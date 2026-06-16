@@ -1,8 +1,18 @@
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, ExternalLink, FileSearch, ShieldAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ExternalLink,
+  FileSearch,
+  ShieldAlert,
+} from "lucide-react";
 
-import { AppShell } from "@/components/minswon/app-shell";
-import { DecisionBadge, PageSection, Panel } from "@/components/minswon/primitives";
+import { AppShell } from "@/components/realillust/app-shell";
+import {
+  DecisionBadge,
+  PageSection,
+  Panel,
+} from "@/components/realillust/primitives";
 import { scans } from "@/lib/mock-data";
 
 export default async function ScanResultPage({
@@ -16,7 +26,10 @@ export default async function ScanResultPage({
   return (
     <AppShell>
       <PageSection>
-        <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-black/60">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-black/60"
+        >
           <ArrowLeft className="size-4" />
           검사 화면으로
         </Link>
@@ -24,7 +37,9 @@ export default async function ScanResultPage({
           <Panel className="overflow-hidden">
             <div className="bg-[var(--cg-house)] p-6 text-white">
               <p className="text-sm font-semibold text-white/65">{scan.id}</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.01em]">{scan.fileName}</h1>
+              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.01em]">
+                {scan.fileName}
+              </h1>
               <div className="mt-5">
                 <DecisionBadge decision={scan.decision} />
               </div>
@@ -41,9 +56,12 @@ export default async function ScanResultPage({
                 <FileSearch className="size-6" />
               </span>
               <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.01em]">검사 근거</h2>
+                <h2 className="text-2xl font-semibold tracking-[-0.01em]">
+                  검사 근거
+                </h2>
                 <p className="mt-2 text-sm leading-6 text-black/58">
-                  모델 결과는 확정 판정이 아니라 risk signal로 저장되고, 최종 decision은 정책 엔진이 만듭니다.
+                  모델 결과는 확정 판정이 아니라 risk signal로 저장되고, 최종
+                  decision은 정책 엔진이 만듭니다.
                 </p>
               </div>
             </div>
@@ -54,9 +72,14 @@ export default async function ScanResultPage({
                 ["정책 엔진", "tenant threshold 기준으로 label_required 권고"],
                 ["보관 정책", "원본 이미지는 24시간 TTL, 결과 메타데이터 보관"],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-xl border border-black/10 p-4">
+                <div
+                  key={label}
+                  className="rounded-xl border border-black/10 p-4"
+                >
                   <p className="text-sm font-semibold">{label}</p>
-                  <p className="mt-1 text-sm leading-6 text-black/58">{value}</p>
+                  <p className="mt-1 text-sm leading-6 text-black/58">
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>
@@ -68,7 +91,8 @@ export default async function ScanResultPage({
             <ShieldAlert className="size-6 text-[var(--cg-green)]" />
             <h2 className="mt-4 text-xl font-semibold">추천 조치</h2>
             <p className="mt-2 text-sm leading-6 text-black/58">
-              AI 생성 의심 점수가 높으므로 게시 전 AI 생성 라벨을 요구하고, 반복 업로드 tenant는 threshold를 낮춥니다.
+              AI 생성 의심 점수가 높으므로 게시 전 AI 생성 라벨을 요구하고, 반복
+              업로드 tenant는 threshold를 낮춥니다.
             </p>
           </Panel>
           <Panel className="p-6">
@@ -97,7 +121,9 @@ function ScoreBlock({ label, value }: { label: string; value: number }) {
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-black/55">{label}</p>
-          <p className="mt-2 text-4xl font-semibold tracking-[-0.01em]">{Math.round(value * 100)}</p>
+          <p className="mt-2 text-4xl font-semibold tracking-[-0.01em]">
+            {Math.round(value * 100)}
+          </p>
         </div>
         <span className="mb-2 text-sm font-semibold text-black/45">/100</span>
       </div>

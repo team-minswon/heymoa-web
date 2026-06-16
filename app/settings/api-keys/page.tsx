@@ -1,7 +1,7 @@
 import { Copy, KeyRound, Plus } from "lucide-react";
 
-import { AppShell } from "@/components/minswon/app-shell";
-import { PageSection, Panel } from "@/components/minswon/primitives";
+import { AppShell } from "@/components/realillust/app-shell";
+import { PageSection, Panel } from "@/components/realillust/primitives";
 import { apiKeys } from "@/lib/mock-data";
 
 export default function ApiKeysPage() {
@@ -10,9 +10,12 @@ export default function ApiKeysPage() {
       <PageSection>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h1 className="text-4xl font-semibold tracking-[-0.01em]">API key 관리</h1>
+            <h1 className="text-4xl font-semibold tracking-[-0.01em]">
+              API key 관리
+            </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-black/58">
-              B2B 고객은 API key로 검사 요청을 만들고 webhook으로 비동기 결과를 받습니다.
+              B2B 고객은 API key로 검사 요청을 만들고 webhook으로 비동기 결과를
+              받습니다.
             </p>
           </div>
           <button className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--cg-green-accent)] px-5 text-sm font-semibold text-white">
@@ -30,7 +33,9 @@ export default function ApiKeysPage() {
                   </span>
                   <div>
                     <h2 className="text-xl font-semibold">{key.name}</h2>
-                    <p className="mt-1 font-mono text-sm text-black/58">{key.prefix}••••••••••••</p>
+                    <p className="mt-1 font-mono text-sm text-black/58">
+                      {key.prefix}••••••••••••
+                    </p>
                     <p className="mt-3 text-sm text-black/55">
                       {key.tenant} · {key.limit} · 마지막 사용 {key.lastUsed}
                     </p>

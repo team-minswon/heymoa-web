@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { ArrowRight, BellRing, Database, RadioTower } from "lucide-react";
 
-import { AppShell } from "@/components/minswon/app-shell";
-import { MetricCard, PageSection, Panel } from "@/components/minswon/primitives";
-import { UploadWorkspace } from "@/components/minswon/upload-workspace";
+import { AppShell } from "@/components/realillust/app-shell";
+import {
+  MetricCard,
+  PageSection,
+  Panel,
+} from "@/components/realillust/primitives";
+import { UploadWorkspace } from "@/components/realillust/upload-workspace";
 import { summaryCards } from "@/lib/mock-data";
 
 const productLanes = [
@@ -47,8 +51,12 @@ export default function Home() {
           {productLanes.map((lane) => (
             <Panel key={lane.title} className="p-6">
               <lane.icon className="size-7 text-[var(--cg-green)]" />
-              <h2 className="mt-5 text-2xl font-semibold tracking-[-0.01em]">{lane.title}</h2>
-              <p className="mt-3 min-h-16 text-sm leading-6 text-black/58">{lane.body}</p>
+              <h2 className="mt-5 text-2xl font-semibold tracking-[-0.01em]">
+                {lane.title}
+              </h2>
+              <p className="mt-3 min-h-16 text-sm leading-6 text-black/58">
+                {lane.body}
+              </p>
               <Link
                 href={lane.href}
                 className="mt-6 inline-flex h-10 items-center gap-2 rounded-full border border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)] transition hover:bg-[var(--cg-green)] hover:text-white"

@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { Check, Eye, X } from "lucide-react";
 
-import { AppShell } from "@/components/minswon/app-shell";
-import { DecisionBadge, PageSection, Panel } from "@/components/minswon/primitives";
+import { AppShell } from "@/components/realillust/app-shell";
+import {
+  DecisionBadge,
+  PageSection,
+  Panel,
+} from "@/components/realillust/primitives";
 import { scans } from "@/lib/mock-data";
 
-const reviewItems = scans.filter((scan) => scan.decision === "review_required" || scan.decision === "block");
+const reviewItems = scans.filter(
+  (scan) => scan.decision === "review_required" || scan.decision === "block"
+);
 
 export default function ReviewQueuePage() {
   return (
@@ -29,10 +35,13 @@ export default function ReviewQueuePage() {
                     <DecisionBadge decision={scan.decision} />
                   </div>
                   <p className="mt-2 text-sm text-black/55">
-                    {scan.id} · {scan.tenant} · AI {Math.round(scan.aiScore * 100)} / NSFW{" "}
+                    {scan.id} · {scan.tenant} · AI{" "}
+                    {Math.round(scan.aiScore * 100)} / NSFW{" "}
                     {Math.round(scan.nsfwScore * 100)}
                   </p>
-                  <p className="mt-3 text-sm leading-6 text-black/58">{scan.metadata}</p>
+                  <p className="mt-3 text-sm leading-6 text-black/58">
+                    {scan.metadata}
+                  </p>
                 </div>
                 <div className="flex gap-2 lg:flex-col">
                   <button className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)]">

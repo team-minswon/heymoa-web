@@ -1,7 +1,7 @@
 import { RefreshCw, RadioTower } from "lucide-react";
 
-import { AppShell } from "@/components/minswon/app-shell";
-import { PageSection, Panel } from "@/components/minswon/primitives";
+import { AppShell } from "@/components/realillust/app-shell";
+import { PageSection, Panel } from "@/components/realillust/primitives";
 import { webhookLogs } from "@/lib/mock-data";
 
 export default function WebhooksPage() {
@@ -10,9 +10,12 @@ export default function WebhooksPage() {
       <PageSection>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h1 className="text-4xl font-semibold tracking-[-0.01em]">Webhook 로그</h1>
+            <h1 className="text-4xl font-semibold tracking-[-0.01em]">
+              Webhook 로그
+            </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-black/58">
-              고객 endpoint 전송 결과, retry 횟수, timeout 상태를 운영자가 추적합니다.
+              고객 endpoint 전송 결과, retry 횟수, timeout 상태를 운영자가
+              추적합니다.
             </p>
           </div>
           <button className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--cg-green)] px-5 text-sm font-semibold text-[var(--cg-green)]">
@@ -30,12 +33,17 @@ export default function WebhooksPage() {
           </div>
           <div className="divide-y divide-black/10">
             {webhookLogs.map((log) => (
-              <div key={log.id} className="grid gap-3 p-5 lg:grid-cols-[1fr_1fr_100px_100px]">
+              <div
+                key={log.id}
+                className="grid gap-3 p-5 lg:grid-cols-[1fr_1fr_100px_100px]"
+              >
                 <div>
                   <p className="font-semibold">{log.tenant}</p>
                   <p className="text-sm text-black/55">{log.id}</p>
                 </div>
-                <p className="break-all text-sm text-black/65">{log.endpoint}</p>
+                <p className="break-all text-sm text-black/65">
+                  {log.endpoint}
+                </p>
                 <p className="text-sm font-semibold">{log.attempts}</p>
                 <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--cg-mint)] px-3 py-1 text-xs font-semibold text-[var(--cg-green)]">
                   <RadioTower className="size-3" />
