@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Check, Eye, X } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/realillust/app-shell";
 import {
   DecisionBadge,
@@ -44,14 +45,20 @@ export default function ReviewQueuePage() {
                   </p>
                 </div>
                 <div className="flex gap-2 lg:flex-col">
-                  <button className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)]">
-                    <Check className="size-4" />
+                  <Button
+                    variant="outline"
+                    className="h-10 rounded-full border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)]"
+                  >
+                    <Check data-icon="inline-start" />
                     승인
-                  </button>
-                  <button className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-700 px-4 text-sm font-semibold text-red-700">
-                    <X className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-10 rounded-full border-red-700 px-4 text-sm font-semibold text-red-700"
+                  >
+                    <X data-icon="inline-start" />
                     차단
-                  </button>
+                  </Button>
                   <Link
                     href={`/scans/${scan.id}`}
                     className="inline-flex h-10 items-center justify-center rounded-full bg-[var(--cg-green-accent)] px-4 text-sm font-semibold text-white"

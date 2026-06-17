@@ -1,5 +1,6 @@
 import { RefreshCw, RadioTower } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/realillust/app-shell";
 import { PageSection, Panel } from "@/components/realillust/primitives";
 import { webhookLogs } from "@/lib/mock-data";
@@ -18,10 +19,13 @@ export default function WebhooksPage() {
               추적합니다.
             </p>
           </div>
-          <button className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--cg-green)] px-5 text-sm font-semibold text-[var(--cg-green)]">
-            <RefreshCw className="size-4" />
+          <Button
+            variant="outline"
+            className="h-11 rounded-full border-[var(--cg-green)] px-5 text-sm font-semibold text-[var(--cg-green)]"
+          >
+            <RefreshCw data-icon="inline-start" />
             새로고침
-          </button>
+          </Button>
         </div>
 
         <Panel className="mt-8 overflow-hidden">

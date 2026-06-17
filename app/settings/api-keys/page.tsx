@@ -1,5 +1,6 @@
 import { Copy, KeyRound, Plus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/realillust/app-shell";
 import { PageSection, Panel } from "@/components/realillust/primitives";
 import { apiKeys } from "@/lib/mock-data";
@@ -18,9 +19,9 @@ export default function ApiKeysPage() {
               받습니다.
             </p>
           </div>
-          <button className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--cg-green-accent)] px-5 text-sm font-semibold text-white">
-            <Plus className="size-4" />새 key
-          </button>
+          <Button className="h-11 rounded-full bg-[var(--cg-green-accent)] px-5 text-sm font-semibold text-white hover:bg-[var(--cg-green)]">
+            <Plus data-icon="inline-start" />새 key
+          </Button>
         </div>
 
         <div className="mt-8 grid gap-5">
@@ -41,10 +42,13 @@ export default function ApiKeysPage() {
                     </p>
                   </div>
                 </div>
-                <button className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)]">
-                  <Copy className="size-4" />
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-full border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)]"
+                >
+                  <Copy data-icon="inline-start" />
                   prefix 복사
-                </button>
+                </Button>
               </div>
             </Panel>
           ))}

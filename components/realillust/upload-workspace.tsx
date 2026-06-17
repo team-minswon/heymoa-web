@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, FileImage, Loader2, UploadCloud } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+
 const steps = ["업로드 수신", "S3 저장", "AI/NSFW 분석", "정책 판정"];
 
 export function UploadWorkspace() {
@@ -66,17 +68,21 @@ export function UploadWorkspace() {
               <p className="text-xs text-black/55">익명 검사 · public tenant</p>
             </div>
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => {
               setIsScanning(true);
               window.setTimeout(() => setIsScanning(false), 900);
             }}
-            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[var(--cg-green-accent)] px-5 text-sm font-semibold text-white transition active:scale-95"
+            className="mt-4 h-11 w-full rounded-full bg-[var(--cg-green-accent)] px-5 text-sm font-semibold text-white transition active:scale-95 hover:bg-[var(--cg-green)]"
           >
-            {isScanning ? <Loader2 className="size-4 animate-spin" /> : <UploadCloud className="size-4" />}
+            {isScanning ? (
+              <Loader2 data-icon="inline-start" className="animate-spin" />
+            ) : (
+              <UploadCloud data-icon="inline-start" />
+            )}
             검사 job 생성
-          </button>
+          </Button>
           <Link
             href="/scans/scan_9K2P1"
             className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[var(--cg-green)] px-5 text-sm font-semibold text-[var(--cg-green)] transition hover:bg-[var(--cg-green)] hover:text-white"

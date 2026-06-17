@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { decisionMeta, type Decision } from "@/lib/mock-data";
 
@@ -23,14 +25,14 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <div
+    <Card
       className={cn(
-        "rounded-xl bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.12)]",
+        "gap-0 py-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.12)]",
         className
       )}
     >
       {children}
-    </div>
+    </Card>
   );
 }
 
@@ -64,8 +66,11 @@ export function MetricCard({
 export function DecisionBadge({ decision }: { decision: Decision }) {
   const meta = decisionMeta[decision];
   return (
-    <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1", meta.tone)}>
+    <Badge
+      variant="outline"
+      className={cn("rounded-full px-3 py-1 font-semibold", meta.tone)}
+    >
       {meta.label}
-    </span>
+    </Badge>
   );
 }
