@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Jinjja Geurim icon">
+  <rect width="512" height="512" rx="112" fill="#1e3932"/>
+  <rect x="122" y="104" width="268" height="304" rx="44" fill="#f8f4ea"/>
+  <path d="M170 332c42-72 73-95 102-70 18 15 35 42 54 13 14-21 25-48 50-43" fill="none" stroke="#d47a39" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="194" cy="172" r="34" fill="#d47a39"/>
+  <path d="M334 344l43 43 88-106" fill="none" stroke="#4fb477" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M132 111c22-29 55-45 95-45h89" fill="none" stroke="#7bb6a3" stroke-width="24" stroke-linecap="round"/>
+</svg>
