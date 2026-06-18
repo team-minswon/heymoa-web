@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Check, Eye, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,14 @@ import {
   Panel,
 } from "@/components/realillust/primitives";
 import { scans } from "@/lib/mock-data";
+
+export const metadata: Metadata = {
+  title: "검수 큐",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const reviewItems = scans.filter(
   (scan) => scan.decision === "review_required" || scan.decision === "block"

@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import { RefreshCw, RadioTower } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/realillust/app-shell";
 import { PageSection, Panel } from "@/components/realillust/primitives";
 import { webhookLogs } from "@/lib/mock-data";
+
+export const metadata: Metadata = {
+  title: "Webhook 로그",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function WebhooksPage() {
   return (

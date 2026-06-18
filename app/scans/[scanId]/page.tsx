@@ -1,10 +1,19 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 
 import { AppShell } from "@/components/realillust/app-shell";
 import { PageSection } from "@/components/realillust/primitives";
 import { ScanReviewWorkspace } from "@/components/realillust/scan-review-workspace";
 import { scans } from "@/lib/mock-data";
+
+export const metadata: Metadata = {
+  title: "검사 결과",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function ScanResultPage({
   params,

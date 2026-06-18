@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowRight, BarChart3 } from "lucide-react";
 
 import { AppShell } from "@/components/realillust/app-shell";
@@ -9,6 +10,14 @@ import {
   Panel,
 } from "@/components/realillust/primitives";
 import { scans, summaryCards } from "@/lib/mock-data";
+
+export const metadata: Metadata = {
+  title: "운영 대시보드",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const distribution = [
   ["allow", "54%"],

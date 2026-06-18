@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import { Copy, KeyRound, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/realillust/app-shell";
 import { PageSection, Panel } from "@/components/realillust/primitives";
 import { apiKeys } from "@/lib/mock-data";
+
+export const metadata: Metadata = {
+  title: "API key 관리",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function ApiKeysPage() {
   return (
