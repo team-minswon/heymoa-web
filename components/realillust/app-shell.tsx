@@ -7,6 +7,7 @@ import {
   Shield,
 } from "lucide-react";
 
+import { AuthStatus } from "@/components/auth/auth-status";
 import { siteConfig } from "@/lib/site";
 
 const navItems = [
@@ -74,12 +75,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <Link
-            href="/scans/scan_9K2P1"
-            className="hidden h-10 items-center rounded-full border border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)] transition hover:bg-[var(--cg-green)] hover:text-white sm:inline-flex"
-          >
-            샘플 결과
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/scans/scan_9K2P1"
+              className="hidden h-10 items-center rounded-full border border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)] transition hover:bg-[var(--cg-green)] hover:text-white xl:inline-flex"
+            >
+              샘플 결과
+            </Link>
+            <AuthStatus />
+          </div>
         </div>
       </header>
       <main className="flex-1">{children}</main>
