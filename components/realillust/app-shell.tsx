@@ -1,48 +1,12 @@
 import Link from "next/link";
-import {
-  KeyRound,
-  LayoutDashboard,
-  ListChecks,
-  RadioTower,
-  Shield,
-} from "lucide-react";
+import { FileText, Shield } from "lucide-react";
 
 import { AuthStatus } from "@/components/auth/auth-status";
 import { siteConfig } from "@/lib/site";
 
 const navItems = [
-  { href: "/", label: "검사", icon: Shield },
-  { href: "/admin", label: "대시보드", icon: LayoutDashboard },
-  { href: "/admin/review", label: "검수 큐", icon: ListChecks },
-  { href: "/admin/webhooks", label: "Webhook", icon: RadioTower },
-  { href: "/settings/api-keys", label: "API Keys", icon: KeyRound },
-];
-
-const footerSections = [
-  {
-    title: "서비스",
-    links: [
-      { href: "/", label: "이미지 검사" },
-      { href: "/ai-image-check", label: "AI 일러스트 검사" },
-      { href: "/contest-ai-check", label: "공모전 AI 일러스트 확인" },
-    ],
-  },
-  {
-    title: "운영",
-    links: [
-      { href: "/admin", label: "운영 대시보드" },
-      { href: "/admin/review", label: "검수 큐" },
-      { href: "/settings/api-keys", label: "API key 관리" },
-    ],
-  },
-  {
-    title: "정책",
-    links: [
-      { href: "/terms", label: "이용약관" },
-      { href: "/privacy", label: "개인정보 처리방침" },
-      { href: `mailto:${siteConfig.contactEmail}`, label: "문의하기" },
-    ],
-  },
+  { href: "/terms", label: "이용약관", icon: FileText },
+  { href: "/privacy", label: "개인정보", icon: Shield },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -55,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Shield className="size-5" />
             </span>
             <span>
-              <span className="block text-[17px] font-semibold leading-tight tracking-[-0.01em]">
+              <span className="block text-[17px] font-semibold leading-tight">
                 {siteConfig.name}
               </span>
               <span className="block text-xs font-medium text-black/55">
@@ -63,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             </span>
           </Link>
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -75,20 +39,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/scans/scan_9K2P1"
-              className="hidden h-10 items-center rounded-full border border-[var(--cg-green)] px-4 text-sm font-semibold text-[var(--cg-green)] transition hover:bg-[var(--cg-green)] hover:text-white xl:inline-flex"
-            >
-              샘플 결과
-            </Link>
-            <AuthStatus />
-          </div>
+          <AuthStatus />
         </div>
       </header>
       <main className="flex-1">{children}</main>
       <footer className="border-t border-black/10 bg-[var(--cg-house)] text-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_1.85fr] lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr] lg:px-8">
           <div>
             <Link href="/" className="inline-flex items-center gap-3">
               <span className="grid size-10 place-items-center rounded-full bg-white text-[var(--cg-green)]">
@@ -105,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             <p className="mt-5 max-w-md text-sm leading-6 text-white/68">
               AI 생성 의심 이미지, 메타데이터, 국소 영역 신호를 함께 검토해
-              일러스트와 공모전 출품 이미지 운영을 돕습니다.
+              창작 이미지 판단을 돕습니다.
             </p>
             <p className="mt-4 text-sm text-white/62">
               문의:{" "}
@@ -117,35 +73,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </a>
             </p>
           </div>
-          <div className="grid gap-8 sm:grid-cols-3">
-            {footerSections.map((section) => (
-              <div key={section.title}>
-                <h2 className="text-sm font-semibold text-[var(--cg-gold)]">
-                  {section.title}
-                </h2>
-                <ul className="mt-4 space-y-3">
-                  {section.links.map((link) => (
-                    <li key={link.href}>
-                      {link.href.startsWith("mailto:") ? (
-                        <a
-                          href={link.href}
-                          className="text-sm font-medium text-white/68 transition hover:text-white"
-                        >
-                          {link.label}
-                        </a>
-                      ) : (
-                        <Link
-                          href={link.href}
-                          className="text-sm font-medium text-white/68 transition hover:text-white"
-                        >
-                          {link.label}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--cg-gold)]">
+                서비스
+              </h2>
+              <ul className="mt-4 space-y-3">
+                <li>
+                  <Link
+                    href="/"
+                    className="text-sm font-medium text-white/68 transition hover:text-white"
+                  >
+                    홈
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--cg-gold)]">
+                정책
+              </h2>
+              <ul className="mt-4 space-y-3">
+                <li>
+                  <Link
+                    href="/terms"
+                    className="text-sm font-medium text-white/68 transition hover:text-white"
+                  >
+                    이용약관
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/privacy"
+                    className="text-sm font-medium text-white/68 transition hover:text-white"
+                  >
+                    개인정보 처리방침
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
         <div className="border-t border-white/10">
