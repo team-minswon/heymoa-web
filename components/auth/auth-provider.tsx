@@ -37,7 +37,7 @@ export function AuthProvider({
 }) {
   const [user, setUserState] = useState<AuthUser | null>(initialUser);
   const [status, setStatus] = useState<AuthStatus>(
-    initialUser ? "authenticated" : "anonymous",
+    initialUser ? "authenticated" : "anonymous"
   );
 
   const setUser = useCallback((nextUser: AuthUser | null) => {
@@ -46,7 +46,9 @@ export function AuthProvider({
   }, []);
 
   const refreshUser = useCallback(async () => {
-    setStatus((current) => (current === "authenticated" ? current : "checking"));
+    setStatus((current) =>
+      current === "authenticated" ? current : "checking"
+    );
 
     try {
       const nextUser = await getMe();
@@ -80,7 +82,7 @@ export function AuthProvider({
     return () => {
       window.removeEventListener(
         AUTH_STATE_CHANGED_EVENT,
-        handleAuthStateChanged,
+        handleAuthStateChanged
       );
     };
   }, [setUser]);
@@ -93,7 +95,7 @@ export function AuthProvider({
       refreshUser,
       logout,
     }),
-    [user, status, setUser, refreshUser, logout],
+    [user, status, setUser, refreshUser, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

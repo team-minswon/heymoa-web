@@ -36,8 +36,8 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
             </span>
           </Link>
           <p className="mt-5 max-w-md text-sm leading-6 text-[var(--clay-muted)]">
-            AI 생성 의심 이미지, 메타데이터, 국소 영역 신호를 함께 검토해
-            창작 이미지 판단을 돕습니다.
+            AI 생성 의심 이미지, 메타데이터, 국소 영역 신호를 함께 검토해 창작
+            이미지 판단을 돕습니다.
           </p>
           <p className="mt-4 text-sm text-[var(--clay-muted)]">
             문의:{" "}

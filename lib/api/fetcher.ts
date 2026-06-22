@@ -89,7 +89,7 @@ async function parseResponse<T>(response: Response, responseType?: string) {
 async function request<T>(
   url: string,
   options: ApiFetchOptions,
-  hasRetried: boolean,
+  hasRetried: boolean
 ): Promise<T> {
   const {
     headers,
@@ -133,7 +133,7 @@ async function request<T>(
 
 export async function apiFetch<T>(
   url: string,
-  options?: ApiFetchOptions,
+  options?: ApiFetchOptions
 ): Promise<T> {
   return request<T>(url, options ?? {}, false);
 }

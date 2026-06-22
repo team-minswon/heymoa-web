@@ -12,6 +12,6 @@ export function notifyAuthStateChanged(detail: AuthStateChangedDetail) {
   window.dispatchEvent(
     new CustomEvent<AuthStateChangedDetail>(AUTH_STATE_CHANGED_EVENT, {
       detail,
-    }),
+    })
   );
 }

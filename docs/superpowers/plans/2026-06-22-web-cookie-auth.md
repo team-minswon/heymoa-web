@@ -166,7 +166,9 @@ export function getCurrentReturnTo() {
     return "/";
   }
 
-  return normalizeReturnTo(`${window.location.pathname}${window.location.search}`);
+  return normalizeReturnTo(
+    `${window.location.pathname}${window.location.search}`
+  );
 }
 
 export function buildApiUrl(path: string) {
@@ -180,7 +182,7 @@ export function buildApiUrl(path: string) {
 export function buildGoogleOAuthUrl(returnTo: string) {
   const normalizedReturnTo = normalizeReturnTo(returnTo);
   const authorizePath = `/api/v1/auth/oauth2/authorize/google?returnTo=${encodeURIComponent(
-    normalizedReturnTo,
+    normalizedReturnTo
   )}`;
 
   return buildApiUrl(authorizePath);
@@ -206,7 +208,7 @@ export function notifyAuthStateChanged(detail: AuthStateChangedDetail) {
   window.dispatchEvent(
     new CustomEvent<AuthStateChangedDetail>(AUTH_STATE_CHANGED_EVENT, {
       detail,
-    }),
+    })
   );
 }
 ```
@@ -334,7 +336,7 @@ class AuthApiError extends Error {
 
 async function parseAppResponse<T>(
   response: Response,
-  allowEmptyData = false,
+  allowEmptyData = false
 ): Promise<T> {
   if (response.status === 204 && allowEmptyData) {
     return undefined as T;
@@ -350,7 +352,7 @@ async function parseAppResponse<T>(
     throw new AuthApiError(
       body.error?.message ?? "Authentication request failed.",
       response.status,
-      body.error?.code,
+      body.error?.code
     );
   }
 
@@ -434,7 +436,7 @@ export function AuthProvider({
 }) {
   const [user, setUserState] = useState<AuthUser | null>(initialUser);
   const [status, setStatus] = useState<AuthStatus>(
-    initialUser ? "authenticated" : "anonymous",
+    initialUser ? "authenticated" : "anonymous"
   );
 
   const setUser = useCallback((nextUser: AuthUser | null) => {
@@ -443,7 +445,9 @@ export function AuthProvider({
   }, []);
 
   const refreshUser = useCallback(async () => {
-    setStatus((current) => (current === "authenticated" ? current : "checking"));
+    setStatus((current) =>
+      current === "authenticated" ? current : "checking"
+    );
 
     try {
       const nextUser = await getMe();
@@ -477,7 +481,7 @@ export function AuthProvider({
     return () => {
       window.removeEventListener(
         AUTH_STATE_CHANGED_EVENT,
-        handleAuthStateChanged,
+        handleAuthStateChanged
       );
     };
   }, [setUser]);
@@ -490,7 +494,7 @@ export function AuthProvider({
       refreshUser,
       logout,
     }),
-    [user, status, setUser, refreshUser, logout],
+    [user, status, setUser, refreshUser, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -563,7 +567,7 @@ export function GoogleLoginButton({
         disabled={pending || !isAuthApiConfigured}
         className={cn(
           "rounded-full border-black/10 bg-white text-black/72 shadow-sm hover:bg-[var(--cg-ceramic)] hover:text-[var(--cg-green)]",
-          compact ? "p-0" : "px-4",
+          compact ? "p-0" : "px-4"
         )}
         aria-label="Google로 로그인"
       >
@@ -961,10 +965,17 @@ async function parseResponse<T>(response: Response, responseType?: string) {
 async function request<T>(
   url: string,
   options: ApiFetchOptions,
-  hasRetried: boolean,
+  hasRetried: boolean
 ): Promise<T> {
-  const { headers, data, params, signal, responseType, skipAuthRefresh, ...requestOptions } =
-    options;
+  const {
+    headers,
+    data,
+    params,
+    signal,
+    responseType,
+    skipAuthRefresh,
+    ...requestOptions
+  } = options;
   const isJsonBody =
     data && !(data instanceof FormData) && !(data instanceof Blob);
   const builtUrl = buildUrl(url, params);
@@ -998,7 +1009,7 @@ async function request<T>(
 
 export async function apiFetch<T>(
   url: string,
-  options?: ApiFetchOptions,
+  options?: ApiFetchOptions
 ): Promise<T> {
   return request<T>(url, options ?? {}, false);
 }
@@ -1102,8 +1113,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             </Link>
             <p className="mt-5 max-w-md text-sm leading-6 text-white/68">
-              AI 생성 의심 이미지, 메타데이터, 국소 영역 신호를 함께 검토해
-              창작 이미지 판단을 돕습니다.
+              AI 생성 의심 이미지, 메타데이터, 국소 영역 신호를 함께 검토해 창작
+              이미지 판단을 돕습니다.
             </p>
             <p className="mt-4 text-sm text-white/62">
               문의:{" "}
@@ -1239,8 +1250,8 @@ export default function Home() {
             진짜그림
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-black/62 sm:text-lg">
-            AI 생성 의심 일러스트, 메타데이터, 국소 영역 신호를 함께 분석해
-            창작 이미지 검토를 돕는 서비스입니다.
+            AI 생성 의심 일러스트, 메타데이터, 국소 영역 신호를 함께 분석해 창작
+            이미지 검토를 돕는 서비스입니다.
           </p>
         </div>
       </PageSection>

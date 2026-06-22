@@ -16,7 +16,7 @@ class AuthApiError extends Error {
 
 async function parseAppResponse<T>(
   response: Response,
-  allowEmptyData = false,
+  allowEmptyData = false
 ): Promise<T> {
   if (response.status === 204 && allowEmptyData) {
     return undefined as T;
@@ -32,7 +32,7 @@ async function parseAppResponse<T>(
     throw new AuthApiError(
       body.error?.message ?? "Authentication request failed.",
       response.status,
-      body.error?.code,
+      body.error?.code
     );
   }
 

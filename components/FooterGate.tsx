@@ -13,7 +13,9 @@ export function FooterGate({ children }: { children: React.ReactNode }) {
 
   return React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
-      return React.cloneElement(child, { simplified: isStatic } as any);
+      return React.cloneElement(child as React.ReactElement<{ simplified?: boolean }>, {
+        simplified: isStatic,
+      });
     }
     return child;
   });

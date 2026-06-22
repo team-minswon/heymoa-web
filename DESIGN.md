@@ -7,6 +7,7 @@ Type voice runs **Plain Black** (or substituted with Inter weight 500-600) — a
 Component voltage comes from **saturated single-color feature cards** in a 6-color palette: hot pink, deep teal, lavender, peach, ochre, and cream-card. Each card shows product UI fragments at small scale — Claygent agent runs, sequencer flows, CRM enrichment outputs. The colored card IS the primary visual element on every long-scroll page.
 
 **Key Characteristics:**
+
 - Cream-tinted white canvas (`{colors.canvas}` — #fffaf0). The warmth differentiates Clay from cool-gray competitor sites.
 - Dark navy/black primary CTAs (`{colors.primary}` — #0a0a0a). Buttons rounded `{rounded.md}` (12px) — friendly modern but not pill.
 - 6-color saturated feature card palette: `{colors.brand-pink}`, `{colors.brand-teal}`, `{colors.brand-lavender}`, `{colors.brand-peach}`, `{colors.brand-ochre}`, `{colors.surface-card}` (cream).
@@ -20,6 +21,7 @@ Component voltage comes from **saturated single-color feature cards** in a 6-col
 ## Colors
 
 ### Brand & Accent
+
 - **Primary** (`{colors.primary}` — #0a0a0a): All primary CTAs, h1/h2 ink type. Near-black with slight warmth.
 - **Brand Pink** (`{colors.brand-pink}` — #ff4d8b): Hot-pink feature card surface. Sequencer / outbound feature pages.
 - **Brand Teal** (`{colors.brand-teal}` — #1a3a3a): Deep teal-green feature card. Often the featured pricing tier.
@@ -30,6 +32,7 @@ Component voltage comes from **saturated single-color feature cards** in a 6-col
 - **Brand Coral** (`{colors.brand-coral}` — #ff6b5a): Coral accent for highlights.
 
 ### Surface
+
 - **Canvas** (`{colors.canvas}` — #fffaf0): The default page floor. Cream-tinted white.
 - **Surface Soft** (`{colors.surface-soft}` — #faf5e8): Footer and CTA-band background.
 - **Surface Card** (`{colors.surface-card}` — #f5f0e0): Cream feature cards, testimonial cards.
@@ -39,6 +42,7 @@ Component voltage comes from **saturated single-color feature cards** in a 6-col
 - **Hairline** (`{colors.hairline}` — #e5e5e5): 1px borders on cards and inputs.
 
 ### Text
+
 - **Ink** (`{colors.ink}` — #0a0a0a): Headlines and primary text.
 - **Body Strong** (`{colors.body-strong}` — #1a1a1a): Emphasized body, lead paragraphs.
 - **Body** (`{colors.body}` — #3a3a3a): Default running-text.
@@ -47,6 +51,7 @@ Component voltage comes from **saturated single-color feature cards** in a 6-col
 - **On Primary / On Dark** (`{colors.on-primary}` — #ffffff): Text on primary buttons + dark feature cards (teal).
 
 ### Semantic
+
 - **Success** (`{colors.success}` — #22c55e): Success states.
 - **Warning** (`{colors.warning}` — #f59e0b): Warning callouts.
 - **Error** (`{colors.error}` — #ef4444): Validation errors.
@@ -54,64 +59,71 @@ Component voltage comes from **saturated single-color feature cards** in a 6-col
 ## Typography
 
 ### Font Family
+
 The system runs **Plain Black** (a custom rounded display face) for headlines and **Inter** for body, navigation, and UI. Plain Black at weight 500 with negative letter-spacing handles every display headline; Inter handles the rest. The fallback stack walks `Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` for both.
 
 ### Hierarchy
 
-| Token | Size | Weight | Line Height | Letter Spacing | Use |
-|---|---|---|---|---|---|
-| `{typography.display-xl}` | 72px | 500 | 1.0 | -2.5px | Homepage h1 ("Go to market with unique data") — Plain Black |
-| `{typography.display-lg}` | 56px | 500 | 1.05 | -2px | Section heads — Plain Black |
-| `{typography.display-md}` | 40px | 500 | 1.1 | -1px | Sub-section heads, product names |
-| `{typography.display-sm}` | 32px | 500 | 1.15 | -0.5px | CTA-band heads, feature card titles |
-| `{typography.title-lg}` | 24px | 600 | 1.3 | -0.3px | Pricing plan names, larger feature titles |
-| `{typography.title-md}` | 18px | 600 | 1.4 | 0 | Card titles, intro paragraphs |
-| `{typography.title-sm}` | 16px | 600 | 1.4 | 0 | Small card titles, list labels |
-| `{typography.body-md}` | 16px | 400 | 1.55 | 0 | Default running-text |
-| `{typography.body-sm}` | 14px | 400 | 1.55 | 0 | Footer body, fine-print |
-| `{typography.caption}` | 13px | 500 | 1.4 | 0 | Badge labels, captions |
-| `{typography.caption-uppercase}` | 12px | 600 | 1.4 | 1.5px | Section labels, "FEATURED" badges |
-| `{typography.button}` | 14px | 600 | 1.0 | 0 | Standard button labels |
-| `{typography.nav-link}` | 14px | 500 | 1.4 | 0 | Top-nav menu items |
+| Token                            | Size | Weight | Line Height | Letter Spacing | Use                                                         |
+| -------------------------------- | ---- | ------ | ----------- | -------------- | ----------------------------------------------------------- |
+| `{typography.display-xl}`        | 72px | 500    | 1.0         | -2.5px         | Homepage h1 ("Go to market with unique data") — Plain Black |
+| `{typography.display-lg}`        | 56px | 500    | 1.05        | -2px           | Section heads — Plain Black                                 |
+| `{typography.display-md}`        | 40px | 500    | 1.1         | -1px           | Sub-section heads, product names                            |
+| `{typography.display-sm}`        | 32px | 500    | 1.15        | -0.5px         | CTA-band heads, feature card titles                         |
+| `{typography.title-lg}`          | 24px | 600    | 1.3         | -0.3px         | Pricing plan names, larger feature titles                   |
+| `{typography.title-md}`          | 18px | 600    | 1.4         | 0              | Card titles, intro paragraphs                               |
+| `{typography.title-sm}`          | 16px | 600    | 1.4         | 0              | Small card titles, list labels                              |
+| `{typography.body-md}`           | 16px | 400    | 1.55        | 0              | Default running-text                                        |
+| `{typography.body-sm}`           | 14px | 400    | 1.55        | 0              | Footer body, fine-print                                     |
+| `{typography.caption}`           | 13px | 500    | 1.4         | 0              | Badge labels, captions                                      |
+| `{typography.caption-uppercase}` | 12px | 600    | 1.4         | 1.5px          | Section labels, "FEATURED" badges                           |
+| `{typography.button}`            | 14px | 600    | 1.0         | 0              | Standard button labels                                      |
+| `{typography.nav-link}`          | 14px | 500    | 1.4         | 0              | Top-nav menu items                                          |
 
 ### Principles
+
 Plain Black at weight 500 + negative letter-spacing IS the brand voice. Going to weight 700 reads as bombastic; the rounded character of the typeface adds warmth that bolder weight would flatten.
 
 The body-vs-display split is functional: Plain Black for Plain Black moments (headlines), Inter for everything else (running text, UI, buttons). Mixing them is a system violation.
 
 ### Note on Font Substitutes
+
 If Plain Black is unavailable, **Inter** at weight 500 with -0.05em letter-spacing is a usable approximation. **Söhne Breit** at weight Buch is an alternative if licensed. **Recoleta** at weight 500 carries similar rounded-display warmth.
 
 ## Layout
 
 ### Spacing System
+
 - **Base unit:** 4px.
 - **Tokens:** `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 96px.
 - **Section padding:** `{spacing.section}` (96px) between major editorial bands.
 - **Card internal padding:** `{spacing.xl}` (32px) for feature cards and pricing tiers; `{spacing.lg}` (24px) for testimonial and product mockup cards.
 
 ### Grid & Container
+
 - **Max content width:** ~1280px centered.
 - **Editorial body:** Single 12-column grid; hero often uses 7/5 split (h1 left, illustration right).
 - **Feature card grids:** 3-up at desktop, 2-up at tablet, 1-up at mobile.
 - **Pricing grid:** 3-4 up at desktop, 1-up at mobile.
 
 ### Whitespace Philosophy
+
 Clay uses generous whitespace around big rounded display headlines and saturated feature cards. The cream canvas + colored cards + 3D illustrations create a playful warmth that competing data-platform sites lack.
 
 ## Elevation & Depth
 
-| Level | Treatment | Use |
-|---|---|---|
-| Flat | No shadow, no border | Body sections, top nav, hero |
-| Soft hairline | 1px `{colors.hairline}` border | Inputs, small content cards |
-| Saturated card | Brand pink/teal/lavender/peach/ochre fill — no shadow | Feature cards |
-| Cream card | `{colors.surface-card}` background — no shadow | Testimonial, secondary cards |
-| Subtle drop shadow | Faint shadow at low alpha | Hover-elevated states (rare) |
+| Level              | Treatment                                             | Use                          |
+| ------------------ | ----------------------------------------------------- | ---------------------------- |
+| Flat               | No shadow, no border                                  | Body sections, top nav, hero |
+| Soft hairline      | 1px `{colors.hairline}` border                        | Inputs, small content cards  |
+| Saturated card     | Brand pink/teal/lavender/peach/ochre fill — no shadow | Feature cards                |
+| Cream card         | `{colors.surface-card}` background — no shadow        | Testimonial, secondary cards |
+| Subtle drop shadow | Faint shadow at low alpha                             | Hover-elevated states (rare) |
 
 The system uses no heavy shadows. Depth comes from the saturated color contrast between cream canvas and bright feature cards.
 
 ### Decorative Depth
+
 - **3D claymation illustrations** — mountains, characters, mascots rendered in a hand-crafted 3D style. The brand's most-recognized depth element. Not a token — these are illustrated assets.
 - **Mascot characters** appear as inline figures in feature cards and CTAs.
 
@@ -119,15 +131,15 @@ The system uses no heavy shadows. Depth comes from the saturated color contrast 
 
 ### Border Radius Scale
 
-| Token | Value | Use |
-|---|---|---|
-| `{rounded.xs}` | 6px | Small badges, dropdown items |
-| `{rounded.sm}` | 8px | Small buttons, hairline-border accent |
-| `{rounded.md}` | 12px | Standard CTA buttons, text inputs |
-| `{rounded.lg}` | 16px | Content cards, testimonial cards, pricing tiers |
-| `{rounded.xl}` | 24px | Feature cards (the saturated brand-color cards) |
-| `{rounded.pill}` | 9999px | Category tabs, badge pills |
-| `{rounded.full}` | 9999px / 50% | Avatars, icon buttons |
+| Token            | Value        | Use                                             |
+| ---------------- | ------------ | ----------------------------------------------- |
+| `{rounded.xs}`   | 6px          | Small badges, dropdown items                    |
+| `{rounded.sm}`   | 8px          | Small buttons, hairline-border accent           |
+| `{rounded.md}`   | 12px         | Standard CTA buttons, text inputs               |
+| `{rounded.lg}`   | 16px         | Content cards, testimonial cards, pricing tiers |
+| `{rounded.xl}`   | 24px         | Feature cards (the saturated brand-color cards) |
+| `{rounded.pill}` | 9999px       | Category tabs, badge pills                      |
+| `{rounded.full}` | 9999px / 50% | Avatars, icon buttons                           |
 
 ## Components
 
@@ -188,6 +200,7 @@ The system uses no heavy shadows. Depth comes from the saturated color contrast 
 ## Do's and Don'ts
 
 ### Do
+
 - Anchor every page on the cream canvas (`{colors.canvas}` — #fffaf0). The warm tint differentiates Clay from cool-gray data sites.
 - Use 3D claymation illustrations as hero artifacts. Hand-crafted 3D characters and mountains ARE the brand.
 - Cycle saturated feature cards across the page — pink → teal → lavender → peach → ochre → cream. Repeating the same color twice in a row reads as off-rhythm.
@@ -197,6 +210,7 @@ The system uses no heavy shadows. Depth comes from the saturated color contrast 
 - Anchor every band with `{spacing.section}` (96px) vertical rhythm.
 
 ### Don't
+
 - Don't use cool grays for canvas. The cream tint is non-negotiable.
 - Don't use a 7th brand-color card. The 6-color palette is saturated enough.
 - Don't bold display weight beyond 500. Plain Black at 700 reads as bombastic.
@@ -209,18 +223,20 @@ The system uses no heavy shadows. Depth comes from the saturated color contrast 
 
 ### Breakpoints
 
-| Name | Width | Key Changes |
-|---|---|---|
-| Mobile | < 768px | Hamburger nav; hero h1 72→36px; hero-illustration-card stacks below; feature grids 1-up; pricing 1-up |
-| Tablet | 768–1024px | Top nav tightens; feature cards 2-up; pricing 2-up |
-| Desktop | 1024–1440px | Full top-nav; 3-up feature cards; 3-up pricing tiers |
-| Wide | > 1440px | Same as desktop with more breathing room; max content 1280px |
+| Name    | Width       | Key Changes                                                                                           |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------- |
+| Mobile  | < 768px     | Hamburger nav; hero h1 72→36px; hero-illustration-card stacks below; feature grids 1-up; pricing 1-up |
+| Tablet  | 768–1024px  | Top nav tightens; feature cards 2-up; pricing 2-up                                                    |
+| Desktop | 1024–1440px | Full top-nav; 3-up feature cards; 3-up pricing tiers                                                  |
+| Wide    | > 1440px    | Same as desktop with more breathing room; max content 1280px                                          |
 
 ### Touch Targets
+
 - `{component.button-primary}` at minimum 44 × 44px (matches WCAG AAA).
 - `{component.text-input}` height is 44px.
 
 ### Collapsing Strategy
+
 - Top nav collapses to hamburger at < 768px.
 - Hero 7-5 grid → single-column on mobile.
 - Feature card grids reduce columns rather than scaling.

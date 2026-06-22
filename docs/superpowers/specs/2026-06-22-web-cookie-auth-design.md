@@ -78,7 +78,7 @@ The frontend sends cookies with API requests:
 ```ts
 fetch(url, {
   credentials: "include",
-})
+});
 ```
 
 The frontend must not send `Authorization: Bearer ...` for this auth flow.
@@ -306,4 +306,3 @@ Recommended targeted tests or manual browser checks:
 - Role or permission UI.
 - Session management UI.
 - CSRF token UI. Backend CSRF protection is intentionally deferred by the server MVP design.
-
