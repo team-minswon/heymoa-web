@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageSection, Panel } from "@/components/realillust/primitives";
-import { StaticShell } from "@/components/realillust/static-shell";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -74,46 +73,44 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <StaticShell>
-      <PageSection>
-        <div className="max-w-3xl">
-          <p className="text-sm font-semibold text-[var(--clay-brand-teal)]">
-            {siteConfig.name}
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.01em]">
-            개인정보 처리방침
-          </h1>
-          <p className="mt-4 text-sm leading-6 text-[var(--clay-muted)]">
-            시행일: 2026년 6월 18일
-          </p>
-        </div>
+    <PageSection>
+      <div className="max-w-3xl">
+        <p className="text-sm font-semibold text-[var(--clay-brand-teal)]">
+          {siteConfig.name}
+        </p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.01em]">
+          개인정보 처리방침
+        </h1>
+        <p className="mt-4 text-sm leading-6 text-[var(--clay-muted)]">
+          시행일: 2026년 6월 18일
+        </p>
+      </div>
 
-        <Panel className="mt-8 p-6 sm:p-8">
-          <div className="space-y-9">
-            {sections.map((section) => (
-              <section key={section.title}>
-                <h2 className="text-xl font-semibold">{section.title}</h2>
-                <div className="mt-4 space-y-3 text-sm leading-7 text-[var(--clay-body)]">
-                  {section.body.map((paragraph) => (
-                    <p key={paragraph}>{paragraph}</p>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </Panel>
-
-        <div className="mt-6 text-sm text-[var(--clay-muted)]">
-          서비스 이용 조건은{" "}
-          <Link
-            href="/terms"
-            className="font-semibold text-[var(--clay-brand-teal)] underline-offset-4 hover:underline"
-          >
-            이용약관
-          </Link>
-          을 확인하세요.
+      <Panel className="mt-8 p-6 sm:p-8">
+        <div className="space-y-9">
+          {sections.map((section) => (
+            <section key={section.title}>
+              <h2 className="text-xl font-semibold">{section.title}</h2>
+              <div className="mt-4 space-y-3 text-sm leading-7 text-[var(--clay-body)]">
+                {section.body.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
-      </PageSection>
-    </StaticShell>
+      </Panel>
+
+      <div className="mt-6 text-sm text-[var(--clay-muted)]">
+        서비스 이용 조건은{" "}
+        <Link
+          href="/terms"
+          className="font-semibold text-[var(--clay-brand-teal)] underline-offset-4 hover:underline"
+        >
+          이용약관
+        </Link>
+        을 확인하세요.
+      </div>
+    </PageSection>
   );
 }

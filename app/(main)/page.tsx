@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { FileSearch, ShieldCheck, Sparkles } from "lucide-react";
 
-import { AppShell } from "@/components/realillust/app-shell";
 import { PageSection, Panel } from "@/components/realillust/primitives";
 import { Badge } from "@/components/ui/badge";
 import { siteConfig } from "@/lib/site";
@@ -50,7 +49,7 @@ const features = [
 
 export default function Home() {
   return (
-    <AppShell>
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -86,6 +85,6 @@ export default function Home() {
           ))}
         </div>
       </PageSection>
-    </AppShell>
+    </>
   );
 }

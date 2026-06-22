@@ -12,6 +12,7 @@ export function StatusPage({
   description,
   actions,
   iconClassName,
+  withoutShell = false,
 }: {
   icon: LucideIcon;
   label: string;
@@ -19,19 +20,24 @@ export function StatusPage({
   description: string;
   actions?: React.ReactNode;
   iconClassName?: string;
+  withoutShell?: boolean;
 }) {
-  return (
-    <AppShell>
-      <PageSection className="flex min-h-[58vh] items-center py-14 sm:py-20">
-        <StatusPanel
-          icon={icon}
-          label={label}
-          title={title}
-          description={description}
-          actions={actions}
-          iconClassName={iconClassName}
-        />
-      </PageSection>
-    </AppShell>
+  const content = (
+    <PageSection className="flex min-h-[58vh] items-center py-14 sm:py-20">
+      <StatusPanel
+        icon={icon}
+        label={label}
+        title={title}
+        description={description}
+        actions={actions}
+        iconClassName={iconClassName}
+      />
+    </PageSection>
   );
+
+  if (withoutShell) {
+    return content;
+  }
+
+  return <AppShell>{content}</AppShell>;
 }
