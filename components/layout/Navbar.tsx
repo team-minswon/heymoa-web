@@ -34,6 +34,7 @@ export function Navbar() {
             height={40}
             className="rounded-xl object-contain"
             priority
+            loading="eager"
           />
           <span>
             <span className="block text-[17px] font-semibold leading-tight text-[var(--clay-primary)]">
