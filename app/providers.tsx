@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
+import type { AuthUser } from "@/lib/auth/types";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -30,12 +31,18 @@ function getQueryClient() {
   return browserQueryClient;
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser | null;
+}) {
   const queryClient = getQueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
     </QueryClientProvider>
   );
 }

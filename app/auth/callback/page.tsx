@@ -1,47 +1,66 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/auth-provider";
+import { Suspense, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function AuthCallbackPage() {
-  const { refresh } = useAuth();
+import { useAuth } from "@/components/auth/auth-provider";
+import { getMe } from "@/lib/auth/api";
+import { normalizeReturnTo } from "@/lib/auth/paths";
+
+function AuthCallbackContent() {
+  const { setUser } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const initialized = useRef(false);
 
   useEffect(() => {
-    if (initialized.current) return;
+    if (initialized.current) {
+      return;
+    }
+
     initialized.current = true;
+
+    const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
 
     const handleCallback = async () => {
       try {
-        await refresh();
+        const user = await getMe();
+        setUser(user);
+        router.replace(returnTo);
+      } catch {
+        setUser(null);
         router.replace("/");
-      } catch (error) {
-        console.error("Authentication failed during callback:", error);
-        router.replace("/auth/error");
       }
     };
 
-    handleCallback();
-  }, [refresh, router]);
+    void handleCallback();
+  }, [router, searchParams, setUser]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-radial from-zinc-900 via-zinc-950 to-black p-4 text-white">
-      {/* Background glow effects */}
-      <div className="absolute top-1/4 left-1/4 h-72 w-72 rounded-full bg-violet-600/10 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none" />
-
-      <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-xl transition-all duration-300">
-        <div className="relative flex h-16 w-16 items-center justify-center">
-          <div className="absolute inset-0 animate-ping rounded-full bg-indigo-500/10 opacity-75" />
-          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-zinc-700 border-t-indigo-500" />
-        </div>
-        <div className="text-center">
-          <h2 className="text-xl font-semibold tracking-tight text-zinc-100">안전하게 로그인 중</h2>
-          <p className="mt-1 text-sm text-zinc-500">인증 정보를 확인하고 있습니다...</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--cg-cream)] p-4 text-[var(--cg-ink)]">
+      <div className="flex w-full max-w-sm flex-col items-center gap-5 rounded-lg border border-black/10 bg-white p-8 text-center shadow-sm">
+        <div className="size-10 animate-spin rounded-full border-2 border-black/10 border-t-[var(--cg-green)]" />
+        <div>
+          <h1 className="text-lg font-semibold">로그인 처리 중</h1>
+          <p className="mt-2 text-sm text-black/58">
+            인증 정보를 확인하고 있습니다.
+          </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[var(--cg-cream)] text-[var(--cg-ink)]">
+          로그인 처리 중
+        </div>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }

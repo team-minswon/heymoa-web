@@ -1,8 +1,6 @@
-import type { AppResponse, AuthTokenResponse, AuthUser } from "@/lib/auth/types";
-
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-
-export const isAuthApiConfigured = Boolean(apiBaseUrl);
+import { notifyAuthStateChanged } from "@/lib/auth/events";
+import { buildApiUrl, isAuthApiConfigured } from "@/lib/auth/paths";
+import type { AppResponse, AuthUser } from "@/lib/auth/types";
 
 class AuthApiError extends Error {
   code?: string;
@@ -16,18 +14,14 @@ class AuthApiError extends Error {
   }
 }
 
-function buildApiUrl(path: string) {
-  if (!apiBaseUrl) {
-    return path;
-  }
-
-  return new URL(path, apiBaseUrl).toString();
-}
-
 async function parseAppResponse<T>(
   response: Response,
   allowEmptyData = false,
 ): Promise<T> {
+  if (response.status === 204 && allowEmptyData) {
+    return undefined as T;
+  }
+
   const body = (await response.json()) as AppResponse<T>;
 
   if (!response.ok || !body.success || body.data === null) {
@@ -45,39 +39,34 @@ async function parseAppResponse<T>(
   return body.data;
 }
 
-async function postAuth<T>(
-  path: string,
-  body?: Record<string, unknown>,
-  allowEmptyData = false,
-) {
+async function postAuth<T>(path: string, allowEmptyData = false) {
   const response = await fetch(buildApiUrl(path), {
     method: "POST",
     credentials: "include",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
   });
 
   return parseAppResponse<T>(response, allowEmptyData);
 }
 
-export async function refreshToken() {
-  return postAuth<AuthTokenResponse>("/api/v1/auth/refresh");
-}
-
-export async function logout() {
-  await postAuth<void>("/api/v1/auth/logout", undefined, true);
-}
-
-export async function getMe(accessToken: string) {
+export async function getMe() {
   const response = await fetch(buildApiUrl("/api/v1/users/me"), {
     method: "GET",
     credentials: "include",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
   });
 
   return parseAppResponse<AuthUser>(response);
 }
 
-export { AuthApiError };
+export async function refreshAuth() {
+  await postAuth<void>("/api/v1/auth/refresh", true);
+}
+
+export async function logout() {
+  try {
+    await postAuth<void>("/api/v1/auth/logout", true);
+  } finally {
+    notifyAuthStateChanged({ reason: "logout" });
+  }
+}
+
+export { AuthApiError, isAuthApiConfigured };

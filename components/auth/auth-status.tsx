@@ -5,9 +5,7 @@ import { LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import { Button } from "@/components/ui/button";
-import { isAuthApiConfigured } from "@/lib/auth/api";
-
-const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+import { isAuthApiConfigured } from "@/lib/auth/paths";
 
 export function AuthStatus() {
   const { user, status, logout } = useAuth();
@@ -26,10 +24,10 @@ export function AuthStatus() {
     return (
       <div className="flex items-center gap-2 sm:gap-3">
         <div className="flex min-w-0 items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5">
-          {user.profileImageUrl ? (
+          {user.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={user.profileImageUrl}
+              src={user.image}
               alt=""
               className="size-7 rounded-full object-cover"
               referrerPolicy="no-referrer"
@@ -57,10 +55,10 @@ export function AuthStatus() {
     );
   }
 
-  if (!googleClientId || !isAuthApiConfigured) {
+  if (!isAuthApiConfigured) {
     return (
       <div className="inline-flex h-10 items-center rounded-full border border-amber-300 bg-amber-50 px-3 text-xs font-semibold text-amber-800 sm:px-4">
-        {!googleClientId ? "Google OAuth 미설정" : "API URL 미설정"}
+        API URL 미설정
       </div>
     );
   }

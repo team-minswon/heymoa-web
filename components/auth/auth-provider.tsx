@@ -10,102 +10,90 @@ import {
 } from "react";
 
 import {
-  getMe,
-  isAuthApiConfigured,
-  logout as requestLogout,
-  refreshToken,
-} from "@/lib/auth/api";
+  AUTH_STATE_CHANGED_EVENT,
+  type AuthStateChangedDetail,
+} from "@/lib/auth/events";
+import { getMe, logout as requestLogout } from "@/lib/auth/api";
 import type { AuthUser } from "@/lib/auth/types";
 
 type AuthStatus = "checking" | "authenticated" | "anonymous";
 
 type AuthContextValue = {
-  accessToken: string | null;
   user: AuthUser | null;
   status: AuthStatus;
-  refresh: () => Promise<void>;
+  setUser: (user: AuthUser | null) => void;
+  refreshUser: () => Promise<AuthUser | null>;
   logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [user, setUser] = useState<AuthUser | null>(null);
+export function AuthProvider({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser | null;
+}) {
+  const [user, setUserState] = useState<AuthUser | null>(initialUser);
   const [status, setStatus] = useState<AuthStatus>(
-    isAuthApiConfigured ? "checking" : "anonymous",
+    initialUser ? "authenticated" : "anonymous",
   );
 
-  const applyTokenResponse = useCallback(
-    async (token: string, responseUser?: AuthUser | null) => {
-      const nextUser = responseUser ?? (await getMe(token));
+  const setUser = useCallback((nextUser: AuthUser | null) => {
+    setUserState(nextUser);
+    setStatus(nextUser ? "authenticated" : "anonymous");
+  }, []);
 
-      setAccessToken(token);
+  const refreshUser = useCallback(async () => {
+    setStatus((current) => (current === "authenticated" ? current : "checking"));
+
+    try {
+      const nextUser = await getMe();
       setUser(nextUser);
-      setStatus("authenticated");
-    },
-    [],
-  );
-
-  const refresh = useCallback(async () => {
-    const tokenResponse = await refreshToken();
-    await applyTokenResponse(tokenResponse.accessToken, tokenResponse.user);
-  }, [applyTokenResponse]);
+      return nextUser;
+    } catch {
+      setUser(null);
+      return null;
+    }
+  }, [setUser]);
 
   const logout = useCallback(async () => {
     try {
       await requestLogout();
     } finally {
-      setAccessToken(null);
       setUser(null);
-      setStatus("anonymous");
     }
-  }, []);
+  }, [setUser]);
 
   useEffect(() => {
-    if (!isAuthApiConfigured) {
-      return;
-    }
+    const handleAuthStateChanged = (event: Event) => {
+      const detail = (event as CustomEvent<AuthStateChangedDetail>).detail;
 
-    let active = true;
-
-    refreshToken()
-      .then(async (tokenResponse) => {
-        const nextUser =
-          tokenResponse.user ?? (await getMe(tokenResponse.accessToken));
-
-        if (!active) {
-          return;
-        }
-
-        setAccessToken(tokenResponse.accessToken);
-        setUser(nextUser);
-        setStatus("authenticated");
-      })
-      .catch(() => {
-        if (!active) {
-          return;
-        }
-
-        setAccessToken(null);
+      if (detail?.reason === "logout" || detail?.reason === "unauthenticated") {
         setUser(null);
-        setStatus("anonymous");
-      });
+      }
+    };
+
+    window.addEventListener(AUTH_STATE_CHANGED_EVENT, handleAuthStateChanged);
 
     return () => {
-      active = false;
+      window.removeEventListener(
+        AUTH_STATE_CHANGED_EVENT,
+        handleAuthStateChanged,
+      );
     };
-  }, []);
+  }, [setUser]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      accessToken,
       user,
       status,
-      refresh,
+      setUser,
+      refreshUser,
       logout,
     }),
-    [accessToken, user, status, refresh, logout],
+    [user, status, setUser, refreshUser, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
