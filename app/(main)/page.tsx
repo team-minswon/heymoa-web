@@ -820,6 +820,8 @@ export default function Home() {
               width={48}
               height={48}
               className="rounded-xl object-contain shrink-0"
+              priority
+              loading="eager"
             />
             <div>
               <h2 className="text-2xl font-semibold tracking-[-0.01em] text-[var(--clay-primary)]">

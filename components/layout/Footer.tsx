@@ -46,6 +46,8 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
               width={40}
               height={40}
               className="rounded-xl object-contain"
+              priority
+              loading="eager"
             />
             <span>
               <span className="block text-lg font-bold text-[var(--clay-primary)]">
