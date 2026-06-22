@@ -1,4 +1,4 @@
-const allowedReturnPaths = new Set(["/", "/terms", "/privacy"]);
+const allowedReturnPaths = new Set(["/", "/terms", "/privacy", "/settings"]);
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -38,7 +38,7 @@ export function getCurrentReturnTo() {
   }
 
   return normalizeReturnTo(
-    `${window.location.pathname}${window.location.search}`,
+    `${window.location.pathname}${window.location.search}`
   );
 }
 
@@ -53,7 +53,7 @@ export function buildApiUrl(path: string) {
 export function buildGoogleOAuthUrl(returnTo: string) {
   const normalizedReturnTo = normalizeReturnTo(returnTo);
   const authorizePath = `/api/v1/auth/oauth2/authorize/google?returnTo=${encodeURIComponent(
-    normalizedReturnTo,
+    normalizedReturnTo
   )}`;
 
   return buildApiUrl(authorizePath);

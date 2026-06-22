@@ -32,16 +32,19 @@ const features = [
     title: "AI 생성 의심 신호",
     body: "이미지 전체 점수만이 아니라 의심 영역, 파일 신호, 메타데이터를 함께 검토하는 방향으로 설계됩니다.",
     icon: Sparkles,
+    className: "bg-[var(--clay-brand-lavender)]",
   },
   {
     title: "창작 이미지 검토",
     body: "일러스트와 웹툰풍 이미지처럼 단순 탐지가 어려운 창작물 검토 흐름에 맞춘 서비스를 준비하고 있습니다.",
     icon: FileSearch,
+    className: "bg-[var(--clay-brand-peach)]",
   },
   {
     title: "운영 기준 보조",
     body: "검사 결과는 확정 판정이 아니라 운영자와 창작자의 판단을 돕는 참고 자료로 제공됩니다.",
     icon: ShieldCheck,
+    className: "bg-[var(--clay-brand-ochre)]",
   },
 ];
 
@@ -54,15 +57,18 @@ export default function Home() {
       />
       <PageSection className="py-16 sm:py-20">
         <div className="max-w-3xl">
-          <Badge variant="outline" className="border-black/10 bg-white">
+          <Badge
+            variant="outline"
+            className="rounded-full border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] text-[var(--clay-primary)]"
+          >
             AI 일러스트 검사
           </Badge>
-          <h1 className="mt-5 text-4xl font-semibold leading-tight sm:text-5xl">
+          <h1 className="mt-5 text-4xl font-medium leading-tight tracking-[-0.05em] sm:text-6xl">
             진짜그림
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-black/62 sm:text-lg">
-            AI 생성 의심 일러스트, 메타데이터, 국소 영역 신호를 함께 분석해
-            창작 이미지 검토를 돕는 서비스입니다.
+          <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--clay-body)] sm:text-lg">
+            AI 생성 의심 일러스트, 메타데이터, 국소 영역 신호를 함께 분석해 창작
+            이미지 검토를 돕는 서비스입니다.
           </p>
         </div>
       </PageSection>
@@ -70,10 +76,10 @@ export default function Home() {
       <PageSection className="pb-16 pt-0">
         <div className="grid gap-5 md:grid-cols-3">
           {features.map((feature) => (
-            <Panel key={feature.title} className="p-6">
-              <feature.icon className="size-7 text-[var(--cg-green)]" />
+            <Panel key={feature.title} className={`${feature.className} p-6`}>
+              <feature.icon className="size-7 text-[var(--clay-primary)]" />
               <h2 className="mt-5 text-xl font-semibold">{feature.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-black/58">
+              <p className="mt-3 text-sm leading-6 text-[var(--clay-body)]">
                 {feature.body}
               </p>
             </Panel>

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AppShell } from "@/components/realillust/app-shell";
 import { PageSection, Panel } from "@/components/realillust/primitives";
+import { StaticShell } from "@/components/realillust/static-shell";
 import { siteConfig } from "@/lib/site";
+
+export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "이용약관",
@@ -71,16 +73,16 @@ const sections = [
 
 export default function TermsPage() {
   return (
-    <AppShell>
+    <StaticShell>
       <PageSection>
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold text-[var(--cg-green)]">
+          <p className="text-sm font-semibold text-[var(--clay-brand-teal)]">
             {siteConfig.name}
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-[-0.01em]">
             이용약관
           </h1>
-          <p className="mt-4 text-sm leading-6 text-black/58">
+          <p className="mt-4 text-sm leading-6 text-[var(--clay-muted)]">
             시행일: 2026년 6월 18일
           </p>
         </div>
@@ -90,7 +92,7 @@ export default function TermsPage() {
             {sections.map((section) => (
               <section key={section.title}>
                 <h2 className="text-xl font-semibold">{section.title}</h2>
-                <div className="mt-4 space-y-3 text-sm leading-7 text-black/62">
+                <div className="mt-4 space-y-3 text-sm leading-7 text-[var(--clay-body)]">
                   {section.body.map((paragraph) => (
                     <p key={paragraph}>{paragraph}</p>
                   ))}
@@ -100,17 +102,17 @@ export default function TermsPage() {
           </div>
         </Panel>
 
-        <div className="mt-6 text-sm text-black/58">
+        <div className="mt-6 text-sm text-[var(--clay-muted)]">
           개인정보 처리에 관한 내용은{" "}
           <Link
             href="/privacy"
-            className="font-semibold text-[var(--cg-green)] underline-offset-4 hover:underline"
+            className="font-semibold text-[var(--clay-brand-teal)] underline-offset-4 hover:underline"
           >
             개인정보 처리방침
           </Link>
           을 확인하세요.
         </div>
       </PageSection>
-    </AppShell>
+    </StaticShell>
   );
 }

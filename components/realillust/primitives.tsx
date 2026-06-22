@@ -9,7 +9,12 @@ export function PageSection({
   className?: string;
 }) {
   return (
-    <section className={cn("mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8", className)}>
+    <section
+      className={cn(
+        "mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8",
+        className
+      )}
+    >
       {children}
     </section>
   );
@@ -25,7 +30,7 @@ export function Panel({
   return (
     <Card
       className={cn(
-        "gap-0 py-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.12)]",
+        "gap-0 rounded-3xl border-0 py-0 shadow-none ring-1 ring-[var(--clay-hairline)]",
         className
       )}
     >

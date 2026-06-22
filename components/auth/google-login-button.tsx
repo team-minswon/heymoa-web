@@ -48,8 +48,8 @@ export function GoogleLoginButton({
         onClick={handleLogin}
         disabled={pending || !isAuthApiConfigured}
         className={cn(
-          "rounded-full border-black/10 bg-white text-black/72 shadow-sm hover:bg-[var(--cg-ceramic)] hover:text-[var(--cg-green)]",
-          compact ? "p-0" : "px-4",
+          "rounded-xl border-[var(--clay-hairline)] bg-[var(--clay-canvas)] text-[var(--clay-primary)] hover:bg-[var(--clay-surface-card)]",
+          compact ? "p-0" : "px-4"
         )}
         aria-label="Google로 로그인"
       >

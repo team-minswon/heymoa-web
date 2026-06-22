@@ -19,8 +19,8 @@ export default function Image() {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        background: "#f2f0eb",
-        color: "#1e3932",
+        background: "#fffaf0",
+        color: "#0a0a0a",
         padding: 72,
         fontFamily: "sans-serif",
       }}
@@ -41,8 +41,8 @@ export default function Image() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: 36,
-            background: "#1e3932",
+            borderRadius: 18,
+            background: "#0a0a0a",
             color: "#ffffff",
           }}
         >
@@ -56,8 +56,8 @@ export default function Image() {
             maxWidth: 900,
             fontSize: 72,
             lineHeight: 1.12,
-            fontWeight: 800,
-            letterSpacing: 0,
+            fontWeight: 500,
+            letterSpacing: -3,
           }}
         >
           AI 일러스트 검사와 이미지 판별
@@ -67,7 +67,7 @@ export default function Image() {
             maxWidth: 880,
             fontSize: 30,
             lineHeight: 1.45,
-            color: "rgba(30, 57, 50, 0.72)",
+            color: "#3a3a3a",
           }}
         >
           AI 생성 일러스트, 공모전 출품 이미지, 메타데이터 신호를 함께
