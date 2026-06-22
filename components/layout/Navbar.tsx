@@ -1,27 +1,83 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Shield } from "lucide-react";
 
 import { AuthStatus } from "@/components/auth/auth-status";
 import { siteConfig } from "@/lib/site";
 
 export function Navbar() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleScroll = (id: string) => {
+    if (pathname === "/") {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      router.push(`/#${id}`);
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--clay-hairline)] bg-[var(--clay-canvas)]/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[var(--clay-hairline)] bg-[var(--clay-canvas)]/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        {/* Left Logo Section */}
         <Link href="/" className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-[var(--clay-primary)] text-white">
+          <span className="grid size-10 place-items-center rounded-xl bg-[var(--clay-primary)] text-white shadow-none">
             <Shield className="size-5" />
           </span>
           <span>
-            <span className="block text-[17px] font-semibold leading-tight">
+            <span className="block text-[17px] font-semibold leading-tight text-[var(--clay-primary)]">
               {siteConfig.name}
             </span>
             <span className="block text-xs font-medium text-[var(--clay-muted)]">
-              AI 일러스트 검사
+              realillust
             </span>
           </span>
         </Link>
-        <AuthStatus />
+
+        {/* Middle Navigation - Hidden on Mobile */}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[var(--clay-muted)]">
+          <button
+            onClick={() => handleScroll("analyze-box")}
+            className="hover:text-[var(--clay-primary)] transition cursor-pointer"
+          >
+            분석하기
+          </button>
+          <button
+            onClick={() => handleScroll("example-section")}
+            className="hover:text-[var(--clay-primary)] transition cursor-pointer"
+          >
+            결과 예시
+          </button>
+          <button
+            onClick={() => handleScroll("features-section")}
+            className="hover:text-[var(--clay-primary)] transition cursor-pointer"
+          >
+            작동 방식
+          </button>
+          <button
+            onClick={() => handleScroll("policy-section")}
+            className="hover:text-[var(--clay-primary)] transition cursor-pointer"
+          >
+            이용 안내
+          </button>
+        </nav>
+
+        {/* Right Section */}
+        <div className="flex items-center gap-3">
+          <AuthStatus />
+          <button
+            onClick={() => handleScroll("analyze-box")}
+            className="hidden sm:inline-flex h-9 items-center justify-center rounded-xl bg-[var(--clay-primary)] px-4 text-xs font-bold text-white transition hover:bg-[var(--clay-brand-teal)] focus:outline-none"
+          >
+            이미지 분석 시작하기
+          </button>
+        </div>
       </div>
     </header>
   );

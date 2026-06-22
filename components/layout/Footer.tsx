@@ -1,11 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Shield } from "lucide-react";
 
 import { siteConfig } from "@/lib/site";
 
 export function Footer({ simplified = false }: { simplified?: boolean }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleScroll = (id: string) => {
+    if (pathname === "/") {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      router.push(`/#${id}`);
+    }
+  };
+
   if (simplified) {
     return (
       <footer className="border-t border-[var(--clay-hairline)] bg-[var(--clay-surface-soft)] text-[var(--clay-body)]">
@@ -25,21 +40,20 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr] lg:px-8">
         <div>
           <Link href="/" className="inline-flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-[var(--clay-primary)] text-white">
+            <span className="grid size-10 place-items-center rounded-xl bg-[var(--clay-primary)] text-white shadow-none">
               <Shield className="size-5" />
             </span>
             <span>
-              <span className="block text-lg font-semibold">
+              <span className="block text-lg font-bold text-[var(--clay-primary)]">
                 {siteConfig.name}
               </span>
               <span className="block text-xs font-medium text-[var(--clay-muted)]">
-                {siteConfig.domain}
+                realillust
               </span>
             </span>
           </Link>
           <p className="mt-5 max-w-md text-sm leading-6 text-[var(--clay-muted)]">
-            AI 생성 의심 이미지, 메타데이터, 국소 영역 신호를 함께 검토해 창작
-            이미지 판단을 돕습니다.
+            AI 생성 여부 확정이 아닌, 시각적 검토를 돕는 Evidence 기반 이미지 분석 서비스
           </p>
           <p className="mt-4 text-sm text-[var(--clay-muted)]">
             문의:{" "}
@@ -53,24 +67,28 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
         </div>
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--clay-brand-ochre)]">
-              서비스
-            </h2>
+            <h2 className="text-sm font-semibold text-[var(--clay-primary)]">서비스</h2>
             <ul className="mt-4 space-y-3">
               <li>
-                <Link
-                  href="/"
-                  className="text-sm font-medium text-[var(--clay-muted)] transition hover:text-[var(--clay-primary)]"
+                <button
+                  onClick={() => handleScroll("analyze-box")}
+                  className="text-sm font-medium text-[var(--clay-muted)] transition hover:text-[var(--clay-primary)] cursor-pointer"
                 >
-                  홈
-                </Link>
+                  분석하기
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleScroll("example-section")}
+                  className="text-sm font-medium text-[var(--clay-muted)] transition hover:text-[var(--clay-primary)] cursor-pointer"
+                >
+                  결과 예시
+                </button>
               </li>
             </ul>
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-[var(--clay-brand-ochre)]">
-              정책
-            </h2>
+            <h2 className="text-sm font-semibold text-[var(--clay-primary)]">정책</h2>
             <ul className="mt-4 space-y-3">
               <li>
                 <Link
