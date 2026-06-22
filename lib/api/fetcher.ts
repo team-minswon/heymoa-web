@@ -1,11 +1,16 @@
+import { notifyAuthStateChanged } from "@/lib/auth/events";
+
 type ApiFetchOptions = RequestInit & {
   headers?: HeadersInit;
   data?: BodyInit | Record<string, unknown>;
   params?: Record<string, unknown>;
   responseType?: string;
+  skipAuthRefresh?: boolean;
 };
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+let refreshPromise: Promise<void> | null = null;
 
 function buildUrl(path: string, params?: Record<string, unknown>) {
   const url = new URL(path, apiBaseUrl || "http://localhost");
@@ -31,25 +36,38 @@ function buildBody(data: ApiFetchOptions["data"]) {
   return JSON.stringify(data);
 }
 
-export async function apiFetch<T>(
-  url: string,
-  options?: ApiFetchOptions
-): Promise<T> {
-  const { headers, data, params, signal, responseType, ...requestOptions } =
-    options ?? {};
-  const isJsonBody =
-    data && !(data instanceof FormData) && !(data instanceof Blob);
+function shouldSkipRefresh(url: string, options: ApiFetchOptions) {
+  if (options.skipAuthRefresh) {
+    return true;
+  }
 
-  const response = await fetch(buildUrl(url, params), {
-    ...requestOptions,
-    headers: {
-      ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
-      ...headers,
-    },
-    body: buildBody(data),
-    signal,
-  });
+  return (
+    url.includes("/api/v1/auth/refresh") ||
+    url.includes("/api/v1/auth/logout") ||
+    url.includes("/api/v1/auth/oauth2/")
+  );
+}
 
+async function refreshAuthOnce() {
+  if (!refreshPromise) {
+    refreshPromise = fetch(buildUrl("/api/v1/auth/refresh"), {
+      method: "POST",
+      credentials: "include",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Authentication refresh failed.");
+        }
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
+async function parseResponse<T>(response: Response, responseType?: string) {
   const responseData =
     response.status === 204
       ? undefined
@@ -66,4 +84,56 @@ export async function apiFetch<T>(
     status: response.status,
     headers: response.headers,
   } as T;
+}
+
+async function request<T>(
+  url: string,
+  options: ApiFetchOptions,
+  hasRetried: boolean,
+): Promise<T> {
+  const {
+    headers,
+    data,
+    params,
+    signal,
+    responseType,
+    skipAuthRefresh,
+    ...requestOptions
+  } = options;
+  const isJsonBody =
+    data && !(data instanceof FormData) && !(data instanceof Blob);
+  const builtUrl = buildUrl(url, params);
+
+  const response = await fetch(builtUrl, {
+    ...requestOptions,
+    credentials: "include",
+    headers: {
+      ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
+      ...headers,
+    },
+    body: buildBody(data),
+    signal,
+  });
+
+  if (
+    response.status === 401 &&
+    !hasRetried &&
+    !shouldSkipRefresh(url, { ...options, skipAuthRefresh })
+  ) {
+    try {
+      await refreshAuthOnce();
+      return request<T>(url, options, true);
+    } catch {
+      notifyAuthStateChanged({ reason: "unauthenticated" });
+    }
+  }
+
+  return parseResponse<T>(response, responseType);
+}
+
+export async function apiFetch<T>(
+  url: string,
+  options?: ApiFetchOptions,
+): Promise<T> {
+  return request<T>(url, options ?? {}, false);
 }
