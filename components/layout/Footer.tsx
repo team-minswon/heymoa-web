@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Shield } from "lucide-react";
 
 import { siteConfig } from "@/lib/site";
 
@@ -40,9 +40,13 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr] lg:px-8">
         <div>
           <Link href="/" className="inline-flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-[var(--clay-primary)] text-white shadow-none">
-              <Shield className="size-5" />
-            </span>
+            <Image
+              src="/apple-touch-icon.png"
+              alt="진짜그림"
+              width={40}
+              height={40}
+              className="rounded-xl object-contain"
+            />
             <span>
               <span className="block text-lg font-bold text-[var(--clay-primary)]">
                 {siteConfig.name}

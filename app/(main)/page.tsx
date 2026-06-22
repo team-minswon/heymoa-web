@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   AlertCircle,
   ArrowRight,
@@ -13,7 +14,6 @@ import {
   Layers,
   Lock,
   RefreshCw,
-  ShieldCheck,
   Sliders,
   Sparkles,
   Upload,
@@ -814,9 +814,13 @@ export default function Home() {
       <PageSection className="py-20 bg-[var(--clay-canvas)] border-t border-[var(--clay-hairline)]">
         <div className="mx-auto max-w-4xl rounded-2xl border border-[var(--clay-hairline)] bg-[var(--clay-surface-soft)] p-8 sm:p-10">
           <div className="flex flex-col md:flex-row md:items-start gap-8">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--clay-surface-card)] border border-[var(--clay-hairline)] text-[var(--clay-primary)]">
-              <ShieldCheck className="size-6" />
-            </div>
+            <Image
+              src="/apple-touch-icon.png"
+              alt="진짜그림"
+              width={48}
+              height={48}
+              className="rounded-xl object-contain shrink-0"
+            />
             <div>
               <h2 className="text-2xl font-semibold tracking-[-0.01em] text-[var(--clay-primary)]">
                 진짜그림은 확정 판정기가 아니라 검토 보조 도구입니다
