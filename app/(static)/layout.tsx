@@ -1,9 +1,9 @@
-import { StaticShell } from "@/components/realillust/static-shell";
+import { PageTransition } from "@/components/layout/PageTransition";
 
 export default function StaticLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <StaticShell>{children}</StaticShell>;
+  return <PageTransition>{children}</PageTransition>;
 }

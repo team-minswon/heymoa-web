@@ -3,7 +3,14 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
+
+import { FooterGate } from "@/components/FooterGate";
+import { Footer } from "@/components/layout/Footer";
+import { Navbar } from "@/components/layout/Navbar";
+import { NavbarGate } from "@/components/NavbarGate";
+import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { siteConfig } from "@/lib/site";
+import { Providers } from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -75,11 +82,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialUser = await getCurrentUserForSsr();
+
   return (
     <html
       lang="ko"
@@ -87,7 +96,19 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <NextTopLoader color="#ff4d8b" showSpinner={false} />
-        {children}
+        <Providers initialUser={initialUser}>
+          <div className="flex min-h-screen flex-col bg-[var(--cg-cream)] text-[var(--cg-ink)]">
+            <NavbarGate>
+              <Navbar />
+            </NavbarGate>
+
+            <main className="flex-1 flex flex-col">{children}</main>
+
+            <FooterGate>
+              <Footer />
+            </FooterGate>
+          </div>
+        </Providers>
         <Analytics />
         <SpeedInsights />
       </body>

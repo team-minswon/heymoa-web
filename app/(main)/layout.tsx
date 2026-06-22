@@ -1,9 +1,9 @@
-import { AppShell } from "@/components/realillust/app-shell";
+import { PageTransition } from "@/components/layout/PageTransition";
 
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <AppShell>{children}</AppShell>;
+  return <PageTransition>{children}</PageTransition>;
 }
