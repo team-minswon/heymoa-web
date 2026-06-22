@@ -53,7 +53,8 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
             </span>
           </Link>
           <p className="mt-5 max-w-md text-sm leading-6 text-[var(--clay-muted)]">
-            AI 생성 여부 확정이 아닌, 시각적 검토를 돕는 Evidence 기반 이미지 분석 서비스
+            AI 생성 여부 확정이 아닌, 시각적 검토를 돕는 Evidence 기반 이미지
+            분석 서비스
           </p>
           <p className="mt-4 text-sm text-[var(--clay-muted)]">
             문의:{" "}
@@ -67,7 +68,9 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
         </div>
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--clay-primary)]">서비스</h2>
+            <h2 className="text-sm font-semibold text-[var(--clay-primary)]">
+              서비스
+            </h2>
             <ul className="mt-4 space-y-3">
               <li>
                 <button
@@ -88,7 +91,9 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
             </ul>
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-[var(--clay-primary)]">정책</h2>
+            <h2 className="text-sm font-semibold text-[var(--clay-primary)]">
+              정책
+            </h2>
             <ul className="mt-4 space-y-3">
               <li>
                 <Link

@@ -117,7 +117,7 @@ export default function Home() {
                 variants={fadeInUp}
                 className="mt-6 text-4xl font-semibold tracking-[-0.03em] text-[var(--clay-primary)] sm:text-5xl lg:text-6xl lg:leading-[1.1] break-keep"
               >
-                일러스트의 AI 생성 의심 신호를<span>  </span>
+                일러스트의 AI 생성 의심 신호를<span> </span>
                 <span className="text-[var(--clay-brand-pink)]">
                   한눈에 확인하세요
                 </span>
@@ -708,7 +708,10 @@ export default function Home() {
       </PageSection>
 
       {/* Free Usage Policy Section */}
-      <PageSection id="policy-section" className="py-20 bg-[var(--clay-canvas)]">
+      <PageSection
+        id="policy-section"
+        className="py-20 bg-[var(--clay-canvas)]"
+      >
         <div className="mx-auto max-w-4xl rounded-2xl border border-[var(--clay-hairline)] bg-gradient-to-tr from-[var(--clay-primary)] to-[var(--clay-brand-teal)] p-8 text-white shadow-none sm:p-12 relative overflow-hidden">
           <div className="absolute right-0 top-0 size-72 bg-white/5 blur-3xl rounded-full" />
           <div className="relative z-10 grid gap-8 md:grid-cols-2 md:items-center">

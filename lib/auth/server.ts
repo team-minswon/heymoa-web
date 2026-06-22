@@ -1,6 +1,5 @@
-import "server-only";
-
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
 
@@ -21,41 +20,43 @@ function serializeCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
     .join("; ");
 }
 
-export async function getCurrentUserForSsr(): Promise<AuthUser | null> {
-  const url = buildServerApiUrl("/api/v1/users/me");
+export const getCurrentUserForSsr = cache(
+  async (): Promise<AuthUser | null> => {
+    const url = buildServerApiUrl("/api/v1/users/me");
 
-  if (!url) {
-    return null;
-  }
-
-  const cookieHeader = serializeCookies(await cookies());
-
-  if (!cookieHeader) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Cookie: cookieHeader,
-      },
-      credentials: "include",
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
+    if (!url) {
       return null;
     }
 
-    const body = (await response.json()) as AppResponse<AuthUser>;
+    const cookieHeader = serializeCookies(await cookies());
 
-    if (!body.success || !body.data) {
+    if (!cookieHeader) {
       return null;
     }
 
-    return body.data;
-  } catch {
-    return null;
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Cookie: cookieHeader,
+        },
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const body = (await response.json()) as AppResponse<AuthUser>;
+
+      if (!body.success || !body.data) {
+        return null;
+      }
+
+      return body.data;
+    } catch {
+      return null;
+    }
   }
-}
+);

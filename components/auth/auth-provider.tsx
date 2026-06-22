@@ -6,8 +6,8 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   AUTH_STATE_CHANGED_EVENT,
@@ -35,21 +35,25 @@ export function AuthProvider({
   children: React.ReactNode;
   initialUser: AuthUser | null;
 }) {
-  const [user, setUserState] = useState<AuthUser | null>(initialUser);
-  const [status, setStatus] = useState<AuthStatus>(
-    initialUser ? "authenticated" : "anonymous"
+  const queryClient = useQueryClient();
+
+  const { data: user, status: queryStatus } = useQuery<AuthUser | null>({
+    queryKey: ["user"],
+    queryFn: getMe,
+    initialData: initialUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache stale time
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const setUser = useCallback(
+    (nextUser: AuthUser | null) => {
+      queryClient.setQueryData(["user"], nextUser);
+    },
+    [queryClient]
   );
 
-  const setUser = useCallback((nextUser: AuthUser | null) => {
-    setUserState(nextUser);
-    setStatus(nextUser ? "authenticated" : "anonymous");
-  }, []);
-
   const refreshUser = useCallback(async () => {
-    setStatus((current) =>
-      current === "authenticated" ? current : "checking"
-    );
-
     try {
       const nextUser = await getMe();
       setUser(nextUser);
@@ -87,9 +91,16 @@ export function AuthProvider({
     };
   }, [setUser]);
 
+  const status = useMemo<AuthStatus>(() => {
+    if ((queryStatus as string) === "pending") {
+      return "checking";
+    }
+    return user ? "authenticated" : "anonymous";
+  }, [queryStatus, user]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
+      user: user ?? null,
       status,
       setUser,
       refreshUser,
