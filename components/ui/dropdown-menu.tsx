@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
 
@@ -110,6 +112,7 @@ function DropdownMenuLinkItem({
 }) {
   return (
     <MenuPrimitive.LinkItem
+      render={props.href ? <Link href={props.href} /> : undefined}
       data-slot="dropdown-menu-link-item"
       data-inset={inset}
       data-variant={variant}
