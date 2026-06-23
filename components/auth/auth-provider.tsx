@@ -40,7 +40,7 @@ export function AuthProvider({
   const { data: user, status: queryStatus } = useQuery<AuthUser | null>({
     queryKey: ["user"],
     queryFn: getMe,
-    initialData: initialUser,
+    ...(initialUser !== null ? { initialData: initialUser } : {}),
     staleTime: 5 * 60 * 1000, // 5 minutes cache stale time
     retry: false,
     refetchOnWindowFocus: false,
