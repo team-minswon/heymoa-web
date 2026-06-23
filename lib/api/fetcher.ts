@@ -48,7 +48,7 @@ function shouldSkipRefresh(url: string, options: ApiFetchOptions) {
   );
 }
 
-async function refreshAuthOnce() {
+export async function refreshAuthOnce() {
   if (!refreshPromise) {
     refreshPromise = fetch(buildUrl("/api/v1/auth/refresh"), {
       method: "POST",
@@ -125,6 +125,7 @@ async function request<T>(
       return request<T>(url, options, true);
     } catch {
       notifyAuthStateChanged({ reason: "unauthenticated" });
+      throw new Error("Authentication refresh failed.");
     }
   }
 
