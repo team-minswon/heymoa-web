@@ -44,12 +44,12 @@ export function GoogleLoginButton({
       <Button
         type="button"
         variant="outline"
-        size={compact ? "icon-lg" : "lg"}
+        size={compact ? "icon-xl" : "xl"}
         onClick={handleLogin}
         disabled={pending || !isAuthApiConfigured}
         className={cn(
-          "rounded-xl border-[var(--clay-hairline)] bg-[var(--clay-canvas)] text-[var(--clay-primary)] hover:bg-[var(--clay-surface-card)]",
-          compact ? "p-0" : "px-4"
+          "rounded-xl border-[var(--clay-hairline)] bg-[var(--clay-canvas)] text-[var(--clay-primary)] hover:bg-[var(--clay-surface-card)] font-semibold",
+          compact ? "p-0" : "pl-3.5 pr-4"
         )}
         aria-label="Google로 로그인"
       >
