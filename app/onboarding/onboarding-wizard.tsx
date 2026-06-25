@@ -312,9 +312,7 @@ export function OnboardingWizard() {
                 <div className="mt-2 flex items-center justify-between text-xs">
                   <p
                     className={
-                      otherTooLong
-                        ? "text-red-600"
-                        : "text-[var(--clay-muted)]"
+                      otherTooLong ? "text-red-600" : "text-[var(--clay-muted)]"
                     }
                   >
                     {otherTooLong
@@ -323,9 +321,7 @@ export function OnboardingWizard() {
                   </p>
                   <p
                     className={
-                      otherTooLong
-                        ? "text-red-600"
-                        : "text-[var(--clay-muted)]"
+                      otherTooLong ? "text-red-600" : "text-[var(--clay-muted)]"
                     }
                   >
                     {otherValue.length}/{ONBOARDING_MAX_LENGTH}

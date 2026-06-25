@@ -61,7 +61,5 @@ export const getOrganizationForSsr = cache((publicId: string) =>
 );
 
 export const getOrganizationMembersForSsr = cache((publicId: string) =>
-  getServerData<OrganizationMember[]>(
-    `/v1/organizations/${publicId}/members`
-  )
+  getServerData<OrganizationMember[]>(`/v1/organizations/${publicId}/members`)
 );

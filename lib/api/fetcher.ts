@@ -72,10 +72,8 @@ function isOnboardingRequiredError(value: unknown) {
     typeof value === "object" &&
     value !== null &&
     "error" in value &&
-    typeof (value as { error?: { code?: unknown } }).error?.code ===
-      "string" &&
-    (value as { error: { code: string } }).error.code ===
-      "ONBOARDING_REQUIRED"
+    typeof (value as { error?: { code?: unknown } }).error?.code === "string" &&
+    (value as { error: { code: string } }).error.code === "ONBOARDING_REQUIRED"
   );
 }
 

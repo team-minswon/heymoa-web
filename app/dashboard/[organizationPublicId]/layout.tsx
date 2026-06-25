@@ -53,5 +53,7 @@ export default async function OrganizationDashboardLayout({
     );
   }
 
-  return <DashboardShell organization={organization}>{children}</DashboardShell>;
+  return (
+    <DashboardShell organization={organization}>{children}</DashboardShell>
+  );
 }
