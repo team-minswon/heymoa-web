@@ -42,15 +42,15 @@ function shouldSkipRefresh(url: string, options: ApiFetchOptions) {
   }
 
   return (
-    url.includes("/api/v1/auth/refresh") ||
-    url.includes("/api/v1/auth/logout") ||
-    url.includes("/api/v1/auth/oauth2/")
+    url.includes("/v1/auth/refresh") ||
+    url.includes("/v1/auth/logout") ||
+    url.includes("/v1/auth/oauth2/")
   );
 }
 
 export async function refreshAuthOnce() {
   if (!refreshPromise) {
-    refreshPromise = fetch(buildUrl("/api/v1/auth/refresh"), {
+    refreshPromise = fetch(buildUrl("/v1/auth/refresh"), {
       method: "POST",
       credentials: "include",
     })
@@ -67,6 +67,18 @@ export async function refreshAuthOnce() {
   return refreshPromise;
 }
 
+function isOnboardingRequiredError(value: unknown) {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "error" in value &&
+    typeof (value as { error?: { code?: unknown } }).error?.code ===
+      "string" &&
+    (value as { error: { code: string } }).error.code ===
+      "ONBOARDING_REQUIRED"
+  );
+}
+
 async function parseResponse<T>(response: Response, responseType?: string) {
   const responseData =
     response.status === 204
@@ -76,6 +88,14 @@ async function parseResponse<T>(response: Response, responseType?: string) {
         : await response.json();
 
   if (!response.ok) {
+    if (
+      typeof window !== "undefined" &&
+      response.status === 403 &&
+      isOnboardingRequiredError(responseData)
+    ) {
+      window.location.assign("/onboarding");
+    }
+
     throw responseData;
   }
 

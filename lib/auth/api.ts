@@ -50,7 +50,7 @@ async function postAuth<T>(path: string, allowEmptyData = false) {
 }
 
 async function fetchMe(hasRetried = false): Promise<AuthUser> {
-  const url = buildApiUrl("/api/v1/users/me");
+  const url = buildApiUrl("/v1/users/me");
   const response = await fetch(url, {
     method: "GET",
     credentials: "include",
@@ -74,12 +74,12 @@ export async function getMe(): Promise<AuthUser> {
 }
 
 export async function refreshAuth() {
-  await postAuth<void>("/api/v1/auth/refresh", true);
+  await postAuth<void>("/v1/auth/refresh", true);
 }
 
 export async function logout() {
   try {
-    await postAuth<void>("/api/v1/auth/logout", true);
+    await postAuth<void>("/v1/auth/logout", true);
   } finally {
     notifyAuthStateChanged({ reason: "logout" });
   }

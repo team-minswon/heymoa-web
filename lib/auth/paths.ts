@@ -52,7 +52,7 @@ export function buildApiUrl(path: string) {
 
 export function buildGoogleOAuthUrl(returnTo: string) {
   const normalizedReturnTo = normalizeReturnTo(returnTo);
-  const authorizePath = `/api/v1/auth/oauth2/authorize/google?returnTo=${encodeURIComponent(
+  const authorizePath = `/v1/auth/oauth2/authorize/google?returnTo=${encodeURIComponent(
     normalizedReturnTo
   )}`;
 

@@ -121,7 +121,7 @@ export async function proxy(request: NextRequest) {
 
   try {
     const refreshResponse = await fetch(
-      new URL("/api/v1/auth/refresh", apiBaseUrl),
+      new URL("/v1/auth/refresh", apiBaseUrl),
       {
         method: "POST",
         headers: {

@@ -22,7 +22,7 @@ function serializeCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
 
 export const getCurrentUserForSsr = cache(
   async (): Promise<AuthUser | null> => {
-    const url = buildServerApiUrl("/api/v1/users/me");
+    const url = buildServerApiUrl("/v1/users/me");
 
     if (!url) {
       return null;
