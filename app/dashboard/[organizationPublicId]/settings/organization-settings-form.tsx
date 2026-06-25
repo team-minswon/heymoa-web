@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { updateOrganizationName } from "@/lib/organization/api";
 import type { OrganizationDetail } from "@/lib/organization/types";
@@ -12,6 +13,7 @@ export function OrganizationSettingsForm({
   organization: OrganizationDetail;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [name, setName] = useState(organization.name);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -25,9 +27,12 @@ export function OrganizationSettingsForm({
         startTransition(async () => {
           try {
             await updateOrganizationName(organization.publicId, name.trim());
+            await queryClient.invalidateQueries({
+              queryKey: ["organizations"],
+            });
             router.refresh();
-          } catch {
-            setError("조직 이름을 수정하지 못했습니다.");
+          } catch (e: any) {
+            setError(e?.message ?? "조직 이름을 수정하지 못했습니다.");
           }
         });
       }}
