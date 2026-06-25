@@ -7,7 +7,7 @@ export function FooterGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // Hide Footer on the authentication callback page
-  if (pathname === "/auth/callback") return null;
+  if (pathname === "/auth/callback" || pathname === "/onboarding") return null;
 
   const isStatic = pathname === "/privacy" || pathname === "/terms";
 
