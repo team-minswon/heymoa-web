@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, type Variants } from "motion/react";
+import { useMutation } from "@tanstack/react-query";
 
 import { cn } from "@/lib/utils";
 import { submitOnboardingProfile } from "@/lib/onboarding/api";
@@ -26,6 +27,102 @@ const initialOtherValues: Record<OnboardingStepKey, string> = {
   primaryUseCase: "",
 };
 
+const stepColors: Record<
+  OnboardingStepKey,
+  { bg: string; border: string; text: string }
+> = {
+  acquisitionSource: {
+    bg: "bg-[var(--clay-brand-peach)]",
+    border: "border-[var(--clay-primary)]",
+    text: "text-[var(--clay-primary)]",
+  },
+  userType: {
+    bg: "bg-[var(--clay-brand-lavender)]",
+    border: "border-[var(--clay-primary)]",
+    text: "text-[var(--clay-primary)]",
+  },
+  primaryUseCase: {
+    bg: "bg-[var(--clay-brand-pink)]",
+    border: "border-[var(--clay-primary)]",
+    text: "text-white",
+  },
+};
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0, transition: { duration: 0 } },
+};
+
+const eyebrowVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 30,
+    filter: "blur(8px)",
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.5,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0,
+    },
+  },
+};
+
+const wordVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 30,
+    filter: "blur(8px)",
+  },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.5,
+      delay: i * 0.08,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  }),
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0,
+    },
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 30,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      delay: 0.25,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0,
+    },
+  },
+};
+
 export function OnboardingWizard() {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
@@ -33,20 +130,45 @@ export function OnboardingWizard() {
   const [answers, setAnswers] = useState<OnboardingAnswers>(initialAnswers);
   const [otherValues, setOtherValues] = useState(initialOtherValues);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const mutation = useMutation({
+    mutationFn: submitOnboardingProfile,
+    onSuccess: () => {
+      router.replace("/");
+      router.refresh();
+    },
+    onError: (submitError: Error) => {
+      setError(submitError.message || "온보딩 저장에 실패했습니다.");
+    },
+  });
 
   const step = ONBOARDING_STEPS[stepIndex];
   const currentValue = answers[step.key];
   const otherValue = otherValues[step.key];
   const otherTooLong = otherValue.length > ONBOARDING_MAX_LENGTH;
   const canGoNext =
-    currentValue.trim().length > 0 && !otherTooLong && !isPending;
+    currentValue.trim().length > 0 && !otherTooLong && !mutation.isPending;
   const progress = ((stepIndex + 1) / ONBOARDING_STEPS.length) * 100;
 
   const selectedOption = useMemo(
     () => step.options.find((option) => option === currentValue) ?? null,
     [currentValue, step.options]
   );
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[var(--cg-cream)] text-[var(--cg-ink)] flex items-center justify-center">
+        <div className="animate-pulse text-sm font-semibold text-[var(--clay-muted)]">
+          온보딩 준비 중...
+        </div>
+      </div>
+    );
+  }
 
   function selectOption(value: string) {
     setError(null);
@@ -78,22 +200,10 @@ export function OnboardingWizard() {
       return;
     }
 
-    startTransition(async () => {
-      try {
-        await submitOnboardingProfile({
-          acquisitionSource: answers.acquisitionSource.trim(),
-          userType: answers.userType.trim(),
-          primaryUseCase: answers.primaryUseCase.trim(),
-        });
-        router.replace("/");
-        router.refresh();
-      } catch (submitError) {
-        setError(
-          submitError instanceof Error
-            ? submitError.message
-            : "온보딩 저장에 실패했습니다."
-        );
-      }
+    mutation.mutate({
+      acquisitionSource: answers.acquisitionSource.trim(),
+      userType: answers.userType.trim(),
+      primaryUseCase: answers.primaryUseCase.trim(),
     });
   }
 
@@ -113,23 +223,53 @@ export function OnboardingWizard() {
             <motion.section
               key={step.key}
               custom={direction}
-              initial={{ opacity: 0, x: direction * 48, filter: "blur(6px)" }}
-              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, x: direction * -48, filter: "blur(6px)" }}
-              transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
               className="w-full"
             >
-              <p className="mb-3 text-xs font-bold tracking-[0.16em] text-[var(--clay-muted)] uppercase">
+              {/* Eyebrow */}
+              <motion.p
+                variants={eyebrowVariants}
+                className="mb-3 text-xs font-bold tracking-[0.16em] text-[var(--clay-muted)] uppercase"
+              >
                 {step.eyebrow}
-              </p>
+              </motion.p>
+
+              {/* Title Word-by-Word Animation */}
               <h1 className="text-3xl leading-tight font-bold tracking-[0] sm:text-5xl">
-                {step.title}
+                {step.title.split(" ").map((word, i) => (
+                  <motion.span
+                    key={`${step.key}-title-${i}`}
+                    custom={i}
+                    variants={wordVariants}
+                    className="inline-block mr-[0.25em]"
+                  >
+                    {word}
+                  </motion.span>
+                ))}
               </h1>
+
+              {/* Description Word-by-Word Animation */}
               <p className="mt-4 text-base leading-7 text-[var(--clay-muted)]">
-                {step.description}
+                {step.description.split(" ").map((word, i) => (
+                  <motion.span
+                    key={`${step.key}-desc-${i}`}
+                    custom={i}
+                    variants={wordVariants}
+                    className="inline-block mr-[0.25em]"
+                  >
+                    {word}
+                  </motion.span>
+                ))}
               </p>
 
-              <div className="mt-9 grid gap-3 sm:grid-cols-2">
+              {/* Options Grid rising up */}
+              <motion.div
+                variants={cardVariants}
+                className="mt-9 grid gap-3 sm:grid-cols-2"
+              >
                 {step.options.map((option) => {
                   const selected = selectedOption === option;
 
@@ -143,8 +283,8 @@ export function OnboardingWizard() {
                       className={cn(
                         "relative flex min-h-14 items-center justify-between rounded-xl border px-4 text-left text-sm font-semibold transition",
                         selected
-                          ? "border-[var(--clay-primary)] bg-white shadow-lg shadow-black/5"
-                          : "border-[var(--clay-hairline)] bg-white/60 hover:bg-white"
+                          ? `${stepColors[step.key].bg} ${stepColors[step.key].border} ${stepColors[step.key].text} shadow-lg shadow-black/5`
+                          : "border-[var(--clay-hairline)] bg-white/60 hover:bg-white text-[var(--clay-primary)]"
                       )}
                     >
                       <span>{option}</span>
@@ -152,9 +292,10 @@ export function OnboardingWizard() {
                     </motion.button>
                   );
                 })}
-              </div>
+              </motion.div>
 
-              <div className="mt-4">
+              {/* Other Input Container rising up */}
+              <motion.div variants={cardVariants} className="mt-4">
                 <label className="mb-2 block text-sm font-semibold">기타</label>
                 <input
                   value={otherValue}
@@ -190,7 +331,7 @@ export function OnboardingWizard() {
                     {otherValue.length}/{ONBOARDING_MAX_LENGTH}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             </motion.section>
           </AnimatePresence>
         </div>
@@ -201,7 +342,7 @@ export function OnboardingWizard() {
             <button
               type="button"
               onClick={goBack}
-              disabled={stepIndex === 0 || isPending}
+              disabled={stepIndex === 0 || mutation.isPending}
               className="rounded-full px-5 py-2.5 text-sm font-semibold text-[var(--clay-muted)] transition hover:bg-black/5 disabled:pointer-events-none disabled:opacity-40"
             >
               이전
@@ -210,10 +351,10 @@ export function OnboardingWizard() {
               type="button"
               onClick={goNext}
               disabled={!canGoNext}
-              className="rounded-full bg-[var(--clay-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-black/10 transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex h-10 w-24 items-center justify-center rounded-full bg-[var(--clay-primary)] text-sm font-bold text-white shadow-md shadow-black/10 transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
             >
               {stepIndex === ONBOARDING_STEPS.length - 1
-                ? isPending
+                ? mutation.isPending
                   ? "저장 중"
                   : "완료"
                 : "다음"}

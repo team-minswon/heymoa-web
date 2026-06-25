@@ -11,17 +11,18 @@ type AppResponse<T> = {
 };
 
 export async function submitOnboardingProfile(answers: OnboardingAnswers) {
-  const response = await apiFetch<AppResponse<OnboardingCompletion>>(
-    "/v1/onboarding/profile",
-    {
-      method: "POST",
-      data: answers,
-    }
-  );
+  const { data: resBody } = await apiFetch<{
+    data: AppResponse<OnboardingCompletion>;
+    status: number;
+    headers: Headers;
+  }>("/v1/onboarding/profile", {
+    method: "POST",
+    data: answers,
+  });
 
-  if (!response.success || !response.data?.onboardingCompleted) {
-    throw new Error(response.error?.message ?? "온보딩 저장에 실패했습니다.");
+  if (!resBody || !resBody.success || !resBody.data?.onboardingCompleted) {
+    throw new Error(resBody?.error?.message ?? "온보딩 저장에 실패했습니다.");
   }
 
-  return response.data;
+  return resBody.data;
 }
