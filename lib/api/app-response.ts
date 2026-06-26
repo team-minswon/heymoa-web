@@ -1,10 +1,18 @@
-import type { AppError, AppResponse } from "@/lib/auth/types";
+type AppResponseLike<T> = {
+  success: boolean;
+  data?: T | null;
+  error?: {
+    code?: string;
+    message?: string;
+    details?: unknown;
+  } | null;
+};
 
 export class AppResponseError extends Error {
   public readonly code?: string;
-  public readonly details?: AppError["details"];
+  public readonly details?: unknown;
 
-  constructor(message: string, code?: string, details?: AppError["details"]) {
+  constructor(message: string, code?: string, details?: unknown) {
     super(message);
     this.name = "AppResponseError";
     this.code = code;
@@ -12,8 +20,37 @@ export class AppResponseError extends Error {
   }
 }
 
-export function unwrapAppResponse<T>(body: AppResponse<T>): T {
-  if (!body.success || body.data === null) {
+function isAppResponseLike(value: unknown): value is AppResponseLike<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "success" in value &&
+    typeof (value as { success?: unknown }).success === "boolean"
+  );
+}
+
+export function toAppResponseError(error: unknown, fallback = "Request failed.") {
+  if (error instanceof AppResponseError) {
+    return error;
+  }
+
+  if (isAppResponseLike(error)) {
+    return new AppResponseError(
+      error.error?.message ?? fallback,
+      error.error?.code,
+      error.error?.details
+    );
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new AppResponseError(fallback);
+}
+
+export function unwrapAppResponse<T>(body: AppResponseLike<T>): T {
+  if (!body.success || body.data === null || body.data === undefined) {
     throw new AppResponseError(
       body.error?.message ?? "Request failed.",
       body.error?.code,
@@ -25,7 +62,7 @@ export function unwrapAppResponse<T>(body: AppResponse<T>): T {
 }
 
 export function unwrapGeneratedAppResponse<T>(response: {
-  data?: AppResponse<T>;
+  data?: AppResponseLike<T>;
 }): T {
   if (!response.data) {
     throw new AppResponseError("Empty response.");
