@@ -1,16 +1,10 @@
 "use client";
 
-import { Copy, MoreHorizontal } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 import type { ApiKeyResponse } from "@/lib/api/generated/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import {
   formatApiKeyTimestamp,
@@ -99,9 +93,8 @@ export function ApiKeysTable({
                   </span>
                 </td>
                 <td className="px-5 py-4">
-                  <code className="flex min-w-0 items-center gap-2 truncate rounded-md border border-[var(--clay-hairline)] bg-[var(--clay-surface-soft)] px-2 py-1 font-mono text-xs text-[var(--clay-muted)]">
-                    <Copy className="size-3.5 shrink-0" />
-                    <span className="truncate">{apiKey.maskedKey}</span>
+                  <code className="block truncate rounded-md border border-[var(--clay-hairline)] bg-[var(--clay-surface-soft)] px-2 py-1 font-mono text-xs text-[var(--clay-muted)]">
+                    {apiKey.maskedKey}
                   </code>
                 </td>
                 <td className="px-5 py-4">
@@ -121,28 +114,30 @@ export function ApiKeysTable({
                   </span>
                 </td>
                 <td className="px-5 py-4">
-                  <div className="flex justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={<Button variant="ghost" size="icon-sm" />}
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onRename(apiKey)}
+                      aria-label={`Rename ${formatKeyName(apiKey.name)}`}
+                      title="Rename"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    {apiKey.status === "ACTIVE" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => onRevoke(apiKey)}
+                        aria-label={`Revoke ${formatKeyName(apiKey.name)}`}
+                        title="Revoke"
                       >
-                        <MoreHorizontal className="size-4" />
-                        <span className="sr-only">Open API key actions</span>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-32">
-                        <DropdownMenuItem onClick={() => onRename(apiKey)}>
-                          Rename
-                        </DropdownMenuItem>
-                        {apiKey.status === "ACTIVE" ? (
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => onRevoke(apiKey)}
-                          >
-                            Revoke
-                          </DropdownMenuItem>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 </td>
               </tr>
