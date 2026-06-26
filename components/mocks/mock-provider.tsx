@@ -7,9 +7,7 @@ import { enableMocking, shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 const MOCK_START_TIMEOUT_MS = 3000;
 
 export function MockProvider({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(
-    typeof window === "undefined" || !shouldEnableMocking()
-  );
+  const [ready, setReady] = useState(!shouldEnableMocking());
 
   useEffect(() => {
     let mounted = true;
