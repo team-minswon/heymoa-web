@@ -119,6 +119,7 @@ export function ApiKeysTable({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
+                      className="text-[var(--clay-muted)] hover:bg-[var(--clay-surface-strong)] hover:text-[var(--clay-primary)]"
                       onClick={() => onRename(apiKey)}
                       aria-label={`Rename ${formatKeyName(apiKey.name)}`}
                       title="Rename"
@@ -130,7 +131,7 @@ export function ApiKeysTable({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="text-[var(--clay-muted)] hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => onRevoke(apiKey)}
                         aria-label={`Revoke ${formatKeyName(apiKey.name)}`}
                         title="Revoke"
