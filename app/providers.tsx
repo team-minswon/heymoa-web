@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { MockProvider } from "@/components/mocks/mock-provider";
 import type { AuthUser } from "@/lib/auth/types";
 
 function makeQueryClient() {
@@ -41,8 +42,10 @@ export function Providers({
   const queryClient = getQueryClient();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
-    </QueryClientProvider>
+    <MockProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
+      </QueryClientProvider>
+    </MockProvider>
   );
 }

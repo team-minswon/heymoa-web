@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 
 import type { AppResponse } from "@/lib/auth/types";
+import { mockState } from "@/lib/mocks/state";
+import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import {
   OrganizationApiError,
   type OrganizationDetail,
@@ -27,6 +29,39 @@ async function cookieHeader() {
 }
 
 async function getServerData<T>(path: string): Promise<T> {
+  if (shouldEnableMocking()) {
+    if (path === "/v1/organizations") {
+      return mockState.listOrganizations() as T;
+    }
+
+    const organizationMatch = path.match(
+      /^\/v1\/organizations\/([^/]+)(?:\/(members))?$/
+    );
+
+    if (organizationMatch) {
+      const publicId = organizationMatch[1];
+      const suffix = organizationMatch[2];
+
+      if (suffix === "members") {
+        const members = mockState.listMembers(publicId);
+
+        if (!members) {
+          throw new OrganizationApiError("Organization not found.", 404);
+        }
+
+        return members as T;
+      }
+
+      const organization = mockState.getOrganization(publicId);
+
+      if (!organization) {
+        throw new OrganizationApiError("Organization not found.", 404);
+      }
+
+      return organization as T;
+    }
+  }
+
   const url = buildServerApiUrl(path);
 
   if (!url) {
