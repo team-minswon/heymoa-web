@@ -1,0 +1,502 @@
+openapi: 3.0.3
+info:
+  title: Realillust API
+  version: 0.1.0
+servers:
+  - url: /
+tags:
+  - name: Auth
+  - name: Organizations
+  - name: ApiKeys
+paths:
+  /v1/users/me:
+    get:
+      tags:
+        - Auth
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: Current authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserAppResponse"
+        "401":
+          $ref: "#/components/responses/AppError"
+  /v1/auth/refresh:
+    post:
+      tags:
+        - Auth
+      operationId: refreshAuth
+      responses:
+        "200":
+          description: Authentication refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyAppResponse"
+        "401":
+          $ref: "#/components/responses/AppError"
+  /v1/auth/logout:
+    post:
+      tags:
+        - Auth
+      operationId: logout
+      responses:
+        "200":
+          description: Logged out.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyAppResponse"
+  /v1/organizations:
+    get:
+      tags:
+        - Organizations
+      operationId: listOrganizations
+      responses:
+        "200":
+          description: Organizations visible to the current user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationSummaryListAppResponse"
+  /v1/organizations/{organizationPublicId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationPublicId"
+    get:
+      tags:
+        - Organizations
+      operationId: getOrganization
+      responses:
+        "200":
+          description: Organization detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationDetailAppResponse"
+        "404":
+          $ref: "#/components/responses/AppError"
+    patch:
+      tags:
+        - Organizations
+      operationId: updateOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrganizationRequest"
+      responses:
+        "200":
+          description: Updated organization detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationDetailAppResponse"
+  /v1/organizations/{organizationPublicId}/members:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationPublicId"
+    get:
+      tags:
+        - Organizations
+      operationId: listOrganizationMembers
+      responses:
+        "200":
+          description: Organization members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationMemberListAppResponse"
+  /v1/organizations/{organizationPublicId}/api-keys:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationPublicId"
+    get:
+      tags:
+        - ApiKeys
+      operationId: listApiKeys
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiKeyStatusFilter"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: API keys for an organization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyListAppResponse"
+    post:
+      tags:
+        - ApiKeys
+      operationId: createApiKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyRequest"
+      responses:
+        "201":
+          description: Created API key with secret material.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateApiKeyAppResponse"
+  /v1/organizations/{organizationPublicId}/api-keys/{keyId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationPublicId"
+      - $ref: "#/components/parameters/KeyId"
+    patch:
+      tags:
+        - ApiKeys
+      operationId: updateApiKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateApiKeyRequest"
+      responses:
+        "200":
+          description: Updated API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyAppResponse"
+  /v1/organizations/{organizationPublicId}/api-keys/{keyId}/revoke:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationPublicId"
+      - $ref: "#/components/parameters/KeyId"
+    post:
+      tags:
+        - ApiKeys
+      operationId: revokeApiKey
+      responses:
+        "200":
+          description: Revoked API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyAppResponse"
+components:
+  parameters:
+    OrganizationPublicId:
+      name: organizationPublicId
+      in: path
+      required: true
+      schema:
+        type: string
+    KeyId:
+      name: keyId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    AppError:
+      description: Application error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/EmptyAppResponse"
+  schemas:
+    AppErrorBody:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    EmptyAppResponse:
+      type: object
+      required:
+        - success
+        - data
+        - error
+      properties:
+        success:
+          type: boolean
+        data:
+          nullable: true
+        error:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/AppErrorBody"
+    AuthUserAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/EmptyAppResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/AuthUser"
+    OrganizationSummaryListAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/EmptyAppResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/OrganizationSummary"
+    OrganizationDetailAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/EmptyAppResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/OrganizationDetail"
+    OrganizationMemberListAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/EmptyAppResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/OrganizationMember"
+    ApiKeyListAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/EmptyAppResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/ApiKeyListResponse"
+    ApiKeyAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/EmptyAppResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/ApiKeyResponse"
+    CreateApiKeyAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/EmptyAppResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/CreateApiKeyResponse"
+    AuthUser:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - image
+        - onboardingCompleted
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        onboardingCompleted:
+          type: boolean
+    OrganizationRole:
+      type: string
+      enum:
+        - OWNER
+        - MEMBER
+    PlanCode:
+      type: string
+      enum:
+        - FREE
+    OrganizationSummary:
+      type: object
+      required:
+        - publicId
+        - name
+        - role
+        - planCode
+      properties:
+        publicId:
+          type: string
+        name:
+          type: string
+        role:
+          $ref: "#/components/schemas/OrganizationRole"
+        planCode:
+          $ref: "#/components/schemas/PlanCode"
+    OrganizationDetail:
+      allOf:
+        - $ref: "#/components/schemas/OrganizationSummary"
+        - type: object
+          required:
+            - memberCount
+          properties:
+            memberCount:
+              type: integer
+              minimum: 0
+    OrganizationMember:
+      type: object
+      required:
+        - userId
+        - name
+        - email
+        - image
+        - role
+        - joinedAt
+      properties:
+        userId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        role:
+          $ref: "#/components/schemas/OrganizationRole"
+        joinedAt:
+          type: string
+          format: date-time
+    UpdateOrganizationRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    ApiKeyStatusFilter:
+      type: string
+      enum:
+        - active
+        - revoked
+        - all
+    ApiKeyStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - REVOKED
+    ApiKeyCreatedBy:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          nullable: true
+    ApiKeyResponse:
+      type: object
+      required:
+        - id
+        - name
+        - maskedKey
+        - status
+        - createdAt
+        - lastUsedAt
+        - createdBy
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        maskedKey:
+          type: string
+        status:
+          $ref: "#/components/schemas/ApiKeyStatus"
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          $ref: "#/components/schemas/ApiKeyCreatedBy"
+    ApiKeyListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiKeyResponse"
+    CreateApiKeyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+    CreateApiKeyResponse:
+      type: object
+      required:
+        - id
+        - name
+        - secretKey
+        - maskedKey
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        secretKey:
+          type: string
+        maskedKey:
+          type: string
+        status:
+          $ref: "#/components/schemas/ApiKeyStatus"
+        createdAt:
+          type: string
+          format: date-time
+    UpdateApiKeyRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string

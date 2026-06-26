@@ -1,9 +1,9 @@
 import { defineConfig } from "orval";
 
 export default defineConfig({
-  petstore: {
+  realillust: {
     input: {
-      target: "https://petstore3.swagger.io/api/v3/openapi.json",
+      target: "./openapi3.yml",
     },
     output: {
       mode: "tags-split",
@@ -14,6 +14,7 @@ export default defineConfig({
       clean: ["./lib/api/generated"],
       formatter: "prettier",
       baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "",
+      mock: true,
       override: {
         mutator: {
           path: "./lib/api/fetcher.ts",
