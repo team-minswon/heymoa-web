@@ -1,5 +1,11 @@
-import { ComingSoonPanel } from "@/components/dashboard/coming-soon-panel";
+import { ApiKeysManager } from "./api-keys-manager";
 
-export default function ApiKeysPage() {
-  return <ComingSoonPanel title="API Keys" />;
+export default async function ApiKeysPage({
+  params,
+}: {
+  params: Promise<{ organizationPublicId: string }>;
+}) {
+  const { organizationPublicId } = await params;
+
+  return <ApiKeysManager organizationPublicId={organizationPublicId} />;
 }
