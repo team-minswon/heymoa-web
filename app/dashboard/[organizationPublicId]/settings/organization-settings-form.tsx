@@ -31,8 +31,12 @@ export function OrganizationSettingsForm({
               queryKey: ["organizations"],
             });
             router.refresh();
-          } catch (e: any) {
-            setError(e?.message ?? "조직 이름을 수정하지 못했습니다.");
+          } catch (e: unknown) {
+            setError(
+              e instanceof Error
+                ? e.message
+                : "조직 이름을 수정하지 못했습니다."
+            );
           }
         });
       }}

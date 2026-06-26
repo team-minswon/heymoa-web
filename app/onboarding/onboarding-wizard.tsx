@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
@@ -131,10 +131,7 @@ export function OnboardingWizard() {
   const [otherValues, setOtherValues] = useState(initialOtherValues);
   const [error, setError] = useState<string | null>(null);
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = true;
 
   const mutation = useMutation({
     mutationFn: submitOnboardingProfile,
