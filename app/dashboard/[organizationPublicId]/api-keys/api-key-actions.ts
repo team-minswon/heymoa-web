@@ -30,7 +30,10 @@ export async function getApiKeys(
   status: ApiKeyStatusFilter
 ): Promise<ApiKeyListResponse> {
   try {
-    const response = await listApiKeys(organizationPublicId, { status, limit: 50 });
+    const response = await listApiKeys(organizationPublicId, {
+      status,
+      limit: 50,
+    });
 
     return unwrapGeneratedAppResponse(response);
   } catch (error) {

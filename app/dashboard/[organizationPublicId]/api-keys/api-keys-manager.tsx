@@ -62,7 +62,8 @@ export function ApiKeysManager({ organizationPublicId }: ApiKeysManagerProps) {
   }, [organizationPublicId, queryClient]);
 
   const createMutation = useMutation({
-    mutationFn: (name: string) => createOrganizationApiKey(organizationPublicId, name),
+    mutationFn: (name: string) =>
+      createOrganizationApiKey(organizationPublicId, name),
     onSuccess: async (secret) => {
       setCreatedSecret(secret);
       await invalidateCurrentList();
@@ -173,7 +174,9 @@ export function ApiKeysManager({ organizationPublicId }: ApiKeysManagerProps) {
         isPending={createMutation.isPending}
         error={createMutation.error}
         onOpenChange={handleCreateOpenChange}
-        onCreate={(name) => createMutation.mutateAsync(name).then(() => undefined)}
+        onCreate={(name) =>
+          createMutation.mutateAsync(name).then(() => undefined)
+        }
       />
 
       <RenameApiKeyDialog
@@ -203,7 +206,9 @@ export function ApiKeysManager({ organizationPublicId }: ApiKeysManagerProps) {
             return Promise.resolve();
           }
 
-          return revokeMutation.mutateAsync(revokeTarget.id).then(() => undefined);
+          return revokeMutation
+            .mutateAsync(revokeTarget.id)
+            .then(() => undefined);
         }}
       />
     </div>

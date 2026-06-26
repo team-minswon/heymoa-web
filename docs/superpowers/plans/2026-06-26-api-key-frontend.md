@@ -50,6 +50,7 @@ All shell commands in this repo must be prefixed with `rtk`.
 ### Task 1: Realillust OpenAPI And Orval Generation
 
 **Files:**
+
 - Create: `openapi3.yml`
 - Modify: `orval.config.ts`
 - Modify: `package.json`
@@ -564,6 +565,7 @@ Expected: commit succeeds.
 ### Task 2: Fetcher Compatibility And AppResponse Helpers
 
 **Files:**
+
 - Modify: `lib/api/fetcher.ts`
 - Create: `lib/api/app-response.ts`
 
@@ -703,6 +705,7 @@ Expected: commit succeeds.
 ### Task 3: MSW Mock Backend Bootstrap
 
 **Files:**
+
 - Create: `lib/mocks/state.ts`
 - Create: `lib/mocks/handlers.ts`
 - Create: `lib/mocks/browser.ts`
@@ -1155,6 +1158,7 @@ Expected: commit succeeds.
 ### Task 4: Dialog UI Primitives
 
 **Files:**
+
 - Create: `components/ui/dialog.tsx`
 - Create: `components/ui/alert-dialog.tsx`
 
@@ -1207,7 +1211,10 @@ function DialogPopup({ className, ...props }: DialogPrimitive.Popup.Props) {
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-lg font-semibold text-[var(--clay-primary)]", className)}
+      className={cn(
+        "text-lg font-semibold text-[var(--clay-primary)]",
+        className
+      )}
       {...props}
     />
   );
@@ -1258,7 +1265,10 @@ function AlertDialogBackdrop({
 }: AlertDialogPrimitive.Backdrop.Props) {
   return (
     <AlertDialogPrimitive.Backdrop
-      className={cn("fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px]", className)}
+      className={cn(
+        "fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px]",
+        className
+      )}
       {...props}
     />
   );
@@ -1285,7 +1295,10 @@ function AlertDialogTitle({
 }: AlertDialogPrimitive.Title.Props) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn("text-lg font-semibold text-[var(--clay-primary)]", className)}
+      className={cn(
+        "text-lg font-semibold text-[var(--clay-primary)]",
+        className
+      )}
       {...props}
     />
   );
@@ -1341,6 +1354,7 @@ Expected: commit succeeds.
 ### Task 5: API Key Feature Wrappers And Helpers
 
 **Files:**
+
 - Create: `app/dashboard/[organizationPublicId]/api-keys/api-key-actions.ts`
 - Create: `app/dashboard/[organizationPublicId]/api-keys/api-key-helpers.ts`
 
@@ -1480,6 +1494,7 @@ Expected: commit succeeds.
 ### Task 6: API Keys Dashboard UI
 
 **Files:**
+
 - Modify: `app/dashboard/[organizationPublicId]/api-keys/page.tsx`
 - Create: `app/dashboard/[organizationPublicId]/api-keys/api-keys-manager.tsx`
 - Create: `app/dashboard/[organizationPublicId]/api-keys/api-keys-table.tsx`
@@ -1717,7 +1732,11 @@ export function CreateApiKeyDialog({
                     setCopied(true);
                   }}
                 >
-                  {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  {copied ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
                   {copied ? "Copied" : "Copy secret key"}
                 </Button>
               </div>
@@ -1746,7 +1765,11 @@ export function CreateApiKeyDialog({
                 </div>
                 {error ? <p className="text-sm text-red-600">{error}</p> : null}
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => close(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => close(false)}
+                  >
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isPending}>
@@ -1818,7 +1841,10 @@ export function RenameApiKeyDialog({
               </Dialog.Description>
             </div>
             <div>
-              <label className="text-sm font-semibold text-[var(--clay-muted)]" htmlFor="rename-api-key">
+              <label
+                className="text-sm font-semibold text-[var(--clay-muted)]"
+                htmlFor="rename-api-key"
+              >
                 Name
               </label>
               <input
@@ -1830,10 +1856,17 @@ export function RenameApiKeyDialog({
             </div>
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || name.trim().length === 0}>
+              <Button
+                type="submit"
+                disabled={isPending || name.trim().length === 0}
+              >
                 Save
               </Button>
             </div>
@@ -1887,10 +1920,19 @@ export function RevokeApiKeyDialog({
             </div>
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
-              <Button type="button" variant="destructive" disabled={isPending} onClick={onRevoke}>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isPending}
+                onClick={onRevoke}
+              >
                 Revoke key
               </Button>
             </div>
@@ -1915,7 +1957,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { ApiKeyResponse, CreateApiKeyResponse } from "@/lib/api/generated/models";
+import type {
+  ApiKeyResponse,
+  CreateApiKeyResponse,
+} from "@/lib/api/generated/models";
 import { getErrorMessage } from "@/lib/api/app-response";
 
 import {
@@ -1958,7 +2003,8 @@ export function ApiKeysManager({
   };
 
   const createMutation = useMutation({
-    mutationFn: (name: string) => createOrganizationApiKey(organizationPublicId, name),
+    mutationFn: (name: string) =>
+      createOrganizationApiKey(organizationPublicId, name),
     onSuccess: async (result) => {
       setCreated(result);
       await invalidate();
@@ -1975,7 +2021,8 @@ export function ApiKeysManager({
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (keyId: string) => revokeOrganizationApiKey(organizationPublicId, keyId),
+    mutationFn: (keyId: string) =>
+      revokeOrganizationApiKey(organizationPublicId, keyId),
     onSuccess: async () => {
       setRevokeTarget(null);
       await invalidate();
@@ -1988,7 +2035,8 @@ export function ApiKeysManager({
         <div>
           <h1 className="text-3xl font-semibold">API Keys</h1>
           <p className="mt-2 text-sm text-[var(--clay-muted)]">
-            Organization API keys are used to authenticate external integrations.
+            Organization API keys are used to authenticate external
+            integrations.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -2031,7 +2079,10 @@ export function ApiKeysManager({
         isPending={createMutation.isPending}
         error={
           createMutation.error
-            ? getErrorMessage(createMutation.error, "API key could not be created.")
+            ? getErrorMessage(
+                createMutation.error,
+                "API key could not be created."
+              )
             : null
         }
         created={created}
@@ -2053,7 +2104,10 @@ export function ApiKeysManager({
         isPending={renameMutation.isPending}
         error={
           renameMutation.error
-            ? getErrorMessage(renameMutation.error, "API key could not be renamed.")
+            ? getErrorMessage(
+                renameMutation.error,
+                "API key could not be renamed."
+              )
             : null
         }
         onOpenChange={(open) => {
@@ -2074,7 +2128,10 @@ export function ApiKeysManager({
         isPending={revokeMutation.isPending}
         error={
           revokeMutation.error
-            ? getErrorMessage(revokeMutation.error, "API key could not be revoked.")
+            ? getErrorMessage(
+                revokeMutation.error,
+                "API key could not be revoked."
+              )
             : null
         }
         onOpenChange={(open) => {
@@ -2120,6 +2177,7 @@ Expected: commit succeeds.
 ### Task 7: Mock Browser Verification And Final Checks
 
 **Files:**
+
 - Modify if needed: files from prior tasks only.
 
 - [ ] **Step 1: Run Orval generation**

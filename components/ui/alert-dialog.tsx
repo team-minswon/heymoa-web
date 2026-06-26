@@ -9,7 +9,9 @@ function AlertDialogRoot(props: AlertDialogPrimitive.Root.Props) {
 }
 
 function AlertDialogPortal(props: AlertDialogPrimitive.Portal.Props) {
-  return <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />;
+  return (
+    <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
+  );
 }
 
 function AlertDialogBackdrop({
@@ -51,7 +53,10 @@ function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn("text-lg font-semibold text-[var(--clay-primary)]", className)}
+      className={cn(
+        "text-lg font-semibold text-[var(--clay-primary)]",
+        className
+      )}
       {...props}
     />
   );

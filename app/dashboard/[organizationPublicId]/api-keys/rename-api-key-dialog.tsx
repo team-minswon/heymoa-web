@@ -69,7 +69,10 @@ export function RenameApiKeyDialog({
               </p>
             ) : null}
             <div className="flex justify-end gap-2">
-              <Dialog.Close render={<Button variant="outline" />} disabled={isPending}>
+              <Dialog.Close
+                render={<Button variant="outline" />}
+                disabled={isPending}
+              >
                 Cancel
               </Dialog.Close>
               <Button type="submit" disabled={isPending || !trimmedName}>

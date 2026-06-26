@@ -41,10 +41,17 @@ export function RevokeApiKeyDialog({
               </p>
             ) : null}
             <div className="flex justify-end gap-2">
-              <AlertDialog.Close render={<Button variant="outline" />} disabled={isPending}>
+              <AlertDialog.Close
+                render={<Button variant="outline" />}
+                disabled={isPending}
+              >
                 Cancel
               </AlertDialog.Close>
-              <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+              <Button
+                variant="destructive"
+                onClick={onConfirm}
+                disabled={isPending}
+              >
                 {isPending ? "Revoking…" : "Revoke key"}
               </Button>
             </div>

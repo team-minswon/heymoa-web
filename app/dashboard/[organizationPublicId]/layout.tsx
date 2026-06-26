@@ -9,6 +9,8 @@ import {
   type OrganizationDetail,
 } from "@/lib/organization/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function OrganizationDashboardLayout({
   children,
   params,

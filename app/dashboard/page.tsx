@@ -7,6 +7,8 @@ import {
   type OrganizationSummary,
 } from "@/lib/organization/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardIndexPage() {
   let organizations: OrganizationSummary[] | undefined;
   let unauthorized = false;

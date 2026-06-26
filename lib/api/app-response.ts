@@ -29,7 +29,10 @@ function isAppResponseLike(value: unknown): value is AppResponseLike<unknown> {
   );
 }
 
-export function toAppResponseError(error: unknown, fallback = "Request failed.") {
+export function toAppResponseError(
+  error: unknown,
+  fallback = "Request failed."
+) {
   if (error instanceof AppResponseError) {
     return error;
   }

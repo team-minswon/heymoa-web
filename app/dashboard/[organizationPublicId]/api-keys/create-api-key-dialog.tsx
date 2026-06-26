@@ -55,8 +55,8 @@ export function CreateApiKeyDialog({
                 <div>
                   <Dialog.Title>Copy your API key</Dialog.Title>
                   <Dialog.Description className="mt-2">
-                    This secret is only shown once. Copy it now and store it in a
-                    safe place.
+                    This secret is only shown once. Copy it now and store it in
+                    a safe place.
                   </Dialog.Description>
                 </div>
                 <div className="rounded-lg border border-[var(--clay-hairline)] bg-[var(--clay-surface-soft)] p-3">
@@ -106,7 +106,10 @@ export function CreateApiKeyDialog({
                   </p>
                 ) : null}
                 <div className="flex justify-end gap-2">
-                  <Dialog.Close render={<Button variant="outline" />} disabled={isPending}>
+                  <Dialog.Close
+                    render={<Button variant="outline" />}
+                    disabled={isPending}
+                  >
                     Cancel
                   </Dialog.Close>
                   <Button type="submit" disabled={isPending}>

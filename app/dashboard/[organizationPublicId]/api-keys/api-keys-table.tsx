@@ -123,7 +123,9 @@ export function ApiKeysTable({
                 <td className="px-5 py-4">
                   <div className="flex justify-end">
                     <DropdownMenu>
-                      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                      <DropdownMenuTrigger
+                        render={<Button variant="ghost" size="icon-sm" />}
+                      >
                         <MoreHorizontal className="size-4" />
                         <span className="sr-only">Open API key actions</span>
                       </DropdownMenuTrigger>
