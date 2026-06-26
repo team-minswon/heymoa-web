@@ -28,12 +28,26 @@ function buildUrl(path: string, params?: Record<string, unknown>) {
   return url.toString();
 }
 
-function buildBody(data: ApiFetchOptions["data"]) {
+function buildBody(data: ApiFetchOptions["data"], body?: BodyInit | null) {
+  if (body !== undefined) {
+    return body;
+  }
+
   if (!data || data instanceof FormData || data instanceof Blob) {
     return data;
   }
 
   return JSON.stringify(data);
+}
+
+function isJsonData(data: ApiFetchOptions["data"]) {
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(data);
+
+  return prototype === Object.prototype || prototype === null;
 }
 
 function shouldSkipRefresh(url: string, options: ApiFetchOptions) {
@@ -111,6 +125,7 @@ async function request<T>(
 ): Promise<T> {
   const {
     headers,
+    body,
     data,
     params,
     signal,
@@ -118,8 +133,7 @@ async function request<T>(
     skipAuthRefresh,
     ...requestOptions
   } = options;
-  const isJsonBody =
-    data && !(data instanceof FormData) && !(data instanceof Blob);
+  const isJsonBody = isJsonData(data) || typeof body === "string";
   const builtUrl = buildUrl(url, params);
 
   const response = await fetch(builtUrl, {
@@ -129,7 +143,7 @@ async function request<T>(
       ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
       ...headers,
     },
-    body: buildBody(data),
+    body: buildBody(data, body),
     signal,
   });
 
