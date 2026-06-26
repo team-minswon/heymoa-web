@@ -13,6 +13,7 @@ import {
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { getOrganizations } from "@/lib/organization/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -49,8 +50,8 @@ export function DashboardShell({
   const displayName = user?.name ?? user?.email ?? "사용자";
 
   return (
-    <div className="min-h-screen bg-[var(--clay-canvas)] text-[var(--clay-primary)]">
-      <header className="sticky top-0 z-30 border-b border-[var(--clay-hairline)] bg-[var(--clay-canvas)]/95 backdrop-blur">
+    <div className="flex min-h-screen flex-col bg-[var(--clay-canvas)] text-[var(--clay-primary)]">
+      <header className="sticky top-0 z-30 border-b border-[var(--clay-hairline)] bg-[var(--clay-canvas)]/95 backdrop-blur shrink-0">
         <div className="flex h-16 items-center justify-between gap-4 px-4 md:px-6">
           <div className="flex items-center gap-3">
             <Link
@@ -161,9 +162,11 @@ export function DashboardShell({
           </div>
         </div>
       </header>
-      <div className="flex">
+      <div className="flex flex-1 items-stretch">
         <DashboardSidebar organizationPublicId={organization.publicId} />
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-8">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
     </div>
   );

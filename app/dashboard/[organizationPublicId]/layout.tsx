@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { DashboardAuthRequired } from "@/components/dashboard/dashboard-auth-required";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { Card, CardContent } from "@/components/ui/card";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { getOrganizationForSsr } from "@/lib/organization/server";
 import {
@@ -45,12 +46,14 @@ export default async function OrganizationDashboardLayout({
   if (notFound || !organization) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[var(--clay-canvas)] p-6">
-        <section className="w-full max-w-sm rounded-xl border border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] p-6">
-          <h1 className="text-xl font-semibold">조직을 찾을 수 없습니다</h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--clay-muted)]">
-            조직이 없거나 접근 권한이 없습니다.
-          </p>
-        </section>
+        <Card className="w-full max-w-sm border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] p-6 shadow-none ring-0">
+          <CardContent className="p-0">
+            <h1 className="text-xl font-semibold">조직을 찾을 수 없습니다</h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--clay-muted)]">
+              조직이 없거나 접근 권한이 없습니다.
+            </p>
+          </CardContent>
+        </Card>
       </main>
     );
   }

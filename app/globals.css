@@ -159,6 +159,10 @@
   select {
     font: inherit;
   }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
   ::selection {
     background: color-mix(in srgb, var(--clay-brand-pink), white 70%);
   }

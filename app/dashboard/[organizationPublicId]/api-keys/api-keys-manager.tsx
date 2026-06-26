@@ -11,6 +11,8 @@ import type {
 } from "@/lib/api/generated/models";
 import { getErrorMessage } from "@/lib/api/app-response";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { AnimatePresence, motion } from "motion/react";
 
 import {
   apiKeysQueryKey,
@@ -133,42 +135,55 @@ export function ApiKeysManager({ organizationPublicId }: ApiKeysManagerProps) {
         </Button>
       </div>
 
-      <div className="inline-flex rounded-lg border border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] p-1">
+      <ToggleGroup
+        value={[statusFilter]}
+        onValueChange={(value) => {
+          const val = value[0];
+          if (val) handleStatusFilterChange(val as ApiKeyStatusFilter);
+        }}
+        className="inline-flex rounded-lg border border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] p-1"
+      >
         {API_KEY_STATUS_FILTERS.map((filter) => (
-          <button
+          <ToggleGroupItem
             key={filter.value}
-            type="button"
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-[var(--clay-muted)] transition-colors data-[active=true]:bg-[var(--clay-primary)] data-[active=true]:text-white"
-            data-active={statusFilter === filter.value}
-            aria-pressed={statusFilter === filter.value}
-            onClick={() => handleStatusFilterChange(filter.value)}
+            value={filter.value}
+            className="rounded-md px-3 py-1 text-sm font-medium text-[var(--clay-muted)] transition-all cursor-pointer hover:bg-[var(--clay-surface-strong)] hover:text-[var(--clay-primary)] aria-pressed:bg-[var(--clay-primary)] aria-pressed:text-white! data-[state=on]:bg-[var(--clay-primary)] data-[state=on]:text-white!"
           >
             {filter.label}
-          </button>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
 
-      <ApiKeysTable
-        apiKeys={apiKeys}
-        isLoading={listQuery.isLoading}
-        errorMessage={
-          listQuery.error
-            ? getErrorMessage(listQuery.error, "Failed to load API keys.")
-            : null
-        }
-        onRetry={() => void listQuery.refetch()}
-        onRename={(apiKey) => {
-          renameMutation.reset();
-          setRenameTarget(apiKey);
-        }}
-        onRevoke={(apiKey) => {
-          revokeMutation.reset();
-          setRevokeTarget(apiKey);
-        }}
-      />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={statusFilter}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        >
+          <ApiKeysTable
+            apiKeys={apiKeys}
+            isLoading={listQuery.isLoading}
+            errorMessage={
+              listQuery.error
+                ? getErrorMessage(listQuery.error, "Failed to load API keys.")
+                : null
+            }
+            onRetry={() => void listQuery.refetch()}
+            onRename={(apiKey) => {
+              renameMutation.reset();
+              setRenameTarget(apiKey);
+            }}
+            onRevoke={(apiKey) => {
+              revokeMutation.reset();
+              setRevokeTarget(apiKey);
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
 
       <CreateApiKeyDialog
-        key={createOpen ? "create-open" : "create-closed"}
         open={createOpen}
         secret={createdSecret}
         isPending={createMutation.isPending}
@@ -180,7 +195,6 @@ export function ApiKeysManager({ organizationPublicId }: ApiKeysManagerProps) {
       />
 
       <RenameApiKeyDialog
-        key={renameTarget?.id ?? "rename-closed"}
         apiKey={renameTarget}
         isPending={renameMutation.isPending}
         error={renameMutation.error}

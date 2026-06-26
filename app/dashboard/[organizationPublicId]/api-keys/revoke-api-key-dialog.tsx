@@ -50,9 +50,9 @@ export function RevokeApiKeyDialog({
               <Button
                 variant="destructive"
                 onClick={onConfirm}
-                disabled={isPending}
+                loading={isPending}
               >
-                {isPending ? "Revoking…" : "Revoke key"}
+                Revoke key
               </Button>
             </div>
           </div>

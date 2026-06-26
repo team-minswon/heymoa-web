@@ -30,6 +30,13 @@ export function CreateApiKeyDialog({
   const [name, setName] = React.useState("");
   const [copied, setCopied] = React.useState(false);
 
+  React.useEffect(() => {
+    if (!open) {
+      setName("");
+      setCopied(false);
+    }
+  }, [open]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await onCreate(normalizeKeyName(name));
@@ -112,8 +119,8 @@ export function CreateApiKeyDialog({
                   >
                     Cancel
                   </Dialog.Close>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? "Creating…" : "Create key"}
+                  <Button type="submit" loading={isPending}>
+                    Create key
                   </Button>
                 </div>
               </form>

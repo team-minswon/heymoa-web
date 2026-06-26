@@ -131,7 +131,7 @@ export function ApiKeysTable({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        className="text-[var(--clay-muted)] hover:bg-destructive/10 hover:text-destructive"
+                        className="text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => onRevoke(apiKey)}
                         aria-label={`Revoke ${formatKeyName(apiKey.name)}`}
                         title="Revoke"

@@ -46,7 +46,8 @@ export function GoogleLoginButton({
         variant="outline"
         size={compact ? "icon-xl" : "xl"}
         onClick={handleLogin}
-        disabled={pending || !isAuthApiConfigured}
+        disabled={!isAuthApiConfigured}
+        loading={pending}
         className={cn(
           "rounded-xl border-[var(--clay-hairline)] bg-[var(--clay-canvas)] text-[var(--clay-primary)] hover:bg-[var(--clay-surface-card)] font-semibold",
           compact ? "p-0" : "pl-3.5 pr-4"

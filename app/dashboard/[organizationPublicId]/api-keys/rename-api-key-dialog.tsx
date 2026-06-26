@@ -24,8 +24,12 @@ export function RenameApiKeyDialog({
   onOpenChange,
   onRename,
 }: RenameApiKeyDialogProps) {
-  const [name, setName] = React.useState(apiKey?.name ?? "");
+  const [name, setName] = React.useState("");
   const trimmedName = normalizeKeyName(name);
+
+  React.useEffect(() => {
+    setName(apiKey?.name ?? "");
+  }, [apiKey]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,8 +79,8 @@ export function RenameApiKeyDialog({
               >
                 Cancel
               </Dialog.Close>
-              <Button type="submit" disabled={isPending || !trimmedName}>
-                {isPending ? "Saving…" : "Save"}
+              <Button type="submit" disabled={!trimmedName} loading={isPending}>
+                Save
               </Button>
             </div>
           </form>

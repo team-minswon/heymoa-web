@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { updateOrganizationName } from "@/lib/organization/api";
 import type { OrganizationDetail } from "@/lib/organization/types";
+import { Button } from "@/components/ui/button";
 
 export function OrganizationSettingsForm({
   organization,
@@ -52,14 +53,16 @@ export function OrganizationSettingsForm({
           id="organization-name"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className="h-11 min-w-0 flex-1 rounded-lg border border-[var(--clay-hairline)] bg-[var(--clay-canvas)] px-3 text-sm"
+          className="h-11 min-w-0 flex-1 rounded-lg border border-[var(--clay-hairline)] bg-[var(--clay-canvas)] px-3 text-sm focus:border-[var(--clay-primary)] outline-none transition-colors"
         />
-        <button
-          disabled={isPending || name.trim().length === 0}
-          className="h-11 rounded-lg bg-[var(--clay-primary)] px-4 text-sm font-semibold text-white disabled:opacity-50"
+        <Button
+          type="submit"
+          disabled={name.trim().length === 0}
+          loading={isPending}
+          className="h-11 px-4 text-sm font-semibold!"
         >
           Save
-        </button>
+        </Button>
       </div>
       {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
     </form>
