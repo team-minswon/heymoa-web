@@ -1,3 +1,5 @@
+import { AuthStatus } from "@/components/auth/auth-status";
+
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-16">
@@ -26,6 +28,12 @@ export default function Home() {
           </div>
         ))}
       </dl>
+      <section className="mt-12 max-w-md">
+        <h2 className="text-lg font-semibold">Auth shell</h2>
+        <div className="mt-4">
+          <AuthStatus />
+        </div>
+      </section>
     </main>
   );
 }
