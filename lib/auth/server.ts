@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
-import { buildApiUrl, isAuthApiConfigured } from "@/lib/auth/paths";
-import type { AppResponse, AuthUser } from "@/lib/auth/types";
+import { ApiClientError } from "@/lib/api/client";
+import { getMeApi } from "@/lib/api/endpoints";
+import { isAuthApiConfigured } from "@/lib/auth/paths";
+import type { AuthUser } from "@/lib/auth/types";
 
 export async function getCurrentUserForSsr(): Promise<AuthUser | null> {
   if (!isAuthApiConfigured) {
@@ -10,20 +12,15 @@ export async function getCurrentUserForSsr(): Promise<AuthUser | null> {
   const cookieHeader = (await cookies()).toString();
 
   try {
-    const response = await fetch(buildApiUrl("/v1/users/me"), {
-      method: "GET",
+    return await getMeApi({
       headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
       cache: "no-store",
     });
-
-    if (!response.ok) {
+  } catch (error) {
+    if (error instanceof ApiClientError) {
       return null;
     }
 
-    const body = (await response.json()) as AppResponse<AuthUser>;
-
-    return body.success ? body.data : null;
-  } catch {
     return null;
   }
 }

@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
 import { DashboardAuthRequired } from "@/components/dashboard/dashboard-auth-required";
+import { ApiClientError } from "@/lib/api/client";
 import { getOrganizationsForSsr } from "@/lib/organization/server";
-import {
-  OrganizationApiError,
-  type OrganizationSummary,
-} from "@/lib/organization/types";
+import type { OrganizationSummary } from "@/lib/organization/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +13,7 @@ export default async function DashboardIndexPage() {
   try {
     organizations = await getOrganizationsForSsr();
   } catch (error) {
-    if (
-      error instanceof OrganizationApiError &&
-      (error.status === 401 || error.status === 503)
-    ) {
+    if (error instanceof ApiClientError && [401, 503].includes(error.status)) {
       unauthorized = true;
     } else {
       throw error;

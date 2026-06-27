@@ -1,55 +1,13 @@
+import { ApiClientError } from "@/lib/api/client";
+import { getMeApi, logoutAuthApi, refreshAuthApi } from "@/lib/api/endpoints";
 import { notifyAuthStateChanged } from "@/lib/auth/events";
-import { buildApiUrl, isAuthApiConfigured } from "@/lib/auth/paths";
-import type { AppResponse, AuthUser } from "@/lib/auth/types";
+import { isAuthApiConfigured } from "@/lib/auth/paths";
+import type { AuthUser } from "@/lib/auth/types";
 
-class AuthApiError extends Error {
-  code?: string;
-  status: number;
-
-  constructor(message: string, status: number, code?: string) {
-    super(message);
-    this.name = "AuthApiError";
-    this.status = status;
-    this.code = code;
-  }
-}
-
-async function parseAppResponse<T>(
-  response: Response,
-  allowEmptyData = false
-): Promise<T> {
-  if (response.status === 204 && allowEmptyData) {
-    return undefined as T;
-  }
-
-  const body = (await response.json()) as AppResponse<T>;
-
-  if (!response.ok || !body.success || body.data === null) {
-    if (response.ok && body.success && allowEmptyData) {
-      return undefined as T;
-    }
-
-    throw new AuthApiError(
-      body.error?.message ?? "Authentication request failed.",
-      response.status,
-      body.error?.code
-    );
-  }
-
-  return body.data;
-}
-
-async function postAuth<T>(path: string, allowEmptyData = false) {
-  const response = await fetch(buildApiUrl(path), {
-    method: "POST",
-    credentials: "include",
-  });
-
-  return parseAppResponse<T>(response, allowEmptyData);
-}
+class AuthApiError extends ApiClientError {}
 
 export async function refreshAuth() {
-  await postAuth<void>("/v1/auth/refresh", true);
+  await refreshAuthApi();
 }
 
 async function fetchMe(hasRetried = false): Promise<AuthUser> {
@@ -61,12 +19,17 @@ async function fetchMe(hasRetried = false): Promise<AuthUser> {
     );
   }
 
-  const response = await fetch(buildApiUrl("/v1/users/me"), {
-    method: "GET",
-    credentials: "include",
-  });
+  try {
+    return await getMeApi();
+  } catch (error) {
+    if (!(error instanceof ApiClientError)) {
+      throw error;
+    }
 
-  if (response.status === 401 && !hasRetried) {
+    if (error.status !== 401 || hasRetried) {
+      throw new AuthApiError(error.message, error.status, error.code);
+    }
+
     try {
       await refreshAuth();
       return fetchMe(true);
@@ -75,8 +38,6 @@ async function fetchMe(hasRetried = false): Promise<AuthUser> {
       throw new AuthApiError("Authentication refresh failed.", 401);
     }
   }
-
-  return parseAppResponse<AuthUser>(response);
 }
 
 export async function getMe(): Promise<AuthUser> {
@@ -85,7 +46,7 @@ export async function getMe(): Promise<AuthUser> {
 
 export async function logout() {
   try {
-    await postAuth<void>("/v1/auth/logout", true);
+    await logoutAuthApi();
   } finally {
     notifyAuthStateChanged({ reason: "logout" });
   }
