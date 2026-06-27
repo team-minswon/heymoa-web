@@ -1,0 +1,81 @@
+name: Chore / task
+description: Track maintenance, tooling, documentation, or rebuild infrastructure work.
+title: "[Chore] "
+labels: ["chore"]
+body:
+  - type: dropdown
+    id: reporter
+    attributes:
+      label: Reporter
+      options:
+        - Human
+        - Human with AI assistance
+        - AI agent
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Workflow
+        - Documentation
+        - Build / CI
+        - Dependencies
+        - Formatting / lint
+        - Baseline overlay
+        - Rebuild planning
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: rebuild_stage
+    attributes:
+      label: Rebuild stage
+      options:
+        - Not part of rebuild
+        - Workflow templates
+        - Rebuild roadmap
+        - React baseline overlay
+        - App foundation
+        - Final parity verification
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: 이 작업이 필요한 이유와 기대 결과를 적어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tasks
+      description: 완료해야 할 작업 목록을 적어주세요.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: 어떤 명령이나 확인으로 완료를 검증할지 적어주세요.
+      placeholder: |
+        - `pnpm lint`
+        - `pnpm build`
+        - Manual check:
+    validations:
+      required: false
+  - type: textarea
+    id: agent_notes
+    attributes:
+      label: Agent notes
+      placeholder: |
+        - Inspected:
+        - Commands run:
+        - Assumptions / unknowns:
+    validations:
+      required: false
