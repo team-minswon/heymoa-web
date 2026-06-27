@@ -1,6 +1,6 @@
-## 관련 이슈
+## Related Issues
 
-<!-- 이 PR이 이슈를 닫는다면 `Closes #123` 형식을 사용해주세요. -->
+<!-- 이 PR이 이슈를 닫는다면 아래처럼 반드시 GitHub closing keyword를 사용해주세요. -->
 
 - Closes #
 
