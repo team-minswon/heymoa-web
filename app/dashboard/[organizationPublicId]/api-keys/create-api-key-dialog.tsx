@@ -30,13 +30,6 @@ export function CreateApiKeyDialog({
   const [name, setName] = React.useState("");
   const [copied, setCopied] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!open) {
-      setName("");
-      setCopied(false);
-    }
-  }, [open]);
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await onCreate(normalizeKeyName(name));
@@ -55,7 +48,7 @@ export function CreateApiKeyDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Popup>
+        <Dialog.Popup key={open ? "open" : "closed"}>
           <div className="space-y-5 p-6">
             {secret ? (
               <>

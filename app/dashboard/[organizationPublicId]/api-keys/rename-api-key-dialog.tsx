@@ -24,12 +24,8 @@ export function RenameApiKeyDialog({
   onOpenChange,
   onRename,
 }: RenameApiKeyDialogProps) {
-  const [name, setName] = React.useState("");
+  const [name, setName] = React.useState(apiKey?.name ?? "");
   const trimmedName = normalizeKeyName(name);
-
-  React.useEffect(() => {
-    setName(apiKey?.name ?? "");
-  }, [apiKey]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,7 +41,7 @@ export function RenameApiKeyDialog({
     <Dialog open={Boolean(apiKey)} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Popup>
+        <Dialog.Popup key={apiKey?.id ?? "none"}>
           <form className="space-y-5 p-6" onSubmit={handleSubmit}>
             <div>
               <Dialog.Title>Rename API key</Dialog.Title>
