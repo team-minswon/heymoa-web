@@ -23,6 +23,7 @@ flowchart TD
     H --> I["#11 Organization dashboard pages"]
     I --> J["#12 API key management"]
     J --> K["#13 Final parity verification"]
+    K --> L["#26 Pre-rebuild design parity"]
 ```
 
 ## Verified Routes
@@ -51,9 +52,11 @@ flowchart LR
 - `curl -I http://localhost:3001/terms`
 - `curl -I http://localhost:3001/privacy`
 - `curl -I http://localhost:3001/dashboard`
+- `curl -I http://localhost:3001/opengraph-image`
 - `curl -I http://localhost:3001/robots.txt`
 - `curl -I http://localhost:3001/sitemap.xml`
 - `curl -I http://localhost:3001/mockServiceWorker.js`
+- Playwright browser smoke for `/`, `/terms`, and `/privacy`
 
 ## Result
 
@@ -61,6 +64,13 @@ All verification commands passed on June 27, 2026.
 
 Public routes, dashboard entry, metadata routes, build, lint, formatting, and
 the MSW browser worker are functional on the rebuilt `dev` branch.
+
+The follow-up design parity pass in #26 restored the pre-rebuild visual layer
+from `b1a2adf`: root route groups, landing page composition, static legal
+pages, navbar/footer gates, Open Graph image route, favicons, web manifest,
+dashboard shell visuals, UI primitives, and API key management UI. The restored
+design code was adapted to the rebuilt auth/API/MSW layer without resetting git
+history.
 
 Direct organization dashboard routes remain SSR API-backed and require a real
 API/session at runtime. The UI and API client contract for organization and API

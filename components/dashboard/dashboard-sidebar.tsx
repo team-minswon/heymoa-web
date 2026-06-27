@@ -1,35 +1,59 @@
+"use client";
+
+import {
+  BarChart3,
+  KeyRound,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Webhook,
+} from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import { cn } from "@/lib/utils";
 
 const items = [
-  { label: "Overview", href: "" },
-  { label: "API Keys", href: "/api-keys" },
-  { label: "Webhooks", href: "/webhooks" },
-  { label: "Usage", href: "/usage" },
-  { label: "Members", href: "/members" },
-  { label: "Settings", href: "/settings" },
+  { label: "Overview", href: "", icon: LayoutDashboard },
+  { label: "API Keys", href: "/api-keys", icon: KeyRound },
+  { label: "Webhooks", href: "/webhooks", icon: Webhook },
+  { label: "Usage", href: "/usage", icon: BarChart3 },
+  { label: "Members", href: "/members", icon: Users },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
-
-type DashboardSidebarProps = {
-  organizationPublicId: string;
-};
 
 export function DashboardSidebar({
   organizationPublicId,
-}: DashboardSidebarProps) {
+}: {
+  organizationPublicId: string;
+}) {
+  const pathname = usePathname();
   const base = `/dashboard/${organizationPublicId}`;
 
   return (
-    <aside className="border-b border-border bg-muted md:w-60 md:border-b-0 md:border-r">
-      <nav className="flex gap-2 overflow-x-auto p-4 md:flex-col">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            className="whitespace-nowrap border border-border bg-background px-3 py-2 text-sm font-medium md:w-full"
-            href={`${base}${item.href}`}
-          >
-            {item.label}
-          </Link>
-        ))}
+    <aside className="hidden w-64 shrink-0 border-r border-[var(--clay-hairline)] bg-[var(--clay-surface-soft)] p-4 md:block">
+      <nav className="space-y-1">
+        {items.map((item) => {
+          const href = `${base}${item.href}`;
+          const active = pathname === href;
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.label}
+              href={href}
+              className={cn(
+                "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                active
+                  ? "bg-[var(--clay-primary)] text-white"
+                  : "text-[var(--clay-muted)] hover:bg-[var(--clay-surface-card)] hover:text-[var(--clay-primary)]"
+              )}
+            >
+              <Icon className="size-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

@@ -9,9 +9,13 @@ import {
 
 type GoogleLoginButtonProps = {
   compact?: boolean;
+  className?: string;
 };
 
-export function GoogleLoginButton({ compact = false }: GoogleLoginButtonProps) {
+export function GoogleLoginButton({
+  compact = false,
+  className,
+}: GoogleLoginButtonProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -33,7 +37,9 @@ export function GoogleLoginButton({ compact = false }: GoogleLoginButtonProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className={["flex flex-col gap-2", className].filter(Boolean).join(" ")}
+    >
       <button
         type="button"
         onClick={handleLogin}

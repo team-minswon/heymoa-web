@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AppShell } from "@/components/layout/app-shell";
+import NextTopLoader from "nextjs-toploader";
+import Script from "next/script";
+
+import { FooterGate } from "@/components/FooterGate";
+import { Footer } from "@/components/layout/Footer";
+import { Navbar } from "@/components/layout/Navbar";
+import { NavbarGate } from "@/components/NavbarGate";
+import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { siteConfig } from "@/lib/site";
-import { AppProviders } from "./providers";
+import { Providers } from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,34 +26,114 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
+  applicationName: siteConfig.name,
   title: {
-    default: siteConfig.name,
+    default: siteConfig.title,
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  applicationName: siteConfig.name,
+  keywords: [...siteConfig.keywords],
+  authors: [{ name: siteConfig.name }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  icons: {
+    icon: [
+      { url: "/favicon.ico?v=2", sizes: "any" },
+      { url: "/favicon-32x32.png?v=2", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png?v=2", sizes: "16x16", type: "image/png" },
+      {
+        url: "/android-chrome-192x192.png?v=2",
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: siteConfig.name,
-    description: siteConfig.description,
-    siteName: siteConfig.name,
     type: "website",
+    locale: "ko_KR",
+    url: "/",
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "진짜그림 AI 일러스트 검사 서비스",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: ["/opengraph-image"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialUser = await getCurrentUserForSsr();
+
   return (
     <html
-      lang="en"
+      lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-background text-foreground">
-        <AppProviders>
-          <AppShell>{children}</AppShell>
-        </AppProviders>
+      <body className="min-h-full flex flex-col">
+        {/* Google tag (gtag.js) */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-YL06KCCE4N"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-YL06KCCE4N');
+          `}
+        </Script>
+
+        <NextTopLoader color="#ff4d8b" showSpinner={false} />
+        <Providers initialUser={initialUser}>
+          <div className="flex min-h-screen flex-col bg-[var(--cg-cream)] text-[var(--cg-ink)]">
+            <NavbarGate>
+              <Navbar />
+            </NavbarGate>
+
+            <main className="flex-1 flex flex-col">{children}</main>
+
+            <FooterGate>
+              <Footer />
+            </FooterGate>
+          </div>
+        </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

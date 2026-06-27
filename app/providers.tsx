@@ -7,12 +7,20 @@ type AppProvidersProps = {
   children: ReactNode;
 };
 
-export async function AppProviders({ children }: AppProvidersProps) {
-  const initialUser = await getCurrentUserForSsr();
+type ProvidersProps = AppProvidersProps & {
+  initialUser: Awaited<ReturnType<typeof getCurrentUserForSsr>>;
+};
 
+export function Providers({ children, initialUser }: ProvidersProps) {
   return (
     <MockProvider>
       <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
     </MockProvider>
   );
+}
+
+export async function AppProviders({ children }: AppProvidersProps) {
+  const initialUser = await getCurrentUserForSsr();
+
+  return <Providers initialUser={initialUser}>{children}</Providers>;
 }

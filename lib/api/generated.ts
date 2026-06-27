@@ -61,19 +61,23 @@ export type ApiKeyListResponse = {
   items: ApiKeyResponse[];
 };
 
+export type ApiKeyCreatedByResponse = {
+  id: number;
+  name: string | null;
+};
+
+export type ApiKeyCreatedBy = ApiKeyCreatedByResponse;
+export type ApiKeyStatus = "ACTIVE" | "REVOKED";
+export type ApiKeyStatusFilter = "active" | "revoked" | "all";
+
 export type ApiKeyResponse = {
   id: string;
   name: string;
   maskedKey: string;
-  status: string;
+  status: ApiKeyStatus;
   createdAt: string;
   lastUsedAt: string | null;
   createdBy: ApiKeyCreatedByResponse;
-};
-
-export type ApiKeyCreatedByResponse = {
-  id: number;
-  name: string | null;
 };
 
 export type CreateApiKeyRequest = {
