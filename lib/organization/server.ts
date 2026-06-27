@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { ApiClientError } from "@/lib/api/client";
-import { getOrganizationApi, listOrganizationsApi } from "@/lib/api/endpoints";
+import {
+  getOrganizationApi,
+  listOrganizationMembersApi,
+  listOrganizationsApi,
+} from "@/lib/api/endpoints";
 
 async function cookieHeader() {
   return (await cookies()).toString();
@@ -31,6 +35,15 @@ export const getOrganizationsForSsr = cache(() =>
 export const getOrganizationForSsr = cache((publicId: string) =>
   withServerCookies((cookie) =>
     getOrganizationApi(publicId, {
+      headers: cookie ? { Cookie: cookie } : undefined,
+      cache: "no-store",
+    })
+  )
+);
+
+export const getOrganizationMembersForSsr = cache((publicId: string) =>
+  withServerCookies((cookie) =>
+    listOrganizationMembersApi(publicId, {
       headers: cookie ? { Cookie: cookie } : undefined,
       cache: "no-store",
     })
