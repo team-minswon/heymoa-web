@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Copy } from "lucide-react";
 
-import type { CreateApiKeyResponse } from "@/lib/api/generated";
+import type { CreateApiKeyResponse } from "@/lib/api/generated/models";
 import { getErrorMessage } from "@/lib/api/app-response";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -30,14 +30,12 @@ export function CreateApiKeyDialog({
   const [name, setName] = React.useState("");
   const [copied, setCopied] = React.useState(false);
 
-  function handleOpenChange(nextOpen: boolean) {
-    onOpenChange(nextOpen);
-
-    if (!nextOpen) {
+  React.useEffect(() => {
+    if (!open) {
       setName("");
       setCopied(false);
     }
-  }
+  }, [open]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,7 +52,7 @@ export function CreateApiKeyDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
         <Dialog.Popup>

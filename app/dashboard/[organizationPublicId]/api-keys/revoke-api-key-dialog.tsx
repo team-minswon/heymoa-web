@@ -1,6 +1,6 @@
 "use client";
 
-import type { ApiKeyResponse } from "@/lib/api/generated";
+import type { ApiKeyResponse } from "@/lib/api/generated/models";
 import { getErrorMessage } from "@/lib/api/app-response";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";

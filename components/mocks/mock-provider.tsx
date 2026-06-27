@@ -1,41 +1,42 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
-const shouldEnableMocking =
-  process.env.NODE_ENV === "development" &&
-  process.env.NEXT_PUBLIC_API_MOCKING === "enabled";
+import { enableMocking, shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 
-type MockProviderProps = {
-  children: ReactNode;
-};
+const MOCK_START_TIMEOUT_MS = 3000;
 
-export function MockProvider({ children }: MockProviderProps) {
-  const [ready, setReady] = useState(!shouldEnableMocking);
+export function MockProvider({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(!shouldEnableMocking());
 
   useEffect(() => {
-    if (!shouldEnableMocking) {
-      return;
+    let mounted = true;
+
+    async function startMocks() {
+      if (!shouldEnableMocking()) {
+        return;
+      }
+
+      await Promise.race([
+        enableMocking(),
+        new Promise<void>((resolve) =>
+          window.setTimeout(resolve, MOCK_START_TIMEOUT_MS)
+        ),
+      ]);
     }
 
-    let cancelled = false;
-
-    async function enableMocking() {
-      const { worker } = await import("@/lib/mocks/browser");
-
-      await worker.start({
-        onUnhandledRequest: "bypass",
+    startMocks()
+      .catch((error) => {
+        console.error("Failed to start API mocks.", error);
+      })
+      .finally(() => {
+        if (mounted) {
+          setReady(true);
+        }
       });
 
-      if (!cancelled) {
-        setReady(true);
-      }
-    }
-
-    void enableMocking();
-
     return () => {
-      cancelled = true;
+      mounted = false;
     };
   }, []);
 

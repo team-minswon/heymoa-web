@@ -1,11 +1,4 @@
-const allowedReturnPaths = new Set([
-  "/",
-  "/dashboard",
-  "/onboarding",
-  "/privacy",
-  "/settings",
-  "/terms",
-]);
+const allowedReturnPaths = new Set(["/", "/terms", "/privacy", "/settings"]);
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 

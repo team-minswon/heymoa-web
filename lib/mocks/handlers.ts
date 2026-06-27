@@ -1,159 +1,152 @@
-import { http, HttpResponse } from "msw";
-import type { AppResponse } from "@/lib/api/generated";
-import {
-  mockApiKeys,
-  mockMembers,
-  mockOrganization,
-  mockUser,
-} from "@/lib/mocks/data";
+import { HttpResponse, http } from "msw";
 
-function success<T>(data: T): AppResponse<T> {
-  return {
-    success: true,
-    data,
-    error: null,
-  };
+import { mockState } from "@/lib/mocks/state";
+
+function organizationPublicId(params: Record<string, string | undefined>) {
+  return params.organizationPublicId;
 }
 
-function createdApiKeyName(value: unknown) {
-  if (
-    value &&
-    typeof value === "object" &&
-    "name" in value &&
-    typeof value.name === "string" &&
-    value.name.trim()
-  ) {
-    return value.name.trim();
-  }
+function keyId(params: Record<string, string | undefined>) {
+  return params.keyId;
+}
 
-  return "New API key";
+function jsonError(code: string, message: string, status: number) {
+  return HttpResponse.json(mockState.appError(code, message), { status });
+}
+
+function jsonSuccess<T>(data: T, status = 200) {
+  return HttpResponse.json(mockState.appSuccess(data), { status });
 }
 
 export const handlers = [
-  http.get("*/v1/users/me", () => HttpResponse.json(success(mockUser))),
+  http.get("*/v1/users/me", () => {
+    const body = mockState.getMeResponse();
 
-  http.post("*/v1/auth/refresh", () =>
-    HttpResponse.json(success<Record<string, never>>({}))
-  ),
+    if (body.data === null) {
+      return jsonError("UNAUTHORIZED", "Authentication required.", 401);
+    }
 
-  http.post("*/v1/auth/logout", () =>
-    HttpResponse.json(success<Record<string, never>>({}))
-  ),
-
-  http.post("*/v1/onboarding/profile", () =>
-    HttpResponse.json(success({ onboardingCompleted: true }))
-  ),
-
+    return jsonSuccess(body.data);
+  }),
+  http.post("*/v1/auth/refresh", () => {
+    mockState.refreshAuth();
+    return jsonSuccess(null);
+  }),
+  http.post("*/v1/auth/logout", () => jsonSuccess(mockState.logout().data)),
   http.get("*/v1/organizations", () =>
-    HttpResponse.json(success([mockOrganization]))
+    jsonSuccess(mockState.listOrganizations())
   ),
-
-  http.get("*/v1/organizations/:publicId", ({ params }) => {
-    if (params.publicId !== mockOrganization.publicId) {
-      return new HttpResponse(null, { status: 404 });
-    }
-
-    return HttpResponse.json(success(mockOrganization));
-  }),
-
-  http.get("*/v1/organizations/:publicId/members", ({ params }) => {
-    if (params.publicId !== mockOrganization.publicId) {
-      return new HttpResponse(null, { status: 404 });
-    }
-
-    return HttpResponse.json(success(mockMembers));
-  }),
-
-  http.patch("*/v1/organizations/:publicId", async ({ params, request }) => {
-    if (params.publicId !== mockOrganization.publicId) {
-      return new HttpResponse(null, { status: 404 });
-    }
-
-    const body = (await request.json()) as { name?: string };
-
-    return HttpResponse.json(
-      success({
-        ...mockOrganization,
-        name: body.name?.trim() || mockOrganization.name,
-      })
-    );
-  }),
-
-  http.get("*/v1/organizations/:publicId/api-keys", ({ params }) => {
-    if (params.publicId !== mockOrganization.publicId) {
-      return new HttpResponse(null, { status: 404 });
-    }
-
-    return HttpResponse.json(success({ items: mockApiKeys }));
-  }),
-
-  http.post(
-    "*/v1/organizations/:publicId/api-keys",
-    async ({ params, request }) => {
-      if (params.publicId !== mockOrganization.publicId) {
-        return new HttpResponse(null, { status: 404 });
-      }
-
-      const body = await request.json();
-      const now = new Date().toISOString();
-
-      return HttpResponse.json(
-        success({
-          id: "key_mock_created",
-          name: createdApiKeyName(body),
-          secretKey: "ril_live_mock_secret_only_shown_once",
-          maskedKey: "ril_live_************************mock",
-          status: "ACTIVE",
-          createdAt: now,
-        }),
-        { status: 201 }
-      );
-    }
-  ),
-
   http.patch(
-    "*/v1/organizations/:publicId/api-keys/:keyId",
+    "*/v1/organizations/:organizationPublicId",
     async ({ params, request }) => {
-      if (params.publicId !== mockOrganization.publicId) {
-        return new HttpResponse(null, { status: 404 });
-      }
-
-      const key = mockApiKeys.find((item) => item.id === params.keyId);
-
-      if (!key) {
-        return new HttpResponse(null, { status: 404 });
-      }
-
       const body = (await request.json()) as { name?: string };
-
-      return HttpResponse.json(
-        success({
-          ...key,
-          name: body.name?.trim() || key.name,
-        })
+      const updated = mockState.updateOrganization(
+        organizationPublicId(params as Record<string, string | undefined>) ??
+          "",
+        body.name ?? ""
       );
+
+      if (!updated) {
+        return jsonError("NOT_FOUND", "Organization not found.", 404);
+      }
+
+      return jsonSuccess(updated);
     }
   ),
+  http.get("*/v1/organizations/:organizationPublicId", ({ params }) => {
+    const organization = mockState.getOrganization(
+      organizationPublicId(params as Record<string, string | undefined>) ?? ""
+    );
 
-  http.post(
-    "*/v1/organizations/:publicId/api-keys/:keyId/revoke",
-    ({ params }) => {
-      if (params.publicId !== mockOrganization.publicId) {
-        return new HttpResponse(null, { status: 404 });
-      }
+    if (!organization) {
+      return jsonError("NOT_FOUND", "Organization not found.", 404);
+    }
 
-      const key = mockApiKeys.find((item) => item.id === params.keyId);
+    return jsonSuccess(organization);
+  }),
+  http.get("*/v1/organizations/:organizationPublicId/members", ({ params }) => {
+    const members = mockState.listMembers(
+      organizationPublicId(params as Record<string, string | undefined>) ?? ""
+    );
 
-      if (!key) {
-        return new HttpResponse(null, { status: 404 });
-      }
+    if (!members) {
+      return jsonError("NOT_FOUND", "Organization not found.", 404);
+    }
 
-      return HttpResponse.json(
-        success({
-          ...key,
-          status: "REVOKED",
-        })
+    return jsonSuccess(members);
+  }),
+  http.get(
+    "*/v1/organizations/:organizationPublicId/api-keys",
+    ({ params, request }) => {
+      const publicId = organizationPublicId(
+        params as Record<string, string | undefined>
       );
+
+      if (!mockState.getOrganization(publicId ?? "")) {
+        return jsonError("NOT_FOUND", "Organization not found.", 404);
+      }
+
+      const url = new URL(request.url);
+      const items = mockState.listApiKeys(publicId ?? "", {
+        status: url.searchParams.get("status"),
+        limit: (() => {
+          const value = url.searchParams.get("limit");
+          return value ? Number(value) : undefined;
+        })(),
+      });
+
+      return jsonSuccess(items);
+    }
+  ),
+  http.post(
+    "*/v1/organizations/:organizationPublicId/api-keys",
+    async ({ params, request }) => {
+      const body = (await request.json()) as { name?: string | null };
+      const created = mockState.createApiKey(
+        organizationPublicId(params as Record<string, string | undefined>) ??
+          "",
+        body.name
+      );
+
+      if (!created) {
+        return jsonError("NOT_FOUND", "Organization not found.", 404);
+      }
+
+      return jsonSuccess(created, 201);
+    }
+  ),
+  http.patch(
+    "*/v1/organizations/:organizationPublicId/api-keys/:keyId",
+    async ({ params, request }) => {
+      const body = (await request.json()) as { name?: string };
+      const updated = mockState.updateApiKey(
+        organizationPublicId(params as Record<string, string | undefined>) ??
+          "",
+        keyId(params as Record<string, string | undefined>) ?? "",
+        body.name ?? ""
+      );
+
+      if (!updated) {
+        return jsonError("API_KEY_NOT_FOUND", "API key not found.", 404);
+      }
+
+      return jsonSuccess(updated);
+    }
+  ),
+  http.post(
+    "*/v1/organizations/:organizationPublicId/api-keys/:keyId/revoke",
+    ({ params }) => {
+      const revoked = mockState.revokeApiKey(
+        organizationPublicId(params as Record<string, string | undefined>) ??
+          "",
+        keyId(params as Record<string, string | undefined>) ?? ""
+      );
+
+      if (!revoked) {
+        return jsonError("API_KEY_NOT_FOUND", "API key not found.", 404);
+      }
+
+      return jsonSuccess(revoked);
     }
   ),
 ];

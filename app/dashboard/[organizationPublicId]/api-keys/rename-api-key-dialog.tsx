@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import type { ApiKeyResponse } from "@/lib/api/generated";
+import type { ApiKeyResponse } from "@/lib/api/generated/models";
 import { getErrorMessage } from "@/lib/api/app-response";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -24,12 +24,12 @@ export function RenameApiKeyDialog({
   onOpenChange,
   onRename,
 }: RenameApiKeyDialogProps) {
-  const [draft, setDraft] = React.useState<{
-    keyId: string | null;
-    name: string;
-  }>({ keyId: null, name: "" });
-  const name = draft.keyId === apiKey?.id ? draft.name : (apiKey?.name ?? "");
+  const [name, setName] = React.useState("");
   const trimmedName = normalizeKeyName(name);
+
+  React.useEffect(() => {
+    setName(apiKey?.name ?? "");
+  }, [apiKey]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,12 +60,7 @@ export function RenameApiKeyDialog({
               <input
                 className="h-9 w-full rounded-lg border border-[var(--clay-hairline)] bg-[var(--clay-canvas)] px-3 text-sm outline-none focus:border-[var(--clay-primary)]"
                 value={name}
-                onChange={(event) =>
-                  setDraft({
-                    keyId: apiKey?.id ?? null,
-                    name: event.target.value,
-                  })
-                }
+                onChange={(event) => setName(event.target.value)}
                 disabled={isPending}
                 autoFocus
               />

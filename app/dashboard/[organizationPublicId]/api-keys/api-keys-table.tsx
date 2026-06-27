@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 
-import type { ApiKeyResponse } from "@/lib/api/generated";
+import type { ApiKeyResponse } from "@/lib/api/generated/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 

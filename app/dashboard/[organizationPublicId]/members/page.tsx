@@ -1,50 +1,54 @@
+import { Card, CardContent } from "@/components/ui/card";
 import { getOrganizationMembersForSsr } from "@/lib/organization/server";
 
-type MembersPageProps = {
+export default async function MembersPage({
+  params,
+}: {
   params: Promise<{ organizationPublicId: string }>;
-};
-
-export default async function MembersPage({ params }: MembersPageProps) {
+}) {
   const { organizationPublicId } = await params;
   const members = await getOrganizationMembersForSsr(organizationPublicId);
 
   return (
-    <section>
-      <p className="font-mono text-sm text-muted-foreground">Members</p>
-      <h1 className="mt-4 text-3xl font-semibold">Organization members</h1>
-      <p className="mt-4 text-muted-foreground">
-        Review the people with access to this organization.
-      </p>
-      <div className="mt-8 overflow-hidden border border-border">
-        <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-          <thead className="bg-muted text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium">Joined</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member) => (
-              <tr key={member.userId} className="border-t border-border">
-                <td className="px-4 py-3 font-medium">
-                  {member.name ?? "Unnamed member"}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {member.email ?? "No email"}
-                </td>
-                <td className="px-4 py-3">{member.role}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {new Intl.DateTimeFormat("en", {
-                    dateStyle: "medium",
-                  }).format(new Date(member.joinedAt))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-semibold">Members</h1>
+        <p className="mt-2 text-sm text-[var(--clay-muted)]">
+          현재 organization 멤버를 확인합니다.
+        </p>
       </div>
-    </section>
+      <Card className="overflow-hidden border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] shadow-none ring-0">
+        <CardContent className="p-0 overflow-x-auto">
+          <div className="min-w-[680px]">
+            <div className="grid grid-cols-[1fr_120px_180px] gap-4 border-b border-[var(--clay-hairline)] px-5 py-3 text-sm font-semibold text-[var(--clay-muted)]">
+              <span>Member</span>
+              <span>Role</span>
+              <span>Joined</span>
+            </div>
+            {members.map((member) => (
+              <div
+                key={member.userId}
+                className="grid grid-cols-[1fr_120px_180px] gap-4 border-b border-[var(--clay-hairline)] px-5 py-4 text-sm last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">
+                    {member.name ?? member.email ?? "사용자"}
+                  </p>
+                  <p className="truncate text-[var(--clay-muted)]">
+                    {member.email ?? "이메일 없음"}
+                  </p>
+                </div>
+                <span>{member.role}</span>
+                <span>
+                  {new Intl.DateTimeFormat("ko-KR").format(
+                    new Date(member.joinedAt)
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

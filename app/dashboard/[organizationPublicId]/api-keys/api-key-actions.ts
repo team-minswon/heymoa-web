@@ -1,15 +1,20 @@
 import {
-  createApiKeyApi,
-  listApiKeysApi,
-  revokeApiKeyApi,
-  updateApiKeyApi,
-} from "@/lib/api/endpoints";
+  createApiKey,
+  getListApiKeysQueryKey,
+  listApiKeys,
+  revokeApiKey,
+  updateApiKey,
+} from "@/lib/api/generated/api-keys/api-keys";
 import type {
   ApiKeyListResponse,
   ApiKeyResponse,
   ApiKeyStatusFilter,
   CreateApiKeyResponse,
-} from "@/lib/api/generated";
+} from "@/lib/api/generated/models";
+import {
+  toAppResponseError,
+  unwrapGeneratedAppResponse,
+} from "@/lib/api/app-response";
 
 import { normalizeKeyName } from "./api-key-helpers";
 
@@ -17,7 +22,7 @@ export function apiKeysQueryKey(
   organizationPublicId: string,
   status: ApiKeyStatusFilter
 ) {
-  return ["api-keys", organizationPublicId, status, 50] as const;
+  return getListApiKeysQueryKey(organizationPublicId, { status, limit: 50 });
 }
 
 export async function getApiKeys(
@@ -25,14 +30,14 @@ export async function getApiKeys(
   status: ApiKeyStatusFilter
 ): Promise<ApiKeyListResponse> {
   try {
-    return await listApiKeysApi(organizationPublicId, {
+    const response = await listApiKeys(organizationPublicId, {
       status,
       limit: 50,
     });
+
+    return unwrapGeneratedAppResponse(response);
   } catch (error) {
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to load API keys.");
+    throw toAppResponseError(error, "Failed to load API keys.");
   }
 }
 
@@ -42,13 +47,13 @@ export async function createOrganizationApiKey(
 ): Promise<CreateApiKeyResponse> {
   try {
     const normalizedName = normalizeKeyName(name);
-    return await createApiKeyApi(organizationPublicId, {
+    const response = await createApiKey(organizationPublicId, {
       name: normalizedName || null,
     });
+
+    return unwrapGeneratedAppResponse(response);
   } catch (error) {
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to create API key.");
+    throw toAppResponseError(error, "Failed to create API key.");
   }
 }
 
@@ -58,13 +63,13 @@ export async function renameOrganizationApiKey(
   name: string
 ): Promise<ApiKeyResponse> {
   try {
-    return await updateApiKeyApi(organizationPublicId, keyId, {
+    const response = await updateApiKey(organizationPublicId, keyId, {
       name: normalizeKeyName(name),
     });
+
+    return unwrapGeneratedAppResponse(response);
   } catch (error) {
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to rename API key.");
+    throw toAppResponseError(error, "Failed to rename API key.");
   }
 }
 
@@ -73,11 +78,11 @@ export async function revokeOrganizationApiKey(
   keyId: string
 ): Promise<ApiKeyResponse> {
   try {
-    return await revokeApiKeyApi(organizationPublicId, keyId);
+    const response = await revokeApiKey(organizationPublicId, keyId);
+
+    return unwrapGeneratedAppResponse(response);
   } catch (error) {
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to revoke API key.");
+    throw toAppResponseError(error, "Failed to revoke API key.");
   }
 }
 

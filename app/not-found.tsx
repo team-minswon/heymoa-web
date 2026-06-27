@@ -1,16 +1,17 @@
-import Link from "next/link";
+import { SearchX } from "lucide-react";
+
+import { DefaultStatusActions } from "@/components/realillust/status-panel";
+import { StatusPage } from "@/components/realillust/status-page";
 
 export default function NotFound() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-16">
-      <p className="font-mono text-sm text-muted-foreground">404</p>
-      <h1 className="mt-4 text-3xl font-semibold">Page not found</h1>
-      <p className="mt-4 text-muted-foreground">
-        The requested route is not part of the current rebuild stage.
-      </p>
-      <Link className="mt-8 text-sm font-medium underline" href="/">
-        Go home
-      </Link>
-    </main>
+    <StatusPage
+      icon={SearchX}
+      label="404"
+      title="페이지를 찾을 수 없습니다"
+      description="주소가 바뀌었거나 더 이상 제공하지 않는 페이지입니다. 홈으로 돌아가 다시 시작해 주세요."
+      actions={<DefaultStatusActions />}
+      withoutShell
+    />
   );
 }

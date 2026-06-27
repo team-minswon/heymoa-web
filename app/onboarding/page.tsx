@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { OnboardingWizard } from "./onboarding-wizard";
 

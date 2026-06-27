@@ -8,7 +8,7 @@ import type {
   ApiKeyResponse,
   ApiKeyStatusFilter,
   CreateApiKeyResponse,
-} from "@/lib/api/generated";
+} from "@/lib/api/generated/models";
 import { getErrorMessage } from "@/lib/api/app-response";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";

@@ -2,7 +2,7 @@ import type {
   ApiKeyCreatedBy,
   ApiKeyStatus,
   ApiKeyStatusFilter,
-} from "@/lib/api/generated";
+} from "@/lib/api/generated/models";
 
 export type ApiKeyStatusFilterValue = ApiKeyStatusFilter;
 

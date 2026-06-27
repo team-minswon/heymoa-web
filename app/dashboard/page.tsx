@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
+
 import { DashboardAuthRequired } from "@/components/dashboard/dashboard-auth-required";
-import { ApiClientError } from "@/lib/api/client";
+import { Card, CardContent } from "@/components/ui/card";
 import { getOrganizationsForSsr } from "@/lib/organization/server";
-import type { OrganizationSummary } from "@/lib/organization/types";
+import {
+  OrganizationApiError,
+  type OrganizationSummary,
+} from "@/lib/organization/types";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +17,7 @@ export default async function DashboardIndexPage() {
   try {
     organizations = await getOrganizationsForSsr();
   } catch (error) {
-    if (error instanceof ApiClientError && [401, 503].includes(error.status)) {
+    if (error instanceof OrganizationApiError && error.status === 401) {
       unauthorized = true;
     } else {
       throw error;
@@ -31,12 +35,15 @@ export default async function DashboardIndexPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-16">
-      <p className="font-mono text-sm text-muted-foreground">Dashboard</p>
-      <h1 className="mt-4 text-3xl font-semibold">No organization found</h1>
-      <p className="mt-4 text-muted-foreground">
-        The account does not have an organization available yet.
-      </p>
+    <main className="flex min-h-screen items-center justify-center bg-[var(--clay-canvas)] p-6">
+      <Card className="w-full max-w-sm border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] p-6 shadow-none ring-0">
+        <CardContent className="p-0">
+          <h1 className="text-xl font-semibold">조직을 찾을 수 없습니다</h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--clay-muted)]">
+            가입 후 생성된 organization이 없습니다.
+          </p>
+        </CardContent>
+      </Card>
     </main>
   );
 }

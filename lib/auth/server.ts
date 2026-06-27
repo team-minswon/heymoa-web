@@ -1,26 +1,70 @@
 import { cookies } from "next/headers";
-import { ApiClientError } from "@/lib/api/client";
-import { getMeApi } from "@/lib/api/endpoints";
-import { isAuthApiConfigured } from "@/lib/auth/paths";
-import type { AuthUser } from "@/lib/auth/types";
+import { cache } from "react";
 
-export async function getCurrentUserForSsr(): Promise<AuthUser | null> {
-  if (!isAuthApiConfigured) {
+import type { AppResponse, AuthUser } from "@/lib/auth/types";
+import { mockState } from "@/lib/mocks/state";
+import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+function buildServerApiUrl(path: string) {
+  if (!apiBaseUrl) {
     return null;
   }
 
-  const cookieHeader = (await cookies()).toString();
+  return new URL(path, apiBaseUrl).toString();
+}
 
-  try {
-    return await getMeApi({
-      headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
-      cache: "no-store",
-    });
-  } catch (error) {
-    if (error instanceof ApiClientError) {
+function serializeCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  return cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
+}
+
+export const getCurrentUserForSsr = cache(
+  async (): Promise<AuthUser | null> => {
+    if (shouldEnableMocking()) {
+      return mockState.isAuthenticated()
+        ? mockState.getAuthenticatedUser()
+        : null;
+    }
+
+    const url = buildServerApiUrl("/v1/users/me");
+
+    if (!url) {
       return null;
     }
 
-    return null;
+    const cookieHeader = serializeCookies(await cookies());
+
+    if (!cookieHeader) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Cookie: cookieHeader,
+        },
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const body = (await response.json()) as AppResponse<AuthUser>;
+
+      if (!body.success || !body.data) {
+        return null;
+      }
+
+      return body.data;
+    } catch {
+      return null;
+    }
   }
-}
+);

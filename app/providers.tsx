@@ -1,26 +1,51 @@
-import type { ReactNode } from "react";
+"use client";
+
+import {
+  environmentManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { MockProvider } from "@/components/mocks/mock-provider";
-import { getCurrentUserForSsr } from "@/lib/auth/server";
+import type { AuthUser } from "@/lib/auth/types";
 
-type AppProvidersProps = {
-  children: ReactNode;
-};
-
-type ProvidersProps = AppProvidersProps & {
-  initialUser: Awaited<ReturnType<typeof getCurrentUserForSsr>>;
-};
-
-export function Providers({ children, initialUser }: ProvidersProps) {
-  return (
-    <MockProvider>
-      <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
-    </MockProvider>
-  );
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+      },
+    },
+  });
 }
 
-export async function AppProviders({ children }: AppProvidersProps) {
-  const initialUser = await getCurrentUserForSsr();
+let browserQueryClient: QueryClient | undefined;
 
-  return <Providers initialUser={initialUser}>{children}</Providers>;
+function getQueryClient() {
+  if (environmentManager.isServer()) {
+    return makeQueryClient();
+  }
+
+  browserQueryClient ??= makeQueryClient();
+  return browserQueryClient;
+}
+
+export function Providers({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser | null;
+}) {
+  const queryClient = getQueryClient();
+
+  return (
+    <MockProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
+      </QueryClientProvider>
+    </MockProvider>
+  );
 }

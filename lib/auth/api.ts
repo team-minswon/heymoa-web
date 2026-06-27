@@ -1,52 +1,85 @@
-import { ApiClientError } from "@/lib/api/client";
-import { getMeApi, logoutAuthApi, refreshAuthApi } from "@/lib/api/endpoints";
 import { notifyAuthStateChanged } from "@/lib/auth/events";
-import { isAuthApiConfigured } from "@/lib/auth/paths";
-import type { AuthUser } from "@/lib/auth/types";
+import { buildApiUrl, isAuthApiConfigured } from "@/lib/auth/paths";
+import type { AppResponse, AuthUser } from "@/lib/auth/types";
+import { refreshAuthOnce } from "@/lib/api/fetcher";
 
-class AuthApiError extends ApiClientError {}
+class AuthApiError extends Error {
+  code?: string;
+  status: number;
 
-export async function refreshAuth() {
-  await refreshAuthApi();
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "AuthApiError";
+    this.status = status;
+    this.code = code;
+  }
 }
 
-async function fetchMe(hasRetried = false): Promise<AuthUser> {
-  if (!isAuthApiConfigured) {
+async function parseAppResponse<T>(
+  response: Response,
+  allowEmptyData = false
+): Promise<T> {
+  if (response.status === 204 && allowEmptyData) {
+    return undefined as T;
+  }
+
+  const body = (await response.json()) as AppResponse<T>;
+
+  if (!response.ok || !body.success || body.data === null) {
+    if (response.ok && body.success && allowEmptyData) {
+      return undefined as T;
+    }
+
     throw new AuthApiError(
-      "API URL is not configured.",
-      0,
-      "API_NOT_CONFIGURED"
+      body.error?.message ?? "Authentication request failed.",
+      response.status,
+      body.error?.code
     );
   }
 
-  try {
-    return await getMeApi();
-  } catch (error) {
-    if (!(error instanceof ApiClientError)) {
-      throw error;
-    }
+  return body.data;
+}
 
-    if (error.status !== 401 || hasRetried) {
-      throw new AuthApiError(error.message, error.status, error.code);
-    }
+async function postAuth<T>(path: string, allowEmptyData = false) {
+  const response = await fetch(buildApiUrl(path), {
+    method: "POST",
+    credentials: "include",
+  });
 
+  return parseAppResponse<T>(response, allowEmptyData);
+}
+
+async function fetchMe(hasRetried = false): Promise<AuthUser> {
+  const url = buildApiUrl("/v1/users/me");
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (response.status === 401 && !hasRetried) {
     try {
-      await refreshAuth();
+      await refreshAuthOnce();
       return fetchMe(true);
     } catch {
       notifyAuthStateChanged({ reason: "unauthenticated" });
-      throw new AuthApiError("Authentication refresh failed.", 401);
+      throw new Error("Authentication refresh failed.");
     }
   }
+
+  return parseAppResponse<AuthUser>(response);
 }
 
 export async function getMe(): Promise<AuthUser> {
   return fetchMe();
 }
 
+export async function refreshAuth() {
+  await postAuth<void>("/v1/auth/refresh", true);
+}
+
 export async function logout() {
   try {
-    await logoutAuthApi();
+    await postAuth<void>("/v1/auth/logout", true);
   } finally {
     notifyAuthStateChanged({ reason: "logout" });
   }

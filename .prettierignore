@@ -1,5 +1,3 @@
 .next
-AGENTS.md
 node_modules
-out
-public/mockServiceWorker.js
+pnpm-lock.yaml

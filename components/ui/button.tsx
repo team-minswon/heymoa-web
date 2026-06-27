@@ -45,7 +45,8 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonPrimitive.Props, VariantProps<typeof buttonVariants> {
+  extends ButtonPrimitive.Props,
+    VariantProps<typeof buttonVariants> {
   loading?: boolean;
 }
 
