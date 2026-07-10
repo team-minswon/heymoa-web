@@ -1,7 +1,7 @@
 import { defineConfig } from "orval";
 
 export default defineConfig({
-  realillust: {
+  heymoa: {
     input: {
       target: "./openapi3.yml",
     },

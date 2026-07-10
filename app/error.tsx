@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle, Home, RotateCcw } from "lucide-react";
 
-import { StatusPanel } from "@/components/realillust/status-panel";
+import { StatusPanel } from "@/components/heymoa/status-panel";
 
 export default function Error({
   reset,

@@ -1,5 +1,5 @@
 name: Rebuild step
-description: Track one planned step in the realillust-web rebuild sequence.
+description: Track one planned step in the heymoa-web rebuild sequence.
 title: "[Rebuild] "
 labels: ["rebuild"]
 body:

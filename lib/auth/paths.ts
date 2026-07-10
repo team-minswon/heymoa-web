@@ -21,7 +21,7 @@ export function normalizeReturnTo(value: string | null | undefined): string {
   let path = value;
 
   try {
-    const parsed = new URL(value, "http://realillust.local");
+    const parsed = new URL(value, "http://heymoa.local");
     path = `${parsed.pathname}${parsed.search}`;
   } catch {
     return "/";

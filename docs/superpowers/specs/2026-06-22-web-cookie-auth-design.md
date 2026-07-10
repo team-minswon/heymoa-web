@@ -4,7 +4,7 @@ Date: 2026-06-22
 
 ## Scope
 
-This design updates `realillust-web` to match the backend cookie-based Google OAuth design implemented in `realillust-server`.
+This design updates `heymoa-web` to match the backend cookie-based Google OAuth design implemented in `heymoa-server`.
 
 The frontend uses Next.js App Router. The backend owns authentication tokens and sends both the access token and refresh token as HttpOnly Secure cookies. The frontend must not read, store, or forward tokens manually.
 
@@ -41,9 +41,9 @@ Local:
 
 Production:
 
-- Backend API origin: `https://api.realillust.com`
-- Frontend origin: `https://realillust.com`
-- Login endpoint: `https://api.realillust.com/api/v1/auth/oauth2/authorize/google`
+- Backend API origin: `https://api.heymoa.com`
+- Frontend origin: `https://heymoa.com`
+- Login endpoint: `https://api.heymoa.com/api/v1/auth/oauth2/authorize/google`
 
 `NEXT_PUBLIC_API_BASE_URL` remains the frontend's public API origin setting.
 
@@ -54,7 +54,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ```
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://api.realillust.com
+NEXT_PUBLIC_API_BASE_URL=https://api.heymoa.com
 ```
 
 The frontend should not require `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. Google OAuth starts on the backend.

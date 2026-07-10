@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the organization API Keys dashboard page and replace the petstore sample API generation with Realillust OpenAPI, Orval, TanStack Query, MSW, and faker-based mocks.
+**Goal:** Build the organization API Keys dashboard page and replace the petstore sample API generation with Heymoa OpenAPI, Orval, TanStack Query, MSW, and faker-based mocks.
 
 **Architecture:** The API Keys page stays under the existing dashboard route and delegates interactive behavior to client components. `openapi3.yml` becomes the contract source for generated models/hooks, `apiFetch` remains the custom fetch mutator, and MSW provides a stateful fake dashboard backend when `NEXT_PUBLIC_API_MOCKING=enabled`.
 
@@ -16,14 +16,14 @@
 - UI design system: `DESIGN.md`
 - Local UI primitives: `components/ui/*`
 - API fetcher: `lib/api/fetcher.ts`
-- Backend API key controller reference: `/Users/kms/Desktop/realillust/realillust-server/src/main/kotlin/com/realillust/apikey/presentation/ApiKeyV1Controller.kt`
-- Backend API key DTO reference: `/Users/kms/Desktop/realillust/realillust-server/src/main/kotlin/com/realillust/apikey/presentation/dto`
+- Backend API key controller reference: `/Users/kms/Desktop/heymoa/heymoa-server/src/main/kotlin/com/heymoa/apikey/presentation/ApiKeyV1Controller.kt`
+- Backend API key DTO reference: `/Users/kms/Desktop/heymoa/heymoa-server/src/main/kotlin/com/heymoa/apikey/presentation/dto`
 
 All shell commands in this repo must be prefixed with `rtk`.
 
 ## File Structure
 
-- Create `openapi3.yml`: Realillust OpenAPI 3 contract for auth, organization, members, and API keys.
+- Create `openapi3.yml`: Heymoa OpenAPI 3 contract for auth, organization, members, and API keys.
 - Modify `orval.config.ts`: replace petstore input, generate React Query client/models/MSW mocks.
 - Modify `package.json` and `pnpm-lock.yaml`: add `msw` and `@faker-js/faker`.
 - Modify `lib/api/fetcher.ts`: support Orval's generated `body` and existing `data` request styles consistently.
@@ -47,7 +47,7 @@ All shell commands in this repo must be prefixed with `rtk`.
 
 ---
 
-### Task 1: Realillust OpenAPI And Orval Generation
+### Task 1: Heymoa OpenAPI And Orval Generation
 
 **Files:**
 
@@ -74,7 +74,7 @@ Create `openapi3.yml` with this contract:
 ```yaml
 openapi: 3.0.3
 info:
-  title: Realillust API
+  title: Heymoa API
   version: 0.1.0
 servers:
   - url: /
@@ -512,7 +512,7 @@ Replace `orval.config.ts` with:
 import { defineConfig } from "orval";
 
 export default defineConfig({
-  realillust: {
+  heymoa: {
     input: {
       target: "./openapi3.yml",
     },
@@ -555,7 +555,7 @@ Run:
 
 ```bash
 rtk git add openapi3.yml orval.config.ts package.json pnpm-lock.yaml lib/api/generated
-rtk git commit -m "feat: add realillust openapi client"
+rtk git commit -m "feat: add heymoa openapi client"
 ```
 
 Expected: commit succeeds.
@@ -733,8 +733,8 @@ const now = new Date("2026-06-26T09:00:00.000Z").toISOString();
 
 export const mockUser: AuthUser = {
   id: 1,
-  email: "owner@realillust.dev",
-  name: "Realillust Owner",
+  email: "owner@heymoa.dev",
+  name: "Heymoa Owner",
   image: null,
   onboardingCompleted: true,
 };
@@ -750,8 +750,8 @@ let organization: OrganizationDetail = {
 const members: OrganizationMember[] = [
   {
     userId: 1,
-    name: "Realillust Owner",
-    email: "owner@realillust.dev",
+    name: "Heymoa Owner",
+    email: "owner@heymoa.dev",
     image: null,
     role: "OWNER",
     joinedAt: "2026-06-20T02:30:00.000Z",
@@ -759,7 +759,7 @@ const members: OrganizationMember[] = [
   {
     userId: 2,
     name: "Design Reviewer",
-    email: "reviewer@realillust.dev",
+    email: "reviewer@heymoa.dev",
     image: null,
     role: "MEMBER",
     joinedAt: "2026-06-22T06:10:00.000Z",
@@ -774,7 +774,7 @@ let keys: ApiKeyResponse[] = [
     status: "ACTIVE",
     createdAt: "2026-06-24T05:10:00.000Z",
     lastUsedAt: null,
-    createdBy: { id: 1, name: "Realillust Owner" },
+    createdBy: { id: 1, name: "Heymoa Owner" },
   },
   {
     id: "key_demo_revoked",
@@ -783,7 +783,7 @@ let keys: ApiKeyResponse[] = [
     status: "REVOKED",
     createdAt: "2026-06-21T04:20:00.000Z",
     lastUsedAt: "2026-06-23T01:00:00.000Z",
-    createdBy: { id: 1, name: "Realillust Owner" },
+    createdBy: { id: 1, name: "Heymoa Owner" },
   },
 ];
 

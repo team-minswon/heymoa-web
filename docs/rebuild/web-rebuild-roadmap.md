@@ -1,6 +1,6 @@
-# realillust-web Rebuild Roadmap
+# heymoa-web Rebuild Roadmap
 
-This document defines how `realillust-web` will be rebuilt from a fresh React/Next baseline while preserving the existing `main` history.
+This document defines how `heymoa-web` will be rebuilt from a fresh React/Next baseline while preserving the existing `main` history.
 
 The goal is not to reset git history. The goal is to create `dev` from the current `main`, overlay a clean baseline on `dev`, and rebuild the current product behavior through issue, branch, and pull request records.
 

@@ -3,8 +3,8 @@ export const siteConfig = {
   title: "진짜그림 | AI 일러스트 검사와 이미지 판별",
   description:
     "진짜그림은 AI 생성 의심 일러스트, 메타데이터, 국소 영역 신호를 함께 분석해 창작 이미지와 공모전 출품작을 빠르게 검토할 수 있도록 돕는 AI 일러스트 검사 서비스입니다.",
-  url: "https://realillust.com",
-  domain: "realillust.com",
+  url: "https://heymoa.com",
+  domain: "heymoa.com",
   contactEmail: "team.minswon@gmail.com",
   keywords: [
     "진짜그림",

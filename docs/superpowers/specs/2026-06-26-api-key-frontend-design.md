@@ -2,7 +2,7 @@
 
 ## Context
 
-`realillust-server` now exposes organization-owned API key management endpoints. The frontend currently has a dashboard shell and an API Keys navigation item, but `/dashboard/{organizationPublicId}/api-keys` still renders a coming-soon panel.
+`heymoa-server` now exposes organization-owned API key management endpoints. The frontend currently has a dashboard shell and an API Keys navigation item, but `/dashboard/{organizationPublicId}/api-keys` still renders a coming-soon panel.
 
 The API key backend contract supports:
 
@@ -12,7 +12,7 @@ The API key backend contract supports:
 - Revoking a key with a revoke-only lifecycle.
 - Returning list rows with `maskedKey`, `status`, `createdAt`, `lastUsedAt`, and `createdBy`.
 
-This design implements the API Keys dashboard page and also replaces the current petstore Orval sample with a Realillust OpenAPI-based frontend contract. The OpenAPI, Orval, MSW, and faker setup should make dashboard development and browser verification possible without running the backend or passing through Google OAuth2.
+This design implements the API Keys dashboard page and also replaces the current petstore Orval sample with a Heymoa OpenAPI-based frontend contract. The OpenAPI, Orval, MSW, and faker setup should make dashboard development and browser verification possible without running the backend or passing through Google OAuth2.
 
 ## Goals
 

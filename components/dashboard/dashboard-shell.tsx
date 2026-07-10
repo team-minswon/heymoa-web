@@ -65,7 +65,7 @@ export function DashboardShell({
               href={`/dashboard/${organization.publicId}`}
               className="shrink-0 text-sm font-semibold hover:text-[var(--clay-brand-pink)] transition"
             >
-              Realillust Dashboard
+              Heymoa Dashboard
             </Link>
           </div>
 

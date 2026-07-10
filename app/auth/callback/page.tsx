@@ -6,7 +6,7 @@ import { LoaderCircle } from "lucide-react";
 
 import { Providers } from "@/app/providers";
 import { useAuth } from "@/components/auth/auth-provider";
-import { StatusPanel } from "@/components/realillust/status-panel";
+import { StatusPanel } from "@/components/heymoa/status-panel";
 import { getMe } from "@/lib/auth/api";
 import { normalizeReturnTo } from "@/lib/auth/paths";
 

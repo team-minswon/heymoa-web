@@ -18,7 +18,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     key: "acquisitionSource",
     eyebrow: "1 / 3",
     title: "어디서 알게 되었나요?",
-    description: "Realillust를 처음 접한 경로를 하나 선택해 주세요.",
+    description: "Heymoa를 처음 접한 경로를 하나 선택해 주세요.",
     options: ["검색", "SNS", "커뮤니티", "지인 추천", "뉴스/블로그"],
   },
   {

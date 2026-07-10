@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Hash, Mail } from "lucide-react";
 
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
-import { PageSection } from "@/components/realillust/primitives";
+import { PageSection } from "@/components/heymoa/primitives";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,

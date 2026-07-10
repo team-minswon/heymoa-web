@@ -1,4 +1,4 @@
-export const AUTH_STATE_CHANGED_EVENT = "realillust:auth-state-changed";
+export const AUTH_STATE_CHANGED_EVENT = "heymoa:auth-state-changed";
 
 export type AuthStateChangedDetail = {
   reason: "logout" | "unauthenticated";

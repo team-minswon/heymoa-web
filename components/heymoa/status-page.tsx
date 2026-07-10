@@ -3,8 +3,8 @@ import type { LucideIcon } from "lucide-react";
 
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
-import { PageSection } from "@/components/realillust/primitives";
-import { StatusPanel } from "@/components/realillust/status-panel";
+import { PageSection } from "@/components/heymoa/primitives";
+import { StatusPanel } from "@/components/heymoa/status-panel";
 
 export function StatusPage({
   icon,

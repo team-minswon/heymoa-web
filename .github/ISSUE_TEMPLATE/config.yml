@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Realillust web rebuild roadmap
-    url: https://github.com/team-minswon/realillust-web/blob/main/docs/rebuild/web-rebuild-roadmap.md
+  - name: Heymoa web rebuild roadmap
+    url: https://github.com/team-minswon/heymoa-web/blob/main/docs/rebuild/web-rebuild-roadmap.md
     about: Check the planned rebuild order before opening a new rebuild issue.

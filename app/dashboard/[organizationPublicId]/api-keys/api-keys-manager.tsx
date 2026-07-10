@@ -125,7 +125,7 @@ export function ApiKeysManager({ organizationPublicId }: ApiKeysManagerProps) {
         <div>
           <h1 className="text-3xl font-semibold">API Keys</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--clay-muted)]">
-            Create and manage organization API keys for Realillust API access.
+            Create and manage organization API keys for Heymoa API access.
             Store new secrets safely; they are only shown once.
           </p>
         </div>

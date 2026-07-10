@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 
-import { PageSection, Panel } from "@/components/realillust/primitives";
+import { PageSection, Panel } from "@/components/heymoa/primitives";
 import { siteConfig } from "@/lib/site";
 
 const jsonLd = {

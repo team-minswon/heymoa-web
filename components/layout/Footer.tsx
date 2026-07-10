@@ -54,7 +54,7 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
                 {siteConfig.name}
               </span>
               <span className="block text-xs font-medium text-[var(--clay-muted)]">
-                realillust
+                heymoa
               </span>
             </span>
           </Link>

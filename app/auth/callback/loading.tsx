@@ -1,6 +1,6 @@
 import { LoaderCircle } from "lucide-react";
 
-import { StatusPanel } from "@/components/realillust/status-panel";
+import { StatusPanel } from "@/components/heymoa/status-panel";
 
 export default function AuthCallbackLoading() {
   return (

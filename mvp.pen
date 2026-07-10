@@ -6,7 +6,7 @@
       "id": "cnb9e",
       "x": 0,
       "y": 0,
-      "name": "Realillust page.tsx visual reproduction",
+      "name": "Heymoa page.tsx visual reproduction",
       "width": 4520,
       "height": 1760,
       "fill": "$clay-canvas",
@@ -2716,9 +2716,9 @@
                         {
                           "type": "text",
                           "id": "isP2n",
-                          "name": "Realillust Dashboard wordmark",
+                          "name": "Heymoa Dashboard wordmark",
                           "fill": "$clay-primary",
-                          "content": "Realillust Dashboard",
+                          "content": "Heymoa Dashboard",
                           "fontFamily": "$font-body",
                           "fontSize": 14,
                           "fontWeight": "600"
@@ -2805,7 +2805,7 @@
                               "id": "dM9H5",
                               "name": "Organization name",
                               "fill": "$clay-primary",
-                              "content": "Realillust Studio",
+                              "content": "Heymoa Studio",
                               "fontFamily": "$font-body",
                               "fontSize": 12,
                               "fontWeight": "700"
@@ -4151,7 +4151,7 @@
                                                   "id": "y9ZDh",
                                                   "name": "Kim Minseo email",
                                                   "fill": "$clay-muted",
-                                                  "content": "minseo@realillust.com",
+                                                  "content": "minseo@heymoa.com",
                                                   "fontFamily": "$font-body",
                                                   "fontSize": 12,
                                                   "fontWeight": "normal"
@@ -4224,7 +4224,7 @@
                                                   "id": "J6IB7",
                                                   "name": "Park Jiwon email",
                                                   "fill": "$clay-muted",
-                                                  "content": "jiwon@realillust.com",
+                                                  "content": "jiwon@heymoa.com",
                                                   "fontFamily": "$font-body",
                                                   "fontSize": 12,
                                                   "fontWeight": "normal"
@@ -4297,7 +4297,7 @@
                                                   "id": "tWFR1",
                                                   "name": "Lee Hana email",
                                                   "fill": "$clay-muted",
-                                                  "content": "hana@realillust.com",
+                                                  "content": "hana@heymoa.com",
                                                   "fontFamily": "$font-body",
                                                   "fontSize": 12,
                                                   "fontWeight": "normal"
@@ -4429,7 +4429,7 @@
                                                       "id": "v35NZ",
                                                       "name": "Organization name input value",
                                                       "fill": "$clay-primary",
-                                                      "content": "Realillust Studio",
+                                                      "content": "Heymoa Studio",
                                                       "fontFamily": "$font-body",
                                                       "fontSize": 14,
                                                       "fontWeight": "normal"
@@ -6121,14 +6121,14 @@
                     {
                       "type": "frame",
                       "id": "Vxqfv",
-                      "name": "Realillust brand lockup",
+                      "name": "Heymoa brand lockup",
                       "gap": 10,
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
                           "id": "hy7zG",
-                          "name": "Realillust mark",
+                          "name": "Heymoa mark",
                           "width": 34,
                           "height": 34,
                           "fill": "$clay-primary",
@@ -6162,7 +6162,7 @@
                           "id": "nvLuO",
                           "name": "Brand name",
                           "fill": "$clay-primary",
-                          "content": "Realillust",
+                          "content": "Heymoa",
                           "fontFamily": "$font-body",
                           "fontSize": 20,
                           "fontWeight": "700"
@@ -6354,7 +6354,7 @@
                           "fill": "#f4efe1",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Realillust turns upload review into an evidence-backed decision flow for marketplaces, agencies, and creators who need to prove what is real.",
+                          "content": "Heymoa turns upload review into an evidence-backed decision flow for marketplaces, agencies, and creators who need to prove what is real.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 17,
@@ -8296,7 +8296,7 @@
                                   "fill": "$clay-body",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Exports can be shared with reviewers while preserving Realillust attribution.",
+                                  "content": "Exports can be shared with reviewers while preserving Heymoa attribution.",
                                   "lineHeight": 1.25,
                                   "fontFamily": "$font-body",
                                   "fontSize": 13,
@@ -8341,7 +8341,7 @@
                   "id": "xD7CV",
                   "x": 0,
                   "y": 0,
-                  "name": "Sidebar / Realillust navigation",
+                  "name": "Sidebar / Heymoa navigation",
                   "width": 252,
                   "height": 1528,
                   "fill": "#fbf7ec",
@@ -8379,7 +8379,7 @@
                             {
                               "type": "frame",
                               "id": "gtNZI",
-                              "name": "Realillust mark",
+                              "name": "Heymoa mark",
                               "width": 28,
                               "height": 28,
                               "fill": "$clay-brand-pink",
@@ -8398,7 +8398,7 @@
                                   "id": "E4DTj",
                                   "name": "Brand name",
                                   "fill": "$clay-primary",
-                                  "content": "Realillust",
+                                  "content": "Heymoa",
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
                                   "fontWeight": "600"
@@ -10960,7 +10960,7 @@
                                           "fill": "$clay-primary",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "https://api.acme.com/realillust",
+                                          "content": "https://api.acme.com/heymoa",
                                           "fontFamily": "$font-data",
                                           "fontSize": 12,
                                           "fontWeight": "normal"

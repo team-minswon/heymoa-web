@@ -1,7 +1,7 @@
 import { SearchX } from "lucide-react";
 
-import { DefaultStatusActions } from "@/components/realillust/status-panel";
-import { StatusPage } from "@/components/realillust/status-page";
+import { DefaultStatusActions } from "@/components/heymoa/status-panel";
+import { StatusPage } from "@/components/heymoa/status-page";
 
 export default function NotFound() {
   return (

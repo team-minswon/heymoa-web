@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Convert `realillust-web` to backend-owned HttpOnly cookie authentication, keep SSR login state in the nav bar, and reduce the app to `/`, `/terms`, `/privacy`, plus the OAuth callback infrastructure route.
+**Goal:** Convert `heymoa-web` to backend-owned HttpOnly cookie authentication, keep SSR login state in the nav bar, and reduce the app to `/`, `/terms`, `/privacy`, plus the OAuth callback infrastructure route.
 
 **Architecture:** The frontend never reads or stores access tokens. Browser requests use `credentials: "include"`, SSR bootstrap forwards incoming cookies to `GET /api/v1/users/me`, and API 401 responses share one refresh request before retrying the original request once. Route-specific pages and components outside the retained public MVP surface are removed.
 
@@ -52,7 +52,7 @@ Modify:
 - `lib/api/fetcher.ts`  
   Add `credentials: "include"` and shared refresh/retry.
 
-- `components/realillust/app-shell.tsx`  
+- `components/heymoa/app-shell.tsx`  
   Remove links to deleted pages and keep only public route navigation plus auth state.
 
 - `app/page.tsx`  
@@ -77,10 +77,10 @@ Delete:
 - `app/contest-ai-check/page.tsx`
 - `app/scans/[scanId]/page.tsx`
 - `app/settings/api-keys/page.tsx`
-- `components/realillust/scan-review-workspace.tsx`
+- `components/heymoa/scan-review-workspace.tsx`
 - `lib/mock-data.ts`
 
-Delete `components/realillust/upload-workspace.tsx` only after rewriting `app/page.tsx` so it is no longer imported.
+Delete `components/heymoa/upload-workspace.tsx` only after rewriting `app/page.tsx` so it is no longer imported.
 
 ---
 
@@ -150,7 +150,7 @@ export function normalizeReturnTo(value: string | null | undefined): string {
   let path = value;
 
   try {
-    const parsed = new URL(value, "http://realillust.local");
+    const parsed = new URL(value, "http://heymoa.local");
     path = `${parsed.pathname}${parsed.search}`;
   } catch {
     return "/";
@@ -194,7 +194,7 @@ export function buildGoogleOAuthUrl(returnTo: string) {
 Use this exact file content:
 
 ```ts
-export const AUTH_STATE_CHANGED_EVENT = "realillust:auth-state-changed";
+export const AUTH_STATE_CHANGED_EVENT = "heymoa:auth-state-changed";
 
 export type AuthStateChangedDetail = {
   reason: "logout" | "unauthenticated";
@@ -1040,13 +1040,13 @@ git commit -m "feat: retry api requests after cookie refresh"
 
 **Files:**
 
-- Modify: `components/realillust/app-shell.tsx`
+- Modify: `components/heymoa/app-shell.tsx`
 - Modify: `app/page.tsx`
 - Modify: `app/sitemap.ts`
 - Modify: `app/robots.ts`
 - Delete: route and component files listed in the File Structure section
 
-- [ ] **Step 1: Replace `components/realillust/app-shell.tsx`**
+- [ ] **Step 1: Replace `components/heymoa/app-shell.tsx`**
 
 Use this exact file content:
 
@@ -1190,8 +1190,8 @@ Use this exact file content:
 import type { Metadata } from "next";
 import { FileSearch, ShieldCheck, Sparkles } from "lucide-react";
 
-import { AppShell } from "@/components/realillust/app-shell";
-import { PageSection, Panel } from "@/components/realillust/primitives";
+import { AppShell } from "@/components/heymoa/app-shell";
+import { PageSection, Panel } from "@/components/heymoa/primitives";
 import { Badge } from "@/components/ui/badge";
 import { siteConfig } from "@/lib/site";
 
@@ -1343,8 +1343,8 @@ git rm app/admin/page.tsx \
   app/contest-ai-check/page.tsx \
   'app/scans/[scanId]/page.tsx' \
   app/settings/api-keys/page.tsx \
-  components/realillust/scan-review-workspace.tsx \
-  components/realillust/upload-workspace.tsx \
+  components/heymoa/scan-review-workspace.tsx \
+  components/heymoa/upload-workspace.tsx \
   lib/mock-data.ts
 ```
 

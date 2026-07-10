@@ -41,7 +41,7 @@ export function Navbar() {
               {siteConfig.name}
             </span>
             <span className="block text-xs font-medium text-[var(--clay-muted)]">
-              realillust
+              heymoa
             </span>
           </span>
         </Link>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PageSection, Panel } from "@/components/realillust/primitives";
+import { PageSection, Panel } from "@/components/heymoa/primitives";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-static";

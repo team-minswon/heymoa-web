@@ -87,15 +87,15 @@ type MockState = {
 
 const owner: AuthUser = {
   id: 1,
-  email: "owner@realillust.dev",
-  name: "Realillust Owner",
+  email: "owner@heymoa.dev",
+  name: "Heymoa Owner",
   image: null,
   onboardingCompleted: true,
 };
 
 const secondaryUser: AuthUser = {
   id: 2,
-  email: "reviewer@realillust.dev",
+  email: "reviewer@heymoa.dev",
   name: "Design Reviewer",
   image: null,
   onboardingCompleted: true,
