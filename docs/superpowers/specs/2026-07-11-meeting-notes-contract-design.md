@@ -293,7 +293,7 @@ WS /v1/transcription-sessions/{sessionId}/stream?ticket={singleUseTicket}
 ```
 
 1. access/refresh cookie 인증을 사용하는 REST로 Session을 만든다.
-2. 성공 응답은 `session`, `socketUrl`, 짧은 수명의 single-use ticket 만료 시각을 반환한다.
+2. 성공 응답은 `session`, ticket을 포함한 `socketUrl`, 짧은 수명의 만료 시각 `ticketExpiresAt`을 반환한다.
 3. ticket은 User와 Session에 귀속되며 access token 자체를 URL에 넣지 않는다.
 4. Browser는 ticket 유효 시간 안에 WebSocket을 연결한다.
 5. 새로고침이나 짧은 단절 후에는 인증된 REST로 새 ticket을 발급받는다.
@@ -347,6 +347,7 @@ Final은 DB 저장 성공 후 공개 Segment를 보낸다.
 ```json
 {
   "type": "TRANSCRIPT_FINAL",
+  "itemId": "provider-opaque-item",
   "segment": {
     "segmentId": "0HZX2K7M9Q4AB",
     "sessionId": "0HZX2K7M9Q4AC",
@@ -358,7 +359,7 @@ Final은 DB 저장 성공 후 공개 Segment를 보낸다.
 }
 ```
 
-Browser는 `partialByItemId`에서 snapshot을 교체한다. Final을 받으면 해당 item Partial을 제거하고 `segmentId` 기준으로 Final을 upsert한다.
+Browser는 `partialByItemId`에서 snapshot을 교체한다. Final을 받으면 event의 `itemId`에 해당하는 Partial을 제거하고 `segmentId` 기준으로 Final을 upsert한다. `itemId`는 provider correlation 값이며 HeyMoa 리소스 ID가 아니므로 TSID 규칙을 적용하지 않는다.
 
 ## 12. WebSocket 오류와 close code
 
