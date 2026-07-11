@@ -1,11 +1,32 @@
 "use client";
 
-import { Mic, Pause, Play, Square, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Mic, Pause, Play, Square, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useRecording } from "@/components/transcription/recording-provider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { TranscriptSegmentResponse } from "@/lib/api/generated/models";
 import {
   getListNoteTranscriptSegmentsQueryKey,
   useDeleteTranscriptSegment,
@@ -22,10 +43,10 @@ function formatOffset(milliseconds: number) {
 
 export function TranscriptView({ noteId }: { noteId: string }) {
   const queryClient = useQueryClient();
-  const [language, setLanguage] = useState<string | null>("ko");
-  const sessionsQuery = useListNoteTranscriptionSessions(noteId, {
-    limit: 100,
-  });
+  const [language, setLanguage] = useState("ko");
+  const [deleteTarget, setDeleteTarget] =
+    useState<TranscriptSegmentResponse | null>(null);
+  const sessionsQuery = useListNoteTranscriptionSessions(noteId, { limit: 100 });
   const segmentsQuery = useListNoteTranscriptSegments(noteId, { limit: 100 });
   const deleteSegment = useDeleteTranscriptSegment();
   const recording = useRecording();
@@ -49,77 +70,82 @@ export function TranscriptView({ noteId }: { noteId: string }) {
   const orderedSegments = [...segments.values()].sort(
     (a, b) => a.sequence - b.sequence
   );
-  const active =
+  const active = Boolean(
     liveForNote &&
-    recording.session &&
-    ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
-      recording.session.status
-    );
-  const otherActive =
+      recording.session &&
+      ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
+        recording.session.status
+      )
+  );
+  const otherActive = Boolean(
     !liveForNote &&
-    recording.session &&
-    ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
-      recording.session.status
-    );
+      recording.session &&
+      ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
+        recording.session.status
+      )
+  );
 
   return (
-    <div className="grid min-h-[620px] lg:grid-cols-[180px_1fr]">
-      <aside className="border-b border-[var(--el-hairline)] p-5 lg:border-b-0 lg:border-r">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--el-muted)]">
-          Sessions
-        </p>
-        <div className="mt-4 space-y-2">
+    <div className="grid min-h-full lg:grid-cols-[180px_1fr]">
+      <aside className="border-b bg-muted/20 p-4 lg:border-r lg:border-b-0">
+        <p className="text-xs font-semibold text-muted-foreground">세션</p>
+        <div className="mt-3 flex gap-2 overflow-x-auto lg:flex-col">
           {sessions.map((session, index) => (
             <div
               key={session.sessionId}
-              className="rounded-lg bg-white/70 px-3 py-2.5"
+              className="min-w-32 rounded-lg border bg-background px-3 py-2.5"
             >
               <p className="text-xs font-medium">
                 기록 {sessions.length - index}
               </p>
-              <p className="mt-1 font-mono text-[10px] text-[var(--el-muted)]">
+              <Badge variant="outline" className="mt-2 font-mono text-[10px]">
                 {session.status}
-              </p>
+              </Badge>
             </div>
           ))}
+          {!sessionsQuery.isPending && !sessions.length ? (
+            <p className="text-xs text-muted-foreground">기록 없음</p>
+          ) : null}
         </div>
       </aside>
 
-      <section className="p-6 sm:p-10">
-        <div className="flex flex-col justify-between gap-5 border-b border-[var(--el-hairline)] pb-6 sm:flex-row sm:items-end">
+      <section className="min-w-0 p-5 sm:p-8">
+        <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--el-muted)]">
+            <p className="text-xs font-medium text-muted-foreground">
               Raw transcript
             </p>
-            <h2 className="mt-2 font-serif text-3xl font-light tracking-tight">
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">
               원본 기록
             </h2>
           </div>
-          <div className="flex items-center gap-2">
-            {!active && (
-              <select
-                value={language ?? "auto"}
-                onChange={(event) =>
-                  setLanguage(
-                    event.target.value === "auto" ? null : event.target.value
-                  )
-                }
-                className="h-9 rounded-full border border-[var(--el-hairline-strong)] bg-white px-3 text-xs outline-none"
+          <div className="flex flex-wrap items-center gap-2">
+            {!active ? (
+              <Select
+                value={language}
+                onValueChange={(value) => value && setLanguage(value)}
               >
-                <option value="ko">한국어</option>
-                <option value="en">English</option>
-                <option value="auto">자동 감지</option>
-              </select>
-            )}
+                <SelectTrigger aria-label="기록 언어" className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ko">한국어</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="auto">자동 감지</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : null}
             {otherActive ? (
-              <span className="rounded-full bg-[var(--el-surface-strong)] px-3 py-2 text-xs text-[var(--el-muted)]">
-                다른 노트 기록 중
-              </span>
+              <Badge variant="secondary">다른 노트 기록 중</Badge>
             ) : !active ? (
               <Button
                 type="button"
-                onClick={() => void recording.start(noteId, language)}
-                className="rounded-full bg-[var(--el-primary)] px-4 text-white"
+                onClick={() =>
+                  void recording.start(
+                    noteId,
+                    language === "auto" ? null : language
+                  )
+                }
               >
                 <Mic /> 기록 시작
               </Button>
@@ -133,22 +159,14 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                       ? recording.resume()
                       : recording.pause())
                   }
-                  className="rounded-full"
                 >
-                  {recording.session?.status === "PAUSED" ? (
-                    <Play />
-                  ) : (
-                    <Pause />
-                  )}
-                  {recording.session?.status === "PAUSED"
-                    ? "재개"
-                    : "일시 정지"}
+                  {recording.session?.status === "PAUSED" ? <Play /> : <Pause />}
+                  {recording.session?.status === "PAUSED" ? "재개" : "일시 정지"}
                 </Button>
                 <Button
                   type="button"
                   variant="destructive"
                   onClick={() => void recording.stop()}
-                  className="rounded-full"
                 >
                   <Square /> 종료
                 </Button>
@@ -157,66 +175,94 @@ export function TranscriptView({ noteId }: { noteId: string }) {
           </div>
         </div>
 
-        {recording.error && (
-          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {recording.error}
-          </p>
-        )}
+        {recording.error ? (
+          <Alert variant="destructive" className="mt-4">
+            <AlertDescription>{recording.error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-        <div className="mt-8 space-y-1">
-          {orderedSegments.map((segment) => (
-            <article
-              key={segment.segmentId}
-              className="group grid grid-cols-[48px_1fr_auto] gap-3 border-b border-[var(--el-hairline-soft)] py-4"
-            >
-              <time className="pt-0.5 font-mono text-[11px] text-[var(--el-muted)]">
-                {formatOffset(segment.startedAtMs)}
-              </time>
-              <p className="text-[15px] leading-7 text-[var(--el-body)]">
-                {segment.text}
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="스크립트 삭제"
-                onClick={async () => {
-                  await deleteSegment.mutateAsync({
-                    segmentId: segment.segmentId,
-                  });
-                  await queryClient.invalidateQueries({
-                    queryKey: getListNoteTranscriptSegmentsQueryKey(noteId),
-                  });
-                }}
-                className="rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100"
+        {segmentsQuery.isPending ? (
+          <div className="mt-6 space-y-3">
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+          </div>
+        ) : (
+          <div className="mt-6 space-y-1">
+            {orderedSegments.map((segment) => (
+              <article
+                key={segment.segmentId}
+                className="group grid grid-cols-[48px_1fr_auto] gap-3 border-b py-4"
               >
-                <Trash2 />
-              </Button>
-            </article>
-          ))}
-          {liveForNote &&
-            Object.entries(recording.transcript.partialByItemId).map(
-              ([itemId, text]) => (
-                <article
-                  key={itemId}
-                  className="grid grid-cols-[48px_1fr] gap-3 py-4 text-[var(--el-muted)]"
+                <time className="pt-1 font-mono text-[11px] text-muted-foreground">
+                  {formatOffset(segment.startedAtMs)}
+                </time>
+                <p className="text-sm leading-7 sm:text-[15px]">{segment.text}</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="스크립트 삭제"
+                  onClick={() => setDeleteTarget(segment)}
+                  className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                 >
-                  <span className="flex items-center">
-                    <span className="size-2 animate-pulse rounded-full bg-[var(--el-ink)]" />
-                  </span>
-                  <p className="text-[15px] italic leading-7">{text}</p>
-                </article>
-              )
-            )}
-          {!segmentsQuery.isPending &&
-            orderedSegments.length === 0 &&
-            !active && (
-              <div className="py-24 text-center text-sm text-[var(--el-muted)]">
+                  <Trash2 />
+                </Button>
+              </article>
+            ))}
+            {liveForNote &&
+              Object.entries(recording.transcript.partialByItemId).map(
+                ([itemId, text]) => (
+                  <article
+                    key={itemId}
+                    className="mt-3 rounded-xl border border-dashed bg-muted/30 p-4"
+                  >
+                    <Badge variant="outline">전사 중</Badge>
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                      {text}
+                    </p>
+                  </article>
+                )
+              )}
+            {!orderedSegments.length && !active ? (
+              <div className="py-20 text-center text-sm text-muted-foreground">
                 기록을 시작하면 확정된 문장이 여기에 쌓입니다.
               </div>
-            )}
-        </div>
+            ) : null}
+          </div>
+        )}
       </section>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스크립트를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 확정 문장만 삭제되며 나머지 순서는 유지됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                await deleteSegment.mutateAsync({
+                  segmentId: deleteTarget.segmentId,
+                });
+                await queryClient.invalidateQueries({
+                  queryKey: getListNoteTranscriptSegmentsQueryKey(noteId),
+                });
+                setDeleteTarget(null);
+              }}
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

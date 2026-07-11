@@ -1,9 +1,25 @@
 "use client";
 
-import { Check, Plus, X } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useAttachNoteFolder,
   useDetachNoteFolder,
@@ -28,6 +44,7 @@ export function NoteDetails({
   const updateNote = useUpdateNote();
   const attachFolder = useAttachNoteFolder();
   const detachFolder = useDetachNoteFolder();
+  const [feedback, setFeedback] = useState<"saved" | "error" | null>(null);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
@@ -41,22 +58,24 @@ export function NoteDetails({
 
   if (!note) {
     return (
-      <div className="p-8 text-sm text-[var(--el-muted)]">
-        노트를 불러오는 중입니다.
+      <div className="space-y-5 p-6 sm:p-8">
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-10 p-6 sm:p-10">
-      <form
-        key={note.updatedAt}
-        className="space-y-10"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          const form = new FormData(event.currentTarget);
-          const title = String(form.get("title") ?? "").trim();
-          const context = String(form.get("context") ?? "");
+    <form
+      key={`${note.noteId}-${note.updatedAt}`}
+      className="mx-auto max-w-2xl space-y-8 p-6 sm:p-8"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setFeedback(null);
+        const form = new FormData(event.currentTarget);
+        const title = String(form.get("title") ?? "").trim();
+        const context = String(form.get("context") ?? "");
+        try {
           await updateNote.mutateAsync({
             noteId,
             data: {
@@ -65,86 +84,122 @@ export function NoteDetails({
             },
           });
           await refresh();
-        }}
-      >
-        <section>
-          <label className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--el-muted)]">
-            Title
-          </label>
-          <input
-            name="title"
-            defaultValue={note.title}
-            maxLength={200}
-            className="mt-3 w-full border-0 border-b border-[var(--el-hairline)] bg-transparent px-0 py-3 font-serif text-3xl font-light tracking-tight outline-none focus:border-[var(--el-ink)]"
-          />
-        </section>
-        <section>
-          <label className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--el-muted)]">
-            Context
-          </label>
-          <textarea
-            name="context"
-            defaultValue={note.context ?? ""}
-            maxLength={4000}
-            rows={7}
-            placeholder="회의에서 알아야 할 맥락을 적어두세요."
-            className="mt-3 w-full resize-none rounded-2xl border border-[var(--el-hairline)] bg-white p-4 text-sm leading-6 outline-none focus:border-[var(--el-ink)]"
-          />
-        </section>
-        <Button
-          type="submit"
-          loading={updateNote.isPending}
-          className="rounded-full bg-[var(--el-primary)] px-5 text-white"
-        >
+          setFeedback("saved");
+        } catch {
+          setFeedback("error");
+        }
+      }}
+    >
+      <div className="space-y-2">
+        <Label htmlFor="note-title">제목</Label>
+        <Input
+          id="note-title"
+          name="title"
+          defaultValue={note.title}
+          maxLength={200}
+          className="h-11 text-base font-semibold"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="note-context">회의 맥락</Label>
+        <Textarea
+          id="note-context"
+          name="context"
+          defaultValue={note.context ?? ""}
+          maxLength={4000}
+          rows={8}
+          placeholder="전사에서 알아야 할 제품명, 참여자 역할, 용어를 적어두세요."
+          className="resize-none leading-6"
+        />
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <Label>폴더</Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            여러 폴더를 태그처럼 연결할 수 있습니다.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {note.folders.map((folder) => (
+            <Badge key={folder.folderId} variant="secondary">
+              {folder.name}
+            </Badge>
+          ))}
+          {!note.folders.length ? (
+            <span className="text-sm text-muted-foreground">연결된 폴더 없음</span>
+          ) : null}
+        </div>
+        <Popover>
+          <PopoverTrigger
+            render={<Button type="button" variant="outline" />}
+          >
+            폴더 선택 <ChevronsUpDown />
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-72 p-0">
+            <Command>
+              <CommandInput placeholder="폴더 찾기" />
+              <CommandList>
+                <CommandEmpty>폴더가 없습니다.</CommandEmpty>
+                <CommandGroup>
+                  {folders.map((folder) => {
+                    const attached = note.folders.some(
+                      (candidate) => candidate.folderId === folder.folderId
+                    );
+                    return (
+                      <CommandItem
+                        key={folder.folderId}
+                        value={folder.name}
+                        onSelect={async () => {
+                          if (attached) {
+                            await detachFolder.mutateAsync({
+                              noteId,
+                              folderId: folder.folderId,
+                            });
+                          } else {
+                            await attachFolder.mutateAsync({
+                              noteId,
+                              folderId: folder.folderId,
+                            });
+                          }
+                          await refresh();
+                        }}
+                      >
+                        <span
+                          className={`flex size-4 items-center justify-center rounded border ${attached ? "bg-primary text-primary-foreground" : ""}`}
+                        >
+                          {attached ? <Check className="size-3" /> : null}
+                        </span>
+                        {folder.name}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {feedback === "error" ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            저장하지 못했습니다. 입력한 내용은 유지됩니다.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" loading={updateNote.isPending}>
           <Check /> 변경 저장
         </Button>
-      </form>
-
-      <section className="border-t border-[var(--el-hairline)] pt-8">
-        <h3 className="font-serif text-2xl font-light">Folders</h3>
-        <p className="mt-1 text-sm text-[var(--el-muted)]">
-          폴더는 노트를 분류하는 태그처럼 동작합니다.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {folders.map((folder) => {
-            const attached = note.folders.some(
-              (candidate) => candidate.folderId === folder.folderId
-            );
-            return (
-              <button
-                key={folder.folderId}
-                type="button"
-                onClick={async () => {
-                  if (attached) {
-                    await detachFolder.mutateAsync({
-                      noteId,
-                      folderId: folder.folderId,
-                    });
-                  } else {
-                    await attachFolder.mutateAsync({
-                      noteId,
-                      folderId: folder.folderId,
-                    });
-                  }
-                  await refresh();
-                }}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition ${
-                  attached
-                    ? "border-[var(--el-ink)] bg-[var(--el-ink)] text-white"
-                    : "border-[var(--el-hairline-strong)] bg-white hover:border-[var(--el-ink)]"
-                }`}
-              >
-                {attached ? (
-                  <X className="size-3" />
-                ) : (
-                  <Plus className="size-3" />
-                )}
-                {folder.name}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-    </div>
+        {feedback === "saved" ? (
+          <span role="status" className="text-sm text-muted-foreground">
+            저장됨
+          </span>
+        ) : null}
+      </div>
+    </form>
   );
 }
