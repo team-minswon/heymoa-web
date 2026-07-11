@@ -109,7 +109,11 @@ function shouldRefreshBeforeSsr(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
-  if (!shouldRefreshBeforeSsr(request)) {
+  // Skip during mocking or if no refresh is needed
+  if (
+    process.env.NEXT_PUBLIC_API_MOCKING === "enabled" ||
+    !shouldRefreshBeforeSsr(request)
+  ) {
     return NextResponse.next();
   }
 
@@ -131,8 +135,12 @@ export async function proxy(request: NextRequest) {
       }
     );
 
+    // If refresh fails, clear auth cookies to prevent loops
     if (!refreshResponse.ok) {
-      return NextResponse.next();
+      const response = NextResponse.next();
+      response.cookies.delete(ACCESS_TOKEN_COOKIE_NAME);
+      response.cookies.delete(REFRESH_TOKEN_COOKIE_NAME);
+      return response;
     }
 
     const setCookieHeaders = getSetCookieHeaders(refreshResponse.headers);
@@ -159,7 +167,11 @@ export async function proxy(request: NextRequest) {
 
     return response;
   } catch {
-    return NextResponse.next();
+    // On network failure, clear cookies or proceed silently
+    const response = NextResponse.next();
+    response.cookies.delete(ACCESS_TOKEN_COOKIE_NAME);
+    response.cookies.delete(REFRESH_TOKEN_COOKIE_NAME);
+    return response;
   }
 }
 
