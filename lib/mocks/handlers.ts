@@ -4,6 +4,8 @@ import {
 } from "@/lib/api/generated/auth/auth.msw";
 import { getGetV1UsersMeMockHandler } from "@/lib/api/generated/user/user.msw";
 
+import { restHandlers } from "@/lib/mocks/rest-handlers";
+
 export const handlers = [
   getPostV1AuthRefreshMockHandler({
     success: true,
@@ -25,4 +27,5 @@ export const handlers = [
       email: "test@heymoa.com",
     },
   }),
+  ...restHandlers,
 ];
