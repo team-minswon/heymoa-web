@@ -49,7 +49,7 @@ export function GoogleLoginButton({
         disabled={!isAuthApiConfigured}
         loading={pending}
         className={cn(
-          "rounded-xl border-[var(--clay-hairline)] bg-[var(--clay-canvas)] text-[var(--clay-primary)] hover:bg-[var(--clay-surface-card)] font-semibold",
+          "rounded-full border-[var(--el-hairline)] bg-[var(--el-canvas)] text-[var(--el-ink)] hover:bg-[var(--el-canvas-elevated)] font-medium",
           compact ? "p-0" : "pl-3.5 pr-4"
         )}
         aria-label="Google로 로그인"
