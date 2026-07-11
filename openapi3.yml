@@ -487,6 +487,221 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /v1/notes/{noteId}/transcription-sessions:
+    post:
+      tags: [Transcription]
+      operationId: createTranscriptionSession
+      summary: 실시간 전사 세션 생성
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTranscriptionSessionRequest"
+      responses:
+        "200":
+          description: 전사 세션 및 최초 연결 ticket 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_TranscriptionConnectionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    get:
+      tags: [Transcription]
+      operationId: listNoteTranscriptionSessions
+      summary: 노트의 전사 세션 목록 조회
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 전사 세션 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_TranscriptionSessionCursorPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/transcription-sessions/active:
+    get:
+      tags: [Transcription]
+      operationId: getActiveTranscriptionSession
+      summary: 현재 사용자의 활성 전사 세션 조회
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: 활성 전사 세션 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_ActiveTranscriptionSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/transcription-sessions/{sessionId}:
+    get:
+      tags: [Transcription]
+      operationId: getTranscriptionSession
+      summary: 전사 세션 조회
+      security:
+        - access_token: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 전사 세션 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_TranscriptionSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/transcription-sessions/{sessionId}/connection-ticket:
+    post:
+      tags: [Transcription]
+      operationId: createTranscriptionConnectionTicket
+      summary: 전사 WebSocket 재연결 ticket 발급
+      security:
+        - access_token: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 연결 ticket 발급 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_TranscriptionConnectionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/notes/{noteId}/transcript-segments:
+    get:
+      tags: [Transcription]
+      operationId: listNoteTranscriptSegments
+      summary: 노트의 확정 전사 구간 목록 조회
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 확정 전사 구간 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_TranscriptSegmentCursorPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/transcript-segments/{segmentId}:
+    delete:
+      tags: [Transcription]
+      operationId: deleteTranscriptSegment
+      summary: 확정 전사 구간 삭제
+      security:
+        - access_token: []
+      parameters:
+        - name: segmentId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 확정 전사 구간 삭제 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_Unit"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   securitySchemes:
     access_token:
@@ -539,6 +754,12 @@ components:
             $ref: "#/components/schemas/AppResponse_Unit"
     Conflict:
       description: 현재 리소스 상태와 충돌함
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppResponse_Unit"
+    ServiceUnavailable:
+      description: STT provider를 사용할 수 없음
       content:
         application/json:
           schema:
@@ -700,6 +921,135 @@ components:
           maxLength: 50
           example: 제품
 
+    TranscriptionSessionStatus:
+      type: string
+      enum:
+        [
+          CONNECTING,
+          STREAMING,
+          PAUSED,
+          FINALIZING,
+          COMPLETED,
+          INTERRUPTED,
+          FAILED,
+        ]
+
+    TranscriptionSessionResponse:
+      type: object
+      required:
+        [sessionId, noteId, status, language, startedBy, startedAt, endedAt]
+      properties:
+        sessionId:
+          $ref: "#/components/schemas/Tsid"
+        noteId:
+          $ref: "#/components/schemas/Tsid"
+        status:
+          $ref: "#/components/schemas/TranscriptionSessionStatus"
+        language:
+          type: string
+          pattern: "^[a-z]{2}$"
+          nullable: true
+          example: ko
+        startedBy:
+          $ref: "#/components/schemas/UserSummary"
+        startedAt:
+          type: string
+          format: date-time
+          example: "2026-07-11T00:00:00Z"
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    CreateTranscriptionSessionRequest:
+      type: object
+      required: [language]
+      properties:
+        language:
+          type: string
+          pattern: "^[a-z]{2}$"
+          nullable: true
+          example: ko
+
+    TranscriptionConnectionResponse:
+      type: object
+      required: [session, socketUrl, ticketExpiresAt]
+      properties:
+        session:
+          $ref: "#/components/schemas/TranscriptionSessionResponse"
+        socketUrl:
+          type: string
+          format: uri
+          example: ws://localhost:8080/v1/transcription-sessions/0HZX2K7M9Q4AB/stream?ticket=opaque-ticket
+        ticketExpiresAt:
+          type: string
+          format: date-time
+          example: "2026-07-11T00:01:00Z"
+
+    ActiveTranscriptionSessionResponse:
+      type: object
+      required: [session]
+      properties:
+        session:
+          allOf:
+            - $ref: "#/components/schemas/TranscriptionSessionResponse"
+          nullable: true
+
+    TranscriptSegmentResponse:
+      type: object
+      required: [segmentId, sessionId, sequence, text, startedAtMs, endedAtMs]
+      properties:
+        segmentId:
+          $ref: "#/components/schemas/Tsid"
+        sessionId:
+          $ref: "#/components/schemas/Tsid"
+        sequence:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 1
+        text:
+          type: string
+          minLength: 1
+          example: 확정 문장
+        startedAtMs:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 0
+        endedAtMs:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 1200
+
+    TranscriptionSessionCursorPageResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptionSessionResponse"
+        nextCursor:
+          type: string
+          nullable: true
+          example: null
+
+    TranscriptSegmentCursorPageResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptSegmentResponse"
+        nextCursor:
+          type: string
+          nullable: true
+          example: null
+
     CurrentUserInfoResponse:
       type: object
       required: [userId, name, email]
@@ -740,6 +1090,11 @@ components:
         - NOTE_NOT_FOUND
         - FOLDER_NOT_FOUND
         - FOLDER_NAME_ALREADY_EXISTS
+        - TRANSCRIPTION_SESSION_NOT_FOUND
+        - TRANSCRIPT_SEGMENT_NOT_FOUND
+        - ACTIVE_TRANSCRIPTION_SESSION_EXISTS
+        - INVALID_TRANSCRIPTION_SESSION_STATE
+        - STT_PROVIDER_UNAVAILABLE
         - INTERNAL_SERVER_ERROR
 
     AppErrorBody:
@@ -863,6 +1218,66 @@ components:
           example: true
         data:
           $ref: "#/components/schemas/NoteCursorPageResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_TranscriptionSessionResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/TranscriptionSessionResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_TranscriptionConnectionResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/TranscriptionConnectionResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_ActiveTranscriptionSessionResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/ActiveTranscriptionSessionResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_TranscriptionSessionCursorPageResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/TranscriptionSessionCursorPageResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_TranscriptSegmentCursorPageResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/TranscriptSegmentCursorPageResponse"
         error:
           $ref: "#/components/schemas/AppErrorBody"
 

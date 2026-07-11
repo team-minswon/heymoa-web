@@ -8,9 +8,11 @@
 import { faker } from "@faker-js/faker";
 
 import type {
+  ActiveTranscriptionSessionResponse,
   AppErrorBody,
   AppErrorDetail,
   AppErrorType,
+  AppResponseActiveTranscriptionSessionResponse,
   AppResponseCurrentUserInfoResponse,
   AppResponseFolderListResponse,
   AppResponseFolderResponse,
@@ -18,9 +20,14 @@ import type {
   AppResponseNoteCursorPageResponse,
   AppResponseNoteResponse,
   AppResponseRefreshTokensResponse,
+  AppResponseTranscriptSegmentCursorPageResponse,
+  AppResponseTranscriptionConnectionResponse,
+  AppResponseTranscriptionSessionCursorPageResponse,
+  AppResponseTranscriptionSessionResponse,
   AppResponseUnit,
   AppResponseWorkspaceResponse,
   CreateNoteRequest,
+  CreateTranscriptionSessionRequest,
   CurrentUserInfoResponse,
   FolderNameRequest,
   FolderResponse,
@@ -29,6 +36,12 @@ import type {
   NoteResponse,
   NoteSummaryResponse,
   RefreshTokensResponse,
+  TranscriptSegmentCursorPageResponse,
+  TranscriptSegmentResponse,
+  TranscriptionConnectionResponse,
+  TranscriptionSessionCursorPageResponse,
+  TranscriptionSessionResponse,
+  TranscriptionSessionStatus,
   Tsid,
   UpdateNoteRequest,
   UserSummary,
@@ -142,6 +155,103 @@ export const getFolderNameRequestMock = (
   ...overrideResponse,
 });
 
+export const getTranscriptionSessionStatusMock =
+  (): TranscriptionSessionStatus =>
+    faker.helpers.arrayElement([
+      "CONNECTING",
+      "STREAMING",
+      "PAUSED",
+      "FINALIZING",
+      "COMPLETED",
+      "INTERRUPTED",
+      "FAILED",
+    ] as const);
+
+export const getTranscriptionSessionResponseMock = (
+  overrideResponse: Partial<TranscriptionSessionResponse> = {}
+): TranscriptionSessionResponse => ({
+  sessionId: getTsidMock(),
+  noteId: getTsidMock(),
+  status: getTranscriptionSessionStatusMock(),
+  language: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[a-z]{2}$"),
+    null,
+  ]),
+  startedBy: { ...getUserSummaryMock() },
+  startedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+  endedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getCreateTranscriptionSessionRequestMock = (
+  overrideResponse: Partial<CreateTranscriptionSessionRequest> = {}
+): CreateTranscriptionSessionRequest => ({
+  language: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[a-z]{2}$"),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getTranscriptionConnectionResponseMock = (
+  overrideResponse: Partial<TranscriptionConnectionResponse> = {}
+): TranscriptionConnectionResponse => ({
+  session: { ...getTranscriptionSessionResponseMock() },
+  socketUrl: faker.internet.url(),
+  ticketExpiresAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getActiveTranscriptionSessionResponseMock = (
+  overrideResponse: Partial<ActiveTranscriptionSessionResponse> = {}
+): ActiveTranscriptionSessionResponse => ({
+  session: { ...{ ...getTranscriptionSessionResponseMock() } },
+  ...overrideResponse,
+});
+
+export const getTranscriptSegmentResponseMock = (
+  overrideResponse: Partial<TranscriptSegmentResponse> = {}
+): TranscriptSegmentResponse => ({
+  segmentId: getTsidMock(),
+  sessionId: getTsidMock(),
+  sequence: faker.number.int({ min: 1 }),
+  text: faker.string.alpha({ length: { min: 1, max: 20 } }),
+  startedAtMs: faker.number.int({ min: 0 }),
+  endedAtMs: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getTranscriptionSessionCursorPageResponseMock = (
+  overrideResponse: Partial<TranscriptionSessionCursorPageResponse> = {}
+): TranscriptionSessionCursorPageResponse => ({
+  items: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1
+  ).map(() => ({ ...getTranscriptionSessionResponseMock() })),
+  nextCursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getTranscriptSegmentCursorPageResponseMock = (
+  overrideResponse: Partial<TranscriptSegmentCursorPageResponse> = {}
+): TranscriptSegmentCursorPageResponse => ({
+  items: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1
+  ).map(() => ({ ...getTranscriptSegmentResponseMock() })),
+  nextCursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
 export const getCurrentUserInfoResponseMock = (
   overrideResponse: Partial<CurrentUserInfoResponse> = {}
 ): CurrentUserInfoResponse => ({
@@ -174,6 +284,11 @@ export const getAppErrorTypeMock = (): AppErrorType =>
     "NOTE_NOT_FOUND",
     "FOLDER_NOT_FOUND",
     "FOLDER_NAME_ALREADY_EXISTS",
+    "TRANSCRIPTION_SESSION_NOT_FOUND",
+    "TRANSCRIPT_SEGMENT_NOT_FOUND",
+    "ACTIVE_TRANSCRIPTION_SESSION_EXISTS",
+    "INVALID_TRANSCRIPTION_SESSION_STATE",
+    "STT_PROVIDER_UNAVAILABLE",
     "INTERNAL_SERVER_ERROR",
   ] as const);
 
@@ -284,6 +399,66 @@ export const getAppResponseNoteCursorPageResponseMock = (
   success: faker.datatype.boolean(),
   data: faker.helpers.arrayElement([
     { ...getNoteCursorPageResponseMock() },
+    undefined,
+  ]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  ...overrideResponse,
+});
+
+export const getAppResponseTranscriptionSessionResponseMock = (
+  overrideResponse: Partial<AppResponseTranscriptionSessionResponse> = {}
+): AppResponseTranscriptionSessionResponse => ({
+  success: faker.datatype.boolean(),
+  data: faker.helpers.arrayElement([
+    { ...getTranscriptionSessionResponseMock() },
+    undefined,
+  ]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  ...overrideResponse,
+});
+
+export const getAppResponseTranscriptionConnectionResponseMock = (
+  overrideResponse: Partial<AppResponseTranscriptionConnectionResponse> = {}
+): AppResponseTranscriptionConnectionResponse => ({
+  success: faker.datatype.boolean(),
+  data: faker.helpers.arrayElement([
+    { ...getTranscriptionConnectionResponseMock() },
+    undefined,
+  ]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  ...overrideResponse,
+});
+
+export const getAppResponseActiveTranscriptionSessionResponseMock = (
+  overrideResponse: Partial<AppResponseActiveTranscriptionSessionResponse> = {}
+): AppResponseActiveTranscriptionSessionResponse => ({
+  success: faker.datatype.boolean(),
+  data: faker.helpers.arrayElement([
+    { ...getActiveTranscriptionSessionResponseMock() },
+    undefined,
+  ]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  ...overrideResponse,
+});
+
+export const getAppResponseTranscriptionSessionCursorPageResponseMock = (
+  overrideResponse: Partial<AppResponseTranscriptionSessionCursorPageResponse> = {}
+): AppResponseTranscriptionSessionCursorPageResponse => ({
+  success: faker.datatype.boolean(),
+  data: faker.helpers.arrayElement([
+    { ...getTranscriptionSessionCursorPageResponseMock() },
+    undefined,
+  ]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  ...overrideResponse,
+});
+
+export const getAppResponseTranscriptSegmentCursorPageResponseMock = (
+  overrideResponse: Partial<AppResponseTranscriptSegmentCursorPageResponse> = {}
+): AppResponseTranscriptSegmentCursorPageResponse => ({
+  success: faker.datatype.boolean(),
+  data: faker.helpers.arrayElement([
+    { ...getTranscriptSegmentCursorPageResponseMock() },
     undefined,
   ]),
   error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
