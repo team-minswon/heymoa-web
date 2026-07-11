@@ -121,9 +121,7 @@ export function NotePanel({
 
       <Tabs
         value={tab}
-        onValueChange={(value) =>
-          value && onTabChange(value as NoteTab)
-        }
+        onValueChange={(value) => value && onTabChange(value as NoteTab)}
         className="min-h-0 flex-1 gap-0"
       >
         <div className="border-b px-4 sm:px-6">

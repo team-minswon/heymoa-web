@@ -40,7 +40,9 @@ export function groupNotesByDate(
       month: "long",
       day: "numeric",
       weekday: "short",
-    }).format(new Date(groupedNotes[0].lastRecordedAt ?? groupedNotes[0].createdAt)),
+    }).format(
+      new Date(groupedNotes[0].lastRecordedAt ?? groupedNotes[0].createdAt)
+    ),
     notes: groupedNotes,
   }));
 }
@@ -77,7 +79,11 @@ export function WorkspaceNoteList({
       <Alert variant="destructive" className="mt-8">
         <AlertTitle>노트를 불러오지 못했습니다.</AlertTitle>
         <AlertDescription className="mt-3">
-          <Button variant="outline" size="sm" onClick={() => void notesQuery.refetch()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void notesQuery.refetch()}
+          >
             <RefreshCcw /> 다시 시도
           </Button>
         </AlertDescription>
@@ -112,7 +118,9 @@ export function WorkspaceNoteList({
             >
               {group.label}
             </h2>
-            <Separator />
+            <div className="min-w-0 flex-1">
+              <Separator />
+            </div>
           </div>
           <div className="mt-2 divide-y divide-border/60">
             {group.notes.map((note) => (

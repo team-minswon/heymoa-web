@@ -50,7 +50,11 @@ export function NoteRouteSurface({
           aria-label="노트"
           data-surface="sheet"
           showCloseButton={false}
-          className="w-[min(780px,calc(100vw-16rem))] gap-0 p-0 sm:max-w-[780px]"
+          className="gap-0 p-0"
+          style={{
+            width: "min(780px, calc(100vw - 16rem))",
+            maxWidth: "780px",
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>노트</SheetTitle>

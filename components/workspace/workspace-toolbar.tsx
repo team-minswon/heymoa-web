@@ -1,14 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  CircleStop,
-  ExternalLink,
-  Mic,
-  Pause,
-  Play,
-  Plus,
-} from "lucide-react";
+import { CircleStop, ExternalLink, Mic, Pause, Play, Plus } from "lucide-react";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -56,9 +49,7 @@ export function WorkspaceToolbar({
   const paused = session?.status === "PAUSED";
 
   const openNote = (noteId: string) =>
-    router.push(
-      `/w/${workspaceId}/notes/${noteId}?view=side&tab=transcript`
-    );
+    router.push(`/w/${workspaceId}/notes/${noteId}?view=side&tab=transcript`);
 
   const handleStart = async () => {
     let noteId = activeNoteId;
@@ -81,9 +72,7 @@ export function WorkspaceToolbar({
       <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
         <SidebarTrigger className="md:hidden" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-muted-foreground">
-            Workspace
-          </p>
+          <p className="text-xs font-medium text-muted-foreground">Workspace</p>
           <h1 className="truncate text-base font-semibold">{currentLabel}</h1>
         </div>
 

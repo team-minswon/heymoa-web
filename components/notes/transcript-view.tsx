@@ -46,7 +46,9 @@ export function TranscriptView({ noteId }: { noteId: string }) {
   const [language, setLanguage] = useState("ko");
   const [deleteTarget, setDeleteTarget] =
     useState<TranscriptSegmentResponse | null>(null);
-  const sessionsQuery = useListNoteTranscriptionSessions(noteId, { limit: 100 });
+  const sessionsQuery = useListNoteTranscriptionSessions(noteId, {
+    limit: 100,
+  });
   const segmentsQuery = useListNoteTranscriptSegments(noteId, { limit: 100 });
   const deleteSegment = useDeleteTranscriptSegment();
   const recording = useRecording();
@@ -72,17 +74,17 @@ export function TranscriptView({ noteId }: { noteId: string }) {
   );
   const active = Boolean(
     liveForNote &&
-      recording.session &&
-      ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
-        recording.session.status
-      )
+    recording.session &&
+    ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
+      recording.session.status
+    )
   );
   const otherActive = Boolean(
     !liveForNote &&
-      recording.session &&
-      ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
-        recording.session.status
-      )
+    recording.session &&
+    ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
+      recording.session.status
+    )
   );
 
   return (
@@ -160,8 +162,14 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                       : recording.pause())
                   }
                 >
-                  {recording.session?.status === "PAUSED" ? <Play /> : <Pause />}
-                  {recording.session?.status === "PAUSED" ? "재개" : "일시 정지"}
+                  {recording.session?.status === "PAUSED" ? (
+                    <Play />
+                  ) : (
+                    <Pause />
+                  )}
+                  {recording.session?.status === "PAUSED"
+                    ? "재개"
+                    : "일시 정지"}
                 </Button>
                 <Button
                   type="button"
@@ -196,7 +204,9 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                 <time className="pt-1 font-mono text-[11px] text-muted-foreground">
                   {formatOffset(segment.startedAtMs)}
                 </time>
-                <p className="text-sm leading-7 sm:text-[15px]">{segment.text}</p>
+                <p className="text-sm leading-7 sm:text-[15px]">
+                  {segment.text}
+                </p>
                 <Button
                   type="button"
                   variant="ghost"

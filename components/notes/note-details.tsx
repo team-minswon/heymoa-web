@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -128,13 +132,13 @@ export function NoteDetails({
             </Badge>
           ))}
           {!note.folders.length ? (
-            <span className="text-sm text-muted-foreground">연결된 폴더 없음</span>
+            <span className="text-sm text-muted-foreground">
+              연결된 폴더 없음
+            </span>
           ) : null}
         </div>
         <Popover>
-          <PopoverTrigger
-            render={<Button type="button" variant="outline" />}
-          >
+          <PopoverTrigger render={<Button type="button" variant="outline" />}>
             폴더 선택 <ChevronsUpDown />
           </PopoverTrigger>
           <PopoverContent align="start" className="w-72 p-0">

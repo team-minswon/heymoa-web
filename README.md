@@ -40,6 +40,10 @@ NEXT_PUBLIC_API_MOCKING=enabled pnpm dev
 
 Mock 모드에서는 REST와 WebSocket 모두 브라우저에서 동작하며, 실제 마이크 대신 결정적인 PCM 입력을 사용해 실시간 전사 흐름을 재현합니다.
 
+- 기본 mock Workspace: `http://localhost:3000/w/01K0000000000`
+- 데스크톱 side Note: `?view=side&tab=transcript`
+- 전체 화면 Note 정보: `?view=full&tab=details`
+
 ## 검증
 
 ```bash

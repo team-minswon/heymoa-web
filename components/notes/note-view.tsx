@@ -50,9 +50,7 @@ export function NoteView({
         onTabChange={(tab) => setQuery({ tab })}
         onClose={() => router.push(`/w/${workspaceId}`)}
         onExpand={
-          current.view === "side"
-            ? () => setQuery({ view: "full" })
-            : undefined
+          current.view === "side" ? () => setQuery({ view: "full" }) : undefined
         }
       />
     </NoteRouteSurface>

@@ -214,7 +214,10 @@ export function WorkspaceSidebar({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="ghost" className="h-auto w-full justify-start p-2" />
+              <Button
+                variant="ghost"
+                className="h-auto w-full justify-start p-2"
+              />
             }
           >
             <Avatar className="size-8">
@@ -247,7 +250,13 @@ export function WorkspaceSidebar({
         open={folderDialog !== null}
         onOpenChange={(open) => !open && setFolderDialog(null)}
       >
-        <DialogContent aria-label={folderDialog?.mode === "rename" ? "폴더 이름 변경" : "새 폴더 만들기"}>
+        <DialogContent
+          aria-label={
+            folderDialog?.mode === "rename"
+              ? "폴더 이름 변경"
+              : "새 폴더 만들기"
+          }
+        >
           <form action={(formData) => void handleFolderSubmit(formData)}>
             <DialogHeader>
               <DialogTitle>
@@ -276,7 +285,11 @@ export function WorkspaceSidebar({
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFolderDialog(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFolderDialog(null)}
+              >
                 취소
               </Button>
               <Button type="submit">저장</Button>

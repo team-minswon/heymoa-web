@@ -33,9 +33,8 @@ describe("groupNotesByDate", () => {
       "ko-KR"
     );
 
-    expect(groups.map((group) => group.notes.map((item) => item.noteId))).toEqual([
-      ["newer", "same-day-older"],
-      ["older"],
-    ]);
+    expect(
+      groups.map((group) => group.notes.map((item) => item.noteId))
+    ).toEqual([["newer", "same-day-older"], ["older"]]);
   });
 });
