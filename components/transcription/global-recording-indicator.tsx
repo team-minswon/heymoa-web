@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { Pause, Radio, Square, Waves } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useGetDefaultWorkspace } from "@/lib/api/generated/workspace/workspace";
 import { useRecording } from "@/components/transcription/recording-provider";
+import { isWorkspaceRoute } from "@/lib/routes/app-route";
 
 const ACTIVE_STATUSES = new Set([
   "CONNECTING",
@@ -22,12 +24,18 @@ function formatElapsed(elapsedMs: number) {
 }
 
 export function GlobalRecordingIndicator() {
+  const pathname = usePathname();
   const { session, elapsedMs, pause, resume, stop } = useRecording();
   const workspaceQuery = useGetDefaultWorkspace({
     query: { enabled: Boolean(session), staleTime: 5 * 60 * 1000 },
   });
 
-  if (!session || !ACTIVE_STATUSES.has(session.status)) return null;
+  if (
+    isWorkspaceRoute(pathname) ||
+    !session ||
+    !ACTIVE_STATUSES.has(session.status)
+  )
+    return null;
 
   const workspaceEnvelope =
     workspaceQuery.data?.status === 200 ? workspaceQuery.data.data : undefined;

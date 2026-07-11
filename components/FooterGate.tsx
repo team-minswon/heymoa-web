@@ -3,11 +3,13 @@
 import { usePathname } from "next/navigation";
 import React from "react";
 
+import { isWorkspaceRoute } from "@/lib/routes/app-route";
+
 export function FooterGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // Hide Footer on the authentication callback page
-  if (pathname === "/auth/callback" || pathname.startsWith("/w/")) {
+  if (pathname === "/auth/callback" || isWorkspaceRoute(pathname)) {
     return null;
   }
 
