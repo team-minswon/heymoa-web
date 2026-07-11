@@ -1,0 +1,347 @@
+asyncapi: 3.1.0
+info:
+  title: HeyMoa Realtime Transcription API
+  version: 0.0.1
+  description: Browser와 Spring 애플리케이션 사이의 실시간 전사 WebSocket 계약입니다.
+defaultContentType: application/json
+
+servers:
+  local:
+    host: localhost:8080
+    protocol: ws
+    description: Local Spring server
+  production:
+    host: api.heymoa.com
+    protocol: wss
+    description: Production Spring server
+
+channels:
+  transcription:
+    address: /v1/transcription-sessions/{sessionId}/stream
+    title: Realtime transcription stream
+    description: >-
+      Binary frame은 PCM16 little-endian, mono, 24 kHz audio입니다.
+      Close code는 1000 정상 완료, 4401 ticket 인증 실패, 4403 권한 없음,
+      4404 Session 없음, 4409 잘못된 Session 상태, 4503 STT provider 사용 불가를 뜻합니다.
+    parameters:
+      sessionId:
+        $ref: "#/components/parameters/SessionId"
+    bindings:
+      ws:
+        method: GET
+        query:
+          type: object
+          additionalProperties: false
+          required: [ticket]
+          properties:
+            ticket:
+              type: string
+              minLength: 1
+              description: REST로 발급한 짧은 수명의 일회용 연결 ticket
+    messages:
+      AudioChunk:
+        $ref: "#/components/messages/AudioChunk"
+      TurnCommit:
+        $ref: "#/components/messages/TurnCommit"
+      SessionPause:
+        $ref: "#/components/messages/SessionPause"
+      SessionResume:
+        $ref: "#/components/messages/SessionResume"
+      SessionComplete:
+        $ref: "#/components/messages/SessionComplete"
+      Ping:
+        $ref: "#/components/messages/Ping"
+      SessionReady:
+        $ref: "#/components/messages/SessionReady"
+      SessionStatus:
+        $ref: "#/components/messages/SessionStatus"
+      TranscriptPartial:
+        $ref: "#/components/messages/TranscriptPartial"
+      TranscriptFinal:
+        $ref: "#/components/messages/TranscriptFinal"
+      SessionCompleted:
+        $ref: "#/components/messages/SessionCompleted"
+      Error:
+        $ref: "#/components/messages/Error"
+      Pong:
+        $ref: "#/components/messages/Pong"
+
+operations:
+  receiveBrowserMessages:
+    action: receive
+    title: Receive Browser audio and commands
+    channel:
+      $ref: "#/channels/transcription"
+    messages:
+      - $ref: "#/channels/transcription/messages/AudioChunk"
+      - $ref: "#/channels/transcription/messages/TurnCommit"
+      - $ref: "#/channels/transcription/messages/SessionPause"
+      - $ref: "#/channels/transcription/messages/SessionResume"
+      - $ref: "#/channels/transcription/messages/SessionComplete"
+      - $ref: "#/channels/transcription/messages/Ping"
+  sendBrowserEvents:
+    action: send
+    title: Send transcription events to Browser
+    channel:
+      $ref: "#/channels/transcription"
+    messages:
+      - $ref: "#/channels/transcription/messages/SessionReady"
+      - $ref: "#/channels/transcription/messages/SessionStatus"
+      - $ref: "#/channels/transcription/messages/TranscriptPartial"
+      - $ref: "#/channels/transcription/messages/TranscriptFinal"
+      - $ref: "#/channels/transcription/messages/SessionCompleted"
+      - $ref: "#/channels/transcription/messages/Error"
+      - $ref: "#/channels/transcription/messages/Pong"
+
+components:
+  parameters:
+    SessionId:
+      description: 13-character TranscriptionSession TSID matching ^[0-9A-HJKMNP-TV-Z]{13}$
+      examples: [0HZX2K7M9Q4AB]
+
+  messages:
+    AudioChunk:
+      name: AudioChunk
+      title: PCM audio chunk
+      contentType: application/octet-stream
+      payload:
+        type: string
+        format: binary
+    TurnCommit:
+      name: TurnCommit
+      payload:
+        $ref: "#/components/schemas/TurnCommit"
+      examples:
+        - name: commit
+          payload: { type: TURN_COMMIT }
+    SessionPause:
+      name: SessionPause
+      payload:
+        $ref: "#/components/schemas/SessionPause"
+      examples:
+        - name: pause
+          payload: { type: SESSION_PAUSE }
+    SessionResume:
+      name: SessionResume
+      payload:
+        $ref: "#/components/schemas/SessionResume"
+      examples:
+        - name: resume
+          payload: { type: SESSION_RESUME }
+    SessionComplete:
+      name: SessionComplete
+      payload:
+        $ref: "#/components/schemas/SessionComplete"
+      examples:
+        - name: complete
+          payload: { type: SESSION_COMPLETE }
+    Ping:
+      name: Ping
+      payload:
+        $ref: "#/components/schemas/Ping"
+      examples:
+        - name: ping
+          payload: { type: PING }
+    SessionReady:
+      name: SessionReady
+      payload:
+        $ref: "#/components/schemas/SessionReady"
+      examples:
+        - name: ready
+          payload: { type: SESSION_READY, sessionId: 0HZX2K7M9Q4AB }
+    SessionStatus:
+      name: SessionStatus
+      payload:
+        $ref: "#/components/schemas/SessionStatus"
+      examples:
+        - name: streaming
+          payload: { type: SESSION_STATUS, status: STREAMING }
+    TranscriptPartial:
+      name: TranscriptPartial
+      payload:
+        $ref: "#/components/schemas/TranscriptPartial"
+      examples:
+        - name: partialSnapshot
+          payload:
+            type: TRANSCRIPT_PARTIAL
+            itemId: provider-item-1
+            text: 현재까지 누적된 문장
+    TranscriptFinal:
+      name: TranscriptFinal
+      payload:
+        $ref: "#/components/schemas/TranscriptFinal"
+      examples:
+        - name: persistedFinal
+          payload:
+            type: TRANSCRIPT_FINAL
+            itemId: provider-item-1
+            segment:
+              segmentId: 0HZX2K7M9Q4AB
+              sessionId: 0HZX2K7M9Q4AC
+              sequence: 1
+              text: 확정된 문장입니다.
+              startedAtMs: 1200
+              endedAtMs: 4100
+    SessionCompleted:
+      name: SessionCompleted
+      payload:
+        $ref: "#/components/schemas/SessionCompleted"
+      examples:
+        - name: completed
+          payload: { type: SESSION_COMPLETED, sessionId: 0HZX2K7M9Q4AB }
+    Error:
+      name: Error
+      payload:
+        $ref: "#/components/schemas/Error"
+      examples:
+        - name: invalidState
+          payload:
+            type: ERROR
+            code: INVALID_TRANSCRIPTION_SESSION_STATE
+            message: 현재 상태에서는 요청을 처리할 수 없습니다.
+            retryable: false
+    Pong:
+      name: Pong
+      payload:
+        $ref: "#/components/schemas/Pong"
+      examples:
+        - name: pong
+          payload: { type: PONG }
+
+  schemas:
+    Tsid:
+      type: string
+      minLength: 13
+      maxLength: 13
+      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+
+    TranscriptionSessionStatus:
+      type: string
+      enum:
+        [
+          CONNECTING,
+          STREAMING,
+          PAUSED,
+          FINALIZING,
+          COMPLETED,
+          INTERRUPTED,
+          FAILED,
+        ]
+
+    AppErrorType:
+      type: string
+      enum:
+        - BAD_REQUEST
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - WORKSPACE_NOT_FOUND
+        - NOTE_NOT_FOUND
+        - FOLDER_NOT_FOUND
+        - TRANSCRIPTION_SESSION_NOT_FOUND
+        - TRANSCRIPT_SEGMENT_NOT_FOUND
+        - FOLDER_NAME_ALREADY_EXISTS
+        - ACTIVE_TRANSCRIPTION_SESSION_EXISTS
+        - INVALID_TRANSCRIPTION_SESSION_STATE
+        - STT_PROVIDER_UNAVAILABLE
+        - INTERNAL_SERVER_ERROR
+
+    TurnCommit:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [TURN_COMMIT] }
+    SessionPause:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [SESSION_PAUSE] }
+    SessionResume:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [SESSION_RESUME] }
+    SessionComplete:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [SESSION_COMPLETE] }
+    Ping:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [PING] }
+    SessionReady:
+      type: object
+      additionalProperties: false
+      required: [type, sessionId]
+      properties:
+        type: { type: string, enum: [SESSION_READY] }
+        sessionId:
+          $ref: "#/components/schemas/Tsid"
+    SessionStatus:
+      type: object
+      additionalProperties: false
+      required: [type, status]
+      properties:
+        type: { type: string, enum: [SESSION_STATUS] }
+        status:
+          $ref: "#/components/schemas/TranscriptionSessionStatus"
+    TranscriptPartial:
+      type: object
+      additionalProperties: false
+      required: [type, itemId, text]
+      properties:
+        type: { type: string, enum: [TRANSCRIPT_PARTIAL] }
+        itemId: { type: string, minLength: 1 }
+        text: { type: string }
+    TranscriptFinal:
+      type: object
+      additionalProperties: false
+      required: [type, itemId, segment]
+      properties:
+        type: { type: string, enum: [TRANSCRIPT_FINAL] }
+        itemId: { type: string, minLength: 1 }
+        segment:
+          $ref: "#/components/schemas/TranscriptSegment"
+    TranscriptSegment:
+      type: object
+      additionalProperties: false
+      required: [segmentId, sessionId, sequence, text, startedAtMs, endedAtMs]
+      properties:
+        segmentId:
+          $ref: "#/components/schemas/Tsid"
+        sessionId:
+          $ref: "#/components/schemas/Tsid"
+        sequence: { type: integer, minimum: 1 }
+        text: { type: string, minLength: 1 }
+        startedAtMs: { type: integer, minimum: 0 }
+        endedAtMs: { type: integer, minimum: 0 }
+    SessionCompleted:
+      type: object
+      additionalProperties: false
+      required: [type, sessionId]
+      properties:
+        type: { type: string, enum: [SESSION_COMPLETED] }
+        sessionId:
+          $ref: "#/components/schemas/Tsid"
+    Error:
+      type: object
+      additionalProperties: false
+      required: [type, code, message, retryable]
+      properties:
+        type: { type: string, enum: [ERROR] }
+        code:
+          $ref: "#/components/schemas/AppErrorType"
+        message: { type: string }
+        retryable: { type: boolean }
+    Pong:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [PONG] }
