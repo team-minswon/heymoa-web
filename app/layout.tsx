@@ -67,7 +67,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "진짜그림 AI 일러스트 검사 서비스",
+        alt: "HeyMoa AI 회의 운영 에이전트",
       },
     ],
   },

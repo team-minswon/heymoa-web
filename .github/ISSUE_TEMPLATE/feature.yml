@@ -52,8 +52,6 @@ body:
         - App foundation
         - Auth shell
         - Public pages and navigation
-        - Onboarding flow
-        - Dashboard shell
         - Generated API client and fetcher
         - MSW mock backend
         - Organization dashboard pages

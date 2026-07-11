@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, LogOut, Settings, UserRound } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
@@ -71,11 +71,6 @@ export function AuthStatus() {
               ) : null}
             </DropdownMenuLabel>
           </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuLinkItem href="/dashboard" closeOnClick>
-            <LayoutDashboard className="size-4" />
-            대시보드
-          </DropdownMenuLinkItem>
           <DropdownMenuSeparator />
           <DropdownMenuLinkItem href="/settings" closeOnClick>
             <Settings className="size-4" />내 정보

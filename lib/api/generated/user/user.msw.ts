@@ -7,20 +7,28 @@
  */
 import { faker } from "@faker-js/faker";
 
-import type {
-  AppResponseLogoutResponse,
-  AppResponseRefreshTokensResponse,
-} from "../models";
+import { HttpResponse, http } from "msw";
+import type { RequestHandlerOptions } from "msw";
 
-export const getPostV1AuthRefreshResponseMock = (
+import type { AppResponseCurrentUserInfoResponse } from "../models";
+
+export const getGetV1UsersMeResponseMock = (
   overrideResponse: Partial<
-    Extract<AppResponseRefreshTokensResponse, object>
+    Extract<AppResponseCurrentUserInfoResponse, object>
   > = {}
-): AppResponseRefreshTokensResponse => ({
+): AppResponseCurrentUserInfoResponse => ({
   success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   data: faker.helpers.arrayElement([
     {
-      message: faker.helpers.arrayElement([
+      userId: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      email: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         undefined,
       ]),
@@ -59,47 +67,29 @@ export const getPostV1AuthRefreshResponseMock = (
   ...overrideResponse,
 });
 
-export const getPostV1AuthLogoutResponseMock = (
-  overrideResponse: Partial<Extract<AppResponseLogoutResponse, object>> = {}
-): AppResponseLogoutResponse => ({
-  success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
-  data: faker.helpers.arrayElement([
-    {
-      message: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
+export const getGetV1UsersMeMockHandler = (
+  overrideResponse?:
+    | AppResponseCurrentUserInfoResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) =>
+        | Promise<AppResponseCurrentUserInfoResponse>
+        | AppResponseCurrentUserInfoResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/users/me",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetV1UsersMeResponseMock(),
+        { status: 200 }
+      );
     },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([
-    {
-      code: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
-      message: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
-      details: faker.helpers.arrayElement([
-        Array.from(
-          { length: faker.number.int({ min: 1, max: 10 }) },
-          (_, i) => i + 1
-        ).map(() => ({
-          field: faker.helpers.arrayElement([
-            faker.string.alpha({ length: { min: 10, max: 20 } }),
-            undefined,
-          ]),
-          message: faker.helpers.arrayElement([
-            faker.string.alpha({ length: { min: 10, max: 20 } }),
-            undefined,
-          ]),
-        })),
-        undefined,
-      ]),
-    },
-    undefined,
-  ]),
-  ...overrideResponse,
-});
+    options
+  );
+};
+export const getUserMock = () => [getGetV1UsersMeMockHandler()];

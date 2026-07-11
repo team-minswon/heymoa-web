@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
-import { mockState } from "@/lib/mocks/state";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -25,9 +24,11 @@ function serializeCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
 export const getCurrentUserForSsr = cache(
   async (): Promise<AuthUser | null> => {
     if (shouldEnableMocking()) {
-      return mockState.isAuthenticated()
-        ? mockState.getAuthenticatedUser()
-        : null;
+      return {
+        userId: "user-12345",
+        name: "테스트 유저",
+        email: "test@heymoa.com",
+      };
     }
 
     const url = buildServerApiUrl("/v1/users/me");

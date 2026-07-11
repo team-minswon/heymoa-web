@@ -78,7 +78,7 @@ export default async function SettingsPage() {
                     사용자 ID
                   </dt>
                   <dd className="mt-2 font-mono text-base text-[var(--clay-primary)]">
-                    {user.id}
+                    {user.userId ?? "-"}
                   </dd>
                 </div>
                 <div className="rounded-2xl border border-[var(--clay-hairline)] bg-[var(--clay-canvas)] p-4">

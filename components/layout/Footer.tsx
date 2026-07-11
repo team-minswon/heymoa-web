@@ -27,8 +27,7 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-xs text-[var(--clay-muted-soft)] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <span>© 2026 {siteConfig.name}. All rights reserved.</span>
           <span>
-            AI 검사 결과는 보조 판단 자료이며 최종 판단은 운영 기준에 따라
-            이루어집니다.
+            AI 회의 에이전트는 사용자의 업무 효율을 높이는 보조 수단입니다.
           </span>
         </div>
       </footer>
@@ -42,7 +41,7 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
           <Link href="/" className="inline-flex items-center gap-3">
             <Image
               src="/apple-touch-icon.png"
-              alt="진짜그림"
+              alt={siteConfig.name}
               width={40}
               height={40}
               className="rounded-xl object-contain"
@@ -53,14 +52,10 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
               <span className="block text-lg font-bold text-[var(--clay-primary)]">
                 {siteConfig.name}
               </span>
-              <span className="block text-xs font-medium text-[var(--clay-muted)]">
-                heymoa
-              </span>
             </span>
           </Link>
           <p className="mt-5 max-w-md text-sm leading-6 text-[var(--clay-muted)]">
-            AI 생성 여부 확정이 아닌, 시각적 검토를 돕는 Evidence 기반 이미지
-            분석 서비스
+            회의를 기록하고 참여하며, 대화를 실제 업무로 연결하는 참여형 AI Agent
           </p>
           <p className="mt-4 text-sm text-[var(--clay-muted)]">
             문의:{" "}
@@ -80,18 +75,18 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
             <ul className="mt-4 space-y-3">
               <li>
                 <button
-                  onClick={() => handleScroll("analyze-box")}
+                  onClick={() => handleScroll("features")}
                   className="text-sm font-medium text-[var(--clay-muted)] transition hover:text-[var(--clay-primary)] cursor-pointer"
                 >
-                  분석하기
+                  기능 소개
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => handleScroll("example-section")}
+                  onClick={() => handleScroll("how-it-works")}
                   className="text-sm font-medium text-[var(--clay-muted)] transition hover:text-[var(--clay-primary)] cursor-pointer"
                 >
-                  결과 예시
+                  작동 방식
                 </button>
               </li>
             </ul>
@@ -125,8 +120,7 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-xs text-[var(--clay-muted-soft)] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <span>© 2026 {siteConfig.name}. All rights reserved.</span>
           <span>
-            AI 검사 결과는 보조 판단 자료이며 최종 판단은 운영 기준에 따라
-            이루어집니다.
+            AI 회의 에이전트는 사용자의 업무 효율을 높이는 보조 수단입니다.
           </span>
         </div>
       </div>

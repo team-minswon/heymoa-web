@@ -10,9 +10,6 @@ export default async function MainLayout({
 }) {
   const user = await getCurrentUserForSsr();
 
-  if (user && !user.onboardingCompleted) {
-    redirect("/onboarding");
-  }
 
   return <PageTransition>{children}</PageTransition>;
 }

@@ -7,65 +7,25 @@
  */
 import { faker } from "@faker-js/faker";
 
-import type {
-  AppResponseLogoutResponse,
-  AppResponseRefreshTokensResponse,
-} from "../models";
+import type { AppResponseCurrentUserInfoResponse } from "../models";
 
-export const getPostV1AuthRefreshResponseMock = (
+export const getGetV1UsersMeResponseMock = (
   overrideResponse: Partial<
-    Extract<AppResponseRefreshTokensResponse, object>
+    Extract<AppResponseCurrentUserInfoResponse, object>
   > = {}
-): AppResponseRefreshTokensResponse => ({
+): AppResponseCurrentUserInfoResponse => ({
   success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   data: faker.helpers.arrayElement([
     {
-      message: faker.helpers.arrayElement([
+      userId: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         undefined,
       ]),
-    },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([
-    {
-      code: faker.helpers.arrayElement([
+      name: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         undefined,
       ]),
-      message: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
-      details: faker.helpers.arrayElement([
-        Array.from(
-          { length: faker.number.int({ min: 1, max: 10 }) },
-          (_, i) => i + 1
-        ).map(() => ({
-          field: faker.helpers.arrayElement([
-            faker.string.alpha({ length: { min: 10, max: 20 } }),
-            undefined,
-          ]),
-          message: faker.helpers.arrayElement([
-            faker.string.alpha({ length: { min: 10, max: 20 } }),
-            undefined,
-          ]),
-        })),
-        undefined,
-      ]),
-    },
-    undefined,
-  ]),
-  ...overrideResponse,
-});
-
-export const getPostV1AuthLogoutResponseMock = (
-  overrideResponse: Partial<Extract<AppResponseLogoutResponse, object>> = {}
-): AppResponseLogoutResponse => ({
-  success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
-  data: faker.helpers.arrayElement([
-    {
-      message: faker.helpers.arrayElement([
+      email: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         undefined,
       ]),

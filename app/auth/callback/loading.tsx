@@ -1,17 +1,13 @@
 import { LoaderCircle } from "lucide-react";
 
-import { StatusPanel } from "@/components/heymoa/status-panel";
-
 export default function AuthCallbackLoading() {
   return (
-    <main className="flex min-h-screen items-center bg-[var(--clay-canvas)] px-4 py-12 text-[var(--clay-primary)]">
-      <StatusPanel
-        icon={LoaderCircle}
-        iconClassName="animate-spin"
-        label="Auth"
-        title="로그인 처리 중"
-        description="Google 인증 결과를 확인하고 있습니다."
-      />
-    </main>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--clay-canvas)] px-4 py-12 text-[var(--clay-primary)]">
+      <div className="text-center">
+        <LoaderCircle className="size-12 animate-spin mx-auto text-[var(--clay-primary)] mb-4" />
+        <h1 className="text-2xl font-bold text-[var(--clay-primary)]">로그인 중입니다</h1>
+        <p className="mt-2 text-[var(--clay-body)]">잠시만 기다려 주세요...</p>
+      </div>
+    </div>
   );
 }

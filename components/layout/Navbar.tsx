@@ -29,7 +29,7 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/apple-touch-icon.png"
-            alt="진짜그림"
+            alt={siteConfig.name}
             width={40}
             height={40}
             className="rounded-xl object-contain"
@@ -40,37 +40,22 @@ export function Navbar() {
             <span className="block text-[17px] font-semibold leading-tight text-[var(--clay-primary)]">
               {siteConfig.name}
             </span>
-            <span className="block text-xs font-medium text-[var(--clay-muted)]">
-              heymoa
-            </span>
           </span>
         </Link>
 
         {/* Middle Navigation - Hidden on Mobile */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[var(--clay-muted)]">
           <button
-            onClick={() => handleScroll("analyze-box")}
+            onClick={() => handleScroll("features")}
             className="hover:text-[var(--clay-primary)] transition cursor-pointer"
           >
-            분석하기
+            기능 소개
           </button>
           <button
-            onClick={() => handleScroll("example-section")}
-            className="hover:text-[var(--clay-primary)] transition cursor-pointer"
-          >
-            결과 예시
-          </button>
-          <button
-            onClick={() => handleScroll("features-section")}
+            onClick={() => handleScroll("how-it-works")}
             className="hover:text-[var(--clay-primary)] transition cursor-pointer"
           >
             작동 방식
-          </button>
-          <button
-            onClick={() => handleScroll("policy-section")}
-            className="hover:text-[var(--clay-primary)] transition cursor-pointer"
-          >
-            이용 안내
           </button>
         </nav>
 
@@ -78,10 +63,10 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <AuthStatus />
           <button
-            onClick={() => handleScroll("analyze-box")}
+            onClick={() => handleScroll("start")}
             className="hidden sm:inline-flex h-9 items-center justify-center rounded-xl bg-[var(--clay-primary)] px-4 text-xs font-bold text-white transition hover:bg-[var(--clay-brand-teal)] focus:outline-none"
           >
-            이미지 분석 시작하기
+            시작하기
           </button>
         </div>
       </div>

@@ -14,9 +14,8 @@ export type AppError = {
 };
 
 export type AuthUser = {
-  id: number;
-  email: string | null;
-  name: string | null;
-  image: string | null;
-  onboardingCompleted: boolean;
+  userId?: string;
+  email?: string;
+  name?: string;
+  image?: string | null;
 };

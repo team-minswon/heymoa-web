@@ -81,15 +81,6 @@ export async function refreshAuthOnce() {
   return refreshPromise;
 }
 
-function isOnboardingRequiredError(value: unknown) {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "error" in value &&
-    typeof (value as { error?: { code?: unknown } }).error?.code === "string" &&
-    (value as { error: { code: string } }).error.code === "ONBOARDING_REQUIRED"
-  );
-}
 
 async function parseResponse<T>(response: Response, responseType?: string) {
   const responseData =
@@ -100,14 +91,6 @@ async function parseResponse<T>(response: Response, responseType?: string) {
         : await response.json();
 
   if (!response.ok) {
-    if (
-      typeof window !== "undefined" &&
-      response.status === 403 &&
-      isOnboardingRequiredError(responseData)
-    ) {
-      window.location.assign("/onboarding");
-    }
-
     throw responseData;
   }
 
