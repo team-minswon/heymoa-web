@@ -16,7 +16,8 @@ import type {
 import type {
   AppResponseLogoutResponse,
   AppResponseRefreshTokensResponse,
-  AppResponseUnit,
+  BadRequestResponse,
+  InternalServerErrorResponse,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -29,12 +30,12 @@ export type postV1AuthRefreshResponse200 = {
 };
 
 export type postV1AuthRefreshResponse400 = {
-  data: AppResponseUnit;
+  data: BadRequestResponse;
   status: 400;
 };
 
 export type postV1AuthRefreshResponse500 = {
-  data: AppResponseUnit;
+  data: InternalServerErrorResponse;
   status: 500;
 };
 
@@ -57,7 +58,6 @@ export const getPostV1AuthRefreshUrl = () => {
 };
 
 /**
- * refresh_token 쿠키를 검증하고 access_token과 refresh_token 쿠키를 갱신합니다.
  * @summary 토큰 갱신
  */
 export const postV1AuthRefresh = async (
@@ -70,7 +70,7 @@ export const postV1AuthRefresh = async (
 };
 
 export const getPostV1AuthRefreshMutationOptions = <
-  TError = AppResponseUnit,
+  TError = BadRequestResponse | InternalServerErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -109,13 +109,15 @@ export type PostV1AuthRefreshMutationResult = NonNullable<
   Awaited<ReturnType<typeof postV1AuthRefresh>>
 >;
 
-export type PostV1AuthRefreshMutationError = AppResponseUnit;
+export type PostV1AuthRefreshMutationError =
+  | BadRequestResponse
+  | InternalServerErrorResponse;
 
 /**
  * @summary 토큰 갱신
  */
 export const usePostV1AuthRefresh = <
-  TError = AppResponseUnit,
+  TError = BadRequestResponse | InternalServerErrorResponse,
   TContext = unknown,
 >(
   options?: {
@@ -142,7 +144,7 @@ export type postV1AuthLogoutResponse200 = {
 };
 
 export type postV1AuthLogoutResponse500 = {
-  data: AppResponseUnit;
+  data: InternalServerErrorResponse;
   status: 500;
 };
 
@@ -162,7 +164,6 @@ export const getPostV1AuthLogoutUrl = () => {
 };
 
 /**
- * 서버 세션을 정리하고 인증 쿠키를 만료합니다. refresh_token이 없어도 성공합니다.
  * @summary 로그아웃
  */
 export const postV1AuthLogout = async (
@@ -175,7 +176,7 @@ export const postV1AuthLogout = async (
 };
 
 export const getPostV1AuthLogoutMutationOptions = <
-  TError = AppResponseUnit,
+  TError = InternalServerErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -214,13 +215,13 @@ export type PostV1AuthLogoutMutationResult = NonNullable<
   Awaited<ReturnType<typeof postV1AuthLogout>>
 >;
 
-export type PostV1AuthLogoutMutationError = AppResponseUnit;
+export type PostV1AuthLogoutMutationError = InternalServerErrorResponse;
 
 /**
  * @summary 로그아웃
  */
 export const usePostV1AuthLogout = <
-  TError = AppResponseUnit,
+  TError = InternalServerErrorResponse,
   TContext = unknown,
 >(
   options?: {

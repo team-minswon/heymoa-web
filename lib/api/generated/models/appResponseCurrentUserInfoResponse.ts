@@ -8,11 +8,7 @@
 import type { AppErrorBody } from "./appErrorBody";
 import type { CurrentUserInfoResponse } from "./currentUserInfoResponse";
 
-/**
- * 응답 Wrapper
- */
 export interface AppResponseCurrentUserInfoResponse {
-  /** 요청 성공 여부 */
   success: boolean;
   data?: CurrentUserInfoResponse;
   error?: AppErrorBody;

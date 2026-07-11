@@ -5,7 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
+import type { AppResponseUnit } from "./appResponseUnit";
 
-export interface RefreshTokensResponse {
-  message: string;
-}
+/**
+ * 인증이 필요함
+ */
+export type UnauthorizedResponse = AppResponseUnit;

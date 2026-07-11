@@ -8,11 +8,7 @@
 import type { AppErrorBody } from "./appErrorBody";
 import type { LogoutResponse } from "./logoutResponse";
 
-/**
- * 응답 Wrapper
- */
 export interface AppResponseLogoutResponse {
-  /** 요청 성공 여부 */
   success: boolean;
   data?: LogoutResponse;
   error?: AppErrorBody;

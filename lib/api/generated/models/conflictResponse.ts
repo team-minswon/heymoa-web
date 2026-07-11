@@ -5,7 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
+import type { AppResponseUnit } from "./appResponseUnit";
 
-export interface RefreshTokensResponse {
-  message: string;
-}
+/**
+ * 현재 리소스 상태와 충돌함
+ */
+export type ConflictResponse = AppResponseUnit;

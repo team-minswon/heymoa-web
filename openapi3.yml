@@ -10,103 +10,482 @@ servers:
 paths:
   /v1/users/me:
     get:
-      tags:
-        - User
+      tags: [User]
       summary: 현재 사용자 조회
-      description: access_token 쿠키로 인증된 현재 사용자 정보를 조회합니다.
       security:
         - access_token: []
       responses:
-        '200':
+        "200":
           description: 현재 사용자 조회 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppResponse_CurrentUserInfoResponse'
-        '401':
-          description: 인증 쿠키가 없거나 유효하지 않음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppResponse_Unit'
-        '404':
-          description: 사용자를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppResponse_Unit'
-        '500':
-          description: 서버 내부 오류
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppResponse_Unit'
+                $ref: "#/components/schemas/AppResponse_CurrentUserInfoResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /v1/auth/refresh:
     post:
-      tags:
-        - Auth
+      tags: [Auth]
       summary: 토큰 갱신
-      description: refresh_token 쿠키를 검증하고 access_token과 refresh_token 쿠키를 갱신합니다.
       parameters:
         - name: refresh_token
           in: cookie
-          description: 갱신에 사용할 refresh token 쿠키
           required: false
           schema:
             type: string
         - name: User-Agent
           in: header
-          description: User Agent
           required: false
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: 토큰 갱신 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppResponse_RefreshTokensResponse'
-        '400':
-          description: refresh token이 없거나 유효하지 않음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppResponse_Unit'
-        '500':
-          description: 서버 내부 오류
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppResponse_Unit'
+                $ref: "#/components/schemas/AppResponse_RefreshTokensResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /v1/auth/logout:
     post:
-      tags:
-        - Auth
+      tags: [Auth]
       summary: 로그아웃
-      description: 서버 세션을 정리하고 인증 쿠키를 만료합니다. refresh_token이 없어도 성공합니다.
       parameters:
         - name: refresh_token
           in: cookie
-          description: 폐기할 refresh token 쿠키
           required: false
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: 로그아웃 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppResponse_LogoutResponse'
-        '500':
-          description: 서버 내부 오류
+                $ref: "#/components/schemas/AppResponse_LogoutResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/workspaces/default:
+    get:
+      tags: [Workspace]
+      operationId: getDefaultWorkspace
+      summary: 기본 워크스페이스 조회
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: 기본 워크스페이스 조회 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppResponse_Unit'
+                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/workspaces/{workspaceId}:
+    get:
+      tags: [Workspace]
+      operationId: getWorkspace
+      summary: 워크스페이스 상세 조회
+      security:
+        - access_token: []
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 워크스페이스 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/workspaces/{workspaceId}/notes:
+    get:
+      tags: [Note]
+      operationId: listWorkspaceNotes
+      summary: 워크스페이스 노트 목록 조회
+      security:
+        - access_token: []
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: folderId
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 노트 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_NoteCursorPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      tags: [Note]
+      operationId: createNote
+      summary: 노트 생성
+      security:
+        - access_token: []
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+      responses:
+        "200":
+          description: 노트 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_NoteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/notes/{noteId}:
+    get:
+      tags: [Note]
+      operationId: getNote
+      summary: 노트 상세 조회
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 노트 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_NoteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    put:
+      tags: [Note]
+      operationId: updateNote
+      summary: 노트 수정
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteRequest"
+      responses:
+        "200":
+          description: 노트 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_NoteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [Note]
+      operationId: deleteNote
+      summary: 노트 삭제
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 노트 삭제 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_Unit"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/workspaces/{workspaceId}/folders:
+    get:
+      tags: [Folder]
+      operationId: listWorkspaceFolders
+      summary: 워크스페이스 폴더 목록 조회
+      security:
+        - access_token: []
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 폴더 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_FolderListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      tags: [Folder]
+      operationId: createFolder
+      summary: 폴더 생성
+      security:
+        - access_token: []
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FolderNameRequest"
+      responses:
+        "200":
+          description: 폴더 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_FolderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/folders/{folderId}:
+    put:
+      tags: [Folder]
+      operationId: updateFolder
+      summary: 폴더 이름 변경
+      security:
+        - access_token: []
+      parameters:
+        - name: folderId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FolderNameRequest"
+      responses:
+        "200":
+          description: 폴더 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_FolderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [Folder]
+      operationId: deleteFolder
+      summary: 폴더 삭제
+      security:
+        - access_token: []
+      parameters:
+        - name: folderId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 폴더 삭제 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_Unit"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/notes/{noteId}/folders/{folderId}:
+    put:
+      tags: [Folder]
+      operationId: attachNoteFolder
+      summary: 노트에 폴더 연결
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+        - name: folderId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 폴더 연결 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_NoteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [Folder]
+      operationId: detachNoteFolder
+      summary: 노트의 폴더 연결 해제
+      security:
+        - access_token: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+        - name: folderId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 폴더 연결 해제 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_NoteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
 components:
   securitySchemes:
@@ -116,142 +495,385 @@ components:
       name: access_token
       description: 인증을 위한 Access Token 쿠키
 
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    BadRequest:
+      description: 잘못된 요청
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppResponse_Unit"
+    Unauthorized:
+      description: 인증이 필요함
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppResponse_Unit"
+    Forbidden:
+      description: 접근 권한이 없음
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppResponse_Unit"
+    NotFound:
+      description: 리소스를 찾을 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppResponse_Unit"
+    Conflict:
+      description: 현재 리소스 상태와 충돌함
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppResponse_Unit"
+    InternalServerError:
+      description: 서버 내부 오류
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppResponse_Unit"
+
   schemas:
-    AppResponse_CurrentUserInfoResponse:
-      type: object
-      description: 응답 Wrapper
-      required:
-        - success
-      properties:
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          example: true
-        data:
-          $ref: '#/components/schemas/CurrentUserInfoResponse'
-        error:
-          $ref: '#/components/schemas/AppErrorBody'
+    Tsid:
+      type: string
+      minLength: 13
+      maxLength: 13
+      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+      example: 0HZX2K7M9Q4AB
 
-    AppResponse_RefreshTokensResponse:
+    UserSummary:
       type: object
-      description: 응답 Wrapper
-      required:
-        - success
+      required: [userId, name]
       properties:
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          example: true
-        data:
-          $ref: '#/components/schemas/RefreshTokensResponse'
-        error:
-          $ref: '#/components/schemas/AppErrorBody'
+        userId:
+          $ref: "#/components/schemas/Tsid"
+        name:
+          type: string
+          example: 테스트 유저
 
-    AppResponse_LogoutResponse:
+    WorkspaceResponse:
       type: object
-      description: 응답 Wrapper
-      required:
-        - success
+      required: [workspaceId, name]
       properties:
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          example: true
-        data:
-          $ref: '#/components/schemas/LogoutResponse'
-        error:
-          $ref: '#/components/schemas/AppErrorBody'
+        workspaceId:
+          $ref: "#/components/schemas/Tsid"
+        name:
+          type: string
+          example: 테스트 유저의 워크스페이스
 
-    AppResponse_Unit:
+    FolderResponse:
       type: object
-      description: 에러 응답 Wrapper
-      required:
-        - success
+      required: [folderId, name]
       properties:
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          example: false
-        error:
-          $ref: '#/components/schemas/AppErrorBody'
+        folderId:
+          $ref: "#/components/schemas/Tsid"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: 제품
+
+    NoteResponse:
+      type: object
+      required:
+        [
+          noteId,
+          workspaceId,
+          title,
+          context,
+          createdBy,
+          folders,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        noteId:
+          $ref: "#/components/schemas/Tsid"
+        workspaceId:
+          $ref: "#/components/schemas/Tsid"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: 주간 회의
+        context:
+          type: string
+          nullable: true
+          maxLength: 4000
+          example: 이번 주 제품 진행 상황을 공유합니다.
+        createdBy:
+          $ref: "#/components/schemas/UserSummary"
+        folders:
+          type: array
+          items:
+            $ref: "#/components/schemas/FolderResponse"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-07-11T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-07-11T00:00:00Z"
+
+    NoteSummaryResponse:
+      allOf:
+        - $ref: "#/components/schemas/NoteResponse"
+        - type: object
+          required: [lastRecordedAt, recordedDurationMs]
+          properties:
+            lastRecordedAt:
+              type: string
+              format: date-time
+              nullable: true
+              example: "2026-07-11T00:00:00Z"
+            recordedDurationMs:
+              type: integer
+              format: int64
+              minimum: 0
+              example: 120000
+
+    NoteCursorPageResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoteSummaryResponse"
+        nextCursor:
+          type: string
+          nullable: true
+          example: null
+
+    CreateNoteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: 주간 회의
+        context:
+          type: string
+          nullable: true
+          maxLength: 4000
+          example: null
+
+    UpdateNoteRequest:
+      type: object
+      required: [title, context]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        context:
+          type: string
+          nullable: true
+          maxLength: 4000
+
+    FolderNameRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: 제품
 
     CurrentUserInfoResponse:
       type: object
-      description: 현재 사용자 정보
-      required:
-        - userId
-        - name
-        - email
+      required: [userId, name, email]
       properties:
         userId:
-          type: string
-          description: 사용자 ID
-          example: 0HZX2K7M9Q4AB
+          $ref: "#/components/schemas/Tsid"
         name:
           type: string
-          description: 사용자 이름
           example: 홍길동
         email:
           type: string
-          description: 이메일
+          format: email
           example: user@example.com
 
     RefreshTokensResponse:
       type: object
-      description: 토큰 갱신 결과
-      required:
-        - message
+      required: [message]
       properties:
         message:
           type: string
-          description: 처리 결과 메시지
           example: 토큰이 갱신되었습니다.
 
     LogoutResponse:
       type: object
-      description: 로그아웃 결과
-      required:
-        - message
+      required: [message]
       properties:
         message:
           type: string
-          description: 처리 결과 메시지
           example: 성공적으로 로그아웃했습니다.
+
+    AppErrorType:
+      type: string
+      enum:
+        - BAD_REQUEST
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - WORKSPACE_NOT_FOUND
+        - NOTE_NOT_FOUND
+        - FOLDER_NOT_FOUND
+        - FOLDER_NAME_ALREADY_EXISTS
+        - INTERNAL_SERVER_ERROR
 
     AppErrorBody:
       type: object
-      description: 실패 응답 정보
-      required:
-        - code
-        - message
+      required: [code, message]
       properties:
         code:
-          type: string
-          description: 에러 코드 (예. BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR, USER_NOT_FOUND)
-          example: BAD_REQUEST
+          $ref: "#/components/schemas/AppErrorType"
         message:
           type: string
-          description: 에러 메시지
           example: 잘못된 요청입니다.
         details:
           type: array
-          description: 필드별 상세 오류
           nullable: true
           items:
-            $ref: '#/components/schemas/AppErrorDetail'
+            $ref: "#/components/schemas/AppErrorDetail"
 
     AppErrorDetail:
       type: object
-      description: 에러 상세 정보
-      required:
-        - field
-        - message
+      required: [field, message]
       properties:
         field:
           type: string
-          description: 오류가 발생한 필드
-          example: email
+          example: title
         message:
           type: string
-          description: 필드 오류 메시지
-          example: 올바른 이메일 형식이어야 합니다.
+          example: 제목은 비어 있을 수 없습니다.
+
+    AppResponse_CurrentUserInfoResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/CurrentUserInfoResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_RefreshTokensResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/RefreshTokensResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_LogoutResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/LogoutResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_WorkspaceResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/WorkspaceResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_FolderResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/FolderResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_FolderListResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FolderResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_NoteResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/NoteResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_NoteCursorPageResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/NoteCursorPageResponse"
+        error:
+          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_Unit:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          nullable: true
+        error:
+          $ref: "#/components/schemas/AppErrorBody"

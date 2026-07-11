@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 
-/**
- * 로그아웃 결과
- */
 export interface LogoutResponse {
-  /** 처리 결과 메시지 */
   message: string;
 }

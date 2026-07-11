@@ -9,6 +9,11 @@ import { faker } from "@faker-js/faker";
 
 import type { AppResponseCurrentUserInfoResponse } from "../models";
 
+import {
+  getAppErrorBodyMock,
+  getCurrentUserInfoResponseMock,
+} from "../models/index.faker";
+
 export const getGetV1UsersMeResponseMock = (
   overrideResponse: Partial<
     Extract<AppResponseCurrentUserInfoResponse, object>
@@ -16,29 +21,9 @@ export const getGetV1UsersMeResponseMock = (
 ): AppResponseCurrentUserInfoResponse => ({
   success: faker.datatype.boolean(),
   data: faker.helpers.arrayElement([
-    {
-      userId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      email: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    },
+    { ...getCurrentUserInfoResponseMock() },
     undefined,
   ]),
-  error: faker.helpers.arrayElement([
-    {
-      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      details: faker.helpers.arrayElement([
-        Array.from(
-          { length: faker.number.int({ min: 1, max: 10 }) },
-          (_, i) => i + 1
-        ).map(() => ({
-          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
-          message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        })),
-        undefined,
-      ]),
-    },
-    undefined,
-  ]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
   ...overrideResponse,
 });

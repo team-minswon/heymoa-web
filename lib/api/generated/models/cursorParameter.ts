@@ -6,6 +6,4 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 
-export interface RefreshTokensResponse {
-  message: string;
-}
+export type CursorParameter = string;

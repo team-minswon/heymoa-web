@@ -6,9 +6,10 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 import type { AppErrorBody } from "./appErrorBody";
+import type { NoteResponse } from "./noteResponse";
 
-export interface AppResponseUnit {
+export interface AppResponseNoteResponse {
   success: boolean;
-  data?: unknown | null;
+  data?: NoteResponse;
   error?: AppErrorBody;
 }

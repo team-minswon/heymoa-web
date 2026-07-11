@@ -6,12 +6,7 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 
-/**
- * 에러 상세 정보
- */
 export interface AppErrorDetail {
-  /** 오류가 발생한 필드 */
   field: string;
-  /** 필드 오류 메시지 */
   message: string;
 }

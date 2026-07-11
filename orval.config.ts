@@ -14,7 +14,13 @@ export default defineConfig({
       clean: ["./lib/api/generated"],
       formatter: "prettier",
       baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "",
-      mock: true,
+      mock: {
+        indexMockFiles: true,
+        generators: [
+          { type: "msw", useExamples: true },
+          { type: "faker", useExamples: true, schemas: true },
+        ],
+      },
       override: {
         mutator: {
           path: "./lib/api/fetcher.ts",

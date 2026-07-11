@@ -5,7 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
+import type { AppResponseUnit } from "./appResponseUnit";
 
-export interface RefreshTokensResponse {
-  message: string;
-}
+/**
+ * 리소스를 찾을 수 없음
+ */
+export type NotFoundResponse = AppResponseUnit;

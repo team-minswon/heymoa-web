@@ -6,9 +6,10 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 import type { AppErrorBody } from "./appErrorBody";
+import type { NoteCursorPageResponse } from "./noteCursorPageResponse";
 
-export interface AppResponseUnit {
+export interface AppResponseNoteCursorPageResponse {
   success: boolean;
-  data?: unknown | null;
+  data?: NoteCursorPageResponse;
   error?: AppErrorBody;
 }

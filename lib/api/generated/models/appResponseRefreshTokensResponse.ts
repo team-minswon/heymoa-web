@@ -8,11 +8,7 @@
 import type { AppErrorBody } from "./appErrorBody";
 import type { RefreshTokensResponse } from "./refreshTokensResponse";
 
-/**
- * 응답 Wrapper
- */
 export interface AppResponseRefreshTokensResponse {
-  /** 요청 성공 여부 */
   success: boolean;
   data?: RefreshTokensResponse;
   error?: AppErrorBody;

@@ -20,7 +20,9 @@ import type {
 
 import type {
   AppResponseCurrentUserInfoResponse,
-  AppResponseUnit,
+  InternalServerErrorResponse,
+  NotFoundResponse,
+  UnauthorizedResponse,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -33,17 +35,17 @@ export type getV1UsersMeResponse200 = {
 };
 
 export type getV1UsersMeResponse401 = {
-  data: AppResponseUnit;
+  data: UnauthorizedResponse;
   status: 401;
 };
 
 export type getV1UsersMeResponse404 = {
-  data: AppResponseUnit;
+  data: NotFoundResponse;
   status: 404;
 };
 
 export type getV1UsersMeResponse500 = {
-  data: AppResponseUnit;
+  data: InternalServerErrorResponse;
   status: 500;
 };
 
@@ -67,7 +69,6 @@ export const getGetV1UsersMeUrl = () => {
 };
 
 /**
- * access_token 쿠키로 인증된 현재 사용자 정보를 조회합니다.
  * @summary 현재 사용자 조회
  */
 export const getV1UsersMe = async (
@@ -85,7 +86,10 @@ export const getGetV1UsersMeQueryKey = () => {
 
 export const getGetV1UsersMeQueryOptions = <
   TData = Awaited<ReturnType<typeof getV1UsersMe>>,
-  TError = AppResponseUnit,
+  TError =
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof getV1UsersMe>>, TError, TData>
@@ -110,11 +114,17 @@ export const getGetV1UsersMeQueryOptions = <
 export type GetV1UsersMeQueryResult = NonNullable<
   Awaited<ReturnType<typeof getV1UsersMe>>
 >;
-export type GetV1UsersMeQueryError = AppResponseUnit;
+export type GetV1UsersMeQueryError =
+  | UnauthorizedResponse
+  | NotFoundResponse
+  | InternalServerErrorResponse;
 
 export function useGetV1UsersMe<
   TData = Awaited<ReturnType<typeof getV1UsersMe>>,
-  TError = AppResponseUnit,
+  TError =
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
 >(
   options: {
     query: Partial<
@@ -136,7 +146,10 @@ export function useGetV1UsersMe<
 };
 export function useGetV1UsersMe<
   TData = Awaited<ReturnType<typeof getV1UsersMe>>,
-  TError = AppResponseUnit,
+  TError =
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
 >(
   options?: {
     query?: Partial<
@@ -158,7 +171,10 @@ export function useGetV1UsersMe<
 };
 export function useGetV1UsersMe<
   TData = Awaited<ReturnType<typeof getV1UsersMe>>,
-  TError = AppResponseUnit,
+  TError =
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
 >(
   options?: {
     query?: Partial<
@@ -176,7 +192,10 @@ export function useGetV1UsersMe<
 
 export function useGetV1UsersMe<
   TData = Awaited<ReturnType<typeof getV1UsersMe>>,
-  TError = AppResponseUnit,
+  TError =
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
 >(
   options?: {
     query?: Partial<

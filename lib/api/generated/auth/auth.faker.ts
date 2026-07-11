@@ -12,6 +12,12 @@ import type {
   AppResponseRefreshTokensResponse,
 } from "../models";
 
+import {
+  getAppErrorBodyMock,
+  getLogoutResponseMock,
+  getRefreshTokensResponseMock,
+} from "../models/index.faker";
+
 export const getPostV1AuthRefreshResponseMock = (
   overrideResponse: Partial<
     Extract<AppResponseRefreshTokensResponse, object>
@@ -19,26 +25,10 @@ export const getPostV1AuthRefreshResponseMock = (
 ): AppResponseRefreshTokensResponse => ({
   success: faker.datatype.boolean(),
   data: faker.helpers.arrayElement([
-    { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+    { ...getRefreshTokensResponseMock() },
     undefined,
   ]),
-  error: faker.helpers.arrayElement([
-    {
-      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      details: faker.helpers.arrayElement([
-        Array.from(
-          { length: faker.number.int({ min: 1, max: 10 }) },
-          (_, i) => i + 1
-        ).map(() => ({
-          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
-          message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        })),
-        undefined,
-      ]),
-    },
-    undefined,
-  ]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
   ...overrideResponse,
 });
 
@@ -46,26 +36,7 @@ export const getPostV1AuthLogoutResponseMock = (
   overrideResponse: Partial<Extract<AppResponseLogoutResponse, object>> = {}
 ): AppResponseLogoutResponse => ({
   success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([
-    {
-      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      details: faker.helpers.arrayElement([
-        Array.from(
-          { length: faker.number.int({ min: 1, max: 10 }) },
-          (_, i) => i + 1
-        ).map(() => ({
-          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
-          message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        })),
-        undefined,
-      ]),
-    },
-    undefined,
-  ]),
+  data: faker.helpers.arrayElement([{ ...getLogoutResponseMock() }, undefined]),
+  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
   ...overrideResponse,
 });

@@ -6,18 +6,11 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 import type { AppErrorDetail } from "./appErrorDetail";
+import type { AppErrorType } from "./appErrorType";
 
-/**
- * 실패 응답 정보
- */
 export interface AppErrorBody {
-  /** 에러 코드 (예. BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR, USER_NOT_FOUND) */
-  code: string;
-  /** 에러 메시지 */
+  code: AppErrorType;
   message: string;
-  /**
-   * 필드별 상세 오류
-   * @nullable
-   */
+  /** @nullable */
   details?: AppErrorDetail[] | null;
 }

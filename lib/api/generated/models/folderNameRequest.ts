@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 
-export interface RefreshTokensResponse {
-  message: string;
+export interface FolderNameRequest {
+  /**
+   * @minLength 1
+   * @maxLength 50
+   */
+  name: string;
 }
