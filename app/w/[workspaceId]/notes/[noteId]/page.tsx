@@ -1,4 +1,5 @@
 import { NoteView } from "@/components/notes/note-view";
+import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 
 export default async function NoteRoute({
   params,
@@ -12,13 +13,15 @@ export default async function NoteRoute({
     searchParams,
   ]);
   return (
-    <NoteView
-      workspaceId={workspaceId}
-      noteId={noteId}
-      initialQuery={{
-        view: Array.isArray(query.view) ? query.view[0] : query.view,
-        tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
-      }}
-    />
+    <WorkspaceAppShell workspaceId={workspaceId}>
+      <NoteView
+        workspaceId={workspaceId}
+        noteId={noteId}
+        initialQuery={{
+          view: Array.isArray(query.view) ? query.view[0] : query.view,
+          tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
+        }}
+      />
+    </WorkspaceAppShell>
   );
 }
