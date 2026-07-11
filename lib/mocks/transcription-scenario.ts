@@ -22,6 +22,7 @@ export class MockTranscriptionScenario {
   private audioFrameCount = 0;
   private partialText = "";
   private disposed = false;
+  private closeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly sessionId: string,
@@ -54,7 +55,10 @@ export class MockTranscriptionScenario {
         this.setStatus("FINALIZING");
         this.setStatus("COMPLETED");
         this.send({ type: "SESSION_COMPLETED", sessionId: this.sessionId });
-        this.requestClose(1000, "completed");
+        this.closeTimer = setTimeout(
+          () => this.requestClose(1000, "completed"),
+          0
+        );
         break;
       case "PING":
         this.send({ type: "PONG" });
@@ -85,6 +89,8 @@ export class MockTranscriptionScenario {
 
   dispose() {
     this.disposed = true;
+    if (this.closeTimer) clearTimeout(this.closeTimer);
+    this.closeTimer = null;
   }
 
   private get itemId() {

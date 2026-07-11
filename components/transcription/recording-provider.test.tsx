@@ -76,6 +76,7 @@ describe("RecordingProvider", () => {
     await act(() => result.current.start(session.noteId, "ko"));
     rerender();
     expect(result.current.session?.sessionId).toBe("01K0000000010");
+    expect(result.current.elapsedMs).toBeLessThan(1000);
     await act(() => result.current.pause());
     await act(() => result.current.resume());
     expect(result.current.session?.sessionId).toBe("01K0000000010");

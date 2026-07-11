@@ -15,4 +15,26 @@ describe("MockTranscriptionScenario", () => {
       expect.objectContaining({ type: "SESSION_STATUS", status: "STREAMING" })
     );
   });
+
+  it("delivers COMPLETED before requesting a normal close", () => {
+    vi.useFakeTimers();
+    const send = vi.fn();
+    const close = vi.fn();
+    const scenario = new MockTranscriptionScenario(
+      "01K0000000010",
+      send,
+      close
+    );
+    scenario.open();
+    scenario.receive({ type: "SESSION_COMPLETE" });
+
+    expect(send).toHaveBeenLastCalledWith({
+      type: "SESSION_COMPLETED",
+      sessionId: "01K0000000010",
+    });
+    expect(close).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(close).toHaveBeenCalledWith(1000, "completed");
+    vi.useRealTimers();
+  });
 });

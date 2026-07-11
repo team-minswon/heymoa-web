@@ -73,8 +73,25 @@ type RecordingContextValue = {
 
 const RecordingContext = createContext<RecordingContextValue | null>(null);
 
+function createBrowserAudio(onChunk: (chunk: ArrayBuffer) => void) {
+  if (process.env.NEXT_PUBLIC_API_MOCKING === "enabled") {
+    let timer: number | null = null;
+    return {
+      requestPermission: async () => undefined,
+      start: async () => {
+        timer ??= window.setInterval(() => onChunk(new ArrayBuffer(3840)), 350);
+      },
+      stop: async () => {
+        if (timer !== null) window.clearInterval(timer);
+        timer = null;
+      },
+    } satisfies AudioController;
+  }
+  return new PcmAudioCapture({ onChunk });
+}
+
 const browserRuntime: RecordingRuntime = {
-  createAudio: (onChunk) => new PcmAudioCapture({ onChunk }),
+  createAudio: createBrowserAudio,
   createSocket: (options) => new TranscriptionSocket(options),
 };
 
@@ -109,6 +126,7 @@ export function RecordingProvider({
   );
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const elapsedOriginRef = useRef<number | null>(null);
   const sessionRef = useRef<TranscriptionSessionResponse | null>(null);
   const socketRef = useRef<SocketController | null>(null);
   const audioRef = useRef<AudioController | null>(null);
@@ -235,9 +253,10 @@ export function RecordingProvider({
         socketRef.current?.sendAudio(chunk)
       );
       audioRef.current = audio;
-      await audio.requestPermission();
       try {
+        await audio.requestPermission();
         const connection = await api.createSession(noteId, language);
+        elapsedOriginRef.current = Date.now();
         setCurrentSession(connection.session);
         await openConnection(connection, audio);
       } catch (cause) {
@@ -282,6 +301,7 @@ export function RecordingProvider({
       );
       audioRef.current = audio;
       await audio.requestPermission();
+      elapsedOriginRef.current = Date.parse(activeSession.startedAt);
       setCurrentSession(activeSession);
       const connection = await api.createTicket(activeSession.sessionId);
       await openConnection(connection, audio);
@@ -299,8 +319,9 @@ export function RecordingProvider({
 
   useEffect(() => {
     if (!session || !["STREAMING", "PAUSED"].includes(session.status)) return;
+    const origin = elapsedOriginRef.current ?? Date.parse(session.startedAt);
     const updateElapsed = () =>
-      setElapsedMs(Math.max(0, Date.now() - Date.parse(session.startedAt)));
+      setElapsedMs(Math.max(0, Date.now() - origin));
     updateElapsed();
     const timer = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(timer);

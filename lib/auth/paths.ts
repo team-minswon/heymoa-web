@@ -1,4 +1,6 @@
 const allowedReturnPaths = new Set(["/", "/terms", "/privacy", "/settings"]);
+const workspaceReturnPath =
+  /^\/w\/[0-9A-HJKMNP-TV-Z]{13}(?:\/notes\/[0-9A-HJKMNP-TV-Z]{13})?$/;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -29,7 +31,9 @@ export function normalizeReturnTo(value: string | null | undefined): string {
 
   const pathname = path.split("?")[0] || "/";
 
-  return allowedReturnPaths.has(pathname) ? path : "/";
+  return allowedReturnPaths.has(pathname) || workspaceReturnPath.test(pathname)
+    ? path
+    : "/";
 }
 
 export function getCurrentReturnTo() {
