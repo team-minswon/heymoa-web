@@ -9,7 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-serif: var(--font-eb-garamond);
+  --font-heading: var(--font-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,63 +50,80 @@
 }
 
 :root {
-  --clay-primary: #0a0a0a;
-  --clay-brand-pink: #ff4d8b;
-  --clay-brand-teal: #1a3a3a;
-  --clay-brand-lavender: #b8a4ed;
-  --clay-brand-peach: #ffb084;
-  --clay-brand-ochre: #e8b94a;
-  --clay-brand-mint: #a4d4c5;
-  --clay-brand-coral: #ff6b5a;
-  --clay-canvas: #fffaf0;
-  --clay-surface-soft: #faf5e8;
-  --clay-surface-card: #f5f0e0;
-  --clay-surface-strong: #ebe6d6;
-  --clay-surface-dark: #0a1a1a;
-  --clay-hairline: #e5e5e5;
-  --clay-body: #3a3a3a;
-  --clay-muted: #6a6a6a;
-  --clay-muted-soft: #9a9a9a;
-  --cg-green: var(--clay-brand-teal);
-  --cg-green-accent: var(--clay-brand-pink);
-  --cg-house: var(--clay-surface-soft);
-  --cg-mint: var(--clay-brand-mint);
-  --cg-gold: var(--clay-brand-ochre);
-  --cg-cream: var(--clay-canvas);
-  --cg-ceramic: var(--clay-surface-card);
-  --cg-ink: var(--clay-primary);
-  --background: var(--clay-canvas);
-  --foreground: var(--clay-primary);
-  --card: var(--clay-surface-card);
-  --card-foreground: var(--clay-primary);
-  --popover: var(--clay-canvas);
-  --popover-foreground: var(--clay-primary);
-  --primary: var(--clay-primary);
-  --primary-foreground: #ffffff;
-  --secondary: var(--clay-surface-card);
-  --secondary-foreground: var(--clay-primary);
-  --muted: var(--clay-surface-soft);
-  --muted-foreground: var(--clay-muted);
-  --accent: var(--clay-brand-mint);
-  --accent-foreground: var(--clay-primary);
-  --destructive: #ef4444;
-  --border: var(--clay-hairline);
-  --input: var(--clay-hairline);
-  --ring: var(--clay-brand-teal);
-  --chart-1: var(--clay-brand-pink);
-  --chart-2: var(--clay-brand-teal);
-  --chart-3: var(--clay-brand-lavender);
-  --chart-4: var(--clay-brand-peach);
-  --chart-5: var(--clay-brand-ochre);
+  /* ElevenLabs Theme Color Tokens */
+  --el-primary: #292524;
+  --el-primary-active: #0c0a09;
+  --el-canvas: #f5f5f5;
+  --el-canvas-soft: #fafafa;
+  --el-canvas-deep: #0c0a09;
+  --el-surface-card: #ffffff;
+  --el-surface-strong: #f0efed;
+  --el-surface-dark: #0c0a09;
+  --el-surface-dark-elevated: #1c1917;
+  
+  --el-hairline: #e7e5e4;
+  --el-hairline-soft: #f0efed;
+  --el-hairline-strong: #d6d3d1;
+  
+  --el-ink: #0c0a09;
+  --el-body: #4e4e4e;
+  --el-body-strong: #292524;
+  --el-muted: #777169;
+  --el-muted-soft: #a8a29e;
+  --el-on-primary: #ffffff;
+  --el-on-dark: #ffffff;
+  --el-on-dark-soft: #a8a29e;
+  
+  /* Atmospheric Gradient Stops */
+  --el-gradient-mint: #a7e5d3;
+  --el-gradient-peach: #f4c5a8;
+  --el-gradient-lavender: #c8b8e0;
+  --el-gradient-sky: #a8c8e8;
+  --el-gradient-rose: #e8b8c4;
+  
+  --el-success: #16a34a;
+  --el-error: #dc2626;
+
+  /* Backward Compatibility Mappings for Clay */
+  --clay-canvas: var(--el-canvas);
+  --clay-primary: var(--el-primary);
+  --clay-surface-soft: var(--el-canvas-soft);
+  --clay-surface-card: var(--el-surface-card);
+  --clay-surface-strong: var(--el-surface-strong);
+  --clay-hairline: var(--el-hairline);
+  --clay-body: var(--el-body);
+  --clay-muted: var(--el-muted);
+  --clay-brand-teal: var(--el-primary);
+  
+  /* UI Mapping variables */
+  --background: var(--el-canvas);
+  --foreground: var(--el-ink);
+  --card: var(--el-surface-card);
+  --card-foreground: var(--el-ink);
+  --popover: var(--el-canvas);
+  --popover-foreground: var(--el-ink);
+  --primary: var(--el-primary);
+  --primary-foreground: var(--el-on-primary);
+  --secondary: var(--el-surface-strong);
+  --secondary-foreground: var(--el-ink);
+  --muted: var(--el-canvas-soft);
+  --muted-foreground: var(--el-muted);
+  --accent: var(--el-surface-strong);
+  --accent-foreground: var(--el-ink);
+  --destructive: var(--el-error);
+  --border: var(--el-hairline);
+  --input: var(--el-hairline-strong);
+  --ring: var(--el-ink);
   --radius: 1rem;
-  --sidebar: var(--clay-surface-soft);
-  --sidebar-foreground: var(--clay-primary);
-  --sidebar-primary: var(--clay-primary);
+  
+  --sidebar: var(--el-canvas-soft);
+  --sidebar-foreground: var(--el-ink);
+  --sidebar-primary: var(--el-primary);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--clay-surface-card);
-  --sidebar-accent-foreground: var(--clay-primary);
-  --sidebar-border: var(--clay-hairline);
-  --sidebar-ring: var(--clay-brand-teal);
+  --sidebar-accent: var(--el-surface-card);
+  --sidebar-accent-foreground: var(--el-ink);
+  --sidebar-border: var(--el-hairline);
+  --sidebar-ring: var(--el-ink);
 }
 
 .dark {
@@ -148,7 +166,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.16px; /* Inter looser tracking for editorial dialet */
   }
   html {
     @apply font-sans;
@@ -164,6 +182,6 @@
     cursor: pointer;
   }
   ::selection {
-    background: color-mix(in srgb, var(--clay-brand-pink), white 70%);
+    background: color-mix(in srgb, var(--el-gradient-peach), white 70%);
   }
 }
