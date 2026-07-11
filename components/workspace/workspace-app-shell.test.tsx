@@ -4,6 +4,19 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/components/transcription/recording-provider", () => ({
+  useRecording: () => ({
+    session: null,
+    elapsedMs: 0,
+    error: null,
+    start: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    stop: vi.fn(),
+  }),
+}));
+
 vi.mock("@/lib/api/generated/workspace/workspace", () => ({
   useGetWorkspace: () => ({
     data: {
@@ -35,6 +48,7 @@ vi.mock("@/lib/api/generated/folder/folder", () => ({
 
 vi.mock("@/lib/api/generated/note/note", () => ({
   getListWorkspaceNotesQueryKey: () => ["notes"],
+  useCreateNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 describe("WorkspaceAppShell", () => {

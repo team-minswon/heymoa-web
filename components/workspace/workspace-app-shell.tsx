@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
+import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import { useListWorkspaceFolders } from "@/lib/api/generated/folder/folder";
 import { useGetWorkspace } from "@/lib/api/generated/workspace/workspace";
 
@@ -30,9 +31,11 @@ export function useWorkspaceShell() {
 
 export function WorkspaceAppShell({
   workspaceId,
+  activeNoteId,
   children,
 }: {
   workspaceId: string;
+  activeNoteId?: string;
   children: React.ReactNode;
 }) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -56,6 +59,9 @@ export function WorkspaceAppShell({
     }),
     [language, selectedFolderId]
   );
+  const currentLabel =
+    folders.find((folder) => folder.folderId === selectedFolderId)?.name ??
+    "모든 노트";
 
   return (
     <WorkspaceShellContext.Provider value={value}>
@@ -72,6 +78,13 @@ export function WorkspaceAppShell({
           </Sidebar>
           <SidebarInset className="min-h-svh bg-background">
             <div className="flex min-h-svh min-w-0 flex-1 flex-col">
+              <WorkspaceToolbar
+                workspaceId={workspaceId}
+                currentLabel={currentLabel}
+                language={language}
+                onLanguageChange={setLanguage}
+                activeNoteId={activeNoteId}
+              />
               {children}
             </div>
           </SidebarInset>

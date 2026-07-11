@@ -13,7 +13,7 @@ export default async function NoteRoute({
     searchParams,
   ]);
   return (
-    <WorkspaceAppShell workspaceId={workspaceId}>
+    <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>
       <NoteView
         workspaceId={workspaceId}
         noteId={noteId}
