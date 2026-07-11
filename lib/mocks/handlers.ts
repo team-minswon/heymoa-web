@@ -5,6 +5,7 @@ import {
 import { getGetV1UsersMeMockHandler } from "@/lib/api/generated/user/user.msw";
 
 import { restHandlers } from "@/lib/mocks/rest-handlers";
+import { transcriptionWebSocketHandler } from "@/lib/mocks/websocket-handler";
 
 export const handlers = [
   getPostV1AuthRefreshMockHandler({
@@ -28,4 +29,5 @@ export const handlers = [
     },
   }),
   ...restHandlers,
+  transcriptionWebSocketHandler,
 ];

@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { protocolExamples } from "@/lib/transcription/protocol";
 
 describe("AsyncAPI examples", () => {
   it("keeps Partial as a full snapshot", () => {
-    const message = {
-      type: "TRANSCRIPT_PARTIAL",
-      itemId: "provider-item-1",
-      text: "현재까지 누적된 문장",
-    } as const;
-    expect(message.text).not.toBe("");
+    expect(protocolExamples.partial.text).not.toBe("");
   });
 });
