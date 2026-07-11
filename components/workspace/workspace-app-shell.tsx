@@ -77,7 +77,7 @@ export function WorkspaceAppShell({
             />
           </Sidebar>
           <SidebarInset className="min-h-svh bg-background">
-            <div className="flex min-h-svh min-w-0 flex-1 flex-col">
+            <div className="relative flex min-h-svh min-w-0 flex-1 flex-col">
               <WorkspaceToolbar
                 workspaceId={workspaceId}
                 currentLabel={currentLabel}

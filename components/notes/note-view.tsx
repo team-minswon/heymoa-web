@@ -5,9 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { NoteDetails } from "@/components/notes/note-details";
+import { NoteRouteSurface } from "@/components/notes/note-route-surface";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { Button } from "@/components/ui/button";
-import { WorkspacePage } from "@/components/workspace/workspace-page";
 import {
   getListWorkspaceNotesQueryKey,
   useDeleteNote,
@@ -141,28 +141,9 @@ export function NoteView({
     </div>
   );
 
-  if (current.view === "side") {
-    return (
-      <div className="relative min-h-screen overflow-hidden">
-        <WorkspacePage workspaceId={workspaceId} embedded />
-        <button
-          type="button"
-          aria-label="사이드 노트 닫기"
-          onClick={() => router.push(`/w/${workspaceId}`)}
-          className="absolute inset-0 bg-black/5 backdrop-blur-[1px]"
-        />
-        <aside className="fixed bottom-0 right-0 top-16 z-30 w-full border-l border-[var(--el-hairline)] bg-[var(--el-canvas)] shadow-[-20px_0_60px_rgba(28,25,23,0.12)] sm:w-[min(760px,78vw)]">
-          {panel}
-        </aside>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto w-full max-w-6xl px-0 py-0 sm:px-6 sm:py-8">
-      <div className="overflow-hidden border-y border-[var(--el-hairline)] bg-[var(--el-canvas)] sm:rounded-2xl sm:border sm:shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-        {panel}
-      </div>
-    </div>
+    <NoteRouteSurface workspaceId={workspaceId} view={current.view}>
+      {panel}
+    </NoteRouteSurface>
   );
 }

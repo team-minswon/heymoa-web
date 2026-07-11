@@ -1,5 +1,6 @@
 import { NoteView } from "@/components/notes/note-view";
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
+import { WorkspacePage } from "@/components/workspace/workspace-page";
 
 export default async function NoteRoute({
   params,
@@ -14,6 +15,7 @@ export default async function NoteRoute({
   ]);
   return (
     <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>
+      <WorkspacePage workspaceId={workspaceId} />
       <NoteView
         workspaceId={workspaceId}
         noteId={noteId}
