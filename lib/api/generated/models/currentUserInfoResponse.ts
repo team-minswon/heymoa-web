@@ -11,9 +11,9 @@
  */
 export interface CurrentUserInfoResponse {
   /** 사용자 ID */
-  userId?: string;
+  userId: string;
   /** 사용자 이름 */
-  name?: string;
+  name: string;
   /** 이메일 */
-  email?: string;
+  email: string;
 }

@@ -12,6 +12,6 @@ import type { AppErrorBody } from "./appErrorBody";
  */
 export interface AppResponseUnit {
   /** 요청 성공 여부 */
-  success?: boolean;
+  success: boolean;
   error?: AppErrorBody;
 }

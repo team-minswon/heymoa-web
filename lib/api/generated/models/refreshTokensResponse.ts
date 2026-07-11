@@ -11,5 +11,5 @@
  */
 export interface RefreshTokensResponse {
   /** 처리 결과 메시지 */
-  message?: string;
+  message: string;
 }

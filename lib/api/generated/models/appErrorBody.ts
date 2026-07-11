@@ -12,9 +12,9 @@ import type { AppErrorDetail } from "./appErrorDetail";
  */
 export interface AppErrorBody {
   /** 에러 코드 (예. BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR, USER_NOT_FOUND) */
-  code?: string;
+  code: string;
   /** 에러 메시지 */
-  message?: string;
+  message: string;
   /**
    * 필드별 상세 오류
    * @nullable

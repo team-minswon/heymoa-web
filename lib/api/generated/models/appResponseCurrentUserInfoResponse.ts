@@ -13,7 +13,7 @@ import type { CurrentUserInfoResponse } from "./currentUserInfoResponse";
  */
 export interface AppResponseCurrentUserInfoResponse {
   /** 요청 성공 여부 */
-  success?: boolean;
+  success: boolean;
   data?: CurrentUserInfoResponse;
   error?: AppErrorBody;
 }

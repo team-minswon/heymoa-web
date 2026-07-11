@@ -13,7 +13,7 @@ import type { RefreshTokensResponse } from "./refreshTokensResponse";
  */
 export interface AppResponseRefreshTokensResponse {
   /** 요청 성공 여부 */
-  success?: boolean;
+  success: boolean;
   data?: RefreshTokensResponse;
   error?: AppErrorBody;
 }

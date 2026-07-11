@@ -17,47 +17,26 @@ export const getGetV1UsersMeResponseMock = (
     Extract<AppResponseCurrentUserInfoResponse, object>
   > = {}
 ): AppResponseCurrentUserInfoResponse => ({
-  success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  success: faker.datatype.boolean(),
   data: faker.helpers.arrayElement([
     {
-      userId: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
-      name: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
-      email: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
+      userId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.string.alpha({ length: { min: 10, max: 20 } }),
     },
     undefined,
   ]),
   error: faker.helpers.arrayElement([
     {
-      code: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
-      message: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        undefined,
-      ]),
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      message: faker.string.alpha({ length: { min: 10, max: 20 } }),
       details: faker.helpers.arrayElement([
         Array.from(
           { length: faker.number.int({ min: 1, max: 10 }) },
           (_, i) => i + 1
         ).map(() => ({
-          field: faker.helpers.arrayElement([
-            faker.string.alpha({ length: { min: 10, max: 20 } }),
-            undefined,
-          ]),
-          message: faker.helpers.arrayElement([
-            faker.string.alpha({ length: { min: 10, max: 20 } }),
-            undefined,
-          ]),
+          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          message: faker.string.alpha({ length: { min: 10, max: 20 } }),
         })),
         undefined,
       ]),

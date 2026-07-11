@@ -13,7 +13,7 @@ import type { LogoutResponse } from "./logoutResponse";
  */
 export interface AppResponseLogoutResponse {
   /** 요청 성공 여부 */
-  success?: boolean;
+  success: boolean;
   data?: LogoutResponse;
   error?: AppErrorBody;
 }
