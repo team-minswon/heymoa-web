@@ -320,8 +320,7 @@ export function RecordingProvider({
   useEffect(() => {
     if (!session || !["STREAMING", "PAUSED"].includes(session.status)) return;
     const origin = elapsedOriginRef.current ?? Date.parse(session.startedAt);
-    const updateElapsed = () =>
-      setElapsedMs(Math.max(0, Date.now() - origin));
+    const updateElapsed = () => setElapsedMs(Math.max(0, Date.now() - origin));
     updateElapsed();
     const timer = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(timer);
