@@ -8,6 +8,7 @@ import {
 
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { MockProvider } from "@/components/mocks/mock-provider";
+import { RecordingProvider } from "@/components/transcription/recording-provider";
 import type { AuthUser } from "@/lib/auth/types";
 
 function makeQueryClient() {
@@ -44,7 +45,9 @@ export function Providers({
   return (
     <MockProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
+        <AuthProvider initialUser={initialUser}>
+          <RecordingProvider>{children}</RecordingProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </MockProvider>
   );

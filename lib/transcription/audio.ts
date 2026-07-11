@@ -96,21 +96,25 @@ export class PcmAudioCapture {
     );
   }
 
-  async start() {
-    if (this.audioContext) return;
-
-    this.stream = await navigator.mediaDevices.getUserMedia({
+  async requestPermission() {
+    this.stream ??= await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
         echoCancellation: true,
         noiseSuppression: true,
       },
     });
+  }
+
+  async start() {
+    if (this.audioContext) return;
+
+    await this.requestPermission();
     this.audioContext = new AudioContext();
     await this.audioContext.audioWorklet.addModule(
       "/audio/pcm-capture-worklet.js"
     );
-    this.source = this.audioContext.createMediaStreamSource(this.stream);
+    this.source = this.audioContext.createMediaStreamSource(this.stream!);
     this.worklet = new AudioWorkletNode(
       this.audioContext,
       "pcm-capture-processor"
