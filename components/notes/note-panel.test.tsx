@@ -1,8 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { NotePanel } from "@/components/notes/note-panel";
+import {
+  RecordingProvider,
+  type RecordingRuntime,
+} from "@/components/transcription/recording-provider";
 
 vi.mock("@/components/notes/note-details", () => ({
   NoteDetails: () => <p>정보 내용</p>,
@@ -28,20 +33,51 @@ vi.mock("@/lib/api/generated/note/note", () => ({
   useDeleteNote: () => ({ mutateAsync: vi.fn() }),
 }));
 
+const runtime: RecordingRuntime = {
+  createAudio: () => ({
+    requestPermission: vi.fn().mockResolvedValue(undefined),
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn().mockResolvedValue(undefined),
+  }),
+  createSocket: () => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    sendAudio: vi.fn(),
+    sendCommand: vi.fn(),
+    close: vi.fn(),
+  }),
+};
+
+function renderNotePanel(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={client}>
+      <RecordingProvider
+        runtime={runtime}
+        api={{ createSession: vi.fn(), createTicket: vi.fn() }}
+      >
+        {ui}
+      </RecordingProvider>
+    </QueryClientProvider>
+  );
+}
+
 describe("NotePanel", () => {
   it("changes only the controlled tab", () => {
     const onTabChange = vi.fn();
-    const client = new QueryClient();
-    render(
-      <QueryClientProvider client={client}>
-        <NotePanel
-          workspaceId="01K0000000000"
-          noteId="01K0000000002"
-          tab="transcript"
-          onTabChange={onTabChange}
-          onClose={vi.fn()}
-        />
-      </QueryClientProvider>
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        tab="transcript"
+        onTabChange={onTabChange}
+        onClose={vi.fn()}
+      />
     );
 
     fireEvent.click(screen.getByRole("tab", { name: "노트 정보" }));
