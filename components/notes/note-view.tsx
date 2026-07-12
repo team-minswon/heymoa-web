@@ -48,7 +48,7 @@ export function NoteView({
     // Wait for the exit animation duration before routing
     setTimeout(() => {
       router.push(`/w/${workspaceId}`);
-    }, 200); 
+    }, 200);
   };
 
   const setQuery = (updates: Partial<{ view: NoteViewMode; tab: NoteTab }>) => {
@@ -59,7 +59,7 @@ export function NoteView({
   };
 
   return (
-    <NoteRouteSurface 
+    <NoteRouteSurface
       view={current.view}
       isOpen={isOpen}
       onClose={closeWithAnim}

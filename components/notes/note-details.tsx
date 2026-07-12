@@ -186,6 +186,31 @@ export function NoteDetails({
         </Popover>
       </div>
 
+      <dl className="grid gap-3 rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="text-[var(--el-muted)]">작성자</dt>
+          <dd className="mt-1 font-medium">{note.createdBy.name}</dd>
+        </div>
+        <div>
+          <dt className="text-[var(--el-muted)]">생성</dt>
+          <dd className="mt-1">
+            {new Intl.DateTimeFormat("ko-KR", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(new Date(note.createdAt))}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[var(--el-muted)]">수정</dt>
+          <dd className="mt-1">
+            {new Intl.DateTimeFormat("ko-KR", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(new Date(note.updatedAt))}
+          </dd>
+        </div>
+      </dl>
+
       {feedback === "error" ? (
         <Alert variant="destructive">
           <AlertDescription>

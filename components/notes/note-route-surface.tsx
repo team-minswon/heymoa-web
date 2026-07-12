@@ -48,7 +48,7 @@ export function NoteRouteSurface({
           aria-label="노트"
           data-surface="sheet"
           showCloseButton={false}
-          className="gap-0 p-0 !bg-card h-full border-l shadow-2xl overflow-hidden"
+          className="inset-y-3 right-3 h-[calc(100dvh-1.5rem)] gap-0 overflow-hidden rounded-2xl border border-[var(--el-hairline)] bg-white p-0 shadow-[0_12px_36px_rgba(0,0,0,0.10)]"
           style={{
             width: "min(780px, calc(100vw - 16rem))",
             maxWidth: "780px",
@@ -66,11 +66,15 @@ export function NoteRouteSurface({
 
   if (surface === "drawer") {
     return (
-      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} showSwipeHandle>
+      <Drawer
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        showSwipeHandle
+      >
         <DrawerContent
           aria-label="노트"
           data-surface="drawer"
-          className="[--drawer-content-max-height:calc(100dvh-3rem)]"
+          className="[--drawer-content-max-height:100dvh] min-h-dvh rounded-none"
         >
           <DrawerHeader className="sr-only">
             <DrawerTitle>노트</DrawerTitle>

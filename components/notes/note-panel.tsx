@@ -90,6 +90,26 @@ export function NotePanel({
     <div className="relative flex h-full min-h-0 flex-col bg-background">
       <header className="flex min-h-16 items-center justify-center border-b px-4 sm:px-6">
         <div className="flex w-full max-w-3xl items-center gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="노트 닫기"
+            onClick={onClose}
+          >
+            <PanelRightClose />
+          </Button>
+          {onExpand ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="전체 화면으로 보기"
+              onClick={onExpand}
+            >
+              <Expand />
+            </Button>
+          ) : null}
           <div className="min-w-0 flex-1">
             <p className="truncate text-base font-semibold">
               {note?.title ?? "노트"}
@@ -104,17 +124,6 @@ export function NotePanel({
               </div>
             ) : null}
           </div>
-          {onExpand ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="전체 화면으로 보기"
-              onClick={onExpand}
-            >
-              <Expand />
-            </Button>
-          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -137,15 +146,6 @@ export function NotePanel({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="노트 닫기"
-            onClick={onClose}
-          >
-            <PanelRightClose />
-          </Button>
         </div>
       </header>
 
@@ -237,24 +237,37 @@ export function NotePanel({
               <span className="min-w-[48px] font-mono text-sm font-medium tabular-nums text-destructive">
                 {formatElapsed(recording.elapsedMs)}
               </span>
-              <span className="mx-1 relative flex h-3 w-4 items-center justify-center gap-[2px]">
+              <span
+                role="meter"
+                aria-label="마이크 입력"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(recording.level * 100)}
+                className="mx-1 relative flex h-3 w-4 items-center justify-center gap-[2px]"
+              >
                 <span
                   className={cn(
-                    "h-full w-[3px] rounded-full bg-destructive transition-all",
-                    !isPaused && "animate-[pulse_1s_ease-in-out_infinite]"
+                    "h-full w-[3px] origin-center rounded-full bg-destructive transition-transform"
                   )}
+                  style={{
+                    transform: `scaleY(${Math.max(0.12, recording.level * 0.5)})`,
+                  }}
                 ></span>
                 <span
                   className={cn(
-                    "h-2/3 w-[3px] rounded-full bg-destructive transition-all",
-                    !isPaused && "animate-[pulse_1s_ease-in-out_infinite_0.2s]"
+                    "h-2/3 w-[3px] origin-center rounded-full bg-destructive transition-transform"
                   )}
+                  style={{
+                    transform: `scaleY(${Math.max(0.12, recording.level * 0.8)})`,
+                  }}
                 ></span>
                 <span
                   className={cn(
-                    "h-full w-[3px] rounded-full bg-destructive transition-all",
-                    !isPaused && "animate-[pulse_1s_ease-in-out_infinite_0.4s]"
+                    "h-full w-[3px] origin-center rounded-full bg-destructive transition-transform"
                   )}
+                  style={{
+                    transform: `scaleY(${Math.max(0.12, recording.level)})`,
+                  }}
                 ></span>
               </span>
               <Button

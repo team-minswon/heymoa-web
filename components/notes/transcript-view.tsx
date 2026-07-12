@@ -64,10 +64,51 @@ export function TranscriptView({ noteId }: { noteId: string }) {
       recording.session.status
     )
   );
+  const bars = Array.from(
+    { length: 40 },
+    (_, index) => 0.35 + ((index * 17) % 10) / 15
+  );
 
   return (
     <div className="mx-auto max-w-3xl">
       <section className="min-w-0 p-5 sm:p-8 pt-6 sm:pt-10">
+        {active ? (
+          <div className="rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4">
+            <div className="mb-2 flex items-center justify-between text-xs text-[var(--el-muted)]">
+              <span>
+                {recording.session?.status === "PAUSED"
+                  ? "일시정지"
+                  : "실시간 전사"}
+              </span>
+              <span className="font-mono">
+                {formatOffset(recording.elapsedMs)}
+              </span>
+            </div>
+            <svg
+              role="meter"
+              aria-label="실시간 마이크 파형"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(recording.level * 100)}
+              viewBox="0 0 320 48"
+              className="h-12 w-full fill-[var(--el-ink)]"
+            >
+              {bars.map((weight, index) => {
+                const height = Math.max(4, recording.level * weight * 44);
+                return (
+                  <rect
+                    key={index}
+                    x={index * 8}
+                    y={24 - height / 2}
+                    width="4"
+                    height={height}
+                    rx="2"
+                  />
+                );
+              })}
+            </svg>
+          </div>
+        ) : null}
 
         {recording.error ? (
           <Alert variant="destructive" className="mt-4">
@@ -85,6 +126,7 @@ export function TranscriptView({ noteId }: { noteId: string }) {
             {orderedSegments.map((segment) => (
               <article
                 key={segment.segmentId}
+                data-state="final"
                 className="group grid grid-cols-[48px_1fr_auto] gap-3 border-b py-4"
               >
                 <time className="pt-1 font-mono text-[11px] text-muted-foreground">
@@ -110,10 +152,21 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                 ([itemId, text]) => (
                   <article
                     key={itemId}
+                    data-state="partial"
                     className="mt-3 rounded-xl border border-dashed bg-muted/30 p-4"
                   >
+                    <time className="font-mono text-[11px] text-muted-foreground">
+                      {formatOffset(
+                        recording.transcript.partialStartedAtMsByItemId[
+                          itemId
+                        ] ?? 0
+                      )}
+                    </time>
                     <Badge variant="outline">전사 중</Badge>
-                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                    <p
+                      data-state="partial"
+                      className="mt-2 text-sm leading-7 text-muted-foreground"
+                    >
                       {text}
                     </p>
                   </article>
