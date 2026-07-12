@@ -12,7 +12,7 @@ export function WorkspacePage({
   const { selectedFolderId } = useWorkspaceShell();
 
   return (
-    <section className="mx-auto min-h-full w-full max-w-[1320px] bg-[var(--el-canvas)] px-4 py-7 sm:px-8 lg:px-12 xl:px-16">
+    <section className="mx-auto min-h-full w-full max-w-[1320px] bg-card px-4 py-7 sm:px-8 lg:px-12 xl:px-16">
       <div className="mb-8 lg:mb-10">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--el-muted)]">
           Meeting notes
