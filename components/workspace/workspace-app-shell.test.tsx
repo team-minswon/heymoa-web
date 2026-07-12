@@ -80,5 +80,10 @@ describe("WorkspaceAppShell", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveTextContent("노트 목록");
     expect(screen.getAllByText("김민수의 워크스페이스")).not.toHaveLength(0);
+
+    const sidebarContainer = document.querySelector(
+      '[data-slot="sidebar-container"]'
+    );
+    expect(sidebarContainer).toHaveClass("rounded-r-2xl", "overflow-hidden");
   });
 });
