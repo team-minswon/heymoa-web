@@ -21,6 +21,10 @@ channels:
     title: Realtime transcription stream
     description: >-
       Binary frame은 PCM16 little-endian, mono, 24 kHz audio입니다.
+      STREAMING에서는 TURN_COMMIT, SESSION_PAUSE, SESSION_COMPLETE, PING을,
+      PAUSED에서는 SESSION_RESUME, SESSION_COMPLETE, PING을 허용합니다.
+      FINALIZING에서는 PING만 허용합니다. 복구 가능한 ERROR는 연결을 유지합니다.
+      인증, 권한, Session 없음, provider 실패는 ERROR 전송 후 연결을 닫습니다.
       Close code는 1000 정상 완료, 4401 ticket 인증 실패, 4403 권한 없음,
       4404 Session 없음, 4409 잘못된 Session 상태, 4503 STT provider 사용 불가를 뜻합니다.
     parameters:
@@ -155,7 +159,8 @@ components:
         $ref: "#/components/schemas/SessionStatus"
       examples:
         - name: streaming
-          payload: { type: SESSION_STATUS, status: STREAMING }
+          payload:
+            { type: SESSION_STATUS, status: STREAMING, recordedDurationMs: 0 }
     TranscriptPartial:
       name: TranscriptPartial
       payload:
@@ -166,6 +171,7 @@ components:
             type: TRANSCRIPT_PARTIAL
             itemId: provider-item-1
             text: 현재까지 누적된 문장
+            startedAtMs: 1200
     TranscriptFinal:
       name: TranscriptFinal
       payload:
@@ -286,19 +292,21 @@ components:
     SessionStatus:
       type: object
       additionalProperties: false
-      required: [type, status]
+      required: [type, status, recordedDurationMs]
       properties:
         type: { type: string, enum: [SESSION_STATUS] }
         status:
           $ref: "#/components/schemas/TranscriptionSessionStatus"
+        recordedDurationMs: { type: integer, format: int64, minimum: 0 }
     TranscriptPartial:
       type: object
       additionalProperties: false
-      required: [type, itemId, text]
+      required: [type, itemId, text, startedAtMs]
       properties:
         type: { type: string, enum: [TRANSCRIPT_PARTIAL] }
         itemId: { type: string, minLength: 1 }
         text: { type: string }
+        startedAtMs: { type: integer, format: int64, minimum: 0 }
     TranscriptFinal:
       type: object
       additionalProperties: false

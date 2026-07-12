@@ -84,6 +84,7 @@ export class MockTranscriptionScenario {
       type: "TRANSCRIPT_PARTIAL",
       itemId: this.itemId,
       text: this.partialText,
+      startedAtMs: (this.itemSequence - 1) * 5000,
     });
   }
 
@@ -100,7 +101,11 @@ export class MockTranscriptionScenario {
   private setStatus(status: TranscriptionSessionStatus) {
     this.status = status;
     mockDb.updateSessionStatus(this.sessionId, status);
-    this.send({ type: "SESSION_STATUS", status });
+    this.send({
+      type: "SESSION_STATUS",
+      status,
+      recordedDurationMs: mockDb.getSession(this.sessionId).recordedDurationMs,
+    });
   }
 
   private commitPartial() {

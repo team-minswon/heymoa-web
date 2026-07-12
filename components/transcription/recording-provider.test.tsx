@@ -40,15 +40,27 @@ describe("RecordingProvider", () => {
         return {
           connect: vi.fn(async () => {
             onEvent({ type: "SESSION_READY", sessionId: session.sessionId });
-            onEvent({ type: "SESSION_STATUS", status: "STREAMING" });
+            onEvent({
+              type: "SESSION_STATUS",
+              status: "STREAMING",
+              recordedDurationMs: 0,
+            });
           }),
           sendAudio: vi.fn(),
           sendCommand: vi.fn((command) => {
             if (command.type === "SESSION_PAUSE") {
-              onEvent({ type: "SESSION_STATUS", status: "PAUSED" });
+              onEvent({
+                type: "SESSION_STATUS",
+                status: "PAUSED",
+                recordedDurationMs: 0,
+              });
             }
             if (command.type === "SESSION_RESUME") {
-              onEvent({ type: "SESSION_STATUS", status: "STREAMING" });
+              onEvent({
+                type: "SESSION_STATUS",
+                status: "STREAMING",
+                recordedDurationMs: 0,
+              });
             }
             if (command.type === "SESSION_COMPLETE") {
               onEvent({

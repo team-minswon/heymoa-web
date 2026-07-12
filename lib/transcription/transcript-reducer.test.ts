@@ -10,11 +10,13 @@ describe("transcriptReducer", () => {
       type: "TRANSCRIPT_PARTIAL",
       itemId: "item-1",
       text: "안녕",
+      startedAtMs: 0,
     });
     const second = transcriptReducer(first, {
       type: "TRANSCRIPT_PARTIAL",
       itemId: "item-1",
       text: "안녕하세요",
+      startedAtMs: 0,
     });
     const final = transcriptReducer(second, {
       type: "TRANSCRIPT_FINAL",

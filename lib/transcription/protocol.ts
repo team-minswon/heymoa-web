@@ -56,11 +56,13 @@ export const serverEventSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("SESSION_STATUS"),
     status: transcriptionSessionStatusSchema,
+    recordedDurationMs: z.number().int().nonnegative(),
   }),
   z.strictObject({
     type: z.literal("TRANSCRIPT_PARTIAL"),
     itemId: z.string().min(1),
     text: z.string(),
+    startedAtMs: z.number().int().nonnegative(),
   }),
   z.strictObject({
     type: z.literal("TRANSCRIPT_FINAL"),
@@ -96,21 +98,51 @@ export function parseServerEvent(raw: string): ServerEvent {
 }
 
 export const protocolExamples = {
-  partial: {
-    type: "TRANSCRIPT_PARTIAL",
-    itemId: "provider-item-1",
-    text: "현재까지 누적된 문장",
+  commands: {
+    commit: { type: "TURN_COMMIT" },
+    pause: { type: "SESSION_PAUSE" },
+    resume: { type: "SESSION_RESUME" },
+    complete: { type: "SESSION_COMPLETE" },
+    ping: { type: "PING" },
   },
-  final: {
-    type: "TRANSCRIPT_FINAL",
-    itemId: "provider-item-1",
-    segment: {
-      segmentId: "0HZX2K7M9Q4AB",
-      sessionId: "0HZX2K7M9Q4AC",
-      sequence: 1,
-      text: "확정된 문장입니다.",
-      startedAtMs: 1200,
-      endedAtMs: 4100,
+  events: {
+    ready: { type: "SESSION_READY", sessionId: "0HZX2K7M9Q4AB" },
+    status: {
+      type: "SESSION_STATUS",
+      status: "STREAMING",
+      recordedDurationMs: 0,
     },
+    partial: {
+      type: "TRANSCRIPT_PARTIAL",
+      itemId: "provider-item-1",
+      text: "현재까지 누적된 문장",
+      startedAtMs: 1200,
+    },
+    final: {
+      type: "TRANSCRIPT_FINAL",
+      itemId: "provider-item-1",
+      segment: {
+        segmentId: "0HZX2K7M9Q4AB",
+        sessionId: "0HZX2K7M9Q4AC",
+        sequence: 1,
+        text: "확정된 문장입니다.",
+        startedAtMs: 1200,
+        endedAtMs: 4100,
+      },
+    },
+    completed: {
+      type: "SESSION_COMPLETED",
+      sessionId: "0HZX2K7M9Q4AB",
+    },
+    error: {
+      type: "ERROR",
+      code: "INVALID_TRANSCRIPTION_SESSION_STATE",
+      message: "현재 상태에서는 요청을 처리할 수 없습니다.",
+      retryable: false,
+    },
+    pong: { type: "PONG" },
   },
-} as const satisfies Record<string, ServerEvent>;
+} as const satisfies {
+  commands: Record<string, ClientCommand>;
+  events: Record<string, ServerEvent>;
+};

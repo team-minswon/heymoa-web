@@ -61,7 +61,11 @@ describe("TranscriptionSocket", () => {
     );
     await connected;
     transport.message(
-      JSON.stringify({ type: "SESSION_STATUS", status: "STREAMING" })
+      JSON.stringify({
+        type: "SESSION_STATUS",
+        status: "STREAMING",
+        recordedDurationMs: 0,
+      })
     );
     socket.sendAudio(new ArrayBuffer(2));
     expect(transport.sent).toHaveLength(1);
