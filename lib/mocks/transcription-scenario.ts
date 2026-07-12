@@ -104,6 +104,7 @@ export class MockTranscriptionScenario {
         this.setStatus("STREAMING");
         break;
       case "SESSION_COMPLETE":
+        if (this.status === "FINALIZING" || this.status === "COMPLETED") break;
         this.commitPartial();
         this.setStatus("FINALIZING");
         this.setStatus("COMPLETED");
@@ -117,6 +118,17 @@ export class MockTranscriptionScenario {
         this.send({ type: "PONG" });
         break;
     }
+  }
+
+  fail(error: {
+    code: Extract<ServerEvent, { type: "ERROR" }>["code"];
+    message: string;
+  }) {
+    if (this.disposed || this.status === "COMPLETED") return;
+    this.setStatus("FAILED");
+    this.send({ type: "ERROR", ...error, retryable: false });
+    this.disposed = true;
+    this.requestClose(4500, error.message);
   }
 
   async receiveFrame(frame: string | ArrayBufferLike | ArrayBufferView | Blob) {

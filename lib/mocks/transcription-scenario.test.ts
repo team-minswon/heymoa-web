@@ -84,4 +84,61 @@ describe("MockTranscriptionScenario", () => {
     expect(close).toHaveBeenCalledWith(1000, "completed");
     vi.useRealTimers();
   });
+
+  it("ignores duplicate complete commands while finalizing", () => {
+    vi.useFakeTimers();
+    const send = vi.fn();
+    const close = vi.fn();
+    const scenario = new MockTranscriptionScenario(
+      "01K0000000010",
+      send,
+      close
+    );
+    scenario.open();
+
+    scenario.receive({ type: "SESSION_COMPLETE" });
+    scenario.receive({ type: "SESSION_COMPLETE" });
+    vi.runAllTimers();
+
+    expect(
+      send.mock.calls.filter(([event]) => event.type === "SESSION_COMPLETED")
+    ).toHaveLength(1);
+    expect(close).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("keeps persisted finals after a fatal provider error", async () => {
+    mockDb.reset();
+    const note = mockDb.createNote(mockDb.workspace.workspaceId, {});
+    const session = mockDb.createSession(note.noteId);
+    const send = vi.fn();
+    const close = vi.fn();
+    const scenario = createMockTranscriptionScenario({
+      sessionId: session.sessionId,
+      send,
+      requestClose: close,
+      config: { partialEveryMs: 40, minimumVoiceMs: 40 },
+      script: ["첫 번째 결정사항입니다."],
+    });
+    scenario.open();
+    await scenario.receiveFrame(voicedPcm);
+    scenario.receive({ type: "TURN_COMMIT" });
+
+    scenario.fail({
+      code: "STT_PROVIDER_UNAVAILABLE",
+      message: "음성 인식 제공자에 연결할 수 없습니다.",
+    });
+
+    expect(mockDb.listSegments(note.noteId).items).toEqual([
+      expect.objectContaining({ text: "첫 번째 결정사항입니다." }),
+    ]);
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: "ERROR",
+        code: "STT_PROVIDER_UNAVAILABLE",
+        retryable: false,
+      })
+    );
+    expect(close).toHaveBeenCalledWith(4500, expect.any(String));
+  });
 });
