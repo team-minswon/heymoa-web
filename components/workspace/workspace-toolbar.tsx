@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { CircleStop, ExternalLink, Mic, Pause, Play, Plus } from "lucide-react";
 
 import { useRecording } from "@/components/transcription/recording-provider";
@@ -134,47 +135,67 @@ export function WorkspaceToolbar({
         ) : null}
       </div>
 
-      {isRecordingOtherNote && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-300 delay-200 fill-mode-both fixed left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border bg-background/95 px-4 py-2.5 shadow-md backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => openNote(session.noteId)}
-            className="rounded-full"
+      <AnimatePresence>
+        {isRecordingOtherNote && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, x: "-50%" }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              x: "-50%",
+              transition: { duration: 0.3, delay: 0.2, ease: [0.4, 0, 0.2, 1] },
+            }}
+            exit={{
+              opacity: 0,
+              y: -16,
+              x: "-50%",
+              transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+            }}
+            className="fixed left-1/2 top-6 z-50 flex items-center gap-3 rounded-full border bg-background/95 px-4 py-2.5 shadow-md backdrop-blur supports-[backdrop-filter]:bg-background/80"
           >
-            <ExternalLink className="mr-1" /> 현재 녹음
-          </Button>
-          <Badge variant={paused ? "secondary" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
-            {paused ? "Paused" : "Recording"}
-          </Badge>
-          <span className="font-mono text-sm font-medium tabular-nums">
-            {formatElapsed(elapsedMs)}
-          </span>
-          <div className="ml-1 flex items-center gap-2">
             <Button
               type="button"
-              variant="outline"
-              size="icon-sm"
+              variant="ghost"
+              size="sm"
+              onClick={() => openNote(session.noteId)}
               className="rounded-full"
-              aria-label={paused ? "녹음 재개" : "녹음 일시 정지"}
-              onClick={() => void (paused ? resume() : pause())}
             >
-              {paused ? <Play /> : <Pause />}
+              <ExternalLink className="mr-1" /> 현재 녹음
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon-sm"
-              className="rounded-full"
-              aria-label="녹음 종료"
-              onClick={() => void stop()}
+            <Badge
+              variant={paused ? "secondary" : "default"}
+              className="rounded-full px-2.5 py-0.5 text-xs"
             >
-              <CircleStop />
-            </Button>
-          </div>
-        </div>
-      )}
+              {paused ? "Paused" : "Recording"}
+            </Badge>
+            <span className="font-mono text-sm font-medium tabular-nums">
+              {formatElapsed(elapsedMs)}
+            </span>
+            <div className="ml-1 flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                aria-label={paused ? "녹음 재개" : "녹음 일시 정지"}
+                onClick={() => void (paused ? resume() : pause())}
+              >
+                {paused ? <Play /> : <Pause />}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon-sm"
+                className="rounded-full"
+                aria-label="녹음 종료"
+                onClick={() => void stop()}
+              >
+                <CircleStop />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
