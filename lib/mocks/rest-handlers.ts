@@ -9,7 +9,6 @@ import type {
 import { getListWorkspaceFoldersMockHandler } from "@/lib/api/generated/folder/folder.msw";
 import { getListWorkspaceNotesMockHandler } from "@/lib/api/generated/note/note.msw";
 import {
-  getGetActiveTranscriptionSessionMockHandler,
   getListNoteTranscriptSegmentsMockHandler,
   getListNoteTranscriptionSessionsMockHandler,
 } from "@/lib/api/generated/transcription/transcription.msw";
@@ -174,8 +173,8 @@ export const restHandlers = [
   getListNoteTranscriptionSessionsMockHandler(({ request, params }) =>
     success(mockDb.listSessions(id(params.noteId), pageOptions(request)))
   ),
-  getGetActiveTranscriptionSessionMockHandler(
-    success({ session: mockDb.getActiveSession() })
+  http.get("*/v1/transcription-sessions/active", () =>
+    HttpResponse.json(success({ session: mockDb.getActiveSession() }))
   ),
   http.get("*/v1/transcription-sessions/:sessionId", ({ params }) =>
     withStore(() => mockDb.getSession(id(params.sessionId)))

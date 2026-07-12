@@ -1,7 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NotePanel } from "@/components/notes/note-panel";
 import {
@@ -59,7 +65,22 @@ function renderNotePanel(ui: ReactNode) {
     <QueryClientProvider client={client}>
       <RecordingProvider
         runtime={runtime}
-        api={{ createSession: vi.fn(), createTicket: vi.fn() }}
+        api={{
+          createSession: vi.fn(async (noteId) => ({
+            session: {
+              sessionId: "01K0000000010",
+              noteId,
+              status: "CONNECTING",
+              recordedDurationMs: 0,
+              startedBy: { userId: "01K0000000003", name: "테스트 유저" },
+              startedAt: "2026-07-11T00:00:00Z",
+              endedAt: null,
+            },
+            socketUrl: "ws://localhost/stream?ticket=test",
+            ticketExpiresAt: "2026-07-11T00:01:00Z",
+          })),
+          createTicket: vi.fn(),
+        }}
       >
         {ui}
       </RecordingProvider>
@@ -68,6 +89,7 @@ function renderNotePanel(ui: ReactNode) {
 }
 
 describe("NotePanel", () => {
+  afterEach(cleanup);
   it("changes only the controlled tab", () => {
     const onTabChange = vi.fn();
     renderNotePanel(
@@ -84,5 +106,24 @@ describe("NotePanel", () => {
     expect(onTabChange).toHaveBeenCalledWith("details");
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
+  });
+
+  it("shows five rounded microphone bars in the bottom recording control", async () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "기록 시작" }));
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("note-recording-waveform").children
+      ).toHaveLength(5)
+    );
   });
 });

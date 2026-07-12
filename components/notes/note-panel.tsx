@@ -239,21 +239,24 @@ export function NotePanel({
               </span>
               <span
                 role="meter"
+                data-testid="note-recording-waveform"
                 aria-label="마이크 입력"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(recording.level * 100)}
-                className="mx-1 relative flex h-3 w-4 items-center justify-center gap-[2px]"
+                className="mx-1 flex h-5 w-8 items-center justify-center gap-[3px]"
               >
-                {(recording.levelHistory ?? [0, 0, 0]).slice(-3).map((sample, index) => (
-                  <span
-                    key={index}
-                    className={cn(
-                      "h-full w-[3px] origin-center rounded-full bg-destructive transition-transform"
-                    )}
-                    style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
-                  />
-                ))}
+                {(recording.levelHistory ?? [0, 0, 0, 0, 0])
+                  .slice(-5)
+                  .map((sample, index) => (
+                    <span
+                      key={index}
+                      className={cn(
+                        "h-4 w-[3px] origin-center rounded-full bg-destructive transition-transform duration-75"
+                      )}
+                      style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
+                    />
+                  ))}
               </span>
               <Button
                 type="button"

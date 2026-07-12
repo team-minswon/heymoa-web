@@ -64,52 +64,9 @@ export function TranscriptView({ noteId }: { noteId: string }) {
       recording.session.status
     )
   );
-  const bars = recording.levelHistory.length
-    ? recording.levelHistory
-    : Array(24).fill(0);
-
   return (
     <div className="mx-auto max-w-3xl">
       <section className="min-w-0 p-5 sm:p-8 pt-6 sm:pt-10">
-        {active ? (
-          <div className="rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4">
-            <div className="mb-2 flex items-center justify-between text-xs text-[var(--el-muted)]">
-              <span>
-                {recording.session?.status === "PAUSED"
-                  ? "일시정지"
-                  : "실시간 전사"}
-              </span>
-              <span className="font-mono">
-                {formatOffset(recording.elapsedMs)}
-              </span>
-            </div>
-            <svg
-              role="meter"
-              aria-label="실시간 마이크 파형"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(recording.level * 100)}
-              viewBox="0 0 320 48"
-              className="h-12 w-full fill-[var(--el-ink)]"
-            >
-              {bars.map((sample, index) => {
-                const height = Math.round(Math.max(3, sample * 44) * 10) / 10;
-                return (
-                  <rect
-                    key={index}
-                    data-testid={`wave-bar-${index}`}
-                    x={index * (320 / bars.length) + 2}
-                    y={24 - height / 2}
-                    width={Math.max(3, 320 / bars.length - 5)}
-                    height={height}
-                    rx="2"
-                  />
-                );
-              })}
-            </svg>
-          </div>
-        ) : null}
-
         {recording.error ? (
           <Alert variant="destructive" className="mt-4">
             <AlertDescription>{recording.error}</AlertDescription>

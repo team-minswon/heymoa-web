@@ -47,9 +47,8 @@ describe("TranscriptView", () => {
       screen.getByText("첫 번째 결정사항입니다.").closest("article")
     ).toHaveAttribute("data-state", "final");
     expect(
-      screen.getByRole("meter", { name: "실시간 마이크 파형" })
-    ).toHaveAttribute("aria-valuenow", "42");
-    expect(screen.getByTestId("wave-bar-2")).toHaveAttribute("height", "30.8");
+      screen.queryByRole("meter", { name: "실시간 마이크 파형" })
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /수정/ })
     ).not.toBeInTheDocument();
