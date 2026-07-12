@@ -10,6 +10,86 @@ import {
 } from "@/components/transcription/recording-provider";
 
 describe("RecordingProvider", () => {
+  it("freezes elapsed time while paused and resumes from accumulated duration", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-11T00:00:00Z"));
+    const session = {
+      sessionId: "01K0000000010",
+      noteId: "01K0000000002",
+      status: "CONNECTING" as const,
+      recordedDurationMs: 0,
+      startedBy: { userId: "01K0000000003", name: "테스트 유저" },
+      startedAt: "2026-07-11T00:00:00Z",
+      endedAt: null,
+    };
+    const api: RecordingApi = {
+      createSession: vi.fn(async () => ({
+        session,
+        socketUrl: "ws://localhost/stream?ticket=test",
+        ticketExpiresAt: "2026-07-11T00:01:00Z",
+      })),
+      createTicket: vi.fn(),
+    };
+    let emit!: Parameters<RecordingRuntime["createSocket"]>[0]["onEvent"];
+    const runtime: RecordingRuntime = {
+      createAudio: () => ({
+        requestPermission: vi.fn(async () => undefined),
+        start: vi.fn(async () => undefined),
+        stop: vi.fn(async () => undefined),
+      }),
+      createSocket: (options) => {
+        emit = options.onEvent;
+        return {
+          connect: vi.fn(async () => undefined),
+          sendAudio: vi.fn(),
+          sendCommand: vi.fn(),
+          close: vi.fn(),
+        };
+      },
+    };
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <RecordingProvider api={api} runtime={runtime}>
+          {children}
+        </RecordingProvider>
+      </QueryClientProvider>
+    );
+    const { result } = renderHook(() => useRecording(), { wrapper });
+
+    await act(() => result.current.start(session.noteId));
+    act(() => {
+      emit({
+        type: "SESSION_STATUS",
+        status: "STREAMING",
+        recordedDurationMs: 0,
+      });
+      vi.advanceTimersByTime(3_000);
+    });
+    act(() =>
+      emit({
+        type: "SESSION_STATUS",
+        status: "PAUSED",
+        recordedDurationMs: 3_000,
+      })
+    );
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(result.current.elapsedMs).toBe(3_000);
+
+    act(() =>
+      emit({
+        type: "SESSION_STATUS",
+        status: "STREAMING",
+        recordedDurationMs: 3_000,
+      })
+    );
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(result.current.elapsedMs).toBe(5_000);
+    vi.useRealTimers();
+  });
+
   it("keeps one session and socket across child rerenders and pause/resume", async () => {
     const session = {
       sessionId: "01K0000000010",

@@ -3,10 +3,18 @@ import {
   backlogMs,
   float32ToPcm16,
   linearResample,
+  normalizePcm16Level,
   PcmChunkBatcher,
 } from "@/lib/transcription/audio";
 
 describe("audio conversion", () => {
+  it("normalizes silence and full-scale PCM levels", () => {
+    expect(normalizePcm16Level(new Int16Array(480))).toBe(0);
+    expect(normalizePcm16Level(new Int16Array(480).fill(32767))).toBeCloseTo(
+      1,
+      2
+    );
+  });
   it("clamps Float32 samples to signed PCM16", () => {
     const pcm = new Int16Array(
       float32ToPcm16(new Float32Array([-2, -1, 0, 1, 2]))

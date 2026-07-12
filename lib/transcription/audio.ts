@@ -11,6 +11,16 @@ export function float32ToPcm16(samples: Float32Array): ArrayBuffer {
   return buffer;
 }
 
+export function normalizePcm16Level(samples: Int16Array) {
+  if (samples.length === 0) return 0;
+  const meanSquare =
+    samples.reduce((sum, sample) => {
+      const normalized = sample / 32768;
+      return sum + normalized * normalized;
+    }, 0) / samples.length;
+  return Math.min(1, Math.sqrt(meanSquare));
+}
+
 export function linearResample(
   samples: Float32Array,
   inputSampleRate: number,
@@ -72,8 +82,9 @@ export class PcmChunkBatcher {
   }
 }
 
-type PcmAudioCaptureOptions = {
+export type PcmAudioCaptureOptions = {
   onChunk: (chunk: ArrayBuffer) => void;
+  onLevel?: (level: number) => void;
   targetSampleRate?: number;
   batchMs?: number;
 };
@@ -84,6 +95,9 @@ export class PcmAudioCapture {
   private source: MediaStreamAudioSourceNode | null = null;
   private worklet: AudioWorkletNode | null = null;
   private silentGain: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private levelFrame: number | null = null;
+  private lastLevelAt = 0;
   private readonly targetSampleRate: number;
   private readonly batcher: PcmChunkBatcher;
 
@@ -91,7 +105,7 @@ export class PcmAudioCapture {
     this.targetSampleRate = options.targetSampleRate ?? 24_000;
     this.batcher = new PcmChunkBatcher(
       this.targetSampleRate,
-      options.batchMs ?? 80,
+      options.batchMs ?? 40,
       options.onChunk
     );
   }
@@ -111,15 +125,15 @@ export class PcmAudioCapture {
 
     await this.requestPermission();
     this.audioContext = new AudioContext();
-    await this.audioContext.audioWorklet.addModule(
-      "/audio/pcm-capture-worklet.js"
-    );
+    await this.audioContext.audioWorklet.addModule("/pcm-capture-worklet.js");
     this.source = this.audioContext.createMediaStreamSource(this.stream!);
     this.worklet = new AudioWorkletNode(
       this.audioContext,
       "pcm-capture-processor"
     );
     this.silentGain = this.audioContext.createGain();
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 1024;
     this.silentGain.gain.value = 0;
     this.worklet.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
       const sourceSamples = new Float32Array(event.data);
@@ -131,13 +145,19 @@ export class PcmAudioCapture {
       this.batcher.push(new Int16Array(float32ToPcm16(resampled)));
     };
     this.source.connect(this.worklet);
+    this.source.connect(this.analyser);
     this.worklet.connect(this.silentGain);
     this.silentGain.connect(this.audioContext.destination);
+    this.publishLevel();
   }
 
   async stop() {
+    if (this.levelFrame !== null) cancelAnimationFrame(this.levelFrame);
+    this.levelFrame = null;
+    this.options.onLevel?.(0);
     this.worklet?.disconnect();
     this.source?.disconnect();
+    this.analyser?.disconnect();
     this.silentGain?.disconnect();
     this.stream?.getTracks().forEach((track) => track.stop());
     await this.audioContext?.close();
@@ -146,6 +166,19 @@ export class PcmAudioCapture {
     this.source = null;
     this.worklet = null;
     this.silentGain = null;
+    this.analyser = null;
     this.batcher.reset();
   }
+
+  private publishLevel = (now = performance.now()) => {
+    if (!this.analyser) return;
+    if (now - this.lastLevelAt >= 50) {
+      const samples = new Float32Array(this.analyser.fftSize);
+      this.analyser.getFloatTimeDomainData(samples);
+      const pcm = new Int16Array(float32ToPcm16(samples));
+      this.options.onLevel?.(normalizePcm16Level(pcm));
+      this.lastLevelAt = now;
+    }
+    this.levelFrame = requestAnimationFrame(this.publishLevel);
+  };
 }

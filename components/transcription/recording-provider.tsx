@@ -44,7 +44,10 @@ type SocketController = Pick<
 >;
 
 export type RecordingRuntime = {
-  createAudio: (onChunk: (chunk: ArrayBuffer) => void) => AudioController;
+  createAudio: (
+    onChunk: (chunk: ArrayBuffer) => void,
+    onLevel: (level: number) => void
+  ) => AudioController;
   createSocket: (options: {
     url: string;
     onEvent: (event: ServerEvent) => void;
@@ -61,6 +64,15 @@ type RecordingContextValue = {
   session: TranscriptionSessionResponse | null;
   transcript: TranscriptState;
   elapsedMs: number;
+  level: number;
+  microphoneState:
+    | "idle"
+    | "requesting"
+    | "ready"
+    | "recording"
+    | "paused"
+    | "denied"
+    | "unavailable";
   error: string | null;
   start: (noteId: string) => Promise<void>;
   pause: () => Promise<void>;
@@ -70,21 +82,11 @@ type RecordingContextValue = {
 
 const RecordingContext = createContext<RecordingContextValue | null>(null);
 
-function createBrowserAudio(onChunk: (chunk: ArrayBuffer) => void) {
-  if (process.env.NEXT_PUBLIC_API_MOCKING === "enabled") {
-    let timer: number | null = null;
-    return {
-      requestPermission: async () => undefined,
-      start: async () => {
-        timer ??= window.setInterval(() => onChunk(new ArrayBuffer(3840)), 350);
-      },
-      stop: async () => {
-        if (timer !== null) window.clearInterval(timer);
-        timer = null;
-      },
-    } satisfies AudioController;
-  }
-  return new PcmAudioCapture({ onChunk });
+function createBrowserAudio(
+  onChunk: (chunk: ArrayBuffer) => void,
+  onLevel: (level: number) => void
+) {
+  return new PcmAudioCapture({ onChunk, onLevel });
 }
 
 const browserRuntime: RecordingRuntime = {
@@ -122,8 +124,12 @@ export function RecordingProvider({
     initialTranscriptState
   );
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [level, setLevel] = useState(0);
+  const [microphoneState, setMicrophoneState] =
+    useState<RecordingContextValue["microphoneState"]>("idle");
   const [error, setError] = useState<string | null>(null);
-  const elapsedOriginRef = useRef<number | null>(null);
+  const accumulatedMsRef = useRef(0);
+  const streamingStartedAtRef = useRef<number | null>(null);
   const sessionRef = useRef<TranscriptionSessionResponse | null>(null);
   const socketRef = useRef<SocketController | null>(null);
   const audioRef = useRef<AudioController | null>(null);
@@ -185,10 +191,25 @@ export function RecordingProvider({
 
       if (event.type === "SESSION_STATUS") {
         const current = sessionRef.current;
-        if (current) setCurrentSession({ ...current, status: event.status });
+        accumulatedMsRef.current = event.recordedDurationMs;
+        streamingStartedAtRef.current =
+          event.status === "STREAMING" ? Date.now() : null;
+        setElapsedMs(event.recordedDurationMs);
+        if (event.status !== "STREAMING") setLevel(0);
+        if (event.status === "PAUSED") setMicrophoneState("paused");
+        if (current)
+          setCurrentSession({
+            ...current,
+            status: event.status,
+            recordedDurationMs: event.recordedDurationMs,
+          });
         if (event.status === "STREAMING" && resumePendingRef.current) {
           resumePendingRef.current = false;
-          void audioRef.current?.start();
+          void audioRef.current
+            ?.start()
+            .then(() => setMicrophoneState("recording"));
+        } else if (event.status === "STREAMING") {
+          setMicrophoneState("recording");
         }
       }
 
@@ -229,7 +250,10 @@ export function RecordingProvider({
       });
       socketRef.current = socket;
       await socket.connect();
-      await audio.start();
+      if (connection.session.status !== "PAUSED") {
+        await audio.start();
+        setMicrophoneState("recording");
+      }
     },
     [handleEvent, runtime]
   );
@@ -245,18 +269,27 @@ export function RecordingProvider({
         throw new Error("ACTIVE_TRANSCRIPTION_SESSION_EXISTS");
       }
       setError(null);
-      const audio = runtime.createAudio((chunk) =>
-        socketRef.current?.sendAudio(chunk)
+      const audio = runtime.createAudio(
+        (chunk) => socketRef.current?.sendAudio(chunk),
+        setLevel
       );
       audioRef.current = audio;
       try {
+        setMicrophoneState("requesting");
         await audio.requestPermission();
+        setMicrophoneState("ready");
         const connection = await api.createSession(noteId);
-        elapsedOriginRef.current = Date.now();
+        accumulatedMsRef.current = connection.session.recordedDurationMs;
+        streamingStartedAtRef.current = null;
+        setElapsedMs(connection.session.recordedDurationMs);
         setCurrentSession(connection.session);
         await openConnection(connection, audio);
       } catch (cause) {
         await audio.stop();
+        const errorName = cause instanceof DOMException ? cause.name : "";
+        setMicrophoneState(
+          errorName === "NotAllowedError" ? "denied" : "unavailable"
+        );
         setError(
           cause instanceof Error ? cause.message : "녹음을 시작하지 못했습니다."
         );
@@ -268,16 +301,20 @@ export function RecordingProvider({
 
   const pause = useCallback(async () => {
     await audioRef.current?.stop();
+    setLevel(0);
+    setMicrophoneState("paused");
     socketRef.current?.sendCommand({ type: "SESSION_PAUSE" });
   }, []);
 
   const resume = useCallback(async () => {
     resumePendingRef.current = true;
+    setMicrophoneState("ready");
     socketRef.current?.sendCommand({ type: "SESSION_RESUME" });
   }, []);
 
   const stop = useCallback(async () => {
     await audioRef.current?.stop();
+    setLevel(0);
     await new Promise<void>((resolve) => {
       stopResolveRef.current = resolve;
       socketRef.current?.sendCommand({ type: "SESSION_COMPLETE" });
@@ -292,12 +329,18 @@ export function RecordingProvider({
 
     rehydratingRef.current = true;
     const reconnect = async () => {
-      const audio = runtime.createAudio((chunk) =>
-        socketRef.current?.sendAudio(chunk)
+      const audio = runtime.createAudio(
+        (chunk) => socketRef.current?.sendAudio(chunk),
+        setLevel
       );
       audioRef.current = audio;
+      setMicrophoneState("requesting");
       await audio.requestPermission();
-      elapsedOriginRef.current = Date.parse(activeSession.startedAt);
+      setMicrophoneState("ready");
+      accumulatedMsRef.current = activeSession.recordedDurationMs;
+      streamingStartedAtRef.current =
+        activeSession.status === "STREAMING" ? Date.now() : null;
+      setElapsedMs(activeSession.recordedDurationMs);
       setCurrentSession(activeSession);
       const connection = await api.createTicket(activeSession.sessionId);
       await openConnection(connection, audio);
@@ -314,9 +357,14 @@ export function RecordingProvider({
   }, [activeQuery.data, api, openConnection, runtime, setCurrentSession]);
 
   useEffect(() => {
-    if (!session || !["STREAMING", "PAUSED"].includes(session.status)) return;
-    const origin = elapsedOriginRef.current ?? Date.parse(session.startedAt);
-    const updateElapsed = () => setElapsedMs(Math.max(0, Date.now() - origin));
+    if (!session || session.status !== "STREAMING") return;
+    const updateElapsed = () =>
+      setElapsedMs(
+        accumulatedMsRef.current +
+          (streamingStartedAtRef.current === null
+            ? 0
+            : Date.now() - streamingStartedAtRef.current)
+      );
     updateElapsed();
     const timer = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(timer);
@@ -335,13 +383,26 @@ export function RecordingProvider({
       session,
       transcript,
       elapsedMs,
+      level,
+      microphoneState,
       error,
       start,
       pause,
       resume,
       stop,
     }),
-    [session, transcript, elapsedMs, error, start, pause, resume, stop]
+    [
+      session,
+      transcript,
+      elapsedMs,
+      level,
+      microphoneState,
+      error,
+      start,
+      pause,
+      resume,
+      stop,
+    ]
   );
 
   return (
