@@ -19,6 +19,7 @@ vi.mock("@/components/transcription/recording-provider", () => ({
     session: { noteId: "01K0000000002", status: "STREAMING" },
     elapsedMs: 1200,
     level: 0.42,
+    levelHistory: [0.1, 0.25, 0.7, 0.4],
     microphoneState: "recording",
     pause: vi.fn(),
     resume: vi.fn(),
@@ -34,5 +35,8 @@ describe("GlobalRecordingIndicator", () => {
       "42"
     );
     expect(screen.getByText("녹음 중")).toBeInTheDocument();
+    expect(screen.getByTestId("global-wave-bar-2")).toHaveStyle({
+      transform: "scaleY(0.7)",
+    });
   });
 });

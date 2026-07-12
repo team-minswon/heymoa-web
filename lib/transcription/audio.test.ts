@@ -4,6 +4,7 @@ import {
   float32ToPcm16,
   linearResample,
   normalizePcm16Level,
+  normalizeMicrophoneLevel,
   PcmChunkBatcher,
 } from "@/lib/transcription/audio";
 
@@ -14,6 +15,14 @@ describe("audio conversion", () => {
       1,
       2
     );
+  });
+
+  it("maps microphone RMS into a perceptible voice range", () => {
+    expect(normalizeMicrophoneLevel(0)).toBe(0);
+    expect(normalizeMicrophoneLevel(0.004)).toBe(0);
+    expect(normalizeMicrophoneLevel(0.03)).toBeGreaterThan(0.35);
+    expect(normalizeMicrophoneLevel(0.12)).toBeGreaterThan(0.75);
+    expect(normalizeMicrophoneLevel(1)).toBe(1);
   });
   it("clamps Float32 samples to signed PCM16", () => {
     const pcm = new Int16Array(

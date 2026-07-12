@@ -65,6 +65,7 @@ type RecordingContextValue = {
   transcript: TranscriptState;
   elapsedMs: number;
   level: number;
+  levelHistory: number[];
   microphoneState:
     | "idle"
     | "requesting"
@@ -125,6 +126,9 @@ export function RecordingProvider({
   );
   const [elapsedMs, setElapsedMs] = useState(0);
   const [level, setLevel] = useState(0);
+  const [levelHistory, setLevelHistory] = useState<number[]>(() =>
+    Array(24).fill(0)
+  );
   const [microphoneState, setMicrophoneState] =
     useState<RecordingContextValue["microphoneState"]>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +140,22 @@ export function RecordingProvider({
   const resumePendingRef = useRef(false);
   const rehydratingRef = useRef(false);
   const stopResolveRef = useRef<(() => void) | null>(null);
+  const smoothedLevelRef = useRef(0);
+
+  const publishLevel = useCallback((nextLevel: number) => {
+    const previous = smoothedLevelRef.current;
+    const factor = nextLevel > previous ? 0.72 : 0.2;
+    const smoothed = previous + (nextLevel - previous) * factor;
+    smoothedLevelRef.current = smoothed;
+    setLevel(smoothed);
+    setLevelHistory((history) => [...history.slice(1), smoothed]);
+  }, []);
+
+  const clearLevel = useCallback(() => {
+    smoothedLevelRef.current = 0;
+    setLevel(0);
+    setLevelHistory(Array(24).fill(0));
+  }, []);
 
   const setCurrentSession = useCallback(
     (next: TranscriptionSessionResponse | null) => {
@@ -195,7 +215,7 @@ export function RecordingProvider({
         streamingStartedAtRef.current =
           event.status === "STREAMING" ? Date.now() : null;
         setElapsedMs(event.recordedDurationMs);
-        if (event.status !== "STREAMING") setLevel(0);
+        if (event.status !== "STREAMING") clearLevel();
         if (event.status === "PAUSED") setMicrophoneState("paused");
         if (current)
           setCurrentSession({
@@ -233,7 +253,7 @@ export function RecordingProvider({
 
       if (event.type === "ERROR") setError(event.message);
     },
-    [invalidateTranscriptQueries, setCurrentSession]
+    [clearLevel, invalidateTranscriptQueries, setCurrentSession]
   );
 
   const openConnection = useCallback(
@@ -271,7 +291,7 @@ export function RecordingProvider({
       setError(null);
       const audio = runtime.createAudio(
         (chunk) => socketRef.current?.sendAudio(chunk),
-        setLevel
+        publishLevel
       );
       audioRef.current = audio;
       try {
@@ -296,15 +316,15 @@ export function RecordingProvider({
         throw cause;
       }
     },
-    [api, openConnection, runtime, setCurrentSession]
+    [api, openConnection, publishLevel, runtime, setCurrentSession]
   );
 
   const pause = useCallback(async () => {
     await audioRef.current?.stop();
-    setLevel(0);
+    clearLevel();
     setMicrophoneState("paused");
     socketRef.current?.sendCommand({ type: "SESSION_PAUSE" });
-  }, []);
+  }, [clearLevel]);
 
   const resume = useCallback(async () => {
     resumePendingRef.current = true;
@@ -314,12 +334,12 @@ export function RecordingProvider({
 
   const stop = useCallback(async () => {
     await audioRef.current?.stop();
-    setLevel(0);
+    clearLevel();
     await new Promise<void>((resolve) => {
       stopResolveRef.current = resolve;
       socketRef.current?.sendCommand({ type: "SESSION_COMPLETE" });
     });
-  }, []);
+  }, [clearLevel]);
 
   useEffect(() => {
     const envelope =
@@ -331,7 +351,7 @@ export function RecordingProvider({
     const reconnect = async () => {
       const audio = runtime.createAudio(
         (chunk) => socketRef.current?.sendAudio(chunk),
-        setLevel
+        publishLevel
       );
       audioRef.current = audio;
       setMicrophoneState("requesting");
@@ -354,7 +374,14 @@ export function RecordingProvider({
       .finally(() => {
         rehydratingRef.current = false;
       });
-  }, [activeQuery.data, api, openConnection, runtime, setCurrentSession]);
+  }, [
+    activeQuery.data,
+    api,
+    openConnection,
+    publishLevel,
+    runtime,
+    setCurrentSession,
+  ]);
 
   useEffect(() => {
     if (!session || session.status !== "STREAMING") return;
@@ -384,6 +411,7 @@ export function RecordingProvider({
       transcript,
       elapsedMs,
       level,
+      levelHistory,
       microphoneState,
       error,
       start,
@@ -396,6 +424,7 @@ export function RecordingProvider({
       transcript,
       elapsedMs,
       level,
+      levelHistory,
       microphoneState,
       error,
       start,

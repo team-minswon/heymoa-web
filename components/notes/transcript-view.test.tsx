@@ -8,6 +8,7 @@ vi.mock("@/components/transcription/recording-provider", () => ({
     session: { noteId: "01K0000000002", status: "STREAMING" },
     elapsedMs: 3200,
     level: 0.42,
+    levelHistory: [0.1, 0.25, 0.7, 0.4],
     error: null,
     transcript: {
       partialByItemId: { "item-1": "결과를" },
@@ -48,6 +49,7 @@ describe("TranscriptView", () => {
     expect(
       screen.getByRole("meter", { name: "실시간 마이크 파형" })
     ).toHaveAttribute("aria-valuenow", "42");
+    expect(screen.getByTestId("wave-bar-2")).toHaveAttribute("height", "30.8");
     expect(
       screen.queryByRole("button", { name: /수정/ })
     ).not.toBeInTheDocument();

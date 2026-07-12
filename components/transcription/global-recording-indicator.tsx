@@ -25,8 +25,16 @@ function formatElapsed(elapsedMs: number) {
 
 export function GlobalRecordingIndicator() {
   const pathname = usePathname();
-  const { session, elapsedMs, level, microphoneState, pause, resume, stop } =
-    useRecording();
+  const {
+    session,
+    elapsedMs,
+    level,
+    levelHistory,
+    microphoneState,
+    pause,
+    resume,
+    stop,
+  } = useRecording();
   const workspaceQuery = useListWorkspaces({
     query: { enabled: Boolean(session), staleTime: 5 * 60 * 1000 },
   });
@@ -77,11 +85,12 @@ export function GlobalRecordingIndicator() {
           aria-valuenow={Math.round(level * 100)}
           className="flex h-6 items-center gap-0.5 rounded-full bg-[var(--el-ink)] px-2 text-white"
         >
-          {[0.35, 0.6, 0.85, 0.55].map((weight, index) => (
+          {levelHistory.slice(-4).map((sample, index) => (
             <span
               key={index}
+              data-testid={`global-wave-bar-${index}`}
               className="h-3 w-0.5 origin-center rounded-full bg-white transition-transform"
-              style={{ transform: `scaleY(${Math.max(0.12, level * weight)})` }}
+              style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
             />
           ))}
         </span>

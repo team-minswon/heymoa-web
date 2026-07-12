@@ -21,6 +21,13 @@ export function normalizePcm16Level(samples: Int16Array) {
   return Math.min(1, Math.sqrt(meanSquare));
 }
 
+export function normalizeMicrophoneLevel(rms: number) {
+  const noiseFloor = 0.005;
+  if (rms <= noiseFloor) return 0;
+  const normalized = Math.min(1, (rms - noiseFloor) / 0.115);
+  return Math.min(1, Math.sqrt(normalized));
+}
+
 export function linearResample(
   samples: Float32Array,
   inputSampleRate: number,
@@ -176,7 +183,9 @@ export class PcmAudioCapture {
       const samples = new Float32Array(this.analyser.fftSize);
       this.analyser.getFloatTimeDomainData(samples);
       const pcm = new Int16Array(float32ToPcm16(samples));
-      this.options.onLevel?.(normalizePcm16Level(pcm));
+      this.options.onLevel?.(
+        normalizeMicrophoneLevel(normalizePcm16Level(pcm))
+      );
       this.lastLevelAt = now;
     }
     this.levelFrame = requestAnimationFrame(this.publishLevel);

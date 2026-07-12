@@ -245,30 +245,15 @@ export function NotePanel({
                 aria-valuenow={Math.round(recording.level * 100)}
                 className="mx-1 relative flex h-3 w-4 items-center justify-center gap-[2px]"
               >
-                <span
-                  className={cn(
-                    "h-full w-[3px] origin-center rounded-full bg-destructive transition-transform"
-                  )}
-                  style={{
-                    transform: `scaleY(${Math.max(0.12, recording.level * 0.5)})`,
-                  }}
-                ></span>
-                <span
-                  className={cn(
-                    "h-2/3 w-[3px] origin-center rounded-full bg-destructive transition-transform"
-                  )}
-                  style={{
-                    transform: `scaleY(${Math.max(0.12, recording.level * 0.8)})`,
-                  }}
-                ></span>
-                <span
-                  className={cn(
-                    "h-full w-[3px] origin-center rounded-full bg-destructive transition-transform"
-                  )}
-                  style={{
-                    transform: `scaleY(${Math.max(0.12, recording.level)})`,
-                  }}
-                ></span>
+                {(recording.levelHistory ?? [0, 0, 0]).slice(-3).map((sample, index) => (
+                  <span
+                    key={index}
+                    className={cn(
+                      "h-full w-[3px] origin-center rounded-full bg-destructive transition-transform"
+                    )}
+                    style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
+                  />
+                ))}
               </span>
               <Button
                 type="button"

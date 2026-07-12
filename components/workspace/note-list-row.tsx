@@ -49,7 +49,7 @@ export function NoteListRow({
   const queryClient = useQueryClient();
   const deleteNote = useDeleteNote();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const { session, elapsedMs } = useRecording();
+  const { session, elapsedMs, levelHistory } = useRecording();
 
   const isRecording =
     session?.noteId === note.noteId &&
@@ -64,11 +64,11 @@ export function NoteListRow({
   const timestamp = new Date(note.lastRecordedAt ?? note.createdAt);
 
   return (
-    <article className="group flex min-h-20 items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-muted/60 sm:px-4">
+    <article className="group flex min-h-[76px] items-center gap-2 rounded-xl px-2 py-2 transition-colors duration-150 hover:bg-white/70 focus-within:bg-white/70 sm:px-3">
       <Link
         href={sideHref}
         aria-label={`${note.title} 노트 열기`}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 items-center gap-4 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-5"
       >
         <div
           className={cn(
@@ -77,13 +77,14 @@ export function NoteListRow({
           )}
         >
           {isRecording ? (
-            <div className="relative flex size-4 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive/40 opacity-75"></span>
-              <span className="relative flex h-3 w-3 items-center justify-center gap-[2px]">
-                <span className="h-full w-1 animate-[pulse_1s_ease-in-out_infinite] rounded-full bg-destructive"></span>
-                <span className="h-2/3 w-1 animate-[pulse_1s_ease-in-out_infinite_0.2s] rounded-full bg-destructive"></span>
-                <span className="h-full w-1 animate-[pulse_1s_ease-in-out_infinite_0.4s] rounded-full bg-destructive"></span>
-              </span>
+            <div className="flex h-4 items-center gap-[2px]" aria-hidden="true">
+              {levelHistory.slice(-5).map((sample, index) => (
+                <span
+                  key={index}
+                  className="h-4 w-[2px] origin-center rounded-full bg-destructive transition-transform duration-75"
+                  style={{ transform: `scaleY(${Math.max(0.16, sample)})` }}
+                />
+              ))}
             </div>
           ) : (
             <Waves className="size-4" />
@@ -93,7 +94,7 @@ export function NoteListRow({
           </span>
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold sm:text-base">
+          <h3 className="truncate text-[15px] font-medium tracking-[-0.01em] text-[var(--el-ink)] sm:text-base">
             {note.title}
           </h3>
           {(note.folders.length > 0 || isRecording) && (
@@ -111,7 +112,7 @@ export function NoteListRow({
             </div>
           )}
         </div>
-        <div className="hidden w-28 shrink-0 text-right text-xs text-muted-foreground sm:block">
+        <div className="hidden w-32 shrink-0 text-right text-xs leading-5 text-[var(--el-muted)] sm:block">
           <p>
             {new Intl.DateTimeFormat("ko-KR", {
               hour: "numeric",

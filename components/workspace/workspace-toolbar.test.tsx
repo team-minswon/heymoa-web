@@ -8,6 +8,7 @@ const recording = vi.hoisted(() => ({
   session: null as null | Record<string, unknown>,
   elapsedMs: 0,
   level: 0.42,
+  levelHistory: [0.1, 0.25, 0.7, 0.4],
   microphoneState: "recording",
   error: null,
   start: vi.fn(),

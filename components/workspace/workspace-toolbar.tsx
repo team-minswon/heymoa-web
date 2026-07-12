@@ -33,6 +33,7 @@ export function WorkspaceToolbar({
     session,
     elapsedMs,
     level,
+    levelHistory,
     microphoneState,
     error,
     start,
@@ -167,12 +168,12 @@ export function WorkspaceToolbar({
               aria-valuenow={Math.round(level * 100)}
               className="flex h-5 items-center gap-0.5"
             >
-              {[0.35, 0.6, 0.85, 0.55].map((weight, index) => (
+              {levelHistory.slice(-4).map((sample, index) => (
                 <span
                   key={index}
                   className="h-3 w-0.5 origin-center rounded-full bg-current transition-transform"
                   style={{
-                    transform: `scaleY(${Math.max(0.12, level * weight)})`,
+                    transform: `scaleY(${Math.max(0.12, sample)})`,
                   }}
                 />
               ))}

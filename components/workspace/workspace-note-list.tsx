@@ -108,13 +108,13 @@ export function WorkspaceNoteList({
   }
 
   return (
-    <div className="space-y-7 rounded-2xl border border-[var(--el-hairline)] bg-white p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] sm:p-6">
+    <div data-testid="workspace-note-list" className="space-y-7">
       {groups.map((group) => (
         <section key={group.key} aria-labelledby={`date-${group.key}`}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <h2
               id={`date-${group.key}`}
-              className="shrink-0 text-xs font-semibold text-muted-foreground"
+              className="shrink-0 text-xs font-medium tracking-[-0.01em] text-[var(--el-muted)]"
             >
               {group.label}
             </h2>
@@ -122,7 +122,7 @@ export function WorkspaceNoteList({
               <Separator />
             </div>
           </div>
-          <div className="mt-2 divide-y divide-border/60">
+          <div className="mt-1">
             {group.notes.map((note) => (
               <NoteListRow
                 key={note.noteId}

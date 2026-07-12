@@ -64,10 +64,9 @@ export function TranscriptView({ noteId }: { noteId: string }) {
       recording.session.status
     )
   );
-  const bars = Array.from(
-    { length: 40 },
-    (_, index) => 0.35 + ((index * 17) % 10) / 15
-  );
+  const bars = recording.levelHistory.length
+    ? recording.levelHistory
+    : Array(24).fill(0);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -93,14 +92,15 @@ export function TranscriptView({ noteId }: { noteId: string }) {
               viewBox="0 0 320 48"
               className="h-12 w-full fill-[var(--el-ink)]"
             >
-              {bars.map((weight, index) => {
-                const height = Math.max(4, recording.level * weight * 44);
+              {bars.map((sample, index) => {
+                const height = Math.round(Math.max(3, sample * 44) * 10) / 10;
                 return (
                   <rect
                     key={index}
-                    x={index * 8}
+                    data-testid={`wave-bar-${index}`}
+                    x={index * (320 / bars.length) + 2}
                     y={24 - height / 2}
-                    width="4"
+                    width={Math.max(3, 320 / bars.length - 5)}
                     height={height}
                     rx="2"
                   />
