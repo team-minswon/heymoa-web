@@ -1,7 +1,10 @@
 import type {
   CreateNoteRequest,
+  CreateWorkspaceRequest,
   FolderNameRequest,
+  UpdateCurrentUserRequest,
   UpdateNoteRequest,
+  UpdateWorkspaceRequest,
 } from "@/lib/api/generated/models";
 import { getListWorkspaceFoldersMockHandler } from "@/lib/api/generated/folder/folder.msw";
 import { getListWorkspaceNotesMockHandler } from "@/lib/api/generated/note/note.msw";
@@ -10,7 +13,6 @@ import {
   getListNoteTranscriptSegmentsMockHandler,
   getListNoteTranscriptionSessionsMockHandler,
 } from "@/lib/api/generated/transcription/transcription.msw";
-import { getListWorkspacesMockHandler } from "@/lib/api/generated/workspace/workspace.msw";
 import { HttpResponse, http } from "msw";
 
 import { mockDb } from "@/lib/mocks/db";
@@ -74,11 +76,31 @@ function withStore<T>(operation: () => T) {
 }
 
 export const restHandlers = [
-  getListWorkspacesMockHandler(success({ items: [mockDb.workspace] })),
+  http.get("*/v1/users/me", () =>
+    HttpResponse.json(success(mockDb.getCurrentUser()))
+  ),
+  http.patch("*/v1/users/me", async ({ request }) => {
+    const body = (await request.json()) as UpdateCurrentUserRequest;
+    return withStore(() => mockDb.updateCurrentUser(body));
+  }),
+  http.get("*/v1/workspaces", () =>
+    HttpResponse.json(success(mockDb.listWorkspaces()))
+  ),
+  http.post("*/v1/workspaces", async ({ request }) => {
+    const body = (await request.json()) as CreateWorkspaceRequest;
+    return withStore(() => mockDb.createWorkspace(body));
+  }),
   http.get("*/v1/workspaces/:workspaceId", ({ params }) =>
-    id(params.workspaceId) === mockDb.workspace.workspaceId
-      ? HttpResponse.json(success(mockDb.workspace))
-      : errorResponse(new Error("WORKSPACE_NOT_FOUND"))
+    withStore(() => mockDb.getWorkspace(id(params.workspaceId)))
+  ),
+  http.patch("*/v1/workspaces/:workspaceId", async ({ request, params }) => {
+    const body = (await request.json()) as UpdateWorkspaceRequest;
+    return withStore(() =>
+      mockDb.updateWorkspace(id(params.workspaceId), body)
+    );
+  }),
+  http.put("*/v1/workspaces/:workspaceId/default", ({ params }) =>
+    withStore(() => mockDb.setDefaultWorkspace(id(params.workspaceId)))
   ),
   getListWorkspaceNotesMockHandler(({ request, params }) => {
     const url = new URL(request.url);

@@ -1,5 +1,7 @@
 import type {
+  CreateWorkspaceRequest,
   CreateNoteRequest,
+  CurrentUserResponse,
   FolderNameRequest,
   FolderResponse,
   NoteCursorPageResponse,
@@ -11,6 +13,8 @@ import type {
   TranscriptionSessionResponse,
   TranscriptionSessionStatus,
   UpdateNoteRequest,
+  UpdateCurrentUserRequest,
+  UpdateWorkspaceRequest,
   UserSummary,
   WorkspaceResponse,
 } from "@/lib/api/generated/models";
@@ -28,20 +32,6 @@ const TERMINAL_STATUSES = new Set<TranscriptionSessionStatus>([
   "FAILED",
 ]);
 
-const user: UserSummary = {
-  userId: "01K0000000003",
-  name: "테스트 유저",
-};
-
-const defaultWorkspace: WorkspaceResponse = {
-  workspaceId: "01K0000000000",
-  name: "테스트 유저의 워크스페이스",
-  description: "회의 기록을 모으는 기본 공간입니다.",
-  isDefault: true,
-  createdAt: "2026-07-01T00:00:00Z",
-  updatedAt: "2026-07-01T00:00:00Z",
-};
-
 type PageOptions = {
   cursor?: string | null;
   limit?: number;
@@ -57,7 +47,9 @@ type AddSegmentInput = Pick<
 >;
 
 type StoreState = {
-  folders: FolderResponse[];
+  user: CurrentUserResponse;
+  workspaces: WorkspaceResponse[];
+  folders: Array<FolderResponse & { workspaceId: string }>;
   notes: NoteResponse[];
   sessions: TranscriptionSessionResponse[];
   segments: TranscriptSegmentResponse[];
@@ -90,27 +82,58 @@ function nextTimestamp() {
 }
 
 function createSeedState(): StoreState {
-  const folders: FolderResponse[] = [
-    { folderId: "01K0000000001", name: "주간" },
-    { folderId: "01K0000000004", name: "고객" },
+  const user: CurrentUserResponse = {
+    userId: "01K0000000003",
+    name: "테스트 유저",
+    email: "test@heymoa.com",
+  };
+  const workspaces: WorkspaceResponse[] = [
+    {
+      workspaceId: "01K0000000000",
+      name: "테스트 유저의 워크스페이스",
+      description: "회의 기록을 모으는 기본 공간입니다.",
+      isDefault: true,
+      createdAt: "2026-07-01T00:00:00Z",
+      updatedAt: "2026-07-01T00:00:00Z",
+    },
+    {
+      workspaceId: "01K0000000006",
+      name: "제품 팀",
+      description: "제품 팀의 회의 기록입니다.",
+      isDefault: false,
+      createdAt: "2026-07-02T00:00:00Z",
+      updatedAt: "2026-07-02T00:00:00Z",
+    },
+  ];
+  const folders: StoreState["folders"] = [
+    {
+      folderId: "01K0000000001",
+      workspaceId: workspaces[0].workspaceId,
+      name: "주간",
+    },
+    {
+      folderId: "01K0000000004",
+      workspaceId: workspaces[0].workspaceId,
+      name: "고객",
+    },
   ];
   const notes: NoteResponse[] = [
     {
       noteId: "01K0000000002",
-      workspaceId: defaultWorkspace.workspaceId,
+      workspaceId: workspaces[0].workspaceId,
       title: "주간 제품 회의",
       context: "이번 주 제품 진행 상황을 공유합니다.",
-      createdBy: user,
+      createdBy: { userId: user.userId, name: user.name },
       folders: [folders[0]],
       createdAt: "2026-07-10T00:00:00Z",
       updatedAt: "2026-07-11T00:00:00Z",
     },
     {
       noteId: "01K0000000005",
-      workspaceId: defaultWorkspace.workspaceId,
+      workspaceId: workspaces[0].workspaceId,
       title: "고객 인터뷰",
       context: null,
-      createdBy: user,
+      createdBy: { userId: user.userId, name: user.name },
       folders: [folders[1]],
       createdAt: "2026-07-09T00:00:00Z",
       updatedAt: "2026-07-09T00:00:00Z",
@@ -122,7 +145,7 @@ function createSeedState(): StoreState {
       noteId: notes[0].noteId,
       status: "COMPLETED",
       recordedDurationMs: 120000,
-      startedBy: user,
+      startedBy: { userId: user.userId, name: user.name },
       startedAt: "2026-07-11T00:00:00Z",
       endedAt: "2026-07-11T00:02:00Z",
     },
@@ -153,13 +176,19 @@ function createSeedState(): StoreState {
       endedAtMs: 7100,
     },
   ];
-  return { folders, notes, sessions, segments };
+  return { user, workspaces, folders, notes, sessions, segments };
 }
 
 function assertWorkspace(workspaceId: string) {
-  if (workspaceId !== defaultWorkspace.workspaceId) {
-    fail("WORKSPACE_NOT_FOUND");
-  }
+  return (
+    state.workspaces.find(
+      (workspace) => workspace.workspaceId === workspaceId
+    ) ?? fail("WORKSPACE_NOT_FOUND")
+  );
+}
+
+function userSummary(): UserSummary {
+  return { userId: state.user.userId, name: state.user.name };
 }
 
 function findNote(noteId: string) {
@@ -231,10 +260,75 @@ reset();
 
 export const mockDb = {
   get workspace() {
-    return copy(defaultWorkspace);
+    return copy(
+      state.workspaces.find((workspace) => workspace.isDefault) ??
+        state.workspaces[0]
+    );
   },
 
   reset,
+
+  getCurrentUser(): CurrentUserResponse {
+    return copy(state.user);
+  },
+
+  updateCurrentUser(input: UpdateCurrentUserRequest): CurrentUserResponse {
+    const name = input.name.trim();
+    if (!name) fail("BAD_REQUEST");
+    state.user.name = name;
+    return copy(state.user);
+  },
+
+  listWorkspaces() {
+    const items = [...state.workspaces].sort((a, b) => {
+      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+      return a.name.localeCompare(b.name, "ko");
+    });
+    return { items: copy(items) };
+  },
+
+  createWorkspace(input: CreateWorkspaceRequest): WorkspaceResponse {
+    const name = input.name.trim();
+    if (!name) fail("BAD_REQUEST");
+    const createdAt = nextTimestamp();
+    const workspace: WorkspaceResponse = {
+      workspaceId: nextId(),
+      name,
+      description: input.description,
+      isDefault: false,
+      createdAt,
+      updatedAt: createdAt,
+    };
+    state.workspaces.push(workspace);
+    return copy(workspace);
+  },
+
+  getWorkspace(workspaceId: string): WorkspaceResponse {
+    return copy(assertWorkspace(workspaceId));
+  },
+
+  updateWorkspace(
+    workspaceId: string,
+    input: UpdateWorkspaceRequest
+  ): WorkspaceResponse {
+    const workspace = assertWorkspace(workspaceId);
+    const name = input.name.trim();
+    if (!name) fail("BAD_REQUEST");
+    workspace.name = name;
+    workspace.description = input.description;
+    workspace.updatedAt = nextTimestamp();
+    return copy(workspace);
+  },
+
+  setDefaultWorkspace(workspaceId: string): WorkspaceResponse {
+    assertWorkspace(workspaceId);
+    const updatedAt = nextTimestamp();
+    state.workspaces.forEach((workspace) => {
+      workspace.isDefault = workspace.workspaceId === workspaceId;
+      if (workspace.isDefault) workspace.updatedAt = updatedAt;
+    });
+    return copy(assertWorkspace(workspaceId));
+  },
 
   listNotes(
     workspaceId: string,
@@ -244,8 +338,9 @@ export const mockDb = {
     const notes = state.notes
       .filter(
         (note) =>
-          !options.folderId ||
-          note.folders.some((folder) => folder.folderId === options.folderId)
+          note.workspaceId === workspaceId &&
+          (!options.folderId ||
+            note.folders.some((folder) => folder.folderId === options.folderId))
       )
       .map(noteSummary)
       .sort((a, b) => {
@@ -270,7 +365,7 @@ export const mockDb = {
       workspaceId,
       title: input.title?.trim() || "제목 없는 노트",
       context: input.context ?? null,
-      createdBy: user,
+      createdBy: userSummary(),
       folders: [],
       createdAt,
       updatedAt: createdAt,
@@ -308,19 +403,26 @@ export const mockDb = {
   listFolders(workspaceId: string): FolderResponse[] {
     assertWorkspace(workspaceId);
     return copy(
-      [...state.folders].sort((a, b) => a.name.localeCompare(b.name))
+      state.folders
+        .filter((folder) => folder.workspaceId === workspaceId)
+        .sort((a, b) => a.name.localeCompare(b.name, "ko"))
+        .map(({ folderId, name }) => ({ folderId, name }))
     );
   },
 
   createFolder(workspaceId: string, input: FolderNameRequest): FolderResponse {
     assertWorkspace(workspaceId);
     const name = input.name.trim();
-    if (state.folders.some((folder) => folder.name === name)) {
+    if (
+      state.folders.some(
+        (folder) => folder.workspaceId === workspaceId && folder.name === name
+      )
+    ) {
       fail("FOLDER_NAME_ALREADY_EXISTS");
     }
-    const folder = { folderId: nextId(), name };
+    const folder = { folderId: nextId(), workspaceId, name };
     state.folders.push(folder);
-    return copy(folder);
+    return copy({ folderId: folder.folderId, name: folder.name });
   },
 
   updateFolder(folderId: string, input: FolderNameRequest): FolderResponse {
@@ -329,7 +431,9 @@ export const mockDb = {
     if (
       state.folders.some(
         (candidate) =>
-          candidate.folderId !== folderId && candidate.name === name
+          candidate.folderId !== folderId &&
+          candidate.name === name &&
+          candidate.workspaceId === folder.workspaceId
       )
     ) {
       fail("FOLDER_NAME_ALREADY_EXISTS");
@@ -340,7 +444,7 @@ export const mockDb = {
         if (attached.folderId === folderId) attached.name = name;
       });
     });
-    return copy(folder);
+    return copy({ folderId: folder.folderId, name: folder.name });
   },
 
   deleteFolder(folderId: string) {
@@ -358,9 +462,9 @@ export const mockDb = {
   attachFolder(noteId: string, folderId: string): NoteResponse {
     const note = findNote(noteId);
     const folder = findFolder(folderId);
-    if (note.workspaceId !== defaultWorkspace.workspaceId) fail("FORBIDDEN");
+    if (note.workspaceId !== folder.workspaceId) fail("FORBIDDEN");
     if (!note.folders.some((attached) => attached.folderId === folderId)) {
-      note.folders.push(copy(folder));
+      note.folders.push({ folderId: folder.folderId, name: folder.name });
       note.updatedAt = nextTimestamp();
     }
     return copy(note);
@@ -368,7 +472,8 @@ export const mockDb = {
 
   detachFolder(noteId: string, folderId: string): NoteResponse {
     const note = findNote(noteId);
-    findFolder(folderId);
+    const folder = findFolder(folderId);
+    if (note.workspaceId !== folder.workspaceId) fail("FORBIDDEN");
     note.folders = note.folders.filter(
       (folder) => folder.folderId !== folderId
     );
@@ -386,7 +491,7 @@ export const mockDb = {
       noteId,
       status: "CONNECTING",
       recordedDurationMs: 0,
-      startedBy: user,
+      startedBy: userSummary(),
       startedAt: nextTimestamp(),
       endedAt: null,
     };
