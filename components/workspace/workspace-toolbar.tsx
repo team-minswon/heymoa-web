@@ -29,8 +29,17 @@ export function WorkspaceToolbar({
 }) {
   const router = useRouter();
   const createNote = useCreateNote();
-  const { session, elapsedMs, error, start, pause, resume, stop } =
-    useRecording();
+  const {
+    session,
+    elapsedMs,
+    level,
+    microphoneState,
+    error,
+    start,
+    pause,
+    resume,
+    stop,
+  } = useRecording();
   const isActive =
     session &&
     ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
@@ -144,8 +153,30 @@ export function WorkspaceToolbar({
               variant={paused ? "secondary" : "default"}
               className="rounded-full px-2.5 py-0.5 text-xs"
             >
-              {paused ? "Paused" : "Recording"}
+              {paused
+                ? "일시정지"
+                : microphoneState === "recording"
+                  ? "녹음 중"
+                  : "마이크 대기 중"}
             </Badge>
+            <span
+              role="meter"
+              aria-label="마이크 입력"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(level * 100)}
+              className="flex h-5 items-center gap-0.5"
+            >
+              {[0.35, 0.6, 0.85, 0.55].map((weight, index) => (
+                <span
+                  key={index}
+                  className="h-3 w-0.5 origin-center rounded-full bg-current transition-transform"
+                  style={{
+                    transform: `scaleY(${Math.max(0.12, level * weight)})`,
+                  }}
+                />
+              ))}
+            </span>
             <span className="font-mono text-sm font-medium tabular-nums">
               {formatElapsed(elapsedMs)}
             </span>

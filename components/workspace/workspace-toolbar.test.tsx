@@ -7,6 +7,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 const recording = vi.hoisted(() => ({
   session: null as null | Record<string, unknown>,
   elapsedMs: 0,
+  level: 0.42,
+  microphoneState: "recording",
   error: null,
   start: vi.fn(),
   pause: vi.fn(),
@@ -61,7 +63,11 @@ describe("WorkspaceToolbar", () => {
       </SidebarProvider>
     );
 
-    expect(screen.getByText("Recording")).toBeInTheDocument();
+    expect(screen.getByText("녹음 중")).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "마이크 입력" })).toHaveAttribute(
+      "aria-valuenow",
+      "42"
+    );
     expect(screen.getByText("00:12")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "녹음 일시 정지" })

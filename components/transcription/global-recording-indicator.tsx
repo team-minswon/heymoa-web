@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Pause, Radio, Square, Waves } from "lucide-react";
+import { Pause, Radio, Square } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,8 @@ function formatElapsed(elapsedMs: number) {
 
 export function GlobalRecordingIndicator() {
   const pathname = usePathname();
-  const { session, elapsedMs, pause, resume, stop } = useRecording();
+  const { session, elapsedMs, level, microphoneState, pause, resume, stop } =
+    useRecording();
   const workspaceQuery = useListWorkspaces({
     query: { enabled: Boolean(session), staleTime: 5 * 60 * 1000 },
   });
@@ -49,6 +50,15 @@ export function GlobalRecordingIndicator() {
     ? `/w/${workspaceId}/notes/${session.noteId}?view=full&tab=transcript`
     : "#";
   const paused = session.status === "PAUSED";
+  const stateLabel = paused
+    ? "일시정지"
+    : microphoneState === "denied"
+      ? "마이크 권한 필요"
+      : microphoneState === "unavailable"
+        ? "마이크 없음"
+        : microphoneState === "recording"
+          ? "녹음 중"
+          : "마이크 대기 중";
 
   return (
     <aside
@@ -59,15 +69,25 @@ export function GlobalRecordingIndicator() {
         href={href}
         className="group flex min-w-0 items-center gap-2 rounded-full px-1.5 py-1 outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
       >
-        <span className="relative flex size-6 items-center justify-center rounded-full bg-[var(--el-ink)] text-white">
-          {paused ? <Radio className="size-3" /> : <Waves className="size-3" />}
-          {!paused && (
-            <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-[var(--el-ink)] opacity-20" />
-          )}
+        <span
+          role="meter"
+          aria-label="마이크 입력"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(level * 100)}
+          className="flex h-6 items-center gap-0.5 rounded-full bg-[var(--el-ink)] px-2 text-white"
+        >
+          {[0.35, 0.6, 0.85, 0.55].map((weight, index) => (
+            <span
+              key={index}
+              className="h-3 w-0.5 origin-center rounded-full bg-white transition-transform"
+              style={{ transform: `scaleY(${Math.max(0.12, level * weight)})` }}
+            />
+          ))}
         </span>
         <span className="min-w-0 leading-none">
           <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--el-muted)]">
-            {paused ? "Paused" : "Recording"}
+            {stateLabel}
           </span>
           <span className="mt-1 block font-mono text-xs tabular-nums">
             {formatElapsed(elapsedMs)}

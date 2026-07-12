@@ -108,7 +108,7 @@ export function WorkspaceNoteList({
   }
 
   return (
-    <div className="space-y-8 py-6">
+    <div className="space-y-7 rounded-2xl border border-[var(--el-hairline)] bg-white p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] sm:p-6">
       {groups.map((group) => (
         <section key={group.key} aria-labelledby={`date-${group.key}`}>
           <div className="flex items-center gap-3">
