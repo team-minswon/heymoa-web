@@ -135,7 +135,7 @@ export function WorkspaceToolbar({
       </div>
 
       {isRecordingOtherNote && (
-        <div className="fixed left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border bg-background/95 px-4 py-2.5 shadow-md backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300 delay-200 fill-mode-both fixed left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border bg-background/95 px-4 py-2.5 shadow-md backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Button
             type="button"
             variant="ghost"
