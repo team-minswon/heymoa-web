@@ -1,6 +1,6 @@
 import { ws } from "msw";
 
-import { MockTranscriptionScenario } from "@/lib/mocks/transcription-scenario";
+import { createMockTranscriptionScenario } from "@/lib/mocks/transcription-scenario";
 
 const transcriptionLink = ws.link(
   /\/v1\/transcription-sessions\/[^/]+\/stream/
@@ -23,11 +23,11 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
       return;
     }
 
-    const scenario = new MockTranscriptionScenario(
+    const scenario = createMockTranscriptionScenario({
       sessionId,
-      (event) => client.send(JSON.stringify(event)),
-      (code, reason) => client.close(code, reason)
-    );
+      send: (event) => client.send(JSON.stringify(event)),
+      requestClose: (code, reason) => client.close(code, reason),
+    });
 
     try {
       scenario.open();

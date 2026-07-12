@@ -242,10 +242,7 @@ function noteSummary(note: NoteResponse): NoteSummaryResponse {
       .map((session) => session.startedAt)
       .sort((a, b) => b.localeCompare(a))[0] ?? null;
   const recordedDurationMs = sessions.reduce((total, session) => {
-    const lastSegment = state.segments
-      .filter((segment) => segment.sessionId === session.sessionId)
-      .sort((a, b) => b.sequence - a.sequence)[0];
-    return total + (lastSegment?.endedAtMs ?? 0);
+    return total + session.recordedDurationMs;
   }, 0);
   return { ...note, lastRecordedAt, recordedDurationMs };
 }
@@ -533,10 +530,14 @@ export const mockDb = {
 
   updateSessionStatus(
     sessionId: string,
-    status: TranscriptionSessionStatus
+    status: TranscriptionSessionStatus,
+    recordedDurationMs?: number
   ): TranscriptionSessionResponse {
     const session = findSession(sessionId);
     session.status = status;
+    if (recordedDurationMs !== undefined) {
+      session.recordedDurationMs = Math.max(0, recordedDurationMs);
+    }
     if (TERMINAL_STATUSES.has(status)) session.endedAt = nextTimestamp();
     return copy(session);
   },
