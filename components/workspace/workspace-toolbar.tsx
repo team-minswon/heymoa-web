@@ -67,7 +67,7 @@ export function WorkspaceToolbar({
     await start(noteId, language === "auto" ? null : language);
   };
 
-  const isRecordingOtherNote = isActive && session?.noteId !== activeNoteId;
+  const isRecordingOtherNote = isActive && !activeNoteId;
 
   return (
     <>

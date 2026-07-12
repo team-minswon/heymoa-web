@@ -13,8 +13,15 @@ export default async function NoteRoute({
     params,
     searchParams,
   ]);
+  const view = Array.isArray(query.view) ? query.view[0] : query.view;
+  const isFullScreen = view !== "side";
+
   return (
-    <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>
+    <WorkspaceAppShell
+      workspaceId={workspaceId}
+      activeNoteId={noteId}
+      hideSidebar={isFullScreen}
+    >
       <WorkspacePage workspaceId={workspaceId} />
       <NoteView
         workspaceId={workspaceId}

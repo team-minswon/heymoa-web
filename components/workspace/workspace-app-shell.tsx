@@ -32,10 +32,12 @@ export function useWorkspaceShell() {
 export function WorkspaceAppShell({
   workspaceId,
   activeNoteId,
+  hideSidebar,
   children,
 }: {
   workspaceId: string;
   activeNoteId?: string;
+  hideSidebar?: boolean;
   children: React.ReactNode;
 }) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -67,17 +69,19 @@ export function WorkspaceAppShell({
     <WorkspaceShellContext.Provider value={value}>
       <TooltipProvider>
         <SidebarProvider>
-          <Sidebar className="border-r border-border/70">
-            <WorkspaceSidebar
-              workspaceId={workspaceId}
-              workspace={workspace}
-              folders={folders}
-              selectedFolderId={selectedFolderId}
-              onSelectFolder={setSelectedFolderId}
-            />
-          </Sidebar>
-          <SidebarInset className="min-h-svh bg-background">
-            <div className="relative flex min-h-svh min-w-0 flex-1 flex-col">
+          {!hideSidebar && (
+            <Sidebar variant="floating" className="border-none [&>[data-sidebar=sidebar]]:bg-card [&>[data-sidebar=sidebar]]:overflow-hidden">
+              <WorkspaceSidebar
+                workspaceId={workspaceId}
+                workspace={workspace}
+                folders={folders}
+                selectedFolderId={selectedFolderId}
+                onSelectFolder={setSelectedFolderId}
+              />
+            </Sidebar>
+          )}
+          <SidebarInset className="flex-1 bg-card md:m-2 md:ml-0 md:overflow-hidden md:rounded-xl md:border md:shadow-sm">
+            <div className="relative flex h-full min-w-0 flex-col">
               <WorkspaceToolbar
                 workspaceId={workspaceId}
                 currentLabel={currentLabel}
