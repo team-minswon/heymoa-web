@@ -1,8 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
 import {
   Drawer,
   DrawerContent,
@@ -31,35 +28,27 @@ export function resolveNoteSurface(
 }
 
 export function NoteRouteSurface({
-  workspaceId,
   view,
+  isOpen,
+  onClose,
   children,
 }: {
-  workspaceId: string;
   view: NoteViewMode;
+  isOpen: boolean;
+  onClose: () => void;
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const surface = resolveNoteSurface(view, isDesktop);
-  const [isOpen, setIsOpen] = useState(true);
-
-  const close = () => {
-    setIsOpen(false);
-    // Give a tiny tick for the state to update before navigating
-    setTimeout(() => {
-      router.push(`/w/${workspaceId}`);
-    }, 50);
-  };
 
   if (surface === "sheet") {
     return (
-      <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
+      <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <SheetContent
           aria-label="노트"
           data-surface="sheet"
           showCloseButton={false}
-          className="gap-0 p-0 !bg-card md:!right-2 md:!top-2 md:!bottom-2 md:!h-[calc(100svh-16px)] md:!rounded-xl md:!border md:shadow-xl md:!overflow-hidden"
+          className="gap-0 p-0 !bg-card h-full border-l shadow-2xl overflow-hidden"
           style={{
             width: "min(780px, calc(100vw - 16rem))",
             maxWidth: "780px",
@@ -77,7 +66,7 @@ export function NoteRouteSurface({
 
   if (surface === "drawer") {
     return (
-      <Drawer open={isOpen} onOpenChange={(open) => !open && close()} showSwipeHandle>
+      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} showSwipeHandle>
         <DrawerContent
           aria-label="노트"
           data-surface="drawer"

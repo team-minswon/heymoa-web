@@ -70,7 +70,7 @@ export function WorkspaceAppShell({
       <TooltipProvider>
         <SidebarProvider>
           {!hideSidebar && (
-            <Sidebar variant="floating" className="border-none [&>[data-sidebar=sidebar]]:bg-card [&>[data-sidebar=sidebar]]:overflow-hidden">
+            <Sidebar className="border-r [&>[data-sidebar=sidebar]]:bg-muted/30 [&>[data-sidebar=sidebar]]:overflow-hidden">
               <WorkspaceSidebar
                 workspaceId={workspaceId}
                 workspace={workspace}
@@ -80,7 +80,7 @@ export function WorkspaceAppShell({
               />
             </Sidebar>
           )}
-          <SidebarInset className="flex-1 bg-card md:m-2 md:ml-0 md:overflow-hidden md:rounded-xl md:border md:shadow-sm">
+          <SidebarInset className="flex-1 bg-card">
             <div className="relative flex h-full min-w-0 flex-col">
               <WorkspaceToolbar
                 workspaceId={workspaceId}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { NotePanel, type NoteTab } from "@/components/notes/note-panel";
@@ -34,6 +35,22 @@ export function NoteView({
     tab: searchParams.get("tab") ?? initialQuery.tab,
   });
 
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    // Wait for the initial render to commit before triggering the open transition
+    const timer = setTimeout(() => setIsOpen(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const closeWithAnim = () => {
+    setIsOpen(false);
+    // Wait for the exit animation duration before routing
+    setTimeout(() => {
+      router.push(`/w/${workspaceId}`);
+    }, 200); 
+  };
+
   const setQuery = (updates: Partial<{ view: NoteViewMode; tab: NoteTab }>) => {
     const next = new URLSearchParams(searchParams.toString());
     next.set("view", updates.view ?? current.view);
@@ -42,13 +59,17 @@ export function NoteView({
   };
 
   return (
-    <NoteRouteSurface workspaceId={workspaceId} view={current.view}>
+    <NoteRouteSurface 
+      view={current.view}
+      isOpen={isOpen}
+      onClose={closeWithAnim}
+    >
       <NotePanel
         workspaceId={workspaceId}
         noteId={noteId}
         tab={current.tab}
         onTabChange={(tab) => setQuery({ tab })}
-        onClose={() => router.push(`/w/${workspaceId}`)}
+        onClose={closeWithAnim}
         onExpand={
           current.view === "side" ? () => setQuery({ view: "full" }) : undefined
         }
