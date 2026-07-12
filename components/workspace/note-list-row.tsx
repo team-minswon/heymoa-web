@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Expand, MoreHorizontal, Trash2, Waves } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { useRecording } from "@/components/transcription/recording-provider";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +49,16 @@ export function NoteListRow({
   const queryClient = useQueryClient();
   const deleteNote = useDeleteNote();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { session, elapsedMs } = useRecording();
+
+  const isRecording =
+    session?.noteId === note.noteId &&
+    ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
+      session.status
+    );
+
+  const displayDurationMs = isRecording ? elapsedMs : note.recordedDurationMs;
+
   const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=transcript`;
   const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=transcript`;
   const timestamp = new Date(note.lastRecordedAt ?? note.createdAt);
@@ -58,25 +70,46 @@ export function NoteListRow({
         aria-label={`${note.title} 노트 열기`}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <div className="flex w-14 shrink-0 flex-col items-center gap-1 text-muted-foreground">
-          <Waves className="size-4" />
+        <div
+          className={cn(
+            "flex w-14 shrink-0 flex-col items-center gap-1",
+            isRecording ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {isRecording ? (
+            <div className="relative flex size-4 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive/40 opacity-75"></span>
+              <span className="relative flex h-3 w-3 items-center justify-center gap-[2px]">
+                <span className="h-full w-1 animate-[pulse_1s_ease-in-out_infinite] rounded-full bg-destructive"></span>
+                <span className="h-2/3 w-1 animate-[pulse_1s_ease-in-out_infinite_0.2s] rounded-full bg-destructive"></span>
+                <span className="h-full w-1 animate-[pulse_1s_ease-in-out_infinite_0.4s] rounded-full bg-destructive"></span>
+              </span>
+            </div>
+          ) : (
+            <Waves className="size-4" />
+          )}
           <span className="font-mono text-[11px] tabular-nums">
-            {formatDuration(note.recordedDurationMs)}
+            {formatDuration(displayDurationMs)}
           </span>
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold sm:text-base">
             {note.title}
           </h3>
-          {note.folders.length ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+          {(note.folders.length > 0 || isRecording) && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {isRecording && (
+                <span className="mr-1 text-[11px] font-semibold text-destructive">
+                  기록 중
+                </span>
+              )}
               {note.folders.map((folder) => (
                 <Badge key={folder.folderId} variant="secondary">
                   {folder.name}
                 </Badge>
               ))}
             </div>
-          ) : null}
+          )}
         </div>
         <div className="hidden w-28 shrink-0 text-right text-xs text-muted-foreground sm:block">
           <p>

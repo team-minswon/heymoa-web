@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mic, Pause, Play, Square, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useRecording } from "@/components/transcription/recording-provider";
@@ -18,20 +18,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TranscriptSegmentResponse } from "@/lib/api/generated/models";
 import {
   getListNoteTranscriptSegmentsQueryKey,
   useDeleteTranscriptSegment,
   useListNoteTranscriptSegments,
-  useListNoteTranscriptionSessions,
 } from "@/lib/api/generated/transcription/transcription";
 
 function formatOffset(milliseconds: number) {
@@ -43,19 +36,11 @@ function formatOffset(milliseconds: number) {
 
 export function TranscriptView({ noteId }: { noteId: string }) {
   const queryClient = useQueryClient();
-  const [language, setLanguage] = useState("ko");
   const [deleteTarget, setDeleteTarget] =
     useState<TranscriptSegmentResponse | null>(null);
-  const sessionsQuery = useListNoteTranscriptionSessions(noteId, {
-    limit: 100,
-  });
   const segmentsQuery = useListNoteTranscriptSegments(noteId, { limit: 100 });
   const deleteSegment = useDeleteTranscriptSegment();
   const recording = useRecording();
-  const sessions =
-    sessionsQuery.data?.status === 200 && sessionsQuery.data.data.success
-      ? (sessionsQuery.data.data.data?.items ?? [])
-      : [];
   const persisted =
     segmentsQuery.data?.status === 200 && segmentsQuery.data.data.success
       ? (segmentsQuery.data.data.data?.items ?? [])
@@ -79,109 +64,10 @@ export function TranscriptView({ noteId }: { noteId: string }) {
       recording.session.status
     )
   );
-  const otherActive = Boolean(
-    !liveForNote &&
-    recording.session &&
-    ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
-      recording.session.status
-    )
-  );
 
   return (
-    <div className="grid min-h-full lg:grid-cols-[180px_1fr]">
-      <aside className="border-b bg-muted/20 p-4 lg:border-r lg:border-b-0">
-        <p className="text-xs font-semibold text-muted-foreground">세션</p>
-        <div className="mt-3 flex gap-2 overflow-x-auto lg:flex-col">
-          {sessions.map((session, index) => (
-            <div
-              key={session.sessionId}
-              className="min-w-32 rounded-lg border bg-background px-3 py-2.5"
-            >
-              <p className="text-xs font-medium">
-                기록 {sessions.length - index}
-              </p>
-              <Badge variant="outline" className="mt-2 font-mono text-[10px]">
-                {session.status}
-              </Badge>
-            </div>
-          ))}
-          {!sessionsQuery.isPending && !sessions.length ? (
-            <p className="text-xs text-muted-foreground">기록 없음</p>
-          ) : null}
-        </div>
-      </aside>
-
-      <section className="min-w-0 p-5 sm:p-8">
-        <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">
-              Raw transcript
-            </p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-              원본 기록
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {!active ? (
-              <Select
-                value={language}
-                onValueChange={(value) => value && setLanguage(value)}
-              >
-                <SelectTrigger aria-label="기록 언어" className="w-28">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ko">한국어</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="auto">자동 감지</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : null}
-            {otherActive ? (
-              <Badge variant="secondary">다른 노트 기록 중</Badge>
-            ) : !active ? (
-              <Button
-                type="button"
-                onClick={() =>
-                  void recording.start(
-                    noteId,
-                    language === "auto" ? null : language
-                  )
-                }
-              >
-                <Mic /> 기록 시작
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    void (recording.session?.status === "PAUSED"
-                      ? recording.resume()
-                      : recording.pause())
-                  }
-                >
-                  {recording.session?.status === "PAUSED" ? (
-                    <Play />
-                  ) : (
-                    <Pause />
-                  )}
-                  {recording.session?.status === "PAUSED"
-                    ? "재개"
-                    : "일시 정지"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => void recording.stop()}
-                >
-                  <Square /> 종료
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+    <div className="mx-auto max-w-3xl">
+      <section className="min-w-0 p-5 sm:p-8 pt-6 sm:pt-10">
 
         {recording.error ? (
           <Alert variant="destructive" className="mt-4">
