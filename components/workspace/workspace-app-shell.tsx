@@ -90,6 +90,7 @@ export function WorkspaceAppShell({
                 folders={folders}
                 selectedFolderId={selectedFolderId}
                 onSelectFolder={setSelectedFolderId}
+                onOpenSettings={value.openSettings}
               />
             </Sidebar>
           )}

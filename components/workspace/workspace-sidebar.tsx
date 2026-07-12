@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AudioLines,
+  Check,
   ChevronUp,
   Folder,
   FolderPlus,
   MoreHorizontal,
   NotebookText,
   Pencil,
+  Plus,
   Settings,
+  LogOut,
   Trash2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,7 +43,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -70,6 +72,11 @@ import type {
   WorkspaceResponse,
 } from "@/lib/api/generated/models";
 import { getListWorkspaceNotesQueryKey } from "@/lib/api/generated/note/note";
+import {
+  getListWorkspacesQueryKey,
+  useCreateWorkspace,
+  useListWorkspaces,
+} from "@/lib/api/generated/workspace/workspace";
 
 type FolderDialogState =
   | { mode: "create" }
@@ -82,20 +89,30 @@ export function WorkspaceSidebar({
   folders,
   selectedFolderId,
   onSelectFolder,
+  onOpenSettings,
 }: {
   workspaceId: string;
   workspace?: WorkspaceResponse;
   folders: FolderResponse[];
   selectedFolderId: string | null;
   onSelectFolder: (folderId: string | null) => void;
+  onOpenSettings: (section: "account" | "workspace") => void;
 }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const workspacesQuery = useListWorkspaces();
+  const createWorkspace = useCreateWorkspace();
   const createFolder = useCreateFolder();
   const updateFolder = useUpdateFolder();
   const deleteFolder = useDeleteFolder();
   const [folderDialog, setFolderDialog] = useState<FolderDialogState>(null);
   const [deleteTarget, setDeleteTarget] = useState<FolderResponse | null>(null);
+  const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
+  const workspaces =
+    workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
+      ? workspacesQuery.data.data.data.items
+      : [];
 
   const refreshFolders = () =>
     queryClient.invalidateQueries({
@@ -122,8 +139,8 @@ export function WorkspaceSidebar({
 
   return (
     <>
-      <SidebarHeader className="gap-4 border-b border-sidebar-border p-4">
-        <Link href={`/w/${workspaceId}`} className="flex items-center gap-3">
+      <SidebarHeader className="gap-3 border-b border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
           <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <AudioLines className="size-4" />
           </span>
@@ -135,7 +152,47 @@ export function WorkspaceSidebar({
               {workspace?.name ?? "워크스페이스"}
             </p>
           </div>
-        </Link>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="outline"
+                aria-label="워크스페이스 전환"
+                className="h-auto w-full justify-between rounded-xl px-3 py-2"
+              />
+            }
+          >
+            <span className="truncate">
+              {workspace?.name ?? "워크스페이스"}
+            </span>
+            <ChevronUp className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            {workspaces.map((item) => (
+              <DropdownMenuItem
+                key={item.workspaceId}
+                onClick={() => router.push(`/w/${item.workspaceId}`)}
+              >
+                <span className="flex-1 truncate">{item.name}</span>
+                {item.isDefault && (
+                  <>
+                    <span className="text-xs text-muted-foreground">기본</span>
+                    <Check />
+                  </>
+                )}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setWorkspaceDialogOpen(true)}>
+              <Plus />새 워크스페이스
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onOpenSettings("workspace")}>
+              <Settings />
+              워크스페이스 설정
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarHeader>
 
       <SidebarContent>
@@ -235,16 +292,67 @@ export function WorkspaceSidebar({
             <ChevronUp className="size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-60">
-            <DropdownMenuLinkItem href="/settings">
-              <Settings /> 설정
-            </DropdownMenuLinkItem>
+            <DropdownMenuItem onClick={() => onOpenSettings("account")}>
+              <Settings />내 계정 설정
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">
-              {workspace?.name ?? "워크스페이스"}
-            </div>
+            <DropdownMenuItem onClick={() => void logout()}>
+              <LogOut />
+              로그아웃
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
+
+      <Dialog open={workspaceDialogOpen} onOpenChange={setWorkspaceDialogOpen}>
+        <DialogContent aria-label="새 워크스페이스 만들기">
+          <form
+            action={async (formData) => {
+              const name = String(formData.get("name") ?? "").trim();
+              if (!name) return;
+              const response = await createWorkspace.mutateAsync({
+                data: { name, description: null },
+              });
+              if (response.status === 200 && response.data.success) {
+                await queryClient.invalidateQueries({
+                  queryKey: getListWorkspacesQueryKey(),
+                });
+                setWorkspaceDialogOpen(false);
+                router.push(`/w/${response.data.data.workspaceId}`);
+              }
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>새 워크스페이스</DialogTitle>
+              <DialogDescription>
+                회의 기록을 모을 공간의 이름을 정해 주세요.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-5">
+              <Label htmlFor="new-workspace-name">워크스페이스 이름</Label>
+              <Input
+                id="new-workspace-name"
+                name="name"
+                className="mt-2"
+                required
+                maxLength={80}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setWorkspaceDialogOpen(false)}
+              >
+                취소
+              </Button>
+              <Button type="submit" loading={createWorkspace.isPending}>
+                만들기
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={folderDialog !== null}

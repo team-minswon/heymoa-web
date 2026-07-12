@@ -11,6 +11,10 @@ describe("meeting-note generated models", () => {
     const workspace: WorkspaceResponse = {
       workspaceId: "01K0000000000",
       name: "테스트 유저의 워크스페이스",
+      description: null,
+      isDefault: true,
+      createdAt: "2026-07-01T00:00:00Z",
+      updatedAt: "2026-07-01T00:00:00Z",
     };
     const folder: FolderResponse = { folderId: "01K0000000001", name: "제품" };
     const note: NoteResponse = {

@@ -18,6 +18,11 @@ vi.mock("@/components/transcription/recording-provider", () => ({
 }));
 
 vi.mock("@/lib/api/generated/workspace/workspace", () => ({
+  getListWorkspacesQueryKey: () => ["workspaces"],
+  useListWorkspaces: () => ({
+    data: { status: 200, data: { success: true, data: { items: [] } } },
+  }),
+  useCreateWorkspace: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useGetWorkspace: () => ({
     data: {
       status: 200,
@@ -74,6 +79,6 @@ describe("WorkspaceAppShell", () => {
       screen.getByRole("navigation", { name: "워크스페이스" })
     ).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveTextContent("노트 목록");
-    expect(screen.getByText("김민수의 워크스페이스")).toBeInTheDocument();
+    expect(screen.getAllByText("김민수의 워크스페이스")).not.toHaveLength(0);
   });
 });

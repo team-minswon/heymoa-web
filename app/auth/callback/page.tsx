@@ -9,6 +9,7 @@ import { Providers } from "@/app/providers";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getMe } from "@/lib/auth/api";
 import { normalizeReturnTo } from "@/lib/auth/paths";
+import { listWorkspaces } from "@/lib/api/generated/workspace/workspace";
 
 export default function AuthCallback() {
   return (
@@ -20,7 +21,7 @@ export default function AuthCallback() {
   );
 }
 
-function CallbackProcessor() {
+export function CallbackProcessor() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setUser } = useAuth();
@@ -52,8 +53,30 @@ function CallbackProcessor() {
 
           const returnToRaw = searchParams.get("return_to");
           const destination = normalizeReturnTo(returnToRaw);
-
-          router.replace(destination);
+          if (destination !== "/") {
+            router.replace(destination);
+            return;
+          }
+          const response = await listWorkspaces();
+          if (response.status !== 200 || !response.data.success) {
+            throw new Error("WORKSPACE_LIST_FAILED");
+          }
+          const items = response.data.data.items;
+          const selected = items.find((item) => item.isDefault) ?? items[0];
+          if (!selected) {
+            setErrorDetails({
+              title: "워크스페이스가 필요합니다",
+              description:
+                "새 워크스페이스를 만든 뒤 회의 기록을 시작해 주세요.",
+            });
+            return;
+          }
+          if (!items.some((item) => item.isDefault)) {
+            console.error("DEFAULT_WORKSPACE_MISSING", {
+              workspaceIds: items.map((item) => item.workspaceId),
+            });
+          }
+          router.replace(`/w/${selected.workspaceId}`);
         }
       } catch (error) {
         if (!ignore) {
@@ -77,8 +100,12 @@ function CallbackProcessor() {
     return (
       <div className="text-center w-full max-w-sm rounded-xl border border-[var(--clay-hairline)] bg-[var(--clay-surface-card)] p-6">
         <AlertTriangle className="size-12 mx-auto text-red-500 mb-4" />
-        <h1 className="text-xl font-bold text-[var(--clay-primary)]">{errorDetails.title}</h1>
-        <p className="mt-2 text-sm text-[var(--clay-body)]">{errorDetails.description}</p>
+        <h1 className="text-xl font-bold text-[var(--clay-primary)]">
+          {errorDetails.title}
+        </h1>
+        <p className="mt-2 text-sm text-[var(--clay-body)]">
+          {errorDetails.description}
+        </p>
         <div className="mt-6 flex flex-col gap-3">
           <Link
             href="/?login=true"
@@ -102,7 +129,9 @@ function CallbackProcessor() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh]">
       <div className="size-8 animate-spin rounded-full border-4 border-[var(--clay-primary)] border-t-transparent mb-4" />
-      <p className="text-sm font-medium text-[var(--clay-primary)]">로그인 처리 중...</p>
+      <p className="text-sm font-medium text-[var(--clay-primary)]">
+        로그인 처리 중...
+      </p>
     </div>
   );
 }
