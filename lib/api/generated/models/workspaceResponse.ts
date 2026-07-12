@@ -9,5 +9,17 @@ import type { Tsid } from "./tsid";
 
 export interface WorkspaceResponse {
   workspaceId: Tsid;
+  /**
+   * @minLength 1
+   * @maxLength 80
+   */
   name: string;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  description: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

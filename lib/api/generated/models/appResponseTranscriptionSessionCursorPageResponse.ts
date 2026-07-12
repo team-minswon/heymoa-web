@@ -5,11 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { AppErrorBody } from "./appErrorBody";
 import type { TranscriptionSessionCursorPageResponse } from "./transcriptionSessionCursorPageResponse";
 
 export interface AppResponseTranscriptionSessionCursorPageResponse {
-  success: boolean;
-  data?: TranscriptionSessionCursorPageResponse;
-  error?: AppErrorBody;
+  success: true;
+  data: TranscriptionSessionCursorPageResponse;
 }

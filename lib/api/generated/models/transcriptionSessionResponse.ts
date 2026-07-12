@@ -13,11 +13,8 @@ export interface TranscriptionSessionResponse {
   sessionId: Tsid;
   noteId: Tsid;
   status: TranscriptionSessionStatus;
-  /**
-   * @nullable
-   * @pattern ^[a-z]{2}$
-   */
-  language: string | null;
+  /** @minimum 0 */
+  recordedDurationMs: number;
   startedBy: UserSummary;
   startedAt: string;
   /** @nullable */

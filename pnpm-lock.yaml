@@ -123,6 +123,9 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@20.19.42)(jsdom@29.1.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@20.19.42)(typescript@5.9.3))(vite@8.1.4(@types/node@20.19.42)(esbuild@0.28.0)(jiti@2.7.0)(yaml@2.9.0))
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
 
 packages:
 

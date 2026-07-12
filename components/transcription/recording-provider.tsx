@@ -53,10 +53,7 @@ export type RecordingRuntime = {
 };
 
 export type RecordingApi = {
-  createSession: (
-    noteId: string,
-    language: string | null
-  ) => Promise<TranscriptionConnectionResponse>;
+  createSession: (noteId: string) => Promise<TranscriptionConnectionResponse>;
   createTicket: (sessionId: string) => Promise<TranscriptionConnectionResponse>;
 };
 
@@ -65,7 +62,7 @@ type RecordingContextValue = {
   transcript: TranscriptState;
   elapsedMs: number;
   error: string | null;
-  start: (noteId: string, language: string | null) => Promise<void>;
+  start: (noteId: string) => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   stop: () => Promise<void>;
@@ -145,10 +142,9 @@ export function RecordingProvider({
   const api = useMemo<RecordingApi>(
     () =>
       apiOverride ?? {
-        createSession: async (noteId, language) => {
+        createSession: async (noteId) => {
           const response = await createSessionMutation.mutateAsync({
             noteId,
-            data: { language },
           });
           if (response.status !== 200) throw new Error("SESSION_CREATE_FAILED");
           return unwrapGeneratedAppResponse<TranscriptionConnectionResponse>(
@@ -239,7 +235,7 @@ export function RecordingProvider({
   );
 
   const start = useCallback(
-    async (noteId: string, language: string | null) => {
+    async (noteId: string) => {
       if (
         sessionRef.current &&
         ACTIVE_STATUSES.includes(
@@ -255,7 +251,7 @@ export function RecordingProvider({
       audioRef.current = audio;
       try {
         await audio.requestPermission();
-        const connection = await api.createSession(noteId, language);
+        const connection = await api.createSession(noteId);
         elapsedOriginRef.current = Date.now();
         setCurrentSession(connection.session);
         await openConnection(connection, audio);

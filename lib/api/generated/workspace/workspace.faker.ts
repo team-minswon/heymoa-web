@@ -7,33 +7,54 @@
  */
 import { faker } from "@faker-js/faker";
 
-import type { AppResponseWorkspaceResponse } from "../models";
+import type {
+  AppResponseWorkspaceListResponse,
+  AppResponseWorkspaceResponse,
+} from "../models";
 
 import {
-  getAppErrorBodyMock,
+  getWorkspaceListResponseMock,
   getWorkspaceResponseMock,
 } from "../models/index.faker";
 
-export const getGetDefaultWorkspaceResponseMock = (
+export const getListWorkspacesResponseMock = (
+  overrideResponse: Partial<
+    Extract<AppResponseWorkspaceListResponse, object>
+  > = {}
+): AppResponseWorkspaceListResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceListResponseMock() },
+  ...overrideResponse,
+});
+
+export const getCreateWorkspaceResponseMock = (
   overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
 ): AppResponseWorkspaceResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getWorkspaceResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
   ...overrideResponse,
 });
 
 export const getGetWorkspaceResponseMock = (
   overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
 ): AppResponseWorkspaceResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getWorkspaceResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
+  ...overrideResponse,
+});
+
+export const getUpdateWorkspaceResponseMock = (
+  overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
+): AppResponseWorkspaceResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
+  ...overrideResponse,
+});
+
+export const getSetDefaultWorkspaceResponseMock = (
+  overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
+): AppResponseWorkspaceResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
   ...overrideResponse,
 });

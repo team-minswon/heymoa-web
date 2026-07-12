@@ -2,7 +2,7 @@ import {
   getPostV1AuthLogoutMockHandler,
   getPostV1AuthRefreshMockHandler,
 } from "@/lib/api/generated/auth/auth.msw";
-import { getGetV1UsersMeMockHandler } from "@/lib/api/generated/user/user.msw";
+import { getGetCurrentUserMockHandler } from "@/lib/api/generated/user/user.msw";
 
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 import { transcriptionWebSocketHandler } from "@/lib/mocks/websocket-handler";
@@ -20,10 +20,10 @@ export const handlers = [
       message: "Logged out successfully",
     },
   }),
-  getGetV1UsersMeMockHandler({
+  getGetCurrentUserMockHandler({
     success: true,
     data: {
-      userId: "user-12345",
+      userId: "01K0000000003",
       name: "테스트 유저",
       email: "test@heymoa.com",
     },

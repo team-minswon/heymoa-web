@@ -1,6 +1,5 @@
 import type {
   CreateNoteRequest,
-  CreateTranscriptionSessionRequest,
   FolderNameRequest,
   FolderResponse,
   NoteCursorPageResponse,
@@ -37,6 +36,10 @@ const user: UserSummary = {
 const defaultWorkspace: WorkspaceResponse = {
   workspaceId: "01K0000000000",
   name: "테스트 유저의 워크스페이스",
+  description: "회의 기록을 모으는 기본 공간입니다.",
+  isDefault: true,
+  createdAt: "2026-07-01T00:00:00Z",
+  updatedAt: "2026-07-01T00:00:00Z",
 };
 
 type PageOptions = {
@@ -118,7 +121,7 @@ function createSeedState(): StoreState {
       sessionId: "01K0000000010",
       noteId: notes[0].noteId,
       status: "COMPLETED",
-      language: "ko",
+      recordedDurationMs: 120000,
       startedBy: user,
       startedAt: "2026-07-11T00:00:00Z",
       endedAt: "2026-07-11T00:02:00Z",
@@ -373,10 +376,7 @@ export const mockDb = {
     return copy(note);
   },
 
-  createSession(
-    noteId: string,
-    input: CreateTranscriptionSessionRequest
-  ): TranscriptionSessionResponse {
+  createSession(noteId: string): TranscriptionSessionResponse {
     findNote(noteId);
     if (state.sessions.some((session) => ACTIVE_STATUSES.has(session.status))) {
       fail("ACTIVE_TRANSCRIPTION_SESSION_EXISTS");
@@ -385,7 +385,7 @@ export const mockDb = {
       sessionId: nextId(),
       noteId,
       status: "CONNECTING",
-      language: input.language,
+      recordedDurationMs: 0,
       startedBy: user,
       startedAt: nextTimestamp(),
       endedAt: null,

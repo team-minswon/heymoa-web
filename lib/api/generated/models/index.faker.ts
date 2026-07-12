@@ -11,9 +11,10 @@ import type {
   ActiveTranscriptionSessionResponse,
   AppErrorBody,
   AppErrorDetail,
+  AppErrorResponse,
   AppErrorType,
   AppResponseActiveTranscriptionSessionResponse,
-  AppResponseCurrentUserInfoResponse,
+  AppResponseCurrentUserResponse,
   AppResponseFolderListResponse,
   AppResponseFolderResponse,
   AppResponseLogoutResponse,
@@ -25,10 +26,11 @@ import type {
   AppResponseTranscriptionSessionCursorPageResponse,
   AppResponseTranscriptionSessionResponse,
   AppResponseUnit,
+  AppResponseWorkspaceListResponse,
   AppResponseWorkspaceResponse,
   CreateNoteRequest,
-  CreateTranscriptionSessionRequest,
-  CurrentUserInfoResponse,
+  CreateWorkspaceRequest,
+  CurrentUserResponse,
   FolderNameRequest,
   FolderResponse,
   LogoutResponse,
@@ -43,8 +45,11 @@ import type {
   TranscriptionSessionResponse,
   TranscriptionSessionStatus,
   Tsid,
+  UpdateCurrentUserRequest,
   UpdateNoteRequest,
+  UpdateWorkspaceRequest,
   UserSummary,
+  WorkspaceListResponse,
   WorkspaceResponse,
 } from ".";
 
@@ -63,8 +68,40 @@ export const getWorkspaceResponseMock = (
   overrideResponse: Partial<WorkspaceResponse> = {}
 ): WorkspaceResponse => ({
   workspaceId: getTsidMock(),
-  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 1, max: 80 } }),
+  description: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 500 } }),
+    null,
+  ]),
+  isDefault: faker.datatype.boolean(),
+  createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
+});
+
+export const getWorkspaceListResponseMock = (
+  overrideResponse: Partial<WorkspaceListResponse> = {}
+): WorkspaceListResponse => ({
+  items: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1
+  ).map(() => ({ ...getWorkspaceResponseMock() })),
+  ...overrideResponse,
+});
+
+export const getCreateWorkspaceRequestMock = (
+  overrideResponse: Partial<CreateWorkspaceRequest> = {}
+): CreateWorkspaceRequest => ({
+  name: faker.string.alpha({ length: { min: 1, max: 80 } }),
+  description: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 500 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateWorkspaceRequestMock = (): UpdateWorkspaceRequest => ({
+  ...getCreateWorkspaceRequestMock(),
 });
 
 export const getFolderResponseMock = (
@@ -173,24 +210,11 @@ export const getTranscriptionSessionResponseMock = (
   sessionId: getTsidMock(),
   noteId: getTsidMock(),
   status: getTranscriptionSessionStatusMock(),
-  language: faker.helpers.arrayElement([
-    faker.helpers.fromRegExp("^[a-z]{2}$"),
-    null,
-  ]),
+  recordedDurationMs: faker.number.int({ min: 0 }),
   startedBy: { ...getUserSummaryMock() },
   startedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
   endedAt: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
-    null,
-  ]),
-  ...overrideResponse,
-});
-
-export const getCreateTranscriptionSessionRequestMock = (
-  overrideResponse: Partial<CreateTranscriptionSessionRequest> = {}
-): CreateTranscriptionSessionRequest => ({
-  language: faker.helpers.arrayElement([
-    faker.helpers.fromRegExp("^[a-z]{2}$"),
     null,
   ]),
   ...overrideResponse,
@@ -252,12 +276,19 @@ export const getTranscriptSegmentCursorPageResponseMock = (
   ...overrideResponse,
 });
 
-export const getCurrentUserInfoResponseMock = (
-  overrideResponse: Partial<CurrentUserInfoResponse> = {}
-): CurrentUserInfoResponse => ({
+export const getCurrentUserResponseMock = (
+  overrideResponse: Partial<CurrentUserResponse> = {}
+): CurrentUserResponse => ({
   userId: getTsidMock(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   email: faker.internet.email(),
+  ...overrideResponse,
+});
+
+export const getUpdateCurrentUserRequestMock = (
+  overrideResponse: Partial<UpdateCurrentUserRequest> = {}
+): UpdateCurrentUserRequest => ({
+  name: faker.string.alpha({ length: { min: 1, max: 80 } }),
   ...overrideResponse,
 });
 
@@ -315,161 +346,133 @@ export const getAppErrorBodyMock = (
   ...overrideResponse,
 });
 
-export const getAppResponseCurrentUserInfoResponseMock = (
-  overrideResponse: Partial<AppResponseCurrentUserInfoResponse> = {}
-): AppResponseCurrentUserInfoResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getCurrentUserInfoResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+export const getAppErrorResponseMock = (
+  overrideResponse: Partial<AppErrorResponse> = {}
+): AppErrorResponse => ({
+  success: faker.helpers.arrayElement([false] as const),
+  error: { ...getAppErrorBodyMock() },
+  ...overrideResponse,
+});
+
+export const getAppResponseCurrentUserResponseMock = (
+  overrideResponse: Partial<AppResponseCurrentUserResponse> = {}
+): AppResponseCurrentUserResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getCurrentUserResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseRefreshTokensResponseMock = (
   overrideResponse: Partial<AppResponseRefreshTokensResponse> = {}
 ): AppResponseRefreshTokensResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getRefreshTokensResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getRefreshTokensResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseLogoutResponseMock = (
   overrideResponse: Partial<AppResponseLogoutResponse> = {}
 ): AppResponseLogoutResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getLogoutResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getLogoutResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseWorkspaceResponseMock = (
   overrideResponse: Partial<AppResponseWorkspaceResponse> = {}
 ): AppResponseWorkspaceResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getWorkspaceResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
+  ...overrideResponse,
+});
+
+export const getAppResponseWorkspaceListResponseMock = (
+  overrideResponse: Partial<AppResponseWorkspaceListResponse> = {}
+): AppResponseWorkspaceListResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceListResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseFolderResponseMock = (
   overrideResponse: Partial<AppResponseFolderResponse> = {}
 ): AppResponseFolderResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getFolderResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getFolderResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseFolderListResponseMock = (
   overrideResponse: Partial<AppResponseFolderListResponse> = {}
 ): AppResponseFolderListResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    Array.from(
-      { length: faker.number.int({ min: 1, max: 10 }) },
-      (_, i) => i + 1
-    ).map(() => ({ ...getFolderResponseMock() })),
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1
+  ).map(() => ({ ...getFolderResponseMock() })),
   ...overrideResponse,
 });
 
 export const getAppResponseNoteResponseMock = (
   overrideResponse: Partial<AppResponseNoteResponse> = {}
 ): AppResponseNoteResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getNoteResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseNoteCursorPageResponseMock = (
   overrideResponse: Partial<AppResponseNoteCursorPageResponse> = {}
 ): AppResponseNoteCursorPageResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getNoteCursorPageResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteCursorPageResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseTranscriptionSessionResponseMock = (
   overrideResponse: Partial<AppResponseTranscriptionSessionResponse> = {}
 ): AppResponseTranscriptionSessionResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptionSessionResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptionSessionResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseTranscriptionConnectionResponseMock = (
   overrideResponse: Partial<AppResponseTranscriptionConnectionResponse> = {}
 ): AppResponseTranscriptionConnectionResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptionConnectionResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptionConnectionResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseActiveTranscriptionSessionResponseMock = (
   overrideResponse: Partial<AppResponseActiveTranscriptionSessionResponse> = {}
 ): AppResponseActiveTranscriptionSessionResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getActiveTranscriptionSessionResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getActiveTranscriptionSessionResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseTranscriptionSessionCursorPageResponseMock = (
   overrideResponse: Partial<AppResponseTranscriptionSessionCursorPageResponse> = {}
 ): AppResponseTranscriptionSessionCursorPageResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptionSessionCursorPageResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptionSessionCursorPageResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseTranscriptSegmentCursorPageResponseMock = (
   overrideResponse: Partial<AppResponseTranscriptSegmentCursorPageResponse> = {}
 ): AppResponseTranscriptSegmentCursorPageResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptSegmentCursorPageResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptSegmentCursorPageResponseMock() },
   ...overrideResponse,
 });
 
 export const getAppResponseUnitMock = (
   overrideResponse: Partial<AppResponseUnit> = {}
 ): AppResponseUnit => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{}, null]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: {},
   ...overrideResponse,
 });

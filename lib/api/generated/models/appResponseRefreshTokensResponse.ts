@@ -5,11 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { AppErrorBody } from "./appErrorBody";
 import type { RefreshTokensResponse } from "./refreshTokensResponse";
 
 export interface AppResponseRefreshTokensResponse {
-  success: boolean;
-  data?: RefreshTokensResponse;
-  error?: AppErrorBody;
+  success: true;
+  data: RefreshTokensResponse;
 }

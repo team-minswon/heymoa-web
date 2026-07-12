@@ -14,7 +14,6 @@ import type {
 } from "../models";
 
 import {
-  getAppErrorBodyMock,
   getNoteCursorPageResponseMock,
   getNoteResponseMock,
 } from "../models/index.faker";
@@ -24,47 +23,39 @@ export const getListWorkspaceNotesResponseMock = (
     Extract<AppResponseNoteCursorPageResponse, object>
   > = {}
 ): AppResponseNoteCursorPageResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getNoteCursorPageResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteCursorPageResponseMock() },
   ...overrideResponse,
 });
 
 export const getCreateNoteResponseMock = (
   overrideResponse: Partial<Extract<AppResponseNoteResponse, object>> = {}
 ): AppResponseNoteResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getNoteResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteResponseMock() },
   ...overrideResponse,
 });
 
 export const getGetNoteResponseMock = (
   overrideResponse: Partial<Extract<AppResponseNoteResponse, object>> = {}
 ): AppResponseNoteResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getNoteResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteResponseMock() },
   ...overrideResponse,
 });
 
 export const getUpdateNoteResponseMock = (
   overrideResponse: Partial<Extract<AppResponseNoteResponse, object>> = {}
 ): AppResponseNoteResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getNoteResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteResponseMock() },
   ...overrideResponse,
 });
 
 export const getDeleteNoteResponseMock = (
   overrideResponse: Partial<Extract<AppResponseUnit, object>> = {}
 ): AppResponseUnit => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{}, null]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: {},
   ...overrideResponse,
 });

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { LandingClient } from "@/components/heymoa/landing-client";
-import { getDefaultWorkspace } from "@/lib/api/generated/workspace/workspace";
+import { listWorkspaces } from "@/lib/api/generated/workspace/workspace";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 
 export default async function Home() {
@@ -12,13 +12,16 @@ export default async function Home() {
     try {
       const headersList = await headers();
       const cookie = headersList.get("cookie");
-      
-      const workspaceResponse = await getDefaultWorkspace({
+
+      const workspaceResponse = await listWorkspaces({
         headers: { cookie: cookie || "" },
       });
-      
+
       if (workspaceResponse.status === 200 && workspaceResponse.data.success) {
-        const workspaceId = workspaceResponse.data.data?.workspaceId;
+        const workspaces = workspaceResponse.data.data.items;
+        const workspaceId =
+          workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
+          workspaces[0]?.workspaceId;
         if (workspaceId) {
           redirect(`/w/${workspaceId}`);
         }

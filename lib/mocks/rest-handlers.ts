@@ -1,6 +1,5 @@
 import type {
   CreateNoteRequest,
-  CreateTranscriptionSessionRequest,
   FolderNameRequest,
   UpdateNoteRequest,
 } from "@/lib/api/generated/models";
@@ -11,7 +10,7 @@ import {
   getListNoteTranscriptSegmentsMockHandler,
   getListNoteTranscriptionSessionsMockHandler,
 } from "@/lib/api/generated/transcription/transcription.msw";
-import { getGetDefaultWorkspaceMockHandler } from "@/lib/api/generated/workspace/workspace.msw";
+import { getListWorkspacesMockHandler } from "@/lib/api/generated/workspace/workspace.msw";
 import { HttpResponse, http } from "msw";
 
 import { mockDb } from "@/lib/mocks/db";
@@ -75,7 +74,7 @@ function withStore<T>(operation: () => T) {
 }
 
 export const restHandlers = [
-  getGetDefaultWorkspaceMockHandler(success(mockDb.workspace)),
+  getListWorkspacesMockHandler(success({ items: [mockDb.workspace] })),
   http.get("*/v1/workspaces/:workspaceId", ({ params }) =>
     id(params.workspaceId) === mockDb.workspace.workspaceId
       ? HttpResponse.json(success(mockDb.workspace))
@@ -140,20 +139,16 @@ export const restHandlers = [
   http.delete("*/v1/notes/:noteId/folders/:folderId", ({ params }) =>
     withStore(() => mockDb.detachFolder(id(params.noteId), id(params.folderId)))
   ),
-  http.post(
-    "*/v1/notes/:noteId/transcription-sessions",
-    async ({ request, params }) => {
-      const body = (await request.json()) as CreateTranscriptionSessionRequest;
-      return withStore(() => {
-        const session = mockDb.createSession(id(params.noteId), body);
-        return {
-          session,
-          socketUrl: `ws://localhost:8080/v1/transcription-sessions/${session.sessionId}/stream?ticket=mock-ticket`,
-          ticketExpiresAt: "2026-07-11T09:01:00Z",
-        };
-      });
-    }
-  ),
+  http.post("*/v1/notes/:noteId/transcription-sessions", ({ params }) => {
+    return withStore(() => {
+      const session = mockDb.createSession(id(params.noteId));
+      return {
+        session,
+        socketUrl: `ws://localhost:8080/v1/transcription-sessions/${session.sessionId}/stream?ticket=mock-ticket`,
+        ticketExpiresAt: "2026-07-11T09:01:00Z",
+      };
+    });
+  }),
   getListNoteTranscriptionSessionsMockHandler(({ request, params }) =>
     success(mockDb.listSessions(id(params.noteId), pageOptions(request)))
   ),

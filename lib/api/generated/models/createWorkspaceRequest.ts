@@ -6,10 +6,15 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 
-export interface CreateTranscriptionSessionRequest {
+export interface CreateWorkspaceRequest {
   /**
-   * @nullable
-   * @pattern ^[a-z]{2}$
+   * @minLength 1
+   * @maxLength 80
    */
-  language: string | null;
+  name: string;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  description: string | null;
 }

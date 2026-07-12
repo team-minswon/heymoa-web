@@ -39,8 +39,6 @@ describe("WorkspaceToolbar", () => {
         <WorkspaceToolbar
           workspaceId="01K0000000000"
           currentLabel="모든 노트"
-          language="ko"
-          onLanguageChange={vi.fn()}
         />
       </SidebarProvider>
     );
@@ -59,12 +57,7 @@ describe("WorkspaceToolbar", () => {
     recording.elapsedMs = 12_000;
     render(
       <SidebarProvider>
-        <WorkspaceToolbar
-          workspaceId="01K0000000000"
-          currentLabel="주간"
-          language="ko"
-          onLanguageChange={vi.fn()}
-        />
+        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
       </SidebarProvider>
     );
 

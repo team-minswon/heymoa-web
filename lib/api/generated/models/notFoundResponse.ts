@@ -5,9 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { AppResponseUnit } from "./appResponseUnit";
+import type { AppErrorResponse } from "./appErrorResponse";
 
 /**
  * 리소스를 찾을 수 없음
  */
-export type NotFoundResponse = AppResponseUnit;
+export type NotFoundResponse = AppErrorResponse;

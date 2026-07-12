@@ -7,23 +7,26 @@
  */
 import { faker } from "@faker-js/faker";
 
-import type { AppResponseCurrentUserInfoResponse } from "../models";
+import type { AppResponseCurrentUserResponse } from "../models";
 
-import {
-  getAppErrorBodyMock,
-  getCurrentUserInfoResponseMock,
-} from "../models/index.faker";
+import { getCurrentUserResponseMock } from "../models/index.faker";
 
-export const getGetV1UsersMeResponseMock = (
+export const getGetCurrentUserResponseMock = (
   overrideResponse: Partial<
-    Extract<AppResponseCurrentUserInfoResponse, object>
+    Extract<AppResponseCurrentUserResponse, object>
   > = {}
-): AppResponseCurrentUserInfoResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getCurrentUserInfoResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+): AppResponseCurrentUserResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getCurrentUserResponseMock() },
+  ...overrideResponse,
+});
+
+export const getUpdateCurrentUserResponseMock = (
+  overrideResponse: Partial<
+    Extract<AppResponseCurrentUserResponse, object>
+  > = {}
+): AppResponseCurrentUserResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getCurrentUserResponseMock() },
   ...overrideResponse,
 });

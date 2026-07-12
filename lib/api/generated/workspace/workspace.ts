@@ -5,21 +5,27 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
+  AppResponseWorkspaceListResponse,
   AppResponseWorkspaceResponse,
+  BadRequestResponse,
+  CreateWorkspaceRequest,
   ForbiddenResponse,
   InternalServerErrorResponse,
   NotFoundResponse,
@@ -31,103 +37,98 @@ import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-export type getDefaultWorkspaceResponse200 = {
-  data: AppResponseWorkspaceResponse;
+export type listWorkspacesResponse200 = {
+  data: AppResponseWorkspaceListResponse;
   status: 200;
 };
 
-export type getDefaultWorkspaceResponse401 = {
+export type listWorkspacesResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
 };
 
-export type getDefaultWorkspaceResponse404 = {
+export type listWorkspacesResponse404 = {
   data: NotFoundResponse;
   status: 404;
 };
 
-export type getDefaultWorkspaceResponse500 = {
+export type listWorkspacesResponse500 = {
   data: InternalServerErrorResponse;
   status: 500;
 };
 
-export type getDefaultWorkspaceResponseSuccess =
-  getDefaultWorkspaceResponse200 & {
-    headers: Headers;
-  };
-export type getDefaultWorkspaceResponseError = (
-  | getDefaultWorkspaceResponse401
-  | getDefaultWorkspaceResponse404
-  | getDefaultWorkspaceResponse500
+export type listWorkspacesResponseSuccess = listWorkspacesResponse200 & {
+  headers: Headers;
+};
+export type listWorkspacesResponseError = (
+  | listWorkspacesResponse401
+  | listWorkspacesResponse404
+  | listWorkspacesResponse500
 ) & {
   headers: Headers;
 };
 
-export type getDefaultWorkspaceResponse =
-  | getDefaultWorkspaceResponseSuccess
-  | getDefaultWorkspaceResponseError;
+export type listWorkspacesResponse =
+  | listWorkspacesResponseSuccess
+  | listWorkspacesResponseError;
 
-export const getGetDefaultWorkspaceUrl = () => {
-  return `/v1/workspaces/default`;
+export const getListWorkspacesUrl = () => {
+  return `/v1/workspaces`;
 };
 
 /**
- * @summary 기본 워크스페이스 조회
+ * @summary 워크스페이스 목록 조회
  */
-export const getDefaultWorkspace = async (
+export const listWorkspaces = async (
   options?: RequestInit
-): Promise<getDefaultWorkspaceResponse> => {
-  return apiFetch<getDefaultWorkspaceResponse>(getGetDefaultWorkspaceUrl(), {
+): Promise<listWorkspacesResponse> => {
+  return apiFetch<listWorkspacesResponse>(getListWorkspacesUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetDefaultWorkspaceQueryKey = () => {
-  return [`/v1/workspaces/default`] as const;
+export const getListWorkspacesQueryKey = () => {
+  return [`/v1/workspaces`] as const;
 };
 
-export const getGetDefaultWorkspaceQueryOptions = <
-  TData = Awaited<ReturnType<typeof getDefaultWorkspace>>,
+export const getListWorkspacesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWorkspaces>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
     | InternalServerErrorResponse,
 >(options?: {
   query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof getDefaultWorkspace>>,
-      TError,
-      TData
-    >
+    UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData>
   >;
   request?: SecondParameter<typeof apiFetch>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetDefaultWorkspaceQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListWorkspacesQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getDefaultWorkspace>>
-  > = ({ signal }) => getDefaultWorkspace({ signal, ...requestOptions });
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaces>>> = ({
+    signal,
+  }) => listWorkspaces({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getDefaultWorkspace>>,
+    Awaited<ReturnType<typeof listWorkspaces>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetDefaultWorkspaceQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getDefaultWorkspace>>
+export type ListWorkspacesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listWorkspaces>>
 >;
-export type GetDefaultWorkspaceQueryError =
+export type ListWorkspacesQueryError =
   | UnauthorizedResponse
   | NotFoundResponse
   | InternalServerErrorResponse;
 
-export function useGetDefaultWorkspace<
-  TData = Awaited<ReturnType<typeof getDefaultWorkspace>>,
+export function useListWorkspaces<
+  TData = Awaited<ReturnType<typeof listWorkspaces>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -135,17 +136,13 @@ export function useGetDefaultWorkspace<
 >(
   options: {
     query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getDefaultWorkspace>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData>
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDefaultWorkspace>>,
+          Awaited<ReturnType<typeof listWorkspaces>>,
           TError,
-          Awaited<ReturnType<typeof getDefaultWorkspace>>
+          Awaited<ReturnType<typeof listWorkspaces>>
         >,
         "initialData"
       >;
@@ -155,8 +152,8 @@ export function useGetDefaultWorkspace<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetDefaultWorkspace<
-  TData = Awaited<ReturnType<typeof getDefaultWorkspace>>,
+export function useListWorkspaces<
+  TData = Awaited<ReturnType<typeof listWorkspaces>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -164,17 +161,13 @@ export function useGetDefaultWorkspace<
 >(
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getDefaultWorkspace>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData>
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDefaultWorkspace>>,
+          Awaited<ReturnType<typeof listWorkspaces>>,
           TError,
-          Awaited<ReturnType<typeof getDefaultWorkspace>>
+          Awaited<ReturnType<typeof listWorkspaces>>
         >,
         "initialData"
       >;
@@ -184,8 +177,8 @@ export function useGetDefaultWorkspace<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetDefaultWorkspace<
-  TData = Awaited<ReturnType<typeof getDefaultWorkspace>>,
+export function useListWorkspaces<
+  TData = Awaited<ReturnType<typeof listWorkspaces>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -193,11 +186,7 @@ export function useGetDefaultWorkspace<
 >(
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getDefaultWorkspace>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData>
     >;
     request?: SecondParameter<typeof apiFetch>;
   },
@@ -206,11 +195,11 @@ export function useGetDefaultWorkspace<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
- * @summary 기본 워크스페이스 조회
+ * @summary 워크스페이스 목록 조회
  */
 
-export function useGetDefaultWorkspace<
-  TData = Awaited<ReturnType<typeof getDefaultWorkspace>>,
+export function useListWorkspaces<
+  TData = Awaited<ReturnType<typeof listWorkspaces>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -218,11 +207,7 @@ export function useGetDefaultWorkspace<
 >(
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getDefaultWorkspace>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData>
     >;
     request?: SecondParameter<typeof apiFetch>;
   },
@@ -230,7 +215,7 @@ export function useGetDefaultWorkspace<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetDefaultWorkspaceQueryOptions(options);
+  const queryOptions = getListWorkspacesQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -240,6 +225,138 @@ export function useGetDefaultWorkspace<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+export type createWorkspaceResponse200 = {
+  data: AppResponseWorkspaceResponse;
+  status: 200;
+};
+
+export type createWorkspaceResponse400 = {
+  data: BadRequestResponse;
+  status: 400;
+};
+
+export type createWorkspaceResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type createWorkspaceResponse500 = {
+  data: InternalServerErrorResponse;
+  status: 500;
+};
+
+export type createWorkspaceResponseSuccess = createWorkspaceResponse200 & {
+  headers: Headers;
+};
+export type createWorkspaceResponseError = (
+  | createWorkspaceResponse400
+  | createWorkspaceResponse401
+  | createWorkspaceResponse500
+) & {
+  headers: Headers;
+};
+
+export type createWorkspaceResponse =
+  | createWorkspaceResponseSuccess
+  | createWorkspaceResponseError;
+
+export const getCreateWorkspaceUrl = () => {
+  return `/v1/workspaces`;
+};
+
+/**
+ * @summary 워크스페이스 생성
+ */
+export const createWorkspace = async (
+  createWorkspaceRequest: CreateWorkspaceRequest,
+  options?: RequestInit
+): Promise<createWorkspaceResponse> => {
+  return apiFetch<createWorkspaceResponse>(getCreateWorkspaceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createWorkspaceRequest),
+  });
+};
+
+export const getCreateWorkspaceMutationOptions = <
+  TError =
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWorkspace>>,
+    TError,
+    { data: CreateWorkspaceRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWorkspace>>,
+  TError,
+  { data: CreateWorkspaceRequest },
+  TContext
+> => {
+  const mutationKey = ["createWorkspace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWorkspace>>,
+    { data: CreateWorkspaceRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createWorkspace(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWorkspaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWorkspace>>
+>;
+export type CreateWorkspaceMutationBody = CreateWorkspaceRequest;
+export type CreateWorkspaceMutationError =
+  | BadRequestResponse
+  | UnauthorizedResponse
+  | InternalServerErrorResponse;
+
+/**
+ * @summary 워크스페이스 생성
+ */
+export const useCreateWorkspace = <
+  TError =
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createWorkspace>>,
+      TError,
+      { data: CreateWorkspaceRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createWorkspace>>,
+  TError,
+  { data: CreateWorkspaceRequest },
+  TContext
+> => {
+  return useMutation(getCreateWorkspaceMutationOptions(options), queryClient);
+};
 export type getWorkspaceResponse200 = {
   data: AppResponseWorkspaceResponse;
   status: 200;
@@ -453,3 +570,301 @@ export function useGetWorkspace<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type updateWorkspaceResponse200 = {
+  data: AppResponseWorkspaceResponse;
+  status: 200;
+};
+
+export type updateWorkspaceResponse400 = {
+  data: BadRequestResponse;
+  status: 400;
+};
+
+export type updateWorkspaceResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type updateWorkspaceResponse403 = {
+  data: ForbiddenResponse;
+  status: 403;
+};
+
+export type updateWorkspaceResponse404 = {
+  data: NotFoundResponse;
+  status: 404;
+};
+
+export type updateWorkspaceResponse500 = {
+  data: InternalServerErrorResponse;
+  status: 500;
+};
+
+export type updateWorkspaceResponseSuccess = updateWorkspaceResponse200 & {
+  headers: Headers;
+};
+export type updateWorkspaceResponseError = (
+  | updateWorkspaceResponse400
+  | updateWorkspaceResponse401
+  | updateWorkspaceResponse403
+  | updateWorkspaceResponse404
+  | updateWorkspaceResponse500
+) & {
+  headers: Headers;
+};
+
+export type updateWorkspaceResponse =
+  | updateWorkspaceResponseSuccess
+  | updateWorkspaceResponseError;
+
+export const getUpdateWorkspaceUrl = (workspaceId: Tsid) => {
+  return `/v1/workspaces/${workspaceId}`;
+};
+
+/**
+ * @summary 워크스페이스 수정
+ */
+export const updateWorkspace = async (
+  workspaceId: Tsid,
+  createWorkspaceRequest: CreateWorkspaceRequest,
+  options?: RequestInit
+): Promise<updateWorkspaceResponse> => {
+  return apiFetch<updateWorkspaceResponse>(getUpdateWorkspaceUrl(workspaceId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createWorkspaceRequest),
+  });
+};
+
+export const getUpdateWorkspaceMutationOptions = <
+  TError =
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateWorkspace>>,
+    TError,
+    { workspaceId: Tsid; data: CreateWorkspaceRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateWorkspace>>,
+  TError,
+  { workspaceId: Tsid; data: CreateWorkspaceRequest },
+  TContext
+> => {
+  const mutationKey = ["updateWorkspace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateWorkspace>>,
+    { workspaceId: Tsid; data: CreateWorkspaceRequest }
+  > = (props) => {
+    const { workspaceId, data } = props ?? {};
+
+    return updateWorkspace(workspaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateWorkspaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateWorkspace>>
+>;
+export type UpdateWorkspaceMutationBody = CreateWorkspaceRequest;
+export type UpdateWorkspaceMutationError =
+  | BadRequestResponse
+  | UnauthorizedResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InternalServerErrorResponse;
+
+/**
+ * @summary 워크스페이스 수정
+ */
+export const useUpdateWorkspace = <
+  TError =
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateWorkspace>>,
+      TError,
+      { workspaceId: Tsid; data: CreateWorkspaceRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateWorkspace>>,
+  TError,
+  { workspaceId: Tsid; data: CreateWorkspaceRequest },
+  TContext
+> => {
+  return useMutation(getUpdateWorkspaceMutationOptions(options), queryClient);
+};
+export type setDefaultWorkspaceResponse200 = {
+  data: AppResponseWorkspaceResponse;
+  status: 200;
+};
+
+export type setDefaultWorkspaceResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type setDefaultWorkspaceResponse403 = {
+  data: ForbiddenResponse;
+  status: 403;
+};
+
+export type setDefaultWorkspaceResponse404 = {
+  data: NotFoundResponse;
+  status: 404;
+};
+
+export type setDefaultWorkspaceResponse500 = {
+  data: InternalServerErrorResponse;
+  status: 500;
+};
+
+export type setDefaultWorkspaceResponseSuccess =
+  setDefaultWorkspaceResponse200 & {
+    headers: Headers;
+  };
+export type setDefaultWorkspaceResponseError = (
+  | setDefaultWorkspaceResponse401
+  | setDefaultWorkspaceResponse403
+  | setDefaultWorkspaceResponse404
+  | setDefaultWorkspaceResponse500
+) & {
+  headers: Headers;
+};
+
+export type setDefaultWorkspaceResponse =
+  | setDefaultWorkspaceResponseSuccess
+  | setDefaultWorkspaceResponseError;
+
+export const getSetDefaultWorkspaceUrl = (workspaceId: Tsid) => {
+  return `/v1/workspaces/${workspaceId}/default`;
+};
+
+/**
+ * @summary 기본 워크스페이스 설정
+ */
+export const setDefaultWorkspace = async (
+  workspaceId: Tsid,
+  options?: RequestInit
+): Promise<setDefaultWorkspaceResponse> => {
+  return apiFetch<setDefaultWorkspaceResponse>(
+    getSetDefaultWorkspaceUrl(workspaceId),
+    {
+      ...options,
+      method: "PUT",
+    }
+  );
+};
+
+export const getSetDefaultWorkspaceMutationOptions = <
+  TError =
+    | UnauthorizedResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDefaultWorkspace>>,
+    TError,
+    { workspaceId: Tsid },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setDefaultWorkspace>>,
+  TError,
+  { workspaceId: Tsid },
+  TContext
+> => {
+  const mutationKey = ["setDefaultWorkspace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setDefaultWorkspace>>,
+    { workspaceId: Tsid }
+  > = (props) => {
+    const { workspaceId } = props ?? {};
+
+    return setDefaultWorkspace(workspaceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetDefaultWorkspaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setDefaultWorkspace>>
+>;
+
+export type SetDefaultWorkspaceMutationError =
+  | UnauthorizedResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InternalServerErrorResponse;
+
+/**
+ * @summary 기본 워크스페이스 설정
+ */
+export const useSetDefaultWorkspace = <
+  TError =
+    | UnauthorizedResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setDefaultWorkspace>>,
+      TError,
+      { workspaceId: Tsid },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof setDefaultWorkspace>>,
+  TError,
+  { workspaceId: Tsid },
+  TContext
+> => {
+  return useMutation(
+    getSetDefaultWorkspaceMutationOptions(options),
+    queryClient
+  );
+};

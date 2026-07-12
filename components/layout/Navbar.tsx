@@ -7,21 +7,24 @@ import { usePathname, useRouter } from "next/navigation";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
-import { useGetDefaultWorkspace } from "@/lib/api/generated/workspace/workspace";
+import { useListWorkspaces } from "@/lib/api/generated/workspace/workspace";
 import { siteConfig } from "@/lib/site";
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { status } = useAuth();
-  const workspaceQuery = useGetDefaultWorkspace({
+  const workspaceQuery = useListWorkspaces({
     query: { enabled: status === "authenticated", staleTime: 5 * 60 * 1000 },
   });
   const workspaceEnvelope =
     workspaceQuery.data?.status === 200 ? workspaceQuery.data.data : undefined;
-  const workspaceId = workspaceEnvelope?.success
-    ? workspaceEnvelope.data?.workspaceId
-    : undefined;
+  const workspaces = workspaceEnvelope?.success
+    ? workspaceEnvelope.data.items
+    : [];
+  const workspaceId =
+    workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
+    workspaces[0]?.workspaceId;
   const logoHref = workspaceId ? `/w/${workspaceId}` : "/";
   const inWorkspace = pathname.startsWith("/w/");
 

@@ -30,7 +30,6 @@ import type {
   AppResponseUnit,
   BadRequestResponse,
   ConflictResponse,
-  CreateTranscriptionSessionRequest,
   ForbiddenResponse,
   InternalServerErrorResponse,
   ListNoteTranscriptSegmentsParams,
@@ -114,7 +113,6 @@ export const getCreateTranscriptionSessionUrl = (noteId: Tsid) => {
  */
 export const createTranscriptionSession = async (
   noteId: Tsid,
-  createTranscriptionSessionRequest: CreateTranscriptionSessionRequest,
   options?: RequestInit
 ): Promise<createTranscriptionSessionResponse> => {
   return apiFetch<createTranscriptionSessionResponse>(
@@ -122,8 +120,6 @@ export const createTranscriptionSession = async (
     {
       ...options,
       method: "POST",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(createTranscriptionSessionRequest),
     }
   );
 };
@@ -142,14 +138,14 @@ export const getCreateTranscriptionSessionMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createTranscriptionSession>>,
     TError,
-    { noteId: Tsid; data: CreateTranscriptionSessionRequest },
+    { noteId: Tsid },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createTranscriptionSession>>,
   TError,
-  { noteId: Tsid; data: CreateTranscriptionSessionRequest },
+  { noteId: Tsid },
   TContext
 > => {
   const mutationKey = ["createTranscriptionSession"];
@@ -163,11 +159,11 @@ export const getCreateTranscriptionSessionMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createTranscriptionSession>>,
-    { noteId: Tsid; data: CreateTranscriptionSessionRequest }
+    { noteId: Tsid }
   > = (props) => {
-    const { noteId, data } = props ?? {};
+    const { noteId } = props ?? {};
 
-    return createTranscriptionSession(noteId, data, requestOptions);
+    return createTranscriptionSession(noteId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -176,8 +172,7 @@ export const getCreateTranscriptionSessionMutationOptions = <
 export type CreateTranscriptionSessionMutationResult = NonNullable<
   Awaited<ReturnType<typeof createTranscriptionSession>>
 >;
-export type CreateTranscriptionSessionMutationBody =
-  CreateTranscriptionSessionRequest;
+
 export type CreateTranscriptionSessionMutationError =
   | BadRequestResponse
   | UnauthorizedResponse
@@ -205,7 +200,7 @@ export const useCreateTranscriptionSession = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createTranscriptionSession>>,
       TError,
-      { noteId: Tsid; data: CreateTranscriptionSessionRequest },
+      { noteId: Tsid },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -214,7 +209,7 @@ export const useCreateTranscriptionSession = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof createTranscriptionSession>>,
   TError,
-  { noteId: Tsid; data: CreateTranscriptionSessionRequest },
+  { noteId: Tsid },
   TContext
 > => {
   return useMutation(

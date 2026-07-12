@@ -5,9 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { AppResponseUnit } from "./appResponseUnit";
+import type { AppErrorResponse } from "./appErrorResponse";
 
 /**
  * STT provider를 사용할 수 없음
  */
-export type ServiceUnavailableResponse = AppResponseUnit;
+export type ServiceUnavailableResponse = AppErrorResponse;

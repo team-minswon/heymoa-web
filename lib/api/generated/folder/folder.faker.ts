@@ -15,7 +15,6 @@ import type {
 } from "../models";
 
 import {
-  getAppErrorBodyMock,
   getFolderResponseMock,
   getNoteResponseMock,
 } from "../models/index.faker";
@@ -23,59 +22,50 @@ import {
 export const getListWorkspaceFoldersResponseMock = (
   overrideResponse: Partial<Extract<AppResponseFolderListResponse, object>> = {}
 ): AppResponseFolderListResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    Array.from(
-      { length: faker.number.int({ min: 1, max: 10 }) },
-      (_, i) => i + 1
-    ).map(() => ({ ...getFolderResponseMock() })),
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1
+  ).map(() => ({ ...getFolderResponseMock() })),
   ...overrideResponse,
 });
 
 export const getCreateFolderResponseMock = (
   overrideResponse: Partial<Extract<AppResponseFolderResponse, object>> = {}
 ): AppResponseFolderResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getFolderResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getFolderResponseMock() },
   ...overrideResponse,
 });
 
 export const getUpdateFolderResponseMock = (
   overrideResponse: Partial<Extract<AppResponseFolderResponse, object>> = {}
 ): AppResponseFolderResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getFolderResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getFolderResponseMock() },
   ...overrideResponse,
 });
 
 export const getDeleteFolderResponseMock = (
   overrideResponse: Partial<Extract<AppResponseUnit, object>> = {}
 ): AppResponseUnit => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{}, null]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: {},
   ...overrideResponse,
 });
 
 export const getAttachNoteFolderResponseMock = (
   overrideResponse: Partial<Extract<AppResponseNoteResponse, object>> = {}
 ): AppResponseNoteResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getNoteResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteResponseMock() },
   ...overrideResponse,
 });
 
 export const getDetachNoteFolderResponseMock = (
   overrideResponse: Partial<Extract<AppResponseNoteResponse, object>> = {}
 ): AppResponseNoteResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getNoteResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getNoteResponseMock() },
   ...overrideResponse,
 });

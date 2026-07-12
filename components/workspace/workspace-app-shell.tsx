@@ -15,8 +15,6 @@ import { useGetWorkspace } from "@/lib/api/generated/workspace/workspace";
 type WorkspaceShellState = {
   selectedFolderId: string | null;
   setSelectedFolderId: (folderId: string | null) => void;
-  language: string;
-  setLanguage: (language: string) => void;
 };
 
 const WorkspaceShellContext = createContext<WorkspaceShellState | null>(null);
@@ -41,7 +39,6 @@ export function WorkspaceAppShell({
   children: React.ReactNode;
 }) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [language, setLanguage] = useState("ko");
   const workspaceQuery = useGetWorkspace(workspaceId);
   const foldersQuery = useListWorkspaceFolders(workspaceId);
   const workspace =
@@ -56,10 +53,8 @@ export function WorkspaceAppShell({
     () => ({
       selectedFolderId,
       setSelectedFolderId,
-      language,
-      setLanguage,
     }),
-    [language, selectedFolderId]
+    [selectedFolderId]
   );
   const currentLabel =
     folders.find((folder) => folder.folderId === selectedFolderId)?.name ??
@@ -85,8 +80,6 @@ export function WorkspaceAppShell({
               <WorkspaceToolbar
                 workspaceId={workspaceId}
                 currentLabel={currentLabel}
-                language={language}
-                onLanguageChange={setLanguage}
                 activeNoteId={activeNoteId}
               />
               {children}

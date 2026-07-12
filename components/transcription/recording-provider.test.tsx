@@ -15,7 +15,7 @@ describe("RecordingProvider", () => {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
       status: "CONNECTING" as const,
-      language: "ko",
+      recordedDurationMs: 0,
       startedBy: { userId: "01K0000000003", name: "테스트 유저" },
       startedAt: "2026-07-11T00:00:00Z",
       endedAt: null,
@@ -73,7 +73,7 @@ describe("RecordingProvider", () => {
     );
     const { result, rerender } = renderHook(() => useRecording(), { wrapper });
 
-    await act(() => result.current.start(session.noteId, "ko"));
+    await act(() => result.current.start(session.noteId));
     rerender();
     expect(result.current.session?.sessionId).toBe("01K0000000010");
     expect(result.current.elapsedMs).toBeLessThan(1000);

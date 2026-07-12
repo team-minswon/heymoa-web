@@ -5,7 +5,7 @@ import { Pause, Radio, Square, Waves } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { useGetDefaultWorkspace } from "@/lib/api/generated/workspace/workspace";
+import { useListWorkspaces } from "@/lib/api/generated/workspace/workspace";
 import { useRecording } from "@/components/transcription/recording-provider";
 import { isWorkspaceRoute } from "@/lib/routes/app-route";
 
@@ -26,7 +26,7 @@ function formatElapsed(elapsedMs: number) {
 export function GlobalRecordingIndicator() {
   const pathname = usePathname();
   const { session, elapsedMs, pause, resume, stop } = useRecording();
-  const workspaceQuery = useGetDefaultWorkspace({
+  const workspaceQuery = useListWorkspaces({
     query: { enabled: Boolean(session), staleTime: 5 * 60 * 1000 },
   });
 
@@ -39,9 +39,12 @@ export function GlobalRecordingIndicator() {
 
   const workspaceEnvelope =
     workspaceQuery.data?.status === 200 ? workspaceQuery.data.data : undefined;
-  const workspaceId = workspaceEnvelope?.success
-    ? workspaceEnvelope.data?.workspaceId
-    : undefined;
+  const workspaces = workspaceEnvelope?.success
+    ? workspaceEnvelope.data.items
+    : [];
+  const workspaceId =
+    workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
+    workspaces[0]?.workspaceId;
   const href = workspaceId
     ? `/w/${workspaceId}/notes/${session.noteId}?view=full&tab=transcript`
     : "#";

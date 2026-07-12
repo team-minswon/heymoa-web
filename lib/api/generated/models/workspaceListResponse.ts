@@ -7,7 +7,6 @@
  */
 import type { WorkspaceResponse } from "./workspaceResponse";
 
-export interface AppResponseWorkspaceResponse {
-  success: true;
-  data: WorkspaceResponse;
+export interface WorkspaceListResponse {
+  items: WorkspaceResponse[];
 }

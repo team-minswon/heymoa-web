@@ -8,13 +8,6 @@ import { useRecording } from "@/components/transcription/recording-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useCreateNote } from "@/lib/api/generated/note/note";
 
@@ -28,14 +21,10 @@ function formatElapsed(elapsedMs: number) {
 export function WorkspaceToolbar({
   workspaceId,
   currentLabel,
-  language,
-  onLanguageChange,
   activeNoteId,
 }: {
   workspaceId: string;
   currentLabel: string;
-  language: string;
-  onLanguageChange: (language: string) => void;
   activeNoteId?: string;
 }) {
   const router = useRouter();
@@ -65,7 +54,7 @@ export function WorkspaceToolbar({
       noteId = response.data.data.noteId;
     }
     openNote(noteId);
-    await start(noteId, language === "auto" ? null : language);
+    await start(noteId);
   };
 
   const isRecordingOtherNote = isActive && !activeNoteId;
@@ -76,25 +65,14 @@ export function WorkspaceToolbar({
         <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground">Workspace</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Workspace
+            </p>
             <h1 className="truncate text-base font-semibold">{currentLabel}</h1>
           </div>
 
           {!isActive && (
             <div className="flex items-center gap-2">
-              <Select
-                value={language}
-                onValueChange={(value) => value && onLanguageChange(value)}
-              >
-                <SelectTrigger aria-label="기록 언어" className="w-28">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ko">한국어</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="auto">자동 감지</SelectItem>
-                </SelectContent>
-              </Select>
               <Button
                 type="button"
                 onClick={() => void handleStart()}

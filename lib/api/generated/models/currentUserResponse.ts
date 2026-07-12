@@ -5,9 +5,10 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { WorkspaceResponse } from "./workspaceResponse";
+import type { Tsid } from "./tsid";
 
-export interface AppResponseWorkspaceResponse {
-  success: true;
-  data: WorkspaceResponse;
+export interface CurrentUserResponse {
+  userId: Tsid;
+  name: string;
+  email: string;
 }

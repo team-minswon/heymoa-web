@@ -5,122 +5,127 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
-  AppResponseCurrentUserInfoResponse,
+  AppResponseCurrentUserResponse,
+  BadRequestResponse,
   InternalServerErrorResponse,
   NotFoundResponse,
   UnauthorizedResponse,
+  UpdateCurrentUserRequest,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-export type getV1UsersMeResponse200 = {
-  data: AppResponseCurrentUserInfoResponse;
+export type getCurrentUserResponse200 = {
+  data: AppResponseCurrentUserResponse;
   status: 200;
 };
 
-export type getV1UsersMeResponse401 = {
+export type getCurrentUserResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
 };
 
-export type getV1UsersMeResponse404 = {
+export type getCurrentUserResponse404 = {
   data: NotFoundResponse;
   status: 404;
 };
 
-export type getV1UsersMeResponse500 = {
+export type getCurrentUserResponse500 = {
   data: InternalServerErrorResponse;
   status: 500;
 };
 
-export type getV1UsersMeResponseSuccess = getV1UsersMeResponse200 & {
+export type getCurrentUserResponseSuccess = getCurrentUserResponse200 & {
   headers: Headers;
 };
-export type getV1UsersMeResponseError = (
-  | getV1UsersMeResponse401
-  | getV1UsersMeResponse404
-  | getV1UsersMeResponse500
+export type getCurrentUserResponseError = (
+  | getCurrentUserResponse401
+  | getCurrentUserResponse404
+  | getCurrentUserResponse500
 ) & {
   headers: Headers;
 };
 
-export type getV1UsersMeResponse =
-  | getV1UsersMeResponseSuccess
-  | getV1UsersMeResponseError;
+export type getCurrentUserResponse =
+  | getCurrentUserResponseSuccess
+  | getCurrentUserResponseError;
 
-export const getGetV1UsersMeUrl = () => {
+export const getGetCurrentUserUrl = () => {
   return `/v1/users/me`;
 };
 
 /**
  * @summary 현재 사용자 조회
  */
-export const getV1UsersMe = async (
+export const getCurrentUser = async (
   options?: RequestInit
-): Promise<getV1UsersMeResponse> => {
-  return apiFetch<getV1UsersMeResponse>(getGetV1UsersMeUrl(), {
+): Promise<getCurrentUserResponse> => {
+  return apiFetch<getCurrentUserResponse>(getGetCurrentUserUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetV1UsersMeQueryKey = () => {
+export const getGetCurrentUserQueryKey = () => {
   return [`/v1/users/me`] as const;
 };
 
-export const getGetV1UsersMeQueryOptions = <
-  TData = Awaited<ReturnType<typeof getV1UsersMe>>,
+export const getGetCurrentUserQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCurrentUser>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
     | InternalServerErrorResponse,
 >(options?: {
   query?: Partial<
-    UseQueryOptions<Awaited<ReturnType<typeof getV1UsersMe>>, TError, TData>
+    UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
   >;
   request?: SecondParameter<typeof apiFetch>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetV1UsersMeQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetCurrentUserQueryKey();
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getV1UsersMe>>> = ({
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentUser>>> = ({
     signal,
-  }) => getV1UsersMe({ signal, ...requestOptions });
+  }) => getCurrentUser({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getV1UsersMe>>,
+    Awaited<ReturnType<typeof getCurrentUser>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetV1UsersMeQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getV1UsersMe>>
+export type GetCurrentUserQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCurrentUser>>
 >;
-export type GetV1UsersMeQueryError =
+export type GetCurrentUserQueryError =
   | UnauthorizedResponse
   | NotFoundResponse
   | InternalServerErrorResponse;
 
-export function useGetV1UsersMe<
-  TData = Awaited<ReturnType<typeof getV1UsersMe>>,
+export function useGetCurrentUser<
+  TData = Awaited<ReturnType<typeof getCurrentUser>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -128,13 +133,13 @@ export function useGetV1UsersMe<
 >(
   options: {
     query: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getV1UsersMe>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getV1UsersMe>>,
+          Awaited<ReturnType<typeof getCurrentUser>>,
           TError,
-          Awaited<ReturnType<typeof getV1UsersMe>>
+          Awaited<ReturnType<typeof getCurrentUser>>
         >,
         "initialData"
       >;
@@ -144,8 +149,8 @@ export function useGetV1UsersMe<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetV1UsersMe<
-  TData = Awaited<ReturnType<typeof getV1UsersMe>>,
+export function useGetCurrentUser<
+  TData = Awaited<ReturnType<typeof getCurrentUser>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -153,13 +158,13 @@ export function useGetV1UsersMe<
 >(
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getV1UsersMe>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getV1UsersMe>>,
+          Awaited<ReturnType<typeof getCurrentUser>>,
           TError,
-          Awaited<ReturnType<typeof getV1UsersMe>>
+          Awaited<ReturnType<typeof getCurrentUser>>
         >,
         "initialData"
       >;
@@ -169,8 +174,8 @@ export function useGetV1UsersMe<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetV1UsersMe<
-  TData = Awaited<ReturnType<typeof getV1UsersMe>>,
+export function useGetCurrentUser<
+  TData = Awaited<ReturnType<typeof getCurrentUser>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -178,7 +183,7 @@ export function useGetV1UsersMe<
 >(
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getV1UsersMe>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
     >;
     request?: SecondParameter<typeof apiFetch>;
   },
@@ -190,8 +195,8 @@ export function useGetV1UsersMe<
  * @summary 현재 사용자 조회
  */
 
-export function useGetV1UsersMe<
-  TData = Awaited<ReturnType<typeof getV1UsersMe>>,
+export function useGetCurrentUser<
+  TData = Awaited<ReturnType<typeof getCurrentUser>>,
   TError =
     | UnauthorizedResponse
     | NotFoundResponse
@@ -199,7 +204,7 @@ export function useGetV1UsersMe<
 >(
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getV1UsersMe>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
     >;
     request?: SecondParameter<typeof apiFetch>;
   },
@@ -207,7 +212,7 @@ export function useGetV1UsersMe<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetV1UsersMeQueryOptions(options);
+  const queryOptions = getGetCurrentUserQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -216,3 +221,136 @@ export function useGetV1UsersMe<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type updateCurrentUserResponse200 = {
+  data: AppResponseCurrentUserResponse;
+  status: 200;
+};
+
+export type updateCurrentUserResponse400 = {
+  data: BadRequestResponse;
+  status: 400;
+};
+
+export type updateCurrentUserResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type updateCurrentUserResponse500 = {
+  data: InternalServerErrorResponse;
+  status: 500;
+};
+
+export type updateCurrentUserResponseSuccess = updateCurrentUserResponse200 & {
+  headers: Headers;
+};
+export type updateCurrentUserResponseError = (
+  | updateCurrentUserResponse400
+  | updateCurrentUserResponse401
+  | updateCurrentUserResponse500
+) & {
+  headers: Headers;
+};
+
+export type updateCurrentUserResponse =
+  | updateCurrentUserResponseSuccess
+  | updateCurrentUserResponseError;
+
+export const getUpdateCurrentUserUrl = () => {
+  return `/v1/users/me`;
+};
+
+/**
+ * @summary 현재 사용자 수정
+ */
+export const updateCurrentUser = async (
+  updateCurrentUserRequest: UpdateCurrentUserRequest,
+  options?: RequestInit
+): Promise<updateCurrentUserResponse> => {
+  return apiFetch<updateCurrentUserResponse>(getUpdateCurrentUserUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateCurrentUserRequest),
+  });
+};
+
+export const getUpdateCurrentUserMutationOptions = <
+  TError =
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCurrentUser>>,
+    TError,
+    { data: UpdateCurrentUserRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCurrentUser>>,
+  TError,
+  { data: UpdateCurrentUserRequest },
+  TContext
+> => {
+  const mutationKey = ["updateCurrentUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCurrentUser>>,
+    { data: UpdateCurrentUserRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateCurrentUser(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCurrentUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCurrentUser>>
+>;
+export type UpdateCurrentUserMutationBody = UpdateCurrentUserRequest;
+export type UpdateCurrentUserMutationError =
+  | BadRequestResponse
+  | UnauthorizedResponse
+  | InternalServerErrorResponse;
+
+/**
+ * @summary 현재 사용자 수정
+ */
+export const useUpdateCurrentUser = <
+  TError =
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | InternalServerErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCurrentUser>>,
+      TError,
+      { data: UpdateCurrentUserRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCurrentUser>>,
+  TError,
+  { data: UpdateCurrentUserRequest },
+  TContext
+> => {
+  return useMutation(getUpdateCurrentUserMutationOptions(options), queryClient);
+};

@@ -5,9 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { WorkspaceResponse } from "./workspaceResponse";
+import type { WorkspaceListResponse } from "./workspaceListResponse";
 
-export interface AppResponseWorkspaceResponse {
+export interface AppResponseWorkspaceListResponse {
   success: true;
-  data: WorkspaceResponse;
+  data: WorkspaceListResponse;
 }

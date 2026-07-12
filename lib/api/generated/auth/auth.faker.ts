@@ -13,7 +13,6 @@ import type {
 } from "../models";
 
 import {
-  getAppErrorBodyMock,
   getLogoutResponseMock,
   getRefreshTokensResponseMock,
 } from "../models/index.faker";
@@ -23,20 +22,15 @@ export const getPostV1AuthRefreshResponseMock = (
     Extract<AppResponseRefreshTokensResponse, object>
   > = {}
 ): AppResponseRefreshTokensResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getRefreshTokensResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getRefreshTokensResponseMock() },
   ...overrideResponse,
 });
 
 export const getPostV1AuthLogoutResponseMock = (
   overrideResponse: Partial<Extract<AppResponseLogoutResponse, object>> = {}
 ): AppResponseLogoutResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{ ...getLogoutResponseMock() }, undefined]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getLogoutResponseMock() },
   ...overrideResponse,
 });

@@ -5,10 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { Tsid } from "./tsid";
+import type { AppErrorBody } from "./appErrorBody";
 
-export interface CurrentUserInfoResponse {
-  userId: Tsid;
-  name: string;
-  email: string;
+export interface AppErrorResponse {
+  success: false;
+  error: AppErrorBody;
 }

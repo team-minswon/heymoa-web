@@ -20,8 +20,8 @@ describe("mockDb", () => {
 
   it("rejects a second active session", () => {
     const note = mockDb.createNote(mockDb.workspace.workspaceId, {});
-    mockDb.createSession(note.noteId, { language: "ko" });
-    expect(() => mockDb.createSession(note.noteId, { language: "en" })).toThrow(
+    mockDb.createSession(note.noteId);
+    expect(() => mockDb.createSession(note.noteId)).toThrow(
       "ACTIVE_TRANSCRIPTION_SESSION_EXISTS"
     );
   });

@@ -5,11 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { AppErrorBody } from "./appErrorBody";
 import type { FolderResponse } from "./folderResponse";
 
 export interface AppResponseFolderResponse {
-  success: boolean;
-  data?: FolderResponse;
-  error?: AppErrorBody;
+  success: true;
+  data: FolderResponse;
 }

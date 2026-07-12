@@ -5,11 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { AppErrorBody } from "./appErrorBody";
 import type { LogoutResponse } from "./logoutResponse";
 
 export interface AppResponseLogoutResponse {
-  success: boolean;
-  data?: LogoutResponse;
-  error?: AppErrorBody;
+  success: true;
+  data: LogoutResponse;
 }

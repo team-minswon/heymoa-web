@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Expand, Mic, MoreHorizontal, PanelRightClose, Pause, Play, Square, Trash2 } from "lucide-react";
+import {
+  Expand,
+  Mic,
+  MoreHorizontal,
+  PanelRightClose,
+  Pause,
+  Play,
+  Square,
+  Trash2,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -171,7 +180,11 @@ export function NotePanel({
         style={{ borderRadius: 9999 }}
         transition={{ type: "spring", bounce: 0, duration: 0.3 }}
       >
-        <motion.div layout transition={{ type: "spring", bounce: 0, duration: 0.3 }} className="flex items-center">
+        <motion.div
+          layout
+          transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+          className="flex items-center"
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -182,14 +195,17 @@ export function NotePanel({
           </Button>
           <div className="mx-1 h-6 w-[1px] bg-border" />
         </motion.div>
-        
+
         <AnimatePresence mode="popLayout" initial={false}>
           {!isActive ? (
             <motion.div
               layout
               key="start"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { duration: 0.2, delay: 0.3 } }}
+              animate={{
+                opacity: 1,
+                transition: { duration: 0.2, delay: 0.3 },
+              }}
               exit={{ opacity: 0, transition: { duration: 0.1, delay: 0 } }}
               className="flex w-max shrink-0 items-center"
             >
@@ -199,7 +215,7 @@ export function NotePanel({
                 size="icon"
                 className="shrink-0 rounded-full px-2 hover:bg-transparent"
                 aria-label="기록 시작"
-                onClick={() => void recording.start(noteId, "ko")}
+                onClick={() => void recording.start(noteId)}
               >
                 <span className="flex size-9 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90">
                   <span className="sr-only">기록 시작</span>
@@ -211,7 +227,10 @@ export function NotePanel({
               layout
               key="recording"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { duration: 0.2, delay: 0.3 } }}
+              animate={{
+                opacity: 1,
+                transition: { duration: 0.2, delay: 0.3 },
+              }}
               exit={{ opacity: 0, transition: { duration: 0.1, delay: 0 } }}
               className="flex w-max shrink-0 items-center gap-2 pl-2 pr-1"
             >
@@ -219,9 +238,24 @@ export function NotePanel({
                 {formatElapsed(recording.elapsedMs)}
               </span>
               <span className="mx-1 relative flex h-3 w-4 items-center justify-center gap-[2px]">
-                <span className={cn("h-full w-[3px] rounded-full bg-destructive transition-all", !isPaused && "animate-[pulse_1s_ease-in-out_infinite]")}></span>
-                <span className={cn("h-2/3 w-[3px] rounded-full bg-destructive transition-all", !isPaused && "animate-[pulse_1s_ease-in-out_infinite_0.2s]")}></span>
-                <span className={cn("h-full w-[3px] rounded-full bg-destructive transition-all", !isPaused && "animate-[pulse_1s_ease-in-out_infinite_0.4s]")}></span>
+                <span
+                  className={cn(
+                    "h-full w-[3px] rounded-full bg-destructive transition-all",
+                    !isPaused && "animate-[pulse_1s_ease-in-out_infinite]"
+                  )}
+                ></span>
+                <span
+                  className={cn(
+                    "h-2/3 w-[3px] rounded-full bg-destructive transition-all",
+                    !isPaused && "animate-[pulse_1s_ease-in-out_infinite_0.2s]"
+                  )}
+                ></span>
+                <span
+                  className={cn(
+                    "h-full w-[3px] rounded-full bg-destructive transition-all",
+                    !isPaused && "animate-[pulse_1s_ease-in-out_infinite_0.4s]"
+                  )}
+                ></span>
               </span>
               <Button
                 type="button"
@@ -229,9 +263,15 @@ export function NotePanel({
                 size="icon-sm"
                 className="shrink-0 rounded-full"
                 aria-label={isPaused ? "재개" : "일시 정지"}
-                onClick={() => void (isPaused ? recording.resume() : recording.pause())}
+                onClick={() =>
+                  void (isPaused ? recording.resume() : recording.pause())
+                }
               >
-                {isPaused ? <Play className="size-4 text-destructive" /> : <Pause className="size-4 text-destructive" />}
+                {isPaused ? (
+                  <Play className="size-4 text-destructive" />
+                ) : (
+                  <Pause className="size-4 text-destructive" />
+                )}
               </Button>
               <Button
                 type="button"

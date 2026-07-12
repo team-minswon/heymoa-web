@@ -18,7 +18,6 @@ import type {
 
 import {
   getActiveTranscriptionSessionResponseMock,
-  getAppErrorBodyMock,
   getTranscriptSegmentCursorPageResponseMock,
   getTranscriptionConnectionResponseMock,
   getTranscriptionSessionCursorPageResponseMock,
@@ -30,12 +29,8 @@ export const getCreateTranscriptionSessionResponseMock = (
     Extract<AppResponseTranscriptionConnectionResponse, object>
   > = {}
 ): AppResponseTranscriptionConnectionResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptionConnectionResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptionConnectionResponseMock() },
   ...overrideResponse,
 });
 
@@ -44,12 +39,8 @@ export const getListNoteTranscriptionSessionsResponseMock = (
     Extract<AppResponseTranscriptionSessionCursorPageResponse, object>
   > = {}
 ): AppResponseTranscriptionSessionCursorPageResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptionSessionCursorPageResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptionSessionCursorPageResponseMock() },
   ...overrideResponse,
 });
 
@@ -58,12 +49,8 @@ export const getGetActiveTranscriptionSessionResponseMock = (
     Extract<AppResponseActiveTranscriptionSessionResponse, object>
   > = {}
 ): AppResponseActiveTranscriptionSessionResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getActiveTranscriptionSessionResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getActiveTranscriptionSessionResponseMock() },
   ...overrideResponse,
 });
 
@@ -72,12 +59,8 @@ export const getGetTranscriptionSessionResponseMock = (
     Extract<AppResponseTranscriptionSessionResponse, object>
   > = {}
 ): AppResponseTranscriptionSessionResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptionSessionResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptionSessionResponseMock() },
   ...overrideResponse,
 });
 
@@ -86,12 +69,8 @@ export const getCreateTranscriptionConnectionTicketResponseMock = (
     Extract<AppResponseTranscriptionConnectionResponse, object>
   > = {}
 ): AppResponseTranscriptionConnectionResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptionConnectionResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptionConnectionResponseMock() },
   ...overrideResponse,
 });
 
@@ -100,20 +79,15 @@ export const getListNoteTranscriptSegmentsResponseMock = (
     Extract<AppResponseTranscriptSegmentCursorPageResponse, object>
   > = {}
 ): AppResponseTranscriptSegmentCursorPageResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getTranscriptSegmentCursorPageResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getTranscriptSegmentCursorPageResponseMock() },
   ...overrideResponse,
 });
 
 export const getDeleteTranscriptSegmentResponseMock = (
   overrideResponse: Partial<Extract<AppResponseUnit, object>> = {}
 ): AppResponseUnit => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([{}, null]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: {},
   ...overrideResponse,
 });

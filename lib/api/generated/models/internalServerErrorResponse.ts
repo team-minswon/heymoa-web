@@ -5,9 +5,9 @@
  * API documentation for Heymoa Server
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
-import type { AppResponseUnit } from "./appResponseUnit";
+import type { AppErrorResponse } from "./appErrorResponse";
 
 /**
  * 서버 내부 오류
  */
-export type InternalServerErrorResponse = AppResponseUnit;
+export type InternalServerErrorResponse = AppErrorResponse;

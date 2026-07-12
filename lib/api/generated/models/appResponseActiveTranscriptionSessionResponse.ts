@@ -6,10 +6,8 @@
  * OpenAPI spec version: 0.0.1-SNAPSHOT
  */
 import type { ActiveTranscriptionSessionResponse } from "./activeTranscriptionSessionResponse";
-import type { AppErrorBody } from "./appErrorBody";
 
 export interface AppResponseActiveTranscriptionSessionResponse {
-  success: boolean;
-  data?: ActiveTranscriptionSessionResponse;
-  error?: AppErrorBody;
+  success: true;
+  data: ActiveTranscriptionSessionResponse;
 }

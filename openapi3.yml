@@ -11,6 +11,7 @@ paths:
   /v1/users/me:
     get:
       tags: [User]
+      operationId: getCurrentUser
       summary: 현재 사용자 조회
       security:
         - access_token: []
@@ -20,11 +21,36 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_CurrentUserInfoResponse"
+                $ref: "#/components/schemas/AppResponse_CurrentUserResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      tags: [User]
+      operationId: updateCurrentUser
+      summary: 현재 사용자 수정
+      security:
+        - access_token: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCurrentUserRequest"
+      responses:
+        "200":
+          description: 현재 사용자 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_CurrentUserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -75,24 +101,49 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /v1/workspaces/default:
+  /v1/workspaces:
     get:
       tags: [Workspace]
-      operationId: getDefaultWorkspace
-      summary: 기본 워크스페이스 조회
+      operationId: listWorkspaces
+      summary: 워크스페이스 목록 조회
       security:
         - access_token: []
       responses:
         "200":
-          description: 기본 워크스페이스 조회 성공
+          description: 워크스페이스 목록 조회 성공
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+                $ref: "#/components/schemas/AppResponse_WorkspaceListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      tags: [Workspace]
+      operationId: createWorkspace
+      summary: 워크스페이스 생성
+      security:
+        - access_token: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkspaceRequest"
+      responses:
+        "200":
+          description: 워크스페이스 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -112,6 +163,70 @@ paths:
       responses:
         "200":
           description: 워크스페이스 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      tags: [Workspace]
+      operationId: updateWorkspace
+      summary: 워크스페이스 수정
+      security:
+        - access_token: []
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkspaceRequest"
+      responses:
+        "200":
+          description: 워크스페이스 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /v1/workspaces/{workspaceId}/default:
+    put:
+      tags: [Workspace]
+      operationId: setDefaultWorkspace
+      summary: 기본 워크스페이스 설정
+      security:
+        - access_token: []
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Tsid"
+      responses:
+        "200":
+          description: 기본 워크스페이스 설정 성공
           content:
             application/json:
               schema:
@@ -500,12 +615,6 @@ paths:
           required: true
           schema:
             $ref: "#/components/schemas/Tsid"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateTranscriptionSessionRequest"
       responses:
         "200":
           description: 전사 세션 및 최초 연결 ticket 생성 성공
@@ -733,43 +842,43 @@ components:
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AppResponse_Unit"
+            $ref: "#/components/schemas/AppErrorResponse"
     Unauthorized:
       description: 인증이 필요함
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AppResponse_Unit"
+            $ref: "#/components/schemas/AppErrorResponse"
     Forbidden:
       description: 접근 권한이 없음
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AppResponse_Unit"
+            $ref: "#/components/schemas/AppErrorResponse"
     NotFound:
       description: 리소스를 찾을 수 없음
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AppResponse_Unit"
+            $ref: "#/components/schemas/AppErrorResponse"
     Conflict:
       description: 현재 리소스 상태와 충돌함
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AppResponse_Unit"
+            $ref: "#/components/schemas/AppErrorResponse"
     ServiceUnavailable:
       description: STT provider를 사용할 수 없음
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AppResponse_Unit"
+            $ref: "#/components/schemas/AppErrorResponse"
     InternalServerError:
       description: 서버 내부 오류
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AppResponse_Unit"
+            $ref: "#/components/schemas/AppErrorResponse"
 
   schemas:
     Tsid:
@@ -791,13 +900,55 @@ components:
 
     WorkspaceResponse:
       type: object
-      required: [workspaceId, name]
+      required:
+        [workspaceId, name, description, isDefault, createdAt, updatedAt]
       properties:
         workspaceId:
           $ref: "#/components/schemas/Tsid"
         name:
           type: string
+          minLength: 1
+          maxLength: 80
           example: 테스트 유저의 워크스페이스
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+          example: 제품 회의 기록을 모으는 공간입니다.
+        isDefault:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkspaceListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceResponse"
+
+    CreateWorkspaceRequest:
+      type: object
+      required: [name, description]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+
+    UpdateWorkspaceRequest:
+      $ref: "#/components/schemas/CreateWorkspaceRequest"
 
     FolderResponse:
       type: object
@@ -937,7 +1088,15 @@ components:
     TranscriptionSessionResponse:
       type: object
       required:
-        [sessionId, noteId, status, language, startedBy, startedAt, endedAt]
+        [
+          sessionId,
+          noteId,
+          status,
+          recordedDurationMs,
+          startedBy,
+          startedAt,
+          endedAt,
+        ]
       properties:
         sessionId:
           $ref: "#/components/schemas/Tsid"
@@ -945,11 +1104,11 @@ components:
           $ref: "#/components/schemas/Tsid"
         status:
           $ref: "#/components/schemas/TranscriptionSessionStatus"
-        language:
-          type: string
-          pattern: "^[a-z]{2}$"
-          nullable: true
-          example: ko
+        recordedDurationMs:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 120000
         startedBy:
           $ref: "#/components/schemas/UserSummary"
         startedAt:
@@ -961,16 +1120,6 @@ components:
           format: date-time
           nullable: true
           example: null
-
-    CreateTranscriptionSessionRequest:
-      type: object
-      required: [language]
-      properties:
-        language:
-          type: string
-          pattern: "^[a-z]{2}$"
-          nullable: true
-          example: ko
 
     TranscriptionConnectionResponse:
       type: object
@@ -1050,7 +1199,7 @@ components:
           nullable: true
           example: null
 
-    CurrentUserInfoResponse:
+    CurrentUserResponse:
       type: object
       required: [userId, name, email]
       properties:
@@ -1063,6 +1212,15 @@ components:
           type: string
           format: email
           example: user@example.com
+
+    UpdateCurrentUserRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
 
     RefreshTokensResponse:
       type: object
@@ -1123,172 +1281,164 @@ components:
           type: string
           example: 제목은 비어 있을 수 없습니다.
 
-    AppResponse_CurrentUserInfoResponse:
+    AppErrorResponse:
       type: object
-      required: [success]
+      required: [success, error]
       properties:
         success:
           type: boolean
-          example: true
-        data:
-          $ref: "#/components/schemas/CurrentUserInfoResponse"
+          enum: [false]
         error:
           $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_CurrentUserResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/CurrentUserResponse"
 
     AppResponse_RefreshTokensResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/RefreshTokensResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_LogoutResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/LogoutResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_WorkspaceResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/WorkspaceResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
+
+    AppResponse_WorkspaceListResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/WorkspaceListResponse"
 
     AppResponse_FolderResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/FolderResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_FolderListResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           type: array
           items:
             $ref: "#/components/schemas/FolderResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_NoteResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/NoteResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_NoteCursorPageResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/NoteCursorPageResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_TranscriptionSessionResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/TranscriptionSessionResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_TranscriptionConnectionResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/TranscriptionConnectionResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_ActiveTranscriptionSessionResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/ActiveTranscriptionSessionResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_TranscriptionSessionCursorPageResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/TranscriptionSessionCursorPageResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_TranscriptSegmentCursorPageResponse:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           $ref: "#/components/schemas/TranscriptSegmentCursorPageResponse"
-        error:
-          $ref: "#/components/schemas/AppErrorBody"
 
     AppResponse_Unit:
       type: object
-      required: [success]
+      required: [success, data]
       properties:
         success:
           type: boolean
-          example: true
+          enum: [true]
         data:
           nullable: true
-        error:
-          $ref: "#/components/schemas/AppErrorBody"

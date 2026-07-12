@@ -10,7 +10,7 @@ describe("transcription generated models", () => {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
       status: "STREAMING",
-      language: "ko",
+      recordedDurationMs: 0,
       startedBy: { userId: "01K0000000003", name: "테스트 유저" },
       startedAt: "2026-07-11T00:00:00Z",
       endedAt: null,

@@ -10,35 +10,38 @@ import { faker } from "@faker-js/faker";
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { AppResponseCurrentUserInfoResponse } from "../models";
+import type { AppResponseCurrentUserResponse } from "../models";
 
-import {
-  getAppErrorBodyMock,
-  getCurrentUserInfoResponseMock,
-} from "../models/index.faker";
+import { getCurrentUserResponseMock } from "../models/index.faker";
 
-export const getGetV1UsersMeResponseMock = (
+export const getGetCurrentUserResponseMock = (
   overrideResponse: Partial<
-    Extract<AppResponseCurrentUserInfoResponse, object>
+    Extract<AppResponseCurrentUserResponse, object>
   > = {}
-): AppResponseCurrentUserInfoResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getCurrentUserInfoResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+): AppResponseCurrentUserResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getCurrentUserResponseMock() },
   ...overrideResponse,
 });
 
-export const getGetV1UsersMeMockHandler = (
+export const getUpdateCurrentUserResponseMock = (
+  overrideResponse: Partial<
+    Extract<AppResponseCurrentUserResponse, object>
+  > = {}
+): AppResponseCurrentUserResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getCurrentUserResponseMock() },
+  ...overrideResponse,
+});
+
+export const getGetCurrentUserMockHandler = (
   overrideResponse?:
-    | AppResponseCurrentUserInfoResponse
+    | AppResponseCurrentUserResponse
     | ((
         info: Parameters<Parameters<typeof http.get>[1]>[0]
       ) =>
-        | Promise<AppResponseCurrentUserInfoResponse>
-        | AppResponseCurrentUserInfoResponse),
+        | Promise<AppResponseCurrentUserResponse>
+        | AppResponseCurrentUserResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.get(
@@ -49,11 +52,40 @@ export const getGetV1UsersMeMockHandler = (
           ? typeof overrideResponse === "function"
             ? await overrideResponse(info)
             : overrideResponse
-          : getGetV1UsersMeResponseMock(),
+          : getGetCurrentUserResponseMock(),
         { status: 200 }
       );
     },
     options
   );
 };
-export const getUserMock = () => [getGetV1UsersMeMockHandler()];
+
+export const getUpdateCurrentUserMockHandler = (
+  overrideResponse?:
+    | AppResponseCurrentUserResponse
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0]
+      ) =>
+        | Promise<AppResponseCurrentUserResponse>
+        | AppResponseCurrentUserResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.patch(
+    "*/v1/users/me",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCurrentUserResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+export const getUserMock = () => [
+  getGetCurrentUserMockHandler(),
+  getUpdateCurrentUserMockHandler(),
+];

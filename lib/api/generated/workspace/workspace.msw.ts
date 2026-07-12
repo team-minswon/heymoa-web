@@ -10,56 +10,103 @@ import { faker } from "@faker-js/faker";
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { AppResponseWorkspaceResponse } from "../models";
+import type {
+  AppResponseWorkspaceListResponse,
+  AppResponseWorkspaceResponse,
+} from "../models";
 
 import {
-  getAppErrorBodyMock,
+  getWorkspaceListResponseMock,
   getWorkspaceResponseMock,
 } from "../models/index.faker";
 
-export const getGetDefaultWorkspaceResponseMock = (
+export const getListWorkspacesResponseMock = (
+  overrideResponse: Partial<
+    Extract<AppResponseWorkspaceListResponse, object>
+  > = {}
+): AppResponseWorkspaceListResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceListResponseMock() },
+  ...overrideResponse,
+});
+
+export const getCreateWorkspaceResponseMock = (
   overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
 ): AppResponseWorkspaceResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getWorkspaceResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
   ...overrideResponse,
 });
 
 export const getGetWorkspaceResponseMock = (
   overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
 ): AppResponseWorkspaceResponse => ({
-  success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([
-    { ...getWorkspaceResponseMock() },
-    undefined,
-  ]),
-  error: faker.helpers.arrayElement([{ ...getAppErrorBodyMock() }, undefined]),
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
   ...overrideResponse,
 });
 
-export const getGetDefaultWorkspaceMockHandler = (
+export const getUpdateWorkspaceResponseMock = (
+  overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
+): AppResponseWorkspaceResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
+  ...overrideResponse,
+});
+
+export const getSetDefaultWorkspaceResponseMock = (
+  overrideResponse: Partial<Extract<AppResponseWorkspaceResponse, object>> = {}
+): AppResponseWorkspaceResponse => ({
+  success: faker.helpers.arrayElement([true] as const),
+  data: { ...getWorkspaceResponseMock() },
+  ...overrideResponse,
+});
+
+export const getListWorkspacesMockHandler = (
   overrideResponse?:
-    | AppResponseWorkspaceResponse
+    | AppResponseWorkspaceListResponse
     | ((
         info: Parameters<Parameters<typeof http.get>[1]>[0]
       ) =>
-        | Promise<AppResponseWorkspaceResponse>
-        | AppResponseWorkspaceResponse),
+        | Promise<AppResponseWorkspaceListResponse>
+        | AppResponseWorkspaceListResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.get(
-    "*/v1/workspaces/default",
+    "*/v1/workspaces",
     async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === "function"
             ? await overrideResponse(info)
             : overrideResponse
-          : getGetDefaultWorkspaceResponseMock(),
+          : getListWorkspacesResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getCreateWorkspaceMockHandler = (
+  overrideResponse?:
+    | AppResponseWorkspaceResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) =>
+        | Promise<AppResponseWorkspaceResponse>
+        | AppResponseWorkspaceResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateWorkspaceResponseMock(),
         { status: 200 }
       );
     },
@@ -92,7 +139,62 @@ export const getGetWorkspaceMockHandler = (
     options
   );
 };
+
+export const getUpdateWorkspaceMockHandler = (
+  overrideResponse?:
+    | AppResponseWorkspaceResponse
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0]
+      ) =>
+        | Promise<AppResponseWorkspaceResponse>
+        | AppResponseWorkspaceResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.patch(
+    "*/v1/workspaces/:workspaceId",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateWorkspaceResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getSetDefaultWorkspaceMockHandler = (
+  overrideResponse?:
+    | AppResponseWorkspaceResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) =>
+        | Promise<AppResponseWorkspaceResponse>
+        | AppResponseWorkspaceResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/workspaces/:workspaceId/default",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetDefaultWorkspaceResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getWorkspaceMock = () => [
-  getGetDefaultWorkspaceMockHandler(),
+  getListWorkspacesMockHandler(),
+  getCreateWorkspaceMockHandler(),
   getGetWorkspaceMockHandler(),
+  getUpdateWorkspaceMockHandler(),
+  getSetDefaultWorkspaceMockHandler(),
 ];
