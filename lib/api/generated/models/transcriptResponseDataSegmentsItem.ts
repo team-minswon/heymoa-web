@@ -20,11 +20,10 @@ export type TranscriptResponseDataSegmentsItem = {
    */
   segmentId: string;
   /**
-   * 오디오 종료 오프셋(ms)
+   * 세션 시작 기준 PCM 구간 종료 밀리초
    * @minimum 0
-   * @nullable
    */
-  endedAtMs: number | null;
+  endedAtMs: number;
   /** 확정 전사 텍스트 */
   text: string;
   /**
@@ -35,9 +34,8 @@ export type TranscriptResponseDataSegmentsItem = {
    */
   transcriptionSessionId: string;
   /**
-   * 오디오 시작 오프셋(ms)
+   * 세션 시작 기준 PCM 구간 시작 밀리초
    * @minimum 0
-   * @nullable
    */
-  startedAtMs: number | null;
+  startedAtMs: number;
 };

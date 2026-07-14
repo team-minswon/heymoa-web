@@ -9,6 +9,11 @@ import type { CurrentUserResponse } from "../models";
 
 export const getGetCurrentUserResponseMock = (): CurrentUserResponse => ({
   success: true,
-  data: { userId: "0HZX2K7M9Q4AC", name: "홍길동", email: "hong@example.com" },
+  data: {
+    userId: "0HZX2K7M9Q4AC",
+    name: "홍길동",
+    email: "hong@example.com",
+    image: "https://cdn.heymoa.com/profiles/member.png",
+  },
   error: null,
 });

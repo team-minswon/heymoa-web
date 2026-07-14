@@ -6,22 +6,26 @@ const openapi = parse(readFileSync("openapi3.yml", "utf8"));
 const asyncapi = parse(readFileSync("asyncapi.yml", "utf8"));
 
 describe("REST and WebSocket contract consistency", () => {
-  it("shares TSID, session status, errors, and persisted segment fields", () => {
+  it("shares TSID and persisted final segment fields", () => {
     const rest = openapi.components.schemas;
-    const socket = asyncapi.components.schemas;
 
     // Verify TSID pattern consistency
     const restTsidPattern =
       rest.TranscriptionSessionResponse.properties.data.properties.noteId.pattern;
-    expect(socket.Tsid.pattern).toBe(restTsidPattern);
+    expect(asyncapi.components.schemas.Tsid.pattern).toBe(restTsidPattern);
 
-    // Verify Segment fields consistency
-    const restSegmentRequired =
-      rest.TranscriptResponse.properties.data.properties.segments.items.required;
-    const restFields = [...restSegmentRequired]
-      .map((f) => (f === "transcriptionSessionId" ? "sessionId" : f))
+    const restRequired = [
+      ...rest.TranscriptResponse.properties.data.properties.segments.items
+        .required,
+    ]
+      .filter((field) => field !== "transcriptionSessionId")
       .sort();
-    const socketFields = [...socket.TranscriptSegment.required].sort();
-    expect(socketFields).toEqual(restFields);
+    const socketRequired = [
+      ...asyncapi.components.messages.FinalEvent.payload.required,
+    ]
+      .filter((field) => !["type", "utteranceId"].includes(field))
+      .sort();
+
+    expect(socketRequired).toEqual(restRequired);
   });
 });

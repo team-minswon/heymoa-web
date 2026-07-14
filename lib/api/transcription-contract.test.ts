@@ -24,5 +24,7 @@ describe("transcription generated models", () => {
       endedAtMs: 1200,
     };
     expect(segment.transcriptionSessionId).toBe(session.sessionId);
+    expect(segment.startedAtMs).toBe(0);
+    expect(segment.endedAtMs).toBe(1200);
   });
 });

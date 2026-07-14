@@ -1,355 +1,275 @@
-asyncapi: 3.1.0
+asyncapi: 3.0.0
 info:
-  title: HeyMoa Realtime Transcription API
-  version: 0.0.1
-  description: Browser와 Spring 애플리케이션 사이의 실시간 전사 WebSocket 계약입니다.
+  title: Heymoa Realtime Transcription API
+  version: 1.0.0
+  description: |
+    브라우저와 Heymoa 서버 사이의 실시간 전사 WebSocket 계약이다.
+    브라우저는 access_token cookie와 허용된 Origin으로 연결해야 한다.
+    서버는 연결 준비에 최대 1분, OpenAI 연결 준비에 최대 5초를 기다린다.
+    stop 수신 후 남은 final을 최대 10초간 drain하며, 오디오가 15초 쌓이면
+    브라우저 command가 없어도 강제로 commit한다.
 defaultContentType: application/json
-
 servers:
-  local:
-    host: localhost:8080
-    protocol: ws
-    description: Local Spring server
   production:
     host: api.heymoa.com
+    pathname: /
     protocol: wss
-    description: Production Spring server
-
+    description: |
+      운영 WebSocket endpoint. HTTP upgrade 요청에는 access_token cookie와
+      서버 CORS allowlist에 포함된 Origin header가 모두 필요하다.
+    security:
+      - $ref: '#/components/securitySchemes/accessCookie'
 channels:
-  transcription:
-    address: /v1/transcription-sessions/{sessionId}/stream
-    title: Realtime transcription stream
-    description: >-
-      Binary frame은 PCM16 little-endian, mono, 24 kHz audio입니다.
-      STREAMING에서는 TURN_COMMIT, SESSION_PAUSE, SESSION_COMPLETE, PING을,
-      PAUSED에서는 SESSION_RESUME, SESSION_COMPLETE, PING을 허용합니다.
-      FINALIZING에서는 PING만 허용합니다. 복구 가능한 ERROR는 연결을 유지합니다.
-      인증, 권한, Session 없음, provider 실패는 ERROR 전송 후 연결을 닫습니다.
-      Close code는 1000 정상 완료, 4401 ticket 인증 실패, 4403 권한 없음,
-      4404 Session 없음, 4409 잘못된 Session 상태, 4503 STT provider 사용 불가를 뜻합니다.
+  transcriptionSession:
+    address: /ws/transcription-sessions/{sessionId}
+    title: 실시간 전사 세션
+    description: |
+      하나의 전사 세션에서 binary PCM frame과 JSON command를 받고 JSON event를 보낸다.
+      정상 완료는 completed event 후 close code 1000, 잘못된 client frame/command는
+      error event 후 1008, upstream 또는 내부 실패는 error event 후 1011로 종료한다.
     parameters:
       sessionId:
-        $ref: "#/components/parameters/SessionId"
-    bindings:
-      ws:
-        method: GET
-        query:
-          type: object
-          additionalProperties: false
-          required: [ticket]
-          properties:
-            ticket:
-              type: string
-              minLength: 1
-              description: REST로 발급한 짧은 수명의 일회용 연결 ticket
+        $ref: '#/components/parameters/sessionId'
     messages:
-      AudioChunk:
-        $ref: "#/components/messages/AudioChunk"
-      TurnCommit:
-        $ref: "#/components/messages/TurnCommit"
-      SessionPause:
-        $ref: "#/components/messages/SessionPause"
-      SessionResume:
-        $ref: "#/components/messages/SessionResume"
-      SessionComplete:
-        $ref: "#/components/messages/SessionComplete"
-      Ping:
-        $ref: "#/components/messages/Ping"
-      SessionReady:
-        $ref: "#/components/messages/SessionReady"
-      SessionStatus:
-        $ref: "#/components/messages/SessionStatus"
-      TranscriptPartial:
-        $ref: "#/components/messages/TranscriptPartial"
-      TranscriptFinal:
-        $ref: "#/components/messages/TranscriptFinal"
-      SessionCompleted:
-        $ref: "#/components/messages/SessionCompleted"
-      Error:
-        $ref: "#/components/messages/Error"
-      Pong:
-        $ref: "#/components/messages/Pong"
-
+      PcmAudio:
+        $ref: '#/components/messages/PcmAudio'
+      CommitCommand:
+        $ref: '#/components/messages/CommitCommand'
+      StopCommand:
+        $ref: '#/components/messages/StopCommand'
+      ConnectedEvent:
+        $ref: '#/components/messages/ConnectedEvent'
+      PartialEvent:
+        $ref: '#/components/messages/PartialEvent'
+      FinalEvent:
+        $ref: '#/components/messages/FinalEvent'
+      CompletedEvent:
+        $ref: '#/components/messages/CompletedEvent'
+      ErrorEvent:
+        $ref: '#/components/messages/ErrorEvent'
 operations:
-  receiveBrowserMessages:
+  receiveTranscriptionInput:
     action: receive
-    title: Receive Browser audio and commands
+    title: 오디오와 제어 command 수신
+    summary: 브라우저가 PCM 오디오 또는 commit/stop command를 보낸다.
     channel:
-      $ref: "#/channels/transcription"
+      $ref: '#/channels/transcriptionSession'
     messages:
-      - $ref: "#/channels/transcription/messages/AudioChunk"
-      - $ref: "#/channels/transcription/messages/TurnCommit"
-      - $ref: "#/channels/transcription/messages/SessionPause"
-      - $ref: "#/channels/transcription/messages/SessionResume"
-      - $ref: "#/channels/transcription/messages/SessionComplete"
-      - $ref: "#/channels/transcription/messages/Ping"
-  sendBrowserEvents:
+      - $ref: '#/channels/transcriptionSession/messages/PcmAudio'
+      - $ref: '#/channels/transcriptionSession/messages/CommitCommand'
+      - $ref: '#/channels/transcriptionSession/messages/StopCommand'
+  sendTranscriptionEvent:
     action: send
-    title: Send transcription events to Browser
+    title: 전사 상태와 결과 전송
+    summary: 서버가 연결 상태, partial/final 전사와 terminal event를 보낸다.
+    description: |
+      partial.text는 utteranceId별 누적 snapshot이므로 같은 utteranceId의 표시를 교체한다.
+      final은 DB transaction commit 성공 후에만 전송되며 sequence 오름차순으로 전달된다.
     channel:
-      $ref: "#/channels/transcription"
+      $ref: '#/channels/transcriptionSession'
     messages:
-      - $ref: "#/channels/transcription/messages/SessionReady"
-      - $ref: "#/channels/transcription/messages/SessionStatus"
-      - $ref: "#/channels/transcription/messages/TranscriptPartial"
-      - $ref: "#/channels/transcription/messages/TranscriptFinal"
-      - $ref: "#/channels/transcription/messages/SessionCompleted"
-      - $ref: "#/channels/transcription/messages/Error"
-      - $ref: "#/channels/transcription/messages/Pong"
-
+      - $ref: '#/channels/transcriptionSession/messages/ConnectedEvent'
+      - $ref: '#/channels/transcriptionSession/messages/PartialEvent'
+      - $ref: '#/channels/transcriptionSession/messages/FinalEvent'
+      - $ref: '#/channels/transcriptionSession/messages/CompletedEvent'
+      - $ref: '#/channels/transcriptionSession/messages/ErrorEvent'
 components:
+  securitySchemes:
+    accessCookie:
+      type: httpApiKey
+      name: access_token
+      in: cookie
+      description: 로그인 시 발급된 access token cookie
   parameters:
-    SessionId:
-      description: 13-character TranscriptionSession TSID matching ^[0-9A-HJKMNP-TV-Z]{13}$
-      examples: [0HZX2K7M9Q4AB]
-
+    sessionId:
+      description: 연결할 전사 세션의 13자리 TSID
+      location: $message.header#/sessionId
+      examples:
+        - 0HZX2K7M9Q4AB
   messages:
-    AudioChunk:
-      name: AudioChunk
-      title: PCM audio chunk
+    PcmAudio:
+      name: PcmAudio
+      title: PCM 오디오 frame
+      summary: signed PCM16, 24 kHz, mono, little-endian binary frame
       contentType: application/octet-stream
       payload:
         type: string
         format: binary
-    TurnCommit:
-      name: TurnCommit
+        minLength: 2
+        maxLength: 1048576
+        description: 비어 있지 않은 짝수 byte 크기의 PCM16 frame. 최대 1 MiB이다.
+    CommitCommand:
+      name: CommitCommand
+      title: 현재 오디오 구간 확정
       payload:
-        $ref: "#/components/schemas/TurnCommit"
+        type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [commit]
+            description: 현재 non-empty audio buffer를 전사하도록 확정한다.
       examples:
         - name: commit
-          payload: { type: TURN_COMMIT }
-    SessionPause:
-      name: SessionPause
-      payload:
-        $ref: "#/components/schemas/SessionPause"
-      examples:
-        - name: pause
-          payload: { type: SESSION_PAUSE }
-    SessionResume:
-      name: SessionResume
-      payload:
-        $ref: "#/components/schemas/SessionResume"
-      examples:
-        - name: resume
-          payload: { type: SESSION_RESUME }
-    SessionComplete:
-      name: SessionComplete
-      payload:
-        $ref: "#/components/schemas/SessionComplete"
-      examples:
-        - name: complete
-          payload: { type: SESSION_COMPLETE }
-    Ping:
-      name: Ping
-      payload:
-        $ref: "#/components/schemas/Ping"
-      examples:
-        - name: ping
-          payload: { type: PING }
-    SessionReady:
-      name: SessionReady
-      payload:
-        $ref: "#/components/schemas/SessionReady"
-      examples:
-        - name: ready
-          payload: { type: SESSION_READY, sessionId: 0HZX2K7M9Q4AB }
-    SessionStatus:
-      name: SessionStatus
-      payload:
-        $ref: "#/components/schemas/SessionStatus"
-      examples:
-        - name: streaming
           payload:
-            { type: SESSION_STATUS, status: STREAMING, recordedDurationMs: 0 }
-    TranscriptPartial:
-      name: TranscriptPartial
+            type: commit
+    StopCommand:
+      name: StopCommand
+      title: 전사 세션 정상 종료
       payload:
-        $ref: "#/components/schemas/TranscriptPartial"
+        type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [stop]
+            description: 새 오디오 전송을 끝내고 pending final을 처리한 뒤 종료한다.
       examples:
-        - name: partialSnapshot
+        - name: stop
           payload:
-            type: TRANSCRIPT_PARTIAL
-            itemId: provider-item-1
-            text: 현재까지 누적된 문장
-            startedAtMs: 1200
-    TranscriptFinal:
-      name: TranscriptFinal
+            type: stop
+    ConnectedEvent:
+      name: ConnectedEvent
+      title: 전사 연결 준비 완료
       payload:
-        $ref: "#/components/schemas/TranscriptFinal"
+        type: object
+        additionalProperties: false
+        required: [type, sessionId]
+        properties:
+          type:
+            type: string
+            enum: [connected]
+          sessionId:
+            $ref: '#/components/schemas/Tsid'
       examples:
-        - name: persistedFinal
+        - name: connected
           payload:
-            type: TRANSCRIPT_FINAL
-            itemId: provider-item-1
-            segment:
-              segmentId: 0HZX2K7M9Q4AB
-              sessionId: 0HZX2K7M9Q4AC
-              sequence: 1
-              text: 확정된 문장입니다.
-              startedAtMs: 1200
-              endedAtMs: 4100
-    SessionCompleted:
-      name: SessionCompleted
+            type: connected
+            sessionId: 0HZX2K7M9Q4AB
+    PartialEvent:
+      name: PartialEvent
+      title: 진행 중인 누적 전사
+      summary: 같은 utteranceId의 이전 partial 표시를 이 snapshot으로 교체한다.
       payload:
-        $ref: "#/components/schemas/SessionCompleted"
+        type: object
+        additionalProperties: false
+        required: [type, utteranceId, text]
+        properties:
+          type:
+            type: string
+            enum: [partial]
+          utteranceId:
+            $ref: '#/components/schemas/Tsid'
+          text:
+            type: string
+            minLength: 1
+            example: 오늘 회의에서는
+      examples:
+        - name: partial
+          payload:
+            type: partial
+            utteranceId: 0HZX2K7M9Q4AC
+            text: 오늘 회의에서는
+    FinalEvent:
+      name: FinalEvent
+      title: 저장이 완료된 확정 전사 segment
+      summary: DB 저장 성공 후 sequence 오름차순으로 전송된다.
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
+        properties:
+          type:
+            type: string
+            enum: [final]
+          segmentId:
+            $ref: '#/components/schemas/Tsid'
+          utteranceId:
+            $ref: '#/components/schemas/Tsid'
+          sequence:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 1
+          text:
+            type: string
+            minLength: 1
+            example: 오늘 회의에서는 출시 일정을 논의했습니다.
+          startedAtMs:
+            type: integer
+            format: int64
+            minimum: 0
+            example: 0
+          endedAtMs:
+            type: integer
+            format: int64
+            minimum: 0
+            example: 8230
+      examples:
+        - name: final
+          payload:
+            type: final
+            segmentId: 0HZX2K7M9Q4AD
+            utteranceId: 0HZX2K7M9Q4AC
+            sequence: 1
+            text: 오늘 회의에서는 출시 일정을 논의했습니다.
+            startedAtMs: 0
+            endedAtMs: 8230
+    CompletedEvent:
+      name: CompletedEvent
+      title: 전사 세션 정상 완료
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, sessionId]
+        properties:
+          type:
+            type: string
+            enum: [completed]
+          sessionId:
+            $ref: '#/components/schemas/Tsid'
       examples:
         - name: completed
-          payload: { type: SESSION_COMPLETED, sessionId: 0HZX2K7M9Q4AB }
-    Error:
-      name: Error
-      payload:
-        $ref: "#/components/schemas/Error"
-      examples:
-        - name: invalidState
           payload:
-            type: ERROR
-            code: INVALID_TRANSCRIPTION_SESSION_STATE
-            message: 현재 상태에서는 요청을 처리할 수 없습니다.
-            retryable: false
-    Pong:
-      name: Pong
+            type: completed
+            sessionId: 0HZX2K7M9Q4AB
+    ErrorEvent:
+      name: ErrorEvent
+      title: 전사 세션 실패
+      summary: event 전송 후 원인에 따라 WebSocket close code 1008 또는 1011로 종료한다.
       payload:
-        $ref: "#/components/schemas/Pong"
+        type: object
+        additionalProperties: false
+        required: [type, code, message]
+        properties:
+          type:
+            type: string
+            enum: [error]
+          code:
+            type: string
+            enum:
+              - INVALID_CLIENT_MESSAGE
+              - INVALID_AUDIO_FRAME
+              - OPENAI_CONNECTION_FAILED
+              - OPENAI_TRANSCRIPTION_FAILED
+              - INTERNAL_ERROR
+            example: OPENAI_TRANSCRIPTION_FAILED
+          message:
+            type: string
+            minLength: 1
+            example: 실시간 전사 처리에 실패했습니다.
       examples:
-        - name: pong
-          payload: { type: PONG }
-
+        - name: upstreamFailure
+          payload:
+            type: error
+            code: OPENAI_TRANSCRIPTION_FAILED
+            message: 실시간 전사 처리에 실패했습니다.
   schemas:
     Tsid:
       type: string
+      pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
       minLength: 13
       maxLength: 13
-      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-
-    TranscriptionSessionStatus:
-      type: string
-      enum:
-        [
-          CONNECTING,
-          STREAMING,
-          PAUSED,
-          FINALIZING,
-          COMPLETED,
-          INTERRUPTED,
-          FAILED,
-        ]
-
-    AppErrorType:
-      type: string
-      enum:
-        - BAD_REQUEST
-        - UNAUTHORIZED
-        - FORBIDDEN
-        - WORKSPACE_NOT_FOUND
-        - NOTE_NOT_FOUND
-        - FOLDER_NOT_FOUND
-        - TRANSCRIPTION_SESSION_NOT_FOUND
-        - TRANSCRIPT_SEGMENT_NOT_FOUND
-        - FOLDER_NAME_ALREADY_EXISTS
-        - ACTIVE_TRANSCRIPTION_SESSION_EXISTS
-        - INVALID_TRANSCRIPTION_SESSION_STATE
-        - STT_PROVIDER_UNAVAILABLE
-        - INTERNAL_SERVER_ERROR
-
-    TurnCommit:
-      type: object
-      additionalProperties: false
-      required: [type]
-      properties:
-        type: { type: string, enum: [TURN_COMMIT] }
-    SessionPause:
-      type: object
-      additionalProperties: false
-      required: [type]
-      properties:
-        type: { type: string, enum: [SESSION_PAUSE] }
-    SessionResume:
-      type: object
-      additionalProperties: false
-      required: [type]
-      properties:
-        type: { type: string, enum: [SESSION_RESUME] }
-    SessionComplete:
-      type: object
-      additionalProperties: false
-      required: [type]
-      properties:
-        type: { type: string, enum: [SESSION_COMPLETE] }
-    Ping:
-      type: object
-      additionalProperties: false
-      required: [type]
-      properties:
-        type: { type: string, enum: [PING] }
-    SessionReady:
-      type: object
-      additionalProperties: false
-      required: [type, sessionId]
-      properties:
-        type: { type: string, enum: [SESSION_READY] }
-        sessionId:
-          $ref: "#/components/schemas/Tsid"
-    SessionStatus:
-      type: object
-      additionalProperties: false
-      required: [type, status, recordedDurationMs]
-      properties:
-        type: { type: string, enum: [SESSION_STATUS] }
-        status:
-          $ref: "#/components/schemas/TranscriptionSessionStatus"
-        recordedDurationMs: { type: integer, format: int64, minimum: 0 }
-    TranscriptPartial:
-      type: object
-      additionalProperties: false
-      required: [type, itemId, text, startedAtMs]
-      properties:
-        type: { type: string, enum: [TRANSCRIPT_PARTIAL] }
-        itemId: { type: string, minLength: 1 }
-        text: { type: string }
-        startedAtMs: { type: integer, format: int64, minimum: 0 }
-    TranscriptFinal:
-      type: object
-      additionalProperties: false
-      required: [type, itemId, segment]
-      properties:
-        type: { type: string, enum: [TRANSCRIPT_FINAL] }
-        itemId: { type: string, minLength: 1 }
-        segment:
-          $ref: "#/components/schemas/TranscriptSegment"
-    TranscriptSegment:
-      type: object
-      additionalProperties: false
-      required: [segmentId, sessionId, sequence, text, startedAtMs, endedAtMs]
-      properties:
-        segmentId:
-          $ref: "#/components/schemas/Tsid"
-        sessionId:
-          $ref: "#/components/schemas/Tsid"
-        sequence: { type: integer, minimum: 1 }
-        text: { type: string, minLength: 1 }
-        startedAtMs: { type: integer, minimum: 0 }
-        endedAtMs: { type: integer, minimum: 0 }
-    SessionCompleted:
-      type: object
-      additionalProperties: false
-      required: [type, sessionId]
-      properties:
-        type: { type: string, enum: [SESSION_COMPLETED] }
-        sessionId:
-          $ref: "#/components/schemas/Tsid"
-    Error:
-      type: object
-      additionalProperties: false
-      required: [type, code, message, retryable]
-      properties:
-        type: { type: string, enum: [ERROR] }
-        code:
-          $ref: "#/components/schemas/AppErrorType"
-        message: { type: string }
-        retryable: { type: boolean }
-    Pong:
-      type: object
-      additionalProperties: false
-      required: [type]
-      properties:
-        type: { type: string, enum: [PONG] }
+      example: 0HZX2K7M9Q4AB

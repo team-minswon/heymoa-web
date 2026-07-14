@@ -44,8 +44,6 @@ export * from "./projectResponseError";
 export * from "./refreshTokensResponse";
 export * from "./refreshTokensResponseData";
 export * from "./refreshTokensResponseError";
-export * from "./startTranscriptionSessionRequest";
-export * from "./startTranscriptionSessionRequestAudioFormat";
 export * from "./startTranscriptionSessionResponse";
 export * from "./startTranscriptionSessionResponseData";
 export * from "./startTranscriptionSessionResponseDataEndReason";

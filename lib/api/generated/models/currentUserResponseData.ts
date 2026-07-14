@@ -10,6 +10,11 @@
  * 성공 응답 데이터
  */
 export type CurrentUserResponseData = {
+  /**
+   * 사용자 프로필 이미지 URL. 등록되지 않은 경우 null
+   * @nullable
+   */
+  image: string | null;
   /** 사용자 이름 */
   name: string;
   /**

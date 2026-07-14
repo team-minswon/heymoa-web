@@ -23,7 +23,6 @@ import type {
 
 import type {
   AppErrorResponse,
-  StartTranscriptionSessionRequest,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
@@ -461,11 +460,6 @@ export type startTranscriptionSessionResponse201 = {
   status: 201;
 };
 
-export type startTranscriptionSessionResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type startTranscriptionSessionResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -486,7 +480,6 @@ export type startTranscriptionSessionResponseSuccess =
     headers: Headers;
   };
 export type startTranscriptionSessionResponseError = (
-  | startTranscriptionSessionResponse400
   | startTranscriptionSessionResponse401
   | startTranscriptionSessionResponse404
   | startTranscriptionSessionResponse409
@@ -508,7 +501,6 @@ export const getStartTranscriptionSessionUrl = (noteId: string) => {
  */
 export const startTranscriptionSession = async (
   noteId: string,
-  startTranscriptionSessionRequest?: StartTranscriptionSessionRequest,
   options?: RequestInit
 ): Promise<startTranscriptionSessionResponse> => {
   return apiFetch<startTranscriptionSessionResponse>(
@@ -516,27 +508,25 @@ export const startTranscriptionSession = async (
     {
       ...options,
       method: "POST",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(startTranscriptionSessionRequest),
     }
   );
 };
 
 export const getStartTranscriptionSessionMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof startTranscriptionSession>>,
     TError,
-    { noteId: string; data?: StartTranscriptionSessionRequest },
+    { noteId: string },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof startTranscriptionSession>>,
   TError,
-  { noteId: string; data?: StartTranscriptionSessionRequest },
+  { noteId: string },
   TContext
 > => {
   const mutationKey = ["startTranscriptionSession"];
@@ -550,11 +540,11 @@ export const getStartTranscriptionSessionMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof startTranscriptionSession>>,
-    { noteId: string; data?: StartTranscriptionSessionRequest }
+    { noteId: string }
   > = (props) => {
-    const { noteId, data } = props ?? {};
+    const { noteId } = props ?? {};
 
-    return startTranscriptionSession(noteId, data, requestOptions);
+    return startTranscriptionSession(noteId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -563,25 +553,23 @@ export const getStartTranscriptionSessionMutationOptions = <
 export type StartTranscriptionSessionMutationResult = NonNullable<
   Awaited<ReturnType<typeof startTranscriptionSession>>
 >;
-export type StartTranscriptionSessionMutationBody =
-  | StartTranscriptionSessionRequest
-  | undefined;
+
 export type StartTranscriptionSessionMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 /**
  * @summary 전사 세션 시작
  */
 export const useStartTranscriptionSession = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof startTranscriptionSession>>,
       TError,
-      { noteId: string; data?: StartTranscriptionSessionRequest },
+      { noteId: string },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -590,7 +578,7 @@ export const useStartTranscriptionSession = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof startTranscriptionSession>>,
   TError,
-  { noteId: string; data?: StartTranscriptionSessionRequest },
+  { noteId: string },
   TContext
 > => {
   return useMutation(

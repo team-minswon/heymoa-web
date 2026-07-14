@@ -28,6 +28,7 @@ export const getCurrentUserForSsr = cache(
         userId: "user-12345",
         name: "테스트 유저",
         email: "test@heymoa.com",
+        image: "https://images.heymoa.test/users/test-user.png",
       };
     }
 

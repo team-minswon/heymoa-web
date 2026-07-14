@@ -7,7 +7,10 @@ const document = parseDocument(source, { uniqueKeys: true });
 
 function api() {
   return document.toJS() as {
-    paths: Record<string, Record<string, { operationId?: string }>>;
+    paths: Record<
+      string,
+      Record<string, { operationId?: string; requestBody?: unknown }>
+    >;
     components: { schemas: Record<string, unknown> };
   };
 }
@@ -49,6 +52,40 @@ describe("OpenAPI contract", () => {
   it("does not expose a language field or default-workspace read route", () => {
     expect(source).not.toContain("/v1/workspaces/default:");
     expect(source).not.toMatch(/^\s+language:/m);
+  });
+
+  it("starts transcription without a request body", () => {
+    expect(
+      api().paths["/v1/notes/{noteId}/transcription-sessions"]?.post
+        ?.requestBody
+    ).toBeUndefined();
+  });
+
+  it("requires the current-user image and current session end reasons", () => {
+    const schemas = api().components.schemas as {
+      CurrentUserResponse: {
+        properties: { data: { required: string[] } };
+      };
+      StartTranscriptionSessionResponse: {
+        properties: {
+          data: { properties: { endReason: { enum: string[] } } };
+        };
+      };
+    };
+
+    expect(
+      schemas.CurrentUserResponse.properties.data.required
+    ).toContain("image");
+    expect(
+      schemas.StartTranscriptionSessionResponse.properties.data.properties
+        .endReason.enum
+    ).toEqual([
+      "READY_TIMEOUT",
+      "CLIENT_DISCONNECTED",
+      "CLIENT_PROTOCOL_ERROR",
+      "OPENAI_ERROR",
+      "INTERNAL_ERROR",
+    ]);
   });
 
   it("uses discriminated success envelopes", () => {

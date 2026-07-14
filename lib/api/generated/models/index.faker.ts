@@ -22,7 +22,6 @@ import type {
   ProjectRequest,
   ProjectResponse,
   RefreshTokensResponse,
-  StartTranscriptionSessionRequest,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
@@ -31,28 +30,6 @@ import type {
   WorkspaceListResponse,
   WorkspaceResponse,
 } from ".";
-
-export const getCurrentUserResponseMock = (
-  overrideResponse: Partial<CurrentUserResponse> = {}
-): CurrentUserResponse => ({
-  data: {
-    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-    email: faker.internet.email(),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
-
-export const getLogoutResponseMock = (
-  overrideResponse: Partial<LogoutResponse> = {}
-): LogoutResponse => ({
-  data: { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
 
 export const getStartTranscriptionSessionResponseMock = (
   overrideResponse: Partial<StartTranscriptionSessionResponse> = {}
@@ -77,15 +54,24 @@ export const getStartTranscriptionSessionResponseMock = (
     ]),
     endReason: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
-        "CLIENT_DISCONNECTED",
         "READY_TIMEOUT",
-        "STT_FAILURE",
-        "AUDIO_ARCHIVE_FAILURE",
+        "CLIENT_DISCONNECTED",
+        "CLIENT_PROTOCOL_ERROR",
+        "OPENAI_ERROR",
         "INTERNAL_ERROR",
       ] as const),
       null,
     ]),
   },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getLogoutResponseMock = (
+  overrideResponse: Partial<LogoutResponse> = {}
+): LogoutResponse => ({
+  data: { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
   success: faker.datatype.boolean(),
   error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
   ...overrideResponse,
@@ -109,35 +95,6 @@ export const getUpdateWorkspaceRequestMock = (
     ]),
     undefined,
   ]),
-  ...overrideResponse,
-});
-
-export const getTranscriptResponseMock = (
-  overrideResponse: Partial<TranscriptResponse> = {}
-): TranscriptResponse => ({
-  data: {
-    segments: Array.from(
-      { length: faker.number.int({ min: 1, max: 10 }) },
-      (_, i) => i + 1
-    ).map(() => ({
-      sequence: faker.number.int({ min: 0 }),
-      segmentId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-      endedAtMs: faker.helpers.arrayElement([
-        faker.number.int({ min: 0 }),
-        null,
-      ]),
-      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      transcriptionSessionId: faker.helpers.fromRegExp(
-        "^[0-9A-HJKMNP-TV-Z]{13}$"
-      ),
-      startedAtMs: faker.helpers.arrayElement([
-        faker.number.int({ min: 0 }),
-        null,
-      ]),
-    })),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
   ...overrideResponse,
 });
 
@@ -165,16 +122,39 @@ export const getNoteResponseMock = (
   ...overrideResponse,
 });
 
+export const getTranscriptResponseMock = (
+  overrideResponse: Partial<TranscriptResponse> = {}
+): TranscriptResponse => ({
+  data: {
+    segments: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      sequence: faker.number.int({ min: 0 }),
+      segmentId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      endedAtMs: faker.number.int({ min: 0 }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      transcriptionSessionId: faker.helpers.fromRegExp(
+        "^[0-9A-HJKMNP-TV-Z]{13}$"
+      ),
+      startedAtMs: faker.number.int({ min: 0 }),
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
 export const getTranscriptionSessionResponseMock = (
   overrideResponse: Partial<TranscriptionSessionResponse> = {}
 ): TranscriptionSessionResponse => ({
   data: {
     endReason: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
-        "CLIENT_DISCONNECTED",
         "READY_TIMEOUT",
-        "STT_FAILURE",
-        "AUDIO_ARCHIVE_FAILURE",
+        "CLIENT_DISCONNECTED",
+        "CLIENT_PROTOCOL_ERROR",
+        "OPENAI_ERROR",
         "INTERNAL_ERROR",
       ] as const),
       null,
@@ -229,14 +209,17 @@ export const getChangeDefaultWorkspaceResponseMock = (
   ...overrideResponse,
 });
 
-export const getStartTranscriptionSessionRequestMock = (
-  overrideResponse: Partial<StartTranscriptionSessionRequest> = {}
-): StartTranscriptionSessionRequest => ({
-  audioFormat: {
-    channels: faker.number.int({ min: 1 }),
-    mimeType: faker.string.alpha({ length: { min: 1, max: 100 } }),
-    sampleRate: faker.number.int({ min: 1 }),
+export const getCurrentUserResponseMock = (
+  overrideResponse: Partial<CurrentUserResponse> = {}
+): CurrentUserResponse => ({
+  data: {
+    image: faker.helpers.arrayElement([faker.internet.url(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    email: faker.internet.email(),
   },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
   ...overrideResponse,
 });
 

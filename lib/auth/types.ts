@@ -14,8 +14,8 @@ export type AppError = {
 };
 
 export type AuthUser = {
-  userId?: string;
-  email?: string;
-  name?: string;
-  image?: string | null;
+  userId: string;
+  email: string;
+  name: string;
+  image: string | null;
 };

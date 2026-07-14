@@ -525,6 +525,7 @@ paths:
                       userId: "0HZX2K7M9Q4AC"
                       name: "홍길동"
                       email: "hong@example.com"
+                      image: "https://cdn.heymoa.com/profiles/member.png"
                     error: null
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -818,48 +819,6 @@ paths:
           minLength: 13
           maxLength: 13
         example: "0HZX2K7M9Q4AF"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StartTranscriptionSessionRequest"
-            examples:
-              startTranscriptionSession_ProjectNotFoundException:
-                value:
-                  audioFormat:
-                    mimeType: "audio/webm;codecs=opus"
-                    sampleRate: 48000
-                    channels: 1
-              startTranscriptionSession_Success:
-                value:
-                  audioFormat:
-                    mimeType: "audio/webm;codecs=opus"
-                    sampleRate: 48000
-                    channels: 1
-              startTranscriptionSession_NoteNotFoundException:
-                value:
-                  audioFormat:
-                    mimeType: "audio/webm;codecs=opus"
-                    sampleRate: 48000
-                    channels: 1
-              startTranscriptionSession_BadRequest:
-                value:
-                  audioFormat:
-                    mimeType: ""
-                    sampleRate: 0
-                    channels: 0
-              startTranscriptionSession_ActiveTranscriptionSessionException:
-                value:
-                  audioFormat:
-                    mimeType: "audio/webm;codecs=opus"
-                    sampleRate: 48000
-                    channels: 1
-              startTranscriptionSession_WorkspaceNotFoundException:
-                value:
-                  audioFormat:
-                    mimeType: "audio/webm;codecs=opus"
-                    sampleRate: 48000
-                    channels: 1
       responses:
         "404":
           description: "요청한 리소스를 찾을 수 없음"
@@ -911,21 +870,6 @@ paths:
                       endedAt: null
                       endReason: null
                     error: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "409":
           description: "요청 상태 충돌"
           content:
@@ -1683,80 +1627,6 @@ paths:
       - accessCookie: []
 components:
   schemas:
-    CurrentUserResponse:
-      title: "CurrentUserResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "email"
-          - "name"
-          - "userId"
-          type: "object"
-          properties:
-            name:
-              type: "string"
-              description: "사용자 이름"
-              nullable: false
-              example: "홍길동"
-            userId:
-              type: "string"
-              description: "사용자의 13자리 TSID"
-              nullable: false
-              example: "0HZX2K7M9Q4AC"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            email:
-              type: "string"
-              description: "사용자 이메일"
-              nullable: false
-              example: "hong@example.com"
-              format: "email"
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
-          nullable: true
-    LogoutResponse:
-      title: "LogoutResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "message"
-          type: "object"
-          properties:
-            message:
-              type: "string"
-              description: "처리 결과 메시지"
-              nullable: false
-              example: "성공적으로 로그아웃했습니다."
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
-          nullable: true
     StartTranscriptionSessionResponse:
       title: "StartTranscriptionSessionResponse"
       required:
@@ -1823,11 +1693,40 @@ components:
               description: "전사 종료 사유"
               nullable: true
               enum:
-              - "CLIENT_DISCONNECTED"
               - "READY_TIMEOUT"
-              - "STT_FAILURE"
-              - "AUDIO_ARCHIVE_FAILURE"
+              - "CLIENT_DISCONNECTED"
+              - "CLIENT_PROTOCOL_ERROR"
+              - "OPENAI_ERROR"
               - "INTERNAL_ERROR"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    LogoutResponse:
+      title: "LogoutResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "message"
+          type: "object"
+          properties:
+            message:
+              type: "string"
+              description: "처리 결과 메시지"
+              nullable: false
+              example: "성공적으로 로그아웃했습니다."
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -1871,86 +1770,6 @@ components:
           nullable: true
           example: "제품을 만드는 팀의 워크스페이스"
           maxLength: 1000
-    TranscriptResponse:
-      title: "TranscriptResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "segments"
-          type: "object"
-          properties:
-            segments:
-              type: "array"
-              description: "시간순 확정 전사 구간 목록"
-              items:
-                required:
-                - "endedAtMs"
-                - "segmentId"
-                - "sequence"
-                - "startedAtMs"
-                - "text"
-                - "transcriptionSessionId"
-                type: "object"
-                properties:
-                  sequence:
-                    type: "integer"
-                    description: "세션 내 구간 순서"
-                    nullable: false
-                    example: 1
-                    format: "int64"
-                    minimum: 0
-                  segmentId:
-                    type: "string"
-                    description: "확정 전사 구간의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AH"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  endedAtMs:
-                    type: "integer"
-                    description: "오디오 종료 오프셋(ms)"
-                    nullable: true
-                    example: 1200
-                    format: "int64"
-                    minimum: 0
-                  text:
-                    type: "string"
-                    description: "확정 전사 텍스트"
-                    nullable: false
-                    example: "안녕하세요."
-                  transcriptionSessionId:
-                    type: "string"
-                    description: "전사 세션의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AG"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  startedAtMs:
-                    type: "integer"
-                    description: "오디오 시작 오프셋(ms)"
-                    nullable: true
-                    example: 0
-                    format: "int64"
-                    minimum: 0
-              nullable: false
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
-          nullable: true
     RefreshTokensResponse:
       title: "RefreshTokensResponse"
       required:
@@ -2042,6 +1861,86 @@ components:
           type: "object"
           description: "성공 시 null인 오류 정보"
           nullable: true
+    TranscriptResponse:
+      title: "TranscriptResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "segments"
+          type: "object"
+          properties:
+            segments:
+              type: "array"
+              description: "시간순 확정 전사 구간 목록"
+              items:
+                required:
+                - "endedAtMs"
+                - "segmentId"
+                - "sequence"
+                - "startedAtMs"
+                - "text"
+                - "transcriptionSessionId"
+                type: "object"
+                properties:
+                  sequence:
+                    type: "integer"
+                    description: "세션 내 구간 순서"
+                    nullable: false
+                    example: 1
+                    format: "int64"
+                    minimum: 0
+                  segmentId:
+                    type: "string"
+                    description: "확정 전사 구간의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AH"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  endedAtMs:
+                    type: "integer"
+                    description: "세션 시작 기준 PCM 구간 종료 밀리초"
+                    nullable: false
+                    example: 1200
+                    format: "int64"
+                    minimum: 0
+                  text:
+                    type: "string"
+                    description: "확정 전사 텍스트"
+                    nullable: false
+                    example: "안녕하세요."
+                  transcriptionSessionId:
+                    type: "string"
+                    description: "전사 세션의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AG"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  startedAtMs:
+                    type: "integer"
+                    description: "세션 시작 기준 PCM 구간 시작 밀리초"
+                    nullable: false
+                    example: 0
+                    format: "int64"
+                    minimum: 0
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
     TranscriptionSessionResponse:
       title: "TranscriptionSessionResponse"
       required:
@@ -2067,10 +1966,10 @@ components:
               nullable: true
               example: "CLIENT_DISCONNECTED"
               enum:
-              - "CLIENT_DISCONNECTED"
               - "READY_TIMEOUT"
-              - "STT_FAILURE"
-              - "AUDIO_ARCHIVE_FAILURE"
+              - "CLIENT_DISCONNECTED"
+              - "CLIENT_PROTOCOL_ERROR"
+              - "OPENAI_ERROR"
               - "INTERNAL_ERROR"
             endedAt:
               type: "string"
@@ -2220,42 +2119,58 @@ components:
           type: "object"
           description: "성공 시 null인 오류 정보"
           nullable: true
-    StartTranscriptionSessionRequest:
-      title: "StartTranscriptionSessionRequest"
+    CurrentUserResponse:
+      title: "CurrentUserResponse"
       required:
-      - "audioFormat"
+      - "data"
+      - "error"
+      - "success"
       type: "object"
       properties:
-        audioFormat:
+        data:
           required:
-          - "channels"
-          - "mimeType"
-          - "sampleRate"
+          - "email"
+          - "image"
+          - "name"
+          - "userId"
           type: "object"
           properties:
-            channels:
-              type: "integer"
-              description: "오디오 채널 수"
-              nullable: false
-              example: 1
-              format: "int32"
-              minimum: 1
-            mimeType:
+            image:
               type: "string"
-              description: "오디오 MIME 타입"
+              description: "사용자 프로필 이미지 URL. 등록되지 않은 경우 null"
+              nullable: true
+              example: "https://cdn.heymoa.com/profiles/member.png"
+              format: "uri"
+            name:
+              type: "string"
+              description: "사용자 이름"
               nullable: false
-              example: "audio/webm;codecs=opus"
-              minLength: 1
-              maxLength: 100
-            sampleRate:
-              type: "integer"
-              description: "오디오 샘플 레이트(Hz)"
+              example: "홍길동"
+            userId:
+              type: "string"
+              description: "사용자의 13자리 TSID"
               nullable: false
-              example: 48000
-              format: "int32"
-              minimum: 1
-          description: "입력 오디오 형식"
+              example: "0HZX2K7M9Q4AC"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            email:
+              type: "string"
+              description: "사용자 이메일"
+              nullable: false
+              example: "hong@example.com"
+              format: "email"
+          description: "성공 응답 데이터"
           nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
     UpdateWorkspaceResponse:
       title: "UpdateWorkspaceResponse"
       required:
