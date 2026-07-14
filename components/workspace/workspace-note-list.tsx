@@ -51,6 +51,8 @@ export function WorkspaceNoteList({
   isError,
   onRetry,
   onCreateMeeting,
+  createMeetingLabel = "새 회의",
+  isCreateMeetingDisabled = false,
 }: {
   workspaceId: string;
   notes: NoteListResponseDataNotesItem[];
@@ -58,6 +60,8 @@ export function WorkspaceNoteList({
   isError: boolean;
   onRetry: () => void;
   onCreateMeeting: () => void;
+  createMeetingLabel?: string;
+  isCreateMeetingDisabled?: boolean;
 }) {
   const groups = groupNotesByDate(notes, "ko-KR");
 
@@ -101,8 +105,12 @@ export function WorkspaceNoteList({
         <p className="mt-1 max-w-sm text-sm text-[var(--el-muted)]">
           첫 회의를 시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
         </p>
-        <Button className="mt-5 rounded-full" onClick={onCreateMeeting}>
-          <Mic /> 새 회의
+        <Button
+          className="mt-5 rounded-full"
+          disabled={isCreateMeetingDisabled}
+          onClick={onCreateMeeting}
+        >
+          <Mic /> {createMeetingLabel}
         </Button>
       </div>
     );

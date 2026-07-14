@@ -1,18 +1,22 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
 
 const push = vi.hoisted(() => vi.fn());
-const start = vi.hoisted(() => vi.fn());
 const createNote = vi.hoisted(() => vi.fn());
+const recording = vi.hoisted(() => ({
+  phase: "idle",
+  session: null as null | { noteId: string },
+  start: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useWorkspaceShell: () => ({ selectedProjectId: "01K0000000001" }),
 }));
 vi.mock("@/components/transcription/recording-provider", () => ({
-  useRecording: () => ({ start, session: null, phase: "idle" }),
+  useRecording: () => recording,
 }));
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   useGetProjects: () => ({
@@ -67,6 +71,14 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
 }));
 
 describe("WorkspacePage", () => {
+  beforeEach(() => {
+    push.mockReset();
+    createNote.mockReset();
+    recording.start.mockReset();
+    recording.phase = "idle";
+    recording.session = null;
+  });
+
   it("renders the selected project hierarchy and creates a meeting", async () => {
     createNote.mockResolvedValue({
       status: 201,
@@ -88,9 +100,29 @@ describe("WorkspacePage", () => {
     expect(button).toHaveClass("rounded-full");
     fireEvent.click(button);
 
-    await waitFor(() => expect(start).toHaveBeenCalledWith("01K0000000100"));
+    await waitFor(() =>
+      expect(recording.start).toHaveBeenCalledWith("01K0000000100")
+    );
     expect(push).toHaveBeenCalledWith(
       "/w/01K0000000000/notes/01K0000000100?view=side&tab=transcript"
     );
+  });
+
+  it("opens the active recording instead of creating another meeting", () => {
+    recording.phase = "recording";
+    recording.session = { noteId: "01K0000000002" };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkspacePage workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "현재 녹음" }));
+
+    expect(push).toHaveBeenCalledWith(
+      "/w/01K0000000000/notes/01K0000000002?view=side&tab=transcript"
+    );
+    expect(createNote).not.toHaveBeenCalled();
+    expect(recording.start).not.toHaveBeenCalled();
   });
 });

@@ -62,8 +62,25 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const isError = selectedProjectId
     ? singleNotesQuery.isError
     : projectsQuery.isError || allNotesQueries.isError;
+  const isRecordingActive = [
+    "requesting-permission",
+    "connecting",
+    "recording",
+    "stopping",
+  ].includes(recording.phase);
+  const activeRecordingNoteId = isRecordingActive
+    ? recording.session?.noteId
+    : undefined;
 
   const handleCreateMeeting = async () => {
+    if (isRecordingActive) {
+      if (activeRecordingNoteId) {
+        router.push(
+          `/w/${workspaceId}/notes/${activeRecordingNoteId}?view=side&tab=transcript`
+        );
+      }
+      return;
+    }
     if (!targetProjectId) return;
     const response = await createNote.mutateAsync({
       projectId: targetProjectId,
@@ -107,10 +124,12 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         <Button
           className="rounded-full"
           loading={createNote.isPending}
-          disabled={!targetProjectId}
+          disabled={
+            !targetProjectId || (isRecordingActive && !activeRecordingNoteId)
+          }
           onClick={() => void handleCreateMeeting()}
         >
-          <Mic /> 새 회의
+          <Mic /> {activeRecordingNoteId ? "현재 녹음" : "새 회의"}
         </Button>
       </header>
       <WorkspaceNoteList
@@ -120,6 +139,10 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         isError={isError}
         onRetry={retry}
         onCreateMeeting={() => void handleCreateMeeting()}
+        createMeetingLabel={activeRecordingNoteId ? "현재 녹음" : "새 회의"}
+        isCreateMeetingDisabled={
+          createNote.isPending || (isRecordingActive && !activeRecordingNoteId)
+        }
       />
     </section>
   );
