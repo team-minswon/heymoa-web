@@ -1,6 +1,10 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useGetCurrentUser } from "@/lib/api/generated/users/users";
@@ -24,6 +28,9 @@ export function AccountSettingsForm() {
       </div>
       <div className="flex items-center gap-4 rounded-2xl border border-[var(--el-hairline)] bg-white p-5">
         <Avatar className="size-12">
+          {user?.image ? (
+            <AvatarImage src={user.image} alt={`${user.name} 프로필`} />
+          ) : null}
           <AvatarFallback>{user?.name.slice(0, 1) ?? "나"}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1 space-y-2">

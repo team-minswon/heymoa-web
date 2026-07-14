@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Pause, Radio, Square } from "lucide-react";
+import { Scissors, Square } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,12 @@ import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { useRecording } from "@/components/transcription/recording-provider";
 import { isWorkspaceRoute } from "@/lib/routes/app-route";
 
-const ACTIVE_STATUSES = new Set([
-  "CONNECTING",
-  "STREAMING",
-  "PAUSED",
-  "FINALIZING",
+const VISIBLE_PHASES = new Set([
+  "requesting-permission",
+  "connecting",
+  "recording",
+  "stopping",
+  "failed",
 ]);
 
 function formatElapsed(elapsedMs: number) {
@@ -30,9 +31,8 @@ export function GlobalRecordingIndicator() {
     elapsedMs,
     level,
     levelHistory,
-    microphoneState,
-    pause,
-    resume,
+    phase,
+    commit,
     stop,
   } = useRecording();
   const workspacesQuery = useGetWorkspaces({
@@ -42,7 +42,7 @@ export function GlobalRecordingIndicator() {
   if (
     isWorkspaceRoute(pathname) ||
     !session ||
-    !ACTIVE_STATUSES.has(session.status)
+    !VISIBLE_PHASES.has(phase)
   )
     return null;
 
@@ -57,16 +57,14 @@ export function GlobalRecordingIndicator() {
   const href = workspaceId
     ? `/w/${workspaceId}/notes/${session.noteId}?view=full&tab=transcript`
     : "#";
-  const paused = session.status === "PAUSED";
-  const stateLabel = paused
-    ? "일시정지"
-    : microphoneState === "denied"
-      ? "마이크 권한 필요"
-      : microphoneState === "unavailable"
-        ? "마이크 없음"
-        : microphoneState === "recording"
-          ? "녹음 중"
-          : "마이크 대기 중";
+  const stateLabel =
+    phase === "connecting" || phase === "requesting-permission"
+      ? "연결 중"
+      : phase === "recording"
+        ? "녹음 중"
+        : phase === "stopping"
+          ? "마무리 중"
+          : "연결 오류";
 
   return (
     <aside
@@ -107,12 +105,13 @@ export function GlobalRecordingIndicator() {
       <Button
         type="button"
         variant="ghost"
-        size="icon-sm"
-        aria-label={paused ? "녹음 재개" : "녹음 일시 정지"}
-        onClick={() => void (paused ? resume() : pause())}
-        className="size-7 rounded-full text-[var(--el-muted)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
+        size="sm"
+        onClick={commit}
+        disabled={phase !== "recording"}
+        className="h-7 rounded-full px-2.5 text-[11px] text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
       >
-        {paused ? <Radio className="size-3.5" /> : <Pause className="size-3.5" />}
+        <Scissors className="size-3.5" />
+        구간 확정
       </Button>
       <Button
         type="button"
@@ -120,6 +119,7 @@ export function GlobalRecordingIndicator() {
         size="icon-sm"
         aria-label="녹음 종료"
         onClick={() => void stop()}
+        disabled={phase === "stopping" || phase === "failed"}
         className="size-7 rounded-full text-destructive hover:text-destructive hover:bg-destructive/8"
       >
         <Square className="size-3.5" />

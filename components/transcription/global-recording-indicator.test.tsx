@@ -1,8 +1,12 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+const recording = vi.hoisted(() => ({
+  commit: vi.fn(),
+  stop: vi.fn(),
+}));
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspaces: () => ({
     data: {
@@ -18,18 +22,22 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
 }));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => ({
-    session: { noteId: "01K0000000002", status: "STREAMING" },
+    session: { noteId: "01K0000000002", status: "ACTIVE" },
+    phase: "recording",
     elapsedMs: 1200,
     level: 0.42,
     levelHistory: [0.1, 0.25, 0.7, 0.4],
-    microphoneState: "recording",
-    pause: vi.fn(),
-    resume: vi.fn(),
-    stop: vi.fn(),
+    commit: recording.commit,
+    stop: recording.stop,
   }),
 }));
 
 describe("GlobalRecordingIndicator", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
   it("renders input level as an accessible meter", () => {
     render(<GlobalRecordingIndicator />);
     expect(screen.getByRole("meter", { name: "마이크 입력" })).toHaveAttribute(
@@ -40,5 +48,16 @@ describe("GlobalRecordingIndicator", () => {
     expect(screen.getByTestId("global-wave-bar-2")).toHaveStyle({
       transform: "scaleY(0.7)",
     });
+  });
+
+  it("offers commit and stop without pause controls", () => {
+    render(<GlobalRecordingIndicator />);
+
+    fireEvent.click(screen.getByRole("button", { name: "구간 확정" }));
+    expect(recording.commit).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: /일시 정지|재개/ })
+    ).not.toBeInTheDocument();
   });
 });
