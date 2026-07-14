@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -121,19 +122,29 @@ export function WorkspaceSidebar({
     const name = String(formData.get("name") ?? "").trim();
     if (!name || !projectDialog) return;
 
-    if (projectDialog.mode === "create") {
-      await createProject.mutateAsync({
-        workspaceId,
-        data: { name, description: null },
-      });
-    } else {
-      await updateProject.mutateAsync({
-        workspaceId,
-        projectId: projectDialog.project.projectId,
-        data: { name, description: projectDialog.project.description },
-      });
+    try {
+      if (projectDialog.mode === "create") {
+        await createProject.mutateAsync({
+          workspaceId,
+          data: { name, description: null },
+        });
+        toast.success("프로젝트가 생성되었습니다.");
+      } else {
+        await updateProject.mutateAsync({
+          workspaceId,
+          projectId: projectDialog.project.projectId,
+          data: { name, description: projectDialog.project.description },
+        });
+        toast.success("프로젝트 이름이 변경되었습니다.");
+      }
+      await refreshProjects();
+    } catch {
+      if (projectDialog.mode === "create") {
+        toast.error("프로젝트 생성에 실패했습니다.");
+      } else {
+        toast.error("프로젝트 이름 변경에 실패했습니다.");
+      }
     }
-    await refreshProjects();
     setProjectDialog(null);
   };
 
@@ -441,7 +452,7 @@ export function WorkspaceSidebar({
           <AlertDialogHeader>
             <AlertDialogTitle>프로젝트를 삭제할까요?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.name} 프로젝트가 삭제됩니다. 프로젝트에 노트가 있으면 삭제할 수 없습니다.
+              {deleteTarget?.name} 프로젝트가 삭제됩니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -460,9 +471,12 @@ export function WorkspaceSidebar({
                       onSelectProject(null);
                     }
                     await refreshProjects();
+                    toast.success("프로젝트가 삭제되었습니다.");
+                  } else {
+                    toast.error("프로젝트 삭제에 실패했습니다.");
                   }
                 } catch {
-                  // Error handled by react-query / global error boundary
+                  toast.error("프로젝트에 노트가 있어 삭제할 수 없습니다.");
                 }
                 setDeleteTarget(null);
               }}

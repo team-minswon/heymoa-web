@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { NavbarGate } from "@/components/NavbarGate";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
+import { Toaster } from "@/components/ui/sonner";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { siteConfig } from "@/lib/site";
 import { Providers } from "./providers";
@@ -35,12 +36,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   applicationName: siteConfig.name,
   title: {
-    default: siteConfig.title,
+    default: siteConfig.name,
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  keywords: [...siteConfig.keywords],
-  authors: [{ name: siteConfig.name }],
+  keywords: ["AI", "Meeting", "Transcription", "Note", "Summarization"],
+  authors: [{ name: siteConfig.name, url: siteConfig.url }],
   creator: siteConfig.name,
   publisher: siteConfig.name,
   icons: {
@@ -65,24 +66,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ko_KR",
-    url: "/",
+    url: siteConfig.url,
     siteName: siteConfig.name,
-    title: siteConfig.title,
+    title: siteConfig.name,
     description: siteConfig.description,
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "HeyMoa AI 회의 운영 에이전트",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: siteConfig.title,
+    title: siteConfig.name,
     description: siteConfig.description,
-    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
@@ -139,6 +131,7 @@ export default async function RootLayout({
               <Footer />
             </FooterGate>
           </div>
+          <Toaster />
         </Providers>
         <Analytics />
         <SpeedInsights />
