@@ -119,7 +119,7 @@
 ## 6. 오류 처리
 
 - REST `401`은 기존 fetcher의 refresh/retry가 처리한다.
-- 세션 시작 `409 ACTIVE_TRANSCRIPTION_SESSION_EXISTS`는 새 socket을 만들지 않고 명확한 충돌 toast/alert를 보여준다.
+- 세션 시작 `409 ACTIVE_TRANSCRIPTION_SESSION`은 새 socket을 만들지 않고 명확한 충돌 toast/alert를 보여준다.
 - note/workspace/project `404`는 해당 화면의 not-found 또는 비어 있는 selection 상태로 변환한다.
 - socket `error` event는 code와 message를 보존하되 UI에는 안전한 한국어 메시지를 표시한다.
 - `INVALID_CLIENT_MESSAGE`와 `INVALID_AUDIO_FRAME`은 terminal protocol error로 처리한다.
