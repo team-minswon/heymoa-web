@@ -117,7 +117,10 @@ describe("NotePanel", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "회의 정보" }));
+    expect(
+      screen.getByRole("tab", { name: "원본 전사" })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "노트 정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
@@ -140,5 +143,12 @@ describe("NotePanel", () => {
         screen.getByTestId("note-recording-waveform").children
       ).toHaveLength(5)
     );
+    expect(
+      screen.queryByRole("button", { name: "구간 확정" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /일시 정지|재개/ })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
   });
 });
