@@ -125,6 +125,21 @@ describe("RecordingProvider", () => {
     expect(url.host).toBe(window.location.host);
   });
 
+  it("keeps a closed initial WebSocket connection in a recoverable error state", async () => {
+    const harness = setup();
+    harness.socket.connect.mockRejectedValueOnce(new Error("WEBSOCKET_CLOSED"));
+
+    await expect(
+      act(() => harness.result.current.start(session.noteId))
+    ).resolves.toBeUndefined();
+
+    expect(harness.result.current.phase).toBe("failed");
+    expect(harness.result.current.error).toBe(
+      "실시간 전사 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요."
+    );
+    expect(harness.audio.stop).toHaveBeenCalled();
+  });
+
   it("commits the current utterance", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId));

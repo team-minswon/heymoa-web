@@ -78,6 +78,19 @@ export type RecordingContextValue = {
 
 const RecordingContext = createContext<RecordingContextValue | null>(null);
 
+function getStartErrorMessage(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : "";
+
+  if (
+    message === "WEBSOCKET_CLOSED" ||
+    message === "WEBSOCKET_CONNECTION_FAILED"
+  ) {
+    return "실시간 전사 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요.";
+  }
+
+  return message || "녹음을 시작하지 못했습니다.";
+}
+
 const browserRuntime: RecordingRuntime = {
   createAudio: (onChunk, onLevel) =>
     new PcmAudioCapture({ onChunk, onLevel }),
@@ -253,11 +266,8 @@ export function RecordingProvider({
         setPhase("recording");
       } catch (cause) {
         await audio.stop();
-        const message =
-          cause instanceof Error ? cause.message : "녹음을 시작하지 못했습니다.";
-        setError(message);
+        setError(getStartErrorMessage(cause));
         setPhase("failed");
-        throw cause;
       }
     },
     [api, failRecording, handleEvent, phase, publishLevel, runtime, setCurrentSession]
