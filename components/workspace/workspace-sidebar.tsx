@@ -3,11 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AudioLines,
   Check,
-  ChevronUp,
   Folder,
-  FolderPlus,
   MoreHorizontal,
   NotebookText,
   Pencil,
@@ -15,6 +12,9 @@ import {
   Settings,
   LogOut,
   Trash2,
+  ChevronsUpDown,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -50,11 +50,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -108,6 +105,8 @@ export function WorkspaceSidebar({
   const [projectDialog, setProjectDialog] = useState<ProjectDialogState>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponseData | null>(null);
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(true);
+
   const workspaces =
     workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
       ? workspacesQuery.data.data.data.workspaces
@@ -123,12 +122,15 @@ export function WorkspaceSidebar({
     if (!name || !projectDialog) return;
 
     if (projectDialog.mode === "create") {
-      await createProject.mutateAsync({ workspaceId, data: { name, description: null } });
+      await createProject.mutateAsync({
+        workspaceId,
+        data: { name, description: null },
+      });
     } else {
       await updateProject.mutateAsync({
         workspaceId,
         projectId: projectDialog.project.projectId,
-        data: { name, description: null },
+        data: { name, description: projectDialog.project.description },
       });
     }
     await refreshProjects();
@@ -139,73 +141,111 @@ export function WorkspaceSidebar({
 
   return (
     <>
-      <SidebarHeader className="gap-3 border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <AudioLines className="size-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-              HeyMoa
-            </p>
-            <p className="truncate text-sm font-medium">
-              {workspace?.name ?? "워크스페이스"}
-            </p>
-          </div>
-        </div>
+      <SidebarHeader className="gap-2.5 p-4 pb-3">
+        {/* User Profile Selector (Top) */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
-                variant="outline"
-                aria-label="워크스페이스 전환"
-                className="h-auto w-full justify-between rounded-xl px-3 py-2"
+                variant="ghost"
+                className="h-auto w-full justify-between p-1.5 hover:bg-accent/50 focus-visible:ring-0 rounded-xl"
               />
             }
           >
-            <span className="truncate">
-              {workspace?.name ?? "워크스페이스"}
-            </span>
-            <ChevronUp className="size-4" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Avatar className="size-8 rounded-full border border-sidebar-border/60">
+                <AvatarImage src={user?.image ?? undefined} alt="" />
+                <AvatarFallback className="rounded-full bg-primary/5 text-primary text-xs font-semibold">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="block truncate text-xs font-semibold text-foreground leading-tight">
+                  {user?.name ?? "사용자"}
+                </p>
+                <p className="block truncate text-[10px] text-muted-foreground leading-tight">
+                  {user?.email ?? ""}
+                </p>
+              </div>
+            </div>
+            <ChevronsUpDown className="size-3.5 text-muted-foreground/80 shrink-0 ml-1" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64">
+          <DropdownMenuContent align="start" className="w-60 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] border border-sidebar-border">
+            <DropdownMenuItem onClick={() => onOpenSettings("account")} className="gap-2 rounded-lg py-2">
+              <Settings className="size-4" />
+              <span>내 계정 설정</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-sidebar-border" />
+            <DropdownMenuItem onClick={() => void logout()} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 rounded-lg py-2">
+              <LogOut className="size-4" />
+              <span>로그아웃</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="h-px bg-sidebar-border my-1" />
+
+        {/* Workspace Switcher */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                aria-label="워크스페이스 전환"
+                className="h-auto w-full justify-between p-1.5 hover:bg-accent/50 focus-visible:ring-0 rounded-xl"
+              />
+            }
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-[#3f3a36] text-[10px] font-bold text-white uppercase">
+                {workspace?.name?.trim().slice(0, 1) || "W"}
+              </span>
+              <span className="truncate text-xs font-semibold text-foreground">
+                {workspace?.name ?? "워크스페이스"}
+              </span>
+            </div>
+            <ChevronsUpDown className="size-3.5 text-muted-foreground/80 shrink-0 ml-1" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] border border-sidebar-border">
             {workspaces.map((item) => (
               <DropdownMenuItem
                 key={item.workspaceId}
                 onClick={() => router.push(`/w/${item.workspaceId}`)}
+                className="justify-between rounded-lg py-2"
               >
-                <span className="flex-1 truncate">{item.name}</span>
+                <span className="truncate flex-1">{item.name}</span>
                 {item.isDefault && (
-                  <>
-                    <span className="text-xs text-muted-foreground">기본</span>
-                    <Check />
-                  </>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] bg-accent px-1.5 py-0.5 rounded-full text-muted-foreground font-medium">기본</span>
+                    <Check className="size-3.5 text-primary" />
+                  </div>
                 )}
               </DropdownMenuItem>
             ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setWorkspaceDialogOpen(true)}>
-              <Plus />새 워크스페이스
+            <DropdownMenuSeparator className="bg-sidebar-border" />
+            <DropdownMenuItem onClick={() => setWorkspaceDialogOpen(true)} className="gap-2 rounded-lg py-2">
+              <Plus className="size-4" />
+              <span>새 워크스페이스</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onOpenSettings("workspace")}>
-              <Settings />
-              워크스페이스 설정
+            <DropdownMenuItem onClick={() => onOpenSettings("workspace")} className="gap-2 rounded-lg py-2">
+              <Settings className="size-4" />
+              <span>워크스페이스 설정</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarHeader>
 
-      <SidebarContent>
-        <nav aria-label="워크스페이스">
-          <SidebarGroup>
+      <SidebarContent className="px-2">
+        <nav aria-label="워크스페이스" className="space-y-1">
+          {/* All Notes */}
+          <SidebarGroup className="py-1">
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-0.5">
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={selectedProjectId === null}
                     onClick={() => onSelectProject(null)}
+                    className="gap-2.5 text-xs font-medium rounded-lg h-8 px-2"
                   >
-                    <NotebookText />
+                    <NotebookText className="size-4 opacity-70" />
                     <span>모든 노트</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -213,96 +253,81 @@ export function WorkspaceSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          <SidebarGroup>
-            <SidebarGroupLabel>프로젝트</SidebarGroupLabel>
-            <SidebarGroupAction
-              aria-label="새 프로젝트"
-              onClick={() => setProjectDialog({ mode: "create" })}
-            >
-              <FolderPlus />
-            </SidebarGroupAction>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {projects.map((project) => (
-                  <SidebarMenuItem key={project.projectId}>
-                    <SidebarMenuButton
-                      isActive={selectedProjectId === project.projectId}
-                      onClick={() => onSelectProject(project.projectId)}
-                    >
-                      <Folder />
-                      <span>{project.name}</span>
-                    </SidebarMenuButton>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <SidebarMenuAction
-                            aria-label={`${project.name} 프로젝트 메뉴`}
-                            showOnHover
-                          />
-                        }
+          {/* Collapsible Projects Group */}
+          <SidebarGroup className="py-1">
+            <div className="flex items-center justify-between px-2 py-1">
+              <button
+                onClick={() => setProjectsOpen(!projectsOpen)}
+                className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-muted-foreground/80 hover:text-foreground uppercase text-left shrink-0"
+              >
+                {projectsOpen ? (
+                  <ChevronDown className="size-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="size-3 text-muted-foreground" />
+                )}
+                <span>프로젝트</span>
+              </button>
+              <button
+                aria-label="새 프로젝트"
+                onClick={() => setProjectDialog({ mode: "create" })}
+                className="p-0.5 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </div>
+            {projectsOpen && (
+              <SidebarGroupContent className="mt-1">
+                <SidebarMenu className="space-y-0.5">
+                  {projects.map((project) => (
+                    <SidebarMenuItem key={project.projectId}>
+                      <SidebarMenuButton
+                        isActive={selectedProjectId === project.projectId}
+                        onClick={() => onSelectProject(project.projectId)}
+                        className="gap-2.5 text-xs font-medium rounded-lg h-8 px-2"
                       >
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="right" align="start">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            setProjectDialog({ mode: "rename", project })
+                        <Folder className="size-4 opacity-70" />
+                        <span className="truncate">{project.name}</span>
+                      </SidebarMenuButton>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <SidebarMenuAction
+                              aria-label={`${project.name} 프로젝트 메뉴`}
+                              showOnHover
+                              className="size-6 text-muted-foreground/60 hover:text-foreground hover:bg-accent"
+                            />
                           }
                         >
-                          <Pencil /> 이름 변경
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeleteTarget(project)}
-                        >
-                          <Trash2 /> 삭제
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
+                          <MoreHorizontal className="size-3.5" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="right" align="start" className="rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] border border-sidebar-border">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setProjectDialog({ mode: "rename", project })
+                            }
+                            className="gap-2 rounded-lg py-1.5 text-xs"
+                          >
+                            <Pencil className="size-3.5" />
+                            <span>이름 변경</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setDeleteTarget(project)}
+                            className="gap-2 rounded-lg py-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/5"
+                          >
+                            <Trash2 className="size-3.5" />
+                            <span>삭제</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
           </SidebarGroup>
         </nav>
       </SidebarContent>
-
-      <SidebarFooter className="border-t border-sidebar-border p-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                className="h-auto w-full justify-start p-2"
-              />
-            }
-          >
-            <Avatar className="size-8">
-              <AvatarImage src={user?.image ?? undefined} alt="" />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block truncate text-sm font-medium">
-                {user?.name ?? "사용자"}
-              </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {user?.email ?? ""}
-              </span>
-            </span>
-            <ChevronUp className="size-4 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-60">
-            <DropdownMenuItem onClick={() => onOpenSettings("account")}>
-              <Settings />내 계정 설정
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => void logout()}>
-              <LogOut />
-              로그아웃
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarFooter>
 
       <Dialog open={workspaceDialogOpen} onOpenChange={setWorkspaceDialogOpen}>
         <DialogContent aria-label="새 워크스페이스 만들기">
@@ -358,52 +383,54 @@ export function WorkspaceSidebar({
         open={projectDialog !== null}
         onOpenChange={(open) => !open && setProjectDialog(null)}
       >
-        <DialogContent
-          aria-label={
-            projectDialog?.mode === "rename"
-              ? "프로젝트 이름 변경"
-              : "새 프로젝트 만들기"
-          }
-        >
-          <form action={(formData) => void handleProjectSubmit(formData)}>
-            <DialogHeader>
-              <DialogTitle>
-                {projectDialog?.mode === "rename"
-                  ? "프로젝트 이름 변경"
-                  : "새 프로젝트 만들기"}
-              </DialogTitle>
-              <DialogDescription>
-                노트를 분류할 프로젝트 이름을 입력하세요.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-5">
-              <Label htmlFor="project-name">프로젝트 이름</Label>
-              <Input
-                id="project-name"
-                name="name"
-                className="mt-2"
-                maxLength={50}
-                required
-                autoFocus
-                defaultValue={
-                  projectDialog?.mode === "rename"
-                    ? projectDialog.project.name
-                    : ""
-                }
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setProjectDialog(null)}
-              >
-                취소
-              </Button>
-              <Button type="submit">저장</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
+        {projectDialog !== null && (
+          <DialogContent
+            aria-label={
+              projectDialog.mode === "rename"
+                ? "프로젝트 이름 변경"
+                : "새 프로젝트 만들기"
+            }
+          >
+            <form action={(formData) => void handleProjectSubmit(formData)}>
+              <DialogHeader>
+                <DialogTitle>
+                  {projectDialog.mode === "rename"
+                    ? "프로젝트 이름 변경"
+                    : "새 프로젝트 만들기"}
+                </DialogTitle>
+                <DialogDescription>
+                  노트를 분류할 프로젝트 이름을 입력하세요.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-5">
+                <Label htmlFor="project-name">프로젝트 이름</Label>
+                <Input
+                  id="project-name"
+                  name="name"
+                  className="mt-2"
+                  maxLength={50}
+                  required
+                  autoFocus
+                  defaultValue={
+                    projectDialog.mode === "rename"
+                      ? projectDialog.project.name
+                      : ""
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setProjectDialog(null)}
+                >
+                  취소
+                </Button>
+                <Button type="submit">저장</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        )}
       </Dialog>
 
       <AlertDialog

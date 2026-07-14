@@ -305,7 +305,7 @@ export function RecordingProvider({
         const wsBaseUrl = apiBaseUrl
           ? apiBaseUrl.replace(/^http/, "ws")
           : `${wsProtocol}//${window.location.host}`;
-        const socketUrl = `${wsBaseUrl}/v1/transcription-sessions/${connectionSession.sessionId}/stream`;
+        const socketUrl = `${wsBaseUrl}/v1/transcription-sessions/${connectionSession.sessionId}/stream?ticket=mock-ticket`;
 
         await openConnection({ socketUrl, session: connectionSession }, audio);
       } catch (cause) {

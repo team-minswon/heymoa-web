@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, cleanup } from "@testing-library/react";
+import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
 
@@ -82,6 +82,10 @@ describe("WorkspaceSidebar", () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     }));
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("selects projects and exposes accessible CRUD dialogs", () => {
