@@ -2,24 +2,16 @@ import { ws } from "msw";
 
 import { createMockTranscriptionScenario } from "@/lib/mocks/transcription-scenario";
 
-const transcriptionLink = ws.link(
-  /\/v1\/transcription-sessions\/[^/]+\/stream/
-);
+const transcriptionLink = ws.link(/\/ws\/transcription-sessions\/[^/?]+$/);
 
 export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
   "connection",
   ({ client }) => {
     const url = new URL(client.url);
-    const sessionId = url.pathname.split("/").at(-2);
-    const ticket = url.searchParams.get("ticket");
-
-    if (!ticket) {
-      client.close(4401, "missing ticket");
-      return;
-    }
+    const sessionId = url.pathname.split("/").at(-1);
 
     if (!sessionId) {
-      client.close(4404, "missing session");
+      client.close(1008, "missing session");
       return;
     }
 
@@ -32,7 +24,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
     try {
       scenario.open();
     } catch {
-      client.close(4404, "session not found");
+      client.close(1008, "session not found");
       return;
     }
 

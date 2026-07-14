@@ -9,8 +9,10 @@ import {
   parseClientCommand,
   type ClientCommand,
   type ServerEvent,
-  type TranscriptionSessionStatus,
 } from "@/lib/transcription/protocol";
+
+const AUTO_COMMIT_BYTES = 24_000 * 2 * 15;
+const MAX_FRAME_BYTES = 1_048_576;
 
 const KOREAN_MEETING_SCRIPTS = [
   [
@@ -27,6 +29,10 @@ const KOREAN_MEETING_SCRIPTS = [
 
 type Send = (event: ServerEvent) => void;
 type Close = (code: number, reason: string) => void;
+type Failure = {
+  code: Extract<ServerEvent, { type: "error" }>["code"];
+  message: string;
+};
 
 type ScenarioOptions = {
   sessionId: string;
@@ -34,118 +40,99 @@ type ScenarioOptions = {
   requestClose?: Close;
   config?: Partial<VoiceActivityConfig>;
   script?: readonly string[];
+  failure?: Failure;
 };
+
+type ScenarioPhase = "connecting" | "recording" | "stopping" | "closed";
 
 function stableIndex(value: string, length: number) {
   let hash = 0;
-  for (const character of value)
+  for (const character of value) {
     hash = (hash * 31 + character.charCodeAt(0)) | 0;
+  }
   return Math.abs(hash) % length;
 }
 
 export function createMockTranscriptionScenario(options: ScenarioOptions) {
-  return new MockTranscriptionScenario(
-    options.sessionId,
-    options.send,
-    options.requestClose,
-    options.config,
-    options.script
-  );
+  return new MockTranscriptionScenario(options);
 }
 
 export class MockTranscriptionScenario {
-  private status: TranscriptionSessionStatus = "CONNECTING";
+  private phase: ScenarioPhase = "connecting";
   private itemSequence = 1;
   private sentenceIndex = 0;
   private recordedDurationMs = 0;
+  private bufferedBytes = 0;
   private partialText = "";
   private utteranceStartedAtMs: number | null = null;
   private lastPartialAtMs = 0;
-  private disposed = false;
-  private closeTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly config: VoiceActivityConfig;
   private readonly detector: VoiceActivityDetector;
   private readonly script: readonly string[];
 
-  constructor(
-    private readonly sessionId: string,
-    private readonly send: Send,
-    private readonly requestClose: Close = () => undefined,
-    config: Partial<VoiceActivityConfig> = {},
-    script?: readonly string[]
-  ) {
-    this.config = { ...DEFAULT_VOICE_ACTIVITY_CONFIG, ...config };
+  constructor(private readonly options: ScenarioOptions) {
+    this.config = { ...DEFAULT_VOICE_ACTIVITY_CONFIG, ...options.config };
     this.detector = new VoiceActivityDetector(this.config);
     this.script =
-      script ??
+      options.script ??
       KOREAN_MEETING_SCRIPTS[
-        stableIndex(sessionId, KOREAN_MEETING_SCRIPTS.length)
+        stableIndex(options.sessionId, KOREAN_MEETING_SCRIPTS.length)
       ];
-    this.recordedDurationMs = 0;
   }
 
   open() {
-    if (this.disposed) return;
-    this.send({ type: "SESSION_READY", sessionId: this.sessionId });
-    this.setStatus("STREAMING");
-  }
-
-  receive(command: ClientCommand) {
-    if (this.disposed) return;
-    switch (command.type) {
-      case "TURN_COMMIT":
-        this.commitPartial();
-        break;
-      case "SESSION_PAUSE":
-        this.commitPartial();
-        this.setStatus("PAUSED");
-        break;
-      case "SESSION_RESUME":
-        this.setStatus("STREAMING");
-        break;
-      case "SESSION_COMPLETE":
-        if (this.status === "FINALIZING" || this.status === "COMPLETED") break;
-        this.commitPartial();
-        this.setStatus("FINALIZING");
-        this.setStatus("COMPLETED");
-        this.send({ type: "SESSION_COMPLETED", sessionId: this.sessionId });
-        this.closeTimer = setTimeout(
-          () => this.requestClose(1000, "completed"),
-          0
-        );
-        break;
-      case "PING":
-        this.send({ type: "PONG" });
-        break;
-    }
-  }
-
-  fail(error: {
-    code: Extract<ServerEvent, { type: "ERROR" }>["code"];
-    message: string;
-  }) {
-    if (this.disposed || this.status === "COMPLETED") return;
-    this.setStatus("FAILED");
-    this.send({ type: "ERROR", ...error, retryable: false });
-    this.disposed = true;
-    this.requestClose(4500, error.message);
+    if (this.phase !== "connecting") return;
+    this.phase = "recording";
+    mockDb.updateSessionStatus(this.options.sessionId, "ACTIVE");
+    this.options.send({
+      type: "connected",
+      sessionId: this.options.sessionId,
+    });
   }
 
   async receiveFrame(frame: string | ArrayBufferLike | ArrayBufferView | Blob) {
+    if (this.phase !== "recording") return;
+
     if (typeof frame === "string") {
-      this.receive(parseClientCommand(frame));
+      try {
+        this.receiveCommand(parseClientCommand(frame));
+      } catch {
+        this.closeWithError(
+          {
+            code: "INVALID_CLIENT_MESSAGE",
+            message: "지원하지 않는 클라이언트 메시지입니다.",
+          },
+          1008
+        );
+      }
       return;
     }
-    if (this.status !== "STREAMING" || this.disposed) return;
 
     const buffer = await this.toArrayBuffer(frame);
+    if (
+      buffer.byteLength < 2 ||
+      buffer.byteLength > MAX_FRAME_BYTES ||
+      buffer.byteLength % 2 !== 0
+    ) {
+      this.closeWithError(
+        {
+          code: "INVALID_AUDIO_FRAME",
+          message: "PCM16 오디오 프레임 형식이 올바르지 않습니다.",
+        },
+        1008
+      );
+      return;
+    }
+
+    if (this.options.failure) {
+      this.closeWithError(this.options.failure, 1011);
+      return;
+    }
+
     const frameDurationMs = (buffer.byteLength / 2 / 24_000) * 1000;
     this.recordedDurationMs += frameDurationMs;
+    this.bufferedBytes += buffer.byteLength;
     const activity = this.detector.push(frameDurationMs, pcm16Rms(buffer));
-    mockDb.updateSessionStatus(
-      this.sessionId,
-      this.status
-    );
 
     if (activity.isVoiced && this.utteranceStartedAtMs === null) {
       this.utteranceStartedAtMs = Math.max(
@@ -161,28 +148,42 @@ export class MockTranscriptionScenario {
       this.revealPartial(activity.voicedMs);
     }
     if (activity.isVoiced && activity.silenceMs >= this.config.finalSilenceMs) {
-      this.commitPartial(this.recordedDurationMs - activity.silenceMs);
+      this.commitBufferedAudio(this.recordedDurationMs - activity.silenceMs);
+      return;
+    }
+    if (this.bufferedBytes >= AUTO_COMMIT_BYTES) {
+      this.commitBufferedAudio();
     }
   }
 
+  fail(failure: Failure) {
+    if (this.phase === "closed") return;
+    this.closeWithError(failure, 1011);
+  }
+
   dispose() {
-    this.disposed = true;
-    if (this.closeTimer) clearTimeout(this.closeTimer);
-    this.closeTimer = null;
+    this.phase = "closed";
   }
 
-  private get itemId() {
-    return `provider-item-${this.itemSequence}`;
-  }
+  private receiveCommand(command: ClientCommand) {
+    if (command.type === "commit") {
+      this.commitBufferedAudio();
+      return;
+    }
 
-  private setStatus(status: TranscriptionSessionStatus) {
-    this.status = status;
-    mockDb.updateSessionStatus(this.sessionId, status);
-    this.send({
-      type: "SESSION_STATUS",
-      status,
-      recordedDurationMs: this.recordedDurationMs,
+    this.commitBufferedAudio();
+    this.phase = "stopping";
+    mockDb.updateSessionStatus(this.options.sessionId, "COMPLETED");
+    this.options.send({
+      type: "completed",
+      sessionId: this.options.sessionId,
     });
+    this.options.requestClose?.(1000, "completed");
+    this.phase = "closed";
+  }
+
+  private get utteranceId() {
+    return `01K00000002${String(this.itemSequence).padStart(2, "0")}`;
   }
 
   private revealPartial(voicedMs: number) {
@@ -195,46 +196,55 @@ export class MockTranscriptionScenario {
     const tokenCount = Math.min(tokens.length, revealSteps * 3);
     this.partialText = tokens.slice(0, tokenCount).join(" ");
     this.lastPartialAtMs = voicedMs;
-    this.send({
-      type: "TRANSCRIPT_PARTIAL",
-      itemId: this.itemId,
+    this.options.send({
+      type: "partial",
+      utteranceId: this.utteranceId,
       text: this.partialText,
-      startedAtMs: this.utteranceStartedAtMs ?? 0,
     });
   }
 
-  private commitPartial(endedAtMs = this.recordedDurationMs) {
+  private commitBufferedAudio(endedAtMs = this.recordedDurationMs) {
     if (!this.partialText && this.utteranceStartedAtMs !== null) {
       this.revealPartial(this.config.partialEveryMs);
     }
     if (!this.partialText) {
-      this.detector.reset();
+      this.resetUtterance();
       return;
     }
-    const itemId = this.itemId;
-    const segment = mockDb.addSegment(this.sessionId, {
+
+    const utteranceId = this.utteranceId;
+    const segment = mockDb.addSegment(this.options.sessionId, {
       text: this.partialText,
       startedAtMs: this.utteranceStartedAtMs ?? 0,
       endedAtMs: Math.max(this.utteranceStartedAtMs ?? 0, endedAtMs),
     });
-    this.send({
-      type: "TRANSCRIPT_FINAL",
-      itemId,
-      segment: {
-        segmentId: segment.segmentId,
-        sessionId: segment.transcriptionSessionId,
-        sequence: segment.sequence,
-        text: segment.text,
-        startedAtMs: segment.startedAtMs ?? 0,
-        endedAtMs: segment.endedAtMs ?? 0,
-      },
+    this.options.send({
+      type: "final",
+      segmentId: segment.segmentId,
+      utteranceId,
+      sequence: segment.sequence,
+      text: segment.text,
+      startedAtMs: segment.startedAtMs,
+      endedAtMs: segment.endedAtMs,
     });
     this.itemSequence += 1;
     this.sentenceIndex += 1;
+    this.resetUtterance();
+  }
+
+  private resetUtterance() {
+    this.bufferedBytes = 0;
     this.partialText = "";
     this.utteranceStartedAtMs = null;
     this.lastPartialAtMs = 0;
     this.detector.reset();
+  }
+
+  private closeWithError(failure: Failure, code: 1008 | 1011) {
+    this.options.send({ type: "error", ...failure });
+    this.phase = "closed";
+    mockDb.updateSessionStatus(this.options.sessionId, "INTERRUPTED");
+    this.options.requestClose?.(code, failure.message);
   }
 
   private async toArrayBuffer(
