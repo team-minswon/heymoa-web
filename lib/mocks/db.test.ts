@@ -4,6 +4,26 @@ import { mockDb } from "@/lib/mocks/db";
 describe("mockDb", () => {
   beforeEach(() => mockDb.reset());
 
+  it("seeds the deterministic profile and balanced workspace content", () => {
+    expect(mockDb.getCurrentUser()).toEqual({
+      userId: "user-12345",
+      name: "테스트 유저",
+      email: "test@heymoa.com",
+      image: "https://images.heymoa.test/users/test-user.png",
+    });
+    const workspaces = mockDb.listWorkspaces();
+    expect(workspaces).toHaveLength(2);
+    expect(mockDb.listProjects(workspaces[0].workspaceId)).toHaveLength(2);
+    expect(mockDb.listProjects(workspaces[1].workspaceId)).toHaveLength(2);
+    expect(
+      workspaces.flatMap((workspace) =>
+        mockDb
+          .listProjects(workspace.workspaceId)
+          .flatMap((project) => mockDb.listNotes(project.projectId))
+      )
+    ).toHaveLength(4);
+  });
+
   it("keeps exactly one explicit default workspace", () => {
     const created = mockDb.createWorkspace({
       name: "제품",
@@ -42,5 +62,17 @@ describe("mockDb", () => {
     expect(() => mockDb.createSession(note.noteId)).toThrow(
       "ACTIVE_TRANSCRIPTION_SESSION"
     );
+  });
+
+  it("keeps every persisted transcript offset non-null", () => {
+    const segments = mockDb.listSegments("01K0000000002");
+    expect(segments).toHaveLength(3);
+    expect(
+      segments.every(
+        (segment) =>
+          Number.isInteger(segment.startedAtMs) &&
+          Number.isInteger(segment.endedAtMs)
+      )
+    ).toBe(true);
   });
 });

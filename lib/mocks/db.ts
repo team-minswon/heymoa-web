@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import type {
   CreateWorkspaceRequest,
   CurrentUserResponseData,
@@ -15,17 +16,13 @@ import type {
 } from "@/lib/api/generated/models";
 
 const ACTIVE_STATUSES = new Set<string>([
-  "CONNECTING",
-  "STREAMING",
-  "PAUSED",
-  "FINALIZING",
   "READY",
+  "ACTIVE",
 ]);
 
 const TERMINAL_STATUSES = new Set<string>([
   "COMPLETED",
   "INTERRUPTED",
-  "FAILED",
 ]);
 
 type AddSegmentInput = Pick<
@@ -73,10 +70,12 @@ function nextTimestamp() {
 }
 
 function createSeedState(): StoreState {
+  faker.seed(20260715);
   const user: CurrentUserResponseData = {
-    userId: "01K0000000003",
+    userId: "user-12345",
     name: "테스트 유저",
     email: "test@heymoa.com",
+    image: "https://images.heymoa.test/users/test-user.png",
   };
   const workspaces: WorkspaceResponseData[] = [
     {
@@ -111,6 +110,28 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-02T00:00:00Z",
       updatedAt: "2026-07-02T00:00:00Z",
     },
+    {
+      projectId: "01K0000000007",
+      workspaceId: workspaces[1].workspaceId,
+      name: "로드맵",
+      description: faker.helpers.arrayElement([
+        "제품 로드맵과 우선순위를 정리합니다.",
+        "분기별 제품 계획을 논의합니다.",
+      ]),
+      createdAt: "2026-07-03T00:00:00Z",
+      updatedAt: "2026-07-03T00:00:00Z",
+    },
+    {
+      projectId: "01K0000000008",
+      workspaceId: workspaces[1].workspaceId,
+      name: "리서치",
+      description: faker.helpers.arrayElement([
+        "사용자 조사 기록을 모읍니다.",
+        "시장과 고객 인사이트를 공유합니다.",
+      ]),
+      createdAt: "2026-07-04T00:00:00Z",
+      updatedAt: "2026-07-04T00:00:00Z",
+    },
   ];
   const notes: NoteResponseData[] = [
     {
@@ -126,6 +147,26 @@ function createSeedState(): StoreState {
       title: "고객 인터뷰",
       createdAt: "2026-07-09T00:00:00Z",
       updatedAt: "2026-07-09T00:00:00Z",
+    },
+    {
+      noteId: "01K0000000009",
+      projectId: projects[2].projectId,
+      title: faker.helpers.arrayElement([
+        "3분기 로드맵 정렬",
+        "제품 우선순위 검토",
+      ]),
+      createdAt: "2026-07-08T00:00:00Z",
+      updatedAt: "2026-07-08T00:00:00Z",
+    },
+    {
+      noteId: "01K0000000014",
+      projectId: projects[3].projectId,
+      title: faker.helpers.arrayElement([
+        "신규 사용자 인터뷰",
+        "탐색 리서치 메모",
+      ]),
+      createdAt: "2026-07-07T00:00:00Z",
+      updatedAt: "2026-07-07T00:00:00Z",
     },
   ];
   const sessions: MockSession[] = [
@@ -394,7 +435,7 @@ export const mockDb = {
   ): TranscriptionSessionResponseData {
     const session = findSession(sessionId);
     session.status = status;
-    if (status === "STREAMING" && !session.startedAt) {
+    if (status === "ACTIVE" && !session.startedAt) {
       session.startedAt = nextTimestamp();
     }
     if (TERMINAL_STATUSES.has(status)) session.endedAt = nextTimestamp();
