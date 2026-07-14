@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Mic } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,6 +19,11 @@ import { useGetProjects } from "@/lib/api/generated/projects/projects";
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const recording = useRecording();
   const createNote = useCreateNote();
   const { selectedProjectId } = useWorkspaceShell();
@@ -74,6 +80,10 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const activeRecordingNoteId = isRecordingActive
     ? recording.session?.noteId
     : undefined;
+  const isCreateMeetingDisabled =
+    !hydrated ||
+    !targetProjectId ||
+    (isRecordingActive && !activeRecordingNoteId);
 
   const handleCreateMeeting = async () => {
     if (isRecordingActive) {
@@ -127,9 +137,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         <Button
           className="rounded-full"
           loading={createNote.isPending}
-          disabled={
-            !targetProjectId || (isRecordingActive && !activeRecordingNoteId)
-          }
+          disabled={isCreateMeetingDisabled}
           onClick={() => void handleCreateMeeting()}
         >
           <Mic /> {activeRecordingNoteId ? "현재 녹음" : "새 회의"}
@@ -145,7 +153,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         projectNames={projectNames}
         createMeetingLabel={activeRecordingNoteId ? "현재 녹음" : "새 회의"}
         isCreateMeetingDisabled={
-          createNote.isPending || (isRecordingActive && !activeRecordingNoteId)
+          createNote.isPending || isCreateMeetingDisabled
         }
       />
     </section>

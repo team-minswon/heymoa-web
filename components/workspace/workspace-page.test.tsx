@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
 
@@ -79,6 +80,21 @@ describe("WorkspacePage", () => {
     recording.start.mockReset();
     recording.phase = "idle";
     recording.session = null;
+  });
+
+  it("keeps meeting creation disabled in server markup", () => {
+    const markup = renderToString(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkspacePage workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
+
+    const document = new DOMParser().parseFromString(markup, "text/html");
+    const createMeeting = [...document.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("새 회의")
+    );
+
+    expect(createMeeting?.hasAttribute("disabled")).toBe(true);
   });
 
   it("renders the selected project hierarchy and creates a meeting", async () => {
