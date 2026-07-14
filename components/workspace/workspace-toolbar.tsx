@@ -2,13 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  ExternalLink,
-  Mic,
-  Plus,
-  Scissors,
-  Square,
-} from "lucide-react";
+import { ExternalLink, Mic, Plus, Square } from "lucide-react";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -175,16 +169,6 @@ export function WorkspaceToolbar({
             <span className="font-mono text-[13px] font-medium tabular-nums text-[var(--el-ink)]">
               {formatElapsed(recording.elapsedMs)}
             </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 rounded-full"
-              disabled={recording.phase !== "recording"}
-              onClick={recording.commit}
-            >
-              <Scissors className="size-3.5" /> 구간 확정
-            </Button>
             <Button
               type="button"
               variant="outline"

@@ -56,6 +56,7 @@ describe("WorkspaceToolbar", () => {
     createNote.mockReset();
     push.mockReset();
     recording.start.mockReset();
+    recording.stop.mockReset();
   });
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -138,7 +139,7 @@ describe("WorkspaceToolbar", () => {
     expect(recording.start).not.toHaveBeenCalled();
   });
 
-  it("shows global commit and stop controls while recording", () => {
+  it("shows automatic recording status with only a stop control", () => {
     recording.session = {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
@@ -158,8 +159,11 @@ describe("WorkspaceToolbar", () => {
       "42"
     );
     expect(screen.getByText("00:12")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "구간 확정" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: "구간 확정" })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
+    expect(recording.stop).toHaveBeenCalledOnce();
     expect(
       screen.queryByRole("button", { name: /일시 정지|재개/ })
     ).not.toBeInTheDocument();

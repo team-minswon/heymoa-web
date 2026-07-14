@@ -50,12 +50,14 @@ describe("GlobalRecordingIndicator", () => {
     });
   });
 
-  it("offers commit and stop without pause controls", () => {
+  it("offers only stop while automatic finalization is active", () => {
     render(<GlobalRecordingIndicator />);
 
-    fireEvent.click(screen.getByRole("button", { name: "구간 확정" }));
-    expect(recording.commit).toHaveBeenCalledOnce();
-    expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: "구간 확정" })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
+    expect(recording.stop).toHaveBeenCalledOnce();
     expect(
       screen.queryByRole("button", { name: /일시 정지|재개/ })
     ).not.toBeInTheDocument();

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Scissors, Square } from "lucide-react";
+import { Square } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -26,15 +26,8 @@ function formatElapsed(elapsedMs: number) {
 
 export function GlobalRecordingIndicator() {
   const pathname = usePathname();
-  const {
-    session,
-    elapsedMs,
-    level,
-    levelHistory,
-    phase,
-    commit,
-    stop,
-  } = useRecording();
+  const { session, elapsedMs, level, levelHistory, phase, stop } =
+    useRecording();
   const workspacesQuery = useGetWorkspaces({
     query: { enabled: Boolean(session), staleTime: 5 * 60 * 1000 },
   });
@@ -102,17 +95,6 @@ export function GlobalRecordingIndicator() {
         </span>
       </Link>
       <div className="h-5 w-px bg-[var(--el-hairline)]" />
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={commit}
-        disabled={phase !== "recording"}
-        className="h-7 rounded-full px-2.5 text-[11px] text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
-      >
-        <Scissors className="size-3.5" />
-        구간 확정
-      </Button>
       <Button
         type="button"
         variant="ghost"
