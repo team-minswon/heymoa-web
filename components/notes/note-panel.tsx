@@ -4,8 +4,7 @@ import {
   Expand,
   Mic,
   PanelRightClose,
-  Pause,
-  Play,
+  Scissors,
   Square,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -20,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export type NoteTab = "details" | "transcript";
 
@@ -58,13 +58,13 @@ export function NotePanel({
       : undefined;
 
   const recording = useRecording();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const isThisNoteRecording = recording.session?.noteId === noteId;
   const isActive =
     isThisNoteRecording &&
-    ["CONNECTING", "STREAMING", "PAUSED", "FINALIZING"].includes(
-      recording.session?.status ?? ""
+    ["requesting-permission", "connecting", "recording", "stopping"].includes(
+      recording.phase
     );
-  const isPaused = recording.session?.status === "PAUSED";
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-background">
@@ -105,30 +105,43 @@ export function NotePanel({
         </div>
       </header>
 
-      <Tabs
-        value={tab}
-        onValueChange={(value) => value && onTabChange(value as NoteTab)}
-        className="min-h-0 flex-1 gap-0"
-      >
-        <div className="border-b px-4 sm:px-6 flex justify-center">
-          <div className="w-full max-w-3xl">
-            <TabsList variant="line" className="h-12 w-full justify-start">
-              <TabsTrigger value="transcript">원본 전사</TabsTrigger>
-              <TabsTrigger value="details">노트 정보</TabsTrigger>
-            </TabsList>
-          </div>
-        </div>
-        <TabsContent value="transcript" className="min-h-0 flex-1">
-          <ScrollArea className="h-full">
+      {isDesktop ? (
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_360px]">
+          <ScrollArea className="h-full min-w-0">
             <TranscriptView noteId={noteId} />
           </ScrollArea>
-        </TabsContent>
-        <TabsContent value="details" className="min-h-0 flex-1">
-          <ScrollArea className="h-full">
-            <NoteDetails noteId={noteId} />
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+          <aside className="min-h-0 border-l border-[var(--el-hairline)]">
+            <ScrollArea className="h-full">
+              <NoteDetails noteId={noteId} />
+            </ScrollArea>
+          </aside>
+        </div>
+      ) : (
+        <Tabs
+          value={tab}
+          onValueChange={(value) => value && onTabChange(value as NoteTab)}
+          className="min-h-0 flex-1 gap-0"
+        >
+          <div className="flex justify-center border-b border-[var(--el-hairline)] px-4 sm:px-6">
+            <div className="w-full max-w-3xl">
+              <TabsList variant="line" className="h-12 w-full justify-start">
+                <TabsTrigger value="transcript">원본 전사</TabsTrigger>
+                <TabsTrigger value="details">회의 정보</TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+          <TabsContent value="transcript" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <TranscriptView noteId={noteId} />
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="details" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <NoteDetails noteId={noteId} />
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+      )}
 
       <motion.div
         layout
@@ -213,18 +226,12 @@ export function NotePanel({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
-                className="size-7 shrink-0 rounded-full text-[var(--el-muted)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
-                aria-label={isPaused ? "재개" : "일시 정지"}
-                onClick={() =>
-                  void (isPaused ? recording.resume() : recording.pause())
-                }
+                size="sm"
+                className="h-7 shrink-0 rounded-full px-2.5 text-[11px] text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
+                disabled={recording.phase !== "recording"}
+                onClick={recording.commit}
               >
-                {isPaused ? (
-                  <Play className="size-3.5 text-destructive" />
-                ) : (
-                  <Pause className="size-3.5" />
-                )}
+                <Scissors className="size-3.5" /> 구간 확정
               </Button>
               <Button
                 type="button"

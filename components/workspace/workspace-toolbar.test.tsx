@@ -15,11 +15,10 @@ const recording = vi.hoisted(() => ({
   elapsedMs: 0,
   level: 0.42,
   levelHistory: [0.1, 0.25, 0.7, 0.4],
-  microphoneState: "recording",
+  phase: "idle",
   error: null,
   start: vi.fn(),
-  pause: vi.fn(),
-  resume: vi.fn(),
+  commit: vi.fn(),
   stop: vi.fn(),
 }));
 const createNote = vi.hoisted(() => vi.fn());
@@ -66,8 +65,9 @@ describe("WorkspaceToolbar", () => {
     }));
   });
 
-  it("shows the start action when idle", () => {
+  it("keeps workspace-route creation in the page when idle", () => {
     recording.session = null;
+    recording.phase = "idle";
     recording.elapsedMs = 0;
     render(
       <SidebarProvider>
@@ -79,12 +79,13 @@ describe("WorkspaceToolbar", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "실시간 기록 시작" })
-    ).toBeEnabled();
+      screen.queryByRole("button", { name: "실시간 기록 시작" })
+    ).not.toBeInTheDocument();
   });
 
   it("creates a fresh note and starts a session for that exact note", async () => {
     recording.session = null;
+    recording.phase = "idle";
     createNote.mockResolvedValue({
       status: 201,
       data: { success: true, data: { noteId: "01K0000000100" } },
@@ -94,11 +95,12 @@ describe("WorkspaceToolbar", () => {
         <WorkspaceToolbar
           workspaceId="01K0000000000"
           currentLabel="모든 노트"
+          activeNoteId="01K0000000002"
         />
       </SidebarProvider>
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "실시간 기록 시작" }));
+    fireEvent.click(screen.getByRole("button", { name: "새 회의" }));
 
     await waitFor(() =>
       expect(recording.start).toHaveBeenCalledWith("01K0000000100")
@@ -110,6 +112,7 @@ describe("WorkspaceToolbar", () => {
 
   it("creates only a fresh note when the plus button is used", async () => {
     recording.session = null;
+    recording.phase = "idle";
     recording.start.mockClear();
     createNote.mockResolvedValue({
       status: 201,
@@ -120,6 +123,7 @@ describe("WorkspaceToolbar", () => {
         <WorkspaceToolbar
           workspaceId="01K0000000000"
           currentLabel="모든 노트"
+          activeNoteId="01K0000000002"
         />
       </SidebarProvider>
     );
@@ -134,12 +138,13 @@ describe("WorkspaceToolbar", () => {
     expect(recording.start).not.toHaveBeenCalled();
   });
 
-  it("shows global pause and stop controls while streaming", () => {
+  it("shows global commit and stop controls while recording", () => {
     recording.session = {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
-      status: "STREAMING",
+      status: "ACTIVE",
     };
+    recording.phase = "recording";
     recording.elapsedMs = 12_000;
     render(
       <SidebarProvider>
@@ -153,9 +158,10 @@ describe("WorkspaceToolbar", () => {
       "42"
     );
     expect(screen.getByText("00:12")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "녹음 일시 정지" })
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "구간 확정" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: /일시 정지|재개/ })
+    ).not.toBeInTheDocument();
   });
 });

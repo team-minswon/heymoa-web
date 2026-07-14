@@ -7,7 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { NotePanel } from "@/components/notes/note-panel";
 import {
@@ -60,7 +60,8 @@ const runtime: RecordingRuntime = {
   createSocket: () => ({
     connect: vi.fn().mockResolvedValue(undefined),
     sendAudio: vi.fn(),
-    sendCommand: vi.fn(),
+    commit: vi.fn(),
+    stop: vi.fn(),
     close: vi.fn(),
   }),
 };
@@ -81,7 +82,7 @@ function renderNotePanel(ui: ReactNode) {
           startSession: vi.fn(async (noteId) => ({
             sessionId: "01K0000000010",
             noteId,
-            status: "STREAMING",
+            status: "READY",
             readyExpiresAt: "2026-07-11T00:10:00Z",
             startedAt: null,
             endedAt: null,
@@ -96,6 +97,13 @@ function renderNotePanel(ui: ReactNode) {
 }
 
 describe("NotePanel", () => {
+  beforeAll(() => {
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+  });
   afterEach(cleanup);
   it("changes only the controlled tab", () => {
     const onTabChange = vi.fn();
@@ -109,7 +117,7 @@ describe("NotePanel", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "노트 정보" }));
+    fireEvent.click(screen.getByRole("tab", { name: "회의 정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
