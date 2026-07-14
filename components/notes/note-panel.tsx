@@ -57,11 +57,15 @@ export function NotePanel({
 
   const recording = useRecording();
   const isThisNoteRecording = recording.session?.noteId === noteId;
+  const hasActiveSession = [
+    "requesting-permission",
+    "connecting",
+    "recording",
+    "stopping",
+  ].includes(recording.phase);
   const isActive =
-    isThisNoteRecording &&
-    ["requesting-permission", "connecting", "recording", "stopping"].includes(
-      recording.phase
-    );
+    isThisNoteRecording && hasActiveSession;
+  const isOtherNoteRecording = hasActiveSession && !isThisNoteRecording;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-background">
@@ -164,11 +168,22 @@ export function NotePanel({
             >
               <button
                 type="button"
-                className="flex size-8 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
-                aria-label="기록 시작"
-                onClick={() => void recording.start(noteId)}
+                className="flex size-8 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45"
+                aria-label={
+                  isOtherNoteRecording
+                    ? "다른 노트에서 녹음 중"
+                    : "기록 시작"
+                }
+                disabled={isOtherNoteRecording}
+                onClick={() => {
+                  if (!isOtherNoteRecording) void recording.start(noteId);
+                }}
               >
-                <span className="sr-only">기록 시작</span>
+                <span className="sr-only">
+                  {isOtherNoteRecording
+                    ? "다른 노트에서 녹음 중"
+                    : "기록 시작"}
+                </span>
               </button>
             </motion.div>
           ) : (

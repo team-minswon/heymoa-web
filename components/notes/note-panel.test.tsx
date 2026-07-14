@@ -151,4 +151,33 @@ describe("NotePanel", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
   });
+
+  it("blocks a second note from starting while another note records", async () => {
+    renderNotePanel(
+      <>
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000002"
+          tab="transcript"
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000003"
+          tab="transcript"
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </>
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "기록 시작" })[0]);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "다른 노트에서 녹음 중" })
+      ).toBeDisabled()
+    );
+  });
 });
