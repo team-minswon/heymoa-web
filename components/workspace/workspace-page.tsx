@@ -29,6 +29,9 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const selectedProject = projects.find(
     (project) => project.projectId === selectedProjectId
   );
+  const projectNames = Object.fromEntries(
+    projects.map((project) => [project.projectId, project.name])
+  );
   const targetProjectId = selectedProjectId ?? projects[0]?.projectId;
   const singleNotesQuery = useGetNotes(selectedProjectId ?? "", {
     query: { enabled: selectedProjectId !== null },
@@ -139,6 +142,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         isError={isError}
         onRetry={retry}
         onCreateMeeting={() => void handleCreateMeeting()}
+        projectNames={projectNames}
         createMeetingLabel={activeRecordingNoteId ? "현재 녹음" : "새 회의"}
         isCreateMeetingDisabled={
           createNote.isPending || (isRecordingActive && !activeRecordingNoteId)

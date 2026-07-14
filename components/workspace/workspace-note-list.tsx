@@ -51,6 +51,7 @@ export function WorkspaceNoteList({
   isError,
   onRetry,
   onCreateMeeting,
+  projectNames,
   createMeetingLabel = "새 회의",
   isCreateMeetingDisabled = false,
 }: {
@@ -60,6 +61,7 @@ export function WorkspaceNoteList({
   isError: boolean;
   onRetry: () => void;
   onCreateMeeting: () => void;
+  projectNames: Record<string, string>;
   createMeetingLabel?: string;
   isCreateMeetingDisabled?: boolean;
 }) {
@@ -137,6 +139,7 @@ export function WorkspaceNoteList({
                 key={note.noteId}
                 workspaceId={workspaceId}
                 note={note}
+                projectName={projectNames[note.projectId]}
               />
             ))}
           </div>

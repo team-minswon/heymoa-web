@@ -8,6 +8,8 @@ const createNote = vi.hoisted(() => vi.fn());
 const recording = vi.hoisted(() => ({
   phase: "idle",
   session: null as null | { noteId: string },
+  elapsedMs: 0,
+  levelHistory: [0, 0, 0, 0, 0],
   start: vi.fn(),
 }));
 
