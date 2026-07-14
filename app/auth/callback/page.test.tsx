@@ -13,13 +13,13 @@ vi.mock("@/components/auth/auth-provider", () => ({
 vi.mock("@/lib/auth/api", () => ({
   getMe: vi.fn().mockResolvedValue({ name: "김민수" }),
 }));
-vi.mock("@/lib/api/generated/workspace/workspace", () => ({
-  listWorkspaces: vi.fn().mockResolvedValue({
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  getWorkspaces: vi.fn().mockResolvedValue({
     status: 200,
     data: {
       success: true,
       data: {
-        items: [
+        workspaces: [
           { workspaceId: "01K0000000007", isDefault: false },
           { workspaceId: "01K0000000000", isDefault: true },
         ],

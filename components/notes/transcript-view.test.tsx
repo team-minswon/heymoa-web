@@ -27,10 +27,17 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   }),
 }));
 vi.mock("@/lib/api/generated/transcription/transcription", () => ({
-  getListNoteTranscriptSegmentsQueryKey: () => ["segments"],
-  useDeleteTranscriptSegment: () => ({ mutateAsync: vi.fn() }),
-  useListNoteTranscriptSegments: () => ({
-    data: { status: 200, data: { success: true, data: { items: [] } } },
+  getGetNoteTranscriptQueryKey: () => ["transcript"],
+  useGetNoteTranscript: () => ({
+    data: {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          segments: [],
+        },
+      },
+    },
     isPending: false,
   }),
 }));

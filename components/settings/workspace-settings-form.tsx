@@ -12,11 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getGetWorkspaceQueryKey,
-  getListWorkspacesQueryKey,
+  getGetWorkspacesQueryKey,
   useGetWorkspace,
-  useSetDefaultWorkspace,
+  useChangeDefaultWorkspace,
   useUpdateWorkspace,
-} from "@/lib/api/generated/workspace/workspace";
+} from "@/lib/api/generated/workspaces/workspaces";
 
 const workspaceSchema = z.object({
   name: z.string().trim().min(1, "워크스페이스 이름을 입력해 주세요.").max(80),
@@ -37,7 +37,7 @@ export function WorkspaceSettingsForm({
   const queryClient = useQueryClient();
   const query = useGetWorkspace(workspaceId);
   const update = useUpdateWorkspace();
-  const setDefault = useSetDefaultWorkspace();
+  const setDefault = useChangeDefaultWorkspace();
   const [feedback, setFeedback] = useState<string | null>(null);
   const workspace =
     query.data?.status === 200 && query.data.data.success
@@ -63,7 +63,7 @@ export function WorkspaceSettingsForm({
       queryClient.invalidateQueries({
         queryKey: getGetWorkspaceQueryKey(workspaceId),
       }),
-      queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getGetWorkspacesQueryKey() }),
     ]);
   }
 
@@ -81,7 +81,7 @@ export function WorkspaceSettingsForm({
   const makeDefault = async () => {
     setFeedback(null);
     try {
-      await setDefault.mutateAsync({ workspaceId });
+      await setDefault.mutateAsync({ data: { workspaceId } });
       await refresh();
       setFeedback("기본 워크스페이스로 설정됨");
     } catch {

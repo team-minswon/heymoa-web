@@ -9,7 +9,7 @@ import { Providers } from "@/app/providers";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getMe } from "@/lib/auth/api";
 import { normalizeReturnTo } from "@/lib/auth/paths";
-import { listWorkspaces } from "@/lib/api/generated/workspace/workspace";
+import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 
 export default function AuthCallback() {
   return (
@@ -57,11 +57,11 @@ export function CallbackProcessor() {
             router.replace(destination);
             return;
           }
-          const response = await listWorkspaces();
+          const response = await getWorkspaces();
           if (response.status !== 200 || !response.data.success) {
             throw new Error("WORKSPACE_LIST_FAILED");
           }
-          const items = response.data.data.items;
+          const items = response.data.data.workspaces ?? [];
           const selected = items.find((item) => item.isDefault) ?? items[0];
           if (!selected) {
             setErrorDetails({

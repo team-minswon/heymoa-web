@@ -13,12 +13,12 @@ import {
 } from "@/components/settings/settings-dialog";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
-import { useListWorkspaceFolders } from "@/lib/api/generated/folder/folder";
-import { useGetWorkspace } from "@/lib/api/generated/workspace/workspace";
+import { useGetProjects } from "@/lib/api/generated/projects/projects";
+import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 
 type WorkspaceShellState = {
-  selectedFolderId: string | null;
-  setSelectedFolderId: (folderId: string | null) => void;
+  selectedProjectId: string | null;
+  setSelectedProjectId: (projectId: string | null) => void;
   openSettings: (section: SettingsSection) => void;
 };
 
@@ -43,33 +43,33 @@ export function WorkspaceAppShell({
   hideSidebar?: boolean;
   children: React.ReactNode;
 }) {
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] =
     useState<SettingsSection>("account");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const workspaceQuery = useGetWorkspace(workspaceId);
-  const foldersQuery = useListWorkspaceFolders(workspaceId);
+  const projectsQuery = useGetProjects(workspaceId);
   const workspace =
     workspaceQuery.data?.status === 200 && workspaceQuery.data.data.success
       ? workspaceQuery.data.data.data
       : undefined;
-  const folders =
-    foldersQuery.data?.status === 200 && foldersQuery.data.data.success
-      ? (foldersQuery.data.data.data ?? [])
+  const projects =
+    projectsQuery.data?.status === 200 && projectsQuery.data.data.success
+      ? (projectsQuery.data.data.data.projects ?? [])
       : [];
   const value = useMemo(
     () => ({
-      selectedFolderId,
-      setSelectedFolderId,
+      selectedProjectId,
+      setSelectedProjectId,
       openSettings: (section: SettingsSection) => {
         setSettingsSection(section);
         setSettingsOpen(true);
       },
     }),
-    [selectedFolderId]
+    [selectedProjectId]
   );
   const currentLabel =
-    folders.find((folder) => folder.folderId === selectedFolderId)?.name ??
+    projects.find((project) => project.projectId === selectedProjectId)?.name ??
     "모든 노트";
 
   return (
@@ -87,9 +87,9 @@ export function WorkspaceAppShell({
               <WorkspaceSidebar
                 workspaceId={workspaceId}
                 workspace={workspace}
-                folders={folders}
-                selectedFolderId={selectedFolderId}
-                onSelectFolder={setSelectedFolderId}
+                projects={projects}
+                selectedProjectId={selectedProjectId}
+                onSelectProject={setSelectedProjectId}
                 onOpenSettings={value.openSettings}
               />
             </Sidebar>

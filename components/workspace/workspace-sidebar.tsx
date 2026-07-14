@@ -62,77 +62,77 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  getListWorkspaceFoldersQueryKey,
-  useCreateFolder,
-  useDeleteFolder,
-  useUpdateFolder,
-} from "@/lib/api/generated/folder/folder";
+  getGetProjectsQueryKey,
+  useCreateProject,
+  useDeleteProject,
+  useUpdateProject,
+} from "@/lib/api/generated/projects/projects";
 import type {
-  FolderResponse,
-  WorkspaceResponse,
+  ProjectResponseData,
+  WorkspaceResponseData,
 } from "@/lib/api/generated/models";
-import { getListWorkspaceNotesQueryKey } from "@/lib/api/generated/note/note";
 import {
-  getListWorkspacesQueryKey,
+  getGetWorkspacesQueryKey,
   useCreateWorkspace,
-  useListWorkspaces,
-} from "@/lib/api/generated/workspace/workspace";
+  useGetWorkspaces,
+} from "@/lib/api/generated/workspaces/workspaces";
 
-type FolderDialogState =
+type ProjectDialogState =
   | { mode: "create" }
-  | { mode: "rename"; folder: FolderResponse }
+  | { mode: "rename"; project: ProjectResponseData }
   | null;
 
 export function WorkspaceSidebar({
   workspaceId,
   workspace,
-  folders,
-  selectedFolderId,
-  onSelectFolder,
+  projects,
+  selectedProjectId,
+  onSelectProject,
   onOpenSettings,
 }: {
   workspaceId: string;
-  workspace?: WorkspaceResponse;
-  folders: FolderResponse[];
-  selectedFolderId: string | null;
-  onSelectFolder: (folderId: string | null) => void;
+  workspace?: WorkspaceResponseData;
+  projects: ProjectResponseData[];
+  selectedProjectId: string | null;
+  onSelectProject: (projectId: string | null) => void;
   onOpenSettings: (section: "account" | "workspace") => void;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, logout } = useAuth();
-  const workspacesQuery = useListWorkspaces();
+  const workspacesQuery = useGetWorkspaces();
   const createWorkspace = useCreateWorkspace();
-  const createFolder = useCreateFolder();
-  const updateFolder = useUpdateFolder();
-  const deleteFolder = useDeleteFolder();
-  const [folderDialog, setFolderDialog] = useState<FolderDialogState>(null);
-  const [deleteTarget, setDeleteTarget] = useState<FolderResponse | null>(null);
+  const createProject = useCreateProject();
+  const updateProject = useUpdateProject();
+  const deleteProject = useDeleteProject();
+  const [projectDialog, setProjectDialog] = useState<ProjectDialogState>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectResponseData | null>(null);
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
   const workspaces =
     workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
-      ? workspacesQuery.data.data.data.items
+      ? workspacesQuery.data.data.data.workspaces
       : [];
 
-  const refreshFolders = () =>
+  const refreshProjects = () =>
     queryClient.invalidateQueries({
-      queryKey: getListWorkspaceFoldersQueryKey(workspaceId),
+      queryKey: getGetProjectsQueryKey(workspaceId),
     });
 
-  const handleFolderSubmit = async (formData: FormData) => {
+  const handleProjectSubmit = async (formData: FormData) => {
     const name = String(formData.get("name") ?? "").trim();
-    if (!name || !folderDialog) return;
+    if (!name || !projectDialog) return;
 
-    if (folderDialog.mode === "create") {
-      await createFolder.mutateAsync({ workspaceId, data: { name } });
+    if (projectDialog.mode === "create") {
+      await createProject.mutateAsync({ workspaceId, data: { name, description: null } });
     } else {
-      await updateFolder.mutateAsync({
-        folderId: folderDialog.folder.folderId,
-        data: { name },
+      await updateProject.mutateAsync({
+        workspaceId,
+        projectId: projectDialog.project.projectId,
+        data: { name, description: null },
       });
     }
-    await refreshFolders();
-    setFolderDialog(null);
+    await refreshProjects();
+    setProjectDialog(null);
   };
 
   const initials = user?.name?.trim().slice(0, 1) || "H";
@@ -144,7 +144,7 @@ export function WorkspaceSidebar({
           <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <AudioLines className="size-4" />
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
               HeyMoa
             </p>
@@ -202,8 +202,8 @@ export function WorkspaceSidebar({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    isActive={selectedFolderId === null}
-                    onClick={() => onSelectFolder(null)}
+                    isActive={selectedProjectId === null}
+                    onClick={() => onSelectProject(null)}
                   >
                     <NotebookText />
                     <span>모든 노트</span>
@@ -214,29 +214,29 @@ export function WorkspaceSidebar({
           </SidebarGroup>
 
           <SidebarGroup>
-            <SidebarGroupLabel>폴더</SidebarGroupLabel>
+            <SidebarGroupLabel>프로젝트</SidebarGroupLabel>
             <SidebarGroupAction
-              aria-label="새 폴더"
-              onClick={() => setFolderDialog({ mode: "create" })}
+              aria-label="새 프로젝트"
+              onClick={() => setProjectDialog({ mode: "create" })}
             >
               <FolderPlus />
             </SidebarGroupAction>
             <SidebarGroupContent>
               <SidebarMenu>
-                {folders.map((folder) => (
-                  <SidebarMenuItem key={folder.folderId}>
+                {projects.map((project) => (
+                  <SidebarMenuItem key={project.projectId}>
                     <SidebarMenuButton
-                      isActive={selectedFolderId === folder.folderId}
-                      onClick={() => onSelectFolder(folder.folderId)}
+                      isActive={selectedProjectId === project.projectId}
+                      onClick={() => onSelectProject(project.projectId)}
                     >
                       <Folder />
-                      <span>{folder.name}</span>
+                      <span>{project.name}</span>
                     </SidebarMenuButton>
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
                           <SidebarMenuAction
-                            aria-label={`${folder.name} 폴더 메뉴`}
+                            aria-label={`${project.name} 프로젝트 메뉴`}
                             showOnHover
                           />
                         }
@@ -246,14 +246,14 @@ export function WorkspaceSidebar({
                       <DropdownMenuContent side="right" align="start">
                         <DropdownMenuItem
                           onClick={() =>
-                            setFolderDialog({ mode: "rename", folder })
+                            setProjectDialog({ mode: "rename", project })
                           }
                         >
                           <Pencil /> 이름 변경
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           variant="destructive"
-                          onClick={() => setDeleteTarget(folder)}
+                          onClick={() => setDeleteTarget(project)}
                         >
                           <Trash2 /> 삭제
                         </DropdownMenuItem>
@@ -313,9 +313,9 @@ export function WorkspaceSidebar({
               const response = await createWorkspace.mutateAsync({
                 data: { name, description: null },
               });
-              if (response.status === 200 && response.data.success) {
+              if (response.status === 201 && response.data.success) {
                 await queryClient.invalidateQueries({
-                  queryKey: getListWorkspacesQueryKey(),
+                  queryKey: getGetWorkspacesQueryKey(),
                 });
                 setWorkspaceDialogOpen(false);
                 router.push(`/w/${response.data.data.workspaceId}`);
@@ -355,39 +355,39 @@ export function WorkspaceSidebar({
       </Dialog>
 
       <Dialog
-        open={folderDialog !== null}
-        onOpenChange={(open) => !open && setFolderDialog(null)}
+        open={projectDialog !== null}
+        onOpenChange={(open) => !open && setProjectDialog(null)}
       >
         <DialogContent
           aria-label={
-            folderDialog?.mode === "rename"
-              ? "폴더 이름 변경"
-              : "새 폴더 만들기"
+            projectDialog?.mode === "rename"
+              ? "프로젝트 이름 변경"
+              : "새 프로젝트 만들기"
           }
         >
-          <form action={(formData) => void handleFolderSubmit(formData)}>
+          <form action={(formData) => void handleProjectSubmit(formData)}>
             <DialogHeader>
               <DialogTitle>
-                {folderDialog?.mode === "rename"
-                  ? "폴더 이름 변경"
-                  : "새 폴더 만들기"}
+                {projectDialog?.mode === "rename"
+                  ? "프로젝트 이름 변경"
+                  : "새 프로젝트 만들기"}
               </DialogTitle>
               <DialogDescription>
-                노트를 분류할 폴더 이름을 입력하세요.
+                노트를 분류할 프로젝트 이름을 입력하세요.
               </DialogDescription>
             </DialogHeader>
             <div className="py-5">
-              <Label htmlFor="folder-name">폴더 이름</Label>
+              <Label htmlFor="project-name">프로젝트 이름</Label>
               <Input
-                id="folder-name"
+                id="project-name"
                 name="name"
                 className="mt-2"
                 maxLength={50}
                 required
                 autoFocus
                 defaultValue={
-                  folderDialog?.mode === "rename"
-                    ? folderDialog.folder.name
+                  projectDialog?.mode === "rename"
+                    ? projectDialog.project.name
                     : ""
                 }
               />
@@ -396,7 +396,7 @@ export function WorkspaceSidebar({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setFolderDialog(null)}
+                onClick={() => setProjectDialog(null)}
               >
                 취소
               </Button>
@@ -412,10 +412,9 @@ export function WorkspaceSidebar({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>폴더를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogTitle>프로젝트를 삭제할까요?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.name} 폴더가 삭제됩니다. 노트 자체는 삭제되지
-              않습니다.
+              {deleteTarget?.name} 프로젝트가 삭제됩니다. 프로젝트에 노트가 있으면 삭제할 수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -424,18 +423,20 @@ export function WorkspaceSidebar({
               variant="destructive"
               onClick={async () => {
                 if (!deleteTarget) return;
-                await deleteFolder.mutateAsync({
-                  folderId: deleteTarget.folderId,
-                });
-                if (selectedFolderId === deleteTarget.folderId) {
-                  onSelectFolder(null);
+                try {
+                  const response = await deleteProject.mutateAsync({
+                    workspaceId,
+                    projectId: deleteTarget.projectId,
+                  });
+                  if (response.status === 204) {
+                    if (selectedProjectId === deleteTarget.projectId) {
+                      onSelectProject(null);
+                    }
+                    await refreshProjects();
+                  }
+                } catch {
+                  // Error handled by react-query / global error boundary
                 }
-                await Promise.all([
-                  refreshFolders(),
-                  queryClient.invalidateQueries({
-                    queryKey: getListWorkspaceNotesQueryKey(workspaceId),
-                  }),
-                ]);
                 setDeleteTarget(null);
               }}
             >

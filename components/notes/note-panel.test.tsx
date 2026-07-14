@@ -21,8 +21,7 @@ vi.mock("@/components/notes/note-details", () => ({
 vi.mock("@/components/notes/transcript-view", () => ({
   TranscriptView: () => <p>전사 내용</p>,
 }));
-vi.mock("@/lib/api/generated/note/note", () => ({
-  getListWorkspaceNotesQueryKey: () => ["notes"],
+vi.mock("@/lib/api/generated/notes/notes", () => ({
   useGetNote: () => ({
     data: {
       status: 200,
@@ -31,12 +30,25 @@ vi.mock("@/lib/api/generated/note/note", () => ({
         data: {
           noteId: "01K0000000002",
           title: "주간 제품 회의",
-          folders: [{ folderId: "01K0000000001", name: "주간" }],
+          projectId: "01K0000000001",
         },
       },
     },
   }),
-  useDeleteNote: () => ({ mutateAsync: vi.fn() }),
+}));
+vi.mock("@/lib/api/generated/projects/projects", () => ({
+  useGetProject: () => ({
+    data: {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          projectId: "01K0000000001",
+          name: "주간",
+        },
+      },
+    },
+  }),
 }));
 
 const runtime: RecordingRuntime = {
@@ -66,20 +78,15 @@ function renderNotePanel(ui: ReactNode) {
       <RecordingProvider
         runtime={runtime}
         api={{
-          createSession: vi.fn(async (noteId) => ({
-            session: {
-              sessionId: "01K0000000010",
-              noteId,
-              status: "CONNECTING",
-              recordedDurationMs: 0,
-              startedBy: { userId: "01K0000000003", name: "테스트 유저" },
-              startedAt: "2026-07-11T00:00:00Z",
-              endedAt: null,
-            },
-            socketUrl: "ws://localhost/stream?ticket=test",
-            ticketExpiresAt: "2026-07-11T00:01:00Z",
+          startSession: vi.fn(async (noteId) => ({
+            sessionId: "01K0000000010",
+            noteId,
+            status: "STREAMING",
+            readyExpiresAt: "2026-07-11T00:10:00Z",
+            startedAt: null,
+            endedAt: null,
+            endReason: null,
           })),
-          createTicket: vi.fn(),
         }}
       >
         {ui}

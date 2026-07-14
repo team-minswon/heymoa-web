@@ -14,16 +14,17 @@ describe("REST mock handlers", () => {
   });
   afterAll(() => server.close());
 
-  it("returns the current active session instead of a module-load snapshot", async () => {
-    const note = mockDb.createNote(mockDb.workspace.workspaceId, {});
+  it("returns the session details", async () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
     const session = mockDb.createSession(note.noteId);
 
     const response = await fetch(
-      "http://localhost/v1/transcription-sessions/active"
+      `http://localhost/v1/transcription-sessions/${session.sessionId}`
     );
     const body = await response.json();
 
-    expect(body.data.session).toMatchObject({
+    expect(body.data).toMatchObject({
       sessionId: session.sessionId,
       noteId: note.noteId,
     });

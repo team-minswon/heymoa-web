@@ -81,7 +81,7 @@ export class MockTranscriptionScenario {
       KOREAN_MEETING_SCRIPTS[
         stableIndex(sessionId, KOREAN_MEETING_SCRIPTS.length)
       ];
-    this.recordedDurationMs = mockDb.getSession(sessionId).recordedDurationMs;
+    this.recordedDurationMs = 0;
   }
 
   open() {
@@ -144,8 +144,7 @@ export class MockTranscriptionScenario {
     const activity = this.detector.push(frameDurationMs, pcm16Rms(buffer));
     mockDb.updateSessionStatus(
       this.sessionId,
-      this.status,
-      this.recordedDurationMs
+      this.status
     );
 
     if (activity.isVoiced && this.utteranceStartedAtMs === null) {
@@ -178,7 +177,7 @@ export class MockTranscriptionScenario {
 
   private setStatus(status: TranscriptionSessionStatus) {
     this.status = status;
-    mockDb.updateSessionStatus(this.sessionId, status, this.recordedDurationMs);
+    mockDb.updateSessionStatus(this.sessionId, status);
     this.send({
       type: "SESSION_STATUS",
       status,
@@ -218,7 +217,18 @@ export class MockTranscriptionScenario {
       startedAtMs: this.utteranceStartedAtMs ?? 0,
       endedAtMs: Math.max(this.utteranceStartedAtMs ?? 0, endedAtMs),
     });
-    this.send({ type: "TRANSCRIPT_FINAL", itemId, segment });
+    this.send({
+      type: "TRANSCRIPT_FINAL",
+      itemId,
+      segment: {
+        segmentId: segment.segmentId,
+        sessionId: segment.transcriptionSessionId,
+        sequence: segment.sequence,
+        text: segment.text,
+        startedAtMs: segment.startedAtMs ?? 0,
+        endedAtMs: segment.endedAtMs ?? 0,
+      },
+    });
     this.itemSequence += 1;
     this.sentenceIndex += 1;
     this.partialText = "";

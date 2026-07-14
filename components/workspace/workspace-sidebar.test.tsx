@@ -3,7 +3,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
-const setDefaultWorkspace = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
@@ -16,26 +15,26 @@ vi.mock("@/components/auth/auth-provider", () => ({
   }),
 }));
 
-vi.mock("@/lib/api/generated/folder/folder", () => ({
-  getListWorkspaceFoldersQueryKey: () => ["folders"],
-  useCreateFolder: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateFolder: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeleteFolder: () => ({ mutateAsync: vi.fn(), isPending: false }),
+vi.mock("@/lib/api/generated/projects/projects", () => ({
+  getGetProjectsQueryKey: () => ["projects"],
+  useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
-vi.mock("@/lib/api/generated/note/note", () => ({
-  getListWorkspaceNotesQueryKey: () => ["notes"],
+vi.mock("@/lib/api/generated/notes/notes", () => ({
+  getGetNotesQueryKey: () => ["notes"],
 }));
 
-vi.mock("@/lib/api/generated/workspace/workspace", () => ({
-  getListWorkspacesQueryKey: () => ["workspaces"],
-  useListWorkspaces: () => ({
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  getGetWorkspacesQueryKey: () => ["workspaces"],
+  useGetWorkspaces: () => ({
     data: {
       status: 200,
       data: {
         success: true,
         data: {
-          items: [
+          workspaces: [
             {
               workspaceId: "01K0000000000",
               name: "김민수의 워크스페이스",
@@ -48,7 +47,6 @@ vi.mock("@/lib/api/generated/workspace/workspace", () => ({
     },
   }),
   useCreateWorkspace: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useSetDefaultWorkspace: () => ({ mutateAsync: setDefaultWorkspace }),
 }));
 
 const props = {
@@ -58,12 +56,11 @@ const props = {
     name: "김민수의 워크스페이스",
     description: null,
     isDefault: true,
-    createdAt: "2026-07-01T00:00:00Z",
-    updatedAt: "2026-07-01T00:00:00Z",
+    role: "ADMIN" as const,
   },
-  folders: [{ folderId: "01K0000000001", name: "주간" }],
-  selectedFolderId: null,
-  onSelectFolder: vi.fn(),
+  projects: [{ projectId: "01K0000000001", name: "주간", workspaceId: "01K0000000000", description: null, createdAt: "", updatedAt: "" }],
+  selectedProjectId: null,
+  onSelectProject: vi.fn(),
   onOpenSettings: vi.fn(),
 };
 
@@ -87,32 +84,31 @@ describe("WorkspaceSidebar", () => {
     }));
   });
 
-  it("selects folders and exposes accessible CRUD dialogs", () => {
+  it("selects projects and exposes accessible CRUD dialogs", () => {
     renderSidebar();
 
     fireEvent.click(screen.getByRole("button", { name: "주간" }));
-    expect(props.onSelectFolder).toHaveBeenCalledWith("01K0000000001");
+    expect(props.onSelectProject).toHaveBeenCalledWith("01K0000000001");
 
-    fireEvent.click(screen.getByRole("button", { name: "새 폴더" }));
+    fireEvent.click(screen.getByRole("button", { name: "새 프로젝트" }));
     expect(
-      screen.getByRole("dialog", { name: "새 폴더 만들기" })
+      screen.getByRole("dialog", { name: "새 프로젝트 만들기" })
     ).toBeInTheDocument();
   });
 
-  it("requires confirmation before deleting a folder", async () => {
+  it("requires confirmation before deleting a project", async () => {
     renderSidebar();
 
-    fireEvent.click(screen.getByRole("button", { name: "주간 폴더 메뉴" }));
+    fireEvent.click(screen.getByRole("button", { name: "주간 프로젝트 메뉴" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
 
     expect(await screen.findByRole("alertdialog")).toHaveTextContent("주간");
   });
 
-  it("switches workspace without changing the default", async () => {
+  it("switches workspace", async () => {
     renderSidebar();
     fireEvent.click(screen.getByRole("button", { name: "워크스페이스 전환" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /제품 팀/ }));
     expect(push).toHaveBeenCalledWith("/w/01K0000000007");
-    expect(setDefaultWorkspace).not.toHaveBeenCalled();
   });
 });

@@ -1,23 +1,25 @@
 import {
-  getPostV1AuthLogoutMockHandler,
-  getPostV1AuthRefreshMockHandler,
+  getLogoutMockHandler,
+  getRefreshTokensMockHandler,
 } from "@/lib/api/generated/auth/auth.msw";
 
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 import { transcriptionWebSocketHandler } from "@/lib/mocks/websocket-handler";
 
 export const handlers = [
-  getPostV1AuthRefreshMockHandler({
+  getRefreshTokensMockHandler({
     success: true,
     data: {
       message: "Tokens refreshed successfully",
     },
+    error: null,
   }),
-  getPostV1AuthLogoutMockHandler({
+  getLogoutMockHandler({
     success: true,
     data: {
       message: "Logged out successfully",
     },
+    error: null,
   }),
   ...restHandlers,
   transcriptionWebSocketHandler,

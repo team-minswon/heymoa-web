@@ -5,7 +5,7 @@ import { Pause, Radio, Square } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { useListWorkspaces } from "@/lib/api/generated/workspace/workspace";
+import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { useRecording } from "@/components/transcription/recording-provider";
 import { isWorkspaceRoute } from "@/lib/routes/app-route";
 
@@ -35,7 +35,7 @@ export function GlobalRecordingIndicator() {
     resume,
     stop,
   } = useRecording();
-  const workspaceQuery = useListWorkspaces({
+  const workspacesQuery = useGetWorkspaces({
     query: { enabled: Boolean(session), staleTime: 5 * 60 * 1000 },
   });
 
@@ -47,9 +47,9 @@ export function GlobalRecordingIndicator() {
     return null;
 
   const workspaceEnvelope =
-    workspaceQuery.data?.status === 200 ? workspaceQuery.data.data : undefined;
+    workspacesQuery.data?.status === 200 ? workspacesQuery.data.data : undefined;
   const workspaces = workspaceEnvelope?.success
-    ? workspaceEnvelope.data.items
+    ? (workspaceEnvelope.data.workspaces ?? [])
     : [];
   const workspaceId =
     workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??

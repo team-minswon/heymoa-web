@@ -13,18 +13,13 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 import type {
-  TranscriptionConnectionResponse,
-  TranscriptionSessionResponse,
+  StartTranscriptionSessionResponseData,
+  TranscriptionSessionResponseData,
 } from "@/lib/api/generated/models";
 import {
-  getGetActiveTranscriptionSessionQueryKey,
-  getListNoteTranscriptSegmentsQueryKey,
-  getListNoteTranscriptionSessionsQueryKey,
-  useCreateTranscriptionConnectionTicket,
-  useCreateTranscriptionSession,
-  useGetActiveTranscriptionSession,
+  getGetNoteTranscriptQueryKey,
+  useStartTranscriptionSession,
 } from "@/lib/api/generated/transcription/transcription";
-import { unwrapGeneratedAppResponse } from "@/lib/api/app-response";
 import { PcmAudioCapture } from "@/lib/transcription/audio";
 import type { ServerEvent } from "@/lib/transcription/protocol";
 import { TranscriptionSocket } from "@/lib/transcription/socket";
@@ -55,13 +50,32 @@ export type RecordingRuntime = {
   }) => SocketController;
 };
 
+export type LocalRecordingSession = Omit<
+  TranscriptionSessionResponseData,
+  "status"
+> & {
+  status:
+    | "CONNECTING"
+    | "STREAMING"
+    | "PAUSED"
+    | "FINALIZING"
+    | "COMPLETED"
+    | "INTERRUPTED"
+    | "FAILED"
+    | "READY";
+};
+
+type ConnectionInfo = {
+  socketUrl: string;
+  session: StartTranscriptionSessionResponseData;
+};
+
 export type RecordingApi = {
-  createSession: (noteId: string) => Promise<TranscriptionConnectionResponse>;
-  createTicket: (sessionId: string) => Promise<TranscriptionConnectionResponse>;
+  startSession: (noteId: string) => Promise<StartTranscriptionSessionResponseData>;
 };
 
 type RecordingContextValue = {
-  session: TranscriptionSessionResponse | null;
+  session: LocalRecordingSession | null;
   transcript: TranscriptState;
   elapsedMs: number;
   level: number;
@@ -112,12 +126,8 @@ export function RecordingProvider({
   runtime?: RecordingRuntime;
 }) {
   const queryClient = useQueryClient();
-  const createSessionMutation = useCreateTranscriptionSession();
-  const createTicketMutation = useCreateTranscriptionConnectionTicket();
-  const activeQuery = useGetActiveTranscriptionSession({
-    query: { enabled: apiOverride === undefined, retry: false },
-  });
-  const [session, setSession] = useState<TranscriptionSessionResponse | null>(
+  const startSessionMutation = useStartTranscriptionSession();
+  const [session, setSession] = useState<LocalRecordingSession | null>(
     null
   );
   const [transcript, dispatchTranscript] = useReducer(
@@ -132,13 +142,10 @@ export function RecordingProvider({
   const [microphoneState, setMicrophoneState] =
     useState<RecordingContextValue["microphoneState"]>("idle");
   const [error, setError] = useState<string | null>(null);
-  const accumulatedMsRef = useRef(0);
-  const streamingStartedAtRef = useRef<number | null>(null);
-  const sessionRef = useRef<TranscriptionSessionResponse | null>(null);
+  const sessionRef = useRef<LocalRecordingSession | null>(null);
   const socketRef = useRef<SocketController | null>(null);
   const audioRef = useRef<AudioController | null>(null);
   const resumePendingRef = useRef(false);
-  const rehydratingRef = useRef(false);
   const stopResolveRef = useRef<(() => void) | null>(null);
   const smoothedLevelRef = useRef(0);
 
@@ -158,7 +165,7 @@ export function RecordingProvider({
   }, []);
 
   const setCurrentSession = useCallback(
-    (next: TranscriptionSessionResponse | null) => {
+    (next: LocalRecordingSession | null) => {
       sessionRef.current = next;
       setSession(next);
     },
@@ -168,38 +175,31 @@ export function RecordingProvider({
   const api = useMemo<RecordingApi>(
     () =>
       apiOverride ?? {
-        createSession: async (noteId) => {
-          const response = await createSessionMutation.mutateAsync({
+        startSession: async (noteId) => {
+          const response = await startSessionMutation.mutateAsync({
             noteId,
+            data: {
+              audioFormat: {
+                mimeType: "audio/webm;codecs=opus",
+                sampleRate: 48000,
+                channels: 1,
+              },
+            },
           });
-          if (response.status !== 200) throw new Error("SESSION_CREATE_FAILED");
-          return unwrapGeneratedAppResponse<TranscriptionConnectionResponse>(
-            response
-          );
-        },
-        createTicket: async (sessionId) => {
-          const response = await createTicketMutation.mutateAsync({
-            sessionId,
-          });
-          if (response.status !== 200) throw new Error("TICKET_CREATE_FAILED");
-          return unwrapGeneratedAppResponse<TranscriptionConnectionResponse>(
-            response
-          );
+          if (response.status !== 201) throw new Error("SESSION_CREATE_FAILED");
+          if (!response.data.success || !response.data.data) {
+            throw new Error("SESSION_CREATE_FAILED");
+          }
+          return response.data.data;
         },
       },
-    [apiOverride, createSessionMutation, createTicketMutation]
+    [apiOverride, startSessionMutation]
   );
 
   const invalidateTranscriptQueries = useCallback(
     (noteId: string) => {
       void queryClient.invalidateQueries({
-        queryKey: getListNoteTranscriptionSessionsQueryKey(noteId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: getListNoteTranscriptSegmentsQueryKey(noteId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: getGetActiveTranscriptionSessionQueryKey(),
+        queryKey: getGetNoteTranscriptQueryKey(noteId),
       });
     },
     [queryClient]
@@ -211,9 +211,6 @@ export function RecordingProvider({
 
       if (event.type === "SESSION_STATUS") {
         const current = sessionRef.current;
-        accumulatedMsRef.current = event.recordedDurationMs;
-        streamingStartedAtRef.current =
-          event.status === "STREAMING" ? Date.now() : null;
         setElapsedMs(event.recordedDurationMs);
         if (event.status !== "STREAMING") clearLevel();
         if (event.status === "PAUSED") setMicrophoneState("paused");
@@ -221,7 +218,6 @@ export function RecordingProvider({
           setCurrentSession({
             ...current,
             status: event.status,
-            recordedDurationMs: event.recordedDurationMs,
           });
         if (event.status === "STREAMING" && resumePendingRef.current) {
           resumePendingRef.current = false;
@@ -258,7 +254,7 @@ export function RecordingProvider({
 
   const openConnection = useCallback(
     async (
-      connection: TranscriptionConnectionResponse,
+      connection: ConnectionInfo,
       audio: AudioController
     ) => {
       const socket = runtime.createSocket({
@@ -270,10 +266,8 @@ export function RecordingProvider({
       });
       socketRef.current = socket;
       await socket.connect();
-      if (connection.session.status !== "PAUSED") {
-        await audio.start();
-        setMicrophoneState("recording");
-      }
+      await audio.start();
+      setMicrophoneState("recording");
     },
     [handleEvent, runtime]
   );
@@ -298,12 +292,22 @@ export function RecordingProvider({
         setMicrophoneState("requesting");
         await audio.requestPermission();
         setMicrophoneState("ready");
-        const connection = await api.createSession(noteId);
-        accumulatedMsRef.current = connection.session.recordedDurationMs;
-        streamingStartedAtRef.current = null;
-        setElapsedMs(connection.session.recordedDurationMs);
-        setCurrentSession(connection.session);
-        await openConnection(connection, audio);
+        const connectionSession = await api.startSession(noteId);
+        
+        setElapsedMs(0);
+        setCurrentSession({
+          ...connectionSession,
+          status: connectionSession.status as LocalRecordingSession["status"],
+        });
+
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+        const wsBaseUrl = apiBaseUrl
+          ? apiBaseUrl.replace(/^http/, "ws")
+          : `${wsProtocol}//${window.location.host}`;
+        const socketUrl = `${wsBaseUrl}/v1/transcription-sessions/${connectionSession.sessionId}/stream`;
+
+        await openConnection({ socketUrl, session: connectionSession }, audio);
       } catch (cause) {
         await audio.stop();
         const errorName = cause instanceof DOMException ? cause.name : "";
@@ -341,59 +345,12 @@ export function RecordingProvider({
     });
   }, [clearLevel]);
 
-  useEffect(() => {
-    const envelope =
-      activeQuery.data?.status === 200 ? activeQuery.data.data : undefined;
-    const activeSession = envelope?.success ? envelope.data?.session : null;
-    if (!activeSession || sessionRef.current || rehydratingRef.current) return;
-
-    rehydratingRef.current = true;
-    const reconnect = async () => {
-      const audio = runtime.createAudio(
-        (chunk) => socketRef.current?.sendAudio(chunk),
-        publishLevel
-      );
-      audioRef.current = audio;
-      setMicrophoneState("requesting");
-      await audio.requestPermission();
-      setMicrophoneState("ready");
-      accumulatedMsRef.current = activeSession.recordedDurationMs;
-      streamingStartedAtRef.current =
-        activeSession.status === "STREAMING" ? Date.now() : null;
-      setElapsedMs(activeSession.recordedDurationMs);
-      setCurrentSession(activeSession);
-      const connection = await api.createTicket(activeSession.sessionId);
-      await openConnection(connection, audio);
-    };
-    void reconnect()
-      .catch((cause) =>
-        setError(
-          cause instanceof Error ? cause.message : "재연결하지 못했습니다."
-        )
-      )
-      .finally(() => {
-        rehydratingRef.current = false;
-      });
-  }, [
-    activeQuery.data,
-    api,
-    openConnection,
-    publishLevel,
-    runtime,
-    setCurrentSession,
-  ]);
-
+  // Purely client-side elapsed timer during STREAMING
   useEffect(() => {
     if (!session || session.status !== "STREAMING") return;
-    const updateElapsed = () =>
-      setElapsedMs(
-        accumulatedMsRef.current +
-          (streamingStartedAtRef.current === null
-            ? 0
-            : Date.now() - streamingStartedAtRef.current)
-      );
-    updateElapsed();
-    const timer = window.setInterval(updateElapsed, 1000);
+    const timer = window.setInterval(() => {
+      setElapsedMs((prev) => prev + 1000);
+    }, 1000);
     return () => window.clearInterval(timer);
   }, [session]);
 

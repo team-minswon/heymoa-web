@@ -1,11 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AccountSettingsForm } from "@/components/settings/account-settings-form";
 
-const updateCurrentUser = vi.fn().mockResolvedValue({ status: 200 });
-
-vi.mock("@/lib/api/generated/user/user", () => ({
+vi.mock("@/lib/api/generated/users/users", () => ({
   getGetCurrentUserQueryKey: () => ["current-user"],
   useGetCurrentUser: () => ({
     data: {
@@ -20,28 +18,16 @@ vi.mock("@/lib/api/generated/user/user", () => ({
       },
     },
   }),
-  useUpdateCurrentUser: () => ({
-    mutateAsync: updateCurrentUser,
-    isPending: false,
-  }),
 }));
 
 describe("AccountSettingsForm", () => {
-  it("edits only the display name", async () => {
+  it("displays read-only profile information", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <AccountSettingsForm />
       </QueryClientProvider>
     );
     expect(screen.getByDisplayValue("test@heymoa.com")).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("이름"), {
-      target: { value: "김민수" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
-    await waitFor(() =>
-      expect(updateCurrentUser).toHaveBeenCalledWith({
-        data: { name: "김민수" },
-      })
-    );
+    expect(screen.getByDisplayValue("테스트 유저")).toBeDisabled();
   });
 });

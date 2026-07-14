@@ -9,60 +9,38 @@ describe("mockDb", () => {
       name: "제품",
       description: null,
     });
-    expect(mockDb.listWorkspaces().items[0].isDefault).toBe(true);
+    expect(mockDb.listWorkspaces()[0].isDefault).toBe(true);
     expect(created.isDefault).toBe(false);
 
     mockDb.setDefaultWorkspace(created.workspaceId);
     const defaults = mockDb
       .listWorkspaces()
-      .items.filter((item) => item.isDefault);
+      .filter((item) => item.isDefault);
     expect(defaults).toEqual([
       expect.objectContaining({ workspaceId: created.workspaceId }),
     ]);
   });
 
-  it("updates only the editable user display name", () => {
-    const before = mockDb.getCurrentUser();
-    const after = mockDb.updateCurrentUser({ name: "김민수" });
-    expect(after).toMatchObject({ name: "김민수", email: before.email });
-  });
-
-  it("rejects cross-workspace folder attachment", () => {
-    const other = mockDb.createWorkspace({
-      name: "다른 팀",
-      description: null,
-    });
-    const note = mockDb.createNote(other.workspaceId, {
-      title: "다른 노트",
-      context: null,
-    });
-    const defaultFolder = mockDb.listFolders(
-      mockDb.listWorkspaces().items[0].workspaceId
-    )[0];
+  it("rejects note creation in a non-existent project", () => {
     expect(() =>
-      mockDb.attachFolder(note.noteId, defaultFolder.folderId)
-    ).toThrow("FORBIDDEN");
+      mockDb.createNote("non-existent-project", { title: "새 노트" })
+    ).toThrow("PROJECT_NOT_FOUND");
   });
 
-  it("attaches one note to multiple folders idempotently", () => {
-    const note = mockDb.createNote(mockDb.workspace.workspaceId, {});
-    const first = mockDb.createFolder(mockDb.workspace.workspaceId, {
-      name: "제품",
-    });
-    const second = mockDb.createFolder(mockDb.workspace.workspaceId, {
-      name: "개발",
-    });
-    mockDb.attachFolder(note.noteId, first.folderId);
-    mockDb.attachFolder(note.noteId, first.folderId);
-    mockDb.attachFolder(note.noteId, second.folderId);
-    expect(mockDb.getNote(note.noteId).folders).toHaveLength(2);
+  it("rejects project deletion when it contains notes", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    mockDb.createNote(project.projectId, { title: "제품 주간 보고" });
+    expect(() =>
+      mockDb.deleteProject("01K0000000000", project.projectId)
+    ).toThrow("PROJECT_HAS_NOTES");
   });
 
   it("rejects a second active session", () => {
-    const note = mockDb.createNote(mockDb.workspace.workspaceId, {});
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
     mockDb.createSession(note.noteId);
     expect(() => mockDb.createSession(note.noteId)).toThrow(
-      "ACTIVE_TRANSCRIPTION_SESSION_EXISTS"
+      "ACTIVE_TRANSCRIPTION_SESSION"
     );
   });
 });

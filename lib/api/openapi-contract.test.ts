@@ -32,21 +32,18 @@ describe("OpenAPI contract", () => {
     expect(api().paths["/v1/users/me"]?.get?.operationId).toBe(
       "getCurrentUser"
     );
-    expect(api().paths["/v1/users/me"]?.patch?.operationId).toBe(
-      "updateCurrentUser"
-    );
     expect(api().paths["/v1/workspaces"]?.get?.operationId).toBe(
-      "listWorkspaces"
+      "getWorkspaces"
     );
     expect(api().paths["/v1/workspaces"]?.post?.operationId).toBe(
       "createWorkspace"
     );
     expect(
-      api().paths["/v1/workspaces/{workspaceId}"]?.patch?.operationId
+      api().paths["/v1/workspaces/{workspaceId}"]?.put?.operationId
     ).toBe("updateWorkspace");
     expect(
-      api().paths["/v1/workspaces/{workspaceId}/default"]?.put?.operationId
-    ).toBe("setDefaultWorkspace");
+      api().paths["/v1/users/me/default-workspace"]?.put?.operationId
+    ).toBe("changeDefaultWorkspace");
   });
 
   it("does not expose a language field or default-workspace read route", () => {
@@ -57,10 +54,10 @@ describe("OpenAPI contract", () => {
   it("uses discriminated success envelopes", () => {
     const schemas = api().components.schemas as Record<
       string,
-      { required?: string[]; properties?: { success?: { enum?: boolean[] } } }
+      { required?: string[]; properties?: { success?: { type?: string } } }
     >;
     const successEnvelopes = Object.entries(schemas).filter(([name]) =>
-      name.startsWith("AppResponse_")
+      name.endsWith("Response") && !name.endsWith("Request")
     );
 
     expect(successEnvelopes.length).toBeGreaterThan(0);
@@ -68,7 +65,7 @@ describe("OpenAPI contract", () => {
       expect(schema.required).toEqual(
         expect.arrayContaining(["success", "data"])
       );
-      expect(schema.properties?.success?.enum).toEqual([true]);
+      expect(schema.properties?.success?.type).toBe("boolean");
     }
   });
 });

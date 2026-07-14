@@ -3,11 +3,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceSettingsForm } from "@/components/settings/workspace-settings-form";
 
-const setDefaultWorkspace = vi.fn().mockResolvedValue({ status: 200 });
+const changeDefaultWorkspace = vi.fn().mockResolvedValue({ status: 200 });
 
-vi.mock("@/lib/api/generated/workspace/workspace", () => ({
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   getGetWorkspaceQueryKey: (id: string) => ["workspace", id],
-  getListWorkspacesQueryKey: () => ["workspaces"],
+  getGetWorkspacesQueryKey: () => ["workspaces"],
   useGetWorkspace: () => ({
     data: {
       status: 200,
@@ -23,8 +23,8 @@ vi.mock("@/lib/api/generated/workspace/workspace", () => ({
     },
   }),
   useUpdateWorkspace: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useSetDefaultWorkspace: () => ({
-    mutateAsync: setDefaultWorkspace,
+  useChangeDefaultWorkspace: () => ({
+    mutateAsync: changeDefaultWorkspace,
     isPending: false,
   }),
 }));
@@ -40,8 +40,8 @@ describe("WorkspaceSettingsForm", () => {
       screen.getByRole("button", { name: "기본 워크스페이스로 설정" })
     );
     await waitFor(() =>
-      expect(setDefaultWorkspace).toHaveBeenCalledWith({
-        workspaceId: "01K0000000007",
+      expect(changeDefaultWorkspace).toHaveBeenCalledWith({
+        data: { workspaceId: "01K0000000007" },
       })
     );
   });

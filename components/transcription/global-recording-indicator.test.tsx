@@ -3,13 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
-vi.mock("@/lib/api/generated/workspace/workspace", () => ({
-  useListWorkspaces: () => ({
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  useGetWorkspaces: () => ({
     data: {
       status: 200,
       data: {
         success: true,
-        data: { items: [{ workspaceId: "01K0000000000", isDefault: true }] },
+        data: {
+          workspaces: [{ workspaceId: "01K0000000000", isDefault: true }],
+        },
       },
     },
   }),

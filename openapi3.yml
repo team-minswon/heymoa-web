@@ -1,1444 +1,2777 @@
-openapi: 3.0.3
+---
+openapi: "3.0.1"
 info:
-  title: Heymoa API
-  version: 0.0.1-SNAPSHOT
-  description: API documentation for Heymoa Server
+  title: "Heymoa API"
+  description: "Heymoa 서버 REST API"
+  version: "1.0.0"
 servers:
-  - url: http://localhost:8080
-    description: Local Server
-
+- url: "/"
+tags: []
 paths:
-  /v1/users/me:
-    get:
-      tags: [User]
-      operationId: getCurrentUser
-      summary: 현재 사용자 조회
-      security:
-        - access_token: []
-      responses:
-        "200":
-          description: 현재 사용자 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_CurrentUserResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    patch:
-      tags: [User]
-      operationId: updateCurrentUser
-      summary: 현재 사용자 수정
-      security:
-        - access_token: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateCurrentUserRequest"
-      responses:
-        "200":
-          description: 현재 사용자 수정 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_CurrentUserResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/auth/refresh:
-    post:
-      tags: [Auth]
-      summary: 토큰 갱신
-      parameters:
-        - name: refresh_token
-          in: cookie
-          required: false
-          schema:
-            type: string
-        - name: User-Agent
-          in: header
-          required: false
-          schema:
-            type: string
-      responses:
-        "200":
-          description: 토큰 갱신 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_RefreshTokensResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/auth/logout:
-    post:
-      tags: [Auth]
-      summary: 로그아웃
-      parameters:
-        - name: refresh_token
-          in: cookie
-          required: false
-          schema:
-            type: string
-      responses:
-        "200":
-          description: 로그아웃 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_LogoutResponse"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
   /v1/workspaces:
     get:
-      tags: [Workspace]
-      operationId: listWorkspaces
-      summary: 워크스페이스 목록 조회
-      security:
-        - access_token: []
+      tags:
+      - "Workspaces"
+      summary: "워크스페이스 목록 조회"
+      description: "현재 사용자가 참여 중인 워크스페이스 목록을 조회한다."
+      operationId: "getWorkspaces"
       responses:
         "200":
-          description: 워크스페이스 목록 조회 성공
+          description: "요청 성공"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_WorkspaceListResponse"
+                $ref: "#/components/schemas/WorkspaceListResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      workspaces:
+                      - workspaceId: "0HZX2K7M9Q4AD"
+                        name: "제품 팀"
+                        description: "제품을 만드는 팀의 워크스페이스"
+                        role: "ADMIN"
+                        isDefault: false
+                    error: null
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    post:
-      tags: [Workspace]
-      operationId: createWorkspace
-      summary: 워크스페이스 생성
       security:
-        - access_token: []
+      - accessCookie: []
+    post:
+      tags:
+      - "Workspaces"
+      summary: "워크스페이스 생성"
+      description: "현재 사용자가 관리할 새 워크스페이스를 생성한다."
+      operationId: "createWorkspace"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/CreateWorkspaceRequest"
+            examples:
+              createWorkspace_BadRequest:
+                value:
+                  name: ""
+                  description: null
+              createWorkspace_Success:
+                value:
+                  name: "제품 팀"
+                  description: "제품을 만드는 팀의 워크스페이스"
       responses:
-        "200":
-          description: 워크스페이스 생성 성공
+        "400":
+          description: "잘못된 요청"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "201":
+          description: "생성 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateWorkspaceResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      workspaceId: "0HZX2K7M9Q4AD"
+                      name: "제품 팀"
+                      description: "제품을 만드는 팀의 워크스페이스"
+                      role: "ADMIN"
+                      isDefault: false
+                    error: null
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
+      security:
+      - accessCookie: []
+  /v1/auth/logout:
+    post:
+      tags:
+      - "Auth"
+      summary: "로그아웃"
+      description: "현재 세션을 폐기하고 access token과 refresh token 쿠키를 만료시킨다."
+      operationId: "logout"
+      parameters:
+      - name: "refresh_token"
+        in: "cookie"
+        description: "refresh_token 쿠키"
+        required: false
+        schema:
+          type: "string"
+        example: "refresh-token-example"
+      responses:
+        "200":
+          description: "요청 성공"
+          headers:
+            Set-Cookie:
+              description: "만료된 access_token 및 refresh_token HttpOnly 쿠키"
+              schema:
+                type: "string"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      message: "성공적으로 로그아웃했습니다."
+                    error: null
+      security: []
+  /v1/auth/refresh:
+    post:
+      tags:
+      - "Auth"
+      summary: "토큰 갱신"
+      description: "리프레시 토큰 쿠키로 access token과 refresh token을 갱신한다."
+      operationId: "refreshTokens"
+      parameters:
+      - name: "refresh_token"
+        in: "cookie"
+        description: "refresh_token 쿠키"
+        required: false
+        schema:
+          type: "string"
+        example: "refresh-token-example"
+      - name: "User-Agent"
+        in: "header"
+        description: "클라이언트 User-Agent"
+        required: false
+        schema:
+          type: "string"
+        example: "Heymoa Docs Client"
+      - name: "X-Forwarded-For"
+        in: "header"
+        description: "프록시가 전달한 클라이언트 IP 목록"
+        required: false
+        schema:
+          type: "string"
+        example: "203.0.113.10, 10.0.0.1"
+      responses:
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "200":
+          description: "요청 성공"
+          headers:
+            Set-Cookie:
+              description: "갱신된 access_token 및 refresh_token HttpOnly 쿠키"
+              schema:
+                type: "string"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokensResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      message: "토큰이 갱신되었습니다."
+                    error: null
+      security: []
+  /v1/notes/{noteId}:
+    get:
+      tags:
+      - "Notes"
+      summary: "노트 조회"
+      description: "노트의 기본 정보를 조회한다."
+      operationId: "getNote"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        description: "노트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "노트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      responses:
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: "0HZX2K7M9Q4AF"
+                      projectId: "0HZX2K7M9Q4AE"
+                      title: "주간 회의"
+                      createdAt: "2026-07-14T01:02:03Z"
+                      updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+    patch:
+      tags:
+      - "Notes"
+      summary: "노트 수정"
+      description: "노트 제목을 수정한다."
+      operationId: "updateNote"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        description: "노트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "노트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteRequest"
+            examples:
+              updateNote_Success:
+                value:
+                  title: "주간 회의"
+              updateNote_WorkspaceNotFoundException:
+                value:
+                  title: "주간 회의"
+              updateNote_ProjectNotFoundException:
+                value:
+                  title: "주간 회의"
+              updateNote_NoteNotFoundException:
+                value:
+                  title: "주간 회의"
+              updateNote_BadRequest:
+                value:
+                  title: ""
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: "0HZX2K7M9Q4AF"
+                      projectId: "0HZX2K7M9Q4AE"
+                      title: "주간 회의"
+                      createdAt: "2026-07-14T01:02:03Z"
+                      updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/transcription-sessions/{sessionId}:
+    get:
+      tags:
+      - "Transcription"
+      summary: "전사 세션 조회"
+      description: "전사 세션의 현재 상태와 종료 정보를 조회한다."
+      operationId: "getTranscriptionSession"
+      parameters:
+      - name: "sessionId"
+        in: "path"
+        description: "전사 세션의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "전사 세션의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AG"
+      responses:
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                TRANSCRIPTION_SESSION_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "TRANSCRIPTION_SESSION_NOT_FOUND"
+                      message: "전사 세션을 찾을 수 없습니다."
+                      details: null
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSessionResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      sessionId: "0HZX2K7M9Q4AG"
+                      noteId: "0HZX2K7M9Q4AF"
+                      status: "COMPLETED"
+                      readyExpiresAt: "2026-07-14T01:02:03Z"
+                      startedAt: "2026-07-14T01:02:03Z"
+                      endedAt: "2026-07-14T01:02:03Z"
+                      endReason: "CLIENT_DISCONNECTED"
+                    error: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/users/me:
+    get:
+      tags:
+      - "Users"
+      summary: "현재 사용자 조회"
+      description: "현재 인증된 사용자의 기본 정보를 조회한다."
+      operationId: "getCurrentUser"
+      responses:
+        "404":
+          description: "사용자를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                USER_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "USER_NOT_FOUND"
+                      message: "사용자를 찾을 수 없습니다."
+                      details: null
+        "200":
+          description: "현재 사용자 조회 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUserResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      userId: "0HZX2K7M9Q4AC"
+                      name: "홍길동"
+                      email: "hong@example.com"
+                    error: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
   /v1/workspaces/{workspaceId}:
     get:
-      tags: [Workspace]
-      operationId: getWorkspace
-      summary: 워크스페이스 상세 조회
-      security:
-        - access_token: []
+      tags:
+      - "Workspaces"
+      summary: "워크스페이스 조회"
+      description: "현재 사용자가 참여 중인 워크스페이스를 조회한다."
+      operationId: "getWorkspace"
       parameters:
-        - name: workspaceId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
       responses:
         "200":
-          description: 워크스페이스 조회 성공
+          description: "요청 성공"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+                $ref: "#/components/schemas/WorkspaceResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      workspaceId: "0HZX2K7M9Q4AD"
+                      name: "제품 팀"
+                      description: "제품을 만드는 팀의 워크스페이스"
+                      role: "ADMIN"
+                      isDefault: false
+                    error: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    patch:
-      tags: [Workspace]
-      operationId: updateWorkspace
-      summary: 워크스페이스 수정
       security:
-        - access_token: []
+      - accessCookie: []
+    put:
+      tags:
+      - "Workspaces"
+      summary: "워크스페이스 수정"
+      description: "관리자 권한으로 워크스페이스 이름과 설명을 수정한다."
+      operationId: "updateWorkspace"
       parameters:
-        - name: workspaceId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      requestBody:
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
         required: true
+        schema:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/UpdateWorkspaceRequest"
+            examples:
+              updateWorkspace_BadRequest:
+                value:
+                  name: ""
+                  description: null
+              updateWorkspace_Success:
+                value:
+                  name: "제품 팀"
+                  description: "제품을 만드는 팀의 워크스페이스"
+              updateWorkspace_WorkspaceNotFoundException:
+                value:
+                  name: "제품 팀"
+                  description: "제품을 만드는 팀의 워크스페이스"
+              updateWorkspace_WorkspaceAccessDeniedException:
+                value:
+                  name: "제품 팀"
+                  description: "제품을 만드는 팀의 워크스페이스"
       responses:
-        "200":
-          description: 워크스페이스 수정 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
         "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/workspaces/{workspaceId}/default:
-    put:
-      tags: [Workspace]
-      operationId: setDefaultWorkspace
-      summary: 기본 워크스페이스 설정
-      security:
-        - access_token: []
-      parameters:
-        - name: workspaceId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 기본 워크스페이스 설정 성공
+          description: "잘못된 요청"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_WorkspaceResponse"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateWorkspaceResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      workspaceId: "0HZX2K7M9Q4AD"
+                      name: "제품 팀"
+                      description: "제품을 만드는 팀의 워크스페이스"
+                    error: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "403":
+          description: "권한 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_ACCESS_DENIED"
+                      message: "워크스페이스를 변경할 권한이 없습니다."
+                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/workspaces/{workspaceId}/notes:
+      security:
+      - accessCookie: []
+  /v1/notes/{noteId}/transcript:
     get:
-      tags: [Note]
-      operationId: listWorkspaceNotes
-      summary: 워크스페이스 노트 목록 조회
-      security:
-        - access_token: []
+      tags:
+      - "Transcription"
+      summary: "노트 전사 조회"
+      description: "노트에 저장된 확정 전사 구간을 시간순으로 조회한다."
+      operationId: "getNoteTranscript"
       parameters:
-        - name: workspaceId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-        - name: folderId
-          in: query
-          required: false
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 노트 목록 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_NoteCursorPageResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    post:
-      tags: [Note]
-      operationId: createNote
-      summary: 노트 생성
-      security:
-        - access_token: []
-      parameters:
-        - name: workspaceId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      requestBody:
+      - name: "noteId"
+        in: "path"
+        description: "노트의 13자리 TSID"
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateNoteRequest"
+        schema:
+          type: "string"
+          description: "노트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
       responses:
         "200":
-          description: 노트 생성 성공
+          description: "요청 성공"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_NoteResponse"
+                $ref: "#/components/schemas/TranscriptResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      segments:
+                      - segmentId: "0HZX2K7M9Q4AH"
+                        transcriptionSessionId: "0HZX2K7M9Q4AG"
+                        sequence: 1
+                        text: "안녕하세요."
+                        startedAtMs: 0
+                        endedAtMs: 1200
+                    error: null
         "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/notes/{noteId}:
-    get:
-      tags: [Note]
-      operationId: getNote
-      summary: 노트 상세 조회
-      security:
-        - access_token: []
-      parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 노트 조회 성공
+          description: "잘못된 요청"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_NoteResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
         "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    put:
-      tags: [Note]
-      operationId: updateNote
-      summary: 노트 수정
-      security:
-        - access_token: []
-      parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateNoteRequest"
-      responses:
-        "200":
-          description: 노트 수정 성공
+          description: "요청한 리소스를 찾을 수 없음"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_NoteResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    delete:
-      tags: [Note]
-      operationId: deleteNote
-      summary: 노트 삭제
       security:
-        - access_token: []
-      parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 노트 삭제 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_Unit"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/workspaces/{workspaceId}/folders:
-    get:
-      tags: [Folder]
-      operationId: listWorkspaceFolders
-      summary: 워크스페이스 폴더 목록 조회
-      security:
-        - access_token: []
-      parameters:
-        - name: workspaceId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 폴더 목록 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_FolderListResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    post:
-      tags: [Folder]
-      operationId: createFolder
-      summary: 폴더 생성
-      security:
-        - access_token: []
-      parameters:
-        - name: workspaceId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FolderNameRequest"
-      responses:
-        "200":
-          description: 폴더 생성 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_FolderResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/folders/{folderId}:
-    put:
-      tags: [Folder]
-      operationId: updateFolder
-      summary: 폴더 이름 변경
-      security:
-        - access_token: []
-      parameters:
-        - name: folderId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FolderNameRequest"
-      responses:
-        "200":
-          description: 폴더 수정 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_FolderResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    delete:
-      tags: [Folder]
-      operationId: deleteFolder
-      summary: 폴더 삭제
-      security:
-        - access_token: []
-      parameters:
-        - name: folderId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 폴더 삭제 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_Unit"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/notes/{noteId}/folders/{folderId}:
-    put:
-      tags: [Folder]
-      operationId: attachNoteFolder
-      summary: 노트에 폴더 연결
-      security:
-        - access_token: []
-      parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-        - name: folderId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 폴더 연결 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_NoteResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    delete:
-      tags: [Folder]
-      operationId: detachNoteFolder
-      summary: 노트의 폴더 연결 해제
-      security:
-        - access_token: []
-      parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-        - name: folderId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 폴더 연결 해제 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_NoteResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
+      - accessCookie: []
   /v1/notes/{noteId}/transcription-sessions:
     post:
-      tags: [Transcription]
-      operationId: createTranscriptionSession
-      summary: 실시간 전사 세션 생성
-      security:
-        - access_token: []
+      tags:
+      - "Transcription"
+      summary: "전사 세션 시작"
+      description: "노트에 실시간 전사 세션을 생성하고 연결 대기 상태로 만든다."
+      operationId: "startTranscriptionSession"
       parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
+      - name: "noteId"
+        in: "path"
+        description: "노트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "노트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartTranscriptionSessionRequest"
+            examples:
+              startTranscriptionSession_ProjectNotFoundException:
+                value:
+                  audioFormat:
+                    mimeType: "audio/webm;codecs=opus"
+                    sampleRate: 48000
+                    channels: 1
+              startTranscriptionSession_Success:
+                value:
+                  audioFormat:
+                    mimeType: "audio/webm;codecs=opus"
+                    sampleRate: 48000
+                    channels: 1
+              startTranscriptionSession_NoteNotFoundException:
+                value:
+                  audioFormat:
+                    mimeType: "audio/webm;codecs=opus"
+                    sampleRate: 48000
+                    channels: 1
+              startTranscriptionSession_BadRequest:
+                value:
+                  audioFormat:
+                    mimeType: ""
+                    sampleRate: 0
+                    channels: 0
+              startTranscriptionSession_ActiveTranscriptionSessionException:
+                value:
+                  audioFormat:
+                    mimeType: "audio/webm;codecs=opus"
+                    sampleRate: 48000
+                    channels: 1
+              startTranscriptionSession_WorkspaceNotFoundException:
+                value:
+                  audioFormat:
+                    mimeType: "audio/webm;codecs=opus"
+                    sampleRate: 48000
+                    channels: 1
       responses:
-        "200":
-          description: 전사 세션 및 최초 연결 ticket 생성 성공
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_TranscriptionConnectionResponse"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "201":
+          description: "생성 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartTranscriptionSessionResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      sessionId: "0HZX2K7M9Q4AG"
+                      noteId: "0HZX2K7M9Q4AF"
+                      status: "READY"
+                      readyExpiresAt: "2026-07-14T01:02:03Z"
+                      startedAt: null
+                      endedAt: null
+                      endReason: null
+                    error: null
         "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
         "409":
-          $ref: "#/components/responses/Conflict"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-    get:
-      tags: [Transcription]
-      operationId: listNoteTranscriptionSessions
-      summary: 노트의 전사 세션 목록 조회
-      security:
-        - access_token: []
-      parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-      responses:
-        "200":
-          description: 전사 세션 목록 조회 성공
+          description: "요청 상태 충돌"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_TranscriptionSessionCursorPageResponse"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                ACTIVE_TRANSCRIPTION_SESSION:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "ACTIVE_TRANSCRIPTION_SESSION"
+                      message: "이미 진행 가능한 전사 세션이 있습니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/projects/{projectId}/notes:
+    get:
+      tags:
+      - "Notes"
+      summary: "노트 목록 조회"
+      description: "프로젝트의 노트 목록을 조회한다."
+      operationId: "getNotes"
+      parameters:
+      - name: "projectId"
+        in: "path"
+        description: "프로젝트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "프로젝트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AE"
+      responses:
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteListResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      notes:
+                      - noteId: "0HZX2K7M9Q4AF"
+                        projectId: "0HZX2K7M9Q4AE"
+                        title: "주간 회의"
+                        createdAt: "2026-07-14T01:02:03Z"
+                        updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
         "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/transcription-sessions/active:
-    get:
-      tags: [Transcription]
-      operationId: getActiveTranscriptionSession
-      summary: 현재 사용자의 활성 전사 세션 조회
-      security:
-        - access_token: []
-      responses:
-        "200":
-          description: 활성 전사 세션 조회 성공
+          description: "잘못된 요청"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_ActiveTranscriptionSessionResponse"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/transcription-sessions/{sessionId}:
-    get:
-      tags: [Transcription]
-      operationId: getTranscriptionSession
-      summary: 전사 세션 조회
       security:
-        - access_token: []
-      parameters:
-        - name: sessionId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 전사 세션 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_TranscriptionSessionResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/transcription-sessions/{sessionId}/connection-ticket:
+      - accessCookie: []
     post:
-      tags: [Transcription]
-      operationId: createTranscriptionConnectionTicket
-      summary: 전사 WebSocket 재연결 ticket 발급
-      security:
-        - access_token: []
+      tags:
+      - "Notes"
+      summary: "노트 생성"
+      description: "프로젝트에 새 노트를 생성한다."
+      operationId: "createNote"
       parameters:
-        - name: sessionId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
+      - name: "projectId"
+        in: "path"
+        description: "프로젝트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "프로젝트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AE"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteRequest"
+            examples:
+              createNote_Success:
+                value:
+                  title: "주간 회의"
+              createNote_BadRequest:
+                value:
+                  title: ""
+              createNote_WorkspaceNotFoundException:
+                value:
+                  title: "주간 회의"
+              createNote_ProjectNotFoundException:
+                value:
+                  title: "주간 회의"
       responses:
-        "200":
-          description: 연결 ticket 발급 성공
+        "201":
+          description: "생성 성공"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_TranscriptionConnectionResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/notes/{noteId}/transcript-segments:
-    get:
-      tags: [Transcription]
-      operationId: listNoteTranscriptSegments
-      summary: 노트의 확정 전사 구간 목록 조회
-      security:
-        - access_token: []
-      parameters:
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-      responses:
-        "200":
-          description: 확정 전사 구간 목록 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppResponse_TranscriptSegmentCursorPageResponse"
+                $ref: "#/components/schemas/NoteResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: "0HZX2K7M9Q4AF"
+                      projectId: "0HZX2K7M9Q4AE"
+                      title: "주간 회의"
+                      createdAt: "2026-07-14T01:02:03Z"
+                      updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
         "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /v1/transcript-segments/{segmentId}:
-    delete:
-      tags: [Transcription]
-      operationId: deleteTranscriptSegment
-      summary: 확정 전사 구간 삭제
-      security:
-        - access_token: []
-      parameters:
-        - name: segmentId
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/Tsid"
-      responses:
-        "200":
-          description: 확정 전사 구간 삭제 성공
+          description: "잘못된 요청"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppResponse_Unit"
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
+      security:
+      - accessCookie: []
+  /v1/users/me/default-workspace:
+    put:
+      tags:
+      - "Workspaces"
+      summary: "기본 워크스페이스 변경"
+      description: "현재 사용자의 기본 워크스페이스를 변경한다."
+      operationId: "changeDefaultWorkspace"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeDefaultWorkspaceRequest"
+            examples:
+              changeDefaultWorkspace_BadRequest:
+                value:
+                  workspaceId: "short"
+              changeDefaultWorkspace_Success:
+                value:
+                  workspaceId: "0HZX2K7M9Q4AD"
+              changeDefaultWorkspace_UserNotFoundException:
+                value:
+                  workspaceId: "0HZX2K7M9Q4AD"
+              changeDefaultWorkspace_WorkspaceNotFoundException:
+                value:
+                  workspaceId: "0HZX2K7M9Q4AD"
+      responses:
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangeDefaultWorkspaceResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      workspaceId: "0HZX2K7M9Q4AD"
+                    error: null
         "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                USER_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "USER_NOT_FOUND"
+                      message: "사용자를 찾을 수 없습니다."
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/projects:
+    get:
+      tags:
+      - "Projects"
+      summary: "프로젝트 목록 조회"
+      description: "워크스페이스의 프로젝트 목록을 조회한다."
+      operationId: "getProjects"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      projects:
+                      - projectId: "0HZX2K7M9Q4AE"
+                        workspaceId: "0HZX2K7M9Q4AD"
+                        name: "모바일 앱"
+                        description: "Heymoa 모바일 앱 프로젝트"
+                        createdAt: "2026-07-14T01:02:03Z"
+                        updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+    post:
+      tags:
+      - "Projects"
+      summary: "프로젝트 생성"
+      description: "워크스페이스에 새 프로젝트를 생성한다."
+      operationId: "createProject"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectRequest"
+            examples:
+              createProject_WorkspaceNotFoundException:
+                value:
+                  name: "모바일 앱"
+                  description: "Heymoa 모바일 앱 프로젝트"
+              createProject_BadRequest:
+                value:
+                  name: ""
+                  description: null
+              createProject_Success:
+                value:
+                  name: "모바일 앱"
+                  description: "Heymoa 모바일 앱 프로젝트"
+      responses:
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "201":
+          description: "생성 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      projectId: "0HZX2K7M9Q4AE"
+                      workspaceId: "0HZX2K7M9Q4AD"
+                      name: "모바일 앱"
+                      description: "Heymoa 모바일 앱 프로젝트"
+                      createdAt: "2026-07-14T01:02:03Z"
+                      updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/projects/{projectId}:
+    get:
+      tags:
+      - "Projects"
+      summary: "프로젝트 조회"
+      description: "워크스페이스의 프로젝트를 조회한다."
+      operationId: "getProject"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      - name: "projectId"
+        in: "path"
+        description: "프로젝트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "프로젝트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AE"
+      responses:
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      projectId: "0HZX2K7M9Q4AE"
+                      workspaceId: "0HZX2K7M9Q4AD"
+                      name: "모바일 앱"
+                      description: "Heymoa 모바일 앱 프로젝트"
+                      createdAt: "2026-07-14T01:02:03Z"
+                      updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+    put:
+      tags:
+      - "Projects"
+      summary: "프로젝트 수정"
+      description: "프로젝트 이름과 설명을 수정한다."
+      operationId: "updateProject"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      - name: "projectId"
+        in: "path"
+        description: "프로젝트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "프로젝트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AE"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectRequest"
+            examples:
+              updateProject_Success:
+                value:
+                  name: "모바일 앱"
+                  description: "Heymoa 모바일 앱 프로젝트"
+              updateProject_ProjectNotFoundException:
+                value:
+                  name: "모바일 앱"
+                  description: "Heymoa 모바일 앱 프로젝트"
+              updateProject_BadRequest:
+                value:
+                  name: ""
+                  description: null
+              updateProject_WorkspaceNotFoundException:
+                value:
+                  name: "모바일 앱"
+                  description: "Heymoa 모바일 앱 프로젝트"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      projectId: "0HZX2K7M9Q4AE"
+                      workspaceId: "0HZX2K7M9Q4AD"
+                      name: "모바일 앱"
+                      description: "Heymoa 모바일 앱 프로젝트"
+                      createdAt: "2026-07-14T01:02:03Z"
+                      updatedAt: "2026-07-14T01:02:03Z"
+                    error: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+    delete:
+      tags:
+      - "Projects"
+      summary: "프로젝트 삭제"
+      description: "관리자 권한으로 노트가 없는 프로젝트를 삭제한다."
+      operationId: "deleteProject"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      - name: "projectId"
+        in: "path"
+        description: "프로젝트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "프로젝트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AE"
+      responses:
+        "204":
+          description: "처리 성공"
+        "409":
+          description: "요청 상태 충돌"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                PROJECT_HAS_NOTES:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_HAS_NOTES"
+                      message: "노트가 있는 프로젝트는 삭제할 수 없습니다."
+                      details: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "403":
+          description: "권한 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_ACCESS_DENIED"
+                      message: "워크스페이스를 변경할 권한이 없습니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
 components:
-  securitySchemes:
-    access_token:
-      type: apiKey
-      in: cookie
-      name: access_token
-      description: 인증을 위한 Access Token 쿠키
-
-  parameters:
-    Cursor:
-      name: cursor
-      in: query
-      required: false
-      schema:
-        type: string
-    Limit:
-      name: limit
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-
-  responses:
-    BadRequest:
-      description: 잘못된 요청
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AppErrorResponse"
-    Unauthorized:
-      description: 인증이 필요함
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AppErrorResponse"
-    Forbidden:
-      description: 접근 권한이 없음
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AppErrorResponse"
-    NotFound:
-      description: 리소스를 찾을 수 없음
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AppErrorResponse"
-    Conflict:
-      description: 현재 리소스 상태와 충돌함
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AppErrorResponse"
-    ServiceUnavailable:
-      description: STT provider를 사용할 수 없음
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AppErrorResponse"
-    InternalServerError:
-      description: 서버 내부 오류
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AppErrorResponse"
-
   schemas:
-    Tsid:
-      type: string
-      minLength: 13
-      maxLength: 13
-      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-      example: 0HZX2K7M9Q4AB
-
-    UserSummary:
-      type: object
-      required: [userId, name]
-      properties:
-        userId:
-          $ref: "#/components/schemas/Tsid"
-        name:
-          type: string
-          example: 테스트 유저
-
-    WorkspaceResponse:
-      type: object
-      required:
-        [workspaceId, name, description, isDefault, createdAt, updatedAt]
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/Tsid"
-        name:
-          type: string
-          minLength: 1
-          maxLength: 80
-          example: 테스트 유저의 워크스페이스
-        description:
-          type: string
-          nullable: true
-          maxLength: 500
-          example: 제품 회의 기록을 모으는 공간입니다.
-        isDefault:
-          type: boolean
-          example: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WorkspaceListResponse:
-      type: object
-      required: [items]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/WorkspaceResponse"
-
-    CreateWorkspaceRequest:
-      type: object
-      required: [name, description]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 80
-        description:
-          type: string
-          nullable: true
-          maxLength: 500
-
-    UpdateWorkspaceRequest:
-      $ref: "#/components/schemas/CreateWorkspaceRequest"
-
-    FolderResponse:
-      type: object
-      required: [folderId, name]
-      properties:
-        folderId:
-          $ref: "#/components/schemas/Tsid"
-        name:
-          type: string
-          minLength: 1
-          maxLength: 50
-          example: 제품
-
-    NoteResponse:
-      type: object
-      required:
-        [
-          noteId,
-          workspaceId,
-          title,
-          context,
-          createdBy,
-          folders,
-          createdAt,
-          updatedAt,
-        ]
-      properties:
-        noteId:
-          $ref: "#/components/schemas/Tsid"
-        workspaceId:
-          $ref: "#/components/schemas/Tsid"
-        title:
-          type: string
-          minLength: 1
-          maxLength: 200
-          example: 주간 회의
-        context:
-          type: string
-          nullable: true
-          maxLength: 4000
-          example: 이번 주 제품 진행 상황을 공유합니다.
-        createdBy:
-          $ref: "#/components/schemas/UserSummary"
-        folders:
-          type: array
-          items:
-            $ref: "#/components/schemas/FolderResponse"
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-07-11T00:00:00Z"
-        updatedAt:
-          type: string
-          format: date-time
-          example: "2026-07-11T00:00:00Z"
-
-    NoteSummaryResponse:
-      allOf:
-        - $ref: "#/components/schemas/NoteResponse"
-        - type: object
-          required: [lastRecordedAt, recordedDurationMs]
-          properties:
-            lastRecordedAt:
-              type: string
-              format: date-time
-              nullable: true
-              example: "2026-07-11T00:00:00Z"
-            recordedDurationMs:
-              type: integer
-              format: int64
-              minimum: 0
-              example: 120000
-
-    NoteCursorPageResponse:
-      type: object
-      required: [items, nextCursor]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/NoteSummaryResponse"
-        nextCursor:
-          type: string
-          nullable: true
-          example: null
-
-    CreateNoteRequest:
-      type: object
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 200
-          example: 주간 회의
-        context:
-          type: string
-          nullable: true
-          maxLength: 4000
-          example: null
-
-    UpdateNoteRequest:
-      type: object
-      required: [title, context]
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 200
-        context:
-          type: string
-          nullable: true
-          maxLength: 4000
-
-    FolderNameRequest:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 50
-          example: 제품
-
-    TranscriptionSessionStatus:
-      type: string
-      enum:
-        [
-          CONNECTING,
-          STREAMING,
-          PAUSED,
-          FINALIZING,
-          COMPLETED,
-          INTERRUPTED,
-          FAILED,
-        ]
-
-    TranscriptionSessionResponse:
-      type: object
-      required:
-        [
-          sessionId,
-          noteId,
-          status,
-          recordedDurationMs,
-          startedBy,
-          startedAt,
-          endedAt,
-        ]
-      properties:
-        sessionId:
-          $ref: "#/components/schemas/Tsid"
-        noteId:
-          $ref: "#/components/schemas/Tsid"
-        status:
-          $ref: "#/components/schemas/TranscriptionSessionStatus"
-        recordedDurationMs:
-          type: integer
-          format: int64
-          minimum: 0
-          example: 120000
-        startedBy:
-          $ref: "#/components/schemas/UserSummary"
-        startedAt:
-          type: string
-          format: date-time
-          example: "2026-07-11T00:00:00Z"
-        endedAt:
-          type: string
-          format: date-time
-          nullable: true
-          example: null
-
-    TranscriptionConnectionResponse:
-      type: object
-      required: [session, socketUrl, ticketExpiresAt]
-      properties:
-        session:
-          $ref: "#/components/schemas/TranscriptionSessionResponse"
-        socketUrl:
-          type: string
-          format: uri
-          example: ws://localhost:8080/v1/transcription-sessions/0HZX2K7M9Q4AB/stream?ticket=opaque-ticket
-        ticketExpiresAt:
-          type: string
-          format: date-time
-          example: "2026-07-11T00:01:00Z"
-
-    ActiveTranscriptionSessionResponse:
-      type: object
-      required: [session]
-      properties:
-        session:
-          allOf:
-            - $ref: "#/components/schemas/TranscriptionSessionResponse"
-          nullable: true
-
-    TranscriptSegmentResponse:
-      type: object
-      required: [segmentId, sessionId, sequence, text, startedAtMs, endedAtMs]
-      properties:
-        segmentId:
-          $ref: "#/components/schemas/Tsid"
-        sessionId:
-          $ref: "#/components/schemas/Tsid"
-        sequence:
-          type: integer
-          format: int32
-          minimum: 1
-          example: 1
-        text:
-          type: string
-          minLength: 1
-          example: 확정 문장
-        startedAtMs:
-          type: integer
-          format: int64
-          minimum: 0
-          example: 0
-        endedAtMs:
-          type: integer
-          format: int64
-          minimum: 0
-          example: 1200
-
-    TranscriptionSessionCursorPageResponse:
-      type: object
-      required: [items, nextCursor]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/TranscriptionSessionResponse"
-        nextCursor:
-          type: string
-          nullable: true
-          example: null
-
-    TranscriptSegmentCursorPageResponse:
-      type: object
-      required: [items, nextCursor]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/TranscriptSegmentResponse"
-        nextCursor:
-          type: string
-          nullable: true
-          example: null
-
     CurrentUserResponse:
-      type: object
-      required: [userId, name, email]
+      title: "CurrentUserResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
       properties:
-        userId:
-          $ref: "#/components/schemas/Tsid"
-        name:
-          type: string
-          example: 홍길동
-        email:
-          type: string
-          format: email
-          example: user@example.com
-
-    UpdateCurrentUserRequest:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 80
-
-    RefreshTokensResponse:
-      type: object
-      required: [message]
-      properties:
-        message:
-          type: string
-          example: 토큰이 갱신되었습니다.
-
-    LogoutResponse:
-      type: object
-      required: [message]
-      properties:
-        message:
-          type: string
-          example: 성공적으로 로그아웃했습니다.
-
-    AppErrorType:
-      type: string
-      enum:
-        - BAD_REQUEST
-        - UNAUTHORIZED
-        - FORBIDDEN
-        - WORKSPACE_NOT_FOUND
-        - NOTE_NOT_FOUND
-        - FOLDER_NOT_FOUND
-        - FOLDER_NAME_ALREADY_EXISTS
-        - TRANSCRIPTION_SESSION_NOT_FOUND
-        - TRANSCRIPT_SEGMENT_NOT_FOUND
-        - ACTIVE_TRANSCRIPTION_SESSION_EXISTS
-        - INVALID_TRANSCRIPTION_SESSION_STATE
-        - STT_PROVIDER_UNAVAILABLE
-        - INTERNAL_SERVER_ERROR
-
-    AppErrorBody:
-      type: object
-      required: [code, message]
-      properties:
-        code:
-          $ref: "#/components/schemas/AppErrorType"
-        message:
-          type: string
-          example: 잘못된 요청입니다.
-        details:
-          type: array
-          nullable: true
-          items:
-            $ref: "#/components/schemas/AppErrorDetail"
-
-    AppErrorDetail:
-      type: object
-      required: [field, message]
-      properties:
-        field:
-          type: string
-          example: title
-        message:
-          type: string
-          example: 제목은 비어 있을 수 없습니다.
-
-    AppErrorResponse:
-      type: object
-      required: [success, error]
-      properties:
+        data:
+          required:
+          - "email"
+          - "name"
+          - "userId"
+          type: "object"
+          properties:
+            name:
+              type: "string"
+              description: "사용자 이름"
+              nullable: false
+              example: "홍길동"
+            userId:
+              type: "string"
+              description: "사용자의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AC"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            email:
+              type: "string"
+              description: "사용자 이메일"
+              nullable: false
+              example: "hong@example.com"
+              format: "email"
+          description: "성공 응답 데이터"
+          nullable: false
         success:
-          type: boolean
-          enum: [false]
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
         error:
-          $ref: "#/components/schemas/AppErrorBody"
-
-    AppResponse_CurrentUserResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/CurrentUserResponse"
-
-    AppResponse_RefreshTokensResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/RefreshTokensResponse"
-
-    AppResponse_LogoutResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/LogoutResponse"
-
-    AppResponse_WorkspaceResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/WorkspaceResponse"
-
-    AppResponse_WorkspaceListResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/WorkspaceListResponse"
-
-    AppResponse_FolderResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/FolderResponse"
-
-    AppResponse_FolderListResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          type: array
-          items:
-            $ref: "#/components/schemas/FolderResponse"
-
-    AppResponse_NoteResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/NoteResponse"
-
-    AppResponse_NoteCursorPageResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/NoteCursorPageResponse"
-
-    AppResponse_TranscriptionSessionResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/TranscriptionSessionResponse"
-
-    AppResponse_TranscriptionConnectionResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/TranscriptionConnectionResponse"
-
-    AppResponse_ActiveTranscriptionSessionResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/ActiveTranscriptionSessionResponse"
-
-    AppResponse_TranscriptionSessionCursorPageResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/TranscriptionSessionCursorPageResponse"
-
-    AppResponse_TranscriptSegmentCursorPageResponse:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
-          $ref: "#/components/schemas/TranscriptSegmentCursorPageResponse"
-
-    AppResponse_Unit:
-      type: object
-      required: [success, data]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-        data:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
           nullable: true
+    LogoutResponse:
+      title: "LogoutResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "message"
+          type: "object"
+          properties:
+            message:
+              type: "string"
+              description: "처리 결과 메시지"
+              nullable: false
+              example: "성공적으로 로그아웃했습니다."
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    StartTranscriptionSessionResponse:
+      title: "StartTranscriptionSessionResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "endReason"
+          - "endedAt"
+          - "noteId"
+          - "readyExpiresAt"
+          - "sessionId"
+          - "startedAt"
+          - "status"
+          type: "object"
+          properties:
+            readyExpiresAt:
+              type: "string"
+              description: "전사 연결 대기 만료 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            noteId:
+              type: "string"
+              description: "노트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AF"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            sessionId:
+              type: "string"
+              description: "전사 세션의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AG"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            status:
+              type: "string"
+              description: "전사 세션 상태"
+              nullable: false
+              example: "READY"
+              enum:
+              - "READY"
+              - "ACTIVE"
+              - "COMPLETED"
+              - "INTERRUPTED"
+            startedAt:
+              type: "string"
+              description: "전사 시작 시각"
+              nullable: true
+              format: "date-time"
+            endedAt:
+              type: "string"
+              description: "전사 종료 시각"
+              nullable: true
+              format: "date-time"
+            endReason:
+              type: "string"
+              description: "전사 종료 사유"
+              nullable: true
+              enum:
+              - "CLIENT_DISCONNECTED"
+              - "READY_TIMEOUT"
+              - "STT_FAILURE"
+              - "AUDIO_ARCHIVE_FAILURE"
+              - "INTERNAL_ERROR"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    NoteRequest:
+      title: "NoteRequest"
+      required:
+      - "title"
+      type: "object"
+      properties:
+        title:
+          type: "string"
+          description: "노트 제목"
+          nullable: false
+          example: "주간 회의"
+          minLength: 1
+          maxLength: 200
+    UpdateWorkspaceRequest:
+      title: "UpdateWorkspaceRequest"
+      required:
+      - "name"
+      type: "object"
+      properties:
+        name:
+          type: "string"
+          description: "워크스페이스 이름"
+          nullable: false
+          example: "제품 팀"
+          minLength: 1
+          maxLength: 100
+        description:
+          type: "string"
+          description: "워크스페이스 설명"
+          nullable: true
+          example: "제품을 만드는 팀의 워크스페이스"
+          maxLength: 1000
+    TranscriptResponse:
+      title: "TranscriptResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "segments"
+          type: "object"
+          properties:
+            segments:
+              type: "array"
+              description: "시간순 확정 전사 구간 목록"
+              items:
+                required:
+                - "endedAtMs"
+                - "segmentId"
+                - "sequence"
+                - "startedAtMs"
+                - "text"
+                - "transcriptionSessionId"
+                type: "object"
+                properties:
+                  sequence:
+                    type: "integer"
+                    description: "세션 내 구간 순서"
+                    nullable: false
+                    example: 1
+                    format: "int64"
+                    minimum: 0
+                  segmentId:
+                    type: "string"
+                    description: "확정 전사 구간의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AH"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  endedAtMs:
+                    type: "integer"
+                    description: "오디오 종료 오프셋(ms)"
+                    nullable: true
+                    example: 1200
+                    format: "int64"
+                    minimum: 0
+                  text:
+                    type: "string"
+                    description: "확정 전사 텍스트"
+                    nullable: false
+                    example: "안녕하세요."
+                  transcriptionSessionId:
+                    type: "string"
+                    description: "전사 세션의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AG"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  startedAtMs:
+                    type: "integer"
+                    description: "오디오 시작 오프셋(ms)"
+                    nullable: true
+                    example: 0
+                    format: "int64"
+                    minimum: 0
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    RefreshTokensResponse:
+      title: "RefreshTokensResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "message"
+          type: "object"
+          properties:
+            message:
+              type: "string"
+              description: "처리 결과 메시지"
+              nullable: false
+              example: "토큰이 갱신되었습니다."
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    NoteResponse:
+      title: "NoteResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "createdAt"
+          - "noteId"
+          - "projectId"
+          - "title"
+          - "updatedAt"
+          type: "object"
+          properties:
+            createdAt:
+              type: "string"
+              description: "노트 생성 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            noteId:
+              type: "string"
+              description: "노트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AF"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            title:
+              type: "string"
+              description: "노트 제목"
+              nullable: false
+              example: "주간 회의"
+              maxLength: 200
+            projectId:
+              type: "string"
+              description: "프로젝트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AE"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            updatedAt:
+              type: "string"
+              description: "노트 수정 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    TranscriptionSessionResponse:
+      title: "TranscriptionSessionResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "endReason"
+          - "endedAt"
+          - "noteId"
+          - "readyExpiresAt"
+          - "sessionId"
+          - "startedAt"
+          - "status"
+          type: "object"
+          properties:
+            endReason:
+              type: "string"
+              description: "전사 종료 사유"
+              nullable: true
+              example: "CLIENT_DISCONNECTED"
+              enum:
+              - "CLIENT_DISCONNECTED"
+              - "READY_TIMEOUT"
+              - "STT_FAILURE"
+              - "AUDIO_ARCHIVE_FAILURE"
+              - "INTERNAL_ERROR"
+            endedAt:
+              type: "string"
+              description: "전사 종료 시각"
+              nullable: true
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            startedAt:
+              type: "string"
+              description: "전사 시작 시각"
+              nullable: true
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            readyExpiresAt:
+              type: "string"
+              description: "전사 연결 대기 만료 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            noteId:
+              type: "string"
+              description: "노트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AF"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            sessionId:
+              type: "string"
+              description: "전사 세션의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AG"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            status:
+              type: "string"
+              description: "전사 세션 상태"
+              nullable: false
+              example: "COMPLETED"
+              enum:
+              - "READY"
+              - "ACTIVE"
+              - "COMPLETED"
+              - "INTERRUPTED"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    WorkspaceResponse:
+      title: "WorkspaceResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "description"
+          - "isDefault"
+          - "name"
+          - "role"
+          - "workspaceId"
+          type: "object"
+          properties:
+            isDefault:
+              type: "boolean"
+              description: "현재 사용자의 기본 워크스페이스 여부"
+              nullable: false
+              example: false
+            role:
+              type: "string"
+              description: "현재 사용자의 워크스페이스 역할"
+              nullable: false
+              example: "ADMIN"
+              enum:
+              - "ADMIN"
+              - "MEMBER"
+            name:
+              type: "string"
+              description: "워크스페이스 이름"
+              nullable: false
+              example: "제품 팀"
+              maxLength: 100
+            description:
+              type: "string"
+              description: "워크스페이스 설명"
+              nullable: true
+              example: "제품을 만드는 팀의 워크스페이스"
+              maxLength: 1000
+            workspaceId:
+              type: "string"
+              description: "워크스페이스의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AD"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    ChangeDefaultWorkspaceResponse:
+      title: "ChangeDefaultWorkspaceResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "workspaceId"
+          type: "object"
+          properties:
+            workspaceId:
+              type: "string"
+              description: "워크스페이스의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AD"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    StartTranscriptionSessionRequest:
+      title: "StartTranscriptionSessionRequest"
+      required:
+      - "audioFormat"
+      type: "object"
+      properties:
+        audioFormat:
+          required:
+          - "channels"
+          - "mimeType"
+          - "sampleRate"
+          type: "object"
+          properties:
+            channels:
+              type: "integer"
+              description: "오디오 채널 수"
+              nullable: false
+              example: 1
+              format: "int32"
+              minimum: 1
+            mimeType:
+              type: "string"
+              description: "오디오 MIME 타입"
+              nullable: false
+              example: "audio/webm;codecs=opus"
+              minLength: 1
+              maxLength: 100
+            sampleRate:
+              type: "integer"
+              description: "오디오 샘플 레이트(Hz)"
+              nullable: false
+              example: 48000
+              format: "int32"
+              minimum: 1
+          description: "입력 오디오 형식"
+          nullable: false
+    UpdateWorkspaceResponse:
+      title: "UpdateWorkspaceResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "description"
+          - "name"
+          - "workspaceId"
+          type: "object"
+          properties:
+            name:
+              type: "string"
+              description: "워크스페이스 이름"
+              nullable: false
+              example: "제품 팀"
+            description:
+              type: "string"
+              description: "워크스페이스 설명"
+              nullable: true
+              example: "제품을 만드는 팀의 워크스페이스"
+            workspaceId:
+              type: "string"
+              description: "워크스페이스의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AD"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    CreateWorkspaceRequest:
+      title: "CreateWorkspaceRequest"
+      required:
+      - "name"
+      type: "object"
+      properties:
+        name:
+          type: "string"
+          description: "워크스페이스 이름"
+          nullable: false
+          example: "제품 팀"
+          minLength: 1
+          maxLength: 100
+        description:
+          type: "string"
+          description: "워크스페이스 설명"
+          nullable: true
+          example: "제품을 만드는 팀의 워크스페이스"
+          maxLength: 1000
+    ChangeDefaultWorkspaceRequest:
+      title: "ChangeDefaultWorkspaceRequest"
+      required:
+      - "workspaceId"
+      type: "object"
+      properties:
+        workspaceId:
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
+          nullable: false
+          example: "0HZX2K7M9Q4AD"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+    NoteListResponse:
+      title: "NoteListResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "notes"
+          type: "object"
+          properties:
+            notes:
+              type: "array"
+              description: "노트 목록"
+              items:
+                required:
+                - "createdAt"
+                - "noteId"
+                - "projectId"
+                - "title"
+                - "updatedAt"
+                type: "object"
+                properties:
+                  createdAt:
+                    type: "string"
+                    description: "노트 생성 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  noteId:
+                    type: "string"
+                    description: "노트의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AF"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  title:
+                    type: "string"
+                    description: "노트 제목"
+                    nullable: false
+                    example: "주간 회의"
+                    maxLength: 200
+                  projectId:
+                    type: "string"
+                    description: "프로젝트의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AE"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  updatedAt:
+                    type: "string"
+                    description: "노트 수정 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    ProjectListResponse:
+      title: "ProjectListResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "projects"
+          type: "object"
+          properties:
+            projects:
+              type: "array"
+              description: "프로젝트 목록"
+              items:
+                required:
+                - "createdAt"
+                - "description"
+                - "name"
+                - "projectId"
+                - "updatedAt"
+                - "workspaceId"
+                type: "object"
+                properties:
+                  createdAt:
+                    type: "string"
+                    description: "프로젝트 생성 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  name:
+                    type: "string"
+                    description: "프로젝트 이름"
+                    nullable: false
+                    example: "모바일 앱"
+                    maxLength: 100
+                  description:
+                    type: "string"
+                    description: "프로젝트 설명"
+                    nullable: true
+                    example: "Heymoa 모바일 앱 프로젝트"
+                    maxLength: 1000
+                  projectId:
+                    type: "string"
+                    description: "프로젝트의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AE"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  updatedAt:
+                    type: "string"
+                    description: "프로젝트 수정 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  workspaceId:
+                    type: "string"
+                    description: "워크스페이스의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AD"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    ProjectResponse:
+      title: "ProjectResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "createdAt"
+          - "description"
+          - "name"
+          - "projectId"
+          - "updatedAt"
+          - "workspaceId"
+          type: "object"
+          properties:
+            createdAt:
+              type: "string"
+              description: "프로젝트 생성 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            name:
+              type: "string"
+              description: "프로젝트 이름"
+              nullable: false
+              example: "모바일 앱"
+              maxLength: 100
+            description:
+              type: "string"
+              description: "프로젝트 설명"
+              nullable: true
+              example: "Heymoa 모바일 앱 프로젝트"
+              maxLength: 1000
+            projectId:
+              type: "string"
+              description: "프로젝트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AE"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            updatedAt:
+              type: "string"
+              description: "프로젝트 수정 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            workspaceId:
+              type: "string"
+              description: "워크스페이스의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AD"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    CreateWorkspaceResponse:
+      title: "CreateWorkspaceResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "description"
+          - "isDefault"
+          - "name"
+          - "role"
+          - "workspaceId"
+          type: "object"
+          properties:
+            isDefault:
+              type: "boolean"
+              description: "현재 사용자의 기본 워크스페이스 여부"
+              nullable: false
+              example: false
+            role:
+              type: "string"
+              description: "현재 사용자의 워크스페이스 역할"
+              nullable: false
+              example: "ADMIN"
+              enum:
+              - "ADMIN"
+              - "MEMBER"
+            name:
+              type: "string"
+              description: "워크스페이스 이름"
+              nullable: false
+              example: "제품 팀"
+              maxLength: 100
+            description:
+              type: "string"
+              description: "워크스페이스 설명"
+              nullable: true
+              example: "제품을 만드는 팀의 워크스페이스"
+              maxLength: 1000
+            workspaceId:
+              type: "string"
+              description: "워크스페이스의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AD"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    AppErrorResponse:
+      title: "AppErrorResponse"
+      type: "object"
+      required:
+      - "success"
+      - "data"
+      - "error"
+      properties:
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: false
+        data:
+          type: "object"
+          nullable: true
+          description: "실패 시 null인 응답 데이터"
+        error:
+          type: "object"
+          required:
+          - "code"
+          - "message"
+          - "details"
+          properties:
+            code:
+              type: "string"
+              description: "애플리케이션 오류 코드"
+              nullable: false
+            message:
+              type: "string"
+              description: "사용자에게 표시할 오류 메시지"
+              nullable: false
+            details:
+              type: "array"
+              nullable: true
+              items:
+                type: "object"
+                required:
+                - "field"
+                - "message"
+                properties:
+                  field:
+                    type: "string"
+                    description: "오류가 발생한 필드"
+                    nullable: false
+                  message:
+                    type: "string"
+                    description: "필드 오류 메시지"
+                    nullable: false
+              description: "필드별 오류 상세"
+          description: "오류 정보"
+          nullable: false
+    WorkspaceListResponse:
+      title: "WorkspaceListResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "workspaces"
+          type: "object"
+          properties:
+            workspaces:
+              type: "array"
+              description: "워크스페이스 목록"
+              items:
+                required:
+                - "description"
+                - "isDefault"
+                - "name"
+                - "role"
+                - "workspaceId"
+                type: "object"
+                properties:
+                  isDefault:
+                    type: "boolean"
+                    description: "현재 사용자의 기본 워크스페이스 여부"
+                    nullable: false
+                    example: false
+                  role:
+                    type: "string"
+                    description: "현재 사용자의 워크스페이스 역할"
+                    nullable: false
+                    example: "ADMIN"
+                    enum:
+                    - "ADMIN"
+                    - "MEMBER"
+                  name:
+                    type: "string"
+                    description: "워크스페이스 이름"
+                    nullable: false
+                    example: "제품 팀"
+                    maxLength: 100
+                  description:
+                    type: "string"
+                    description: "워크스페이스 설명"
+                    nullable: true
+                    example: "제품을 만드는 팀의 워크스페이스"
+                    maxLength: 1000
+                  workspaceId:
+                    type: "string"
+                    description: "워크스페이스의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AD"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    ProjectRequest:
+      title: "ProjectRequest"
+      required:
+      - "name"
+      type: "object"
+      properties:
+        name:
+          type: "string"
+          description: "프로젝트 이름"
+          nullable: false
+          example: "모바일 앱"
+          minLength: 1
+          maxLength: 100
+        description:
+          type: "string"
+          description: "프로젝트 설명"
+          nullable: true
+          example: "Heymoa 모바일 앱 프로젝트"
+          maxLength: 1000
+  securitySchemes:
+    accessCookie:
+      type: "apiKey"
+      in: "cookie"
+      name: "access_token"
+      description: "로그인 후 발급되는 HttpOnly access token 쿠키"
+  responses:
+    Unauthorized:
+      description: "인증 필요"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AppErrorResponse"
+          examples:
+            UNAUTHORIZED:
+              value:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "인증이 필요합니다."
+                  details: null

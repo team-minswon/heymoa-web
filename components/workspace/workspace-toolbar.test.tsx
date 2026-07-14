@@ -29,8 +29,26 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
 }));
-vi.mock("@/lib/api/generated/note/note", () => ({
+vi.mock("@/lib/api/generated/notes/notes", () => ({
   useCreateNote: () => ({ mutateAsync: createNote, isPending: false }),
+}));
+vi.mock("@/components/workspace/workspace-app-shell", () => ({
+  useWorkspaceShell: () => ({ selectedProjectId: "01K0000000001" }),
+}));
+vi.mock("@/lib/api/generated/projects/projects", () => ({
+  useGetProjects: () => ({
+    data: {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          projects: [
+            { projectId: "01K0000000001", name: "주간" }
+          ]
+        }
+      }
+    }
+  }),
 }));
 
 describe("WorkspaceToolbar", () => {
@@ -68,7 +86,7 @@ describe("WorkspaceToolbar", () => {
   it("creates a fresh note and starts a session for that exact note", async () => {
     recording.session = null;
     createNote.mockResolvedValue({
-      status: 200,
+      status: 201,
       data: { success: true, data: { noteId: "01K0000000100" } },
     });
     render(
@@ -94,7 +112,7 @@ describe("WorkspaceToolbar", () => {
     recording.session = null;
     recording.start.mockClear();
     createNote.mockResolvedValue({
-      status: 200,
+      status: 201,
       data: { success: true, data: { noteId: "01K0000000101" } },
     });
     render(

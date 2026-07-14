@@ -17,10 +17,10 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   }),
 }));
 
-vi.mock("@/lib/api/generated/workspace/workspace", () => ({
-  getListWorkspacesQueryKey: () => ["workspaces"],
-  useListWorkspaces: () => ({
-    data: { status: 200, data: { success: true, data: { items: [] } } },
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  getGetWorkspacesQueryKey: () => ["workspaces"],
+  useGetWorkspaces: () => ({
+    data: { status: 200, data: { success: true, data: { workspaces: [] } } },
   }),
   useCreateWorkspace: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useGetWorkspace: () => ({
@@ -41,18 +41,18 @@ vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { name: "김민수", email: "minsu@example.com" } }),
 }));
 
-vi.mock("@/lib/api/generated/folder/folder", () => ({
-  getListWorkspaceFoldersQueryKey: () => ["folders"],
-  useListWorkspaceFolders: () => ({
-    data: { status: 200, data: { success: true, data: [] } },
+vi.mock("@/lib/api/generated/projects/projects", () => ({
+  getGetProjectsQueryKey: () => ["projects"],
+  useGetProjects: () => ({
+    data: { status: 200, data: { success: true, data: { projects: [] } } },
   }),
-  useCreateFolder: () => ({ mutateAsync: vi.fn() }),
-  useUpdateFolder: () => ({ mutateAsync: vi.fn() }),
-  useDeleteFolder: () => ({ mutateAsync: vi.fn() }),
+  useCreateProject: () => ({ mutateAsync: vi.fn() }),
+  useUpdateProject: () => ({ mutateAsync: vi.fn() }),
+  useDeleteProject: () => ({ mutateAsync: vi.fn() }),
 }));
 
-vi.mock("@/lib/api/generated/note/note", () => ({
-  getListWorkspaceNotesQueryKey: () => ["notes"],
+vi.mock("@/lib/api/generated/notes/notes", () => ({
+  getGetNotesQueryKey: () => ["notes"],
   useCreateNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 

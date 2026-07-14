@@ -9,7 +9,7 @@ export function WorkspacePage({
   workspaceId: string;
   embedded?: boolean;
 }) {
-  const { selectedFolderId } = useWorkspaceShell();
+  const { selectedProjectId } = useWorkspaceShell();
 
   return (
     <section className="mx-auto min-h-full w-full max-w-[1320px] bg-card px-4 py-7 sm:px-8 lg:px-12 xl:px-16">
@@ -23,7 +23,7 @@ export function WorkspacePage({
       </div>
       <WorkspaceNoteList
         workspaceId={workspaceId}
-        folderId={selectedFolderId}
+        projectId={selectedProjectId}
       />
     </section>
   );

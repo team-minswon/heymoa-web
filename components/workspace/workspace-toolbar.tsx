@@ -9,7 +9,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useCreateNote } from "@/lib/api/generated/note/note";
+import { useCreateNote } from "@/lib/api/generated/notes/notes";
+import { useGetProjects } from "@/lib/api/generated/projects/projects";
+import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 
 function formatElapsed(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1000);
@@ -29,6 +31,14 @@ export function WorkspaceToolbar({
 }) {
   const router = useRouter();
   const createNote = useCreateNote();
+  const { selectedProjectId } = useWorkspaceShell();
+  const projectsQuery = useGetProjects(workspaceId);
+  const projects =
+    projectsQuery.data?.status === 200 && projectsQuery.data.data.success
+      ? (projectsQuery.data.data.data.projects ?? [])
+      : [];
+  const targetProjectId = selectedProjectId ?? projects[0]?.projectId;
+
   const {
     session,
     elapsedMs,
@@ -54,9 +64,13 @@ export function WorkspaceToolbar({
   const handleStart = async () => {
     let noteId = activeNoteId;
     if (!noteId) {
-      const response = await createNote.mutateAsync({ workspaceId, data: {} });
+      if (!targetProjectId) return;
+      const response = await createNote.mutateAsync({
+        projectId: targetProjectId,
+        data: { title: "실시간 기록 노트" },
+      });
       if (
-        response.status !== 200 ||
+        response.status !== 201 ||
         !response.data.success ||
         !response.data.data
       )
@@ -87,6 +101,7 @@ export function WorkspaceToolbar({
                 type="button"
                 onClick={() => void handleStart()}
                 loading={createNote.isPending}
+                disabled={!targetProjectId}
                 aria-label="실시간 기록 시작"
               >
                 <Mic className="mr-1" />
@@ -96,14 +111,16 @@ export function WorkspaceToolbar({
                 type="button"
                 variant="outline"
                 size="icon"
+                disabled={!targetProjectId}
                 aria-label="새 노트"
                 onClick={async () => {
+                  if (!targetProjectId) return;
                   const response = await createNote.mutateAsync({
-                    workspaceId,
-                    data: {},
+                    projectId: targetProjectId,
+                    data: { title: "새 노트" },
                   });
                   if (
-                    response.status === 200 &&
+                    response.status === 201 &&
                     response.data.success &&
                     response.data.data
                   ) {

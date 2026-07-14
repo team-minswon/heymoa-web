@@ -1,24 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { groupNotesByDate } from "@/components/workspace/workspace-note-list";
-import type { NoteSummaryResponse } from "@/lib/api/generated/models";
+import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 
 function note(
   noteId: string,
-  createdAt: string,
-  lastRecordedAt: string | null = null
-): NoteSummaryResponse {
+  updatedAt: string
+): NoteListResponseDataNotesItem {
   return {
     noteId,
-    workspaceId: "01K0000000000",
+    projectId: "01K0000000001",
     title: noteId,
-    context: null,
-    createdBy: { userId: "01K0000000003", name: "김민수" },
-    folders: [],
-    createdAt,
-    updatedAt: createdAt,
-    lastRecordedAt,
-    recordedDurationMs: 0,
+    createdAt: updatedAt,
+    updatedAt,
   };
 }
 

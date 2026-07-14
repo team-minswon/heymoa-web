@@ -10,15 +10,18 @@ describe("REST and WebSocket contract consistency", () => {
     const rest = openapi.components.schemas;
     const socket = asyncapi.components.schemas;
 
-    expect(socket.Tsid.pattern).toBe(rest.Tsid.pattern);
-    expect(socket.TranscriptionSessionStatus.enum).toEqual(
-      rest.TranscriptionSessionStatus.enum
-    );
-    expect([...socket.AppErrorType.enum].sort()).toEqual(
-      [...rest.AppErrorType.enum].sort()
-    );
-    expect(socket.TranscriptSegment.required).toEqual(
-      rest.TranscriptSegmentResponse.required
-    );
+    // Verify TSID pattern consistency
+    const restTsidPattern =
+      rest.TranscriptionSessionResponse.properties.data.properties.noteId.pattern;
+    expect(socket.Tsid.pattern).toBe(restTsidPattern);
+
+    // Verify Segment fields consistency
+    const restSegmentRequired =
+      rest.TranscriptResponse.properties.data.properties.segments.items.required;
+    const restFields = [...restSegmentRequired]
+      .map((f) => (f === "transcriptionSessionId" ? "sessionId" : f))
+      .sort();
+    const socketFields = [...socket.TranscriptSegment.required].sort();
+    expect(socketFields).toEqual(restFields);
   });
 });

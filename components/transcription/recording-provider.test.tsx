@@ -15,10 +15,10 @@ describe("RecordingProvider", () => {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
       status: "CONNECTING" as const,
-      recordedDurationMs: 0,
-      startedBy: { userId: "01K0000000003", name: "테스트 유저" },
-      startedAt: "2026-07-11T00:00:00Z",
+      readyExpiresAt: "2026-07-11T00:01:00Z",
+      startedAt: null,
       endedAt: null,
+      endReason: null,
     };
     let publishLevel!: (level: number) => void;
     let emit!: Parameters<RecordingRuntime["createSocket"]>[0]["onEvent"];
@@ -42,12 +42,7 @@ describe("RecordingProvider", () => {
       },
     };
     const api: RecordingApi = {
-      createSession: vi.fn(async () => ({
-        session,
-        socketUrl: "ws://localhost/stream?ticket=test",
-        ticketExpiresAt: "2026-07-11T00:01:00Z",
-      })),
-      createTicket: vi.fn(),
+      startSession: vi.fn(async () => session),
     };
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={new QueryClient()}>
@@ -82,18 +77,13 @@ describe("RecordingProvider", () => {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
       status: "CONNECTING" as const,
-      recordedDurationMs: 0,
-      startedBy: { userId: "01K0000000003", name: "테스트 유저" },
-      startedAt: "2026-07-11T00:00:00Z",
+      readyExpiresAt: "2026-07-11T00:01:00Z",
+      startedAt: null,
       endedAt: null,
+      endReason: null,
     };
     const api: RecordingApi = {
-      createSession: vi.fn(async () => ({
-        session,
-        socketUrl: "ws://localhost/stream?ticket=test",
-        ticketExpiresAt: "2026-07-11T00:01:00Z",
-      })),
-      createTicket: vi.fn(),
+      startSession: vi.fn(async () => session),
     };
     let emit!: Parameters<RecordingRuntime["createSocket"]>[0]["onEvent"];
     const runtime: RecordingRuntime = {
@@ -160,18 +150,13 @@ describe("RecordingProvider", () => {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
       status: "CONNECTING" as const,
-      recordedDurationMs: 0,
-      startedBy: { userId: "01K0000000003", name: "테스트 유저" },
-      startedAt: "2026-07-11T00:00:00Z",
+      readyExpiresAt: "2026-07-11T00:01:00Z",
+      startedAt: null,
       endedAt: null,
+      endReason: null,
     };
     const api: RecordingApi = {
-      createSession: vi.fn(async () => ({
-        session,
-        socketUrl: "ws://localhost/stream?ticket=test",
-        ticketExpiresAt: "2026-07-11T00:01:00Z",
-      })),
-      createTicket: vi.fn(),
+      startSession: vi.fn(async () => session),
     };
     let onEvent: Parameters<RecordingRuntime["createSocket"]>[0]["onEvent"];
     const runtime: RecordingRuntime = {

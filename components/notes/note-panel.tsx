@@ -1,48 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import {
   Expand,
   Mic,
-  MoreHorizontal,
   PanelRightClose,
   Pause,
   Play,
   Square,
-  Trash2,
 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 
 import { NoteDetails } from "@/components/notes/note-details";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { useRecording } from "@/components/transcription/recording-provider";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  getListWorkspaceNotesQueryKey,
-  useDeleteNote,
-  useGetNote,
-} from "@/lib/api/generated/note/note";
+import { useGetNote } from "@/lib/api/generated/notes/notes";
+import { useGetProject } from "@/lib/api/generated/projects/projects";
 
 export type NoteTab = "details" | "transcript";
 
@@ -68,13 +45,16 @@ export function NotePanel({
   onClose: () => void;
   onExpand?: () => void;
 }) {
-  const queryClient = useQueryClient();
   const noteQuery = useGetNote(noteId);
-  const deleteNote = useDeleteNote();
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
+      : undefined;
+
+  const projectQuery = useGetProject(workspaceId, note?.projectId ?? "");
+  const project =
+    projectQuery.data?.status === 200 && projectQuery.data.data.success
+      ? projectQuery.data.data.data
       : undefined;
 
   const recording = useRecording();
@@ -114,38 +94,14 @@ export function NotePanel({
             <p className="truncate text-base font-semibold">
               {note?.title ?? "노트"}
             </p>
-            {note?.folders.length ? (
+            {project && (
               <div className="mt-1 flex gap-1.5 overflow-hidden">
-                {note.folders.map((folder) => (
-                  <Badge key={folder.folderId} variant="secondary">
-                    {folder.name}
-                  </Badge>
-                ))}
+                <Badge variant="secondary">
+                  {project.name}
+                </Badge>
               </div>
-            ) : null}
+            )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="노트 메뉴"
-                />
-              }
-            >
-              <MoreHorizontal />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 /> 노트 삭제
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </header>
 
@@ -169,7 +125,7 @@ export function NotePanel({
         </TabsContent>
         <TabsContent value="details" className="min-h-0 flex-1">
           <ScrollArea className="h-full">
-            <NoteDetails workspaceId={workspaceId} noteId={noteId} />
+            <NoteDetails noteId={noteId} />
           </ScrollArea>
         </TabsContent>
       </Tabs>
@@ -288,32 +244,6 @@ export function NotePanel({
           )}
         </AnimatePresence>
       </motion.div>
-
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>노트를 삭제할까요?</AlertDialogTitle>
-            <AlertDialogDescription>
-              노트와 연결된 전사 기록도 함께 삭제됩니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={async () => {
-                await deleteNote.mutateAsync({ noteId });
-                await queryClient.invalidateQueries({
-                  queryKey: getListWorkspaceNotesQueryKey(workspaceId),
-                });
-                onClose();
-              }}
-            >
-              삭제
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
