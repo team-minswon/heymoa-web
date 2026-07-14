@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   RecordingProvider,
   type RecordingApi,
@@ -87,6 +87,10 @@ function setup() {
 }
 
 describe("RecordingProvider", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("starts a bodyless session and records only after connected", async () => {
     const harness = setup();
 
@@ -106,6 +110,19 @@ describe("RecordingProvider", () => {
       "audio-start",
     ]);
     expect(harness.result.current.phase).toBe("recording");
+  });
+
+  it("uses the browser origin for WebSocket mocks", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_MOCKING", "enabled");
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://api.example.test:8080");
+    const harness = setup();
+
+    await act(() => harness.result.current.start(session.noteId));
+
+    const options = vi.mocked(harness.runtime.createSocket).mock.calls[0][0];
+    const url = new URL(options.url);
+    expect(url.protocol).toBe("ws:");
+    expect(url.host).toBe(window.location.host);
   });
 
   it("commits the current utterance", async () => {

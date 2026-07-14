@@ -17,6 +17,7 @@ import {
   getGetNoteTranscriptQueryKey,
   useStartTranscriptionSession,
 } from "@/lib/api/generated/transcription/transcription";
+import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { PcmAudioCapture } from "@/lib/transcription/audio";
 import type { ServerEvent } from "@/lib/transcription/protocol";
 import { TranscriptionSocket } from "@/lib/transcription/socket";
@@ -227,9 +228,11 @@ export function RecordingProvider({
 
         const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-        const wsBaseUrl = apiBaseUrl
-          ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
-          : `${wsProtocol}//${window.location.host}`;
+        const wsBaseUrl = shouldEnableMocking()
+          ? `${wsProtocol}//${window.location.host}`
+          : apiBaseUrl
+            ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
+            : `${wsProtocol}//${window.location.host}`;
         const socket = runtime.createSocket({
           url: `${wsBaseUrl}/ws/transcription-sessions/${connectionSession.sessionId}`,
           onEvent: handleEvent,
