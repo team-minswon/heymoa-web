@@ -83,7 +83,7 @@ export function WorkspaceAppShell({
         />
         <SidebarProvider>
           {!hideSidebar && (
-            <Sidebar className="overflow-hidden rounded-r-2xl border-r [&>[data-sidebar=sidebar]]:bg-muted/30 [&>[data-sidebar=sidebar]]:overflow-hidden">
+            <Sidebar className="overflow-hidden rounded-r-2xl border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:bg-[var(--el-canvas-soft)] [&>[data-sidebar=sidebar]]:overflow-hidden">
               <WorkspaceSidebar
                 workspaceId={workspaceId}
                 workspace={workspace}

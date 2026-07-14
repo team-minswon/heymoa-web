@@ -71,7 +71,7 @@ export function GlobalRecordingIndicator() {
   return (
     <aside
       aria-label="진행 중인 녹음"
-      className="fixed right-5 top-20 z-50 flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_94%,transparent)] p-1.5 pl-2.5 text-[var(--el-ink)] shadow-[0_12px_40px_rgba(28,25,23,0.16)] backdrop-blur-xl"
+      className="fixed right-5 top-20 z-50 flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1.5 pl-2.5 text-[var(--el-ink)] shadow-[0_8px_32px_rgba(28,25,23,0.12)] backdrop-blur-xl"
     >
       <Link
         href={href}
@@ -83,13 +83,13 @@ export function GlobalRecordingIndicator() {
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(level * 100)}
-          className="flex h-6 items-center gap-0.5 rounded-full bg-[var(--el-ink)] px-2 text-white"
+          className="flex h-5 items-center gap-[3px] rounded-full bg-[var(--el-ink)] px-2"
         >
           {levelHistory.slice(-4).map((sample, index) => (
             <span
               key={index}
               data-testid={`global-wave-bar-${index}`}
-              className="h-3 w-0.5 origin-center rounded-full bg-white transition-transform"
+              className="h-2.5 w-[2px] origin-center rounded-full bg-white transition-transform duration-75"
               style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
             />
           ))}
@@ -103,26 +103,26 @@ export function GlobalRecordingIndicator() {
           </span>
         </span>
       </Link>
-      <div className="h-6 w-px bg-[var(--el-hairline)]" />
+      <div className="h-5 w-px bg-[var(--el-hairline)]" />
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
         aria-label={paused ? "녹음 재개" : "녹음 일시 정지"}
         onClick={() => void (paused ? resume() : pause())}
-        className="rounded-full"
+        className="size-7 rounded-full text-[var(--el-muted)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
       >
-        {paused ? <Radio /> : <Pause />}
+        {paused ? <Radio className="size-3.5" /> : <Pause className="size-3.5" />}
       </Button>
       <Button
         type="button"
-        variant="destructive"
+        variant="ghost"
         size="icon-sm"
         aria-label="녹음 종료"
         onClick={() => void stop()}
-        className="rounded-full"
+        className="size-7 rounded-full text-destructive hover:text-destructive hover:bg-destructive/8"
       >
-        <Square />
+        <Square className="size-3.5" />
       </Button>
     </aside>
   );

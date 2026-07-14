@@ -6,7 +6,7 @@ import { CircleStop, ExternalLink, Mic, Pause, Play, Plus } from "lucide-react";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useCreateNote } from "@/lib/api/generated/notes/notes";
@@ -143,81 +143,80 @@ export function WorkspaceToolbar({
       <AnimatePresence>
         {isRecordingOtherNote && (
           <motion.div
-            initial={{ opacity: 0, y: -16, x: "-50%" }}
+            initial={{ opacity: 0, y: -12, x: "-50%" }}
             animate={{
               opacity: 1,
               y: 0,
               x: "-50%",
-              transition: { duration: 0.3, delay: 0.2, ease: [0.4, 0, 0.2, 1] },
+              transition: { duration: 0.15, ease: [0.4, 0, 0.2, 1] },
             }}
             exit={{
               opacity: 0,
-              y: -16,
+              y: -12,
               x: "-50%",
-              transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+              transition: { duration: 0.12, ease: [0.4, 0, 0.2, 1] },
             }}
-            className="fixed left-1/2 top-6 z-50 flex items-center gap-3 rounded-full border bg-background/95 px-4 py-2.5 shadow-md backdrop-blur supports-[backdrop-filter]:bg-background/80"
+            className="fixed left-1/2 top-5 z-50 flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] px-3 py-1.5 shadow-[0_8px_32px_rgba(28,25,23,0.12)] backdrop-blur-xl"
           >
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => openNote(session.noteId)}
-              className="rounded-full"
+              className="h-7 rounded-full px-2.5 text-[13px] font-medium text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
             >
-              <ExternalLink className="mr-1" /> 현재 녹음
+              <ExternalLink className="mr-1.5 size-3.5" />
+              현재 녹음
             </Button>
-            <Badge
-              variant={paused ? "secondary" : "default"}
-              className="rounded-full px-2.5 py-0.5 text-xs"
-            >
+            <div className="h-4 w-px bg-[var(--el-hairline)]" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--el-muted)]">
               {paused
                 ? "일시정지"
                 : microphoneState === "recording"
                   ? "녹음 중"
                   : "마이크 대기 중"}
-            </Badge>
+            </span>
             <span
               role="meter"
               aria-label="마이크 입력"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(level * 100)}
-              className="flex h-5 items-center gap-0.5"
+              className="flex h-4 items-center gap-[3px] rounded-full bg-[var(--el-ink)] px-2"
             >
               {levelHistory.slice(-4).map((sample, index) => (
                 <span
                   key={index}
-                  className="h-3 w-0.5 origin-center rounded-full bg-current transition-transform"
+                  className="h-2.5 w-[2px] origin-center rounded-full bg-white transition-transform duration-75"
                   style={{
                     transform: `scaleY(${Math.max(0.12, sample)})`,
                   }}
                 />
               ))}
             </span>
-            <span className="font-mono text-sm font-medium tabular-nums">
+            <span className="font-mono text-[13px] font-medium tabular-nums text-[var(--el-ink)]">
               {formatElapsed(elapsedMs)}
             </span>
-            <div className="ml-1 flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="icon-sm"
-                className="rounded-full"
+                className="size-7 rounded-full text-[var(--el-muted)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
                 aria-label={paused ? "녹음 재개" : "녹음 일시 정지"}
                 onClick={() => void (paused ? resume() : pause())}
               >
-                {paused ? <Play /> : <Pause />}
+                {paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
               </Button>
               <Button
                 type="button"
-                variant="destructive"
+                variant="ghost"
                 size="icon-sm"
-                className="rounded-full"
+                className="size-7 rounded-full text-destructive hover:text-destructive hover:bg-destructive/8"
                 aria-label="녹음 종료"
                 onClick={() => void stop()}
               >
-                <CircleStop />
+                <CircleStop className="size-3.5" />
               </Button>
             </div>
           </motion.div>

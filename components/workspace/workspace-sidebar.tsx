@@ -152,111 +152,110 @@ export function WorkspaceSidebar({
 
   return (
     <>
-      <SidebarHeader className="gap-2.5 p-4 pb-3">
-        {/* User Profile Selector (Top) */}
+      <SidebarHeader className="p-0">
+        {/* ── User profile ── */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 variant="ghost"
-                className="h-auto w-full justify-between p-1.5 hover:bg-accent/50 focus-visible:ring-0 rounded-xl"
+                className="h-auto w-full justify-start gap-0 rounded-none px-3 py-3 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
               />
             }
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Avatar className="size-8 rounded-full border border-sidebar-border/60">
+            <div className="flex w-full items-center gap-2.5 min-w-0">
+              <Avatar className="size-7 shrink-0 rounded-full">
                 <AvatarImage src={user?.image ?? undefined} alt="" />
-                <AvatarFallback className="rounded-full bg-primary/5 text-primary text-xs font-semibold">{initials}</AvatarFallback>
+                <AvatarFallback className="rounded-full bg-[var(--el-primary)] text-[var(--el-on-primary)] text-[11px] font-semibold">{initials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1 text-left">
-                <p className="block truncate text-xs font-semibold text-foreground leading-tight">
+                <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">
                   {user?.name ?? "사용자"}
                 </p>
-                <p className="block truncate text-[10px] text-muted-foreground leading-tight">
+                <p className="block truncate text-[11px] text-[var(--el-muted)] leading-tight">
                   {user?.email ?? ""}
                 </p>
               </div>
+              <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
             </div>
-            <ChevronsUpDown className="size-3.5 text-muted-foreground/80 shrink-0 ml-1" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-60 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] border border-sidebar-border">
-            <DropdownMenuItem onClick={() => onOpenSettings("account")} className="gap-2 rounded-lg py-2">
-              <Settings className="size-4" />
+          <DropdownMenuContent align="start" className="w-60 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]">
+            <DropdownMenuItem onClick={() => onOpenSettings("account")} className="gap-2 rounded-lg py-2 text-sm">
+              <Settings className="size-4 text-[var(--el-muted)]" />
               <span>내 계정 설정</span>
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-sidebar-border" />
-            <DropdownMenuItem onClick={() => void logout()} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 rounded-lg py-2">
+            <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
+            <DropdownMenuItem onClick={() => void logout()} className="gap-2 text-destructive rounded-lg py-2 text-sm">
               <LogOut className="size-4" />
               <span>로그아웃</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="h-px bg-sidebar-border my-1" />
+        <div className="h-px bg-[var(--el-hairline)]" />
 
-        {/* Workspace Switcher */}
+        {/* ── Workspace switcher ── */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 variant="ghost"
                 aria-label="워크스페이스 전환"
-                className="h-auto w-full justify-between p-1.5 hover:bg-accent/50 focus-visible:ring-0 rounded-xl"
+                className="h-auto w-full justify-start gap-0 rounded-none px-3 py-2.5 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
               />
             }
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-[#3f3a36] text-[10px] font-bold text-white uppercase">
+            <div className="flex w-full items-center gap-2.5 min-w-0">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-[var(--el-primary)] text-[9px] font-bold text-white uppercase">
                 {workspace?.name?.trim().slice(0, 1) || "W"}
               </span>
-              <span className="truncate text-xs font-semibold text-foreground">
+              <span className="min-w-0 flex-1 truncate text-left text-[12px] font-medium text-[var(--el-body-strong)]">
                 {workspace?.name ?? "워크스페이스"}
               </span>
+              <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
             </div>
-            <ChevronsUpDown className="size-3.5 text-muted-foreground/80 shrink-0 ml-1" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] border border-sidebar-border">
+          <DropdownMenuContent align="start" className="w-64 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]">
             {workspaces.map((item) => (
               <DropdownMenuItem
                 key={item.workspaceId}
                 onClick={() => router.push(`/w/${item.workspaceId}`)}
-                className="justify-between rounded-lg py-2"
+                className="justify-between rounded-lg py-2 text-sm"
               >
                 <span className="truncate flex-1">{item.name}</span>
-                {item.isDefault && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10px] bg-accent px-1.5 py-0.5 rounded-full text-muted-foreground font-medium">기본</span>
-                    <Check className="size-3.5 text-primary" />
-                  </div>
+                {item.workspaceId === workspaceId && (
+                  <Check className="size-3.5 text-[var(--el-primary)] shrink-0" />
                 )}
               </DropdownMenuItem>
             ))}
-            <DropdownMenuSeparator className="bg-sidebar-border" />
-            <DropdownMenuItem onClick={() => setWorkspaceDialogOpen(true)} className="gap-2 rounded-lg py-2">
-              <Plus className="size-4" />
+            <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
+            <DropdownMenuItem onClick={() => setWorkspaceDialogOpen(true)} className="gap-2 rounded-lg py-2 text-sm">
+              <Plus className="size-4 text-[var(--el-muted)]" />
               <span>새 워크스페이스</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onOpenSettings("workspace")} className="gap-2 rounded-lg py-2">
-              <Settings className="size-4" />
+            <DropdownMenuItem onClick={() => onOpenSettings("workspace")} className="gap-2 rounded-lg py-2 text-sm">
+              <Settings className="size-4 text-[var(--el-muted)]" />
               <span>워크스페이스 설정</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <div className="h-px bg-[var(--el-hairline)]" />
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
-        <nav aria-label="워크스페이스" className="space-y-1">
-          {/* All Notes */}
-          <SidebarGroup className="py-1">
+      <SidebarContent className="px-1.5 py-2">
+        <nav aria-label="워크스페이스">
+          {/* ── 모든 노트 ── */}
+          <SidebarGroup className="py-0.5">
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-0.5">
+              <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={selectedProjectId === null}
                     onClick={() => onSelectProject(null)}
-                    className="gap-2.5 text-xs font-medium rounded-lg h-8 px-2"
+                    className="gap-2.5 text-[13px] font-medium rounded-lg h-8 px-2.5"
                   >
-                    <NotebookText className="size-4 opacity-70" />
+                    <NotebookText className="size-4 text-[var(--el-muted)]" />
                     <span>모든 노트</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -264,39 +263,39 @@ export function WorkspaceSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Collapsible Projects Group */}
-          <SidebarGroup className="py-1">
+          {/* ── 프로젝트 ── */}
+          <SidebarGroup className="py-0.5 mt-2">
             <div className="flex items-center justify-between px-2 py-1">
               <button
                 onClick={() => setProjectsOpen(!projectsOpen)}
-                className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-muted-foreground/80 hover:text-foreground uppercase text-left shrink-0"
+                className="flex items-center gap-1 text-[11px] font-semibold tracking-widest text-[var(--el-muted)] hover:text-[var(--el-ink)] uppercase transition-colors"
               >
                 {projectsOpen ? (
-                  <ChevronDown className="size-3 text-muted-foreground" />
+                  <ChevronDown className="size-3" />
                 ) : (
-                  <ChevronRight className="size-3 text-muted-foreground" />
+                  <ChevronRight className="size-3" />
                 )}
-                <span>프로젝트</span>
+                프로젝트
               </button>
               <button
                 aria-label="새 프로젝트"
                 onClick={() => setProjectDialog({ mode: "create" })}
-                className="p-0.5 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                className="flex size-5 items-center justify-center rounded hover:bg-[var(--el-surface-strong)] text-[var(--el-muted)] hover:text-[var(--el-ink)] transition-colors"
               >
                 <Plus className="size-3.5" />
               </button>
             </div>
             {projectsOpen && (
-              <SidebarGroupContent className="mt-1">
-                <SidebarMenu className="space-y-0.5">
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-0">
                   {projects.map((project) => (
                     <SidebarMenuItem key={project.projectId}>
                       <SidebarMenuButton
                         isActive={selectedProjectId === project.projectId}
                         onClick={() => onSelectProject(project.projectId)}
-                        className="gap-2.5 text-xs font-medium rounded-lg h-8 px-2"
+                        className="gap-2.5 text-[13px] font-medium rounded-lg h-8 px-2.5"
                       >
-                        <Folder className="size-4 opacity-70" />
+                        <Folder className="size-4 text-[var(--el-muted)]" />
                         <span className="truncate">{project.name}</span>
                       </SidebarMenuButton>
                       <DropdownMenu>
@@ -305,26 +304,26 @@ export function WorkspaceSidebar({
                             <SidebarMenuAction
                               aria-label={`${project.name} 프로젝트 메뉴`}
                               showOnHover
-                              className="size-6 text-muted-foreground/60 hover:text-foreground hover:bg-accent"
+                              className="size-5 rounded text-[var(--el-muted-soft)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
                             />
                           }
                         >
                           <MoreHorizontal className="size-3.5" />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent side="right" align="start" className="rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] border border-sidebar-border">
+                        <DropdownMenuContent side="right" align="start" className="rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]">
                           <DropdownMenuItem
                             onClick={() =>
                               setProjectDialog({ mode: "rename", project })
                             }
                             className="gap-2 rounded-lg py-1.5 text-xs"
                           >
-                            <Pencil className="size-3.5" />
+                            <Pencil className="size-3.5 text-[var(--el-muted)]" />
                             <span>이름 변경</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
                             onClick={() => setDeleteTarget(project)}
-                            className="gap-2 rounded-lg py-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/5"
+                            className="gap-2 rounded-lg py-1.5 text-xs text-destructive"
                           >
                             <Trash2 className="size-3.5" />
                             <span>삭제</span>

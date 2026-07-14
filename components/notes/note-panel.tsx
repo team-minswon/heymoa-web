@@ -132,24 +132,24 @@ export function NotePanel({
 
       <motion.div
         layout
-        className="absolute bottom-8 left-1/2 z-50 flex -translate-x-1/2 items-center overflow-hidden rounded-full border bg-background/95 p-1.5 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        className="absolute bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 shadow-[0_8px_32px_rgba(28,25,23,0.12)] backdrop-blur-xl"
         style={{ borderRadius: 9999 }}
-        transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+        transition={{ type: "spring", bounce: 0, duration: 0.2 }}
       >
         <motion.div
           layout
-          transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+          transition={{ type: "spring", bounce: 0, duration: 0.2 }}
           className="flex items-center"
         >
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 rounded-full text-muted-foreground"
+            className="shrink-0 rounded-full text-[var(--el-muted)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
             aria-label="마이크 설정"
           >
-            <Mic className="size-5" />
+            <Mic className="size-4" />
           </Button>
-          <div className="mx-1 h-6 w-[1px] bg-border" />
+          <div className="mx-1 h-5 w-px bg-[var(--el-hairline)]" />
         </motion.div>
 
         <AnimatePresence mode="popLayout" initial={false}>
@@ -160,23 +160,19 @@ export function NotePanel({
               initial={{ opacity: 0 }}
               animate={{
                 opacity: 1,
-                transition: { duration: 0.2, delay: 0.3 },
+                transition: { duration: 0.15, delay: 0.1 },
               }}
-              exit={{ opacity: 0, transition: { duration: 0.1, delay: 0 } }}
-              className="flex w-max shrink-0 items-center"
+              exit={{ opacity: 0, transition: { duration: 0.08 } }}
+              className="flex shrink-0 items-center px-1"
             >
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="shrink-0 rounded-full px-2 hover:bg-transparent"
+                className="flex size-8 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
                 aria-label="기록 시작"
                 onClick={() => void recording.start(noteId)}
               >
-                <span className="flex size-9 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90">
-                  <span className="sr-only">기록 시작</span>
-                </span>
-              </Button>
+                <span className="sr-only">기록 시작</span>
+              </button>
             </motion.div>
           ) : (
             <motion.div
@@ -185,12 +181,12 @@ export function NotePanel({
               initial={{ opacity: 0 }}
               animate={{
                 opacity: 1,
-                transition: { duration: 0.2, delay: 0.3 },
+                transition: { duration: 0.15, delay: 0.1 },
               }}
-              exit={{ opacity: 0, transition: { duration: 0.1, delay: 0 } }}
+              exit={{ opacity: 0, transition: { duration: 0.08 } }}
               className="flex w-max shrink-0 items-center gap-2 pl-2 pr-1"
             >
-              <span className="min-w-[48px] font-mono text-sm font-medium tabular-nums text-destructive">
+              <span className="min-w-[48px] font-mono text-[13px] font-semibold tabular-nums text-destructive">
                 {formatElapsed(recording.elapsedMs)}
               </span>
               <span
@@ -200,7 +196,7 @@ export function NotePanel({
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(recording.level * 100)}
-                className="mx-1 flex h-5 w-8 items-center justify-center gap-[3px]"
+                className="mx-0.5 flex h-5 w-8 items-center justify-center gap-[3px]"
               >
                 {(recording.levelHistory ?? [0, 0, 0, 0, 0])
                   .slice(-5)
@@ -218,27 +214,27 @@ export function NotePanel({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="shrink-0 rounded-full"
+                className="size-7 shrink-0 rounded-full text-[var(--el-muted)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
                 aria-label={isPaused ? "재개" : "일시 정지"}
                 onClick={() =>
                   void (isPaused ? recording.resume() : recording.pause())
                 }
               >
                 {isPaused ? (
-                  <Play className="size-4 text-destructive" />
+                  <Play className="size-3.5 text-destructive" />
                 ) : (
-                  <Pause className="size-4 text-destructive" />
+                  <Pause className="size-3.5" />
                 )}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="shrink-0 rounded-full"
+                className="size-7 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)]"
                 aria-label="기록 종료"
                 onClick={() => void recording.stop()}
               >
-                <Square className="size-4 text-muted-foreground" />
+                <Square className="size-3.5" />
               </Button>
             </motion.div>
           )}
