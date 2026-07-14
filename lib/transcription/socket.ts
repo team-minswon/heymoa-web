@@ -2,7 +2,6 @@ import {
   parseServerEvent,
   type ClientCommand,
   type ServerEvent,
-  type TranscriptionSessionStatus,
 } from "@/lib/transcription/protocol";
 
 export type TranscriptionSocketOptions = {
@@ -13,7 +12,7 @@ export type TranscriptionSocketOptions = {
 
 export class TranscriptionSocket {
   private socket: WebSocket | null = null;
-  private status: TranscriptionSessionStatus = "CONNECTING";
+  private connected = false;
 
   constructor(private readonly options: TranscriptionSocketOptions) {}
 
@@ -24,35 +23,35 @@ export class TranscriptionSocket {
       const socket = new WebSocket(this.options.url);
       this.socket = socket;
       socket.binaryType = "arraybuffer";
-      let ready = false;
 
       socket.addEventListener("message", (message) => {
         if (typeof message.data !== "string") return;
 
         try {
           const event = parseServerEvent(message.data);
-          if (event.type === "SESSION_READY" && !ready) {
-            ready = true;
+          if (event.type === "connected" && !this.connected) {
+            this.connected = true;
             resolve();
           }
-          if (event.type === "SESSION_STATUS") this.status = event.status;
           this.options.onEvent(event);
-          if (event.type === "SESSION_COMPLETED") {
+          if (event.type === "completed") {
             socket.close(1000, "completed");
           }
         } catch (error) {
-          if (!ready) reject(error);
-          socket.close(4409, "invalid server event");
+          if (!this.connected) reject(error);
+          socket.close(1008, "invalid server event");
         }
       });
 
       socket.addEventListener("error", () => {
-        if (!ready) reject(new Error("WEBSOCKET_CONNECTION_FAILED"));
+        if (!this.connected) reject(new Error("WEBSOCKET_CONNECTION_FAILED"));
       });
 
       socket.addEventListener("close", (event) => {
+        const hadConnected = this.connected;
         this.socket = null;
-        if (!ready) reject(new Error(event.reason || "WEBSOCKET_CLOSED"));
+        this.connected = false;
+        if (!hadConnected) reject(new Error(event.reason || "WEBSOCKET_CLOSED"));
         this.options.onClose(event.code, event.reason);
       });
     });
@@ -60,14 +59,27 @@ export class TranscriptionSocket {
 
   sendAudio(chunk: ArrayBuffer) {
     if (
-      this.status === "STREAMING" &&
-      this.socket?.readyState === WebSocket.OPEN
+      !this.connected ||
+      chunk.byteLength < 2 ||
+      chunk.byteLength > 1_048_576 ||
+      chunk.byteLength % 2 !== 0
     ) {
+      return;
+    }
+    if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(chunk);
     }
   }
 
-  sendCommand(command: ClientCommand) {
+  commit() {
+    this.sendCommand({ type: "commit" });
+  }
+
+  stop() {
+    this.sendCommand({ type: "stop" });
+  }
+
+  private sendCommand(command: ClientCommand) {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(command));
     }
@@ -76,5 +88,6 @@ export class TranscriptionSocket {
   close() {
     this.socket?.close(1000, "client closed");
     this.socket = null;
+    this.connected = false;
   }
 }

@@ -7,6 +7,7 @@ class FakeWebSocket extends EventTarget {
   static instances: FakeWebSocket[] = [];
 
   readonly sent: unknown[] = [];
+  readonly closes: Array<{ code: number; reason: string }> = [];
   readyState = FakeWebSocket.CONNECTING;
   binaryType = "blob";
 
@@ -29,6 +30,7 @@ class FakeWebSocket extends EventTarget {
   }
 
   close(code = 1000, reason = "") {
+    this.closes.push({ code, reason });
     this.readyState = 3;
     this.dispatchEvent(new CloseEvent("close", { code, reason }));
   }
@@ -42,11 +44,10 @@ describe("TranscriptionSocket", () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
-  it("waits for READY and forwards audio only while STREAMING", async () => {
-    const onEvent = vi.fn();
+  it("waits for connected and sends only valid PCM frames afterward", async () => {
     const socket = new TranscriptionSocket({
-      url: "ws://localhost/stream?ticket=test",
-      onEvent,
+      url: "ws://localhost/ws/transcription-sessions/0HZX2K7M9Q4AB",
+      onEvent: vi.fn(),
       onClose: vi.fn(),
     });
     const connected = socket.connect();
@@ -57,24 +58,20 @@ describe("TranscriptionSocket", () => {
     expect(transport.sent).toHaveLength(0);
 
     transport.message(
-      JSON.stringify({ type: "SESSION_READY", sessionId: "01K0000000010" })
+      JSON.stringify({ type: "connected", sessionId: "0HZX2K7M9Q4AB" })
     );
     await connected;
-    transport.message(
-      JSON.stringify({
-        type: "SESSION_STATUS",
-        status: "STREAMING",
-        recordedDurationMs: 0,
-      })
-    );
+
+    socket.sendAudio(new ArrayBuffer(1));
+    socket.sendAudio(new ArrayBuffer(1_048_578));
     socket.sendAudio(new ArrayBuffer(2));
-    expect(transport.sent).toHaveLength(1);
+    expect(transport.sent).toEqual([expect.any(ArrayBuffer)]);
   });
 
-  it("serializes commands and closes after SESSION_COMPLETED", async () => {
+  it("serializes commit and stop and closes after completed", async () => {
     const onClose = vi.fn();
     const socket = new TranscriptionSocket({
-      url: "ws://localhost/stream?ticket=test",
+      url: "ws://localhost/ws/transcription-sessions/0HZX2K7M9Q4AB",
       onEvent: vi.fn(),
       onClose,
     });
@@ -82,19 +79,39 @@ describe("TranscriptionSocket", () => {
     const transport = FakeWebSocket.instances[0];
     transport.open();
     transport.message(
-      JSON.stringify({ type: "SESSION_READY", sessionId: "01K0000000010" })
+      JSON.stringify({ type: "connected", sessionId: "0HZX2K7M9Q4AB" })
     );
     await connected;
 
-    socket.sendCommand({ type: "SESSION_PAUSE" });
-    expect(transport.sent).toContain(JSON.stringify({ type: "SESSION_PAUSE" }));
+    socket.commit();
+    socket.stop();
+    expect(transport.sent).toContain('{"type":"commit"}');
+    expect(transport.sent).toContain('{"type":"stop"}');
 
     transport.message(
-      JSON.stringify({
-        type: "SESSION_COMPLETED",
-        sessionId: "01K0000000010",
-      })
+      JSON.stringify({ type: "completed", sessionId: "0HZX2K7M9Q4AB" })
     );
     expect(onClose).toHaveBeenCalledWith(1000, "completed");
+  });
+
+  it("closes with 1008 when the server sends a malformed event", async () => {
+    const socket = new TranscriptionSocket({
+      url: "ws://localhost/ws/transcription-sessions/0HZX2K7M9Q4AB",
+      onEvent: vi.fn(),
+      onClose: vi.fn(),
+    });
+    const connected = socket.connect();
+    const transport = FakeWebSocket.instances[0];
+    transport.open();
+    transport.message(
+      JSON.stringify({ type: "connected", sessionId: "0HZX2K7M9Q4AB" })
+    );
+    await connected;
+
+    transport.message('{"type":"unknown"}');
+    expect(transport.closes).toContainEqual({
+      code: 1008,
+      reason: "invalid server event",
+    });
   });
 });

@@ -1,4 +1,5 @@
 const PCM_BYTES_PER_SAMPLE = 2;
+const MAX_PCM_FRAME_BYTES = 1_048_576;
 
 export function float32ToPcm16(samples: Float32Array): ArrayBuffer {
   const buffer = new ArrayBuffer(samples.length * PCM_BYTES_PER_SAMPLE);
@@ -69,6 +70,12 @@ export class PcmChunkBatcher {
       throw new Error("PCM_BATCH_MUST_BE_40_TO_100_MS");
     }
     this.targetSamples = Math.round((sampleRate * batchMs) / 1000);
+    if (
+      this.targetSamples < 1 ||
+      this.targetSamples * PCM_BYTES_PER_SAMPLE > MAX_PCM_FRAME_BYTES
+    ) {
+      throw new Error("PCM_FRAME_EXCEEDS_MAX_BYTES");
+    }
   }
 
   push(samples: Int16Array) {

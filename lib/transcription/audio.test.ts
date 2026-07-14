@@ -49,6 +49,24 @@ describe("audio conversion", () => {
     expect(new Int16Array(emit.mock.calls[0][0])).toHaveLength(1920);
   });
 
+  it("emits default 24 kHz mono PCM16 frames within the contract limit", () => {
+    const emit = vi.fn();
+    const batcher = new PcmChunkBatcher(24_000, 40, emit);
+
+    batcher.push(new Int16Array(24_000 * 0.04));
+
+    const chunk = emit.mock.calls[0][0] as ArrayBuffer;
+    expect(chunk.byteLength).toBe(24_000 * 0.04 * 2);
+    expect(chunk.byteLength % 2).toBe(0);
+    expect(chunk.byteLength).toBeLessThanOrEqual(1_048_576);
+  });
+
+  it("rejects batch configurations that could emit an oversized frame", () => {
+    expect(
+      () => new PcmChunkBatcher(6_000_000, 100, vi.fn())
+    ).toThrow("PCM_FRAME_EXCEEDS_MAX_BYTES");
+  });
+
   it("converts buffered PCM16 bytes to backlog time", () => {
     expect(backlogMs(48_000, 24_000)).toBe(1000);
   });
