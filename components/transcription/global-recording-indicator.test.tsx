@@ -1,6 +1,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
+import {
+  GLOBAL_RECORDING_EXIT_DURATION,
+  GlobalRecordingIndicator,
+} from "@/components/transcription/global-recording-indicator";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 const recording = vi.hoisted(() => ({
@@ -48,6 +51,10 @@ describe("GlobalRecordingIndicator", () => {
     expect(screen.getByTestId("global-wave-bar-2")).toHaveStyle({
       transform: "scaleY(0.7)",
     });
+  });
+
+  it("uses a doubled exit duration without changing its entry duration", () => {
+    expect(GLOBAL_RECORDING_EXIT_DURATION).toBe(0.3);
   });
 
   it("offers only stop while automatic finalization is active", () => {

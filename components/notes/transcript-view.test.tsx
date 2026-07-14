@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TranscriptView } from "@/components/notes/transcript-view";
 
 vi.mock("@/components/transcription/recording-provider", () => ({
@@ -53,7 +53,19 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
 }));
 
 describe("TranscriptView", () => {
+  const scrollIntoView = vi.fn();
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("shows immutable finals, a live partial, and actual microphone level", () => {
+    vi.stubGlobal("scrollIntoView", scrollIntoView);
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
     render(
       <QueryClientProvider client={new QueryClient()}>
         <TranscriptView noteId="01K0000000002" />
@@ -64,6 +76,13 @@ describe("TranscriptView", () => {
       "partial"
     );
     expect(screen.queryByText("결과를")).not.toBeInTheDocument();
+    expect(screen.getByText("결과를 정리합니다")).toHaveClass(
+      "text-[var(--el-muted)]"
+    );
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "end",
+    });
     expect(
       screen.getByText("첫 번째 결정사항입니다.").closest("article")
     ).toHaveAttribute("data-state", "final");

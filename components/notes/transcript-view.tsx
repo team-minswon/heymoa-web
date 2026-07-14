@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { useRecording } from "@/components/transcription/recording-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 
@@ -49,6 +50,19 @@ export function TranscriptView({ noteId }: { noteId: string }) {
         "stopping",
       ].includes(recording.phase)
   );
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const liveContentKey = `${orderedSegments.at(-1)?.segmentId ?? ""}:${Object.values(
+    recording.transcript.partialByUtteranceId
+  ).join("\u0000")}`;
+
+  useEffect(() => {
+    if (active) {
+      transcriptEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
+  }, [active, liveContentKey]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -65,16 +79,16 @@ export function TranscriptView({ noteId }: { noteId: string }) {
             <Skeleton className="h-16 rounded-2xl" />
           </div>
         ) : (
-          <div className="mt-6 space-y-1">
+          <div className="mt-6 space-y-2">
             {orderedSegments.map((segment) => (
               <article
                 key={segment.segmentId}
                 data-testid="final-segment"
                 data-sequence={segment.sequence}
                 data-state="final"
-                className="group grid grid-cols-[48px_1fr] gap-3 border-b border-[var(--el-hairline)] py-4"
+                className="group grid grid-cols-[48px_1fr] gap-3 py-4"
               >
-                <time className="pt-1 font-mono text-[11px] text-[var(--el-muted)]">
+                <time className="pt-1 font-mono text-xs text-[var(--el-muted)]">
                   {formatOffset(segment.startedAtMs)}
                 </time>
                 <p className="text-sm leading-7 text-[var(--el-ink)] sm:text-[15px]">
@@ -89,12 +103,14 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                   <article
                     key={utteranceId}
                     data-state="partial"
-                    className="mt-3 rounded-2xl border border-dashed border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4"
+                    className="grid grid-cols-[48px_1fr] gap-3 py-4"
                   >
-                    <Badge variant="outline">전사 중</Badge>
+                    <span className="pt-1 font-mono text-xs text-[var(--el-muted)]">
+                      ···
+                    </span>
                     <p
                       data-state="partial"
-                      className="mt-2 text-sm leading-7 text-[var(--el-muted)]"
+                      className="text-sm leading-7 text-[var(--el-muted)] sm:text-[15px]"
                     >
                       {text}
                     </p>
@@ -106,6 +122,7 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                 기록을 시작하면 확정된 문장이 여기에 쌓입니다.
               </div>
             ) : null}
+            <div ref={transcriptEndRef} aria-hidden />
           </div>
         )}
       </section>
