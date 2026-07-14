@@ -9,221 +9,144 @@ import {
   useRecording,
 } from "@/components/transcription/recording-provider";
 
-describe("RecordingProvider", () => {
-  it("builds a recent microphone level history and clears it on pause", async () => {
-    const session = {
-      sessionId: "01K0000000010",
-      noteId: "01K0000000002",
-      status: "CONNECTING" as const,
-      readyExpiresAt: "2026-07-11T00:01:00Z",
-      startedAt: null,
-      endedAt: null,
-      endReason: null,
-    };
-    let publishLevel!: (level: number) => void;
-    let emit!: Parameters<RecordingRuntime["createSocket"]>[0]["onEvent"];
-    const runtime: RecordingRuntime = {
-      createAudio: (_onChunk, onLevel) => {
-        publishLevel = onLevel;
-        return {
-          requestPermission: vi.fn(async () => undefined),
-          start: vi.fn(async () => undefined),
-          stop: vi.fn(async () => undefined),
-        };
-      },
-      createSocket: (options) => {
-        emit = options.onEvent;
-        return {
-          connect: vi.fn(async () => undefined),
-          sendAudio: vi.fn(),
-          sendCommand: vi.fn(),
-          close: vi.fn(),
-        };
-      },
-    };
-    const api: RecordingApi = {
-      startSession: vi.fn(async () => session),
-    };
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={new QueryClient()}>
-        <RecordingProvider api={api} runtime={runtime}>
-          {children}
-        </RecordingProvider>
-      </QueryClientProvider>
-    );
-    const { result } = renderHook(() => useRecording(), { wrapper });
+const session = {
+  sessionId: "0HZX2K7M9Q4AG",
+  noteId: "0HZX2K7M9Q4AF",
+  status: "READY" as const,
+  readyExpiresAt: "2026-07-15T00:01:00Z",
+  startedAt: null,
+  endedAt: null,
+  endReason: null,
+};
 
-    await act(() => result.current.start(session.noteId));
-    act(() =>
-      emit({
-        type: "SESSION_STATUS",
-        status: "STREAMING",
-        recordedDurationMs: 0,
-      })
-    );
-    act(() => publishLevel(0.6));
-    expect(result.current.levelHistory.at(-1)).toBeGreaterThan(0);
-
-    await act(() => result.current.pause());
-    expect(result.current.levelHistory.every((value) => value === 0)).toBe(
-      true
-    );
-  });
-
-  it("freezes elapsed time while paused and resumes from accumulated duration", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-11T00:00:00Z"));
-    const session = {
-      sessionId: "01K0000000010",
-      noteId: "01K0000000002",
-      status: "CONNECTING" as const,
-      readyExpiresAt: "2026-07-11T00:01:00Z",
-      startedAt: null,
-      endedAt: null,
-      endReason: null,
-    };
-    const api: RecordingApi = {
-      startSession: vi.fn(async () => session),
-    };
-    let emit!: Parameters<RecordingRuntime["createSocket"]>[0]["onEvent"];
-    const runtime: RecordingRuntime = {
-      createAudio: () => ({
-        requestPermission: vi.fn(async () => undefined),
-        start: vi.fn(async () => undefined),
-        stop: vi.fn(async () => undefined),
-      }),
-      createSocket: (options) => {
-        emit = options.onEvent;
-        return {
-          connect: vi.fn(async () => undefined),
-          sendAudio: vi.fn(),
-          sendCommand: vi.fn(),
-          close: vi.fn(),
-        };
-      },
-    };
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        <RecordingProvider api={api} runtime={runtime}>
-          {children}
-        </RecordingProvider>
-      </QueryClientProvider>
-    );
-    const { result } = renderHook(() => useRecording(), { wrapper });
-
-    await act(() => result.current.start(session.noteId));
-    act(() => {
-      emit({
-        type: "SESSION_STATUS",
-        status: "STREAMING",
-        recordedDurationMs: 0,
+function setup() {
+  const order: string[] = [];
+  const audio = {
+    requestPermission: vi.fn(async () => {
+      order.push("permission");
+    }),
+    start: vi.fn(async () => {
+      order.push("audio-start");
+    }),
+    stop: vi.fn(async () => {
+      order.push("audio-stop");
+    }),
+  };
+  const socket = {
+    connect: vi.fn(async () => {
+      order.push("socket-connect");
+      callbacks.onEvent({
+        type: "connected",
+        sessionId: session.sessionId,
       });
-      vi.advanceTimersByTime(3_000);
-    });
-    act(() =>
-      emit({
-        type: "SESSION_STATUS",
-        status: "PAUSED",
-        recordedDurationMs: 3_000,
-      })
-    );
-    act(() => vi.advanceTimersByTime(5_000));
-    expect(result.current.elapsedMs).toBe(3_000);
+    }),
+    sendAudio: vi.fn(),
+    commit: vi.fn(() => order.push("commit")),
+    stop: vi.fn(() => {
+      order.push("socket-stop");
+      callbacks.onEvent({
+        type: "completed",
+        sessionId: session.sessionId,
+      });
+    }),
+    close: vi.fn(() => order.push("socket-close")),
+  };
+  let callbacks!: Parameters<RecordingRuntime["createSocket"]>[0];
+  const runtime: RecordingRuntime = {
+    createAudio: vi.fn(() => audio),
+    createSocket: vi.fn((options) => {
+      callbacks = options;
+      return socket;
+    }),
+  };
+  const api: RecordingApi = {
+    startSession: vi.fn(async () => session),
+  };
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <RecordingProvider api={api} runtime={runtime}>
+        {children}
+      </RecordingProvider>
+    </QueryClientProvider>
+  );
 
-    act(() =>
-      emit({
-        type: "SESSION_STATUS",
-        status: "STREAMING",
-        recordedDurationMs: 3_000,
+  return {
+    ...renderHook(() => useRecording(), { wrapper }),
+    api,
+    runtime,
+    audio,
+    socket,
+    order,
+    invalidate,
+    getCallbacks: () => callbacks,
+  };
+}
+
+describe("RecordingProvider", () => {
+  it("starts a bodyless session and records only after connected", async () => {
+    const harness = setup();
+
+    await act(() => harness.result.current.start(session.noteId));
+
+    expect(harness.api.startSession).toHaveBeenCalledWith(session.noteId);
+    expect(harness.runtime.createSocket).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining(
+          `/ws/transcription-sessions/${session.sessionId}`
+        ),
       })
     );
-    act(() => vi.advanceTimersByTime(2_000));
-    expect(result.current.elapsedMs).toBe(5_000);
-    vi.useRealTimers();
+    expect(harness.order).toEqual([
+      "permission",
+      "socket-connect",
+      "audio-start",
+    ]);
+    expect(harness.result.current.phase).toBe("recording");
   });
 
-  it("keeps one session and socket across child rerenders and pause/resume", async () => {
-    const session = {
-      sessionId: "01K0000000010",
-      noteId: "01K0000000002",
-      status: "CONNECTING" as const,
-      readyExpiresAt: "2026-07-11T00:01:00Z",
-      startedAt: null,
-      endedAt: null,
-      endReason: null,
-    };
-    const api: RecordingApi = {
-      startSession: vi.fn(async () => session),
-    };
-    let onEvent: Parameters<RecordingRuntime["createSocket"]>[0]["onEvent"];
-    const runtime: RecordingRuntime = {
-      createAudio: vi.fn(() => ({
-        requestPermission: vi.fn(async () => undefined),
-        start: vi.fn(async () => undefined),
-        stop: vi.fn(async () => undefined),
-      })),
-      createSocket: vi.fn((options) => {
-        onEvent = options.onEvent;
-        return {
-          connect: vi.fn(async () => {
-            onEvent({ type: "SESSION_READY", sessionId: session.sessionId });
-            onEvent({
-              type: "SESSION_STATUS",
-              status: "STREAMING",
-              recordedDurationMs: 0,
-            });
-          }),
-          sendAudio: vi.fn(),
-          sendCommand: vi.fn((command) => {
-            if (command.type === "SESSION_PAUSE") {
-              onEvent({
-                type: "SESSION_STATUS",
-                status: "PAUSED",
-                recordedDurationMs: 0,
-              });
-            }
-            if (command.type === "SESSION_RESUME") {
-              onEvent({
-                type: "SESSION_STATUS",
-                status: "STREAMING",
-                recordedDurationMs: 0,
-              });
-            }
-            if (command.type === "SESSION_COMPLETE") {
-              onEvent({
-                type: "SESSION_COMPLETED",
-                sessionId: session.sessionId,
-              });
-            }
-          }),
-          close: vi.fn(),
-        };
-      }),
-    };
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        <RecordingProvider api={api} runtime={runtime}>
-          {children}
-        </RecordingProvider>
-      </QueryClientProvider>
-    );
-    const { result, rerender } = renderHook(() => useRecording(), { wrapper });
+  it("commits the current utterance", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
 
-    await act(() => result.current.start(session.noteId));
-    rerender();
-    expect(result.current.session?.sessionId).toBe("01K0000000010");
-    expect(result.current.elapsedMs).toBeLessThan(1000);
-    await act(() => result.current.pause());
-    await act(() => result.current.resume());
-    expect(result.current.session?.sessionId).toBe("01K0000000010");
-    await act(() => result.current.stop());
-    expect(result.current.session?.status).toBe("COMPLETED");
-    expect(runtime.createSocket).toHaveBeenCalledTimes(1);
+    act(() => harness.result.current.commit());
+
+    expect(harness.socket.commit).toHaveBeenCalledOnce();
+  });
+
+  it("stops audio before the socket and invalidates persisted transcript", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+
+    await act(() => harness.result.current.stop());
+
+    expect(harness.order.slice(-3)).toEqual([
+      "audio-stop",
+      "socket-stop",
+      "socket-close",
+    ]);
+    expect(harness.result.current.phase).toBe("completed");
+    expect(harness.invalidate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [expect.stringContaining(session.noteId)],
+      })
+    );
+  });
+
+  it("fails and cleans audio after an internal WebSocket close", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+
+    await act(async () => {
+      harness.getCallbacks().onClose(1011, "upstream failed");
+      await Promise.resolve();
+    });
+
+    expect(harness.result.current.phase).toBe("failed");
+    expect(harness.result.current.error).toBe("upstream failed");
+    expect(harness.audio.stop).toHaveBeenCalled();
   });
 });
