@@ -209,6 +209,31 @@ export const getChangeDefaultWorkspaceResponseMock = (
   ...overrideResponse,
 });
 
+export const getNoteListResponseMock = (
+  overrideResponse: Partial<NoteListResponse> = {}
+): NoteListResponse => ({
+  data: {
+    notes: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      lastRecordedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      recordedDurationMs: faker.number.int({ min: 0 }),
+      noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
 export const getCurrentUserResponseMock = (
   overrideResponse: Partial<CurrentUserResponse> = {}
 ): CurrentUserResponse => ({
@@ -257,26 +282,6 @@ export const getChangeDefaultWorkspaceRequestMock = (
   overrideResponse: Partial<ChangeDefaultWorkspaceRequest> = {}
 ): ChangeDefaultWorkspaceRequest => ({
   workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-  ...overrideResponse,
-});
-
-export const getNoteListResponseMock = (
-  overrideResponse: Partial<NoteListResponse> = {}
-): NoteListResponse => ({
-  data: {
-    notes: Array.from(
-      { length: faker.number.int({ min: 1, max: 10 }) },
-      (_, i) => i + 1
-    ).map(() => ({
-      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-      noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-      title: faker.string.alpha({ length: { min: 10, max: 200 } }),
-      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-    })),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
   ...overrideResponse,
 });
 

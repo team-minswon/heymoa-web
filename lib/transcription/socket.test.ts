@@ -114,4 +114,28 @@ describe("TranscriptionSocket", () => {
       reason: "invalid server event",
     });
   });
+
+  it("preserves a server error received before the connection is ready", async () => {
+    const socket = new TranscriptionSocket({
+      url: "ws://localhost/ws/transcription-sessions/0HZX2K7M9Q4AB",
+      onEvent: vi.fn(),
+      onClose: vi.fn(),
+    });
+    const connected = socket.connect();
+    const transport = FakeWebSocket.instances[0];
+    transport.open();
+
+    transport.message(
+      JSON.stringify({
+        type: "error",
+        code: "OPENAI_CONNECTION_FAILED",
+        message: "OpenAI realtime 연결에 실패했습니다.",
+      })
+    );
+    transport.close(1011);
+
+    await expect(connected).rejects.toThrow(
+      "OpenAI realtime 연결에 실패했습니다."
+    );
+  });
 });

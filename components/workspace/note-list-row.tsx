@@ -77,7 +77,9 @@ export function NoteListRow({
             <Waves className="size-4" aria-hidden="true" />
           )}
           <span className="font-mono text-[11px] tabular-nums">
-            {isRecording ? formatDuration(recording.elapsedMs) : "--:--"}
+            {formatDuration(
+              isRecording ? recording.elapsedMs : note.recordedDurationMs
+            )}
           </span>
         </div>
         <div className="min-w-0 flex-1">
@@ -91,7 +93,9 @@ export function NoteListRow({
                   기록 중
                 </span>
               ) : null}
-              {projectName ? <Badge variant="secondary">{projectName}</Badge> : null}
+              {projectName ? (
+                <Badge variant="secondary">{projectName}</Badge>
+              ) : null}
             </div>
           ) : null}
         </div>

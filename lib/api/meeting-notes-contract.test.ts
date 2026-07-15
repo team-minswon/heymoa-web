@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type {
   ProjectResponseData,
+  NoteListResponseDataNotesItem,
   NoteResponseData,
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
@@ -29,7 +30,13 @@ describe("meeting-note generated models", () => {
       createdAt: "2026-07-11T00:00:00Z",
       updatedAt: "2026-07-11T00:00:00Z",
     };
+    const noteListItem: NoteListResponseDataNotesItem = {
+      ...note,
+      lastRecordedAt: "2026-07-11T00:00:00Z",
+      recordedDurationMs: 7_100,
+    };
 
     expect(note.noteId).toHaveLength(13);
+    expect(noteListItem.recordedDurationMs).toBe(7_100);
   });
 });

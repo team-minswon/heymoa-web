@@ -15,15 +15,9 @@ import type {
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
 
-const ACTIVE_STATUSES = new Set<string>([
-  "READY",
-  "ACTIVE",
-]);
+const ACTIVE_STATUSES = new Set<string>(["READY", "ACTIVE"]);
 
-const TERMINAL_STATUSES = new Set<string>([
-  "COMPLETED",
-  "INTERRUPTED",
-]);
+const TERMINAL_STATUSES = new Set<string>(["COMPLETED", "INTERRUPTED"]);
 
 type AddSegmentInput = Pick<
   TranscriptResponseDataSegmentsItem,
@@ -236,6 +230,24 @@ function findSession(sessionId: string): MockSession {
   return session ?? fail("TRANSCRIPTION_SESSION_NOT_FOUND");
 }
 
+function getRecordedDurationMs(noteId: string) {
+  return state.sessions
+    .filter((session) => session.noteId === noteId)
+    .reduce((total, session) => {
+      const startedAt = session.startedAt
+        ? Date.parse(session.startedAt)
+        : Number.NaN;
+      const endedAt = session.endedAt
+        ? Date.parse(session.endedAt)
+        : Number.NaN;
+      const duration =
+        Number.isFinite(startedAt) && Number.isFinite(endedAt)
+          ? Math.max(0, endedAt - startedAt)
+          : 0;
+      return total + duration;
+    }, 0);
+}
+
 function reset() {
   idCounter = 100;
   timestampCounter = 0;
@@ -313,7 +325,10 @@ export const mockDb = {
     );
   },
 
-  createProject(workspaceId: string, input: ProjectRequest): ProjectResponseData {
+  createProject(
+    workspaceId: string,
+    input: ProjectRequest
+  ): ProjectResponseData {
     assertWorkspace(workspaceId);
     const name = input.name.trim();
     if (!name) fail("BAD_REQUEST");
@@ -360,16 +375,30 @@ export const mockDb = {
     if (state.notes.some((note) => note.projectId === projectId)) {
       fail("PROJECT_HAS_NOTES");
     }
-    state.projects = state.projects.filter(
-      (p) => p.projectId !== projectId
-    );
+    state.projects = state.projects.filter((p) => p.projectId !== projectId);
   },
 
   listNotes(projectId: string): NoteListResponseDataNotesItem[] {
     assertProject(projectId);
     const notes = state.notes
       .filter((note) => note.projectId === projectId)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.noteId.localeCompare(a.noteId));
+      .sort(
+        (a, b) =>
+          b.updatedAt.localeCompare(a.updatedAt) ||
+          b.noteId.localeCompare(a.noteId)
+      )
+      .map((note) => {
+        const startedAt = state.sessions
+          .filter((session) => session.noteId === note.noteId)
+          .map((session) => session.startedAt)
+          .filter((value): value is string => value !== null)
+          .sort((a, b) => b.localeCompare(a))[0];
+        return {
+          ...note,
+          lastRecordedAt: startedAt ?? null,
+          recordedDurationMs: getRecordedDurationMs(note.noteId),
+        };
+      });
     return copy(notes);
   },
 
@@ -419,14 +448,18 @@ export const mockDb = {
   },
 
   getSession(sessionId: string): TranscriptionSessionResponseData {
-    return copy(findSession(sessionId)) as unknown as TranscriptionSessionResponseData;
+    return copy(
+      findSession(sessionId)
+    ) as unknown as TranscriptionSessionResponseData;
   },
 
   getActiveSession(): TranscriptionSessionResponseData | null {
     const session = state.sessions.find((candidate) =>
       ACTIVE_STATUSES.has(candidate.status)
     );
-    return session ? (copy(session) as unknown as TranscriptionSessionResponseData) : null;
+    return session
+      ? (copy(session) as unknown as TranscriptionSessionResponseData)
+      : null;
   },
 
   updateSessionStatus(
@@ -459,7 +492,8 @@ export const mockDb = {
       .sort(
         (a, b) =>
           (sessionOrder.get(a.transcriptionSessionId) ?? 0) -
-            (sessionOrder.get(b.transcriptionSessionId) ?? 0) || a.sequence - b.sequence
+            (sessionOrder.get(b.transcriptionSessionId) ?? 0) ||
+          a.sequence - b.sequence
       );
     return copy(segments);
   },

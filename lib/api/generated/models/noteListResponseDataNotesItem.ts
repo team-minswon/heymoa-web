@@ -10,6 +10,16 @@ export type NoteListResponseDataNotesItem = {
   /** 노트 생성 시각 */
   createdAt: string;
   /**
+   * 가장 최근 녹음 시작 시각
+   * @nullable
+   */
+  lastRecordedAt: string | null;
+  /**
+   * 전사 세션별 마지막 구간을 합산한 누적 녹음 시간(ms)
+   * @minimum 0
+   */
+  recordedDurationMs: number;
+  /**
    * 노트의 13자리 TSID
    * @minLength 13
    * @maxLength 13

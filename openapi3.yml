@@ -5,13 +5,13 @@ info:
   description: "Heymoa 서버 REST API"
   version: "1.0.0"
 servers:
-- url: "/"
+  - url: "/"
 tags: []
 paths:
   /v1/workspaces:
     get:
       tags:
-      - "Workspaces"
+        - "Workspaces"
       summary: "워크스페이스 목록 조회"
       description: "현재 사용자가 참여 중인 워크스페이스 목록을 조회한다."
       operationId: "getWorkspaces"
@@ -28,19 +28,19 @@ paths:
                     success: true
                     data:
                       workspaces:
-                      - workspaceId: "0HZX2K7M9Q4AD"
-                        name: "제품 팀"
-                        description: "제품을 만드는 팀의 워크스페이스"
-                        role: "ADMIN"
-                        isDefault: false
+                        - workspaceId: "0HZX2K7M9Q4AD"
+                          name: "제품 팀"
+                          description: "제품을 만드는 팀의 워크스페이스"
+                          role: "ADMIN"
+                          isDefault: false
                     error: null
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
     post:
       tags:
-      - "Workspaces"
+        - "Workspaces"
       summary: "워크스페이스 생성"
       description: "현재 사용자가 관리할 새 워크스페이스를 생성한다."
       operationId: "createWorkspace"
@@ -94,22 +94,22 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/auth/logout:
     post:
       tags:
-      - "Auth"
+        - "Auth"
       summary: "로그아웃"
       description: "현재 세션을 폐기하고 access token과 refresh token 쿠키를 만료시킨다."
       operationId: "logout"
       parameters:
-      - name: "refresh_token"
-        in: "cookie"
-        description: "refresh_token 쿠키"
-        required: false
-        schema:
-          type: "string"
-        example: "refresh-token-example"
+        - name: "refresh_token"
+          in: "cookie"
+          description: "refresh_token 쿠키"
+          required: false
+          schema:
+            type: "string"
+          example: "refresh-token-example"
       responses:
         "200":
           description: "요청 성공"
@@ -133,32 +133,32 @@ paths:
   /v1/auth/refresh:
     post:
       tags:
-      - "Auth"
+        - "Auth"
       summary: "토큰 갱신"
       description: "리프레시 토큰 쿠키로 access token과 refresh token을 갱신한다."
       operationId: "refreshTokens"
       parameters:
-      - name: "refresh_token"
-        in: "cookie"
-        description: "refresh_token 쿠키"
-        required: false
-        schema:
-          type: "string"
-        example: "refresh-token-example"
-      - name: "User-Agent"
-        in: "header"
-        description: "클라이언트 User-Agent"
-        required: false
-        schema:
-          type: "string"
-        example: "Heymoa Docs Client"
-      - name: "X-Forwarded-For"
-        in: "header"
-        description: "프록시가 전달한 클라이언트 IP 목록"
-        required: false
-        schema:
-          type: "string"
-        example: "203.0.113.10, 10.0.0.1"
+        - name: "refresh_token"
+          in: "cookie"
+          description: "refresh_token 쿠키"
+          required: false
+          schema:
+            type: "string"
+          example: "refresh-token-example"
+        - name: "User-Agent"
+          in: "header"
+          description: "클라이언트 User-Agent"
+          required: false
+          schema:
+            type: "string"
+          example: "Heymoa Docs Client"
+        - name: "X-Forwarded-For"
+          in: "header"
+          description: "프록시가 전달한 클라이언트 IP 목록"
+          required: false
+          schema:
+            type: "string"
+          example: "203.0.113.10, 10.0.0.1"
       responses:
         "400":
           description: "잘못된 요청"
@@ -197,23 +197,23 @@ paths:
   /v1/notes/{noteId}:
     get:
       tags:
-      - "Notes"
+        - "Notes"
       summary: "노트 조회"
       description: "노트의 기본 정보를 조회한다."
       operationId: "getNote"
       parameters:
-      - name: "noteId"
-        in: "path"
-        description: "노트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "noteId"
+          in: "path"
           description: "노트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AF"
+          required: true
+          schema:
+            type: "string"
+            description: "노트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AF"
       responses:
         "404":
           description: "요청한 리소스를 찾을 수 없음"
@@ -281,26 +281,26 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
     patch:
       tags:
-      - "Notes"
+        - "Notes"
       summary: "노트 수정"
       description: "노트 제목을 수정한다."
       operationId: "updateNote"
       parameters:
-      - name: "noteId"
-        in: "path"
-        description: "노트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "noteId"
+          in: "path"
           description: "노트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AF"
+          required: true
+          schema:
+            type: "string"
+            description: "노트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
           application/json:
@@ -389,27 +389,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/transcription-sessions/{sessionId}:
     get:
       tags:
-      - "Transcription"
+        - "Transcription"
       summary: "전사 세션 조회"
       description: "전사 세션의 현재 상태와 종료 정보를 조회한다."
       operationId: "getTranscriptionSession"
       parameters:
-      - name: "sessionId"
-        in: "path"
-        description: "전사 세션의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "sessionId"
+          in: "path"
           description: "전사 세션의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AG"
+          required: true
+          schema:
+            type: "string"
+            description: "전사 세션의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AG"
       responses:
         "400":
           description: "잘못된 요청"
@@ -487,11 +487,11 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/users/me:
     get:
       tags:
-      - "Users"
+        - "Users"
       summary: "현재 사용자 조회"
       description: "현재 인증된 사용자의 기본 정보를 조회한다."
       operationId: "getCurrentUser"
@@ -530,27 +530,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/workspaces/{workspaceId}:
     get:
       tags:
-      - "Workspaces"
+        - "Workspaces"
       summary: "워크스페이스 조회"
       description: "현재 사용자가 참여 중인 워크스페이스를 조회한다."
       operationId: "getWorkspace"
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "workspaceId"
+          in: "path"
           description: "워크스페이스의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AD"
+          required: true
+          schema:
+            type: "string"
+            description: "워크스페이스의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AD"
       responses:
         "200":
           description: "요청 성공"
@@ -602,26 +602,26 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
     put:
       tags:
-      - "Workspaces"
+        - "Workspaces"
       summary: "워크스페이스 수정"
       description: "관리자 권한으로 워크스페이스 이름과 설명을 수정한다."
       operationId: "updateWorkspace"
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "workspaceId"
+          in: "path"
           description: "워크스페이스의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AD"
+          required: true
+          schema:
+            type: "string"
+            description: "워크스페이스의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AD"
       requestBody:
         content:
           application/json:
@@ -708,27 +708,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/notes/{noteId}/transcript:
     get:
       tags:
-      - "Transcription"
+        - "Transcription"
       summary: "노트 전사 조회"
       description: "노트에 저장된 확정 전사 구간을 시간순으로 조회한다."
       operationId: "getNoteTranscript"
       parameters:
-      - name: "noteId"
-        in: "path"
-        description: "노트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "noteId"
+          in: "path"
           description: "노트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AF"
+          required: true
+          schema:
+            type: "string"
+            description: "노트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AF"
       responses:
         "200":
           description: "요청 성공"
@@ -742,12 +742,12 @@ paths:
                     success: true
                     data:
                       segments:
-                      - segmentId: "0HZX2K7M9Q4AH"
-                        transcriptionSessionId: "0HZX2K7M9Q4AG"
-                        sequence: 1
-                        text: "안녕하세요."
-                        startedAtMs: 0
-                        endedAtMs: 1200
+                        - segmentId: "0HZX2K7M9Q4AH"
+                          transcriptionSessionId: "0HZX2K7M9Q4AG"
+                          sequence: 1
+                          text: "안녕하세요."
+                          startedAtMs: 0
+                          endedAtMs: 1200
                     error: null
         "400":
           description: "잘못된 요청"
@@ -798,27 +798,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/notes/{noteId}/transcription-sessions:
     post:
       tags:
-      - "Transcription"
+        - "Transcription"
       summary: "전사 세션 시작"
       description: "노트에 실시간 전사 세션을 생성하고 연결 대기 상태로 만든다."
       operationId: "startTranscriptionSession"
       parameters:
-      - name: "noteId"
-        in: "path"
-        description: "노트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "noteId"
+          in: "path"
           description: "노트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AF"
+          required: true
+          schema:
+            type: "string"
+            description: "노트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AF"
       responses:
         "404":
           description: "요청한 리소스를 찾을 수 없음"
@@ -888,27 +888,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/projects/{projectId}/notes:
     get:
       tags:
-      - "Notes"
+        - "Notes"
       summary: "노트 목록 조회"
       description: "프로젝트의 노트 목록을 조회한다."
       operationId: "getNotes"
       parameters:
-      - name: "projectId"
-        in: "path"
-        description: "프로젝트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "projectId"
+          in: "path"
           description: "프로젝트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AE"
+          required: true
+          schema:
+            type: "string"
+            description: "프로젝트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AE"
       responses:
         "404":
           description: "요청한 리소스를 찾을 수 없음"
@@ -945,11 +945,13 @@ paths:
                     success: true
                     data:
                       notes:
-                      - noteId: "0HZX2K7M9Q4AF"
-                        projectId: "0HZX2K7M9Q4AE"
-                        title: "주간 회의"
-                        createdAt: "2026-07-14T01:02:03Z"
-                        updatedAt: "2026-07-14T01:02:03Z"
+                        - noteId: "0HZX2K7M9Q4AF"
+                          projectId: "0HZX2K7M9Q4AE"
+                          title: "주간 회의"
+                          createdAt: "2026-07-14T01:02:03Z"
+                          updatedAt: "2026-07-14T01:02:03Z"
+                          lastRecordedAt: "2026-07-14T01:02:03Z"
+                          recordedDurationMs: 6500
                     error: null
         "400":
           description: "잘못된 요청"
@@ -969,26 +971,26 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
     post:
       tags:
-      - "Notes"
+        - "Notes"
       summary: "노트 생성"
       description: "프로젝트에 새 노트를 생성한다."
       operationId: "createNote"
       parameters:
-      - name: "projectId"
-        in: "path"
-        description: "프로젝트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "projectId"
+          in: "path"
           description: "프로젝트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AE"
+          required: true
+          schema:
+            type: "string"
+            description: "프로젝트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AE"
       requestBody:
         content:
           application/json:
@@ -1066,11 +1068,11 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/users/me/default-workspace:
     put:
       tags:
-      - "Workspaces"
+        - "Workspaces"
       summary: "기본 워크스페이스 변경"
       description: "현재 사용자의 기본 워크스페이스를 변경한다."
       operationId: "changeDefaultWorkspace"
@@ -1147,27 +1149,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/workspaces/{workspaceId}/projects:
     get:
       tags:
-      - "Projects"
+        - "Projects"
       summary: "프로젝트 목록 조회"
       description: "워크스페이스의 프로젝트 목록을 조회한다."
       operationId: "getProjects"
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "workspaceId"
+          in: "path"
           description: "워크스페이스의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AD"
+          required: true
+          schema:
+            type: "string"
+            description: "워크스페이스의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AD"
       responses:
         "200":
           description: "요청 성공"
@@ -1181,12 +1183,12 @@ paths:
                     success: true
                     data:
                       projects:
-                      - projectId: "0HZX2K7M9Q4AE"
-                        workspaceId: "0HZX2K7M9Q4AD"
-                        name: "모바일 앱"
-                        description: "Heymoa 모바일 앱 프로젝트"
-                        createdAt: "2026-07-14T01:02:03Z"
-                        updatedAt: "2026-07-14T01:02:03Z"
+                        - projectId: "0HZX2K7M9Q4AE"
+                          workspaceId: "0HZX2K7M9Q4AD"
+                          name: "모바일 앱"
+                          description: "Heymoa 모바일 앱 프로젝트"
+                          createdAt: "2026-07-14T01:02:03Z"
+                          updatedAt: "2026-07-14T01:02:03Z"
                     error: null
         "400":
           description: "잘못된 요청"
@@ -1221,26 +1223,26 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
     post:
       tags:
-      - "Projects"
+        - "Projects"
       summary: "프로젝트 생성"
       description: "워크스페이스에 새 프로젝트를 생성한다."
       operationId: "createProject"
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "workspaceId"
+          in: "path"
           description: "워크스페이스의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AD"
+          required: true
+          schema:
+            type: "string"
+            description: "워크스페이스의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AD"
       requestBody:
         content:
           application/json:
@@ -1311,39 +1313,39 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
   /v1/workspaces/{workspaceId}/projects/{projectId}:
     get:
       tags:
-      - "Projects"
+        - "Projects"
       summary: "프로젝트 조회"
       description: "워크스페이스의 프로젝트를 조회한다."
       operationId: "getProject"
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "workspaceId"
+          in: "path"
           description: "워크스페이스의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AD"
-      - name: "projectId"
-        in: "path"
-        description: "프로젝트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+          required: true
+          schema:
+            type: "string"
+            description: "워크스페이스의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AD"
+        - name: "projectId"
+          in: "path"
           description: "프로젝트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AE"
+          required: true
+          schema:
+            type: "string"
+            description: "프로젝트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AE"
       responses:
         "400":
           description: "잘못된 요청"
@@ -1404,38 +1406,38 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
     put:
       tags:
-      - "Projects"
+        - "Projects"
       summary: "프로젝트 수정"
       description: "프로젝트 이름과 설명을 수정한다."
       operationId: "updateProject"
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "workspaceId"
+          in: "path"
           description: "워크스페이스의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AD"
-      - name: "projectId"
-        in: "path"
-        description: "프로젝트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+          required: true
+          schema:
+            type: "string"
+            description: "워크스페이스의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AD"
+        - name: "projectId"
+          in: "path"
           description: "프로젝트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AE"
+          required: true
+          schema:
+            type: "string"
+            description: "프로젝트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AE"
       requestBody:
         content:
           application/json:
@@ -1518,38 +1520,38 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
     delete:
       tags:
-      - "Projects"
+        - "Projects"
       summary: "프로젝트 삭제"
       description: "관리자 권한으로 노트가 없는 프로젝트를 삭제한다."
       operationId: "deleteProject"
       parameters:
-      - name: "workspaceId"
-        in: "path"
-        description: "워크스페이스의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+        - name: "workspaceId"
+          in: "path"
           description: "워크스페이스의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AD"
-      - name: "projectId"
-        in: "path"
-        description: "프로젝트의 13자리 TSID"
-        required: true
-        schema:
-          type: "string"
+          required: true
+          schema:
+            type: "string"
+            description: "워크스페이스의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AD"
+        - name: "projectId"
+          in: "path"
           description: "프로젝트의 13자리 TSID"
-          nullable: false
-          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
-        example: "0HZX2K7M9Q4AE"
+          required: true
+          schema:
+            type: "string"
+            description: "프로젝트의 13자리 TSID"
+            nullable: false
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            minLength: 13
+            maxLength: 13
+          example: "0HZX2K7M9Q4AE"
       responses:
         "204":
           description: "처리 성공"
@@ -1624,26 +1626,26 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
-      - accessCookie: []
+        - accessCookie: []
 components:
   schemas:
     StartTranscriptionSessionResponse:
       title: "StartTranscriptionSessionResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "endReason"
-          - "endedAt"
-          - "noteId"
-          - "readyExpiresAt"
-          - "sessionId"
-          - "startedAt"
-          - "status"
+            - "endReason"
+            - "endedAt"
+            - "noteId"
+            - "readyExpiresAt"
+            - "sessionId"
+            - "startedAt"
+            - "status"
           type: "object"
           properties:
             readyExpiresAt:
@@ -1674,10 +1676,10 @@ components:
               nullable: false
               example: "READY"
               enum:
-              - "READY"
-              - "ACTIVE"
-              - "COMPLETED"
-              - "INTERRUPTED"
+                - "READY"
+                - "ACTIVE"
+                - "COMPLETED"
+                - "INTERRUPTED"
             startedAt:
               type: "string"
               description: "전사 시작 시각"
@@ -1693,11 +1695,11 @@ components:
               description: "전사 종료 사유"
               nullable: true
               enum:
-              - "READY_TIMEOUT"
-              - "CLIENT_DISCONNECTED"
-              - "CLIENT_PROTOCOL_ERROR"
-              - "OPENAI_ERROR"
-              - "INTERNAL_ERROR"
+                - "READY_TIMEOUT"
+                - "CLIENT_DISCONNECTED"
+                - "CLIENT_PROTOCOL_ERROR"
+                - "OPENAI_ERROR"
+                - "INTERNAL_ERROR"
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -1712,14 +1714,14 @@ components:
     LogoutResponse:
       title: "LogoutResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "message"
+            - "message"
           type: "object"
           properties:
             message:
@@ -1741,7 +1743,7 @@ components:
     NoteRequest:
       title: "NoteRequest"
       required:
-      - "title"
+        - "title"
       type: "object"
       properties:
         title:
@@ -1754,7 +1756,7 @@ components:
     UpdateWorkspaceRequest:
       title: "UpdateWorkspaceRequest"
       required:
-      - "name"
+        - "name"
       type: "object"
       properties:
         name:
@@ -1773,14 +1775,14 @@ components:
     RefreshTokensResponse:
       title: "RefreshTokensResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "message"
+            - "message"
           type: "object"
           properties:
             message:
@@ -1802,18 +1804,18 @@ components:
     NoteResponse:
       title: "NoteResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "createdAt"
-          - "noteId"
-          - "projectId"
-          - "title"
-          - "updatedAt"
+            - "createdAt"
+            - "noteId"
+            - "projectId"
+            - "title"
+            - "updatedAt"
           type: "object"
           properties:
             createdAt:
@@ -1864,14 +1866,14 @@ components:
     TranscriptResponse:
       title: "TranscriptResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "segments"
+            - "segments"
           type: "object"
           properties:
             segments:
@@ -1879,12 +1881,12 @@ components:
               description: "시간순 확정 전사 구간 목록"
               items:
                 required:
-                - "endedAtMs"
-                - "segmentId"
-                - "sequence"
-                - "startedAtMs"
-                - "text"
-                - "transcriptionSessionId"
+                  - "endedAtMs"
+                  - "segmentId"
+                  - "sequence"
+                  - "startedAtMs"
+                  - "text"
+                  - "transcriptionSessionId"
                 type: "object"
                 properties:
                   sequence:
@@ -1944,20 +1946,20 @@ components:
     TranscriptionSessionResponse:
       title: "TranscriptionSessionResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "endReason"
-          - "endedAt"
-          - "noteId"
-          - "readyExpiresAt"
-          - "sessionId"
-          - "startedAt"
-          - "status"
+            - "endReason"
+            - "endedAt"
+            - "noteId"
+            - "readyExpiresAt"
+            - "sessionId"
+            - "startedAt"
+            - "status"
           type: "object"
           properties:
             endReason:
@@ -1966,11 +1968,11 @@ components:
               nullable: true
               example: "CLIENT_DISCONNECTED"
               enum:
-              - "READY_TIMEOUT"
-              - "CLIENT_DISCONNECTED"
-              - "CLIENT_PROTOCOL_ERROR"
-              - "OPENAI_ERROR"
-              - "INTERNAL_ERROR"
+                - "READY_TIMEOUT"
+                - "CLIENT_DISCONNECTED"
+                - "CLIENT_PROTOCOL_ERROR"
+                - "OPENAI_ERROR"
+                - "INTERNAL_ERROR"
             endedAt:
               type: "string"
               description: "전사 종료 시각"
@@ -2011,10 +2013,10 @@ components:
               nullable: false
               example: "COMPLETED"
               enum:
-              - "READY"
-              - "ACTIVE"
-              - "COMPLETED"
-              - "INTERRUPTED"
+                - "READY"
+                - "ACTIVE"
+                - "COMPLETED"
+                - "INTERRUPTED"
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -2029,18 +2031,18 @@ components:
     WorkspaceResponse:
       title: "WorkspaceResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "description"
-          - "isDefault"
-          - "name"
-          - "role"
-          - "workspaceId"
+            - "description"
+            - "isDefault"
+            - "name"
+            - "role"
+            - "workspaceId"
           type: "object"
           properties:
             isDefault:
@@ -2054,8 +2056,8 @@ components:
               nullable: false
               example: "ADMIN"
               enum:
-              - "ADMIN"
-              - "MEMBER"
+                - "ADMIN"
+                - "MEMBER"
             name:
               type: "string"
               description: "워크스페이스 이름"
@@ -2090,14 +2092,14 @@ components:
     ChangeDefaultWorkspaceResponse:
       title: "ChangeDefaultWorkspaceResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "workspaceId"
+            - "workspaceId"
           type: "object"
           properties:
             workspaceId:
@@ -2119,20 +2121,106 @@ components:
           type: "object"
           description: "성공 시 null인 오류 정보"
           nullable: true
-    CurrentUserResponse:
-      title: "CurrentUserResponse"
+    NoteListResponse:
+      title: "NoteListResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "email"
-          - "image"
-          - "name"
-          - "userId"
+            - "notes"
+          type: "object"
+          properties:
+            notes:
+              type: "array"
+              description: "노트 목록"
+              items:
+                required:
+                  - "createdAt"
+                  - "lastRecordedAt"
+                  - "noteId"
+                  - "projectId"
+                  - "recordedDurationMs"
+                  - "title"
+                  - "updatedAt"
+                type: "object"
+                properties:
+                  createdAt:
+                    type: "string"
+                    description: "노트 생성 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  lastRecordedAt:
+                    type: "string"
+                    description: "가장 최근 녹음 시작 시각"
+                    nullable: true
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  recordedDurationMs:
+                    type: "integer"
+                    description: "전사 세션별 마지막 구간을 합산한 누적 녹음 시간(ms)"
+                    nullable: false
+                    example: 6500
+                    format: "int64"
+                    minimum: 0
+                  noteId:
+                    type: "string"
+                    description: "노트의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AF"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  title:
+                    type: "string"
+                    description: "노트 제목"
+                    nullable: false
+                    example: "주간 회의"
+                    maxLength: 200
+                  projectId:
+                    type: "string"
+                    description: "프로젝트의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AE"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  updatedAt:
+                    type: "string"
+                    description: "노트 수정 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          type: "object"
+          description: "성공 시 null인 오류 정보"
+          nullable: true
+    CurrentUserResponse:
+      title: "CurrentUserResponse"
+      required:
+        - "data"
+        - "error"
+        - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+            - "email"
+            - "image"
+            - "name"
+            - "userId"
           type: "object"
           properties:
             image:
@@ -2174,16 +2262,16 @@ components:
     UpdateWorkspaceResponse:
       title: "UpdateWorkspaceResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "description"
-          - "name"
-          - "workspaceId"
+            - "description"
+            - "name"
+            - "workspaceId"
           type: "object"
           properties:
             name:
@@ -2218,7 +2306,7 @@ components:
     CreateWorkspaceRequest:
       title: "CreateWorkspaceRequest"
       required:
-      - "name"
+        - "name"
       type: "object"
       properties:
         name:
@@ -2237,7 +2325,7 @@ components:
     ChangeDefaultWorkspaceRequest:
       title: "ChangeDefaultWorkspaceRequest"
       required:
-      - "workspaceId"
+        - "workspaceId"
       type: "object"
       properties:
         workspaceId:
@@ -2248,88 +2336,17 @@ components:
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
           minLength: 13
           maxLength: 13
-    NoteListResponse:
-      title: "NoteListResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "notes"
-          type: "object"
-          properties:
-            notes:
-              type: "array"
-              description: "노트 목록"
-              items:
-                required:
-                - "createdAt"
-                - "noteId"
-                - "projectId"
-                - "title"
-                - "updatedAt"
-                type: "object"
-                properties:
-                  createdAt:
-                    type: "string"
-                    description: "노트 생성 시각"
-                    nullable: false
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  noteId:
-                    type: "string"
-                    description: "노트의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AF"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  title:
-                    type: "string"
-                    description: "노트 제목"
-                    nullable: false
-                    example: "주간 회의"
-                    maxLength: 200
-                  projectId:
-                    type: "string"
-                    description: "프로젝트의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AE"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  updatedAt:
-                    type: "string"
-                    description: "노트 수정 시각"
-                    nullable: false
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-              nullable: false
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
-          nullable: true
     ProjectListResponse:
       title: "ProjectListResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "projects"
+            - "projects"
           type: "object"
           properties:
             projects:
@@ -2337,12 +2354,12 @@ components:
               description: "프로젝트 목록"
               items:
                 required:
-                - "createdAt"
-                - "description"
-                - "name"
-                - "projectId"
-                - "updatedAt"
-                - "workspaceId"
+                  - "createdAt"
+                  - "description"
+                  - "name"
+                  - "projectId"
+                  - "updatedAt"
+                  - "workspaceId"
                 type: "object"
                 properties:
                   createdAt:
@@ -2400,19 +2417,19 @@ components:
     ProjectResponse:
       title: "ProjectResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "createdAt"
-          - "description"
-          - "name"
-          - "projectId"
-          - "updatedAt"
-          - "workspaceId"
+            - "createdAt"
+            - "description"
+            - "name"
+            - "projectId"
+            - "updatedAt"
+            - "workspaceId"
           type: "object"
           properties:
             createdAt:
@@ -2469,18 +2486,18 @@ components:
     CreateWorkspaceResponse:
       title: "CreateWorkspaceResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "description"
-          - "isDefault"
-          - "name"
-          - "role"
-          - "workspaceId"
+            - "description"
+            - "isDefault"
+            - "name"
+            - "role"
+            - "workspaceId"
           type: "object"
           properties:
             isDefault:
@@ -2494,8 +2511,8 @@ components:
               nullable: false
               example: "ADMIN"
               enum:
-              - "ADMIN"
-              - "MEMBER"
+                - "ADMIN"
+                - "MEMBER"
             name:
               type: "string"
               description: "워크스페이스 이름"
@@ -2531,9 +2548,9 @@ components:
       title: "AppErrorResponse"
       type: "object"
       required:
-      - "success"
-      - "data"
-      - "error"
+        - "success"
+        - "data"
+        - "error"
       properties:
         success:
           type: "boolean"
@@ -2547,9 +2564,9 @@ components:
         error:
           type: "object"
           required:
-          - "code"
-          - "message"
-          - "details"
+            - "code"
+            - "message"
+            - "details"
           properties:
             code:
               type: "string"
@@ -2565,8 +2582,8 @@ components:
               items:
                 type: "object"
                 required:
-                - "field"
-                - "message"
+                  - "field"
+                  - "message"
                 properties:
                   field:
                     type: "string"
@@ -2582,14 +2599,14 @@ components:
     WorkspaceListResponse:
       title: "WorkspaceListResponse"
       required:
-      - "data"
-      - "error"
-      - "success"
+        - "data"
+        - "error"
+        - "success"
       type: "object"
       properties:
         data:
           required:
-          - "workspaces"
+            - "workspaces"
           type: "object"
           properties:
             workspaces:
@@ -2597,11 +2614,11 @@ components:
               description: "워크스페이스 목록"
               items:
                 required:
-                - "description"
-                - "isDefault"
-                - "name"
-                - "role"
-                - "workspaceId"
+                  - "description"
+                  - "isDefault"
+                  - "name"
+                  - "role"
+                  - "workspaceId"
                 type: "object"
                 properties:
                   isDefault:
@@ -2615,8 +2632,8 @@ components:
                     nullable: false
                     example: "ADMIN"
                     enum:
-                    - "ADMIN"
-                    - "MEMBER"
+                      - "ADMIN"
+                      - "MEMBER"
                   name:
                     type: "string"
                     description: "워크스페이스 이름"
@@ -2652,7 +2669,7 @@ components:
     ProjectRequest:
       title: "ProjectRequest"
       required:
-      - "name"
+        - "name"
       type: "object"
       properties:
         name:

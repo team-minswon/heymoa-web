@@ -1,10 +1,21 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
 
-vi.mock("@/components/transcription/recording-provider", () => ({
-  useRecording: () => ({
+type RecordingMock = {
+  session: {
+    sessionId: string;
+    noteId: string;
+    status: string;
+  } | null;
+  phase: string;
+  elapsedMs: number;
+  levelHistory: number[];
+};
+
+const recording = vi.hoisted(() => ({
+  current: {
     session: {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
@@ -13,10 +24,27 @@ vi.mock("@/components/transcription/recording-provider", () => ({
     phase: "recording",
     elapsedMs: 12_000,
     levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2],
-  }),
+  } as RecordingMock,
+}));
+
+vi.mock("@/components/transcription/recording-provider", () => ({
+  useRecording: () => recording.current,
 }));
 
 describe("NoteListRow", () => {
+  beforeEach(() => {
+    recording.current = {
+      session: {
+        sessionId: "01K0000000010",
+        noteId: "01K0000000002",
+        status: "ACTIVE",
+      },
+      phase: "recording",
+      elapsedMs: 12_000,
+      levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2],
+    };
+  });
+
   it("shows project metadata and live recording activity", () => {
     render(
       <NoteListRow
@@ -28,6 +56,8 @@ describe("NoteListRow", () => {
           title: "주간 제품 회의",
           createdAt: "2026-07-11T00:00:00Z",
           updatedAt: "2026-07-11T00:00:00Z",
+          lastRecordedAt: "2026-07-11T00:00:00Z",
+          recordedDurationMs: 65_000,
         }}
       />
     );
@@ -38,5 +68,33 @@ describe("NoteListRow", () => {
       screen.getByRole("meter", { name: "주간 제품 회의 마이크 입력" })
     ).toBeInTheDocument();
     expect(screen.getByText("기록 중")).toBeInTheDocument();
+    expect(screen.queryByText("01:05")).not.toBeInTheDocument();
+  });
+
+  it("shows persisted recording duration when the note is inactive", () => {
+    recording.current = {
+      session: null,
+      phase: "completed",
+      elapsedMs: 0,
+      levelHistory: [0, 0, 0, 0, 0],
+    };
+
+    render(
+      <NoteListRow
+        workspaceId="01K0000000000"
+        note={{
+          noteId: "01K0000000002",
+          projectId: "01K0000000001",
+          title: "주간 제품 회의",
+          createdAt: "2026-07-11T00:00:00Z",
+          updatedAt: "2026-07-11T00:00:00Z",
+          lastRecordedAt: "2026-07-11T00:00:00Z",
+          recordedDurationMs: 65_000,
+        }}
+      />
+    );
+
+    expect(screen.getByText("01:05")).toBeInTheDocument();
+    expect(screen.queryByText("--:--")).not.toBeInTheDocument();
   });
 });

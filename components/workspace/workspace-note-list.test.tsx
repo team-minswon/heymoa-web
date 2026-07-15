@@ -13,6 +13,8 @@ function note(
     title: noteId,
     createdAt: updatedAt,
     updatedAt,
+    lastRecordedAt: null,
+    recordedDurationMs: 0,
   };
 }
 

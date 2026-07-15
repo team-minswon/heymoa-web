@@ -33,6 +33,9 @@ export class TranscriptionSocket {
             this.connected = true;
             resolve();
           }
+          if (event.type === "error" && !this.connected) {
+            reject(new Error(event.message));
+          }
           this.options.onEvent(event);
           if (event.type === "completed") {
             socket.close(1000, "completed");

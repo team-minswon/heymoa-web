@@ -44,6 +44,8 @@ export const getGetNotesResponseMock = (): NoteListResponse => ({
         title: "주간 회의",
         createdAt: "2026-07-14T01:02:03Z",
         updatedAt: "2026-07-14T01:02:03Z",
+        lastRecordedAt: "2026-07-14T01:02:03Z",
+        recordedDurationMs: 6500,
       },
     ],
   },
