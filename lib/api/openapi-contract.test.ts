@@ -83,7 +83,7 @@ describe("OpenAPI contract", () => {
       "READY_TIMEOUT",
       "CLIENT_DISCONNECTED",
       "CLIENT_PROTOCOL_ERROR",
-      "OPENAI_ERROR",
+      "STT_PROVIDER_ERROR",
       "INTERNAL_ERROR",
     ]);
   });

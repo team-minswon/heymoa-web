@@ -43,6 +43,7 @@ export type RecordingRuntime = {
   ) => AudioController;
   createSocket: (options: {
     url: string;
+    sessionId: string;
     onEvent: (event: ServerEvent) => void;
     onClose: (code: number, reason: string) => void;
   }) => SocketController;
@@ -181,7 +182,12 @@ export function RecordingProvider({
       setError(message);
       setPhase("failed");
       clearLevel();
-      void audioRef.current?.stop();
+      const socket = socketRef.current;
+      socketRef.current = null;
+      void socket?.close();
+      const audio = audioRef.current;
+      audioRef.current = null;
+      void audio?.stop();
       const current = sessionRef.current;
       if (current) invalidateTranscriptQueries(current.noteId);
       stopResolveRef.current?.();
@@ -227,7 +233,12 @@ export function RecordingProvider({
       setError(null);
       setPhase("requesting-permission");
       const audio = runtime.createAudio(
-        (chunk) => socketRef.current?.sendAudio(chunk),
+        (chunk) => {
+          const socket = socketRef.current;
+          if (socket && !socket.sendAudio(chunk)) {
+            failRecording("네트워크가 느려 오디오 전송을 계속할 수 없습니다.");
+          }
+        },
         publishLevel
       );
       audioRef.current = audio;
@@ -247,10 +258,11 @@ export function RecordingProvider({
             ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
             : `${wsProtocol}//${window.location.host}`;
         const socket = runtime.createSocket({
-          url: `${wsBaseUrl}/ws/transcription-sessions/${connectionSession.sessionId}`,
+          url: `${wsBaseUrl}/ws/transcriptions`,
+          sessionId: connectionSession.sessionId,
           onEvent: handleEvent,
           onClose: (code, reason) => {
-            if (code === 1008 || code === 1011) {
+            if (code !== 1000) {
               failRecording(reason || `WebSocket closed (${code})`);
             }
           },
@@ -265,7 +277,11 @@ export function RecordingProvider({
         await audio.start();
         setPhase("recording");
       } catch (cause) {
+        const socket = socketRef.current;
+        socketRef.current = null;
+        await socket?.close();
         await audio.stop();
+        audioRef.current = null;
         setError(getStartErrorMessage(cause));
         setPhase("failed");
       }
@@ -280,18 +296,26 @@ export function RecordingProvider({
   const stop = useCallback(async () => {
     setPhase("stopping");
     await audioRef.current?.stop();
+    audioRef.current = null;
     clearLevel();
-    await Promise.race([
-      new Promise<void>((resolve) => {
-        stopResolveRef.current = resolve;
+    const completed = await Promise.race([
+      new Promise<boolean>((resolve) => {
+        stopResolveRef.current = () => resolve(true);
         socketRef.current?.stop();
       }),
-      new Promise<void>((resolve) => window.setTimeout(resolve, 11_000)),
+      new Promise<boolean>((resolve) => window.setTimeout(() => resolve(false), 11_000)),
     ]);
-    socketRef.current?.close();
+    stopResolveRef.current = null;
+    if (!completed) {
+      failRecording("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+      return;
+    }
+    const socket = socketRef.current;
+    socketRef.current = null;
+    await socket?.close();
     const current = sessionRef.current;
     if (current) invalidateTranscriptQueries(current.noteId);
-  }, [clearLevel, invalidateTranscriptQueries]);
+  }, [clearLevel, failRecording, invalidateTranscriptQueries]);
 
   useEffect(() => {
     if (phase !== "recording") return;

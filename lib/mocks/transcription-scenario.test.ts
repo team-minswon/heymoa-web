@@ -116,7 +116,7 @@ describe("MockTranscriptionScenario", () => {
       send,
       requestClose,
       failure: {
-        code: "OPENAI_TRANSCRIPTION_FAILED",
+        code: "STT_TRANSCRIPTION_FAILED",
         message: "upstream failed",
       },
     });
@@ -126,7 +126,7 @@ describe("MockTranscriptionScenario", () => {
 
     expect(send).toHaveBeenLastCalledWith({
       type: "error",
-      code: "OPENAI_TRANSCRIPTION_FAILED",
+      code: "STT_TRANSCRIPTION_FAILED",
       message: "upstream failed",
     });
     expect(requestClose).toHaveBeenCalledWith(1011, "upstream failed");

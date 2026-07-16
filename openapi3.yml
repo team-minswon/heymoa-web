@@ -1698,7 +1698,7 @@ components:
                 - "READY_TIMEOUT"
                 - "CLIENT_DISCONNECTED"
                 - "CLIENT_PROTOCOL_ERROR"
-                - "OPENAI_ERROR"
+                - "STT_PROVIDER_ERROR"
                 - "INTERNAL_ERROR"
           description: "성공 응답 데이터"
           nullable: false
@@ -1971,7 +1971,7 @@ components:
                 - "READY_TIMEOUT"
                 - "CLIENT_DISCONNECTED"
                 - "CLIENT_PROTOCOL_ERROR"
-                - "OPENAI_ERROR"
+                - "STT_PROVIDER_ERROR"
                 - "INTERNAL_ERROR"
             endedAt:
               type: "string"

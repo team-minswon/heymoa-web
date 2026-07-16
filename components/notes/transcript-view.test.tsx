@@ -80,7 +80,7 @@ describe("TranscriptView", () => {
       "text-[var(--el-muted)]"
     );
     expect(scrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
+      behavior: "auto",
       block: "end",
     });
     expect(

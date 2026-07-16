@@ -40,7 +40,7 @@ function setup() {
         sessionId: session.sessionId,
       });
     }),
-    sendAudio: vi.fn(),
+    sendAudio: vi.fn(() => true),
     commit: vi.fn(() => order.push("commit")),
     stop: vi.fn(() => {
       order.push("socket-stop");
@@ -49,11 +49,17 @@ function setup() {
         sessionId: session.sessionId,
       });
     }),
-    close: vi.fn(() => order.push("socket-close")),
+    close: vi.fn(async () => {
+      order.push("socket-close");
+    }),
   };
   let callbacks!: Parameters<RecordingRuntime["createSocket"]>[0];
+  let audioChunk!: (chunk: ArrayBuffer) => void;
   const runtime: RecordingRuntime = {
-    createAudio: vi.fn(() => audio),
+    createAudio: vi.fn((onChunk) => {
+      audioChunk = onChunk;
+      return audio;
+    }),
     createSocket: vi.fn((options) => {
       callbacks = options;
       return socket;
@@ -83,6 +89,7 @@ function setup() {
     order,
     invalidate,
     getCallbacks: () => callbacks,
+    sendAudio: (chunk: ArrayBuffer) => audioChunk(chunk),
   };
 }
 
@@ -99,9 +106,8 @@ describe("RecordingProvider", () => {
     expect(harness.api.startSession).toHaveBeenCalledWith(session.noteId);
     expect(harness.runtime.createSocket).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: expect.stringContaining(
-          `/ws/transcription-sessions/${session.sessionId}`
-        ),
+        url: expect.stringContaining("/ws/transcriptions"),
+        sessionId: session.sessionId,
       })
     );
     expect(harness.order).toEqual([
@@ -180,5 +186,17 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.error).toBe("upstream failed");
     expect(harness.audio.stop).toHaveBeenCalled();
+  });
+
+  it("fails when STOMP audio backpressure exceeds the limit", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+    harness.socket.sendAudio.mockReturnValueOnce(false);
+
+    await act(async () => harness.sendAudio(new ArrayBuffer(4_800)));
+
+    expect(harness.result.current.phase).toBe("failed");
+    expect(harness.result.current.error).toContain("네트워크가 느려");
+    expect(harness.socket.close).toHaveBeenCalled();
   });
 });

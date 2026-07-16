@@ -34,8 +34,8 @@ export const serverEventSchema = z.discriminatedUnion("type", [
     code: z.enum([
       "INVALID_CLIENT_MESSAGE",
       "INVALID_AUDIO_FRAME",
-      "OPENAI_CONNECTION_FAILED",
-      "OPENAI_TRANSCRIPTION_FAILED",
+      "STT_CONNECTION_FAILED",
+      "STT_TRANSCRIPTION_FAILED",
       "INTERNAL_ERROR",
     ]),
     message: z.string().min(1),
@@ -81,7 +81,7 @@ export const protocolExamples = {
     },
     error: {
       type: "error",
-      code: "OPENAI_TRANSCRIPTION_FAILED",
+      code: "STT_TRANSCRIPTION_FAILED",
       message: "전사 처리에 실패했습니다.",
     },
   },

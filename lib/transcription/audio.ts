@@ -91,6 +91,13 @@ export class PcmChunkBatcher {
     }
   }
 
+  flush() {
+    if (this.pending.length === 0) return;
+    const remainder = this.pending;
+    this.pending = new Int16Array(0);
+    this.emit(remainder.buffer);
+  }
+
   reset() {
     this.pending = new Int16Array(0);
   }
@@ -119,7 +126,7 @@ export class PcmAudioCapture {
     this.targetSampleRate = options.targetSampleRate ?? 24_000;
     this.batcher = new PcmChunkBatcher(
       this.targetSampleRate,
-      options.batchMs ?? 40,
+      options.batchMs ?? 100,
       options.onChunk
     );
   }
@@ -169,10 +176,12 @@ export class PcmAudioCapture {
     if (this.levelFrame !== null) cancelAnimationFrame(this.levelFrame);
     this.levelFrame = null;
     this.options.onLevel?.(0);
+    if (this.worklet) this.worklet.port.onmessage = null;
     this.worklet?.disconnect();
     this.source?.disconnect();
     this.analyser?.disconnect();
     this.silentGain?.disconnect();
+    this.batcher.flush();
     this.stream?.getTracks().forEach((track) => track.stop());
     await this.audioContext?.close();
     this.audioContext = null;

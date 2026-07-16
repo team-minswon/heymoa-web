@@ -49,14 +49,26 @@ describe("audio conversion", () => {
     expect(new Int16Array(emit.mock.calls[0][0])).toHaveLength(1920);
   });
 
-  it("emits default 24 kHz mono PCM16 frames within the contract limit", () => {
+  it("flushes the final PCM remainder exactly once", () => {
     const emit = vi.fn();
-    const batcher = new PcmChunkBatcher(24_000, 40, emit);
+    const batcher = new PcmChunkBatcher(24_000, 100, emit);
+    batcher.push(new Int16Array(1_200));
 
-    batcher.push(new Int16Array(24_000 * 0.04));
+    batcher.flush();
+    batcher.flush();
+
+    expect(emit).toHaveBeenCalledOnce();
+    expect(new Int16Array(emit.mock.calls[0][0])).toHaveLength(1_200);
+  });
+
+  it("emits recommended 100 ms 24 kHz mono PCM16 frames within the contract limit", () => {
+    const emit = vi.fn();
+    const batcher = new PcmChunkBatcher(24_000, 100, emit);
+
+    batcher.push(new Int16Array(24_000 * 0.1));
 
     const chunk = emit.mock.calls[0][0] as ArrayBuffer;
-    expect(chunk.byteLength).toBe(24_000 * 0.04 * 2);
+    expect(chunk.byteLength).toBe(24_000 * 0.1 * 2);
     expect(chunk.byteLength % 2).toBe(0);
     expect(chunk.byteLength).toBeLessThanOrEqual(1_048_576);
   });

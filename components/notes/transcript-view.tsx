@@ -56,9 +56,12 @@ export function TranscriptView({ noteId }: { noteId: string }) {
   ).join("\u0000")}`;
 
   useEffect(() => {
-    if (active) {
+    const distanceFromBottom =
+      document.documentElement.scrollHeight -
+      (window.scrollY + window.innerHeight);
+    if (active && distanceFromBottom < 160) {
       transcriptEndRef.current?.scrollIntoView({
-        behavior: "smooth",
+        behavior: "auto",
         block: "end",
       });
     }
