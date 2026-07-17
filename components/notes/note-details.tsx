@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { CalendarDays, Check, Clock3 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -15,11 +15,7 @@ import {
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
 
-export function NoteDetails({
-  noteId,
-}: {
-  noteId: string;
-}) {
+export function NoteDetails({ noteId }: { noteId: string }) {
   const queryClient = useQueryClient();
   const noteQuery = useGetNote(noteId);
   const updateNote = useUpdateNote();
@@ -34,7 +30,7 @@ export function NoteDetails({
 
   if (!note) {
     return (
-      <div className="space-y-5 p-6 sm:p-8">
+      <div className="mx-auto max-w-3xl space-y-5 p-6 sm:p-10">
         <Skeleton className="h-10 w-2/3" />
         <Skeleton className="h-40 w-full" />
       </div>
@@ -44,7 +40,7 @@ export function NoteDetails({
   return (
     <form
       key={`${note.noteId}-${note.updatedAt}`}
-      className="mx-auto max-w-2xl space-y-8 p-6 sm:p-8"
+      className="mx-auto max-w-3xl space-y-10 p-6 pb-36 sm:p-10"
       onSubmit={async (event) => {
         event.preventDefault();
         setFeedback(null);
@@ -64,30 +60,48 @@ export function NoteDetails({
         }
       }}
     >
-      <div className="space-y-2">
-        <Label htmlFor="note-title">제목</Label>
+      <header>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--el-muted)]">
+          Note details
+        </p>
+        <h2 className="mt-2 font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+          노트 정보
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
+          회의 제목과 기록 시각을 관리합니다.
+        </p>
+      </header>
+
+      <div className="space-y-3 rounded-2xl border border-[var(--el-hairline)] bg-white p-5 shadow-[0_4px_16px_rgba(0,0,0,0.03)] sm:p-6">
+        <Label htmlFor="note-title" className="text-xs text-[var(--el-muted)]">
+          회의 제목
+        </Label>
         <Input
           id="note-title"
           name="title"
           defaultValue={note.title}
           maxLength={200}
-          className="h-11 text-base font-semibold"
+          className="h-auto border-0 bg-transparent px-0 py-1 font-serif text-2xl font-light tracking-[-0.02em] shadow-none focus-visible:ring-0"
         />
       </div>
 
-      <dl className="grid gap-3 rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-[var(--el-muted)]">생성</dt>
-          <dd className="mt-1">
+      <dl className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-[var(--el-hairline)] bg-white p-5">
+          <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
+            <CalendarDays className="size-3.5" /> 생성
+          </dt>
+          <dd className="mt-3 text-sm text-[var(--el-body-strong)]">
             {new Intl.DateTimeFormat("ko-KR", {
               dateStyle: "medium",
               timeStyle: "short",
             }).format(new Date(note.createdAt))}
           </dd>
         </div>
-        <div>
-          <dt className="text-[var(--el-muted)]">수정</dt>
-          <dd className="mt-1">
+        <div className="rounded-2xl border border-[var(--el-hairline)] bg-white p-5">
+          <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
+            <Clock3 className="size-3.5" /> 최근 수정
+          </dt>
+          <dd className="mt-3 text-sm text-[var(--el-body-strong)]">
             {new Intl.DateTimeFormat("ko-KR", {
               dateStyle: "medium",
               timeStyle: "short",
@@ -104,8 +118,12 @@ export function NoteDetails({
         </Alert>
       ) : null}
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" loading={updateNote.isPending}>
+      <div className="flex items-center gap-3 border-t border-[var(--el-hairline)] pt-6">
+        <Button
+          type="submit"
+          loading={updateNote.isPending}
+          className="rounded-full px-5"
+        >
           <Check /> 변경 저장
         </Button>
         {feedback === "saved" ? (

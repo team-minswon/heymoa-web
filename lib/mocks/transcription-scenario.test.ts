@@ -83,6 +83,21 @@ describe("MockTranscriptionScenario", () => {
     const types = send.mock.calls.map(([event]) => event.type);
     expect(types.slice(-2)).toEqual(["final", "completed"]);
     expect(requestClose).toHaveBeenCalledWith(1000, "completed");
+    scenario.dispose();
+    expect(mockDb.getSession(session.sessionId).status).toBe("COMPLETED");
+  });
+
+  it("marks an unexpectedly disconnected recording as interrupted", () => {
+    const { session } = createSession();
+    const scenario = createMockTranscriptionScenario({
+      sessionId: session.sessionId,
+      send: vi.fn(),
+    });
+    scenario.open();
+
+    scenario.dispose();
+
+    expect(mockDb.getSession(session.sessionId).status).toBe("INTERRUPTED");
   });
 
   it("reports invalid odd-byte audio and closes with 1008", async () => {

@@ -162,6 +162,9 @@ export class MockTranscriptionScenario {
   }
 
   dispose() {
+    if (this.phase === "recording" || this.phase === "stopping") {
+      mockDb.updateSessionStatus(this.options.sessionId, "INTERRUPTED");
+    }
     this.phase = "closed";
   }
 
@@ -178,8 +181,8 @@ export class MockTranscriptionScenario {
       type: "completed",
       sessionId: this.options.sessionId,
     });
-    this.options.requestClose?.(1000, "completed");
     this.phase = "closed";
+    this.options.requestClose?.(1000, "completed");
   }
 
   private get utteranceId() {

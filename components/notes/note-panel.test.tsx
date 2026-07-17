@@ -15,6 +15,8 @@ import {
   type RecordingRuntime,
 } from "@/components/transcription/recording-provider";
 
+const useGetProject = vi.hoisted(() => vi.fn());
+
 vi.mock("@/components/notes/note-details", () => ({
   NoteDetails: () => <p>정보 내용</p>,
 }));
@@ -37,32 +39,35 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
   }),
 }));
 vi.mock("@/lib/api/generated/projects/projects", () => ({
-  useGetProject: () => ({
-    data: {
-      status: 200,
+  useGetProject: (...args: unknown[]) => {
+    useGetProject(...args);
+    return {
       data: {
-        success: true,
+        status: 200,
         data: {
-          projectId: "01K0000000001",
-          name: "주간",
+          success: true,
+          data: {
+            projectId: "01K0000000001",
+            name: "주간",
+          },
         },
       },
-    },
-  }),
+    };
+  },
 }));
 
 const runtime: RecordingRuntime = {
-  createAudio: () => ({
+  createSession: (options) => ({
     requestPermission: vi.fn().mockResolvedValue(undefined),
-    start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(undefined),
-  }),
-  createSocket: () => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    sendAudio: vi.fn(),
+    connect: vi.fn(async (sessionId: string) =>
+      options.onEvent({ type: "connected", sessionId })
+    ),
     commit: vi.fn(),
-    stop: vi.fn(),
-    close: vi.fn(),
+    stop: vi.fn(async () =>
+      options.onEvent({ type: "completed", sessionId: "01K0000000010" })
+    ),
+    reconcile: vi.fn(),
+    close: vi.fn().mockResolvedValue(undefined),
   }),
 };
 
@@ -78,11 +83,12 @@ function renderNotePanel(ui: ReactNode) {
     <QueryClientProvider client={client}>
       <RecordingProvider
         runtime={runtime}
+        enablePolling={false}
         api={{
           startSession: vi.fn(async (noteId) => ({
             sessionId: "01K0000000010",
             noteId,
-            status: "READY",
+            status: "READY" as const,
             readyExpiresAt: "2026-07-11T00:10:00Z",
             startedAt: null,
             endedAt: null,
@@ -118,15 +124,20 @@ describe("NotePanel", () => {
     );
 
     expect(
-      screen.getByRole("tab", { name: "원본 전사" })
+      screen.getByRole("tab", { name: "실시간 전사" })
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "노트 정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
+    expect(useGetProject).toHaveBeenCalledWith(
+      "01K0000000000",
+      "01K0000000001",
+      { query: { enabled: true } }
+    );
   });
 
-  it("shows five rounded microphone bars in the bottom recording control", async () => {
+  it("shows nine microphone bars in the recording dock", async () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -141,7 +152,7 @@ describe("NotePanel", () => {
     await waitFor(() =>
       expect(
         screen.getByTestId("note-recording-waveform").children
-      ).toHaveLength(5)
+      ).toHaveLength(9)
     );
     expect(
       screen.queryByRole("button", { name: "구간 확정" })

@@ -90,21 +90,21 @@ export function WorkspaceSettingsForm({
   };
 
   return (
-    <div className="space-y-7">
+    <div className="mx-auto max-w-2xl space-y-8">
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="font-serif text-2xl font-light tracking-tight">
+          <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
             워크스페이스 일반
           </h2>
           {workspace?.isDefault && <Badge>기본</Badge>}
         </div>
-        <p className="mt-1 text-sm text-[var(--el-muted)]">
+        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
           이 공간의 이름과 설명을 관리합니다.
         </p>
       </div>
       <form
         onSubmit={submit}
-        className="space-y-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-5"
+        className="space-y-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.03)]"
       >
         <div className="space-y-2">
           <Label htmlFor="workspace-name">워크스페이스 이름</Label>

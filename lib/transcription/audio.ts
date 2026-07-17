@@ -146,6 +146,9 @@ export class PcmAudioCapture {
 
     await this.requestPermission();
     this.audioContext = new AudioContext();
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
     await this.audioContext.audioWorklet.addModule("/pcm-capture-worklet.js");
     this.source = this.audioContext.createMediaStreamSource(this.stream!);
     this.worklet = new AudioWorkletNode(

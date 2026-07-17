@@ -1,4 +1,5 @@
 import { Client, type StompSubscription } from "@stomp/stompjs";
+import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import {
   parseServerEvent,
   type ServerEvent,
@@ -18,6 +19,7 @@ export class TranscriptionSocket {
   private subscription: StompSubscription | null = null;
   private connected = false;
   private closing = false;
+  private reconcileConnection: (() => void) | null = null;
 
   constructor(private readonly options: TranscriptionSocketOptions) {}
 
@@ -37,6 +39,7 @@ export class TranscriptionSocket {
         if (settled) return;
         settled = true;
         globalThis.clearTimeout(readyTimeout);
+        this.reconcileConnection = null;
         reject(error);
       };
       const readyTimeout = globalThis.setTimeout(() => {
@@ -52,21 +55,13 @@ export class TranscriptionSocket {
         debug: () => undefined,
         onConnect: () => {
           const replyId = crypto.randomUUID();
-          const receiptId = `subscribe-${replyId}`;
-          client.watchForReceipt(receiptId, () => {
-            client.publish({
-              destination: this.destination("connect"),
-              headers: { "reply-id": replyId },
-            });
-          });
           this.subscription = client.subscribe(
             `/user/queue/transcription-sessions/${replyId}/events`,
             (message) => {
               try {
                 const event = parseServerEvent(message.body);
                 if (event.type === "connected" && !this.connected) {
-                  this.connected = true;
-                  resolveOnce();
+                  this.reconcileConnection?.();
                 }
                 if (event.type === "error" && !this.connected) {
                   rejectOnce(new Error(event.message));
@@ -76,14 +71,21 @@ export class TranscriptionSocket {
                   void this.close();
                 }
               } catch (cause) {
-                const error = cause instanceof Error ? cause : new Error(String(cause));
+                const error =
+                  cause instanceof Error ? cause : new Error(String(cause));
                 if (!this.connected) rejectOnce(error);
                 else this.options.onClose(1008, "invalid server event");
                 void this.close();
               }
-            },
-            { receipt: receiptId }
+            }
           );
+          // Spring's simple broker does not acknowledge SUBSCRIBE receipts.
+          // Frame order plus preserveReceiveOrder(true) guarantees registration
+          // before the following application connect message is handled.
+          client.publish({
+            destination: this.destination("connect"),
+            headers: { "reply-id": replyId },
+          });
         },
         onStompError: (frame) => {
           const reason = frame.headers.message || "STOMP_PROTOCOL_ERROR";
@@ -102,15 +104,25 @@ export class TranscriptionSocket {
           this.client = null;
           this.subscription = null;
           this.connected = false;
+          this.reconcileConnection = null;
           if (!hadConnected) {
             rejectOnce(new Error(event.reason || "WEBSOCKET_CLOSED"));
           }
           if (!expected) this.options.onClose(event.code, event.reason);
         },
       });
+      this.reconcileConnection = () => {
+        if (!client.connected || this.connected) return;
+        this.connected = true;
+        resolveOnce();
+      };
       this.client = client;
       void client.activate();
     });
+  }
+
+  reconcileConnected() {
+    this.reconcileConnection?.();
   }
 
   sendAudio(chunk: ArrayBuffer): boolean {
@@ -124,7 +136,12 @@ export class TranscriptionSocket {
     }
     const client = this.client;
     const transport = client?.webSocket as WebSocket | undefined;
-    if (!client?.connected || !transport || transport.bufferedAmount > MAX_BUFFERED_BYTES) return false;
+    if (
+      !client?.connected ||
+      !transport ||
+      (!shouldEnableMocking() && transport.bufferedAmount > MAX_BUFFERED_BYTES)
+    )
+      return false;
 
     client.publish({
       destination: this.destination("audio"),
@@ -154,6 +171,7 @@ export class TranscriptionSocket {
     this.closing = true;
     this.client = null;
     this.connected = false;
+    this.reconcileConnection = null;
     this.subscription?.unsubscribe();
     this.subscription = null;
     await client.deactivate();

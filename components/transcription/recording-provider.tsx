@@ -15,44 +15,32 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import {
   getGetNoteTranscriptQueryKey,
+  useGetTranscriptionSession,
   useStartTranscriptionSession,
 } from "@/lib/api/generated/transcription/transcription";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
-import { PcmAudioCapture } from "@/lib/transcription/audio";
+import {
+  BrowserRealtimeSession,
+  type RealtimeSessionController,
+  type RealtimeSessionOptions,
+} from "@/lib/transcription/realtime-session";
 import type { ServerEvent } from "@/lib/transcription/protocol";
-import { TranscriptionSocket } from "@/lib/transcription/socket";
 import {
   initialTranscriptState,
   transcriptReducer,
   type TranscriptState,
 } from "@/lib/transcription/transcript-reducer";
 
-type AudioController = Pick<
-  PcmAudioCapture,
-  "requestPermission" | "start" | "stop"
->;
-type SocketController = Pick<
-  TranscriptionSocket,
-  "connect" | "sendAudio" | "commit" | "stop" | "close"
->;
-
 export type RecordingRuntime = {
-  createAudio: (
-    onChunk: (chunk: ArrayBuffer) => void,
-    onLevel: (level: number) => void
-  ) => AudioController;
-  createSocket: (options: {
-    url: string;
-    sessionId: string;
-    onEvent: (event: ServerEvent) => void;
-    onClose: (code: number, reason: string) => void;
-  }) => SocketController;
+  createSession: (options: RealtimeSessionOptions) => RealtimeSessionController;
 };
 
 export type LocalRecordingSession = StartTranscriptionSessionResponseData;
 
 export type RecordingApi = {
-  startSession: (noteId: string) => Promise<StartTranscriptionSessionResponseData>;
+  startSession: (
+    noteId: string
+  ) => Promise<StartTranscriptionSessionResponseData>;
 };
 
 export type RecordingPhase =
@@ -66,25 +54,35 @@ export type RecordingPhase =
 
 export type RecordingContextValue = {
   session: LocalRecordingSession | null;
+  activeNoteId: string | null;
   phase: RecordingPhase;
   transcript: TranscriptState;
   elapsedMs: number;
   level: number;
   levelHistory: number[];
   error: string | null;
+  isReconciling: boolean;
+  lastSyncedAt: number | null;
   start: (noteId: string) => Promise<void>;
   commit: () => void;
   stop: () => Promise<void>;
 };
 
 const RecordingContext = createContext<RecordingContextValue | null>(null);
+const ACTIVE_PHASES = new Set<RecordingPhase>([
+  "requesting-permission",
+  "connecting",
+  "recording",
+  "stopping",
+]);
 
 function getStartErrorMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : "";
 
   if (
     message === "WEBSOCKET_CLOSED" ||
-    message === "WEBSOCKET_CONNECTION_FAILED"
+    message === "WEBSOCKET_CONNECTION_FAILED" ||
+    message === "STOMP_APPLICATION_READY_TIMEOUT"
   ) {
     return "실시간 전사 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요.";
   }
@@ -92,24 +90,46 @@ function getStartErrorMessage(cause: unknown) {
   return message || "녹음을 시작하지 못했습니다.";
 }
 
+function getInterruptedMessage(endReason: string | null) {
+  if (endReason === "STT_PROVIDER_ERROR") {
+    return "음성 인식 서비스 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  if (endReason === "CLIENT_DISCONNECTED") {
+    return "실시간 연결이 종료되어 녹음을 중단했습니다.";
+  }
+  return "서버에서 전사 세션이 중단되었습니다.";
+}
+
+function getWebSocketUrl() {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+  const baseUrl = shouldEnableMocking()
+    ? `${protocol}//${window.location.host}`
+    : apiBaseUrl
+      ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
+      : `${protocol}//${window.location.host}`;
+  return `${baseUrl}/ws/transcriptions`;
+}
+
 const browserRuntime: RecordingRuntime = {
-  createAudio: (onChunk, onLevel) =>
-    new PcmAudioCapture({ onChunk, onLevel }),
-  createSocket: (options) => new TranscriptionSocket(options),
+  createSession: (options) => new BrowserRealtimeSession(options),
 };
 
 export function RecordingProvider({
   children,
   api: apiOverride,
   runtime = browserRuntime,
+  enablePolling = true,
 }: {
   children: React.ReactNode;
   api?: RecordingApi;
   runtime?: RecordingRuntime;
+  enablePolling?: boolean;
 }) {
   const queryClient = useQueryClient();
   const startSessionMutation = useStartTranscriptionSession();
   const [session, setSession] = useState<LocalRecordingSession | null>(null);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [phase, setPhase] = useState<RecordingPhase>("idle");
   const [transcript, dispatchTranscript] = useReducer(
     transcriptReducer,
@@ -122,10 +142,22 @@ export function RecordingProvider({
   );
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<LocalRecordingSession | null>(null);
-  const socketRef = useRef<SocketController | null>(null);
-  const audioRef = useRef<AudioController | null>(null);
-  const stopResolveRef = useRef<(() => void) | null>(null);
+  const controllerRef = useRef<RealtimeSessionController | null>(null);
   const smoothedLevelRef = useRef(0);
+  const hasOpenSession =
+    session?.status === "READY" || session?.status === "ACTIVE";
+  const shouldPoll =
+    enablePolling &&
+    Boolean(session?.sessionId) &&
+    (ACTIVE_PHASES.has(phase) || (phase === "failed" && hasOpenSession));
+  const sessionQuery = useGetTranscriptionSession(session?.sessionId ?? "", {
+    query: {
+      enabled: shouldPoll,
+      staleTime: 0,
+      refetchInterval: shouldPoll ? 3_000 : false,
+      refetchOnWindowFocus: true,
+    },
+  });
 
   const setCurrentSession = useCallback(
     (next: LocalRecordingSession | null) => {
@@ -179,19 +211,15 @@ export function RecordingProvider({
 
   const failRecording = useCallback(
     (message: string) => {
+      dispatchTranscript({ type: "clear-partials" });
       setError(message);
       setPhase("failed");
       clearLevel();
-      const socket = socketRef.current;
-      socketRef.current = null;
-      void socket?.close();
-      const audio = audioRef.current;
-      audioRef.current = null;
-      void audio?.stop();
+      const controller = controllerRef.current;
+      controllerRef.current = null;
+      void controller?.close();
       const current = sessionRef.current;
       if (current) invalidateTranscriptQueries(current.noteId);
-      stopResolveRef.current?.();
-      stopResolveRef.current = null;
     },
     [clearLevel, invalidateTranscriptQueries]
   );
@@ -215,104 +243,139 @@ export function RecordingProvider({
           invalidateTranscriptQueries(current.noteId);
         }
         setPhase("completed");
-        stopResolveRef.current?.();
-        stopResolveRef.current = null;
+        clearLevel();
       }
 
       if (event.type === "error") failRecording(event.message);
     },
-    [failRecording, invalidateTranscriptQueries, setCurrentSession]
+    [clearLevel, failRecording, invalidateTranscriptQueries, setCurrentSession]
   );
+
+  useEffect(() => {
+    const response = sessionQuery.data;
+    const serverSession =
+      response?.status === 200 && response.data.success
+        ? response.data.data
+        : undefined;
+    if (
+      !serverSession ||
+      serverSession.sessionId !== sessionRef.current?.sessionId
+    ) {
+      return;
+    }
+
+    if (serverSession.status === "ACTIVE") {
+      controllerRef.current?.reconcile("ACTIVE");
+      return;
+    }
+    const reconcileTimer = window.setTimeout(() => {
+      if (serverSession.status === "COMPLETED" && phase !== "completed") {
+        controllerRef.current?.reconcile("COMPLETED");
+        dispatchTranscript({
+          type: "completed",
+          sessionId: serverSession.sessionId,
+        });
+        setCurrentSession(serverSession);
+        setPhase("completed");
+        clearLevel();
+        invalidateTranscriptQueries(serverSession.noteId);
+        return;
+      }
+      if (serverSession.status === "INTERRUPTED") {
+        setCurrentSession(serverSession);
+        if (phase !== "failed") {
+          controllerRef.current?.reconcile("INTERRUPTED");
+          failRecording(getInterruptedMessage(serverSession.endReason));
+        }
+      }
+    }, 0);
+    return () => window.clearTimeout(reconcileTimer);
+  }, [
+    clearLevel,
+    failRecording,
+    invalidateTranscriptQueries,
+    phase,
+    sessionQuery.data,
+    setCurrentSession,
+  ]);
 
   const start = useCallback(
     async (noteId: string) => {
-      if (["requesting-permission", "connecting", "recording", "stopping"].includes(phase)) {
-        throw new Error("ACTIVE_TRANSCRIPTION_SESSION");
-      }
+      if (controllerRef.current || ACTIVE_PHASES.has(phase)) return;
 
+      const current = sessionRef.current;
+      const reusableSession =
+        current?.noteId === noteId &&
+        current.status === "READY" &&
+        Date.parse(current.readyExpiresAt) > Date.now()
+          ? current
+          : null;
+
+      dispatchTranscript({ type: "reset" });
+      setActiveNoteId(noteId);
+      setCurrentSession(reusableSession);
       setError(null);
+      setElapsedMs(0);
       setPhase("requesting-permission");
-      const audio = runtime.createAudio(
-        (chunk) => {
-          const socket = socketRef.current;
-          if (socket && !socket.sendAudio(chunk)) {
-            failRecording("네트워크가 느려 오디오 전송을 계속할 수 없습니다.");
-          }
-        },
-        publishLevel
-      );
-      audioRef.current = audio;
+      const controller = runtime.createSession({
+        url: getWebSocketUrl(),
+        onEvent: handleEvent,
+        onLevel: publishLevel,
+        onFailure: failRecording,
+      });
+      controllerRef.current = controller;
 
       try {
-        await audio.requestPermission();
+        await controller.requestPermission();
         setPhase("connecting");
-        const connectionSession = await api.startSession(noteId);
-        setElapsedMs(0);
+        const connectionSession =
+          reusableSession ?? (await api.startSession(noteId));
         setCurrentSession(connectionSession);
-
-        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-        const wsBaseUrl = shouldEnableMocking()
-          ? `${wsProtocol}//${window.location.host}`
-          : apiBaseUrl
-            ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
-            : `${wsProtocol}//${window.location.host}`;
-        const socket = runtime.createSocket({
-          url: `${wsBaseUrl}/ws/transcriptions`,
-          sessionId: connectionSession.sessionId,
-          onEvent: handleEvent,
-          onClose: (code, reason) => {
-            if (code !== 1000) {
-              failRecording(reason || `WebSocket closed (${code})`);
-            }
-          },
-        });
-        socketRef.current = socket;
-        await socket.connect();
+        await controller.connect(connectionSession.sessionId);
+        if (controllerRef.current !== controller) return;
         setCurrentSession({
           ...connectionSession,
           status: "ACTIVE",
           startedAt: connectionSession.startedAt ?? new Date().toISOString(),
         });
-        await audio.start();
         setPhase("recording");
       } catch (cause) {
-        const socket = socketRef.current;
-        socketRef.current = null;
-        await socket?.close();
-        await audio.stop();
-        audioRef.current = null;
+        await controller.close();
+        if (controllerRef.current !== controller) return;
+        controllerRef.current = null;
         setError(getStartErrorMessage(cause));
         setPhase("failed");
+        clearLevel();
       }
     },
-    [api, failRecording, handleEvent, phase, publishLevel, runtime, setCurrentSession]
+    [
+      api,
+      clearLevel,
+      failRecording,
+      handleEvent,
+      phase,
+      publishLevel,
+      runtime,
+      setCurrentSession,
+    ]
   );
 
   const commit = useCallback(() => {
-    socketRef.current?.commit();
+    controllerRef.current?.commit();
   }, []);
 
   const stop = useCallback(async () => {
+    const controller = controllerRef.current;
+    if (!controller) return;
     setPhase("stopping");
-    await audioRef.current?.stop();
-    audioRef.current = null;
     clearLevel();
-    const completed = await Promise.race([
-      new Promise<boolean>((resolve) => {
-        stopResolveRef.current = () => resolve(true);
-        socketRef.current?.stop();
-      }),
-      new Promise<boolean>((resolve) => window.setTimeout(() => resolve(false), 11_000)),
-    ]);
-    stopResolveRef.current = null;
-    if (!completed) {
-      failRecording("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+    try {
+      await controller.stop();
+    } catch {
+      failRecording("녹음을 종료하는 중 오류가 발생했습니다.");
       return;
     }
-    const socket = socketRef.current;
-    socketRef.current = null;
-    await socket?.close();
+    if (controllerRef.current === controller) controllerRef.current = null;
     const current = sessionRef.current;
     if (current) invalidateTranscriptQueries(current.noteId);
   }, [clearLevel, failRecording, invalidateTranscriptQueries]);
@@ -327,8 +390,7 @@ export function RecordingProvider({
 
   useEffect(
     () => () => {
-      socketRef.current?.close();
-      void audioRef.current?.stop();
+      void controllerRef.current?.close();
     },
     []
   );
@@ -336,24 +398,31 @@ export function RecordingProvider({
   const value = useMemo<RecordingContextValue>(
     () => ({
       session,
+      activeNoteId,
       phase,
       transcript,
       elapsedMs,
       level,
       levelHistory,
       error,
+      isReconciling: shouldPoll && sessionQuery.isFetching,
+      lastSyncedAt: sessionQuery.dataUpdatedAt || null,
       start,
       commit,
       stop,
     }),
     [
       session,
+      activeNoteId,
       phase,
       transcript,
       elapsedMs,
       level,
       levelHistory,
       error,
+      shouldPoll,
+      sessionQuery.isFetching,
+      sessionQuery.dataUpdatedAt,
       start,
       commit,
       stop,

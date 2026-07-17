@@ -62,7 +62,7 @@ describe("NoteListRow", () => {
       />
     );
 
-    expect(screen.getAllByText("모바일 앱")).toHaveLength(2);
+    expect(screen.getAllByText("모바일 앱")).toHaveLength(1);
     expect(screen.getByText("00:12")).toBeInTheDocument();
     expect(
       screen.getByRole("meter", { name: "주간 제품 회의 마이크 입력" })

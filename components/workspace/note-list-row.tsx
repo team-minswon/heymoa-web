@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Expand, MoreHorizontal, Waves } from "lucide-react";
+import { Expand, MoreHorizontal, Radio, Waves } from "lucide-react";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ export function NoteListRow({
 }) {
   const recording = useRecording();
   const isRecording =
-    recording.session?.noteId === note.noteId &&
+    (recording.activeNoteId ?? recording.session?.noteId) === note.noteId &&
     ["requesting-permission", "connecting", "recording", "stopping"].includes(
       recording.phase
     );
@@ -42,15 +42,15 @@ export function NoteListRow({
   const timestamp = new Date(note.updatedAt);
 
   return (
-    <article className="group flex min-h-[76px] items-center gap-2 rounded-xl px-2 py-2 transition-colors duration-150 hover:bg-white/70 focus-within:bg-white/70 sm:px-3">
+    <article className="group flex min-h-[92px] items-center gap-2 rounded-2xl border border-transparent bg-white/65 px-3 py-3 shadow-[0_2px_12px_rgba(0,0,0,0.025)] transition-all duration-150 hover:-translate-y-px hover:border-[var(--el-hairline)] hover:bg-white hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] focus-within:border-[var(--el-hairline-strong)] focus-within:bg-white sm:px-4">
       <Link
         href={sideHref}
         aria-label={`${note.title} 노트 열기`}
-        className="flex min-w-0 flex-1 items-center gap-4 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)] sm:gap-5"
+        className="flex min-w-0 flex-1 items-center gap-4 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)] sm:gap-6"
       >
         <div
           className={cn(
-            "flex w-14 shrink-0 flex-col items-center gap-1",
+            "flex w-14 shrink-0 flex-col items-center gap-1.5",
             isRecording ? "text-destructive" : "text-[var(--el-muted)]"
           )}
         >
@@ -74,23 +74,20 @@ export function NoteListRow({
               ))}
             </div>
           ) : (
-            <Waves className="size-4" aria-hidden="true" />
+            <span className="flex size-7 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
+              <Waves className="size-3.5" aria-hidden="true" />
+            </span>
           )}
-          <span className="font-mono text-[11px] tabular-nums">
-            {formatDuration(
-              isRecording ? recording.elapsedMs : note.recordedDurationMs
-            )}
-          </span>
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[15px] font-medium tracking-[-0.01em] text-[var(--el-ink)] sm:text-base">
+          <h3 className="truncate font-serif text-xl font-light tracking-[-0.02em] text-[var(--el-ink)]">
             {note.title}
           </h3>
           {projectName || isRecording ? (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {isRecording ? (
-                <span className="mr-1 text-[11px] font-semibold text-destructive">
-                  기록 중
+                <span className="mr-1 inline-flex items-center gap-1 text-[11px] font-semibold text-red-700">
+                  <Radio className="size-3" /> 기록 중
                 </span>
               ) : null}
               {projectName ? (
@@ -99,14 +96,18 @@ export function NoteListRow({
             </div>
           ) : null}
         </div>
-        <div className="hidden w-32 shrink-0 text-right text-xs leading-5 text-[var(--el-muted)] sm:block">
+        <div className="hidden w-28 shrink-0 text-right text-xs leading-5 text-[var(--el-muted)] sm:block">
           <p>
             {new Intl.DateTimeFormat("ko-KR", {
               hour: "numeric",
               minute: "2-digit",
             }).format(timestamp)}
           </p>
-          {projectName ? <p className="mt-1 truncate">{projectName}</p> : null}
+          <p className="mt-1 font-mono text-[11px] tabular-nums">
+            {formatDuration(
+              isRecording ? recording.elapsedMs : note.recordedDurationMs
+            )}
+          </p>
         </div>
       </Link>
 

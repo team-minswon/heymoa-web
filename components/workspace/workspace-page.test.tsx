@@ -1,7 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { renderToString } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
 
 const push = vi.hoisted(() => vi.fn());
@@ -28,9 +33,7 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
       data: {
         success: true,
         data: {
-          projects: [
-            { projectId: "01K0000000001", name: "모바일 앱" },
-          ],
+          projects: [{ projectId: "01K0000000001", name: "모바일 앱" }],
         },
       },
     },
@@ -74,6 +77,8 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
 }));
 
 describe("WorkspacePage", () => {
+  afterEach(cleanup);
+
   beforeEach(() => {
     push.mockReset();
     createNote.mockReset();
@@ -82,19 +87,17 @@ describe("WorkspacePage", () => {
     recording.session = null;
   });
 
-  it("keeps meeting creation disabled in server markup", () => {
-    const markup = renderToString(
+  it("disables meeting creation while a recording is starting", () => {
+    recording.phase = "requesting-permission";
+    render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkspacePage workspaceId="01K0000000000" />
       </QueryClientProvider>
     );
 
-    const document = new DOMParser().parseFromString(markup, "text/html");
-    const createMeeting = [...document.querySelectorAll("button")].find(
-      (button) => button.textContent?.includes("새 회의")
-    );
-
-    expect(createMeeting?.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "새 회의 기록" })
+    ).toBeDisabled();
   });
 
   it("renders the selected project hierarchy and creates a meeting", async () => {
@@ -112,9 +115,11 @@ describe("WorkspacePage", () => {
     );
 
     expect(screen.getByText("Meeting notes")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "모바일 앱" })).toBeInTheDocument();
-    expect(screen.getByText("2개의 회의 기록")).toBeInTheDocument();
-    const button = screen.getByRole("button", { name: "새 회의" });
+    expect(
+      screen.getByRole("heading", { name: "모바일 앱" })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/2개의 회의 기록/)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "새 회의 기록" });
     expect(button).toHaveClass("rounded-full");
     fireEvent.click(button);
 

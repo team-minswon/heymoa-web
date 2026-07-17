@@ -43,7 +43,9 @@ export function WorkspaceAppShell({
   hideSidebar?: boolean;
   children: React.ReactNode;
 }) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    null
+  );
   const [settingsSection, setSettingsSection] =
     useState<SettingsSection>("account");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -81,9 +83,9 @@ export function WorkspaceAppShell({
           initialSection={settingsSection}
           workspaceId={workspaceId}
         />
-        <SidebarProvider>
+        <SidebarProvider className="bg-[var(--el-canvas)]">
           {!hideSidebar && (
-            <Sidebar className="overflow-hidden rounded-r-2xl border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:bg-[var(--el-canvas-soft)] [&>[data-sidebar=sidebar]]:overflow-hidden">
+            <Sidebar className="overflow-hidden border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-[color-mix(in_srgb,var(--el-canvas-soft)_92%,white)]">
               <WorkspaceSidebar
                 workspaceId={workspaceId}
                 workspace={workspace}
@@ -94,8 +96,8 @@ export function WorkspaceAppShell({
               />
             </Sidebar>
           )}
-          <SidebarInset className="flex-1 bg-card">
-            <div className="relative flex h-full min-w-0 flex-col">
+          <SidebarInset className="flex-1 bg-[var(--el-canvas)]">
+            <div className="relative flex h-full min-w-0 flex-col overflow-hidden">
               <WorkspaceToolbar
                 workspaceId={workspaceId}
                 currentLabel={currentLabel}

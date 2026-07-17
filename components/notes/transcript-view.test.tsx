@@ -3,9 +3,47 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TranscriptView } from "@/components/notes/transcript-view";
 
+const useGetNoteTranscript = vi.hoisted(() =>
+  vi.fn(() => ({
+    data: {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          segments: [
+            {
+              segmentId: "01K0000000012",
+              transcriptionSessionId: "01K0000000010",
+              sequence: 1,
+              text: "첫 번째 결정사항입니다.",
+              startedAtMs: 0,
+              endedAtMs: 1200,
+            },
+            {
+              segmentId: "01K0000000013",
+              transcriptionSessionId: "01K0000000020",
+              sequence: 1,
+              text: "두 번째 녹음의 첫 문장입니다.",
+              startedAtMs: 0,
+              endedAtMs: 900,
+            },
+          ],
+        },
+      },
+    },
+    isPending: false,
+    isFetching: false,
+    isError: false,
+  }))
+);
+
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => ({
-    session: { noteId: "01K0000000002", status: "ACTIVE" },
+    session: {
+      sessionId: "01K0000000030",
+      noteId: "01K0000000002",
+      status: "ACTIVE",
+    },
     phase: "recording",
     elapsedMs: 3200,
     level: 0.42,
@@ -18,10 +56,10 @@ vi.mock("@/components/transcription/recording-provider", () => ({
           segmentId: "01K0000000011",
           utteranceId: "01K0000000200",
           type: "final",
-          sequence: 1,
-          text: "첫 번째 결정사항입니다.",
-          startedAtMs: 0,
-          endedAtMs: 1200,
+          sequence: 2,
+          text: "두 번째 결정사항입니다.",
+          startedAtMs: 1300,
+          endedAtMs: 2400,
         },
       ],
     },
@@ -29,27 +67,7 @@ vi.mock("@/components/transcription/recording-provider", () => ({
 }));
 vi.mock("@/lib/api/generated/transcription/transcription", () => ({
   getGetNoteTranscriptQueryKey: () => ["transcript"],
-  useGetNoteTranscript: () => ({
-    data: {
-      status: 200,
-      data: {
-        success: true,
-        data: {
-          segments: [
-            {
-              segmentId: "01K0000000012",
-              transcriptionSessionId: "01K0000000010",
-              sequence: 2,
-              text: "두 번째 결정사항입니다.",
-              startedAtMs: 1300,
-              endedAtMs: 2400,
-            },
-          ],
-        },
-      },
-    },
-    isPending: false,
-  }),
+  useGetNoteTranscript,
 }));
 
 describe("TranscriptView", () => {
@@ -77,7 +95,7 @@ describe("TranscriptView", () => {
     );
     expect(screen.queryByText("결과를")).not.toBeInTheDocument();
     expect(screen.getByText("결과를 정리합니다")).toHaveClass(
-      "text-[var(--el-muted)]"
+      "text-[var(--el-body)]"
     );
     expect(scrollIntoView).toHaveBeenCalledWith({
       behavior: "auto",
@@ -93,9 +111,18 @@ describe("TranscriptView", () => {
       screen.queryByRole("button", { name: /수정/ })
     ).not.toBeInTheDocument();
     expect(
+      screen.getAllByTestId("final-segment").map((row) => row.dataset.sequence)
+    ).toEqual(["1", "1", "2"]);
+    expect(
       screen
         .getAllByTestId("final-segment")
-        .map((row) => row.dataset.sequence)
-    ).toEqual(["1", "2"]);
+        .map((row) => row.dataset.timelineStartMs)
+    ).toEqual(["0", "1200", "3400"]);
+    expect(useGetNoteTranscript).toHaveBeenCalledWith(
+      "01K0000000002",
+      expect.objectContaining({
+        query: expect.objectContaining({ refetchInterval: 2_500 }),
+      })
+    );
   });
 });

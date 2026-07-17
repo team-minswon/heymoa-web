@@ -1,28 +1,12 @@
 "use client";
 
-import { LogOut, UserRound } from "lucide-react";
-
 import { useAuth } from "@/components/auth/auth-provider";
 import { AuthModal } from "@/components/auth/auth-modal";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { isAuthApiConfigured } from "@/lib/auth/paths";
 
-function getUserInitial(name: string) {
-  return name.trim().charAt(0).toUpperCase() || "U";
-}
-
 export function AuthStatus() {
-  const { user, status, logout } = useAuth();
+  const { user, status } = useAuth();
 
   if (status === "checking") {
     return (
@@ -47,12 +31,18 @@ export function AuthStatus() {
   return (
     <div className="flex items-center gap-2">
       <AuthModal>
-        <Button variant="outline" className="rounded-full font-medium sm:hidden">
+        <Button
+          variant="outline"
+          className="rounded-full font-medium sm:hidden"
+        >
           로그인
         </Button>
       </AuthModal>
       <AuthModal>
-        <Button variant="outline" className="hidden sm:inline-flex rounded-full font-medium">
+        <Button
+          variant="outline"
+          className="hidden sm:inline-flex rounded-full font-medium"
+        >
           로그인
         </Button>
       </AuthModal>

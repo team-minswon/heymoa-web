@@ -1,5 +1,4 @@
-import { WorkspacePage } from "@/components/workspace/workspace-page";
-import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
+import { WorkspaceClientBoundary } from "@/components/workspace/workspace-client-boundary";
 
 export default async function WorkspaceRoute({
   params,
@@ -7,9 +6,5 @@ export default async function WorkspaceRoute({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  return (
-    <WorkspaceAppShell workspaceId={workspaceId}>
-      <WorkspacePage workspaceId={workspaceId} />
-    </WorkspaceAppShell>
-  );
+  return <WorkspaceClientBoundary workspaceId={workspaceId} />;
 }

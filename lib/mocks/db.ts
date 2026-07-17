@@ -69,7 +69,7 @@ function createSeedState(): StoreState {
     userId: "user-12345",
     name: "테스트 유저",
     email: "test@heymoa.com",
-    image: "https://images.heymoa.test/users/test-user.png",
+    image: null,
   };
   const workspaces: WorkspaceResponseData[] = [
     {

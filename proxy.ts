@@ -108,6 +108,13 @@ function shouldRefreshBeforeSsr(request: NextRequest) {
   return !accessToken || isJwtExpired(accessToken);
 }
 
+function clearAuthCookies() {
+  const response = NextResponse.next();
+  response.cookies.delete(ACCESS_TOKEN_COOKIE_NAME);
+  response.cookies.delete(REFRESH_TOKEN_COOKIE_NAME);
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   // Skip during mocking or if no refresh is needed
   if (
@@ -135,12 +142,10 @@ export async function proxy(request: NextRequest) {
       }
     );
 
-    // If refresh fails, clear auth cookies to prevent loops
     if (!refreshResponse.ok) {
-      const response = NextResponse.next();
-      response.cookies.delete(ACCESS_TOKEN_COOKIE_NAME);
-      response.cookies.delete(REFRESH_TOKEN_COOKIE_NAME);
-      return response;
+      const tokenIsInvalid =
+        refreshResponse.status === 400 || refreshResponse.status === 401;
+      return tokenIsInvalid ? clearAuthCookies() : NextResponse.next();
     }
 
     const setCookieHeaders = getSetCookieHeaders(refreshResponse.headers);
@@ -167,11 +172,7 @@ export async function proxy(request: NextRequest) {
 
     return response;
   } catch {
-    // On network failure, clear cookies or proceed silently
-    const response = NextResponse.next();
-    response.cookies.delete(ACCESS_TOKEN_COOKIE_NAME);
-    response.cookies.delete(REFRESH_TOKEN_COOKIE_NAME);
-    return response;
+    return NextResponse.next();
   }
 }
 

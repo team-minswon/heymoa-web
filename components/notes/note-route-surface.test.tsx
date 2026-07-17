@@ -8,7 +8,7 @@ vi.mock("@/hooks/use-media-query", () => ({
 }));
 
 describe("NoteRouteSurface", () => {
-  it("uses the compact historical width for the desktop side sheet", () => {
+  it("gives the desktop transcript enough room to remain readable", () => {
     render(
       <NoteRouteSurface view="side" isOpen onClose={vi.fn()}>
         <p>노트 내용</p>
@@ -16,6 +16,6 @@ describe("NoteRouteSurface", () => {
     );
 
     const sheet = screen.getByLabelText("노트");
-    expect(sheet.style.maxWidth).toBe("780px");
+    expect(sheet.style.maxWidth).toBe("860px");
   });
 });

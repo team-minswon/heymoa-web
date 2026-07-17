@@ -17,9 +17,7 @@ describe("transcriptReducer", () => {
       text: "누적 snapshot",
     });
 
-    expect(second.partialByUtteranceId["0HZX2K7M9Q4AC"]).toBe(
-      "누적 snapshot"
-    );
+    expect(second.partialByUtteranceId["0HZX2K7M9Q4AC"]).toBe("누적 snapshot");
   });
 
   it("removes a partial when its final arrives and marks completion", () => {
@@ -44,6 +42,52 @@ describe("transcriptReducer", () => {
 
     expect(final.partialByUtteranceId["0HZX2K7M9Q4AC"]).toBeUndefined();
     expect(final.finalSegments).toHaveLength(1);
+    expect(completed.partialByUtteranceId).toEqual({});
     expect(completed.completed).toBe(true);
+  });
+
+  it("drops unfinished and late partials once the session completes", () => {
+    const partial = transcriptReducer(initialTranscriptState, {
+      type: "partial",
+      utteranceId: "0HZX2K7M9Q4AC",
+      text: "완료 직전 문장",
+    });
+    const completed = transcriptReducer(partial, {
+      type: "completed",
+      sessionId: "0HZX2K7M9Q4AB",
+    });
+
+    expect(
+      transcriptReducer(completed, {
+        type: "partial",
+        utteranceId: "0HZX2K7M9Q4AC",
+        text: "늦게 도착한 문장",
+      })
+    ).toEqual(completed);
+  });
+
+  it("clears an unfinished partial when a recording fails", () => {
+    const partial = transcriptReducer(initialTranscriptState, {
+      type: "partial",
+      utteranceId: "0HZX2K7M9Q4AC",
+      text: "저장되지 않은 문장",
+    });
+
+    expect(
+      transcriptReducer(partial, { type: "clear-partials" })
+        .partialByUtteranceId
+    ).toEqual({});
+  });
+
+  it("resets all live state before a new session", () => {
+    const previous = transcriptReducer(initialTranscriptState, {
+      type: "partial",
+      utteranceId: "0HZX2K7M9Q4AC",
+      text: "이전 세션",
+    });
+
+    expect(transcriptReducer(previous, { type: "reset" })).toEqual(
+      initialTranscriptState
+    );
   });
 });

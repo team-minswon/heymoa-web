@@ -1,6 +1,6 @@
 import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { CallbackProcessor } from "@/app/auth/callback/page";
+import { CallbackProcessor } from "@/components/auth/auth-callback-client";
 
 const replace = vi.fn();
 vi.mock("next/navigation", () => ({

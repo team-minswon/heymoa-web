@@ -1,116 +1,85 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { PageSection, Panel } from "@/components/heymoa/primitives";
+import {
+  LegalDocument,
+  type LegalSection,
+} from "@/app/(static)/legal-document";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "개인정보 처리방침",
-  description:
-    "진짜그림의 개인정보 수집 항목, 이용 목적, 보관 기간, 이미지 처리, 이용자 권리에 관한 안내입니다.",
-  alternates: {
-    canonical: "/privacy",
-  },
+  description: `${siteConfig.name}의 계정, 회의 음성, 전사 데이터와 서비스 이용 기록 처리에 관한 안내입니다.`,
+  alternates: { canonical: "/privacy" },
 };
 
 const sections = [
   {
-    title: "1. 수집하는 정보",
+    title: "1. 처리하는 정보",
     body: [
-      "진짜그림은 서비스 제공을 위해 이메일, 프로필 이름, 소셜 로그인 식별자, 접속 기록, 기기 및 브라우저 정보, 서비스 이용 기록을 처리할 수 있습니다.",
-      "이미지 검사를 위해 이용자가 업로드한 이미지 파일, 파일명, 파일 메타데이터, 검사 결과, 검토 상태, API 요청 기록을 처리할 수 있습니다.",
-      "문의 접수 시 이메일 주소와 문의 내용을 처리할 수 있습니다.",
+      "서비스 가입과 이용을 위해 이메일, 프로필 이름, 소셜 로그인 식별자, 워크스페이스 및 프로젝트 정보, 접속 기록과 기기·브라우저 정보를 처리할 수 있습니다.",
+      "회의 기록 기능을 사용하는 동안 마이크에서 입력된 음성 데이터와 그 음성으로 생성된 실시간 전사, 확정 문장, 노트 제목 및 회의 메타데이터를 처리합니다.",
+      "문의 접수 시 이메일 주소와 문의 내용 등 답변에 필요한 정보를 처리할 수 있습니다.",
     ],
   },
   {
-    title: "2. 이용 목적",
+    title: "2. 처리 목적",
     body: [
-      "회원 식별, 로그인 유지, 부정 이용 방지, 이미지 검사 제공, 검사 결과 저장 및 조회, 운영 대시보드 제공을 위해 개인정보를 이용합니다.",
-      "서비스 안정성 확보, 오류 분석, 보안 사고 대응, 기능 개선, 고객 문의 처리를 위해 이용 기록을 사용할 수 있습니다.",
+      "회원 식별과 로그인 유지, 워크스페이스 운영, 실시간 회의 전사, 노트 저장과 조회, 서비스 보안 및 부정 이용 방지를 위해 정보를 사용합니다.",
+      "접속 기록과 오류 정보는 장애 분석, 품질 개선, 보안 사고 대응 및 고객 문의 처리를 위해 사용할 수 있습니다.",
     ],
   },
   {
-    title: "3. 이미지 처리",
+    title: "3. 음성 및 전사 데이터",
     body: [
-      "업로드된 이미지는 AI 생성 의심 검사, 메타데이터 분석, 국소 영역 탐지, 결과 제공을 위해 처리됩니다.",
-      "MVP 또는 무료 검사에서 업로드된 원본 이미지는 서비스 정책에 따라 제한된 기간 동안 보관된 뒤 삭제될 수 있습니다.",
-      "법령 준수, 보안 사고 조사, 분쟁 대응이 필요한 경우 필요한 범위에서 보관 기간이 연장될 수 있습니다.",
+      "마이크는 이용자가 기록 시작을 선택하고 브라우저 권한을 허용한 경우에만 사용됩니다. 실시간 음성 데이터는 전사를 위해 HeyMoa 서버와 계약된 음성 인식 처리 사업자에게 전송될 수 있습니다.",
+      "현재 실시간 음성은 별도 녹음 파일로 저장하지 않는 것을 원칙으로 하며, 확정된 전사 문장은 회의 노트 제공을 위해 저장됩니다.",
+      "자동 전사에는 오류가 포함될 수 있으므로 중요한 결정이나 고유명사는 이용자가 직접 확인해야 합니다.",
     ],
   },
   {
     title: "4. 보관 및 파기",
     body: [
-      "개인정보는 수집 및 이용 목적 달성 후 지체 없이 파기하는 것을 원칙으로 합니다.",
-      "계정, 세션, API 이용 기록, 결제 또는 계약 관련 기록은 법령 또는 운영상 필요한 기간 동안 보관될 수 있습니다.",
-      "전자 파일은 복구가 어렵도록 삭제하고, 출력물은 분쇄 또는 이에 준하는 방법으로 파기합니다.",
+      "개인정보와 회의 데이터는 서비스 제공에 필요한 기간 동안 보관하며, 이용 목적이 달성되거나 계정·노트 삭제 요청이 처리되면 관련 법령상 보존 의무가 없는 범위에서 파기합니다.",
+      "보안, 분쟁 대응 또는 법령 준수를 위해 필요한 기록은 정해진 기간 동안 분리 보관할 수 있습니다.",
+      "전자 파일은 복구가 어렵도록 삭제하고, 백업 데이터는 운영 주기에 따라 순차적으로 제거합니다.",
     ],
   },
   {
-    title: "5. 제3자 제공 및 처리 위탁",
+    title: "5. 처리 위탁 및 외부 서비스",
     body: [
-      "진짜그림은 법령상 근거가 있거나 이용자의 동의가 있는 경우를 제외하고 개인정보를 외부에 판매하지 않습니다.",
-      "인프라, 인증, 분석, 알림, 고객 지원 등 서비스 운영에 필요한 범위에서 외부 서비스에 처리를 위탁할 수 있습니다.",
-      "외부 AI 검사 API를 사용하는 기능이 제공되는 경우, 검사에 필요한 이미지 또는 파생 데이터가 해당 제공자에게 전송될 수 있습니다.",
+      "서비스 운영을 위해 클라우드 인프라, 소셜 로그인, 음성 인식, 분석 및 오류 추적 사업자에게 필요한 범위에서 처리를 위탁할 수 있습니다.",
+      "실시간 음성 인식에는 ElevenLabs 등 외부 STT 서비스가 사용될 수 있으며, 해당 제공자에는 전사 처리에 필요한 음성 데이터만 전송합니다.",
+      "국외 처리가 필요한 경우 관련 법령에 따른 고지, 동의 또는 보호 조치를 이행합니다.",
     ],
   },
   {
     title: "6. 이용자의 권리",
     body: [
-      "이용자는 개인정보 열람, 정정, 삭제, 처리 정지, 동의 철회를 요청할 수 있습니다.",
-      "권리 행사는 본인 확인 후 처리되며, 법령상 보관 의무가 있는 정보는 요청 즉시 삭제되지 않을 수 있습니다.",
+      "이용자는 본인의 개인정보와 회의 데이터에 대해 열람, 정정, 삭제, 처리 정지 및 동의 철회를 요청할 수 있습니다.",
+      "권리 행사는 본인 확인 후 처리되며, 법령상 보관 의무가 있는 정보는 해당 기간이 끝난 뒤 삭제될 수 있습니다.",
     ],
   },
   {
-    title: "7. 문의 및 책임자",
+    title: "7. 보호 조치 및 문의",
     body: [
-      `개인정보 보호 관련 문의는 ${siteConfig.contactEmail}로 연락할 수 있습니다.`,
-      "진짜그림은 문의 접수 후 합리적인 기간 내에 확인하고 필요한 조치를 안내합니다.",
+      "HeyMoa는 접근 권한 제한, 전송 구간 보호, 인증 정보 관리, 로그 점검 등 개인정보와 회의 데이터 보호에 필요한 조치를 적용합니다.",
+      `개인정보 보호와 데이터 처리에 관한 문의는 ${siteConfig.contactEmail}로 접수할 수 있습니다.`,
     ],
   },
-];
+] satisfies readonly LegalSection[];
 
 export default function PrivacyPage() {
   return (
-    <PageSection>
-      <div className="max-w-3xl">
-        <p className="text-sm font-semibold text-[var(--clay-brand-teal)]">
-          {siteConfig.name}
-        </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.01em]">
-          개인정보 처리방침
-        </h1>
-        <p className="mt-4 text-sm leading-6 text-[var(--clay-muted)]">
-          시행일: 2026년 6월 18일
-        </p>
-      </div>
-
-      <Panel className="mt-8 p-6 sm:p-8">
-        <div className="space-y-9">
-          {sections.map((section) => (
-            <section key={section.title}>
-              <h2 className="text-xl font-semibold">{section.title}</h2>
-              <div className="mt-4 space-y-3 text-sm leading-7 text-[var(--clay-body)]">
-                {section.body.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      </Panel>
-
-      <div className="mt-6 text-sm text-[var(--clay-muted)]">
-        서비스 이용 조건은{" "}
-        <Link
-          href="/terms"
-          className="font-semibold text-[var(--clay-brand-teal)] underline-offset-4 hover:underline"
-        >
-          이용약관
-        </Link>
-        을 확인하세요.
-      </div>
-    </PageSection>
+    <LegalDocument
+      label="Privacy"
+      title="개인정보 처리방침"
+      description="회의를 기록하는 순간부터 저장된 전사를 다시 확인할 때까지, HeyMoa가 어떤 정보를 왜 처리하는지 안내합니다."
+      effectiveDate="2026년 7월 17일"
+      sections={sections}
+      relatedHref="/terms"
+      relatedLabel="이용약관 보기"
+    />
   );
 }

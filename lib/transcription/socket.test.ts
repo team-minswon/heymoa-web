@@ -75,7 +75,9 @@ function messageFrame(subscription: string, body: string) {
     `content-length:${new TextEncoder().encode(body).byteLength}`,
     "",
     body,
-  ].join("\n").concat("\0");
+  ]
+    .join("\n")
+    .concat("\0");
 }
 
 async function establish(socket: TranscriptionSocket) {
@@ -84,19 +86,22 @@ async function establish(socket: TranscriptionSocket) {
   const transport = FakeWebSocket.instances[0];
   transport.open();
   await vi.waitFor(() =>
-    expect(transport.sent.some((frame) => frameText(frame).startsWith("CONNECT"))).toBe(true)
+    expect(
+      transport.sent.some((frame) => frameText(frame).startsWith("CONNECT"))
+    ).toBe(true)
   );
   transport.message(
     "CONNECTED\nversion:1.2\nheart-beat:0,0\nsession:test-stomp-session\n\n\0"
   );
   await vi.waitFor(() =>
-    expect(transport.sent.some((frame) => frameText(frame).startsWith("SUBSCRIBE"))).toBe(true)
+    expect(
+      transport.sent.some((frame) => frameText(frame).startsWith("SUBSCRIBE"))
+    ).toBe(true)
   );
-  const subscribe = transport.sent.find((frame) => frameText(frame).startsWith("SUBSCRIBE"));
+  const subscribe = transport.sent.find((frame) =>
+    frameText(frame).startsWith("SUBSCRIBE")
+  );
   const subscription = header(subscribe, "id")!;
-  transport.message(
-    `RECEIPT\nreceipt-id:${header(subscribe, "receipt")}\n\n\0`
-  );
   await vi.waitFor(() =>
     expect(
       transport.sent.some(
@@ -133,10 +138,15 @@ describe("TranscriptionSocket", () => {
   beforeEach(() => {
     FakeWebSocket.instances = [];
     vi.stubGlobal("WebSocket", FakeWebSocket);
-    vi.stubGlobal("crypto", { randomUUID: () => "550e8400-e29b-41d4-a716-446655440000" });
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "550e8400-e29b-41d4-a716-446655440000",
+    });
   });
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
 
   it("subscribes before starting and sends valid PCM as a binary STOMP body", async () => {
     const socket = createSocket();
@@ -149,6 +159,16 @@ describe("TranscriptionSocket", () => {
     expect(socket.sendAudio(new ArrayBuffer(1))).toBe(false);
     expect(socket.sendAudio(new ArrayBuffer(1_048_578))).toBe(false);
     expect(socket.sendAudio(new ArrayBuffer(2))).toBe(true);
+    const subscribeIndex = connection.transport.sent.findIndex((frame) =>
+      frameText(frame).startsWith("SUBSCRIBE")
+    );
+    const connectIndex = connection.transport.sent.findIndex(
+      (frame) =>
+        frameText(frame).startsWith("SEND") &&
+        header(frame, "destination") ===
+          `/app/transcription-sessions/${sessionId}/connect`
+    );
+    expect(subscribeIndex).toBeLessThan(connectIndex);
     expect(
       connection.transport.sent.some(
         (frame) =>
@@ -187,6 +207,17 @@ describe("TranscriptionSocket", () => {
     connection.transport.bufferedAmount = 96_001;
 
     expect(socket.sendAudio(new ArrayBuffer(4_800))).toBe(false);
+  });
+
+  it("ignores the MSW WebSocket shim's non-draining send buffer", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_MOCKING", "enabled");
+    const socket = createSocket();
+    const connection = await establish(socket);
+    connection.event({ type: "connected", sessionId });
+    await connection.connected;
+    connection.transport.bufferedAmount = 96_001;
+
+    expect(socket.sendAudio(new ArrayBuffer(4_800))).toBe(true);
   });
 
   it("reports a malformed server event and deactivates STOMP", async () => {

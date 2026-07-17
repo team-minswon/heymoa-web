@@ -84,6 +84,6 @@ describe("WorkspaceAppShell", () => {
     const sidebarContainer = document.querySelector(
       '[data-slot="sidebar-container"]'
     );
-    expect(sidebarContainer).toHaveClass("rounded-r-2xl", "overflow-hidden");
+    expect(sidebarContainer).toHaveClass("overflow-hidden", "border-r");
   });
 });

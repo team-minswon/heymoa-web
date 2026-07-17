@@ -15,96 +15,96 @@ servers:
     host: api.heymoa.com
     pathname: /ws/transcriptions
     protocol: wss
-    protocolVersion: '1.2'
+    protocolVersion: "1.2"
     description: |
       STOMP WebSocket endpoint. HTTP upgrade 요청에는 access_token cookie와
       서버 CORS allowlist에 포함된 Origin header가 모두 필요하다.
     security:
-      - $ref: '#/components/securitySchemes/accessCookie'
+      - $ref: "#/components/securitySchemes/accessCookie"
 channels:
   connectCommand:
     address: /app/transcription-sessions/{sessionId}/connect
     title: 전사 stream 연결
     parameters:
       sessionId:
-        $ref: '#/components/parameters/sessionId'
+        $ref: "#/components/parameters/sessionId"
     messages:
       ConnectCommand:
-        $ref: '#/components/messages/ConnectCommand'
+        $ref: "#/components/messages/ConnectCommand"
   audioCommand:
     address: /app/transcription-sessions/{sessionId}/audio
     title: PCM 오디오 전송
     parameters:
       sessionId:
-        $ref: '#/components/parameters/sessionId'
+        $ref: "#/components/parameters/sessionId"
     messages:
       PcmAudio:
-        $ref: '#/components/messages/PcmAudio'
+        $ref: "#/components/messages/PcmAudio"
   commitCommand:
     address: /app/transcription-sessions/{sessionId}/commit
     title: 현재 발화 수동 확정
     parameters:
       sessionId:
-        $ref: '#/components/parameters/sessionId'
+        $ref: "#/components/parameters/sessionId"
     messages:
       CommitCommand:
-        $ref: '#/components/messages/CommitCommand'
+        $ref: "#/components/messages/CommitCommand"
   stopCommand:
     address: /app/transcription-sessions/{sessionId}/stop
     title: 전사 세션 종료
     parameters:
       sessionId:
-        $ref: '#/components/parameters/sessionId'
+        $ref: "#/components/parameters/sessionId"
     messages:
       StopCommand:
-        $ref: '#/components/messages/StopCommand'
+        $ref: "#/components/messages/StopCommand"
   transcriptionEvents:
     address: /user/queue/transcription-sessions/{replyId}/events
     title: 현재 STOMP 연결 전용 전사 event
     description: 다른 탭의 동일 사용자 연결과 event가 섞이지 않도록 STOMP session별 queue를 구독한다.
     parameters:
       replyId:
-        $ref: '#/components/parameters/replyId'
+        $ref: "#/components/parameters/replyId"
     messages:
       ConnectedEvent:
-        $ref: '#/components/messages/ConnectedEvent'
+        $ref: "#/components/messages/ConnectedEvent"
       PartialEvent:
-        $ref: '#/components/messages/PartialEvent'
+        $ref: "#/components/messages/PartialEvent"
       FinalEvent:
-        $ref: '#/components/messages/FinalEvent'
+        $ref: "#/components/messages/FinalEvent"
       CompletedEvent:
-        $ref: '#/components/messages/CompletedEvent'
+        $ref: "#/components/messages/CompletedEvent"
       ErrorEvent:
-        $ref: '#/components/messages/ErrorEvent'
+        $ref: "#/components/messages/ErrorEvent"
 operations:
   connectTranscription:
     action: receive
-    summary: SUBSCRIBE 완료 후 빈 body의 SEND로 전사 stream을 연결한다.
+    summary: SUBSCRIBE 프레임 직후 빈 body의 SEND로 전사 stream을 연결한다.
     channel:
-      $ref: '#/channels/connectCommand'
+      $ref: "#/channels/connectCommand"
     messages:
-      - $ref: '#/channels/connectCommand/messages/ConnectCommand'
+      - $ref: "#/channels/connectCommand/messages/ConnectCommand"
   receiveTranscriptionAudio:
     action: receive
     summary: STOMP binaryBody로 PCM16 오디오를 전송한다.
     channel:
-      $ref: '#/channels/audioCommand'
+      $ref: "#/channels/audioCommand"
     messages:
-      - $ref: '#/channels/audioCommand/messages/PcmAudio'
+      - $ref: "#/channels/audioCommand/messages/PcmAudio"
   commitTranscription:
     action: receive
     summary: 빈 body의 SEND로 현재 non-empty provider buffer를 확정한다.
     channel:
-      $ref: '#/channels/commitCommand'
+      $ref: "#/channels/commitCommand"
     messages:
-      - $ref: '#/channels/commitCommand/messages/CommitCommand'
+      - $ref: "#/channels/commitCommand/messages/CommitCommand"
   stopTranscription:
     action: receive
     summary: 빈 body의 SEND로 남은 final을 drain하고 세션을 완료한다.
     channel:
-      $ref: '#/channels/stopCommand'
+      $ref: "#/channels/stopCommand"
     messages:
-      - $ref: '#/channels/stopCommand/messages/StopCommand'
+      - $ref: "#/channels/stopCommand/messages/StopCommand"
   sendTranscriptionEvent:
     action: send
     summary: 현재 STOMP 연결의 전사 상태와 결과를 보낸다.
@@ -114,13 +114,13 @@ operations:
       성공 후에만 sequence 오름차순으로 전달된다. completed 또는 error는 terminal event이며
       수신한 client는 STOMP 연결을 deactivate한다.
     channel:
-      $ref: '#/channels/transcriptionEvents'
+      $ref: "#/channels/transcriptionEvents"
     messages:
-      - $ref: '#/channels/transcriptionEvents/messages/ConnectedEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/PartialEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/FinalEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/CompletedEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/ErrorEvent'
+      - $ref: "#/channels/transcriptionEvents/messages/ConnectedEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/PartialEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/FinalEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/CompletedEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/ErrorEvent"
 components:
   securitySchemes:
     accessCookie:
@@ -175,7 +175,7 @@ components:
             type: string
             enum: [connected]
           sessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
       examples:
         - name: connected
           payload:
@@ -194,7 +194,7 @@ components:
             type: string
             enum: [partial]
           utteranceId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           text:
             type: string
             minLength: 1
@@ -212,15 +212,16 @@ components:
       payload:
         type: object
         additionalProperties: false
-        required: [type, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
+        required:
+          [type, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
         properties:
           type:
             type: string
             enum: [final]
           segmentId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           utteranceId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           sequence:
             type: integer
             format: int64
@@ -262,7 +263,7 @@ components:
             type: string
             enum: [completed]
           sessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
       examples:
         - name: completed
           payload:
@@ -302,7 +303,7 @@ components:
   schemas:
     Tsid:
       type: string
-      pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
+      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
       minLength: 13
       maxLength: 13
       example: 0HZX2K7M9Q4AB

@@ -48,10 +48,10 @@ export function NoteRouteSurface({
           aria-label="노트"
           data-surface="sheet"
           showCloseButton={false}
-          className="inset-y-3 right-3 h-[calc(100dvh-1.5rem)] gap-0 overflow-hidden rounded-2xl border border-[var(--el-hairline)] bg-white p-0 shadow-[0_12px_36px_rgba(0,0,0,0.10)]"
+          className="inset-y-2 right-2 h-[calc(100dvh-1rem)] gap-0 overflow-hidden rounded-[22px] border border-black/5 bg-white p-0 shadow-[-12px_0_48px_rgba(12,10,9,0.12)]"
           style={{
-            width: "min(780px, calc(100vw - 16rem))",
-            maxWidth: "780px",
+            width: "min(860px, calc(100vw - 15rem))",
+            maxWidth: "860px",
           }}
         >
           <SheetHeader className="sr-only">

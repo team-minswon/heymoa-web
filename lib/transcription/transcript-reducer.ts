@@ -15,11 +15,22 @@ export const initialTranscriptState: TranscriptState = {
   completed: false,
 };
 
+export type TranscriptAction =
+  | ServerEvent
+  | { type: "reset" }
+  | { type: "clear-partials" };
+
 export function transcriptReducer(
   state: TranscriptState,
-  event: ServerEvent
+  event: TranscriptAction
 ): TranscriptState {
+  if (event.type === "reset") return initialTranscriptState;
+  if (event.type === "clear-partials") {
+    return { ...state, partialByUtteranceId: {} };
+  }
+
   if (event.type === "partial") {
+    if (state.completed) return state;
     return {
       ...state,
       partialByUtteranceId: {
@@ -41,7 +52,7 @@ export function transcriptReducer(
   }
 
   if (event.type === "completed") {
-    return { ...state, completed: true };
+    return { ...state, partialByUtteranceId: {}, completed: true };
   }
 
   return state;

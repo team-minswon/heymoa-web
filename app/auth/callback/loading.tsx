@@ -2,11 +2,15 @@ import { LoaderCircle } from "lucide-react";
 
 export default function AuthCallbackLoading() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--clay-canvas)] px-4 py-12 text-[var(--clay-primary)]">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--el-canvas)] px-4 py-12 text-[var(--el-ink)]">
       <div className="text-center">
-        <LoaderCircle className="size-12 animate-spin mx-auto text-[var(--clay-primary)] mb-4" />
-        <h1 className="text-2xl font-bold text-[var(--clay-primary)]">로그인 중입니다</h1>
-        <p className="mt-2 text-[var(--clay-body)]">잠시만 기다려 주세요...</p>
+        <LoaderCircle className="mx-auto mb-5 size-8 animate-spin text-[var(--el-ink)]" />
+        <h1 className="font-serif text-3xl font-light tracking-[-0.025em]">
+          로그인 중입니다
+        </h1>
+        <p className="mt-2 text-sm text-[var(--el-muted)]">
+          워크스페이스를 준비하고 있습니다.
+        </p>
       </div>
     </div>
   );

@@ -1,6 +1,4 @@
-import { NoteView } from "@/components/notes/note-view";
-import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
-import { WorkspacePage } from "@/components/workspace/workspace-page";
+import { NoteClientBoundary } from "@/components/workspace/workspace-client-boundary";
 
 export default async function NoteRoute({
   params,
@@ -13,24 +11,15 @@ export default async function NoteRoute({
     params,
     searchParams,
   ]);
-  const view = Array.isArray(query.view) ? query.view[0] : query.view;
-  const isFullScreen = view !== "side";
 
   return (
-    <WorkspaceAppShell
+    <NoteClientBoundary
       workspaceId={workspaceId}
-      activeNoteId={noteId}
-      hideSidebar={isFullScreen}
-    >
-      <WorkspacePage workspaceId={workspaceId} />
-      <NoteView
-        workspaceId={workspaceId}
-        noteId={noteId}
-        initialQuery={{
-          view: Array.isArray(query.view) ? query.view[0] : query.view,
-          tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
-        }}
-      />
-    </WorkspaceAppShell>
+      noteId={noteId}
+      initialQuery={{
+        view: Array.isArray(query.view) ? query.view[0] : query.view,
+        tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
+      }}
+    />
   );
 }

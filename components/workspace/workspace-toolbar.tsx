@@ -76,28 +76,31 @@ export function WorkspaceToolbar({
     if (noteId) openNote(noteId);
   };
 
+  const recordingNoteId = recording.activeNoteId ?? recording.session?.noteId;
   const isRecordingOtherNote =
-    isActive &&
-    recording.session &&
-    recording.session.noteId !== activeNoteId;
+    isActive && recordingNoteId && recordingNoteId !== activeNoteId;
 
   return (
     <>
-      <div className="sticky top-0 z-20 border-b border-[var(--el-hairline)] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="sticky top-0 z-20 border-b border-[var(--el-hairline)] bg-[color-mix(in_srgb,var(--el-canvas)_88%,transparent)] backdrop-blur-xl">
+        <div className="flex min-h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-[var(--el-muted)]">
-              Workspace
-            </p>
-            <h1 className="truncate text-base font-semibold">{currentLabel}</h1>
+          <div className="flex min-w-0 flex-1 items-baseline gap-2">
+            <span className="font-serif text-lg font-light tracking-[-0.03em] text-[var(--el-ink)]">
+              heymoa
+            </span>
+            <span className="text-[var(--el-hairline-strong)]">/</span>
+            <h1 className="truncate text-xs font-medium text-[var(--el-muted)]">
+              {currentLabel}
+            </h1>
           </div>
 
           {!isActive && activeNoteId ? (
             <div className="flex items-center gap-2">
               <Button
                 type="button"
-                className="rounded-full"
+                size="sm"
+                className="rounded-full px-3"
                 onClick={() => void handleCreateMeeting()}
                 loading={createNote.isPending}
                 disabled={!targetProjectId}
@@ -107,7 +110,7 @@ export function WorkspaceToolbar({
               <Button
                 type="button"
                 variant="outline"
-                size="icon"
+                size="icon-sm"
                 className="rounded-full"
                 disabled={!targetProjectId}
                 aria-label="새 노트"
@@ -137,7 +140,7 @@ export function WorkspaceToolbar({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => openNote(recording.session!.noteId)}
+              onClick={() => openNote(recordingNoteId!)}
               className="h-7 rounded-full px-2.5 text-[13px] font-medium text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
             >
               <ExternalLink className="size-3.5" /> 현재 녹음

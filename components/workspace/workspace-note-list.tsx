@@ -69,7 +69,7 @@ export function WorkspaceNoteList({
 
   if (isPending) {
     return (
-      <div aria-label="노트 불러오는 중" className="space-y-3 py-6">
+      <div aria-label="노트 불러오는 중" className="space-y-3 py-4">
         {Array.from({ length: 5 }).map((_, index) => (
           <Skeleton key={index} className="h-20 rounded-2xl" />
         ))}
@@ -97,18 +97,19 @@ export function WorkspaceNoteList({
 
   if (!notes.length) {
     return (
-      <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--el-hairline)] bg-white px-6 text-center shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-        <span className="flex size-11 items-center justify-center rounded-full bg-[var(--el-canvas-soft)]">
+      <div className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--el-hairline-strong)] bg-white/75 px-6 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+        <span className="flex size-12 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
           <FileText className="size-5 text-[var(--el-muted)]" />
         </span>
-        <h2 className="mt-4 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+        <h2 className="mt-5 font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
           아직 회의 기록이 없습니다
         </h2>
         <p className="mt-1 max-w-sm text-sm text-[var(--el-muted)]">
           첫 회의를 시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
         </p>
         <Button
-          className="mt-5 rounded-full"
+          size="xl"
+          className="mt-6 rounded-full px-5"
           disabled={isCreateMeetingDisabled}
           onClick={onCreateMeeting}
         >
@@ -119,13 +120,13 @@ export function WorkspaceNoteList({
   }
 
   return (
-    <div data-testid="workspace-note-list" className="space-y-7">
+    <div data-testid="workspace-note-list" className="space-y-10">
       {groups.map((group) => (
         <section key={group.key} aria-labelledby={`date-${group.key}`}>
-          <div className="flex items-center gap-4">
+          <div className="mb-3 flex items-center gap-4 px-1">
             <h2
               id={`date-${group.key}`}
-              className="shrink-0 text-xs font-medium tracking-[-0.01em] text-[var(--el-muted)]"
+              className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--el-muted)]"
             >
               {group.label}
             </h2>
@@ -133,7 +134,7 @@ export function WorkspaceNoteList({
               <Separator />
             </div>
           </div>
-          <div className="mt-1">
+          <div className="space-y-2">
             {group.notes.map((note) => (
               <NoteListRow
                 key={note.noteId}
