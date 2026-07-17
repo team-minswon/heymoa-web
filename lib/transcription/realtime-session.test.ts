@@ -65,6 +65,8 @@ function setup() {
     order,
     onFailure,
     emitChunk: (chunk: ArrayBuffer) => emitChunk(chunk),
+    emitEvent: (event: Parameters<typeof socketOptions.onEvent>[0]) =>
+      socketOptions.onEvent(event),
     closeTransport: (code: number, reason = "") =>
       socketOptions.onClose(code, reason),
   };
@@ -96,6 +98,22 @@ describe("BrowserRealtimeSession", () => {
       "socket-stop",
       "socket-close",
     ]);
+  });
+
+  it("does not turn a completed terminal close into a failure", async () => {
+    const harness = setup();
+    await harness.controller.connect("0HZX2K7M9Q4AG");
+    harness.socket.stop.mockImplementationOnce(() => {
+      harness.emitEvent({
+        type: "completed",
+        sessionId: "0HZX2K7M9Q4AG",
+      });
+      harness.closeTransport(1000, "completed");
+    });
+
+    await harness.controller.stop();
+
+    expect(harness.onFailure).not.toHaveBeenCalled();
   });
 
   it("deduplicates concurrent stop requests", async () => {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Geist, Geist_Mono, EB_Garamond } from "next/font/google";
+import { EB_Garamond, Geist_Mono, Inter } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
@@ -16,8 +16,8 @@ import { siteConfig } from "@/lib/site";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -99,7 +99,7 @@ export default async function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} ${ebGaramond.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} ${ebGaramond.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/* Google tag (gtag.js) */}

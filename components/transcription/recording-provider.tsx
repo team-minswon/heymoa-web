@@ -56,19 +56,21 @@ export type RecordingContextValue = {
   session: LocalRecordingSession | null;
   activeNoteId: string | null;
   phase: RecordingPhase;
-  transcript: TranscriptState;
   elapsedMs: number;
+  error: string | null;
+  start: (noteId: string) => Promise<void>;
+  stop: () => Promise<void>;
+  disconnect: () => Promise<void>;
+};
+
+export type RecordingMeterValue = {
   level: number;
   levelHistory: number[];
-  error: string | null;
-  isReconciling: boolean;
-  lastSyncedAt: number | null;
-  start: (noteId: string) => Promise<void>;
-  commit: () => void;
-  stop: () => Promise<void>;
 };
 
 const RecordingContext = createContext<RecordingContextValue | null>(null);
+const RecordingTranscriptContext = createContext<TranscriptState | null>(null);
+const RecordingMeterContext = createContext<RecordingMeterValue | null>(null);
 const ACTIVE_PHASES = new Set<RecordingPhase>([
   "requesting-permission",
   "connecting",
@@ -78,6 +80,15 @@ const ACTIVE_PHASES = new Set<RecordingPhase>([
 
 function getStartErrorMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : "";
+  const name = cause instanceof Error ? cause.name : "";
+
+  if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+    return "마이크 권한이 필요합니다. 브라우저 설정에서 마이크 사용을 허용해 주세요.";
+  }
+
+  if (name === "NotFoundError") {
+    return "사용할 수 있는 마이크를 찾지 못했습니다.";
+  }
 
   if (
     message === "WEBSOCKET_CLOSED" ||
@@ -87,7 +98,36 @@ function getStartErrorMessage(cause: unknown) {
     return "실시간 전사 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요.";
   }
 
-  return message || "녹음을 시작하지 못했습니다.";
+  if (message === "SESSION_CREATE_FAILED") {
+    return "전사 세션을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+
+  return "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+}
+
+type ServerErrorCode = Extract<ServerEvent, { type: "error" }>["code"];
+
+function getServerErrorMessage(code: ServerErrorCode) {
+  if (code === "INVALID_CLIENT_MESSAGE" || code === "INVALID_AUDIO_FRAME") {
+    return "오디오를 처리하지 못했습니다. 녹음을 다시 시작해 주세요.";
+  }
+  if (code === "STT_CONNECTION_FAILED") {
+    return "음성 인식 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  if (code === "STT_TRANSCRIPTION_FAILED") {
+    return "음성을 기록하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  return "실시간 전사를 계속할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+}
+
+function getRuntimeFailureMessage(message: string) {
+  if (message.includes("네트워크가 느려")) {
+    return "네트워크가 불안정해 오디오 전송을 중단했습니다. 연결을 확인해 주세요.";
+  }
+  if (message.includes("완료 응답") || message.includes("종료 요청")) {
+    return "마지막 기록을 정리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  return "실시간 전사 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
 }
 
 function getInterruptedMessage(endReason: string | null) {
@@ -246,7 +286,9 @@ export function RecordingProvider({
         clearLevel();
       }
 
-      if (event.type === "error") failRecording(event.message);
+      if (event.type === "error") {
+        failRecording(getServerErrorMessage(event.code));
+      }
     },
     [clearLevel, failRecording, invalidateTranscriptQueries, setCurrentSession]
   );
@@ -321,7 +363,8 @@ export function RecordingProvider({
         url: getWebSocketUrl(),
         onEvent: handleEvent,
         onLevel: publishLevel,
-        onFailure: failRecording,
+        onFailure: (message) =>
+          failRecording(getRuntimeFailureMessage(message)),
       });
       controllerRef.current = controller;
 
@@ -360,10 +403,6 @@ export function RecordingProvider({
     ]
   );
 
-  const commit = useCallback(() => {
-    controllerRef.current?.commit();
-  }, []);
-
   const stop = useCallback(async () => {
     const controller = controllerRef.current;
     if (!controller) return;
@@ -379,6 +418,23 @@ export function RecordingProvider({
     const current = sessionRef.current;
     if (current) invalidateTranscriptQueries(current.noteId);
   }, [clearLevel, failRecording, invalidateTranscriptQueries]);
+
+  const disconnect = useCallback(async () => {
+    const controller = controllerRef.current;
+    const current = sessionRef.current;
+    controllerRef.current = null;
+
+    clearLevel();
+    setPhase("idle");
+    setCurrentSession(null);
+    setActiveNoteId(null);
+    setElapsedMs(0);
+    setError(null);
+    dispatchTranscript({ type: "reset" });
+
+    await controller?.close();
+    if (current) invalidateTranscriptQueries(current.noteId);
+  }, [clearLevel, invalidateTranscriptQueries, setCurrentSession]);
 
   useEffect(() => {
     if (phase !== "recording") return;
@@ -400,38 +456,26 @@ export function RecordingProvider({
       session,
       activeNoteId,
       phase,
-      transcript,
       elapsedMs,
-      level,
-      levelHistory,
       error,
-      isReconciling: shouldPoll && sessionQuery.isFetching,
-      lastSyncedAt: sessionQuery.dataUpdatedAt || null,
       start,
-      commit,
       stop,
+      disconnect,
     }),
-    [
-      session,
-      activeNoteId,
-      phase,
-      transcript,
-      elapsedMs,
-      level,
-      levelHistory,
-      error,
-      shouldPoll,
-      sessionQuery.isFetching,
-      sessionQuery.dataUpdatedAt,
-      start,
-      commit,
-      stop,
-    ]
+    [session, activeNoteId, phase, elapsedMs, error, start, stop, disconnect]
+  );
+  const meterValue = useMemo<RecordingMeterValue>(
+    () => ({ level, levelHistory }),
+    [level, levelHistory]
   );
 
   return (
     <RecordingContext.Provider value={value}>
-      {children}
+      <RecordingTranscriptContext.Provider value={transcript}>
+        <RecordingMeterContext.Provider value={meterValue}>
+          {children}
+        </RecordingMeterContext.Provider>
+      </RecordingTranscriptContext.Provider>
     </RecordingContext.Provider>
   );
 }
@@ -440,6 +484,24 @@ export function useRecording() {
   const value = useContext(RecordingContext);
   if (!value) {
     throw new Error("useRecording must be used inside RecordingProvider.");
+  }
+  return value;
+}
+
+export function useRecordingMeter() {
+  const value = useContext(RecordingMeterContext);
+  if (!value) {
+    throw new Error("useRecordingMeter must be used inside RecordingProvider.");
+  }
+  return value;
+}
+
+export function useRecordingTranscript() {
+  const value = useContext(RecordingTranscriptContext);
+  if (!value) {
+    throw new Error(
+      "useRecordingTranscript must be used inside RecordingProvider."
+    );
   }
   return value;
 }

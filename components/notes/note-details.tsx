@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { CalendarDays, Check, Clock3 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +14,13 @@ import {
   useGetNote,
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
+import { formatAppDate } from "@/lib/format/date";
 
 export function NoteDetails({ noteId }: { noteId: string }) {
   const queryClient = useQueryClient();
   const noteQuery = useGetNote(noteId);
   const updateNote = useUpdateNote();
-  const [feedback, setFeedback] = useState<"saved" | "error" | null>(null);
+  const [feedback, setFeedback] = useState<"saved" | null>(null);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
@@ -56,7 +57,9 @@ export function NoteDetails({ noteId }: { noteId: string }) {
           await refresh();
           setFeedback("saved");
         } catch {
-          setFeedback("error");
+          toast.error("저장하지 못했습니다. 입력한 내용은 유지됩니다.", {
+            id: `note-save-${noteId}`,
+          });
         }
       }}
     >
@@ -91,10 +94,10 @@ export function NoteDetails({ noteId }: { noteId: string }) {
             <CalendarDays className="size-3.5" /> 생성
           </dt>
           <dd className="mt-3 text-sm text-[var(--el-body-strong)]">
-            {new Intl.DateTimeFormat("ko-KR", {
+            {formatAppDate(note.createdAt, {
               dateStyle: "medium",
               timeStyle: "short",
-            }).format(new Date(note.createdAt))}
+            })}
           </dd>
         </div>
         <div className="rounded-2xl border border-[var(--el-hairline)] bg-white p-5">
@@ -102,21 +105,13 @@ export function NoteDetails({ noteId }: { noteId: string }) {
             <Clock3 className="size-3.5" /> 최근 수정
           </dt>
           <dd className="mt-3 text-sm text-[var(--el-body-strong)]">
-            {new Intl.DateTimeFormat("ko-KR", {
+            {formatAppDate(note.updatedAt, {
               dateStyle: "medium",
               timeStyle: "short",
-            }).format(new Date(note.updatedAt))}
+            })}
           </dd>
         </div>
       </dl>
-
-      {feedback === "error" ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            저장하지 못했습니다. 입력한 내용은 유지됩니다.
-          </AlertDescription>
-        </Alert>
-      ) : null}
 
       <div className="flex items-center gap-3 border-t border-[var(--el-hairline)] pt-6">
         <Button

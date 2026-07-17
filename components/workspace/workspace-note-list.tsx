@@ -1,13 +1,15 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { FileText, Mic, RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import { formatAppDate, getAppDateKey } from "@/lib/format/date";
 
 export type NoteDateGroup = {
   key: string;
@@ -27,19 +29,22 @@ export function groupNotesByDate(
   const grouped = new Map<string, NoteListResponseDataNotesItem[]>();
 
   sorted.forEach((note) => {
-    const date = new Date(note.updatedAt);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const key = getAppDateKey(note.updatedAt);
     grouped.set(key, [...(grouped.get(key) ?? []), note]);
   });
 
   return [...grouped.entries()].map(([key, groupedNotes]) => ({
     key,
-    label: new Intl.DateTimeFormat(locale, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-    }).format(new Date(groupedNotes[0].updatedAt)),
+    label: formatAppDate(
+      groupedNotes[0].updatedAt,
+      {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+      },
+      locale
+    ),
     notes: groupedNotes,
   }));
 }
@@ -66,32 +71,46 @@ export function WorkspaceNoteList({
   isCreateMeetingDisabled?: boolean;
 }) {
   const groups = groupNotesByDate(notes, "ko-KR");
+  const retryRef = useRef(onRetry);
+
+  useEffect(() => {
+    retryRef.current = onRetry;
+  }, [onRetry]);
+
+  useEffect(() => {
+    if (!isError) return;
+
+    toast.error("노트를 불러오지 못했습니다.", {
+      id: `workspace-notes-${workspaceId}`,
+      action: {
+        label: "다시 시도",
+        onClick: () => retryRef.current(),
+      },
+    });
+  }, [isError, workspaceId]);
 
   if (isPending) {
     return (
       <div aria-label="노트 불러오는 중" className="space-y-3 py-4">
         {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-20 rounded-2xl" />
+          <Skeleton key={index} className="h-[92px] rounded-2xl" />
         ))}
       </div>
     );
   }
 
-  if (isError) {
+  if (isError && !notes.length) {
     return (
-      <Alert variant="destructive" className="mt-8 rounded-2xl">
-        <AlertTitle>노트를 불러오지 못했습니다.</AlertTitle>
-        <AlertDescription className="mt-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            onClick={onRetry}
-          >
-            <RefreshCcw /> 다시 시도
-          </Button>
-        </AlertDescription>
-      </Alert>
+      <div className="flex min-h-40 items-center justify-center">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+          onClick={onRetry}
+        >
+          <RefreshCcw /> 다시 시도
+        </Button>
+      </div>
     );
   }
 

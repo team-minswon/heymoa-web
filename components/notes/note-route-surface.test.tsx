@@ -3,12 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { NoteRouteSurface } from "@/components/notes/note-route-surface";
 
-vi.mock("@/hooks/use-media-query", () => ({
-  useMediaQuery: () => true,
-}));
-
 describe("NoteRouteSurface", () => {
-  it("gives the desktop transcript enough room to remain readable", () => {
+  it("uses one hydration-safe sheet that adapts from mobile to desktop", () => {
     render(
       <NoteRouteSurface view="side" isOpen onClose={vi.fn()}>
         <p>노트 내용</p>
@@ -16,6 +12,20 @@ describe("NoteRouteSurface", () => {
     );
 
     const sheet = screen.getByLabelText("노트");
-    expect(sheet.style.maxWidth).toBe("860px");
+    expect(sheet).toHaveAttribute("data-surface", "sheet");
+    expect(sheet).toHaveClass("w-full", "sm:max-w-none", "md:max-w-[860px]");
+    expect(sheet).not.toHaveClass("w-3/4", "sm:max-w-sm");
+  });
+
+  it("renders a stable inline surface in full view", () => {
+    render(
+      <NoteRouteSurface view="full" isOpen onClose={vi.fn()}>
+        <p>노트 내용</p>
+      </NoteRouteSurface>
+    );
+
+    const surface = document.querySelector('[data-surface="full"]');
+    expect(surface).toBeInTheDocument();
+    expect(surface).toHaveTextContent("노트 내용");
   });
 });

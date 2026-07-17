@@ -26,13 +26,17 @@ export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
       {children && (
         <DialogTrigger
           render={
-            React.isValidElement(children) ? children : <button type="button">{children}</button>
+            React.isValidElement(children) ? (
+              children
+            ) : (
+              <button type="button">{children}</button>
+            )
           }
         />
       )}
       <DialogContent className="sm:max-w-md w-[95vw] rounded-2xl border-[var(--el-hairline)] bg-[var(--el-canvas)] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-0 overflow-hidden">
         <div className="flex flex-col items-center px-6 py-10 sm:px-12 sm:py-14 text-center">
-          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--el-surface)] border border-[var(--el-hairline)] shadow-sm">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-sm">
             <Image
               src="/apple-touch-icon.png"
               alt={siteConfig.name}
@@ -42,13 +46,14 @@ export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
               priority
             />
           </div>
-          
+
           <DialogHeader className="mb-8 w-full text-center">
             <DialogTitle className="font-serif text-2xl font-light tracking-[-0.02em] text-[var(--el-ink)] sm:text-3xl mx-auto">
               Welcome to HeyMoa
             </DialogTitle>
             <DialogDescription className="mt-2 text-[15px] font-normal text-[var(--el-body)] mx-auto">
-              회의를 기록하고 참여하며, 대화를 실제 업무로 연결하는 AI 에이전트를 시작해보세요.
+              회의를 기록하고 참여하며, 대화를 실제 업무로 연결하는 AI
+              에이전트를 시작해보세요.
             </DialogDescription>
           </DialogHeader>
 
@@ -60,7 +65,10 @@ export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
                 서비스 이용약관
               </a>
               과{" "}
-              <a href="/privacy" className="underline hover:text-[var(--el-ink)]">
+              <a
+                href="/privacy"
+                className="underline hover:text-[var(--el-ink)]"
+              >
                 개인정보 처리방침
               </a>
               에 동의하는 것으로 간주됩니다.

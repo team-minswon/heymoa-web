@@ -15,6 +15,7 @@ import {
   ChevronsUpDown,
   ChevronDown,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -97,14 +98,18 @@ export function WorkspaceSidebar({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, logout } = useAuth();
+  const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
   const createWorkspace = useCreateWorkspace();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
+  const isProjectMutationPending =
+    createProject.isPending || updateProject.isPending;
   const [projectDialog, setProjectDialog] = useState<ProjectDialogState>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ProjectResponseData | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectResponseData | null>(
+    null
+  );
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(true);
 
@@ -159,35 +164,59 @@ export function WorkspaceSidebar({
             render={
               <Button
                 variant="ghost"
+                disabled={isLoggingOut}
+                aria-label={isLoggingOut ? "로그아웃 중" : undefined}
                 className="h-auto w-full justify-start gap-0 rounded-none px-3 py-3 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
               />
             }
           >
             <div className="flex w-full items-center gap-2.5 min-w-0">
-              <Avatar className="size-7 shrink-0 rounded-full">
-                <AvatarImage src={user?.image ?? undefined} alt="" />
-                <AvatarFallback className="rounded-full bg-[var(--el-primary)] text-[var(--el-on-primary)] text-[11px] font-semibold">{initials}</AvatarFallback>
-              </Avatar>
+              {isLoggingOut ? (
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
+                  <Loader2 className="size-4 animate-spin text-[var(--el-muted)]" />
+                </span>
+              ) : (
+                <Avatar className="size-7 shrink-0 rounded-full">
+                  <AvatarImage src={user?.image ?? undefined} alt="" />
+                  <AvatarFallback className="rounded-full bg-[var(--el-primary)] text-[var(--el-on-primary)] text-[11px] font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="min-w-0 flex-1 text-left">
                 <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">
-                  {user?.name ?? "사용자"}
+                  {isLoggingOut ? "로그아웃 중" : (user?.name ?? "사용자")}
                 </p>
                 <p className="block truncate text-[11px] text-[var(--el-muted)] leading-tight">
-                  {user?.email ?? ""}
+                  {isLoggingOut ? "잠시만 기다려 주세요" : (user?.email ?? "")}
                 </p>
               </div>
               <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-60 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]">
-            <DropdownMenuItem onClick={() => onOpenSettings("account")} className="gap-2 rounded-lg py-2 text-sm">
+          <DropdownMenuContent
+            align="start"
+            className="w-60 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]"
+          >
+            <DropdownMenuItem
+              onClick={() => onOpenSettings("account")}
+              className="gap-2 rounded-lg py-2 text-sm"
+            >
               <Settings className="size-4 text-[var(--el-muted)]" />
               <span>내 계정 설정</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
-            <DropdownMenuItem onClick={() => void logout()} className="gap-2 text-destructive rounded-lg py-2 text-sm">
-              <LogOut className="size-4" />
-              <span>로그아웃</span>
+            <DropdownMenuItem
+              disabled={isLoggingOut}
+              onClick={() => void logout()}
+              className="gap-2 rounded-lg py-2 text-sm text-destructive"
+            >
+              {isLoggingOut ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <LogOut className="size-4" />
+              )}
+              <span>{isLoggingOut ? "로그아웃 중" : "로그아웃"}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -215,7 +244,10 @@ export function WorkspaceSidebar({
               <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]">
+          <DropdownMenuContent
+            align="start"
+            className="w-64 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]"
+          >
             {workspaces.map((item) => (
               <DropdownMenuItem
                 key={item.workspaceId}
@@ -229,11 +261,17 @@ export function WorkspaceSidebar({
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
-            <DropdownMenuItem onClick={() => setWorkspaceDialogOpen(true)} className="gap-2 rounded-lg py-2 text-sm">
+            <DropdownMenuItem
+              onClick={() => setWorkspaceDialogOpen(true)}
+              className="gap-2 rounded-lg py-2 text-sm"
+            >
               <Plus className="size-4 text-[var(--el-muted)]" />
               <span>새 워크스페이스</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onOpenSettings("workspace")} className="gap-2 rounded-lg py-2 text-sm">
+            <DropdownMenuItem
+              onClick={() => onOpenSettings("workspace")}
+              className="gap-2 rounded-lg py-2 text-sm"
+            >
               <Settings className="size-4 text-[var(--el-muted)]" />
               <span>워크스페이스 설정</span>
             </DropdownMenuItem>
@@ -310,7 +348,11 @@ export function WorkspaceSidebar({
                         >
                           <MoreHorizontal className="size-3.5" />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent side="right" align="start" className="rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]">
+                        <DropdownMenuContent
+                          side="right"
+                          align="start"
+                          className="rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]"
+                        >
                           <DropdownMenuItem
                             onClick={() =>
                               setProjectDialog({ mode: "rename", project })
@@ -432,11 +474,14 @@ export function WorkspaceSidebar({
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={isProjectMutationPending}
                   onClick={() => setProjectDialog(null)}
                 >
                   취소
                 </Button>
-                <Button type="submit">저장</Button>
+                <Button type="submit" loading={isProjectMutationPending}>
+                  저장
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -455,9 +500,12 @@ export function WorkspaceSidebar({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteProject.isPending}>
+              취소
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              loading={deleteProject.isPending}
               onClick={async () => {
                 if (!deleteTarget) return;
                 try {

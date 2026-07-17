@@ -1,10 +1,20 @@
 "use client";
 
-import { Database, Loader2, Mic, RotateCcw, Square } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { Mic, RotateCcw, Square } from "lucide-react";
 
-import { useRecording } from "@/components/transcription/recording-provider";
+import {
+  useRecording,
+  useRecordingMeter,
+} from "@/components/transcription/recording-provider";
+import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+
+const LAYOUT_TRANSITION = {
+  type: "spring" as const,
+  bounce: 0,
+  duration: 0.2,
+};
 
 function formatElapsed(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1000);
@@ -15,6 +25,7 @@ function formatElapsed(elapsedMs: number) {
 
 export function RecordingDock({ noteId }: { noteId: string }) {
   const recording = useRecording();
+  const meter = useRecordingMeter();
   const hasActiveSession = [
     "requesting-permission",
     "connecting",
@@ -23,116 +34,135 @@ export function RecordingDock({ noteId }: { noteId: string }) {
   ].includes(recording.phase);
   const isThisNote = recording.activeNoteId === noteId;
   const isOtherNote = hasActiveSession && !isThisNote;
+  const state = isThisNote ? recording.phase : "idle";
 
-  if (isThisNote && recording.phase === "recording") {
-    return (
-      <div className="grid min-h-[68px] grid-cols-[auto_1fr_auto] items-center gap-4 rounded-2xl border border-white/10 bg-[var(--el-ink)] px-3 py-2.5 text-white shadow-[0_18px_50px_rgba(12,10,9,0.24)] sm:px-4">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65">
-            <span className="size-2 animate-pulse rounded-full bg-red-400" />
-            REC
-          </span>
-          <span className="min-w-[54px] font-mono text-base font-medium tabular-nums">
-            {formatElapsed(recording.elapsedMs)}
-          </span>
-        </div>
-        <span
-          role="meter"
-          data-testid="note-recording-waveform"
-          aria-label="마이크 입력"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(recording.level * 100)}
-          className="flex h-8 min-w-12 items-center justify-center gap-[4px]"
-        >
-          {recording.levelHistory.slice(-9).map((sample, index) => (
-            <span
-              key={index}
-              className="h-6 w-[3px] origin-center rounded-full bg-white/75 transition-transform duration-75"
-              style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
-            />
-          ))}
-        </span>
-        <div className="flex items-center gap-3">
-          <span
-            className={cn(
-              "hidden items-center gap-1.5 text-[10px] text-white/45 md:flex",
-              recording.isReconciling && "text-white/75"
-            )}
-          >
-            {recording.isReconciling ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Database className="size-3" />
-            )}
-            {recording.isReconciling ? "저장 중" : "자동 저장"}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-lg"
-            aria-label="녹음 종료"
-            onClick={() => void recording.stop()}
-            className="size-11 rounded-xl bg-white text-[var(--el-ink)] hover:bg-white/90"
-          >
-            <Square className="size-3.5 fill-current" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isThisNote && recording.phase === "stopping") {
-    return (
-      <div className="flex min-h-[68px] items-center justify-center gap-3 rounded-2xl border border-[var(--el-hairline)] bg-white px-6 text-sm text-[var(--el-body)] shadow-[0_12px_36px_rgba(28,25,23,0.10)]">
-        <Loader2 className="size-4 animate-spin" />
-        마지막 문장을 저장하고 있습니다
-      </div>
-    );
-  }
-
-  if (
-    isThisNote &&
-    ["requesting-permission", "connecting"].includes(recording.phase)
-  ) {
-    return (
-      <div className="flex min-h-[68px] items-center justify-center gap-3 rounded-2xl border border-[var(--el-hairline)] bg-white px-6 text-sm text-[var(--el-body)] shadow-[0_12px_36px_rgba(28,25,23,0.10)]">
-        <Loader2 className="size-4 animate-spin" />
-        {recording.phase === "requesting-permission"
-          ? "마이크 권한을 확인하고 있습니다"
-          : "실시간 전사를 연결하고 있습니다"}
-      </div>
-    );
-  }
-
-  const retry = isThisNote && recording.phase === "failed";
   return (
-    <div className="flex min-h-[68px] items-center justify-between gap-4 rounded-2xl border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] py-2.5 pl-5 pr-2.5 shadow-[0_12px_36px_rgba(28,25,23,0.10)] backdrop-blur-xl">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-          {isOtherNote
-            ? "다른 회의를 기록하고 있습니다"
-            : retry
-              ? "연결을 다시 시도할 수 있습니다"
-              : "이 회의를 실시간으로 기록하세요"}
-        </p>
-        <p className="mt-0.5 hidden text-xs text-[var(--el-muted)] sm:block">
-          {isOtherNote
-            ? "진행 중인 기록을 먼저 종료해 주세요."
-            : "중간 조작 없이 말하는 내용이 자동으로 저장됩니다."}
-        </p>
-      </div>
-      <Button
-        type="button"
-        size="xl"
-        className="h-11 rounded-xl px-5"
-        aria-label={isOtherNote ? "다른 노트에서 녹음 중" : "기록 시작"}
-        disabled={isOtherNote}
-        onClick={() => void recording.start(noteId)}
+    <motion.div
+      layout
+      aria-label="녹음 제어"
+      className="flex min-h-10 items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 text-[var(--el-ink)] shadow-[0_8px_32px_rgba(28,25,23,0.12)] backdrop-blur-xl"
+      style={{ borderRadius: 9999 }}
+      transition={LAYOUT_TRANSITION}
+    >
+      <motion.div
+        layout
+        aria-hidden
+        className="flex items-center"
+        transition={LAYOUT_TRANSITION}
       >
-        {retry ? <RotateCcw /> : <Mic />}
-        {retry ? "다시 시작" : "기록 시작"}
-      </Button>
-    </div>
+        <span className="flex size-8 items-center justify-center rounded-full text-[var(--el-muted)]">
+          <Mic className="size-4" />
+        </span>
+        <span className="mx-1 h-5 w-px bg-[var(--el-hairline)]" />
+      </motion.div>
+
+      <AnimatePresence mode="popLayout" initial={false}>
+        {state === "recording" ? (
+          <motion.div
+            layout
+            key="recording"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: 1,
+              transition: { duration: 0.15, delay: 0.1 },
+            }}
+            exit={{ opacity: 0, transition: { duration: 0.08 } }}
+            className="flex w-max shrink-0 items-center gap-2 pl-2 pr-1"
+          >
+            <span className="min-w-12 font-mono text-[13px] font-semibold tabular-nums text-destructive">
+              {formatElapsed(recording.elapsedMs)}
+            </span>
+            <span
+              role="meter"
+              data-testid="note-recording-waveform"
+              aria-label="마이크 입력"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(meter.level * 100)}
+              className="mx-0.5 flex h-5 w-8 items-center justify-center gap-[3px]"
+            >
+              {meter.levelHistory.slice(-5).map((sample, index) => (
+                <span
+                  key={index}
+                  className="h-4 w-[3px] origin-center rounded-full bg-destructive transition-transform duration-75"
+                  style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
+                />
+              ))}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="size-7 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)]"
+              aria-label="녹음 종료"
+              onClick={() => void recording.stop()}
+            >
+              <Square className="size-3.5" />
+            </Button>
+          </motion.div>
+        ) : state === "requesting-permission" ||
+          state === "connecting" ||
+          state === "stopping" ? (
+          <motion.div
+            layout
+            key="pending"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: 1,
+              transition: { duration: 0.15, delay: 0.1 },
+            }}
+            exit={{ opacity: 0, transition: { duration: 0.08 } }}
+            className="flex h-8 shrink-0 items-center px-1"
+          >
+            <RecordingPendingSpinner />
+          </motion.div>
+        ) : state === "failed" ? (
+          <motion.div
+            layout
+            key="failed"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: 1,
+              transition: { duration: 0.15, delay: 0.1 },
+            }}
+            exit={{ opacity: 0, transition: { duration: 0.08 } }}
+            className="flex shrink-0 items-center px-1"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 rounded-full px-2.5 text-xs"
+              onClick={() => void recording.start(noteId)}
+            >
+              <RotateCcw className="size-3.5" />
+              다시 시도
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div
+            layout
+            key="idle"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: 1,
+              transition: { duration: 0.15, delay: 0.1 },
+            }}
+            exit={{ opacity: 0, transition: { duration: 0.08 } }}
+            className="flex shrink-0 items-center px-1"
+          >
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45"
+              aria-label={isOtherNote ? "다른 노트에서 녹음 중" : "기록 시작"}
+              disabled={isOtherNote}
+              onClick={() => void recording.start(noteId)}
+            >
+              <span className="size-2.5 rounded-full bg-white" aria-hidden />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

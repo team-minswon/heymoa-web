@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Home, LogIn } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -10,17 +10,28 @@ import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { getMe } from "@/lib/auth/api";
 import { normalizeReturnTo } from "@/lib/auth/paths";
 
-export function AuthCallbackClient() {
+export function AuthCallbackClient({
+  urlError,
+  returnTo,
+}: {
+  urlError?: string;
+  returnTo?: string;
+}) {
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-[var(--el-canvas)] p-4 text-[var(--el-ink)]">
-      <CallbackProcessor />
+      <CallbackProcessor urlError={urlError} returnTo={returnTo} />
     </main>
   );
 }
 
-export function CallbackProcessor() {
+export function CallbackProcessor({
+  urlError,
+  returnTo,
+}: {
+  urlError?: string;
+  returnTo?: string;
+} = {}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { setUser } = useAuth();
   const [errorDetails, setErrorDetails] = useState<{
     title: string;
@@ -31,7 +42,6 @@ export function CallbackProcessor() {
     let ignore = false;
 
     async function checkAuth() {
-      const urlError = searchParams.get("error");
       if (urlError) {
         if (!ignore) {
           setErrorDetails({
@@ -48,8 +58,7 @@ export function CallbackProcessor() {
         if (!ignore) {
           setUser(user);
 
-          const returnToRaw = searchParams.get("return_to");
-          const destination = normalizeReturnTo(returnToRaw);
+          const destination = normalizeReturnTo(returnTo);
           if (destination !== "/") {
             router.replace(destination);
             return;
@@ -91,7 +100,7 @@ export function CallbackProcessor() {
     return () => {
       ignore = true;
     };
-  }, [router, searchParams, setUser]);
+  }, [returnTo, router, setUser, urlError]);
 
   if (errorDetails) {
     return (

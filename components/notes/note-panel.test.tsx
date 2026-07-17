@@ -137,7 +137,7 @@ describe("NotePanel", () => {
     );
   });
 
-  it("shows nine microphone bars in the recording dock", async () => {
+  it("shows five microphone bars in the compact recording dock", async () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -152,7 +152,7 @@ describe("NotePanel", () => {
     await waitFor(() =>
       expect(
         screen.getByTestId("note-recording-waveform").children
-      ).toHaveLength(9)
+      ).toHaveLength(5)
     );
     expect(
       screen.queryByRole("button", { name: "구간 확정" })

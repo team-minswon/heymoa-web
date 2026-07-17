@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-eb-garamond);
   --font-heading: var(--font-serif);
@@ -60,11 +60,11 @@
   --el-surface-strong: #f0efed;
   --el-surface-dark: #0c0a09;
   --el-surface-dark-elevated: #1c1917;
-  
+
   --el-hairline: #e7e5e4;
   --el-hairline-soft: #f0efed;
   --el-hairline-strong: #d6d3d1;
-  
+
   --el-ink: #0c0a09;
   --el-body: #4e4e4e;
   --el-body-strong: #292524;
@@ -73,28 +73,17 @@
   --el-on-primary: #ffffff;
   --el-on-dark: #ffffff;
   --el-on-dark-soft: #a8a29e;
-  
+
   /* Atmospheric Gradient Stops */
   --el-gradient-mint: #a7e5d3;
   --el-gradient-peach: #f4c5a8;
   --el-gradient-lavender: #c8b8e0;
   --el-gradient-sky: #a8c8e8;
   --el-gradient-rose: #e8b8c4;
-  
+
   --el-success: #16a34a;
   --el-error: #dc2626;
 
-  /* Backward Compatibility Mappings for Clay */
-  --clay-canvas: var(--el-canvas);
-  --clay-primary: var(--el-primary);
-  --clay-surface-soft: var(--el-canvas-soft);
-  --clay-surface-card: var(--el-surface-card);
-  --clay-surface-strong: var(--el-surface-strong);
-  --clay-hairline: var(--el-hairline);
-  --clay-body: var(--el-body);
-  --clay-muted: var(--el-muted);
-  --clay-brand-teal: var(--el-primary);
-  
   /* UI Mapping variables */
   --background: var(--el-canvas);
   --foreground: var(--el-ink);
@@ -115,7 +104,7 @@
   --input: var(--el-hairline-strong);
   --ring: var(--el-ink);
   --radius: 1rem;
-  
+
   --sidebar: var(--el-canvas-soft);
   --sidebar-foreground: var(--el-ink);
   --sidebar-primary: var(--el-primary);

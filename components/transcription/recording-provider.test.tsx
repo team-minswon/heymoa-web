@@ -7,6 +7,7 @@ import {
   type RecordingApi,
   type RecordingRuntime,
   useRecording,
+  useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
 
 type SessionQueryMock = {
@@ -103,7 +104,13 @@ function setup({ enablePolling = false } = {}) {
   );
 
   return {
-    ...renderHook(() => useRecording(), { wrapper }),
+    ...renderHook(
+      () => ({
+        ...useRecording(),
+        transcript: useRecordingTranscript(),
+      }),
+      { wrapper }
+    ),
     api,
     runtime,
     controller,
@@ -176,15 +183,6 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.phase).toBe("recording");
   });
 
-  it("commits the current utterance through the cohesive session controller", async () => {
-    const harness = setup();
-    await act(() => harness.result.current.start(session.noteId));
-
-    act(() => harness.result.current.commit());
-
-    expect(harness.controller.commit).toHaveBeenCalledOnce();
-  });
-
   it("stops the session and invalidates persisted transcript", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId));
@@ -200,6 +198,27 @@ describe("RecordingProvider", () => {
     );
   });
 
+  it("disconnects microphone and socket immediately for logout", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+    act(() =>
+      harness.getCallbacks().onEvent({
+        type: "partial",
+        utteranceId: "0HZX2K7M9Q4AC",
+        text: "로그아웃 전 전사",
+      })
+    );
+
+    await act(() => harness.result.current.disconnect());
+
+    expect(harness.controller.close).toHaveBeenCalledOnce();
+    expect(harness.controller.stop).not.toHaveBeenCalled();
+    expect(harness.result.current.phase).toBe("idle");
+    expect(harness.result.current.session).toBeNull();
+    expect(harness.result.current.activeNoteId).toBeNull();
+    expect(harness.result.current.transcript.partialByUtteranceId).toEqual({});
+  });
+
   it("fails and closes after a realtime transport error", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId));
@@ -210,8 +229,28 @@ describe("RecordingProvider", () => {
     });
 
     expect(harness.result.current.phase).toBe("failed");
-    expect(harness.result.current.error).toBe("upstream failed");
+    expect(harness.result.current.error).toBe(
+      "실시간 전사 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요."
+    );
     expect(harness.controller.close).toHaveBeenCalled();
+  });
+
+  it("maps provider errors to a user-safe product message", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+
+    act(() =>
+      harness.getCallbacks().onEvent({
+        type: "error",
+        code: "STT_TRANSCRIPTION_FAILED",
+        message: "provider_internal_drain_state=completed",
+      })
+    );
+
+    expect(harness.result.current.error).toBe(
+      "음성을 기록하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
+    );
+    expect(harness.result.current.error).not.toContain("provider_internal");
   });
 
   it("does not remain stuck in stopping when cleanup fails", async () => {

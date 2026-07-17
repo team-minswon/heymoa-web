@@ -78,11 +78,8 @@ export async function refreshAuth() {
 }
 
 export async function logout() {
-  try {
-    await postAuth<void>("/v1/auth/logout", true);
-  } finally {
-    notifyAuthStateChanged({ reason: "logout" });
-  }
+  await postAuth<void>("/v1/auth/logout", true);
+  notifyAuthStateChanged({ reason: "logout" });
 }
 
 export { AuthApiError, isAuthApiConfigured };

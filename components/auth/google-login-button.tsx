@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,37 +20,38 @@ export function GoogleLoginButton({
   compact = false,
   className,
 }: GoogleLoginButtonProps) {
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const handleLogin = () => {
     if (!isAuthApiConfigured) {
-      setErrorMessage("API URL이 설정되지 않았습니다.");
+      toast.error("현재 로그인을 사용할 수 없습니다.", {
+        id: "google-login-unavailable",
+      });
       return;
     }
 
     setPending(true);
-    setErrorMessage(null);
 
     try {
       window.location.href = buildGoogleOAuthUrl(getCurrentReturnTo());
     } catch {
-      setErrorMessage("로그인 페이지로 이동하는 중 오류가 발생했습니다.");
+      toast.error("로그인 페이지로 이동하지 못했습니다. 다시 시도해 주세요.", {
+        id: "google-login-redirect",
+      });
       setPending(false);
     }
   };
 
   return (
-    <div className={cn("flex flex-col items-end gap-2", className)}>
+    <div className={className}>
       <Button
         type="button"
         variant="outline"
         size={compact ? "icon-xl" : "xl"}
         onClick={handleLogin}
-        disabled={!isAuthApiConfigured}
         loading={pending}
         className={cn(
-          "rounded-full border-[var(--el-hairline)] bg-[var(--el-canvas)] text-[var(--el-ink)] hover:bg-[var(--el-canvas-elevated)] font-medium",
+          "rounded-full border-[var(--el-hairline)] bg-[var(--el-canvas)] font-medium text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]",
           compact ? "p-0" : "pl-3.5 pr-4"
         )}
         aria-label="Google로 로그인"
@@ -74,11 +76,6 @@ export function GoogleLoginButton({
         </svg>
         {!compact && <span>Google 로그인</span>}
       </Button>
-      {errorMessage ? (
-        <p className="max-w-52 text-right text-xs font-medium text-red-600">
-          {errorMessage}
-        </p>
-      ) : null}
     </div>
   );
 }

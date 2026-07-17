@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   GLOBAL_RECORDING_EXIT_DURATION,
   GlobalRecordingIndicator,
@@ -7,8 +7,10 @@ import {
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 const recording = vi.hoisted(() => ({
-  commit: vi.fn(),
   stop: vi.fn(),
+  session: { noteId: "01K0000000002", status: "ACTIVE" },
+  phase: "recording",
+  elapsedMs: 1200,
 }));
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspaces: () => ({
@@ -24,18 +26,19 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   }),
 }));
 vi.mock("@/components/transcription/recording-provider", () => ({
-  useRecording: () => ({
-    session: { noteId: "01K0000000002", status: "ACTIVE" },
-    phase: "recording",
-    elapsedMs: 1200,
+  useRecording: () => recording,
+  useRecordingMeter: () => ({
     level: 0.42,
     levelHistory: [0.1, 0.25, 0.7, 0.4],
-    commit: recording.commit,
-    stop: recording.stop,
   }),
 }));
 
 describe("GlobalRecordingIndicator", () => {
+  beforeEach(() => {
+    recording.phase = "recording";
+    recording.elapsedMs = 1200;
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -47,7 +50,7 @@ describe("GlobalRecordingIndicator", () => {
       "aria-valuenow",
       "42"
     );
-    expect(screen.getByText("녹음 중")).toBeInTheDocument();
+    expect(screen.queryByText("녹음 중")).toBeNull();
     expect(screen.getByTestId("global-wave-bar-2")).toHaveStyle({
       transform: "scaleY(0.7)",
     });
@@ -55,6 +58,19 @@ describe("GlobalRecordingIndicator", () => {
 
   it("uses a doubled exit duration without changing its entry duration", () => {
     expect(GLOBAL_RECORDING_EXIT_DURATION).toBe(0.3);
+  });
+
+  it("uses only the shared spinner for transitional states", () => {
+    recording.phase = "connecting";
+
+    render(<GlobalRecordingIndicator />);
+
+    expect(
+      screen.getByRole("status", { name: "녹음 처리 중" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
+    expect(screen.queryByText("연결 중")).toBeNull();
+    expect(screen.queryByText("마무리 중")).toBeNull();
   });
 
   it("offers only stop while automatic finalization is active", () => {

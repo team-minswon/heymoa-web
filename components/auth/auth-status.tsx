@@ -10,9 +10,16 @@ export function AuthStatus() {
 
   if (status === "checking") {
     return (
-      <div className="inline-flex h-10 items-center rounded-full border border-[var(--el-hairline)] px-3 text-xs font-medium text-[var(--el-muted)] sm:px-4 sm:text-sm">
-        로그인 확인 중
-      </div>
+      <Button
+        type="button"
+        variant="outline"
+        loading
+        disabled
+        aria-label="로그인 상태 확인 중"
+        className="rounded-full font-medium"
+      >
+        로그인
+      </Button>
     );
   }
 
@@ -22,9 +29,14 @@ export function AuthStatus() {
 
   if (!isAuthApiConfigured) {
     return (
-      <div className="inline-flex h-10 items-center rounded-full border border-red-500 bg-[var(--el-surface)] px-3 text-xs font-medium text-red-500 sm:px-4">
-        API URL 미설정
-      </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="rounded-full font-medium"
+        disabled
+      >
+        로그인
+      </Button>
     );
   }
 

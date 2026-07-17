@@ -15,6 +15,10 @@ vi.mock("@/components/transcription/recording-provider", () => ({
     resume: vi.fn(),
     stop: vi.fn(),
   }),
+  useRecordingMeter: () => ({
+    level: 0,
+    levelHistory: [0, 0, 0, 0],
+  }),
 }));
 
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({

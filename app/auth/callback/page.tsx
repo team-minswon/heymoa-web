@@ -1,20 +1,17 @@
-"use client";
+import { AuthCallbackClient } from "@/components/auth/auth-callback-client";
 
-import dynamic from "next/dynamic";
+function first(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
 
-import AuthCallbackLoading from "@/app/auth/callback/loading";
+export default async function AuthCallbackPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = await searchParams;
+  const urlError = first(query.error);
+  const returnTo = first(query.return_to);
 
-const ClientAuthCallback = dynamic(
-  () =>
-    import("@/components/auth/auth-callback-client").then(
-      (module) => module.AuthCallbackClient
-    ),
-  {
-    loading: AuthCallbackLoading,
-    ssr: false,
-  }
-);
-
-export default function AuthCallbackPage() {
-  return <ClientAuthCallback />;
+  return <AuthCallbackClient urlError={urlError} returnTo={returnTo} />;
 }

@@ -3,6 +3,10 @@ import { fireEvent, render, screen, cleanup } from "@testing-library/react";
 import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
+const logout = vi.fn();
+const auth = vi.hoisted(() => ({
+  isLoggingOut: false,
+}));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
@@ -12,6 +16,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({
     user: { id: "01K0000000003", name: "김민수", email: "minsu@example.com" },
+    isLoggingOut: auth.isLoggingOut,
+    logout,
   }),
 }));
 
@@ -58,7 +64,16 @@ const props = {
     isDefault: true,
     role: "ADMIN" as const,
   },
-  projects: [{ projectId: "01K0000000001", name: "주간", workspaceId: "01K0000000000", description: null, createdAt: "", updatedAt: "" }],
+  projects: [
+    {
+      projectId: "01K0000000001",
+      name: "주간",
+      workspaceId: "01K0000000000",
+      description: null,
+      createdAt: "",
+      updatedAt: "",
+    },
+  ],
   selectedProjectId: null,
   onSelectProject: vi.fn(),
   onOpenSettings: vi.fn(),
@@ -86,6 +101,8 @@ describe("WorkspaceSidebar", () => {
 
   afterEach(() => {
     cleanup();
+    auth.isLoggingOut = false;
+    logout.mockReset();
   });
 
   it("selects projects and exposes accessible CRUD dialogs", () => {
@@ -114,5 +131,28 @@ describe("WorkspaceSidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "워크스페이스 전환" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /제품 팀/ }));
     expect(push).toHaveBeenCalledWith("/w/01K0000000007");
+  });
+
+  it("keeps logout progress visible after the profile menu closes", async () => {
+    const view = renderSidebar();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /김민수 minsu@example.com/,
+      })
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "로그아웃" }));
+    expect(logout).toHaveBeenCalledOnce();
+
+    auth.isLoggingOut = true;
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <SidebarProvider>
+          <WorkspaceSidebar {...props} />
+        </SidebarProvider>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByRole("button", { name: "로그아웃 중" })).toBeDisabled();
+    expect(screen.getByText("잠시만 기다려 주세요")).toBeInTheDocument();
   });
 });

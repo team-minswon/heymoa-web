@@ -2,8 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,6 @@ export function WorkspaceSettingsForm({
   const query = useGetWorkspace(workspaceId);
   const update = useUpdateWorkspace();
   const setDefault = useChangeDefaultWorkspace();
-  const [feedback, setFeedback] = useState<string | null>(null);
   const workspace =
     query.data?.status === 200 && query.data.data.success
       ? query.data.data.data
@@ -68,24 +68,30 @@ export function WorkspaceSettingsForm({
   }
 
   const submit = form.handleSubmit(async (values) => {
-    setFeedback(null);
     try {
       await update.mutateAsync({ workspaceId, data: values });
       await refresh();
-      setFeedback("저장됨");
+      toast.success("변경사항을 저장했습니다.", {
+        id: "workspace-settings-save",
+      });
     } catch {
-      setFeedback("워크스페이스 정보를 저장하지 못했습니다.");
+      toast.error("워크스페이스 정보를 저장하지 못했습니다.", {
+        id: "workspace-settings-save",
+      });
     }
   });
 
   const makeDefault = async () => {
-    setFeedback(null);
     try {
       await setDefault.mutateAsync({ data: { workspaceId } });
       await refresh();
-      setFeedback("기본 워크스페이스로 설정됨");
+      toast.success("기본 워크스페이스로 설정했습니다.", {
+        id: "workspace-settings-default",
+      });
     } catch {
-      setFeedback("기본 워크스페이스를 변경하지 못했습니다.");
+      toast.error("기본 워크스페이스를 변경하지 못했습니다.", {
+        id: "workspace-settings-default",
+      });
     }
   };
 
@@ -149,11 +155,6 @@ export function WorkspaceSettingsForm({
             기본 워크스페이스로 설정
           </Button>
         </div>
-      )}
-      {feedback && (
-        <p role="status" className="text-sm text-[var(--el-muted)]">
-          {feedback}
-        </p>
       )}
     </div>
   );

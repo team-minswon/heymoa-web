@@ -48,6 +48,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private closePromise: Promise<void> | null = null;
   private closing = false;
   private audioStopped = false;
+  private terminalEventReceived = false;
   private terminalResolve:
     | ((state: Exclude<TerminalState, "timeout">) => void)
     | null = null;
@@ -77,6 +78,10 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       sessionId,
       onEvent: (event) => this.handleEvent(event),
       onClose: (code, reason) => {
+        if (this.terminalEventReceived) {
+          void this.close();
+          return;
+        }
         this.fail(reason || `WebSocket closed (${code})`);
       },
     });
@@ -163,8 +168,14 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   }
 
   private handleEvent(event: ServerEvent) {
-    if (event.type === "completed") this.terminalResolve?.("completed");
-    if (event.type === "error") this.terminalResolve?.("failed");
+    if (event.type === "completed") {
+      this.terminalEventReceived = true;
+      this.terminalResolve?.("completed");
+    }
+    if (event.type === "error") {
+      this.terminalEventReceived = true;
+      this.terminalResolve?.("failed");
+    }
     this.options.onEvent(event);
     if (event.type === "error") void this.close();
   }

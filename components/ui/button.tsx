@@ -45,8 +45,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonPrimitive.Props,
-    VariantProps<typeof buttonVariants> {
+  extends ButtonPrimitive.Props, VariantProps<typeof buttonVariants> {
   loading?: boolean;
 }
 
@@ -62,7 +61,9 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
-      disabled={disabled || loading}
+      data-loading={loading ? "" : undefined}
+      aria-busy={loading || undefined}
+      disabled={Boolean(disabled || loading)}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >

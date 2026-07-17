@@ -1,28 +1,20 @@
 "use client";
 
-import {
-  environmentManager,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { environmentManager, QueryClientProvider } from "@tanstack/react-query";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { MockProvider } from "@/components/mocks/mock-provider";
-import { RecordingProvider } from "@/components/transcription/recording-provider";
+import {
+  RecordingProvider,
+  useRecording,
+} from "@/components/transcription/recording-provider";
+import { RecordingErrorToast } from "@/components/transcription/recording-error-toast";
 import type { AuthUser } from "@/lib/auth/types";
+import { makeQueryClient } from "@/lib/query/query-client";
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
-      },
-    },
-  });
-}
+type AppQueryClient = ReturnType<typeof makeQueryClient>;
 
-let browserQueryClient: QueryClient | undefined;
+let browserQueryClient: AppQueryClient | undefined;
 
 function getQueryClient() {
   if (environmentManager.isServer()) {
@@ -31,6 +23,22 @@ function getQueryClient() {
 
   browserQueryClient ??= makeQueryClient();
   return browserQueryClient;
+}
+
+function AuthenticatedProviders({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser | null;
+}) {
+  const { disconnect } = useRecording();
+
+  return (
+    <AuthProvider initialUser={initialUser} beforeLogout={disconnect}>
+      {children}
+    </AuthProvider>
+  );
 }
 
 export function Providers({
@@ -45,9 +53,12 @@ export function Providers({
   return (
     <MockProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider initialUser={initialUser}>
-          <RecordingProvider>{children}</RecordingProvider>
-        </AuthProvider>
+        <RecordingProvider>
+          <RecordingErrorToast />
+          <AuthenticatedProviders initialUser={initialUser}>
+            {children}
+          </AuthenticatedProviders>
+        </RecordingProvider>
       </QueryClientProvider>
     </MockProvider>
   );

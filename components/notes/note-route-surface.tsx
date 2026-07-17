@@ -1,31 +1,14 @@
 "use client";
 
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useMediaQuery } from "@/hooks/use-media-query";
 
 export type NoteViewMode = "side" | "full";
-export type NoteSurface = "sheet" | "drawer" | "full";
-
-export function resolveNoteSurface(
-  view: NoteViewMode,
-  isDesktop: boolean
-): NoteSurface {
-  if (view === "full") return "full";
-  return isDesktop ? "sheet" : "drawer";
-}
 
 export function NoteRouteSurface({
   view,
@@ -38,21 +21,14 @@ export function NoteRouteSurface({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const surface = resolveNoteSurface(view, isDesktop);
-
-  if (surface === "sheet") {
+  if (view === "side") {
     return (
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <SheetContent
           aria-label="노트"
           data-surface="sheet"
           showCloseButton={false}
-          className="inset-y-2 right-2 h-[calc(100dvh-1rem)] gap-0 overflow-hidden rounded-[22px] border border-black/5 bg-white p-0 shadow-[-12px_0_48px_rgba(12,10,9,0.12)]"
-          style={{
-            width: "min(860px, calc(100vw - 15rem))",
-            maxWidth: "860px",
-          }}
+          className="inset-0 h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 bg-white p-0 shadow-[-12px_0_48px_rgba(12,10,9,0.12)] sm:max-w-none md:inset-y-2 md:left-auto md:right-2 md:h-[calc(100dvh-1rem)] md:w-[min(860px,calc(100vw-15rem))] md:max-w-[860px] md:rounded-[22px] md:border md:border-black/5"
         >
           <SheetHeader className="sr-only">
             <SheetTitle>노트</SheetTitle>
@@ -61,28 +37,6 @@ export function NoteRouteSurface({
           {children}
         </SheetContent>
       </Sheet>
-    );
-  }
-
-  if (surface === "drawer") {
-    return (
-      <Drawer
-        open={isOpen}
-        onOpenChange={(open) => !open && onClose()}
-        showSwipeHandle
-      >
-        <DrawerContent
-          aria-label="노트"
-          data-surface="drawer"
-          className="[--drawer-content-max-height:100dvh] min-h-dvh rounded-none"
-        >
-          <DrawerHeader className="sr-only">
-            <DrawerTitle>노트</DrawerTitle>
-            <DrawerDescription>선택한 회의 노트 상세</DrawerDescription>
-          </DrawerHeader>
-          {children}
-        </DrawerContent>
-      </Drawer>
     );
   }
 

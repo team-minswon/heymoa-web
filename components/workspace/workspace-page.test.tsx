@@ -15,16 +15,25 @@ const recording = vi.hoisted(() => ({
   phase: "idle",
   session: null as null | { noteId: string },
   elapsedMs: 0,
-  levelHistory: [0, 0, 0, 0, 0],
   start: vi.fn(),
+}));
+const recordingMeter = vi.hoisted(() => ({
+  level: 0,
+  levelHistory: [0, 0, 0, 0, 0],
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
-  useWorkspaceShell: () => ({ selectedProjectId: "01K0000000001" }),
+  useWorkspaceShell: () => ({
+    selectedProjectId: "01K0000000001",
+    projects: [{ projectId: "01K0000000001", name: "모바일 앱" }],
+    isWorkspacePending: false,
+    isWorkspaceError: false,
+  }),
 }));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
+  useRecordingMeter: () => recordingMeter,
 }));
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   useGetProjects: () => ({
@@ -95,9 +104,7 @@ describe("WorkspacePage", () => {
       </QueryClientProvider>
     );
 
-    expect(
-      screen.getByRole("button", { name: "새 회의 기록" })
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "새 회의 기록" })).toBeDisabled();
   });
 
   it("renders the selected project hierarchy and creates a meeting", async () => {

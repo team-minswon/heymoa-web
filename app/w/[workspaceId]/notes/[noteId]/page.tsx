@@ -1,4 +1,7 @@
-import { NoteClientBoundary } from "@/components/workspace/workspace-client-boundary";
+import { HydrationBoundary } from "@tanstack/react-query";
+
+import { NoteRouteClient } from "@/components/notes/note-route-client";
+import { prefetchNoteRoute } from "@/lib/workspace/prefetch";
 
 export default async function NoteRoute({
   params,
@@ -11,15 +14,18 @@ export default async function NoteRoute({
     params,
     searchParams,
   ]);
+  const state = await prefetchNoteRoute({ workspaceId, noteId });
 
   return (
-    <NoteClientBoundary
-      workspaceId={workspaceId}
-      noteId={noteId}
-      initialQuery={{
-        view: Array.isArray(query.view) ? query.view[0] : query.view,
-        tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
-      }}
-    />
+    <HydrationBoundary state={state}>
+      <NoteRouteClient
+        workspaceId={workspaceId}
+        noteId={noteId}
+        initialQuery={{
+          view: Array.isArray(query.view) ? query.view[0] : query.view,
+          tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
+        }}
+      />
+    </HydrationBoundary>
   );
 }

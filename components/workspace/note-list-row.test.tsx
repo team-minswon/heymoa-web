@@ -11,6 +11,9 @@ type RecordingMock = {
   } | null;
   phase: string;
   elapsedMs: number;
+};
+
+type RecordingMeterMock = {
   levelHistory: number[];
 };
 
@@ -23,12 +26,15 @@ const recording = vi.hoisted(() => ({
     },
     phase: "recording",
     elapsedMs: 12_000,
-    levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2],
   } as RecordingMock,
+  meter: {
+    levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2],
+  } as RecordingMeterMock,
 }));
 
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording.current,
+  useRecordingMeter: () => recording.meter,
 }));
 
 describe("NoteListRow", () => {
@@ -41,6 +47,8 @@ describe("NoteListRow", () => {
       },
       phase: "recording",
       elapsedMs: 12_000,
+    };
+    recording.meter = {
       levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2],
     };
   });
@@ -76,6 +84,8 @@ describe("NoteListRow", () => {
       session: null,
       phase: "completed",
       elapsedMs: 0,
+    };
+    recording.meter = {
       levelHistory: [0, 0, 0, 0, 0],
     };
 

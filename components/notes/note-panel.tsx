@@ -99,9 +99,7 @@ export function NotePanel({
           </div>
         </div>
         <TabsContent value="transcript" className="min-h-0 flex-1">
-          <ScrollArea className="h-full">
-            <TranscriptView noteId={noteId} />
-          </ScrollArea>
+          <TranscriptView noteId={noteId} />
         </TabsContent>
         <TabsContent value="details" className="min-h-0 flex-1">
           <ScrollArea className="h-full">
@@ -110,8 +108,8 @@ export function NotePanel({
         </TabsContent>
       </Tabs>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-white via-white/95 to-transparent px-5 pb-5 pt-14 sm:px-9 sm:pb-7">
-        <div className="pointer-events-auto mx-auto w-full max-w-[760px]">
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center px-5 sm:px-9">
+        <div className="pointer-events-auto">
           <RecordingDock noteId={noteId} />
         </div>
       </div>

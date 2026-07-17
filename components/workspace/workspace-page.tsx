@@ -14,18 +14,13 @@ import {
   useCreateNote,
   useGetNotes,
 } from "@/lib/api/generated/notes/notes";
-import { useGetProjects } from "@/lib/api/generated/projects/projects";
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const recording = useRecording();
   const createNote = useCreateNote();
-  const { selectedProjectId } = useWorkspaceShell();
-  const projectsQuery = useGetProjects(workspaceId);
-  const projects =
-    projectsQuery.data?.status === 200 && projectsQuery.data.data.success
-      ? (projectsQuery.data.data.data.projects ?? [])
-      : [];
+  const { selectedProjectId, projects, isWorkspacePending, isWorkspaceError } =
+    useWorkspaceShell();
   const selectedProject = projects.find(
     (project) => project.projectId === selectedProjectId
   );
@@ -60,10 +55,10 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     : allNotesQueries.notes;
   const isPending = selectedProjectId
     ? singleNotesQuery.isPending
-    : projectsQuery.isPending || allNotesQueries.isPending;
+    : isWorkspacePending || allNotesQueries.isPending;
   const isError = selectedProjectId
     ? singleNotesQuery.isError
-    : projectsQuery.isError || allNotesQueries.isError;
+    : isWorkspaceError || allNotesQueries.isError;
   const isRecordingActive = [
     "requesting-permission",
     "connecting",
@@ -107,7 +102,6 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
       void singleNotesQuery.refetch();
       return;
     }
-    void projectsQuery.refetch();
     allNotesQueries.refetch();
   };
 

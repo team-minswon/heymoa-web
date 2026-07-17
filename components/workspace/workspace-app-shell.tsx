@@ -13,6 +13,10 @@ import {
 } from "@/components/settings/settings-dialog";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
+import type {
+  ProjectResponseData,
+  WorkspaceResponseData,
+} from "@/lib/api/generated/models";
 import { useGetProjects } from "@/lib/api/generated/projects/projects";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 
@@ -20,6 +24,10 @@ type WorkspaceShellState = {
   selectedProjectId: string | null;
   setSelectedProjectId: (projectId: string | null) => void;
   openSettings: (section: SettingsSection) => void;
+  workspace?: WorkspaceResponseData;
+  projects: ProjectResponseData[];
+  isWorkspacePending: boolean;
+  isWorkspaceError: boolean;
 };
 
 const WorkspaceShellContext = createContext<WorkspaceShellState | null>(null);
@@ -55,10 +63,13 @@ export function WorkspaceAppShell({
     workspaceQuery.data?.status === 200 && workspaceQuery.data.data.success
       ? workspaceQuery.data.data.data
       : undefined;
-  const projects =
-    projectsQuery.data?.status === 200 && projectsQuery.data.data.success
-      ? (projectsQuery.data.data.data.projects ?? [])
-      : [];
+  const projects = useMemo(
+    () =>
+      projectsQuery.data?.status === 200 && projectsQuery.data.data.success
+        ? (projectsQuery.data.data.data.projects ?? [])
+        : [],
+    [projectsQuery.data]
+  );
   const value = useMemo(
     () => ({
       selectedProjectId,
@@ -67,8 +78,20 @@ export function WorkspaceAppShell({
         setSettingsSection(section);
         setSettingsOpen(true);
       },
+      workspace,
+      projects,
+      isWorkspacePending: workspaceQuery.isPending || projectsQuery.isPending,
+      isWorkspaceError: workspaceQuery.isError || projectsQuery.isError,
     }),
-    [selectedProjectId]
+    [
+      projects,
+      projectsQuery.isPending,
+      projectsQuery.isError,
+      selectedProjectId,
+      workspace,
+      workspaceQuery.isPending,
+      workspaceQuery.isError,
+    ]
   );
   const currentLabel =
     projects.find((project) => project.projectId === selectedProjectId)?.name ??
