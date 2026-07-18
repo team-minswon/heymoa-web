@@ -12,6 +12,7 @@ import {
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { siteConfig } from "@/lib/site";
 
 function formatElapsed(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1000);
@@ -122,7 +123,7 @@ export function WorkspaceToolbar({
           <SidebarTrigger className="md:hidden" />
           <div className="flex min-w-0 flex-1 items-baseline gap-2">
             <span className="font-serif text-lg font-light tracking-[-0.03em] text-[var(--el-ink)]">
-              heymoa
+              {siteConfig.name}
             </span>
             <span className="text-[var(--el-hairline-strong)]">/</span>
             <h1 className="truncate text-xs font-medium text-[var(--el-muted)]">

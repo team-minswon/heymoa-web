@@ -36,11 +36,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   applicationName: siteConfig.name,
   title: {
-    default: siteConfig.name,
+    default: siteConfig.title,
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  keywords: ["AI", "Meeting", "Transcription", "Note", "Summarization"],
+  keywords: [...siteConfig.keywords],
   authors: [{ name: siteConfig.name, url: siteConfig.url }],
   creator: siteConfig.name,
   publisher: siteConfig.name,

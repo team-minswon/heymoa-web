@@ -1,6 +1,9 @@
 {
-  "name": "heymoa",
-  "short_name": "heymoa",
+  "name": "HeyMoa",
+  "short_name": "HeyMoa",
+  "description": "HeyMoa는 회의 대화를 기록하고 맥락과 결정사항을 요약하며, 담당자별 액션 아이템을 정리해 후속 업무로 연결하는 AI 회의 운영 서비스입니다.",
+  "lang": "ko-KR",
+  "start_url": "/",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
