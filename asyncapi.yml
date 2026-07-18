@@ -12,7 +12,7 @@ info:
 defaultContentType: application/json
 servers:
   production:
-    host: api.heymoa.com
+    host: api.heymoa.app
     pathname: /ws/transcriptions
     protocol: wss
     protocolVersion: "1.2"

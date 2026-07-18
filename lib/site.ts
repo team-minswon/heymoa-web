@@ -3,8 +3,8 @@ export const siteConfig = {
   title: "HeyMoa | 참여형 AI 회의 운영 에이전트",
   description:
     "HeyMoa는 회의 대화를 기록하고 맥락과 결정사항을 요약하며, 담당자별 액션 아이템을 정리해 후속 업무로 연결하는 AI 회의 운영 서비스입니다.",
-  url: "https://heymoa.com",
-  domain: "heymoa.com",
+  url: "https://heymoa.app",
+  domain: "heymoa.app",
   contactEmail: "team.minswon@gmail.com",
   keywords: [
     "HeyMoa",

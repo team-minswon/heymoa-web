@@ -526,7 +526,7 @@ Expected: FAIL because the referenced message and required channel parameter def
 
 Define:
 
-- servers `local` (`localhost:8080`, protocol `ws`) and `production` (`api.heymoa.com`, protocol `wss`)
+- servers `local` (`localhost:8080`, protocol `ws`) and `production` (`api.heymoa.app`, protocol `wss`)
 - one WebSocket channel with `{sessionId}` TSID path parameter and required `ticket` query binding
 - `receiveBrowserMessages` action `receive`
 - `sendBrowserEvents` action `send`
