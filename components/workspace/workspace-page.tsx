@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { Mic } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -11,12 +11,15 @@ import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
   getGetNotesQueryOptions,
+  getGetNotesQueryKey,
+  type getNotesResponse,
   useCreateNote,
   useGetNotes,
 } from "@/lib/api/generated/notes/notes";
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const recording = useRecording();
   const createNote = useCreateNote();
   const { selectedProjectId, projects, isWorkspacePending, isWorkspaceError } =
@@ -92,7 +95,36 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     ) {
       return;
     }
-    const noteId = response.data.data.noteId;
+    const createdNote = response.data.data;
+    const noteId = createdNote.noteId;
+    const notesQueryKey = getGetNotesQueryKey(targetProjectId);
+
+    queryClient.setQueryData<getNotesResponse>(notesQueryKey, (current) => {
+      const existingNotes =
+        current?.status === 200 && current.data.success
+          ? current.data.data.notes
+          : [];
+
+      return {
+        status: 200,
+        headers: current?.headers ?? response.headers,
+        data: {
+          success: true,
+          error: null,
+          data: {
+            notes: [
+              {
+                ...createdNote,
+                lastRecordedAt: null,
+                recordedDurationMs: 0,
+              },
+              ...existingNotes.filter((note) => note.noteId !== noteId),
+            ],
+          },
+        },
+      };
+    });
+
     router.push(`/w/${workspaceId}/notes/${noteId}?view=side&tab=transcript`);
     await recording.start(noteId);
   };

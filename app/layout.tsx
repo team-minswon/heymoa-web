@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { EB_Garamond, Geist_Mono, Inter } from "next/font/google";
-import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
 import { FooterGate } from "@/components/FooterGate";
@@ -117,7 +116,6 @@ export default async function RootLayout({
           `}
         </Script>
 
-        <NextTopLoader color="#292524" showSpinner={false} />
         <Providers initialUser={initialUser}>
           <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
             <NavbarGate>

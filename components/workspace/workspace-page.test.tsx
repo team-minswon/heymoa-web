@@ -53,6 +53,9 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryOptions: vi.fn(),
+  getGetNotesQueryKey: (projectId: string) => [
+    `/v1/projects/${projectId}/notes`,
+  ],
   useGetNotes: () => ({
     data: {
       status: 200,
@@ -110,13 +113,21 @@ describe("WorkspacePage", () => {
   it("renders the selected project hierarchy and creates a meeting", async () => {
     createNote.mockResolvedValue({
       status: 201,
+      headers: new Headers(),
       data: {
         success: true,
-        data: { noteId: "01K0000000100" },
+        data: {
+          noteId: "01K0000000100",
+          projectId: "01K0000000001",
+          title: "실시간 기록 노트",
+          createdAt: "2026-07-19T10:00:00Z",
+          updatedAt: "2026-07-19T10:00:00Z",
+        },
       },
     });
+    const queryClient = new QueryClient();
     render(
-      <QueryClientProvider client={new QueryClient()}>
+      <QueryClientProvider client={queryClient}>
         <WorkspacePage workspaceId="01K0000000000" />
       </QueryClientProvider>
     );
@@ -136,6 +147,23 @@ describe("WorkspacePage", () => {
     expect(push).toHaveBeenCalledWith(
       "/w/01K0000000000/notes/01K0000000100?view=side&tab=transcript"
     );
+    expect(
+      queryClient.getQueryData(["/v1/projects/01K0000000001/notes"])
+    ).toMatchObject({
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          notes: [
+            {
+              noteId: "01K0000000100",
+              lastRecordedAt: null,
+              recordedDurationMs: 0,
+            },
+          ],
+        },
+      },
+    });
   });
 
   it("opens the active recording instead of creating another meeting", () => {

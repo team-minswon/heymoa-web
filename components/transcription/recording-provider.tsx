@@ -77,6 +77,7 @@ const ACTIVE_PHASES = new Set<RecordingPhase>([
   "recording",
   "stopping",
 ]);
+const PROJECT_NOTES_QUERY_PATTERN = /^\/v1\/projects\/[^/]+\/notes$/;
 
 function getStartErrorMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : "";
@@ -249,6 +250,14 @@ export function RecordingProvider({
     [queryClient]
   );
 
+  const invalidateNoteListQueries = useCallback(() => {
+    void queryClient.invalidateQueries({
+      predicate: ({ queryKey }) =>
+        typeof queryKey[0] === "string" &&
+        PROJECT_NOTES_QUERY_PATTERN.test(queryKey[0]),
+    });
+  }, [queryClient]);
+
   const failRecording = useCallback(
     (message: string) => {
       dispatchTranscript({ type: "clear-partials" });
@@ -281,6 +290,7 @@ export function RecordingProvider({
             endedAt: new Date().toISOString(),
           });
           invalidateTranscriptQueries(current.noteId);
+          invalidateNoteListQueries();
         }
         setPhase("completed");
         clearLevel();
@@ -290,7 +300,13 @@ export function RecordingProvider({
         failRecording(getServerErrorMessage(event.code));
       }
     },
-    [clearLevel, failRecording, invalidateTranscriptQueries, setCurrentSession]
+    [
+      clearLevel,
+      failRecording,
+      invalidateNoteListQueries,
+      invalidateTranscriptQueries,
+      setCurrentSession,
+    ]
   );
 
   useEffect(() => {
@@ -321,6 +337,7 @@ export function RecordingProvider({
         setPhase("completed");
         clearLevel();
         invalidateTranscriptQueries(serverSession.noteId);
+        invalidateNoteListQueries();
         return;
       }
       if (serverSession.status === "INTERRUPTED") {
@@ -335,6 +352,7 @@ export function RecordingProvider({
   }, [
     clearLevel,
     failRecording,
+    invalidateNoteListQueries,
     invalidateTranscriptQueries,
     phase,
     sessionQuery.data,

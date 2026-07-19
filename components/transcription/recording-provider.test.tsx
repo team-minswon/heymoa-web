@@ -196,6 +196,9 @@ describe("RecordingProvider", () => {
         queryKey: [expect.stringContaining(session.noteId)],
       })
     );
+    expect(harness.invalidate).toHaveBeenCalledWith(
+      expect.objectContaining({ predicate: expect.any(Function) })
+    );
   });
 
   it("disconnects microphone and socket immediately for logout", async () => {
