@@ -55,4 +55,3 @@ pnpm lint
 pnpm build
 ```
 
-Spring Kotlin 서버와 OpenAI STT 연동은 이 계약과 mock MVP가 안정된 뒤 진행하는 별도 구현 단계입니다. 서버의 시간 필드는 `Instant`와 호환되는 RFC 3339 `date-time`, 공개 ID와 PK는 문자열 TSID를 사용합니다.
