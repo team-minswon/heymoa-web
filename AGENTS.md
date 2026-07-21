@@ -15,6 +15,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **API Contract**: `openapi3.yml` → Orval → TanStack Query hooks + MSW mocks
 - **Architecture**: read `docs/frontend-architecture.md` before changing route, data, auth, loading, or realtime state boundaries
 
+## Git Workflow
+
+- No GitHub issues or PRs. There are no issue/PR templates and no CI workflows in this repo.
+- Branches: `main` (stable), `dev` (integration), and `feature/*` branches cut from `dev`.
+- Integrate a feature by **squash-merging it into `dev` locally**, then `git push` — no pull request.
+- Promote to `main` the same way: squash-merge `dev` into `main` locally, then push.
+- Run the verification checklist below before merging.
+
 ## Architecture
 
 - `app/**/page.tsx` stays a Server Component and only orchestrates params, redirects, server prefetch, and hydration.
@@ -58,7 +66,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ### MSW Mocking
 
-- MSW handlers in `lib/mocks/handlers.ts` MUST use **explicit override responses** with `success: true`.
+- REST handlers live in `lib/mocks/rest-handlers.ts` (WebSocket in `lib/mocks/websocket-handler.ts`); `lib/mocks/handlers.ts` only assembles the registry. Edit the right file.
+- Handlers MUST use **explicit override responses** with `success: true`.
 - NEVER use default faker-generated responses (they produce random `success: false` which breaks auth).
 - SSR mock path: `lib/auth/server.ts` `getCurrentUserForSsr()` returns hard-coded mock user when `shouldEnableMocking()` is true.
 

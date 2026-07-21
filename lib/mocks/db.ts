@@ -14,6 +14,7 @@ import type {
   WorkspaceListResponseDataWorkspacesItem,
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
+import { MOCK_USER } from "@/lib/mocks/mock-user";
 
 const ACTIVE_STATUSES = new Set<string>(["READY", "ACTIVE"]);
 
@@ -65,12 +66,7 @@ function nextTimestamp() {
 
 function createSeedState(): StoreState {
   faker.seed(20260715);
-  const user: CurrentUserResponseData = {
-    userId: "user-12345",
-    name: "테스트 유저",
-    email: "test@heymoa.com",
-    image: null,
-  };
+  const user: CurrentUserResponseData = { ...MOCK_USER };
   const workspaces: WorkspaceResponseData[] = [
     {
       workspaceId: "01K0000000000",
@@ -257,13 +253,6 @@ function reset() {
 reset();
 
 export const mockDb = {
-  get workspace() {
-    return copy(
-      state.workspaces.find((workspace) => workspace.isDefault) ??
-        state.workspaces[0]
-    );
-  },
-
   reset,
 
   getCurrentUser(): CurrentUserResponseData {
@@ -402,7 +391,7 @@ export const mockDb = {
     return copy(notes);
   },
 
-  createNote(projectId: string, input: NoteRequest): NoteResponseData {
+  createNote(projectId: string, input: Partial<NoteRequest>): NoteResponseData {
     assertProject(projectId);
     const createdAt = nextTimestamp();
     const note: NoteResponseData = {
@@ -451,15 +440,6 @@ export const mockDb = {
     return copy(
       findSession(sessionId)
     ) as unknown as TranscriptionSessionResponseData;
-  },
-
-  getActiveSession(): TranscriptionSessionResponseData | null {
-    const session = state.sessions.find((candidate) =>
-      ACTIVE_STATUSES.has(candidate.status)
-    );
-    return session
-      ? (copy(session) as unknown as TranscriptionSessionResponseData)
-      : null;
   },
 
   updateSessionStatus(

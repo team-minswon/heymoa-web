@@ -14,7 +14,7 @@ const NOTE_ID = "01K0000000002";
 const useRecording = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 const useGetNoteTranscript = vi.hoisted(() =>
-  vi.fn(() => ({
+  vi.fn<() => unknown>(() => ({
     data: {
       status: 200,
       data: {
@@ -165,7 +165,7 @@ describe("TranscriptView", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
-    delete HTMLElement.prototype.scrollTo;
+    delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
   });
 
   it("groups adjacent finals into presentation blocks and keeps the partial live", () => {

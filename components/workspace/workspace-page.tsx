@@ -138,7 +138,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   };
 
   return (
-    <section className="relative mx-auto min-h-full w-full max-w-[1440px] overflow-hidden px-4 pb-16 pt-8 sm:px-8 sm:pt-11 lg:px-14 xl:px-20">
+    <section className="relative mx-auto min-h-full w-full max-w-4xl overflow-hidden px-5 pb-16 pt-8 sm:px-8 sm:pt-11">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-24 top-0 size-72 rounded-full opacity-25 blur-3xl"
@@ -161,7 +161,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         </div>
         <Button
           size="xl"
-          className="rounded-full px-5 shadow-[0_8px_24px_rgba(12,10,9,0.12)]"
+          className="rounded-full px-5 shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
           loading={createNote.isPending}
           disabled={isCreateMeetingDisabled}
           onClick={() => void handleCreateMeeting()}

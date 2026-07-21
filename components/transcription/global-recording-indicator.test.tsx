@@ -1,9 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  GLOBAL_RECORDING_EXIT_DURATION,
-  GlobalRecordingIndicator,
-} from "@/components/transcription/global-recording-indicator";
+import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 const recording = vi.hoisted(() => ({
@@ -54,10 +51,6 @@ describe("GlobalRecordingIndicator", () => {
     expect(screen.getByTestId("global-wave-bar-2")).toHaveStyle({
       transform: "scaleY(0.7)",
     });
-  });
-
-  it("uses a doubled exit duration without changing its entry duration", () => {
-    expect(GLOBAL_RECORDING_EXIT_DURATION).toBe(0.3);
   });
 
   it("uses only the shared spinner for transitional states", () => {

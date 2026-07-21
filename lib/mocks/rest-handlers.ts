@@ -189,6 +189,8 @@ export const restHandlers = [
       };
     }
   }),
+  // Hand-written (not the Orval getDeleteProjectMockHandler): needs 204/409
+  // status codes the generated wrapper can't express.
   http.delete(
     "*/v1/workspaces/:workspaceId/projects/:projectId",
     async ({ params }) => {
@@ -328,6 +330,8 @@ export const restHandlers = [
       };
     }
   }),
+  // Hand-written (not the Orval getStartTranscriptionSessionMockHandler): needs
+  // 201/409 status codes the generated wrapper can't express.
   http.post(
     "*/v1/notes/:noteId/transcription-sessions",
     async ({ params }) => {

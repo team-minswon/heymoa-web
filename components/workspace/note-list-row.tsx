@@ -99,7 +99,7 @@ export function NoteListRow({
   const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=transcript`;
 
   return (
-    <article className="group flex min-h-[92px] items-center gap-2 rounded-2xl border border-transparent bg-white/65 px-3 py-3 shadow-[0_2px_12px_rgba(0,0,0,0.025)] transition-all duration-150 hover:-translate-y-px hover:border-[var(--el-hairline)] hover:bg-white hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] focus-within:border-[var(--el-hairline-strong)] focus-within:bg-white sm:px-4">
+    <article className="group flex min-h-[64px] items-center gap-2 rounded-2xl border border-transparent bg-white/55 px-3 py-2.5 transition-all duration-150 hover:-translate-y-px hover:border-[var(--el-hairline)] hover:bg-white hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] focus-within:border-[var(--el-hairline-strong)] focus-within:bg-white sm:px-4">
       <Link
         href={sideHref}
         aria-label={`${note.title} 노트 열기`}

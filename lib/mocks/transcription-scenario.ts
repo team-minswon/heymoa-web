@@ -156,11 +156,6 @@ export class MockTranscriptionScenario {
     }
   }
 
-  fail(failure: Failure) {
-    if (this.phase === "closed") return;
-    this.closeWithError(failure, 1011);
-  }
-
   dispose() {
     if (this.phase === "recording" || this.phase === "stopping") {
       mockDb.updateSessionStatus(this.options.sessionId, "INTERRUPTED");

@@ -73,10 +73,6 @@ export async function getMe(): Promise<AuthUser> {
   return fetchMe();
 }
 
-export async function refreshAuth() {
-  await postAuth<void>("/v1/auth/refresh", true);
-}
-
 export async function logout() {
   await postAuth<void>("/v1/auth/logout", true);
   notifyAuthStateChanged({ reason: "logout" });

@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+
+import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   RecordingProvider,
@@ -42,10 +44,10 @@ vi.mock(
   })
 );
 
-const session = {
+const session: StartTranscriptionSessionResponseData = {
   sessionId: "0HZX2K7M9Q4AG",
   noteId: "0HZX2K7M9Q4AF",
-  status: "READY" as const,
+  status: "READY",
   readyExpiresAt: "2099-07-15T00:01:00Z",
   startedAt: null,
   endedAt: null,

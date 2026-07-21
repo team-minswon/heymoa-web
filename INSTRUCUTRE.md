@@ -38,7 +38,7 @@ AsyncAPI는 현재 코드 생성에 사용하지 않습니다. `lib/transcriptio
 NEXT_PUBLIC_API_MOCKING=enabled pnpm dev
 ```
 
-Mock 모드에서는 REST와 WebSocket 모두 브라우저에서 동작하며, 실제 마이크 대신 결정적인 PCM 입력을 사용해 실시간 전사 흐름을 재현합니다.
+Mock 모드에서는 REST와 WebSocket 모두 브라우저에서 동작합니다. 녹음은 실제 마이크 권한(`getUserMedia`)이 필요하며, 마이크 입력의 음성 활동(VAD)에 맞춰 MSW WebSocket이 미리 정의된 전사 결과를 돌려주는 방식으로 실시간 흐름을 재현합니다.
 
 - 기본 mock Workspace: `http://localhost:3000/w/01K0000000000`
 - 데스크톱 side Note: `?view=side&tab=transcript`

@@ -93,7 +93,7 @@ export function WorkspaceNoteList({
     return (
       <div aria-label="노트 불러오는 중" className="space-y-3 py-4">
         {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-[92px] rounded-2xl" />
+          <Skeleton key={index} className="h-16 rounded-2xl" />
         ))}
       </div>
     );
