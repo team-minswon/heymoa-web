@@ -41,9 +41,9 @@ describe("OpenAPI contract", () => {
     expect(api().paths["/v1/workspaces"]?.post?.operationId).toBe(
       "createWorkspace"
     );
-    expect(
-      api().paths["/v1/workspaces/{workspaceId}"]?.put?.operationId
-    ).toBe("updateWorkspace");
+    expect(api().paths["/v1/workspaces/{workspaceId}"]?.put?.operationId).toBe(
+      "updateWorkspace"
+    );
     expect(
       api().paths["/v1/users/me/default-workspace"]?.put?.operationId
     ).toBe("changeDefaultWorkspace");
@@ -73,9 +73,9 @@ describe("OpenAPI contract", () => {
       };
     };
 
-    expect(
-      schemas.CurrentUserResponse.properties.data.required
-    ).toContain("image");
+    expect(schemas.CurrentUserResponse.properties.data.required).toContain(
+      "image"
+    );
     expect(
       schemas.StartTranscriptionSessionResponse.properties.data.properties
         .endReason.enum
@@ -93,8 +93,8 @@ describe("OpenAPI contract", () => {
       string,
       { required?: string[]; properties?: { success?: { type?: string } } }
     >;
-    const successEnvelopes = Object.entries(schemas).filter(([name]) =>
-      name.endsWith("Response") && !name.endsWith("Request")
+    const successEnvelopes = Object.entries(schemas).filter(
+      ([name]) => name.endsWith("Response") && !name.endsWith("Request")
     );
 
     expect(successEnvelopes.length).toBeGreaterThan(0);

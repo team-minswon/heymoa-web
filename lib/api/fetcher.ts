@@ -81,7 +81,6 @@ export async function refreshAuthOnce() {
   return refreshPromise;
 }
 
-
 async function parseResponse<T>(response: Response, responseType?: string) {
   const responseData =
     response.status === 204

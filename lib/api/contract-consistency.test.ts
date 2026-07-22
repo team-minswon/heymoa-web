@@ -11,7 +11,8 @@ describe("REST and WebSocket contract consistency", () => {
 
     // Verify TSID pattern consistency
     const restTsidPattern =
-      rest.TranscriptionSessionResponse.properties.data.properties.noteId.pattern;
+      rest.TranscriptionSessionResponse.properties.data.properties.noteId
+        .pattern;
     expect(asyncapi.components.schemas.Tsid.pattern).toBe(restTsidPattern);
 
     const restRequired = [

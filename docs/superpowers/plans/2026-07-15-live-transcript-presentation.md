@@ -19,18 +19,25 @@
 ### Task 1: Present and follow live transcript content
 
 **Files:**
+
 - Modify: `components/notes/transcript-view.tsx`
 - Modify: `components/notes/transcript-view.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `useRecording().transcript.finalSegments` and `partialByUtteranceId`.
 - Produces: final rows marked `data-state="final"`, partial rows marked `data-state="partial"`, and a trailing scroll anchor.
 
 - [ ] **Step 1: Write the failing test**
 
 ```tsx
-expect(screen.getByText("결과를 정리합니다")).toHaveClass("text-[var(--el-muted)]");
-expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "end" });
+expect(screen.getByText("결과를 정리합니다")).toHaveClass(
+  "text-[var(--el-muted)]"
+);
+expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+  behavior: "smooth",
+  block: "end",
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -46,7 +53,10 @@ const transcriptEndRef = useRef<HTMLDivElement>(null);
 const liveContentKey = `${orderedSegments.at(-1)?.segmentId ?? ""}:${Object.values(recording.transcript.partialByUtteranceId).join("\\u0000")}`;
 
 useEffect(() => {
-  transcriptEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  transcriptEndRef.current?.scrollIntoView({
+    behavior: "smooth",
+    block: "end",
+  });
 }, [liveContentKey]);
 ```
 
@@ -61,17 +71,22 @@ Expected: PASS.
 ### Task 2: Slow the global recording indicator exit
 
 **Files:**
+
 - Modify: `components/transcription/global-recording-indicator.tsx`
 - Modify: `components/transcription/global-recording-indicator.test.tsx`
 
 **Interfaces:**
+
 - Consumes: existing recording session state.
 - Produces: the same indicator with a 0.3-second exit transition.
 
 - [ ] **Step 1: Write the failing test**
 
 ```tsx
-expect(screen.getByLabelText("진행 중인 녹음")).toHaveAttribute("data-motion-exit-duration", "0.3");
+expect(screen.getByLabelText("진행 중인 녹음")).toHaveAttribute(
+  "data-motion-exit-duration",
+  "0.3"
+);
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -93,6 +108,7 @@ Expected: PASS.
 ### Task 3: Verify the combined change
 
 **Files:**
+
 - Modify: both implementation and test files above.
 
 - [ ] **Step 1: Run focused tests**

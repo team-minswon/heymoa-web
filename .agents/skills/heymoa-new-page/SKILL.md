@@ -9,19 +9,23 @@ description: |
 # HeyMoa New Page Skill
 
 ## When to Use
+
 - Creating a new page under `app/` using Next.js App Router
 - Adding a new route that needs metadata, SEO, and design system compliance
 
 ## Checklist
 
 ### 1. Route Structure
+
 - Pages go in `app/(main)/` for pages with Navbar/Footer
 - Pages go in `app/(static)/` for legal/static content (simplified footer)
 - Auth pages go in `app/auth/`
 - File: `page.tsx` for the route, `layout.tsx` if custom layout needed
 
 ### 2. Metadata
+
 Every page MUST export a `Metadata` object:
+
 ```typescript
 import type { Metadata } from "next";
 
@@ -34,11 +38,13 @@ export const metadata: Metadata = {
 ```
 
 For private pages (settings, dashboard), add:
+
 ```typescript
 robots: { index: false, follow: false },
 ```
 
 ### 3. Design System Compliance
+
 - Page wrapper: use `<PageSection>` from `@/components/heymoa/primitives`
 - Display headings: `font-serif font-light text-3xl sm:text-4xl text-[var(--el-ink)]`
 - Body text: `text-[15px] text-[var(--el-body)] tracking-[0.16px]`
@@ -47,21 +53,25 @@ robots: { index: false, follow: false },
 - Section spacing: `py-24` (96px) between major sections
 
 ### 4. SEO Updates
+
 - Add the route to `app/sitemap.ts` if it should be indexable
 - Check `app/robots.ts` — add to `disallow` if it's a private page
 - If needed, update `lib/auth/paths.ts` `allowedReturnPaths` set
 
 ### 5. Navigation Updates
+
 - If the page should appear in nav, update `components/layout/Navbar.tsx`
 - If the page should appear in footer, update `components/layout/Footer.tsx`
 - If the page should hide nav/footer, update `components/NavbarGate.tsx` / `components/FooterGate.tsx`
 
 ### 6. Verify
+
 ```bash
 pnpm lint && pnpm build
 ```
 
 ## Key Files
+
 - `app/(main)/page.tsx` — Example of a main content page
 - `app/(main)/settings/page.tsx` — Example of an authenticated page
 - `app/(static)/layout.tsx` — Static page layout

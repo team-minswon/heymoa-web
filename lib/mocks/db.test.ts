@@ -33,9 +33,7 @@ describe("mockDb", () => {
     expect(created.isDefault).toBe(false);
 
     mockDb.setDefaultWorkspace(created.workspaceId);
-    const defaults = mockDb
-      .listWorkspaces()
-      .filter((item) => item.isDefault);
+    const defaults = mockDb.listWorkspaces().filter((item) => item.isDefault);
     expect(defaults).toEqual([
       expect.objectContaining({ workspaceId: created.workspaceId }),
     ]);

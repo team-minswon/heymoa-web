@@ -24,6 +24,7 @@
 ### Task 1: Restore Compact Project Note Rows
 
 **Files:**
+
 - Create: `components/workspace/note-list-row.test.tsx`
 - Modify: `components/workspace/note-list-row.tsx`
 - Modify: `components/workspace/workspace-note-list.tsx`
@@ -31,6 +32,7 @@
 - Modify: `components/workspace/workspace-page.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `RecordingContextValue.session`, `phase`, `elapsedMs`, and `levelHistory`; the current project list already loaded by `WorkspacePage`.
 - Produces: `WorkspaceNoteList` prop `projectNames: Record<string, string>` and `NoteListRow` prop `projectName?: string`.
 
@@ -41,8 +43,9 @@ Create a test that mocks `useRecording()` with an active session, renders `NoteL
 ```tsx
 expect(screen.getByText("모바일 앱")).toBeInTheDocument();
 expect(screen.getByText("00:12")).toBeInTheDocument();
-expect(screen.getByRole("meter", { name: "주간 제품 회의 마이크 입력" }))
-  .toBeInTheDocument();
+expect(
+  screen.getByRole("meter", { name: "주간 제품 회의 마이크 입력" })
+).toBeInTheDocument();
 expect(screen.getByText("기록 중")).toBeInTheDocument();
 ```
 
@@ -102,11 +105,13 @@ rtk git commit -m "feat(ui): restore compact project note rows"
 ### Task 2: Restore the Narrow Tabbed Note Surface
 
 **Files:**
+
 - Modify: `components/notes/note-route-surface.tsx`
 - Modify: `components/notes/note-panel.tsx`
 - Modify: `components/notes/note-panel.test.tsx`
 
 **Interfaces:**
+
 - Consumes: controlled `NoteTab`, `onTabChange`, current `TranscriptView`, `NoteDetails`, and `RecordingContextValue`.
 - Produces: a 780 px desktop sheet and a tabbed panel shared by desktop and mobile.
 
@@ -118,8 +123,12 @@ Change the panel test to click `노트 정보` and assert controlled tab behavio
 expect(screen.getByRole("tab", { name: "원본 전사" })).toBeInTheDocument();
 fireEvent.click(screen.getByRole("tab", { name: "노트 정보" }));
 expect(onTabChange).toHaveBeenCalledWith("details");
-expect(screen.queryByRole("button", { name: "구간 확정" })).not.toBeInTheDocument();
-expect(screen.queryByRole("button", { name: /일시 정지|재개/ })).not.toBeInTheDocument();
+expect(
+  screen.queryByRole("button", { name: "구간 확정" })
+).not.toBeInTheDocument();
+expect(
+  screen.queryByRole("button", { name: /일시 정지|재개/ })
+).not.toBeInTheDocument();
 ```
 
 - [ ] **Step 2: Run the panel test and verify RED**
@@ -142,13 +151,20 @@ style={{
 Remove the desktop media-query split from `NotePanel` and render one controlled tab tree for every viewport:
 
 ```tsx
-<Tabs value={tab} onValueChange={(value) => value && onTabChange(value as NoteTab)}>
+<Tabs
+  value={tab}
+  onValueChange={(value) => value && onTabChange(value as NoteTab)}
+>
   <TabsList variant="line">
     <TabsTrigger value="transcript">원본 전사</TabsTrigger>
     <TabsTrigger value="details">노트 정보</TabsTrigger>
   </TabsList>
-  <TabsContent value="transcript"><TranscriptView noteId={noteId} /></TabsContent>
-  <TabsContent value="details"><NoteDetails noteId={noteId} /></TabsContent>
+  <TabsContent value="transcript">
+    <TranscriptView noteId={noteId} />
+  </TabsContent>
+  <TabsContent value="details">
+    <NoteDetails noteId={noteId} />
+  </TabsContent>
 </Tabs>
 ```
 
@@ -170,12 +186,14 @@ rtk git commit -m "feat(ui): restore tabbed note side sheet"
 ### Task 3: Simplify Workspace and Global Recording Pills
 
 **Files:**
+
 - Modify: `components/workspace/workspace-toolbar.tsx`
 - Modify: `components/workspace/workspace-toolbar.test.tsx`
 - Modify: `components/transcription/global-recording-indicator.tsx`
 - Modify: `components/transcription/global-recording-indicator.test.tsx`
 
 **Interfaces:**
+
 - Consumes: current recording `phase`, `session`, `elapsedMs`, `level`, `levelHistory`, `error`, and `stop()`.
 - Produces: consistent status/waveform/time/stop pills with no manual segmentation controls.
 
@@ -184,8 +202,12 @@ rtk git commit -m "feat(ui): restore tabbed note side sheet"
 Replace commit expectations in both tests with absence assertions and retain stop behavior:
 
 ```tsx
-expect(screen.queryByRole("button", { name: "구간 확정" })).not.toBeInTheDocument();
-expect(screen.queryByRole("button", { name: /일시 정지|재개/ })).not.toBeInTheDocument();
+expect(
+  screen.queryByRole("button", { name: "구간 확정" })
+).not.toBeInTheDocument();
+expect(
+  screen.queryByRole("button", { name: /일시 정지|재개/ })
+).not.toBeInTheDocument();
 fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
 expect(recording.stop).toHaveBeenCalledOnce();
 ```
@@ -231,9 +253,11 @@ rtk git commit -m "feat(ui): simplify automatic recording controls"
 ### Task 4: Verify the Integrated Restoration
 
 **Files:**
+
 - Verify only; modify a scoped file only if verification exposes a regression caused by Tasks 1-3.
 
 **Interfaces:**
+
 - Consumes: all outputs from Tasks 1-3.
 - Produces: verified UI restoration with unchanged generated clients and realtime protocol.
 

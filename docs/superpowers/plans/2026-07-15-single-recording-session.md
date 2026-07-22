@@ -19,17 +19,21 @@
 ### Task 1: Disable cross-note starts from note detail
 
 **Files:**
+
 - Modify: `components/notes/note-panel.tsx`
 - Modify: `components/notes/note-panel.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `useRecording().session`, `phase`, and `start`.
 - Produces: a disabled `다른 노트에서 녹음 중` control when a different note owns an active session.
 
 - [ ] **Step 1: Write the failing test**
 
 ```tsx
-expect(screen.getByRole("button", { name: "다른 노트에서 녹음 중" })).toBeDisabled();
+expect(
+  screen.getByRole("button", { name: "다른 노트에서 녹음 중" })
+).toBeDisabled();
 fireEvent.click(screen.getByRole("button", { name: "다른 노트에서 녹음 중" }));
 expect(startSession).not.toHaveBeenCalled();
 ```
@@ -43,10 +47,18 @@ Expected: FAIL because the existing panel renders an enabled `기록 시작` but
 - [ ] **Step 3: Write minimal implementation**
 
 ```tsx
-const hasActiveSession = ["requesting-permission", "connecting", "recording", "stopping"].includes(recording.phase);
+const hasActiveSession = [
+  "requesting-permission",
+  "connecting",
+  "recording",
+  "stopping",
+].includes(recording.phase);
 const isOtherNoteRecording = hasActiveSession && !isThisNoteRecording;
 
-<button disabled={isOtherNoteRecording} aria-label={isOtherNoteRecording ? "다른 노트에서 녹음 중" : "기록 시작"} />
+<button
+  disabled={isOtherNoteRecording}
+  aria-label={isOtherNoteRecording ? "다른 노트에서 녹음 중" : "기록 시작"}
+/>;
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -58,6 +70,7 @@ Expected: PASS.
 ### Task 2: Verify session safety
 
 **Files:**
+
 - Modify: `components/notes/note-panel.tsx`
 - Modify: `components/notes/note-panel.test.tsx`
 

@@ -55,7 +55,8 @@ export function Footer({ simplified = false }: { simplified?: boolean }) {
             </span>
           </Link>
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-[var(--el-muted)]">
-            회의를 기록하고 참여하며, 대화를 실제 업무로 연결하는 참여형 AI Agent
+            회의를 기록하고 참여하며, 대화를 실제 업무로 연결하는 참여형 AI
+            Agent
           </p>
           <p className="mt-4 text-[15px] text-[var(--el-muted)]">
             문의:{" "}

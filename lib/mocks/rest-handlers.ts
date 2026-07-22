@@ -154,7 +154,10 @@ export const restHandlers = [
   }),
   getGetProjectMockHandler(({ params }) => {
     try {
-      const data = mockDb.getProject(id(params.workspaceId), id(params.projectId));
+      const data = mockDb.getProject(
+        id(params.workspaceId),
+        id(params.projectId)
+      );
       return { success: true, data, error: null };
     } catch {
       return {
@@ -198,7 +201,8 @@ export const restHandlers = [
         mockDb.deleteProject(id(params.workspaceId), id(params.projectId));
         return new HttpResponse(null, { status: 204 });
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
+        const msg =
+          error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
         if (msg === "PROJECT_HAS_NOTES") {
           return HttpResponse.json(
             {
@@ -332,41 +336,42 @@ export const restHandlers = [
   }),
   // Hand-written (not the Orval getStartTranscriptionSessionMockHandler): needs
   // 201/409 status codes the generated wrapper can't express.
-  http.post(
-    "*/v1/notes/:noteId/transcription-sessions",
-    async ({ params }) => {
-      try {
-        const data = mockDb.createSession(id(params.noteId));
-        return HttpResponse.json({ success: true, data, error: null }, { status: 201 });
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
-        if (msg === "ACTIVE_TRANSCRIPTION_SESSION") {
-          return HttpResponse.json(
-            {
-              success: false,
-              data: null,
-              error: {
-                code: "ACTIVE_TRANSCRIPTION_SESSION",
-                message: "이미 진행 가능한 전사 세션이 있습니다.",
-                details: null,
-              },
-            },
-            { status: 409 }
-          );
-        }
+  http.post("*/v1/notes/:noteId/transcription-sessions", async ({ params }) => {
+    try {
+      const data = mockDb.createSession(id(params.noteId));
+      return HttpResponse.json(
+        { success: true, data, error: null },
+        { status: 201 }
+      );
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
+      if (msg === "ACTIVE_TRANSCRIPTION_SESSION") {
         return HttpResponse.json(
           {
             success: false,
             data: null,
             error: {
-              code: msg,
-              message: msg,
+              code: "ACTIVE_TRANSCRIPTION_SESSION",
+              message: "이미 진행 가능한 전사 세션이 있습니다.",
               details: null,
             },
           },
-          { status: 404 }
+          { status: 409 }
         );
       }
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: msg,
+            message: msg,
+            details: null,
+          },
+        },
+        { status: 404 }
+      );
     }
-  ),
+  }),
 ];

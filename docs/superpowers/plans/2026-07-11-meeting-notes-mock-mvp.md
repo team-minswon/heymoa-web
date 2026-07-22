@@ -80,6 +80,7 @@
 ### Task 1: Add deterministic contract test tooling
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml`
 - Create: `vitest.config.ts`
@@ -87,6 +88,7 @@
 - Create: `lib/api/app-response.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing `unwrapAppResponse<T>()` from `lib/api/app-response.ts`.
 - Produces: `pnpm test`, `pnpm test:run`, and `pnpm asyncapi:validate` scripts used by every later task.
 
@@ -138,7 +140,9 @@ import { AppResponseError, unwrapAppResponse } from "@/lib/api/app-response";
 
 describe("unwrapAppResponse", () => {
   it("returns successful data", () => {
-    expect(unwrapAppResponse({ success: true, data: { id: "01K0000000000" } })).toEqual({
+    expect(
+      unwrapAppResponse({ success: true, data: { id: "01K0000000000" } })
+    ).toEqual({
       id: "01K0000000000",
     });
   });
@@ -170,12 +174,14 @@ git commit -m "test: add contract test tooling"
 ### Task 2: Expand OpenAPI for Workspace, Folder, and Note
 
 **Files:**
+
 - Modify: `openapi3.yml`
 - Modify: `orval.config.ts`
 - Regenerate: `lib/api/generated/**`
 - Create: `lib/api/meeting-notes-contract.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing cookie security scheme and `AppErrorBody`/`AppErrorDetail` schemas.
 - Produces: `Tsid`, `UserSummary`, `WorkspaceResponse`, `FolderResponse`, `NoteSummaryResponse`, `NoteResponse`, cursor page schemas, request schemas, and generated `workspace`, `folder`, and `note` clients.
 
@@ -248,7 +254,7 @@ Define the shared path parameter exactly once per operation using:
 
 ```yaml
 schema:
-  $ref: '#/components/schemas/Tsid'
+  $ref: "#/components/schemas/Tsid"
 ```
 
 Define `Tsid`, title/context/folder constraints, explicit success wrappers, error responses, and cursor fields exactly as specified in `docs/superpowers/specs/2026-07-11-meeting-notes-contract-design.md`. `CreateNoteRequest.title` is optional; `UpdateNoteRequest.title` is required. Both requests allow nullable `context`. Folder names are 1–50 characters; Note titles are 1–200; context is nullable with maxLength 4000.
@@ -287,11 +293,13 @@ git commit -m "feat(api): add workspace folder and note contracts"
 ### Task 3: Add transcription REST contracts
 
 **Files:**
+
 - Modify: `openapi3.yml`
 - Regenerate: `lib/api/generated/**`
 - Create: `lib/api/transcription-contract.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 2 `Tsid`, `UserSummary`, cursor, and AppResponse schemas.
 - Produces: `TranscriptionSessionResponse`, `TranscriptionConnectionResponse`, `ActiveTranscriptionSessionResponse`, `TranscriptSegmentResponse`, generated transcription hooks, and all transcription error codes.
 
@@ -353,7 +361,8 @@ Use this enum without additional states:
 ```yaml
 TranscriptionSessionStatus:
   type: string
-  enum: [CONNECTING, STREAMING, PAUSED, FINALIZING, COMPLETED, INTERRUPTED, FAILED]
+  enum:
+    [CONNECTING, STREAMING, PAUSED, FINALIZING, COMPLETED, INTERRUPTED, FAILED]
 ```
 
 `CreateTranscriptionSessionRequest.language` is nullable ISO 639-1. The creation and ticket responses contain `session`, `socketUrl`, and `ticketExpiresAt`; the opaque ticket is embedded in `socketUrl`, not duplicated as another field. `ActiveTranscriptionSessionResponse.session` is nullable so “none active” remains HTTP 200.
@@ -376,12 +385,14 @@ git commit -m "feat(api): add transcription rest contracts"
 ### Task 4: Build a stateful REST mock store
 
 **Files:**
+
 - Create: `lib/mocks/db.ts`
 - Create: `lib/mocks/db.test.ts`
 - Create: `lib/mocks/rest-handlers.ts`
 - Modify: `lib/mocks/handlers.ts`
 
 **Interfaces:**
+
 - Consumes: generated request/response models and Orval `*.msw.ts` handler factories.
 - Produces: `mockDb.reset()`, Workspace/Folder/Note/Session/Segment query/mutation methods, and `restHandlers`.
 
@@ -396,8 +407,12 @@ describe("mockDb", () => {
 
   it("attaches one note to multiple folders idempotently", () => {
     const note = mockDb.createNote(mockDb.workspace.workspaceId, {});
-    const first = mockDb.createFolder(mockDb.workspace.workspaceId, { name: "제품" });
-    const second = mockDb.createFolder(mockDb.workspace.workspaceId, { name: "개발" });
+    const first = mockDb.createFolder(mockDb.workspace.workspaceId, {
+      name: "제품",
+    });
+    const second = mockDb.createFolder(mockDb.workspace.workspaceId, {
+      name: "개발",
+    });
     mockDb.attachFolder(note.noteId, first.folderId);
     mockDb.attachFolder(note.noteId, first.folderId);
     mockDb.attachFolder(note.noteId, second.folderId);
@@ -494,10 +509,12 @@ git commit -m "feat(mocks): add stateful meeting note rest handlers"
 ### Task 5: Add and validate the AsyncAPI contract
 
 **Files:**
+
 - Create: `asyncapi.yml`
 - Create: `lib/transcription/protocol.examples.test.ts`
 
 **Interfaces:**
+
 - Consumes: design-spec WebSocket endpoint, TSID schema, state enum, and shared error codes.
 - Produces: AsyncAPI 3.1 channel `/v1/transcription-sessions/{sessionId}/stream`, five client commands, seven server events, binary audio, examples, and close-code documentation.
 
@@ -515,7 +532,7 @@ channels:
     address: /v1/transcription-sessions/{sessionId}/stream
     messages:
       MissingMessage:
-        $ref: '#/components/messages/MissingMessage'
+        $ref: "#/components/messages/MissingMessage"
 ```
 
 Run: `pnpm asyncapi:validate`
@@ -573,6 +590,7 @@ git commit -m "feat(api): add realtime transcription asyncapi contract"
 ### Task 6: Implement the typed protocol and MSW WebSocket state machine
 
 **Files:**
+
 - Create: `lib/transcription/protocol.ts`
 - Create: `lib/transcription/protocol.test.ts`
 - Create: `lib/mocks/transcription-scenario.ts`
@@ -581,6 +599,7 @@ git commit -m "feat(api): add realtime transcription asyncapi contract"
 - Modify: `lib/mocks/handlers.ts`
 
 **Interfaces:**
+
 - Produces: `ClientCommand`, `ServerEvent`, `parseClientCommand()`, `parseServerEvent()`, `MockTranscriptionScenario.receive()`, and `transcriptionWebSocketHandler`.
 
 - [ ] **Step 1: Write failing protocol parsing tests**
@@ -592,11 +611,13 @@ import { parseServerEvent } from "@/lib/transcription/protocol";
 describe("parseServerEvent", () => {
   it("accepts a Partial snapshot", () => {
     expect(
-      parseServerEvent(JSON.stringify({
-        type: "TRANSCRIPT_PARTIAL",
-        itemId: "provider-item-1",
-        text: "안녕하세요",
-      }))
+      parseServerEvent(
+        JSON.stringify({
+          type: "TRANSCRIPT_PARTIAL",
+          itemId: "provider-item-1",
+          text: "안녕하세요",
+        })
+      )
     ).toMatchObject({ type: "TRANSCRIPT_PARTIAL", text: "안녕하세요" });
   });
 
@@ -643,8 +664,12 @@ describe("MockTranscriptionScenario", () => {
     scenario.open();
     scenario.receive({ type: "SESSION_PAUSE" });
     scenario.receive({ type: "SESSION_RESUME" });
-    expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "SESSION_STATUS", status: "PAUSED" }));
-    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({ type: "SESSION_STATUS", status: "STREAMING" }));
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "SESSION_STATUS", status: "PAUSED" })
+    );
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: "SESSION_STATUS", status: "STREAMING" })
+    );
   });
 });
 ```
@@ -665,7 +690,9 @@ export const transcriptionWebSocketHandler = link.addEventListener(
   ({ client }) => {
     const scenario = createScenarioFromConnection(client.url, client);
     scenario.open();
-    client.addEventListener("message", (event) => scenario.receiveFrame(event.data));
+    client.addEventListener("message", (event) =>
+      scenario.receiveFrame(event.data)
+    );
     client.addEventListener("close", () => scenario.dispose());
   }
 );
@@ -689,6 +716,7 @@ git commit -m "feat(mocks): simulate realtime transcription websocket"
 ### Task 7: Implement transcript reduction, socket lifecycle, and PCM capture
 
 **Files:**
+
 - Create: `lib/transcription/transcript-reducer.ts`
 - Create: `lib/transcription/transcript-reducer.test.ts`
 - Create: `lib/transcription/socket.ts`
@@ -698,13 +726,17 @@ git commit -m "feat(mocks): simulate realtime transcription websocket"
 - Create: `public/audio/pcm-capture-worklet.js`
 
 **Interfaces:**
+
 - Produces: `TranscriptState`, `transcriptReducer`, `TranscriptionSocket`, `PcmAudioCapture`.
 
 - [ ] **Step 1: Write failing reducer tests**
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { initialTranscriptState, transcriptReducer } from "@/lib/transcription/transcript-reducer";
+import {
+  initialTranscriptState,
+  transcriptReducer,
+} from "@/lib/transcription/transcript-reducer";
 
 describe("transcriptReducer", () => {
   it("replaces Partial snapshots and removes them on Final", () => {
@@ -794,6 +826,7 @@ git commit -m "feat(transcription): add browser audio and socket runtime"
 ### Task 8: Mount one global RecordingProvider
 
 **Files:**
+
 - Create: `components/transcription/recording-provider.tsx`
 - Create: `components/transcription/recording-provider.test.tsx`
 - Create: `components/transcription/global-recording-indicator.tsx`
@@ -801,6 +834,7 @@ git commit -m "feat(transcription): add browser audio and socket runtime"
 - Modify: `app/layout.tsx`
 
 **Interfaces:**
+
 - Consumes: generated transcription mutations/queries, `TranscriptionSocket`, `PcmAudioCapture`, and `transcriptReducer`.
 - Produces: `useRecording()` with `start(noteId, language)`, `pause()`, `resume()`, `stop()`, current Session, transcript state, elapsed time, and error.
 
@@ -870,6 +904,7 @@ git commit -m "feat(transcription): add global recording provider"
 ### Task 9: Build Workspace and canonical Note routes
 
 **Files:**
+
 - Create: `app/w/[workspaceId]/page.tsx`
 - Create: `app/w/[workspaceId]/notes/[noteId]/page.tsx`
 - Create: `components/workspace/workspace-page.tsx`
@@ -882,6 +917,7 @@ git commit -m "feat(transcription): add global recording provider"
 - Modify: `lib/auth/paths.ts`
 
 **Interfaces:**
+
 - Consumes: generated Workspace/Folder/Note/Session/Segment hooks and `useRecording()`.
 - Produces: mock-backed URLs `/w/{workspaceId}` and `/w/{workspaceId}/notes/{noteId}?view=side|full&tab=details|transcript`.
 
@@ -903,10 +939,12 @@ import { normalizeNoteViewQuery } from "@/components/notes/note-view";
 
 describe("normalizeNoteViewQuery", () => {
   it("falls back to full transcript", () => {
-    expect(normalizeNoteViewQuery({ view: "invalid", tab: "invalid" })).toEqual({
-      view: "full",
-      tab: "transcript",
-    });
+    expect(normalizeNoteViewQuery({ view: "invalid", tab: "invalid" })).toEqual(
+      {
+        view: "full",
+        tab: "transcript",
+      }
+    );
   });
 
   it("preserves an explicit side details view", () => {
@@ -969,10 +1007,12 @@ git commit -m "feat: add mock-backed meeting note workspace"
 ### Task 10: Final contract and regression verification
 
 **Files:**
+
 - Verify: all changed files
 - Modify: `README.md`
 
 **Interfaces:**
+
 - Consumes: completed REST/AsyncAPI contracts, generated client, mocks, transcription runtime, and pages.
 - Produces: reproducible developer commands and a clean verified branch.
 

@@ -62,7 +62,11 @@ async function parseFrame(data: unknown): Promise<StompFrame | null> {
   };
 }
 
-function stompFrame(command: string, headers: Record<string, string>, body = "") {
+function stompFrame(
+  command: string,
+  headers: Record<string, string>,
+  body = ""
+) {
   const bodyLength = encoder.encode(body).byteLength;
   return [
     command,
@@ -70,7 +74,9 @@ function stompFrame(command: string, headers: Record<string, string>, body = "")
     ...(body ? [`content-length:${bodyLength}`] : []),
     "",
     body,
-  ].join("\n").concat("\0");
+  ]
+    .join("\n")
+    .concat("\0");
 }
 
 export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
@@ -113,14 +119,18 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           subscriptionId = frame.headers.id;
           subscriptionDestination = frame.headers.destination;
           if (frame.headers.receipt) {
-            client.send(stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt }));
+            client.send(
+              stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt })
+            );
           }
           return;
         }
         if (frame.command === "DISCONNECT") {
           scenario?.dispose();
           if (frame.headers.receipt) {
-            client.send(stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt }));
+            client.send(
+              stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt })
+            );
           }
           client.close(1000, "client disconnected");
           return;

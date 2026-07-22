@@ -74,9 +74,9 @@ describe("audio conversion", () => {
   });
 
   it("rejects batch configurations that could emit an oversized frame", () => {
-    expect(
-      () => new PcmChunkBatcher(6_000_000, 100, vi.fn())
-    ).toThrow("PCM_FRAME_EXCEEDS_MAX_BYTES");
+    expect(() => new PcmChunkBatcher(6_000_000, 100, vi.fn())).toThrow(
+      "PCM_FRAME_EXCEEDS_MAX_BYTES"
+    );
   });
 
   it("converts buffered PCM16 bytes to backlog time", () => {

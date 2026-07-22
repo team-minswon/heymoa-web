@@ -120,10 +120,10 @@
 
 ### 5.1 User
 
-| Method | Path | 역할 |
-| --- | --- | --- |
-| GET | `/v1/users/me` | 현재 사용자 조회 |
-| PATCH | `/v1/users/me` | 표시 이름 수정 |
+| Method | Path           | 역할             |
+| ------ | -------------- | ---------------- |
+| GET    | `/v1/users/me` | 현재 사용자 조회 |
+| PATCH  | `/v1/users/me` | 표시 이름 수정   |
 
 `CurrentUserResponse`:
 
@@ -138,13 +138,13 @@ Google 이메일과 프로필 이미지는 읽기 전용이다. `UpdateCurrentUs
 
 ### 5.2 Workspace
 
-| Method | Path | 역할 |
-| --- | --- | --- |
-| GET | `/v1/workspaces` | 내 워크스페이스 목록 |
-| POST | `/v1/workspaces` | 워크스페이스 생성 |
-| GET | `/v1/workspaces/{workspaceId}` | 워크스페이스 조회 |
-| PATCH | `/v1/workspaces/{workspaceId}` | 이름·설명 부분 수정 |
-| PUT | `/v1/workspaces/{workspaceId}/default` | 기본 워크스페이스 지정 |
+| Method | Path                                   | 역할                   |
+| ------ | -------------------------------------- | ---------------------- |
+| GET    | `/v1/workspaces`                       | 내 워크스페이스 목록   |
+| POST   | `/v1/workspaces`                       | 워크스페이스 생성      |
+| GET    | `/v1/workspaces/{workspaceId}`         | 워크스페이스 조회      |
+| PATCH  | `/v1/workspaces/{workspaceId}`         | 이름·설명 부분 수정    |
+| PUT    | `/v1/workspaces/{workspaceId}/default` | 기본 워크스페이스 지정 |
 
 기존 `GET /v1/workspaces/default`는 제거한다.
 
