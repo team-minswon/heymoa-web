@@ -79,6 +79,21 @@ React의 첫 client render는 서버 HTML과 같은 결과여야 한다.
 - pending 중 같은 mutation을 시작할 수 있는 모든 control을 함께 비활성화한다.
 - `isFetching`을 “저장 중”처럼 다른 의미로 번역하지 않는다. 내부 polling과 reconciliation은 사용자에게 노출하지 않는다.
 
+## 실시간 데이터 계층
+
+WebSocket·SSE·polling 코드는 feature마다 같은 계층을 반복한다. 기준 구현은 전사 스택이다.
+
+```text
+transport   lib/transcription/socket.ts     연결·프레이밍만 안다. React와 이벤트 의미를 모른다.
+protocol    lib/transcription/protocol.ts   asyncapi 계약의 zod discriminated union. 파싱 실패는 에러다.
+reducer     lib/transcription/transcript-reducer.ts  순수 함수. 이벤트 → 화면 상태.
+provider    components/*/recording-provider.tsx      lifecycle 소유, TanStack Query 캐시와 연결.
+```
+
+- **transport는 공용, protocol은 feature별.** SSE-over-POST는 `lib/api/sse.ts`의 `postEventStream()`을 사용한다(네이티브 `EventSource`는 GET 전용, Orval은 스트리밍 훅을 생성하지 못한다). 인증 401 refresh는 transport가 처리하고, 이벤트 payload의 zod 파싱은 feature protocol이 담당한다. agent 챗봇 2종은 진입 URL만 다르고 같은 계층을 공유한다.
+- **polling은 TanStack Query가 소유한다.** `refetchInterval` + `enabled` 게이팅으로만 폴링한다(`recording-provider` 세션 reconcile 3s, `transcript-view` 활성 전사 2.5s가 선례). 별도 타이머·폴링 추상화를 만들지 않는다.
+- **영속 상태의 단일 출처는 서버다.** 실시간 이벤트는 화면을 즉시 갱신하고, 확정된 데이터는 query invalidate로 서버 응답에 수렴시킨다(final → transcript invalidate가 선례). 스트림과 폴링이 같은 상태를 이중으로 쓰지 않게 reconcile 지점을 provider 한 곳에 둔다.
+
 ## 실시간 전사 UX
 
 ```mermaid

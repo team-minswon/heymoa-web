@@ -12,7 +12,7 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 let refreshPromise: Promise<void> | null = null;
 
-function buildUrl(path: string, params?: Record<string, unknown>) {
+export function buildUrl(path: string, params?: Record<string, unknown>) {
   const url = new URL(path, apiBaseUrl || "http://localhost");
 
   Object.entries(params ?? {}).forEach(([key, value]) => {
