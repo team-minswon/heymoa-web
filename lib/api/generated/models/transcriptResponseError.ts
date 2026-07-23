@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type TranscriptResponseError = { [key: string]: unknown } | null;
+export type TranscriptResponseError =
+  | (typeof TranscriptResponseError)[keyof typeof TranscriptResponseError]
+  | null;
+
+export const TranscriptResponseError = {} as const;

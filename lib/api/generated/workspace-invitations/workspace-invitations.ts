@@ -23,8 +23,8 @@ import type {
 
 import type {
   AppErrorResponse,
+  CreateWorkspaceInvitationRequest,
   UnauthorizedResponse,
-  V1WorkspacesWorkspaceIdInvitations1055786918,
   WorkspaceInvitationActionResponse,
   WorkspaceInvitationListResponse,
 } from "../models";
@@ -598,7 +598,7 @@ export const getCreateWorkspaceInvitationUrl = (workspaceId: string) => {
  */
 export const createWorkspaceInvitation = async (
   workspaceId: string,
-  v1WorkspacesWorkspaceIdInvitations1055786918?: V1WorkspacesWorkspaceIdInvitations1055786918,
+  createWorkspaceInvitationRequest?: CreateWorkspaceInvitationRequest,
   options?: RequestInit
 ): Promise<createWorkspaceInvitationResponse> => {
   return apiFetch<createWorkspaceInvitationResponse>(
@@ -607,7 +607,7 @@ export const createWorkspaceInvitation = async (
       ...options,
       method: "POST",
       headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(v1WorkspacesWorkspaceIdInvitations1055786918),
+      body: JSON.stringify(createWorkspaceInvitationRequest),
     }
   );
 };
@@ -619,17 +619,14 @@ export const getCreateWorkspaceInvitationMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createWorkspaceInvitation>>,
     TError,
-    {
-      workspaceId: string;
-      data?: V1WorkspacesWorkspaceIdInvitations1055786918;
-    },
+    { workspaceId: string; data?: CreateWorkspaceInvitationRequest },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createWorkspaceInvitation>>,
   TError,
-  { workspaceId: string; data?: V1WorkspacesWorkspaceIdInvitations1055786918 },
+  { workspaceId: string; data?: CreateWorkspaceInvitationRequest },
   TContext
 > => {
   const mutationKey = ["createWorkspaceInvitation"];
@@ -643,7 +640,7 @@ export const getCreateWorkspaceInvitationMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createWorkspaceInvitation>>,
-    { workspaceId: string; data?: V1WorkspacesWorkspaceIdInvitations1055786918 }
+    { workspaceId: string; data?: CreateWorkspaceInvitationRequest }
   > = (props) => {
     const { workspaceId, data } = props ?? {};
 
@@ -657,7 +654,7 @@ export type CreateWorkspaceInvitationMutationResult = NonNullable<
   Awaited<ReturnType<typeof createWorkspaceInvitation>>
 >;
 export type CreateWorkspaceInvitationMutationBody =
-  | V1WorkspacesWorkspaceIdInvitations1055786918
+  | CreateWorkspaceInvitationRequest
   | undefined;
 export type CreateWorkspaceInvitationMutationError =
   | AppErrorResponse
@@ -674,10 +671,7 @@ export const useCreateWorkspaceInvitation = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createWorkspaceInvitation>>,
       TError,
-      {
-        workspaceId: string;
-        data?: V1WorkspacesWorkspaceIdInvitations1055786918;
-      },
+      { workspaceId: string; data?: CreateWorkspaceInvitationRequest },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -686,7 +680,7 @@ export const useCreateWorkspaceInvitation = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof createWorkspaceInvitation>>,
   TError,
-  { workspaceId: string; data?: V1WorkspacesWorkspaceIdInvitations1055786918 },
+  { workspaceId: string; data?: CreateWorkspaceInvitationRequest },
   TContext
 > => {
   return useMutation(

@@ -5,17 +5,13 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AppError } from "./appError";
 import type { AppErrorResponseData } from "./appErrorResponseData";
-import type { AppErrorResponseError } from "./appErrorResponseError";
 
 export interface AppErrorResponse {
   /** 요청 성공 여부 */
   success: boolean;
-  /**
-   * 실패 시 null인 응답 데이터
-   * @nullable
-   */
+  /** 실패 시 null인 응답 데이터 */
   data: AppErrorResponseData;
-  /** 오류 정보 */
-  error: AppErrorResponseError;
+  error: AppError;
 }

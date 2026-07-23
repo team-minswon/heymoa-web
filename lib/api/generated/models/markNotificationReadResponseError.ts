@@ -8,8 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type MarkNotificationReadResponseError = {
-  [key: string]: unknown;
-} | null;
+export type MarkNotificationReadResponseError =
+  | (typeof MarkNotificationReadResponseError)[keyof typeof MarkNotificationReadResponseError]
+  | null;
+
+export const MarkNotificationReadResponseError = {} as const;

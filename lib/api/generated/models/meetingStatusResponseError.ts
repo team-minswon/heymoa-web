@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type MeetingStatusResponseError = { [key: string]: unknown } | null;
+export type MeetingStatusResponseError =
+  | (typeof MeetingStatusResponseError)[keyof typeof MeetingStatusResponseError]
+  | null;
+
+export const MeetingStatusResponseError = {} as const;

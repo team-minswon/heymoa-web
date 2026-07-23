@@ -5,12 +5,12 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { AppErrorResponseErrorDetailsItem } from "./appErrorResponseErrorDetailsItem";
+import type { AppErrorDetail } from "./appErrorDetail";
 
 /**
  * 오류 정보
  */
-export type AppErrorResponseError = {
+export interface AppError {
   /** 애플리케이션 오류 코드 */
   code: string;
   /** 사용자에게 표시할 오류 메시지 */
@@ -19,5 +19,5 @@ export type AppErrorResponseError = {
    * 필드별 오류 상세
    * @nullable
    */
-  details: AppErrorResponseErrorDetailsItem[] | null;
-};
+  details: AppErrorDetail[] | null;
+}

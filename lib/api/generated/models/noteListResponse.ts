@@ -13,9 +13,6 @@ export interface NoteListResponse {
   data: NoteListResponseData;
   /** 요청 성공 여부 */
   success: boolean;
-  /**
-   * 성공 시 null인 오류 정보
-   * @nullable
-   */
+  /** 성공 시 null인 오류 정보 */
   error: NoteListResponseError;
 }

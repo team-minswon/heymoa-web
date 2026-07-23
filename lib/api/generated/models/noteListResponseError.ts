@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type NoteListResponseError = { [key: string]: unknown } | null;
+export type NoteListResponseError =
+  | (typeof NoteListResponseError)[keyof typeof NoteListResponseError]
+  | null;
+
+export const NoteListResponseError = {} as const;

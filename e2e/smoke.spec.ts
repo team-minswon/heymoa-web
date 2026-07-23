@@ -81,6 +81,24 @@ test("streams chat tokens through the service worker", async ({ page }) => {
 });
 
 /**
+ * 개인 챗봇 한 턴을 화면에서 끝까지 굴린다. 위 테스트가 목의 스트림을 확인한다면 이건
+ * `useChatStream`이 실제 브라우저에서 그 스트림을 읽어 그리는지의 증거다.
+ */
+test("streams a personal chat turn from the panel", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+
+  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await expect(page.getByText("아직 시작된 대화가 없습니다.")).toBeVisible();
+
+  await page.getByLabel("메시지").fill("요약해줘");
+  await page.getByRole("button", { name: "보내기" }).click();
+
+  await expect(
+    page.getByText("회의에서 정한 내용을 정리했습니다.")
+  ).toBeVisible({ timeout: 20_000 });
+});
+
+/**
  * OAuth는 authorize가 외부로 리다이렉트하는 흐름이라 서비스 워커가 가로챌 수 없다.
  * 목에서는 `/mock-oauth`가 그 자리를 대신하므로, 왕복이 실제로 닫히는지 확인한다.
  */

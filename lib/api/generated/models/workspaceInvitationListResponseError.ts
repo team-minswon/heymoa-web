@@ -8,8 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type WorkspaceInvitationListResponseError = {
-  [key: string]: unknown;
-} | null;
+export type WorkspaceInvitationListResponseError =
+  | (typeof WorkspaceInvitationListResponseError)[keyof typeof WorkspaceInvitationListResponseError]
+  | null;
+
+export const WorkspaceInvitationListResponseError = {} as const;

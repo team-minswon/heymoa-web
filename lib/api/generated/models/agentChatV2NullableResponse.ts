@@ -16,9 +16,6 @@ export interface AgentChatV2NullableResponse {
   data: AgentChatV2NullableResponseData;
   /** 요청 성공 여부 */
   success: boolean;
-  /**
-   * 성공 시 null인 오류 정보
-   * @nullable
-   */
+  /** 성공 시 null인 오류 정보 */
   error: AgentChatV2NullableResponseError;
 }

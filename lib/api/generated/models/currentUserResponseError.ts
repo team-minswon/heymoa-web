@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type CurrentUserResponseError = { [key: string]: unknown } | null;
+export type CurrentUserResponseError =
+  | (typeof CurrentUserResponseError)[keyof typeof CurrentUserResponseError]
+  | null;
+
+export const CurrentUserResponseError = {} as const;

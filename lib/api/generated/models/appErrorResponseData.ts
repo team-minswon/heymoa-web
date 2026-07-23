@@ -8,6 +8,9 @@
 
 /**
  * 실패 시 null인 응답 데이터
- * @nullable
  */
-export type AppErrorResponseData = { [key: string]: unknown } | null;
+export type AppErrorResponseData =
+  | (typeof AppErrorResponseData)[keyof typeof AppErrorResponseData]
+  | null;
+
+export const AppErrorResponseData = {} as const;

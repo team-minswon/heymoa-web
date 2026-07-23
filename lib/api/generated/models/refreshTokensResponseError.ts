@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type RefreshTokensResponseError = { [key: string]: unknown } | null;
+export type RefreshTokensResponseError =
+  | (typeof RefreshTokensResponseError)[keyof typeof RefreshTokensResponseError]
+  | null;
+
+export const RefreshTokensResponseError = {} as const;

@@ -2388,8 +2388,6 @@ paths:
                       code: "WORKSPACE_ACCESS_DENIED"
                       message: "워크스페이스를 변경할 권한이 없습니다."
                       details: null
-        "401":
-          $ref: "#/components/responses/Unauthorized"
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -2440,6 +2438,8 @@ paths:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
                       details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
     post:
@@ -2466,7 +2466,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/v1-workspaces-workspaceId-invitations1055786918"
+              $ref: "#/components/schemas/CreateWorkspaceInvitationRequest"
             examples:
               createWorkspaceInvitation_DuplicatePendingInvitationException:
                 value:
@@ -2479,10 +2479,6 @@ paths:
               createWorkspaceInvitation_BadRequest:
                 value:
                   email: "not-an-email"
-                  role: "MEMBER"
-              createWorkspaceInvitation_Unauthorized:
-                value:
-                  email: "kim@example.com"
                   role: "MEMBER"
               createWorkspaceInvitation_Success:
                 value:
@@ -2562,8 +2558,6 @@ paths:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
                       details: null
-        "401":
-          $ref: "#/components/responses/Unauthorized"
         "201":
           description: "생성 성공"
           content:
@@ -2595,6 +2589,8 @@ paths:
                       code: "WORKSPACE_ACCESS_DENIED"
                       message: "워크스페이스를 변경할 권한이 없습니다."
                       details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
   /v1/workspaces/{workspaceId}/members:
@@ -3933,16 +3929,19 @@ components:
               type: "string"
               description: "전사 시작 시각"
               nullable: true
+              example: "2026-07-14T01:02:03Z"
               format: "date-time"
             endedAt:
               type: "string"
               description: "전사 종료 시각"
               nullable: true
+              example: "2026-07-14T01:02:03Z"
               format: "date-time"
             endReason:
               type: "string"
               description: "전사 종료 사유"
               nullable: true
+              example: "CLIENT_DISCONNECTED"
               enum:
               - "READY_TIMEOUT"
               - "CLIENT_DISCONNECTED"
@@ -3959,9 +3958,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     AgentChatV2NullableResponse:
       title: "AgentChatV2NullableResponse"
       required:
@@ -4003,6 +4003,7 @@ components:
               type: "string"
               description: "연결된 노트 (scope=workspace면 null)"
               nullable: true
+              example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
               minLength: 13
               maxLength: 13
@@ -4027,9 +4028,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     SendAgentChatMessageRequest:
       title: "SendAgentChatMessageRequest"
       required:
@@ -4069,9 +4071,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     CreateAgentChatV2Request:
       title: "CreateAgentChatV2Request"
       required:
@@ -4192,9 +4195,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     WorkspaceResponse:
       title: "WorkspaceResponse"
       required:
@@ -4253,29 +4257,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
-    v1-workspaces-workspaceId-invitations1055786918:
-      required:
-      - "email"
-      - "role"
-      type: "object"
-      properties:
-        role:
-          type: "string"
-          description: "수락 시 부여할 워크스페이스 역할"
-          nullable: false
-          example: "MEMBER"
           enum:
-          - "ADMIN"
-          - "MEMBER"
-        email:
-          type: "string"
-          description: "초대할 사용자의 가입 이메일"
-          nullable: false
-          example: "kim@example.com"
-          format: "email"
+          - null
+          description: "성공 시 null인 오류 정보"
     ChangeDefaultWorkspaceResponse:
       title: "ChangeDefaultWorkspaceResponse"
       required:
@@ -4305,9 +4290,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     ResolveToolApprovalRequest:
       title: "ResolveToolApprovalRequest"
       required:
@@ -4443,9 +4429,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     CreateWorkspaceRequest:
       title: "CreateWorkspaceRequest"
       required:
@@ -4495,9 +4482,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     NoteResponse:
       title: "NoteResponse"
       required:
@@ -4589,9 +4577,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     WorkspaceInvitationListResponse:
       title: "WorkspaceInvitationListResponse"
       required:
@@ -4672,9 +4661,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     AppErrorResponse:
       title: "AppErrorResponse"
       type: "object"
@@ -4689,44 +4679,12 @@ components:
           nullable: false
           example: false
         data:
-          type: "object"
           nullable: true
+          enum:
+          - null
           description: "실패 시 null인 응답 데이터"
         error:
-          type: "object"
-          required:
-          - "code"
-          - "message"
-          - "details"
-          properties:
-            code:
-              type: "string"
-              description: "애플리케이션 오류 코드"
-              nullable: false
-            message:
-              type: "string"
-              description: "사용자에게 표시할 오류 메시지"
-              nullable: false
-            details:
-              type: "array"
-              nullable: true
-              items:
-                type: "object"
-                required:
-                - "field"
-                - "message"
-                properties:
-                  field:
-                    type: "string"
-                    description: "오류가 발생한 필드"
-                    nullable: false
-                  message:
-                    type: "string"
-                    description: "필드 오류 메시지"
-                    nullable: false
-              description: "필드별 오류 상세"
-          description: "오류 정보"
-          nullable: false
+          $ref: "#/components/schemas/AppError"
     WorkspaceListResponse:
       title: "WorkspaceListResponse"
       required:
@@ -4794,9 +4752,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     SendNoteSharedChatMessageRequest:
       title: "SendNoteSharedChatMessageRequest"
       required:
@@ -4859,9 +4818,31 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    CreateWorkspaceInvitationRequest:
+      title: "CreateWorkspaceInvitationRequest"
+      required:
+      - "email"
+      - "role"
+      type: "object"
+      properties:
+        role:
+          type: "string"
+          description: "수락 시 부여할 워크스페이스 역할"
+          nullable: false
+          example: "MEMBER"
+          enum:
+          - "ADMIN"
+          - "MEMBER"
+        email:
+          type: "string"
+          description: "초대할 사용자의 가입 이메일"
+          nullable: false
+          example: "kim@example.com"
+          format: "email"
     LogoutResponse:
       title: "LogoutResponse"
       required:
@@ -4888,9 +4869,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     UpdateWorkspaceRequest:
       title: "UpdateWorkspaceRequest"
       required:
@@ -4977,6 +4959,7 @@ components:
               type: "string"
               description: "연결된 워크스페이스 (scope=note면 null)"
               nullable: true
+              example: "0HZX2K7M9Q4AD"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
               minLength: 13
               maxLength: 13
@@ -4988,9 +4971,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     WorkspaceMemberListResponse:
       title: "WorkspaceMemberListResponse"
       required:
@@ -5065,9 +5049,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     TranscriptResponse:
       title: "TranscriptResponse"
       required:
@@ -5145,9 +5130,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     WorkspaceInvitationActionResponse:
       title: "WorkspaceInvitationActionResponse"
       required:
@@ -5206,9 +5192,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     AgentChatMessagesResponse:
       title: "AgentChatMessagesResponse"
       required:
@@ -5294,9 +5281,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     ToolConnectionsResponse:
       title: "ToolConnectionsResponse"
       required:
@@ -5350,9 +5338,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     NoteListResponse:
       title: "NoteListResponse"
       required:
@@ -5458,9 +5447,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     CurrentUserResponse:
       title: "CurrentUserResponse"
       required:
@@ -5510,9 +5500,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     UpdateWorkspaceResponse:
       title: "UpdateWorkspaceResponse"
       required:
@@ -5554,9 +5545,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     ChangeDefaultWorkspaceRequest:
       title: "ChangeDefaultWorkspaceRequest"
       required:
@@ -5646,9 +5638,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     NoteSharedChatResponse:
       title: "NoteSharedChatResponse"
       required:
@@ -5809,9 +5802,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     ProjectResponse:
       title: "ProjectResponse"
       required:
@@ -5878,9 +5872,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     MarkNotificationReadResponse:
       title: "MarkNotificationReadResponse"
       required:
@@ -5910,9 +5905,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     CreateWorkspaceResponse:
       title: "CreateWorkspaceResponse"
       required:
@@ -5971,9 +5967,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     AnalysisResultCallback:
       title: "AnalysisResultCallback"
       oneOf:
@@ -6027,22 +6024,27 @@ components:
               type: "string"
               description: "회의 개요 (markdown, 미완료 시 null)"
               nullable: true
+              example: "# 개요"
             insights:
               type: "string"
               description: "insight (markdown, 미완료 시 null)"
               nullable: true
+              example: "- 인사이트"
             actionItems:
               type: "string"
               description: "action item (markdown, 미완료 시 null)"
               nullable: true
+              example: "- 액션"
             errorMessage:
               type: "string"
               description: "에러 메시지 (FAILED일 때)"
               nullable: true
+              example: "분석이 제한 시간을 초과했습니다."
             errorCode:
               type: "string"
               description: "에러 코드 (FAILED일 때)"
               nullable: true
+              example: "ANALYSIS_TIMEOUT"
             analysisId:
               type: "string"
               description: "분석 잡의 13자리 TSID"
@@ -6077,9 +6079,10 @@ components:
           nullable: false
           example: true
         error:
-          type: "object"
-          description: "성공 시 null인 오류 정보"
           nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     AnalysisSucceededCallback:
       title: "AnalysisSucceededCallback"
       type: "object"
@@ -6094,15 +6097,19 @@ components:
           description: "SUCCEEDED 고정"
           enum:
           - "SUCCEEDED"
+          example: "SUCCEEDED"
         overview:
           type: "string"
           description: "회의 개요 (markdown)"
+          example: "## 개요\n주간 회의에서 다음 스프린트 범위를 정했다."
         actionItems:
           type: "string"
           description: "action item 목록 (markdown)"
+          example: "- [ ] 김민수: 계약 문서 갱신"
         insights:
           type: "string"
           description: "insight 목록 (markdown)"
+          example: "- 배포 주기가 병목이다."
     AnalysisFailedCallback:
       title: "AnalysisFailedCallback"
       type: "object"
@@ -6115,6 +6122,7 @@ components:
           description: "FAILED 고정"
           enum:
           - "FAILED"
+          example: "FAILED"
         error:
           type: "object"
           required:
@@ -6124,9 +6132,53 @@ components:
             code:
               type: "string"
               description: "기계 판독용 에러 코드"
+              example: "ANALYSIS_TIMEOUT"
             message:
               type: "string"
               description: "에러 메시지"
+              example: "분석이 제한 시간을 초과했습니다."
+    AppErrorDetail:
+      type: "object"
+      required:
+      - "field"
+      - "message"
+      properties:
+        field:
+          type: "string"
+          example: "name"
+          description: "오류가 발생한 필드"
+          nullable: false
+        message:
+          type: "string"
+          example: "이름은 필수입니다."
+          description: "필드 오류 메시지"
+          nullable: false
+      title: "AppErrorDetail"
+    AppError:
+      type: "object"
+      required:
+      - "code"
+      - "message"
+      - "details"
+      properties:
+        code:
+          type: "string"
+          example: "WORKSPACE_NOT_FOUND"
+          description: "애플리케이션 오류 코드"
+          nullable: false
+        message:
+          type: "string"
+          example: "워크스페이스를 찾을 수 없습니다."
+          description: "사용자에게 표시할 오류 메시지"
+          nullable: false
+        details:
+          type: "array"
+          nullable: true
+          items:
+            $ref: "#/components/schemas/AppErrorDetail"
+          description: "필드별 오류 상세"
+      description: "오류 정보"
+      title: "AppError"
   securitySchemes:
     accessCookie:
       type: "apiKey"

@@ -6,9 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type AppErrorResponseErrorDetailsItem = {
+export interface AppErrorDetail {
   /** 오류가 발생한 필드 */
   field: string;
   /** 필드 오류 메시지 */
   message: string;
-};
+}

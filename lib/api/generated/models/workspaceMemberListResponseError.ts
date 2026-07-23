@@ -8,8 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type WorkspaceMemberListResponseError = {
-  [key: string]: unknown;
-} | null;
+export type WorkspaceMemberListResponseError =
+  | (typeof WorkspaceMemberListResponseError)[keyof typeof WorkspaceMemberListResponseError]
+  | null;
+
+export const WorkspaceMemberListResponseError = {} as const;

@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type NoteSharedChatResponseError = { [key: string]: unknown } | null;
+export type NoteSharedChatResponseError =
+  | (typeof NoteSharedChatResponseError)[keyof typeof NoteSharedChatResponseError]
+  | null;
+
+export const NoteSharedChatResponseError = {} as const;

@@ -8,6 +8,10 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
+  PersonalChatProvider,
+  usePersonalChat,
+} from "@/components/chat/personal-chat";
+import {
   SettingsDialog,
   type SettingsSection,
 } from "@/components/settings/settings-dialog";
@@ -19,6 +23,7 @@ import type {
 } from "@/lib/api/generated/models";
 import { useGetProjects } from "@/lib/api/generated/projects/projects";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
+import { cn } from "@/lib/utils";
 
 type WorkspaceShellState = {
   selectedProjectId: string | null;
@@ -99,6 +104,10 @@ export function WorkspaceAppShell({
 
   return (
     <WorkspaceShellContext.Provider value={value}>
+      <PersonalChatProvider
+        workspaceId={workspaceId}
+        workspaceName={workspace?.name}
+      >
       <TooltipProvider>
         <SettingsDialog
           open={settingsOpen}
@@ -119,18 +128,54 @@ export function WorkspaceAppShell({
               />
             </Sidebar>
           )}
-          <SidebarInset className="flex-1 bg-[var(--el-canvas)]">
-            <div className="relative flex h-full min-w-0 flex-col overflow-hidden">
-              <WorkspaceToolbar
-                workspaceId={workspaceId}
-                currentLabel={currentLabel}
-                activeNoteId={activeNoteId}
-              />
-              {children}
-            </div>
-          </SidebarInset>
+          <ShellMain
+            workspaceId={workspaceId}
+            currentLabel={currentLabel}
+            activeNoteId={activeNoteId}
+          >
+            {children}
+          </ShellMain>
         </SidebarProvider>
       </TooltipProvider>
+      </PersonalChatProvider>
     </WorkspaceShellContext.Provider>
+  );
+}
+
+/**
+ * 개인 챗봇 패널은 `fixed`라 본문을 덮는다. 열려 있는 동안 본문을 패널 폭(448 + 거터 8)만큼
+ * 밀어 두 프레임(`LeuWE`·`LCXcj`)의 본문 컬럼 축소를 그대로 낸다.
+ */
+function ShellMain({
+  workspaceId,
+  currentLabel,
+  activeNoteId,
+  children,
+}: {
+  workspaceId: string;
+  currentLabel: string;
+  activeNoteId?: string;
+  children: React.ReactNode;
+}) {
+  const { isVisible } = usePersonalChat();
+  return (
+    <SidebarInset className="flex-1 bg-[var(--el-canvas)]">
+      <div
+        className={cn(
+          "relative flex h-full min-w-0 flex-col overflow-hidden transition-[width] duration-200",
+          // padding이 아니라 폭을 줄인다 — 노트 full 화면은 이 컨테이너 안에서 `absolute
+          // inset-x-0`으로 깔리는데, 절대 배치의 기준은 padding box라 padding으로는 안 밀린다.
+          // 좁은 화면에서는 패널이 전체를 덮으므로 본문을 더 줄이지 않는다.
+          isVisible && "lg:w-[calc(100%-456px)]"
+        )}
+      >
+        <WorkspaceToolbar
+          workspaceId={workspaceId}
+          currentLabel={currentLabel}
+          activeNoteId={activeNoteId}
+        />
+        {children}
+      </div>
+    </SidebarInset>
   );
 }

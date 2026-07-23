@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type ProjectListResponseError = { [key: string]: unknown } | null;
+export type ProjectListResponseError =
+  | (typeof ProjectListResponseError)[keyof typeof ProjectListResponseError]
+  | null;
+
+export const ProjectListResponseError = {} as const;

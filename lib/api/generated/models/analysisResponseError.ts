@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type AnalysisResponseError = { [key: string]: unknown } | null;
+export type AnalysisResponseError =
+  | (typeof AnalysisResponseError)[keyof typeof AnalysisResponseError]
+  | null;
+
+export const AnalysisResponseError = {} as const;

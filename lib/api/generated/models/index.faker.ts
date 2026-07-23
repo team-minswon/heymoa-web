@@ -16,10 +16,13 @@ import type {
   AnalysisResultCallback,
   AnalysisResultResponse,
   AnalysisSucceededCallback,
+  AppError,
+  AppErrorDetail,
   AppErrorResponse,
   ChangeDefaultWorkspaceRequest,
   ChangeDefaultWorkspaceResponse,
   CreateAgentChatV2Request,
+  CreateWorkspaceInvitationRequest,
   CreateWorkspaceRequest,
   CreateWorkspaceResponse,
   CurrentUserResponse,
@@ -44,7 +47,6 @@ import type {
   TranscriptionSessionResponse,
   UpdateWorkspaceRequest,
   UpdateWorkspaceResponse,
-  V1WorkspacesWorkspaceIdInvitations1055786918,
   WorkspaceInvitationActionResponse,
   WorkspaceInvitationListResponse,
   WorkspaceListResponse,
@@ -87,7 +89,7 @@ export const getStartTranscriptionSessionResponseMock = (
     ]),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -127,7 +129,7 @@ export const getAgentChatV2NullableResponseMock = (
     null,
   ]),
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -143,7 +145,7 @@ export const getRefreshTokensResponseMock = (
 ): RefreshTokensResponse => ({
   data: { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -210,7 +212,7 @@ export const getTranscriptionSessionResponseMock = (
     ] as const),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -228,15 +230,7 @@ export const getWorkspaceResponseMock = (
     workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
-
-export const getV1WorkspacesWorkspaceIdInvitations1055786918Mock = (
-  overrideResponse: Partial<V1WorkspacesWorkspaceIdInvitations1055786918> = {}
-): V1WorkspacesWorkspaceIdInvitations1055786918 => ({
-  role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
-  email: faker.internet.email(),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -245,7 +239,7 @@ export const getChangeDefaultWorkspaceResponseMock = (
 ): ChangeDefaultWorkspaceResponse => ({
   data: { workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$") },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -291,7 +285,7 @@ export const getNotificationListResponseMock = (
     })),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -320,7 +314,7 @@ export const getMeetingStatusResponseMock = (
     ] as const),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -350,7 +344,7 @@ export const getNoteResponseMock = (
     updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -372,7 +366,30 @@ export const getWorkspaceInvitationListResponseMock = (
     })),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
+
+export const getAppErrorDetailMock = (
+  overrideResponse: Partial<AppErrorDetail> = {}
+): AppErrorDetail => ({
+  field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getAppErrorMock = (
+  overrideResponse: Partial<AppError> = {}
+): AppError => ({
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  details: faker.helpers.arrayElement([
+    Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({ ...getAppErrorDetailMock() })),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -380,21 +397,8 @@ export const getAppErrorResponseMock = (
   overrideResponse: Partial<AppErrorResponse> = {}
 ): AppErrorResponse => ({
   success: faker.datatype.boolean(),
-  data: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  error: {
-    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    details: faker.helpers.arrayElement([
-      Array.from(
-        { length: faker.number.int({ min: 1, max: 10 }) },
-        (_, i) => i + 1
-      ).map(() => ({
-        field: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      })),
-      null,
-    ]),
-  },
+  data: faker.helpers.arrayElement([] as const),
+  error: { ...getAppErrorMock() },
   ...overrideResponse,
 });
 
@@ -417,7 +421,7 @@ export const getWorkspaceListResponseMock = (
     })),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -442,7 +446,15 @@ export const getAnalysisResponseMock = (
     ] as const),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
+
+export const getCreateWorkspaceInvitationRequestMock = (
+  overrideResponse: Partial<CreateWorkspaceInvitationRequest> = {}
+): CreateWorkspaceInvitationRequest => ({
+  role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+  email: faker.internet.email(),
   ...overrideResponse,
 });
 
@@ -451,7 +463,7 @@ export const getLogoutResponseMock = (
 ): LogoutResponse => ({
   data: { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -506,7 +518,7 @@ export const getAgentChatV2ResponseMock = (
     ]),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -527,7 +539,7 @@ export const getWorkspaceMemberListResponseMock = (
     })),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -550,7 +562,7 @@ export const getTranscriptResponseMock = (
     })),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -569,7 +581,7 @@ export const getWorkspaceInvitationActionResponseMock = (
     workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -615,7 +627,7 @@ export const getAgentChatMessagesResponseMock = (
     ]),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -643,7 +655,7 @@ export const getToolConnectionsResponseMock = (
     ]),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -678,7 +690,7 @@ export const getNoteListResponseMock = (
     })),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -692,7 +704,7 @@ export const getCurrentUserResponseMock = (
     email: faker.internet.email(),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -708,7 +720,7 @@ export const getUpdateWorkspaceResponseMock = (
     workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -739,7 +751,7 @@ export const getProjectListResponseMock = (
     })),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -805,7 +817,7 @@ export const getNoteSharedChatResponseMock = (
     },
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -824,7 +836,7 @@ export const getProjectResponseMock = (
     workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -835,7 +847,7 @@ export const getMarkNotificationReadResponseMock = (
     notificationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -853,7 +865,7 @@ export const getCreateWorkspaceResponseMock = (
     workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });
 
@@ -932,6 +944,6 @@ export const getAnalysisResultResponseMock = (
     ] as const),
   },
   success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  error: faker.helpers.arrayElement([] as const),
   ...overrideResponse,
 });

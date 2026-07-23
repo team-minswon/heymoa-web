@@ -5,11 +5,11 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { V1WorkspacesWorkspaceIdInvitations1055786918Role } from "./v1WorkspacesWorkspaceIdInvitations1055786918Role";
+import type { CreateWorkspaceInvitationRequestRole } from "./createWorkspaceInvitationRequestRole";
 
-export interface V1WorkspacesWorkspaceIdInvitations1055786918 {
+export interface CreateWorkspaceInvitationRequest {
   /** 수락 시 부여할 워크스페이스 역할 */
-  role: V1WorkspacesWorkspaceIdInvitations1055786918Role;
+  role: CreateWorkspaceInvitationRequestRole;
   /** 초대할 사용자의 가입 이메일 */
   email: string;
 }

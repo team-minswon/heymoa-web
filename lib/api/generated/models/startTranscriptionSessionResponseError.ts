@@ -8,8 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type StartTranscriptionSessionResponseError = {
-  [key: string]: unknown;
-} | null;
+export type StartTranscriptionSessionResponseError =
+  | (typeof StartTranscriptionSessionResponseError)[keyof typeof StartTranscriptionSessionResponseError]
+  | null;
+
+export const StartTranscriptionSessionResponseError = {} as const;

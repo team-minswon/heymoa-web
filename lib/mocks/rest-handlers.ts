@@ -1,34 +1,15 @@
 import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
 
+// 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
+// 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
 import { getGetCurrentUserMockHandler } from "@/lib/api/generated/users/users.msw";
-import {
-  getGetWorkspacesMockHandler,
-  getCreateWorkspaceMockHandler,
-  getGetWorkspaceMockHandler,
-  getUpdateWorkspaceMockHandler,
-  getChangeDefaultWorkspaceMockHandler,
-} from "@/lib/api/generated/workspaces/workspaces.msw";
-import {
-  getGetProjectsMockHandler,
-  getCreateProjectMockHandler,
-  getGetProjectMockHandler,
-  getUpdateProjectMockHandler,
-} from "@/lib/api/generated/projects/projects.msw";
-import {
-  getGetNoteMockHandler,
-  getUpdateNoteMockHandler,
-  getGetNotesMockHandler,
-  getCreateNoteMockHandler,
-} from "@/lib/api/generated/notes/notes.msw";
-import {
-  getGetTranscriptionSessionMockHandler,
-  getGetNoteTranscriptMockHandler,
-} from "@/lib/api/generated/transcription/transcription.msw";
+import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/workspaces.msw";
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
 import { getGetActiveAgentChatMockHandler } from "@/lib/api/generated/agent-chat/agent-chat.msw";
 
 import type {
+  ChangeDefaultWorkspaceRequest,
   CreateWorkspaceRequest,
   ProjectRequest,
   NoteRequest,
@@ -54,11 +35,30 @@ const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER"]);
 const NOT_FOUND_CODES = new Set([
   "NOTE_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
+  "PROJECT_NOT_FOUND",
+  "TRANSCRIPTION_SESSION_NOT_FOUND",
   "ANALYSIS_JOB_NOT_FOUND",
   "INTEGRATION_NOT_FOUND",
   "NOTIFICATION_NOT_FOUND",
   "AGENT_CHAT_NOT_FOUND",
 ]);
+
+/** mockDb가 던지는 계약 코드. 이것 말고는 목 자신의 버그이므로 fallback으로 떨어뜨린다. */
+const KNOWN_CODES = new Set([
+  ...NOT_FOUND_CODES,
+  ...FORBIDDEN_CODES,
+  ...INVITATION_NOT_FOUND_CODES,
+  "PROJECT_HAS_NOTES",
+  "MEETING_NOT_ACTIVE",
+  "CHAT_LOCKED",
+  "NOT_MEETING_STARTER",
+]);
+
+function statusOf(code: string) {
+  if (FORBIDDEN_CODES.has(code)) return 403;
+  if (NOT_FOUND_CODES.has(code)) return 404;
+  return 409;
+}
 
 /** 목의 실패 코드를 화면이 구분할 수 있는 상태 코드로 옮긴다 — 없으면 404, 상태 위반이면 409. */
 function commandResult<T>(run: () => T, okStatus = 200) {
@@ -82,6 +82,52 @@ function commandResult<T>(run: () => T, okStatus = 200) {
             ? 404
             : 409,
       }
+    );
+  }
+}
+
+const BAD_REQUEST = {
+  code: "BAD_REQUEST",
+  message: "잘못된 요청입니다.",
+  status: 400,
+} as const;
+
+function notFound(code: string, message: string) {
+  return { code, message, status: 404 } as const;
+}
+
+/**
+ * orval이 만든 `get*MockHandler`는 **항상 200을 준다.** 실패 봉투를 그 안에 넣으면
+ * `200 success:false`가 되어 계약을 어긴다 — 계약의 성공 응답은 `error`가 null로 못박혀
+ * 있고, 실패는 4xx + AppErrorResponse다. 실패 경로가 있는 operation은 직접 `http.*`로
+ * 쓰고 이 헬퍼로 상태 코드를 붙인다. 생성 mock 래퍼는 실패가 없는 조회에만 쓴다.
+ */
+async function resultOf<T>(
+  run: () => T | Promise<T>,
+  onError: { code: string; message: string; status: number },
+  okStatus = 200
+) {
+  try {
+    return HttpResponse.json(
+      { success: true, data: await run(), error: null },
+      { status: okStatus }
+    );
+  } catch (error) {
+    // mockDb가 계약 코드를 던졌으면 그걸 그대로 쓴다. 한 operation에 실패가 여럿인데
+    // 기본값으로 덮으면(예: createProject의 WORKSPACE_NOT_FOUND → 400) 계약과 어긋난다.
+    const thrown = error instanceof Error ? error.message : "";
+    const code = KNOWN_CODES.has(thrown) ? thrown : onError.code;
+    return HttpResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          code,
+          message: code === onError.code ? onError.message : code,
+          details: null,
+        },
+      },
+      { status: code === onError.code ? onError.status : statusOf(code) }
     );
   }
 }
@@ -119,147 +165,78 @@ export const restHandlers = [
     data: { workspaces: mockDb.listWorkspaces() },
     error: null,
   })),
-  getCreateWorkspaceMockHandler(async ({ request }) => {
-    try {
-      const body = (await request.json()) as CreateWorkspaceRequest;
-      const data = mockDb.createWorkspace(body);
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "BAD_REQUEST",
-          message: "잘못된 요청입니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getGetWorkspaceMockHandler(({ params }) => {
-    try {
-      const data = mockDb.getWorkspace(id(params.workspaceId));
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "WORKSPACE_NOT_FOUND",
-          message: "워크스페이스를 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getUpdateWorkspaceMockHandler(async ({ request, params }) => {
-    try {
-      const body = (await request.json()) as UpdateWorkspaceRequest;
-      const data = mockDb.updateWorkspace(id(params.workspaceId), body);
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "BAD_REQUEST",
-          message: "잘못된 요청입니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getChangeDefaultWorkspaceMockHandler(({ params }) => {
-    try {
-      const data = mockDb.setDefaultWorkspace(id(params.workspaceId));
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "WORKSPACE_NOT_FOUND",
-          message: "워크스페이스를 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
+  // 계약상 생성은 201이다. 생성 mock 래퍼는 200만 줄 수 있어 화면의
+  // `status === 201` 분기가 통과하지 못했다 — 목에서 워크스페이스가 만들어지지 않던 원인이다.
+  http.post("*/v1/workspaces", async ({ request }) =>
+    resultOf(
+      async () =>
+        mockDb.createWorkspace((await request.json()) as CreateWorkspaceRequest),
+      BAD_REQUEST,
+      201
+    )
+  ),
+  http.get("*/v1/workspaces/:workspaceId", ({ params }) =>
+    resultOf(
+      () => mockDb.getWorkspace(id(params.workspaceId)),
+      notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
+    )
+  ),
+  http.put("*/v1/workspaces/:workspaceId", async ({ request, params }) =>
+    resultOf(
+      async () =>
+        mockDb.updateWorkspace(
+          id(params.workspaceId),
+          (await request.json()) as UpdateWorkspaceRequest
+        ),
+      BAD_REQUEST
+    )
+  ),
+  // workspaceId는 path가 아니라 **본문**으로 온다 (PUT /v1/users/me/default-workspace).
+  // params에서 읽으면 언제나 없는 워크스페이스라 기본 워크스페이스가 바뀌지 않았다.
+  http.put("*/v1/users/me/default-workspace", async ({ request }) =>
+    resultOf(async () => {
+      const body = (await request.json()) as ChangeDefaultWorkspaceRequest;
+      return mockDb.setDefaultWorkspace(String(body.workspaceId ?? ""));
+    }, notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다."))
+  ),
 
   // Projects
-  getGetProjectsMockHandler(({ params }) => {
-    try {
-      const projects = mockDb.listProjects(id(params.workspaceId));
-      return { success: true, data: { projects }, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "WORKSPACE_NOT_FOUND",
-          message: "워크스페이스를 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getCreateProjectMockHandler(async ({ request, params }) => {
-    try {
-      const body = (await request.json()) as ProjectRequest;
-      const data = mockDb.createProject(id(params.workspaceId), body);
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "BAD_REQUEST",
-          message: "잘못된 요청입니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getGetProjectMockHandler(({ params }) => {
-    try {
-      const data = mockDb.getProject(
-        id(params.workspaceId),
-        id(params.projectId)
-      );
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "PROJECT_NOT_FOUND",
-          message: "프로젝트를 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getUpdateProjectMockHandler(async ({ request, params }) => {
-    try {
-      const body = (await request.json()) as ProjectRequest;
-      const data = mockDb.updateProject(
-        id(params.workspaceId),
-        id(params.projectId),
-        body
-      );
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "BAD_REQUEST",
-          message: "잘못된 요청입니다.",
-          details: null,
-        },
-      };
-    }
-  }),
+  http.get("*/v1/workspaces/:workspaceId/projects", ({ params }) =>
+    resultOf(
+      () => ({ projects: mockDb.listProjects(id(params.workspaceId)) }),
+      notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
+    )
+  ),
+  http.post("*/v1/workspaces/:workspaceId/projects", async ({ request, params }) =>
+    resultOf(
+      async () =>
+        mockDb.createProject(
+          id(params.workspaceId),
+          (await request.json()) as ProjectRequest
+        ),
+      BAD_REQUEST,
+      201
+    )
+  ),
+  http.get("*/v1/workspaces/:workspaceId/projects/:projectId", ({ params }) =>
+    resultOf(
+      () => mockDb.getProject(id(params.workspaceId), id(params.projectId)),
+      notFound("PROJECT_NOT_FOUND", "프로젝트를 찾을 수 없습니다.")
+    )
+  ),
+  http.put(
+    "*/v1/workspaces/:workspaceId/projects/:projectId",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.updateProject(
+            id(params.workspaceId),
+            id(params.projectId),
+            (await request.json()) as ProjectRequest
+          ),
+        BAD_REQUEST
+      )
+  ),
   // Hand-written (not the Orval getDeleteProjectMockHandler): needs 204/409
   // status codes the generated wrapper can't express.
   http.delete(
@@ -302,106 +279,56 @@ export const restHandlers = [
   ),
 
   // Notes
-  getGetNotesMockHandler(({ params }) => {
-    try {
-      const notes = mockDb.listNotes(id(params.projectId));
-      return { success: true, data: { notes }, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "PROJECT_NOT_FOUND",
-          message: "프로젝트를 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getCreateNoteMockHandler(async ({ request, params }) => {
-    try {
-      const body = (await request.json()) as NoteRequest;
-      const data = mockDb.createNote(id(params.projectId), body);
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "BAD_REQUEST",
-          message: "잘못된 요청입니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getGetNoteMockHandler(({ params }) => {
-    try {
-      const data = mockDb.getNote(id(params.noteId));
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "NOTE_NOT_FOUND",
-          message: "노트를 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getUpdateNoteMockHandler(async ({ request, params }) => {
-    try {
-      const body = (await request.json()) as NoteRequest;
-      const data = mockDb.updateNote(id(params.noteId), body);
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "BAD_REQUEST",
-          message: "잘못된 요청입니다.",
-          details: null,
-        },
-      };
-    }
-  }),
+  http.get("*/v1/projects/:projectId/notes", ({ params }) =>
+    resultOf(
+      () => ({ notes: mockDb.listNotes(id(params.projectId)) }),
+      notFound("PROJECT_NOT_FOUND", "프로젝트를 찾을 수 없습니다.")
+    )
+  ),
+  http.post("*/v1/projects/:projectId/notes", async ({ request, params }) =>
+    resultOf(
+      async () =>
+        mockDb.createNote(
+          id(params.projectId),
+          (await request.json()) as NoteRequest
+        ),
+      BAD_REQUEST,
+      201
+    )
+  ),
+  http.get("*/v1/notes/:noteId", ({ params }) =>
+    resultOf(
+      () => mockDb.getNote(id(params.noteId)),
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    )
+  ),
+  http.patch("*/v1/notes/:noteId", async ({ request, params }) =>
+    resultOf(
+      async () =>
+        mockDb.updateNote(
+          id(params.noteId),
+          (await request.json()) as NoteRequest
+        ),
+      BAD_REQUEST
+    )
+  ),
 
   // Transcription
-  getGetTranscriptionSessionMockHandler(({ params }) => {
-    try {
-      const data = mockDb.getSession(id(params.sessionId));
-      return { success: true, data, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "TRANSCRIPTION_SESSION_NOT_FOUND",
-          message: "전사 세션을 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
-  getGetNoteTranscriptMockHandler(({ params }) => {
-    try {
-      const segments = mockDb.listSegments(id(params.noteId));
-      return { success: true, data: { segments }, error: null };
-    } catch {
-      return {
-        success: false,
-        data: null as unknown as never,
-        error: {
-          code: "NOTE_NOT_FOUND",
-          message: "노트를 찾을 수 없습니다.",
-          details: null,
-        },
-      };
-    }
-  }),
+  http.get("*/v1/transcription-sessions/:sessionId", ({ params }) =>
+    resultOf(
+      () => mockDb.getSession(id(params.sessionId)),
+      notFound(
+        "TRANSCRIPTION_SESSION_NOT_FOUND",
+        "전사 세션을 찾을 수 없습니다."
+      )
+    )
+  ),
+  http.get("*/v1/notes/:noteId/transcript", ({ params }) =>
+    resultOf(
+      () => ({ segments: mockDb.listSegments(id(params.noteId)) }),
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    )
+  ),
   // Hand-written (not the Orval getStartTranscriptionSessionMockHandler): needs
   // 201/409 status codes the generated wrapper can't express.
   http.post("*/v1/notes/:noteId/transcription-sessions", async ({ params }) => {

@@ -8,6 +8,9 @@
 
 /**
  * 성공 시 null인 오류 정보
- * @nullable
  */
-export type AgentChatV2ResponseError = { [key: string]: unknown } | null;
+export type AgentChatV2ResponseError =
+  | (typeof AgentChatV2ResponseError)[keyof typeof AgentChatV2ResponseError]
+  | null;
+
+export const AgentChatV2ResponseError = {} as const;

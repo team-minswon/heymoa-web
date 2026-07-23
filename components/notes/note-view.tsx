@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { usePersonalChatScope } from "@/components/chat/personal-chat";
 import { NotePanel, type NoteTab } from "@/components/notes/note-panel";
 import { NoteRouteSurface } from "@/components/notes/note-route-surface";
 
@@ -34,6 +35,9 @@ export function NoteView({
     view: searchParams.get("view") ?? initialQuery.view,
     tab: searchParams.get("tab") ?? initialQuery.tab,
   });
+
+  // full이면 개인 챗봇이 이 노트 스코프가 되고, side(Sheet)면 감춘다.
+  usePersonalChatScope({ noteId, hidden: current.view === "side" });
 
   const [isOpen, setIsOpen] = useState(false);
 
