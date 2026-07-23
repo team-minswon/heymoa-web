@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
@@ -85,6 +85,10 @@ describe("OpenAPI contract", () => {
       "CLIENT_PROTOCOL_ERROR",
       "STT_PROVIDER_ERROR",
       "INTERNAL_ERROR",
+      // 회의 상태 머신(APP-120)이 추가한 둘 — 시작자가 회의를 끝내거나 멈추면
+      // 진행 중인 전사 세션이 이 사유로 종료된다.
+      "MEETING_ENDED",
+      "MEETING_PAUSED",
     ]);
   });
 
@@ -104,5 +108,61 @@ describe("OpenAPI contract", () => {
       );
       expect(schema.properties?.success?.type).toBe("boolean");
     }
+  });
+});
+
+describe("contract sync 2026-07-23", () => {
+  it("mirrors 34 public paths and excludes internal ones", () => {
+    const paths = Object.keys(api().paths);
+    expect(paths).toHaveLength(34);
+    expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
+  });
+
+  it("exposes the invitation, notification and member operations", () => {
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/invitations"]?.post?.operationId
+    ).toBe("createWorkspaceInvitation");
+    expect(
+      api().paths["/v1/invitations/{invitationId}/accept"]?.post?.operationId
+    ).toBe("acceptWorkspaceInvitation");
+    expect(api().paths["/v1/notifications"]?.get?.operationId).toBe(
+      "getNotifications"
+    );
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/members"]?.get?.operationId
+    ).toBe("getWorkspaceMembers");
+  });
+
+  it("exposes the chat, approval, meeting and analysis operations", () => {
+    expect(
+      api().paths["/v1/agent-chats/{chatId}/messages"]?.post?.operationId
+    ).toBe("sendAgentChatMessage");
+    expect(
+      api().paths["/v1/notes/{noteId}/chat/messages"]?.post?.operationId
+    ).toBe("sendNoteSharedChatMessage");
+    expect(
+      api().paths["/v1/agent-chats/{chatId}/approvals/{approvalId}"]?.post
+        ?.operationId
+    ).toBe("resolveToolApproval");
+    expect(
+      api().paths["/v1/notes/{noteId}/meeting-end"]?.post?.operationId
+    ).toBe("endMeeting");
+    expect(
+      api().paths["/v1/notes/{noteId}/analyses/latest"]?.get?.operationId
+    ).toBe("getLatestAnalysis");
+  });
+});
+
+describe("generated client", () => {
+  it("never generates a client for internal paths", () => {
+    const files = readdirSync("lib/api/generated", { recursive: true })
+      .map(String)
+      .filter((name) => name.endsWith(".ts"));
+    const offenders = files.filter((name) =>
+      readFileSync(`lib/api/generated/${name}`, "utf8").includes("/internal/")
+    );
+
+    expect(files.length).toBeGreaterThan(0);
+    expect(offenders).toEqual([]);
   });
 });

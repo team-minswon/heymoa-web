@@ -30,3 +30,23 @@ describe("REST and WebSocket contract consistency", () => {
     expect(socketRequired).toEqual(restRequired);
   });
 });
+
+describe("chat SSE contract", () => {
+  it("carries the agent chat channels and the eight stream events", () => {
+    expect(Object.keys(asyncapi.channels)).toEqual(
+      expect.arrayContaining(["agentChatStream", "noteSharedChatStream"])
+    );
+    expect(Object.keys(asyncapi.components.messages)).toEqual(
+      expect.arrayContaining([
+        "MessageStart",
+        "Token",
+        "ToolCallStart",
+        "ToolApprovalRequest",
+        "ToolApprovalResolved",
+        "ToolCallResult",
+        "MessageEnd",
+        "Error",
+      ])
+    );
+  });
+});

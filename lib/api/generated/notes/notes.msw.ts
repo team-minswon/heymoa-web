@@ -18,6 +18,8 @@ export const getGetNoteResponseMock = (): NoteResponse => ({
     title: "주간 회의",
     createdAt: "2026-07-14T01:02:03Z",
     updatedAt: "2026-07-14T01:02:03Z",
+    meetingStatus: "IN_PROGRESS",
+    meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
   },
   error: null,
 });
@@ -30,6 +32,8 @@ export const getUpdateNoteResponseMock = (): NoteResponse => ({
     title: "주간 회의",
     createdAt: "2026-07-14T01:02:03Z",
     updatedAt: "2026-07-14T01:02:03Z",
+    meetingStatus: "IN_PROGRESS",
+    meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
   },
   error: null,
 });
@@ -46,6 +50,7 @@ export const getGetNotesResponseMock = (): NoteListResponse => ({
         updatedAt: "2026-07-14T01:02:03Z",
         lastRecordedAt: "2026-07-14T01:02:03Z",
         recordedDurationMs: 6500,
+        meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
       },
     ],
   },
@@ -60,6 +65,8 @@ export const getCreateNoteResponseMock = (): NoteResponse => ({
     title: "주간 회의",
     createdAt: "2026-07-14T01:02:03Z",
     updatedAt: "2026-07-14T01:02:03Z",
+    meetingStatus: "IN_PROGRESS",
+    meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
   },
   error: null,
 });

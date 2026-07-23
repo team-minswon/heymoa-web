@@ -465,6 +465,11 @@ export type startTranscriptionSessionResponse401 = {
   status: 401;
 };
 
+export type startTranscriptionSessionResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
 export type startTranscriptionSessionResponse404 = {
   data: AppErrorResponse;
   status: 404;
@@ -481,6 +486,7 @@ export type startTranscriptionSessionResponseSuccess =
   };
 export type startTranscriptionSessionResponseError = (
   | startTranscriptionSessionResponse401
+  | startTranscriptionSessionResponse403
   | startTranscriptionSessionResponse404
   | startTranscriptionSessionResponse409
 ) & {

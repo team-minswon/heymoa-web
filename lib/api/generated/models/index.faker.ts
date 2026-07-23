@@ -8,26 +8,47 @@
 import { faker } from "@faker-js/faker";
 
 import type {
+  AgentChatMessagesResponse,
+  AgentChatV2NullableResponse,
+  AgentChatV2Response,
+  AnalysisFailedCallback,
+  AnalysisResponse,
+  AnalysisResultCallback,
+  AnalysisResultResponse,
+  AnalysisSucceededCallback,
   AppErrorResponse,
   ChangeDefaultWorkspaceRequest,
   ChangeDefaultWorkspaceResponse,
+  CreateAgentChatV2Request,
   CreateWorkspaceRequest,
   CreateWorkspaceResponse,
   CurrentUserResponse,
   LogoutResponse,
+  MarkNotificationReadResponse,
+  MeetingStatusResponse,
   NoteListResponse,
   NoteRequest,
   NoteResponse,
+  NoteSharedChatResponse,
+  NotificationListResponse,
   ProjectListResponse,
   ProjectRequest,
   ProjectResponse,
   RefreshTokensResponse,
+  ResolveToolApprovalRequest,
+  SendAgentChatMessageRequest,
+  SendNoteSharedChatMessageRequest,
   StartTranscriptionSessionResponse,
+  ToolConnectionsResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
   UpdateWorkspaceRequest,
   UpdateWorkspaceResponse,
+  V1WorkspacesWorkspaceIdInvitations1055786918,
+  WorkspaceInvitationActionResponse,
+  WorkspaceInvitationListResponse,
   WorkspaceListResponse,
+  WorkspaceMemberListResponse,
   WorkspaceResponse,
 } from ".";
 
@@ -59,6 +80,8 @@ export const getStartTranscriptionSessionResponseMock = (
         "CLIENT_PROTOCOL_ERROR",
         "STT_PROVIDER_ERROR",
         "INTERNAL_ERROR",
+        "MEETING_ENDED",
+        "MEETING_PAUSED",
       ] as const),
       null,
     ]),
@@ -68,33 +91,50 @@ export const getStartTranscriptionSessionResponseMock = (
   ...overrideResponse,
 });
 
-export const getLogoutResponseMock = (
-  overrideResponse: Partial<LogoutResponse> = {}
-): LogoutResponse => ({
-  data: { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+export const getAgentChatV2NullableResponseMock = (
+  overrideResponse: Partial<AgentChatV2NullableResponse> = {}
+): AgentChatV2NullableResponse => ({
+  data: faker.helpers.arrayElement([
+    faker.helpers.arrayElement([
+      {
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+        chatId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+        scope: faker.helpers.arrayElement(["workspace", "note"] as const),
+        noteId: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+            null,
+          ]),
+          undefined,
+        ]),
+        title: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          undefined,
+        ]),
+        workspaceId: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+            null,
+          ]),
+          undefined,
+        ]),
+      },
+      null,
+    ]),
+    null,
+  ]),
   success: faker.datatype.boolean(),
   error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
   ...overrideResponse,
 });
 
-export const getNoteRequestMock = (
-  overrideResponse: Partial<NoteRequest> = {}
-): NoteRequest => ({
-  title: faker.string.alpha({ length: { min: 1, max: 200 } }),
-  ...overrideResponse,
-});
-
-export const getUpdateWorkspaceRequestMock = (
-  overrideResponse: Partial<UpdateWorkspaceRequest> = {}
-): UpdateWorkspaceRequest => ({
-  name: faker.string.alpha({ length: { min: 1, max: 100 } }),
-  description: faker.helpers.arrayElement([
-    faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 1000 } }),
-      null,
-    ]),
-    undefined,
-  ]),
+export const getSendAgentChatMessageRequestMock = (
+  overrideResponse: Partial<SendAgentChatMessageRequest> = {}
+): SendAgentChatMessageRequest => ({
+  message: faker.helpers.fromRegExp("[\\s\\S]*\\S[\\s\\S]*"),
   ...overrideResponse,
 });
 
@@ -107,41 +147,31 @@ export const getRefreshTokensResponseMock = (
   ...overrideResponse,
 });
 
-export const getNoteResponseMock = (
-  overrideResponse: Partial<NoteResponse> = {}
-): NoteResponse => ({
-  data: {
-    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-    noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-    title: faker.string.alpha({ length: { min: 10, max: 200 } }),
-    projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-    updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
-
-export const getTranscriptResponseMock = (
-  overrideResponse: Partial<TranscriptResponse> = {}
-): TranscriptResponse => ({
-  data: {
-    segments: Array.from(
-      { length: faker.number.int({ min: 1, max: 10 }) },
-      (_, i) => i + 1
-    ).map(() => ({
-      sequence: faker.number.int({ min: 0 }),
-      segmentId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-      endedAtMs: faker.number.int({ min: 0 }),
-      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      transcriptionSessionId: faker.helpers.fromRegExp(
-        "^[0-9A-HJKMNP-TV-Z]{13}$"
-      ),
-      startedAtMs: faker.number.int({ min: 0 }),
-    })),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+export const getCreateAgentChatV2RequestMock = (
+  overrideResponse: Partial<CreateAgentChatV2Request> = {}
+): CreateAgentChatV2Request => ({
+  scope: faker.helpers.arrayElement(["workspace", "note"] as const),
+  noteId: faker.helpers.arrayElement([
+    faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      null,
+    ]),
+    undefined,
+  ]),
+  title: faker.helpers.arrayElement([
+    faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 200 } }),
+      null,
+    ]),
+    undefined,
+  ]),
+  workspaceId: faker.helpers.arrayElement([
+    faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      null,
+    ]),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -156,6 +186,8 @@ export const getTranscriptionSessionResponseMock = (
         "CLIENT_PROTOCOL_ERROR",
         "STT_PROVIDER_ERROR",
         "INTERNAL_ERROR",
+        "MEETING_ENDED",
+        "MEETING_PAUSED",
       ] as const),
       null,
     ]),
@@ -200,6 +232,14 @@ export const getWorkspaceResponseMock = (
   ...overrideResponse,
 });
 
+export const getV1WorkspacesWorkspaceIdInvitations1055786918Mock = (
+  overrideResponse: Partial<V1WorkspacesWorkspaceIdInvitations1055786918> = {}
+): V1WorkspacesWorkspaceIdInvitations1055786918 => ({
+  role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+  email: faker.internet.email(),
+  ...overrideResponse,
+});
+
 export const getChangeDefaultWorkspaceResponseMock = (
   overrideResponse: Partial<ChangeDefaultWorkspaceResponse> = {}
 ): ChangeDefaultWorkspaceResponse => ({
@@ -209,55 +249,46 @@ export const getChangeDefaultWorkspaceResponseMock = (
   ...overrideResponse,
 });
 
-export const getNoteListResponseMock = (
-  overrideResponse: Partial<NoteListResponse> = {}
-): NoteListResponse => ({
+export const getResolveToolApprovalRequestMock = (
+  overrideResponse: Partial<ResolveToolApprovalRequest> = {}
+): ResolveToolApprovalRequest => ({
+  decision: faker.helpers.arrayElement(["APPROVED", "REJECTED"] as const),
+  ...overrideResponse,
+});
+
+export const getNotificationListResponseMock = (
+  overrideResponse: Partial<NotificationListResponse> = {}
+): NotificationListResponse => ({
   data: {
-    notes: Array.from(
+    unreadCount: faker.number.int(),
+    notifications: Array.from(
       { length: faker.number.int({ min: 1, max: 10 }) },
       (_, i) => i + 1
     ).map(() => ({
       createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-      lastRecordedAt: faker.helpers.arrayElement([
+      invitation: faker.helpers.arrayElement([
+        {
+          role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+          workspaceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          invitationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+          inviterName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+          status: faker.helpers.arrayElement([
+            "PENDING",
+            "ACCEPTED",
+            "DECLINED",
+            "CANCELED",
+          ] as const),
+        },
+        undefined,
+      ]),
+      notificationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      readAt: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
       ]),
-      recordedDurationMs: faker.number.int({ min: 0 }),
-      noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-      title: faker.string.alpha({ length: { min: 10, max: 200 } }),
-      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      type: faker.helpers.arrayElement(["WORKSPACE_INVITATION"] as const),
     })),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
-
-export const getCurrentUserResponseMock = (
-  overrideResponse: Partial<CurrentUserResponse> = {}
-): CurrentUserResponse => ({
-  data: {
-    image: faker.helpers.arrayElement([faker.internet.url(), null]),
-    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-    email: faker.internet.email(),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
-
-export const getUpdateWorkspaceResponseMock = (
-  overrideResponse: Partial<UpdateWorkspaceResponse> = {}
-): UpdateWorkspaceResponse => ({
-  data: {
-    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    description: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
-    workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
   error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
@@ -278,68 +309,67 @@ export const getCreateWorkspaceRequestMock = (
   ...overrideResponse,
 });
 
-export const getChangeDefaultWorkspaceRequestMock = (
-  overrideResponse: Partial<ChangeDefaultWorkspaceRequest> = {}
-): ChangeDefaultWorkspaceRequest => ({
-  workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+export const getMeetingStatusResponseMock = (
+  overrideResponse: Partial<MeetingStatusResponse> = {}
+): MeetingStatusResponse => ({
+  data: {
+    meetingStatus: faker.helpers.arrayElement([
+      "IN_PROGRESS",
+      "PAUSED",
+      "ENDED",
+    ] as const),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
   ...overrideResponse,
 });
 
-export const getProjectListResponseMock = (
-  overrideResponse: Partial<ProjectListResponse> = {}
-): ProjectListResponse => ({
+export const getNoteResponseMock = (
+  overrideResponse: Partial<NoteResponse> = {}
+): NoteResponse => ({
   data: {
-    projects: Array.from(
+    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    meetingStartedBy: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        {
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+        },
+        null,
+      ]),
+      null,
+    ]),
+    meetingStatus: faker.helpers.arrayElement([
+      "IN_PROGRESS",
+      "PAUSED",
+      "ENDED",
+    ] as const),
+    noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+    projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getWorkspaceInvitationListResponseMock = (
+  overrideResponse: Partial<WorkspaceInvitationListResponse> = {}
+): WorkspaceInvitationListResponse => ({
+  data: {
+    invitations: Array.from(
       { length: faker.number.int({ min: 1, max: 10 }) },
       (_, i) => i + 1
     ).map(() => ({
       createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-      name: faker.string.alpha({ length: { min: 10, max: 100 } }),
-      description: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 1000 } }),
-        null,
-      ]),
-      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-      workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+      inviteeImage: faker.helpers.arrayElement([faker.internet.url(), null]),
+      inviteeEmail: faker.internet.email(),
+      inviteeName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      invitationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      inviterName: faker.string.alpha({ length: { min: 10, max: 20 } }),
     })),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
-
-export const getProjectResponseMock = (
-  overrideResponse: Partial<ProjectResponse> = {}
-): ProjectResponse => ({
-  data: {
-    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-    name: faker.string.alpha({ length: { min: 10, max: 100 } }),
-    description: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 1000 } }),
-      null,
-    ]),
-    projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-    updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-    workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
-  ...overrideResponse,
-});
-
-export const getCreateWorkspaceResponseMock = (
-  overrideResponse: Partial<CreateWorkspaceResponse> = {}
-): CreateWorkspaceResponse => ({
-  data: {
-    isDefault: faker.datatype.boolean(),
-    role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
-    name: faker.string.alpha({ length: { min: 10, max: 100 } }),
-    description: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 1000 } }),
-      null,
-    ]),
-    workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
   },
   success: faker.datatype.boolean(),
   error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
@@ -391,6 +421,469 @@ export const getWorkspaceListResponseMock = (
   ...overrideResponse,
 });
 
+export const getSendNoteSharedChatMessageRequestMock = (
+  overrideResponse: Partial<SendNoteSharedChatMessageRequest> = {}
+): SendNoteSharedChatMessageRequest => ({
+  message: faker.helpers.fromRegExp("[\\s\\S]*\\S[\\s\\S]*"),
+  ...overrideResponse,
+});
+
+export const getAnalysisResponseMock = (
+  overrideResponse: Partial<AnalysisResponse> = {}
+): AnalysisResponse => ({
+  data: {
+    analysisId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    status: faker.helpers.arrayElement([
+      "PENDING",
+      "RUNNING",
+      "SUCCEEDED",
+      "FAILED",
+    ] as const),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getLogoutResponseMock = (
+  overrideResponse: Partial<LogoutResponse> = {}
+): LogoutResponse => ({
+  data: { message: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getUpdateWorkspaceRequestMock = (
+  overrideResponse: Partial<UpdateWorkspaceRequest> = {}
+): UpdateWorkspaceRequest => ({
+  name: faker.string.alpha({ length: { min: 1, max: 100 } }),
+  description: faker.helpers.arrayElement([
+    faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 1000 } }),
+      null,
+    ]),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getNoteRequestMock = (
+  overrideResponse: Partial<NoteRequest> = {}
+): NoteRequest => ({
+  title: faker.string.alpha({ length: { min: 1, max: 200 } }),
+  ...overrideResponse,
+});
+
+export const getAgentChatV2ResponseMock = (
+  overrideResponse: Partial<AgentChatV2Response> = {}
+): AgentChatV2Response => ({
+  data: {
+    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    chatId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    scope: faker.helpers.arrayElement(["workspace", "note"] as const),
+    noteId: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+        null,
+      ]),
+      undefined,
+    ]),
+    title: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      undefined,
+    ]),
+    workspaceId: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+        null,
+      ]),
+      undefined,
+    ]),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getWorkspaceMemberListResponseMock = (
+  overrideResponse: Partial<WorkspaceMemberListResponse> = {}
+): WorkspaceMemberListResponse => ({
+  data: {
+    members: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      image: faker.helpers.arrayElement([faker.internet.url(), null]),
+      role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+      joinedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      email: faker.internet.email(),
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getTranscriptResponseMock = (
+  overrideResponse: Partial<TranscriptResponse> = {}
+): TranscriptResponse => ({
+  data: {
+    segments: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      sequence: faker.number.int({ min: 0 }),
+      segmentId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      endedAtMs: faker.number.int({ min: 0 }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      transcriptionSessionId: faker.helpers.fromRegExp(
+        "^[0-9A-HJKMNP-TV-Z]{13}$"
+      ),
+      startedAtMs: faker.number.int({ min: 0 }),
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getWorkspaceInvitationActionResponseMock = (
+  overrideResponse: Partial<WorkspaceInvitationActionResponse> = {}
+): WorkspaceInvitationActionResponse => ({
+  data: {
+    role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+    invitationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    status: faker.helpers.arrayElement([
+      "PENDING",
+      "ACCEPTED",
+      "DECLINED",
+      "CANCELED",
+    ] as const),
+    workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getAgentChatMessagesResponseMock = (
+  overrideResponse: Partial<AgentChatMessagesResponse> = {}
+): AgentChatMessagesResponse => ({
+  data: {
+    messages: faker.helpers.arrayElement([
+      Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1
+      ).map(() => ({
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+        role: faker.helpers.arrayElement([
+          "USER",
+          "ASSISTANT",
+          "TOOL",
+        ] as const),
+        toolEvent: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([
+            {
+              decision: faker.helpers.arrayElement([
+                faker.helpers.arrayElement(["APPROVED", "REJECTED"] as const),
+                null,
+              ]),
+              url: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                null,
+              ]),
+              tool: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              status: faker.helpers.arrayElement([
+                faker.helpers.arrayElement(["success", "error"] as const),
+                null,
+              ]),
+            },
+            null,
+          ]),
+          null,
+        ]),
+        content: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      })),
+      undefined,
+    ]),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getToolConnectionsResponseMock = (
+  overrideResponse: Partial<ToolConnectionsResponse> = {}
+): ToolConnectionsResponse => ({
+  data: {
+    integrations: faker.helpers.arrayElement([
+      Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1
+      ).map(() => ({
+        connected: faker.datatype.boolean(),
+        connectedAt: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        provider: faker.helpers.arrayElement(["LINEAR", "GITHUB"] as const),
+        connectedBy: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      })),
+      undefined,
+    ]),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getNoteListResponseMock = (
+  overrideResponse: Partial<NoteListResponse> = {}
+): NoteListResponse => ({
+  data: {
+    notes: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      lastRecordedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      meetingStartedBy: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+          },
+          null,
+        ]),
+        null,
+      ]),
+      recordedDurationMs: faker.number.int({ min: 0 }),
+      noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getCurrentUserResponseMock = (
+  overrideResponse: Partial<CurrentUserResponse> = {}
+): CurrentUserResponse => ({
+  data: {
+    image: faker.helpers.arrayElement([faker.internet.url(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    email: faker.internet.email(),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getUpdateWorkspaceResponseMock = (
+  overrideResponse: Partial<UpdateWorkspaceResponse> = {}
+): UpdateWorkspaceResponse => ({
+  data: {
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    description: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getChangeDefaultWorkspaceRequestMock = (
+  overrideResponse: Partial<ChangeDefaultWorkspaceRequest> = {}
+): ChangeDefaultWorkspaceRequest => ({
+  workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+  ...overrideResponse,
+});
+
+export const getProjectListResponseMock = (
+  overrideResponse: Partial<ProjectListResponse> = {}
+): ProjectListResponse => ({
+  data: {
+    projects: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      name: faker.string.alpha({ length: { min: 10, max: 100 } }),
+      description: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 1000 } }),
+        null,
+      ]),
+      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getNoteSharedChatResponseMock = (
+  overrideResponse: Partial<NoteSharedChatResponse> = {}
+): NoteSharedChatResponse => ({
+  data: {
+    chatId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    messages: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      role: faker.helpers.arrayElement(["USER", "ASSISTANT", "TOOL"] as const),
+      toolEvent: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            decision: faker.helpers.arrayElement([
+              faker.helpers.arrayElement(["APPROVED", "REJECTED"] as const),
+              null,
+            ]),
+            url: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            tool: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            status: faker.helpers.arrayElement([
+              faker.helpers.arrayElement(["success", "error"] as const),
+              null,
+            ]),
+          },
+          null,
+        ]),
+        null,
+      ]),
+      authorName: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      messageId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      content: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    lock: {
+      lockedBy: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      locked: faker.datatype.boolean(),
+      pendingApproval: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            summary: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              null,
+            ]),
+            approvalId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+            tool: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          },
+          null,
+        ]),
+        null,
+      ]),
+    },
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getProjectResponseMock = (
+  overrideResponse: Partial<ProjectResponse> = {}
+): ProjectResponse => ({
+  data: {
+    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    name: faker.string.alpha({ length: { min: 10, max: 100 } }),
+    description: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 1000 } }),
+      null,
+    ]),
+    projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getMarkNotificationReadResponseMock = (
+  overrideResponse: Partial<MarkNotificationReadResponse> = {}
+): MarkNotificationReadResponse => ({
+  data: {
+    notificationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getCreateWorkspaceResponseMock = (
+  overrideResponse: Partial<CreateWorkspaceResponse> = {}
+): CreateWorkspaceResponse => ({
+  data: {
+    isDefault: faker.datatype.boolean(),
+    role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+    name: faker.string.alpha({ length: { min: 10, max: 100 } }),
+    description: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 1000 } }),
+      null,
+    ]),
+    workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
+  ...overrideResponse,
+});
+
+export const getAnalysisSucceededCallbackMock = (
+  overrideResponse: Partial<AnalysisSucceededCallback> = {}
+): AnalysisSucceededCallback => ({
+  status: faker.helpers.arrayElement(["SUCCEEDED"] as const),
+  overview: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  actionItems: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  insights: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getAnalysisFailedCallbackMock = (
+  overrideResponse: Partial<AnalysisFailedCallback> = {}
+): AnalysisFailedCallback => ({
+  status: faker.helpers.arrayElement(["FAILED"] as const),
+  error: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getAnalysisResultCallbackMock = (): AnalysisResultCallback =>
+  faker.helpers.arrayElement([
+    { ...getAnalysisSucceededCallbackMock() },
+    { ...getAnalysisFailedCallbackMock() },
+  ]);
+
 export const getProjectRequestMock = (
   overrideResponse: Partial<ProjectRequest> = {}
 ): ProjectRequest => ({
@@ -402,5 +895,43 @@ export const getProjectRequestMock = (
     ]),
     undefined,
   ]),
+  ...overrideResponse,
+});
+
+export const getAnalysisResultResponseMock = (
+  overrideResponse: Partial<AnalysisResultResponse> = {}
+): AnalysisResultResponse => ({
+  data: {
+    overview: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    insights: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    actionItems: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    errorMessage: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    errorCode: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    analysisId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    status: faker.helpers.arrayElement([
+      "PENDING",
+      "RUNNING",
+      "SUCCEEDED",
+      "FAILED",
+    ] as const),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.helpers.arrayElement([null]), null]),
   ...overrideResponse,
 });

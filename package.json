@@ -11,12 +11,14 @@
     "format:check": "prettier --check .",
     "orval": "orval",
     "orval:watch": "orval --watch",
-    "verify": "pnpm lint && pnpm build",
+    "verify": "pnpm lint && pnpm typecheck && pnpm build",
     "clean:next": "rm -rf .next",
     "dev:clean": "pnpm clean:next && pnpm dev",
     "test": "vitest",
     "test:run": "vitest run",
-    "asyncapi:validate": "asyncapi validate asyncapi.yml"
+    "asyncapi:validate": "asyncapi validate asyncapi.yml",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -43,6 +45,7 @@
   "devDependencies": {
     "@asyncapi/cli": "^6.0.2",
     "@faker-js/faker": "^10.5.0",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

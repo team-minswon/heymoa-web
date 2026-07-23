@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { NoteListResponseDataNotesItemMeetingStartedBy } from "./noteListResponseDataNotesItemMeetingStartedBy";
 
 export type NoteListResponseDataNotesItem = {
   /** 노트 생성 시각 */
@@ -14,6 +15,11 @@ export type NoteListResponseDataNotesItem = {
    * @nullable
    */
   lastRecordedAt: string | null;
+  /**
+   * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
+   * @nullable
+   */
+  meetingStartedBy: NoteListResponseDataNotesItemMeetingStartedBy;
   /**
    * 전사 세션별 마지막 구간을 합산한 누적 녹음 시간(ms)
    * @minimum 0

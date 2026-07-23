@@ -5,6 +5,8 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { NoteResponseDataMeetingStartedBy } from "./noteResponseDataMeetingStartedBy";
+import type { NoteResponseDataMeetingStatus } from "./noteResponseDataMeetingStatus";
 
 /**
  * 성공 응답 데이터
@@ -12,6 +14,13 @@
 export type NoteResponseData = {
   /** 노트 생성 시각 */
   createdAt: string;
+  /**
+   * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
+   * @nullable
+   */
+  meetingStartedBy: NoteResponseDataMeetingStartedBy;
+  /** 회의 상태 */
+  meetingStatus: NoteResponseDataMeetingStatus;
   /**
    * 노트의 13자리 TSID
    * @minLength 13

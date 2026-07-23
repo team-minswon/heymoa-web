@@ -66,6 +66,7 @@ describe("NoteListRow", () => {
           updatedAt: "2026-07-11T00:00:00Z",
           lastRecordedAt: "2026-07-11T00:00:00Z",
           recordedDurationMs: 65_000,
+    meetingStartedBy: null,
         }}
       />
     );
@@ -100,6 +101,7 @@ describe("NoteListRow", () => {
           updatedAt: "2026-07-11T00:00:00Z",
           lastRecordedAt: "2026-07-11T00:00:00Z",
           recordedDurationMs: 65_000,
+    meetingStartedBy: null,
         }}
       />
     );

@@ -60,9 +60,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ### API & Data
 
-- All API calls MUST use Orval-generated hooks from `lib/api/generated/`. No direct `fetch()` to API endpoints.
+- All API calls MUST use Orval-generated hooks from `lib/api/generated/`. The only exceptions are `lib/api/fetcher.ts` (the shared mutator) and `lib/api/sse.ts` (SSE streams, which generated hooks cannot read). Nothing else may `fetch()` an API path directly.
+- SSE endpoints (`sendAgentChatMessage`, `sendNoteSharedChatMessage`) return `text/event-stream`. Their generated hooks exist but are unusable — call `postEventStream()` from `lib/api/sse.ts` instead.
 - The custom fetcher at `lib/api/fetcher.ts` handles auth token refresh automatically.
-- When `openapi3.yml` changes: run `pnpm orval` first, then update `lib/mocks/handlers.ts`.
+- `openapi3.yml` is a mirror of `docs/contracts/openapi3-server.yml` with the three `/internal/**` paths removed — heymoa-ai calls those, not the browser. Never hand-edit it; recopy and strip.
+- When `openapi3.yml` changes: run `pnpm orval` first, then update `lib/mocks/handlers.ts`. Generated tag → file paths are recorded in `docs/generated-api-map.md`.
 
 ### MSW Mocking
 

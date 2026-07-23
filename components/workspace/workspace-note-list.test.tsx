@@ -29,6 +29,7 @@ function note(
     updatedAt,
     lastRecordedAt: null,
     recordedDurationMs: 0,
+    meetingStartedBy: null,
   };
 }
 

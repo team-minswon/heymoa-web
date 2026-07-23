@@ -25,6 +25,8 @@ import {
   getGetTranscriptionSessionMockHandler,
   getGetNoteTranscriptMockHandler,
 } from "@/lib/api/generated/transcription/transcription.msw";
+import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
+import { getGetActiveAgentChatMockHandler } from "@/lib/api/generated/agent-chat/agent-chat.msw";
 
 import type {
   CreateWorkspaceRequest,
@@ -35,6 +37,72 @@ import type {
 
 function id(value: string | readonly string[] | undefined) {
   return Array.isArray(value) ? value[0] : String(value ?? "");
+}
+
+/**
+ * 초대 관련 명령은 실패 코드에 따라 상태 코드가 갈린다 — 없는 초대는 404, 이미 확정된
+ * 초대나 중복·기존 멤버는 409다. 화면이 이 셋을 다르게 다뤄야 해서 목도 갈라 준다.
+ */
+const INVITATION_NOT_FOUND_CODES = new Set([
+  "INVITATION_NOT_FOUND",
+  "WORKSPACE_NOT_FOUND",
+]);
+
+/** 권한 문제는 403이다 — 없음(404)이나 상태 충돌(409)과 구분해야 화면이 다르게 다룬다. */
+const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER"]);
+
+const NOT_FOUND_CODES = new Set([
+  "NOTE_NOT_FOUND",
+  "WORKSPACE_NOT_FOUND",
+  "ANALYSIS_JOB_NOT_FOUND",
+  "INTEGRATION_NOT_FOUND",
+  "NOTIFICATION_NOT_FOUND",
+  "AGENT_CHAT_NOT_FOUND",
+]);
+
+/** 목의 실패 코드를 화면이 구분할 수 있는 상태 코드로 옮긴다 — 없으면 404, 상태 위반이면 409. */
+function commandResult<T>(run: () => T, okStatus = 200) {
+  try {
+    return HttpResponse.json(
+      { success: true, data: run(), error: null },
+      { status: okStatus }
+    );
+  } catch (error) {
+    const code = (error as Error).message;
+    return HttpResponse.json(
+      {
+        success: false,
+        data: null,
+        error: { code, message: code, details: null },
+      },
+      {
+        status: FORBIDDEN_CODES.has(code)
+          ? 403
+          : NOT_FOUND_CODES.has(code)
+            ? 404
+            : 409,
+      }
+    );
+  }
+}
+
+function invitationResult<T>(run: () => T, okStatus = 200) {
+  try {
+    return HttpResponse.json(
+      { success: true, data: run(), error: null },
+      { status: okStatus }
+    );
+  } catch (error) {
+    const code = (error as Error).message;
+    return HttpResponse.json(
+      {
+        success: false,
+        data: null,
+        error: { code, message: code, details: null },
+      },
+      { status: INVITATION_NOT_FOUND_CODES.has(code) ? 404 : 409 }
+    );
+  }
 }
 
 export const restHandlers = [
@@ -374,4 +442,148 @@ export const restHandlers = [
       );
     }
   }),
+
+  // Workspace members / invitations / notifications
+  http.get("*/v1/workspaces/:workspaceId/members", ({ params }) =>
+    commandResult(() => ({
+      members: mockDb.listMembers(id(params.workspaceId)),
+    }))
+  ),
+  http.get("*/v1/workspaces/:workspaceId/invitations", ({ params }) =>
+    commandResult(() => ({
+      invitations: mockDb.listInvitations(id(params.workspaceId)),
+    }))
+  ),
+  getGetNotificationsMockHandler(() => ({
+    success: true,
+    data: mockDb.listNotifications(),
+    error: null,
+  })),
+  http.put("*/v1/notifications/:notificationId/read", ({ params }) =>
+    commandResult(() => mockDb.markNotificationRead(id(params.notificationId)))
+  ),
+
+  http.post("*/v1/workspaces/:workspaceId/invitations", async ({ request, params }) => {
+    const body = (await request.json()) as { email: string; role: string };
+    return invitationResult(
+      () => mockDb.createInvitation(id(params.workspaceId), body),
+      201
+    );
+  }),
+  http.delete(
+    "*/v1/workspaces/:workspaceId/invitations/:invitationId",
+    ({ params }) =>
+      invitationResult(() => mockDb.cancelInvitation(id(params.invitationId)))
+  ),
+  http.post("*/v1/invitations/:invitationId/accept", ({ params }) =>
+    invitationResult(() => mockDb.acceptInvitation(id(params.invitationId)))
+  ),
+  http.post("*/v1/invitations/:invitationId/decline", ({ params }) =>
+    invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))
+  ),
+
+  // Meeting / analysis / integrations
+  http.get("*/v1/notes/:noteId/analyses/latest", ({ params }) =>
+    commandResult(() => mockDb.getLatestAnalysis(id(params.noteId)))
+  ),
+  http.get("*/v1/workspaces/:workspaceId/integrations", ({ params }) =>
+    commandResult(() => ({
+      integrations: mockDb.listIntegrations(id(params.workspaceId)),
+    }))
+  ),
+
+  http.post("*/v1/notes/:noteId/meeting-pause", ({ params }) =>
+    commandResult(() => mockDb.pauseMeeting(id(params.noteId)))
+  ),
+  http.post("*/v1/notes/:noteId/meeting-resume", ({ params }) =>
+    commandResult(() => mockDb.resumeMeeting(id(params.noteId)))
+  ),
+  http.post("*/v1/notes/:noteId/meeting-end", ({ params }) =>
+    commandResult(() => mockDb.endMeeting(id(params.noteId)), 202)
+  ),
+  http.post("*/v1/notes/:noteId/analyses", ({ params }) =>
+    commandResult(() => mockDb.requestAnalysis(id(params.noteId)), 202)
+  ),
+  http.delete(
+    "*/v1/workspaces/:workspaceId/integrations/:provider",
+    ({ params }) => {
+      try {
+        mockDb.disconnectIntegration(id(params.workspaceId), id(params.provider));
+      } catch (error) {
+        const code = (error as Error).message;
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: { code, message: code, details: null },
+          },
+          { status: NOT_FOUND_CODES.has(code) ? 404 : 409 }
+        );
+      }
+      // 계약은 bodyless 204다.
+      return new HttpResponse(null, { status: 204 });
+    }
+  ),
+
+  // OAuth는 외부 도메인으로 리다이렉트하는 흐름이라 서비스 워커가 가로챌 수 없다.
+  // 목에서는 우리 도메인의 목 전용 승인 화면으로 보내고 거기서 callback으로 돌려보낸다.
+  // 이 경로는 fetch 대상이 아니다. 계약이 302 리다이렉트라 생성 훅으로 부르면 응답 본문이
+  // HTML이고 apiFetch의 JSON 파싱이 깨진다 — 실제 서버(Linear·GitHub로 이동)도 마찬가지다.
+  // web은 window.location으로 이동해야 한다. 목은 계약대로 302를 돌려준다.
+  http.get(
+    "*/v1/workspaces/:workspaceId/integrations/:provider/authorize",
+    ({ params }) => {
+      const workspaceId = id(params.workspaceId);
+      const provider = id(params.provider);
+      return new HttpResponse(null, {
+        status: 302,
+        headers: {
+          Location: `/mock-oauth?workspaceId=${workspaceId}&provider=${provider}`,
+        },
+      });
+    }
+  ),
+  http.get("*/v1/integrations/:provider/callback", ({ request, params }) => {
+    const workspaceId = new URL(request.url).searchParams.get("state") ?? "";
+    try {
+      mockDb.connectIntegration(workspaceId, id(params.provider));
+    } catch {
+      // 이미 연결된 상태로 돌아오는 것은 왕복의 정상 재시도다. 화면은 결과만 보면 된다.
+    }
+    // 설정 화면은 아직 없다(APP-115). 존재하는 워크스페이스 화면으로 돌려보낸다.
+    return new HttpResponse(null, {
+      status: 302,
+      headers: { Location: `/w/${workspaceId}` },
+    });
+  }),
+
+  // Agent chat sessions (SSE 전송은 sse-handler.ts가 맡는다)
+  http.post("*/v1/agent-chats", async ({ request }) => {
+    const body = (await request.json()) as {
+      scope: string;
+      workspaceId?: string | null;
+      noteId?: string | null;
+    };
+    return commandResult(() => mockDb.createAgentChat(body), 201);
+  }),
+  getGetActiveAgentChatMockHandler(({ request }) => {
+    const url = new URL(request.url);
+    return {
+      success: true,
+      data: mockDb.getActiveAgentChat({
+        scope: url.searchParams.get("scope") ?? "workspace",
+        workspaceId: url.searchParams.get("workspaceId"),
+        noteId: url.searchParams.get("noteId"),
+      }),
+      error: null,
+    };
+  }),
+  http.get("*/v1/agent-chats/:chatId/messages", ({ params }) =>
+    commandResult(() => ({
+      messages: mockDb.getAgentChatMessages(id(params.chatId)),
+    }))
+  ),
+  http.get("*/v1/notes/:noteId/chat/messages", ({ params }) =>
+    commandResult(() => mockDb.getNoteSharedChat(id(params.noteId)))
+  ),
 ];

@@ -4,6 +4,7 @@ import {
 } from "@/lib/api/generated/auth/auth.msw";
 
 import { restHandlers } from "@/lib/mocks/rest-handlers";
+import { chatSseHandlers } from "@/lib/mocks/sse-handler";
 import { transcriptionWebSocketHandler } from "@/lib/mocks/websocket-handler";
 
 export const handlers = [
@@ -22,5 +23,6 @@ export const handlers = [
     error: null,
   }),
   ...restHandlers,
+  ...chatSseHandlers,
   transcriptionWebSocketHandler,
 ];
