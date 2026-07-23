@@ -19,36 +19,36 @@
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `POST /v1/auth/refresh` | `useRefreshTokens` | 없음 (`lib/api/fetcher.ts`가 401에서 자동 호출) | 실패 시 로그아웃 전이 | 없음 |
-| `POST /v1/auth/logout` | `useLogout` | 툴바 계정 메뉴 | 성공 시 `/`로 replace + 캐시 비움 | 없음 |
-| `GET /v1/users/me` | `useGetCurrentUser` | 앱 셸 전체 | 로딩 / 미인증(401) | 없음 |
+| `POST /v1/auth/refresh` | `useRefreshTokens` | 없음 (`lib/api/fetcher.ts`가 401에서 자동 호출) | 실패 시 로그아웃 전이 | 해당 없음 (화면 없음) |
+| `POST /v1/auth/logout` | `useLogout` | 툴바 계정 메뉴 | 성공 시 `/`로 replace + 캐시 비움 | 기존 화면(v1) |
+| `GET /v1/users/me` | `useGetCurrentUser` | 앱 셸 전체 | 로딩 / 미인증(401) | 기존 화면(v1) |
 
 ## 워크스페이스 · 프로젝트 · 노트 (기존 화면)
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `GET /v1/workspaces` | `useGetWorkspaces` | 사이드바 워크스페이스 전환 | 로딩 / 빈 목록 | 없음 |
-| `POST /v1/workspaces` | `useCreateWorkspace` | 워크스페이스 생성 | pending / 400 이름 오류 | 없음 |
-| `GET /v1/workspaces/{workspaceId}` | `useGetWorkspace` | 워크스페이스 셸 | 로딩 / 404 | 없음 |
-| `PUT /v1/workspaces/{workspaceId}` | `useUpdateWorkspace` | 설정 · 일반 | pending / 403 비ADMIN | 없음 |
-| `PUT /v1/users/me/default-workspace` | `useChangeDefaultWorkspace` | 워크스페이스 전환 | pending | 없음 |
-| `GET /v1/workspaces/{workspaceId}/projects` | `useGetProjects` | 사이드바 프로젝트 목록 | 로딩 / 빈 목록 | 없음 |
-| `POST /v1/workspaces/{workspaceId}/projects` | `useCreateProject` | 프로젝트 생성 | pending / 400 | 없음 |
-| `GET /v1/workspaces/{workspaceId}/projects/{projectId}` | `useGetProject` | 프로젝트 상세 | 로딩 / 404 | 없음 |
-| `PUT /v1/workspaces/{workspaceId}/projects/{projectId}` | `useUpdateProject` | 프로젝트 이름 수정 | pending | 없음 |
-| `DELETE /v1/workspaces/{workspaceId}/projects/{projectId}` | `useDeleteProject` | 프로젝트 삭제 | 확인 → pending | 없음 |
-| `GET /v1/projects/{projectId}/notes` | `useGetNotes` | 노트 목록 | 로딩 / 빈 목록 | 없음 |
-| `POST /v1/projects/{projectId}/notes` | `useCreateNote` | 노트 생성 | pending | 없음 |
-| `GET /v1/notes/{noteId}` | `useGetNote` | 노트 상세(side·full) | 로딩 / 404. **`meetingStatus`·`meetingStartedBy`가 회의 UI 전부의 근거** | 없음 |
-| `PATCH /v1/notes/{noteId}` | `useUpdateNote` | 노트 제목 수정 | pending | 없음 |
+| `GET /v1/workspaces` | `useGetWorkspaces` | 사이드바 워크스페이스 전환 | 로딩 / 빈 목록 | 기존 화면(v1) |
+| `POST /v1/workspaces` | `useCreateWorkspace` | 워크스페이스 생성 | pending / 400 이름 오류 | 기존 화면(v1) |
+| `GET /v1/workspaces/{workspaceId}` | `useGetWorkspace` | 워크스페이스 셸 | 로딩 / 404 | 기존 화면(v1) |
+| `PUT /v1/workspaces/{workspaceId}` | `useUpdateWorkspace` | 설정 · 일반 | pending / 403 비ADMIN | 기존 화면(v1) |
+| `PUT /v1/users/me/default-workspace` | `useChangeDefaultWorkspace` | 워크스페이스 전환 | pending | 기존 화면(v1) |
+| `GET /v1/workspaces/{workspaceId}/projects` | `useGetProjects` | 사이드바 프로젝트 목록 | 로딩 / 빈 목록 | 기존 화면(v1) |
+| `POST /v1/workspaces/{workspaceId}/projects` | `useCreateProject` | 프로젝트 생성 | pending / 400 | 기존 화면(v1) |
+| `GET /v1/workspaces/{workspaceId}/projects/{projectId}` | `useGetProject` | 프로젝트 상세 | 로딩 / 404 | 기존 화면(v1) |
+| `PUT /v1/workspaces/{workspaceId}/projects/{projectId}` | `useUpdateProject` | 프로젝트 이름 수정 | pending | 기존 화면(v1) |
+| `DELETE /v1/workspaces/{workspaceId}/projects/{projectId}` | `useDeleteProject` | 프로젝트 삭제 | 확인 → pending | 기존 화면(v1) |
+| `GET /v1/projects/{projectId}/notes` | `useGetNotes` | 노트 목록 | 로딩 / 빈 목록 | 기존 화면(v1) |
+| `POST /v1/projects/{projectId}/notes` | `useCreateNote` | 노트 생성 | pending | 기존 화면(v1) |
+| `GET /v1/notes/{noteId}` | `useGetNote` | 노트 상세(side·full) | 로딩 / 404. **`meetingStatus`·`meetingStartedBy`가 회의 UI 전부의 근거** | `TkHep` `DdzUR` `oMqgT` `Kl7Dz` `NsGqf` `ezlsT` `X3vCNH` `LdiLi` `MUfyh` `gVcFM` |
+| `PATCH /v1/notes/{noteId}` | `useUpdateNote` | 노트 제목 수정 | pending | 기존 화면(v1) |
 
 ## 전사
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `POST /v1/notes/{noteId}/transcription-sessions` | `useStartTranscriptionSession` | 녹음 시작 | pending / 409 이미 진행 중 / 403. **첫 성공이 회의 시작자를 정한다** | 없음 |
-| `GET /v1/transcription-sessions/{sessionId}` | `useGetTranscriptionSession` | 녹음 독 | 세션 상태 표시 | 없음 |
-| `GET /v1/notes/{noteId}/transcript` | `useGetNoteTranscript` | 전사 탭 | 로딩 / 빈 전사 | 없음 |
+| `POST /v1/notes/{noteId}/transcription-sessions` | `useStartTranscriptionSession` | 녹음 시작 | pending / 409 이미 진행 중 / 403. **첫 성공이 회의 시작자를 정한다** | `NsGqf` `HjcHO` `ezlsT` `X3vCNH` |
+| `GET /v1/transcription-sessions/{sessionId}` | `useGetTranscriptionSession` | 녹음 독 | 세션 상태 표시 | `ezlsT` `V7cEN` |
+| `GET /v1/notes/{noteId}/transcript` | `useGetNoteTranscript` | 전사 탭 | 로딩 / 빈 전사 | `fBM14` `TkHep` |
 
 실시간 전사는 STOMP다 — `asyncapi.yml` 참조. REST는 세션 시작과 확정 전사 조회만 한다.
 
@@ -56,9 +56,9 @@
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `POST /v1/notes/{noteId}/meeting-pause` | `usePauseMeeting` | 회의 컨트롤 (시작자만) | pending / **403 시작자 아님** / 409 녹음 중·상태 위반 | 없음 |
-| `POST /v1/notes/{noteId}/meeting-resume` | `useResumeMeeting` | 회의 컨트롤 (시작자만) | pending / 403 / 409 PAUSED 아님 | 없음 |
-| `POST /v1/notes/{noteId}/meeting-end` | `useEndMeeting` | 회의 종료 확인 (시작자만) | 202 접수 → 분석 대기 / 403 / **409 녹음 중 → stop 후 재시도** | 없음 |
+| `POST /v1/notes/{noteId}/meeting-pause` | `usePauseMeeting` | 회의 컨트롤 (시작자만) | pending / **403 시작자 아님** / 409 녹음 중·상태 위반 | `DdzUR` `gVcFM` |
+| `POST /v1/notes/{noteId}/meeting-resume` | `useResumeMeeting` | 회의 컨트롤 (시작자만) | pending / 403 / 409 PAUSED 아님 | `DdzUR` `gVcFM` |
+| `POST /v1/notes/{noteId}/meeting-end` | `useEndMeeting` | 회의 종료 확인 (시작자만) | 202 접수 → 분석 대기 / 403 / **409 녹음 중 → stop 후 재시도** | `hbv5v` `m6E89F` |
 
 **시작자가 아니면 이 셋이 화면에 없어야 한다.** 뷰어에게는 상태만 보인다. 시작자 판정은
 `GET /v1/notes/{noteId}`의 `meetingStartedBy.userId`다.
@@ -67,8 +67,8 @@
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `GET /v1/notes/{noteId}/analyses/latest` | `useGetLatestAnalysis` | 요약 탭 | **404 = 아직 분석 없음**(오류 아님) / PENDING·RUNNING 진행 중 / SUCCEEDED 요약 3종 / FAILED 사유 | 없음 |
-| `POST /v1/notes/{noteId}/analyses` | `useRequestAnalysis` | 재분석 버튼 | 202 접수 / 409 회의 미종료·이미 진행 중 | 없음 |
+| `GET /v1/notes/{noteId}/analyses/latest` | `useGetLatestAnalysis` | 요약 탭 | **404 = 아직 분석 없음**(오류 아님) / PENDING·RUNNING 진행 중 / SUCCEEDED 요약 3종 / FAILED 사유 | `uWnWH` `quNSL` `PAVkf` `f9FCb` |
+| `POST /v1/notes/{noteId}/analyses` | `useRequestAnalysis` | 재분석 버튼 | 202 접수 / 409 회의 미종료·이미 진행 중 | `PAVkf` `f9FCb` |
 
 `overview`·`actionItems`·`insights`는 **markdown 문자열이고 미완료 시 null**이다.
 서버는 이 값을 구조화하지 않고 그대로 넘기므로 **web이 markdown으로 렌더한다** — 원문을
@@ -78,11 +78,11 @@
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `POST /v1/agent-chats` | `useCreateAgentChat` | "새로운 대화 시작" | pending. 같은 대상의 기존 세션이 비활성으로 내려간다 | 없음 |
-| `GET /v1/agent-chats/active` | `useGetActiveAgentChat` | 패널 열 때 (새로고침 복원) | **`null` = 활성 세션 없음**(오류 아님) | 없음 |
-| `GET /v1/agent-chats/{chatId}/messages` | `useGetAgentChatMessages` | 패널 히스토리 | 로딩 / 빈 대화 / 404 | 없음 |
-| `POST /v1/agent-chats/{chatId}/messages` | ⚠ 생성 훅 사용 불가 | 메시지 전송 | SSE 스트림 — 아래 참조 | 없음 |
-| `POST /v1/agent-chats/{chatId}/approvals/{approvalId}` | `useResolveToolApproval` | 승인 카드 | 204 접수(확정 아님) / **403 입력자 아님**(`NOT_APPROVAL_OWNER`) / **404 만료·없음**(`APPROVAL_NOT_FOUND`) / **409 회의가 끝남**(`MEETING_NOT_ACTIVE`) / 400 잘못된 decision | 없음 |
+| `POST /v1/agent-chats` | `useCreateAgentChat` | "새로운 대화 시작" | pending. 같은 대상의 기존 세션이 비활성으로 내려간다 | `xyR27` |
+| `GET /v1/agent-chats/active` | `useGetActiveAgentChat` | 패널 열 때 (새로고침 복원) | **`null` = 활성 세션 없음**(오류 아님) | `evks6` `LeuWE` `LCXcj` |
+| `GET /v1/agent-chats/{chatId}/messages` | `useGetAgentChatMessages` | 패널 히스토리 | 로딩 / 빈 대화 / 404 | `L0Wx2` |
+| `POST /v1/agent-chats/{chatId}/messages` | ⚠ 생성 훅 사용 불가 | 메시지 전송 | SSE 스트림 — 아래 참조 | `LeuWE` `LCXcj` `Z3EDew` `tmNgz` `pn9GH` |
+| `POST /v1/agent-chats/{chatId}/approvals/{approvalId}` | `useResolveToolApproval` | 승인 카드 | 204 접수(확정 아님) / **403 입력자 아님**(`NOT_APPROVAL_OWNER`) / **404 만료·없음**(`APPROVAL_NOT_FOUND`) / **409 회의가 끝남**(`MEETING_NOT_ACTIVE`) / 400 잘못된 decision | `eP8jX` `jobCE` `ImOW0` `pysh5` `WKrCG` `d9IWR` `YBXm4` |
 
 ⚠ `sendAgentChatMessage`는 응답이 `text/event-stream`이라 생성 훅이 스트림을 읽지 못한다.
 `lib/api/sse.ts`의 `postEventStream()`을 쓴다.
@@ -94,8 +94,8 @@
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `GET /v1/notes/{noteId}/chat/messages` | `useGetNoteSharedChatMessages` | 노트 full 우측 패널 | 로딩 / 빈 대화. **`lock.locked`·`lock.lockedBy`·`lock.pendingApproval`이 관전자 화면의 전부** | 없음 |
-| `POST /v1/notes/{noteId}/chat/messages` | ⚠ 생성 훅 사용 불가 | 메시지 전송 | SSE 스트림 / **409 잠금·비ACTIVE** / 400 빈 메시지 | 없음 |
+| `GET /v1/notes/{noteId}/chat/messages` | `useGetNoteSharedChatMessages` | 노트 full 우측 패널 | 로딩 / 빈 대화. **`lock.locked`·`lock.lockedBy`·`lock.pendingApproval`이 관전자 화면의 전부** | `TqX06` `xPpzc` `DZu5q` |
+| `POST /v1/notes/{noteId}/chat/messages` | ⚠ 생성 훅 사용 불가 | 메시지 전송 | SSE 스트림 / **409 잠금·비ACTIVE** / 400 빈 메시지 | `F8dV8C` `xPpzc` `Ngodq` `dH6kK` |
 
 **관전자는 스트림을 받지 않는다.** 다른 멤버가 입력 중인 것도, 승인 대기 중인 것도
 `GET`의 `lock`을 폴링해서만 안다. 이 필드가 관전자 UI의 유일한 근거다.
@@ -104,14 +104,14 @@
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `GET /v1/workspaces/{workspaceId}/members` | `useGetWorkspaceMembers` | 설정 · 멤버 탭 | 로딩. **내 role 판별의 근거** (ADMIN이면 초대 폼 노출) | 없음 |
-| `GET /v1/workspaces/{workspaceId}/invitations` | `useGetWorkspaceInvitations` | 설정 · 멤버 탭 (ADMIN) | 빈 목록 / 대기 초대 목록 | 없음 |
-| `POST /v1/workspaces/{workspaceId}/invitations` | `useCreateWorkspaceInvitation` | 초대 폼 | pending / **409 이미 멤버·중복 초대** / **404 미가입자** / 403 비ADMIN | 없음 |
-| `DELETE /v1/workspaces/{workspaceId}/invitations/{invitationId}` | `useCancelWorkspaceInvitation` | 대기 초대 취소 | pending / 409 이미 확정 | 없음 |
-| `POST /v1/invitations/{invitationId}/accept` | `useAcceptWorkspaceInvitation` | 알림 벨 인라인 | pending → **워크스페이스 목록에 합류** / 403 본인 아님 / 409 이미 확정 | 없음 |
-| `POST /v1/invitations/{invitationId}/decline` | `useDeclineWorkspaceInvitation` | 알림 벨 인라인 | pending / 403 / 409 | 없음 |
-| `GET /v1/notifications` | `useGetNotifications` | 알림 벨 | 빈 목록 / `unreadCount` 배지 | 없음 |
-| `PUT /v1/notifications/{notificationId}/read` | `useMarkNotificationRead` | 알림 클릭 | 배지 감소. **응답은 `notificationId`만** | 없음 |
+| `GET /v1/workspaces/{workspaceId}/members` | `useGetWorkspaceMembers` | 설정 · 멤버 탭 | 로딩. **내 role 판별의 근거** (ADMIN이면 초대 폼 노출) | `iAG1e` |
+| `GET /v1/workspaces/{workspaceId}/invitations` | `useGetWorkspaceInvitations` | 설정 · 멤버 탭 (ADMIN) | 빈 목록 / 대기 초대 목록 | `iAG1e` |
+| `POST /v1/workspaces/{workspaceId}/invitations` | `useCreateWorkspaceInvitation` | 초대 폼 | pending / **409 이미 멤버·중복 초대** / **404 미가입자** / 403 비ADMIN | `iAG1e` `UOUZl` `KOM8F` `iHlP8` |
+| `DELETE /v1/workspaces/{workspaceId}/invitations/{invitationId}` | `useCancelWorkspaceInvitation` | 대기 초대 취소 | pending / 409 이미 확정 | `iAG1e` `x1pwOb` |
+| `POST /v1/invitations/{invitationId}/accept` | `useAcceptWorkspaceInvitation` | 알림 벨 인라인 | pending → **워크스페이스 목록에 합류** / 403 본인 아님 / 409 이미 확정 | `O1xLI` `x1pwOb` |
+| `POST /v1/invitations/{invitationId}/decline` | `useDeclineWorkspaceInvitation` | 알림 벨 인라인 | pending / 403 / 409 | `O1xLI` `x1pwOb` |
+| `GET /v1/notifications` | `useGetNotifications` | 알림 벨 | 빈 목록 / `unreadCount` 배지 | `O1xLI` `Si390` |
+| `PUT /v1/notifications/{notificationId}/read` | `useMarkNotificationRead` | 알림 클릭 | 배지 감소. **응답은 `notificationId`만** | `O1xLI` |
 
 **알림은 초대의 현재 상태를 담는다.** 초대가 취소돼도 알림은 목록에 남고 `invitation.status`만
 바뀐다. 그래서 PENDING이 아닌 알림은 버튼 대신 상태 라벨을 보여야 한다.
@@ -123,10 +123,10 @@
 
 | operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
 |---|---|---|---|---|
-| `GET /v1/workspaces/{workspaceId}/integrations` | `useGetWorkspaceIntegrations` | 설정 · 연동 탭 | **미연동 provider도 목록에 온다**(`connected: false`) — "연결하기" 버튼의 근거 | 없음 |
-| `GET /v1/workspaces/{workspaceId}/integrations/{provider}/authorize` | ⚠ 생성 훅 사용 불가 | 연결 버튼 (ADMIN) | 302 리다이렉트 | 없음 |
-| `GET /v1/integrations/{provider}/callback` | `useCompleteWorkspaceIntegration` | 없음 (제공자가 브라우저를 보냄) | 302 리다이렉트 | 없음 |
-| `DELETE /v1/workspaces/{workspaceId}/integrations/{provider}` | `useDisconnectWorkspaceIntegration` | 해제 버튼 (ADMIN) | 204 / 403 비ADMIN | 없음 |
+| `GET /v1/workspaces/{workspaceId}/integrations` | `useGetWorkspaceIntegrations` | 설정 · 연동 탭 | **미연동 provider도 목록에 온다**(`connected: false`) — "연결하기" 버튼의 근거 | `soPy6` `t8oW0` |
+| `GET /v1/workspaces/{workspaceId}/integrations/{provider}/authorize` | ⚠ 생성 훅 사용 불가 | 연결 버튼 (ADMIN) | 302 리다이렉트 | `soPy6` `uUOq0` |
+| `GET /v1/integrations/{provider}/callback` | `useCompleteWorkspaceIntegration` | 없음 (제공자가 브라우저를 보냄) | 302 리다이렉트 | `uUOq0` |
+| `DELETE /v1/workspaces/{workspaceId}/integrations/{provider}` | `useDisconnectWorkspaceIntegration` | 해제 버튼 (ADMIN) | 204 / 403 비ADMIN | `soPy6` |
 
 ⚠ `startWorkspaceIntegration`은 **302라 fetch로 부르면 안 된다** — 응답 본문이 HTML이고
 `apiFetch`의 JSON 파싱이 깨진다. `window.location`으로 이동한다.
@@ -140,19 +140,22 @@ MEMBER에게는 상태만 보이고 연결·해제 버튼은 없다 — `connect
 
 상태 코드를 그대로 옮기면 쓸모가 없다. **그 실패가 화면에서 무엇으로 보여야 하는가**를 적는다.
 
-| 실패 | 어디서 | 화면에서 보여야 하는 것 |
-|---|---|---|
-| 409 입력 잠금 | 공유 챗 전송 | "OO님이 입력 중" + 입력창 비활성. `lock.lockedBy`가 이름의 출처 |
-| 409 회의 비ACTIVE | 공유 챗 전송 | "중지 중에는 개인 챗봇을 이용하세요" |
-| 403 입력자 아님 | 승인 API | 관전자에게는 승인 버튼이 아예 없어야 한다 — 403은 최후 방어선 |
-| 404 만료된 승인 | 승인 API | 카드 무효화 + 사유. 스트림이 끝나면 그 승인은 죽는다 |
-| **409 회의가 끝남** | 승인 API (공유 챗) | 카드 무효화. 승인을 누르는 사이 회의가 종료된 경우다 — 일반 오류로 뭉개면 카드가 계속 눌리는 상태로 남는다 |
-| 403 시작자 아님 | 회의 종료·중지·재개 | 뷰어에게는 버튼이 없어야 한다 |
-| 409 녹음 중 종료 | 회의 종료 | stop 후 재시도 안내 |
-| 404 분석 없음 | 요약 탭 | 오류가 아니라 **"아직 분석 전"** 상태 |
-| **종료 이벤트 없이 SSE 끊김** | 두 스트림 | **재시도 UX.** 처리하지 않으면 영원히 로딩이다 |
-| SSE `error` 이벤트 | 두 스트림 | 사유 표시 + 재시도. 부분 응답은 저장되지 않았다 |
-| `tool_call_result(status=error)` | 두 스트림 | 도구 실패 표시. **스트림은 계속된다** — 종료로 다루면 안 된다 |
+**표시 방식은 `AGENTS.md`의 "오류·로딩 표시 경계"를 따른다.** 요약하면 mutation 실패는
+토스트(자동), 지속 상태와 주 데이터 실패는 화면이 그린다. 아래 `표시` 칸이 그 판정이다.
+
+| 실패 | 어디서 | 화면에서 보여야 하는 것 | 표시 |
+|---|---|---|---|
+| 409 입력 잠금 | 공유 챗 전송 | "OO님이 입력 중" + 입력창 비활성. `lock.lockedBy`가 이름의 출처 | 인라인 `Alert` — 잠금이 풀릴 때까지 지속 |
+| 409 회의 비ACTIVE | 공유 챗 전송 | "중지 중에는 개인 챗봇을 이용하세요" | 인라인 `Alert` — 상태가 바뀔 때까지 지속 |
+| 403 입력자 아님 | 승인 API | 관전자에게는 승인 버튼이 아예 없어야 한다 — 403은 최후 방어선 | 토스트 (버튼이 없으니 도달 자체가 예외) |
+| 404 만료된 승인 | 승인 API | 카드 무효화 + 사유. 스트림이 끝나면 그 승인은 죽는다 | 인라인 — 카드를 무효 상태로 바꾼다 |
+| **409 회의가 끝남** | 승인 API (공유 챗) | 카드 무효화. 승인을 누르는 사이 회의가 종료된 경우다 — 일반 오류로 뭉개면 카드가 계속 눌리는 상태로 남는다 | 인라인 — 카드를 무효 상태로 |
+| 403 시작자 아님 | 회의 종료·중지·재개 | 뷰어에게는 버튼이 없어야 한다 | 토스트 (버튼이 없으니 도달 자체가 예외) |
+| 409 녹음 중 종료 | 회의 종료 | stop 후 재시도 안내 | 인라인 — 확인 다이얼로그 안에서 |
+| 404 분석 없음 | 요약 탭 | 오류가 아니라 **"아직 분석 전"** 상태 | 빈 상태 — 오류로 다루지 않는다 |
+| **종료 이벤트 없이 SSE 끊김** | 두 스트림 | **재시도 UX.** 처리하지 않으면 영원히 로딩이다 | 인라인 — 답변 자리에 재시도 |
+| SSE `error` 이벤트 | 두 스트림 | 사유 표시 + 재시도. 부분 응답은 저장되지 않았다 | 인라인 — 답변 자리에 재시도 |
+| `tool_call_result(status=error)` | 두 스트림 | 도구 실패 표시. **스트림은 계속된다** — 종료로 다루면 안 된다 | 인라인 — 도구 기록 카드 안에서 |
 
 **"종료 이벤트 없이 끊김"이 가장 놓치기 쉽다.** 계약(`asyncapi.yml`)이 명시한 세 번째 종료
 경로이고, 동시 스트림 상한 초과·upstream 유휴 60초·입력 잠금 상실 때 일어난다.
@@ -177,3 +180,14 @@ MEMBER에게는 상태만 보이고 연결·해제 버튼은 없다 — `connect
 | 분석 진행 | `Skeleton` |
 | 요약 3종 | `Tabs` + markdown 렌더 |
 | 채팅 패널 | `Sheet`(노트 side) / 고정 패널(full·워크스페이스) |
+
+## 실패의 표시 방식
+
+`AGENTS.md`의 "오류·로딩 표시 경계"가 규칙이고, 여기서는 이 계약에 적용한 결과만 적는다.
+
+**mutation 실패는 토스트가 자동으로 뜬다.** `lib/query/query-client.ts`의 `MutationCache.onError`가
+서버 문구로 띄운다. 초대 실패(409·409·404), 연동 해제 실패, 알림 읽음 실패, 저장 실패가 여기 해당한다.
+
+**화면이 직접 그려야 하는 것**은 `meta.suppressErrorToast: true`로 opt-out한다 — 위 표의 `표시` 칸이
+`인라인`인 것들이다. 이들은 사라지면 안 된다. 잠금 안내가 3초 뒤 사라지면 사용자는 왜
+입력이 막혔는지 알 수 없다.

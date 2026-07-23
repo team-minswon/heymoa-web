@@ -101,9 +101,9 @@ export function WorkspaceSidebar({
   const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
   const createWorkspace = useCreateWorkspace();
-  const createProject = useCreateProject();
-  const updateProject = useUpdateProject();
-  const deleteProject = useDeleteProject();
+  const createProject = useCreateProject({ mutation: { meta: { suppressErrorToast: true } } });
+  const updateProject = useUpdateProject({ mutation: { meta: { suppressErrorToast: true } } });
+  const deleteProject = useDeleteProject({ mutation: { meta: { suppressErrorToast: true } } });
   const isProjectMutationPending =
     createProject.isPending || updateProject.isPending;
   const [projectDialog, setProjectDialog] = useState<ProjectDialogState>(null);

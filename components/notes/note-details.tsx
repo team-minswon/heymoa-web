@@ -19,7 +19,7 @@ import { formatAppDate } from "@/lib/format/date";
 export function NoteDetails({ noteId }: { noteId: string }) {
   const queryClient = useQueryClient();
   const noteQuery = useGetNote(noteId);
-  const updateNote = useUpdateNote();
+  const updateNote = useUpdateNote({ mutation: { meta: { suppressErrorToast: true } } });
   const [feedback, setFeedback] = useState<"saved" | null>(null);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success

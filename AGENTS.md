@@ -49,6 +49,38 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Gradient orbs are **atmosphere only** — never use as button fills, text colors, or card backgrounds.
 - Product UI must not expose query polling, database/reconciliation labels, segment counts, session IDs, or environment configuration.
 
+### 오류·로딩 표시 경계
+
+실패를 전부 토스트로 밀거나 전부 화면에 그리는 것 둘 다 틀렸다. **사라져도 되는가**로 가른다.
+
+| 무엇 | 어떻게 | 왜 |
+|---|---|---|
+| **mutation 실패** | `sonner` 토스트 (기본, 자동) | 방금 한 행동에 대한 응답이라 사라져도 된다. 인라인으로 그리면 버튼 옆에 문구가 끼어들어 레이아웃이 밀린다 |
+| **지속 상태** — 입력 잠금, 회의 비ACTIVE, 승인 카드 무효화, 권한 없음 | 인라인 `Alert` | **오류가 아니라 "지금 할 수 없음"이다.** 토스트로 하면 사라진 뒤 왜 입력이 막혔는지 알 수 없다 |
+| **주 데이터 실패** — 노트 404, 분석 FAILED, 종료 이벤트 없이 끊긴 스트림 | error boundary / 빈 상태 + 재시도 | 그 화면에 그릴 것이 없다. 토스트만 띄우면 빈 화면이 남는다 |
+| **로딩** | `Skeleton` / Suspense | 기능 크기 단위로. route 전체 spinner 금지 |
+
+**mutation 토스트는 자동이다.** `lib/query/query-client.ts`의 `MutationCache.onError`가 모든 실패를 잡아 서버 문구로 토스트한다. 컴포넌트마다 `onError`를 쓰지 않는다.
+
+전역 토스트를 건너뛰려면 **opt-out**한다. 이유는 둘뿐이다.
+
+```ts
+// 1. 화면이 인라인으로 그린다 (지속 상태·주 데이터 실패)
+useSendNoteSharedChatMessage({
+  mutation: { meta: { suppressErrorToast: true } },
+});
+
+// 2. 호출부가 실패 코드에 따라 다른 문구를 띄운다 (프로젝트 삭제 등)
+const deleteProject = useDeleteProject({
+  mutation: { meta: { suppressErrorToast: true } },
+});
+```
+
+**opt-out 없이 자기 `toast.error`를 부르면 두 개가 겹친다.** 전역 훅이 호출부의
+`catch`보다 먼저 돌기 때문이다.
+
+**문구는 서버 것을 쓴다.** 계약이 사용자에게 보일 한국어 메시지를 담고 있고, web이 코드별 문구를 다시 만들면 서버가 바뀔 때마다 갈라진다. `lib/api/error-message.ts`의 `errorMessageOf()`가 봉투에서 뽑는다. 코드로 분기해야 할 때만 `errorCodeOf()`를 쓴다.
+
 ### Hydration & Loading
 
 - Server HTML and the first client render must match. No render-time randomness, browser-only branching, or implicit locale/timezone formatting.
@@ -85,8 +117,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Before any commit:
 
 ```bash
-pnpm test:run && pnpm lint && pnpm build
+pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 ```
+
+`pnpm build`는 Next가 포함하는 파일만 타입 체크한다 — `.test.tsx`가 계약을 어겨도 통과하므로
+`pnpm typecheck`(`tsc --noEmit`)가 따로 필요하다. `pnpm test:e2e`는 MSW의 브라우저 서비스
+워커 경로를 덮는다(vitest는 jsdom이라 그 경로를 지나지 않는다).
 
 ## File Conventions
 

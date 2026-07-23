@@ -37,8 +37,8 @@ export function WorkspaceSettingsForm({
 }) {
   const queryClient = useQueryClient();
   const query = useGetWorkspace(workspaceId);
-  const update = useUpdateWorkspace();
-  const setDefault = useChangeDefaultWorkspace();
+  const update = useUpdateWorkspace({ mutation: { meta: { suppressErrorToast: true } } });
+  const setDefault = useChangeDefaultWorkspace({ mutation: { meta: { suppressErrorToast: true } } });
   const workspace =
     query.data?.status === 200 && query.data.data.success
       ? query.data.data.data
