@@ -24,13 +24,12 @@ import {
   useCreateAgentChat,
   useGetActiveAgentChat,
   useGetAgentChatMessages,
-  useResolveToolApproval,
 } from "@/lib/api/generated/agent-chat/agent-chat";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
-import type { ApprovalDecision } from "@/lib/chat/stream-protocol";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
 import { useChatStream } from "@/lib/chat/use-chat-stream";
+import { useToolApproval } from "@/lib/chat/use-tool-approval";
 import { cn } from "@/lib/utils";
 
 /** 노트 화면이 등록하는 스코프. `hidden`은 side 모드(Sheet)에서 패널을 감추기 위한 것이다. */
@@ -175,13 +174,6 @@ export function PersonalChatProvider({
   );
 }
 
-/** 이 코드로 실패한 승인은 카드가 죽은 것이다 — 다시 눌러도 같은 오류다. */
-const TERMINAL_APPROVAL_CODES = new Set([
-  "APPROVAL_NOT_FOUND",
-  "MEETING_NOT_ACTIVE",
-  "NOT_APPROVAL_OWNER",
-]);
-
 const EXAMPLE_QUESTIONS = [
   "지난 회의에서 정한 것만 정리해줘",
   "남은 액션 아이템이 뭐야?",
@@ -211,10 +203,6 @@ function PersonalChatPanel({
   const [lastSent, setLastSent] = useState<string | null>(null);
   /** 세션 생성 → 스트림 → 히스토리 반영까지 한 트랜잭션 전체가 진행 중인지. */
   const [isSending, setIsSending] = useState(false);
-  /** 승인 API가 204를 받은 승인 id. 확정은 스트림이 하므로 그때까지 버튼을 잠근다. */
-  const [submittedApprovalId, setSubmittedApprovalId] = useState<string | null>(
-    null
-  );
   /** 이 턴을 시작할 때의 히스토리 길이. 뒤에 붙은 것만 이 턴으로 본다. */
   const [turnBaseline, setTurnBaseline] = useState(0);
 
@@ -311,7 +299,11 @@ function PersonalChatPanel({
       : null;
 
   const createChat = useCreateAgentChat();
-  const resolveApproval = useResolveToolApproval();
+  const approval = useToolApproval({
+    chatId: sessionId,
+    pending: stream.state.pendingApproval,
+    streamPhase: stream.state.phase,
+  });
 
   /**
    * 전송·새 대화를 다 막는 상태. 넷 다 "지금 보내면 엉뚱한 대화에 닿는다"는 같은 이유다.
@@ -425,31 +417,6 @@ function PersonalChatPanel({
     });
   }, [createChat, isBusy, queryClient, scopeParams, stream]);
 
-  const approve = useCallback(
-    (decision: ApprovalDecision) => {
-      const approvalId = stream.state.pendingApproval?.approvalId;
-      if (!approvalId || !sessionId) return;
-      // 204는 접수일 뿐이다 — 확정은 스트림의 tool_approval_resolved가 반영한다.
-      // 그 사이 버튼이 다시 눌리면 중복 결정이 나가고 404/409 토스트가 뜬다.
-      setSubmittedApprovalId(approvalId);
-      resolveApproval.mutate(
-        { chatId: sessionId, approvalId, data: { decision } },
-        {
-          onError: (error) => {
-            // 만료·회의 종료·소유자 아님은 카드가 죽은 것이라 다시 눌러도 같은 오류다.
-            // (카드 무효화 화면은 APP-114.) 그 밖의 실패는 재시도할 수 있어야 하므로
-            // 잠금을 푼다 — 안 그러면 스트림이 닫힐 때까지 최대 300초를 잠긴 채 기다린다.
-            // 문구는 전역 MutationCache가 토스트한다.
-            const code = errorCodeOf(error);
-            if (code && TERMINAL_APPROVAL_CODES.has(code)) return;
-            setSubmittedApprovalId(null);
-          },
-        }
-      );
-    },
-    [resolveApproval, sessionId, stream.state.pendingApproval]
-  );
-
   const isStreaming =
     stream.state.phase === "streaming" ||
     stream.state.phase === "awaiting_approval";
@@ -560,11 +527,8 @@ function PersonalChatPanel({
                 stream.reset();
                 void send(lastSent);
               }}
-              onApprove={approve}
-              isApprovalPending={
-                resolveApproval.isPending ||
-                submittedApprovalId === stream.state.pendingApproval?.approvalId
-              }
+              onApprove={approval.approve}
+              approvalCard={approval.card}
               emptyState={
                 <div className="space-y-3">
                   <p className="text-sm text-[var(--el-body)]">

@@ -26,7 +26,6 @@ function renderThread(
       pendingUserMessage={null}
       onRetry={vi.fn()}
       onApprove={vi.fn()}
-      isApprovalPending={false}
       {...props}
     />
   );
@@ -154,33 +153,53 @@ describe("ChatThread", () => {
     expect(screen.getByRole("alert")).toBeTruthy();
   });
 
+  const openCard = {
+    tool: "linear.create_issue",
+    summary: "Linear 이슈 'APP 버그 수정' 생성",
+    state: { kind: "open" as const },
+  };
+
   it("승인 대기 중에는 승인·거절 버튼이 보인다", () => {
     const onApprove = vi.fn();
-    renderThread({
-      stream: {
-        ...initialStreamState,
-        phase: "awaiting_approval",
-        pendingApproval: {
-          approvalId: "0K9GVJT2C4Q7F",
-          tool: "linear.create_issue",
-          summary: "Linear 이슈 'APP 버그 수정' 생성",
-        },
-        records: [
-          {
-            kind: "approval",
-            approvalId: "0K9GVJT2C4Q7F",
-            toolCallId: "call_02",
-            tool: "linear.create_issue",
-            summary: "Linear 이슈 'APP 버그 수정' 생성",
-            decision: null,
-          },
-        ],
-      },
-      onApprove,
-    });
+    renderThread({ approvalCard: openCard, onApprove });
     expect(screen.getByText("Linear 이슈 'APP 버그 수정' 생성")).toBeTruthy();
+    // 300초 상한 문구가 있다.
+    expect(screen.getByText(/5분 뒤 자동으로 거절/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "거절" }));
     expect(onApprove).toHaveBeenCalledWith("REJECTED");
+  });
+
+  it("submitted면 버튼을 잠그고 확정 대기 문구를 보인다", () => {
+    renderThread({
+      approvalCard: { ...openCard, state: { kind: "submitted" } },
+    });
+    expect(screen.getByRole("button", { name: "승인" })).toHaveProperty(
+      "disabled",
+      true
+    );
+    expect(screen.getByRole("button", { name: "거절" })).toHaveProperty(
+      "disabled",
+      true
+    );
+    expect(screen.getByText(/확정은 응답이 재개되면/)).toBeTruthy();
+  });
+
+  it("invalidated면 버튼을 지우고 사유를 보인다", () => {
+    const { container } = renderThread({
+      approvalCard: {
+        ...openCard,
+        state: {
+          kind: "invalidated",
+          reason: "승인 요청이 만료되어 처리할 수 없습니다.",
+        },
+      },
+    });
+    expect(container.querySelector('[data-approval="invalidated"]')).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "거절" })).toBeNull();
+    expect(
+      screen.getByText("승인 요청이 만료되어 처리할 수 없습니다.")
+    ).toBeTruthy();
   });
 
   it("도구 실패 기록 아래로 토큰이 이어진다", () => {

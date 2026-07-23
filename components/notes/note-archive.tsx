@@ -146,7 +146,6 @@ export function NoteArchive({ noteId }: { noteId: string }) {
                   pendingUserMessage={null}
                   onRetry={() => {}}
                   onApprove={() => {}}
-                  isApprovalPending={false}
                 />
               )}
             </div>

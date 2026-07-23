@@ -230,6 +230,10 @@ describe("SharedChatPanel", () => {
     expect(screen.getAllByText(/홍길동님이 승인 대기 중/).length).toBeGreaterThan(0);
     expect(screen.getByText("Linear 이슈 'APP 버그' 생성")).toBeTruthy();
     expect(screen.queryByText(/홍길동님이 입력 중/)).toBeNull();
+    // jobCE — Pending Row + "승인 대기" Badge로 도구를 드러낸다.
+    expect(screen.getByTestId("spectator-pending")).toBeTruthy();
+    expect(screen.getByText("승인 대기")).toBeTruthy();
+    expect(screen.getByText("linear.create_issue")).toBeTruthy();
   });
 
   it("중지 중에는 컴포저가 잠기고 개인 챗봇 열기를 제공한다", () => {

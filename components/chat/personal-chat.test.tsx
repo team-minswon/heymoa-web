@@ -663,8 +663,8 @@ describe("PersonalChatProvider", () => {
     state.releaseStream?.();
   });
 
-  it("만료된 승인은 잠금을 풀지 않는다", async () => {
-    // 카드가 죽었다 — 다시 눌러도 같은 404다.
+  it("만료된 승인은 카드를 무효화한다 — 버튼이 사라지고 사유가 남는다", async () => {
+    // 카드가 죽었다 — 다시 눌러도 같은 404다. 잠긴 버튼이 아니라 무효화 카드로 드러낸다.
     state.active = { chatId: CHAT_ID, scope: "workspace" };
     state.approvalStream = true;
     state.approvalError = {
@@ -682,11 +682,9 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "승인" })).toHaveProperty(
-        "disabled",
-        true
-      )
+      expect(screen.queryByRole("button", { name: "승인" })).toBeNull()
     );
+    expect(screen.getByText(/만료되어 처리할 수 없습니다/)).toBeTruthy();
 
     state.releaseStream?.();
   });

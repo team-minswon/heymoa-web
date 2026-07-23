@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, PauseCircle } from "lucide-react";
+import { AlertTriangle, ExternalLink, PauseCircle, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import type {
   ChatStreamState,
   LiveToolRecord,
 } from "@/lib/chat/stream-protocol";
+import type { ApprovalCard, ApprovalCardState } from "@/lib/chat/use-tool-approval";
 
 /**
  * 개인·공유 챗봇이 같은 스레드 컴포넌트를 쓴다. 공유 메시지는 USER에 `authorName`(멀티멤버)이
@@ -37,7 +38,7 @@ export function ChatThread({
   onRetry,
   isRetryDisabled,
   onApprove,
-  isApprovalPending,
+  approvalCard,
   emptyState,
 }: {
   messages: ThreadMessage[];
@@ -48,7 +49,8 @@ export function ChatThread({
   /** 앞 전송이 아직 정리되지 않았으면 재전송을 막는다. */
   isRetryDisabled?: boolean;
   onApprove: (decision: ApprovalDecision) => void;
-  isApprovalPending: boolean;
+  /** 훅이 소유하는 승인 카드. pending이 사라진 뒤에도 무효화 카드를 남기려고 stream이 아니라 이걸 그린다. */
+  approvalCard?: ApprovalCard | null;
   emptyState?: React.ReactNode;
 }) {
   const isLive = stream.phase !== "idle" || stream.content !== null;
@@ -68,13 +70,11 @@ export function ChatThread({
         <ToolRecord key={recordKey(record)} record={record} />
       ))}
 
-      {stream.pendingApproval ? (
+      {approvalCard ? (
         <ApprovalPrompt
-          summary={
-            stream.pendingApproval.summary ?? `${stream.pendingApproval.tool} 실행`
-          }
-          tool={stream.pendingApproval.tool}
-          isPending={isApprovalPending}
+          summary={approvalCard.summary ?? `${approvalCard.tool} 실행`}
+          tool={approvalCard.tool}
+          state={approvalCard.state}
           onApprove={onApprove}
         />
       ) : null}
@@ -390,44 +390,82 @@ function CallRecordCard({
 function ApprovalPrompt({
   summary,
   tool,
-  isPending,
+  state,
   onApprove,
 }: {
   summary: string;
   tool: string;
-  isPending: boolean;
+  state: ApprovalCardState;
   onApprove: (decision: ApprovalDecision) => void;
 }) {
+  const invalidated = state.kind === "invalidated";
+  const submitted = state.kind === "submitted";
   return (
     <div className="rounded-2xl border border-[var(--el-hairline)] bg-white p-3.5 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-xs font-medium text-[var(--el-body-strong)]">
+        <p
+          className={
+            invalidated
+              ? "truncate text-xs font-medium text-[var(--el-muted)]"
+              : "truncate text-xs font-medium text-[var(--el-body-strong)]"
+          }
+        >
           {tool}
         </p>
         <Badge variant="outline">쓰기 도구</Badge>
       </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-[var(--el-ink)]">
+      <p
+        className={
+          invalidated
+            ? "mt-1.5 text-sm leading-relaxed text-[var(--el-muted)]"
+            : "mt-1.5 text-sm leading-relaxed text-[var(--el-ink)]"
+        }
+      >
         {summary}
       </p>
-      <div className="mt-3 flex gap-2">
-        <Button
-          size="sm"
-          className="h-[30px]"
-          disabled={isPending}
-          onClick={() => onApprove("APPROVED")}
+
+      {invalidated ? (
+        // 카드가 죽었다 — 버튼을 지우고 사유를 남긴다. 스트림은 정상 종료돼 컴포저는 다시 열린다.
+        <div
+          data-approval="invalidated"
+          className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-2.5"
         >
-          승인
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-[30px]"
-          disabled={isPending}
-          onClick={() => onApprove("REJECTED")}
-        >
-          거절
-        </Button>
-      </div>
+          <XCircle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
+          <p className="text-xs leading-relaxed text-[var(--el-body)]">
+            {state.reason}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* 204는 접수일 뿐 낙관적으로 뒤집지 않는다 — submitted면 버튼을 흐리게 잠근다. */}
+          <div
+            className={submitted ? "mt-3 flex gap-2 opacity-40" : "mt-3 flex gap-2"}
+          >
+            <Button
+              size="sm"
+              className="h-[30px]"
+              disabled={submitted}
+              onClick={() => onApprove("APPROVED")}
+            >
+              승인
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-[30px]"
+              disabled={submitted}
+              onClick={() => onApprove("REJECTED")}
+            >
+              거절
+            </Button>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-[var(--el-muted)]">
+            {submitted
+              ? "확정은 응답이 재개되면 반영됩니다."
+              : "응답이 없으면 5분 뒤 자동으로 거절 처리됩니다."}
+          </p>
+        </>
+      )}
     </div>
   );
 }

@@ -8,27 +8,18 @@ import { ChatThread } from "@/components/chat/chat-thread";
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorCodeOf } from "@/lib/api/error-message";
-// 승인 API는 공유·개인 공용 경로(`/v1/agent-chats/{chatId}/approvals/...`)라 agent-chat 모듈에 있다.
-import { useResolveToolApproval } from "@/lib/api/generated/agent-chat/agent-chat";
 import {
   getGetNoteSharedChatMessagesQueryOptions,
   getSendNoteSharedChatMessageUrl,
   useGetNoteSharedChatMessages,
 } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
-import type { ApprovalDecision } from "@/lib/chat/stream-protocol";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
 import { useChatStream } from "@/lib/chat/use-chat-stream";
+import { useToolApproval } from "@/lib/chat/use-tool-approval";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
-
-/** 이 코드로 실패한 승인은 카드가 죽은 것이다 — 다시 눌러도 같은 오류다 (심화는 APP-114). */
-const TERMINAL_APPROVAL_CODES = new Set([
-  "APPROVAL_NOT_FOUND",
-  "MEETING_NOT_ACTIVE",
-  "NOT_APPROVAL_OWNER",
-]);
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -56,9 +47,6 @@ export function SharedChatPanel({
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
   const [lastSent, setLastSent] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [submittedApprovalId, setSubmittedApprovalId] = useState<string | null>(
-    null
-  );
   const [turnBaseline, setTurnBaseline] = useState(0);
 
   const isStreaming =
@@ -96,7 +84,11 @@ export function SharedChatPanel({
   const isUnavailable =
     !isSending && (messagesQuery.isError || (response !== undefined && !ok));
 
-  const resolveApproval = useResolveToolApproval();
+  const approval = useToolApproval({
+    chatId,
+    pending: stream.state.pendingApproval,
+    streamPhase: stream.state.phase,
+  });
 
   const canSend = phase === "active" && !isSpectator && !isUnavailable;
   const isBusy = isSending || isLoading || isUnavailable;
@@ -163,26 +155,6 @@ export function SharedChatPanel({
       }
     },
     [canSend, isBusy, messages.length, noteId, queryClient, stream]
-  );
-
-  const approve = useCallback(
-    (decision: ApprovalDecision) => {
-      const approvalId = stream.state.pendingApproval?.approvalId;
-      if (!approvalId || !chatId) return;
-      // 204는 접수일 뿐 — 확정은 스트림의 tool_approval_resolved가 한다. 그때까지 잠근다.
-      setSubmittedApprovalId(approvalId);
-      resolveApproval.mutate(
-        { chatId, approvalId, data: { decision } },
-        {
-          onError: (error: unknown) => {
-            const code = errorCodeOf(error);
-            if (code && TERMINAL_APPROVAL_CODES.has(code)) return;
-            setSubmittedApprovalId(null);
-          },
-        }
-      );
-    },
-    [chatId, resolveApproval, stream.state.pendingApproval]
   );
 
   // 새 내용은 아래로 쌓인다. 유저가 위를 읽고 있을 때 끌어내리지 않도록 바닥 근처일 때만 따라간다.
@@ -272,11 +244,8 @@ export function SharedChatPanel({
                   stream.reset();
                   void send(lastSent);
                 }}
-                onApprove={approve}
-                isApprovalPending={
-                  resolveApproval.isPending ||
-                  submittedApprovalId === stream.state.pendingApproval?.approvalId
-                }
+                onApprove={approval.approve}
+                approvalCard={approval.card}
                 emptyState={
                   phase === "not-started" ? (
                     <p className="text-sm text-[var(--el-muted)]">
@@ -289,14 +258,31 @@ export function SharedChatPanel({
                   )
                 }
               />
-              {isSpectator ? (
+              {isSpectator && pendingApproval ? (
+                // jobCE — 관전자는 스트림을 못 받아 이 폴링 필드가 승인 대기의 전부다.
+                // Alert 성격의 Pending Row + Badge로 도구·요약을 드러낸다.
+                <div
+                  data-testid="spectator-pending"
+                  className="mt-4 rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-xs font-medium text-[var(--el-body-strong)]">
+                      {pendingApproval.tool}
+                    </p>
+                    <Badge variant="outline">승인 대기</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--el-muted)]">
+                    {pendingApproval.summary
+                      ? `${lockedByLabel}님이 검토 중 · ${pendingApproval.summary}`
+                      : `${lockedByLabel}님이 승인을 검토하고 있습니다`}
+                  </p>
+                </div>
+              ) : isSpectator ? (
                 <p
                   data-testid="typing-divider"
                   className="mt-4 text-center text-xs text-[var(--el-muted)]"
                 >
-                  {pendingApproval
-                    ? `${lockedByLabel}님이 승인 대기 중 · 완료되면 여기에 올라옵니다`
-                    : `${lockedByLabel}님이 입력 중 · 응답이 끝나면 여기에 올라옵니다`}
+                  {lockedByLabel}님이 입력 중 · 응답이 끝나면 여기에 올라옵니다
                 </p>
               ) : null}
             </>

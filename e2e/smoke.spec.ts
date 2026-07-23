@@ -99,6 +99,26 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
 });
 
 /**
+ * 쓰기 도구 승인 한 흐름을 화면에서 굴린다 — 목은 "이슈"가 든 메시지에서 실제로 멈춰
+ * 승인을 기다린다(sse-handler). 승인 카드 → 승인 → 승인·실행 기록까지 서비스 워커 경로로 확인.
+ */
+test("approves a write tool from the chat card", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+
+  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "논의된 이슈를 Linear 이슈로 만들어줘" }).click();
+
+  // 승인 카드가 뜨고 300초 상한 문구가 있다.
+  await expect(page.getByText(/5분 뒤 자동으로 거절/)).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.getByRole("button", { name: "승인" }).click();
+
+  // 승인 → 실행 기록(외부 링크 포함)이 남는다.
+  await expect(page.getByText("APP-12 생성됨")).toBeVisible({ timeout: 20_000 });
+});
+
+/**
  * 노트 full 모드 우측의 공유 챗봇 한 턴을 화면에서 굴린다. 개인 챗봇과 같은 SSE 레이어를
  * 쓰지만 진입점(노트 스코프)과 게이트(회의 ACTIVE)가 달라 별도 증거가 필요하다.
  * `01K0000000002`는 목 기본 시드에서 IN_PROGRESS + 시작자 있음(=ACTIVE)이다.
