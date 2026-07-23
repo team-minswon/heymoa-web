@@ -48,6 +48,23 @@ describe("ChatThread", () => {
     expect(screen.getByText("이렇게 정리했습니다.")).toBeTruthy();
   });
 
+  it("공유 메시지의 작성자 이름을 USER 위에 보인다", () => {
+    // 공유 챗봇은 멀티멤버라 누가 물었는지 보여야 한다. 개인 메시지에는 authorName이 없다.
+    renderThread({
+      messages: [
+        message({ role: "USER", content: "배포 이슈 요약해줘", authorName: "홍길동" }),
+      ],
+    });
+    expect(screen.getByText("홍길동")).toBeTruthy();
+    expect(screen.getByText("배포 이슈 요약해줘")).toBeTruthy();
+  });
+
+  it("작성자 이름이 없으면(개인 챗봇) 이름을 그리지 않는다", () => {
+    renderThread({ messages: [message({ role: "USER", content: "안녕" })] });
+    // authorName 없이 렌더 — 이름 노드가 없다.
+    expect(screen.getByText("안녕")).toBeTruthy();
+  });
+
   it("decision이 있는 TOOL 메시지는 승인 기록으로 렌더한다", () => {
     const { container } = renderThread({
       messages: [

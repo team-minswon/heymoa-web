@@ -98,6 +98,8 @@ type StoreState = {
   analyses: AnalysisResultResponseData[];
   integrations: MockIntegration[];
   sharedChatLocks: Set<string>;
+  /** 현재 유저가 아닌 멤버가 쥔 잠금 (noteId → 이름). 관전자 화면 재현용. */
+  sharedChatForeignLocks: Map<string, string>;
   sharedChatPendingApprovals: Map<string, NoteSharedChatResponseDataLockPendingApproval>;
   agentChats: MockAgentChat[];
   agentChatMessages: MockAgentChatMessage[];
@@ -364,6 +366,7 @@ function createSeedState(): StoreState {
     analyses: [],
     integrations,
     sharedChatLocks: new Set<string>(),
+    sharedChatForeignLocks: new Map<string, string>(),
     sharedChatPendingApprovals: new Map(),
     agentChats: [],
     agentChatMessages: [],
@@ -622,18 +625,28 @@ export const mockDb = {
 
   getNoteSharedChat(noteId: string): NoteSharedChatResponseData {
     findNote(noteId);
+    // 남의 잠금(관전자)이 내 잠금보다 우선한다 — 관전자 화면을 재현하려면 lockedBy가
+    // 현재 유저가 아니어야 한다.
+    const foreignLocker = state.sharedChatForeignLocks.get(noteId) ?? null;
+    const locked = foreignLocker !== null || state.sharedChatLocks.has(noteId);
     return copy({
       chatId: noteId,
       messages: state.sharedChatMessages
         .filter((message) => message.noteId === noteId)
         .map((message) => omit(message, ["noteId"])),
       lock: {
-        locked: state.sharedChatLocks.has(noteId),
-        lockedBy: state.sharedChatLocks.has(noteId) ? state.user.name : null,
+        locked,
+        lockedBy: foreignLocker ?? (state.sharedChatLocks.has(noteId) ? state.user.name : null),
         // 관전자는 스트림을 받지 않는다 — 승인 대기를 이 필드의 폴링으로만 본다 (계약).
         pendingApproval: state.sharedChatPendingApprovals.get(noteId) ?? null,
       },
     });
+  },
+
+  /** 관전자 화면 재현: 현재 유저가 아닌 멤버가 입력 중인 잠금을 세운다 (null이면 해제). */
+  seedForeignLock(noteId: string, lockedBy: string | null) {
+    if (lockedBy) state.sharedChatForeignLocks.set(noteId, lockedBy);
+    else state.sharedChatForeignLocks.delete(noteId);
   },
 
   appendSharedChatMessage(
@@ -655,7 +668,11 @@ export const mockDb = {
     if (note.meetingStatus !== "IN_PROGRESS" || !note.meetingStartedBy) {
       fail("MEETING_NOT_ACTIVE");
     }
-    if (state.sharedChatLocks.has(noteId)) fail("CHAT_LOCKED");
+    // 남의 잠금(시드된 관전자 상태)도 실제로 막아야 계약(다른 멤버 입력 중이면 CHAT_LOCKED)을
+    // 그대로 시연한다 — GET만 잠겼다고 하고 POST는 통과하면 목이 계약과 어긋난다.
+    if (state.sharedChatLocks.has(noteId) || state.sharedChatForeignLocks.has(noteId)) {
+      fail("CHAT_LOCKED");
+    }
     state.sharedChatLocks.add(noteId);
   },
 

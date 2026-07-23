@@ -4,14 +4,27 @@ import { AlertTriangle, ExternalLink, PauseCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { AgentChatMessagesResponseDataMessagesItem } from "@/lib/api/generated/models";
+import type {
+  AgentChatMessagesResponseDataMessagesItem,
+  NoteSharedChatResponseDataMessagesItem,
+} from "@/lib/api/generated/models";
 import type {
   ApprovalDecision,
   ChatStreamState,
   LiveToolRecord,
 } from "@/lib/chat/stream-protocol";
 
-export type ThreadMessage = AgentChatMessagesResponseDataMessagesItem;
+/**
+ * 개인·공유 챗봇이 같은 스레드 컴포넌트를 쓴다. 공유 메시지는 USER에 `authorName`(멀티멤버)이
+ * 붙고 개인 메시지에는 없다 — 둘 다 받아 공통 필드로 렌더하고 이름은 있을 때만 보인다.
+ */
+export type ThreadMessage =
+  | AgentChatMessagesResponseDataMessagesItem
+  | NoteSharedChatResponseDataMessagesItem;
+
+function authorOf(message: ThreadMessage): string | null {
+  return "authorName" in message ? (message.authorName ?? null) : null;
+}
 
 /**
  * 채팅 한 스레드. 개인·공유 챗봇이 같은 이벤트 계약을 쓰므로 이 컴포넌트는 어느 쪽인지 모른다 —
@@ -83,7 +96,8 @@ function recordKey(record: LiveToolRecord) {
 }
 
 function HistoryMessage({ message }: { message: ThreadMessage }) {
-  if (message.role === "USER") return <UserBubble content={message.content} />;
+  if (message.role === "USER")
+    return <UserBubble content={message.content} author={authorOf(message)} />;
   if (message.role === "ASSISTANT") {
     return <AssistantText content={message.content} />;
   }
@@ -113,9 +127,20 @@ function HistoryMessage({ message }: { message: ThreadMessage }) {
   return null;
 }
 
-function UserBubble({ content }: { content: string }) {
+function UserBubble({
+  content,
+  author,
+}: {
+  content: string;
+  author?: string | null;
+}) {
   return (
-    <div className="flex justify-end">
+    <div className="flex flex-col items-end gap-1">
+      {author ? (
+        <p className="px-1 text-xs font-medium text-[var(--el-muted)]">
+          {author}
+        </p>
+      ) : null}
       <p className="max-w-[85%] rounded-2xl bg-[var(--el-surface-strong)] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-[var(--el-ink)]">
         {content}
       </p>

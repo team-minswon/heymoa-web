@@ -99,6 +99,49 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
 });
 
 /**
+ * 노트 full 모드 우측의 공유 챗봇 한 턴을 화면에서 굴린다. 개인 챗봇과 같은 SSE 레이어를
+ * 쓰지만 진입점(노트 스코프)과 게이트(회의 ACTIVE)가 달라 별도 증거가 필요하다.
+ * `01K0000000002`는 목 기본 시드에서 IN_PROGRESS + 시작자 있음(=ACTIVE)이다.
+ */
+test("streams a shared chat turn inside a note", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+
+  const panel = page.getByRole("complementary", { name: "회의 챗봇" });
+  await panel.getByLabel("메시지").fill("이번 회의에서 정한 것만 정리해줘");
+  await panel.getByRole("button", { name: "보내기" }).click();
+
+  await expect(
+    page.getByText("회의에서 정한 내용을 정리했습니다.")
+  ).toBeVisible({ timeout: 20_000 });
+});
+
+/**
+ * 관전자(다른 멤버가 입력 중)는 스트림을 받지 않고 `lock`을 폴링해서만 안다. 목에 남의
+ * 잠금을 심고, 폴링이 그것을 잡아 컴포저를 잠그는지 확인한다. 폴링은 문서가 보일 때만 도는데
+ * (TanStack 기본) Playwright 탭은 visible이라 도는 게 정상이다.
+ */
+test("locks the composer when another member is typing", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+
+  const panel = page.getByRole("complementary", { name: "회의 챗봇" });
+  await panel.getByLabel("메시지").waitFor();
+
+  // 로드 뒤에 심는다 — 새로고침은 목 상태를 초기화하므로 폴링이 잡아야 한다.
+  await page.evaluate(() =>
+    fetch("/v1/notes/01K0000000002/_mock/foreign-lock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ lockedBy: "김민수" }),
+    })
+  );
+
+  await expect(page.getByText(/김민수님이 입력 중/).first()).toBeVisible({
+    timeout: 20_000,
+  });
+});
+
+/**
  * OAuth는 authorize가 외부로 리다이렉트하는 흐름이라 서비스 워커가 가로챌 수 없다.
  * 목에서는 `/mock-oauth`가 그 자리를 대신하므로, 왕복이 실제로 닫히는지 확인한다.
  */

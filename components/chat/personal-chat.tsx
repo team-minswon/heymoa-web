@@ -40,6 +40,7 @@ type PersonalChatState = {
   isOpen: boolean;
   /** 열려 있고 감춰지지 않았을 때만 참. 셸이 본문 여백을 이걸로 정한다. */
   isVisible: boolean;
+  /** 패널을 연다. 라우트가 감췄으면(`hidden`) 존중한다 — PAUSED·ENDED에서는 감추지 않는다. */
   open: () => void;
   close: () => void;
   setNoteScope: (scope: NoteScope | null) => void;
@@ -109,17 +110,17 @@ export function PersonalChatProvider({
   const turnActiveRef = useRef(false);
 
   const setNoteScope = useCallback((scope: NoteScope | null) => {
+    const nextNote = scope?.noteId ?? null;
     setHidden(scope?.hidden ?? false);
     // 감춰진 동안에는 스코프를 바꾸지 않는다.
     if (scope?.hidden) return;
-    const next = scope?.noteId ?? null;
     // 턴이 도는 중에 스코프가 바뀌면 패널 key가 바뀌어 언마운트되고 스트림이 끊긴다.
     // 노트를 닫고 나가는 평범한 이동이 답변을 통째로 날리므로, 턴이 끝날 때까지 미룬다.
     if (turnActiveRef.current) {
-      deferredScopeRef.current = next;
+      deferredScopeRef.current = nextNote;
       return;
     }
-    setScopeNoteId(next);
+    setScopeNoteId(nextNote);
   }, []);
 
   const setTurnActive = useCallback((active: boolean) => {

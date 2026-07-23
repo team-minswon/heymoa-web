@@ -167,8 +167,14 @@ vi.mock("@/lib/api/sse", () => ({
   },
 }));
 
-function NoteScope({ hidden }: { hidden: boolean }) {
-  usePersonalChatScope({ noteId: NOTE_ID, hidden });
+function NoteScope({
+  hidden,
+  noteId = NOTE_ID,
+}: {
+  hidden: boolean;
+  noteId?: string;
+}) {
+  usePersonalChatScope({ noteId, hidden });
   return null;
 }
 
@@ -480,6 +486,29 @@ describe("PersonalChatProvider", () => {
     });
     expect(screen.queryByRole("button", { name: "개인 챗봇 열기" })).toBeNull();
     expect(state.aborted).toBe(false);
+  });
+
+  it("워크스페이스에서 연 개인 챗봇은 노트 회의 중으로 새지 않는다", async () => {
+    // open()은 감춤을 존중한다. 안 그러면 워크스페이스에서 한 번 열면 노트 회의 중에도
+    // 공유 트레이 위에 개인 패널이 계속 뜬다.
+    const { rerender, client } = renderChat();
+    openPanel();
+    expect(screen.getByTestId("personal-chat-panel").className).not.toContain(
+      "hidden"
+    );
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+          <NoteScope hidden />
+        </PersonalChatProvider>
+      </QueryClientProvider>
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("personal-chat-panel").className).toContain(
+        "hidden"
+      )
+    );
   });
 
   it("활성 세션 조회가 끝나기 전에는 보내지 않는다", () => {

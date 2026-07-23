@@ -155,6 +155,20 @@ describe("chat SSE handlers", () => {
     expect((await response.json()).error.code).toBe("CHAT_LOCKED");
   });
 
+  it("시드된 남의 잠금도 전송을 막는다 — GET만이 아니라 POST 게이트까지", async () => {
+    // 관전자 재현용 시드가 GET에서만 잠겨 보이고 POST는 통과하면 계약과 어긋난다.
+    const note = activeNote();
+    mockDb.seedForeignLock(note.noteId, "김민수");
+
+    const response = await send(
+      `http://localhost/v1/notes/${note.noteId}/chat/messages`,
+      "요약해줘"
+    );
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("CHAT_LOCKED");
+  });
+
   // 잠금은 스트림이 사는 동안 유지된다. 응답 객체를 받은 것만으로는 아직 끝난 게 아니다 —
   // 그 사이 들어온 요청은 CHAT_LOCKED여야 한다.
   it("holds the lock while the stream is still flowing", async () => {

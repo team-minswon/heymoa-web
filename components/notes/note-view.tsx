@@ -6,6 +6,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePersonalChatScope } from "@/components/chat/personal-chat";
 import { NotePanel, type NoteTab } from "@/components/notes/note-panel";
 import { NoteRouteSurface } from "@/components/notes/note-route-surface";
+import { useGetNote } from "@/lib/api/generated/notes/notes";
+import {
+  deriveMeetingPhase,
+  isPersonalChatHiddenInNote,
+} from "@/lib/notes/meeting-state";
 
 type NoteViewMode = "side" | "full";
 
@@ -36,8 +41,21 @@ export function NoteView({
     tab: searchParams.get("tab") ?? initialQuery.tab,
   });
 
-  // full이면 개인 챗봇이 이 노트 스코프가 되고, side(Sheet)면 감춘다.
-  usePersonalChatScope({ noteId, hidden: current.view === "side" });
+  // 개인 챗봇은 side에서 감춰지고, full에서도 공유 챗봇 트레이가 레일을 독차지하는 동안
+  // (활성·미시작) 감춰진다. **중지(PAUSED)에는 감추지 않는다** — 그 화면이 "개인 챗봇을
+  // 이용하세요"라고 안내하므로 개인 챗봇이 열려야 한다. 종료(ENDED)면 우측이 개인 챗봇으로
+  // 돌아온다(`TqX06`). unknown(로딩)은 감춰 둔다 — 트레이 자리에 개인 패널이 깜빡이지 않게.
+  // 감출 뿐 언마운트하지 않아 흐르던 스트림은 산다.
+  const noteQuery = useGetNote(noteId);
+  const note =
+    noteQuery.data?.status === 200 && noteQuery.data.data.success
+      ? noteQuery.data.data.data
+      : undefined;
+  const phase = deriveMeetingPhase(note);
+  usePersonalChatScope({
+    noteId,
+    hidden: isPersonalChatHiddenInNote(current.view, phase, noteQuery.isPending),
+  });
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -71,6 +89,7 @@ export function NoteView({
       <NotePanel
         workspaceId={workspaceId}
         noteId={noteId}
+        view={current.view}
         tab={current.tab}
         onTabChange={(tab) => setQuery({ tab })}
         onClose={closeWithAnim}

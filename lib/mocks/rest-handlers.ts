@@ -513,4 +513,16 @@ export const restHandlers = [
   http.get("*/v1/notes/:noteId/chat/messages", ({ params }) =>
     commandResult(() => mockDb.getNoteSharedChat(id(params.noteId)))
   ),
+
+  // 목 전용(계약 밖, `_mock` 접두사): 관전자 화면을 재현하려고 남의 잠금을 심는다.
+  // e2e는 페이지 안에서 fetch로 이 경로를 쳐 서비스 워커가 상태를 세우게 한다.
+  http.post("*/v1/notes/:noteId/_mock/foreign-lock", async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      lockedBy?: string | null;
+    };
+    // 명시적 null은 잠금 해제다 — 생략했을 때만 기본 이름을 넣는다(`??`는 null도 덮어 해제를 막는다).
+    const lockedBy = body.lockedBy === undefined ? "김민수" : body.lockedBy;
+    mockDb.seedForeignLock(id(params.noteId), lockedBy);
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

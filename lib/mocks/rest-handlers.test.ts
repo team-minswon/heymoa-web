@@ -194,6 +194,42 @@ describe("meeting and integration handlers", () => {
     expect((await response.json()).data.status).toBe("PENDING");
   });
 
+  it("남의 잠금을 심으면 lockedBy가 현재 유저가 아니게 된다 (관전자 재현)", async () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+
+    const seed = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/_mock/foreign-lock`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lockedBy: "홍길동" }),
+      }
+    );
+    expect(seed.status).toBe(204);
+
+    const chat = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/chat/messages`
+    );
+    const body = await chat.json();
+    expect(body.data.lock).toMatchObject({ locked: true, lockedBy: "홍길동" });
+
+    // 명시적 null은 잠금을 해제한다 — `??`로 기본값을 씌워 해제를 막으면 안 된다.
+    const clear = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/_mock/foreign-lock`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lockedBy: null }),
+      }
+    );
+    expect(clear.status).toBe(204);
+    const after = await (
+      await fetch(`http://localhost/v1/notes/${note.noteId}/chat/messages`)
+    ).json();
+    expect(after.data.lock).toMatchObject({ locked: false, lockedBy: null });
+  });
+
   it("serves both providers even before anything is connected", async () => {
     const response = await fetch(
       "http://localhost/v1/workspaces/01K0000000000/integrations"

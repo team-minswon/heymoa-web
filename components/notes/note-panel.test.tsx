@@ -16,6 +16,15 @@ import {
 } from "@/components/transcription/recording-provider";
 
 const useGetProject = vi.hoisted(() => vi.fn());
+const noteState = vi.hoisted(() => ({
+  value: {
+    noteId: "01K0000000002",
+    title: "주간 제품 회의",
+    projectId: "01K0000000001",
+    meetingStatus: "IN_PROGRESS" as string,
+    meetingStartedBy: { userId: "u1", name: "테스트 유저" } as unknown,
+  },
+}));
 
 vi.mock("@/components/notes/note-details", () => ({
   NoteDetails: () => <p>정보 내용</p>,
@@ -23,19 +32,30 @@ vi.mock("@/components/notes/note-details", () => ({
 vi.mock("@/components/notes/transcript-view", () => ({
   TranscriptView: () => <p>전사 내용</p>,
 }));
+vi.mock("@/components/notes/shared-chat-panel", () => ({
+  SharedChatPanel: ({
+    phase,
+    onTurnActiveChange,
+  }: {
+    phase: string;
+    onTurnActiveChange?: (active: boolean) => void;
+  }) => (
+    <div data-testid="shared-chat-panel" data-phase={phase}>
+      <button type="button" onClick={() => onTurnActiveChange?.(true)}>
+        턴 시작
+      </button>
+      <button type="button" onClick={() => onTurnActiveChange?.(false)}>
+        턴 끝
+      </button>
+    </div>
+  ),
+}));
+vi.mock("@/components/notes/note-archive", () => ({
+  NoteArchive: () => <div data-testid="note-archive" />,
+}));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   useGetNote: () => ({
-    data: {
-      status: 200,
-      data: {
-        success: true,
-        data: {
-          noteId: "01K0000000002",
-          title: "주간 제품 회의",
-          projectId: "01K0000000001",
-        },
-      },
-    },
+    data: { status: 200, data: { success: true, data: noteState.value } },
   }),
 }));
 vi.mock("@/lib/api/generated/projects/projects", () => ({
@@ -78,8 +98,7 @@ function renderNotePanel(ui: ReactNode) {
       mutations: { retry: false },
     },
   });
-
-  return render(
+  const wrap = (node: ReactNode) => (
     <QueryClientProvider client={client}>
       <RecordingProvider
         runtime={runtime}
@@ -96,10 +115,13 @@ function renderNotePanel(ui: ReactNode) {
           })),
         }}
       >
-        {ui}
+        {node}
       </RecordingProvider>
     </QueryClientProvider>
   );
+
+  const view = render(wrap(ui));
+  return { ...view, rerenderNote: (node: ReactNode) => view.rerender(wrap(node)) };
 }
 
 describe("NotePanel", () => {
@@ -110,13 +132,23 @@ describe("NotePanel", () => {
       removeEventListener: vi.fn(),
     }));
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    noteState.value = {
+      noteId: "01K0000000002",
+      title: "주간 제품 회의",
+      projectId: "01K0000000001",
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedBy: { userId: "u1", name: "테스트 유저" },
+    };
+  });
   it("changes only the controlled tab", () => {
     const onTabChange = vi.fn();
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
+        view="side"
         tab="transcript"
         onTabChange={onTabChange}
         onClose={vi.fn()}
@@ -142,6 +174,7 @@ describe("NotePanel", () => {
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
+        view="side"
         tab="transcript"
         onTabChange={vi.fn()}
         onClose={vi.fn()}
@@ -169,6 +202,7 @@ describe("NotePanel", () => {
         <NotePanel
           workspaceId="01K0000000000"
           noteId="01K0000000002"
+          view="side"
           tab="transcript"
           onTabChange={vi.fn()}
           onClose={vi.fn()}
@@ -176,6 +210,7 @@ describe("NotePanel", () => {
         <NotePanel
           workspaceId="01K0000000000"
           noteId="01K0000000003"
+          view="side"
           tab="transcript"
           onTabChange={vi.fn()}
           onClose={vi.fn()}
@@ -190,5 +225,79 @@ describe("NotePanel", () => {
         screen.getByRole("button", { name: "다른 노트에서 녹음 중" })
       ).toBeDisabled()
     );
+  });
+
+  it("full + 활성이면 공유 챗봇 트레이가 선다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByTestId("shared-chat-panel").getAttribute("data-phase")
+    ).toBe("active");
+  });
+
+  it("full + 종료면 트레이가 사라진다 — 우측은 개인 챗봇 몫", () => {
+    noteState.value.meetingStatus = "ENDED";
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+  });
+
+  it("답변이 흐르는 중 회의가 종료돼도 트레이를 걷지 않고, 턴이 끝나면 아카이브로 넘긴다", () => {
+    const el = (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(el);
+    expect(screen.getByTestId("shared-chat-panel")).toBeTruthy();
+
+    // 턴이 흐른다.
+    fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
+    // 그 사이 다른 멤버가 회의를 끝낸다(폴링이 ENDED를 올린다).
+    noteState.value.meetingStatus = "ENDED";
+    rerenderNote(el);
+    // 트레이는 아직 있고 아카이브는 아직 없다 — 언마운트하면 흐르던 답변이 사라진다.
+    expect(screen.getByTestId("shared-chat-panel")).toBeTruthy();
+    expect(screen.queryByTestId("note-archive")).toBeNull();
+
+    // 턴이 끝난다.
+    fireEvent.click(screen.getByRole("button", { name: "턴 끝" }));
+    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+    expect(screen.getByTestId("note-archive")).toBeTruthy();
+  });
+
+  it("side 모드에는 트레이가 없다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
   });
 });
