@@ -99,6 +99,27 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
 });
 
 /**
+ * 회의 종료 → 분석 대기 흐름을 화면에서 굴린다. 시작자 조작(회의 종료)·확인 다이얼로그·
+ * 종료 후 요약 탭이 분석 진행으로 넘어가는지 서비스 워커 경로로 확인한다.
+ * `01K0000000002`는 시작자가 목 유저라 조작 버튼이 뜬다.
+ */
+test("ends a meeting and shows the analysis in progress", async ({ page }) => {
+  // 기본 전사 탭에서 종료해도 요약 탭으로 넘어가 분석 진행을 보여야 한다.
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+
+  await page.getByRole("button", { name: "회의 종료" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog.getByText(/녹음 상태/)).toBeVisible();
+  await dialog.getByRole("button", { name: "회의 종료" }).click();
+
+  // 종료 → 분석 PENDING → 요약 탭이 분석 진행으로.
+  await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText("회의 종료됨")).toBeVisible();
+});
+
+/**
  * 쓰기 도구 승인 한 흐름을 화면에서 굴린다 — 목은 "이슈"가 든 메시지에서 실제로 멈춰
  * 승인을 기다린다(sse-handler). 승인 카드 → 승인 → 승인·실행 기록까지 서비스 워커 경로로 확인.
  */

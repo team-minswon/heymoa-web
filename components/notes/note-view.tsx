@@ -18,10 +18,16 @@ export function normalizeNoteViewQuery(query: {
   view?: string | string[];
   tab?: string | string[];
 }): { view: NoteViewMode; tab: NoteTab } {
-  return {
-    view: query.view === "side" ? "side" : "full",
-    tab: query.tab === "details" ? "details" : "transcript",
-  };
+  const view = query.view === "side" ? "side" : "full";
+  const rawTab = query.tab;
+  // 요약 탭은 full 전용(side는 2탭) — side에서 summary 요청은 전사로 떨어뜨린다.
+  const tab: NoteTab =
+    rawTab === "details"
+      ? "details"
+      : rawTab === "summary" && view === "full"
+        ? "summary"
+        : "transcript";
+  return { view, tab };
 }
 
 export function NoteView({

@@ -53,6 +53,14 @@ vi.mock("@/components/notes/shared-chat-panel", () => ({
 vi.mock("@/components/notes/note-archive", () => ({
   NoteArchive: () => <div data-testid="note-archive" />,
 }));
+vi.mock("@/components/notes/meeting-controls", () => ({
+  MeetingControls: () => <div data-testid="meeting-controls" />,
+}));
+vi.mock("@/components/notes/note-summary", () => ({
+  NoteSummary: ({ isEnded }: { isEnded: boolean }) => (
+    <div data-testid="note-summary" data-ended={isEnded} />
+  ),
+}));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   useGetNote: () => ({
     data: { status: 200, data: { success: true, data: noteState.value } },
@@ -299,5 +307,36 @@ describe("NotePanel", () => {
       />
     );
     expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+  });
+
+  it("full 모드는 요약 탭과 회의 조작을 앱바에 둔다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="summary"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("tab", { name: "요약" })).toBeTruthy();
+    expect(screen.getByTestId("meeting-controls")).toBeTruthy();
+    expect(screen.getByTestId("note-summary")).toBeTruthy();
+  });
+
+  it("side 모드에는 요약 탭이 없다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("tab", { name: "요약" })).toBeNull();
+    expect(screen.queryByTestId("meeting-controls")).toBeNull();
   });
 });

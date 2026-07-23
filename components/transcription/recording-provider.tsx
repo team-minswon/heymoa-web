@@ -77,6 +77,59 @@ const ACTIVE_PHASES = new Set<RecordingPhase>([
   "recording",
   "stopping",
 ]);
+
+/**
+ * 이 노트의 전사 세션이 아직 살아 있는가 — 살아 있으면 회의 중지·종료가 계약상
+ * `ACTIVE_TRANSCRIPTION_SESSION`(409)로 막힌다. **`failed`도 세션이 열려 있으면 활성이다**:
+ * stop이 실패하면 phase는 failed지만 READY/ACTIVE 세션은 그대로 남아 서버가 여전히 거절한다.
+ */
+export function isNoteRecordingActive(
+  recording: Pick<
+    RecordingContextValue,
+    "activeNoteId" | "session" | "phase"
+  >,
+  noteId: string
+): boolean {
+  if (recording.activeNoteId !== noteId) return false;
+  // 진행 phase는 세션 id가 붙기 전(권한 요청·연결 중)이라도 활성이다 — 그 사이 pause/end를
+  // 열어 두면 뒤늦게 시작이 세션을 만들어 회의를 되살린다.
+  if (ACTIVE_PHASES.has(recording.phase)) return true;
+  // failed는 서버 세션이 아직 열려 있을 때만 활성(READY/ACTIVE).
+  const sessionOpen =
+    recording.session?.status === "READY" || recording.session?.status === "ACTIVE";
+  return recording.phase === "failed" && sessionOpen;
+}
+
+/**
+ * `stop()`이 이 노트의 녹음을 곱게 끝낼 수 있는가 — **연결돼 녹음 중일 때(`recording`)만**이다.
+ * `requesting-permission`/`connecting`은 `start()`가 아직 세션을 만드는 중이고 취소 안전하지
+ * 않아, 여기서 `stop()`을 부르면 컨트롤러만 닫히고 시작 흐름이 이어져 고아 세션을 남긴다 —
+ * 그래서 stoppable이 아니라 "차단(대기)"으로 둔다. `stopping`은 이미 멈추는 중, `failed`는
+ * 컨트롤러가 비어 no-op이라 모두 빠진다.
+ */
+export function isRecordingStoppable(
+  recording: Pick<RecordingContextValue, "activeNoteId" | "phase">,
+  noteId: string
+): boolean {
+  return recording.activeNoteId === noteId && recording.phase === "recording";
+}
+
+/**
+ * 이 노트의 녹음이 아직 시작 중인가(권한 요청·연결). **이 창에서는 회의를 끝내면 안 된다** —
+ * 서버 세션이 아직 없어 종료가 성공해 버리고, 진행 중인 start()가 이어져 종료된 노트에 고아
+ * 전사 세션을 만든다. 연결이 끝나 `recording`이 되면 곱게 중지한 뒤 종료할 수 있다.
+ */
+export function isRecordingStarting(
+  recording: Pick<RecordingContextValue, "activeNoteId" | "phase">,
+  noteId: string
+): boolean {
+  return (
+    recording.activeNoteId === noteId &&
+    (recording.phase === "requesting-permission" ||
+      recording.phase === "connecting")
+  );
+}
+
 const PROJECT_NOTES_QUERY_PATTERN = /^\/v1\/projects\/[^/]+\/notes$/;
 
 function getStartErrorMessage(cause: unknown) {

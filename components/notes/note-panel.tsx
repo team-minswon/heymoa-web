@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Expand, PanelRightClose } from "lucide-react";
 
+import { MeetingControls } from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
 import { NoteDetails } from "@/components/notes/note-details";
+import { NoteSummary } from "@/components/notes/note-summary";
 import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
@@ -19,7 +21,7 @@ import {
   meetingRefetchInterval,
 } from "@/lib/notes/meeting-state";
 
-export type NoteTab = "details" | "transcript";
+export type NoteTab = "details" | "transcript" | "summary";
 
 export function NotePanel({
   workspaceId,
@@ -91,7 +93,14 @@ export function NotePanel({
               {note?.title ?? "회의 노트"}
             </h1>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-2">
+            {/* 회의 조작은 full 모드 앱바에서만 — side는 컴팩트하게 둔다. */}
+            {view === "full" && note ? (
+              <MeetingControls
+                note={note}
+                onMeetingEnded={() => onTabChange("summary")}
+              />
+            ) : null}
             {onExpand ? (
               <Button
                 type="button"
@@ -130,6 +139,10 @@ export function NotePanel({
               className="h-11 w-full justify-start gap-6"
             >
               <TabsTrigger value="transcript">실시간 전사</TabsTrigger>
+              {/* 요약은 종료 시 생성되지만 full은 항상 3탭 — 종료 전엔 탭이 안내를 보인다. */}
+              {view === "full" ? (
+                <TabsTrigger value="summary">요약</TabsTrigger>
+              ) : null}
               <TabsTrigger value="details">노트 정보</TabsTrigger>
             </TabsList>
           </div>
@@ -141,6 +154,11 @@ export function NotePanel({
           ) : (
             <TranscriptView noteId={noteId} />
           )}
+        </TabsContent>
+        <TabsContent value="summary" className="min-h-0 flex-1">
+          <ScrollArea className="h-full">
+            <NoteSummary noteId={noteId} isEnded={phase === "ended"} />
+          </ScrollArea>
         </TabsContent>
         <TabsContent value="details" className="min-h-0 flex-1">
           <ScrollArea className="h-full">
