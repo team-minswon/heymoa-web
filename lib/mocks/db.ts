@@ -828,6 +828,9 @@ export const mockDb = {
     input: { email: string; role: string }
   ): WorkspaceInvitationActionResponseData {
     assertWorkspace(workspaceId);
+    // ponytail: 서버는 초대 대상 조회에 이메일을 정규화하지 않아 대문자가 섞이면 가입자도
+    // 못 찾는다(404). 실제 가입자 레지스트리가 없으니 그 quirk를 대문자 휴리스틱으로 흉내 낸다.
+    if (input.email !== input.email.toLowerCase()) fail("INVITEE_NOT_FOUND");
     const alreadyMember = state.members.some(
       (member) =>
         member.workspaceId === workspaceId && member.email === input.email

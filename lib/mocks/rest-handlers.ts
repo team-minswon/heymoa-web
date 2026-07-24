@@ -26,8 +26,19 @@ function id(value: string | readonly string[] | undefined) {
  */
 const INVITATION_NOT_FOUND_CODES = new Set([
   "INVITATION_NOT_FOUND",
+  "INVITEE_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
 ]);
+
+/**
+ * 실서버 봉투는 코드별 한국어 메시지를 담는데(openapi3.yml) 목은 코드를 그대로 넣고 있었다.
+ * dev는 MSW로 도니 web이 `errorMessageOf`로 서버 문구를 그리려면 목도 같은 메시지를 줘야 한다.
+ */
+const INVITATION_ERROR_MESSAGES: Record<string, string> = {
+  ALREADY_WORKSPACE_MEMBER: "이미 워크스페이스 멤버입니다.",
+  DUPLICATE_PENDING_INVITATION: "이미 대기 중인 초대가 있습니다.",
+  INVITEE_NOT_FOUND: "초대할 사용자를 찾을 수 없습니다.",
+};
 
 /** 권한 문제는 403이다 — 없음(404)이나 상태 충돌(409)과 구분해야 화면이 다르게 다룬다. */
 const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER"]);
@@ -144,7 +155,11 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
       {
         success: false,
         data: null,
-        error: { code, message: code, details: null },
+        error: {
+          code,
+          message: INVITATION_ERROR_MESSAGES[code] ?? code,
+          details: null,
+        },
       },
       { status: INVITATION_NOT_FOUND_CODES.has(code) ? 404 : 409 }
     );

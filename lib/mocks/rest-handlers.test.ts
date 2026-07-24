@@ -127,9 +127,25 @@ describe("invitation and notification handlers", () => {
       body: JSON.stringify(payload),
     });
     expect(second.status).toBe(409);
-    expect((await second.json()).error.code).toBe(
-      "DUPLICATE_PENDING_INVITATION"
+    const body = await second.json();
+    expect(body.error.code).toBe("DUPLICATE_PENDING_INVITATION");
+    // 실서버처럼 한국어 메시지를 담아야 web이 errorMessageOf로 서버 문구를 그린다.
+    expect(body.error.message).toBe("이미 대기 중인 초대가 있습니다.");
+  });
+
+  it("returns 404 INVITEE_NOT_FOUND for a mixed-case email", async () => {
+    const response = await fetch(
+      "http://localhost/v1/workspaces/01K0000000000/invitations",
+      {
+        method: "POST",
+        body: JSON.stringify({ email: "Sora@Heymoa.app", role: "MEMBER" }),
+      }
     );
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.error.code).toBe("INVITEE_NOT_FOUND");
+    expect(body.error.message).toBe("초대할 사용자를 찾을 수 없습니다.");
   });
 
   it("returns 404 when accepting an invitation that does not exist", async () => {
