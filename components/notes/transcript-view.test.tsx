@@ -183,6 +183,12 @@ describe("TranscriptView", () => {
     const partial = screen.getByText("결과를 정리합니다").closest("article");
     expect(partial).toHaveAttribute("data-state", "partial");
     expect(partial).toHaveTextContent("Live");
+
+    // v5: 제품 면 대문자 키커·세리프 헤더 없음(FORM SPEC), 전사 행은 단일 값 grid.
+    expect(screen.queryByText("Conversation")).toBeNull();
+    expect(screen.queryByText("대화 기록")).toBeNull();
+    expect(blocks[0].className).toContain("grid-cols-[64px_1fr]");
+    expect(blocks[0].className).toContain("gap-5");
     expect(useGetNoteTranscript).toHaveBeenCalledWith(
       NOTE_ID,
       expect.objectContaining({

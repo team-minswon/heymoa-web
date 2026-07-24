@@ -183,14 +183,6 @@ export function TranscriptView({ noteId }: { noteId: string }) {
     []
   );
 
-  const statusLabel =
-    recording.phase === "requesting-permission"
-      ? "마이크 권한 확인 중"
-      : recording.phase === "connecting"
-        ? "실시간 전사 연결 중"
-        : recording.phase === "stopping"
-          ? "마지막 문장 정리 중"
-          : "실시간 기록 중";
   const followAction =
     active && !isFollowing ? (
       <div className="pointer-events-none absolute inset-x-0 bottom-20 z-20 flex justify-center">
@@ -214,26 +206,16 @@ export function TranscriptView({ noteId }: { noteId: string }) {
       overlay={followAction}
     >
       <div className="mx-auto w-full max-w-[820px] px-5 pb-28 pt-7 sm:px-9 sm:pt-9">
+        {/* v5: 제품 면 대문자 키커·세리프 헤더 제거 — 탭이 이미 위치를 말한다(FORM SPEC).
+            녹음 상태는 상단바·레코더 독이 표시한다. 전사 행이 바로 시작한다. */}
         <section aria-label="회의 전사">
-          <header className="border-b border-[var(--el-hairline-strong)] pb-4">
-            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--el-muted)]">
-              {active ? (
-                <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
-              ) : null}
-              {active ? statusLabel : "Conversation"}
-            </p>
-            <h2 className="mt-2 font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-              {active ? "대화를 기록하고 있습니다" : "대화 기록"}
-            </h2>
-          </header>
-
           {transcriptQuery.isPending ? (
-            <div className="mt-6 space-y-4" aria-label="대화 기록 불러오는 중">
+            <div className="space-y-4" aria-label="대화 기록 불러오는 중">
               <Skeleton className="h-24 rounded-2xl" />
               <Skeleton className="h-28 rounded-2xl" />
             </div>
           ) : (
-            <div className="mt-3">
+            <div>
               {blocks.map((block) => (
                 <article
                   key={block.blockId}
@@ -241,12 +223,12 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                   data-segment-count={block.segmentIds.length}
                   data-timeline-start-ms={block.timelineStartedAtMs}
                   data-state="final"
-                  className="group grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
+                  className="group grid grid-cols-[64px_1fr] gap-5 border-b border-[var(--el-hairline)] py-4"
                 >
                   <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)]">
                     {formatOffset(block.timelineStartedAtMs)}
                   </time>
-                  <p className="max-w-3xl text-[15px] leading-7 tracking-[0.005em] text-[var(--el-ink)]">
+                  <p className="text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
                     {block.text}
                   </p>
                 </article>
@@ -257,13 +239,13 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                   data-state="partial"
                   aria-live="polite"
                   aria-atomic="true"
-                  className="mt-2 grid grid-cols-[58px_1fr] gap-4 rounded-xl bg-[var(--el-canvas-soft)] px-3 py-4 sm:grid-cols-[66px_1fr] sm:gap-6"
+                  className="mt-2 grid grid-cols-[64px_1fr] gap-5 rounded-chip bg-[var(--el-canvas-soft)] px-3 py-4"
                 >
                   <span className="flex items-center gap-1.5 self-start pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-600">
                     <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
                     Live
                   </span>
-                  <p className="max-w-3xl text-[15px] leading-7 text-[var(--el-body)]">
+                  <p className="text-read leading-7 text-[var(--el-body)]">
                     {partialText}
                     <span className="ml-1 inline-block h-4 w-px animate-pulse bg-[var(--el-muted)] align-middle" />
                   </p>

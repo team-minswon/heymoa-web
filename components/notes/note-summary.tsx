@@ -175,10 +175,8 @@ function Shell({ children }: { children: React.ReactNode }) {
 function AnalyzingSkeleton() {
   return (
     <Shell>
-      <p className="text-[10px] font-semibold tracking-[0.18em] text-[var(--el-muted)] uppercase">
-        Analyzing
-      </p>
-      <h2 className="mt-2 font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+      {/* v5: 대문자 키커 제거 — 세리프 제목만 유지(FORM SPEC). */}
+      <h2 className="font-serif text-section font-light tracking-[-0.025em] text-[var(--el-ink)]">
         회의를 정리하고 있습니다
       </h2>
       <div className="mt-6 space-y-6" aria-label="분석 진행 중">

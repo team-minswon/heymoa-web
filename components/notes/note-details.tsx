@@ -31,7 +31,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
 
   if (!note) {
     return (
-      <div className="mx-auto max-w-3xl space-y-5 p-6 sm:p-10">
+      <div className="mx-auto w-full max-w-[820px] space-y-5 px-5 pt-7 sm:px-9 sm:pt-9">
         <Skeleton className="h-10 w-2/3" />
         <Skeleton className="h-40 w-full" />
       </div>
@@ -41,7 +41,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
   return (
     <form
       key={`${note.noteId}-${note.updatedAt}`}
-      className="mx-auto max-w-3xl space-y-10 p-6 pb-36 sm:p-10"
+      className="mx-auto w-full max-w-[820px] space-y-10 px-5 pb-36 pt-7 sm:px-9 sm:pt-9"
       onSubmit={async (event) => {
         event.preventDefault();
         setFeedback(null);
@@ -63,11 +63,9 @@ export function NoteDetails({ noteId }: { noteId: string }) {
         }
       }}
     >
+      {/* v5: 대문자 키커 제거 — 세리프 제목만 유지(FORM SPEC). */}
       <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--el-muted)]">
-          Note details
-        </p>
-        <h2 className="mt-2 font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+        <h2 className="font-serif text-section font-light tracking-[-0.025em] text-[var(--el-ink)]">
           노트 정보
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
@@ -75,7 +73,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
         </p>
       </header>
 
-      <div className="space-y-3 rounded-2xl border border-[var(--el-hairline)] bg-white p-5 shadow-[0_4px_16px_rgba(0,0,0,0.03)] sm:p-6">
+      <div className="space-y-3 rounded-block border border-[var(--el-hairline)] bg-white p-5 sm:p-6">
         <Label htmlFor="note-title" className="text-xs text-[var(--el-muted)]">
           회의 제목
         </Label>
@@ -89,7 +87,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
       </div>
 
       <dl className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[var(--el-hairline)] bg-white p-5">
+        <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
           <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
             <CalendarDays className="size-3.5" /> 생성
           </dt>
@@ -100,7 +98,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
             })}
           </dd>
         </div>
-        <div className="rounded-2xl border border-[var(--el-hairline)] bg-white p-5">
+        <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
           <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
             <Clock3 className="size-3.5" /> 최근 수정
           </dt>
