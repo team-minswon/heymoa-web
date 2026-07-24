@@ -2,7 +2,7 @@
 
 `mvp.pen` y52000의 SPEC 노트 4개를 옮긴 것이다. `.pen`은 git 밖이라 fresh checkout에서 캔버스를
 열 수 없으므로, **수치·규칙의 정답이자 최신본은 이 파일이다.** 화면 구현(APP-153~157)은 이 문서를
-근거로 한다. codex 리뷰로 정정된 항목(상단바 중지, 목록 배지 계약 블록)은 이 파일에 먼저 반영됐고
+근거로 한다. codex 리뷰로 정정된 항목(상단바 중지, 목록 상태 배지·필터 제거)은 이 파일에 먼저 반영됐고
 캔버스 y52000 노트는 초기 버전이라 일부 뒤처질 수 있다 — 다르면 이 파일이 이긴다.
 
 프레임 ID 표와 세대 배경은 `../design-decisions.md`를 본다.
@@ -33,13 +33,15 @@
 
 **목록 행 정본** (drift: 코드는 높이 ~90 흰 카드 pill)
 
-- 높이 52 · 한 줄(상태 배지를 제목과 같은 줄에) · r8 · 기본 배경 없음 · 행 사이 hairline ·
-  gap 14 · padding [0,12].
-- **상태 배지(녹음 중/일시정지/요약 완료 등)는 `NoteListResponse` 목록 아이템에 `meetingStatus`가
-  없어 지금 계약으로 못 채운다** — 목록엔 `lastRecordedAt`·`recordedDurationMs`만 있다.
-  배지는 [APP-159](https://linear.app/minswon/issue/APP-159)(계약 확장)에 블록된다.
-  그 이슈가 목록 응답에 `meetingStatus`를 넣기 전까지 노트 허브 구현은 배지 없이 나간다.
-  프레임 PNG는 배지가 있는 최종 모습이고, 구현 순서상 계약이 먼저다.
+- 높이 52 · 한 줄 · r8 · 기본 배경 없음 · 행 사이 hairline · gap 14 · padding [0,12].
+- 구성: 파일 아이콘 + 제목 15 + (우측) 상대 시각. **상태 배지는 두지 않는다.**
+- **왜 상태 배지가 없나:** `NoteListResponse` 목록 아이템에는 `meetingStatus`도 분석 상태도 없다
+  (`createdAt`·`lastRecordedAt`·`meetingStartedBy`·`recordedDurationMs`·`title`·`updatedAt`뿐).
+  `meetingStatus`는 상세 `NoteResponse`에만 있다. 계약을 늘리는 안(APP-159)은 취소됐고,
+  **v5는 계약 그대로 — 목록에 상태 배지를 그리지 않는다.** 회의 상태는 노트를 열면 상세에서 본다.
+- **상태 의존 필터도 빼라.** "녹음 중" 필터는 목록에 `meetingStatus`가 없어 성립하지 않는다.
+  필터는 `전체`와 `내가 시작`(`meetingStartedBy`로 판별)만 둔다. 캔버스 프레임에 "녹음 중" 칩이
+  남아 있으면 잔재이니 구현은 이 SPEC을 따른다.
 
 **레이아웃 산술 정정 — 노트 상세 full** (에이전트가 잡은 모순)
 
