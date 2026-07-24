@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, UserRound } from "lucide-react";
+import { Building2, Plug, UserRound } from "lucide-react";
 import { AccountSettingsForm } from "@/components/settings/account-settings-form";
+import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
 import { WorkspaceSettingsForm } from "@/components/settings/workspace-settings-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export type SettingsSection = "account" | "workspace";
+export type SettingsSection = "account" | "workspace" | "integrations";
 
 function SettingsSections({
   initialSection,
@@ -52,11 +53,22 @@ function SettingsSections({
             <Building2 />
             워크스페이스 일반
           </Button>
+          <Button
+            type="button"
+            variant={section === "integrations" ? "secondary" : "ghost"}
+            onClick={() => setSection("integrations")}
+            className="h-10 justify-start rounded-xl px-3"
+          >
+            <Plug />
+            연동
+          </Button>
         </div>
       </nav>
       <div className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 sm:p-10 md:p-14">
         {section === "account" ? (
           <AccountSettingsForm />
+        ) : section === "integrations" ? (
+          <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : (
           <WorkspaceSettingsForm workspaceId={workspaceId} />
         )}

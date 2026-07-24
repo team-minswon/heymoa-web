@@ -62,6 +62,17 @@ function shouldSkipRefresh(url: string, options: ApiFetchOptions) {
   );
 }
 
+/** 갱신 실패 사유. `expired`면 재로그인이 필요하고, 아니면 일시 오류다. */
+export class AuthRefreshError extends Error {
+  readonly expired: boolean;
+  constructor(status: number | null) {
+    super("Authentication refresh failed.");
+    this.name = "AuthRefreshError";
+    // 계약: 리프레시 쿠키가 없거나 무효면 400/401이다(proxy도 둘 다 무효로 본다).
+    this.expired = status === 400 || status === 401;
+  }
+}
+
 export async function refreshAuthOnce() {
   if (!refreshPromise) {
     refreshPromise = fetch(buildUrl("/v1/auth/refresh"), {
@@ -70,8 +81,13 @@ export async function refreshAuthOnce() {
     })
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Authentication refresh failed.");
+          throw new AuthRefreshError(response.status);
         }
+      })
+      .catch((error) => {
+        // 네트워크 오류(fetch reject)는 만료가 아니라 일시 실패다.
+        if (error instanceof AuthRefreshError) throw error;
+        throw new AuthRefreshError(null);
       })
       .finally(() => {
         refreshPromise = null;
