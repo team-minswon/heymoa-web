@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Expand, PanelRightClose } from "lucide-react";
 
-import { MeetingControls } from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
 import { NoteDetails } from "@/components/notes/note-details";
 import { NoteSummary } from "@/components/notes/note-summary";
@@ -20,6 +19,7 @@ import {
   deriveMeetingPhase,
   meetingRefetchInterval,
 } from "@/lib/notes/meeting-state";
+import { cn } from "@/lib/utils";
 
 export type NoteTab = "details" | "transcript" | "summary";
 
@@ -81,7 +81,15 @@ export function NotePanel({
   return (
     <div className="flex h-full min-h-0 flex-col bg-white lg:flex-row">
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
-      <header className="relative z-10 border-b border-[var(--el-hairline)] bg-white/92 px-5 py-4 backdrop-blur-xl sm:px-9 sm:py-5">
+      {/* full은 상단바가 브레드크럼·노트 액션을 맡으므로 여기선 바 테두리 없이 제목만(본문 블록).
+          side 시트는 자체 헤더 바(제목 + 전체화면·닫기)를 유지한다(계승). */}
+      <header
+        className={cn(
+          "relative z-10 px-5 py-4 sm:px-9 sm:py-5",
+          view === "side" &&
+            "border-b border-[var(--el-hairline)] bg-white/92 backdrop-blur-xl"
+        )}
+      >
         <div className="mx-auto flex w-full max-w-[820px] items-start gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -89,41 +97,36 @@ export function NotePanel({
                 <Badge variant="secondary">{project.name}</Badge>
               ) : null}
             </div>
-            <h1 className="mt-2 truncate font-serif text-[28px] font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)] sm:text-[32px]">
+            <h1 className="mt-2 truncate font-serif text-note-title font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)]">
               {note?.title ?? "회의 노트"}
             </h1>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {/* 회의 조작은 full 모드 앱바에서만 — side는 컴팩트하게 둔다. */}
-            {view === "full" && note ? (
-              <MeetingControls
-                note={note}
-                onMeetingEnded={() => onTabChange("summary")}
-              />
-            ) : null}
-            {onExpand ? (
+          {view === "side" ? (
+            <div className="flex shrink-0 items-center gap-2">
+              {onExpand ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-lg"
+                  className="rounded-full"
+                  aria-label="전체 화면으로 보기"
+                  onClick={onExpand}
+                >
+                  <Expand />
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-lg"
                 className="rounded-full"
-                aria-label="전체 화면으로 보기"
-                onClick={onExpand}
+                aria-label="노트 닫기"
+                onClick={onClose}
               >
-                <Expand />
+                <PanelRightClose />
               </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-lg"
-              className="rounded-full"
-              aria-label="노트 닫기"
-              onClick={onClose}
-            >
-              <PanelRightClose />
-            </Button>
-          </div>
+            </div>
+          ) : null}
         </div>
       </header>
 

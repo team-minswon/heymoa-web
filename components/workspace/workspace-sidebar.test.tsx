@@ -133,6 +133,23 @@ describe("WorkspaceSidebar", () => {
     expect(push).toHaveBeenCalledWith("/w/01K0000000007");
   });
 
+  it("puts the workspace switcher in the header and the user profile in the footer", () => {
+    const { container } = renderSidebar();
+
+    const header = container.querySelector('[data-slot="sidebar-header"]');
+    expect(header).toContainElement(
+      screen.getByRole("button", { name: "워크스페이스 전환" })
+    );
+
+    const footer = container.querySelector('[data-slot="sidebar-footer"]');
+    const profile = screen.getByRole("button", {
+      name: /김민수 minsu@example.com/,
+    });
+    expect(footer).toContainElement(profile);
+    // settings gear replaces the old chevron affordance
+    expect(profile.querySelector("svg.lucide-settings")).toBeInTheDocument();
+  });
+
   it("keeps logout progress visible after the profile menu closes", async () => {
     const view = renderSidebar();
     fireEvent.click(

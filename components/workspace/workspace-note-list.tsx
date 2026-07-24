@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { FileText, Mic, RefreshCcw } from "lucide-react";
+import { FileText, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
@@ -55,20 +55,14 @@ export function WorkspaceNoteList({
   isPending,
   isError,
   onRetry,
-  onCreateMeeting,
   projectNames,
-  createMeetingLabel = "새 회의",
-  isCreateMeetingDisabled = false,
 }: {
   workspaceId: string;
   notes: NoteListResponseDataNotesItem[];
   isPending: boolean;
   isError: boolean;
   onRetry: () => void;
-  onCreateMeeting: () => void;
   projectNames: Record<string, string>;
-  createMeetingLabel?: string;
-  isCreateMeetingDisabled?: boolean;
 }) {
   const groups = groupNotesByDate(notes, "ko-KR");
   const retryRef = useRef(onRetry);
@@ -124,16 +118,9 @@ export function WorkspaceNoteList({
           아직 회의 기록이 없습니다
         </h2>
         <p className="mt-1 max-w-sm text-sm text-[var(--el-muted)]">
-          첫 회의를 시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
+          상단바의 <span className="font-medium text-[var(--el-ink)]">새 노트</span>로 첫 회의를
+          시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
         </p>
-        <Button
-          size="xl"
-          className="mt-6 rounded-full px-5"
-          disabled={isCreateMeetingDisabled}
-          onClick={onCreateMeeting}
-        >
-          <Mic /> {createMeetingLabel}
-        </Button>
       </div>
     );
   }

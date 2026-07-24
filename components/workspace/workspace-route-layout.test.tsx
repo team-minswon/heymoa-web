@@ -16,18 +16,12 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   WorkspaceAppShell: ({
     activeNoteId,
-    hideSidebar,
     children,
   }: {
     activeNoteId?: string;
-    hideSidebar?: boolean;
     children: React.ReactNode;
   }) => (
-    <div
-      data-testid="workspace-shell"
-      data-active-note-id={activeNoteId}
-      data-hide-sidebar={String(Boolean(hideSidebar))}
-    >
+    <div data-testid="workspace-shell" data-active-note-id={activeNoteId}>
       {children}
     </div>
   ),
@@ -61,13 +55,9 @@ describe("WorkspaceRouteLayout", () => {
       "data-active-note-id",
       "note-1"
     );
-    expect(screen.getByTestId("workspace-shell")).toHaveAttribute(
-      "data-hide-sidebar",
-      "false"
-    );
   });
 
-  it("hides the sidebar only for a full-screen note", () => {
+  it("keeps the workspace page mounted for a full-screen note (sidebar retained)", () => {
     route.noteId = "note-1";
     route.search = "view=full&tab=transcript";
 
@@ -77,9 +67,12 @@ describe("WorkspaceRouteLayout", () => {
       </WorkspaceRouteLayout>
     );
 
+    // v5: full 모드도 사이드바를 유지하므로 허브 페이지가 셸 안에 계속 마운트된다.
+    expect(screen.getByText("워크스페이스 목록")).toBeInTheDocument();
+    expect(screen.getByText("전체 화면 노트")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-shell")).toHaveAttribute(
-      "data-hide-sidebar",
-      "true"
+      "data-active-note-id",
+      "note-1"
     );
   });
 });

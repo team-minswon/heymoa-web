@@ -1,28 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
 
-const push = vi.hoisted(() => vi.fn());
-const createNote = vi.hoisted(() => vi.fn());
-const recording = vi.hoisted(() => ({
-  phase: "idle",
-  session: null as null | { noteId: string },
-  elapsedMs: 0,
-  start: vi.fn(),
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/components/transcription/recording-provider", () => ({
+  useRecording: () => ({ phase: "idle", activeNoteId: undefined, session: null }),
+  useRecordingMeter: () => ({ level: 0, levelHistory: [0, 0, 0, 0, 0] }),
 }));
-const recordingMeter = vi.hoisted(() => ({
-  level: 0,
-  levelHistory: [0, 0, 0, 0, 0],
-}));
-
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useWorkspaceShell: () => ({
     selectedProjectId: "01K0000000001",
@@ -31,31 +16,8 @@ vi.mock("@/components/workspace/workspace-app-shell", () => ({
     isWorkspaceError: false,
   }),
 }));
-vi.mock("@/components/transcription/recording-provider", () => ({
-  useRecording: () => recording,
-  useRecordingMeter: () => recordingMeter,
-}));
-vi.mock("@/lib/api/generated/projects/projects", () => ({
-  useGetProjects: () => ({
-    data: {
-      status: 200,
-      data: {
-        success: true,
-        data: {
-          projects: [{ projectId: "01K0000000001", name: "모바일 앱" }],
-        },
-      },
-    },
-    isPending: false,
-    isError: false,
-    refetch: vi.fn(),
-  }),
-}));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryOptions: vi.fn(),
-  getGetNotesQueryKey: (projectId: string) => [
-    `/v1/projects/${projectId}/notes`,
-  ],
   useGetNotes: () => ({
     data: {
       status: 200,
@@ -85,102 +47,25 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
     isError: false,
     refetch: vi.fn(),
   }),
-  useCreateNote: () => ({ mutateAsync: createNote, isPending: false }),
 }));
 
 describe("WorkspacePage", () => {
   afterEach(cleanup);
 
-  beforeEach(() => {
-    push.mockReset();
-    createNote.mockReset();
-    recording.start.mockReset();
-    recording.phase = "idle";
-    recording.session = null;
-  });
-
-  it("disables meeting creation while a recording is starting", () => {
-    recording.phase = "requesting-permission";
+  it("renders the screen title, count, and note list without the marketing kicker or header CTA", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkspacePage workspaceId="01K0000000000" />
       </QueryClientProvider>
     );
 
-    expect(screen.getByRole("button", { name: "새 회의 기록" })).toBeDisabled();
-  });
-
-  it("renders the selected project hierarchy and creates a meeting", async () => {
-    createNote.mockResolvedValue({
-      status: 201,
-      headers: new Headers(),
-      data: {
-        success: true,
-        data: {
-          noteId: "01K0000000100",
-          projectId: "01K0000000001",
-          title: "실시간 기록 노트",
-          createdAt: "2026-07-19T10:00:00Z",
-          updatedAt: "2026-07-19T10:00:00Z",
-        },
-      },
-    });
-    const queryClient = new QueryClient();
-    render(
-      <QueryClientProvider client={queryClient}>
-        <WorkspacePage workspaceId="01K0000000000" />
-      </QueryClientProvider>
-    );
-
-    expect(screen.getByText("Meeting notes")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "모바일 앱" })
     ).toBeInTheDocument();
     expect(screen.getByText(/2개의 회의 기록/)).toBeInTheDocument();
-    const button = screen.getByRole("button", { name: "새 회의 기록" });
-    expect(button).toHaveClass("rounded-full");
-    fireEvent.click(button);
-
-    await waitFor(() =>
-      expect(recording.start).toHaveBeenCalledWith("01K0000000100")
-    );
-    expect(push).toHaveBeenCalledWith(
-      "/w/01K0000000000/notes/01K0000000100?view=side&tab=transcript"
-    );
-    expect(
-      queryClient.getQueryData(["/v1/projects/01K0000000001/notes"])
-    ).toMatchObject({
-      status: 200,
-      data: {
-        success: true,
-        data: {
-          notes: [
-            {
-              noteId: "01K0000000100",
-              lastRecordedAt: null,
-              recordedDurationMs: 0,
-            },
-          ],
-        },
-      },
-    });
-  });
-
-  it("opens the active recording instead of creating another meeting", () => {
-    recording.phase = "recording";
-    recording.session = { noteId: "01K0000000002" };
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <WorkspacePage workspaceId="01K0000000000" />
-      </QueryClientProvider>
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "현재 녹음" }));
-
-    expect(push).toHaveBeenCalledWith(
-      "/w/01K0000000000/notes/01K0000000002?view=side&tab=transcript"
-    );
-    expect(createNote).not.toHaveBeenCalled();
-    expect(recording.start).not.toHaveBeenCalled();
+    expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
+    // v5: 제품 면 대문자 키커 금지, 새 노트 진입점은 상단바로 이동(헤더 CTA 없음).
+    expect(screen.queryByText("Meeting notes")).toBeNull();
+    expect(screen.queryByRole("button", { name: /새 회의 기록|새 노트/ })).toBeNull();
   });
 });

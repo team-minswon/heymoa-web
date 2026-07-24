@@ -53,9 +53,6 @@ vi.mock("@/components/notes/shared-chat-panel", () => ({
 vi.mock("@/components/notes/note-archive", () => ({
   NoteArchive: () => <div data-testid="note-archive" />,
 }));
-vi.mock("@/components/notes/meeting-controls", () => ({
-  MeetingControls: () => <div data-testid="meeting-controls" />,
-}));
 vi.mock("@/components/notes/note-summary", () => ({
   NoteSummary: ({ isEnded }: { isEnded: boolean }) => (
     <div data-testid="note-summary" data-ended={isEnded} />
@@ -309,7 +306,7 @@ describe("NotePanel", () => {
     expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
   });
 
-  it("full 모드는 요약 탭과 회의 조작을 앱바에 둔다", () => {
+  it("full 모드는 요약 탭을 두되, 회의 조작은 상단바로 올려 패널에 두지 않는다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -321,8 +318,10 @@ describe("NotePanel", () => {
       />
     );
     expect(screen.getByRole("tab", { name: "요약" })).toBeTruthy();
-    expect(screen.getByTestId("meeting-controls")).toBeTruthy();
     expect(screen.getByTestId("note-summary")).toBeTruthy();
+    // v5: 회의 조작·닫기는 셸 상단바가 맡는다 — 패널 헤더엔 없다(1단 통합).
+    expect(screen.queryByTestId("meeting-controls")).toBeNull();
+    expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
   });
 
   it("side 모드에는 요약 탭이 없다", () => {

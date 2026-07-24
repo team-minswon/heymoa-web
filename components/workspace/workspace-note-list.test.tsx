@@ -63,7 +63,6 @@ describe("WorkspaceNoteList", () => {
         isPending={false}
         isError
         onRetry={onRetry}
-        onCreateMeeting={vi.fn()}
         projectNames={{}}
       />
     );

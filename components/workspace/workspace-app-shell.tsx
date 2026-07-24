@@ -48,12 +48,10 @@ export function useWorkspaceShell() {
 export function WorkspaceAppShell({
   workspaceId,
   activeNoteId,
-  hideSidebar,
   children,
 }: {
   workspaceId: string;
   activeNoteId?: string;
-  hideSidebar?: boolean;
   children: React.ReactNode;
 }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -116,18 +114,16 @@ export function WorkspaceAppShell({
           workspaceId={workspaceId}
         />
         <SidebarProvider className="bg-[var(--el-canvas)]">
-          {!hideSidebar && (
-            <Sidebar className="overflow-hidden border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-[color-mix(in_srgb,var(--el-canvas-soft)_92%,white)]">
-              <WorkspaceSidebar
-                workspaceId={workspaceId}
-                workspace={workspace}
-                projects={projects}
-                selectedProjectId={selectedProjectId}
-                onSelectProject={setSelectedProjectId}
-                onOpenSettings={value.openSettings}
-              />
-            </Sidebar>
-          )}
+          <Sidebar className="overflow-hidden border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-[color-mix(in_srgb,var(--el-canvas-soft)_92%,white)]">
+            <WorkspaceSidebar
+              workspaceId={workspaceId}
+              workspace={workspace}
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              onSelectProject={setSelectedProjectId}
+              onOpenSettings={value.openSettings}
+            />
+          </Sidebar>
           <ShellMain
             workspaceId={workspaceId}
             currentLabel={currentLabel}

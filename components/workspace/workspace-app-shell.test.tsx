@@ -4,7 +4,10 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(""),
+}));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => ({
     session: null,
@@ -58,6 +61,7 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryKey: () => ["notes"],
   useCreateNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useGetNote: () => ({ data: undefined }),
 }));
 
 describe("WorkspaceAppShell", () => {

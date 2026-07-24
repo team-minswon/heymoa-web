@@ -90,14 +90,17 @@ describe("MeetingControls", () => {
     );
   });
 
-  it("녹음 중이면 중지 대신 녹음 중지를 준다 — pause가 항상 409이므로", () => {
+  it("녹음 중이면 회의 중지를 비활성화한다 — 녹음 중지는 레코더 독이 맡는다(drift #7)", () => {
     state.recordingNoteId = "01K0000000002";
     state.recordingPhase = "recording";
     renderControls(note({ meetingStatus: "IN_PROGRESS" }));
-    expect(screen.queryByRole("button", { name: /^중지$/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "녹음 중지" }));
-    expect(state.stopMock).toHaveBeenCalled();
+    // 상단바 회의 조작은 recording.stop()을 부르지 않는다 — 녹음 중지 버튼이 없다.
+    expect(screen.queryByRole("button", { name: "녹음 중지" })).toBeNull();
+    const pauseBtn = screen.getByRole("button", { name: "중지" });
+    expect(pauseBtn).toHaveProperty("disabled", true);
+    fireEvent.click(pauseBtn);
     expect(state.pauseMock).not.toHaveBeenCalled();
+    expect(state.stopMock).not.toHaveBeenCalled();
   });
 
   it("연결 중(세션 생성 전)이면 중지를 막는다 — stop이 고아 세션을 남기므로", () => {

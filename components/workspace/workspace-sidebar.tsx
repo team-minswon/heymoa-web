@@ -52,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -158,87 +159,22 @@ export function WorkspaceSidebar({
   return (
     <>
       <SidebarHeader className="p-0">
-        {/* ── User profile ── */}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                disabled={isLoggingOut}
-                aria-label={isLoggingOut ? "로그아웃 중" : undefined}
-                className="h-auto w-full justify-start gap-0 rounded-none px-3 py-3 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
-              />
-            }
-          >
-            <div className="flex w-full items-center gap-2.5 min-w-0">
-              {isLoggingOut ? (
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
-                  <Loader2 className="size-4 animate-spin text-[var(--el-muted)]" />
-                </span>
-              ) : (
-                <Avatar className="size-7 shrink-0 rounded-full">
-                  <AvatarImage src={user?.image ?? undefined} alt="" />
-                  <AvatarFallback className="rounded-full bg-[var(--el-primary)] text-[var(--el-on-primary)] text-[11px] font-semibold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              )}
-              <div className="min-w-0 flex-1 text-left">
-                <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">
-                  {isLoggingOut ? "로그아웃 중" : (user?.name ?? "사용자")}
-                </p>
-                <p className="block truncate text-[11px] text-[var(--el-muted)] leading-tight">
-                  {isLoggingOut ? "잠시만 기다려 주세요" : (user?.email ?? "")}
-                </p>
-              </div>
-              <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="w-60 rounded-xl shadow-e3 border border-[var(--el-hairline)]"
-          >
-            <DropdownMenuItem
-              onClick={() => onOpenSettings("account")}
-              className="gap-2 rounded-lg py-2 text-sm"
-            >
-              <Settings className="size-4 text-[var(--el-muted)]" />
-              <span>내 계정 설정</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
-            <DropdownMenuItem
-              disabled={isLoggingOut}
-              onClick={() => void logout()}
-              className="gap-2 rounded-lg py-2 text-sm text-destructive"
-            >
-              {isLoggingOut ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <LogOut className="size-4" />
-              )}
-              <span>{isLoggingOut ? "로그아웃 중" : "로그아웃"}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="h-px bg-[var(--el-hairline)]" />
-
-        {/* ── Workspace switcher ── */}
+        {/* ── Workspace switcher (single ~56px row) ── */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 variant="ghost"
                 aria-label="워크스페이스 전환"
-                className="h-auto w-full justify-start gap-0 rounded-none px-3 py-2.5 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
+                className="h-14 w-full justify-start gap-0 rounded-none px-3 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
               />
             }
           >
             <div className="flex w-full items-center gap-2.5 min-w-0">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-[var(--el-primary)] text-[9px] font-bold text-white uppercase">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[var(--el-primary)] text-[11px] font-bold text-white uppercase">
                 {workspace?.name?.trim().slice(0, 1) || "W"}
               </span>
-              <span className="min-w-0 flex-1 truncate text-left text-[12px] font-medium text-[var(--el-body-strong)]">
+              <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--el-ink)]">
                 {workspace?.name ?? "워크스페이스"}
               </span>
               <ChevronsUpDown className="size-3.5 text-[var(--el-muted-soft)] shrink-0" />
@@ -380,6 +316,72 @@ export function WorkspaceSidebar({
           </SidebarGroup>
         </nav>
       </SidebarContent>
+
+      {/* ── User profile (footer) ── */}
+      <SidebarFooter className="p-0 border-t border-[var(--el-hairline)]">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                disabled={isLoggingOut}
+                aria-label={isLoggingOut ? "로그아웃 중" : undefined}
+                className="h-auto w-full justify-start gap-0 rounded-none px-3 py-3 hover:bg-[var(--el-surface-strong)] focus-visible:ring-0"
+              />
+            }
+          >
+            <div className="flex w-full items-center gap-2.5 min-w-0">
+              {isLoggingOut ? (
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
+                  <Loader2 className="size-4 animate-spin text-[var(--el-muted)]" />
+                </span>
+              ) : (
+                <Avatar className="size-7 shrink-0 rounded-full">
+                  <AvatarImage src={user?.image ?? undefined} alt="" />
+                  <AvatarFallback className="rounded-full bg-[var(--el-primary)] text-[var(--el-on-primary)] text-[11px] font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div className="min-w-0 flex-1 text-left">
+                <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">
+                  {isLoggingOut ? "로그아웃 중" : (user?.name ?? "사용자")}
+                </p>
+                <p className="block truncate text-[11px] text-[var(--el-muted)] leading-tight">
+                  {isLoggingOut ? "잠시만 기다려 주세요" : (user?.email ?? "")}
+                </p>
+              </div>
+              <Settings className="size-4 text-[var(--el-muted-soft)] shrink-0" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            side="top"
+            className="w-60 rounded-xl shadow-e3 border border-[var(--el-hairline)]"
+          >
+            <DropdownMenuItem
+              onClick={() => onOpenSettings("account")}
+              className="gap-2 rounded-lg py-2 text-sm"
+            >
+              <Settings className="size-4 text-[var(--el-muted)]" />
+              <span>내 계정 설정</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
+            <DropdownMenuItem
+              disabled={isLoggingOut}
+              onClick={() => void logout()}
+              className="gap-2 rounded-lg py-2 text-sm text-destructive"
+            >
+              {isLoggingOut ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <LogOut className="size-4" />
+              )}
+              <span>{isLoggingOut ? "로그아웃 중" : "로그아웃"}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarFooter>
 
       <Dialog open={workspaceDialogOpen} onOpenChange={setWorkspaceDialogOpen}>
         <DialogContent aria-label="새 워크스페이스 만들기">
