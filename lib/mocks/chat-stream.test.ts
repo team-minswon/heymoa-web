@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { buildApprovalPlan, buildChatEvents } from "@/lib/mocks/chat-stream";
+import {
+  buildApprovalPlan,
+  buildChatEvents,
+  GENERAL_CHAT_ANSWERS,
+} from "@/lib/mocks/chat-stream";
 
 const names = (events: { event: string }[]) => events.map((event) => event.event);
 
 function payloadOf(events: { event: string; data: string }[], name: string) {
   return JSON.parse(events.find((event) => event.event === name)!.data);
+}
+
+function answerOf(message: string, turn: number) {
+  const events = buildChatEvents({ chatId: "chat-1", message, turn });
+  return payloadOf(events, "message_end").content as string;
 }
 
 describe("buildChatEvents", () => {
@@ -92,6 +101,27 @@ describe("buildChatEvents", () => {
     const second = buildChatEvents({ chatId: "chat-1", message: "이슈 만들어줘" });
 
     expect(first).toEqual(second);
+  });
+});
+
+describe("general chat answer pool (APP-156)", () => {
+  it("picks a pool answer deterministically per input", () => {
+    expect(answerOf("요약해줘", 0)).toBe(answerOf("요약해줘", 0));
+    expect(GENERAL_CHAT_ANSWERS).toContain(answerOf("요약해줘", 0));
+  });
+
+  it("gives an answer long enough to judge density (multi-sentence)", () => {
+    // 고정 한 줄로 회귀하면 밀도를 못 본다 — 후보는 모두 여러 문장이어야 한다.
+    for (const answer of GENERAL_CHAT_ANSWERS) {
+      expect(answer.length).toBeGreaterThan(60);
+    }
+  });
+
+  it("varies the answer across turns instead of one fixed line", () => {
+    const distinct = new Set(
+      Array.from({ length: 12 }, (_, turn) => answerOf("요약해줘", turn))
+    );
+    expect(distinct.size).toBeGreaterThan(1);
   });
 });
 

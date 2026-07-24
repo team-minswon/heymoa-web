@@ -159,6 +159,7 @@ function AssistantText({
 }) {
   return (
     <p
+      data-testid="assistant-message"
       data-partial={partial ? "true" : undefined}
       className={
         partial

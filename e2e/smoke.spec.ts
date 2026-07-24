@@ -93,9 +93,12 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
   await page.getByLabel("메시지").fill("요약해줘");
   await page.getByRole("button", { name: "보내기" }).click();
 
-  await expect(
-    page.getByText("회의에서 정한 내용을 정리했습니다.")
-  ).toBeVisible({ timeout: 20_000 });
+  // MSW 응답은 시드 기반 풀에서 뽑혀 문장이 매번 다를 수 있다 — 어시스턴트 답변이 스트리밍돼
+  // 실제 문장(모든 후보가 "습니다."로 끝남)으로 채워지는지만 확인한다.
+  await expect(page.getByTestId("assistant-message").last()).toContainText(
+    "습니다",
+    { timeout: 20_000 }
+  );
 });
 
 /**
@@ -151,9 +154,11 @@ test("streams a shared chat turn inside a note", async ({ page }) => {
   await panel.getByLabel("메시지").fill("이번 회의에서 정한 것만 정리해줘");
   await panel.getByRole("button", { name: "보내기" }).click();
 
-  await expect(
-    page.getByText("회의에서 정한 내용을 정리했습니다.")
-  ).toBeVisible({ timeout: 20_000 });
+  // 공유 챗봇도 같은 SSE·풀을 쓴다 — 어시스턴트 답변이 실제 문장으로 채워지는지 확인.
+  await expect(panel.getByTestId("assistant-message").last()).toContainText(
+    "습니다",
+    { timeout: 20_000 }
+  );
 });
 
 /**

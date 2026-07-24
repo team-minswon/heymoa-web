@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CirclePlay, Lock, PauseCircle, Send, Square } from "lucide-react";
+import { CirclePlay, Lock, PauseCircle } from "lucide-react";
 
+import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import { Button } from "@/components/ui/button";
@@ -389,38 +390,15 @@ function Composer({
   }
 
   return (
-    <form
-      className="border-t border-[var(--el-hairline)] px-5 py-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
-      }}
-    >
-      <div className="flex items-center gap-2">
-        <Input
-          value={draft}
-          onChange={(event) => onDraftChange(event.target.value)}
-          disabled={isBusy}
-          placeholder="이 회의에 대해 물어보세요"
-          aria-label="메시지"
-        />
-        {isStreaming ? (
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            aria-label="중지"
-            onClick={onStop}
-          >
-            <Square className="size-3.5" />
-          </Button>
-        ) : (
-          <Button type="submit" size="icon" aria-label="보내기" disabled={isBusy}>
-            <Send className="size-4" />
-          </Button>
-        )}
-      </div>
-    </form>
+    <ChatComposer
+      draft={draft}
+      onDraftChange={onDraftChange}
+      onSubmit={onSubmit}
+      onStop={onStop}
+      isBusy={isBusy}
+      isStreaming={isStreaming}
+      placeholder="이 회의에 대해 물어보세요"
+    />
   );
 }
 

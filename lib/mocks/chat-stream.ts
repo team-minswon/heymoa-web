@@ -9,7 +9,35 @@
  * 브라우저 없이 테스트할 수 있다.
  */
 
+import { faker } from "@faker-js/faker";
+
 export type MockSseEvent = { event: string; data: string };
+
+/**
+ * 일반(도구 없는) 챗 응답 풀. 짧은 고정 한 줄로는 실제 화면 밀도를 볼 수 없어(APP-156),
+ * 회의 Q&A 톤의 2~4문장 후보에서 뽑는다. 선택은 입력에서 파생한 시드로 결정적이다 —
+ * 같은 질문·턴이면 같은 답, 다른 턴이면 다른 답. 순수 함수를 지키려 매 호출 재시드한다.
+ */
+export const GENERAL_CHAT_ANSWERS = [
+  "이번 회의에서는 온보딩 이탈과 알림 정책 두 가지를 다뤘습니다. 가입 직후 3분 안에 빠져나가는 비율이 40%를 넘어 프로필 설정 단계를 원인으로 보고, 입력 항목을 여섯 개에서 두 개로 줄이는 안을 검토했습니다. 다음 주 사용자 테스트로 효과를 확인하기로 했습니다.",
+  "지금까지 확정된 액션 아이템은 세 건입니다. 온보딩 프로필 항목 축소안 확정, 신규 가입 첫 세션 대상 테스트 시나리오 작성, 테스트 참가자 20명 모집(금요일 마감)입니다. 담당자는 첫 번째 건만 정해졌고 나머지는 아직 언급되지 않았습니다.",
+  "알림 논의는 발송 방식에서 시작했습니다. 지금은 이벤트마다 개별 푸시가 나가는데, 하루 알림 수가 많다는 피드백이 반복돼 묶어서 보내는 방향을 검토했습니다. 묶음 기준과 주기를 먼저 정한 뒤 채널별 예외를 다루는 순서가 좋겠다는 의견이 있었습니다.",
+  "말씀하신 부분은 회의 후반 08분경에 다뤄졌습니다. 알림 클릭률이 지난 분기 대비 절반 아래로 떨어졌고 알림을 아예 끄는 사용자도 늘고 있어, 정책부터 다시 보기로 했습니다. 구체적인 수치는 전사 기록에서 확인할 수 있습니다.",
+  "결정과 남은 논의를 나눠 보면, 결정은 온보딩 입력 항목 축소와 사용자 테스트 진행 두 가지입니다. 남은 논의는 알림 묶음 기준과 알림 설정 화면 개선인데, 후자는 다음 사이클 백로그로 넘겼습니다.",
+  "해당 안건은 이번 회의 범위에서는 결론이 나지 않았습니다. 테스트 범위를 첫 세션으로 좁힌 결정은 결과 해석을 쉽게 하지만 재방문 시점의 이탈은 확인할 수 없어, 후속 회차가 필요하다는 점이 함께 언급됐습니다.",
+];
+
+/** 문자열 시드를 faker용 32비트 정수로. tsid와 같은 방식이라 결정적이다. */
+function numericSeed(seed: string) {
+  let hash = 7;
+  for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return hash;
+}
+
+function pickGeneralAnswer(seed: string) {
+  faker.seed(numericSeed(seed));
+  return faker.helpers.arrayElement(GENERAL_CHAT_ANSWERS);
+}
 
 type BuildInput = {
   chatId: string;
@@ -137,7 +165,9 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
   }
 
   if (!input.message.includes("이슈")) {
-    const content = "회의에서 정한 내용을 정리했습니다.";
+    const content = pickGeneralAnswer(
+      `${input.chatId}:${input.turn ?? 0}:${input.message}`
+    );
     return [
       start,
       ...tokens(content),

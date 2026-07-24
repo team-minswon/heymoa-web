@@ -10,11 +10,11 @@ import {
   useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Plus, Send, Square, X } from "lucide-react";
+import { MessageCircle, Plus, X } from "lucide-react";
 
+import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -554,50 +554,24 @@ function PersonalChatPanel({
         </div>
       </ScrollArea>
 
-      <form
-        className="border-t border-[var(--el-hairline)] px-6 py-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void send(draft);
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <Input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            disabled={isBusy}
-            placeholder={
-              sessionId ? "무엇이든 물어보세요" : "첫 질문을 보내면 대화가 시작됩니다"
-            }
-            aria-label="메시지"
-          />
-          {isStreaming ? (
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              aria-label="중지"
-              onClick={stream.stop}
-            >
-              <Square className="size-3.5" />
-            </Button>
-          ) : (
-            <Button
-              type="submit"
-              size="icon"
-              aria-label="보내기"
-              disabled={isBusy}
-            >
-              <Send className="size-4" />
-            </Button>
-          )}
-        </div>
-        {stream.state.phase === "awaiting_approval" ? (
-          <p className="mt-2 text-xs text-[var(--el-muted)]">
-            승인을 기다리는 동안에는 입력할 수 없습니다.
-          </p>
-        ) : null}
-      </form>
+      <ChatComposer
+        draft={draft}
+        onDraftChange={setDraft}
+        onSubmit={() => void send(draft)}
+        onStop={stream.stop}
+        isBusy={isBusy}
+        isStreaming={isStreaming}
+        placeholder={
+          sessionId ? "무엇이든 물어보세요" : "첫 질문을 보내면 대화가 시작됩니다"
+        }
+        footer={
+          stream.state.phase === "awaiting_approval" ? (
+            <p className="mt-2 text-xs text-[var(--el-muted)]">
+              승인을 기다리는 동안에는 입력할 수 없습니다.
+            </p>
+          ) : null
+        }
+      />
     </aside>
   );
 }
