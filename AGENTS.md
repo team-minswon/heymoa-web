@@ -44,10 +44,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - CSS variables use `--el-*` namespace. `--clay-*` is legacy alias — do NOT reference in new code.
 - Display headings: `font-serif font-light` + negative tracking.
-- CTA buttons: `rounded-full` (pill geometry). Never `rounded-xl` or smaller for CTAs.
-- Cards: `rounded-2xl border border-[var(--el-hairline)] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.04)]`.
 - Gradient orbs are **atmosphere only** — never use as button fills, text colors, or card backgrounds.
 - Product UI must not expose query polling, database/reconciliation labels, segment counts, session IDs, or environment configuration.
+
+**마케팅 면(랜딩·약관 — `app/(main)`·`app/(static)`, `components/heymoa/primitives.tsx`)과 제품 면(워크스페이스 이후)은 규칙이 다르다.** 전체 근거는 `DESIGN.md`의 `## Product Surface (제품 면 · v5)`.
+
+- **마케팅:** pill CTA(`rounded-full`), 카드 `rounded-2xl border border-[var(--el-hairline)] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.04)]`(단일 티어). 이 단일 티어 그림자는 마케팅 전용 — 제품에 쓰지 않는다.
+- **제품 고도:** 셸(App Panel·사이드바·메인)은 각짐(radius 0)·그림자 없음·hairline로만 구분. 부양(챗봇 카드·플로팅 독·FAB)은 `shadow-e2`, 오버레이(시트·다이얼로그·드롭다운)는 `shadow-e3`. raw `shadow-[...]` 금지.
+- **제품 형태:** `rounded-panel`(16)·`rounded-block`(10)·`rounded-control`(8)·`rounded-chip`(6)·`rounded-full`(circle·pill). 주 CTA·레코더 독만 `rounded-full`.
+- **제품 타이포:** `text-screen-title`(34)·`text-note-title`(26)·`text-section`(20)·`text-panel-title`(18)·`text-read`(15). 14 이하는 Tailwind 기본. 제품 면 대문자 키커 금지, 세리프 300 제목만 정체성.
+- 토큰은 `app/globals.css` `@theme inline`에 있다. `lib/design-tokens.test.ts`가 존재를 지킨다.
 
 ### 오류·로딩 표시 경계
 

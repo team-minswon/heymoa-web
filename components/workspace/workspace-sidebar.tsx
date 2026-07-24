@@ -196,7 +196,7 @@ export function WorkspaceSidebar({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-60 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]"
+            className="w-60 rounded-xl shadow-e3 border border-[var(--el-hairline)]"
           >
             <DropdownMenuItem
               onClick={() => onOpenSettings("account")}
@@ -246,7 +246,7 @@ export function WorkspaceSidebar({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-64 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]"
+            className="w-64 rounded-xl shadow-e3 border border-[var(--el-hairline)]"
           >
             {workspaces.map((item) => (
               <DropdownMenuItem
@@ -351,7 +351,7 @@ export function WorkspaceSidebar({
                         <DropdownMenuContent
                           side="right"
                           align="start"
-                          className="rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--el-hairline)]"
+                          className="rounded-xl shadow-e3 border border-[var(--el-hairline)]"
                         >
                           <DropdownMenuItem
                             onClick={() =>

@@ -16,6 +16,8 @@ CTAs are subtle: a near-black ink pill (`{component.button-primary}`) is the pri
 - Soft pill geometry (`{rounded.pill}` for CTAs, `{rounded.xl}` for cards).
 - 96px section rhythm.
 
+> **이 문서는 두 면을 기술한다.** 아래 Colors~Responsive는 **마케팅 면**(랜딩·약관 — off-white 캔버스, pill CTA, 그라데이션 오브, 단일 티어 그림자)의 규칙이다. **제품 면**(워크스페이스 이후 — 각진 셸, 2연타 고도, 형태 스케일 5단계)은 별도 규칙을 따른다 — [`## Product Surface (제품 면 · v5)`](#product-surface-제품-면--v5)를 본다. 색 토큰(`--el-*`)과 폰트(Inter/EB Garamond)는 두 면이 공유한다.
+
 ## Colors
 
 ### Brand & Accent
@@ -249,6 +251,56 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 - Top nav switches to hamburger below 768px.
 - Feature grid: 3-up → 2-up → 1-up.
 - Gradient orbs reduce diameter at every breakpoint but never disappear.
+
+## Product Surface (제품 면 · v5)
+
+워크스페이스에 들어간 뒤의 화면(사이드바·노트 상세·챗봇·알림·설정)은 마케팅 면과 다른 규칙을 따른다. **왜 다른가:** 마케팅은 흰 배경 위 잡지 조판이고, 제품은 회색 캔버스 위에서 실제로 뜨고 지는 레이어를 구분해야 한다. 마케팅 단일 티어 그림자(`0 4px 16px rgba(0,0,0,0.04)`)는 회색 캔버스에서 안 보인다. 정본 수치는 `docs/design/v5-spec-notes.md`의 SPEC 노트이며, 여기서는 코드 토큰과의 대응만 못박는다.
+
+### 공유하는 것 / 나뉘는 것
+
+| | 마케팅(랜딩·약관) | 제품(워크스페이스 이후) |
+| --- | --- | --- |
+| 색 토큰 | `--el-*` (공유) | `--el-*` (공유) |
+| 폰트 | Inter + EB Garamond (공유) | Inter + EB Garamond (공유) |
+| 셸/캔버스 | off-white, 96px 리듬, pill CTA | 각진 셸(radius 0) · hairline · 여백 0으로 뷰포트 꽉 채움 |
+| 그림자 | 단일 티어 `0 4px 16px/0.04` | 2연타 e2/e3 (아래) |
+| 조판 | 대문자 키커 + 세리프 300 제목 | **대문자 키커 금지** · 세리프 300 제목만 정체성으로 유지 |
+
+### 고도 — 셸은 각지고 레이어만 둥글다
+
+`globals.css` 토큰. raw `shadow-[...]` 대신 유틸을 쓴다.
+
+| 층 | 토큰 / 유틸 | 값 | 쓰임 |
+| --- | --- | --- | --- |
+| 셸(App Panel·사이드바·메인) | — (없음) | radius 0 · 그림자 없음 · hairline | 사이드바/메인은 항상 함께 사는 한 셸 |
+| e2 부양 | `shadow-e2` | `0 2px 4px #0c0a090f, 0 10px 28px #0c0a091c` | 챗봇 카드 · 플로팅 독 · FAB |
+| e3 오버레이 | `shadow-e3` | `0 4px 8px #0c0a0914, 0 20px 56px #0c0a092b` | 노트 시트 · 다이얼로그 · 드롭다운 |
+
+그림자는 2연타다 — 짧고 진한 접지 + 길고 옅은 앰비언트. 카드 안의 카드(요약 블록·목록 행)에는 그림자 금지, hairline만.
+
+### 형태 스케일 (5단계 · 역할 기반)
+
+| 유틸 | 값 | 쓰임 |
+| --- | --- | --- |
+| `rounded-panel` | 16px | 패널·다이얼로그 |
+| `rounded-block` | 10px | 블록 카드 |
+| `rounded-control` | 8px | 컨트롤·목록 행 |
+| `rounded-chip` | 6px | 칩·배지 |
+| `rounded-full` | 9999px | circle(아바타·아이콘) · pill(주 CTA·레코더 독) |
+
+`rounded-full`은 circle과 pill 두 역할만. 셸은 각짐(0). 마케팅의 `{rounded.xl}` 카드 규칙은 제품에 쓰지 않는다.
+
+### 타이포 스케일
+
+| 유틸 | 값 | 쓰임 |
+| --- | --- | --- |
+| `text-screen-title` | 34px | 화면 제목 (세리프 300) |
+| `text-note-title` | 26px | 노트 제목 (세리프 300) |
+| `text-section` | 20px | 섹션 제목 |
+| `text-panel-title` | 18px | 패널 제목 |
+| `text-read` | 15px | 전사 본문 · 목록 행 제목 |
+
+14 이하(탭·채팅·메타·힌트)는 Tailwind 기본(`text-sm`/`text-xs`)을 그대로 쓴다.
 
 ## Iteration Guide
 

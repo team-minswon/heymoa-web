@@ -42,7 +42,7 @@ function WorkspaceRecordingIndicator({
       initial={{ opacity: 0, y: -12, x: "-50%" }}
       animate={{ opacity: 1, y: 0, x: "-50%" }}
       exit={{ opacity: 0, y: -12, x: "-50%" }}
-      className="fixed left-1/2 top-5 z-50 flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] px-3 py-1.5 shadow-[0_8px_32px_rgba(28,25,23,0.12)] backdrop-blur-xl"
+      className="fixed left-1/2 top-5 z-50 flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] px-3 py-1.5 shadow-e2 backdrop-blur-xl"
     >
       <Button
         type="button"

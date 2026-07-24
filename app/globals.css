@@ -47,6 +47,24 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* v5 제품 고도 — 접지 + 앰비언트 2연타. 셸은 그림자 없음(hairline로만 구분).
+     단일 티어 0_4px_16px는 마케팅(랜딩·약관) 전용이다. (ELEVATION SPEC) */
+  --shadow-e2: 0 2px 4px #0c0a090f, 0 10px 28px #0c0a091c; /* 부양: 챗봇 카드·플로팅 독·FAB */
+  --shadow-e3: 0 4px 8px #0c0a0914, 0 20px 56px #0c0a092b; /* 오버레이: 시트·다이얼로그·드롭다운 */
+
+  /* v5 형태 스케일 — 역할 기반. circle·pill은 rounded-full, 셸은 각짐(0). (FORM SPEC) */
+  --radius-panel: 16px;
+  --radius-block: 10px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
+
+  /* v5 타이포 스케일 — 세리프 300 제목 + 본문. 14 이하는 Tailwind 기본. (FORM SPEC) */
+  --text-screen-title: 34px;
+  --text-note-title: 26px;
+  --text-section: 20px;
+  --text-panel-title: 18px;
+  --text-read: 15px; /* 전사 본문 + 목록 행 제목 */
 }
 
 :root {
