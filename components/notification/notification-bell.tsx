@@ -150,7 +150,11 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[360px] max-w-[calc(100vw-1rem)] p-0"
+        // v5: 불투명 흰 패널 + e3 2연타 그림자로 캔버스 위에 확실히 뜬다(ELEVATION SPEC).
+        // 그림자는 인라인으로 준다 — base의 shadow-md·ring이 클래스 순서상 shadow-e3를 이겨
+        // (합성 box-shadow), 인라인이 그 전체를 확실히 덮는다.
+        className="w-[360px] max-w-[calc(100vw-1rem)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-0"
+        style={{ boxShadow: "var(--shadow-e3)" }}
       >
         <div className="border-b border-[var(--el-hairline)] px-4 py-3">
           <p className="text-sm font-medium text-[var(--el-ink)]">알림</p>
