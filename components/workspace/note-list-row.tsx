@@ -1,13 +1,12 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { Expand, Loader2, MoreHorizontal, Radio, Waves } from "lucide-react";
+import { Expand, FileText, Loader2, MoreHorizontal } from "lucide-react";
 
 import {
   useRecording,
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,14 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
+import { formatRelativeTime } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
-
-function formatDuration(durationMs: number) {
-  const totalSeconds = Math.floor(durationMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
 
 function ActiveRecordingMeter({ title }: { title: string }) {
   const meter = useRecordingMeter();
@@ -38,12 +31,12 @@ function ActiveRecordingMeter({ title }: { title: string }) {
       aria-valuenow={Math.round(
         Math.max(...meter.levelHistory.slice(-5), 0) * 100
       )}
-      className="flex h-4 items-center gap-[2px]"
+      className="flex h-4 w-5 items-center justify-center gap-[2px]"
     >
-      {meter.levelHistory.slice(-5).map((sample, index) => (
+      {meter.levelHistory.slice(-4).map((sample, index) => (
         <span
           key={index}
-          className="h-4 w-[2px] origin-center rounded-full bg-destructive transition-transform duration-75"
+          className="h-3.5 w-[2px] origin-center rounded-full bg-destructive transition-transform duration-75"
           style={{ transform: `scaleY(${Math.max(0.16, sample)})` }}
         />
       ))}
@@ -51,7 +44,7 @@ function ActiveRecordingMeter({ title }: { title: string }) {
   );
 }
 
-function NoteNavigationVisual({
+function NoteRowIcon({
   title,
   isRecording,
 }: {
@@ -61,10 +54,10 @@ function NoteNavigationVisual({
   const { pending } = useLinkStatus();
 
   return (
-    <div
+    <span
       className={cn(
-        "flex w-14 shrink-0 flex-col items-center gap-1.5",
-        isRecording ? "text-destructive" : "text-[var(--el-muted)]"
+        "flex size-5 shrink-0 items-center justify-center",
+        isRecording ? "text-destructive" : "text-[var(--el-muted-soft)]"
       )}
     >
       {pending ? (
@@ -72,22 +65,36 @@ function NoteNavigationVisual({
       ) : isRecording ? (
         <ActiveRecordingMeter title={title} />
       ) : (
-        <span className="flex size-7 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
-          <Waves className="size-3.5" aria-hidden="true" />
-        </span>
+        <FileText className="size-4" aria-hidden="true" />
       )}
-    </div>
+    </span>
+  );
+}
+
+/**
+ * 상대 시각("방금/14분 전/어제"). `now`는 목록이 단일 시계로 내려준다 — 행마다 타이머를 두면
+ * 노트가 많을 때 렌더가 폭증한다. `now`가 없으면(SSR·첫 렌더·미해결) 짧은 절대 날짜로 두어
+ * 하이드레이션을 맞추고, 채워지면 상대 시각으로 교체한다.
+ */
+function RelativeTime({ iso, now }: { iso: string; now: number | null }) {
+  return (
+    <span className="shrink-0 text-xs text-[var(--el-muted)] tabular-nums">
+      {now === null
+        ? formatAppDate(iso, { month: "long", day: "numeric" })
+        : formatRelativeTime(iso, now)}
+    </span>
   );
 }
 
 export function NoteListRow({
   workspaceId,
   note,
-  projectName,
+  now = null,
 }: {
   workspaceId: string;
   note: NoteListResponseDataNotesItem;
-  projectName?: string;
+  /** 목록이 내려주는 공용 시계. 없으면 절대 날짜 fallback. */
+  now?: number | null;
 }) {
   const recording = useRecording();
   const isRecording =
@@ -98,44 +105,21 @@ export function NoteListRow({
   const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=transcript`;
   const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=transcript`;
 
+  // v5 목록 행 정본: 높이 52 · 한 줄 · r8 · 배경 없음 · 아이콘 + 제목 15 + 상대 시각.
+  // 카드·그림자·배지·녹음시간은 없다(FORM SPEC).
   return (
-    <article className="group flex min-h-[64px] items-center gap-2 rounded-2xl border border-transparent bg-white/55 px-3 py-2.5 transition-all duration-150 hover:-translate-y-px hover:border-[var(--el-hairline)] hover:bg-white hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] focus-within:border-[var(--el-hairline-strong)] focus-within:bg-white sm:px-4">
+    <article className="group flex h-[52px] items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)]">
       <Link
         href={sideHref}
         aria-label={`${note.title} 노트 열기`}
-        className="flex min-w-0 flex-1 items-center gap-4 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)] sm:gap-6"
+        // self-stretch로 52px 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
+        className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
       >
-        <NoteNavigationVisual title={note.title} isRecording={isRecording} />
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-serif text-xl font-light tracking-[-0.02em] text-[var(--el-ink)]">
-            {note.title}
-          </h3>
-          {projectName || isRecording ? (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {isRecording ? (
-                <span className="mr-1 inline-flex items-center gap-1 text-[11px] font-semibold text-red-700">
-                  <Radio className="size-3" /> 기록 중
-                </span>
-              ) : null}
-              {projectName ? (
-                <Badge variant="secondary">{projectName}</Badge>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-        <div className="hidden w-28 shrink-0 text-right text-xs leading-5 text-[var(--el-muted)] sm:block">
-          <p>
-            {formatAppDate(note.updatedAt, {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </p>
-          <p className="mt-1 font-mono text-[11px] tabular-nums">
-            {formatDuration(
-              isRecording ? recording.elapsedMs : note.recordedDurationMs
-            )}
-          </p>
-        </div>
+        <NoteRowIcon title={note.title} isRecording={isRecording} />
+        <h3 className="min-w-0 flex-1 truncate text-read font-medium text-[var(--el-ink)]">
+          {note.title}
+        </h3>
+        <RelativeTime iso={note.updatedAt} now={now} />
       </Link>
 
       <DropdownMenu>

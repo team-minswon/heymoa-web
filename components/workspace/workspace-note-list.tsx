@@ -1,52 +1,41 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
-import { formatAppDate, getAppDateKey } from "@/lib/format/date";
 
-export type NoteDateGroup = {
-  key: string;
-  label: string;
-  notes: NoteListResponseDataNotesItem[];
-};
+/**
+ * 목록 전체가 공유하는 상대-시각 시계. 행마다 타이머를 두면 노트가 많을 때 렌더가 폭증하므로
+ * 여기 하나만 둔다. 마운트 후 채우고 1분마다 갱신(효과 본문 동기 setState 경고를 타이머로 회피).
+ */
+function useSharedNow(): number | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const initial = window.setTimeout(tick, 0);
+    const interval = window.setInterval(tick, 60_000);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
+  }, []);
+  return now;
+}
 
-export function groupNotesByDate(
-  notes: NoteListResponseDataNotesItem[],
-  locale: string
-): NoteDateGroup[] {
-  const sorted = [...notes].sort((a, b) => {
-    const aTime = Date.parse(a.updatedAt);
-    const bTime = Date.parse(b.updatedAt);
-    return bTime - aTime || b.noteId.localeCompare(a.noteId);
-  });
-  const grouped = new Map<string, NoteListResponseDataNotesItem[]>();
-
-  sorted.forEach((note) => {
-    const key = getAppDateKey(note.updatedAt);
-    grouped.set(key, [...(grouped.get(key) ?? []), note]);
-  });
-
-  return [...grouped.entries()].map(([key, groupedNotes]) => ({
-    key,
-    label: formatAppDate(
-      groupedNotes[0].updatedAt,
-      {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        weekday: "short",
-      },
-      locale
-    ),
-    notes: groupedNotes,
-  }));
+/** 최근 수정 내림차순. v5 허브는 날짜 그룹 없이 최근순 flat 목록이다(프레임 LHXhy). */
+export function sortNotesByRecency(
+  notes: NoteListResponseDataNotesItem[]
+): NoteListResponseDataNotesItem[] {
+  return [...notes].sort(
+    (a, b) =>
+      Date.parse(b.updatedAt) - Date.parse(a.updatedAt) ||
+      b.noteId.localeCompare(a.noteId)
+  );
 }
 
 export function WorkspaceNoteList({
@@ -55,17 +44,15 @@ export function WorkspaceNoteList({
   isPending,
   isError,
   onRetry,
-  projectNames,
 }: {
   workspaceId: string;
   notes: NoteListResponseDataNotesItem[];
   isPending: boolean;
   isError: boolean;
   onRetry: () => void;
-  projectNames: Record<string, string>;
 }) {
-  const groups = groupNotesByDate(notes, "ko-KR");
   const retryRef = useRef(onRetry);
+  const now = useSharedNow();
 
   useEffect(() => {
     retryRef.current = onRetry;
@@ -85,9 +72,12 @@ export function WorkspaceNoteList({
 
   if (isPending) {
     return (
-      <div aria-label="노트 불러오는 중" className="space-y-3 py-4">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-16 rounded-2xl" />
+      <div aria-label="노트 불러오는 중" className="divide-y divide-[var(--el-hairline)]">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="flex h-[52px] items-center gap-[14px] px-3">
+            <Skeleton className="size-5 rounded-full" />
+            <Skeleton className="h-4 w-1/3" />
+          </div>
         ))}
       </div>
     );
@@ -110,7 +100,7 @@ export function WorkspaceNoteList({
 
   if (!notes.length) {
     return (
-      <div className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--el-hairline-strong)] bg-white/75 px-6 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+      <div className="flex min-h-80 flex-col items-center justify-center rounded-panel border border-dashed border-[var(--el-hairline-strong)] px-6 text-center">
         <span className="flex size-12 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
           <FileText className="size-5 text-[var(--el-muted)]" />
         </span>
@@ -126,31 +116,17 @@ export function WorkspaceNoteList({
   }
 
   return (
-    <div data-testid="workspace-note-list" className="space-y-10">
-      {groups.map((group) => (
-        <section key={group.key} aria-labelledby={`date-${group.key}`}>
-          <div className="mb-3 flex items-center gap-4 px-1">
-            <h2
-              id={`date-${group.key}`}
-              className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--el-muted)]"
-            >
-              {group.label}
-            </h2>
-            <div className="min-w-0 flex-1">
-              <Separator />
-            </div>
-          </div>
-          <div className="space-y-2">
-            {group.notes.map((note) => (
-              <NoteListRow
-                key={note.noteId}
-                workspaceId={workspaceId}
-                note={note}
-                projectName={projectNames[note.projectId]}
-              />
-            ))}
-          </div>
-        </section>
+    <div
+      data-testid="workspace-note-list"
+      className="divide-y divide-[var(--el-hairline)]"
+    >
+      {sortNotesByRecency(notes).map((note) => (
+        <NoteListRow
+          key={note.noteId}
+          workspaceId={workspaceId}
+          note={note}
+          now={now}
+        />
       ))}
     </div>
   );
