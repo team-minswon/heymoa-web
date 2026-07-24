@@ -23,6 +23,10 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
   useRecordingMeter: () => recordingMeter,
 }));
+// 벨은 자체 테스트가 있다 — 여기선 툴바에 걸리는지만 본다.
+vi.mock("@/components/notification/notification-bell", () => ({
+  NotificationBell: () => <div data-testid="notification-bell" />,
+}));
 describe("WorkspaceToolbar", () => {
   afterEach(() => {
     cleanup();
@@ -53,6 +57,7 @@ describe("WorkspaceToolbar", () => {
 
     expect(screen.queryByRole("button", { name: "새 회의" })).toBeNull();
     expect(screen.queryByRole("button", { name: "새 노트" })).toBeNull();
+    expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
   });
 
   it("shows automatic recording status with only a stop control", () => {

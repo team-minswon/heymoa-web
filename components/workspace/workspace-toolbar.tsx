@@ -10,6 +10,7 @@ import {
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
+import { NotificationBell } from "@/components/notification/notification-bell";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { siteConfig } from "@/lib/site";
@@ -130,6 +131,7 @@ export function WorkspaceToolbar({
               {currentLabel}
             </h1>
           </div>
+          <NotificationBell />
         </div>
       </div>
 
