@@ -67,9 +67,14 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
+      {/*
+        children을 감싸는 래퍼라 아이콘과 라벨은 버튼이 아니라 이 span의 flex 아이템이다 —
+        버튼의 gap이 여기까지 내려오지 않으면 둘이 붙는다. `gap-inherit`은 Tailwind에 없는
+        클래스라 계산값이 `normal`(0)이었다. 임의 속성으로 실제 상속시킨다.
+      */}
       <span
         className={cn(
-          "inline-flex items-center justify-center gap-inherit",
+          "inline-flex items-center justify-center [gap:inherit]",
           loading && "opacity-0 pointer-events-none"
         )}
       >

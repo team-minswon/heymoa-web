@@ -31,6 +31,7 @@ import type {
   NoteSharedChatResponseDataLockPendingApproval,
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
+import { getAppDateKey } from "@/lib/format/date";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 
 const ACTIVE_STATUSES = new Set<string>(["READY", "ACTIVE"]);
@@ -145,6 +146,18 @@ function nextTimestamp() {
   return value;
 }
 
+/**
+ * 오늘로부터 `daysAgo`일 전의 시각. 앱 타임존(KST) 날짜가 정확히 그 날이 되도록
+ * UTC 01시대에 놓는다 — 자정 근처에 두면 KST 기준 날짜가 하루 밀려 묶음이 어긋난다.
+ * `order`는 같은 날 안의 정렬만 벌리는 분 단위 오프셋이다.
+ */
+function daysAgoIso(daysAgo: number, order = 0): string {
+  const todayUtcMidnight = Date.parse(`${getAppDateKey(new Date())}T00:00:00Z`);
+  const at =
+    todayUtcMidnight - daysAgo * 86_400_000 + 3_600_000 - order * 60_000;
+  return new Date(at).toISOString();
+}
+
 function createSeedState(): StoreState {
   faker.seed(20260715);
   const user: CurrentUserResponseData = { ...MOCK_USER };
@@ -247,6 +260,35 @@ function createSeedState(): StoreState {
       meetingStatus: "IN_PROGRESS",
       meetingStartedBy: null,
     },
+    // 날짜 묶음(오늘·어제·이번 주·지난주·이번 달·연월)과 밀도 합격선(주 콘텐츠 8개 이상)을
+    // 실제 화면에서 볼 수 있어야 해서 시간대를 흩어 둔다. 노트가 둘뿐이면 목록이 한 묶음으로
+    // 뭉쳐 "날짜 구분이 없다"처럼 보인다.
+    //
+    // **날짜만 실행일 기준 상대값이다.** 고정 문자열로 두면 하루만 지나도 `오늘` 묶음이
+    // 사라지고 결국 전부 한 달로 뭉쳐, 묶음을 보여주려던 시드가 제 일을 못 한다.
+    // 무작위가 아니라 오늘에 맞춘 값이라 실행 안에서는 결정적이다.
+    ...[
+      ["01K0000000020", "온보딩 이탈 구간 리뷰", 0, 0],
+      ["01K0000000021", "알림 정책 논의", 0, 1],
+      ["01K0000000022", "고객 피드백 정리", 1, 0],
+      ["01K0000000023", "스프린트 회고", 3, 1],
+      ["01K0000000024", "로드맵 브레인스토밍", 4, 0],
+      ["01K0000000025", "디자인 시스템 점검", 9, 1],
+      ["01K0000000026", "분기 계획 세션", 20, 0],
+      ["01K0000000027", "파트너십 킥오프", 45, 1],
+    ].map(([noteId, title, daysAgo, projectIndex], index) => ({
+      noteId: noteId as string,
+      projectId: projects[projectIndex as number].projectId,
+      title: title as string,
+      createdAt: daysAgoIso(daysAgo as number, index),
+      updatedAt: daysAgoIso(daysAgo as number, index),
+      meetingStatus: "ENDED" as const,
+      // 절반은 내가 시작한 회의로 둔다 — `내가 시작` 필터가 빈 목록만 보여주면 검증이 안 된다.
+      meetingStartedBy:
+        (projectIndex as number) === 0
+          ? { userId: MOCK_USER.userId, name: MOCK_USER.name }
+          : null,
+    })),
   ];
   const sessions: MockSession[] = [
     {
@@ -392,7 +434,48 @@ function createSeedState(): StoreState {
     sharedChatPendingApprovals: new Map(),
     agentChats: [],
     agentChatMessages: [],
-    sharedChatMessages: [],
+    // 공유 챗봇은 여러 명이 함께 쓰는 화면이라 빈 상태만 보면 발화자·시각 표기를 검증할 수
+    // 없다. 다른 멤버(`authorName`)와 내가 섞인 2왕복을 시드한다.
+    sharedChatMessages: [
+      {
+        messageId: "01K0000000040",
+        noteId: notes[0].noteId,
+        role: "USER",
+        content: "지금까지 나온 액션 아이템 정리해줘",
+        authorName: MOCK_USER.name,
+        createdAt: "2026-07-11T00:06:00Z",
+        toolEvent: null,
+      },
+      {
+        messageId: "01K0000000041",
+        noteId: notes[0].noteId,
+        role: "ASSISTANT",
+        content:
+          "지금까지 2건입니다.\n1. 온보딩 이탈 구간 분석\n2. 다음 주 사용자 테스트 진행",
+        authorName: null,
+        createdAt: "2026-07-11T00:06:30Z",
+        toolEvent: null,
+      },
+      {
+        messageId: "01K0000000042",
+        noteId: notes[0].noteId,
+        role: "USER",
+        content: "두 번째 건 담당자는 정해졌어?",
+        authorName: "박준호",
+        createdAt: "2026-07-11T00:09:00Z",
+        toolEvent: null,
+      },
+      {
+        messageId: "01K0000000043",
+        noteId: notes[0].noteId,
+        role: "ASSISTANT",
+        content:
+          "04:22에 박준호님이 테스트 대상 20명을 제안했고, 05:12에 이서연님이 모집 마감을 금요일로 정했습니다. 담당자는 아직 정해지지 않았습니다.",
+        authorName: null,
+        createdAt: "2026-07-11T00:09:20Z",
+        toolEvent: null,
+      },
+    ],
   };
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Info, Link2, Plug } from "lucide-react";
+import { Info, Link2 } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
@@ -109,11 +109,7 @@ export function WorkspaceIntegrationsSettings({
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <header className="mb-8">
-        <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.16em] text-[var(--el-muted)] uppercase">
-          <Plug className="size-3.5" />
-          Integrations
-        </p>
-        <h2 className="mt-2 font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+        <h2 className="font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
           연동
         </h2>
         <p className="mt-2 text-sm text-[var(--el-muted)]">

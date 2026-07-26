@@ -9,6 +9,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatAppDate } from "@/lib/format/date";
 import type {
   AgentChatMessagesResponseDataMessagesItem,
   NoteSharedChatResponseDataMessagesItem,
@@ -33,6 +34,61 @@ export type ThreadMessage =
 
 function authorOf(message: ThreadMessage): string | null {
   return "authorName" in message ? (message.authorName ?? null) : null;
+}
+
+/** 에이전트의 표시 이름. 사람 발화와 나란히 놓이므로 이름이 있어야 누가 말했는지 읽힌다. */
+const ASSISTANT_NAME = "HeyMoa";
+
+/**
+ * 발화자와 시각. 공유 챗봇은 여러 명이 한 대화를 쓰므로 이게 없으면 누가 말했는지 알 수 없다.
+ * 시각은 계약의 `createdAt`을 쓰고 `formatAppDate`를 거친다 — 렌더 중 로컬 타임존을 읽으면
+ * 서버와 갈려 hydration이 깨진다.
+ */
+function MessageMeta({
+  author,
+  createdAt,
+}: {
+  /** 개인 챗봇 메시지에는 발화자 이름이 없다 — 그때도 시각은 남는다. */
+  author?: string | null;
+  createdAt?: string | null;
+}) {
+  if (!author && !createdAt) return null;
+
+  return (
+    <div className="flex items-baseline gap-2">
+      {author ? (
+        <span className="text-[13px] font-medium text-[var(--el-ink)]">
+          {author}
+        </span>
+      ) : null}
+      {createdAt ? (
+        <span className="text-xs text-[var(--el-muted)] tabular-nums">
+          {formatAppDate(createdAt, {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** 대화가 언제 시작됐는지. 회의 타임라인의 일부라 첫 메시지 앞에 한 번만 놓는다. */
+function ConversationStart({ createdAt }: { createdAt: string }) {
+  return (
+    <div className="flex items-center gap-3 pb-1">
+      <span className="shrink-0 text-xs text-[var(--el-muted)]">
+        대화 시작 ·{" "}
+        {formatAppDate(createdAt, {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })}
+      </span>
+      <span className="h-px flex-1 bg-[var(--el-hairline)]" />
+    </div>
+  );
 }
 
 /**
@@ -69,7 +125,13 @@ export function ChatThread({
   }
 
   return (
-    <div className="flex flex-1 flex-col justify-end gap-4">
+    // 대화는 위에서부터 쌓인다. 아래 정렬로 두면 짧은 대화에서 위에 빈 띠가 크게 남아
+    // 밀도 합격선(200px 넘는 빈 세로 띠 없음)에 걸린다. 하단 추적은 스크롤 로직이 맡는다.
+    <div className="flex flex-1 flex-col gap-4">
+      {messages[0]?.createdAt ? (
+        <ConversationStart createdAt={messages[0].createdAt} />
+      ) : null}
+
       {messages.map((message, index) => (
         <HistoryMessage
           key={`${message.createdAt}-${index}`}
@@ -110,9 +172,17 @@ function recordKey(record: LiveToolRecord) {
 
 function HistoryMessage({ message }: { message: ThreadMessage }) {
   if (message.role === "USER")
-    return <UserBubble content={message.content} author={authorOf(message)} />;
+    return (
+      <UserBubble
+        content={message.content}
+        author={authorOf(message)}
+        createdAt={message.createdAt}
+      />
+    );
   if (message.role === "ASSISTANT") {
-    return <AssistantText content={message.content} />;
+    return (
+      <AssistantText content={message.content} createdAt={message.createdAt} />
+    );
   }
 
   // TOOL은 승인 기록(decision)과 실행 기록(status) 두 종류이고 계약상 배타다.
@@ -140,55 +210,70 @@ function HistoryMessage({ message }: { message: ThreadMessage }) {
   return null;
 }
 
+/**
+ * 유저 발화. 좌측 정렬이다 — 공유 챗봇은 여러 사람이 함께 쓰므로 "나는 오른쪽"이라는
+ * 메신저 관용구가 성립하지 않는다. 누가 말했는지는 이름과 시각으로 가른다.
+ */
 function UserBubble({
   content,
   author,
+  createdAt,
 }: {
   content: string;
   author?: string | null;
+  createdAt?: string | null;
 }) {
   return (
-    <div className="flex flex-col items-end gap-1">
-      {author ? (
-        <p className="px-1 text-xs font-medium text-[var(--el-muted)]">
-          {author}
-        </p>
-      ) : null}
-      <p className="max-w-[85%] rounded-2xl bg-[var(--el-surface-strong)] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-[var(--el-ink)]">
+    <div className="flex flex-col items-start gap-1.5">
+      <MessageMeta author={author} createdAt={createdAt} />
+      <p className="max-w-[85%] rounded-panel bg-[var(--el-surface-strong)] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-[var(--el-ink)]">
         {content}
       </p>
     </div>
   );
 }
 
+/**
+ * 에이전트 발화. 사람 발화와 같은 줄기에 놓이므로 이름을 붙인다 — 안 붙이면 히스토리에서
+ * 누가 한 말인지 본문으로 추측해야 한다. 스트리밍 중에는 아직 확정된 시각이 없어 이름만 쓴다.
+ */
 function AssistantText({
   content,
   partial,
   cursor,
+  createdAt,
+  showAuthor = true,
 }: {
   content: string;
   partial?: boolean;
   cursor?: boolean;
+  createdAt?: string | null;
+  showAuthor?: boolean;
 }) {
   return (
-    <p
-      data-testid="assistant-message"
-      data-partial={partial ? "true" : undefined}
-      className={
-        partial
-          ? "text-sm leading-[1.65] whitespace-pre-wrap text-[var(--el-muted-soft)]"
-          : "text-sm leading-[1.65] whitespace-pre-wrap text-[var(--el-body)]"
-      }
-    >
-      {content}
-      {cursor ? (
-        <span
-          data-stream="cursor"
-          aria-hidden
-          className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-pulse bg-[var(--el-ink)]"
-        />
+    <div className="flex flex-col gap-1.5">
+      {showAuthor ? (
+        <MessageMeta author={ASSISTANT_NAME} createdAt={createdAt} />
       ) : null}
-    </p>
+      <p
+        data-testid="assistant-message"
+        data-partial={partial ? "true" : undefined}
+        className={
+          partial
+            ? "text-sm leading-[1.65] whitespace-pre-wrap text-[var(--el-muted-soft)]"
+            : "text-sm leading-[1.65] whitespace-pre-wrap text-[var(--el-body)]"
+        }
+      >
+        {content}
+        {cursor ? (
+          <span
+            data-stream="cursor"
+            aria-hidden
+            className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-pulse bg-[var(--el-ink)]"
+          />
+        ) : null}
+      </p>
+    </div>
   );
 }
 

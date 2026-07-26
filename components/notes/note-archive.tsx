@@ -61,10 +61,7 @@ export function NoteArchive({ noteId }: { noteId: string }) {
       <div className="mx-auto w-full max-w-[820px] px-5 pb-28 pt-7 sm:px-9 sm:pt-9">
         <section aria-label="회의 전사 아카이브">
           <header className="border-b border-[var(--el-hairline-strong)] pb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--el-muted)]">
-              Archive
-            </p>
-            <h2 className="mt-2 font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+            <h2 className="font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
               대화 기록
             </h2>
           </header>
@@ -118,10 +115,7 @@ export function NoteArchive({ noteId }: { noteId: string }) {
         {messages.length || chatFailed ? (
           <section aria-label="회의 중 챗봇 대화" className="mt-10">
             <header className="border-b border-[var(--el-hairline-strong)] pb-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--el-muted)]">
-                Q&amp;A
-              </p>
-              <h2 className="mt-1.5 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+              <h2 className="font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
                 회의 중 챗봇 대화
               </h2>
             </header>

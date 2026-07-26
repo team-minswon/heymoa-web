@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Expand, PanelRightClose } from "lucide-react";
+import { CalendarDays, Expand, PanelRightClose } from "lucide-react";
 
 import { NoteArchive } from "@/components/notes/note-archive";
 import {
@@ -13,6 +13,7 @@ import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
 import { Badge } from "@/components/ui/badge";
+import { formatAppDate } from "@/lib/format/date";
 import { Button } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -96,9 +97,23 @@ export function NotePanel({
         >
           <div className="mx-auto flex w-full max-w-[820px] items-start gap-4">
             <div className="min-w-0 flex-1">
+              {/* 회의가 언제 열렸는지는 상세에서만 볼 수 있다 — 목록 계약에는 없다. */}
               <div className="flex flex-wrap items-center gap-2">
                 {project ? (
                   <Badge variant="secondary">{project.name}</Badge>
+                ) : null}
+                {note?.createdAt ? (
+                  <span className="flex items-center gap-1.5 text-xs text-[var(--el-muted)]">
+                    <CalendarDays className="size-3.5" />
+                    {formatAppDate(note.createdAt, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      weekday: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 ) : null}
               </div>
               <h1 className="mt-2 truncate font-serif text-note-title font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)]">

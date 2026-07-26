@@ -114,9 +114,16 @@ function contractSamples() {
 
   const notes = tuples.filter((tuple) => tuple.noteId).map((t) => t.noteId!);
 
+  // 회의를 끝낼 수 있는 노트는 아직 진행 중인 것뿐이다. **위치가 아니라 상태로 고른다** —
+  // 시드에 종료된 노트가 늘면 `notes[0]`이 그쪽으로 바뀌어 표본 생성이 통째로 깨진다.
+  // 상태는 상세에만 있다 — 목록 계약에는 `meetingStatus`가 없다.
+  const inProgress = notes.filter(
+    (noteId) => mockDb.getNote(noteId).meetingStatus === "IN_PROGRESS"
+  );
+
   // 분석은 시드에 없어 모든 노트가 404다. 회의를 끝내 PENDING(결과 전부 null) 하나와
   // SUCCEEDED(결과 비-null) 하나를 만든다 — 두 쪽이 다 있어야 표본이 성립한다.
-  for (const [index, noteId] of [notes[0], notes[1]].entries()) {
+  for (const [index, noteId] of [inProgress[0], inProgress[1]].entries()) {
     const session = mockDb.createSession(noteId);
     mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
     mockDb.endMeeting(noteId);
@@ -376,8 +383,8 @@ describe("nullable 목 표본", () => {
     // 알려진 것보다 늘어났으면 새로 심은 목이 한쪽 값만 준다는 뜻이다.
     expect(oneSided.filter((key) => !KNOWN_ONE_SIDED.has(key))).toEqual([]);
     // 줄었으면 KNOWN_ONE_SIDED에서 지워야 목록이 거짓말을 하지 않는다.
-    expect([...KNOWN_ONE_SIDED].filter((key) => !oneSided.includes(key))).toEqual(
-      []
-    );
+    expect(
+      [...KNOWN_ONE_SIDED].filter((key) => !oneSided.includes(key))
+    ).toEqual([]);
   });
 });

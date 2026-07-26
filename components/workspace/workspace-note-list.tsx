@@ -8,6 +8,7 @@ import { NoteListRow } from "@/components/workspace/note-list-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import { groupNotesByRecency } from "@/lib/workspace/note-groups";
 
 /**
  * 목록 전체가 공유하는 상대-시각 시계. 행마다 타이머를 두면 노트가 많을 때 렌더가 폭증하므로
@@ -27,7 +28,13 @@ function useSharedNow(): number | null {
   return now;
 }
 
-/** 최근 수정 내림차순. v5 허브는 날짜 그룹 없이 최근순 flat 목록이다(프레임 LHXhy). */
+/**
+ * 최근 수정 내림차순. 순서의 주인은 이 함수 하나다 — 묶기(`groupNotesByRecency`)는 정렬하지 않는다.
+ *
+ * APP-162는 프레임 LHXhy를 근거로 날짜 그룹을 없앴지만, 노트가 쌓이면 상대 시각만으로는
+ * 훑기 어렵다는 판단으로 2026-07-26(APP-211)에 날짜 묶음을 되살렸다. 행 자체는 FORM SPEC
+ * 정본(52·한 줄) 그대로이고 헤더만 위에 붙는다.
+ */
 export function sortNotesByRecency(
   notes: NoteListResponseDataNotesItem[]
 ): NoteListResponseDataNotesItem[] {
@@ -123,17 +130,25 @@ export function WorkspaceNoteList({
   }
 
   return (
-    <div
-      data-testid="workspace-note-list"
-      className="divide-y divide-[var(--el-hairline)]"
-    >
-      {sortNotesByRecency(notes).map((note) => (
-        <NoteListRow
-          key={note.noteId}
-          workspaceId={workspaceId}
-          note={note}
-          now={now}
-        />
+    <div data-testid="workspace-note-list">
+      {groupNotesByRecency(sortNotesByRecency(notes), now).map((group) => (
+        <section key={group.key}>
+          {group.label ? (
+            <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">
+              {group.label}
+            </h2>
+          ) : null}
+          <div className="divide-y divide-[var(--el-hairline)]">
+            {group.notes.map((note) => (
+              <NoteListRow
+                key={note.noteId}
+                workspaceId={workspaceId}
+                note={note}
+                now={now}
+              />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );

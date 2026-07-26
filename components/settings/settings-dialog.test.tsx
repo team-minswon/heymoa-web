@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 
@@ -23,7 +23,11 @@ describe("SettingsDialog", () => {
       <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
     );
     expect(screen.getByText("계정 내용")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "워크스페이스 일반" }));
+    // nav는 `워크스페이스`·`계정` 두 그룹이고 항목 이름은 그 안에서 짧다(프레임 WKSCp).
+    const workspaceGroup = screen.getByRole("group", { name: "워크스페이스" });
+    fireEvent.click(
+      within(workspaceGroup).getByRole("button", { name: "일반" })
+    );
     expect(screen.getByText("워크스페이스 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "멤버" }));
     expect(screen.getByText("멤버 내용")).toBeInTheDocument();

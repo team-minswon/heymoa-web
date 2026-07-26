@@ -27,6 +27,32 @@ export type SettingsSection =
   | "members"
   | "integrations";
 
+/**
+ * 워크스페이스에 영향을 주는 설정과 내 계정 설정을 갈라 둔다. 프레임 `WKSCp`의 두 그룹이고,
+ * 계약에 없는 항목(알림 설정 등)은 만들지 않는다 — 있는 네 개를 나누는 데서 멈춘다.
+ */
+const SETTINGS_GROUPS: {
+  label: string;
+  items: {
+    key: SettingsSection;
+    label: string;
+    Icon: typeof Building2;
+  }[];
+}[] = [
+  {
+    label: "워크스페이스",
+    items: [
+      { key: "workspace", label: "일반", Icon: Building2 },
+      { key: "members", label: "멤버", Icon: UsersRound },
+      { key: "integrations", label: "연동", Icon: Plug },
+    ],
+  },
+  {
+    label: "계정",
+    items: [{ key: "account", label: "내 계정", Icon: UserRound }],
+  },
+];
+
 function SettingsSections({
   initialSection,
   workspaceId,
@@ -41,48 +67,41 @@ function SettingsSections({
         aria-label="설정"
         className="border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--el-muted)]">
-          Preferences
-        </p>
-        <p className="mb-7 mt-2 font-serif text-3xl font-light tracking-[-0.03em]">
+        {/* 제품 면에 대문자 키커를 두지 않는다 — 세리프 제목만 남긴다. (FORM SPEC) */}
+        <p className="mb-7 font-serif text-3xl font-light tracking-[-0.03em]">
           설정
         </p>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-1">
-          <Button
-            type="button"
-            variant={section === "account" ? "secondary" : "ghost"}
-            onClick={() => setSection("account")}
-            className="h-10 justify-start rounded-xl px-3"
-          >
-            <UserRound />내 계정
-          </Button>
-          <Button
-            type="button"
-            variant={section === "workspace" ? "secondary" : "ghost"}
-            onClick={() => setSection("workspace")}
-            className="h-10 justify-start rounded-xl px-3"
-          >
-            <Building2 />
-            워크스페이스 일반
-          </Button>
-          <Button
-            type="button"
-            variant={section === "members" ? "secondary" : "ghost"}
-            onClick={() => setSection("members")}
-            className="h-10 justify-start rounded-xl px-3"
-          >
-            <UsersRound />
-            멤버
-          </Button>
-          <Button
-            type="button"
-            variant={section === "integrations" ? "secondary" : "ghost"}
-            onClick={() => setSection("integrations")}
-            className="h-10 justify-start rounded-xl px-3"
-          >
-            <Plug />
-            연동
-          </Button>
+        {/* 워크스페이스 것과 내 계정 것이 섞여 있으면 무엇이 팀에 영향을 주는지 안 읽힌다. */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-1">
+          {SETTINGS_GROUPS.map((group) => (
+            // 라벨이 `일반`처럼 짧아 그룹 밖에서는 무엇의 일반인지 모른다 — 보조기술이
+            // "워크스페이스 그룹, 일반"으로 읽도록 그룹에 이름을 준다.
+            <div
+              key={group.label}
+              role="group"
+              aria-label={group.label}
+              className="grid gap-1"
+            >
+              <p
+                aria-hidden
+                className="px-3 pb-1 text-xs text-[var(--el-muted)]"
+              >
+                {group.label}
+              </p>
+              {group.items.map(({ key, label, Icon }) => (
+                <Button
+                  key={key}
+                  type="button"
+                  variant={section === key ? "secondary" : "ghost"}
+                  onClick={() => setSection(key)}
+                  className="h-10 justify-start gap-2.5 rounded-block px-3"
+                >
+                  <Icon />
+                  {label}
+                </Button>
+              ))}
+            </div>
+          ))}
         </div>
       </nav>
       <div className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 sm:p-10 md:p-14">

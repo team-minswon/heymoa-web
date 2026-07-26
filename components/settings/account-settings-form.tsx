@@ -16,10 +16,7 @@ export function AccountSettingsForm() {
   return (
     <div className="mx-auto max-w-2xl space-y-8" aria-label="내 계정 설정">
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--el-muted)]">
-          Account
-        </p>
-        <h2 className="mt-2 font-serif text-3xl font-light tracking-[-0.025em]">
+        <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
           내 계정
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">

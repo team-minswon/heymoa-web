@@ -2,10 +2,22 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { mockDb } from "@/lib/mocks/db";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 
+/**
+ * 아직 진행 중인 회의 노트. **위치가 아니라 상태로 고른다** — 시드에 종료된 노트가 늘면
+ * `[0]`이 그쪽으로 바뀌어 회의 조작 테스트가 통째로 깨진다(실제로 겪었다).
+ */
 function firstNoteId() {
   const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
-  const projectId = mockDb.listProjects(workspaceId)[0].projectId;
-  return mockDb.listNotes(projectId)[0].noteId;
+  // 목록 계약에는 `meetingStatus`가 없다(APP-159에서 안 늘리기로 했다) — 상세로 확인한다.
+  const noteId = mockDb
+    .listProjects(workspaceId)
+    .flatMap((project) => mockDb.listNotes(project.projectId))
+    .map((candidate) => candidate.noteId)
+    .find(
+      (candidate) => mockDb.getNote(candidate).meetingStatus === "IN_PROGRESS"
+    );
+  if (!noteId) throw new Error("진행 중인 노트가 시드에 없다");
+  return noteId;
 }
 
 /**
@@ -34,7 +46,7 @@ describe("mockDb", () => {
           .listProjects(workspace.workspaceId)
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
-    ).toHaveLength(4);
+    ).toHaveLength(12);
   });
 
   it("keeps exactly one explicit default workspace", () => {
