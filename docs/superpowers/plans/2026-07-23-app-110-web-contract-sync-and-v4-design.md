@@ -16,7 +16,7 @@
 
 **Tech Stack:** Next.js 16 (App Router), TanStack Query, orval 8, MSW 2, faker 10, vitest 4 (jsdom), Playwright(신규), pencil MCP (`mvp.pen`)
 
-**Spec:** `docs/superpowers/specs/2026-07-23-web-contract-sync-and-v4-design.md`
+**Spec:** `docs/superpowers/specs/2026-07-23-app-110-web-contract-sync-and-v4-design.md`
 
 ## Global Constraints
 
