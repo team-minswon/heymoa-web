@@ -51,7 +51,9 @@ export function WorkspaceRouteSkeleton() {
         <div className="flex h-16 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
           <Skeleton className="h-5 w-28 rounded-chip" />
         </div>
-        <section className="mx-auto w-full max-w-[1440px] px-4 pt-8 pb-16 sm:px-8 sm:pt-11 lg:px-14 xl:px-20">
+        {/* 폭·padding은 `workspace-page.tsx`의 섹션과 같아야 한다 — 다르면 로딩이 끝나는
+          순간 콘텐츠 폭이 튄다. 실제로 1440과 896으로 갈려 있었다. */}
+        <section className="mx-auto w-full max-w-4xl px-5 pt-8 pb-16 sm:px-8 sm:pt-11">
           {/* 제목 34 세리프 + 서브타이틀. 키커는 없다(FORM SPEC). */}
           <Skeleton className="h-9 w-56 max-w-full rounded-chip" />
           <Skeleton className="mt-3 h-4 w-80 max-w-full rounded-chip" />
