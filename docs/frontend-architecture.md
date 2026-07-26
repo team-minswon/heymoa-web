@@ -59,6 +59,17 @@ hooks/                  # 여러 feature가 공유하는 browser adapter
 - workspace 선택: 현재 project 선택은 workspace shell의 지역 상태다. URL 공유가 필요해질 때만 search param으로 승격한다.
 - 전사: 서버 segment는 영속 모델이다. UI는 `groupTranscriptSegments()`로 인접 segment를 문단으로 투영하지만 원본 ID와 session 경계는 바꾸지 않는다.
 
+## 인증이 어떻게 동작하나
+
+규칙이 아니라 현재 동작이다. 값의 원본은 코드이므로 어긋나면 코드를 따른다.
+
+- 쿠키 기반이다. `access_token` + `refresh_token`을 백엔드가 HttpOnly로 심는다.
+- `proxy.ts`가 페이지 렌더 전 SSR 쪽 토큰 갱신을 처리한다.
+- 클라이언트는 `lib/api/fetcher.ts`가 401을 가로채 `/v1/auth/refresh`를 부르고 재시도한다.
+- 목 유저는 `lib/mocks/mock-user.ts`에 있다. SSR 목 경로는 `lib/auth/server.ts`의 `getCurrentUserForSsr()`이고, `shouldEnableMocking()`이 참일 때 그 값을 돌려준다.
+
+인증 경로가 생성 훅 대신 직접 `fetch()`하는 이유는 토큰 갱신과 순환하기 때문이다. 판정 기준은 rule [`api-data`](../harness/v001-2026-07-26/rules/api-data.md)에 있다.
+
 ## Hydration 규칙
 
 React의 첫 client render는 서버 HTML과 같은 결과여야 한다.

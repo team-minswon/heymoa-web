@@ -13,8 +13,8 @@ import { errorMessageOf } from "@/lib/api/error-message";
  * `meta.suppressErrorToast: true`면 건너뛴다. 이유는 둘이다.
  *
  * 1. **화면이 인라인으로 그린다** — 지속 상태(입력 잠금, 회의 비ACTIVE, 승인 카드 무효화)와
- *    주 데이터 실패(노트 404, 분석 FAILED, 끊긴 스트림). 판정 기준은 `AGENTS.md`
- *    "오류·로딩 표시 경계"에 있다
+ *    주 데이터 실패(노트 404, 분석 FAILED, 끊긴 스트림). 판정 기준은
+ *    `.claude/rules/error-loading.md`에 있다
  * 2. **호출부가 이미 자기 토스트를 띄운다** — 실패 코드에 따라 문구가 갈리는 곳
  *    (프로젝트 삭제의 "노트가 있어 삭제할 수 없습니다" 등). 여기서 또 띄우면 두 개가 겹친다
  */

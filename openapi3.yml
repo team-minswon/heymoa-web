@@ -1,4 +1,5 @@
-# heymoa-server 빌드 산출물의 미러 (docs/contracts/openapi3-server.yml).
+# heymoa-server 빌드 산출물의 미러. 원본은 docs repo(`../docs`)의 `origin/main`이고,
+# 어느 파일인지는 그 레포의 `INDEX.md`가 가리킨다 — 깊은 경로는 여기 적지 않는다(옮겨진다).
 # 손으로 수정하지 말 것. 갱신: docs repo에서 복사한 뒤 /internal/** 경로를 제거.
 #
 # /internal/** 3경로(callbacks/analyses, notes/{noteId}/context,

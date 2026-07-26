@@ -302,6 +302,18 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 
 14 이하(탭·채팅·메타·힌트)는 Tailwind 기본(`text-sm`/`text-xs`)을 그대로 쓴다.
 
+### 코드와의 대응
+
+이 문서의 값이 실제로 어디 사는지. **값의 원본은 코드이고 이 표는 지도다** — 어긋나면 코드를 따른다.
+
+| 무엇 | 어디 |
+|---|---|
+| 색·형태·타이포 토큰 | `app/globals.css`의 `@theme inline`. CSS 변수는 `--el-*` 네임스페이스 |
+| 토큰이 살아 있는지 | `lib/design-tokens.test.ts`가 존재를 지킨다. 지우면 테스트가 깨진다 |
+| 세리프 300 제목 | `font-serif font-light` + 음의 tracking. 위 Hierarchy 표의 letter-spacing이 그 값이다 |
+
+값 목록을 에이전트 rule로 복사하지 않는다. 매 세션 로드되는 목록은 천장이 되어 "이 안에서 고르면 된다"로 읽히고, 이 문서와 실제 앱 실측을 건너뛰게 만든다. 위반 감지는 `design-tokens.test.ts`와 codex 리뷰가 맡는다.
+
 ## Iteration Guide
 
 1. Focus on a single component at a time.

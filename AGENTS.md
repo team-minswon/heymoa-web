@@ -1,145 +1,62 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# heymoa-web 에이전트용 안내
 
-# This is NOT the Next.js you know
+HeyMoa의 웹 프론트엔드. Next.js 16 App Router입니다.
+레포 규약(구조·명령어·문서 지도)은 [`CLAUDE.md`](CLAUDE.md)에, 항상 걸리는 규칙은
+[`.claude/rules/`](harness/v001-2026-07-26/rules/)에 있습니다. 그대로 따르세요.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+이 파일은 **코드 리뷰를 할 때 지킬 것**만 담습니다.
+심각도 라벨과 되풀이된 결함, 출력 형식은
+[`skills/code-review`](harness/v001-2026-07-26/skills/code-review/SKILL.md)에 있습니다.
 
-<!-- END:nextjs-agent-rules -->
+## 리뷰는 한국어 존댓말로 씁니다
 
-# HeyMoa Web — Agent Rules
+지적은 짧게, 근거는 구체적으로. 파일과 줄 번호를 답니다.
 
-## Project Identity
+## 문제를 그림으로 보여주세요
 
-- **Service**: HeyMoa — 회의를 기록하고 참여하며, 대화를 실제 업무로 연결하는 참여형 AI Agent
-- **Design System**: ElevenLabs editorial style (see `DESIGN.md`)
-- **API Contract**: `openapi3.yml` → Orval → TanStack Query hooks + MSW mocks
-- **Architecture**: read `docs/frontend-architecture.md` before changing route, data, auth, loading, or realtime state boundaries
+흐름·구조·의존 관계가 걸린 지적은 mermaid로 그리면 한 번에 읽힙니다. 무엇이 잘못됐는지,
+어디서 끊기는지를 그림에 표시해 주세요.
 
-## Git Workflow
+**출력 형식이 허용할 때만입니다.** 인라인 코멘트처럼 길이 제한이 있으면 다이어그램은 빼고
+글로 짧게 씁니다 — 형식을 어기면서까지 그리지 마세요. 그림이 없을 때는 어디서 끊기는지를
+파일과 줄 번호로 대신 짚습니다.
 
-- No GitHub issues or PRs. There are no issue/PR templates and no CI workflows in this repo.
-- Branches: `main` (stable), `dev` (integration), and `feature/*` branches cut from `dev`.
-- Integrate a feature by **squash-merging it into `dev` locally**, then `git push` — no pull request.
-- Promote to `main` by **rebase-merging `dev` into `main` (fast-forward, 커밋 보존) locally**, then push — squash 아님.
-- 커밋·브랜치 제목은 `[APP-N] 제목` 형식. `feat(app-N):`·`feat:` 등 conventional prefix는 쓰지 않는다(이슈 없는 잡일만 `chore:`/`docs:` bare 허용).
-- 코드 리뷰 게이트는 push 전 로컬 `codex exec review --base dev --title "..."` 하나다. GitHub 원격 `@codex` 봇 리뷰는 요청·반영하지 않는다.
-- Run the verification checklist below before merging.
-
-## Architecture
-
-- `app/**/page.tsx` stays a Server Component and only orchestrates params, redirects, server prefetch, and hydration.
-- Persistent app chrome such as the workspace sidebar, toolbar, and background list belongs in a shared route `layout.tsx`; nested pages render only the surface that changes.
-- Keep interactive code in the smallest practical Client Component. Never disable SSR for an entire feature to hide a hydration mismatch.
-- Server state belongs to TanStack Query. Use Orval query options + `HydrationBoundary` for data needed on the first render.
-- Global client state is limited to truly cross-route lifecycles such as auth and active recording. Keep feature selection and dialog state local.
-- High-frequency microphone level consumers use `useRecordingMeter()`; other components use `useRecording()` so transcript surfaces do not rerender at 20Hz.
-- Persisted transcript segments remain immutable. Presentation grouping belongs in pure selectors under `lib/transcription/`.
-
-## Critical Conventions
-
-### Next.js 16
-
-- Use `proxy.ts` for middleware. **NEVER create `middleware.ts`** — it conflicts and causes 404 loops.
-- After changing proxy/middleware logic, always `rm -rf .next` before `pnpm dev`.
-
-### Styling
-
-- CSS variables use `--el-*` namespace. `--clay-*` is legacy alias — do NOT reference in new code.
-- Display headings: `font-serif font-light` + negative tracking.
-- Gradient orbs are **atmosphere only** — never use as button fills, text colors, or card backgrounds.
-- Product UI must not expose query polling, database/reconciliation labels, segment counts, session IDs, or environment configuration.
-
-**마케팅 면(랜딩·약관 — `app/(main)`·`app/(static)`, `components/heymoa/primitives.tsx`)과 제품 면(워크스페이스 이후)은 규칙이 다르다.** 전체 근거는 `DESIGN.md`의 `## Product Surface (제품 면 · v5)`.
-
-- **마케팅:** pill CTA(`rounded-full`), 카드 `rounded-2xl border border-[var(--el-hairline)] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.04)]`(단일 티어). 이 단일 티어 그림자는 마케팅 전용 — 제품에 쓰지 않는다.
-- **제품 고도:** 셸(App Panel·사이드바·메인)은 각짐(radius 0)·그림자 없음·hairline로만 구분. 부양(챗봇 카드·플로팅 독·FAB)은 `shadow-e2`, 오버레이(시트·다이얼로그·드롭다운)는 `shadow-e3`. raw `shadow-[...]` 금지.
-- **제품 형태:** `rounded-panel`(16)·`rounded-block`(10)·`rounded-control`(8)·`rounded-chip`(6)·`rounded-full`(circle·pill). 주 CTA·레코더 독만 `rounded-full`.
-- **제품 타이포:** `text-screen-title`(34)·`text-note-title`(26)·`text-section`(20)·`text-panel-title`(18)·`text-read`(15). 14 이하는 Tailwind 기본. 제품 면 대문자 키커 금지, 세리프 300 제목만 정체성.
-- 토큰은 `app/globals.css` `@theme inline`에 있다. `lib/design-tokens.test.ts`가 존재를 지킨다.
-
-### 오류·로딩 표시 경계
-
-실패를 전부 토스트로 밀거나 전부 화면에 그리는 것 둘 다 틀렸다. **사라져도 되는가**로 가른다.
-
-| 무엇                                                                     | 어떻게                            | 왜                                                                                                        |
-| ------------------------------------------------------------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **mutation 실패**                                                        | `sonner` 토스트 (기본, 자동)      | 방금 한 행동에 대한 응답이라 사라져도 된다. 인라인으로 그리면 버튼 옆에 문구가 끼어들어 레이아웃이 밀린다 |
-| **지속 상태** — 입력 잠금, 회의 비ACTIVE, 승인 카드 무효화, 권한 없음    | 인라인 `Alert`                    | **오류가 아니라 "지금 할 수 없음"이다.** 토스트로 하면 사라진 뒤 왜 입력이 막혔는지 알 수 없다            |
-| **주 데이터 실패** — 노트 404, 분석 FAILED, 종료 이벤트 없이 끊긴 스트림 | error boundary / 빈 상태 + 재시도 | 그 화면에 그릴 것이 없다. 토스트만 띄우면 빈 화면이 남는다                                                |
-| **로딩**                                                                 | `Skeleton` / Suspense             | 기능 크기 단위로. route 전체 spinner 금지                                                                 |
-
-**단순 조회 위젯은 `components/ui/data-boundary.tsx`의 `<DataBoundary>`로 감싼다.** suspense 훅(`useGetXSuspense`)을 쓰고, 로딩은 skeleton fallback, 실패는 `InlineRetry`("다시 시도"→재요청)로 통일한다(로딩=skeleton 우선, 버튼·mutation 진행만 인라인 spinner). 단 **폴링(`refetchInterval`)·조건부(`enabled`)·실패를 정상 UI로 다루는 조회는 suspense와 맞지 않아 `useQuery`를 유지한다** — 404를 빈 상태로 그리는 `note-summary`·`personal-chat`, 두 쿼리의 부분 실패를 개별 처리하는 `note-archive`·`workspace-integrations-settings` 등.
-
-**mutation 토스트는 자동이다.** `lib/query/query-client.ts`의 `MutationCache.onError`가 모든 실패를 잡아 서버 문구로 토스트한다. 컴포넌트마다 `onError`를 쓰지 않는다.
-
-전역 토스트를 건너뛰려면 **opt-out**한다. 이유는 둘뿐이다.
-
-```ts
-// 1. 화면이 인라인으로 그린다 (지속 상태·주 데이터 실패)
-useSendNoteSharedChatMessage({
-  mutation: { meta: { suppressErrorToast: true } },
-});
-
-// 2. 호출부가 실패 코드에 따라 다른 문구를 띄운다 (프로젝트 삭제 등)
-const deleteProject = useDeleteProject({
-  mutation: { meta: { suppressErrorToast: true } },
-});
+````markdown
+```mermaid
+sequenceDiagram
+    participant C as 컴포넌트
+    participant Q as MutationCache
+    participant T as sonner
+    C->>Q: mutate() 실패
+    Q->>T: 전역 onError가 토스트
+    C-->>T: catch에서 toast.error 하나 더
+    Note over T: 같은 실패가 두 번 뜹니다<br/>opt-out을 안 걸었기 때문입니다
 ```
+````
 
-**opt-out 없이 자기 `toast.error`를 부르면 두 개가 겹친다.** 전역 훅이 호출부의
-`catch`보다 먼저 돌기 때문이다.
+| 무엇을 설명하나 | 무엇으로 |
+|---|---|
+| 요청이 오가는 순서, 어디서 끊기는지 | `sequenceDiagram` |
+| 구조·레이어·의존 방향 | `flowchart` |
+| 상태가 바뀌는 규칙 | `stateDiagram-v2` |
 
-**문구는 서버 것을 쓴다.** 계약이 사용자에게 보일 한국어 메시지를 담고 있고, web이 코드별 문구를 다시 만들면 서버가 바뀔 때마다 갈라진다. `lib/api/error-message.ts`의 `errorMessageOf()`가 봉투에서 뽑는다. 코드로 분기해야 할 때만 `errorCodeOf()`를 쓴다.
+## 지적 하나에 이 셋을 담아주세요
 
-### Hydration & Loading
+1. **무엇이 잘못됐나.** 한 문장으로 씁니다
+2. **어떻게 터지나.** 구체적인 입력이나 상황을 씁니다. "~할 수 있다"가 아니라 "A를 누르면 B가 된다"로
+3. **왜 그렇게 되나.** 코드의 어느 줄이 원인인지 짚습니다
 
-- Server HTML and the first client render must match. No render-time randomness, browser-only branching, or implicit locale/timezone formatting.
-- Format product dates through `lib/format/date.ts`.
-- `ssr: false` and `suppressHydrationWarning` are last-resort escape hatches and require a documented browser-only reason.
-- Prefer feature-sized skeleton/error/retry states over a route-sized spinner. Match skeleton geometry to the final surface.
-- Do not render a temporary modal or sheet skeleton and then mount an animated modal or sheet in the same place. Keep the parent surface visible and let the final overlay enter once.
-- Use the shared `Button loading` prop for mutations; it preserves the original label width. Disable sibling controls that trigger the same mutation while pending.
+추측이면 추측이라고 적어주세요. 확인 안 된 지적을 단정으로 쓰면 그걸 피하는 코드가 생기고,
+그건 없는 함정을 피하는 구조로 남습니다.
 
-### API & Data
+## 이 레포에서 자주 걸리는 것
 
-- All API calls MUST use Orval-generated hooks from `lib/api/generated/`. The only exceptions are `lib/api/fetcher.ts` (the shared mutator) and `lib/api/sse.ts` (SSE streams, which generated hooks cannot read). Nothing else may `fetch()` an API path directly.
-- SSE endpoints (`sendAgentChatMessage`, `sendNoteSharedChatMessage`) return `text/event-stream`. Their generated hooks exist but are unusable — call `postEventStream()` from `lib/api/sse.ts` instead.
-- The custom fetcher at `lib/api/fetcher.ts` handles auth token refresh automatically.
-- `openapi3.yml` is a mirror of `docs/contracts/openapi3-server.yml` with the three `/internal/**` paths removed — heymoa-ai calls those, not the browser. Never hand-edit it; recopy and strip.
-- When `openapi3.yml` changes: run `pnpm orval` first, then update `lib/mocks/handlers.ts`. Generated tag → file paths are recorded in `docs/generated-api-map.md`.
-
-### MSW Mocking
-
-- REST handlers live in `lib/mocks/rest-handlers.ts` (WebSocket in `lib/mocks/websocket-handler.ts`); `lib/mocks/handlers.ts` only assembles the registry. Edit the right file.
-- Handlers MUST use **explicit override responses** with `success: true`.
-- NEVER use default faker-generated responses (they produce random `success: false` which breaks auth).
-- SSR mock path: `lib/auth/server.ts` `getCurrentUserForSsr()` returns hard-coded mock user when `shouldEnableMocking()` is true.
-
-### Authentication
-
-- Cookie-based: `access_token` + `refresh_token` (HttpOnly from backend).
-- `proxy.ts` handles SSR-side token refresh before page render.
-- Client-side: `lib/api/fetcher.ts` intercepts 401 → calls `/v1/auth/refresh` → retries.
-- Mock user: `userId: "user-12345"`, `name: "테스트 유저"`, `email: "test@heymoa.com"`.
-
-## Verification Checklist
-
-Before any commit:
-
-```bash
-pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
-```
-
-`pnpm build`는 Next가 포함하는 파일만 타입 체크한다 — `.test.tsx`가 계약을 어겨도 통과하므로
-`pnpm typecheck`(`tsc --noEmit`)가 따로 필요하다. `pnpm test:e2e`는 MSW의 브라우저 서비스
-워커 경로를 덮는다(vitest는 jsdom이라 그 경로를 지나지 않는다).
-
-## File Conventions
-
-- `app/(main)/` — Pages with Navbar + Footer
-- `app/(static)/` — Legal/static pages (simplified footer)
-- `app/auth/` — Authentication flow pages
-- `components/ui/` — shadcn/ui primitives
-- `components/heymoa/` — HeyMoa compound components
-- `lib/api/generated/` — Auto-generated (DO NOT edit)
-- `lib/mocks/handlers.ts` — MSW handler registry (manually maintained)
+| | |
+|---|---|
+| 실패와 빈 상태 | 조회 실패를 "데이터 없음"으로 그리면 사용자는 비어 있다고 믿습니다. 가장 자주 나온 지적입니다 |
+| 캐시 갱신 | mutation 뒤 invalidate 대상이 좁거나 `void`로 흘려 남의 변경이 안 따라옵니다 |
+| 오류 중복 | 전역 `MutationCache.onError`가 토스트합니다. 인라인으로 그릴 거면 `suppressErrorToast`로 opt-out해야 겹치지 않습니다 |
+| 경계 상태 | 리소스를 떠나거나 겹쳐 조작해도 이전 상태가 남습니다. `DataBoundary`의 `resetKeys` 계열 |
+| 서버/클라이언트 | `page.tsx`는 Server Component입니다. hydration 불일치를 `ssr: false`로 덮지 않습니다 |
+| 목과 계약 | MSW 핸들러가 실제 계약과 다르면 화면은 되는데 실제로는 안 됩니다 |
+| 한국어 | 말을 거는 표면(이슈·커밋·리뷰·코드 주석)은 존댓말입니다. `docs/` 설명 산문의 문체는 지적 대상이 아닙니다 |

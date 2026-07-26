@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/harness/v001-2026-07-26/hooks/block-forbidden-writes.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
