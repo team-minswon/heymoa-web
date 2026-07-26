@@ -56,7 +56,7 @@ hooks/                  # 여러 feature가 공유하는 browser adapter
 - 인증: `AuthProvider`가 사용자와 logout lifecycle을 소유한다. logout은 사용자별 Query cache를 비우고 `/`로 replace한 뒤 route를 refresh한다.
 - 녹음: `RecordingProvider`는 session, phase, transcript, command를 소유한다.
 - 오디오 미터: 50ms 단위 level은 `RecordingMeterContext`로 분리한다. 파형을 그리는 component만 `useRecordingMeter()`를 사용한다.
-- workspace 선택: 현재 project 선택은 workspace shell의 지역 상태다. URL 공유가 필요해질 때만 search param으로 승격한다.
+- workspace 선택: 현재 project 선택은 workspace shell의 지역 상태다. URL 공유가 필요해질 때만 search param으로 승격한다. 노트가 열린 상태에서 project를 고르면 노트를 닫고 목록으로 돌아간다 — 노트 표면이 본문 컬럼을 덮어서(full은 항상, side는 모바일에서 `inset-0`) 필터만 바꾸면 화면이 반응하지 않는 것처럼 보이기 때문이다.
 - 전사: 서버 segment는 영속 모델이다. UI는 `groupTranscriptSegments()`로 인접 segment를 문단으로 투영하지만 원본 ID와 session 경계는 바꾸지 않는다.
 
 ## 인증이 어떻게 동작하나

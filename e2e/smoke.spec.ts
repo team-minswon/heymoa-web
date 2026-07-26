@@ -297,3 +297,20 @@ test("keeps the personal chat scrollable when the thread grows", async ({
 
   expect((await metrics()).scrollTop).toBe(0);
 });
+
+/**
+ * 노트가 열린 상태에서 프로젝트를 고르면 목록으로 돌아가는지 본다.
+ *
+ * 노트 표면이 본문 컬럼을 덮어서(full은 항상, side는 모바일에서 inset-0) 필터만 바꾸면
+ * 화면이 반응하지 않는 것처럼 보였다.
+ */
+test("returns to the note list when a project is picked in full view", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+  await expect(page).toHaveURL(/notes/);
+
+  await page.getByRole("button", { name: "모든 노트" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
+});

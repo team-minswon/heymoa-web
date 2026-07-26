@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -70,6 +77,20 @@ export function WorkspaceAppShell({
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  // 프로젝트를 고르면 목록으로 돌아간다. 노트 표면이 본문 컬럼을 덮고 있어서(full은 항상,
+  // side는 모바일에서 inset-0) 필터만 바꾸면 화면에 아무 일도 안 일어난 것처럼 보인다.
+  // 워크스페이스 전환이 이미 이동으로 처리되므로 프로젝트 선택도 같은 성질로 맞춘다.
+  const handleSelectProject = useCallback(
+    (projectId: string | null) => {
+      setSelectedProjectId(projectId);
+
+      if (activeNoteId) {
+        router.push(`/w/${workspaceId}`);
+      }
+    },
+    [activeNoteId, router, workspaceId]
+  );
 
   // OAuth 연동 승인 후 서버가 /w/{workspaceId}?provider=&status=로 돌려보낸다(APP-194).
   // 연동 설정 모달을 열어 결과를 보이고, 새로고침·뒤로가기에 재실행되지 않게 쿼리를 지운다.
@@ -158,7 +179,7 @@ export function WorkspaceAppShell({
                 workspace={workspace}
                 projects={projects}
                 selectedProjectId={selectedProjectId}
-                onSelectProject={setSelectedProjectId}
+                onSelectProject={handleSelectProject}
                 onOpenSettings={value.openSettings}
               />
             </Sidebar>
