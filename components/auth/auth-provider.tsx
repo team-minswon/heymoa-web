@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import {
   AUTH_STATE_CHANGED_EVENT,
+  SESSION_EXPIRED_PARAM,
   type AuthStateChangedDetail,
 } from "@/lib/auth/events";
 import { getMe, logout as requestLogout } from "@/lib/auth/api";
@@ -133,11 +134,16 @@ export function AuthProvider({
       // 토스트를 하면 두 번씩 일어난다.
       void requestLogout().catch(() => undefined);
 
-      toast.error("세션이 만료되었습니다. 다시 로그인해 주세요.");
-
-      // 로그인 전용 페이지가 없으므로 홈으로 보낸다. 이동하면 /w/** 트리가 언마운트되어
-      // 폴링 쿼리도 함께 사라진다.
-      router.replace("/");
+      // **하드 내비게이션이어야 한다.** 세션 게이트는 모듈 수준 상태이고 "만료는 새 문서로만
+      // 풀린다"가 그 모듈의 규칙이다(닫는 함수는 테스트 전용). router.replace는 같은 문서라
+      // 홈에 도착해도 게이트가 열린 채여서, 이후 모든 요청이 네트워크도 안 타고 거절된다 —
+      // 수동 새로고침 전까지 앱이 죽어 있었다.
+      //
+      // 게이트를 클라이언트에서 리셋해 때우지 않는다. 게이트가 있는 이유가 401을 만난
+      // 호출부들이 각자 갱신을 시도하는 무한 루프를 막는 것이다(APP-205).
+      //
+      // 사유는 쿼리로 넘긴다 — 토스트는 새 문서와 함께 사라진다.
+      window.location.replace(`/?${SESSION_EXPIRED_PARAM}`);
     };
 
     window.addEventListener(AUTH_STATE_CHANGED_EVENT, handleAuthStateChanged);
@@ -149,6 +155,19 @@ export function AuthProvider({
       );
     };
   }, [clearAuthenticatedState, releaseAuthenticatedResources, router]);
+
+  // 만료로 쫓겨나 도착한 문서에서 사유를 한 번 보이고 쿼리를 지운다. 안 지우면 새로고침·
+  // 뒤로가기마다 다시 뜬다. `history.replaceState`라 이동이 아니라 주소만 정리된다.
+  useEffect(() => {
+    const [key, value] = SESSION_EXPIRED_PARAM.split("=");
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.get(key) !== value) return;
+
+    toast.error("세션이 만료되었습니다. 다시 로그인해 주세요.");
+    url.searchParams.delete(key);
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  }, []);
 
   const status = useMemo<AuthStatus>(() => {
     if ((queryStatus as string) === "pending") {

@@ -19,6 +19,19 @@ const authApi = vi.hoisted(() => ({
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
+// jsdom은 실제 이동을 구현하지 않아 location.replace가 "Not implemented"로 터진다.
+// href는 document.URL로 위임해 history.replaceState가 반영되게 둔다.
+const hardNavigate = vi.fn();
+Object.defineProperty(window, "location", {
+  configurable: true,
+  value: {
+    replace: hardNavigate,
+    get href() {
+      return document.URL;
+    },
+  },
+});
+
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
 }));
@@ -57,6 +70,9 @@ describe("AuthProvider", () => {
     toast.error.mockReset();
     router.replace.mockReset();
     router.refresh.mockReset();
+    // jsdom은 실제 이동을 구현하지 않는다. 만료 처리가 하드 내비게이션이므로 여기서 잡는다.
+    hardNavigate.mockReset();
+    window.history.replaceState(null, "", "/");
   });
 
   // AuthProvider가 window에 리스너를 건다. 언마운트하지 않으면 앞선 테스트의 provider가
@@ -217,17 +233,19 @@ describe("AuthProvider", () => {
     });
   }
 
-  it("만료 이벤트를 받으면 로그아웃하고 홈으로 보낸다", async () => {
+  // 세션 게이트는 모듈 수준 상태이고 새 문서로만 풀린다. 소프트 이동으로 보내면 홈에
+  // 도착해도 게이트가 열린 채라 이후 모든 요청이 거절된다 — 앱이 죽은 채 남았다(APP-223).
+  it("만료 이벤트를 받으면 로그아웃하고 홈으로 하드 이동한다", async () => {
     authApi.logout.mockResolvedValue(undefined);
     renderWithProvider();
 
     dispatchExpired();
 
     await waitFor(() => {
-      expect(router.replace).toHaveBeenCalledWith("/");
+      expect(hardNavigate).toHaveBeenCalledWith("/?session=expired");
     });
+    expect(router.replace).not.toHaveBeenCalled();
     expect(authApi.logout).toHaveBeenCalledTimes(1);
-    expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
   it("로그아웃 호출이 실패해도 홈으로 보낸다", async () => {
@@ -237,7 +255,28 @@ describe("AuthProvider", () => {
     dispatchExpired();
 
     await waitFor(() => {
-      expect(router.replace).toHaveBeenCalledWith("/");
+      expect(hardNavigate).toHaveBeenCalledWith("/?session=expired");
     });
+  });
+
+  // 토스트는 하드 이동과 함께 사라지므로 사유를 쿼리로 넘긴다. 도착한 문서에서 한 번
+  // 보이고 주소를 정리한다 — 안 지우면 새로고침·뒤로가기마다 다시 뜬다.
+  it("만료로 도착하면 사유를 한 번 보이고 쿼리를 지운다", async () => {
+    window.history.replaceState(null, "", "/?session=expired");
+
+    renderWithProvider();
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "세션이 만료되었습니다. 다시 로그인해 주세요."
+      );
+    });
+    expect(window.location.href).not.toContain("session=expired");
+  });
+
+  it("평범하게 홈에 오면 만료 안내를 띄우지 않는다", () => {
+    renderWithProvider();
+
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });
