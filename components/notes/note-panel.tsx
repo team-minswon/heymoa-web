@@ -188,9 +188,10 @@ export function NotePanel({
       </div>
 
       {showSharedTray ? (
-        // 넓은 화면은 우측 사이드 레일(420), 좁은 화면은 본문 아래 스택 — 어느 폭에서도
-        // 공유 챗봇에 닿는다. 회의 중에는 개인 챗봇도 감춰지므로 여기가 유일한 챗 입구다.
-        <div className="flex h-[45vh] w-full shrink-0 border-t border-[var(--el-hairline)] lg:h-full lg:w-[420px] lg:border-t-0">
+        // 넓은 화면은 우측 대화 트레이(464 — FORM SPEC 레이아웃 산술), 좁은 화면은 본문 아래
+        // 스택 — 어느 폭에서도 공유 챗봇에 닿는다. 회의 중에는 개인 챗봇도 감춰지므로 여기가
+        // 유일한 챗 입구다.
+        <div className="flex h-[45vh] w-full shrink-0 border-t border-[var(--el-hairline)] lg:h-full lg:w-[464px] lg:border-t-0">
           <SharedChatPanel
             noteId={noteId}
             phase={phase}

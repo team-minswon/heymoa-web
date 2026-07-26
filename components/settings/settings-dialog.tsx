@@ -125,7 +125,8 @@ export function SettingsDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-dvh max-h-none w-screen max-w-none gap-0 overflow-hidden rounded-none border border-black/5 bg-[var(--el-canvas)] p-0 shadow-[0_28px_80px_rgba(12,10,9,0.18)] sm:h-[min(760px,calc(100dvh-3rem))] sm:max-w-5xl sm:rounded-[28px]">
+      {/* 오버레이는 e3 2연타 + panel 16이다. rounded-[28px]는 스케일 밖 값이라 폐기했다. (ELEVATION SPEC) */}
+      <DialogContent className="h-dvh max-h-none w-screen max-w-none gap-0 overflow-hidden rounded-none border border-black/5 bg-[var(--el-canvas)] p-0 shadow-e3 sm:h-[min(780px,calc(100dvh-3rem))] sm:max-w-5xl sm:rounded-panel">
         <DialogTitle className="sr-only">설정</DialogTitle>
         <DialogDescription className="sr-only">
           계정과 워크스페이스 설정을 관리합니다.

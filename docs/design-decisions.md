@@ -81,7 +81,10 @@ SPEC은 그 위에서 규칙을 통일한 결과다. 최종 정답은 이 캔버
 
 **알려진 프레임 잔재** — 구현 시 SPEC대로 고칠 것(PNG를 그대로 베끼지 말 것):
 
-- **상단바 `중지` 버튼** — `Ftvu9`·`AB8zp`에 남아 있으나 중지는 레코더 독 하나뿐(MOTION SPEC). 독만 둔다.
+- **상단바 `중지` 버튼** — `Ftvu9`·`AB8zp`에 남아 있으나 **녹음** 중지는 레코더 독 하나뿐(MOTION SPEC). 독만 둔다.
+  단 **회의 중지(`pauseMeeting`, IN_PROGRESS → PAUSED)는 다르다 — 상단바에 둔다.** 이 SPEC은
+  회의 상태 머신(APP-120)보다 먼저 쓰여 둘을 구분하지 않았다. 지우면 회의를 멈출 유일한 수단이
+  사라진다(APP-209에서 실제로 오판했다가 잡았다). 근거는 `design/v5-spec-notes.md` CHROME SPEC.
 - **노트 목록 "녹음 중" 필터 칩** — 목록 계약에 `meetingStatus`가 없어 성립 안 함. `전체`·`내가 시작`만 둔다(FORM SPEC).
 - **요약 탭 우측 트레이 라벨** — `m0eVmx`가 "개인 챗봇"으로 되어 있으나 노트 3탭 트레이는 전부 공유 챗봇(CHROME SPEC).
 - **요약 섹션 키커** — `m0eVmx`에 `OVERVIEW`/`ACTION ITEMS`/`INSIGHTS` 대문자 키커가 남아 있으나 제품 면 키커 금지(FORM SPEC).

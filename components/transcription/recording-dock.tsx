@@ -40,7 +40,7 @@ export function RecordingDock({ noteId }: { noteId: string }) {
     <motion.div
       layout
       aria-label="녹음 제어"
-      className="flex min-h-10 items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 text-[var(--el-ink)] shadow-[0_8px_32px_rgba(28,25,23,0.12)] backdrop-blur-xl"
+      className="flex min-h-10 items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
       style={{ borderRadius: 9999 }}
       transition={LAYOUT_TRANSITION}
     >

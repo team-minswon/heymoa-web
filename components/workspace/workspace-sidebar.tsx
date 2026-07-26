@@ -363,7 +363,7 @@ export function WorkspaceSidebar({
           <DropdownMenuContent
             align="start"
             side="top"
-            className="w-60 rounded-xl shadow-e3 border border-[var(--el-hairline)]"
+            className="w-60 rounded-panel shadow-e3 border border-[var(--el-hairline)]"
           >
             <DropdownMenuItem
               onClick={() => onOpenSettings("account")}

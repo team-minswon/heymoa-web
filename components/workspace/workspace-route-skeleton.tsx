@@ -27,7 +27,8 @@ export function WorkspaceRouteSkeleton() {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
-        <div className="flex h-14 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
+        {/* 상단바 1단 64와 같은 높이여야 로딩이 끝날 때 본문이 안 밀린다. (CHROME SPEC) */}
+        <div className="flex h-16 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
           <Skeleton className="h-5 w-28 rounded-md" />
         </div>
         <section className="mx-auto w-full max-w-[1440px] px-4 pb-16 pt-8 sm:px-8 sm:pt-11 lg:px-14 xl:px-20">

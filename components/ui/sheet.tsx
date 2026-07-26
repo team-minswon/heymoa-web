@@ -62,7 +62,9 @@ function SheetContent({
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0",
+          // 시트는 e3 오버레이다. Tailwind 기본 shadow-lg는 단일 티어라 제품 캔버스에서 뭉갠다.
+          // 호출부에서 shadow-e3를 얹어도 CSS 순서상 shadow-lg가 이기므로 기본값을 바꾼다. (ELEVATION SPEC)
+          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-e3 transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0",
           sheetSideClasses[side],
           className
         )}

@@ -183,7 +183,8 @@ export function WorkspaceToolbar({
   return (
     <>
       <div className="sticky top-0 z-20 border-b border-[var(--el-hairline)] bg-[color-mix(in_srgb,var(--el-canvas)_88%,transparent)] backdrop-blur-xl">
-        <div className="flex min-h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
+        {/* 상단바는 1단 64다 — 2단을 합치며 회수한 세로를 여기서 지킨다. (CHROME SPEC) */}
+        <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
           <nav
             aria-label="현재 위치"

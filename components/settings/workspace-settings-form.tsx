@@ -117,7 +117,7 @@ export function WorkspaceSettingsForm({
       </div>
       <form
         onSubmit={submit}
-        className="space-y-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.03)]"
+        className="space-y-5 rounded-panel border border-[var(--el-hairline)] bg-white p-6"
       >
         <div className="space-y-2">
           <Label htmlFor="workspace-name">워크스페이스 이름</Label>

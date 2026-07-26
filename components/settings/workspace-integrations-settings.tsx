@@ -213,8 +213,9 @@ function IntegrationCard({
   onDisconnect: () => void;
 }) {
   const provider = integration.provider as Provider;
+  // 카드 안의 카드에는 그림자를 주지 않는다 — hairline만. (ELEVATION SPEC)
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--el-hairline)] bg-white p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+    <div className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4">
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--el-canvas-soft)]">
           <Link2 className="size-4 text-[var(--el-ink)]" />

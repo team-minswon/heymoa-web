@@ -26,7 +26,7 @@ export function AccountSettingsForm() {
           프로필 정보를 확인합니다.
         </p>
       </div>
-      <div className="flex items-center gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.03)]">
+      <div className="flex items-center gap-5 rounded-panel border border-[var(--el-hairline)] bg-white p-6">
         <Avatar className="size-14">
           {user.image ? (
             <AvatarImage src={user.image} alt={`${user.name} 프로필`} />

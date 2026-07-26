@@ -152,7 +152,7 @@ export function PersonalChatProvider({
           size="icon"
           aria-label="개인 챗봇 열기"
           onClick={value.open}
-          className="fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-[0_8px_24px_rgba(12,10,9,0.18)]"
+          className="fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-e2"
         >
           <MessageCircle className="size-5" />
         </Button>
@@ -458,7 +458,9 @@ function PersonalChatPanel({
       aria-label="개인 챗봇"
       className={cn(
         // 448은 v4 프레임 값이지만 좁은 화면에서는 뷰포트를 넘어 왼쪽이 잘린다.
-        "fixed top-2 right-2 bottom-2 z-30 flex w-[min(448px,calc(100vw-1rem))] flex-col rounded-2xl border border-[var(--el-hairline)] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.04)]",
+        // 부양 카드는 e2 2연타다. 단일 티어 0_4px_16px는 흰 마케팅 면 전용이라
+        // 제품 캔버스에서는 그림자가 보이지 않는다. (ELEVATION SPEC)
+        "fixed top-2 right-2 bottom-2 z-30 flex w-[min(448px,calc(100vw-1rem))] flex-col rounded-panel border border-[var(--el-hairline)] bg-white shadow-e2",
         hidden && "hidden"
       )}
     >

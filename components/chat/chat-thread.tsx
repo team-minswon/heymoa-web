@@ -421,7 +421,7 @@ function ApprovalPrompt({
   const invalidated = state.kind === "invalidated";
   const submitted = state.kind === "submitted";
   return (
-    <div className="rounded-2xl border border-[var(--el-hairline)] bg-white p-3.5 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+    <div className="rounded-panel border border-[var(--el-hairline)] bg-white p-3.5">
       <div className="flex items-center justify-between gap-2">
         <p
           className={

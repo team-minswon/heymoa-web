@@ -114,7 +114,8 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
             aria-pressed={filter === key}
             onClick={() => setFilter(key)}
             className={cn(
-              "h-8 rounded-full px-3.5 text-[13px] font-medium transition-colors",
+              // 칩은 chip 6이다. pill(9999)은 주 CTA와 레코더 독 두 곳뿐. (FORM SPEC)
+              "h-8 rounded-chip px-3.5 text-[13px] font-medium transition-colors",
               filter === key
                 ? "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
                 : "text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)]"
