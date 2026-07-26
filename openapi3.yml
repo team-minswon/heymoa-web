@@ -1563,210 +1563,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
       security:
         - accessCookie: []
-  /v1/notes/{noteId}/meeting-pause:
-    post:
-      tags:
-        - "Meeting"
-      summary: "회의 중지"
-      description: "회의를 중지한다(PAUSED). 회의 시작자만 가능하고 진행 중인 전사 세션이 있으면 409를 응답한다."
-      operationId: "pauseMeeting"
-      parameters:
-        - name: "noteId"
-          in: "path"
-          description: "노트의 13자리 TSID"
-          required: true
-          schema:
-            type: "string"
-            description: "노트의 13자리 TSID"
-            nullable: false
-            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-            minLength: 13
-            maxLength: 13
-          example: "0HZX2K7M9Q4AF"
-      responses:
-        "200":
-          description: "요청 성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MeetingStatusResponse"
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      meetingStatus: "PAUSED"
-                    error: null
-        "409":
-          description: "요청 상태 충돌"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                MEETING_NOT_IN_PROGRESS:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "MEETING_NOT_IN_PROGRESS"
-                      message: "진행 중인 회의가 아닙니다."
-                      details: null
-                ACTIVE_TRANSCRIPTION_SESSION:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "ACTIVE_TRANSCRIPTION_SESSION"
-                      message: "이미 진행 가능한 전사 세션이 있습니다."
-                      details: null
-        "403":
-          description: "권한 없음"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                NOT_MEETING_STARTER:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "NOT_MEETING_STARTER"
-                      message: "회의 시작자만 조작할 수 있습니다."
-                      details: null
-        "404":
-          description: "요청한 리소스를 찾을 수 없음"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "NOTE_NOT_FOUND"
-                      message: "노트를 찾을 수 없습니다."
-                      details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-      security:
-        - accessCookie: []
-  /v1/notes/{noteId}/meeting-resume:
-    post:
-      tags:
-        - "Meeting"
-      summary: "회의 재개"
-      description: "중지된 회의를 재개한다(IN_PROGRESS). 회의 시작자만 가능하다."
-      operationId: "resumeMeeting"
-      parameters:
-        - name: "noteId"
-          in: "path"
-          description: "노트의 13자리 TSID"
-          required: true
-          schema:
-            type: "string"
-            description: "노트의 13자리 TSID"
-            nullable: false
-            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-            minLength: 13
-            maxLength: 13
-          example: "0HZX2K7M9Q4AF"
-      responses:
-        "409":
-          description: "요청 상태 충돌"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                MEETING_NOT_PAUSED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "MEETING_NOT_PAUSED"
-                      message: "중지된 회의가 아닙니다."
-                      details: null
-        "200":
-          description: "요청 성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MeetingStatusResponse"
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      meetingStatus: "IN_PROGRESS"
-                    error: null
-        "404":
-          description: "요청한 리소스를 찾을 수 없음"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "NOTE_NOT_FOUND"
-                      message: "노트를 찾을 수 없습니다."
-                      details: null
-        "403":
-          description: "권한 없음"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                NOT_MEETING_STARTER:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "NOT_MEETING_STARTER"
-                      message: "회의 시작자만 조작할 수 있습니다."
-                      details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-      security:
-        - accessCookie: []
   /v1/notes/{noteId}/transcript:
     get:
       tags:
@@ -2911,7 +2707,7 @@ paths:
                     data: null
                     error:
                       code: "MEETING_NOT_ACTIVE"
-                      message: "녹음 중에만 공유 챗봇을 사용할 수 있습니다."
+                      message: "진행 중인 회의에서만 공유 챗봇을 사용할 수 있습니다."
                       details: null
         "400":
           description: "잘못된 요청"
@@ -3244,7 +3040,7 @@ paths:
                     data: null
                     error:
                       code: "MEETING_NOT_ACTIVE"
-                      message: "녹음 중에만 공유 챗봇을 사용할 수 있습니다."
+                      message: "진행 중인 회의에서만 공유 챗봇을 사용할 수 있습니다."
                       details: null
                 CHAT_LOCKED:
                   value:
@@ -4464,40 +4260,6 @@ components:
           nullable: true
           example: "제품을 만드는 팀의 워크스페이스"
           maxLength: 1000
-    MeetingStatusResponse:
-      title: "MeetingStatusResponse"
-      required:
-        - "data"
-        - "error"
-        - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-            - "meetingStatus"
-          type: "object"
-          properties:
-            meetingStatus:
-              type: "string"
-              description: "회의 상태"
-              nullable: false
-              example: "IN_PROGRESS"
-              enum:
-                - "IN_PROGRESS"
-                - "PAUSED"
-                - "ENDED"
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: "성공 시 null인 오류 정보"
     NoteResponse:
       title: "NoteResponse"
       required:
@@ -4551,7 +4313,6 @@ components:
               example: "IN_PROGRESS"
               enum:
                 - "IN_PROGRESS"
-                - "PAUSED"
                 - "ENDED"
             noteId:
               type: "string"

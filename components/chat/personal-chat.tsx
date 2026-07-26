@@ -39,7 +39,7 @@ type PersonalChatState = {
   isOpen: boolean;
   /** 열려 있고 감춰지지 않았을 때만 참. 셸이 본문 여백을 이걸로 정한다. */
   isVisible: boolean;
-  /** 패널을 연다. 라우트가 감췄으면(`hidden`) 존중한다 — PAUSED·ENDED에서는 감추지 않는다. */
+  /** 패널을 연다. 라우트가 감췄으면(`hidden`) 존중한다 — ENDED에서는 감추지 않는다. */
   open: () => void;
   close: () => void;
   setNoteScope: (scope: NoteScope | null) => void;

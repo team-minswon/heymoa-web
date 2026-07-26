@@ -112,9 +112,10 @@ describe("OpenAPI contract", () => {
 });
 
 describe("contract sync 2026-07-23", () => {
-  it("mirrors 34 public paths and excludes internal ones", () => {
+  it("mirrors 32 public paths and excludes internal ones", () => {
     const paths = Object.keys(api().paths);
-    expect(paths).toHaveLength(34);
+    // APP-218에서 meeting-pause·meeting-resume 2경로가 빠졌다 (34 → 32).
+    expect(paths).toHaveLength(32);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

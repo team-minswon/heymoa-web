@@ -28,7 +28,6 @@ import type {
   CurrentUserResponse,
   LogoutResponse,
   MarkNotificationReadResponse,
-  MeetingStatusResponse,
   NoteListResponse,
   NoteRequest,
   NoteResponse,
@@ -303,21 +302,6 @@ export const getCreateWorkspaceRequestMock = (
   ...overrideResponse,
 });
 
-export const getMeetingStatusResponseMock = (
-  overrideResponse: Partial<MeetingStatusResponse> = {}
-): MeetingStatusResponse => ({
-  data: {
-    meetingStatus: faker.helpers.arrayElement([
-      "IN_PROGRESS",
-      "PAUSED",
-      "ENDED",
-    ] as const),
-  },
-  success: faker.datatype.boolean(),
-  error: faker.helpers.arrayElement([] as const),
-  ...overrideResponse,
-});
-
 export const getNoteResponseMock = (
   overrideResponse: Partial<NoteResponse> = {}
 ): NoteResponse => ({
@@ -335,7 +319,6 @@ export const getNoteResponseMock = (
     ]),
     meetingStatus: faker.helpers.arrayElement([
       "IN_PROGRESS",
-      "PAUSED",
       "ENDED",
     ] as const),
     noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),

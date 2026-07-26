@@ -77,8 +77,7 @@ export function NotePanel({
   // 답변이 흐르는 중에 다른 멤버가 회의를 끝내도 트레이를 바로 걷지 않는다 — 언마운트하면
   // 스트림이 끊기고 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 턴이 끝나면 접는다.
   const [sharedTurnActive, setSharedTurnActive] = useState(false);
-  const meetingLive =
-    phase === "active" || phase === "not-started" || phase === "paused";
+  const meetingLive = phase === "active" || phase === "not-started";
   const showSharedTray = view === "full" && (meetingLive || sharedTurnActive);
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
   const showArchive = phase === "ended" && !sharedTurnActive;

@@ -248,13 +248,6 @@ describe("SharedChatPanel", () => {
     expect(screen.getByText("linear.create_issue")).toBeTruthy();
   });
 
-  it("중지 중에는 컴포저가 잠기고 개인 챗봇 열기를 제공한다", () => {
-    renderPanel("paused");
-    expect(screen.getByText(/중지 중에는 개인 챗봇을 이용하세요/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "개인 챗봇 열기" }));
-    expect(openPersonalMock).toHaveBeenCalledTimes(1);
-  });
-
   it("히스토리를 못 읽으면 빈 대화 대신 오류를 보이고 전송을 막는다", () => {
     // 빈 배열로 접으면 잠금·대화 상태를 모른 채 전송이 열려 화면과 실제가 어긋난다.
     state.historyFails = true;

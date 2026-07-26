@@ -205,26 +205,16 @@ describe("meeting and analysis", () => {
     expect(done.insights).toBeTruthy();
   });
 
-  it("refuses to pause a meeting that already ended", () => {
+  it("refuses to end a meeting that already ended", () => {
     const noteId = startedNoteId();
     mockDb.endMeeting(noteId);
 
-    expect(() => mockDb.pauseMeeting(noteId)).toThrow(
-      "MEETING_NOT_IN_PROGRESS"
-    );
+    expect(() => mockDb.endMeeting(noteId)).toThrow("MEETING_ALREADY_ENDED");
   });
 
   // 종료된 회의의 전사 시작은 여기서 막지 않는다 — 계약에 거절 코드가 없어 실서버도
   // 안 막기 때문이다(APP-214 서버 몫). 목이 더 엄격하면 그 구멍이 로컬에서 가려진다.
   // 지금 막는 곳은 UI다(`note-panel.test.tsx`).
-
-  it("moves a meeting through pause and resume", () => {
-    const noteId = startedNoteId();
-
-    expect(mockDb.pauseMeeting(noteId).meetingStatus).toBe("PAUSED");
-    expect(mockDb.resumeMeeting(noteId).meetingStatus).toBe("IN_PROGRESS");
-    expect(() => mockDb.resumeMeeting(noteId)).toThrow("MEETING_NOT_PAUSED");
-  });
 });
 
 describe("workspace integrations", () => {
@@ -319,9 +309,6 @@ describe("only the meeting starter can operate a meeting", () => {
     const fresh = mockDb.createNote(projectId, { title: "아직 시작 전" });
 
     expect(fresh.meetingStartedBy).toBeNull();
-    expect(() => mockDb.pauseMeeting(fresh.noteId)).toThrow(
-      "NOT_MEETING_STARTER"
-    );
     expect(() => mockDb.endMeeting(fresh.noteId)).toThrow(
       "NOT_MEETING_STARTER"
     );
@@ -335,6 +322,6 @@ describe("only the meeting starter can operate a meeting", () => {
     const session = mockDb.createSession(note.noteId);
     mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
 
-    expect(mockDb.pauseMeeting(note.noteId).meetingStatus).toBe("PAUSED");
+    expect(mockDb.endMeeting(note.noteId)).toBeTruthy();
   });
 });

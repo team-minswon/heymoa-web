@@ -22,7 +22,6 @@ import type {
   NotificationListResponseDataNotificationsItemInvitationStatus,
   MarkNotificationReadResponseData,
   AnalysisResultResponseData,
-  MeetingStatusResponseData,
   ToolConnectionsResponseDataIntegrationsItem,
   AgentChatV2ResponseData,
   AgentChatMessagesResponseDataMessagesItem,
@@ -817,24 +816,6 @@ export const mockDb = {
     if (hasActiveSession(noteId)) fail("ACTIVE_TRANSCRIPTION_SESSION");
     note.meetingStatus = "ENDED";
     return this.requestAnalysis(noteId);
-  },
-
-  pauseMeeting(noteId: string): MeetingStatusResponseData {
-    const note = findNote(noteId);
-    requireMeetingStarter(note);
-    if (note.meetingStatus !== "IN_PROGRESS") fail("MEETING_NOT_IN_PROGRESS");
-    // 종료와 같은 규칙 — 녹음 중이면 web이 stop을 먼저 보내고 다시 호출해야 한다.
-    if (hasActiveSession(noteId)) fail("ACTIVE_TRANSCRIPTION_SESSION");
-    note.meetingStatus = "PAUSED";
-    return copy({ meetingStatus: note.meetingStatus });
-  },
-
-  resumeMeeting(noteId: string): MeetingStatusResponseData {
-    const note = findNote(noteId);
-    requireMeetingStarter(note);
-    if (note.meetingStatus !== "PAUSED") fail("MEETING_NOT_PAUSED");
-    note.meetingStatus = "IN_PROGRESS";
-    return copy({ meetingStatus: note.meetingStatus });
   },
 
   requestAnalysis(noteId: string): AnalysisResultResponseData {

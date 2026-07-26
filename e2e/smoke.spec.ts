@@ -115,6 +115,24 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
  * 종료 후 요약 탭이 분석 진행으로 넘어가는지 서비스 워커 경로로 확인한다.
  * `01K0000000002`는 시작자가 목 유저라 조작 버튼이 뜬다.
  */
+/**
+ * APP-218에서 회의 중지·재개를 폐기했다 — 상단바의 회의 조작은 `회의 종료` 하나다.
+ * "멈춤"의 창구는 레코더 독(전사 세션)이고, 쉬는 시간에는 녹음만 멈춘다.
+ *
+ * 계약에서 경로가 사라졌으므로 버튼이 남으면 404를 부른다. 서비스 워커 경로로 확인한다.
+ */
+test("shows only the end-meeting control in the note toolbar", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+
+  await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "중지" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "재개" })).toHaveCount(0);
+  // 녹음 시작은 독이 계속 맡는다 — 축이 사라진 게 아니라 하나로 합쳐졌다.
+  await expect(page.getByRole("button", { name: "기록 시작" })).toBeVisible();
+});
+
 test("ends a meeting and shows the analysis in progress", async ({ page }) => {
   // 기본 전사 탭에서 종료해도 요약 탭으로 넘어가 분석 진행을 보여야 한다.
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);

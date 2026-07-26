@@ -14,6 +14,5 @@ export type NoteResponseDataMeetingStatus =
 
 export const NoteResponseDataMeetingStatus = {
   IN_PROGRESS: "IN_PROGRESS",
-  PAUSED: "PAUSED",
   ENDED: "ENDED",
 } as const;

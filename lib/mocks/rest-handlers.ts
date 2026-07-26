@@ -444,12 +444,6 @@ export const restHandlers = [
     }))
   ),
 
-  http.post("*/v1/notes/:noteId/meeting-pause", ({ params }) =>
-    commandResult(() => mockDb.pauseMeeting(id(params.noteId)))
-  ),
-  http.post("*/v1/notes/:noteId/meeting-resume", ({ params }) =>
-    commandResult(() => mockDb.resumeMeeting(id(params.noteId)))
-  ),
   http.post("*/v1/notes/:noteId/meeting-end", ({ params }) =>
     commandResult(() => mockDb.endMeeting(id(params.noteId)), 202)
   ),

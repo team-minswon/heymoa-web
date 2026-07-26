@@ -30,15 +30,6 @@ describe("deriveMeetingPhase", () => {
     ).toBe("not-started");
   });
 
-  it("PAUSED는 중지", () => {
-    expect(
-      deriveMeetingPhase({
-        meetingStatus: "PAUSED",
-        meetingStartedBy: startedBy,
-      })
-    ).toBe("paused");
-  });
-
   it("ENDED는 종료", () => {
     expect(
       deriveMeetingPhase({
@@ -63,12 +54,6 @@ describe("meetingRefetchInterval", () => {
     ).toBe(MEETING_POLL_MS);
     expect(
       meetingRefetchInterval({
-        meetingStatus: "PAUSED",
-        meetingStartedBy: startedBy,
-      })
-    ).toBe(MEETING_POLL_MS);
-    expect(
-      meetingRefetchInterval({
         meetingStatus: "ENDED",
         meetingStartedBy: startedBy,
       })
@@ -85,8 +70,7 @@ describe("isPersonalChatHiddenInNote", () => {
   it("full에서 트레이가 레일을 독차지할 때만 감춘다", () => {
     expect(isPersonalChatHiddenInNote("full", "active", false)).toBe(true);
     expect(isPersonalChatHiddenInNote("full", "not-started", false)).toBe(true);
-    // 중지·종료는 개인 챗봇을 남긴다.
-    expect(isPersonalChatHiddenInNote("full", "paused", false)).toBe(false);
+    // 종료는 개인 챗봇을 남긴다.
     expect(isPersonalChatHiddenInNote("full", "ended", false)).toBe(false);
   });
 

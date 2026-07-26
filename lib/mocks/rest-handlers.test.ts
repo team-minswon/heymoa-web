@@ -185,17 +185,17 @@ describe("meeting and integration handlers", () => {
   });
   afterAll(() => server.close());
 
-  it("returns 409 when pausing a meeting that already ended", async () => {
+  it("returns 409 when ending a meeting that already ended", async () => {
     const note = startedNote();
     mockDb.endMeeting(note.noteId);
 
     const response = await fetch(
-      `http://localhost/v1/notes/${note.noteId}/meeting-pause`,
+      `http://localhost/v1/notes/${note.noteId}/meeting-end`,
       { method: "POST" }
     );
 
     expect(response.status).toBe(409);
-    expect((await response.json()).error.code).toBe("MEETING_NOT_IN_PROGRESS");
+    expect((await response.json()).error.code).toBe("MEETING_ALREADY_ENDED");
   });
 
   it("accepts a meeting end with 202 and queues an analysis", async () => {

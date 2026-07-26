@@ -8,7 +8,6 @@ export * from "./users/users.faker";
 export * from "./workspace-integration/workspace-integration.faker";
 export * from "./workspace-invitations/workspace-invitations.faker";
 export * from "./analysis/analysis.faker";
-export * from "./meeting/meeting.faker";
 export * from "./workspace-members/workspace-members.faker";
 export * from "./projects/projects.faker";
 export * from "./note-shared-chat/note-shared-chat.faker";

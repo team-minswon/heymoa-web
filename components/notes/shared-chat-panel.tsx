@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CirclePlay, Lock, PauseCircle } from "lucide-react";
+import { CirclePlay, Lock } from "lucide-react";
 
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
-import { usePersonalChat } from "@/components/chat/personal-chat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +42,6 @@ export function SharedChatPanel({
 }) {
   const queryClient = useQueryClient();
   const stream = useChatStream();
-  const personalChat = usePersonalChat();
   const [draft, setDraft] = useState("");
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
     null
@@ -311,7 +309,6 @@ export function SharedChatPanel({
         isStreaming={isStreaming}
         onSubmit={() => void send(draft)}
         onStop={stream.stop}
-        onOpenPersonal={personalChat.open}
       />
     </aside>
   );
@@ -328,7 +325,6 @@ function Composer({
   isStreaming,
   onSubmit,
   onStop,
-  onOpenPersonal,
 }: {
   phase: SharedChatPhase;
   isSpectator: boolean;
@@ -341,29 +337,8 @@ function Composer({
   isStreaming: boolean;
   onSubmit: () => void;
   onStop: () => void;
-  onOpenPersonal: () => void;
 }) {
-  // 지속 상태(중지·관전·미시작)는 인라인 Alert다 — 토스트로 하면 왜 못 쓰는지 사라진다.
-  if (phase === "paused") {
-    return (
-      <ComposerNotice
-        icon={<PauseCircle className="size-4 text-[var(--el-muted)]" />}
-        title="회의가 중지되어 있습니다"
-        description="중지 중에는 개인 챗봇을 이용하세요."
-        action={
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-[30px]"
-            onClick={onOpenPersonal}
-          >
-            개인 챗봇 열기
-          </Button>
-        }
-      />
-    );
-  }
-
+  // 지속 상태(관전·미시작)는 인라인 Alert다 — 토스트로 하면 왜 못 쓰는지 사라진다.
   if (phase === "not-started") {
     return (
       <ComposerNotice
