@@ -11,11 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoteDetails } from "@/components/notes/note-details";
 
 const NOTE_ID = "01K0000000002";
+const PROJECT_ID = "01K0000000010";
 const mutateAsync = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNoteQueryKey: (noteId: string) => ["note", noteId],
+  getGetNotesQueryKey: (projectId: string) => ["notes", projectId],
   useGetNoteSuspense: () => ({
     data: {
       status: 200,
@@ -23,6 +25,7 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
         success: true,
         data: {
           noteId: NOTE_ID,
+          projectId: PROJECT_ID,
           title: "주간 제품 회의",
           createdAt: "2026-07-10T00:00:00Z",
           updatedAt: "2026-07-11T00:00:00Z",
@@ -66,5 +69,27 @@ describe("NoteDetails", () => {
     );
     expect(title).toHaveValue("수정 중인 회의 제목");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("저장에 성공하면 노트 단건과 목록을 함께 무효화한다", async () => {
+    mutateAsync.mockResolvedValueOnce({ status: 200 });
+    const client = new QueryClient();
+    const invalidate = vi
+      .spyOn(client, "invalidateQueries")
+      .mockResolvedValue(undefined);
+    render(
+      <QueryClientProvider client={client}>
+        <NoteDetails noteId={NOTE_ID} />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "변경 저장" }));
+
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["note", NOTE_ID] });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["notes", PROJECT_ID],
+      });
+    });
   });
 });

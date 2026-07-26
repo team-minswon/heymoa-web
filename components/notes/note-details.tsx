@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getGetNoteQueryKey,
+  getGetNotesQueryKey,
   useGetNoteSuspense,
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
@@ -30,8 +31,15 @@ export function NoteDetails({ noteId }: { noteId: string }) {
   }
   const note = noteResponse.data.data;
 
+  // 노트 단건과 목록을 함께 무효화한다 — 목록은 projectId별로 조회하므로(workspace-page)
+  // 단건만 무효화하면 제목 변경이 목록에 반영되지 않는다.
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) }),
+      queryClient.invalidateQueries({
+        queryKey: getGetNotesQueryKey(note.projectId),
+      }),
+    ]);
 
   return (
     <form
