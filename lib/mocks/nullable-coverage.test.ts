@@ -131,9 +131,10 @@ function contractSamples() {
   }
   // READY 세션은 마지막에 만든다 — 전역 가드가 위 endMeeting들을 막지 않게. 이 세션이
   // `startedAt`·`endedAt`·`endReason`의 null 쪽 표본이다.
+  // 방금 종료한 둘 말고 아직 진행 중인 노트에 만든다 — 종료된 회의는 세션을 못 만든다.
   const sessionIds = [
     "01K0000000010",
-    mockDb.createSession(notes[2]).sessionId,
+    mockDb.createSession(inProgress[2]).sessionId,
   ];
 
   // 연동은 목이 둘 다 미연동으로 시작한다 — 하나를 연결해 `connectedAt`·`connectedBy`의

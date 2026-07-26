@@ -1231,6 +1231,9 @@ export const mockDb = {
 
   createSession(noteId: string): StartTranscriptionSessionResponseData {
     const note = findNote(noteId);
+    // 종료된 회의를 여기서 막지 않는다. 계약의 이 operation에는 아직 거절 코드가 없고,
+    // 목이 계약보다 엄격하면 로컬만 안전해 보이고 실서버 구멍이 가려진다(APP-214 서버 몫).
+    // 지금 막는 곳은 UI다 — note-panel이 상태를 모르는 동안에도 시작을 열지 않는다.
     if (state.sessions.some((session) => ACTIVE_STATUSES.has(session.status))) {
       fail("ACTIVE_TRANSCRIPTION_SESSION");
     }

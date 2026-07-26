@@ -17,6 +17,8 @@ import {
 
 const useGetProject = vi.hoisted(() => vi.fn());
 const noteState = vi.hoisted(() => ({
+  /** 세팅하면 `useGetNote` 반환을 통째로 대신한다 — 로딩·실패를 그리려고 쓴다. */
+  query: null as { data?: unknown; isError?: boolean } | null,
   value: {
     noteId: "01K0000000002",
     title: "주간 제품 회의",
@@ -60,9 +62,10 @@ vi.mock("@/components/notes/note-summary", () => ({
   ),
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
-  useGetNote: () => ({
-    data: { status: 200, data: { success: true, data: noteState.value } },
-  }),
+  useGetNote: () =>
+    noteState.query ?? {
+      data: { status: 200, data: { success: true, data: noteState.value } },
+    },
 }));
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   useGetProject: (...args: unknown[]) => {
@@ -143,6 +146,7 @@ describe("NotePanel", () => {
   });
   afterEach(() => {
     cleanup();
+    noteState.query = null;
     noteState.value = {
       noteId: "01K0000000002",
       title: "주간 제품 회의",
@@ -341,5 +345,53 @@ describe("NotePanel", () => {
     );
     expect(screen.queryByRole("tab", { name: "요약" })).toBeNull();
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
+  });
+
+  // 계약의 startTranscriptionSession에는 아직 종료 거절 코드가 없다 — 서버가 안 막으므로
+  // 여기서 여는 순간 종료된 회의에 세션이 붙는다(APP-214 서버 몫).
+  describe("녹음 시작 게이트", () => {
+    function renderDock() {
+      renderNotePanel(
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000002"
+          view="side"
+          tab="transcript"
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      );
+    }
+
+    it("종료된 회의는 시작 버튼 자리에 이유가 선다", () => {
+      noteState.value = { ...noteState.value, meetingStatus: "ENDED" };
+
+      renderDock();
+
+      expect(
+        screen.getByText("종료된 회의입니다. 전사를 다시 시작할 수 없습니다.")
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
+    });
+
+    it("상태를 아직 모르면 열지 않는다", () => {
+      // 콜드 캐시·느린 응답. 여기서 버튼이 살아 있으면 종료된 회의에도 눌린다.
+      noteState.query = { data: undefined, isError: false };
+
+      renderDock();
+
+      expect(
+        screen.getByText("회의 상태를 확인하는 중입니다.")
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
+    });
+
+    it("진행 중인 회의는 시작할 수 있다", () => {
+      renderDock();
+
+      expect(
+        screen.getByRole("button", { name: "기록 시작" })
+      ).toBeInTheDocument();
+    });
   });
 });

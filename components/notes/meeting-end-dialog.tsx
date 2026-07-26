@@ -26,7 +26,10 @@ import {
   getGetLatestAnalysisQueryKey,
   useEndMeeting,
 } from "@/lib/api/generated/analysis/analysis";
-import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
+import {
+  getGetNoteQueryKey,
+  type getNoteResponse,
+} from "@/lib/api/generated/notes/notes";
 
 /**
  * 회의 종료 확인 다이얼로그. 종료하면 요약 분석이 시작되고 이후 전사를 시작할 수 없다.
@@ -79,6 +82,22 @@ export function MeetingEndDialog({
         onSuccess: () => {
           setServerBlocked(false);
           onOpenChange(false);
+          // 종료가 성공했으면 상태는 이미 ENDED다. invalidate만 하면 응답이 올 때까지
+          // 캐시에 IN_PROGRESS가 남아 그 틈에 녹음 시작이 열린다 — 계약이 종료된 회의의
+          // 세션 생성을 안 막으므로 서버도 안 잡아 준다(APP-214 서버 몫).
+          queryClient.setQueryData<getNoteResponse>(
+            getGetNoteQueryKey(noteId),
+            (prev) =>
+              prev?.status === 200 && prev.data.success
+                ? {
+                    ...prev,
+                    data: {
+                      ...prev.data,
+                      data: { ...prev.data.data, meetingStatus: "ENDED" },
+                    },
+                  }
+                : prev
+          );
           void queryClient.invalidateQueries({
             queryKey: getGetNoteQueryKey(noteId),
           });

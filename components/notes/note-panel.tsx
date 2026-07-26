@@ -83,6 +83,21 @@ export function NotePanel({
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
   const showArchive = phase === "ended" && !sharedTurnActive;
 
+  // 종료된 회의는 전사를 다시 시작할 수 없다 — 종료 다이얼로그가 그렇게 약속하고, 종료가
+  // 분석을 만들었으므로 이후 전사가 늘면 이미 나온 요약과 어긋난다.
+  //
+  // **상태를 모르는 동안에도 열지 않는다.** 콜드 캐시나 느린 응답에서는 `note`가 아직
+  // undefined인데, 그때 시작 버튼이 살아 있으면 종료된 회의에 세션이 붙는다. 계약의
+  // startTranscriptionSession에는 아직 거절 코드가 없어 서버도 이걸 안 막는다(APP-214 서버 몫).
+  const startBlockedReason =
+    note?.meetingStatus === "ENDED"
+      ? "종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
+      : note
+        ? null
+        : noteQuery.isError
+          ? "회의 상태를 확인하지 못했습니다."
+          : "회의 상태를 확인하는 중입니다.";
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-white lg:flex-row">
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
@@ -198,9 +213,14 @@ export function NotePanel({
           </TabsContent>
         </Tabs>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center px-5 sm:px-9">
-          <div className="pointer-events-auto">
-            <RecordingDock noteId={noteId} />
+        {/* 개인 챗봇 FAB이 `fixed right-6 bottom-6 size-12`로 같은 띠에 있다. 좁은 화면에서는
+          독이 그 아래로 들어가 가려지므로 레인에서 FAB 자리를 뺀다(24 + 48 + 여백).
+          sm부터는 가운데 정렬로 돌아가도 닿지 않는다. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center pl-5 pr-[84px] sm:px-9">
+          <div className="pointer-events-auto min-w-0">
+            {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
+              시작 버튼 자리에 이 문구가 선다. */}
+            <RecordingDock noteId={noteId} disabledReason={startBlockedReason} />
           </div>
         </div>
       </div>

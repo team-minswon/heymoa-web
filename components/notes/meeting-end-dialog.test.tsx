@@ -57,6 +57,7 @@ function renderDialog(onEnded?: () => void) {
   const view = render(ui(true));
   return {
     ...view,
+    client,
     reopen: () => view.rerender(ui(true)),
     close: () => view.rerender(ui(false)),
   };
@@ -89,6 +90,29 @@ describe("MeetingEndDialog", () => {
     renderDialog(onEnded);
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
     expect(onEnded).toHaveBeenCalled();
+  });
+
+  // invalidate만 하면 재조회 응답이 올 때까지 캐시에 IN_PROGRESS가 남고, 그 틈에
+  // 녹음 시작이 열린다 — 계약이 종료된 회의의 세션 생성을 안 막아 서버도 안 잡아 준다.
+  it("종료 직후 캐시의 회의 상태를 ENDED로 먼저 적는다", () => {
+    state.endMock.mockImplementation((_vars, options) =>
+      options?.onSuccess?.()
+    );
+    const { client } = renderDialog();
+    client.setQueryData(["note", "01K0000000002"], {
+      status: 200,
+      data: {
+        success: true,
+        data: { noteId: "01K0000000002", meetingStatus: "IN_PROGRESS" },
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+
+    const cached = client.getQueryData(["note", "01K0000000002"]) as {
+      data: { data: { meetingStatus: string } };
+    };
+    expect(cached.data.data.meetingStatus).toBe("ENDED");
   });
 
   it("녹음 중이면 종료 대신 녹음 중지를 준다", () => {

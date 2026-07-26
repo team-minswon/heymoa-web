@@ -214,6 +214,10 @@ describe("meeting and analysis", () => {
     );
   });
 
+  // 종료된 회의의 전사 시작은 여기서 막지 않는다 — 계약에 거절 코드가 없어 실서버도
+  // 안 막기 때문이다(APP-214 서버 몫). 목이 더 엄격하면 그 구멍이 로컬에서 가려진다.
+  // 지금 막는 곳은 UI다(`note-panel.test.tsx`).
+
   it("moves a meeting through pause and resume", () => {
     const noteId = startedNoteId();
 
