@@ -363,8 +363,8 @@ function Notice({
       role="alert"
       className={
         isError
-          ? "rounded-2xl border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3.5"
-          : "rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
+          ? "rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3.5"
+          : "rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
       }
     >
       <div className="flex gap-2.5">
@@ -460,8 +460,8 @@ function CallRecordCard({
       data-record="call"
       className={
         status === "error"
-          ? "rounded-2xl border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.04] p-3"
-          : "rounded-2xl border border-[var(--el-hairline)] bg-white p-3"
+          ? "rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.04] p-3"
+          : "rounded-block border border-[var(--el-hairline)] bg-white p-3"
       }
     >
       <div className="flex items-center justify-between gap-2">
@@ -533,7 +533,7 @@ function ApprovalPrompt({
         // 카드가 죽었다 — 버튼을 지우고 사유를 남긴다. 스트림은 정상 종료돼 컴포저는 다시 열린다.
         <div
           data-approval="invalidated"
-          className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-2.5"
+          className="mt-3 flex items-start gap-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-2.5"
         >
           <XCircle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
           <p className="text-xs leading-relaxed text-[var(--el-body)]">

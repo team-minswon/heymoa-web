@@ -145,7 +145,7 @@ export function WorkspaceSettingsForm({
         </Button>
       </form>
       {!workspace?.isDefault && (
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--el-hairline)] bg-white p-5">
+        <div className="flex items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-white p-5">
           <div>
             <p className="font-medium">기본 워크스페이스</p>
             <p className="text-sm text-[var(--el-muted)]">
@@ -175,7 +175,7 @@ export function WorkspaceSettingsFormSkeleton() {
       aria-label="워크스페이스 설정 불러오는 중"
     >
       <Skeleton className="h-9 w-40" />
-      <Skeleton className="h-64 rounded-2xl" />
+      <Skeleton className="h-64 rounded-panel" />
     </div>
   );
 }

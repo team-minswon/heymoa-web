@@ -120,8 +120,8 @@ export function WorkspaceIntegrationsSettings({
 
       {integrationsQuery.isLoading ? (
         <div className="space-y-3">
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-panel" />
+          <Skeleton className="h-24 rounded-panel" />
         </div>
       ) : integrationsQuery.isError ? (
         <div role="alert" className="space-y-2">
@@ -162,7 +162,7 @@ export function WorkspaceIntegrationsSettings({
       {roleError ? (
         <div
           role="alert"
-          className="mt-4 flex items-start gap-2 rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
+          className="mt-4 flex items-start gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
         >
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <div className="min-w-0 flex-1">
@@ -182,7 +182,7 @@ export function WorkspaceIntegrationsSettings({
       ) : roleKnown && !isAdmin ? (
         <div
           role="alert"
-          className="mt-4 flex items-start gap-2 rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
+          className="mt-4 flex items-start gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
         >
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <p className="text-xs leading-relaxed text-[var(--el-muted)]">
@@ -213,7 +213,7 @@ function IntegrationCard({
   return (
     <div className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--el-canvas-soft)]">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
           <Link2 className="size-4 text-[var(--el-ink)]" />
         </span>
         <div className="min-w-0">

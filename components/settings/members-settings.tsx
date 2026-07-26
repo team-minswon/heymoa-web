@@ -87,9 +87,9 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
 
       {membersQuery.isLoading ? (
         <div className="space-y-2">
-          <Skeleton className="h-[52px] rounded-xl" />
-          <Skeleton className="h-[52px] rounded-xl" />
-          <Skeleton className="h-[52px] rounded-xl" />
+          <Skeleton className="h-[52px] rounded-block" />
+          <Skeleton className="h-[52px] rounded-block" />
+          <Skeleton className="h-[52px] rounded-block" />
         </div>
       ) : membersQuery.isError ? (
         <div role="alert" className="space-y-2">
@@ -106,7 +106,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
           </Button>
         </div>
       ) : (
-        <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-2xl border border-[var(--el-hairline)] bg-white">
+        <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
           {members.map((member) => (
             <MemberRow
               key={member.userId}
@@ -256,7 +256,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
             <select
               id="invite-role"
               {...form.register("role")}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-8 rounded-control border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <option value="MEMBER">멤버</option>
               <option value="ADMIN">관리자</option>
@@ -270,7 +270,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
         {inviteMessage ? (
           <div
             role="alert"
-            className="flex items-start gap-2 rounded-xl border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] px-3 py-2.5"
+            className="flex items-start gap-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] px-3 py-2.5"
           >
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
             <p className="text-xs leading-relaxed text-[var(--el-body)]">
@@ -314,8 +314,8 @@ function PendingInvitations({
       <div className="mt-3">
         {isLoading ? (
           <div className="space-y-2">
-            <Skeleton className="h-[52px] rounded-xl" />
-            <Skeleton className="h-[52px] rounded-xl" />
+            <Skeleton className="h-[52px] rounded-block" />
+            <Skeleton className="h-[52px] rounded-block" />
           </div>
         ) : isError ? (
           <div role="alert" className="space-y-2">
@@ -332,14 +332,14 @@ function PendingInvitations({
             </Button>
           </div>
         ) : invitations.length === 0 ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-6">
+          <div className="flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-6">
             <Info className="size-4 shrink-0 text-[var(--el-muted)]" />
             <p className="text-sm text-[var(--el-muted)]">
               대기 중인 초대가 없습니다.
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-2xl border border-[var(--el-hairline)] bg-white">
+          <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
             {invitations.map((invitation) => (
               <li
                 key={invitation.invitationId}

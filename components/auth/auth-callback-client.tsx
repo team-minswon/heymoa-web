@@ -104,7 +104,7 @@ export function CallbackProcessor({
 
   if (errorDetails) {
     return (
-      <div className="w-full max-w-md rounded-3xl border border-[var(--el-hairline)] bg-white p-8 text-center shadow-[0_16px_48px_rgba(12,10,9,0.08)]">
+      <div className="w-full max-w-md rounded-panel border border-[var(--el-hairline)] bg-white p-8 text-center shadow-[0_16px_48px_rgba(12,10,9,0.08)]">
         <AlertTriangle className="mx-auto mb-5 size-10 text-[var(--el-error)]" />
         <h1 className="font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
           {errorDetails.title}

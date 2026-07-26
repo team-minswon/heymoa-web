@@ -96,7 +96,7 @@ export function NoteSummary({
       <Shell>
         <div
           role="alert"
-          className="rounded-2xl border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-4"
+          className="rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-4"
         >
           <div className="flex gap-2.5">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
@@ -128,7 +128,7 @@ export function NoteSummary({
   if (isMissing) {
     return (
       <Shell>
-        <div className="rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-5">
+        <div className="rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-5">
           <p className="text-sm font-medium text-[var(--el-ink)]">
             {isEnded
               ? "아직 요약이 없습니다"

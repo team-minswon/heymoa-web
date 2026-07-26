@@ -211,8 +211,8 @@ export function TranscriptView({ noteId }: { noteId: string }) {
         <section aria-label="회의 전사">
           {transcriptQuery.isPending ? (
             <div className="space-y-4" aria-label="대화 기록 불러오는 중">
-              <Skeleton className="h-24 rounded-2xl" />
-              <Skeleton className="h-28 rounded-2xl" />
+              <Skeleton className="h-24 rounded-block" />
+              <Skeleton className="h-28 rounded-block" />
             </div>
           ) : (
             <div>

@@ -271,7 +271,7 @@ export function SharedChatPanel({
                 // Alert 성격의 Pending Row + Badge로 도구·요약을 드러낸다.
                 <div
                   data-testid="spectator-pending"
-                  className="mt-4 rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3"
+                  className="mt-4 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-xs font-medium text-[var(--el-body-strong)]">
@@ -408,7 +408,7 @@ function ComposerNotice({
     <div className="border-t border-[var(--el-hairline)] px-5 py-4">
       <div
         role="alert"
-        className="rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
+        className="rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
       >
         <div className="flex gap-2.5">
           <span className="mt-0.5 shrink-0">{icon}</span>

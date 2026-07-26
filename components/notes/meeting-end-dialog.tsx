@@ -136,7 +136,7 @@ export function MeetingEndDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="flex items-center gap-2 rounded-xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5 text-xs text-[var(--el-muted)]">
+        <div className="flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5 text-xs text-[var(--el-muted)]">
           <Mic className="size-3.5" />
           녹음 상태 · {blocked ? "활성" : "대기"}
         </div>
@@ -144,7 +144,7 @@ export function MeetingEndDialog({
         {blocked ? (
           <div
             role="alert"
-            className="flex items-start gap-2 rounded-xl border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3"
+            className="flex items-start gap-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3"
           >
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
             <p className="text-xs leading-relaxed text-[var(--el-body)]">

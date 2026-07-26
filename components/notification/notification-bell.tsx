@@ -180,8 +180,8 @@ export function NotificationBell() {
         <div className="max-h-[360px] overflow-y-auto">
           {notificationsQuery.isLoading ? (
             <div className="space-y-3 p-4">
-              <Skeleton className="h-12 w-full rounded-xl" />
-              <Skeleton className="h-12 w-full rounded-xl" />
+              <Skeleton className="h-12 w-full rounded-block" />
+              <Skeleton className="h-12 w-full rounded-block" />
             </div>
           ) : notificationsQuery.isError ? (
             <div role="alert" className="space-y-2 p-4">

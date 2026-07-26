@@ -68,8 +68,8 @@ export function NoteArchive({ noteId }: { noteId: string }) {
 
           {transcriptQuery.isPending ? (
             <div className="mt-6 space-y-4" aria-label="대화 기록 불러오는 중">
-              <Skeleton className="h-24 rounded-2xl" />
-              <Skeleton className="h-28 rounded-2xl" />
+              <Skeleton className="h-24 rounded-block" />
+              <Skeleton className="h-28 rounded-block" />
             </div>
           ) : transcriptQuery.isError ? (
             // 실패를 "없음"으로 위장하지 않는다 — 아카이브가 TranscriptView의 재시도 경로를

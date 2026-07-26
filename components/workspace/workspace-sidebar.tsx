@@ -177,7 +177,7 @@ export function WorkspaceSidebar({
             }
           >
             <div className="flex w-full items-center gap-2.5 min-w-0">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[var(--el-primary)] text-[11px] font-bold text-white uppercase">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-control bg-[var(--el-primary)] text-[11px] font-bold text-white uppercase">
                 {workspace?.name?.trim().slice(0, 1) || "W"}
               </span>
               <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--el-ink)]">
@@ -188,13 +188,13 @@ export function WorkspaceSidebar({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-64 rounded-xl shadow-e3 border border-[var(--el-hairline)]"
+            className="w-64 rounded-panel shadow-e3 border border-[var(--el-hairline)]"
           >
             {workspaces.map((item) => (
               <DropdownMenuItem
                 key={item.workspaceId}
                 onClick={() => router.push(`/w/${item.workspaceId}`)}
-                className="justify-between rounded-lg py-2 text-sm"
+                className="justify-between rounded-control py-2 text-sm"
               >
                 <span className="truncate flex-1">{item.name}</span>
                 {item.workspaceId === workspaceId && (
@@ -205,14 +205,14 @@ export function WorkspaceSidebar({
             <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
             <DropdownMenuItem
               onClick={() => setWorkspaceDialogOpen(true)}
-              className="gap-2 rounded-lg py-2 text-sm"
+              className="gap-2 rounded-control py-2 text-sm"
             >
               <Plus className="size-4 text-[var(--el-muted)]" />
               <span>새 워크스페이스</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onOpenSettings("workspace")}
-              className="gap-2 rounded-lg py-2 text-sm"
+              className="gap-2 rounded-control py-2 text-sm"
             >
               <Settings className="size-4 text-[var(--el-muted)]" />
               <span>워크스페이스 설정</span>
@@ -233,7 +233,7 @@ export function WorkspaceSidebar({
                   <SidebarMenuButton
                     isActive={selectedProjectId === null}
                     onClick={() => onSelectProject(null)}
-                    className="gap-2.5 text-[13px] font-medium rounded-lg h-8 px-2.5"
+                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
                     <NotebookText className="size-4 text-[var(--el-muted)]" />
                     <span>모든 노트</span>
@@ -260,7 +260,7 @@ export function WorkspaceSidebar({
               <button
                 aria-label="새 프로젝트"
                 onClick={() => setProjectDialog({ mode: "create" })}
-                className="flex size-5 items-center justify-center rounded hover:bg-[var(--el-surface-strong)] text-[var(--el-muted)] hover:text-[var(--el-ink)] transition-colors"
+                className="flex size-5 items-center justify-center rounded-chip hover:bg-[var(--el-surface-strong)] text-[var(--el-muted)] hover:text-[var(--el-ink)] transition-colors"
               >
                 <Plus className="size-3.5" />
               </button>
@@ -273,7 +273,7 @@ export function WorkspaceSidebar({
                       <SidebarMenuButton
                         isActive={selectedProjectId === project.projectId}
                         onClick={() => onSelectProject(project.projectId)}
-                        className="gap-2.5 text-[13px] font-medium rounded-lg h-8 px-2.5"
+                        className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                       >
                         <Folder className="size-4 text-[var(--el-muted)]" />
                         <span className="truncate">{project.name}</span>
@@ -284,7 +284,7 @@ export function WorkspaceSidebar({
                             <SidebarMenuAction
                               aria-label={`${project.name} 프로젝트 메뉴`}
                               showOnHover
-                              className="size-5 rounded text-[var(--el-muted-soft)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
+                              className="size-5 rounded-chip text-[var(--el-muted-soft)] hover:text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]"
                             />
                           }
                         >
@@ -293,13 +293,13 @@ export function WorkspaceSidebar({
                         <DropdownMenuContent
                           side="right"
                           align="start"
-                          className="rounded-xl shadow-e3 border border-[var(--el-hairline)]"
+                          className="rounded-panel shadow-e3 border border-[var(--el-hairline)]"
                         >
                           <DropdownMenuItem
                             onClick={() =>
                               setProjectDialog({ mode: "rename", project })
                             }
-                            className="gap-2 rounded-lg py-1.5 text-xs"
+                            className="gap-2 rounded-control py-1.5 text-xs"
                           >
                             <Pencil className="size-3.5 text-[var(--el-muted)]" />
                             <span>이름 변경</span>
@@ -307,7 +307,7 @@ export function WorkspaceSidebar({
                           <DropdownMenuItem
                             variant="destructive"
                             onClick={() => setDeleteTarget(project)}
-                            className="gap-2 rounded-lg py-1.5 text-xs text-destructive"
+                            className="gap-2 rounded-control py-1.5 text-xs text-destructive"
                           >
                             <Trash2 className="size-3.5" />
                             <span>삭제</span>
@@ -367,7 +367,7 @@ export function WorkspaceSidebar({
           >
             <DropdownMenuItem
               onClick={() => onOpenSettings("account")}
-              className="gap-2 rounded-lg py-2 text-sm"
+              className="gap-2 rounded-control py-2 text-sm"
             >
               <Settings className="size-4 text-[var(--el-muted)]" />
               <span>내 계정 설정</span>
@@ -376,7 +376,7 @@ export function WorkspaceSidebar({
             <DropdownMenuItem
               disabled={isLoggingOut}
               onClick={() => void logout()}
-              className="gap-2 rounded-lg py-2 text-sm text-destructive"
+              className="gap-2 rounded-control py-2 text-sm text-destructive"
             >
               {isLoggingOut ? (
                 <Loader2 className="size-4 animate-spin" />

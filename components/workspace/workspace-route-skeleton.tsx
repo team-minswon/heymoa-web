@@ -25,36 +25,36 @@ export function WorkspaceRouteSkeleton() {
       <aside className="hidden w-[255px] shrink-0 border-r border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] md:flex md:flex-col">
         {/* 상단: 워크스페이스 1줄 56 (CHROME SPEC) */}
         <div className="flex h-14 items-center gap-2.5 px-3">
-          <Skeleton className="size-7 shrink-0 rounded-md" />
-          <Skeleton className="h-3.5 w-32 rounded-md" />
+          <Skeleton className="size-7 shrink-0 rounded-chip" />
+          <Skeleton className="h-3.5 w-32 rounded-chip" />
         </div>
         <div className="h-px bg-[var(--el-hairline)]" />
         <div className="flex-1 space-y-1 px-3 py-3">
           <Skeleton className="h-9 rounded-full" />
           <div className="h-3" />
-          <Skeleton className="h-3 w-16 rounded-md" />
-          <Skeleton className="h-7 w-4/5 rounded-md" />
-          <Skeleton className="h-7 w-3/5 rounded-md" />
+          <Skeleton className="h-3 w-16 rounded-chip" />
+          <Skeleton className="h-7 w-4/5 rounded-chip" />
+          <Skeleton className="h-7 w-3/5 rounded-chip" />
         </div>
         {/* 하단: UserBar (상단 hairline) */}
         <div className="h-px bg-[var(--el-hairline)]" />
         <div className="flex h-14 items-center gap-2.5 px-3">
           <Skeleton className="size-7 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <Skeleton className="h-3 w-20 rounded-md" />
-            <Skeleton className="h-2.5 w-28 rounded-md" />
+            <Skeleton className="h-3 w-20 rounded-chip" />
+            <Skeleton className="h-2.5 w-28 rounded-chip" />
           </div>
         </div>
       </aside>
       <main className="min-w-0 flex-1">
         {/* 상단바 1단 64와 같은 높이여야 로딩이 끝날 때 본문이 안 밀린다. (CHROME SPEC) */}
         <div className="flex h-16 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
-          <Skeleton className="h-5 w-28 rounded-md" />
+          <Skeleton className="h-5 w-28 rounded-chip" />
         </div>
         <section className="mx-auto w-full max-w-[1440px] px-4 pt-8 pb-16 sm:px-8 sm:pt-11 lg:px-14 xl:px-20">
           {/* 제목 34 세리프 + 서브타이틀. 키커는 없다(FORM SPEC). */}
-          <Skeleton className="h-9 w-56 max-w-full rounded-md" />
-          <Skeleton className="mt-3 h-4 w-80 max-w-full rounded-md" />
+          <Skeleton className="h-9 w-56 max-w-full rounded-chip" />
+          <Skeleton className="mt-3 h-4 w-80 max-w-full rounded-chip" />
           {/* 필터 칩 둘 — chip 6 */}
           <div className="mt-6 flex items-center gap-1.5 border-b border-[var(--el-hairline)] pb-4">
             <Skeleton className="h-8 w-[51px] rounded-chip" />
@@ -63,12 +63,12 @@ export function WorkspaceRouteSkeleton() {
           {/* 날짜 헤더 + 목록 행 52 (행 사이 hairline) */}
           {[3, 2].map((rows, group) => (
             <div key={group}>
-              <Skeleton className="mt-5 mb-2 ml-3 h-3 w-36 rounded-md" />
+              <Skeleton className="mt-5 mb-2 ml-3 h-3 w-36 rounded-chip" />
               <div className="divide-y divide-[var(--el-hairline)]">
                 {Array.from({ length: rows }, (_, row) => (
                   <div key={row} className="flex h-[52px] items-center gap-3.5">
-                    <Skeleton className="size-5 shrink-0 rounded-md" />
-                    <Skeleton className="h-4 w-1/3 rounded-md" />
+                    <Skeleton className="size-5 shrink-0 rounded-chip" />
+                    <Skeleton className="h-4 w-1/3 rounded-chip" />
                   </div>
                 ))}
               </div>

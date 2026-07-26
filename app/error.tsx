@@ -11,7 +11,7 @@ export default function Error({
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--el-canvas)] px-4 py-12 text-[var(--el-ink)]">
-      <div className="w-full max-w-lg rounded-3xl border border-[var(--el-hairline)] bg-white p-8 text-center shadow-[0_16px_48px_rgba(12,10,9,0.08)] sm:p-12">
+      <div className="w-full max-w-lg rounded-panel border border-[var(--el-hairline)] bg-white p-8 text-center shadow-[0_16px_48px_rgba(12,10,9,0.08)] sm:p-12">
         <AlertTriangle className="mx-auto mb-5 size-10 text-[var(--el-error)]" />
         <h1 className="font-serif text-3xl font-light tracking-[-0.025em]">
           화면을 불러오지 못했습니다

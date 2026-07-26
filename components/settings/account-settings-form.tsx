@@ -35,7 +35,7 @@ export function AccountSettingsForm() {
           <Input id="account-email" value={user.email} disabled />
         </div>
       </div>
-      <div className="space-y-2 rounded-2xl border border-[var(--el-hairline)] bg-white p-6">
+      <div className="space-y-2 rounded-panel border border-[var(--el-hairline)] bg-white p-6">
         <Label htmlFor="account-name">이름</Label>
         <Input id="account-name" value={user.name} disabled />
       </div>
@@ -51,8 +51,8 @@ export function AccountSettingsFormSkeleton() {
       aria-label="내 계정 설정 불러오는 중"
     >
       <Skeleton className="h-9 w-28" />
-      <Skeleton className="h-24 rounded-2xl" />
-      <Skeleton className="h-20 rounded-2xl" />
+      <Skeleton className="h-24 rounded-panel" />
+      <Skeleton className="h-20 rounded-panel" />
     </div>
   );
 }
