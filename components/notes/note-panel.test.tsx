@@ -16,6 +16,29 @@ import {
 } from "@/components/transcription/recording-provider";
 
 const useGetProject = vi.hoisted(() => vi.fn());
+/** side에서 독을 감추는 판정이 recording 상태에 달려 있어 덮어쓸 수 있게 둔다. */
+const recordingState = vi.hoisted(() => ({
+  activeNoteId: null as string | null,
+  phase: "idle" as string,
+}));
+
+vi.mock("@/components/transcription/recording-provider", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/components/transcription/recording-provider")
+  >("@/components/transcription/recording-provider");
+  return {
+    ...actual,
+    useRecording: () => ({
+      ...actual.useRecording(),
+      ...(recordingState.activeNoteId
+        ? {
+            activeNoteId: recordingState.activeNoteId,
+            phase: recordingState.phase,
+          }
+        : {}),
+    }),
+  };
+});
 const noteState = vi.hoisted(() => ({
   /** 세팅하면 `useGetNote` 반환을 통째로 대신한다 — 로딩·실패를 그리려고 쓴다. */
   query: null as { data?: unknown; isError?: boolean } | null,
@@ -146,6 +169,8 @@ describe("NotePanel", () => {
   });
   afterEach(() => {
     cleanup();
+    recordingState.activeNoteId = null;
+    recordingState.phase = "idle";
     noteState.query = null;
     noteState.value = {
       noteId: "01K0000000002",
@@ -187,7 +212,7 @@ describe("NotePanel", () => {
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
-        view="side"
+        view="full"
         tab="transcript"
         onTabChange={vi.fn()}
         onClose={vi.fn()}
@@ -215,7 +240,7 @@ describe("NotePanel", () => {
         <NotePanel
           workspaceId="01K0000000000"
           noteId="01K0000000002"
-          view="side"
+          view="full"
           tab="transcript"
           onTabChange={vi.fn()}
           onClose={vi.fn()}
@@ -223,7 +248,7 @@ describe("NotePanel", () => {
         <NotePanel
           workspaceId="01K0000000000"
           noteId="01K0000000003"
-          view="side"
+          view="full"
           tab="transcript"
           onTabChange={vi.fn()}
           onClose={vi.fn()}
@@ -350,12 +375,13 @@ describe("NotePanel", () => {
   // 계약의 startTranscriptionSession에는 아직 종료 거절 코드가 없다 — 서버가 안 막으므로
   // 여기서 여는 순간 종료된 회의에 세션이 붙는다(APP-214 서버 몫).
   describe("녹음 시작 게이트", () => {
-    function renderDock() {
+    // 독은 full의 것이다(v5 side 프레임 셋에 없다) — 게이트도 full에서 검사한다.
+    function renderDock(view: "side" | "full" = "full") {
       renderNotePanel(
         <NotePanel
           workspaceId="01K0000000000"
           noteId="01K0000000002"
-          view="side"
+          view={view}
           tab="transcript"
           onTabChange={vi.fn()}
           onClose={vi.fn()}
@@ -392,6 +418,59 @@ describe("NotePanel", () => {
       expect(
         screen.getByRole("button", { name: "기록 시작" })
       ).toBeInTheDocument();
+    });
+  });
+
+  // v5 side 프레임 셋(oLmGL·viNgv·KCoyt)에는 레코더 독도 회의 조작도 없다. side에서
+  // 녹음만 시작되고 회의를 끝낼 곳이 없던 것이 APP-220이다 — 시작 자체를 side에서 뺀다.
+  describe("side는 회의 조작 면이 아니다", () => {
+    function renderSide() {
+      renderNotePanel(
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000002"
+          view="side"
+          tab="transcript"
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      );
+    }
+
+    it("side에서는 레코더 독이 없다", () => {
+      renderSide();
+
+      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
+    });
+
+    it("그 노트를 녹음 중이면 독을 남긴다 — 멈출 방법이 사라지면 안 된다", () => {
+      // 전역 녹음 필은 워크스페이스 라우트에서 안 뜬다(!isWorkspaceRoute).
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "recording";
+
+      renderSide();
+
+      expect(screen.getByLabelText("녹음 제어")).toBeInTheDocument();
+    });
+
+    // activeNoteId는 녹음이 끝나도 남는다. "idle이 아님"으로 판정하면 끝난 뒤에도 독이
+    // 다시 서서 side에서 시작 버튼이 살아난다.
+    it("녹음이 끝났으면 독을 다시 세우지 않는다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "completed";
+
+      renderSide();
+
+      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
+    });
+
+    it("다른 노트를 녹음 중이면 이 노트의 side에는 독이 없다", () => {
+      recordingState.activeNoteId = "01K0000000099";
+      recordingState.phase = "recording";
+
+      renderSide();
+
+      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
     });
   });
 });

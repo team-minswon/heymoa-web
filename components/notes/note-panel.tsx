@@ -12,6 +12,10 @@ import { NoteSummary } from "@/components/notes/note-summary";
 import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
+import {
+  isNoteRecordingActive,
+  useRecording,
+} from "@/components/transcription/recording-provider";
 import { Badge } from "@/components/ui/badge";
 import { formatAppDate } from "@/lib/format/date";
 import { Button } from "@/components/ui/button";
@@ -81,6 +85,20 @@ export function NotePanel({
   const showSharedTray = view === "full" && (meetingLive || sharedTurnActive);
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
   const showArchive = phase === "ended" && !sharedTurnActive;
+
+  // v5 side 프레임 셋(`oLmGL`·`viNgv`·`KCoyt`)에는 레코더 독도 회의 조작도 없다. side는
+  // 읽기·미리보기 면이고 주 액션은 `확장`이다 — full 프레임(`Ftvu9`)에만 둘 다 있다.
+  //
+  // **다만 도는 녹음은 남긴다.** 전역 녹음 필은 `!isWorkspaceRoute`라 워크스페이스 안에서는
+  // 안 뜬다. full에서 시작하고 side로 오면 독까지 없앨 때 멈출 방법이 하나도 없다.
+  // (프레임 셋이 전부 종료된 회의라 "라이브를 side로 볼 때"는 그려진 적이 없다 — 추론이다.)
+  //
+  // 판정은 `isNoteRecordingActive`를 쓴다. `activeNoteId`는 종료 뒤에도 남고 phase가
+  // `completed`·`failed`로 가므로 "idle이 아님"으로 보면 끝난 녹음에도 독이 다시 서서
+  // side에서 시작 버튼이 살아난다. 그 함수는 진행 phase와 **서버 세션이 아직 열린** failed만
+  // 활성으로 본다 — 후자는 정리할 세션이 남아 있어 독이 필요한 경우다.
+  const recording = useRecording();
+  const showDock = view === "full" || isNoteRecordingActive(recording, noteId);
 
   // 종료된 회의는 전사를 다시 시작할 수 없다 — 종료 다이얼로그가 그렇게 약속하고, 종료가
   // 분석을 만들었으므로 이후 전사가 늘면 이미 나온 요약과 어긋난다.
@@ -212,16 +230,21 @@ export function NotePanel({
           </TabsContent>
         </Tabs>
 
-        {/* 개인 챗봇 FAB이 `fixed right-6 bottom-6 size-12`로 같은 띠에 있다. 좁은 화면에서는
-          독이 그 아래로 들어가 가려지므로 레인에서 FAB 자리를 뺀다(24 + 48 + 여백).
-          sm부터는 가운데 정렬로 돌아가도 닿지 않는다. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center pl-5 pr-[84px] sm:px-9">
-          <div className="pointer-events-auto min-w-0">
-            {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
-              시작 버튼 자리에 이 문구가 선다. */}
-            <RecordingDock noteId={noteId} disabledReason={startBlockedReason} />
+        {showDock ? (
+          /* 개인 챗봇 FAB이 `fixed right-6 bottom-6 size-12`로 같은 띠에 있다. 좁은 화면에서는
+            독이 그 아래로 들어가 가려지므로 레인에서 FAB 자리를 뺀다(24 + 48 + 여백).
+            sm부터는 가운데 정렬로 돌아가도 닿지 않는다. */
+          <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center pl-5 pr-[84px] sm:px-9">
+            <div className="pointer-events-auto min-w-0">
+              {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
+                시작 버튼 자리에 이 문구가 선다. */}
+              <RecordingDock
+                noteId={noteId}
+                disabledReason={startBlockedReason}
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       {showSharedTray ? (
