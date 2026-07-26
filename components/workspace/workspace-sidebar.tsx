@@ -188,7 +188,7 @@ export function WorkspaceSidebar({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-64 rounded-panel shadow-e3 border border-[var(--el-hairline)]"
+            className="w-64"
           >
             {workspaces.map((item) => (
               <DropdownMenuItem
@@ -293,7 +293,7 @@ export function WorkspaceSidebar({
                         <DropdownMenuContent
                           side="right"
                           align="start"
-                          className="rounded-panel shadow-e3 border border-[var(--el-hairline)]"
+                          className="rounded-panel"
                         >
                           <DropdownMenuItem
                             onClick={() =>
@@ -363,7 +363,7 @@ export function WorkspaceSidebar({
           <DropdownMenuContent
             align="start"
             side="top"
-            className="w-60 rounded-panel shadow-e3 border border-[var(--el-hairline)]"
+            className="w-60"
           >
             <DropdownMenuItem
               onClick={() => onOpenSettings("account")}
