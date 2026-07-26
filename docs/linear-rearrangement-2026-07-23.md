@@ -1,6 +1,6 @@
 # Linear 재배치 기록 (2026-07-23)
 
-계약 반영과 v4 디자인 작업(`docs/superpowers/specs/2026-07-23-web-contract-sync-and-v4-design.md`)의
+계약 반영과 v4 디자인 작업(`docs/superpowers/specs/2026-07-23-app-110-web-contract-sync-and-v4-design.md`)의
 0단계 산출물. 스펙의 6단계를 Linear에 겹쳐 보니 담을 이슈가 없는 단계가 둘이었고,
 APP-110은 전제 자체가 무너져 있었다.
 

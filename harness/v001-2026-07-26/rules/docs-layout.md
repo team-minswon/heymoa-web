@@ -8,7 +8,11 @@
 | `DESIGN.md` · `docs/design/` | 디자인 판단의 원본 | 코드가 바뀌면 같이 고칩니다 |
 | `docs/codex-review-app-N.md` | 그 이슈의 codex 리뷰 기록 | 안 고칩니다 |
 
-**`specs/`·`plans/`의 파일명만** `YYYY-MM-DD-영문-slug.md`입니다. 이미 50개 넘게 그 형태입니다.
+**`specs/`·`plans/`의 파일명은 `YYYY-MM-DD-app-N-slug.md`입니다.** 이슈 번호를 빼지 않습니다 —
+빼면 나중에 이 문서가 어느 작업의 산출물인지 git log를 뒤져야 알 수 있습니다. 실제로 초기
+문서 여럿이 번호 없이 쌓여 되짚어야 했습니다. 문서 하나가 이슈 여럿에 걸치면 **먼저 만든
+이슈 번호**를 씁니다(`app-205`가 205~208을 함께 담는 식).
+
 리뷰 기록은 여기 안 걸립니다 — `docs/codex-review-app-N.md` 그대로 씁니다. 날짜를 붙이면
 `code-review` skill이 찾는 `docs/codex-review-app-*.md` 패턴에서 빠집니다.
 

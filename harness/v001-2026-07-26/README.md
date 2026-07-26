@@ -4,7 +4,7 @@ heymoa-web의 첫 하네스입니다. rule 5개, skill 2개, hook 1개입니다.
 
 `AGENTS.md` 145줄 한 파일을 성격에 따라 나눈 것이고, **새 규칙을 지어낸 것이 아닙니다.**
 형식은 heymoa-ai의 `harness/vNNN/` + 심링크를 따랐고 내용은 web이 이미 가진 것입니다.
-설계는 [`docs/superpowers/specs/2026-07-26-agent-harness-restructure-design.md`](../../docs/superpowers/specs/2026-07-26-agent-harness-restructure-design.md)에 있습니다.
+설계는 [`docs/superpowers/specs/2026-07-26-app-200-agent-harness-restructure-design.md`](../../docs/superpowers/specs/2026-07-26-app-200-agent-harness-restructure-design.md)에 있습니다.
 
 ## 매 세션 읽히는 rule
 
