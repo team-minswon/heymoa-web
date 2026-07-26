@@ -28,9 +28,7 @@ describe("design tokens (globals.css)", () => {
 
   it("keeps e2/e3 elevation as a two-shadow stack (not the marketing single tier)", () => {
     for (const token of ["--shadow-e2", "--shadow-e3"]) {
-      const line = css
-        .split("\n")
-        .find((l) => l.trimStart().startsWith(token));
+      const line = css.split("\n").find((l) => l.trimStart().startsWith(token));
       expect(line, `${token} missing`).toBeDefined();
       // 접지 + 앰비언트 2연타 → 콤마로 두 그림자.
       expect(line!.split(",").length).toBeGreaterThanOrEqual(2);

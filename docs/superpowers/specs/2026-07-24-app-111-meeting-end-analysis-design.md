@@ -14,13 +14,13 @@
 
 상태별 버튼(시작자):
 
-| meetingStatus | 버튼 | 프레임 |
-|---|---|---|
-| IN_PROGRESS + startedBy=me | 중지(`usePauseMeeting`) · 회의 종료 | `TkHep` |
-| PAUSED + startedBy=me | 재개(`useResumeMeeting`) · 회의 종료 | `DdzUR` |
-| IN_PROGRESS/PAUSED + startedBy=타인 | 없음. pill + 시작자 힌트 | `oMqgT` |
-| ENDED | 없음 (조작 끝) | — |
-| startedBy=null (미시작) | 없음 (녹음 독이 시작 담당) | `NsGqf` |
+| meetingStatus                       | 버튼                                 | 프레임  |
+| ----------------------------------- | ------------------------------------ | ------- |
+| IN_PROGRESS + startedBy=me          | 중지(`usePauseMeeting`) · 회의 종료  | `TkHep` |
+| PAUSED + startedBy=me               | 재개(`useResumeMeeting`) · 회의 종료 | `DdzUR` |
+| IN_PROGRESS/PAUSED + startedBy=타인 | 없음. pill + 시작자 힌트             | `oMqgT` |
+| ENDED                               | 없음 (조작 끝)                       | —       |
+| startedBy=null (미시작)             | 없음 (녹음 독이 시작 담당)           | `NsGqf` |
 
 ### 탭은 full 모드에서 항상 3개다
 
@@ -32,12 +32,12 @@
 
 `GET analyses/latest`가 만드는 다섯 화면:
 
-| 응답 | 화면 | 프레임 |
-|---|---|---|
-| **404** | 오류 아님 — "아직 분석 전". ENDED면 `요약 만들기`(`useRequestAnalysis`), 진행 중이면 안내만 | `f9FCb` |
-| PENDING·RUNNING | 3행 스켈레톤. **폴링**(`refetchInterval`) | `uWnWH` |
-| SUCCEEDED | overview/actionItems/insights 마크다운 3종 | `quNSL` |
-| FAILED | `errorCode`·`errorMessage` destructive `Alert` + `다시 분석` | `PAVkf` |
+| 응답            | 화면                                                                                        | 프레임  |
+| --------------- | ------------------------------------------------------------------------------------------- | ------- |
+| **404**         | 오류 아님 — "아직 분석 전". ENDED면 `요약 만들기`(`useRequestAnalysis`), 진행 중이면 안내만 | `f9FCb` |
+| PENDING·RUNNING | 3행 스켈레톤. **폴링**(`refetchInterval`)                                                   | `uWnWH` |
+| SUCCEEDED       | overview/actionItems/insights 마크다운 3종                                                  | `quNSL` |
+| FAILED          | `errorCode`·`errorMessage` destructive `Alert` + `다시 분석`                                | `PAVkf` |
 
 **404는 빈 상태다(오류 아님).** `useGetLatestAnalysis`의 404를 error boundary가 아니라 빈 상태로 떨어뜨린다(`errorCodeOf === "ANALYSIS_JOB_NOT_FOUND"`). 폴링은 status가 PENDING/RUNNING일 때만 켜고 SUCCEEDED/FAILED/404면 멈춘다.
 
@@ -71,13 +71,13 @@ components/notes/note-panel.tsx      (수정) 3탭(전사/요약/노트정보) +
 
 ## 오류 표시 — AGENTS.md 경계
 
-| 무엇 | 어떻게 |
-|---|---|
-| 404 분석 없음 | 빈 상태(오류 아님) |
-| FAILED 분석 | 요약 탭 인라인 destructive `Alert` + 재분석 (주 데이터가 실패 상태) |
-| 409 녹음 중 종료 | 종료 다이얼로그 안 인라인 `Alert` + 녹음 중지 액션 |
-| 409 이미 종료·미종료·분석 중 | 토스트 (전역 MutationCache) 또는 버튼 숨김/disabled로 예방 |
-| 노트 404 | error boundary/빈 상태 (기존) |
+| 무엇                         | 어떻게                                                              |
+| ---------------------------- | ------------------------------------------------------------------- |
+| 404 분석 없음                | 빈 상태(오류 아님)                                                  |
+| FAILED 분석                  | 요약 탭 인라인 destructive `Alert` + 재분석 (주 데이터가 실패 상태) |
+| 409 녹음 중 종료             | 종료 다이얼로그 안 인라인 `Alert` + 녹음 중지 액션                  |
+| 409 이미 종료·미종료·분석 중 | 토스트 (전역 MutationCache) 또는 버튼 숨김/disabled로 예방          |
+| 노트 404                     | error boundary/빈 상태 (기존)                                       |
 
 ## 성공 기준
 

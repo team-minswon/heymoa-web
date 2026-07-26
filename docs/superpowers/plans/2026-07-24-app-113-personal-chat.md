@@ -24,6 +24,7 @@
 ### Task 1: 스트림 프로토콜 리듀서
 
 **Files:**
+
 - Create: `lib/chat/stream-protocol.ts`
 - Test: `lib/chat/stream-protocol.test.ts`
 
@@ -31,12 +32,29 @@
 
 ```ts
 export type ChatStreamPhase =
-  | "idle" | "streaming" | "awaiting_approval"
-  | "failed" | "stalled" | "aborted";
+  | "idle"
+  | "streaming"
+  | "awaiting_approval"
+  | "failed"
+  | "stalled"
+  | "aborted";
 
 export type LiveToolRecord =
-  | { kind: "approval"; approvalId: string; tool: string; summary?: string; decision: "APPROVED" | "REJECTED" | null }
-  | { kind: "call"; toolCallId: string; tool: string; summary?: string; status: "success" | "error" | null; url?: string | null };
+  | {
+      kind: "approval";
+      approvalId: string;
+      tool: string;
+      summary?: string;
+      decision: "APPROVED" | "REJECTED" | null;
+    }
+  | {
+      kind: "call";
+      toolCallId: string;
+      tool: string;
+      summary?: string;
+      status: "success" | "error" | null;
+      url?: string | null;
+    };
 
 export type ChatStreamState = {
   phase: ChatStreamPhase;
@@ -46,13 +64,23 @@ export type ChatStreamState = {
   /** 확정된 답변. message_end 전에는 null. */
   content: string | null;
   records: LiveToolRecord[];
-  pendingApproval: { approvalId: string; tool: string; summary?: string } | null;
+  pendingApproval: {
+    approvalId: string;
+    tool: string;
+    summary?: string;
+  } | null;
   error: { code: string; message: string } | null;
 };
 
 export const initialStreamState: ChatStreamState;
-export function reduceStreamEvent(state: ChatStreamState, event: { event: string; data: string }): ChatStreamState;
-export function endStream(state: ChatStreamState, reason: "closed" | "stalled" | "aborted"): ChatStreamState;
+export function reduceStreamEvent(
+  state: ChatStreamState,
+  event: { event: string; data: string }
+): ChatStreamState;
+export function endStream(
+  state: ChatStreamState,
+  reason: "closed" | "stalled" | "aborted"
+): ChatStreamState;
 ```
 
 - [ ] **Step 1: 실패하는 테스트를 쓴다**
@@ -92,6 +120,7 @@ pnpm vitest run lib/chat/stream-protocol.test.ts
 ### Task 2: `useChatStream` 훅
 
 **Files:**
+
 - Create: `lib/chat/use-chat-stream.ts`
 - Test: `lib/chat/use-chat-stream.test.ts`
 
@@ -145,6 +174,7 @@ pnpm vitest run lib/chat/use-chat-stream.test.ts
 ### Task 3: 스레드 렌더
 
 **Files:**
+
 - Create: `components/chat/chat-thread.tsx`
 - Test: `components/chat/chat-thread.test.tsx`
 
@@ -203,6 +233,7 @@ if (message.role === "TOOL") {
 ### Task 4: 개인 챗봇 패널 + 스코프 배선
 
 **Files:**
+
 - Create: `components/chat/personal-chat.tsx`
 - Modify: `components/workspace/workspace-app-shell.tsx` (패널 마운트 + 본문 우측 여백)
 - Modify: `components/notes/note-view.tsx` 또는 `note-route-surface.tsx` (노트 스코프 등록 / side 숨김)
@@ -213,9 +244,14 @@ if (message.role === "TOOL") {
 **Produces:**
 
 ```tsx
-export function PersonalChatProvider({ workspaceId, children }): React.ReactElement;
+export function PersonalChatProvider({
+  workspaceId,
+  children,
+}): React.ReactElement;
 /** 노트 화면이 자기 스코프를 등록한다. view가 side면 hidden으로 넘긴다. */
-export function usePersonalChatScope(scope: { noteId: string; hidden: boolean } | null): void;
+export function usePersonalChatScope(
+  scope: { noteId: string; hidden: boolean } | null
+): void;
 ```
 
 - [ ] **Step 1: 실패하는 테스트를 쓴다**
@@ -251,6 +287,7 @@ generated 훅은 기존 테스트 관례대로 `vi.mock`한다.
 ### Task 5: Playwright 스모크
 
 **Files:**
+
 - Modify: `e2e/smoke.spec.ts`
 
 - [ ] **Step 1: 시나리오를 추가한다**

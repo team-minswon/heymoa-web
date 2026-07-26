@@ -31,7 +31,11 @@ vi.mock("@/components/transcription/recording-provider", async () => {
       stop: state.stopMock,
       disconnect: state.disconnectMock,
       session: state.recordingNoteId
-        ? { sessionId: "sess1", noteId: state.recordingNoteId, status: "ACTIVE" }
+        ? {
+            sessionId: "sess1",
+            noteId: state.recordingNoteId,
+            status: "ACTIVE",
+          }
         : null,
     }),
   };

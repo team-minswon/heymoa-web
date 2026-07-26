@@ -2,7 +2,10 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ChatThread, type ThreadMessage } from "@/components/chat/chat-thread";
-import { initialStreamState, type ChatStreamState } from "@/lib/chat/stream-protocol";
+import {
+  initialStreamState,
+  type ChatStreamState,
+} from "@/lib/chat/stream-protocol";
 
 afterEach(cleanup);
 
@@ -51,7 +54,11 @@ describe("ChatThread", () => {
     // 공유 챗봇은 멀티멤버라 누가 물었는지 보여야 한다. 개인 메시지에는 authorName이 없다.
     renderThread({
       messages: [
-        message({ role: "USER", content: "배포 이슈 요약해줘", authorName: "홍길동" }),
+        message({
+          role: "USER",
+          content: "배포 이슈 요약해줘",
+          authorName: "홍길동",
+        }),
       ],
     });
     expect(screen.getByText("홍길동")).toBeTruthy();
@@ -121,7 +128,9 @@ describe("ChatThread", () => {
   });
 
   it("스트리밍 중에는 지금까지의 토큰과 커서가 보인다", () => {
-    const { container } = renderThread({ stream: streaming({ text: "만들던 중" }) });
+    const { container } = renderThread({
+      stream: streaming({ text: "만들던 중" }),
+    });
     expect(screen.getByText(/만들던 중/)).toBeTruthy();
     expect(container.querySelector('[data-stream="cursor"]')).toBeTruthy();
   });
@@ -133,7 +142,10 @@ describe("ChatThread", () => {
         ...initialStreamState,
         phase: "failed",
         text: "",
-        error: { code: "LLM_PROVIDER_ERROR", message: "응답 생성에 실패했습니다." },
+        error: {
+          code: "LLM_PROVIDER_ERROR",
+          message: "응답 생성에 실패했습니다.",
+        },
       },
       onRetry,
     });
@@ -194,7 +206,9 @@ describe("ChatThread", () => {
         },
       },
     });
-    expect(container.querySelector('[data-approval="invalidated"]')).toBeTruthy();
+    expect(
+      container.querySelector('[data-approval="invalidated"]')
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
     expect(screen.queryByRole("button", { name: "거절" })).toBeNull();
     expect(
@@ -230,9 +244,10 @@ describe("ChatThread", () => {
       stream: { ...initialStreamState, phase: "stalled", text: "만들던 중" },
       isRetryDisabled: true,
     });
-    expect(
-      screen.getByRole("button", { name: "다시 보내기" })
-    ).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "다시 보내기" })).toHaveProperty(
+      "disabled",
+      true
+    );
   });
 
   it("메시지가 없고 흐르지 않으면 빈 상태를 보인다", () => {

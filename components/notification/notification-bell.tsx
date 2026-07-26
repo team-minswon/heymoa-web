@@ -112,7 +112,10 @@ export function NotificationBell() {
     markReadIfUnread(notification);
     declineInvitation.mutate(
       { invitationId: notification.invitation!.invitationId },
-      { onSuccess: () => void invalidateNotifications(), onError: onResolveError }
+      {
+        onSuccess: () => void invalidateNotifications(),
+        onError: onResolveError,
+      }
     );
   };
 
@@ -134,7 +137,9 @@ export function NotificationBell() {
             variant="ghost"
             size="icon"
             className="relative rounded-full"
-            aria-label={unreadCount > 0 ? `알림 ${unreadCount}건 안 읽음` : "알림"}
+            aria-label={
+              unreadCount > 0 ? `알림 ${unreadCount}건 안 읽음` : "알림"
+            }
           />
         }
       >
@@ -194,7 +199,9 @@ export function NotificationBell() {
             </div>
           ) : notifications.length === 0 ? (
             <div className="px-4 py-10 text-center">
-              <p className="text-sm text-[var(--el-ink)]">아직 알림이 없습니다.</p>
+              <p className="text-sm text-[var(--el-ink)]">
+                아직 알림이 없습니다.
+              </p>
               <p className="mt-1 text-xs text-[var(--el-muted)]">
                 읽은 알림도 사라지지 않습니다.
               </p>

@@ -55,7 +55,11 @@ export type ChatStreamState = {
   /** 확정된 답변. message_end 전에는 null이다. */
   content: string | null;
   records: LiveToolRecord[];
-  pendingApproval: { approvalId: string; tool: string; summary: string | null } | null;
+  pendingApproval: {
+    approvalId: string;
+    tool: string;
+    summary: string | null;
+  } | null;
   error: { code: string; message: string } | null;
 };
 
@@ -94,7 +98,11 @@ export function reduceStreamEvent(
       };
 
     case "token":
-      return { ...state, phase: "streaming", text: state.text + String(payload.delta ?? "") };
+      return {
+        ...state,
+        phase: "streaming",
+        text: state.text + String(payload.delta ?? ""),
+      };
 
     case "message_end": {
       const content = String(payload.content ?? "");
@@ -159,7 +167,8 @@ export function reduceStreamEvent(
                 text(payload.tool) ??
                 state.records.find(
                   (record) =>
-                    record.kind === "approval" && record.toolCallId === toolCallId
+                    record.kind === "approval" &&
+                    record.toolCallId === toolCallId
                 )?.tool ??
                 "",
               summary,
@@ -225,8 +234,10 @@ export function endStream(
   state: ChatStreamState,
   reason: "closed" | "stalled" | "aborted"
 ): ChatStreamState {
-  if (reason === "aborted") return { ...state, phase: "aborted", pendingApproval: null };
-  if (reason === "stalled") return { ...state, phase: "stalled", pendingApproval: null };
+  if (reason === "aborted")
+    return { ...state, phase: "aborted", pendingApproval: null };
+  if (reason === "stalled")
+    return { ...state, phase: "stalled", pendingApproval: null };
   if (state.phase === "streaming" || state.phase === "awaiting_approval") {
     return { ...state, phase: "stalled", pendingApproval: null };
   }

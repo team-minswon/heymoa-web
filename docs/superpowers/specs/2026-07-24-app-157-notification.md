@@ -28,5 +28,6 @@ APP-154 상단바 1단 통합으로 벨이 우측 끝(새 노트 오른쪽)에 �
 - [ ] 게이트·`codex exec review --base dev` P1 없음·Playwright 실측
 
 ## 링크
+
 - 이슈: https://linear.app/minswon/issue/APP-157
 - 근거: 프레임 sPg4o·e71yPK·M5pzv, ELEVATION SPEC

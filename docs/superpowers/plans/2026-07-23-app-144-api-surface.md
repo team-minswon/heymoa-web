@@ -22,6 +22,7 @@
 ### Task 1: 맵 작성
 
 **Files:**
+
 - Create: `docs/api-surface.md`
 
 - [ ] **Step 1: operation 목록을 뽑는다**
@@ -56,8 +57,8 @@ grep -rhoE "^export (const|function) use[A-Za-z]+" lib/api/generated/*/[a-z]*.ts
 형식:
 
 ```markdown
-| operation | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
-|---|---|---|---|---|
+| operation | 훅  | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 |
+| --------- | --- | --------- | ------------------ | --------- |
 ```
 
 `쓰는 화면`은 APP-111~117의 요구에서 가져온다. `응답이 만드는 상태`에는 그 operation이 실제로 만드는 것만 적는다 — 로딩·빈·에러·권한없음을 기계적으로 반복하지 않는다.

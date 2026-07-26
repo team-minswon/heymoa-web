@@ -27,7 +27,6 @@ async function readEvents(response: Response) {
   return readEventsFromText(await response.text());
 }
 
-
 /**
  * 공유 챗은 회의가 ACTIVE일 때만 열린다 — 계약의 ACTIVE는 IN_PROGRESS + 시작자 존재다.
  * 새로 만든 노트는 아직 아무도 녹음을 시작하지 않아 그 조건을 못 넘는다.
@@ -114,7 +113,9 @@ describe("chat SSE handlers", () => {
 
     expect(text.startsWith(": keepalive")).toBe(true);
     // comment는 이벤트가 아니므로 프레임 파서에 잡히지 않아야 한다.
-    expect(text.split("\n\n").filter((b) => b.startsWith(": "))).toHaveLength(1);
+    expect(text.split("\n\n").filter((b) => b.startsWith(": "))).toHaveLength(
+      1
+    );
   });
 
   it("closes without a terminal event when the stream is dropped", async () => {
@@ -249,7 +250,10 @@ describe("stream is teed into history", () => {
       decision: "APPROVED",
       status: null,
     });
-    expect(messages[2].toolEvent).toMatchObject({ decision: null, status: "success" });
+    expect(messages[2].toolEvent).toMatchObject({
+      decision: null,
+      status: "success",
+    });
     expect(messages[2].toolEvent?.url).toContain("linear.app");
   });
 
@@ -416,8 +420,8 @@ describe("spectators see the approval wait by polling", () => {
     // 스트림이 승인을 기다리는 동안 관전자가 폴링하면 대기 상태가 보인다.
     // 관전자는 스트림을 받지 않으므로 이 필드가 유일한 창구다 (계약).
     await expect
-      .poll(() =>
-        mockDb.getNoteSharedChat(note.noteId).lock.pendingApproval?.tool
+      .poll(
+        () => mockDb.getNoteSharedChat(note.noteId).lock.pendingApproval?.tool
       )
       .toBe("linear.create_issue");
 
@@ -430,7 +434,9 @@ describe("spectators see the approval wait by polling", () => {
     );
     await (await streaming).text();
 
-    expect(mockDb.getNoteSharedChat(note.noteId).lock.pendingApproval).toBeNull();
+    expect(
+      mockDb.getNoteSharedChat(note.noteId).lock.pendingApproval
+    ).toBeNull();
   });
 });
 
@@ -463,8 +469,9 @@ describe("input validation matches the contract", () => {
     );
 
     await expect
-      .poll(() =>
-        mockDb.getNoteSharedChat(note.noteId).lock.pendingApproval?.approvalId
+      .poll(
+        () =>
+          mockDb.getNoteSharedChat(note.noteId).lock.pendingApproval?.approvalId
       )
       .toMatch(/^[0-9A-HJKMNP-TV-Z]{13}$/);
     const pending = mockDb.getNoteSharedChat(note.noteId).lock.pendingApproval!;
@@ -510,5 +517,4 @@ describe("input validation matches the contract", () => {
     // 잠금을 잡기 전에 막아야 실패한 요청이 잠금을 남기지 않는다.
     expect(mockDb.getNoteSharedChat(note.noteId).lock.locked).toBe(false);
   });
-
 });

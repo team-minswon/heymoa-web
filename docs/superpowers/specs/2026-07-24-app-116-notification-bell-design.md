@@ -12,10 +12,10 @@
 
 계약 `type` enum은 **`WORKSPACE_INVITATION` 하나**다(요약·회의 종료 알림은 계약에 없어 v4 감사에서 삭제됨). 모든 알림 항목은 초대이고 `invitation`(inviterName·workspaceName·role·status)을 담는다. 그래서 렌더 분기는 `invitation.status`가 전부다.
 
-| status | 화면 | 프레임 |
-|---|---|---|
-| PENDING | "{inviter}님이 {workspace}에 초대했습니다" + 역할 + **수락/거절 버튼** + 미읽음 dot(readAt null) | `O1xLI` |
-| ACCEPTED / DECLINED / CANCELED | 버튼 대신 라벨(수락함/거절함/취소됨). 항목은 목록에 남는다 | `x1pwOb` |
+| status                         | 화면                                                                                             | 프레임   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ | -------- |
+| PENDING                        | "{inviter}님이 {workspace}에 초대했습니다" + 역할 + **수락/거절 버튼** + 미읽음 dot(readAt null) | `O1xLI`  |
+| ACCEPTED / DECLINED / CANCELED | 버튼 대신 라벨(수락함/거절함/취소됨). 항목은 목록에 남는다                                       | `x1pwOb` |
 
 ### 취소·수락된 초대도 목록에 남는다
 
@@ -50,12 +50,12 @@ components/workspace/workspace-toolbar.tsx      (수정) 툴바 우측에 벨
 
 ## 오류 표시 — AGENTS.md 경계
 
-| 무엇 | 어떻게 |
-|---|---|
+| 무엇                 | 어떻게                                               |
+| -------------------- | ---------------------------------------------------- |
 | 409 이미 처리된 초대 | 드롭다운 상단 인라인 destructive `Alert` (지속 상태) |
-| 그 밖 수락/거절 실패 | 전역 토스트(MutationCache) |
-| 목록 로딩 | 드롭다운 안 Skeleton |
-| 목록 실패 | 드롭다운 안 오류 + 재시도 |
+| 그 밖 수락/거절 실패 | 전역 토스트(MutationCache)                           |
+| 목록 로딩            | 드롭다운 안 Skeleton                                 |
+| 목록 실패            | 드롭다운 안 오류 + 재시도                            |
 
 ## 성공 기준
 

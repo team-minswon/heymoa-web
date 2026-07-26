@@ -60,7 +60,11 @@ export function NoteView({
   const phase = deriveMeetingPhase(note);
   usePersonalChatScope({
     noteId,
-    hidden: isPersonalChatHiddenInNote(current.view, phase, noteQuery.isPending),
+    hidden: isPersonalChatHiddenInNote(
+      current.view,
+      phase,
+      noteQuery.isPending
+    ),
   });
 
   const [isOpen, setIsOpen] = useState(false);

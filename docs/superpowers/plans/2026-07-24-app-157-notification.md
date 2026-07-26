@@ -19,5 +19,6 @@
 - `codex exec review --base dev` P1 없음 → dev squash merge, Linear Done.
 
 ## Self-Review
+
 - 동작 0 변경 — 배치·표면만. 계약 불변, 벌크 읽음 안 그림.
 - 벨 위치는 154 계승(재작업 없음).

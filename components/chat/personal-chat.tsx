@@ -199,7 +199,9 @@ function PersonalChatPanel({
   const stream = useChatStream();
   const [createdChatId, setCreatedChatId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
+  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
+    null
+  );
   const [lastSent, setLastSent] = useState<string | null>(null);
   /** 세션 생성 → 스트림 → 히스토리 반영까지 한 트랜잭션 전체가 진행 중인지. */
   const [isSending, setIsSending] = useState(false);
@@ -260,8 +262,7 @@ function PersonalChatPanel({
   const isHistoryUnavailable =
     Boolean(sessionId) &&
     !isSessionGone &&
-    (messagesQuery.isError ||
-      (messagesResponse !== undefined && !messagesOk));
+    (messagesQuery.isError || (messagesResponse !== undefined && !messagesOk));
 
   /** 주 데이터를 못 읽은 상태. 전송도, 새 대화도 막는다. */
   const isUnavailable = isActiveUnavailable || isHistoryUnavailable;
@@ -381,7 +382,8 @@ function PersonalChatPanel({
         // 먼저 진행 중인 조회를 취소한다 — 세션이 막 만들어지면 아직 이 턴이 없는 GET이
         // 떠 있을 수 있고, TanStack은 `staleTime: 0`이어도 그 요청에 합쳐 버린다.
         // 그 빈 응답을 성공으로 읽으면 방금 끝난 턴을 지운다.
-        const messagesKey = getGetAgentChatMessagesQueryOptions(chatId).queryKey;
+        const messagesKey =
+          getGetAgentChatMessagesQueryOptions(chatId).queryKey;
         await queryClient.cancelQueries({ queryKey: messagesKey });
         const refreshed = await queryClient
           .fetchQuery({
@@ -397,7 +399,14 @@ function PersonalChatPanel({
         onTurnActiveChange(false);
       }
     },
-    [ensureSession, isBusy, messages.length, onTurnActiveChange, queryClient, stream]
+    [
+      ensureSession,
+      isBusy,
+      messages.length,
+      onTurnActiveChange,
+      queryClient,
+      stream,
+    ]
   );
 
   const startNewChat = useCallback(async () => {
@@ -460,7 +469,9 @@ function PersonalChatPanel({
           </p>
           {/* 스코프는 어디서 열었는지로 정해진다 — 여기서 바꾸는 어포던스를 두지 않는다. */}
           <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-            {noteId ? (noteTitle ?? "이 노트") : (workspaceName ?? "워크스페이스")}
+            {noteId
+              ? (noteTitle ?? "이 노트")
+              : (workspaceName ?? "워크스페이스")}
           </p>
         </div>
         <Button
@@ -562,7 +573,9 @@ function PersonalChatPanel({
         isBusy={isBusy}
         isStreaming={isStreaming}
         placeholder={
-          sessionId ? "무엇이든 물어보세요" : "첫 질문을 보내면 대화가 시작됩니다"
+          sessionId
+            ? "무엇이든 물어보세요"
+            : "첫 질문을 보내면 대화가 시작됩니다"
         }
         footer={
           stream.state.phase === "awaiting_approval" ? (

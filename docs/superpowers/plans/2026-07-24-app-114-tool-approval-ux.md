@@ -19,6 +19,7 @@
 **Files:** Create `lib/chat/use-tool-approval.ts`, `lib/chat/use-tool-approval.test.ts`.
 
 **Produces:**
+
 ```ts
 type ApprovalCardState = { kind: "open" } | { kind: "submitted" } | { kind: "invalidated"; reason: string };
 useToolApproval({ chatId, pending, streamSettled }): { approve, cardState, isPending };

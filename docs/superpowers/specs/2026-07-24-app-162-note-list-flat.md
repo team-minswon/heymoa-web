@@ -40,5 +40,6 @@
 - [ ] 게이트·`codex exec review --base dev` P1 없음·Playwright LHXhy 대조
 
 ## 링크
+
 - 이슈: https://linear.app/minswon/issue/APP-162
 - 근거: FORM SPEC 목록 행 정본, 프레임 LHXhy·cWU64

@@ -93,7 +93,11 @@ describe("useCreateMeeting", () => {
         success: true,
         data: {
           notes: [
-            { noteId: "01K0000000100", lastRecordedAt: null, recordedDurationMs: 0 },
+            {
+              noteId: "01K0000000100",
+              lastRecordedAt: null,
+              recordedDurationMs: 0,
+            },
           ],
         },
       },

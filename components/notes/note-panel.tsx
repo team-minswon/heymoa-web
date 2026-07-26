@@ -81,94 +81,94 @@ export function NotePanel({
   return (
     <div className="flex h-full min-h-0 flex-col bg-white lg:flex-row">
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
-      {/* full은 상단바가 브레드크럼·노트 액션을 맡으므로 여기선 바 테두리 없이 제목만(본문 블록).
+        {/* full은 상단바가 브레드크럼·노트 액션을 맡으므로 여기선 바 테두리 없이 제목만(본문 블록).
           side 시트는 자체 헤더 바(제목 + 전체화면·닫기)를 유지한다(계승). */}
-      <header
-        className={cn(
-          "relative z-10 px-5 py-4 sm:px-9 sm:py-5",
-          view === "side" &&
-            "border-b border-[var(--el-hairline)] bg-white/92 backdrop-blur-xl"
-        )}
-      >
-        <div className="mx-auto flex w-full max-w-[820px] items-start gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              {project ? (
-                <Badge variant="secondary">{project.name}</Badge>
-              ) : null}
+        <header
+          className={cn(
+            "relative z-10 px-5 py-4 sm:px-9 sm:py-5",
+            view === "side" &&
+              "border-b border-[var(--el-hairline)] bg-white/92 backdrop-blur-xl"
+          )}
+        >
+          <div className="mx-auto flex w-full max-w-[820px] items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                {project ? (
+                  <Badge variant="secondary">{project.name}</Badge>
+                ) : null}
+              </div>
+              <h1 className="mt-2 truncate font-serif text-note-title font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)]">
+                {note?.title ?? "회의 노트"}
+              </h1>
             </div>
-            <h1 className="mt-2 truncate font-serif text-note-title font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)]">
-              {note?.title ?? "회의 노트"}
-            </h1>
-          </div>
-          {view === "side" ? (
-            <div className="flex shrink-0 items-center gap-2">
-              {onExpand ? (
+            {view === "side" ? (
+              <div className="flex shrink-0 items-center gap-2">
+                {onExpand ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-lg"
+                    className="rounded-full"
+                    aria-label="전체 화면으로 보기"
+                    onClick={onExpand}
+                  >
+                    <Expand />
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-lg"
                   className="rounded-full"
-                  aria-label="전체 화면으로 보기"
-                  onClick={onExpand}
+                  aria-label="노트 닫기"
+                  onClick={onClose}
                 >
-                  <Expand />
+                  <PanelRightClose />
                 </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-lg"
-                className="rounded-full"
-                aria-label="노트 닫기"
-                onClick={onClose}
-              >
-                <PanelRightClose />
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      </header>
-
-      <Tabs
-        value={tab}
-        onValueChange={(value) => value && onTabChange(value as NoteTab)}
-        className="min-h-0 flex-1 gap-0"
-      >
-        <div className="border-b border-[var(--el-hairline)] bg-white px-5 sm:px-9">
-          <div className="mx-auto w-full max-w-[820px]">
-            <TabsList
-              variant="line"
-              className="h-11 w-full justify-start gap-6"
-            >
-              <TabsTrigger value="transcript">실시간 전사</TabsTrigger>
-              {/* 요약은 종료 시 생성되지만 full은 항상 3탭 — 종료 전엔 탭이 안내를 보인다. */}
-              {view === "full" ? (
-                <TabsTrigger value="summary">요약</TabsTrigger>
-              ) : null}
-              <TabsTrigger value="details">노트 정보</TabsTrigger>
-            </TabsList>
+              </div>
+            ) : null}
           </div>
-        </div>
-        <TabsContent value="transcript" className="min-h-0 flex-1">
-          {/* 종료된 회의는 전사 탭이 아카이브(전사 + 공유 Q&A)가 된다. */}
-          {showArchive ? (
-            <NoteArchive noteId={noteId} />
-          ) : (
-            <TranscriptView noteId={noteId} />
-          )}
-        </TabsContent>
-        <TabsContent value="summary" className="min-h-0 flex-1">
-          <ScrollArea className="h-full">
-            <NoteSummary noteId={noteId} isEnded={phase === "ended"} />
-          </ScrollArea>
-        </TabsContent>
-        <TabsContent value="details" className="min-h-0 flex-1">
-          <ScrollArea className="h-full">
-            <NoteDetails noteId={noteId} />
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+        </header>
+
+        <Tabs
+          value={tab}
+          onValueChange={(value) => value && onTabChange(value as NoteTab)}
+          className="min-h-0 flex-1 gap-0"
+        >
+          <div className="border-b border-[var(--el-hairline)] bg-white px-5 sm:px-9">
+            <div className="mx-auto w-full max-w-[820px]">
+              <TabsList
+                variant="line"
+                className="h-11 w-full justify-start gap-6"
+              >
+                <TabsTrigger value="transcript">실시간 전사</TabsTrigger>
+                {/* 요약은 종료 시 생성되지만 full은 항상 3탭 — 종료 전엔 탭이 안내를 보인다. */}
+                {view === "full" ? (
+                  <TabsTrigger value="summary">요약</TabsTrigger>
+                ) : null}
+                <TabsTrigger value="details">노트 정보</TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+          <TabsContent value="transcript" className="min-h-0 flex-1">
+            {/* 종료된 회의는 전사 탭이 아카이브(전사 + 공유 Q&A)가 된다. */}
+            {showArchive ? (
+              <NoteArchive noteId={noteId} />
+            ) : (
+              <TranscriptView noteId={noteId} />
+            )}
+          </TabsContent>
+          <TabsContent value="summary" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <NoteSummary noteId={noteId} isEnded={phase === "ended"} />
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="details" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <NoteDetails noteId={noteId} />
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center px-5 sm:px-9">
           <div className="pointer-events-auto">

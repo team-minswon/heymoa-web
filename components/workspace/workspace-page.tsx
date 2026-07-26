@@ -98,7 +98,8 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
           {selectedProject?.name ?? "모든 노트"}
         </h2>
         <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
-          {visibleNotes.length}개의 회의 기록 · 발화와 결정이 시간순으로 보관됩니다.
+          {visibleNotes.length}개의 회의 기록 · 발화와 결정이 시간순으로
+          보관됩니다.
         </p>
       </header>
       <div

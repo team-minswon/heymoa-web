@@ -126,7 +126,10 @@ function renderNotePanel(ui: ReactNode) {
   );
 
   const view = render(wrap(ui));
-  return { ...view, rerenderNote: (node: ReactNode) => view.rerender(wrap(node)) };
+  return {
+    ...view,
+    rerenderNote: (node: ReactNode) => view.rerender(wrap(node)),
+  };
 }
 
 describe("NotePanel", () => {

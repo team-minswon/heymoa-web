@@ -35,8 +35,16 @@ const TERMINAL_REASON: Record<string, string> = {
 
 const EXPIRED_REASON = "응답을 받지 못해 승인이 만료되었습니다.";
 
-type Pending = { approvalId: string; tool: string; summary: string | null } | null;
-type Invalidation = { approvalId: string; approval: NonNullable<Pending>; reason: string };
+type Pending = {
+  approvalId: string;
+  tool: string;
+  summary: string | null;
+} | null;
+type Invalidation = {
+  approvalId: string;
+  approval: NonNullable<Pending>;
+  reason: string;
+};
 
 function isAbnormalEnd(phase: ChatStreamPhase): boolean {
   return phase === "failed" || phase === "stalled" || phase === "aborted";
@@ -133,7 +141,10 @@ export function useToolApproval({
   );
 
   let card: ApprovalCard | null = null;
-  if (invalidation && (!pending || pending.approvalId === invalidation.approvalId)) {
+  if (
+    invalidation &&
+    (!pending || pending.approvalId === invalidation.approvalId)
+  ) {
     card = {
       tool: invalidation.approval.tool,
       summary: invalidation.approval.summary,
@@ -144,7 +155,9 @@ export function useToolApproval({
       tool: pending.tool,
       summary: pending.summary,
       state:
-        submittedId === pending.approvalId ? { kind: "submitted" } : { kind: "open" },
+        submittedId === pending.approvalId
+          ? { kind: "submitted" }
+          : { kind: "open" },
     };
   }
 

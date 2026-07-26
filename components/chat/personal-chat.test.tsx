@@ -67,8 +67,8 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
       data: state.activeLoading
         ? undefined
         : state.activeFails
-        ? { status: 500, data: { success: false, data: null } }
-        : { status: 200, data: { success: true, data: state.active } },
+          ? { status: 500, data: { success: false, data: null } }
+          : { status: 200, data: { success: true, data: state.active } },
     };
   },
   useGetAgentChatMessages: (chatId: string, options: unknown) => {
@@ -78,7 +78,10 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
     const enabled = Boolean(chatId);
     const data =
       enabled && !state.historyFails && !state.historyMissing
-        ? { status: 200, data: { success: true, data: { messages: state.messages } } }
+        ? {
+            status: 200,
+            data: { success: true, data: { messages: state.messages } },
+          }
         : undefined;
     return {
       isPending: !enabled,
@@ -88,7 +91,10 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
         ? {
             success: false,
             data: null,
-            error: { code: "AGENT_CHAT_NOT_FOUND", message: "없는 대화입니다." },
+            error: {
+              code: "AGENT_CHAT_NOT_FOUND",
+              message: "없는 대화입니다.",
+            },
           }
         : null,
       refetch: state.refetchMock.mockResolvedValue(
@@ -198,7 +204,9 @@ function openPanel() {
 }
 
 async function sendMessage(text: string) {
-  fireEvent.change(screen.getByLabelText("메시지"), { target: { value: text } });
+  fireEvent.change(screen.getByLabelText("메시지"), {
+    target: { value: text },
+  });
   fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 }
 
@@ -287,7 +295,9 @@ describe("PersonalChatProvider", () => {
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.createMock).not.toHaveBeenCalled();
-    expect(state.streamCalls[0].url).toBe(`/v1/agent-chats/${CHAT_ID}/messages`);
+    expect(state.streamCalls[0].url).toBe(
+      `/v1/agent-chats/${CHAT_ID}/messages`
+    );
   });
 
   it("정상 종료 뒤 히스토리를 다시 읽고 스트림을 비운다", async () => {
@@ -370,13 +380,21 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
           <NoteScope hidden={false} />
         </PersonalChatProvider>
       </QueryClientProvider>
     );
-    await waitFor(() => expect(screen.getByText("주간 제품 회의")).toBeTruthy());
-    expect(state.activeParams.at(-1)).toEqual({ scope: "note", noteId: NOTE_ID });
+    await waitFor(() =>
+      expect(screen.getByText("주간 제품 회의")).toBeTruthy()
+    );
+    expect(state.activeParams.at(-1)).toEqual({
+      scope: "note",
+      noteId: NOTE_ID,
+    });
   });
 
   it("닫아도 패널을 언마운트하지 않는다", async () => {
@@ -401,10 +419,7 @@ describe("PersonalChatProvider", () => {
 
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({
-        queryKey: [
-          "active",
-          { scope: "workspace", workspaceId: WORKSPACE_ID },
-        ],
+        queryKey: ["active", { scope: "workspace", workspaceId: WORKSPACE_ID }],
       })
     );
   });
@@ -440,7 +455,10 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
           <NoteScope hidden />
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -467,7 +485,10 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
           <NoteScope hidden />
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -499,7 +520,10 @@ describe("PersonalChatProvider", () => {
 
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
           <NoteScope hidden />
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -572,7 +596,10 @@ describe("PersonalChatProvider", () => {
     ];
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
           {null}
         </PersonalChatProvider>
       </QueryClientProvider>
@@ -753,7 +780,10 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
     rerender(
       <QueryClientProvider client={client}>
-        <PersonalChatProvider workspaceId={WORKSPACE_ID} workspaceName="헤이모아">
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
           {null}
         </PersonalChatProvider>
       </QueryClientProvider>

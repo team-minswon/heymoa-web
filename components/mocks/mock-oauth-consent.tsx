@@ -38,8 +38,8 @@ export function MockOAuthConsent({
           {provider || "도구"} 연결을 허용할까요?
         </h1>
         <p className="text-sm text-[var(--el-muted)]">
-          실제 환경에서는 {provider || "제공자"}의 로그인 화면이 열립니다. 목에서는 이
-          화면이 그 자리를 대신합니다.
+          실제 환경에서는 {provider || "제공자"}의 로그인 화면이 열립니다.
+          목에서는 이 화면이 그 자리를 대신합니다.
         </p>
       </div>
 

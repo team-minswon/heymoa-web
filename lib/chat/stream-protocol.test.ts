@@ -111,7 +111,10 @@ describe("reduceStreamEvent", () => {
   it("tool_call_result의 status=error는 스트림을 끝내지 않는다", () => {
     const state = reduceAll([
       START,
-      frame("tool_call_start", { toolCallId: "call_01", tool: "linear.create_issue" }),
+      frame("tool_call_start", {
+        toolCallId: "call_01",
+        tool: "linear.create_issue",
+      }),
       frame("tool_call_result", {
         toolCallId: "call_01",
         status: "error",
@@ -126,7 +129,11 @@ describe("reduceStreamEvent", () => {
   it("도구 실패 뒤에도 토큰이 계속 붙는다", () => {
     const state = reduceAll([
       START,
-      frame("tool_call_result", { toolCallId: "call_01", status: "error", tool: "x" }),
+      frame("tool_call_result", {
+        toolCallId: "call_01",
+        status: "error",
+        tool: "x",
+      }),
       frame("token", { delta: "대신 이렇게 " }),
       frame("token", { delta: "정리했습니다." }),
     ]);
@@ -150,7 +157,10 @@ describe("reduceStreamEvent", () => {
       tool: "linear.create_issue",
       summary: "Linear 이슈 생성",
     });
-    expect(state.records[0]).toMatchObject({ kind: "approval", decision: null });
+    expect(state.records[0]).toMatchObject({
+      kind: "approval",
+      decision: null,
+    });
   });
 
   it("승인을 거친 도구의 실행 기록이 승인 요청의 도구 이름을 이어 쓴다", () => {
@@ -216,7 +226,10 @@ describe("reduceStreamEvent", () => {
 
 describe("endStream", () => {
   it("종료 이벤트 없이 닫히면 정지 상태이고 부분 토큰은 남는다", () => {
-    const streaming = reduceAll([START, frame("token", { delta: "만들던 중" })]);
+    const streaming = reduceAll([
+      START,
+      frame("token", { delta: "만들던 중" }),
+    ]);
     const state = endStream(streaming, "closed");
     expect(state.phase).toBe("stalled");
     expect(state.text).toBe("만들던 중");

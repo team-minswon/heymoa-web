@@ -50,8 +50,10 @@
 
   /* v5 제품 고도 — 접지 + 앰비언트 2연타. 셸은 그림자 없음(hairline로만 구분).
      단일 티어 0_4px_16px는 마케팅(랜딩·약관) 전용이다. (ELEVATION SPEC) */
-  --shadow-e2: 0 2px 4px #0c0a090f, 0 10px 28px #0c0a091c; /* 부양: 챗봇 카드·플로팅 독·FAB */
-  --shadow-e3: 0 4px 8px #0c0a0914, 0 20px 56px #0c0a092b; /* 오버레이: 시트·다이얼로그·드롭다운 */
+  --shadow-e2:
+    0 2px 4px #0c0a090f, 0 10px 28px #0c0a091c; /* 부양: 챗봇 카드·플로팅 독·FAB */
+  --shadow-e3:
+    0 4px 8px #0c0a0914, 0 20px 56px #0c0a092b; /* 오버레이: 시트·다이얼로그·드롭다운 */
 
   /* v5 형태 스케일 — 역할 기반. circle·pill은 rounded-full, 셸은 각짐(0). (FORM SPEC) */
   --radius-panel: 16px;

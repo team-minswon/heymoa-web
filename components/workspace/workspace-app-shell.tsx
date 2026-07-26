@@ -106,33 +106,33 @@ export function WorkspaceAppShell({
         workspaceId={workspaceId}
         workspaceName={workspace?.name}
       >
-      <TooltipProvider>
-        <SettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          initialSection={settingsSection}
-          workspaceId={workspaceId}
-        />
-        <SidebarProvider className="bg-[var(--el-canvas)]">
-          <Sidebar className="overflow-hidden border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-[color-mix(in_srgb,var(--el-canvas-soft)_92%,white)]">
-            <WorkspaceSidebar
-              workspaceId={workspaceId}
-              workspace={workspace}
-              projects={projects}
-              selectedProjectId={selectedProjectId}
-              onSelectProject={setSelectedProjectId}
-              onOpenSettings={value.openSettings}
-            />
-          </Sidebar>
-          <ShellMain
+        <TooltipProvider>
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            initialSection={settingsSection}
             workspaceId={workspaceId}
-            currentLabel={currentLabel}
-            activeNoteId={activeNoteId}
-          >
-            {children}
-          </ShellMain>
-        </SidebarProvider>
-      </TooltipProvider>
+          />
+          <SidebarProvider className="bg-[var(--el-canvas)]">
+            <Sidebar className="overflow-hidden border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-[color-mix(in_srgb,var(--el-canvas-soft)_92%,white)]">
+              <WorkspaceSidebar
+                workspaceId={workspaceId}
+                workspace={workspace}
+                projects={projects}
+                selectedProjectId={selectedProjectId}
+                onSelectProject={setSelectedProjectId}
+                onOpenSettings={value.openSettings}
+              />
+            </Sidebar>
+            <ShellMain
+              workspaceId={workspaceId}
+              currentLabel={currentLabel}
+              activeNoteId={activeNoteId}
+            >
+              {children}
+            </ShellMain>
+          </SidebarProvider>
+        </TooltipProvider>
       </PersonalChatProvider>
     </WorkspaceShellContext.Provider>
   );

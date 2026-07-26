@@ -52,7 +52,9 @@ export function MeetingControls({
   const isStarter = Boolean(user && startedBy.userId === user.userId);
 
   const refetchNote = () =>
-    void queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(note.noteId) });
+    void queryClient.invalidateQueries({
+      queryKey: getGetNoteQueryKey(note.noteId),
+    });
 
   if (!isStarter) {
     // 뷰어 — 조작 버튼 없이 상태와 시작자만.
@@ -83,10 +85,15 @@ export function MeetingControls({
           className="h-8"
           disabled={isPending || isRecording}
           title={
-            isRecording ? "녹음을 중지한 뒤 회의를 중지할 수 있습니다" : undefined
+            isRecording
+              ? "녹음을 중지한 뒤 회의를 중지할 수 있습니다"
+              : undefined
           }
           onClick={() =>
-            pauseMeeting.mutate({ noteId: note.noteId }, { onSuccess: refetchNote })
+            pauseMeeting.mutate(
+              { noteId: note.noteId },
+              { onSuccess: refetchNote }
+            )
           }
         >
           <Pause className="size-3.5" />
@@ -100,7 +107,10 @@ export function MeetingControls({
           className="h-8"
           disabled={isPending}
           onClick={() =>
-            resumeMeeting.mutate({ noteId: note.noteId }, { onSuccess: refetchNote })
+            resumeMeeting.mutate(
+              { noteId: note.noteId },
+              { onSuccess: refetchNote }
+            )
           }
         >
           <Play className="size-3.5" />

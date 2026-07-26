@@ -195,9 +195,7 @@ describe("MembersSettings", () => {
     renderSettings();
     await invite("Sora@Heymoa.app");
     await waitFor(() =>
-      expect(
-        screen.getByText(/철자와 대소문자를 확인해 주세요\./)
-      ).toBeTruthy()
+      expect(screen.getByText(/철자와 대소문자를 확인해 주세요\./)).toBeTruthy()
     );
   });
 

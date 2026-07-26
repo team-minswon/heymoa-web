@@ -17,7 +17,10 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
     refetch: () => {},
     data: data.transcriptFails
       ? undefined
-      : { status: 200, data: { success: true, data: { segments: data.segments } } },
+      : {
+          status: 200,
+          data: { success: true, data: { segments: data.segments } },
+        },
   }),
 }));
 vi.mock("@/lib/api/generated/note-shared-chat/note-shared-chat", () => ({

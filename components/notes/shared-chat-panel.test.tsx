@@ -59,7 +59,11 @@ vi.mock("@/lib/api/generated/note-shared-chat/note-shared-chat", () => ({
           status: 200,
           data: {
             success: true,
-            data: { chatId: CHAT_ID, messages: state.messages, lock: state.lock },
+            data: {
+              chatId: CHAT_ID,
+              messages: state.messages,
+              lock: state.lock,
+            },
           },
         },
   }),
@@ -79,7 +83,10 @@ vi.mock("@/lib/api/sse", () => ({
       throw {
         success: false,
         data: null,
-        error: { code: "LLM_PROVIDER_ERROR", message: "응답 생성에 실패했습니다." },
+        error: {
+          code: "LLM_PROVIDER_ERROR",
+          message: "응답 생성에 실패했습니다.",
+        },
       };
     }
     yield {
@@ -146,7 +153,10 @@ describe("SharedChatPanel", () => {
 
     await waitFor(() =>
       expect(state.streamCalls).toEqual([
-        { url: `/v1/notes/${NOTE_ID}/chat/messages`, body: { message: "정리해줘" } },
+        {
+          url: `/v1/notes/${NOTE_ID}/chat/messages`,
+          body: { message: "정리해줘" },
+        },
       ])
     );
     // 정상 종료 후 스트림이 비워지고 히스토리 한 벌만 남는다.
@@ -227,7 +237,9 @@ describe("SharedChatPanel", () => {
     };
     renderPanel("active");
 
-    expect(screen.getAllByText(/홍길동님이 승인 대기 중/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/홍길동님이 승인 대기 중/).length
+    ).toBeGreaterThan(0);
     expect(screen.getByText("Linear 이슈 'APP 버그' 생성")).toBeTruthy();
     expect(screen.queryByText(/홍길동님이 입력 중/)).toBeNull();
     // jobCE — Pending Row + "승인 대기" Badge로 도구를 드러낸다.

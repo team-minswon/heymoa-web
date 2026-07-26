@@ -72,9 +72,15 @@ export function WorkspaceNoteList({
 
   if (isPending) {
     return (
-      <div aria-label="노트 불러오는 중" className="divide-y divide-[var(--el-hairline)]">
+      <div
+        aria-label="노트 불러오는 중"
+        className="divide-y divide-[var(--el-hairline)]"
+      >
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="flex h-[52px] items-center gap-[14px] px-3">
+          <div
+            key={index}
+            className="flex h-[52px] items-center gap-[14px] px-3"
+          >
             <Skeleton className="size-5 rounded-full" />
             <Skeleton className="h-4 w-1/3" />
           </div>
@@ -108,8 +114,9 @@ export function WorkspaceNoteList({
           아직 회의 기록이 없습니다
         </h2>
         <p className="mt-1 max-w-sm text-sm text-[var(--el-muted)]">
-          상단바의 <span className="font-medium text-[var(--el-ink)]">새 노트</span>로 첫 회의를
-          시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
+          상단바의{" "}
+          <span className="font-medium text-[var(--el-ink)]">새 노트</span>로 첫
+          회의를 시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
         </p>
       </div>
     );

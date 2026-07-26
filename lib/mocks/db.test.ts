@@ -171,7 +171,9 @@ describe("invitations, members and notifications", () => {
 
     const after = mockDb
       .listNotifications()
-      .notifications.find((item) => item.notificationId === pending!.notificationId);
+      .notifications.find(
+        (item) => item.notificationId === pending!.notificationId
+      );
     // 취소된 초대의 알림도 목록에 남고, 상태만 현재 값을 따라간다 (계약 규칙).
     expect(after?.invitation?.status).toBe("CANCELED");
   });
@@ -199,7 +201,9 @@ describe("meeting and analysis", () => {
     const noteId = startedNoteId();
     mockDb.endMeeting(noteId);
 
-    expect(() => mockDb.pauseMeeting(noteId)).toThrow("MEETING_NOT_IN_PROGRESS");
+    expect(() => mockDb.pauseMeeting(noteId)).toThrow(
+      "MEETING_NOT_IN_PROGRESS"
+    );
   });
 
   it("moves a meeting through pause and resume", () => {
@@ -219,10 +223,9 @@ describe("workspace integrations", () => {
   it("lists every supported provider, connected or not", () => {
     const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
 
-    expect(mockDb.listIntegrations(workspaceId).map((i) => i.provider)).toEqual([
-      "LINEAR",
-      "GITHUB",
-    ]);
+    expect(mockDb.listIntegrations(workspaceId).map((i) => i.provider)).toEqual(
+      ["LINEAR", "GITHUB"]
+    );
     expect(
       mockDb.listIntegrations(workspaceId).every((i) => i.connected === false)
     ).toBe(true);
@@ -260,7 +263,10 @@ describe("workspaces gained after seeding", () => {
   beforeEach(() => mockDb.reset());
 
   it("gives a created workspace its owner and integration rows", () => {
-    const created = mockDb.createWorkspace({ name: "새 팀", description: null });
+    const created = mockDb.createWorkspace({
+      name: "새 팀",
+      description: null,
+    });
 
     expect(mockDb.listMembers(created.workspaceId)).toHaveLength(1);
     expect(mockDb.listMembers(created.workspaceId)[0].role).toBe("ADMIN");
@@ -273,8 +279,9 @@ describe("workspaces gained after seeding", () => {
     const before = mockDb.listWorkspaces().length;
     const invitation = mockDb
       .listNotifications()
-      .notifications.find((item) => item.invitation?.status === "PENDING")!
-      .invitation!;
+      .notifications.find(
+        (item) => item.invitation?.status === "PENDING"
+      )!.invitation!;
 
     mockDb.acceptInvitation(invitation.invitationId);
 
@@ -300,8 +307,12 @@ describe("only the meeting starter can operate a meeting", () => {
     const fresh = mockDb.createNote(projectId, { title: "아직 시작 전" });
 
     expect(fresh.meetingStartedBy).toBeNull();
-    expect(() => mockDb.pauseMeeting(fresh.noteId)).toThrow("NOT_MEETING_STARTER");
-    expect(() => mockDb.endMeeting(fresh.noteId)).toThrow("NOT_MEETING_STARTER");
+    expect(() => mockDb.pauseMeeting(fresh.noteId)).toThrow(
+      "NOT_MEETING_STARTER"
+    );
+    expect(() => mockDb.endMeeting(fresh.noteId)).toThrow(
+      "NOT_MEETING_STARTER"
+    );
   });
 
   it("allows them once recording has started", () => {

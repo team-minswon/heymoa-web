@@ -41,5 +41,6 @@
 - [ ] 컴포넌트 테스트, 게이트, `codex exec review --base dev` P1 없음, Playwright full·side 대조
 
 ## 링크
+
 - 이슈: https://linear.app/minswon/issue/APP-155
 - 근거: `docs/design/v5-spec-notes.md`(FORM SPEC), 프레임 Ftvu9·m0eVmx·AB8zp

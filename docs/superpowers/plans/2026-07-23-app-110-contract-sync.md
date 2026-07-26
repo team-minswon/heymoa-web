@@ -25,16 +25,16 @@
 
 ## File Structure
 
-| 파일 | 책임 |
-|---|---|
-| `openapi3.yml` / `asyncapi.yml` | 계약 미러 |
-| `lib/api/generated/**` | orval 산출물. 직접 수정 금지 |
-| `docs/generated-api-map.md` | 태그 → 실제 생성 경로·훅 이름 |
-| `lib/mocks/db.ts` | 목 상태 저장소 |
-| `lib/mocks/rest-handlers.ts` | REST 핸들러 등록 |
-| `lib/mocks/chat-stream.ts` | SSE 이벤트 시퀀스 (순수 함수) |
-| `lib/mocks/sse-handler.ts` | SSE MSW 핸들러 |
-| `e2e/smoke.spec.ts` · `playwright.config.ts` | 브라우저 워커 경로 검증 |
+| 파일                                         | 책임                          |
+| -------------------------------------------- | ----------------------------- |
+| `openapi3.yml` / `asyncapi.yml`              | 계약 미러                     |
+| `lib/api/generated/**`                       | orval 산출물. 직접 수정 금지  |
+| `docs/generated-api-map.md`                  | 태그 → 실제 생성 경로·훅 이름 |
+| `lib/mocks/db.ts`                            | 목 상태 저장소                |
+| `lib/mocks/rest-handlers.ts`                 | REST 핸들러 등록              |
+| `lib/mocks/chat-stream.ts`                   | SSE 이벤트 시퀀스 (순수 함수) |
+| `lib/mocks/sse-handler.ts`                   | SSE MSW 핸들러                |
+| `e2e/smoke.spec.ts` · `playwright.config.ts` | 브라우저 워커 경로 검증       |
 
 ---
 
@@ -59,9 +59,11 @@
 ### Task 4: 목 — 회의·분석·연동
 
 **Files:**
+
 - Modify: `lib/mocks/db.ts`, `lib/mocks/db.test.ts`, `lib/mocks/rest-handlers.ts`
 
 **Interfaces:**
+
 - Consumes: Task 3이 만든 `db.ts` 구조 (`omit()`, `nextId()`, `nextTimestamp()`, `fail()`)
 - Produces: `mockDb.endMeeting(noteId)`, `pauseMeeting`, `resumeMeeting`, `requestAnalysis`, `advanceAnalysis`, `getLatestAnalysis`, `listIntegrations`, `connectIntegration`, `disconnectIntegration`. 노트의 `meetingStatus`가 Task 5의 잠금 검사 근거가 된다.
 
@@ -98,7 +100,9 @@ describe("meeting and analysis", () => {
     const noteId = firstNoteId();
     mockDb.endMeeting(noteId);
 
-    expect(() => mockDb.pauseMeeting(noteId)).toThrow("MEETING_NOT_IN_PROGRESS");
+    expect(() => mockDb.pauseMeeting(noteId)).toThrow(
+      "MEETING_NOT_IN_PROGRESS"
+    );
   });
 
   it("moves a meeting through pause and resume", () => {
@@ -118,10 +122,9 @@ describe("workspace integrations", () => {
   it("lists every supported provider, connected or not", () => {
     const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
 
-    expect(mockDb.listIntegrations(workspaceId).map((i) => i.provider)).toEqual([
-      "LINEAR",
-      "GITHUB",
-    ]);
+    expect(mockDb.listIntegrations(workspaceId).map((i) => i.provider)).toEqual(
+      ["LINEAR", "GITHUB"]
+    );
     expect(
       mockDb.listIntegrations(workspaceId).every((i) => i.connected === false)
     ).toBe(true);
@@ -356,10 +359,12 @@ git commit -m "feat(mocks): 회의 상태·분석·워크스페이스 연동 목
 ### Task 5: 목 — 채팅 SSE 스트림
 
 **Files:**
+
 - Create: `lib/mocks/chat-stream.ts`, `lib/mocks/chat-stream.test.ts`, `lib/mocks/sse-handler.ts`
 - Modify: `lib/mocks/handlers.ts`, `lib/mocks/db.ts`
 
 **Interfaces:**
+
 - Consumes: Task 4가 노트에 유지하는 `meetingStatus`
 - Produces: `buildChatEvents(input): MockSseEvent[]`, `chatSseHandlers`, `mockDb.acquireSharedChatLock(noteId)`, `mockDb.releaseSharedChatLock(noteId)`
 
@@ -379,7 +384,9 @@ describe("buildChatEvents", () => {
 
     expect(names(events)[0]).toBe("message_start");
     expect(names(events).at(-1)).toBe("message_end");
-    expect(names(events).filter((n) => n === "token").length).toBeGreaterThan(0);
+    expect(names(events).filter((n) => n === "token").length).toBeGreaterThan(
+      0
+    );
   });
 
   it("asks for approval before a write tool and resolves after it", () => {
@@ -600,12 +607,15 @@ function sseResponse(events: { event: string; data: string }[]) {
 }
 
 export const chatSseHandlers = [
-  http.post("*/v1/agent-chats/:chatId/messages", async ({ request, params }) => {
-    const body = (await request.json()) as { message: string };
-    return sseResponse(
-      buildChatEvents({ chatId: id(params.chatId), message: body.message })
-    );
-  }),
+  http.post(
+    "*/v1/agent-chats/:chatId/messages",
+    async ({ request, params }) => {
+      const body = (await request.json()) as { message: string };
+      return sseResponse(
+        buildChatEvents({ chatId: id(params.chatId), message: body.message })
+      );
+    }
+  ),
 
   http.post("*/v1/notes/:noteId/chat/messages", async ({ request, params }) => {
     const body = (await request.json()) as { message: string };
@@ -629,7 +639,10 @@ export const chatSseHandlers = [
   }),
 
   http.post("*/v1/agent-chats/:chatId/approvals/:approvalId", () =>
-    HttpResponse.json({ success: true, data: null, error: null }, { status: 200 })
+    HttpResponse.json(
+      { success: true, data: null, error: null },
+      { status: 200 }
+    )
   ),
 ];
 ```
@@ -677,7 +690,7 @@ codex exec review --base dev
 ## 1차 — 목 3종
 
 | 지적 | 판단 | 근거 |
-|---|---|---|
+| ---- | ---- | ---- |
 ```
 
 계약 미러와 `lib/api/generated/**`에 대한 지적은 반영하지 않고 기록만 한다.
@@ -692,10 +705,12 @@ git commit -m "docs: codex 1차 리뷰 기록 (목 3종)"
 ### Task 6: Playwright 스모크
 
 **Files:**
+
 - Create: `playwright.config.ts`, `e2e/smoke.spec.ts`
 - Modify: `package.json`, `.gitignore`
 
 **Interfaces:**
+
 - Consumes: Task 3~5의 목
 - Produces: `pnpm test:e2e`
 
@@ -744,7 +759,9 @@ export default defineConfig({
 ```typescript
 import { expect, test } from "@playwright/test";
 
-test("boots with the MSW service worker and no console errors", async ({ page }) => {
+test("boots with the MSW service worker and no console errors", async ({
+  page,
+}) => {
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
@@ -770,7 +787,9 @@ test("serves a new endpoint through the service worker", async ({ page }) => {
   await page.goto("/");
 
   const payload = await page.evaluate(async () => {
-    const response = await fetch("/v1/notifications", { credentials: "include" });
+    const response = await fetch("/v1/notifications", {
+      credentials: "include",
+    });
     return { status: response.status, body: await response.json() };
   });
 

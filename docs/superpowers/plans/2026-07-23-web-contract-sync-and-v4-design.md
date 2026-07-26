@@ -36,21 +36,21 @@
 
 ## File Structure
 
-| 파일 | 책임 |
-|---|---|
-| `openapi3.yml` (수정) | REST 계약 미러, 34경로 |
-| `asyncapi.yml` (수정) | 전사 STOMP + 채팅 SSE 계약 미러 |
-| `lib/api/generated/**` (재생성) | orval 산출물. 직접 수정 금지 |
-| `docs/generated-api-map.md` (신규) | orval이 실제로 만든 태그→파일 경로 기록 |
-| `lib/mocks/db.ts` (수정) | 목 상태 저장소. 초대·알림·멤버·회의·분석·연동 확장 |
-| `lib/mocks/rest-handlers.ts` (수정) | REST 핸들러 등록 |
-| `lib/mocks/chat-stream.ts` (신규) | SSE 이벤트 시퀀스 생성 (순수 함수) |
-| `lib/mocks/sse-handler.ts` (신규) | SSE MSW 핸들러. `chat-stream.ts`를 스트림으로 흘린다 |
-| `lib/mocks/handlers.ts` (수정) | 핸들러 레지스트리 |
-| `e2e/smoke.spec.ts` (신규) | Playwright 스모크 |
-| `playwright.config.ts` (신규) | Playwright 설정 |
-| `docs/api-surface.md` (신규) | 경로↔훅↔화면↔상태↔프레임 표 + shadcn 매핑 |
-| `docs/design-decisions.md` (신규) | v4 디자인 결정 기록 (git 안) |
+| 파일                                | 책임                                                 |
+| ----------------------------------- | ---------------------------------------------------- |
+| `openapi3.yml` (수정)               | REST 계약 미러, 34경로                               |
+| `asyncapi.yml` (수정)               | 전사 STOMP + 채팅 SSE 계약 미러                      |
+| `lib/api/generated/**` (재생성)     | orval 산출물. 직접 수정 금지                         |
+| `docs/generated-api-map.md` (신규)  | orval이 실제로 만든 태그→파일 경로 기록              |
+| `lib/mocks/db.ts` (수정)            | 목 상태 저장소. 초대·알림·멤버·회의·분석·연동 확장   |
+| `lib/mocks/rest-handlers.ts` (수정) | REST 핸들러 등록                                     |
+| `lib/mocks/chat-stream.ts` (신규)   | SSE 이벤트 시퀀스 생성 (순수 함수)                   |
+| `lib/mocks/sse-handler.ts` (신규)   | SSE MSW 핸들러. `chat-stream.ts`를 스트림으로 흘린다 |
+| `lib/mocks/handlers.ts` (수정)      | 핸들러 레지스트리                                    |
+| `e2e/smoke.spec.ts` (신규)          | Playwright 스모크                                    |
+| `playwright.config.ts` (신규)       | Playwright 설정                                      |
+| `docs/api-surface.md` (신규)        | 경로↔훅↔화면↔상태↔프레임 표 + shadcn 매핑            |
+| `docs/design-decisions.md` (신규)   | v4 디자인 결정 기록 (git 안)                         |
 
 ---
 
@@ -59,9 +59,11 @@
 코드 변경 없음. 낡은 이슈 위에 세운 계획은 같이 낡으므로 먼저 한다.
 
 **Files:**
+
 - Create: `docs/linear-rearrangement-2026-07-23.md`
 
 **Interfaces:**
+
 - Produces: 신규 이슈 2개의 식별자(예 `APP-144`, `APP-145`). Task 8·9가 이 번호를 참조한다. `docs/linear-rearrangement-2026-07-23.md`에 기록한다.
 
 - [ ] **Step 1: APP-110 본문 재작성**
@@ -82,6 +84,7 @@ Linear MCP `save_issue`로 APP-110을 수정한다.
 - [ ] **Step 3: APP-111~117 참조 감사와 의존 재설정**
 
 일곱 개 각각에서:
+
 - 인용된 계약 파일명을 새 이름으로 고친다 (`agent-chat.web-server.asyncapi.yml` → `asyncapi-web-server.yml`, `heymoa-server.openapi.yml` → `openapi3-server.yml`, `heymoa-ai.openapi.yml` → `openapi3-ai.yml`)
 - Step 2에서 만든 v4 감사 이슈에 **blocked by**로 연결한다
 - 우선순위를 Medium 이하로 내려 신규 이슈들 뒤에 오게 한다
@@ -95,16 +98,17 @@ Linear MCP `save_issue`로 APP-110을 수정한다.
 ```markdown
 # Linear 재배치 기록 (2026-07-23)
 
-| 이슈 | 무엇을 | 왜 |
-|---|---|---|
-| APP-110 | 본문·제목 재작성, 첨부 2개 교체 | 오버레이 소스가 삭제되고 서버가 전부 구현해 전제가 사라짐 |
-| (신규) | API 맥락 맵 이슈 생성 | 4단계를 담을 이슈가 없었음 |
-| (신규) | v4 감사 이슈 생성 | APP-109가 Done이라 5단계를 얹을 곳이 없었음 |
-| APP-111~117 | 계약 파일명 갱신, v4 감사 이슈에 blocked by, 우선순위 하향 | 낡은 참조 + 선행 작업 반영 |
+| 이슈        | 무엇을                                                     | 왜                                                        |
+| ----------- | ---------------------------------------------------------- | --------------------------------------------------------- |
+| APP-110     | 본문·제목 재작성, 첨부 2개 교체                            | 오버레이 소스가 삭제되고 서버가 전부 구현해 전제가 사라짐 |
+| (신규)      | API 맥락 맵 이슈 생성                                      | 4단계를 담을 이슈가 없었음                                |
+| (신규)      | v4 감사 이슈 생성                                          | APP-109가 Done이라 5단계를 얹을 곳이 없었음               |
+| APP-111~117 | 계약 파일명 갱신, v4 감사 이슈에 blocked by, 우선순위 하향 | 낡은 참조 + 선행 작업 반영                                |
 
 ## 신규 이슈 식별자
-- API 맥락 맵: APP-___
-- v4 감사: APP-___
+
+- API 맥락 맵: APP-\_\_\_
+- v4 감사: APP-\_\_\_
 ```
 
 빈칸은 실제 생성된 번호로 채운다.
@@ -134,12 +138,14 @@ git commit -m "docs: Linear 이슈 재배치 기록"
 ### Task 2: 계약 파일 반영
 
 **Files:**
+
 - Modify: `openapi3.yml` (전체 교체)
 - Modify: `asyncapi.yml` (전체 교체)
 - Modify: `lib/api/openapi-contract.test.ts`
 - Modify: `lib/api/contract-consistency.test.ts`
 
 **Interfaces:**
+
 - Produces: 34경로 `openapi3.yml`. Task 3의 orval 입력이다.
 
 - [ ] **Step 1: 실패하는 계약 테스트를 먼저 쓴다**
@@ -180,9 +186,9 @@ describe("contract sync 2026-07-23", () => {
       api().paths["/v1/agent-chats/{chatId}/approvals/{approvalId}"]?.post
         ?.operationId
     ).toBe("resolveToolApproval");
-    expect(api().paths["/v1/notes/{noteId}/meeting-end"]?.post?.operationId).toBe(
-      "endMeeting"
-    );
+    expect(
+      api().paths["/v1/notes/{noteId}/meeting-end"]?.post?.operationId
+    ).toBe("endMeeting");
     expect(
       api().paths["/v1/notes/{noteId}/analyses/latest"]?.get?.operationId
     ).toBe("getLatestAnalysis");
@@ -260,11 +266,13 @@ git commit -m "feat: 계약 미러를 34경로로 갱신하고 채팅 SSE를 반
 ### Task 3: orval 재생성
 
 **Files:**
+
 - Modify: `lib/api/generated/**` (생성물)
 - Create: `docs/generated-api-map.md`
 - Modify: `lib/api/openapi-contract.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 2의 34경로 `openapi3.yml`
 - Produces: `docs/generated-api-map.md` — 태그별 실제 생성 파일 경로. Task 4~7이 import 경로를 여기서 확인한다. 서버 계약의 태그 중 `Workspace Invitations`·`Workspace Members`에 공백이 있어 orval 출력 디렉터리명을 미리 확정할 수 없다.
 
@@ -289,16 +297,16 @@ ls -1 lib/api/generated
 
 `pnpm orval`이 만든 태그별 파일. import 경로는 여기서 확인한다.
 
-| 서버 태그 | 생성 디렉터리 | 훅 파일 | MSW 파일 |
-|---|---|---|---|
-| AgentChat | (실제 값) | (실제 값) | (실제 값) |
-| Notifications | | | |
-| WorkspaceIntegration | | | |
-| Workspace Invitations | | | |
-| Workspace Members | | | |
-| Analysis | | | |
-| Meeting | | | |
-| NoteSharedChat | | | |
+| 서버 태그             | 생성 디렉터리 | 훅 파일   | MSW 파일  |
+| --------------------- | ------------- | --------- | --------- |
+| AgentChat             | (실제 값)     | (실제 값) | (실제 값) |
+| Notifications         |               |           |           |
+| WorkspaceIntegration  |               |           |           |
+| Workspace Invitations |               |           |           |
+| Workspace Members     |               |           |           |
+| Analysis              |               |           |           |
+| Meeting               |               |           |           |
+| NoteSharedChat        |               |           |           |
 
 ## SSE 두 경로는 생성 훅을 쓰지 않는다
 
@@ -357,12 +365,14 @@ git commit -m "feat: orval 재생성 — 신규 8개 태그 훅과 목 생성물
 ### Task 4: 목 상태 확장 — 초대·알림·멤버
 
 **Files:**
+
 - Modify: `lib/mocks/db.ts`
 - Modify: `lib/mocks/db.test.ts`
 - Modify: `lib/mocks/rest-handlers.ts`
 - Modify: `lib/mocks/rest-handlers.test.ts`
 
 **Interfaces:**
+
 - Consumes: `docs/generated-api-map.md`의 `Notifications`·`Workspace Invitations`·`Workspace Members` MSW 파일 경로
 - Produces: `mockDb.listMembers(workspaceId)`, `mockDb.listInvitations(workspaceId)`, `mockDb.createInvitation(workspaceId, { email, role })`, `mockDb.acceptInvitation(invitationId)`, `mockDb.declineInvitation(invitationId)`, `mockDb.cancelInvitation(invitationId)`, `mockDb.listNotifications()`, `mockDb.markNotificationRead(notificationId)`. Task 8이 이 목록을 맥락 맵에 옮긴다.
 
@@ -646,10 +656,16 @@ it("returns 409 for a duplicate pending invitation", async () => {
   const url = `http://localhost/v1/workspaces/${workspaceId}/invitations`;
   const payload = { email: "dup@heymoa.com", role: "MEMBER" };
 
-  const first = await fetch(url, { method: "POST", body: JSON.stringify(payload) });
+  const first = await fetch(url, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
   expect(first.status).toBe(201);
 
-  const second = await fetch(url, { method: "POST", body: JSON.stringify(payload) });
+  const second = await fetch(url, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
   expect(second.status).toBe(409);
   expect((await second.json()).error.code).toBe("DUPLICATE_PENDING_INVITATION");
 });
@@ -668,11 +684,13 @@ git commit -m "feat(mocks): 초대·알림·멤버 상태 전이 목"
 ### Task 5: 목 상태 확장 — 회의·분석·연동
 
 **Files:**
+
 - Modify: `lib/mocks/db.ts`
 - Modify: `lib/mocks/db.test.ts`
 - Modify: `lib/mocks/rest-handlers.ts`
 
 **Interfaces:**
+
 - Consumes: Task 4의 `db.ts` 구조
 - Produces: `mockDb.endMeeting(noteId)`, `mockDb.pauseMeeting(noteId)`, `mockDb.resumeMeeting(noteId)`, `mockDb.requestAnalysis(noteId)`, `mockDb.advanceAnalysis(noteId)`, `mockDb.getLatestAnalysis(noteId)`, `mockDb.listIntegrations(workspaceId)`, `mockDb.connectIntegration(workspaceId, provider)`, `mockDb.disconnectIntegration(workspaceId, provider)`. 노트에 `meetingStatus` 필드가 생긴다 — Task 6의 잠금 검사가 이 값을 읽는다.
 
@@ -703,7 +721,9 @@ describe("meeting and analysis", () => {
     const noteId = firstNoteId();
     mockDb.endMeeting(noteId);
 
-    expect(() => mockDb.pauseMeeting(noteId)).toThrow("MEETING_NOT_IN_PROGRESS");
+    expect(() => mockDb.pauseMeeting(noteId)).toThrow(
+      "MEETING_NOT_IN_PROGRESS"
+    );
   });
 });
 
@@ -919,6 +939,7 @@ git commit -m "feat(mocks): 회의 상태·분석·워크스페이스 연동 목
 ### Task 6: SSE 스트림 목
 
 **Files:**
+
 - Create: `lib/mocks/chat-stream.ts`
 - Create: `lib/mocks/chat-stream.test.ts`
 - Create: `lib/mocks/sse-handler.ts`
@@ -926,6 +947,7 @@ git commit -m "feat(mocks): 회의 상태·분석·워크스페이스 연동 목
 - Modify: `lib/mocks/db.ts`
 
 **Interfaces:**
+
 - Consumes: Task 5가 노트에 넣은 `meetingStatus` 필드
 - Produces: `buildChatEvents(input): MockSseEvent[]` — SSE 이벤트 배열을 만드는 순수 함수. `chatSseHandlers` — MSW 핸들러 배열. `mockDb.acquireSharedChatLock(noteId)`, `mockDb.releaseSharedChatLock(noteId)`.
 
@@ -945,7 +967,9 @@ describe("buildChatEvents", () => {
 
     expect(names(events)[0]).toBe("message_start");
     expect(names(events).at(-1)).toBe("message_end");
-    expect(names(events).filter((n) => n === "token").length).toBeGreaterThan(0);
+    expect(names(events).filter((n) => n === "token").length).toBeGreaterThan(
+      0
+    );
   });
 
   it("asks for approval before a write tool and resolves after it", () => {
@@ -1074,7 +1098,11 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
 
   if (!input.message.includes("이슈")) {
     const content = "회의에서 정한 내용을 정리했습니다.";
-    return [start, ...tokens(content), frame("message_end", { messageId, content })];
+    return [
+      start,
+      ...tokens(content),
+      frame("message_end", { messageId, content }),
+    ];
   }
 
   const approvalId = tsid(`${input.chatId}:approval`);
@@ -1156,12 +1184,15 @@ function sseResponse(events: { event: string; data: string }[]) {
 }
 
 export const chatSseHandlers = [
-  http.post("*/v1/agent-chats/:chatId/messages", async ({ request, params }) => {
-    const body = (await request.json()) as { message: string };
-    return sseResponse(
-      buildChatEvents({ chatId: id(params.chatId), message: body.message })
-    );
-  }),
+  http.post(
+    "*/v1/agent-chats/:chatId/messages",
+    async ({ request, params }) => {
+      const body = (await request.json()) as { message: string };
+      return sseResponse(
+        buildChatEvents({ chatId: id(params.chatId), message: body.message })
+      );
+    }
+  ),
 
   http.post("*/v1/notes/:noteId/chat/messages", async ({ request, params }) => {
     const body = (await request.json()) as { message: string };
@@ -1171,7 +1202,11 @@ export const chatSseHandlers = [
     } catch (error) {
       const code = (error as Error).message;
       return HttpResponse.json(
-        { success: false, data: null, error: { code, message: code, details: null } },
+        {
+          success: false,
+          data: null,
+          error: { code, message: code, details: null },
+        },
         { status: 409 }
       );
     }
@@ -1181,7 +1216,10 @@ export const chatSseHandlers = [
   }),
 
   http.post("*/v1/agent-chats/:chatId/approvals/:approvalId", () =>
-    HttpResponse.json({ success: true, data: null, error: null }, { status: 204 })
+    HttpResponse.json(
+      { success: true, data: null, error: null },
+      { status: 204 }
+    )
   ),
 ];
 ```
@@ -1232,7 +1270,7 @@ codex exec review --base dev
 ## 1차 — 목 3종 (Task 4~6)
 
 | 지적 | 판단 | 근거 |
-|---|---|---|
+| ---- | ---- | ---- |
 ```
 
 계약 미러와 `lib/api/generated/**`에 대한 지적은 반영하지 않고 기록만 한다.
@@ -1247,12 +1285,14 @@ git commit -m "docs: codex 1차 리뷰 기록 (목 3종)"
 ### Task 7: Playwright 도입과 스모크
 
 **Files:**
+
 - Create: `playwright.config.ts`
 - Create: `e2e/smoke.spec.ts`
 - Modify: `package.json`
 - Modify: `.gitignore`
 
 **Interfaces:**
+
 - Consumes: Task 4~6의 목
 - Produces: `pnpm test:e2e`. Task 8·9의 검증 명령에 포함된다.
 
@@ -1311,7 +1351,9 @@ export default defineConfig({
 ```typescript
 import { expect, test } from "@playwright/test";
 
-test("boots with the MSW service worker and no console errors", async ({ page }) => {
+test("boots with the MSW service worker and no console errors", async ({
+  page,
+}) => {
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
@@ -1337,7 +1379,9 @@ test("serves a new endpoint through the service worker", async ({ page }) => {
   await page.goto("/");
 
   const payload = await page.evaluate(async () => {
-    const response = await fetch("/v1/notifications", { credentials: "include" });
+    const response = await fetch("/v1/notifications", {
+      credentials: "include",
+    });
     return { status: response.status, body: await response.json() };
   });
 
@@ -1384,9 +1428,11 @@ git commit -m "docs: codex 2차 리뷰 기록 (Playwright)"
 ### Task 8: API 맥락 맵과 shadcn 매핑표
 
 **Files:**
+
 - Create: `docs/api-surface.md`
 
 **Interfaces:**
+
 - Consumes: `docs/generated-api-map.md`, `openapi3.yml`, Task 4~6의 `mockDb` 동작
 - Produces: `docs/api-surface.md`. Task 9의 여섯 에이전트가 공통 입력으로 읽는다. `v4 프레임 ID`가 `없음`인 행의 집합이 Task 9의 작업 목록이다.
 
@@ -1400,10 +1446,10 @@ git commit -m "docs: codex 2차 리뷰 기록 (Playwright)"
 `openapi3.yml` 34경로가 만드는 화면과 상태. mvp.pen v4 프레임과의 대응을 함께 적는다.
 `v4 프레임 ID`가 `없음`인 행이 디자인 작업 목록이다.
 
-| 경로 | 훅 | 쓰는 화면 | 응답이 만드는 상태 | v4 프레임 ID |
-|---|---|---|---|---|
-| `GET /v1/notifications` | `useGetNotifications` | 알림 벨 | 빈 목록 / 미읽음 배지 | `O1xLI` |
-| `PUT /v1/notifications/{id}/read` | `useMarkNotificationRead` | 알림 벨 | 배지 감소 | `O1xLI` |
+| 경로                                     | 훅                         | 쓰는 화면 | 응답이 만드는 상태          | v4 프레임 ID     |
+| ---------------------------------------- | -------------------------- | --------- | --------------------------- | ---------------- |
+| `GET /v1/notifications`                  | `useGetNotifications`      | 알림 벨   | 빈 목록 / 미읽음 배지       | `O1xLI`          |
+| `PUT /v1/notifications/{id}/read`        | `useMarkNotificationRead`  | 알림 벨   | 배지 감소                   | `O1xLI`          |
 | `POST /v1/agent-chats/{chatId}/messages` | (없음 — `postEventStream`) | 개인 챗봇 | 스트리밍 / 승인 대기 / 실패 | `LeuWE`, `LCXcj` |
 ```
 
@@ -1416,14 +1462,14 @@ v4 프레임 ID는 pencil MCP로 `mvp.pen`의 y≥17000 프레임을 조회해 �
 ```markdown
 ## 목이 표현하는 실패
 
-| 실패 | 경로 | 화면에서 보여야 하는 것 | v4 프레임 ID |
-|---|---|---|---|
-| 409 입력 잠금 | `POST /v1/notes/{noteId}/chat/messages` | "OO님이 입력 중" + 입력창 비활성 | `xPpzc` |
-| 409 회의 비ACTIVE | 같음 | "중지 중에는 개인 챗봇을 이용하세요" | |
-| 403 관전자 승인 시도 | `POST /v1/agent-chats/{chatId}/approvals/{approvalId}` | 승인 권한 없음 안내 | |
-| 404 만료된 승인 | 같음 | 카드 무효화 + 사유 | |
-| 종료 이벤트 없이 SSE 끊김 | 두 스트림 경로 | 재시도 UX | |
-| OAuth 리다이렉트 | `.../integrations/{provider}/authorize` | 목 전용 승인 화면 `/mock-oauth` | |
+| 실패                      | 경로                                                   | 화면에서 보여야 하는 것              | v4 프레임 ID |
+| ------------------------- | ------------------------------------------------------ | ------------------------------------ | ------------ |
+| 409 입력 잠금             | `POST /v1/notes/{noteId}/chat/messages`                | "OO님이 입력 중" + 입력창 비활성     | `xPpzc`      |
+| 409 회의 비ACTIVE         | 같음                                                   | "중지 중에는 개인 챗봇을 이용하세요" |              |
+| 403 관전자 승인 시도      | `POST /v1/agent-chats/{chatId}/approvals/{approvalId}` | 승인 권한 없음 안내                  |              |
+| 404 만료된 승인           | 같음                                                   | 카드 무효화 + 사유                   |              |
+| 종료 이벤트 없이 SSE 끊김 | 두 스트림 경로                                         | 재시도 UX                            |              |
+| OAuth 리다이렉트          | `.../integrations/{provider}/authorize`                | 목 전용 승인 화면 `/mock-oauth`      |              |
 ```
 
 빈 칸은 조회 결과로 채우고, 없으면 `없음`이라 적는다.
@@ -1435,18 +1481,18 @@ v4 프레임 ID는 pencil MCP로 `mvp.pen`의 y≥17000 프레임을 조회해 �
 
 여섯 에이전트가 각자 다른 프리미티브를 고르면 구현이 갈라진다. 여기 적힌 것을 쓴다.
 
-| UI 요소 | shadcn 프리미티브 |
-|---|---|
-| 승인 카드 | `Card` + `Button`(승인/거절) |
-| 알림 벨 | `DropdownMenu` + `Badge` |
-| 설정 탭(멤버·연동) | `Tabs` |
-| 초대 폼 | `Form` + `Input` + `Select`(역할) |
-| 잠금·비ACTIVE 안내 | `Alert` |
-| 회의 종료 확인 | `AlertDialog` |
-| 분석 진행 | `Skeleton` |
-| 요약 3종 | `Tabs` + 마크다운 렌더 |
-| 도구 실행 기록 | `Card`(축약) + `Badge`(상태) |
-| 연동 연결/해제 | `Card` + `Button` + `Badge`(연결됨) |
+| UI 요소            | shadcn 프리미티브                   |
+| ------------------ | ----------------------------------- |
+| 승인 카드          | `Card` + `Button`(승인/거절)        |
+| 알림 벨            | `DropdownMenu` + `Badge`            |
+| 설정 탭(멤버·연동) | `Tabs`                              |
+| 초대 폼            | `Form` + `Input` + `Select`(역할)   |
+| 잠금·비ACTIVE 안내 | `Alert`                             |
+| 회의 종료 확인     | `AlertDialog`                       |
+| 분석 진행          | `Skeleton`                          |
+| 요약 3종           | `Tabs` + 마크다운 렌더              |
+| 도구 실행 기록     | `Card`(축약) + `Badge`(상태)        |
+| 연동 연결/해제     | `Card` + `Button` + `Badge`(연결됨) |
 ```
 
 - [ ] **Step 4: 검증**
@@ -1471,10 +1517,12 @@ git commit -m "docs: API 표면 맵과 shadcn 매핑표"
 ### Task 9: mvp.pen v4 계약 정합성 감사 (에이전트 6개)
 
 **Files:**
+
 - Modify: `/Users/kms/Desktop/heymoa/mvp.pen` (git 밖)
 - Create: `docs/design-decisions.md`
 
 **Interfaces:**
+
 - Consumes: `docs/api-surface.md`의 `없음` 목록, shadcn 매핑표
 - Produces: `docs/design-decisions.md`. 화면 구현 이슈(APP-111~117)가 읽을 문서다
 
@@ -1527,14 +1575,14 @@ heymoa-web/docs/design-decisions.md의 「{행 이름}」 절에 추가한다.
 
 행 배정:
 
-| 에이전트 | 행 이름 | y | 현재 프레임 |
-|---|---|---|---|
-| 1 | note-hub + side panel | 20000, 32000 | `TkHep` `DdzUR` `oMqgT` `Kl7Dz` `ezlsT` `X3vCNH` `LdiLi` `V7cEN` |
-| 2 | 회의 종료와 요약 | 22000 | `hbv5v` `uWnWH` `quNSL` `PAVkf` |
-| 3 | 공유 챗봇 | 24000 | `F8dV8C` `xPpzc` `TqX06` |
-| 4 | 개인 챗봇 | 26000 | `LeuWE` `LCXcj` `xyR27` |
-| 5 | 도구 승인 | 28000 | `eP8jX` `jobCE` `ImOW0` |
-| 6 | 연동·알림·멤버 | 30000 | `soPy6` `t8oW0` `O1xLI` `iAG1e` |
+| 에이전트 | 행 이름               | y            | 현재 프레임                                                      |
+| -------- | --------------------- | ------------ | ---------------------------------------------------------------- |
+| 1        | note-hub + side panel | 20000, 32000 | `TkHep` `DdzUR` `oMqgT` `Kl7Dz` `ezlsT` `X3vCNH` `LdiLi` `V7cEN` |
+| 2        | 회의 종료와 요약      | 22000        | `hbv5v` `uWnWH` `quNSL` `PAVkf`                                  |
+| 3        | 공유 챗봇             | 24000        | `F8dV8C` `xPpzc` `TqX06`                                         |
+| 4        | 개인 챗봇             | 26000        | `LeuWE` `LCXcj` `xyR27`                                          |
+| 5        | 도구 승인             | 28000        | `eP8jX` `jobCE` `ImOW0`                                          |
+| 6        | 연동·알림·멤버        | 30000        | `soPy6` `t8oW0` `O1xLI` `iAG1e`                                  |
 
 `/mock-oauth` 목 전용 승인 화면은 6번 담당이다.
 

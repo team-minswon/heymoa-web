@@ -55,7 +55,11 @@ function renderDialog(onEnded?: () => void) {
     </QueryClientProvider>
   );
   const view = render(ui(true));
-  return { ...view, reopen: () => view.rerender(ui(true)), close: () => view.rerender(ui(false)) };
+  return {
+    ...view,
+    reopen: () => view.rerender(ui(true)),
+    close: () => view.rerender(ui(false)),
+  };
 }
 
 describe("MeetingEndDialog", () => {
@@ -78,7 +82,9 @@ describe("MeetingEndDialog", () => {
   });
 
   it("종료가 접수되면 onEnded를 불러 요약 탭으로 넘긴다", () => {
-    state.endMock.mockImplementation((_vars, options) => options?.onSuccess?.());
+    state.endMock.mockImplementation((_vars, options) =>
+      options?.onSuccess?.()
+    );
     const onEnded = vi.fn();
     renderDialog(onEnded);
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));

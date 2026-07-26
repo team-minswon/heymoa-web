@@ -42,7 +42,10 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
   useGetNote: () => ({
     data: {
       status: 200,
-      data: { success: true, data: { noteId: "01K0000000002", title: "주간 제품 회의" } },
+      data: {
+        success: true,
+        data: { noteId: "01K0000000002", title: "주간 제품 회의" },
+      },
     },
   }),
 }));
@@ -79,7 +82,10 @@ describe("WorkspaceToolbar", () => {
     recording.elapsedMs = 0;
     render(
       <SidebarProvider>
-        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="모든 노트" />
+        <WorkspaceToolbar
+          workspaceId="01K0000000000"
+          currentLabel="모든 노트"
+        />
       </SidebarProvider>
     );
 
@@ -106,9 +112,13 @@ describe("WorkspaceToolbar", () => {
     );
 
     // 브레드크럼에 노트 제목, 같은 행에 회의 조작 + 닫기 + 새 노트 + 벨.
-    expect(screen.getByRole("heading", { name: "주간 제품 회의" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "주간 제품 회의" })
+    ).toBeInTheDocument();
     expect(screen.getByTestId("meeting-controls")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "노트 닫기" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "새 노트" })).toBeInTheDocument();
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
   });

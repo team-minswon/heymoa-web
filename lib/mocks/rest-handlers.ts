@@ -185,7 +185,9 @@ export const restHandlers = [
   http.post("*/v1/workspaces", async ({ request }) =>
     resultOf(
       async () =>
-        mockDb.createWorkspace((await request.json()) as CreateWorkspaceRequest),
+        mockDb.createWorkspace(
+          (await request.json()) as CreateWorkspaceRequest
+        ),
       BAD_REQUEST,
       201
     )
@@ -209,10 +211,13 @@ export const restHandlers = [
   // workspaceId는 path가 아니라 **본문**으로 온다 (PUT /v1/users/me/default-workspace).
   // params에서 읽으면 언제나 없는 워크스페이스라 기본 워크스페이스가 바뀌지 않았다.
   http.put("*/v1/users/me/default-workspace", async ({ request }) =>
-    resultOf(async () => {
-      const body = (await request.json()) as ChangeDefaultWorkspaceRequest;
-      return mockDb.setDefaultWorkspace(String(body.workspaceId ?? ""));
-    }, notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다."))
+    resultOf(
+      async () => {
+        const body = (await request.json()) as ChangeDefaultWorkspaceRequest;
+        return mockDb.setDefaultWorkspace(String(body.workspaceId ?? ""));
+      },
+      notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
+    )
   ),
 
   // Projects
@@ -222,16 +227,18 @@ export const restHandlers = [
       notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
     )
   ),
-  http.post("*/v1/workspaces/:workspaceId/projects", async ({ request, params }) =>
-    resultOf(
-      async () =>
-        mockDb.createProject(
-          id(params.workspaceId),
-          (await request.json()) as ProjectRequest
-        ),
-      BAD_REQUEST,
-      201
-    )
+  http.post(
+    "*/v1/workspaces/:workspaceId/projects",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.createProject(
+            id(params.workspaceId),
+            (await request.json()) as ProjectRequest
+          ),
+        BAD_REQUEST,
+        201
+      )
   ),
   http.get("*/v1/workspaces/:workspaceId/projects/:projectId", ({ params }) =>
     resultOf(
@@ -405,13 +412,16 @@ export const restHandlers = [
     commandResult(() => mockDb.markNotificationRead(id(params.notificationId)))
   ),
 
-  http.post("*/v1/workspaces/:workspaceId/invitations", async ({ request, params }) => {
-    const body = (await request.json()) as { email: string; role: string };
-    return invitationResult(
-      () => mockDb.createInvitation(id(params.workspaceId), body),
-      201
-    );
-  }),
+  http.post(
+    "*/v1/workspaces/:workspaceId/invitations",
+    async ({ request, params }) => {
+      const body = (await request.json()) as { email: string; role: string };
+      return invitationResult(
+        () => mockDb.createInvitation(id(params.workspaceId), body),
+        201
+      );
+    }
+  ),
   http.delete(
     "*/v1/workspaces/:workspaceId/invitations/:invitationId",
     ({ params }) =>
@@ -450,7 +460,10 @@ export const restHandlers = [
     "*/v1/workspaces/:workspaceId/integrations/:provider",
     ({ params }) => {
       try {
-        mockDb.disconnectIntegration(id(params.workspaceId), id(params.provider));
+        mockDb.disconnectIntegration(
+          id(params.workspaceId),
+          id(params.provider)
+        );
       } catch (error) {
         const code = (error as Error).message;
         return HttpResponse.json(
@@ -531,13 +544,16 @@ export const restHandlers = [
 
   // 목 전용(계약 밖, `_mock` 접두사): 관전자 화면을 재현하려고 남의 잠금을 심는다.
   // e2e는 페이지 안에서 fetch로 이 경로를 쳐 서비스 워커가 상태를 세우게 한다.
-  http.post("*/v1/notes/:noteId/_mock/foreign-lock", async ({ request, params }) => {
-    const body = (await request.json().catch(() => ({}))) as {
-      lockedBy?: string | null;
-    };
-    // 명시적 null은 잠금 해제다 — 생략했을 때만 기본 이름을 넣는다(`??`는 null도 덮어 해제를 막는다).
-    const lockedBy = body.lockedBy === undefined ? "김민수" : body.lockedBy;
-    mockDb.seedForeignLock(id(params.noteId), lockedBy);
-    return new HttpResponse(null, { status: 204 });
-  }),
+  http.post(
+    "*/v1/notes/:noteId/_mock/foreign-lock",
+    async ({ request, params }) => {
+      const body = (await request.json().catch(() => ({}))) as {
+        lockedBy?: string | null;
+      };
+      // 명시적 null은 잠금 해제다 — 생략했을 때만 기본 이름을 넣는다(`??`는 null도 덮어 해제를 막는다).
+      const lockedBy = body.lockedBy === undefined ? "김민수" : body.lockedBy;
+      mockDb.seedForeignLock(id(params.noteId), lockedBy);
+      return new HttpResponse(null, { status: 204 });
+    }
+  ),
 ];

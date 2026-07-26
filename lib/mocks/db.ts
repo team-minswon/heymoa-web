@@ -100,7 +100,10 @@ type StoreState = {
   sharedChatLocks: Set<string>;
   /** 현재 유저가 아닌 멤버가 쥔 잠금 (noteId → 이름). 관전자 화면 재현용. */
   sharedChatForeignLocks: Map<string, string>;
-  sharedChatPendingApprovals: Map<string, NoteSharedChatResponseDataLockPendingApproval>;
+  sharedChatPendingApprovals: Map<
+    string,
+    NoteSharedChatResponseDataLockPendingApproval
+  >;
   agentChats: MockAgentChat[];
   agentChatMessages: MockAgentChatMessage[];
   sharedChatMessages: MockSharedChatMessage[];
@@ -387,9 +390,11 @@ function findInvitation(invitationId: string): MockInvitation {
  */
 function syncInvitationNotification(invitation: MockInvitation) {
   const notification = state.notifications.find(
-    (candidate) => candidate.invitation?.invitationId === invitation.invitationId
+    (candidate) =>
+      candidate.invitation?.invitationId === invitation.invitationId
   );
-  if (notification?.invitation) notification.invitation.status = invitation.status;
+  if (notification?.invitation)
+    notification.invitation.status = invitation.status;
 }
 
 /** PENDING 초대를 확정 상태로 옮기고 알림을 맞춘다. 수락만 멤버를 늘린다. */
@@ -421,7 +426,8 @@ function requireMeetingStarter(note: NoteResponseData) {
 
 function hasActiveSession(noteId: string) {
   return state.sessions.some(
-    (session) => session.noteId === noteId && ACTIVE_STATUSES.has(session.status)
+    (session) =>
+      session.noteId === noteId && ACTIVE_STATUSES.has(session.status)
   );
 }
 
@@ -552,7 +558,8 @@ export const mockDb = {
     noteId?: string | null;
   }): AgentChatV2ResponseData {
     const scope = input.scope as AgentChatV2ResponseData["scope"];
-    const workspaceId = scope === "workspace" ? (input.workspaceId ?? null) : null;
+    const workspaceId =
+      scope === "workspace" ? (input.workspaceId ?? null) : null;
     const noteId = scope === "note" ? (input.noteId ?? null) : null;
     if (scope === "workspace" && !workspaceId) fail("WORKSPACE_NOT_FOUND");
     if (scope === "note" && !noteId) fail("NOTE_NOT_FOUND");
@@ -600,7 +607,9 @@ export const mockDb = {
     return chat ? copy(omit(chat, ["active"])) : null;
   },
 
-  getAgentChatMessages(chatId: string): AgentChatMessagesResponseDataMessagesItem[] {
+  getAgentChatMessages(
+    chatId: string
+  ): AgentChatMessagesResponseDataMessagesItem[] {
     if (!state.agentChats.some((chat) => chat.chatId === chatId)) {
       fail("AGENT_CHAT_NOT_FOUND");
     }
@@ -636,7 +645,9 @@ export const mockDb = {
         .map((message) => omit(message, ["noteId"])),
       lock: {
         locked,
-        lockedBy: foreignLocker ?? (state.sharedChatLocks.has(noteId) ? state.user.name : null),
+        lockedBy:
+          foreignLocker ??
+          (state.sharedChatLocks.has(noteId) ? state.user.name : null),
         // 관전자는 스트림을 받지 않는다 — 승인 대기를 이 필드의 폴링으로만 본다 (계약).
         pendingApproval: state.sharedChatPendingApprovals.get(noteId) ?? null,
       },
@@ -651,7 +662,10 @@ export const mockDb = {
 
   appendSharedChatMessage(
     noteId: string,
-    message: Omit<NoteSharedChatResponseDataMessagesItem, "createdAt" | "messageId">
+    message: Omit<
+      NoteSharedChatResponseDataMessagesItem,
+      "createdAt" | "messageId"
+    >
   ) {
     state.sharedChatMessages.push({
       ...message,
@@ -670,7 +684,10 @@ export const mockDb = {
     }
     // 남의 잠금(시드된 관전자 상태)도 실제로 막아야 계약(다른 멤버 입력 중이면 CHAT_LOCKED)을
     // 그대로 시연한다 — GET만 잠겼다고 하고 POST는 통과하면 목이 계약과 어긋난다.
-    if (state.sharedChatLocks.has(noteId) || state.sharedChatForeignLocks.has(noteId)) {
+    if (
+      state.sharedChatLocks.has(noteId) ||
+      state.sharedChatForeignLocks.has(noteId)
+    ) {
       fail("CHAT_LOCKED");
     }
     state.sharedChatLocks.add(noteId);
@@ -722,7 +739,10 @@ export const mockDb = {
     const note = findNote(noteId);
     if (note.meetingStatus !== "ENDED") fail("MEETING_NOT_ENDED");
     const pending = latestAnalysis(noteId);
-    if (pending && (pending.status === "PENDING" || pending.status === "RUNNING")) {
+    if (
+      pending &&
+      (pending.status === "PENDING" || pending.status === "RUNNING")
+    ) {
       fail("ANALYSIS_IN_PROGRESS");
     }
     const analysis: AnalysisResultResponseData = {
@@ -864,14 +884,19 @@ export const mockDb = {
     });
   },
 
-  acceptInvitation(invitationId: string): WorkspaceInvitationActionResponseData {
+  acceptInvitation(
+    invitationId: string
+  ): WorkspaceInvitationActionResponseData {
     const invitation = findInvitation(invitationId);
     const resolved = resolveInvitation(invitationId, "ACCEPTED");
     const isSelf = invitation.inviteeEmail === state.user.email;
 
     // 본인이 받은 초대를 수락하면 그 워크스페이스가 목록에 나타나야 한다 — 그게 합류다.
     // 기본 워크스페이스는 바뀌지 않는다 (계약).
-    if (isSelf && !state.workspaces.some((w) => w.workspaceId === invitation.workspaceId)) {
+    if (
+      isSelf &&
+      !state.workspaces.some((w) => w.workspaceId === invitation.workspaceId)
+    ) {
       state.workspaces.push({
         workspaceId: invitation.workspaceId,
         name: INVITED_WORKSPACE.name,
@@ -907,7 +932,9 @@ export const mockDb = {
     return resolveInvitation(invitationId, "DECLINED");
   },
 
-  cancelInvitation(invitationId: string): WorkspaceInvitationActionResponseData {
+  cancelInvitation(
+    invitationId: string
+  ): WorkspaceInvitationActionResponseData {
     return resolveInvitation(invitationId, "CANCELED");
   },
 
@@ -922,7 +949,9 @@ export const mockDb = {
   },
 
   /** 계약은 식별자만 돌려준다 — 전체 알림을 흘리면 UI가 없는 필드에 기대게 된다. */
-  markNotificationRead(notificationId: string): MarkNotificationReadResponseData {
+  markNotificationRead(
+    notificationId: string
+  ): MarkNotificationReadResponseData {
     const notification = state.notifications.find(
       (candidate) => candidate.notificationId === notificationId
     );

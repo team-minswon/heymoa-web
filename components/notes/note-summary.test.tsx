@@ -48,7 +48,12 @@ describe("NoteSummary", () => {
   afterEach(cleanup);
 
   it("PENDING이면 분석 진행 스켈레톤을 보인다", () => {
-    state.analysis = { status: "PENDING", overview: null, actionItems: null, insights: null };
+    state.analysis = {
+      status: "PENDING",
+      overview: null,
+      actionItems: null,
+      insights: null,
+    };
     renderSummary(true);
     expect(screen.getByText("회의를 정리하고 있습니다")).toBeTruthy();
   });
@@ -63,7 +68,9 @@ describe("NoteSummary", () => {
     const { container } = renderSummary(true);
     expect(screen.getByText("출시 일정을 정했습니다.")).toBeTruthy();
     expect(screen.getByText("배포 체크리스트")).toBeTruthy();
-    expect(container.querySelectorAll("ul li").length).toBeGreaterThanOrEqual(3);
+    expect(container.querySelectorAll("ul li").length).toBeGreaterThanOrEqual(
+      3
+    );
   });
 
   it("FAILED면 사유와 다시 분석 버튼을 보인다", () => {

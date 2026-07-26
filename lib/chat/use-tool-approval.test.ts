@@ -22,10 +22,18 @@ function failWith(error: unknown) {
   mutateMock.mockImplementation((_vars, options) => options?.onError?.(error));
 }
 
-function render(pendingArg: ReturnType<typeof pending> | null, phase: ChatStreamPhase) {
+function render(
+  pendingArg: ReturnType<typeof pending> | null,
+  phase: ChatStreamPhase
+) {
   return renderHook(
-    ({ p, ph }: { p: ReturnType<typeof pending> | null; ph: ChatStreamPhase }) =>
-      useToolApproval({ chatId: CHAT_ID, pending: p, streamPhase: ph }),
+    ({
+      p,
+      ph,
+    }: {
+      p: ReturnType<typeof pending> | null;
+      ph: ChatStreamPhase;
+    }) => useToolApproval({ chatId: CHAT_ID, pending: p, streamPhase: ph }),
     { initialProps: { p: pendingArg, ph: phase } }
   );
 }
@@ -56,7 +64,11 @@ describe("useToolApproval", () => {
   });
 
   it("종료 오류(404 만료)는 카드를 무효화한다", () => {
-    failWith({ success: false, data: null, error: { code: "APPROVAL_NOT_FOUND", message: "만료되었습니다." } });
+    failWith({
+      success: false,
+      data: null,
+      error: { code: "APPROVAL_NOT_FOUND", message: "만료되었습니다." },
+    });
     const { result } = render(pending("a1"), "awaiting_approval");
     act(() => result.current.approve("APPROVED"));
     expect(result.current.card?.state).toMatchObject({ kind: "invalidated" });
@@ -64,10 +76,17 @@ describe("useToolApproval", () => {
   });
 
   it("409 회의 종료도 무효화하고 사유가 다르다", () => {
-    failWith({ success: false, data: null, error: { code: "MEETING_NOT_ACTIVE", message: "회의가 종료되었습니다." } });
+    failWith({
+      success: false,
+      data: null,
+      error: { code: "MEETING_NOT_ACTIVE", message: "회의가 종료되었습니다." },
+    });
     const { result } = render(pending("a1"), "awaiting_approval");
     act(() => result.current.approve("APPROVED"));
-    const state = result.current.card?.state as { kind: string; reason: string };
+    const state = result.current.card?.state as {
+      kind: string;
+      reason: string;
+    };
     expect(state.reason).toContain("회의가 종료");
   });
 
@@ -104,7 +123,11 @@ describe("useToolApproval", () => {
   });
 
   it("다음 턴의 새 승인(다른 id)은 이전 무효화에 걸리지 않는다", () => {
-    failWith({ success: false, data: null, error: { code: "APPROVAL_NOT_FOUND", message: "만료되었습니다." } });
+    failWith({
+      success: false,
+      data: null,
+      error: { code: "APPROVAL_NOT_FOUND", message: "만료되었습니다." },
+    });
     const { result, rerender } = render(pending("a1"), "awaiting_approval");
     act(() => result.current.approve("APPROVED"));
     expect(result.current.card?.state).toMatchObject({ kind: "invalidated" });

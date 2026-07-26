@@ -112,7 +112,8 @@ export function MeetingEndDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>회의를 종료할까요?</AlertDialogTitle>
           <AlertDialogDescription>
-            종료하면 요약 분석이 시작되고, 이후에는 이 회의의 전사를 다시 시작할 수 없습니다.
+            종료하면 요약 분석이 시작되고, 이후에는 이 회의의 전사를 다시 시작할
+            수 없습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

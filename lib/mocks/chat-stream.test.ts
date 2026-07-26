@@ -6,7 +6,8 @@ import {
   GENERAL_CHAT_ANSWERS,
 } from "@/lib/mocks/chat-stream";
 
-const names = (events: { event: string }[]) => events.map((event) => event.event);
+const names = (events: { event: string }[]) =>
+  events.map((event) => event.event);
 
 function payloadOf(events: { event: string; data: string }[], name: string) {
   return JSON.parse(events.find((event) => event.event === name)!.data);
@@ -23,9 +24,9 @@ describe("buildChatEvents", () => {
 
     expect(names(events)[0]).toBe("message_start");
     expect(names(events).at(-1)).toBe("message_end");
-    expect(names(events).filter((name) => name === "token").length).toBeGreaterThan(
-      0
-    );
+    expect(
+      names(events).filter((name) => name === "token").length
+    ).toBeGreaterThan(0);
   });
 
   it("carries the same messageId from start to end", () => {
@@ -97,8 +98,14 @@ describe("buildChatEvents", () => {
   });
 
   it("is deterministic so tests and the demo do not drift", () => {
-    const first = buildChatEvents({ chatId: "chat-1", message: "이슈 만들어줘" });
-    const second = buildChatEvents({ chatId: "chat-1", message: "이슈 만들어줘" });
+    const first = buildChatEvents({
+      chatId: "chat-1",
+      message: "이슈 만들어줘",
+    });
+    const second = buildChatEvents({
+      chatId: "chat-1",
+      message: "이슈 만들어줘",
+    });
 
     expect(first).toEqual(second);
   });
@@ -135,15 +142,15 @@ describe("streamed tokens match the persisted content", () => {
 
   // 계약: 토큰을 이어붙인 결과 = message_end.content. 다르면 스트리밍 중 보이던 글이
   // 새로고침 후 다른 글로 바뀐다.
-  it.each([
-    ["요약해줘"],
-    ["Linear 이슈 만들어줘"],
-  ])("holds for %s", (message) => {
-    const events = buildChatEvents({ chatId: "chat-1", message });
-    const end = events.find((event) => event.event === "message_end");
+  it.each([["요약해줘"], ["Linear 이슈 만들어줘"]])(
+    "holds for %s",
+    (message) => {
+      const events = buildChatEvents({ chatId: "chat-1", message });
+      const end = events.find((event) => event.event === "message_end");
 
-    expect(joined(events).trim()).toBe(JSON.parse(end!.data).content);
-  });
+      expect(joined(events).trim()).toBe(JSON.parse(end!.data).content);
+    }
+  );
 
   it("holds on the rejected path too", () => {
     const plan = buildApprovalPlan({

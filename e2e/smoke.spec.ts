@@ -13,7 +13,9 @@ test("boots with the MSW service worker registered", async ({ page }) => {
   await page.goto("/");
 
   await expect
-    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .poll(() =>
+      page.evaluate(() => navigator.serviceWorker.controller !== null)
+    )
     .toBe(true);
 });
 
@@ -30,7 +32,9 @@ test("renders the workspace surface from mock data", async ({ page }) => {
 test("serves a new endpoint through the service worker", async ({ page }) => {
   await page.goto("/");
   await expect
-    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .poll(() =>
+      page.evaluate(() => navigator.serviceWorker.controller !== null)
+    )
     .toBe(true);
 
   const payload = await page.evaluate(async () => {
@@ -48,7 +52,9 @@ test("serves a new endpoint through the service worker", async ({ page }) => {
 test("streams chat tokens through the service worker", async ({ page }) => {
   await page.goto("/");
   await expect
-    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .poll(() =>
+      page.evaluate(() => navigator.serviceWorker.controller !== null)
+    )
     .toBe(true);
 
   const events = await page.evaluate(async () => {
@@ -56,7 +62,10 @@ test("streams chat tokens through the service worker", async ({ page }) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ scope: "workspace", workspaceId: "01K0000000000" }),
+      body: JSON.stringify({
+        scope: "workspace",
+        workspaceId: "01K0000000000",
+      }),
     }).then((response) => response.json());
 
     const stream = await fetch(
@@ -130,7 +139,9 @@ test("approves a write tool from the chat card", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
-  await page.getByRole("button", { name: "논의된 이슈를 Linear 이슈로 만들어줘" }).click();
+  await page
+    .getByRole("button", { name: "논의된 이슈를 Linear 이슈로 만들어줘" })
+    .click();
 
   // 승인 카드가 뜨고 300초 상한 문구가 있다.
   await expect(page.getByText(/5분 뒤 자동으로 거절/)).toBeVisible({
@@ -139,7 +150,9 @@ test("approves a write tool from the chat card", async ({ page }) => {
   await page.getByRole("button", { name: "승인" }).click();
 
   // 승인 → 실행 기록(외부 링크 포함)이 남는다.
-  await expect(page.getByText("APP-12 생성됨")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("APP-12 생성됨")).toBeVisible({
+    timeout: 20_000,
+  });
 });
 
 /**
@@ -192,15 +205,21 @@ test("locks the composer when another member is typing", async ({ page }) => {
  * 목에서는 `/mock-oauth`가 그 자리를 대신하므로, 왕복이 실제로 닫히는지 확인한다.
  */
 test("completes the mocked OAuth round trip", async ({ page }) => {
-  await page.goto(`/mock-oauth?workspaceId=${MOCK_WORKSPACE_ID}&provider=LINEAR`);
-  await expect(page.getByRole("button", { name: "허용하고 돌아가기" })).toBeVisible();
+  await page.goto(
+    `/mock-oauth?workspaceId=${MOCK_WORKSPACE_ID}&provider=LINEAR`
+  );
+  await expect(
+    page.getByRole("button", { name: "허용하고 돌아가기" })
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "허용하고 돌아가기" }).click();
 
   // 이동이 끝난 뒤 확인한다 — 이동 중에 평가하면 아직 워커가 붙지 않은 페이지에서 돈다.
   await page.waitForURL(`**/w/${MOCK_WORKSPACE_ID}`);
   await expect
-    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .poll(() =>
+      page.evaluate(() => navigator.serviceWorker.controller !== null)
+    )
     .toBe(true);
 
   await expect

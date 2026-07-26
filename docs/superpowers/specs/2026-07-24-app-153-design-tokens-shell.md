@@ -12,11 +12,11 @@
 
 실측: `globals.css`는 색 토큰(`--el-canvas`·`--el-ink`…)과 shadcn radius 배율(`--radius-sm..4xl`)만 가진다. **고도·형태 스케일·타이포 스케일에 대응하는 토큰이 없다.** 그 결과 공용 셸 크롬조차 그림자를 제각각 손으로 쓴다:
 
-| 위치 | 현재 값 | 정체 |
-|---|---|---|
-| 레코더 툴바 pill (`workspace-toolbar`) | `shadow-[0_8px_32px_rgba(28,25,23,0.12)]` | 부양 독 → e2 |
-| 사이드바 드롭다운·메뉴 오버레이 (`workspace-sidebar`) | `shadow-[0_4px_16px_rgba(0,0,0,0.08)]` ×3 | 오버레이 → e3 |
-| 노트 목록 빈 상태 카드 | `shadow-[0_4px_20px_rgba(0,0,0,0.03)]` | (154에서 정리) |
+| 위치                                                  | 현재 값                                   | 정체           |
+| ----------------------------------------------------- | ----------------------------------------- | -------------- |
+| 레코더 툴바 pill (`workspace-toolbar`)                | `shadow-[0_8px_32px_rgba(28,25,23,0.12)]` | 부양 독 → e2   |
+| 사이드바 드롭다운·메뉴 오버레이 (`workspace-sidebar`) | `shadow-[0_4px_16px_rgba(0,0,0,0.08)]` ×3 | 오버레이 → e3  |
+| 노트 목록 빈 상태 카드                                | `shadow-[0_4px_20px_rgba(0,0,0,0.03)]`    | (154에서 정리) |
 
 **AGENTS.md는 이 갈라짐을 부추긴다.** Styling 절이 "Cards: `rounded-2xl … shadow-[0_4px_16px_rgba(0,0,0,0.04)]`"를 단일 규칙으로 적어, 제품 카드에도 마케팅 단일 티어 그림자를 쓰라고 지시한다. 이 값은 ELEVATION SPEC이 "흰 마케팅 페이지용이라 제품에서 안 보인다"고 명시적으로 배제한 값이다.
 
@@ -33,23 +33,29 @@
 FORM·ELEVATION SPEC 수치를 그대로 옮긴다. 이름은 크기가 아니라 역할로 짓는다 — 크기가 바뀌어도 이름이 산다.
 
 **고도** (`--shadow-*` → `shadow-e2`/`shadow-e3`)
+
 ```
 --shadow-e2: 0 2px 4px #0c0a090f, 0 10px 28px #0c0a091c;   /* 부양: 챗봇 카드·플로팅 독·FAB */
 --shadow-e3: 0 4px 8px #0c0a0914, 0 20px 56px #0c0a092b;   /* 오버레이: 시트·다이얼로그·드롭다운 */
 ```
+
 셸(App Panel·사이드바·메인)은 그림자 없음 — 토큰을 두지 않는다(hairline로만 구분).
 
 **형태 스케일** (`--radius-*` → `rounded-panel`/`block`/`control`/`chip`)
+
 ```
 --radius-panel: 16px;  --radius-block: 10px;  --radius-control: 8px;  --radius-chip: 6px;
 ```
+
 circle·pill은 `rounded-full`. 셸은 각짐(radius 0). 기존 `--radius-sm..4xl`(shadcn 배율)은 건드리지 않는다 — 이름이 달라 충돌 없다.
 
 **타이포 스케일** (`--text-*` → `text-screen-title` 등)
+
 ```
 --text-screen-title: 34px;  --text-note-title: 26px;  --text-section: 20px;
 --text-panel-title: 18px;   --text-read: 15px;   /* 전사 본문 + 목록 행 제목 */
 ```
+
 14 이하(탭·채팅·메타·힌트)는 Tailwind 기본 `text-sm`/`text-xs`를 그대로 쓴다 — 토큰화하지 않는다.
 
 ## 이 이슈가 소비하는 곳 (비구조적 정합)

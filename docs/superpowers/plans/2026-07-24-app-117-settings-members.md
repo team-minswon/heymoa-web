@@ -57,7 +57,7 @@
 - 역할 로딩·실패 중엔 폼·대기 목록 안 그림.
 
 - [ ] 테스트: 목록 렌더, ADMIN 폼 표시/MEMBER 숨김, 초대 mutate+무효화, 409 인라인,
-  404 인라인+힌트, 취소 mutate.
+      404 인라인+힌트, 취소 mutate.
 - [ ] 구현.
 - [ ] `pnpm test:run components/settings/members-settings` 통과.
 - [ ] Commit: `feat(app-117): 멤버 설정 — 목록·초대·대기·취소`.

@@ -18,20 +18,22 @@ describe("renderMarkdown", () => {
     const { container } = draw("- 첫째 항목\n- 둘째 항목");
     const ul = container.querySelector("ul");
     expect(ul).toBeTruthy();
-    expect(within(ul!).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "첫째 항목",
-      "둘째 항목",
-    ]);
+    expect(
+      within(ul!)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent)
+    ).toEqual(["첫째 항목", "둘째 항목"]);
   });
 
   it("1. 목록을 <ol>로 그린다", () => {
     const { container } = draw("1. 준비\n2. 실행");
     const ol = container.querySelector("ol");
     expect(ol).toBeTruthy();
-    expect(within(ol!).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "준비",
-      "실행",
-    ]);
+    expect(
+      within(ol!)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent)
+    ).toEqual(["준비", "실행"]);
   });
 
   it("빈 줄로 블록을 나눈다 — 문단과 목록이 섞여도 각각 그린다", () => {
@@ -56,6 +58,8 @@ describe("renderMarkdown", () => {
 
   it("빈 문자열은 아무것도 그리지 않는다", () => {
     const { container } = draw("");
-    expect(container.querySelector('[data-testid="md"]')?.childElementCount).toBe(0);
+    expect(
+      container.querySelector('[data-testid="md"]')?.childElementCount
+    ).toBe(0);
   });
 });

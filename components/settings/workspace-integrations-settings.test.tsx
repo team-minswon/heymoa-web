@@ -19,25 +19,28 @@ const state = vi.hoisted(() => ({
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { userId: "user-12345", name: "테스트 유저" } }),
 }));
-vi.mock("@/lib/api/generated/workspace-integration/workspace-integration", () => ({
-  getGetWorkspaceIntegrationsQueryKey: (id: string) => ["integrations", id],
-  useGetWorkspaceIntegrations: () => ({
-    isLoading: state.integrationsLoading,
-    isError: state.integrationsError,
-    refetch: vi.fn(),
-    data: state.integrationsError
-      ? undefined
-      : {
-          status: 200,
-          data: { success: true, data: { integrations: state.integrations } },
-        },
-  }),
-  useDisconnectWorkspaceIntegration: () => ({
-    mutate: state.disconnectMock,
-    isPending: false,
-    variables: undefined,
-  }),
-}));
+vi.mock(
+  "@/lib/api/generated/workspace-integration/workspace-integration",
+  () => ({
+    getGetWorkspaceIntegrationsQueryKey: (id: string) => ["integrations", id],
+    useGetWorkspaceIntegrations: () => ({
+      isLoading: state.integrationsLoading,
+      isError: state.integrationsError,
+      refetch: vi.fn(),
+      data: state.integrationsError
+        ? undefined
+        : {
+            status: 200,
+            data: { success: true, data: { integrations: state.integrations } },
+          },
+    }),
+    useDisconnectWorkspaceIntegration: () => ({
+      mutate: state.disconnectMock,
+      isPending: false,
+      variables: undefined,
+    }),
+  })
+);
 vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
   useGetWorkspaceMembers: () => ({
     isError: state.membersError,
@@ -45,18 +48,24 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
     data: state.membersError
       ? undefined
       : state.membersLoaded
-      ? {
-          status: 200,
-          data: {
-            success: true,
+        ? {
+            status: 200,
             data: {
-              members: state.myRole
-                ? [{ userId: "user-12345", role: state.myRole, name: "테스트 유저" }]
-                : [],
+              success: true,
+              data: {
+                members: state.myRole
+                  ? [
+                      {
+                        userId: "user-12345",
+                        role: state.myRole,
+                        name: "테스트 유저",
+                      },
+                    ]
+                  : [],
+              },
             },
-          },
-        }
-      : undefined,
+          }
+        : undefined,
   }),
 }));
 
@@ -69,7 +78,12 @@ function linear(connected: boolean) {
   };
 }
 function github(connected: boolean) {
-  return { provider: "GITHUB", connected, connectedBy: null, connectedAt: null };
+  return {
+    provider: "GITHUB",
+    connected,
+    connectedBy: null,
+    connectedAt: null,
+  };
 }
 
 function renderPanel() {

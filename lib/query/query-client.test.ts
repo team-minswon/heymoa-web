@@ -10,7 +10,11 @@ import { makeQueryClient } from "@/lib/query/query-client";
 const toastError = vi.mocked(toast.error);
 
 function envelope(code: string, message: string) {
-  return { success: false, data: null, error: { code, message, details: null } };
+  return {
+    success: false,
+    data: null,
+    error: { code, message, details: null },
+  };
 }
 
 async function runFailingMutation(
@@ -32,7 +36,10 @@ describe("mutation error toasts", () => {
 
     await runFailingMutation(
       client,
-      envelope("DUPLICATE_PENDING_INVITATION", "이미 대기 중인 초대가 있습니다.")
+      envelope(
+        "DUPLICATE_PENDING_INVITATION",
+        "이미 대기 중인 초대가 있습니다."
+      )
     );
 
     expect(toastError).toHaveBeenCalledWith("이미 대기 중인 초대가 있습니다.");
@@ -71,7 +78,10 @@ describe("callers that already toast are not doubled up", () => {
 
     await runFailingMutation(
       client,
-      envelope("PROJECT_HAS_NOTES", "프로젝트에 노트가 있어 삭제할 수 없습니다."),
+      envelope(
+        "PROJECT_HAS_NOTES",
+        "프로젝트에 노트가 있어 삭제할 수 없습니다."
+      ),
       { suppressErrorToast: true }
     );
 

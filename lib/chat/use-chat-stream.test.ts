@@ -21,7 +21,11 @@ function controllable() {
   let finished = false;
   let aborted = false;
 
-  async function* generator(_url: string, _body: unknown, options?: { signal?: AbortSignal }) {
+  async function* generator(
+    _url: string,
+    _body: unknown,
+    options?: { signal?: AbortSignal }
+  ) {
     options?.signal?.addEventListener("abort", () => {
       aborted = true;
       finished = true;
@@ -70,14 +74,18 @@ describe("useChatStream", () => {
     const { result } = renderHook(() => useChatStream());
 
     act(() => {
-      void result.current.send("/v1/agent-chats/c/messages", { message: "안녕" });
+      void result.current.send("/v1/agent-chats/c/messages", {
+        message: "안녕",
+      });
     });
     act(() => source.push(START, frame("token", { delta: "부분" })));
     await waitFor(() => expect(result.current.state.text).toBe("부분"));
     expect(result.current.state.phase).toBe("streaming");
 
     act(() =>
-      source.push(frame("message_end", { messageId: "m", content: "전체 답변" }))
+      source.push(
+        frame("message_end", { messageId: "m", content: "전체 답변" })
+      )
     );
     act(() => source.finish());
     await waitFor(() => expect(result.current.state.phase).toBe("idle"));
@@ -215,7 +223,10 @@ describe("useChatStream", () => {
       throw {
         success: false,
         data: null,
-        error: { code: "AGENT_CHAT_NOT_FOUND", message: "대화를 찾을 수 없습니다." },
+        error: {
+          code: "AGENT_CHAT_NOT_FOUND",
+          message: "대화를 찾을 수 없습니다.",
+        },
       };
     });
     const { result } = renderHook(() => useChatStream());

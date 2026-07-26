@@ -11,7 +11,8 @@ const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^-\s+(.*)$/;
 const NUMBERED = /^\d+\.\s+(.*)$/;
 
-const LIST_CLASS = "space-y-1.5 pl-5 text-[15px] leading-7 text-[var(--el-body)]";
+const LIST_CLASS =
+  "space-y-1.5 pl-5 text-[15px] leading-7 text-[var(--el-body)]";
 
 export function renderMarkdown(source: string): ReactNode {
   const lines = source.split("\n");
@@ -102,6 +103,8 @@ function Heading({ level, text }: { level: number; text: string }) {
     );
   }
   return (
-    <h4 className="text-sm font-semibold text-[var(--el-body-strong)]">{text}</h4>
+    <h4 className="text-sm font-semibold text-[var(--el-body-strong)]">
+      {text}
+    </h4>
   );
 }

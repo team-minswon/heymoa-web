@@ -112,7 +112,10 @@ export function buildApprovalPlan(input: BuildInput): ApprovalPlan | null {
       }),
     ],
     after: (decision) => {
-      const resolved = frame("tool_approval_resolved", { approvalId, decision });
+      const resolved = frame("tool_approval_resolved", {
+        approvalId,
+        decision,
+      });
       // 토큰을 이어붙인 결과는 message_end.content와 같아야 한다 (계약). 다르면 스트리밍
       // 중 보이던 글이 새로고침 후 다른 글로 바뀐다. 그래서 둘을 같은 원본에서 만든다.
       if (decision === "REJECTED") {

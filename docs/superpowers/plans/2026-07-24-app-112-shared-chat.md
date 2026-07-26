@@ -23,6 +23,7 @@
 **Files:** Create `lib/notes/meeting-state.ts`, `lib/notes/meeting-state.test.ts`.
 
 **Interfaces:**
+
 - Produces: `type SharedChatPhase = "active" | "not-started" | "paused" | "ended"`.
   `deriveMeetingPhase(note: { meetingStatus; meetingStartedBy } | undefined): SharedChatPhase | "unknown"`.
   `isMeetingActive(note): boolean` = phase === "active".
@@ -37,6 +38,7 @@
 **Files:** Modify `components/chat/chat-thread.tsx`, `components/chat/chat-thread.test.tsx`.
 
 **Interfaces:**
+
 - `ThreadMessage` 타입을 개인·공유 둘 다 받게 넓힌다: 공통 필드 + optional `authorName?: string | null`.
 - Consumes: `NoteSharedChatResponseDataMessagesItem` | `AgentChatMessagesResponseDataMessagesItem`.
 
@@ -50,6 +52,7 @@
 **Files:** Modify `components/chat/personal-chat.tsx`, `components/chat/personal-chat.test.tsx`.
 
 **Interfaces:**
+
 - Provider에 `forceVisible` 상태. `open()` → `setForceVisible(true)` + `setIsOpen(true)` + `setHasOpened(true)`. `close()` → `setForceVisible(false)` + `setIsOpen(false)`.
 - `isVisible = (isOpen && !hidden) || (isOpen && forceVisible)`. 버튼/패널 hidden 계산에 forceVisible 반영.
 - 라우트 이탈 시 forceVisible 리셋(스코프 해제 경로에 편승).
@@ -64,6 +67,7 @@
 **Files:** Modify `lib/mocks/db.ts`, `lib/mocks/rest-handlers.ts`, `lib/mocks/rest-handlers.test.ts`.
 
 **Interfaces:**
+
 - `mockDb.seedForeignLock(noteId, lockedByName)` — `lockedBy`가 현재 유저가 아닌 잠금을 세팅.
 - `getNoteSharedChat`이 시드된 이름을 `lockedBy`로 반환(없으면 기존 로직).
 - 데모/e2e 진입점: 쿼리파라미터나 전용 목 경로로 시드 (테스트에서 호출 가능하게).
@@ -78,6 +82,7 @@
 **Files:** Create `components/notes/shared-chat-panel.tsx`, `components/notes/shared-chat-panel.test.tsx`.
 
 **Interfaces:**
+
 - Consumes: `deriveMeetingPhase`(Task 1), `useChatStream`, `ChatThread`(Task 2), `useGetNoteSharedChatMessages`, `getSendNoteSharedChatMessageUrl`, `usePersonalChat().openPersonal`(Task 3 open).
 - Props: `{ noteId: string; phase: SharedChatPhase }`.
 - 관전자 판별: `stream.state.phase === "idle" && lock.locked`.
@@ -98,6 +103,7 @@
 **Files:** Modify `components/notes/note-panel.tsx`, `components/notes/note-view.tsx`.
 
 **Interfaces:**
+
 - `note-panel.tsx`: full 모드(`onExpand` 없음 = full? 아니다 — view를 prop으로 받는다)일 때 우측에 `<SharedChatPanel noteId phase>` 트레이 추가(ENDED 제외). `deriveMeetingPhase(note)`로 phase 계산. side는 그대로.
 - `note-view.tsx`: `useGetNote`로 meetingStatus 읽어 `usePersonalChatScope({ noteId, hidden: view==="side" || (view==="full" && phase!=="ended") })`.
 - ENDED면 우측 트레이 대신 좌측을 아카이브로(Task 7), 개인 챗봇 보임.
@@ -113,6 +119,7 @@
 **Files:** Create `components/notes/note-archive.tsx`, `components/notes/note-archive.test.tsx`. Modify `note-panel.tsx`(ENDED에서 아카이브 섹션 노출).
 
 **Interfaces:**
+
 - Consumes: `useGetNoteTranscript`(전사 블록), `useGetNoteSharedChatMessages`(Q&A), `ChatThread` 히스토리 렌더.
 - 렌더: 기존 전사 블록 + 아래 "회의 중 챗봇 대화" 구분선 + 공유 Q&A(`createdAt` 순, 승인/실행 기록 포함).
 - `ponytail:` 천장 — 세그먼트 절대 시각이 계약에 없어 인터리브 대신 섹션 부착. 주석으로 명시.

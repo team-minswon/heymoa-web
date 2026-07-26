@@ -6,9 +6,11 @@ import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 
 const recording = vi.hoisted(() => ({
   current: {
-    session: { sessionId: "01K0000000010", noteId: "01K0000000002", status: "ACTIVE" } as
-      | { sessionId: string; noteId: string; status: string }
-      | null,
+    session: {
+      sessionId: "01K0000000010",
+      noteId: "01K0000000002",
+      status: "ACTIVE",
+    } as { sessionId: string; noteId: string; status: string } | null,
     activeNoteId: "01K0000000002" as string | undefined,
     phase: "recording",
     elapsedMs: 12_000,
@@ -38,7 +40,11 @@ describe("NoteListRow", () => {
   afterEach(cleanup);
   beforeEach(() => {
     recording.current = {
-      session: { sessionId: "01K0000000010", noteId: "01K0000000002", status: "ACTIVE" },
+      session: {
+        sessionId: "01K0000000010",
+        noteId: "01K0000000002",
+        status: "ACTIVE",
+      },
       activeNoteId: "01K0000000002",
       phase: "recording",
       elapsedMs: 12_000,

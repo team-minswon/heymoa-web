@@ -253,9 +253,8 @@ describe("meeting and integration handlers", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.data.integrations.map((i: { provider: string }) => i.provider)).toEqual([
-      "LINEAR",
-      "GITHUB",
-    ]);
+    expect(
+      body.data.integrations.map((i: { provider: string }) => i.provider)
+    ).toEqual(["LINEAR", "GITHUB"]);
   });
 });

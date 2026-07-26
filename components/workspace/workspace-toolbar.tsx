@@ -156,7 +156,8 @@ export function WorkspaceToolbar({
   const createMeeting = useCreateMeeting(workspaceId);
 
   // full 노트일 때만 상단바가 노트-aware가 된다. side는 시트가 자체 헤더를 가지므로 허브 모드 유지.
-  const isFullNote = Boolean(activeNoteId) && searchParams.get("view") !== "side";
+  const isFullNote =
+    Boolean(activeNoteId) && searchParams.get("view") !== "side";
   const noteQuery = useGetNote(activeNoteId ?? "", {
     query: { enabled: isFullNote },
   });
@@ -226,15 +227,14 @@ export function WorkspaceToolbar({
           </nav>
           <div className="flex shrink-0 items-center gap-2">
             {isFullNote && activeNoteId ? (
-              <NoteActionSlot
-                workspaceId={workspaceId}
-                noteId={activeNoteId}
-              />
+              <NoteActionSlot workspaceId={workspaceId} noteId={activeNoteId} />
             ) : null}
             <Button
               type="button"
               size="sm"
-              aria-label={createMeeting.isRecordingCurrent ? "현재 녹음" : "새 노트"}
+              aria-label={
+                createMeeting.isRecordingCurrent ? "현재 녹음" : "새 노트"
+              }
               className="h-8 shrink-0 rounded-full px-3"
               disabled={createMeeting.disabled}
               loading={createMeeting.isPending}

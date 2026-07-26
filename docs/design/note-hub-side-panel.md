@@ -8,28 +8,28 @@
 
 ### y=20000 note-hub (`?view=full`)
 
-| 프레임 ID | 화면 | 대응 operation | 응답이 만드는 상태 | shadcn | 실측 파생 근거 |
-|---|---|---|---|---|---|
-| `TkHep` (x=0) | note-hub-active | `useGetNote` + `useGetNoteTranscript` | IN_PROGRESS · startedBy=me → 중지 + 회의 종료 + "내가 시작한 회의" | Tabs / 고정 패널(full) | 앱바 1440×109(프레임 상단 64 + hairline), 본문 컬럼 832, 탭 리스트 x=310 y=173 |
-| `DdzUR` (x=1840) | note-hub-paused | `useGetNote` | PAUSED · startedBy=me → 재개 + 회의 종료, 공유 챗봇 읽기 전용 | Tabs / 고정 패널 | 동일 셸, 헤더 832×156 y=101 |
-| `oMqgT` (x=3680) | note-hub-active-viewer | `useGetNote` | IN_PROGRESS · startedBy=타인 → 조작 버튼 없음, 상태 pill + "김민수님이 시작한 회의" | Tabs / 고정 패널 | 앱바 우측 정렬, 독은 본문 컬럼 중앙 |
-| `Kl7Dz` (x=5520) | note-hub-chat-closed | `useGetNote` | IN_PROGRESS · startedBy=me · 대화 패널 닫힘 → 본문 1컬럼(832) 중앙 정렬 | 고정 패널 접힘 | 컬럼 832가 1440 안에서 중앙(x=304) |
-| **`NsGqf` (x=7360)** | **note-hub-ready** | `useGetNote` → `useStartTranscriptionSession` | **`meetingStartedBy=null`** → IN_PROGRESS라도 회의 미개시. 종료/중지 없음, "녹음 시작"만 | Alert(챗봇 잠금) / Tabs | 전사 빈 상태는 헤더 156 아래 40 여백에서 시작, 독은 기존 40px 높이 유지 |
-| **`fBM14` (x=9200)** | **note-hub-transcript-loading** | `useGetNoteTranscript` isPending | 노트는 IN_PROGRESS로 이미 응답, 전사만 로딩 → 스켈레톤 8행 | Tabs (탭 골격 유지) | 세그먼트 실측 구조(타임코드 margin 64 + gap 20) 그대로 스켈레톤 폭에 반영 |
-| **`HjcHO` (x=11040)** | **note-hub-start-conflict** | `POST /v1/notes/{noteId}/transcription-sessions` → **409** | 시작 요청 실패, refetch 결과는 startedBy=타인 → 뷰어 화면 + 실패 Alert | Alert(destructive) / Tabs | Alert는 전사 컬럼(748 기준, x=346 섹션 정렬) 상단에 얹힘 |
+| 프레임 ID             | 화면                            | 대응 operation                                             | 응답이 만드는 상태                                                                       | shadcn                    | 실측 파생 근거                                                                 |
+| --------------------- | ------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------ |
+| `TkHep` (x=0)         | note-hub-active                 | `useGetNote` + `useGetNoteTranscript`                      | IN_PROGRESS · startedBy=me → 중지 + 회의 종료 + "내가 시작한 회의"                       | Tabs / 고정 패널(full)    | 앱바 1440×109(프레임 상단 64 + hairline), 본문 컬럼 832, 탭 리스트 x=310 y=173 |
+| `DdzUR` (x=1840)      | note-hub-paused                 | `useGetNote`                                               | PAUSED · startedBy=me → 재개 + 회의 종료, 공유 챗봇 읽기 전용                            | Tabs / 고정 패널          | 동일 셸, 헤더 832×156 y=101                                                    |
+| `oMqgT` (x=3680)      | note-hub-active-viewer          | `useGetNote`                                               | IN_PROGRESS · startedBy=타인 → 조작 버튼 없음, 상태 pill + "김민수님이 시작한 회의"      | Tabs / 고정 패널          | 앱바 우측 정렬, 독은 본문 컬럼 중앙                                            |
+| `Kl7Dz` (x=5520)      | note-hub-chat-closed            | `useGetNote`                                               | IN_PROGRESS · startedBy=me · 대화 패널 닫힘 → 본문 1컬럼(832) 중앙 정렬                  | 고정 패널 접힘            | 컬럼 832가 1440 안에서 중앙(x=304)                                             |
+| **`NsGqf` (x=7360)**  | **note-hub-ready**              | `useGetNote` → `useStartTranscriptionSession`              | **`meetingStartedBy=null`** → IN_PROGRESS라도 회의 미개시. 종료/중지 없음, "녹음 시작"만 | Alert(챗봇 잠금) / Tabs   | 전사 빈 상태는 헤더 156 아래 40 여백에서 시작, 독은 기존 40px 높이 유지        |
+| **`fBM14` (x=9200)**  | **note-hub-transcript-loading** | `useGetNoteTranscript` isPending                           | 노트는 IN_PROGRESS로 이미 응답, 전사만 로딩 → 스켈레톤 8행                               | Tabs (탭 골격 유지)       | 세그먼트 실측 구조(타임코드 margin 64 + gap 20) 그대로 스켈레톤 폭에 반영      |
+| **`HjcHO` (x=11040)** | **note-hub-start-conflict**     | `POST /v1/notes/{noteId}/transcription-sessions` → **409** | 시작 요청 실패, refetch 결과는 startedBy=타인 → 뷰어 화면 + 실패 Alert                   | Alert(destructive) / Tabs | Alert는 전사 컬럼(748 기준, x=346 섹션 정렬) 상단에 얹힘                       |
 
 ### y=32000 side panel (`?view=side`)
 
 side 모드에서는 개인 챗봇 패널이 숨는다(full·워크스페이스에서만 노출). 시트 폭 860, 좌측 워크스페이스 셸이 그대로 비친다.
 
-| 프레임 ID | 화면 | 대응 operation | 응답이 만드는 상태 | shadcn | 실측 파생 근거 |
-|---|---|---|---|---|---|
-| `ezlsT` (x=0) | note-side-recording | `useGetNote` + `GET /v1/transcription-sessions/{sessionId}` | IN_PROGRESS · startedBy=me → 독에 중지/종료 | Sheet(side) | 사이드바 256 고정, 시트 860 우측 정렬(x=572) |
-| `X3vCNH` (x=1840) | note-side-ready | `useGetNote`(startedBy=null) + 빈 전사 | 회의 미개시 + 빈 전사 → 녹음 버튼만, 시작 전 안내 4항 | Sheet(side) | 탭 2개(요약 없음), 안내 목록은 전사 margin 64 정렬 |
-| `LdiLi` (x=3680) | note-side-ended | `useGetNote` | ENDED → 조작 없음, 탭에 요약 등장, 확장 버튼 강조 | Sheet(side) | ENDED에서만 3탭 |
-| `V7cEN` (x=5520) | workspace-recording-elsewhere | `useGetNote`(목록) + 세션 상태 | 내가 시작한 녹음이 다른 화면에서 진행 중 → 상단 중앙 글로벌 독 | 고정 pill | 워크스페이스 본문 컬럼 x=432 기준 중앙 pill |
-| **`MUfyh` (x=7360)** | **note-side-viewer** | `useGetNote` | IN_PROGRESS · startedBy=타인 → 독에서 중지·종료 제거, "이서연님이 기록 중"만 | Sheet(side) | 독 구성만 교체, 시트/탭 치수 불변 |
-| **`gVcFM` (x=9200)** | **note-side-paused** | `useGetNote` | PAUSED · startedBy=me → 독 "재개" + 종료, 파형·타이머 비활성, partial 라인 없음 | Sheet(side) | full 행 paused와 같은 상태를 side 독 문법으로 |
+| 프레임 ID            | 화면                          | 대응 operation                                              | 응답이 만드는 상태                                                              | shadcn      | 실측 파생 근거                                     |
+| -------------------- | ----------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------- | ----------- | -------------------------------------------------- |
+| `ezlsT` (x=0)        | note-side-recording           | `useGetNote` + `GET /v1/transcription-sessions/{sessionId}` | IN_PROGRESS · startedBy=me → 독에 중지/종료                                     | Sheet(side) | 사이드바 256 고정, 시트 860 우측 정렬(x=572)       |
+| `X3vCNH` (x=1840)    | note-side-ready               | `useGetNote`(startedBy=null) + 빈 전사                      | 회의 미개시 + 빈 전사 → 녹음 버튼만, 시작 전 안내 4항                           | Sheet(side) | 탭 2개(요약 없음), 안내 목록은 전사 margin 64 정렬 |
+| `LdiLi` (x=3680)     | note-side-ended               | `useGetNote`                                                | ENDED → 조작 없음, 탭에 요약 등장, 확장 버튼 강조                               | Sheet(side) | ENDED에서만 3탭                                    |
+| `V7cEN` (x=5520)     | workspace-recording-elsewhere | `useGetNote`(목록) + 세션 상태                              | 내가 시작한 녹음이 다른 화면에서 진행 중 → 상단 중앙 글로벌 독                  | 고정 pill   | 워크스페이스 본문 컬럼 x=432 기준 중앙 pill        |
+| **`MUfyh` (x=7360)** | **note-side-viewer**          | `useGetNote`                                                | IN_PROGRESS · startedBy=타인 → 독에서 중지·종료 제거, "이서연님이 기록 중"만    | Sheet(side) | 독 구성만 교체, 시트/탭 치수 불변                  |
+| **`gVcFM` (x=9200)** | **note-side-paused**          | `useGetNote`                                                | PAUSED · startedBy=me → 독 "재개" + 종료, 파형·타이머 비활성, partial 라인 없음 | Sheet(side) | full 행 paused와 같은 상태를 side 독 문법으로      |
 
 ## 추가한 것
 

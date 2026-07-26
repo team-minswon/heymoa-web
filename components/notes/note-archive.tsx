@@ -42,7 +42,10 @@ export function NoteArchive({ noteId }: { noteId: string }) {
         : [],
     [transcriptQuery.data]
   );
-  const blocks = useMemo(() => groupTranscriptSegments([...segments]), [segments]);
+  const blocks = useMemo(
+    () => groupTranscriptSegments([...segments]),
+    [segments]
+  );
 
   const messages =
     chatQuery.data?.status === 200 && chatQuery.data.data.success

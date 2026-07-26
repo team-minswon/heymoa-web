@@ -100,7 +100,9 @@ export function WorkspaceIntegrationsSettings({
       return;
     }
     window.location.assign(
-      buildUrl(`/v1/workspaces/${workspaceId}/integrations/${provider}/authorize`)
+      buildUrl(
+        `/v1/workspaces/${workspaceId}/integrations/${provider}/authorize`
+      )
     );
   };
 
@@ -115,7 +117,8 @@ export function WorkspaceIntegrationsSettings({
           연동
         </h2>
         <p className="mt-2 text-sm text-[var(--el-muted)]">
-          챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을 씁니다.
+          챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을
+          씁니다.
         </p>
       </header>
 
@@ -126,7 +129,9 @@ export function WorkspaceIntegrationsSettings({
         </div>
       ) : integrationsQuery.isError ? (
         <div role="alert" className="space-y-2">
-          <p className="text-sm text-[var(--el-ink)]">연동 정보를 불러오지 못했습니다.</p>
+          <p className="text-sm text-[var(--el-ink)]">
+            연동 정보를 불러오지 못했습니다.
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -185,7 +190,8 @@ export function WorkspaceIntegrationsSettings({
         >
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-            연동 연결·해제는 관리자만 할 수 있습니다. 새 연동이 필요하면 ADMIN에게 요청하세요.
+            연동 연결·해제는 관리자만 할 수 있습니다. 새 연동이 필요하면
+            ADMIN에게 요청하세요.
           </p>
         </div>
       ) : null}

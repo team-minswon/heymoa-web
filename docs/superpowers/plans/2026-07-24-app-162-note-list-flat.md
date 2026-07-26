@@ -26,6 +26,7 @@
 - `codex exec review --base dev` P1 없음 → dev squash merge, Linear Done.
 
 ## Self-Review
+
 - 계약 불변(meetingStatus 안 씀). 상태 배지·녹음중 필터 안 만듦.
 - 상대시각 하이드레이션 안전(마운트 후 now).
 - e2e 워크스페이스 렌더 테스트가 목록에 의존 — 셀렉터 확인.

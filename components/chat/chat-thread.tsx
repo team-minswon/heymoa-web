@@ -1,6 +1,11 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, PauseCircle, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ExternalLink,
+  PauseCircle,
+  XCircle,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +18,10 @@ import type {
   ChatStreamState,
   LiveToolRecord,
 } from "@/lib/chat/stream-protocol";
-import type { ApprovalCard, ApprovalCardState } from "@/lib/chat/use-tool-approval";
+import type {
+  ApprovalCard,
+  ApprovalCardState,
+} from "@/lib/chat/use-tool-approval";
 
 /**
  * 개인·공유 챗봇이 같은 스레드 컴포넌트를 쓴다. 공유 메시지는 USER에 `authorName`(멀티멤버)이
@@ -55,13 +63,18 @@ export function ChatThread({
 }) {
   const isLive = stream.phase !== "idle" || stream.content !== null;
   if (messages.length === 0 && !isLive && !pendingUserMessage && emptyState) {
-    return <div className="flex flex-1 flex-col justify-end gap-3">{emptyState}</div>;
+    return (
+      <div className="flex flex-1 flex-col justify-end gap-3">{emptyState}</div>
+    );
   }
 
   return (
     <div className="flex flex-1 flex-col justify-end gap-4">
       {messages.map((message, index) => (
-        <HistoryMessage key={`${message.createdAt}-${index}`} message={message} />
+        <HistoryMessage
+          key={`${message.createdAt}-${index}`}
+          message={message}
+        />
       ))}
 
       {pendingUserMessage ? <UserBubble content={pendingUserMessage} /> : null}
@@ -333,7 +346,9 @@ function ApprovalRecordRow({
       data-record="approval"
       className="border-l-2 border-[var(--el-hairline-strong)] pl-3"
     >
-      <p className="text-xs font-medium text-[var(--el-body-strong)]">{label}</p>
+      <p className="text-xs font-medium text-[var(--el-body-strong)]">
+        {label}
+      </p>
       <p className="mt-0.5 text-xs text-[var(--el-muted)]">
         {tool}
         {decision === "REJECTED"
@@ -369,7 +384,11 @@ function CallRecordCard({
           {tool}
         </p>
         <Badge variant={status === "error" ? "destructive" : "secondary"}>
-          {status === "error" ? "실패" : status === "success" ? "완료" : "실행 중"}
+          {status === "error"
+            ? "실패"
+            : status === "success"
+              ? "완료"
+              : "실행 중"}
         </Badge>
       </div>
       <p className="mt-1 text-xs text-[var(--el-muted)]">{label}</p>
@@ -440,7 +459,9 @@ function ApprovalPrompt({
         <>
           {/* 204는 접수일 뿐 낙관적으로 뒤집지 않는다 — submitted면 버튼을 흐리게 잠근다. */}
           <div
-            className={submitted ? "mt-3 flex gap-2 opacity-40" : "mt-3 flex gap-2"}
+            className={
+              submitted ? "mt-3 flex gap-2 opacity-40" : "mt-3 flex gap-2"
+            }
           >
             <Button
               size="sm"

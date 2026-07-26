@@ -18,7 +18,10 @@ const POLL_INTERVAL_MS = 3_000;
 /** 폴링 중인 응답 봉투에서 분석 상태만 꺼낸다 — PENDING/RUNNING일 때만 계속 당긴다. */
 function statusOf(payload: unknown): string | null {
   const envelope = payload as
-    | { status?: number; data?: { success?: boolean; data?: { status?: string } } }
+    | {
+        status?: number;
+        data?: { success?: boolean; data?: { status?: string } };
+      }
     | undefined;
   if (envelope?.status !== 200 || !envelope.data?.success) return null;
   return envelope.data.data?.status ?? null;
@@ -43,7 +46,9 @@ export function NoteSummary({
       // 액션(요약 만들기·다시 시도)이 맡는다 — 없는 분석을 3초마다 무한히 두드리지 않는다.
       refetchInterval: (query) => {
         const status = statusOf(query.state.data);
-        return status === "PENDING" || status === "RUNNING" ? POLL_INTERVAL_MS : false;
+        return status === "PENDING" || status === "RUNNING"
+          ? POLL_INTERVAL_MS
+          : false;
       },
     },
   });
@@ -125,7 +130,9 @@ export function NoteSummary({
       <Shell>
         <div className="rounded-2xl border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-5">
           <p className="text-sm font-medium text-[var(--el-ink)]">
-            {isEnded ? "아직 요약이 없습니다" : "요약은 회의가 끝나면 생성됩니다"}
+            {isEnded
+              ? "아직 요약이 없습니다"
+              : "요약은 회의가 끝나면 생성됩니다"}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
             {isEnded
@@ -150,7 +157,9 @@ export function NoteSummary({
   return (
     <Shell>
       <div role="alert" className="space-y-2">
-        <p className="text-sm text-[var(--el-ink)]">요약을 불러오지 못했습니다.</p>
+        <p className="text-sm text-[var(--el-ink)]">
+          요약을 불러오지 못했습니다.
+        </p>
         <Button
           variant="outline"
           size="sm"
@@ -182,7 +191,9 @@ function AnalyzingSkeleton() {
       <div className="mt-6 space-y-6" aria-label="분석 진행 중">
         {["개요", "액션 아이템", "인사이트"].map((label) => (
           <div key={label} className="space-y-2">
-            <p className="text-xs font-medium text-[var(--el-muted)]">{label}</p>
+            <p className="text-xs font-medium text-[var(--el-muted)]">
+              {label}
+            </p>
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-full" />
           </div>
@@ -214,7 +225,9 @@ function SummarySections({
               {body ? (
                 renderMarkdown(body)
               ) : (
-                <p className="text-sm text-[var(--el-muted)]">내용이 없습니다.</p>
+                <p className="text-sm text-[var(--el-muted)]">
+                  내용이 없습니다.
+                </p>
               )}
             </div>
           </section>

@@ -46,19 +46,22 @@ vi.mock("@/lib/api/generated/notifications/notifications", () => ({
   }),
   useMarkNotificationRead: () => ({ mutate: state.markMock, isPending: false }),
 }));
-vi.mock("@/lib/api/generated/workspace-invitations/workspace-invitations", () => ({
-  useAcceptWorkspaceInvitation: () => ({
-    mutate: (vars: unknown, options?: { onError?: (e: unknown) => void }) => {
-      state.acceptMock(vars);
-      if (state.acceptError) options?.onError?.(state.acceptError);
-    },
-    isPending: false,
-  }),
-  useDeclineWorkspaceInvitation: () => ({
-    mutate: state.declineMock,
-    isPending: false,
-  }),
-}));
+vi.mock(
+  "@/lib/api/generated/workspace-invitations/workspace-invitations",
+  () => ({
+    useAcceptWorkspaceInvitation: () => ({
+      mutate: (vars: unknown, options?: { onError?: (e: unknown) => void }) => {
+        state.acceptMock(vars);
+        if (state.acceptError) options?.onError?.(state.acceptError);
+      },
+      isPending: false,
+    }),
+    useDeclineWorkspaceInvitation: () => ({
+      mutate: state.declineMock,
+      isPending: false,
+    }),
+  })
+);
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   getGetWorkspacesQueryKey: () => ["workspaces"],
 }));

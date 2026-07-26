@@ -97,7 +97,9 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
         </div>
       ) : membersQuery.isError ? (
         <div role="alert" className="space-y-2">
-          <p className="text-sm text-[var(--el-ink)]">멤버를 불러오지 못했습니다.</p>
+          <p className="text-sm text-[var(--el-ink)]">
+            멤버를 불러오지 못했습니다.
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -163,7 +165,9 @@ function MemberRow({
             </span>
           ) : null}
         </p>
-        <p className="truncate text-xs text-[var(--el-muted)]">{member.email}</p>
+        <p className="truncate text-xs text-[var(--el-muted)]">
+          {member.email}
+        </p>
       </div>
       <RoleChip role={member.role} />
       <p className="w-[120px] shrink-0 text-right text-xs text-[var(--el-muted)]">
@@ -308,7 +312,9 @@ function PendingInvitations({
 
   return (
     <section>
-      <h3 className="text-sm font-medium text-[var(--el-ink)]">대기 중인 초대</h3>
+      <h3 className="text-sm font-medium text-[var(--el-ink)]">
+        대기 중인 초대
+      </h3>
       <div className="mt-3">
         {isLoading ? (
           <div className="space-y-2">

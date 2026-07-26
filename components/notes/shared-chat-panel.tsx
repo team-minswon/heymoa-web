@@ -45,7 +45,9 @@ export function SharedChatPanel({
   const stream = useChatStream();
   const personalChat = usePersonalChat();
   const [draft, setDraft] = useState("");
-  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
+  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
+    null
+  );
   const [lastSent, setLastSent] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [turnBaseline, setTurnBaseline] = useState(0);
@@ -60,7 +62,9 @@ export function SharedChatPanel({
     query: {
       enabled: !isSending,
       refetchInterval:
-        phase === "active" && !isStreaming && !isSending ? POLL_INTERVAL_MS : false,
+        phase === "active" && !isStreaming && !isSending
+          ? POLL_INTERVAL_MS
+          : false,
     },
   });
   const response = messagesQuery.data;
@@ -135,9 +139,12 @@ export function SharedChatPanel({
         setTurnBaseline(messages.length);
         setPendingUserMessage(message);
         setLastSent(message);
-        const final = await stream.send(getSendNoteSharedChatMessageUrl(noteId), {
-          message,
-        });
+        const final = await stream.send(
+          getSendNoteSharedChatMessageUrl(noteId),
+          {
+            message,
+          }
+        );
         // 정상 종료가 아니면(실패·정지·중단) 스트림 상태가 스레드 안에 안내를 그린다.
         if (final?.phase !== "idle") return;
 
@@ -237,7 +244,9 @@ export function SharedChatPanel({
                 messages={messages}
                 stream={isTurnReconciled ? initialStreamState : stream.state}
                 pendingUserMessage={
-                  isTurnReconciled || isPendingReconciled ? null : pendingUserMessage
+                  isTurnReconciled || isPendingReconciled
+                    ? null
+                    : pendingUserMessage
                 }
                 isRetryDisabled={isBusy || !lastSent || !canSend}
                 onRetry={() => {
@@ -342,7 +351,12 @@ function Composer({
         title="회의가 중지되어 있습니다"
         description="중지 중에는 개인 챗봇을 이용하세요."
         action={
-          <Button variant="outline" size="sm" className="h-[30px]" onClick={onOpenPersonal}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-[30px]"
+            onClick={onOpenPersonal}
+          >
             개인 챗봇 열기
           </Button>
         }

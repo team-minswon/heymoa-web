@@ -105,7 +105,10 @@ export function useChatStream() {
         clearIdle();
         if (!isCurrent()) return null;
         apply(
-          endStream(stateRef.current, userAbortRef.current ? "aborted" : "closed")
+          endStream(
+            stateRef.current,
+            userAbortRef.current ? "aborted" : "closed"
+          )
         );
       } catch (error) {
         clearIdle();

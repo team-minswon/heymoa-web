@@ -70,7 +70,10 @@ function id(value: string | readonly string[] | undefined) {
 
 type EventSource = MockSseEvent[] | (() => AsyncGenerator<MockSseEvent>);
 
-function streamOf(source: EventSource, onClose?: (sent: MockSseEvent[]) => void) {
+function streamOf(
+  source: EventSource,
+  onClose?: (sent: MockSseEvent[]) => void
+) {
   const encoder = new TextEncoder();
   const sent: MockSseEvent[] = [];
   return new ReadableStream({
@@ -111,7 +114,11 @@ function sseResponse(
 
 function failure(code: string, status: number) {
   return HttpResponse.json(
-    { success: false, data: null, error: { code, message: code, details: null } },
+    {
+      success: false,
+      data: null,
+      error: { code, message: code, details: null },
+    },
     { status }
   );
 }
@@ -223,7 +230,9 @@ function teeShared(noteId: string, message: string, events: MockSseEvent[]) {
 function eventSourceFor(
   chatId: string,
   message: string,
-  onWaiting?: (pending: { approvalId: string; tool: string; summary: string } | null) => void
+  onWaiting?: (
+    pending: { approvalId: string; tool: string; summary: string } | null
+  ) => void
 ): EventSource {
   const turn = nextTurn(chatId);
   const plan = buildApprovalPlan({ chatId, message, turn });
@@ -243,21 +252,24 @@ function eventSourceFor(
 }
 
 export const chatSseHandlers = [
-  http.post("*/v1/agent-chats/:chatId/messages", async ({ request, params }) => {
-    const body = (await request.json()) as { message: string };
-    const chatId = id(params.chatId);
+  http.post(
+    "*/v1/agent-chats/:chatId/messages",
+    async ({ request, params }) => {
+      const body = (await request.json()) as { message: string };
+      const chatId = id(params.chatId);
 
-    // 없는/남의 채팅이면 스트림을 반쯤 열지 않고 깔끔한 404를 준다 (계약).
-    try {
-      mockDb.getAgentChatMessages(chatId);
-    } catch {
-      return failure("AGENT_CHAT_NOT_FOUND", 404);
+      // 없는/남의 채팅이면 스트림을 반쯤 열지 않고 깔끔한 404를 준다 (계약).
+      try {
+        mockDb.getAgentChatMessages(chatId);
+      } catch {
+        return failure("AGENT_CHAT_NOT_FOUND", 404);
+      }
+
+      return sseResponse(eventSourceFor(chatId, body.message), (sent) =>
+        teePersonal(chatId, body.message, sent)
+      );
     }
-
-    return sseResponse(eventSourceFor(chatId, body.message), (sent) =>
-      teePersonal(chatId, body.message, sent)
-    );
-  }),
+  ),
 
   http.post("*/v1/notes/:noteId/chat/messages", async ({ request, params }) => {
     const body = (await request.json()) as { message: string };

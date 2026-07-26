@@ -84,10 +84,7 @@ const ACTIVE_PHASES = new Set<RecordingPhase>([
  * stop이 실패하면 phase는 failed지만 READY/ACTIVE 세션은 그대로 남아 서버가 여전히 거절한다.
  */
 export function isNoteRecordingActive(
-  recording: Pick<
-    RecordingContextValue,
-    "activeNoteId" | "session" | "phase"
-  >,
+  recording: Pick<RecordingContextValue, "activeNoteId" | "session" | "phase">,
   noteId: string
 ): boolean {
   if (recording.activeNoteId !== noteId) return false;
@@ -96,7 +93,8 @@ export function isNoteRecordingActive(
   if (ACTIVE_PHASES.has(recording.phase)) return true;
   // failed는 서버 세션이 아직 열려 있을 때만 활성(READY/ACTIVE).
   const sessionOpen =
-    recording.session?.status === "READY" || recording.session?.status === "ACTIVE";
+    recording.session?.status === "READY" ||
+    recording.session?.status === "ACTIVE";
   return recording.phase === "failed" && sessionOpen;
 }
 

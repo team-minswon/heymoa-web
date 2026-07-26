@@ -25,6 +25,7 @@
 - `codex exec review --base dev` P1 없음 → dev squash merge, Linear Done.
 
 ## Self-Review
+
 - 레코더 독(recording-dock.tsx) 손대지 않음 — 모션 계승.
 - 계약 불변. 우측 트레이(shared-chat-panel) 내부 안 건드림 — 156.
 - SummarySections는 이미 SPEC 준수(한글 세리프) — 프레임 잔재를 따르지 않는다.

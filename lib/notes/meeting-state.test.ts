@@ -13,26 +13,38 @@ const startedBy = { userId: "01K0000000001", name: "테스트 유저" };
 describe("deriveMeetingPhase", () => {
   it("IN_PROGRESS + 시작자 있으면 활성", () => {
     expect(
-      deriveMeetingPhase({ meetingStatus: "IN_PROGRESS", meetingStartedBy: startedBy })
+      deriveMeetingPhase({
+        meetingStatus: "IN_PROGRESS",
+        meetingStartedBy: startedBy,
+      })
     ).toBe("active");
   });
 
   it("IN_PROGRESS인데 시작자 없으면 미시작 — 회의가 열린 게 아니다", () => {
     // 계약: 새 노트는 생성 시부터 IN_PROGRESS라 startedBy=null이 "아직 미개시"를 가른다.
     expect(
-      deriveMeetingPhase({ meetingStatus: "IN_PROGRESS", meetingStartedBy: null })
+      deriveMeetingPhase({
+        meetingStatus: "IN_PROGRESS",
+        meetingStartedBy: null,
+      })
     ).toBe("not-started");
   });
 
   it("PAUSED는 중지", () => {
     expect(
-      deriveMeetingPhase({ meetingStatus: "PAUSED", meetingStartedBy: startedBy })
+      deriveMeetingPhase({
+        meetingStatus: "PAUSED",
+        meetingStartedBy: startedBy,
+      })
     ).toBe("paused");
   });
 
   it("ENDED는 종료", () => {
     expect(
-      deriveMeetingPhase({ meetingStatus: "ENDED", meetingStartedBy: startedBy })
+      deriveMeetingPhase({
+        meetingStatus: "ENDED",
+        meetingStartedBy: startedBy,
+      })
     ).toBe("ended");
   });
 
@@ -44,13 +56,22 @@ describe("deriveMeetingPhase", () => {
 describe("meetingRefetchInterval", () => {
   it("종료 전에는 폴링하고 종료되면 멈춘다", () => {
     expect(
-      meetingRefetchInterval({ meetingStatus: "IN_PROGRESS", meetingStartedBy: startedBy })
+      meetingRefetchInterval({
+        meetingStatus: "IN_PROGRESS",
+        meetingStartedBy: startedBy,
+      })
     ).toBe(MEETING_POLL_MS);
     expect(
-      meetingRefetchInterval({ meetingStatus: "PAUSED", meetingStartedBy: startedBy })
+      meetingRefetchInterval({
+        meetingStatus: "PAUSED",
+        meetingStartedBy: startedBy,
+      })
     ).toBe(MEETING_POLL_MS);
     expect(
-      meetingRefetchInterval({ meetingStatus: "ENDED", meetingStartedBy: startedBy })
+      meetingRefetchInterval({
+        meetingStatus: "ENDED",
+        meetingStartedBy: startedBy,
+      })
     ).toBe(false);
   });
 });
@@ -80,7 +101,10 @@ describe("isPersonalChatHiddenInNote", () => {
 describe("isMeetingActive", () => {
   it("활성일 때만 참", () => {
     expect(
-      isMeetingActive({ meetingStatus: "IN_PROGRESS", meetingStartedBy: startedBy })
+      isMeetingActive({
+        meetingStatus: "IN_PROGRESS",
+        meetingStartedBy: startedBy,
+      })
     ).toBe(true);
     expect(
       isMeetingActive({ meetingStatus: "IN_PROGRESS", meetingStartedBy: null })
