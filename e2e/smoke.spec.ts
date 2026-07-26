@@ -237,3 +237,63 @@ test("completes the mocked OAuth round trip", async ({ page }) => {
     )
     .toBe(true);
 });
+
+/**
+ * 스크롤 여백이 실제로 생기는지 본다.
+ *
+ * jsdom은 레이아웃을 계산하지 않아 단위 테스트로는 못 잡는다. `min-h-0`이 빠지면 flex 아이템의
+ * 기본 `min-height: auto` 때문에 뷰포트가 콘텐츠만큼 커져 `scrollHeight === clientHeight`가
+ * 되고, 스크롤과 자동 하단 이동이 함께 죽는다.
+ */
+test("keeps the personal chat scrollable when the thread grows", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+
+  const panel = page.getByTestId("personal-chat-panel");
+  await expect(panel).toBeVisible();
+
+  // 스크롤할 여백이 생길 만큼 대화를 쌓는다.
+  for (let turn = 0; turn < 4; turn += 1) {
+    await page.getByLabel("메시지").fill(`스크롤을 만드는 메시지 ${turn}`);
+    await page.getByRole("button", { name: "보내기" }).click();
+    await expect(page.getByTestId("assistant-message").nth(turn)).toContainText(
+      "습니다",
+      { timeout: 20_000 }
+    );
+  }
+
+  const viewport = panel.locator('[data-slot="scroll-area-viewport"]');
+  const metrics = () =>
+    viewport.evaluate((el) => ({
+      scrollTop: el.scrollTop,
+      clientHeight: el.clientHeight,
+      scrollHeight: el.scrollHeight,
+    }));
+
+  const grown = await metrics();
+  expect(grown.scrollHeight - grown.clientHeight).toBeGreaterThan(0);
+
+  // 새 출력은 하단으로 따라간다. 바닥까지의 거리가 1px 안이면 따라간 것으로 본다
+  // (분수 픽셀 때문에 정확히 0이 아닐 수 있다).
+  expect(
+    grown.scrollHeight - grown.scrollTop - grown.clientHeight
+  ).toBeLessThanOrEqual(1);
+
+  // 위를 읽는 중에는 끌려 내려가지 않는다. 이 분기는 min-h-0 전에는 아예 돌지 못했다 —
+  // scrollHeight === clientHeight라 언제나 '바닥'이었기 때문이다.
+  await viewport.evaluate((el) => {
+    el.scrollTop = 0;
+    el.dispatchEvent(new Event("scroll"));
+  });
+
+  await page.getByLabel("메시지").fill("위를 읽는 중에 오는 메시지");
+  await page.getByRole("button", { name: "보내기" }).click();
+  await expect(page.getByTestId("assistant-message").nth(4)).toContainText(
+    "습니다",
+    { timeout: 20_000 }
+  );
+
+  expect((await metrics()).scrollTop).toBe(0);
+});

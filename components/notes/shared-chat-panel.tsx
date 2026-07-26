@@ -213,7 +213,7 @@ export function SharedChatPanel({
         </p>
       </header>
 
-      <ScrollArea className="flex-1" viewportRef={viewportRef}>
+      <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
         <div className="flex min-h-full flex-col justify-end p-5">
           {isLoading ? (
             <div className="space-y-3">
