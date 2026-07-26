@@ -85,8 +85,9 @@ describe("OpenAPI contract", () => {
       "CLIENT_PROTOCOL_ERROR",
       "STT_PROVIDER_ERROR",
       "INTERNAL_ERROR",
-      // 회의 상태 머신(APP-120)이 추가한 둘 — 시작자가 회의를 끝내거나 멈추면
-      // 진행 중인 전사 세션이 이 사유로 종료된다.
+      // 회의 상태 머신(APP-120)이 추가한 둘. `MEETING_PAUSED`는 APP-218이 PAUSED를
+      // 폐기한 뒤에도 **종료 사유 enum에는 남아 있다** — 이미 그 사유로 끝난 옛 세션이
+      // 있으므로, 값을 지우면 그 행을 역직렬화할 수 없다. `MeetingStatus`에서는 사라졌다.
       "MEETING_ENDED",
       "MEETING_PAUSED",
     ]);

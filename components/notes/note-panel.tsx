@@ -105,10 +105,13 @@ export function NotePanel({
   //
   // **상태를 모르는 동안에도 열지 않는다.** 콜드 캐시나 느린 응답에서는 `note`가 아직
   // undefined인데, 그때 시작 버튼이 살아 있으면 종료된 회의에 세션이 붙는다. 계약의
-  // startTranscriptionSession에는 아직 거절 코드가 없어 서버도 이걸 안 막는다(APP-214 서버 몫).
+  // 계약의 409에 `MEETING_ALREADY_ENDED`가 생겼다(APP-214). 다만 여기는 **요청이 나가기 전**
+  // 차단 사유라 서버 문구가 도달하지 않는다 — 첫 문장은 계약과 같게 두고(`이미 종료된
+  // 회의입니다.`) 왜 못 하는지를 덧붙인다. 실제로 요청이 실패하는 경로는 `errorMessageOf`가
+  // 서버 문구를 그대로 쓴다.
   const startBlockedReason =
     note?.meetingStatus === "ENDED"
-      ? "종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
+      ? "이미 종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
       : note
         ? null
         : noteQuery.isError

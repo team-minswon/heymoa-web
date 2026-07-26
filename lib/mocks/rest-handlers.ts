@@ -40,6 +40,14 @@ const INVITATION_ERROR_MESSAGES: Record<string, string> = {
   INVITEE_NOT_FOUND: "초대할 사용자를 찾을 수 없습니다.",
 };
 
+/**
+ * 전사 세션 생성이 409로 거절되는 이유들. 문구는 계약(`openapi3.yml`)의 409 예시 그대로다.
+ */
+const SESSION_CONFLICTS: Record<string, string> = {
+  ACTIVE_TRANSCRIPTION_SESSION: "이미 진행 가능한 전사 세션이 있습니다.",
+  MEETING_ALREADY_ENDED: "이미 종료된 회의입니다.",
+};
+
 /** 권한 문제는 403이다 — 없음(404)이나 상태 충돌(409)과 구분해야 화면이 다르게 다룬다. */
 const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER"]);
 
@@ -363,16 +371,16 @@ export const restHandlers = [
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
-      if (msg === "ACTIVE_TRANSCRIPTION_SESSION") {
+      // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 web이
+      // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 예시를 그대로 쓴다 —
+      // web이 코드별 문구를 다시 만들면 서버가 바뀔 때마다 갈라진다.
+      const conflict = SESSION_CONFLICTS[msg];
+      if (conflict) {
         return HttpResponse.json(
           {
             success: false,
             data: null,
-            error: {
-              code: "ACTIVE_TRANSCRIPTION_SESSION",
-              message: "이미 진행 가능한 전사 세션이 있습니다.",
-              details: null,
-            },
+            error: { code: msg, message: conflict, details: null },
           },
           { status: 409 }
         );

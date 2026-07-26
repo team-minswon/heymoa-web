@@ -246,6 +246,29 @@ describe("meeting and integration handlers", () => {
     expect(after.data.lock).toMatchObject({ locked: false, lockedBy: null });
   });
 
+  // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 화면이
+  // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 409 예시 그대로여야
+  // `errorMessageOf`가 서버 문구를 그리는 것과 어긋나지 않는다.
+  it("종료된 회의의 전사 시작을 409 MEETING_ALREADY_ENDED로 거절한다", async () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const session = mockDb.createSession(note.noteId);
+    mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
+    mockDb.endMeeting(note.noteId);
+
+    const response = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/transcription-sessions`,
+      { method: "POST" }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toMatchObject({
+      code: "MEETING_ALREADY_ENDED",
+      message: "이미 종료된 회의입니다.",
+    });
+  });
+
   it("serves both providers even before anything is connected", async () => {
     const response = await fetch(
       "http://localhost/v1/workspaces/01K0000000000/integrations"

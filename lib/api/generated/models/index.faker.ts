@@ -408,13 +408,6 @@ export const getWorkspaceListResponseMock = (
   ...overrideResponse,
 });
 
-export const getSendNoteSharedChatMessageRequestMock = (
-  overrideResponse: Partial<SendNoteSharedChatMessageRequest> = {}
-): SendNoteSharedChatMessageRequest => ({
-  message: faker.helpers.fromRegExp("[\\s\\S]*\\S[\\s\\S]*"),
-  ...overrideResponse,
-});
-
 export const getAnalysisResponseMock = (
   overrideResponse: Partial<AnalysisResponse> = {}
 ): AnalysisResponse => ({
@@ -430,6 +423,13 @@ export const getAnalysisResponseMock = (
   },
   success: faker.datatype.boolean(),
   error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
+
+export const getSendNoteSharedChatMessageRequestMock = (
+  overrideResponse: Partial<SendNoteSharedChatMessageRequest> = {}
+): SendNoteSharedChatMessageRequest => ({
+  message: faker.helpers.fromRegExp("[\\s\\S]*\\S[\\s\\S]*"),
   ...overrideResponse,
 });
 

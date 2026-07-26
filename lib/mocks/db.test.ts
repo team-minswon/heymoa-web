@@ -212,9 +212,15 @@ describe("meeting and analysis", () => {
     expect(() => mockDb.endMeeting(noteId)).toThrow("MEETING_ALREADY_ENDED");
   });
 
-  // 종료된 회의의 전사 시작은 여기서 막지 않는다 — 계약에 거절 코드가 없어 실서버도
-  // 안 막기 때문이다(APP-214 서버 몫). 목이 더 엄격하면 그 구멍이 로컬에서 가려진다.
-  // 지금 막는 곳은 UI다(`note-panel.test.tsx`).
+  // 계약의 409에 MEETING_ALREADY_ENDED가 생겼다(APP-214, server@a582684). 서버는 원래부터
+  // 막고 있었고 없던 것이 계약뿐이었다 — 그래서 목만 그 사실을 몰라 로컬이 초록이었다.
+  it("refuses to start transcription on an ended meeting", () => {
+    const noteId = startedNoteId();
+    mockDb.endMeeting(noteId);
+
+    expect(() => mockDb.createSession(noteId)).toThrow("MEETING_ALREADY_ENDED");
+  });
+
 });
 
 describe("workspace integrations", () => {

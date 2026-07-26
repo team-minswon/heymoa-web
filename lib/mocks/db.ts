@@ -1212,9 +1212,10 @@ export const mockDb = {
 
   createSession(noteId: string): StartTranscriptionSessionResponseData {
     const note = findNote(noteId);
-    // 종료된 회의를 여기서 막지 않는다. 계약의 이 operation에는 아직 거절 코드가 없고,
-    // 목이 계약보다 엄격하면 로컬만 안전해 보이고 실서버 구멍이 가려진다(APP-214 서버 몫).
-    // 지금 막는 곳은 UI다 — note-panel이 상태를 모르는 동안에도 시작을 열지 않는다.
+    // 계약의 409에 `MEETING_ALREADY_ENDED`가 생겨(APP-214, server@a582684) 목도 막는다.
+    // **서버는 원래부터 막고 있었다** — 없던 것은 계약뿐이었고, 그래서 목과 생성 클라이언트만
+    // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.
+    if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
     if (state.sessions.some((session) => ACTIVE_STATUSES.has(session.status))) {
       fail("ACTIVE_TRANSCRIPTION_SESSION");
     }

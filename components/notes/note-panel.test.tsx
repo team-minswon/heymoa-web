@@ -395,7 +395,7 @@ describe("NotePanel", () => {
       renderDock();
 
       expect(
-        screen.getByText("종료된 회의입니다. 전사를 다시 시작할 수 없습니다.")
+        screen.getByText("이미 종료된 회의입니다. 전사를 다시 시작할 수 없습니다.")
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
     });
