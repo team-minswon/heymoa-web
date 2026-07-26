@@ -10,7 +10,12 @@ const auth = vi.hoisted(() => ({
   } | null,
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+// 목록 행이 이동 진행 표시를 위해 경로·쿼리를 읽는다(APP-215).
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/w/01K0000000000",
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: auth.user }),
 }));

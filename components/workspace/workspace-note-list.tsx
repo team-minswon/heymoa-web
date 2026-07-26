@@ -131,13 +131,11 @@ export function WorkspaceNoteList({
 
   return (
     <div data-testid="workspace-note-list">
-      {groupNotesByRecency(sortNotesByRecency(notes), now).map((group) => (
+      {groupNotesByRecency(sortNotesByRecency(notes)).map((group) => (
         <section key={group.key}>
-          {group.label ? (
-            <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">
-              {group.label}
-            </h2>
-          ) : null}
+          <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">
+            {group.label}
+          </h2>
           <div className="divide-y divide-[var(--el-hairline)]">
             {group.notes.map((note) => (
               <NoteListRow

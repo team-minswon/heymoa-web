@@ -105,11 +105,14 @@ export function NotePanel({
                 {note?.createdAt ? (
                   <span className="flex items-center gap-1.5 text-xs text-[var(--el-muted)]">
                     <CalendarDays className="size-3.5" />
+                    {/* 요일을 Intl에 함께 넘기면 괄호 없이 붙는다 — 목록 헤더와 같은 형식으로 조립한다. */}
                     {formatAppDate(note.createdAt, {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
-                      weekday: "short",
+                    })}{" "}
+                    ({formatAppDate(note.createdAt, { weekday: "short" })}){" "}
+                    {formatAppDate(note.createdAt, {
                       hour: "numeric",
                       minute: "2-digit",
                     })}

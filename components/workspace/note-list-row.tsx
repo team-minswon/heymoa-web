@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Expand, FileText, Loader2, MoreHorizontal } from "lucide-react";
 
 import {
@@ -47,11 +49,15 @@ function ActiveRecordingMeter({ title }: { title: string }) {
 function NoteRowIcon({
   title,
   isRecording,
+  forcePending = false,
 }: {
   title: string;
   isRecording: boolean;
+  /** 메뉴의 `전체 화면으로 열기`처럼 이 링크 밖에서 시작된 이동. */
+  forcePending?: boolean;
 }) {
   const { pending } = useLinkStatus();
+  const isPending = pending || forcePending;
 
   return (
     <span
@@ -60,7 +66,7 @@ function NoteRowIcon({
         isRecording ? "text-destructive" : "text-[var(--el-muted-soft)]"
       )}
     >
-      {pending ? (
+      {isPending ? (
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
       ) : isRecording ? (
         <ActiveRecordingMeter title={title} />
@@ -102,6 +108,19 @@ export function NoteListRow({
     ["requesting-permission", "connecting", "recording", "stopping"].includes(
       recording.phase
     );
+  // `전체 화면으로 열기`는 메뉴 안에 있고, 누르면 메뉴가 닫히며 그 안의 표시도 사라진다.
+  // 그래서 진행 상태를 포털 밖(이 행)에 둔다.
+  //
+  // **누른 시점의 위치를 기억해 렌더 중 비교한다** — 이동이 끝나면 위치가 달라지므로
+  // 저절로 꺼진다. effect로 끄면 라우터가 바뀔 때마다 setState가 한 번 더 돈다.
+  // 쿼리까지 보는 이유는 같은 노트에서 side → full이면 경로가 안 바뀌기 때문이다.
+  // 테스트 환경에는 라우터가 없어 `useSearchParams()`가 null이다.
+  const routeKey = `${usePathname()}?${useSearchParams()?.toString() ?? ""}`;
+  const [openedFullViewFrom, setOpenedFullViewFrom] = useState<string | null>(
+    null
+  );
+  const openingFullView = openedFullViewFrom === routeKey;
+
   const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=transcript`;
   const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=transcript`;
 
@@ -115,7 +134,11 @@ export function NoteListRow({
         // self-stretch로 52px 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
         className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
       >
-        <NoteRowIcon title={note.title} isRecording={isRecording} />
+        <NoteRowIcon
+          title={note.title}
+          isRecording={isRecording}
+          forcePending={openingFullView}
+        />
         <h3 className="min-w-0 flex-1 truncate text-read font-medium text-[var(--el-ink)]">
           {note.title}
         </h3>
@@ -136,7 +159,12 @@ export function NoteListRow({
           <MoreHorizontal />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLinkItem href={fullHref}>
+          <DropdownMenuLinkItem
+            href={fullHref}
+            // `onNavigate`는 실제 클라이언트 이동에만 불린다 — ⌘+클릭(새 탭)에서는 안 돈다.
+            // `onClick`으로 하면 새 탭을 열어도 이 탭의 스피너가 영원히 남는다.
+            onNavigate={() => setOpenedFullViewFrom(routeKey)}
+          >
             <Expand /> 전체 화면으로 열기
           </DropdownMenuLinkItem>
         </DropdownMenuContent>
