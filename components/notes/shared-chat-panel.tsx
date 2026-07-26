@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CirclePlay, Lock } from "lucide-react";
 
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
+import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
 } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
 import { useChatStream } from "@/lib/chat/use-chat-stream";
+import { useStickToBottom } from "@/lib/chat/use-stick-to-bottom";
 import { useToolApproval } from "@/lib/chat/use-tool-approval";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 
@@ -163,28 +165,9 @@ export function SharedChatPanel({
     [canSend, isBusy, messages.length, noteId, queryClient, stream]
   );
 
-  // 새 내용은 아래로 쌓인다. 유저가 위를 읽고 있을 때 끌어내리지 않도록 바닥 근처일 때만 따라간다.
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const stickToBottomRef = useRef(true);
-  const tail = `${messages.length}:${pendingUserMessage ?? ""}:${stream.state.text}:${stream.state.records.length}`;
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    // scroll 이벤트는 버블링하지 않아 부모에 onScroll을 걸 수 없다.
-    const onScroll = () => {
-      stickToBottomRef.current =
-        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 48;
-    };
-    viewport.addEventListener("scroll", onScroll, { passive: true });
-    return () => viewport.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport || !stickToBottomRef.current) return;
-    viewport.scrollTop = viewport.scrollHeight;
-  }, [tail]);
+  const { viewportRef, atBottom, scrollToBottom } = useStickToBottom(
+    `${messages.length}:${pendingUserMessage ?? ""}:${stream.state.text}:${stream.state.records.length}`
+  );
 
   // 한 턴이 도는 동안 부모에게 알린다 — 회의가 종료돼도 이 패널을 언마운트해 스트림을 끊지
   // 않게 (계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다). 언마운트 시엔 false.
@@ -211,7 +194,15 @@ export function SharedChatPanel({
         </p>
       </header>
 
-      <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
+      <ScrollArea
+        className="min-h-0 flex-1"
+        viewportRef={viewportRef}
+        overlay={
+          atBottom ? null : (
+            <ScrollToBottomButton label="맨 아래로" onClick={scrollToBottom} />
+          )
+        }
+      >
         <div className="flex min-h-full flex-col justify-end p-5">
           {isLoading ? (
             <div className="space-y-3">

@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   useRecording,
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
-import { Button } from "@/components/ui/button";
+import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
@@ -183,20 +182,15 @@ export function TranscriptView({ noteId }: { noteId: string }) {
     []
   );
 
+  // 여기 스크롤 엔진은 챗봇과 다르다(프로그램 스크롤 가드·라이브 판정). 생김새만 공유한다.
   const followAction =
     active && !isFollowing ? (
-      <div className="pointer-events-none absolute inset-x-0 bottom-20 z-20 flex justify-center">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="pointer-events-auto h-9 rounded-full bg-white/95 px-3.5 shadow-[0_8px_24px_rgba(28,25,23,0.10)] backdrop-blur-xl"
-          onClick={() => scrollToLatest("smooth")}
-        >
-          <ArrowDown className="size-3.5" />
-          최신 기록 보기
-        </Button>
-      </div>
+      <ScrollToBottomButton
+        label="최신 기록 보기"
+        onClick={() => scrollToLatest("smooth")}
+        // 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
+        className="bottom-20"
+      />
     ) : null;
 
   return (

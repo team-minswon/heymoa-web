@@ -15,6 +15,7 @@ import { MessageCircle, Plus, X } from "lucide-react";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { Button } from "@/components/ui/button";
+import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,6 +30,7 @@ import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
 import { useChatStream } from "@/lib/chat/use-chat-stream";
+import { useStickToBottom } from "@/lib/chat/use-stick-to-bottom";
 import { useToolApproval } from "@/lib/chat/use-tool-approval";
 import { cn } from "@/lib/utils";
 
@@ -430,28 +432,10 @@ function PersonalChatPanel({
     stream.state.phase === "streaming" ||
     stream.state.phase === "awaiting_approval";
 
-  // 새 내용은 아래로 쌓인다. 유저가 위를 읽고 있을 때 끌어내리지 않도록 바닥 근처일 때만 따라간다.
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const stickToBottomRef = useRef(true);
-  const tail = `${messages.length}:${pendingUserMessage ?? ""}:${stream.state.text}:${stream.state.records.length}`;
+  const { viewportRef, atBottom, scrollToBottom } = useStickToBottom(
+    `${messages.length}:${pendingUserMessage ?? ""}:${stream.state.text}:${stream.state.records.length}`
+  );
 
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    // scroll 이벤트는 버블링하지 않아 React의 onScroll을 부모에 걸 수 없다.
-    const onScroll = () => {
-      stickToBottomRef.current =
-        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 48;
-    };
-    viewport.addEventListener("scroll", onScroll, { passive: true });
-    return () => viewport.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport || !stickToBottomRef.current) return;
-    viewport.scrollTop = viewport.scrollHeight;
-  }, [tail]);
   return (
     <aside
       data-testid="personal-chat-panel"
@@ -491,7 +475,15 @@ function PersonalChatPanel({
         </Button>
       </header>
 
-      <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
+      <ScrollArea
+        className="min-h-0 flex-1"
+        viewportRef={viewportRef}
+        overlay={
+          atBottom ? null : (
+            <ScrollToBottomButton label="맨 아래로" onClick={scrollToBottom} />
+          )
+        }
+      >
         <div className="flex min-h-full flex-col justify-end p-6">
           {isLoading ? (
             <div className="space-y-3">
