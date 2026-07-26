@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -19,6 +19,8 @@ import type {
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
+  UseSuspenseQueryOptions,
+  UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
@@ -248,6 +250,171 @@ export function useGetTranscriptionSession<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+/**
+ * @summary 전사 세션 조회
+ */
+export const prefetchGetTranscriptionSessionQuery = async <
+  TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  sessionId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetTranscriptionSessionQueryOptions(
+    sessionId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetTranscriptionSessionSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  sessionId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTranscriptionSessionQueryKey(sessionId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTranscriptionSession>>
+  > = ({ signal }) =>
+    getTranscriptionSession(sessionId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getTranscriptionSession>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetTranscriptionSessionSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTranscriptionSession>>
+>;
+export type GetTranscriptionSessionSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  sessionId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  sessionId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  sessionId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 전사 세션 조회
+ */
+
+export function useGetTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  sessionId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetTranscriptionSessionSuspenseQueryOptions(
+    sessionId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
 export type getNoteTranscriptResponse200 = {
   data: TranscriptResponse;
   status: 200;
@@ -451,6 +618,167 @@ export function useGetNoteTranscript<
     TData,
     TError
   > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 노트 전사 조회
+ */
+export const prefetchGetNoteTranscriptQuery = async <
+  TData = Awaited<ReturnType<typeof getNoteTranscript>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteTranscript>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetNoteTranscriptQueryOptions(noteId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetNoteTranscriptSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNoteTranscript>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteTranscript>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNoteTranscriptQueryKey(noteId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getNoteTranscript>>
+  > = ({ signal }) => getNoteTranscript(noteId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getNoteTranscript>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNoteTranscriptSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNoteTranscript>>
+>;
+export type GetNoteTranscriptSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetNoteTranscriptSuspense<
+  TData = Awaited<ReturnType<typeof getNoteTranscript>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteTranscript>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteTranscriptSuspense<
+  TData = Awaited<ReturnType<typeof getNoteTranscript>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteTranscript>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteTranscriptSuspense<
+  TData = Awaited<ReturnType<typeof getNoteTranscript>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteTranscript>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 노트 전사 조회
+ */
+
+export function useGetNoteTranscriptSuspense<
+  TData = Awaited<ReturnType<typeof getNoteTranscript>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteTranscript>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetNoteTranscriptSuspenseQueryOptions(
+    noteId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

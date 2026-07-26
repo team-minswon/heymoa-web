@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -19,6 +19,8 @@ import type {
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
+  UseSuspenseQueryOptions,
+  UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
@@ -536,6 +538,171 @@ export function useGetWorkspaceInvitations<
     TData,
     TError
   > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 대기 중인 초대 목록 조회
+ */
+export const prefetchGetWorkspaceInvitationsQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceInvitationsQueryOptions(
+    workspaceId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceInvitationsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceInvitationsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceInvitations>>
+  > = ({ signal }) =>
+    getWorkspaceInvitations(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceInvitationsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceInvitations>>
+>;
+export type GetWorkspaceInvitationsSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetWorkspaceInvitationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceInvitationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceInvitationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 대기 중인 초대 목록 조회
+ */
+
+export function useGetWorkspaceInvitationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceInvitations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceInvitationsSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

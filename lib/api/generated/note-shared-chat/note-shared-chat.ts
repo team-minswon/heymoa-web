@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -19,6 +19,8 @@ import type {
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
+  UseSuspenseQueryOptions,
+  UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
@@ -237,6 +239,171 @@ export function useGetNoteSharedChatMessages<
     TData,
     TError
   > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 공유 챗봇 히스토리 + 잠금 상태 조회
+ */
+export const prefetchGetNoteSharedChatMessagesQuery = async <
+  TData = Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetNoteSharedChatMessagesQueryOptions(
+    noteId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetNoteSharedChatMessagesSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNoteSharedChatMessagesQueryKey(noteId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getNoteSharedChatMessages>>
+  > = ({ signal }) =>
+    getNoteSharedChatMessages(noteId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNoteSharedChatMessagesSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNoteSharedChatMessages>>
+>;
+export type GetNoteSharedChatMessagesSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetNoteSharedChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteSharedChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteSharedChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 공유 챗봇 히스토리 + 잠금 상태 조회
+ */
+
+export function useGetNoteSharedChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteSharedChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetNoteSharedChatMessagesSuspenseQueryOptions(
+    noteId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

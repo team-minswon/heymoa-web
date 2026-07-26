@@ -16,7 +16,7 @@ const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNoteQueryKey: (noteId: string) => ["note", noteId],
-  useGetNote: () => ({
+  useGetNoteSuspense: () => ({
     data: {
       status: 200,
       data: {

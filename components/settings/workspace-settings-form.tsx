@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getGetWorkspaceQueryKey,
   getGetWorkspacesQueryKey,
-  useGetWorkspace,
+  useGetWorkspaceSuspense,
   useChangeDefaultWorkspace,
   useUpdateWorkspace,
 } from "@/lib/api/generated/workspaces/workspaces";
@@ -36,7 +37,9 @@ export function WorkspaceSettingsForm({
   workspaceId: string;
 }) {
   const queryClient = useQueryClient();
-  const query = useGetWorkspace(workspaceId);
+  // suspense — 로딩/에러는 settings-dialog의 DataBoundary가 잡는다. 200 봉투가 보장되므로
+  // 아래 workspace?. 옵셔널은 타입 안전용이며 런타임엔 항상 값이 있다.
+  const query = useGetWorkspaceSuspense(workspaceId);
   const update = useUpdateWorkspace({
     mutation: { meta: { suppressErrorToast: true } },
   });
@@ -160,6 +163,19 @@ export function WorkspaceSettingsForm({
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** 워크스페이스 일반 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다. */
+export function WorkspaceSettingsFormSkeleton() {
+  return (
+    <div
+      className="mx-auto max-w-2xl space-y-8"
+      aria-label="워크스페이스 설정 불러오는 중"
+    >
+      <Skeleton className="h-9 w-40" />
+      <Skeleton className="h-64 rounded-2xl" />
     </div>
   );
 }

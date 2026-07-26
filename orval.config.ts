@@ -22,6 +22,10 @@ export default defineConfig({
         ],
       },
       override: {
+        query: {
+          useSuspenseQuery: true,
+          usePrefetch: true,
+        },
         mutator: {
           path: "./lib/api/fetcher.ts",
           name: "apiFetch",

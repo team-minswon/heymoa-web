@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -19,6 +19,8 @@ import type {
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
+  UseSuspenseQueryOptions,
+  UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
@@ -253,6 +255,181 @@ export function useCompleteWorkspaceIntegration<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+/**
+ * @summary 워크스페이스 연동 콜백
+ */
+export const prefetchCompleteWorkspaceIntegrationQuery = async <
+  TData = Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+  TError = void,
+>(
+  queryClient: QueryClient,
+  provider: "LINEAR" | "GITHUB",
+  params?: CompleteWorkspaceIntegrationParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getCompleteWorkspaceIntegrationQueryOptions(
+    provider,
+    params,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getCompleteWorkspaceIntegrationSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+  TError = void,
+>(
+  provider: "LINEAR" | "GITHUB",
+  params?: CompleteWorkspaceIntegrationParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getCompleteWorkspaceIntegrationQueryKey(provider, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof completeWorkspaceIntegration>>
+  > = ({ signal }) =>
+    completeWorkspaceIntegration(provider, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type CompleteWorkspaceIntegrationSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof completeWorkspaceIntegration>>
+>;
+export type CompleteWorkspaceIntegrationSuspenseQueryError = void;
+
+export function useCompleteWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+  TError = void,
+>(
+  provider: "LINEAR" | "GITHUB",
+  params: undefined | CompleteWorkspaceIntegrationParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useCompleteWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+  TError = void,
+>(
+  provider: "LINEAR" | "GITHUB",
+  params?: CompleteWorkspaceIntegrationParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useCompleteWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+  TError = void,
+>(
+  provider: "LINEAR" | "GITHUB",
+  params?: CompleteWorkspaceIntegrationParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 연동 콜백
+ */
+
+export function useCompleteWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+  TError = void,
+>(
+  provider: "LINEAR" | "GITHUB",
+  params?: CompleteWorkspaceIntegrationParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof completeWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getCompleteWorkspaceIntegrationSuspenseQueryOptions(
+    provider,
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
 export type getWorkspaceIntegrationsResponse200 = {
   data: ToolConnectionsResponse;
   status: 200;
@@ -458,6 +635,171 @@ export function useGetWorkspaceIntegrations<
     TData,
     TError
   > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 워크스페이스 연동 상태 조회
+ */
+export const prefetchGetWorkspaceIntegrationsQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceIntegrationsQueryOptions(
+    workspaceId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceIntegrationsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceIntegrationsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceIntegrations>>
+  > = ({ signal }) =>
+    getWorkspaceIntegrations(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceIntegrationsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceIntegrations>>
+>;
+export type GetWorkspaceIntegrationsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetWorkspaceIntegrationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceIntegrationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceIntegrationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 연동 상태 조회
+ */
+
+export function useGetWorkspaceIntegrationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceIntegrations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceIntegrationsSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
@@ -843,6 +1185,184 @@ export function useStartWorkspaceIntegration<
     TData,
     TError
   > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 워크스페이스 연동 시작
+ */
+export const prefetchStartWorkspaceIntegrationQuery = async <
+  TData = Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+  TError = void | AppErrorResponse | UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  provider: "LINEAR" | "GITHUB",
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getStartWorkspaceIntegrationQueryOptions(
+    workspaceId,
+    provider,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getStartWorkspaceIntegrationSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+  TError = void | AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  provider: "LINEAR" | "GITHUB",
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getStartWorkspaceIntegrationQueryKey(workspaceId, provider);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof startWorkspaceIntegration>>
+  > = ({ signal }) =>
+    startWorkspaceIntegration(workspaceId, provider, {
+      signal,
+      ...requestOptions,
+    });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type StartWorkspaceIntegrationSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof startWorkspaceIntegration>>
+>;
+export type StartWorkspaceIntegrationSuspenseQueryError =
+  | void
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useStartWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+  TError = void | AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  provider: "LINEAR" | "GITHUB",
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useStartWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+  TError = void | AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  provider: "LINEAR" | "GITHUB",
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useStartWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+  TError = void | AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  provider: "LINEAR" | "GITHUB",
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 연동 시작
+ */
+
+export function useStartWorkspaceIntegrationSuspense<
+  TData = Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+  TError = void | AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  provider: "LINEAR" | "GITHUB",
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof startWorkspaceIntegration>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getStartWorkspaceIntegrationSuspenseQueryOptions(
+    workspaceId,
+    provider,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

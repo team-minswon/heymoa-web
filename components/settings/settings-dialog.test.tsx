@@ -4,9 +4,11 @@ import { SettingsDialog } from "@/components/settings/settings-dialog";
 
 vi.mock("@/components/settings/account-settings-form", () => ({
   AccountSettingsForm: () => <p>계정 내용</p>,
+  AccountSettingsFormSkeleton: () => <p>계정 로딩</p>,
 }));
 vi.mock("@/components/settings/workspace-settings-form", () => ({
   WorkspaceSettingsForm: () => <p>워크스페이스 내용</p>,
+  WorkspaceSettingsFormSkeleton: () => <p>워크스페이스 로딩</p>,
 }));
 vi.mock("@/components/settings/members-settings", () => ({
   MembersSettings: () => <p>멤버 내용</p>,

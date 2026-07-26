@@ -11,34 +11,27 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getGetNoteQueryKey,
-  useGetNote,
+  useGetNoteSuspense,
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
 import { formatAppDate } from "@/lib/format/date";
 
 export function NoteDetails({ noteId }: { noteId: string }) {
   const queryClient = useQueryClient();
-  const noteQuery = useGetNote(noteId);
+  const noteResponse = useGetNoteSuspense(noteId).data;
   const updateNote = useUpdateNote({
     mutation: { meta: { suppressErrorToast: true } },
   });
   const [feedback, setFeedback] = useState<"saved" | null>(null);
-  const note =
-    noteQuery.data?.status === 200 && noteQuery.data.data.success
-      ? noteQuery.data.data.data
-      : undefined;
+
+  // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
+  if (noteResponse.status !== 200 || !noteResponse.data.success) {
+    throw new Error("노트를 불러오지 못했습니다.");
+  }
+  const note = noteResponse.data.data;
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) });
-
-  if (!note) {
-    return (
-      <div className="mx-auto w-full max-w-[820px] space-y-5 px-5 pt-7 sm:px-9 sm:pt-9">
-        <Skeleton className="h-10 w-2/3" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
-  }
 
   return (
     <form
@@ -128,5 +121,15 @@ export function NoteDetails({ noteId }: { noteId: string }) {
         ) : null}
       </div>
     </form>
+  );
+}
+
+/** 노트 정보 로딩 스켈레톤. DataBoundary fallback으로 부모(note-panel)가 쓴다. */
+export function NoteDetailsSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-[820px] space-y-5 px-5 pt-7 sm:px-9 sm:pt-9">
+      <Skeleton className="h-10 w-2/3" />
+      <Skeleton className="h-40 w-full" />
+    </div>
   );
 }

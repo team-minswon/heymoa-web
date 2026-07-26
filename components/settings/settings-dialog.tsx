@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import { Building2, Plug, UserRound, UsersRound } from "lucide-react";
-import { AccountSettingsForm } from "@/components/settings/account-settings-form";
+import {
+  AccountSettingsForm,
+  AccountSettingsFormSkeleton,
+} from "@/components/settings/account-settings-form";
 import { MembersSettings } from "@/components/settings/members-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
-import { WorkspaceSettingsForm } from "@/components/settings/workspace-settings-form";
+import {
+  WorkspaceSettingsForm,
+  WorkspaceSettingsFormSkeleton,
+} from "@/components/settings/workspace-settings-form";
+import { DataBoundary } from "@/components/ui/data-boundary";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -80,13 +87,25 @@ function SettingsSections({
       </nav>
       <div className="min-h-0 overflow-y-auto bg-white/60 p-6 pt-14 sm:p-10 md:p-14">
         {section === "account" ? (
-          <AccountSettingsForm />
+          <DataBoundary
+            fallback={<AccountSettingsFormSkeleton />}
+            errorLabel="계정 정보를 불러오지 못했습니다"
+            resetKeys={["account"]}
+          >
+            <AccountSettingsForm />
+          </DataBoundary>
         ) : section === "members" ? (
           <MembersSettings workspaceId={workspaceId} />
         ) : section === "integrations" ? (
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
         ) : (
-          <WorkspaceSettingsForm workspaceId={workspaceId} />
+          <DataBoundary
+            fallback={<WorkspaceSettingsFormSkeleton />}
+            errorLabel="워크스페이스 정보를 불러오지 못했습니다"
+            resetKeys={["workspace"]}
+          >
+            <WorkspaceSettingsForm workspaceId={workspaceId} />
+          </DataBoundary>
         )}
       </div>
     </div>

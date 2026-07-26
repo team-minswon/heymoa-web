@@ -21,8 +21,8 @@ import type {
   ProjectResponseData,
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
-import { useGetProjects } from "@/lib/api/generated/projects/projects";
-import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
+import { useGetProjectsSuspense } from "@/lib/api/generated/projects/projects";
+import { useGetWorkspaceSuspense } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
 
 type WorkspaceShellState = {
@@ -60,8 +60,10 @@ export function WorkspaceAppShell({
   const [settingsSection, setSettingsSection] =
     useState<SettingsSection>("account");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const workspaceQuery = useGetWorkspace(workspaceId);
-  const projectsQuery = useGetProjects(workspaceId);
+  // suspense — 로딩/에러는 route-layout의 DataBoundary가 잡는다. isPending/isError는 항상 false라
+  // context 인터페이스(workspace-page가 소비)는 그대로 두어도 값이 자연히 false가 된다.
+  const workspaceQuery = useGetWorkspaceSuspense(workspaceId);
+  const projectsQuery = useGetProjectsSuspense(workspaceId);
   const workspace =
     workspaceQuery.data?.status === 200 && workspaceQuery.data.data.success
       ? workspaceQuery.data.data.data

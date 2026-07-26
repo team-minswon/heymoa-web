@@ -28,6 +28,7 @@ const noteState = vi.hoisted(() => ({
 
 vi.mock("@/components/notes/note-details", () => ({
   NoteDetails: () => <p>정보 내용</p>,
+  NoteDetailsSkeleton: () => <p>정보 로딩</p>,
 }));
 vi.mock("@/components/notes/transcript-view", () => ({
   TranscriptView: () => <p>전사 내용</p>,

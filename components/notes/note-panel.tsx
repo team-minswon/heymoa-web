@@ -4,13 +4,17 @@ import { useState } from "react";
 import { Expand, PanelRightClose } from "lucide-react";
 
 import { NoteArchive } from "@/components/notes/note-archive";
-import { NoteDetails } from "@/components/notes/note-details";
+import {
+  NoteDetails,
+  NoteDetailsSkeleton,
+} from "@/components/notes/note-details";
 import { NoteSummary } from "@/components/notes/note-summary";
 import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataBoundary } from "@/components/ui/data-boundary";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
@@ -165,7 +169,13 @@ export function NotePanel({
           </TabsContent>
           <TabsContent value="details" className="min-h-0 flex-1">
             <ScrollArea className="h-full">
-              <NoteDetails noteId={noteId} />
+              <DataBoundary
+                fallback={<NoteDetailsSkeleton />}
+                errorLabel="노트를 불러오지 못했습니다"
+                resetKeys={[noteId]}
+              >
+                <NoteDetails noteId={noteId} />
+              </DataBoundary>
             </ScrollArea>
           </TabsContent>
         </Tabs>

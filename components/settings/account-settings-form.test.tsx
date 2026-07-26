@@ -5,7 +5,7 @@ import { AccountSettingsForm } from "@/components/settings/account-settings-form
 
 vi.mock("@/lib/api/generated/users/users", () => ({
   getGetCurrentUserQueryKey: () => ["current-user"],
-  useGetCurrentUser: () => ({
+  useGetCurrentUserSuspense: () => ({
     data: {
       status: 200,
       data: {

@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -19,6 +19,8 @@ import type {
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
+  UseSuspenseQueryOptions,
+  UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
@@ -481,6 +483,167 @@ export function useGetLatestAnalysis<
     TData,
     TError
   > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 최신 분석 조회
+ */
+export const prefetchGetLatestAnalysisQuery = async <
+  TData = Awaited<ReturnType<typeof getLatestAnalysis>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLatestAnalysis>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetLatestAnalysisQueryOptions(noteId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetLatestAnalysisSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLatestAnalysis>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestAnalysis>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetLatestAnalysisQueryKey(noteId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getLatestAnalysis>>
+  > = ({ signal }) => getLatestAnalysis(noteId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getLatestAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetLatestAnalysisSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLatestAnalysis>>
+>;
+export type GetLatestAnalysisSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetLatestAnalysisSuspense<
+  TData = Awaited<ReturnType<typeof getLatestAnalysis>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestAnalysis>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLatestAnalysisSuspense<
+  TData = Awaited<ReturnType<typeof getLatestAnalysis>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestAnalysis>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLatestAnalysisSuspense<
+  TData = Awaited<ReturnType<typeof getLatestAnalysis>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestAnalysis>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 최신 분석 조회
+ */
+
+export function useGetLatestAnalysisSuspense<
+  TData = Awaited<ReturnType<typeof getLatestAnalysis>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestAnalysis>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetLatestAnalysisSuspenseQueryOptions(
+    noteId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

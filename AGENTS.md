@@ -20,7 +20,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - No GitHub issues or PRs. There are no issue/PR templates and no CI workflows in this repo.
 - Branches: `main` (stable), `dev` (integration), and `feature/*` branches cut from `dev`.
 - Integrate a feature by **squash-merging it into `dev` locally**, then `git push` — no pull request.
-- Promote to `main` the same way: squash-merge `dev` into `main` locally, then push.
+- Promote to `main` by **rebase-merging `dev` into `main` (fast-forward, 커밋 보존) locally**, then push — squash 아님.
+- 커밋·브랜치 제목은 `[APP-N] 제목` 형식. `feat(app-N):`·`feat:` 등 conventional prefix는 쓰지 않는다(이슈 없는 잡일만 `chore:`/`docs:` bare 허용).
+- 코드 리뷰 게이트는 push 전 로컬 `codex exec review --base dev --title "..."` 하나다. GitHub 원격 `@codex` 봇 리뷰는 요청·반영하지 않는다.
 - Run the verification checklist below before merging.
 
 ## Architecture
@@ -65,6 +67,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | **지속 상태** — 입력 잠금, 회의 비ACTIVE, 승인 카드 무효화, 권한 없음    | 인라인 `Alert`                    | **오류가 아니라 "지금 할 수 없음"이다.** 토스트로 하면 사라진 뒤 왜 입력이 막혔는지 알 수 없다            |
 | **주 데이터 실패** — 노트 404, 분석 FAILED, 종료 이벤트 없이 끊긴 스트림 | error boundary / 빈 상태 + 재시도 | 그 화면에 그릴 것이 없다. 토스트만 띄우면 빈 화면이 남는다                                                |
 | **로딩**                                                                 | `Skeleton` / Suspense             | 기능 크기 단위로. route 전체 spinner 금지                                                                 |
+
+**단순 조회 위젯은 `components/ui/data-boundary.tsx`의 `<DataBoundary>`로 감싼다.** suspense 훅(`useGetXSuspense`)을 쓰고, 로딩은 skeleton fallback, 실패는 `InlineRetry`("다시 시도"→재요청)로 통일한다(로딩=skeleton 우선, 버튼·mutation 진행만 인라인 spinner). 단 **폴링(`refetchInterval`)·조건부(`enabled`)·실패를 정상 UI로 다루는 조회는 suspense와 맞지 않아 `useQuery`를 유지한다** — 404를 빈 상태로 그리는 `note-summary`·`personal-chat`, 두 쿼리의 부분 실패를 개별 처리하는 `note-archive`·`workspace-integrations-settings` 등.
 
 **mutation 토스트는 자동이다.** `lib/query/query-client.ts`의 `MutationCache.onError`가 모든 실패를 잡아 서버 문구로 토스트한다. 컴포넌트마다 `onError`를 쓰지 않는다.
 

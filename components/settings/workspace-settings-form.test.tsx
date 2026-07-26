@@ -18,7 +18,7 @@ const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   getGetWorkspaceQueryKey: (id: string) => ["workspace", id],
   getGetWorkspacesQueryKey: () => ["workspaces"],
-  useGetWorkspace: () => ({
+  useGetWorkspaceSuspense: () => ({
     data: {
       status: 200,
       data: {

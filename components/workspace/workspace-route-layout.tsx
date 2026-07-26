@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
+import { WorkspaceRouteSkeleton } from "@/components/workspace/workspace-route-skeleton";
+import { DataBoundary } from "@/components/ui/data-boundary";
 
 export function WorkspaceRouteLayout({
   workspaceId,
@@ -20,9 +22,15 @@ export function WorkspaceRouteLayout({
   // v5: 사이드바는 full 모드에서도 유지한다 — full 노트 표면이 SidebarInset 안에서
   // 255 우측에 앉으므로 내비를 잃지 않는다. (이전 hideSidebar 폐기)
   return (
-    <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>
-      <WorkspacePage workspaceId={workspaceId} />
-      {children}
-    </WorkspaceAppShell>
+    <DataBoundary
+      fallback={<WorkspaceRouteSkeleton />}
+      errorLabel="워크스페이스를 불러오지 못했습니다"
+      resetKeys={[workspaceId]}
+    >
+      <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>
+        <WorkspacePage workspaceId={workspaceId} />
+        {children}
+      </WorkspaceAppShell>
+    </DataBoundary>
   );
 }

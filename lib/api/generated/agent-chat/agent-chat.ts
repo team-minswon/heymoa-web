@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -19,6 +19,8 @@ import type {
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
+  UseSuspenseQueryOptions,
+  UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
@@ -377,6 +379,167 @@ export function useGetActiveAgentChat<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+/**
+ * @summary 활성 세션 조회
+ */
+export const prefetchGetActiveAgentChatQuery = async <
+  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  params: GetActiveAgentChatParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetActiveAgentChatQueryOptions(params, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetActiveAgentChatSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  params: GetActiveAgentChatParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetActiveAgentChatQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getActiveAgentChat>>
+  > = ({ signal }) => getActiveAgentChat(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getActiveAgentChat>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetActiveAgentChatSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getActiveAgentChat>>
+>;
+export type GetActiveAgentChatSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetActiveAgentChatSuspense<
+  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  params: GetActiveAgentChatParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetActiveAgentChatSuspense<
+  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  params: GetActiveAgentChatParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetActiveAgentChatSuspense<
+  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  params: GetActiveAgentChatParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 활성 세션 조회
+ */
+
+export function useGetActiveAgentChatSuspense<
+  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  params: GetActiveAgentChatParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetActiveAgentChatSuspenseQueryOptions(
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
 export type getAgentChatMessagesResponse200 = {
   data: AgentChatMessagesResponse;
   status: 200;
@@ -579,6 +742,168 @@ export function useGetAgentChatMessages<
     TData,
     TError
   > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 채팅 히스토리 조회
+ */
+export const prefetchGetAgentChatMessagesQuery = async <
+  TData = Awaited<ReturnType<typeof getAgentChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  chatId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetAgentChatMessagesQueryOptions(chatId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetAgentChatMessagesSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAgentChatMessagesQueryKey(chatId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAgentChatMessages>>
+  > = ({ signal }) =>
+    getAgentChatMessages(chatId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getAgentChatMessages>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAgentChatMessagesSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAgentChatMessages>>
+>;
+export type GetAgentChatMessagesSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetAgentChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 채팅 히스토리 조회
+ */
+
+export function useGetAgentChatMessagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChatMessages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChatMessages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAgentChatMessagesSuspenseQueryOptions(
+    chatId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

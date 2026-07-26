@@ -30,7 +30,7 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
     data: { status: 200, data: { success: true, data: { workspaces: [] } } },
   }),
   useCreateWorkspace: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useGetWorkspace: () => ({
+  useGetWorkspaceSuspense: () => ({
     data: {
       status: 200,
       data: {
@@ -41,6 +41,8 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
         },
       },
     },
+    isPending: false,
+    isError: false,
   }),
 }));
 
@@ -50,8 +52,10 @@ vi.mock("@/components/auth/auth-provider", () => ({
 
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   getGetProjectsQueryKey: () => ["projects"],
-  useGetProjects: () => ({
+  useGetProjectsSuspense: () => ({
     data: { status: 200, data: { success: true, data: { projects: [] } } },
+    isPending: false,
+    isError: false,
   }),
   useCreateProject: () => ({ mutateAsync: vi.fn() }),
   useUpdateProject: () => ({ mutateAsync: vi.fn() }),
