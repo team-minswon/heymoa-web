@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { mockDb } from "@/lib/mocks/db";
+import { MOCK_USER } from "@/lib/mocks/mock-user";
 
 function firstNoteId() {
   const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
@@ -22,12 +23,7 @@ describe("mockDb", () => {
   beforeEach(() => mockDb.reset());
 
   it("seeds the deterministic profile and balanced workspace content", () => {
-    expect(mockDb.getCurrentUser()).toEqual({
-      userId: "user-12345",
-      name: "테스트 유저",
-      email: "test@heymoa.com",
-      image: null,
-    });
+    expect(mockDb.getCurrentUser()).toEqual(MOCK_USER);
     const workspaces = mockDb.listWorkspaces();
     expect(workspaces).toHaveLength(2);
     expect(mockDb.listProjects(workspaces[0].workspaceId)).toHaveLength(2);

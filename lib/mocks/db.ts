@@ -156,10 +156,12 @@ function createSeedState(): StoreState {
       isDefault: true,
       role: "ADMIN",
     },
+    // description은 계약상 nullable이다 — 설명 없는 워크스페이스를 화면이 어떻게 그리는지
+    // 목이 한 번도 안 보여주면 그 레이아웃은 검증되지 않는다.
     {
       workspaceId: "01K0000000006",
       name: "제품 팀",
-      description: "제품 팀의 회의 기록입니다.",
+      description: null,
       isDefault: false,
       role: "ADMIN",
     },
@@ -192,14 +194,12 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-03T00:00:00Z",
       updatedAt: "2026-07-03T00:00:00Z",
     },
+    // 설명 없는 프로젝트. 목록 행과 상세 헤더가 null을 어떻게 다루는지의 유일한 표본이다.
     {
       projectId: "01K0000000008",
       workspaceId: workspaces[1].workspaceId,
       name: "리서치",
-      description: faker.helpers.arrayElement([
-        "사용자 조사 기록을 모읍니다.",
-        "시장과 고객 인사이트를 공유합니다.",
-      ]),
+      description: null,
       createdAt: "2026-07-04T00:00:00Z",
       updatedAt: "2026-07-04T00:00:00Z",
     },
@@ -258,6 +258,9 @@ function createSeedState(): StoreState {
       endedAt: "2026-07-11T00:02:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
+    // READY/ACTIVE 세션은 시드하지 않는다 — `createSession`의 가드가 전역이라(한 유저는
+    // 동시에 하나만 녹음) 시드가 하나라도 있으면 모든 세션 생성이 막힌다.
+    // `startedAt`·`endedAt`·`endReason`의 null 경로는 `createSession`이 런타임에 만든다.
   ];
   const segments: TranscriptResponseDataSegmentsItem[] = [
     {
@@ -343,6 +346,22 @@ function createSeedState(): StoreState {
         workspaceId: INVITED_WORKSPACE.workspaceId,
         workspaceName: INVITED_WORKSPACE.name,
         inviterName: invitations[0].inviterName,
+      },
+    },
+    // 이미 읽은 알림. `readAt`이 전부 null이면 벨의 읽음 표시와 안읽음 카운트 분기가
+    // 한쪽만 검증된다.
+    {
+      notificationId: "01K0000000023",
+      type: "WORKSPACE_INVITATION",
+      readAt: "2026-07-11T01:00:00Z",
+      createdAt: "2026-07-10T00:00:00Z",
+      invitation: {
+        invitationId: "01K0000000024",
+        status: "ACCEPTED",
+        role: "MEMBER",
+        workspaceId: workspaces[1].workspaceId,
+        workspaceName: workspaces[1].name,
+        inviterName: "한지원",
       },
     },
   ];
