@@ -1,13 +1,20 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(""),
+const navState = vi.hoisted(() => ({
+  params: new URLSearchParams(""),
+  replace: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: navState.replace }),
+  useSearchParams: () => navState.params,
+  usePathname: () => "/w/01K0000000000",
+}));
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock("sonner", () => ({ toast: toastMock }));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => ({
     session: null,
@@ -77,6 +84,13 @@ describe("WorkspaceAppShell", () => {
     }));
   });
 
+  beforeEach(() => {
+    navState.params = new URLSearchParams("");
+    navState.replace.mockClear();
+    toastMock.success.mockClear();
+    toastMock.error.mockClear();
+  });
+
   it("renders one app navigation and a main content region", () => {
     const client = new QueryClient();
     render(
@@ -97,5 +111,42 @@ describe("WorkspaceAppShell", () => {
       '[data-slot="sidebar-container"]'
     );
     expect(sidebarContainer).toHaveClass("overflow-hidden", "border-r");
+  });
+
+  it("OAuth 복귀 쿼리로 연동 결과 토스트를 띄우고 쿼리를 지운다", async () => {
+    navState.params = new URLSearchParams("provider=LINEAR&status=connected");
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkspaceAppShell workspaceId="01K0000000000">
+          <p>노트 목록</p>
+        </WorkspaceAppShell>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(toastMock.success).toHaveBeenCalledWith(
+        "Linear 연동을 연결했습니다."
+      );
+      expect(navState.replace).toHaveBeenCalledWith("/w/01K0000000000", {
+        scroll: false,
+      });
+    });
+  });
+
+  it("status가 connected가 아니면 실패 토스트를 띄운다", async () => {
+    navState.params = new URLSearchParams("provider=GITHUB&status=error");
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkspaceAppShell workspaceId="01K0000000000">
+          <p>노트 목록</p>
+        </WorkspaceAppShell>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(toastMock.error).toHaveBeenCalledWith(
+        "연동 연결에 실패했습니다. 잠시 후 다시 시도해 주세요."
+      );
+    });
   });
 });

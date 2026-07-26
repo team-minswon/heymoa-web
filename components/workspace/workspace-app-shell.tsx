@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Sidebar,
   SidebarInset,
@@ -35,6 +37,11 @@ type WorkspaceShellState = {
   isWorkspaceError: boolean;
 };
 
+const INTEGRATION_LABEL: Record<string, string> = {
+  LINEAR: "Linear",
+  GITHUB: "GitHub",
+};
+
 const WorkspaceShellContext = createContext<WorkspaceShellState | null>(null);
 
 export function useWorkspaceShell() {
@@ -60,6 +67,35 @@ export function WorkspaceAppShell({
   const [settingsSection, setSettingsSection] =
     useState<SettingsSection>("account");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // OAuth 연동 승인 후 서버가 /w/{workspaceId}?provider=&status=로 돌려보낸다(APP-194).
+  // 연동 설정 모달을 열어 결과를 보이고, 새로고침·뒤로가기에 재실행되지 않게 쿼리를 지운다.
+  useEffect(() => {
+    const provider = searchParams.get("provider");
+    if (!provider) return;
+    const status = searchParams.get("status");
+    // URL 쿼리(외부 상태)에 반응해 설정 모달을 여는 정당한 동기화 — toast·replace와 한 묶음이라 effect가 맞다.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setSettingsSection("integrations");
+    setSettingsOpen(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    if (status === "connected") {
+      toast.success(
+        `${INTEGRATION_LABEL[provider] ?? provider} 연동을 연결했습니다.`
+      );
+    } else {
+      toast.error("연동 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("provider");
+    next.delete("status");
+    const query = next.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
+  }, [searchParams, router, pathname]);
+
   // suspense — 로딩/에러는 route-layout의 DataBoundary가 잡는다. isPending/isError는 항상 false라
   // context 인터페이스(workspace-page가 소비)는 그대로 두어도 값이 자연히 false가 된다.
   const workspaceQuery = useGetWorkspaceSuspense(workspaceId);
