@@ -16,6 +16,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
+      // 기본값은 우측 하단인데 제품 화면의 플로팅 독·챗봇 카드와 겹쳐 잘 안 보인다.
+      position="top-right"
+      closeButton
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

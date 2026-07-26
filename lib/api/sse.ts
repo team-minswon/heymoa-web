@@ -1,5 +1,9 @@
-import { buildUrl, refreshAuthOnce } from "@/lib/api/fetcher";
-import { notifyAuthStateChanged } from "@/lib/auth/events";
+import { AuthRefreshError, buildUrl, refreshAuthOnce } from "@/lib/api/fetcher";
+import {
+  isSessionExpired,
+  openSessionGate,
+  SessionExpiredError,
+} from "@/lib/auth/session-gate";
 
 export type SseEvent = {
   event: string;
@@ -12,6 +16,11 @@ async function connect(
   signal: AbortSignal | undefined,
   hasRetried: boolean
 ): Promise<Response> {
+  // 세션이 끝났으면 스트림을 열지 않는다. apiFetch를 안 거치는 경로라 따로 막아야 한다.
+  if (isSessionExpired()) {
+    throw new SessionExpiredError();
+  }
+
   const response = await fetch(buildUrl(url), {
     method: "POST",
     credentials: "include",
@@ -26,9 +35,12 @@ async function connect(
   if (response.status === 401 && !hasRetried) {
     try {
       await refreshAuthOnce();
-    } catch {
-      notifyAuthStateChanged({ reason: "unauthenticated" });
-      throw new Error("Authentication refresh failed.");
+    } catch (error) {
+      // 만료일 때만 게이트를 연다. 네트워크 오류는 일시 실패라 재시도 대상으로 남긴다.
+      if (error instanceof AuthRefreshError && error.expired) {
+        openSessionGate();
+      }
+      throw error;
     }
     return connect(url, body, signal, true);
   }

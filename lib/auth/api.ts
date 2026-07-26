@@ -2,6 +2,10 @@ import { notifyAuthStateChanged } from "@/lib/auth/events";
 import { buildApiUrl, isAuthApiConfigured } from "@/lib/auth/paths";
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
 import { refreshAuthOnce } from "@/lib/api/fetcher";
+import {
+  isSessionExpired,
+  SessionExpiredError,
+} from "@/lib/auth/session-gate";
 
 class AuthApiError extends Error {
   code?: string;
@@ -50,6 +54,11 @@ async function postAuth<T>(path: string, allowEmptyData = false) {
 }
 
 async function fetchMe(hasRetried = false): Promise<AuthUser> {
+  // apiFetch를 안 거치는 경로라 게이트를 따로 확인한다.
+  if (isSessionExpired()) {
+    throw new SessionExpiredError();
+  }
+
   const url = buildApiUrl("/v1/users/me");
   const response = await fetch(url, {
     method: "GET",
@@ -60,9 +69,15 @@ async function fetchMe(hasRetried = false): Promise<AuthUser> {
     try {
       await refreshAuthOnce();
       return fetchMe(true);
-    } catch {
-      notifyAuthStateChanged({ reason: "unauthenticated" });
-      throw new Error("Authentication refresh failed.");
+    } catch (error) {
+      // **여기서는 게이트를 열지 않는다.** 이 함수는 "로그인했나"를 묻는 탐침이고,
+      // 비로그인 방문자가 홈에 처음 와도 401 → 갱신 400을 그대로 겪는다. 게이트를 열면
+      // 로그인한 적 없는 사람에게 "세션이 만료되었습니다" 토스트가 뜨고 로그아웃 요청이
+      // 나간다. 401이 이 경로에서는 정상 답이다.
+      //
+      // 만료를 선언하는 것은 앱이 이미 로그인 상태라고 믿고 부르는 경로다 —
+      // `lib/api/fetcher.ts`(제품 쿼리)와 `lib/api/sse.ts`(스트림).
+      throw error;
     }
   }
 

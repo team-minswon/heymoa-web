@@ -1,4 +1,8 @@
-import { notifyAuthStateChanged } from "@/lib/auth/events";
+import {
+  isSessionExpired,
+  openSessionGate,
+  SessionExpiredError,
+} from "@/lib/auth/session-gate";
 
 type ApiFetchOptions = RequestInit & {
   headers?: HeadersInit;
@@ -73,6 +77,20 @@ export class AuthRefreshError extends Error {
   }
 }
 
+/**
+ * 재시도해도 소용없는 인증 오류인가. 전역 재시도 정책(`lib/query/query-client.ts`)이 쓴다.
+ *
+ * 네트워크 때문에 갱신이 실패한 경우(`expired === false`)는 여기 안 걸린다. 지하철에서
+ * 잠깐 끊긴 사용자를 작업 중인 화면에서 내보내면 안 되기 때문이다.
+ */
+export function isAuthError(error: unknown) {
+  if (error instanceof SessionExpiredError) {
+    return true;
+  }
+
+  return error instanceof AuthRefreshError && error.expired;
+}
+
 export async function refreshAuthOnce() {
   if (!refreshPromise) {
     refreshPromise = fetch(buildUrl("/v1/auth/refresh"), {
@@ -121,6 +139,13 @@ async function request<T>(
   options: ApiFetchOptions,
   hasRetried: boolean
 ): Promise<T> {
+  // 세션이 끝났으면 네트워크를 타지 않는다. 폴링 호출부가 5곳이라 여기서 막지 않으면
+  // 각자 401을 만나 갱신을 다시 시도하고, 그것이 무한 루프의 실체다.
+  // 인증 엔드포인트 자신은 통과시킨다 — 로그아웃이 쿠키를 지워야 하기 때문이다.
+  if (isSessionExpired() && !shouldSkipRefresh(url, options)) {
+    throw new SessionExpiredError();
+  }
+
   const {
     headers,
     body,
@@ -153,9 +178,14 @@ async function request<T>(
     try {
       await refreshAuthOnce();
       return request<T>(url, options, true);
-    } catch {
-      notifyAuthStateChanged({ reason: "unauthenticated" });
-      throw new Error("Authentication refresh failed.");
+    } catch (error) {
+      // 만료일 때만 게이트를 연다. 네트워크 오류는 일시 실패라 재시도 대상으로 남긴다.
+      if (error instanceof AuthRefreshError && error.expired) {
+        openSessionGate();
+      }
+
+      // 타입을 뭉개지 않는다. 전역 재시도 정책이 `isAuthError`로 판별해야 한다.
+      throw error;
     }
   }
 

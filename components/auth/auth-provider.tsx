@@ -111,13 +111,33 @@ export function AuthProvider({
     const handleAuthStateChanged = (event: Event) => {
       const detail = (event as CustomEvent<AuthStateChangedDetail>).detail;
 
-      if (detail?.reason === "logout" || detail?.reason === "unauthenticated") {
-        if (detail.reason === "unauthenticated") {
-          releaseAuthenticatedResources();
-        }
-
+      if (detail?.reason === "logout") {
         clearAuthenticatedState();
+        return;
       }
+
+      if (detail?.reason !== "unauthenticated") {
+        return;
+      }
+
+      releaseAuthenticatedResources();
+      clearAuthenticatedState();
+
+      // access·refresh 쿠키는 HttpOnly라 JS가 못 지운다. 서버가 만료 Set-Cookie를
+      // 내려주는 것이 유일한 방법이고, LogoutService는 토큰도 세션도 없을 때 조용히
+      // 반환하므로 이 호출은 안전하다. 실패해도 이동은 그대로 진행한다 — 남은 쿠키는
+      // 다음 SSR에서 proxy.ts의 clearAuthCookies()가 정리한다.
+      //
+      // 이 호출이 끝나면 logout()이 reason "logout" 이벤트를 다시 쏘아 이 핸들러에
+      // 재진입한다. 위 갈래가 캐시만 비우고 끝내는 이유가 그것이다 — 거기서 이동이나
+      // 토스트를 하면 두 번씩 일어난다.
+      void requestLogout().catch(() => undefined);
+
+      toast.error("세션이 만료되었습니다. 다시 로그인해 주세요.");
+
+      // 로그인 전용 페이지가 없으므로 홈으로 보낸다. 이동하면 /w/** 트리가 언마운트되어
+      // 폴링 쿼리도 함께 사라진다.
+      router.replace("/");
     };
 
     window.addEventListener(AUTH_STATE_CHANGED_EVENT, handleAuthStateChanged);
@@ -128,7 +148,7 @@ export function AuthProvider({
         handleAuthStateChanged
       );
     };
-  }, [clearAuthenticatedState, releaseAuthenticatedResources]);
+  }, [clearAuthenticatedState, releaseAuthenticatedResources, router]);
 
   const status = useMemo<AuthStatus>(() => {
     if ((queryStatus as string) === "pending") {

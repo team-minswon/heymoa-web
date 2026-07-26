@@ -1,5 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+
+import {
+  openSessionGate,
+  resetSessionGate,
+  SessionExpiredError,
+} from "@/lib/auth/session-gate";
 import { postEventStream, type SseEvent } from "@/lib/api/sse";
 
 const encoder = new TextEncoder();
@@ -123,5 +129,25 @@ describe("postEventStream", () => {
     }
 
     expect(cancelled).toBe(true);
+  });
+});
+
+describe("postEventStream 세션 게이트", () => {
+  beforeEach(() => {
+    resetSessionGate();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("게이트가 열려 있으면 네트워크를 타지 않는다", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    openSessionGate();
+
+    const iterator = postEventStream("/v1/chat", {});
+    await expect(iterator.next()).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

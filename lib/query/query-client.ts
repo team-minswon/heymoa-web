@@ -2,6 +2,8 @@ import { MutationCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { errorMessageOf } from "@/lib/api/error-message";
+import { isAuthError } from "@/lib/api/fetcher";
+import { isSessionExpired } from "@/lib/auth/session-gate";
 
 /**
  * mutation이 실패하면 기본으로 토스트를 띄운다.
@@ -24,11 +26,18 @@ export function makeQueryClient() {
       queries: {
         staleTime: 60 * 1000,
         refetchOnWindowFocus: false,
+        // 호출부 31곳 중 retry를 지정한 곳이 2곳뿐이라 나머지는 v5 기본값 3회를 쓴다.
+        // 인증 오류는 몇 번을 더 보내도 결과가 같으므로 여기서 끊는다.
+        retry: (failureCount, error) =>
+          isAuthError(error) ? false : failureCount < 2,
       },
     },
     mutationCache: new MutationCache({
       onError: (error, _variables, _context, mutation) => {
         if (mutation.meta?.suppressErrorToast) return;
+        // 세션이 끝난 뒤의 실패는 만료 토스트 하나로 충분하다. 여기서 또 띄우면
+        // "세션이 만료되었습니다"와 "요청을 처리하지 못했습니다"가 겹친다.
+        if (isSessionExpired() || isAuthError(error)) return;
         toast.error(errorMessageOf(error, "요청을 처리하지 못했습니다."));
       },
     }),

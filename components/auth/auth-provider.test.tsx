@@ -1,7 +1,7 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider, useAuth } from "@/components/auth/auth-provider";
 import { AUTH_STATE_CHANGED_EVENT } from "@/lib/auth/events";
@@ -52,9 +52,17 @@ describe("AuthProvider", () => {
   beforeEach(() => {
     authApi.getMe.mockResolvedValue(user);
     authApi.logout.mockReset();
+    // 만료 처리가 logout을 best-effort로 부르므로 기본 구현이 promise여야 한다.
+    authApi.logout.mockResolvedValue(undefined);
     toast.error.mockReset();
     router.replace.mockReset();
     router.refresh.mockReset();
+  });
+
+  // AuthProvider가 window에 리스너를 건다. 언마운트하지 않으면 앞선 테스트의 provider가
+  // 남아 다음 테스트의 이벤트에도 반응해 호출 횟수가 부풀려진다.
+  afterEach(() => {
+    cleanup();
   });
 
   it("exposes logout pending state and clears client state before returning home", async () => {
@@ -155,7 +163,9 @@ describe("AuthProvider", () => {
 
     await waitFor(() => expect(result.current.user).toBeNull());
     expect(beforeLogout).toHaveBeenCalledOnce();
-    expect(authApi.logout).not.toHaveBeenCalled();
+    // APP-205부터 만료 처리가 logout을 부른다. HttpOnly 쿠키는 JS가 못 지우므로
+    // 서버가 만료 Set-Cookie를 내려주는 것이 유일한 정리 수단이다.
+    expect(authApi.logout).toHaveBeenCalledTimes(1);
     expect(
       queryClient.getQueryData(["workspace", "workspace-1"])
     ).toBeUndefined();
@@ -182,5 +192,52 @@ describe("AuthProvider", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요."
     );
+  });
+
+  function renderWithProvider() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider initialUser={user}>{children}</AuthProvider>
+      </QueryClientProvider>
+    );
+
+    return renderHook(() => useAuth(), { wrapper });
+  }
+
+  function dispatchExpired() {
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(AUTH_STATE_CHANGED_EVENT, {
+          detail: { reason: "unauthenticated" },
+        })
+      );
+    });
+  }
+
+  it("만료 이벤트를 받으면 로그아웃하고 홈으로 보낸다", async () => {
+    authApi.logout.mockResolvedValue(undefined);
+    renderWithProvider();
+
+    dispatchExpired();
+
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+    expect(authApi.logout).toHaveBeenCalledTimes(1);
+    expect(toast.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("로그아웃 호출이 실패해도 홈으로 보낸다", async () => {
+    authApi.logout.mockRejectedValue(new Error("네트워크"));
+    renderWithProvider();
+
+    dispatchExpired();
+
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
   });
 });
