@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NoteArchive } from "@/components/notes/note-archive";
@@ -126,5 +126,54 @@ describe("NoteArchive", () => {
     render(<NoteArchive noteId="01K0000000002" />);
     expect(screen.getByText("짧은 회의.")).toBeTruthy();
     expect(screen.queryByText("회의 중 챗봇 대화")).toBeNull();
+  });
+
+  describe("맨 아래로", () => {
+    function renderScrollable({ scrollTop = 0, scrollHeight = 1_000 } = {}) {
+      data.segments = [
+        {
+          segmentId: "s1",
+          transcriptionSessionId: "sess1",
+          sequence: 0,
+          startedAtMs: 0,
+          endedAtMs: 1000,
+          text: "긴 회의.",
+        },
+      ];
+      const view = render(<NoteArchive noteId="01K0000000002" />);
+      const viewport = view.container.querySelector<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]'
+      );
+      Object.defineProperties(viewport!, {
+        scrollTop: { configurable: true, writable: true, value: scrollTop },
+        scrollHeight: { configurable: true, value: scrollHeight },
+        clientHeight: { configurable: true, value: 400 },
+      });
+      return { ...view, viewport: viewport! };
+    }
+
+    it("바닥에 있으면 안 보인다", () => {
+      const { viewport } = renderScrollable({ scrollTop: 600 });
+      fireEvent.scroll(viewport);
+      expect(screen.queryByRole("button", { name: "맨 아래로" })).toBeNull();
+    });
+
+    it("위로 올리면 뜬다 — 종료된 회의라고 되돌아갈 길이 없으면 안 된다", () => {
+      const { viewport } = renderScrollable({ scrollTop: 0 });
+      fireEvent.scroll(viewport);
+      expect(
+        screen.getByRole("button", { name: "맨 아래로" })
+      ).toBeInTheDocument();
+    });
+
+    it("눌러 바닥으로 간다. 자동으로 따라가지는 않는다", () => {
+      const { viewport } = renderScrollable({ scrollTop: 0 });
+      fireEvent.scroll(viewport);
+      fireEvent.click(screen.getByRole("button", { name: "맨 아래로" }));
+
+      // 정적 문서라 마운트 시 튀면 안 되고, 명령을 받았을 때만 내려간다.
+      expect(viewport.scrollTop).toBe(1_000);
+      expect(screen.queryByRole("button", { name: "맨 아래로" })).toBeNull();
+    });
   });
 });

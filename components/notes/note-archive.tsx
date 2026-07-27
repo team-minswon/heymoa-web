@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChatThread } from "@/components/chat/chat-thread";
+import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,64 @@ function formatOffset(milliseconds: number) {
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
     seconds % 60
   ).padStart(2, "0")}`;
+}
+
+/** 바닥에서 이만큼 안쪽이면 "바닥"으로 본다. 스크롤 위치는 소수점으로 떨어진다. */
+const BOTTOM_THRESHOLD_PX = 48;
+
+/**
+ * 바닥에서 멀어졌는지만 본다. **따라가지 않는다.**
+ *
+ * 챗봇의 `useStickToBottom`은 내용이 자라면 바닥으로 붙이는데, 아카이브는 새 내용이 쌓이는
+ * 면이 아니라 다 끝난 기록을 위에서부터 읽는 면이다. 그걸 그대로 쓰면 열자마자 맨 끝으로
+ * 튄다. 전사 뷰의 엔진도 라이브 판정·프로그램 스크롤 가드가 붙어 있어 여기엔 과하다.
+ */
+function useAwayFromBottom() {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [away, setAway] = useState(false);
+
+  const sync = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    setAway(
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight >
+        BOTTOM_THRESHOLD_PX
+    );
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    // scroll 이벤트는 버블링하지 않아 부모에 onScroll을 걸 수 없다.
+    viewport.addEventListener("scroll", sync, { passive: true });
+    sync();
+
+    // **높이 변화는 scroll 이벤트를 내지 않는다.** 두 쿼리(`refetchOnMount: "always"`)가
+    // 늦게 도착하면 스크롤 없이도 바닥이 멀어지는데, 그때 다시 재지 않으면 버튼이 안 뜬다.
+    // 블록·메시지 개수를 키로 쓰는 방법도 있지만 개수가 같고 문장만 길어지는 갱신을 놓친다.
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(sync);
+    observer?.observe(viewport);
+    if (viewport.firstElementChild) {
+      observer?.observe(viewport.firstElementChild);
+    }
+
+    return () => {
+      viewport.removeEventListener("scroll", sync);
+      observer?.disconnect();
+    };
+  }, [sync]);
+
+  const scrollToBottom = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    // 즉시 이동이다. smooth는 애니메이션 중 scroll 이벤트가 "아직 바닥이 아니다"로 읽혀
+    // 버튼이 깜빡인다(APP-227에서 밟았다).
+    viewport.scrollTop = viewport.scrollHeight;
+    sync();
+  }, [sync]);
+
+  return { viewportRef, away, scrollToBottom };
 }
 
 /**
@@ -56,8 +115,24 @@ export function NoteArchive({ noteId }: { noteId: string }) {
     (chatQuery.data !== undefined &&
       !(chatQuery.data.status === 200 && chatQuery.data.data.success));
 
+  const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
+
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea
+      className="h-full"
+      viewportRef={viewportRef}
+      overlay={
+        away ? (
+          <ScrollToBottomButton
+            label="맨 아래로"
+            onClick={scrollToBottom}
+            // full은 회의가 끝나도 레코더 독을 그린다(`NotePanel`의 showDock은 view만 본다).
+            // 기본 bottom-4로 두면 독 아래에 깔려 누를 수 없다 — TranscriptView와 같은 자리.
+            className="bottom-20"
+          />
+        ) : null
+      }
+    >
       <div className="mx-auto w-full max-w-[820px] px-5 pb-28 pt-7 sm:px-9 sm:pt-9">
         <section aria-label="회의 전사 아카이브">
           <header className="border-b border-[var(--el-hairline-strong)] pb-4">
