@@ -1,9 +1,16 @@
-# v5 디자인 결정 (2026-07-24)
+# v1 디자인 결정 (2026-07-24 작성, 2026-07-27 v1 통합)
 
-APP-152 전체 재디자인의 결과다. **화면 구현(APP-154~157)이 읽을 문서는 `mvp.pen`이 아니라
-이 파일과 v5 SPEC 노트다** — `.pen`은 git 밖이라 변경 이력이 남지 않는다.
+APP-152 전체 재디자인의 결과다. **화면 구현이 읽을 문서는 `mvp.pen`이 아니라
+이 파일과 SPEC 노트다** — `.pen`은 git 밖이라 변경 이력이 남지 않는다.
 
-이전 세대는 `design-decisions-v4.md`(참조용). v4 행(y17000~36900)은 캔버스에 보존돼 있다.
+> **2026-07-27 — 캔버스가 v1 한 세대로 통합됐다 (APP-213 ③).**
+> 세대 이름이 `v5/`에서 `v1/`로 바뀌었다. **이름만 바꾼 것이 아니다** — v5가 다시 그리지
+> 않은 예외 상태를 v4에서, 랜딩·인증을 v2에서 가져와 "지금 맞는 것"만 한 세대로 모았다.
+> 아래 문서에서 `v5/`로 적힌 프레임 경로는 전부 `v1/`이다. 무엇을 왜 남기고 지웠는지는
+> 캔버스의 `v1 README` 노트(y53200)와 이 문서 맨 아래 「v1 통합」 절에 있다.
+
+이전 세대 문서는 `design-decisions-v4.md`(참조용). v4 프레임은 대부분 지웠고, 살아남은
+것은 v1으로 이름이 바뀌었다.
 
 ## 왜 v5인가
 
@@ -51,26 +58,69 @@ MSW로 실제 앱을 띄워 v4 결정과 코드를 대조한 결과, "섞였다"
   개인 챗봇 = 워크스페이스 레벨 플로팅. v4는 요약 탭만 개인 챗봇으로 갈려 있었다.
 - **참석자 필드** — `NoteResponse`에 participants 없음 → `meetingStartedBy`만 쓴다.
 
-## v5 프레임 ID
+## v1 프레임 ID
 
-| 행               | 프레임 (이름 = ID)                                                                                                                                                                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| y40000 셸        | note-hub `LHXhy` · note-hub-chat-closed `cWU64` · sidebar `sLzX8`                                                                                                                        |
-| y42000 노트 full | transcript `Ftvu9` · summary `m0eVmx` · details `AB8zp` · chat-closed `MFFmb`                                                                                                            |
-| y44000 노트 side | transcript `oLmGL` · summary `viNgv` · details `KCoyt`                                                                                                                                   |
-| y46000 챗봇      | shared-streaming `jsz26` · personal-fab `fQwhV` · personal-open `lbdN9` · approval-pending `I49sOL` · approval-result `d6dtU`                                                            |
-| y48000 알림·설정 | notify-open `sPg4o` · notify-empty `e71yPK` · notify-resolved `M5pzv` · settings-account `WKSCp` · settings-workspace `Bt1kk` · settings-members `V3H0t` · settings-integrations `jG86c` |
-| y50000 상태      | empty `MQYkO` · skeleton `j2y3od` · error `ybD9g` · meeting-end `UqTC4`                                                                                                                  |
-| y52000 SPEC      | FORM `XaNLp` · ELEVATION `oKPxF` · MOTION `RY2I9` · CHROME `wqUUn` + 키프레임 `WBWIU`/`w6xaTE`/`d3KGHq`                                                                                  |
+**출처** 열은 그 프레임이 어느 세대에서 왔는지다. v4 출신은 상태의 기록으로는 맞지만
+크롬이 낡았다(아래 「v1 통합」 참조).
+
+| 행               | 프레임 (이름 = ID)                                                                                                                                                                       | 출처   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| y40000 셸        | note-hub `LHXhy` · note-hub-chat-closed `cWU64` · sidebar `sLzX8`                                                                                                                        | v5     |
+| y42000 노트 full | transcript `Ftvu9` · summary `m0eVmx` · details `AB8zp` · chat-closed `MFFmb`                                                                                                            | v5     |
+| y44000 노트 side | transcript `oLmGL` · summary `viNgv` · details `KCoyt`                                                                                                                                   | v5     |
+| y46000 챗봇      | shared-streaming `jsz26` · personal-fab `fQwhV` · personal-open `lbdN9` · approval-pending `I49sOL` · approval-result `d6dtU`                                                            | v5     |
+| y48000 알림·설정 | notify-open `sPg4o` · notify-empty `e71yPK` · notify-resolved `M5pzv` · settings-account `WKSCp` · settings-workspace `Bt1kk` · settings-members `V3H0t` · settings-integrations `jG86c` | v5     |
+| y50000 상태      | empty `MQYkO` · skeleton `j2y3od` · error `ybD9g` · meeting-end `UqTC4`                                                                                                                  | v5     |
+| y52000 SPEC      | FORM `XaNLp` · ELEVATION `oKPxF` · MOTION `RY2I9` · CHROME `wqUUn` + 키프레임 `WBWIU`/`w6xaTE`/`d3KGHq`                                                                                  | v5     |
+| y12000 마케팅·인증 | landing `A77tqi` · auth-modal `hpQXM` · auth-callback `y9uef`                                                                                                                          | v2     |
+| y-2830 정적      | static-privacy `Z4gKmI` · static-terms `MDq9Q`                                                                                                                                          | 신규   |
+| y300~2150 오버레이 | dialog/project-new `cAif4` · dialog/workspace-new `N6Vsp` · dialog/meeting-end `FnxZm` · menu/note-row `ckrXr` · menu/user `uzfDJ` · menu/workspace-switcher `aP6sW` · static-404 `zkxGw` · auth-callback-failed `FxjoJ` | 신규 |
+| y20000~32000 예외 | 승인 4(`WKrCG`·`d9IWR`·`pysh5`·`jobCE`) · 도구 실패 `YBXm4` · 종료 차단 `m6E89F` · 전사 4(`oMqgT`·`NsGqf`·`HjcHO`·`fBM14`) · side 3(`X3vCNH`·`ezlsT`·`MUfyh`) · 요약 3(`uWnWH`·`f9FCb`·`PAVkf`) · 개인 챗봇 5(`evks6`·`L0Wx2`·`tmNgz`·`pn9GH`·`Z3EDew`) · 설정 4(`t8oW0`·`iHlP8`·`KOM8F`·`UOUZl`) · 공유 챗봇 4(`TqX06`·`xPpzc`·`DZu5q`·`Ngodq`) · 녹음 알림 `V7cEN` | v4 |
 
 ## 프레임 이미지가 git에 있다
 
-`mvp.pen`은 git 밖이라 fresh checkout에서 캔버스를 볼 수 없다. 그래서 v5 화면 프레임 26개를
-PNG로 export해 `docs/design/frames/v5/<프레임ID>.png`에 넣었다 — v4가 `docs/design/frames/`에
-한 것과 같다. **화면 구현(APP-154~157)이 실제로 보는 것은 이 PNG와 위 SPEC 노트 텍스트다.**
+`mvp.pen`은 git 밖이라 fresh checkout에서 캔버스를 볼 수 없다. 그래서 v1 프레임 72개를
+PNG로 export해 **`docs/design/frames/v1/<프레임이름>.png`** 에 넣었다.
+**화면 구현이 실제로 보는 것은 이 PNG와 위 SPEC 노트 텍스트다.**
 
-SPEC 노트 4개와 키프레임은 이미지가 아니라 이 문서와 `mvp.pen` y52000 노트에 텍스트로 있다 —
-수치가 본체이므로 PNG로 뜨지 않는다. 프레임을 고치면 해당 PNG를 다시 export해 갱신한다.
+파일명이 노드 ID가 아니라 프레임 이름이다(`shell_note-hub.png`, `chat_shared-locked.png`).
+ID로 두면 이름만 보고 무슨 화면인지 알 수 없었고, 실제로 v4 export 34장이 그 상태였다.
+`/`는 파일명에 못 쓰므로 `_`로 바꾼다.
+
+SPEC 노트 4개는 이미지가 아니라 이 문서와 [`design/v5-spec-notes.md`](design/v5-spec-notes.md)에
+텍스트로 있다 — 수치가 본체이므로 PNG로 뜨지 않는다. 프레임을 고치면 해당 PNG를 다시 export한다.
+
+> **export 도구가 불안정하다.** `export_nodes`는 1440×900 프레임을 여러 개 한 번에 넘기면
+> 타임아웃난다. 크기에 비례하므로 큰 프레임은 하나씩(또는 `scale: 1`로) 부른다.
+> 실패해도 파일이 안 생기니 재시도하면 된다 — 부분 출력은 없다.
+
+## v1 통합 (2026-07-27, APP-213 ③)
+
+세대를 하나로 모았다. **v5의 이름을 바꾼 것이 아니라, 세대를 가로질러 아직 맞는 것을 모은
+것이다.** 근거는 감사 §2-5 — v5가 못 덮는 표면 셋(랜딩·인증 모달·인증 콜백)이 이미 v2 행에
+현재 구현과 같은 구조로 그려져 있었다.
+
+**지운 것 (최상위 노드 62개 = 프레임 55 + 노트 2 + 행 라벨 2 + 키프레임 3)**
+
+| 무엇                                       | 몇 개 | 왜                                                |
+| ------------------------------------------ | ----- | ------------------------------------------------- |
+| 옛 v1                                      | 10    | 전부 대체됨                                       |
+| v2 (랜딩·인증 3장 제외)                    | 17    | 전부 대체됨                                       |
+| v4-concept · v4-alt                        | 6     | 채택 안 된 탐색                                   |
+| v5가 다시 그린 v4                          | 21    | 중복. **PAUSED 3장**(APP-218이 그 상태를 없앴다)과 **`mock-oauth-consent` 1장**(목 전용이라 제품이 아니다, 감사 §3)이 이 21에 포함된다 |
+| 사이드바 push — SPEC 노트 1 + 키프레임 3   | 4     | MOTION SPEC이 폐기했다 — 설정이 라우트가 아니다   |
+| `v5/static-terms`                          | 1     | 실제 `legal-document.tsx`와 구조가 달라 다시 그림 |
+| v4 ELEVATION SPEC (`kuPpg`)                | 1     | v1 ELEVATION SPEC이 계승·개정했다                 |
+| 빈 행이 된 라벨 (`v4-concept`·`v4-alt`)    | 2     | 그 행의 프레임이 전부 사라졌다                    |
+
+**남은 숙제 — v4 출신 30장은 크롬이 낡았다**
+
+APP-209·210·211·218·220·222 이전에 그려져서 상단바가 2단이고, radius가 22.4이며,
+그림자가 단일 티어다. **상태의 기록(무슨 화면이 언제 뜨는가)으로는 맞지만 생김새는 낡았다.**
+다시 그릴 때는 SPEC 넷을 기준으로 한다. 지우지 않은 이유는 그 상태를 그린 프레임이
+이것들뿐이기 때문이다 — 지우면 예외 상태의 기록이 통째로 사라진다.
+
+**백업** — `mvp.pen`은 git 밖이다. 정리 직전 상태는 `mvp.pen.bak-2026-07-27-pre-v1`에 있다.
 
 ## 충돌 시 SPEC이 프레임보다 우선이다
 
@@ -81,10 +131,13 @@ SPEC은 그 위에서 규칙을 통일한 결과다. 최종 정답은 이 캔버
 
 **알려진 프레임 잔재** — 구현 시 SPEC대로 고칠 것(PNG를 그대로 베끼지 말 것):
 
-- **상단바 `중지` 버튼** — `Ftvu9`·`AB8zp`에 남아 있으나 **녹음** 중지는 레코더 독 하나뿐(MOTION SPEC). 독만 둔다.
-  단 **회의 중지(`pauseMeeting`, IN_PROGRESS → PAUSED)는 다르다 — 상단바에 둔다.** 이 SPEC은
-  회의 상태 머신(APP-120)보다 먼저 쓰여 둘을 구분하지 않았다. 지우면 회의를 멈출 유일한 수단이
-  사라진다(APP-209에서 실제로 오판했다가 잡았다). 근거는 `design/v5-spec-notes.md` CHROME SPEC.
+- **상단바 `중지` 버튼** — `Ftvu9`·`AB8zp`에 남아 있으나 녹음 중지는 레코더 독 하나뿐(MOTION SPEC).
+  독만 둔다. **상단바 노트 액션은 `회의 종료`와 패널 토글뿐이다.**
+  (2026-07-27 정정) 예전에는 여기에 "회의 중지(`pauseMeeting`)는 달라서 상단바에 둔다"는
+  단서가 붙어 있었다. **APP-218이 `PAUSED` 상태를 폐기하면서 그 단서가 틀렸다** —
+  `pauseMeeting`·`resumeMeeting`은 계약에서 빠졌고 APP-219가 UI도 걷었다. 그대로 따라 그리면
+  없는 API를 부르는 버튼이 생긴다. `design/v5-spec-notes.md` CHROME SPEC의 같은 대목도
+  그 시점의 기록이지 지금의 지침이 아니다.
 - **노트 목록 "녹음 중" 필터 칩** — 목록 계약에 `meetingStatus`가 없어 성립 안 함. `전체`·`내가 시작`만 둔다(FORM SPEC).
 - **요약 탭 우측 트레이 라벨** — `m0eVmx`가 "개인 챗봇"으로 되어 있으나 노트 3탭 트레이는 전부 공유 챗봇(CHROME SPEC).
 - **요약 섹션 키커** — `m0eVmx`에 `OVERVIEW`/`ACTION ITEMS`/`INSIGHTS` 대문자 키커가 남아 있으나 제품 면 키커 금지(FORM SPEC).
