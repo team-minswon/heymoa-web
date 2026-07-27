@@ -183,15 +183,18 @@ export function TranscriptView({ noteId }: { noteId: string }) {
   );
 
   // 여기 스크롤 엔진은 챗봇과 다르다(프로그램 스크롤 가드·라이브 판정). 생김새만 공유한다.
-  const followAction =
-    active && !isFollowing ? (
-      <ScrollToBottomButton
-        label="최신 기록 보기"
-        onClick={() => scrollToLatest("smooth")}
-        // 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
-        className="bottom-20"
-      />
-    ) : null;
+  //
+  // **`active`를 보지 않는다.** 스크롤 추적은 회의 상태와 무관하게 도는데 버튼 표시만
+  // 라이브에 묶여 있어서, 종료된 회의의 전사를 위로 올려 읽으면 바닥으로 돌아갈 방법이
+  // 없었다(APP-239). 되돌아갈 곳이 있는지는 회의가 도는지가 아니라 스크롤 위치가 정한다.
+  const followAction = !isFollowing ? (
+    <ScrollToBottomButton
+      label="맨 아래로"
+      onClick={() => scrollToLatest("smooth")}
+      // 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
+      className="bottom-20"
+    />
+  ) : null;
 
   return (
     <ScrollArea

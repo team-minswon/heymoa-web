@@ -94,6 +94,18 @@ function recordingState(partialText = "결과를 정리합니다") {
   };
 }
 
+/** 회의가 안 도는 상태 — 종료된 회의의 전사를 다시 읽을 때가 이렇다. */
+function idleState() {
+  return {
+    activeNoteId: null,
+    session: null,
+    phase: "idle",
+    elapsedMs: 0,
+    error: null,
+    transcript: { partialByUtteranceId: {}, finalSegments: [] },
+  };
+}
+
 function renderTranscript() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -245,8 +257,24 @@ describe("TranscriptView", () => {
       behavior: "auto",
     });
     expect(
-      screen.queryByRole("button", { name: "최신 기록 보기" })
+      screen.queryByRole("button", { name: "맨 아래로" })
     ).not.toBeInTheDocument();
+  });
+
+  it("offers the way back even when no meeting is running", () => {
+    // 종료된 회의의 전사를 위로 올려 읽는 경우다. 예전에는 표시 조건이 라이브에
+    // 묶여 있어서 바닥으로 돌아갈 방법이 없었다(APP-239).
+    useRecording.mockReturnValue(idleState());
+    const { container } = renderTranscript();
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    setScrollMetrics(viewport!, { scrollTop: 100 });
+    fireEvent.scroll(viewport!);
+
+    expect(
+      screen.getByRole("button", { name: "맨 아래로" })
+    ).toBeInTheDocument();
   });
 
   it("pauses follow after the reader scrolls away and resumes from the latest button", () => {
@@ -258,7 +286,7 @@ describe("TranscriptView", () => {
     setScrollMetrics(viewport!, { scrollTop: 100 });
     fireEvent.scroll(viewport!);
     expect(
-      screen.getByRole("button", { name: "최신 기록 보기" })
+      screen.getByRole("button", { name: "맨 아래로" })
     ).toBeInTheDocument();
     scrollTo.mockClear();
 
@@ -266,13 +294,13 @@ describe("TranscriptView", () => {
     rerenderTranscript();
     expect(scrollTo).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "최신 기록 보기" }));
+    fireEvent.click(screen.getByRole("button", { name: "맨 아래로" }));
     expect(scrollTo).toHaveBeenCalledWith({
       top: 1_000,
       behavior: "smooth",
     });
     expect(
-      screen.queryByRole("button", { name: "최신 기록 보기" })
+      screen.queryByRole("button", { name: "맨 아래로" })
     ).not.toBeInTheDocument();
   });
 });
