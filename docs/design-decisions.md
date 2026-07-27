@@ -7,7 +7,7 @@ APP-152 전체 재디자인의 결과다. **화면 구현이 읽을 문서는 `m
 > 세대 이름이 `v5/`에서 `v1/`로 바뀌었다. **이름만 바꾼 것이 아니다** — v5가 다시 그리지
 > 않은 예외 상태를 v4에서, 랜딩·인증을 v2에서 가져와 "지금 맞는 것"만 한 세대로 모았다.
 > 아래 문서에서 `v5/`로 적힌 프레임 경로는 전부 `v1/`이다. 무엇을 왜 남기고 지웠는지는
-> 캔버스의 `v1 README` 노트(y53200)와 이 문서 맨 아래 「v1 통합」 절에 있다.
+> 캔버스의 `v1 README` 노트(y3200)와 이 문서 맨 아래 「v1 통합」 절에 있다.
 
 이전 세대 문서는 `design-decisions-v4.md`(참조용). v4 프레임은 대부분 지웠고, 살아남은
 것은 v1으로 이름이 바뀌었다.
@@ -36,7 +36,7 @@ MSW로 실제 앱을 띄워 v4 결정과 코드를 대조한 결과, "섞였다"
 | 6   | (신규) 알림 드롭다운 불투명            | 반투명 → 뒤 텍스트 비침 결함            | 불투명 + e3                     |
 | 7   | (신규) 중지 버튼 1개                   | 헤더 중지 + 레코더 독 = 2개             | 레코더 독 하나                  |
 
-## SPEC 노트 (mvp.pen y52000)
+## SPEC 노트 (mvp.pen y30400)
 
 수치의 단일 출처. 화면 구현은 이 노트를 근거로 한다. **전문은 [`design/v5-spec-notes.md`](design/v5-spec-notes.md)에
 텍스트로 체크인돼 있다** — `.pen`은 git 밖이라 캔버스를 못 여니 이 파일이 정답이다. 아래는 요약이다.
@@ -63,19 +63,36 @@ MSW로 실제 앱을 띄워 v4 결정과 코드를 대조한 결과, "섞였다"
 **출처** 열은 그 프레임이 어느 세대에서 왔는지다. v4 출신은 상태의 기록으로는 맞지만
 크롬이 낡았다(아래 「v1 통합」 참조).
 
-| 행               | 프레임 (이름 = ID)                                                                                                                                                                       | 출처   |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| y40000 셸        | note-hub `LHXhy` · note-hub-chat-closed `cWU64` · sidebar `sLzX8`                                                                                                                        | v5     |
-| y42000 노트 full | transcript `Ftvu9` · summary `m0eVmx` · details `AB8zp` · chat-closed `MFFmb`                                                                                                            | v5     |
-| y44000 노트 side | transcript `oLmGL` · summary `viNgv` · details `KCoyt`                                                                                                                                   | v5     |
-| y46000 챗봇      | shared-streaming `jsz26` · personal-fab `fQwhV` · personal-open `lbdN9` · approval-pending `I49sOL` · approval-result `d6dtU`                                                            | v5     |
-| y48000 알림·설정 | notify-open `sPg4o` · notify-empty `e71yPK` · notify-resolved `M5pzv` · settings-account `WKSCp` · settings-workspace `Bt1kk` · settings-members `V3H0t` · settings-integrations `jG86c` | v5     |
-| y50000 상태      | empty `MQYkO` · skeleton `j2y3od` · error `ybD9g` · meeting-end `UqTC4`                                                                                                                  | v5     |
-| y52000 SPEC      | FORM `XaNLp` · ELEVATION `oKPxF` · MOTION `RY2I9` · CHROME `wqUUn` + 키프레임 `WBWIU`/`w6xaTE`/`d3KGHq`                                                                                  | v5     |
-| y12000 마케팅·인증 | landing `A77tqi` · auth-modal `hpQXM` · auth-callback `y9uef`                                                                                                                          | v2     |
-| y-2830 정적      | static-privacy `Z4gKmI` · static-terms `MDq9Q`                                                                                                                                          | 신규   |
-| y300~2150 오버레이 | dialog/project-new `cAif4` · dialog/workspace-new `N6Vsp` · dialog/meeting-end `FnxZm` · menu/note-row `ckrXr` · menu/user `uzfDJ` · menu/workspace-switcher `aP6sW` · static-404 `zkxGw` · auth-callback-failed `FxjoJ` | 신규 |
-| y20000~32000 예외 | 승인 4(`WKrCG`·`d9IWR`·`pysh5`·`jobCE`) · 도구 실패 `YBXm4` · 종료 차단 `m6E89F` · 전사 4(`oMqgT`·`NsGqf`·`HjcHO`·`fBM14`) · side 3(`X3vCNH`·`ezlsT`·`MUfyh`) · 요약 3(`uWnWH`·`f9FCb`·`PAVkf`) · 개인 챗봇 5(`evks6`·`L0Wx2`·`tmNgz`·`pn9GH`·`Z3EDew`) · 설정 4(`t8oW0`·`iHlP8`·`KOM8F`·`UOUZl`) · 공유 챗봇 4(`TqX06`·`xPpzc`·`DZu5q`·`Ngodq`) · 녹음 알림 `V7cEN` | v4 |
+**캔버스는 세대 하나짜리 격자다.** x=0에서 시작해 **1440 폭 화면 프레임은** 1840씩 오른쪽으로,
+행마다 1800씩 아래로 간다(첫 행만 세로로 길어 3400). 각 행 위 120px에 행 라벨 텍스트가 있다.
+`x<0`은 v1이 아닌 것(shadcn 디자인 시스템·템플릿 대시보드)의 주차 구역이다.
+
+**작은 노드는 자기 폭에 맞춰 조밀하게 둔다** — 1840을 그대로 쓰면 다이얼로그 384짜리 사이에
+1400의 빈 띠가 생긴다. 두 행이 그렇다.
+
+| 행          | 간격                                                                   |
+| ----------- | ---------------------------------------------------------------------- |
+| 29000 오버레이 | 다이얼로그 3장은 x 0/480/960, 드롭다운 3장은 x 1500/1700/2000        |
+| 30400 SPEC  | 키프레임 3장은 x 0/400/800, SPEC 노트 5장은 x 1300부터 980씩           |
+
+| 행 (y)   | 프레임 (이름 = ID)                                                                                                                                                                       | 출처   |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 3200     | `v1 README` 노트 `HtukF` — 무엇을 왜 남기고 지웠는지                                                                                                                                     | —      |
+| 4000 마케팅·정적 | landing `A77tqi` · static-terms `MDq9Q` · static-privacy `Z4gKmI`                                                                                                               | v2/신규 |
+| 7400 인증·오류 | auth-modal `hpQXM` · auth-callback `y9uef` · auth-callback-failed `FxjoJ` · static-404 `zkxGw`                                                                                     | v2/신규 |
+| 9200 셸  | note-hub `LHXhy` · note-hub-chat-closed `cWU64` · sidebar `sLzX8`                                                                                                                        | v5     |
+| 11000 노트 full | transcript `Ftvu9` · summary `m0eVmx` · details `AB8zp` · chat-closed `MFFmb`                                                                                                     | v5     |
+| 12800 full 예외 | transcript-ready `NsGqf` · transcript-viewer `oMqgT` · transcript-loading `fBM14` · transcript-start-conflict `HjcHO`                                                             | v4     |
+| 14600 요약 상태 | summary-analyzing `uWnWH` · summary-empty `f9FCb` · summary-failed `PAVkf`                                                                                                        | v4     |
+| 16400 노트 side | transcript `oLmGL` · summary `viNgv` · details `KCoyt` · transcript-ready `X3vCNH` · transcript-recording `ezlsT` · transcript-viewer `MUfyh`                                      | v5/v4  |
+| 18200 공유 챗봇 | shared-streaming `jsz26` · shared-archive `TqX06` · shared-locked `xPpzc` · shared-not-started `DZu5q` · shared-stream-dropped `Ngodq`                                             | v5/v4  |
+| 20000 개인 챗봇 | personal-fab `fQwhV` · personal-open `lbdN9` · personal-empty `evks6` · personal-history `L0Wx2` · stream-error `tmNgz` · stream-stalled `pn9GH` · stream-tool-error `Z3EDew`      | v5/v4  |
+| 21800 도구 승인 | approval-pending `I49sOL` · approval-result `d6dtU` · approval-expired `WKrCG` · approval-meeting-ended `d9IWR` · approval-relayed `pysh5` · approval-spectator `jobCE` · tool-error `YBXm4` | v5/v4 |
+| 23600 알림 | notify-open `sPg4o` · notify-empty `e71yPK` · notify-resolved `M5pzv`                                                                                                                  | v5     |
+| 25400 설정 | account `WKSCp` · workspace `Bt1kk` · members `V3H0t` · integrations `jG86c` · integrations-member `t8oW0` · invite-404 `iHlP8` · invite-409-duplicate `KOM8F` · invite-409-member `UOUZl` | v5/v4 |
+| 27200 상태 | empty `MQYkO` · skeleton `j2y3od` · error `ybD9g` · meeting-end `UqTC4` · meeting-end-blocked `m6E89F` · recording-elsewhere `V7cEN`                                                    | v5/v4  |
+| 29000 오버레이 | dialog/project-new `cAif4` · dialog/workspace-new `N6Vsp` · dialog/meeting-end `FnxZm` · menu/note-row `ckrXr` · menu/user `uzfDJ` · menu/workspace-switcher `aP6sW`               | 신규   |
+| 30400 SPEC | 키프레임 `WBWIU`/`w6xaTE`/`d3KGHq` · FORM `XaNLp` · ELEVATION `oKPxF` · MOTION `RY2I9` · CHROME `wqUUn` · 레코더 `ROX9B`                                                              | v5     |
 
 ## 프레임 이미지가 git에 있다
 
