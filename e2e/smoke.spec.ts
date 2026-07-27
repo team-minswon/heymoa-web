@@ -332,3 +332,26 @@ test("returns to the note list when a project is picked in full view", async ({
 
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
 });
+
+/**
+ * 메뉴로 노트를 전체 화면으로 열고 닫으면 그 목록 행이 영원히 돌았다.
+ *
+ * 누른 위치를 기억만 하고 버리지 않아서, **그 위치로 돌아왔을 때 다시 같아져** 스피너가
+ * 켜졌다. 노트를 닫는 것이 바로 그 위치로 돌아오는 동작이다. 이 경로는 Link의
+ * `onNavigate`가 실제 라우터에서만 돌아 jsdom으로는 못 밟는다 — 그래서 e2e다. (APP-243)
+ */
+test("clears the note row spinner after the full-view note is closed", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+
+  const row = page.locator("article", { hasText: "주간 제품 회의" }).first();
+  await row.getByRole("button", { name: "주간 제품 회의 노트 메뉴" }).click();
+  await page.getByRole("menuitem", { name: "전체 화면으로 열기" }).click();
+  await expect(page).toHaveURL(/view=full/);
+
+  await page.getByRole("button", { name: "모든 노트" }).click();
+  await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
+
+  await expect(row.locator(".animate-spin")).toHaveCount(0);
+});

@@ -111,14 +111,20 @@ export function NoteListRow({
   // `전체 화면으로 열기`는 메뉴 안에 있고, 누르면 메뉴가 닫히며 그 안의 표시도 사라진다.
   // 그래서 진행 상태를 포털 밖(이 행)에 둔다.
   //
-  // **누른 시점의 위치를 기억해 렌더 중 비교한다** — 이동이 끝나면 위치가 달라지므로
-  // 저절로 꺼진다. effect로 끄면 라우터가 바뀔 때마다 setState가 한 번 더 돈다.
+  // **누른 시점의 위치를 기억해 렌더 중 비교한다.**
   // 쿼리까지 보는 이유는 같은 노트에서 side → full이면 경로가 안 바뀌기 때문이다.
   // 테스트 환경에는 라우터가 없어 `useSearchParams()`가 null이다.
   const routeKey = `${usePathname()}?${useSearchParams()?.toString() ?? ""}`;
   const [openedFullViewFrom, setOpenedFullViewFrom] = useState<string | null>(
     null
   );
+  // **떠날 때 기억을 버려야 한다.** 예전에는 "위치가 달라지면 저절로 꺼진다"고만 두었는데,
+  // 그건 떠날 때만 맞았다. 값이 남아 있으면 **그 위치로 돌아왔을 때 다시 같아져** 스피너가
+  // 켜지고, 노트를 닫는 것이 바로 그 위치로 돌아오는 동작이라 목록 행이 영원히 돌았다(APP-243).
+  // effect가 아니라 렌더 중 조정이다 — 커밋 전에 다시 렌더되므로 중간 상태가 화면에 안 나간다.
+  if (openedFullViewFrom !== null && openedFullViewFrom !== routeKey) {
+    setOpenedFullViewFrom(null);
+  }
   const openingFullView = openedFullViewFrom === routeKey;
 
   const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=transcript`;
