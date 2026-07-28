@@ -441,6 +441,21 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("side 전사만 읽을 때는 공유 챗봇을 마운트하지 않는다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+  });
+
   it("side 챗봇은 다른 탭으로 이동해도 같은 패널을 keepMounted한다", () => {
     const panel = (tab: "chat" | "transcript") => (
       <NotePanel
@@ -568,6 +583,35 @@ describe("NotePanel", () => {
     expect(onTabChange).toHaveBeenCalledWith("summary");
   });
 
+  it("side 뷰어가 읽는 중 회의가 끝나면 안내 뒤 아카이브를 연다", () => {
+    authState.userId = "u2";
+    const el = (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(el);
+
+    noteState.value.meetingStatus = "ENDED";
+    rerenderNote(el);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "회의가 종료되었습니다"
+    );
+    expect(screen.getByTestId("transcript-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("note-archive")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "기록과 요약 보기" }));
+
+    expect(screen.queryByTestId("transcript-view")).toBeNull();
+    expect(screen.getByTestId("note-archive")).toBeInTheDocument();
+  });
+
   it("side의 공유 턴 중 회의가 끝나도 기록 탭 뒤에서 패널을 보존한다", () => {
     authState.userId = "u2";
     const onTabChange = vi.fn();
@@ -592,8 +636,12 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "흐르던 답변이 끝나면 기록에 올라옵니다."
+      "회의가 종료되었습니다"
     );
+    fireEvent.click(screen.getByRole("button", { name: "기록과 요약 보기" }));
+    expect(
+      screen.getByRole("button", { name: "답변이 끝나면 이동합니다" })
+    ).toBeDisabled();
 
     fireEvent.click(screen.getByText("턴 끝"));
 
@@ -890,7 +938,7 @@ describe("NotePanel", () => {
       expect(screen.queryByLabelText("녹음 제어")).toBeNull();
     });
 
-    it("서버 세션이 남은 failed 상태에서도 side는 다시 시작하지 않는다", () => {
+    it("서버 세션이 남은 failed 상태에서는 side도 재시도를 제공한다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "failed";
       recordingState.sessionStatus = "ACTIVE";
@@ -898,9 +946,8 @@ describe("NotePanel", () => {
       renderSide();
 
       expect(
-        screen.getByText("전체 화면에서 녹음을 시작할 수 있습니다.")
+        screen.getByRole("button", { name: "다시 시도" })
       ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
     });
   });
 });

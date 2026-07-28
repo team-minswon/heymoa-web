@@ -94,7 +94,8 @@ export function NotePanel({
     view === "side" &&
     (phase === "active" || (phase === "unknown" && tab === "chat"));
   const keepSideChatMounted =
-    showSideChatTab || (view === "side" && sharedTurnActive);
+    (showSideChatTab && tab === "chat") ||
+    (view === "side" && sharedTurnActive);
   const showSummaryTab =
     view === "full" ||
     (view === "side" &&
@@ -107,7 +108,6 @@ export function NotePanel({
   });
   if (archiveState.noteId !== noteId || archiveState.phase !== phase) {
     const viewerEndTransition =
-      view === "full" &&
       archiveState.noteId === noteId &&
       archiveState.phase === "active" &&
       phase === "ended" &&
@@ -121,12 +121,9 @@ export function NotePanel({
   const archiveQueued =
     phase === "ended" && archiveState.visible && sharedTurnActive;
   const showViewerEndNotice =
-    view === "full" &&
     phase === "ended" &&
     !isStarter &&
     (!archiveState.visible || archiveQueued);
-  const showSideEndNotice =
-    view === "side" && phase === "ended" && sharedTurnActive;
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
   const showArchive =
     phase === "ended" && archiveState.visible && !sharedTurnActive;
@@ -147,14 +144,12 @@ export function NotePanel({
     isNoteRecordingActive(recording, noteId) ||
     (view === "full" && (phase === "not-started" || isStarter));
 
-  // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. unknown은 소유자도 모르므로
-  // showDock에서 닫힌다.
+  // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. side의 idle 독은 showDock에서
+  // 닫히므로, 실패한 기존 세션의 재시도까지 막을 별도 이유는 필요 없다.
   const startBlockedReason =
     note?.meetingStatus === "ENDED"
       ? "이미 종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
-      : view === "side"
-        ? "전체 화면에서 녹음을 시작할 수 있습니다."
-        : null;
+      : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white max-lg:landscape:flex-row lg:flex-row">
@@ -310,19 +305,6 @@ export function NotePanel({
                     ? "답변이 끝나면 이동합니다"
                     : "기록과 요약 보기"}
                 </Button>
-              </div>
-            ) : null}
-            {showSideEndNotice ? (
-              <div
-                role="status"
-                className="mx-5 mt-4 shrink-0 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5 sm:mx-9"
-              >
-                <p className="text-sm font-medium text-[var(--el-ink)]">
-                  회의가 종료되었습니다
-                </p>
-                <p className="mt-0.5 text-xs text-[var(--el-muted)]">
-                  흐르던 답변이 끝나면 기록에 올라옵니다.
-                </p>
               </div>
             ) : null}
             <div className="min-h-0 flex-1">
