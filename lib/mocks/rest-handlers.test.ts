@@ -1,4 +1,12 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { setupServer } from "msw/node";
 
 import { mockDb } from "@/lib/mocks/db";
@@ -9,6 +17,7 @@ const server = setupServer(...restHandlers);
 describe("REST mock handlers", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
   afterEach(() => {
+    vi.useRealTimers();
     server.resetHandlers();
     mockDb.reset();
   });
@@ -101,6 +110,21 @@ describe("REST mock handlers", () => {
       success: false,
       error: { code: "ACTIVE_TRANSCRIPTION_SESSION" },
     });
+  });
+
+  it("returns null for an expired READY current session", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-11T09:00:00Z"));
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    mockDb.createSession(note.noteId);
+    vi.setSystemTime(new Date("2026-07-11T09:10:00Z"));
+
+    const response = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/transcription-sessions/current`
+    );
+
+    expect((await response.json()).data).toBeNull();
   });
 });
 

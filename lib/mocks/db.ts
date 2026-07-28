@@ -1216,7 +1216,10 @@ export const mockDb = {
       )
       .map((note) => {
         const startedAt = state.sessions
-          .filter((session) => session.noteId === note.noteId)
+          .filter(
+            (session) =>
+              session.noteId === note.noteId && session.endedAt !== null
+          )
           .map((session) => session.startedAt)
           .filter((value): value is string => value !== null)
           .sort((a, b) => b.localeCompare(a))[0];
@@ -1272,6 +1275,18 @@ export const mockDb = {
     // **서버는 원래부터 막고 있었다** — 없던 것은 계약뿐이었고, 그래서 목과 생성 클라이언트만
     // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
+    const now = Date.now();
+    const expiredReady = state.sessions.find(
+      (session) =>
+        session.noteId === noteId &&
+        session.status === "READY" &&
+        Date.parse(session.readyExpiresAt) <= now
+    );
+    if (expiredReady) {
+      expiredReady.status = "INTERRUPTED";
+      expiredReady.endedAt = new Date(now).toISOString();
+      expiredReady.endReason = "READY_TIMEOUT";
+    }
     if (state.sessions.some((session) => ACTIVE_STATUSES.has(session.status))) {
       fail("ACTIVE_TRANSCRIPTION_SESSION");
     }
@@ -1279,7 +1294,7 @@ export const mockDb = {
       sessionId: nextId(),
       noteId,
       status: "READY",
-      readyExpiresAt: nextTimestamp(),
+      readyExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       startedAt: null,
       endedAt: null,
       endReason: null,
@@ -1305,7 +1320,10 @@ export const mockDb = {
     findNote(noteId);
     const session = state.sessions.find(
       (candidate) =>
-        candidate.noteId === noteId && ACTIVE_STATUSES.has(candidate.status)
+        candidate.noteId === noteId &&
+        (candidate.status === "ACTIVE" ||
+          (candidate.status === "READY" &&
+            Date.parse(candidate.readyExpiresAt) > Date.now()))
     );
     return session
       ? {

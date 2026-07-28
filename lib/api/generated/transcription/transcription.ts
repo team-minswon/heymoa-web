@@ -962,7 +962,7 @@ export const getGetCurrentTranscriptionSessionUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 열린 전사 세션(READY 또는 ACTIVE)을 조회한다. 열린 세션이 없으면 data가 null이다.
+ * 노트의 현재 전사 세션(만료되지 않은 READY 또는 ACTIVE)을 조회한다. 현재 세션이 없으면 data가 null이다.
  * @summary 현재 전사 세션 조회
  */
 export const getCurrentTranscriptionSession = async (

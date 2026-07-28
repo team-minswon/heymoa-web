@@ -17,7 +17,7 @@ export type NoteListResponseDataNotesItem = {
   /** 노트 생성 시각 */
   createdAt: string;
   /**
-   * 가장 최근 녹음 시작 시각
+   * 가장 최근 종료된 전사 세션의 시작 시각
    * @nullable
    */
   lastRecordedAt: string | null;
