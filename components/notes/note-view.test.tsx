@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { normalizeNoteViewQuery, NoteView } from "@/components/notes/note-view";
@@ -25,8 +31,19 @@ vi.mock("@/components/chat/personal-chat", () => ({
   usePersonalChatScope: () => {},
 }));
 vi.mock("@/components/notes/note-panel", () => ({
-  NotePanel: ({ tab }: { tab: string }) => (
-    <div data-testid="note-panel">{tab}</div>
+  NotePanel: ({
+    tab,
+    onTabChange,
+  }: {
+    tab: string;
+    onTabChange: (tab: "summary") => void;
+  }) => (
+    <>
+      <div data-testid="note-panel">{tab}</div>
+      <button type="button" onClick={() => onTabChange("summary")}>
+        요약 전환
+      </button>
+    </>
   ),
 }));
 vi.mock("@/components/notes/note-route-surface", () => ({
@@ -132,6 +149,24 @@ describe("NoteView", () => {
         "/w/workspace/notes/note?view=side&tab=transcript",
         { scroll: false }
       )
+    );
+  });
+
+  it("preserves the ended-summary intent before the active phase rerenders", () => {
+    state.search = "view=side&tab=transcript";
+    state.note = {
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedBy: { userId: "starter", name: "시작자" },
+    };
+    render(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "요약 전환" }));
+
+    expect(state.replace).toHaveBeenCalledWith(
+      "/w/workspace/notes/note?view=side&tab=summary",
+      { scroll: false }
     );
   });
 });

@@ -116,15 +116,11 @@ export function NoteView({
 
   const setQuery = (updates: Partial<{ view: NoteViewMode; tab: NoteTab }>) => {
     const next = new URLSearchParams(search);
-    const normalized = normalizeNoteViewQuery(
-      {
-        view: updates.view ?? current.view,
-        tab: updates.tab ?? current.tab,
-      },
-      phase
-    );
-    next.set("view", normalized.view);
-    next.set("tab", normalized.tab);
+    // 회의 종료 성공 콜백은 쿼리 캐시 구독자가 ENDED로 다시 그리기 직전에 올 수 있다.
+    // 여기서 이전 phase로 정규화하면 의도한 summary가 transcript로 유실된다. 이벤트 의도를
+    // 먼저 URL에 쓰고, 위 effect가 다음 렌더의 실제 phase로 유효하지 않은 조합만 고친다.
+    next.set("view", updates.view ?? current.view);
+    next.set("tab", updates.tab ?? current.tab);
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
