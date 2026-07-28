@@ -34,14 +34,22 @@ vi.mock("@/components/notes/note-panel", () => ({
   NotePanel: ({
     tab,
     onTabChange,
+    onSharedTurnActiveChange,
   }: {
     tab: string;
     onTabChange: (tab: "summary") => void;
+    onSharedTurnActiveChange?: (active: boolean) => void;
   }) => (
     <>
       <div data-testid="note-panel">{tab}</div>
       <button type="button" onClick={() => onTabChange("summary")}>
         요약 전환
+      </button>
+      <button type="button" onClick={() => onSharedTurnActiveChange?.(true)}>
+        공유 턴 시작
+      </button>
+      <button type="button" onClick={() => onSharedTurnActiveChange?.(false)}>
+        공유 턴 끝
       </button>
     </>
   ),
@@ -183,5 +191,38 @@ describe("NoteView", () => {
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
     await waitFor(() => expect(state.replace).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps ended side chat reachable until its shared turn finishes", async () => {
+    state.search = "view=side&tab=chat";
+    state.note = {
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedBy: { userId: "starter", name: "시작자" },
+    };
+    const view = render(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "공유 턴 시작" }));
+    state.note = {
+      meetingStatus: "ENDED",
+      meetingStartedBy: { userId: "starter", name: "시작자" },
+    };
+    view.rerender(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+
+    expect(screen.getByTestId("note-panel")).toHaveTextContent("chat");
+    expect(state.replace).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "공유 턴 끝" }));
+
+    expect(screen.getByTestId("note-panel")).toHaveTextContent("transcript");
+    await waitFor(() =>
+      expect(state.replace).toHaveBeenCalledWith(
+        "/w/workspace/notes/note?view=side&tab=transcript",
+        { scroll: false }
+      )
+    );
   });
 });

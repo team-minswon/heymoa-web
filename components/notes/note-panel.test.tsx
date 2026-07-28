@@ -93,6 +93,7 @@ vi.mock("@/components/notes/shared-chat-panel", () => ({
     onTurnActiveChange?: (active: boolean) => void;
   }) => (
     <div data-testid="shared-chat-panel" data-phase={phase}>
+      <input aria-label="공유 질문" defaultValue="" />
       <button type="button" onClick={() => onTurnActiveChange?.(true)}>
         턴 시작
       </button>
@@ -477,6 +478,31 @@ describe("NotePanel", () => {
     expect(sharedPanel.closest('[data-slot="tabs-content"]')).not.toBeVisible();
   });
 
+  it("side 챗봇의 무턴 초안은 전사 탭으로 이동해도 같은 패널에 남는다", () => {
+    const panel = (tab: "chat" | "transcript") => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab={tab}
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(panel("chat"));
+    const sharedPanel = screen.getByTestId("shared-chat-panel");
+    const draft = screen.getByRole("textbox", { name: "공유 질문" });
+    fireEvent.change(draft, { target: { value: "남겨 둘 초안" } });
+
+    rerenderNote(panel("transcript"));
+
+    expect(screen.getByTestId("shared-chat-panel")).toBe(sharedPanel);
+    expect(sharedPanel.querySelector('[aria-label="공유 질문"]')).toHaveValue(
+      "남겨 둘 초안"
+    );
+    expect(sharedPanel.closest('[data-slot="tabs-content"]')).not.toBeVisible();
+  });
+
   it("side 공유 답변이 흐르는 동안 full 확장을 잠근다", () => {
     renderNotePanel(
       <NotePanel
@@ -651,30 +677,60 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
 
-  it("side 조회가 실패하면 이유와 재시도를 보인다", () => {
-    noteState.query = {
-      data: undefined,
-      isError: true,
-      refetch: noteRefetch,
-    };
-
-    renderNotePanel(
+  it("side 공유 턴·승인 대기 중 회의가 끝나도 챗봇 탭과 패널에 접근한다", () => {
+    authState.userId = "u2";
+    const panel = (
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
         view="side"
-        tab="transcript"
+        tab="chat"
         onTabChange={vi.fn()}
         onClose={vi.fn()}
       />
     );
+    const { rerenderNote } = renderNotePanel(panel);
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "회의 상태를 확인하지 못했습니다."
+    fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
+    noteState.value.meetingStatus = "ENDED";
+    rerenderNote(panel);
+
+    expect(screen.getByRole("tab", { name: "챗봇" })).toBeInTheDocument();
+    expect(screen.getByTestId("shared-chat-panel")).toBeVisible();
+    expect(screen.getByTestId("shared-chat-panel")).toHaveAttribute(
+      "data-phase",
+      "ended"
     );
-    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
-    expect(noteRefetch).toHaveBeenCalledOnce();
   });
+
+  it.each(["chat", "summary"] as const)(
+    "side 조회가 실패하면 이유와 재시도를 보이고 %s 지속 UI는 숨긴다",
+    (tab) => {
+      noteState.query = {
+        data: undefined,
+        isError: true,
+        refetch: noteRefetch,
+      };
+
+      renderNotePanel(
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000002"
+          view="side"
+          tab={tab}
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "회의 상태를 확인하지 못했습니다."
+      );
+      fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+      expect(noteRefetch).toHaveBeenCalledOnce();
+      expect(screen.queryByRole("tabpanel")).toBeNull();
+    }
+  );
 
   it("side + 미시작은 전사·노트 정보만 보이고 기록 시작 조작은 없다", () => {
     noteState.value.meetingStartedBy = null;
@@ -959,6 +1015,20 @@ describe("NotePanel", () => {
       expect(
         screen.getByRole("button", { name: "다시 시도" })
       ).toBeInTheDocument();
+    });
+
+    it("조회 hard error에서는 세션 없는 failed 독을 노출하지 않는다", () => {
+      noteState.query = {
+        data: undefined,
+        isError: true,
+        refetch: noteRefetch,
+      };
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "failed";
+
+      renderSide();
+
+      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
     });
   });
 });

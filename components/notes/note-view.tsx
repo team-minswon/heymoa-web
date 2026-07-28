@@ -20,7 +20,8 @@ export function normalizeNoteViewQuery(
     view?: string | string[];
     tab?: string | string[];
   },
-  phase: SharedChatPhase
+  phase: SharedChatPhase,
+  sharedTurnActive = false
 ): { view: NoteViewMode; tab: NoteTab } {
   const view = query.view === "side" ? "side" : "full";
   const rawTab = query.tab;
@@ -33,7 +34,7 @@ export function normalizeNoteViewQuery(
         ? "summary"
         : rawTab === "chat" &&
             view === "side" &&
-            (phase === "active" || phase === "unknown")
+            (phase === "active" || phase === "unknown" || sharedTurnActive)
           ? "chat"
           : "transcript";
   return { view, tab };
@@ -67,7 +68,8 @@ export function NoteView({
       ? noteQuery.data.data.data
       : undefined;
   const phase = deriveMeetingPhase(note);
-  const current = normalizeNoteViewQuery(requested, phase);
+  const [sharedTurnActive, setSharedTurnActive] = useState(false);
+  const current = normalizeNoteViewQuery(requested, phase, sharedTurnActive);
   usePersonalChatScope({
     noteId,
     hidden: isPersonalChatHiddenInNote(
@@ -151,6 +153,7 @@ export function NoteView({
         view={current.view}
         tab={current.tab}
         onTabChange={(tab) => setQuery({ tab })}
+        onSharedTurnActiveChange={setSharedTurnActive}
         onClose={closeWithAnim}
         onExpand={
           current.view === "side" ? () => setQuery({ view: "full" }) : undefined

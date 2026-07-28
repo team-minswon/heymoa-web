@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CalendarDays, Expand, PanelRightClose } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -41,6 +41,7 @@ export function NotePanel({
   view,
   tab,
   onTabChange,
+  onSharedTurnActiveChange,
   onClose,
   onExpand,
 }: {
@@ -49,6 +50,7 @@ export function NotePanel({
   view: "side" | "full";
   tab: NoteTab;
   onTabChange: (tab: NoteTab) => void;
+  onSharedTurnActiveChange?: (active: boolean) => void;
   onClose: () => void;
   onExpand?: () => void;
 }) {
@@ -88,17 +90,49 @@ export function NotePanel({
   // 답변이 흐르는 중에 다른 멤버가 회의를 끝내도 트레이를 바로 걷지 않는다 — 언마운트하면
   // 스트림이 끊기고 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 턴이 끝나면 접는다.
   const [sharedTurnActive, setSharedTurnActive] = useState(false);
+  const handleSharedTurnActiveChange = useCallback(
+    (active: boolean) => {
+      setSharedTurnActive(active);
+      onSharedTurnActiveChange?.(active);
+    },
+    [onSharedTurnActiveChange]
+  );
+  const noteLoadFailed = noteQuery.isError && !note;
   const meetingLive = phase === "active" || phase === "not-started";
   const showSharedTray = view === "full" && (meetingLive || sharedTurnActive);
   const showSideChatTab =
     view === "side" &&
-    (phase === "active" || (phase === "unknown" && tab === "chat"));
+    !noteLoadFailed &&
+    (phase === "active" ||
+      sharedTurnActive ||
+      (phase === "unknown" && tab === "chat"));
+  const sideChatNow = view === "side" && tab === "chat";
+  const [sideChatVisit, setSideChatVisit] = useState({
+    noteId,
+    visited: sideChatNow,
+  });
+  if (
+    sideChatVisit.noteId !== noteId ||
+    (!sideChatVisit.visited && sideChatNow)
+  ) {
+    setSideChatVisit({
+      noteId,
+      visited: sideChatNow,
+    });
+  }
+  const sideChatVisited =
+    sideChatNow ||
+    (sideChatVisit.noteId === noteId && sideChatVisit.visited);
   const keepSideChatMounted =
-    (showSideChatTab && tab === "chat") ||
-    (view === "side" && sharedTurnActive);
+    view === "side" &&
+    !noteLoadFailed &&
+    (tab === "chat" ||
+      sharedTurnActive ||
+      (phase === "active" && sideChatVisited));
   const showSummaryTab =
     view === "full" ||
     (view === "side" &&
+      !noteLoadFailed &&
       (phase === "ended" || (phase === "unknown" && tab === "summary")));
   // 전환을 렌더 중에 접어야 ended 아카이브를 한 번 커밋했다가 읽던 전사를 다시 세우지 않는다.
   const [archiveState, setArchiveState] = useState({
@@ -121,9 +155,7 @@ export function NotePanel({
   const archiveQueued =
     phase === "ended" && archiveState.visible && sharedTurnActive;
   const showViewerEndNotice =
-    phase === "ended" &&
-    !isStarter &&
-    (!archiveState.visible || archiveQueued);
+    phase === "ended" && !isStarter && (!archiveState.visible || archiveQueued);
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
   const showArchive =
     phase === "ended" && archiveState.visible && !sharedTurnActive;
@@ -142,7 +174,9 @@ export function NotePanel({
   const recording = useRecording();
   const showDock =
     isNoteRecordingActive(recording, noteId) ||
-    (recording.activeNoteId === noteId && recording.phase === "failed") ||
+    (Boolean(note) &&
+      recording.activeNoteId === noteId &&
+      recording.phase === "failed") ||
     (view === "full" && (phase === "not-started" || isStarter));
 
   // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. side의 idle 독은 showDock에서
@@ -233,7 +267,7 @@ export function NotePanel({
           </div>
         </header>
 
-        {noteQuery.isError && !note ? (
+        {noteLoadFailed ? (
           <div className="mx-auto w-full max-w-[820px] px-5 pb-4 sm:px-9">
             <InlineRetry
               label="회의 상태를 확인하지 못했습니다."
@@ -322,7 +356,7 @@ export function NotePanel({
               <SharedChatPanel
                 noteId={noteId}
                 phase={phase}
-                onTurnActiveChange={setSharedTurnActive}
+                onTurnActiveChange={handleSharedTurnActiveChange}
               />
             </TabsContent>
           ) : null}
@@ -368,7 +402,7 @@ export function NotePanel({
           <SharedChatPanel
             noteId={noteId}
             phase={phase}
-            onTurnActiveChange={setSharedTurnActive}
+            onTurnActiveChange={handleSharedTurnActiveChange}
           />
         </div>
       ) : null}
