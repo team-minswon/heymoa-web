@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { usePersonalChatScope } from "@/components/chat/personal-chat";
@@ -78,6 +78,7 @@ export function NoteView({
   });
 
   const [isOpen, setIsOpen] = useState(false);
+  const pendingSearchRef = useRef<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
     // Wait for the initial render to commit before triggering the open transition
@@ -86,6 +87,16 @@ export function NoteView({
   }, []);
 
   useEffect(() => {
+    const pendingSearch = pendingSearchRef.current;
+    if (pendingSearch) {
+      if (search === pendingSearch.to) {
+        pendingSearchRef.current = null;
+      } else if (search === pendingSearch.from) {
+        return;
+      } else {
+        pendingSearchRef.current = null;
+      }
+    }
     if (
       (requested.view ?? "full") === current.view &&
       (requested.tab ?? "transcript") === current.tab
@@ -121,7 +132,11 @@ export function NoteView({
     // 먼저 URL에 쓰고, 위 effect가 다음 렌더의 실제 phase로 유효하지 않은 조합만 고친다.
     next.set("view", updates.view ?? current.view);
     next.set("tab", updates.tab ?? current.tab);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    const nextSearch = next.toString();
+    if (nextSearch !== search) {
+      pendingSearchRef.current = { from: search, to: nextSearch };
+    }
+    router.replace(`${pathname}?${nextSearch}`, { scroll: false });
   };
 
   return (

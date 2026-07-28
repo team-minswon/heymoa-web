@@ -591,10 +591,14 @@ describe("NotePanel", () => {
 
     expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "흐르던 답변이 끝나면 기록에 올라옵니다."
+    );
 
     fireEvent.click(screen.getByText("턴 끝"));
 
     expect(onTabChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });

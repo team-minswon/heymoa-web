@@ -152,21 +152,36 @@ describe("NoteView", () => {
     );
   });
 
-  it("preserves the ended-summary intent before the active phase rerenders", () => {
-    state.search = "view=side&tab=transcript";
+  it("does not normalize an ended-summary intent from a stale chat URL", async () => {
+    state.search = "view=side&tab=chat";
     state.note = {
       meetingStatus: "IN_PROGRESS",
       meetingStartedBy: { userId: "starter", name: "시작자" },
     };
-    render(
+    const view = render(
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "요약 전환" }));
-
     expect(state.replace).toHaveBeenCalledWith(
       "/w/workspace/notes/note?view=side&tab=summary",
       { scroll: false }
     );
+
+    state.note = {
+      meetingStatus: "ENDED",
+      meetingStartedBy: { userId: "starter", name: "시작자" },
+    };
+    view.rerender(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+
+    await waitFor(() => expect(state.replace).toHaveBeenCalledTimes(1));
+
+    state.search = "view=side&tab=summary";
+    view.rerender(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+    await waitFor(() => expect(state.replace).toHaveBeenCalledTimes(1));
   });
 });

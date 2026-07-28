@@ -125,6 +125,8 @@ export function NotePanel({
     phase === "ended" &&
     !isStarter &&
     (!archiveState.visible || archiveQueued);
+  const showSideEndNotice =
+    view === "side" && phase === "ended" && sharedTurnActive;
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
   const showArchive =
     phase === "ended" && archiveState.visible && !sharedTurnActive;
@@ -308,6 +310,19 @@ export function NotePanel({
                     ? "답변이 끝나면 이동합니다"
                     : "기록과 요약 보기"}
                 </Button>
+              </div>
+            ) : null}
+            {showSideEndNotice ? (
+              <div
+                role="status"
+                className="mx-5 mt-4 shrink-0 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5 sm:mx-9"
+              >
+                <p className="text-sm font-medium text-[var(--el-ink)]">
+                  회의가 종료되었습니다
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--el-muted)]">
+                  흐르던 답변이 끝나면 기록에 올라옵니다.
+                </p>
               </div>
             ) : null}
             <div className="min-h-0 flex-1">
