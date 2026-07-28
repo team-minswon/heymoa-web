@@ -20,10 +20,13 @@ import type { NoteResponseData } from "@/lib/api/generated/models";
 export function MeetingControls({
   note,
   onMeetingEnded,
+  showContext = false,
 }: {
   note: NoteResponseData;
   /** 종료 접수 후 호출 — note-panel이 요약 탭으로 넘긴다. */
   onMeetingEnded?: () => void;
+  /** side 헤더처럼 시작자에게도 상태와 시작자명을 함께 보여 주는 면. */
+  showContext?: boolean;
 }) {
   const { user } = useAuth();
   const [endOpen, setEndOpen] = useState(false);
@@ -33,27 +36,36 @@ export function MeetingControls({
   // 아직 아무도 녹음을 시작하지 않았으면 조작이 없다(녹음 독이 시작을 맡는다).
   if (!startedBy) return null;
 
+  const context = (
+    <>
+      <Badge variant="secondary">
+        {note.meetingStatus === "ENDED" ? "회의 종료됨" : "진행 중"}
+      </Badge>
+      <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
+        {startedBy.name}
+        <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
+      </span>
+    </>
+  );
+
   if (note.meetingStatus === "ENDED") {
-    return <Badge variant="secondary">회의 종료됨</Badge>;
+    return showContext ? (
+      <div className="flex items-center gap-2">{context}</div>
+    ) : (
+      <Badge variant="secondary">회의 종료됨</Badge>
+    );
   }
 
   const isStarter = Boolean(user && startedBy.userId === user.userId);
 
   if (!isStarter) {
     // 뷰어 — 조작 버튼 없이 상태와 시작자만.
-    return (
-      <div className="flex items-center gap-2">
-        <Badge variant="secondary">진행 중</Badge>
-        <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
-          {startedBy.name}
-          <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
-        </span>
-      </div>
-    );
+    return <div className="flex items-center gap-2">{context}</div>;
   }
 
   return (
     <div className="flex items-center gap-2">
+      {showContext ? context : null}
       <Button size="sm" className="h-8" onClick={() => setEndOpen(true)}>
         <Square className="size-3.5" />
         <span className="sr-only sm:not-sr-only">회의 종료</span>

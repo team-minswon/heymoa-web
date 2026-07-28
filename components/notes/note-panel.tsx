@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CalendarDays, Expand, PanelRightClose } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { MeetingControls } from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
 import {
   NoteDetails,
@@ -32,7 +33,7 @@ import {
 } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
-export type NoteTab = "details" | "transcript" | "summary";
+export type NoteTab = "chat" | "details" | "transcript" | "summary";
 
 export function NotePanel({
   workspaceId,
@@ -40,6 +41,7 @@ export function NotePanel({
   view,
   tab,
   onTabChange,
+  onSharedTurnActiveChange,
   onClose,
   onExpand,
 }: {
@@ -48,6 +50,7 @@ export function NotePanel({
   view: "side" | "full";
   tab: NoteTab;
   onTabChange: (tab: NoteTab) => void;
+  onSharedTurnActiveChange?: (active: boolean) => void;
   onClose: () => void;
   onExpand?: () => void;
 }) {
@@ -87,8 +90,50 @@ export function NotePanel({
   // 답변이 흐르는 중에 다른 멤버가 회의를 끝내도 트레이를 바로 걷지 않는다 — 언마운트하면
   // 스트림이 끊기고 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 턴이 끝나면 접는다.
   const [sharedTurnActive, setSharedTurnActive] = useState(false);
+  const handleSharedTurnActiveChange = useCallback(
+    (active: boolean) => {
+      setSharedTurnActive(active);
+      onSharedTurnActiveChange?.(active);
+    },
+    [onSharedTurnActiveChange]
+  );
+  const noteLoadFailed = noteQuery.isError && !note;
   const meetingLive = phase === "active" || phase === "not-started";
   const showSharedTray = view === "full" && (meetingLive || sharedTurnActive);
+  const showSideChatTab =
+    view === "side" &&
+    !noteLoadFailed &&
+    (phase === "active" ||
+      sharedTurnActive ||
+      (phase === "unknown" && tab === "chat"));
+  const sideChatNow = view === "side" && tab === "chat";
+  const [sideChatVisit, setSideChatVisit] = useState({
+    noteId,
+    visited: sideChatNow,
+  });
+  if (
+    sideChatVisit.noteId !== noteId ||
+    (!sideChatVisit.visited && sideChatNow)
+  ) {
+    setSideChatVisit({
+      noteId,
+      visited: sideChatNow,
+    });
+  }
+  const sideChatVisited =
+    sideChatNow ||
+    (sideChatVisit.noteId === noteId && sideChatVisit.visited);
+  const keepSideChatMounted =
+    view === "side" &&
+    !noteLoadFailed &&
+    (tab === "chat" ||
+      sharedTurnActive ||
+      (phase === "active" && sideChatVisited));
+  const showSummaryTab =
+    view === "full" ||
+    (view === "side" &&
+      !noteLoadFailed &&
+      (phase === "ended" || (phase === "unknown" && tab === "summary")));
   // 전환을 렌더 중에 접어야 ended 아카이브를 한 번 커밋했다가 읽던 전사를 다시 세우지 않는다.
   const [archiveState, setArchiveState] = useState({
     noteId,
@@ -115,24 +160,27 @@ export function NotePanel({
   const showArchive =
     phase === "ended" && archiveState.visible && !sharedTurnActive;
 
-  // v5 side 프레임 셋(`oLmGL`·`viNgv`·`KCoyt`)에는 레코더 독도 회의 조작도 없다. side는
-  // 읽기·미리보기 면이고 주 액션은 `확장`이다. full 독도 미시작 회의와 시작자에게만 선다.
+  // v5 side 프레임 셋(`oLmGL`·`viNgv`·`KCoyt`)에는 레코더 독이 없다. APP-280에서
+  // 상태·회의 종료는 side 헤더에 넣되, 녹음 시작은 계속 full 독만 맡는다.
   //
   // **다만 도는 녹음은 남긴다.** 전역 녹음 필은 `!isWorkspaceRoute`라 워크스페이스 안에서는
   // 안 뜬다. full에서 시작하고 side로 오면 독까지 없앨 때 멈출 방법이 하나도 없다.
   // (프레임 셋이 전부 종료된 회의라 "라이브를 side로 볼 때"는 그려진 적이 없다 — 추론이다.)
   //
   // 판정은 `isNoteRecordingActive`를 쓴다. `activeNoteId`는 종료 뒤에도 남고 phase가
-  // `completed`·`failed`로 가므로 "idle이 아님"으로 보면 끝난 녹음에도 독이 다시 서서
-  // side에서 시작 버튼이 살아난다. 그 함수는 진행 phase와 **서버 세션이 아직 열린** failed만
-  // 활성으로 본다 — 후자는 정리할 세션이 남아 있어 독이 필요한 경우다.
+  // `completed`로 가므로 "idle이 아님"으로 보면 끝난 녹음에도 독이 다시 선다.
+  // failed는 서버 세션이 없어도 권한 거부 등을 재시도해야 하므로 이 화면에서만 독을 남긴다.
+  // 공용 selector까지 넓히면 세션 없는 실패를 활성 녹음으로 오인해 회의 종료를 막는다.
   const recording = useRecording();
   const showDock =
     isNoteRecordingActive(recording, noteId) ||
+    (Boolean(note) &&
+      recording.activeNoteId === noteId &&
+      recording.phase === "failed") ||
     (view === "full" && (phase === "not-started" || isStarter));
 
-  // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. unknown은 소유자도 모르므로
-  // showDock에서 닫힌다.
+  // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. side의 idle 독은 showDock에서
+  // 닫히므로, 실패한 기존 세션의 재시도까지 막을 별도 이유는 필요 없다.
   const startBlockedReason =
     note?.meetingStatus === "ENDED"
       ? "이미 종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
@@ -180,13 +228,25 @@ export function NotePanel({
             </div>
             {view === "side" ? (
               <div className="flex shrink-0 items-center gap-2">
+                {note ? (
+                  <MeetingControls
+                    note={note}
+                    showContext
+                    onMeetingEnded={() => onTabChange("summary")}
+                  />
+                ) : null}
                 {onExpand ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-lg"
                     className="rounded-full"
-                    aria-label="전체 화면으로 보기"
+                    aria-label={
+                      sharedTurnActive
+                        ? "답변이 끝나면 확장할 수 있습니다"
+                        : "전체 화면으로 보기"
+                    }
+                    disabled={sharedTurnActive}
                     onClick={onExpand}
                   >
                     <Expand />
@@ -207,7 +267,7 @@ export function NotePanel({
           </div>
         </header>
 
-        {view === "full" && noteQuery.isError && !note ? (
+        {noteLoadFailed ? (
           <div className="mx-auto w-full max-w-[820px] px-5 pb-4 sm:px-9">
             <InlineRetry
               label="회의 상태를 확인하지 못했습니다."
@@ -227,9 +287,18 @@ export function NotePanel({
                 variant="line"
                 className="h-11 w-full justify-start gap-6"
               >
-                <TabsTrigger value="transcript">실시간 전사</TabsTrigger>
+                <TabsTrigger value="transcript">
+                  {view === "side"
+                    ? phase === "ended"
+                      ? "기록"
+                      : "전사"
+                    : "실시간 전사"}
+                </TabsTrigger>
+                {showSideChatTab ? (
+                  <TabsTrigger value="chat">챗봇</TabsTrigger>
+                ) : null}
                 {/* 요약은 종료 시 생성되지만 full은 항상 3탭 — 종료 전엔 탭이 안내를 보인다. */}
-                {view === "full" ? (
+                {showSummaryTab ? (
                   <TabsTrigger value="summary">요약</TabsTrigger>
                 ) : null}
                 <TabsTrigger value="details">노트 정보</TabsTrigger>
@@ -282,11 +351,22 @@ export function NotePanel({
               )}
             </div>
           </TabsContent>
-          <TabsContent value="summary" className="min-h-0 flex-1">
-            <ScrollArea className="h-full">
-              <NoteSummary noteId={noteId} isEnded={phase === "ended"} />
-            </ScrollArea>
-          </TabsContent>
+          {keepSideChatMounted ? (
+            <TabsContent value="chat" keepMounted className="min-h-0 flex-1">
+              <SharedChatPanel
+                noteId={noteId}
+                phase={phase}
+                onTurnActiveChange={handleSharedTurnActiveChange}
+              />
+            </TabsContent>
+          ) : null}
+          {showSummaryTab ? (
+            <TabsContent value="summary" className="min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <NoteSummary noteId={noteId} isEnded={phase === "ended"} />
+              </ScrollArea>
+            </TabsContent>
+          ) : null}
           <TabsContent value="details" className="min-h-0 flex-1">
             <ScrollArea className="h-full">
               <DataBoundary
@@ -322,7 +402,7 @@ export function NotePanel({
           <SharedChatPanel
             noteId={noteId}
             phase={phase}
-            onTurnActiveChange={setSharedTurnActive}
+            onTurnActiveChange={handleSharedTurnActiveChange}
           />
         </div>
       ) : null}
