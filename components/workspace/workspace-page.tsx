@@ -9,8 +9,10 @@ import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
   getGetNotesQueryOptions,
+  type getNotesResponse,
   useGetNotes,
 } from "@/lib/api/generated/notes/notes";
+import { isMeetingActive } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
 type NoteFilter = "all" | "mine";
@@ -22,6 +24,25 @@ const FILTERS: { key: NoteFilter; label: string }[] = [
   { key: "mine", label: "내가 시작" },
 ];
 
+export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
+export const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
+
+export function noteListRefetchInterval(
+  notes: NoteListResponseDataNotesItem[] | undefined
+): number {
+  return notes?.some(isMeetingActive)
+    ? ACTIVE_NOTE_LIST_POLL_MS
+    : INACTIVE_NOTE_LIST_POLL_MS;
+}
+
+function notesFromResponse(
+  response: getNotesResponse | undefined
+): NoteListResponseDataNotesItem[] | undefined {
+  return response?.status === 200 && response.data.success
+    ? response.data.data.notes
+    : undefined;
+}
+
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const { user } = useAuth();
   const { selectedProjectId, projects, isWorkspacePending, isWorkspaceError } =
@@ -31,12 +52,23 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     (project) => project.projectId === selectedProjectId
   );
   const singleNotesQuery = useGetNotes(selectedProjectId ?? "", {
-    query: { enabled: selectedProjectId !== null },
+    query: {
+      enabled: selectedProjectId !== null,
+      refetchInterval: (query) =>
+        noteListRefetchInterval(notesFromResponse(query.state.data)),
+    },
   });
   const allNotesQueries = useQueries({
     queries: selectedProjectId
       ? []
-      : projects.map((project) => getGetNotesQueryOptions(project.projectId)),
+      : projects.map((project) =>
+          getGetNotesQueryOptions(project.projectId, {
+            query: {
+              refetchInterval: (query) =>
+                noteListRefetchInterval(notesFromResponse(query.state.data)),
+            },
+          })
+        ),
     combine: (results) => ({
       notes: results.flatMap((result) =>
         result.data?.status === 200 && result.data.data.success

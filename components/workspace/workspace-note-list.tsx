@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { FileText, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -8,25 +8,9 @@ import { NoteListRow } from "@/components/workspace/note-list-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import { isMeetingActive } from "@/lib/notes/meeting-state";
+import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 import { groupNotesByRecency } from "@/lib/workspace/note-groups";
-
-/**
- * 목록 전체가 공유하는 상대-시각 시계. 행마다 타이머를 두면 노트가 많을 때 렌더가 폭증하므로
- * 여기 하나만 둔다. 마운트 후 채우고 1분마다 갱신(효과 본문 동기 setState 경고를 타이머로 회피).
- */
-function useSharedNow(): number | null {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    const tick = () => setNow(Date.now());
-    const initial = window.setTimeout(tick, 0);
-    const interval = window.setInterval(tick, 60_000);
-    return () => {
-      window.clearTimeout(initial);
-      window.clearInterval(interval);
-    };
-  }, []);
-  return now;
-}
 
 /**
  * 최근 수정 내림차순. 순서의 주인은 이 함수 하나다 — 묶기(`groupNotesByRecency`)는 정렬하지 않는다.
@@ -59,7 +43,13 @@ export function WorkspaceNoteList({
   onRetry: () => void;
 }) {
   const retryRef = useRef(onRetry);
-  const now = useSharedNow();
+  const activeMeetingStarts = notes
+    .filter(isMeetingActive)
+    .map((note) => Date.parse(note.meetingStartedAt ?? ""))
+    .filter(Number.isFinite);
+  // 목록 전체가 이 타이머 하나만 공유하되, 각 활성 회의의 다음 경과 분 경계 중 가장 가까운
+  // 시각에 깨운다. 시작 초가 다른 회의도 최대 59초 늦게 바뀌지 않는다.
+  const now = useAlignedNow(60_000, true, activeMeetingStarts);
 
   useEffect(() => {
     retryRef.current = onRetry;

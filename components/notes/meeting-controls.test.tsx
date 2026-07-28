@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MeetingControls } from "@/components/notes/meeting-controls";
@@ -34,7 +40,10 @@ describe("MeetingControls", () => {
   beforeEach(() => {
     state.userId = "user-12345";
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   it("시작자 · 진행 중이면 회의 종료만 보인다", () => {
     renderControls(note({ meetingStatus: "IN_PROGRESS" }));
@@ -59,6 +68,27 @@ describe("MeetingControls", () => {
       "김민수님이 시작한 회의"
     );
     expect(screen.getByRole("button", { name: /회의 종료/ })).toBeTruthy();
+  });
+
+  it("진행 중인 노트 상단은 회의 시작부터의 경과를 초 단위로 갱신한다", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-11T00:23:41Z"));
+    renderControls(
+      note({
+        meetingStartedAt: "2026-07-11T00:00:00Z",
+      })
+    );
+    act(() => vi.advanceTimersByTime(0));
+
+    expect(
+      screen.getByRole("status", { name: "회의 진행 시간" })
+    ).toHaveTextContent("23:41");
+
+    act(() => vi.advanceTimersByTime(1_000));
+
+    expect(
+      screen.getByRole("status", { name: "회의 진행 시간" })
+    ).toHaveTextContent("23:42");
   });
 
   it("녹음 중에도 회의 종료가 잠기지 않는다", () => {

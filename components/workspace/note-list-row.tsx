@@ -16,9 +16,19 @@ import {
   DropdownMenuLinkItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
 import { formatRelativeTime } from "@/lib/format/relative-time";
+import {
+  formatMeetingElapsedMinutes,
+  isMeetingActive,
+} from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
 function ActiveRecordingMeter({ title }: { title: string }) {
@@ -92,6 +102,50 @@ function RelativeTime({ iso, now }: { iso: string; now: number | null }) {
   );
 }
 
+function ActiveMeetingMeta({
+  note,
+  now,
+}: {
+  note: NoteListResponseDataNotesItem;
+  now: number | null;
+}) {
+  const starter = note.meetingStartedBy;
+  if (!starter) return null;
+  const elapsed =
+    now !== null && note.meetingStartedAt
+      ? formatMeetingElapsedMinutes(note.meetingStartedAt, now)
+      : null;
+
+  return (
+    <span className="flex min-w-0 shrink-0 items-center gap-1.5 text-xs text-[var(--el-muted)]">
+      <span className="size-1.5 shrink-0 rounded-full bg-destructive" />
+      <span className="shrink-0 font-medium text-destructive">진행 중</span>
+      <span aria-hidden="true">·</span>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span aria-label={starter.name} className="shrink-0">
+              <Avatar size="sm" className="size-5">
+                <AvatarFallback className="bg-[var(--el-surface-strong)] text-[10px] text-[var(--el-ink)]">
+                  {starter.name.slice(0, 1)}
+                </AvatarFallback>
+              </Avatar>
+            </span>
+          }
+        />
+        <TooltipContent>{starter.name}</TooltipContent>
+      </Tooltip>
+      <span className="max-w-20 truncate">{starter.name}</span>
+      {elapsed ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span className="shrink-0 tabular-nums">{elapsed}</span>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
 export function NoteListRow({
   workspaceId,
   note,
@@ -108,6 +162,7 @@ export function NoteListRow({
     ["requesting-permission", "connecting", "recording", "stopping"].includes(
       recording.phase
     );
+  const meetingActive = isMeetingActive(note);
   // `전체 화면으로 열기`는 메뉴 안에 있고, 누르면 메뉴가 닫히며 그 안의 표시도 사라진다.
   // 그래서 진행 상태를 포털 밖(이 행)에 둔다.
   //
@@ -148,7 +203,11 @@ export function NoteListRow({
         <h3 className="min-w-0 flex-1 truncate text-read font-medium text-[var(--el-ink)]">
           {note.title}
         </h3>
-        <RelativeTime iso={note.updatedAt} now={now} />
+        {meetingActive ? (
+          <ActiveMeetingMeta note={note} now={now} />
+        ) : (
+          <RelativeTime iso={note.updatedAt} now={now} />
+        )}
       </Link>
 
       <DropdownMenu>
