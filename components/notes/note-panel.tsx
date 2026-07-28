@@ -139,7 +139,7 @@ export function NotePanel({
       : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-white lg:flex-row">
+    <div className="flex h-full min-h-0 flex-col bg-white max-lg:landscape:flex-row lg:flex-row">
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
         {/* full은 상단바가 브레드크럼·노트 액션을 맡으므로 여기선 바 테두리 없이 제목만(본문 블록).
           side 시트는 자체 헤더 바(제목 + 전체화면·닫기)를 유지한다(계승). */}
@@ -301,10 +301,8 @@ export function NotePanel({
         </Tabs>
 
         {showDock ? (
-          /* 개인 챗봇 FAB이 `fixed right-6 bottom-6 size-12`로 같은 띠에 있다. 좁은 화면에서는
-            독이 그 아래로 들어가 가려지므로 레인에서 FAB 자리를 뺀다(24 + 48 + 여백).
-            sm부터는 가운데 정렬로 돌아가도 닿지 않는다. */
-          <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center pl-5 pr-[84px] sm:px-9">
+          /* 좁은 화면에서는 스크롤을 덮지 않는 footer 레인이고, lg부터 기존처럼 떠 있다. */
+          <div className="pointer-events-none z-30 flex shrink-0 justify-center pb-6 pl-5 pr-[84px] sm:px-9 lg:absolute lg:inset-x-0 lg:bottom-6 lg:pb-0">
             <div className="pointer-events-auto min-w-0">
               {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
                 시작 버튼 자리에 이 문구가 선다. */}
@@ -318,10 +316,9 @@ export function NotePanel({
       </div>
 
       {showSharedTray ? (
-        // 넓은 화면은 우측 대화 트레이(464 — FORM SPEC 레이아웃 산술), 좁은 화면은 본문 아래
-        // 스택 — 어느 폭에서도 공유 챗봇에 닿는다. 회의 중에는 개인 챗봇도 감춰지므로 여기가
-        // 유일한 챗 입구다.
-        <div className="flex h-[45vh] w-full shrink-0 border-t border-[var(--el-hairline)] lg:h-full lg:w-[464px] lg:border-t-0">
+        // 넓은 화면은 우측 대화 트레이(464 — FORM SPEC 레이아웃 산술), 좁은 세로 화면은
+        // 본문 아래 스택이다. 짧은 가로 화면은 14rem 높이 floor가 전사를 밀어내므로 옆 열로 둔다.
+        <div className="flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 border-t border-[var(--el-hairline)] max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] max-lg:landscape:border-l max-lg:landscape:border-t-0 lg:h-full lg:w-[464px] lg:border-t-0">
           <SharedChatPanel
             noteId={noteId}
             phase={phase}

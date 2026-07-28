@@ -128,6 +128,18 @@ describe("NoteArchive", () => {
     expect(screen.queryByText("회의 중 챗봇 대화")).toBeNull();
   });
 
+  it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {
+    render(<NoteArchive noteId="01K0000000002" />);
+
+    const content = screen.getByRole("region", {
+      name: "회의 전사 아카이브",
+    }).parentElement!;
+    expect(content.classList.contains("pb-7")).toBe(true);
+    expect(content.classList.contains("sm:pb-9")).toBe(true);
+    expect(content.classList.contains("lg:pb-28")).toBe(true);
+    expect(content.classList.contains("pb-28")).toBe(false);
+  });
+
   describe("맨 아래로", () => {
     function renderScrollable({ scrollTop = 0, scrollHeight = 1_000 } = {}) {
       data.segments = [
@@ -161,9 +173,19 @@ describe("NoteArchive", () => {
     it("위로 올리면 뜬다 — 종료된 회의라고 되돌아갈 길이 없으면 안 된다", () => {
       const { viewport } = renderScrollable({ scrollTop: 0 });
       fireEvent.scroll(viewport);
-      expect(
-        screen.getByRole("button", { name: "맨 아래로" })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "맨 아래로" })).toBeTruthy();
+    });
+
+    it("모바일 버튼은 콘텐츠 가까이에 두고 데스크톱에서만 독을 피한다", () => {
+      const { viewport } = renderScrollable({ scrollTop: 0 });
+      fireEvent.scroll(viewport);
+
+      const overlay = screen.getByRole("button", {
+        name: "맨 아래로",
+      }).parentElement!;
+      expect(overlay.classList.contains("bottom-4")).toBe(true);
+      expect(overlay.classList.contains("lg:bottom-20")).toBe(true);
+      expect(overlay.classList.contains("bottom-20")).toBe(false);
     });
 
     it("눌러 바닥으로 간다. 자동으로 따라가지는 않는다", () => {

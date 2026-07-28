@@ -410,6 +410,17 @@ describe("TranscriptView", () => {
     ).toBeInTheDocument();
   });
 
+  it("reserves floating dock clearance only at desktop widths", () => {
+    renderTranscript();
+
+    const content = screen.getByRole("log", {
+      name: "회의 전사",
+    }).parentElement;
+
+    expect(content).toHaveClass("pb-7", "sm:pb-9", "lg:pb-28");
+    expect(content).not.toHaveClass("pb-28");
+  });
+
   it("does not expose the pending transcript skeleton as a live log", () => {
     useGetNoteTranscript.mockReturnValueOnce({
       data: undefined,
@@ -487,9 +498,12 @@ describe("TranscriptView", () => {
     setScrollMetrics(viewport!, { scrollTop: 100 });
     fireEvent.scroll(viewport!);
 
-    expect(
-      screen.getByRole("button", { name: "맨 아래로" })
-    ).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "맨 아래로" });
+    const overlay = button.parentElement;
+
+    expect(button).toBeInTheDocument();
+    expect(overlay).toHaveClass("bottom-4", "lg:bottom-20");
+    expect(overlay).not.toHaveClass("bottom-20");
   });
 
   it("pauses follow after the reader scrolls away and resumes from the latest button", () => {
