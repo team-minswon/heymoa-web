@@ -10,23 +10,32 @@ import { useGetNote } from "@/lib/api/generated/notes/notes";
 import {
   deriveMeetingPhase,
   isPersonalChatHiddenInNote,
+  type SharedChatPhase,
 } from "@/lib/notes/meeting-state";
 
 type NoteViewMode = "side" | "full";
 
-export function normalizeNoteViewQuery(query: {
-  view?: string | string[];
-  tab?: string | string[];
-}): { view: NoteViewMode; tab: NoteTab } {
+export function normalizeNoteViewQuery(
+  query: {
+    view?: string | string[];
+    tab?: string | string[];
+  },
+  phase: SharedChatPhase
+): { view: NoteViewMode; tab: NoteTab } {
   const view = query.view === "side" ? "side" : "full";
   const rawTab = query.tab;
-  // 요약 탭은 full 전용(side는 2탭) — side에서 summary 요청은 전사로 떨어뜨린다.
+  // unknown에서는 직링크를 보존한다. 노트를 읽은 뒤 아래 effect가 실제 phase에 맞게 URL도 고친다.
   const tab: NoteTab =
     rawTab === "details"
       ? "details"
-      : rawTab === "summary" && view === "full"
+      : rawTab === "summary" &&
+          (view === "full" || phase === "ended" || phase === "unknown")
         ? "summary"
-        : "transcript";
+        : rawTab === "chat" &&
+            view === "side" &&
+            (phase === "active" || phase === "unknown")
+          ? "chat"
+          : "transcript";
   return { view, tab };
 }
 
@@ -42,10 +51,11 @@ export function NoteView({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const current = normalizeNoteViewQuery({
+  const search = searchParams.toString();
+  const requested = {
     view: searchParams.get("view") ?? initialQuery.view,
     tab: searchParams.get("tab") ?? initialQuery.tab,
-  });
+  };
 
   // 개인 챗봇은 side에서 감춰지고, full에서도 공유 챗봇 트레이가 레일을 독차지하는 동안
   // (활성·미시작) 감춰진다. 종료(ENDED)면 우측이 개인 챗봇으로 돌아온다(`TqX06`).
@@ -57,6 +67,7 @@ export function NoteView({
       ? noteQuery.data.data.data
       : undefined;
   const phase = deriveMeetingPhase(note);
+  const current = normalizeNoteViewQuery(requested, phase);
   usePersonalChatScope({
     noteId,
     hidden: isPersonalChatHiddenInNote(
@@ -74,6 +85,27 @@ export function NoteView({
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (
+      (requested.view ?? "full") === current.view &&
+      (requested.tab ?? "transcript") === current.tab
+    ) {
+      return;
+    }
+    const next = new URLSearchParams(search);
+    next.set("view", current.view);
+    next.set("tab", current.tab);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  }, [
+    current.tab,
+    current.view,
+    pathname,
+    requested.tab,
+    requested.view,
+    router,
+    search,
+  ]);
+
   const closeWithAnim = () => {
     setIsOpen(false);
     // Wait for the exit animation duration before routing
@@ -83,9 +115,16 @@ export function NoteView({
   };
 
   const setQuery = (updates: Partial<{ view: NoteViewMode; tab: NoteTab }>) => {
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("view", updates.view ?? current.view);
-    next.set("tab", updates.tab ?? current.tab);
+    const next = new URLSearchParams(search);
+    const normalized = normalizeNoteViewQuery(
+      {
+        view: updates.view ?? current.view,
+        tab: updates.tab ?? current.tab,
+      },
+      phase
+    );
+    next.set("view", normalized.view);
+    next.set("tab", normalized.tab);
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
