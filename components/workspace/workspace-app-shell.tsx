@@ -217,7 +217,10 @@ function ShellMain({
     <SidebarInset className="flex-1 bg-[var(--el-canvas)]">
       <div
         className={cn(
-          "relative flex h-full min-w-0 flex-col overflow-hidden transition-[width] duration-200",
+          // 높이는 뷰포트에 못박는다. `h-full`이면 이 컨테이너가 뒤에 깔린 노트 목록 길이를
+          // 따라 늘어나고, 그 위에 `absolute`로 앉는 노트 full 면이 컨테이너를 다 못 덮어
+          // 아래로 목록이 비쳤다(노트 목록이 화면보다 길 때 405px 실측 · APP-252).
+          "relative flex h-svh min-w-0 flex-col overflow-hidden transition-[width] duration-200",
           // padding이 아니라 폭을 줄인다 — 노트 full 화면은 이 컨테이너 안에서 `absolute
           // inset-x-0`으로 깔리는데, 절대 배치의 기준은 padding box라 padding으로는 안 밀린다.
           // 좁은 화면에서는 패널이 전체를 덮으므로 본문을 더 줄이지 않는다.

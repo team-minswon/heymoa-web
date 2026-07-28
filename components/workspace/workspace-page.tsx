@@ -84,64 +84,72 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   };
 
   return (
-    // 이 섹션은 클리핑하지 않는다. 장식 블롭이 콘텐츠 폭(896) 밖까지 뻗는데 여기서 자르면
-    // 부드러운 그라데이션이 캔버스 한복판에서 직선으로 끊겨 이음선처럼 보였다(실측: 화면
-    // 끝보다 144px 앞에서 잘림). 바깥 셸 컨테이너가 이미 overflow-hidden이라 화면
-    // 가장자리에서 처리된다 — 가로 스크롤도 생기지 않는다.
-    <section className="relative mx-auto min-h-full w-full max-w-4xl px-5 pb-16 pt-8 sm:px-8 sm:pt-11">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-24 top-0 size-72 rounded-full opacity-25 blur-3xl"
-        style={{
-          background:
-            "radial-gradient(circle, var(--el-gradient-mint) 0%, transparent 68%)",
-        }}
-      />
-      <header className="relative mb-6">
-        <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
-          {selectedProject?.name ?? "모든 노트"}
-        </h2>
-        <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
-          {visibleNotes.length}개의 회의 기록 · 발화와 결정이 시간순으로
-          보관됩니다.
-        </p>
-      </header>
-      <div
-        role="group"
-        aria-label="노트 필터"
-        className="mb-4 flex items-center gap-1.5 border-b border-[var(--el-hairline)] pb-4"
-      >
-        {FILTERS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            aria-pressed={filter === key}
-            onClick={() => setFilter(key)}
-            className={cn(
-              // 칩은 chip 6이다. pill(9999)은 주 CTA와 레코더 독 두 곳뿐. (FORM SPEC)
-              "h-8 rounded-chip px-3.5 text-[13px] font-medium transition-colors",
-              filter === key
-                ? "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
-                : "text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)]"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {isFilteredEmpty ? (
-        <p className="py-16 text-center text-sm text-[var(--el-muted)]">
-          내가 시작한 회의가 없습니다.
-        </p>
-      ) : (
-        <WorkspaceNoteList
-          workspaceId={workspaceId}
-          notes={visibleNotes}
-          isPending={isPending}
-          isError={isError}
-          onRetry={retry}
+    // 목록은 셸이 아니라 **자기 안에서** 스크롤한다. 문서를 늘리면 셸 컨테이너가 따라 늘어나
+    // 그 위에 앉는 노트 full 면이 컨테이너를 다 못 덮는다(APP-252).
+    // `overflow-x-hidden`은 장식이다. `overflow-y`만 주면 계산된 `overflow-x`도 `auto`가 되어
+    // 본문이 좁을 때(뷰포트 900 실측) 블롭의 `-right-24`가 96px짜리 가로 스크롤을 만든다.
+    // 자르는 자리는 메인 컬럼 끝이라 APP-226이 없앤 콘텐츠 폭 이음선은 돌아오지 않는다.
+    <section className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+      {/* 이 박스는 클리핑하지 않는다. 장식 블롭이 콘텐츠 폭(896) 밖까지 뻗는데 여기서 자르면
+          부드러운 그라데이션이 캔버스 한복판에서 직선으로 끊겨 이음선처럼 보였다(실측: 화면
+          끝보다 144px 앞에서 잘림). 바깥 셸 컨테이너가 이미 overflow-hidden이라 화면
+          가장자리에서 처리된다 — 가로 스크롤도 생기지 않는다. 블롭의 기준은 콘텐츠 폭이라
+          이 안에 남는다. */}
+      <div className="relative mx-auto w-full max-w-4xl px-5 pb-16 pt-8 sm:px-8 sm:pt-11">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 top-0 size-72 rounded-full opacity-25 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, var(--el-gradient-mint) 0%, transparent 68%)",
+          }}
         />
-      )}
+        <header className="relative mb-6">
+          <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
+            {selectedProject?.name ?? "모든 노트"}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
+            {visibleNotes.length}개의 회의 기록 · 발화와 결정이 시간순으로
+            보관됩니다.
+          </p>
+        </header>
+        <div
+          role="group"
+          aria-label="노트 필터"
+          className="mb-4 flex items-center gap-1.5 border-b border-[var(--el-hairline)] pb-4"
+        >
+          {FILTERS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={filter === key}
+              onClick={() => setFilter(key)}
+              className={cn(
+                // 칩은 chip 6이다. pill(9999)은 주 CTA와 레코더 독 두 곳뿐. (FORM SPEC)
+                "h-8 rounded-chip px-3.5 text-[13px] font-medium transition-colors",
+                filter === key
+                  ? "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
+                  : "text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)]"
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {isFilteredEmpty ? (
+          <p className="py-16 text-center text-sm text-[var(--el-muted)]">
+            내가 시작한 회의가 없습니다.
+          </p>
+        ) : (
+          <WorkspaceNoteList
+            workspaceId={workspaceId}
+            notes={visibleNotes}
+            isPending={isPending}
+            isError={isError}
+            onRetry={retry}
+          />
+        )}
+      </div>
     </section>
   );
 }
