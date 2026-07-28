@@ -24,6 +24,7 @@ const authState = vi.hoisted(() => ({
 const recordingState = vi.hoisted(() => ({
   activeNoteId: null as string | null,
   phase: "idle" as string,
+  sessionStatus: null as "ACTIVE" | "READY" | null,
 }));
 
 vi.mock("@/components/transcription/recording-provider", async () => {
@@ -38,6 +39,14 @@ vi.mock("@/components/transcription/recording-provider", async () => {
         ? {
             activeNoteId: recordingState.activeNoteId,
             phase: recordingState.phase,
+            ...(recordingState.sessionStatus
+              ? {
+                  session: {
+                    noteId: recordingState.activeNoteId,
+                    status: recordingState.sessionStatus,
+                  },
+                }
+              : {}),
           }
         : {}),
     }),
@@ -205,6 +214,7 @@ describe("NotePanel", () => {
     authState.userId = "u1";
     recordingState.activeNoteId = null;
     recordingState.phase = "idle";
+    recordingState.sessionStatus = null;
     noteState.query = null;
     noteState.value = {
       noteId: "01K0000000002",
@@ -452,6 +462,51 @@ describe("NotePanel", () => {
     expect(sharedPanel.closest('[data-slot="tabs-content"]')).not.toBeVisible();
   });
 
+  it("side 공유 답변이 흐르는 동안 full 확장을 잠근다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="chat"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        onExpand={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
+
+    expect(
+      screen.getByRole("button", {
+        name: "답변이 끝나면 확장할 수 있습니다",
+      })
+    ).toBeDisabled();
+  });
+
+  it.each(["chat", "summary"] as const)(
+    "side + unknown 직링크 %s는 대응 탭 패널을 유지한다",
+    (tab) => {
+      noteState.query = { data: undefined, isError: false };
+
+      renderNotePanel(
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000002"
+          view="side"
+          tab={tab}
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(
+        screen.getByRole("tab", { name: tab === "chat" ? "챗봇" : "요약" })
+      ).toBeInTheDocument();
+      expect(screen.getByRole("tabpanel")).toBeInTheDocument();
+    }
+  );
+
   it("full 모드는 요약 탭을 두되, 회의 조작은 상단바로 올려 패널에 두지 않는다", () => {
     renderNotePanel(
       <NotePanel
@@ -513,7 +568,7 @@ describe("NotePanel", () => {
     expect(onTabChange).toHaveBeenCalledWith("summary");
   });
 
-  it("side의 공유 턴 중 회의가 끝나면 패널을 보존하고 턴 종료 뒤 기록으로 전환한다", async () => {
+  it("side의 공유 턴 중 회의가 끝나도 기록 탭 뒤에서 패널을 보존한다", () => {
     authState.userId = "u2";
     const onTabChange = vi.fn();
     const panel = (tab: "chat" | "transcript") => (
@@ -530,17 +585,43 @@ describe("NotePanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
     noteState.value.meetingStatus = "ENDED";
-    rerenderNote(panel("chat"));
+    // NoteView가 ended + chat을 즉시 transcript로 정규화한다. 답변 패널은 숨겨도
+    // 턴이 끝날 때까지 마운트해 부분 응답을 잃지 않는다.
+    rerenderNote(panel("transcript"));
 
     expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "턴 끝" }));
-    await waitFor(() => expect(onTabChange).toHaveBeenCalledWith("transcript"));
-    rerenderNote(panel("transcript"));
+    fireEvent.click(screen.getByText("턴 끝"));
 
+    expect(onTabChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
+  });
+
+  it("side 조회가 실패하면 이유와 재시도를 보인다", () => {
+    noteState.query = {
+      data: undefined,
+      isError: true,
+      refetch: noteRefetch,
+    };
+
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "회의 상태를 확인하지 못했습니다."
+    );
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(noteRefetch).toHaveBeenCalledOnce();
   });
 
   it("side + 미시작은 전사·노트 정보만 보이고 기록 시작 조작은 없다", () => {
@@ -750,7 +831,7 @@ describe("NotePanel", () => {
 
   // v5 side 프레임 셋(oLmGL·viNgv·KCoyt)에는 레코더 독도 회의 조작도 없다. side에서
   // 녹음만 시작되고 회의를 끝낼 곳이 없던 것이 APP-220이다 — 시작 자체를 side에서 뺀다.
-  describe("side는 회의 조작 면이 아니다", () => {
+  describe("side 녹음 시작 게이트", () => {
     function renderSide() {
       renderNotePanel(
         <NotePanel
@@ -803,6 +884,19 @@ describe("NotePanel", () => {
       renderSide();
 
       expect(screen.queryByLabelText("녹음 제어")).toBeNull();
+    });
+
+    it("서버 세션이 남은 failed 상태에서도 side는 다시 시작하지 않는다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "failed";
+      recordingState.sessionStatus = "ACTIVE";
+
+      renderSide();
+
+      expect(
+        screen.getByText("전체 화면에서 녹음을 시작할 수 있습니다.")
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
     });
   });
 });
