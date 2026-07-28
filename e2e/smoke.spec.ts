@@ -370,6 +370,55 @@ test("shows only the end-meeting control in the note toolbar", async ({
   await expect(page.getByRole("button", { name: "기록 시작" })).toBeVisible();
 });
 
+test("shows meeting context and shared chat inside the viewer side panel", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=side&tab=transcript`
+  );
+
+  await expect(page.getByText("진행 중", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("김서연님이 시작한 회의", { exact: true })
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "기록 시작" })).toHaveCount(0);
+  await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "노트 정보"]);
+
+  await page.getByRole("tab", { name: "챗봇" }).click();
+
+  const panel = page.getByRole("complementary", { name: "회의 챗봇" });
+  await expect(panel.getByLabel("메시지")).toBeVisible();
+  await expect(page).toHaveURL(/view=side&tab=chat/);
+});
+
+test("ends a meeting from the side panel and opens the ended summary", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=transcript`
+  );
+
+  await expect(page.getByText("진행 중", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("테스트 유저님이 시작한 회의", { exact: true })
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "기록 시작" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "회의 종료" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("button", { name: "회의 종료" }).click();
+
+  await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText("회의 종료됨")).toBeVisible();
+  await expect(page.getByRole("tab")).toHaveText(["기록", "요약", "노트 정보"]);
+  await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
+  await expect(page).toHaveURL(/view=side&tab=summary/);
+});
+
 test("ends a meeting and shows the analysis in progress", async ({ page }) => {
   // 기본 전사 탭에서 종료해도 요약 탭으로 넘어가 분석 진행을 보여야 한다.
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);

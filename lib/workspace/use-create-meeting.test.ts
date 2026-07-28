@@ -7,6 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCreateMeeting } from "@/lib/workspace/use-create-meeting";
 
 const push = vi.hoisted(() => vi.fn());
+const navigation = vi.hoisted(() => ({
+  pathname: "/w/01K0000000000",
+}));
 const createNote = vi.hoisted(() => vi.fn());
 const recording = vi.hoisted(() => ({
   phase: "idle" as string,
@@ -22,7 +25,10 @@ const shell = vi.hoisted(() => ({
   }[],
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
+  useRouter: () => ({ push }),
+}));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
 }));
@@ -51,6 +57,7 @@ describe("useCreateMeeting", () => {
     recording.phase = "idle";
     recording.activeNoteId = undefined;
     recording.session = null;
+    navigation.pathname = "/w/01K0000000000";
     shell.selectedProjectId = "01K0000000001";
   });
   afterEach(() => vi.clearAllMocks());
@@ -120,6 +127,24 @@ describe("useCreateMeeting", () => {
     expect(push).toHaveBeenCalledWith(
       "/w/01K0000000000/notes/01K0000000002?view=side&tab=transcript"
     );
+    expect(createNote).not.toHaveBeenCalled();
+    expect(recording.start).not.toHaveBeenCalled();
+  });
+
+  it("keeps the current view when the active recording note is already open", async () => {
+    recording.phase = "recording";
+    recording.activeNoteId = "01K0000000002";
+    navigation.pathname = "/w/01K0000000000/notes/01K0000000002";
+    const client = new QueryClient();
+    const { result } = renderHook(() => useCreateMeeting("01K0000000000"), {
+      wrapper: wrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.createMeeting();
+    });
+
+    expect(push).not.toHaveBeenCalled();
     expect(createNote).not.toHaveBeenCalled();
     expect(recording.start).not.toHaveBeenCalled();
   });

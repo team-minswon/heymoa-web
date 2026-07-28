@@ -329,6 +329,16 @@ function Composer({
   onStop: () => void;
 }) {
   // 지속 상태(관전·미시작)는 인라인 Alert다 — 토스트로 하면 왜 못 쓰는지 사라진다.
+  if (phase === "unknown") {
+    return (
+      <ComposerNotice
+        icon={<Lock className="size-4 text-[var(--el-muted)]" />}
+        title="회의 상태를 확인하는 중입니다"
+        description="상태를 확인한 뒤 질문을 보낼 수 있습니다."
+      />
+    );
+  }
+
   if (phase === "not-started") {
     return (
       <ComposerNotice

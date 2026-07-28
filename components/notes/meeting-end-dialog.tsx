@@ -85,6 +85,10 @@ export function MeetingEndDialog({
           // 종료가 성공했으면 상태는 이미 ENDED다. invalidate만 하면 응답이 올 때까지
           // 캐시에 IN_PROGRESS가 남아 그 틈에 녹음 시작이 열린다 — 계약이 종료된 회의의
           // 세션 생성을 안 막으므로 서버도 안 잡아 준다(APP-214 서버 몫).
+          // 종료 전에 시작된 조회도 먼저 취소해야 늦은 IN_PROGRESS 응답이 아래 값을 덮지 않는다.
+          void queryClient.cancelQueries({
+            queryKey: getGetNoteQueryKey(noteId),
+          });
           queryClient.setQueryData<getNoteResponse>(
             getGetNoteQueryKey(noteId),
             (prev) =>

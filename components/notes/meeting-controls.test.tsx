@@ -27,8 +27,8 @@ function note(overrides: Partial<NoteResponseData>): NoteResponseData {
   } as NoteResponseData;
 }
 
-const renderControls = (n: NoteResponseData) =>
-  render(<MeetingControls note={n} />);
+const renderControls = (n: NoteResponseData, showContext?: boolean) =>
+  render(<MeetingControls note={n} showContext={showContext} />);
 
 describe("MeetingControls", () => {
   beforeEach(() => {
@@ -44,6 +44,21 @@ describe("MeetingControls", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /중지/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /재개/ })).toBeNull();
+    expect(screen.queryByText("진행 중")).toBeNull();
+    expect(screen.queryByText("테스트 유저")).toBeNull();
+  });
+
+  it("문맥 표시를 요청하면 시작자에게 상태와 시작자명과 종료를 함께 보인다", () => {
+    renderControls(
+      note({ meetingStartedBy: { userId: "user-12345", name: "김민수" } }),
+      true
+    );
+
+    expect(screen.getByText("진행 중")).toBeTruthy();
+    expect(screen.getByText("김민수").textContent).toBe(
+      "김민수님이 시작한 회의"
+    );
+    expect(screen.getByRole("button", { name: /회의 종료/ })).toBeTruthy();
   });
 
   it("녹음 중에도 회의 종료가 잠기지 않는다", () => {
@@ -89,6 +104,23 @@ describe("MeetingControls", () => {
     renderControls(note({ meetingStatus: "ENDED" }));
 
     expect(screen.getByText("회의 종료됨")).toBeTruthy();
+    expect(screen.queryByText("테스트 유저")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("종료된 회의도 문맥 표시를 요청하면 시작자명을 보이되 종료 버튼은 두지 않는다", () => {
+    renderControls(
+      note({
+        meetingStatus: "ENDED",
+        meetingStartedBy: { userId: "user-12345", name: "김민수" },
+      }),
+      true
+    );
+
+    expect(screen.getByText("회의 종료됨")).toBeTruthy();
+    expect(screen.getByText("김민수").textContent).toBe(
+      "김민수님이 시작한 회의"
+    );
     expect(screen.queryByRole("button")).toBeNull();
   });
 
