@@ -301,6 +301,38 @@ describe("NotePanel", () => {
     ).toBe("active");
   });
 
+  it("짧은 landscape에서는 14rem 높이 트레이 대신 bounded side column을 쓴다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const tray = screen.getByTestId("shared-chat-panel").parentElement;
+    const root = tray?.parentElement;
+
+    expect(root).toHaveClass(
+      "flex-col",
+      "max-lg:landscape:flex-row",
+      "lg:flex-row"
+    );
+    expect(tray).toHaveClass(
+      "h-[clamp(14rem,36dvh,18rem)]",
+      "w-full",
+      "max-lg:landscape:h-full",
+      "max-lg:landscape:w-[min(22rem,42vw)]",
+      "max-lg:landscape:border-l",
+      "max-lg:landscape:border-t-0",
+      "lg:h-full",
+      "lg:w-[464px]"
+    );
+  });
+
   it("passes the existing meeting phase to the transcript", () => {
     renderNotePanel(
       <NotePanel
@@ -497,6 +529,18 @@ describe("NotePanel", () => {
         screen.getByRole("button", { name: "기록 시작" })
       ).toBeInTheDocument();
     });
+
+    it("좁은 화면에서는 독을 본문 아래 레인에 두고 desktop에서만 띄운다", () => {
+      noteState.value.meetingStartedBy = null;
+
+      renderDock();
+
+      const dock = screen.getByLabelText("녹음 제어");
+      const lane = dock.parentElement?.parentElement;
+
+      expect(lane).toHaveClass("shrink-0", "lg:absolute", "lg:bottom-6");
+      expect(lane).not.toHaveClass("absolute");
+    });
   });
 
   it("뷰어가 읽는 중 회의가 끝나면 안내 뒤 명시적으로 아카이브를 연다", () => {
@@ -612,7 +656,12 @@ describe("NotePanel", () => {
 
       renderSide();
 
-      expect(screen.getByLabelText("녹음 제어")).toBeInTheDocument();
+      const dock = screen.getByLabelText("녹음 제어");
+      const lane = dock.parentElement?.parentElement;
+
+      expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
+      expect(lane).toHaveClass("shrink-0", "lg:absolute");
+      expect(lane).not.toHaveClass("absolute");
     });
 
     // activeNoteId는 녹음이 끝나도 남는다. "idle이 아님"으로 판정하면 끝난 뒤에도 독이

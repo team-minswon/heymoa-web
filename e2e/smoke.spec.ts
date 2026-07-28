@@ -8,6 +8,7 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const MOCK_WORKSPACE_ID = "01K0000000000";
+const STARTER_NOTE_ID = "01K0000000002";
 const FOREIGN_VIEWER_NOTE_ID = "01K0000000028";
 
 async function expectForeignViewerTranscript(
@@ -36,6 +37,21 @@ async function expectForeignViewerTranscript(
       "파트너 요구사항을 먼저 확인하겠습니다."
     );
     await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(
+      0
+    );
+    if (viewportSize.width === 375) {
+      const status = page.getByText("진행 중", { exact: true });
+      const starterName = page.getByText("김서연", { exact: false });
+      await expect(status).toBeVisible();
+      await expect(starterName).toBeVisible();
+      const starterBox = await starterName.boundingBox();
+      expect(starterBox).not.toBeNull();
+      expect(starterBox!.x).toBeGreaterThanOrEqual(0);
+      expect(starterBox!.x + starterBox!.width).toBeLessThanOrEqual(
+        viewportSize.width
+      );
+    }
     const initialBlockCount = await blocks.count();
     expect(initialBlockCount).toBeGreaterThan(0);
 
@@ -136,6 +152,114 @@ test("renders the foreign viewer transcript without recording controls", async (
   ]) {
     await expectForeignViewerTranscript(page, viewportSize);
   }
+});
+
+test("keeps the mobile recorder dock outside the transcript above a bounded chat tray", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=full&tab=transcript`
+  );
+
+  const transcriptLog = page.getByRole("log", { name: "회의 전사" });
+  const transcriptViewport = page
+    .locator('[data-slot="scroll-area"]')
+    .filter({ has: transcriptLog })
+    .locator('[data-slot="scroll-area-viewport"]');
+  const dock = page.getByLabel("녹음 제어");
+  const tray = page.getByTestId("shared-chat-panel");
+
+  await expect(page.getByTestId("transcript-block").first()).toBeVisible();
+  await expect(dock).toBeVisible();
+  await expect(tray.getByLabel("메시지")).toBeVisible();
+
+  const [transcriptBox, dockBox, trayBox] = await Promise.all([
+    transcriptViewport.boundingBox(),
+    dock.boundingBox(),
+    tray.boundingBox(),
+  ]);
+  expect(transcriptBox).not.toBeNull();
+  expect(dockBox).not.toBeNull();
+  expect(trayBox).not.toBeNull();
+
+  const overlapHeight = Math.max(
+    0,
+    Math.min(
+      transcriptBox!.y + transcriptBox!.height,
+      dockBox!.y + dockBox!.height
+    ) - Math.max(transcriptBox!.y, dockBox!.y)
+  );
+  expect(overlapHeight).toBe(0);
+  expect(transcriptBox!.height).toBeGreaterThan(0);
+  expect(trayBox!.height).toBeGreaterThanOrEqual(220);
+  expect(trayBox!.height).toBeLessThanOrEqual(320);
+});
+
+test("keeps the recorder dock and transcript visible in mobile landscape", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 812, height: 375 });
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=full&tab=transcript`
+  );
+
+  const surface = page.locator('[data-surface="full"]');
+  const panel = surface.locator(":scope > div").first();
+  const main = panel.locator(":scope > div").first();
+  const transcriptLog = page.getByRole("log", { name: "회의 전사" });
+  const transcriptViewport = page
+    .locator('[data-slot="scroll-area"]')
+    .filter({ has: transcriptLog })
+    .locator('[data-slot="scroll-area-viewport"]');
+  const dock = page.getByLabel("녹음 제어");
+  const tray = page.getByTestId("shared-chat-panel");
+
+  await expect.soft(transcriptViewport).toBeVisible();
+  await expect(dock).toBeVisible();
+  await expect(tray.getByLabel("메시지")).toBeVisible();
+
+  const [surfaceBox, mainBox, transcriptBox, dockBox, trayBox] =
+    await Promise.all([
+      surface.boundingBox(),
+      main.boundingBox(),
+      transcriptViewport.boundingBox(),
+      dock.boundingBox(),
+      tray.boundingBox(),
+    ]);
+  expect(surfaceBox).not.toBeNull();
+  expect(mainBox).not.toBeNull();
+  expect(transcriptBox).not.toBeNull();
+  expect(dockBox).not.toBeNull();
+  expect(trayBox).not.toBeNull();
+
+  expect(dockBox!.x).toBeGreaterThanOrEqual(mainBox!.x);
+  expect(dockBox!.y).toBeGreaterThanOrEqual(mainBox!.y);
+  expect(dockBox!.x + dockBox!.width).toBeLessThanOrEqual(
+    mainBox!.x + mainBox!.width
+  );
+  expect(dockBox!.y + dockBox!.height).toBeLessThanOrEqual(
+    mainBox!.y + mainBox!.height
+  );
+  expect(dockBox!.x).toBeGreaterThanOrEqual(surfaceBox!.x);
+  expect(dockBox!.y).toBeGreaterThanOrEqual(surfaceBox!.y);
+  expect(dockBox!.x + dockBox!.width).toBeLessThanOrEqual(
+    surfaceBox!.x + surfaceBox!.width
+  );
+  expect(dockBox!.y + dockBox!.height).toBeLessThanOrEqual(
+    surfaceBox!.y + surfaceBox!.height
+  );
+
+  const overlapHeight = Math.max(
+    0,
+    Math.min(
+      transcriptBox!.y + transcriptBox!.height,
+      dockBox!.y + dockBox!.height
+    ) - Math.max(transcriptBox!.y, dockBox!.y)
+  );
+  expect(overlapHeight).toBe(0);
+  expect(transcriptBox!.height).toBeGreaterThan(0);
+  expect(trayBox!.height).toBeGreaterThan(0);
 });
 
 /**

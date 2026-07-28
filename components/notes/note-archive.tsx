@@ -126,14 +126,13 @@ export function NoteArchive({ noteId }: { noteId: string }) {
           <ScrollToBottomButton
             label="맨 아래로"
             onClick={scrollToBottom}
-            // full은 회의가 끝나도 레코더 독을 그린다(`NotePanel`의 showDock은 view만 본다).
-            // 기본 bottom-4로 두면 독 아래에 깔려 누를 수 없다 — TranscriptView와 같은 자리.
-            className="bottom-20"
+            // desktop에서는 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
+            className="lg:bottom-20"
           />
         ) : null
       }
     >
-      <div className="mx-auto w-full max-w-[820px] px-5 pb-28 pt-7 sm:px-9 sm:pt-9">
+      <div className="mx-auto w-full max-w-[820px] px-5 pb-7 pt-7 sm:px-9 sm:pb-9 sm:pt-9 lg:pb-28">
         <section aria-label="회의 전사 아카이브">
           <header className="border-b border-[var(--el-hairline-strong)] pb-4">
             <h2 className="font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">

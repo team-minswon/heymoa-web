@@ -44,8 +44,9 @@ export function MeetingControls({
     return (
       <div className="flex items-center gap-2">
         <Badge variant="secondary">진행 중</Badge>
-        <span className="hidden text-xs text-[var(--el-muted)] sm:inline">
-          {startedBy.name}님이 시작한 회의
+        <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
+          {startedBy.name}
+          <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
         </span>
       </div>
     );

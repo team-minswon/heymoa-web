@@ -64,8 +64,25 @@ describe("MeetingControls", () => {
     );
 
     expect(screen.getByText("진행 중")).toBeTruthy();
-    expect(screen.getByText("김민수님이 시작한 회의")).toBeTruthy();
+    expect(screen.getByText("김민수").textContent).toBe(
+      "김민수님이 시작한 회의"
+    );
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("뷰어의 시작자 이름은 모바일에서도 보이고 전체 설명은 접근 가능하다", () => {
+    state.userId = "user-other";
+
+    renderControls(
+      note({ meetingStartedBy: { userId: "user-12345", name: "김민수" } })
+    );
+
+    const name = screen.getByText("김민수");
+    expect(name.classList.contains("hidden")).toBe(false);
+    expect(name.classList.contains("truncate")).toBe(true);
+    const description = screen.getByText("님이 시작한 회의");
+    expect(description.classList.contains("sr-only")).toBe(true);
+    expect(description.classList.contains("sm:not-sr-only")).toBe(true);
   });
 
   it("종료된 회의는 종료됨 배지만 보인다", () => {
