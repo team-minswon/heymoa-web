@@ -9,6 +9,7 @@ const auth = vi.hoisted(() => ({
     name: string;
   } | null,
 }));
+const useGetNotes = vi.hoisted(() => vi.fn());
 
 // 목록 행이 이동 진행 표시를 위해 경로·쿼리를 읽는다(APP-215).
 vi.mock("next/navigation", () => ({
@@ -37,41 +38,48 @@ vi.mock("@/components/workspace/workspace-app-shell", () => ({
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryOptions: vi.fn(),
-  useGetNotes: () => ({
-    data: {
-      status: 200,
+  useGetNotes: (...args: unknown[]) => {
+    useGetNotes(...args);
+    return {
       data: {
-        success: true,
+        status: 200,
         data: {
-          notes: [
-            {
-              noteId: "01K0000000002",
-              projectId: "01K0000000001",
-              title: "주간 제품 회의",
-              createdAt: "2026-07-10T00:00:00Z",
-              updatedAt: "2026-07-11T00:00:00Z",
-              lastRecordedAt: null,
-              recordedDurationMs: 0,
-              meetingStartedBy: { userId: "user-me", name: "나" },
-            },
-            {
-              noteId: "01K0000000003",
-              projectId: "01K0000000001",
-              title: "리서치 공유",
-              createdAt: "2026-07-09T00:00:00Z",
-              updatedAt: "2026-07-10T00:00:00Z",
-              lastRecordedAt: null,
-              recordedDurationMs: 0,
-              meetingStartedBy: { userId: "user-other", name: "남" },
-            },
-          ],
+          success: true,
+          data: {
+            notes: [
+              {
+                noteId: "01K0000000002",
+                projectId: "01K0000000001",
+                title: "주간 제품 회의",
+                createdAt: "2026-07-10T00:00:00Z",
+                updatedAt: "2026-07-11T00:00:00Z",
+                lastRecordedAt: null,
+                recordedDurationMs: 0,
+                meetingStatus: "IN_PROGRESS",
+                meetingStartedAt: "2026-07-11T00:00:00Z",
+                meetingStartedBy: { userId: "user-me", name: "나" },
+              },
+              {
+                noteId: "01K0000000003",
+                projectId: "01K0000000001",
+                title: "리서치 공유",
+                createdAt: "2026-07-09T00:00:00Z",
+                updatedAt: "2026-07-10T00:00:00Z",
+                lastRecordedAt: null,
+                recordedDurationMs: 0,
+                meetingStatus: "ENDED",
+                meetingStartedAt: "2026-07-09T00:00:00Z",
+                meetingStartedBy: { userId: "user-other", name: "남" },
+              },
+            ],
+          },
         },
       },
-    },
-    isPending: false,
-    isError: false,
-    refetch: vi.fn(),
-  }),
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+  },
 }));
 
 function renderPage() {
@@ -85,6 +93,7 @@ function renderPage() {
 describe("WorkspacePage", () => {
   afterEach(() => {
     cleanup();
+    useGetNotes.mockReset();
     auth.user = { userId: "user-me", name: "나" };
   });
 
@@ -140,5 +149,42 @@ describe("WorkspacePage", () => {
     expect(
       screen.getByText("내가 시작한 회의가 없습니다.")
     ).toBeInTheDocument();
+  });
+
+  it("polls active lists every 10 seconds and inactive lists every 30 seconds", () => {
+    renderPage();
+    const options = useGetNotes.mock.calls.at(-1)?.[1] as {
+      query: {
+        refetchInterval: (query: { state: { data: unknown } }) => number;
+      };
+    };
+    const response = (meetingStatus: "IN_PROGRESS" | "ENDED") => ({
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          notes: [
+            {
+              meetingStatus,
+              meetingStartedAt:
+                meetingStatus === "IN_PROGRESS" ? "2026-07-11T00:00:00Z" : null,
+              meetingStartedBy:
+                meetingStatus === "IN_PROGRESS"
+                  ? { userId: "user-other", name: "남" }
+                  : null,
+            },
+          ],
+        },
+      },
+    });
+
+    expect(
+      options.query.refetchInterval({
+        state: { data: response("IN_PROGRESS") },
+      })
+    ).toBe(10_000);
+    expect(
+      options.query.refetchInterval({ state: { data: response("ENDED") } })
+    ).toBe(30_000);
   });
 });

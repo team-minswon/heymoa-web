@@ -31,6 +31,28 @@ export function isMeetingActive(note: MeetingFields | undefined): boolean {
   return deriveMeetingPhase(note) === "active";
 }
 
+export function meetingElapsedMs(startedAt: string, now: number): number {
+  const startedAtMs = Date.parse(startedAt);
+  return Number.isFinite(startedAtMs) ? Math.max(0, now - startedAtMs) : 0;
+}
+
+export function formatMeetingElapsedMinutes(
+  startedAt: string,
+  now: number
+): string {
+  return `${Math.floor(meetingElapsedMs(startedAt, now) / 60_000)}분`;
+}
+
+export function formatMeetingElapsedClock(
+  startedAt: string,
+  now: number
+): string {
+  const totalSeconds = Math.floor(meetingElapsedMs(startedAt, now) / 1_000);
+  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(
+    totalSeconds % 60
+  ).padStart(2, "0")}`;
+}
+
 /**
  * 노트 화면에서 개인 챗봇을 감출까. side면 항상 감춘다. full에서는 공유 챗봇 트레이가 레일을
  * 독차지하는 동안(활성·미시작)만 감춘다 — **종료에는 개인 챗봇을 남긴다.**

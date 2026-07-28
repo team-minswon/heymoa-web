@@ -23,7 +23,9 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecordingMeter: () => recording.meter,
 }));
 
-function note(): NoteListResponseDataNotesItem {
+function note(
+  overrides: Partial<NoteListResponseDataNotesItem> = {}
+): NoteListResponseDataNotesItem {
   return {
     noteId: "01K0000000002",
     projectId: "01K0000000001",
@@ -35,6 +37,7 @@ function note(): NoteListResponseDataNotesItem {
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: "2026-07-11T00:00:00Z",
     meetingStartedBy: null,
+    ...overrides,
   };
 }
 
@@ -82,5 +85,57 @@ describe("NoteListRow", () => {
     // 카드 시절 잔재(녹음 시간·"기록 중")는 v5 행에 없다.
     expect(screen.queryByText("01:05")).toBeNull();
     expect(screen.queryByText("기록 중")).toBeNull();
+  });
+
+  it("shows remote active meeting metadata from the server contract", () => {
+    recording.current = {
+      session: null,
+      activeNoteId: undefined,
+      phase: "idle",
+      elapsedMs: 0,
+    };
+
+    render(
+      <NoteListRow
+        workspaceId="01K0000000000"
+        note={note({
+          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
+        })}
+        now={Date.parse("2026-07-11T00:23:41Z")}
+      />
+    );
+
+    expect(screen.getByText("진행 중")).toBeInTheDocument();
+    expect(screen.getByLabelText("김민수")).toBeInTheDocument();
+    expect(screen.getByText("김민수")).toBeInTheDocument();
+    expect(screen.getByText("23분")).toBeInTheDocument();
+  });
+
+  it("clamps a future meeting start to zero minutes", () => {
+    render(
+      <NoteListRow
+        workspaceId="01K0000000000"
+        note={note({
+          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
+        })}
+        now={Date.parse("2026-07-10T23:59:00Z")}
+      />
+    );
+
+    expect(screen.getByText("0분")).toBeInTheDocument();
+  });
+
+  it("keeps elapsed meeting time unresolved while SSR now is null", () => {
+    render(
+      <NoteListRow
+        workspaceId="01K0000000000"
+        note={note({
+          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
+        })}
+        now={null}
+      />
+    );
+
+    expect(screen.queryByText(/^\d+분$/)).toBeNull();
   });
 });

@@ -8,6 +8,26 @@ import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { NoteResponseData } from "@/lib/api/generated/models";
+import { formatMeetingElapsedClock } from "@/lib/notes/meeting-state";
+import { useAlignedNow } from "@/lib/notes/use-aligned-now";
+
+function MeetingElapsed({
+  startedAt,
+  now,
+}: {
+  startedAt: string;
+  now: number | null;
+}) {
+  return now === null ? null : (
+    <span
+      role="status"
+      aria-label="회의 진행 시간"
+      className="text-xs font-medium text-destructive tabular-nums"
+    >
+      {formatMeetingElapsedClock(startedAt, now)}
+    </span>
+  );
+}
 
 /**
  * 노트 앱바의 회의 조작. **조작권은 시작자 단독이다** — `meetingStartedBy.userId === 내 userId`.
@@ -32,6 +52,14 @@ export function MeetingControls({
   const [endOpen, setEndOpen] = useState(false);
 
   const startedBy = note.meetingStartedBy;
+  const now = useAlignedNow(
+    1_000,
+    note.meetingStatus === "IN_PROGRESS" && Boolean(note.meetingStartedAt),
+    note.meetingStartedAt ? [Date.parse(note.meetingStartedAt)] : []
+  );
+  const elapsed = note.meetingStartedAt ? (
+    <MeetingElapsed startedAt={note.meetingStartedAt} now={now} />
+  ) : null;
 
   // 아직 아무도 녹음을 시작하지 않았으면 조작이 없다(녹음 독이 시작을 맡는다).
   if (!startedBy) return null;
@@ -45,6 +73,7 @@ export function MeetingControls({
         {startedBy.name}
         <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
       </span>
+      {elapsed}
     </>
   );
 
@@ -65,7 +94,7 @@ export function MeetingControls({
 
   return (
     <div className="flex items-center gap-2">
-      {showContext ? context : null}
+      {showContext ? context : elapsed}
       <Button size="sm" className="h-8" onClick={() => setEndOpen(true)}>
         <Square className="size-3.5" />
         <span className="sr-only sm:not-sr-only">회의 종료</span>

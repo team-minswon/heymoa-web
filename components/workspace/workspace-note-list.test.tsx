@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -18,8 +19,16 @@ const toast = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 // note-list-row는 자체 테스트가 있다 — 목록의 정렬·에러 처리만 본다.
 vi.mock("@/components/workspace/note-list-row", () => ({
-  NoteListRow: ({ note }: { note: NoteListResponseDataNotesItem }) => (
-    <div data-testid="row">{note.title}</div>
+  NoteListRow: ({
+    note,
+    now,
+  }: {
+    note: NoteListResponseDataNotesItem;
+    now: number | null;
+  }) => (
+    <div data-testid="row" data-now={String(now)}>
+      {note.title}
+    </div>
   ),
 }));
 
@@ -54,7 +63,10 @@ describe("sortNotesByRecency", () => {
 
 describe("WorkspaceNoteList", () => {
   beforeEach(() => toast.error.mockReset());
-  afterEach(cleanup);
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+  });
 
   it("renders a flat recency-ordered list", () => {
     render(
@@ -103,5 +115,78 @@ describe("WorkspaceNoteList", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(onRetry).toHaveBeenCalledTimes(2);
+  });
+
+  it("aligns the shared minute clock to the next minute boundary", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T00:00:30.250Z"));
+    render(
+      <WorkspaceNoteList
+        workspaceId="01K0000000000"
+        notes={[note("note", "2026-07-11T00:00:00Z")]}
+        isPending={false}
+        isError={false}
+        onRetry={vi.fn()}
+      />
+    );
+    act(() => vi.advanceTimersByTime(0));
+
+    act(() => vi.advanceTimersByTime(29_750));
+
+    expect(screen.getByTestId("row")).toHaveAttribute(
+      "data-now",
+      String(Date.parse("2026-07-29T00:01:00Z"))
+    );
+  });
+
+  it("aligns an active meeting clock to the meeting's elapsed minute boundary", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T00:00:30.250Z"));
+    render(
+      <WorkspaceNoteList
+        workspaceId="01K0000000000"
+        notes={[
+          {
+            ...note("active", "2026-07-29T00:00:00Z"),
+            meetingStartedAt: "2026-07-29T00:00:01Z",
+            meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
+          },
+        ]}
+        isPending={false}
+        isError={false}
+        onRetry={vi.fn()}
+      />
+    );
+    act(() => vi.advanceTimersByTime(0));
+
+    act(() => vi.advanceTimersByTime(30_750));
+
+    expect(screen.getByTestId("row")).toHaveAttribute(
+      "data-now",
+      String(Date.parse("2026-07-29T00:01:01Z"))
+    );
+  });
+
+  it("recalculates the shared clock immediately when the page becomes visible", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T00:00:00Z"));
+    render(
+      <WorkspaceNoteList
+        workspaceId="01K0000000000"
+        notes={[note("note", "2026-07-11T00:00:00Z")]}
+        isPending={false}
+        isError={false}
+        onRetry={vi.fn()}
+      />
+    );
+    act(() => vi.advanceTimersByTime(0));
+    vi.setSystemTime(new Date("2026-07-29T00:05:00Z"));
+
+    fireEvent(document, new Event("visibilitychange"));
+
+    expect(screen.getByTestId("row")).toHaveAttribute(
+      "data-now",
+      String(Date.parse("2026-07-29T00:05:00Z"))
+    );
   });
 });

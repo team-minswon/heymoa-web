@@ -41,8 +41,11 @@ async function expectForeignViewerTranscript(
       0
     );
     if (viewportSize.width === 375) {
-      const status = page.getByText("진행 중", { exact: true });
-      const starterName = page.getByText("김서연", { exact: false });
+      const toolbar = page
+        .getByRole("navigation", { name: "현재 위치" })
+        .locator("..");
+      const status = toolbar.getByText("진행 중", { exact: true });
+      const starterName = toolbar.getByText("김서연", { exact: false });
       await expect(status).toBeVisible();
       await expect(starterName).toBeVisible();
       const starterBox = await starterName.boundingBox();
@@ -377,9 +380,10 @@ test("shows meeting context and shared chat inside the viewer side panel", async
     `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=side&tab=transcript`
   );
 
-  await expect(page.getByText("진행 중", { exact: true })).toBeVisible();
+  const noteSurface = page.getByLabel("노트", { exact: true });
+  await expect(noteSurface.getByText("진행 중", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("김서연님이 시작한 회의", { exact: true })
+    noteSurface.getByText("김서연님이 시작한 회의", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "기록 시작" })).toHaveCount(0);
@@ -399,9 +403,10 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
     `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=transcript`
   );
 
-  await expect(page.getByText("진행 중", { exact: true })).toBeVisible();
+  const noteSurface = page.getByLabel("노트", { exact: true });
+  await expect(noteSurface.getByText("진행 중", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("테스트 유저님이 시작한 회의", { exact: true })
+    noteSurface.getByText("테스트 유저님이 시작한 회의", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(page.getByRole("button", { name: "기록 시작" })).toHaveCount(0);
