@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "@/lib/mocks/db";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 
@@ -8,14 +8,10 @@ import { MOCK_USER } from "@/lib/mocks/mock-user";
  */
 function firstNoteId() {
   const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
-  // 목록 계약에는 `meetingStatus`가 없다(APP-159에서 안 늘리기로 했다) — 상세로 확인한다.
   const noteId = mockDb
     .listProjects(workspaceId)
     .flatMap((project) => mockDb.listNotes(project.projectId))
-    .map((candidate) => candidate.noteId)
-    .find(
-      (candidate) => mockDb.getNote(candidate).meetingStatus === "IN_PROGRESS"
-    );
+    .find((candidate) => candidate.meetingStatus === "IN_PROGRESS")?.noteId;
   if (!noteId) throw new Error("진행 중인 노트가 시드에 없다");
   return noteId;
 }
@@ -85,6 +81,34 @@ describe("mockDb", () => {
     expect(() => mockDb.createSession(note.noteId)).toThrow(
       "ACTIVE_TRANSCRIPTION_SESSION"
     );
+  });
+
+  it("replaces an expired READY session after current returns null", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const expired = mockDb.createSession(note.noteId);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.parse(expired.readyExpiresAt) + 1));
+
+    try {
+      mockDb.getCurrentSession(note.noteId);
+      const replacement = mockDb.createSession(note.noteId);
+
+      expect(replacement.sessionId).not.toBe(expired.sessionId);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("derives lastRecordedAt from completed sessions, not a newer active session", () => {
+    const session = mockDb.createSession("01K0000000002");
+    mockDb.updateSessionStatus(session.sessionId, "ACTIVE");
+
+    const note = mockDb
+      .listNotes("01K0000000001")
+      .find((candidate) => candidate.noteId === "01K0000000002");
+
+    expect(note?.lastRecordedAt).toBe("2026-07-11T00:00:00Z");
   });
 
   it("keeps every persisted transcript offset non-null", () => {

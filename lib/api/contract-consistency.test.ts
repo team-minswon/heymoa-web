@@ -18,9 +18,7 @@ describe("REST and WebSocket contract consistency", () => {
     const restRequired = [
       ...rest.TranscriptResponse.properties.data.properties.segments.items
         .required,
-    ]
-      .filter((field) => field !== "transcriptionSessionId")
-      .sort();
+    ].sort();
     const socketRequired = [
       ...asyncapi.components.messages.FinalEvent.payload.required,
     ]

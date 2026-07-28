@@ -218,6 +218,7 @@ export class MockTranscriptionScenario {
     });
     this.options.send({
       type: "final",
+      transcriptionSessionId: this.options.sessionId,
       segmentId: segment.segmentId,
       utteranceId,
       sequence: segment.sequence,

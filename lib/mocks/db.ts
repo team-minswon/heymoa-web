@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import type {
   CreateWorkspaceRequest,
+  CurrentTranscriptionSessionNullableResponseData,
   CurrentUserResponseData,
   NoteListResponseDataNotesItem,
   NoteRequest,
@@ -224,6 +225,7 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-10T00:00:00Z",
       updatedAt: "2026-07-11T00:00:00Z",
       meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: "2026-07-11T00:00:00Z",
       meetingStartedBy: { userId: MOCK_USER.userId, name: MOCK_USER.name },
     },
     {
@@ -233,6 +235,7 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-09T00:00:00Z",
       updatedAt: "2026-07-09T00:00:00Z",
       meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: null,
       meetingStartedBy: null,
     },
     {
@@ -242,6 +245,7 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-12T00:00:00Z",
       updatedAt: "2026-07-12T00:05:00Z",
       meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: "2026-07-12T00:00:00Z",
       meetingStartedBy: { userId: "01K0000000099", name: "김서연" },
     },
     {
@@ -254,6 +258,7 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-08T00:00:00Z",
       updatedAt: "2026-07-08T00:00:00Z",
       meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: null,
       meetingStartedBy: null,
     },
     {
@@ -266,6 +271,7 @@ function createSeedState(): StoreState {
       createdAt: "2026-07-07T00:00:00Z",
       updatedAt: "2026-07-07T00:00:00Z",
       meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: null,
       meetingStartedBy: null,
     },
     // 날짜 묶음(오늘·어제·이번 주·지난주·이번 달·연월)과 밀도 합격선(주 콘텐츠 8개 이상)을
@@ -291,6 +297,7 @@ function createSeedState(): StoreState {
       createdAt: daysAgoIso(daysAgo as number, index),
       updatedAt: daysAgoIso(daysAgo as number, index),
       meetingStatus: "ENDED" as const,
+      meetingStartedAt: null,
       // 절반은 내가 시작한 회의로 둔다 — `내가 시작` 필터가 빈 목록만 보여주면 검증이 안 된다.
       meetingStartedBy:
         (projectIndex as number) === 0
@@ -1209,7 +1216,10 @@ export const mockDb = {
       )
       .map((note) => {
         const startedAt = state.sessions
-          .filter((session) => session.noteId === note.noteId)
+          .filter(
+            (session) =>
+              session.noteId === note.noteId && session.endedAt !== null
+          )
           .map((session) => session.startedAt)
           .filter((value): value is string => value !== null)
           .sort((a, b) => b.localeCompare(a))[0];
@@ -1233,6 +1243,7 @@ export const mockDb = {
       updatedAt: createdAt,
       // 노트는 생성 시부터 IN_PROGRESS이고, 시작자는 녹음을 처음 시작할 때 정해진다 (APP-120).
       meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: null,
       meetingStartedBy: null,
     };
     state.notes.push(note);
@@ -1264,6 +1275,18 @@ export const mockDb = {
     // **서버는 원래부터 막고 있었다** — 없던 것은 계약뿐이었고, 그래서 목과 생성 클라이언트만
     // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
+    const now = Date.now();
+    const expiredReady = state.sessions.find(
+      (session) =>
+        session.noteId === noteId &&
+        session.status === "READY" &&
+        Date.parse(session.readyExpiresAt) <= now
+    );
+    if (expiredReady) {
+      expiredReady.status = "INTERRUPTED";
+      expiredReady.endedAt = new Date(now).toISOString();
+      expiredReady.endReason = "READY_TIMEOUT";
+    }
     if (state.sessions.some((session) => ACTIVE_STATUSES.has(session.status))) {
       fail("ACTIVE_TRANSCRIPTION_SESSION");
     }
@@ -1271,7 +1294,7 @@ export const mockDb = {
       sessionId: nextId(),
       noteId,
       status: "READY",
-      readyExpiresAt: nextTimestamp(),
+      readyExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       startedAt: null,
       endedAt: null,
       endReason: null,
@@ -1291,6 +1314,28 @@ export const mockDb = {
     ) as unknown as TranscriptionSessionResponseData;
   },
 
+  getCurrentSession(
+    noteId: string
+  ): CurrentTranscriptionSessionNullableResponseData {
+    findNote(noteId);
+    const session = state.sessions.find(
+      (candidate) =>
+        candidate.noteId === noteId &&
+        (candidate.status === "ACTIVE" ||
+          (candidate.status === "READY" &&
+            Date.parse(candidate.readyExpiresAt) > Date.now()))
+    );
+    return session
+      ? {
+          sessionId: session.sessionId,
+          noteId: session.noteId,
+          status: session.status as "READY" | "ACTIVE",
+          readyExpiresAt: session.readyExpiresAt,
+          startedAt: session.startedAt,
+        }
+      : null;
+  },
+
   updateSessionStatus(
     sessionId: string,
     status: string
@@ -1299,6 +1344,7 @@ export const mockDb = {
     session.status = status;
     if (status === "ACTIVE" && !session.startedAt) {
       session.startedAt = nextTimestamp();
+      findNote(session.noteId).meetingStartedAt ??= session.startedAt;
     }
     if (TERMINAL_STATUSES.has(status)) session.endedAt = nextTimestamp();
     return copy(session) as unknown as TranscriptionSessionResponseData;

@@ -12,6 +12,7 @@ export const clientCommandSchema = z.discriminatedUnion("type", [
 
 const finalEventSchema = z.strictObject({
   type: z.literal("final"),
+  transcriptionSessionId: tsidSchema,
   segmentId: tsidSchema,
   utteranceId: tsidSchema,
   sequence: z.number().int().min(1),
@@ -68,6 +69,7 @@ export const protocolExamples = {
     },
     final: {
       type: "final",
+      transcriptionSessionId: "0HZX2K7M9Q4AB",
       segmentId: "0HZX2K7M9Q4AD",
       utteranceId: "0HZX2K7M9Q4AC",
       sequence: 1,

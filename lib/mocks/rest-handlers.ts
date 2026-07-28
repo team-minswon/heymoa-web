@@ -353,6 +353,14 @@ export const restHandlers = [
       )
     )
   ),
+  http.get(
+    "*/v1/notes/:noteId/transcription-sessions/current",
+    ({ params }) =>
+      resultOf(
+        () => mockDb.getCurrentSession(id(params.noteId)),
+        notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+      )
+  ),
   http.get("*/v1/notes/:noteId/transcript", ({ params }) =>
     resultOf(
       () => ({ segments: mockDb.listSegments(id(params.noteId)) }),

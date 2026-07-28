@@ -25,6 +25,7 @@ import type {
 
 import type {
   AppErrorResponse,
+  CurrentTranscriptionSessionNullableResponse,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
@@ -920,3 +921,382 @@ export const useStartTranscriptionSession = <
     queryClient
   );
 };
+export type getCurrentTranscriptionSessionResponse200 = {
+  data: CurrentTranscriptionSessionNullableResponse;
+  status: 200;
+};
+
+export type getCurrentTranscriptionSessionResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type getCurrentTranscriptionSessionResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getCurrentTranscriptionSessionResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getCurrentTranscriptionSessionResponseSuccess =
+  getCurrentTranscriptionSessionResponse200 & {
+    headers: Headers;
+  };
+export type getCurrentTranscriptionSessionResponseError = (
+  | getCurrentTranscriptionSessionResponse400
+  | getCurrentTranscriptionSessionResponse401
+  | getCurrentTranscriptionSessionResponse404
+) & {
+  headers: Headers;
+};
+
+export type getCurrentTranscriptionSessionResponse =
+  | getCurrentTranscriptionSessionResponseSuccess
+  | getCurrentTranscriptionSessionResponseError;
+
+export const getGetCurrentTranscriptionSessionUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/transcription-sessions/current`;
+};
+
+/**
+ * 노트의 현재 전사 세션(만료되지 않은 READY 또는 ACTIVE)을 조회한다. 현재 세션이 없으면 data가 null이다.
+ * @summary 현재 전사 세션 조회
+ */
+export const getCurrentTranscriptionSession = async (
+  noteId: string,
+  options?: RequestInit
+): Promise<getCurrentTranscriptionSessionResponse> => {
+  return apiFetch<getCurrentTranscriptionSessionResponse>(
+    getGetCurrentTranscriptionSessionUrl(noteId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetCurrentTranscriptionSessionQueryKey = (noteId: string) => {
+  return [`/v1/notes/${noteId}/transcription-sessions/current`] as const;
+};
+
+export const getGetCurrentTranscriptionSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCurrentTranscriptionSessionQueryKey(noteId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
+  > = ({ signal }) =>
+    getCurrentTranscriptionSession(noteId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: noteId !== null && noteId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCurrentTranscriptionSessionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
+>;
+export type GetCurrentTranscriptionSessionQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetCurrentTranscriptionSession<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCurrentTranscriptionSession<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCurrentTranscriptionSession<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 현재 전사 세션 조회
+ */
+
+export function useGetCurrentTranscriptionSession<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetCurrentTranscriptionSessionQueryOptions(
+    noteId,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 현재 전사 세션 조회
+ */
+export const prefetchGetCurrentTranscriptionSessionQuery = async <
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetCurrentTranscriptionSessionQueryOptions(
+    noteId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetCurrentTranscriptionSessionSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCurrentTranscriptionSessionQueryKey(noteId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
+  > = ({ signal }) =>
+    getCurrentTranscriptionSession(noteId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCurrentTranscriptionSessionSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
+>;
+export type GetCurrentTranscriptionSessionSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetCurrentTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCurrentTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCurrentTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 현재 전사 세션 조회
+ */
+
+export function useGetCurrentTranscriptionSessionSuspense<
+  TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetCurrentTranscriptionSessionSuspenseQueryOptions(
+    noteId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

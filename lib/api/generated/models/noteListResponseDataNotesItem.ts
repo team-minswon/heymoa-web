@@ -6,12 +6,18 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { NoteListResponseDataNotesItemMeetingStartedBy } from "./noteListResponseDataNotesItemMeetingStartedBy";
+import type { NoteListResponseDataNotesItemMeetingStatus } from "./noteListResponseDataNotesItemMeetingStatus";
 
 export type NoteListResponseDataNotesItem = {
+  /**
+   * 최초 활성 전사 세션의 시작 시각 (활성화된 세션이 없으면 null)
+   * @nullable
+   */
+  meetingStartedAt: string | null;
   /** 노트 생성 시각 */
   createdAt: string;
   /**
-   * 가장 최근 녹음 시작 시각
+   * 가장 최근 종료된 전사 세션의 시작 시각
    * @nullable
    */
   lastRecordedAt: string | null;
@@ -25,6 +31,8 @@ export type NoteListResponseDataNotesItem = {
    * @minimum 0
    */
   recordedDurationMs: number;
+  /** 회의 상태 */
+  meetingStatus: NoteListResponseDataNotesItemMeetingStatus;
   /**
    * 노트의 13자리 TSID
    * @minLength 13

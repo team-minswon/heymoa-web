@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 
 type NoteFilter = "all" | "mine";
 
-// v5: 상태 배지·"녹음 중" 필터는 목록 계약에 meetingStatus가 없어 만들지 않는다(FORM SPEC).
-// 필터는 전체와 내가 시작(meetingStartedBy로 판별) 둘뿐이다.
+// v5 목록 필터는 전체와 내가 시작(meetingStartedBy로 판별) 둘뿐이다.
+// meetingStatus 표시는 APP-284가 목록 행에서 맡는다.
 const FILTERS: { key: NoteFilter; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "mine", label: "내가 시작" },

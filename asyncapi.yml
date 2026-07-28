@@ -475,7 +475,8 @@ components:
       title: 저장이 완료된 확정 전사 segment
       summary: DB 저장 성공 후 sequence 오름차순으로 전송된다.
       description: |
-        `sequence`는 세션 안에서 1부터 빈틈없이 증가한다. `startedAtMs`는 직전 확정 경계이고
+        `transcriptionSessionId`가 `sequence`의 범위를 식별한다. `sequence`는 그 세션 안에서
+        1부터 빈틈없이 증가한다. `startedAtMs`는 직전 확정 경계이고
         `endedAtMs`는 그때까지 받은 오디오의 누적 길이라, 두 값은 **수신한 오디오 바이트로 계산한
         경계**이지 발화의 실제 시각이 아니다.
 
@@ -484,11 +485,13 @@ components:
         type: object
         additionalProperties: false
         required:
-          [type, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
+          [type, transcriptionSessionId, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
         properties:
           type:
             type: string
             enum: [final]
+          transcriptionSessionId:
+            $ref: "#/components/schemas/Tsid"
           segmentId:
             $ref: "#/components/schemas/Tsid"
           utteranceId:
@@ -516,6 +519,7 @@ components:
         - name: final
           payload:
             type: final
+            transcriptionSessionId: 0HZX2K7M9Q4AB
             segmentId: 0HZX2K7M9Q4AD
             utteranceId: 0HZX2K7M9Q4AC
             sequence: 1

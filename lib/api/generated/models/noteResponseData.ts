@@ -12,6 +12,11 @@ import type { NoteResponseDataMeetingStatus } from "./noteResponseDataMeetingSta
  * 성공 응답 데이터
  */
 export type NoteResponseData = {
+  /**
+   * 최초 활성 전사 세션의 시작 시각 (활성화된 세션이 없으면 null)
+   * @nullable
+   */
+  meetingStartedAt: string | null;
   /** 노트 생성 시각 */
   createdAt: string;
   /**
