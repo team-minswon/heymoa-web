@@ -829,8 +829,8 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
 
-  // v5 side 프레임 셋(oLmGL·viNgv·KCoyt)에는 레코더 독도 회의 조작도 없다. side에서
-  // 녹음만 시작되고 회의를 끝낼 곳이 없던 것이 APP-220이다 — 시작 자체를 side에서 뺀다.
+  // v5 side 프레임 셋(oLmGL·viNgv·KCoyt)에는 레코더 독이 없다. 상태·회의 종료는
+  // APP-280에서 side 헤더에 넣었지만, 녹음 시작은 계속 full 독만 맡는다.
   describe("side 녹음 시작 게이트", () => {
     function renderSide() {
       renderNotePanel(

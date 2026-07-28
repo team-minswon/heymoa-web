@@ -129,8 +129,8 @@ export function NotePanel({
   const showArchive =
     phase === "ended" && archiveState.visible && !sharedTurnActive;
 
-  // v5 side 프레임 셋(`oLmGL`·`viNgv`·`KCoyt`)에는 레코더 독도 회의 조작도 없다. side는
-  // 읽기·미리보기 면이고 주 액션은 `확장`이다. full 독도 미시작 회의와 시작자에게만 선다.
+  // v5 side 프레임 셋(`oLmGL`·`viNgv`·`KCoyt`)에는 레코더 독이 없다. APP-280에서
+  // 상태·회의 종료는 side 헤더에 넣되, 녹음 시작은 계속 full 독만 맡는다.
   //
   // **다만 도는 녹음은 남긴다.** 전역 녹음 필은 `!isWorkspaceRoute`라 워크스페이스 안에서는
   // 안 뜬다. full에서 시작하고 side로 오면 독까지 없앨 때 멈출 방법이 하나도 없다.
