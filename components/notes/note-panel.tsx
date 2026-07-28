@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDays, Expand, PanelRightClose } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { MeetingControls } from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
 import {
   NoteDetails,
@@ -32,7 +33,7 @@ import {
 } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
-export type NoteTab = "details" | "transcript" | "summary";
+export type NoteTab = "chat" | "details" | "transcript" | "summary";
 
 export function NotePanel({
   workspaceId,
@@ -89,6 +90,22 @@ export function NotePanel({
   const [sharedTurnActive, setSharedTurnActive] = useState(false);
   const meetingLive = phase === "active" || phase === "not-started";
   const showSharedTray = view === "full" && (meetingLive || sharedTurnActive);
+  const showSideChat =
+    view === "side" && (phase === "active" || sharedTurnActive);
+  const showSummaryTab =
+    view === "full" || (view === "side" && phase === "ended");
+  // 원격 종료가 공유 답변보다 먼저 도착하면 현재 챗봇 패널을 유지한다. 답변이 끝난 뒤에만
+  // 종료 상태에 유효한 기록 탭으로 넘긴다.
+  useEffect(() => {
+    if (
+      view === "side" &&
+      phase === "ended" &&
+      tab === "chat" &&
+      !sharedTurnActive
+    ) {
+      onTabChange("transcript");
+    }
+  }, [onTabChange, phase, sharedTurnActive, tab, view]);
   // 전환을 렌더 중에 접어야 ended 아카이브를 한 번 커밋했다가 읽던 전사를 다시 세우지 않는다.
   const [archiveState, setArchiveState] = useState({
     noteId,
@@ -97,6 +114,7 @@ export function NotePanel({
   });
   if (archiveState.noteId !== noteId || archiveState.phase !== phase) {
     const viewerEndTransition =
+      view === "full" &&
       archiveState.noteId === noteId &&
       archiveState.phase === "active" &&
       phase === "ended" &&
@@ -110,7 +128,10 @@ export function NotePanel({
   const archiveQueued =
     phase === "ended" && archiveState.visible && sharedTurnActive;
   const showViewerEndNotice =
-    phase === "ended" && !isStarter && (!archiveState.visible || archiveQueued);
+    view === "full" &&
+    phase === "ended" &&
+    !isStarter &&
+    (!archiveState.visible || archiveQueued);
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
   const showArchive =
     phase === "ended" && archiveState.visible && !sharedTurnActive;
@@ -180,6 +201,13 @@ export function NotePanel({
             </div>
             {view === "side" ? (
               <div className="flex shrink-0 items-center gap-2">
+                {note ? (
+                  <MeetingControls
+                    note={note}
+                    showContext
+                    onMeetingEnded={() => onTabChange("summary")}
+                  />
+                ) : null}
                 {onExpand ? (
                   <Button
                     type="button"
@@ -227,9 +255,18 @@ export function NotePanel({
                 variant="line"
                 className="h-11 w-full justify-start gap-6"
               >
-                <TabsTrigger value="transcript">실시간 전사</TabsTrigger>
+                <TabsTrigger value="transcript">
+                  {view === "side"
+                    ? phase === "ended"
+                      ? "기록"
+                      : "전사"
+                    : "실시간 전사"}
+                </TabsTrigger>
+                {showSideChat ? (
+                  <TabsTrigger value="chat">챗봇</TabsTrigger>
+                ) : null}
                 {/* 요약은 종료 시 생성되지만 full은 항상 3탭 — 종료 전엔 탭이 안내를 보인다. */}
-                {view === "full" ? (
+                {showSummaryTab ? (
                   <TabsTrigger value="summary">요약</TabsTrigger>
                 ) : null}
                 <TabsTrigger value="details">노트 정보</TabsTrigger>
@@ -282,11 +319,22 @@ export function NotePanel({
               )}
             </div>
           </TabsContent>
-          <TabsContent value="summary" className="min-h-0 flex-1">
-            <ScrollArea className="h-full">
-              <NoteSummary noteId={noteId} isEnded={phase === "ended"} />
-            </ScrollArea>
-          </TabsContent>
+          {showSideChat ? (
+            <TabsContent value="chat" keepMounted className="min-h-0 flex-1">
+              <SharedChatPanel
+                noteId={noteId}
+                phase={phase}
+                onTurnActiveChange={setSharedTurnActive}
+              />
+            </TabsContent>
+          ) : null}
+          {showSummaryTab ? (
+            <TabsContent value="summary" className="min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <NoteSummary noteId={noteId} isEnded={phase === "ended"} />
+              </ScrollArea>
+            </TabsContent>
+          ) : null}
           <TabsContent value="details" className="min-h-0 flex-1">
             <ScrollArea className="h-full">
               <DataBoundary

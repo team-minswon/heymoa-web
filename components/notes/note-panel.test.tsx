@@ -101,6 +101,20 @@ vi.mock("@/components/notes/note-summary", () => ({
     <div data-testid="note-summary" data-ended={isEnded} />
   ),
 }));
+vi.mock("@/components/notes/meeting-end-dialog", () => ({
+  MeetingEndDialog: ({
+    open,
+    onEnded,
+  }: {
+    open: boolean;
+    onEnded?: () => void;
+  }) =>
+    open ? (
+      <button type="button" onClick={onEnded}>
+        종료 확인
+      </button>
+    ) : null,
+}));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNoteQueryKey: (noteId: string) => [`/v1/notes/${noteId}`],
   useGetNote: () =>
@@ -213,9 +227,7 @@ describe("NotePanel", () => {
       />
     );
 
-    expect(
-      screen.getByRole("tab", { name: "실시간 전사" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "전사" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "노트 정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
@@ -395,18 +407,49 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeTruthy();
   });
 
-  it("side 모드에는 트레이가 없다", () => {
+  it("side + 활성은 전사·챗봇·노트 정보 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
         view="side"
-        tab="transcript"
+        tab="chat"
         onTabChange={vi.fn()}
         onClose={vi.fn()}
       />
     );
-    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+
+    expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
+      "전사",
+      "챗봇",
+      "노트 정보",
+    ]);
+    expect(
+      screen
+        .getByTestId("shared-chat-panel")
+        .closest('[data-slot="tabs-content"]')
+    ).toBeInTheDocument();
+  });
+
+  it("side 챗봇은 다른 탭으로 이동해도 같은 패널을 keepMounted한다", () => {
+    const panel = (tab: "chat" | "transcript") => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab={tab}
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(panel("chat"));
+    const sharedPanel = screen.getByTestId("shared-chat-panel");
+
+    fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
+    rerenderNote(panel("transcript"));
+
+    expect(screen.getByTestId("shared-chat-panel")).toBe(sharedPanel);
+    expect(sharedPanel.closest('[data-slot="tabs-content"]')).not.toBeVisible();
   });
 
   it("full 모드는 요약 탭을 두되, 회의 조작은 상단바로 올려 패널에 두지 않는다", () => {
@@ -427,7 +470,8 @@ describe("NotePanel", () => {
     expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
   });
 
-  it("side 모드에는 요약 탭이 없다", () => {
+  it("side + 종료는 기록·요약·노트 정보 탭과 아카이브를 보인다", () => {
+    noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -438,8 +482,85 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
-    expect(screen.queryByRole("tab", { name: "요약" })).toBeNull();
-    expect(screen.queryByTestId("meeting-controls")).toBeNull();
+
+    expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
+      "기록",
+      "요약",
+      "노트 정보",
+    ]);
+    expect(screen.getByTestId("note-archive")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
+  });
+
+  it("side 헤더는 회의 맥락을 보이고 종료 성공 뒤 요약 탭으로 이동한다", () => {
+    const onTabChange = vi.fn();
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={onTabChange}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("진행 중")).toBeInTheDocument();
+    expect(screen.getByText("테스트 유저")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+    fireEvent.click(screen.getByRole("button", { name: "종료 확인" }));
+
+    expect(onTabChange).toHaveBeenCalledWith("summary");
+  });
+
+  it("side의 공유 턴 중 회의가 끝나면 패널을 보존하고 턴 종료 뒤 기록으로 전환한다", async () => {
+    authState.userId = "u2";
+    const onTabChange = vi.fn();
+    const panel = (tab: "chat" | "transcript") => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab={tab}
+        onTabChange={onTabChange}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(panel("chat"));
+
+    fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
+    noteState.value.meetingStatus = "ENDED";
+    rerenderNote(panel("chat"));
+
+    expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("note-archive")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "턴 끝" }));
+    await waitFor(() => expect(onTabChange).toHaveBeenCalledWith("transcript"));
+    rerenderNote(panel("transcript"));
+
+    expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
+    expect(screen.getByTestId("note-archive")).toBeInTheDocument();
+  });
+
+  it("side + 미시작은 전사·노트 정보만 보이고 기록 시작 조작은 없다", () => {
+    noteState.value.meetingStartedBy = null;
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
+      "전사",
+      "노트 정보",
+    ]);
+    expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
   });
 
   // 계약의 startTranscriptionSession에는 아직 종료 거절 코드가 없다 — 서버가 안 막으므로
