@@ -258,4 +258,11 @@ describe("SharedChatPanel", () => {
     expect(screen.getByText("아직 회의가 시작되지 않았습니다")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
   });
+
+  it("회의 상태를 모르면 입력 대신 확인 중 안내를 보인다", () => {
+    renderPanel("unknown");
+    expect(screen.getByText("회의 상태를 확인하는 중입니다")).toBeTruthy();
+    expect(screen.queryByLabelText("메시지")).toBeNull();
+    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+  });
 });

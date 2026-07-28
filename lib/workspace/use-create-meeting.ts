@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
@@ -25,6 +25,7 @@ const ACTIVE_RECORDING_PHASES = [
  */
 export function useCreateMeeting(workspaceId: string) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const recording = useRecording();
   const createNote = useCreateNote();
@@ -43,6 +44,9 @@ export function useCreateMeeting(workspaceId: string) {
   const createMeeting = async () => {
     if (isRecordingActive) {
       if (activeRecordingNoteId) {
+        if (pathname === `/w/${workspaceId}/notes/${activeRecordingNoteId}`) {
+          return;
+        }
         router.push(
           `/w/${workspaceId}/notes/${activeRecordingNoteId}?view=side&tab=transcript`
         );

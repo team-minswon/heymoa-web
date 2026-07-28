@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { usePersonalChatScope } from "@/components/chat/personal-chat";
@@ -10,23 +10,33 @@ import { useGetNote } from "@/lib/api/generated/notes/notes";
 import {
   deriveMeetingPhase,
   isPersonalChatHiddenInNote,
+  type SharedChatPhase,
 } from "@/lib/notes/meeting-state";
 
 type NoteViewMode = "side" | "full";
 
-export function normalizeNoteViewQuery(query: {
-  view?: string | string[];
-  tab?: string | string[];
-}): { view: NoteViewMode; tab: NoteTab } {
+export function normalizeNoteViewQuery(
+  query: {
+    view?: string | string[];
+    tab?: string | string[];
+  },
+  phase: SharedChatPhase,
+  sharedTurnActive = false
+): { view: NoteViewMode; tab: NoteTab } {
   const view = query.view === "side" ? "side" : "full";
   const rawTab = query.tab;
-  // 요약 탭은 full 전용(side는 2탭) — side에서 summary 요청은 전사로 떨어뜨린다.
+  // unknown에서는 직링크를 보존한다. 노트를 읽은 뒤 아래 effect가 실제 phase에 맞게 URL도 고친다.
   const tab: NoteTab =
     rawTab === "details"
       ? "details"
-      : rawTab === "summary" && view === "full"
+      : rawTab === "summary" &&
+          (view === "full" || phase === "ended" || phase === "unknown")
         ? "summary"
-        : "transcript";
+        : rawTab === "chat" &&
+            view === "side" &&
+            (phase === "active" || phase === "unknown" || sharedTurnActive)
+          ? "chat"
+          : "transcript";
   return { view, tab };
 }
 
@@ -42,10 +52,11 @@ export function NoteView({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const current = normalizeNoteViewQuery({
+  const search = searchParams.toString();
+  const requested = {
     view: searchParams.get("view") ?? initialQuery.view,
     tab: searchParams.get("tab") ?? initialQuery.tab,
-  });
+  };
 
   // 개인 챗봇은 side에서 감춰지고, full에서도 공유 챗봇 트레이가 레일을 독차지하는 동안
   // (활성·미시작) 감춰진다. 종료(ENDED)면 우측이 개인 챗봇으로 돌아온다(`TqX06`).
@@ -57,6 +68,8 @@ export function NoteView({
       ? noteQuery.data.data.data
       : undefined;
   const phase = deriveMeetingPhase(note);
+  const [sharedTurnActive, setSharedTurnActive] = useState(false);
+  const current = normalizeNoteViewQuery(requested, phase, sharedTurnActive);
   usePersonalChatScope({
     noteId,
     hidden: isPersonalChatHiddenInNote(
@@ -67,12 +80,44 @@ export function NoteView({
   });
 
   const [isOpen, setIsOpen] = useState(false);
+  const pendingSearchRef = useRef<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
     // Wait for the initial render to commit before triggering the open transition
     const timer = setTimeout(() => setIsOpen(true), 10);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const pendingSearch = pendingSearchRef.current;
+    if (pendingSearch) {
+      if (search === pendingSearch.to) {
+        pendingSearchRef.current = null;
+      } else if (search === pendingSearch.from) {
+        return;
+      } else {
+        pendingSearchRef.current = null;
+      }
+    }
+    if (
+      (requested.view ?? "full") === current.view &&
+      (requested.tab ?? "transcript") === current.tab
+    ) {
+      return;
+    }
+    const next = new URLSearchParams(search);
+    next.set("view", current.view);
+    next.set("tab", current.tab);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  }, [
+    current.tab,
+    current.view,
+    pathname,
+    requested.tab,
+    requested.view,
+    router,
+    search,
+  ]);
 
   const closeWithAnim = () => {
     setIsOpen(false);
@@ -83,10 +128,17 @@ export function NoteView({
   };
 
   const setQuery = (updates: Partial<{ view: NoteViewMode; tab: NoteTab }>) => {
-    const next = new URLSearchParams(searchParams.toString());
+    const next = new URLSearchParams(search);
+    // 회의 종료 성공 콜백은 쿼리 캐시 구독자가 ENDED로 다시 그리기 직전에 올 수 있다.
+    // 여기서 이전 phase로 정규화하면 의도한 summary가 transcript로 유실된다. 이벤트 의도를
+    // 먼저 URL에 쓰고, 위 effect가 다음 렌더의 실제 phase로 유효하지 않은 조합만 고친다.
     next.set("view", updates.view ?? current.view);
     next.set("tab", updates.tab ?? current.tab);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    const nextSearch = next.toString();
+    if (nextSearch !== search) {
+      pendingSearchRef.current = { from: search, to: nextSearch };
+    }
+    router.replace(`${pathname}?${nextSearch}`, { scroll: false });
   };
 
   return (
@@ -101,6 +153,7 @@ export function NoteView({
         view={current.view}
         tab={current.tab}
         onTabChange={(tab) => setQuery({ tab })}
+        onSharedTurnActiveChange={setSharedTurnActive}
         onClose={closeWithAnim}
         onExpand={
           current.view === "side" ? () => setQuery({ view: "full" }) : undefined

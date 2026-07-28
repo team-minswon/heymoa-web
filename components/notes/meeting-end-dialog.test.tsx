@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
@@ -113,6 +119,52 @@ describe("MeetingEndDialog", () => {
       data: { data: { meetingStatus: string } };
     };
     expect(cached.data.data.meetingStatus).toBe("ENDED");
+  });
+
+  it("종료 전에 시작된 노트 조회가 늦게 끝나도 ENDED를 되돌리지 않는다", async () => {
+    state.endMock.mockImplementation((_vars, options) =>
+      options?.onSuccess?.()
+    );
+    const { client } = renderDialog();
+    const queryKey = ["note", "01K0000000002"];
+    const inProgress = {
+      status: 200,
+      data: {
+        success: true,
+        data: { noteId: "01K0000000002", meetingStatus: "IN_PROGRESS" },
+      },
+    };
+    client.setQueryData(queryKey, inProgress);
+    let resolveGetNote!: (value: typeof inProgress) => void;
+    const getNote = new Promise<typeof inProgress>((resolve) => {
+      resolveGetNote = resolve;
+    });
+    const pendingGetNote = client.fetchQuery({
+      queryKey,
+      queryFn: () => getNote,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+    expect(
+      (
+        client.getQueryData(queryKey) as {
+          data: { data: { meetingStatus: string } };
+        }
+      ).data.data.meetingStatus
+    ).toBe("ENDED");
+
+    await act(async () => {
+      resolveGetNote(inProgress);
+      await pendingGetNote;
+    });
+
+    expect(
+      (
+        client.getQueryData(queryKey) as {
+          data: { data: { meetingStatus: string } };
+        }
+      ).data.data.meetingStatus
+    ).toBe("ENDED");
   });
 
   it("녹음 중이면 종료 대신 녹음 중지를 준다", () => {
