@@ -46,7 +46,7 @@ vi.mock("@/components/transcription/recording-provider", async () => {
                     status: recordingState.sessionStatus,
                   },
                 }
-              : {}),
+              : { session: null }),
           }
         : {}),
     }),
@@ -942,6 +942,17 @@ describe("NotePanel", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "failed";
       recordingState.sessionStatus = "ACTIVE";
+
+      renderSide();
+
+      expect(
+        screen.getByRole("button", { name: "다시 시도" })
+      ).toBeInTheDocument();
+    });
+
+    it("세션 없이 실패해도 side에서 재시도를 제공한다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "failed";
 
       renderSide();
 

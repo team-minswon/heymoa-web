@@ -136,12 +136,13 @@ export function NotePanel({
   // (프레임 셋이 전부 종료된 회의라 "라이브를 side로 볼 때"는 그려진 적이 없다 — 추론이다.)
   //
   // 판정은 `isNoteRecordingActive`를 쓴다. `activeNoteId`는 종료 뒤에도 남고 phase가
-  // `completed`·`failed`로 가므로 "idle이 아님"으로 보면 끝난 녹음에도 독이 다시 서서
-  // side에서 시작 버튼이 살아난다. 그 함수는 진행 phase와 **서버 세션이 아직 열린** failed만
-  // 활성으로 본다 — 후자는 정리할 세션이 남아 있어 독이 필요한 경우다.
+  // `completed`로 가므로 "idle이 아님"으로 보면 끝난 녹음에도 독이 다시 선다.
+  // failed는 서버 세션이 없어도 권한 거부 등을 재시도해야 하므로 이 화면에서만 독을 남긴다.
+  // 공용 selector까지 넓히면 세션 없는 실패를 활성 녹음으로 오인해 회의 종료를 막는다.
   const recording = useRecording();
   const showDock =
     isNoteRecordingActive(recording, noteId) ||
+    (recording.activeNoteId === noteId && recording.phase === "failed") ||
     (view === "full" && (phase === "not-started" || isStarter));
 
   // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. side의 idle 독은 showDock에서
