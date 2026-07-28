@@ -28,6 +28,7 @@ describe("transcriptReducer", () => {
     });
     const final = transcriptReducer(partial, {
       type: "final",
+      transcriptionSessionId: "0HZX2K7M9Q4AB",
       segmentId: "0HZX2K7M9Q4AD",
       utteranceId: "0HZX2K7M9Q4AC",
       sequence: 1,

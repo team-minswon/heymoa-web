@@ -35,6 +35,8 @@ function note(
     updatedAt,
     lastRecordedAt: null,
     recordedDurationMs: 0,
+    meetingStatus: "IN_PROGRESS",
+    meetingStartedAt: null,
     meetingStartedBy: null,
   };
 }

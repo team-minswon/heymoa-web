@@ -32,6 +32,8 @@ function note(): NoteListResponseDataNotesItem {
     updatedAt: "2026-07-11T00:00:00Z",
     lastRecordedAt: "2026-07-11T00:00:00Z",
     recordedDurationMs: 65_000,
+    meetingStatus: "IN_PROGRESS",
+    meetingStartedAt: "2026-07-11T00:00:00Z",
     meetingStartedBy: null,
   };
 }
