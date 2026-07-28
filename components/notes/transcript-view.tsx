@@ -15,6 +15,7 @@ import {
   groupTranscriptSegments,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
+import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 
 const FOLLOW_THRESHOLD_PX = 180;
 
@@ -29,21 +30,23 @@ function getDistanceFromBottom(viewport: HTMLElement) {
   return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
 }
 
-export function TranscriptView({ noteId }: { noteId: string }) {
+export function TranscriptView({
+  noteId,
+  phase,
+}: {
+  noteId: string;
+  phase: SharedChatPhase;
+}) {
   const recording = useRecording();
   const liveTranscript = useRecordingTranscript();
   const liveForNote =
     (recording.activeNoteId ?? recording.session?.noteId) === noteId;
-  const active = Boolean(
-    liveForNote &&
-    ["requesting-permission", "connecting", "recording", "stopping"].includes(
-      recording.phase
-    )
-  );
+  const serverActive = phase === "active";
+  const viewerLive = serverActive || liveForNote;
   const transcriptQuery = useGetNoteTranscript(noteId, {
     query: {
-      staleTime: active ? 0 : 60_000,
-      refetchInterval: active ? 2_500 : false,
+      staleTime: serverActive ? 0 : 60_000,
+      refetchInterval: serverActive ? 2_500 : false,
       refetchOnWindowFocus: true,
     },
   });
@@ -162,16 +165,26 @@ export function TranscriptView({ noteId }: { noteId: string }) {
   }, [updateFollowing]);
 
   useEffect(() => {
-    if (!active) return;
+    if (!serverActive || transcriptQuery.isPending) return;
     const frame = window.requestAnimationFrame(() => scrollToLatest("auto"));
     return () => window.cancelAnimationFrame(frame);
-  }, [active, scrollToLatest]);
+  }, [scrollToLatest, serverActive, transcriptQuery.isPending]);
 
   useEffect(() => {
-    if (!liveForNote || !followingRef.current) return;
+    if (
+      transcriptQuery.isPending ||
+      !viewerLive ||
+      !followingRef.current
+    )
+      return;
     const frame = window.requestAnimationFrame(() => scrollToLatest("auto"));
     return () => window.cancelAnimationFrame(frame);
-  }, [liveContentKey, liveForNote, scrollToLatest]);
+  }, [
+    liveContentKey,
+    scrollToLatest,
+    transcriptQuery.isPending,
+    viewerLive,
+  ]);
 
   useEffect(
     () => () => {
@@ -205,7 +218,10 @@ export function TranscriptView({ noteId }: { noteId: string }) {
       <div className="mx-auto w-full max-w-[820px] px-5 pb-28 pt-7 sm:px-9 sm:pt-9">
         {/* v5: 제품 면 대문자 키커·세리프 헤더 제거 — 탭이 이미 위치를 말한다(FORM SPEC).
             녹음 상태는 상단바·레코더 독이 표시한다. 전사 행이 바로 시작한다. */}
-        <section aria-label="회의 전사">
+        <section
+          role={transcriptQuery.isPending ? undefined : "log"}
+          aria-label="회의 전사"
+        >
           {transcriptQuery.isPending ? (
             <div className="space-y-4" aria-label="대화 기록 불러오는 중">
               <Skeleton className="h-24 rounded-block" />
@@ -249,7 +265,7 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                 </article>
               ) : null}
 
-              {!blocks.length && !active ? (
+              {!blocks.length && !viewerLive && phase === "not-started" ? (
                 <div className="flex min-h-72 flex-col justify-center border-b border-[var(--el-hairline)] py-12">
                   <span
                     aria-hidden
@@ -267,7 +283,7 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                 </div>
               ) : null}
 
-              {!blocks.length && active && !partialText ? (
+              {!blocks.length && viewerLive && !partialText ? (
                 <div className="flex min-h-64 flex-col items-center justify-center text-center">
                   <span className="flex items-end gap-1" aria-hidden>
                     {[0.35, 0.7, 1, 0.55, 0.3].map((height, index) => (
@@ -288,6 +304,12 @@ export function TranscriptView({ noteId }: { noteId: string }) {
                     자연스럽게 말씀해 주세요.
                   </p>
                 </div>
+              ) : null}
+
+              {!blocks.length && !viewerLive && phase !== "not-started" ? (
+                <p className="py-8 text-sm text-[var(--el-muted)]">
+                  전사된 대화가 없습니다.
+                </p>
               ) : null}
             </div>
           )}

@@ -46,7 +46,7 @@ describe("mockDb", () => {
           .listProjects(workspace.workspaceId)
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
-    ).toHaveLength(12);
+    ).toHaveLength(13);
   });
 
   it("keeps exactly one explicit default workspace", () => {
@@ -97,6 +97,22 @@ describe("mockDb", () => {
           Number.isInteger(segment.endedAtMs)
       )
     ).toBe(true);
+  });
+
+  it("seeds an in-progress meeting started by another user with a transcript", () => {
+    const foreignNote = mockDb
+      .listWorkspaces()
+      .flatMap((workspace) => mockDb.listProjects(workspace.workspaceId))
+      .flatMap((project) => mockDb.listNotes(project.projectId))
+      .find(
+        (note) =>
+          note.meetingStartedBy?.userId !== undefined &&
+          note.meetingStartedBy.userId !== MOCK_USER.userId &&
+          mockDb.getNote(note.noteId).meetingStatus === "IN_PROGRESS"
+      );
+
+    expect(foreignNote).toBeDefined();
+    expect(mockDb.listSegments(foreignNote!.noteId)).toHaveLength(3);
   });
 });
 

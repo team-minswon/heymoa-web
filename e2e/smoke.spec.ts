@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /**
  * MSW의 브라우저 서비스 워커 경로를 덮는 스모크. vitest는 jsdom이라 이 경로를 지나지 않는데
@@ -8,6 +8,62 @@ import { expect, test } from "@playwright/test";
  */
 
 const MOCK_WORKSPACE_ID = "01K0000000000";
+const FOREIGN_VIEWER_NOTE_ID = "01K0000000028";
+
+async function expectForeignViewerTranscript(
+  page: Page,
+  viewportSize: { width: number; height: number }
+) {
+  await page.setViewportSize(viewportSize);
+  let transcriptRequestCount = 0;
+  const countTranscriptRequest = (request: { url: () => string }) => {
+    if (
+      new URL(request.url()).pathname ===
+      `/v1/notes/${FOREIGN_VIEWER_NOTE_ID}/transcript`
+    ) {
+      transcriptRequestCount += 1;
+    }
+  };
+  page.on("request", countTranscriptRequest);
+
+  try {
+    await page.goto(
+      `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=full`
+    );
+
+    const blocks = page.getByTestId("transcript-block");
+    await expect(blocks.first()).toContainText(
+      "파트너 요구사항을 먼저 확인하겠습니다."
+    );
+    await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
+    const initialBlockCount = await blocks.count();
+    expect(initialBlockCount).toBeGreaterThan(0);
+
+    const transcriptViewport = page
+      .locator('[data-slot="scroll-area"]')
+      .filter({ has: page.getByRole("log", { name: "회의 전사" }) })
+      .locator('[data-slot="scroll-area-viewport"]');
+    await expect(transcriptViewport).toBeVisible();
+    await expect
+      .poll(() => transcriptRequestCount, { timeout: 8_000 })
+      .toBeGreaterThanOrEqual(3);
+    await expect
+      .poll(() => blocks.count(), { timeout: 8_000 })
+      .toBeGreaterThan(initialBlockCount);
+
+    const metrics = await transcriptViewport.evaluate((element) => ({
+      scrollTop: element.scrollTop,
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }));
+    expect(metrics.scrollHeight - metrics.clientHeight).toBeGreaterThan(0);
+    expect(
+      metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
+    ).toBeLessThanOrEqual(1);
+  } finally {
+    page.off("request", countTranscriptRequest);
+  }
+}
 
 test("boots with the MSW service worker registered", async ({ page }) => {
   await page.goto("/");
@@ -23,6 +79,63 @@ test("renders the workspace surface from mock data", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   await expect(page.getByText("테스트 유저의 워크스페이스")).toBeVisible();
+});
+
+test("renders the foreign viewer transcript without recording controls", async ({
+  page,
+}) => {
+  await page.addInitScript((transcriptPath) => {
+    const originalFetch = window.fetch.bind(window);
+    let transcriptPollCount = 0;
+
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      const input = args[0];
+      const url = input instanceof Request ? input.url : String(input);
+      if (new URL(url, window.location.href).pathname !== transcriptPath) {
+        return response;
+      }
+
+      transcriptPollCount += 1;
+      if (transcriptPollCount < 2 || !response.ok) return response;
+
+      const body = await response.clone().json();
+      const segments = body.data?.segments;
+      if (!Array.isArray(segments) || segments.length === 0) return response;
+
+      const last = segments.at(-1);
+      const added = Array.from({ length: 12 }, (_, index) => {
+        const startedAtMs = last.endedAtMs + (index + 1) * 4_000;
+        return {
+          ...last,
+          segmentId: `01K${String(index + 100).padStart(10, "0")}`,
+          sequence: last.sequence + index + 1,
+          text: `폴링으로 도착한 추가 전사 ${index + 1}입니다.`,
+          startedAtMs,
+          endedAtMs: startedAtMs + 1_800,
+        };
+      });
+
+      return new Response(
+        JSON.stringify({
+          ...body,
+          data: { ...body.data, segments: [...segments, ...added] },
+        }),
+        {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+        }
+      );
+    };
+  }, `/v1/notes/${FOREIGN_VIEWER_NOTE_ID}/transcript`);
+
+  for (const viewportSize of [
+    { width: 1280, height: 720 },
+    { width: 375, height: 812 },
+  ]) {
+    await expectForeignViewerTranscript(page, viewportSize);
+  }
 });
 
 /**

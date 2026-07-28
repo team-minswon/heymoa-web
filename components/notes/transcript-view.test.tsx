@@ -9,8 +9,25 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TranscriptView } from "@/components/notes/transcript-view";
+import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 
 const NOTE_ID = "01K0000000002";
+const POLLED_SEGMENT = {
+  segmentId: "01K0000000100",
+  transcriptionSessionId: "01K0000000010",
+  sequence: 1,
+  text: "폴링 전 발화입니다.",
+  startedAtMs: 0,
+  endedAtMs: 900,
+};
+const NEW_POLLED_SEGMENT = {
+  segmentId: "01K0000000101",
+  transcriptionSessionId: "01K0000000010",
+  sequence: 2,
+  text: "폴링으로 도착한 발화입니다.",
+  startedAtMs: 1_000,
+  endedAtMs: 1_900,
+};
 const useRecording = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 const useGetNoteTranscript = vi.hoisted(() =>
@@ -106,13 +123,23 @@ function idleState() {
   };
 }
 
-function renderTranscript() {
+function transcriptResult(segments: unknown[]) {
+  return {
+    data: { status: 200, data: { success: true, data: { segments } } },
+    isPending: false,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  };
+}
+
+function renderTranscript(phase: SharedChatPhase = "active") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const result = render(
     <QueryClientProvider client={client}>
-      <TranscriptView noteId={NOTE_ID} />
+      <TranscriptView noteId={NOTE_ID} phase={phase} />
     </QueryClientProvider>
   );
 
@@ -121,10 +148,22 @@ function renderTranscript() {
     rerenderTranscript: () =>
       result.rerender(
         <QueryClientProvider client={client}>
-          <TranscriptView noteId={NOTE_ID} />
+          <TranscriptView noteId={NOTE_ID} phase={phase} />
         </QueryClientProvider>
       ),
   };
+}
+
+function deferAnimationFrames() {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    vi.fn((callback: FrameRequestCallback) => {
+      frames.push(callback);
+      return frames.length;
+    })
+  );
+  return () => frames.splice(0).forEach((frame) => frame(0));
 }
 
 function setScrollMetrics(
@@ -180,6 +219,160 @@ describe("TranscriptView", () => {
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
   });
 
+  it("polls the persisted transcript for an active server meeting even when local recording is idle", () => {
+    useRecording.mockReturnValue(idleState());
+
+    renderTranscript("active");
+
+    expect(useGetNoteTranscript).toHaveBeenCalledWith(
+      NOTE_ID,
+      expect.objectContaining({
+        query: expect.objectContaining({
+          staleTime: 0,
+          refetchInterval: 2_500,
+        }),
+      })
+    );
+  });
+
+  it("does not poll the persisted transcript before the server meeting starts", () => {
+    useRecording.mockReturnValue(idleState());
+
+    renderTranscript("not-started");
+
+    expect(useGetNoteTranscript).toHaveBeenCalledWith(
+      NOTE_ID,
+      expect.objectContaining({
+        query: expect.objectContaining({
+          refetchInterval: false,
+        }),
+      })
+    );
+  });
+
+  it("lands on the latest transcript after an active viewer finishes loading", () => {
+    const flushAnimationFrames = deferAnimationFrames();
+    useRecording.mockReturnValue(idleState());
+    useGetNoteTranscript.mockReturnValueOnce({
+      data: undefined,
+      isPending: true,
+      isFetching: true,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    scrollTo.mockClear();
+
+    const { container, rerenderTranscript } = renderTranscript("active");
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    setScrollMetrics(viewport!, { scrollTop: 0, scrollHeight: 200 });
+    flushAnimationFrames();
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    setScrollMetrics(viewport!, { scrollTop: 0, scrollHeight: 1_000 });
+    rerenderTranscript();
+    flushAnimationFrames();
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 1_000,
+      behavior: "auto",
+    });
+  });
+
+  it("shows the waiting copy for an active server meeting with no transcript", () => {
+    useRecording.mockReturnValue(idleState());
+    useGetNoteTranscript.mockReturnValueOnce(transcriptResult([]));
+
+    renderTranscript("active");
+
+    expect(screen.getByText("첫 발화를 기다리고 있습니다")).toBeInTheDocument();
+  });
+
+  it("shows the waiting copy while local recording starts before the server phase catches up", () => {
+    const recording = recordingState("");
+    recording.transcript.finalSegments = [];
+    useRecording.mockReturnValue(recording);
+    useGetNoteTranscript.mockReturnValueOnce(transcriptResult([]));
+
+    renderTranscript("not-started");
+
+    expect(screen.getByText("첫 발화를 기다리고 있습니다")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/기록을 시작하고 평소처럼 대화하세요/)
+    ).toBeNull();
+  });
+
+  it.each(["unknown", "ended"] as const)(
+    "shows neutral empty copy when the server phase is %s",
+    (phase) => {
+      useRecording.mockReturnValue(idleState());
+      useGetNoteTranscript.mockReturnValueOnce(transcriptResult([]));
+
+      renderTranscript(phase);
+
+      expect(screen.getByText("전사된 대화가 없습니다.")).toBeInTheDocument();
+      expect(
+        screen.queryByText(/기록을 시작하고 평소처럼 대화하세요/)
+      ).toBeNull();
+    }
+  );
+
+  it("follows persisted segments added by polling while the active viewer stays near the bottom", () => {
+    const flushAnimationFrames = deferAnimationFrames();
+    useRecording.mockReturnValue(idleState());
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT])
+    );
+
+    const { container, rerenderTranscript } = renderTranscript("active");
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    setScrollMetrics(viewport!, { scrollTop: 450 });
+    flushAnimationFrames();
+    fireEvent.scroll(viewport!);
+    scrollTo.mockClear();
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT, NEW_POLLED_SEGMENT])
+    );
+
+    rerenderTranscript();
+    flushAnimationFrames();
+
+    expect(screen.getByText(/폴링으로 도착한 발화입니다/)).toBeInTheDocument();
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 1_000,
+      behavior: "auto",
+    });
+  });
+
+  it("does not follow persisted segments added by polling after the active viewer scrolls up", () => {
+    const flushAnimationFrames = deferAnimationFrames();
+    useRecording.mockReturnValue(idleState());
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT])
+    );
+
+    const { container, rerenderTranscript } = renderTranscript("active");
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    setScrollMetrics(viewport!, { scrollTop: 100 });
+    flushAnimationFrames();
+    fireEvent.scroll(viewport!);
+    scrollTo.mockClear();
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT, NEW_POLLED_SEGMENT])
+    );
+
+    rerenderTranscript();
+    flushAnimationFrames();
+
+    expect(screen.getByText(/폴링으로 도착한 발화입니다/)).toBeInTheDocument();
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   it("groups adjacent finals into presentation blocks and keeps the partial live", () => {
     renderTranscript();
 
@@ -207,6 +400,28 @@ describe("TranscriptView", () => {
         query: expect.objectContaining({ refetchInterval: 2_500 }),
       })
     );
+  });
+
+  it("exposes sequential transcript additions as an accessible log", () => {
+    renderTranscript();
+
+    expect(
+      screen.getByRole("log", { name: "회의 전사" })
+    ).toBeInTheDocument();
+  });
+
+  it("does not expose the pending transcript skeleton as a live log", () => {
+    useGetNoteTranscript.mockReturnValueOnce({
+      data: undefined,
+      isPending: true,
+      isFetching: true,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderTranscript();
+
+    expect(screen.queryByRole("log", { name: "회의 전사" })).toBeNull();
   });
 
   it("shows a retryable toast instead of inserting a transcript error into the page", async () => {

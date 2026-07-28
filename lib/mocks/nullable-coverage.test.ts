@@ -114,12 +114,19 @@ function contractSamples() {
 
   const notes = tuples.filter((tuple) => tuple.noteId).map((t) => t.noteId!);
 
-  // 회의를 끝낼 수 있는 노트는 아직 진행 중인 것뿐이다. **위치가 아니라 상태로 고른다** —
+  // 현재 유저가 끝낼 수 있는 노트는 아직 진행 중이고 시작자가 없거나 현재 유저인 것뿐이다.
+  // **위치가 아니라 상태로 고른다** —
   // 시드에 종료된 노트가 늘면 `notes[0]`이 그쪽으로 바뀌어 표본 생성이 통째로 깨진다.
   // 상태는 상세에만 있다 — 목록 계약에는 `meetingStatus`가 없다.
-  const inProgress = notes.filter(
-    (noteId) => mockDb.getNote(noteId).meetingStatus === "IN_PROGRESS"
-  );
+  const currentUserId = mockDb.getCurrentUser().userId;
+  const inProgress = notes.filter((noteId) => {
+    const note = mockDb.getNote(noteId);
+    return (
+      note.meetingStatus === "IN_PROGRESS" &&
+      (note.meetingStartedBy === null ||
+        note.meetingStartedBy.userId === currentUserId)
+    );
+  });
 
   // 분석은 시드에 없어 모든 노트가 404다. 회의를 끝내 PENDING(결과 전부 null) 하나와
   // SUCCEEDED(결과 비-null) 하나를 만든다 — 두 쪽이 다 있어야 표본이 성립한다.

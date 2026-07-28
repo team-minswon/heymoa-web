@@ -8,7 +8,6 @@ import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -246,7 +245,7 @@ export function SharedChatPanel({
                 onApprove={approval.approve}
                 approvalCard={approval.card}
                 emptyState={
-                  phase === "not-started" ? (
+                  isSpectator ? null : phase === "not-started" ? (
                     <p className="text-sm text-[var(--el-muted)]">
                       녹음을 시작하면 이 회의에 대해 물어볼 수 있습니다.
                     </p>
@@ -353,18 +352,6 @@ function Composer({
               `${pendingApproval.tool} 실행을 검토하고 있습니다.`)
             : "입력을 마칠 때까지 기다려 주세요."
         }
-        input={
-          <Input
-            value=""
-            disabled
-            aria-label="메시지"
-            placeholder={
-              waiting
-                ? `${lockedByLabel}님이 승인을 마칠 때까지 기다려 주세요`
-                : `${lockedByLabel}님이 입력을 마칠 때까지 기다려 주세요`
-            }
-          />
-        }
       />
     );
   }
@@ -387,13 +374,11 @@ function ComposerNotice({
   title,
   description,
   action,
-  input,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
   action?: React.ReactNode;
-  input?: React.ReactNode;
 }) {
   return (
     <div className="border-t border-[var(--el-hairline)] px-5 py-4">
@@ -412,7 +397,6 @@ function ComposerNotice({
           </div>
         </div>
       </div>
-      {input ? <div className="mt-2.5">{input}</div> : null}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
+import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   RecordingProvider,
@@ -141,6 +142,16 @@ describe("RecordingProvider", () => {
     expect(harness.controller.connect).toHaveBeenCalledWith(session.sessionId);
     expect(harness.order).toEqual(["permission", "realtime-connect"]);
     expect(harness.result.current.phase).toBe("recording");
+  });
+
+  it("invalidates the exact note query after creating a recording session", async () => {
+    const harness = setup();
+
+    await act(() => harness.result.current.start(session.noteId));
+
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetNoteQueryKey(session.noteId),
+    });
   });
 
   it("uses the browser origin for mocked STOMP", async () => {

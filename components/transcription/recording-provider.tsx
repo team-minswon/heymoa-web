@@ -18,6 +18,7 @@ import {
   useGetTranscriptionSession,
   useStartTranscriptionSession,
 } from "@/lib/api/generated/transcription/transcription";
+import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import {
   BrowserRealtimeSession,
@@ -442,6 +443,11 @@ export function RecordingProvider({
         setPhase("connecting");
         const connectionSession =
           reusableSession ?? (await api.startSession(noteId));
+        if (!reusableSession) {
+          void queryClient.invalidateQueries({
+            queryKey: getGetNoteQueryKey(noteId),
+          });
+        }
         setCurrentSession(connectionSession);
         await controller.connect(connectionSession.sessionId);
         if (controllerRef.current !== controller) return;
@@ -467,6 +473,7 @@ export function RecordingProvider({
       handleEvent,
       phase,
       publishLevel,
+      queryClient,
       runtime,
       setCurrentSession,
     ]

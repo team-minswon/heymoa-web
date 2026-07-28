@@ -185,6 +185,36 @@ describe("meeting and integration handlers", () => {
   });
   afterAll(() => server.close());
 
+  it("rejects a transcription session started by another meeting starter", async () => {
+    const foreignNote = mockDb
+      .listWorkspaces()
+      .flatMap((workspace) => mockDb.listProjects(workspace.workspaceId))
+      .flatMap((project) => mockDb.listNotes(project.projectId))
+      .find(
+        (note) =>
+          note.meetingStartedBy?.userId !== undefined &&
+          note.meetingStartedBy.userId !== mockDb.getCurrentUser().userId &&
+          mockDb.getNote(note.noteId).meetingStatus === "IN_PROGRESS"
+      );
+
+    expect(foreignNote).toBeDefined();
+    const response = await fetch(
+      `http://localhost/v1/notes/${foreignNote!.noteId}/transcription-sessions`,
+      { method: "POST" }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "NOT_MEETING_STARTER",
+        message: "회의 시작자만 조작할 수 있습니다.",
+      },
+    });
+  });
+
   it("returns 409 when ending a meeting that already ended", async () => {
     const note = startedNote();
     mockDb.endMeeting(note.noteId);

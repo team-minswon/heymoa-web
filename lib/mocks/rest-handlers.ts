@@ -371,6 +371,20 @@ export const restHandlers = [
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
+      if (FORBIDDEN_CODES.has(msg)) {
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: {
+              code: msg,
+              message: "회의 시작자만 조작할 수 있습니다.",
+              details: null,
+            },
+          },
+          { status: 403 }
+        );
+      }
       // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 web이
       // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 예시를 그대로 쓴다 —
       // web이 코드별 문구를 다시 만들면 서버가 바뀔 때마다 갈라진다.

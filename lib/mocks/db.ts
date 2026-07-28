@@ -236,6 +236,15 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
     },
     {
+      noteId: "01K0000000028",
+      projectId: projects[0].projectId,
+      title: "파트너 검토 회의",
+      createdAt: "2026-07-12T00:00:00Z",
+      updatedAt: "2026-07-12T00:05:00Z",
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedBy: { userId: "01K0000000099", name: "김서연" },
+    },
+    {
       noteId: "01K0000000009",
       projectId: projects[2].projectId,
       title: faker.helpers.arrayElement([
@@ -299,6 +308,15 @@ function createSeedState(): StoreState {
       endedAt: "2026-07-11T00:02:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
+    {
+      sessionId: "01K0000000029",
+      noteId: "01K0000000028",
+      status: "COMPLETED",
+      readyExpiresAt: "2026-07-12T00:10:00Z",
+      startedAt: "2026-07-12T00:00:00Z",
+      endedAt: "2026-07-12T00:05:00Z",
+      endReason: "CLIENT_DISCONNECTED",
+    },
     // READY/ACTIVE 세션은 시드하지 않는다 — `createSession`의 가드가 전역이라(한 유저는
     // 동시에 하나만 녹음) 시드가 하나라도 있으면 모든 세션 생성이 막힌다.
     // `startedAt`·`endedAt`·`endReason`의 null 경로는 `createSession`이 런타임에 만든다.
@@ -325,6 +343,30 @@ function createSeedState(): StoreState {
       transcriptionSessionId: sessions[0].sessionId,
       sequence: 3,
       text: "다음 주까지 사용자 테스트를 진행합니다.",
+      startedAtMs: 5000,
+      endedAtMs: 7100,
+    },
+    {
+      segmentId: "01K0000000030",
+      transcriptionSessionId: "01K0000000029",
+      sequence: 1,
+      text: "파트너 요구사항을 먼저 확인하겠습니다.",
+      startedAtMs: 0,
+      endedAtMs: 1900,
+    },
+    {
+      segmentId: "01K0000000031",
+      transcriptionSessionId: "01K0000000029",
+      sequence: 2,
+      text: "다음 배포 일정과 책임자를 정리하겠습니다.",
+      startedAtMs: 2300,
+      endedAtMs: 4500,
+    },
+    {
+      segmentId: "01K0000000032",
+      transcriptionSessionId: "01K0000000029",
+      sequence: 3,
+      text: "확인한 내용은 회의록에 남기겠습니다.",
       startedAtMs: 5000,
       endedAtMs: 7100,
     },
@@ -1212,6 +1254,12 @@ export const mockDb = {
 
   createSession(noteId: string): StartTranscriptionSessionResponseData {
     const note = findNote(noteId);
+    if (
+      note.meetingStartedBy &&
+      note.meetingStartedBy.userId !== state.user.userId
+    ) {
+      fail("NOT_MEETING_STARTER");
+    }
     // 계약의 409에 `MEETING_ALREADY_ENDED`가 생겨(APP-214, server@a582684) 목도 막는다.
     // **서버는 원래부터 막고 있었다** — 없던 것은 계약뿐이었고, 그래서 목과 생성 클라이언트만
     // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.

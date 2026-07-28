@@ -203,24 +203,15 @@ describe("SharedChatPanel", () => {
     );
   });
 
-  it("남의 잠금이 있으면 관전자 — 입력이 잠기고 입력 중 표시가 뜬다", () => {
+  it("빈 대화의 관전자 잠금은 안내와 입력 중 표시만 보인다", () => {
     state.lock = { locked: true, lockedBy: "홍길동", pendingApproval: null };
-    state.messages = [
-      {
-        messageId: "u1",
-        createdAt: "2026-07-24T00:00:00Z",
-        role: "USER",
-        content: "이전 질문",
-        authorName: "홍길동",
-        toolEvent: null,
-      },
-    ];
     renderPanel("active");
 
-    expect(screen.getByLabelText("메시지")).toHaveProperty("disabled", true);
+    expect(screen.getByRole("alert")).toHaveTextContent("홍길동님이 입력 중");
     expect(screen.getAllByText(/홍길동님이 입력 중/).length).toBeGreaterThan(0);
     expect(screen.getByTestId("typing-divider")).toBeTruthy();
-    // 관전자에게는 보내기 버튼이 없다.
+    expect(screen.queryByText("아직 나눈 대화가 없습니다.")).toBeNull();
+    expect(screen.queryByLabelText("메시지")).toBeNull();
     expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
   });
 

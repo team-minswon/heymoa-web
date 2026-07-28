@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, Expand, PanelRightClose } from "lucide-react";
 
+import { useAuth } from "@/components/auth/auth-provider";
 import { NoteArchive } from "@/components/notes/note-archive";
 import {
   NoteDetails,
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatAppDate } from "@/lib/format/date";
 import { Button } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
+import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
@@ -78,16 +80,43 @@ export function NotePanel({
   // 공유 챗봇 트레이는 full 모드에서 회의가 살아 있을 때만(활성·미시작·중지) 선다. 종료되면
   // 우측은 개인 챗봇으로 돌아가고 Q&A는 좌측 아카이브로 접힌다(note-view가 감춤을 푼다).
   const phase = deriveMeetingPhase(note);
+  const { user } = useAuth();
+  const isStarter = Boolean(
+    user && note?.meetingStartedBy?.userId === user.userId
+  );
   // 답변이 흐르는 중에 다른 멤버가 회의를 끝내도 트레이를 바로 걷지 않는다 — 언마운트하면
   // 스트림이 끊기고 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 턴이 끝나면 접는다.
   const [sharedTurnActive, setSharedTurnActive] = useState(false);
   const meetingLive = phase === "active" || phase === "not-started";
   const showSharedTray = view === "full" && (meetingLive || sharedTurnActive);
+  // 전환을 렌더 중에 접어야 ended 아카이브를 한 번 커밋했다가 읽던 전사를 다시 세우지 않는다.
+  const [archiveState, setArchiveState] = useState({
+    noteId,
+    phase,
+    visible: phase === "ended",
+  });
+  if (archiveState.noteId !== noteId || archiveState.phase !== phase) {
+    const viewerEndTransition =
+      archiveState.noteId === noteId &&
+      archiveState.phase === "active" &&
+      phase === "ended" &&
+      !isStarter;
+    setArchiveState({
+      noteId,
+      phase,
+      visible: phase === "ended" && !viewerEndTransition,
+    });
+  }
+  const archiveQueued =
+    phase === "ended" && archiveState.visible && sharedTurnActive;
+  const showViewerEndNotice =
+    phase === "ended" && !isStarter && (!archiveState.visible || archiveQueued);
   // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
-  const showArchive = phase === "ended" && !sharedTurnActive;
+  const showArchive =
+    phase === "ended" && archiveState.visible && !sharedTurnActive;
 
   // v5 side 프레임 셋(`oLmGL`·`viNgv`·`KCoyt`)에는 레코더 독도 회의 조작도 없다. side는
-  // 읽기·미리보기 면이고 주 액션은 `확장`이다 — full 프레임(`Ftvu9`)에만 둘 다 있다.
+  // 읽기·미리보기 면이고 주 액션은 `확장`이다. full 독도 미시작 회의와 시작자에게만 선다.
   //
   // **다만 도는 녹음은 남긴다.** 전역 녹음 필은 `!isWorkspaceRoute`라 워크스페이스 안에서는
   // 안 뜬다. full에서 시작하고 side로 오면 독까지 없앨 때 멈출 방법이 하나도 없다.
@@ -98,25 +127,16 @@ export function NotePanel({
   // side에서 시작 버튼이 살아난다. 그 함수는 진행 phase와 **서버 세션이 아직 열린** failed만
   // 활성으로 본다 — 후자는 정리할 세션이 남아 있어 독이 필요한 경우다.
   const recording = useRecording();
-  const showDock = view === "full" || isNoteRecordingActive(recording, noteId);
+  const showDock =
+    isNoteRecordingActive(recording, noteId) ||
+    (view === "full" && (phase === "not-started" || isStarter));
 
-  // 종료된 회의는 전사를 다시 시작할 수 없다 — 종료 다이얼로그가 그렇게 약속하고, 종료가
-  // 분석을 만들었으므로 이후 전사가 늘면 이미 나온 요약과 어긋난다.
-  //
-  // **상태를 모르는 동안에도 열지 않는다.** 콜드 캐시나 느린 응답에서는 `note`가 아직
-  // undefined인데, 그때 시작 버튼이 살아 있으면 종료된 회의에 세션이 붙는다. 계약의
-  // 계약의 409에 `MEETING_ALREADY_ENDED`가 생겼다(APP-214). 다만 여기는 **요청이 나가기 전**
-  // 차단 사유라 서버 문구가 도달하지 않는다 — 첫 문장은 계약과 같게 두고(`이미 종료된
-  // 회의입니다.`) 왜 못 하는지를 덧붙인다. 실제로 요청이 실패하는 경로는 `errorMessageOf`가
-  // 서버 문구를 그대로 쓴다.
+  // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. unknown은 소유자도 모르므로
+  // showDock에서 닫힌다.
   const startBlockedReason =
     note?.meetingStatus === "ENDED"
       ? "이미 종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
-      : note
-        ? null
-        : noteQuery.isError
-          ? "회의 상태를 확인하지 못했습니다."
-          : "회의 상태를 확인하는 중입니다.";
+      : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white lg:flex-row">
@@ -187,6 +207,15 @@ export function NotePanel({
           </div>
         </header>
 
+        {view === "full" && noteQuery.isError && !note ? (
+          <div className="mx-auto w-full max-w-[820px] px-5 pb-4 sm:px-9">
+            <InlineRetry
+              label="회의 상태를 확인하지 못했습니다."
+              onRetry={() => void noteQuery.refetch()}
+            />
+          </div>
+        ) : null}
+
         <Tabs
           value={tab}
           onValueChange={(value) => value && onTabChange(value as NoteTab)}
@@ -207,13 +236,51 @@ export function NotePanel({
               </TabsList>
             </div>
           </div>
-          <TabsContent value="transcript" className="min-h-0 flex-1">
-            {/* 종료된 회의는 전사 탭이 아카이브(전사 + 공유 Q&A)가 된다. */}
-            {showArchive ? (
-              <NoteArchive noteId={noteId} />
-            ) : (
-              <TranscriptView noteId={noteId} />
-            )}
+          <TabsContent
+            value="transcript"
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            {showViewerEndNotice ? (
+              <div
+                role="status"
+                className="mx-5 mt-4 flex shrink-0 items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5 sm:mx-9"
+              >
+                <div>
+                  <p className="text-sm font-medium text-[var(--el-ink)]">
+                    회의가 종료되었습니다
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--el-muted)]">
+                    읽던 기록을 확인한 뒤 종료된 기록과 요약으로 이동할 수
+                    있습니다.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={archiveQueued}
+                  onClick={() =>
+                    setArchiveState((current) => ({
+                      ...current,
+                      visible: true,
+                    }))
+                  }
+                >
+                  {archiveQueued
+                    ? "답변이 끝나면 이동합니다"
+                    : "기록과 요약 보기"}
+                </Button>
+              </div>
+            ) : null}
+            <div className="min-h-0 flex-1">
+              {/* 종료된 회의는 전사 탭이 아카이브(전사 + 공유 Q&A)가 된다. */}
+              {showArchive ? (
+                <NoteArchive noteId={noteId} />
+              ) : (
+                <TranscriptView noteId={noteId} phase={phase} />
+              )}
+            </div>
           </TabsContent>
           <TabsContent value="summary" className="min-h-0 flex-1">
             <ScrollArea className="h-full">
