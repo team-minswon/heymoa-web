@@ -334,6 +334,35 @@ test("returns to the note list when a project is picked in full view", async ({
 });
 
 /**
+ * 노트 full 면이 화면 바닥까지 덮는지 본다.
+ *
+ * 셸 컨테이너가 뒤에 깔린 목록을 따라 늘어나면 문서가 스크롤되고, 그 위에 `absolute`로 앉는
+ * 노트 면이 컨테이너를 다 못 덮어 아래로 목록이 비쳤다(405px 실측 · APP-252). 목록이 화면보다
+ * 길어야 재현되므로 목 시드 10개가 조건을 만든다. jsdom은 레이아웃을 안 해 e2e여야 한다.
+ */
+test("covers the viewport with the full note surface", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+
+  await expect(page.locator('[data-surface="full"]')).toBeVisible();
+  // 뒤 목록이 실제로 그려질 때까지 기다린다. skeleton은 6행이라 뷰포트를 안 넘어서, 로드 전에
+  // 재면 수정을 되돌려도 통과한다 — 재현 조건 자체가 "목록이 화면보다 길다"이다.
+  await expect(page.getByTestId("workspace-note-list")).toBeAttached();
+
+  const geometry = await page.evaluate(() => {
+    const element = document.querySelector('[data-surface="full"]')!;
+    return {
+      documentScrollHeight: document.documentElement.scrollHeight,
+      viewportHeight: document.documentElement.clientHeight,
+      surfaceBottom: element.getBoundingClientRect().bottom,
+    };
+  });
+
+  // 문서가 스크롤되면 그 자체가 셸이 뷰포트를 넘었다는 뜻이다.
+  expect(geometry.documentScrollHeight).toBe(geometry.viewportHeight);
+  expect(geometry.surfaceBottom).toBe(geometry.viewportHeight);
+});
+
+/**
  * 메뉴로 노트를 전체 화면으로 열고 닫으면 그 목록 행이 영원히 돌았다.
  *
  * 누른 위치를 기억만 하고 버리지 않아서, **그 위치로 돌아왔을 때 다시 같아져** 스피너가
