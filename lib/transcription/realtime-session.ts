@@ -41,6 +41,11 @@ export type RealtimeSessionDependencies = {
 
 type TerminalState = "completed" | "failed" | "timeout";
 
+// 전송 정체가 이 시간만큼 연속되면 회복 불가로 판정한다. socket의 백프레셔 임계(96KB)가
+// PCM 2초분이므로 그 5배다 — 일시적 지연은 살아남고, 이 시간 내내 2초 이상 밀린 채였다면
+// 회선이 사실상 죽은 것이다. 정체 중 frame은 버린다(버퍼링하면 메모리가 무한이 된다).
+const MAX_CONGESTION_MS = 10_000;
+
 export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
   private socket: SocketPort | null = null;
@@ -54,6 +59,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     | ((state: Exclude<TerminalState, "timeout">) => void)
     | null = null;
   private failed = false;
+  private congestedSinceMs: number | null = null;
 
   constructor(
     private readonly options: RealtimeSessionOptions,
@@ -175,7 +181,24 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
 
   private sendAudio(chunk: ArrayBuffer) {
     if (this.closing) return;
-    if (!this.socket?.sendAudio(chunk)) {
+    if (this.socket?.sendAudio(chunk)) {
+      if (this.congestedSinceMs !== null) {
+        console.warn(
+          `transcription: 전송 정체 회복, 유실 ${Date.now() - this.congestedSinceMs}ms`
+        );
+        this.congestedSinceMs = null;
+      }
+      return;
+    }
+    // 일시적 정체는 회복 가능한 상태다. frame은 버리되 녹음은 계속하고,
+    // 정체가 MAX_CONGESTION_MS 연속될 때만 회복 불가로 판정한다.
+    const now = Date.now();
+    if (this.congestedSinceMs === null) {
+      this.congestedSinceMs = now;
+      console.warn("transcription: 전송 정체 시작, frame을 버립니다");
+      return;
+    }
+    if (now - this.congestedSinceMs >= MAX_CONGESTION_MS) {
       this.fail("네트워크가 느려 오디오 전송을 계속할 수 없습니다.");
     }
   }

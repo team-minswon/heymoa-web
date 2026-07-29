@@ -227,18 +227,67 @@ describe("BrowserRealtimeSession", () => {
     );
   });
 
-  it("turns socket backpressure into one terminal failure", async () => {
-    const harness = setup();
-    await harness.controller.connect("0HZX2K7M9Q4AG");
-    harness.socket.sendAudio.mockReturnValue(false);
+  it("keeps the session alive through transient backpressure", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+      harness.socket.sendAudio.mockReturnValue(false);
 
-    harness.emitChunk(new ArrayBuffer(4_800));
-    harness.emitChunk(new ArrayBuffer(4_800));
+      harness.emitChunk(new ArrayBuffer(4_800));
+      vi.advanceTimersByTime(9_000);
+      harness.emitChunk(new ArrayBuffer(4_800));
+      harness.socket.sendAudio.mockReturnValue(true);
+      harness.emitChunk(new ArrayBuffer(4_800));
 
-    expect(harness.onFailure).toHaveBeenCalledOnce();
-    expect(harness.onFailure).toHaveBeenCalledWith(
-      expect.stringContaining("네트워크가 느려")
-    );
+      expect(harness.onFailure).not.toHaveBeenCalled();
+      expect(harness.socket.close).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("fails once when backpressure lasts beyond the congestion limit", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+      harness.socket.sendAudio.mockReturnValue(false);
+
+      harness.emitChunk(new ArrayBuffer(4_800));
+      vi.advanceTimersByTime(10_000);
+      harness.emitChunk(new ArrayBuffer(4_800));
+      harness.emitChunk(new ArrayBuffer(4_800));
+
+      expect(harness.onFailure).toHaveBeenCalledOnce();
+      expect(harness.onFailure).toHaveBeenCalledWith(
+        expect.stringContaining("네트워크가 느려")
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("resets the congestion clock after a successful send", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+
+      harness.socket.sendAudio.mockReturnValue(false);
+      harness.emitChunk(new ArrayBuffer(4_800));
+      vi.advanceTimersByTime(8_000);
+      harness.socket.sendAudio.mockReturnValue(true);
+      harness.emitChunk(new ArrayBuffer(4_800));
+      harness.socket.sendAudio.mockReturnValue(false);
+      harness.emitChunk(new ArrayBuffer(4_800));
+      vi.advanceTimersByTime(8_000);
+      harness.emitChunk(new ArrayBuffer(4_800));
+
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("uses DB reconciliation to recover a missed connected event", async () => {
