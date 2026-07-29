@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { config } from "@/proxy";
 
 function requestWithRefreshToken() {
   return new NextRequest("http://web.example.test/w/01K0000000000", {
@@ -12,6 +15,30 @@ async function loadProxy() {
   vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://api.example.test");
   return (await import("@/proxy")).proxy;
 }
+
+describe("proxy matcher", () => {
+  it.each([
+    { "next-router-prefetch": "1" },
+    { purpose: "prefetch" },
+  ])("skips Next.js prefetch headers: %o", (headers) => {
+    expect(
+      unstable_doesMiddlewareMatch({
+        config,
+        url: "/w/01K0000000000",
+        headers,
+      })
+    ).toBe(false);
+  });
+
+  it("keeps normal document requests matched", () => {
+    expect(
+      unstable_doesMiddlewareMatch({
+        config,
+        url: "/w/01K0000000000",
+      })
+    ).toBe(true);
+  });
+});
 
 describe("proxy token refresh", () => {
   beforeEach(() => {
