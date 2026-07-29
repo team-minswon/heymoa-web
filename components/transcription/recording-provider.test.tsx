@@ -496,7 +496,9 @@ describe("RecordingProvider", () => {
     expect(harness.controller.close).toHaveBeenCalled();
   });
 
-  it("maps provider errors to a user-safe product message", async () => {
+  it("keeps the server-sent failure message verbatim", async () => {
+    // 계약(asyncapi)의 error.message가 사용자에게 보일 한국어 문구의 원본이다.
+    // web이 코드별로 다시 쓰면 서버가 바뀔 때마다 갈라진다 — rule error-loading.
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId));
 
@@ -504,14 +506,13 @@ describe("RecordingProvider", () => {
       harness.getCallbacks().onEvent({
         type: "error",
         code: "STT_TRANSCRIPTION_FAILED",
-        message: "provider_internal_drain_state=completed",
+        message: "실시간 전사 처리에 실패했습니다.",
       })
     );
 
     expect(harness.result.current.error).toBe(
-      "음성을 기록하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
+      "실시간 전사 처리에 실패했습니다."
     );
-    expect(harness.result.current.error).not.toContain("provider_internal");
   });
 
   it("does not remain stuck in stopping when cleanup fails", async () => {

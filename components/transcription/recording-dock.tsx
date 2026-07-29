@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Mic, RotateCcw, Square } from "lucide-react";
+import { Mic, RotateCcw, Square, X } from "lucide-react";
 
 import {
   isNoteRecordingActive,
@@ -131,6 +131,8 @@ export function RecordingDock({
           // 녹음 중·정리 중은 위에서 먼저 걸린다 — 다른 멤버가 회의를 끝내도 내 정지 버튼은
           // 남는다. 여기 오는 것은 시작할 수 있었을 자리뿐이고, 그 자리에 이유를 대신 놓는다.
           // 잠긴 버튼 + title은 터치에서 호버가 없고 disabled는 포커스도 안 받아 이유가 사라진다.
+          // failed보다도 먼저 선다 — 세션이 열린 실패는 note-panel이 원격 기록으로 취급한다
+          // (APP-288). 그래서 회의 중 실패의 사유는 세션이 닫힌 뒤에야 이 아래 분기로 보인다.
           <motion.div
             layout
             key="blocked"
@@ -148,6 +150,8 @@ export function RecordingDock({
             </span>
           </motion.div>
         ) : state === "failed" ? (
+          // 실패 사유는 토스트가 아니라 여기 남는다 — 토스트는 사라진 뒤 왜 멈췄는지
+          // 알 길이 없다(rule error-loading). 문구는 서버가 보낸 것 그대로다.
           <motion.div
             layout
             key="failed"
@@ -157,19 +161,42 @@ export function RecordingDock({
               transition: { duration: 0.15, delay: 0.1 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            className="flex shrink-0 items-center px-1"
+            className="flex min-w-0 items-center gap-1 py-1 pl-2.5 pr-1"
           >
+            {recording.error ? (
+              // 사유는 문장이라 좁은 화면에서 잘리면 안 된다 — disabledReason과 같은 이유로 접힌다.
+              <span
+                role="alert"
+                className="min-w-0 text-xs leading-snug text-destructive"
+              >
+                {recording.error}
+              </span>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-11 rounded-full px-3 text-xs"
+              className="h-11 shrink-0 rounded-full px-3 text-xs"
               disabled={isOtherNote}
               onClick={() => void recording.start(noteId)}
             >
               <RotateCcw className="size-3.5" />
               다시 시도
             </Button>
+            {/* 서버 세션이 열려 있으면(READY/ACTIVE) 닫기를 숨긴다 — disconnect()는 로컬만
+                지우므로 서버에 열린 세션이 남아 회의 종료·재시작이 계속 거절된다. */}
+            {!isNoteRecordingActive(recording, noteId) ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="닫기"
+                className="size-11 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:text-[var(--el-muted)]"
+                onClick={() => void recording.disconnect()}
+              >
+                <X className="size-3.5" />
+              </Button>
+            ) : null}
           </motion.div>
         ) : (
           <motion.div

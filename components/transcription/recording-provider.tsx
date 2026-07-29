@@ -157,21 +157,6 @@ function getStartErrorMessage(cause: unknown) {
   return "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 }
 
-type ServerErrorCode = Extract<ServerEvent, { type: "error" }>["code"];
-
-function getServerErrorMessage(code: ServerErrorCode) {
-  if (code === "INVALID_CLIENT_MESSAGE" || code === "INVALID_AUDIO_FRAME") {
-    return "오디오를 처리하지 못했습니다. 녹음을 다시 시작해 주세요.";
-  }
-  if (code === "STT_CONNECTION_FAILED") {
-    return "음성 인식 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-  }
-  if (code === "STT_TRANSCRIPTION_FAILED") {
-    return "음성을 기록하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.";
-  }
-  return "실시간 전사를 계속할 수 없습니다. 잠시 후 다시 시도해 주세요.";
-}
-
 function getRuntimeFailureMessage(message: string) {
   if (message.includes("네트워크가 느려")) {
     return "네트워크가 불안정해 오디오 전송을 중단했습니다. 연결을 확인해 주세요.";
@@ -364,7 +349,9 @@ export function RecordingProvider({
       }
 
       if (event.type === "error") {
-        failRecording(getServerErrorMessage(event.code));
+        // 계약이 사용자에게 보일 한국어 메시지를 담고 있다(message: min 1). 코드별로 다시
+        // 쓰면 서버가 바뀔 때마다 갈라진다 — rule error-loading "문구는 서버 것을 쓴다".
+        failRecording(event.message);
       }
     },
     [
