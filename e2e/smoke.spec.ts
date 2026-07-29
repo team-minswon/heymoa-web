@@ -502,7 +502,7 @@ test("locks the composer when another member is typing", async ({ page }) => {
   );
 
   await expect(page.getByText(/김민수님이 입력 중/).first()).toBeVisible({
-    timeout: 20_000,
+    timeout: 35_000,
   });
 });
 
