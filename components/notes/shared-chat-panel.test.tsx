@@ -18,6 +18,25 @@ const openPersonalMock = vi.hoisted(() => vi.fn());
 vi.mock("@/components/chat/personal-chat", () => ({
   usePersonalChat: () => ({ open: openPersonalMock }),
 }));
+const realtime = vi.hoisted(() => ({
+  chat: {
+    stream: {
+      phase: "idle",
+      messageId: null,
+      text: "",
+      content: null as string | null,
+      records: [],
+      pendingApproval: null,
+      error: null,
+    },
+    text: "",
+    interrupted: false,
+    locked: null as boolean | null,
+  },
+}));
+vi.mock("@/components/notes/note-realtime-provider", () => ({
+  useNoteRealtime: () => realtime,
+}));
 
 const state = vi.hoisted(() => ({
   messages: [] as unknown[],
@@ -33,6 +52,9 @@ const state = vi.hoisted(() => ({
   historyFails: false,
   streamFails: false,
   streamCalls: [] as { url: string; body: unknown }[],
+  queryOptions: [] as Array<{
+    query: { refetchInterval: (query: unknown) => number | false };
+  }>,
   approveMock: vi.fn(),
 }));
 
@@ -49,24 +71,32 @@ vi.mock("@/lib/api/generated/note-shared-chat/note-shared-chat", () => ({
       },
     }),
   }),
-  useGetNoteSharedChatMessages: () => ({
-    isLoading: false,
-    isError: state.historyFails,
-    refetch: vi.fn(),
-    data: state.historyFails
-      ? undefined
-      : {
-          status: 200,
-          data: {
-            success: true,
+  useGetNoteSharedChatMessages: (
+    _noteId: string,
+    options: {
+      query: { refetchInterval: (query: unknown) => number | false };
+    }
+  ) => {
+    state.queryOptions.push(options);
+    return {
+      isLoading: false,
+      isError: state.historyFails,
+      refetch: vi.fn(),
+      data: state.historyFails
+        ? undefined
+        : {
+            status: 200,
             data: {
-              chatId: CHAT_ID,
-              messages: state.messages,
-              lock: state.lock,
+              success: true,
+              data: {
+                chatId: CHAT_ID,
+                messages: state.messages,
+                lock: state.lock,
+              },
             },
           },
-        },
-  }),
+    };
+  },
 }));
 
 vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
@@ -119,6 +149,21 @@ describe("SharedChatPanel", () => {
     state.historyFails = false;
     state.streamFails = false;
     state.streamCalls = [];
+    state.queryOptions = [];
+    realtime.chat = {
+      stream: {
+        phase: "idle",
+        messageId: null,
+        text: "",
+        content: null,
+        records: [],
+        pendingApproval: null,
+        error: null,
+      },
+      text: "",
+      interrupted: false,
+      locked: null,
+    };
     openPersonalMock.mockReset();
     state.approveMock.mockReset();
   });
@@ -201,6 +246,108 @@ describe("SharedChatPanel", () => {
     await waitFor(() =>
       expect(screen.getAllByText("정리해줘")).toHaveLength(1)
     );
+  });
+
+  it("종료된 로컬 실패보다 새 원격 턴을 우선 표시한다", async () => {
+    state.streamFails = true;
+    const view = renderPanel("active");
+    fireEvent.change(screen.getByLabelText("메시지"), {
+      target: { value: "실패할 질문" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+
+    realtime.chat.locked = false;
+    view.rerender(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
+      >
+        <SharedChatPanel noteId={NOTE_ID} phase="active" />
+      </QueryClientProvider>
+    );
+    realtime.chat.locked = true;
+    realtime.chat.stream = {
+      ...realtime.chat.stream,
+      phase: "streaming",
+      text: "다른 멤버의 새 답변",
+    };
+    view.rerender(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
+      >
+        <SharedChatPanel noteId={NOTE_ID} phase="active" />
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByText("다른 멤버의 새 답변")).toBeInTheDocument();
+    expect(screen.queryByText("응답을 만들지 못했습니다")).toBeNull();
+
+    realtime.chat.locked = false;
+    realtime.chat.stream = {
+      ...realtime.chat.stream,
+      phase: "idle",
+      text: "다른 멤버의 완료 답변",
+      content: "다른 멤버의 완료 답변",
+    };
+    view.rerender(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
+      >
+        <SharedChatPanel noteId={NOTE_ID} phase="active" />
+      </QueryClientProvider>
+    );
+    expect(screen.getByText("다른 멤버의 완료 답변")).toBeInTheDocument();
+    expect(screen.queryByText("응답을 만들지 못했습니다")).toBeNull();
+  });
+
+  it("원격 중단 사본보다 송신자의 실제 로컬 실패를 우선 표시한다", async () => {
+    realtime.chat.stream = {
+      ...realtime.chat.stream,
+      phase: "stalled",
+      text: "원격 부분 답변",
+    };
+    state.streamFails = true;
+    renderPanel("active");
+    fireEvent.change(screen.getByLabelText("메시지"), {
+      target: { value: "새 질문" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("응답을 만들지 못했습니다")).toBeInTheDocument()
+    );
+    expect(screen.queryByText("원격 부분 답변")).toBeNull();
+  });
+
+  it("active baseline은 30초, 원격 잠금 중에는 10초 safety poll로 복구한다", () => {
+    realtime.chat.locked = true;
+    renderPanel("active");
+
+    const refetchInterval = state.queryOptions.at(-1)?.query.refetchInterval;
+    expect(
+      refetchInterval?.({
+        state: { data: undefined },
+      })
+    ).toBe(10_000);
+
+    realtime.chat.locked = false;
+    expect(
+      refetchInterval?.({
+        state: { data: undefined },
+      })
+    ).toBe(30_000);
   });
 
   it("빈 대화의 관전자 잠금은 안내와 입력 중 표시만 보인다", () => {

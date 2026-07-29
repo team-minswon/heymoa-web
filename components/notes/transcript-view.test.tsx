@@ -30,6 +30,12 @@ const NEW_POLLED_SEGMENT = {
 };
 const useRecording = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const noteRealtime = vi.hoisted(() => ({
+  transcript: {
+    partialByUtteranceId: {} as Record<string, string>,
+    finalSegments: [] as Array<Record<string, unknown>>,
+  },
+}));
 const useGetNoteTranscript = vi.hoisted(() =>
   vi.fn<() => unknown>(() => ({
     data: {
@@ -76,6 +82,9 @@ const useGetNoteTranscript = vi.hoisted(() =>
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => useRecording(),
   useRecordingTranscript: () => useRecording().transcript,
+}));
+vi.mock("@/components/notes/note-realtime-provider", () => ({
+  useNoteRealtime: () => noteRealtime,
 }));
 vi.mock("@/lib/api/generated/transcription/transcription", () => ({
   getGetNoteTranscriptQueryKey: () => ["transcript"],
@@ -190,6 +199,8 @@ describe("TranscriptView", () => {
 
   beforeEach(() => {
     toast.error.mockReset();
+    noteRealtime.transcript.partialByUtteranceId = {};
+    noteRealtime.transcript.finalSegments = [];
     useRecording.mockReturnValue(recordingState());
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
@@ -219,7 +230,7 @@ describe("TranscriptView", () => {
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
   });
 
-  it("polls the persisted transcript for an active server meeting even when local recording is idle", () => {
+  it("keeps a low-frequency transcript safety poll while the server meeting is active", () => {
     useRecording.mockReturnValue(idleState());
 
     renderTranscript("active");
@@ -229,7 +240,7 @@ describe("TranscriptView", () => {
       expect.objectContaining({
         query: expect.objectContaining({
           staleTime: 0,
-          refetchInterval: 2_500,
+          refetchInterval: 30_000,
         }),
       })
     );
@@ -387,7 +398,7 @@ describe("TranscriptView", () => {
 
     const partial = screen.getByText("결과를 정리합니다").closest("article");
     expect(partial).toHaveAttribute("data-state", "partial");
-    expect(partial).toHaveTextContent("Live");
+    expect(partial).toHaveTextContent("실시간 · 확정 전");
 
     // v5: 제품 면 대문자 키커·세리프 헤더 없음(FORM SPEC), 전사 행은 단일 값 grid.
     expect(screen.queryByText("Conversation")).toBeNull();
@@ -397,17 +408,38 @@ describe("TranscriptView", () => {
     expect(useGetNoteTranscript).toHaveBeenCalledWith(
       NOTE_ID,
       expect.objectContaining({
-        query: expect.objectContaining({ refetchInterval: 2_500 }),
+        query: expect.objectContaining({ refetchInterval: 30_000 }),
       })
     );
+  });
+
+  it("dedupes recorder and note-topic partials by utteranceId and hides a finalized partial", () => {
+    noteRealtime.transcript.partialByUtteranceId = {
+      "01K0000000201": "결과를 정리합니다",
+    };
+    noteRealtime.transcript.finalSegments = [
+      {
+        type: "transcript.final",
+        segmentId: "01K0000000099",
+        transcriptionSessionId: "01K0000000030",
+        utteranceId: "01K0000000201",
+        sequence: 3,
+        text: "확정됐습니다.",
+        startedAtMs: 2_500,
+        endedAtMs: 3_200,
+      },
+    ];
+
+    renderTranscript();
+
+    expect(screen.queryByText("결과를 정리합니다")).toBeNull();
+    expect(screen.getByText("확정됐습니다.")).toBeInTheDocument();
   });
 
   it("exposes sequential transcript additions as an accessible log", () => {
     renderTranscript();
 
-    expect(
-      screen.getByRole("log", { name: "회의 전사" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("log", { name: "회의 전사" })).toBeInTheDocument();
   });
 
   it("reserves floating dock clearance only at desktop widths", () => {

@@ -318,7 +318,7 @@ function StreamNotice({
     return (
       <Notice
         tone="neutral"
-        title="응답이 중간에 끊겼습니다"
+        title="답변이 중단되었습니다"
         description="다시 시도하면 위 조각은 버려집니다."
         onRetry={onRetry}
         isRetryDisabled={isRetryDisabled}

@@ -1,6 +1,7 @@
 "use client";
 
 import { NoteView } from "@/components/notes/note-view";
+import { NoteRealtimeProvider } from "@/components/notes/note-realtime-provider";
 
 export function NoteRouteClient({
   workspaceId,
@@ -12,10 +13,12 @@ export function NoteRouteClient({
   initialQuery: { view?: string; tab?: string };
 }) {
   return (
-    <NoteView
-      workspaceId={workspaceId}
-      noteId={noteId}
-      initialQuery={initialQuery}
-    />
+    <NoteRealtimeProvider noteId={noteId}>
+      <NoteView
+        workspaceId={workspaceId}
+        noteId={noteId}
+        initialQuery={initialQuery}
+      />
+    </NoteRealtimeProvider>
   );
 }

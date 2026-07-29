@@ -220,6 +220,38 @@ channels:
         $ref: "#/components/messages/CompletedEvent"
       ErrorEvent:
         $ref: "#/components/messages/ErrorEvent"
+  noteTopic:
+    servers:
+      - $ref: "#/servers/production"
+    address: /topic/notes/{noteId}
+    title: 노트 멤버용 실시간 event
+    description: |
+      노트 멤버만 구독할 수 있다. 서버는 SUBSCRIBE 시점과 30초마다 멤버십을 재검증한다.
+      권한 상실, 형식 오류, 노트별 100개 구독 상한 초과는 ERROR 없이 조용히 구독을 해제하거나
+      거절한다. 이벤트는 원본 transaction commit 뒤 발행되며, stream 기반 partial과 chat
+      이벤트처럼 transaction 밖에서 생긴 이벤트는 즉시 발행된다.
+    parameters:
+      noteId:
+        $ref: "#/components/parameters/noteId"
+    messages:
+      NoteTranscriptPartialEvent:
+        $ref: "#/components/messages/NoteTranscriptPartialEvent"
+      NoteTranscriptFinalEvent:
+        $ref: "#/components/messages/NoteTranscriptFinalEvent"
+      NoteMeetingStartedEvent:
+        $ref: "#/components/messages/NoteMeetingStartedEvent"
+      NoteMeetingEndedEvent:
+        $ref: "#/components/messages/NoteMeetingEndedEvent"
+      NoteRecordingStartedEvent:
+        $ref: "#/components/messages/NoteRecordingStartedEvent"
+      NoteRecordingStoppedEvent:
+        $ref: "#/components/messages/NoteRecordingStoppedEvent"
+      NoteChatTokenEvent:
+        $ref: "#/components/messages/NoteChatTokenEvent"
+      NoteChatMessageEndEvent:
+        $ref: "#/components/messages/NoteChatMessageEndEvent"
+      NoteChatLockEvent:
+        $ref: "#/components/messages/NoteChatLockEvent"
   agentChatStream:
     servers:
       - $ref: "#/servers/sseEdge"
@@ -332,6 +364,25 @@ operations:
       - $ref: "#/channels/transcriptionEvents/messages/FinalEvent"
       - $ref: "#/channels/transcriptionEvents/messages/CompletedEvent"
       - $ref: "#/channels/transcriptionEvents/messages/ErrorEvent"
+  receiveNoteTopicEvent:
+    action: receive
+    summary: 노트 멤버가 회의·녹음·전사·공유 챗 상태를 수신한다.
+    description: |
+      transcript.partial은 같은 utteranceId의 누적 snapshot이고 transcript.final은 저장 transaction
+      commit 뒤에만 발행된다. chat.lock의 locked=false는 정상 종료뿐 아니라 중단 시에도 편집 잠금이
+      풀렸음을 알리는 신호다. tool approval 이벤트는 이 토픽에 포함하지 않는다.
+    channel:
+      $ref: "#/channels/noteTopic"
+    messages:
+      - $ref: "#/channels/noteTopic/messages/NoteTranscriptPartialEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteTranscriptFinalEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteMeetingStartedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteMeetingEndedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteRecordingStartedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteRecordingStoppedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteChatTokenEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteChatMessageEndEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteChatLockEvent"
   receiveAgentChatEvents:
     action: receive
     summary: heymoa-web이 개인 챗봇 응답 이벤트를 SSE로 수신한다.
@@ -485,7 +536,16 @@ components:
         type: object
         additionalProperties: false
         required:
-          [type, transcriptionSessionId, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
+          [
+            type,
+            transcriptionSessionId,
+            segmentId,
+            utteranceId,
+            sequence,
+            text,
+            startedAtMs,
+            endedAtMs,
+          ]
         properties:
           type:
             type: string
@@ -582,6 +642,218 @@ components:
             type: error
             code: STT_TRANSCRIPTION_FAILED
             message: 실시간 전사 처리에 실패했습니다.
+    NoteTranscriptPartialEvent:
+      name: NoteTranscriptPartialEvent
+      title: 노트의 진행 중인 누적 전사
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, transcriptionSessionId, utteranceId, text]
+        properties:
+          type:
+            type: string
+            enum: [transcript.partial]
+          transcriptionSessionId:
+            $ref: "#/components/schemas/Tsid"
+          utteranceId:
+            $ref: "#/components/schemas/Tsid"
+          text:
+            type: string
+            minLength: 1
+      examples:
+        - name: partial
+          payload:
+            type: transcript.partial
+            transcriptionSessionId: 0HZX2K7M9Q4AB
+            utteranceId: 0HZX2K7M9Q4AC
+            text: 오늘 회의에서는
+    NoteTranscriptFinalEvent:
+      name: NoteTranscriptFinalEvent
+      title: 노트에 저장된 확정 전사
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          [
+            type,
+            transcriptionSessionId,
+            segmentId,
+            utteranceId,
+            sequence,
+            text,
+            startedAtMs,
+            endedAtMs,
+          ]
+        properties:
+          type:
+            type: string
+            enum: [transcript.final]
+          transcriptionSessionId:
+            $ref: "#/components/schemas/Tsid"
+          segmentId:
+            $ref: "#/components/schemas/Tsid"
+          utteranceId:
+            $ref: "#/components/schemas/Tsid"
+          sequence:
+            type: integer
+            format: int64
+            minimum: 1
+          text:
+            type: string
+            minLength: 1
+          startedAtMs:
+            type: integer
+            format: int64
+            minimum: 0
+          endedAtMs:
+            type: integer
+            format: int64
+            minimum: 0
+      examples:
+        - name: final
+          payload:
+            type: transcript.final
+            transcriptionSessionId: 0HZX2K7M9Q4AB
+            segmentId: 0HZX2K7M9Q4AD
+            utteranceId: 0HZX2K7M9Q4AC
+            sequence: 1
+            text: 오늘 회의에서는 출시 일정을 논의했습니다.
+            startedAtMs: 0
+            endedAtMs: 8230
+    NoteMeetingStartedEvent:
+      name: NoteMeetingStartedEvent
+      title: 회의 시작
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [meeting.started]
+      examples:
+        - name: started
+          payload:
+            type: meeting.started
+    NoteMeetingEndedEvent:
+      name: NoteMeetingEndedEvent
+      title: 회의 종료
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [meeting.ended]
+      examples:
+        - name: ended
+          payload:
+            type: meeting.ended
+    NoteRecordingStartedEvent:
+      name: NoteRecordingStartedEvent
+      title: 녹음 시작
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, transcriptionSessionId]
+        properties:
+          type:
+            type: string
+            enum: [recording.started]
+          transcriptionSessionId:
+            $ref: "#/components/schemas/Tsid"
+      examples:
+        - name: started
+          payload:
+            type: recording.started
+            transcriptionSessionId: 0HZX2K7M9Q4AB
+    NoteRecordingStoppedEvent:
+      name: NoteRecordingStoppedEvent
+      title: 녹음 종료
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, transcriptionSessionId]
+        properties:
+          type:
+            type: string
+            enum: [recording.stopped]
+          transcriptionSessionId:
+            $ref: "#/components/schemas/Tsid"
+      examples:
+        - name: stopped
+          payload:
+            type: recording.stopped
+            transcriptionSessionId: 0HZX2K7M9Q4AB
+    NoteChatTokenEvent:
+      name: NoteChatTokenEvent
+      title: 공유 챗 응답 token
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, delta]
+        properties:
+          type:
+            type: string
+            enum: [chat.token]
+          delta:
+            type: string
+            minLength: 1
+      examples:
+        - name: token
+          payload:
+            type: chat.token
+            delta: 안녕하세요
+    NoteChatMessageEndEvent:
+      name: NoteChatMessageEndEvent
+      title: 공유 챗 응답 완료
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, messageId, content]
+        properties:
+          type:
+            type: string
+            enum: [chat.message_end]
+          messageId:
+            type: string
+            minLength: 1
+          content:
+            type: string
+            minLength: 1
+      examples:
+        - name: messageEnd
+          payload:
+            type: chat.message_end
+            messageId: m1
+            content: 안녕하세요
+    NoteChatLockEvent:
+      name: NoteChatLockEvent
+      title: 공유 챗 편집 잠금 상태
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, chatId, locked, lockedByUserId]
+        properties:
+          type:
+            type: string
+            enum: [chat.lock]
+          chatId:
+            $ref: "#/components/schemas/Tsid"
+          locked:
+            type: boolean
+          lockedByUserId:
+            type: string
+            nullable: true
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+      examples:
+        - name: released
+          payload:
+            type: chat.lock
+            chatId: 0HZX2K7M9Q4AF
+            locked: false
+            lockedByUserId: null
 
     # --- agent 채팅 SSE 이벤트 (server↔ai 구간과 공유하는 단일 출처) ---
     #

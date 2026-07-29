@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CirclePlay, Lock } from "lucide-react";
 
@@ -21,8 +21,9 @@ import { useChatStream } from "@/lib/chat/use-chat-stream";
 import { useStickToBottom } from "@/lib/chat/use-stick-to-bottom";
 import { useToolApproval } from "@/lib/chat/use-tool-approval";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
+import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 
-const POLL_INTERVAL_MS = 3_000;
+const SPECTATOR_SAFETY_POLL_MS = 10_000;
 
 /**
  * 노트 공유 챗봇. 개인 챗봇과 **같은 SSE 레이어**(`use-chat-stream`·`chat-thread`)를 쓰고,
@@ -43,6 +44,8 @@ export function SharedChatPanel({
 }) {
   const queryClient = useQueryClient();
   const stream = useChatStream();
+  const resetStream = stream.reset;
+  const noteRealtime = useNoteRealtime();
   const [draft, setDraft] = useState("");
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
     null
@@ -50,20 +53,46 @@ export function SharedChatPanel({
   const [lastSent, setLastSent] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [turnBaseline, setTurnBaseline] = useState(0);
+  const ownsTopicTurnRef = useRef(false);
 
-  const isStreaming =
+  const localIsStreaming =
     stream.state.phase === "streaming" ||
     stream.state.phase === "awaiting_approval";
+  const localTurnVisible =
+    stream.state.phase !== "idle" ||
+    stream.state.text.length > 0 ||
+    stream.state.records.length > 0;
+  const remoteTurnActive =
+    noteRealtime.chat.locked === true ||
+    noteRealtime.chat.stream.phase === "streaming" ||
+    noteRealtime.chat.stream.phase === "awaiting_approval";
+  const effectiveStream =
+    isSending || localIsStreaming
+      ? stream.state
+      : remoteTurnActive
+        ? noteRealtime.chat.stream
+        : localTurnVisible
+          ? stream.state
+          : noteRealtime.chat.stream;
+  const isStreaming =
+    effectiveStream.phase === "streaming" ||
+    effectiveStream.phase === "awaiting_approval";
 
-  // 회의가 흐를 때만, 내가 보내는 중이 아닐 때만 폴링한다. 내 스트림이 진실의 출처인 동안
-  // 폴링이 낡은 히스토리로 덮으면 흐르는 답변이 깜빡인다.
   const messagesQuery = useGetNoteSharedChatMessages(noteId, {
     query: {
       enabled: !isSending,
-      refetchInterval:
-        phase === "active" && !isStreaming && !isSending
-          ? POLL_INTERVAL_MS
-          : false,
+      // approval event는 note topic 계약에 없다. lock event가 주 경로이고, 관전자만
+      // 저주기 REST safety net으로 승인 대기를 회복한다.
+      refetchInterval: (query) => {
+        const response = query.state.data;
+        const topicLocked = noteRealtime.chat.locked === true;
+        const restLocked =
+          response?.status === 200 &&
+          response.data.success &&
+          response.data.data.lock?.locked;
+        if (phase !== "active") return false;
+        return topicLocked || restLocked ? SPECTATOR_SAFETY_POLL_MS : 30_000;
+      },
     },
   });
   const response = messagesQuery.data;
@@ -76,7 +105,10 @@ export function SharedChatPanel({
   const pendingApproval = lock?.pendingApproval ?? null;
 
   // 내가 스트리밍 중이 아닌데 잠금이 있으면 관전자다 — 다른 멤버가 입력 중이다.
-  const isSpectator = !isSending && !isStreaming && Boolean(lock?.locked);
+  const isSpectator =
+    !isSending &&
+    !localIsStreaming &&
+    Boolean(noteRealtime.chat.locked || lock?.locked);
 
   const isLoading = messagesQuery.isLoading;
 
@@ -97,20 +129,30 @@ export function SharedChatPanel({
   const canSend = phase === "active" && !isSpectator && !isUnavailable;
   const isBusy = isSending || isLoading || isUnavailable;
 
+  useEffect(() => {
+    if (noteRealtime.chat.locked !== true) {
+      if (!isSending) ownsTopicTurnRef.current = false;
+      return;
+    }
+    if (!isSending && !localIsStreaming && !ownsTopicTurnRef.current) {
+      resetStream();
+    }
+  }, [isSending, localIsStreaming, noteRealtime.chat.locked, resetStream]);
+
   /**
    * 히스토리가 방금 끝난 턴을 이미 담고 있는가. 즉시 반영이 실패해 로컬 사본을 남겨 둔 뒤
    * 히스토리가 스스로(폴링) 성공하면 같은 턴이 두 벌 그려진다 — 그때는 로컬 사본을 가린다.
    */
   const isTurnReconciled =
     ok &&
-    stream.state.phase === "idle" &&
-    stream.state.content !== null &&
+    effectiveStream.phase === "idle" &&
+    effectiveStream.content !== null &&
     messages
       .slice(turnBaseline)
       .some(
         (message) =>
           message.role === "ASSISTANT" &&
-          message.content === stream.state.content
+          message.content === effectiveStream.content
       );
 
   /**
@@ -132,6 +174,7 @@ export function SharedChatPanel({
     async (text: string) => {
       const message = text.trim();
       if (!message || !canSend || isBusy) return;
+      ownsTopicTurnRef.current = true;
       setIsSending(true);
       try {
         setDraft("");
@@ -165,7 +208,7 @@ export function SharedChatPanel({
   );
 
   const { viewportRef, atBottom, scrollToBottom } = useStickToBottom(
-    `${messages.length}:${pendingUserMessage ?? ""}:${stream.state.text}:${stream.state.records.length}`
+    `${messages.length}:${pendingUserMessage ?? ""}:${effectiveStream.text}:${effectiveStream.records.length}`
   );
 
   // 한 턴이 도는 동안 부모에게 알린다 — 회의가 종료돼도 이 패널을 언마운트해 스트림을 끊지
@@ -230,7 +273,7 @@ export function SharedChatPanel({
             <>
               <ChatThread
                 messages={messages}
-                stream={isTurnReconciled ? initialStreamState : stream.state}
+                stream={isTurnReconciled ? initialStreamState : effectiveStream}
                 pendingUserMessage={
                   isTurnReconciled || isPendingReconciled
                     ? null

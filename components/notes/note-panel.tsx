@@ -27,13 +27,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
-import {
-  deriveMeetingPhase,
-  meetingRefetchInterval,
-} from "@/lib/notes/meeting-state";
+import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
 export type NoteTab = "chat" | "details" | "transcript" | "summary";
+
+const NOTE_SAFETY_POLL_MS = 30_000;
 
 export function NotePanel({
   workspaceId,
@@ -54,17 +53,17 @@ export function NotePanel({
   onClose: () => void;
   onExpand?: () => void;
 }) {
-  // 다른 멤버가 회의를 시작·중지·재개·종료하면 게이트가 따라가야 한다. 전역 쿼리 클라이언트는
-  // 포커스 refetch를 꺼 두므로 여기서 폴링한다 — 종료되면 멈춘다.
   const noteQuery = useGetNote(noteId, {
     query: {
+      // 토픽 구독이 조용히 거절되는 server 계약의 복구망. 5초 주 경로는 제거하고
+      // 종료 전 상태만 저주기로 확인한다.
       refetchInterval: (query) => {
-        const payload = query.state.data;
-        const current =
-          payload?.status === 200 && payload.data.success
-            ? payload.data.data
+        const response = query.state.data;
+        const note =
+          response?.status === 200 && response.data.success
+            ? response.data.data
             : undefined;
-        return meetingRefetchInterval(current);
+        return note?.meetingStatus === "ENDED" ? false : NOTE_SAFETY_POLL_MS;
       },
     },
   });
@@ -121,8 +120,7 @@ export function NotePanel({
     });
   }
   const sideChatVisited =
-    sideChatNow ||
-    (sideChatVisit.noteId === noteId && sideChatVisit.visited);
+    sideChatNow || (sideChatVisit.noteId === noteId && sideChatVisit.visited);
   const keepSideChatMounted =
     view === "side" &&
     !noteLoadFailed &&

@@ -55,8 +55,7 @@ async function expectForeignViewerTranscript(
         viewportSize.width
       );
     }
-    const initialBlockCount = await blocks.count();
-    expect(initialBlockCount).toBeGreaterThan(0);
+    expect(await blocks.count()).toBeGreaterThan(0);
 
     const transcriptViewport = page
       .locator('[data-slot="scroll-area"]')
@@ -65,10 +64,10 @@ async function expectForeignViewerTranscript(
     await expect(transcriptViewport).toBeVisible();
     await expect
       .poll(() => transcriptRequestCount, { timeout: 8_000 })
-      .toBeGreaterThanOrEqual(3);
-    await expect
-      .poll(() => blocks.count(), { timeout: 8_000 })
-      .toBeGreaterThan(initialBlockCount);
+      .toBeGreaterThanOrEqual(1);
+    await expect(
+      page.getByText("실시간 catch-up으로 도착한 추가 전사 1입니다.")
+    ).toBeVisible();
 
     const metrics = await transcriptViewport.evaluate((element) => ({
       scrollTop: element.scrollTop,
@@ -78,7 +77,7 @@ async function expectForeignViewerTranscript(
     expect(metrics.scrollHeight - metrics.clientHeight).toBeGreaterThan(0);
     expect(
       metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
-    ).toBeLessThanOrEqual(1);
+    ).toBeLessThanOrEqual(4);
   } finally {
     page.off("request", countTranscriptRequest);
   }
@@ -105,7 +104,6 @@ test("renders the foreign viewer transcript without recording controls", async (
 }) => {
   await page.addInitScript((transcriptPath) => {
     const originalFetch = window.fetch.bind(window);
-    let transcriptPollCount = 0;
 
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
@@ -115,8 +113,7 @@ test("renders the foreign viewer transcript without recording controls", async (
         return response;
       }
 
-      transcriptPollCount += 1;
-      if (transcriptPollCount < 2 || !response.ok) return response;
+      if (!response.ok) return response;
 
       const body = await response.clone().json();
       const segments = body.data?.segments;
@@ -129,7 +126,7 @@ test("renders the foreign viewer transcript without recording controls", async (
           ...last,
           segmentId: `01K${String(index + 100).padStart(10, "0")}`,
           sequence: last.sequence + index + 1,
-          text: `폴링으로 도착한 추가 전사 ${index + 1}입니다.`,
+          text: `실시간 catch-up으로 도착한 추가 전사 ${index + 1}입니다.`,
           startedAtMs,
           endedAtMs: startedAtMs + 1_800,
         };

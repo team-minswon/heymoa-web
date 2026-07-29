@@ -16,6 +16,7 @@ import {
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
+import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 
 const FOLLOW_THRESHOLD_PX = 180;
 
@@ -39,6 +40,7 @@ export function TranscriptView({
 }) {
   const recording = useRecording();
   const liveTranscript = useRecordingTranscript();
+  const noteRealtime = useNoteRealtime();
   const liveForNote =
     (recording.activeNoteId ?? recording.session?.noteId) === noteId;
   const serverActive = phase === "active";
@@ -46,7 +48,7 @@ export function TranscriptView({
   const transcriptQuery = useGetNoteTranscript(noteId, {
     query: {
       staleTime: serverActive ? 0 : 60_000,
-      refetchInterval: serverActive ? 2_500 : false,
+      refetchInterval: serverActive ? 30_000 : false,
       refetchOnWindowFocus: true,
     },
   });
@@ -61,12 +63,12 @@ export function TranscriptView({
     const rows = new Map<string, TranscriptPresentationSegment>();
 
     persisted.forEach((segment) => rows.set(segment.segmentId, segment));
+    noteRealtime.transcript.finalSegments.forEach((segment) => {
+      rows.set(segment.segmentId, segment);
+    });
     if (liveForNote) {
       liveTranscript.finalSegments.forEach((segment) => {
-        rows.set(segment.segmentId, {
-          ...segment,
-          transcriptionSessionId: recording.session?.sessionId,
-        });
+        rows.set(segment.segmentId, segment);
       });
     }
 
@@ -76,19 +78,38 @@ export function TranscriptView({
   }, [
     liveForNote,
     liveTranscript.finalSegments,
+    noteRealtime.transcript.finalSegments,
     persisted,
-    recording.session?.sessionId,
   ]);
-  const partialText = useMemo(
-    () =>
-      liveForNote
-        ? Object.values(liveTranscript.partialByUtteranceId)
-            .map((text) => text.trim())
-            .filter(Boolean)
-            .join(" ")
-        : "",
-    [liveForNote, liveTranscript.partialByUtteranceId]
-  );
+  const partialText = useMemo(() => {
+    const partials = new Map<string, string>();
+    if (liveForNote) {
+      Object.entries(liveTranscript.partialByUtteranceId).forEach(
+        ([utteranceId, text]) => partials.set(utteranceId, text)
+      );
+    }
+    Object.entries(noteRealtime.transcript.partialByUtteranceId).forEach(
+      ([utteranceId, text]) => partials.set(utteranceId, text)
+    );
+    noteRealtime.transcript.finalSegments.forEach((segment) =>
+      partials.delete(segment.utteranceId)
+    );
+    if (liveForNote) {
+      liveTranscript.finalSegments.forEach((segment) =>
+        partials.delete(segment.utteranceId)
+      );
+    }
+    return [...partials.values()]
+      .map((text) => text.trim())
+      .filter(Boolean)
+      .join(" ");
+  }, [
+    liveForNote,
+    liveTranscript.finalSegments,
+    liveTranscript.partialByUtteranceId,
+    noteRealtime.transcript.finalSegments,
+    noteRealtime.transcript.partialByUtteranceId,
+  ]);
   const isTranscriptError = transcriptQuery.isError;
   const refetchTranscript = transcriptQuery.refetch;
 
@@ -171,20 +192,11 @@ export function TranscriptView({
   }, [scrollToLatest, serverActive, transcriptQuery.isPending]);
 
   useEffect(() => {
-    if (
-      transcriptQuery.isPending ||
-      !viewerLive ||
-      !followingRef.current
-    )
+    if (transcriptQuery.isPending || !viewerLive || !followingRef.current)
       return;
     const frame = window.requestAnimationFrame(() => scrollToLatest("auto"));
     return () => window.cancelAnimationFrame(frame);
-  }, [
-    liveContentKey,
-    scrollToLatest,
-    transcriptQuery.isPending,
-    viewerLive,
-  ]);
+  }, [liveContentKey, scrollToLatest, transcriptQuery.isPending, viewerLive]);
 
   useEffect(
     () => () => {
@@ -256,7 +268,7 @@ export function TranscriptView({
                 >
                   <span className="flex items-center gap-1.5 self-start pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-600">
                     <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
-                    Live
+                    실시간 · 확정 전
                   </span>
                   <p className="text-read leading-7 text-[var(--el-body)]">
                     {partialText}
