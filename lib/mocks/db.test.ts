@@ -11,7 +11,11 @@ function firstNoteId() {
   const noteId = mockDb
     .listProjects(workspaceId)
     .flatMap((project) => mockDb.listNotes(project.projectId))
-    .find((candidate) => candidate.meetingStatus === "IN_PROGRESS")?.noteId;
+    .find(
+      (candidate) =>
+        candidate.meetingStatus === "IN_PROGRESS" &&
+        candidate.meetingStartedBy?.userId === MOCK_USER.userId
+    )?.noteId;
   if (!noteId) throw new Error("진행 중인 노트가 시드에 없다");
   return noteId;
 }
@@ -43,6 +47,20 @@ describe("mockDb", () => {
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
     ).toHaveLength(13);
+  });
+
+  it("does not seed IN_PROGRESS without a meeting starter", () => {
+    const notes = mockDb
+      .listWorkspaces()
+      .flatMap((workspace) => mockDb.listProjects(workspace.workspaceId))
+      .flatMap((project) => mockDb.listNotes(project.projectId));
+
+    expect(
+      notes.filter(
+        (note) =>
+          note.meetingStatus === "IN_PROGRESS" && note.meetingStartedBy === null
+      )
+    ).toEqual([]);
   });
 
   it("keeps exactly one explicit default workspace", () => {
@@ -83,6 +101,39 @@ describe("mockDb", () => {
     );
   });
 
+  it("transitions a new note through recording, pause, and cumulative sessions", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+
+    expect(note.meetingStatus).toBe("NOT_STARTED");
+
+    const first = mockDb.createSession(note.noteId);
+    expect(mockDb.getNote(note.noteId).meetingStatus).toBe("IN_PROGRESS");
+    mockDb.updateSessionStatus(first.sessionId, "ACTIVE");
+    mockDb.updateSessionStatus(first.sessionId, "COMPLETED");
+
+    expect(mockDb.getNote(note.noteId).meetingStatus).toBe("PAUSED");
+    expect(
+      mockDb
+        .listNotes(project.projectId)
+        .find((candidate) => candidate.noteId === note.noteId)
+    ).toMatchObject({
+      recordedDurationMs: 1000,
+      activeSessionStartedAt: null,
+    });
+
+    const second = mockDb.createSession(note.noteId);
+    mockDb.updateSessionStatus(second.sessionId, "ACTIVE");
+    mockDb.updateSessionStatus(second.sessionId, "COMPLETED");
+
+    expect(
+      mockDb
+        .listNotes(project.projectId)
+        .find((candidate) => candidate.noteId === note.noteId)
+        ?.recordedDurationMs
+    ).toBe(2000);
+  });
+
   it("replaces an expired READY session after current returns null", () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
@@ -92,12 +143,96 @@ describe("mockDb", () => {
 
     try {
       mockDb.getCurrentSession(note.noteId);
+      expect(mockDb.getSession(expired.sessionId)).toMatchObject({
+        status: "INTERRUPTED",
+        endReason: "READY_TIMEOUT",
+      });
+      expect(mockDb.getNote(note.noteId).meetingStatus).toBe("PAUSED");
       const replacement = mockDb.createSession(note.noteId);
 
       expect(replacement.sessionId).not.toBe(expired.sessionId);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("terminalizes an expired READY session before replacing it", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const expired = mockDb.createSession(note.noteId);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.parse(expired.readyExpiresAt) + 1));
+
+    try {
+      mockDb.createSession(note.noteId);
+
+      expect(mockDb.getSession(expired.sessionId)).toMatchObject({
+        status: "INTERRUPTED",
+        endReason: "READY_TIMEOUT",
+      });
+      expect(mockDb.getNote(note.noteId).meetingStatus).toBe("IN_PROGRESS");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    [
+      "note detail",
+      (projectId: string, noteId: string) => mockDb.getNote(noteId),
+    ],
+    [
+      "note list",
+      (projectId: string, noteId: string) =>
+        mockDb
+          .listNotes(projectId)
+          .find((candidate) => candidate.noteId === noteId),
+    ],
+    [
+      "session detail",
+      (_projectId: string, _noteId: string, sessionId: string) =>
+        mockDb.getSession(sessionId),
+    ],
+  ])("expires READY from a direct %s read", (_name, read) => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const session = mockDb.createSession(note.noteId);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.parse(session.readyExpiresAt) + 1));
+
+    try {
+      const result = read(project.projectId, note.noteId, session.sessionId);
+
+      expect(result).toMatchObject(
+        _name === "session detail"
+          ? { status: "INTERRUPTED", endReason: "READY_TIMEOUT" }
+          : { meetingStatus: "PAUSED", activeSessionStartedAt: null }
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns derived timing snapshots after a note update", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const session = mockDb.createSession(note.noteId);
+    mockDb.updateSessionStatus(session.sessionId, "ACTIVE");
+
+    expect(
+      mockDb.updateNote(note.noteId, { title: "기록 중 제목" })
+    ).toMatchObject({
+      activeSessionStartedAt: expect.any(String),
+      recordedDurationMs: 0,
+    });
+
+    mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
+    expect(
+      mockDb.updateNote(note.noteId, { title: "중지된 제목" })
+    ).toMatchObject({
+      activeSessionStartedAt: null,
+      recordedDurationMs: 1000,
+    });
   });
 
   it("derives lastRecordedAt from completed sessions, not a newer active session", () => {
@@ -252,6 +387,13 @@ describe("meeting and analysis", () => {
     expect(() => mockDb.endMeeting(noteId)).toThrow("MEETING_ALREADY_ENDED");
   });
 
+  it("refuses to end a meeting that has not started before checking its starter", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+
+    expect(() => mockDb.endMeeting(note.noteId)).toThrow("MEETING_NOT_STARTED");
+  });
+
   // 계약의 409에 MEETING_ALREADY_ENDED가 생겼다(APP-214, server@a582684). 서버는 원래부터
   // 막고 있었고 없던 것이 계약뿐이었다 — 그래서 목만 그 사실을 몰라 로컬이 초록이었다.
   it("refuses to start transcription on an ended meeting", () => {
@@ -260,7 +402,6 @@ describe("meeting and analysis", () => {
 
     expect(() => mockDb.createSession(noteId)).toThrow("MEETING_ALREADY_ENDED");
   });
-
 });
 
 describe("workspace integrations", () => {
@@ -346,9 +487,8 @@ describe("workspaces gained after seeding", () => {
 describe("only the meeting starter can operate a meeting", () => {
   beforeEach(() => mockDb.reset());
 
-  // 계약 403 NOT_MEETING_STARTER. 새로 만든 노트는 아직 아무도 녹음을 시작하지 않았으므로
-  // 조작할 회의가 없다.
-  it("refuses meeting commands on a note nobody started", () => {
+  // 새 노트는 NOT_STARTED라 회의 종료 자체가 409 MEETING_NOT_STARTED다.
+  it("refuses ending a note nobody started", () => {
     const projectId = mockDb.listProjects(
       mockDb.listWorkspaces()[0].workspaceId
     )[0].projectId;
@@ -356,7 +496,7 @@ describe("only the meeting starter can operate a meeting", () => {
 
     expect(fresh.meetingStartedBy).toBeNull();
     expect(() => mockDb.endMeeting(fresh.noteId)).toThrow(
-      "NOT_MEETING_STARTER"
+      "MEETING_NOT_STARTED"
     );
   });
 

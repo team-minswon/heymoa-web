@@ -45,7 +45,7 @@ export function WorkspaceNoteList({
   const retryRef = useRef(onRetry);
   const activeMeetingStarts = notes
     .filter(isMeetingActive)
-    .map((note) => Date.parse(note.meetingStartedAt ?? ""))
+    .map((note) => Date.parse(note.activeSessionStartedAt ?? ""))
     .filter(Number.isFinite);
   // 목록 전체가 이 타이머 하나만 공유하되, 각 활성 회의의 다음 경과 분 경계 중 가장 가까운
   // 시각에 깨운다. 시작 초가 다른 회의도 최대 59초 늦게 바뀌지 않는다.

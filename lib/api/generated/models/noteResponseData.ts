@@ -12,11 +12,6 @@ import type { NoteResponseDataMeetingStatus } from "./noteResponseDataMeetingSta
  * 성공 응답 데이터
  */
 export type NoteResponseData = {
-  /**
-   * 최초 활성 전사 세션의 시작 시각 (활성화된 세션이 없으면 null)
-   * @nullable
-   */
-  meetingStartedAt: string | null;
   /** 노트 생성 시각 */
   createdAt: string;
   /**
@@ -24,6 +19,11 @@ export type NoteResponseData = {
    * @nullable
    */
   meetingStartedBy: NoteResponseDataMeetingStartedBy;
+  /**
+   * ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
+   * @minimum 0
+   */
+  recordedDurationMs: number;
   /** 회의 상태 */
   meetingStatus: NoteResponseDataMeetingStatus;
   /**
@@ -47,4 +47,14 @@ export type NoteResponseData = {
   projectId: string;
   /** 노트 수정 시각 */
   updatedAt: string;
+  /**
+   * 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
+   * @nullable
+   */
+  meetingStartedAt: string | null;
+  /**
+   * 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
+   * @nullable
+   */
+  activeSessionStartedAt: string | null;
 };

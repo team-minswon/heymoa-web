@@ -13,6 +13,8 @@ export type NoteListResponseDataNotesItemMeetingStatus =
   (typeof NoteListResponseDataNotesItemMeetingStatus)[keyof typeof NoteListResponseDataNotesItemMeetingStatus];
 
 export const NoteListResponseDataNotesItemMeetingStatus = {
+  NOT_STARTED: "NOT_STARTED",
   IN_PROGRESS: "IN_PROGRESS",
+  PAUSED: "PAUSED",
   ENDED: "ENDED",
 } as const;

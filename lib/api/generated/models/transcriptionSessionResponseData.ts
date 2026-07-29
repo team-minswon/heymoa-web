@@ -13,17 +13,17 @@ import type { TranscriptionSessionResponseDataStatus } from "./transcriptionSess
  */
 export type TranscriptionSessionResponseData = {
   /**
-   * 전사 종료 사유
+   * 전사 종료 사유 (READY면 null)
    * @nullable
    */
   endReason: TranscriptionSessionResponseDataEndReason;
   /**
-   * 전사 종료 시각
+   * 전사 종료 시각 (READY면 null)
    * @nullable
    */
   endedAt: string | null;
   /**
-   * 전사 시작 시각
+   * 전사 시작 시각 (READY면 null)
    * @nullable
    */
   startedAt: string | null;

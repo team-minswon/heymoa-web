@@ -7,7 +7,7 @@
  */
 
 /**
- * 전사 종료 사유
+ * 전사 종료 사유 (READY면 null)
  * @nullable
  */
 export type StartTranscriptionSessionResponseDataEndReason =

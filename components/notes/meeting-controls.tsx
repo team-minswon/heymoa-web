@@ -8,35 +8,31 @@ import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { NoteResponseData } from "@/lib/api/generated/models";
-import { formatMeetingElapsedClock } from "@/lib/notes/meeting-state";
+import {
+  getRecordedDurationMs,
+  MEETING_STATUS_LABEL,
+} from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 
-function MeetingElapsed({
-  startedAt,
-  now,
-}: {
-  startedAt: string;
-  now: number | null;
-}) {
-  return now === null ? null : (
+function formatRecordedClock(elapsedMs: number) {
+  const totalSeconds = Math.floor(elapsedMs / 1_000);
+  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(
+    totalSeconds % 60
+  ).padStart(2, "0")}`;
+}
+
+function RecordedTime({ elapsedMs }: { elapsedMs: number }) {
+  return (
     <span
-      role="status"
-      aria-label="회의 진행 시간"
-      className="text-xs font-medium text-destructive tabular-nums"
+      role="timer"
+      aria-label="누적 기록 시간"
+      className="text-xs font-medium tabular-nums text-[var(--el-muted)]"
     >
-      {formatMeetingElapsedClock(startedAt, now)}
+      {formatRecordedClock(elapsedMs)}
     </span>
   );
 }
 
-/**
- * 노트 앱바의 회의 조작. **조작권은 시작자 단독이다** — `meetingStartedBy.userId === 내 userId`.
- * 뷰어는 상태 pill과 "OO님이 시작한 회의"만 본다(왜 버튼이 없는지 읽히게). 403
- * `NOT_MEETING_STARTER`는 버튼을 숨겨 예방하므로 최후 방어선일 뿐이다.
- *
- * **남는 조작은 `회의 종료` 하나다** (APP-219). 회의 중지·재개(PAUSED)를 폐기하면서 "멈춤"의
- * 창구가 레코더 독 하나로 정리됐다 — 쉬는 시간에는 녹음만 멈추고 회의는 열어 둔다.
- */
 export function MeetingControls({
   note,
   onMeetingEnded,
@@ -52,59 +48,65 @@ export function MeetingControls({
   const [endOpen, setEndOpen] = useState(false);
 
   const startedBy = note.meetingStartedBy;
+  const isStarter = Boolean(
+    user && startedBy && startedBy.userId === user.userId
+  );
   const now = useAlignedNow(
     1_000,
-    note.meetingStatus === "IN_PROGRESS" && Boolean(note.meetingStartedAt),
-    note.meetingStartedAt ? [Date.parse(note.meetingStartedAt)] : []
+    note.meetingStatus === "IN_PROGRESS",
+    note.activeSessionStartedAt ? [Date.parse(note.activeSessionStartedAt)] : []
   );
-  const elapsed = note.meetingStartedAt ? (
-    <MeetingElapsed startedAt={note.meetingStartedAt} now={now} />
-  ) : null;
-
-  // 아직 아무도 녹음을 시작하지 않았으면 조작이 없다(녹음 독이 시작을 맡는다).
-  if (!startedBy) return null;
-
-  const context = (
-    <>
-      <Badge variant="secondary">
-        {note.meetingStatus === "ENDED" ? "회의 종료됨" : "진행 중"}
-      </Badge>
-      <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
-        {startedBy.name}
-        <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
-      </span>
-      {elapsed}
-    </>
-  );
-
-  if (note.meetingStatus === "ENDED") {
-    return showContext ? (
-      <div className="flex items-center gap-2">{context}</div>
-    ) : (
-      <Badge variant="secondary">회의 종료됨</Badge>
-    );
-  }
-
-  const isStarter = Boolean(user && startedBy.userId === user.userId);
-
-  if (!isStarter) {
-    // 뷰어 — 조작 버튼 없이 상태와 시작자만.
-    return <div className="flex items-center gap-2">{context}</div>;
-  }
+  const showStarter = Boolean(startedBy && (showContext || !isStarter));
+  const canEnd =
+    isStarter &&
+    (note.meetingStatus === "IN_PROGRESS" || note.meetingStatus === "PAUSED");
 
   return (
-    <div className="flex items-center gap-2">
-      {showContext ? context : elapsed}
-      <Button size="sm" className="h-8" onClick={() => setEndOpen(true)}>
-        <Square className="size-3.5" />
-        <span className="sr-only sm:not-sr-only">회의 종료</span>
-      </Button>
-      <MeetingEndDialog
-        noteId={note.noteId}
-        open={endOpen}
-        onOpenChange={setEndOpen}
-        onEnded={onMeetingEnded}
-      />
+    <div
+      role="group"
+      aria-label="회의 상태 및 제어"
+      className="flex min-w-0 flex-wrap items-center gap-2"
+    >
+      <Badge variant="secondary">
+        {MEETING_STATUS_LABEL[note.meetingStatus]}
+      </Badge>
+      <RecordedTime elapsedMs={getRecordedDurationMs(note, now ?? 0)} />
+      {showStarter ? (
+        <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
+          {startedBy?.name}
+          <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
+        </span>
+      ) : null}
+      {note.meetingStatus === "ENDED" && onMeetingEnded ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11"
+          onClick={onMeetingEnded}
+        >
+          요약 보기
+        </Button>
+      ) : null}
+      {canEnd ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 border-destructive/30 text-destructive"
+          onClick={() => setEndOpen(true)}
+        >
+          <Square className="size-3.5" />
+          회의 종료
+        </Button>
+      ) : null}
+      {canEnd ? (
+        <MeetingEndDialog
+          noteId={note.noteId}
+          meetingStatus={note.meetingStatus}
+          open={endOpen}
+          onOpenChange={setEndOpen}
+          onEnded={onMeetingEnded}
+        />
+      ) : null}
     </div>
   );
 }

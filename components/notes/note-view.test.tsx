@@ -15,7 +15,7 @@ const state = vi.hoisted(() => ({
   note: undefined as
     | undefined
     | {
-        meetingStatus: "IN_PROGRESS" | "ENDED";
+        meetingStatus: "IN_PROGRESS" | "PAUSED" | "ENDED";
         meetingStartedBy: null | { userId: string; name: string };
       },
   replace: vi.fn(),
@@ -101,6 +101,7 @@ describe("normalizeNoteViewQuery", () => {
   it.each([
     ["active", "chat", "chat"],
     ["active", "summary", "transcript"],
+    ["paused", "chat", "chat"],
     ["ended", "summary", "summary"],
     ["ended", "chat", "transcript"],
     ["not-started", "chat", "transcript"],
@@ -133,6 +134,39 @@ describe("NoteView", () => {
     state.push.mockReset();
   });
   afterEach(cleanup);
+
+  it("announces a meeting state change once through one polite live region", () => {
+    state.note = {
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedBy: { userId: "starter", name: "시작자" },
+    };
+    const view = render(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+
+    const announcement = screen.getByRole("status", {
+      name: "회의 상태 변경",
+    });
+    expect(announcement).toHaveAttribute("aria-live", "polite");
+    expect(announcement).toHaveTextContent(
+      "회의 상태가 기록 중으로 변경되었습니다."
+    );
+
+    state.note = {
+      meetingStatus: "ENDED",
+      meetingStartedBy: { userId: "starter", name: "시작자" },
+    };
+    view.rerender(
+      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
+    );
+
+    expect(
+      screen.getAllByRole("status", { name: "회의 상태 변경" })
+    ).toHaveLength(1);
+    expect(announcement).toHaveTextContent(
+      "회의 상태가 종료됨으로 변경되었습니다."
+    );
+  });
 
   it("waits for the phase before replacing a potentially legal side query", async () => {
     state.search = "view=side&tab=summary";

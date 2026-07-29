@@ -77,7 +77,7 @@ export const getGetTranscriptionSessionUrl = (sessionId: string) => {
 };
 
 /**
- * 전사 세션의 현재 상태와 종료 정보를 조회한다.
+ * 전사 세션의 현재 상태와 종료 정보를 조회한다. READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다.
  * @summary 전사 세션 조회
  */
 export const getTranscriptionSession = async (
@@ -831,7 +831,7 @@ export const getStartTranscriptionSessionUrl = (noteId: string) => {
 };
 
 /**
- * 노트에 실시간 전사 세션을 생성하고 연결 대기 상태로 만든다.
+ * 노트에 실시간 전사 세션을 READY로 생성한다. READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다.
  * @summary 전사 세션 시작
  */
 export const startTranscriptionSession = async (
@@ -962,7 +962,7 @@ export const getGetCurrentTranscriptionSessionUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 현재 전사 세션(만료되지 않은 READY 또는 ACTIVE)을 조회한다. 현재 세션이 없으면 data가 null이다.
+ * 노트의 현재 전사 세션(만료되지 않은 READY 또는 ACTIVE)을 조회한다. READY의 startedAt은 null이고, 현재 세션이 없으면 data가 null이다.
  * @summary 현재 전사 세션 조회
  */
 export const getCurrentTranscriptionSession = async (

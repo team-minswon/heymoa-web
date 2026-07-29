@@ -11,6 +11,70 @@ const MOCK_WORKSPACE_ID = "01K0000000000";
 const STARTER_NOTE_ID = "01K0000000002";
 const FOREIGN_VIEWER_NOTE_ID = "01K0000000028";
 
+function meetingControls(page: Page) {
+  return page.getByRole("group", { name: "회의 상태 및 제어" });
+}
+
+function recordedSeconds(value: string | null) {
+  const [minutes = "0", seconds = "0"] = (value ?? "0:0").split(":");
+  return Number(minutes) * 60 + Number(seconds);
+}
+
+async function createMeetingNote(page: Page) {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+  await page.getByRole("button", { name: "새 노트" }).click();
+  await page.waitForURL(
+    new RegExp(`/w/${MOCK_WORKSPACE_ID}/notes/[^?]+\\?view=full`)
+  );
+
+  const noteId = new URL(page.url()).pathname.split("/").at(-1);
+  expect(noteId).toBeTruthy();
+  await expect(
+    meetingControls(page).getByText("시작 전", { exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
+  ).toBeVisible();
+  return noteId!;
+}
+
+async function startRecording(page: Page, name: "회의 시작" | "재개") {
+  const dock = page.getByLabel("녹음 제어");
+  await dock.getByRole("button", { name }).click();
+  await expect(dock.getByRole("button", { name: "중지" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(
+    meetingControls(page).getByText("기록 중", { exact: true })
+  ).toBeVisible({ timeout: 20_000 });
+}
+
+async function stopRecording(page: Page) {
+  await page
+    .getByLabel("녹음 제어")
+    .getByRole("button", { name: "중지" })
+    .click();
+  await expect(
+    meetingControls(page).getByText("중지됨", { exact: true })
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.getByLabel("녹음 제어").getByRole("button", { name: "재개" })
+  ).toBeVisible();
+}
+
+async function endMeeting(page: Page) {
+  await meetingControls(page)
+    .getByRole("button", { name: "회의 종료" })
+    .click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "회의 종료" })
+    .click();
+  await expect(
+    meetingControls(page).getByText("종료됨", { exact: true })
+  ).toBeVisible({ timeout: 20_000 });
+}
+
 async function expectForeignViewerTranscript(
   page: Page,
   viewportSize: { width: number; height: number }
@@ -44,7 +108,7 @@ async function expectForeignViewerTranscript(
       const toolbar = page
         .getByRole("navigation", { name: "현재 위치" })
         .locator("..");
-      const status = toolbar.getByText("진행 중", { exact: true });
+      const status = toolbar.getByText("기록 중", { exact: true });
       const starterName = toolbar.getByText("김서연", { exact: false });
       await expect(status).toBeVisible();
       await expect(starterName).toBeVisible();
@@ -70,14 +134,20 @@ async function expectForeignViewerTranscript(
     ).toBeVisible();
 
     const metrics = await transcriptViewport.evaluate((element) => ({
-      scrollTop: element.scrollTop,
       clientHeight: element.clientHeight,
       scrollHeight: element.scrollHeight,
     }));
     expect(metrics.scrollHeight - metrics.clientHeight).toBeGreaterThan(0);
-    expect(
-      metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
-    ).toBeLessThanOrEqual(4);
+    await expect
+      .poll(() =>
+        transcriptViewport.evaluate(
+          (element) =>
+            element.scrollHeight - element.scrollTop - element.clientHeight
+        )
+      )
+      // 모바일 폰트가 늦게 자리 잡으면 마지막 줄 높이만큼 다시 흐른다. 한 줄 이내면
+      // 하단 추적이고, 추적이 끊긴 회귀는 수백 px가 남는다.
+      .toBeLessThanOrEqual(32);
   } finally {
     page.off("request", countTranscriptRequest);
   }
@@ -352,22 +422,126 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
  * 종료 후 요약 탭이 분석 진행으로 넘어가는지 서비스 워커 경로로 확인한다.
  * `01K0000000002`는 시작자가 목 유저라 조작 버튼이 뜬다.
  */
-/**
- * APP-218에서 회의 중지·재개를 폐기했다 — 상단바의 회의 조작은 `회의 종료` 하나다.
- * "멈춤"의 창구는 레코더 독(전사 세션)이고, 쉬는 시간에는 녹음만 멈춘다.
- *
- * 계약에서 경로가 사라졌으므로 버튼이 남으면 404를 부른다. 서비스 워커 경로로 확인한다.
- */
-test("shows only the end-meeting control in the note toolbar", async ({
+test("shows a persistent explanation for a remotely active starter note", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
 
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "중지" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "재개" })).toHaveCount(0);
-  // 녹음 시작은 독이 계속 맡는다 — 축이 사라진 게 아니라 하나로 합쳐졌다.
-  await expect(page.getByRole("button", { name: "기록 시작" })).toBeVisible();
+  await expect(
+    page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
+  ).toBeVisible();
+  await expect(
+    page
+      .getByLabel("녹음 제어")
+      .getByRole("button", { name: /회의 시작|재개|중지/ })
+  ).toHaveCount(0);
+});
+
+test("creates a NOT_STARTED note without requesting the microphone", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const original = navigator.mediaDevices.getUserMedia.bind(
+      navigator.mediaDevices
+    );
+    const state = window as typeof window & { app288GetUserMediaCalls: number };
+    state.app288GetUserMediaCalls = 0;
+    navigator.mediaDevices.getUserMedia = (...args) => {
+      state.app288GetUserMediaCalls += 1;
+      return original(...args);
+    };
+  });
+
+  await createMeetingNote(page);
+
+  await expect(
+    meetingControls(page).getByRole("timer", { name: "누적 기록 시간" })
+  ).toHaveText("00:00");
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { app288GetUserMediaCalls: number })
+          .app288GetUserMediaCalls
+    )
+  ).toBe(0);
+});
+
+test("starts and ends a meeting through one confirmation", async ({ page }) => {
+  await createMeetingNote(page);
+  await startRecording(page, "회의 시작");
+  expect(
+    recordedSeconds(
+      await meetingControls(page)
+        .getByRole("timer", { name: "누적 기록 시간" })
+        .textContent()
+    )
+  ).toBeLessThan(60);
+
+  await endMeeting(page);
+
+  await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
+  await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
+    timeout: 20_000,
+  });
+});
+
+test("freezes cumulative time across stop and end", async ({ page }) => {
+  await createMeetingNote(page);
+  await startRecording(page, "회의 시작");
+  await stopRecording(page);
+
+  const timer = meetingControls(page).getByRole("timer", {
+    name: "누적 기록 시간",
+  });
+  const stopped = recordedSeconds(await timer.textContent());
+  expect(stopped).toBeGreaterThan(0);
+  await page.waitForTimeout(1_100);
+  expect(recordedSeconds(await timer.textContent())).toBe(stopped);
+
+  await endMeeting(page);
+
+  expect(recordedSeconds(await timer.textContent())).toBe(stopped);
+});
+
+test("continues cumulative time across stop, resume, and stop", async ({
+  page,
+}) => {
+  await createMeetingNote(page);
+  await startRecording(page, "회의 시작");
+  await stopRecording(page);
+
+  const timer = meetingControls(page).getByRole("timer", {
+    name: "누적 기록 시간",
+  });
+  const firstStop = recordedSeconds(await timer.textContent());
+  expect(firstStop).toBeGreaterThan(0);
+
+  await startRecording(page, "재개");
+  await stopRecording(page);
+
+  const secondStop = recordedSeconds(await timer.textContent());
+  expect(secondStop).toBeGreaterThan(firstStop);
+  await page.waitForTimeout(1_100);
+  expect(recordedSeconds(await timer.textContent())).toBe(secondStop);
+});
+
+test("shows the NOT_STARTED recorder dock in the side panel", async ({
+  page,
+}) => {
+  const noteId = await createMeetingNote(page);
+  await page.getByRole("button", { name: "노트 닫기" }).click();
+  await page.getByRole("link", { name: "실시간 기록 노트 노트 열기" }).click();
+  await expect(page).toHaveURL(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=side&tab=transcript`
+  );
+
+  await expect(
+    page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
+  ).toBeVisible();
+  await expect(
+    meetingControls(page).getByText("시작 전", { exact: true })
+  ).toBeVisible();
 });
 
 test("shows meeting context and shared chat inside the viewer side panel", async ({
@@ -378,12 +552,12 @@ test("shows meeting context and shared chat inside the viewer side panel", async
   );
 
   const noteSurface = page.getByLabel("노트", { exact: true });
-  await expect(noteSurface.getByText("진행 중", { exact: true })).toBeVisible();
+  await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
   await expect(
     noteSurface.getByText("김서연님이 시작한 회의", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "기록 시작" })).toHaveCount(0);
+  await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
   await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "노트 정보"]);
 
   await page.getByRole("tab", { name: "챗봇" }).click();
@@ -401,12 +575,14 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   );
 
   const noteSurface = page.getByLabel("노트", { exact: true });
-  await expect(noteSurface.getByText("진행 중", { exact: true })).toBeVisible();
+  await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
   await expect(
     noteSurface.getByText("테스트 유저님이 시작한 회의", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "기록 시작" })).toHaveCount(0);
+  await expect(
+    page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "회의 종료" }).click();
   const dialog = page.getByRole("alertdialog");
@@ -415,7 +591,9 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText("회의 종료됨")).toBeVisible();
+  await expect(
+    meetingControls(page).getByText("종료됨", { exact: true })
+  ).toBeVisible();
   await expect(page.getByRole("tab")).toHaveText(["기록", "요약", "노트 정보"]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
@@ -434,7 +612,9 @@ test("ends a meeting and shows the analysis in progress", async ({ page }) => {
   await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText("회의 종료됨")).toBeVisible();
+  await expect(
+    meetingControls(page).getByText("종료됨", { exact: true })
+  ).toBeVisible();
 });
 
 /**

@@ -27,9 +27,11 @@ import type {
   NoteTopicEvent,
   NoteTopicFinalSegment,
 } from "@/lib/notes/note-topic-protocol";
+import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
 
 type NoteRealtimeState = {
   partialByUtteranceId: Record<string, string>;
+  partialSessionIdByUtteranceId: Record<string, string>;
   finalSegments: NoteTopicFinalSegment[];
   chatStream: ChatStreamState;
   chatLocked: boolean | null;
@@ -42,6 +44,7 @@ type NoteRealtimeAction =
 
 const initialState: NoteRealtimeState = {
   partialByUtteranceId: {},
+  partialSessionIdByUtteranceId: {},
   finalSegments: [],
   chatStream: initialStreamState,
   chatLocked: null,
@@ -70,10 +73,18 @@ function reducer(
           ...state.partialByUtteranceId,
           [event.utteranceId]: event.text,
         },
+        partialSessionIdByUtteranceId: {
+          ...state.partialSessionIdByUtteranceId,
+          [event.utteranceId]: event.transcriptionSessionId,
+        },
       };
     case "transcript.final": {
       const partialByUtteranceId = { ...state.partialByUtteranceId };
+      const partialSessionIdByUtteranceId = {
+        ...state.partialSessionIdByUtteranceId,
+      };
       delete partialByUtteranceId[event.utteranceId];
+      delete partialSessionIdByUtteranceId[event.utteranceId];
       const index = state.finalSegments.findIndex(
         (segment) => segment.segmentId === event.segmentId
       );
@@ -83,11 +94,37 @@ function reducer(
           : state.finalSegments.map((segment, current) =>
               current === index ? event : segment
             );
-      return { ...state, partialByUtteranceId, finalSegments };
+      return {
+        ...state,
+        partialByUtteranceId,
+        partialSessionIdByUtteranceId,
+        finalSegments,
+      };
     }
-    case "recording.stopped":
+    case "recording.stopped": {
+      const partialByUtteranceId = { ...state.partialByUtteranceId };
+      const partialSessionIdByUtteranceId = {
+        ...state.partialSessionIdByUtteranceId,
+      };
+      Object.entries(partialSessionIdByUtteranceId).forEach(
+        ([utteranceId, sessionId]) => {
+          if (sessionId !== event.transcriptionSessionId) return;
+          delete partialByUtteranceId[utteranceId];
+          delete partialSessionIdByUtteranceId[utteranceId];
+        }
+      );
+      return {
+        ...state,
+        partialByUtteranceId,
+        partialSessionIdByUtteranceId,
+      };
+    }
     case "meeting.ended":
-      return { ...state, partialByUtteranceId: {} };
+      return {
+        ...state,
+        partialByUtteranceId: {},
+        partialSessionIdByUtteranceId: {},
+      };
     case "chat.token":
       return {
         ...state,
@@ -153,6 +190,14 @@ export function NoteRealtimeProvider({
       void queryClient.invalidateQueries({
         queryKey: getGetNoteQueryKey(noteId),
       });
+    const invalidateNoteLists = () =>
+      void queryClient.invalidateQueries({
+        predicate: ({ queryKey }) => isProjectNotesQueryKey(queryKey),
+      });
+    const invalidateLifecycle = () => {
+      invalidateNote();
+      invalidateNoteLists();
+    };
     const invalidateTranscript = () =>
       void queryClient.invalidateQueries({
         queryKey: getGetNoteTranscriptQueryKey(noteId),
@@ -178,7 +223,7 @@ export function NoteRealtimeProvider({
       clearInterruption();
       clearTranscriptCatchUp();
       dispatch({ type: "reset" });
-      invalidateNote();
+      invalidateLifecycle();
       invalidateTranscript();
       invalidateChat();
     };
@@ -190,20 +235,20 @@ export function NoteRealtimeProvider({
         dispatch({ type: "event", event });
         switch (event.type) {
           case "meeting.started":
-            invalidateNote();
+            invalidateLifecycle();
             break;
           case "meeting.ended":
             clearTranscriptCatchUp();
-            invalidateNote();
+            invalidateLifecycle();
             invalidateTranscript();
             invalidateChat();
             break;
           case "recording.started":
-            invalidateNote();
+            invalidateLifecycle();
             break;
           case "recording.stopped":
             clearTranscriptCatchUp();
-            invalidateNote();
+            invalidateLifecycle();
             invalidateTranscript();
             break;
           case "transcript.final":

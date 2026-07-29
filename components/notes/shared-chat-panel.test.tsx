@@ -406,6 +406,29 @@ describe("SharedChatPanel", () => {
     expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
   });
 
+  it.each([
+    ["paused", "회의 기록이 중지되었습니다"],
+    ["ended", "회의가 종료되었습니다"],
+  ] as const)("%s에서는 기존 대화를 읽되 새 전송은 잠근다", (phase, notice) => {
+    state.messages = [
+      {
+        messageId: "a1",
+        createdAt: "2026-07-24T00:00:01Z",
+        role: "ASSISTANT",
+        content: "기존 회의 답변입니다.",
+        authorName: null,
+        toolEvent: null,
+      },
+    ];
+
+    renderPanel(phase);
+
+    expect(screen.getByText("기존 회의 답변입니다.")).toBeInTheDocument();
+    expect(screen.getByText(notice)).toBeInTheDocument();
+    expect(screen.queryByLabelText("메시지")).toBeNull();
+    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+  });
+
   it("회의 상태를 모르면 입력 대신 확인 중 안내를 보인다", () => {
     renderPanel("unknown");
     expect(screen.getByText("회의 상태를 확인하는 중입니다")).toBeTruthy();

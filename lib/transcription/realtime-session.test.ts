@@ -40,10 +40,11 @@ function setup() {
     }),
   };
   const onFailure = vi.fn();
+  const onEvent = vi.fn();
   const controller = new BrowserRealtimeSession(
     {
       url: "ws://localhost/ws/transcriptions",
-      onEvent: vi.fn(),
+      onEvent,
       onLevel: vi.fn(),
       onFailure,
     },
@@ -63,6 +64,7 @@ function setup() {
     audio,
     socket,
     order,
+    onEvent,
     onFailure,
     emitChunk: (chunk: ArrayBuffer) => emitChunk(chunk),
     emitEvent: (event: Parameters<typeof socketOptions.onEvent>[0]) =>
@@ -70,6 +72,14 @@ function setup() {
     closeTransport: (code: number, reason = "") =>
       socketOptions.onClose(code, reason),
   };
+}
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
 
 describe("BrowserRealtimeSession", () => {
@@ -116,6 +126,22 @@ describe("BrowserRealtimeSession", () => {
     expect(harness.onFailure).not.toHaveBeenCalled();
   });
 
+  it("recovers when a clean completed close arrives before its terminal event", async () => {
+    const harness = setup();
+    await harness.controller.connect("0HZX2K7M9Q4AG");
+    harness.socket.stop.mockImplementationOnce(() => {
+      harness.closeTransport(1000, "completed");
+    });
+
+    await harness.controller.stop();
+
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    expect(harness.onEvent).toHaveBeenCalledWith({
+      type: "completed",
+      sessionId: "0HZX2K7M9Q4AG",
+    });
+  });
+
   it("deduplicates concurrent stop requests", async () => {
     const harness = setup();
     await harness.controller.connect("0HZX2K7M9Q4AG");
@@ -127,6 +153,50 @@ describe("BrowserRealtimeSession", () => {
     await first;
     expect(harness.audio.stop).toHaveBeenCalledOnce();
     expect(harness.socket.stop).toHaveBeenCalledOnce();
+  });
+
+  it("releases permission acquired after stop and never continues startup", async () => {
+    const harness = setup();
+    const permission = deferred();
+    harness.audio.requestPermission.mockReturnValueOnce(permission.promise);
+
+    const requesting = harness.controller.requestPermission();
+    await harness.controller.stop();
+    permission.resolve();
+
+    await expect(requesting).rejects.toThrow("REALTIME_SESSION_CLOSED");
+    expect(harness.audio.stop).toHaveBeenCalledTimes(2);
+    expect(harness.socket.connect).not.toHaveBeenCalled();
+    expect(harness.audio.start).not.toHaveBeenCalled();
+  });
+
+  it("recloses a socket whose connection settles after stop and never starts audio", async () => {
+    const harness = setup();
+    const connection = deferred();
+    harness.socket.connect.mockReturnValueOnce(connection.promise);
+
+    const connecting = harness.controller.connect("0HZX2K7M9Q4AG");
+    await harness.controller.stop();
+    connection.resolve();
+
+    await expect(connecting).rejects.toThrow("REALTIME_SESSION_CLOSED");
+    expect(harness.socket.close).toHaveBeenCalledTimes(2);
+    expect(harness.audio.start).not.toHaveBeenCalled();
+  });
+
+  it("cancels connecting immediately even when stop cannot send a terminal command yet", async () => {
+    const harness = setup();
+    const connection = deferred();
+    harness.socket.connect.mockReturnValueOnce(connection.promise);
+    harness.socket.stop.mockImplementationOnce(() => undefined);
+
+    const connecting = harness.controller.connect("0HZX2K7M9Q4AG");
+    const stopping = harness.controller.stop();
+    connection.resolve();
+
+    await expect(connecting).rejects.toThrow("REALTIME_SESSION_CLOSED");
+    await expect(stopping).resolves.toBeUndefined();
+    expect(harness.audio.start).not.toHaveBeenCalled();
   });
 
   it("still completes when browser audio cleanup rejects", async () => {

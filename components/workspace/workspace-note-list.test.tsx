@@ -44,6 +44,7 @@ function note(
     updatedAt,
     lastRecordedAt: null,
     recordedDurationMs: 0,
+    activeSessionStartedAt: null,
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: null,
     meetingStartedBy: null,
@@ -139,7 +140,7 @@ describe("WorkspaceNoteList", () => {
     );
   });
 
-  it("aligns an active meeting clock to the meeting's elapsed minute boundary", () => {
+  it("aligns an active meeting clock to the active session minute boundary", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-29T00:00:30.250Z"));
     render(
@@ -148,7 +149,8 @@ describe("WorkspaceNoteList", () => {
         notes={[
           {
             ...note("active", "2026-07-29T00:00:00Z"),
-            meetingStartedAt: "2026-07-29T00:00:01Z",
+            meetingStartedAt: "2026-07-01T00:00:01Z",
+            activeSessionStartedAt: "2026-07-29T00:00:01Z",
             meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
           },
         ]}

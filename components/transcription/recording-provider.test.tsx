@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
+import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   RecordingProvider,
@@ -123,6 +124,18 @@ function setup({ enablePolling = false } = {}) {
   };
 }
 
+function getProjectNotesPredicate(
+  invalidate: ReturnType<typeof setup>["invalidate"]
+) {
+  const filters = invalidate.mock.calls
+    .map(([candidate]) => candidate)
+    .find((candidate) => candidate && "predicate" in candidate);
+  if (!filters || !("predicate" in filters) || !filters.predicate) {
+    throw new Error("project note list invalidation was not called");
+  }
+  return filters.predicate;
+}
+
 describe("RecordingProvider", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -144,7 +157,7 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.phase).toBe("recording");
   });
 
-  it("invalidates the exact note query after creating a recording session", async () => {
+  it("invalidates the exact note and cached project lists after creating a recording session", async () => {
     const harness = setup();
 
     await act(() => harness.result.current.start(session.noteId));
@@ -152,6 +165,15 @@ describe("RecordingProvider", () => {
     expect(harness.invalidate).toHaveBeenCalledWith({
       queryKey: getGetNoteQueryKey(session.noteId),
     });
+    const predicate = getProjectNotesPredicate(harness.invalidate);
+    expect(
+      predicate({
+        queryKey: ["/v1/projects/0HZX2K7M9Q4AA/notes"],
+      } as never)
+    ).toBe(true);
+    expect(
+      predicate({ queryKey: getGetNoteQueryKey(session.noteId) } as never)
+    ).toBe(false);
   });
 
   it("uses the browser origin for mocked STOMP", async () => {
@@ -196,22 +218,245 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.phase).toBe("recording");
   });
 
-  it("stops the session and invalidates persisted transcript", async () => {
+  it("returns true after terminal reconciliation and invalidates the note, transcript, and cached project lists", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId));
+    harness.invalidate.mockClear();
 
-    await act(() => harness.result.current.stop());
+    let stopped = false;
+    await act(async () => {
+      stopped = await harness.result.current.stop();
+    });
 
+    expect(stopped).toBe(true);
     expect(harness.controller.stop).toHaveBeenCalledOnce();
     expect(harness.result.current.phase).toBe("completed");
-    expect(harness.invalidate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: [expect.stringContaining(session.noteId)],
-      })
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetNoteQueryKey(session.noteId),
+    });
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetNoteTranscriptQueryKey(session.noteId),
+    });
+    expect(
+      getProjectNotesPredicate(harness.invalidate)({
+        queryKey: ["/v1/projects/0HZX2K7M9Q4AA/notes"],
+      } as never)
+    ).toBe(true);
+  });
+
+  it("deduplicates concurrent stop calls onto the same terminal result", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+    let resolveStop!: () => void;
+    harness.controller.stop.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStop = resolve;
+        })
     );
-    expect(harness.invalidate).toHaveBeenCalledWith(
-      expect.objectContaining({ predicate: expect.any(Function) })
+
+    let first!: Promise<boolean>;
+    let second!: Promise<boolean>;
+    act(() => {
+      first = harness.result.current.stop();
+      second = harness.result.current.stop();
+    });
+
+    expect(first).toBe(second);
+    expect(harness.controller.stop).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      harness.getCallbacks().onEvent({
+        type: "completed",
+        sessionId: session.sessionId,
+      });
+      resolveStop();
+      await first;
+    });
+    await expect(first).resolves.toBe(true);
+  });
+
+  it("cancels a deferred permission request before creating a server session", async () => {
+    const harness = setup();
+    let resolvePermission!: () => void;
+    harness.controller.requestPermission.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePermission = resolve;
+        })
     );
+    let starting!: Promise<void>;
+    act(() => {
+      starting = harness.result.current.start(session.noteId);
+    });
+    await waitFor(() =>
+      expect(harness.result.current.phase).toBe("requesting-permission")
+    );
+
+    let stopped = true;
+    await act(async () => {
+      stopped = await harness.result.current.stop();
+    });
+    await act(async () => {
+      resolvePermission();
+      await starting;
+    });
+
+    expect(stopped).toBe(false);
+    expect(harness.api.startSession).not.toHaveBeenCalled();
+    expect(harness.controller.connect).not.toHaveBeenCalled();
+    expect(harness.result.current.phase).toBe("failed");
+  });
+
+  it("returns false when stop times out before a terminal session is reconciled", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+    harness.controller.stop.mockImplementationOnce(async () => {
+      harness
+        .getCallbacks()
+        .onFailure("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+    });
+
+    let stopped = true;
+    await act(async () => {
+      stopped = await harness.result.current.stop();
+    });
+
+    expect(stopped).toBe(false);
+    expect(harness.result.current.phase).toBe("failed");
+  });
+
+  it("clears a settled false stop promise so a later attempt is not deduplicated to it", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId));
+    harness.controller.stop.mockResolvedValueOnce(undefined);
+
+    let first!: Promise<boolean>;
+    await act(async () => {
+      first = harness.result.current.stop();
+      await first;
+    });
+    const second = harness.result.current.stop();
+
+    expect(await first).toBe(false);
+    expect(second).not.toBe(first);
+    await expect(second).resolves.toBe(false);
+  });
+
+  it("keeps the failed ACTIVE session polling instead of starting over", async () => {
+    const harness = setup({ enablePolling: true });
+    await act(() => harness.result.current.start(session.noteId));
+    harness.controller.stop.mockImplementationOnce(async () => {
+      harness
+        .getCallbacks()
+        .onFailure("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+    });
+    await act(() => harness.result.current.stop());
+
+    await act(() => harness.result.current.start(session.noteId));
+
+    expect(harness.api.startSession).toHaveBeenCalledOnce();
+    expect(harness.result.current.session?.status).toBe("ACTIVE");
+    sessionQuery.current = {
+      data: {
+        status: 200,
+        data: {
+          success: true,
+          data: {
+            ...session,
+            status: "COMPLETED",
+            endedAt: "2026-07-15T00:02:00Z",
+          },
+        },
+      },
+      isFetching: false,
+      dataUpdatedAt: Date.now(),
+    };
+    harness.rerender();
+    await waitFor(() => expect(harness.result.current.phase).toBe("completed"));
+  });
+
+  it("keeps a timed-out stop false when delayed cleanup resolves after DB completion", async () => {
+    const harness = setup({ enablePolling: true });
+    await act(() => harness.result.current.start(session.noteId));
+    let resolveStop!: () => void;
+    harness.controller.stop.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStop = resolve;
+        })
+    );
+    let stopping!: Promise<boolean>;
+    act(() => {
+      stopping = harness.result.current.stop();
+      harness
+        .getCallbacks()
+        .onFailure("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+    });
+    sessionQuery.current = {
+      data: {
+        status: 200,
+        data: {
+          success: true,
+          data: {
+            ...session,
+            status: "COMPLETED",
+            endedAt: "2026-07-15T00:02:00Z",
+          },
+        },
+      },
+      isFetching: false,
+      dataUpdatedAt: Date.now(),
+    };
+    harness.rerender();
+    await waitFor(() => expect(harness.result.current.phase).toBe("completed"));
+
+    await act(async () => {
+      resolveStop();
+      await stopping;
+    });
+
+    await expect(stopping).resolves.toBe(false);
+  });
+
+  it("keeps the local controller until a polled completion settles stop successfully", async () => {
+    const harness = setup({ enablePolling: true });
+    await act(() => harness.result.current.start(session.noteId));
+    let resolveStop!: () => void;
+    harness.controller.stop.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStop = resolve;
+        })
+    );
+    let stopping!: Promise<boolean>;
+    act(() => {
+      stopping = harness.result.current.stop();
+    });
+    sessionQuery.current = {
+      data: {
+        status: 200,
+        data: {
+          success: true,
+          data: {
+            ...session,
+            status: "COMPLETED",
+            endedAt: "2026-07-15T00:02:00Z",
+          },
+        },
+      },
+      isFetching: false,
+      dataUpdatedAt: Date.now(),
+    };
+    harness.rerender();
+    await waitFor(() => expect(harness.result.current.phase).toBe("completed"));
+
+    await act(async () => {
+      resolveStop();
+      await stopping;
+    });
+
+    await expect(stopping).resolves.toBe(true);
   });
 
   it("disconnects microphone and socket immediately for logout", async () => {
@@ -274,8 +519,12 @@ describe("RecordingProvider", () => {
     await act(() => harness.result.current.start(session.noteId));
     harness.controller.stop.mockRejectedValueOnce(new Error("cleanup"));
 
-    await act(() => harness.result.current.stop());
+    let stopped = true;
+    await act(async () => {
+      stopped = await harness.result.current.stop();
+    });
 
+    expect(stopped).toBe(false);
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.error).toContain("종료하는 중 오류");
   });
@@ -298,7 +547,7 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.transcript.completed).toBe(false);
   });
 
-  it("reconciles a missed WebSocket terminal event from the polled DB state", async () => {
+  it("reconciles a missed terminal event from polling and allows the note to resume", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId));
     act(() =>
@@ -330,14 +579,20 @@ describe("RecordingProvider", () => {
     expect(harness.controller.reconcile).toHaveBeenCalledWith("COMPLETED");
     expect(harness.result.current.transcript.partialByUtteranceId).toEqual({});
     expect(harness.result.current.transcript.completed).toBe(true);
+
+    await act(() => harness.result.current.start(session.noteId));
+
+    expect(harness.api.startSession).toHaveBeenCalledTimes(2);
+    expect(harness.result.current.phase).toBe("recording");
   });
 
-  it("updates a failed local READY session from the interrupted DB state", async () => {
+  it("invalidates lifecycle caches when failed-session polling finds an interruption", async () => {
     const harness = setup({ enablePolling: true });
     harness.controller.connect.mockRejectedValueOnce(
       new Error("WEBSOCKET_CLOSED")
     );
     await act(() => harness.result.current.start(session.noteId));
+    harness.invalidate.mockClear();
     sessionQuery.current = {
       data: {
         status: 200,
@@ -360,5 +615,16 @@ describe("RecordingProvider", () => {
     await waitFor(() =>
       expect(harness.result.current.session?.status).toBe("INTERRUPTED")
     );
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetNoteQueryKey(session.noteId),
+    });
+    expect(harness.invalidate).toHaveBeenCalledWith({
+      queryKey: getGetNoteTranscriptQueryKey(session.noteId),
+    });
+    expect(
+      getProjectNotesPredicate(harness.invalidate)({
+        queryKey: ["/v1/projects/0HZX2K7M9Q4AA/notes"],
+      } as never)
+    ).toBe(true);
   });
 });

@@ -104,6 +104,13 @@ describe("REST mock handlers", () => {
       error: null,
     });
 
+    const noteAfterStart = await fetch(
+      `http://localhost/v1/notes/${note.noteId}`
+    );
+    expect((await noteAfterStart.json()).data.meetingStatus).toBe(
+      "IN_PROGRESS"
+    );
+
     const conflict = await fetch(url, { method: "POST" });
     expect(conflict.status).toBe(409);
     expect(await conflict.json()).toMatchObject({
@@ -125,6 +132,24 @@ describe("REST mock handlers", () => {
     );
 
     expect((await response.json()).data).toBeNull();
+  });
+
+  it("returns a derived timing snapshot from the note PATCH response", async () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const session = mockDb.createSession(note.noteId);
+    mockDb.updateSessionStatus(session.sessionId, "ACTIVE");
+
+    const response = await fetch(`http://localhost/v1/notes/${note.noteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "기록 중 제목" }),
+    });
+
+    expect((await response.json()).data).toMatchObject({
+      activeSessionStartedAt: expect.any(String),
+      recordedDurationMs: 0,
+    });
   });
 });
 
@@ -250,6 +275,19 @@ describe("meeting and integration handlers", () => {
 
     expect(response.status).toBe(409);
     expect((await response.json()).error.code).toBe("MEETING_ALREADY_ENDED");
+  });
+
+  it("returns 409 MEETING_NOT_STARTED before the starter permission error", async () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+
+    const response = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/meeting-end`,
+      { method: "POST" }
+    );
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("MEETING_NOT_STARTED");
   });
 
   it("accepts a meeting end with 202 and queues an analysis", async () => {

@@ -98,11 +98,13 @@ export function NotePanel({
   );
   const noteLoadFailed = noteQuery.isError && !note;
   const meetingLive = phase === "active" || phase === "not-started";
-  const showSharedTray = view === "full" && (meetingLive || sharedTurnActive);
+  const showSharedTray =
+    view === "full" && (meetingLive || phase === "paused" || sharedTurnActive);
   const showSideChatTab =
     view === "side" &&
     !noteLoadFailed &&
     (phase === "active" ||
+      phase === "paused" ||
       sharedTurnActive ||
       (phase === "unknown" && tab === "chat"));
   const sideChatNow = view === "side" && tab === "chat";
@@ -126,7 +128,7 @@ export function NotePanel({
     !noteLoadFailed &&
     (tab === "chat" ||
       sharedTurnActive ||
-      (phase === "active" && sideChatVisited));
+      ((phase === "active" || phase === "paused") && sideChatVisited));
   const showSummaryTab =
     view === "full" ||
     (view === "side" &&
@@ -158,31 +160,22 @@ export function NotePanel({
   const showArchive =
     phase === "ended" && archiveState.visible && !sharedTurnActive;
 
-  // v5 side 프레임 셋(`oLmGL`·`viNgv`·`KCoyt`)에는 레코더 독이 없다. APP-280에서
-  // 상태·회의 종료는 side 헤더에 넣되, 녹음 시작은 계속 full 독만 맡는다.
-  //
-  // **다만 도는 녹음은 남긴다.** 전역 녹음 필은 `!isWorkspaceRoute`라 워크스페이스 안에서는
-  // 안 뜬다. full에서 시작하고 side로 오면 독까지 없앨 때 멈출 방법이 하나도 없다.
-  // (프레임 셋이 전부 종료된 회의라 "라이브를 side로 볼 때"는 그려진 적이 없다 — 추론이다.)
-  //
-  // 판정은 `isNoteRecordingActive`를 쓴다. `activeNoteId`는 종료 뒤에도 남고 phase가
-  // `completed`로 가므로 "idle이 아님"으로 보면 끝난 녹음에도 독이 다시 선다.
-  // failed는 서버 세션이 없어도 권한 거부 등을 재시도해야 하므로 이 화면에서만 독을 남긴다.
-  // 공용 selector까지 넓히면 세션 없는 실패를 활성 녹음으로 오인해 회의 종료를 막는다.
   const recording = useRecording();
-  const showDock =
-    isNoteRecordingActive(recording, noteId) ||
-    (Boolean(note) &&
-      recording.activeNoteId === noteId &&
-      recording.phase === "failed") ||
-    (view === "full" && (phase === "not-started" || isStarter));
-
-  // 종료된 회의는 분석과 어긋나므로 다시 시작할 수 없다. side의 idle 독은 showDock에서
-  // 닫히므로, 실패한 기존 세션의 재시도까지 막을 별도 이유는 필요 없다.
+  const localProviderCanControlNote =
+    isNoteRecordingActive(recording, noteId) &&
+    !(recording.phase === "failed" && recording.session?.status === "ACTIVE");
+  const showDock = Boolean(
+    note &&
+    (note.meetingStatus === "NOT_STARTED" ||
+      (isStarter &&
+        (note.meetingStatus === "IN_PROGRESS" ||
+          note.meetingStatus === "PAUSED")))
+  );
   const startBlockedReason =
-    note?.meetingStatus === "ENDED"
-      ? "이미 종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
+    note?.meetingStatus === "IN_PROGRESS" && !localProviderCanControlNote
+      ? "다른 탭·기기에서 기록 중입니다."
       : null;
+  const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white max-lg:landscape:flex-row lg:flex-row">
@@ -196,8 +189,8 @@ export function NotePanel({
               "border-b border-[var(--el-hairline)] bg-white/92 backdrop-blur-xl"
           )}
         >
-          <div className="mx-auto flex w-full max-w-[820px] items-start gap-4">
-            <div className="min-w-0 flex-1">
+          <div className="mx-auto flex w-full max-w-[820px] flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+            <div className="min-w-0 w-full flex-1 sm:w-auto">
               {/* 회의가 언제 열렸는지는 상세에서만 볼 수 있다 — 목록 계약에는 없다. */}
               <div className="flex flex-wrap items-center gap-2">
                 {project ? (
@@ -219,13 +212,27 @@ export function NotePanel({
                     })}
                   </span>
                 ) : null}
+                {note?.meetingStartedAt ? (
+                  <time
+                    dateTime={note.meetingStartedAt}
+                    className="text-xs text-[var(--el-muted)]"
+                  >
+                    {formatAppDate(note.meetingStartedAt, {
+                      month: "long",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}{" "}
+                    시작
+                  </time>
+                ) : null}
               </div>
               <h1 className="mt-2 truncate font-serif text-note-title font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)]">
                 {note?.title ?? "회의 노트"}
               </h1>
             </div>
             {view === "side" ? (
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 sm:w-auto sm:shrink-0 sm:justify-start">
                 {note ? (
                   <MeetingControls
                     note={note}
@@ -233,33 +240,39 @@ export function NotePanel({
                     onMeetingEnded={() => onTabChange("summary")}
                   />
                 ) : null}
-                {onExpand ? (
+                <div
+                  role="group"
+                  aria-label="창 제어"
+                  className="flex shrink-0 items-center gap-1 border-l border-[var(--el-hairline)] pl-2"
+                >
+                  {onExpand ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-lg"
+                      className="size-11 rounded-full"
+                      aria-label={
+                        sharedTurnActive
+                          ? "답변이 끝나면 확장할 수 있습니다"
+                          : "전체 화면으로 보기"
+                      }
+                      disabled={sharedTurnActive}
+                      onClick={onExpand}
+                    >
+                      <Expand />
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-lg"
-                    className="rounded-full"
-                    aria-label={
-                      sharedTurnActive
-                        ? "답변이 끝나면 확장할 수 있습니다"
-                        : "전체 화면으로 보기"
-                    }
-                    disabled={sharedTurnActive}
-                    onClick={onExpand}
+                    className="size-11 rounded-full"
+                    aria-label="노트 닫기"
+                    onClick={onClose}
                   >
-                    <Expand />
+                    <PanelRightClose />
                   </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-lg"
-                  className="rounded-full"
-                  aria-label="노트 닫기"
-                  onClick={onClose}
-                >
-                  <PanelRightClose />
-                </Button>
+                </div>
               </div>
             ) : null}
           </div>
@@ -309,7 +322,8 @@ export function NotePanel({
           >
             {showViewerEndNotice ? (
               <div
-                role="status"
+                role="region"
+                aria-label="회의 종료 안내"
                 className="mx-5 mt-4 flex shrink-0 items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5 sm:mx-9"
               >
                 <div>
@@ -387,6 +401,7 @@ export function NotePanel({
               <RecordingDock
                 noteId={noteId}
                 disabledReason={startBlockedReason}
+                startLabel={startLabel}
               />
             </div>
           </div>

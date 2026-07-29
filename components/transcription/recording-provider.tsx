@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/generated/transcription/transcription";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
+import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
 import {
   BrowserRealtimeSession,
   type RealtimeSessionController,
@@ -60,7 +61,7 @@ export type RecordingContextValue = {
   elapsedMs: number;
   error: string | null;
   start: (noteId: string) => Promise<void>;
-  stop: () => Promise<void>;
+  stop: () => Promise<boolean>;
   disconnect: () => Promise<void>;
 };
 
@@ -128,8 +129,6 @@ export function isRecordingStarting(
       recording.phase === "connecting")
   );
 }
-
-const PROJECT_NOTES_QUERY_PATTERN = /^\/v1\/projects\/[^/]+\/notes$/;
 
 function getStartErrorMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : "";
@@ -236,6 +235,8 @@ export function RecordingProvider({
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<LocalRecordingSession | null>(null);
   const controllerRef = useRef<RealtimeSessionController | null>(null);
+  const cancelledControllerRef = useRef<RealtimeSessionController | null>(null);
+  const stopPromiseRef = useRef<Promise<boolean> | null>(null);
   const smoothedLevelRef = useRef(0);
   const hasOpenSession =
     session?.status === "READY" || session?.status === "ACTIVE";
@@ -304,11 +305,20 @@ export function RecordingProvider({
 
   const invalidateNoteListQueries = useCallback(() => {
     void queryClient.invalidateQueries({
-      predicate: ({ queryKey }) =>
-        typeof queryKey[0] === "string" &&
-        PROJECT_NOTES_QUERY_PATTERN.test(queryKey[0]),
+      predicate: ({ queryKey }) => isProjectNotesQueryKey(queryKey),
     });
   }, [queryClient]);
+
+  const invalidateLifecycleQueries = useCallback(
+    (noteId: string, transcript = false) => {
+      void queryClient.invalidateQueries({
+        queryKey: getGetNoteQueryKey(noteId),
+      });
+      invalidateNoteListQueries();
+      if (transcript) invalidateTranscriptQueries(noteId);
+    },
+    [invalidateNoteListQueries, invalidateTranscriptQueries, queryClient]
+  );
 
   const failRecording = useCallback(
     (message: string) => {
@@ -327,6 +337,12 @@ export function RecordingProvider({
 
   const handleEvent = useCallback(
     (event: ServerEvent) => {
+      if (
+        event.type === "completed" &&
+        event.sessionId !== sessionRef.current?.sessionId
+      ) {
+        return;
+      }
       dispatchTranscript(event);
 
       if (event.type === "final" && sessionRef.current) {
@@ -341,8 +357,7 @@ export function RecordingProvider({
             status: "COMPLETED",
             endedAt: new Date().toISOString(),
           });
-          invalidateTranscriptQueries(current.noteId);
-          invalidateNoteListQueries();
+          invalidateLifecycleQueries(current.noteId, true);
         }
         setPhase("completed");
         clearLevel();
@@ -355,7 +370,7 @@ export function RecordingProvider({
     [
       clearLevel,
       failRecording,
-      invalidateNoteListQueries,
+      invalidateLifecycleQueries,
       invalidateTranscriptQueries,
       setCurrentSession,
     ]
@@ -380,7 +395,11 @@ export function RecordingProvider({
     }
     const reconcileTimer = window.setTimeout(() => {
       if (serverSession.status === "COMPLETED" && phase !== "completed") {
-        controllerRef.current?.reconcile("COMPLETED");
+        const controller = controllerRef.current;
+        controller?.reconcile("COMPLETED");
+        if (!stopPromiseRef.current && controllerRef.current === controller) {
+          controllerRef.current = null;
+        }
         dispatchTranscript({
           type: "completed",
           sessionId: serverSession.sessionId,
@@ -388,12 +407,12 @@ export function RecordingProvider({
         setCurrentSession(serverSession);
         setPhase("completed");
         clearLevel();
-        invalidateTranscriptQueries(serverSession.noteId);
-        invalidateNoteListQueries();
+        invalidateLifecycleQueries(serverSession.noteId, true);
         return;
       }
       if (serverSession.status === "INTERRUPTED") {
         setCurrentSession(serverSession);
+        invalidateLifecycleQueries(serverSession.noteId, true);
         if (phase !== "failed") {
           controllerRef.current?.reconcile("INTERRUPTED");
           failRecording(getInterruptedMessage(serverSession.endReason));
@@ -404,7 +423,7 @@ export function RecordingProvider({
   }, [
     clearLevel,
     failRecording,
-    invalidateNoteListQueries,
+    invalidateLifecycleQueries,
     invalidateTranscriptQueries,
     phase,
     sessionQuery.data,
@@ -416,6 +435,9 @@ export function RecordingProvider({
       if (controllerRef.current || ACTIVE_PHASES.has(phase)) return;
 
       const current = sessionRef.current;
+      if (phase === "failed" && current?.status === "ACTIVE") return;
+      stopPromiseRef.current = null;
+      cancelledControllerRef.current = null;
       const reusableSession =
         current?.noteId === noteId &&
         current.status === "READY" &&
@@ -437,20 +459,30 @@ export function RecordingProvider({
           failRecording(getRuntimeFailureMessage(message)),
       });
       controllerRef.current = controller;
+      const cancelled = () =>
+        cancelledControllerRef.current === controller ||
+        controllerRef.current !== controller;
 
       try {
         await controller.requestPermission();
+        if (cancelled()) {
+          await controller.close();
+          return;
+        }
         setPhase("connecting");
         const connectionSession =
           reusableSession ?? (await api.startSession(noteId));
         if (!reusableSession) {
-          void queryClient.invalidateQueries({
-            queryKey: getGetNoteQueryKey(noteId),
-          });
+          invalidateLifecycleQueries(noteId);
+        }
+        if (cancelled()) {
+          setCurrentSession(connectionSession);
+          await controller.close();
+          return;
         }
         setCurrentSession(connectionSession);
         await controller.connect(connectionSession.sessionId);
-        if (controllerRef.current !== controller) return;
+        if (cancelled()) return;
         setCurrentSession({
           ...connectionSession,
           status: "ACTIVE",
@@ -471,34 +503,56 @@ export function RecordingProvider({
       clearLevel,
       failRecording,
       handleEvent,
+      invalidateLifecycleQueries,
       phase,
       publishLevel,
-      queryClient,
       runtime,
       setCurrentSession,
     ]
   );
 
-  const stop = useCallback(async () => {
+  const stop = useCallback((): Promise<boolean> => {
+    if (stopPromiseRef.current) return stopPromiseRef.current;
     const controller = controllerRef.current;
-    if (!controller) return;
-    setPhase("stopping");
-    clearLevel();
-    try {
-      await controller.stop();
-    } catch {
-      failRecording("녹음을 종료하는 중 오류가 발생했습니다.");
-      return;
-    }
-    if (controllerRef.current === controller) controllerRef.current = null;
-    const current = sessionRef.current;
-    if (current) invalidateTranscriptQueries(current.noteId);
-  }, [clearLevel, failRecording, invalidateTranscriptQueries]);
+    if (!controller) return Promise.resolve(false);
+    cancelledControllerRef.current = controller;
+    const attempt = (async () => {
+      setPhase("stopping");
+      clearLevel();
+      try {
+        await controller.stop();
+      } catch {
+        failRecording("녹음을 종료하는 중 오류가 발생했습니다.");
+        return false;
+      }
+      const reconciled =
+        controllerRef.current === controller &&
+        sessionRef.current?.status === "COMPLETED";
+      if (!reconciled) {
+        if (controllerRef.current === controller) {
+          failRecording("녹음 종료 상태를 확인하지 못했습니다.");
+        }
+        return false;
+      }
+      if (controllerRef.current === controller) controllerRef.current = null;
+      return true;
+    })();
+    const stopPromise = attempt.then((result) => {
+      if (!result && stopPromiseRef.current === stopPromise) {
+        stopPromiseRef.current = null;
+      }
+      return result;
+    });
+    stopPromiseRef.current = stopPromise;
+    return stopPromise;
+  }, [clearLevel, failRecording]);
 
   const disconnect = useCallback(async () => {
     const controller = controllerRef.current;
     const current = sessionRef.current;
     controllerRef.current = null;
+    cancelledControllerRef.current = null;
+    stopPromiseRef.current = null;
 
     clearLevel();
     setPhase("idle");

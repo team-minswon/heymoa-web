@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,9 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCreateMeeting } from "@/lib/workspace/use-create-meeting";
 
 const push = vi.hoisted(() => vi.fn());
-const navigation = vi.hoisted(() => ({
-  pathname: "/w/01K0000000000",
-}));
+const getUserMedia = vi.hoisted(() => vi.fn());
 const createNote = vi.hoisted(() => vi.fn());
 const recording = vi.hoisted(() => ({
   phase: "idle" as string,
@@ -26,7 +24,6 @@ const shell = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => navigation.pathname,
   useRouter: () => ({ push }),
 }));
 vi.mock("@/components/transcription/recording-provider", () => ({
@@ -54,15 +51,25 @@ describe("useCreateMeeting", () => {
     push.mockReset();
     createNote.mockReset();
     recording.start.mockReset();
+    getUserMedia.mockReset();
+    getUserMedia.mockResolvedValue({} as MediaStream);
+    recording.start.mockImplementation(async () => {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    });
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia },
+    });
     recording.phase = "idle";
     recording.activeNoteId = undefined;
     recording.session = null;
-    navigation.pathname = "/w/01K0000000000";
     shell.selectedProjectId = "01K0000000001";
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("creates a note, optimistically inserts it, routes, and starts recording", async () => {
+  it("creates a NOT_STARTED note and opens the full view without requesting the microphone", async () => {
+    recording.phase = "recording";
+    recording.activeNoteId = "01K0000000002";
     createNote.mockResolvedValue({
       status: 201,
       headers: new Headers(),
@@ -74,6 +81,11 @@ describe("useCreateMeeting", () => {
           title: "실시간 기록 노트",
           createdAt: "2026-07-19T10:00:00Z",
           updatedAt: "2026-07-19T10:00:00Z",
+          meetingStatus: "NOT_STARTED",
+          meetingStartedBy: null,
+          meetingStartedAt: null,
+          activeSessionStartedAt: null,
+          recordedDurationMs: 0,
         },
       },
     });
@@ -86,11 +98,10 @@ describe("useCreateMeeting", () => {
       await result.current.createMeeting();
     });
 
-    await waitFor(() =>
-      expect(recording.start).toHaveBeenCalledWith("01K0000000100")
-    );
+    expect(recording.start).not.toHaveBeenCalled();
+    expect(getUserMedia).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith(
-      "/w/01K0000000000/notes/01K0000000100?view=side&tab=transcript"
+      "/w/01K0000000000/notes/01K0000000100?view=full&tab=transcript"
     );
     expect(
       client.getQueryData(["/v1/projects/01K0000000001/notes"])
@@ -102,6 +113,7 @@ describe("useCreateMeeting", () => {
           notes: [
             {
               noteId: "01K0000000100",
+              meetingStatus: "NOT_STARTED",
               lastRecordedAt: null,
               recordedDurationMs: 0,
             },
@@ -109,52 +121,5 @@ describe("useCreateMeeting", () => {
         },
       },
     });
-  });
-
-  it("opens the active recording instead of creating another meeting", async () => {
-    recording.phase = "recording";
-    recording.activeNoteId = "01K0000000002";
-    const client = new QueryClient();
-    const { result } = renderHook(() => useCreateMeeting("01K0000000000"), {
-      wrapper: wrapper(client),
-    });
-
-    expect(result.current.isRecordingCurrent).toBe(true);
-    await act(async () => {
-      await result.current.createMeeting();
-    });
-
-    expect(push).toHaveBeenCalledWith(
-      "/w/01K0000000000/notes/01K0000000002?view=side&tab=transcript"
-    );
-    expect(createNote).not.toHaveBeenCalled();
-    expect(recording.start).not.toHaveBeenCalled();
-  });
-
-  it("keeps the current view when the active recording note is already open", async () => {
-    recording.phase = "recording";
-    recording.activeNoteId = "01K0000000002";
-    navigation.pathname = "/w/01K0000000000/notes/01K0000000002";
-    const client = new QueryClient();
-    const { result } = renderHook(() => useCreateMeeting("01K0000000000"), {
-      wrapper: wrapper(client),
-    });
-
-    await act(async () => {
-      await result.current.createMeeting();
-    });
-
-    expect(push).not.toHaveBeenCalled();
-    expect(createNote).not.toHaveBeenCalled();
-    expect(recording.start).not.toHaveBeenCalled();
-  });
-
-  it("is disabled while a recording is starting with no active note", () => {
-    recording.phase = "requesting-permission";
-    const client = new QueryClient();
-    const { result } = renderHook(() => useCreateMeeting("01K0000000000"), {
-      wrapper: wrapper(client),
-    });
-    expect(result.current.disabled).toBe(true);
   });
 });

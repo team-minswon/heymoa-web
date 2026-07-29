@@ -27,6 +27,35 @@ describe("REST and WebSocket contract consistency", () => {
 
     expect(socketRequired).toEqual(restRequired);
   });
+
+  it("keeps meeting pause out of the realtime protocol", () => {
+    const eventTypes = Object.values(
+      asyncapi.components.messages as Record<
+        string,
+        { payload?: { properties?: { type?: { enum?: string[] } } } }
+      >
+    ).flatMap(
+      (message: { payload?: { properties?: { type?: { enum?: string[] } } } }) =>
+        message.payload?.properties?.type?.enum ?? []
+    );
+
+    expect(eventTypes).not.toContain("meeting.paused");
+    expect(eventTypes).toEqual(
+      expect.arrayContaining(["recording.started", "recording.stopped"])
+    );
+  });
+
+  it("binds note topics to STOMP and chat streams to the SSE edge", () => {
+    expect(asyncapi.channels.noteTopic.servers).toEqual([
+      { $ref: "#/servers/production" },
+    ]);
+    expect(asyncapi.channels.agentChatStream.servers).toEqual([
+      { $ref: "#/servers/sseEdge" },
+    ]);
+    expect(asyncapi.channels.noteSharedChatStream.servers).toEqual([
+      { $ref: "#/servers/sseEdge" },
+    ]);
+  });
 });
 
 describe("chat SSE contract", () => {

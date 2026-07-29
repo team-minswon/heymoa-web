@@ -46,6 +46,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private socket: SocketPort | null = null;
   private stopPromise: Promise<void> | null = null;
   private closePromise: Promise<void> | null = null;
+  private stopping = false;
   private closing = false;
   private audioStopped = false;
   private terminalEventReceived = false;
@@ -64,11 +65,15 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     this.audio = createAudio((chunk) => this.sendAudio(chunk), options.onLevel);
   }
 
-  requestPermission() {
-    return this.audio.requestPermission();
+  async requestPermission() {
+    await this.audio.requestPermission();
+    await this.rejectIfStopped();
   }
 
   async connect(sessionId: string) {
+    if (this.stopping || this.closing) {
+      throw new Error("REALTIME_SESSION_CLOSED");
+    }
     if (this.socket) throw new Error("REALTIME_SESSION_ALREADY_CONNECTED");
     const createSocket =
       this.dependencies.createSocket ??
@@ -82,13 +87,20 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
           void this.close();
           return;
         }
+        if (code === 1000 && reason === "completed") {
+          this.handleEvent({ type: "completed", sessionId });
+          void this.close();
+          return;
+        }
         this.fail(reason || `WebSocket closed (${code})`);
       },
     });
     this.socket = socket;
     await socket.connect();
+    await this.rejectIfStopped(socket);
     if (this.failed) return;
     await this.audio.start();
+    await this.rejectIfStopped(socket);
   }
 
   commit() {
@@ -96,6 +108,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   }
 
   stop() {
+    this.stopping = true;
     this.stopPromise ??= this.stopOnce();
     return this.stopPromise;
   }
@@ -192,5 +205,15 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     if (this.audioStopped) return Promise.resolve();
     this.audioStopped = true;
     return this.audio.stop();
+  }
+
+  private async rejectIfStopped(socket: SocketPort | null = this.socket) {
+    if (!this.stopping && !this.closing) return;
+    await this.close();
+    await Promise.allSettled([
+      this.audio.stop(),
+      socket?.close() ?? Promise.resolve(),
+    ]);
+    throw new Error("REALTIME_SESSION_CLOSED");
   }
 }

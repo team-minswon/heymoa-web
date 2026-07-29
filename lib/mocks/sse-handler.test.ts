@@ -34,8 +34,7 @@ async function readEvents(response: Response) {
 function activeNote() {
   const project = mockDb.listProjects("01K0000000000")[0];
   const note = mockDb.createNote(project.projectId, {});
-  const session = mockDb.createSession(note.noteId);
-  mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
+  mockDb.createSession(note.noteId);
   return note;
 }
 

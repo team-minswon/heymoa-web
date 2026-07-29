@@ -455,7 +455,7 @@ export const getSendNoteSharedChatMessageUrl = (noteId: string) => {
 };
 
 /**
- * 공유 챗봇에 메시지를 보내고 응답을 SSE(text/event-stream)로 passthrough한다. 이벤트 페이로드 계약은 AsyncAPI(asyncapi-web-server.yml) 참고. 게이트는 스트림을 열기 전에 동기 검증한다 — 접근할 수 없는 노트면 404, 녹음이 진행 중(IN_PROGRESS + 시작자 존재)이 아니면 409(MEETING_NOT_ACTIVE), 다른 멤버가 입력 중이면 409(CHAT_LOCKED). 입력 잠금은 요청 시작에 획득하고 스트림 종료 시 해제하며 TTL은 300초다.
+ * 공유 챗봇에 메시지를 보내고 응답을 SSE(text/event-stream)로 passthrough한다. 이벤트 페이로드 계약은 AsyncAPI(asyncapi-web-server.yml) 참고. 게이트는 스트림을 열기 전에 동기 검증한다 — 접근할 수 없는 노트면 404, 회의 상태가 IN_PROGRESS가 아니면 409(MEETING_NOT_ACTIVE; NOT_STARTED·PAUSED·ENDED), 다른 멤버가 입력 중이면 409(CHAT_LOCKED). 입력 잠금은 요청 시작에 획득하고 스트림 종료 시 해제하며 TTL은 300초다.
  * @summary 공유 챗봇 메시지 전송 (SSE 중계)
  */
 export const sendNoteSharedChatMessage = async (

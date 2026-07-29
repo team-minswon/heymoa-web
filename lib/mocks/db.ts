@@ -146,6 +146,16 @@ function nextTimestamp() {
   return value;
 }
 
+function nextSessionTimestamp() {
+  const latest = state.sessions.reduce((latestMs, session) => {
+    const candidates = [session.startedAt, session.endedAt]
+      .map((value) => (value ? Date.parse(value) : Number.NaN))
+      .filter(Number.isFinite);
+    return Math.max(latestMs, ...candidates);
+  }, Number.NEGATIVE_INFINITY);
+  return new Date(Math.max(Date.now(), latest + 1_000)).toISOString();
+}
+
 /**
  * 오늘로부터 `daysAgo`일 전의 시각. 앱 타임존(KST) 날짜가 정확히 그 날이 되도록
  * UTC 01시대에 놓는다 — 자정 근처에 두면 KST 기준 날짜가 하루 밀려 묶음이 어긋난다.
@@ -226,6 +236,8 @@ function createSeedState(): StoreState {
       updatedAt: "2026-07-11T00:00:00Z",
       meetingStatus: "IN_PROGRESS",
       meetingStartedAt: "2026-07-11T00:00:00Z",
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
       meetingStartedBy: { userId: MOCK_USER.userId, name: MOCK_USER.name },
     },
     {
@@ -234,8 +246,10 @@ function createSeedState(): StoreState {
       title: "고객 인터뷰",
       createdAt: "2026-07-09T00:00:00Z",
       updatedAt: "2026-07-09T00:00:00Z",
-      meetingStatus: "IN_PROGRESS",
+      meetingStatus: "NOT_STARTED",
       meetingStartedAt: null,
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
       meetingStartedBy: null,
     },
     {
@@ -246,6 +260,8 @@ function createSeedState(): StoreState {
       updatedAt: "2026-07-12T00:05:00Z",
       meetingStatus: "IN_PROGRESS",
       meetingStartedAt: "2026-07-12T00:00:00Z",
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
       meetingStartedBy: { userId: "01K0000000099", name: "김서연" },
     },
     {
@@ -257,8 +273,10 @@ function createSeedState(): StoreState {
       ]),
       createdAt: "2026-07-08T00:00:00Z",
       updatedAt: "2026-07-08T00:00:00Z",
-      meetingStatus: "IN_PROGRESS",
+      meetingStatus: "NOT_STARTED",
       meetingStartedAt: null,
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
       meetingStartedBy: null,
     },
     {
@@ -270,8 +288,10 @@ function createSeedState(): StoreState {
       ]),
       createdAt: "2026-07-07T00:00:00Z",
       updatedAt: "2026-07-07T00:00:00Z",
-      meetingStatus: "IN_PROGRESS",
+      meetingStatus: "NOT_STARTED",
       meetingStartedAt: null,
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
       meetingStartedBy: null,
     },
     // 날짜 묶음(오늘·어제·이번 주·지난주·이번 달·연월)과 밀도 합격선(주 콘텐츠 8개 이상)을
@@ -298,6 +318,8 @@ function createSeedState(): StoreState {
       updatedAt: daysAgoIso(daysAgo as number, index),
       meetingStatus: "ENDED" as const,
       meetingStartedAt: null,
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
       // 절반은 내가 시작한 회의로 둔다 — `내가 시작` 필터가 빈 목록만 보여주면 검증이 안 된다.
       meetingStartedBy:
         (projectIndex as number) === 0
@@ -564,10 +586,7 @@ function resolveInvitation(
   });
 }
 
-/**
- * 회의 조작(종료·중지·재개)은 시작자만 할 수 있다 (계약 403 NOT_MEETING_STARTER).
- * 아직 아무도 시작하지 않았으면 조작할 회의가 없다 — 같은 코드로 막는다.
- */
+/** 회의 종료는 시작자만 할 수 있다 (계약 403 NOT_MEETING_STARTER). */
 function requireMeetingStarter(note: NoteResponseData) {
   if (note.meetingStartedBy?.userId !== state.user.userId) {
     fail("NOT_MEETING_STARTER");
@@ -667,7 +686,10 @@ function findSession(sessionId: string): MockSession {
 
 function getRecordedDurationMs(noteId: string) {
   return state.sessions
-    .filter((session) => session.noteId === noteId)
+    .filter(
+      (session) =>
+        session.noteId === noteId && TERMINAL_STATUSES.has(session.status)
+    )
     .reduce((total, session) => {
       const startedAt = session.startedAt
         ? Date.parse(session.startedAt)
@@ -681,6 +703,26 @@ function getRecordedDurationMs(noteId: string) {
           : 0;
       return total + duration;
     }, 0);
+}
+
+function expireReadySessions(noteId: string) {
+  const now = Date.now();
+  const note =
+    state.notes.find((candidate) => candidate.noteId === noteId) ??
+    fail("NOTE_NOT_FOUND");
+  for (const session of state.sessions) {
+    if (
+      session.noteId !== noteId ||
+      session.status !== "READY" ||
+      Date.parse(session.readyExpiresAt) > now
+    ) {
+      continue;
+    }
+    session.status = "INTERRUPTED";
+    session.endedAt = new Date(now).toISOString();
+    session.endReason = "READY_TIMEOUT";
+    if (note.meetingStatus === "IN_PROGRESS") note.meetingStatus = "PAUSED";
+  }
 }
 
 function reset() {
@@ -828,7 +870,7 @@ export const mockDb = {
   acquireSharedChatLock(noteId: string) {
     const note = findNote(noteId);
     // 계약의 ACTIVE 판정은 IN_PROGRESS만이 아니라 "녹음이 시작됐는가"까지다.
-    // 새 노트는 생성 시부터 IN_PROGRESS지만 아직 회의가 열린 게 아니다.
+    // 새 노트는 NOT_STARTED이고, 세션 생성 뒤에만 시작자가 정해진다.
     if (note.meetingStatus !== "IN_PROGRESS" || !note.meetingStartedBy) {
       fail("MEETING_NOT_ACTIVE");
     }
@@ -859,8 +901,9 @@ export const mockDb = {
 
   endMeeting(noteId: string): AnalysisResultResponseData {
     const note = findNote(noteId);
-    requireMeetingStarter(note);
+    if (note.meetingStatus === "NOT_STARTED") fail("MEETING_NOT_STARTED");
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
+    requireMeetingStarter(note);
     // 계약: 진행 중인 전사가 있으면 409. web은 stop을 먼저 보내고 다시 호출해야 한다.
     if (hasActiveSession(noteId)) fail("ACTIVE_TRANSCRIPTION_SESSION");
     note.meetingStatus = "ENDED";
@@ -1207,6 +1250,9 @@ export const mockDb = {
 
   listNotes(projectId: string): NoteListResponseDataNotesItem[] {
     assertProject(projectId);
+    state.notes
+      .filter((note) => note.projectId === projectId)
+      .forEach((note) => expireReadySessions(note.noteId));
     const notes = state.notes
       .filter((note) => note.projectId === projectId)
       .sort(
@@ -1227,6 +1273,11 @@ export const mockDb = {
           ...note,
           lastRecordedAt: startedAt ?? null,
           recordedDurationMs: getRecordedDurationMs(note.noteId),
+          activeSessionStartedAt:
+            state.sessions.find(
+              (session) =>
+                session.noteId === note.noteId && session.status === "ACTIVE"
+            )?.startedAt ?? null,
         };
       });
     return copy(notes);
@@ -1241,9 +1292,10 @@ export const mockDb = {
       title: input.title?.trim() || "제목 없는 노트",
       createdAt,
       updatedAt: createdAt,
-      // 노트는 생성 시부터 IN_PROGRESS이고, 시작자는 녹음을 처음 시작할 때 정해진다 (APP-120).
-      meetingStatus: "IN_PROGRESS",
+      meetingStatus: "NOT_STARTED",
       meetingStartedAt: null,
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
       meetingStartedBy: null,
     };
     state.notes.push(note);
@@ -1251,7 +1303,16 @@ export const mockDb = {
   },
 
   getNote(noteId: string): NoteResponseData {
-    return copy(findNote(noteId));
+    expireReadySessions(noteId);
+    const note = findNote(noteId);
+    return copy({
+      ...note,
+      recordedDurationMs: getRecordedDurationMs(noteId),
+      activeSessionStartedAt:
+        state.sessions.find(
+          (session) => session.noteId === noteId && session.status === "ACTIVE"
+        )?.startedAt ?? null,
+    });
   },
 
   updateNote(noteId: string, input: NoteRequest): NoteResponseData {
@@ -1260,7 +1321,7 @@ export const mockDb = {
     if (!title) fail("BAD_REQUEST");
     note.title = title;
     note.updatedAt = nextTimestamp();
-    return copy(note);
+    return this.getNote(noteId);
   },
 
   createSession(noteId: string): StartTranscriptionSessionResponseData {
@@ -1275,18 +1336,7 @@ export const mockDb = {
     // **서버는 원래부터 막고 있었다** — 없던 것은 계약뿐이었고, 그래서 목과 생성 클라이언트만
     // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
-    const now = Date.now();
-    const expiredReady = state.sessions.find(
-      (session) =>
-        session.noteId === noteId &&
-        session.status === "READY" &&
-        Date.parse(session.readyExpiresAt) <= now
-    );
-    if (expiredReady) {
-      expiredReady.status = "INTERRUPTED";
-      expiredReady.endedAt = new Date(now).toISOString();
-      expiredReady.endReason = "READY_TIMEOUT";
-    }
+    expireReadySessions(noteId);
     if (state.sessions.some((session) => ACTIVE_STATUSES.has(session.status))) {
       fail("ACTIVE_TRANSCRIPTION_SESSION");
     }
@@ -1299,25 +1349,26 @@ export const mockDb = {
       endedAt: null,
       endReason: null,
     };
-    // 회의 시작자는 녹음을 처음 시작한 유저다 (계약). 이후 시작자만 종료·중지할 수 있다.
+    // 회의 시작자는 녹음을 처음 시작한 유저다 (계약). 이후 시작자만 회의를 종료할 수 있다.
     note.meetingStartedBy ??= {
       userId: state.user.userId,
       name: state.user.name,
     };
+    note.meetingStatus = "IN_PROGRESS";
     state.sessions.push(session);
     return copy(session) as unknown as StartTranscriptionSessionResponseData;
   },
 
   getSession(sessionId: string): TranscriptionSessionResponseData {
-    return copy(
-      findSession(sessionId)
-    ) as unknown as TranscriptionSessionResponseData;
+    const session = findSession(sessionId);
+    expireReadySessions(session.noteId);
+    return copy(session) as unknown as TranscriptionSessionResponseData;
   },
 
   getCurrentSession(
     noteId: string
   ): CurrentTranscriptionSessionNullableResponseData {
-    findNote(noteId);
+    expireReadySessions(noteId);
     const session = state.sessions.find(
       (candidate) =>
         candidate.noteId === noteId &&
@@ -1343,10 +1394,14 @@ export const mockDb = {
     const session = findSession(sessionId);
     session.status = status;
     if (status === "ACTIVE" && !session.startedAt) {
-      session.startedAt = nextTimestamp();
+      session.startedAt = nextSessionTimestamp();
       findNote(session.noteId).meetingStartedAt ??= session.startedAt;
     }
-    if (TERMINAL_STATUSES.has(status)) session.endedAt = nextTimestamp();
+    if (TERMINAL_STATUSES.has(status)) {
+      session.endedAt = nextSessionTimestamp();
+      const note = findNote(session.noteId);
+      if (note.meetingStatus !== "ENDED") note.meetingStatus = "PAUSED";
+    }
     return copy(session) as unknown as TranscriptionSessionResponseData;
   },
 

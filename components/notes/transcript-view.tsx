@@ -248,12 +248,12 @@ export function TranscriptView({
                   data-segment-count={block.segmentIds.length}
                   data-timeline-start-ms={block.timelineStartedAtMs}
                   data-state="final"
-                  className="group grid grid-cols-[64px_1fr] gap-5 border-b border-[var(--el-hairline)] py-4"
+                  className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
                 >
-                  <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)]">
+                  <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
                     {formatOffset(block.timelineStartedAtMs)}
                   </time>
-                  <p className="text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
+                  <p className="min-w-0 whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
                     {block.text}
                   </p>
                 </article>
@@ -264,13 +264,13 @@ export function TranscriptView({
                   data-state="partial"
                   aria-live="polite"
                   aria-atomic="true"
-                  className="mt-2 grid grid-cols-[64px_1fr] gap-5 rounded-chip bg-[var(--el-canvas-soft)] px-3 py-4"
+                  className="mt-2 grid grid-cols-1 gap-2 rounded-chip bg-[var(--el-canvas-soft)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
                 >
-                  <span className="flex items-center gap-1.5 self-start pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-600">
+                  <span className="flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-600 sm:w-32">
                     <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
                     실시간 · 확정 전
                   </span>
-                  <p className="text-read leading-7 text-[var(--el-body)]">
+                  <p className="min-w-0 whitespace-normal break-keep text-read leading-7 text-[var(--el-body)]">
                     {partialText}
                     <span className="ml-1 inline-block h-4 w-px animate-pulse bg-[var(--el-muted)] align-middle" />
                   </p>

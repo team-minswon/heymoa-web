@@ -392,6 +392,26 @@ function Composer({
     );
   }
 
+  if (phase === "paused") {
+    return (
+      <ComposerNotice
+        icon={<Lock className="size-4 text-[var(--el-muted)]" />}
+        title="회의 기록이 중지되었습니다"
+        description="기존 대화는 읽을 수 있으며, 녹음을 재개하면 다시 질문할 수 있습니다."
+      />
+    );
+  }
+
+  if (phase === "ended") {
+    return (
+      <ComposerNotice
+        icon={<Lock className="size-4 text-[var(--el-muted)]" />}
+        title="회의가 종료되었습니다"
+        description="기존 대화는 계속 읽을 수 있지만 새 질문은 보낼 수 없습니다."
+      />
+    );
+  }
+
   if (isSpectator) {
     // 승인 대기 중이면 "입력 중"이 아니라 그 사실을 보인다 — 관전자에겐 이 폴링 필드가 전부다.
     const waiting = pendingApproval !== null;

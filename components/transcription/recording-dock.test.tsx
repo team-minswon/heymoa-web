@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecordingDock } from "@/components/transcription/recording-dock";
@@ -7,18 +7,24 @@ const recording = vi.hoisted(() => ({
   activeNoteId: "note-1",
   elapsedMs: 0,
   phase: "connecting",
-  session: { noteId: "note-1" },
+  session: { noteId: "note-1", status: "ACTIVE" },
   start: vi.fn(),
   stop: vi.fn(),
 }));
 
-vi.mock("@/components/transcription/recording-provider", () => ({
-  useRecording: () => recording,
-  useRecordingMeter: () => ({
-    level: 0,
-    levelHistory: [0, 0, 0, 0, 0],
-  }),
-}));
+vi.mock("@/components/transcription/recording-provider", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/components/transcription/recording-provider")
+  >("@/components/transcription/recording-provider");
+  return {
+    ...actual,
+    useRecording: () => recording,
+    useRecordingMeter: () => ({
+      level: 0,
+      levelHistory: [0, 0, 0, 0, 0],
+    }),
+  };
+});
 
 describe("RecordingDock", () => {
   afterEach(cleanup);
@@ -59,10 +65,51 @@ describe("RecordingDock", () => {
 
       render(<RecordingDock noteId="note-1" disabledReason={reason} />);
 
-      expect(
-        screen.getByRole("button", { name: "녹음 종료" })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "중지" })).toBeInTheDocument();
       expect(screen.queryByText(reason)).toBeNull();
     });
+  });
+
+  it.each(["회의 시작", "재개"] as const)(
+    "%s 라벨로 같은 시작 경로를 쓰고 44px 터치 영역을 둔다",
+    (startLabel) => {
+      recording.phase = "idle";
+      recording.start.mockReset();
+
+      render(<RecordingDock noteId="note-1" startLabel={startLabel} />);
+
+      const button = screen.getByRole("button", { name: startLabel });
+      expect(button).toHaveClass("size-11");
+      fireEvent.click(button);
+      expect(recording.start).toHaveBeenCalledWith("note-1");
+    }
+  );
+
+  it("로컬 녹음의 단일 중지 버튼도 44px 터치 영역을 둔다", () => {
+    recording.phase = "recording";
+
+    render(<RecordingDock noteId="note-1" />);
+
+    expect(screen.getByRole("button", { name: "중지" })).toHaveClass("size-11");
+  });
+
+  it("실패 후 다시 시도도 44px 터치 영역을 둔다", () => {
+    recording.phase = "failed";
+
+    render(<RecordingDock noteId="note-1" />);
+
+    expect(screen.getByRole("button", { name: "다시 시도" })).toHaveClass(
+      "h-11"
+    );
+  });
+
+  it("다른 노트의 failed ACTIVE 세션이 있으면 시작 버튼을 잠근다", () => {
+    recording.phase = "failed";
+
+    render(<RecordingDock noteId="note-2" />);
+
+    expect(
+      screen.getByRole("button", { name: "다른 노트에서 녹음 중" })
+    ).toBeDisabled();
   });
 });

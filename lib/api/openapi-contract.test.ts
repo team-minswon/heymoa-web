@@ -61,6 +61,68 @@ describe("OpenAPI contract", () => {
     ).toBeUndefined();
   });
 
+  it("models the four meeting states and required timing snapshots", () => {
+    const schemas = api().components.schemas as Record<
+      string,
+      {
+        properties: {
+          data: {
+            required: string[];
+            properties: {
+              meetingStatus?: { enum: string[] };
+              notes?: {
+                items: {
+                  required: string[];
+                  properties: { meetingStatus?: { enum: string[] } };
+                };
+              };
+            };
+          };
+        };
+      }
+    >;
+
+    expect(
+      schemas.NoteResponse.properties.data.properties.meetingStatus?.enum
+    ).toEqual(["NOT_STARTED", "IN_PROGRESS", "PAUSED", "ENDED"]);
+    expect(schemas.NoteResponse.properties.data.required).toEqual(
+      expect.arrayContaining(["recordedDurationMs", "activeSessionStartedAt"])
+    );
+    expect(
+      schemas.NoteListResponse.properties.data.properties.notes?.items.required
+    ).toEqual(
+      expect.arrayContaining([
+        "recordedDurationMs",
+        "activeSessionStartedAt",
+        "lastRecordedAt",
+      ])
+    );
+    expect(
+      schemas.NoteListResponse.properties.data.properties.notes?.items
+        .properties.meetingStatus?.enum
+    ).toEqual(["NOT_STARTED", "IN_PROGRESS", "PAUSED", "ENDED"]);
+  });
+
+  it("omits schemas reachable only from internal routes", () => {
+    const schemaNames = Object.keys(api().components.schemas);
+    for (const name of [
+      "AnalysisResultCallback",
+      "AnalysisSucceededCallback",
+      "AnalysisFailedCallback",
+    ]) {
+      expect(schemaNames).not.toContain(name);
+    }
+  });
+
+  it("has no pause or resume HTTP operations", () => {
+    expect(Object.keys(api().paths)).not.toEqual(
+      expect.arrayContaining([
+        "/v1/notes/{noteId}/meeting-pause",
+        "/v1/notes/{noteId}/meeting-resume",
+      ])
+    );
+  });
+
   it("requires the current-user image and current session end reasons", () => {
     const schemas = api().components.schemas as {
       CurrentUserResponse: {
@@ -85,9 +147,8 @@ describe("OpenAPI contract", () => {
       "CLIENT_PROTOCOL_ERROR",
       "STT_PROVIDER_ERROR",
       "INTERNAL_ERROR",
-      // 회의 상태 머신(APP-120)이 추가한 둘. `MEETING_PAUSED`는 APP-218이 PAUSED를
-      // 폐기한 뒤에도 **종료 사유 enum에는 남아 있다** — 이미 그 사유로 끝난 옛 세션이
-      // 있으므로, 값을 지우면 그 행을 역직렬화할 수 없다. `MeetingStatus`에서는 사라졌다.
+      // 회의 상태 머신(APP-120)이 추가한 둘. `MEETING_PAUSED`는 이전 세션의 종료 사유라
+      // 현재 MeetingStatus에 PAUSED가 있어도 역직렬화를 위해 남겨 둔다.
       "MEETING_ENDED",
       "MEETING_PAUSED",
     ]);

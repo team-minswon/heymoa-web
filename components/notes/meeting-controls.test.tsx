@@ -29,6 +29,9 @@ function note(overrides: Partial<NoteResponseData>): NoteResponseData {
     updatedAt: "2026-07-24T00:00:00Z",
     meetingStatus: "IN_PROGRESS",
     meetingStartedBy: { userId: "user-12345", name: "테스트 유저" },
+    meetingStartedAt: "2026-07-24T00:00:00Z",
+    recordedDurationMs: 65_000,
+    activeSessionStartedAt: "2026-07-24T00:01:00Z",
     ...overrides,
   } as NoteResponseData;
 }
@@ -45,15 +48,14 @@ describe("MeetingControls", () => {
     vi.useRealTimers();
   });
 
-  it("시작자 · 진행 중이면 회의 종료만 보인다", () => {
+  it("시작자 · 기록 중이면 상태와 누적 시간과 회의 종료를 보인다", () => {
     renderControls(note({ meetingStatus: "IN_PROGRESS" }));
 
     expect(screen.getByRole("button", { name: /회의 종료/ })).toBeTruthy();
-    // APP-218에서 회의 중지·재개를 폐기했다 — "멈춤"은 레코더 독이 단독으로 맡는다.
     expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /중지/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /재개/ })).toBeNull();
-    expect(screen.queryByText("진행 중")).toBeNull();
+    expect(screen.getByText("기록 중")).toBeInTheDocument();
     expect(screen.queryByText("테스트 유저")).toBeNull();
   });
 
@@ -63,31 +65,33 @@ describe("MeetingControls", () => {
       true
     );
 
-    expect(screen.getByText("진행 중")).toBeTruthy();
+    expect(screen.getByText("기록 중")).toBeTruthy();
     expect(screen.getByText("김민수").textContent).toBe(
       "김민수님이 시작한 회의"
     );
     expect(screen.getByRole("button", { name: /회의 종료/ })).toBeTruthy();
   });
 
-  it("진행 중인 노트 상단은 회의 시작부터의 경과를 초 단위로 갱신한다", () => {
+  it("진행 중인 노트 상단은 누적 기록 시간을 초 단위로 갱신한다", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-11T00:23:41Z"));
     renderControls(
       note({
         meetingStartedAt: "2026-07-11T00:00:00Z",
+        recordedDurationMs: 0,
+        activeSessionStartedAt: "2026-07-11T00:00:00Z",
       })
     );
     act(() => vi.advanceTimersByTime(0));
 
     expect(
-      screen.getByRole("status", { name: "회의 진행 시간" })
+      screen.getByRole("timer", { name: "누적 기록 시간" })
     ).toHaveTextContent("23:41");
 
     act(() => vi.advanceTimersByTime(1_000));
 
     expect(
-      screen.getByRole("status", { name: "회의 진행 시간" })
+      screen.getByRole("timer", { name: "누적 기록 시간" })
     ).toHaveTextContent("23:42");
   });
 
@@ -108,7 +112,7 @@ describe("MeetingControls", () => {
       note({ meetingStartedBy: { userId: "user-12345", name: "김민수" } })
     );
 
-    expect(screen.getByText("진행 중")).toBeTruthy();
+    expect(screen.getByText("기록 중")).toBeTruthy();
     expect(screen.getByText("김민수").textContent).toBe(
       "김민수님이 시작한 회의"
     );
@@ -130,10 +134,10 @@ describe("MeetingControls", () => {
     expect(description.classList.contains("sm:not-sr-only")).toBe(true);
   });
 
-  it("종료된 회의는 종료됨 배지만 보인다", () => {
+  it("종료된 회의는 종료 상태와 누적 시간만 보인다", () => {
     renderControls(note({ meetingStatus: "ENDED" }));
 
-    expect(screen.getByText("회의 종료됨")).toBeTruthy();
+    expect(screen.getByText("종료됨")).toBeTruthy();
     expect(screen.queryByText("테스트 유저")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
@@ -147,17 +151,28 @@ describe("MeetingControls", () => {
       true
     );
 
-    expect(screen.getByText("회의 종료됨")).toBeTruthy();
+    expect(screen.getByText("종료됨")).toBeTruthy();
     expect(screen.getByText("김민수").textContent).toBe(
       "김민수님이 시작한 회의"
     );
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("아직 시작 전(startedBy null)이면 아무것도 그리지 않는다", () => {
-    const { container } = renderControls(note({ meetingStartedBy: null }));
+  it("아직 시작 전이면 상태와 00:00을 그린다", () => {
+    renderControls(
+      note({
+        meetingStatus: "NOT_STARTED",
+        meetingStartedBy: null,
+        meetingStartedAt: null,
+        recordedDurationMs: 0,
+        activeSessionStartedAt: null,
+      })
+    );
 
-    expect(container.textContent).toBe("");
+    expect(screen.getByText("시작 전")).toBeInTheDocument();
+    expect(
+      screen.getByRole("timer", { name: "누적 기록 시간" })
+    ).toHaveTextContent("00:00");
   });
 
   it("회의 종료를 누르면 확인 다이얼로그를 연다", () => {
@@ -166,5 +181,53 @@ describe("MeetingControls", () => {
     fireEvent.click(screen.getByRole("button", { name: /회의 종료/ }));
 
     expect(screen.getByTestId("end-dialog")).toBeTruthy();
+  });
+
+  it("초마다 바뀌는 누적 타이머는 live region이 아니다", () => {
+    renderControls(note({ meetingStatus: "IN_PROGRESS" }));
+
+    expect(
+      screen.getByRole("timer", { name: "누적 기록 시간" })
+    ).not.toHaveAttribute("aria-live");
+    expect(screen.queryByRole("status", { name: "누적 기록 시간" })).toBeNull();
+  });
+
+  it("서버 상태와 누적 기록 시간을 한 회의 제어 그룹에 표시한다", () => {
+    renderControls(
+      note({
+        meetingStatus: "PAUSED",
+        activeSessionStartedAt: null,
+        recordedDurationMs: 65_000,
+      })
+    );
+
+    expect(
+      screen.getByRole("group", { name: "회의 상태 및 제어" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("중지됨")).toBeInTheDocument();
+    expect(
+      screen.getByRole("timer", { name: "누적 기록 시간" })
+    ).toHaveTextContent("01:05");
+    expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass(
+      "h-11"
+    );
+  });
+
+  it("종료된 회의는 요약 보기만 제공한다", () => {
+    const onMeetingEnded = vi.fn();
+    render(
+      <MeetingControls
+        note={note({
+          meetingStatus: "ENDED",
+          activeSessionStartedAt: null,
+        })}
+        onMeetingEnded={onMeetingEnded}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "요약 보기" }));
+
+    expect(onMeetingEnded).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "회의 종료" })).toBeNull();
   });
 });

@@ -31,7 +31,7 @@ export type CurrentTranscriptionSessionNullableResponseData = {
   /** 현재 전사 세션 상태 */
   status: CurrentTranscriptionSessionNullableResponseDataStatus;
   /**
-   * 전사 시작 시각
+   * 전사 시작 시각 (READY면 null)
    * @nullable
    */
   startedAt: string | null;

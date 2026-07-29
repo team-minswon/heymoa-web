@@ -87,7 +87,7 @@ function WorkspaceRecordingIndicator({
         size="icon-sm"
         className="size-7 rounded-full text-destructive"
         aria-label="녹음 종료"
-        disabled={phase === "stopping"}
+        disabled={phase !== "recording"}
         onClick={onStop}
       >
         <Square className="size-3.5" />
@@ -127,16 +127,18 @@ function NoteActionSlot({
           }
         />
       ) : null}
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-lg"
-        className="rounded-full"
-        aria-label="노트 닫기"
-        onClick={() => router.push(`/w/${workspaceId}`)}
-      >
-        <ChevronLeft />
-      </Button>
+      <div role="group" aria-label="창 제어">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xl"
+          className="size-11 rounded-full"
+          aria-label="노트 닫기"
+          onClick={() => router.push(`/w/${workspaceId}`)}
+        >
+          <ChevronLeft />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -233,22 +235,16 @@ export function WorkspaceToolbar({
             <Button
               type="button"
               size="sm"
-              aria-label={
-                createMeeting.isRecordingCurrent ? "현재 녹음" : "새 노트"
-              }
+              aria-label="새 노트"
               className="h-8 shrink-0 rounded-full px-3"
               disabled={createMeeting.disabled}
               loading={createMeeting.isPending}
               onClick={() => void createMeeting.createMeeting()}
             >
-              {createMeeting.isRecordingCurrent ? (
-                <ExternalLink className="size-3.5" />
-              ) : (
-                <Plus className="size-3.5" />
-              )}
+              <Plus className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만 — 노트 액션·벨이 잘리지 않게. */}
               <span className={cn(isFullNote && "hidden sm:inline")}>
-                {createMeeting.isRecordingCurrent ? "현재 녹음" : "새 노트"}
+                새 노트
               </span>
             </Button>
             <NotificationBell />

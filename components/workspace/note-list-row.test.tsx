@@ -34,6 +34,7 @@ function note(
     updatedAt: "2026-07-11T00:00:00Z",
     lastRecordedAt: "2026-07-11T00:00:00Z",
     recordedDurationMs: 65_000,
+    activeSessionStartedAt: "2026-07-11T00:00:00Z",
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: "2026-07-11T00:00:00Z",
     meetingStartedBy: null,
@@ -69,7 +70,7 @@ describe("NoteListRow", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows no meter, badge, or duration when inactive (v5 flat row)", () => {
+  it("shows no meter when the local recorder is inactive", () => {
     recording.current = {
       session: null,
       activeNoteId: undefined,
@@ -82,12 +83,17 @@ describe("NoteListRow", () => {
 
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.queryByRole("meter")).toBeNull();
-    // 카드 시절 잔재(녹음 시간·"기록 중")는 v5 행에 없다.
+    // 로컬 녹음 여부와 서버 회의 상태는 별개다.
     expect(screen.queryByText("01:05")).toBeNull();
-    expect(screen.queryByText("기록 중")).toBeNull();
+    expect(screen.getByText("기록 중")).toBeInTheDocument();
   });
 
-  it("shows remote active meeting metadata from the server contract", () => {
+  it.each([
+    ["NOT_STARTED", "시작 전"],
+    ["IN_PROGRESS", "기록 중"],
+    ["PAUSED", "중지됨"],
+    ["ENDED", "종료됨"],
+  ] as const)("shows the exact %s status copy", (meetingStatus, label) => {
     recording.current = {
       session: null,
       activeNoteId: undefined,
@@ -99,43 +105,79 @@ describe("NoteListRow", () => {
       <NoteListRow
         workspaceId="01K0000000000"
         note={note({
+          meetingStatus,
+          activeSessionStartedAt:
+            meetingStatus === "IN_PROGRESS" ? "2026-07-11T00:22:41Z" : null,
           meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
         })}
         now={Date.parse("2026-07-11T00:23:41Z")}
       />
     );
 
-    expect(screen.getByText("진행 중")).toBeInTheDocument();
-    expect(screen.getByLabelText("김민수")).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
+  it("uses cumulative active-only time instead of wall time since the first start", () => {
+    render(
+      <NoteListRow
+        workspaceId="01K0000000000"
+        note={note({
+          recordedDurationMs: 120_000,
+          activeSessionStartedAt: "2026-07-11T00:22:41Z",
+          meetingStartedAt: "2026-07-01T00:00:00Z",
+          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
+        })}
+        now={Date.parse("2026-07-11T00:23:41Z")}
+      />
+    );
+
+    expect(screen.getByText("3분")).toBeInTheDocument();
+    expect(screen.queryByText(/\d{4,}분/)).toBeNull();
+  });
+
+  it("freezes PAUSED duration and keeps its starter readable", () => {
+    render(
+      <NoteListRow
+        workspaceId="01K0000000000"
+        note={note({
+          meetingStatus: "PAUSED",
+          activeSessionStartedAt: null,
+          recordedDurationMs: 185_000,
+          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
+        })}
+        now={Date.parse("2026-08-11T00:23:41Z")}
+      />
+    );
+
+    expect(screen.getByText("중지됨")).toBeInTheDocument();
     expect(screen.getByText("김민수")).toBeInTheDocument();
-    expect(screen.getByText("23분")).toBeInTheDocument();
+    expect(screen.getByText("기록 3분")).toBeInTheDocument();
   });
 
-  it("clamps a future meeting start to zero minutes", () => {
+  it("lets narrow rows keep title width and hides secondary live detail below sm", () => {
     render(
       <NoteListRow
         workspaceId="01K0000000000"
         note={note({
+          recordedDurationMs: 120_000,
+          activeSessionStartedAt: "2026-07-11T00:22:41Z",
           meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
         })}
-        now={Date.parse("2026-07-10T23:59:00Z")}
+        now={Date.parse("2026-07-11T00:23:41Z")}
       />
     );
 
-    expect(screen.getByText("0분")).toBeInTheDocument();
-  });
+    const title = screen.getByRole("heading", { name: "주간 제품 회의" });
+    const meta = screen.getByText("기록 중").parentElement;
 
-  it("keeps elapsed meeting time unresolved while SSR now is null", () => {
-    render(
-      <NoteListRow
-        workspaceId="01K0000000000"
-        note={note({
-          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
-        })}
-        now={null}
-      />
+    expect(title).toHaveClass("min-w-16");
+    expect(meta).toHaveClass("shrink", "overflow-hidden");
+    expect(meta).not.toHaveClass("shrink-0");
+    expect(screen.getByText("김민수").parentElement).toHaveClass(
+      "hidden",
+      "sm:flex"
     );
-
-    expect(screen.queryByText(/^\d+분$/)).toBeNull();
+    expect(screen.getByText("3분")).toHaveClass("hidden", "sm:inline");
+    expect(screen.getByText("기록 중")).not.toHaveClass("hidden");
   });
 });

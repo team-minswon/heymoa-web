@@ -204,7 +204,7 @@ export const getEndMeetingUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 회의를 종료하고 분석을 시작한다.
+ * 노트의 회의를 종료하고 분석을 시작한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다.
  * @summary 회의 종료
  */
 export const endMeeting = async (

@@ -8,7 +8,10 @@ import {
   useNoteRealtime,
 } from "@/components/notes/note-realtime-provider";
 import { getGetNoteSharedChatMessagesQueryKey } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
-import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
+import {
+  getGetNoteQueryKey,
+  getGetNotesQueryKey,
+} from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 
 type TopicClientOptions = {
@@ -39,6 +42,7 @@ vi.mock("@/lib/notes/note-topic-client", () => ({
 }));
 
 const NOTE_ID = "01K0000000002";
+const PROJECT_ID = "01K0000000001";
 const SESSION_ID = "01K0000000010";
 const UTTERANCE_ID = "01K0000000100";
 const SEGMENT_ID = "01K0000000200";
@@ -80,7 +84,7 @@ function renderProvider({ strict = false }: { strict?: boolean } = {}) {
     strict ? <StrictMode>{provider}</StrictMode> : provider
   );
 
-  return { ...result, invalidateQueries };
+  return { ...result, invalidateQueries, queryClient };
 }
 
 function emit(event: Record<string, unknown>, clientIndex = 0) {
@@ -92,6 +96,16 @@ function expectInvalidated(
   queryKey: readonly unknown[]
 ) {
   expect(invalidateQueries).toHaveBeenCalledWith({ queryKey });
+}
+
+function getProjectNotesPredicate(invalidateQueries: ReturnType<typeof vi.fn>) {
+  const filters = invalidateQueries.mock.calls
+    .map(([candidate]) => candidate)
+    .find((candidate) => candidate && "predicate" in candidate);
+  if (!filters?.predicate) {
+    throw new Error("project note list invalidation was not called");
+  }
+  return filters.predicate;
 }
 
 describe("NoteRealtimeProvider", () => {
@@ -236,7 +250,7 @@ describe("NoteRealtimeProvider", () => {
     expect(invalidateQueries).not.toHaveBeenCalled();
   });
 
-  it("상태 이벤트는 즉시, 연속 final은 한 번 묶어 REST를 갱신한다", async () => {
+  it("상태 이벤트는 exact note와 cached project lists를 즉시, 연속 final은 한 번 묶어 REST를 갱신한다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
     vi.useFakeTimers();
@@ -246,6 +260,11 @@ describe("NoteRealtimeProvider", () => {
       transcriptionSessionId: SESSION_ID,
     });
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
+    expect(
+      getProjectNotesPredicate(invalidateQueries)({
+        queryKey: getGetNotesQueryKey(PROJECT_ID),
+      } as never)
+    ).toBe(true);
     invalidateQueries.mockClear();
 
     emit({
@@ -279,7 +298,107 @@ describe("NoteRealtimeProvider", () => {
       type: "recording.stopped",
       transcriptionSessionId: SESSION_ID,
     });
+    expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
     expectInvalidated(invalidateQueries, getGetNoteTranscriptQueryKey(NOTE_ID));
+    expect(
+      getProjectNotesPredicate(invalidateQueries)({
+        queryKey: getGetNotesQueryKey(PROJECT_ID),
+      } as never)
+    ).toBe(true);
+  });
+
+  it("late and order-reversed lifecycle events only invalidate and never overwrite authoritative cache state", async () => {
+    const { invalidateQueries, queryClient } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    const noteKey = getGetNoteQueryKey(NOTE_ID);
+    const endedNote = {
+      status: 200,
+      headers: new Headers(),
+      data: {
+        success: true,
+        error: null,
+        data: {
+          noteId: NOTE_ID,
+          projectId: PROJECT_ID,
+          title: "종료된 회의",
+          meetingStatus: "ENDED",
+        },
+      },
+    };
+    queryClient.setQueryData(noteKey, endedNote);
+    const setQueryData = vi.spyOn(queryClient, "setQueryData");
+    invalidateQueries.mockClear();
+
+    emit({ type: "meeting.ended", meetingStatus: "ENDED" });
+    emit({
+      type: "recording.started",
+      transcriptionSessionId: SESSION_ID,
+      meetingStatus: "IN_PROGRESS",
+    });
+
+    expect(queryClient.getQueryData(noteKey)).toBe(endedNote);
+    expect(setQueryData).not.toHaveBeenCalled();
+    expect(invalidateQueries).toHaveBeenCalledTimes(6);
+    expectInvalidated(invalidateQueries, noteKey);
+    expect(
+      getProjectNotesPredicate(invalidateQueries)({
+        queryKey: getGetNotesQueryKey(PROJECT_ID),
+      } as never)
+    ).toBe(true);
+  });
+
+  it("a stale stopped event from session A does not clear session B partials", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    const newerSessionId = "01K0000000011";
+
+    emit({
+      type: "transcript.partial",
+      transcriptionSessionId: newerSessionId,
+      utteranceId: UTTERANCE_ID,
+      text: "새 세션의 작성 중 문장",
+    });
+    emit({
+      type: "recording.stopped",
+      transcriptionSessionId: SESSION_ID,
+    });
+
+    expect(
+      JSON.parse(screen.getByTestId("partials").textContent ?? "{}")
+    ).toEqual({ [UTTERANCE_ID]: "새 세션의 작성 중 문장" });
+  });
+
+  it("현재 세션이 중지되면 확정되지 않은 partial을 지운다", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "transcript.partial",
+      transcriptionSessionId: SESSION_ID,
+      utteranceId: UTTERANCE_ID,
+      text: "중지 전에 남은 초안",
+    });
+    emit({
+      type: "recording.stopped",
+      transcriptionSessionId: SESSION_ID,
+    });
+
+    expect(screen.getByTestId("partials").textContent).toBe("{}");
+  });
+
+  it("회의가 종료되면 세션 순서와 무관하게 모든 partial을 지운다", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "transcript.partial",
+      transcriptionSessionId: SESSION_ID,
+      utteranceId: UTTERANCE_ID,
+      text: "종료 전에 남은 초안",
+    });
+    emit({ type: "meeting.ended" });
+
+    expect(screen.getByTestId("partials").textContent).toBe("{}");
   });
 
   it("재연결 catch-up에서 임시 payload를 버리고 note·transcript·chat을 모두 갱신한다", async () => {
@@ -302,6 +421,11 @@ describe("NoteRealtimeProvider", () => {
     expect(screen.getByTestId("chat-text").textContent).toBe("");
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
     expectInvalidated(invalidateQueries, getGetNoteTranscriptQueryKey(NOTE_ID));
+    expect(
+      getProjectNotesPredicate(invalidateQueries)({
+        queryKey: getGetNotesQueryKey(PROJECT_ID),
+      } as never)
+    ).toBe(true);
     expectInvalidated(
       invalidateQueries,
       getGetNoteSharedChatMessagesQueryKey(NOTE_ID)

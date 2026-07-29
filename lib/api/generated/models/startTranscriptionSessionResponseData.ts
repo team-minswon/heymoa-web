@@ -31,17 +31,17 @@ export type StartTranscriptionSessionResponseData = {
   /** 전사 세션 상태 */
   status: StartTranscriptionSessionResponseDataStatus;
   /**
-   * 전사 시작 시각
+   * 전사 시작 시각 (READY면 null)
    * @nullable
    */
   startedAt: string | null;
   /**
-   * 전사 종료 시각
+   * 전사 종료 시각 (READY면 null)
    * @nullable
    */
   endedAt: string | null;
   /**
-   * 전사 종료 사유
+   * 전사 종료 사유 (READY면 null)
    * @nullable
    */
   endReason: StartTranscriptionSessionResponseDataEndReason;

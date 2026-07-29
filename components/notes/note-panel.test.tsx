@@ -20,7 +20,7 @@ const noteRefetch = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({
   userId: "u1",
 }));
-/** side에서 독을 감추는 판정이 recording 상태에 달려 있어 덮어쓸 수 있게 둔다. */
+/** 로컬 provider 소유권을 상태 행렬에서 바꿔 볼 수 있게 둔다. */
 const recordingState = vi.hoisted(() => ({
   activeNoteId: null as string | null,
   phase: "idle" as string,
@@ -65,6 +65,9 @@ const noteState = vi.hoisted(() => ({
     projectId: "01K0000000001",
     meetingStatus: "IN_PROGRESS" as string,
     meetingStartedBy: { userId: "u1", name: "테스트 유저" } as unknown,
+    meetingStartedAt: "2026-07-29T00:00:00Z",
+    recordedDurationMs: 60_000,
+    activeSessionStartedAt: "2026-07-29T00:01:00Z" as string | null,
   },
 }));
 
@@ -223,6 +226,9 @@ describe("NotePanel", () => {
       projectId: "01K0000000001",
       meetingStatus: "IN_PROGRESS",
       meetingStartedBy: { userId: "u1", name: "테스트 유저" },
+      meetingStartedAt: "2026-07-29T00:00:00Z",
+      recordedDurationMs: 60_000,
+      activeSessionStartedAt: "2026-07-29T00:01:00Z",
     };
   });
   it("changes only the controlled tab", () => {
@@ -251,6 +257,8 @@ describe("NotePanel", () => {
   });
 
   it("shows five microphone bars in the compact recording dock", async () => {
+    noteState.value.meetingStatus = "NOT_STARTED";
+    noteState.value.meetingStartedBy = null;
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -262,7 +270,7 @@ describe("NotePanel", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "기록 시작" }));
+    fireEvent.click(screen.getByRole("button", { name: "회의 시작" }));
     await waitFor(() =>
       expect(
         screen.getByTestId("note-recording-waveform").children
@@ -274,10 +282,12 @@ describe("NotePanel", () => {
     expect(
       screen.queryByRole("button", { name: /일시 정지|재개/ })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "중지" })).toBeEnabled();
   });
 
   it("blocks a second note from starting while another note records", async () => {
+    noteState.value.meetingStatus = "NOT_STARTED";
+    noteState.value.meetingStartedBy = null;
     renderNotePanel(
       <>
         <NotePanel
@@ -299,7 +309,7 @@ describe("NotePanel", () => {
       </>
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "기록 시작" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "회의 시작" })[0]);
 
     await waitFor(() =>
       expect(
@@ -322,6 +332,27 @@ describe("NotePanel", () => {
     expect(
       screen.getByTestId("shared-chat-panel").getAttribute("data-phase")
     ).toBe("active");
+  });
+
+  it("full + 중지에서도 기존 공유 챗봇 기록을 읽을 수 있다", () => {
+    noteState.value.meetingStatus = "PAUSED";
+    noteState.value.activeSessionStartedAt = null;
+
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("shared-chat-panel")).toHaveAttribute(
+      "data-phase",
+      "paused"
+    );
   });
 
   it("짧은 landscape에서는 14rem 높이 트레이 대신 bounded side column을 쓴다", () => {
@@ -442,6 +473,48 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("side + 중지는 챗봇 기록 탭을 유지한다", () => {
+    noteState.value.meetingStatus = "PAUSED";
+    noteState.value.activeSessionStartedAt = null;
+
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="chat"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("tab", { name: "챗봇" })).toBeInTheDocument();
+    expect(screen.getByTestId("shared-chat-panel")).toHaveAttribute(
+      "data-phase",
+      "paused"
+    );
+  });
+
+  it.each(["full", "side"] as const)(
+    "%s는 최초 시작을 절대 시각 time 요소로 보인다",
+    (view) => {
+      renderNotePanel(
+        <NotePanel
+          workspaceId="01K0000000000"
+          noteId="01K0000000002"
+          view={view}
+          tab="transcript"
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      );
+
+      const started = screen.getByText(/7월 29일.*시작/);
+      expect(started.tagName).toBe("TIME");
+      expect(started).toHaveAttribute("datetime", "2026-07-29T00:00:00Z");
+    }
+  );
+
   it("side 전사만 읽을 때는 공유 챗봇을 마운트하지 않는다", () => {
     renderNotePanel(
       <NotePanel
@@ -561,7 +634,7 @@ describe("NotePanel", () => {
     );
     expect(screen.getByRole("tab", { name: "요약" })).toBeTruthy();
     expect(screen.getByTestId("note-summary")).toBeTruthy();
-    // v5: 회의 조작·닫기는 셸 상단바가 맡는다 — 패널 헤더엔 없다(1단 통합).
+    // full의 상태·종료·닫기는 셸 상단바가 맡는다.
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
     expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
   });
@@ -601,12 +674,60 @@ describe("NotePanel", () => {
       />
     );
 
-    expect(screen.getByText("진행 중")).toBeInTheDocument();
+    expect(screen.getByText("기록 중")).toBeInTheDocument();
     expect(screen.getByText("테스트 유저")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "회의 상태 및 제어" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "창 제어" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
+      "size-11"
+    );
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
     fireEvent.click(screen.getByRole("button", { name: "종료 확인" }));
 
     expect(onTabChange).toHaveBeenCalledWith("summary");
+  });
+
+  it("side 좁은 헤더는 제목과 상태·창 제어 그룹을 쌓고 44px 버튼을 유지한다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        onExpand={vi.fn()}
+      />
+    );
+
+    const title = screen.getByRole("heading", { name: "주간 제품 회의" });
+    const headerLayout = title.parentElement?.parentElement;
+    const meetingGroup = screen.getByRole("group", {
+      name: "회의 상태 및 제어",
+    });
+    const windowGroup = screen.getByRole("group", { name: "창 제어" });
+    const controlLayout = windowGroup.parentElement;
+
+    expect(headerLayout).toHaveClass(
+      "flex-col",
+      "sm:flex-row",
+      "sm:items-start"
+    );
+    expect(controlLayout).toHaveClass(
+      "w-full",
+      "flex-wrap",
+      "justify-between",
+      "sm:w-auto"
+    );
+    expect(meetingGroup).toHaveClass("flex-wrap");
+    expect(
+      screen.getByRole("button", { name: "전체 화면으로 보기" })
+    ).toHaveClass("size-11");
+    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
+      "size-11"
+    );
   });
 
   it("side 뷰어가 읽는 중 회의가 끝나면 안내 뒤 아카이브를 연다", () => {
@@ -626,9 +747,9 @@ describe("NotePanel", () => {
     noteState.value.meetingStatus = "ENDED";
     rerenderNote(el);
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "회의가 종료되었습니다"
-    );
+    expect(
+      screen.getByRole("region", { name: "회의 종료 안내" })
+    ).toHaveTextContent("회의가 종료되었습니다");
     expect(screen.getByTestId("transcript-view")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
 
@@ -661,9 +782,9 @@ describe("NotePanel", () => {
 
     expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "회의가 종료되었습니다"
-    );
+    expect(
+      screen.getByRole("region", { name: "회의 종료 안내" })
+    ).toHaveTextContent("회의가 종료되었습니다");
     fireEvent.click(screen.getByRole("button", { name: "기록과 요약 보기" }));
     expect(
       screen.getByRole("button", { name: "답변이 끝나면 이동합니다" })
@@ -672,7 +793,7 @@ describe("NotePanel", () => {
     fireEvent.click(screen.getByText("턴 끝"));
 
     expect(onTabChange).not.toHaveBeenCalled();
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("region", { name: "회의 종료 안내" })).toBeNull();
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
@@ -732,7 +853,8 @@ describe("NotePanel", () => {
     }
   );
 
-  it("side + 미시작은 전사·노트 정보만 보이고 기록 시작 조작은 없다", () => {
+  it("side + 미시작은 전사·노트 정보와 회의 시작을 보인다", () => {
+    noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
     renderNotePanel(
       <NotePanel
@@ -749,19 +871,147 @@ describe("NotePanel", () => {
       "전사",
       "노트 정보",
     ]);
-    expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "회의 시작" })
+    ).toBeInTheDocument();
   });
 
-  // 계약의 startTranscriptionSession에는 아직 종료 거절 코드가 없다 — 서버가 안 막으므로
-  // 여기서 여는 순간 종료된 회의에 세션이 붙는다(APP-214 서버 몫).
+  function renderDock(view: "side" | "full") {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view={view}
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+  }
+
+  describe.each(["full", "side"] as const)("%s 회의 제어 행렬", (view) => {
+    it("NOT_STARTED는 모든 멤버에게 회의 시작 독을 보인다", () => {
+      authState.userId = "u2";
+      noteState.value.meetingStatus = "NOT_STARTED";
+      noteState.value.meetingStartedBy = null;
+
+      renderDock(view);
+
+      expect(
+        screen.getByRole("button", { name: "회의 시작" })
+      ).toBeInTheDocument();
+    });
+
+    it("IN_PROGRESS 로컬 시작자는 중지 독을 본다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "recording";
+
+      renderDock(view);
+
+      expect(screen.getByRole("button", { name: "중지" })).toBeEnabled();
+      if (view === "side") {
+        expect(
+          screen.getByRole("button", { name: "회의 종료" })
+        ).toBeInTheDocument();
+      }
+    });
+
+    it("IN_PROGRESS 원격 시작자는 거짓 시작 대신 다른 탭 안내를 본다", () => {
+      renderDock(view);
+
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "재개" })).toBeNull();
+    });
+
+    it("IN_PROGRESS의 세션 없는 로컬 실패도 원격 기록으로 취급한다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "failed";
+
+      renderDock(view);
+
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+    });
+
+    it("IN_PROGRESS의 실패한 ACTIVE 세션은 원격 기록으로 취급한다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "failed";
+      recordingState.sessionStatus = "ACTIVE";
+
+      renderDock(view);
+
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+    });
+
+    it("IN_PROGRESS 뷰어에게는 독이 없다", () => {
+      authState.userId = "u2";
+
+      renderDock(view);
+
+      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
+    });
+
+    it("PAUSED 시작자는 재개 독을 본다", () => {
+      noteState.value.meetingStatus = "PAUSED";
+      noteState.value.activeSessionStartedAt = null;
+
+      renderDock(view);
+
+      expect(screen.getByRole("button", { name: "재개" })).toBeInTheDocument();
+      if (view === "side") {
+        expect(
+          screen.getByRole("button", { name: "회의 종료" })
+        ).toBeInTheDocument();
+      }
+    });
+
+    it.each(["NOT_STARTED", "PAUSED"] as const)(
+      "%s의 세션 없는 권한 실패는 다시 시도할 수 있다",
+      (meetingStatus) => {
+        noteState.value.meetingStatus = meetingStatus;
+        noteState.value.meetingStartedBy =
+          meetingStatus === "NOT_STARTED"
+            ? null
+            : { userId: "u1", name: "테스트 유저" };
+        noteState.value.activeSessionStartedAt = null;
+        recordingState.activeNoteId = "01K0000000002";
+        recordingState.phase = "failed";
+
+        renderDock(view);
+
+        expect(screen.getByRole("button", { name: "다시 시도" })).toBeEnabled();
+        expect(
+          screen.queryByText("다른 탭·기기에서 기록 중입니다.")
+        ).toBeNull();
+      }
+    );
+
+    it("ENDED는 독 없이 요약 탭을 보인다", () => {
+      noteState.value.meetingStatus = "ENDED";
+      noteState.value.activeSessionStartedAt = null;
+
+      renderDock(view);
+
+      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
+      expect(screen.getByRole("tab", { name: "요약" })).toBeInTheDocument();
+    });
+  });
+
   describe("녹음 시작 게이트", () => {
-    // 독은 full의 것이다(v5 side 프레임 셋에 없다) — 게이트도 full에서 검사한다.
-    function renderDock(view: "side" | "full" = "full") {
+    function renderStartGate() {
       renderNotePanel(
         <NotePanel
           workspaceId="01K0000000000"
           noteId="01K0000000002"
-          view={view}
+          view="full"
           tab="transcript"
           onTabChange={vi.fn()}
           onClose={vi.fn()}
@@ -772,24 +1022,19 @@ describe("NotePanel", () => {
     it("종료된 회의는 시작 버튼 자리에 이유가 선다", () => {
       noteState.value = { ...noteState.value, meetingStatus: "ENDED" };
 
-      renderDock();
+      renderStartGate();
 
-      expect(
-        screen.getByText(
-          "이미 종료된 회의입니다. 전사를 다시 시작할 수 없습니다."
-        )
-      ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
+      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
     });
 
     it("상태를 아직 모르면 독을 열지 않는다", () => {
       // 콜드 캐시·느린 응답. 소유자도 모르는 동안은 독 자체를 열지 않는다.
       noteState.query = { data: undefined, isError: false };
 
-      renderDock();
+      renderStartGate();
 
       expect(screen.queryByLabelText("녹음 제어")).toBeNull();
-      expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
     });
 
     it("full 조회 실패는 독 없이 지속 실패 이유와 재시도를 보인다", () => {
@@ -799,7 +1044,7 @@ describe("NotePanel", () => {
         refetch: noteRefetch,
       };
 
-      renderDock();
+      renderStartGate();
 
       expect(screen.getByRole("alert")).toHaveTextContent(
         "회의 상태를 확인하지 못했습니다."
@@ -812,38 +1057,32 @@ describe("NotePanel", () => {
       expect(noteRefetch).toHaveBeenCalledOnce();
     });
 
-    it("진행 중인 회의는 시작할 수 있다", () => {
-      renderDock();
-
-      expect(
-        screen.getByRole("button", { name: "기록 시작" })
-      ).toBeInTheDocument();
-    });
-
     it("다른 사용자가 시작한 진행 중 회의에서는 독을 숨긴다", () => {
       authState.userId = "u2";
 
-      renderDock();
+      renderStartGate();
 
       expect(screen.queryByLabelText("녹음 제어")).toBeNull();
-      expect(screen.queryByRole("button", { name: "기록 시작" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
     });
 
     it("미시작 회의에서는 독을 유지한다", () => {
+      noteState.value.meetingStatus = "NOT_STARTED";
       noteState.value.meetingStartedBy = null;
 
-      renderDock();
+      renderStartGate();
 
       expect(screen.getByLabelText("녹음 제어")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "기록 시작" })
+        screen.getByRole("button", { name: "회의 시작" })
       ).toBeInTheDocument();
     });
 
     it("좁은 화면에서는 독을 본문 아래 레인에 두고 desktop에서만 띄운다", () => {
+      noteState.value.meetingStatus = "NOT_STARTED";
       noteState.value.meetingStartedBy = null;
 
-      renderDock();
+      renderStartGate();
 
       const dock = screen.getByLabelText("녹음 제어");
       const lane = dock.parentElement?.parentElement;
@@ -870,9 +1109,9 @@ describe("NotePanel", () => {
     noteState.value.meetingStatus = "ENDED";
     rerenderNote(el);
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "회의가 종료되었습니다"
-    );
+    expect(
+      screen.getByRole("region", { name: "회의 종료 안내" })
+    ).toHaveTextContent("회의가 종료되었습니다");
     expect(screen.getByTestId("transcript-view")).toBeInTheDocument();
     expect(screen.queryByTestId("note-archive")).toBeNull();
 
@@ -901,9 +1140,9 @@ describe("NotePanel", () => {
     rerenderNote(el);
     fireEvent.click(screen.getByRole("button", { name: "기록과 요약 보기" }));
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "회의가 종료되었습니다"
-    );
+    expect(
+      screen.getByRole("region", { name: "회의 종료 안내" })
+    ).toHaveTextContent("회의가 종료되었습니다");
     expect(
       screen.getByRole("button", { name: "답변이 끝나면 이동합니다" })
     ).toBeDisabled();
@@ -935,100 +1174,5 @@ describe("NotePanel", () => {
 
     expect(screen.queryByText("회의가 종료되었습니다")).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
-  });
-
-  // v5 side 프레임 셋(oLmGL·viNgv·KCoyt)에는 레코더 독이 없다. 상태·회의 종료는
-  // APP-280에서 side 헤더에 넣었지만, 녹음 시작은 계속 full 독만 맡는다.
-  describe("side 녹음 시작 게이트", () => {
-    function renderSide() {
-      renderNotePanel(
-        <NotePanel
-          workspaceId="01K0000000000"
-          noteId="01K0000000002"
-          view="side"
-          tab="transcript"
-          onTabChange={vi.fn()}
-          onClose={vi.fn()}
-        />
-      );
-    }
-
-    it("side에서는 레코더 독이 없다", () => {
-      renderSide();
-
-      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
-    });
-
-    it("그 노트를 녹음 중이면 독을 남긴다 — 멈출 방법이 사라지면 안 된다", () => {
-      // 전역 녹음 필은 워크스페이스 라우트에서 안 뜬다(!isWorkspaceRoute).
-      recordingState.activeNoteId = "01K0000000002";
-      recordingState.phase = "recording";
-
-      renderSide();
-
-      const dock = screen.getByLabelText("녹음 제어");
-      const lane = dock.parentElement?.parentElement;
-
-      expect(screen.getByRole("button", { name: "녹음 종료" })).toBeEnabled();
-      expect(lane).toHaveClass("shrink-0", "lg:absolute");
-      expect(lane).not.toHaveClass("absolute");
-    });
-
-    // activeNoteId는 녹음이 끝나도 남는다. "idle이 아님"으로 판정하면 끝난 뒤에도 독이
-    // 다시 서서 side에서 시작 버튼이 살아난다.
-    it("녹음이 끝났으면 독을 다시 세우지 않는다", () => {
-      recordingState.activeNoteId = "01K0000000002";
-      recordingState.phase = "completed";
-
-      renderSide();
-
-      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
-    });
-
-    it("다른 노트를 녹음 중이면 이 노트의 side에는 독이 없다", () => {
-      recordingState.activeNoteId = "01K0000000099";
-      recordingState.phase = "recording";
-
-      renderSide();
-
-      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
-    });
-
-    it("서버 세션이 남은 failed 상태에서는 side도 재시도를 제공한다", () => {
-      recordingState.activeNoteId = "01K0000000002";
-      recordingState.phase = "failed";
-      recordingState.sessionStatus = "ACTIVE";
-
-      renderSide();
-
-      expect(
-        screen.getByRole("button", { name: "다시 시도" })
-      ).toBeInTheDocument();
-    });
-
-    it("세션 없이 실패해도 side에서 재시도를 제공한다", () => {
-      recordingState.activeNoteId = "01K0000000002";
-      recordingState.phase = "failed";
-
-      renderSide();
-
-      expect(
-        screen.getByRole("button", { name: "다시 시도" })
-      ).toBeInTheDocument();
-    });
-
-    it("조회 hard error에서는 세션 없는 failed 독을 노출하지 않는다", () => {
-      noteState.query = {
-        data: undefined,
-        isError: true,
-        refetch: noteRefetch,
-      };
-      recordingState.activeNoteId = "01K0000000002";
-      recordingState.phase = "failed";
-
-      renderSide();
-
-      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
-    });
   });
 });

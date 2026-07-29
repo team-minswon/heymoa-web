@@ -13,6 +13,8 @@ export type NoteResponseDataMeetingStatus =
   (typeof NoteResponseDataMeetingStatus)[keyof typeof NoteResponseDataMeetingStatus];
 
 export const NoteResponseDataMeetingStatus = {
+  NOT_STARTED: "NOT_STARTED",
   IN_PROGRESS: "IN_PROGRESS",
+  PAUSED: "PAUSED",
   ENDED: "ENDED",
 } as const;

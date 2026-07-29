@@ -35,7 +35,7 @@ vi.mock("@/lib/workspace/use-create-meeting", () => ({
     createMeeting,
     disabled: false,
     isPending: false,
-    isRecordingCurrent: false,
+    isRecordingCurrent: Boolean(recording.activeNoteId),
   }),
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
@@ -119,6 +119,12 @@ describe("WorkspaceToolbar", () => {
     expect(
       screen.getByRole("button", { name: "노트 닫기" })
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "창 제어" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
+      "size-11"
+    );
     expect(screen.getByRole("button", { name: "새 노트" })).toBeInTheDocument();
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
   });
@@ -151,6 +157,26 @@ describe("WorkspaceToolbar", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("keeps one 새 노트 entry while another note is recording", () => {
+    recording.session = {
+      sessionId: "01K0000000010",
+      noteId: "01K0000000002",
+      status: "ACTIVE",
+    };
+    recording.activeNoteId = "01K0000000002";
+    recording.phase = "recording";
+
+    render(
+      <SidebarProvider>
+        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
+      </SidebarProvider>
+    );
+
+    const newNote = screen.getByRole("button", { name: "새 노트" });
+    fireEvent.click(newNote);
+    expect(createMeeting).toHaveBeenCalledOnce();
+  });
+
   it("replaces transitional status labels with the shared spinner", () => {
     recording.session = {
       sessionId: "01K0000000010",
@@ -173,4 +199,28 @@ describe("WorkspaceToolbar", () => {
     expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
     expect(screen.getByRole("button", { name: "녹음 종료" })).toBeDisabled();
   });
+
+  it.each(["requesting-permission", "connecting"] as const)(
+    "does not expose stop while recording startup is %s",
+    (phase) => {
+      recording.session = {
+        sessionId: "01K0000000010",
+        noteId: "01K0000000002",
+        status: "READY",
+      };
+      recording.activeNoteId = "01K0000000002";
+      recording.phase = phase;
+
+      render(
+        <SidebarProvider>
+          <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
+        </SidebarProvider>
+      );
+
+      const stop = screen.getByRole("button", { name: "녹음 종료" });
+      fireEvent.click(stop);
+      expect(stop).toBeDisabled();
+      expect(recording.stop).not.toHaveBeenCalled();
+    }
+  );
 });

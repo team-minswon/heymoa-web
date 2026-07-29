@@ -93,7 +93,7 @@ function GlobalRecordingPill({
         size="icon-sm"
         aria-label="녹음 종료"
         onClick={onStop}
-        disabled={phase === "stopping"}
+        disabled={phase !== "recording"}
         className="size-7 rounded-full text-destructive hover:bg-destructive/8 hover:text-destructive"
       >
         <Square className="size-3.5" />

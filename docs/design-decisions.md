@@ -150,18 +150,35 @@ SPEC은 그 위에서 규칙을 통일한 결과다. 최종 정답은 이 캔버
 
 - **상단바 `중지` 버튼** — `Ftvu9`·`AB8zp`에 남아 있으나 녹음 중지는 레코더 독 하나뿐(MOTION SPEC).
   독만 둔다. **상단바 노트 액션은 `회의 종료`와 패널 토글뿐이다.**
-  (2026-07-27 정정) 예전에는 여기에 "회의 중지(`pauseMeeting`)는 달라서 상단바에 둔다"는
-  단서가 붙어 있었다. **APP-218이 `PAUSED` 상태를 폐기하면서 그 단서가 틀렸다** —
-  `pauseMeeting`·`resumeMeeting`은 계약에서 빠졌고 APP-219가 UI도 걷었다. 그대로 따라 그리면
-  없는 API를 부르는 버튼이 생긴다. `design/v5-spec-notes.md` CHROME SPEC의 같은 대목도
-  그 시점의 기록이지 지금의 지침이 아니다.
-- **노트 목록 "녹음 중" 필터 칩** — 목록 계약에 `meetingStatus`가 없어 성립 안 함. `전체`·`내가 시작`만 둔다(FORM SPEC).
+  (2026-07-29 APP-288 정정) `PAUSED`는 전사 세션이 끝난 서버 상태로 복구됐지만 별도
+  `pauseMeeting`·`resumeMeeting` API는 만들지 않았다. 레코더 독의 `중지`·`재개`가 전사 세션
+  전이를 맡고 상단바는 최종 `회의 종료`만 맡는다.
+- **노트 목록 "녹음 중" 필터 칩** — APP-288 목록 계약은 `meetingStatus`를 제공하지만 별도
+  상태 필터는 제품 요구가 아니다. `전체`·`내가 시작`만 두고 각 행에 네 상태를 표시한다.
 - **요약 탭 우측 트레이 라벨** — `m0eVmx`가 "개인 챗봇"으로 되어 있으나 노트 3탭 트레이는 전부 공유 챗봇(CHROME SPEC).
 - **요약 섹션 키커** — `m0eVmx`에 `OVERVIEW`/`ACTION ITEMS`/`INSIGHTS` 대문자 키커가 남아 있으나 제품 면 키커 금지(FORM SPEC).
 
 ## 계약 가드레일
 
-v5는 계약을 바꾸지 않는다. 프레임 데이터는 `openapi3.yml`로 채운다.
+프레임 데이터는 `openapi3.yml`로 채운다.
 계약에 없는 데이터가 필요하면 화면을 밀지 말고 그 데이터를 뺀다(APP-145에서 계약에 없는 알림 타입을
-그렸다가 삭제한 전례). **노트 목록 상태 배지가 그 사례다** — 목록 계약에 `meetingStatus`가 없어
-계약을 늘리는 대신(APP-159 취소) 배지를 뺐다. 회의 상태는 노트 상세에서 본다.
+그렸다가 삭제한 전례). APP-288은 서버 계약과 함께 목록의 `meetingStatus`,
+`recordedDurationMs`, `activeSessionStartedAt`을 추가했으므로 목록과 상세가 같은 네 상태와
+활성 구간 누적 시간을 표시한다.
+
+## APP-288 실제 DOM 왕복 (2026-07-29)
+
+최종 키는 과거 v1 프레임을 덮지 않고 `import-to-canvas`가 새로 반환한 ID만 기록한다.
+
+| 실제 DOM 화면                    | 최종 Pencil frame ID |
+| -------------------------------- | -------------------- |
+| 목록 · 네 상태와 누적 기록 시간  | `zi0FU`              |
+| full · IN_PROGRESS                | `ujfls`              |
+| side · IN_PROGRESS 원격 활성 설명 | `zQnLs`              |
+| side · NOT_STARTED recorder dock | `OL1es`              |
+| 종료 확인 · 기록 중 stop → end   | `B2GwMZ`              |
+
+브라우저 MSW 검증은 생성만(마이크 0회), 시작→종료, 시작→중지→종료,
+시작→중지→재개→중지, side 미시작 dock, 원격 활성 설명, 중지·종료 뒤 시간 고정과 재개 뒤
+누적 계속을 통과시킨다. partial/final 열 폭과 한국어 줄바꿈은 실제 음성 내용에 좌우되는 E2E
+대신 `transcript-view.test.tsx`의 결정적 DOM 계약으로 유지한다.

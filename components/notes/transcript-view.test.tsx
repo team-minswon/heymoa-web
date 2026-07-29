@@ -403,7 +403,10 @@ describe("TranscriptView", () => {
     // v5: 제품 면 대문자 키커·세리프 헤더 없음(FORM SPEC), 전사 행은 단일 값 grid.
     expect(screen.queryByText("Conversation")).toBeNull();
     expect(screen.queryByText("대화 기록")).toBeNull();
-    expect(blocks[0].className).toContain("grid-cols-[64px_1fr]");
+    expect(blocks[0]).toHaveClass(
+      "grid-cols-1",
+      "sm:grid-cols-[max-content_minmax(0,1fr)]"
+    );
     expect(blocks[0].className).toContain("gap-5");
     expect(useGetNoteTranscript).toHaveBeenCalledWith(
       NOTE_ID,
@@ -411,6 +414,40 @@ describe("TranscriptView", () => {
         query: expect.objectContaining({ refetchInterval: 30_000 }),
       })
     );
+  });
+
+  it("keeps the partial label on one line and wraps Korean text by words without changing the final column width", () => {
+    useRecording.mockReturnValue(
+      recordingState(
+        "아주 긴 한국어 회의 문장이 남은 너비 안에서 어절을 기준으로 자연스럽게 줄바꿈됩니다"
+      )
+    );
+
+    renderTranscript();
+
+    const final = screen.getAllByTestId("transcript-block")[0];
+    const partial = screen
+      .getByText(/아주 긴 한국어 회의 문장/)
+      .closest("article")!;
+    const partialLabel = screen.getByText("실시간 · 확정 전");
+    const partialBody = partial.querySelector("p");
+
+    expect(final.firstElementChild).toHaveClass("sm:w-32");
+    expect(partial.firstElementChild).toHaveClass("sm:w-32");
+    expect(partial).toHaveClass(
+      "grid-cols-1",
+      "sm:grid-cols-[max-content_minmax(0,1fr)]"
+    );
+    expect(partialLabel).toHaveClass("whitespace-nowrap", "shrink-0");
+    expect(partialBody).toHaveClass(
+      "min-w-0",
+      "whitespace-normal",
+      "break-keep"
+    );
+    expect(partialBody).not.toHaveClass("truncate", "break-all");
+    const horizontalPadding = (element: Element) =>
+      [...element.classList].filter((name) => /^(px|pl|pr)-/.test(name));
+    expect(horizontalPadding(partial)).toEqual(horizontalPadding(final));
   });
 
   it("dedupes recorder and note-topic partials by utteranceId and hides a finalized partial", () => {

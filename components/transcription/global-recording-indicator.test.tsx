@@ -53,18 +53,24 @@ describe("GlobalRecordingIndicator", () => {
     });
   });
 
-  it("uses only the shared spinner for transitional states", () => {
-    recording.phase = "connecting";
+  it.each(["requesting-permission", "connecting"] as const)(
+    "uses only the shared spinner and disables stop while %s",
+    (phase) => {
+      recording.phase = phase;
 
-    render(<GlobalRecordingIndicator />);
+      render(<GlobalRecordingIndicator />);
 
-    expect(
-      screen.getByRole("status", { name: "녹음 처리 중" })
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
-    expect(screen.queryByText("연결 중")).toBeNull();
-    expect(screen.queryByText("마무리 중")).toBeNull();
-  });
+      expect(
+        screen.getByRole("status", { name: "녹음 처리 중" })
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
+      expect(screen.queryByText("연결 중")).toBeNull();
+      expect(screen.queryByText("마무리 중")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
+      expect(screen.getByRole("button", { name: "녹음 종료" })).toBeDisabled();
+      expect(recording.stop).not.toHaveBeenCalled();
+    }
+  );
 
   it("offers only stop while automatic finalization is active", () => {
     render(<GlobalRecordingIndicator />);

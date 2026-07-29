@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Mic, RotateCcw, Square } from "lucide-react";
 
 import {
+  isNoteRecordingActive,
   useRecording,
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
@@ -26,6 +27,7 @@ function formatElapsed(elapsedMs: number) {
 export function RecordingDock({
   noteId,
   disabledReason = null,
+  startLabel = "회의 시작",
 }: {
   noteId: string;
   /**
@@ -33,15 +35,13 @@ export function RecordingDock({
    * 이 문구가 대신 선다 — 눌러서 실패하게 두면 "지금 할 수 없음"이 오류로 읽힌다.
    */
   disabledReason?: string | null;
+  startLabel?: "회의 시작" | "재개";
 }) {
   const recording = useRecording();
   const meter = useRecordingMeter();
-  const hasActiveSession = [
-    "requesting-permission",
-    "connecting",
-    "recording",
-    "stopping",
-  ].includes(recording.phase);
+  const hasActiveSession = recording.activeNoteId
+    ? isNoteRecordingActive(recording, recording.activeNoteId)
+    : false;
   const isThisNote = recording.activeNoteId === noteId;
   const isOtherNote = hasActiveSession && !isThisNote;
   const state = isThisNote ? recording.phase : "idle";
@@ -50,7 +50,8 @@ export function RecordingDock({
     <motion.div
       layout
       aria-label="녹음 제어"
-      className="flex min-h-10 min-w-0 max-w-full items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
+      role="group"
+      className="flex min-h-11 min-w-0 max-w-full items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
       style={{ borderRadius: 9999 }}
       transition={LAYOUT_TRANSITION}
     >
@@ -102,9 +103,9 @@ export function RecordingDock({
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
-              className="size-7 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)]"
-              aria-label="녹음 종료"
+              size="icon-xl"
+              className="size-11 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)]"
+              aria-label="중지"
               onClick={() => void recording.stop()}
             >
               <Square className="size-3.5" />
@@ -162,7 +163,7 @@ export function RecordingDock({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 rounded-full px-2.5 text-xs"
+              className="h-11 rounded-full px-3 text-xs"
               disabled={isOtherNote}
               onClick={() => void recording.start(noteId)}
             >
@@ -184,8 +185,8 @@ export function RecordingDock({
           >
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45"
-              aria-label={isOtherNote ? "다른 노트에서 녹음 중" : "기록 시작"}
+              className="flex size-11 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45"
+              aria-label={isOtherNote ? "다른 노트에서 녹음 중" : startLabel}
               disabled={isOtherNote}
               onClick={() => void recording.start(noteId)}
             >

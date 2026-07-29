@@ -10,7 +10,7 @@ import type { NoteListResponseDataNotesItemMeetingStatus } from "./noteListRespo
 
 export type NoteListResponseDataNotesItem = {
   /**
-   * 최초 활성 전사 세션의 시작 시각 (활성화된 세션이 없으면 null)
+   * 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
    * @nullable
    */
   meetingStartedAt: string | null;
@@ -27,7 +27,7 @@ export type NoteListResponseDataNotesItem = {
    */
   meetingStartedBy: NoteListResponseDataNotesItemMeetingStartedBy;
   /**
-   * 전사 세션별 마지막 구간을 합산한 누적 녹음 시간(ms)
+   * ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
    * @minimum 0
    */
   recordedDurationMs: number;
@@ -52,6 +52,11 @@ export type NoteListResponseDataNotesItem = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   projectId: string;
+  /**
+   * 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
+   * @nullable
+   */
+  activeSessionStartedAt: string | null;
   /** 노트 수정 시각 */
   updatedAt: string;
 };

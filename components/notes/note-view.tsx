@@ -10,6 +10,7 @@ import { useGetNote } from "@/lib/api/generated/notes/notes";
 import {
   deriveMeetingPhase,
   isPersonalChatHiddenInNote,
+  MEETING_STATUS_LABEL,
   type SharedChatPhase,
 } from "@/lib/notes/meeting-state";
 
@@ -34,7 +35,10 @@ export function normalizeNoteViewQuery(
         ? "summary"
         : rawTab === "chat" &&
             view === "side" &&
-            (phase === "active" || phase === "unknown" || sharedTurnActive)
+            (phase === "active" ||
+              phase === "paused" ||
+              phase === "unknown" ||
+              sharedTurnActive)
           ? "chat"
           : "transcript";
   return { view, tab };
@@ -59,7 +63,7 @@ export function NoteView({
   };
 
   // 개인 챗봇은 side에서 감춰지고, full에서도 공유 챗봇 트레이가 레일을 독차지하는 동안
-  // (활성·미시작) 감춰진다. 종료(ENDED)면 우측이 개인 챗봇으로 돌아온다(`TqX06`).
+  // (활성·미시작·중지) 감춰진다. 종료(ENDED)면 우측이 개인 챗봇으로 돌아온다(`TqX06`).
   // unknown(로딩)은 감춰 둔다 — 트레이 자리에 개인 패널이 깜빡이지 않게.
   // 감출 뿐 언마운트하지 않아 흐르던 스트림은 산다.
   const noteQuery = useGetNote(noteId);
@@ -147,6 +151,18 @@ export function NoteView({
       isOpen={isOpen}
       onClose={closeWithAnim}
     >
+      {note ? (
+        <span
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label="회의 상태 변경"
+          className="sr-only"
+        >
+          회의 상태가 {MEETING_STATUS_LABEL[note.meetingStatus]}으로
+          변경되었습니다.
+        </span>
+      ) : null}
       <NotePanel
         workspaceId={workspaceId}
         noteId={noteId}

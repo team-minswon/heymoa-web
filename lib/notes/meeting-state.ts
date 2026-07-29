@@ -1,61 +1,84 @@
-import type { NoteResponseDataMeetingStartedBy } from "@/lib/api/generated/models/noteResponseDataMeetingStartedBy";
+import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models/noteListResponseDataNotesItem";
+import type { NoteResponseData } from "@/lib/api/generated/models/noteResponseData";
 import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models/noteResponseDataMeetingStatus";
+
+export const MEETING_STATUS_LABEL = {
+  NOT_STARTED: "시작 전",
+  IN_PROGRESS: "기록 중",
+  PAUSED: "중지됨",
+  ENDED: "종료됨",
+} as const satisfies Record<NoteResponseDataMeetingStatus, string>;
+
+export const MEETING_PRIMARY_ACTION_LABEL = {
+  NOT_STARTED: "회의 시작",
+  IN_PROGRESS: "중지",
+  PAUSED: "재개",
+  ENDED: "요약 보기",
+} as const satisfies Record<NoteResponseDataMeetingStatus, string>;
 
 /**
  * 공유 챗봇 컴포저가 갈리는 회의 상태. `unknown`은 노트를 아직 못 읽은 것 —
  * 게이트를 열지도 닫지도 않는다.
  */
-export type SharedChatPhase = "active" | "not-started" | "ended" | "unknown";
+export type SharedChatPhase =
+  | "active"
+  | "not-started"
+  | "paused"
+  | "ended"
+  | "unknown";
 
-type MeetingFields = {
-  meetingStatus: NoteResponseDataMeetingStatus;
-  meetingStartedBy: NoteResponseDataMeetingStartedBy;
-};
+type MeetingFields = Pick<NoteResponseData, "meetingStatus">;
 
 /**
  * 노트의 회의 상태를 컴포저 상태로 접는다. 순수 함수 — 브라우저 없이 테스트한다.
- *
- * **ACTIVE 판정 = IN_PROGRESS && meetingStartedBy !== null.** 새 노트는 생성 시부터
- * IN_PROGRESS라 시작자가 없으면 아직 회의가 열린 게 아니다(계약 단일 출처: APP-120).
  */
 export function deriveMeetingPhase(
   note: MeetingFields | undefined
 ): SharedChatPhase {
   if (!note) return "unknown";
+  if (note.meetingStatus === "NOT_STARTED") return "not-started";
+  if (note.meetingStatus === "PAUSED") return "paused";
   if (note.meetingStatus === "ENDED") return "ended";
-  // IN_PROGRESS
-  return note.meetingStartedBy ? "active" : "not-started";
+  return "active";
 }
 
 export function isMeetingActive(note: MeetingFields | undefined): boolean {
   return deriveMeetingPhase(note) === "active";
 }
 
-export function meetingElapsedMs(startedAt: string, now: number): number {
-  const startedAtMs = Date.parse(startedAt);
-  return Number.isFinite(startedAtMs) ? Math.max(0, now - startedAtMs) : 0;
-}
+type MeetingTimingFields =
+  | Pick<
+      NoteResponseData,
+      "meetingStatus" | "recordedDurationMs" | "activeSessionStartedAt"
+    >
+  | Pick<
+      NoteListResponseDataNotesItem,
+      "meetingStatus" | "recordedDurationMs" | "activeSessionStartedAt"
+    >;
 
-export function formatMeetingElapsedMinutes(
-  startedAt: string,
+export function getRecordedDurationMs(
+  note: MeetingTimingFields,
   now: number
-): string {
-  return `${Math.floor(meetingElapsedMs(startedAt, now) / 60_000)}분`;
-}
-
-export function formatMeetingElapsedClock(
-  startedAt: string,
-  now: number
-): string {
-  const totalSeconds = Math.floor(meetingElapsedMs(startedAt, now) / 1_000);
-  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(
-    totalSeconds % 60
-  ).padStart(2, "0")}`;
+): number {
+  if (note.meetingStatus === "NOT_STARTED") return 0;
+  const recorded = Number.isFinite(note.recordedDurationMs)
+    ? Math.max(0, note.recordedDurationMs)
+    : 0;
+  const activeStartedAt = note.activeSessionStartedAt
+    ? Date.parse(note.activeSessionStartedAt)
+    : Number.NaN;
+  const live =
+    note.meetingStatus === "IN_PROGRESS" &&
+    Number.isFinite(activeStartedAt) &&
+    Number.isFinite(now)
+      ? Math.max(0, now - activeStartedAt)
+      : 0;
+  return recorded + live;
 }
 
 /**
  * 노트 화면에서 개인 챗봇을 감출까. side면 항상 감춘다. full에서는 공유 챗봇 트레이가 레일을
- * 독차지하는 동안(활성·미시작)만 감춘다 — **종료에는 개인 챗봇을 남긴다.**
+ * 독차지하는 동안(활성·미시작·중지)만 감춘다. 종료에는 개인 챗봇을 남긴다.
  *
  * `unknown`은 로딩과 실패 둘 다다. **로딩 중에만** 감춘다(트레이가 곧 뜬다). 조회가 실패하면
  * 트레이도 안 서므로, 여기서 감추면 챗 입구가 전무해진다 — 실패면 개인 챗봇을 남긴다.
@@ -69,6 +92,7 @@ export function isPersonalChatHiddenInNote(
   return (
     phase === "active" ||
     phase === "not-started" ||
+    phase === "paused" ||
     (phase === "unknown" && noteIsPending)
   );
 }
