@@ -477,7 +477,7 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.phase).toBe("idle");
     expect(harness.result.current.session).toBeNull();
     expect(harness.result.current.activeNoteId).toBeNull();
-    expect(harness.result.current.transcript.partialByUtteranceId).toEqual({});
+    expect(harness.result.current.transcript.partial).toBeNull();
   });
 
   it("fails and closes after a realtime transport error", async () => {
@@ -544,7 +544,7 @@ describe("RecordingProvider", () => {
 
     await act(() => harness.result.current.start(session.noteId));
 
-    expect(harness.result.current.transcript.partialByUtteranceId).toEqual({});
+    expect(harness.result.current.transcript.partial).toBeNull();
     expect(harness.result.current.transcript.completed).toBe(false);
   });
 
@@ -578,7 +578,7 @@ describe("RecordingProvider", () => {
 
     await waitFor(() => expect(harness.result.current.phase).toBe("completed"));
     expect(harness.controller.reconcile).toHaveBeenCalledWith("COMPLETED");
-    expect(harness.result.current.transcript.partialByUtteranceId).toEqual({});
+    expect(harness.result.current.transcript.partial).toBeNull();
     expect(harness.result.current.transcript.completed).toBe(true);
 
     await act(() => harness.result.current.start(session.noteId));

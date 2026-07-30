@@ -53,7 +53,7 @@ function Probe() {
   return (
     <>
       <div data-testid="partials">
-        {JSON.stringify(realtime.transcript.partialByUtteranceId)}
+        {JSON.stringify(realtime.transcript.partial)}
       </div>
       <div data-testid="finals">
         {JSON.stringify(realtime.transcript.finalSegments)}
@@ -136,8 +136,13 @@ describe("NoteRealtimeProvider", () => {
     });
 
     expect(
-      JSON.parse(screen.getByTestId("partials").textContent ?? "{}")
-    ).toEqual({ [UTTERANCE_ID]: "수정된 초안" });
+      JSON.parse(screen.getByTestId("partials").textContent ?? "null")
+    ).toEqual(
+      expect.objectContaining({
+        utteranceId: UTTERANCE_ID,
+        text: "수정된 초안",
+      })
+    );
 
     const finalEvent = {
       type: "transcript.final",
@@ -152,7 +157,7 @@ describe("NoteRealtimeProvider", () => {
     emit(finalEvent);
     emit({ ...finalEvent, text: "확정 문장 교정본" });
 
-    expect(screen.getByTestId("partials").textContent).toBe("{}");
+    expect(screen.getByTestId("partials").textContent).toBe("null");
     expect(
       JSON.parse(screen.getByTestId("finals").textContent ?? "[]")
     ).toEqual([
@@ -364,8 +369,39 @@ describe("NoteRealtimeProvider", () => {
     });
 
     expect(
-      JSON.parse(screen.getByTestId("partials").textContent ?? "{}")
-    ).toEqual({ [UTTERANCE_ID]: "새 세션의 작성 중 문장" });
+      JSON.parse(screen.getByTestId("partials").textContent ?? "null")
+    ).toEqual(
+      expect.objectContaining({
+        transcriptionSessionId: newerSessionId,
+        text: "새 세션의 작성 중 문장",
+      })
+    );
+  });
+
+  it("다른 발화의 final이 와도 현재 partial을 비운다", async () => {
+    // utteranceId는 최신성을 뜻하지 않는다 — 서버가 재연결 때 폐기한 commit의 이전 id를
+    // 되살린다. id 일치로만 지우면 확정되지 못한 발화가 세션 끝까지 화면에 남는다.
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "transcript.partial",
+      transcriptionSessionId: SESSION_ID,
+      utteranceId: UTTERANCE_ID,
+      text: "확정되지 못한 문장",
+    });
+    emit({
+      type: "transcript.final",
+      transcriptionSessionId: SESSION_ID,
+      segmentId: SEGMENT_ID,
+      utteranceId: "01K0000000999",
+      sequence: 1,
+      text: "다음 발화의 확정",
+      startedAtMs: 0,
+      endedAtMs: 900,
+    });
+
+    expect(screen.getByTestId("partials").textContent).toBe("null");
   });
 
   it("현재 세션이 중지되면 확정되지 않은 partial을 지운다", async () => {
@@ -383,7 +419,7 @@ describe("NoteRealtimeProvider", () => {
       transcriptionSessionId: SESSION_ID,
     });
 
-    expect(screen.getByTestId("partials").textContent).toBe("{}");
+    expect(screen.getByTestId("partials").textContent).toBe("null");
   });
 
   it("회의가 종료되면 세션 순서와 무관하게 모든 partial을 지운다", async () => {
@@ -398,7 +434,7 @@ describe("NoteRealtimeProvider", () => {
     });
     emit({ type: "meeting.ended" });
 
-    expect(screen.getByTestId("partials").textContent).toBe("{}");
+    expect(screen.getByTestId("partials").textContent).toBe("null");
   });
 
   it("재연결 catch-up에서 임시 payload를 버리고 note·transcript·chat을 모두 갱신한다", async () => {
@@ -417,7 +453,7 @@ describe("NoteRealtimeProvider", () => {
 
     await act(() => topicClients[0].options.onCatchUp());
 
-    expect(screen.getByTestId("partials").textContent).toBe("{}");
+    expect(screen.getByTestId("partials").textContent).toBe("null");
     expect(screen.getByTestId("chat-text").textContent).toBe("");
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
     expectInvalidated(invalidateQueries, getGetNoteTranscriptQueryKey(NOTE_ID));

@@ -32,7 +32,7 @@ const useRecording = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 const noteRealtime = vi.hoisted(() => ({
   transcript: {
-    partialByUtteranceId: {} as Record<string, string>,
+    partial: null as { utteranceId: string; text: string } | null,
     finalSegments: [] as Array<Record<string, unknown>>,
   },
 }));
@@ -104,7 +104,7 @@ function recordingState(partialText = "결과를 정리합니다") {
     elapsedMs: 3_200,
     error: null,
     transcript: {
-      partialByUtteranceId: { "01K0000000201": partialText },
+      partial: { utteranceId: "01K0000000201", text: partialText },
       finalSegments: [
         {
           segmentId: "01K0000000011",
@@ -128,7 +128,7 @@ function idleState() {
     phase: "idle",
     elapsedMs: 0,
     error: null,
-    transcript: { partialByUtteranceId: {}, finalSegments: [] },
+    transcript: { partial: null, finalSegments: [] },
   };
 }
 
@@ -199,7 +199,7 @@ describe("TranscriptView", () => {
 
   beforeEach(() => {
     toast.error.mockReset();
-    noteRealtime.transcript.partialByUtteranceId = {};
+    noteRealtime.transcript.partial = null;
     noteRealtime.transcript.finalSegments = [];
     useRecording.mockReturnValue(recordingState());
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
@@ -451,8 +451,9 @@ describe("TranscriptView", () => {
   });
 
   it("dedupes recorder and note-topic partials by utteranceId and hides a finalized partial", () => {
-    noteRealtime.transcript.partialByUtteranceId = {
-      "01K0000000201": "결과를 정리합니다",
+    noteRealtime.transcript.partial = {
+      utteranceId: "01K0000000201",
+      text: "결과를 정리합니다",
     };
     noteRealtime.transcript.finalSegments = [
       {
@@ -471,6 +472,68 @@ describe("TranscriptView", () => {
 
     expect(screen.queryByText("결과를 정리합니다")).toBeNull();
     expect(screen.getByText("확정됐습니다.")).toBeInTheDocument();
+  });
+
+  it("내가 녹음자면 토픽이 아니라 내 소켓의 발화를 그린다", () => {
+    // 두 소스는 같은 서버 이벤트에서 갈라지고 토픽이 메아리다. 토픽이 지연·재연결되는
+    // 동안 이미 지나간 발화를 그리지 않도록 녹음자는 자기 소켓만 본다.
+    useRecording.mockReturnValue({
+      ...recordingState(),
+      transcript: {
+        partial: { utteranceId: "01K0000000301", text: "지금 말하는 문장" },
+        finalSegments: [],
+      },
+    });
+    noteRealtime.transcript.partial = {
+      utteranceId: "01K0000000300",
+      text: "토픽에 남은 이전 문장",
+    };
+
+    renderTranscript();
+
+    expect(screen.getByText("지금 말하는 문장")).toBeInTheDocument();
+    expect(screen.queryByText("토픽에 남은 이전 문장")).toBeNull();
+    // 예전에는 두 소스의 partial을 map에 모아 join(" ")했다. 확정되지 못한 발화가
+    // 그렇게 남아 회의 내내 앞에 붙었다 — 이어 붙는 형태 자체가 없어야 한다.
+    expect(
+      screen.queryByText(/토픽에 남은 이전 문장\s+지금 말하는 문장/)
+    ).toBeNull();
+  });
+
+  it("중지 drain 동안에도 내 소켓의 partial을 그린다", () => {
+    // 중지 요청 뒤에도 같은 소켓이 마지막 final을 drain한다. 그 구간에 토픽으로 넘기면
+    // 토픽이 재연결·catch-up으로 비어 있을 때 화면이 빈다.
+    useRecording.mockReturnValue({
+      ...recordingState(),
+      phase: "stopping",
+      transcript: {
+        partial: { utteranceId: "01K0000000401", text: "마지막 문장" },
+        finalSegments: [],
+      },
+    });
+    noteRealtime.transcript.partial = null;
+
+    renderTranscript();
+
+    expect(screen.getByText("마지막 문장")).toBeInTheDocument();
+  });
+
+  it("내 녹음이 끝난 뒤에는 다른 탭의 토픽 발화를 그린다", () => {
+    // 녹음이 끝나도 activeNoteId는 disconnect 전까지 남는다. 그것만 보고 내 소켓을
+    // 고르면, 다른 탭·기기가 회의를 재개했을 때 비어 있는 내 소켓이 토픽을 가린다.
+    useRecording.mockReturnValue({
+      ...recordingState(),
+      phase: "completed",
+      transcript: { partial: null, finalSegments: [] },
+    });
+    noteRealtime.transcript.partial = {
+      utteranceId: "01K0000000400",
+      text: "다른 탭에서 말하는 중",
+    };
+
+    renderTranscript();
+
+    expect(screen.getByText("다른 탭에서 말하는 중")).toBeInTheDocument();
   });
 
   it("exposes sequential transcript additions as an accessible log", () => {

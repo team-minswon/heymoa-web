@@ -82,33 +82,41 @@ export function TranscriptView({
     persisted,
   ]);
   const partialText = useMemo(() => {
-    const partials = new Map<string, string>();
-    if (liveForNote) {
-      Object.entries(liveTranscript.partialByUtteranceId).forEach(
-        ([utteranceId, text]) => partials.set(utteranceId, text)
-      );
-    }
-    Object.entries(noteRealtime.transcript.partialByUtteranceId).forEach(
-      ([utteranceId, text]) => partials.set(utteranceId, text)
-    );
-    noteRealtime.transcript.finalSegments.forEach((segment) =>
-      partials.delete(segment.utteranceId)
-    );
-    if (liveForNote) {
-      liveTranscript.finalSegments.forEach((segment) =>
-        partials.delete(segment.utteranceId)
-      );
-    }
-    return [...partials.values()]
-      .map((text) => text.trim())
-      .filter(Boolean)
-      .join(" ");
+    // 살아 있는 partial은 세션당 하나다. 이어 붙이지 않는 것이 핵심이다 — 합치면 확정되지
+    // 못한 발화가 화면에 계속 남는다.
+    //
+    // 소스는 둘인데 같은 서버 이벤트에서 갈라진다. **내가 지금 녹음 중일 때만** 내 전사
+    // 소켓이 원본이고 노트 토픽은 그 메아리다. `liveForNote`만으로 가르면 안 된다 —
+    // 녹음이 끝나도 `activeNoteId`는 disconnect 전까지 남아서, 다른 탭·기기가 회의를
+    // 재개했을 때 비어 있는 내 소켓이 토픽을 가린다.
+    //
+    // utteranceId 순서로 "더 최신"을 고르지 않는다 — 서버가 재연결 때 이전 id를
+    // 되살리므로(`rollbackDiscardedCommit`) id 대소는 최신성을 뜻하지 않는다.
+    // `stopping`도 포함한다 — 중지 요청 뒤에도 같은 소켓이 마지막 final을 drain하는 동안
+    // 로컬 partial이 살아 있다. 여기서 토픽으로 넘기면 그 구간이 화면에서 빈다.
+    const ownSocketIsSource =
+      liveForNote &&
+      (recording.phase === "recording" || recording.phase === "stopping");
+    const live = ownSocketIsSource
+      ? liveTranscript.partial
+      : noteRealtime.transcript.partial;
+    if (!live) return "";
+    const confirmed =
+      noteRealtime.transcript.finalSegments.some(
+        (segment) => segment.utteranceId === live.utteranceId
+      ) ||
+      (liveForNote &&
+        liveTranscript.finalSegments.some(
+          (segment) => segment.utteranceId === live.utteranceId
+        ));
+    return confirmed ? "" : live.text.trim();
   }, [
     liveForNote,
     liveTranscript.finalSegments,
-    liveTranscript.partialByUtteranceId,
+    liveTranscript.partial,
     noteRealtime.transcript.finalSegments,
-    noteRealtime.transcript.partialByUtteranceId,
+    noteRealtime.transcript.partial,
+    recording.phase,
   ]);
   const isTranscriptError = transcriptQuery.isError;
   const refetchTranscript = transcriptQuery.refetch;

@@ -29,9 +29,19 @@ import type {
 } from "@/lib/notes/note-topic-protocol";
 import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
 
+/**
+ * 뷰어도 살아 있는 partial은 하나만 든다 — 근거는 `lib/transcription/transcript-reducer.ts`의
+ * `LivePartial` 주석과 같다. 여기는 어느 세션의 발화인지도 알아야 `recording.stopped`에서
+ * 그 세션 것만 지울 수 있다.
+ */
+type ViewerLivePartial = {
+  utteranceId: string;
+  transcriptionSessionId: string;
+  text: string;
+};
+
 type NoteRealtimeState = {
-  partialByUtteranceId: Record<string, string>;
-  partialSessionIdByUtteranceId: Record<string, string>;
+  partial: ViewerLivePartial | null;
   finalSegments: NoteTopicFinalSegment[];
   chatStream: ChatStreamState;
   chatLocked: boolean | null;
@@ -43,8 +53,7 @@ type NoteRealtimeAction =
   | { type: "chat.interrupted" };
 
 const initialState: NoteRealtimeState = {
-  partialByUtteranceId: {},
-  partialSessionIdByUtteranceId: {},
+  partial: null,
   finalSegments: [],
   chatStream: initialStreamState,
   chatLocked: null,
@@ -67,24 +76,16 @@ function reducer(
   const event = action.event;
   switch (event.type) {
     case "transcript.partial":
+      // 다른 utteranceId면 이전 발화를 대체한다 — 그것이 계약이 말하는 정리 기준이다.
       return {
         ...state,
-        partialByUtteranceId: {
-          ...state.partialByUtteranceId,
-          [event.utteranceId]: event.text,
-        },
-        partialSessionIdByUtteranceId: {
-          ...state.partialSessionIdByUtteranceId,
-          [event.utteranceId]: event.transcriptionSessionId,
+        partial: {
+          utteranceId: event.utteranceId,
+          transcriptionSessionId: event.transcriptionSessionId,
+          text: event.text,
         },
       };
     case "transcript.final": {
-      const partialByUtteranceId = { ...state.partialByUtteranceId };
-      const partialSessionIdByUtteranceId = {
-        ...state.partialSessionIdByUtteranceId,
-      };
-      delete partialByUtteranceId[event.utteranceId];
-      delete partialSessionIdByUtteranceId[event.utteranceId];
       const index = state.finalSegments.findIndex(
         (segment) => segment.segmentId === event.segmentId
       );
@@ -94,37 +95,20 @@ function reducer(
           : state.finalSegments.map((segment, current) =>
               current === index ? event : segment
             );
+      // final이 오면 id와 무관하게 현재 partial을 비운다 — 근거는
+      // `lib/transcription/transcript-reducer.ts`의 같은 분기 주석에 있다.
+      return { ...state, partial: null, finalSegments };
+    }
+    case "recording.stopped":
       return {
         ...state,
-        partialByUtteranceId,
-        partialSessionIdByUtteranceId,
-        finalSegments,
+        partial:
+          state.partial?.transcriptionSessionId === event.transcriptionSessionId
+            ? null
+            : state.partial,
       };
-    }
-    case "recording.stopped": {
-      const partialByUtteranceId = { ...state.partialByUtteranceId };
-      const partialSessionIdByUtteranceId = {
-        ...state.partialSessionIdByUtteranceId,
-      };
-      Object.entries(partialSessionIdByUtteranceId).forEach(
-        ([utteranceId, sessionId]) => {
-          if (sessionId !== event.transcriptionSessionId) return;
-          delete partialByUtteranceId[utteranceId];
-          delete partialSessionIdByUtteranceId[utteranceId];
-        }
-      );
-      return {
-        ...state,
-        partialByUtteranceId,
-        partialSessionIdByUtteranceId,
-      };
-    }
     case "meeting.ended":
-      return {
-        ...state,
-        partialByUtteranceId: {},
-        partialSessionIdByUtteranceId: {},
-      };
+      return { ...state, partial: null };
     case "chat.token":
       return {
         ...state,
@@ -154,7 +138,7 @@ function reducer(
 }
 
 type NoteRealtimeValue = {
-  transcript: Pick<NoteRealtimeState, "partialByUtteranceId" | "finalSegments">;
+  transcript: Pick<NoteRealtimeState, "partial" | "finalSegments">;
   chat: {
     stream: ChatStreamState;
     text: string;
@@ -293,7 +277,7 @@ export function NoteRealtimeProvider({
   const value = useMemo<NoteRealtimeValue>(
     () => ({
       transcript: {
-        partialByUtteranceId: state.partialByUtteranceId,
+        partial: state.partial,
         finalSegments: state.finalSegments,
       },
       chat: {
