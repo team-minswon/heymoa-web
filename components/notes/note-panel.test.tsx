@@ -24,7 +24,7 @@ const authState = vi.hoisted(() => ({
 const recordingState = vi.hoisted(() => ({
   activeNoteId: null as string | null,
   phase: "idle" as string,
-  sessionStatus: null as "ACTIVE" | "READY" | null,
+  sessionStatus: null as "ACTIVE" | "READY" | "INTERRUPTED" | null,
 }));
 
 vi.mock("@/components/transcription/recording-provider", async () => {
@@ -949,6 +949,22 @@ describe("NotePanel", () => {
         screen.getByText("다른 탭·기기에서 기록 중입니다.")
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+    });
+
+    it("IN_PROGRESS라도 죽음이 확인된 실패는 차단 대신 다시 시도를 연다", () => {
+      // failed+ACTIVE(서버 상태 미확인)·failed+세션 없음은 위에서 원격 기록으로 차단하지만,
+      // 폴링이 INTERRUPTED를 확인한 실패까지 "다른 탭·기기에서 기록 중"으로 가리면
+      // 아무도 기록하지 않는데 그렇게 읽힌다.
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "failed";
+      recordingState.sessionStatus = "INTERRUPTED";
+
+      renderDock(view);
+
+      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "다시 시도" })
+      ).toBeInTheDocument();
     });
 
     it("IN_PROGRESS 뷰어에게는 독이 없다", () => {

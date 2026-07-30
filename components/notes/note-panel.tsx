@@ -164,6 +164,15 @@ export function NotePanel({
   const localProviderCanControlNote =
     isNoteRecordingActive(recording, noteId) &&
     !(recording.phase === "failed" && recording.session?.status === "ACTIVE");
+  // 이 노트의 실패이고 서버가 세션 종료를 확인해 준 상태(폴링 reconcile이 INTERRUPTED로
+  // 갱신)다. failed+ACTIVE(서버 상태 미확인)·failed+세션 없음은 원격 기록으로 취급해
+  // 차단하지만, 죽음이 확인된 실패까지 "다른 탭·기기에서 기록 중"으로 가리면 아무도
+  // 기록하지 않는데 그렇게 읽힌다 — 이때는 독의 failed 분기(사유·다시 시도)가 서야 한다.
+  const failureSettled =
+    recording.phase === "failed" &&
+    recording.activeNoteId === noteId &&
+    recording.session?.noteId === noteId &&
+    recording.session.status === "INTERRUPTED";
   const showDock = Boolean(
     note &&
     (note.meetingStatus === "NOT_STARTED" ||
@@ -172,7 +181,9 @@ export function NotePanel({
           note.meetingStatus === "PAUSED")))
   );
   const startBlockedReason =
-    note?.meetingStatus === "IN_PROGRESS" && !localProviderCanControlNote
+    note?.meetingStatus === "IN_PROGRESS" &&
+    !localProviderCanControlNote &&
+    !failureSettled
       ? "다른 탭·기기에서 기록 중입니다."
       : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
