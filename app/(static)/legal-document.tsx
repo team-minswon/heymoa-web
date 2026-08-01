@@ -35,7 +35,7 @@ export function LegalDocument({
         className="pointer-events-none absolute -right-32 top-12 size-[28rem] rounded-full bg-[radial-gradient(circle,var(--el-gradient-mint)_0%,transparent_68%)] opacity-25 blur-3xl"
       />
       <div className="relative mx-auto max-w-6xl">
-        <header className="overflow-hidden rounded-[28px] border border-[var(--el-hairline)] bg-white/80 px-6 py-10 shadow-[0_8px_32px_rgba(12,10,9,0.05)] backdrop-blur-sm sm:px-10 sm:py-14 lg:px-14">
+        <header className="overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white/80 px-6 py-10 shadow-marketing backdrop-blur-sm sm:px-10 sm:py-14 lg:px-14">
           <Badge
             variant="secondary"
             className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"

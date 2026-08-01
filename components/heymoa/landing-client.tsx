@@ -217,7 +217,7 @@ export function LandingClient() {
         >
           {/* Feature 1: Real-time Audio Waveform */}
           <motion.div variants={fadeInUp} className="flex flex-col">
-            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col justify-between min-h-[300px]">
+            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-marketing flex flex-col justify-between min-h-[300px]">
               <div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[var(--el-ink)]">
                   <Mic className="size-5" />
@@ -270,7 +270,7 @@ export function LandingClient() {
 
           {/* Feature 2: Context Summarization */}
           <motion.div variants={fadeInUp} className="flex flex-col">
-            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col justify-between min-h-[300px]">
+            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-marketing flex flex-col justify-between min-h-[300px]">
               <div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[var(--el-ink)]">
                   <BrainCircuit className="size-5" />
@@ -304,7 +304,7 @@ export function LandingClient() {
 
           {/* Feature 3: Action Items */}
           <motion.div variants={fadeInUp} className="flex flex-col">
-            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col justify-between min-h-[300px]">
+            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-marketing flex flex-col justify-between min-h-[300px]">
               <div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[var(--el-ink)]">
                   <ListChecks className="size-5" />
@@ -370,7 +370,7 @@ export function LandingClient() {
             {agents.map((agent) => (
               <div
                 key={agent.id}
-                className="flex items-center justify-between rounded-xl border border-[var(--el-hairline)] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
+                className="flex items-center justify-between rounded-xl border border-[var(--el-hairline)] bg-white p-4 shadow-marketing transition hover:shadow-marketing"
               >
                 <div className="flex items-center gap-4">
                   {/* Voice Circular Icon (ElevenLabs component) */}
@@ -411,7 +411,7 @@ export function LandingClient() {
         </div>
 
         <div className="mx-auto max-w-3xl space-y-4">
-          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-marketing">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] text-white font-medium text-xs">
               1
             </div>
@@ -425,7 +425,7 @@ export function LandingClient() {
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-marketing">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] text-white font-medium text-xs">
               2
             </div>
@@ -439,7 +439,7 @@ export function LandingClient() {
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-marketing">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] text-white font-medium text-xs">
               3
             </div>

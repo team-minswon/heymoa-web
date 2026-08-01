@@ -11,6 +11,7 @@ describe("design tokens (globals.css)", () => {
   const required = [
     "--shadow-e2",
     "--shadow-e3",
+    "--shadow-marketing",
     "--radius-panel",
     "--radius-block",
     "--radius-control",
@@ -49,5 +50,14 @@ describe("design tokens (globals.css)", () => {
       // 접지 + 앰비언트 2연타 → 콤마로 두 그림자.
       expect(declaration.split(",").length).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  // 마케팅 면은 떠 있는 층이 하나뿐이라 접지 그림자가 없어야 종이처럼 읽힌다.
+  // 두 겹이 되면 제품 면의 e2 와 구분이 사라진다.
+  it("marketing 티어는 단일 그림자다", () => {
+    const start = css.indexOf("--shadow-marketing:");
+    expect(start, "--shadow-marketing missing").toBeGreaterThanOrEqual(0);
+    const declaration = css.slice(start, css.indexOf(";", start));
+    expect(declaration.split(",")).toHaveLength(1);
   });
 });

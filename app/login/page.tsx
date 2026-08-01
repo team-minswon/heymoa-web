@@ -17,7 +17,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-svh items-center justify-center bg-[var(--el-canvas)] px-6 py-16">
       <div className="w-[440px] max-w-full rounded-panel border border-[var(--el-hairline)] bg-card px-10 py-12 text-center">
-        <p className="font-serif text-[22px] font-light tracking-[-0.02em]">
+        <p className="font-serif text-[18px] font-light tracking-[-0.02em]">
           {siteConfig.name}
         </p>
         <h1 className="mt-6 text-[26px] font-serif font-light leading-tight">

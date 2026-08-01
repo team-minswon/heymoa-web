@@ -34,7 +34,7 @@ export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
           }
         />
       )}
-      <DialogContent className="sm:max-w-md w-[95vw] rounded-2xl border-[var(--el-hairline)] bg-[var(--el-canvas)] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md w-[95vw] rounded-2xl border-[var(--el-hairline)] bg-[var(--el-canvas)] shadow-e3 p-0 overflow-hidden">
         <div className="flex flex-col items-center px-6 py-10 sm:px-12 sm:py-14 text-center">
           <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-sm">
             <Image
