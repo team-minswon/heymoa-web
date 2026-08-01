@@ -12,10 +12,11 @@ import {
   useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Plus, X } from "lucide-react";
+import { Lock, MessageCircle, Plus } from "lucide-react";
 
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
+import { RailScopeBar, RailTabs } from "@/components/notes/rail-chrome";
 import { Button } from "@/components/ui/button";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,7 +38,12 @@ import { useToolApproval } from "@/lib/chat/use-tool-approval";
 import { cn } from "@/lib/utils";
 
 /** 노트 화면이 등록하는 스코프. `hidden`은 side 모드(Sheet)에서 패널을 감추기 위한 것이다. */
-type NoteScope = { noteId: string; hidden: boolean };
+type NoteScope = {
+  noteId: string;
+  hidden: boolean;
+  /** 이 회의가 레일에 공유 챗봇 탭을 갖는가 — 없으면 「이 회의」 탭을 그리지 않는다. */
+  hasNoteRail?: boolean;
+};
 
 type PersonalChatState = {
   isOpen: boolean;
@@ -70,6 +76,7 @@ export function usePersonalChatScope(scope: NoteScope | null) {
   const { setNoteScope } = usePersonalChat();
   const noteId = scope?.noteId ?? null;
   const hidden = scope?.hidden ?? false;
+  const hasNoteRail = scope?.hasNoteRail ?? false;
 
   // 해제는 **노트를 떠날 때만** 한다. `hidden`까지 이 effect의 의존성에 넣으면 full→side
   // 전환에서 cleanup이 먼저 돌아 스코프를 지우고, 감춰진 상태라 복구되지 않는다 —
@@ -80,8 +87,8 @@ export function usePersonalChatScope(scope: NoteScope | null) {
   }, [noteId, setNoteScope]);
 
   useEffect(() => {
-    setNoteScope(noteId ? { noteId, hidden } : null);
-  }, [hidden, noteId, setNoteScope]);
+    setNoteScope(noteId ? { noteId, hidden, hasNoteRail } : null);
+  }, [hasNoteRail, hidden, noteId, setNoteScope]);
 }
 
 export function PersonalChatProvider({
@@ -107,6 +114,7 @@ export function PersonalChatProvider({
    */
   const [hasOpened, setHasOpened] = useState(deepLinked);
   const [hidden, setHidden] = useState(false);
+  const [hasNoteRail, setHasNoteRail] = useState(false);
   /**
    * 패널이 붙어 있는 노트. **감춰진 동안에는 바꾸지 않는다** — 워크스페이스 답변이 흐르는 중에
    * 노트를 side로 열면 스코프가 바뀌고, 그러면 패널 key가 바뀌어 언마운트되며 스트림이 끊긴다.
@@ -121,6 +129,7 @@ export function PersonalChatProvider({
   const setNoteScope = useCallback((scope: NoteScope | null) => {
     const nextNote = scope?.noteId ?? null;
     setHidden(scope?.hidden ?? false);
+    setHasNoteRail(scope?.hasNoteRail ?? false);
     // 감춰진 동안에는 스코프를 바꾸지 않는다.
     if (scope?.hidden) return;
     // 턴이 도는 중에 스코프가 바뀌면 패널 key가 바뀌어 언마운트되고 스트림이 끊긴다.
@@ -196,6 +205,9 @@ export function PersonalChatProvider({
           workspaceId={workspaceId}
           workspaceName={workspaceName}
           noteId={scopeNoteId}
+          // 「이 회의」로 건너가는 것은 이 레일을 닫는 것이다 — 그러면 공유 챗봇이 같은
+          // 자리에 다시 선다. 두 패널 다 마운트된 채로 남으므로 스트림은 안 끊긴다.
+          onSelectNoteChat={hasNoteRail ? value.close : undefined}
           onTurnActiveChange={setTurnActive}
           onClose={value.close}
         />
@@ -212,6 +224,7 @@ const EXAMPLE_QUESTIONS = [
 
 function PersonalChatPanel({
   hidden,
+  onSelectNoteChat,
   workspaceId,
   workspaceName,
   noteId,
@@ -219,6 +232,7 @@ function PersonalChatPanel({
   onClose,
 }: {
   hidden: boolean;
+  onSelectNoteChat?: () => void;
   workspaceId: string;
   workspaceName?: string;
   noteId: string | null;
@@ -478,32 +492,32 @@ function PersonalChatPanel({
         hidden && "hidden"
       )}
     >
-      <header className="flex items-center gap-2 border-b border-[var(--el-hairline)] px-6 py-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] tracking-wide text-[var(--el-muted)] uppercase">
-            {noteId ? "회의" : "워크스페이스"}
-          </p>
-          {/* 스코프는 어디서 열었는지로 정해진다 — 여기서 바꾸는 어포던스를 두지 않는다. */}
-          <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-            {noteId
-              ? (noteTitle ?? "이 회의")
-              : (workspaceName ?? "워크스페이스")}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8"
-          // 조회가 실패한 상태에서 새 대화를 만들면, 못 본 활성 세션을 비활성으로 내린다.
-          disabled={isBusy}
-          onClick={() => void startNewChat()}
-        >
-          <Plus className="size-3.5" />새 대화
-        </Button>
-        <Button variant="ghost" size="icon" aria-label="닫기" onClick={onClose}>
-          <X className="size-4" />
-        </Button>
-      </header>
+      {/* 레일 머리는 공유 챗봇과 공유한다 — 회의 안에서는 「이 회의」로 건너간다. */}
+      <RailTabs
+        active="agent"
+        hasNoteTab={Boolean(onSelectNoteChat)}
+        onSelect={(tab) => (tab === "note" ? onSelectNoteChat?.() : undefined)}
+        onClose={onClose}
+      />
+      {/* 스코프는 어디서 열었는지로 정해진다 — 여기서 바꾸는 어포던스를 두지 않는다. */}
+      <RailScopeBar
+        icon={Lock}
+        trailing={
+          <Button
+            variant="ghost"
+            size="sm"
+            // 조회가 실패한 상태에서 새 대화를 만들면, 못 본 활성 세션을 비활성으로 내린다.
+            disabled={isBusy}
+            onClick={() => void startNewChat()}
+          >
+            <Plus className="size-3.5" />새 대화
+          </Button>
+        }
+      >
+        나만 보는 대화 ·{" "}
+        {noteId ? (noteTitle ?? "이 회의") : (workspaceName ?? "워크스페이스")}{" "}
+        범위
+      </RailScopeBar>
 
       <ScrollArea
         className="min-h-0 flex-1"

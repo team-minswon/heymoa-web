@@ -70,7 +70,7 @@ export function NoteTopBar({
         <NotificationBell />
         {onToggleRail ? (
           <IconButton
-            label={railOpen ? "레일 닫기" : "레일 열기"}
+            label={railOpen ? "레일 접기" : "레일 펴기"}
             bordered
             pressed={railOpen}
             onClick={onToggleRail}

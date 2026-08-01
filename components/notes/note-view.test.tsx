@@ -29,6 +29,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/components/chat/personal-chat", () => ({
   usePersonalChatScope: () => {},
+  usePersonalChat: () => ({ isOpen: false, open: vi.fn(), close: vi.fn() }),
 }));
 vi.mock("@/components/notes/note-panel", () => ({
   NotePanel: ({

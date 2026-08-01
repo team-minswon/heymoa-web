@@ -385,7 +385,7 @@ describe("PersonalChatProvider", () => {
   it("노트 스코프면 노트 제목을, 아니면 워크스페이스 이름을 보인다", async () => {
     const { rerender, client } = renderChat();
     openPanel();
-    expect(screen.getByText("헤이모아")).toBeTruthy();
+    expect(screen.getByText(/헤이모아/)).toBeTruthy();
 
     rerender(
       <QueryClientProvider client={client}>
@@ -398,7 +398,7 @@ describe("PersonalChatProvider", () => {
       </QueryClientProvider>
     );
     await waitFor(() =>
-      expect(screen.getByText("주간 제품 회의")).toBeTruthy()
+      expect(screen.getByText(/주간 제품 회의/)).toBeTruthy()
     );
     expect(state.activeParams.at(-1)).toEqual({
       scope: "note",
@@ -411,7 +411,7 @@ describe("PersonalChatProvider", () => {
     // 흐르던 답변이 통째로 사라진다. 닫기도 감추기다.
     renderChat();
     openPanel();
-    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    fireEvent.click(screen.getByRole("button", { name: "레일 닫기" }));
 
     await waitFor(() =>
       expect(screen.getByTestId("personal-chat-panel").className).toContain(

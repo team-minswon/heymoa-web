@@ -89,6 +89,22 @@ export function isPersonalChatHiddenInNote(
   noteIsPending: boolean
 ): boolean {
   if (view === "side") return true;
+  return hasSharedRail(view, phase, noteIsPending);
+}
+
+/**
+ * 이 회의가 우측 레일에 **공유 챗봇 탭**을 갖는가. 회의가 살아 있는 동안(활성·미시작·중지)만이다 —
+ * 종료된 회의의 Q&A 는 좌측 아카이브로 접히므로 레일에 건너갈 곳이 없다.
+ *
+ * 한 규칙을 두 곳(감춤 판정·탭 표시)이 쓰므로 함수 하나로 둔다. 갈라 두면 탭은 있는데
+ * 눌러도 아무것도 안 서는 상태가 생긴다.
+ */
+export function hasSharedRail(
+  view: "side" | "full",
+  phase: SharedChatPhase,
+  noteIsPending: boolean
+): boolean {
+  if (view === "side") return false;
   return (
     phase === "active" ||
     phase === "not-started" ||

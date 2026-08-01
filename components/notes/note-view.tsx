@@ -3,12 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { usePersonalChatScope } from "@/components/chat/personal-chat";
+import {
+  usePersonalChat,
+  usePersonalChatScope,
+} from "@/components/chat/personal-chat";
 import { NotePanel, type NoteTab } from "@/components/notes/note-panel";
 import { NoteRouteSurface } from "@/components/notes/note-route-surface";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import {
   deriveMeetingPhase,
+  hasSharedRail,
   isPersonalChatHiddenInNote,
   MEETING_STATUS_LABEL,
   type SharedChatPhase,
@@ -74,13 +78,20 @@ export function NoteView({
   const phase = deriveMeetingPhase(note);
   const [sharedTurnActive, setSharedTurnActive] = useState(false);
   const current = normalizeNoteViewQuery(requested, phase, sharedTurnActive);
+  const personalChat = usePersonalChat();
+  const noteRailAvailable = hasSharedRail(
+    current.view,
+    phase,
+    noteQuery.isPending
+  );
   usePersonalChatScope({
     noteId,
-    hidden: isPersonalChatHiddenInNote(
-      current.view,
-      phase,
-      noteQuery.isPending
-    ),
+    // 공유 챗봇이 레일을 쓰는 동안에는 개인 레일을 감춘다 — 다만 사용자가 탭으로 직접
+    // 부르면 그쪽이 이긴다. 그러지 않으면 「내 에이전트」 탭이 눌려도 아무것도 안 뜬다.
+    hidden:
+      !personalChat.isOpen &&
+      isPersonalChatHiddenInNote(current.view, phase, noteQuery.isPending),
+    hasNoteRail: noteRailAvailable,
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -170,6 +181,8 @@ export function NoteView({
         tab={current.tab}
         onTabChange={(tab) => setQuery({ tab })}
         onViewChange={(view) => setQuery({ view })}
+        onOpenAgentRail={personalChat.open}
+        agentRailOpen={personalChat.isOpen}
         onSharedTurnActiveChange={setSharedTurnActive}
         onClose={closeWithAnim}
         onExpand={

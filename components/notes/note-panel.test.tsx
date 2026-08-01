@@ -90,12 +90,25 @@ vi.mock("@/components/notes/transcript-view", () => ({
 vi.mock("@/components/notes/shared-chat-panel", () => ({
   SharedChatPanel: ({
     phase,
+    onSelectTab,
+    onCloseRail,
     onTurnActiveChange,
   }: {
     phase: string;
+    onSelectTab?: (tab: "note" | "agent") => void;
+    onCloseRail?: () => void;
     onTurnActiveChange?: (active: boolean) => void;
   }) => (
     <div data-testid="shared-chat-panel" data-phase={phase}>
+      {/* 실제 레일 머리는 rail-chrome 이 그린다 — 여기서는 부모 배선만 본다. */}
+      {onSelectTab ? (
+        <button type="button" role="tab" onClick={() => onSelectTab("agent")}>
+          내 에이전트
+        </button>
+      ) : null}
+      {onCloseRail ? (
+        <button type="button" aria-label="레일 닫기" onClick={onCloseRail} />
+      ) : null}
       <input aria-label="공유 질문" defaultValue="" />
       <button type="button" onClick={() => onTurnActiveChange?.(true)}>
         턴 시작
@@ -332,6 +345,61 @@ describe("NotePanel", () => {
     expect(
       screen.getByTestId("shared-chat-panel").getAttribute("data-phase")
     ).toBe("active");
+  });
+
+  it("에이전트 레일이 서면 공유 레일을 감출 뿐 언마운트하지 않는다", () => {
+    // 언마운트하면 흐르던 답변이 통째로 사라진다(계약상 부분 응답은 저장되지 않는다).
+    // 그래서 탭 전환은 **감추기**여야 한다 — 이 테스트가 그 계약을 지킨다.
+    const open = vi.fn();
+    const el = (agentRailOpen: boolean) => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        onOpenAgentRail={open}
+        agentRailOpen={agentRailOpen}
+      />
+    );
+    const view = renderNotePanel(el(false));
+    const rail = screen.getByTestId("shared-chat-panel").parentElement!;
+    expect(rail.classList.contains("hidden")).toBe(false);
+
+    fireEvent.click(screen.getByRole("tab", { name: "내 에이전트" }));
+    expect(open).toHaveBeenCalledOnce();
+
+    view.rerenderNote(el(true));
+    expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId("shared-chat-panel")
+        .parentElement!.classList.contains("hidden")
+    ).toBe(true);
+  });
+
+  it("레일을 접었다 상단바 토글로 다시 편다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const railHidden = () =>
+      screen
+        .getByTestId("shared-chat-panel")
+        .parentElement!.classList.contains("hidden");
+
+    fireEvent.click(screen.getByRole("button", { name: "레일 접기" }));
+    expect(railHidden()).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "레일 펴기" }));
+    expect(railHidden()).toBe(false);
   });
 
   it("full + 중지에서도 기존 공유 챗봇 기록을 읽을 수 있다", () => {

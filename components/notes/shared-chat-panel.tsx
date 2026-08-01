@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CirclePlay, Lock } from "lucide-react";
+import { CirclePlay, Lock, Users } from "lucide-react";
 
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThread } from "@/components/chat/chat-thread";
@@ -22,6 +22,11 @@ import { useStickToBottom } from "@/lib/chat/use-stick-to-bottom";
 import { useToolApproval } from "@/lib/chat/use-tool-approval";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
+import {
+  RailScopeBar,
+  RailTabs,
+  type RailTab,
+} from "@/components/notes/rail-chrome";
 
 const SPECTATOR_SAFETY_POLL_MS = 10_000;
 
@@ -35,12 +40,17 @@ const SPECTATOR_SAFETY_POLL_MS = 10_000;
 export function SharedChatPanel({
   noteId,
   phase,
+  onSelectTab,
+  onCloseRail,
   onTurnActiveChange,
 }: {
   noteId: string;
   phase: SharedChatPhase;
   /** 한 턴(전송~스트림)이 도는 동안 참. 부모가 회의 종료로 이 패널을 언마운트하지 않게 한다. */
   onTurnActiveChange?: (active: boolean) => void;
+  /** 레일 머리를 그릴 자리에서만 준다 — side 탭 패널 안에서는 머리가 없다. */
+  onSelectTab?: (tab: RailTab) => void;
+  onCloseRail?: () => void;
 }) {
   const queryClient = useQueryClient();
   const stream = useChatStream();
@@ -227,14 +237,17 @@ export function SharedChatPanel({
       aria-label="회의 챗봇"
       className="flex h-full min-h-0 w-full flex-col bg-card lg:border-l lg:border-[var(--el-hairline)]"
     >
-      <header className="border-b border-[var(--el-hairline)] px-5 py-4">
-        <p className="text-[11px] tracking-wide text-[var(--el-muted)] uppercase">
-          회의 챗봇
-        </p>
-        <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-          이 회의에 대해 물어보세요
-        </p>
-      </header>
+      {/* 레일 머리는 두 챗봇이 공유한다 — 여기서 「내 에이전트」로 건너간다. */}
+      {onSelectTab && onCloseRail ? (
+        <RailTabs
+          active="note"
+          onSelect={onSelectTab}
+          onClose={onCloseRail}
+        />
+      ) : null}
+      <RailScopeBar icon={Users}>
+        워크스페이스 멤버가 함께 봅니다
+      </RailScopeBar>
 
       <ScrollArea
         className="min-h-0 flex-1"

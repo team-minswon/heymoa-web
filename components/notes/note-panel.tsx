@@ -31,7 +31,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
-import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
+import { deriveMeetingPhase, hasSharedRail } from "@/lib/notes/meeting-state";
+import { cn } from "@/lib/utils";
 
 export type NoteTab = "chat" | "details" | "transcript" | "summary";
 
@@ -44,11 +45,11 @@ export function NotePanel({
   tab,
   onTabChange,
   onViewChange,
+  onOpenAgentRail,
+  agentRailOpen = false,
   onSharedTurnActiveChange,
   onClose,
   onExpand,
-  onToggleRail,
-  railOpen,
 }: {
   workspaceId: string;
   noteId: string;
@@ -56,11 +57,12 @@ export function NotePanel({
   tab: NoteTab;
   onTabChange: (tab: NoteTab) => void;
   onViewChange?: (view: "side" | "full") => void;
+  /** 「내 에이전트」 탭 — 개인 레일을 같은 자리에 세운다. */
+  onOpenAgentRail?: () => void;
+  agentRailOpen?: boolean;
   onSharedTurnActiveChange?: (active: boolean) => void;
   onClose: () => void;
   onExpand?: () => void;
-  onToggleRail?: () => void;
-  railOpen?: boolean;
 }) {
   const noteQuery = useGetNote(noteId, {
     query: {
@@ -106,9 +108,10 @@ export function NotePanel({
     [onSharedTurnActiveChange]
   );
   const noteLoadFailed = noteQuery.isError && !note;
-  const meetingLive = phase === "active" || phase === "not-started";
-  const showSharedTray =
-    view === "full" && (meetingLive || phase === "paused" || sharedTurnActive);
+  // 레일에 공유 챗봇 자리가 있는가. **마운트 여부**다 — 보일지는 아래에서 따로 정한다.
+  // 흐르던 턴 중에 언마운트하면 계약상 부분 응답이 저장되지 않아 답변이 통째로 사라진다.
+  const sharedRailMounted =
+    hasSharedRail(view, phase, noteQuery.isPending) || (view === "full" && sharedTurnActive);
   const showSideChatTab =
     view === "side" &&
     !noteLoadFailed &&
@@ -197,8 +200,13 @@ export function NotePanel({
       : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
 
+  // 레일 접기는 사용자 것이다 — 상단바의 토글로 다시 편다.
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  // 개인 레일이 같은 자리를 쓰는 동안에는 공유 레일을 **감춘다**(언마운트하지 않는다).
+  const sharedRailVisible =
+    sharedRailMounted && !railCollapsed && !agentRailOpen;
   // 레일이 패널 밖으로 나갔으므로 셸이 그만큼 패널을 좁혀야 한다.
-  useSharedRailSlot(showSharedTray);
+  useSharedRailSlot(sharedRailVisible);
 
   const tabOptions = [
     ...(showSummaryTab ? [{ key: "summary" as const, label: "요약" }] : []),
@@ -226,8 +234,12 @@ export function NotePanel({
           // 흐르는 답변 중에 확장하면 패널이 갈려 스트림이 끊긴다. 감추지 않고 막는다 —
           // 사라지면 왜 못 하는지가 화면에서 없어진다.
           shrinkDisabled={view === "side" && sharedTurnActive}
-          onToggleRail={onToggleRail}
-          railOpen={railOpen}
+          onToggleRail={
+            sharedRailMounted
+              ? () => setRailCollapsed((collapsed) => !collapsed)
+              : undefined
+          }
+          railOpen={sharedRailVisible}
           actions={
             note ? (
               <MeetingControls
@@ -355,15 +367,24 @@ export function NotePanel({
         ) : null}
       </div>
 
-      {showSharedTray ? (
+      {sharedRailMounted ? (
         // 넓은 화면에서는 패널 **밖**에 떠 있는 480 레일이다 — 개인 에이전트 레일과 같은
         // 자리·폭·radius·그림자라야 둘이 번갈아 서도 화면이 안 흔들린다(design.pen).
         // 좁은 세로 화면은 본문 아래 스택이고, 짧은 가로 화면은 14rem floor가 전사를
         // 밀어내므로 옆 열로 둔다.
-        <div className="flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 border-t border-[var(--el-hairline)] max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] max-lg:landscape:border-l max-lg:landscape:border-t-0 lg:fixed lg:top-2.5 lg:right-2.5 lg:bottom-2.5 lg:z-30 lg:h-auto lg:w-[480px] lg:overflow-hidden lg:rounded-panel lg:border lg:border-[var(--el-hairline)] lg:shadow-e2">
+        <div
+          className={cn(
+            "flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 border-t border-[var(--el-hairline)] max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] max-lg:landscape:border-l max-lg:landscape:border-t-0 lg:fixed lg:top-2.5 lg:right-2.5 lg:bottom-2.5 lg:z-30 lg:h-auto lg:w-[480px] lg:overflow-hidden lg:rounded-panel lg:border lg:border-[var(--el-hairline)] lg:shadow-e2",
+            !sharedRailVisible && "hidden"
+          )}
+        >
           <SharedChatPanel
             noteId={noteId}
             phase={phase}
+            onSelectTab={(tab) => {
+              if (tab === "agent") onOpenAgentRail?.();
+            }}
+            onCloseRail={() => setRailCollapsed(true)}
             onTurnActiveChange={handleSharedTurnActiveChange}
           />
         </div>
