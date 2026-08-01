@@ -22,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import type { NoteSummary } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
 import { formatRelativeTime } from "@/lib/format/relative-time";
 import {
@@ -106,7 +106,7 @@ function MeetingMeta({
   note,
   now,
 }: {
-  note: NoteListResponseDataNotesItem;
+  note: NoteSummary;
   now: number | null;
 }) {
   const starter = note.meetingStartedBy;
@@ -180,7 +180,7 @@ export function NoteListRow({
   now = null,
 }: {
   workspaceId: string;
-  note: NoteListResponseDataNotesItem;
+  note: NoteSummary;
   /** 목록이 내려주는 공용 시계. 없으면 절대 날짜 fallback. */
   now?: number | null;
 }) {

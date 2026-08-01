@@ -252,6 +252,12 @@ channels:
         $ref: '#/components/messages/NoteChatMessageEndEvent'
       NoteChatLockEvent:
         $ref: '#/components/messages/NoteChatLockEvent'
+      NoteUpdatedEvent:
+        $ref: '#/components/messages/NoteUpdatedEvent'
+      NoteAnalysisStatusEvent:
+        $ref: '#/components/messages/NoteAnalysisStatusEvent'
+      NoteSessionInterruptedEvent:
+        $ref: '#/components/messages/NoteSessionInterruptedEvent'
   agentChatStream:
     servers:
       - $ref: '#/servers/sseEdge'
@@ -366,7 +372,7 @@ operations:
       - $ref: '#/channels/transcriptionEvents/messages/ErrorEvent'
   sendNoteTopicEvent:
     action: send
-    summary: 노트 멤버에게 회의·녹음·전사·공유 챗 상태를 팬아웃한다.
+    summary: 노트 멤버에게 회의·녹음·전사·공유 챗·회의 메타·분석 상태를 팬아웃한다.
     description: |
       transcript.partial은 같은 utteranceId의 누적 snapshot이고 transcript.final은 저장 transaction
       commit 뒤에만 발행된다. chat.lock의 locked=false는 정상 종료뿐 아니라 중단 시에도 편집 잠금이
@@ -383,6 +389,9 @@ operations:
       - $ref: '#/channels/noteTopic/messages/NoteChatTokenEvent'
       - $ref: '#/channels/noteTopic/messages/NoteChatMessageEndEvent'
       - $ref: '#/channels/noteTopic/messages/NoteChatLockEvent'
+      - $ref: '#/channels/noteTopic/messages/NoteUpdatedEvent'
+      - $ref: '#/channels/noteTopic/messages/NoteAnalysisStatusEvent'
+      - $ref: '#/channels/noteTopic/messages/NoteSessionInterruptedEvent'
   receiveAgentChatEvents:
     action: receive
     summary: heymoa-web이 개인 챗봇 응답 이벤트를 SSE로 수신한다.
@@ -1048,6 +1057,104 @@ components:
           payload:
             code: LLM_PROVIDER_ERROR
             message: 응답 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.
+    NoteUpdatedEvent:
+      name: NoteUpdatedEvent
+      title: 회의 메타 변경
+      summary: title·scheduledAt·participants·context·projectId·previousNote 중 하나 이상이 바뀌었다.
+      description: |
+        생성과 시작을 분리하면서 생긴 구멍을 메운다. 시작 전 화면에는 여러 명이 동시에 머물며
+        참석자와 일시를 같이 정하는데, 기존 이벤트는 전부 「회의가 시작된 뒤」의 것이라
+        A가 참석자를 바꿔도 B 화면은 그대로였다.
+
+        값은 싣지 않는다. 참석자 배열을 실으면 NoteSummary를 이벤트 스키마에 복제하게 되고
+        두 곳이 갈라진다. recording.started가 transcriptionSessionId만 주고 나머지는 재조회하는
+        것과 같은 관례다.
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, changed]
+        properties:
+          type:
+            type: string
+            enum: [note.updated]
+          changed:
+            type: array
+            minItems: 1
+            items:
+              type: string
+              enum: [title, scheduledAt, participants, context, projectId, previousNote]
+          updatedBy:
+            $ref: '#/components/schemas/Tsid'
+      examples:
+        - name: participants
+          payload:
+            type: note.updated
+            changed: [participants, scheduledAt]
+            updatedBy: 0HZX2K7M9Q4AC
+    NoteAnalysisStatusEvent:
+      name: NoteAnalysisStatusEvent
+      title: 분석 상태 변경
+      summary: 분석 잡의 상태가 바뀌었다.
+      description: |
+        meeting.ended는 있는데 그 뒤에 시작되는 분석의 끝을 알리는 이벤트가 없었다.
+        「분석 중」에서 요약 완성으로 넘어가는 전환을 폴링 말고는 알 방법이 없었다.
+
+        딴 데 있는 사람에게 가는 알림(NotificationListResponse)과는 역할이 다르다 —
+        이 이벤트는 그 회의를 보고 있는 사람에게 간다. 둘 다 필요하다.
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, analysisId, status]
+        properties:
+          type:
+            type: string
+            enum: [analysis.status]
+          analysisId:
+            $ref: '#/components/schemas/Tsid'
+          status:
+            type: string
+            enum: [PENDING, RUNNING, SUCCEEDED, FAILED]
+          failureReason:
+            type: string
+            nullable: true
+            description: SUCCEEDED면 null. 「분석 실패」 화면이 그대로 노출한다.
+      examples:
+        - name: succeeded
+          payload:
+            type: analysis.status
+            analysisId: 0K9GVJT2C4Q1Z
+            status: SUCCEEDED
+            failureReason: null
+    NoteSessionInterruptedEvent:
+      name: NoteSessionInterruptedEvent
+      title: 전사 세션 비정상 종료
+      summary: stop 없이 연결이 끊겨 서버가 세션을 INTERRUPTED로 닫았다.
+      description: |
+        stop 없이 WebSocket이 끊기면 완료 신호가 오지 않아 회의가 영원히 「기록 중」으로 남는다.
+        지금 UI는 stale 배너 + 재개/종료 선택으로 우회하고 있다.
+
+        completed·error는 /user/queue/transcription-sessions/{replyId}/events라 녹음 중인 본인에게만
+        가고 참관자에게는 안 간다. 참관자가 알 수 있는 경로는 이 이벤트뿐이다.
+        이게 들어오면 stale 배너 우회를 걷어낼 수 있다.
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, transcriptionSessionId, reason]
+        properties:
+          type:
+            type: string
+            enum: [recording.interrupted]
+          transcriptionSessionId:
+            $ref: '#/components/schemas/Tsid'
+          reason:
+            type: string
+            enum: [CONNECTION_LOST, PROVIDER_ERROR, SERVER_SHUTDOWN]
+      examples:
+        - name: connectionLost
+          payload:
+            type: recording.interrupted
+            transcriptionSessionId: 0HZX2K7M9Q4AB
+            reason: CONNECTION_LOST
   schemas:
     Tsid:
       type: string

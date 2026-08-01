@@ -7,17 +7,15 @@
  */
 
 /**
- * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
+ * 이 회의가 후속인 원 회의. 트리가 아니라 사슬이라 하나뿐이다
  * @nullable
  */
-export type NoteListResponseDataNotesItemMeetingStartedBy = {
-  /** 회의 시작자 이름 */
-  name: string;
+export type NoteSummaryPreviousNote = {
   /**
-   * 회의 시작자의 13자리 TSID
    * @minLength 13
    * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
-  userId: string;
+  noteId: string;
+  title: string;
 } | null;

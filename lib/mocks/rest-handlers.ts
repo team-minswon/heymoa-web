@@ -9,6 +9,10 @@ import { getGetNotificationsMockHandler } from "@/lib/api/generated/notification
 import { getGetActiveAgentChatMockHandler } from "@/lib/api/generated/agent-chat/agent-chat.msw";
 
 import type {
+  ActionItemUpdateRequest,
+  GetActionItemsParams,
+  GetWorkspaceNotesParams,
+  NoteCreateRequest,
   ChangeDefaultWorkspaceRequest,
   CreateWorkspaceRequest,
   ProjectRequest,
@@ -52,6 +56,7 @@ const SESSION_CONFLICTS: Record<string, string> = {
 const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER"]);
 
 const NOT_FOUND_CODES = new Set([
+  "ACTION_ITEM_NOT_FOUND",
   "NOTE_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
   "PROJECT_NOT_FOUND",
@@ -64,6 +69,8 @@ const NOT_FOUND_CODES = new Set([
 
 /** mockDb가 던지는 계약 코드. 이것 말고는 목 자신의 버그이므로 fallback으로 떨어뜨린다. */
 const KNOWN_CODES = new Set([
+  "ACTION_ITEM_NOT_FOUND",
+  "MEETING_IN_PROGRESS",
   ...NOT_FOUND_CODES,
   ...FORBIDDEN_CODES,
   ...INVITATION_NOT_FOUND_CODES,
@@ -172,6 +179,39 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
       { status: INVITATION_NOT_FOUND_CODES.has(code) ? 404 : 409 }
     );
   }
+}
+
+
+/**
+ * 쿼리 문자열을 orval 파라미터 타입으로 옮긴다. 목이 파라미터를 무시하면 화면의 필터가
+ * 목에서는 늘 통과하고 실서버에서 처음 틀린다.
+ */
+function searchToNoteParams(search: URLSearchParams): GetWorkspaceNotesParams {
+  const status = search.get("meetingStatus");
+  return {
+    q: search.get("q") ?? undefined,
+    meetingStatus: status
+      ? (status.split(",") as GetWorkspaceNotesParams["meetingStatus"])
+      : undefined,
+    projectId: search.get("projectId") ?? undefined,
+    sort: (search.get("sort") ?? undefined) as GetWorkspaceNotesParams["sort"],
+    cursor: search.get("cursor") ?? undefined,
+    limit: search.get("limit") ? Number(search.get("limit")) : undefined,
+  };
+}
+
+function searchToActionItemParams(
+  search: URLSearchParams
+): GetActionItemsParams {
+  return {
+    q: search.get("q") ?? undefined,
+    assigneeId: search.get("assigneeId") ?? undefined,
+    status: (search.get("status") ?? undefined) as GetActionItemsParams["status"],
+    dueBefore: search.get("dueBefore") ?? undefined,
+    projectId: search.get("projectId") ?? undefined,
+    cursor: search.get("cursor") ?? undefined,
+    limit: search.get("limit") ? Number(search.get("limit")) : undefined,
+  };
 }
 
 export const restHandlers = [
@@ -579,5 +619,64 @@ export const restHandlers = [
       mockDb.seedForeignLock(id(params.noteId), lockedBy);
       return new HttpResponse(null, { status: 204 });
     }
+  ),
+
+  // ── MVP2 ────────────────────────────────────────────────────────────────
+  http.get("*/v1/workspaces/:workspaceId/notes", ({ params, request }) =>
+    resultOf(
+      () =>
+        mockDb.listWorkspaceNotes(
+          id(params.workspaceId),
+          searchToNoteParams(new URL(request.url).searchParams)
+        ),
+      notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
+    )
+  ),
+  http.post("*/v1/workspaces/:workspaceId/notes", async ({ request, params }) =>
+    resultOf(
+      async () => {
+        const body = (await request.json()) as NoteCreateRequest;
+        const workspaceId = id(params.workspaceId);
+        const projects = mockDb.listProjects(workspaceId);
+        const projectId =
+          body.projectId ??
+          projects.find((project) => project.isDefault)?.projectId ??
+          projects[0]?.projectId;
+        if (!projectId) throw new Error("PROJECT_NOT_FOUND");
+        return mockDb.createNote(projectId, body);
+      },
+      BAD_REQUEST,
+      201
+    )
+  ),
+  http.delete("*/v1/notes/:noteId", ({ params }) =>
+    resultOf(
+      () => mockDb.deleteNote(id(params.noteId)),
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."),
+      204
+    )
+  ),
+  http.put("*/v1/notifications/read-all", () =>
+    resultOf(() => mockDb.readAllNotifications(), BAD_REQUEST)
+  ),
+  http.get("*/v1/workspaces/:workspaceId/action-items", ({ params, request }) =>
+    resultOf(
+      () =>
+        mockDb.listActionItems(
+          id(params.workspaceId),
+          searchToActionItemParams(new URL(request.url).searchParams)
+        ),
+      notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
+    )
+  ),
+  http.patch("*/v1/action-items/:actionItemId", async ({ request, params }) =>
+    resultOf(
+      async () =>
+        mockDb.updateActionItem(
+          id(params.actionItemId),
+          (await request.json()) as ActionItemUpdateRequest
+        ),
+      notFound("ACTION_ITEM_NOT_FOUND", "액션 아이템을 찾을 수 없습니다.")
+    )
   ),
 ];

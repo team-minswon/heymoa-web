@@ -5,56 +5,16 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { NoteResponseDataMeetingStartedBy } from "./noteResponseDataMeetingStartedBy";
-import type { NoteResponseDataMeetingStatus } from "./noteResponseDataMeetingStatus";
+import type { NoteSummary } from "./noteSummary";
 
 /**
  * 성공 응답 데이터
  */
-export type NoteResponseData = {
-  /** 노트 생성 시각 */
-  createdAt: string;
+export type NoteResponseData = NoteSummary & {
   /**
-   * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
+   * 회의 전 적어 두는 안건·용어·배경. 요약 입력으로 쓰인다. 목록에는 내리지 않는다 — 2000자를 30행 곱하면 목록 응답이 60KB가 된다
+   * @maxLength 2000
    * @nullable
    */
-  meetingStartedBy: NoteResponseDataMeetingStartedBy;
-  /**
-   * ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
-   * @minimum 0
-   */
-  recordedDurationMs: number;
-  /** 회의 상태 */
-  meetingStatus: NoteResponseDataMeetingStatus;
-  /**
-   * 노트의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
-   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
-   */
-  noteId: string;
-  /**
-   * 노트 제목
-   * @maxLength 200
-   */
-  title: string;
-  /**
-   * 프로젝트의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
-   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
-   */
-  projectId: string;
-  /** 노트 수정 시각 */
-  updatedAt: string;
-  /**
-   * 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
-   * @nullable
-   */
-  meetingStartedAt: string | null;
-  /**
-   * 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
-   * @nullable
-   */
-  activeSessionStartedAt: string | null;
+  context: string | null;
 };

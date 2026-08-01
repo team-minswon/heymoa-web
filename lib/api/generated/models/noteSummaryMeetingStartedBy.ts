@@ -10,7 +10,7 @@
  * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
  * @nullable
  */
-export type NoteResponseDataMeetingStartedBy = {
+export type NoteSummaryMeetingStartedBy = {
   /** 회의 시작자 이름 */
   name: string;
   /**

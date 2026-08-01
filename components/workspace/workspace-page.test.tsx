@@ -153,7 +153,9 @@ describe("WorkspacePage", () => {
 
   it("polls active lists every 10 seconds and inactive lists every 30 seconds", () => {
     renderPage();
-    const options = useGetNotes.mock.calls.at(-1)?.[1] as {
+    // MVP2에서 GET /v1/projects/{projectId}/notes에 조회 파라미터가 생겨
+    // 훅 시그니처가 (projectId, params, options)로 바뀌었다 — options는 세 번째다.
+    const options = useGetNotes.mock.calls.at(-1)?.[2] as {
       query: {
         refetchInterval: (query: { state: { data: unknown } }) => number;
       };

@@ -72,6 +72,7 @@ const props = {
       description: null,
       createdAt: "",
       updatedAt: "",
+      isDefault: false,
     },
   ],
   selectedProjectId: null,

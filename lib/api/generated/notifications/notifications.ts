@@ -485,3 +485,113 @@ export const useMarkNotificationRead = <
     queryClient
   );
 };
+export type readAllNotificationsResponse200 = {
+  data: NotificationListResponse;
+  status: 200;
+};
+
+export type readAllNotificationsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type readAllNotificationsResponseSuccess =
+  readAllNotificationsResponse200 & {
+    headers: Headers;
+  };
+export type readAllNotificationsResponseError =
+  readAllNotificationsResponse401 & {
+    headers: Headers;
+  };
+
+export type readAllNotificationsResponse =
+  | readAllNotificationsResponseSuccess
+  | readAllNotificationsResponseError;
+
+export const getReadAllNotificationsUrl = () => {
+  return `/v1/notifications/read-all`;
+};
+
+/**
+ * 인박스의 「전부 읽음」. 단건 호출을 N회 반복하지 않는다. 갱신된 목록을 그대로 돌려주면 클라이언트가 재조회하지 않는다.
+ * @summary 알림 전부 읽음 처리
+ */
+export const readAllNotifications = async (
+  options?: RequestInit
+): Promise<readAllNotificationsResponse> => {
+  return apiFetch<readAllNotificationsResponse>(getReadAllNotificationsUrl(), {
+    ...options,
+    method: "PUT",
+  });
+};
+
+export const getReadAllNotificationsMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof readAllNotifications>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof readAllNotifications>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["readAllNotifications"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof readAllNotifications>>,
+    void
+  > = () => {
+    return readAllNotifications(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReadAllNotificationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof readAllNotifications>>
+>;
+
+export type ReadAllNotificationsMutationError = UnauthorizedResponse;
+
+/**
+ * @summary 알림 전부 읽음 처리
+ */
+export const useReadAllNotifications = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof readAllNotifications>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof readAllNotifications>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    getReadAllNotificationsMutationOptions(options),
+    queryClient
+  );
+};

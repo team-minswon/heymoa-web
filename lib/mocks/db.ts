@@ -1,9 +1,15 @@
 import { faker } from "@faker-js/faker";
 import type {
+  ActionItem,
+  ActionItemUpdateRequest,
+  GetActionItemsParams,
+  GetWorkspaceNotesParams,
+  NotePageResponseData,
+  ActionItemPageResponseData,
   CreateWorkspaceRequest,
   CurrentTranscriptionSessionNullableResponseData,
   CurrentUserResponseData,
-  NoteListResponseDataNotesItem,
+  NoteSummary,
   NoteRequest,
   NoteResponseData,
   ProjectRequest,
@@ -33,6 +39,24 @@ import type {
 } from "@/lib/api/generated/models";
 import { getAppDateKey } from "@/lib/format/date";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
+
+// MVP2 계약이 더한 필수 필드. 목록·상세가 같은 NoteSummary 를 쓰므로 모든 노트가 들고 있어야 한다.
+const NOTE_MVP2 = {
+  scheduledAt: null,
+  participants: [],
+  analysisStatus: "NONE",
+  previousNote: null,
+  lastRecordedAt: null,
+  context: null,
+} satisfies Pick<
+  NoteResponseData,
+  | "scheduledAt"
+  | "participants"
+  | "analysisStatus"
+  | "previousNote"
+  | "lastRecordedAt"
+  | "context"
+>;
 
 const ACTIVE_STATUSES = new Set<string>(["READY", "ACTIVE"]);
 
@@ -97,6 +121,7 @@ type StoreState = {
   invitations: MockInvitation[];
   notifications: NotificationListResponseDataNotificationsItem[];
   analyses: AnalysisResultResponseData[];
+  actionItems: ActionItem[];
   integrations: MockIntegration[];
   sharedChatLocks: Set<string>;
   /** 현재 유저가 아닌 멤버가 쥔 잠금 (noteId → 이름). 관전자 화면 재현용. */
@@ -191,6 +216,7 @@ function createSeedState(): StoreState {
   ];
   const projects: ProjectResponseData[] = [
     {
+      isDefault: true,
       projectId: "01K0000000001",
       workspaceId: workspaces[0].workspaceId,
       name: "주간",
@@ -199,6 +225,7 @@ function createSeedState(): StoreState {
       updatedAt: "2026-07-01T00:00:00Z",
     },
     {
+      isDefault: false,
       projectId: "01K0000000004",
       workspaceId: workspaces[0].workspaceId,
       name: "고객",
@@ -207,6 +234,7 @@ function createSeedState(): StoreState {
       updatedAt: "2026-07-02T00:00:00Z",
     },
     {
+      isDefault: true,
       projectId: "01K0000000007",
       workspaceId: workspaces[1].workspaceId,
       name: "로드맵",
@@ -219,6 +247,7 @@ function createSeedState(): StoreState {
     },
     // 설명 없는 프로젝트. 목록 행과 상세 헤더가 null을 어떻게 다루는지의 유일한 표본이다.
     {
+      isDefault: false,
       projectId: "01K0000000008",
       workspaceId: workspaces[1].workspaceId,
       name: "리서치",
@@ -229,6 +258,7 @@ function createSeedState(): StoreState {
   ];
   const notes: NoteResponseData[] = [
     {
+      ...NOTE_MVP2,
       noteId: "01K0000000002",
       projectId: projects[0].projectId,
       title: "주간 제품 회의",
@@ -241,9 +271,17 @@ function createSeedState(): StoreState {
       meetingStartedBy: { userId: MOCK_USER.userId, name: MOCK_USER.name },
     },
     {
+      ...NOTE_MVP2,
       noteId: "01K0000000005",
       projectId: projects[1].projectId,
       title: "고객 인터뷰",
+      // nullable 양쪽 표본. 여기만 값이 있으면 화면의 「일시 미정」 분기가 검증되지 않는다.
+      scheduledAt: "2026-08-05T05:00:00Z",
+      participants: [
+        { userId: MOCK_USER.userId, name: MOCK_USER.name, email: MOCK_USER.email },
+        { userId: "01K0000000099", name: "김서연", email: null },
+      ],
+      context: "지난 인터뷰에서 안 닫힌 질문 셋을 마저 확인한다.",
       createdAt: "2026-07-09T00:00:00Z",
       updatedAt: "2026-07-09T00:00:00Z",
       meetingStatus: "NOT_STARTED",
@@ -253,6 +291,7 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
     },
     {
+      ...NOTE_MVP2,
       noteId: "01K0000000028",
       projectId: projects[0].projectId,
       title: "파트너 검토 회의",
@@ -265,8 +304,12 @@ function createSeedState(): StoreState {
       meetingStartedBy: { userId: "01K0000000099", name: "김서연" },
     },
     {
+      ...NOTE_MVP2,
       noteId: "01K0000000009",
       projectId: projects[2].projectId,
+      // 이어짐 표본. previousNote가 늘 null이면 배지 분기를 목으로 못 본다.
+      previousNote: { noteId: "01K0000000002", title: "주간 제품 회의" },
+      analysisStatus: "SUCCEEDED",
       title: faker.helpers.arrayElement([
         "3분기 로드맵 정렬",
         "제품 우선순위 검토",
@@ -280,6 +323,7 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
     },
     {
+      ...NOTE_MVP2,
       noteId: "01K0000000014",
       projectId: projects[3].projectId,
       title: faker.helpers.arrayElement([
@@ -312,6 +356,7 @@ function createSeedState(): StoreState {
       ["01K0000000027", "파트너십 킥오프", 45, 1],
     ].map(([noteId, title, daysAgo, projectIndex], index) => ({
       noteId: noteId as string,
+      ...NOTE_MVP2,
       projectId: projects[projectIndex as number].projectId,
       title: title as string,
       createdAt: daysAgoIso(daysAgo as number, index),
@@ -498,6 +543,54 @@ function createSeedState(): StoreState {
     invitations,
     notifications,
     analyses: [],
+    // 액션 아이템은 분석에서 나온다. 시드는 「지난 기한 / 이번 주 / 기한 없음」과
+    // 담당자 유/무를 한 번씩 갖는다 — 화면의 세 묶음과 「미지정」 분기를 목으로 볼 수 있게.
+    actionItems: [
+      {
+        actionItemId: "01K0000000060",
+        noteId: notes[0].noteId,
+        noteTitle: notes[0].title,
+        projectId: notes[0].projectId,
+        text: "결제 개편 착수 시점 확정",
+        assignee: { userId: "01K0000000099", name: "김서연" },
+        dueAt: daysAgoIso(2, 0),
+        status: "OPEN",
+        createdAt: "2026-07-11T00:10:00Z",
+      },
+      {
+        actionItemId: "01K0000000061",
+        noteId: notes[0].noteId,
+        noteTitle: notes[0].title,
+        projectId: notes[0].projectId,
+        text: "온보딩 개선 담당 지정",
+        assignee: null,
+        dueAt: daysAgoIso(1, 0),
+        status: "OPEN",
+        createdAt: "2026-07-11T00:11:00Z",
+      },
+      {
+        actionItemId: "01K0000000062",
+        noteId: notes[1].noteId,
+        noteTitle: notes[1].title,
+        projectId: notes[1].projectId,
+        text: "4분기 목표 지표 초안 작성",
+        assignee: { userId: MOCK_USER.userId, name: MOCK_USER.name },
+        dueAt: null,
+        status: "OPEN",
+        createdAt: "2026-07-09T00:10:00Z",
+      },
+      {
+        actionItemId: "01K0000000063",
+        noteId: notes[1].noteId,
+        noteTitle: notes[1].title,
+        projectId: notes[1].projectId,
+        text: "인터뷰 대상 리스트 공유",
+        assignee: { userId: MOCK_USER.userId, name: MOCK_USER.name },
+        dueAt: daysAgoIso(-3, 0),
+        status: "DONE",
+        createdAt: "2026-07-09T00:12:00Z",
+      },
+    ],
     integrations,
     sharedChatLocks: new Set<string>(),
     sharedChatForeignLocks: new Map<string, string>(),
@@ -1204,6 +1297,7 @@ export const mockDb = {
     if (!name) fail("BAD_REQUEST");
     const createdAt = nextTimestamp();
     const project: ProjectResponseData = {
+      isDefault: false,
       projectId: nextId(),
       workspaceId,
       name,
@@ -1248,7 +1342,7 @@ export const mockDb = {
     state.projects = state.projects.filter((p) => p.projectId !== projectId);
   },
 
-  listNotes(projectId: string): NoteListResponseDataNotesItem[] {
+  listNotes(projectId: string): NoteSummary[] {
     assertProject(projectId);
     state.notes
       .filter((note) => note.projectId === projectId)
@@ -1287,6 +1381,7 @@ export const mockDb = {
     assertProject(projectId);
     const createdAt = nextTimestamp();
     const note: NoteResponseData = {
+      ...NOTE_MVP2,
       noteId: nextId(),
       projectId,
       title: input.title?.trim() || "제목 없는 노트",
@@ -1448,5 +1543,157 @@ export const mockDb = {
     };
     state.segments.push(segment);
     return copy(segment);
+  },
+
+  // ── MVP2 ────────────────────────────────────────────────────────────────
+  /**
+   * 워크스페이스 전역 회의 목록. 프로젝트 단위 목록만으로는 「모든 회의」를 못 그린다.
+   * 커서는 정렬 키의 마지막 값을 그대로 쓴다 — 목이라 불투명할 필요가 없다.
+   */
+  listWorkspaceNotes(
+    workspaceId: string,
+    params: GetWorkspaceNotesParams = {}
+  ): NotePageResponseData {
+    assertWorkspace(workspaceId);
+    const projectIds = new Set(
+      state.projects
+        .filter((project) => project.workspaceId === workspaceId)
+        .map((project) => project.projectId)
+    );
+    const q = params.q?.trim().toLowerCase();
+    const statuses = params.meetingStatus;
+    let rows = state.projects
+      .filter((project) => projectIds.has(project.projectId))
+      .flatMap((project) => mockDb.listNotes(project.projectId));
+    if (params.projectId) {
+      rows = rows.filter((note) => note.projectId === params.projectId);
+    }
+    if (statuses?.length) {
+      rows = rows.filter((note) =>
+        (statuses as string[]).includes(note.meetingStatus)
+      );
+    }
+    if (q) {
+      rows = rows.filter((note) => {
+        const project = state.projects.find(
+          (candidate) => candidate.projectId === note.projectId
+        );
+        return (
+          note.title.toLowerCase().includes(q) ||
+          (project?.name.toLowerCase().includes(q) ?? false) ||
+          note.participants.some((person) =>
+            person.name.toLowerCase().includes(q)
+          )
+        );
+      });
+    }
+    const sort = params.sort ?? "updatedAt_desc";
+    rows.sort((a, b) => {
+      if (sort === "scheduledAt_asc") {
+        // 일시 미정은 늘 뒤로. null을 빈 문자열로 두면 가장 앞으로 와서 「예정」이 거짓말을 한다.
+        const left = a.scheduledAt ?? "9999";
+        const right = b.scheduledAt ?? "9999";
+        return left.localeCompare(right) || a.noteId.localeCompare(b.noteId);
+      }
+      const key = sort === "startedAt_desc" ? "meetingStartedAt" : "updatedAt";
+      return (
+        (b[key] ?? "").localeCompare(a[key] ?? "") ||
+        b.noteId.localeCompare(a.noteId)
+      );
+    });
+    const limit = params.limit ?? 30;
+    const from = params.cursor
+      ? rows.findIndex((note) => note.noteId === params.cursor) + 1
+      : 0;
+    const page = rows.slice(from, from + limit);
+    return copy({
+      notes: page,
+      nextCursor:
+        from + limit < rows.length ? (page.at(-1)?.noteId ?? null) : null,
+    });
+  },
+
+  deleteNote(noteId: string) {
+    const note = findNote(noteId);
+    // 기록 중 삭제는 전사 세션과 경합한다. 계약이 409로 막는 자리다.
+    if (note.meetingStatus === "IN_PROGRESS") fail("MEETING_IN_PROGRESS");
+    state.notes = state.notes.filter((row) => row.noteId !== noteId);
+    state.actionItems = state.actionItems.filter((row) => row.noteId !== noteId);
+  },
+
+  readAllNotifications(): NotificationListResponseData {
+    const readAt = nextTimestamp();
+    for (const notification of state.notifications) notification.readAt ??= readAt;
+    return mockDb.listNotifications();
+  },
+
+  listActionItems(
+    workspaceId: string,
+    params: GetActionItemsParams = {}
+  ): ActionItemPageResponseData {
+    assertWorkspace(workspaceId);
+    const projectIds = new Set(
+      state.projects
+        .filter((project) => project.workspaceId === workspaceId)
+        .map((project) => project.projectId)
+    );
+    const q = params.q?.trim().toLowerCase();
+    let rows = state.actionItems.filter((item) =>
+      projectIds.has(item.projectId)
+    );
+    const status = params.status ?? "OPEN";
+    if (status !== "ALL") rows = rows.filter((item) => item.status === status);
+    if (params.projectId) {
+      rows = rows.filter((item) => item.projectId === params.projectId);
+    }
+    if (params.assigneeId === "UNASSIGNED") {
+      rows = rows.filter((item) => item.assignee === null);
+    } else if (params.assigneeId) {
+      rows = rows.filter(
+        (item) => item.assignee?.userId === params.assigneeId
+      );
+    }
+    if (params.dueBefore) {
+      const before = params.dueBefore;
+      rows = rows.filter((item) => item.dueAt !== null && item.dueAt < before);
+    }
+    if (q) rows = rows.filter((item) => item.text.toLowerCase().includes(q));
+    // 기한 없음은 늘 뒤로 — 목록이 「언제까지」로 묶이기 때문이다.
+    rows.sort(
+      (a, b) =>
+        (a.dueAt ?? "9999").localeCompare(b.dueAt ?? "9999") ||
+        a.actionItemId.localeCompare(b.actionItemId)
+    );
+    const limit = params.limit ?? 50;
+    const from = params.cursor
+      ? rows.findIndex((item) => item.actionItemId === params.cursor) + 1
+      : 0;
+    const page = rows.slice(from, from + limit);
+    return copy({
+      actionItems: page,
+      nextCursor:
+        from + limit < rows.length ? (page.at(-1)?.actionItemId ?? null) : null,
+    });
+  },
+
+  updateActionItem(
+    actionItemId: string,
+    input: ActionItemUpdateRequest
+  ): ActionItem {
+    const item = state.actionItems.find(
+      (row) => row.actionItemId === actionItemId
+    );
+    if (!item) fail("ACTION_ITEM_NOT_FOUND");
+    if (input.status !== undefined) item.status = input.status;
+    if ("dueAt" in input) item.dueAt = input.dueAt ?? null;
+    if ("assigneeId" in input) {
+      const member = state.members.find(
+        (row) => row.userId === input.assigneeId
+      );
+      item.assignee = input.assigneeId
+        ? { userId: input.assigneeId, name: member?.name ?? "알 수 없음" }
+        : null;
+    }
+    return copy(item);
   },
 };

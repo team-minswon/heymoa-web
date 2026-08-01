@@ -6,13 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-/**
- * 회의 상태
- */
-export type NoteResponseDataMeetingStatus =
-  (typeof NoteResponseDataMeetingStatus)[keyof typeof NoteResponseDataMeetingStatus];
+export type GetWorkspaceNotesMeetingStatusItem =
+  (typeof GetWorkspaceNotesMeetingStatusItem)[keyof typeof GetWorkspaceNotesMeetingStatusItem];
 
-export const NoteResponseDataMeetingStatus = {
+export const GetWorkspaceNotesMeetingStatusItem = {
   NOT_STARTED: "NOT_STARTED",
   IN_PROGRESS: "IN_PROGRESS",
   PAUSED: "PAUSED",

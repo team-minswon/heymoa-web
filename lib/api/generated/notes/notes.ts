@@ -25,9 +25,13 @@ import type {
 
 import type {
   AppErrorResponse,
+  GetNotesParams,
+  GetWorkspaceNotesParams,
+  NoteCreateRequest,
   NoteListResponse,
-  NoteRequest,
+  NotePageResponse,
   NoteResponse,
+  NoteUpdateRequest,
   UnauthorizedResponse,
 } from "../models";
 
@@ -411,14 +415,14 @@ export const getUpdateNoteUrl = (noteId: string) => {
  */
 export const updateNote = async (
   noteId: string,
-  noteRequest?: NoteRequest,
+  noteUpdateRequest?: NoteUpdateRequest,
   options?: RequestInit
 ): Promise<updateNoteResponse> => {
   return apiFetch<updateNoteResponse>(getUpdateNoteUrl(noteId), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(noteRequest),
+    body: JSON.stringify(noteUpdateRequest),
   });
 };
 
@@ -429,14 +433,14 @@ export const getUpdateNoteMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateNote>>,
     TError,
-    { noteId: string; data?: NoteRequest },
+    { noteId: string; data?: NoteUpdateRequest },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateNote>>,
   TError,
-  { noteId: string; data?: NoteRequest },
+  { noteId: string; data?: NoteUpdateRequest },
   TContext
 > => {
   const mutationKey = ["updateNote"];
@@ -450,7 +454,7 @@ export const getUpdateNoteMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateNote>>,
-    { noteId: string; data?: NoteRequest }
+    { noteId: string; data?: NoteUpdateRequest }
   > = (props) => {
     const { noteId, data } = props ?? {};
 
@@ -463,7 +467,7 @@ export const getUpdateNoteMutationOptions = <
 export type UpdateNoteMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateNote>>
 >;
-export type UpdateNoteMutationBody = NoteRequest | undefined;
+export type UpdateNoteMutationBody = NoteUpdateRequest | undefined;
 export type UpdateNoteMutationError = AppErrorResponse | UnauthorizedResponse;
 
 /**
@@ -477,7 +481,7 @@ export const useUpdateNote = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateNote>>,
       TError,
-      { noteId: string; data?: NoteRequest },
+      { noteId: string; data?: NoteUpdateRequest },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -486,10 +490,132 @@ export const useUpdateNote = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateNote>>,
   TError,
-  { noteId: string; data?: NoteRequest },
+  { noteId: string; data?: NoteUpdateRequest },
   TContext
 > => {
   return useMutation(getUpdateNoteMutationOptions(options), queryClient);
+};
+export type deleteNoteResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteNoteResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type deleteNoteResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type deleteNoteResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type deleteNoteResponseSuccess = deleteNoteResponse204 & {
+  headers: Headers;
+};
+export type deleteNoteResponseError = (
+  | deleteNoteResponse401
+  | deleteNoteResponse404
+  | deleteNoteResponse409
+) & {
+  headers: Headers;
+};
+
+export type deleteNoteResponse =
+  | deleteNoteResponseSuccess
+  | deleteNoteResponseError;
+
+export const getDeleteNoteUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}`;
+};
+
+/**
+ * 생성과 시작을 분리한 뒤로 시작 안 한 빈 회의가 자주 생긴다. 치울 방법이 없으면 목록이 쓰레기로 찬다. 기록 중인 회의는 전사 세션·오디오 스트림과 경합해 409 로 막는다.
+ * @summary 회의 삭제
+ */
+export const deleteNote = async (
+  noteId: string,
+  options?: RequestInit
+): Promise<deleteNoteResponse> => {
+  return apiFetch<deleteNoteResponse>(getDeleteNoteUrl(noteId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteNoteMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteNote>>,
+    TError,
+    { noteId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteNote>>,
+  TError,
+  { noteId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteNote>>,
+    { noteId: string }
+  > = (props) => {
+    const { noteId } = props ?? {};
+
+    return deleteNote(noteId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteNote>>
+>;
+
+export type DeleteNoteMutationError = UnauthorizedResponse | AppErrorResponse;
+
+/**
+ * @summary 회의 삭제
+ */
+export const useDeleteNote = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteNote>>,
+      TError,
+      { noteId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteNote>>,
+  TError,
+  { noteId: string },
+  TContext
+> => {
+  return useMutation(getDeleteNoteMutationOptions(options), queryClient);
 };
 export type getNotesResponse200 = {
   data: NoteListResponse;
@@ -524,8 +650,20 @@ export type getNotesResponseError = (
 
 export type getNotesResponse = getNotesResponseSuccess | getNotesResponseError;
 
-export const getGetNotesUrl = (projectId: string) => {
-  return `/v1/projects/${projectId}/notes`;
+export const getGetNotesUrl = (projectId: string, params?: GetNotesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/projects/${projectId}/notes?${stringifiedParams}`
+    : `/v1/projects/${projectId}/notes`;
 };
 
 /**
@@ -534,16 +672,23 @@ export const getGetNotesUrl = (projectId: string) => {
  */
 export const getNotes = async (
   projectId: string,
+  params?: GetNotesParams,
   options?: RequestInit
 ): Promise<getNotesResponse> => {
-  return apiFetch<getNotesResponse>(getGetNotesUrl(projectId), {
+  return apiFetch<getNotesResponse>(getGetNotesUrl(projectId, params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetNotesQueryKey = (projectId: string) => {
-  return [`/v1/projects/${projectId}/notes`] as const;
+export const getGetNotesQueryKey = (
+  projectId: string,
+  params?: GetNotesParams
+) => {
+  return [
+    `/v1/projects/${projectId}/notes`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetNotesQueryOptions = <
@@ -551,6 +696,7 @@ export const getGetNotesQueryOptions = <
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -560,11 +706,12 @@ export const getGetNotesQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetNotesQueryKey(projectId);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNotesQueryKey(projectId, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotes>>> = ({
     signal,
-  }) => getNotes(projectId, { signal, ...requestOptions });
+  }) => getNotes(projectId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -586,6 +733,7 @@ export function useGetNotes<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params: undefined | GetNotesParams,
   options: {
     query: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -609,6 +757,7 @@ export function useGetNotes<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -632,6 +781,7 @@ export function useGetNotes<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -651,6 +801,7 @@ export function useGetNotes<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -661,7 +812,7 @@ export function useGetNotes<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetNotesQueryOptions(projectId, options);
+  const queryOptions = getGetNotesQueryOptions(projectId, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -680,6 +831,7 @@ export const prefetchGetNotesQuery = async <
 >(
   queryClient: QueryClient,
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -687,7 +839,7 @@ export const prefetchGetNotesQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetNotesQueryOptions(projectId, options);
+  const queryOptions = getGetNotesQueryOptions(projectId, params, options);
 
   await queryClient.prefetchQuery(queryOptions);
 
@@ -699,6 +851,7 @@ export const getGetNotesSuspenseQueryOptions = <
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -712,11 +865,12 @@ export const getGetNotesSuspenseQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetNotesQueryKey(projectId);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNotesQueryKey(projectId, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotes>>> = ({
     signal,
-  }) => getNotes(projectId, { signal, ...requestOptions });
+  }) => getNotes(projectId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
     Awaited<ReturnType<typeof getNotes>>,
@@ -737,6 +891,7 @@ export function useGetNotesSuspense<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params: undefined | GetNotesParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
@@ -756,6 +911,7 @@ export function useGetNotesSuspense<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -775,6 +931,7 @@ export function useGetNotesSuspense<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -798,6 +955,7 @@ export function useGetNotesSuspense<
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -812,7 +970,11 @@ export function useGetNotesSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetNotesSuspenseQueryOptions(projectId, options);
+  const queryOptions = getGetNotesSuspenseQueryOptions(
+    projectId,
+    params,
+    options
+  );
 
   const query = useSuspenseQuery(
     queryOptions,
@@ -869,14 +1031,14 @@ export const getCreateNoteUrl = (projectId: string) => {
  */
 export const createNote = async (
   projectId: string,
-  noteRequest?: NoteRequest,
+  noteCreateRequest?: NoteCreateRequest,
   options?: RequestInit
 ): Promise<createNoteResponse> => {
   return apiFetch<createNoteResponse>(getCreateNoteUrl(projectId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(noteRequest),
+    body: JSON.stringify(noteCreateRequest),
   });
 };
 
@@ -887,14 +1049,14 @@ export const getCreateNoteMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createNote>>,
     TError,
-    { projectId: string; data?: NoteRequest },
+    { projectId: string; data?: NoteCreateRequest },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createNote>>,
   TError,
-  { projectId: string; data?: NoteRequest },
+  { projectId: string; data?: NoteCreateRequest },
   TContext
 > => {
   const mutationKey = ["createNote"];
@@ -908,7 +1070,7 @@ export const getCreateNoteMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createNote>>,
-    { projectId: string; data?: NoteRequest }
+    { projectId: string; data?: NoteCreateRequest }
   > = (props) => {
     const { projectId, data } = props ?? {};
 
@@ -921,7 +1083,7 @@ export const getCreateNoteMutationOptions = <
 export type CreateNoteMutationResult = NonNullable<
   Awaited<ReturnType<typeof createNote>>
 >;
-export type CreateNoteMutationBody = NoteRequest | undefined;
+export type CreateNoteMutationBody = NoteCreateRequest | undefined;
 export type CreateNoteMutationError = AppErrorResponse | UnauthorizedResponse;
 
 /**
@@ -935,7 +1097,7 @@ export const useCreateNote = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createNote>>,
       TError,
-      { projectId: string; data?: NoteRequest },
+      { projectId: string; data?: NoteCreateRequest },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -944,8 +1106,557 @@ export const useCreateNote = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof createNote>>,
   TError,
-  { projectId: string; data?: NoteRequest },
+  { projectId: string; data?: NoteCreateRequest },
   TContext
 > => {
   return useMutation(getCreateNoteMutationOptions(options), queryClient);
+};
+export type getWorkspaceNotesResponse200 = {
+  data: NotePageResponse;
+  status: 200;
+};
+
+export type getWorkspaceNotesResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type getWorkspaceNotesResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getWorkspaceNotesResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getWorkspaceNotesResponseSuccess = getWorkspaceNotesResponse200 & {
+  headers: Headers;
+};
+export type getWorkspaceNotesResponseError = (
+  | getWorkspaceNotesResponse400
+  | getWorkspaceNotesResponse401
+  | getWorkspaceNotesResponse404
+) & {
+  headers: Headers;
+};
+
+export type getWorkspaceNotesResponse =
+  | getWorkspaceNotesResponseSuccess
+  | getWorkspaceNotesResponseError;
+
+export const getGetWorkspaceNotesUrl = (
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/workspaces/${workspaceId}/notes?${stringifiedParams}`
+    : `/v1/workspaces/${workspaceId}/notes`;
+};
+
+/**
+ * 워크스페이스 전체 회의를 검색·필터·정렬해 조회한다. 「모든 회의」 화면이 쓰는 유일한 경로다 — 프로젝트 단위 목록만으로는 그릴 수 없다.
+ * @summary 워크스페이스 회의 목록 조회
+ */
+export const getWorkspaceNotes = async (
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: RequestInit
+): Promise<getWorkspaceNotesResponse> => {
+  return apiFetch<getWorkspaceNotesResponse>(
+    getGetWorkspaceNotesUrl(workspaceId, params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetWorkspaceNotesQueryKey = (
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams
+) => {
+  return [
+    `/v1/workspaces/${workspaceId}/notes`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetWorkspaceNotesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>
+  > = ({ signal }) =>
+    getWorkspaceNotes(workspaceId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceNotesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceNotes>>
+>;
+export type GetWorkspaceNotesQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params: undefined | GetWorkspaceNotesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceNotes>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceNotes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceNotes>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceNotes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 회의 목록 조회
+ */
+
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceNotesQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 워크스페이스 회의 목록 조회
+ */
+export const prefetchGetWorkspaceNotesQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceNotesQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceNotesSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>
+  > = ({ signal }) =>
+    getWorkspaceNotes(workspaceId, params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceNotesSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceNotes>>
+>;
+export type GetWorkspaceNotesSuspenseQueryError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params: undefined | GetWorkspaceNotesParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 회의 목록 조회
+ */
+
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = AppErrorResponse | UnauthorizedResponse,
+>(
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceNotesSuspenseQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export type createWorkspaceNoteResponse201 = {
+  data: NoteResponse;
+  status: 201;
+};
+
+export type createWorkspaceNoteResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type createWorkspaceNoteResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type createWorkspaceNoteResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type createWorkspaceNoteResponseSuccess =
+  createWorkspaceNoteResponse201 & {
+    headers: Headers;
+  };
+export type createWorkspaceNoteResponseError = (
+  | createWorkspaceNoteResponse400
+  | createWorkspaceNoteResponse401
+  | createWorkspaceNoteResponse404
+) & {
+  headers: Headers;
+};
+
+export type createWorkspaceNoteResponse =
+  | createWorkspaceNoteResponseSuccess
+  | createWorkspaceNoteResponseError;
+
+export const getCreateWorkspaceNoteUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/notes`;
+};
+
+/**
+ * 「+ 새 회의」가 「프로젝트 전체」 상태에서 눌릴 때 쓴다. projectId 가 null 이면 워크스페이스 기본 프로젝트에 넣는다. 프로젝트 안에서 만드는 기존 경로는 그대로 둔다.
+ * @summary 회의 생성 (프로젝트 미지정 허용)
+ */
+export const createWorkspaceNote = async (
+  workspaceId: string,
+  noteCreateRequest?: NoteCreateRequest,
+  options?: RequestInit
+): Promise<createWorkspaceNoteResponse> => {
+  return apiFetch<createWorkspaceNoteResponse>(
+    getCreateWorkspaceNoteUrl(workspaceId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(noteCreateRequest),
+    }
+  );
+};
+
+export const getCreateWorkspaceNoteMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWorkspaceNote>>,
+    TError,
+    { workspaceId: string; data?: NoteCreateRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWorkspaceNote>>,
+  TError,
+  { workspaceId: string; data?: NoteCreateRequest },
+  TContext
+> => {
+  const mutationKey = ["createWorkspaceNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWorkspaceNote>>,
+    { workspaceId: string; data?: NoteCreateRequest }
+  > = (props) => {
+    const { workspaceId, data } = props ?? {};
+
+    return createWorkspaceNote(workspaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWorkspaceNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWorkspaceNote>>
+>;
+export type CreateWorkspaceNoteMutationBody = NoteCreateRequest | undefined;
+export type CreateWorkspaceNoteMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 회의 생성 (프로젝트 미지정 허용)
+ */
+export const useCreateWorkspaceNote = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createWorkspaceNote>>,
+      TError,
+      { workspaceId: string; data?: NoteCreateRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createWorkspaceNote>>,
+  TError,
+  { workspaceId: string; data?: NoteCreateRequest },
+  TContext
+> => {
+  return useMutation(
+    getCreateWorkspaceNoteMutationOptions(options),
+    queryClient
+  );
 };

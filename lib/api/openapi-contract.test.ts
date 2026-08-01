@@ -62,45 +62,53 @@ describe("OpenAPI contract", () => {
   });
 
   it("models the four meeting states and required timing snapshots", () => {
-    const schemas = api().components.schemas as Record<
-      string,
-      {
-        properties: {
-          data: {
-            required: string[];
-            properties: {
-              meetingStatus?: { enum: string[] };
-              notes?: {
-                items: {
-                  required: string[];
-                  properties: { meetingStatus?: { enum: string[] } };
-                };
-              };
-            };
-          };
-        };
-      }
-    >;
 
-    expect(
-      schemas.NoteResponse.properties.data.properties.meetingStatus?.enum
-    ).toEqual(["NOT_STARTED", "IN_PROGRESS", "PAUSED", "ENDED"]);
-    expect(schemas.NoteResponse.properties.data.required).toEqual(
-      expect.arrayContaining(["recordedDurationMs", "activeSessionStartedAt"])
-    );
-    expect(
-      schemas.NoteListResponse.properties.data.properties.notes?.items.required
-    ).toEqual(
+    // MVP2에서 목록·단건이 각자 인라인으로 들고 있던 필드를 NoteSummary로 뽑았다.
+    // 단건은 거기에 context만 더한다(allOf) — 목록에는 안 내린다.
+    const summary = (
+      api().components.schemas as Record<
+        string,
+        {
+          required: string[];
+          properties: { meetingStatus?: { enum: string[] } };
+        }
+      >
+    ).NoteSummary;
+    expect(summary.properties.meetingStatus?.enum).toEqual([
+      "NOT_STARTED",
+      "IN_PROGRESS",
+      "PAUSED",
+      "ENDED",
+    ]);
+    expect(summary.required).toEqual(
       expect.arrayContaining([
         "recordedDurationMs",
         "activeSessionStartedAt",
         "lastRecordedAt",
+        "scheduledAt",
+        "participants",
+        "analysisStatus",
+        "previousNote",
       ])
     );
+    const refs = api().components.schemas as Record<
+      string,
+      {
+        properties: {
+          data: {
+            allOf?: { $ref?: string }[];
+            properties: { notes?: { items: { $ref?: string } } };
+          };
+        };
+      }
+    >;
+    expect(refs.NoteResponse.properties.data.allOf?.[0]?.$ref).toBe(
+      "#/components/schemas/NoteSummary"
+    );
     expect(
-      schemas.NoteListResponse.properties.data.properties.notes?.items
-        .properties.meetingStatus?.enum
-    ).toEqual(["NOT_STARTED", "IN_PROGRESS", "PAUSED", "ENDED"]);
+      refs.NoteListResponse.properties.data.properties.notes?.items.$ref
+    ).toBe("#/components/schemas/NoteSummary");
+    // 목록 items는 이제 $ref라 enum은 NoteSummary 한 곳에만 있다 — 위에서 이미 봤다.
   });
 
   it("omits schemas reachable only from internal routes", () => {
@@ -174,10 +182,21 @@ describe("OpenAPI contract", () => {
 });
 
 describe("contract sync 2026-07-29", () => {
-  it("mirrors 33 public paths and excludes internal ones", () => {
+  it("mirrors 37 public paths and excludes internal ones", () => {
     const paths = Object.keys(api().paths);
     // APP-281에서 현재 전사 세션 조회 경로가 하나 추가됐다 (32 → 33).
-    expect(paths).toHaveLength(33);
+    // MVP2에서 손으로 넷을 더했다 (33 → 37) — 워크스페이스 회의 목록/생성,
+    // 알림 일괄 읽음, 액션 아이템 목록, 액션 아이템 수정.
+    // 무엇을 왜 더했는지는 design/CONTRACT-SPEC-DELTA.md에 있다.
+    expect(paths).toHaveLength(37);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "/v1/workspaces/{workspaceId}/notes",
+        "/v1/notifications/read-all",
+        "/v1/workspaces/{workspaceId}/action-items",
+        "/v1/action-items/{actionItemId}",
+      ])
+    );
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

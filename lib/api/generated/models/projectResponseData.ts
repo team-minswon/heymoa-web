@@ -10,6 +10,8 @@
  * 성공 응답 데이터
  */
 export type ProjectResponseData = {
+  /** 워크스페이스 기본 프로젝트. 워크스페이스당 정확히 하나 */
+  isDefault: boolean;
   /** 프로젝트 생성 시각 */
   createdAt: string;
   /**

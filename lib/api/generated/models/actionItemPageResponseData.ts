@@ -5,12 +5,13 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { NoteSummary } from "./noteSummary";
+import type { ActionItem } from "./actionItem";
 
 /**
  * 성공 응답 데이터
  */
-export type NoteListResponseData = {
-  /** 노트 목록 */
-  notes: NoteSummary[];
+export type ActionItemPageResponseData = {
+  actionItems: ActionItem[];
+  /** @nullable */
+  nextCursor: string | null;
 };

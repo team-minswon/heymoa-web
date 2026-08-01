@@ -5,10 +5,33 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { NoteListResponseDataNotesItemMeetingStartedBy } from "./noteListResponseDataNotesItemMeetingStartedBy";
-import type { NoteListResponseDataNotesItemMeetingStatus } from "./noteListResponseDataNotesItemMeetingStatus";
+import type { NoteSummaryAnalysisStatus } from "./noteSummaryAnalysisStatus";
+import type { NoteSummaryMeetingStartedBy } from "./noteSummaryMeetingStartedBy";
+import type { NoteSummaryMeetingStatus } from "./noteSummaryMeetingStatus";
+import type { NoteSummaryParticipantsItem } from "./noteSummaryParticipantsItem";
+import type { NoteSummaryPreviousNote } from "./noteSummaryPreviousNote";
 
-export type NoteListResponseDataNotesItem = {
+/**
+ * 회의 요약. 목록·단건·워크스페이스 전역 목록이 함께 쓴다.
+ */
+export interface NoteSummary {
+  /**
+   * 예정 일시. null 이면 일시 미정
+   * @nullable
+   */
+  scheduledAt: string | null;
+  /**
+   * 참석자. 워크스페이스 멤버 중에서 고른다. 공유 범위와는 다른 개념이다 — 회의록은 멤버 전원이 보고 참석자는 「누가 있었나」다
+   * @maxItems 50
+   */
+  participants: NoteSummaryParticipantsItem[];
+  /** 최신 분석 잡 상태. 한 번도 안 돌렸으면 NONE. meetingStatus 와 직교한다 — 배지가 「종료됨 + 분석 중」으로 나란히 붙는다 */
+  analysisStatus: NoteSummaryAnalysisStatus;
+  /**
+   * 이 회의가 후속인 원 회의. 트리가 아니라 사슬이라 하나뿐이다
+   * @nullable
+   */
+  previousNote: NoteSummaryPreviousNote;
   /**
    * 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
    * @nullable
@@ -25,14 +48,14 @@ export type NoteListResponseDataNotesItem = {
    * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
    * @nullable
    */
-  meetingStartedBy: NoteListResponseDataNotesItemMeetingStartedBy;
+  meetingStartedBy: NoteSummaryMeetingStartedBy;
   /**
    * ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
    * @minimum 0
    */
   recordedDurationMs: number;
   /** 회의 상태 */
-  meetingStatus: NoteListResponseDataNotesItemMeetingStatus;
+  meetingStatus: NoteSummaryMeetingStatus;
   /**
    * 노트의 13자리 TSID
    * @minLength 13
@@ -59,4 +82,4 @@ export type NoteListResponseDataNotesItem = {
   activeSessionStartedAt: string | null;
   /** 노트 수정 시각 */
   updatedAt: string;
-};
+}

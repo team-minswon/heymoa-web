@@ -5,6 +5,8 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import { faker } from "@faker-js/faker";
+
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
@@ -44,6 +46,45 @@ export const getMarkNotificationReadResponseMock =
     data: { notificationId: "0HZX2K7M9Q4AJ" },
     error: null,
   });
+
+export const getReadAllNotificationsResponseMock = (
+  overrideResponse: Partial<Extract<NotificationListResponse, object>> = {}
+): NotificationListResponse => ({
+  data: {
+    unreadCount: faker.number.int(),
+    notifications: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      invitation: faker.helpers.arrayElement([
+        {
+          role: faker.helpers.arrayElement(["ADMIN", "MEMBER"] as const),
+          workspaceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          invitationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+          inviterName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          workspaceId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+          status: faker.helpers.arrayElement([
+            "PENDING",
+            "ACCEPTED",
+            "DECLINED",
+            "CANCELED",
+          ] as const),
+        },
+        undefined,
+      ]),
+      notificationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      readAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      type: faker.helpers.arrayElement(["WORKSPACE_INVITATION"] as const),
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
 
 export const getGetNotificationsMockHandler = (
   overrideResponse?:
@@ -94,7 +135,32 @@ export const getMarkNotificationReadMockHandler = (
     options
   );
 };
+
+export const getReadAllNotificationsMockHandler = (
+  overrideResponse?:
+    | NotificationListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<NotificationListResponse> | NotificationListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notifications/read-all",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReadAllNotificationsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getNotificationsMock = () => [
   getGetNotificationsMockHandler(),
   getMarkNotificationReadMockHandler(),
+  getReadAllNotificationsMockHandler(),
 ];

@@ -12,7 +12,7 @@ import {
   sortNotesByRecency,
   WorkspaceNoteList,
 } from "@/components/workspace/workspace-note-list";
-import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import type { NoteSummary } from "@/lib/api/generated/models";
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
@@ -23,7 +23,7 @@ vi.mock("@/components/workspace/note-list-row", () => ({
     note,
     now,
   }: {
-    note: NoteListResponseDataNotesItem;
+    note: NoteSummary;
     now: number | null;
   }) => (
     <div data-testid="row" data-now={String(now)}>
@@ -35,7 +35,7 @@ vi.mock("@/components/workspace/note-list-row", () => ({
 function note(
   noteId: string,
   updatedAt: string
-): NoteListResponseDataNotesItem {
+): NoteSummary {
   return {
     noteId,
     projectId: "01K0000000001",
@@ -47,6 +47,10 @@ function note(
     activeSessionStartedAt: null,
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: null,
+    scheduledAt: null,
+    participants: [],
+    analysisStatus: "NONE",
+    previousNote: null,
     meetingStartedBy: null,
   };
 }

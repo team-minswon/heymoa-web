@@ -7,6 +7,8 @@
  */
 
 export type ProjectListResponseDataProjectsItem = {
+  /** 워크스페이스 기본 프로젝트. 워크스페이스당 정확히 하나. 「+ 새 회의」가 프로젝트 전체 상태에서 눌렸을 때 어디에 만들지의 근거다 */
+  isDefault: boolean;
   /** 프로젝트 생성 시각 */
   createdAt: string;
   /**

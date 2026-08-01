@@ -1,20 +1,20 @@
-import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models/noteListResponseDataNotesItem";
+import type { NoteSummary } from "@/lib/api/generated/models/noteSummary";
 import type { NoteResponseData } from "@/lib/api/generated/models/noteResponseData";
-import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models/noteResponseDataMeetingStatus";
+import type { NoteSummaryMeetingStatus } from "@/lib/api/generated/models/noteSummaryMeetingStatus";
 
 export const MEETING_STATUS_LABEL = {
   NOT_STARTED: "시작 전",
   IN_PROGRESS: "기록 중",
   PAUSED: "중지됨",
   ENDED: "종료됨",
-} as const satisfies Record<NoteResponseDataMeetingStatus, string>;
+} as const satisfies Record<NoteSummaryMeetingStatus, string>;
 
 export const MEETING_PRIMARY_ACTION_LABEL = {
   NOT_STARTED: "회의 시작",
   IN_PROGRESS: "중지",
   PAUSED: "재개",
   ENDED: "요약 보기",
-} as const satisfies Record<NoteResponseDataMeetingStatus, string>;
+} as const satisfies Record<NoteSummaryMeetingStatus, string>;
 
 /**
  * 공유 챗봇 컴포저가 갈리는 회의 상태. `unknown`은 노트를 아직 못 읽은 것 —
@@ -52,7 +52,7 @@ type MeetingTimingFields =
       "meetingStatus" | "recordedDurationMs" | "activeSessionStartedAt"
     >
   | Pick<
-      NoteListResponseDataNotesItem,
+      NoteSummary,
       "meetingStatus" | "recordedDurationMs" | "activeSessionStartedAt"
     >;
 

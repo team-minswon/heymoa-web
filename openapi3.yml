@@ -11,6 +11,21 @@
 # 남기면 브라우저가 부르지 않는 훅과 MSW 목이 생긴다. internalToken 보안 스킴도
 # 참조하는 경로가 사라져 함께 제거했다. 그 경로 전용 스키마와 그 전이 의존성도 같이 뺀다 —
 # 남기면 아무도 안 쓰는 모델이 생성된다.
+# ⚠️ MVP2 — 아래 구간은 손으로 더했고 heymoa-server 에 아직 없다.
+# rules/api-data.md 는 이 파일을 손으로 고치지 말라고 하지만, MVP2 는 화면이 계약보다
+# 앞서는 기획 단계라 사용자 결정으로 예외를 뒀다. 서버가 따라온 뒤 재생성하면
+# 아래 목록을 다시 넣어야 한다 — 무엇을 왜 더했는지는 design/CONTRACT-SPEC-DELTA.md 에 있다.
+#
+#   스키마  NoteSummary(추출) · NotePageResponse · NoteCreateRequest · NoteUpdateRequest
+#           ActionItem · ActionItemPageResponse · ActionItemUpdateRequest · ActionItemResponse
+#   필드    NoteSummary.scheduledAt · participants · analysisStatus · previousNote
+#           NoteResponse.data.context · ProjectListResponse.items[].isDefault
+#   경로    GET/POST /v1/workspaces/{workspaceId}/notes
+#           DELETE   /v1/notes/{noteId}
+#           PUT      /v1/notifications/read-all
+#           GET      /v1/workspaces/{workspaceId}/action-items
+#           PATCH    /v1/action-items/{actionItemId}
+#   파라미터 GET /v1/projects/{projectId}/notes 에 from·to·sort·cursor·limit
 ---
 openapi: "3.0.1"
 info:
@@ -520,6 +535,15 @@ paths:
                       meetingStartedAt: "2026-07-14T01:02:03Z"
                       recordedDurationMs: 6500
                       activeSessionStartedAt: "2026-07-14T01:02:03Z"
+                      lastRecordedAt: "2026-07-14T01:02:03Z"
+                      scheduledAt: null
+                      participants:
+                      - userId: "0HZX2K7M9Q4AC"
+                        name: "홍길동"
+                        email: "hong@heymoa.com"
+                      analysisStatus: "SUCCEEDED"
+                      previousNote: null
+                      context: "결제 개편 일정과 리소스 배분이 핵심 안건."
                       meetingStartedBy:
                         userId: "0HZX2K7M9Q4AC"
                         name: "홍길동"
@@ -551,7 +575,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NoteRequest"
+              $ref: "#/components/schemas/NoteUpdateRequest"
             examples:
               updateNote_Success:
                 value:
@@ -589,6 +613,15 @@ paths:
                       meetingStartedAt: "2026-07-14T01:02:03Z"
                       recordedDurationMs: 6500
                       activeSessionStartedAt: "2026-07-14T01:02:03Z"
+                      lastRecordedAt: "2026-07-14T01:02:03Z"
+                      scheduledAt: null
+                      participants:
+                      - userId: "0HZX2K7M9Q4AC"
+                        name: "홍길동"
+                        email: "hong@heymoa.com"
+                      analysisStatus: "SUCCEEDED"
+                      previousNote: null
+                      context: "결제 개편 일정과 리소스 배분이 핵심 안건."
                       meetingStartedBy:
                         userId: "0HZX2K7M9Q4AC"
                         name: "홍길동"
@@ -638,6 +671,62 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+    delete:
+      tags:
+      - "Notes"
+      summary: "회의 삭제"
+      description: "생성과 시작을 분리한 뒤로 시작 안 한 빈 회의가 자주 생긴다. 치울 방법이 없으면\
+        \ 목록이 쓰레기로 찬다. 기록 중인 회의는 전사 세션·오디오 스트림과 경합해 409 로 막는다."
+      operationId: "deleteNote"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        description: "노트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      responses:
+        "204":
+          description: "삭제 성공"
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+        "409":
+          description: "기록 중인 회의는 삭제할 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                MEETING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "MEETING_IN_PROGRESS"
+                      message: "기록 중인 회의는 삭제할 수 없습니다."
                       details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -1857,6 +1946,43 @@ paths:
       description: "프로젝트의 노트 목록을 조회한다."
       operationId: "getNotes"
       parameters:
+      - name: "from"
+        in: "query"
+        description: "기간 시작. 프로젝트 타임라인이 쓴다"
+        required: false
+        schema:
+          type: "string"
+          format: "date-time"
+      - name: "to"
+        in: "query"
+        description: "기간 끝"
+        required: false
+        schema:
+          type: "string"
+          format: "date-time"
+      - name: "sort"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+          default: "startedAt_desc"
+          enum:
+          - "scheduledAt_asc"
+          - "startedAt_desc"
+          - "updatedAt_desc"
+      - name: "cursor"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+      - name: "limit"
+        in: "query"
+        required: false
+        schema:
+          type: "integer"
+          default: 30
+          minimum: 1
+          maximum: 100
       - name: "projectId"
         in: "path"
         description: "프로젝트의 13자리 TSID"
@@ -1915,6 +2041,13 @@ paths:
                         lastRecordedAt: "2026-07-14T01:02:03Z"
                         recordedDurationMs: 6500
                         activeSessionStartedAt: "2026-07-14T01:02:03Z"
+                        scheduledAt: null
+                        participants:
+                        - userId: "0HZX2K7M9Q4AC"
+                          name: "홍길동"
+                          email: "hong@heymoa.com"
+                        analysisStatus: "SUCCEEDED"
+                        previousNote: null
                         meetingStartedBy:
                           userId: "0HZX2K7M9Q4AC"
                           name: "홍길동"
@@ -1961,7 +2094,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NoteRequest"
+              $ref: "#/components/schemas/NoteCreateRequest"
             examples:
               createNote_Success:
                 value:
@@ -1996,6 +2129,15 @@ paths:
                       meetingStartedAt: null
                       recordedDurationMs: 0
                       activeSessionStartedAt: null
+                      lastRecordedAt: null
+                      scheduledAt: "2026-08-05T05:00:00Z"
+                      participants:
+                      - userId: "0HZX2K7M9Q4AC"
+                        name: "홍길동"
+                        email: "hong@heymoa.com"
+                      analysisStatus: "NONE"
+                      previousNote: null
+                      context: "결제 개편 일정과 리소스 배분이 핵심 안건."
                       meetingStartedBy: null
                     error: null
         "400":
@@ -2531,6 +2673,7 @@ paths:
                     data:
                       projects:
                       - projectId: "0HZX2K7M9Q4AE"
+                        isDefault: false
                         workspaceId: "0HZX2K7M9Q4AD"
                         name: "모바일 앱"
                         description: "Heymoa 모바일 앱 프로젝트"
@@ -2651,6 +2794,7 @@ paths:
                     success: true
                     data:
                       projectId: "0HZX2K7M9Q4AE"
+                      isDefault: false
                       workspaceId: "0HZX2K7M9Q4AD"
                       name: "모바일 앱"
                       description: "Heymoa 모바일 앱 프로젝트"
@@ -3468,6 +3612,7 @@ paths:
                     success: true
                     data:
                       projectId: "0HZX2K7M9Q4AE"
+                      isDefault: false
                       workspaceId: "0HZX2K7M9Q4AD"
                       name: "모바일 앱"
                       description: "Heymoa 모바일 앱 프로젝트"
@@ -3544,6 +3689,7 @@ paths:
                     success: true
                     data:
                       projectId: "0HZX2K7M9Q4AE"
+                      isDefault: false
                       workspaceId: "0HZX2K7M9Q4AD"
                       name: "모바일 앱"
                       description: "Heymoa 모바일 앱 프로젝트"
@@ -3787,6 +3933,302 @@ paths:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
                       details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/notes:
+    get:
+      tags:
+      - "Notes"
+      summary: "워크스페이스 회의 목록 조회"
+      description: "워크스페이스 전체 회의를 검색·필터·정렬해 조회한다. 「모든 회의」 화면이 쓰는\
+        \ 유일한 경로다 — 프로젝트 단위 목록만으로는 그릴 수 없다."
+      operationId: "getWorkspaceNotes"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      - name: "q"
+        in: "query"
+        description: "제목·프로젝트명·참석자명 부분 일치. 트림 후 빈 문자열이면 무시"
+        required: false
+        schema:
+          type: "string"
+          maxLength: 100
+      - name: "meetingStatus"
+        in: "query"
+        description: "복수 지정 시 OR. 생략하면 전체"
+        required: false
+        style: "form"
+        explode: false
+        schema:
+          type: "array"
+          items:
+            type: "string"
+            enum:
+            - "NOT_STARTED"
+            - "IN_PROGRESS"
+            - "PAUSED"
+            - "ENDED"
+        example: "IN_PROGRESS,PAUSED"
+      - name: "projectId"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+      - name: "sort"
+        in: "query"
+        description: "「예정」과 「지난」은 정렬 축이 달라 한 번에 못 나온다 — 클라이언트가 두 번 부른다"
+        required: false
+        schema:
+          type: "string"
+          default: "updatedAt_desc"
+          enum:
+          - "scheduledAt_asc"
+          - "startedAt_desc"
+          - "updatedAt_desc"
+      - name: "cursor"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+      - name: "limit"
+        in: "query"
+        required: false
+        schema:
+          type: "integer"
+          default: 30
+          minimum: 1
+          maximum: 100
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotePageResponse"
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+    post:
+      tags:
+      - "Notes"
+      summary: "회의 생성 (프로젝트 미지정 허용)"
+      description: "「+ 새 회의」가 「프로젝트 전체」 상태에서 눌릴 때 쓴다. projectId 가 null 이면\
+        \ 워크스페이스 기본 프로젝트에 넣는다. 프로젝트 안에서 만드는 기존 경로는 그대로 둔다."
+      operationId: "createWorkspaceNote"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteCreateRequest"
+      responses:
+        "201":
+          description: "생성 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResponse"
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/notifications/read-all:
+    put:
+      tags:
+      - "Notifications"
+      summary: "알림 전부 읽음 처리"
+      description: "인박스의 「전부 읽음」. 단건 호출을 N회 반복하지 않는다. 갱신된 목록을 그대로\
+        \ 돌려주면 클라이언트가 재조회하지 않는다."
+      operationId: "readAllNotifications"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/action-items:
+    get:
+      tags:
+      - "ActionItems"
+      summary: "액션 아이템 목록 조회"
+      description: "여러 회의의 할 일을 한 곳에 모은다. 분석이 SUCCEEDED 인 회의의 것만 나온다."
+      operationId: "getActionItems"
+      parameters:
+      - name: "workspaceId"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AD"
+      - name: "q"
+        in: "query"
+        description: "할 일 내용 부분 일치"
+        required: false
+        schema:
+          type: "string"
+          maxLength: 100
+      - name: "assigneeId"
+        in: "query"
+        description: "UNASSIGNED 를 주면 담당자 미지정만"
+        required: false
+        schema:
+          type: "string"
+      - name: "status"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+          default: "OPEN"
+          enum:
+          - "OPEN"
+          - "DONE"
+          - "ALL"
+      - name: "dueBefore"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+          format: "date-time"
+      - name: "projectId"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+      - name: "cursor"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+      - name: "limit"
+        in: "query"
+        required: false
+        schema:
+          type: "integer"
+          default: 50
+          minimum: 1
+          maximum: 100
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItemPageResponse"
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/action-items/{actionItemId}:
+    patch:
+      tags:
+      - "ActionItems"
+      summary: "액션 아이템 수정"
+      description: "완료 토글·담당자·기한. 본문은 분석이 만든 것이라 고치지 않는다."
+      operationId: "updateActionItem"
+      parameters:
+      - name: "actionItemId"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0K9GVJT2C4Q20"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionItemUpdateRequest"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItemResponse"
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -4047,111 +4489,7 @@ components:
               type: "array"
               description: "노트 목록"
               items:
-                required:
-                - "activeSessionStartedAt"
-                - "createdAt"
-                - "lastRecordedAt"
-                - "meetingStartedAt"
-                - "meetingStartedBy"
-                - "meetingStatus"
-                - "noteId"
-                - "projectId"
-                - "recordedDurationMs"
-                - "title"
-                - "updatedAt"
-                type: "object"
-                properties:
-                  meetingStartedAt:
-                    type: "string"
-                    description: "최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)"
-                    nullable: true
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  createdAt:
-                    type: "string"
-                    description: "노트 생성 시각"
-                    nullable: false
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  lastRecordedAt:
-                    type: "string"
-                    description: "가장 최근 종료된 전사 세션의 시작 시각"
-                    nullable: true
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  meetingStartedBy:
-                    type: "object"
-                    properties:
-                      name:
-                        type: "string"
-                        description: "회의 시작자 이름"
-                        nullable: false
-                        example: "홍길동"
-                      userId:
-                        type: "string"
-                        description: "회의 시작자의 13자리 TSID"
-                        nullable: false
-                        example: "0HZX2K7M9Q4AC"
-                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
-                    description: "회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)"
-                    nullable: true
-                    required:
-                    - "userId"
-                    - "name"
-                  recordedDurationMs:
-                    type: "integer"
-                    description: "ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt\
-                      \ 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0"
-                    nullable: false
-                    example: 6500
-                    format: "int64"
-                    minimum: 0
-                  meetingStatus:
-                    type: "string"
-                    description: "회의 상태"
-                    nullable: false
-                    example: "IN_PROGRESS"
-                    enum:
-                    - "NOT_STARTED"
-                    - "IN_PROGRESS"
-                    - "PAUSED"
-                    - "ENDED"
-                  noteId:
-                    type: "string"
-                    description: "노트의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AF"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  title:
-                    type: "string"
-                    description: "노트 제목"
-                    nullable: false
-                    example: "주간 회의"
-                    maxLength: 200
-                  projectId:
-                    type: "string"
-                    description: "프로젝트의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AE"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  activeSessionStartedAt:
-                    type: "string"
-                    description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
-                    nullable: true
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  updatedAt:
-                    type: "string"
-                    description: "노트 수정 시각"
-                    nullable: false
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
+                $ref: "#/components/schemas/NoteSummary"
               nullable: false
           description: "성공 응답 데이터"
           nullable: false
@@ -4492,104 +4830,19 @@ components:
       type: "object"
       properties:
         data:
-          required:
-          - "activeSessionStartedAt"
-          - "createdAt"
-          - "meetingStartedAt"
-          - "meetingStartedBy"
-          - "meetingStatus"
-          - "noteId"
-          - "projectId"
-          - "recordedDurationMs"
-          - "title"
-          - "updatedAt"
-          type: "object"
-          properties:
-            createdAt:
-              type: "string"
-              description: "노트 생성 시각"
-              nullable: false
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
-            meetingStartedBy:
-              type: "object"
-              properties:
-                name:
-                  type: "string"
-                  description: "회의 시작자 이름"
-                  nullable: false
-                  example: "홍길동"
-                userId:
-                  type: "string"
-                  description: "회의 시작자의 13자리 TSID"
-                  nullable: false
-                  example: "0HZX2K7M9Q4AC"
-                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
-              description: "회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)"
-              nullable: true
-              required:
-              - "userId"
-              - "name"
-            recordedDurationMs:
-              type: "integer"
-              description: "ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt\
-                \ 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0"
-              nullable: false
-              example: 0
-              format: "int64"
-              minimum: 0
-            meetingStatus:
-              type: "string"
-              description: "회의 상태"
-              nullable: false
-              example: "NOT_STARTED"
-              enum:
-              - "NOT_STARTED"
-              - "IN_PROGRESS"
-              - "PAUSED"
-              - "ENDED"
-            noteId:
-              type: "string"
-              description: "노트의 13자리 TSID"
-              nullable: false
-              example: "0HZX2K7M9Q4AF"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            title:
-              type: "string"
-              description: "노트 제목"
-              nullable: false
-              example: "주간 회의"
-              maxLength: 200
-            projectId:
-              type: "string"
-              description: "프로젝트의 13자리 TSID"
-              nullable: false
-              example: "0HZX2K7M9Q4AE"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            updatedAt:
-              type: "string"
-              description: "노트 수정 시각"
-              nullable: false
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
-            meetingStartedAt:
-              type: "string"
-              description: "최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)"
-              nullable: true
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
-            activeSessionStartedAt:
-              type: "string"
-              description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
-              nullable: true
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
+          allOf:
+          - $ref: "#/components/schemas/NoteSummary"
+          - required:
+            - "context"
+            type: "object"
+            properties:
+              context:
+                type: "string"
+                description: "회의 전 적어 두는 안건·용어·배경. 요약 입력으로 쓰인다. 목록에는\
+                  \ 내리지 않는다 — 2000자를 30행 곱하면 목록 응답이 60KB가 된다"
+                nullable: true
+                example: "결제 개편 일정과 리소스 배분이 핵심 안건."
+                maxLength: 2000
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -5581,6 +5834,7 @@ components:
               description: "프로젝트 목록"
               items:
                 required:
+                - "isDefault"
                 - "createdAt"
                 - "description"
                 - "name"
@@ -5589,6 +5843,12 @@ components:
                 - "workspaceId"
                 type: "object"
                 properties:
+                  isDefault:
+                    type: "boolean"
+                    description: "워크스페이스 기본 프로젝트. 워크스페이스당 정확히 하나.\
+                      \ 「+ 새 회의」가 프로젝트 전체 상태에서 눌렸을 때 어디에 만들지의 근거다"
+                    nullable: false
+                    example: false
                   createdAt:
                     type: "string"
                     description: "프로젝트 생성 시각"
@@ -5816,6 +6076,7 @@ components:
       properties:
         data:
           required:
+          - "isDefault"
           - "createdAt"
           - "description"
           - "name"
@@ -5824,6 +6085,11 @@ components:
           - "workspaceId"
           type: "object"
           properties:
+            isDefault:
+              type: "boolean"
+              description: "워크스페이스 기본 프로젝트. 워크스페이스당 정확히 하나"
+              nullable: false
+              example: false
             createdAt:
               type: "string"
               description: "프로젝트 생성 시각"
@@ -6115,6 +6381,466 @@ components:
           description: "필드별 오류 상세"
       description: "오류 정보"
       title: "AppError"
+    NoteSummary:
+      title: "NoteSummary"
+      description: "회의 요약. 목록·단건·워크스페이스 전역 목록이 함께 쓴다."
+      required:
+      - "analysisStatus"
+      - "participants"
+      - "previousNote"
+      - "scheduledAt"
+      - "activeSessionStartedAt"
+      - "createdAt"
+      - "lastRecordedAt"
+      - "meetingStartedAt"
+      - "meetingStartedBy"
+      - "meetingStatus"
+      - "noteId"
+      - "projectId"
+      - "recordedDurationMs"
+      - "title"
+      - "updatedAt"
+      type: "object"
+      properties:
+        scheduledAt:
+          type: "string"
+          description: "예정 일시. null 이면 일시 미정"
+          nullable: true
+          example: "2026-08-05T05:00:00Z"
+          format: "date-time"
+        participants:
+          type: "array"
+          description: "참석자. 워크스페이스 멤버 중에서 고른다. 공유 범위와는 다른 개념이다\
+            \ — 회의록은 멤버 전원이 보고 참석자는 「누가 있었나」다"
+          nullable: false
+          maxItems: 50
+          items:
+            required:
+            - "name"
+            - "userId"
+            type: "object"
+            properties:
+              userId:
+                type: "string"
+                nullable: false
+                example: "0HZX2K7M9Q4AC"
+                pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                minLength: 13
+                maxLength: 13
+              name:
+                type: "string"
+                nullable: false
+                example: "홍길동"
+              email:
+                type: "string"
+                description: "아바타 hover 툴팁이 쓴다"
+                nullable: true
+                example: "hong@heymoa.com"
+                format: "email"
+        analysisStatus:
+          type: "string"
+          description: "최신 분석 잡 상태. 한 번도 안 돌렸으면 NONE. meetingStatus 와 직교한다\
+            \ — 배지가 「종료됨 + 분석 중」으로 나란히 붙는다"
+          nullable: false
+          example: "NONE"
+          enum:
+          - "NONE"
+          - "PENDING"
+          - "RUNNING"
+          - "SUCCEEDED"
+          - "FAILED"
+        previousNote:
+          type: "object"
+          description: "이 회의가 후속인 원 회의. 트리가 아니라 사슬이라 하나뿐이다"
+          nullable: true
+          required:
+          - "noteId"
+          - "title"
+          properties:
+            noteId:
+              type: "string"
+              nullable: false
+              example: "0HZX2K7M9Q4AG"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            title:
+              type: "string"
+              nullable: false
+              example: "3분기 로드맵 초안"
+        meetingStartedAt:
+          type: "string"
+          description: "최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)"
+          nullable: true
+          example: "2026-07-14T01:02:03Z"
+          format: "date-time"
+        createdAt:
+          type: "string"
+          description: "노트 생성 시각"
+          nullable: false
+          example: "2026-07-14T01:02:03Z"
+          format: "date-time"
+        lastRecordedAt:
+          type: "string"
+          description: "가장 최근 종료된 전사 세션의 시작 시각"
+          nullable: true
+          example: "2026-07-14T01:02:03Z"
+          format: "date-time"
+        meetingStartedBy:
+          type: "object"
+          properties:
+            name:
+              type: "string"
+              description: "회의 시작자 이름"
+              nullable: false
+              example: "홍길동"
+            userId:
+              type: "string"
+              description: "회의 시작자의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AC"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+          description: "회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)"
+          nullable: true
+          required:
+          - "userId"
+          - "name"
+        recordedDurationMs:
+          type: "integer"
+          description: "ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt\
+            \ 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0"
+          nullable: false
+          example: 6500
+          format: "int64"
+          minimum: 0
+        meetingStatus:
+          type: "string"
+          description: "회의 상태"
+          nullable: false
+          example: "IN_PROGRESS"
+          enum:
+          - "NOT_STARTED"
+          - "IN_PROGRESS"
+          - "PAUSED"
+          - "ENDED"
+        noteId:
+          type: "string"
+          description: "노트의 13자리 TSID"
+          nullable: false
+          example: "0HZX2K7M9Q4AF"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        title:
+          type: "string"
+          description: "노트 제목"
+          nullable: false
+          example: "주간 회의"
+          maxLength: 200
+        projectId:
+          type: "string"
+          description: "프로젝트의 13자리 TSID"
+          nullable: false
+          example: "0HZX2K7M9Q4AE"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        activeSessionStartedAt:
+          type: "string"
+          description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
+          nullable: true
+          example: "2026-07-14T01:02:03Z"
+          format: "date-time"
+        updatedAt:
+          type: "string"
+          description: "노트 수정 시각"
+          nullable: false
+          example: "2026-07-14T01:02:03Z"
+          format: "date-time"
+    NotePageResponse:
+      title: "NotePageResponse"
+      description: "커서 페이지네이션을 쓰는 회의 목록. 기존 NoteListResponse 는 커서가 없어\
+        \ 새 스키마로 뺐다 — 목록 응답이 두 종류가 된다."
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "nextCursor"
+          - "notes"
+          type: "object"
+          properties:
+            notes:
+              type: "array"
+              nullable: false
+              items:
+                $ref: "#/components/schemas/NoteSummary"
+            nextCursor:
+              type: "string"
+              description: "다음 페이지 커서. 마지막 페이지면 null"
+              nullable: true
+              example: "eyJ1IjoiMjAyNi0wNy0xNCJ9"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    NoteCreateRequest:
+      title: "NoteCreateRequest"
+      required:
+      - "title"
+      type: "object"
+      properties:
+        title:
+          type: "string"
+          nullable: false
+          example: "주간 회의"
+          minLength: 1
+          maxLength: 200
+        projectId:
+          type: "string"
+          description: "워크스페이스 스코프 생성에서만 의미가 있다. null 이면 기본 프로젝트"
+          nullable: true
+          example: "0HZX2K7M9Q4AE"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        scheduledAt:
+          type: "string"
+          description: "예정 일시. null 이면 일시 미정"
+          nullable: true
+          example: "2026-08-05T05:00:00Z"
+          format: "date-time"
+        participantIds:
+          type: "array"
+          nullable: true
+          maxItems: 50
+          items:
+            type: "string"
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        context:
+          type: "string"
+          nullable: true
+          maxLength: 2000
+        contextFromNoteIds:
+          type: "array"
+          description: "지난 회의에서 맥락을 이어받는다. 서버가 요약해 context 초안을 만든다.\
+            \ 첫 항목이 previousNoteId 의 기본값이 된다"
+          nullable: true
+          maxItems: 5
+          items:
+            type: "string"
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        previousNoteId:
+          type: "string"
+          description: "이 회의가 후속인 원 회의. 같은 프로젝트여야 하고 순환은 거부한다"
+          nullable: true
+          example: "0HZX2K7M9Q4AG"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+    NoteUpdateRequest:
+      title: "NoteUpdateRequest"
+      description: "부분 수정. 키가 없으면 그대로 두고, 키가 있고 값이 null 이면 지운다 —\
+        \ 이 구분이 없으면 「일시 미정으로 되돌리기」를 표현할 수 없다."
+      type: "object"
+      properties:
+        title:
+          type: "string"
+          nullable: false
+          example: "주간 회의"
+          minLength: 1
+          maxLength: 200
+        projectId:
+          type: "string"
+          description: "회의 이동"
+          nullable: false
+          example: "0HZX2K7M9Q4AE"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        scheduledAt:
+          type: "string"
+          nullable: true
+          example: "2026-08-05T05:00:00Z"
+          format: "date-time"
+        participantIds:
+          type: "array"
+          nullable: true
+          maxItems: 50
+          items:
+            type: "string"
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        context:
+          type: "string"
+          nullable: true
+          maxLength: 2000
+        previousNoteId:
+          type: "string"
+          nullable: true
+          example: "0HZX2K7M9Q4AG"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+    ActionItem:
+      title: "ActionItem"
+      description: "회의 분석에서 나온 할 일. AnalysisResultResponse.actionItems(마크다운\
+        \ 문자열)와 함께 존재한다 — 그쪽은 요약 탭이 계속 쓰고, 이쪽은 회의를 가로지르는 뷰를 위한 것이다.\
+        \ 이 리소스가 생기려면 heymoa-ai 의 분석 출력이 구조화돼야 한다."
+      required:
+      - "actionItemId"
+      - "assignee"
+      - "createdAt"
+      - "dueAt"
+      - "noteId"
+      - "noteTitle"
+      - "projectId"
+      - "status"
+      - "text"
+      type: "object"
+      properties:
+        actionItemId:
+          type: "string"
+          nullable: false
+          example: "0K9GVJT2C4Q20"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        noteId:
+          type: "string"
+          nullable: false
+          example: "0HZX2K7M9Q4AF"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        noteTitle:
+          type: "string"
+          description: "출처 회의 제목. 목록이 회의를 가로지르므로 N+1 을 피하려고 같이 내린다"
+          nullable: false
+          example: "3분기 로드맵 초안"
+        projectId:
+          type: "string"
+          nullable: false
+          example: "0HZX2K7M9Q4AE"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        text:
+          type: "string"
+          nullable: false
+          example: "결제 개편 착수 시점 확정"
+          maxLength: 500
+        assignee:
+          type: "object"
+          description: "담당자. 분석이 못 고르면 null 이고 화면은 「미지정」으로 그린다"
+          nullable: true
+          required:
+          - "name"
+          - "userId"
+          properties:
+            userId:
+              type: "string"
+              nullable: false
+              example: "0HZX2K7M9Q4AC"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+            name:
+              type: "string"
+              nullable: false
+              example: "김서연"
+        dueAt:
+          type: "string"
+          description: "기한. null 이면 기한 없음"
+          nullable: true
+          example: "2026-08-01T00:00:00Z"
+          format: "date-time"
+        status:
+          type: "string"
+          nullable: false
+          example: "OPEN"
+          enum:
+          - "OPEN"
+          - "DONE"
+        createdAt:
+          type: "string"
+          nullable: false
+          example: "2026-07-24T01:02:03Z"
+          format: "date-time"
+    ActionItemPageResponse:
+      title: "ActionItemPageResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "actionItems"
+          - "nextCursor"
+          type: "object"
+          properties:
+            actionItems:
+              type: "array"
+              nullable: false
+              items:
+                $ref: "#/components/schemas/ActionItem"
+            nextCursor:
+              type: "string"
+              nullable: true
+              example: "eyJ1IjoiMjAyNi0wNy0xNCJ9"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    ActionItemResponse:
+      title: "ActionItemResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          $ref: "#/components/schemas/ActionItem"
+        success:
+          type: "boolean"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    ActionItemUpdateRequest:
+      title: "ActionItemUpdateRequest"
+      description: "부분 수정. 키가 없으면 그대로 둔다."
+      type: "object"
+      properties:
+        status:
+          type: "string"
+          nullable: false
+          example: "DONE"
+          enum:
+          - "OPEN"
+          - "DONE"
+        assigneeId:
+          type: "string"
+          description: "null 이면 담당자를 지운다"
+          nullable: true
+          example: "0HZX2K7M9Q4AC"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        dueAt:
+          type: "string"
+          description: "null 이면 기한을 지운다"
+          nullable: true
+          example: "2026-08-01T00:00:00Z"
+          format: "date-time"
   securitySchemes:
     accessCookie:
       type: "apiKey"

@@ -9,10 +9,10 @@
 /**
  * 회의 상태
  */
-export type NoteListResponseDataNotesItemMeetingStatus =
-  (typeof NoteListResponseDataNotesItemMeetingStatus)[keyof typeof NoteListResponseDataNotesItemMeetingStatus];
+export type NoteSummaryMeetingStatus =
+  (typeof NoteSummaryMeetingStatus)[keyof typeof NoteSummaryMeetingStatus];
 
-export const NoteListResponseDataNotesItemMeetingStatus = {
+export const NoteSummaryMeetingStatus = {
   NOT_STARTED: "NOT_STARTED",
   IN_PROGRESS: "IN_PROGRESS",
   PAUSED: "PAUSED",

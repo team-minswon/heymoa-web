@@ -11,3 +11,4 @@ export { getAnalysisMock } from "./analysis/analysis.msw";
 export { getWorkspaceMembersMock } from "./workspace-members/workspace-members.msw";
 export { getProjectsMock } from "./projects/projects.msw";
 export { getNoteSharedChatMock } from "./note-shared-chat/note-shared-chat.msw";
+export { getActionItemsMock } from "./action-items/action-items.msw";

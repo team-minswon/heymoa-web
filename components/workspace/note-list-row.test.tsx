@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
-import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import type { NoteSummary } from "@/lib/api/generated/models";
 
 const recording = vi.hoisted(() => ({
   current: {
@@ -24,8 +24,8 @@ vi.mock("@/components/transcription/recording-provider", () => ({
 }));
 
 function note(
-  overrides: Partial<NoteListResponseDataNotesItem> = {}
-): NoteListResponseDataNotesItem {
+  overrides: Partial<NoteSummary> = {}
+): NoteSummary {
   return {
     noteId: "01K0000000002",
     projectId: "01K0000000001",
@@ -37,6 +37,10 @@ function note(
     activeSessionStartedAt: "2026-07-11T00:00:00Z",
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: "2026-07-11T00:00:00Z",
+    scheduledAt: null,
+    participants: [],
+    analysisStatus: "NONE",
+    previousNote: null,
     meetingStartedBy: null,
     ...overrides,
   };

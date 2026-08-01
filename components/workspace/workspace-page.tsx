@@ -6,7 +6,7 @@ import { useQueries } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
-import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import type { NoteSummary } from "@/lib/api/generated/models";
 import {
   getGetNotesQueryOptions,
   type getNotesResponse,
@@ -28,7 +28,7 @@ export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
 export const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
 
 export function noteListRefetchInterval(
-  notes: NoteListResponseDataNotesItem[] | undefined
+  notes: NoteSummary[] | undefined
 ): number {
   return notes?.some(isMeetingActive)
     ? ACTIVE_NOTE_LIST_POLL_MS
@@ -37,7 +37,7 @@ export function noteListRefetchInterval(
 
 function notesFromResponse(
   response: getNotesResponse | undefined
-): NoteListResponseDataNotesItem[] | undefined {
+): NoteSummary[] | undefined {
   return response?.status === 200 && response.data.success
     ? response.data.data.notes
     : undefined;
@@ -51,7 +51,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const selectedProject = projects.find(
     (project) => project.projectId === selectedProjectId
   );
-  const singleNotesQuery = useGetNotes(selectedProjectId ?? "", {
+  const singleNotesQuery = useGetNotes(selectedProjectId ?? "", undefined, {
     query: {
       enabled: selectedProjectId !== null,
       refetchInterval: (query) =>
@@ -62,7 +62,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     queries: selectedProjectId
       ? []
       : projects.map((project) =>
-          getGetNotesQueryOptions(project.projectId, {
+          getGetNotesQueryOptions(project.projectId, undefined, {
             query: {
               refetchInterval: (query) =>
                 noteListRefetchInterval(notesFromResponse(query.state.data)),
@@ -84,7 +84,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     singleNotesQuery.data?.status === 200 && singleNotesQuery.data.data.success
       ? (singleNotesQuery.data.data.data.notes ?? [])
       : [];
-  const notes: NoteListResponseDataNotesItem[] = selectedProjectId
+  const notes: NoteSummary[] = selectedProjectId
     ? selectedNotes
     : allNotesQueries.notes;
   // 유저가 아직 안 풀렸으면(undefined) 소유 판별을 하지 않는다 — meetingStartedBy가 null인

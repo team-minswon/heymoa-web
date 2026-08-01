@@ -5,10 +5,16 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import { faker } from "@faker-js/faker";
+
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { NoteListResponse, NoteResponse } from "../models";
+import type {
+  NoteListResponse,
+  NotePageResponse,
+  NoteResponse,
+} from "../models";
 
 export const getGetNoteResponseMock = (): NoteResponse => ({
   success: true,
@@ -22,6 +28,14 @@ export const getGetNoteResponseMock = (): NoteResponse => ({
     meetingStartedAt: "2026-07-14T01:02:03Z",
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
+    lastRecordedAt: "2026-07-14T01:02:03Z",
+    scheduledAt: null,
+    participants: [
+      { userId: "0HZX2K7M9Q4AC", name: "홍길동", email: "hong@heymoa.com" },
+    ],
+    analysisStatus: "SUCCEEDED",
+    previousNote: null,
+    context: "결제 개편 일정과 리소스 배분이 핵심 안건.",
     meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
   },
   error: null,
@@ -39,6 +53,14 @@ export const getUpdateNoteResponseMock = (): NoteResponse => ({
     meetingStartedAt: "2026-07-14T01:02:03Z",
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
+    lastRecordedAt: "2026-07-14T01:02:03Z",
+    scheduledAt: null,
+    participants: [
+      { userId: "0HZX2K7M9Q4AC", name: "홍길동", email: "hong@heymoa.com" },
+    ],
+    analysisStatus: "SUCCEEDED",
+    previousNote: null,
+    context: "결제 개편 일정과 리소스 배분이 핵심 안건.",
     meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
   },
   error: null,
@@ -59,6 +81,12 @@ export const getGetNotesResponseMock = (): NoteListResponse => ({
         lastRecordedAt: "2026-07-14T01:02:03Z",
         recordedDurationMs: 6500,
         activeSessionStartedAt: "2026-07-14T01:02:03Z",
+        scheduledAt: null,
+        participants: [
+          { userId: "0HZX2K7M9Q4AC", name: "홍길동", email: "hong@heymoa.com" },
+        ],
+        analysisStatus: "SUCCEEDED",
+        previousNote: null,
         meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
       },
     ],
@@ -78,9 +106,186 @@ export const getCreateNoteResponseMock = (): NoteResponse => ({
     meetingStartedAt: null,
     recordedDurationMs: 0,
     activeSessionStartedAt: null,
+    lastRecordedAt: null,
+    scheduledAt: "2026-08-05T05:00:00Z",
+    participants: [
+      { userId: "0HZX2K7M9Q4AC", name: "홍길동", email: "hong@heymoa.com" },
+    ],
+    analysisStatus: "NONE",
+    previousNote: null,
+    context: "결제 개편 일정과 리소스 배분이 핵심 안건.",
     meetingStartedBy: null,
   },
   error: null,
+});
+
+export const getGetWorkspaceNotesResponseMock = (
+  overrideResponse: Partial<Extract<NotePageResponse, object>> = {}
+): NotePageResponse => ({
+  data: {
+    notes: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      scheduledAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      participants: Array.from(
+        { length: faker.number.int({ min: 1, max: 50 }) },
+        (_, i) => i + 1
+      ).map(() => ({
+        userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        email: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([faker.internet.email(), null]),
+          undefined,
+        ]),
+      })),
+      analysisStatus: faker.helpers.arrayElement([
+        "NONE",
+        "PENDING",
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
+      ] as const),
+      previousNote: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+            title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          },
+          null,
+        ]),
+        null,
+      ]),
+      meetingStartedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      lastRecordedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      meetingStartedBy: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+          },
+          null,
+        ]),
+        null,
+      ]),
+      recordedDurationMs: faker.number.int({ min: 0 }),
+      meetingStatus: faker.helpers.arrayElement([
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "PAUSED",
+        "ENDED",
+      ] as const),
+      noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      activeSessionStartedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    nextCursor: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
+
+export const getCreateWorkspaceNoteResponseMock = (
+  overrideResponse: Partial<Extract<NoteResponse, object>> = {}
+): NoteResponse => ({
+  data: {
+    ...{
+      scheduledAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      participants: Array.from(
+        { length: faker.number.int({ min: 1, max: 50 }) },
+        (_, i) => i + 1
+      ).map(() => ({
+        userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        email: faker.helpers.arrayElement([
+          faker.helpers.arrayElement([faker.internet.email(), null]),
+          undefined,
+        ]),
+      })),
+      analysisStatus: faker.helpers.arrayElement([
+        "NONE",
+        "PENDING",
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
+      ] as const),
+      previousNote: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+            title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          },
+          null,
+        ]),
+        null,
+      ]),
+      meetingStartedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+      lastRecordedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      meetingStartedBy: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            userId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+          },
+          null,
+        ]),
+        null,
+      ]),
+      recordedDurationMs: faker.number.int({ min: 0 }),
+      meetingStatus: faker.helpers.arrayElement([
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "PAUSED",
+        "ENDED",
+      ] as const),
+      noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+      projectId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      activeSessionStartedAt: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+    },
+    ...{
+      context: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 2000 } }),
+        null,
+      ]),
+    },
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
 });
 
 export const getGetNoteMockHandler = (
@@ -126,6 +331,27 @@ export const getUpdateNoteMockHandler = (
           : getUpdateNoteResponseMock(),
         { status: 200 }
       );
+    },
+    options
+  );
+};
+
+export const getDeleteNoteMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.delete(
+    "*/v1/notes/:noteId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options
   );
@@ -178,9 +404,60 @@ export const getCreateNoteMockHandler = (
     options
   );
 };
+
+export const getGetWorkspaceNotesMockHandler = (
+  overrideResponse?:
+    | NotePageResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<NotePageResponse> | NotePageResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/notes",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetWorkspaceNotesResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getCreateWorkspaceNoteMockHandler = (
+  overrideResponse?:
+    | NoteResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<NoteResponse> | NoteResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/notes",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateWorkspaceNoteResponseMock(),
+        { status: 201 }
+      );
+    },
+    options
+  );
+};
 export const getNotesMock = () => [
   getGetNoteMockHandler(),
   getUpdateNoteMockHandler(),
+  getDeleteNoteMockHandler(),
   getGetNotesMockHandler(),
   getCreateNoteMockHandler(),
+  getGetWorkspaceNotesMockHandler(),
+  getCreateWorkspaceNoteMockHandler(),
 ];

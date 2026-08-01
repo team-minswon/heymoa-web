@@ -10,7 +10,11 @@ import type { NoteSummary } from "./noteSummary";
 /**
  * 성공 응답 데이터
  */
-export type NoteListResponseData = {
-  /** 노트 목록 */
+export type NotePageResponseData = {
   notes: NoteSummary[];
+  /**
+   * 다음 페이지 커서. 마지막 페이지면 null
+   * @nullable
+   */
+  nextCursor: string | null;
 };

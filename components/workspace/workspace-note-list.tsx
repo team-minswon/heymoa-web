@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { NoteListRow } from "@/components/workspace/note-list-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
+import type { NoteSummary } from "@/lib/api/generated/models";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 import { groupNotesByRecency } from "@/lib/workspace/note-groups";
@@ -20,8 +20,8 @@ import { groupNotesByRecency } from "@/lib/workspace/note-groups";
  * 정본(52·한 줄) 그대로이고 헤더만 위에 붙는다.
  */
 export function sortNotesByRecency(
-  notes: NoteListResponseDataNotesItem[]
-): NoteListResponseDataNotesItem[] {
+  notes: NoteSummary[]
+): NoteSummary[] {
   return [...notes].sort(
     (a, b) =>
       Date.parse(b.updatedAt) - Date.parse(a.updatedAt) ||
@@ -37,7 +37,7 @@ export function WorkspaceNoteList({
   onRetry,
 }: {
   workspaceId: string;
-  notes: NoteListResponseDataNotesItem[];
+  notes: NoteSummary[];
   isPending: boolean;
   isError: boolean;
   onRetry: () => void;

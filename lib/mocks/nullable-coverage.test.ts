@@ -323,6 +323,11 @@ const KNOWN_ONE_SIDED = new Set([
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
   "CurrentTranscriptionSessionNullableResponse.data.startedAt",
+  // 표본 URL은 limit을 안 붙인다. 시드가 기본 페이지 크기(회의 30·액션 50)보다 적어
+  // 커서가 늘 null이다 — 「다음 페이지가 있다」 분기는 limit을 준 호출에서만 나온다.
+  // 시드를 30건 넘게 불리는 건 이 한 필드 때문에 치르기엔 비싸다.
+  "NotePageResponse.data.nextCursor",
+  "ActionItemPageResponse.data.nextCursor",
 ]);
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */

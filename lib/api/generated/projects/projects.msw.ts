@@ -16,6 +16,7 @@ export const getGetProjectsResponseMock = (): ProjectListResponse => ({
     projects: [
       {
         projectId: "0HZX2K7M9Q4AE",
+        isDefault: false,
         workspaceId: "0HZX2K7M9Q4AD",
         name: "모바일 앱",
         description: "Heymoa 모바일 앱 프로젝트",
@@ -31,6 +32,7 @@ export const getCreateProjectResponseMock = (): ProjectResponse => ({
   success: true,
   data: {
     projectId: "0HZX2K7M9Q4AE",
+    isDefault: false,
     workspaceId: "0HZX2K7M9Q4AD",
     name: "모바일 앱",
     description: "Heymoa 모바일 앱 프로젝트",
@@ -44,6 +46,7 @@ export const getGetProjectResponseMock = (): ProjectResponse => ({
   success: true,
   data: {
     projectId: "0HZX2K7M9Q4AE",
+    isDefault: false,
     workspaceId: "0HZX2K7M9Q4AD",
     name: "모바일 앱",
     description: "Heymoa 모바일 앱 프로젝트",
@@ -57,6 +60,7 @@ export const getUpdateProjectResponseMock = (): ProjectResponse => ({
   success: true,
   data: {
     projectId: "0HZX2K7M9Q4AE",
+    isDefault: false,
     workspaceId: "0HZX2K7M9Q4AD",
     name: "모바일 앱",
     description: "Heymoa 모바일 앱 프로젝트",
