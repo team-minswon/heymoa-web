@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
 import {
   createContext,
   useCallback,
@@ -91,13 +93,19 @@ export function PersonalChatProvider({
   workspaceName?: string;
   children: React.ReactNode;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  // `?panel=assistant` 로 바로 열 수 있다 — 디자인 화면들이 그 주소를 쓰고, 레일이
+  // 버튼으로만 열리면 「이 대화 보고 있어」를 공유할 수 없다.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const deepLinked = searchParams.get("panel") === "assistant";
+  const [isOpen, setIsOpen] = useState(deepLinked);
   /**
    * 한 번이라도 열었는가. 열기 전에는 패널을 마운트하지 않고(조회를 걸지 않는다),
    * 한 번 열면 **닫아도 마운트를 유지한다** — 언마운트하면 흐르던 스트림이 끊기고
    * 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 닫기도 감추기다.
    */
-  const [hasOpened, setHasOpened] = useState(false);
+  const [hasOpened, setHasOpened] = useState(deepLinked);
   const [hidden, setHidden] = useState(false);
   /**
    * 패널이 붙어 있는 노트. **감춰진 동안에는 바꾸지 않는다** — 워크스페이스 답변이 흐르는 중에
@@ -124,6 +132,20 @@ export function PersonalChatProvider({
     setScopeNoteId(nextNote);
   }, []);
 
+  /** 열고 닫을 때 주소를 맞춘다. replace 라 뒤로가기가 패널 토글로 채워지지 않는다. */
+  const setPanelParam = useCallback(
+    (open: boolean) => {
+      const next = new URLSearchParams(searchParams);
+      if (open) next.set("panel", "assistant");
+      else next.delete("panel");
+      const query = next.toString();
+      router.replace(`${pathname}${query ? `?${query}` : ""}`, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams]
+  );
+
   const setTurnActive = useCallback((active: boolean) => {
     turnActiveRef.current = active;
     if (active || deferredScopeRef.current === undefined) return;
@@ -138,12 +160,16 @@ export function PersonalChatProvider({
       open: () => {
         setHasOpened(true);
         setIsOpen(true);
+        setPanelParam(true);
       },
-      close: () => setIsOpen(false),
+      close: () => {
+        setIsOpen(false);
+        setPanelParam(false);
+      },
       setNoteScope,
       setTurnActive,
     }),
-    [hidden, isOpen, setNoteScope, setTurnActive]
+    [hidden, isOpen, setNoteScope, setPanelParam, setTurnActive]
   );
 
   return (

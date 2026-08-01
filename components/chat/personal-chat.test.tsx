@@ -41,6 +41,15 @@ const state = vi.hoisted(() => ({
   releaseStream: null as (() => void) | null,
 }));
 
+const navReplace = vi.hoisted(() => vi.fn());
+const navParams = vi.hoisted(() => ({ value: new URLSearchParams() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: navReplace, push: vi.fn() }),
+  usePathname: () => "/w/01K0000000000",
+  useSearchParams: () => navParams.value,
+}));
+
 vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
   getGetActiveAgentChatQueryKey: (params: unknown) => ["active", params],
   getGetAgentChatMessagesQueryKey: (chatId: string) => ["messages", chatId],
@@ -803,5 +812,14 @@ describe("PersonalChatProvider", () => {
       "disabled",
       true
     );
+  });
+
+  // 디자인 화면들이 `?panel=assistant` 를 쓴다. 버튼으로만 열리면 「이 대화 보고 있어」를
+  // 공유할 수 없고, 새로고침에 레일이 닫힌다.
+  it("panel=assistant 로 들어오면 레일이 열려 있다", () => {
+    navParams.value = new URLSearchParams("panel=assistant");
+    renderChat();
+    expect(screen.getByTestId("personal-chat-panel")).toBeInTheDocument();
+    navParams.value = new URLSearchParams();
   });
 });
