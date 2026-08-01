@@ -26,6 +26,7 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-control-border: var(--control-border);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -84,11 +85,16 @@
   --el-hairline: #e7e5e4;
   --el-hairline-soft: #f0efed;
   --el-hairline-strong: #d6d3d1;
+  /* WCAG 1.4.11 — 컨트롤 경계는 3:1 이 필요하다. hairline(#e7e5e4)은 1.26 이라
+     테두리만으로 경계를 만드는 outline 버튼·입력에는 못 쓴다. 행 구분선은 hairline 그대로. */
+  --el-control-border: #8d877e;
 
   --el-ink: #0c0a09;
   --el-body: #4e4e4e;
   --el-body-strong: #292524;
-  --el-muted: #777169;
+  /* #777169 은 흰 배경에서만 4.5:1 을 넘긴다. 캔버스(#f5f5f5) 4.43 · 칩(#f0efed) 4.20 ·
+     비활성면(#e7e5e4) 3.84 로 전부 미달이라 아래 값으로 내렸다 — 네 배경 전부 통과한다. */
+  --el-muted: #6b655c;
   --el-muted-soft: #a8a29e;
   --el-on-primary: #ffffff;
   --el-on-dark: #ffffff;
@@ -103,6 +109,9 @@
 
   --el-success: #16a34a;
   --el-error: #dc2626;
+  /* 라이브 상태(사이드바 「기록 중」)가 쓰는 3단 램프. 디자인 파일에만 있던 값을 승격했다. */
+  --el-error-strong: #c41f1f;
+  --el-error-bg: #fef2f2;
 
   /* UI Mapping variables */
   --background: var(--el-canvas);
@@ -121,7 +130,8 @@
   --accent-foreground: var(--el-ink);
   --destructive: var(--el-error);
   --border: var(--el-hairline);
-  --input: var(--el-hairline-strong);
+  --input: var(--el-control-border);
+  --control-border: var(--el-control-border);
   --ring: var(--el-ink);
   --radius: 1rem;
 
