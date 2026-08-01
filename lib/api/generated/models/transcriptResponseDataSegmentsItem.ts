@@ -8,6 +8,11 @@
 
 export type TranscriptResponseDataSegmentsItem = {
   /**
+   * 제공자가 붙인 화자 라벨. 이름이 아니라 번호다("1".."15"). **세션이 다르면 같은 번호가 같은 사람이라는 보장이 없다** — 제공자가 스트림마다 번호를 새로 매긴다. 화자 분리를 못 켠 구간은 null
+   * @nullable
+   */
+  speaker?: string | null;
+  /**
    * 세션 내 구간 순서
    * @minimum 0
    */

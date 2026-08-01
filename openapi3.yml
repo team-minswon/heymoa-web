@@ -1703,8 +1703,25 @@ paths:
                         transcriptionSessionId: "0HZX2K7M9Q4AG"
                         sequence: 1
                         text: "안녕하세요."
+                        speaker: "1"
                         startedAtMs: 0
                         endedAtMs: 1200
+                      - segmentId: "0HZX2K7M9Q4AJ"
+                        transcriptionSessionId: "0HZX2K7M9Q4AG"
+                        sequence: 2
+                        text: "네, 시작하겠습니다."
+                        speaker: null
+                        startedAtMs: 1200
+                        endedAtMs: 2400
+                      speakers:
+                      - transcriptionSessionId: "0HZX2K7M9Q4AG"
+                        speaker: "1"
+                        userId: "0HZX2K7M9Q4AC"
+                        displayName: "홍길동"
+                      - transcriptionSessionId: "0HZX2K7M9Q4AG"
+                        speaker: "2"
+                        userId: null
+                        displayName: null
                     error: null
         "400":
           description: "잘못된 요청"
@@ -4220,6 +4237,54 @@ paths:
           $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
+  /v1/notes/{noteId}/speakers:
+    put:
+      tags:
+      - "Transcription"
+      summary: "화자 라벨을 참석자에 연결한다"
+      description: "제공자 라벨은 번호뿐이라 누가 말했는지 모른다. 참석자를 붙여야 전사가 읽힌다.\
+        \ 라벨은 세션 단위라 (transcriptionSessionId, speaker) 가 키다 — 중지 후 이어서 기록하면\
+        \ 번호가 다시 매겨지므로 같은 사람도 구간마다 지정해야 한다."
+      operationId: "assignSpeaker"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakerAssignmentRequest"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptResponse"
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
 components:
   schemas:
     StartTranscriptionSessionResponse:
@@ -5412,6 +5477,7 @@ components:
       properties:
         data:
           required:
+          - "speakers"
           - "segments"
           type: "object"
           properties:
@@ -5428,6 +5494,13 @@ components:
                 - "transcriptionSessionId"
                 type: "object"
                 properties:
+                  speaker:
+                    type: "string"
+                    description: "제공자가 붙인 화자 라벨. 이름이 아니라 번호다(\"1\"..\"15\").\
+                      \ **세션이 다르면 같은 번호가 같은 사람이라는 보장이 없다** — 제공자가\
+                      \ 스트림마다 번호를 새로 매긴다. 화자 분리를 못 켠 구간은 null"
+                    nullable: true
+                    example: "1"
                   sequence:
                     type: "integer"
                     description: "세션 내 구간 순서"
@@ -5471,6 +5544,39 @@ components:
                     format: "int64"
                     minimum: 0
               nullable: false
+            speakers:
+              type: "array"
+              description: "화자 라벨 → 참석자 매핑. 라벨이 세션 단위라 키도 세션을 포함한다.\
+                \ 매핑이 없는 라벨은 화면에서 「화자 N」으로 그린다"
+              nullable: false
+              items:
+                required:
+                - "displayName"
+                - "speaker"
+                - "transcriptionSessionId"
+                - "userId"
+                type: "object"
+                properties:
+                  transcriptionSessionId:
+                    type: "string"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AG"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  speaker:
+                    type: "string"
+                    nullable: false
+                    example: "1"
+                  userId:
+                    type: "string"
+                    description: "참석자로 지정됐으면 그 유저. 아직 안 정했으면 null"
+                    nullable: true
+                    example: "0HZX2K7M9Q4AC"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  displayName:
+                    type: "string"
+                    description: "화면에 쓸 이름. userId 가 있으면 그 사람 이름, 없으면 null"
+                    nullable: true
+                    example: "김서연"
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -6828,6 +6934,30 @@ components:
           nullable: true
           example: "2026-08-01T00:00:00Z"
           format: "date-time"
+    SpeakerAssignmentRequest:
+      title: "SpeakerAssignmentRequest"
+      required:
+      - "speaker"
+      - "transcriptionSessionId"
+      type: "object"
+      properties:
+        transcriptionSessionId:
+          type: "string"
+          nullable: false
+          example: "0HZX2K7M9Q4AG"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        speaker:
+          type: "string"
+          description: "제공자가 붙인 화자 라벨"
+          nullable: false
+          example: "1"
+          maxLength: 8
+        userId:
+          type: "string"
+          description: "참석자의 TSID. null 이면 연결을 지운다"
+          nullable: true
+          example: "0HZX2K7M9Q4AC"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
   securitySchemes:
     accessCookie:
       type: "apiKey"

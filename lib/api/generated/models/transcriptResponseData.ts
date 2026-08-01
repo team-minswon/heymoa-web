@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { TranscriptResponseDataSegmentsItem } from "./transcriptResponseDataSegmentsItem";
+import type { TranscriptResponseDataSpeakersItem } from "./transcriptResponseDataSpeakersItem";
 
 /**
  * 성공 응답 데이터
@@ -13,4 +14,6 @@ import type { TranscriptResponseDataSegmentsItem } from "./transcriptResponseDat
 export type TranscriptResponseData = {
   /** 시간순 확정 전사 구간 목록 */
   segments: TranscriptResponseDataSegmentsItem[];
+  /** 화자 라벨 → 참석자 매핑. 라벨이 세션 단위라 키도 세션을 포함한다. 매핑이 없는 라벨은 화면에서 「화자 N」으로 그린다 */
+  speakers: TranscriptResponseDataSpeakersItem[];
 };

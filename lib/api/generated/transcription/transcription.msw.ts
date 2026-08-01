@@ -5,6 +5,8 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import { faker } from "@faker-js/faker";
+
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
@@ -39,8 +41,32 @@ export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
         transcriptionSessionId: "0HZX2K7M9Q4AG",
         sequence: 1,
         text: "안녕하세요.",
+        speaker: "1",
         startedAtMs: 0,
         endedAtMs: 1200,
+      },
+      {
+        segmentId: "0HZX2K7M9Q4AJ",
+        transcriptionSessionId: "0HZX2K7M9Q4AG",
+        sequence: 2,
+        text: "네, 시작하겠습니다.",
+        speaker: null,
+        startedAtMs: 1200,
+        endedAtMs: 2400,
+      },
+    ],
+    speakers: [
+      {
+        transcriptionSessionId: "0HZX2K7M9Q4AG",
+        speaker: "1",
+        userId: "0HZX2K7M9Q4AC",
+        displayName: "홍길동",
+      },
+      {
+        transcriptionSessionId: "0HZX2K7M9Q4AG",
+        speaker: "2",
+        userId: null,
+        displayName: null,
       },
     ],
   },
@@ -74,6 +100,53 @@ export const getGetCurrentTranscriptionSessionResponseMock =
     },
     error: null,
   });
+
+export const getAssignSpeakerResponseMock = (
+  overrideResponse: Partial<Extract<TranscriptResponse, object>> = {}
+): TranscriptResponse => ({
+  data: {
+    segments: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      speaker: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        undefined,
+      ]),
+      sequence: faker.number.int({ min: 0 }),
+      segmentId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+      endedAtMs: faker.number.int({ min: 0 }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      transcriptionSessionId: faker.helpers.fromRegExp(
+        "^[0-9A-HJKMNP-TV-Z]{13}$"
+      ),
+      startedAtMs: faker.number.int({ min: 0 }),
+    })),
+    speakers: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1
+    ).map(() => ({
+      transcriptionSessionId: faker.helpers.fromRegExp(
+        "^[0-9A-HJKMNP-TV-Z]{13}$"
+      ),
+      speaker: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      userId: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+        null,
+      ]),
+      displayName: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    })),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
 
 export const getGetTranscriptionSessionMockHandler = (
   overrideResponse?:
@@ -176,9 +249,34 @@ export const getGetCurrentTranscriptionSessionMockHandler = (
     options
   );
 };
+
+export const getAssignSpeakerMockHandler = (
+  overrideResponse?:
+    | TranscriptResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<TranscriptResponse> | TranscriptResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notes/:noteId/speakers",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssignSpeakerResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getTranscriptionMock = () => [
   getGetTranscriptionSessionMockHandler(),
   getGetNoteTranscriptMockHandler(),
   getStartTranscriptionSessionMockHandler(),
   getGetCurrentTranscriptionSessionMockHandler(),
+  getAssignSpeakerMockHandler(),
 ];

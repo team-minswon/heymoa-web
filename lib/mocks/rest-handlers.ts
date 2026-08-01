@@ -14,6 +14,7 @@ import type {
   GetNotesParams,
   GetWorkspaceNotesParams,
   NoteCreateRequest,
+  SpeakerAssignmentRequest,
   NoteUpdateRequest,
   ChangeDefaultWorkspaceRequest,
   CreateWorkspaceRequest,
@@ -452,7 +453,10 @@ export const restHandlers = [
   ),
   http.get("*/v1/notes/:noteId/transcript", ({ params }) =>
     resultOf(
-      () => ({ segments: mockDb.listSegments(id(params.noteId)) }),
+      () => ({
+        segments: mockDb.listSegments(id(params.noteId)),
+        speakers: mockDb.listSpeakers(id(params.noteId)),
+      }),
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
   ),
@@ -734,6 +738,20 @@ export const restHandlers = [
       );
     }
   }),
+  http.put("*/v1/notes/:noteId/speakers", async ({ request, params }) =>
+    resultOf(() => {
+      const noteId = id(params.noteId);
+      return request
+        .json()
+        .then((body) => {
+          mockDb.assignSpeaker(noteId, body as SpeakerAssignmentRequest);
+          return {
+            segments: mockDb.listSegments(noteId),
+            speakers: mockDb.listSpeakers(noteId),
+          };
+        });
+    }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."))
+  ),
   http.put("*/v1/notifications/read-all", () =>
     resultOf(() => mockDb.readAllNotifications(), BAD_REQUEST)
   ),

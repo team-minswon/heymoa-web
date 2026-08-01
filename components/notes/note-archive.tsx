@@ -10,7 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteSharedChatMessages } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
-import { groupTranscriptSegments } from "@/lib/transcription/presentation";
+import {
+  groupTranscriptSegments,
+  resolveSpeakerName,
+} from "@/lib/transcription/presentation";
 
 function formatOffset(milliseconds: number) {
   const seconds = Math.floor(milliseconds / 1000);
@@ -101,6 +104,13 @@ export function NoteArchive({ noteId }: { noteId: string }) {
         : [],
     [transcriptQuery.data]
   );
+  const speakerAssignments = useMemo(
+    () =>
+      transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
+        ? (transcriptQuery.data.data.data.speakers ?? [])
+        : [],
+    [transcriptQuery.data]
+  );
   const blocks = useMemo(
     () => groupTranscriptSegments([...segments]),
     [segments]
@@ -172,9 +182,23 @@ export function NoteArchive({ noteId }: { noteId: string }) {
                   <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
                     {formatOffset(block.timelineStartedAtMs)}
                   </time>
-                  <p className="max-w-3xl text-[15px] leading-7 text-[var(--el-ink)]">
-                    {block.text}
-                  </p>
+                  <div className="max-w-3xl">
+                    {block.speaker ? (
+                      <p
+                        data-testid="archive-transcript-speaker"
+                        className="mb-1 text-[11px] font-semibold text-[var(--el-body)]"
+                      >
+                        {resolveSpeakerName(
+                          block.sessionId,
+                          block.speaker,
+                          speakerAssignments
+                        )}
+                      </p>
+                    ) : null}
+                    <p className="text-[15px] leading-7 text-[var(--el-ink)]">
+                      {block.text}
+                    </p>
+                  </div>
                 </article>
               ))}
               {!blocks.length ? (

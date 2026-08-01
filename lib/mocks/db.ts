@@ -18,6 +18,8 @@ import type {
   ProjectResponseData,
   StartTranscriptionSessionResponseData,
   TranscriptResponseDataSegmentsItem,
+  TranscriptResponseDataSpeakersItem,
+  SpeakerAssignmentRequest,
   TranscriptionSessionResponseData,
   UpdateWorkspaceRequest,
   WorkspaceListResponseDataWorkspacesItem,
@@ -124,6 +126,7 @@ type StoreState = {
   notifications: NotificationListResponseDataNotificationsItem[];
   analyses: AnalysisResultResponseData[];
   actionItems: ActionItem[];
+  speakers: TranscriptResponseDataSpeakersItem[];
   integrations: MockIntegration[];
   sharedChatLocks: Set<string>;
   /** 현재 유저가 아닌 멤버가 쥔 잠금 (noteId → 이름). 관전자 화면 재현용. */
@@ -412,6 +415,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000011",
       transcriptionSessionId: sessions[0].sessionId,
       sequence: 1,
+      speaker: "1",
       text: "이번 주 제품 진행 상황을 공유하겠습니다.",
       startedAtMs: 0,
       endedAtMs: 1800,
@@ -420,6 +424,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000012",
       transcriptionSessionId: sessions[0].sessionId,
       sequence: 2,
+      speaker: "2",
       text: "첫 번째 안건은 온보딩 개선입니다.",
       startedAtMs: 2200,
       endedAtMs: 4300,
@@ -428,6 +433,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000013",
       transcriptionSessionId: sessions[0].sessionId,
       sequence: 3,
+      speaker: null,
       text: "다음 주까지 사용자 테스트를 진행합니다.",
       startedAtMs: 5000,
       endedAtMs: 7100,
@@ -436,6 +442,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000030",
       transcriptionSessionId: "01K0000000029",
       sequence: 1,
+      speaker: "1",
       text: "파트너 요구사항을 먼저 확인하겠습니다.",
       startedAtMs: 0,
       endedAtMs: 1900,
@@ -444,6 +451,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000031",
       transcriptionSessionId: "01K0000000029",
       sequence: 2,
+      speaker: "2",
       text: "다음 배포 일정과 책임자를 정리하겠습니다.",
       startedAtMs: 2300,
       endedAtMs: 4500,
@@ -452,6 +460,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000032",
       transcriptionSessionId: "01K0000000029",
       sequence: 3,
+      speaker: null,
       text: "확인한 내용은 회의록에 남기겠습니다.",
       startedAtMs: 5000,
       endedAtMs: 7100,
@@ -557,6 +566,22 @@ function createSeedState(): StoreState {
     analyses: [],
     // 액션 아이템은 분석에서 나온다. 시드는 「지난 기한 / 이번 주 / 기한 없음」과
     // 담당자 유/무를 한 번씩 갖는다 — 화면의 세 묶음과 「미지정」 분기를 목으로 볼 수 있게.
+    // 화자 라벨 → 참석자. 하나만 연결하고 하나는 비워 둔다 — 「화자 2」로 그리는 분기가
+    // 목에서 안 보이면 이름 없는 상태를 검증할 수 없다.
+    speakers: [
+      {
+        transcriptionSessionId: sessions[0].sessionId,
+        speaker: "1",
+        userId: MOCK_USER.userId,
+        displayName: MOCK_USER.name,
+      },
+      {
+        transcriptionSessionId: sessions[0].sessionId,
+        speaker: "2",
+        userId: null,
+        displayName: null,
+      },
+    ],
     actionItems: [
       {
         actionItemId: "01K0000000060",
@@ -1598,6 +1623,71 @@ export const mockDb = {
           a.sequence - b.sequence
       );
     return copy(segments);
+  },
+
+  listSpeakers(noteId: string): TranscriptResponseDataSpeakersItem[] {
+    findNote(noteId);
+    const sessionIds = new Set(
+      state.sessions
+        .filter((session) => session.noteId === noteId)
+        .map((session) => session.sessionId)
+    );
+    // 세그먼트에 나타난 라벨은 매핑이 없어도 목록에 있어야 한다 — 화면이 「화자 N」을
+    // 그리려면 어떤 라벨이 있는지부터 알아야 한다.
+    const seen = new Map<string, TranscriptResponseDataSpeakersItem>();
+    for (const row of state.speakers) {
+      if (sessionIds.has(row.transcriptionSessionId)) {
+        seen.set(`${row.transcriptionSessionId}/${row.speaker}`, row);
+      }
+    }
+    for (const segment of state.segments) {
+      if (!sessionIds.has(segment.transcriptionSessionId)) continue;
+      if (segment.speaker == null) continue;
+      const key = `${segment.transcriptionSessionId}/${segment.speaker}`;
+      if (!seen.has(key)) {
+        seen.set(key, {
+          transcriptionSessionId: segment.transcriptionSessionId,
+          speaker: segment.speaker,
+          userId: null,
+          displayName: null,
+        });
+      }
+    }
+    return copy(
+      [...seen.values()].sort(
+        (a, b) =>
+          a.transcriptionSessionId.localeCompare(b.transcriptionSessionId) ||
+          Number(a.speaker) - Number(b.speaker)
+      )
+    );
+  },
+
+  /**
+   * 라벨을 참석자에 연결한다. 키가 (세션, 라벨)인 이유는 제공자가 스트림마다 번호를
+   * 새로 매기기 때문이다 — 중지 후 이어서 기록하면 같은 사람도 다시 지정해야 한다.
+   */
+  assignSpeaker(noteId: string, input: SpeakerAssignmentRequest) {
+    findNote(noteId);
+    const session = state.sessions.find(
+      (row) =>
+        row.sessionId === input.transcriptionSessionId && row.noteId === noteId
+    );
+    if (!session) fail("BAD_REQUEST");
+    const member = state.members.find((row) => row.userId === input.userId);
+    if (input.userId && !member) fail("BAD_REQUEST");
+    const existing = state.speakers.find(
+      (row) =>
+        row.transcriptionSessionId === input.transcriptionSessionId &&
+        row.speaker === input.speaker
+    );
+    const next = {
+      transcriptionSessionId: input.transcriptionSessionId,
+      speaker: input.speaker,
+      userId: input.userId ?? null,
+      displayName: input.userId ? (member?.name ?? null) : null,
+    };
+    if (existing) Object.assign(existing, next);
+    else state.speakers.push(next);
   },
 
   addSegment(

@@ -189,19 +189,20 @@ describe("OpenAPI contract", () => {
 });
 
 describe("contract sync 2026-07-29", () => {
-  it("mirrors 37 public paths and excludes internal ones", () => {
+  it("mirrors 38 public paths and excludes internal ones", () => {
     const paths = Object.keys(api().paths);
     // APP-281에서 현재 전사 세션 조회 경로가 하나 추가됐다 (32 → 33).
-    // MVP2에서 손으로 넷을 더했다 (33 → 37) — 워크스페이스 회의 목록/생성,
-    // 알림 일괄 읽음, 액션 아이템 목록, 액션 아이템 수정.
+    // MVP2에서 손으로 다섯을 더했다 (33 → 38) — 워크스페이스 회의 목록/생성,
+    // 알림 일괄 읽음, 액션 아이템 목록/수정, 화자 지정.
     // 무엇을 왜 더했는지는 design/CONTRACT-SPEC-DELTA.md에 있다.
-    expect(paths).toHaveLength(37);
+    expect(paths).toHaveLength(38);
     expect(paths).toEqual(
       expect.arrayContaining([
         "/v1/workspaces/{workspaceId}/notes",
         "/v1/notifications/read-all",
         "/v1/workspaces/{workspaceId}/action-items",
         "/v1/action-items/{actionItemId}",
+        "/v1/notes/{noteId}/speakers",
       ])
     );
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);

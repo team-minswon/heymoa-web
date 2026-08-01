@@ -522,6 +522,13 @@ components:
             $ref: '#/components/schemas/Tsid'
           text:
             type: string
+          speaker:
+            type: string
+            nullable: true
+            description: |
+              **잠정값이다.** 실시간 화자 분리는 맥락이 쌓이기 전까지 라벨이 뒤바뀔 수 있어
+              같은 utteranceId 안에서도 값이 달라진다. 확정은 final의 speaker다 —
+              화면은 partial의 화자를 단정해 그리지 않는다.
             minLength: 1
             example: 오늘 회의에서는
       examples:
@@ -562,6 +569,13 @@ components:
             example: 1
           text:
             type: string
+          speaker:
+            type: string
+            nullable: true
+            description: |
+              제공자가 붙인 화자 라벨("1".."15"). 이름이 아니고, **세션이 다르면 같은 번호가
+              같은 사람이라는 보장이 없다** — 제공자가 스트림마다 번호를 새로 매긴다.
+              화자 분리를 못 켠 구간은 null이다.
             minLength: 1
             example: 오늘 회의에서는 출시 일정을 논의했습니다.
           startedAtMs:
@@ -658,6 +672,13 @@ components:
             $ref: '#/components/schemas/Tsid'
           text:
             type: string
+          speaker:
+            type: string
+            nullable: true
+            description: |
+              **잠정값이다.** 실시간 화자 분리는 맥락이 쌓이기 전까지 라벨이 뒤바뀔 수 있어
+              같은 utteranceId 안에서도 값이 달라진다. 확정은 final의 speaker다 —
+              화면은 partial의 화자를 단정해 그리지 않는다.
             minLength: 1
       examples:
         - name: partial
@@ -689,6 +710,13 @@ components:
             minimum: 1
           text:
             type: string
+          speaker:
+            type: string
+            nullable: true
+            description: |
+              제공자가 붙인 화자 라벨("1".."15"). 이름이 아니고, **세션이 다르면 같은 번호가
+              같은 사람이라는 보장이 없다** — 제공자가 스트림마다 번호를 새로 매긴다.
+              화자 분리를 못 켠 구간은 null이다.
             minLength: 1
           startedAtMs:
             type: integer

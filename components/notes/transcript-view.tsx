@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import {
   groupTranscriptSegments,
+  resolveSpeakerName,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
@@ -56,6 +57,13 @@ export function TranscriptView({
     () =>
       transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
         ? (transcriptQuery.data.data.data.segments ?? [])
+        : [],
+    [transcriptQuery.data]
+  );
+  const speakerAssignments = useMemo(
+    () =>
+      transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
+        ? (transcriptQuery.data.data.data.speakers ?? [])
         : [],
     [transcriptQuery.data]
   );
@@ -261,9 +269,23 @@ export function TranscriptView({
                   <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
                     {formatOffset(block.timelineStartedAtMs)}
                   </time>
-                  <p className="min-w-0 whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
-                    {block.text}
-                  </p>
+                  <div className="min-w-0">
+                    {block.speaker ? (
+                      <p
+                        data-testid="transcript-speaker"
+                        className="mb-1 text-[11px] font-semibold text-[var(--el-body)]"
+                      >
+                        {resolveSpeakerName(
+                          block.sessionId,
+                          block.speaker,
+                          speakerAssignments
+                        )}
+                      </p>
+                    ) : null}
+                    <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
+                      {block.text}
+                    </p>
+                  </div>
                 </article>
               ))}
 

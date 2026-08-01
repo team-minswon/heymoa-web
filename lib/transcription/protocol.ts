@@ -17,6 +17,11 @@ const finalEventSchema = z.strictObject({
   utteranceId: tsidSchema,
   sequence: z.number().int().min(1),
   text: z.string().min(1),
+  /**
+   * 제공자가 붙인 화자 라벨("1".."15"). 이름이 아니고, 화자 분리를 못 켠 구간은 null이다.
+   * **세션이 다르면 같은 번호가 같은 사람이라는 보장이 없다.**
+   */
+  speaker: z.string().min(1).max(8).nullish(),
   startedAtMs: z.number().int().min(0),
   endedAtMs: z.number().int().min(0),
 });
@@ -27,6 +32,11 @@ export const serverEventSchema = z.discriminatedUnion("type", [
     type: z.literal("partial"),
     utteranceId: tsidSchema,
     text: z.string().min(1),
+    /**
+     * **잠정값이다.** 실시간 화자 분리는 맥락이 쌓이기 전까지 라벨이 뒤바뀔 수 있어
+     * 같은 utteranceId 안에서도 값이 달라진다. 확정은 final의 speaker다.
+     */
+    speaker: z.string().min(1).max(8).nullish(),
   }),
   finalEventSchema,
   z.strictObject({ type: z.literal("completed"), sessionId: tsidSchema }),
@@ -66,6 +76,7 @@ export const protocolExamples = {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
       text: "현재까지 누적된 문장",
+      speaker: "1",
     },
     final: {
       type: "final",
@@ -74,6 +85,7 @@ export const protocolExamples = {
       utteranceId: "0HZX2K7M9Q4AC",
       sequence: 1,
       text: "확정된 문장입니다.",
+      speaker: "1",
       startedAtMs: 1200,
       endedAtMs: 4100,
     },

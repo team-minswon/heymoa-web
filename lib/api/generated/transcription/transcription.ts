@@ -26,6 +26,7 @@ import type {
 import type {
   AppErrorResponse,
   CurrentTranscriptionSessionNullableResponse,
+  SpeakerAssignmentRequest,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
@@ -1300,3 +1301,131 @@ export function useGetCurrentTranscriptionSessionSuspense<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type assignSpeakerResponse200 = {
+  data: TranscriptResponse;
+  status: 200;
+};
+
+export type assignSpeakerResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type assignSpeakerResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type assignSpeakerResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type assignSpeakerResponseSuccess = assignSpeakerResponse200 & {
+  headers: Headers;
+};
+export type assignSpeakerResponseError = (
+  | assignSpeakerResponse400
+  | assignSpeakerResponse401
+  | assignSpeakerResponse404
+) & {
+  headers: Headers;
+};
+
+export type assignSpeakerResponse =
+  | assignSpeakerResponseSuccess
+  | assignSpeakerResponseError;
+
+export const getAssignSpeakerUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/speakers`;
+};
+
+/**
+ * 제공자 라벨은 번호뿐이라 누가 말했는지 모른다. 참석자를 붙여야 전사가 읽힌다. 라벨은 세션 단위라 (transcriptionSessionId, speaker) 가 키다 — 중지 후 이어서 기록하면 번호가 다시 매겨지므로 같은 사람도 구간마다 지정해야 한다.
+ * @summary 화자 라벨을 참석자에 연결한다
+ */
+export const assignSpeaker = async (
+  noteId: string,
+  speakerAssignmentRequest?: SpeakerAssignmentRequest,
+  options?: RequestInit
+): Promise<assignSpeakerResponse> => {
+  return apiFetch<assignSpeakerResponse>(getAssignSpeakerUrl(noteId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(speakerAssignmentRequest),
+  });
+};
+
+export const getAssignSpeakerMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignSpeaker>>,
+    TError,
+    { noteId: string; data?: SpeakerAssignmentRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assignSpeaker>>,
+  TError,
+  { noteId: string; data?: SpeakerAssignmentRequest },
+  TContext
+> => {
+  const mutationKey = ["assignSpeaker"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assignSpeaker>>,
+    { noteId: string; data?: SpeakerAssignmentRequest }
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return assignSpeaker(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssignSpeakerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assignSpeaker>>
+>;
+export type AssignSpeakerMutationBody = SpeakerAssignmentRequest | undefined;
+export type AssignSpeakerMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 화자 라벨을 참석자에 연결한다
+ */
+export const useAssignSpeaker = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assignSpeaker>>,
+      TError,
+      { noteId: string; data?: SpeakerAssignmentRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof assignSpeaker>>,
+  TError,
+  { noteId: string; data?: SpeakerAssignmentRequest },
+  TContext
+> => {
+  return useMutation(getAssignSpeakerMutationOptions(options), queryClient);
+};

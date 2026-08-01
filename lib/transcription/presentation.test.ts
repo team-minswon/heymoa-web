@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   groupTranscriptSegments,
+  resolveSpeakerName,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
 
@@ -11,7 +12,8 @@ function segment(
   sequence: number,
   text: string,
   startedAtMs: number,
-  endedAtMs: number
+  endedAtMs: number,
+  speaker: string | null = null
 ): TranscriptPresentationSegment {
   return {
     segmentId,
@@ -20,6 +22,7 @@ function segment(
     text,
     startedAtMs,
     endedAtMs,
+    speaker,
   };
 }
 
@@ -85,5 +88,78 @@ describe("groupTranscriptSegments", () => {
       longText,
       "나".repeat(20),
     ]);
+  });
+});
+
+describe("화자 분리", () => {
+  it("화자가 바뀌면 시간이 붙어 있어도 블록을 나눈다", () => {
+    // 붙어 있는 두 발화를 합치면 두 사람의 말이 한 사람 것으로 읽힌다.
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "먼저 진행 상황부터 볼까요.", 0, 900, "1"),
+      segment("s2", "session-1", 2, "네, 제가 정리했습니다.", 1_000, 2_000, "2"),
+    ]);
+
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0].speaker).toBe("1");
+    expect(blocks[1].speaker).toBe("2");
+  });
+
+  it("같은 화자는 기존 규칙대로 합친다", () => {
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "먼저", 0, 400, "1"),
+      segment("s2", "session-1", 2, "진행 상황부터 봅니다.", 600, 1_400, "1"),
+    ]);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].text).toBe("먼저 진행 상황부터 봅니다.");
+    expect(blocks[0].speaker).toBe("1");
+  });
+
+  it("화자 분리가 없던 구간은 null끼리 합쳐진다", () => {
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "먼저", 0, 400),
+      segment("s2", "session-1", 2, "진행 상황부터 봅니다.", 600, 1_400),
+    ]);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].speaker).toBeNull();
+  });
+
+  it("화자 분리 구간과 아닌 구간은 안 합친다", () => {
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "먼저", 0, 400, "1"),
+      segment("s2", "session-1", 2, "진행 상황부터 봅니다.", 600, 1_400),
+    ]);
+
+    expect(blocks).toHaveLength(2);
+  });
+});
+
+describe("resolveSpeakerName", () => {
+  const assignments = [
+    {
+      transcriptionSessionId: "session-1",
+      speaker: "1",
+      displayName: "김서연",
+    },
+    { transcriptionSessionId: "session-1", speaker: "2", displayName: null },
+  ];
+
+  it("연결된 라벨은 이름으로 옮긴다", () => {
+    expect(resolveSpeakerName("session-1", "1", assignments)).toBe("김서연");
+  });
+
+  it("연결이 없으면 「화자 N」이다", () => {
+    expect(resolveSpeakerName("session-1", "2", assignments)).toBe("화자 2");
+    expect(resolveSpeakerName("session-1", "3", assignments)).toBe("화자 3");
+  });
+
+  it("세션이 다르면 같은 번호라도 남의 연결을 쓰지 않는다", () => {
+    // 제공자가 스트림마다 번호를 새로 매긴다 — 세션을 무시하면 엉뚱한 사람 이름이 붙는다.
+    expect(resolveSpeakerName("session-2", "1", assignments)).toBe("화자 1");
+  });
+
+  it("화자 분리가 없던 구간은 이름이 없다", () => {
+    expect(resolveSpeakerName("session-1", null, assignments)).toBeNull();
   });
 });
