@@ -27,7 +27,9 @@ async function createMeetingNote(page: Page) {
     new RegExp(`/w/${MOCK_WORKSPACE_ID}/meetings/[^?]+\\?view=full`)
   );
 
-  const noteId = new URL(page.url()).pathname.split("/").at(-1);
+  // 전사·정보는 하위 경로라 마지막 조각이 id 가 아니다 — meetings 바로 뒤가 id 다.
+  const segments = new URL(page.url()).pathname.split("/").filter(Boolean);
+  const noteId = segments[segments.indexOf("meetings") + 1];
   expect(noteId).toBeTruthy();
   await expect(
     meetingControls(page).getByText("시작 전", { exact: true })
