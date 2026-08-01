@@ -528,6 +528,93 @@ paths:
           $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
+    delete:
+      tags:
+      - "Notes"
+      summary: "노트 삭제"
+      description: "노트를 삭제한다. 전사·요약·채팅이 함께 사라지며 되돌릴 수 없다."
+      operationId: "deleteNote"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        description: "노트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "노트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      responses:
+        "409":
+          description: "요청 상태 충돌"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                MEETING_IN_PROGRESS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "MEETING_IN_PROGRESS"
+                      message: "기록 중인 회의는 삭제할 수 없습니다."
+                      details: null
+        "204":
+          description: "처리 성공"
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "PROJECT_NOT_FOUND"
+                      message: "프로젝트를 찾을 수 없습니다."
+                      details: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      message: "잘못된 요청입니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
     patch:
       tags:
       - "Notes"

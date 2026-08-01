@@ -366,6 +366,134 @@ export function useGetNoteSuspense<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+export type deleteNoteResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteNoteResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type deleteNoteResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type deleteNoteResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type deleteNoteResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type deleteNoteResponseSuccess = deleteNoteResponse204 & {
+  headers: Headers;
+};
+export type deleteNoteResponseError = (
+  | deleteNoteResponse400
+  | deleteNoteResponse401
+  | deleteNoteResponse404
+  | deleteNoteResponse409
+) & {
+  headers: Headers;
+};
+
+export type deleteNoteResponse =
+  | deleteNoteResponseSuccess
+  | deleteNoteResponseError;
+
+export const getDeleteNoteUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}`;
+};
+
+/**
+ * 노트를 삭제한다. 전사·요약·채팅이 함께 사라지며 되돌릴 수 없다.
+ * @summary 노트 삭제
+ */
+export const deleteNote = async (
+  noteId: string,
+  options?: RequestInit
+): Promise<deleteNoteResponse> => {
+  return apiFetch<deleteNoteResponse>(getDeleteNoteUrl(noteId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteNoteMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteNote>>,
+    TError,
+    { noteId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteNote>>,
+  TError,
+  { noteId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteNote>>,
+    { noteId: string }
+  > = (props) => {
+    const { noteId } = props ?? {};
+
+    return deleteNote(noteId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteNote>>
+>;
+
+export type DeleteNoteMutationError = AppErrorResponse | UnauthorizedResponse;
+
+/**
+ * @summary 노트 삭제
+ */
+export const useDeleteNote = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteNote>>,
+      TError,
+      { noteId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteNote>>,
+  TError,
+  { noteId: string },
+  TContext
+> => {
+  return useMutation(getDeleteNoteMutationOptions(options), queryClient);
+};
 export type updateNoteResponse200 = {
   data: NoteResponse;
   status: 200;
