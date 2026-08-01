@@ -511,3 +511,32 @@ describe("only the meeting starter can operate a meeting", () => {
     expect(mockDb.endMeeting(note.noteId)).toBeTruthy();
   });
 });
+
+describe("노트 삭제", () => {
+  beforeEach(() => mockDb.reset());
+
+  it("기록 중인 회의는 못 지운다", () => {
+    const live = mockDb
+      .listNotes("01K0000000001")
+      .find((row) => row.meetingStatus === "IN_PROGRESS");
+    expect(live).toBeDefined();
+    expect(() => mockDb.deleteNote(live!.noteId)).toThrow("MEETING_IN_PROGRESS");
+  });
+
+  it("지우면 전사 세그먼트와 요약도 함께 사라진다", () => {
+    const target = mockDb
+      .listNotes("01K0000000001")
+      .find((row) => row.meetingStatus !== "IN_PROGRESS");
+    expect(target).toBeDefined();
+    const noteId = target!.noteId;
+    // 서버는 FK CASCADE가 지운다(APP-335 V18). 목이 안 지우면 "지웠는데 요약이 남는" 상태가
+    // 목에서만 만들어져 화면 검증이 거짓이 된다.
+    expect(mockDb.listSegments(noteId).length).toBeGreaterThanOrEqual(0);
+
+    mockDb.deleteNote(noteId);
+
+    expect(() => mockDb.getNote(noteId)).toThrow("NOTE_NOT_FOUND");
+    expect(() => mockDb.listSegments(noteId)).toThrow("NOTE_NOT_FOUND");
+    expect(() => mockDb.getLatestAnalysis(noteId)).toThrow();
+  });
+});

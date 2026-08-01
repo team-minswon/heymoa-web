@@ -44,10 +44,19 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
       status: 200,
       data: {
         success: true,
-        data: { noteId: "01K0000000002", title: "주간 제품 회의" },
+        data: {
+          noteId: "01K0000000002",
+          projectId: "01K0000000001",
+          title: "주간 제품 회의",
+          meetingStatus: "ENDED",
+        },
       },
     },
   }),
+}));
+// 삭제 다이얼로그도 자체 테스트가 있다 — 여기선 메뉴가 툴바에 걸리는지만 본다.
+vi.mock("@/components/notes/note-delete-dialog", () => ({
+  NoteDeleteDialog: () => null,
 }));
 // 회의 조작·벨은 각자 테스트가 있다 — 여기선 툴바에 걸리는지만 본다.
 vi.mock("@/components/notes/meeting-controls", () => ({
@@ -223,4 +232,22 @@ describe("WorkspaceToolbar", () => {
       expect(recording.stop).not.toHaveBeenCalled();
     }
   );
+  it("기록 중이 아닌 노트에는 상단바에 노트 메뉴를 건다", () => {
+    recording.session = null;
+    recording.phase = "idle";
+    nav.search = "view=full&tab=transcript";
+    render(
+      <SidebarProvider>
+        <WorkspaceToolbar
+          workspaceId="01K0000000000"
+          currentLabel="주간 제품 회의"
+          activeNoteId="01K0000000002"
+        />
+      </SidebarProvider>
+    );
+
+    expect(
+      screen.getByRole("button", { name: "노트 메뉴" })
+    ).toBeInTheDocument();
+  });
 });

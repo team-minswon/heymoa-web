@@ -38,6 +38,9 @@ vi.mock("@/components/workspace/workspace-app-shell", () => ({
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryOptions: vi.fn(),
+  // 행이 삭제 다이얼로그를 그리므로 그 훅도 목에 있어야 한다.
+  getGetNotesQueryKey: (projectId: string) => [`/v1/projects/${projectId}/notes`],
+  useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useGetNotes: (...args: unknown[]) => {
     useGetNotes(...args);
     return {

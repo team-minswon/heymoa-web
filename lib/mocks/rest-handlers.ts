@@ -343,6 +343,45 @@ export const restHandlers = [
     )
   ),
 
+  // 손으로 쓴다(생성 목이 아니라): 204는 본문이 없어야 하는데 resultOf는 모든 성공을 JSON
+  // 봉투로 만들어 `HttpResponse.json(..., {status: 204})`가 TypeError를 던진다.
+  http.delete("*/v1/notes/:noteId", ({ params }) => {
+    try {
+      mockDb.deleteNote(id(params.noteId));
+      return new HttpResponse(null, { status: 204 });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
+      if (code === "MEETING_IN_PROGRESS") {
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: {
+              code,
+              message: "기록 중인 회의는 삭제할 수 없습니다.",
+              details: null,
+            },
+          },
+          { status: 409 }
+        );
+      }
+      const notFound = code === "NOTE_NOT_FOUND";
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code,
+            // 문구는 서버 계약 것을 쓴다 — 원시 코드를 넣으면 토스트에 그대로 나온다.
+            message: notFound ? "노트를 찾을 수 없습니다." : code,
+            details: null,
+          },
+        },
+        { status: notFound ? 404 : 409 }
+      );
+    }
+  }),
+
   // Transcription
   http.get("*/v1/transcription-sessions/:sessionId", ({ params }) =>
     resultOf(

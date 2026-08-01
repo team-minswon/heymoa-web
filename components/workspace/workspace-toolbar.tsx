@@ -1,8 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronLeft, ExternalLink, Plus, Square } from "lucide-react";
+import {
+  ChevronLeft,
+  ExternalLink,
+  MoreHorizontal,
+  Plus,
+  Square,
+  Trash2,
+} from "lucide-react";
 
 import {
   type RecordingPhase,
@@ -11,8 +19,15 @@ import {
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import { MeetingControls } from "@/components/notes/meeting-controls";
+import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import { NotificationBell } from "@/components/notification/notification-bell";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { siteConfig } from "@/lib/site";
@@ -109,11 +124,14 @@ function NoteActionSlot({
   noteId: string;
 }) {
   const router = useRouter();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const noteQuery = useGetNote(noteId);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
       : undefined;
+  // 기록 중이면 서버가 409로 막는다. 눌러서 실패하게 두지 않고 메뉴 자체를 안 그린다.
+  const canDelete = note && note.meetingStatus !== "IN_PROGRESS";
 
   return (
     <div className="flex items-center gap-2">
@@ -126,6 +144,46 @@ function NoteActionSlot({
             )
           }
         />
+      ) : null}
+      {canDelete ? (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xl"
+                  aria-label="노트 메뉴"
+                  // 좁은 폭에서는 감춘다 — 이 줄은 상태·시간·요약·닫기·새 노트·알림까지
+                  // 들어가 375px를 넘고 셸이 overflow-hidden이라 우측이 잘린다.
+                  // 삭제는 목록 행 메뉴가 같이 제공하므로 모바일에서 길이 막히지 않는다.
+                  className="hidden size-11 rounded-full sm:inline-flex"
+                />
+              }
+            >
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 /> 삭제
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <NoteDeleteDialog
+            noteId={noteId}
+            projectId={note.projectId}
+            title={note.title}
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            // 보고 있던 노트가 사라졌으니 목록으로 되돌린다. **replace다** — push하면
+            // 뒤로가기가 방금 지운 노트 URL로 돌아가 404를 만난다.
+            onDeleted={() => router.replace(`/w/${workspaceId}`)}
+          />
+        </>
       ) : null}
       <div role="group" aria-label="창 제어">
         <Button
@@ -229,8 +287,14 @@ export function WorkspaceToolbar({
             ) : null}
           </nav>
           <div className="flex shrink-0 items-center gap-2">
+            {/* noteId로 키잉한다 — 안 하면 A의 삭제 확인창을 연 채 뒤로가기로 B에 왔을 때
+                그 창이 B 제목으로 남아 엉뚱한 노트를 지운다. */}
             {isFullNote && activeNoteId ? (
-              <NoteActionSlot workspaceId={workspaceId} noteId={activeNoteId} />
+              <NoteActionSlot
+                key={activeNoteId}
+                workspaceId={workspaceId}
+                noteId={activeNoteId}
+              />
             ) : null}
             <Button
               type="button"

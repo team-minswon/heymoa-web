@@ -3,16 +3,18 @@
 import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Expand, FileText, Loader2, MoreHorizontal } from "lucide-react";
+import { Expand, FileText, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 
 import {
   useRecording,
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
+import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLinkItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -200,6 +202,7 @@ export function NoteListRow({
   const [openedFullViewFrom, setOpenedFullViewFrom] = useState<string | null>(
     null
   );
+  const [deleteOpen, setDeleteOpen] = useState(false);
   // **떠날 때 기억을 버려야 한다.** 예전에는 "위치가 달라지면 저절로 꺼진다"고만 두었는데,
   // 그건 떠날 때만 맞았다. 값이 남아 있으면 **그 위치로 돌아왔을 때 다시 같아져** 스피너가
   // 켜지고, 노트를 닫는 것이 바로 그 위치로 돌아오는 동작이라 목록 행이 영원히 돌았다(APP-243).
@@ -255,8 +258,25 @@ export function NoteListRow({
           >
             <Expand /> 전체 화면으로 열기
           </DropdownMenuLinkItem>
+          {/* 기록 중이면 서버가 409로 막는다. 눌러서 실패하게 두지 않고 항목을 안 그린다. */}
+          {note.meetingStatus === "IN_PROGRESS" ? null : (
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 /> 삭제
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <NoteDeleteDialog
+        noteId={note.noteId}
+        projectId={note.projectId}
+        title={note.title}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+      />
     </article>
   );
 }

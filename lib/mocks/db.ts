@@ -1324,6 +1324,39 @@ export const mockDb = {
     return this.getNote(noteId);
   },
 
+  /**
+   * 노트를 물리 삭제한다. 서버는 FK CASCADE가 자식을 지우므로(APP-335 V18) 목도 같은 것을
+   * 같이 지운다 — 세션·전사 세그먼트·분석·챗과 그 메시지. 안 지우면 "지웠는데 요약이 남는"
+   * 상태가 목에서만 만들어져 화면 검증이 거짓이 된다.
+   */
+  deleteNote(noteId: string) {
+    const note = findNote(noteId);
+    // 기록 중 삭제는 전사 세션과 경합한다. 계약이 409로 막는 자리다.
+    if (note.meetingStatus === "IN_PROGRESS") fail("MEETING_IN_PROGRESS");
+    const sessionIds = new Set(
+      state.sessions.filter((row) => row.noteId === noteId).map((row) => row.sessionId)
+    );
+    const chatIds = new Set(
+      state.agentChats.filter((row) => row.noteId === noteId).map((row) => row.chatId)
+    );
+    state.notes = state.notes.filter((row) => row.noteId !== noteId);
+    state.sessions = state.sessions.filter((row) => row.noteId !== noteId);
+    state.segments = state.segments.filter(
+      (row) => !sessionIds.has(row.transcriptionSessionId)
+    );
+    state.analyses = state.analyses.filter((row) => row.noteId !== noteId);
+    state.agentChats = state.agentChats.filter((row) => row.noteId !== noteId);
+    state.agentChatMessages = state.agentChatMessages.filter((row) =>
+      !chatIds.has(row.chatId)
+    );
+    state.sharedChatMessages = state.sharedChatMessages.filter(
+      (row) => row.noteId !== noteId
+    );
+    state.sharedChatLocks.delete(noteId);
+    state.sharedChatForeignLocks.delete(noteId);
+    state.sharedChatPendingApprovals.delete(noteId);
+  },
+
   createSession(noteId: string): StartTranscriptionSessionResponseData {
     const note = findNote(noteId);
     if (
