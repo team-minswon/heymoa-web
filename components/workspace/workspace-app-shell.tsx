@@ -81,15 +81,19 @@ export function WorkspaceAppShell({
   // 프로젝트를 고르면 목록으로 돌아간다. 노트 표면이 본문 컬럼을 덮고 있어서(full은 항상,
   // side는 모바일에서 inset-0) 필터만 바꾸면 화면에 아무 일도 안 일어난 것처럼 보인다.
   // 워크스페이스 전환이 이미 이동으로 처리되므로 프로젝트 선택도 같은 성질로 맞춘다.
+  // 프로젝트는 URL 을 갖는다. 사이드바 지역 상태로만 두면 「이 프로젝트 보고 있어」를
+  // 공유할 수 없고, 새로고침에 선택이 날아간다 — [ROUTES] 가 AS-IS 의 결함으로 적어 둔 것이다.
+  // selectedProjectId 는 사이드바 강조와 「새 회의」의 목적지로 계속 쓴다.
   const handleSelectProject = useCallback(
     (projectId: string | null) => {
       setSelectedProjectId(projectId);
-
-      if (activeNoteId) {
-        router.push(`/w/${workspaceId}`);
-      }
+      router.push(
+        projectId
+          ? `/w/${workspaceId}/projects/${projectId}`
+          : `/w/${workspaceId}`
+      );
     },
-    [activeNoteId, router, workspaceId]
+    [router, workspaceId]
   );
 
   // OAuth 연동 승인 후 서버가 /w/{workspaceId}?provider=&status=로 돌려보낸다(APP-194).
@@ -158,10 +162,13 @@ export function WorkspaceAppShell({
   // 브레드크럼은 지금 보고 있는 것을 말해야 한다. 액션 아이템 위에서 「모든 노트」가
   // 떠 있으면 사용자는 자기가 어디 있는지 잘못 안다.
   const isActionItems = pathname.endsWith("/action-items");
+  const routeProjectId = pathname.match(/\/projects\/([^/]+)/)?.[1];
   const currentLabel = isActionItems
     ? "액션 아이템"
-    : (projects.find((project) => project.projectId === selectedProjectId)
-        ?.name ?? "모든 노트");
+    : (projects.find(
+        (project) =>
+          project.projectId === (routeProjectId ?? selectedProjectId)
+      )?.name ?? "모든 노트");
 
   return (
     <WorkspaceShellContext.Provider value={value}>
@@ -182,7 +189,9 @@ export function WorkspaceAppShell({
                 workspaceId={workspaceId}
                 workspace={workspace}
                 projects={projects}
-                selectedProjectId={selectedProjectId}
+                // 주소로 바로 들어와도 사이드바가 어디인지 말해야 한다. 라우트가 있으면
+                // 그것이 먼저다 — effect 로 state 를 맞추면 첫 렌더가 한 번 비어 깜빡인다.
+                selectedProjectId={routeProjectId ?? selectedProjectId}
                 onSelectProject={handleSelectProject}
                 onOpenSettings={value.openSettings}
               />
