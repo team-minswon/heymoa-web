@@ -107,17 +107,7 @@ export function WorkspaceIntegrationsSettings({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8">
-        <h2 className="font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          연동
-        </h2>
-        <p className="mt-2 text-sm text-[var(--el-muted)]">
-          챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을
-          씁니다.
-        </p>
-      </header>
-
+    <div className="w-full">
       {integrationsQuery.isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-24 rounded-panel" />
@@ -211,7 +201,7 @@ function IntegrationCard({
   const provider = integration.provider as Provider;
   // 카드 안의 카드에는 그림자를 주지 않는다 — hairline만. (ELEVATION SPEC)
   return (
-    <div className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4">
+    <div className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-card p-4">
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
           <Link2 className="size-4 text-[var(--el-ink)]" />

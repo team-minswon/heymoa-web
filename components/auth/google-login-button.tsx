@@ -52,7 +52,8 @@ export function GoogleLoginButton({
         loading={pending}
         className={cn(
           "rounded-full border-[var(--el-hairline)] bg-[var(--el-canvas)] font-medium text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]",
-          compact ? "p-0" : "pl-3.5 pr-4"
+          // 진입 카드 안의 유일한 주 액션이라 h48 로 선다(design.pen).
+          compact ? "p-0" : "h-12 w-full px-6 text-[15px]"
         )}
         aria-label="Google로 로그인"
       >

@@ -217,7 +217,7 @@ export function RecordingDock({
               disabled={isOtherNote}
               onClick={() => void recording.start(noteId)}
             >
-              <span className="size-2.5 rounded-full bg-white" aria-hidden />
+              <span className="size-2.5 rounded-full bg-card" aria-hidden />
             </button>
           </motion.div>
         )}

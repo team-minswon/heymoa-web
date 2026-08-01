@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, AlignLeft, CircleCheck, Lightbulb } from "lucide-react";
 
+import { NoteColumn, NoteSection } from "@/components/notes/note-chrome";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorCodeOf } from "@/lib/api/error-message";
@@ -175,8 +176,8 @@ export function NoteSummary({
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[820px] px-5 pt-7 pb-16 sm:px-9 sm:pt-9">
-      {children}
+    <div className="px-4 py-6 sm:px-8">
+      <NoteColumn className="flex flex-col gap-5">{children}</NoteColumn>
     </div>
   );
 }
@@ -208,31 +209,27 @@ function SummarySections({
 }: {
   analysis: AnalysisResultResponseData;
 }) {
+  // 제목에 계약의 필드명을 함께 적는다 — 요약이 어디서 왔는지가 화면에서 추적 가능해진다.
   const sections = [
-    { label: "개요", body: analysis.overview },
-    { label: "액션 아이템", body: analysis.actionItems },
-    { label: "인사이트", body: analysis.insights },
+    { label: "개요 · overview", icon: AlignLeft, body: analysis.overview },
+    {
+      label: "액션 아이템 · actionItems",
+      icon: CircleCheck,
+      body: analysis.actionItems,
+    },
+    { label: "인사이트 · insights", icon: Lightbulb, body: analysis.insights },
   ];
   return (
     <Shell>
-      <div className="space-y-8">
-        {sections.map(({ label, body }) => (
-          <section key={label} aria-label={label}>
-            <h2 className="border-b border-[var(--el-hairline-strong)] pb-2 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-              {label}
-            </h2>
-            <div className="mt-3 space-y-3">
-              {body ? (
-                renderMarkdown(body)
-              ) : (
-                <p className="text-sm text-[var(--el-muted)]">
-                  내용이 없습니다.
-                </p>
-              )}
-            </div>
-          </section>
-        ))}
-      </div>
+      {sections.map(({ label, icon, body }) => (
+        <NoteSection key={label} icon={icon} label={label}>
+          {body ? (
+            renderMarkdown(body)
+          ) : (
+            <p className="text-[var(--el-muted)]">내용이 없습니다.</p>
+          )}
+        </NoteSection>
+      ))}
     </Shell>
   );
 }

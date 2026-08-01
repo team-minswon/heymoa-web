@@ -1,11 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
+import { AudioLines, Check, Folder, Plus, SearchX } from "lucide-react";
 
-import { useAuth } from "@/components/auth/auth-provider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { InlineRetry } from "@/components/ui/inline-retry";
+import {
+  MeetingsTable,
+  MeetingsTableSkeleton,
+} from "@/components/workspace/meetings-table";
+import {
+  ControlChip,
+  EmptyState,
+  FilterBar,
+  PageBody,
+  PageContent,
+  PageHead,
+  SearchField,
+  SegmentedTabs,
+} from "@/components/workspace/page-chrome";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
-import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import type { NoteSummary } from "@/lib/api/generated/models";
 import {
   getGetNotesQueryOptions,
@@ -13,16 +33,27 @@ import {
   useGetNotes,
 } from "@/lib/api/generated/notes/notes";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
-import { cn } from "@/lib/utils";
+import { useCreateMeeting } from "@/lib/workspace/use-create-meeting";
+import { usePinnedNow } from "@/lib/workspace/use-pinned-now";
 
-type NoteFilter = "all" | "mine";
+type StatusFilter = "all" | "scheduled" | "live" | "ended";
 
-// v5 목록 필터는 전체와 내가 시작(meetingStartedBy로 판별) 둘뿐이다.
-// meetingStatus 표시는 APP-284가 목록 행에서 맡는다.
-const FILTERS: { key: NoteFilter; label: string }[] = [
+// 필터는 표의 「상태」 칸과 같은 어휘를 쓴다. 다른 말을 쓰면 눌러 놓고 무엇이 걸러졌는지 모른다.
+const STATUS_FILTERS = [
   { key: "all", label: "전체" },
-  { key: "mine", label: "내가 시작" },
-];
+  { key: "scheduled", label: "예정" },
+  { key: "live", label: "기록 중" },
+  { key: "ended", label: "종료됨" },
+] as const satisfies readonly { key: StatusFilter; label: string }[];
+
+const STATUS_MATCH: Record<StatusFilter, (note: NoteSummary) => boolean> = {
+  all: () => true,
+  scheduled: (note) => note.meetingStatus === "NOT_STARTED",
+  live: (note) => note.meetingStatus === "IN_PROGRESS",
+  // 「중지됨」은 따로 탭이 없다 — 끝난 것도 아니고 도는 것도 아니라 종료됨 쪽에 둔다.
+  ended: (note) =>
+    note.meetingStatus === "ENDED" || note.meetingStatus === "PAUSED",
+};
 
 export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
 export const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
@@ -44,18 +75,21 @@ function notesFromResponse(
 }
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
-  const { user } = useAuth();
   const { selectedProjectId, projects, isWorkspacePending, isWorkspaceError } =
     useWorkspaceShell();
-  const [filter, setFilter] = useState<NoteFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [projectFilter, setProjectFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const now = usePinnedNow();
+
   const selectedProject = projects.find(
     (project) => project.projectId === selectedProjectId
   );
   const singleNotesQuery = useGetNotes(selectedProjectId ?? "", undefined, {
     query: {
       enabled: selectedProjectId !== null,
-      refetchInterval: (query) =>
-        noteListRefetchInterval(notesFromResponse(query.state.data)),
+      refetchInterval: (q) =>
+        noteListRefetchInterval(notesFromResponse(q.state.data)),
     },
   });
   const allNotesQueries = useQueries({
@@ -64,8 +98,8 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
       : projects.map((project) =>
           getGetNotesQueryOptions(project.projectId, undefined, {
             query: {
-              refetchInterval: (query) =>
-                noteListRefetchInterval(notesFromResponse(query.state.data)),
+              refetchInterval: (q) =>
+                noteListRefetchInterval(notesFromResponse(q.state.data)),
             },
           })
         ),
@@ -87,25 +121,41 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const notes: NoteSummary[] = selectedProjectId
     ? selectedNotes
     : allNotesQueries.notes;
-  // 유저가 아직 안 풀렸으면(undefined) 소유 판별을 하지 않는다 — meetingStartedBy가 null인
-  // 노트의 userId도 undefined라 `undefined === undefined`로 잘못 걸린다.
-  const mineNotes = user
-    ? notes.filter((note) => note.meetingStartedBy?.userId === user.userId)
-    : [];
-  const visibleNotes = filter === "mine" ? mineNotes : notes;
+
+  const projectNames = useMemo(
+    () => new Map(projects.map((p) => [p.projectId, p.name])),
+    [projects]
+  );
+
+  const needle = query.trim().toLowerCase();
+  const visibleNotes = useMemo(
+    () =>
+      notes
+        .filter(STATUS_MATCH[status])
+        .filter(
+          (note) => !projectFilter || note.projectId === projectFilter
+        )
+        // 제목·프로젝트·참석자로 찾는다 — 셋 다 「그 회의」를 떠올리는 실마리다.
+        .filter((note) =>
+          needle
+            ? note.title.toLowerCase().includes(needle) ||
+              (projectNames.get(note.projectId) ?? "")
+                .toLowerCase()
+                .includes(needle) ||
+              note.participants.some((p) =>
+                p.name.toLowerCase().includes(needle)
+              )
+            : true
+        ),
+    [notes, status, projectFilter, needle, projectNames]
+  );
+
   const isPending = selectedProjectId
     ? singleNotesQuery.isPending
     : isWorkspacePending || allNotesQueries.isPending;
   const isError = selectedProjectId
     ? singleNotesQuery.isError
     : isWorkspaceError || allNotesQueries.isError;
-  // 필터 때문에 비었을 뿐 노트는 있다 — "첫 회의를 시작하세요" 빈 상태는 오해를 준다.
-  const isFilteredEmpty =
-    filter === "mine" &&
-    !isPending &&
-    !isError &&
-    notes.length > 0 &&
-    visibleNotes.length === 0;
 
   const retry = () => {
     if (selectedProjectId) {
@@ -115,73 +165,141 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     allNotesQueries.refetch();
   };
 
+  const scheduledCount = notes.filter(
+    (note) => note.meetingStatus === "NOT_STARTED"
+  ).length;
+  const liveCount = notes.filter(
+    (note) => note.meetingStatus === "IN_PROGRESS"
+  ).length;
+  const summary = [
+    `회의 ${notes.length}건`,
+    scheduledCount > 0 ? `예정 ${scheduledCount}건` : null,
+    liveCount > 0 ? `기록 중 ${liveCount}건` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const activeProjectName = projectFilter
+    ? (projectNames.get(projectFilter) ?? "프로젝트")
+    : "프로젝트 전체";
+
   return (
-    // 목록은 셸이 아니라 **자기 안에서** 스크롤한다. 문서를 늘리면 셸 컨테이너가 따라 늘어나
-    // 그 위에 앉는 노트 full 면이 컨테이너를 다 못 덮는다(APP-252).
-    // `overflow-x-hidden`은 장식이다. `overflow-y`만 주면 계산된 `overflow-x`도 `auto`가 되어
-    // 본문이 좁을 때(뷰포트 900 실측) 블롭의 `-right-24`가 96px짜리 가로 스크롤을 만든다.
-    // 자르는 자리는 메인 컬럼 끝이라 APP-226이 없앤 콘텐츠 폭 이음선은 돌아오지 않는다.
-    <section className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-      {/* 이 박스는 클리핑하지 않는다. 장식 블롭이 콘텐츠 폭(896) 밖까지 뻗는데 여기서 자르면
-          부드러운 그라데이션이 캔버스 한복판에서 직선으로 끊겨 이음선처럼 보였다(실측: 화면
-          끝보다 144px 앞에서 잘림). 바깥 셸 컨테이너가 이미 overflow-hidden이라 화면
-          가장자리에서 처리된다 — 가로 스크롤도 생기지 않는다. 블롭의 기준은 콘텐츠 폭이라
-          이 안에 남는다. */}
-      <div className="relative mx-auto w-full max-w-4xl px-5 pb-16 pt-8 sm:px-8 sm:pt-11">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 top-0 size-72 rounded-full opacity-25 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, var(--el-gradient-mint) 0%, transparent 68%)",
-          }}
+    <PageBody>
+      <PageHead
+        title={selectedProject?.name ?? "모든 회의"}
+        description={isPending ? "불러오는 중" : summary}
+        actions={
+          <>
+            <SearchField
+              label="회의 찾기"
+              placeholder="제목 · 프로젝트 · 참석자로 찾기"
+              value={query}
+              onChange={setQuery}
+            />
+            <NewMeetingButton workspaceId={workspaceId} />
+          </>
+        }
+      />
+
+      <FilterBar>
+        <SegmentedTabs
+          label="회의 상태 필터"
+          value={status}
+          options={STATUS_FILTERS}
+          onChange={setStatus}
         />
-        <header className="relative mb-6">
-          <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
-            {selectedProject?.name ?? "모든 회의"}
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
-            {visibleNotes.length}개의 회의 기록 · 발화와 결정이 시간순으로
-            보관됩니다.
-          </p>
-        </header>
-        <div
-          role="group"
-          aria-label="노트 필터"
-          className="mb-4 flex items-center gap-1.5 border-b border-[var(--el-hairline)] pb-4"
-        >
-          {FILTERS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={filter === key}
-              onClick={() => setFilter(key)}
-              className={cn(
-                // 칩은 chip 6이다. pill(9999)은 주 CTA와 레코더 독 두 곳뿐. (FORM SPEC)
-                "h-8 rounded-chip px-3.5 text-[13px] font-medium transition-colors",
-                filter === key
-                  ? "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
-                  : "text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)]"
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {isFilteredEmpty ? (
-          <p className="py-16 text-center text-sm text-[var(--el-muted)]">
-            내가 시작한 회의가 없습니다.
-          </p>
-        ) : (
-          <WorkspaceNoteList
-            workspaceId={workspaceId}
-            notes={visibleNotes}
-            isPending={isPending}
-            isError={isError}
+        {/* 프로젝트 하나만 보고 있으면 사이드바가 이미 그것을 말한다 — 같은 걸 두 번 묻지 않는다. */}
+        {selectedProjectId ? null : (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <ControlChip
+                  icon={Folder}
+                  label={activeProjectName}
+                  active={projectFilter !== null}
+                />
+              }
+            />
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem
+                onClick={() => setProjectFilter(null)}
+                className="justify-between rounded-control py-2 text-sm"
+              >
+                프로젝트 전체
+                {projectFilter === null ? <Check className="size-3.5" /> : null}
+              </DropdownMenuItem>
+              {projects.map((project) => (
+                <DropdownMenuItem
+                  key={project.projectId}
+                  onClick={() => setProjectFilter(project.projectId)}
+                  className="justify-between rounded-control py-2 text-sm"
+                >
+                  <span className="truncate">{project.name}</span>
+                  {projectFilter === project.projectId ? (
+                    <Check className="size-3.5 shrink-0" />
+                  ) : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </FilterBar>
+
+      <PageContent>
+        {isPending ? (
+          <MeetingsTableSkeleton />
+        ) : isError ? (
+          <InlineRetry
+            label="회의를 불러오지 못했습니다"
             onRetry={retry}
           />
+        ) : visibleNotes.length === 0 ? (
+          <NoMeetings hasNotes={notes.length > 0} workspaceId={workspaceId} />
+        ) : (
+          <MeetingsTable
+            workspaceId={workspaceId}
+            notes={visibleNotes}
+            projectNames={projectNames}
+            now={now}
+          />
         )}
-      </div>
-    </section>
+      </PageContent>
+    </PageBody>
+  );
+}
+
+function NoMeetings({
+  hasNotes,
+  workspaceId,
+}: {
+  hasNotes: boolean;
+  workspaceId: string;
+}) {
+  return (
+    <EmptyState
+      icon={hasNotes ? SearchX : AudioLines}
+      title={hasNotes ? "조건에 맞는 회의가 없습니다" : "첫 회의를 기록해 보세요"}
+      description={
+        hasNotes
+          ? "필터나 검색어를 바꿔 보세요."
+          : "회의를 시작하면 발화와 결정이 시간순으로 여기에 쌓입니다."
+      }
+      action={hasNotes ? null : <NewMeetingButton workspaceId={workspaceId} />}
+    />
+  );
+}
+
+function NewMeetingButton({ workspaceId }: { workspaceId: string }) {
+  const create = useCreateMeeting(workspaceId);
+  return (
+    <button
+      type="button"
+      disabled={create.disabled || create.isPending}
+      onClick={() => void create.createMeeting()}
+      className="flex h-9 shrink-0 items-center gap-1.5 rounded-control bg-[var(--el-primary)] px-3.5 text-[13px] font-medium text-[var(--el-on-primary)] transition-colors hover:bg-[var(--el-primary-active)] disabled:opacity-50"
+    >
+      <Plus className="size-3.5" />
+      새 회의
+    </button>
   );
 }

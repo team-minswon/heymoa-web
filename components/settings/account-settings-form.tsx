@@ -26,16 +26,8 @@ export function AccountSettingsForm() {
   const user = response.data.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8" aria-label="내 계정 설정">
-      <div>
-        <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
-          내 계정
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
-          프로필 정보를 확인합니다.
-        </p>
-      </div>
-      <div className="flex items-center gap-5 rounded-panel border border-[var(--el-hairline)] bg-white p-6">
+    <div className="space-y-5" aria-label="내 계정 설정">
+      <div className="flex items-center gap-5 rounded-panel border border-[var(--el-hairline)] bg-card p-6">
         <Avatar className="size-14">
           {user.image ? (
             <AvatarImage src={user.image} alt={`${user.name} 프로필`} />
@@ -47,7 +39,7 @@ export function AccountSettingsForm() {
           <Input id="account-email" value={user.email} disabled />
         </div>
       </div>
-      <div className="space-y-2 rounded-panel border border-[var(--el-hairline)] bg-white p-6">
+      <div className="space-y-2 rounded-panel border border-[var(--el-hairline)] bg-card p-6">
         <Label htmlFor="account-name">이름</Label>
         <Input id="account-name" value={user.name} disabled />
       </div>
@@ -122,7 +114,7 @@ function DefaultWorkspaceSection() {
   return (
     <section
       aria-labelledby="account-default-workspace-heading"
-      className="rounded-panel border border-[var(--el-hairline)] bg-white p-6"
+      className="rounded-panel border border-[var(--el-hairline)] bg-card p-6"
     >
       <h3
         id="account-default-workspace-heading"
@@ -148,7 +140,6 @@ function DefaultWorkspaceSection() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="rounded-full"
                 loading={pendingId === workspace.workspaceId}
                 // 다른 행이 도는 동안 두 번째 요청이 나가면 어느 쪽이 마지막인지 서버 순서에
                 // 달린다 — 도는 동안은 형제 버튼도 함께 잠근다.

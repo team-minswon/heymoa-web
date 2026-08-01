@@ -37,12 +37,15 @@ export function MeetingControls({
   note,
   onMeetingEnded,
   showContext = false,
+  showStatus = false,
 }: {
   note: NoteResponseData;
   /** 종료 접수 후 호출 — note-panel이 요약 탭으로 넘긴다. */
   onMeetingEnded?: () => void;
   /** side 헤더처럼 시작자에게도 상태와 시작자명을 함께 보여 주는 면. */
   showContext?: boolean;
+  /** 회의 머리가 없는 자리에서만 켠다 — 켜면 상태 배지를 함께 그린다. */
+  showStatus?: boolean;
 }) {
   const { user } = useAuth();
   const [endOpen, setEndOpen] = useState(false);
@@ -67,9 +70,13 @@ export function MeetingControls({
       aria-label="회의 상태 및 제어"
       className="flex min-w-0 flex-wrap items-center gap-2"
     >
-      <Badge variant="secondary">
-        {MEETING_STATUS_LABEL[note.meetingStatus]}
-      </Badge>
+      {/* 상태는 회의 머리가 이미 말한다 — 여기서 또 그리면 같은 화면에 두 번 뜬다.
+          머리가 없는 자리(툴바 단독)에서만 배지를 세운다. */}
+      {showStatus ? (
+        <Badge variant="secondary">
+          {MEETING_STATUS_LABEL[note.meetingStatus]}
+        </Badge>
+      ) : null}
       <RecordedTime elapsedMs={getRecordedDurationMs(note, now ?? 0)} />
       {showStarter ? (
         <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">

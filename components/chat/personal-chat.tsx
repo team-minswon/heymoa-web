@@ -472,7 +472,9 @@ function PersonalChatPanel({
         // 448은 v4 프레임 값이지만 좁은 화면에서는 뷰포트를 넘어 왼쪽이 잘린다.
         // 부양 카드는 e2 2연타다. 단일 티어 0_4px_16px는 흰 마케팅 면 전용이라
         // 제품 캔버스에서는 그림자가 보이지 않는다. (ELEVATION SPEC)
-        "fixed top-2 right-2 bottom-2 z-30 flex w-[min(448px,calc(100vw-1rem))] flex-col rounded-panel border border-[var(--el-hairline)] bg-white shadow-e2",
+        // 레일은 캔버스에서 10 띄운 480 패널이다 — 본문 패널과 같은 여백·radius·그림자라야
+        // 둘이 한 판 위에 나란히 놓인 것으로 읽힌다(design.pen).
+        "fixed top-2.5 right-2.5 bottom-2.5 z-30 flex w-[min(480px,calc(100vw-1.25rem))] flex-col rounded-panel border border-[var(--el-hairline)] bg-card shadow-e2",
         hidden && "hidden"
       )}
     >

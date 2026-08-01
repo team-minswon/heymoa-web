@@ -75,16 +75,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
   });
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
-      <header className="mb-8">
-        <h2 className="font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          멤버
-        </h2>
-        <p className="mt-2 text-sm text-[var(--el-muted)]">
-          이 워크스페이스의 멤버와 대기 중인 초대를 관리합니다.
-        </p>
-      </header>
-
+    <div className="w-full">
       {membersQuery.isLoading ? (
         <div className="space-y-2">
           <Skeleton className="h-[52px] rounded-block" />
@@ -106,7 +97,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
           </Button>
         </div>
       ) : (
-        <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
+        <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-card">
           {members.map((member) => (
             <MemberRow
               key={member.userId}
@@ -262,7 +253,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
               <option value="ADMIN">관리자</option>
             </select>
           </div>
-          <Button type="submit" loading={isSubmitting} className="rounded-full">
+          <Button type="submit" loading={isSubmitting}>
             초대
           </Button>
         </div>
@@ -339,7 +330,7 @@ function PendingInvitations({
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
+          <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-card">
             {invitations.map((invitation) => (
               <li
                 key={invitation.invitationId}

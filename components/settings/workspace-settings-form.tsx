@@ -105,32 +105,25 @@ export function WorkspaceSettingsForm({
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <div className="flex items-center gap-2">
-          <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
-            워크스페이스 일반
-          </h2>
-          {workspace?.isDefault && <Badge>기본</Badge>}
+    // 제목은 SettingsPageShell 이 그린다 — 여기서 또 그리면 같은 말이 두 번 뜬다.
+    <div className="space-y-5">
+      {workspace?.isDefault ? (
+        <div>
+          <Badge>기본 워크스페이스</Badge>
         </div>
-        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
-          이 공간의 이름과 설명을 관리합니다.
-        </p>
-      </div>
-      <form
-        onSubmit={submit}
-        className="space-y-5 rounded-panel border border-[var(--el-hairline)] bg-white p-6"
-      >
-        <div className="space-y-2">
+      ) : null}
+      {/* 설정 폼은 카드에 안 담는다 — 패널이 이미 한 겹이라 두 겹이면 깊이가 거짓말을 한다. */}
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="workspace-name">워크스페이스 이름</Label>
           <Input id="workspace-name" {...form.register("name")} />
           {form.formState.errors.name && (
-            <p className="text-sm text-[var(--el-error)]">
+            <p className="text-[12px] text-[var(--el-error)]">
               {form.formState.errors.name.message}
             </p>
           )}
         </div>
-        <div className="space-y-2">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="workspace-description">설명</Label>
           <Textarea
             id="workspace-description"
@@ -138,16 +131,14 @@ export function WorkspaceSettingsForm({
             rows={4}
           />
         </div>
-        <Button
-          type="submit"
-          loading={update.isPending}
-          className="rounded-full"
-        >
-          변경사항 저장
-        </Button>
+        <div>
+          <Button type="submit" loading={update.isPending}>
+            변경 사항 저장
+          </Button>
+        </div>
       </form>
       {!workspace?.isDefault && (
-        <div className="flex items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-white p-5">
+        <div className="flex items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-card p-5">
           <div>
             <p className="font-medium">기본 워크스페이스</p>
             <p className="text-sm text-[var(--el-muted)]">
@@ -162,7 +153,6 @@ export function WorkspaceSettingsForm({
             loading={pendingDefaultId === workspaceId}
             disabled={pendingDefaultId !== null}
             onClick={() => void makeDefault()}
-            className="rounded-full"
           >
             기본 워크스페이스로 설정
           </Button>

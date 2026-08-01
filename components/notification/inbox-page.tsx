@@ -3,6 +3,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { Inbox } from "lucide-react";
+
+import {
+  EmptyState,
+  PageBody,
+  PageContent,
+  PageHead,
+} from "@/components/workspace/page-chrome";
 import { Button } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -92,12 +100,11 @@ function InboxList() {
 
   if (!notifications.length) {
     return (
-      <div className="rounded-panel border border-[var(--el-hairline)] bg-card px-8 py-16 text-center">
-        <p className="text-[15px] font-medium">받은 알림이 없습니다</p>
-        <p className="mt-2 text-[13px] text-[var(--el-muted)]">
-          지금은 워크스페이스 초대가 여기에 쌓입니다.
-        </p>
-      </div>
+      <EmptyState
+        icon={Inbox}
+        title="받은 알림이 없습니다"
+        description="지금은 워크스페이스 초대가 여기에 쌓입니다."
+      />
     );
   }
 
@@ -215,22 +222,19 @@ function InboxSkeleton() {
 
 export function InboxPage() {
   return (
-    // 셸이 overflow-hidden 이라 페이지가 스스로 스크롤 경계를 만든다.
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-[660px] px-8 pb-10 pt-6">
-      <header className="pb-4">
-        <h1 className="text-note-title font-serif font-light">받은 알림</h1>
-        <p className="mt-1 text-[13px] text-[var(--el-muted)]">
-          초대는 워크스페이스가 아니라 나에게 옵니다.
-        </p>
-      </header>
-      <DataBoundary
-        fallback={<InboxSkeleton />}
-        errorLabel="알림을 불러오지 못했습니다"
-      >
-        <InboxList />
-      </DataBoundary>
-      </div>
-    </div>
+    <PageBody>
+      <PageHead
+        title="받은 알림"
+        description="초대는 워크스페이스가 아니라 나에게 옵니다."
+      />
+      <PageContent>
+        <DataBoundary
+          fallback={<InboxSkeleton />}
+          errorLabel="알림을 불러오지 못했습니다"
+        >
+          <InboxList />
+        </DataBoundary>
+      </PageContent>
+    </PageBody>
   );
 }

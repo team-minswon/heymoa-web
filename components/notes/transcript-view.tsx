@@ -243,7 +243,7 @@ export function TranscriptView({
       viewportRef={viewportRef}
       overlay={followAction}
     >
-      <div className="mx-auto w-full max-w-[820px] px-5 pb-7 pt-7 sm:px-9 sm:pb-9 sm:pt-9 lg:pb-28">
+      <div className="mx-auto w-full max-w-[660px] px-4 py-6 sm:px-8 lg:pb-28">
         {/* v5: 제품 면 대문자 키커·세리프 헤더 제거 — 탭이 이미 위치를 말한다(FORM SPEC).
             녹음 상태는 상단바·레코더 독이 표시한다. 전사 행이 바로 시작한다. */}
         <section

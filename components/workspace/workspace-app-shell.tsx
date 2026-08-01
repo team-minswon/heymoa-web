@@ -40,6 +40,12 @@ type WorkspaceShellState = {
   projects: ProjectResponseData[];
   isWorkspacePending: boolean;
   isWorkspaceError: boolean;
+  /**
+   * 회의 화면이 공유 챗봇 레일을 세웠나. 레일은 패널 **밖**에 떠 있으므로(개인 에이전트
+   * 레일과 같은 자리) 패널이 그만큼 좁아져야 둘이 겹치지 않는다. 레일을 패널 안에 두면
+   * 디자인의 두 판이 한 판으로 붙어 보이고, 본문 폭도 레일만큼 잘못 계산된다.
+   */
+  setSharedRailOpen: (open: boolean) => void;
 };
 
 // 설정은 모달이 아니라 라우트다. 「어디 있나」가 주소에 없으면 공유도 새로고침도 안 된다.
@@ -74,6 +80,22 @@ export function useWorkspaceShell() {
   return context;
 }
 
+const NOOP = () => {};
+
+/**
+ * 공유 챗봇 레일이 패널 밖 자리를 차지한다고 셸에 알린다.
+ *
+ * 셸 밖(테스트·시트 단독 렌더)에서는 좁힐 패널 자체가 없으므로 조용히 아무것도 안 한다 —
+ * 여기서 던지면 회의 패널이 셸 없이는 못 서는 컴포넌트가 된다.
+ */
+export function useSharedRailSlot(open: boolean) {
+  const setOpen = useContext(WorkspaceShellContext)?.setSharedRailOpen ?? NOOP;
+  useEffect(() => {
+    setOpen(open);
+    return () => setOpen(false);
+  }, [open, setOpen]);
+}
+
 export function WorkspaceAppShell({
   workspaceId,
   activeNoteId,
@@ -86,6 +108,7 @@ export function WorkspaceAppShell({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
+  const [sharedRailOpen, setSharedRailOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -158,6 +181,7 @@ export function WorkspaceAppShell({
       projects,
       isWorkspacePending: workspaceQuery.isPending || projectsQuery.isPending,
       isWorkspaceError: workspaceQuery.isError || projectsQuery.isError,
+      setSharedRailOpen,
     }),
     [
       projects,
@@ -187,6 +211,11 @@ export function WorkspaceAppShell({
           project.projectId === (routeProjectId ?? selectedProjectId)
       )?.name ?? "모든 회의");
 
+  // full 회의는 셸을 걷는다 — 회의 화면이 캔버스를 통째로 쓰고 자기 상단바를 갖는다(design.pen).
+  // 사이드바를 남기면 본문이 232 좁아져 전사 두 줄이 접히고, 상단바가 둘이 된다.
+  const isFullNote =
+    Boolean(activeNoteId) && searchParams.get("view") !== "side";
+
   return (
     <WorkspaceShellContext.Provider value={value}>
       <PersonalChatProvider
@@ -194,32 +223,45 @@ export function WorkspaceAppShell({
         workspaceName={workspace?.name}
       >
         <TooltipProvider>
-          <SidebarProvider className="bg-[var(--el-canvas)]">
-            {/* 설정은 같은 232 슬롯에서 사이드바만 갈아끼운다. 콘텐츠 팬은 안 움직인다. */}
-            <Sidebar className="overflow-hidden border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-[color-mix(in_srgb,var(--el-canvas-soft)_92%,white)]">
-              {settingsSlug ? (
-                <SettingsSidebar
-                  workspaceId={workspaceId}
-                  workspaceName={workspace?.name}
-                  section={settingsSlug}
-                />
-              ) : (
-                <WorkspaceSidebar
-                  workspaceId={workspaceId}
-                  workspace={workspace}
-                  projects={projects}
-                  // 주소로 바로 들어와도 사이드바가 어디인지 말해야 한다. 라우트가 있으면
-                  // 그것이 먼저다 — effect 로 state 를 맞추면 첫 렌더가 한 번 비어 깜빡인다.
-                  selectedProjectId={routeProjectId ?? selectedProjectId}
-                  onSelectProject={handleSelectProject}
-                  onOpenSettings={value.openSettings}
-                />
-              )}
-            </Sidebar>
+          {/* 셸은 캔버스(#f5f5f5) 위에 사이드바 232 + 흰 패널이 떠 있는 구조다(design.pen).
+              사이드바는 배경이 없다 — 캔버스가 그대로 비쳐야 패널이 「떠 있는」 것으로 읽힌다. */}
+          <SidebarProvider
+            className="min-h-svh bg-[var(--el-canvas)]"
+            style={{ "--sidebar-width": "232px" } as React.CSSProperties}
+          >
+            {/* 설정은 같은 232 슬롯에서 사이드바만 갈아끼운다. 콘텐츠 팬은 안 움직인다.
+                full 회의는 아예 안 그린다 — `hidden` 으로 감추면 자리 확보용 gap 요소가 남아
+                232 만큼 빈 칸이 생긴다. */}
+            {isFullNote ? null : (
+              <Sidebar className="border-r-0 [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:border-r-0 [&>[data-sidebar=sidebar]]:bg-transparent">
+                {settingsSlug ? (
+                  <SettingsSidebar
+                    workspaceId={workspaceId}
+                    workspaceName={workspace?.name}
+                    section={settingsSlug}
+                  />
+                ) : (
+                  <WorkspaceSidebar
+                    workspaceId={workspaceId}
+                    workspace={workspace}
+                    projects={projects}
+                    // 주소로 바로 들어와도 사이드바가 어디인지 말해야 한다. 라우트가 있으면
+                    // 그것이 먼저다 — effect 로 state 를 맞추면 첫 렌더가 한 번 비어 깜빡인다.
+                    selectedProjectId={routeProjectId ?? selectedProjectId}
+                    onSelectProject={handleSelectProject}
+                    onOpenSettings={value.openSettings}
+                  />
+                )}
+              </Sidebar>
+            )}
             <ShellMain
               workspaceId={workspaceId}
               currentLabel={currentLabel}
               activeNoteId={activeNoteId}
+              // 설정과 full 회의는 상단바가 없다 — 각자 자기 머리가 그 자리를 겸한다(design.pen).
+              // 둘 다 그리면 「설정 · 일반」과 「워크스페이스 일반」이 같은 말을 두 번 한다.
+              showToolbar={!settingsSlug && !isFullNote}
+              railOpen={sharedRailOpen}
             >
               {children}
             </ShellMain>
@@ -231,40 +273,48 @@ export function WorkspaceAppShell({
 }
 
 /**
- * 개인 챗봇 패널은 `fixed`라 본문을 덮는다. 열려 있는 동안 본문을 패널 폭(448 + 거터 8)만큼
+ * 개인 챗봇 레일은 `fixed`라 본문을 덮는다. 열려 있는 동안 본문을 레일 폭(480 + 거터 10)만큼
  * 밀어 두 프레임(`LeuWE`·`LCXcj`)의 본문 컬럼 축소를 그대로 낸다.
  */
 function ShellMain({
   workspaceId,
   currentLabel,
   activeNoteId,
+  showToolbar,
+  railOpen,
   children,
 }: {
   workspaceId: string;
   currentLabel: string;
   activeNoteId?: string;
+  showToolbar: boolean;
+  railOpen: boolean;
   children: React.ReactNode;
 }) {
   const { isVisible } = usePersonalChat();
+  // 두 레일은 같은 자리를 쓴다 — 동시에 서지 않으므로 한 번만 좁힌다.
+  const railTakesSpace = isVisible || railOpen;
   return (
     <SidebarInset className="flex-1 bg-[var(--el-canvas)]">
       <div
         className={cn(
-          // 높이는 뷰포트에 못박는다. `h-full`이면 이 컨테이너가 뒤에 깔린 노트 목록 길이를
-          // 따라 늘어나고, 그 위에 `absolute`로 앉는 노트 full 면이 컨테이너를 다 못 덮어
-          // 아래로 목록이 비쳤다(노트 목록이 화면보다 길 때 405px 실측 · APP-252).
-          "relative flex h-svh min-w-0 flex-col overflow-hidden transition-[width] duration-200",
+          // 흰 패널. 캔버스에서 10px 띄우고 radius 16 + hairline + e2 그림자로 부양시킨다.
+          // 높이는 뷰포트에 못박는다 — `h-full`이면 뒤에 깔린 목록 길이를 따라 늘어나고,
+          // 그 위에 `absolute`로 앉는 노트 full 면이 패널을 다 못 덮는다(APP-252).
+          "relative m-2.5 flex h-[calc(100svh-20px)] min-w-0 flex-col overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-card shadow-e2 transition-[width] duration-200",
           // padding이 아니라 폭을 줄인다 — 노트 full 화면은 이 컨테이너 안에서 `absolute
           // inset-x-0`으로 깔리는데, 절대 배치의 기준은 padding box라 padding으로는 안 밀린다.
           // 좁은 화면에서는 패널이 전체를 덮으므로 본문을 더 줄이지 않는다.
-          isVisible && "lg:w-[calc(100%-456px)]"
+          railTakesSpace && "lg:w-[calc(100%-490px)]"
         )}
       >
-        <WorkspaceToolbar
-          workspaceId={workspaceId}
-          currentLabel={currentLabel}
-          activeNoteId={activeNoteId}
-        />
+        {showToolbar ? (
+          <WorkspaceToolbar
+            workspaceId={workspaceId}
+            currentLabel={currentLabel}
+            activeNoteId={activeNoteId}
+          />
+        ) : null}
         {children}
       </div>
     </SidebarInset>

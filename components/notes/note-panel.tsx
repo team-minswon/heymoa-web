@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CalendarDays, Expand, PanelRightClose } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { useSharedRailSlot } from "@/components/workspace/workspace-app-shell";
 import { MeetingControls } from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
+import {
+  NoteColumn,
+  NoteHeader,
+  NoteTabs,
+  NoteTopBar,
+} from "@/components/notes/note-chrome";
 import {
   NoteDetails,
   NoteDetailsSkeleton,
@@ -18,17 +24,14 @@ import {
   isNoteRecordingActive,
   useRecording,
 } from "@/components/transcription/recording-provider";
-import { Badge } from "@/components/ui/badge";
-import { formatAppDate } from "@/lib/format/date";
 import { Button } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
-import { cn } from "@/lib/utils";
 
 export type NoteTab = "chat" | "details" | "transcript" | "summary";
 
@@ -40,18 +43,24 @@ export function NotePanel({
   view,
   tab,
   onTabChange,
+  onViewChange,
   onSharedTurnActiveChange,
   onClose,
   onExpand,
+  onToggleRail,
+  railOpen,
 }: {
   workspaceId: string;
   noteId: string;
   view: "side" | "full";
   tab: NoteTab;
   onTabChange: (tab: NoteTab) => void;
+  onViewChange?: (view: "side" | "full") => void;
   onSharedTurnActiveChange?: (active: boolean) => void;
   onClose: () => void;
   onExpand?: () => void;
+  onToggleRail?: () => void;
+  railOpen?: boolean;
 }) {
   const noteQuery = useGetNote(noteId, {
     query: {
@@ -188,113 +197,64 @@ export function NotePanel({
       : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
 
+  // 레일이 패널 밖으로 나갔으므로 셸이 그만큼 패널을 좁혀야 한다.
+  useSharedRailSlot(showSharedTray);
+
+  const tabOptions = [
+    ...(showSummaryTab ? [{ key: "summary" as const, label: "요약" }] : []),
+    { key: "transcript" as const, label: "전사" },
+    ...(showSideChatTab ? [{ key: "chat" as const, label: "챗봇" }] : []),
+    { key: "details" as const, label: "정보" },
+  ];
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-white max-lg:landscape:flex-row lg:flex-row">
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
-        {/* full은 상단바가 브레드크럼·노트 액션을 맡으므로 여기선 바 테두리 없이 제목만(본문 블록).
-          side 시트는 자체 헤더 바(제목 + 전체화면·닫기)를 유지한다(계승). */}
-        <header
-          className={cn(
-            "relative z-10 px-5 py-4 sm:px-9 sm:py-5",
-            view === "side" &&
-              "border-b border-[var(--el-hairline)] bg-white/92 backdrop-blur-xl"
-          )}
-        >
-          <div className="mx-auto flex w-full max-w-[820px] flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-            <div className="min-w-0 w-full flex-1 sm:w-auto">
-              {/* 회의가 언제 열렸는지는 상세에서만 볼 수 있다 — 목록 계약에는 없다. */}
-              <div className="flex flex-wrap items-center gap-2">
-                {project ? (
-                  <Badge variant="secondary">{project.name}</Badge>
-                ) : null}
-                {note?.createdAt ? (
-                  <span className="flex items-center gap-1.5 text-xs text-[var(--el-muted)]">
-                    <CalendarDays className="size-3.5" />
-                    {/* 요일을 Intl에 함께 넘기면 괄호 없이 붙는다 — 목록 헤더와 같은 형식으로 조립한다. */}
-                    {formatAppDate(note.createdAt, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}{" "}
-                    ({formatAppDate(note.createdAt, { weekday: "short" })}){" "}
-                    {formatAppDate(note.createdAt, {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                ) : null}
-                {note?.meetingStartedAt ? (
-                  <time
-                    dateTime={note.meetingStartedAt}
-                    className="text-xs text-[var(--el-muted)]"
-                  >
-                    {formatAppDate(note.meetingStartedAt, {
-                      month: "long",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}{" "}
-                    시작
-                  </time>
-                ) : null}
-              </div>
-              <h1 className="mt-2 truncate font-serif text-note-title font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)]">
-                {note?.title ?? "회의"}
-              </h1>
-            </div>
-            {view === "side" ? (
-              <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 sm:w-auto sm:shrink-0 sm:justify-start">
-                {note ? (
-                  <MeetingControls
-                    note={note}
-                    showContext
-                    onMeetingEnded={() => onTabChange("summary")}
-                  />
-                ) : null}
-                <div
-                  role="group"
-                  aria-label="창 제어"
-                  className="flex shrink-0 items-center gap-1 border-l border-[var(--el-hairline)] pl-2"
-                >
-                  {onExpand ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-lg"
-                      className="size-11 rounded-full"
-                      aria-label={
-                        sharedTurnActive
-                          ? "답변이 끝나면 확장할 수 있습니다"
-                          : "전체 화면으로 보기"
-                      }
-                      disabled={sharedTurnActive}
-                      onClick={onExpand}
-                    >
-                      <Expand />
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-lg"
-                    className="size-11 rounded-full"
-                    aria-label="회의 닫기"
-                    onClick={onClose}
-                  >
-                    <PanelRightClose />
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </header>
+    <div className="flex h-full min-h-0 flex-col bg-card max-lg:landscape:flex-row lg:flex-row">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-card">
+        {/* full 은 셸이 상단바를 걷었으므로 회의가 자기 상단바를 갖는다(design.pen).
+            side 시트는 같은 바를 좁은 폭에서 쓴다 — 「전체 화면으로」가 shrink 자리를 바꿔 든다. */}
+        <NoteTopBar
+          title={note?.title ?? "회의"}
+          onBack={onClose}
+          onShrink={view === "full" ? () => onViewChange?.("side") : onExpand}
+          shrinkLabel={
+            view === "full"
+              ? "옆에 열기"
+              : sharedTurnActive
+                ? "답변이 끝나면 확장할 수 있습니다"
+                : "전체 화면으로 보기"
+          }
+          // 흐르는 답변 중에 확장하면 패널이 갈려 스트림이 끊긴다. 감추지 않고 막는다 —
+          // 사라지면 왜 못 하는지가 화면에서 없어진다.
+          shrinkDisabled={view === "side" && sharedTurnActive}
+          onToggleRail={onToggleRail}
+          railOpen={railOpen}
+          actions={
+            note ? (
+              <MeetingControls
+                note={note}
+                showContext={view === "side"}
+                onMeetingEnded={() => onTabChange("summary")}
+              />
+            ) : null
+          }
+        />
+
+        <NoteHeader note={note} projectName={project?.name}>
+          <NoteTabs
+            value={tab}
+            options={tabOptions}
+            onChange={(next) => onTabChange(next)}
+          />
+        </NoteHeader>
 
         {noteLoadFailed ? (
-          <div className="mx-auto w-full max-w-[820px] px-5 pb-4 sm:px-9">
-            <InlineRetry
-              label="회의 상태를 확인하지 못했습니다."
-              onRetry={() => void noteQuery.refetch()}
-            />
+          <div className="px-4 pt-4 sm:px-8">
+            <NoteColumn>
+              <InlineRetry
+                label="회의 상태를 확인하지 못했습니다."
+                onRetry={() => void noteQuery.refetch()}
+              />
+            </NoteColumn>
           </div>
         ) : null}
 
@@ -303,30 +263,6 @@ export function NotePanel({
           onValueChange={(value) => value && onTabChange(value as NoteTab)}
           className="min-h-0 flex-1 gap-0"
         >
-          <div className="border-b border-[var(--el-hairline)] bg-white px-5 sm:px-9">
-            <div className="mx-auto w-full max-w-[820px]">
-              <TabsList
-                variant="line"
-                className="h-11 w-full justify-start gap-6"
-              >
-                <TabsTrigger value="transcript">
-                  {view === "side"
-                    ? phase === "ended"
-                      ? "기록"
-                      : "전사"
-                    : "실시간 전사"}
-                </TabsTrigger>
-                {showSideChatTab ? (
-                  <TabsTrigger value="chat">챗봇</TabsTrigger>
-                ) : null}
-                {/* 요약은 종료 시 생성되지만 full은 항상 3탭 — 종료 전엔 탭이 안내를 보인다. */}
-                {showSummaryTab ? (
-                  <TabsTrigger value="summary">요약</TabsTrigger>
-                ) : null}
-                <TabsTrigger value="details">회의 정보</TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
           <TabsContent
             value="transcript"
             className="flex min-h-0 flex-1 flex-col"
@@ -420,9 +356,11 @@ export function NotePanel({
       </div>
 
       {showSharedTray ? (
-        // 넓은 화면은 우측 대화 트레이(464 — FORM SPEC 레이아웃 산술), 좁은 세로 화면은
-        // 본문 아래 스택이다. 짧은 가로 화면은 14rem 높이 floor가 전사를 밀어내므로 옆 열로 둔다.
-        <div className="flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 border-t border-[var(--el-hairline)] max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] max-lg:landscape:border-l max-lg:landscape:border-t-0 lg:h-full lg:w-[464px] lg:border-t-0">
+        // 넓은 화면에서는 패널 **밖**에 떠 있는 480 레일이다 — 개인 에이전트 레일과 같은
+        // 자리·폭·radius·그림자라야 둘이 번갈아 서도 화면이 안 흔들린다(design.pen).
+        // 좁은 세로 화면은 본문 아래 스택이고, 짧은 가로 화면은 14rem floor가 전사를
+        // 밀어내므로 옆 열로 둔다.
+        <div className="flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 border-t border-[var(--el-hairline)] max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] max-lg:landscape:border-l max-lg:landscape:border-t-0 lg:fixed lg:top-2.5 lg:right-2.5 lg:bottom-2.5 lg:z-30 lg:h-auto lg:w-[480px] lg:overflow-hidden lg:rounded-panel lg:border lg:border-[var(--el-hairline)] lg:shadow-e2">
           <SharedChatPanel
             noteId={noteId}
             phase={phase}

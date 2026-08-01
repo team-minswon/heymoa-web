@@ -27,6 +27,12 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
           noteId: NOTE_ID,
           projectId: PROJECT_ID,
           title: "주간 제품 회의",
+          context: null,
+          participants: [],
+          meetingStatus: "ENDED",
+          meetingStartedAt: null,
+          meetingStartedBy: null,
+          recordedDurationMs: 0,
           createdAt: "2026-07-10T00:00:00Z",
           updatedAt: "2026-07-11T00:00:00Z",
         },
@@ -57,7 +63,7 @@ describe("NoteDetails", () => {
     mutateAsync.mockRejectedValueOnce(new Error("save failed"));
     renderDetails();
 
-    const title = screen.getByRole("textbox", { name: "회의 제목" });
+    const title = screen.getByRole("textbox", { name: "제목" });
     fireEvent.change(title, { target: { value: "수정 중인 회의 제목" } });
     fireEvent.click(screen.getByRole("button", { name: "변경 저장" }));
 

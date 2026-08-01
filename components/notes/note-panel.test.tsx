@@ -245,9 +245,9 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getByRole("tab", { name: "전사" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "회의 정보" }));
+    fireEvent.click(screen.getByRole("tab", { name: "정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
-    expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
+    expect(screen.getAllByText("주간 제품 회의")[0]).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
     expect(useGetProject).toHaveBeenCalledWith(
       "01K0000000000",
@@ -382,8 +382,10 @@ describe("NotePanel", () => {
       "max-lg:landscape:w-[min(22rem,42vw)]",
       "max-lg:landscape:border-l",
       "max-lg:landscape:border-t-0",
-      "lg:h-full",
-      "lg:w-[464px]"
+      "lg:fixed",
+      "lg:w-[480px]",
+      "lg:rounded-panel",
+      "lg:shadow-e2"
     );
   });
 
@@ -449,7 +451,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeTruthy();
   });
 
-  it("side + 활성은 전사·챗봇·회의 정보 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
+  it("side + 활성은 전사·챗봇·정보 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -464,7 +466,7 @@ describe("NotePanel", () => {
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "전사",
       "챗봇",
-      "회의 정보",
+      "정보",
     ]);
     expect(
       screen
@@ -509,7 +511,8 @@ describe("NotePanel", () => {
         />
       );
 
-      const started = screen.getByText(/7월 29일.*시작/);
+      // 머리의 메타 줄이 최초 시작 시각을 기계가 읽는 형태로 들고 있다.
+      const started = screen.getByText(/7월 29일/);
       expect(started.tagName).toBe("TIME");
       expect(started).toHaveAttribute("datetime", "2026-07-29T00:00:00Z");
     }
@@ -639,7 +642,7 @@ describe("NotePanel", () => {
     expect(screen.queryByRole("button", { name: "회의 닫기" })).toBeNull();
   });
 
-  it("side + 종료는 기록·요약·회의 정보 탭과 아카이브를 보인다", () => {
+  it("side + 종료는 요약·전사·정보 탭과 아카이브를 보인다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -653,9 +656,9 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
-      "기록",
       "요약",
-      "회의 정보",
+      "전사",
+      "정보",
     ]);
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
@@ -674,22 +677,20 @@ describe("NotePanel", () => {
       />
     );
 
-    expect(screen.getByText("기록 중")).toBeInTheDocument();
+    // 상태는 머리의 배지와 상단바의 회의 조작 둘 다에 나온다 — 둘 다 있어야 한다.
+    expect(screen.getAllByText("기록 중").length).toBeGreaterThan(0);
     expect(screen.getByText("테스트 유저")).toBeInTheDocument();
     expect(
       screen.getByRole("group", { name: "회의 상태 및 제어" })
     ).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "창 제어" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "회의 닫기" })).toHaveClass(
-      "size-11"
-    );
+    expect(screen.getByRole("button", { name: "목록으로" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
     fireEvent.click(screen.getByRole("button", { name: "종료 확인" }));
 
     expect(onTabChange).toHaveBeenCalledWith("summary");
   });
 
-  it("side 좁은 헤더는 제목과 상태·창 제어 그룹을 쌓고 44px 버튼을 유지한다", () => {
+  it("side 상단바는 목록으로·전체 화면으로·닫기를 32px 아이콘 버튼으로 둔다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -702,32 +703,10 @@ describe("NotePanel", () => {
       />
     );
 
-    const title = screen.getByRole("heading", { name: "주간 제품 회의" });
-    const headerLayout = title.parentElement?.parentElement;
-    const meetingGroup = screen.getByRole("group", {
-      name: "회의 상태 및 제어",
-    });
-    const windowGroup = screen.getByRole("group", { name: "창 제어" });
-    const controlLayout = windowGroup.parentElement;
-
-    expect(headerLayout).toHaveClass(
-      "flex-col",
-      "sm:flex-row",
-      "sm:items-start"
-    );
-    expect(controlLayout).toHaveClass(
-      "w-full",
-      "flex-wrap",
-      "justify-between",
-      "sm:w-auto"
-    );
-    expect(meetingGroup).toHaveClass("flex-wrap");
-    expect(
-      screen.getByRole("button", { name: "전체 화면으로 보기" })
-    ).toHaveClass("size-11");
-    expect(screen.getByRole("button", { name: "회의 닫기" })).toHaveClass(
-      "size-11"
-    );
+    // design.pen 의 회의 상단바는 아이콘 버튼 32 하나뿐이다 — 44 짜리 창 제어 그룹은 없어졌다.
+    for (const name of ["목록으로", "전체 화면으로 보기"]) {
+      expect(screen.getByRole("button", { name })).toHaveClass("size-8");
+    }
   });
 
   it("side 뷰어가 읽는 중 회의가 끝나면 안내 뒤 아카이브를 연다", () => {
@@ -853,7 +832,7 @@ describe("NotePanel", () => {
     }
   );
 
-  it("side + 미시작은 전사·회의 정보와 회의 시작을 보인다", () => {
+  it("side + 미시작은 요약·전사·정보와 회의 시작을 보인다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
     renderNotePanel(
@@ -869,7 +848,7 @@ describe("NotePanel", () => {
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "전사",
-      "회의 정보",
+      "정보",
     ]);
     expect(
       screen.getByRole("button", { name: "회의 시작" })

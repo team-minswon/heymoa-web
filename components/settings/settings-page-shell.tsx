@@ -1,34 +1,31 @@
+import { SettingsBody, SettingsHead } from "@/components/workspace/page-chrome";
+
 /**
- * 셸이 `h-svh overflow-hidden` 이라 페이지가 스스로 스크롤 경계를 만들어야 한다 —
- * 안 만들면 한 화면보다 긴 내용의 아래쪽이 잘려서 닿을 수 없다.
+ * 설정 화면 하나의 뼈대. design.pen 기준으로 **제목은 여기 한 곳에서만** 나온다 —
+ * 패널 맨 위 hairline 머리(26px 세리프)가 상단바 자리를 겸하고, 그 아래가 본문이다.
  *
- * 제목은 선택이다. 기존 설정 폼들(멤버·일반·연동·계정)은 자기 헤더를 이미 갖고 있어서
- * 여기서 또 그리면 같은 제목이 두 벌 뜬다.
+ * 폼 컴포넌트가 자기 제목을 또 그리면 같은 말이 두 번 뜬다. 제목은 이 셸이 소유한다.
+ * 셸이 `overflow-hidden` 이라 스크롤 경계도 여기서 만든다 — 안 만들면 긴 폼의 아래가 잘린다.
  */
 export function SettingsPageShell({
   title,
   description,
+  actions,
   children,
 }: {
-  title?: string;
+  title: string;
   description?: string;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-[660px] px-8 pb-10 pt-6">
-        {title ? (
-          <header className="pb-5">
-            <h1 className="text-note-title font-serif font-light">{title}</h1>
-            {description ? (
-              <p className="mt-1 text-[13px] text-[var(--el-muted)]">
-                {description}
-              </p>
-            ) : null}
-          </header>
-        ) : null}
-        {children}
-      </div>
-    </div>
+    <>
+      <SettingsHead
+        title={title}
+        description={description}
+        actions={actions}
+      />
+      <SettingsBody>{children}</SettingsBody>
+    </>
   );
 }

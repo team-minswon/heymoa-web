@@ -19,7 +19,11 @@ const recordingMeter = vi.hoisted(() => ({
 }));
 const push = vi.hoisted(() => vi.fn());
 const replace = vi.hoisted(() => vi.fn());
-const createMeeting = vi.hoisted(() => vi.fn());
+const chat = vi.hoisted(() => ({
+  isVisible: false,
+  open: vi.fn(),
+  close: vi.fn(),
+}));
 const nav = vi.hoisted(() => ({ search: "" }));
 
 vi.mock("next/navigation", () => ({
@@ -30,13 +34,8 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
   useRecordingMeter: () => recordingMeter,
 }));
-vi.mock("@/lib/workspace/use-create-meeting", () => ({
-  useCreateMeeting: () => ({
-    createMeeting,
-    disabled: false,
-    isPending: false,
-    isRecordingCurrent: Boolean(recording.activeNoteId),
-  }),
+vi.mock("@/components/chat/personal-chat", () => ({
+  usePersonalChat: () => chat,
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   useGetNote: () => ({
@@ -49,20 +48,22 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
     },
   }),
 }));
-// 회의 조작·벨은 각자 테스트가 있다 — 여기선 툴바에 걸리는지만 본다.
-vi.mock("@/components/notes/meeting-controls", () => ({
-  MeetingControls: () => <div data-testid="meeting-controls" />,
-}));
-vi.mock("@/components/notification/notification-bell", () => ({
-  NotificationBell: () => <div data-testid="notification-bell" />,
-}));
+
+const renderToolbar = (props: Parameters<typeof WorkspaceToolbar>[0]) =>
+  render(
+    <SidebarProvider>
+      <WorkspaceToolbar {...props} />
+    </SidebarProvider>
+  );
 
 describe("WorkspaceToolbar", () => {
   afterEach(() => {
     cleanup();
     push.mockReset();
     replace.mockReset();
-    createMeeting.mockReset();
+    chat.open.mockReset();
+    chat.close.mockReset();
+    chat.isVisible = false;
     recording.start.mockReset();
     recording.stop.mockReset();
     recording.activeNoteId = undefined;
@@ -76,60 +77,50 @@ describe("WorkspaceToolbar", () => {
     }));
   });
 
-  it("carries the single-row app bar: new note + bell, no note actions on the hub", () => {
+  it("carries only the location label and the agent entry on the hub", () => {
     recording.session = null;
     recording.phase = "idle";
     recording.elapsedMs = 0;
-    render(
-      <SidebarProvider>
-        <WorkspaceToolbar
-          workspaceId="01K0000000000"
-          currentLabel="모든 회의"
-        />
-      </SidebarProvider>
-    );
+    renderToolbar({ workspaceId: "01K0000000000", currentLabel: "모든 회의" });
 
-    const newNote = screen.getByRole("button", { name: "새 회의" });
-    fireEvent.click(newNote);
-    expect(createMeeting).toHaveBeenCalledOnce();
-    expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
+    expect(screen.getByText("모든 회의")).toBeInTheDocument();
+    // 「새 회의」는 페이지 머리가 갖는다 — 상단바에 두면 같은 버튼이 두 번 나온다.
+    expect(screen.queryByRole("button", { name: "새 회의" })).toBeNull();
     // 노트가 열려 있지 않으면 회의 조작 슬롯은 없다.
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "에이전트" }));
+    expect(chat.open).toHaveBeenCalledOnce();
   });
 
-  it("lifts note actions into the same row for a full note", () => {
+  it("closes the agent rail when it is already open", () => {
+    recording.session = null;
+    recording.phase = "idle";
+    chat.isVisible = true;
+    renderToolbar({ workspaceId: "01K0000000000", currentLabel: "모든 회의" });
+
+    fireEvent.click(screen.getByRole("button", { name: "에이전트" }));
+    expect(chat.close).toHaveBeenCalledOnce();
+    expect(chat.open).not.toHaveBeenCalled();
+  });
+
+  it("swaps the label for the note title in a full note but keeps note actions out", () => {
     recording.session = null;
     recording.phase = "idle";
     nav.search = "view=full&tab=transcript";
-    render(
-      <SidebarProvider>
-        <WorkspaceToolbar
-          workspaceId="01K0000000000"
-          currentLabel="모든 회의"
-          activeNoteId="01K0000000002"
-        />
-      </SidebarProvider>
-    );
+    renderToolbar({
+      workspaceId: "01K0000000000",
+      currentLabel: "모든 회의",
+      activeNoteId: "01K0000000002",
+    });
 
-    // 브레드크럼에 노트 제목, 같은 행에 회의 조작 + 닫기 + 새 회의 + 벨.
-    expect(
-      screen.getByRole("heading", { name: "주간 제품 회의" })
-    ).toBeInTheDocument();
-    expect(screen.getByTestId("meeting-controls")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "회의 닫기" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("group", { name: "창 제어" })
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "회의 닫기" })).toHaveClass(
-      "size-11"
-    );
-    expect(screen.getByRole("button", { name: "새 회의" })).toBeInTheDocument();
-    expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
+    expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
+    // 회의 조작·닫기는 회의 화면이 자기 상단바에서 든다 — 셸 상단바는 위치만 말한다.
+    expect(screen.queryByTestId("meeting-controls")).toBeNull();
+    expect(screen.queryByRole("button", { name: "회의 닫기" })).toBeNull();
   });
 
-  it("shows automatic recording status with only a stop control", () => {
+  it("shows the recording pill with a meter and a stop control while off the note", () => {
     recording.session = {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
@@ -138,26 +129,24 @@ describe("WorkspaceToolbar", () => {
     recording.activeNoteId = "01K0000000002";
     recording.phase = "recording";
     recording.elapsedMs = 12_000;
-    render(
-      <SidebarProvider>
-        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
-      </SidebarProvider>
-    );
+    renderToolbar({ workspaceId: "01K0000000000", currentLabel: "주간" });
 
-    expect(screen.queryByText("녹음 중")).toBeNull();
     expect(screen.getByRole("meter", { name: "마이크 입력" })).toHaveAttribute(
       "aria-valuenow",
       "42"
     );
     expect(screen.getByText("00:12")).toBeInTheDocument();
+    // 필은 회의로 돌아가는 길을 함께 낸다 — 정지만 있으면 되돌아갈 곳이 없다.
+    fireEvent.click(screen.getByRole("button", { name: "회의로" }));
+    expect(push).toHaveBeenCalledWith(
+      "/w/01K0000000000/meetings/01K0000000002?view=full&tab=transcript"
+    );
+
     fireEvent.click(screen.getByRole("button", { name: "녹음 종료" }));
     expect(recording.stop).toHaveBeenCalledOnce();
-    expect(
-      screen.queryByRole("button", { name: /일시 정지|재개/ })
-    ).not.toBeInTheDocument();
   });
 
-  it("keeps one 새 회의 entry while another note is recording", () => {
+  it("hides the pill while the note it records is the one on screen", () => {
     recording.session = {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
@@ -165,16 +154,14 @@ describe("WorkspaceToolbar", () => {
     };
     recording.activeNoteId = "01K0000000002";
     recording.phase = "recording";
+    nav.search = "view=full&tab=transcript";
+    renderToolbar({
+      workspaceId: "01K0000000000",
+      currentLabel: "주간",
+      activeNoteId: "01K0000000002",
+    });
 
-    render(
-      <SidebarProvider>
-        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
-      </SidebarProvider>
-    );
-
-    const newNote = screen.getByRole("button", { name: "새 회의" });
-    fireEvent.click(newNote);
-    expect(createMeeting).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
   });
 
   it("replaces transitional status labels with the shared spinner", () => {
@@ -186,12 +173,7 @@ describe("WorkspaceToolbar", () => {
     recording.activeNoteId = "01K0000000002";
     recording.phase = "stopping";
     recording.elapsedMs = 12_000;
-
-    render(
-      <SidebarProvider>
-        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
-      </SidebarProvider>
-    );
+    renderToolbar({ workspaceId: "01K0000000000", currentLabel: "주간" });
 
     expect(
       screen.getByRole("status", { name: "녹음 처리 중" })
@@ -210,12 +192,7 @@ describe("WorkspaceToolbar", () => {
       };
       recording.activeNoteId = "01K0000000002";
       recording.phase = phase;
-
-      render(
-        <SidebarProvider>
-          <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
-        </SidebarProvider>
-      );
+      renderToolbar({ workspaceId: "01K0000000000", currentLabel: "주간" });
 
       const stop = screen.getByRole("button", { name: "녹음 종료" });
       fireEvent.click(stop);

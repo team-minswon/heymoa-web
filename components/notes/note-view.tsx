@@ -169,6 +169,7 @@ export function NoteView({
         view={current.view}
         tab={current.tab}
         onTabChange={(tab) => setQuery({ tab })}
+        onViewChange={(view) => setQuery({ view })}
         onSharedTurnActiveChange={setSharedTurnActive}
         onClose={closeWithAnim}
         onExpand={

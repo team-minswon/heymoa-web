@@ -18,6 +18,16 @@ const LABEL: Record<ActionItemGroupKey, string> = {
 const ORDER: ActionItemGroupKey[] = ["overdue", "thisWeek", "later", "noDue"];
 
 /**
+ * 기한이 지났나. 파싱 못 하는 값은 **지나지 않은 것**으로 본다 —
+ * `groupActionItemsByDue` 가 그것을 「기한 없음」으로 보내는 것과 같은 판단이다.
+ */
+export function isOverdue(dueAt: string | null, now: number): boolean {
+  if (dueAt === null) return false;
+  const due = Date.parse(dueAt);
+  return !Number.isNaN(due) && due < now;
+}
+
+/**
  * 「누가」보다 「언제까지」가 먼저 걸린다. 그래서 목록은 담당자가 아니라 기한으로 묶는다.
  *
  * 경계는 **시각**으로 판정한다 — 문자열 비교는 `+09:00` 오프셋을 잘못 가른다.

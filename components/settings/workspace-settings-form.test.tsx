@@ -88,7 +88,7 @@ describe("WorkspaceSettingsForm", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("워크스페이스 이름")).toHaveValue("제품 팀")
     );
-    fireEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
+    fireEvent.click(screen.getByRole("button", { name: "변경 사항 저장" }));
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(

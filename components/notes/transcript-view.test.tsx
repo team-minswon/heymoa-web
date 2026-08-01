@@ -549,7 +549,7 @@ describe("TranscriptView", () => {
       name: "회의 전사",
     }).parentElement;
 
-    expect(content).toHaveClass("pb-7", "sm:pb-9", "lg:pb-28");
+    expect(content).toHaveClass("py-6", "max-w-[660px]", "lg:pb-28");
     expect(content).not.toHaveClass("pb-28");
   });
 

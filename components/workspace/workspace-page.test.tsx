@@ -3,22 +3,12 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
 
-const auth = vi.hoisted(() => ({
-  user: { userId: "user-me", name: "나" } as {
-    userId: string;
-    name: string;
-  } | null,
-}));
 const useGetNotes = vi.hoisted(() => vi.fn());
 
-// 목록 행이 이동 진행 표시를 위해 경로·쿼리를 읽는다(APP-215).
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/w/01K0000000000",
   useSearchParams: () => new URLSearchParams(),
-}));
-vi.mock("@/components/auth/auth-provider", () => ({
-  useAuth: () => ({ user: auth.user }),
 }));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => ({
@@ -28,6 +18,13 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   }),
   useRecordingMeter: () => ({ level: 0, levelHistory: [0, 0, 0, 0, 0] }),
 }));
+vi.mock("@/lib/workspace/use-create-meeting", () => ({
+  useCreateMeeting: () => ({
+    createMeeting: vi.fn(),
+    disabled: false,
+    isPending: false,
+  }),
+}));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useWorkspaceShell: () => ({
     selectedProjectId: "01K0000000001",
@@ -36,6 +33,16 @@ vi.mock("@/components/workspace/workspace-app-shell", () => ({
     isWorkspaceError: false,
   }),
 }));
+
+const NOTE_DEFAULTS = {
+  projectId: "01K0000000001",
+  scheduledAt: null,
+  participants: [],
+  analysisStatus: "NONE",
+  previousNote: null,
+  activeSessionStartedAt: null,
+};
+
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryOptions: vi.fn(),
   useGetNotes: (...args: unknown[]) => {
@@ -48,8 +55,8 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
           data: {
             notes: [
               {
+                ...NOTE_DEFAULTS,
                 noteId: "01K0000000002",
-                projectId: "01K0000000001",
                 title: "주간 제품 회의",
                 createdAt: "2026-07-10T00:00:00Z",
                 updatedAt: "2026-07-11T00:00:00Z",
@@ -60,8 +67,8 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
                 meetingStartedBy: { userId: "user-me", name: "나" },
               },
               {
+                ...NOTE_DEFAULTS,
                 noteId: "01K0000000003",
-                projectId: "01K0000000001",
                 title: "리서치 공유",
                 createdAt: "2026-07-09T00:00:00Z",
                 updatedAt: "2026-07-10T00:00:00Z",
@@ -70,6 +77,19 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
                 meetingStatus: "ENDED",
                 meetingStartedAt: "2026-07-09T00:00:00Z",
                 meetingStartedBy: { userId: "user-other", name: "남" },
+              },
+              {
+                ...NOTE_DEFAULTS,
+                noteId: "01K0000000004",
+                title: "로드맵 리뷰",
+                scheduledAt: "2026-08-03T05:00:00Z",
+                createdAt: "2026-07-08T00:00:00Z",
+                updatedAt: "2026-07-08T00:00:00Z",
+                lastRecordedAt: null,
+                recordedDurationMs: 0,
+                meetingStatus: "NOT_STARTED",
+                meetingStartedAt: null,
+                meetingStartedBy: null,
               },
             ],
           },
@@ -94,61 +114,65 @@ describe("WorkspacePage", () => {
   afterEach(() => {
     cleanup();
     useGetNotes.mockReset();
-    auth.user = { userId: "user-me", name: "나" };
   });
 
-  it("renders the screen title, count, and flat list without the marketing kicker", () => {
+  it("renders the screen title, the counts, and the table under its column head", () => {
     renderPage();
 
     expect(
       screen.getByRole("heading", { name: "모바일 앱" })
     ).toBeInTheDocument();
-    expect(screen.getByText(/2개의 회의 기록/)).toBeInTheDocument();
+    expect(screen.getByText("회의 3건 · 예정 1건 · 기록 중 1건")).toBeInTheDocument();
+    // 표는 칸 이름을 갖는다 — 목록이 아니라 표라는 것이 이 줄로 결정된다.
+    expect(screen.getByText("참석자")).toBeInTheDocument();
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("리서치 공유")).toBeInTheDocument();
-    // v5: 제품 면 대문자 키커 금지, 새 회의 진입점은 상단바(헤더 CTA 없음).
-    expect(screen.queryByText("Meeting notes")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /새 회의 기록|새 회의/ })
-    ).toBeNull();
+    // 새 회의는 페이지 머리가 갖는다(상단바가 아니라).
+    expect(screen.getByRole("button", { name: "새 회의" })).toBeInTheDocument();
   });
 
-  it("filters to notes I started via meetingStartedBy", () => {
+  it("splits scheduled meetings from started ones, each with its own order", () => {
     renderPage();
 
-    const mine = screen.getByRole("button", { name: "내가 시작" });
-    fireEvent.click(mine);
+    // 「예정」은 필터 탭에도 있다 — 구획 제목 쪽만 본다.
+    expect(screen.getAllByText("예정").length).toBeGreaterThan(1);
+    expect(screen.getByText("1건 · 가까운 순")).toBeInTheDocument();
+    expect(screen.getByText("시작된 회의")).toBeInTheDocument();
+    expect(screen.getByText("2건 · 최근 시작순")).toBeInTheDocument();
+  });
 
-    expect(mine).toHaveAttribute("aria-pressed", "true");
+  it("filters by meeting status", () => {
+    renderPage();
+
+    const live = screen.getByRole("button", { name: "기록 중" });
+    fireEvent.click(live);
+
+    expect(live).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.queryByText("리서치 공유")).toBeNull();
-    expect(screen.getByText(/1개의 회의 기록/)).toBeInTheDocument();
+    expect(screen.queryByText("로드맵 리뷰")).toBeNull();
   });
 
-  it("shows a filter-specific empty state, not '아직 회의 기록이 없습니다', when none are mine", () => {
-    auth.user = { userId: "nobody", name: "X" };
+  it("searches title and participants without touching the status filter", () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "내가 시작" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "회의 찾기" }), {
+      target: { value: "리서치" },
+    });
 
-    expect(
-      screen.getByText("내가 시작한 회의가 없습니다.")
-    ).toBeInTheDocument();
-    expect(screen.queryByText("아직 회의 기록이 없습니다")).toBeNull();
-  });
-
-  it("does not leak null-owner notes as mine while the user is unresolved", () => {
-    auth.user = null;
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "내가 시작" }));
-
-    // 유저 미해결이면 소유 판별 없이 아무 노트도 '내가 시작'에 걸리지 않는다.
+    expect(screen.getByText("리서치 공유")).toBeInTheDocument();
     expect(screen.queryByText("주간 제품 회의")).toBeNull();
-    expect(screen.queryByText("리서치 공유")).toBeNull();
-    expect(
-      screen.getByText("내가 시작한 회의가 없습니다.")
-    ).toBeInTheDocument();
+  });
+
+  it("tells filtered-empty apart from never-had-any", () => {
+    renderPage();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "회의 찾기" }), {
+      target: { value: "없는회의" },
+    });
+
+    expect(screen.getByText("조건에 맞는 회의가 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("아직 회의가 없습니다")).toBeNull();
   });
 
   it("polls active lists every 10 seconds and inactive lists every 30 seconds", () => {

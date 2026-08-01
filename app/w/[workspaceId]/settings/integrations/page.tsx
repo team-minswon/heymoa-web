@@ -8,7 +8,10 @@ export default async function WorkspaceIntegrationsSettingsRoute({
 }) {
   const { workspaceId } = await params;
   return (
-    <SettingsPageShell>
+    <SettingsPageShell
+      title="연동"
+      description="챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을 씁니다."
+    >
       <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
     </SettingsPageShell>
   );

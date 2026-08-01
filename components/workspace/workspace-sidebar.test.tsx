@@ -7,6 +7,11 @@ const logout = vi.fn();
 const auth = vi.hoisted(() => ({
   isLoggingOut: false,
 }));
+const recordingState = vi.hoisted(() => ({
+  phase: "idle" as string,
+  activeNoteId: undefined as string | undefined,
+  session: null as null | { noteId: string },
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
@@ -33,6 +38,48 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
 
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryKey: () => ["notes"],
+}));
+
+vi.mock("@/components/transcription/recording-provider", () => ({
+  useRecording: () => recordingState,
+}));
+
+vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
+  useGetWorkspaceMembers: () => ({
+    data: {
+      status: 200,
+      data: {
+        success: true,
+        data: { members: [{ userId: "01K0000000003" }, { userId: "01K1" }] },
+      },
+    },
+  }),
+}));
+
+vi.mock("@/lib/api/generated/notifications/notifications", () => ({
+  useGetNotifications: () => ({
+    data: {
+      status: 200,
+      data: { success: true, data: { notifications: [], unreadCount: 3 } },
+    },
+  }),
+}));
+
+vi.mock("@/lib/api/generated/action-items/action-items", () => ({
+  useGetActionItems: () => ({
+    data: {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          actionItems: [
+            { actionItemId: "a1", dueAt: "2000-01-01T00:00:00Z" },
+            { actionItemId: "a2", dueAt: null },
+          ],
+        },
+      },
+    },
+  }),
 }));
 
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
@@ -134,33 +181,47 @@ describe("WorkspaceSidebar", () => {
     renderSidebar();
     fireEvent.click(screen.getByRole("button", { name: "워크스페이스 전환" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /제품 팀/ }));
-    expect(push).toHaveBeenCalledWith("/w/01K0000000007");
+    expect(push).toHaveBeenCalledWith("/w/01K0000000007/meetings");
   });
 
-  it("puts the workspace switcher in the header and the user profile in the footer", () => {
-    const { container } = renderSidebar();
+  it("counts members, unread notifications, and overdue action items", () => {
+    renderSidebar();
 
-    const header = container.querySelector('[data-slot="sidebar-header"]');
-    expect(header).toContainElement(
-      screen.getByRole("button", { name: "워크스페이스 전환" })
+    expect(screen.getByText("멤버 2명")).toBeInTheDocument();
+    // 배지는 「늦었다」는 뜻이다 — 기한 없는 항목은 세지 않는다.
+    expect(
+      screen.getByRole("button", { name: /액션 아이템\s*1/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /받은 알림\s*3/ })
+    ).toBeInTheDocument();
+  });
+
+  it("surfaces the live row only while a recording is running", () => {
+    const { rerender } = renderSidebar();
+    expect(screen.queryByText("기록 중 1건")).toBeNull();
+
+    recordingState.phase = "recording";
+    recordingState.activeNoteId = "01K0000000002";
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <SidebarProvider>
+          <WorkspaceSidebar {...props} />
+        </SidebarProvider>
+      </QueryClientProvider>
     );
 
-    const footer = container.querySelector('[data-slot="sidebar-footer"]');
-    const profile = screen.getByRole("button", {
-      name: /김민수 minsu@example.com/,
-    });
-    expect(footer).toContainElement(profile);
-    // settings gear replaces the old chevron affordance
-    expect(profile.querySelector("svg.lucide-settings")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /기록 중인 회의/ }));
+    expect(push).toHaveBeenCalledWith(
+      "/w/01K0000000000/meetings/01K0000000002?view=full&tab=transcript"
+    );
+    recordingState.phase = "idle";
+    recordingState.activeNoteId = undefined;
   });
 
   it("keeps logout progress visible after the profile menu closes", async () => {
     const view = renderSidebar();
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /김민수 minsu@example.com/,
-      })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "계정 메뉴" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "로그아웃" }));
     expect(logout).toHaveBeenCalledOnce();
 

@@ -28,7 +28,9 @@ export function NoteRouteSurface({
           aria-label="회의"
           data-surface="sheet"
           showCloseButton={false}
-          className="inset-0 h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 bg-white p-0 shadow-e3 sm:max-w-none md:inset-y-2 md:left-auto md:right-2 md:h-[calc(100dvh-1rem)] md:w-[min(860px,calc(100vw-15rem))] md:max-w-[860px] md:rounded-panel md:border md:border-black/5"
+          // 넓은 화면에서는 캔버스에서 10 띄운 패널이다 — 셸 패널·에이전트 레일과 같은
+          // 여백·radius·테두리라야 셋이 한 판 위에 놓인 것으로 읽힌다.
+          className="inset-0 h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 bg-card p-0 shadow-e3 sm:max-w-none md:inset-y-2.5 md:right-2.5 md:left-auto md:h-[calc(100dvh-20px)] md:w-[min(860px,calc(100vw-15rem))] md:max-w-[860px] md:rounded-panel md:border md:border-[var(--el-hairline)]"
         >
           <SheetHeader className="sr-only">
             <SheetTitle>회의</SheetTitle>
@@ -41,11 +43,11 @@ export function NoteRouteSurface({
   }
 
   return (
-    // 상단바 아래 전부가 이 면의 몫이다. 셸 컨테이너가 뷰포트 높이에 못박혀 있어(APP-252)
-    // `bottom-0`이 곧 화면 바닥이다 — 상단바 높이를 여기 다시 적지 않는다.
+    // full 회의는 패널을 통째로 쓴다 — 셸이 사이드바와 상단바를 걷었으므로 남길 여백이 없다.
+    // 셸 컨테이너가 뷰포트 높이에 못박혀 있어(APP-252) inset-0 이 곧 화면이다.
     <div
       data-surface="full"
-      className="absolute inset-x-0 bottom-0 top-16 z-10 min-h-0 overflow-hidden bg-background"
+      className="absolute inset-0 z-10 min-h-0 overflow-hidden bg-card"
     >
       {children}
     </div>

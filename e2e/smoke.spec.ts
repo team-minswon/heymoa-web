@@ -15,6 +15,14 @@ function meetingControls(page: Page) {
   return page.getByRole("group", { name: "회의 상태 및 제어" });
 }
 
+/**
+ * 회의 상태는 **회의 머리**가 말한다 — 상단바의 회의 조작은 「할 수 있는 것」만 든다.
+ * 한 화면에서 같은 상태를 두 번 그리지 않기로 한 결과다(design.pen).
+ */
+function meetingStatus(page: Page) {
+  return page.getByTestId("meeting-status");
+}
+
 function recordedSeconds(value: string | null) {
   const [minutes = "0", seconds = "0"] = (value ?? "0:0").split(":");
   return Number(minutes) * 60 + Number(seconds);
@@ -32,7 +40,7 @@ async function createMeetingNote(page: Page) {
   const noteId = segments[segments.indexOf("meetings") + 1];
   expect(noteId).toBeTruthy();
   await expect(
-    meetingControls(page).getByText("시작 전", { exact: true })
+    meetingStatus(page).getByText("시작 전", { exact: true })
   ).toBeVisible();
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
@@ -47,7 +55,7 @@ async function startRecording(page: Page, name: "회의 시작" | "재개") {
     timeout: 20_000,
   });
   await expect(
-    meetingControls(page).getByText("기록 중", { exact: true })
+    meetingStatus(page).getByText("기록 중", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -57,7 +65,7 @@ async function stopRecording(page: Page) {
     .getByRole("button", { name: "중지" })
     .click();
   await expect(
-    meetingControls(page).getByText("중지됨", { exact: true })
+    meetingStatus(page).getByText("중지됨", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "재개" })
@@ -73,7 +81,7 @@ async function endMeeting(page: Page) {
     .getByRole("button", { name: "회의 종료" })
     .click();
   await expect(
-    meetingControls(page).getByText("종료됨", { exact: true })
+    meetingStatus(page).getByText("종료됨", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -107,11 +115,11 @@ async function expectForeignViewerTranscript(
       0
     );
     if (viewportSize.width === 375) {
-      const toolbar = page
-        .getByRole("navigation", { name: "현재 위치" })
-        .locator("..");
-      const status = toolbar.getByText("기록 중", { exact: true });
-      const starterName = toolbar.getByText("김서연", { exact: false });
+      // full 회의는 셸 상단바를 걷는다 — 상태는 회의 머리가, 시작자는 회의 조작이 든다.
+      const status = meetingStatus(page).getByText("기록 중", { exact: true });
+      const starterName = meetingControls(page).getByText("김서연", {
+        exact: false,
+      });
       await expect(status).toBeVisible();
       await expect(starterName).toBeVisible();
       const starterBox = await starterName.boundingBox();
@@ -532,17 +540,18 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
   page,
 }) => {
   const noteId = await createMeetingNote(page);
-  await page.getByRole("button", { name: "회의 닫기" }).click();
-  await page.getByRole("link", { name: "실시간 기록 노트 회의 열기" }).click();
+  await page.getByRole("button", { name: "목록으로" }).click();
+  await page.getByRole("link", { name: /실시간 기록 노트/ }).click();
+  // 시작 전 회의는 정보 탭으로 연다 — 아직 읽을 전사가 없다(design.pen `STdBl`).
   await expect(page).toHaveURL(
-    `/w/${MOCK_WORKSPACE_ID}/meetings/${noteId}?view=side&tab=transcript`
+    `/w/${MOCK_WORKSPACE_ID}/meetings/${noteId}?view=side&tab=details`
   );
 
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
   ).toBeVisible();
   await expect(
-    meetingControls(page).getByText("시작 전", { exact: true })
+    meetingStatus(page).getByText("시작 전", { exact: true })
   ).toBeVisible();
 });
 
@@ -554,13 +563,15 @@ test("shows meeting context and shared chat inside the viewer side panel", async
   );
 
   const noteSurface = page.getByLabel("회의", { exact: true });
-  await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
+  await expect(
+    noteSurface.getByText("기록 중", { exact: true })
+  ).toBeVisible();
   await expect(
     noteSurface.getByText("김서연님이 시작한 회의", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "회의 정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "정보"]);
 
   await page.getByRole("tab", { name: "챗봇" }).click();
 
@@ -577,7 +588,9 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   );
 
   const noteSurface = page.getByLabel("회의", { exact: true });
-  await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
+  await expect(
+    noteSurface.getByText("기록 중", { exact: true })
+  ).toBeVisible();
   await expect(
     noteSurface.getByText("테스트 유저님이 시작한 회의", { exact: true })
   ).toBeVisible();
@@ -594,9 +607,9 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
     timeout: 20_000,
   });
   await expect(
-    meetingControls(page).getByText("종료됨", { exact: true })
+    meetingStatus(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
-  await expect(page.getByRole("tab")).toHaveText(["기록", "요약", "회의 정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["요약", "전사", "정보"]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });
@@ -615,7 +628,7 @@ test("ends a meeting and shows the analysis in progress", async ({ page }) => {
     timeout: 20_000,
   });
   await expect(
-    meetingControls(page).getByText("종료됨", { exact: true })
+    meetingStatus(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
 });
 
@@ -792,13 +805,15 @@ test("keeps the personal chat scrollable when the thread grows", async ({
  * 노트 표면이 본문 컬럼을 덮어서(full은 항상, side는 모바일에서 inset-0) 필터만 바꾸면
  * 화면이 반응하지 않는 것처럼 보였다.
  */
-test("returns to the note list when a project is picked in full view", async ({
-  page,
-}) => {
+test("returns to the note list from the full view top bar", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/meetings/01K0000000002?view=full`);
   await expect(page).toHaveURL(/meetings/);
 
-  await page.getByRole("button", { name: "모든 회의" }).click();
+  // full 회의는 셸(사이드바 포함)을 걷으므로 돌아갈 길은 상단바 하나뿐이다 — 그것이 서야 한다.
+  await expect(page.getByRole("navigation", { name: "워크스페이스" })).toHaveCount(
+    0
+  );
+  await page.getByRole("button", { name: "목록으로" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}/meetings$`));
 });
@@ -816,7 +831,7 @@ test("covers the viewport with the full note surface", async ({ page }) => {
   await expect(page.locator('[data-surface="full"]')).toBeVisible();
   // 뒤 목록이 실제로 그려질 때까지 기다린다. skeleton은 6행이라 뷰포트를 안 넘어서, 로드 전에
   // 재면 수정을 되돌려도 통과한다 — 재현 조건 자체가 "목록이 화면보다 길다"이다.
-  await expect(page.getByTestId("workspace-note-list")).toBeAttached();
+  await expect(page.getByText("모든 회의").first()).toBeAttached();
 
   const geometry = await page.evaluate(() => {
     const element = document.querySelector('[data-surface="full"]')!;
@@ -829,7 +844,9 @@ test("covers the viewport with the full note surface", async ({ page }) => {
 
   // 문서가 스크롤되면 그 자체가 셸이 뷰포트를 넘었다는 뜻이다.
   expect(geometry.documentScrollHeight).toBe(geometry.viewportHeight);
-  expect(geometry.surfaceBottom).toBe(geometry.viewportHeight);
+  // 회의 면은 패널을 통째로 채운다. 패널이 캔버스에서 10 띄워 앉으므로 바닥도 그만큼 위다.
+  expect(geometry.surfaceBottom).toBeLessThanOrEqual(geometry.viewportHeight);
+  expect(geometry.surfaceBottom).toBeGreaterThan(geometry.viewportHeight - 14);
 });
 
 /**
@@ -844,12 +861,14 @@ test("clears the note row spinner after the full-view note is closed", async ({
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
-  const row = page.locator("article", { hasText: "주간 제품 회의" }).first();
-  await row.getByRole("button", { name: "주간 제품 회의 회의 메뉴" }).click();
-  await page.getByRole("menuitem", { name: "전체 화면으로 열기" }).click();
+  const row = page.getByRole("link", { name: /주간 제품 회의/ }).first();
+  await row.click();
+  await expect(page).toHaveURL(/view=side/);
+  // 목록에서 여는 회의는 side 다 — full 은 상단바에서 넓힌 뒤에야 나온다.
+  await page.getByRole("button", { name: "전체 화면으로 보기" }).click();
   await expect(page).toHaveURL(/view=full/);
 
-  await page.getByRole("button", { name: "모든 회의" }).click();
+  await page.getByRole("button", { name: "목록으로" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}/meetings$`));
 
   await expect(row.locator(".animate-spin")).toHaveCount(0);

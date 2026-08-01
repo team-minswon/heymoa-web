@@ -37,7 +37,7 @@ function note(overrides: Partial<NoteResponseData>): NoteResponseData {
 }
 
 const renderControls = (n: NoteResponseData, showContext?: boolean) =>
-  render(<MeetingControls note={n} showContext={showContext} />);
+  render(<MeetingControls showStatus note={n} showContext={showContext} />);
 
 describe("MeetingControls", () => {
   beforeEach(() => {
@@ -216,7 +216,7 @@ describe("MeetingControls", () => {
   it("종료된 회의는 요약 보기만 제공한다", () => {
     const onMeetingEnded = vi.fn();
     render(
-      <MeetingControls
+      <MeetingControls showStatus
         note={note({
           meetingStatus: "ENDED",
           activeSessionStartedAt: null,

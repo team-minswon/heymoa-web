@@ -137,7 +137,7 @@ export function NotificationBell() {
             type="button"
             variant="ghost"
             size="icon"
-            className="relative rounded-full"
+            className="relative"
             aria-label={
               unreadCount > 0 ? `알림 ${unreadCount}건 안 읽음` : "알림"
             }

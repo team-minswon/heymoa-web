@@ -74,7 +74,7 @@ function GlobalRecordingPill({
               <span
                 key={index}
                 data-testid={`global-wave-bar-${index}`}
-                className="h-2.5 w-[2px] origin-center rounded-full bg-white transition-transform duration-75"
+                className="h-2.5 w-[2px] origin-center rounded-full bg-card transition-transform duration-75"
                 style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
               />
             ))}

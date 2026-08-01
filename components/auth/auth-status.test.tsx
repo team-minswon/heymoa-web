@@ -17,7 +17,7 @@ describe("AuthStatus", () => {
 
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-busy", "true");
-    expect(button).toHaveClass("h-8", "rounded-full");
+    expect(button).toHaveClass("h-9", "rounded-full");
     expect(button).toHaveTextContent("로그인");
     expect(button.firstElementChild).toHaveClass("opacity-0");
   });

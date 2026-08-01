@@ -461,7 +461,7 @@ function CallRecordCard({
       className={
         status === "error"
           ? "rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.04] p-3"
-          : "rounded-block border border-[var(--el-hairline)] bg-white p-3"
+          : "rounded-block border border-[var(--el-hairline)] bg-card p-3"
       }
     >
       <div className="flex items-center justify-between gap-2">
@@ -506,7 +506,7 @@ function ApprovalPrompt({
   const invalidated = state.kind === "invalidated";
   const submitted = state.kind === "submitted";
   return (
-    <div className="rounded-panel border border-[var(--el-hairline)] bg-white p-3.5">
+    <div className="rounded-panel border border-[var(--el-hairline)] bg-card p-3.5">
       <div className="flex items-center justify-between gap-2">
         <p
           className={

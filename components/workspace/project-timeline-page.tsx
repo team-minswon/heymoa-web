@@ -5,6 +5,11 @@ import { useMemo } from "react";
 import { Calendar, CornerUpLeft, Pause } from "lucide-react";
 
 import { DataBoundary } from "@/components/ui/data-boundary";
+import {
+  PageBody,
+  PageContent,
+  PageHead,
+} from "@/components/workspace/page-chrome";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import type { NoteSummary } from "@/lib/api/generated/models";
@@ -203,26 +208,22 @@ export function ProjectTimelinePage({
   const project = projects.find((row) => row.projectId === projectId);
 
   return (
-    // 셸이 overflow-hidden 이라 페이지가 스스로 스크롤 경계를 만든다.
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="px-8 pb-7 pt-6">
-      <header className="pb-4">
-        <h1 className="text-note-title font-serif font-light">
-          {project?.name ?? "프로젝트"}
-        </h1>
-        <p className="mt-1 text-[13px] text-[var(--el-muted)]">
-          {project?.description ??
-            "이 프로젝트의 회의를 시간순으로 봅니다."}
-        </p>
-      </header>
-      <DataBoundary
-        fallback={<TimelineSkeleton />}
-        errorLabel="프로젝트 회의를 불러오지 못했습니다"
-        resetKeys={[projectId]}
-      >
-        <Timeline workspaceId={workspaceId} projectId={projectId} />
-      </DataBoundary>
-      </div>
-    </div>
+    <PageBody>
+      <PageHead
+        title={project?.name ?? "프로젝트"}
+        description={
+          project?.description ?? "이 프로젝트의 회의를 시간순으로 봅니다."
+        }
+      />
+      <PageContent>
+        <DataBoundary
+          fallback={<TimelineSkeleton />}
+          errorLabel="프로젝트 회의를 불러오지 못했습니다"
+          resetKeys={[projectId]}
+        >
+          <Timeline workspaceId={workspaceId} projectId={projectId} />
+        </DataBoundary>
+      </PageContent>
+    </PageBody>
   );
 }

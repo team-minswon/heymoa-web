@@ -225,7 +225,7 @@ export function SharedChatPanel({
     <aside
       data-testid="shared-chat-panel"
       aria-label="회의 챗봇"
-      className="flex h-full min-h-0 w-full flex-col bg-white lg:border-l lg:border-[var(--el-hairline)]"
+      className="flex h-full min-h-0 w-full flex-col bg-card lg:border-l lg:border-[var(--el-hairline)]"
     >
       <header className="border-b border-[var(--el-hairline)] px-5 py-4">
         <p className="text-[11px] tracking-wide text-[var(--el-muted)] uppercase">

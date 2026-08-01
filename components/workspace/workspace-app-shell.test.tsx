@@ -107,10 +107,16 @@ describe("WorkspaceAppShell", () => {
     expect(screen.getByRole("main")).toHaveTextContent("노트 목록");
     expect(screen.getAllByText("김민수의 워크스페이스")).not.toHaveLength(0);
 
+    // 셸은 캔버스 위에 흰 패널이 떠 있는 구조다 — 사이드바에는 면도 경계선도 없다.
+    // 사이드바에 배경이 생기면 패널이 「떠 있는」 것으로 안 읽히고 2단 레이아웃이 된다.
     const sidebarContainer = document.querySelector(
       '[data-slot="sidebar-container"]'
     );
-    expect(sidebarContainer).toHaveClass("overflow-hidden", "border-r");
+    expect(sidebarContainer).toHaveClass("border-r-0");
+    expect(document.querySelector("main > div")).toHaveClass(
+      "rounded-panel",
+      "shadow-e2"
+    );
   });
 
   it("OAuth 복귀 쿼리로 연동 결과 토스트를 띄우고 쿼리를 지운다", async () => {
