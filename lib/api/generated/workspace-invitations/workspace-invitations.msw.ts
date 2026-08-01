@@ -5,13 +5,39 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import { faker } from "@faker-js/faker";
+
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  InvitationPreviewResponse,
   WorkspaceInvitationActionResponse,
   WorkspaceInvitationListResponse,
 } from "../models";
+
+export const getGetInvitationResponseMock = (
+  overrideResponse: Partial<Extract<InvitationPreviewResponse, object>> = {}
+): InvitationPreviewResponse => ({
+  data: {
+    invitationId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+    workspaceName: faker.string.alpha({ length: { min: 10, max: 100 } }),
+    inviterName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "PENDING",
+      "ACCEPTED",
+      "DECLINED",
+      "CANCELED",
+    ] as const),
+    expiresAt: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
 
 export const getAcceptWorkspaceInvitationResponseMock =
   (): WorkspaceInvitationActionResponse => ({
@@ -79,6 +105,30 @@ export const getCancelWorkspaceInvitationResponseMock =
     },
     error: null,
   });
+
+export const getGetInvitationMockHandler = (
+  overrideResponse?:
+    | InvitationPreviewResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<InvitationPreviewResponse> | InvitationPreviewResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/invitations/:invitationId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetInvitationResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 
 export const getAcceptWorkspaceInvitationMockHandler = (
   overrideResponse?:
@@ -210,6 +260,7 @@ export const getCancelWorkspaceInvitationMockHandler = (
   );
 };
 export const getWorkspaceInvitationsMock = () => [
+  getGetInvitationMockHandler(),
   getAcceptWorkspaceInvitationMockHandler(),
   getDeclineWorkspaceInvitationMockHandler(),
   getGetWorkspaceInvitationsMockHandler(),

@@ -213,7 +213,8 @@ describe("invitation and notification handlers", () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data.unreadCount).toBe(1);
+    // 초대 하나 + 회의에서 나온 둘. 시드가 타입별로 한 모양씩 갖는다.
+    expect(body.data.unreadCount).toBe(3);
   });
 });
 

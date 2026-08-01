@@ -258,6 +258,23 @@ channels:
         $ref: '#/components/messages/NoteAnalysisStatusEvent'
       NoteSessionInterruptedEvent:
         $ref: '#/components/messages/NoteSessionInterruptedEvent'
+  userTopic:
+    servers:
+      - $ref: '#/servers/production'
+    address: /topic/users/{userId}
+    title: 로그인한 사용자 개인 event
+    description: |
+      **자기 자신만** 구독할 수 있다. 노트 토픽으로는 닿지 않는 알림을 나른다 — 「내가 참석자인
+      회의가 기록을 시작할 때」의 나는 그 회의를 열고 있지 않으므로 노트 토픽에 없다.
+
+      알림 본문은 싣지 않는다. `notificationId`만 주고 목록을 재조회하는 관례를 따른다
+      (note.updated가 값을 안 싣는 것과 같은 이유 — 실으면 REST 스키마가 두 곳으로 갈린다).
+    parameters:
+      userId:
+        $ref: '#/components/parameters/userId'
+    messages:
+      NotificationCreatedEvent:
+        $ref: '#/components/messages/NotificationCreatedEvent'
   agentChatStream:
     servers:
       - $ref: '#/servers/sseEdge'
@@ -392,6 +409,16 @@ operations:
       - $ref: '#/channels/noteTopic/messages/NoteUpdatedEvent'
       - $ref: '#/channels/noteTopic/messages/NoteAnalysisStatusEvent'
       - $ref: '#/channels/noteTopic/messages/NoteSessionInterruptedEvent'
+  sendUserTopicEvent:
+    action: send
+    summary: 사용자 본인에게 새 알림이 생겼음을 알린다.
+    description: |
+      벨 배지와 인박스가 이 신호로만 는다. 없으면 알림 설정을 켜도 다음 새로고침까지 안 보인다.
+      실제 알림 내용은 `GET /v1/notifications` 로 다시 읽는다.
+    channel:
+      $ref: '#/channels/userTopic'
+    messages:
+      - $ref: '#/channels/userTopic/messages/NotificationCreatedEvent'
   receiveAgentChatEvents:
     action: receive
     summary: heymoa-web이 개인 챗봇 응답 이벤트를 SSE로 수신한다.
@@ -454,6 +481,12 @@ components:
       description: 구독할 노트의 13자리 TSID
       examples:
         - 0HZX2K7M9Q4AF
+    userId:
+      description: |
+        구독하는 본인의 13자리 TSID. 남의 것을 구독하면 ERROR 없이 조용히 거절한다
+        (노트 토픽의 멤버십 재검증과 같은 관례).
+      examples:
+        - 0HZX2K7M9Q4AC
   messages:
     ConnectCommand:
       name: ConnectCommand
@@ -1085,6 +1118,45 @@ components:
           payload:
             code: LLM_PROVIDER_ERROR
             message: 응답 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.
+    NotificationCreatedEvent:
+      name: NotificationCreatedEvent
+      title: 새 알림
+      summary: 이 사용자 앞으로 알림이 하나 생겼다.
+      description: |
+        `type`은 REST의 `NotificationListResponse.notifications[].type`과 같은 값이다. 화면은 이
+        값으로 배지를 늘릴지만 정하고, 내용은 목록을 재조회해 읽는다.
+
+        수신 여부는 서버가 정한다 — 사용자가 그 사건을 껐으면(`notification-preferences`)
+        알림 자체가 만들어지지 않으므로 이 이벤트도 오지 않는다. 클라이언트가 거르지 않는다.
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, notificationId, notificationType, createdAt]
+        properties:
+          type:
+            type: string
+            enum: [notification.created]
+          notificationId:
+            type: string
+            pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
+          notificationType:
+            type: string
+            enum:
+              - WORKSPACE_INVITATION
+              - MEETING_STARTED
+              - ANALYSIS_COMPLETED
+              - ANALYSIS_FAILED
+              - SHARED_CHAT_MESSAGE
+          createdAt:
+            type: string
+            format: date-time
+      examples:
+        - name: 분석 완료
+          payload:
+            type: notification.created
+            notificationId: 0HZX2K7M9Q4AJ
+            notificationType: ANALYSIS_COMPLETED
+            createdAt: '2026-07-14T01:02:03Z'
     NoteUpdatedEvent:
       name: NoteUpdatedEvent
       title: 회의 메타 변경

@@ -20,6 +20,7 @@ import {
   useUpdateWorkspace,
 } from "@/lib/api/generated/workspaces/workspaces";
 import { usePendingDefaultWorkspaceId } from "@/lib/workspaces/default-workspace";
+import { DeleteWorkspaceCard } from "@/components/settings/delete-workspace-card";
 
 const workspaceSchema = z.object({
   name: z.string().trim().min(1, "워크스페이스 이름을 입력해 주세요.").max(80),
@@ -137,6 +138,13 @@ export function WorkspaceSettingsForm({
           </Button>
         </div>
       </form>
+      {workspace ? (
+        <DeleteWorkspaceCard
+          workspaceId={workspaceId}
+          name={workspace.name}
+          isDefault={workspace.isDefault}
+        />
+      ) : null}
       {!workspace?.isDefault && (
         <div className="flex items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-card p-5">
           <div>

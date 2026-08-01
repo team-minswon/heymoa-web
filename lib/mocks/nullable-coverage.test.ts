@@ -141,6 +141,13 @@ function contractSamples() {
 
   const notes = tuples.filter((tuple) => tuple.noteId).map((t) => t.noteId!);
 
+  // 초대 미리보기 표본. **내 워크스페이스 목록에서는 못 얻는다** — 초대는 아직 멤버가
+  // 아닌 곳으로 오기 때문이다. 받은 알림이 그 invitationId 를 들고 있다.
+  const invitationIds = mockDb
+    .listNotifications()
+    .notifications.map((notification) => notification.invitation?.invitationId)
+    .filter((value): value is string => Boolean(value));
+
   // 현재 유저가 시작·종료할 수 있는 노트는 미시작이거나 현재 유저가 시작한 진행 중 노트다.
   // **위치가 아니라 상태로 고른다** —
   // 시드에 종료된 노트가 늘면 `notes[0]`이 그쪽으로 바뀌어 표본 생성이 통째로 깨진다.
@@ -308,6 +315,8 @@ function contractSamples() {
         ),
         sessionId: sessionIds,
         chatId: chatIds,
+        // 초대 단건은 워크스페이스 조합과 무관하다 — 초대받은 사람은 workspaceId 를 모른다.
+        invitationId: invitationIds,
       };
       if (params.some((param) => !values[param]?.length)) continue;
       // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).

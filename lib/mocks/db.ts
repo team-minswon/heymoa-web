@@ -30,6 +30,8 @@ import type {
   WorkspaceInvitationListResponseData,
   NotificationListResponseData,
   NotificationListResponseDataNotificationsItem,
+  InvitationPreview,
+  NotificationPreferences,
   NotificationListResponseDataNotificationsItemInvitationStatus,
   MarkNotificationReadResponseData,
   AnalysisResultResponseData,
@@ -91,6 +93,9 @@ type MockInvitation = WorkspaceInvitationListResponseDataInvitationsItem & {
 
 /** 계약은 미연동 provider도 목록에 담으므로(connected: false) 목도 두 provider를 항상 들고 있는다. */
 /** 유저가 아직 멤버가 아닌, 초대만 와 있는 워크스페이스. 수락하면 여기 합류한다. */
+/** 초대 만료 시각. 시드는 결정적이어야 해서 상대값이 아니라 고정값이다. */
+const INVITATION_EXPIRES_AT = "2026-08-08T01:02:03Z";
+
 const INVITED_WORKSPACE = {
   workspaceId: "01K0000000030",
   name: "디자인 팀",
@@ -124,6 +129,7 @@ type StoreState = {
   members: MockMember[];
   invitations: MockInvitation[];
   notifications: NotificationListResponseDataNotificationsItem[];
+  notificationPreferences: NotificationPreferences;
   analyses: AnalysisResultResponseData[];
   actionItems: ActionItem[];
   speakers: TranscriptResponseDataSpeakersItem[];
@@ -510,6 +516,19 @@ function createSeedState(): StoreState {
       status: "PENDING",
       createdAt: "2026-07-11T00:00:00Z",
     },
+    // 이미 수락된 초대. 미리보기의 「만료 없음」과 종료 상태를 목이 보여주려면 하나가 더 있어야
+    // 한다 — PENDING 만 두면 링크를 다시 열었을 때의 화면이 목에 없다.
+    {
+      workspaceId: workspaces[1].workspaceId,
+      invitationId: "01K0000000024",
+      inviteeName: user.name,
+      inviteeEmail: user.email,
+      inviteeImage: user.image,
+      inviterName: "한지원",
+      role: "MEMBER",
+      status: "ACCEPTED",
+      createdAt: "2026-07-10T00:00:00Z",
+    },
   ];
   const notifications: NotificationListResponseDataNotificationsItem[] = [
     {
@@ -517,6 +536,7 @@ function createSeedState(): StoreState {
       type: "WORKSPACE_INVITATION",
       readAt: null,
       createdAt: "2026-07-11T00:00:00Z",
+      note: null,
       invitation: {
         invitationId: invitations[0].invitationId,
         status: invitations[0].status,
@@ -533,6 +553,7 @@ function createSeedState(): StoreState {
       type: "WORKSPACE_INVITATION",
       readAt: "2026-07-11T01:00:00Z",
       createdAt: "2026-07-10T00:00:00Z",
+      note: null,
       invitation: {
         invitationId: "01K0000000024",
         status: "ACCEPTED",
@@ -542,7 +563,39 @@ function createSeedState(): StoreState {
         inviterName: "한지원",
       },
     },
+    // 회의에서 나온 알림 셋. 초대만 시드에 두면 인박스가 한 모양만 그려서, 「note 를 실은
+    // 알림」 분기가 목에서 한 번도 안 지나간다.
+    {
+      notificationId: "01K0000000025",
+      type: "ANALYSIS_COMPLETED",
+      readAt: null,
+      createdAt: "2026-07-11T02:00:00Z",
+      note: { noteId: notes[0].noteId, title: notes[0].title },
+    },
+    {
+      notificationId: "01K0000000026",
+      type: "MEETING_STARTED",
+      readAt: null,
+      createdAt: "2026-07-11T01:30:00Z",
+      note: { noteId: notes[2].noteId, title: notes[2].title },
+    },
+    {
+      notificationId: "01K0000000027",
+      type: "ANALYSIS_FAILED",
+      readAt: "2026-07-11T03:00:00Z",
+      createdAt: "2026-07-10T05:00:00Z",
+      note: { noteId: notes[1].noteId, title: notes[1].title },
+    },
   ];
+  // 알림 설정. 「분석 실패」와 「초대」는 기본으로 켜 둔다 — 놓치면 손해가 큰 둘이다.
+  const notificationPreferences: NotificationPreferences = {
+    meetingStarted: true,
+    analysisCompleted: true,
+    analysisFailed: true,
+    sharedChatMessage: false,
+    workspaceInvitation: true,
+    weeklyDigest: false,
+  };
   // 연동은 두 provider가 모두 미연동으로 시작한다 — 연결 흐름을 데모에서 직접 밟게 한다.
   const integrations: MockIntegration[] = workspaces.flatMap((workspace) =>
     SUPPORTED_PROVIDERS.map((provider) => ({
@@ -563,6 +616,7 @@ function createSeedState(): StoreState {
     members,
     invitations,
     notifications,
+    notificationPreferences,
     analyses: [],
     // 액션 아이템은 분석에서 나온다. 시드는 「지난 기한 / 이번 주 / 기한 없음」과
     // 담당자 유/무를 한 번씩 갖는다 — 화면의 세 묶음과 「미지정」 분기를 목으로 볼 수 있게.
@@ -1795,6 +1849,71 @@ export const mockDb = {
     const readAt = nextTimestamp();
     for (const notification of state.notifications) notification.readAt ??= readAt;
     return mockDb.listNotifications();
+  },
+
+  getNotificationPreferences(): NotificationPreferences {
+    return copy(state.notificationPreferences);
+  },
+
+  /** 전체 치환이다 — 부분 갱신이면 스위치 여섯이 각자 다른 시점의 상태로 갈린다. */
+  updateNotificationPreferences(
+    next: NotificationPreferences
+  ): NotificationPreferences {
+    state.notificationPreferences = { ...next };
+    return copy(state.notificationPreferences);
+  },
+
+  /** 초대받은 사람은 workspaceId 를 모른다 — invitationId 만으로 찾는다. */
+  getInvitationPreview(invitationId: string): InvitationPreview {
+    const invitation = state.invitations.find(
+      (row) => row.invitationId === invitationId
+    );
+    if (!invitation) fail("INVITATION_NOT_FOUND");
+    const workspace = state.workspaces.find(
+      (row) => row.workspaceId === invitation.workspaceId
+    );
+    return copy({
+      invitationId: invitation.invitationId,
+      workspaceName: workspace?.name ?? INVITED_WORKSPACE.name,
+      inviterName: invitation.inviterName,
+      status: invitation.status,
+      // 만료는 있을 수도 없을 수도 있다. PENDING 만 만료를 갖게 두면 목이 양쪽을 보여준다 —
+      // 한쪽만 주면 화면의 반대쪽 분기가 실서버에서 처음 실행된다.
+      expiresAt:
+        invitation.status === "PENDING"
+          ? INVITATION_EXPIRES_AT
+          : null,
+    });
+  },
+
+  deleteWorkspace(workspaceId: string) {
+    const workspace = state.workspaces.find(
+      (row) => row.workspaceId === workspaceId
+    );
+    if (!workspace) fail("WORKSPACE_NOT_FOUND");
+    // 기본을 지우면 로그인 후 갈 곳이 없어진다. 계약이 409로 막는 자리다.
+    if (workspace.isDefault) fail("DEFAULT_WORKSPACE");
+    const projectIds = new Set(
+      state.projects
+        .filter((project) => project.workspaceId === workspaceId)
+        .map((project) => project.projectId)
+    );
+    state.notes = state.notes.filter((note) => !projectIds.has(note.projectId));
+    state.actionItems = state.actionItems.filter(
+      (item) => !projectIds.has(item.projectId)
+    );
+    state.projects = state.projects.filter(
+      (project) => project.workspaceId !== workspaceId
+    );
+    state.members = state.members.filter(
+      (member) => member.workspaceId !== workspaceId
+    );
+    state.invitations = state.invitations.filter(
+      (invitation) => invitation.workspaceId !== workspaceId
+    );
+    state.workspaces = state.workspaces.filter(
+      (row) => row.workspaceId !== workspaceId
+    );
   },
 
   listActionItems(

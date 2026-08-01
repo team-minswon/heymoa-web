@@ -17,6 +17,7 @@ import type {
   SpeakerAssignmentRequest,
   NoteUpdateRequest,
   ChangeDefaultWorkspaceRequest,
+  NotificationPreferences,
   CreateWorkspaceRequest,
   ProjectRequest,
   UpdateWorkspaceRequest,
@@ -556,6 +557,39 @@ export const restHandlers = [
   http.post("*/v1/invitations/:invitationId/decline", ({ params }) =>
     invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))
   ),
+  // 초대받은 사람은 workspaceId 를 모른다 — 이 경로가 수락 전 미리보기를 준다.
+  http.get("*/v1/invitations/:invitationId", ({ params }) =>
+    invitationResult(() => mockDb.getInvitationPreview(id(params.invitationId)))
+  ),
+  http.get("*/v1/users/me/notification-preferences", () =>
+    resultOf(() => mockDb.getNotificationPreferences(), BAD_REQUEST)
+  ),
+  http.put("*/v1/users/me/notification-preferences", async ({ request }) =>
+    resultOf(
+      async () =>
+        mockDb.updateNotificationPreferences(
+          (await request.json()) as NotificationPreferences
+        ),
+      BAD_REQUEST
+    )
+  ),
+  http.delete("*/v1/workspaces/:workspaceId", ({ params }) => {
+    try {
+      mockDb.deleteWorkspace(id(params.workspaceId));
+    } catch (error) {
+      const code = (error as Error).message;
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: { code, message: code, details: null },
+        },
+        { status: code === "WORKSPACE_NOT_FOUND" ? 404 : 409 }
+      );
+    }
+    // 계약은 bodyless 204다.
+    return new HttpResponse(null, { status: 204 });
+  }),
 
   // Meeting / analysis / integrations
   http.get("*/v1/notes/:noteId/analyses/latest", ({ params }) =>

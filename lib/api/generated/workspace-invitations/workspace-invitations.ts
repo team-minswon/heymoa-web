@@ -26,6 +26,7 @@ import type {
 import type {
   AppErrorResponse,
   CreateWorkspaceInvitationRequest,
+  InvitationPreviewResponse,
   UnauthorizedResponse,
   WorkspaceInvitationActionResponse,
   WorkspaceInvitationListResponse,
@@ -34,6 +35,342 @@ import type {
 import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+export type getInvitationResponse200 = {
+  data: InvitationPreviewResponse;
+  status: 200;
+};
+
+export type getInvitationResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getInvitationResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getInvitationResponseSuccess = getInvitationResponse200 & {
+  headers: Headers;
+};
+export type getInvitationResponseError = (
+  | getInvitationResponse401
+  | getInvitationResponse404
+) & {
+  headers: Headers;
+};
+
+export type getInvitationResponse =
+  | getInvitationResponseSuccess
+  | getInvitationResponseError;
+
+export const getGetInvitationUrl = (invitationId: string) => {
+  return `/v1/invitations/${invitationId}`;
+};
+
+/**
+ * 수락 **전**에 보여줄 최소치만 돌려준다. 멤버 목록·회의 제목 같은 워크스페이스 내용은 담지 않는다 — 링크만 있으면 읽을 수 있는 자리다.
+ * @summary 초대 단건 조회 (수락 전 미리보기)
+ */
+export const getInvitation = async (
+  invitationId: string,
+  options?: RequestInit
+): Promise<getInvitationResponse> => {
+  return apiFetch<getInvitationResponse>(getGetInvitationUrl(invitationId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInvitationQueryKey = (invitationId: string) => {
+  return [`/v1/invitations/${invitationId}`] as const;
+};
+
+export const getGetInvitationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetInvitationQueryKey(invitationId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvitation>>> = ({
+    signal,
+  }) => getInvitation(invitationId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: invitationId !== null && invitationId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInvitation>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetInvitationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInvitation>>
+>;
+export type GetInvitationQueryError = UnauthorizedResponse | AppErrorResponse;
+
+export function useGetInvitation<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitation>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInvitation>>,
+          TError,
+          Awaited<ReturnType<typeof getInvitation>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetInvitation<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitation>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInvitation>>,
+          TError,
+          Awaited<ReturnType<typeof getInvitation>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetInvitation<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 초대 단건 조회 (수락 전 미리보기)
+ */
+
+export function useGetInvitation<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetInvitationQueryOptions(invitationId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 초대 단건 조회 (수락 전 미리보기)
+ */
+export const prefetchGetInvitationQuery = async <
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetInvitationQueryOptions(invitationId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetInvitationSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getInvitation>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetInvitationQueryKey(invitationId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvitation>>> = ({
+    signal,
+  }) => getInvitation(invitationId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getInvitation>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetInvitationSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInvitation>>
+>;
+export type GetInvitationSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetInvitationSuspense<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getInvitation>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetInvitationSuspense<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getInvitation>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetInvitationSuspense<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getInvitation>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 초대 단건 조회 (수락 전 미리보기)
+ */
+
+export function useGetInvitationSuspense<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  invitationId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getInvitation>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetInvitationSuspenseQueryOptions(
+    invitationId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 export type acceptWorkspaceInvitationResponse200 = {
   data: WorkspaceInvitationActionResponse;

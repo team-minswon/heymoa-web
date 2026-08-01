@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { NotificationListResponseDataNotificationsItemInvitation } from "./notificationListResponseDataNotificationsItemInvitation";
+import type { NotificationListResponseDataNotificationsItemNote } from "./notificationListResponseDataNotificationsItemNote";
 import type { NotificationListResponseDataNotificationsItemType } from "./notificationListResponseDataNotificationsItemType";
 
 export type NotificationListResponseDataNotificationsItem = {
@@ -24,6 +25,11 @@ export type NotificationListResponseDataNotificationsItem = {
    * @nullable
    */
   readAt: string | null;
-  /** 알림 종류 */
+  /** 알림 종류. 초대만 `invitation` 을, 회의에서 나온 넷은 `note` 를 함께 싣는다 */
   type: NotificationListResponseDataNotificationsItemType;
+  /**
+   * 회의에서 나온 알림의 출처. 초대 알림이면 null
+   * @nullable
+   */
+  note?: NotificationListResponseDataNotificationsItemNote;
 };

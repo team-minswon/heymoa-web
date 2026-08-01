@@ -460,6 +460,130 @@ export const useCreateWorkspace = <
 > => {
   return useMutation(getCreateWorkspaceMutationOptions(options), queryClient);
 };
+export type deleteWorkspaceResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteWorkspaceResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type deleteWorkspaceResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type deleteWorkspaceResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type deleteWorkspaceResponseSuccess = deleteWorkspaceResponse204 & {
+  headers: Headers;
+};
+export type deleteWorkspaceResponseError = (
+  | deleteWorkspaceResponse401
+  | deleteWorkspaceResponse403
+  | deleteWorkspaceResponse409
+) & {
+  headers: Headers;
+};
+
+export type deleteWorkspaceResponse =
+  | deleteWorkspaceResponseSuccess
+  | deleteWorkspaceResponseError;
+
+export const getDeleteWorkspaceUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}`;
+};
+
+/**
+ * 회의·프로젝트·멤버가 함께 사라진다. ADMIN 단독이고 되돌릴 수 없다. 기본 워크스페이스는 지울 수 없다 — 지우면 로그인 후 갈 곳이 없어진다.
+ * @summary 워크스페이스 삭제
+ */
+export const deleteWorkspace = async (
+  workspaceId: string,
+  options?: RequestInit
+): Promise<deleteWorkspaceResponse> => {
+  return apiFetch<deleteWorkspaceResponse>(getDeleteWorkspaceUrl(workspaceId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteWorkspaceMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWorkspace>>,
+    TError,
+    { workspaceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWorkspace>>,
+  TError,
+  { workspaceId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteWorkspace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWorkspace>>,
+    { workspaceId: string }
+  > = (props) => {
+    const { workspaceId } = props ?? {};
+
+    return deleteWorkspace(workspaceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteWorkspaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWorkspace>>
+>;
+
+export type DeleteWorkspaceMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 워크스페이스 삭제
+ */
+export const useDeleteWorkspace = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWorkspace>>,
+      TError,
+      { workspaceId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWorkspace>>,
+  TError,
+  { workspaceId: string },
+  TContext
+> => {
+  return useMutation(getDeleteWorkspaceMutationOptions(options), queryClient);
+};
 export type getWorkspaceResponse200 = {
   data: WorkspaceResponse;
   status: 200;

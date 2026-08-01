@@ -189,13 +189,15 @@ describe("OpenAPI contract", () => {
 });
 
 describe("contract sync 2026-07-29", () => {
-  it("mirrors 38 public paths and excludes internal ones", () => {
+  it("mirrors 40 public paths and excludes internal ones", () => {
     const paths = Object.keys(api().paths);
     // APP-281에서 현재 전사 세션 조회 경로가 하나 추가됐다 (32 → 33).
     // MVP2에서 손으로 다섯을 더했다 (33 → 38) — 워크스페이스 회의 목록/생성,
     // 알림 일괄 읽음, 액션 아이템 목록/수정, 화자 지정.
+    // MVP2 §6에서 둘 더 (38 → 40) — 초대 단건 조회, 알림 설정.
+    // (워크스페이스 삭제는 기존 경로에 delete 를 더한 것이라 경로 수는 안 는다.)
     // 무엇을 왜 더했는지는 design/CONTRACT-SPEC-DELTA.md에 있다.
-    expect(paths).toHaveLength(38);
+    expect(paths).toHaveLength(40);
     expect(paths).toEqual(
       expect.arrayContaining([
         "/v1/workspaces/{workspaceId}/notes",

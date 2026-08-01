@@ -78,7 +78,23 @@ export const getReadAllNotificationsResponseMock = (
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
       ]),
-      type: faker.helpers.arrayElement(["WORKSPACE_INVITATION"] as const),
+      type: faker.helpers.arrayElement([
+        "WORKSPACE_INVITATION",
+        "MEETING_STARTED",
+        "ANALYSIS_COMPLETED",
+        "ANALYSIS_FAILED",
+        "SHARED_CHAT_MESSAGE",
+      ] as const),
+      note: faker.helpers.arrayElement([
+        faker.helpers.arrayElement([
+          {
+            noteId: faker.helpers.fromRegExp("^[0-9A-HJKMNP-TV-Z]{13}$"),
+            title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          },
+          null,
+        ]),
+        undefined,
+      ]),
     })),
   },
   success: faker.datatype.boolean(),

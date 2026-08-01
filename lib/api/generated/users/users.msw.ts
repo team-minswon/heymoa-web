@@ -5,10 +5,15 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import { faker } from "@faker-js/faker";
+
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { CurrentUserResponse } from "../models";
+import type {
+  CurrentUserResponse,
+  NotificationPreferencesResponse,
+} from "../models";
 
 export const getGetCurrentUserResponseMock = (): CurrentUserResponse => ({
   success: true,
@@ -19,6 +24,42 @@ export const getGetCurrentUserResponseMock = (): CurrentUserResponse => ({
     image: "https://cdn.heymoa.com/profiles/member.png",
   },
   error: null,
+});
+
+export const getGetNotificationPreferencesResponseMock = (
+  overrideResponse: Partial<
+    Extract<NotificationPreferencesResponse, object>
+  > = {}
+): NotificationPreferencesResponse => ({
+  data: {
+    meetingStarted: faker.datatype.boolean(),
+    analysisCompleted: faker.datatype.boolean(),
+    analysisFailed: faker.datatype.boolean(),
+    sharedChatMessage: faker.datatype.boolean(),
+    workspaceInvitation: faker.datatype.boolean(),
+    weeklyDigest: faker.datatype.boolean(),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
+});
+
+export const getUpdateNotificationPreferencesResponseMock = (
+  overrideResponse: Partial<
+    Extract<NotificationPreferencesResponse, object>
+  > = {}
+): NotificationPreferencesResponse => ({
+  data: {
+    meetingStarted: faker.datatype.boolean(),
+    analysisCompleted: faker.datatype.boolean(),
+    analysisFailed: faker.datatype.boolean(),
+    sharedChatMessage: faker.datatype.boolean(),
+    workspaceInvitation: faker.datatype.boolean(),
+    weeklyDigest: faker.datatype.boolean(),
+  },
+  success: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([] as const),
+  ...overrideResponse,
 });
 
 export const getGetCurrentUserMockHandler = (
@@ -44,4 +85,60 @@ export const getGetCurrentUserMockHandler = (
     options
   );
 };
-export const getUsersMock = () => [getGetCurrentUserMockHandler()];
+
+export const getGetNotificationPreferencesMockHandler = (
+  overrideResponse?:
+    | NotificationPreferencesResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) =>
+        | Promise<NotificationPreferencesResponse>
+        | NotificationPreferencesResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/users/me/notification-preferences",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetNotificationPreferencesResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getUpdateNotificationPreferencesMockHandler = (
+  overrideResponse?:
+    | NotificationPreferencesResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) =>
+        | Promise<NotificationPreferencesResponse>
+        | NotificationPreferencesResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/users/me/notification-preferences",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateNotificationPreferencesResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+export const getUsersMock = () => [
+  getGetCurrentUserMockHandler(),
+  getGetNotificationPreferencesMockHandler(),
+  getUpdateNotificationPreferencesMockHandler(),
+];

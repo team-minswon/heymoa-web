@@ -15,9 +15,14 @@ const mutations = vi.hoisted(() => ({
 }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
+
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   getGetWorkspaceQueryKey: (id: string) => ["workspace", id],
   getGetWorkspacesQueryKey: () => ["workspaces"],
+  useDeleteWorkspace: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useGetWorkspaceSuspense: () => ({
     data: {
       status: 200,

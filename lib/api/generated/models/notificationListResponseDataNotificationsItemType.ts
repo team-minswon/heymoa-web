@@ -7,11 +7,15 @@
  */
 
 /**
- * 알림 종류
+ * 알림 종류. 초대만 `invitation` 을, 회의에서 나온 넷은 `note` 를 함께 싣는다
  */
 export type NotificationListResponseDataNotificationsItemType =
   (typeof NotificationListResponseDataNotificationsItemType)[keyof typeof NotificationListResponseDataNotificationsItemType];
 
 export const NotificationListResponseDataNotificationsItemType = {
   WORKSPACE_INVITATION: "WORKSPACE_INVITATION",
+  MEETING_STARTED: "MEETING_STARTED",
+  ANALYSIS_COMPLETED: "ANALYSIS_COMPLETED",
+  ANALYSIS_FAILED: "ANALYSIS_FAILED",
+  SHARED_CHAT_MESSAGE: "SHARED_CHAT_MESSAGE",
 } as const;
