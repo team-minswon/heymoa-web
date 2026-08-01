@@ -20,10 +20,8 @@ import {
   PersonalChatProvider,
   usePersonalChat,
 } from "@/components/chat/personal-chat";
-import {
-  SettingsDialog,
-  type SettingsSection,
-} from "@/components/settings/settings-dialog";
+import type { SettingsSection } from "@/components/settings/settings-dialog";
+import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import type {
@@ -42,6 +40,23 @@ type WorkspaceShellState = {
   projects: ProjectResponseData[];
   isWorkspacePending: boolean;
   isWorkspaceError: boolean;
+};
+
+// 설정은 모달이 아니라 라우트다. 「어디 있나」가 주소에 없으면 공유도 새로고침도 안 된다.
+const SETTINGS_SLUG: Record<SettingsSection, string> = {
+  account: "account",
+  workspace: "general",
+  members: "members",
+  integrations: "integrations",
+};
+
+const SETTINGS_LABEL: Record<string, string> = {
+  general: "일반",
+  members: "멤버",
+  projects: "프로젝트",
+  integrations: "연동",
+  account: "내 계정",
+  notifications: "알림",
 };
 
 const INTEGRATION_LABEL: Record<string, string> = {
@@ -71,9 +86,6 @@ export function WorkspaceAppShell({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
-  const [settingsSection, setSettingsSection] =
-    useState<SettingsSection>("account");
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -102,11 +114,6 @@ export function WorkspaceAppShell({
     const provider = searchParams.get("provider");
     if (!provider) return;
     const status = searchParams.get("status");
-    // URL 쿼리(외부 상태)에 반응해 설정 모달을 여는 정당한 동기화 — toast·replace와 한 묶음이라 effect가 맞다.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setSettingsSection("integrations");
-    setSettingsOpen(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
     if (status === "connected") {
       toast.success(
         `${INTEGRATION_LABEL[provider] ?? provider} 연동을 연결했습니다.`
@@ -118,8 +125,12 @@ export function WorkspaceAppShell({
     next.delete("provider");
     next.delete("status");
     const query = next.toString();
-    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
-  }, [searchParams, router, pathname]);
+    // 결과를 연동 설정 화면에서 보여준다. replace 라 뒤로가기에 재실행되지 않는다.
+    router.replace(
+      `/w/${workspaceId}/settings/integrations${query ? `?${query}` : ""}`,
+      { scroll: false }
+    );
+  }, [searchParams, router, workspaceId]);
 
   // suspense — 로딩/에러는 route-layout의 DataBoundary가 잡는다. isPending/isError는 항상 false라
   // context 인터페이스(workspace-page가 소비)는 그대로 두어도 값이 자연히 false가 된다.
@@ -141,8 +152,7 @@ export function WorkspaceAppShell({
       selectedProjectId,
       setSelectedProjectId,
       openSettings: (section: SettingsSection) => {
-        setSettingsSection(section);
-        setSettingsOpen(true);
+        router.push(`/w/${workspaceId}/settings/${SETTINGS_SLUG[section]}`);
       },
       workspace,
       projects,
@@ -153,8 +163,10 @@ export function WorkspaceAppShell({
       projects,
       projectsQuery.isPending,
       projectsQuery.isError,
+      router,
       selectedProjectId,
       workspace,
+      workspaceId,
       workspaceQuery.isPending,
       workspaceQuery.isError,
     ]
@@ -163,7 +175,10 @@ export function WorkspaceAppShell({
   // 떠 있으면 사용자는 자기가 어디 있는지 잘못 안다.
   const isActionItems = pathname.endsWith("/action-items");
   const routeProjectId = pathname.match(/\/projects\/([^/]+)/)?.[1];
-  const currentLabel = isActionItems
+  const settingsSlug = pathname.match(/\/settings\/([^/?]+)/)?.[1];
+  const currentLabel = settingsSlug
+    ? `설정 · ${SETTINGS_LABEL[settingsSlug] ?? settingsSlug}`
+    : isActionItems
     ? "액션 아이템"
     : (projects.find(
         (project) =>
@@ -177,24 +192,27 @@ export function WorkspaceAppShell({
         workspaceName={workspace?.name}
       >
         <TooltipProvider>
-          <SettingsDialog
-            open={settingsOpen}
-            onOpenChange={setSettingsOpen}
-            initialSection={settingsSection}
-            workspaceId={workspaceId}
-          />
           <SidebarProvider className="bg-[var(--el-canvas)]">
+            {/* 설정은 같은 232 슬롯에서 사이드바만 갈아끼운다. 콘텐츠 팬은 안 움직인다. */}
             <Sidebar className="overflow-hidden border-r border-[var(--el-hairline)] [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-[color-mix(in_srgb,var(--el-canvas-soft)_92%,white)]">
-              <WorkspaceSidebar
-                workspaceId={workspaceId}
-                workspace={workspace}
-                projects={projects}
-                // 주소로 바로 들어와도 사이드바가 어디인지 말해야 한다. 라우트가 있으면
-                // 그것이 먼저다 — effect 로 state 를 맞추면 첫 렌더가 한 번 비어 깜빡인다.
-                selectedProjectId={routeProjectId ?? selectedProjectId}
-                onSelectProject={handleSelectProject}
-                onOpenSettings={value.openSettings}
-              />
+              {settingsSlug ? (
+                <SettingsSidebar
+                  workspaceId={workspaceId}
+                  workspaceName={workspace?.name}
+                  section={settingsSlug}
+                />
+              ) : (
+                <WorkspaceSidebar
+                  workspaceId={workspaceId}
+                  workspace={workspace}
+                  projects={projects}
+                  // 주소로 바로 들어와도 사이드바가 어디인지 말해야 한다. 라우트가 있으면
+                  // 그것이 먼저다 — effect 로 state 를 맞추면 첫 렌더가 한 번 비어 깜빡인다.
+                  selectedProjectId={routeProjectId ?? selectedProjectId}
+                  onSelectProject={handleSelectProject}
+                  onOpenSettings={value.openSettings}
+                />
+              )}
             </Sidebar>
             <ShellMain
               workspaceId={workspaceId}

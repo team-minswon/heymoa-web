@@ -127,9 +127,11 @@ describe("WorkspaceAppShell", () => {
       expect(toastMock.success).toHaveBeenCalledWith(
         "Linear 연동을 연결했습니다."
       );
-      expect(navState.replace).toHaveBeenCalledWith("/w/01K0000000000", {
-        scroll: false,
-      });
+      // 결과는 연동 설정 화면에서 보여준다 — 모달이 아니라 라우트라서 돌아올 자리가 있다.
+      expect(navState.replace).toHaveBeenCalledWith(
+        "/w/01K0000000000/settings/integrations",
+        { scroll: false }
+      );
     });
   });
 

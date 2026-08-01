@@ -22,7 +22,9 @@ export function WorkspaceRouteLayout({
   // 목록이 살아 있어야 하지만, 액션 아이템·프로젝트 타임라인은 목록을 대체한다 —
   // 같이 그리면 두 표가 겹친다.
   const segments = useSelectedLayoutSegments();
-  const showNoteList = !["action-items", "projects"].includes(segments[0] ?? "");
+  const showNoteList = !["action-items", "projects", "settings"].includes(
+    segments[0] ?? ""
+  );
 
   // v5: 사이드바는 full 모드에서도 유지한다 — full 노트 표면이 SidebarInset 안에서
   // 255 우측에 앉으므로 내비를 잃지 않는다. (이전 hideSidebar 폐기)
