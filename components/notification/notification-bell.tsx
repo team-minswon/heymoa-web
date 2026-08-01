@@ -36,7 +36,8 @@ const STATUS_LABEL: Record<string, string> = {
 /**
  * 알림 벨. 계약상 알림은 **초대(WORKSPACE_INVITATION) 하나**뿐이라 렌더 분기는
  * `invitation.status`가 전부다 — PENDING이면 수락/거절, 아니면 상태 라벨(항목은 남는다).
- * 벌크 읽음 엔드포인트가 없어 행을 클릭하면 읽음 처리한다.
+ * 행을 클릭하면 읽음 처리한다. 벌크 읽음(`PUT /v1/notifications/read-all`)은 인박스가 맡는다 —
+ * 드롭다운은 최근 것만 보는 자리라 「전부 읽음」을 두면 안 보이는 것까지 지운다.
  */
 export function NotificationBell() {
   const queryClient = useQueryClient();
