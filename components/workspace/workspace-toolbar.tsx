@@ -20,6 +20,7 @@ import {
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import { MeetingControls } from "@/components/notes/meeting-controls";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
+import { NewMeetingDialog } from "@/components/workspace/new-meeting-dialog";
 import { NotificationBell } from "@/components/notification/notification-bell";
 import { Button } from "@/components/ui/button";
 import {
@@ -214,6 +215,7 @@ export function WorkspaceToolbar({
   const searchParams = useSearchParams();
   const recording = useRecording();
   const createMeeting = useCreateMeeting(workspaceId);
+  const [newMeetingOpen, setNewMeetingOpen] = useState(false);
 
   // full 노트일 때만 상단바가 노트-aware가 된다. side는 시트가 자체 헤더를 가지므로 허브 모드 유지.
   const isFullNote =
@@ -303,7 +305,7 @@ export function WorkspaceToolbar({
               className="h-8 shrink-0 rounded-full px-3"
               disabled={createMeeting.disabled}
               loading={createMeeting.isPending}
-              onClick={() => void createMeeting.createMeeting()}
+              onClick={() => setNewMeetingOpen(true)}
             >
               <Plus className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만 — 노트 액션·벨이 잘리지 않게. */}
@@ -315,6 +317,19 @@ export function WorkspaceToolbar({
           </div>
         </div>
       </div>
+
+      <NewMeetingDialog
+        open={newMeetingOpen}
+        onOpenChange={setNewMeetingOpen}
+        isPending={createMeeting.isPending}
+        onSubmit={async (title) => {
+          // 만들어졌을 때만 닫는다. 대상 프로젝트가 사라졌거나 응답 guard에 걸리면
+          // 노트도 라우팅도 없는데 창만 닫혀 사용자가 만들어진 줄 안다.
+          const created = await createMeeting.createMeeting(title);
+          if (created) setNewMeetingOpen(false);
+          return created;
+        }}
+      />
 
       <AnimatePresence>
         {isRecordingOtherNote ? (

@@ -24,18 +24,19 @@ export function useCreateMeeting(workspaceId: string) {
   const targetProjectId = selectedProjectId ?? projects[0]?.projectId;
   const disabled = createNote.isPending || !targetProjectId;
 
-  const createMeeting = async () => {
-    if (!targetProjectId) return;
+  /** 실제로 만들어졌으면 true. 호출부는 이 값으로만 다이얼로그를 닫는다. */
+  const createMeeting = async (title: string): Promise<boolean> => {
+    if (!targetProjectId) return false;
     const response = await createNote.mutateAsync({
       projectId: targetProjectId,
-      data: { title: "실시간 기록 노트" },
+      data: { title },
     });
     if (
       response.status !== 201 ||
       !response.data.success ||
       !response.data.data
     ) {
-      return;
+      return false;
     }
     const createdNote = response.data.data;
     const noteId = createdNote.noteId;
@@ -67,7 +68,11 @@ export function useCreateMeeting(workspaceId: string) {
       };
     });
 
-    router.push(`/w/${workspaceId}/notes/${noteId}?view=full&tab=transcript`);
+    // `tab`을 안 붙인다 — 어차피 전사가 기본 탭이고, 붙여 두면 "기록하러 왔다"는 뜻으로
+    // 읽힌다. 새 노트는 NOT_STARTED라 「회의 시작」을 눌러야 기록이 시작된다.
+    router.push(`/w/${workspaceId}/notes/${noteId}?view=full`);
+
+    return true;
   };
 
   return {

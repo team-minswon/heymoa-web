@@ -78,7 +78,7 @@ describe("useCreateMeeting", () => {
         data: {
           noteId: "01K0000000100",
           projectId: "01K0000000001",
-          title: "실시간 기록 노트",
+          title: "주간 제품 회의",
           createdAt: "2026-07-19T10:00:00Z",
           updatedAt: "2026-07-19T10:00:00Z",
           meetingStatus: "NOT_STARTED",
@@ -95,14 +95,19 @@ describe("useCreateMeeting", () => {
     });
 
     await act(async () => {
-      await result.current.createMeeting();
+      await result.current.createMeeting("주간 제품 회의");
     });
 
     expect(recording.start).not.toHaveBeenCalled();
     expect(getUserMedia).not.toHaveBeenCalled();
+    // tab을 안 붙인다 — 전사가 기본 탭이고, 붙이면 "기록하러 왔다"로 읽힌다.
     expect(push).toHaveBeenCalledWith(
-      "/w/01K0000000000/notes/01K0000000100?view=full&tab=transcript"
+      "/w/01K0000000000/notes/01K0000000100?view=full"
     );
+    expect(createNote).toHaveBeenCalledWith({
+      projectId: "01K0000000001",
+      data: { title: "주간 제품 회의" },
+    });
     expect(
       client.getQueryData(["/v1/projects/01K0000000001/notes"])
     ).toMatchObject({

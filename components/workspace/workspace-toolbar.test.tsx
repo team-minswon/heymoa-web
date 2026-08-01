@@ -100,7 +100,13 @@ describe("WorkspaceToolbar", () => {
 
     const newNote = screen.getByRole("button", { name: "새 노트" });
     fireEvent.click(newNote);
-    expect(createMeeting).toHaveBeenCalledOnce();
+    // 바로 만들지 않는다 — 이름을 먼저 묻는다(생성과 시작을 가른다).
+    expect(createMeeting).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("회의 이름"), {
+      target: { value: "주간 제품 회의" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "만들기" }));
+    expect(createMeeting).toHaveBeenCalledWith("주간 제품 회의");
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
     // 노트가 열려 있지 않으면 회의 조작 슬롯은 없다.
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
@@ -183,7 +189,8 @@ describe("WorkspaceToolbar", () => {
 
     const newNote = screen.getByRole("button", { name: "새 노트" });
     fireEvent.click(newNote);
-    expect(createMeeting).toHaveBeenCalledOnce();
+    // 다른 노트가 기록 중이어도 진입점은 하나이고, 여전히 이름을 먼저 묻는다.
+    expect(screen.getByLabelText("회의 이름")).toBeInTheDocument();
   });
 
   it("replaces transitional status labels with the shared spinner", () => {

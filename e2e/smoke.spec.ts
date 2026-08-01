@@ -23,6 +23,9 @@ function recordedSeconds(value: string | null) {
 async function createMeetingNote(page: Page) {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "새 노트" }).click();
+  // 생성과 시작을 가른다 — 이름을 먼저 묻고, 기록은 노트 안에서 시작한다(APP-337).
+  await page.getByLabel("회의 이름").fill("주간 제품 회의");
+  await page.getByRole("button", { name: "만들기" }).click();
   await page.waitForURL(
     new RegExp(`/w/${MOCK_WORKSPACE_ID}/notes/[^?]+\\?view=full`)
   );
@@ -531,7 +534,7 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
 }) => {
   const noteId = await createMeetingNote(page);
   await page.getByRole("button", { name: "노트 닫기" }).click();
-  await page.getByRole("link", { name: "실시간 기록 노트 노트 열기" }).click();
+  await page.getByRole("link", { name: "주간 제품 회의 노트 열기" }).first().click();
   await expect(page).toHaveURL(
     `/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=side&tab=transcript`
   );
