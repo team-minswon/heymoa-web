@@ -27,3 +27,8 @@ export function formatAppDate(
     timeZone: APP_TIME_ZONE,
   }).format(date);
 }
+
+/** 액션 아이템의 기한. 시간은 안 쓴다 — 날짜만으로 「언제까지」가 읽힌다. */
+export function formatDueDate(value: string) {
+  return formatAppDate(value, { month: "long", day: "numeric" });
+}

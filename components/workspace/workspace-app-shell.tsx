@@ -155,9 +155,13 @@ export function WorkspaceAppShell({
       workspaceQuery.isError,
     ]
   );
-  const currentLabel =
-    projects.find((project) => project.projectId === selectedProjectId)?.name ??
-    "모든 노트";
+  // 브레드크럼은 지금 보고 있는 것을 말해야 한다. 액션 아이템 위에서 「모든 노트」가
+  // 떠 있으면 사용자는 자기가 어디 있는지 잘못 안다.
+  const isActionItems = pathname.endsWith("/action-items");
+  const currentLabel = isActionItems
+    ? "액션 아이템"
+    : (projects.find((project) => project.projectId === selectedProjectId)
+        ?.name ?? "모든 노트");
 
   return (
     <WorkspaceShellContext.Provider value={value}>

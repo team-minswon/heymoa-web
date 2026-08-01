@@ -8,7 +8,10 @@ const auth = vi.hoisted(() => ({
   isLoggingOut: false,
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => "/w/01K0000000000",
+}));
 
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";

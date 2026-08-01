@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Check,
   Folder,
   MoreHorizontal,
+  ListChecks,
   NotebookText,
   Pencil,
   Plus,
@@ -98,6 +99,8 @@ export function WorkspaceSidebar({
   onOpenSettings: (section: "account" | "workspace") => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isActionItems = pathname.endsWith("/action-items");
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
@@ -237,6 +240,16 @@ export function WorkspaceSidebar({
                   >
                     <NotebookText className="size-4 text-[var(--el-muted)]" />
                     <span>모든 노트</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={isActionItems}
+                    onClick={() => router.push(`/w/${workspaceId}/action-items`)}
+                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+                  >
+                    <ListChecks className="size-4 text-[var(--el-muted)]" />
+                    <span>액션 아이템</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
