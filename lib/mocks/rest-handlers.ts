@@ -11,12 +11,13 @@ import { getGetActiveAgentChatMockHandler } from "@/lib/api/generated/agent-chat
 import type {
   ActionItemUpdateRequest,
   GetActionItemsParams,
+  GetNotesParams,
   GetWorkspaceNotesParams,
   NoteCreateRequest,
+  NoteUpdateRequest,
   ChangeDefaultWorkspaceRequest,
   CreateWorkspaceRequest,
   ProjectRequest,
-  NoteRequest,
   UpdateWorkspaceRequest,
 } from "@/lib/api/generated/models";
 
@@ -186,17 +187,57 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
  * 쿼리 문자열을 orval 파라미터 타입으로 옮긴다. 목이 파라미터를 무시하면 화면의 필터가
  * 목에서는 늘 통과하고 실서버에서 처음 틀린다.
  */
+const MEETING_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "PAUSED", "ENDED"];
+const NOTE_SORTS = ["scheduledAt_asc", "startedAt_desc", "updatedAt_desc"];
+
+/** 계약의 enum·범위를 어기면 빈 목록이 아니라 400이다 — 목이 봐주면 실서버에서 처음 틀린다. */
+function enumOrThrow<T extends string>(
+  value: string | null,
+  allowed: string[]
+): T | undefined {
+  if (value === null) return undefined;
+  if (!allowed.includes(value)) throw new Error("BAD_REQUEST");
+  return value as T;
+}
+
+function limitOrThrow(value: string | null, max: number): number | undefined {
+  if (value === null) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
+    throw new Error("BAD_REQUEST");
+  }
+  return parsed;
+}
+
 function searchToNoteParams(search: URLSearchParams): GetWorkspaceNotesParams {
   const status = search.get("meetingStatus");
   return {
     q: search.get("q") ?? undefined,
     meetingStatus: status
-      ? (status.split(",") as GetWorkspaceNotesParams["meetingStatus"])
+      ? (status
+          .split(",")
+          .map((value) =>
+            enumOrThrow(value, MEETING_STATUSES)
+          ) as GetWorkspaceNotesParams["meetingStatus"])
       : undefined,
     projectId: search.get("projectId") ?? undefined,
-    sort: (search.get("sort") ?? undefined) as GetWorkspaceNotesParams["sort"],
+    sort: enumOrThrow<NonNullable<GetWorkspaceNotesParams["sort"]>>(
+      search.get("sort"),
+      NOTE_SORTS
+    ),
     cursor: search.get("cursor") ?? undefined,
-    limit: search.get("limit") ? Number(search.get("limit")) : undefined,
+    limit: limitOrThrow(search.get("limit"), 100),
+  };
+}
+
+function searchToProjectNoteParams(search: URLSearchParams): GetNotesParams {
+  return {
+    from: search.get("from") ?? undefined,
+    to: search.get("to") ?? undefined,
+    sort: enumOrThrow<NonNullable<GetNotesParams["sort"]>>(
+      search.get("sort"),
+      NOTE_SORTS
+    ),
   };
 }
 
@@ -206,11 +247,14 @@ function searchToActionItemParams(
   return {
     q: search.get("q") ?? undefined,
     assigneeId: search.get("assigneeId") ?? undefined,
-    status: (search.get("status") ?? undefined) as GetActionItemsParams["status"],
+    status: enumOrThrow<NonNullable<GetActionItemsParams["status"]>>(
+      search.get("status"),
+      ["OPEN", "DONE", "ALL"]
+    ),
     dueBefore: search.get("dueBefore") ?? undefined,
     projectId: search.get("projectId") ?? undefined,
     cursor: search.get("cursor") ?? undefined,
-    limit: search.get("limit") ? Number(search.get("limit")) : undefined,
+    limit: limitOrThrow(search.get("limit"), 100),
   };
 }
 
@@ -349,9 +393,14 @@ export const restHandlers = [
   ),
 
   // Notes
-  http.get("*/v1/projects/:projectId/notes", ({ params }) =>
+  http.get("*/v1/projects/:projectId/notes", ({ params, request }) =>
     resultOf(
-      () => ({ notes: mockDb.listNotes(id(params.projectId)) }),
+      () => ({
+        notes: mockDb.listNotes(
+          id(params.projectId),
+          searchToProjectNoteParams(new URL(request.url).searchParams)
+        ),
+      }),
       notFound("PROJECT_NOT_FOUND", "프로젝트를 찾을 수 없습니다.")
     )
   ),
@@ -360,7 +409,7 @@ export const restHandlers = [
       async () =>
         mockDb.createNote(
           id(params.projectId),
-          (await request.json()) as NoteRequest
+          (await request.json()) as NoteUpdateRequest
         ),
       BAD_REQUEST,
       201
@@ -377,7 +426,7 @@ export const restHandlers = [
       async () =>
         mockDb.updateNote(
           id(params.noteId),
-          (await request.json()) as NoteRequest
+          (await request.json()) as NoteUpdateRequest
         ),
       BAD_REQUEST
     )
@@ -649,13 +698,42 @@ export const restHandlers = [
       201
     )
   ),
-  http.delete("*/v1/notes/:noteId", ({ params }) =>
-    resultOf(
-      () => mockDb.deleteNote(id(params.noteId)),
-      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."),
-      204
-    )
-  ),
+  // 204는 본문이 없어야 한다. resultOf는 모든 성공을 JSON 봉투로 만들어
+  // `HttpResponse.json(..., {status: 204})`가 TypeError를 던진다 — 직접 응답한다.
+  http.delete("*/v1/notes/:noteId", ({ params }) => {
+    try {
+      mockDb.deleteNote(id(params.noteId));
+      return new HttpResponse(null, { status: 204 });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      if (code === "MEETING_IN_PROGRESS") {
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: {
+              code,
+              message: "기록 중인 회의는 삭제할 수 없습니다.",
+              details: null,
+            },
+          },
+          { status: 409 }
+        );
+      }
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: "NOTE_NOT_FOUND",
+            message: "노트를 찾을 수 없습니다.",
+            details: null,
+          },
+        },
+        { status: 404 }
+      );
+    }
+  }),
   http.put("*/v1/notifications/read-all", () =>
     resultOf(() => mockDb.readAllNotifications(), BAD_REQUEST)
   ),

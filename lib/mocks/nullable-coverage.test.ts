@@ -17,20 +17,47 @@ import { restHandlers } from "@/lib/mocks/rest-handlers";
 const server = setupServer(...restHandlers);
 const contract = parse(readFileSync("openapi3.yml", "utf8"));
 
-function nullableLeaves(schema: unknown, path = ""): string[] {
-  if (!schema || typeof schema !== "object") return [];
-  const node = schema as {
+/**
+ * `$ref`와 `allOf`를 따라간다. MVP2에서 NoteSummary를 뽑으면서 목록 items가 `$ref`,
+ * 단건 data가 `allOf`가 됐는데, 안 따라가면 이 테스트가 봉투의 `error`만 보고
+ * **조용히 통과한다** — 실제로 그렇게 됐다가 codex 리뷰에서 잡혔다.
+ */
+function deref(schema: unknown, seen = new Set<string>()): unknown {
+  if (!schema || typeof schema !== "object") return schema;
+  const node = schema as { $ref?: string };
+  if (typeof node.$ref === "string") {
+    const name = node.$ref.replace("#/components/schemas/", "");
+    // 자기 참조는 한 번만 편다 — 계약에 순환이 생겨도 무한루프로 죽지 않게.
+    if (seen.has(name)) return {};
+    return deref(contract.components.schemas[name], new Set([...seen, name]));
+  }
+  return schema;
+}
+
+function nullableLeaves(
+  schema: unknown,
+  path = "",
+  seen = new Set<string>()
+): string[] {
+  const resolved = deref(schema, seen);
+  if (!resolved || typeof resolved !== "object") return [];
+  const node = resolved as {
     properties?: Record<string, unknown>;
     items?: unknown;
+    allOf?: unknown[];
   };
   const out: string[] = [];
+  for (const member of node.allOf ?? []) {
+    out.push(...nullableLeaves(member, path, seen));
+  }
   for (const [key, value] of Object.entries(node.properties ?? {})) {
     const next = path ? `${path}.${key}` : key;
-    if ((value as Record<string, unknown>)?.nullable === true) out.push(next);
-    out.push(...nullableLeaves(value, next));
+    const child = deref(value, seen);
+    if ((child as Record<string, unknown>)?.nullable === true) out.push(next);
+    out.push(...nullableLeaves(child, next, seen));
   }
-  if (node.items) out.push(...nullableLeaves(node.items, `${path}[]`));
-  return out;
+  if (node.items) out.push(...nullableLeaves(node.items, `${path}[]`, seen));
+  return [...new Set(out)];
 }
 
 function valuesAt(node: unknown, parts: string[]): unknown[] {
@@ -295,6 +322,18 @@ function contractSamples() {
     }
     if (filled === 0) skipped.push(`${path} — 채울 수 없는 param: ${params}`);
   }
+  // 커서 페이지네이션은 limit을 줘야 「다음 페이지가 있다」 쪽 표본이 나온다.
+  // 시드를 페이지 크기 이상으로 불리는 대신 표본을 하나 더 부른다.
+  for (const [schema, path] of [
+    ["NotePageResponse", `/v1/workspaces/${workspaces[0].workspaceId}/notes`],
+    [
+      "ActionItemPageResponse",
+      `/v1/workspaces/${workspaces[0].workspaceId}/action-items`,
+    ],
+  ] as const) {
+    samples.push([schema, `${path}?limit=1`]);
+  }
+
   return {
     samples: [...new Map(samples.map((s) => [s[1], s])).values()],
     skipped,
@@ -323,11 +362,6 @@ const KNOWN_ONE_SIDED = new Set([
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
   "CurrentTranscriptionSessionNullableResponse.data.startedAt",
-  // 표본 URL은 limit을 안 붙인다. 시드가 기본 페이지 크기(회의 30·액션 50)보다 적어
-  // 커서가 늘 null이다 — 「다음 페이지가 있다」 분기는 limit을 준 호출에서만 나온다.
-  // 시드를 30건 넘게 불리는 건 이 한 필드 때문에 치르기엔 비싸다.
-  "NotePageResponse.data.nextCursor",
-  "ActionItemPageResponse.data.nextCursor",
 ]);
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */

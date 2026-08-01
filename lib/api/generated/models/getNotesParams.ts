@@ -17,10 +17,4 @@ export type GetNotesParams = {
    */
   to?: string;
   sort?: GetNotesSort;
-  cursor?: string;
-  /**
-   * @minimum 1
-   * @maximum 100
-   */
-  limit?: number;
 };

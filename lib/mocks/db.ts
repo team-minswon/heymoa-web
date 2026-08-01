@@ -5,12 +5,14 @@ import type {
   GetActionItemsParams,
   GetWorkspaceNotesParams,
   NotePageResponseData,
+  NoteUpdateRequest,
+  NoteCreateRequest,
+  GetNotesParams,
   ActionItemPageResponseData,
   CreateWorkspaceRequest,
   CurrentTranscriptionSessionNullableResponseData,
   CurrentUserResponseData,
   NoteSummary,
-  NoteRequest,
   NoteResponseData,
   ProjectRequest,
   ProjectResponseData,
@@ -186,6 +188,16 @@ function nextSessionTimestamp() {
  * UTC 01시대에 놓는다 — 자정 근처에 두면 KST 기준 날짜가 하루 밀려 묶음이 어긋난다.
  * `order`는 같은 날 안의 정렬만 벌리는 분 단위 오프셋이다.
  */
+function lastRecordedAtOf(noteId: string): string | null {
+  return (
+    state.sessions
+      .filter((session) => session.noteId === noteId && session.endedAt !== null)
+      .map((session) => session.startedAt)
+      .filter((value): value is string => value !== null)
+      .sort((a, b) => b.localeCompare(a))[0] ?? null
+  );
+}
+
 function daysAgoIso(daysAgo: number, order = 0): string {
   const todayUtcMidnight = Date.parse(`${getAppDateKey(new Date())}T00:00:00Z`);
   const at =
@@ -1342,18 +1354,32 @@ export const mockDb = {
     state.projects = state.projects.filter((p) => p.projectId !== projectId);
   },
 
-  listNotes(projectId: string): NoteSummary[] {
+  listNotes(projectId: string, params: GetNotesParams = {}): NoteSummary[] {
     assertProject(projectId);
     state.notes
       .filter((note) => note.projectId === projectId)
       .forEach((note) => expireReadySessions(note.noteId));
+    const from = params.from ? Date.parse(params.from) : null;
+    const to = params.to ? Date.parse(params.to) : null;
+    const sort = params.sort ?? "updatedAt_desc";
     const notes = state.notes
       .filter((note) => note.projectId === projectId)
-      .sort(
-        (a, b) =>
-          b.updatedAt.localeCompare(a.updatedAt) ||
-          b.noteId.localeCompare(a.noteId)
-      )
+      // 기간은 회의가 놓이는 시각(예정 또는 생성) 기준이다. 타임라인이 쓴다.
+      .filter((note) => {
+        const at = Date.parse(note.scheduledAt ?? note.createdAt);
+        return (from === null || at >= from) && (to === null || at <= to);
+      })
+      .sort((a, b) => {
+        if (sort === "scheduledAt_asc") {
+          const left = a.scheduledAt ? Date.parse(a.scheduledAt) : Infinity;
+          const right = b.scheduledAt ? Date.parse(b.scheduledAt) : Infinity;
+          return left - right || a.noteId.localeCompare(b.noteId);
+        }
+        const key = sort === "startedAt_desc" ? "meetingStartedAt" : "updatedAt";
+        const left = a[key] ? Date.parse(a[key] as string) : -Infinity;
+        const right = b[key] ? Date.parse(b[key] as string) : -Infinity;
+        return right - left || b.noteId.localeCompare(a.noteId);
+      })
       .map((note) => {
         const startedAt = state.sessions
           .filter(
@@ -1377,11 +1403,30 @@ export const mockDb = {
     return copy(notes);
   },
 
-  createNote(projectId: string, input: Partial<NoteRequest>): NoteResponseData {
+  createNote(
+    projectId: string,
+    input: Partial<NoteCreateRequest>
+  ): NoteResponseData {
     assertProject(projectId);
     const createdAt = nextTimestamp();
+    // contextFromNoteIds의 첫 항목이 previousNoteId의 기본값이다 — 「지난 회의에서
+    // 가져오기」로 고른 첫 회의가 곧 선행 회의라는 계약을 목도 지킨다.
+    const previousNoteId =
+      input.previousNoteId ?? input.contextFromNoteIds?.[0] ?? null;
     const note: NoteResponseData = {
       ...NOTE_MVP2,
+      scheduledAt: input.scheduledAt ?? null,
+      context: input.context ?? null,
+      participants: (input.participantIds ?? []).map((userId) => ({
+        userId,
+        name:
+          state.members.find((member) => member.userId === userId)?.name ??
+          "알 수 없음",
+        email: null,
+      })),
+      previousNote: previousNoteId
+        ? { noteId: previousNoteId, title: findNote(previousNoteId).title }
+        : null,
       noteId: nextId(),
       projectId,
       title: input.title?.trim() || "제목 없는 노트",
@@ -1407,14 +1452,46 @@ export const mockDb = {
         state.sessions.find(
           (session) => session.noteId === noteId && session.status === "ACTIVE"
         )?.startedAt ?? null,
+      // 목록과 같은 값을 줘야 한다. 단건만 늘 null이면 상세의 「마지막 기록」이 목에서
+      // 한쪽 분기만 보인다.
+      lastRecordedAt: lastRecordedAtOf(noteId),
     });
   },
 
-  updateNote(noteId: string, input: NoteRequest): NoteResponseData {
+  /**
+   * 부분 수정. 키가 없으면 그대로 두고, 키가 있고 null이면 지운다 — 이 구분이 없으면
+   * 「일시 미정으로 되돌리기」를 표현할 수 없다.
+   */
+  updateNote(noteId: string, input: NoteUpdateRequest): NoteResponseData {
     const note = findNote(noteId);
-    const title = input.title.trim();
-    if (!title) fail("BAD_REQUEST");
-    note.title = title;
+    if (input.title !== undefined) {
+      const title = input.title.trim();
+      if (!title) fail("BAD_REQUEST");
+      note.title = title;
+    }
+    if (input.projectId !== undefined) {
+      assertProject(input.projectId);
+      note.projectId = input.projectId;
+    }
+    if ("scheduledAt" in input) note.scheduledAt = input.scheduledAt ?? null;
+    if ("context" in input) note.context = input.context ?? null;
+    if ("participantIds" in input) {
+      note.participants = (input.participantIds ?? []).map((userId) => ({
+        userId,
+        name:
+          state.members.find((member) => member.userId === userId)?.name ??
+          "알 수 없음",
+        email: null,
+      }));
+    }
+    if ("previousNoteId" in input) {
+      note.previousNote = input.previousNoteId
+        ? {
+            noteId: input.previousNoteId,
+            title: findNote(input.previousNoteId).title,
+          }
+        : null;
+    }
     note.updatedAt = nextTimestamp();
     return this.getNote(noteId);
   },
@@ -1591,20 +1668,23 @@ export const mockDb = {
     rows.sort((a, b) => {
       if (sort === "scheduledAt_asc") {
         // 일시 미정은 늘 뒤로. null을 빈 문자열로 두면 가장 앞으로 와서 「예정」이 거짓말을 한다.
-        const left = a.scheduledAt ?? "9999";
-        const right = b.scheduledAt ?? "9999";
-        return left.localeCompare(right) || a.noteId.localeCompare(b.noteId);
+        const left = a.scheduledAt ? Date.parse(a.scheduledAt) : Infinity;
+        const right = b.scheduledAt ? Date.parse(b.scheduledAt) : Infinity;
+        return left - right || a.noteId.localeCompare(b.noteId);
       }
       const key = sort === "startedAt_desc" ? "meetingStartedAt" : "updatedAt";
-      return (
-        (b[key] ?? "").localeCompare(a[key] ?? "") ||
-        b.noteId.localeCompare(a.noteId)
-      );
+      const left = a[key] ? Date.parse(a[key] as string) : -Infinity;
+      const right = b[key] ? Date.parse(b[key] as string) : -Infinity;
+      return right - left || b.noteId.localeCompare(a.noteId);
     });
     const limit = params.limit ?? 30;
-    const from = params.cursor
-      ? rows.findIndex((note) => note.noteId === params.cursor) + 1
-      : 0;
+    // 커서가 가리키던 행이 사라지면(삭제·필터 변경) findIndex가 -1이다. 여기에 1을 더하면
+    // 첫 페이지로 되감겨 무한히 같은 페이지를 준다 — 못 찾으면 끝난 것으로 본다.
+    const at = params.cursor
+      ? rows.findIndex((note) => note.noteId === params.cursor)
+      : -1;
+    if (params.cursor && at === -1) return copy({ notes: [], nextCursor: null });
+    const from = at + 1;
     const page = rows.slice(from, from + limit);
     return copy({
       notes: page,
@@ -1655,19 +1735,28 @@ export const mockDb = {
     }
     if (params.dueBefore) {
       const before = params.dueBefore;
-      rows = rows.filter((item) => item.dueAt !== null && item.dueAt < before);
+      // 문자열 비교는 +09:00 오프셋을 잘못 정렬한다. 시각으로 판정한다.
+      const boundary = Date.parse(before);
+      rows = rows.filter(
+        (item) => item.dueAt !== null && Date.parse(item.dueAt) < boundary
+      );
     }
     if (q) rows = rows.filter((item) => item.text.toLowerCase().includes(q));
     // 기한 없음은 늘 뒤로 — 목록이 「언제까지」로 묶이기 때문이다.
     rows.sort(
       (a, b) =>
-        (a.dueAt ?? "9999").localeCompare(b.dueAt ?? "9999") ||
+        (a.dueAt ? Date.parse(a.dueAt) : Infinity) -
+          (b.dueAt ? Date.parse(b.dueAt) : Infinity) ||
         a.actionItemId.localeCompare(b.actionItemId)
     );
     const limit = params.limit ?? 50;
-    const from = params.cursor
-      ? rows.findIndex((item) => item.actionItemId === params.cursor) + 1
-      : 0;
+    const at = params.cursor
+      ? rows.findIndex((item) => item.actionItemId === params.cursor)
+      : -1;
+    if (params.cursor && at === -1) {
+      return copy({ actionItems: [], nextCursor: null });
+    }
+    const from = at + 1;
     const page = rows.slice(from, from + limit);
     return copy({
       actionItems: page,

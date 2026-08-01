@@ -96,15 +96,22 @@ describe("OpenAPI contract", () => {
       {
         properties: {
           data: {
-            allOf?: { $ref?: string }[];
+            allOf?: {
+              $ref?: string;
+              required?: string[];
+              properties?: { context?: { nullable?: boolean } };
+            }[];
             properties: { notes?: { items: { $ref?: string } } };
           };
         };
       }
     >;
-    expect(refs.NoteResponse.properties.data.allOf?.[0]?.$ref).toBe(
-      "#/components/schemas/NoteSummary"
-    );
+    const noteData = refs.NoteResponse.properties.data;
+    expect(noteData.allOf?.[0]?.$ref).toBe("#/components/schemas/NoteSummary");
+    // 단건만 context를 더한다. 목록에는 없어야 한다 — 2000자를 30행 곱하면 60KB다.
+    expect(noteData.allOf?.[1]?.required).toContain("context");
+    expect(noteData.allOf?.[1]?.properties?.context?.nullable).toBe(true);
+    expect(summary.properties).not.toHaveProperty("context");
     expect(
       refs.NoteListResponse.properties.data.properties.notes?.items.$ref
     ).toBe("#/components/schemas/NoteSummary");
