@@ -1,7 +1,10 @@
 import { ReconnectionTimeMode } from "@stomp/stompjs";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { NoteTopicClient } from "@/lib/notes/note-topic-client";
+import {
+  getNoteTopicWebSocketUrl,
+  NoteTopicClient,
+} from "@/lib/notes/note-topic-client";
 
 const stomp = vi.hoisted(() => ({
   configs: [] as Array<Record<string, unknown>>,
@@ -145,3 +148,38 @@ describe("NoteTopicClient", () => {
     expect(stomp.instances[0].deactivate).toHaveBeenCalledOnce();
   });
 });
+
+// 변이 감사에서 나온 구멍: `protocol === "https:"` 를 뒤집어도 아무 테스트가 안 잡았다.
+// 뒤집히면 https 페이지가 ws:// 로 붙어 브라우저가 mixed content 로 막는다 — 배포에서만 터진다.
+describe("getNoteTopicWebSocketUrl", () => {
+  const origin = window.location;
+
+  function setLocation(protocol: string, host: string) {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...origin, protocol, host },
+    });
+  }
+
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: origin,
+    });
+  });
+
+  it("https 페이지는 wss 로 붙는다", () => {
+    setLocation("https:", "app.heymoa.com");
+    expect(getNoteTopicWebSocketUrl()).toBe(
+      "wss://app.heymoa.com/ws/transcriptions"
+    );
+  });
+
+  it("http 페이지는 ws 로 붙는다", () => {
+    setLocation("http:", "localhost:3000");
+    expect(getNoteTopicWebSocketUrl()).toBe(
+      "ws://localhost:3000/ws/transcriptions"
+    );
+  });
+});
+

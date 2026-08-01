@@ -161,4 +161,61 @@ describe("transcriptReducer", () => {
       initialTranscriptState
     );
   });
+
+  // 변이 감사에서 나온 구멍: dedupe 필터의 `!==` 를 `===` 로 뒤집어도 아무 테스트가
+  // 안 잡았다. 서버가 같은 segmentId 로 final 을 다시 보내면(재연결 drain) 화면에
+  // 같은 문장이 두 번 남거나, 반대로 쌓인 것이 전부 사라진다.
+  it("같은 segmentId 의 final 이 다시 오면 대체한다 — 쌓지 않는다", () => {
+    const first = transcriptReducer(initialTranscriptState, {
+      type: "final",
+      transcriptionSessionId: "0HZX2K7M9Q4AB",
+      segmentId: "0HZX2K7M9Q4AD",
+      utteranceId: "0HZX2K7M9Q4AC",
+      sequence: 1,
+      text: "처음 확정",
+      startedAtMs: 0,
+      endedAtMs: 1200,
+    });
+    const again = transcriptReducer(first, {
+      type: "final",
+      transcriptionSessionId: "0HZX2K7M9Q4AB",
+      segmentId: "0HZX2K7M9Q4AD",
+      utteranceId: "0HZX2K7M9Q4AC",
+      sequence: 1,
+      text: "고쳐진 확정",
+      startedAtMs: 0,
+      endedAtMs: 1200,
+    });
+
+    expect(again.finalSegments).toHaveLength(1);
+    expect(again.finalSegments[0].text).toBe("고쳐진 확정");
+  });
+
+  it("다른 segmentId 의 final 은 기존 것을 지우지 않는다", () => {
+    const first = transcriptReducer(initialTranscriptState, {
+      type: "final",
+      transcriptionSessionId: "0HZX2K7M9Q4AB",
+      segmentId: "0HZX2K7M9Q4AD",
+      utteranceId: "0HZX2K7M9Q4AC",
+      sequence: 1,
+      text: "첫 문장",
+      startedAtMs: 0,
+      endedAtMs: 1200,
+    });
+    const second = transcriptReducer(first, {
+      type: "final",
+      transcriptionSessionId: "0HZX2K7M9Q4AB",
+      segmentId: "0HZX2K7M9Q4AE",
+      utteranceId: "0HZX2K7M9Q4AF",
+      sequence: 2,
+      text: "둘째 문장",
+      startedAtMs: 1200,
+      endedAtMs: 2400,
+    });
+
+    expect(second.finalSegments.map((s) => s.text)).toEqual([
+      "첫 문장",
+      "둘째 문장",
+    ]);
+  });
 });

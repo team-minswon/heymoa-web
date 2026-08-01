@@ -163,3 +163,66 @@ describe("resolveSpeakerName", () => {
     expect(resolveSpeakerName("session-1", null, assignments)).toBeNull();
   });
 });
+
+// 변이 감사에서 나온 구멍: 합치기 조건의 `<=` 를 `<` 로 바꿔도 아무 테스트가 안 잡았다.
+// 경계에서만 갈리는 값이라 딱 그 지점을 찌르지 않으면 안 보인다.
+describe("합치기 경계", () => {
+  it("간격이 정확히 상한(1500ms)이면 합친다", () => {
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "앞 문장", 0, 500),
+      segment("s2", "session-1", 2, "뒤 문장", 2_000, 2_400),
+    ]);
+
+    expect(blocks).toHaveLength(1);
+  });
+
+  it("간격이 상한을 1ms 넘으면 나눈다", () => {
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "앞 문장", 0, 500),
+      segment("s2", "session-1", 2, "뒤 문장", 2_001, 2_400),
+    ]);
+
+    expect(blocks).toHaveLength(2);
+  });
+
+  it("블록 길이가 정확히 상한(30초)이면 합친다", () => {
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "앞 문장", 0, 500),
+      segment("s2", "session-1", 2, "뒤 문장", 1_800, 30_000),
+    ]);
+
+    expect(blocks).toHaveLength(1);
+  });
+
+  it("블록 길이가 상한을 1ms 넘으면 나눈다", () => {
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, "앞 문장", 0, 500),
+      segment("s2", "session-1", 2, "뒤 문장", 1_800, 30_001),
+    ]);
+
+    expect(blocks).toHaveLength(2);
+  });
+
+  it("글자 수가 정확히 상한(260)이면 합친다", () => {
+    const a = "가".repeat(129);
+    const b = "나".repeat(130);
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, a, 0, 500),
+      segment("s2", "session-1", 2, b, 800, 1_200),
+    ]);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].text).toHaveLength(260);
+  });
+
+  it("글자 수가 상한을 1자 넘으면 나눈다", () => {
+    const a = "가".repeat(130);
+    const b = "나".repeat(130);
+    const blocks = groupTranscriptSegments([
+      segment("s1", "session-1", 1, a, 0, 500),
+      segment("s2", "session-1", 2, b, 800, 1_200),
+    ]);
+
+    expect(blocks).toHaveLength(2);
+  });
+});
