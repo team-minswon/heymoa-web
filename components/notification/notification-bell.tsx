@@ -74,7 +74,8 @@ export function NotificationBell() {
     toast.error(errorMessageOf(error, "초대 처리에 실패했습니다."));
   };
 
-  // 벌크 읽음 API가 없다 — 초대를 확정하면 그 알림도 읽는다(배지·dot이 줄어든다).
+  // 초대를 확정하면 그 알림도 읽는다 — 배지가 안 줄면 처리한 줄 모른다.
+  // (일괄 읽음은 인박스(`/w/{wid}/inbox`)가 맡는다. 드롭다운은 최근 것만 보는 자리다.)
   const markReadIfUnread = (
     notification: NotificationListResponseDataNotificationsItem
   ) => {

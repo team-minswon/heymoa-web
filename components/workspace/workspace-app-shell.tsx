@@ -178,8 +178,10 @@ export function WorkspaceAppShell({
   const settingsSlug = pathname.match(/\/settings\/([^/?]+)/)?.[1];
   const currentLabel = settingsSlug
     ? `설정 · ${SETTINGS_LABEL[settingsSlug] ?? settingsSlug}`
-    : isActionItems
-    ? "액션 아이템"
+    : pathname.endsWith("/inbox")
+      ? "받은 알림"
+      : isActionItems
+        ? "액션 아이템"
     : (projects.find(
         (project) =>
           project.projectId === (routeProjectId ?? selectedProjectId)

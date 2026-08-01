@@ -22,7 +22,7 @@ export function WorkspaceRouteLayout({
   // 목록이 살아 있어야 하지만, 액션 아이템·프로젝트 타임라인은 목록을 대체한다 —
   // 같이 그리면 두 표가 겹친다.
   const segments = useSelectedLayoutSegments();
-  const showNoteList = !["action-items", "projects", "settings"].includes(
+  const showNoteList = !["action-items", "projects", "settings", "inbox"].includes(
     segments[0] ?? ""
   );
 

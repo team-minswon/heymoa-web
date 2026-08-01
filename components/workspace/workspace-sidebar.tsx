@@ -6,6 +6,7 @@ import {
   Check,
   Folder,
   MoreHorizontal,
+  Inbox,
   ListChecks,
   NotebookText,
   Pencil,
@@ -101,6 +102,7 @@ export function WorkspaceSidebar({
   const router = useRouter();
   const pathname = usePathname();
   const isActionItems = pathname.endsWith("/action-items");
+  const isInbox = pathname.endsWith("/inbox");
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
@@ -240,6 +242,16 @@ export function WorkspaceSidebar({
                   >
                     <NotebookText className="size-4 text-[var(--el-muted)]" />
                     <span>모든 노트</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={isInbox}
+                    onClick={() => router.push(`/w/${workspaceId}/inbox`)}
+                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+                  >
+                    <Inbox className="size-4 text-[var(--el-muted)]" />
+                    <span>받은 알림</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
