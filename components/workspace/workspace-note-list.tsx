@@ -58,7 +58,7 @@ export function WorkspaceNoteList({
   useEffect(() => {
     if (!isError) return;
 
-    toast.error("노트를 불러오지 못했습니다.", {
+    toast.error("회의를 불러오지 못했습니다.", {
       id: `workspace-notes-${workspaceId}`,
       action: {
         label: "다시 시도",
@@ -70,7 +70,7 @@ export function WorkspaceNoteList({
   if (isPending) {
     return (
       <div
-        aria-label="노트 불러오는 중"
+        aria-label="회의 불러오는 중"
         className="divide-y divide-[var(--el-hairline)]"
       >
         {Array.from({ length: 6 }).map((_, index) => (
@@ -112,7 +112,7 @@ export function WorkspaceNoteList({
         </h2>
         <p className="mt-1 max-w-sm text-sm text-[var(--el-muted)]">
           상단바의{" "}
-          <span className="font-medium text-[var(--el-ink)]">새 노트</span>로 첫
+          <span className="font-medium text-[var(--el-ink)]">새 회의</span>로 첫
           회의를 시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
         </p>
       </div>

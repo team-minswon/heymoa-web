@@ -22,9 +22,9 @@ function recordedSeconds(value: string | null) {
 
 async function createMeetingNote(page: Page) {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "새 노트" }).click();
+  await page.getByRole("button", { name: "새 회의" }).click();
   await page.waitForURL(
-    new RegExp(`/w/${MOCK_WORKSPACE_ID}/notes/[^?]+\\?view=full`)
+    new RegExp(`/w/${MOCK_WORKSPACE_ID}/meetings/[^?]+\\?view=full`)
   );
 
   const noteId = new URL(page.url()).pathname.split("/").at(-1);
@@ -93,7 +93,7 @@ async function expectForeignViewerTranscript(
 
   try {
     await page.goto(
-      `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=full`
+      `/w/${MOCK_WORKSPACE_ID}/meetings/${FOREIGN_VIEWER_NOTE_ID}?view=full`
     );
 
     const blocks = page.getByTestId("transcript-block");
@@ -229,7 +229,7 @@ test("keeps the mobile recorder dock outside the transcript above a bounded chat
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(
-    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=full&tab=transcript`
+    `/w/${MOCK_WORKSPACE_ID}/meetings/${STARTER_NOTE_ID}?view=full&tab=transcript`
   );
 
   const transcriptLog = page.getByRole("log", { name: "회의 전사" });
@@ -271,7 +271,7 @@ test("keeps the recorder dock and transcript visible in mobile landscape", async
 }) => {
   await page.setViewportSize({ width: 812, height: 375 });
   await page.goto(
-    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=full&tab=transcript`
+    `/w/${MOCK_WORKSPACE_ID}/meetings/${STARTER_NOTE_ID}?view=full&tab=transcript`
   );
 
   const surface = page.locator('[data-surface="full"]');
@@ -425,7 +425,7 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
 test("shows a persistent explanation for a remotely active starter note", async ({
   page,
 }) => {
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/meetings/01K0000000002?view=full`);
 
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(
@@ -530,10 +530,10 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
   page,
 }) => {
   const noteId = await createMeetingNote(page);
-  await page.getByRole("button", { name: "노트 닫기" }).click();
-  await page.getByRole("link", { name: "실시간 기록 노트 노트 열기" }).click();
+  await page.getByRole("button", { name: "회의 닫기" }).click();
+  await page.getByRole("link", { name: "실시간 기록 노트 회의 열기" }).click();
   await expect(page).toHaveURL(
-    `/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=side&tab=transcript`
+    `/w/${MOCK_WORKSPACE_ID}/meetings/${noteId}?view=side&tab=transcript`
   );
 
   await expect(
@@ -548,17 +548,17 @@ test("shows meeting context and shared chat inside the viewer side panel", async
   page,
 }) => {
   await page.goto(
-    `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=side&tab=transcript`
+    `/w/${MOCK_WORKSPACE_ID}/meetings/${FOREIGN_VIEWER_NOTE_ID}?view=side&tab=transcript`
   );
 
-  const noteSurface = page.getByLabel("노트", { exact: true });
+  const noteSurface = page.getByLabel("회의", { exact: true });
   await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
   await expect(
     noteSurface.getByText("김서연님이 시작한 회의", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "노트 정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "회의 정보"]);
 
   await page.getByRole("tab", { name: "챗봇" }).click();
 
@@ -571,10 +571,10 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   page,
 }) => {
   await page.goto(
-    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=transcript`
+    `/w/${MOCK_WORKSPACE_ID}/meetings/${STARTER_NOTE_ID}?view=side&tab=transcript`
   );
 
-  const noteSurface = page.getByLabel("노트", { exact: true });
+  const noteSurface = page.getByLabel("회의", { exact: true });
   await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
   await expect(
     noteSurface.getByText("테스트 유저님이 시작한 회의", { exact: true })
@@ -594,14 +594,14 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   await expect(
     meetingControls(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
-  await expect(page.getByRole("tab")).toHaveText(["기록", "요약", "노트 정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["기록", "요약", "회의 정보"]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });
 
 test("ends a meeting and shows the analysis in progress", async ({ page }) => {
   // 기본 전사 탭에서 종료해도 요약 탭으로 넘어가 분석 진행을 보여야 한다.
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/meetings/01K0000000002?view=full`);
 
   await page.getByRole("button", { name: "회의 종료" }).click();
   const dialog = page.getByRole("alertdialog");
@@ -647,7 +647,7 @@ test("approves a write tool from the chat card", async ({ page }) => {
  * `01K0000000002`는 목 기본 시드에서 IN_PROGRESS + 시작자 있음(=ACTIVE)이다.
  */
 test("streams a shared chat turn inside a note", async ({ page }) => {
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/meetings/01K0000000002?view=full`);
 
   const panel = page.getByRole("complementary", { name: "회의 챗봇" });
   await panel.getByLabel("메시지").fill("이번 회의에서 정한 것만 정리해줘");
@@ -666,7 +666,7 @@ test("streams a shared chat turn inside a note", async ({ page }) => {
  * (TanStack 기본) Playwright 탭은 visible이라 도는 게 정상이다.
  */
 test("locks the composer when another member is typing", async ({ page }) => {
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/meetings/01K0000000002?view=full`);
 
   const panel = page.getByRole("complementary", { name: "회의 챗봇" });
   await panel.getByLabel("메시지").waitFor();
@@ -701,7 +701,7 @@ test("completes the mocked OAuth round trip", async ({ page }) => {
   await page.getByRole("button", { name: "허용하고 돌아가기" }).click();
 
   // 이동이 끝난 뒤 확인한다 — 이동 중에 평가하면 아직 워커가 붙지 않은 페이지에서 돈다.
-  await page.waitForURL(`**/w/${MOCK_WORKSPACE_ID}`);
+  await page.waitForURL(`**/w/${MOCK_WORKSPACE_ID}/meetings`);
   await expect
     .poll(() =>
       page.evaluate(() => navigator.serviceWorker.controller !== null)
@@ -793,12 +793,12 @@ test("keeps the personal chat scrollable when the thread grows", async ({
 test("returns to the note list when a project is picked in full view", async ({
   page,
 }) => {
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
-  await expect(page).toHaveURL(/notes/);
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/meetings/01K0000000002?view=full`);
+  await expect(page).toHaveURL(/meetings/);
 
-  await page.getByRole("button", { name: "모든 노트" }).click();
+  await page.getByRole("button", { name: "모든 회의" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
+  await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}/meetings$`));
 });
 
 /**
@@ -809,7 +809,7 @@ test("returns to the note list when a project is picked in full view", async ({
  * 길어야 재현되므로 목 시드 10개가 조건을 만든다. jsdom은 레이아웃을 안 해 e2e여야 한다.
  */
 test("covers the viewport with the full note surface", async ({ page }) => {
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/meetings/01K0000000002?view=full`);
 
   await expect(page.locator('[data-surface="full"]')).toBeVisible();
   // 뒤 목록이 실제로 그려질 때까지 기다린다. skeleton은 6행이라 뷰포트를 안 넘어서, 로드 전에
@@ -843,12 +843,12 @@ test("clears the note row spinner after the full-view note is closed", async ({
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   const row = page.locator("article", { hasText: "주간 제품 회의" }).first();
-  await row.getByRole("button", { name: "주간 제품 회의 노트 메뉴" }).click();
+  await row.getByRole("button", { name: "주간 제품 회의 회의 메뉴" }).click();
   await page.getByRole("menuitem", { name: "전체 화면으로 열기" }).click();
   await expect(page).toHaveURL(/view=full/);
 
-  await page.getByRole("button", { name: "모든 노트" }).click();
-  await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
+  await page.getByRole("button", { name: "모든 회의" }).click();
+  await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}/meetings$`));
 
   await expect(row.locator(".animate-spin")).toHaveCount(0);
 });

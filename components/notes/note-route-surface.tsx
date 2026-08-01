@@ -25,14 +25,14 @@ export function NoteRouteSurface({
     return (
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <SheetContent
-          aria-label="노트"
+          aria-label="회의"
           data-surface="sheet"
           showCloseButton={false}
           className="inset-0 h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 bg-white p-0 shadow-e3 sm:max-w-none md:inset-y-2 md:left-auto md:right-2 md:h-[calc(100dvh-1rem)] md:w-[min(860px,calc(100vw-15rem))] md:max-w-[860px] md:rounded-panel md:border md:border-black/5"
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>노트</SheetTitle>
-            <SheetDescription>선택한 회의 노트 상세</SheetDescription>
+            <SheetTitle>회의</SheetTitle>
+            <SheetDescription>선택한 회의 상세</SheetDescription>
           </SheetHeader>
           {children}
         </SheetContent>

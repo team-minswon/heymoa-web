@@ -1000,7 +1000,7 @@ export const mockDb = {
   acquireSharedChatLock(noteId: string) {
     const note = findNote(noteId);
     // 계약의 ACTIVE 판정은 IN_PROGRESS만이 아니라 "녹음이 시작됐는가"까지다.
-    // 새 노트는 NOT_STARTED이고, 세션 생성 뒤에만 시작자가 정해진다.
+    // 새 회의는 NOT_STARTED이고, 세션 생성 뒤에만 시작자가 정해진다.
     if (note.meetingStatus !== "IN_PROGRESS" || !note.meetingStartedBy) {
       fail("MEETING_NOT_ACTIVE");
     }
@@ -1454,7 +1454,7 @@ export const mockDb = {
         : null,
       noteId: nextId(),
       projectId,
-      title: input.title?.trim() || "제목 없는 노트",
+      title: input.title?.trim() || "제목 없는 회의",
       createdAt,
       updatedAt: createdAt,
       meetingStatus: "NOT_STARTED",

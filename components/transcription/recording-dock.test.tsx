@@ -111,7 +111,7 @@ describe("RecordingDock", () => {
     render(<RecordingDock noteId="note-2" />);
 
     expect(
-      screen.getByRole("button", { name: "다른 노트에서 녹음 중" })
+      screen.getByRole("button", { name: "다른 회의에서 녹음 중" })
     ).toBeDisabled();
   });
 

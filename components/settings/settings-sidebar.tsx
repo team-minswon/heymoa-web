@@ -65,7 +65,7 @@ export function SettingsSidebar({
     <Sidebar collapsible="none" className="border-r">
       <SidebarHeader className="p-0">
         <button
-          onClick={() => router.push(`/w/${workspaceId}`)}
+          onClick={() => router.push(`/w/${workspaceId}/meetings`)}
           className="flex h-[60px] w-full items-center gap-2.5 border-b border-[var(--el-hairline)] px-3.5 text-left"
         >
           <span className="flex size-8 items-center justify-center rounded-control border border-[var(--control-border)]">

@@ -239,7 +239,7 @@ export function NotePanel({
                 ) : null}
               </div>
               <h1 className="mt-2 truncate font-serif text-note-title font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)]">
-                {note?.title ?? "회의 노트"}
+                {note?.title ?? "회의"}
               </h1>
             </div>
             {view === "side" ? (
@@ -278,7 +278,7 @@ export function NotePanel({
                     variant="ghost"
                     size="icon-lg"
                     className="size-11 rounded-full"
-                    aria-label="노트 닫기"
+                    aria-label="회의 닫기"
                     onClick={onClose}
                   >
                     <PanelRightClose />
@@ -323,7 +323,7 @@ export function NotePanel({
                 {showSummaryTab ? (
                   <TabsTrigger value="summary">요약</TabsTrigger>
                 ) : null}
-                <TabsTrigger value="details">노트 정보</TabsTrigger>
+                <TabsTrigger value="details">회의 정보</TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -394,7 +394,7 @@ export function NotePanel({
             <ScrollArea className="h-full">
               <DataBoundary
                 fallback={<NoteDetailsSkeleton />}
-                errorLabel="노트를 불러오지 못했습니다"
+                errorLabel="회의를 불러오지 못했습니다"
                 resetKeys={[noteId]}
               >
                 <NoteDetails noteId={noteId} />

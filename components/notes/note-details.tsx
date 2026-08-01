@@ -27,7 +27,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
 
   // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
   if (noteResponse.status !== 200 || !noteResponse.data.success) {
-    throw new Error("노트를 불러오지 못했습니다.");
+    throw new Error("회의를 불러오지 못했습니다.");
   }
   const note = noteResponse.data.data;
 
@@ -54,7 +54,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
           await updateNote.mutateAsync({
             noteId,
             data: {
-              title: title || "제목 없는 노트",
+              title: title || "제목 없는 회의",
             },
           });
           await refresh();
@@ -69,7 +69,7 @@ export function NoteDetails({ noteId }: { noteId: string }) {
       {/* v5: 대문자 키커 제거 — 세리프 제목만 유지(FORM SPEC). */}
       <header>
         <h2 className="font-serif text-section font-light tracking-[-0.025em] text-[var(--el-ink)]">
-          노트 정보
+          회의 정보
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
           회의 제목과 기록 시각을 관리합니다.

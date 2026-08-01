@@ -80,7 +80,7 @@ describe("mockDb", () => {
 
   it("rejects note creation in a non-existent project", () => {
     expect(() =>
-      mockDb.createNote("non-existent-project", { title: "새 노트" })
+      mockDb.createNote("non-existent-project", { title: "새 회의" })
     ).toThrow("PROJECT_NOT_FOUND");
   });
 
@@ -487,7 +487,7 @@ describe("workspaces gained after seeding", () => {
 describe("only the meeting starter can operate a meeting", () => {
   beforeEach(() => mockDb.reset());
 
-  // 새 노트는 NOT_STARTED라 회의 종료 자체가 409 MEETING_NOT_STARTED다.
+  // 새 회의는 NOT_STARTED라 회의 종료 자체가 409 MEETING_NOT_STARTED다.
   it("refuses ending a note nobody started", () => {
     const projectId = mockDb.listProjects(
       mockDb.listWorkspaces()[0].workspaceId

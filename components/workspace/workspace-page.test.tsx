@@ -106,10 +106,10 @@ describe("WorkspacePage", () => {
     expect(screen.getByText(/2개의 회의 기록/)).toBeInTheDocument();
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("리서치 공유")).toBeInTheDocument();
-    // v5: 제품 면 대문자 키커 금지, 새 노트 진입점은 상단바(헤더 CTA 없음).
+    // v5: 제품 면 대문자 키커 금지, 새 회의 진입점은 상단바(헤더 CTA 없음).
     expect(screen.queryByText("Meeting notes")).toBeNull();
     expect(
-      screen.queryByRole("button", { name: /새 회의 기록|새 노트/ })
+      screen.queryByRole("button", { name: /새 회의 기록|새 회의/ })
     ).toBeNull();
   });
 

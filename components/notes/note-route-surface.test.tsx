@@ -11,7 +11,7 @@ describe("NoteRouteSurface", () => {
       </NoteRouteSurface>
     );
 
-    const sheet = screen.getByLabelText("노트");
+    const sheet = screen.getByLabelText("회의");
     expect(sheet).toHaveAttribute("data-surface", "sheet");
     expect(sheet).toHaveClass("w-full", "sm:max-w-none", "md:max-w-[860px]");
     expect(sheet).not.toHaveClass("w-3/4", "sm:max-w-sm");

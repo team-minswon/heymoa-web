@@ -124,7 +124,7 @@ export function GlobalRecordingIndicator() {
     workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
     workspaces[0]?.workspaceId;
   const href = workspaceId
-    ? `/w/${workspaceId}/notes/${session?.noteId ?? ""}?view=full&tab=transcript`
+    ? `/w/${workspaceId}/meetings/${session?.noteId ?? ""}?view=full&tab=transcript`
     : "#";
 
   return (

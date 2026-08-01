@@ -245,7 +245,7 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getByRole("tab", { name: "전사" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "노트 정보" }));
+    fireEvent.click(screen.getByRole("tab", { name: "회의 정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
@@ -313,7 +313,7 @@ describe("NotePanel", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "다른 노트에서 녹음 중" })
+        screen.getByRole("button", { name: "다른 회의에서 녹음 중" })
       ).toBeDisabled()
     );
   });
@@ -449,7 +449,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeTruthy();
   });
 
-  it("side + 활성은 전사·챗봇·노트 정보 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
+  it("side + 활성은 전사·챗봇·회의 정보 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -464,7 +464,7 @@ describe("NotePanel", () => {
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "전사",
       "챗봇",
-      "노트 정보",
+      "회의 정보",
     ]);
     expect(
       screen
@@ -636,10 +636,10 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-summary")).toBeTruthy();
     // full의 상태·종료·닫기는 셸 상단바가 맡는다.
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
-    expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "회의 닫기" })).toBeNull();
   });
 
-  it("side + 종료는 기록·요약·노트 정보 탭과 아카이브를 보인다", () => {
+  it("side + 종료는 기록·요약·회의 정보 탭과 아카이브를 보인다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -655,7 +655,7 @@ describe("NotePanel", () => {
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "기록",
       "요약",
-      "노트 정보",
+      "회의 정보",
     ]);
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
@@ -680,7 +680,7 @@ describe("NotePanel", () => {
       screen.getByRole("group", { name: "회의 상태 및 제어" })
     ).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "창 제어" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "회의 닫기" })).toHaveClass(
       "size-11"
     );
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
@@ -725,7 +725,7 @@ describe("NotePanel", () => {
     expect(
       screen.getByRole("button", { name: "전체 화면으로 보기" })
     ).toHaveClass("size-11");
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "회의 닫기" })).toHaveClass(
       "size-11"
     );
   });
@@ -853,7 +853,7 @@ describe("NotePanel", () => {
     }
   );
 
-  it("side + 미시작은 전사·노트 정보와 회의 시작을 보인다", () => {
+  it("side + 미시작은 전사·회의 정보와 회의 시작을 보인다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
     renderNotePanel(
@@ -869,7 +869,7 @@ describe("NotePanel", () => {
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "전사",
-      "노트 정보",
+      "회의 정보",
     ]);
     expect(
       screen.getByRole("button", { name: "회의 시작" })

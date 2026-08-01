@@ -11,7 +11,7 @@ import {
 } from "@/lib/api/generated/notes/notes";
 
 /**
- * "새 노트" 진입점의 단일 출처 —
+ * "새 회의" 진입점의 단일 출처 —
  * 노트 생성 → 목록 낙관 갱신 → full 라우팅.
  * 워크스페이스 셸 컨텍스트(선택 프로젝트·프로젝트 목록) 안에서만 쓴다.
  */
@@ -67,7 +67,7 @@ export function useCreateMeeting(workspaceId: string) {
       };
     });
 
-    router.push(`/w/${workspaceId}/notes/${noteId}?view=full&tab=transcript`);
+    router.push(`/w/${workspaceId}/meetings/${noteId}?view=full&tab=transcript`);
   };
 
   return {

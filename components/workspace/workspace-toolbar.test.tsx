@@ -84,12 +84,12 @@ describe("WorkspaceToolbar", () => {
       <SidebarProvider>
         <WorkspaceToolbar
           workspaceId="01K0000000000"
-          currentLabel="모든 노트"
+          currentLabel="모든 회의"
         />
       </SidebarProvider>
     );
 
-    const newNote = screen.getByRole("button", { name: "새 노트" });
+    const newNote = screen.getByRole("button", { name: "새 회의" });
     fireEvent.click(newNote);
     expect(createMeeting).toHaveBeenCalledOnce();
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
@@ -105,27 +105,27 @@ describe("WorkspaceToolbar", () => {
       <SidebarProvider>
         <WorkspaceToolbar
           workspaceId="01K0000000000"
-          currentLabel="모든 노트"
+          currentLabel="모든 회의"
           activeNoteId="01K0000000002"
         />
       </SidebarProvider>
     );
 
-    // 브레드크럼에 노트 제목, 같은 행에 회의 조작 + 닫기 + 새 노트 + 벨.
+    // 브레드크럼에 노트 제목, 같은 행에 회의 조작 + 닫기 + 새 회의 + 벨.
     expect(
       screen.getByRole("heading", { name: "주간 제품 회의" })
     ).toBeInTheDocument();
     expect(screen.getByTestId("meeting-controls")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "노트 닫기" })
+      screen.getByRole("button", { name: "회의 닫기" })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("group", { name: "창 제어" })
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "회의 닫기" })).toHaveClass(
       "size-11"
     );
-    expect(screen.getByRole("button", { name: "새 노트" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "새 회의" })).toBeInTheDocument();
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
   });
 
@@ -157,7 +157,7 @@ describe("WorkspaceToolbar", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps one 새 노트 entry while another note is recording", () => {
+  it("keeps one 새 회의 entry while another note is recording", () => {
     recording.session = {
       sessionId: "01K0000000010",
       noteId: "01K0000000002",
@@ -172,7 +172,7 @@ describe("WorkspaceToolbar", () => {
       </SidebarProvider>
     );
 
-    const newNote = screen.getByRole("button", { name: "새 노트" });
+    const newNote = screen.getByRole("button", { name: "새 회의" });
     fireEvent.click(newNote);
     expect(createMeeting).toHaveBeenCalledOnce();
   });

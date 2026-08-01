@@ -213,7 +213,7 @@ export function RecordingDock({
             <button
               type="button"
               className="flex size-11 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45"
-              aria-label={isOtherNote ? "다른 노트에서 녹음 중" : startLabel}
+              aria-label={isOtherNote ? "다른 회의에서 녹음 중" : startLabel}
               disabled={isOtherNote}
               onClick={() => void recording.start(noteId)}
             >

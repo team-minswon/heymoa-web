@@ -122,7 +122,7 @@ function NoteActionSlot({
           note={note}
           onMeetingEnded={() =>
             router.replace(
-              `/w/${workspaceId}/notes/${noteId}?view=full&tab=summary`
+              `/w/${workspaceId}/meetings/${noteId}?view=full&tab=summary`
             )
           }
         />
@@ -133,8 +133,8 @@ function NoteActionSlot({
           variant="ghost"
           size="icon-xl"
           className="size-11 rounded-full"
-          aria-label="노트 닫기"
-          onClick={() => router.push(`/w/${workspaceId}`)}
+          aria-label="회의 닫기"
+          onClick={() => router.push(`/w/${workspaceId}/meetings`)}
         >
           <ChevronLeft />
         </Button>
@@ -176,7 +176,7 @@ export function WorkspaceToolbar({
   ].includes(recording.phase);
 
   const openNote = (noteId: string) =>
-    router.push(`/w/${workspaceId}/notes/${noteId}?view=side&tab=transcript`);
+    router.push(`/w/${workspaceId}/meetings/${noteId}?view=side&tab=transcript`);
 
   const recordingNoteId = recording.activeNoteId ?? recording.session?.noteId;
   const isRecordingOtherNote =
@@ -223,7 +223,7 @@ export function WorkspaceToolbar({
                   /
                 </span>
                 <h1 className="truncate text-xs font-medium text-[var(--el-ink)]">
-                  {noteTitle ?? "회의 노트"}
+                  {noteTitle ?? "회의"}
                 </h1>
               </>
             ) : null}
@@ -235,7 +235,7 @@ export function WorkspaceToolbar({
             <Button
               type="button"
               size="sm"
-              aria-label="새 노트"
+              aria-label="새 회의"
               className="h-8 shrink-0 rounded-full px-3"
               disabled={createMeeting.disabled}
               loading={createMeeting.isPending}
@@ -244,7 +244,7 @@ export function WorkspaceToolbar({
               <Plus className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만 — 노트 액션·벨이 잘리지 않게. */}
               <span className={cn(isFullNote && "hidden sm:inline")}>
-                새 노트
+                새 회의
               </span>
             </Button>
             <NotificationBell />

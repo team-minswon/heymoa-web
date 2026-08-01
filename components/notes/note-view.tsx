@@ -127,7 +127,7 @@ export function NoteView({
     setIsOpen(false);
     // Wait for the exit animation duration before routing
     setTimeout(() => {
-      router.push(`/w/${workspaceId}`);
+      router.push(`/w/${workspaceId}/meetings`);
     }, 200);
   };
 

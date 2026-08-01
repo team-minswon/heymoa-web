@@ -80,7 +80,7 @@ describe("Navbar", () => {
 
     expect(screen.getByRole("link", { name: /대시보드/ })).toHaveAttribute(
       "href",
-      "/w/workspace-1"
+      "/w/workspace-1/meetings"
     );
 
     fireEvent.click(screen.getByRole("button", { name: "로그아웃" }));

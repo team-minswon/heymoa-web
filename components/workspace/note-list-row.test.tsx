@@ -67,7 +67,7 @@ describe("NoteListRow", () => {
 
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "주간 제품 회의 노트 열기" })
+      screen.getByRole("link", { name: "주간 제품 회의 회의 열기" })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("meter", { name: "주간 제품 회의 마이크 입력" })

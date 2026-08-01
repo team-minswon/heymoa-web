@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceRouteLayout } from "@/components/workspace/workspace-route-layout";
 
 const route = vi.hoisted(() => ({
-  noteId: undefined as string | undefined,
+  meetingId: undefined as string | undefined,
   search: "",
 }));
 
 const segments = vi.hoisted(() => [] as string[]);
 
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ noteId: route.noteId }),
+  useParams: () => ({ meetingId: route.meetingId }),
   useSearchParams: () => new URLSearchParams(route.search),
   usePathname: () => "/w/01K0000000000",
   useSelectedLayoutSegments: () => segments,
@@ -39,12 +39,12 @@ describe("WorkspaceRouteLayout", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
-    route.noteId = undefined;
+    route.meetingId = undefined;
     route.search = "";
   });
 
   it("keeps the workspace page mounted behind a side note", () => {
-    route.noteId = "note-1";
+    route.meetingId = "note-1";
     route.search = "view=side&tab=transcript";
 
     render(
@@ -62,7 +62,7 @@ describe("WorkspaceRouteLayout", () => {
   });
 
   it("keeps the workspace page mounted for a full-screen note (sidebar retained)", () => {
-    route.noteId = "note-1";
+    route.meetingId = "note-1";
     route.search = "view=full&tab=transcript";
 
     render(

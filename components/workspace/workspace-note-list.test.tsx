@@ -105,7 +105,7 @@ describe("WorkspaceNoteList", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "노트를 불러오지 못했습니다.",
+        "회의를 불러오지 못했습니다.",
         expect.objectContaining({
           id: "workspace-notes-01K0000000000",
           action: expect.objectContaining({ label: "다시 시도" }),

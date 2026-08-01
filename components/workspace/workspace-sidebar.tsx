@@ -241,7 +241,7 @@ export function WorkspaceSidebar({
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
                     <NotebookText className="size-4 text-[var(--el-muted)]" />
-                    <span>모든 노트</span>
+                    <span>모든 회의</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

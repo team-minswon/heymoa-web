@@ -38,7 +38,7 @@ export function Navbar() {
   const workspaceId =
     workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
     workspaces[0]?.workspaceId;
-  const dashboardHref = workspaceId ? `/w/${workspaceId}` : null;
+  const dashboardHref = workspaceId ? `/w/${workspaceId}/meetings` : null;
   const logoHref = dashboardHref ?? "/";
   const inWorkspace = pathname.startsWith("/w/");
   const shouldRetryWorkspaces =

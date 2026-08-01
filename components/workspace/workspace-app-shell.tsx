@@ -102,7 +102,7 @@ export function WorkspaceAppShell({
       router.push(
         projectId
           ? `/w/${workspaceId}/projects/${projectId}`
-          : `/w/${workspaceId}`
+          : `/w/${workspaceId}/meetings`
       );
     },
     [router, workspaceId]
@@ -185,7 +185,7 @@ export function WorkspaceAppShell({
     : (projects.find(
         (project) =>
           project.projectId === (routeProjectId ?? selectedProjectId)
-      )?.name ?? "모든 노트");
+      )?.name ?? "모든 회의");
 
   return (
     <WorkspaceShellContext.Provider value={value}>

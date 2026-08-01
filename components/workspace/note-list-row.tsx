@@ -209,8 +209,8 @@ export function NoteListRow({
   }
   const openingFullView = openedFullViewFrom === routeKey;
 
-  const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=transcript`;
-  const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=transcript`;
+  const sideHref = `/w/${workspaceId}/meetings/${note.noteId}?view=side&tab=transcript`;
+  const fullHref = `/w/${workspaceId}/meetings/${note.noteId}?view=full&tab=transcript`;
 
   // v5 목록 행 정본: 높이 52 · 한 줄 · r8 · 배경 없음 · 아이콘 + 제목 15 + 상대 시각.
   // 카드·그림자·배지·녹음시간은 없다(FORM SPEC).
@@ -218,7 +218,7 @@ export function NoteListRow({
     <article className="group flex h-[52px] items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)]">
       <Link
         href={sideHref}
-        aria-label={`${note.title} 노트 열기`}
+        aria-label={`${note.title} 회의 열기`}
         // self-stretch로 52px 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
         className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
       >
@@ -239,7 +239,7 @@ export function NoteListRow({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`${note.title} 노트 메뉴`}
+              aria-label={`${note.title} 회의 메뉴`}
               className="rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
             />
           }

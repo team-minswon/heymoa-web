@@ -479,12 +479,12 @@ function PersonalChatPanel({
       <header className="flex items-center gap-2 border-b border-[var(--el-hairline)] px-6 py-4">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] tracking-wide text-[var(--el-muted)] uppercase">
-            {noteId ? "노트" : "워크스페이스"}
+            {noteId ? "회의" : "워크스페이스"}
           </p>
           {/* 스코프는 어디서 열었는지로 정해진다 — 여기서 바꾸는 어포던스를 두지 않는다. */}
           <p className="truncate text-sm font-medium text-[var(--el-ink)]">
             {noteId
-              ? (noteTitle ?? "이 노트")
+              ? (noteTitle ?? "이 회의")
               : (workspaceName ?? "워크스페이스")}
           </p>
         </div>

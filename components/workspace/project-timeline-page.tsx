@@ -83,7 +83,7 @@ function Item({
       <div className={cn("min-w-0 flex-1", last ? "pb-0" : "pb-6")}>
         <div className="flex flex-wrap items-center gap-2.5">
           <Link
-            href={`/w/${workspaceId}/notes/${note.noteId}?view=full&tab=transcript`}
+            href={`/w/${workspaceId}/meetings/${note.noteId}?view=full&tab=transcript`}
             className="text-read font-medium underline-offset-4 hover:underline"
           >
             {note.title}

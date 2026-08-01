@@ -101,7 +101,7 @@ describe("useCreateMeeting", () => {
     expect(recording.start).not.toHaveBeenCalled();
     expect(getUserMedia).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith(
-      "/w/01K0000000000/notes/01K0000000100?view=full&tab=transcript"
+      "/w/01K0000000000/meetings/01K0000000100?view=full&tab=transcript"
     );
     expect(
       client.getQueryData(["/v1/projects/01K0000000001/notes"])

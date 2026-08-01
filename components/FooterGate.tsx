@@ -8,8 +8,9 @@ import { isWorkspaceRoute } from "@/lib/routes/app-route";
 export function FooterGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Hide Footer on the authentication callback page
-  if (pathname === "/auth/callback" || isWorkspaceRoute(pathname)) {
+  // Navbar 와 같은 기준 — 자기 셸을 가진 면에는 전역 Footer 도 얹지 않는다.
+  const ownsShell = ["/auth/callback", "/login", "/welcome"].includes(pathname);
+  if (ownsShell || pathname.startsWith("/invite/") || isWorkspaceRoute(pathname)) {
     return null;
   }
 

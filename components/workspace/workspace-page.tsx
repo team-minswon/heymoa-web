@@ -138,7 +138,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         />
         <header className="relative mb-6">
           <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
-            {selectedProject?.name ?? "모든 노트"}
+            {selectedProject?.name ?? "모든 회의"}
           </h2>
           <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
             {visibleNotes.length}개의 회의 기록 · 발화와 결정이 시간순으로
