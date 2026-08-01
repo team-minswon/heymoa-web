@@ -8,10 +8,7 @@ export default async function WorkspaceMembersSettingsRoute({
 }) {
   const { workspaceId } = await params;
   return (
-    <SettingsPageShell
-      title="멤버"
-      description="워크스페이스 멤버와 초대를 관리합니다."
-    >
+    <SettingsPageShell>
       <MembersSettings workspaceId={workspaceId} />
     </SettingsPageShell>
   );

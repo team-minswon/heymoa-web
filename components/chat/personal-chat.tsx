@@ -155,8 +155,10 @@ export function PersonalChatProvider({
 
   const value = useMemo<PersonalChatState>(
     () => ({
-      isOpen,
-      isVisible: isOpen && !hidden,
+      // URL 이 진실이다. 라우트를 옮기면 다른 push/replace 가 panel 을 떨구는데,
+      // state 만 믿으면 패널은 열린 채로 주소에는 없어 새로고침에 닫힌다.
+      isOpen: isOpen || deepLinked,
+      isVisible: (isOpen || deepLinked) && !hidden,
       open: () => {
         setHasOpened(true);
         setIsOpen(true);
@@ -169,7 +171,7 @@ export function PersonalChatProvider({
       setNoteScope,
       setTurnActive,
     }),
-    [hidden, isOpen, setNoteScope, setPanelParam, setTurnActive]
+    [deepLinked, hidden, isOpen, setNoteScope, setPanelParam, setTurnActive]
   );
 
   return (
@@ -185,7 +187,7 @@ export function PersonalChatProvider({
           <MessageCircle className="size-5" />
         </Button>
       ) : null}
-      {hasOpened ? (
+      {hasOpened || deepLinked ? (
         <PersonalChatPanel
           // 스코프가 바뀌면 세션·스트림을 갈아 끼운다. 스코프별로 활성 세션이 따로이므로
           // 상태를 이어 붙이면 노트 답변이 워크스페이스 대화에 섞인다.

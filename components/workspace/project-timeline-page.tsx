@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import type { NoteSummary } from "@/lib/api/generated/models";
 import { useGetNotesSuspense } from "@/lib/api/generated/notes/notes";
-import { formatAppDate } from "@/lib/format/date";
+import { currentAppYear, formatAppDate } from "@/lib/format/date";
 import {
   groupNotesByMonth,
   timelineAnchorOf,
@@ -122,10 +122,10 @@ function Timeline({
         : [],
     [query.data]
   );
-  // 라벨에만 쓰는 값이라 서버·클라이언트가 같은 해를 본다. 자정에 해가 바뀌는 순간의
-  // 불일치는 라벨 하나뿐이라 hydration 을 위해 스켈레톤을 한 번 더 그릴 값이 아니다.
+  // 월 구분은 서비스 시간대(서울)로 하는데 연도만 UTC 로 읽으면, 한국 1월 1일 새벽에
+  // 「2027년 1월」처럼 지난 해 형식이 붙는다. 같은 시간대로 맞춘다.
   const groups = useMemo(
-    () => groupNotesByMonth(notes, String(new Date().getUTCFullYear())),
+    () => groupNotesByMonth(notes, currentAppYear()),
     [notes]
   );
 
@@ -203,7 +203,9 @@ export function ProjectTimelinePage({
   const project = projects.find((row) => row.projectId === projectId);
 
   return (
-    <div className="px-8 pb-7 pt-6">
+    // 셸이 overflow-hidden 이라 페이지가 스스로 스크롤 경계를 만든다.
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="px-8 pb-7 pt-6">
       <header className="pb-4">
         <h1 className="text-note-title font-serif font-light">
           {project?.name ?? "프로젝트"}
@@ -220,6 +222,7 @@ export function ProjectTimelinePage({
       >
         <Timeline workspaceId={workspaceId} projectId={projectId} />
       </DataBoundary>
+      </div>
     </div>
   );
 }

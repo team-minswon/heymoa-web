@@ -19,12 +19,12 @@ export function WorkspaceRouteLayout({
     ? params.noteId[0]
     : params.noteId;
   // 회의 목록은 셸이 아니라 이 자리의 기본 화면이다. 노트 상세는 그 위에 덮으므로
-  // 목록이 살아 있어야 하지만, 액션 아이템·프로젝트 타임라인은 목록을 대체한다 —
-  // 같이 그리면 두 표가 겹친다.
+  // 목록이 살아 있어야 하지만, 나머지 화면들은 목록을 **대체한다** — 같이 그리면 표가 겹친다.
+  //
+  // denylist 가 아니라 allowlist 다. 모르는 세그먼트를 「목록도 같이」로 두면 새 라우트를
+  // 더할 때마다 조용히 겹치고, 그 배열을 고치는 걸 잊었다는 신호가 아무 데도 안 남는다.
   const segments = useSelectedLayoutSegments();
-  const showNoteList = !["action-items", "projects", "settings", "inbox"].includes(
-    segments[0] ?? ""
-  );
+  const showNoteList = ["", "notes"].includes(segments[0] ?? "");
 
   // v5: 사이드바는 full 모드에서도 유지한다 — full 노트 표면이 SidebarInset 안에서
   // 255 우측에 앉으므로 내비를 잃지 않는다. (이전 hideSidebar 폐기)

@@ -3,7 +3,12 @@ import "server-only";
 import { dehydrate, type DehydratedState } from "@tanstack/react-query";
 
 import { getServerApiRequestOptions } from "@/lib/api/server-request";
-import { getGetNoteQueryOptions } from "@/lib/api/generated/notes/notes";
+import { getGetActionItemsQueryOptions } from "@/lib/api/generated/action-items/action-items";
+import {
+  getGetNoteQueryOptions,
+  getGetNotesQueryOptions,
+} from "@/lib/api/generated/notes/notes";
+import { getGetNotificationsQueryOptions } from "@/lib/api/generated/notifications/notifications";
 import {
   getGetProjectQueryOptions,
   getGetProjectsQueryOptions,
@@ -84,5 +89,50 @@ export async function prefetchNoteRoute({
     );
   }
 
+  return dehydrate(queryClient);
+}
+
+/**
+ * 첫 화면 데이터는 서버 스냅샷에 담는다. 안 담으면 주소로 바로 들어왔을 때 스켈레톤을
+ * 한 번 거치고 브라우저가 다시 조회한다 — 이 레포의 규약이다.
+ */
+export async function prefetchActionItems(
+  workspaceId: string
+): Promise<DehydratedState> {
+  const queryClient = makeQueryClient();
+  if (shouldEnableMocking()) return dehydrate(queryClient);
+
+  const request = await getServerApiRequestOptions();
+  await queryClient
+    .prefetchQuery(
+      getGetActionItemsQueryOptions(workspaceId, { status: "OPEN" }, { request })
+    )
+    .catch(() => undefined);
+  return dehydrate(queryClient);
+}
+
+export async function prefetchProjectTimeline(
+  projectId: string
+): Promise<DehydratedState> {
+  const queryClient = makeQueryClient();
+  if (shouldEnableMocking()) return dehydrate(queryClient);
+
+  const request = await getServerApiRequestOptions();
+  await queryClient
+    .prefetchQuery(
+      getGetNotesQueryOptions(projectId, { sort: "scheduledAt_asc" }, { request })
+    )
+    .catch(() => undefined);
+  return dehydrate(queryClient);
+}
+
+export async function prefetchInbox(): Promise<DehydratedState> {
+  const queryClient = makeQueryClient();
+  if (shouldEnableMocking()) return dehydrate(queryClient);
+
+  const request = await getServerApiRequestOptions();
+  await queryClient
+    .prefetchQuery(getGetNotificationsQueryOptions({ request }))
+    .catch(() => undefined);
   return dehydrate(queryClient);
 }

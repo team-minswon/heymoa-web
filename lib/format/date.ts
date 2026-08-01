@@ -32,3 +32,11 @@ export function formatAppDate(
 export function formatDueDate(value: string) {
   return formatAppDate(value, { month: "long", day: "numeric" });
 }
+
+/** 서비스 시간대의 현재 연도. 월 구분과 같은 기준이어야 라벨이 안 어긋난다. */
+export function currentAppYear() {
+  return new Intl.DateTimeFormat("en", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+  }).format(new Date());
+}

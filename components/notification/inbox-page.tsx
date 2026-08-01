@@ -17,9 +17,17 @@ import {
   useAcceptWorkspaceInvitation,
   useDeclineWorkspaceInvitation,
 } from "@/lib/api/generated/workspace-invitations/workspace-invitations";
+import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import type { NotificationListResponseDataNotificationsItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
+
+/** 계약의 종료 상태는 셋이다. 취소된 초대를 「거절함」으로 접으면 사용자가 자기가 거절한 줄 안다. */
+const STATUS_LABEL: Record<string, string> = {
+  ACCEPTED: "수락함",
+  DECLINED: "거절함",
+  CANCELED: "취소됨",
+};
 
 function InboxList() {
   const client = useQueryClient();
@@ -33,6 +41,9 @@ function InboxList() {
 
   const invalidate = () =>
     client.invalidateQueries({ queryKey: getGetNotificationsQueryKey() });
+  // 수락하면 그 워크스페이스에 들어간 것이다 — 스위처가 안 따라오면 가입한 곳이 안 보인다.
+  const invalidateWorkspaces = () =>
+    client.invalidateQueries({ queryKey: getGetWorkspacesQueryKey() });
 
   const markRead = useMarkNotificationRead({
     mutation: { onSuccess: () => void invalidate() },
@@ -54,6 +65,8 @@ function InboxList() {
   const decline = useDeclineWorkspaceInvitation({
     mutation: { meta: { suppressErrorToast: true }, onError: onResolveError },
   });
+  // 한 초대에 수락과 거절이 함께 나가면 하나가 성공한 뒤 다른 하나가 409 를 띄운다.
+  const isResolving = accept.isPending || decline.isPending;
 
   const resolveInvitation = (
     notification: NotificationListResponseDataNotificationsItem,
@@ -71,6 +84,7 @@ function InboxList() {
             markRead.mutate({ notificationId: notification.notificationId });
           }
           void invalidate();
+          if (action === "accept") void invalidateWorkspaces();
         },
       }
     );
@@ -81,7 +95,7 @@ function InboxList() {
       <div className="rounded-panel border border-[var(--el-hairline)] bg-card px-8 py-16 text-center">
         <p className="text-[15px] font-medium">받은 알림이 없습니다</p>
         <p className="mt-2 text-[13px] text-[var(--el-muted)]">
-          워크스페이스 초대와 회의 분석 결과가 여기에 쌓입니다.
+          지금은 워크스페이스 초대가 여기에 쌓입니다.
         </p>
       </div>
     );
@@ -137,7 +151,7 @@ function InboxList() {
                     minute: "2-digit",
                   })}
                   {invitation && !pending
-                    ? ` · ${invitation.status === "ACCEPTED" ? "수락함" : "거절함"}`
+                    ? ` · ${STATUS_LABEL[invitation.status] ?? invitation.status}`
                     : ""}
                 </p>
                 {pending ? (
@@ -145,6 +159,7 @@ function InboxList() {
                     <Button
                       size="sm"
                       loading={accept.isPending}
+                      disabled={isResolving}
                       onClick={() => resolveInvitation(notification, "accept")}
                     >
                       수락
@@ -153,6 +168,7 @@ function InboxList() {
                       variant="outline"
                       size="sm"
                       loading={decline.isPending}
+                      disabled={isResolving}
                       onClick={() => resolveInvitation(notification, "decline")}
                     >
                       거절
@@ -199,11 +215,13 @@ function InboxSkeleton() {
 
 export function InboxPage() {
   return (
-    <div className="mx-auto max-w-[660px] px-8 pb-10 pt-6">
+    // 셸이 overflow-hidden 이라 페이지가 스스로 스크롤 경계를 만든다.
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-[660px] px-8 pb-10 pt-6">
       <header className="pb-4">
         <h1 className="text-note-title font-serif font-light">받은 알림</h1>
         <p className="mt-1 text-[13px] text-[var(--el-muted)]">
-          초대와 분석 결과는 워크스페이스가 아니라 나에게 옵니다.
+          초대는 워크스페이스가 아니라 나에게 옵니다.
         </p>
       </header>
       <DataBoundary
@@ -212,6 +230,7 @@ export function InboxPage() {
       >
         <InboxList />
       </DataBoundary>
+      </div>
     </div>
   );
 }

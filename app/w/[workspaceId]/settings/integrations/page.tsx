@@ -8,10 +8,7 @@ export default async function WorkspaceIntegrationsSettingsRoute({
 }) {
   const { workspaceId } = await params;
   return (
-    <SettingsPageShell
-      title="연동"
-      description="에이전트가 쓸 도구를 워크스페이스 단위로 연결합니다."
-    >
+    <SettingsPageShell>
       <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
     </SettingsPageShell>
   );
