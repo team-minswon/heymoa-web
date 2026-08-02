@@ -13,6 +13,11 @@ import type { NoteResponseDataParticipantsItem } from "./noteResponseDataPartici
  * 성공 응답 데이터
  */
 export type NoteResponseData = {
+  /**
+   * 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
+   * @nullable
+   */
+  meetingStartedAt: string | null;
   /** 노트 생성 시각 */
   createdAt: string;
   /**
@@ -46,18 +51,13 @@ export type NoteResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   projectId: string;
-  /** 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열 */
-  participants: NoteResponseDataParticipantsItem[];
-  /** 노트 수정 시각 */
-  updatedAt: string;
-  /**
-   * 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
-   * @nullable
-   */
-  meetingStartedAt: string | null;
   /**
    * 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
    * @nullable
    */
   activeSessionStartedAt: string | null;
+  /** 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열 */
+  participants: NoteResponseDataParticipantsItem[];
+  /** 노트 수정 시각 */
+  updatedAt: string;
 };

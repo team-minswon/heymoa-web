@@ -11,6 +11,11 @@
  * @nullable
  */
 export type NoteListResponseDataNotesItemMeetingStartedBy = {
+  /**
+   * 회의 시작자 프로필 이미지 URL (없으면 null)
+   * @nullable
+   */
+  image: string | null;
   /** 회의 시작자 이름 */
   name: string;
   /**
@@ -20,4 +25,6 @@ export type NoteListResponseDataNotesItemMeetingStartedBy = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   userId: string;
+  /** 회의 시작자 이메일 */
+  email: string;
 } | null;

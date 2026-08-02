@@ -535,7 +535,10 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
 }) => {
   const noteId = await createMeetingNote(page);
   await page.getByRole("button", { name: "노트 닫기" }).click();
-  await page.getByRole("link", { name: "주간 제품 회의 노트 열기" }).first().click();
+  await page
+    .getByRole("link", { name: "주간 제품 회의 노트 열기" })
+    .first()
+    .click();
   await expect(page).toHaveURL(
     `/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=side&tab=details`
   );
@@ -803,6 +806,28 @@ test("returns to the note list when a project is picked in full view", async ({
   await page.getByRole("button", { name: "모든 노트" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
+});
+
+/**
+ * 진행자 아바타가 **참여자 명단에 없는 진행자**에게도 자기 이미지를 그리는지 본다.
+ *
+ * 예전 계약은 `meetingStartedBy`가 `userId`·`name`뿐이라 화면이 같은 userId를 participants에서
+ * 찾아 이미지를 빌려 왔고, 회의 뒤 워크스페이스를 떠난 진행자는 빌릴 데가 없어 이름 첫 글자로
+ * 떨어졌다. 계약이 email·image를 실으면서 그 우회가 사라졌다.
+ *
+ * **vitest로는 못 본다** — base-ui `Avatar.Image`는 브라우저가 로드를 알려야 `<img>`를 붙이는데
+ * jsdom은 그 신호를 안 준다. 목 시드에서 이 조건을 만드는 노트는 「파트너 검토 회의」 하나다.
+ */
+test("draws the starter avatar image even when the starter is not a participant", async ({
+  page,
+}) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+
+  const starter = page.getByLabel("진행자 김서연 (seoyeon@heymoa.com)");
+  await expect(starter).toBeVisible();
+  await expect(starter.locator("img")).toBeVisible();
+  // 이니셜 fallback이 남아 있으면 이미지를 못 그린 것이다.
+  await expect(starter).not.toHaveText("김");
 });
 
 /**

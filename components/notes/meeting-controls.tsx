@@ -5,6 +5,7 @@ import { Square } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
+import { ParticipantAvatar } from "@/components/notes/note-participants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { NoteResponseData } from "@/lib/api/generated/models";
@@ -71,10 +72,15 @@ export function MeetingControls({
         {MEETING_STATUS_LABEL[note.meetingStatus]}
       </Badge>
       <RecordedTime elapsedMs={getRecordedDurationMs(note, now ?? 0)} />
-      {showStarter ? (
-        <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
-          {startedBy?.name}
-          <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
+      {/* 얼굴은 목록 행과 같은 아바타로 낸다 — 이름 하나만 있으면 좁은 폭에서 잘리고,
+          목록에서 본 사람과 같은 사람인지 알 수 없다. */}
+      {showStarter && startedBy ? (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <ParticipantAvatar participant={startedBy} size="sm" isStarter />
+          <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
+            {startedBy.name}
+            <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
+          </span>
         </span>
       ) : null}
       {canEnd ? (

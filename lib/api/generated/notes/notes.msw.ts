@@ -26,7 +26,12 @@ export const getGetNoteResponseMock = (): NoteResponse => ({
     meetingStartedAt: "2026-07-14T01:02:03Z",
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
-    meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
+    meetingStartedBy: {
+      userId: "0HZX2K7M9Q4AC",
+      name: "홍길동",
+      email: "hong@example.com",
+      image: "https://cdn.example.com/avatars/hong.png",
+    },
     participants: [
       {
         userId: "0HZX2K7M9Q4AC",
@@ -51,7 +56,12 @@ export const getUpdateNoteResponseMock = (): NoteResponse => ({
     meetingStartedAt: "2026-07-14T01:02:03Z",
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
-    meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
+    meetingStartedBy: {
+      userId: "0HZX2K7M9Q4AC",
+      name: "홍길동",
+      email: "hong@example.com",
+      image: "https://cdn.example.com/avatars/hong.png",
+    },
     participants: [
       {
         userId: "0HZX2K7M9Q4AC",
@@ -95,7 +105,12 @@ export const getGetNotesResponseMock = (): NoteListResponse => ({
         lastRecordedAt: "2026-07-14T01:02:03Z",
         recordedDurationMs: 6500,
         activeSessionStartedAt: "2026-07-14T01:02:03Z",
-        meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
+        meetingStartedBy: {
+          userId: "0HZX2K7M9Q4AC",
+          name: "홍길동",
+          email: "hong@example.com",
+          image: "https://cdn.example.com/avatars/hong.png",
+        },
         participants: [
           {
             userId: "0HZX2K7M9Q4AC",

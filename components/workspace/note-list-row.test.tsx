@@ -117,42 +117,94 @@ describe("NoteListRow", () => {
       elapsedMs: 0,
     };
 
-    renderRow(note({
-          meetingStatus,
-          activeSessionStartedAt:
-            meetingStatus === "IN_PROGRESS" ? "2026-07-11T00:22:41Z" : null,
-          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
-        }), Date.parse("2026-07-11T00:23:41Z"));
+    renderRow(
+      note({
+        meetingStatus,
+        activeSessionStartedAt:
+          meetingStatus === "IN_PROGRESS" ? "2026-07-11T00:22:41Z" : null,
+        meetingStartedBy: {
+          userId: "01K0000000099",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
+      }),
+      Date.parse("2026-07-11T00:23:41Z")
+    );
 
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
   it("uses cumulative active-only time instead of wall time since the first start", () => {
-    renderRow(note({
-          recordedDurationMs: 120_000,
-          activeSessionStartedAt: "2026-07-11T00:22:41Z",
-          meetingStartedAt: "2026-07-01T00:00:00Z",
-          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
-        }), Date.parse("2026-07-11T00:23:41Z"));
+    renderRow(
+      note({
+        recordedDurationMs: 120_000,
+        activeSessionStartedAt: "2026-07-11T00:22:41Z",
+        meetingStartedAt: "2026-07-01T00:00:00Z",
+        meetingStartedBy: {
+          userId: "01K0000000099",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
+      }),
+      Date.parse("2026-07-11T00:23:41Z")
+    );
 
     expect(screen.getByText("기록 3분")).toBeInTheDocument();
     expect(screen.queryByText(/\d{4,}분/)).toBeNull();
   });
 
   it("freezes PAUSED duration and keeps its starter readable", () => {
-    renderRow(note({
-          meetingStatus: "PAUSED",
-          activeSessionStartedAt: null,
-          recordedDurationMs: 185_000,
-          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
-        }), Date.parse("2026-08-11T00:23:41Z"));
+    renderRow(
+      note({
+        meetingStatus: "PAUSED",
+        activeSessionStartedAt: null,
+        recordedDurationMs: 185_000,
+        meetingStartedBy: {
+          userId: "01K0000000099",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
+      }),
+      Date.parse("2026-08-11T00:23:41Z")
+    );
 
     expect(screen.getByText("중지됨")).toBeInTheDocument();
     // 진행자는 아바타 배지만으로 안 읽혀서 둘째 줄에 글자로도 적는다.
     // 진행자는 둘째 줄이 아니라 오른쪽 아바타 줄에서 구분선으로 갈라 선다.
     expect(screen.queryByText("김민수")).toBeNull();
-    expect(screen.getByLabelText("진행자 김민수")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("진행자 김민수 (minsu@heymoa.com)")
+    ).toBeInTheDocument();
     expect(screen.getByText("기록 3분")).toBeInTheDocument();
+  });
+
+  // 진행자가 참여자 명단에 없으면 예전에는 이미지를 빌릴 데가 없어, `email: ""`인 가짜
+  // 객체로 떨어지고 아바타가 이름 첫 글자가 됐다. 계약이 meetingStartedBy에 email·image를
+  // 실으면서 빌려오기 자체가 사라졌다 — **참여자 0명**이 그 회귀 조건이다.
+  //
+  // 이미지가 실제로 그려지는지는 여기서 못 본다. base-ui `Avatar.Image`는 브라우저가 로드를
+  // 알려야 <img>를 붙이는데 jsdom은 그 신호를 안 준다. 대신 계약 객체가 손실 없이 그대로
+  // 내려갔는지를 라벨의 이메일로 확인한다 — 옛 fallback은 여기가 비어 있었다.
+  it("참여자가 아닌 진행자도 자기 계약 값 그대로 그린다", () => {
+    renderRow(
+      note({
+        participants: [],
+        meetingStartedBy: {
+          userId: "01K0000000099",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: "https://cdn.example.com/minsu.png",
+        },
+      }),
+      Date.parse("2026-07-11T00:23:41Z")
+    );
+
+    expect(
+      screen.getByLabelText("진행자 김민수 (minsu@heymoa.com)")
+    ).toBeInTheDocument();
   });
 
   // 메타를 둘째 줄로 내리면서 화면 폭별 숨김을 걷어냈다 — 폭마다 행 구성이 달라지던 원인이다.
@@ -171,11 +223,19 @@ describe("NoteListRow", () => {
   });
 
   it("모든 폭에서 상태·기록·시각을 같은 순서로 내고 제목 폭을 지킨다", () => {
-    renderRow(note({
-          recordedDurationMs: 120_000,
-          activeSessionStartedAt: "2026-07-11T00:22:41Z",
-          meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
-        }), Date.parse("2026-07-11T00:23:41Z"));
+    renderRow(
+      note({
+        recordedDurationMs: 120_000,
+        activeSessionStartedAt: "2026-07-11T00:22:41Z",
+        meetingStartedBy: {
+          userId: "01K0000000099",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
+      }),
+      Date.parse("2026-07-11T00:23:41Z")
+    );
 
     const title = screen.getByRole("heading", { name: "주간 제품 회의" });
     const meta = screen.getByText("기록 중").parentElement;
@@ -186,7 +246,9 @@ describe("NoteListRow", () => {
     expect(screen.getByText("기록 3분")).not.toHaveClass("hidden");
     // 이름과 구분점을 함께 접는다 — 이름만 접으면 점만 덩그러니 남는다.
     // 진행자 표식은 화면 폭으로 접지 않는다 — 접으면 모바일에서 알 방법이 사라진다.
-    expect(screen.getByLabelText("진행자 김민수")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("진행자 김민수 (minsu@heymoa.com)")
+    ).toBeInTheDocument();
   });
   it("기록 중이 아닌 회의는 메뉴에서 삭제할 수 있다", async () => {
     recording.current = {

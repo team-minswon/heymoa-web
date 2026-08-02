@@ -28,7 +28,12 @@ function note(overrides: Partial<NoteResponseData>): NoteResponseData {
     createdAt: "2026-07-24T00:00:00Z",
     updatedAt: "2026-07-24T00:00:00Z",
     meetingStatus: "IN_PROGRESS",
-    meetingStartedBy: { userId: "user-12345", name: "테스트 유저" },
+    meetingStartedBy: {
+      userId: "user-12345",
+      name: "테스트 유저",
+      email: "test@heymoa.com",
+      image: null,
+    },
     meetingStartedAt: "2026-07-24T00:00:00Z",
     recordedDurationMs: 65_000,
     activeSessionStartedAt: "2026-07-24T00:01:00Z",
@@ -61,7 +66,14 @@ describe("MeetingControls", () => {
 
   it("문맥 표시를 요청하면 시작자에게 상태와 시작자명과 종료를 함께 보인다", () => {
     renderControls(
-      note({ meetingStartedBy: { userId: "user-12345", name: "김민수" } }),
+      note({
+        meetingStartedBy: {
+          userId: "user-12345",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
+      }),
       true
     );
 
@@ -109,7 +121,14 @@ describe("MeetingControls", () => {
     state.userId = "user-other";
 
     renderControls(
-      note({ meetingStartedBy: { userId: "user-12345", name: "김민수" } })
+      note({
+        meetingStartedBy: {
+          userId: "user-12345",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
+      })
     );
 
     expect(screen.getByText("기록 중")).toBeTruthy();
@@ -123,7 +142,14 @@ describe("MeetingControls", () => {
     state.userId = "user-other";
 
     renderControls(
-      note({ meetingStartedBy: { userId: "user-12345", name: "김민수" } })
+      note({
+        meetingStartedBy: {
+          userId: "user-12345",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
+      })
     );
 
     const name = screen.getByText("김민수");
@@ -146,7 +172,12 @@ describe("MeetingControls", () => {
     renderControls(
       note({
         meetingStatus: "ENDED",
-        meetingStartedBy: { userId: "user-12345", name: "김민수" },
+        meetingStartedBy: {
+          userId: "user-12345",
+          name: "김민수",
+          email: "minsu@heymoa.com",
+          image: null,
+        },
       }),
       true
     );

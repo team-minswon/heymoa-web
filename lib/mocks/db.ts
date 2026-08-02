@@ -68,6 +68,17 @@ const INVITED_WORKSPACE = {
   name: "디자인 팀",
 } as const;
 
+/**
+ * 워크스페이스를 떠난 시작자의 아바타. 멤버 목록에 없어 참여자에서 이미지를 빌릴 수 없는
+ * 유일한 표본이라, 계약이 `meetingStartedBy.image`를 싣는지가 여기서만 눈에 보인다.
+ * `MOCK_AVATAR`와 같은 이유로 원격 URL이 아닌 인라인 data URI다 (오프라인에서 안 흔들린다).
+ */
+const EX_MEMBER_AVATAR =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#c7d3d8"/><circle cx="32" cy="25" r="11" fill="#6b7f88"/><path d="M8 64c0-13 11-21 24-21s24 8 24 21z" fill="#6b7f88"/></svg>'
+  );
+
 const SUPPORTED_PROVIDERS = ["LINEAR", "GITHUB"] as const;
 
 type MockIntegration = ToolConnectionsResponseDataIntegrationsItem & {
@@ -288,6 +299,20 @@ function createSeedState(): StoreState {
           a.name.localeCompare(b.name) || a.userId.localeCompare(b.userId)
       );
   };
+  /**
+   * 회의 시작자. 계약이 참여자와 **같은 네 필드**를 내리므로 목도 같은 모양으로 시드한다 —
+   * 예전에는 시작자만 userId·name이라 화면이 이미지를 참여자 목록에서 빌려 왔고, 그
+   * 우회가 사라졌다. 여기서 email·image를 빠뜨리면 목만 옛 계약으로 남는다.
+   *
+   * 시작자는 워크스페이스 멤버가 아닐 수 있다(회의 뒤 나간 사람). 그 경우는 호출부가
+   * 직접 적는다 — members에 없다고 null을 돌려주면 시작자가 통째로 사라진다.
+   */
+  const starterOf = (userId: string): NoteResponseData["meetingStartedBy"] => {
+    const member = members.find((candidate) => candidate.userId === userId);
+    if (!member) return null;
+    const { name, email, image } = member;
+    return { userId, name, email, image };
+  };
   const notes: NoteResponseData[] = [
     {
       noteId: "01K0000000002",
@@ -299,7 +324,7 @@ function createSeedState(): StoreState {
       meetingStartedAt: "2026-07-11T00:00:00Z",
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
-      meetingStartedBy: { userId: MOCK_USER.userId, name: MOCK_USER.name },
+      meetingStartedBy: starterOf(MOCK_USER.userId),
       participants: participantsOf(
         projects[0].projectId,
         MOCK_USER.userId,
@@ -329,7 +354,15 @@ function createSeedState(): StoreState {
       meetingStartedAt: "2026-07-12T00:00:00Z",
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
-      meetingStartedBy: { userId: "01K0000000099", name: "김서연" },
+      // 워크스페이스 멤버 목록에 없는 시작자다 — 회의 뒤 나간 사람. 참여자에서 이미지를
+      // 빌려 올 수 없는 유일한 표본이라, 시작자 아바타 회귀는 이 노트에서만 눈에 띈다.
+      // **image를 null로 두면 이 표본이 무의미해진다** — 고쳐도 이니셜만 보이기 때문이다.
+      meetingStartedBy: {
+        userId: "01K0000000099",
+        name: "김서연",
+        email: "seoyeon@heymoa.com",
+        image: EX_MEMBER_AVATAR,
+      },
       participants: participantsOf(
         projects[0].projectId,
         MOCK_USER.userId,
@@ -396,10 +429,17 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       // 절반은 내가 시작한 회의로 둔다 — `내가 시작` 필터가 빈 목록만 보여주면 검증이 안 된다.
+      //
+      // 나머지 절반은 다시 둘로 가른다. **셋 다 필요하다** — 이미지 있는 시작자, 이미지 없는
+      // 시작자(한지원), 시작자 자체가 없는 회의. 「시작 전」 노트들도 시작자가 null이지만
+      // 그건 표본이 못 된다: `nullable-coverage`가 그 노트들로 세션을 만들면서 시작자를
+      // 채워 버려, **종료된 이 노트들만이 null 쪽을 끝까지 들고 있다.**
       meetingStartedBy:
         (projectIndex as number) === 0
-          ? { userId: MOCK_USER.userId, name: MOCK_USER.name }
-          : null,
+          ? starterOf(MOCK_USER.userId)
+          : (index as number) < 4
+            ? starterOf("01K0000000020")
+            : null,
       // 넘침(+N) 표시를 화면에서 볼 수 있게 절반은 참여자를 둘 다 넣는다.
       participants:
         index % 2 === 0
@@ -1504,6 +1544,8 @@ export const mockDb = {
     note.meetingStartedBy ??= {
       userId: state.user.userId,
       name: state.user.name,
+      email: state.user.email,
+      image: state.user.image,
     };
     note.meetingStatus = "IN_PROGRESS";
     state.sessions.push(session);

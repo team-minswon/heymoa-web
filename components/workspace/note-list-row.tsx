@@ -211,18 +211,6 @@ export function NoteListRow({
   }
   const openingFullView = openedFullViewFrom === routeKey;
 
-  // 목록 계약의 `meetingStartedBy`는 userId·name뿐이라 이미지가 없다 — 참여자로도 있으면
-  // 거기서 이미지를 빌려 온다.
-  const starter = note.meetingStartedBy
-    ? ((note.participants ?? []).find(
-        (participant) => participant.userId === note.meetingStartedBy?.userId
-      ) ?? {
-        userId: note.meetingStartedBy.userId,
-        name: note.meetingStartedBy.name,
-        email: "",
-      })
-    : null;
-
   const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=details`;
   const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=details`;
 
@@ -254,9 +242,13 @@ export function NoteListRow({
             무엇인지 알 수 없고, 배지로 표시해 봤자 이 크기에서는 점으로만 보인다.
             화면 폭으로 접지 않는다 — 접으면 모바일에서 진행자를 알 방법이 사라진다. */}
         <span className="flex shrink-0 items-center gap-2">
-          {starter ? (
+          {note.meetingStartedBy ? (
             <>
-              <ParticipantAvatar participant={starter} size="sm" isStarter />
+              <ParticipantAvatar
+                participant={note.meetingStartedBy}
+                size="sm"
+                isStarter
+              />
               <span
                 aria-hidden="true"
                 className="h-5 w-px bg-[var(--el-hairline-strong)]"

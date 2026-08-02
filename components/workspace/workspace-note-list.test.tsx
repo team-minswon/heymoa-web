@@ -152,7 +152,12 @@ describe("WorkspaceNoteList", () => {
             ...note("active", "2026-07-29T00:00:00Z"),
             meetingStartedAt: "2026-07-01T00:00:01Z",
             activeSessionStartedAt: "2026-07-29T00:00:01Z",
-            meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
+            meetingStartedBy: {
+              userId: "01K0000000099",
+              name: "김민수",
+              email: "minsu@heymoa.com",
+              image: null,
+            },
           },
         ]}
         isPending={false}
