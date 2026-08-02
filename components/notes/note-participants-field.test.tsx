@@ -83,7 +83,7 @@ function renderField(participants = [PARTICIPANT]) {
 }
 
 function openMenu() {
-  fireEvent.click(screen.getByRole("button", { name: /참여자 선택/ }));
+  fireEvent.click(screen.getByRole("combobox", { name: /참여자 선택/ }));
 }
 
 describe("NoteParticipantsField", () => {
@@ -106,9 +106,9 @@ describe("NoteParticipantsField", () => {
     renderField();
     openMenu();
 
-    const items = await screen.findAllByRole("menuitemcheckbox");
-    expect(items[0]).toBeChecked();
-    expect(items[1]).not.toBeChecked();
+    const items = await screen.findAllByRole("option");
+    expect(items[0]).toHaveAttribute("aria-selected", "true");
+    expect(items[1]).toHaveAttribute("aria-selected", "false");
   });
 
   // 체크마다 보내면 요청이 줄줄이 나가고 응답 순서도 보장되지 않는다.
@@ -116,7 +116,7 @@ describe("NoteParticipantsField", () => {
     renderField();
     openMenu();
 
-    const items = await screen.findAllByRole("menuitemcheckbox");
+    const items = await screen.findAllByRole("option");
     fireEvent.click(items[1]);
 
     expect(replaceParticipants).not.toHaveBeenCalled();
@@ -126,7 +126,7 @@ describe("NoteParticipantsField", () => {
     renderField();
     openMenu();
 
-    const items = await screen.findAllByRole("menuitemcheckbox");
+    const items = await screen.findAllByRole("option");
     fireEvent.click(items[1]);
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
@@ -144,7 +144,7 @@ describe("NoteParticipantsField", () => {
   it("아무것도 안 건드리고 닫으면 그 사이 바뀐 참여자를 덮어쓰지 않는다", async () => {
     const view = renderField();
     openMenu();
-    await screen.findAllByRole("menuitemcheckbox");
+    await screen.findAllByRole("option");
 
     // 메뉴가 열려 있는 동안 다른 사용자가 한지원을 추가했다.
     view.rerender(
@@ -170,7 +170,7 @@ describe("NoteParticipantsField", () => {
     });
 
     await waitFor(() =>
-      expect(screen.queryByRole("menuitemcheckbox")).toBeNull()
+      expect(screen.queryByRole("option")).toBeNull()
     );
     expect(replaceParticipants).not.toHaveBeenCalled();
   });
@@ -178,13 +178,13 @@ describe("NoteParticipantsField", () => {
   it("고른 것이 그대로면 요청을 보내지 않는다", async () => {
     renderField();
     openMenu();
-    await screen.findAllByRole("menuitemcheckbox");
+    await screen.findAllByRole("option");
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",
     });
 
     await waitFor(() =>
-      expect(screen.queryByRole("menuitemcheckbox")).toBeNull()
+      expect(screen.queryByRole("option")).toBeNull()
     );
     expect(replaceParticipants).not.toHaveBeenCalled();
   });
@@ -203,7 +203,7 @@ describe("NoteParticipantsField", () => {
     renderField();
     openMenu();
 
-    const items = await screen.findAllByRole("menuitemcheckbox");
+    const items = await screen.findAllByRole("option");
     fireEvent.click(items[1]);
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: "Escape",

@@ -68,7 +68,8 @@ export function WorkspaceRouteSkeleton() {
               <Skeleton className="mt-5 mb-2 ml-3 h-3 w-36 rounded-chip" />
               <div className="divide-y divide-[var(--el-hairline)]">
                 {Array.from({ length: rows }, (_, row) => (
-                  <div key={row} className="flex h-[52px] items-center gap-3.5">
+                  // 실제 행(note-list-row)이 두 줄 h-16이다.
+                  <div key={row} className="flex h-16 items-center gap-3.5">
                     <Skeleton className="size-5 shrink-0 rounded-chip" />
                     <Skeleton className="h-4 w-1/3 rounded-chip" />
                   </div>

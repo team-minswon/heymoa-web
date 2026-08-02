@@ -76,7 +76,8 @@ export function WorkspaceNoteList({
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
-            className="flex h-[52px] items-center gap-[14px] px-3"
+            // 실제 행(note-list-row)이 두 줄 h-16이다. 어긋나면 데이터 도착 시 목록이 아래로 점프한다.
+            className="flex h-16 items-center gap-[14px] px-3"
           >
             <Skeleton className="size-5 rounded-full" />
             <Skeleton className="h-4 w-1/3" />

@@ -135,7 +135,7 @@ describe("NoteListRow", () => {
           meetingStartedBy: { userId: "01K0000000099", name: "김민수" },
         }), Date.parse("2026-07-11T00:23:41Z"));
 
-    expect(screen.getByText("3분")).toBeInTheDocument();
+    expect(screen.getByText("기록 3분")).toBeInTheDocument();
     expect(screen.queryByText(/\d{4,}분/)).toBeNull();
   });
 
@@ -148,11 +148,27 @@ describe("NoteListRow", () => {
         }), Date.parse("2026-08-11T00:23:41Z"));
 
     expect(screen.getByText("중지됨")).toBeInTheDocument();
-    expect(screen.getByText("김민수")).toBeInTheDocument();
+    // 진행자는 아바타 배지만으로 안 읽혀서 둘째 줄에 글자로도 적는다.
+    expect(screen.getByText("진행 김민수")).toBeInTheDocument();
     expect(screen.getByText("기록 3분")).toBeInTheDocument();
   });
 
-  it("lets narrow rows keep title width and hides secondary live detail below sm", () => {
+  // 메타를 둘째 줄로 내리면서 화면 폭별 숨김을 걷어냈다 — 폭마다 행 구성이 달라지던 원인이다.
+  // 진행자 이름만 좁은 화면에서 접는다(이름 길이를 알 수 없어 제목을 밀어낼 수 있다).
+  // 배포 직후 남은 옛 응답·캐시에는 participants가 없다 — 여기서 죽으면 목록 전체가 빈다.
+  it("participants가 없는 옛 응답에도 행이 그려진다", () => {
+    const legacy = note();
+    delete (legacy as { participants?: unknown }).participants;
+
+    renderRow(legacy, Date.parse("2026-07-11T00:23:41Z"));
+
+    expect(
+      screen.getByRole("heading", { name: "주간 제품 회의" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/참여 \d+명/)).toBeNull();
+  });
+
+  it("모든 폭에서 상태·기록·시각을 같은 순서로 내고 제목 폭을 지킨다", () => {
     renderRow(note({
           recordedDurationMs: 120_000,
           activeSessionStartedAt: "2026-07-11T00:22:41Z",
@@ -162,15 +178,15 @@ describe("NoteListRow", () => {
     const title = screen.getByRole("heading", { name: "주간 제품 회의" });
     const meta = screen.getByText("기록 중").parentElement;
 
-    expect(title).toHaveClass("min-w-16");
-    expect(meta).toHaveClass("shrink", "overflow-hidden");
-    expect(meta).not.toHaveClass("shrink-0");
-    expect(screen.getByText("김민수").parentElement).toHaveClass(
+    expect(title).toHaveClass("min-w-16", "truncate");
+    expect(meta).toHaveClass("overflow-hidden");
+    expect(screen.getByText("기록 중")).not.toHaveClass("hidden");
+    expect(screen.getByText("기록 3분")).not.toHaveClass("hidden");
+    // 이름과 구분점을 함께 접는다 — 이름만 접으면 점만 덩그러니 남는다.
+    expect(screen.getByText("진행 김민수").parentElement).toHaveClass(
       "hidden",
       "sm:flex"
     );
-    expect(screen.getByText("3분")).toHaveClass("hidden", "sm:inline");
-    expect(screen.getByText("기록 중")).not.toHaveClass("hidden");
   });
   it("기록 중이 아닌 회의는 메뉴에서 삭제할 수 있다", async () => {
     recording.current = {
@@ -199,7 +215,7 @@ describe("NoteListRow", () => {
 
     // 서버가 409로 막는 자리라 눌러서 실패하게 두지 않는다.
     await waitFor(() => {
-      expect(screen.getByText("전체 화면으로 열기")).toBeInTheDocument();
+      expect(screen.getByText("전체 화면")).toBeInTheDocument();
     });
     expect(screen.queryByText("삭제")).toBeNull();
   });

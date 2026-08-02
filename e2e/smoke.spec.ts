@@ -848,7 +848,7 @@ test("clears the note row spinner after the full-view note is closed", async ({
 
   const row = page.locator("article", { hasText: "주간 제품 회의" }).first();
   await row.getByRole("button", { name: "주간 제품 회의 노트 메뉴" }).click();
-  await page.getByRole("menuitem", { name: "전체 화면으로 열기" }).click();
+  await page.getByRole("menuitem", { name: "전체 화면" }).click();
   await expect(page).toHaveURL(/view=full/);
 
   await page.getByRole("button", { name: "모든 노트" }).click();

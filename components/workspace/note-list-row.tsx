@@ -25,12 +25,6 @@ import {
   DropdownMenuLinkItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
 import { formatRelativeTime } from "@/lib/format/relative-time";
@@ -111,6 +105,20 @@ function RelativeTime({ iso, now }: { iso: string; now: number | null }) {
   );
 }
 
+/**
+ * 행의 둘째 줄. **모든 행이 같은 항목을 같은 순서로** 왼쪽 정렬로 낸다.
+ *
+ * 예전에는 한 줄 오른쪽 끝에 몰아넣고 상태마다 항목을 갈랐다 — 진행자는 중지됨에만,
+ * 상대 시각은 종료됨에만 떠서 행마다 길이도 구성도 달랐고, 오른쪽 정렬이라 시작 x까지
+ * 어긋나 **세로로 훑을 수가 없었다.** 브레이크포인트별 숨김(`hidden sm:`·`md:`)도 같은
+ * 불일치를 화면 폭마다 다시 만들었다.
+ *
+ * 기록 시간은 회의를 시작한 적이 있을 때만 쓴다 — 시작 전의 `0분`은 사실이 아니라 빈칸이다.
+ *
+ * **사람은 글자로 말하고 아바타는 얼굴만 맡는다.** 16px 원 안에는 "이게 참여자다"도
+ * "이 사람이 진행자다"도 안 담긴다 — 배지는 이 크기에서 아이콘이 숨겨져 점으로만 보인다.
+ * 그래서 인원수와 진행자 이름을 여기에 적고, 오른쪽 아바타는 누구인지 알아보는 용도로 둔다.
+ */
 function MeetingMeta({
   note,
   now,
@@ -118,14 +126,15 @@ function MeetingMeta({
   note: NoteListResponseDataNotesItem;
   now: number | null;
 }) {
-  const starter = note.meetingStartedBy;
   const status = note.meetingStatus;
   const minutes = Math.floor(getRecordedDurationMs(note, now ?? 0) / 60_000);
-  const showStarter =
-    starter && (status === "IN_PROGRESS" || status === "PAUSED");
+  // 계약상 필수지만 배포 직후 남은 옛 응답·캐시에는 없을 수 있다. 여기서 그냥 `.length`를
+  // 읽으면 아바타 하나 때문에 **노트 목록 전체가 빈 화면**이 된다(`NoteParticipantAvatars`가
+  // 같은 이유로 기본값을 두는데, 이 줄이 그보다 먼저 돈다).
+  const participantCount = note.participants?.length ?? 0;
 
   return (
-    <span className="flex min-w-0 max-w-[55%] shrink items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-[var(--el-muted)]">
+    <span className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-[var(--el-muted)]">
       {status === "IN_PROGRESS" ? (
         <span className="size-1.5 shrink-0 rounded-full bg-destructive" />
       ) : null}
@@ -137,52 +146,41 @@ function MeetingMeta({
       >
         {MEETING_STATUS_LABEL[status]}
       </span>
-      {showStarter ? (
+      {status !== "NOT_STARTED" ? (
+        <>
+          <span aria-hidden="true" className="shrink-0">
+            ·
+          </span>
+          <span className="shrink-0 tabular-nums">기록 {minutes}분</span>
+        </>
+      ) : null}
+      {participantCount > 0 ? (
+        <>
+          <span aria-hidden="true" className="shrink-0">
+            ·
+          </span>
+          <span className="shrink-0 tabular-nums">
+            참여 {participantCount}명
+          </span>
+        </>
+      ) : null}
+      {note.meetingStartedBy ? (
+        // 진행자는 참여자와 다른 사람일 수 있다 — 아바타 배지만으로는 그 사실이 안 읽힌다.
+        // 좁은 화면에서는 이름 길이를 알 수 없어 접는데, **구분점도 같이 접어야** 한다.
+        // 따로 두면 `참여 2명 · · 3분 전`처럼 점만 덩그러니 남는다.
         <span className="hidden min-w-0 items-center gap-1.5 sm:flex">
           <span aria-hidden="true" className="shrink-0">
             ·
           </span>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                // 진행자는 참여자 그룹과 섞지 않는다 — "누가 켰나"와 "누가 있었나"는 다른 사실이다.
-                <span
-                  aria-label={`진행자 ${starter.name}`}
-                  className="shrink-0"
-                >
-                  <Avatar size="sm" className="size-5">
-                    <AvatarFallback className="bg-[var(--el-surface-strong)] text-[10px] text-[var(--el-ink)]">
-                      {starter.name.slice(0, 1)}
-                    </AvatarFallback>
-                  </Avatar>
-                </span>
-              }
-            />
-            <TooltipContent>진행자 · {starter.name}</TooltipContent>
-          </Tooltip>
-          <span className="max-w-20 truncate">{starter.name}</span>
+          <span className="min-w-0 truncate">
+            진행 {note.meetingStartedBy.name}
+          </span>
         </span>
       ) : null}
-      {status !== "NOT_STARTED" ? (
-        <>
-          <span aria-hidden="true" className="hidden shrink-0 sm:inline">
-            ·
-          </span>
-          <span className="hidden shrink-0 tabular-nums sm:inline">
-            {status === "IN_PROGRESS" ? `${minutes}분` : `기록 ${minutes}분`}
-          </span>
-        </>
-      ) : null}
-      {status === "ENDED" ? (
-        <>
-          <span aria-hidden="true" className="hidden shrink-0 md:inline">
-            ·
-          </span>
-          <span className="hidden md:inline">
-            <RelativeTime iso={note.updatedAt} now={now} />
-          </span>
-        </>
-      ) : null}
+      <span aria-hidden="true" className="shrink-0">
+        ·
+      </span>
+      <RelativeTime iso={note.updatedAt} now={now} />
     </span>
   );
 }
@@ -226,14 +224,15 @@ export function NoteListRow({
   const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=details`;
   const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=details`;
 
-  // v5 목록 행 정본: 높이 52 · 한 줄 · r8 · 배경 없음 · 아이콘 + 제목 15 + 상대 시각.
-  // 카드·그림자·배지·녹음시간은 없다(FORM SPEC).
+  // v5 행은 한 줄이었지만, 상태 메타를 오른쪽 끝에 몰아넣으니 행마다 구성이 달라져 세로로
+  // 훑히지 않았다. 제목과 메타를 두 줄로 나눠 **메타의 시작 x를 모든 행에서 같게** 만든다.
+  // 배경·카드·그림자는 그대로 없다(FORM SPEC).
   return (
-    <article className="group flex h-[52px] items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)]">
+    <article className="group flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)]">
       <Link
         href={sideHref}
         aria-label={`${note.title} 노트 열기`}
-        // self-stretch로 52px 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
+        // self-stretch로 행 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
         className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
       >
         <NoteRowIcon
@@ -241,19 +240,22 @@ export function NoteListRow({
           isRecording={isRecording}
           forcePending={openingFullView}
         />
-        <h3 className="min-w-16 flex-1 truncate text-read font-medium text-[var(--el-ink)]">
-          {note.title}
-        </h3>
-        {/* 목록은 3명까지만 — 52px 한 줄에서 아바타가 넓어질수록 제목이 먼저 잘린다.
-            좁은 화면에서는 상태·시간을 살리고 참여자를 접는다. */}
-        <span className="hidden shrink-0 md:inline-flex">
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <h3 className="min-w-16 truncate text-read font-medium text-[var(--el-ink)]">
+            {note.title}
+          </h3>
+          <MeetingMeta note={note} now={now} />
+        </span>
+        {/* 진행자는 이 뭉치 안에서 배지로 구분된다 — 따로 세우면 라벨 없는 아바타 뭉치가
+            둘이 되어 어느 쪽이 무엇인지 알 수 없다. */}
+        <span className="shrink-0">
           <NoteParticipantAvatars
             participants={note.participants}
+            starter={note.meetingStartedBy}
             max={3}
             size="sm"
           />
         </span>
-        <MeetingMeta note={note} now={now} />
       </Link>
 
       <DropdownMenu>
@@ -276,7 +278,7 @@ export function NoteListRow({
             // `onClick`으로 하면 새 탭을 열어도 이 탭의 스피너가 영원히 남는다.
             onNavigate={() => setOpenedFullViewFrom(routeKey)}
           >
-            <Expand /> 전체 화면으로 열기
+            <Expand /> 전체 화면
           </DropdownMenuLinkItem>
           {/* 기록 중이면 서버가 409로 막는다. 눌러서 실패하게 두지 않고 항목을 안 그린다. */}
           {note.meetingStatus === "IN_PROGRESS" ? null : (
