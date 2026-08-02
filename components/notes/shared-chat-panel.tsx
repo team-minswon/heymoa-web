@@ -41,16 +41,17 @@ export function SharedChatPanel({
   noteId,
   phase,
   onSelectTab,
-  onCloseRail,
   onTurnActiveChange,
 }: {
   noteId: string;
   phase: SharedChatPhase;
   /** 한 턴(전송~스트림)이 도는 동안 참. 부모가 회의 종료로 이 패널을 언마운트하지 않게 한다. */
   onTurnActiveChange?: (active: boolean) => void;
-  /** 레일 머리를 그릴 자리에서만 준다 — side 탭 패널 안에서는 머리가 없다. */
+  /**
+   * 레일 머리를 그릴 자리에서만 준다 — side 탭 패널 안에서는 머리가 없다.
+   * 닫기는 없다. 노트 전체 화면에서 레일은 상주이므로 이 패널은 닫을 수 없다.
+   */
   onSelectTab?: (tab: RailTab) => void;
-  onCloseRail?: () => void;
 }) {
   const queryClient = useQueryClient();
   const stream = useChatStream();
@@ -238,13 +239,8 @@ export function SharedChatPanel({
       className="flex h-full min-h-0 w-full flex-col bg-card lg:border-l lg:border-[var(--el-hairline)]"
     >
       {/* 레일 머리는 두 챗봇이 공유한다 — 여기서 「내 에이전트」로 건너간다. */}
-      {onSelectTab && onCloseRail ? (
-        <RailTabs
-          active="note"
-          onSelect={onSelectTab}
-          onClose={onCloseRail}
-        />
-      ) : null}
+      {/* 노트 전체 화면에서 레일은 상주다 — 탭만 그리고 닫기는 안 준다. */}
+      {onSelectTab ? <RailTabs active="note" onSelect={onSelectTab} /> : null}
       <RailScopeBar icon={Users}>
         워크스페이스 멤버가 함께 봅니다
       </RailScopeBar>
@@ -258,7 +254,7 @@ export function SharedChatPanel({
           )
         }
       >
-        <div className="flex min-h-full flex-col justify-end p-5">
+        <div className="flex min-h-full flex-col justify-end gap-3 p-3.5">
           {isLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-4 w-2/3" />
@@ -450,6 +446,9 @@ function Composer({
       onStop={onStop}
       isBusy={isBusy}
       isStreaming={isStreaming}
+      scopeIcon={Users}
+      scopeHint="보내면 되돌릴 수 없습니다"
+      sendLabel="워크스페이스에 공유"
       placeholder="이 회의에 대해 물어보세요"
     />
   );

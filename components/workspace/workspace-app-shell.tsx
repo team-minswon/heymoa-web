@@ -21,7 +21,6 @@ import {
   usePersonalChat,
 } from "@/components/chat/personal-chat";
 import type { SettingsSection } from "@/components/settings/settings-dialog";
-import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import type {
@@ -54,15 +53,6 @@ const SETTINGS_SLUG: Record<SettingsSection, string> = {
   workspace: "general",
   members: "members",
   integrations: "integrations",
-};
-
-const SETTINGS_LABEL: Record<string, string> = {
-  general: "일반",
-  members: "멤버",
-  projects: "프로젝트",
-  integrations: "연동",
-  account: "내 계정",
-  notifications: "알림",
 };
 
 const INTEGRATION_LABEL: Record<string, string> = {
@@ -199,14 +189,12 @@ export function WorkspaceAppShell({
   // 떠 있으면 사용자는 자기가 어디 있는지 잘못 안다.
   const isActionItems = pathname.endsWith("/action-items");
   const routeProjectId = pathname.match(/\/projects\/([^/]+)/)?.[1];
-  const settingsSlug = pathname.match(/\/settings\/([^/?]+)/)?.[1];
-  const currentLabel = settingsSlug
-    ? `설정 · ${SETTINGS_LABEL[settingsSlug] ?? settingsSlug}`
-    : pathname.endsWith("/inbox")
-      ? "받은 알림"
-      : isActionItems
-        ? "액션 아이템"
-    : (projects.find(
+  // 설정 다이얼로그가 떠 있어도 상단바는 **뒤 화면**을 말한다 — 닫으면 돌아갈 자리다.
+  const currentLabel = pathname.endsWith("/inbox")
+    ? "받은 알림"
+    : isActionItems
+      ? "액션 아이템"
+      : (projects.find(
         (project) =>
           project.projectId === (routeProjectId ?? selectedProjectId)
       )?.name ?? "모든 회의");
@@ -229,39 +217,37 @@ export function WorkspaceAppShell({
             className="min-h-svh bg-[var(--el-canvas)]"
             style={{ "--sidebar-width": "232px" } as React.CSSProperties}
           >
-            {/* 설정은 같은 232 슬롯에서 사이드바만 갈아끼운다. 콘텐츠 팬은 안 움직인다.
+            {/* 설정은 앱 **위에** 다이얼로그로 뜬다 — 사이드바를 갈아끼우지 않는다(design.pen `LS24B`).
                 full 회의는 아예 안 그린다 — `hidden` 으로 감추면 자리 확보용 gap 요소가 남아
                 232 만큼 빈 칸이 생긴다. */}
             {isFullNote ? null : (
-              <Sidebar className="border-r-0 [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:border-r-0 [&>[data-sidebar=sidebar]]:bg-transparent">
-                {settingsSlug ? (
-                  <SettingsSidebar
-                    workspaceId={workspaceId}
-                    workspaceName={workspace?.name}
-                    section={settingsSlug}
-                  />
-                ) : (
-                  <WorkspaceSidebar
-                    workspaceId={workspaceId}
-                    workspace={workspace}
-                    projects={projects}
-                    // 주소로 바로 들어와도 사이드바가 어디인지 말해야 한다. 라우트가 있으면
-                    // 그것이 먼저다 — effect 로 state 를 맞추면 첫 렌더가 한 번 비어 깜빡인다.
-                    selectedProjectId={routeProjectId ?? selectedProjectId}
-                    onSelectProject={handleSelectProject}
-                    onOpenSettings={value.openSettings}
-                  />
-                )}
+              // 사이드바는 캔버스 위에 얹힌다 — 경계선은 떠 있는 패널만 갖는다.
+              <Sidebar className="border-r-0 [&>[data-sidebar=sidebar]]:overflow-hidden [&>[data-sidebar=sidebar]]:bg-transparent">
+                <WorkspaceSidebar
+                  workspaceId={workspaceId}
+                  workspace={workspace}
+                  projects={projects}
+                  // 주소로 바로 들어와도 사이드바가 어디인지 말해야 한다. 라우트가 있으면
+                  // 그것이 먼저다 — effect 로 state 를 맞추면 첫 렌더가 한 번 비어 깜빡인다.
+                  selectedProjectId={routeProjectId ?? selectedProjectId}
+                  onSelectProject={handleSelectProject}
+                  onOpenSettings={value.openSettings}
+                />
               </Sidebar>
             )}
             <ShellMain
               workspaceId={workspaceId}
               currentLabel={currentLabel}
               activeNoteId={activeNoteId}
-              // 설정과 full 회의는 상단바가 없다 — 각자 자기 머리가 그 자리를 겸한다(design.pen).
-              // 둘 다 그리면 「설정 · 일반」과 「워크스페이스 일반」이 같은 말을 두 번 한다.
-              showToolbar={!settingsSlug && !isFullNote}
+              // full 회의만 상단바가 없다 — 회의 머리가 그 자리를 겸한다(design.pen).
+              // 설정은 다이얼로그라 뒤 상단바가 그대로 살아 있어야 「앱 위에 떴다」로 읽힌다.
+              showToolbar={!isFullNote}
               railOpen={sharedRailOpen}
+              // 레일이 본문을 미는가. **노트 full 에서만 민다.**
+              // 워크스페이스 목록에서는 레일이 본문 **위에 쌓인다** — design.pen 의
+              // `?panel=assistant` 5장이 본문을 1188 그대로 두고 레일을 얹는다. 목록을
+              // 좁히면 표의 열이 다시 조판돼 「일시」가 잘린다.
+              narrowsForRail={isFullNote}
             >
               {children}
             </ShellMain>
@@ -273,8 +259,8 @@ export function WorkspaceAppShell({
 }
 
 /**
- * 개인 챗봇 레일은 `fixed`라 본문을 덮는다. 열려 있는 동안 본문을 레일 폭(480 + 거터 10)만큼
- * 밀어 두 프레임(`LeuWE`·`LCXcj`)의 본문 컬럼 축소를 그대로 낸다.
+ * 우측 레일(개인 에이전트·공유 챗)은 `fixed`라 본문을 덮는다. 밀지 말지는 표면마다 다르다 —
+ * 목록에서는 얹히고, 노트 full 에서는 본문을 밀어 10px 틈을 남긴다. `narrowsForRail` 참조.
  */
 function ShellMain({
   workspaceId,
@@ -282,6 +268,7 @@ function ShellMain({
   activeNoteId,
   showToolbar,
   railOpen,
+  narrowsForRail,
   children,
 }: {
   workspaceId: string;
@@ -289,11 +276,12 @@ function ShellMain({
   activeNoteId?: string;
   showToolbar: boolean;
   railOpen: boolean;
+  narrowsForRail: boolean;
   children: React.ReactNode;
 }) {
   const { isVisible } = usePersonalChat();
   // 두 레일은 같은 자리를 쓴다 — 동시에 서지 않으므로 한 번만 좁힌다.
-  const railTakesSpace = isVisible || railOpen;
+  const railTakesSpace = narrowsForRail && (isVisible || railOpen);
   return (
     <SidebarInset className="flex-1 bg-[var(--el-canvas)]">
       <div
@@ -305,7 +293,12 @@ function ShellMain({
           // padding이 아니라 폭을 줄인다 — 노트 full 화면은 이 컨테이너 안에서 `absolute
           // inset-x-0`으로 깔리는데, 절대 배치의 기준은 padding box라 padding으로는 안 밀린다.
           // 좁은 화면에서는 패널이 전체를 덮으므로 본문을 더 줄이지 않는다.
-          railTakesSpace && "lg:w-[calc(100%-490px)]"
+          //
+          // 470 = 패널 좌여백 10 + 패널 우여백 10 + 레일 440 + 레일 우여백 10.
+          // **490이었고 패널 자기 여백 20을 빠뜨려 레일이 패널을 10px 덮었다** — 패널의
+          // 오른쪽 hairline과 radius 16이 레일 밑에 깔리고 표의 마지막 열이 잘렸다.
+          // 레일 폭을 바꾸면 여기도 같이 바꾼다. 셋(레일 둘 + 이 값)이 한 세트다.
+          railTakesSpace && "lg:w-[calc(100%-470px)]"
         )}
       >
         {showToolbar ? (

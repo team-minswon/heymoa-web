@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Square } from "lucide-react";
+import { Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,9 @@ export function ChatComposer({
   isBusy,
   isStreaming,
   placeholder,
+  scopeIcon: ScopeIcon,
+  scopeHint,
+  sendLabel,
   footer,
 }: {
   draft: string;
@@ -27,44 +30,54 @@ export function ChatComposer({
   isBusy: boolean;
   isStreaming: boolean;
   placeholder: string;
+  /** 이 챗이 누구에게 남는지. 보내기 전에 알아야 하는 유일한 것이다. */
+  scopeIcon: React.ComponentType<{ className?: string }>;
+  scopeHint: string;
+  sendLabel: string;
   footer?: React.ReactNode;
 }) {
   return (
     <form
-      className="border-t border-[var(--el-hairline)] px-5 py-4"
+      // design.pen `N38wQ` — 레일 안쪽 여백은 14, 위아래 12. 메시지 열과 같은 열에 선다.
+      className="flex flex-col gap-2 border-t border-[var(--el-hairline)] px-3.5 py-3"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
-      <div className="flex items-center gap-2">
-        <Input
-          value={draft}
-          onChange={(event) => onDraftChange(event.target.value)}
-          disabled={isBusy}
-          placeholder={placeholder}
-          aria-label="메시지"
-        />
+      <Input
+        value={draft}
+        onChange={(event) => onDraftChange(event.target.value)}
+        disabled={isBusy}
+        placeholder={placeholder}
+        aria-label="메시지"
+        className="h-9"
+      />
+      {/* 보내기는 입력 **아래 줄**이다(design.pen `EFF1z`·`h2793`). 입력 옆 동그란 화살표는
+          「어디로 가는지」를 말할 자리가 없어서, 공유 챗에서 워크스페이스 전체로 나가는 것을
+          누르기 전에 알 수 없었다. */}
+      <div className="flex h-8 items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-[var(--el-muted)]">
+          <ScopeIcon className="size-3.5 shrink-0" />
+          <span className="truncate">{scopeHint}</span>
+        </span>
         {isStreaming ? (
           <Button
             type="button"
-            size="icon"
             variant="outline"
-            className="rounded-full"
-            aria-label="중지"
+            className="h-8 shrink-0 px-2.5 text-[12px]"
             onClick={onStop}
           >
             <Square className="size-3.5" />
+            중지
           </Button>
         ) : (
           <Button
             type="submit"
-            size="icon"
-            className="rounded-full"
-            aria-label="보내기"
+            className="h-8 shrink-0 px-2.5 text-[12px]"
             disabled={isBusy}
           >
-            <ArrowUp className="size-4" />
+            {sendLabel}
           </Button>
         )}
       </div>

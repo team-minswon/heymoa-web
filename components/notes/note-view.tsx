@@ -86,12 +86,25 @@ export function NoteView({
   );
   usePersonalChatScope({
     noteId,
-    // 공유 챗봇이 레일을 쓰는 동안에는 개인 레일을 감춘다 — 다만 사용자가 탭으로 직접
-    // 부르면 그쪽이 이긴다. 그러지 않으면 「내 에이전트」 탭이 눌려도 아무것도 안 뜬다.
+    // side 시트에서는 개인 챗봇을 **열 수 없다.** 시트는 목록 위에 얹히는 얕은 표면이고
+    // 레일은 노트 전체 화면의 것이다(D12 · DESIGN.md 「우측 레일」). 목록에서 열어 둔 채로
+    // 들어와도 감춘다 — 그래서 `isOpen` 이 못 이긴다.
+    //
+    // full 에서는 공유 챗봇이 레일을 쓰는 동안 감추되, 사용자가 탭으로 직접 부르면 그쪽이
+    // 이긴다. 그러지 않으면 「내 에이전트」 탭이 눌려도 아무것도 안 뜬다.
     hidden:
-      !personalChat.isOpen &&
-      isPersonalChatHiddenInNote(current.view, phase, noteQuery.isPending),
+      current.view === "side" ||
+      (!personalChat.isOpen &&
+        isPersonalChatHiddenInNote(current.view, phase, noteQuery.isPending)),
     hasNoteRail: noteRailAvailable,
+    // 노트 전체 화면은 우측 레일이 늘 서 있는 화면이다. 살아 있는 회의는 공유 챗봇이 그 자리를
+    // 쓰고(`sharedRailVisible` 기본 참), 종료돼 공유 레일이 없으면 개인 에이전트가 대신 선다.
+    //
+    // **턴이 도는 중에는 안 편다.** 답변이 흐르는 중에 다른 멤버가 회의를 끝내면
+    // `noteRailAvailable`이 즉시 거짓이 되는데, 여기서 개인 레일을 펴면 공유 패널이 마운트된
+    // 채로 가려져 사용자는 흐르던 답변의 나머지를 못 본다. 턴이 끝난 뒤에 편다.
+    autoOpen:
+      current.view === "full" && !noteRailAvailable && !sharedTurnActive,
   });
 
   const [isOpen, setIsOpen] = useState(false);

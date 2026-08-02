@@ -16,6 +16,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Folder, FolderPlus, MoreHorizontal } from "lucide-react";
+import { SettingsRow, SettingsSection } from "@/components/settings/settings-chrome";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -28,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ProjectResponseData } from "@/lib/api/generated/models";
 import {
   getGetProjectsQueryKey,
+  useCreateProject,
   useDeleteProject,
   useGetProjectsSuspense,
   useUpdateProject,
@@ -57,6 +66,7 @@ export function ProjectsSettings({ workspaceId }: { workspaceId: string }) {
   const [renaming, setRenaming] = useState<ProjectResponseData | null>(null);
   const [name, setName] = useState("");
   const [deleting, setDeleting] = useState<ProjectResponseData | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const invalidate = () =>
     client.invalidateQueries({ queryKey: getGetProjectsQueryKey(workspaceId) });
@@ -70,6 +80,18 @@ export function ProjectsSettings({ workspaceId }: { workspaceId: string }) {
       },
     },
   });
+  // design.pen `HinaA` 는 만들기를 섹션 머리에 둔다 — 사이드바 「＋」와 같은 명령이지만
+  // 목록을 보는 자리에서 바로 만들 수 있어야 「여기서는 왜 못 만들지」가 안 생긴다.
+  const create = useCreateProject({
+    mutation: {
+      onSuccess: () => {
+        void invalidate();
+        setCreating(false);
+        setName("");
+        toast.success("프로젝트를 만들었습니다.");
+      },
+    },
+  });
   const remove = useDeleteProject({
     mutation: {
       onSuccess: () => {
@@ -80,72 +102,87 @@ export function ProjectsSettings({ workspaceId }: { workspaceId: string }) {
     },
   });
 
-  if (!projects.length) {
-    return (
-      <div className="rounded-panel border border-[var(--el-hairline)] bg-card px-8 py-14 text-center">
-        <p className="text-[15px] font-medium">프로젝트가 없습니다</p>
-        <p className="mt-2 text-[13px] text-[var(--el-muted)]">
-          사이드바의 「＋」로 첫 프로젝트를 만드세요.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <>
-      <ul className="overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-card">
+      <SettingsSection
+        title="프로젝트"
+        count={projects.length ? `${projects.length}개` : undefined}
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            className="h-8 px-2.5 text-[12px]"
+            onClick={() => {
+              setName("");
+              setCreating(true);
+            }}
+          >
+            <FolderPlus className="size-3.5" />
+            프로젝트 만들기
+          </Button>
+        }
+      >
+        {projects.length === 0 ? (
+          <SettingsRow
+            label="프로젝트가 없습니다"
+            description="회의를 담을 첫 프로젝트를 만드세요"
+          />
+        ) : null}
         {projects.map((project) => (
-          <li
+          <SettingsRow
             key={project.projectId}
             data-testid="project-settings-row"
-            className="flex min-h-14 items-center gap-3 border-b border-[var(--el-hairline)] px-4 py-3 last:border-b-0"
+            label={project.name}
+            description={
+              project.isDefault
+                ? "프로젝트를 고르지 않은 회의가 여기로 갑니다"
+                : (project.description ?? undefined)
+            }
+            icon={<Folder className="size-3.5 text-[var(--el-muted)]" />}
           >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium">
-                {project.name}
-                {project.isDefault ? (
-                  <span className="ml-2 rounded-chip bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-[var(--el-body)]">
-                    기본
-                  </span>
-                ) : null}
-              </span>
-              {project.description ? (
-                <span className="mt-0.5 block truncate text-[12px] text-[var(--el-muted)]">
-                  {project.description}
-                </span>
-              ) : null}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setRenaming(project);
-                setName(project.name);
-              }}
-            >
-              이름 변경
-            </Button>
-            {/* 기본 프로젝트는 지울 수 없다 — 「새 회의」가 갈 곳을 잃는다. */}
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={project.isDefault}
-              onClick={() => setDeleting(project)}
-              className="text-[var(--destructive)]"
-            >
-              삭제
-            </Button>
-          </li>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={`${project.name} 메뉴`}
+                className="flex size-[30px] items-center justify-center rounded-control text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)]"
+              >
+                <MoreHorizontal className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRenaming(project);
+                    setName(project.name);
+                  }}
+                >
+                  이름 변경
+                </DropdownMenuItem>
+                {/* 기본 프로젝트는 지울 수 없다 — 「새 회의」가 갈 곳을 잃는다. */}
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={project.isDefault}
+                  onClick={() => setDeleting(project)}
+                >
+                  삭제
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SettingsRow>
         ))}
-      </ul>
+      </SettingsSection>
 
       <Dialog
-        open={renaming !== null}
-        onOpenChange={(open) => !open && setRenaming(null)}
+        open={renaming !== null || creating}
+        onOpenChange={(open) => {
+          if (open) return;
+          setRenaming(null);
+          setCreating(false);
+        }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>프로젝트 이름 변경</DialogTitle>
+            <DialogTitle>
+              {creating ? "새 프로젝트" : "프로젝트 이름 변경"}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-2">
             <Label htmlFor="project-name">이름</Label>
@@ -156,25 +193,35 @@ export function ProjectsSettings({ workspaceId }: { workspaceId: string }) {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRenaming(null)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRenaming(null);
+                setCreating(false);
+              }}
+            >
               취소
             </Button>
             <Button
-              loading={update.isPending}
+              loading={update.isPending || create.isPending}
               disabled={!name.trim()}
-              onClick={() =>
-                renaming &&
-                update.mutate({
-                  workspaceId,
-                  projectId: renaming.projectId,
-                  data: {
-                    name: name.trim(),
-                    description: renaming.description ?? undefined,
-                  },
-                })
-              }
+              onClick={() => {
+                if (creating) {
+                  create.mutate({ workspaceId, data: { name: name.trim() } });
+                  return;
+                }
+                if (renaming)
+                  update.mutate({
+                    workspaceId,
+                    projectId: renaming.projectId,
+                    data: {
+                      name: name.trim(),
+                      description: renaming.description ?? undefined,
+                    },
+                  });
+              }}
             >
-              저장
+              {creating ? "만들기" : "저장"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -3,14 +3,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Inbox } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowUpRight, Inbox, X } from "lucide-react";
 
-import {
-  EmptyState,
-  PageBody,
-  PageContent,
-  PageHead,
-} from "@/components/workspace/page-chrome";
+import { EmptyState } from "@/components/workspace/page-chrome";
 import { Button } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +25,7 @@ import {
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import type { NotificationListResponseDataNotificationsItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
+import { describeNotification } from "@/lib/notifications/describe";
 import { cn } from "@/lib/utils";
 
 /** 계약의 종료 상태는 셋이다. 취소된 초대를 「거절함」으로 접으면 사용자가 자기가 거절한 줄 안다. */
@@ -37,7 +35,7 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELED: "취소됨",
 };
 
-function InboxList() {
+function InboxList({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient();
   const query = useGetNotificationsSuspense();
   const data =
@@ -100,56 +98,50 @@ function InboxList() {
 
   if (!notifications.length) {
     return (
-      <EmptyState
-        icon={Inbox}
-        title="받은 알림이 없습니다"
-        description="지금은 워크스페이스 초대가 여기에 쌓입니다."
-      />
+      <>
+        <InboxHead unreadCount={0} />
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <EmptyState
+            icon={Inbox}
+            title="받은 알림이 없습니다"
+            description="초대와 회의 알림이 여기에 쌓입니다."
+          />
+        </div>
+      </>
     );
   }
 
   return (
     <>
-      <div className="flex items-center justify-between pb-3">
-        <p className="text-[13px] text-[var(--el-muted)]">
-          {unreadCount > 0 ? `읽지 않음 ${unreadCount}건` : "모두 읽었습니다"}
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={unreadCount === 0}
-          loading={readAll.isPending}
-          onClick={() => readAll.mutate()}
-        >
-          전부 읽음
-        </Button>
-      </div>
-      <ul className="overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-card">
+      <InboxHead
+        unreadCount={unreadCount}
+        onReadAll={() => readAll.mutate()}
+        readAllPending={readAll.isPending}
+      />
+      {/* 행은 카드가 아니라 행이다 — 다이얼로그 안에서 판을 또 쌓으면 깊이가 거짓말을 한다. */}
+      <ul className="min-h-0 flex-1 overflow-y-auto px-7 pt-[22px] pb-7">
         {notifications.map((notification) => {
           const unread = notification.readAt === null;
           const invitation = notification.invitation;
           const pending = invitation?.status === "PENDING";
+          const view = describeNotification(notification, workspaceId);
 
           return (
             <li
               key={notification.notificationId}
               data-testid="inbox-row"
               data-unread={unread}
-              className="flex gap-3 border-b border-[var(--el-hairline)] px-4 py-4 last:border-b-0"
+              className="flex min-h-[58px] items-center gap-3 border-b border-[var(--el-hairline)] py-3 last:border-b-0"
             >
               <span
                 aria-hidden
                 className={cn(
-                  "mt-2 size-1.5 shrink-0 rounded-full",
+                  "size-1.5 shrink-0 self-center rounded-full",
                   unread ? "bg-[var(--el-error)]" : "bg-transparent"
                 )}
               />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium">
-                  {invitation
-                    ? `${invitation.inviterName}님이 「${invitation.workspaceName}」에 초대했습니다`
-                    : "새 알림"}
-                </p>
+                <p className="text-[13px] font-medium">{view.title}</p>
                 <p className="mt-1 text-[12px] text-[var(--el-muted)]">
                   {formatAppDate(notification.createdAt, {
                     month: "long",
@@ -161,41 +153,46 @@ function InboxList() {
                     ? ` · ${STATUS_LABEL[invitation.status] ?? invitation.status}`
                     : ""}
                 </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
                 {pending ? (
-                  <div className="mt-2.5 flex gap-2">
-                    <Button
-                      size="sm"
-                      loading={accept.isPending}
-                      disabled={isResolving}
-                      onClick={() => resolveInvitation(notification, "accept")}
-                    >
-                      수락
-                    </Button>
+                  <>
                     <Button
                       variant="outline"
-                      size="sm"
+                      className="h-9 px-[13px] text-[13px]"
                       loading={decline.isPending}
                       disabled={isResolving}
                       onClick={() => resolveInvitation(notification, "decline")}
                     >
                       거절
                     </Button>
-                  </div>
+                    <Button
+                      className="h-9 px-[13px] text-[13px]"
+                      loading={accept.isPending}
+                      disabled={isResolving}
+                      onClick={() => resolveInvitation(notification, "accept")}
+                    >
+                      참여
+                    </Button>
+                  </>
+                ) : null}
+                {view.action ? (
+                  <Link
+                    href={view.action.href}
+                    // 알림을 눌러 회의로 가면 그 알림은 처리된 것이다 — 배지가 안 줄면 또 누른다.
+                    onClick={() => {
+                      if (unread)
+                        markRead.mutate({
+                          notificationId: notification.notificationId,
+                        });
+                    }}
+                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--el-ink)] underline-offset-4 hover:underline"
+                  >
+                    {view.action.label}
+                    <ArrowUpRight className="size-3.5 text-[var(--el-muted)]" />
+                  </Link>
                 ) : null}
               </div>
-              {unread ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    markRead.mutate({
-                      notificationId: notification.notificationId,
-                    })
-                  }
-                >
-                  읽음
-                </Button>
-              ) : null}
             </li>
           );
         })}
@@ -206,7 +203,7 @@ function InboxList() {
 
 function InboxSkeleton() {
   return (
-    <div className="overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-card">
+    <div>
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
@@ -220,21 +217,73 @@ function InboxSkeleton() {
   );
 }
 
-export function InboxPage() {
+export function InboxPage({ workspaceId }: { workspaceId: string }) {
   return (
-    <PageBody>
-      <PageHead
-        title="받은 알림"
-        description="초대는 워크스페이스가 아니라 나에게 옵니다."
-      />
-      <PageContent>
-        <DataBoundary
-          fallback={<InboxSkeleton />}
-          errorLabel="알림을 불러오지 못했습니다"
+    <DataBoundary
+      fallback={
+        <>
+          <InboxHead />
+          <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-[22px] pb-7">
+            <InboxSkeleton />
+          </div>
+        </>
+      }
+      errorLabel="알림을 불러오지 못했습니다"
+    >
+      <InboxList workspaceId={workspaceId} />
+    </DataBoundary>
+  );
+}
+
+/**
+ * 다이얼로그 머리 — 제목 · 안 읽음 수 · 「전부 읽음」 · 닫기(design.pen `ZZDtz`).
+ * 로딩 중에도 같은 머리가 서 있어야 판이 두 번 그려지지 않는다.
+ */
+function InboxHead({
+  unreadCount,
+  onReadAll,
+  readAllPending,
+}: {
+  unreadCount?: number;
+  onReadAll?: () => void;
+  readAllPending?: boolean;
+}) {
+  const router = useRouter();
+  const params = useParams<{ workspaceId: string }>();
+
+  return (
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--el-hairline)] pr-5 pl-7">
+      <div className="flex items-center gap-2.5">
+        <h2 className="text-[15px] font-semibold text-[var(--el-ink)]">
+          받은 알림
+        </h2>
+        {unreadCount !== undefined ? (
+          <span className="text-[11px] text-[var(--el-muted)]">
+            {unreadCount > 0 ? `안 읽음 ${unreadCount}건` : "모두 읽었습니다"}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex items-center gap-2">
+        {onReadAll ? (
+          <Button
+            variant="outline"
+            className="h-8 px-2.5 text-[12px]"
+            disabled={!unreadCount}
+            loading={readAllPending}
+            onClick={onReadAll}
+          >
+            전부 읽음
+          </Button>
+        ) : null}
+        <button
+          type="button"
+          aria-label="알림 닫기"
+          onClick={() => router.push(`/w/${params.workspaceId}/meetings`)}
+          className="flex size-[30px] items-center justify-center rounded-control text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)]"
         >
-          <InboxList />
-        </DataBoundary>
-      </PageContent>
-    </PageBody>
+          <X className="size-4" />
+        </button>
+      </div>
+    </header>
   );
 }

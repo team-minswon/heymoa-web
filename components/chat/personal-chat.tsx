@@ -43,6 +43,14 @@ type NoteScope = {
   hidden: boolean;
   /** 이 회의가 레일에 공유 챗봇 탭을 갖는가 — 없으면 「이 회의」 탭을 그리지 않는다. */
   hasNoteRail?: boolean;
+  /**
+   * 이 노트에 들어올 때 레일을 **기본으로 편다.** 노트 전체 화면은 우측 레일이 항상 서 있는
+   * 화면이라, 공유 챗봇이 안 서는 종료된 회의에서는 개인 에이전트가 그 자리를 갖는다.
+   *
+   * 주소를 건드리지 않는다 — 기본값이 라우트(full + 공유 레일 없음)에서 나오므로 새로고침해도
+   * 같은 상태가 다시 나온다. 노트당 한 번만 열려서 사용자가 닫으면 닫힌 채로 남는다.
+   */
+  autoOpen?: boolean;
 };
 
 type PersonalChatState = {
@@ -77,6 +85,7 @@ export function usePersonalChatScope(scope: NoteScope | null) {
   const noteId = scope?.noteId ?? null;
   const hidden = scope?.hidden ?? false;
   const hasNoteRail = scope?.hasNoteRail ?? false;
+  const autoOpen = scope?.autoOpen ?? false;
 
   // 해제는 **노트를 떠날 때만** 한다. `hidden`까지 이 effect의 의존성에 넣으면 full→side
   // 전환에서 cleanup이 먼저 돌아 스코프를 지우고, 감춰진 상태라 복구되지 않는다 —
@@ -87,8 +96,8 @@ export function usePersonalChatScope(scope: NoteScope | null) {
   }, [noteId, setNoteScope]);
 
   useEffect(() => {
-    setNoteScope(noteId ? { noteId, hidden, hasNoteRail } : null);
-  }, [hasNoteRail, hidden, noteId, setNoteScope]);
+    setNoteScope(noteId ? { noteId, hidden, hasNoteRail, autoOpen } : null);
+  }, [autoOpen, hasNoteRail, hidden, noteId, setNoteScope]);
 }
 
 export function PersonalChatProvider({
@@ -125,11 +134,22 @@ export function PersonalChatProvider({
   /** 턴이 도는 동안 밀어 둔 스코프. `undefined`면 밀어 둔 것이 없다. */
   const deferredScopeRef = useRef<string | null | undefined>(undefined);
   const turnActiveRef = useRef(false);
+  /**
+   * 자동으로 펴 준 노트. 두 가지를 맡는다 — 같은 노트에서 두 번 펴지 않는 것과,
+   * **그 노트를 떠날 때 되접는 것**. 주소에 `panel`이 없는 열림이라 남겨 두면
+   * 새로고침에 갑자기 닫혀 화면과 주소가 갈린다.
+   */
+  const autoOpenedNoteRef = useRef<string | null>(null);
 
   const setNoteScope = useCallback((scope: NoteScope | null) => {
     const nextNote = scope?.noteId ?? null;
     setHidden(scope?.hidden ?? false);
     setHasNoteRail(scope?.hasNoteRail ?? false);
+    // 노트를 떠났다. 자동으로 폈던 것이면 되접는다 — 사용자가 연 것이 아니고 주소에도 없다.
+    if (!scope && autoOpenedNoteRef.current) {
+      autoOpenedNoteRef.current = null;
+      setIsOpen(false);
+    }
     // 감춰진 동안에는 스코프를 바꾸지 않는다.
     if (scope?.hidden) return;
     // 턴이 도는 중에 스코프가 바뀌면 패널 key가 바뀌어 언마운트되고 스트림이 끊긴다.
@@ -139,6 +159,13 @@ export function PersonalChatProvider({
       return;
     }
     setScopeNoteId(nextNote);
+    // **스코프를 바꾼 뒤에 편다.** 먼저 열면 아직 옛 스코프라, 목록에서 닫아 둔
+    // 워크스페이스 대화가 이 노트의 레일 자리에 그대로 보인다.
+    if (scope?.autoOpen && autoOpenedNoteRef.current !== scope.noteId) {
+      autoOpenedNoteRef.current = scope.noteId;
+      setHasOpened(true);
+      setIsOpen(true);
+    }
   }, []);
 
   /** 열고 닫을 때 주소를 맞춘다. replace 라 뒤로가기가 패널 토글로 채워지지 않는다. */
@@ -209,7 +236,9 @@ export function PersonalChatProvider({
           // 자리에 다시 선다. 두 패널 다 마운트된 채로 남으므로 스트림은 안 끊긴다.
           onSelectNoteChat={hasNoteRail ? value.close : undefined}
           onTurnActiveChange={setTurnActive}
-          onClose={value.close}
+          // 노트 안에서는 닫기를 안 준다 — 본문과 챗이 늘 같이 있는 화면이다.
+          // 워크스페이스 목록에서는 레일이 본문 위에 얹히므로 닫을 수 있어야 한다.
+          onClose={scopeNoteId ? undefined : value.close}
         />
       ) : null}
     </PersonalChatContext.Provider>
@@ -237,7 +266,8 @@ function PersonalChatPanel({
   workspaceName?: string;
   noteId: string | null;
   onTurnActiveChange: (active: boolean) => void;
-  onClose: () => void;
+  /** 없으면 레일 머리에 닫기 버튼을 안 그린다 — 노트 안에서 레일은 상주다. */
+  onClose?: () => void;
 }) {
   const queryClient = useQueryClient();
   const stream = useChatStream();
@@ -486,9 +516,10 @@ function PersonalChatPanel({
         // 448은 v4 프레임 값이지만 좁은 화면에서는 뷰포트를 넘어 왼쪽이 잘린다.
         // 부양 카드는 e2 2연타다. 단일 티어 0_4px_16px는 흰 마케팅 면 전용이라
         // 제품 캔버스에서는 그림자가 보이지 않는다. (ELEVATION SPEC)
-        // 레일은 캔버스에서 10 띄운 480 패널이다 — 본문 패널과 같은 여백·radius·그림자라야
-        // 둘이 한 판 위에 나란히 놓인 것으로 읽힌다(design.pen).
-        "fixed top-2.5 right-2.5 bottom-2.5 z-30 flex w-[min(480px,calc(100vw-1.25rem))] flex-col rounded-panel border border-[var(--el-hairline)] bg-card shadow-e2",
+        // 레일은 캔버스에서 10 띄운 440 패널이다 — 본문 패널과 같은 여백·radius·그림자라야
+        // 둘이 한 판 위에 나란히 놓인 것으로 읽힌다(design.pen). 폭은 480에서 내렸고,
+        // 본문과의 틈은 셸의 다른 여백과 같은 10을 유지한다.
+        "fixed top-2.5 right-2.5 bottom-2.5 z-30 flex w-[min(440px,calc(100vw-1.25rem))] flex-col rounded-panel border border-[var(--el-hairline)] bg-card shadow-e2",
         hidden && "hidden"
       )}
     >
@@ -528,7 +559,7 @@ function PersonalChatPanel({
           )
         }
       >
-        <div className="flex min-h-full flex-col justify-end p-6">
+        <div className="flex min-h-full flex-col justify-end gap-3 p-3.5">
           {isLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-4 w-2/3" />
@@ -610,6 +641,9 @@ function PersonalChatPanel({
         onStop={stream.stop}
         isBusy={isBusy}
         isStreaming={isStreaming}
+        scopeIcon={Lock}
+        scopeHint="저장은 나에게만 남습니다"
+        sendLabel="나만 보기"
         placeholder={
           sessionId
             ? "무엇이든 물어보세요"

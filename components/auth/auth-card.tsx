@@ -16,6 +16,7 @@ export function AuthCard({
   above,
   children,
   footer,
+  headingOutside = false,
   className,
 }: {
   title: React.ReactNode;
@@ -24,33 +25,61 @@ export function AuthCard({
   above?: React.ReactNode;
   children?: React.ReactNode;
   footer?: React.ReactNode;
+  /**
+   * 브랜드·제목·설명을 카드 **밖 720 폭**으로 뺀다(design.pen `Y71I1`).
+   * 웰컴만 그렇다 — 여기서 카드는 「무엇을 읽나」가 아니라 「무엇을 입력하나」다.
+   * 로그인·초대는 카드가 곧 화면이라 안에 둔다(`rI6w8`·`nuuzx`).
+   */
+  headingOutside?: boolean;
   className?: string;
 }) {
+  const brand = (
+    <span className="flex items-center gap-2">
+      <AudioLines className="size-5 text-[var(--el-ink)]" />
+      <span className="text-[18px] font-bold text-[var(--el-ink)]">
+        {siteConfig.name}
+      </span>
+    </span>
+  );
+  const heading = (
+    <div
+      className={cn(
+        "flex w-full flex-col items-center gap-2",
+        headingOutside && "max-w-[720px]"
+      )}
+    >
+      {above}
+      <h1 className="text-center font-serif text-note-title leading-[31px] font-light tracking-[-0.8px] text-[var(--el-ink)]">
+        {title}
+      </h1>
+      {description ? (
+        <p className="text-center text-[13px] leading-[21px] text-[var(--el-body)]">
+          {description}
+        </p>
+      ) : null}
+    </div>
+  );
+
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-[var(--el-canvas)] px-6 py-16">
+      {headingOutside ? (
+        <div className="flex w-full max-w-[720px] flex-col items-center gap-5">
+          {brand}
+          {heading}
+        </div>
+      ) : null}
       <div
         className={cn(
           "flex w-[440px] max-w-full flex-col items-center gap-5 rounded-panel border border-[var(--el-hairline)] bg-card p-8 shadow-e3",
           className
         )}
       >
-        <span className="flex items-center gap-2">
-          <AudioLines className="size-5 text-[var(--el-ink)]" />
-          <span className="text-[18px] font-bold text-[var(--el-ink)]">
-            {siteConfig.name}
-          </span>
-        </span>
-        <div className="flex w-full flex-col items-center gap-2">
-          {above}
-          <h1 className="text-center font-serif text-note-title leading-[31px] font-light tracking-[-0.8px] text-[var(--el-ink)]">
-            {title}
-          </h1>
-          {description ? (
-            <p className="text-center text-[13px] leading-[21px] text-[var(--el-body)]">
-              {description}
-            </p>
-          ) : null}
-        </div>
+        {headingOutside ? null : (
+          <>
+            {brand}
+            {heading}
+          </>
+        )}
         {children}
       </div>
       {footer}

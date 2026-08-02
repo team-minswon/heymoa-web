@@ -38,13 +38,13 @@ export default function GlobalNotFound() {
     >
       <body className="min-h-full">
         <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--el-canvas)] p-4 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--el-muted)]">
-            Error 404
+          {/* 표기는 「404 · 없는 주소입니다」 하나로 통일한다 — 「Error 404」 병용 금지
+              (design.pen `TFJVM`). 34px 세리프 제목도 안 쓴다: 여기서 할 일은
+              「없는 주소」를 페이지의 주제로 만드는 게 아니라 돌아갈 길을 주는 것이다. */}
+          <p className="text-[15px] font-semibold text-[var(--el-ink)]">
+            404 · 없는 주소입니다
           </p>
-          <h1 className="mt-3 font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-            페이지를 찾을 수 없습니다
-          </h1>
-          <p className="mt-3 text-sm text-[var(--el-muted)]">
+          <p className="mt-3 max-w-[420px] text-[13px] leading-[21px] text-[var(--el-body)]">
             주소가 바뀌었거나 더 이상 제공하지 않는 페이지입니다.
           </p>
           {/*
@@ -55,9 +55,9 @@ export default function GlobalNotFound() {
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/"
-            className="mt-7 rounded-full bg-[var(--el-primary)] px-5 py-2.5 text-sm font-medium text-white"
+            className="mt-2.5 flex h-9 items-center rounded-control bg-[var(--el-primary)] px-3.5 text-[13px] font-medium text-[var(--el-on-primary)]"
           >
-            홈으로 돌아가기
+            홈으로
           </a>
         </div>
       </body>

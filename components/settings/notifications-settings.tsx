@@ -1,9 +1,13 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Info } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  SettingsGap,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-chrome";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -23,10 +27,12 @@ type PreferenceKey = keyof NotificationPreferences;
 
 const GROUPS: {
   label: string;
+  note: string;
   items: { key: PreferenceKey; title: string; detail: string }[];
 }[] = [
   {
     label: "앱 안에서",
+    note: "종 아이콘에 쌓입니다",
     items: [
       {
         key: "meetingStarted",
@@ -52,6 +58,7 @@ const GROUPS: {
   },
   {
     label: "메일로",
+    note: "로그인한 주소로 갑니다",
     items: [
       {
         key: "workspaceInvitation",
@@ -104,42 +111,29 @@ export function NotificationsSettings() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      {GROUPS.map((group) => (
-        <section key={group.label} className="flex flex-col">
-          <h2 className="pb-1 text-[13px] font-bold text-[var(--el-ink)]">
-            {group.label}
-          </h2>
-          <div className="flex flex-col">
+    <>
+      {GROUPS.map((group, index) => (
+        <div key={group.label} className="contents">
+          {index > 0 ? <SettingsGap /> : null}
+          <SettingsSection title={group.label} note={group.note}>
             {group.items.map((item) => (
-              <label
+              <SettingsRow
                 key={item.key}
-                className="flex h-[60px] cursor-pointer items-center gap-4 border-b border-[var(--el-hairline)]"
+                label={item.title}
+                description={item.detail}
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-medium text-[var(--el-ink)]">
-                    {item.title}
-                  </span>
-                  <span className="mt-0.5 block text-[12px] text-[var(--el-muted)]">
-                    {item.detail}
-                  </span>
-                </span>
                 <Switch
+                  aria-label={item.title}
                   checked={shown[item.key]}
                   disabled={update.isPending}
                   onCheckedChange={(next) => toggle(item.key, next)}
                 />
-              </label>
+              </SettingsRow>
             ))}
-          </div>
-        </section>
+          </SettingsSection>
+        </div>
       ))}
-
-      <p className="flex gap-2.5 text-[11px] leading-5 text-[var(--el-muted)]">
-        <Info className="mt-0.5 size-3.5 shrink-0" />
-        예정 시각 알림은 회의에 일시가 지정돼야 보낼 수 있습니다.
-      </p>
-    </div>
+    </>
   );
 }
 
@@ -152,7 +146,7 @@ export function NotificationsSettingsSkeleton() {
           {Array.from({ length: rows }).map((_, row) => (
             <div
               key={row}
-              className="flex h-[60px] items-center gap-4 border-b border-[var(--el-hairline)]"
+              className="flex h-[58px] items-center gap-4 border-b border-[var(--el-hairline)]"
             >
               <div className="flex-1">
                 <Skeleton className="h-3 w-40" />

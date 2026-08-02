@@ -212,8 +212,9 @@ function ActionItemsTable({
     );
   }
 
+  // 회의 목록 시트와 같은 인셋 — 행이 px16 에 서야 두 표의 첫 열이 같은 자리에서 시작한다.
   return (
-    <Sheet className="px-5 py-2">
+    <Sheet className="px-4">
       <div className="flex h-10 items-center gap-3 border-b border-[var(--el-hairline)] text-[12px] font-semibold text-[var(--el-muted)]">
         <span className={cn("shrink-0", COL.check)} />
         <span className="min-w-0 flex-1">할 일</span>
@@ -247,7 +248,7 @@ function ActionItemsTable({
 
 function TableSkeleton() {
   return (
-    <Sheet className="px-5 py-2">
+    <Sheet className="px-4">
       <Skeleton className="my-3 h-4 w-24" />
       {Array.from({ length: 6 }).map((_, index) => (
         <div

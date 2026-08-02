@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { SettingsRow } from "@/components/settings/settings-chrome";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
   getGetWorkspacesQueryKey,
@@ -69,33 +70,34 @@ export function DeleteWorkspaceCard({
   };
 
   return (
-    <section className="flex flex-col gap-2 rounded-control border border-[var(--el-error)] bg-[var(--el-error-bg)] p-4">
-      <h3 className="text-[13px] font-bold text-[var(--el-error-strong)]">
-        워크스페이스 삭제
-      </h3>
-      <p className="text-[12px] leading-[19px] text-[var(--el-error-strong)]">
-        이 워크스페이스의 회의·프로젝트·멤버가 함께 사라집니다. 되돌릴 수
-        없습니다.
-      </p>
-      {isDefault ? (
-        <p className="flex gap-2 text-[12px] leading-[19px] text-[var(--el-error-strong)]">
-          <Info className="mt-0.5 size-3.5 shrink-0" />
-          기본 워크스페이스라 삭제할 수 없습니다. 다른 워크스페이스를 기본으로
-          바꾼 뒤 다시 시도하세요.
-        </p>
-      ) : (
-        <div>
+    <>
+      {/* 빨간 카드가 아니라 행이다 — 다이얼로그 안에서 카드를 또 쌓으면 깊이가 거짓말을 한다.
+          경고는 색이 아니라 문장과 확인 단계가 진다(design.pen `Z60u3`). */}
+      <SettingsRow
+        label="워크스페이스 삭제"
+        description={
+          isDefault
+            ? "기본 워크스페이스라 삭제할 수 없습니다. 다른 워크스페이스를 기본으로 바꾼 뒤 다시 시도하세요."
+            : "이 워크스페이스의 회의·프로젝트·멤버가 함께 사라집니다. 되돌릴 수 없습니다."
+        }
+      >
+        {isDefault ? (
+          <Info
+            aria-hidden
+            className="size-3.5 shrink-0 text-[var(--el-muted)]"
+          />
+        ) : (
           <Button
             type="button"
-            variant="destructive"
-            className="bg-[var(--el-error)] text-[var(--el-on-primary)] hover:bg-[var(--el-error)]/90"
+            variant="outline"
+            className="h-9 border-[var(--el-error)] px-[13px] text-[13px] text-[var(--el-error)] hover:bg-[var(--el-error-bg)]"
             onClick={() => setOpen(true)}
           >
             <Trash2 className="size-3.5" />
-            워크스페이스 삭제
+            삭제
           </Button>
-        </div>
-      )}
+        )}
+      </SettingsRow>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
@@ -122,6 +124,6 @@ export function DeleteWorkspaceCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </>
   );
 }

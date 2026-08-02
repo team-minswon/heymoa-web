@@ -21,7 +21,7 @@ describe("GoogleLoginButton", () => {
   it("reports an unavailable login through Sonner without inline feedback", () => {
     render(<GoogleLoginButton />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
+    fireEvent.click(screen.getByRole("button", { name: "Google 계정으로 계속" }));
 
     expect(toast.error).toHaveBeenCalledWith(
       "현재 로그인을 사용할 수 없습니다.",

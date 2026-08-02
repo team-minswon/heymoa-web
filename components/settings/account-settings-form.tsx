@@ -3,11 +3,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  SettingsGap,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-chrome";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessageOf } from "@/lib/api/error-message";
 import { useGetCurrentUserSuspense } from "@/lib/api/generated/users/users";
@@ -26,33 +29,56 @@ export function AccountSettingsForm() {
   const user = response.data.data;
 
   return (
-    <div className="space-y-5" aria-label="내 계정 설정">
-      <div className="flex items-center gap-5 rounded-panel border border-[var(--el-hairline)] bg-card p-6">
-        <Avatar className="size-14">
-          {user.image ? (
-            <AvatarImage src={user.image} alt={`${user.name} 프로필`} />
-          ) : null}
-          <AvatarFallback>{user.name.slice(0, 1)}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1 space-y-2">
-          <Label htmlFor="account-email">이메일</Label>
-          <Input id="account-email" value={user.email} disabled />
-        </div>
-      </div>
-      <div className="space-y-2 rounded-panel border border-[var(--el-hairline)] bg-card p-6">
-        <Label htmlFor="account-name">이름</Label>
-        <Input id="account-name" value={user.name} disabled />
-      </div>
+    <>
+      <SettingsSection title="프로필" note="구글 계정을 따릅니다">
+        {/* design.pen `LJJWo` 은 사진 「바꾸기」와 편집 가능한 이름·이메일을 그리지만
+            계약에는 그런 명령이 없다 — 값의 원본은 구글이다. 읽기 전용으로 낸다. */}
+        <SettingsRow
+          label="프로필 사진"
+          description="구글 계정의 사진이 그대로 나옵니다"
+          className="min-h-[68px]"
+        >
+          <Avatar className="size-10">
+            {user.image ? (
+              <AvatarImage src={user.image} alt={`${user.name} 프로필`} />
+            ) : null}
+            <AvatarFallback>{user.name.slice(0, 1)}</AvatarFallback>
+          </Avatar>
+        </SettingsRow>
+        <SettingsRow label="이름" description="회의와 챗에 이 이름으로 나옵니다">
+          <Input
+            aria-label="이름"
+            className="h-9 w-[300px] text-[13px]"
+            value={user.name}
+            disabled
+            readOnly
+          />
+        </SettingsRow>
+        <SettingsRow
+          label="이메일"
+          description="알림 메일이 이 주소로 갑니다"
+        >
+          <Input
+            aria-label="이메일"
+            className="h-9 w-[300px] text-[13px]"
+            value={user.email}
+            disabled
+            readOnly
+          />
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsGap />
+
       {/* 워크스페이스 목록은 이 화면의 부가 조회다 — 그것만 실패했다고 이미 받아 온
-        이메일·이름까지 함께 걷지 않도록 자기 경계를 둔다. 바깥 DataBoundary는
-        settings-dialog가 계정 탭 전체에 두고 있다. */}
+          이메일·이름까지 함께 걷지 않도록 자기 경계를 둔다. */}
       <DataBoundary
         fallback={<Skeleton className="h-44 rounded-panel" />}
         errorLabel="워크스페이스 목록을 불러오지 못했습니다"
       >
         <DefaultWorkspaceSection />
       </DataBoundary>
-    </div>
+    </>
   );
 }
 
@@ -112,47 +138,32 @@ function DefaultWorkspaceSection() {
   };
 
   return (
-    <section
-      aria-labelledby="account-default-workspace-heading"
-      className="rounded-panel border border-[var(--el-hairline)] bg-card p-6"
-    >
-      <h3
-        id="account-default-workspace-heading"
-        className="text-sm font-medium"
-      >
-        기본 워크스페이스
-      </h3>
-      <p className="mt-1 text-sm text-[var(--el-muted)]">
-        로그인 후 가장 먼저 열 공간입니다.
-      </p>
-      <ul className="mt-4 space-y-2">
-        {workspaces.map((workspace) => (
-          <li
-            key={workspace.workspaceId}
-            className="flex items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] px-4 py-3"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-sm">{workspace.name}</span>
-              {workspace.isDefault && <Badge>기본</Badge>}
-            </span>
-            {workspace.isDefault ? null : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                loading={pendingId === workspace.workspaceId}
-                // 다른 행이 도는 동안 두 번째 요청이 나가면 어느 쪽이 마지막인지 서버 순서에
-                // 달린다 — 도는 동안은 형제 버튼도 함께 잠근다.
-                disabled={pendingId !== null}
-                onClick={() => void makeDefault(workspace.workspaceId)}
-              >
-                기본으로 설정
-              </Button>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    // design.pen `LJJWo` 에는 이 절이 없다 — 그런데 기본 워크스페이스에 머무는 동안에는
+    // 다른 곳을 기본으로 고를 자리가 화면 어디에도 없다(APP-237). 규격만 행으로 맞춘다.
+    <SettingsSection title="기본 워크스페이스" note="로그인하면 여기로 들어옵니다">
+      {workspaces.map((workspace) => (
+        <SettingsRow
+          key={workspace.workspaceId}
+          label={workspace.name}
+          description={workspace.isDefault ? "지금 기본입니다" : undefined}
+        >
+          {workspace.isDefault ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 px-[13px] text-[13px]"
+              loading={pendingId === workspace.workspaceId}
+              // 다른 행이 도는 동안 두 번째 요청이 나가면 어느 쪽이 마지막인지 서버 순서에
+              // 달린다 — 도는 동안은 형제 버튼도 함께 잠근다.
+              disabled={pendingId !== null}
+              onClick={() => void makeDefault(workspace.workspaceId)}
+            >
+              기본으로 설정
+            </Button>
+          )}
+        </SettingsRow>
+      ))}
+    </SettingsSection>
   );
 }
 

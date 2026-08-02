@@ -1,18 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { Square } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { usePathname } from "next/navigation";
+import { AnimatePresence } from "motion/react";
+import { usePathname, useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
-import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import {
-  useRecording,
-  useRecordingMeter,
-  type RecordingPhase,
-} from "@/components/transcription/recording-provider";
+  RecordingPill,
+  RECORDING_PILL_EXIT_DURATION,
+} from "@/components/transcription/recording-pill";
+import { useRecording } from "@/components/transcription/recording-provider";
+import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { isWorkspaceRoute } from "@/lib/routes/app-route";
 
 const VISIBLE_PHASES = new Set([
@@ -22,88 +18,15 @@ const VISIBLE_PHASES = new Set([
   "stopping",
 ]);
 
-export const GLOBAL_RECORDING_EXIT_DURATION = 0.3;
+export const GLOBAL_RECORDING_EXIT_DURATION = RECORDING_PILL_EXIT_DURATION;
 
-function formatElapsed(elapsedMs: number) {
-  const totalSeconds = Math.floor(elapsedMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function GlobalRecordingPill({
-  href,
-  elapsedMs,
-  phase,
-  onStop,
-}: {
-  href: string;
-  elapsedMs: number;
-  phase: RecordingPhase;
-  onStop: () => void;
-}) {
-  const { level, levelHistory } = useRecordingMeter();
-  const isRecording = phase === "recording";
-
-  return (
-    <motion.aside
-      aria-label="진행 중인 녹음"
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0, transition: { duration: 0.15 } }}
-      exit={{
-        opacity: 0,
-        y: -8,
-        transition: { duration: GLOBAL_RECORDING_EXIT_DURATION },
-      }}
-      className="fixed right-5 top-20 z-50 flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1.5 pl-2.5 text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
-    >
-      <Link
-        href={href}
-        className="group flex min-w-0 items-center gap-2 rounded-full px-1.5 py-1 outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
-      >
-        {isRecording ? (
-          <span
-            role="meter"
-            aria-label="마이크 입력"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(level * 100)}
-            className="flex h-5 w-8 items-center justify-center gap-[3px] rounded-full bg-[var(--el-ink)]"
-          >
-            {levelHistory.slice(-4).map((sample, index) => (
-              <span
-                key={index}
-                data-testid={`global-wave-bar-${index}`}
-                className="h-2.5 w-[2px] origin-center rounded-full bg-card transition-transform duration-75"
-                style={{ transform: `scaleY(${Math.max(0.12, sample)})` }}
-              />
-            ))}
-          </span>
-        ) : (
-          <RecordingPendingSpinner />
-        )}
-        <span className="font-mono text-xs tabular-nums">
-          {formatElapsed(elapsedMs)}
-        </span>
-      </Link>
-      <div className="h-5 w-px bg-[var(--el-hairline)]" />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label="녹음 종료"
-        onClick={onStop}
-        disabled={phase !== "recording"}
-        className="size-7 rounded-full text-destructive hover:bg-destructive/8 hover:text-destructive"
-      >
-        <Square className="size-3.5" />
-      </Button>
-    </motion.aside>
-  );
-}
-
+/**
+ * 워크스페이스 **밖**(마케팅·약관·인증 면)에서 뜨는 녹음 표면.
+ * 워크스페이스 안은 툴바가 같은 `RecordingPill` 을 띄운다 — 생김새를 두 벌로 만들지 않는다.
+ */
 export function GlobalRecordingIndicator() {
   const pathname = usePathname();
+  const router = useRouter();
   const { session, elapsedMs, phase, stop } = useRecording();
   const isVisible =
     !isWorkspaceRoute(pathname) &&
@@ -120,20 +43,27 @@ export function GlobalRecordingIndicator() {
   const workspaces = workspaceEnvelope?.success
     ? (workspaceEnvelope.data.workspaces ?? [])
     : [];
+  // 세션이 어느 워크스페이스의 것인지는 계약에 없다(계약 추가 목록 ⓘ). 그때까지는 기본 워크스페이스로 추정한다.
   const workspaceId =
     workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
     workspaces[0]?.workspaceId;
-  const href = workspaceId
-    ? `/w/${workspaceId}/meetings/${session?.noteId ?? ""}?view=full&tab=transcript`
-    : "#";
+  const noteId = session?.noteId;
+  // 목적지를 못 만들면 버튼 자체를 내린다 — 눌러도 안 가는 컨트롤에 포커스를 주지 않는다.
+  const onOpen =
+    workspaceId && noteId
+      ? () =>
+          router.push(
+            `/w/${workspaceId}/meetings/${noteId}?view=full&tab=transcript`
+          )
+      : undefined;
 
   return (
     <AnimatePresence>
       {isVisible ? (
-        <GlobalRecordingPill
-          href={href}
-          elapsedMs={elapsedMs}
+        <RecordingPill
           phase={phase}
+          elapsedMs={elapsedMs}
+          onOpen={onOpen}
           onStop={() => void stop()}
         />
       ) : null}

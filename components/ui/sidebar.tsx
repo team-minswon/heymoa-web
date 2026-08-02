@@ -236,7 +236,10 @@ function Sidebar({
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            // 경계선은 primitive 가 갖지 않는다 — 이 앱의 사이드바는 캔버스 위에 얹혀 있고
+            // 선은 떠 있는 패널만 갖는다(design.pen). 여기 `group-data-[side=*]` 변종을 두면
+            // 호출부의 `border-r-0` 보다 특이도가 높아서 절대 안 지워진다.
+            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
           className
         )}
         {...props}

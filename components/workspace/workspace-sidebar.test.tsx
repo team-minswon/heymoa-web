@@ -199,7 +199,7 @@ describe("WorkspaceSidebar", () => {
 
   it("surfaces the live row only while a recording is running", () => {
     const { rerender } = renderSidebar();
-    expect(screen.queryByText("기록 중 1건")).toBeNull();
+    expect(screen.queryByText("내가 기록 중")).toBeNull();
 
     recordingState.phase = "recording";
     recordingState.activeNoteId = "01K0000000002";

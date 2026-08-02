@@ -29,10 +29,11 @@ export function WelcomePage() {
 
   return (
     <AuthCard
+      headingOutside
       title="첫 워크스페이스를 만들어 주세요"
       description="워크스페이스는 회의·프로젝트·멤버가 모이는 단위입니다. 나중에 이름을 바꾸거나 더 만들 수 있습니다."
       footer={
-        <p className="max-w-[440px] text-center text-[12px] leading-5 text-[var(--el-muted)]">
+        <p className="max-w-[480px] text-center text-[12px] leading-5 text-[var(--el-muted)]">
           초대를 받으셨다면 받은 알림에서 수락하세요 — 그때는 만들지 않아도
           됩니다.
         </p>

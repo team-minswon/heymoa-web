@@ -417,7 +417,7 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
   await expect(page.getByText("아직 시작된 대화가 없습니다.")).toBeVisible();
 
   await page.getByLabel("메시지").fill("요약해줘");
-  await page.getByRole("button", { name: "보내기" }).click();
+  await page.getByRole("button", { name: "나만 보기" }).click();
 
   // MSW 응답은 시드 기반 풀에서 뽑혀 문장이 매번 다를 수 있다 — 어시스턴트 답변이 스트리밍돼
   // 실제 문장(모든 후보가 "습니다."로 끝남)으로 채워지는지만 확인한다.
@@ -571,7 +571,7 @@ test("shows meeting context and shared chat inside the viewer side panel", async
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "챗봇"]);
 
   await page.getByRole("tab", { name: "챗봇" }).click();
 
@@ -609,7 +609,7 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   await expect(
     meetingStatus(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
-  await expect(page.getByRole("tab")).toHaveText(["요약", "전사", "정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "요약"]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });
@@ -666,7 +666,7 @@ test("streams a shared chat turn inside a note", async ({ page }) => {
 
   const panel = page.getByRole("complementary", { name: "회의 챗봇" });
   await panel.getByLabel("메시지").fill("이번 회의에서 정한 것만 정리해줘");
-  await panel.getByRole("button", { name: "보내기" }).click();
+  await panel.getByRole("button", { name: "워크스페이스에 공유" }).click();
 
   // 공유 챗봇도 같은 SSE·풀을 쓴다 — 어시스턴트 답변이 실제 문장으로 채워지는지 확인.
   await expect(panel.getByTestId("assistant-message").last()).toContainText(
@@ -758,7 +758,7 @@ test("keeps the personal chat scrollable when the thread grows", async ({
   // 스크롤할 여백이 생길 만큼 대화를 쌓는다.
   for (let turn = 0; turn < 4; turn += 1) {
     await page.getByLabel("메시지").fill(`스크롤을 만드는 메시지 ${turn}`);
-    await page.getByRole("button", { name: "보내기" }).click();
+    await page.getByRole("button", { name: "나만 보기" }).click();
     await expect(page.getByTestId("assistant-message").nth(turn)).toContainText(
       "습니다",
       { timeout: 20_000 }
@@ -790,7 +790,7 @@ test("keeps the personal chat scrollable when the thread grows", async ({
   });
 
   await page.getByLabel("메시지").fill("위를 읽는 중에 오는 메시지");
-  await page.getByRole("button", { name: "보내기" }).click();
+  await page.getByRole("button", { name: "나만 보기" }).click();
   await expect(page.getByTestId("assistant-message").nth(4)).toContainText(
     "습니다",
     { timeout: 20_000 }

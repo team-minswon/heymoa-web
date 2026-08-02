@@ -110,9 +110,11 @@ describe("WorkspaceIntegrationsSettings", () => {
     renderPanel();
     expect(screen.getByText("Linear")).toBeTruthy();
     expect(screen.getByText("GitHub")).toBeTruthy();
-    expect(screen.getByText("연결됨")).toBeTruthy();
-    expect(screen.getByText("연결되지 않음")).toBeTruthy();
+    // 배지는 걷었다 — 「연결 해제」 버튼이 있으면 연결된 것이고, 아래 줄이 누가 언제인지 말한다.
     expect(screen.getByText(/김민수/)).toBeTruthy();
+    expect(
+      screen.getByText("챗봇이 이 도구를 쓰려면 연결이 필요합니다")
+    ).toBeTruthy();
   });
 
   it("ADMIN이면 연결·해제 버튼을 주고 해제가 mutation을 부른다", () => {
@@ -130,7 +132,8 @@ describe("WorkspaceIntegrationsSettings", () => {
     renderPanel();
     expect(screen.queryByRole("button", { name: "연결" })).toBeNull();
     expect(screen.queryByRole("button", { name: "연결 해제" })).toBeNull();
-    expect(screen.getByText(/관리자만 할 수 있습니다/)).toBeTruthy();
+    // 「관리자만 바꿀 수 있습니다」는 섹션 주석이 상시로 말한다 — 별도 Alert 를 겹치지 않는다.
+    expect(screen.getByText("관리자만 바꿀 수 있습니다")).toBeTruthy();
   });
 
   it("역할이 아직 안 정해졌으면(멤버 로딩) 버튼을 그리지 않는다", () => {
@@ -139,8 +142,8 @@ describe("WorkspaceIntegrationsSettings", () => {
     renderPanel();
     expect(screen.queryByRole("button", { name: "연결" })).toBeNull();
     expect(screen.queryByRole("button", { name: "연결 해제" })).toBeNull();
-    // 안내 Alert도 아직 안 뜬다(역할 불명).
-    expect(screen.queryByText(/관리자만 할 수 있습니다/)).toBeNull();
+    // 섹션 주석은 역할과 무관하게 상시로 서 있다.
+    expect(screen.getByText("관리자만 바꿀 수 있습니다")).toBeTruthy();
   });
 
   it("역할 조회가 실패하면 조작을 숨기고 사유·재시도를 보인다", () => {

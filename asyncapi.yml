@@ -5,6 +5,15 @@
 # - agent 채팅 SSE 구간: 이 파일이 원본. server는 이벤트를 변환 없이 통과시켜 자기 DTO를 갖지
 #   않으므로 server 쪽 DocsTest로 검증할 수 없다. SSE 이벤트 스키마의 단일 출처가 여기이며
 #   asyncapi-server-ai.yml이 $ref로 참조한다.
+# ⚠️ MVP2 — 아래 구간 일부는 손으로 더했고 heymoa-server 에 아직 없다.
+# rules/api-data.md 는 이 파일을 손으로 고치지 말라고 하지만, MVP2 는 화면이 계약보다
+# 앞서는 기획 단계라 사용자 결정으로 예외를 뒀다. 미러를 재복사하면 아래를 다시 넣어야 한다 —
+# 무엇을 왜 더했는지는 design/CONTRACT-BACKLOG.md 에 있다.
+#
+#   메시지  NoteUpdatedEvent · NoteAnalysisStatusEvent · NoteSessionInterruptedEvent
+#           NoteParticipantPresenceEvent
+#   오퍼레이션  sendNoteTopicEvent 에 위 메시지 추가
+#
 asyncapi: 3.0.0
 info:
   title: Heymoa web ↔ server 비동기 계약 (전사 STOMP·노트 토픽 + agent 채팅 SSE)

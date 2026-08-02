@@ -185,11 +185,13 @@ vi.mock("@/lib/api/sse", () => ({
 function NoteScope({
   hidden,
   noteId = NOTE_ID,
+  autoOpen,
 }: {
   hidden: boolean;
   noteId?: string;
+  autoOpen?: boolean;
 }) {
-  usePersonalChatScope({ noteId, hidden });
+  usePersonalChatScope({ noteId, hidden, autoOpen });
   return null;
 }
 
@@ -216,7 +218,7 @@ async function sendMessage(text: string) {
   fireEvent.change(screen.getByLabelText("메시지"), {
     target: { value: text },
   });
-  fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+  fireEvent.click(screen.getByRole("button", { name: "나만 보기" }));
 }
 
 describe("PersonalChatProvider", () => {
@@ -343,7 +345,7 @@ describe("PersonalChatProvider", () => {
       "대화를 불러오지 못했습니다."
     );
     expect(screen.queryByText("아직 시작된 대화가 없습니다.")).toBeNull();
-    expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "나만 보기" })).toHaveProperty(
       "disabled",
       true
     );
@@ -443,7 +445,7 @@ describe("PersonalChatProvider", () => {
       "대화를 불러오지 못했습니다."
     );
     expect(screen.queryByText("아직 시작된 대화가 없습니다.")).toBeNull();
-    expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "나만 보기" })).toHaveProperty(
       "disabled",
       true
     );
@@ -518,6 +520,64 @@ describe("PersonalChatProvider", () => {
     expect(state.aborted).toBe(false);
   });
 
+  it("autoOpen 은 노트를 떠날 때 되접힌다", async () => {
+    // 주소에 `panel=assistant` 가 없는 열림이다. 남겨 두면 목록으로 돌아온 뒤에도 레일이
+    // 떠 있다가 새로고침에 갑자기 닫혀, 화면과 주소가 갈린다.
+    const { rerender, client } = renderChat(
+      <NoteScope hidden={false} autoOpen />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("personal-chat-panel").className).not.toContain(
+        "hidden"
+      )
+    );
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
+          {null}
+        </PersonalChatProvider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "개인 챗봇 열기" })
+      ).toBeInTheDocument()
+    );
+    expect(screen.getByTestId("personal-chat-panel").className).toContain(
+      "hidden"
+    );
+  });
+
+  it("사용자가 연 것은 노트를 떠나도 안 접는다", async () => {
+    // 되접기는 **자동으로 편 것**만이다. 사용자가 연 것까지 접으면 노트를 잠깐 들렀다
+    // 나올 때마다 레일이 사라진다.
+    const { rerender, client } = renderChat(<NoteScope hidden={false} />);
+    openPanel();
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
+          {null}
+        </PersonalChatProvider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() =>
+      expect(state.activeParams.at(-1)).toMatchObject({ scope: "workspace" })
+    );
+    expect(screen.getByTestId("personal-chat-panel").className).not.toContain(
+      "hidden"
+    );
+  });
+
   it("워크스페이스에서 연 개인 챗봇은 노트 회의 중으로 새지 않는다", async () => {
     // open()은 감춤을 존중한다. 안 그러면 워크스페이스에서 한 번 열면 노트 회의 중에도
     // 공유 트레이 위에 개인 패널이 계속 뜬다.
@@ -550,7 +610,7 @@ describe("PersonalChatProvider", () => {
     renderChat();
     openPanel();
 
-    expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "나만 보기" })).toHaveProperty(
       "disabled",
       true
     );
@@ -562,7 +622,7 @@ describe("PersonalChatProvider", () => {
     renderChat();
     openPanel();
 
-    expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "나만 보기" })).toHaveProperty(
       "disabled",
       true
     );
@@ -734,7 +794,7 @@ describe("PersonalChatProvider", () => {
     fireEvent.change(screen.getByLabelText("메시지"), {
       target: { value: "정리해줘" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    fireEvent.click(screen.getByRole("button", { name: "나만 보기" }));
 
     await waitFor(() => expect(state.releaseStream).not.toBeNull());
     const duringTurn = state.messagesArgs.filter(
@@ -760,7 +820,7 @@ describe("PersonalChatProvider", () => {
     openPanel();
 
     expect(screen.getByText("아직 시작된 대화가 없습니다.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "나만 보기" })).toHaveProperty(
       "disabled",
       false
     );
@@ -786,7 +846,7 @@ describe("PersonalChatProvider", () => {
     fireEvent.change(screen.getByLabelText("메시지"), {
       target: { value: "정리해줘" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    fireEvent.click(screen.getByRole("button", { name: "나만 보기" }));
     rerender(
       <QueryClientProvider client={client}>
         <PersonalChatProvider

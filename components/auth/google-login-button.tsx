@@ -9,17 +9,12 @@ import {
   getCurrentReturnTo,
   isAuthApiConfigured,
 } from "@/lib/auth/paths";
-import { cn } from "@/lib/utils";
 
 type GoogleLoginButtonProps = {
-  compact?: boolean;
   className?: string;
 };
 
-export function GoogleLoginButton({
-  compact = false,
-  className,
-}: GoogleLoginButtonProps) {
+export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
   const [pending, setPending] = useState(false);
 
   const handleLogin = () => {
@@ -46,18 +41,15 @@ export function GoogleLoginButton({
     <div className={className}>
       <Button
         type="button"
-        variant="outline"
-        size={compact ? "icon-xl" : "xl"}
+        size="xl"
         onClick={handleLogin}
         loading={pending}
-        className={cn(
-          "rounded-full border-[var(--el-hairline)] bg-[var(--el-canvas)] font-medium text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]",
-          // 진입 카드 안의 유일한 주 액션이라 h48 로 선다(design.pen).
-          compact ? "p-0" : "h-12 w-full px-6 text-[15px]"
-        )}
-        aria-label="Google로 로그인"
+        // 진입 카드 안의 유일한 주 액션이라 h48 로 선다. **채운 잉크 pill 이다** —
+        // design.pen 의 주 CTA 는 전부 `$--primary` + 흰 라벨 15/500 이고, 여기만
+        // outline 이면 진입 화면의 유일한 액션이 가장 약해 보인다(`ExokD`·`A9QAp`).
+        className="h-12 w-full rounded-full px-6 text-[15px] font-medium"
       >
-        <svg className="size-[18px]" viewBox="0 0 24 24" aria-hidden="true">
+        <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
           <path
             fill="#4285F4"
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -75,7 +67,7 @@ export function GoogleLoginButton({
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        {!compact && <span>Google 로그인</span>}
+        <span>Google 계정으로 계속</span>
       </Button>
     </div>
   );

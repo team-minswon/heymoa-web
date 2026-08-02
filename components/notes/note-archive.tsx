@@ -142,7 +142,7 @@ export function NoteArchive({ noteId }: { noteId: string }) {
         ) : null
       }
     >
-      <div className="mx-auto w-full max-w-[660px] px-4 py-6 sm:px-8 lg:pb-28">
+      <div className="mx-auto w-full max-w-[820px] px-4 py-6 sm:px-8 lg:pb-28">
         <section aria-label="회의 전사 아카이브">
           <header className="border-b border-[var(--el-hairline-strong)] pb-4">
             <h2 className="font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">

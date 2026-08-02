@@ -108,6 +108,9 @@ export function WorkspaceSidebar({
   const pathname = usePathname();
   const isActionItems = pathname.endsWith("/action-items");
   const isInbox = pathname.endsWith("/inbox");
+  // 설정은 다이얼로그라 「지금 어디」를 바꾸지 않는다 — isMeetings 는 그대로 두고
+  // 설정 행에 pressed 배경만 준다(D2).
+  const isSettings = pathname.includes("/settings");
   const isMeetings = !isActionItems && !isInbox && !selectedProjectId;
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
@@ -288,8 +291,8 @@ export function WorkspaceSidebar({
           {isLive && liveNoteId ? (
             <NavRow
               tone="live"
-              label="기록 중 1건"
-              aria-label="기록 중인 회의로 이동"
+              label="내가 기록 중"
+              aria-label="내가 기록 중인 회의로 이동"
               onClick={() =>
                 router.push(
                   `/w/${workspaceId}/meetings/${liveNoteId}?view=full&tab=transcript`
@@ -371,6 +374,7 @@ export function WorkspaceSidebar({
         <NavRow
           icon={Settings}
           label="설정"
+          pressed={isSettings}
           onClick={() => onOpenSettings("workspace")}
         />
       </div>

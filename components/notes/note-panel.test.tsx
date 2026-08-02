@@ -91,12 +91,10 @@ vi.mock("@/components/notes/shared-chat-panel", () => ({
   SharedChatPanel: ({
     phase,
     onSelectTab,
-    onCloseRail,
     onTurnActiveChange,
   }: {
     phase: string;
     onSelectTab?: (tab: "note" | "agent") => void;
-    onCloseRail?: () => void;
     onTurnActiveChange?: (active: boolean) => void;
   }) => (
     <div data-testid="shared-chat-panel" data-phase={phase}>
@@ -105,9 +103,6 @@ vi.mock("@/components/notes/shared-chat-panel", () => ({
         <button type="button" role="tab" onClick={() => onSelectTab("agent")}>
           내 에이전트
         </button>
-      ) : null}
-      {onCloseRail ? (
-        <button type="button" aria-label="레일 닫기" onClick={onCloseRail} />
       ) : null}
       <input aria-label="공유 질문" defaultValue="" />
       <button type="button" onClick={() => onTurnActiveChange?.(true)}>
@@ -379,7 +374,7 @@ describe("NotePanel", () => {
     ).toBe(true);
   });
 
-  it("레일을 접었다 상단바 토글로 다시 편다", () => {
+  it("full 에서 레일은 상주다 — 접거나 닫을 길이 없다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -390,16 +385,21 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
-    const railHidden = () =>
+
+    // 본문과 챗이 늘 같이 있는 화면이라 접을 자리를 주지 않는다. 하나라도 살아 있으면
+    // 사용자가 레일을 없앨 수 있고, 그러면 「무조건 같이」가 깨진다.
+    expect(
       screen
         .getByTestId("shared-chat-panel")
-        .parentElement!.classList.contains("hidden");
-
-    fireEvent.click(screen.getByRole("button", { name: "레일 접기" }));
-    expect(railHidden()).toBe(true);
-
-    fireEvent.click(screen.getByRole("button", { name: "레일 펴기" }));
-    expect(railHidden()).toBe(false);
+        .parentElement!.classList.contains("hidden")
+    ).toBe(false);
+    for (const label of ["레일 접기", "레일 펴기", "레일 닫기"]) {
+      expect(screen.queryByRole("button", { name: label })).toBeNull();
+    }
+    // 「내 에이전트」로 건너가는 탭은 남는다 — 레일을 없애는 게 아니라 안을 바꾼다.
+    expect(
+      screen.getByRole("tab", { name: "내 에이전트" })
+    ).toBeInTheDocument();
   });
 
   it("full + 중지에서도 기존 공유 챗봇 기록을 읽을 수 있다", () => {
@@ -451,7 +451,7 @@ describe("NotePanel", () => {
       "max-lg:landscape:border-l",
       "max-lg:landscape:border-t-0",
       "lg:fixed",
-      "lg:w-[480px]",
+      "lg:w-[440px]",
       "lg:rounded-panel",
       "lg:shadow-e2"
     );
@@ -532,9 +532,9 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
+      "정보",
       "전사",
       "챗봇",
-      "정보",
     ]);
     expect(
       screen
@@ -724,9 +724,9 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
-      "요약",
-      "전사",
       "정보",
+      "전사",
+      "요약",
     ]);
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
@@ -915,8 +915,8 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
-      "전사",
       "정보",
+      "전사",
     ]);
     expect(
       screen.getByRole("button", { name: "회의 시작" })

@@ -200,19 +200,19 @@ export function NotePanel({
       : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
 
-  // 레일 접기는 사용자 것이다 — 상단바의 토글로 다시 편다.
-  const [railCollapsed, setRailCollapsed] = useState(false);
-  // 개인 레일이 같은 자리를 쓰는 동안에는 공유 레일을 **감춘다**(언마운트하지 않는다).
-  const sharedRailVisible =
-    sharedRailMounted && !railCollapsed && !agentRailOpen;
+  // **레일은 접히지 않는다.** 노트 전체 화면은 본문과 챗이 늘 같이 있는 화면이라 접을 자리를
+  // 주지 않는다. 개인 레일이 같은 자리를 쓰는 동안에는 공유 레일을 **감춘다**(언마운트하지 않는다).
+  const sharedRailVisible = sharedRailMounted && !agentRailOpen;
   // 레일이 패널 밖으로 나갔으므로 셸이 그만큼 패널을 좁혀야 한다.
   useSharedRailSlot(sharedRailVisible);
 
+  // 정보 → 전사 → 요약. 회의를 열면 「무슨 회의인가」가 먼저고, 그 다음이 진행,
+  // 마지막이 결과다 — 시간 순서와 같다(design.pen `LrSAt`).
   const tabOptions = [
-    ...(showSummaryTab ? [{ key: "summary" as const, label: "요약" }] : []),
-    { key: "transcript" as const, label: "전사" },
-    ...(showSideChatTab ? [{ key: "chat" as const, label: "챗봇" }] : []),
     { key: "details" as const, label: "정보" },
+    { key: "transcript" as const, label: "전사" },
+    ...(showSummaryTab ? [{ key: "summary" as const, label: "요약" }] : []),
+    ...(showSideChatTab ? [{ key: "chat" as const, label: "챗봇" }] : []),
   ];
 
   return (
@@ -234,12 +234,6 @@ export function NotePanel({
           // 흐르는 답변 중에 확장하면 패널이 갈려 스트림이 끊긴다. 감추지 않고 막는다 —
           // 사라지면 왜 못 하는지가 화면에서 없어진다.
           shrinkDisabled={view === "side" && sharedTurnActive}
-          onToggleRail={
-            sharedRailMounted
-              ? () => setRailCollapsed((collapsed) => !collapsed)
-              : undefined
-          }
-          railOpen={sharedRailVisible}
           actions={
             note ? (
               <MeetingControls
@@ -368,13 +362,13 @@ export function NotePanel({
       </div>
 
       {sharedRailMounted ? (
-        // 넓은 화면에서는 패널 **밖**에 떠 있는 480 레일이다 — 개인 에이전트 레일과 같은
+        // 넓은 화면에서는 패널 **밖**에 떠 있는 440 레일이다 — 개인 에이전트 레일과 같은
         // 자리·폭·radius·그림자라야 둘이 번갈아 서도 화면이 안 흔들린다(design.pen).
         // 좁은 세로 화면은 본문 아래 스택이고, 짧은 가로 화면은 14rem floor가 전사를
         // 밀어내므로 옆 열로 둔다.
         <div
           className={cn(
-            "flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 border-t border-[var(--el-hairline)] max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] max-lg:landscape:border-l max-lg:landscape:border-t-0 lg:fixed lg:top-2.5 lg:right-2.5 lg:bottom-2.5 lg:z-30 lg:h-auto lg:w-[480px] lg:overflow-hidden lg:rounded-panel lg:border lg:border-[var(--el-hairline)] lg:shadow-e2",
+            "flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 border-t border-[var(--el-hairline)] max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] max-lg:landscape:border-l max-lg:landscape:border-t-0 lg:fixed lg:top-2.5 lg:right-2.5 lg:bottom-2.5 lg:z-30 lg:h-auto lg:w-[440px] lg:overflow-hidden lg:rounded-panel lg:border lg:border-[var(--el-hairline)] lg:shadow-e2",
             !sharedRailVisible && "hidden"
           )}
         >
@@ -384,7 +378,7 @@ export function NotePanel({
             onSelectTab={(tab) => {
               if (tab === "agent") onOpenAgentRail?.();
             }}
-            onCloseRail={() => setRailCollapsed(true)}
+            // 닫기를 안 준다 — 레일은 상주다. 탭으로 「내 에이전트」와만 오간다.
             onTurnActiveChange={handleSharedTurnActiveChange}
           />
         </div>

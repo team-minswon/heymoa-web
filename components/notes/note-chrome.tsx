@@ -1,9 +1,8 @@
 "use client";
 
-import { ArrowLeft, PanelRight, Shrink } from "lucide-react";
+import { ArrowLeft, Shrink } from "lucide-react";
 
 import { AvatarStack } from "@/components/workspace/page-chrome";
-import { NotificationBell } from "@/components/notification/notification-bell";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
@@ -13,9 +12,10 @@ import { cn } from "@/lib/utils";
  *
  *   Top Bar(h56)   ← 목록으로 · ⤡ side로 │ 제목            🔔 · 레일 토글
  *   Note Header    상태·프로젝트 / 34px 제목 / 아바타 + 메타 / 탭
- *   Content        p 24 · 본문 폭 660 중앙
+ *   Content        p 24 · 본문 폭 820 중앙
  *
- * 본문 폭을 660으로 묶는 게 핵심이다 — 930 폭을 다 쓰면 전사 한 줄이 너무 길어 눈이 줄을 잃는다.
+ * 본문 폭은 820이다. 660 은 좁아서가 아니라 **중첩** 때문에 틀렸다 — 660 안에 다시 좌우 패딩과
+ * 시각 열이 들어가 실제 발화 폭이 448(한글 약 30자)까지 눌렸다. 산문 문단만 680 으로 따로 묶는다.
  */
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,8 +31,6 @@ export function NoteTopBar({
   onShrink,
   shrinkLabel = "옆에 열기",
   shrinkDisabled = false,
-  onToggleRail,
-  railOpen,
   actions,
 }: {
   title: string;
@@ -41,8 +39,6 @@ export function NoteTopBar({
   /** side ↔ full 을 오가는 버튼의 이름. 방향에 따라 말이 반대다. */
   shrinkLabel?: string;
   shrinkDisabled?: boolean;
-  onToggleRail?: () => void;
-  railOpen?: boolean;
   actions?: React.ReactNode;
 }) {
   return (
@@ -65,20 +61,8 @@ export function NoteTopBar({
           {title}
         </span>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {actions}
-        <NotificationBell />
-        {onToggleRail ? (
-          <IconButton
-            label={railOpen ? "레일 접기" : "레일 펴기"}
-            bordered
-            pressed={railOpen}
-            onClick={onToggleRail}
-          >
-            <PanelRight className="size-4" />
-          </IconButton>
-        ) : null}
-      </div>
+      {/* 레일 토글이 없다 — 노트 전체 화면에서 레일은 상주다. */}
+      <div className="flex shrink-0 items-center gap-2">{actions}</div>
     </div>
   );
 }
@@ -125,7 +109,7 @@ export function NoteColumn({
   className?: string;
 }) {
   return (
-    <div className={cn("mx-auto w-full max-w-[660px]", className)}>
+    <div className={cn("mx-auto w-full max-w-[820px]", className)}>
       {children}
     </div>
   );

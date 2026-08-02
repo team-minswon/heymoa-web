@@ -111,10 +111,8 @@ describe("AccountSettingsForm", () => {
 
   it("offers the command only on workspaces that are not already default", () => {
     renderForm();
-    const rows = screen.getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
-    // 기본인 행은 배지만 있고 명령이 없다 — 있으면 자기 자신을 기본으로 다시 지정한다.
-    expect(rows[0]).toHaveTextContent("기본");
+    // 기본인 행은 「지금 기본입니다」만 있고 명령이 없다 — 있으면 자기 자신을 다시 지정한다.
+    expect(screen.getByText("지금 기본입니다")).toBeInTheDocument();
     expect(
       screen.getAllByRole("button", { name: "기본으로 설정" })
     ).toHaveLength(1);

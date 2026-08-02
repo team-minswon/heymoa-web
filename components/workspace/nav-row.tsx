@@ -16,6 +16,7 @@ export function NavRow({
   leading,
   label,
   active = false,
+  pressed = false,
   onClick,
   trailing,
   tone = "default",
@@ -27,6 +28,12 @@ export function NavRow({
   leading?: React.ReactNode;
   label: string;
   active?: boolean;
+  /**
+   * 다이얼로그를 여는 행이 열려 있는 동안. **배경만** 주고 마크·굵은 글씨는 안 준다
+   * (INTERACTION-SPEC D2) — 다이얼로그는 머무는 자리가 아니라서, 마크를 주면
+   * 뒤의 「모든 회의」와 동시에 활성이 되어 마크가 「지금 어디」를 뜻하지 않게 된다.
+   */
+  pressed?: boolean;
   onClick?: () => void;
   trailing?: React.ReactNode;
   tone?: "default" | "live";
@@ -56,7 +63,7 @@ export function NavRow({
           "flex h-[34px] min-w-0 flex-1 items-center gap-2 rounded-control px-2.5 text-left transition-colors",
           live
             ? "bg-[var(--el-error-bg)]"
-            : active
+            : active || pressed
               ? "bg-card"
               : "hover:bg-[var(--el-surface-strong)]"
         )}

@@ -23,7 +23,12 @@ export function RailTabs({
 }: {
   active: RailTab;
   onSelect: (tab: RailTab) => void;
-  onClose: () => void;
+  /**
+   * 없으면 닫기 버튼을 안 그린다. **노트 전체 화면에서 레일은 상주다** — 본문과 챗이 늘 같이
+   * 있는 화면이라 접을 자리를 주지 않는다. 워크스페이스 목록에서는 레일이 본문 위에 얹히므로
+   * 닫을 수 있어야 한다.
+   */
+  onClose?: () => void;
   /** 「이 회의」에 붙는 빨간 수 — 안 읽은 답변이 있을 때만. */
   noteBadge?: number;
   /** 회의 밖(워크스페이스 스코프)에서는 건너갈 회의 챗봇이 없다. */
@@ -52,14 +57,16 @@ export function RailTabs({
           내 에이전트
         </RailTabButton>
       </div>
-      <button
-        type="button"
-        aria-label="레일 닫기"
-        onClick={onClose}
-        className="flex size-8 shrink-0 items-center justify-center rounded-control text-[var(--el-muted)] transition-colors hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
-      >
-        <ChevronsRight className="size-4" />
-      </button>
+      {onClose ? (
+        <button
+          type="button"
+          aria-label="레일 닫기"
+          onClick={onClose}
+          className="flex size-8 shrink-0 items-center justify-center rounded-control text-[var(--el-muted)] transition-colors hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)]"
+        >
+          <ChevronsRight className="size-4" />
+        </button>
+      ) : null}
     </div>
   );
 }

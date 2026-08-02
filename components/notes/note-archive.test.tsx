@@ -136,7 +136,7 @@ describe("NoteArchive", () => {
     }).parentElement!;
     // 본문 폭·여백은 회의 화면 한 벌로 통일했다. 독 여백만 데스크톱에서 따로 붙는다.
     expect(content.classList.contains("py-6")).toBe(true);
-    expect(content.classList.contains("max-w-[660px]")).toBe(true);
+    expect(content.classList.contains("max-w-[820px]")).toBe(true);
     expect(content.classList.contains("lg:pb-28")).toBe(true);
     expect(content.classList.contains("pb-28")).toBe(false);
   });

@@ -4,8 +4,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Info, Link2 } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  SettingsGap,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-chrome";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -107,7 +111,7 @@ export function WorkspaceIntegrationsSettings({
   };
 
   return (
-    <div className="w-full">
+    <>
       {integrationsQuery.isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-24 rounded-panel" />
@@ -128,7 +132,7 @@ export function WorkspaceIntegrationsSettings({
           </Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <SettingsSection title="연결된 도구" note="관리자만 바꿀 수 있습니다">
           {integrations.map((integration) => (
             <IntegrationCard
               key={integration.provider}
@@ -146,7 +150,7 @@ export function WorkspaceIntegrationsSettings({
               }
             />
           ))}
-        </div>
+        </SettingsSection>
       )}
 
       {roleError ? (
@@ -169,19 +173,11 @@ export function WorkspaceIntegrationsSettings({
             </Button>
           </div>
         </div>
-      ) : roleKnown && !isAdmin ? (
-        <div
-          role="alert"
-          className="mt-4 flex items-start gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
-        >
-          <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
-          <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-            연동 연결·해제는 관리자만 할 수 있습니다. 새 연동이 필요하면
-            ADMIN에게 요청하세요.
-          </p>
-        </div>
       ) : null}
-    </div>
+
+      <SettingsGap />
+      <AgentScopeSection />
+    </>
   );
 }
 
@@ -199,60 +195,60 @@ function IntegrationCard({
   onDisconnect: () => void;
 }) {
   const provider = integration.provider as Provider;
-  // 카드 안의 카드에는 그림자를 주지 않는다 — hairline만. (ELEVATION SPEC)
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-card p-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
-          <Link2 className="size-4 text-[var(--el-ink)]" />
-        </span>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-[var(--el-ink)]">
-              {PROVIDER_LABEL[provider]}
-            </p>
-            <Badge variant={integration.connected ? "secondary" : "outline"}>
-              {integration.connected ? "연결됨" : "연결되지 않음"}
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs text-[var(--el-muted)]">
-            {integration.connected
-              ? `${integration.connectedBy ?? "관리자"} · ${
-                  integration.connectedAt
-                    ? formatAppDate(integration.connectedAt, {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
-                    : "-"
-                }`
-              : "챗봇이 이 도구를 쓰려면 연결이 필요합니다."}
-          </p>
-        </div>
-      </div>
 
+  // 카드가 아니라 행이다 — 다이얼로그 안에서 판을 또 쌓으면 깊이가 거짓말을 한다.
+  // 「연결됨」 배지도 걷었다: 오른쪽 버튼이 「연결 해제」면 이미 연결된 것이다.
+  return (
+    <SettingsRow
+      label={PROVIDER_LABEL[provider]}
+      description={
+        integration.connected
+          ? `${integration.connectedBy ?? "관리자"} · ${
+              integration.connectedAt
+                ? formatAppDate(integration.connectedAt, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : "-"
+            }`
+          : "챗봇이 이 도구를 쓰려면 연결이 필요합니다"
+      }
+      icon={<Link2 className="size-3.5 text-[var(--el-ink)]" />}
+    >
       {isAdmin ? (
-        integration.connected ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 shrink-0"
-            disabled={isBusy}
-            onClick={onDisconnect}
-          >
-            연결 해제
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            className="h-8 shrink-0"
-            disabled={isBusy}
-            onClick={onConnect}
-          >
-            연결
-          </Button>
-        )
+        <Button
+          variant={integration.connected ? "outline" : "default"}
+          className="h-9 px-[13px] text-[13px]"
+          disabled={isBusy}
+          onClick={integration.connected ? onDisconnect : onConnect}
+        >
+          {integration.connected ? "연결 해제" : "연결"}
+        </Button>
       ) : null}
-    </div>
+    </SettingsRow>
+  );
+}
+
+/**
+ * 에이전트가 연동으로 무엇을 하는지. design.pen `IcABs` 의 둘째 절이다 —
+ * 연결만 보여주고 「그래서 얘가 뭘 하나」를 안 적으면 연결 버튼이 백지수표로 읽힌다.
+ */
+function AgentScopeSection() {
+  return (
+    <SettingsSection title="에이전트가 하는 일" note="승인 없이 실행하지 않습니다">
+      <SettingsRow
+        label="읽기"
+        description="이슈·PR 을 조회해 회의 맥락에 붙입니다"
+      >
+        <Info aria-hidden className="size-3.5 text-[var(--el-muted)]" />
+      </SettingsRow>
+      <SettingsRow
+        label="쓰기"
+        description="이슈 생성·수정은 카드로 먼저 물어봅니다"
+      >
+        <Info aria-hidden className="size-3.5 text-[var(--el-muted)]" />
+      </SettingsRow>
+    </SettingsSection>
   );
 }

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, within, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DeleteWorkspaceCard } from "@/components/settings/delete-workspace-card";
@@ -39,11 +39,12 @@ describe("DeleteWorkspaceCard", () => {
     mutateAsync.mockResolvedValueOnce({ status: 204 });
     renderCard();
 
-    fireEvent.click(screen.getByRole("button", { name: /워크스페이스 삭제/ }));
+    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent("제품 팀");
 
-    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    // 확인 버튼은 다이얼로그 안의 것이다 — 행의 「삭제」와 이름이 같다.
+    fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
   });
 
@@ -55,7 +56,7 @@ describe("DeleteWorkspaceCard", () => {
       screen.getByText(/기본 워크스페이스라 삭제할 수 없습니다/)
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /워크스페이스 삭제/ })
+      screen.queryByRole("button", { name: "삭제" })
     ).toBeNull();
   });
 });

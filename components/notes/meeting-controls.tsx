@@ -88,7 +88,7 @@ export function MeetingControls({
         <Button
           type="button"
           variant="outline"
-          className="h-11"
+          className="h-8 px-2.5 text-[12px]"
           onClick={onMeetingEnded}
         >
           요약 보기
@@ -98,7 +98,7 @@ export function MeetingControls({
         <Button
           type="button"
           variant="outline"
-          className="h-11 border-destructive/30 text-destructive"
+          className="h-8 border-destructive/30 px-2.5 text-[12px] text-destructive"
           onClick={() => setEndOpen(true)}
         >
           <Square className="size-3.5" />

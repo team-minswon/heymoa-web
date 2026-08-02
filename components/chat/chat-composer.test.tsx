@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { Lock } from "lucide-react";
+
 import { ChatComposer } from "@/components/chat/chat-composer";
 
 const base = {
@@ -11,6 +13,9 @@ const base = {
   isBusy: false,
   isStreaming: false,
   placeholder: "물어보세요",
+  scopeIcon: Lock,
+  scopeHint: "저장은 나에게만 남습니다",
+  sendLabel: "나만 보기",
 };
 
 describe("ChatComposer", () => {
@@ -20,7 +25,7 @@ describe("ChatComposer", () => {
     const onSubmit = vi.fn();
     render(<ChatComposer {...base} draft="안녕" onSubmit={onSubmit} />);
 
-    const send = screen.getByRole("button", { name: "보내기" });
+    const send = screen.getByRole("button", { name: "나만 보기" });
     expect(send).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "중지" })).toBeNull();
     fireEvent.submit(send.closest("form")!);
@@ -33,13 +38,13 @@ describe("ChatComposer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "중지" }));
     expect(onStop).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "나만 보기" })).toBeNull();
   });
 
   it("disables the input and send while busy", () => {
     render(<ChatComposer {...base} isBusy />);
     expect(screen.getByRole("textbox", { name: "메시지" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "보내기" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "나만 보기" })).toBeDisabled();
   });
 
   it("renders a context footer (e.g. 승인 대기 안내)", () => {

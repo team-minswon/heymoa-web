@@ -208,8 +208,9 @@ describe("MeetingControls", () => {
     expect(
       screen.getByRole("timer", { name: "누적 기록 시간" })
     ).toHaveTextContent("01:05");
+    // 상단바 인라인 컨트롤은 규격 사다리의 h32 단이다 — h44 는 사다리에 없는 값이었다.
     expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass(
-      "h-11"
+      "h-8"
     );
   });
 

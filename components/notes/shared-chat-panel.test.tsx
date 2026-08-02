@@ -194,7 +194,7 @@ describe("SharedChatPanel", () => {
         toolEvent: null,
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스에 공유" }));
 
     await waitFor(() =>
       expect(state.streamCalls).toEqual([
@@ -225,7 +225,7 @@ describe("SharedChatPanel", () => {
     fireEvent.change(screen.getByLabelText("메시지"), {
       target: { value: "정리해줘" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스에 공유" }));
     // 실패 안내가 뜨고 방금 보낸 유저 버블은 남는다.
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.getByText("정리해줘")).toBeTruthy();
@@ -254,7 +254,7 @@ describe("SharedChatPanel", () => {
     fireEvent.change(screen.getByLabelText("메시지"), {
       target: { value: "실패할 질문" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스에 공유" }));
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
 
     realtime.chat.locked = false;
@@ -323,7 +323,7 @@ describe("SharedChatPanel", () => {
     fireEvent.change(screen.getByLabelText("메시지"), {
       target: { value: "새 질문" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스에 공유" }));
 
     await waitFor(() =>
       expect(screen.getByText("응답을 만들지 못했습니다")).toBeInTheDocument()
@@ -359,7 +359,7 @@ describe("SharedChatPanel", () => {
     expect(screen.getByTestId("typing-divider")).toBeTruthy();
     expect(screen.queryByText("아직 나눈 대화가 없습니다.")).toBeNull();
     expect(screen.queryByLabelText("메시지")).toBeNull();
-    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "워크스페이스에 공유" })).toBeNull();
   });
 
   it("관전자는 승인 대기를 폴링으로 보고 '입력 중'이 아니라 '승인 대기 중'을 보인다", () => {
@@ -394,7 +394,7 @@ describe("SharedChatPanel", () => {
       "대화를 불러오지 못했습니다."
     );
     expect(screen.getByLabelText("메시지")).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "워크스페이스에 공유" })).toHaveProperty(
       "disabled",
       true
     );
@@ -403,7 +403,7 @@ describe("SharedChatPanel", () => {
   it("회의 미시작이면 녹음 시작 안내를 보인다", () => {
     renderPanel("not-started");
     expect(screen.getByText("아직 회의가 시작되지 않았습니다")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "워크스페이스에 공유" })).toBeNull();
   });
 
   it.each([
@@ -426,13 +426,13 @@ describe("SharedChatPanel", () => {
     expect(screen.getByText("기존 회의 답변입니다.")).toBeInTheDocument();
     expect(screen.getByText(notice)).toBeInTheDocument();
     expect(screen.queryByLabelText("메시지")).toBeNull();
-    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "워크스페이스에 공유" })).toBeNull();
   });
 
   it("회의 상태를 모르면 입력 대신 확인 중 안내를 보인다", () => {
     renderPanel("unknown");
     expect(screen.getByText("회의 상태를 확인하는 중입니다")).toBeTruthy();
     expect(screen.queryByLabelText("메시지")).toBeNull();
-    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "워크스페이스에 공유" })).toBeNull();
   });
 });

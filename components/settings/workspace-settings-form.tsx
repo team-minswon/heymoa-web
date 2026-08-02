@@ -2,16 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
   getGetWorkspaceQueryKey,
   getGetWorkspacesQueryKey,
@@ -21,6 +18,11 @@ import {
 } from "@/lib/api/generated/workspaces/workspaces";
 import { usePendingDefaultWorkspaceId } from "@/lib/workspaces/default-workspace";
 import { DeleteWorkspaceCard } from "@/components/settings/delete-workspace-card";
+import {
+  SettingsGap,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-chrome";
 
 const workspaceSchema = z.object({
   name: z.string().trim().min(1, "워크스페이스 이름을 입력해 주세요.").max(80),
@@ -105,68 +107,85 @@ export function WorkspaceSettingsForm({
     }
   };
 
+  // 저장 버튼이 없다 — 값을 떠나면 저장한다(design.pen 「변경은 바로 저장됩니다」).
+  // 버튼을 두면 「눌렀나 안 눌렀나」를 사용자가 기억해야 하고, 탭을 옮기면 조용히 날아간다.
+  // `formState.isDirty` 는 프록시 구독이라 blur 핸들러 클로저에서 한 박자 늦다.
+  // 서버 값과 직접 대보면 늦을 일이 없다.
+  //
+  // **저장은 직렬로 흘린다.** 이름을 고치고 설명으로 옮기면 PATCH 가 뜨고, 설명까지 고치면
+  // 두 번째가 뜬다. 둘 다 폼 전체를 보내므로 응답이 역순으로 오면 **먼저 보낸 옛 값이
+  // 최종값이 된다.** 앞 요청이 끝난 뒤에 다음을 보내면 마지막에 보낸 것이 마지막에 쓰인다.
+  const saveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  const saveOnBlur = () => {
+    const values = form.getValues();
+    const changed =
+      values.name.trim() !== (workspaceName ?? "") ||
+      (values.description ?? "").trim() !== (workspaceDescription ?? "");
+    if (!changed) return;
+    saveChainRef.current = saveChainRef.current
+      .then(() => submit())
+      .catch(() => {});
+  };
+
   return (
-    // 제목은 SettingsPageShell 이 그린다 — 여기서 또 그리면 같은 말이 두 번 뜬다.
-    <div className="space-y-5">
-      {workspace?.isDefault ? (
-        <div>
-          <Badge>기본 워크스페이스</Badge>
-        </div>
-      ) : null}
-      {/* 설정 폼은 카드에 안 담는다 — 패널이 이미 한 겹이라 두 겹이면 깊이가 거짓말을 한다. */}
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="workspace-name">워크스페이스 이름</Label>
-          <Input id="workspace-name" {...form.register("name")} />
-          {form.formState.errors.name && (
-            <p className="text-[12px] text-[var(--el-error)]">
-              {form.formState.errors.name.message}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="workspace-description">설명</Label>
-          <Textarea
-            id="workspace-description"
-            {...form.register("description")}
-            rows={4}
+    <>
+      <SettingsSection title="워크스페이스" note="변경은 바로 저장됩니다">
+        <SettingsRow
+          label="이름"
+          description="사이드바와 초대 메일에 이 이름이 그대로 나옵니다"
+        >
+          <FieldError message={form.formState.errors.name?.message}>
+            <Input
+              aria-label="워크스페이스 이름"
+              className="h-9 w-[300px] text-[13px]"
+              {...form.register("name")}
+              onBlur={saveOnBlur}
+            />
+          </FieldError>
+        </SettingsRow>
+        <SettingsRow
+          label="설명"
+          description="목록과 초대 메일에서 이 워크스페이스가 무엇인지 알려줍니다"
+        >
+          <FieldError message={form.formState.errors.description?.message}>
+            <Input
+              aria-label="워크스페이스 설명"
+              className="h-9 w-[300px] text-[13px]"
+              {...form.register("description")}
+              onBlur={saveOnBlur}
+            />
+          </FieldError>
+        </SettingsRow>
+        <SettingsRow
+          label="기본 워크스페이스"
+          description="로그인하면 이 워크스페이스로 바로 들어옵니다"
+        >
+          {/* 같은 명령을 내 계정 탭에서도 부를 수 있다. 각자 자기 isPending 만 보면
+              탭을 옮기는 것만으로 두 요청이 겹치므로 전역 진행 상태를 함께 본다.
+              이미 기본이면 끄는 길이 없다 — 기본은 언제나 하나는 있어야 한다. */}
+          <Switch
+            aria-label="기본 워크스페이스"
+            checked={Boolean(workspace?.isDefault)}
+            disabled={Boolean(workspace?.isDefault) || pendingDefaultId !== null}
+            onCheckedChange={(checked) => {
+              if (checked) void makeDefault();
+            }}
           />
-        </div>
-        <div>
-          <Button type="submit" loading={update.isPending}>
-            변경 사항 저장
-          </Button>
-        </div>
-      </form>
-      {workspace ? (
-        <DeleteWorkspaceCard
-          workspaceId={workspaceId}
-          name={workspace.name}
-          isDefault={workspace.isDefault}
-        />
-      ) : null}
-      {!workspace?.isDefault && (
-        <div className="flex items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-card p-5">
-          <div>
-            <p className="font-medium">기본 워크스페이스</p>
-            <p className="text-sm text-[var(--el-muted)]">
-              로그인 후 가장 먼저 열 공간으로 지정합니다.
-            </p>
-          </div>
-          {/* 같은 명령을 내 계정 탭의 목록에서도 부를 수 있다. 각자 자기 isPending만 보면
-            설정 탭을 옮기는 것만으로 두 요청이 겹치므로 전역 진행 상태를 함께 본다. */}
-          <Button
-            type="button"
-            variant="outline"
-            loading={pendingDefaultId === workspaceId}
-            disabled={pendingDefaultId !== null}
-            onClick={() => void makeDefault()}
-          >
-            기본 워크스페이스로 설정
-          </Button>
-        </div>
-      )}
-    </div>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsGap />
+
+      <SettingsSection title="위험 구역">
+        {workspace ? (
+          <DeleteWorkspaceCard
+            workspaceId={workspaceId}
+            name={workspace.name}
+            isDefault={workspace.isDefault}
+          />
+        ) : null}
+      </SettingsSection>
+    </>
   );
 }
 
@@ -179,6 +198,29 @@ export function WorkspaceSettingsFormSkeleton() {
     >
       <Skeleton className="h-9 w-40" />
       <Skeleton className="h-64 rounded-panel" />
+    </div>
+  );
+}
+
+/**
+ * 즉시 저장 폼의 검증 실패를 화면에 남긴다. `handleSubmit` 은 값이 유효하지 않으면 조용히
+ * 아무것도 안 보내는데, 화면이 「변경은 바로 저장됩니다」라고 말하고 있으므로 사용자는
+ * 저장됐다고 믿는다. 왜 안 갔는지를 그 자리에 적는다.
+ */
+function FieldError({
+  message,
+  children,
+}: {
+  message?: string;
+  children: React.ReactNode;
+}) {
+  if (!message) return children;
+  return (
+    <div className="flex flex-col items-end gap-1">
+      {children}
+      <span role="alert" className="text-[11px] text-[var(--el-error-strong)]">
+        {message}
+      </span>
     </div>
   );
 }

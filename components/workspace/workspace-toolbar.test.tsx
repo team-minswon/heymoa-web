@@ -131,13 +131,13 @@ describe("WorkspaceToolbar", () => {
     recording.elapsedMs = 12_000;
     renderToolbar({ workspaceId: "01K0000000000", currentLabel: "주간" });
 
-    expect(screen.getByRole("meter", { name: "마이크 입력" })).toHaveAttribute(
-      "aria-valuenow",
-      "42"
-    );
+    // 필은 알림 표면이라 미터가 없다 — 미터는 노트 안 dock 의 것이다.
+    expect(screen.queryByRole("meter", { name: "마이크 입력" })).toBeNull();
     expect(screen.getByText("00:12")).toBeInTheDocument();
-    // 필은 회의로 돌아가는 길을 함께 낸다 — 정지만 있으면 되돌아갈 곳이 없다.
-    fireEvent.click(screen.getByRole("button", { name: "회의로" }));
+    // 제목은 화면에 안 띄운다 — 상단 중앙 고정이라 화면 공유에 그대로 찍힌다.
+    expect(screen.getByText("기록 중인 회의")).toBeInTheDocument();
+    // 대신 「회의로」의 접근 가능한 이름이 어느 회의인지 말한다.
+    fireEvent.click(screen.getByRole("button", { name: /회의로 이동$/ }));
     expect(push).toHaveBeenCalledWith(
       "/w/01K0000000000/meetings/01K0000000002?view=full&tab=transcript"
     );

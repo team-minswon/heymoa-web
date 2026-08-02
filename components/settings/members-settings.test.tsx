@@ -113,7 +113,13 @@ function renderSettings() {
   );
 }
 
+/** 초대 폼은 「멤버 초대」가 여는 다이얼로그 안이다 — 본문에 상주하지 않는다. */
+function openInvite() {
+  fireEvent.click(screen.getByRole("button", { name: "멤버 초대" }));
+}
+
 async function invite(email: string) {
+  openInvite();
   fireEvent.change(screen.getByLabelText("초대할 이메일"), {
     target: { value: email },
   });
@@ -134,14 +140,14 @@ describe("MembersSettings", () => {
 
   it("멤버 목록을 이름·이메일·역할로 그린다", () => {
     renderSettings();
-    expect(screen.getByText("테스트 유저")).toBeTruthy();
+    // 자기 행은 이름 뒤에 「(나)」가 붙는다 — 별도 칩을 두면 행에 조각이 하나 더 는다.
+    expect(screen.getByText("테스트 유저 (나)")).toBeTruthy();
     expect(screen.getByText("minsu@heymoa.com")).toBeTruthy();
-    expect(screen.getByText("(나)")).toBeTruthy();
   });
 
   it("ADMIN이면 초대 폼을 보이고 MEMBER면 숨긴다", () => {
     const { rerender } = renderSettings();
-    expect(screen.getByRole("button", { name: "초대" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "멤버 초대" })).toBeTruthy();
 
     expect(state.invitationsEnabled).toBe(true);
 
@@ -151,7 +157,7 @@ describe("MembersSettings", () => {
         <MembersSettings workspaceId="01K0000000000" />
       </QueryClientProvider>
     );
-    expect(screen.queryByRole("button", { name: "초대" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "멤버 초대" })).toBeNull();
     // ADMIN 전용 초대 목록 조회는 MEMBER에겐 아예 나가지 않는다.
     expect(state.invitationsEnabled).toBe(false);
   });
@@ -213,6 +219,7 @@ describe("MembersSettings", () => {
     await waitFor(() =>
       expect(screen.getByText("이미 워크스페이스 멤버입니다.")).toBeTruthy()
     );
+    // 실패하면 다이얼로그는 열린 채로 남는다 — 다시 열 필요가 없다.
     fireEvent.change(screen.getByLabelText("초대할 이메일"), {
       target: { value: "junho2@heymoa.app" },
     });
