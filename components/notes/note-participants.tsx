@@ -1,10 +1,7 @@
 "use client";
 
-import { Mic } from "lucide-react";
-
 import {
   Avatar,
-  AvatarBadge,
   AvatarFallback,
   AvatarGroup,
   AvatarGroupCount,
@@ -39,7 +36,10 @@ export function ParticipantAvatar({
   participant: Participant;
   className?: string;
   size?: "sm" | "default" | "lg";
-  /** 회의를 시작한 사람. 아바타에 마이크 배지가 붙는다. */
+  /**
+   * 회의를 시작한 사람. 아바타 모양은 바꾸지 않고 라벨·툴팁만 진행자로 읽힌다 —
+   * 이 크기에서 배지는 뜻 없는 점으로만 보였다. 구분은 자리(구분선 왼쪽)가 한다.
+   */
   isStarter?: boolean;
   /**
    * 툴팁을 붙일지. combobox 항목처럼 이미 자기 롤(listbox option)을 가진 자리에서는
@@ -55,11 +55,6 @@ export function ParticipantAvatar({
       <AvatarFallback className="bg-[var(--el-surface-strong)] text-[10px] text-[var(--el-ink)]">
         {initial(participant)}
       </AvatarFallback>
-      {isStarter ? (
-        <AvatarBadge aria-hidden>
-          <Mic />
-        </AvatarBadge>
-      ) : null}
     </Avatar>
   );
 

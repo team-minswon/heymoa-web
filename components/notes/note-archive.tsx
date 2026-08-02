@@ -142,10 +142,8 @@ export function NoteArchive({ noteId }: { noteId: string }) {
         data-testid="note-archive-content"
         className="mx-auto w-full max-w-[820px] px-5 pb-7 pt-7 sm:px-9 sm:pb-9 sm:pt-9 lg:pb-28"
       >
-        {/* 바깥 노트 탭이 line 변형이라 여기는 기본(알약) 변형을 써서 층위를 구분한다.
-            요약 탭 안의 개요·액션·인사이트와 같은 방식이다. */}
         <Tabs defaultValue="transcript">
-          <TabsList>
+          <TabsList variant="line" className="gap-6">
             <TabsTrigger value="transcript">대화 기록</TabsTrigger>
             <TabsTrigger value="chat">회의 중 챗봇</TabsTrigger>
           </TabsList>

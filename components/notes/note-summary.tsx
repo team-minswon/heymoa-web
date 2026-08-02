@@ -5,7 +5,6 @@ import { AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { errorCodeOf } from "@/lib/api/error-message";
 import {
   useGetLatestAnalysis,
@@ -189,6 +188,10 @@ function AnalyzingSkeleton() {
       <h2 className="font-serif text-section font-light tracking-[-0.025em] text-[var(--el-ink)]">
         회의를 정리하고 있습니다
       </h2>
+      {/* 분석은 몇 분이 걸린다 — 여기 붙들려 기다릴 필요가 없다는 것을 말해 준다. */}
+      <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
+        다른 화면으로 옮겨도 됩니다. 정리가 끝나면 이 탭에 나타납니다.
+      </p>
       <div className="mt-6 space-y-6" aria-label="분석 진행 중">
         {["개요", "액션 아이템", "인사이트"].map((label) => (
           <div key={label} className="space-y-2">
@@ -205,14 +208,10 @@ function AnalyzingSkeleton() {
 }
 
 /**
- * 세 블록을 세그먼트로 가른다.
+ * 개요 → 액션 아이템 → 인사이트를 한 화면에 위에서 아래로 낸다.
  *
- * 예전에는 개요 → 액션 아이템 → 인사이트를 세로로 쌓았는데, 요약이 길어지면 **아래 두 개가
- * 접힌 화면 밖으로 밀려** 있는 줄도 모르고 지나쳤다. 한 번에 하나만 보여주고 나머지는 탭에
- * 이름으로 남긴다.
- *
- * 바깥 노트 탭이 `variant="line"`이라 여기는 기본(알약) 변형을 써서 층위를 구분한다.
- * 어느 블록을 보고 있는지는 URL에 안 남긴다 — 노트를 가리키는 링크가 바뀌지 않아야 한다.
+ * 탭으로 갈라도 봤지만, 요약은 **끝까지 읽는 글**이지 골라 보는 목록이 아니다. 셋을 오가며
+ * 눌러야 하면 회의 하나를 파악하는 데 세 번을 눌러야 한다. 제목이 경계를 만드니 스크롤로 족하다.
  */
 function SummarySections({
   analysis,
@@ -220,23 +219,19 @@ function SummarySections({
   analysis: AnalysisResultResponseData;
 }) {
   const sections = [
-    { value: "overview", label: "개요", body: analysis.overview },
-    { value: "actions", label: "액션 아이템", body: analysis.actionItems },
-    { value: "insights", label: "인사이트", body: analysis.insights },
+    { label: "개요", body: analysis.overview },
+    { label: "액션 아이템", body: analysis.actionItems },
+    { label: "인사이트", body: analysis.insights },
   ];
   return (
     <Shell>
-      <Tabs defaultValue="overview">
-        <TabsList>
-          {sections.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value}>
+      <div className="space-y-8">
+        {sections.map(({ label, body }) => (
+          <section key={label} aria-label={label}>
+            <h2 className="border-b border-[var(--el-hairline-strong)] pb-2 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
               {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        {sections.map(({ value, label, body }) => (
-          <TabsContent key={value} value={value} aria-label={label}>
-            <div className="mt-6 space-y-3">
+            </h2>
+            <div className="mt-3 space-y-3">
               {body ? (
                 renderMarkdown(body)
               ) : (
@@ -245,9 +240,9 @@ function SummarySections({
                 </p>
               )}
             </div>
-          </TabsContent>
+          </section>
         ))}
-      </Tabs>
+      </div>
     </Shell>
   );
 }

@@ -259,7 +259,7 @@ export function NoteListRow({
               <ParticipantAvatar participant={starter} size="sm" isStarter />
               <span
                 aria-hidden="true"
-                className="h-4 w-px bg-[var(--el-hairline)]"
+                className="h-5 w-px bg-[var(--el-hairline-strong)]"
               />
             </>
           ) : null}
