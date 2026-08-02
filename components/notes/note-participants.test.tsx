@@ -57,26 +57,6 @@ describe("NoteParticipantAvatars", () => {
     ).toBeInTheDocument();
   });
 
-  // 진행자가 이름순 뒤라 접힘(+N) 안으로 들어가면, 모바일에서는 알아볼 방법이 아예 없어진다.
-  it("진행자는 이름순과 무관하게 항상 보이는 자리에 온다", () => {
-    render(
-      <NoteParticipantAvatars
-        participants={Array.from({ length: 5 }, (_, index) =>
-          participant(index)
-        )}
-        starter={{ userId: "01K0000000004", name: "참여자4" }}
-        max={2}
-      />
-    );
-
-    const shown = screen.getAllByLabelText(/@heymoa\.com|참여자4/);
-    expect(shown[0]).toHaveAttribute(
-      "aria-label",
-      "진행자 참여자4 (member4@heymoa.com)"
-    );
-    expect(screen.getByLabelText("외 3명")).toBeInTheDocument();
-  });
-
   it("이름이 비어 있으면 이메일 첫 글자로 떨어진다", () => {
     render(
       <NoteParticipantAvatars

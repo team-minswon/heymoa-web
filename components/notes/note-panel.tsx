@@ -164,15 +164,30 @@ export function NotePanel({
   const localProviderCanControlNote =
     isNoteRecordingActive(recording, noteId) &&
     !(recording.phase === "failed" && recording.session?.status === "ACTIVE");
-  // 이 노트의 실패이고 서버가 세션 종료를 확인해 준 상태(폴링 reconcile이 INTERRUPTED로
-  // 갱신)다. failed+ACTIVE(서버 상태 미확인)·failed+세션 없음은 원격 기록으로 취급해
-  // 차단하지만, 죽음이 확인된 실패까지 "다른 탭·기기에서 기록 중"으로 가리면 아무도
-  // 기록하지 않는데 그렇게 읽힌다 — 이때는 독의 failed 분기(사유·다시 시도)가 서야 한다.
-  const failureSettled =
-    recording.phase === "failed" &&
+  /**
+   * **이 창이 방금 이 노트의 세션을 닫았다.** 서버가 종료를 확인해 준 상태(`COMPLETED`)이거나,
+   * 죽음이 확인된 실패(`INTERRUPTED`)다.
+   *
+   * 둘 다 원격 기록으로 취급하면 안 된다. 특히 중지 직후가 그렇다 — 소켓이 `completed`를
+   * 주는 순간 phase는 `ACTIVE_PHASES` 밖으로 나가는데 노트 쿼리는 아직 `IN_PROGRESS`라,
+   * **중지를 누른 진행자 본인에게 "다른 탭·기기에서 기록 중입니다"가 떴다.** 자기가 방금
+   * 끈 것을 남이 켠 것으로 읽던 자리다.
+   *
+   * `failed`+`ACTIVE`(서버 상태 미확인)와 세션 없는 실패는 여전히 원격으로 본다.
+   */
+  const finishedHere =
     recording.activeNoteId === noteId &&
     recording.session?.noteId === noteId &&
-    recording.session.status === "INTERRUPTED";
+    ((recording.phase === "completed" &&
+      recording.session.status === "COMPLETED" &&
+      // **노트가 아직 내 세션을 활성으로 들고 있을 때만**이다. 완료를 영구 예외로 두면,
+      // 이 창에서 끈 뒤 다른 탭이 재개했을 때 낡은 로컬 세션이 그 활성 세션을 계속 가려
+      // "회의 시작"이 열리고 누르면 409가 난다. 남이 재개하면 노트의 활성 세션 시작 시각이
+      // 내 것과 달라지므로 그 순간부터 다시 차단으로 돌아간다.
+      // (`isFetching`으로 가리면 30초 안전 폴링마다 그 틈이 다시 열린다.)
+      note?.activeSessionStartedAt === recording.session.startedAt) ||
+      (recording.phase === "failed" &&
+        recording.session.status === "INTERRUPTED"));
   const showDock = Boolean(
     note &&
     (note.meetingStatus === "NOT_STARTED" ||
@@ -183,7 +198,7 @@ export function NotePanel({
   const startBlockedReason =
     note?.meetingStatus === "IN_PROGRESS" &&
     !localProviderCanControlNote &&
-    !failureSettled
+    !finishedHere
       ? "다른 탭·기기에서 기록 중입니다."
       : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";

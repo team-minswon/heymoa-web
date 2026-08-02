@@ -149,7 +149,9 @@ describe("NoteListRow", () => {
 
     expect(screen.getByText("중지됨")).toBeInTheDocument();
     // 진행자는 아바타 배지만으로 안 읽혀서 둘째 줄에 글자로도 적는다.
-    expect(screen.getByText("진행 김민수")).toBeInTheDocument();
+    // 진행자는 둘째 줄이 아니라 오른쪽 아바타 줄에서 구분선으로 갈라 선다.
+    expect(screen.queryByText("김민수")).toBeNull();
+    expect(screen.getByLabelText("진행자 김민수")).toBeInTheDocument();
     expect(screen.getByText("기록 3분")).toBeInTheDocument();
   });
 
@@ -183,10 +185,8 @@ describe("NoteListRow", () => {
     expect(screen.getByText("기록 중")).not.toHaveClass("hidden");
     expect(screen.getByText("기록 3분")).not.toHaveClass("hidden");
     // 이름과 구분점을 함께 접는다 — 이름만 접으면 점만 덩그러니 남는다.
-    expect(screen.getByText("진행 김민수").parentElement).toHaveClass(
-      "hidden",
-      "sm:flex"
-    );
+    // 진행자 표식은 화면 폭으로 접지 않는다 — 접으면 모바일에서 알 방법이 사라진다.
+    expect(screen.getByLabelText("진행자 김민수")).toBeInTheDocument();
   });
   it("기록 중이 아닌 회의는 메뉴에서 삭제할 수 있다", async () => {
     recording.current = {

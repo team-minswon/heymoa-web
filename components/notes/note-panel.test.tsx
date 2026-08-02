@@ -24,7 +24,9 @@ const authState = vi.hoisted(() => ({
 const recordingState = vi.hoisted(() => ({
   activeNoteId: null as string | null,
   phase: "idle" as string,
-  sessionStatus: null as "ACTIVE" | "READY" | "INTERRUPTED" | null,
+  sessionStatus: null as "ACTIVE" | "READY" | "INTERRUPTED" | "COMPLETED" | null,
+  /** 노트가 들고 있는 활성 세션이 이 세션인지 가르는 값. */
+  sessionStartedAt: null as string | null,
 }));
 
 vi.mock("@/components/transcription/recording-provider", async () => {
@@ -44,6 +46,7 @@ vi.mock("@/components/transcription/recording-provider", async () => {
                   session: {
                     noteId: recordingState.activeNoteId,
                     status: recordingState.sessionStatus,
+                    startedAt: recordingState.sessionStartedAt,
                   },
                 }
               : { session: null }),
@@ -220,6 +223,7 @@ describe("NotePanel", () => {
     recordingState.phase = "idle";
     recordingState.sessionStatus = null;
     noteState.query = null;
+    recordingState.sessionStartedAt = null;
     noteState.value = {
       noteId: "01K0000000002",
       title: "주간 제품 회의",
@@ -964,6 +968,36 @@ describe("NotePanel", () => {
       expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
       expect(
         screen.getByRole("button", { name: "다시 시도" })
+      ).toBeInTheDocument();
+    });
+
+    // 중지 직후의 창이다. 소켓이 completed를 주면 phase는 활성 밖으로 나가는데 노트 쿼리는
+    // 아직 IN_PROGRESS라, 자기가 방금 끈 것을 남이 켠 것으로 읽어 진행자 본인에게
+    // "다른 탭·기기에서 기록 중입니다"가 떴다.
+    it("방금 이 창에서 중지한 진행자에게는 다른 탭 안내를 띄우지 않는다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "completed";
+      recordingState.sessionStatus = "COMPLETED";
+      // 노트가 아직 내 세션을 활성으로 들고 있다 — IN_PROGRESS는 그 갱신을 못 따라온 값이다.
+      recordingState.sessionStartedAt = noteState.value.activeSessionStartedAt;
+
+      renderDock(view);
+
+      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+    });
+
+    // 완료를 영구 예외로 두면 낡은 로컬 세션이 남의 활성 세션을 계속 가린다.
+    it("갱신이 끝났는데도 IN_PROGRESS면 남이 재개한 것으로 본다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "completed";
+      recordingState.sessionStatus = "COMPLETED";
+      // 다른 탭이 재개해 노트의 활성 세션이 내 것과 달라졌다.
+      recordingState.sessionStartedAt = "2026-07-29T09:00:00Z";
+
+      renderDock(view);
+
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
       ).toBeInTheDocument();
     });
 

@@ -16,7 +16,10 @@ import {
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
-import { NoteParticipantAvatars } from "@/components/notes/note-participants";
+import {
+  NoteParticipantAvatars,
+  ParticipantAvatar,
+} from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -115,9 +118,9 @@ function RelativeTime({ iso, now }: { iso: string; now: number | null }) {
  *
  * 기록 시간은 회의를 시작한 적이 있을 때만 쓴다 — 시작 전의 `0분`은 사실이 아니라 빈칸이다.
  *
- * **사람은 글자로 말하고 아바타는 얼굴만 맡는다.** 16px 원 안에는 "이게 참여자다"도
- * "이 사람이 진행자다"도 안 담긴다 — 배지는 이 크기에서 아이콘이 숨겨져 점으로만 보인다.
- * 그래서 인원수와 진행자 이름을 여기에 적고, 오른쪽 아바타는 누구인지 알아보는 용도로 둔다.
+ * 사람 수는 글자로 적고 얼굴은 오른쪽 아바타가 맡는다. 진행자는 그 아바타 줄에서
+ * 구분선으로 갈라 세운다(`진행자 | 참여자들`) — 이름까지 여기 적으면 같은 사실이 두 곳에
+ * 나고 줄이 길어져 제목을 밀어낸다.
  */
 function MeetingMeta({
   note,
@@ -164,19 +167,6 @@ function MeetingMeta({
           </span>
         </>
       ) : null}
-      {note.meetingStartedBy ? (
-        // 진행자는 참여자와 다른 사람일 수 있다 — 아바타 배지만으로는 그 사실이 안 읽힌다.
-        // 좁은 화면에서는 이름 길이를 알 수 없어 접는데, **구분점도 같이 접어야** 한다.
-        // 따로 두면 `참여 2명 · · 3분 전`처럼 점만 덩그러니 남는다.
-        <span className="hidden min-w-0 items-center gap-1.5 sm:flex">
-          <span aria-hidden="true" className="shrink-0">
-            ·
-          </span>
-          <span className="min-w-0 truncate">
-            진행 {note.meetingStartedBy.name}
-          </span>
-        </span>
-      ) : null}
       <span aria-hidden="true" className="shrink-0">
         ·
       </span>
@@ -221,6 +211,18 @@ export function NoteListRow({
   }
   const openingFullView = openedFullViewFrom === routeKey;
 
+  // 목록 계약의 `meetingStartedBy`는 userId·name뿐이라 이미지가 없다 — 참여자로도 있으면
+  // 거기서 이미지를 빌려 온다.
+  const starter = note.meetingStartedBy
+    ? ((note.participants ?? []).find(
+        (participant) => participant.userId === note.meetingStartedBy?.userId
+      ) ?? {
+        userId: note.meetingStartedBy.userId,
+        name: note.meetingStartedBy.name,
+        email: "",
+      })
+    : null;
+
   const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=details`;
   const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=details`;
 
@@ -248,10 +250,21 @@ export function NoteListRow({
         </span>
         {/* 진행자는 이 뭉치 안에서 배지로 구분된다 — 따로 세우면 라벨 없는 아바타 뭉치가
             둘이 되어 어느 쪽이 무엇인지 알 수 없다. */}
-        <span className="shrink-0">
+        {/* `진행자 | 참여자들`. 구분선이 두 뭉치의 뜻을 가른다 — 한 줄에 섞으면 어느 얼굴이
+            무엇인지 알 수 없고, 배지로 표시해 봤자 이 크기에서는 점으로만 보인다.
+            화면 폭으로 접지 않는다 — 접으면 모바일에서 진행자를 알 방법이 사라진다. */}
+        <span className="flex shrink-0 items-center gap-2">
+          {starter ? (
+            <>
+              <ParticipantAvatar participant={starter} size="sm" isStarter />
+              <span
+                aria-hidden="true"
+                className="h-4 w-px bg-[var(--el-hairline)]"
+              />
+            </>
+          ) : null}
           <NoteParticipantAvatars
             participants={note.participants}
-            starter={note.meetingStartedBy}
             max={3}
             size="sm"
           />

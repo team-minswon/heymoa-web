@@ -209,7 +209,7 @@ describe("MeetingControls", () => {
       screen.getByRole("timer", { name: "누적 기록 시간" })
     ).toHaveTextContent("01:05");
     expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass(
-      "h-10"
+      "h-7"
     );
   });
 

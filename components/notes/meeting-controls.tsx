@@ -81,8 +81,10 @@ export function MeetingControls({
         <Button
           type="button"
           variant="outline"
-          size="xl"
-          className="border-destructive/30 text-destructive"
+          size="sm"
+          // 붉은 테두리 + 붉은 글자 + h-10이라 조용한 헤더에서 이것만 소리쳤다. 종료는
+          // 다이얼로그가 한 번 더 확인하므로 여기서까지 경고색을 두를 필요가 없다.
+          className="text-destructive hover:text-destructive"
           onClick={() => setEndOpen(true)}
         >
           <Square className="size-3.5" />
