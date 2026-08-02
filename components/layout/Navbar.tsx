@@ -164,9 +164,15 @@ export function Navbar() {
               </div>
             ) : (
               <AuthModal>
-                <button className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-[var(--el-primary)] px-5 text-[15px] font-medium text-white transition hover:bg-[var(--el-primary-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)] focus-visible:ring-offset-2">
+                {/* 손으로 쓴 버튼이었다 — 옆의 `로그인`(공용 Button)과 높이가 8px 어긋났다.
+                    같은 Button + size="xl"로 맞춘다. */}
+                <Button
+                  type="button"
+                  size="xl"
+                  className="hidden rounded-full bg-[var(--el-primary)] px-5 text-[15px] text-white hover:bg-[var(--el-primary-active)] sm:inline-flex"
+                >
                   시작하기
-                </button>
+                </Button>
               </AuthModal>
             ))}
         </div>

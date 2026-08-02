@@ -95,8 +95,9 @@ async function expectForeignViewerTranscript(
   page.on("request", countTranscriptRequest);
 
   try {
+    // 기본 탭은 정보다 — 전사를 보려면 명시한다.
     await page.goto(
-      `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=full`
+      `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=full&tab=transcript`
     );
 
     const blocks = page.getByTestId("transcript-block");
@@ -536,7 +537,7 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
   await page.getByRole("button", { name: "노트 닫기" }).click();
   await page.getByRole("link", { name: "주간 제품 회의 노트 열기" }).first().click();
   await expect(page).toHaveURL(
-    `/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=side&tab=transcript`
+    `/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=side&tab=details`
   );
 
   await expect(
@@ -561,7 +562,7 @@ test("shows meeting context and shared chat inside the viewer side panel", async
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["전사", "챗봇", "노트 정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["정보", "스크립트", "챗봇"]);
 
   await page.getByRole("tab", { name: "챗봇" }).click();
 
@@ -597,7 +598,7 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   await expect(
     meetingControls(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
-  await expect(page.getByRole("tab")).toHaveText(["기록", "요약", "노트 정보"]);
+  await expect(page.getByRole("tab")).toHaveText(["정보", "스크립트", "요약"]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });

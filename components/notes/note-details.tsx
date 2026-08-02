@@ -5,6 +5,7 @@ import { CalendarDays, Check, Clock3 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { NoteParticipantsField } from "@/components/notes/note-participants-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,13 @@ import {
 } from "@/lib/api/generated/notes/notes";
 import { formatAppDate } from "@/lib/format/date";
 
-export function NoteDetails({ noteId }: { noteId: string }) {
+export function NoteDetails({
+  noteId,
+  workspaceId,
+}: {
+  noteId: string;
+  workspaceId: string;
+}) {
   const queryClient = useQueryClient();
   const noteResponse = useGetNoteSuspense(noteId).data;
   const updateNote = useUpdateNote({
@@ -88,6 +95,16 @@ export function NoteDetails({ noteId }: { noteId: string }) {
           className="h-auto border-0 bg-transparent px-0 py-1 font-serif text-2xl font-light tracking-[-0.02em] shadow-none focus-visible:ring-0"
         />
       </div>
+
+      <section className="space-y-3 rounded-block border border-[var(--el-hairline)] bg-white p-5 sm:p-6">
+        <Label className="text-xs text-[var(--el-muted)]">참여자</Label>
+        <NoteParticipantsField
+          noteId={noteId}
+          projectId={note.projectId}
+          workspaceId={workspaceId}
+          participants={note.participants}
+        />
+      </section>
 
       <dl className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">

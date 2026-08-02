@@ -26,6 +26,8 @@ import type {
 import type {
   AppErrorResponse,
   NoteListResponse,
+  NoteParticipantListResponse,
+  NoteParticipantsRequest,
   NoteRequest,
   NoteResponse,
   UnauthorizedResponse,
@@ -618,6 +620,142 @@ export const useUpdateNote = <
   TContext
 > => {
   return useMutation(getUpdateNoteMutationOptions(options), queryClient);
+};
+export type replaceNoteParticipantsResponse200 = {
+  data: NoteParticipantListResponse;
+  status: 200;
+};
+
+export type replaceNoteParticipantsResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type replaceNoteParticipantsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type replaceNoteParticipantsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type replaceNoteParticipantsResponseSuccess =
+  replaceNoteParticipantsResponse200 & {
+    headers: Headers;
+  };
+export type replaceNoteParticipantsResponseError = (
+  | replaceNoteParticipantsResponse400
+  | replaceNoteParticipantsResponse401
+  | replaceNoteParticipantsResponse404
+) & {
+  headers: Headers;
+};
+
+export type replaceNoteParticipantsResponse =
+  | replaceNoteParticipantsResponseSuccess
+  | replaceNoteParticipantsResponseError;
+
+export const getReplaceNoteParticipantsUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/participants`;
+};
+
+/**
+ * 노트의 참여자를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 참여자를 전원 지운다. 워크스페이스 멤버만 참여자가 될 수 있고, 회의 상태와 무관하게 언제나 호출할 수 있다.
+ * @summary 노트 참여자 교체
+ */
+export const replaceNoteParticipants = async (
+  noteId: string,
+  noteParticipantsRequest?: NoteParticipantsRequest,
+  options?: RequestInit
+): Promise<replaceNoteParticipantsResponse> => {
+  return apiFetch<replaceNoteParticipantsResponse>(
+    getReplaceNoteParticipantsUrl(noteId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(noteParticipantsRequest),
+    }
+  );
+};
+
+export const getReplaceNoteParticipantsMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replaceNoteParticipants>>,
+    TError,
+    { noteId: string; data?: NoteParticipantsRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replaceNoteParticipants>>,
+  TError,
+  { noteId: string; data?: NoteParticipantsRequest },
+  TContext
+> => {
+  const mutationKey = ["replaceNoteParticipants"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replaceNoteParticipants>>,
+    { noteId: string; data?: NoteParticipantsRequest }
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return replaceNoteParticipants(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplaceNoteParticipantsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replaceNoteParticipants>>
+>;
+export type ReplaceNoteParticipantsMutationBody =
+  | NoteParticipantsRequest
+  | undefined;
+export type ReplaceNoteParticipantsMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 노트 참여자 교체
+ */
+export const useReplaceNoteParticipants = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replaceNoteParticipants>>,
+      TError,
+      { noteId: string; data?: NoteParticipantsRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof replaceNoteParticipants>>,
+  TError,
+  { noteId: string; data?: NoteParticipantsRequest },
+  TContext
+> => {
+  return useMutation(
+    getReplaceNoteParticipantsMutationOptions(options),
+    queryClient
+  );
 };
 export type getNotesResponse200 = {
   data: NoteListResponse;

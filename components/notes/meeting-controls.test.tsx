@@ -209,25 +209,23 @@ describe("MeetingControls", () => {
       screen.getByRole("timer", { name: "누적 기록 시간" })
     ).toHaveTextContent("01:05");
     expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass(
-      "h-11"
+      "h-10"
     );
   });
 
-  it("종료된 회의는 요약 보기만 제공한다", () => {
-    const onMeetingEnded = vi.fn();
+  // `요약 보기` 버튼은 없앴다 — 바로 위 탭 줄에 `요약`이 있어 같은 곳으로 가는 길이 둘이었다.
+  it("종료된 회의는 회의 종료도 요약 보기도 내놓지 않는다", () => {
     render(
       <MeetingControls
         note={note({
           meetingStatus: "ENDED",
           activeSessionStartedAt: null,
         })}
-        onMeetingEnded={onMeetingEnded}
+        onMeetingEnded={vi.fn()}
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "요약 보기" }));
-
-    expect(onMeetingEnded).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "요약 보기" })).toBeNull();
     expect(screen.queryByRole("button", { name: "회의 종료" })).toBeNull();
   });
 });

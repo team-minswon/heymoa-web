@@ -8,7 +8,11 @@
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { NoteListResponse, NoteResponse } from "../models";
+import type {
+  NoteListResponse,
+  NoteParticipantListResponse,
+  NoteResponse,
+} from "../models";
 
 export const getGetNoteResponseMock = (): NoteResponse => ({
   success: true,
@@ -23,6 +27,14 @@ export const getGetNoteResponseMock = (): NoteResponse => ({
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
     meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
+    participants: [
+      {
+        userId: "0HZX2K7M9Q4AC",
+        name: "홍길동",
+        email: "hong@example.com",
+        image: "https://cdn.example.com/avatars/hong.png",
+      },
+    ],
   },
   error: null,
 });
@@ -40,9 +52,33 @@ export const getUpdateNoteResponseMock = (): NoteResponse => ({
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
     meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
+    participants: [
+      {
+        userId: "0HZX2K7M9Q4AC",
+        name: "홍길동",
+        email: "hong@example.com",
+        image: "https://cdn.example.com/avatars/hong.png",
+      },
+    ],
   },
   error: null,
 });
+
+export const getReplaceNoteParticipantsResponseMock =
+  (): NoteParticipantListResponse => ({
+    success: true,
+    data: {
+      participants: [
+        {
+          userId: "0HZX2K7M9Q4AC",
+          name: "홍길동",
+          email: "hong@example.com",
+          image: "https://cdn.example.com/avatars/hong.png",
+        },
+      ],
+    },
+    error: null,
+  });
 
 export const getGetNotesResponseMock = (): NoteListResponse => ({
   success: true,
@@ -60,6 +96,14 @@ export const getGetNotesResponseMock = (): NoteListResponse => ({
         recordedDurationMs: 6500,
         activeSessionStartedAt: "2026-07-14T01:02:03Z",
         meetingStartedBy: { userId: "0HZX2K7M9Q4AC", name: "홍길동" },
+        participants: [
+          {
+            userId: "0HZX2K7M9Q4AC",
+            name: "홍길동",
+            email: "hong@example.com",
+            image: "https://cdn.example.com/avatars/hong.png",
+          },
+        ],
       },
     ],
   },
@@ -79,6 +123,14 @@ export const getCreateNoteResponseMock = (): NoteResponse => ({
     recordedDurationMs: 0,
     activeSessionStartedAt: null,
     meetingStartedBy: null,
+    participants: [
+      {
+        userId: "0HZX2K7M9Q4AC",
+        name: "홍길동",
+        email: "hong@example.com",
+        image: "https://cdn.example.com/avatars/hong.png",
+      },
+    ],
   },
   error: null,
 });
@@ -152,6 +204,30 @@ export const getUpdateNoteMockHandler = (
   );
 };
 
+export const getReplaceNoteParticipantsMockHandler = (
+  overrideResponse?:
+    | NoteParticipantListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<NoteParticipantListResponse> | NoteParticipantListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notes/:noteId/participants",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReplaceNoteParticipantsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
 export const getGetNotesMockHandler = (
   overrideResponse?:
     | NoteListResponse
@@ -203,6 +279,7 @@ export const getNotesMock = () => [
   getGetNoteMockHandler(),
   getDeleteNoteMockHandler(),
   getUpdateNoteMockHandler(),
+  getReplaceNoteParticipantsMockHandler(),
   getGetNotesMockHandler(),
   getCreateNoteMockHandler(),
 ];

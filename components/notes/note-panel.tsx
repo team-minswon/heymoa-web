@@ -260,8 +260,8 @@ export function NotePanel({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-lg"
-                      className="size-11 rounded-full"
+                      size="icon-xl"
+                      className="rounded-full"
                       aria-label={
                         sharedTurnActive
                           ? "답변이 끝나면 확장할 수 있습니다"
@@ -276,8 +276,8 @@ export function NotePanel({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-lg"
-                    className="size-11 rounded-full"
+                    size="icon-xl"
+                    className="rounded-full"
                     aria-label="노트 닫기"
                     onClick={onClose}
                   >
@@ -307,23 +307,21 @@ export function NotePanel({
             <div className="mx-auto w-full max-w-[820px]">
               <TabsList
                 variant="line"
-                className="h-11 w-full justify-start gap-6"
+                className="h-10 w-full justify-start gap-6"
               >
-                <TabsTrigger value="transcript">
-                  {view === "side"
-                    ? phase === "ended"
-                      ? "기록"
-                      : "전사"
-                    : "실시간 전사"}
-                </TabsTrigger>
-                {showSideChatTab ? (
-                  <TabsTrigger value="chat">챗봇</TabsTrigger>
-                ) : null}
-                {/* 요약은 종료 시 생성되지만 full은 항상 3탭 — 종료 전엔 탭이 안내를 보인다. */}
+                {/* 순서는 정보 → 스크립트 → 요약이고 정보가 기본이다. 회의를 열면 먼저
+                    보이는 것이 제목·참여자·시각이고, 전사는 필요할 때 넘어간다.
+                    라벨은 뷰·상태에 따라 갈리지 않는다 — 같은 탭이 화면마다 다른 이름으로
+                    불리면(전사/실시간 전사/기록) 같은 자리인지 알기 어렵다. */}
+                <TabsTrigger value="details">정보</TabsTrigger>
+                <TabsTrigger value="transcript">스크립트</TabsTrigger>
+                {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
                 {showSummaryTab ? (
                   <TabsTrigger value="summary">요약</TabsTrigger>
                 ) : null}
-                <TabsTrigger value="details">노트 정보</TabsTrigger>
+                {showSideChatTab ? (
+                  <TabsTrigger value="chat">챗봇</TabsTrigger>
+                ) : null}
               </TabsList>
             </div>
           </div>
@@ -397,7 +395,7 @@ export function NotePanel({
                 errorLabel="노트를 불러오지 못했습니다"
                 resetKeys={[noteId]}
               >
-                <NoteDetails noteId={noteId} />
+                <NoteDetails noteId={noteId} workspaceId={workspaceId} />
               </DataBoundary>
             </ScrollArea>
           </TabsContent>

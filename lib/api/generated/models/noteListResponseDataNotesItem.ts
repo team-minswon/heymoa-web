@@ -7,6 +7,7 @@
  */
 import type { NoteListResponseDataNotesItemMeetingStartedBy } from "./noteListResponseDataNotesItemMeetingStartedBy";
 import type { NoteListResponseDataNotesItemMeetingStatus } from "./noteListResponseDataNotesItemMeetingStatus";
+import type { NoteListResponseDataNotesItemParticipantsItem } from "./noteListResponseDataNotesItemParticipantsItem";
 
 export type NoteListResponseDataNotesItem = {
   /**
@@ -57,6 +58,8 @@ export type NoteListResponseDataNotesItem = {
    * @nullable
    */
   activeSessionStartedAt: string | null;
+  /** 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열 */
+  participants: NoteListResponseDataNotesItemParticipantsItem[];
   /** 노트 수정 시각 */
   updatedAt: string;
 };

@@ -45,6 +45,7 @@ function note(
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: "2026-07-11T00:00:00Z",
     meetingStartedBy: null,
+    participants: [],
     ...overrides,
   };
 }

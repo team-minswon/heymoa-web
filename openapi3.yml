@@ -1,16 +1,3 @@
-# heymoa-server 빌드 산출물의 public 미러. 출처는 docs repo의 `INDEX.md`가
-# 가리키는 server public contract다.
-# 손으로 수정하지 말 것. 갱신: docs repo에서 복사한 뒤 /internal/** 경로를 제거.
-#
-# **생성은 반드시 clean과 함께다.** `./gradlew clean openapi3` — clean 없이 돌리면
-# build/generated-snippets/의 옛 스니펫을 전부 긁어모아 삭제된 API가 부활한다.
-# 실제로 APP-214에서 meeting-pause·meeting-resume가 되살아나 37경로가 나왔다(정상 35).
-#
-# /internal/** 3경로(callbacks/analyses, notes/{noteId}/context,
-# workspaces/{workspaceId}/notes)는 heymoa-ai가 호출하는 경로라 web에서 제외한다 —
-# 남기면 브라우저가 부르지 않는 훅과 MSW 목이 생긴다. internalToken 보안 스킴도
-# 참조하는 경로가 사라져 함께 제거했다. 그 경로 전용 스키마와 그 전이 의존성도 같이 뺀다 —
-# 남기면 아무도 안 쓰는 모델이 생성된다.
 ---
 openapi: "3.0.1"
 info:
@@ -523,6 +510,11 @@ paths:
                       meetingStartedBy:
                         userId: "0HZX2K7M9Q4AC"
                         name: "홍길동"
+                      participants:
+                      - userId: "0HZX2K7M9Q4AC"
+                        name: "홍길동"
+                        email: "hong@example.com"
+                        image: "https://cdn.example.com/avatars/hong.png"
                     error: null
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -679,6 +671,11 @@ paths:
                       meetingStartedBy:
                         userId: "0HZX2K7M9Q4AC"
                         name: "홍길동"
+                      participants:
+                      - userId: "0HZX2K7M9Q4AC"
+                        name: "홍길동"
+                        email: "hong@example.com"
+                        image: "https://cdn.example.com/avatars/hong.png"
                     error: null
         "404":
           description: "요청한 리소스를 찾을 수 없음"
@@ -1664,6 +1661,109 @@ paths:
           $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
+  /v1/notes/{noteId}/participants:
+    put:
+      tags:
+      - "Notes"
+      summary: "노트 참여자 교체"
+      description: "노트의 참여자를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 참여자를 전원 지운다\
+        . 워크스페이스 멤버만 참여자가 될 수 있고, 회의 상태와 무관하게 언제나 호출할 수 있다."
+      operationId: "replaceNoteParticipants"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        description: "노트의 13자리 TSID"
+        required: true
+        schema:
+          type: "string"
+          description: "노트의 13자리 TSID"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteParticipantsRequest"
+            examples:
+              replaceNoteParticipants_Success:
+                value:
+                  userIds:
+                  - "0HZX2K7M9Q4AC"
+              replaceNoteParticipants_NotWorkspaceMemberException:
+                value:
+                  userIds:
+                  - "0HZX2K7M9Q4AC"
+              replaceNoteParticipants_NoteNotFoundException:
+                value:
+                  userIds:
+                  - "0HZX2K7M9Q4AC"
+              replaceNoteParticipants_WorkspaceNotFoundException:
+                value:
+                  userIds:
+                  - "0HZX2K7M9Q4AC"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteParticipantListResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      participants:
+                      - userId: "0HZX2K7M9Q4AC"
+                        name: "홍길동"
+                        email: "hong@example.com"
+                        image: "https://cdn.example.com/avatars/hong.png"
+                    error: null
+        "400":
+          description: "잘못된 요청"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                NOT_WORKSPACE_MEMBER:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOT_WORKSPACE_MEMBER"
+                      message: "워크스페이스 멤버만 참여자로 등록할 수 있습니다."
+                      details: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
   /v1/notes/{noteId}/transcript:
     get:
       tags:
@@ -2005,6 +2105,11 @@ paths:
                         meetingStartedBy:
                           userId: "0HZX2K7M9Q4AC"
                           name: "홍길동"
+                        participants:
+                        - userId: "0HZX2K7M9Q4AC"
+                          name: "홍길동"
+                          email: "hong@example.com"
+                          image: "https://cdn.example.com/avatars/hong.png"
                     error: null
         "400":
           description: "잘못된 요청"
@@ -2084,6 +2189,11 @@ paths:
                       recordedDurationMs: 0
                       activeSessionStartedAt: null
                       meetingStartedBy: null
+                      participants:
+                      - userId: "0HZX2K7M9Q4AC"
+                        name: "홍길동"
+                        email: "hong@example.com"
+                        image: "https://cdn.example.com/avatars/hong.png"
                     error: null
         "400":
           description: "잘못된 요청"
@@ -4117,141 +4227,6 @@ components:
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
           minLength: 13
           maxLength: 13
-    NoteListResponse:
-      title: "NoteListResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "notes"
-          type: "object"
-          properties:
-            notes:
-              type: "array"
-              description: "노트 목록"
-              items:
-                required:
-                - "activeSessionStartedAt"
-                - "createdAt"
-                - "lastRecordedAt"
-                - "meetingStartedAt"
-                - "meetingStartedBy"
-                - "meetingStatus"
-                - "noteId"
-                - "projectId"
-                - "recordedDurationMs"
-                - "title"
-                - "updatedAt"
-                type: "object"
-                properties:
-                  meetingStartedAt:
-                    type: "string"
-                    description: "최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)"
-                    nullable: true
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  createdAt:
-                    type: "string"
-                    description: "노트 생성 시각"
-                    nullable: false
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  lastRecordedAt:
-                    type: "string"
-                    description: "가장 최근 종료된 전사 세션의 시작 시각"
-                    nullable: true
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  meetingStartedBy:
-                    type: "object"
-                    properties:
-                      name:
-                        type: "string"
-                        description: "회의 시작자 이름"
-                        nullable: false
-                        example: "홍길동"
-                      userId:
-                        type: "string"
-                        description: "회의 시작자의 13자리 TSID"
-                        nullable: false
-                        example: "0HZX2K7M9Q4AC"
-                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
-                    description: "회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)"
-                    nullable: true
-                    required:
-                    - "userId"
-                    - "name"
-                  recordedDurationMs:
-                    type: "integer"
-                    description: "ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt\
-                      \ 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0"
-                    nullable: false
-                    example: 6500
-                    format: "int64"
-                    minimum: 0
-                  meetingStatus:
-                    type: "string"
-                    description: "회의 상태"
-                    nullable: false
-                    example: "IN_PROGRESS"
-                    enum:
-                    - "NOT_STARTED"
-                    - "IN_PROGRESS"
-                    - "PAUSED"
-                    - "ENDED"
-                  noteId:
-                    type: "string"
-                    description: "노트의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AF"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  title:
-                    type: "string"
-                    description: "노트 제목"
-                    nullable: false
-                    example: "주간 회의"
-                    maxLength: 200
-                  projectId:
-                    type: "string"
-                    description: "프로젝트의 13자리 TSID"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AE"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  activeSessionStartedAt:
-                    type: "string"
-                    description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
-                    nullable: true
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-                  updatedAt:
-                    type: "string"
-                    description: "노트 수정 시각"
-                    nullable: false
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
-              nullable: false
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: "성공 시 null인 오류 정보"
     WorkspaceResponse:
       title: "WorkspaceResponse"
       required:
@@ -4570,8 +4545,8 @@ components:
           nullable: true
           example: "제품을 만드는 팀의 워크스페이스"
           maxLength: 1000
-    NoteResponse:
-      title: "NoteResponse"
+    NoteListResponse:
+      title: "NoteListResponse"
       required:
       - "data"
       - "error"
@@ -4580,103 +4555,155 @@ components:
       properties:
         data:
           required:
-          - "activeSessionStartedAt"
-          - "createdAt"
-          - "meetingStartedAt"
-          - "meetingStartedBy"
-          - "meetingStatus"
-          - "noteId"
-          - "projectId"
-          - "recordedDurationMs"
-          - "title"
-          - "updatedAt"
+          - "notes"
           type: "object"
           properties:
-            createdAt:
-              type: "string"
-              description: "노트 생성 시각"
+            notes:
+              type: "array"
+              description: "노트 목록"
+              items:
+                required:
+                - "activeSessionStartedAt"
+                - "createdAt"
+                - "lastRecordedAt"
+                - "meetingStartedAt"
+                - "meetingStartedBy"
+                - "meetingStatus"
+                - "noteId"
+                - "participants"
+                - "projectId"
+                - "recordedDurationMs"
+                - "title"
+                - "updatedAt"
+                type: "object"
+                properties:
+                  meetingStartedAt:
+                    type: "string"
+                    description: "최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)"
+                    nullable: true
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  createdAt:
+                    type: "string"
+                    description: "노트 생성 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  lastRecordedAt:
+                    type: "string"
+                    description: "가장 최근 종료된 전사 세션의 시작 시각"
+                    nullable: true
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  meetingStartedBy:
+                    type: "object"
+                    properties:
+                      name:
+                        type: "string"
+                        description: "회의 시작자 이름"
+                        nullable: false
+                        example: "홍길동"
+                      userId:
+                        type: "string"
+                        description: "회의 시작자의 13자리 TSID"
+                        nullable: false
+                        example: "0HZX2K7M9Q4AC"
+                        pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                        minLength: 13
+                        maxLength: 13
+                    description: "회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)"
+                    nullable: true
+                    required:
+                    - "userId"
+                    - "name"
+                  recordedDurationMs:
+                    type: "integer"
+                    description: "ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt\
+                      \ 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0"
+                    nullable: false
+                    example: 6500
+                    format: "int64"
+                    minimum: 0
+                  meetingStatus:
+                    type: "string"
+                    description: "회의 상태"
+                    nullable: false
+                    example: "IN_PROGRESS"
+                    enum:
+                    - "NOT_STARTED"
+                    - "IN_PROGRESS"
+                    - "PAUSED"
+                    - "ENDED"
+                  noteId:
+                    type: "string"
+                    description: "노트의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AF"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  title:
+                    type: "string"
+                    description: "노트 제목"
+                    nullable: false
+                    example: "주간 회의"
+                    maxLength: 200
+                  projectId:
+                    type: "string"
+                    description: "프로젝트의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AE"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  activeSessionStartedAt:
+                    type: "string"
+                    description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
+                    nullable: true
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
+                  participants:
+                    type: "array"
+                    description: "회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열"
+                    items:
+                      required:
+                      - "email"
+                      - "image"
+                      - "name"
+                      - "userId"
+                      type: "object"
+                      properties:
+                        image:
+                          type: "string"
+                          description: "참여자 프로필 이미지 URL (없으면 null)"
+                          nullable: true
+                          example: "https://cdn.example.com/avatars/hong.png"
+                        name:
+                          type: "string"
+                          description: "참여자 이름"
+                          nullable: false
+                          example: "홍길동"
+                        userId:
+                          type: "string"
+                          description: "참여자의 13자리 TSID"
+                          nullable: false
+                          example: "0HZX2K7M9Q4AC"
+                          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                          minLength: 13
+                          maxLength: 13
+                        email:
+                          type: "string"
+                          description: "참여자 이메일"
+                          nullable: false
+                          example: "hong@example.com"
+                    nullable: false
+                  updatedAt:
+                    type: "string"
+                    description: "노트 수정 시각"
+                    nullable: false
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
               nullable: false
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
-            meetingStartedBy:
-              type: "object"
-              properties:
-                name:
-                  type: "string"
-                  description: "회의 시작자 이름"
-                  nullable: false
-                  example: "홍길동"
-                userId:
-                  type: "string"
-                  description: "회의 시작자의 13자리 TSID"
-                  nullable: false
-                  example: "0HZX2K7M9Q4AC"
-                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
-              description: "회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)"
-              nullable: true
-              required:
-              - "userId"
-              - "name"
-            recordedDurationMs:
-              type: "integer"
-              description: "ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt\
-                \ 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0"
-              nullable: false
-              example: 0
-              format: "int64"
-              minimum: 0
-            meetingStatus:
-              type: "string"
-              description: "회의 상태"
-              nullable: false
-              example: "NOT_STARTED"
-              enum:
-              - "NOT_STARTED"
-              - "IN_PROGRESS"
-              - "PAUSED"
-              - "ENDED"
-            noteId:
-              type: "string"
-              description: "노트의 13자리 TSID"
-              nullable: false
-              example: "0HZX2K7M9Q4AF"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            title:
-              type: "string"
-              description: "노트 제목"
-              nullable: false
-              example: "주간 회의"
-              maxLength: 200
-            projectId:
-              type: "string"
-              description: "프로젝트의 13자리 TSID"
-              nullable: false
-              example: "0HZX2K7M9Q4AE"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            updatedAt:
-              type: "string"
-              description: "노트 수정 시각"
-              nullable: false
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
-            meetingStartedAt:
-              type: "string"
-              description: "최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)"
-              nullable: true
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
-            activeSessionStartedAt:
-              type: "string"
-              description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
-              nullable: true
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -5039,6 +5066,161 @@ components:
           nullable: false
           example: "kim@example.com"
           format: "email"
+    NoteResponse:
+      title: "NoteResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "activeSessionStartedAt"
+          - "createdAt"
+          - "meetingStartedAt"
+          - "meetingStartedBy"
+          - "meetingStatus"
+          - "noteId"
+          - "participants"
+          - "projectId"
+          - "recordedDurationMs"
+          - "title"
+          - "updatedAt"
+          type: "object"
+          properties:
+            createdAt:
+              type: "string"
+              description: "노트 생성 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            meetingStartedBy:
+              type: "object"
+              properties:
+                name:
+                  type: "string"
+                  description: "회의 시작자 이름"
+                  nullable: false
+                  example: "홍길동"
+                userId:
+                  type: "string"
+                  description: "회의 시작자의 13자리 TSID"
+                  nullable: false
+                  example: "0HZX2K7M9Q4AC"
+                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  minLength: 13
+                  maxLength: 13
+              description: "회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)"
+              nullable: true
+              required:
+              - "userId"
+              - "name"
+            recordedDurationMs:
+              type: "integer"
+              description: "ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt\
+                \ 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0"
+              nullable: false
+              example: 0
+              format: "int64"
+              minimum: 0
+            meetingStatus:
+              type: "string"
+              description: "회의 상태"
+              nullable: false
+              example: "NOT_STARTED"
+              enum:
+              - "NOT_STARTED"
+              - "IN_PROGRESS"
+              - "PAUSED"
+              - "ENDED"
+            noteId:
+              type: "string"
+              description: "노트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AF"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            title:
+              type: "string"
+              description: "노트 제목"
+              nullable: false
+              example: "주간 회의"
+              maxLength: 200
+            projectId:
+              type: "string"
+              description: "프로젝트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AE"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            participants:
+              type: "array"
+              description: "회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열"
+              items:
+                required:
+                - "email"
+                - "image"
+                - "name"
+                - "userId"
+                type: "object"
+                properties:
+                  image:
+                    type: "string"
+                    description: "참여자 프로필 이미지 URL (없으면 null)"
+                    nullable: true
+                    example: "https://cdn.example.com/avatars/hong.png"
+                  name:
+                    type: "string"
+                    description: "참여자 이름"
+                    nullable: false
+                    example: "홍길동"
+                  userId:
+                    type: "string"
+                    description: "참여자의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AC"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  email:
+                    type: "string"
+                    description: "참여자 이메일"
+                    nullable: false
+                    example: "hong@example.com"
+              nullable: false
+            updatedAt:
+              type: "string"
+              description: "노트 수정 시각"
+              nullable: false
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            meetingStartedAt:
+              type: "string"
+              description: "최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)"
+              nullable: true
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+            activeSessionStartedAt:
+              type: "string"
+              description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
+              nullable: true
+              example: "2026-07-14T01:02:03Z"
+              format: "date-time"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     LogoutResponse:
       title: "LogoutResponse"
       required:
@@ -5088,6 +5270,19 @@ components:
           nullable: true
           example: "제품을 만드는 팀의 워크스페이스"
           maxLength: 1000
+    NoteRequest:
+      title: "NoteRequest"
+      required:
+      - "title"
+      type: "object"
+      properties:
+        title:
+          type: "string"
+          description: "노트 제목"
+          nullable: false
+          example: "주간 회의"
+          minLength: 1
+          maxLength: 200
     AgentChatV2Response:
       title: "AgentChatV2Response"
       required:
@@ -5158,19 +5353,6 @@ components:
           enum:
           - null
           description: "성공 시 null인 오류 정보"
-    NoteRequest:
-      title: "NoteRequest"
-      required:
-      - "title"
-      type: "object"
-      properties:
-        title:
-          type: "string"
-          description: "노트 제목"
-          nullable: false
-          example: "주간 회의"
-          minLength: 1
-          maxLength: 200
     WorkspaceMemberListResponse:
       title: "WorkspaceMemberListResponse"
       required:
@@ -6077,6 +6259,83 @@ components:
           nullable: true
           example: "Heymoa 모바일 앱 프로젝트"
           maxLength: 1000
+    NoteParticipantsRequest:
+      title: "NoteParticipantsRequest"
+      required:
+      - "userIds"
+      type: "object"
+      properties:
+        userIds:
+          type: "array"
+          description: "참여자로 남길 유저의 13자리 TSID 목록. 이 목록이 곧 최종 상태이며 여기 없는 참여자는 지워진다"
+          items:
+            oneOf:
+            - type: "object"
+            - type: "boolean"
+            - type: "string"
+            - type: "number"
+          nullable: false
+          maxLength: 200
+    NoteParticipantListResponse:
+      title: "NoteParticipantListResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "participants"
+          type: "object"
+          properties:
+            participants:
+              type: "array"
+              description: "교체 후의 참여자 목록. 이름 오름차순이다"
+              items:
+                required:
+                - "email"
+                - "image"
+                - "name"
+                - "userId"
+                type: "object"
+                properties:
+                  image:
+                    type: "string"
+                    description: "참여자 프로필 이미지 URL (없으면 null)"
+                    nullable: true
+                    example: "https://cdn.example.com/avatars/hong.png"
+                  name:
+                    type: "string"
+                    description: "참여자 이름"
+                    nullable: false
+                    example: "홍길동"
+                  userId:
+                    type: "string"
+                    description: "참여자의 13자리 TSID"
+                    nullable: false
+                    example: "0HZX2K7M9Q4AC"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    minLength: 13
+                    maxLength: 13
+                  email:
+                    type: "string"
+                    description: "참여자 이메일"
+                    nullable: false
+                    example: "hong@example.com"
+              nullable: false
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     AnalysisResultResponse:
       title: "AnalysisResultResponse"
       required:

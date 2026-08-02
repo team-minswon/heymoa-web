@@ -61,6 +61,7 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
                 meetingStatus: "IN_PROGRESS",
                 meetingStartedAt: "2026-07-11T00:00:00Z",
                 meetingStartedBy: { userId: "user-me", name: "나" },
+                participants: [],
               },
               {
                 noteId: "01K0000000003",
@@ -73,6 +74,7 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
                 meetingStatus: "ENDED",
                 meetingStartedAt: "2026-07-09T00:00:00Z",
                 meetingStartedBy: { userId: "user-other", name: "남" },
+                participants: [],
               },
             ],
           },

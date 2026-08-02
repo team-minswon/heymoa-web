@@ -79,11 +79,16 @@ describe("NoteArchive", () => {
     ];
     render(<NoteArchive noteId="01K0000000002" />);
 
+    // 전사와 Q&A는 세그먼트로 갈라 한 번에 하나만 보인다.
     expect(screen.getByText("배포 일정을 정합시다.")).toBeTruthy();
-    expect(screen.getByText("회의 중 챗봇 대화")).toBeTruthy();
+    expect(screen.queryByText("결정된 것만 정리해줘")).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
+
     expect(screen.getByText("결정된 것만 정리해줘")).toBeTruthy();
     expect(screen.getByText("배포는 금요일로 정했습니다.")).toBeTruthy();
     expect(screen.getByText("홍길동")).toBeTruthy();
+    expect(screen.queryByText("배포 일정을 정합시다.")).toBeNull();
   });
 
   it("전사 로드 실패를 빈 아카이브가 아니라 오류·재시도로 보인다", () => {
@@ -107,12 +112,14 @@ describe("NoteArchive", () => {
     ];
     data.chatFails = true;
     render(<NoteArchive noteId="01K0000000002" />);
+    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
     expect(screen.getByText("챗봇 대화를 불러오지 못했습니다.")).toBeTruthy();
     // 전사 실패와 같은 재시도 경로를 준다.
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
-  it("공유 Q&A가 없으면 Q&A 섹션을 그리지 않는다", () => {
+  // 탭이 나타났다 사라지면 같은 자리인지 알기 어렵다 — 비어 있어도 탭은 남기고 안내를 준다.
+  it("공유 Q&A가 없어도 탭은 남기고 빈 안내를 보인다", () => {
     data.segments = [
       {
         segmentId: "s1",
@@ -125,15 +132,18 @@ describe("NoteArchive", () => {
     ];
     render(<NoteArchive noteId="01K0000000002" />);
     expect(screen.getByText("짧은 회의.")).toBeTruthy();
-    expect(screen.queryByText("회의 중 챗봇 대화")).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
+
+    expect(
+      screen.getByText("회의 중 챗봇에 물어본 내용이 없습니다.")
+    ).toBeTruthy();
   });
 
   it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {
     render(<NoteArchive noteId="01K0000000002" />);
 
-    const content = screen.getByRole("region", {
-      name: "회의 전사 아카이브",
-    }).parentElement!;
+    const content = screen.getByTestId("note-archive-content");
     expect(content.classList.contains("pb-7")).toBe(true);
     expect(content.classList.contains("sm:pb-9")).toBe(true);
     expect(content.classList.contains("lg:pb-28")).toBe(true);

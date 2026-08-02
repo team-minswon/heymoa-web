@@ -41,6 +41,17 @@ const INVITATION_ERROR_MESSAGES: Record<string, string> = {
 };
 
 /**
+ * `resultOf`가 기본값이 아닌 코드로 떨어질 때 쓸 문구. 없으면 원시 코드가 그대로
+ * `error.message`에 들어가 실서버 봉투와 갈라진다 — `errorMessageOf`가 그걸 그대로 그린다.
+ */
+const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
+  NOTE_NOT_FOUND: "노트를 찾을 수 없습니다.",
+  WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
+  PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
+  NOT_WORKSPACE_MEMBER: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.",
+};
+
+/**
  * 전사 세션 생성이 409로 거절되는 이유들. 문구는 계약(`openapi3.yml`)의 409 예시 그대로다.
  */
 const SESSION_CONFLICTS: Record<string, string> = {
@@ -62,9 +73,19 @@ const NOT_FOUND_CODES = new Set([
   "AGENT_CHAT_NOT_FOUND",
 ]);
 
+/** 요청 값이 틀린 것은 400이다 — 없음(404)이나 상태 충돌(409)과 구분한다. */
+const BAD_REQUEST_CODES = new Set(["NOT_WORKSPACE_MEMBER"]);
+
+const NOT_WORKSPACE_MEMBER = {
+  code: "NOT_WORKSPACE_MEMBER",
+  message: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.",
+  status: 400,
+} as const;
+
 /** mockDb가 던지는 계약 코드. 이것 말고는 목 자신의 버그이므로 fallback으로 떨어뜨린다. */
 const KNOWN_CODES = new Set([
   ...NOT_FOUND_CODES,
+  ...BAD_REQUEST_CODES,
   ...FORBIDDEN_CODES,
   ...INVITATION_NOT_FOUND_CODES,
   "PROJECT_HAS_NOTES",
@@ -76,6 +97,7 @@ const KNOWN_CODES = new Set([
 function statusOf(code: string) {
   if (FORBIDDEN_CODES.has(code)) return 403;
   if (NOT_FOUND_CODES.has(code)) return 404;
+  if (BAD_REQUEST_CODES.has(code)) return 400;
   return 409;
 }
 
@@ -142,7 +164,10 @@ async function resultOf<T>(
         data: null,
         error: {
           code,
-          message: code === onError.code ? onError.message : code,
+          message:
+            code === onError.code
+              ? onError.message
+              : (CONTRACT_ERROR_MESSAGES[code] ?? code),
           details: null,
         },
       },
@@ -332,6 +357,18 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
   ),
+  http.put("*/v1/notes/:noteId/participants", async ({ request, params }) =>
+    resultOf(
+      async () =>
+        mockDb.replaceNoteParticipants(
+          id(params.noteId),
+          ((await request.json()) as { userIds?: string[] }).userIds ?? []
+        ),
+      // 기본 BAD_REQUEST를 쓰면 error.message에 원시 코드가 그대로 들어간다.
+      // 계약의 400 문구를 그대로 돌려줘야 자동 토스트가 실제 서버와 같아진다.
+      NOT_WORKSPACE_MEMBER
+    )
+  ),
   http.patch("*/v1/notes/:noteId", async ({ request, params }) =>
     resultOf(
       async () =>
@@ -350,7 +387,8 @@ export const restHandlers = [
       mockDb.deleteNote(id(params.noteId));
       return new HttpResponse(null, { status: 204 });
     } catch (error) {
-      const code = error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
+      const code =
+        error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
       if (code === "MEETING_IN_PROGRESS") {
         return HttpResponse.json(
           {
@@ -392,13 +430,11 @@ export const restHandlers = [
       )
     )
   ),
-  http.get(
-    "*/v1/notes/:noteId/transcription-sessions/current",
-    ({ params }) =>
-      resultOf(
-        () => mockDb.getCurrentSession(id(params.noteId)),
-        notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
-      )
+  http.get("*/v1/notes/:noteId/transcription-sessions/current", ({ params }) =>
+    resultOf(
+      () => mockDb.getCurrentSession(id(params.noteId)),
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    )
   ),
   http.get("*/v1/notes/:noteId/transcript", ({ params }) =>
     resultOf(
@@ -604,6 +640,14 @@ export const restHandlers = [
   http.get("*/v1/notes/:noteId/chat/messages", ({ params }) =>
     commandResult(() => mockDb.getNoteSharedChat(id(params.noteId)))
   ),
+
+  // 목 전용(계약 밖, `_mock` 접두사): 대기 중인 분석을 완료로 넘긴다.
+  // 실제로는 heymoa-ai의 callback이 채우는데 목에는 그걸 밀어줄 주체가 없어,
+  // 이게 없으면 **요약 화면(개요·액션 아이템·인사이트)을 목에서 한 번도 볼 수 없다.**
+  http.post("*/v1/notes/:noteId/_mock/advance-analysis", ({ params }) => {
+    mockDb.advanceAnalysis(id(params.noteId));
+    return new HttpResponse(null, { status: 204 });
+  }),
 
   // 목 전용(계약 밖, `_mock` 접두사): 관전자 화면을 재현하려고 남의 잠금을 심는다.
   // e2e는 페이지 안에서 fetch로 이 경로를 쳐 서비스 워커가 상태를 세우게 한다.

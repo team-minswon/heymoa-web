@@ -48,6 +48,7 @@ function note(
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: null,
     meetingStartedBy: null,
+    participants: [],
   };
 }
 

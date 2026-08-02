@@ -40,7 +40,10 @@ export function normalizeNoteViewQuery(
               phase === "unknown" ||
               sharedTurnActive)
           ? "chat"
-          : "transcript";
+          : rawTab === "transcript"
+            ? "transcript"
+            : // 기본은 정보다 — 회의를 열면 제목·참여자·시각이 먼저 보인다.
+              "details";
   return { view, tab };
 }
 
@@ -105,7 +108,7 @@ export function NoteView({
     }
     if (
       (requested.view ?? "full") === current.view &&
-      (requested.tab ?? "transcript") === current.tab
+      (requested.tab ?? "details") === current.tab
     ) {
       return;
     }

@@ -77,21 +77,12 @@ export function MeetingControls({
           <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
         </span>
       ) : null}
-      {note.meetingStatus === "ENDED" && onMeetingEnded ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11"
-          onClick={onMeetingEnded}
-        >
-          요약 보기
-        </Button>
-      ) : null}
       {canEnd ? (
         <Button
           type="button"
           variant="outline"
-          className="h-11 border-destructive/30 text-destructive"
+          size="xl"
+          className="border-destructive/30 text-destructive"
           onClick={() => setEndOpen(true)}
         >
           <Square className="size-3.5" />

@@ -36,6 +36,52 @@ function renderSummary(isEnded: boolean) {
   return render(<NoteSummary noteId="01K0000000002" isEnded={isEnded} />);
 }
 
+describe("NoteSummary 요약 블록", () => {
+  beforeEach(() => {
+    state.analysis = {
+      status: "SUCCEEDED",
+      overview: "출시 일정을 정했습니다.",
+      actionItems: "- 배포 체크리스트 작성",
+      insights: "- 일정 리스크는 QA에 몰려 있습니다.",
+    };
+    state.missing = false;
+    state.isLoading = false;
+    state.isFetching = false;
+  });
+  afterEach(cleanup);
+
+  // 세로로 쌓아 두면 요약이 길어질 때 아래 두 블록이 접힌 화면 밖으로 밀려 있는 줄도 모른다.
+  it("한 번에 한 블록만 보여주고 나머지는 탭으로 남긴다", () => {
+    render(<NoteSummary noteId="01K0000000002" isEnded />);
+
+    expect(screen.getByText("출시 일정을 정했습니다.")).toBeInTheDocument();
+    expect(screen.queryByText("배포 체크리스트 작성")).toBeNull();
+    expect(screen.getByRole("tab", { name: "액션 아이템" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "인사이트" })).toBeInTheDocument();
+  });
+
+  it("탭을 고르면 그 블록으로 바뀐다", () => {
+    render(<NoteSummary noteId="01K0000000002" isEnded />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "인사이트" }));
+
+    // 마크다운이 "- "를 목록 항목으로 바꾸므로 렌더된 문구로 찾는다.
+    expect(
+      screen.getByText("일정 리스크는 QA에 몰려 있습니다.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("출시 일정을 정했습니다.")).toBeNull();
+  });
+
+  it("내용이 빈 블록도 탭은 남기고 안내를 보여준다", () => {
+    state.analysis = { ...state.analysis, insights: "" };
+    render(<NoteSummary noteId="01K0000000002" isEnded />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "인사이트" }));
+
+    expect(screen.getByText("내용이 없습니다.")).toBeInTheDocument();
+  });
+});
+
 describe("NoteSummary", () => {
   beforeEach(() => {
     state.analysis = null;
@@ -58,7 +104,8 @@ describe("NoteSummary", () => {
     expect(screen.getByText("회의를 정리하고 있습니다")).toBeTruthy();
   });
 
-  it("SUCCEEDED면 요약 3종을 마크다운으로 그린다", () => {
+  // 세 블록은 한 화면에 쌓지 않고 탭으로 가른다 — 각 탭의 본문이 마크다운으로 그려지는지 본다.
+  it("SUCCEEDED면 요약 3종을 각 탭에서 마크다운으로 그린다", () => {
     state.analysis = {
       status: "SUCCEEDED",
       overview: "출시 일정을 정했습니다.",
@@ -67,10 +114,15 @@ describe("NoteSummary", () => {
     };
     const { container } = renderSummary(true);
     expect(screen.getByText("출시 일정을 정했습니다.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("tab", { name: "액션 아이템" }));
     expect(screen.getByText("배포 체크리스트")).toBeTruthy();
     expect(container.querySelectorAll("ul li").length).toBeGreaterThanOrEqual(
-      3
+      2
     );
+
+    fireEvent.click(screen.getByRole("tab", { name: "인사이트" }));
+    expect(screen.getByText("일정 리스크는 QA에 몰려 있습니다.")).toBeTruthy();
   });
 
   it("FAILED면 사유와 다시 분석 버튼을 보인다", () => {

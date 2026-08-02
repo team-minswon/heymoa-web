@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { errorCodeOf } from "@/lib/api/error-message";
 import {
   useGetLatestAnalysis,
@@ -203,25 +204,39 @@ function AnalyzingSkeleton() {
   );
 }
 
+/**
+ * 세 블록을 세그먼트로 가른다.
+ *
+ * 예전에는 개요 → 액션 아이템 → 인사이트를 세로로 쌓았는데, 요약이 길어지면 **아래 두 개가
+ * 접힌 화면 밖으로 밀려** 있는 줄도 모르고 지나쳤다. 한 번에 하나만 보여주고 나머지는 탭에
+ * 이름으로 남긴다.
+ *
+ * 바깥 노트 탭이 `variant="line"`이라 여기는 기본(알약) 변형을 써서 층위를 구분한다.
+ * 어느 블록을 보고 있는지는 URL에 안 남긴다 — 노트를 가리키는 링크가 바뀌지 않아야 한다.
+ */
 function SummarySections({
   analysis,
 }: {
   analysis: AnalysisResultResponseData;
 }) {
   const sections = [
-    { label: "개요", body: analysis.overview },
-    { label: "액션 아이템", body: analysis.actionItems },
-    { label: "인사이트", body: analysis.insights },
+    { value: "overview", label: "개요", body: analysis.overview },
+    { value: "actions", label: "액션 아이템", body: analysis.actionItems },
+    { value: "insights", label: "인사이트", body: analysis.insights },
   ];
   return (
     <Shell>
-      <div className="space-y-8">
-        {sections.map(({ label, body }) => (
-          <section key={label} aria-label={label}>
-            <h2 className="border-b border-[var(--el-hairline-strong)] pb-2 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+      <Tabs defaultValue="overview">
+        <TabsList>
+          {sections.map(({ value, label }) => (
+            <TabsTrigger key={value} value={value}>
               {label}
-            </h2>
-            <div className="mt-3 space-y-3">
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {sections.map(({ value, label, body }) => (
+          <TabsContent key={value} value={value} aria-label={label}>
+            <div className="mt-6 space-y-3">
               {body ? (
                 renderMarkdown(body)
               ) : (
@@ -230,9 +245,9 @@ function SummarySections({
                 </p>
               )}
             </div>
-          </section>
+          </TabsContent>
         ))}
-      </div>
+      </Tabs>
     </Shell>
   );
 }

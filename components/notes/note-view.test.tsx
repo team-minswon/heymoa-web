@@ -71,12 +71,13 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
 }));
 
 describe("normalizeNoteViewQuery", () => {
-  it("falls back to full transcript", () => {
+  // 기본 탭은 정보다 — 회의를 열면 제목·참여자·시각이 먼저 보인다.
+  it("falls back to full details", () => {
     expect(
       normalizeNoteViewQuery({ view: "invalid", tab: "invalid" }, "unknown")
     ).toEqual({
       view: "full",
-      tab: "transcript",
+      tab: "details",
     });
   });
 
@@ -86,6 +87,9 @@ describe("normalizeNoteViewQuery", () => {
     ).toEqual({ view: "full", tab: "summary" });
     expect(
       normalizeNoteViewQuery({ view: "full", tab: "chat" }, "ended")
+    ).toEqual({ view: "full", tab: "details" });
+    expect(
+      normalizeNoteViewQuery({ view: "full", tab: "transcript" }, "ended")
     ).toEqual({ view: "full", tab: "transcript" });
   });
 
@@ -100,12 +104,12 @@ describe("normalizeNoteViewQuery", () => {
 
   it.each([
     ["active", "chat", "chat"],
-    ["active", "summary", "transcript"],
+    ["active", "summary", "details"],
     ["paused", "chat", "chat"],
     ["ended", "summary", "summary"],
-    ["ended", "chat", "transcript"],
-    ["not-started", "chat", "transcript"],
-    ["not-started", "summary", "transcript"],
+    ["ended", "chat", "details"],
+    ["not-started", "chat", "details"],
+    ["not-started", "summary", "details"],
   ] as const)(
     "normalizes side %s tab %s to %s",
     (phase, requested, expected) => {
@@ -185,10 +189,10 @@ describe("NoteView", () => {
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
 
-    expect(screen.getByTestId("note-panel").textContent).toBe("transcript");
+    expect(screen.getByTestId("note-panel").textContent).toBe("details");
     await waitFor(() =>
       expect(state.replace).toHaveBeenCalledWith(
-        "/w/workspace/notes/note?view=side&tab=transcript",
+        "/w/workspace/notes/note?view=side&tab=details",
         { scroll: false }
       )
     );
@@ -251,10 +255,10 @@ describe("NoteView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "공유 턴 끝" }));
 
-    expect(screen.getByTestId("note-panel")).toHaveTextContent("transcript");
+    expect(screen.getByTestId("note-panel")).toHaveTextContent("details");
     await waitFor(() =>
       expect(state.replace).toHaveBeenCalledWith(
-        "/w/workspace/notes/note?view=side&tab=transcript",
+        "/w/workspace/notes/note?view=side&tab=details",
         { scroll: false }
       )
     );

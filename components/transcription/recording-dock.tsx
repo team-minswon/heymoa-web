@@ -51,7 +51,11 @@ export function RecordingDock({
       layout
       aria-label="녹음 제어"
       role="group"
-      className="flex min-h-11 min-w-0 max-w-full items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
+      // 높이를 44px로 **고정**한다. 예전에는 `min-h-11`(44px)로 의도해 놓고 안쪽 컨트롤이
+      // `size-11`(44px)이라 padding까지 더해 54px로 밀려 있었고, 준비 중(h-8 스피너)만 44px로
+      // 눌려 **누르는 순간 독이 줄었다 늘어났다.** 내용을 전부 `size-9`(36px)로 맞추고
+      // 껍데기에 고정 높이를 박아 어느 분기에서도 키가 못 달라지게 한다.
+      className="flex h-11 min-w-0 max-w-full items-center overflow-hidden rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] p-1 text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
       style={{ borderRadius: 9999 }}
       transition={LAYOUT_TRANSITION}
     >
@@ -61,7 +65,7 @@ export function RecordingDock({
         className="flex items-center"
         transition={LAYOUT_TRANSITION}
       >
-        <span className="flex size-8 items-center justify-center rounded-full text-[var(--el-muted)]">
+        <span className="flex size-9 items-center justify-center rounded-full text-[var(--el-muted)]">
           <Mic className="size-4" />
         </span>
         <span className="mx-1 h-5 w-px bg-[var(--el-hairline)]" />
@@ -103,8 +107,11 @@ export function RecordingDock({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xl"
-              className="size-11 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)]"
+              size="icon-lg"
+              // 시작 전 원형 버튼과 같은 지름이어야 시작 전후로 독이 안 흔들린다.
+              // `after:-inset-1`은 **보이는 크기는 36px로 두고 누르는 영역만 44px**로 넓힌다 —
+              // 독을 44px로 줄이면서 탭 영역까지 같이 줄면 모바일에서 가장자리가 안 먹는다.
+              className="size-9 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-muted)] after:absolute after:-inset-1 after:content-['']"
               aria-label="중지"
               onClick={() => void recording.stop()}
             >
@@ -123,7 +130,7 @@ export function RecordingDock({
               transition: { duration: 0.15, delay: 0.1 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            className="flex h-8 shrink-0 items-center px-1"
+            className="flex h-9 shrink-0 items-center px-1"
           >
             <RecordingPendingSpinner />
           </motion.div>
@@ -142,7 +149,7 @@ export function RecordingDock({
               transition: { duration: 0.15, delay: 0.1 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            className="flex min-w-0 items-center px-2.5 py-1"
+            className="flex h-9 min-w-0 items-center px-2.5"
           >
             {/* 이유는 문장이라 좁은 화면에서 잘리면 안 된다 — 다른 분기와 달리 접힌다. */}
             <span className="text-xs leading-snug text-[var(--el-muted)]">
@@ -150,8 +157,10 @@ export function RecordingDock({
             </span>
           </motion.div>
         ) : state === "failed" ? (
-          // 실패 사유는 토스트가 아니라 여기 남는다 — 토스트는 사라진 뒤 왜 멈췄는지
-          // 알 길이 없다(rule error-loading). 문구는 서버가 보낸 것 그대로다.
+          // 사유 문구는 여기 두지 않는다. `RecordingErrorToast`(app/providers.tsx)가 같은
+          // `recording.error`를 이미 토스트로 띄우고 있어서 **같은 문장이 두 곳에 났고**,
+          // 마이크 권한 안내처럼 긴 문장이 들어오면 독이 화면 폭만큼 늘어났다.
+          // 여기 남기는 것은 되돌릴 수단(다시 시도·닫기)뿐이다.
           <motion.div
             layout
             key="failed"
@@ -161,22 +170,13 @@ export function RecordingDock({
               transition: { duration: 0.15, delay: 0.1 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            className="flex min-w-0 items-center gap-1 py-1 pl-2.5 pr-1"
+            className="flex h-9 shrink-0 items-center gap-1 px-1"
           >
-            {recording.error ? (
-              // 사유는 문장이라 좁은 화면에서 잘리면 안 된다 — disabledReason과 같은 이유로 접힌다.
-              <span
-                role="alert"
-                className="min-w-0 text-xs leading-snug text-destructive"
-              >
-                {recording.error}
-              </span>
-            ) : null}
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-11 shrink-0 rounded-full px-3 text-xs"
+              className="h-9 shrink-0 rounded-full px-3 text-xs after:absolute after:-inset-1 after:content-['']"
               disabled={isOtherNote}
               onClick={() => void recording.start(noteId)}
             >
@@ -191,7 +191,7 @@ export function RecordingDock({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="닫기"
-                className="size-11 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:text-[var(--el-muted)]"
+                className="size-9 shrink-0 rounded-full text-[var(--el-muted-soft)] hover:text-[var(--el-muted)] after:absolute after:-inset-1 after:content-['']"
                 onClick={() => void recording.disconnect()}
               >
                 <X className="size-3.5" />
@@ -212,7 +212,7 @@ export function RecordingDock({
           >
             <button
               type="button"
-              className="flex size-11 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45"
+              className="relative flex size-9 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45 after:absolute after:-inset-1 after:content-['']"
               aria-label={isOtherNote ? "다른 노트에서 녹음 중" : startLabel}
               disabled={isOtherNote}
               onClick={() => void recording.start(noteId)}

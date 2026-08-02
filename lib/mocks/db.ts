@@ -227,6 +227,67 @@ function createSeedState(): StoreState {
       updatedAt: "2026-07-04T00:00:00Z",
     },
   ];
+  const members: MockMember[] = [
+    {
+      workspaceId: workspaces[0].workspaceId,
+      userId: user.userId,
+      name: user.name,
+      email: user.email,
+      role: "ADMIN",
+      image: user.image,
+      joinedAt: "2026-07-01T00:00:00Z",
+    },
+    {
+      workspaceId: workspaces[0].workspaceId,
+      userId: "01K0000000020",
+      name: "한지원",
+      email: "jiwon@heymoa.com",
+      role: "MEMBER",
+      image: null,
+      joinedAt: "2026-07-02T00:00:00Z",
+    },
+    {
+      workspaceId: workspaces[1].workspaceId,
+      userId: user.userId,
+      name: user.name,
+      email: user.email,
+      role: "ADMIN",
+      image: user.image,
+      joinedAt: "2026-07-03T00:00:00Z",
+    },
+  ];
+
+  // 서버는 참여자를 이름 오름차순으로 내린다. 목도 같은 순서를 지켜야 아바타 순서가
+  // 화면 검증에서 뒤집히지 않는다.
+  /**
+   * **노트가 속한 워크스페이스의 멤버만** 참여자로 넣는다. 서버가 그 워크스페이스 멤버만
+   * 받으므로(`NOT_WORKSPACE_MEMBER`), 다른 워크스페이스 사람을 시드해 두면 그 노트에서
+   * 참여자를 한 명 추가하는 순간 보이지도 않는 ID까지 함께 PUT되어 400으로 막힌다.
+   * 메뉴에 없으니 지울 수도 없어 그 노트만 영영 편집 불가가 된다.
+   *
+   * members는 (워크스페이스, 유저) 쌍이라 같은 사람이 여러 줄이다 — userId로 한 번만 집는다.
+   */
+  const participantsOf = (
+    projectId: string,
+    ...userIds: string[]
+  ): NoteResponseData["participants"] => {
+    const workspaceId = projects.find(
+      (project) => project.projectId === projectId
+    )?.workspaceId;
+    return userIds
+      .map((userId) =>
+        members.find(
+          (member) =>
+            member.userId === userId && member.workspaceId === workspaceId
+        )
+      )
+      .filter((member) => member !== undefined)
+      .map(({ userId, name, email, image }) => ({ userId, name, email, image }))
+      .sort(
+        (a, b) =>
+          a.name.localeCompare(b.name) || a.userId.localeCompare(b.userId)
+      );
+  };
   const notes: NoteResponseData[] = [
     {
       noteId: "01K0000000002",
@@ -239,6 +300,11 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: { userId: MOCK_USER.userId, name: MOCK_USER.name },
+      participants: participantsOf(
+        projects[0].projectId,
+        MOCK_USER.userId,
+        "01K0000000020"
+      ),
     },
     {
       noteId: "01K0000000005",
@@ -251,6 +317,7 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: null,
+      participants: participantsOf(projects[1].projectId, MOCK_USER.userId),
     },
     {
       noteId: "01K0000000028",
@@ -263,6 +330,11 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: { userId: "01K0000000099", name: "김서연" },
+      participants: participantsOf(
+        projects[0].projectId,
+        MOCK_USER.userId,
+        "01K0000000020"
+      ),
     },
     {
       noteId: "01K0000000009",
@@ -278,6 +350,7 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: null,
+      participants: [],
     },
     {
       noteId: "01K0000000014",
@@ -293,6 +366,8 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: null,
+      // projects[3]은 두 번째 워크스페이스라 그 워크스페이스 멤버(나)만 들어간다.
+      participants: participantsOf(projects[3].projectId, MOCK_USER.userId),
     },
     // 날짜 묶음(오늘·어제·이번 주·지난주·이번 달·연월)과 밀도 합격선(주 콘텐츠 8개 이상)을
     // 실제 화면에서 볼 수 있어야 해서 시간대를 흩어 둔다. 노트가 둘뿐이면 목록이 한 묶음으로
@@ -325,6 +400,18 @@ function createSeedState(): StoreState {
         (projectIndex as number) === 0
           ? { userId: MOCK_USER.userId, name: MOCK_USER.name }
           : null,
+      // 넘침(+N) 표시를 화면에서 볼 수 있게 절반은 참여자를 둘 다 넣는다.
+      participants:
+        index % 2 === 0
+          ? participantsOf(
+              projects[projectIndex as number].projectId,
+              MOCK_USER.userId,
+              "01K0000000020"
+            )
+          : participantsOf(
+              projects[projectIndex as number].projectId,
+              MOCK_USER.userId
+            ),
     })),
   ];
   const sessions: MockSession[] = [
@@ -400,35 +487,6 @@ function createSeedState(): StoreState {
       endedAtMs: 7100,
     },
   ];
-  const members: MockMember[] = [
-    {
-      workspaceId: workspaces[0].workspaceId,
-      userId: user.userId,
-      name: user.name,
-      email: user.email,
-      role: "ADMIN",
-      image: user.image,
-      joinedAt: "2026-07-01T00:00:00Z",
-    },
-    {
-      workspaceId: workspaces[0].workspaceId,
-      userId: "01K0000000020",
-      name: "한지원",
-      email: "jiwon@heymoa.com",
-      role: "MEMBER",
-      image: null,
-      joinedAt: "2026-07-02T00:00:00Z",
-    },
-    {
-      workspaceId: workspaces[1].workspaceId,
-      userId: user.userId,
-      name: user.name,
-      email: user.email,
-      role: "ADMIN",
-      image: user.image,
-      joinedAt: "2026-07-03T00:00:00Z",
-    },
-  ];
   // 아직 멤버가 아닌 워크스페이스에서 온 초대여야 수락이 실제 합류를 흉내낸다.
   // 이미 들어가 있는 워크스페이스를 가리키면 수락이 멤버를 중복으로 만든다.
   // 받은 초대 하나를 대기 상태로 시드한다 — 알림 벨의 수락/거절을 데모에서 바로 밟을 수 있어야 한다.
@@ -497,7 +555,24 @@ function createSeedState(): StoreState {
     members,
     invitations,
     notifications,
-    analyses: [],
+    // 완료된 분석을 하나 시드한다. 실제로는 heymoa-ai의 callback이 채우는데 목에는 그걸
+    // 밀어줄 주체가 없어서, 이게 없으면 **요약 화면(개요·액션 아이템·인사이트)을 목에서
+    // 한 번도 볼 수 없다.** 종료된 노트 하나에만 붙여 빈 상태·분석 중 화면도 그대로 남긴다.
+    analyses: [
+      {
+        analysisId: "01K0000000050",
+        noteId: "01K0000000020",
+        status: "SUCCEEDED",
+        overview:
+          "## 온보딩 이탈 구간\n\n가입 후 첫 회의 생성까지의 이탈이 가장 큽니다. 문구보다 다음에 뭘 해야 하는지가 안 보이는 것이 원인으로 좁혀졌습니다.",
+        actionItems:
+          "- 첫 화면에 회의 만들기 유도 (김민수, 이번 주)\n- 이탈 구간 이벤트 로깅 보강 (한지원)\n- 다음 주 사용자 테스트 5명 모집",
+        insights:
+          "- 이탈은 기능 부족이 아니라 첫 행동이 뭔지 모르는 것에서 옵니다.\n- 재방문 사용자는 같은 구간에서 막히지 않습니다 — 학습 비용은 한 번뿐입니다.",
+        errorCode: null,
+        errorMessage: null,
+      },
+    ],
     integrations,
     sharedChatLocks: new Set<string>(),
     sharedChatForeignLocks: new Map<string, string>(),
@@ -1297,9 +1372,48 @@ export const mockDb = {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: null,
+      // 서버(CreateNoteService)가 만든 사람을 참여자로 넣는다.
+      participants: [
+        {
+          userId: state.user.userId,
+          name: state.user.name,
+          email: state.user.email,
+          image: state.user.image,
+        },
+      ],
     };
     state.notes.push(note);
     return copy(note);
+  },
+
+  /**
+   * 참여자를 통째로 교체한다(PUT). 부분 추가·삭제가 아니라 요청한 목록이 곧 최종 상태다.
+   * 워크스페이스 멤버가 아닌 유저가 섞이면 아무것도 바꾸지 않고 400을 낸다.
+   */
+  replaceNoteParticipants(noteId: string, userIds: string[]) {
+    const note = findNote(noteId);
+    const project = state.projects.find(
+      (row) => row.projectId === note.projectId
+    );
+    const workspaceMembers = state.members.filter(
+      (member) => member.workspaceId === project?.workspaceId
+    );
+    const unique = [...new Set(userIds)];
+    if (
+      unique.some(
+        (userId) => !workspaceMembers.some((m) => m.userId === userId)
+      )
+    ) {
+      fail("NOT_WORKSPACE_MEMBER");
+    }
+    note.participants = workspaceMembers
+      .filter((member) => unique.includes(member.userId))
+      .map(({ userId, name, email, image }) => ({ userId, name, email, image }))
+      .sort(
+        (a, b) =>
+          a.name.localeCompare(b.name) || a.userId.localeCompare(b.userId)
+      );
+    return copy({ participants: note.participants });
   },
 
   getNote(noteId: string): NoteResponseData {
@@ -1334,10 +1448,14 @@ export const mockDb = {
     // 기록 중 삭제는 전사 세션과 경합한다. 계약이 409로 막는 자리다.
     if (note.meetingStatus === "IN_PROGRESS") fail("MEETING_IN_PROGRESS");
     const sessionIds = new Set(
-      state.sessions.filter((row) => row.noteId === noteId).map((row) => row.sessionId)
+      state.sessions
+        .filter((row) => row.noteId === noteId)
+        .map((row) => row.sessionId)
     );
     const chatIds = new Set(
-      state.agentChats.filter((row) => row.noteId === noteId).map((row) => row.chatId)
+      state.agentChats
+        .filter((row) => row.noteId === noteId)
+        .map((row) => row.chatId)
     );
     state.notes = state.notes.filter((row) => row.noteId !== noteId);
     state.sessions = state.sessions.filter((row) => row.noteId !== noteId);
@@ -1346,8 +1464,8 @@ export const mockDb = {
     );
     state.analyses = state.analyses.filter((row) => row.noteId !== noteId);
     state.agentChats = state.agentChats.filter((row) => row.noteId !== noteId);
-    state.agentChatMessages = state.agentChatMessages.filter((row) =>
-      !chatIds.has(row.chatId)
+    state.agentChatMessages = state.agentChatMessages.filter(
+      (row) => !chatIds.has(row.chatId)
     );
     state.sharedChatMessages = state.sharedChatMessages.filter(
       (row) => row.noteId !== noteId

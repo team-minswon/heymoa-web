@@ -7,6 +7,7 @@
  */
 import type { NoteResponseDataMeetingStartedBy } from "./noteResponseDataMeetingStartedBy";
 import type { NoteResponseDataMeetingStatus } from "./noteResponseDataMeetingStatus";
+import type { NoteResponseDataParticipantsItem } from "./noteResponseDataParticipantsItem";
 
 /**
  * 성공 응답 데이터
@@ -45,6 +46,8 @@ export type NoteResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   projectId: string;
+  /** 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열 */
+  participants: NoteResponseDataParticipantsItem[];
   /** 노트 수정 시각 */
   updatedAt: string;
   /**

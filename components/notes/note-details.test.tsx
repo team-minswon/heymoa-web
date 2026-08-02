@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoteDetails } from "@/components/notes/note-details";
 
 const NOTE_ID = "01K0000000002";
+const WORKSPACE_ID = "01K0000000001";
 const PROJECT_ID = "01K0000000010";
 const mutateAsync = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
@@ -29,18 +30,27 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
           title: "주간 제품 회의",
           createdAt: "2026-07-10T00:00:00Z",
           updatedAt: "2026-07-11T00:00:00Z",
+          participants: [],
         },
       },
     },
   }),
   useUpdateNote: () => ({ mutateAsync, isPending: false }),
+  useReplaceNoteParticipants: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }));
+vi.mock(
+  "@/lib/api/generated/workspace-members/workspace-members",
+  () => ({ useGetWorkspaceMembers: () => ({ data: undefined }) })
+);
 vi.mock("sonner", () => ({ toast }));
 
 function renderDetails() {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <NoteDetails noteId={NOTE_ID} />
+      <NoteDetails noteId={NOTE_ID} workspaceId={WORKSPACE_ID} />
     </QueryClientProvider>
   );
 }
@@ -79,7 +89,7 @@ describe("NoteDetails", () => {
       .mockResolvedValue(undefined);
     render(
       <QueryClientProvider client={client}>
-        <NoteDetails noteId={NOTE_ID} />
+        <NoteDetails noteId={NOTE_ID} workspaceId={WORKSPACE_ID} />
       </QueryClientProvider>
     );
 

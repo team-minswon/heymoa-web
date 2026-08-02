@@ -81,18 +81,18 @@ describe("RecordingDock", () => {
       render(<RecordingDock noteId="note-1" startLabel={startLabel} />);
 
       const button = screen.getByRole("button", { name: startLabel });
-      expect(button).toHaveClass("size-11");
+      expect(button).toHaveClass("size-9");
       fireEvent.click(button);
       expect(recording.start).toHaveBeenCalledWith("note-1");
     }
   );
 
-  it("로컬 녹음의 단일 중지 버튼도 44px 터치 영역을 둔다", () => {
+  it("로컬 녹음의 단일 중지 버튼도 시작 버튼과 같은 지름을 쓴다", () => {
     recording.phase = "recording";
 
     render(<RecordingDock noteId="note-1" />);
 
-    expect(screen.getByRole("button", { name: "중지" })).toHaveClass("size-11");
+    expect(screen.getByRole("button", { name: "중지" })).toHaveClass("size-9");
   });
 
   it("실패 후 다시 시도도 44px 터치 영역을 둔다", () => {
@@ -101,7 +101,7 @@ describe("RecordingDock", () => {
     render(<RecordingDock noteId="note-1" />);
 
     expect(screen.getByRole("button", { name: "다시 시도" })).toHaveClass(
-      "h-11"
+      "h-9"
     );
   });
 
@@ -123,13 +123,15 @@ describe("RecordingDock", () => {
       recording.session = { noteId: "note-1", status: "ACTIVE" };
     });
 
-    it("다시 시도 옆에 서버가 보낸 사유를 세운다", () => {
+    // 사유는 `RecordingErrorToast`(app/providers.tsx)가 토스트로 띄운다. 독까지 같은 문장을
+    // 두면 두 곳에 나고, 마이크 권한 안내처럼 긴 문장이 오면 독이 화면 폭만큼 늘어난다.
+    it("사유를 독에 다시 적지 않고 되돌릴 수단만 남긴다", () => {
       recording.phase = "failed";
       recording.error = reason;
 
       render(<RecordingDock noteId="note-1" />);
 
-      expect(screen.getByRole("alert")).toHaveTextContent(reason);
+      expect(screen.queryByText(reason)).toBeNull();
       expect(
         screen.getByRole("button", { name: "다시 시도" })
       ).toBeInTheDocument();

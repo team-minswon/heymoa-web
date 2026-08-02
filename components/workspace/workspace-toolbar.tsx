@@ -236,7 +236,7 @@ export function WorkspaceToolbar({
   ].includes(recording.phase);
 
   const openNote = (noteId: string) =>
-    router.push(`/w/${workspaceId}/notes/${noteId}?view=side&tab=transcript`);
+    router.push(`/w/${workspaceId}/notes/${noteId}?view=side&tab=details`);
 
   const recordingNoteId = recording.activeNoteId ?? recording.session?.noteId;
   const isRecordingOtherNote =

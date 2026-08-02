@@ -174,10 +174,11 @@ describe("OpenAPI contract", () => {
 });
 
 describe("contract sync 2026-07-29", () => {
-  it("mirrors 33 public paths and excludes internal ones", () => {
+  it("mirrors 34 public paths and excludes internal ones", () => {
     const paths = Object.keys(api().paths);
     // APP-281에서 현재 전사 세션 조회 경로가 하나 추가됐다 (32 → 33).
-    expect(paths).toHaveLength(33);
+    // APP-340에서 참여자 교체 경로가 하나 더 늘었다 (33 → 34).
+    expect(paths).toHaveLength(34);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

@@ -3,13 +3,20 @@
 import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Expand, FileText, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  Expand,
+  FileText,
+  Loader2,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 
 import {
   useRecording,
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
+import { NoteParticipantAvatars } from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -138,7 +145,11 @@ function MeetingMeta({
           <Tooltip>
             <TooltipTrigger
               render={
-                <span aria-label={starter.name} className="shrink-0">
+                // 진행자는 참여자 그룹과 섞지 않는다 — "누가 켰나"와 "누가 있었나"는 다른 사실이다.
+                <span
+                  aria-label={`진행자 ${starter.name}`}
+                  className="shrink-0"
+                >
                   <Avatar size="sm" className="size-5">
                     <AvatarFallback className="bg-[var(--el-surface-strong)] text-[10px] text-[var(--el-ink)]">
                       {starter.name.slice(0, 1)}
@@ -147,7 +158,7 @@ function MeetingMeta({
                 </span>
               }
             />
-            <TooltipContent>{starter.name}</TooltipContent>
+            <TooltipContent>진행자 · {starter.name}</TooltipContent>
           </Tooltip>
           <span className="max-w-20 truncate">{starter.name}</span>
         </span>
@@ -212,8 +223,8 @@ export function NoteListRow({
   }
   const openingFullView = openedFullViewFrom === routeKey;
 
-  const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=transcript`;
-  const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=transcript`;
+  const sideHref = `/w/${workspaceId}/notes/${note.noteId}?view=side&tab=details`;
+  const fullHref = `/w/${workspaceId}/notes/${note.noteId}?view=full&tab=details`;
 
   // v5 목록 행 정본: 높이 52 · 한 줄 · r8 · 배경 없음 · 아이콘 + 제목 15 + 상대 시각.
   // 카드·그림자·배지·녹음시간은 없다(FORM SPEC).
@@ -233,6 +244,15 @@ export function NoteListRow({
         <h3 className="min-w-16 flex-1 truncate text-read font-medium text-[var(--el-ink)]">
           {note.title}
         </h3>
+        {/* 목록은 3명까지만 — 52px 한 줄에서 아바타가 넓어질수록 제목이 먼저 잘린다.
+            좁은 화면에서는 상태·시간을 살리고 참여자를 접는다. */}
+        <span className="hidden shrink-0 md:inline-flex">
+          <NoteParticipantAvatars
+            participants={note.participants}
+            max={3}
+            size="sm"
+          />
+        </span>
         <MeetingMeta note={note} now={now} />
       </Link>
 
