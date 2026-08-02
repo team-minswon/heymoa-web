@@ -26,7 +26,7 @@ HeyMoa의 웹 프론트엔드. Next.js 16 App Router입니다.
 sequenceDiagram
     participant C as 컴포넌트
     participant Q as MutationCache
-    participant T as sonner
+    participant T as toast
     C->>Q: mutate() 실패
     Q->>T: 전역 onError가 토스트
     C-->>T: catch에서 toast.error 하나 더

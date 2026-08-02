@@ -12,7 +12,7 @@ import {
 } from "@/lib/auth/session-gate";
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 function retryOf(client: ReturnType<typeof makeQueryClient>) {
   const retry = client.getDefaultOptions().queries?.retry;

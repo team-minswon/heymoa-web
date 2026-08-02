@@ -9,7 +9,7 @@ const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
   useResolveToolApproval: () => ({ mutate: mutateMock, isPending: false }),
 }));
-vi.mock("sonner", () => ({ toast: { error: toastError } }));
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
 const CHAT_ID = "01K0000000003";
 const pending = (approvalId: string) => ({

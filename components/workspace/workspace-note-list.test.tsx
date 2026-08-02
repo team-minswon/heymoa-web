@@ -16,7 +16,7 @@ import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 // note-list-row는 자체 테스트가 있다 — 목록의 정렬·에러 처리만 본다.
 vi.mock("@/components/workspace/note-list-row", () => ({
   NoteListRow: ({

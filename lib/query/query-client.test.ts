@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // vi.mock은 import보다 먼저 끌어올려지므로 팩토리 안에서 만든다.
-vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: vi.fn() } }));
 
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { makeQueryClient } from "@/lib/query/query-client";
 

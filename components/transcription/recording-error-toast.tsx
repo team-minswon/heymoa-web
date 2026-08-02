@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 

@@ -25,7 +25,7 @@ import {
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import type { NotificationListResponseDataNotificationsItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 const STATUS_LABEL: Record<string, string> = {
   ACCEPTED: "수락함",

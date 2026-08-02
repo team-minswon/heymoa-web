@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Mic } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import {
   isNoteRecordingActive,

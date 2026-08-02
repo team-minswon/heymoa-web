@@ -21,7 +21,7 @@ import { AccountSettingsForm } from "@/components/settings/account-settings-form
 const mutations = vi.hoisted(() => ({ changeDefaultWorkspace: vi.fn() }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   getGetWorkspacesQueryKey: () => ["/v1/workspaces"],

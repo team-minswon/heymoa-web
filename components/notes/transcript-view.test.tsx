@@ -90,7 +90,7 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
   getGetNoteTranscriptQueryKey: () => ["transcript"],
   useGetNoteTranscript,
 }));
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 function recordingState(partialText = "결과를 정리합니다") {
   return {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { AuthStatus } from "@/components/auth/auth-status";
 import { AuthModal } from "@/components/auth/auth-modal";

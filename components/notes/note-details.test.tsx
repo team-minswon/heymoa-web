@@ -45,7 +45,7 @@ vi.mock(
   "@/lib/api/generated/workspace-members/workspace-members",
   () => ({ useGetWorkspaceMembers: () => ({ data: undefined }) })
 );
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 function renderDetails() {
   return render(

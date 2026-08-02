@@ -10,7 +10,7 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
 }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 describe("RecordingErrorToast", () => {
   beforeEach(() => {

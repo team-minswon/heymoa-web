@@ -21,7 +21,7 @@ const state = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({ toast: { error: state.toastError } }));
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: state.toastError } }));
 
 vi.mock("@/components/transcription/recording-provider", async () => {
   const actual = await vi.importActual<

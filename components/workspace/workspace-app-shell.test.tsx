@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/w/01K0000000000",
 }));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
-vi.mock("sonner", () => ({ toast: toastMock }));
+vi.mock("@/lib/ui/toast", () => ({ toast: toastMock }));
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => ({
     session: null,

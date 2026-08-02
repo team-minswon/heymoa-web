@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
 const toastError = vi.hoisted(() => vi.fn());
 const refetchMock = vi.hoisted(() => vi.fn());
 
-vi.mock("sonner", () => ({ toast: { error: toastError } }));
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
 vi.mock("@/lib/api/generated/notifications/notifications", () => ({
   getGetNotificationsQueryKey: () => ["notifications"],

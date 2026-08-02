@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import {
   AUTH_STATE_CHANGED_EVENT,

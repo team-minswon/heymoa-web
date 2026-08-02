@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import {
   Sidebar,
   SidebarInset,

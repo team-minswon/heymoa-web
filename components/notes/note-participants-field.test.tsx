@@ -60,7 +60,7 @@ vi.mock(
 );
 
 const toastError = vi.hoisted(() => vi.fn());
-vi.mock("sonner", () => ({ toast: { error: toastError } }));
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
 const PARTICIPANT = {
   userId: "01K0000000001",

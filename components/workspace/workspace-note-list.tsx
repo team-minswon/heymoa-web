@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { FileText, RefreshCcw } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
 import { Button } from "@/components/ui/button";

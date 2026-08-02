@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, Check, Clock3 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { NoteParticipantsField } from "@/components/notes/note-participants-field";
 import { Button } from "@/components/ui/button";

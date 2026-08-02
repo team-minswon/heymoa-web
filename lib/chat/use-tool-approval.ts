@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { useResolveToolApproval } from "@/lib/api/generated/agent-chat/agent-chat";

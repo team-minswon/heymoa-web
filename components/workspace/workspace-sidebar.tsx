@@ -18,7 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

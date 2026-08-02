@@ -26,7 +26,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 });
 
 const toastSuccess = vi.hoisted(() => vi.fn());
-vi.mock("sonner", () => ({ toast: { success: toastSuccess } }));
+vi.mock("@/lib/ui/toast", () => ({ toast: { success: toastSuccess } }));
 
 function renderDialog(onDeleted?: () => void) {
   return render(

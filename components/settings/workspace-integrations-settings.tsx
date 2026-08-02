@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 
 import { AuthRefreshError, buildUrl, refreshAuthOnce } from "@/lib/api/fetcher";
 import {

@@ -41,7 +41,7 @@ vi.mock("@/lib/auth/api", () => ({
   logout: authApi.logout,
 }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 const user: AuthUser = {
   userId: "user-12345",

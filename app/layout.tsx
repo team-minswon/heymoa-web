@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { NavbarGate } from "@/components/NavbarGate";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toast";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { siteConfig } from "@/lib/site";
 import { Providers } from "./providers";

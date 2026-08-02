@@ -42,7 +42,7 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   }),
 }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 describe("WorkspaceSettingsForm", () => {
   afterEach(cleanup);

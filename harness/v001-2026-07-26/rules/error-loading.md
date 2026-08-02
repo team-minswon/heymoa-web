@@ -4,7 +4,7 @@
 
 | 무엇 | 어떻게 | 왜 |
 |---|---|---|
-| mutation 실패 | `sonner` 토스트 (자동) | 방금 한 행동의 응답이라 사라져도 됩니다 |
+| mutation 실패 | 토스트 (자동) | 방금 한 행동의 응답이라 사라져도 됩니다 |
 | 지속 상태 — 입력 잠금, 회의 비ACTIVE, 승인 카드 무효화, 권한 없음 | 인라인 `Alert` | 오류가 아니라 "지금 할 수 없음"입니다. 토스트가 사라지면 왜 막혔는지 알 수 없습니다 |
 | 주 데이터 실패 — 노트 404, 분석 FAILED, 종료 없이 끊긴 스트림 | error boundary / 빈 상태 + 재시도 | 그릴 것이 없습니다. 토스트만 띄우면 빈 화면이 남습니다 |
 | 로딩 | `Skeleton` / Suspense | 기능 크기 단위로. route 전체 spinner 금지 |
@@ -24,6 +24,10 @@ fallback, 실패는 `InlineRetry`로 통일합니다.
 유지합니다. 목록이 아니라 기준으로 판정하세요.
 
 ## mutation 토스트는 자동입니다
+
+토스트는 base-ui `Toast`이고 표면은 **`lib/ui/toast.ts` 하나**입니다 — 제품 코드는 `sonner`가
+아니라 여기서 `toast`를 가져옵니다. 뜨는 자리(우측 상단)와 스택은 `components/ui/toast.tsx`가
+정합니다. 우측 하단에는 개인 챗봇 FAB가, 하단 중앙에는 레코더 독이 상주해 그 위를 덮습니다.
 
 `lib/query/query-client.ts`의 `MutationCache.onError`가 모든 실패를 잡습니다. 컴포넌트마다
 `onError`를 쓰지 않습니다. **opt-out 없이 자기 `toast.error`를 부르면 두 개가 겹칩니다** —

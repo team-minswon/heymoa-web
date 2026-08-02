@@ -11,7 +11,7 @@ vi.mock("@/lib/auth/paths", () => ({
   isAuthApiConfigured: false,
 }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
 
 describe("GoogleLoginButton", () => {
   beforeEach(() => {
