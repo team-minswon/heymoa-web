@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { EB_Garamond, Geist_Mono, Inter } from "next/font/google";
-import Script from "next/script";
 
+import { SiteAnalytics } from "@/components/analytics/site-analytics";
 import { FooterGate } from "@/components/FooterGate";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
@@ -101,21 +99,6 @@ export default async function RootLayout({
       className={`${inter.variable} ${geistMono.variable} ${ebGaramond.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {/* Google tag (gtag.js) */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-YL06KCCE4N"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', 'G-YL06KCCE4N');
-          `}
-        </Script>
-
         <Providers initialUser={initialUser}>
           <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
             <NavbarGate>
@@ -131,8 +114,7 @@ export default async function RootLayout({
           </div>
           <Toaster />
         </Providers>
-        <Analytics />
-        <SpeedInsights />
+        <SiteAnalytics />
       </body>
     </html>
   );
