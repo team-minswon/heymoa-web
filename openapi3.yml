@@ -386,20 +386,20 @@ paths:
           type: "string"
         example: "203.0.113.10, 10.0.0.1"
       responses:
-        "400":
-          description: "잘못된 요청"
+        "401":
+          description: "인증 필요"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppErrorResponse"
               examples:
-                BAD_REQUEST:
+                INVALID_REFRESH_TOKEN:
                   value:
                     success: false
                     data: null
                     error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
+                      code: "INVALID_REFRESH_TOKEN"
+                      message: "세션이 만료되었습니다. 다시 로그인해 주세요."
                       details: null
         "200":
           description: "요청 성공"

@@ -1,3 +1,4 @@
+import { isRefreshTokenDead } from "@/lib/auth/refresh-failure";
 import {
   isSessionExpired,
   openSessionGate,
@@ -68,12 +69,12 @@ function shouldSkipRefresh(url: string, options: ApiFetchOptions) {
 
 /** 갱신 실패 사유. `expired`면 재로그인이 필요하고, 아니면 일시 오류다. */
 export class AuthRefreshError extends Error {
+  /** 판정은 `lib/auth/refresh-failure.ts`가 한다 — proxy와 규칙이 하나여야 한다. */
   readonly expired: boolean;
-  constructor(status: number | null) {
+  constructor(expired: boolean) {
     super("Authentication refresh failed.");
     this.name = "AuthRefreshError";
-    // 계약: 리프레시 쿠키가 없거나 무효면 400/401이다(proxy도 둘 다 무효로 본다).
-    this.expired = status === 400 || status === 401;
+    this.expired = expired;
   }
 }
 
@@ -91,21 +92,50 @@ export function isAuthError(error: unknown) {
   return error instanceof AuthRefreshError && error.expired;
 }
 
+/**
+ * prerender된 문서라면 **활성화될 때까지 기다린다.**
+ *
+ * proxy의 matcher는 서버 쪽 갱신만 막는다. prerender된 문서는 JS를 실행하므로
+ * `AuthProvider`가 hydration 중에 `getMe()` → 여기로 들어온다. 그 prerender가 폐기되면
+ * 서버는 토큰을 회전시켰는데 새 쿠키는 아무도 못 받는다 — matcher로 막으려던 바로 그
+ * 상황이 클라이언트 경로로 다시 생긴다 (APP-347).
+ *
+ * `document.prerendering`은 아직 lib.dom에 없어서 좁혀서 읽는다. 없는 브라우저에서는
+ * 항상 활성 문서로 본다.
+ */
+function whenActivated() {
+  const doc =
+    typeof document === "undefined"
+      ? null
+      : (document as Document & { prerendering?: boolean });
+
+  if (!doc?.prerendering) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve) => {
+    doc.addEventListener("prerenderingchange", () => resolve(), { once: true });
+  });
+}
+
 export async function refreshAuthOnce() {
   if (!refreshPromise) {
-    refreshPromise = fetch(buildUrl("/v1/auth/refresh"), {
-      method: "POST",
-      credentials: "include",
-    })
-      .then((response) => {
+    refreshPromise = whenActivated()
+      .then(() =>
+        fetch(buildUrl("/v1/auth/refresh"), {
+          method: "POST",
+          credentials: "include",
+        })
+      )
+      .then(async (response) => {
         if (!response.ok) {
-          throw new AuthRefreshError(response.status);
+          throw new AuthRefreshError(await isRefreshTokenDead(response));
         }
       })
       .catch((error) => {
         // 네트워크 오류(fetch reject)는 만료가 아니라 일시 실패다.
         if (error instanceof AuthRefreshError) throw error;
-        throw new AuthRefreshError(null);
+        throw new AuthRefreshError(false);
       })
       .finally(() => {
         refreshPromise = null;

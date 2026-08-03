@@ -17,7 +17,7 @@ heymoa-web의 첫 하네스입니다. rule 5개, skill 2개, hook 1개입니다.
 | [`error-loading`](rules/error-loading.md) | 실패를 토스트로 낼지 화면에 그릴지. `DataBoundary`와 전역 토스트 opt-out |
 | [`api-data`](rules/api-data.md) | 생성 훅으로 호출하기, 계약 미러, MSW 목 |
 | [`docs-layout`](rules/docs-layout.md) | 설계·계획·리뷰 기록을 어디에 쓰나 |
-| [`issue-tracking`](rules/issue-tracking.md) | Linear 상태 전이와 댓글을 다는 다섯 순간 |
+| [`issue-tracking`](rules/issue-tracking.md) | Linear 상태 전이, 워크트리 착수, 댓글을 다는 다섯 순간 |
 
 ## 부를 때 읽히는 skill
 

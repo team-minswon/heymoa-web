@@ -32,7 +32,7 @@ describe("makeQueryClient 재시도 정책", () => {
     const retry = retryOf(makeQueryClient());
 
     expect(retry(0, new SessionExpiredError())).toBe(false);
-    expect(retry(0, new AuthRefreshError(400))).toBe(false);
+    expect(retry(0, new AuthRefreshError(true))).toBe(false);
   });
 
   it("그 밖의 오류는 두 번까지 재시도한다", () => {
@@ -46,7 +46,7 @@ describe("makeQueryClient 재시도 정책", () => {
   it("네트워크 갱신 실패는 재시도 대상으로 남는다", () => {
     const retry = retryOf(makeQueryClient());
 
-    expect(retry(0, new AuthRefreshError(null))).toBe(true);
+    expect(retry(0, new AuthRefreshError(false))).toBe(true);
   });
 });
 

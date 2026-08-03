@@ -15,13 +15,40 @@
 
 1. **이슈를 읽고 코드와 대조합니다.** 이슈는 며칠 전 상태를 적어둔 것이라 이미 고쳐졌거나 절반만 남아 있을 수 있습니다. "할 일" 항목을 하나씩 `grep`으로 짚습니다. 남은 것이 제목과 다르면 이슈를 먼저 고쳐 씁니다
 2. **상태를 In Progress로 옮기고 assignee를 채웁니다.** 브랜치를 파기 직전이 그 시점입니다
-3. **브랜치를 팝니다.** `dev`를 최신으로 맞춘 뒤 `feature/app-N-slug`로 땁니다
+3. **워크트리를 만듭니다.** `dev`를 최신으로 맞춘 뒤 `.worktrees/app-N`에 브랜치를 땁니다
 
 그리고 착수 댓글(①)을 답니다.
 
 **2를 건너뛰기 쉽습니다.** 코드부터 만지고 싶어지는데, 그러면 옆에서 보는 사람에게는 아무도
 그 이슈를 안 잡은 것으로 보입니다. 이미 In Progress인 이슈를 배정받아 시작했다면 그대로
 두고 넘어갑니다 — 되돌리지 마세요.
+
+### 작업은 워크트리에서 합니다
+
+```bash
+cd <레포 루트>                       # 워크트리 안이 아니라 메인 트리에서 시작합니다
+git switch dev && git pull --ff-only
+git worktree add .worktrees/app-N -b feature/app-N-slug dev
+```
+
+**`git fetch`만 하고 넘어가지 않습니다.** fetch는 `origin/dev`만 옮기고 메인 트리에 체크아웃된
+로컬 `dev`는 그대로입니다. 그 상태로 작업하면 나중에 [`merging`](../skills/merging/SKILL.md)이
+낡은 `dev` 위에 squash 커밋을 얹어 마지막 `git push`가 non-fast-forward로 거절됩니다.
+
+**메인 워킹 트리를 브랜치로 끌고 다니지 않습니다.** 게이트가 5종이라 한 번 돌리는 데
+몇 분이 걸리고, 그동안 급한 확인이 들어오면 stash와 checkout이 섞입니다. 워크트리는
+디렉토리가 따로라 메인 트리의 `dev`를 그대로 둔 채 나란히 볼 수 있습니다.
+
+`.worktrees/`는 `.gitignore`에 있습니다. **새 워크트리에서는 `pnpm install`을 먼저 돌립니다** —
+`node_modules`는 공유되지 않아서 안 하면 `vitest: command not found`로 시작합니다.
+
+**머지는 메인 워크트리에서 합니다.** [`merging`](../skills/merging/SKILL.md)의
+`git checkout dev`는 워크트리 안에서 실패합니다 — `dev`는 이미 메인 트리가 잡고 있고 git이
+같은 브랜치의 이중 체크아웃을 거부합니다. 검증과 codex 리뷰까지 워크트리에서 끝낸 뒤 레포
+루트로 돌아가 머지합니다.
+
+정리는 `main` 승격까지 끝난 뒤입니다. 시점과 명령은 [`merging`](../skills/merging/SKILL.md)
+5단계가 정합니다 — 여기 두 벌로 적지 않습니다.
 
 ## 번호는 다섯 곳에 같이 붙습니다
 
