@@ -69,10 +69,7 @@ export function WorkspaceNoteList({
 
   if (isPending) {
     return (
-      <div
-        aria-label="노트 불러오는 중"
-        className="divide-y divide-[var(--el-hairline)]"
-      >
+      <div aria-label="노트 불러오는 중">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
@@ -127,7 +124,10 @@ export function WorkspaceNoteList({
           <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">
             {group.label}
           </h2>
-          <div className="divide-y divide-[var(--el-hairline)]">
+          {/* **행 사이에 선을 두지 않는다.** 가르는 것은 날짜 머리글이고, 행은 h-16과 hover로
+              선다. 예전에는 그룹 안에서만 `divide-y`를 돌려서, 하루에 두 건 이상인 그룹에만
+              선이 생겼다 — 목록 전체에 한 줄만 뜨니 규칙이 아니라 사고로 읽혔다. */}
+          <div>
             {group.notes.map((note) => (
               <NoteListRow
                 key={note.noteId}
