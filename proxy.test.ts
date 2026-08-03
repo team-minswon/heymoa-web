@@ -78,4 +78,20 @@ describe("proxy token refresh", () => {
     expect(setCookie).toContain("access_token=");
     expect(setCookie).toContain("refresh_token=");
   });
+
+  // 서버가 심은 쿠키와 (name, domain, path)가 같아야 지워진다. Domain이 빠지면 host-only
+  // 쿠키만 지우고 도메인 쿠키는 남아, 무효해진 refresh token으로 재발급을 무한히 재시도한다.
+  it("deletes auth cookies with the domain the server set them on", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 400 }));
+    const proxy = await loadProxy();
+
+    const response = await proxy(requestWithRefreshToken());
+    const setCookies = response.headers.getSetCookie();
+
+    expect(setCookies).toHaveLength(2);
+    setCookies.forEach((setCookie) => {
+      expect(setCookie).toContain("Domain=.heymoa.app");
+      expect(setCookie).toContain("Path=/");
+    });
+  });
 });
