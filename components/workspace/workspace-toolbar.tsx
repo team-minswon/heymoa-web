@@ -1,16 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  ChevronLeft,
-  ExternalLink,
-  MoreHorizontal,
-  Plus,
-  Square,
-  Trash2,
-} from "lucide-react";
+import { ExternalLink, Plus, Square } from "lucide-react";
 
 import {
   type RecordingPhase,
@@ -18,21 +11,11 @@ import {
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
-import { MeetingControls } from "@/components/notes/meeting-controls";
-import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import { NewMeetingDialog } from "@/components/workspace/new-meeting-dialog";
 import { NotificationBell } from "@/components/notification/notification-bell";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { siteConfig } from "@/lib/site";
-import { cn } from "@/lib/utils";
 import { useCreateMeeting } from "@/lib/workspace/use-create-meeting";
 
 function formatElapsed(elapsedMs: number) {
@@ -113,120 +96,42 @@ function WorkspaceRecordingIndicator({
 }
 
 /**
- * full 노트에서 상단바가 그리는 노트 액션 슬롯 — 회의 조작(회의 종료·중지/재개) + 패널 토글(닫기).
- * 2단이던 셸 브레드크럼 바 + 노트 헤더를 한 줄로 합친다(CHROME SPEC). 녹음 중지는 여기 없다 —
- * 레코더 독이 단독으로 맡는다(MOTION SPEC drift #7).
+ * 워크스페이스 허브의 상단바. **노트를 모른다** — 노트 전체 화면이 이 바를 통째로 덮고
+ * 자기 크롬(제목·회의 제어·창 제어)을 직접 그리기 때문이다(design.pen `XtEMZ`).
+ * 예전에는 여기에 노트 액션 슬롯과 노트 제목 브레드크럼이 있었고, 전체 화면이 이 바 아래에
+ * 눕던 시절의 구조였다.
  */
-function NoteActionSlot({
-  workspaceId,
-  noteId,
-}: {
-  workspaceId: string;
-  noteId: string;
-}) {
-  const router = useRouter();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const noteQuery = useGetNote(noteId);
-  const note =
-    noteQuery.data?.status === 200 && noteQuery.data.data.success
-      ? noteQuery.data.data.data
-      : undefined;
-  // 기록 중이면 서버가 409로 막는다. 눌러서 실패하게 두지 않고 메뉴 자체를 안 그린다.
-  const canDelete = note && note.meetingStatus !== "IN_PROGRESS";
-
-  return (
-    <div className="flex items-center gap-2">
-      {note ? (
-        <MeetingControls
-          note={note}
-          onMeetingEnded={() =>
-            router.replace(
-              `/w/${workspaceId}/notes/${noteId}?view=full&tab=summary`
-            )
-          }
-        />
-      ) : null}
-      {canDelete ? (
-        <>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xl"
-                  aria-label="노트 메뉴"
-                  // 좁은 폭에서는 감춘다 — 이 줄은 상태·시간·요약·닫기·새 노트·알림까지
-                  // 들어가 375px를 넘고 셸이 overflow-hidden이라 우측이 잘린다.
-                  // 삭제는 목록 행 메뉴가 같이 제공하므로 모바일에서 길이 막히지 않는다.
-                  className="hidden size-11 rounded-full sm:inline-flex"
-                />
-              }
-            >
-              <MoreHorizontal />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 /> 삭제
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <NoteDeleteDialog
-            noteId={noteId}
-            projectId={note.projectId}
-            title={note.title}
-            open={deleteOpen}
-            onOpenChange={setDeleteOpen}
-            // 보고 있던 노트가 사라졌으니 목록으로 되돌린다. **replace다** — push하면
-            // 뒤로가기가 방금 지운 노트 URL로 돌아가 404를 만난다.
-            onDeleted={() => router.replace(`/w/${workspaceId}`)}
-          />
-        </>
-      ) : null}
-      <div role="group" aria-label="창 제어">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xl"
-          className="size-11 rounded-full"
-          aria-label="노트 닫기"
-          onClick={() => router.push(`/w/${workspaceId}`)}
-        >
-          <ChevronLeft />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function WorkspaceToolbar({
   workspaceId,
   currentLabel,
   activeNoteId,
+  covered = false,
 }: {
   workspaceId: string;
   currentLabel: string;
+  /**
+   * 지금 열려 있는 노트. **크롬을 바꾸는 데는 안 쓴다** — 녹음 필을 "다른 노트에서 기록 중"
+   * 일 때만 띄우기 위한 판정에만 쓴다. side 시트로 그 노트를 보고 있는데 필까지 뜨면
+   * 보고 있는 회의를 "다른 곳"이라고 말하게 된다.
+   */
   activeNoteId?: string;
+  /**
+   * 노트 전체 화면이 이 바를 덮고 있는가. **덮이는 것은 바뿐이다** — 다른 노트를 녹음 중일 때
+   * 뜨는 상단 필은 `z-50`이라 그 면 위에 남아 눌려야 한다. 그래서 `inert`를 이 컴포넌트
+   * 바깥에 씌우지 않고 바에만 준다(씌웠더니 필이 보이는데 안 눌렸다).
+   */
+  covered?: boolean;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const recording = useRecording();
   const createMeeting = useCreateMeeting(workspaceId);
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
-
-  // full 노트일 때만 상단바가 노트-aware가 된다. side는 시트가 자체 헤더를 가지므로 허브 모드 유지.
-  const isFullNote =
-    Boolean(activeNoteId) && searchParams.get("view") !== "side";
-  const noteQuery = useGetNote(activeNoteId ?? "", {
-    query: { enabled: isFullNote },
-  });
-  const noteTitle =
-    noteQuery.data?.status === 200 && noteQuery.data.data.success
-      ? noteQuery.data.data.data.title
-      : undefined;
+  // 노트 전체 화면이 이 바를 덮으면 **이 바가 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라
+  // `inert`도 덮는 면(`z-30`)도 닿지 않아서, 허브에서 열어 둔 채 뒤로가기로 노트에 오면
+  // 노트 위에 남는다. 셸이 재마운트되지 않으므로 상태가 저절로 사라지지도 않는다.
+  if (covered && newMeetingOpen) {
+    setNewMeetingOpen(false);
+  }
 
   const isActive = [
     "requesting-permission",
@@ -244,60 +149,32 @@ export function WorkspaceToolbar({
 
   return (
     <>
-      <div className="sticky top-0 z-20 border-b border-[var(--el-hairline)] bg-[color-mix(in_srgb,var(--el-canvas)_88%,transparent)] backdrop-blur-xl">
-        {/* 상단바는 1단 64다 — 2단을 합치며 회수한 세로를 여기서 지킨다. (CHROME SPEC) */}
-        <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+      {/* 배경을 주지 않는다 — 상단바는 이제 **흰 패널 안**이라 캔버스 틴트(`--el-canvas` 88%)를
+          깔면 흰 바닥 위에 회색 띠가 하나 생긴다. 각진 셸 시절엔 그 틴트가 크롬으로 읽혔지만
+          패널 셸에서는 얼룩이다. 구분은 아래 hairline 하나가 한다(design.pen Top Bar). */}
+      <div
+        inert={covered}
+        className="sticky top-0 z-20 border-b border-[var(--el-hairline)] bg-[var(--el-surface-card)]"
+      >
+        {/* 상단바는 56이다 — design.pen Top Bar `h-56 · px-32`. */}
+        <div className="flex h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
           <nav
             aria-label="현재 위치"
             className="flex min-w-0 flex-1 items-baseline gap-2"
           >
             {/* 좁은 화면(full 노트)에서는 앞 세그먼트를 접어 노트 제목·우측 액션을 확보한다. */}
-            <span
-              className={cn(
-                "shrink-0 font-serif text-lg font-light tracking-[-0.03em] text-[var(--el-ink)]",
-                isFullNote && "hidden sm:inline"
-              )}
-            >
+            <span className="shrink-0 font-serif text-lg font-light tracking-[-0.03em] text-[var(--el-ink)]">
               {siteConfig.name}
             </span>
-            <span
-              className={cn(
-                "text-[var(--el-hairline-strong)]",
-                isFullNote && "hidden sm:inline"
-              )}
-            >
-              /
-            </span>
-            <span
-              className={cn(
-                "shrink-0 truncate text-xs font-medium text-[var(--el-muted)]",
-                isFullNote && "hidden sm:inline"
-              )}
-            >
+            <span className="text-[var(--el-hairline-strong)]">/</span>
+            <span className="shrink-0 truncate text-xs font-medium text-[var(--el-muted)]">
               {currentLabel}
             </span>
-            {isFullNote ? (
-              <>
-                <span className="hidden text-[var(--el-hairline-strong)] sm:inline">
-                  /
-                </span>
-                <h1 className="truncate text-xs font-medium text-[var(--el-ink)]">
-                  {noteTitle ?? "회의 노트"}
-                </h1>
-              </>
-            ) : null}
           </nav>
           <div className="flex shrink-0 items-center gap-2">
             {/* noteId로 키잉한다 — 안 하면 A의 삭제 확인창을 연 채 뒤로가기로 B에 왔을 때
                 그 창이 B 제목으로 남아 엉뚱한 노트를 지운다. */}
-            {isFullNote && activeNoteId ? (
-              <NoteActionSlot
-                key={activeNoteId}
-                workspaceId={workspaceId}
-                noteId={activeNoteId}
-              />
-            ) : null}
             <Button
               type="button"
               size="sm"
@@ -309,9 +186,7 @@ export function WorkspaceToolbar({
             >
               <Plus className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만 — 노트 액션·벨이 잘리지 않게. */}
-              <span className={cn(isFullNote && "hidden sm:inline")}>
-                새 노트
-              </span>
+              <span>새 노트</span>
             </Button>
             <NotificationBell />
           </div>

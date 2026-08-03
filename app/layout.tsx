@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { EB_Garamond, Geist_Mono, Inter } from "next/font/google";
+import {
+  EB_Garamond,
+  Geist_Mono,
+  Inter,
+  Noto_Serif_KR,
+} from "next/font/google";
 
 import { SiteAnalytics } from "@/components/analytics/site-analytics";
 import { FooterGate } from "@/components/FooterGate";
@@ -27,6 +32,20 @@ const ebGaramond = EB_Garamond({
   variable: "--font-eb-garamond",
   subsets: ["latin"],
   weight: ["400"],
+});
+
+/**
+ * **한글 세리프.** EB Garamond에는 한글 글리프가 없어서 `font-serif`를 준 제목이 전부 시스템
+ * 산세리프로 떨어졌다 — 에디토리얼 서체를 지정해 놓고 화면에는 평범한 고딕이 나왔다.
+ * 라틴은 Garamond, 한글은 이 폰트가 받는다(글리프 단위 폴백).
+ *
+ * `preload: false`는 CJK라서다. 서브셋이 수백 개로 쪼개져 있어 preload를 켜면 쓰지도 않을
+ * 조각까지 끌어온다 — 브라우저가 unicode-range로 필요한 조각만 받게 둔다.
+ */
+const notoSerifKr = Noto_Serif_KR({
+  variable: "--font-noto-serif-kr",
+  weight: ["300", "400"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -96,7 +115,7 @@ export default async function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${inter.variable} ${geistMono.variable} ${ebGaramond.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} ${ebGaramond.variable} ${notoSerifKr.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers initialUser={initialUser}>

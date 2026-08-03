@@ -19,6 +19,7 @@ import { useGetWorkspaceMembers } from "@/lib/api/generated/workspace-members/wo
 import type { ToolConnectionsResponseDataIntegrationsItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
+import { cn } from "@/lib/utils";
 
 type Provider = "LINEAR" | "GITHUB";
 
@@ -210,18 +211,38 @@ function IntegrationCard({
 }) {
   const provider = integration.provider as Provider;
   // 카드 안의 카드에는 그림자를 주지 않는다 — hairline만. (ELEVATION SPEC)
+  //
+  // 색은 **상태에만** 준다. 연결됨은 success 틴트, 연결되지 않음은 무채색 — 색이 없는 것이
+  // "아직 아무것도 아니다"를 그대로 말한다. 예전에는 둘 다 회색이라 칩을 읽어야만 구분됐다.
+  // 아이콘도 같은 색을 따라가서, 칩까지 안 가도 카드 왼쪽에서 상태가 보인다.
   return (
     <div className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
-          <Link2 className="size-4 text-[var(--el-ink)]" />
+        <span
+          className={cn(
+            "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control",
+            integration.connected
+              ? "bg-[var(--el-success)]/10"
+              : "bg-[var(--el-canvas-soft)]"
+          )}
+        >
+          {/* 칩 글자와 같은 이유로 `*-strong`이다 — 아이콘도 상태 단서라 같은 10% 틴트 위에서
+              비텍스트 대비 3:1을 넘어야 한다(`--el-success`를 그대로 쓰면 2.95:1). */}
+          <Link2
+            className={cn(
+              "size-4",
+              integration.connected
+                ? "text-[var(--el-success-strong)]"
+                : "text-[var(--el-muted)]"
+            )}
+          />
         </span>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium text-[var(--el-ink)]">
               {PROVIDER_LABEL[provider]}
             </p>
-            <Badge variant={integration.connected ? "secondary" : "outline"}>
+            <Badge variant={integration.connected ? "success" : "outline"}>
               {integration.connected ? "연결됨" : "연결되지 않음"}
             </Badge>
           </div>
@@ -243,8 +264,10 @@ function IntegrationCard({
 
       {isAdmin ? (
         integration.connected ? (
+          // 되돌릴 수 있는 제거라 솔리드 빨강이 아니라 destructive 틴트다 — 경고가 아니라
+          // "무엇을 없애는 버튼인지"만 알려주면 된다.
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
             className="h-8 shrink-0"
             disabled={isBusy}

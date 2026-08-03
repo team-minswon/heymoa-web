@@ -83,18 +83,25 @@ export function getRecordedDurationMs(
  * `unknown`은 로딩과 실패 둘 다다. **로딩 중에만** 감춘다(트레이가 곧 뜬다). 조회가 실패하면
  * 트레이도 안 서므로, 여기서 감추면 챗 입구가 전무해진다 — 실패면 개인 챗봇을 남긴다.
  */
-export function isPersonalChatHiddenInNote(
-  view: "side" | "full",
-  phase: SharedChatPhase,
-  noteIsPending: boolean
-): boolean {
-  if (view === "side") return true;
-  return (
-    phase === "active" ||
-    phase === "not-started" ||
-    phase === "paused" ||
-    (phase === "unknown" && noteIsPending)
-  );
+/**
+ * 노트 안에서는 **항상** 감춘다.
+ *
+ * - full: 오른쪽 440은 공유 레일이 상주하는 자리라(design.pen `L4PpR`) 개인 챗봇이 `fixed`로
+ *   그 위에 뜨면 챗 UI 둘이 겹친다.
+ * - side: 시트와 backdrop이 `z-50`이라 `z-30/40`인 개인 챗봇 패널·FAB는 그 아래 깔린다 —
+ *   보여 봐야 누를 수 없다.
+ *
+ * **조회 실패도 예외로 두지 않는다.** 한때 실패면 개인 챗봇을 남기게 했는데, side에서는 위
+ * 이유로 눌리지 않아 없는 구제책이었다. 실패의 정상 경로는 노트 자신의 `InlineRetry`다.
+ */
+export function isPersonalChatHiddenInNote(view: "side" | "full"): boolean {
+  // 노트 안에서는 **떠 있는 카드로는** 항상 감춘다. `fixed`로 뜨면 오른쪽 440의 레일
+  // (design.pen `L4PpR`) 위에 겹쳐 챗 UI가 둘이 된다.
+  //
+  // 전체 화면에서 개인 챗봇에 못 가는 것은 아니다 — 레일의 「내 에이전트」 탭이 셸의 그 패널을
+  // 자기 자리로 포털해 온다(`note-agent-rail`). 이 값이 참이어야 스코프가 워크스페이스로
+  // 남고, 그게 정본의 「나만 보는 대화 · 워크스페이스 범위」와 맞는다.
+  return view === "side" || view === "full";
 }
 
 /** 회의 상태 폴링 주기. 다른 멤버가 녹음을 시작하거나 회의를 종료해도 화면이 따라가야 한다. */

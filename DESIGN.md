@@ -16,7 +16,7 @@ CTAs are subtle: a near-black ink pill (`{component.button-primary}`) is the pri
 - Soft pill geometry (`{rounded.pill}` for CTAs, `{rounded.xl}` for cards).
 - 96px section rhythm.
 
-> **이 문서는 두 면을 기술한다.** 아래 Colors~Responsive는 **마케팅 면**(랜딩·약관 — off-white 캔버스, pill CTA, 그라데이션 오브, 단일 티어 그림자)의 규칙이다. **제품 면**(워크스페이스 이후 — 각진 셸, 2연타 고도, 형태 스케일 5단계)은 별도 규칙을 따른다 — [`## Product Surface (제품 면 · v5)`](#product-surface-제품-면--v5)를 본다. 색 토큰(`--el-*`)과 폰트(Inter/EB Garamond)는 두 면이 공유한다.
+> **이 문서는 두 면을 기술한다.** 아래 Colors~Responsive는 **마케팅 면**(랜딩·약관 — off-white 캔버스, pill CTA, 그라데이션 오브, 단일 티어 그림자)의 규칙이다. **제품 면**(워크스페이스 이후 — 캔버스 위에 뜬 둥근 패널 셸, 2연타 고도, 형태 스케일 5단계)은 별도 규칙을 따른다 — [`## Product Surface (제품 면 · v5)`](#product-surface-제품-면--v5)를 본다. 색 토큰(`--el-*`)과 폰트(Inter/EB Garamond)는 두 면이 공유한다.
 
 ## Colors
 
@@ -102,6 +102,16 @@ These appear ONLY as soft radial-gradient atmospheric orbs inside `{component.gr
 
 Waldenburg is licensed. Open-source substitute: **EB Garamond** at weight 300 (slightly more humanist) or **GT Sectra** (closer to Waldenburg's modernity). Use Inter directly for body — it's the same family ElevenLabs uses.
 
+### 한글 세리프 (2026-08-03)
+
+**`font-serif`는 두 폰트의 스택이다** — 라틴은 EB Garamond, 한글은 **Noto Serif KR 300**. 이 제품의 화면은 거의 전부 한글인데 EB Garamond에는 한글 글리프가 없어서, `font-serif`를 준 제목이 전부 시스템 산세리프로 떨어져 있었다. 세리프 300을 정체성으로 적어 두고 화면에는 평범한 고딕이 나온 상태였다.
+
+순서가 곧 글리프 폴백 순서다(`--font-serif: EB Garamond, Noto Serif KR, serif`). 뒤집으면 라틴까지 Noto가 가져가 「HeyMoa」의 라틴 조판이 바뀐다.
+
+CJK라 `preload: false`로 받는다. 서브셋이 수백 개로 쪼개져 있어 preload를 켜면 쓰지 않을 조각까지 끌어온다 — unicode-range로 필요한 조각만 받게 둔다.
+
+디스플레이 크기의 음수 자간(-1.4 ~ -3.4px)은 두 폰트 모두에 그대로 적용된다. 한글은 라틴보다 글자폭이 균일해 같은 값에서 더 조밀하게 읽히지만, 정본(`design.pen`)이 한글 기준으로 잡은 값이라 그대로 쓴다.
+
 ## Layout
 
 ### Spacing System
@@ -176,6 +186,44 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 **`gradient-orb-card`** — A large card with a soft radial-gradient orb behind centered display copy. Background `{colors.canvas-soft}`, rounded `{rounded.xxl}` (24px), padding 32px. Each variant uses one of the five gradient tokens (`gradient-mint`, `gradient-peach`, `gradient-lavender`, `gradient-sky`, `gradient-rose`).
 
 **`audio-waveform-card`** — A waveform visualization card. Background `{colors.surface-card}`, rounded `{rounded.xl}`, padding 24px. Holds a play button + waveform glyph + voice metadata.
+
+### 랜딩 (design.pen `UWqm8` · 2026-08-03)
+
+정본은 `heymoa/design/design.pen`의 `/ · 기본 (비로그인)` 프레임이다. **그 파일은 이 저장소 밖이고 git에도 없다** — 셸 프레임과 같은 규약이라, 구현이 대조할 대상은 아래 표다. 1440 기준 실측이고, 좌우 여백은 전 구간 64다(`px-6 sm:px-10 lg:px-16`).
+
+| 밴드 | 기하 · 조판 |
+| --- | --- |
+| Hero | 높이 720. 배지(pill · 12/600 · 자간 0.8) → 34 → H1 `104/106 · 세리프 300 · -3.4` → 30 → 본문 `18/32` → 36 → CTA 둘(pill h48) → 18 → 잔글 13 |
+| Proof | 상하 48. 3열, 2·3열 앞에 세로 hairline. `01` 세리프 15 → 제목 세리프 30 → 설명 `14/23` |
+| Missions | 상하 104 · 배경 `--el-surface-strong`. 머리 `52/59 · -1.4`, 행마다 hairline. 번호 17 · 제목 `28/35` · 본문 `14/25` |
+| Features | 상하 104. 4열, 각 열 앞 세로 hairline + 왼쪽 20. 아이콘 18 → 제목 세리프 24 → 설명 `13/23` |
+| CTA | 높이 480. `68/75 · -2.2` → 20 → `17/30` → 32 → pill |
+
+그라데이션 오브의 위치·크기도 정본을 따른다. 값은 1440×720(CTA는 1440×480) 기준 좌표를 **비율로** 옮긴 것이라 폭이 달라져도 구도가 유지된다.
+
+**정본과 갈린 것 셋.** 이유가 서로 달라 따로 적는다. **셋 다 정본을 코드에 맞췄다** — 문서와 정본이 서로 다른 말을 하지 않게, 어긋난 쪽을 그때그때 한 방향으로 정리한다.
+
+- **제품 샷(`v9rBG2`)** — 안 그린다. 정본에서도 지웠다.
+- **상단바** — 캔버스에 붙은 평평한 바(높이 76)로 그려져 있었지만, 실제는 루트 레이아웃의 떠 있는 알약(`fixed top-4` · `976 × 62` · 흰색 70% + blur 12)이다. **정본을 알약으로 바꿨고**, 히어로는 `pt-32`(데스크톱 `pt-20`)로 그 몫을 비운다 — 안 비우면 배지가 알약에 가린다.
+- **푸터** — 한 줄로 그려져 있었지만 실제는 5단(브랜드·문의 / 서비스 / 정책 + 하단 저작권 줄, 높이 326)이다. **정본을 그 5단으로 바꿨다.**
+
+상단바·푸터는 랜딩 밖(약관·초대·환영)에서도 같은 것을 쓰므로 랜딩 하나 때문에 갈아 끼우지 않는다.
+
+정본 상단바의 「보안」 메뉴는 **가리킬 섹션이 없다** — 없는 섹션을 지어내지 않았고 링크도 두지 않았다. 남은 앵커는 `#features`와 `#how-it-works`(Proof 밴드) 둘이다.
+
+### 마케팅 면의 움직임
+
+랜딩은 `motion/react`로 들어온다. 히어로는 마운트 즉시, 나머지 밴드는 뷰포트에 들어올 때 **한 번만**(`viewport.once`) 올라온다 — 스크롤을 되돌릴 때마다 다시 튀면 읽는 흐름이 끊긴다.
+
+| 값 | |
+| --- | --- |
+| 기본 전이 | `y 20 → 0` · `opacity 0 → 1` · 800ms · `cubic-bezier(0.16, 1, 0.3, 1)` |
+| 자식 간격 | 120ms |
+| 시작 지점 | 뷰포트 아래 100px (`margin: "-100px"`) |
+
+**`MotionConfig reducedMotion="user"`로 감싼다.** motion의 기본값은 `"never"`라 이게 없으면 OS의 「동작 줄이기」를 무시한다.
+
+앵커 이동은 `scroll-behavior: smooth`를 `html`에 걸지 않고 **버튼의 `scrollIntoView`로** 한다 — 전역으로 걸면 라우트 이동의 「맨 위로 복귀」까지 애니메이션이 붙는다. 대상 섹션은 `scroll-mt-24`로 떠 있는 상단바 몫을 비운다.
 
 ### Cards
 
@@ -261,18 +309,85 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 |           | 마케팅(랜딩·약관)              | 제품(워크스페이스 이후)                                  |
 | --------- | ------------------------------ | -------------------------------------------------------- |
 | 색 토큰   | `--el-*` (공유)                | `--el-*` (공유)                                          |
-| 폰트      | Inter + EB Garamond (공유)     | Inter + EB Garamond (공유)                               |
-| 셸/캔버스 | off-white, 96px 리듬, pill CTA | 각진 셸(radius 0) · hairline · 여백 0으로 뷰포트 꽉 채움 |
+| 폰트      | Inter + EB Garamond + Noto Serif KR (공유) | 좌동                                          |
+| 셸/캔버스 | off-white, 96px 리듬, pill CTA | 회색 캔버스 위에 **뜬 둥근 패널**(radius 16) · 거터 10 · hairline |
 | 그림자    | 단일 티어 `0 4px 16px/0.04`    | 2연타 e2/e3 (아래)                                       |
 | 조판      | 대문자 키커 + 세리프 300 제목  | **대문자 키커 금지** · 세리프 300 제목만 정체성으로 유지 |
 
-### 고도 — 셸은 각지고 레이어만 둥글다
+### 셸 프레임 — 캔버스 위에 뜬 패널 (design.pen 정본)
+
+**셸은 뷰포트를 꽉 채우지 않는다.** 회색 캔버스(`--el-canvas` `#f5f5f5`) 위에 사이드바가 배경·테두리 없이 그냥 앉고, 본문만 둥근 흰 패널로 뜬다. 사이드바와 패널이 `border-r` 하나로 붙어 있던 예전 「한 셸」이 아니다.
+
+**수치의 정본은 아래 표다.** 값이 나온 곳은 `heymoa/design/design.pen`이지만 **그 파일은 이 저장소 밖이고 git에도 없다**(Pencil 전용 포맷 · 10MB). fresh checkout에서는 열 수 없으므로 노드 ID는 출처 표시일 뿐이고, 구현이 대조할 대상은 이 표와 `e2e/smoke.spec.ts`의 「keeps the shell frame geometry from design.pen」이다 — 그 테스트가 아래 값을 실제로 잰다. `docs/design/v5-spec-notes.md`가 같은 이유로 같은 규약을 쓴다.
+
+아래는 뷰포트 1440×900 기준 실측값이다.
+
+| 화면 | 출처 노드 | 기하 |
+| --- | --- | --- |
+| 워크스페이스 | `IUax1` · `BviA2` | 사이드바 `232 · left 0` (투명) → 틈 `10` → 패널 `1188 × 880 · left 242 · top 10`. 거터 사방 10 |
+| 노트 사이드 뷰 | `u3yYCX` | 시트 `860 × 884 · left 572 · top 8` (거터 8). 뒤에 scrim `--el-ink` 10% |
+| 노트 전체 뷰 | `XtEMZ` + `L4PpR` | 본문 + 에이전트 레일 `440` (오른쪽 고정) |
+
+패널 공통: `rounded-panel`(16) · `border 1px --el-hairline` · `bg --el-surface-card` · `shadow-e2`. 상단바는 `56`이고 배경 없이 아래 hairline만 갖는다.
+
+**사이드바 테두리는 primitive에서 뺐다.** `group-data-[side=left]:border-r`이 특이도 (0,2,0)이라 호출부의 `border-r-0`(0,1,0)으로는 못 지운다 — 선이 필요한 쪽이 붙인다.
+
+### 에이전트 레일의 두 탭 (design.pen `L4PpR` · 2026-08-03)
+
+전체 뷰 오른쪽 `440`은 위에서부터 **탭(높이 64) → 범위 한 줄(36) → 대화**다.
+
+| 탭 | 범위 문구 | 무엇 |
+| --- | --- | --- |
+| 이 회의 | 「참여자 전원이 함께 봅니다」 | 공유 챗봇. 회의가 살아 있을 때만 보낼 수 있고, 종료·미시작이면 자물쇠가 붙는다 |
+| 내 에이전트 | 「나만 보는 대화 · 워크스페이스 범위」 | 개인 챗봇 |
+
+**탭이 있는 이유는 회의가 끝나기 때문이다.** 공유 챗봇은 살아 있는 회의에 붙은 것이라 종료되면 컴포저가 잠긴다. 노트 안에서는 개인 챗봇을 떠 있는 카드로 띄우지 않으므로(레일 위에 겹친다), 탭이 없으면 **종료된 회의에는 물어볼 곳이 한 군데도 없었다.**
+
+「내 에이전트」는 레일이 새로 그리지 않는다 — 셸이 이미 들고 있는 개인 챗봇 패널을 이 자리로 **포털**해 온다. 새로 그리면 같은 스코프의 세션이 두 벌이 되고, 옮기면서 언마운트하면 흐르던 답변이 사라진다. 포털은 컴포넌트를 제자리에 두고 DOM만 옮기므로 스트림을 쥔 훅이 살아남는다.
+
+레일에 들어간 패널은 **자기 껍데기를 내려놓는다** — 테두리·radius·그림자는 레일이 갖고, **닫기 버튼은 없다**(탭이 자리를 가르므로 닫을 곳이 없다).
+
+두 탭 모두 **감출 뿐 언마운트하지 않는다.** 탭을 옮길 때 끊으면 계약상 부분 응답은 저장되지 않아 흐르던 답변이 통째로 사라진다. 자리를 넘기는 것도 **「내 에이전트」를 고른 동안만**이다 — 늘 넘기면 노트를 전체 화면으로 열기만 해도 개인 챗봇이 마운트되어 조회가 걸린다. 대신 한 번 넘겨받으면 셸이 「연 것」으로 기억해서, 레일을 떠나도(축소·닫기·뒤로가기) 패널이 언마운트되지 않는다.
+
+**좁은 화면(`lg` 미만)에서는 대화만 접고 탭 줄은 남긴다.** 레일 레인이 14rem이라 회의가 죽어 있을 때까지 세우면 전사 높이가 0이 되지만(모바일 landscape 실측), 통째로 감추면 「내 에이전트」를 고를 버튼까지 감춰져 종료된 회의에는 들어갈 길이 없어진다. 접힌 레일은 탭 줄 높이만 차지하고, 「내 에이전트」를 고르면 펼쳐진다. 개인 답변이 흐르는 동안에도 접지 않는다 — 중지도 도구 승인도 그 안에만 있다.
+
+**노트 전체 뷰는 뷰포트를 통째로 쓴다.** 사이드바도 워크스페이스 상단바도 덮는다 — `fixed inset-0`이고 그 안에서 노트(왼쪽) + 에이전트 레일 `440`(오른쪽 **고정 · 닫기 없음**)이 캔버스 `10`으로 갈린다. 그래서 **회의 제어·창 제어·삭제 메뉴를 노트가 직접 갖는다**(예전에는 상단바의 노트 액션 슬롯이 맡았다).
+
+덮인 크롬은 **`inert`로 포커스에서도 뺀다** — 시각적으로만 가리면 Tab이 보이지 않는 사이드바·목록 행으로 들어가고 Enter로 이동이 실행된다. 모바일 사이드바는 포털 시트라 `inert`가 안 닿으므로 진입 시 실제로 닫는다. 다른 노트를 녹음 중일 때 뜨는 상단 필(`z-50`)만 예외로 살아 있어야 한다.
+
+**캔버스 틈과 패널 껍데기는 `lg`부터다.** 좁은 화면에서는 두 면이 테두리로 붙고, 레일도 회의가 살아 있을 때만 선다 — 그러지 않으면 14rem 레인이 전사 높이를 0으로 눌렀다(812×375에서 실측).
+
+**사이드바 테두리는 primitive에서 뺐다.** `group-data-[side=left]:border-r`이 특이도 (0,2,0)이라 호출부의 `border-r-0`(0,1,0)으로는 못 지운다 — 선이 필요한 쪽이 붙인다.
+
+### 제품 면의 움직임 (2026-08-03)
+
+제품 면은 `motion/react`를 쓰지 않는다. **층이 뜨고 지는 것만** CSS 전이로 200ms `ease-out`이고, 그 안의 내용은 움직이지 않는다.
+
+| 무엇 | 어떻게 |
+| --- | --- |
+| 에이전트 챗 패널 | `opacity 0→1` · `translate-x 16→0`. 닫으면 역방향 |
+| 그 FAB | `opacity 0→1` · `scale 0.9→1`. 패널과 반대 위상 |
+| 노트 전체 뷰 진입 | `opacity 0→1` · `scale 0.98→1` · `origin-right`. **들어올 때만** |
+
+**챗 패널은 언마운트하지 않는다** — 흐르던 스트림을 끊으면 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 그래서 감추기는 `display:none`이 아니라 `visibility:hidden`이고, **`visibility`를 전이 목록에 넣는 것이 핵심이다.** `visibility`는 전이 중 `visible`로 계산되고 끝에서만 뒤집혀서, 들어올 때는 즉시 보이고 나갈 때는 끝까지 보인다. 그러면서 끝 상태에서는 포커스·접근성 트리에서 실제로 빠진다.
+
+FAB도 같은 이유로 상주한다. 조건부 렌더면 패널이 들어오는 동안 버튼만 즉시 증발한다. 감출 때 `aria-hidden`·`inert`·`tabIndex={-1}`을 함께 건다.
+
+**전이 목록에 `transform`이 아니라 `translate`·`scale`을 적는다.** Tailwind v4는 `translate-x-4`를 개별 `translate` 속성으로 낸다 — `transform`만 적으면 투명도만 움직이고 위치는 튄다(실측으로 확인).
+
+첫 마운트는 `starting:`(=`@starting-style`)이 맡는다. 챗 패널은 한 번 열기 전에는 아예 없고 전체 뷰 면은 라우트마다 새로 마운트되므로, 이게 없으면 첫 등장만 애니메이션이 빠진다.
+
+**나갈 때(전체 뷰 → 사이드 뷰)는 애니메이션이 없다.** 전체 면은 즉시 언마운트되고 시트가 오른쪽에서 밀려 들어와 그 자리를 덮는다. 둘을 잇는 morph는 하지 않았다 — 서로 다른 컴포넌트라 값을 하나로 만들려면 노트 본문까지 한 트리에 묶어야 하고, 그건 스트림을 끊는 재마운트를 부른다.
+
+**기하를 재는 테스트는 전이가 끝난 뒤에 잰다.** `e2e/smoke.spec.ts`가 `getAnimations()`의 `finished`를 기다린다 — 애니메이션 중에 재면 `scale(0.98)` 때문에 사방이 1px씩 안쪽으로 들어온 값이 나오고, 실제로 그렇게 잰 수치가 정본으로 굳은 적이 있다.
+
+### 고도
 
 `globals.css` 토큰. raw `shadow-[...]` 대신 유틸을 쓴다.
 
 | 층                          | 토큰 / 유틸 | 값                                           | 쓰임                                 |
 | --------------------------- | ----------- | -------------------------------------------- | ------------------------------------ |
-| 셸(App Panel·사이드바·메인) | — (없음)    | radius 0 · 그림자 없음 · hairline            | 사이드바/메인은 항상 함께 사는 한 셸 |
+| 셸 패널(사이드바 제외)      | `shadow-e2` | radius 16 · e2 · hairline                     | 워크스페이스 본문 패널 · 노트 전체 뷰 |
 | e2 부양                     | `shadow-e2` | `0 2px 4px #0c0a090f, 0 10px 28px #0c0a091c` | 챗봇 카드 · 플로팅 독 · FAB          |
 | e3 오버레이                 | `shadow-e3` | `0 4px 8px #0c0a0914, 0 20px 56px #0c0a092b` | 노트 시트 · 다이얼로그 · 드롭다운    |
 
@@ -288,7 +403,7 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 | `rounded-chip`    | 6px    | 칩·배지                                        |
 | `rounded-full`    | 9999px | circle(아바타·아이콘) · pill(주 CTA·레코더 독) |
 
-`rounded-full`은 circle과 pill 두 역할만. 셸은 각짐(0). 마케팅의 `{rounded.xl}` 카드 규칙은 제품에 쓰지 않는다.
+`rounded-full`은 circle과 pill 두 역할만. **셸 패널도 `rounded-panel`(16)이다** — 각진 셸(0)은 2026-08-02에 교체됐다(위 「셸 프레임」). 마케팅의 `{rounded.xl}` 카드 규칙은 제품에 쓰지 않는다.
 
 ### 타이포 스케일
 

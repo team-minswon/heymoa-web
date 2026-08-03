@@ -12,6 +12,8 @@ import { MembersSettings } from "@/components/settings/members-settings";
 
 const state = vi.hoisted(() => ({
   myRole: "ADMIN" as "ADMIN" | "MEMBER",
+  /** 서버는 가입순으로 내려주므로 내가 첫 줄이 아닐 수 있다. 그 경우를 재현한다. */
+  meJoinedLast: false,
   membersError: false,
   invitations: [] as unknown[],
   createError: null as unknown,
@@ -35,24 +37,35 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
           data: {
             success: true,
             data: {
-              members: [
-                {
+              members: (() => {
+                const me = {
                   userId: "user-12345",
                   name: "테스트 유저",
                   email: "me@heymoa.com",
                   role: state.myRole,
                   joinedAt: "2026-07-01T00:00:00Z",
                   image: null,
-                },
-                {
+                };
+                const other = {
                   userId: "user-67890",
                   name: "김민수",
                   email: "minsu@heymoa.com",
-                  role: "MEMBER",
+                  role: "MEMBER" as const,
                   joinedAt: "2026-07-05T00:00:00Z",
                   image: null,
-                },
-              ],
+                };
+                const third = {
+                  userId: "user-24680",
+                  name: "박서준",
+                  email: "seojun@heymoa.com",
+                  role: "MEMBER" as const,
+                  joinedAt: "2026-07-09T00:00:00Z",
+                  image: null,
+                };
+                return state.meJoinedLast
+                  ? [other, third, me]
+                  : [me, other, third];
+              })(),
             },
           },
         },
@@ -123,6 +136,7 @@ async function invite(email: string) {
 describe("MembersSettings", () => {
   beforeEach(() => {
     state.myRole = "ADMIN";
+    state.meJoinedLast = false;
     state.membersError = false;
     state.invitations = [];
     state.createError = null;
@@ -137,6 +151,23 @@ describe("MembersSettings", () => {
     expect(screen.getByText("테스트 유저")).toBeTruthy();
     expect(screen.getByText("minsu@heymoa.com")).toBeTruthy();
     expect(screen.getByText("(나)")).toBeTruthy();
+  });
+
+  // 계약은 가입순이라 늦게 합류하면 내 행이 목록 아래로 밀린다. 「나」 배지와 역할이 붙은
+  // 행이라 제일 먼저 보여야 한다.
+  it("가입이 늦어도 내 행을 맨 위로 올리고 나머지 순서는 서버 그대로 둔다", () => {
+    state.meJoinedLast = true;
+    renderSettings();
+
+    const names = screen
+      .getAllByRole("listitem")
+      .map((row) => row.textContent ?? "");
+
+    expect(names[0]).toContain("테스트 유저");
+    expect(names[0]).toContain("(나)");
+    // 나를 뽑아 올린 것뿐이고 남은 둘은 서버가 준 가입순 그대로다.
+    expect(names[1]).toContain("김민수");
+    expect(names[2]).toContain("박서준");
   });
 
   it("ADMIN이면 초대 폼을 보이고 MEMBER면 숨긴다", () => {

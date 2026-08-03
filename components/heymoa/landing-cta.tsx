@@ -1,0 +1,95 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+
+import { AuthModal } from "@/components/auth/auth-modal";
+import { useAuth } from "@/components/auth/auth-provider";
+import { Button } from "@/components/ui/button";
+import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
+import { cn } from "@/lib/utils";
+
+/** design.pen 정본의 마케팅 pill — h48 · px24 · 15px. 제품 면의 `size="xl"`(h40)과 다르다. */
+export const MARKETING_PILL = "h-12 rounded-full px-6 text-[15px]";
+
+/**
+ * 랜딩의 주 CTA. 비로그인이면 로그인 모달을, 로그인 상태면 대시보드 링크를 낸다.
+ *
+ * design.pen은 비로그인 화면(`UWqm8`)만 그린다 — 로그인한 사람에게 「Google 계정으로 시작」을
+ * 보이면 이미 가진 것을 다시 권하는 셈이라 라벨과 행선지를 상태로 가른다. 워크스페이스 조회는
+ * Navbar와 같은 쿼리 키라 캐시를 그대로 쓴다(추가 요청이 없다).
+ */
+export function LandingCta({
+  label,
+  className,
+}: {
+  label: string;
+  className?: string;
+}) {
+  const { status } = useAuth();
+  const isAuthenticated = status === "authenticated";
+  const workspacesQuery = useGetWorkspaces({
+    query: { enabled: isAuthenticated, staleTime: 5 * 60 * 1000 },
+  });
+  const envelope =
+    workspacesQuery.data?.status === 200 ? workspacesQuery.data.data : undefined;
+  const workspaces = envelope?.success ? (envelope.data.workspaces ?? []) : [];
+  const workspaceId =
+    workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
+    workspaces[0]?.workspaceId;
+
+  if (isAuthenticated) {
+    // 조회가 끝나기 전에 「Google 계정으로 시작」을 잠깐 보이면 이미 로그인한 사람에게
+    // 라벨이 튄다 — 확정될 때까지 같은 자리에 대시보드 버튼을 로딩으로 둔다.
+    if (workspacesQuery.isPending) {
+      return (
+        <Button
+          type="button"
+          loading
+          disabled
+          className={cn(MARKETING_PILL, className)}
+        >
+          대시보드로 이동
+        </Button>
+      );
+    }
+    // **끝났는데 갈 곳이 없으면 로딩을 끝낸다.** 조회 실패와 워크스페이스 0개를 로딩과 같은
+    // 스피너로 그리면 랜딩의 두 CTA가 영원히 돌면서 재시도할 방법도 없다. 실패 문구는
+    // Navbar가 이미 토스트로 띄우므로(같은 쿼리) 여기서는 다시 띄우지 않는다.
+    if (!workspaceId) {
+      return (
+        <Button
+          type="button"
+          loading={workspacesQuery.isFetching}
+          disabled={workspacesQuery.isFetching}
+          aria-label="대시보드 다시 시도"
+          onClick={() => void workspacesQuery.refetch()}
+          className={cn(MARKETING_PILL, className)}
+        >
+          다시 시도
+        </Button>
+      );
+    }
+    // `nativeButton={false}`를 주지 않는다 — base-ui가 dev 경고를 내지만, 그 prop을 주면
+    // 앵커에 `role="button"`이 붙어 링크가 아니게 된다. 이동하는 것은 링크로 읽혀야 한다.
+    // Navbar의 대시보드 버튼도 같은 자리에서 같은 선택을 한다.
+    return (
+      <Button
+        render={<Link href={`/w/${workspaceId}`} />}
+        className={cn(MARKETING_PILL, className)}
+      >
+        대시보드로 이동
+        <ArrowRight className="size-4" />
+      </Button>
+    );
+  }
+
+  return (
+    <AuthModal>
+      <Button type="button" className={cn(MARKETING_PILL, className)}>
+        {label}
+        <ArrowRight className="size-4" />
+      </Button>
+    </AuthModal>
+  );
+}

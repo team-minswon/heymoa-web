@@ -40,6 +40,52 @@ describe("design tokens (globals.css)", () => {
     }
   );
 
+  /**
+   * 상태색은 **10% 틴트 배경 + `*-strong` 글자**의 짝으로만 쓴다. 배경과 글자에 같은 값을
+   * 쓰면 틴트가 배경을 거의 흰색으로 남겨서 AA(4.5:1)에 못 미친다 — success는 2.96:1,
+   * error는 4.13:1이었다. 여기서 실제 명암비를 계산해 못 박는다.
+   */
+  describe("상태색 틴트 대비", () => {
+    const tokenValue = (name: string) =>
+      css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
+
+    const channels = (hex: string) =>
+      [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16));
+    const linear = (value: number) => {
+      const channel = value / 255;
+      return channel <= 0.03928
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = ([r, g, b]: number[]) =>
+      0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+    /** 흰 패널 위 10% 틴트가 실제로 그려지는 색. */
+    const tintOnWhite = (rgb: number[]) =>
+      rgb.map((channel) => channel * 0.1 + 255 * 0.9);
+    const contrast = (fg: number[], bg: number[]) => {
+      const [brighter, darker] = [luminance(fg), luminance(bg)].sort(
+        (a, b) => b - a
+      );
+      return (brighter + 0.05) / (darker + 0.05);
+    };
+
+    it.each([
+      ["--el-success", "--el-success-strong"],
+      ["--el-error", "--el-error-strong"],
+    ])("%s 틴트 위의 %s 글자가 AA를 넘는다", (tintToken, textToken) => {
+      const tint = tokenValue(tintToken);
+      const text = tokenValue(textToken);
+      expect(tint, `${tintToken} missing`).toBeDefined();
+      expect(text, `${textToken} missing`).toBeDefined();
+
+      const ratio = contrast(
+        channels(text!),
+        tintOnWhite(channels(tint!))
+      );
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
   it("keeps e2/e3 elevation as a two-shadow stack (not the marketing single tier)", () => {
     for (const token of ["--shadow-e2", "--shadow-e3"]) {
       // prettier가 값을 여러 줄로 나눌 수 있으므로 선언 전체(토큰~세미콜론)에서 센다.

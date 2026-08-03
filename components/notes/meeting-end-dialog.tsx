@@ -209,18 +209,19 @@ export function MeetingEndDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel>닫기</AlertDialogCancel>
+          {/* 높이를 손으로 주지 않는다 — `h-11`(44)이 `닫기`의 기본 높이와 달라 같은 줄에서
+              두 버튼 크기가 어긋났다. 진행 표시도 문구 교체가 아니라 `loading`으로 준다:
+              문구를 갈아 끼우면 버튼 폭이 「회의 종료」→「기록 저장 중…」으로 튄다. */}
           <Button
-            className="h-11"
+            loading={endMeeting.isPending || isStopping || starting}
             disabled={endMeeting.isPending || isStopping || starting}
             onClick={() => void confirmEnd()}
           >
-            {starting
-              ? "연결 중…"
-              : isStopping
-                ? "기록 저장 중…"
-                : serverBlocked
-                  ? "다시 시도"
-                  : "회의 종료"}
+            {/* 진행 중에도 **라벨을 갈지 않는다.** 공용 `Button`은 로딩 중에도 투명한
+                children으로 폭을 잡으므로, 문구를 바꾸면 스피너가 도는 동안 버튼이
+                「회의 종료」→「기록 저장 중…」으로 늘어난다. 무엇이 진행 중인지는 위
+                본문이 말한다. */}
+            {serverBlocked ? "다시 시도" : "회의 종료"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

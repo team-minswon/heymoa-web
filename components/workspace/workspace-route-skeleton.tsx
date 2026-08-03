@@ -14,7 +14,10 @@ import { Skeleton } from "@/components/ui/skeleton";
  * 표시하고, `loading.tsx`는 `searchParams`를 못 받아 side(시트)와 full(전체 면)을 구분할
  * 수 없다 — 기본 경로인 side 진입에서 full 화면을 덮었다가 시트로 바뀐다.
  *
- * 기하는 최종 화면에 맞춘다 — 사이드바 255, 상단바 64, 목록은 날짜 헤더 + 52 행이다.
+ * 기하는 최종 화면에 맞춘다 — 사이드바 232(캔버스 위에 배경·테두리 없이), 그 오른쪽 10px
+ * 틈 뒤에 둥근 흰 패널, 패널 안 상단바 56, 목록은 날짜 헤더 + h-16 행이다.
+ * **셸이 로딩과 실제 화면에서 다르게 생기면 로딩이 끝나는 순간 전부 튄다** — 예전 이 파일은
+ * 각진 셸(사이드바 255 + `border-r`, 여백 0)을 그리고 있어 패널 셸로 바뀌며 어긋났다.
  */
 export function WorkspaceRouteSkeleton() {
   return (
@@ -22,7 +25,7 @@ export function WorkspaceRouteSkeleton() {
       aria-label="워크스페이스 불러오는 중"
       className="flex min-h-svh bg-[var(--el-canvas)]"
     >
-      <aside className="hidden w-[255px] shrink-0 border-r border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] md:flex md:flex-col">
+      <aside className="hidden w-[232px] shrink-0 md:flex md:flex-col">
         {/* 상단: 워크스페이스 1줄 56 (CHROME SPEC) */}
         <div className="flex h-14 items-center gap-2.5 px-3">
           <Skeleton className="size-7 shrink-0 rounded-chip" />
@@ -46,9 +49,10 @@ export function WorkspaceRouteSkeleton() {
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1">
-        {/* 상단바 1단 64와 같은 높이여야 로딩이 끝날 때 본문이 안 밀린다. (CHROME SPEC) */}
-        <div className="flex h-16 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
+      <main className="min-w-0 flex-1 p-2.5">
+        <div className="min-h-full overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] shadow-e2">
+        {/* 상단바 56과 같은 높이여야 로딩이 끝날 때 본문이 안 밀린다 (design.pen Top Bar). */}
+        <div className="flex h-14 items-center border-b border-[var(--el-hairline)] px-4 sm:px-6 lg:px-8">
           <Skeleton className="h-5 w-28 rounded-chip" />
         </div>
         {/* 폭·padding은 `workspace-page.tsx`의 섹션과 같아야 한다 — 다르면 로딩이 끝나는
@@ -78,6 +82,7 @@ export function WorkspaceRouteSkeleton() {
             </div>
           ))}
         </section>
+        </div>
       </main>
     </div>
   );

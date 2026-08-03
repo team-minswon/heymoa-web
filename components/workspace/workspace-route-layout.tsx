@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
@@ -19,8 +19,12 @@ export function WorkspaceRouteLayout({
     ? params.noteId[0]
     : params.noteId;
 
-  // v5: 사이드바는 full 모드에서도 유지한다 — full 노트 표면이 SidebarInset 안에서
-  // 255 우측에 앉으므로 내비를 잃지 않는다. (이전 hideSidebar 폐기)
+  // 노트 전체 화면은 뷰포트를 통째로 덮는다(design.pen `XtEMZ`) — 사이드바도 상단바도
+  // 안 보인다. **뒤에 깔린 목록은 계속 살아 있으므로** 포커스에서 빼야 한다: 안 그러면
+  // Tab이 가려진 노트 행·메뉴로 들어가고 Enter로 이동이 실행된다.
+  // side 시트는 안 덮으므로 그대로 둔다.
+  const searchParams = useSearchParams();
+  const isFullNote = Boolean(noteId) && searchParams.get("view") !== "side";
   return (
     <DataBoundary
       fallback={<WorkspaceRouteSkeleton />}
@@ -28,7 +32,9 @@ export function WorkspaceRouteLayout({
       resetKeys={[workspaceId]}
     >
       <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>
-        <WorkspacePage workspaceId={workspaceId} />
+        <div inert={isFullNote} className="contents">
+          <WorkspacePage workspaceId={workspaceId} />
+        </div>
         {children}
       </WorkspaceAppShell>
     </DataBoundary>

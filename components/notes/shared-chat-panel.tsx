@@ -225,7 +225,9 @@ export function SharedChatPanel({
     <aside
       data-testid="shared-chat-panel"
       aria-label="회의 챗봇"
-      className="flex h-full min-h-0 w-full flex-col bg-white lg:border-l lg:border-[var(--el-hairline)]"
+      // 테두리는 여기서 안 준다 — 자리를 잡아 주는 쪽(`note-panel`)이 자기 패널 테두리를
+      // 갖는다. 예전 `lg:border-l`은 그 패널 테두리 바로 안쪽에 선을 하나 더 그렸다.
+      className="flex h-full min-h-0 w-full flex-col bg-white"
     >
       <header className="border-b border-[var(--el-hairline)] px-5 py-4">
         <p className="text-[11px] tracking-wide text-[var(--el-muted)] uppercase">

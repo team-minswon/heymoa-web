@@ -57,23 +57,27 @@ describe("meetingRefetchInterval", () => {
 });
 
 describe("isPersonalChatHiddenInNote", () => {
-  it("side에서는 항상 감춘다", () => {
-    expect(isPersonalChatHiddenInNote("side", "active", false)).toBe(true);
-    expect(isPersonalChatHiddenInNote("side", "ended", false)).toBe(true);
+  // 노트 안에서는 항상 감춘다. 전체 화면의 오른쪽 440은 공유 레일이 **상주**하는 자리라
+  // (design.pen `L4PpR`), 개인 챗봇이 `fixed`로 그 위에 뜨면 챗 UI 둘이 겹친다.
+  // 예전에는 종료되면 레일이 걷혀 그 자리를 개인 챗봇이 물려받는 규칙이었다.
+  it.each([
+    ["side", "active"],
+    ["side", "ended"],
+    ["full", "active"],
+    ["full", "not-started"],
+    ["full", "paused"],
+    ["full", "ended"],
+    ["full", "unknown"],
+  ] as const)("%s + %s는 개인 챗봇을 감춘다", (view, phase) => {
+    expect(phase).toBeTruthy();
+    expect(isPersonalChatHiddenInNote(view)).toBe(true);
   });
 
-  it("full에서 트레이가 레일을 독차지할 때만 감춘다", () => {
-    expect(isPersonalChatHiddenInNote("full", "active", false)).toBe(true);
-    expect(isPersonalChatHiddenInNote("full", "not-started", false)).toBe(true);
-    expect(isPersonalChatHiddenInNote("full", "paused", false)).toBe(true);
-    expect(isPersonalChatHiddenInNote("full", "ended", false)).toBe(false);
-  });
-
-  it("unknown은 로딩 중에만 감추고, 실패면 개인 챗봇을 남긴다", () => {
-    // 로딩(pending) → 트레이가 곧 뜨니 감춘다.
-    expect(isPersonalChatHiddenInNote("full", "unknown", true)).toBe(true);
-    // 실패(pending 아님) → 트레이도 안 서므로 감추면 챗 입구가 전무해진다.
-    expect(isPersonalChatHiddenInNote("full", "unknown", false)).toBe(false);
+  // 조회 실패도 예외가 아니다 — side는 시트가 z-50이라 개인 챗봇 FAB(z-40)이 그 아래 깔려
+  // 보여도 못 누른다. 실패의 정상 경로는 노트 자신의 InlineRetry다.
+  it("조회 실패도 예외로 두지 않는다", () => {
+    expect(isPersonalChatHiddenInNote("full")).toBe(true);
+    expect(isPersonalChatHiddenInNote("side")).toBe(true);
   });
 });
 

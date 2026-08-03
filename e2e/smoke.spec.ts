@@ -109,11 +109,11 @@ async function expectForeignViewerTranscript(
       0
     );
     if (viewportSize.width === 375) {
-      const toolbar = page
-        .getByRole("navigation", { name: "현재 위치" })
-        .locator("..");
-      const status = toolbar.getByText("기록 중", { exact: true });
-      const starterName = toolbar.getByText("김서연", { exact: false });
+      // 상태·진행자는 이제 **노트 헤더**가 그린다 — 전체 화면이 워크스페이스 상단바를 덮으면서
+      // 그 바의 노트 액션 슬롯이 사라졌다.
+      const header = meetingControls(page);
+      const status = header.getByText("기록 중", { exact: true });
+      const starterName = header.getByText("김서연", { exact: false });
       await expect(status).toBeVisible();
       await expect(starterName).toBeVisible();
       const starterBox = await starterName.boundingBox();
@@ -797,14 +797,24 @@ test("keeps the personal chat scrollable when the thread grows", async ({
  * 노트 표면이 본문 컬럼을 덮어서(full은 항상, side는 모바일에서 inset-0) 필터만 바꾸면
  * 화면이 반응하지 않는 것처럼 보였다.
  */
-test("returns to the note list when a project is picked in full view", async ({
+/**
+ * 전체 화면은 **사이드바까지 덮는다** (design.pen `XtEMZ`: 1420 = 1440 − 좌우 10, 사이드바
+ * 없음). 그래서 목록으로 돌아가는 길은 사이드바가 아니라 노트가 가진 닫기다 — 예전에는
+ * 사이드바의 프로젝트를 눌러 나갔다.
+ */
+test("covers the sidebar in full view and leaves the note's own close as the way back", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
   await expect(page).toHaveURL(/notes/);
 
-  await page.getByRole("button", { name: "모든 노트" }).click();
+  // 사이드바는 뒤에 남지만 `inert`라 포커스도 클릭도 안 들어간다. **좌표로 검사하지 않는다** —
+  // `fixed` 면이 위에 떠도 뒤 요소의 좌표는 그대로라 `toBeInViewport`는 가림을 못 본다.
+  await expect(
+    page.locator('[data-slot="sidebar-container"]')
+  ).toHaveAttribute("inert", /.*/);
 
+  await page.getByRole("button", { name: "노트 닫기" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
 });
 
@@ -831,11 +841,129 @@ test("draws the starter avatar image even when the starter is not a participant"
 });
 
 /**
- * 노트 full 면이 화면 바닥까지 덮는지 본다.
+ * 셸 프레임이 design.pen 정본 기하와 맞는지 잰다 (뷰포트 1440×900).
  *
- * 셸 컨테이너가 뒤에 깔린 목록을 따라 늘어나면 문서가 스크롤되고, 그 위에 `absolute`로 앉는
- * 노트 면이 컨테이너를 다 못 덮어 아래로 목록이 비쳤다(405px 실측 · APP-252). 목록이 화면보다
- * 길어야 재현되므로 목 시드 10개가 조건을 만든다. jsdom은 레이아웃을 안 해 e2e여야 한다.
+ * | 화면 | 정본 |
+ * |---|---|
+ * | 워크스페이스 | 사이드바 `232 · left 0` → 틈 `10` → 패널 `1188 × 880 · left 242 · top 10` |
+ * | 노트 사이드 뷰 | 시트 `860 × 884 · left 572 · top 8` |
+ * | 노트 전체 뷰 | 본문 패널 + 틈 `10` + 레일 `440` |
+ *
+ * **jsdom으로는 못 본다** — 레이아웃을 안 하므로 폭·틈이 전부 0이다. 클래스 문자열만 보는
+ * 단위 테스트는 `p-2.5`가 실제로 10px 틈을 만드는지, 사이드바 테두리가 특이도에 져서 살아
+ * 있는지를 구분하지 못한다(실제로 primitive에서 빼야 했다).
+ */
+test("keeps the shell frame geometry from design.pen", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+  await expect(page.getByTestId("workspace-note-list")).toBeAttached();
+
+  const workspace = await page.evaluate(() => {
+    const box = (selector: string) => {
+      const element = document.querySelector(selector)!;
+      const rect = element.getBoundingClientRect();
+      return { x: Math.round(rect.x), width: Math.round(rect.width), right: Math.round(rect.right), y: Math.round(rect.y), bottom: Math.round(rect.bottom) };
+    };
+    const sidebar = document.querySelector('[data-slot="sidebar-container"]')!;
+    return {
+      sidebar: box('[data-slot="sidebar-container"]'),
+      panel: box('[data-slot="sidebar-inset"] .rounded-panel'),
+      sidebarBorderRight: getComputedStyle(sidebar).borderRightWidth,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    };
+  });
+
+  expect(workspace.sidebar.width).toBe(232);
+  expect(workspace.sidebar.x).toBe(0);
+  // 사이드바는 캔버스 위에 그냥 앉는다 — 선이 있으면 패널과 한 셸처럼 붙어 보인다.
+  expect(workspace.sidebarBorderRight).toBe("0px");
+  expect(workspace.panel.x).toBe(242);
+  expect(workspace.panel.y).toBe(10);
+  expect(workspace.panel.width).toBe(1188);
+  expect(workspace.panel.x - workspace.sidebar.right).toBe(10);
+  expect(workspace.viewport.width - workspace.panel.right).toBe(10);
+  expect(workspace.viewport.height - workspace.panel.bottom).toBe(10);
+
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=details`
+  );
+  const sheetLocator = page.locator('[data-surface="sheet"]');
+  await expect(sheetLocator).toBeVisible();
+  // 시트는 오른쪽에서 밀려 들어온다 — 애니메이션이 끝나기 전에 재면 x가 2px쯤 남는다.
+  await expect
+    .poll(() => sheetLocator.evaluate((el) => Math.round(el.getBoundingClientRect().x)))
+    .toBe(572);
+  const sheet = await sheetLocator.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+    };
+  });
+  expect(sheet).toEqual({ y: 8, width: 860, height: 884 });
+
+  // 전체 화면은 **뷰포트를 통째로** 쓴다 — 사이드바도 워크스페이스 상단바도 덮는다.
+  // 안에서 노트(왼쪽) + 에이전트 레일 440(오른쪽 고정)이 캔버스 10px로 갈린다.
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${FOREIGN_VIEWER_NOTE_ID}?view=full&tab=transcript`
+  );
+  const surface = page.locator('[data-surface="full"]');
+  await expect(surface).toBeVisible();
+  // 시트와 같은 이유로 기다린다 — 이 면은 오른쪽에서 `scale(0.98)`로 자라며 들어오고,
+  // 그 사이에 재면 사방이 1px씩 안쪽으로 들어온 값이 나온다. 애니메이션 중에 잰 수치를
+  // 정본으로 굳힌 적이 있다.
+  await surface.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished))
+  );
+  const rail = page.getByTestId("shared-chat-panel");
+  await expect(rail).toBeVisible();
+
+  const full = await page.evaluate(() => {
+    const element = document.querySelector('[data-surface="full"]')!;
+    const rect = element.getBoundingClientRect();
+    // 레일에 「이 회의 / 내 에이전트」 탭이 생기면서 공유 패널은 두 겹 안으로 들어갔다.
+    // 440을 실제로 갖는 것은 레일 상자다.
+    const column = document.querySelector(
+      '[data-testid="note-agent-rail"]'
+    )! as HTMLElement;
+    const body = column.previousElementSibling!;
+    const columnRect = column.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    return {
+      surface: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        right: Math.round(rect.right),
+        bottom: Math.round(rect.bottom),
+      },
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      },
+      railWidth: Math.round(columnRect.width),
+      gap: Math.round(columnRect.x - bodyRect.right),
+    };
+  });
+
+  // 뷰포트 사방 10px 거터. 사이드바(232) 위를 덮으므로 x는 0에서 시작한다.
+  expect(full.surface.x).toBe(0);
+  expect(full.surface.y).toBe(0);
+  expect(full.viewport.width - full.surface.right).toBe(0);
+  expect(full.railWidth).toBe(440);
+  expect(full.gap).toBe(10);
+});
+
+/**
+ * 노트 full 면이 뷰포트를 남김없이 덮는지 본다.
+ *
+ * 셸 컨테이너가 뒤에 깔린 목록을 따라 늘어나면 문서가 스크롤되고, 그 위에 앉는 노트 면이
+ * 컨테이너를 다 못 덮어 아래로 목록이 비쳤다(405px 실측 · APP-252). 목록이 화면보다 길어야
+ * 재현되므로 목 시드 10개가 조건을 만든다. jsdom은 레이아웃을 안 해 e2e여야 한다.
+ *
+ * 이제 이 면은 셸 안이 아니라 **뷰포트에 `fixed`**라 바닥이 곧 화면 바닥이다 — 사이드바까지
+ * 덮기 때문이다(design.pen `XtEMZ`). 막는 회귀는 같고 재는 대상만 달라졌다.
  */
 test("covers the viewport with the full note surface", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
@@ -846,17 +974,27 @@ test("covers the viewport with the full note surface", async ({ page }) => {
   await expect(page.getByTestId("workspace-note-list")).toBeAttached();
 
   const geometry = await page.evaluate(() => {
-    const element = document.querySelector('[data-surface="full"]')!;
+    const rect = document
+      .querySelector('[data-surface="full"]')!
+      .getBoundingClientRect();
     return {
       documentScrollHeight: document.documentElement.scrollHeight,
       viewportHeight: document.documentElement.clientHeight,
-      surfaceBottom: element.getBoundingClientRect().bottom,
+      viewportWidth: document.documentElement.clientWidth,
+      top: Math.round(rect.top),
+      left: Math.round(rect.left),
+      bottom: Math.round(rect.bottom),
+      right: Math.round(rect.right),
     };
   });
 
   // 문서가 스크롤되면 그 자체가 셸이 뷰포트를 넘었다는 뜻이다.
   expect(geometry.documentScrollHeight).toBe(geometry.viewportHeight);
-  expect(geometry.surfaceBottom).toBe(geometry.viewportHeight);
+  // 면이 뷰포트를 남김없이 덮는다 — 어긋나면 그 틈으로 뒤 목록·사이드바가 비친다.
+  expect(geometry.top).toBe(0);
+  expect(geometry.left).toBe(0);
+  expect(geometry.bottom).toBe(geometry.viewportHeight);
+  expect(geometry.right).toBe(geometry.viewportWidth);
 });
 
 /**
@@ -876,7 +1014,8 @@ test("clears the note row spinner after the full-view note is closed", async ({
   await page.getByRole("menuitem", { name: "전체 화면" }).click();
   await expect(page).toHaveURL(/view=full/);
 
-  await page.getByRole("button", { name: "모든 노트" }).click();
+  // 전체 화면이 사이드바를 덮으므로 되돌아가는 길은 노트 자신의 닫기다.
+  await page.getByRole("button", { name: "노트 닫기" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
 
   await expect(row.locator(".animate-spin")).toHaveCount(0);

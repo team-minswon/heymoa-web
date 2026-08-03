@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { MessageCircle, Plus, X } from "lucide-react";
 
@@ -47,9 +48,37 @@ type PersonalChatState = {
   setNoteScope: (scope: NoteScope | null) => void;
   /** 패널이 한 턴을 굴리는 동안 참. 그 사이 스코프 전환은 미뤄진다. */
   setTurnActive: (active: boolean) => void;
+  /**
+   * 지금 개인 챗봇이 한 턴을 굴리고 있는가. 답변이 흐르거나 도구 승인을 기다리는 동안
+   * **패널을 화면에서 치우면 안 된다** — 중지도 승인도 그 안에만 있다.
+   */
+  isTurnActive: boolean;
+  /**
+   * 노트 전체 화면의 레일이 「내 에이전트」 자리를 내준다(design.pen `L4PpR`).
+   * 등록되면 떠 있는 카드 대신 **그 자리에** 그린다 — 챗 UI 둘이 겹치지 않게.
+   */
+  setRailSlot: (element: HTMLElement | null) => void;
 };
 
 const PersonalChatContext = createContext<PersonalChatState | null>(null);
+
+/**
+ * 여닫는 움직임. **`visibility`를 전이 목록에 넣는 것이 핵심이다** — 끝 상태가 `invisible`이라야
+ * 감춰진 패널이 포커스와 접근성 트리에서 빠지는데, `visibility`는 전이 중에는 `visible`로
+ * 계산되고 끝에서만 뒤집힌다. 그래서 들어올 때는 즉시 보이고 나갈 때는 끝까지 보인다.
+ *
+ * `display:none`(=`hidden`)으로는 이 두 가지를 같이 할 수 없어서 예전에는 그냥 툭 사라졌다.
+ * 언마운트는 여전히 금지다 — 흐르던 스트림이 끊기면 계약상 부분 응답은 저장되지 않는다.
+ *
+ * `starting:`은 **첫 마운트**용이다. 패널은 한 번 열기 전에는 아예 없어서, 이게 없으면
+ * 첫 열기만 애니메이션 없이 나타난다.
+ *
+ * 전이 목록이 `translate`·`scale`인 것은 Tailwind v4가 `translate-x-4`를 `transform`이 아니라
+ * 개별 `translate` 속성으로 내기 때문이다 — `transform`만 적으면 투명도만 움직이고 위치는
+ * 즉시 튄다(실측으로 확인).
+ */
+const CHAT_MOTION =
+  "transition-[opacity,translate,scale,visibility] duration-200 ease-out motion-reduce:transition-none";
 
 export function usePersonalChat() {
   const context = useContext(PersonalChatContext);
@@ -109,6 +138,19 @@ export function PersonalChatProvider({
   /** 턴이 도는 동안 밀어 둔 스코프. `undefined`면 밀어 둔 것이 없다. */
   const deferredScopeRef = useRef<string | null | undefined>(undefined);
   const turnActiveRef = useRef(false);
+  /**
+   * 노트 전체 화면의 레일이 내준 자리. 있으면 떠 있는 카드 대신 여기로 포털한다.
+   * **포털이라 `PersonalChatPanel` 자신은 이 트리에 그대로 남는다** — 스트림을 쥐고 있는
+   * 훅이 이 컴포넌트에 있어서, 자리가 바뀌어도 흐르던 답변이 끊기지 않는다.
+   */
+  const [railSlot, setRailSlotState] = useState<HTMLElement | null>(null);
+  const setRailSlot = useCallback((element: HTMLElement | null) => {
+    setRailSlotState(element);
+    // 레일에서 처음 열었어도 **연 것은 연 것이다.** 이걸 안 세우면 레일을 떠나는 순간
+    // (축소·닫기·뒤로가기) `hasOpened`가 거짓이라 패널이 언마운트되고, 흐르던 답변이
+    // 계약상 저장되지 않은 채 사라진다.
+    if (element) setHasOpened(true);
+  }, []);
 
   const setNoteScope = useCallback((scope: NoteScope | null) => {
     const nextNote = scope?.noteId ?? null;
@@ -124,17 +166,26 @@ export function PersonalChatProvider({
     setScopeNoteId(nextNote);
   }, []);
 
+  // ref는 스코프 전환을 미루는 동기 판정용이고, state는 **화면이 구독하는 값**이다 —
+  // 좁은 화면의 노트 레일이 이걸 보고 답변이 흐르는 동안 자기를 접지 않는다.
+  const [isTurnActive, setIsTurnActive] = useState(false);
+
   const setTurnActive = useCallback((active: boolean) => {
     turnActiveRef.current = active;
+    setIsTurnActive(active);
     if (active || deferredScopeRef.current === undefined) return;
     setScopeNoteId(deferredScopeRef.current);
     deferredScopeRef.current = undefined;
   }, []);
 
+  // 레일에 들어가 있으면 떠 있는 카드의 여닫기와 무관하다 — 레일 탭이 곧 열림이다.
+  const railed = railSlot !== null;
+  const fabHidden = hidden || isOpen || railed;
+
   const value = useMemo<PersonalChatState>(
     () => ({
       isOpen,
-      isVisible: isOpen && !hidden,
+      isVisible: isOpen && !hidden && !railed,
       open: () => {
         setHasOpened(true);
         setIsOpen(true);
@@ -142,29 +193,52 @@ export function PersonalChatProvider({
       close: () => setIsOpen(false),
       setNoteScope,
       setTurnActive,
+      isTurnActive,
+      setRailSlot,
     }),
-    [hidden, isOpen, setNoteScope, setTurnActive]
+    [
+      hidden,
+      isOpen,
+      isTurnActive,
+      railed,
+      setNoteScope,
+      setRailSlot,
+      setTurnActive,
+    ]
   );
 
   return (
     <PersonalChatContext.Provider value={value}>
       {children}
-      {!hidden && !isOpen ? (
-        <Button
-          size="icon"
-          aria-label="개인 챗봇 열기"
-          onClick={value.open}
-          className="fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-e2"
-        >
-          <MessageCircle className="size-5" />
-        </Button>
-      ) : null}
-      {hasOpened ? (
+      {/*
+        FAB는 언마운트하지 않는다 — 패널과 자리를 주고받는 한 쌍이라 사라질 때도 같은 길이로
+        물러나야 한다. 조건부 렌더면 패널이 들어오는 동안 버튼만 즉시 증발한다.
+        접근성 트리에서는 실제로 빼야 하므로 `aria-hidden`·`inert`를 함께 건다.
+      */}
+      <Button
+        size="icon"
+        aria-label="개인 챗봇 열기"
+        aria-hidden={fabHidden || undefined}
+        inert={fabHidden}
+        tabIndex={fabHidden ? -1 : undefined}
+        onClick={value.open}
+        className={cn(
+          "fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-e2",
+          CHAT_MOTION,
+          fabHidden
+            ? "invisible scale-90 opacity-0"
+            : "visible scale-100 opacity-100"
+        )}
+      >
+        <MessageCircle className="size-5" />
+      </Button>
+      {hasOpened || railed ? (
         <PersonalChatPanel
           // 스코프가 바뀌면 세션·스트림을 갈아 끼운다. 스코프별로 활성 세션이 따로이므로
           // 상태를 이어 붙이면 노트 답변이 워크스페이스 대화에 섞인다.
           key={scopeNoteId ?? `workspace:${workspaceId}`}
-          hidden={hidden || !isOpen}
+          hidden={railed ? false : hidden || !isOpen}
+          railSlot={railSlot}
           workspaceId={workspaceId}
           workspaceName={workspaceName}
           noteId={scopeNoteId}
@@ -184,6 +258,7 @@ const EXAMPLE_QUESTIONS = [
 
 function PersonalChatPanel({
   hidden,
+  railSlot = null,
   workspaceId,
   workspaceName,
   noteId,
@@ -191,6 +266,8 @@ function PersonalChatPanel({
   onClose,
 }: {
   hidden: boolean;
+  /** 있으면 이 자리로 포털한다. 노트 전체 화면의 「내 에이전트」 레일이다. */
+  railSlot?: HTMLElement | null;
   workspaceId: string;
   workspaceName?: string;
   noteId: string | null;
@@ -436,16 +513,30 @@ function PersonalChatPanel({
     `${messages.length}:${pendingUserMessage ?? ""}:${stream.state.text}:${stream.state.records.length}`
   );
 
-  return (
+  const panel = (
     <aside
       data-testid="personal-chat-panel"
+      data-hidden={hidden || undefined}
+      data-railed={railSlot ? "" : undefined}
       aria-label="개인 챗봇"
+      inert={hidden}
       className={cn(
-        // 448은 v4 프레임 값이지만 좁은 화면에서는 뷰포트를 넘어 왼쪽이 잘린다.
-        // 부양 카드는 e2 2연타다. 단일 티어 0_4px_16px는 흰 마케팅 면 전용이라
-        // 제품 캔버스에서는 그림자가 보이지 않는다. (ELEVATION SPEC)
-        "fixed top-2 right-2 bottom-2 z-30 flex w-[min(448px,calc(100vw-1rem))] flex-col rounded-panel border border-[var(--el-hairline)] bg-white shadow-e2",
-        hidden && "hidden"
+        "flex min-h-0 flex-col bg-white",
+        railSlot
+          ? // 레일에 들어가면 자기 껍데기를 내려놓는다 — 테두리·radius·그림자는 레일이 갖고,
+            // 여기는 그 안을 채우기만 한다. 여닫는 움직임도 레일 탭이 대신한다.
+            "h-full w-full"
+          : cn(
+              // 448은 v4 프레임 값이지만 좁은 화면에서는 뷰포트를 넘어 왼쪽이 잘린다.
+              // 부양 카드는 e2 2연타다. 단일 티어 0_4px_16px는 흰 마케팅 면 전용이라
+              // 제품 캔버스에서는 그림자가 보이지 않는다. (ELEVATION SPEC)
+              "fixed top-2 right-2 bottom-2 z-30 w-[min(448px,calc(100vw-1rem))] rounded-panel border border-[var(--el-hairline)] shadow-e2",
+              CHAT_MOTION,
+              "starting:translate-x-4 starting:opacity-0",
+              hidden
+                ? "invisible translate-x-4 opacity-0"
+                : "visible translate-x-0 opacity-100"
+            )
       )}
     >
       <header className="flex items-center gap-2 border-b border-[var(--el-hairline)] px-6 py-4">
@@ -470,9 +561,18 @@ function PersonalChatPanel({
         >
           <Plus className="size-3.5" />새 대화
         </Button>
-        <Button variant="ghost" size="icon" aria-label="닫기" onClick={onClose}>
-          <X className="size-4" />
-        </Button>
+        {/* 레일에서는 닫기가 없다 — 탭이 자리를 가르므로 닫을 곳이 없고, 전체 화면의
+            에이전트 레일에는 닫기를 두지 않는다는 규칙과도 같다. */}
+        {railSlot ? null : (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="닫기"
+            onClick={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        )}
       </header>
 
       <ScrollArea
@@ -581,4 +681,8 @@ function PersonalChatPanel({
       />
     </aside>
   );
+
+  // 포털이라 **이 컴포넌트는 그대로 남는다.** 스트림을 쥐고 있는 훅이 여기 있어서, 자리가
+  // 떠 있는 카드에서 레일로 옮겨가도 흐르던 답변이 끊기지 않는다(옮겨지는 것은 DOM뿐이다).
+  return railSlot ? createPortal(panel, railSlot) : panel;
 }

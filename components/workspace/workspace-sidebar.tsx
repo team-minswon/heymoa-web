@@ -66,6 +66,7 @@ import {
   useCreateProject,
   useDeleteProject,
   useUpdateProject,
+  type getProjectsResponse,
 } from "@/lib/api/generated/projects/projects";
 import type {
   ProjectResponseData,
@@ -89,6 +90,7 @@ export function WorkspaceSidebar({
   selectedProjectId,
   onSelectProject,
   onOpenSettings,
+  covered = false,
 }: {
   workspaceId: string;
   workspace?: WorkspaceResponseData;
@@ -96,6 +98,8 @@ export function WorkspaceSidebar({
   selectedProjectId: string | null;
   onSelectProject: (projectId: string | null) => void;
   onOpenSettings: (section: "account" | "workspace") => void;
+  /** 노트 전체 화면이 이 사이드바를 덮고 있는가. 열려 있던 창을 닫는 데 쓴다. */
+  covered?: boolean;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -119,6 +123,14 @@ export function WorkspaceSidebar({
   );
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(true);
+  // 노트 전체 화면이 사이드바를 덮으면 **여기서 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라
+  // `inert`도 덮는 면(`z-30`)도 닿지 않고, 셸이 재마운트되지 않아 저절로 사라지지도 않는다.
+  // 모달이라 바깥을 눌러도 안 닫히므로 노트 위에 갇힌 창이 남는다.
+  if (covered && (projectDialog || deleteTarget || workspaceDialogOpen)) {
+    setProjectDialog(null);
+    setDeleteTarget(null);
+    setWorkspaceDialogOpen(false);
+  }
 
   const workspaces =
     workspacesQuery.data?.status === 200 && workspacesQuery.data.data.success
@@ -130,6 +142,39 @@ export function WorkspaceSidebar({
       queryKey: getGetProjectsQueryKey(workspaceId),
     });
 
+  /**
+   * 이름 변경 응답을 목록 캐시에 **바로 써 넣는다.** 예전에는 invalidate의 refetch를 기다렸다가
+   * 다이얼로그를 닫았는데, 그사이 버튼의 loading은 이미 꺼져 있어서 **아무 일도 안 일어나는
+   * 구간**이 생겼다. 그 구간 동안 뒤에 깔린 사이드바는 옛 이름 그대로였고, 다이얼로그가 닫히는
+   * 순간에야 이름이 바뀌어 "확인을 눌렀는데 옛 이름이 잠깐 보인다"로 읽혔다.
+   *
+   * 서버가 갱신된 프로젝트를 응답으로 주므로 왕복을 한 번 더 돌 이유가 없다. 캐시를 먼저
+   * 고치면 닫는 순간 이미 새 이름이고, `refreshProjects()`는 다른 필드(updatedAt 등)를
+   * 맞추는 뒷정리로만 남는다.
+   */
+  const applyRenamedProject = (project: ProjectResponseData) => {
+    queryClient.setQueryData(
+      getGetProjectsQueryKey(workspaceId),
+      (previous: getProjectsResponse | undefined) => {
+        if (previous?.status !== 200 || !previous.data.success) return previous;
+        return {
+          ...previous,
+          data: {
+            ...previous.data,
+            data: {
+              ...previous.data.data,
+              projects: previous.data.data.projects.map((candidate) =>
+                candidate.projectId === project.projectId
+                  ? { ...candidate, ...project }
+                  : candidate
+              ),
+            },
+          },
+        };
+      }
+    );
+  };
+
   const handleProjectSubmit = async (formData: FormData) => {
     const name = String(formData.get("name") ?? "").trim();
     if (!name || !projectDialog) return;
@@ -140,16 +185,22 @@ export function WorkspaceSidebar({
           workspaceId,
           data: { name, description: null },
         });
+        // 새 프로젝트는 목록의 어디에 끼는지를 서버 정렬이 정하므로 캐시에 손으로 못 넣는다.
+        // 목록이 새로 와야 자리도 맞는다.
+        await refreshProjects();
         toast.success("프로젝트가 생성되었습니다.");
       } else {
-        await updateProject.mutateAsync({
+        const response = await updateProject.mutateAsync({
           workspaceId,
           projectId: projectDialog.project.projectId,
           data: { name, description: projectDialog.project.description },
         });
+        if (response.status === 200 && response.data.success) {
+          applyRenamedProject(response.data.data);
+        }
         toast.success("프로젝트 이름이 변경되었습니다.");
+        void refreshProjects();
       }
-      await refreshProjects();
     } catch {
       if (projectDialog.mode === "create") {
         toast.error("프로젝트 생성에 실패했습니다.");

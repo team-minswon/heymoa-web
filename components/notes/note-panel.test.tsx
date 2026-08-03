@@ -90,6 +90,12 @@ vi.mock("@/components/notes/transcript-view", () => ({
     </p>
   ),
 }));
+// 레일이 셸의 개인 챗봇 자리를 등록한다. 여기서는 provider를 세우지 않으므로 훅만 채운다.
+const setRailSlot = vi.hoisted(() => vi.fn());
+const personalChat = vi.hoisted(() => ({ isTurnActive: false }));
+vi.mock("@/components/chat/personal-chat", () => ({
+  usePersonalChat: () => ({ setRailSlot, ...personalChat }),
+}));
 vi.mock("@/components/notes/shared-chat-panel", () => ({
   SharedChatPanel: ({
     phase,
@@ -133,6 +139,9 @@ vi.mock("@/components/notes/meeting-end-dialog", () => ({
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNoteQueryKey: (noteId: string) => [`/v1/notes/${noteId}`],
+  getGetNotesQueryKey: (projectId: string) => [`/v1/projects/${projectId}/notes`],
+  // 삭제 메뉴가 노트 헤더로 옮겨오면서 패널이 이 훅을 지나간다.
+  useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useGetNote: () =>
     noteState.query ?? {
       data: { status: 200, data: { success: true, data: noteState.value } },
@@ -223,6 +232,8 @@ describe("NotePanel", () => {
     recordingState.phase = "idle";
     recordingState.sessionStatus = null;
     noteState.query = null;
+    personalChat.isTurnActive = false;
+    setRailSlot.mockReset();
     recordingState.sessionStartedAt = null;
     noteState.value = {
       noteId: "01K0000000002",
@@ -371,8 +382,10 @@ describe("NotePanel", () => {
       />
     );
 
-    const tray = screen.getByTestId("shared-chat-panel").parentElement;
-    const root = tray?.parentElement;
+    // 레일 안에 탭이 생기면서 `shared-chat-panel`이 두 겹 더 들어갔다. DOM을 거슬러 오르는
+    // 대신 기하를 실제로 갖는 상자를 이름으로 잡는다.
+    const tray = screen.getByTestId("note-agent-rail");
+    const root = tray.parentElement;
 
     expect(root).toHaveClass(
       "flex-col",
@@ -387,8 +400,31 @@ describe("NotePanel", () => {
       "max-lg:landscape:border-l",
       "max-lg:landscape:border-t-0",
       "lg:h-full",
-      "lg:w-[464px]"
+      // 레일 폭은 440이다 (design.pen `L4PpR`). 예전 464는 옛 산술이었다.
+      "lg:w-[440px]"
     );
+    // 캔버스 10px 틈은 **넓은 화면 규칙**이다 — 좁은 화면은 두 면이 테두리로 붙는데
+    // 틈까지 두면 붙은 척하면서 벌어진다.
+    expect(root).toHaveClass("lg:gap-2.5");
+    expect(root?.className).not.toMatch(/(^|\s)gap-2\.5(\s|$)/);
+    expect(tray).toHaveClass("rounded-panel", "shadow-e2");
+  });
+
+  // 가르는 선을 두 곳이 그리면 두 겹이 된다 — 자리를 잡아 주는 쪽만 그린다.
+  it("전사와 레일 사이 선을 한 번만 그린다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const panel = screen.getByTestId("shared-chat-panel");
+    expect(panel.className).not.toContain("border-l");
   });
 
   it("passes the existing meeting phase to the transcript", () => {
@@ -409,7 +445,9 @@ describe("NotePanel", () => {
     );
   });
 
-  it("full + 종료면 트레이가 사라진다 — 우측은 개인 챗봇 몫", () => {
+  // 레일은 회의 상태로 여닫지 않는다 — 전체 화면이면 항상 오른쪽 440에 서 있다
+  // (design.pen `XtEMZ`/`L4PpR`). 예전에는 종료되면 통째로 사라져 본문 폭이 튀었다.
+  it("full 레일은 종료된 회의에도 상주한다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -421,7 +459,40 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
-    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+    expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
+    // 닫기가 없다 — 레일은 고정이다.
+    expect(screen.queryByRole("button", { name: /레일 닫기|챗봇 닫기/ })).toBeNull();
+  });
+
+  it("종료된 회의에서도 「내 에이전트」로 물어볼 곳이 남는다", () => {
+    // 공유 챗봇은 살아 있는 회의에 붙은 것이라 ENDED면 컴포저가 잠긴다. 노트 안에서는 개인
+    // 챗봇도 감춰 두므로, 탭이 없으면 종료된 회의에는 물어볼 곳이 한 군데도 없다.
+    noteState.value.meetingStatus = "ENDED";
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const personal = screen.getByRole("tab", { name: "내 에이전트" });
+    expect(screen.getByRole("tab", { name: "이 회의" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    // 고르기 전에는 자리를 넘기지 않는다 — 늘 넘기면 노트를 열기만 해도 개인 챗봇 조회가 걸린다.
+    expect(setRailSlot).not.toHaveBeenCalledWith(expect.any(HTMLElement));
+
+    fireEvent.click(personal);
+    expect(personal).toHaveAttribute("aria-selected", "true");
+    // 셸의 개인 챗봇이 들어올 자리를 실제로 넘겨줬다.
+    expect(setRailSlot).toHaveBeenCalledWith(expect.any(HTMLElement));
+    // 공유 패널은 **감출 뿐 언마운트하지 않는다** — 끊으면 흐르던 답변이 사라진다.
+    expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
   });
 
   it("답변이 흐르는 중 회의가 종료돼도 트레이를 걷지 않고, 턴이 끝나면 아카이브로 넘긴다", () => {
@@ -447,9 +518,10 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("shared-chat-panel")).toBeTruthy();
     expect(screen.queryByTestId("note-archive")).toBeNull();
 
-    // 턴이 끝난다.
+    // 턴이 끝나면 왼쪽이 아카이브로 넘어간다. **레일은 그대로 선다** — 이제 상주라
+    // 회의 상태로 걷지 않는다.
     fireEvent.click(screen.getByRole("button", { name: "턴 끝" }));
-    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+    expect(screen.getByTestId("shared-chat-panel")).toBeTruthy();
     expect(screen.getByTestId("note-archive")).toBeTruthy();
   });
 
@@ -625,7 +697,170 @@ describe("NotePanel", () => {
     }
   );
 
-  it("full 모드는 요약 탭을 두되, 회의 조작은 상단바로 올려 패널에 두지 않는다", () => {
+  it("삭제 확인창을 연 채 다른 노트로 바뀌면 창이 따라가지 않는다", async () => {
+    // 이 패널은 노트가 바뀌어도 재마운트되지 않는다. 창이 열린 채 대상만 바뀌면 A를 지우려다
+    // B가 지워진다 — 상태가 「열렸나」가 아니라 「어느 노트의 것인가」를 담아야 한다.
+    // 기록 중이면 삭제 메뉴 자체가 없다(서버가 409).
+    noteState.value.meetingStatus = "ENDED";
+
+    const { rerenderNote } = renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "노트 메뉴" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /삭제/ }));
+    expect(await screen.findByText(/을 삭제할까요/)).toBeTruthy();
+
+    noteState.value = { ...noteState.value, noteId: "01K0000000009" };
+    rerenderNote(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000009"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText(/을 삭제할까요/)).toBeNull()
+    );
+  });
+
+  it("개인 답변이 흐르는 동안에는 좁은 화면에서도 레일을 접지 않는다", () => {
+    // 접으면 중지도 도구 승인도 화면 밖으로 나간다 — 레일이 슬롯을 쥐고 있어 떠 있는 FAB로
+    // 되돌아가지도 않는다. 다른 멤버가 회의를 끝내는 순간이 바로 그 자리다.
+    noteState.value.meetingStatus = "ENDED";
+    personalChat.isTurnActive = true;
+
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("note-agent-rail")).not.toHaveClass(
+      "max-lg:h-auto"
+    );
+  });
+
+  it("좁은 화면에서 접혀도 「내 에이전트」를 고를 수 있다", () => {
+    // 레일을 통째로 감추면 탭 버튼까지 같이 감춰져서 종료된 회의에는 들어갈 길이 없어진다.
+    // 접는 것은 대화뿐이고 탭 줄은 남는다.
+    noteState.value.meetingStatus = "ENDED";
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const rail = screen.getByTestId("note-agent-rail");
+    // 종료된 회의는 좁은 화면에서 대화를 접는다 — 전사 높이를 지키기 위해서다.
+    expect(rail).toHaveClass("max-lg:h-auto");
+    expect(rail).not.toHaveClass("max-lg:hidden");
+
+    const personal = screen.getByRole("tab", { name: "내 에이전트" });
+    fireEvent.click(personal);
+
+    expect(screen.getByTestId("note-agent-rail")).not.toHaveClass(
+      "max-lg:h-auto"
+    );
+    expect(setRailSlot).toHaveBeenCalledWith(expect.any(HTMLElement));
+  });
+
+  it("노트를 옮겼다 돌아와도 삭제 확인창이 되살아나지 않는다", async () => {
+    noteState.value.meetingStatus = "ENDED";
+    const panel = (noteId: string) => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId={noteId}
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(panel("01K0000000002"));
+
+    fireEvent.click(screen.getByRole("button", { name: "노트 메뉴" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /삭제/ }));
+    expect(await screen.findByText(/을 삭제할까요/)).toBeTruthy();
+
+    noteState.value = { ...noteState.value, noteId: "01K0000000009" };
+    rerenderNote(panel("01K0000000009"));
+    await waitFor(() => expect(screen.queryByText(/을 삭제할까요/)).toBeNull());
+
+    // 되돌아온다. 저장된 대상을 안 버렸으면 여기서 창이 저절로 뜬다.
+    noteState.value = { ...noteState.value, noteId: "01K0000000002" };
+    rerenderNote(panel("01K0000000002"));
+    expect(screen.queryByText(/을 삭제할까요/)).toBeNull();
+  });
+
+  it("회의 종료 확인창이 노트 전환을 따라가지 않는다", async () => {
+    // 삭제 확인창과 같은 함정인데 결과가 더 나쁘다 — 대상만 B로 바뀌어 **다른 회의가
+    // 종료된다.** 예전에는 상단바의 노트 액션 슬롯이 `key={activeNoteId}`로 막았다.
+    const panel = (noteId: string) => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId={noteId}
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(panel("01K0000000002"));
+
+    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+    expect(screen.getByRole("button", { name: "종료 확인" })).toBeTruthy();
+
+    noteState.value = { ...noteState.value, noteId: "01K0000000009" };
+    rerenderNote(panel("01K0000000009"));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "종료 확인" })).toBeNull()
+    );
+  });
+
+  it("full에서 노트를 못 읽으면 공유 레일도 세우지 않는다", () => {
+    // 왼쪽이 재시도인데 오른쪽 레일이 「회의 상태를 확인하는 중」을 그리면 같은 실패가
+    // 두 가지 뜻으로 보인다. side가 이미 같은 조건으로 챗 탭을 뺀다.
+    noteState.query = { data: undefined, isError: true };
+
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        onCollapse={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+  });
+
+  it("full 모드는 요약 탭과 함께 회의 제어·창 제어를 직접 갖는다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -634,13 +869,41 @@ describe("NotePanel", () => {
         tab="summary"
         onTabChange={vi.fn()}
         onClose={vi.fn()}
+        onCollapse={vi.fn()}
       />
     );
     expect(screen.getByRole("tab", { name: "요약" })).toBeTruthy();
     expect(screen.getByTestId("note-summary")).toBeTruthy();
-    // full의 상태·종료·닫기는 셸 상단바가 맡는다.
-    expect(screen.queryByTestId("meeting-controls")).toBeNull();
-    expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
+    // 전체 화면이 워크스페이스 상단바를 통째로 덮으므로 **회의 제어·창 제어를 노트가 직접
+    // 갖는다.** 예전에는 셸 상단바의 노트 액션 슬롯이 맡았고, 그 바가 안 보이게 되면서
+    // 회의 종료·축소·닫기가 갈 곳이 없어졌다.
+    expect(
+      screen.getByRole("group", { name: "회의 상태 및 제어" })
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "노트 닫기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "사이드 뷰로 보기" })).toBeTruthy();
+  });
+
+  // 뷰가 바뀌면 레일의 SharedChatPanel이 언마운트되고 탭 아래에 새로 마운트되어 SSE가 끊긴다.
+  // 계약상 부분 응답은 저장되지 않으므로 흐르던 답변이 통째로 사라진다 — 확장과 같은 이유로 막는다.
+  it("공유 답변이 흐르는 동안 축소를 막는다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        onCollapse={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
+
+    expect(
+      screen.getByRole("button", { name: "답변이 끝나면 축소할 수 있습니다" })
+    ).toBeDisabled();
   });
 
   it("side + 종료는 정보·스크립트·요약 탭과 아카이브를 보인다", () => {
@@ -714,16 +977,19 @@ describe("NotePanel", () => {
     const windowGroup = screen.getByRole("group", { name: "창 제어" });
     const controlLayout = windowGroup.parentElement;
 
+    // 한 줄로 펴는 지점이 `sm`(640)에서 `lg`(1024)로 내려갔다. 전체 화면의 노트 패널은
+    // 레일 440을 뺀 나머지라, sm에서 펴면 좁은 폭에서 헤더가 세로로 자라 전사 높이를
+    // 0까지 밀어냈다(812×375 landscape에서 헤더 278/355 실측).
     expect(headerLayout).toHaveClass(
       "flex-col",
-      "sm:flex-row",
-      "sm:items-start"
+      "lg:flex-row",
+      "lg:items-start"
     );
     expect(controlLayout).toHaveClass(
       "w-full",
       "flex-wrap",
       "justify-between",
-      "sm:w-auto"
+      "lg:w-auto"
     );
     expect(meetingGroup).toHaveClass("flex-wrap");
     expect(
@@ -1204,7 +1470,8 @@ describe("NotePanel", () => {
 
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
-    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
+    // 레일은 상주라 아카이브로 넘어가도 그대로 선다 — 걷히는 것은 왼쪽 본문뿐이다.
+    expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
   });
 
   it("종료된 회의를 처음 열면 바로 아카이브를 보인다", () => {

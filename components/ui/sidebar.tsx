@@ -27,7 +27,9 @@ import { PanelLeftIcon } from "lucide-react";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
+// 232px. design.pen `IUax1`의 Sidebar 폭이고, 그 오른쪽 10px 틈 뒤에 본문 패널이 선다
+// (232 + 10 + 1188 = 1430, 뷰포트 1440에서 오른쪽 거터 10). shadcn 기본 16rem이 아니다.
+const SIDEBAR_WIDTH = "232px";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -236,7 +238,11 @@ function Sidebar({
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            // 테두리는 여기서 주지 않는다. `group-data-[side=left]:border-r`는 특이도가
+            // (0,2,0)이라 호출부의 `border-r-0`(0,1,0)이 못 이기고, `cn()`도 변종이 달라
+            // 못 지운다 — 사이드바에 선을 안 두려면 여기서 빼는 수밖에 없다. 선이 필요한
+            // 쪽은 호출부가 `border-r`을 붙인다.
+            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
           className
         )}
         {...props}

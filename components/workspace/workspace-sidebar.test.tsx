@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, cleanup } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  cleanup,
+  waitFor,
+} from "@testing-library/react";
 import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
@@ -21,10 +27,17 @@ vi.mock("@/components/auth/auth-provider", () => ({
   }),
 }));
 
+const projectApi = vi.hoisted(() => ({
+  updateMock: vi.fn(),
+}));
+
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   getGetProjectsQueryKey: () => ["projects"],
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateProject: () => ({
+    mutateAsync: projectApi.updateMock,
+    isPending: false,
+  }),
   useDeleteProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
@@ -81,13 +94,29 @@ const props = {
 
 function renderSidebar() {
   const client = new QueryClient();
-  return render(
-    <QueryClientProvider client={client}>
-      <SidebarProvider>
-        <WorkspaceSidebar {...props} />
-      </SidebarProvider>
-    </QueryClientProvider>
-  );
+  return {
+    client,
+    ...render(
+      <QueryClientProvider client={client}>
+        <SidebarProvider>
+          <WorkspaceSidebar {...props} />
+        </SidebarProvider>
+      </QueryClientProvider>
+    ),
+  };
+}
+
+/** 목록 응답 봉투. 사이드바가 캐시에 써 넣는 모양과 같아야 한다. */
+function projectsResponse(name: string) {
+  return {
+    status: 200 as const,
+    data: {
+      success: true as const,
+      data: {
+        projects: [{ ...props.projects[0], name }],
+      },
+    },
+  };
 }
 
 describe("WorkspaceSidebar", () => {
@@ -115,6 +144,47 @@ describe("WorkspaceSidebar", () => {
     expect(
       screen.getByRole("dialog", { name: "새 프로젝트 만들기" })
     ).toBeInTheDocument();
+  });
+
+  /**
+   * 이름 변경은 서버 응답을 목록 캐시에 **바로** 써야 한다.
+   *
+   * 예전에는 invalidate의 refetch를 기다렸다가 다이얼로그를 닫았다. 그사이 버튼 loading은
+   * 이미 꺼져 있어서 아무 일도 안 일어나는 구간이 생겼고, 뒤에 깔린 사이드바는 옛 이름
+   * 그대로였다 — "확인을 눌렀는데 옛 이름이 잠깐 보인다"가 이것이다.
+   *
+   * 캐시를 검사하는 이유: 옛 코드는 캐시에 **아무것도 안 썼다**. 닫힘 여부만 보면 두 구현이
+   * 구분되지 않는다.
+   */
+  it("이름 변경 응답을 목록 캐시에 바로 써 넣고 기다리지 않고 닫는다", async () => {
+    projectApi.updateMock.mockResolvedValue({
+      status: 200,
+      data: {
+        success: true,
+        data: { ...props.projects[0], name: "주간 회의" },
+      },
+    });
+    const { client } = renderSidebar();
+    client.setQueryData(["projects"], projectsResponse("주간"));
+
+    fireEvent.click(screen.getByRole("button", { name: "주간 프로젝트 메뉴" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "이름 변경" }));
+
+    const input = await screen.findByLabelText("프로젝트 이름");
+    fireEvent.change(input, { target: { value: "주간 회의" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      const cached = client.getQueryData(["projects"]) as ReturnType<
+        typeof projectsResponse
+      >;
+      expect(cached.data.data.projects[0].name).toBe("주간 회의");
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "프로젝트 이름 변경" })
+      ).toBeNull()
+    );
   });
 
   it("requires confirmation before deleting a project", async () => {

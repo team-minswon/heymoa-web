@@ -405,8 +405,8 @@ describe("PersonalChatProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
 
     await waitFor(() =>
-      expect(screen.getByTestId("personal-chat-panel").className).toContain(
-        "hidden"
+      expect(screen.getByTestId("personal-chat-panel")).toHaveAttribute(
+        "data-hidden"
       )
     );
     expect(state.aborted).toBe(false);
@@ -465,8 +465,8 @@ describe("PersonalChatProvider", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId("personal-chat-panel").className).toContain(
-        "hidden"
+      expect(screen.getByTestId("personal-chat-panel")).toHaveAttribute(
+        "data-hidden"
       )
     );
     // 감춰졌을 뿐 스코프는 그대로 워크스페이스다.
@@ -479,8 +479,8 @@ describe("PersonalChatProvider", () => {
   it("side 모드에서는 버튼이 사라지고 패널이 감춰지지만 스트림은 유지된다", async () => {
     const { rerender, client } = renderChat(<NoteScope hidden={false} />);
     openPanel();
-    expect(screen.getByTestId("personal-chat-panel").className).not.toContain(
-      "hidden"
+    expect(screen.getByTestId("personal-chat-panel")).not.toHaveAttribute(
+      "data-hidden"
     );
 
     rerender(
@@ -495,8 +495,8 @@ describe("PersonalChatProvider", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId("personal-chat-panel").className).toContain(
-        "hidden"
+      expect(screen.getByTestId("personal-chat-panel")).toHaveAttribute(
+        "data-hidden"
       )
     );
     // 감출 뿐 언마운트하지 않는다 — 끊으면 부분 응답이 저장되지 않아 답변이 통째로 사라진다.
@@ -514,8 +514,8 @@ describe("PersonalChatProvider", () => {
     // 공유 트레이 위에 개인 패널이 계속 뜬다.
     const { rerender, client } = renderChat();
     openPanel();
-    expect(screen.getByTestId("personal-chat-panel").className).not.toContain(
-      "hidden"
+    expect(screen.getByTestId("personal-chat-panel")).not.toHaveAttribute(
+      "data-hidden"
     );
 
     rerender(
@@ -529,8 +529,8 @@ describe("PersonalChatProvider", () => {
       </QueryClientProvider>
     );
     await waitFor(() =>
-      expect(screen.getByTestId("personal-chat-panel").className).toContain(
-        "hidden"
+      expect(screen.getByTestId("personal-chat-panel")).toHaveAttribute(
+        "data-hidden"
       )
     );
   });

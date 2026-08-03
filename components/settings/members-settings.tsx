@@ -64,6 +64,16 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
       ? (membersResponse.data.data?.members ?? [])
       : [];
   const myRole = members.find((member) => member.userId === user?.userId)?.role;
+  // 계약은 가입순으로 내려준다. 나를 맨 위로 올리고 **나머지 순서는 그대로 둔다** — 서버 정렬을
+  // 여기서 다시 짜면 목록이 이 화면에서만 다른 순서가 된다. 내 행에는 「나」 배지와 역할이
+  // 붙어서, 멤버가 많을수록 스크롤해서 찾아야 했다.
+  const myUserId = user?.userId;
+  const orderedMembers = myUserId
+    ? [...members].sort(
+        (a, b) =>
+          Number(b.userId === myUserId) - Number(a.userId === myUserId)
+      )
+    : members;
   // 역할이 확정되기 전(로딩)이나 실패 시엔 관리 조작을 열지 않는다 — MEMBER에게 눌러 봤자
   // 403인 폼이 보이면 안 된다.
   const canManage = myRole === "ADMIN" && !membersQuery.isError;
@@ -107,7 +117,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
         </div>
       ) : (
         <ul className="divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
-          {members.map((member) => (
+          {orderedMembers.map((member) => (
             <MemberRow
               key={member.userId}
               member={member}

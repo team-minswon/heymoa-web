@@ -346,8 +346,12 @@ describe("MeetingEndDialog", () => {
       state.phase = phase;
       renderDialog(undefined, "IN_PROGRESS");
 
-      expect(screen.getByRole("button", { name: "연결 중…" })).toBeDisabled();
-      fireEvent.click(screen.getByRole("button", { name: "연결 중…" }));
+      // 라벨은 진행 중에도 「회의 종료」 그대로다 — 문구를 갈면 스피너가 도는 동안
+      // 버튼 폭이 튄다. 막혔다는 사실은 `disabled`와 `aria-busy`가 말한다.
+      const confirm = screen.getByRole("button", { name: "회의 종료" });
+      expect(confirm).toBeDisabled();
+      expect(confirm).toHaveAttribute("aria-busy", "true");
+      fireEvent.click(confirm);
 
       expect(state.stopMock).not.toHaveBeenCalled();
       expect(state.endMock).not.toHaveBeenCalled();

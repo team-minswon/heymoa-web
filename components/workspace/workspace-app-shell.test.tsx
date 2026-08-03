@@ -107,10 +107,25 @@ describe("WorkspaceAppShell", () => {
     expect(screen.getByRole("main")).toHaveTextContent("노트 목록");
     expect(screen.getAllByText("김민수의 워크스페이스")).not.toHaveLength(0);
 
+    // 셸이 캔버스를 꽉 채우지 않는다 — 사이드바는 캔버스 위에 그냥 앉고(배경·테두리 없음)
+    // 본문만 둥근 흰 패널로 뜬다(design.pen `IUax1`). 예전에는 사이드바에 `border-r`이 있어
+    // 두 면이 한 셸처럼 붙어 있었다.
     const sidebarContainer = document.querySelector(
       '[data-slot="sidebar-container"]'
     );
-    expect(sidebarContainer).toHaveClass("overflow-hidden", "border-r");
+    expect(sidebarContainer).toHaveClass("overflow-hidden", "bg-transparent");
+    expect(sidebarContainer?.className).not.toMatch(/(^|\s|:)border-r(\s|$)/);
+
+    const panel = screen
+      .getByRole("main")
+      .closest("[data-slot='sidebar-inset']")
+      ?.querySelector(".rounded-panel");
+    expect(panel).not.toBeNull();
+    expect(panel).toHaveClass(
+      "rounded-panel",
+      "border",
+      "border-[var(--el-hairline)]"
+    );
   });
 
   it("OAuth 복귀 쿼리로 연동 결과 토스트를 띄우고 쿼리를 지운다", async () => {

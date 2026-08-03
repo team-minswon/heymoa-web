@@ -66,7 +66,9 @@ export function MeetingControls({
     <div
       role="group"
       aria-label="회의 상태 및 제어"
-      className="flex min-w-0 flex-wrap items-center gap-2"
+      // 좁은 폭에서 감기면 이 줄을 품은 노트 헤더가 세로로 자란다 — sm부터는 감지 않고
+      // 줄여서 넘긴다(전사 높이를 0으로 만들던 자리).
+      className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap"
     >
       <Badge variant="secondary">
         {MEETING_STATUS_LABEL[note.meetingStatus]}

@@ -65,9 +65,8 @@ export function NoteView({
     tab: searchParams.get("tab") ?? initialQuery.tab,
   };
 
-  // 개인 챗봇은 side에서 감춰지고, full에서도 공유 챗봇 트레이가 레일을 독차지하는 동안
-  // (활성·미시작·중지) 감춰진다. 종료(ENDED)면 우측이 개인 챗봇으로 돌아온다(`TqX06`).
-  // unknown(로딩)은 감춰 둔다 — 트레이 자리에 개인 패널이 깜빡이지 않게.
+  // 노트 안에서는 개인 챗봇이 **떠 있는 카드로는** 안 뜬다. 전체 화면에서는 레일의
+  // 「내 에이전트」 탭이 그 패널을 자기 자리로 포털해 온다(`note-agent-rail`).
   // 감출 뿐 언마운트하지 않아 흐르던 스트림은 산다.
   const noteQuery = useGetNote(noteId);
   const note =
@@ -79,11 +78,7 @@ export function NoteView({
   const current = normalizeNoteViewQuery(requested, phase, sharedTurnActive);
   usePersonalChatScope({
     noteId,
-    hidden: isPersonalChatHiddenInNote(
-      current.view,
-      phase,
-      noteQuery.isPending
-    ),
+    hidden: isPersonalChatHiddenInNote(current.view),
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -177,6 +172,11 @@ export function NoteView({
         onExpand={
           current.view === "side" ? () => setQuery({ view: "full" }) : undefined
         }
+        onCollapse={
+          current.view === "full" ? () => setQuery({ view: "side" }) : undefined
+        }
+        // **replace다.** push하면 목록에서 뒤로가기가 방금 지운 노트 URL로 돌아가 404가 된다.
+        onDeleted={() => router.replace(`/w/${workspaceId}`)}
       />
     </NoteRouteSurface>
   );

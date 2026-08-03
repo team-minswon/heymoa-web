@@ -1,18 +1,10 @@
 "use client";
 
-import { motion, type Variants } from "motion/react";
-import {
-  Mic,
-  ListChecks,
-  BrainCircuit,
-  Play,
-  Pause,
-  Check,
-} from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { MotionConfig, motion, type Variants } from "motion/react";
+import { Mic, MessageCircle, Play, Plug, Sparkles } from "lucide-react";
 
-import { PageSection } from "@/components/heymoa/primitives";
+import { LandingCta } from "@/components/heymoa/landing-cta";
+import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
 
 const jsonLd = {
@@ -32,6 +24,9 @@ const jsonLd = {
   inLanguage: "ko-KR",
 };
 
+/** 좌우 여백 64px(design.pen 정본)까지 단계로 벌린다. 마케팅 면은 전폭이고 max-width가 없다. */
+const GUTTER = "px-6 sm:px-10 lg:px-16";
+
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -41,420 +36,407 @@ const fadeInUp: Variants = {
   },
 };
 
-const staggerContainer: Variants = {
+const stagger: Variants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.15,
-    },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.12 } },
 };
 
+/**
+ * 스크롤에 맞춰 한 번만 올라온다. `margin`으로 화면 아래 100px 전에 시작해 사용자가 섹션에
+ * 닿을 때쯤 이미 자리를 잡게 한다.
+ */
+const reveal = {
+  variants: stagger,
+  initial: "hidden",
+  whileInView: "visible",
+  viewport: { once: true, margin: "-100px" },
+} as const;
+
+/**
+ * 앵커로 부드럽게 내려간다. `scroll-behavior: smooth`를 `html`에 걸지 않는 이유는 그러면
+ * 라우트 이동의 맨 위로 복귀까지 애니메이션이 붙기 때문이다 — 이 페이지의 앵커에만 건다.
+ * 움직임을 줄여 달라고 한 사람에게는 즉시 이동한다.
+ */
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+  });
+}
+
+/**
+ * 랜딩. design.pen `UWqm8`(/ · 기본 · 비로그인)가 정본이다 — 1440 기준 Hero 720 · Proof ·
+ * Missions · Features · CTA 480.
+ *
+ * **정본에서 셋을 뺐다**(2026-08-03).
+ * - 제품 샷(`v9rBG2`) — 정본에서도 지웠다.
+ * - 상단바·푸터 — 이 페이지 것이 아니라 루트 레이아웃의 마케팅 크롬이고, 기존 것을 그대로
+ *   쓴다. 정본의 평평한 바(`Nav`)와 한 줄 푸터(`Footer`)로 갈아 끼우지 않는다.
+ */
 export function LandingClient() {
-  const [isPlaying, setIsPlaying] = useState(true);
-
-  // Mock Voice Library/Agents List
-  const agents = [
-    {
-      id: "plan",
-      name: "Moa Plan",
-      role: "기획 맥락 요약 & 보류사항 정리",
-      initial: "P",
-    },
-    {
-      id: "dev",
-      name: "Moa Dev",
-      role: "개발 스펙 정의 & 액션 아이템 구조화",
-      initial: "D",
-    },
-    {
-      id: "design",
-      name: "Moa Design",
-      role: "디자인 피드백 취합 & 마일스톤 생성",
-      initial: "A",
-    },
-  ];
-
   return (
-    <div className="relative overflow-hidden bg-[var(--el-canvas)] text-[var(--el-ink)] min-h-screen">
-      {/* JSON-LD for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    // reducedMotion="user"가 없으면 motion은 OS 설정을 무시한다(기본 "never").
+    <MotionConfig reducedMotion="user">
+      <div className="bg-[var(--el-canvas)] text-[var(--el-ink)]">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+
+        <Hero />
+        <Proof />
+        <Missions />
+        <Features />
+        <ClosingCta />
+      </div>
+    </MotionConfig>
+  );
+}
+
+/**
+ * 그라데이션 오브. 브랜드의 유일한 색 모먼트라 위치·크기까지 정본을 따른다 — 값은 1440×720
+ * (CTA는 1440×480) 기준 좌표를 비율로 옮긴 것이다.
+ */
+function Orb({
+  color,
+  alpha,
+  style,
+}: {
+  color: string;
+  alpha: number;
+  style: React.CSSProperties;
+}) {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute rounded-full"
+      style={{
+        ...style,
+        backgroundImage: `radial-gradient(ellipse 50% 50% at 50% 50%, color-mix(in srgb, var(${color}) ${alpha}%, transparent) 0%, transparent 100%)`,
+      }}
+    />
+  );
+}
+
+function Hero() {
+  return (
+    // `pt`가 `py`보다 큰 것은 상단바 몫이다 — 떠 있는 알약(fixed top-4)이라 문서 흐름에
+    // 자리를 차지하지 않는다. 히어로가 그 아래로 파고들면 배지가 알약에 가린다.
+    <section className="relative isolate flex min-h-[640px] flex-col items-center justify-center overflow-hidden px-6 pt-32 pb-24 text-center sm:px-10 lg:h-[720px] lg:px-16 lg:pt-20 lg:pb-0">
+      <Orb
+        color="--el-gradient-mint"
+        alpha={55}
+        style={{ left: "-11.1%", top: "-19.4%", width: "52.8%", height: "77.8%" }}
+      />
+      <Orb
+        color="--el-gradient-lavender"
+        alpha={50}
+        style={{ left: "61.1%", top: "-11.1%", width: "48.6%", height: "72.2%" }}
+      />
+      <Orb
+        color="--el-gradient-peach"
+        alpha={35}
+        style={{ left: "36.1%", top: "52.8%", width: "43.1%", height: "58.3%" }}
+      />
+      <Orb
+        color="--el-gradient-sky"
+        alpha={30}
+        style={{ left: "8.3%", top: "41.7%", width: "33.3%", height: "50%" }}
       />
 
-      {/* Atmospheric Gradient Orbs (ElevenLabs brand voltage) */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Orb 1: Mint (Top Left) */}
-        <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] rounded-full bg-[radial-gradient(circle_at_center,var(--el-gradient-mint)_0%,transparent_70%)] opacity-35 blur-[120px]" />
-        {/* Orb 2: Peach (Top Right) */}
-        <div className="absolute -top-[10%] -right-[10%] w-[45vw] h-[45vw] rounded-full bg-[radial-gradient(circle_at_center,var(--el-gradient-peach)_0%,transparent_70%)] opacity-30 blur-[100px]" />
-        {/* Orb 3: Lavender (Center Left) */}
-        <div className="absolute top-[40%] -left-[20%] w-[60vw] h-[60vw] rounded-full bg-[radial-gradient(circle_at_center,var(--el-gradient-lavender)_0%,transparent_70%)] opacity-25 blur-[150px]" />
-        {/* Orb 4: Sky (Bottom Right) */}
-        <div className="absolute bottom-[10%] -right-[15%] w-[55vw] h-[55vw] rounded-full bg-[radial-gradient(circle_at_center,var(--el-gradient-sky)_0%,transparent_70%)] opacity-30 blur-[130px]" />
-      </div>
-
-      {/* Hero Section */}
-      <section className="relative z-10 py-20 sm:py-32">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={staggerContainer}
-            className="flex flex-col items-center"
-          >
-            <motion.div
-              variants={fadeInUp}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-white px-3.5 py-1 text-xs font-semibold text-[var(--el-muted)] tracking-wider uppercase"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span>{siteConfig.name}</span>
-              <span
-                aria-hidden="true"
-                className="text-[var(--el-hairline-strong)]"
-              >
-                ·
-              </span>
-              <span>AI 회의 운영 서비스</span>
-            </motion.div>
-
-            <motion.h1
-              variants={fadeInUp}
-              className="mt-8 font-serif font-light text-5xl tracking-[-0.03em] leading-[1.08] text-[var(--el-ink)] sm:text-6xl lg:text-7xl break-keep max-w-4xl"
-            >
-              {siteConfig.name}, 회의 대화를
-              <br />
-              실제 업무로 연결합니다
-            </motion.h1>
-
-            <motion.p
-              variants={fadeInUp}
-              className="mt-8 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed text-[var(--el-body)] tracking-[0.16px]"
-            >
-              {siteConfig.description}
-            </motion.p>
-
-            <motion.ul
-              variants={fadeInUp}
-              aria-label={`${siteConfig.name} 핵심 기능`}
-              className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm font-medium text-[var(--el-body-strong)]"
-            >
-              {[
-                "실시간 회의 기록",
-                "맥락·결정사항 요약",
-                "액션 아이템 정리",
-              ].map((feature, index) => (
-                <li key={feature} className="inline-flex items-center gap-3">
-                  {index > 0 ? (
-                    <span
-                      aria-hidden="true"
-                      className="h-1 w-1 rounded-full bg-[var(--el-hairline-strong)]"
-                    />
-                  ) : null}
-                  {feature}
-                </li>
-              ))}
-            </motion.ul>
-
-            <motion.div
-              variants={fadeInUp}
-              className="mt-10 flex flex-wrap justify-center gap-4"
-            >
-              <button
-                onClick={() => {
-                  const el = document.getElementById("features");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="inline-flex h-11 items-center justify-center rounded-full bg-[var(--el-primary)] px-6 text-[15px] font-medium text-white transition hover:bg-[var(--el-primary-active)] shadow-sm focus:outline-none"
-              >
-                자세히 알아보기
-              </button>
-            </motion.div>
-
-            <motion.p
-              variants={fadeInUp}
-              className="mt-5 max-w-xl text-xs leading-relaxed text-[var(--el-muted)]"
-            >
-              Google 로그인에서 제공되는 이메일, 프로필 이름과 소셜 로그인
-              식별자는 회원 식별과 로그인 유지에 사용합니다.{" "}
-              <Link
-                href="/privacy"
-                className="font-medium text-[var(--el-ink)] underline underline-offset-4 transition hover:text-[var(--el-primary-active)]"
-              >
-                개인정보 처리방침 보기
-              </Link>
-            </motion.p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Core Features Section */}
-      <PageSection
-        id="features"
-        className="relative z-10 py-24 border-t border-[var(--el-hairline)]"
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={stagger}
+        className="relative flex flex-col items-center"
       >
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <h2 className="font-serif font-light text-3xl sm:text-4xl tracking-[-0.02em] text-[var(--el-ink)]">
-            결과가 있는 회의를 만드세요
-          </h2>
-          <p className="mt-4 text-[15px] text-[var(--el-body)] tracking-[0.16px]">
-            AI를 호출하여 지금까지의 결정사항, 보류사항, 담당자별 할 일과
-            마감일을 즉시 확인하고 구조화할 수 있습니다.
-          </p>
-        </div>
+        <motion.p
+          variants={fadeInUp}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-white/80 px-3.5 py-1.5 text-xs font-semibold tracking-[0.8px] text-[var(--el-body)]"
+        >
+          <span className="size-1.5 rounded-full bg-[var(--el-body)]" />
+          회의에 함께 앉는 AI 에이전트
+        </motion.p>
+
+        <motion.h1
+          variants={fadeInUp}
+          className="mt-8 font-serif text-[52px] leading-[1.02] font-light tracking-[-1.7px] break-keep text-[var(--el-ink)] sm:text-[76px] sm:tracking-[-2.5px] lg:text-[104px] lg:leading-[106px] lg:tracking-[-3.4px]"
+        >
+          회의 시간을
+          <br />
+          가치있게.
+        </motion.h1>
+
+        <motion.p
+          variants={fadeInUp}
+          className="mt-7 max-w-[46rem] text-base leading-8 break-keep text-[var(--el-body)] sm:text-lg"
+        >
+          팀은 계속 바뀝니다. 그때마다 지난 회의의 맥락이 사라지고 같은 논의를
+          다시 합니다.
+          {/* 정본의 줄바꿈이다. 좁은 화면에서는 강제 줄바꿈이 오히려 어색해 접는다. */}
+          <br className="hidden sm:inline" /> {siteConfig.name} 는 회의를
+          기록하는 데서 멈추지 않고 전·후 맥락을 이어 붙입니다.
+        </motion.p>
 
         <motion.div
-          className="grid gap-8 md:grid-cols-3"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={staggerContainer}
+          variants={fadeInUp}
+          className="mt-9 flex flex-wrap items-center justify-center gap-3"
         >
-          {/* Feature 1: Real-time Audio Waveform */}
-          <motion.div variants={fadeInUp} className="flex flex-col">
-            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col justify-between min-h-[300px]">
-              <div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[var(--el-ink)]">
-                  <Mic className="size-5" />
-                </div>
-                <h3 className="mt-5 font-serif font-light text-2xl text-[var(--el-ink)]">
-                  실시간 회의 경청
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--el-body)] tracking-[0.16px]">
-                  회의의 흐름을 이해하고 대화의 맥락을 분석하며 조용히 대화를
-                  기록합니다.
-                </p>
-              </div>
-
-              {/* Audio Waveform Graphic (ElevenLabs signature) */}
-              <div className="mt-6 p-4 rounded-xl bg-[var(--el-canvas-soft)] border border-[var(--el-hairline-soft)] flex items-center gap-3">
-                <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--el-primary)] text-white hover:bg-[var(--el-primary-active)] transition shrink-0"
-                >
-                  {isPlaying ? (
-                    <Pause className="size-3.5 fill-current" />
-                  ) : (
-                    <Play className="size-3.5 fill-current translate-x-[1px]" />
-                  )}
-                </button>
-                <div className="flex-1 flex items-end gap-[3px] h-8 px-2">
-                  {[
-                    0.3, 0.6, 0.9, 0.4, 0.7, 0.2, 0.5, 0.8, 0.6, 0.3, 0.7, 0.9,
-                    0.4, 0.8, 0.5, 0.2, 0.6, 0.9, 0.3, 0.7, 0.5,
-                  ].map((val, idx) => (
-                    <motion.div
-                      key={idx}
-                      className="w-[3px] bg-[var(--el-primary)] rounded-full"
-                      animate={{
-                        height: isPlaying ? `${val * 100}%` : "15%",
-                      }}
-                      transition={{
-                        repeat: Infinity,
-                        repeatType: "reverse",
-                        duration: 0.6 + (idx % 3) * 0.15,
-                        ease: "easeInOut",
-                      }}
-                      style={{ height: "15%" }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Feature 2: Context Summarization */}
-          <motion.div variants={fadeInUp} className="flex flex-col">
-            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col justify-between min-h-[300px]">
-              <div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[var(--el-ink)]">
-                  <BrainCircuit className="size-5" />
-                </div>
-                <h3 className="mt-5 font-serif font-light text-2xl text-[var(--el-ink)]">
-                  즉각적인 맥락 정리
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--el-body)] tracking-[0.16px]">
-                  결정이 필요하거나 맥락이 꼬일 때 AI를 호출하세요. 결정사항과
-                  보류사항을 명확히 요약합니다.
-                </p>
-              </div>
-
-              {/* Editorial UI Fragment */}
-              <div className="mt-6 p-4 rounded-xl bg-[var(--el-canvas-soft)] border border-[var(--el-hairline-soft)] text-xs space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-emerald-600">결정</span>
-                  <span className="text-[var(--el-ink)] truncate font-medium">
-                    서비스 디자인 톤앤매너를 ElevenLabs 스타일로 변경
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-amber-600">보류</span>
-                  <span className="text-[var(--el-ink)] truncate font-medium">
-                    실시간 다국어 번역 탑재 여부 (다음 주 재논의)
-                  </span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Feature 3: Action Items */}
-          <motion.div variants={fadeInUp} className="flex flex-col">
-            <div className="flex-1 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col justify-between min-h-[300px]">
-              <div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[var(--el-ink)]">
-                  <ListChecks className="size-5" />
-                </div>
-                <h3 className="mt-5 font-serif font-light text-2xl text-[var(--el-ink)]">
-                  액션 아이템 구조화
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--el-body)] tracking-[0.16px]">
-                  회의 후 도출된 담당자별 업무와 마감일을 자동으로 분류하여 실행
-                  가능한 테스크로 연결합니다.
-                </p>
-              </div>
-
-              {/* Task UI Fragment */}
-              <div className="mt-6 p-4 rounded-xl bg-[var(--el-canvas-soft)] border border-[var(--el-hairline-soft)] text-xs space-y-2">
-                <div className="flex items-center justify-between border-b border-[var(--el-hairline-soft)] pb-1.5">
-                  <span className="font-semibold text-[var(--el-ink)]">
-                    할 일 목록
-                  </span>
-                  <span className="text-[var(--el-muted)]">기한</span>
-                </div>
-                <div className="flex items-center justify-between text-[var(--el-body)]">
-                  <span className="truncate flex items-center gap-1.5">
-                    <Check className="size-3 text-emerald-500" /> 랜딩 페이지
-                    리뉴얼
-                  </span>
-                  <span className="shrink-0 text-red-500 font-medium">
-                    오늘
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[var(--el-body)]">
-                  <span className="truncate flex items-center gap-1.5">
-                    <Check className="size-3 text-emerald-500" /> OAuth API 연동
-                    테스트
-                  </span>
-                  <span className="shrink-0">내일</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+          <LandingCta label="Google 계정으로 시작" />
+          <Button
+            type="button"
+            onClick={() => scrollToSection("how-it-works")}
+            variant="outline"
+            className="h-12 rounded-full border-[var(--el-muted)] bg-transparent px-6 text-[15px]"
+          >
+            작동 방식 보기
+            <Play className="size-4" />
+          </Button>
         </motion.div>
-      </PageSection>
 
-      {/* Voice/Agent Showroom Section (ElevenLabs signature layout) */}
-      <PageSection
-        id="agents"
-        className="relative z-10 py-24 border-t border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
-      >
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.5fr] items-center">
-          <div>
-            <h2 className="font-serif font-light text-3xl sm:text-4xl tracking-[-0.02em] leading-tight text-[var(--el-ink)]">
-              필요에 맞는
-              <br />
-              회의 운영 에이전트 라이브러리
-            </h2>
-            <p className="mt-4 text-[15px] text-[var(--el-body)] tracking-[0.16px] leading-relaxed">
-              회의의 어젠다와 주제에 따라 특화된 전문 AI 에이전트를 호출하여
-              보다 깊이 있고 구조화된 대화 기록을 구축할 수 있습니다.
-            </p>
-          </div>
+        <motion.p
+          variants={fadeInUp}
+          className="mt-4.5 text-[13px] text-[var(--el-body)]"
+        >
+          설치할 것 없음 · 신용카드 없음
+        </motion.p>
+      </motion.div>
+    </section>
+  );
+}
 
-          <div className="space-y-4">
-            {agents.map((agent) => (
-              <div
-                key={agent.id}
-                className="flex items-center justify-between rounded-xl border border-[var(--el-hairline)] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-              >
-                <div className="flex items-center gap-4">
-                  {/* Voice Circular Icon (ElevenLabs component) */}
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-sm font-semibold text-[var(--el-ink)]">
-                    {agent.initial}
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-[var(--el-ink)]">
-                      {agent.name}
-                    </h4>
-                    <p className="text-xs text-[var(--el-muted)] mt-0.5">
-                      {agent.role}
-                    </p>
-                  </div>
-                </div>
-                <button className="flex h-8 px-3 items-center justify-center rounded-full border border-[var(--el-hairline-strong)] text-[12px] font-medium text-[var(--el-ink)] bg-transparent hover:bg-[var(--el-canvas-soft)] transition">
-                  선택
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </PageSection>
+const PROOF = [
+  ["01", "회의 중", "말하는 동안 문단으로 쌓입니다"],
+  ["02", "회의 직후", "개요 · 액션 · 인사이트로 갈립니다"],
+  ["03", "그 다음", "Linear · GitHub 로 승인 후 나갑니다"],
+] as const;
 
-      {/* Usage Flow Section */}
-      <PageSection
-        id="how-it-works"
-        className="relative z-10 py-24 border-t border-[var(--el-hairline)]"
-      >
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <h2 className="font-serif font-light text-3xl sm:text-4xl tracking-[-0.02em] text-[var(--el-ink)]">
-            자연스럽게 회의에 스며듭니다
+function Proof() {
+  return (
+    <motion.section
+      {...reveal}
+      id="how-it-works"
+      className={`grid scroll-mt-24 gap-10 border-t border-[var(--el-hairline)] py-12 sm:grid-cols-3 sm:gap-0 ${GUTTER}`}
+    >
+      {PROOF.map(([step, title, detail], index) => (
+        <motion.div
+          key={step}
+          variants={fadeInUp}
+          className={
+            index === 0
+              ? "flex flex-col gap-2.5 sm:pr-10"
+              : "flex flex-col gap-2.5 sm:border-l sm:border-[var(--el-hairline)] sm:px-10"
+          }
+        >
+          <span className="font-serif text-[15px] font-light text-[var(--el-body)]">
+            {step}
+          </span>
+          <h2 className="font-serif text-[30px] font-light tracking-[-0.5px] text-[var(--el-ink)]">
+            {title}
           </h2>
-          <p className="mt-4 text-[15px] text-[var(--el-body)] tracking-[0.16px]">
-            기존의 대화 방식을 바꾸지 않아도 됩니다. 필요한 순간에만
-            활성화됩니다.
+          <p className="text-sm leading-[23px] text-[var(--el-body)]">
+            {detail}
           </p>
-        </div>
+        </motion.div>
+      ))}
+    </motion.section>
+  );
+}
 
-        <div className="mx-auto max-w-3xl space-y-4">
-          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] text-white font-medium text-xs">
-              1
-            </div>
-            <div>
-              <h4 className="font-medium text-base text-[var(--el-ink)]">
-                회의 시작 및 청취
-              </h4>
-              <p className="mt-1.5 text-sm text-[var(--el-body)] tracking-[0.16px]">
-                HeyMoa 에이전트가 회의실에 참여하여 대화를 자연스럽게 기록하고
-                흐름을 읽기 시작합니다.
+const MISSIONS = [
+  {
+    step: "01",
+    title: "맥락이 사람과 함께 사라진다",
+    tag: "지금 되는 것 · 전사 · 요약 · 프로젝트별 묶기",
+    problem:
+      "팀 구성원의 변경과 이탈이 잦고, 그때마다 지난 회의의 맥락이 통째로 사라집니다. 새로 온 사람은 왜 그렇게 정해졌는지를 모른 채 같은 논의를 다시 시작합니다.",
+    solution:
+      "전사와 요약으로 지난 회의를 찾을 수 있게 하고, 프로젝트 단위 타임라인과 사람 사이의 관계로 전·후 맥락을 잇습니다.",
+  },
+  {
+    step: "02",
+    title: "회의 중에 이해가 막힌다",
+    tag: "지금 되는 것 · 회의 중 질의 · Linear · GitHub 연동",
+    problem:
+      "모르는 용어가 나와도 회의를 멈추고 물어보기 어렵습니다. 회의 밖 프로젝트의 맥락도 그 자리에서는 확인할 수 없습니다.",
+    solution:
+      "회의 내용을 실시간으로 이해하는 에이전트를 옆에 둡니다. 용어를 풀어 주고, 연동된 도구에서 회의 밖 맥락까지 끌어옵니다.",
+  },
+  {
+    step: "03",
+    title: "회의가 원치 않는 방향으로 흐른다",
+    tag: "방향 · 계약 추가가 먼저 필요합니다",
+    problem:
+      "누군가 딴 이야기를 하거나 이미 한 말을 반복해도 아무도 끊지 못합니다. 흐름과 이력을 관리하는 사람이 없습니다.",
+    solution:
+      "에이전트가 관전자가 아니라 참여자로 들어갑니다. 흐름을 짚고, 반복을 알아채고, 필요하면 안건으로 되돌립니다.",
+  },
+] as const;
+
+function Missions() {
+  return (
+    <section
+      className={`flex flex-col gap-12 bg-[var(--el-surface-strong)] py-20 lg:py-26 ${GUTTER}`}
+    >
+      <motion.div
+        {...reveal}
+        className="flex flex-col gap-8 lg:flex-row lg:items-end lg:gap-16"
+      >
+        <motion.div variants={fadeInUp} className="flex max-w-[700px] flex-col gap-5">
+          <p className="text-[11px] font-semibold tracking-[1.6px] text-[var(--el-body)]">
+            우리가 푸는 문제
+          </p>
+          <h2 className="font-serif text-[36px] leading-[1.14] font-light tracking-[-1px] break-keep text-[var(--el-ink)] lg:text-[52px] lg:leading-[59px] lg:tracking-[-1.4px]">
+            회의는 끝나도
+            <br />
+            맥락은 끝나지 않는다.
+          </h2>
+        </motion.div>
+        <motion.p
+          variants={fadeInUp}
+          className="text-sm leading-6 break-keep text-[var(--el-body)]"
+        >
+          아래 셋이 우리가 붙들고 있는 문제입니다.
+          <br />
+          전부 지금 되는 건 아니고, 순서대로 만들고 있습니다.
+        </motion.p>
+      </motion.div>
+
+      <motion.div {...reveal} className="border-t border-[var(--el-hairline)]">
+        {MISSIONS.map((mission) => (
+          <motion.article
+            key={mission.step}
+            variants={fadeInUp}
+            className="flex flex-col gap-6 border-b border-[var(--el-hairline)] py-8 lg:flex-row lg:gap-12"
+          >
+            <span className="font-serif text-[17px] font-light text-[var(--el-body)]">
+              {mission.step}
+            </span>
+            <div className="flex flex-col gap-2.5 lg:w-[400px] lg:shrink-0">
+              <h3 className="font-serif text-[28px] leading-[35px] font-light tracking-[-0.5px] break-keep text-[var(--el-ink)]">
+                {mission.title}
+              </h3>
+              <p className="text-[11px] font-semibold text-[var(--el-body)]">
+                {mission.tag}
               </p>
             </div>
-          </div>
-          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] text-white font-medium text-xs">
-              2
-            </div>
-            <div>
-              <h4 className="font-medium text-base text-[var(--el-ink)]">
-                AI 호출 및 즉각 요약
-              </h4>
-              <p className="mt-1.5 text-sm text-[var(--el-body)] tracking-[0.16px]">
-                결정이 필요하거나 정리가 필요할 때 에이전트를 호출하여
-                현재까지의 합의된 내용과 논의를 확인합니다.
+            <div className="flex flex-col gap-3">
+              <p className="text-sm leading-[25px] break-keep text-[var(--el-body)]">
+                {mission.problem}
+              </p>
+              <p className="text-sm leading-[25px] break-keep text-[var(--el-ink)]">
+                {mission.solution}
               </p>
             </div>
-          </div>
-          <div className="flex items-start gap-5 rounded-2xl border border-[var(--el-hairline)] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-primary)] text-white font-medium text-xs">
-              3
-            </div>
-            <div>
-              <h4 className="font-medium text-base text-[var(--el-ink)]">
-                실행 업무 연동
-              </h4>
-              <p className="mt-1.5 text-sm text-[var(--el-body)] tracking-[0.16px]">
-                회의 종료 후 최종 도출된 액션 아이템이 담당자별 기한에 맞춰
-                체계적으로 구조화되어 저장됩니다.
-              </p>
-            </div>
-          </div>
-        </div>
-      </PageSection>
-    </div>
+          </motion.article>
+        ))}
+      </motion.div>
+    </section>
+  );
+}
+
+const FEATURES = [
+  {
+    icon: Mic,
+    title: "실시간 전사",
+    detail:
+      "말하는 동안 문단으로 정리되고, 워크스페이스 멤버 전원이 같은 화면을 실시간으로 봅니다.",
+  },
+  {
+    icon: MessageCircle,
+    title: "회의 중 질의",
+    detail:
+      "「아까 그 결론이 뭐였지」를 회의 도중에 물어봅니다. 답은 스레드에 남아 모두가 봅니다.",
+  },
+  {
+    icon: Sparkles,
+    title: "자동 정리",
+    detail: "회의가 끝나면 개요 · 액션 아이템 · 인사이트 세 갈래로 정리됩니다.",
+  },
+  {
+    icon: Plug,
+    title: "도구로 내보내기",
+    detail:
+      "액션 아이템을 Linear · GitHub 로 보냅니다. 실행 전에 반드시 승인을 받습니다.",
+  },
+] as const;
+
+function Features() {
+  return (
+    <section
+      id="features"
+      className={`flex flex-col gap-12 border-t border-[var(--el-hairline)] py-20 lg:py-26 ${GUTTER}`}
+    >
+      <motion.div {...reveal} className="flex max-w-[760px] flex-col gap-5">
+        <motion.p
+          variants={fadeInUp}
+          className="text-[11px] font-semibold tracking-[1.6px] text-[var(--el-body)]"
+        >
+          기능
+        </motion.p>
+        <motion.h2
+          variants={fadeInUp} className="font-serif text-[36px] leading-[1.14] font-light tracking-[-1px] break-keep text-[var(--el-ink)] lg:text-[52px] lg:leading-[59px] lg:tracking-[-1.4px]">
+          기록이 아니라
+          <br />
+          결과를 남깁니다.
+        </motion.h2>
+      </motion.div>
+
+      <motion.div
+        {...reveal}
+        className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        {FEATURES.map(({ icon: Icon, title, detail }) => (
+          <motion.div
+            key={title}
+            variants={fadeInUp}
+            className="flex flex-col gap-4 border-l border-[var(--el-hairline)] pl-5"
+          >
+            <Icon className="size-4.5 text-[var(--el-ink)]" />
+            <h3 className="font-serif text-2xl font-light tracking-[-0.4px] text-[var(--el-ink)]">
+              {title}
+            </h3>
+            <p className="text-[13px] leading-[23px] break-keep text-[var(--el-body)]">
+              {detail}
+            </p>
+          </motion.div>
+        ))}
+      </motion.div>
+    </section>
+  );
+}
+
+function ClosingCta() {
+  return (
+    <section className="relative isolate flex min-h-[400px] flex-col items-center justify-center overflow-hidden border-t border-[var(--el-hairline)] px-6 py-20 text-center sm:px-10 lg:h-[480px] lg:px-16 lg:py-0">
+      <Orb
+        color="--el-gradient-rose"
+        alpha={45}
+        style={{ left: "-6.9%", top: "25%", width: "45.8%", height: "95.8%" }}
+      />
+      <Orb
+        color="--el-gradient-sky"
+        alpha={42}
+        style={{ left: "62.5%", top: "12.5%", width: "44.4%", height: "91.7%" }}
+      />
+      <Orb
+        color="--el-gradient-mint"
+        alpha={30}
+        style={{ left: "29.2%", top: "45.8%", width: "38.9%", height: "79.2%" }}
+      />
+
+      <div className="relative flex flex-col items-center">
+        <h2 className="font-serif text-[44px] leading-[1.1] font-light tracking-[-1.4px] text-[var(--el-ink)] lg:text-[68px] lg:leading-[75px] lg:tracking-[-2.2px]">
+          다음 회의부터.
+        </h2>
+        <p className="mt-5 text-base leading-[30px] break-keep text-[var(--el-body)] lg:text-[17px]">
+          Google 계정으로 로그인하고 회의를 하나 만들면 끝입니다.
+          <br />
+          설치할 것도, 팀에 새로 배울 것도 없습니다.
+        </p>
+        <LandingCta label="무료로 시작" className="mt-8" />
+      </div>
+    </section>
   );
 }

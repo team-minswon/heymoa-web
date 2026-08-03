@@ -112,7 +112,10 @@ describe("WorkspaceToolbar", () => {
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
   });
 
-  it("lifts note actions into the same row for a full note", () => {
+  // 상단바는 더 이상 노트를 모른다 — 노트 전체 화면이 이 바를 통째로 덮고 자기 크롬을
+  // 직접 그린다(design.pen `XtEMZ`). 회의 제어·닫기·노트 메뉴가 실제로 그려지는지는
+  // `note-panel.test.tsx`의 「full 모드는 요약 탭과 함께 회의 제어·창 제어를 직접 갖는다」가 본다.
+  it("노트가 열려 있어도 상단바는 허브 크롬만 그린다", () => {
     recording.session = null;
     recording.phase = "idle";
     nav.search = "view=full&tab=transcript";
@@ -126,20 +129,13 @@ describe("WorkspaceToolbar", () => {
       </SidebarProvider>
     );
 
-    // 브레드크럼에 노트 제목, 같은 행에 회의 조작 + 닫기 + 새 노트 + 벨.
+    expect(screen.queryByTestId("meeting-controls")).toBeNull();
+    expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "노트 메뉴" })).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "주간 제품 회의" })
-    ).toBeInTheDocument();
-    expect(screen.getByTestId("meeting-controls")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "노트 닫기" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("group", { name: "창 제어" })
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
-      "size-11"
-    );
+      screen.queryByRole("heading", { name: "주간 제품 회의" })
+    ).toBeNull();
+    // 허브 크롬은 그대로다.
     expect(screen.getByRole("button", { name: "새 노트" })).toBeInTheDocument();
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
   });
@@ -193,6 +189,31 @@ describe("WorkspaceToolbar", () => {
     expect(screen.getByLabelText("회의 이름")).toBeInTheDocument();
   });
 
+  it("전체 노트가 바를 덮으면 열려 있던 「새 노트」 창도 닫는다", () => {
+    // 창은 포털(`z-50`)이라 `inert`도 덮는 면(`z-30`)도 닿지 않는다. 셸은 노트로 이동해도
+    // 재마운트되지 않으니 저절로 사라지지도 않아, 허브에서 열어 둔 창이 노트 위에 남았다.
+    const { rerender } = render(
+      <SidebarProvider>
+        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
+      </SidebarProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "새 노트" }));
+    expect(screen.getByLabelText("회의 이름")).toBeInTheDocument();
+
+    rerender(
+      <SidebarProvider>
+        <WorkspaceToolbar
+          workspaceId="01K0000000000"
+          currentLabel="주간"
+          covered
+        />
+      </SidebarProvider>
+    );
+
+    expect(screen.queryByLabelText("회의 이름")).toBeNull();
+  });
+
   it("replaces transitional status labels with the shared spinner", () => {
     recording.session = {
       sessionId: "01K0000000010",
@@ -239,22 +260,4 @@ describe("WorkspaceToolbar", () => {
       expect(recording.stop).not.toHaveBeenCalled();
     }
   );
-  it("기록 중이 아닌 노트에는 상단바에 노트 메뉴를 건다", () => {
-    recording.session = null;
-    recording.phase = "idle";
-    nav.search = "view=full&tab=transcript";
-    render(
-      <SidebarProvider>
-        <WorkspaceToolbar
-          workspaceId="01K0000000000"
-          currentLabel="주간 제품 회의"
-          activeNoteId="01K0000000002"
-        />
-      </SidebarProvider>
-    );
-
-    expect(
-      screen.getByRole("button", { name: "노트 메뉴" })
-    ).toBeInTheDocument();
-  });
 });
