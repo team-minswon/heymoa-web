@@ -825,6 +825,47 @@ function assertWorkspace(workspaceId: string) {
   );
 }
 
+/**
+ * 멤버 역할 변경·추방은 ADMIN만 부를 수 있다. 나가기는 멤버 누구나 가능해서 이 가드를 쓰지 않는다.
+ *
+ * **멤버가 아닌 것과 ADMIN이 아닌 것은 다른 응답이다.** 서버 `WorkspaceAccessHandler`가
+ * `requireMember`(없으면 404 WORKSPACE_NOT_FOUND) 다음에 역할을 보고 403을 내는 구조라,
+ * 워크스페이스가 아예 없는 것도 남의 워크스페이스인 것도 똑같이 404로 존재를 숨긴다.
+ * 둘을 `caller?.role !== "ADMIN"` 하나로 합치면 비멤버에게 그 워크스페이스가 있다고 알려준다.
+ */
+function requireWorkspaceAdmin(workspaceId: string) {
+  const caller = state.members.find(
+    (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
+  );
+  if (!caller) fail("WORKSPACE_NOT_FOUND");
+  if (caller.role !== "ADMIN") fail("WORKSPACE_ACCESS_DENIED");
+}
+
+/**
+ * 계약에 없는 역할은 400이다. 핸들러가 요청 본문에 붙이는 타입 단언은 런타임에 아무것도
+ * 막지 않으므로 여기서 검사한다 — 목이 계약보다 관대하면 웹에서는 통과하는 값이
+ * 실제 서버에서 거부된다.
+ */
+function assertRole(value: string): MockMember["role"] {
+  if (value === "ADMIN" || value === "MEMBER") return value;
+  return fail("BAD_REQUEST");
+}
+
+/**
+ * 현재 유저의 멤버십은 목에 두 벌 있다 — 멤버 명단(`state.members`)과 워크스페이스 응답
+ * (`state.workspaces`, `listWorkspaces`·`getWorkspace`의 원본). 초대 수락이 합류를 두 곳에
+ * 모두 반영하듯 본인 역할 변경도 둘을 같이 고쳐야 `getWorkspace().role`이 명단과 갈라지지 않는다.
+ */
+function syncOwnWorkspaceRole(
+  workspaceId: string,
+  userId: string,
+  role: MockMember["role"]
+) {
+  if (userId !== state.user.userId) return;
+  const workspace = state.workspaces.find((w) => w.workspaceId === workspaceId);
+  if (workspace) workspace.role = role;
+}
+
 function assertProject(projectId: string) {
   return (
     state.projects.find((project) => project.projectId === projectId) ??
@@ -1160,6 +1201,74 @@ export const mockDb = {
         .map((member) => omit(member, ["workspaceId"]))
         .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
     );
+  },
+
+  /**
+   * 역할 변경은 ADMIN만 할 수 있다. 마지막 ADMIN을 MEMBER로 내리는 것은 막는다 —
+   * 계약(openapi3.yml)의 409 LAST_WORKSPACE_ADMIN. 같은 역할로 바꾸면 그냥 통과한다(no-op 성공).
+   */
+  changeMemberRole(workspaceId: string, userId: string, requestedRole: string) {
+    requireWorkspaceAdmin(workspaceId);
+    const role = assertRole(requestedRole);
+    const member = state.members.find(
+      (m) => m.workspaceId === workspaceId && m.userId === userId
+    );
+    if (!member) fail("WORKSPACE_MEMBER_NOT_FOUND");
+    const admins = state.members.filter(
+      (m) => m.workspaceId === workspaceId && m.role === "ADMIN"
+    );
+    if (role !== "ADMIN" && member.role === "ADMIN" && admins.length <= 1) {
+      fail("LAST_WORKSPACE_ADMIN");
+    }
+    member.role = role;
+    syncOwnWorkspaceRole(workspaceId, userId, role);
+  },
+
+  /**
+   * 추방은 ADMIN만, 자기 자신은 대상이 될 수 없다(계약 400 BAD_REQUEST). 이 규칙 때문에
+   * 호출자가 항상 ADMIN이면서 대상과 다른 사람이라, 대상이 마지막 ADMIN인 경우는 수학적으로
+   * 나올 수 없다(호출자 자신도 ADMIN으로 남으므로) — 계약도 이 엔드포인트엔 409가 없다.
+   */
+  removeMember(workspaceId: string, userId: string) {
+    requireWorkspaceAdmin(workspaceId);
+    if (userId === state.user.userId) fail("BAD_REQUEST");
+    const index = state.members.findIndex(
+      (m) => m.workspaceId === workspaceId && m.userId === userId
+    );
+    if (index < 0) fail("WORKSPACE_MEMBER_NOT_FOUND");
+    state.members.splice(index, 1);
+  },
+
+  /**
+   * 나가기는 멤버 누구나 할 수 있고(ADMIN 가드 없음), 마지막 ADMIN은 나갈 수 없다(409).
+   * 비멤버의 404 코드는 추방과 달리 WORKSPACE_MEMBER_NOT_FOUND가 아니라 WORKSPACE_NOT_FOUND다
+   * (계약 — 본인 접근 관점에서는 멤버가 아닌 워크스페이스가 곧 "없는" 워크스페이스다).
+   */
+  leaveWorkspace(workspaceId: string) {
+    const index = state.members.findIndex(
+      (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
+    );
+    if (index < 0) fail("WORKSPACE_NOT_FOUND");
+    const member = state.members[index];
+    const admins = state.members.filter(
+      (m) => m.workspaceId === workspaceId && m.role === "ADMIN"
+    );
+    if (member.role === "ADMIN" && admins.length <= 1) {
+      fail("LAST_WORKSPACE_ADMIN");
+    }
+    state.members.splice(index, 1);
+
+    // 멤버십이 사라지면 그 워크스페이스는 목록에서도 빠진다 — 초대 수락(합류)의 역이다.
+    const workspaceIndex = state.workspaces.findIndex(
+      (w) => w.workspaceId === workspaceId
+    );
+    if (workspaceIndex < 0) return;
+    const [left] = state.workspaces.splice(workspaceIndex, 1);
+    // 서버는 떠난 곳이 기본이었으면 가장 먼저 합류한 다른 워크스페이스로 옮긴다
+    // (WorkspaceMemberChangeHandler.repointDefaultWorkspace). 목은 삽입 순서가 합류 순서다.
+    if (left.isDefault && state.workspaces.length > 0) {
+      state.workspaces[0].isDefault = true;
+    }
   },
 
   listInvitations(

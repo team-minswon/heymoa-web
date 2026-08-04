@@ -392,6 +392,186 @@ describe("invitations, members and notifications", () => {
   });
 });
 
+describe("workspace member management", () => {
+  beforeEach(() => mockDb.reset());
+
+  const WORKSPACE_ID = "01K0000000000"; // 시드: 나(ADMIN) + 한지원(01K0000000020, MEMBER)
+  const OTHER_MEMBER_ID = "01K0000000020";
+
+  /** 자신을 강등·추방·탈퇴시켜도 마지막 ADMIN 규칙에 걸리지 않도록 관리자를 하나 더 만든다. */
+  function addSecondAdmin() {
+    mockDb.changeMemberRole(WORKSPACE_ID, OTHER_MEMBER_ID, "ADMIN");
+  }
+
+  it("역할 변경은 마지막 ADMIN을 MEMBER로 내리는 것을 막는다", () => {
+    expect(() =>
+      mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER")
+    ).toThrow("LAST_WORKSPACE_ADMIN");
+    // 실패했으니 역할은 그대로다.
+    expect(
+      mockDb
+        .listMembers(WORKSPACE_ID)
+        .find((m) => m.userId === MOCK_USER.userId)?.role
+    ).toBe("ADMIN");
+  });
+
+  it("같은 역할로 바꾸는 것은 그냥 성공한다 (no-op)", () => {
+    expect(() =>
+      mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "ADMIN")
+    ).not.toThrow();
+  });
+
+  it("두 번째 ADMIN이 있으면 한쪽을 내려도 통과한다", () => {
+    addSecondAdmin();
+
+    expect(() =>
+      mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER")
+    ).not.toThrow();
+    expect(
+      mockDb
+        .listMembers(WORKSPACE_ID)
+        .find((m) => m.userId === MOCK_USER.userId)?.role
+    ).toBe("MEMBER");
+  });
+
+  it("역할 변경 대상이 멤버가 아니면 404 코드로 던진다", () => {
+    expect(() =>
+      mockDb.changeMemberRole(WORKSPACE_ID, "01K9999999999", "ADMIN")
+    ).toThrow("WORKSPACE_MEMBER_NOT_FOUND");
+  });
+
+  // 서버 WorkspaceAccessHandler는 requireMember(404) → 역할 확인(403) 순이다. 즉 403은
+  // "멤버지만 ADMIN이 아니다"일 때만 나오고, 멤버가 아니면 워크스페이스의 존재 자체를 숨긴다.
+  it.each([
+    ["없는 워크스페이스", "01K9999999999"],
+    ["초대만 받고 합류하지 않은 워크스페이스", "01K0000000030"],
+  ])("%s는 403이 아니라 404다", (_label, workspaceId) => {
+    expect(() =>
+      mockDb.changeMemberRole(workspaceId, OTHER_MEMBER_ID, "ADMIN")
+    ).toThrow("WORKSPACE_NOT_FOUND");
+    expect(() => mockDb.removeMember(workspaceId, OTHER_MEMBER_ID)).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+  });
+
+  it("계약에 없는 역할은 400이고 멤버를 바꾸지 않는다", () => {
+    expect(() =>
+      mockDb.changeMemberRole(WORKSPACE_ID, OTHER_MEMBER_ID, "OWNER")
+    ).toThrow("BAD_REQUEST");
+    expect(
+      mockDb
+        .listMembers(WORKSPACE_ID)
+        .find((m) => m.userId === OTHER_MEMBER_ID)?.role
+    ).toBe("MEMBER");
+  });
+
+  it("본인을 강등하면 워크스페이스 응답의 역할도 따라간다", () => {
+    addSecondAdmin();
+
+    mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER");
+
+    // 멤버 명단과 워크스페이스 응답은 같은 멤버십을 두 벌로 들고 있다. 한쪽만 고치면
+    // 멤버 탭은 MEMBER인데 사이드바·권한 분기는 ADMIN으로 남는다.
+    expect(mockDb.getWorkspace(WORKSPACE_ID).role).toBe("MEMBER");
+    expect(
+      mockDb.listWorkspaces().find((w) => w.workspaceId === WORKSPACE_ID)?.role
+    ).toBe("MEMBER");
+  });
+
+  it("ADMIN이 아닌 사람은 역할을 바꿀 수 없다", () => {
+    addSecondAdmin();
+    mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER"); // 나를 MEMBER로
+
+    expect(() =>
+      mockDb.changeMemberRole(WORKSPACE_ID, OTHER_MEMBER_ID, "MEMBER")
+    ).toThrow("WORKSPACE_ACCESS_DENIED");
+  });
+
+  it("추방은 자기 자신을 대상으로 할 수 없다", () => {
+    expect(() =>
+      mockDb.removeMember(WORKSPACE_ID, MOCK_USER.userId)
+    ).toThrow("BAD_REQUEST");
+    // 실패했으니 멤버 목록은 그대로다.
+    expect(
+      mockDb.listMembers(WORKSPACE_ID).some((m) => m.userId === MOCK_USER.userId)
+    ).toBe(true);
+  });
+
+  it("추방은 멤버 목록에서 대상을 지운다", () => {
+    const before = mockDb.listMembers(WORKSPACE_ID).length;
+
+    mockDb.removeMember(WORKSPACE_ID, OTHER_MEMBER_ID);
+
+    expect(mockDb.listMembers(WORKSPACE_ID)).toHaveLength(before - 1);
+    expect(
+      mockDb.listMembers(WORKSPACE_ID).some((m) => m.userId === OTHER_MEMBER_ID)
+    ).toBe(false);
+  });
+
+  it("추방 대상이 멤버가 아니면 404 코드로 던진다", () => {
+    expect(() =>
+      mockDb.removeMember(WORKSPACE_ID, "01K9999999999")
+    ).toThrow("WORKSPACE_MEMBER_NOT_FOUND");
+  });
+
+  it("ADMIN이 아닌 사람은 추방할 수 없다", () => {
+    addSecondAdmin();
+    mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER");
+
+    expect(() =>
+      mockDb.removeMember(WORKSPACE_ID, OTHER_MEMBER_ID)
+    ).toThrow("WORKSPACE_ACCESS_DENIED");
+  });
+
+  it("나가기는 마지막 ADMIN을 막는다", () => {
+    expect(() => mockDb.leaveWorkspace(WORKSPACE_ID)).toThrow(
+      "LAST_WORKSPACE_ADMIN"
+    );
+  });
+
+  it("나가면 워크스페이스가 목록과 조회에서도 사라진다", () => {
+    addSecondAdmin();
+    expect(
+      mockDb.listWorkspaces().some((w) => w.workspaceId === WORKSPACE_ID)
+    ).toBe(true);
+
+    expect(() => mockDb.leaveWorkspace(WORKSPACE_ID)).not.toThrow();
+
+    // 멤버 행만 지우면 목록·조회가 떠난 공간을 계속 반환한다 — 합류(초대 수락)가 두 곳에
+    // 넣으므로 탈퇴도 두 곳에서 빼야 한다.
+    expect(
+      mockDb.listWorkspaces().some((w) => w.workspaceId === WORKSPACE_ID)
+    ).toBe(false);
+    expect(() => mockDb.getWorkspace(WORKSPACE_ID)).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+    expect(() => mockDb.listMembers(WORKSPACE_ID)).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+  });
+
+  it("기본 워크스페이스를 떠나면 남은 곳이 기본이 된다", () => {
+    addSecondAdmin();
+    expect(
+      mockDb.listWorkspaces().find((w) => w.workspaceId === WORKSPACE_ID)
+        ?.isDefault
+    ).toBe(true);
+
+    mockDb.leaveWorkspace(WORKSPACE_ID);
+
+    // 서버가 기본 워크스페이스를 재지정한다. 목이 안 하면 기본이 하나도 없는 상태가 되고,
+    // 웹이 기본을 기대하는 자리마다 실제로는 나지 않는 빈 화면을 검증하게 된다.
+    expect(mockDb.listWorkspaces().filter((w) => w.isDefault)).toHaveLength(1);
+  });
+
+  it("멤버가 아닌 워크스페이스는 나가기에서 WORKSPACE_NOT_FOUND다 (추방과 다른 코드)", () => {
+    // 01K0000000030 — 초대만 와 있고 아직 합류하지 않은 워크스페이스.
+    expect(() => mockDb.leaveWorkspace("01K0000000030")).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+  });
+});
+
 describe("meeting and analysis", () => {
   beforeEach(() => mockDb.reset());
 

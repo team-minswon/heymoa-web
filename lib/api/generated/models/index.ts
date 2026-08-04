@@ -39,6 +39,8 @@ export * from "./changeDefaultWorkspaceRequest";
 export * from "./changeDefaultWorkspaceResponse";
 export * from "./changeDefaultWorkspaceResponseData";
 export * from "./changeDefaultWorkspaceResponseError";
+export * from "./changeWorkspaceMemberRoleRequest";
+export * from "./changeWorkspaceMemberRoleRequestRole";
 export * from "./completeWorkspaceIntegrationParams";
 export * from "./createAgentChatV2Request";
 export * from "./createAgentChatV2RequestScope";

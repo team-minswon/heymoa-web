@@ -178,6 +178,55 @@ async function resultOf<T>(
   }
 }
 
+/**
+ * 멤버 조작(역할 변경·추방·나가기)은 초대와 다른 상태 코드 집합을 쓴다 — 403 권한 없음,
+ * 400 자기 자신 추방, 404 멤버/워크스페이스 없음, 409 마지막 ADMIN. 문구는 계약
+ * (openapi3.yml)의 예시 그대로다. 성공은 셋 다 204 무본문이다.
+ */
+const MEMBER_ERROR_MESSAGES: Record<string, string> = {
+  WORKSPACE_MEMBER_NOT_FOUND: "워크스페이스 멤버를 찾을 수 없습니다.",
+  WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
+  LAST_WORKSPACE_ADMIN: "워크스페이스에는 관리자가 최소 한 명 있어야 합니다.",
+  WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
+  BAD_REQUEST: "잘못된 요청입니다.",
+};
+
+const MEMBER_NOT_FOUND_CODES = new Set([
+  "WORKSPACE_MEMBER_NOT_FOUND",
+  "WORKSPACE_NOT_FOUND",
+]);
+const MEMBER_FORBIDDEN_CODES = new Set(["WORKSPACE_ACCESS_DENIED"]);
+const MEMBER_BAD_REQUEST_CODES = new Set(["BAD_REQUEST"]);
+
+async function memberResult(run: () => void | Promise<void>) {
+  try {
+    await run();
+    return new HttpResponse(null, { status: 204 });
+  } catch (error) {
+    const code = (error as Error).message;
+    return HttpResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          code,
+          message: MEMBER_ERROR_MESSAGES[code] ?? code,
+          details: null,
+        },
+      },
+      {
+        status: MEMBER_NOT_FOUND_CODES.has(code)
+          ? 404
+          : MEMBER_FORBIDDEN_CODES.has(code)
+            ? 403
+            : MEMBER_BAD_REQUEST_CODES.has(code)
+              ? 400
+              : 409,
+      }
+    );
+  }
+}
+
 function invitationResult<T>(run: () => T, okStatus = 200) {
   try {
     return HttpResponse.json(
@@ -510,6 +559,35 @@ export const restHandlers = [
     commandResult(() => ({
       members: mockDb.listMembers(id(params.workspaceId)),
     }))
+  ),
+  // 본문 파싱은 반드시 memberResult 안에서 한다. 생성 훅의 `data`가 optional이라 본문 없는
+  // 요청이 실제로 날아올 수 있는데, 밖에서 파싱하면 SyntaxError가 그대로 새어 MSW가 500과
+  // 스택 트레이스를 돌려준다 — 실제 서버는 같은 입력에 400 봉투를 준다.
+  http.patch("*/v1/workspaces/:workspaceId/members/:userId", ({ params, request }) =>
+    memberResult(async () => {
+      // 좁은 유니온으로 단언하지 않는다 — 단언은 런타임에 아무것도 막지 않으면서 검증이
+      // 끝난 것처럼 보이게 한다. 계약에 없는 역할은 mockDb가 400으로 막는다.
+      const body = await request
+        .json()
+        .catch(() => {
+          throw new Error("BAD_REQUEST");
+        })
+        .then((value) => value as { role?: string });
+      mockDb.changeMemberRole(
+        id(params.workspaceId),
+        id(params.userId),
+        body?.role ?? ""
+      );
+    })
+  ),
+  // 정적 경로(/members/me)가 :userId보다 먼저 와야 한다 — MSW는 등록 순서대로 매칭한다.
+  http.delete("*/v1/workspaces/:workspaceId/members/me", ({ params }) =>
+    memberResult(() => mockDb.leaveWorkspace(id(params.workspaceId)))
+  ),
+  http.delete("*/v1/workspaces/:workspaceId/members/:userId", ({ params }) =>
+    memberResult(() =>
+      mockDb.removeMember(id(params.workspaceId), id(params.userId))
+    )
   ),
   http.get("*/v1/workspaces/:workspaceId/invitations", ({ params }) =>
     commandResult(() => ({

@@ -11,7 +11,10 @@ function api() {
       string,
       Record<string, { operationId?: string; requestBody?: unknown }>
     >;
-    components: { schemas: Record<string, unknown> };
+    components: {
+      schemas: Record<string, unknown>;
+      securitySchemes: Record<string, unknown>;
+    };
   };
 }
 
@@ -114,6 +117,15 @@ describe("OpenAPI contract", () => {
     }
   });
 
+  it("omits the internal-only security scheme", () => {
+    // 경로만 지우면 securitySchemes에 내부 전용 항목이 남는다 — APP-380 계약 갱신에서 실제로
+    // `internalToken`이 딸려 왔고, 경로와 생성 클라이언트만 보는 다른 검사들은 못 잡았다.
+    expect(source).not.toContain("X-Internal-Token");
+    expect(Object.keys(api().components.securitySchemes)).toEqual([
+      "accessCookie",
+    ]);
+  });
+
   it("has no pause or resume HTTP operations", () => {
     expect(Object.keys(api().paths)).not.toEqual(
       expect.arrayContaining([
@@ -174,12 +186,14 @@ describe("OpenAPI contract", () => {
 });
 
 describe("contract sync 2026-07-29", () => {
-  it("mirrors 34 public paths and excludes internal ones", () => {
+  it("mirrors the public paths and excludes internal ones", () => {
     const paths = Object.keys(api().paths);
     // APP-281에서 현재 전사 세션 조회 경로가 하나 추가됐다 (32 → 33).
     // APP-340에서 참여자 교체 경로가 하나 더 늘었다 (33 → 34).
     // APP-185에서 토큰 초대 수락 경로가 추가됐다 (34 → 35).
-    expect(paths).toHaveLength(35);
+    // APP-379에서 멤버 관리 경로 둘이 늘었다 (35 → 37) — `members/me`(나가기)와
+    // `members/{userId}`(역할 변경 PATCH · 추방 DELETE). 후자는 경로 하나에 메서드 둘이다.
+    expect(paths).toHaveLength(37);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 
@@ -196,6 +210,19 @@ describe("contract sync 2026-07-29", () => {
     expect(
       api().paths["/v1/workspaces/{workspaceId}/members"]?.get?.operationId
     ).toBe("getWorkspaceMembers");
+    // APP-379. 역할 변경과 추방이 같은 경로의 다른 메서드다 — 하나만 검사하면
+    // 다른 하나가 계약에서 빠져도 이 테스트가 통과한다.
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/members/{userId}"]?.patch
+        ?.operationId
+    ).toBe("changeWorkspaceMemberRole");
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/members/{userId}"]?.delete
+        ?.operationId
+    ).toBe("removeWorkspaceMember");
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/members/me"]?.delete?.operationId
+    ).toBe("leaveWorkspace");
   });
 
   it("exposes the chat, approval, meeting and analysis operations", () => {

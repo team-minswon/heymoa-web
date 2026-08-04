@@ -216,6 +216,170 @@ describe("invitation and notification handlers", () => {
   });
 });
 
+describe("workspace member management handlers", () => {
+  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+  afterEach(() => {
+    server.resetHandlers();
+    mockDb.reset();
+  });
+  afterAll(() => server.close());
+
+  const WORKSPACE_ID = "01K0000000000"; // 시드: 나(ADMIN) + 한지원(01K0000000020, MEMBER)
+  const OTHER_MEMBER_ID = "01K0000000020";
+  const currentUserId = () => mockDb.getCurrentUser().userId;
+
+  it("역할 변경은 204 무본문으로 성공한다", async () => {
+    const response = await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${OTHER_MEMBER_ID}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "ADMIN" }),
+      }
+    );
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(
+      mockDb
+        .listMembers(WORKSPACE_ID)
+        .find((m) => m.userId === OTHER_MEMBER_ID)?.role
+    ).toBe("ADMIN");
+  });
+
+  it("마지막 ADMIN을 MEMBER로 내리면 409 LAST_WORKSPACE_ADMIN을 한국어 문구와 함께 돌려준다", async () => {
+    const response = await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${currentUserId()}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "MEMBER" }),
+      }
+    );
+
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error).toMatchObject({
+      code: "LAST_WORKSPACE_ADMIN",
+      message: "워크스페이스에는 관리자가 최소 한 명 있어야 합니다.",
+    });
+  });
+
+  // 웹은 생성 타입에 묶여 "OWNER"를 못 보내지만, 목이 계약보다 관대하면 그 차이가 서버에
+  // 붙는 날에야 드러난다. 핸들러의 타입 단언은 런타임에 아무것도 막지 않는다.
+  it("계약에 없는 역할은 400 BAD_REQUEST다", async () => {
+    const response = await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${OTHER_MEMBER_ID}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "OWNER" }),
+      }
+    );
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe("BAD_REQUEST");
+    expect(
+      mockDb
+        .listMembers(WORKSPACE_ID)
+        .find((m) => m.userId === OTHER_MEMBER_ID)?.role
+    ).toBe("MEMBER");
+  });
+
+  // 생성 훅의 `data`가 optional이라 본문 없는 PATCH가 실제로 날아올 수 있다. 파싱이
+  // 오류 변환 밖에서 일어나면 MSW가 500과 스택 트레이스를 주고, 그건 계약에 없는 응답이다.
+  it("본문이 없거나 깨진 PATCH도 500이 아니라 400 봉투다", async () => {
+    for (const body of [undefined, "{"]) {
+      const response = await fetch(
+        `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${OTHER_MEMBER_ID}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body,
+        }
+      );
+
+      expect(response.status).toBe(400);
+      expect((await response.json()).error.code).toBe("BAD_REQUEST");
+    }
+  });
+
+  it("없는 워크스페이스는 403이 아니라 404 WORKSPACE_NOT_FOUND다", async () => {
+    const response = await fetch(
+      `http://localhost/v1/workspaces/01K9999999999/members/${OTHER_MEMBER_ID}`,
+      { method: "DELETE" }
+    );
+
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe("WORKSPACE_NOT_FOUND");
+  });
+
+  it("추방은 자기 자신을 대상으로 하면 400을 돌려준다", async () => {
+    const response = await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${currentUserId()}`,
+      { method: "DELETE" }
+    );
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe("BAD_REQUEST");
+  });
+
+  it("추방은 204 무본문으로 성공하고 멤버 목록에서 사라진다", async () => {
+    const response = await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${OTHER_MEMBER_ID}`,
+      { method: "DELETE" }
+    );
+
+    expect(response.status).toBe(204);
+    expect(
+      mockDb.listMembers(WORKSPACE_ID).some((m) => m.userId === OTHER_MEMBER_ID)
+    ).toBe(false);
+  });
+
+  // /members/me가 /members/:userId보다 먼저 등록돼야 한다 — 등록 순서가 뒤집히면 이 요청이
+  // :userId 라우트에 userId="me"로 잡혀 removeMember를 타고, 있지도 않은 "me" 멤버를 찾다가
+  // 404 WORKSPACE_MEMBER_NOT_FOUND로 잘못 응답한다. 이 테스트는 그 회귀를 잡는다.
+  it("나가기(/members/me)는 :userId 라우트에 먹히지 않고 별도로 처리된다", async () => {
+    // 마지막 ADMIN이면 나가기 자체가 409라 라우팅 문제를 가린다 — 관리자를 하나 더 만든다.
+    await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/${OTHER_MEMBER_ID}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "ADMIN" }),
+      }
+    );
+
+    const response = await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/me`,
+      { method: "DELETE" }
+    );
+
+    expect(response.status).toBe(204);
+    // 나간 뒤에는 멤버 목록을 조회할 수 없다(워크스페이스가 사라진다) — 목록으로 확인한다.
+    expect(
+      mockDb.listWorkspaces().some((w) => w.workspaceId === WORKSPACE_ID)
+    ).toBe(false);
+  });
+
+  it("나가기에서 마지막 ADMIN은 409, 비멤버는 404 WORKSPACE_NOT_FOUND다", async () => {
+    const lastAdmin = await fetch(
+      `http://localhost/v1/workspaces/${WORKSPACE_ID}/members/me`,
+      { method: "DELETE" }
+    );
+    expect(lastAdmin.status).toBe(409);
+    expect((await lastAdmin.json()).error.code).toBe("LAST_WORKSPACE_ADMIN");
+
+    // 01K0000000030 — 초대만 와 있고 아직 합류하지 않은 워크스페이스.
+    const notMember = await fetch(
+      "http://localhost/v1/workspaces/01K0000000030/members/me",
+      { method: "DELETE" }
+    );
+    expect(notMember.status).toBe(404);
+    expect((await notMember.json()).error.code).toBe("WORKSPACE_NOT_FOUND");
+  });
+});
+
 /** 회의 조작은 시작자만 가능하다 — 녹음을 시작해 시작자를 만든 노트를 쓴다. */
 function startedNote() {
   const project = mockDb.listProjects("01K0000000000")[0];

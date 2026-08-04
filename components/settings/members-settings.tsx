@@ -1,13 +1,23 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AlertTriangle, Info } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +30,12 @@ import {
   useCreateWorkspaceInvitation,
   useGetWorkspaceInvitations,
 } from "@/lib/api/generated/workspace-invitations/workspace-invitations";
-import { useGetWorkspaceMembers } from "@/lib/api/generated/workspace-members/workspace-members";
+import {
+  getGetWorkspaceMembersQueryKey,
+  useChangeWorkspaceMemberRole,
+  useGetWorkspaceMembers,
+  useRemoveWorkspaceMember,
+} from "@/lib/api/generated/workspace-members/workspace-members";
 import type {
   WorkspaceInvitationListResponseDataInvitationsItem,
   WorkspaceMemberListResponseDataMembersItem,
@@ -38,6 +53,21 @@ const inviteSchema = z.object({
 type InviteValues = z.infer<typeof inviteSchema>;
 
 const ROLE_LABEL: Record<string, string> = { ADMIN: "관리자", MEMBER: "멤버" };
+
+/** orval이 operationId로 만드는 mutationKey. 멤버 목록을 바꾸는 둘만 골라 잠금에 센다. */
+const MEMBER_MUTATION_KEYS = new Set([
+  "changeWorkspaceMemberRole",
+  "removeWorkspaceMember",
+]);
+
+/**
+ * 표시 이름은 OAuth에서 오므로 유일하지 않다 — 같은 워크스페이스에 「김민수」가 둘이면
+ * 이름만으로는 컨트롤도 확인창도 어느 계정인지 말하지 못한다. 행이 이미 이메일을 함께
+ * 그리는 이유가 그것이고, 접근성 이름과 확인창도 같은 식별자를 써야 한다.
+ */
+function memberLabel(member: WorkspaceMemberListResponseDataMembersItem) {
+  return `${member.name}(${member.email})`;
+}
 
 function RoleChip({ role }: { role: string }) {
   return (
@@ -122,6 +152,8 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
               key={member.userId}
               member={member}
               isMe={member.userId === user?.userId}
+              canManage={canManage}
+              workspaceId={workspaceId}
             />
           ))}
         </ul>
@@ -153,13 +185,59 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
   }
 }
 
+/**
+ * 역할 변경·추방은 ADMIN 전용이라 `canManage`가 꺼지면 이 행은 배지만 그린다.
+ *
+ * **자기 자신은 추방 버튼을 그리지 않는다** — 서버도 400으로 막지만 UI가 먼저 없앤다.
+ * 자기 역할은 select로 바꿀 수 있게 둔다 — 마지막 관리자가 자기를 강등하려는 시도까지
+ * 포함해 서버가 최종 판정한다(409 `LAST_WORKSPACE_ADMIN`).
+ *
+ * 두 mutation 모두 실패해도 `onSettled`로 목록을 다시 부른다 — 성공에만 걸면 서버 상태가
+ * 이미 바뀐 뒤(예: 동시에 다른 관리자가 바꾼 경우)에도 화면이 옛 값에 머문다(APP-187).
+ * 실패 토스트는 전역 `MutationCache.onError`가 띄우므로 여기서 opt-out하거나 자기
+ * `toast.error`를 부르지 않는다 — 그러면 마지막 관리자 409 같은 서버 문구가 안 뜨거나
+ * 두 번 뜬다.
+ */
 function MemberRow({
   member,
   isMe,
+  canManage,
+  workspaceId,
 }: {
   member: WorkspaceMemberListResponseDataMembersItem;
   isMe: boolean;
+  canManage: boolean;
+  workspaceId: string;
 }) {
+  const queryClient = useQueryClient();
+  const invalidateMembers = () =>
+    queryClient.invalidateQueries({
+      queryKey: getGetWorkspaceMembersQueryKey(workspaceId),
+    });
+
+  const changeRole = useChangeWorkspaceMemberRole({
+    mutation: { onSettled: invalidateMembers },
+  });
+  const remove = useRemoveWorkspaceMember({
+    mutation: { onSettled: invalidateMembers },
+  });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // 잠금은 이 행이 아니라 **이 워크스페이스의 목록** 단위다. 한 행의 변경이 끝나기 전에 다른
+  // 행을 건드리면 아직 invalidate되지 않은 낡은 목록으로 조작하는 셈이고, "ADMIN 최소 1명"은
+  // 목록 전체를 보고 판정되므로 어느 쪽이 403·409를 받는지가 도착 순서에 달라진다.
+  //
+  // `mutationKey`만으로 거르지 않는다 — QueryClient가 앱 전역이라 A에서 시작한 변경이 B의
+  // 멤버 탭까지 잠근다. mutation은 언마운트로 취소되지 않으므로 A의 요청이 멈추면 B가 계속
+  // 잠긴 채로 남는다(rule AGENTS의 「경계 상태」). 그래서 변수의 workspaceId까지 본다.
+  // 키는 orval이 operationId로 만든다(`workspace-members.ts`의 `mutationKey`).
+  const busy =
+    useIsMutating({
+      predicate: (mutation) =>
+        MEMBER_MUTATION_KEYS.has(String(mutation.options.mutationKey?.[0])) &&
+        (mutation.state.variables as { workspaceId?: string } | undefined)
+          ?.workspaceId === workspaceId,
+    }) > 0;
+
   return (
     <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
       <div className="min-w-0 flex-1">
@@ -175,14 +253,98 @@ function MemberRow({
           {member.email}
         </p>
       </div>
-      <RoleChip role={member.role} />
-      <p className="w-[120px] shrink-0 text-right text-xs text-[var(--el-muted)]">
+
+      {canManage ? (
+        <select
+          aria-label={`${memberLabel(member)} 역할`}
+          value={member.role}
+          disabled={busy}
+          onChange={(event) =>
+            changeRole.mutate({
+              workspaceId,
+              userId: member.userId,
+              data: { role: event.target.value as "ADMIN" | "MEMBER" },
+            })
+          }
+          className="h-[30px] shrink-0 rounded-control border border-[var(--el-hairline)] bg-white px-2 text-xs"
+        >
+          <option value="MEMBER">멤버</option>
+          <option value="ADMIN">관리자</option>
+        </select>
+      ) : (
+        <RoleChip role={member.role} />
+      )}
+
+      {/*
+        가입일은 모바일에서 숨긴다. 375px에서 행 안쪽은 약 290px인데 역할 select와 내보내기
+        버튼만으로 이미 200px 가까이 쓴다 — 날짜 120px까지 두면 이름·이메일이 0폭으로 눌려
+        누구를 내보내는지 못 보고 버튼을 누르게 된다. 셋 중 없어도 되는 것은 날짜다.
+      */}
+      <p className="hidden w-[120px] shrink-0 text-right text-xs text-[var(--el-muted)] sm:block">
         {formatAppDate(member.joinedAt, {
           year: "numeric",
           month: "long",
           day: "numeric",
         })}
       </p>
+
+      {canManage && !isMe ? (
+        <>
+          {/*
+            보이는 글자는 「내보내기」지만 접근성 이름에는 대상을 넣는다. 행이 여럿이면 스크린
+            리더의 버튼 목록에 같은 이름이 반복되어 누구를 내보내는 버튼인지 구분할 수 없고,
+            되돌릴 수 없는 조작이라 그 모호함의 대가가 크다. 보이는 글자를 그대로 품고 있어
+            음성 제어로 「내보내기」라고 말해도 여전히 잡힌다.
+          */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-[30px] shrink-0"
+            aria-label={`${memberLabel(member)} 내보내기`}
+            loading={remove.isPending}
+            disabled={busy}
+            onClick={() => setConfirmOpen(true)}
+          >
+            내보내기
+          </Button>
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {member.name}님을 내보낼까요?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {member.email} 계정이 이 워크스페이스의 멤버 목록과 접근
+                  권한을 잃습니다.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={remove.isPending}>
+                  취소
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  loading={remove.isPending}
+                  disabled={remove.isPending}
+                  onClick={async () => {
+                    // 다이얼로그를 연 채 기다린다 — 여기서 바로 닫으면 remove.isPending이
+                    // 다이얼로그 안에서 참으로 보일 틈이 없다(`note-delete-dialog.tsx`와 같은
+                    // 패턴). 거절은 여기서 소비한다 — 안 그러면 unhandled rejection으로 남고,
+                    // 토스트는 전역 `MutationCache.onError`가 띄운다.
+                    const response = await remove
+                      .mutateAsync({ workspaceId, userId: member.userId })
+                      .catch(() => null);
+                    if (response?.status !== 204) return;
+                    setConfirmOpen(false);
+                  }}
+                >
+                  내보내기
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      ) : null}
     </li>
   );
 }

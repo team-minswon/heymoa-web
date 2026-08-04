@@ -5,15 +5,18 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
@@ -22,6 +25,7 @@ import type {
 
 import type {
   AppErrorResponse,
+  ChangeWorkspaceMemberRoleRequest,
   UnauthorizedResponse,
   WorkspaceMemberListResponse,
 } from "../models";
@@ -403,3 +407,441 @@ export function useGetWorkspaceMembersSuspense<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type leaveWorkspaceResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type leaveWorkspaceResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type leaveWorkspaceResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type leaveWorkspaceResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type leaveWorkspaceResponseSuccess = leaveWorkspaceResponse204 & {
+  headers: Headers;
+};
+export type leaveWorkspaceResponseError = (
+  | leaveWorkspaceResponse401
+  | leaveWorkspaceResponse404
+  | leaveWorkspaceResponse409
+) & {
+  headers: Headers;
+};
+
+export type leaveWorkspaceResponse =
+  | leaveWorkspaceResponseSuccess
+  | leaveWorkspaceResponseError;
+
+export const getLeaveWorkspaceUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/members/me`;
+};
+
+/**
+ * 본인이 워크스페이스에서 나간다. 마지막 ADMIN은 나갈 수 없다.
+ * @summary 워크스페이스 나가기
+ */
+export const leaveWorkspace = async (
+  workspaceId: string,
+  options?: RequestInit
+): Promise<leaveWorkspaceResponse> => {
+  return apiFetch<leaveWorkspaceResponse>(getLeaveWorkspaceUrl(workspaceId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getLeaveWorkspaceMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof leaveWorkspace>>,
+    TError,
+    { workspaceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof leaveWorkspace>>,
+  TError,
+  { workspaceId: string },
+  TContext
+> => {
+  const mutationKey = ["leaveWorkspace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof leaveWorkspace>>,
+    { workspaceId: string }
+  > = (props) => {
+    const { workspaceId } = props ?? {};
+
+    return leaveWorkspace(workspaceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LeaveWorkspaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof leaveWorkspace>>
+>;
+
+export type LeaveWorkspaceMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 워크스페이스 나가기
+ */
+export const useLeaveWorkspace = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof leaveWorkspace>>,
+      TError,
+      { workspaceId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof leaveWorkspace>>,
+  TError,
+  { workspaceId: string },
+  TContext
+> => {
+  return useMutation(getLeaveWorkspaceMutationOptions(options), queryClient);
+};
+export type removeWorkspaceMemberResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type removeWorkspaceMemberResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type removeWorkspaceMemberResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type removeWorkspaceMemberResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type removeWorkspaceMemberResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type removeWorkspaceMemberResponseSuccess =
+  removeWorkspaceMemberResponse204 & {
+    headers: Headers;
+  };
+export type removeWorkspaceMemberResponseError = (
+  | removeWorkspaceMemberResponse400
+  | removeWorkspaceMemberResponse401
+  | removeWorkspaceMemberResponse403
+  | removeWorkspaceMemberResponse404
+) & {
+  headers: Headers;
+};
+
+export type removeWorkspaceMemberResponse =
+  | removeWorkspaceMemberResponseSuccess
+  | removeWorkspaceMemberResponseError;
+
+export const getRemoveWorkspaceMemberUrl = (
+  workspaceId: string,
+  userId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/members/${userId}`;
+};
+
+/**
+ * 멤버를 워크스페이스에서 내보낸다. ADMIN만 호출할 수 있고, 자기 자신은 대상이 될 수 없다.
+ * @summary 워크스페이스 멤버 추방
+ */
+export const removeWorkspaceMember = async (
+  workspaceId: string,
+  userId: string,
+  options?: RequestInit
+): Promise<removeWorkspaceMemberResponse> => {
+  return apiFetch<removeWorkspaceMemberResponse>(
+    getRemoveWorkspaceMemberUrl(workspaceId, userId),
+    {
+      ...options,
+      method: "DELETE",
+    }
+  );
+};
+
+export const getRemoveWorkspaceMemberMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeWorkspaceMember>>,
+    TError,
+    { workspaceId: string; userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeWorkspaceMember>>,
+  TError,
+  { workspaceId: string; userId: string },
+  TContext
+> => {
+  const mutationKey = ["removeWorkspaceMember"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeWorkspaceMember>>,
+    { workspaceId: string; userId: string }
+  > = (props) => {
+    const { workspaceId, userId } = props ?? {};
+
+    return removeWorkspaceMember(workspaceId, userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveWorkspaceMemberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeWorkspaceMember>>
+>;
+
+export type RemoveWorkspaceMemberMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 워크스페이스 멤버 추방
+ */
+export const useRemoveWorkspaceMember = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removeWorkspaceMember>>,
+      TError,
+      { workspaceId: string; userId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof removeWorkspaceMember>>,
+  TError,
+  { workspaceId: string; userId: string },
+  TContext
+> => {
+  return useMutation(
+    getRemoveWorkspaceMemberMutationOptions(options),
+    queryClient
+  );
+};
+export type changeWorkspaceMemberRoleResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type changeWorkspaceMemberRoleResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type changeWorkspaceMemberRoleResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type changeWorkspaceMemberRoleResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type changeWorkspaceMemberRoleResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type changeWorkspaceMemberRoleResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type changeWorkspaceMemberRoleResponseSuccess =
+  changeWorkspaceMemberRoleResponse204 & {
+    headers: Headers;
+  };
+export type changeWorkspaceMemberRoleResponseError = (
+  | changeWorkspaceMemberRoleResponse400
+  | changeWorkspaceMemberRoleResponse401
+  | changeWorkspaceMemberRoleResponse403
+  | changeWorkspaceMemberRoleResponse404
+  | changeWorkspaceMemberRoleResponse409
+) & {
+  headers: Headers;
+};
+
+export type changeWorkspaceMemberRoleResponse =
+  | changeWorkspaceMemberRoleResponseSuccess
+  | changeWorkspaceMemberRoleResponseError;
+
+export const getChangeWorkspaceMemberRoleUrl = (
+  workspaceId: string,
+  userId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/members/${userId}`;
+};
+
+/**
+ * 멤버의 역할을 ADMIN·MEMBER로 바꾼다. ADMIN만 호출할 수 있고, 마지막 ADMIN은 강등할 수 없다.
+ * @summary 워크스페이스 멤버 역할 변경
+ */
+export const changeWorkspaceMemberRole = async (
+  workspaceId: string,
+  userId: string,
+  changeWorkspaceMemberRoleRequest?: ChangeWorkspaceMemberRoleRequest,
+  options?: RequestInit
+): Promise<changeWorkspaceMemberRoleResponse> => {
+  return apiFetch<changeWorkspaceMemberRoleResponse>(
+    getChangeWorkspaceMemberRoleUrl(workspaceId, userId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(changeWorkspaceMemberRoleRequest),
+    }
+  );
+};
+
+export const getChangeWorkspaceMemberRoleMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeWorkspaceMemberRole>>,
+    TError,
+    {
+      workspaceId: string;
+      userId: string;
+      data?: ChangeWorkspaceMemberRoleRequest;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeWorkspaceMemberRole>>,
+  TError,
+  {
+    workspaceId: string;
+    userId: string;
+    data?: ChangeWorkspaceMemberRoleRequest;
+  },
+  TContext
+> => {
+  const mutationKey = ["changeWorkspaceMemberRole"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeWorkspaceMemberRole>>,
+    {
+      workspaceId: string;
+      userId: string;
+      data?: ChangeWorkspaceMemberRoleRequest;
+    }
+  > = (props) => {
+    const { workspaceId, userId, data } = props ?? {};
+
+    return changeWorkspaceMemberRole(workspaceId, userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChangeWorkspaceMemberRoleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof changeWorkspaceMemberRole>>
+>;
+export type ChangeWorkspaceMemberRoleMutationBody =
+  | ChangeWorkspaceMemberRoleRequest
+  | undefined;
+export type ChangeWorkspaceMemberRoleMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 워크스페이스 멤버 역할 변경
+ */
+export const useChangeWorkspaceMemberRole = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeWorkspaceMemberRole>>,
+      TError,
+      {
+        workspaceId: string;
+        userId: string;
+        data?: ChangeWorkspaceMemberRoleRequest;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeWorkspaceMemberRole>>,
+  TError,
+  {
+    workspaceId: string;
+    userId: string;
+    data?: ChangeWorkspaceMemberRoleRequest;
+  },
+  TContext
+> => {
+  return useMutation(
+    getChangeWorkspaceMemberRoleMutationOptions(options),
+    queryClient
+  );
+};
