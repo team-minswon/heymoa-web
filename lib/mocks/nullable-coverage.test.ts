@@ -317,9 +317,6 @@ const KNOWN_ONE_SIDED = new Set([
   "AnalysisResultResponse.data.errorMessage",
   // `createAgentChat`이 `title: null`로만 만든다 — 목에 제목을 붙이는 수단이 없다.
   "AgentChatV2NullableResponse.data.title",
-  // `createInvitation`이 `inviteeImage: null`로만 만든다. 실서버는 가입자 초대라 이미지가
-  // 올 수 있는데, 목에 초대 대상의 프로필을 붙이는 수단이 없다.
-  "WorkspaceInvitationListResponse.data.invitations[].inviteeImage",
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
   "CurrentTranscriptionSessionNullableResponse.data.startedAt",

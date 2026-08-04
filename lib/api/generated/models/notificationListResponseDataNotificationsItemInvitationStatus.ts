@@ -17,4 +17,5 @@ export const NotificationListResponseDataNotificationsItemInvitationStatus = {
   ACCEPTED: "ACCEPTED",
   DECLINED: "DECLINED",
   CANCELED: "CANCELED",
+  EXPIRED: "EXPIRED",
 } as const;

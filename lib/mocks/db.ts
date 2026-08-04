@@ -541,6 +541,35 @@ function createSeedState(): StoreState {
       role: "MEMBER",
       status: "PENDING",
       createdAt: "2026-07-11T00:00:00Z",
+      // UI 만료 판정은 실제 시계라 데모용 PENDING은 항상 미래여야 한다 (고정일이면 썩는다)
+      expiresAt: daysAgoIso(-1),
+    },
+    // 미가입자 초대 — 이름이 없는(null) 표본. 계약의 nullable 양쪽을 목이 보여줘야 한다
+    {
+      workspaceId: "01K0000000006",
+      invitationId: "01K0000000025",
+      inviteeName: null,
+      inviteeEmail: "stranger@heymoa.dev",
+      inviteeImage: null,
+      inviterName: user.name,
+      role: "MEMBER",
+      status: "PENDING",
+      createdAt: "2026-07-11T02:00:00Z",
+      expiresAt: daysAgoIso(-1, 1),
+    },
+    // 만료 지난 PENDING 표본 — 토큰 수락의 INVITATION_EXPIRED 경로(/invite)와 멤버 탭의
+    // 만료 배지를 dev에서 밟을 수 있어야 한다. 유저가 ADMIN인 워크스페이스에 둔다.
+    {
+      workspaceId: "01K0000000006",
+      invitationId: "01K0000000026",
+      inviteeName: user.name,
+      inviteeEmail: user.email,
+      inviteeImage: user.image,
+      inviterName: "한지원",
+      role: "MEMBER",
+      status: "PENDING",
+      createdAt: "2026-07-09T00:00:00Z",
+      expiresAt: "2026-07-10T00:00:00Z",
     },
   ];
   const notifications: NotificationListResponseDataNotificationsItem[] = [
@@ -556,6 +585,7 @@ function createSeedState(): StoreState {
         workspaceId: INVITED_WORKSPACE.workspaceId,
         workspaceName: INVITED_WORKSPACE.name,
         inviterName: invitations[0].inviterName,
+        expiresAt: invitations[0].expiresAt,
       },
     },
     // 이미 읽은 알림. `readAt`이 전부 null이면 벨의 읽음 표시와 안읽음 카운트 분기가
@@ -572,6 +602,7 @@ function createSeedState(): StoreState {
         workspaceId: workspaces[1].workspaceId,
         workspaceName: workspaces[1].name,
         inviterName: "한지원",
+        expiresAt: "2026-07-11T00:00:00Z",
       },
     },
   ];
@@ -684,12 +715,26 @@ function syncInvitationNotification(invitation: MockInvitation) {
     notification.invitation.status = invitation.status;
 }
 
+/**
+ * 만료 지난 PENDING은 EXPIRED로 밀고 409를 낸다 — 서버(APP-184)와 같은 전이.
+ * 시계는 실제 시계다 — UI 만료 판정과 같은 시계여야 화면과 목 API가 갈라지지 않는다.
+ * (시드의 만료 시각도 전부 실제-상대라 세월 따라 썩지 않는다.)
+ */
+function expireIfNeeded(invitation: MockInvitation) {
+  if (invitation.status !== "PENDING") return;
+  if (Date.parse(invitation.expiresAt) > Date.now()) return;
+  invitation.status = "EXPIRED";
+  syncInvitationNotification(invitation);
+  fail("INVITATION_EXPIRED");
+}
+
 /** PENDING 초대를 확정 상태로 옮기고 알림을 맞춘다. 수락만 멤버를 늘린다. */
 function resolveInvitation(
   invitationId: string,
   status: NotificationListResponseDataNotificationsItemInvitationStatus
 ): WorkspaceInvitationActionResponseData {
   const invitation = findInvitation(invitationId);
+  expireIfNeeded(invitation);
   if (invitation.status !== "PENDING") fail("INVITATION_NOT_PENDING");
   invitation.status = status;
   syncInvitationNotification(invitation);
@@ -1138,32 +1183,35 @@ export const mockDb = {
     input: { email: string; role: string }
   ): WorkspaceInvitationActionResponseData {
     assertWorkspace(workspaceId);
-    // ponytail: 서버는 초대 대상 조회에 이메일을 정규화하지 않아 대문자가 섞이면 가입자도
-    // 못 찾는다(404). 실제 가입자 레지스트리가 없으니 그 quirk를 대문자 휴리스틱으로 흉내 낸다.
-    if (input.email !== input.email.toLowerCase()) fail("INVITEE_NOT_FOUND");
+    // 서버(APP-183)와 동일한 정규화 — 미가입자 초대가 정상 경로라 404는 없다
+    const email = input.email.trim().toLowerCase();
     const alreadyMember = state.members.some(
-      (member) =>
-        member.workspaceId === workspaceId && member.email === input.email
+      (member) => member.workspaceId === workspaceId && member.email === email
     );
     if (alreadyMember) fail("ALREADY_WORKSPACE_MEMBER");
     const alreadyInvited = state.invitations.some(
       (invitation) =>
         invitation.workspaceId === workspaceId &&
-        invitation.inviteeEmail === input.email &&
+        invitation.inviteeEmail === email &&
         invitation.status === "PENDING"
     );
     if (alreadyInvited) fail("DUPLICATE_PENDING_INVITATION");
 
+    // 생성·만료(생성+1일, 계약)는 같은 시각에서 계산한다. 만료 판정과 UI가 실제 시계를
+    // 쓰므로 여기도 실제 시계다 — 시계가 갈리면 방금 만든 초대가 만료로 보인다.
+    const createdAtMs = Date.now();
     const invitation: MockInvitation = {
       workspaceId,
       invitationId: nextId(),
-      inviteeName: input.email.split("@")[0],
-      inviteeEmail: input.email,
+      // 목엔 가입자 레지스트리가 없다 — 계약의 미가입자 초대(inviteeName null)로 취급한다
+      inviteeName: null,
+      inviteeEmail: email,
       inviteeImage: null,
       inviterName: state.user.name,
       role: input.role as MockInvitation["role"],
       status: "PENDING",
-      createdAt: nextTimestamp(),
+      createdAt: new Date(createdAtMs).toISOString(),
+      expiresAt: new Date(createdAtMs + 86_400_000).toISOString(),
     };
     state.invitations.push(invitation);
     return copy({
@@ -1172,6 +1220,32 @@ export const mockDb = {
       role: invitation.role,
       status: invitation.status,
     });
+  },
+
+  /**
+   * 토큰 수락 — 목의 토큰은 invitationId다. 실서버 계약대로 만료(409)와 이메일
+   * 일치(403)를 먼저 본다. 인앱 수락(`acceptInvitation`)은 항상 본인 초대라 안 본다.
+   */
+  acceptInvitationByToken(token: string): WorkspaceInvitationActionResponseData {
+    const invitation = findInvitation(token);
+    // 서버(AcceptWorkspaceInvitationByTokenService)와 같은 순서 — 만료 → 상태 → 이메일 → 멤버
+    expireIfNeeded(invitation);
+    if (invitation.status !== "PENDING") fail("INVITATION_NOT_PENDING");
+    if (invitation.inviteeEmail !== state.user.email) {
+      fail("INVITATION_EMAIL_MISMATCH");
+    }
+    // 계약의 409. 지금은 createInvitation이 이미 멤버를 막아 목에서 도달할 수 없지만,
+    // 목에 멤버 변동 기능이 생겨도 실서버와 갈라지지 않게 검사를 둔다.
+    if (
+      state.members.some(
+        (member) =>
+          member.workspaceId === invitation.workspaceId &&
+          member.email === state.user.email
+      )
+    ) {
+      fail("ALREADY_WORKSPACE_MEMBER");
+    }
+    return mockDb.acceptInvitation(token);
   },
 
   acceptInvitation(
@@ -1206,7 +1280,7 @@ export const mockDb = {
       state.members.push({
         workspaceId: invitation.workspaceId,
         userId: isSelf ? state.user.userId : nextId(),
-        name: invitation.inviteeName,
+        name: invitation.inviteeName ?? invitation.inviteeEmail,
         email: invitation.inviteeEmail,
         role: invitation.role,
         image: invitation.inviteeImage,

@@ -26,9 +26,10 @@ function id(value: string | readonly string[] | undefined) {
  */
 const INVITATION_NOT_FOUND_CODES = new Set([
   "INVITATION_NOT_FOUND",
-  "INVITEE_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
 ]);
+
+const INVITATION_FORBIDDEN_CODES = new Set(["INVITATION_EMAIL_MISMATCH"]);
 
 /**
  * 실서버 봉투는 코드별 한국어 메시지를 담는데(openapi3.yml) 목은 코드를 그대로 넣고 있었다.
@@ -36,8 +37,9 @@ const INVITATION_NOT_FOUND_CODES = new Set([
  */
 const INVITATION_ERROR_MESSAGES: Record<string, string> = {
   ALREADY_WORKSPACE_MEMBER: "이미 워크스페이스 멤버입니다.",
+  INVITATION_EXPIRED: "만료된 초대입니다.",
+  INVITATION_EMAIL_MISMATCH: "초대 대상 이메일이 아닙니다.",
   DUPLICATE_PENDING_INVITATION: "이미 대기 중인 초대가 있습니다.",
-  INVITEE_NOT_FOUND: "초대할 사용자를 찾을 수 없습니다.",
 };
 
 /**
@@ -194,7 +196,13 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
           details: null,
         },
       },
-      { status: INVITATION_NOT_FOUND_CODES.has(code) ? 404 : 409 }
+      {
+        status: INVITATION_NOT_FOUND_CODES.has(code)
+          ? 404
+          : INVITATION_FORBIDDEN_CODES.has(code)
+            ? 403
+            : 409,
+      }
     );
   }
 }
@@ -535,6 +543,11 @@ export const restHandlers = [
   http.post("*/v1/invitations/:invitationId/accept", ({ params }) =>
     invitationResult(() => mockDb.acceptInvitation(id(params.invitationId)))
   ),
+  // 목 세계의 토큰은 invitationId 그 자체다 — 실서버의 digest 매칭까지 흉내내지 않는다
+  http.post("*/v1/invitations/accept-by-token", async ({ request }) => {
+    const body = (await request.json()) as { token?: string };
+    return invitationResult(() => mockDb.acceptInvitationByToken(body.token ?? ""));
+  }),
   http.post("*/v1/invitations/:invitationId/decline", ({ params }) =>
     invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))
   ),

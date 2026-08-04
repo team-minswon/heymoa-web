@@ -31,6 +31,7 @@ const STATUS_LABEL: Record<string, string> = {
   ACCEPTED: "수락함",
   DECLINED: "거절함",
   CANCELED: "취소됨",
+  EXPIRED: "만료됨",
 };
 
 /**
@@ -64,11 +65,16 @@ export function NotificationBell() {
     queryClient.invalidateQueries({ queryKey: getGetNotificationsQueryKey() });
 
   const onResolveError = (error: unknown) => {
-    if (errorCodeOf(error) === "INVITATION_NOT_PENDING") {
+    const code = errorCodeOf(error);
+    if (code === "INVITATION_NOT_PENDING") {
       // 이미 처리된 초대다 — 목록을 새 상태로 갱신하면 그 항목이 라벨로 바뀐다.
       setStaleInvitation(true);
       void invalidateNotifications();
       return;
+    }
+    if (code === "INVITATION_EXPIRED") {
+      // 서버가 방금 EXPIRED로 전이시켰다(APP-184) — 재조회하면 버튼이 만료됨 라벨로 바뀐다.
+      void invalidateNotifications();
     }
     // 전역 토스트를 껐으니 그 밖 실패는 여기서 서버 문구로 띄운다.
     toast.error(errorMessageOf(error, "초대 처리에 실패했습니다."));
@@ -238,6 +244,12 @@ function NotificationRow({
 }) {
   const invitation = notification.invitation;
   const unread = notification.readAt === null;
+  // 만료 판정은 렌더 시점 1회 고정 — 서버/클라이언트 렌더가 ms 차이로 갈리는
+  // hydration 불일치를 막는다. 서버는 만료 PENDING을 첫 접근 때 EXPIRED로 밀므로
+  // 이 판정은 그 사이의 표시용이다.
+  const [now] = useState(() => Date.now());
+  const isExpiredPending =
+    invitation?.status === "PENDING" && Date.parse(invitation.expiresAt) < now;
 
   return (
     <div className="flex gap-3 border-b border-[var(--el-hairline)] px-4 py-3 last:border-b-0">
@@ -276,7 +288,7 @@ function NotificationRow({
                 day: "numeric",
               })}
             </p>
-            {invitation.status === "PENDING" ? (
+            {invitation.status === "PENDING" && !isExpiredPending ? (
               <div className="mt-2.5 flex gap-2">
                 <Button
                   size="sm"
@@ -298,7 +310,9 @@ function NotificationRow({
               </div>
             ) : (
               <p className="mt-1.5 text-xs font-medium text-[var(--el-muted)]">
-                {STATUS_LABEL[invitation.status] ?? invitation.status}
+                {isExpiredPending
+                  ? "만료됨"
+                  : (STATUS_LABEL[invitation.status] ?? invitation.status)}
               </p>
             )}
           </>

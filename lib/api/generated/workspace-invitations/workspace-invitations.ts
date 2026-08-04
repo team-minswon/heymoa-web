@@ -24,6 +24,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AcceptInvitationByTokenRequest,
   AppErrorResponse,
   CreateWorkspaceInvitationRequest,
   UnauthorizedResponse,
@@ -35,6 +36,153 @@ import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
+export type acceptInvitationByTokenResponse200 = {
+  data: WorkspaceInvitationActionResponse;
+  status: 200;
+};
+
+export type acceptInvitationByTokenResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type acceptInvitationByTokenResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type acceptInvitationByTokenResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type acceptInvitationByTokenResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type acceptInvitationByTokenResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type acceptInvitationByTokenResponseSuccess =
+  acceptInvitationByTokenResponse200 & {
+    headers: Headers;
+  };
+export type acceptInvitationByTokenResponseError = (
+  | acceptInvitationByTokenResponse400
+  | acceptInvitationByTokenResponse401
+  | acceptInvitationByTokenResponse403
+  | acceptInvitationByTokenResponse404
+  | acceptInvitationByTokenResponse409
+) & {
+  headers: Headers;
+};
+
+export type acceptInvitationByTokenResponse =
+  | acceptInvitationByTokenResponseSuccess
+  | acceptInvitationByTokenResponseError;
+
+export const getAcceptInvitationByTokenUrl = () => {
+  return `/v1/invitations/accept-by-token`;
+};
+
+/**
+ * 초대 이메일 링크의 토큰으로 초대를 수락하고 워크스페이스 멤버가 된다. 로그인 계정 이메일이 초대받은 이메일과 같아야 하며, 링크는 생성 1일 후 만료된다.
+ * @summary 토큰으로 초대 수락
+ */
+export const acceptInvitationByToken = async (
+  acceptInvitationByTokenRequest?: AcceptInvitationByTokenRequest,
+  options?: RequestInit
+): Promise<acceptInvitationByTokenResponse> => {
+  return apiFetch<acceptInvitationByTokenResponse>(
+    getAcceptInvitationByTokenUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(acceptInvitationByTokenRequest),
+    }
+  );
+};
+
+export const getAcceptInvitationByTokenMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptInvitationByToken>>,
+    TError,
+    { data?: AcceptInvitationByTokenRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptInvitationByToken>>,
+  TError,
+  { data?: AcceptInvitationByTokenRequest },
+  TContext
+> => {
+  const mutationKey = ["acceptInvitationByToken"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptInvitationByToken>>,
+    { data?: AcceptInvitationByTokenRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return acceptInvitationByToken(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptInvitationByTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptInvitationByToken>>
+>;
+export type AcceptInvitationByTokenMutationBody =
+  | AcceptInvitationByTokenRequest
+  | undefined;
+export type AcceptInvitationByTokenMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 토큰으로 초대 수락
+ */
+export const useAcceptInvitationByToken = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof acceptInvitationByToken>>,
+      TError,
+      { data?: AcceptInvitationByTokenRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof acceptInvitationByToken>>,
+  TError,
+  { data?: AcceptInvitationByTokenRequest },
+  TContext
+> => {
+  return useMutation(
+    getAcceptInvitationByTokenMutationOptions(options),
+    queryClient
+  );
+};
 export type acceptWorkspaceInvitationResponse200 = {
   data: WorkspaceInvitationActionResponse;
   status: 200;
@@ -760,7 +908,7 @@ export const getCreateWorkspaceInvitationUrl = (workspaceId: string) => {
 };
 
 /**
- * 가입된 사용자를 이메일로 워크스페이스에 초대한다. ADMIN만 초대할 수 있고, 생성과 동시에 초대받은 사용자에게 알림이 저장된다.
+ * 이메일로 워크스페이스에 초대한다. ADMIN만 초대할 수 있다. 가입자에게는 인앱 알림과 초대 이메일이, 미가입자에게는 초대 이메일이 발송되며 링크로 가입 후 합류한다.
  * @summary 워크스페이스 초대 생성
  */
 export const createWorkspaceInvitation = async (

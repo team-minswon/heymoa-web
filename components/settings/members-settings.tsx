@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
+import { errorMessageOf } from "@/lib/api/error-message";
 import {
   getGetWorkspaceInvitationsQueryKey,
   useCancelWorkspaceInvitation,
@@ -218,11 +218,8 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
     }
   });
 
-  // 서버가 이메일을 정규화하지 않아 가입자도 404가 될 수 있다 — 대소문자 힌트를 덧붙인다.
   const inviteMessage = inviteError
-    ? errorCodeOf(inviteError) === "INVITEE_NOT_FOUND"
-      ? `${errorMessageOf(inviteError, "초대할 사용자를 찾을 수 없습니다.")} 철자와 대소문자를 확인해 주세요.`
-      : errorMessageOf(inviteError, "초대에 실패했습니다.")
+    ? errorMessageOf(inviteError, "초대에 실패했습니다.")
     : null;
 
   const emailField = form.register("email");
@@ -231,7 +228,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
     <section>
       <h3 className="text-sm font-medium text-[var(--el-ink)]">멤버 초대</h3>
       <p className="mt-1 text-xs text-[var(--el-muted)]">
-        가입한 사용자의 이메일로 초대합니다. 수락하면 워크스페이스에 합류합니다.
+        이메일로 초대합니다. 미가입자도 초대 메일의 링크로 가입해 합류할 수 있습니다.
       </p>
       <form onSubmit={submit} className="mt-3 space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
@@ -307,9 +304,14 @@ function PendingInvitations({
   onRetry: () => void;
 }) {
   const queryClient = useQueryClient();
+  // 만료 판정은 렌더 시점 1회 고정 — hydration 불일치 방지. 서버는 만료 PENDING을
+  // 처리 시점에 EXPIRED로 밀므로 이 판정은 그 사이의 표시용이다.
+  const [now] = useState(() => Date.now());
   const cancel = useCancelWorkspaceInvitation({
     mutation: {
-      onSuccess: () =>
+      // 실패해도 재조회한다 — 만료 409는 서버가 초대를 EXPIRED로 전이시킨 뒤라(APP-184),
+      // 성공시에만 갱신하면 이미 목록에서 빠진 행이 화면에 남는다.
+      onSettled: () =>
         queryClient.invalidateQueries({
           queryKey: getGetWorkspaceInvitationsQueryKey(workspaceId),
         }),
@@ -356,13 +358,19 @@ function PendingInvitations({
                 className="flex min-h-[52px] items-center gap-3 px-4 py-2.5"
               >
                 <div className="min-w-0 flex-1">
+                  {/* 미가입자는 이름이 없다(null) — 이메일이 곧 신원이라 주 텍스트로 올린다 */}
                   <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-                    {invitation.inviteeName}
+                    {invitation.inviteeName ?? invitation.inviteeEmail}
                   </p>
-                  <p className="truncate text-xs text-[var(--el-muted)]">
-                    {invitation.inviteeEmail}
-                  </p>
+                  {invitation.inviteeName !== null && (
+                    <p className="truncate text-xs text-[var(--el-muted)]">
+                      {invitation.inviteeEmail}
+                    </p>
+                  )}
                 </div>
+                {Date.parse(invitation.expiresAt) < now && (
+                  <Badge variant="outline">만료됨</Badge>
+                )}
                 <RoleChip role={invitation.role} />
                 <p className="hidden w-[160px] shrink-0 text-right text-xs text-[var(--el-muted)] sm:block">
                   {invitation.inviterName} ·{" "}

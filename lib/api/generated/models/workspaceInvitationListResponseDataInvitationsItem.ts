@@ -19,8 +19,11 @@ export type WorkspaceInvitationListResponseDataInvitationsItem = {
   inviteeImage: string | null;
   /** 초대받은 사용자 이메일 */
   inviteeEmail: string;
-  /** 초대받은 사용자 이름 */
-  inviteeName: string;
+  /**
+   * 초대받은 사용자 이름. 미가입자 초대는 null
+   * @nullable
+   */
+  inviteeName: string | null;
   /**
    * 초대 식별자
    * @minLength 13
@@ -28,6 +31,8 @@ export type WorkspaceInvitationListResponseDataInvitationsItem = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   invitationId: string;
+  /** 초대 만료 시각. 지난 뒤에는 수락할 수 없다 */
+  expiresAt: string;
   /** 초대를 보낸 사용자 이름 */
   inviterName: string;
 };

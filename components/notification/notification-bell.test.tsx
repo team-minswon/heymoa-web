@@ -66,7 +66,11 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   getGetWorkspacesQueryKey: () => ["workspaces"],
 }));
 
-function invitation(status: string, readAt: string | null = null) {
+function invitation(
+  status: string,
+  readAt: string | null = null,
+  expiresAt: string = new Date(Date.now() + 86_400_000).toISOString()
+) {
   return {
     notificationId: `n-${status}`,
     type: "WORKSPACE_INVITATION",
@@ -79,6 +83,7 @@ function invitation(status: string, readAt: string | null = null) {
       workspaceId: "01K0000000000",
       role: "MEMBER",
       status,
+      expiresAt,
     },
   };
 }
@@ -145,6 +150,25 @@ describe("NotificationBell", () => {
     renderBell();
     await openBell();
     expect(screen.getByText("수락함")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "수락" })).toBeNull();
+  });
+
+  it("만료 지난 PENDING 초대는 버튼 대신 만료됨 라벨을 보인다", async () => {
+    state.notifications = [
+      invitation("PENDING", null, "2026-07-01T00:00:00Z"),
+    ];
+    renderBell();
+    await openBell();
+    expect(screen.getByText("만료됨")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "수락" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "거절" })).toBeNull();
+  });
+
+  it("EXPIRED 상태는 만료됨 라벨을 보인다", async () => {
+    state.notifications = [invitation("EXPIRED", "2026-07-24T01:00:00Z")];
+    renderBell();
+    await openBell();
+    expect(screen.getByText("만료됨")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "수락" })).toBeNull();
   });
 

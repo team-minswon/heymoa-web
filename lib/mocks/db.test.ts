@@ -294,6 +294,36 @@ describe("invitations, members and notifications", () => {
     expect(mockDb.listInvitations(workspaceId)).toEqual([]);
   });
 
+  it("normalizes mixed-case invite emails like the server does", () => {
+    const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
+
+    mockDb.createInvitation(workspaceId, {
+      email: " Sora@Heymoa.app ",
+      role: "MEMBER",
+    });
+
+    expect(mockDb.listInvitations(workspaceId)[0].inviteeEmail).toBe(
+      "sora@heymoa.app"
+    );
+  });
+
+  it("accepting an expired invitation by token fails and marks it EXPIRED", () => {
+    // 01K0000000026 — 만료 지난 PENDING 시드
+    expect(() => mockDb.acceptInvitationByToken("01K0000000026")).toThrowError(
+      "INVITATION_EXPIRED"
+    );
+    expect(() => mockDb.acceptInvitationByToken("01K0000000026")).toThrowError(
+      "INVITATION_NOT_PENDING"
+    );
+  });
+
+  it("accepting another user's invitation by token fails with email mismatch", () => {
+    // 01K0000000025 — stranger@heymoa.dev 대상 시드
+    expect(() => mockDb.acceptInvitationByToken("01K0000000025")).toThrowError(
+      "INVITATION_EMAIL_MISMATCH"
+    );
+  });
+
   it("declining an invitation leaves the member list untouched", () => {
     const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
     const before = mockDb.listMembers(workspaceId).length;

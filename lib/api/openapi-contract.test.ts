@@ -178,7 +178,8 @@ describe("contract sync 2026-07-29", () => {
     const paths = Object.keys(api().paths);
     // APP-281에서 현재 전사 세션 조회 경로가 하나 추가됐다 (32 → 33).
     // APP-340에서 참여자 교체 경로가 하나 더 늘었다 (33 → 34).
-    expect(paths).toHaveLength(34);
+    // APP-185에서 토큰 초대 수락 경로가 추가됐다 (34 → 35).
+    expect(paths).toHaveLength(35);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

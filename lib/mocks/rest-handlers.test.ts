@@ -182,7 +182,7 @@ describe("invitation and notification handlers", () => {
     expect(body.error.message).toBe("이미 대기 중인 초대가 있습니다.");
   });
 
-  it("returns 404 INVITEE_NOT_FOUND for a mixed-case email", async () => {
+  it("creates an invitation from a mixed-case email by normalizing it", async () => {
     const response = await fetch(
       "http://localhost/v1/workspaces/01K0000000000/invitations",
       {
@@ -191,10 +191,9 @@ describe("invitation and notification handlers", () => {
       }
     );
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(201);
     const body = await response.json();
-    expect(body.error.code).toBe("INVITEE_NOT_FOUND");
-    expect(body.error.message).toBe("초대할 사용자를 찾을 수 없습니다.");
+    expect(body.success).toBe(true);
   });
 
   it("returns 404 when accepting an invitation that does not exist", async () => {

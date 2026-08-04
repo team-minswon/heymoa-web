@@ -13,6 +13,18 @@ import type {
   WorkspaceInvitationListResponse,
 } from "../models";
 
+export const getAcceptInvitationByTokenResponseMock =
+  (): WorkspaceInvitationActionResponse => ({
+    success: true,
+    data: {
+      invitationId: "0HZX2K7M9Q4AK",
+      workspaceId: "0HZX2K7M9Q4AD",
+      role: "MEMBER",
+      status: "ACCEPTED",
+    },
+    error: null,
+  });
+
 export const getAcceptWorkspaceInvitationResponseMock =
   (): WorkspaceInvitationActionResponse => ({
     success: true,
@@ -50,6 +62,7 @@ export const getGetWorkspaceInvitationsResponseMock =
           role: "MEMBER",
           inviterName: "홍길동",
           createdAt: "2026-07-14T01:02:03Z",
+          expiresAt: "2026-07-15T01:02:03Z",
         },
       ],
     },
@@ -79,6 +92,32 @@ export const getCancelWorkspaceInvitationResponseMock =
     },
     error: null,
   });
+
+export const getAcceptInvitationByTokenMockHandler = (
+  overrideResponse?:
+    | WorkspaceInvitationActionResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) =>
+        | Promise<WorkspaceInvitationActionResponse>
+        | WorkspaceInvitationActionResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/invitations/accept-by-token",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAcceptInvitationByTokenResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 
 export const getAcceptWorkspaceInvitationMockHandler = (
   overrideResponse?:
@@ -210,6 +249,7 @@ export const getCancelWorkspaceInvitationMockHandler = (
   );
 };
 export const getWorkspaceInvitationsMock = () => [
+  getAcceptInvitationByTokenMockHandler(),
   getAcceptWorkspaceInvitationMockHandler(),
   getDeclineWorkspaceInvitationMockHandler(),
   getGetWorkspaceInvitationsMockHandler(),

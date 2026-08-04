@@ -114,6 +114,7 @@ function pendingInvite(overrides: Record<string, unknown> = {}) {
     role: "MEMBER",
     inviterName: "테스트 유저",
     createdAt: "2026-07-20T00:00:00Z",
+    expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
     ...overrides,
   };
 }
@@ -214,22 +215,6 @@ describe("MembersSettings", () => {
     );
   });
 
-  it("404면 대소문자 힌트를 덧붙인다", async () => {
-    state.createError = {
-      success: false,
-      data: null,
-      error: {
-        code: "INVITEE_NOT_FOUND",
-        message: "초대할 사용자를 찾을 수 없습니다.",
-      },
-    };
-    renderSettings();
-    await invite("Sora@Heymoa.app");
-    await waitFor(() =>
-      expect(screen.getByText(/철자와 대소문자를 확인해 주세요\./)).toBeTruthy()
-    );
-  });
-
   it("이메일을 고치면 지난 초대 오류가 사라진다", async () => {
     state.createError = {
       success: false,
@@ -259,5 +244,24 @@ describe("MembersSettings", () => {
       workspaceId: "01K0000000000",
       invitationId: "inv-1",
     });
+  });
+
+  it("미가입자 초대 행은 이메일을 주 텍스트로 보인다", () => {
+    state.invitations = [
+      pendingInvite({ inviteeName: null, inviteeEmail: "stranger@heymoa.dev" }),
+    ];
+    renderSettings();
+    const email = screen.getByText("stranger@heymoa.dev");
+    expect(email.className).toMatch(/font-medium/);
+    expect(screen.getAllByText("stranger@heymoa.dev")).toHaveLength(1);
+  });
+
+  it("만료 지난 초대는 만료됨 배지를 보이고 취소 버튼은 남는다", () => {
+    state.invitations = [
+      pendingInvite({ expiresAt: "2026-07-01T00:00:00Z" }),
+    ];
+    renderSettings();
+    expect(screen.getByText("만료됨")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "취소" })).toBeTruthy();
   });
 });

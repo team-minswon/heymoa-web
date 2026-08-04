@@ -30,6 +30,7 @@ export const getGetNotificationsResponseMock =
             workspaceId: "0HZX2K7M9Q4AD",
             workspaceName: "제품 팀",
             inviterName: "홍길동",
+            expiresAt: "2026-07-15T01:02:03Z",
           },
         },
       ],

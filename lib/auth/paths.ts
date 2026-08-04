@@ -1,4 +1,4 @@
-const allowedReturnPaths = new Set(["/", "/terms", "/privacy", "/settings"]);
+const allowedReturnPaths = new Set(["/", "/terms", "/privacy", "/settings", "/invite"]);
 const workspaceReturnPath =
   /^\/w\/[0-9A-HJKMNP-TV-Z]{13}(?:\/notes\/[0-9A-HJKMNP-TV-Z]{13})?$/;
 
