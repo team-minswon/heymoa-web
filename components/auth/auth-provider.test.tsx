@@ -70,7 +70,7 @@ describe("AuthProvider", () => {
     cleanup();
   });
 
-  it("exposes logout pending state and clears client state before returning home", async () => {
+  it("로그아웃 대기 상태를 노출하고 홈으로 하드 이동한다", async () => {
     const request = deferred<void>();
     authApi.logout.mockReturnValueOnce(request.promise);
     const queryClient = new QueryClient({
@@ -101,15 +101,15 @@ describe("AuthProvider", () => {
       await logoutPromise;
     });
 
-    await waitFor(() => expect(result.current.user).toBeNull());
-    expect(result.current.isLoggingOut).toBe(false);
-    expect(
-      queryClient.getQueryData(["workspace", "workspace-1"])
-    ).toBeUndefined();
-    expect(queryClient.getQueryData(["user"])).toBeNull();
+    await waitFor(() => expect(result.current.isLoggingOut).toBe(false));
     // 세션 게이트가 열린 채 소프트 이동하면 홈에서도 모든 요청이 거절된다 — 만료 처리와
     // 같은 이유로 하드 내비게이션이다.
     expect(hardNavigate).toHaveBeenCalledWith("/");
+    // **캐시를 비우지 않는다.** 문서를 통째로 버리는 참이라 비울 이유가 없고, 비우면 아직
+    // 떠 있는 화면이 다시 조회해 "노트를 불러오지 못했습니다"가 뜬 뒤에 로그아웃된다.
+    expect(queryClient.getQueryData(["workspace", "workspace-1"])).toEqual({
+      name: "회의 워크스페이스",
+    });
   });
 
   it("stops active browser resources before requesting logout", async () => {
@@ -143,9 +143,6 @@ describe("AuthProvider", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    queryClient.setQueryData(["workspace", "workspace-1"], {
-      name: "회의 워크스페이스",
-    });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         <AuthProvider initialUser={user} beforeLogout={beforeLogout}>
@@ -153,7 +150,7 @@ describe("AuthProvider", () => {
         </AuthProvider>
       </QueryClientProvider>
     );
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    renderHook(() => useAuth(), { wrapper });
 
     act(() => {
       window.dispatchEvent(
@@ -163,14 +160,10 @@ describe("AuthProvider", () => {
       );
     });
 
-    await waitFor(() => expect(result.current.user).toBeNull());
-    expect(beforeLogout).toHaveBeenCalledOnce();
+    await waitFor(() => expect(beforeLogout).toHaveBeenCalledOnce());
     // APP-205부터 만료 처리가 logout을 부른다. HttpOnly 쿠키는 JS가 못 지우므로
     // 서버가 만료 Set-Cookie를 내려주는 것이 유일한 정리 수단이다.
     expect(authApi.logout).toHaveBeenCalledTimes(1);
-    expect(
-      queryClient.getQueryData(["workspace", "workspace-1"])
-    ).toBeUndefined();
   });
 
   it("keeps the authenticated state and reports a recoverable logout failure", async () => {
