@@ -119,15 +119,15 @@ export type refreshTokensResponse200 = {
   status: 200;
 };
 
-export type refreshTokensResponse400 = {
+export type refreshTokensResponse401 = {
   data: AppErrorResponse;
-  status: 400;
+  status: 401;
 };
 
 export type refreshTokensResponseSuccess = refreshTokensResponse200 & {
   headers: Headers;
 };
-export type refreshTokensResponseError = refreshTokensResponse400 & {
+export type refreshTokensResponseError = refreshTokensResponse401 & {
   headers: Headers;
 };
 

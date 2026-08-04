@@ -403,20 +403,20 @@ paths:
                     data:
                       message: 토큰이 갱신되었습니다.
                     error: null
-        '400':
-          description: 잘못된 요청
+        '401':
+          description: 인증 필요
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BAD_REQUEST:
+                INVALID_REFRESH_TOKEN:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
+                      code: INVALID_REFRESH_TOKEN
+                      message: 세션이 만료되었습니다. 다시 로그인해 주세요.
                       details: null
       security: []
   /v1/invitations/accept-by-token:
