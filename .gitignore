@@ -46,3 +46,6 @@ next-env.d.ts
 # playwright
 /test-results
 /playwright-report
+
+# superpowers sdd 작업 보고서 (세션 산출물, 저장소에 남길 것 아님)
+.superpowers/
