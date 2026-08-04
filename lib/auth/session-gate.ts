@@ -50,6 +50,24 @@ export function openSessionGate() {
   notifyAuthStateChanged({ reason: "unauthenticated" });
 }
 
+/**
+ * 스스로 로그아웃했을 때. 게이트는 열되 **만료를 알리지 않는다.**
+ *
+ * 로그아웃이 캐시를 비우면 아직 마운트된 제품 쿼리들이 곧바로 다시 조회한다(사이드바가
+ * `useAuth()` 소비자라 상태가 바뀌면서 리렌더된다). 그 시점엔 쿠키가 이미 지워져서
+ * 401 → 갱신 실패 → `openSessionGate()` 순으로 만료 경로가 열리고, 사용자가 직접 누른
+ * 로그아웃이 "세션이 만료되었습니다"로 둔갑한 채 홈에 떨어졌다.
+ *
+ * 그 요청들을 네트워크 앞에서 막는 것이 이 함수다. 이동과 문구는 호출부가 정한다.
+ */
+export function openSessionGateQuietly() {
+  if (!isBrowser()) {
+    return;
+  }
+
+  expired = true;
+}
+
 /** 테스트 전용. 모듈 수준 상태를 초기화한다. */
 export function resetSessionGate() {
   expired = false;

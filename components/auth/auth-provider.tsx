@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { toast } from "@/lib/ui/toast";
 
 import {
@@ -42,7 +41,6 @@ export function AuthProvider({
   initialUser: AuthUser | null;
   beforeLogout?: () => Promise<void> | void;
 }) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -99,14 +97,17 @@ export function AuthProvider({
       if (beforeLogout) await beforeLogout();
       await requestLogout();
       clearAuthenticatedState();
-      router.replace("/");
-      router.refresh();
+
+      // 만료 경로와 같은 이유로 **하드 내비게이션이다.** 로그아웃이 세션 게이트를 열어 두고
+      // (`lib/auth/api.ts`) 게이트는 새 문서로만 풀린다. 소프트 이동하면 홈에 도착해도
+      // 게이트가 열린 채라 이후 요청이 전부 거절된다 — 앱이 죽은 채 남는다(APP-223).
+      window.location.replace("/");
     } catch {
       toast.error("로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setIsLoggingOut(false);
     }
-  }, [beforeLogout, clearAuthenticatedState, isLoggingOut, router]);
+  }, [beforeLogout, clearAuthenticatedState, isLoggingOut]);
 
   useEffect(() => {
     const handleAuthStateChanged = (event: Event) => {
@@ -154,7 +155,7 @@ export function AuthProvider({
         handleAuthStateChanged
       );
     };
-  }, [clearAuthenticatedState, releaseAuthenticatedResources, router]);
+  }, [clearAuthenticatedState, releaseAuthenticatedResources]);
 
   // 만료로 쫓겨나 도착한 문서에서 사유를 한 번 보이고 쿼리를 지운다. 안 지우면 새로고침·
   // 뒤로가기마다 다시 뜬다. `history.replaceState`라 이동이 아니라 주소만 정리된다.

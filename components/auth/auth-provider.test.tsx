@@ -7,11 +7,6 @@ import { AuthProvider, useAuth } from "@/components/auth/auth-provider";
 import { AUTH_STATE_CHANGED_EVENT } from "@/lib/auth/events";
 import type { AuthUser } from "@/lib/auth/types";
 
-const router = vi.hoisted(() => ({
-  replace: vi.fn(),
-  refresh: vi.fn(),
-}));
-
 const authApi = vi.hoisted(() => ({
   getMe: vi.fn(),
   logout: vi.fn(),
@@ -31,10 +26,6 @@ Object.defineProperty(window, "location", {
     },
   },
 });
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => router,
-}));
 
 vi.mock("@/lib/auth/api", () => ({
   getMe: authApi.getMe,
@@ -68,9 +59,7 @@ describe("AuthProvider", () => {
     // 만료 처리가 logout을 best-effort로 부르므로 기본 구현이 promise여야 한다.
     authApi.logout.mockResolvedValue(undefined);
     toast.error.mockReset();
-    router.replace.mockReset();
-    router.refresh.mockReset();
-    // jsdom은 실제 이동을 구현하지 않는다. 만료 처리가 하드 내비게이션이므로 여기서 잡는다.
+    // jsdom은 실제 이동을 구현하지 않는다. 로그아웃도 만료도 하드 내비게이션이라 여기서 잡는다.
     hardNavigate.mockReset();
     window.history.replaceState(null, "", "/");
   });
@@ -105,8 +94,7 @@ describe("AuthProvider", () => {
     expect(authApi.logout).toHaveBeenCalledOnce();
     expect(result.current.isLoggingOut).toBe(true);
     expect(result.current.user).toEqual(user);
-    expect(router.replace).not.toHaveBeenCalled();
-    expect(router.refresh).not.toHaveBeenCalled();
+    expect(hardNavigate).not.toHaveBeenCalled();
 
     await act(async () => {
       request.resolve();
@@ -119,11 +107,9 @@ describe("AuthProvider", () => {
       queryClient.getQueryData(["workspace", "workspace-1"])
     ).toBeUndefined();
     expect(queryClient.getQueryData(["user"])).toBeNull();
-    expect(router.replace).toHaveBeenCalledWith("/");
-    expect(router.refresh).toHaveBeenCalledOnce();
-    expect(router.replace.mock.invocationCallOrder[0]).toBeLessThan(
-      router.refresh.mock.invocationCallOrder[0]
-    );
+    // 세션 게이트가 열린 채 소프트 이동하면 홈에서도 모든 요청이 거절된다 — 만료 처리와
+    // 같은 이유로 하드 내비게이션이다.
+    expect(hardNavigate).toHaveBeenCalledWith("/");
   });
 
   it("stops active browser resources before requesting logout", async () => {
@@ -149,7 +135,7 @@ describe("AuthProvider", () => {
     await act(() => result.current.logout());
 
     expect(order).toEqual(["disconnect-recording", "logout-request"]);
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(hardNavigate).toHaveBeenCalledWith("/");
   });
 
   it("releases browser resources when authentication expires", async () => {
@@ -203,8 +189,7 @@ describe("AuthProvider", () => {
 
     expect(result.current.user).toEqual(user);
     expect(result.current.isLoggingOut).toBe(false);
-    expect(router.replace).not.toHaveBeenCalled();
-    expect(router.refresh).not.toHaveBeenCalled();
+    expect(hardNavigate).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith(
       "로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요."
     );
@@ -244,7 +229,7 @@ describe("AuthProvider", () => {
     await waitFor(() => {
       expect(hardNavigate).toHaveBeenCalledWith("/?session=expired");
     });
-    expect(router.replace).not.toHaveBeenCalled();
+    expect(hardNavigate).toHaveBeenCalledOnce();
     expect(authApi.logout).toHaveBeenCalledTimes(1);
   });
 

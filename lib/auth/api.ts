@@ -4,6 +4,7 @@ import type { AppResponse, AuthUser } from "@/lib/auth/types";
 import { refreshAuthOnce } from "@/lib/api/fetcher";
 import {
   isSessionExpired,
+  openSessionGateQuietly,
   SessionExpiredError,
 } from "@/lib/auth/session-gate";
 
@@ -90,6 +91,11 @@ export async function getMe(): Promise<AuthUser> {
 
 export async function logout() {
   await postAuth<void>("/v1/auth/logout", true);
+
+  // **알리기 전에 막는다.** 아래 이벤트를 받은 AuthProvider가 캐시를 비우면 남은 제품
+  // 쿼리들이 그 자리에서 다시 조회하는데, 쿠키는 이 줄 위에서 이미 사라졌다. 막지 않으면
+  // 그 401들이 갱신을 시도하고 실패해 만료 경로를 깨운다 — "세션이 만료되었습니다"가 뜬다.
+  openSessionGateQuietly();
   notifyAuthStateChanged({ reason: "logout" });
 }
 
