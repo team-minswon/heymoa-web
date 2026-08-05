@@ -92,14 +92,14 @@ const props = {
   onOpenSettings: vi.fn(),
 };
 
-function renderSidebar() {
+function renderSidebar(overrides: Partial<typeof props> = {}) {
   const client = new QueryClient();
   return {
     client,
     ...render(
       <QueryClientProvider client={client}>
         <SidebarProvider>
-          <WorkspaceSidebar {...props} />
+          <WorkspaceSidebar {...props} {...overrides} />
         </SidebarProvider>
       </QueryClientProvider>
     ),
@@ -132,6 +132,29 @@ describe("WorkspaceSidebar", () => {
     cleanup();
     auth.isLoggingOut = false;
     logout.mockReset();
+  });
+
+  /**
+   * 프로젝트가 0개면 이 자리가 통째로 비어서, 만들 수 있다는 것을 알리는 것이 머리글 옆
+   * 14px `+` 하나뿐이었다. 새 워크스페이스는 항상 이 상태로 시작하므로 처음 들어온 사람이
+   * 가장 먼저 보는 화면이 그것이었다.
+   */
+  it("프로젝트가 없으면 라벨 있는 만들기 입구를 낸다", () => {
+    renderSidebar({ projects: [] });
+
+    fireEvent.click(screen.getByRole("button", { name: "프로젝트 만들기" }));
+    expect(
+      screen.getByRole("dialog", { name: "새 프로젝트 만들기" })
+    ).toBeTruthy();
+  });
+
+  it("프로젝트가 있으면 빈 상태를 안 낸다", () => {
+    renderSidebar();
+
+    expect(
+      screen.queryByRole("button", { name: "프로젝트 만들기" })
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "주간" })).toBeTruthy();
   });
 
   it("selects projects and exposes accessible CRUD dialogs", () => {

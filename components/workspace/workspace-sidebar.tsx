@@ -316,7 +316,30 @@ export function WorkspaceSidebar({
                 <Plus className="size-3.5" />
               </button>
             </div>
-            {projectsOpen && (
+            {projectsOpen && projects.length === 0 && (
+              <SidebarGroupContent>
+                {/* 프로젝트가 0개면 이 자리가 통째로 비어서, 만들 수 있다는 것을 알리는 것이
+                    머리글 옆 14px `+` 하나뿐이었다. 새 워크스페이스는 항상 이 상태로
+                    시작하므로 처음 들어온 사람이 가장 먼저 보는 화면이 그것이었다.
+                    프로젝트 행과 같은 무게의 행 하나를 두어 라벨이 있는 입구를 만든다 —
+                    다이얼로그는 `+`가 여는 것과 같은 것이다. */}
+                <SidebarMenu className="space-y-0">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setProjectDialog({ mode: "create" })}
+                      className="h-8 gap-2.5 rounded-control px-2.5 text-[13px] text-[var(--el-muted)]"
+                    >
+                      <Plus className="size-4 text-[var(--el-muted)]" />
+                      <span>프로젝트 만들기</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+                <p className="px-2.5 pt-1 pb-1 text-[11px] leading-relaxed text-[var(--el-muted-soft)]">
+                  회의를 주제별로 묶으면 지난 맥락을 찾기 쉬워집니다.
+                </p>
+              </SidebarGroupContent>
+            )}
+            {projectsOpen && projects.length > 0 && (
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-0">
                   {projects.map((project) => (
