@@ -51,6 +51,17 @@ hooks/                  # 여러 feature가 공유하는 browser adapter
 
 의존 방향은 `app → feature UI → feature logic → generated API / primitive`이다. `components/ui`는 workspace나 transcription을 import하지 않는다. 동일 API query를 여러 자식이 각각 구독해야 할 이유가 없다면 shell에서 한 번 읽고 context/props로 전달한다.
 
+## URL에 쓰는 두 가지 방법
+
+URL은 두 종류의 상태를 담는다. 어느 쪽인지에 따라 쓰는 API가 다르다.
+
+- **다른 화면으로 가는 것**은 라우터다(`router.push`/`router.replace`). 노트 열기·닫기, 워크스페이스 전환, 삭제 후 목록 복귀.
+- **같은 화면 안의 상태**는 `window.history.pushState`/`replaceState`다. 노트 탭과 side↔full이 여기다. Next 16이 이 둘을 라우터와 통합해 두어 `usePathname`·`useSearchParams`가 그대로 갱신되고, RSC 요청은 나가지 않는다.
+
+`page.tsx`가 `searchParams`를 읽으면 Next는 쿼리 변경을 진짜 내비게이션으로 취급한다. 노트 탭을 `router.replace`로 쓰던 동안 탭 클릭마다 `_rsc=` 왕복이 돌았고, 서버 prefetch와 노트·전사·챗 쿼리가 다시 나갔으며, 탭 UI는 URL을 단일 출처로 쓰므로 그 왕복이 끝나야 움직였다. `page.tsx`가 `searchParams`를 읽는 것 자체는 그대로 둔다 — 첫 렌더·새로고침·딥링크가 그 값을 쓰고, 라우터를 안 거치면 다시 돌지 않는다.
+
+이동 자체는 이미 즉시 반응한다. 노트 목록 행은 `useLinkStatus`로 스피너를 켜고, 워크스페이스 전환은 `app/w/loading.tsx`가 스켈레톤을 세운다. 노트 라우트에는 `loading.tsx`를 두지 않는다 — 이유는 `workspace-route-skeleton.tsx`에 있다.
+
 ## 상태 경계
 
 - 인증: `AuthProvider`가 사용자와 logout lifecycle을 소유한다. logout은 진행 중인 조회만 취소하고 `/`로 **하드 내비게이션**한다 — 세션 게이트가 모듈 상태라 새 문서로만 풀리고, 캐시를 비우면 떠나는 화면이 다시 조회해 오류가 스쳐 지나간다. 캐시는 문서와 함께 사라지고, BFCache로 되살아난 문서는 `pageshow`에서 새로 받는다.
@@ -86,7 +97,7 @@ React의 첫 client render는 서버 HTML과 같은 결과여야 한다.
 - route 전체 spinner보다 note list, transcript, note metadata처럼 사용자가 기다리는 단위에 skeleton/error/retry를 둔다.
 - skeleton의 높이와 최종 component의 최소 높이를 맞춰 layout shift를 줄인다.
 - 이미 로드된 부모 화면 위에 sheet가 열리는 흐름에서는 임시 sheet skeleton을 만들지 않는다. 부모 화면을 유지한 뒤 실제 sheet만 한 번 진입시킨다.
-- mutation 버튼은 기존 label을 투명하게 유지하고 absolute spinner를 올려 폭을 보존한다.
+- mutation 버튼은 기존 label을 투명하게 유지하고 absolute spinner를 올려 폭을 보존한다. 보존되는 것은 그 버튼이 받은 children의 폭이므로, 상태로 브랜치가 갈리는 자리는 로딩 자리표시와 확정의 children을 같게 둔다. `min-w-`로 덮지 않는다.
 - pending 중 같은 mutation을 시작할 수 있는 모든 control을 함께 비활성화한다.
 - `isFetching`을 “저장 중”처럼 다른 의미로 번역하지 않는다. 내부 polling과 reconciliation은 사용자에게 노출하지 않는다.
 

@@ -16,6 +16,26 @@
 - 마이크 레벨처럼 고빈도 값을 읽는 곳만 `useRecordingMeter()`를 쓰고, 나머지는 `useRecording()`을 씁니다. 전사 화면이 20Hz로 리렌더되지 않게 하는 분리입니다.
 - 영속 전사 segment는 불변입니다. 화면용 묶기는 `lib/transcription/`의 순수 selector에서 합니다.
 
+## URL을 쓴다고 다 이동은 아닙니다
+
+**같은 화면 안의 상태를 URL에 쓸 때는 `router.push/replace`를 쓰지 않습니다.**
+`window.history.pushState/replaceState`를 씁니다 — Next 16이 라우터와 통합해 두어
+`usePathname`·`useSearchParams`가 그대로 갱신되고 RSC 요청은 안 나갑니다.
+
+가르는 기준은 **다른 화면으로 가는가**입니다.
+
+| 무엇 | 무엇으로 | 예 |
+|---|---|---|
+| 같은 화면의 상태 | `history.replaceState` | 노트 탭, side↔full, 정렬·필터를 URL에 남길 때 |
+| 다른 화면으로 이동 | `router.push` / `router.replace` | 노트 열기·닫기, 워크스페이스 전환, 삭제 후 목록 |
+
+`page.tsx`가 `searchParams`를 읽으면 Next는 쿼리 변경을 **진짜 내비게이션으로** 취급합니다.
+노트 탭이 그랬습니다 — 누를 때마다 `_rsc=` 왕복이 돌고 서버 prefetch와 쿼리가 다시 나갔으며,
+탭 UI는 그 왕복이 끝나야 움직였습니다(102ms → 10ms, 왕복 1건 → 0건).
+
+`page.tsx`에서 `searchParams`를 읽는 것 자체는 괜찮습니다. 첫 렌더·새로고침·딥링크가 그
+값을 씁니다. 라우터를 안 거치면 다시 돌지 않습니다.
+
 ## Next.js 16
 
 - 미들웨어는 `proxy.ts`입니다. **`middleware.ts`를 만들지 않습니다** — 충돌해서 404 루프가 됩니다.

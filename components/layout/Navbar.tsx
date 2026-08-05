@@ -139,14 +139,18 @@ export function Navbar() {
                     <span className="hidden sm:inline">대시보드로 이동</span>
                   </Button>
                 ) : isWorkspacesPending ? (
+                  // children이 위 확정 버튼과 같아야 폭이 안 튄다. `min-w-24 sm:min-w-36`으로
+                  // 덮어 두었었는데 그 144px이 실제 확정 폭 138.1px보다 커서 반대로 6px
+                  // 줄어들었다. 자리표시를 실물과 같게 두면 min-w가 필요 없다.
                   <Button
                     type="button"
                     size="xl"
                     loading
                     disabled
-                    className="min-w-24 rounded-full px-4 sm:min-w-36 sm:px-5"
+                    className="rounded-full px-4 sm:px-5 sm:text-[15px]"
                   >
-                    대시보드
+                    <span className="sm:hidden">대시보드</span>
+                    <span className="hidden sm:inline">대시보드로 이동</span>
                   </Button>
                 ) : (
                   <Button

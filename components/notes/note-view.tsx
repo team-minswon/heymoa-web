@@ -16,6 +16,22 @@ import {
 
 type NoteViewMode = "side" | "full";
 
+/**
+ * `view`·`tab`은 라우터를 안 거친다.
+ *
+ * `router.replace`로 쓰면 Next가 이걸 진짜 내비게이션으로 취급한다 — `page.tsx`가
+ * `searchParams`를 읽는 async Server Component라 탭 하나 누를 때마다 `_rsc=` 왕복이 돌고,
+ * `prefetchNoteRoute`와 노트·전사·챗 쿼리가 다시 나간다. 탭 UI는 URL을 단일 출처로 쓰므로
+ * 그 왕복이 끝나야 움직인다(prod·localhost 실측 100~140ms, 실서버는 RTT만큼 더).
+ *
+ * `window.history.replaceState`는 Next 16이 라우터와 통합해 두어 `useSearchParams`가 그대로
+ * 갱신되고 RSC 요청이 아예 안 나간다. 히스토리 의미는 `router.replace`와 같다 — 뒤로가기
+ * 항목을 만들지 않는다. 목록으로 나가는 이동은 여전히 진짜 내비게이션이라 `router`를 쓴다.
+ */
+function replaceNoteSearch(pathname: string, search: string) {
+  window.history.replaceState(null, "", `${pathname}?${search}`);
+}
+
 export function normalizeNoteViewQuery(
   query: {
     view?: string | string[];
@@ -91,6 +107,15 @@ export function NoteView({
   }, []);
 
   useEffect(() => {
+    // **첫 커밋 전에는 URL을 안 고친다.** App Router는 자기 effect에서 `history.replaceState`를
+    // 패치하는데, 자식 effect가 부모보다 먼저 돌므로 마운트 중에 여기서 쓰면 패치 전 네이티브
+    // 호출이 되어 현재 엔트리의 `__NA`와 router tree를 지운다. 지금은 App Router가 마운트
+    // 직후 자기 상태를 다시 써서 되살리지만 그건 effect 순서에 기댄 회복이다. `isOpen`은
+    // 첫 커밋 뒤 타이머에서 켜지므로 그 시점은 패치보다 확실히 뒤다.
+    //
+    // 사용자 조작(`setQuery`)은 어차피 마운트 뒤라 이 게이트가 필요 없다.
+    if (!isOpen) return;
+
     const pendingSearch = pendingSearchRef.current;
     if (pendingSearch) {
       if (search === pendingSearch.to) {
@@ -110,14 +135,14 @@ export function NoteView({
     const next = new URLSearchParams(search);
     next.set("view", current.view);
     next.set("tab", current.tab);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    replaceNoteSearch(pathname, next.toString());
   }, [
     current.tab,
     current.view,
+    isOpen,
     pathname,
     requested.tab,
     requested.view,
-    router,
     search,
   ]);
 
@@ -140,7 +165,7 @@ export function NoteView({
     if (nextSearch !== search) {
       pendingSearchRef.current = { from: search, to: nextSearch };
     }
-    router.replace(`${pathname}?${nextSearch}`, { scroll: false });
+    replaceNoteSearch(pathname, nextSearch);
   };
 
   return (

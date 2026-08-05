@@ -41,6 +41,10 @@ export function LandingCta({
   if (isAuthenticated) {
     // 조회가 끝나기 전에 「Google 계정으로 시작」을 잠깐 보이면 이미 로그인한 사람에게
     // 라벨이 튄다 — 확정될 때까지 같은 자리에 대시보드 버튼을 로딩으로 둔다.
+    //
+    // **children이 아래 확정 버튼과 글자 하나까지 같아야 한다.** `Button`은 로딩 중 라벨을
+    // `opacity-0`으로 남겨 폭을 보존하지만, 보존하는 것은 *자기가 받은* children의 폭이다.
+    // 여기에만 `ArrowRight`가 없던 동안 146.1px로 떴다가 확정되며 168.1px로 22px 튀었다.
     if (workspacesQuery.isPending) {
       return (
         <Button
@@ -50,6 +54,7 @@ export function LandingCta({
           className={cn(MARKETING_PILL, className)}
         >
           대시보드로 이동
+          <ArrowRight className="size-4" />
         </Button>
       );
     }

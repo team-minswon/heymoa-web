@@ -95,11 +95,16 @@ describe("Navbar", () => {
     render(<Navbar />);
 
     expect(screen.queryByRole("link", { name: /대시보드/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "대시보드" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "대시보드" })).toHaveAttribute(
-      "aria-busy",
-      "true"
-    );
+
+    // 로딩 자리표시의 children이 확정 링크와 같아야 폭이 안 튄다 — 좁은 화면 `대시보드`와
+    // 넓은 화면 `대시보드로 이동` 두 span을 그대로 들고 있다(둘 중 하나만 CSS로 보인다).
+    const placeholder = screen.getByRole("button", { name: /대시보드/ });
+    expect(placeholder).toHaveTextContent("대시보드");
+    expect(placeholder).toHaveTextContent("대시보드로 이동");
+    expect(placeholder).toBeDisabled();
+    expect(placeholder).toHaveAttribute("aria-busy", "true");
+    // 폭을 min-w로 못 박지 않는다 — 그 값(144px)이 확정 폭(138.1px)보다 커서 반대로 줄었다.
+    expect(placeholder.className).not.toMatch(/min-w-/);
   });
 
   it("offers a toast and retry action when workspaces fail to load", () => {

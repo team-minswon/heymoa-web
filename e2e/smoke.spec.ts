@@ -1020,3 +1020,47 @@ test("clears the note row spinner after the full-view note is closed", async ({
 
   await expect(row.locator(".animate-spin")).toHaveCount(0);
 });
+
+/**
+ * 노트 탭은 라우터를 안 탄다.
+ *
+ * `router.replace`로 URL을 쓰던 동안, `page.tsx`가 `searchParams`를 읽는 async Server
+ * Component라 Next가 탭 클릭을 진짜 내비게이션으로 취급했다 — 누를 때마다 `_rsc=` 왕복이
+ * 돌고 그게 끝나야 탭이 움직였다(prod·localhost 실측 100~140ms, 실서버는 RTT만큼 더).
+ * `window.history.replaceState`는 그 왕복 없이 `useSearchParams`를 갱신한다.
+ *
+ * 왕복이 있는지 없는지는 실제 라우터에서만 드러난다 — jsdom에는 RSC 요청 자체가 없다.
+ */
+test("switches note tabs without an RSC round trip", async ({ page }) => {
+  const rscRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("_rsc=")) rscRequests.push(request.url());
+  });
+
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=details`
+  );
+  await expect(page.getByRole("tab", { name: "정보" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+
+  // 진입 자체의 prefetch·내비게이션은 정당하다. 세는 것은 **탭을 누른 뒤**의 요청뿐이다.
+  rscRequests.length = 0;
+
+  await page.getByRole("tab", { name: "스크립트" }).click();
+  await expect(page.getByRole("tab", { name: "스크립트" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(page).toHaveURL(/tab=transcript/);
+
+  await page.getByRole("tab", { name: "정보" }).click();
+  await expect(page.getByRole("tab", { name: "정보" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(page).toHaveURL(/tab=details/);
+
+  expect(rscRequests).toEqual([]);
+});

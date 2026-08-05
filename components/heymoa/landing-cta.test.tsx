@@ -87,4 +87,31 @@ describe("LandingCta", () => {
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-busy", "true");
   });
+
+  /**
+   * 공용 `Button`은 로딩 중 라벨을 `opacity-0`으로 남겨 폭을 보존하지만, 보존하는 것은
+   * **자기가 받은** children의 폭이다. 로딩 브랜치에만 `ArrowRight`가 없던 동안 146.1px로
+   * 떴다가 확정되며 168.1px로 22px 튀었다.
+   *
+   * jsdom에는 레이아웃이 없어 px를 못 잰다 — 대신 두 브랜치의 children이 같은지를 본다.
+   * 같은 children이면 같은 폭이고, 이 등식이 깨지는 순간이 곧 폭이 튀는 순간이다.
+   */
+  it("로딩 자리표시와 확정 버튼의 내용이 같다", () => {
+    auth.status = "authenticated";
+    workspaces.isPending = true;
+    const loading = render(<LandingCta label="Google 계정으로 시작" />);
+    const loadingLabel =
+      screen.getByRole("button", { name: /대시보드로 이동/ }).firstElementChild
+        ?.innerHTML;
+    loading.unmount();
+
+    workspaces.isPending = false;
+    workspaces.data = WITH_WORKSPACE;
+    render(<LandingCta label="Google 계정으로 시작" />);
+    const settledLabel =
+      screen.getByRole("link", { name: /대시보드로 이동/ }).firstElementChild
+        ?.innerHTML;
+
+    expect(loadingLabel).toBe(settledLabel);
+  });
 });

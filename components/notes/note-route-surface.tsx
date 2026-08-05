@@ -7,6 +7,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 export type NoteViewMode = "side" | "full";
 
@@ -65,11 +66,21 @@ export function NoteRouteSurface({
     // 하지 않는다. 시트와 전체 면은 컴포넌트도 마운트 시점도 달라서, 잇는 값을 하나로 만들려면
     // 노트 본문까지 한 트리에 묶어야 하고 그건 스트림을 끊는 재마운트를 부른다.
     //
+    // **`starting:`은 첫 렌더에서 뺀다.** `@starting-style`은 "side에서 넘어왔다"와 "이게
+    // 이 문서의 첫 페인트다"를 구분하지 못한다 — DOM에 새로 꽂히는 것은 둘 다 같기 때문이다.
+    // `?view=full`로 새로고침하면 이 면이 하이드레이션 뒤에야 붙어서, 빈 화면을 보다가
+    // 노트가 뒤늦게 확대되며 들어왔다(실측 567ms 지점에서 opacity·scale 트랜지션 시작).
+    // `isOpen`은 첫 렌더가 커밋된 뒤에 켜지므로 그대로 이 구분에 쓴다 — 새로고침 진입에는
+    // 마운트 시점에 꺼져 있고, side→full 전환에는 이미 켜져 있다.
+    //
     // **나갈 때(full → side)는 애니메이션이 없다.** 이 면은 즉시 언마운트되고 시트가 오른쪽에서
     // 밀려 들어와 그 자리를 덮는다.
     <div
       data-surface="full"
-      className="fixed inset-0 z-30 min-h-0 origin-right overflow-hidden bg-[var(--el-canvas)] p-2.5 transition-[opacity,scale] duration-200 ease-out starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none"
+      className={cn(
+        "fixed inset-0 z-30 min-h-0 origin-right overflow-hidden bg-[var(--el-canvas)] p-2.5 transition-[opacity,scale] duration-200 ease-out motion-reduce:transition-none",
+        isOpen && "starting:scale-[0.98] starting:opacity-0"
+      )}
     >
       {children}
     </div>

@@ -131,13 +131,28 @@ describe("normalizeNoteViewQuery", () => {
 });
 
 describe("NoteView", () => {
+  // `view`·`tab`은 라우터를 안 거치고 `window.history.replaceState`로 쓴다 — 그래야
+  // Next가 탭 클릭을 내비게이션으로 취급하지 않는다. 그래서 여기를 감시한다.
+  // `state.replace`(라우터)는 노트 삭제 후 목록으로 나가는 진짜 이동에만 남아 있다.
+  const replaceState = vi.fn();
+
   beforeEach(() => {
     state.search = "";
     state.note = undefined;
     state.replace.mockReset();
     state.push.mockReset();
+    replaceState.mockReset();
+    vi.spyOn(window.history, "replaceState").mockImplementation(replaceState);
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    vi.restoreAllMocks();
+    cleanup();
+  });
+
+  /** 라우터를 안 탄 채 쓰인 URL만 뽑는다. */
+  function replacedUrls() {
+    return replaceState.mock.calls.map((call) => call[2]);
+  }
 
   it("announces a meeting state change once through one polite live region", () => {
     state.note = {
@@ -179,7 +194,7 @@ describe("NoteView", () => {
     );
 
     expect(screen.getByTestId("note-panel").textContent).toBe("summary");
-    expect(state.replace).not.toHaveBeenCalled();
+    expect(replacedUrls()).toEqual([]);
 
     state.note = {
       meetingStatus: "IN_PROGRESS",
@@ -191,11 +206,11 @@ describe("NoteView", () => {
 
     expect(screen.getByTestId("note-panel").textContent).toBe("details");
     await waitFor(() =>
-      expect(state.replace).toHaveBeenCalledWith(
-        "/w/workspace/notes/note?view=side&tab=details",
-        { scroll: false }
+      expect(replacedUrls()).toContain(
+        "/w/workspace/notes/note?view=side&tab=details"
       )
     );
+    expect(state.replace).not.toHaveBeenCalled();
   });
 
   it("does not normalize an ended-summary intent from a stale chat URL", async () => {
@@ -209,10 +224,9 @@ describe("NoteView", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "요약 전환" }));
-    expect(state.replace).toHaveBeenCalledWith(
+    expect(replacedUrls()).toEqual([
       "/w/workspace/notes/note?view=side&tab=summary",
-      { scroll: false }
-    );
+    ]);
 
     state.note = {
       meetingStatus: "ENDED",
@@ -222,13 +236,13 @@ describe("NoteView", () => {
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
 
-    await waitFor(() => expect(state.replace).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(replacedUrls()).toHaveLength(1));
 
     state.search = "view=side&tab=summary";
     view.rerender(
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
-    await waitFor(() => expect(state.replace).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(replacedUrls()).toHaveLength(1));
   });
 
   it("keeps ended side chat reachable until its shared turn finishes", async () => {
@@ -251,16 +265,16 @@ describe("NoteView", () => {
     );
 
     expect(screen.getByTestId("note-panel")).toHaveTextContent("chat");
-    expect(state.replace).not.toHaveBeenCalled();
+    expect(replacedUrls()).toEqual([]);
 
     fireEvent.click(screen.getByRole("button", { name: "공유 턴 끝" }));
 
     expect(screen.getByTestId("note-panel")).toHaveTextContent("details");
     await waitFor(() =>
-      expect(state.replace).toHaveBeenCalledWith(
-        "/w/workspace/notes/note?view=side&tab=details",
-        { scroll: false }
+      expect(replacedUrls()).toContain(
+        "/w/workspace/notes/note?view=side&tab=details"
       )
     );
+    expect(state.replace).not.toHaveBeenCalled();
   });
 });
