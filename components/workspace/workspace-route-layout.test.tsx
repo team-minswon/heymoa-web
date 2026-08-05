@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WorkspaceRouteLayout } from "@/components/workspace/workspace-route-layout";
@@ -6,11 +6,43 @@ import { WorkspaceRouteLayout } from "@/components/workspace/workspace-route-lay
 const route = vi.hoisted(() => ({
   noteId: undefined as string | undefined,
   search: "",
+  replaceMock: vi.fn(),
+  /** 셸이 렌더 중 던질 것. null이면 정상 렌더다. */
+  shellError: null as unknown,
+  /**
+   * 워크스페이스 조회가 들고 있는 오류. **캐시된 데이터가 있으면 배경 재조회가 실패해도
+   * suspense 훅은 경계로 던지지 않는다**(실측) — 그래서 셸은 멀쩡히 그려지는데 이 값만 찬다.
+   * 추방이 실제로 일어나는 모양이 이것이다.
+   */
+  workspaceError: null as unknown,
+  removeQueriesMock: vi.fn(),
+  invalidateQueriesMock: vi.fn(),
+  setQueryDataMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ noteId: route.noteId }),
   useSearchParams: () => new URLSearchParams(route.search),
+  useRouter: () => ({ replace: route.replaceMock }),
+}));
+vi.mock("@tanstack/react-query", async () => {
+  const actual =
+    await vi.importActual<typeof import("@tanstack/react-query")>(
+      "@tanstack/react-query"
+    );
+  return {
+    ...actual,
+    useQueryClient: () => ({
+      removeQueries: route.removeQueriesMock,
+      invalidateQueries: route.invalidateQueriesMock,
+      setQueryData: route.setQueryDataMock,
+    }),
+  };
+});
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  useGetWorkspace: () => ({ error: route.workspaceError }),
+  getGetWorkspaceQueryKey: (id: string) => ["workspace", id],
+  getGetWorkspacesQueryKey: () => ["workspaces"],
 }));
 
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
@@ -20,11 +52,15 @@ vi.mock("@/components/workspace/workspace-app-shell", () => ({
   }: {
     activeNoteId?: string;
     children: React.ReactNode;
-  }) => (
-    <div data-testid="workspace-shell" data-active-note-id={activeNoteId}>
-      {children}
-    </div>
-  ),
+  }) => {
+    // 셸 안의 워크스페이스 조회가 실패한 상황을 재현한다. suspense 훅이 던지는 자리다.
+    if (route.shellError) throw route.shellError;
+    return (
+      <div data-testid="workspace-shell" data-active-note-id={activeNoteId}>
+        {children}
+      </div>
+    );
+  },
 }));
 
 vi.mock("@/components/workspace/workspace-page", () => ({
@@ -37,6 +73,12 @@ describe("WorkspaceRouteLayout", () => {
   beforeEach(() => {
     route.noteId = undefined;
     route.search = "";
+    route.replaceMock.mockReset();
+    route.shellError = null;
+    route.workspaceError = null;
+    route.removeQueriesMock.mockReset();
+    route.invalidateQueriesMock.mockReset();
+    route.setQueryDataMock.mockReset();
   });
 
   it("keeps the workspace page mounted behind a side note", () => {
@@ -74,5 +116,113 @@ describe("WorkspaceRouteLayout", () => {
       "data-active-note-id",
       "note-1"
     );
+  });
+});
+
+describe("워크스페이스 조회가 실패했을 때", () => {
+  beforeEach(() => {
+    route.noteId = undefined;
+    route.search = "";
+    route.replaceMock.mockReset();
+    route.shellError = null;
+    route.workspaceError = null;
+    route.removeQueriesMock.mockReset();
+    route.invalidateQueriesMock.mockReset();
+    route.setQueryDataMock.mockReset();
+    // ErrorBoundary가 잡은 예외를 React가 콘솔에 다시 뱉는다. 테스트 출력은 깨끗해야 한다.
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  // **이것이 추방이 실제로 일어나는 모양이다.** 화면을 보고 있는 중에 멤버십이 사라지면
+  // 배경 재조회만 404가 되는데, 캐시된 데이터가 남아 있어 suspense 훅은 경계로 던지지 않는다
+  // (격리 재현으로 확인). 셸은 멀쩡히 그려지고 사용자는 이미 접근할 수 없는 화면을 계속 본다.
+  it("보고 있던 중에 추방되면 화면이 남아 있어도 홈으로 보낸다", async () => {
+    route.workspaceError = {
+      success: false,
+      data: null,
+      error: {
+        code: "WORKSPACE_NOT_FOUND",
+        message: "워크스페이스를 찾을 수 없습니다.",
+      },
+    };
+
+    render(
+      <WorkspaceRouteLayout workspaceId="workspace-1">
+        <div />
+      </WorkspaceRouteLayout>
+    );
+
+    // 경계는 아무것도 잡지 않았다 — 셸이 그대로 그려져 있다.
+    expect(screen.getByTestId("workspace-shell")).toBeInTheDocument();
+    await waitFor(() => expect(route.replaceMock).toHaveBeenCalledWith("/"));
+  });
+
+  // 홈의 「대시보드로 이동」은 워크스페이스 목록을 staleTime 5분으로 들고 있다. 그대로 두면
+  // 방금 쫓겨난 워크스페이스를 다시 가리켜 같은 자리로 돌려보낸다.
+  it("이동 전에 죽은 워크스페이스와 목록 캐시를 정리한다", async () => {
+    route.workspaceError = {
+      success: false,
+      data: null,
+      error: { code: "WORKSPACE_NOT_FOUND", message: "없음" },
+    };
+
+    render(
+      <WorkspaceRouteLayout workspaceId="workspace-1">
+        <div />
+      </WorkspaceRouteLayout>
+    );
+
+    await waitFor(() => {
+      expect(route.removeQueriesMock).toHaveBeenCalledWith({
+        queryKey: ["workspace", "workspace-1"],
+      });
+      expect(route.invalidateQueriesMock).toHaveBeenCalledWith({
+        queryKey: ["workspaces"],
+      });
+      // 무효화 전에 목록에서 직접 빼야 재조회가 늦거나 실패해도 죽은 항목이 안 보인다.
+      expect(route.setQueryDataMock).toHaveBeenCalled();
+    });
+  });
+
+  // 첫 진입부터 404면(남의 워크스페이스 URL 등) 캐시가 없어 경계까지 던져진다. 위 훅이
+  // 이동을 맡으므로 여기서는 재시도 화면이 번쩍이지 않게만 한다.
+  it("첫 진입 404는 재시도를 그리지 않는다", async () => {
+    route.shellError = {
+      success: false,
+      data: null,
+      error: {
+        code: "WORKSPACE_NOT_FOUND",
+        message: "워크스페이스를 찾을 수 없습니다.",
+      },
+    };
+
+    render(
+      <WorkspaceRouteLayout workspaceId="workspace-1">
+        <div />
+      </WorkspaceRouteLayout>
+    );
+
+    expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+  });
+
+  // 네트워크·500은 재시도가 의미 있는 실패다. 여기까지 홈으로 보내면 잠깐 끊긴 것뿐인데
+  // 보던 워크스페이스에서 쫓겨난다.
+  it("다른 실패는 재시도를 그대로 그리고 이동하지 않는다", async () => {
+    route.shellError = new Error("Network request failed");
+
+    render(
+      <WorkspaceRouteLayout workspaceId="workspace-1">
+        <div />
+      </WorkspaceRouteLayout>
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "다시 시도" })
+    ).toBeInTheDocument();
+    expect(route.replaceMock).not.toHaveBeenCalled();
   });
 });

@@ -24,8 +24,28 @@ const state = vi.hoisted(() => ({
   changeRoleCalls: [] as unknown[],
   changeRoleOptions: null as { mutation?: Record<string, unknown> } | null,
   removeCalls: [] as unknown[],
+  replaceMock: vi.fn(),
+  /** 나가기 뒤 어디로 갈지는 이 목록에서 고른다. 떠나는 곳(01K0000000000)도 아직 들어 있다. */
+  workspaces: [] as { workspaceId: string; isDefault: boolean }[],
+  leaveCalls: [] as unknown[],
+  leaveOptions: null as { mutation?: Record<string, unknown> } | null,
+  leaveError: null as unknown,
+  leavePending: false,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: state.replaceMock }),
+}));
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  useGetWorkspaces: () => ({
+    data: {
+      status: 200,
+      data: { success: true, data: { workspaces: state.workspaces } },
+    },
+  }),
+  getGetWorkspacesQueryKey: () => ["workspaces"],
+  getGetWorkspaceQueryKey: (id: string) => ["workspace", id],
+}));
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { userId: "user-12345" } }),
 }));
@@ -50,6 +70,15 @@ vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
     mutateAsync: async (vars: unknown) => {
       state.removeCalls.push(vars);
       options?.mutation?.onSettled?.();
+      return { status: 204 };
+    },
+  }),
+  useLeaveWorkspace: (options?: { mutation?: Record<string, unknown> }) => ({
+    isPending: state.leavePending,
+    mutateAsync: async (vars: unknown) => {
+      state.leaveCalls.push(vars);
+      state.leaveOptions = options ?? null;
+      if (state.leaveError) throw state.leaveError;
       return { status: 204 };
     },
   }),
@@ -174,6 +203,15 @@ describe("MembersSettings", () => {
     state.changeRoleCalls = [];
     state.changeRoleOptions = null;
     state.removeCalls = [];
+    state.replaceMock.mockReset();
+    state.workspaces = [
+      { workspaceId: "01K0000000000", isDefault: true },
+      { workspaceId: "01K0000000006", isDefault: false },
+    ];
+    state.leaveCalls = [];
+    state.leaveOptions = null;
+    state.leaveError = null;
+    state.leavePending = false;
   });
   afterEach(cleanup);
 
@@ -461,5 +499,190 @@ describe("MembersSettings", () => {
     await waitFor(() =>
       expect(screen.queryByRole("alertdialog")).toBeNull()
     );
+  });
+});
+
+describe("워크스페이스 나가기", () => {
+  beforeEach(() => {
+    state.myRole = "ADMIN";
+    state.meJoinedLast = false;
+    state.membersError = false;
+    state.invitations = [];
+    state.replaceMock.mockReset();
+    state.workspaces = [
+      { workspaceId: "01K0000000000", isDefault: true },
+      { workspaceId: "01K0000000006", isDefault: false },
+    ];
+    state.leaveCalls = [];
+    state.leaveOptions = null;
+    state.leaveError = null;
+    state.leavePending = false;
+  });
+  afterEach(cleanup);
+
+  /** 확인 다이얼로그까지 열어 준다. 나가기는 되돌릴 수 없어 한 번 묻는다. */
+  function openLeaveDialog() {
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스 나가기" }));
+    return screen.getByRole("alertdialog");
+  }
+
+  // 역할 변경과 나가기는 같은 「ADMIN 최소 1명」 판정을 놓고 겹친다. 마지막 관리자가 다른
+  // 멤버를 승격한 직후 응답 전에 나가기를 누르면 도착 순서에 따라 성공하기도 409가 되기도
+  // 한다 — 행들끼리는 이미 직렬화했으니 나가기도 같은 잠금에 넣는다.
+  it("같은 워크스페이스의 역할 변경이 진행 중이면 나가기도 잠긴다", () => {
+    const client = new QueryClient();
+    void client
+      .getMutationCache()
+      .build(client, {
+        mutationKey: ["changeWorkspaceMemberRole"],
+        mutationFn: () => new Promise<void>(() => {}),
+      })
+      .execute({ workspaceId: "01K0000000000", userId: "user-67890" });
+
+    render(
+      <QueryClientProvider client={client}>
+        <MembersSettings workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
+
+    expect(
+      screen.getByRole("button", { name: "워크스페이스 나가기" })
+    ).toBeDisabled();
+  });
+
+  // 요청 중에 창만 사라지면 취소한 줄 알지만 요청은 계속 간다 — 뒤늦게 성공하면 갑자기
+  // 다른 워크스페이스로 튕긴다. 버튼만 잠그고 Escape를 열어 두면 그 구멍이 남는다.
+  it("요청 중에는 Escape로 닫히지 않는다", () => {
+    const client = new QueryClient();
+    // 같은 엘리먼트 참조로 rerender하면 React가 렌더를 건너뛴다 — 매번 새로 만든다.
+    const view = () => (
+      <QueryClientProvider client={client}>
+        <MembersSettings workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view());
+    const dialog = openLeaveDialog();
+
+    // 확인을 누른 뒤 응답을 기다리는 상태를 만든다.
+    state.leavePending = true;
+    rerender(view());
+
+    fireEvent.keyDown(dialog, { key: "Escape", code: "Escape" });
+
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  // 나가기는 ADMIN 전용이 아니다 — 마지막 ADMIN인지는 서버가 판정한다(409).
+  it("MEMBER에게도 나가기를 보인다", () => {
+    state.myRole = "MEMBER";
+    renderSettings();
+
+    expect(
+      screen.getByRole("button", { name: "워크스페이스 나가기" })
+    ).toBeTruthy();
+  });
+
+  it("확인을 거친 뒤에만 mutation을 부른다", async () => {
+    renderSettings();
+    const dialog = openLeaveDialog();
+    expect(state.leaveCalls).toHaveLength(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
+
+    await waitFor(() =>
+      expect(state.leaveCalls).toContainEqual({
+        workspaceId: "01K0000000000",
+      })
+    );
+  });
+
+  // 목적지 규칙은 `auth-callback-client.tsx`의 `find(isDefault) ?? items[0]`을 그대로 쓴다.
+  // 떠나는 워크스페이스가 기본이었으므로 남은 것 중엔 기본이 없고, 첫 항목으로 떨어진다.
+  it("나가면 남은 워크스페이스로 이동한다", async () => {
+    renderSettings();
+    const dialog = openLeaveDialog();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
+
+    await waitFor(() =>
+      expect(state.replaceMock).toHaveBeenCalledWith("/w/01K0000000006")
+    );
+  });
+
+  // 무효화만 하면 재조회가 끝날 때까지, 실패하면 영영, 떠난 워크스페이스가 목록에 남는다.
+  // 사이드바와 홈 CTA가 그걸 그대로 그려서 누르면 방금 떠난 곳으로 다시 들어간다.
+  it("나가면 목록 캐시에서 그 워크스페이스를 즉시 지운다", async () => {
+    const client = new QueryClient();
+    client.setQueryData(["workspaces"], {
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          workspaces: [
+            { workspaceId: "01K0000000000", isDefault: true },
+            { workspaceId: "01K0000000006", isDefault: false },
+          ],
+        },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={client}>
+        <MembersSettings workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
+    const dialog = openLeaveDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
+
+    await waitFor(() => {
+      const cached = client.getQueryData(["workspaces"]) as {
+        data: { data: { workspaces: { workspaceId: string }[] } };
+      };
+      expect(
+        cached.data.data.workspaces.map((w) => w.workspaceId)
+      ).toEqual(["01K0000000006"]);
+    });
+  });
+
+  it("남은 워크스페이스가 없으면 홈으로 보낸다", async () => {
+    state.workspaces = [{ workspaceId: "01K0000000000", isDefault: true }];
+    renderSettings();
+    const dialog = openLeaveDialog();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
+
+    await waitFor(() => expect(state.replaceMock).toHaveBeenCalledWith("/"));
+  });
+
+  // 마지막 관리자 409는 「지금 할 수 없음」이지 방금 한 행동의 실패가 아니다. 토스트로
+  // 사라지면 왜 막혔는지 알 수 없어서 화면에 남긴다 — rule error-loading의 「지속 상태」 줄.
+  it("마지막 관리자면 서버 문구를 화면에 남기고 이동하지 않는다", async () => {
+    state.leaveError = {
+      success: false,
+      data: null,
+      error: {
+        code: "LAST_WORKSPACE_ADMIN",
+        message: "워크스페이스에는 관리자가 최소 한 명 있어야 합니다.",
+      },
+    };
+    renderSettings();
+    const dialog = openLeaveDialog();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "나가기" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("워크스페이스에는 관리자가 최소 한 명 있어야 합니다.")
+      ).toBeTruthy()
+    );
+    expect(state.replaceMock).not.toHaveBeenCalled();
+    // 인라인으로 그리므로 전역 토스트는 꺼야 한다 — 안 그러면 같은 문구가 두 번 뜬다.
+    expect(
+      (
+        state.leaveOptions?.mutation as
+          | { meta?: { suppressErrorToast?: boolean } }
+          | undefined
+      )?.meta?.suppressErrorToast
+    ).toBe(true);
   });
 });

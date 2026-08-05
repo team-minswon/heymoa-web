@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -34,8 +35,11 @@ import {
   getGetWorkspaceMembersQueryKey,
   useChangeWorkspaceMemberRole,
   useGetWorkspaceMembers,
+  useLeaveWorkspace,
   useRemoveWorkspaceMember,
 } from "@/lib/api/generated/workspace-members/workspace-members";
+import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
+import { forgetWorkspace } from "@/lib/workspace/cache";
 import type {
   WorkspaceInvitationListResponseDataInvitationsItem,
   WorkspaceMemberListResponseDataMembersItem,
@@ -54,11 +58,33 @@ type InviteValues = z.infer<typeof inviteSchema>;
 
 const ROLE_LABEL: Record<string, string> = { ADMIN: "관리자", MEMBER: "멤버" };
 
-/** orval이 operationId로 만드는 mutationKey. 멤버 목록을 바꾸는 둘만 골라 잠금에 센다. */
+/** orval이 operationId로 만드는 mutationKey. 멤버 목록을 바꾸는 셋을 잠금에 센다. */
 const MEMBER_MUTATION_KEYS = new Set([
   "changeWorkspaceMemberRole",
   "removeWorkspaceMember",
+  "leaveWorkspace",
 ]);
+
+/**
+ * 같은 워크스페이스의 멤버 변경이 하나라도 진행 중인가. 역할 변경·추방·나가기가 **서로를**
+ * 잠근다 — 셋 다 「ADMIN 최소 1명」이라는 목록 전체 판정을 놓고 겹치므로, 아직 무효화되지
+ * 않은 낡은 목록으로 두 번째 조작을 시작하면 어느 쪽이 성공하고 어느 쪽이 403·409를 받는지가
+ * 요청 도착 순서에 달라진다.
+ *
+ * **키만으로 거르지 않는다** — QueryClient가 앱 전역이라 A에서 시작한 변경이 B의 멤버 탭까지
+ * 잠근다. mutation은 언마운트로 취소되지 않아 A의 요청이 멈추면 B가 계속 잠긴 채로 남는다
+ * (rule AGENTS의 「경계 상태」). 그래서 변수의 workspaceId까지 본다.
+ */
+function useMemberMutationBusy(workspaceId: string) {
+  return (
+    useIsMutating({
+      predicate: (mutation) =>
+        MEMBER_MUTATION_KEYS.has(String(mutation.options.mutationKey?.[0])) &&
+        (mutation.state.variables as { workspaceId?: string } | undefined)
+          ?.workspaceId === workspaceId,
+    }) > 0
+  );
+}
 
 /**
  * 표시 이름은 OAuth에서 오므로 유일하지 않다 — 같은 워크스페이스에 「김민수」가 둘이면
@@ -171,6 +197,8 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
           />
         </div>
       ) : null}
+
+      <LeaveWorkspaceSection workspaceId={workspaceId} />
     </div>
   );
 
@@ -222,21 +250,7 @@ function MemberRow({
     mutation: { onSettled: invalidateMembers },
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
-  // 잠금은 이 행이 아니라 **이 워크스페이스의 목록** 단위다. 한 행의 변경이 끝나기 전에 다른
-  // 행을 건드리면 아직 invalidate되지 않은 낡은 목록으로 조작하는 셈이고, "ADMIN 최소 1명"은
-  // 목록 전체를 보고 판정되므로 어느 쪽이 403·409를 받는지가 도착 순서에 달라진다.
-  //
-  // `mutationKey`만으로 거르지 않는다 — QueryClient가 앱 전역이라 A에서 시작한 변경이 B의
-  // 멤버 탭까지 잠근다. mutation은 언마운트로 취소되지 않으므로 A의 요청이 멈추면 B가 계속
-  // 잠긴 채로 남는다(rule AGENTS의 「경계 상태」). 그래서 변수의 workspaceId까지 본다.
-  // 키는 orval이 operationId로 만든다(`workspace-members.ts`의 `mutationKey`).
-  const busy =
-    useIsMutating({
-      predicate: (mutation) =>
-        MEMBER_MUTATION_KEYS.has(String(mutation.options.mutationKey?.[0])) &&
-        (mutation.state.variables as { workspaceId?: string } | undefined)
-          ?.workspaceId === workspaceId,
-    }) > 0;
+  const busy = useMemberMutationBusy(workspaceId);
 
   return (
     <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
@@ -307,7 +321,14 @@ function MemberRow({
           >
             내보내기
           </Button>
-          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          {/* 나가기와 같은 이유로 요청 중에는 닫지 않는다. */}
+          <AlertDialog
+            open={confirmOpen}
+            onOpenChange={(open) => {
+              if (remove.isPending) return;
+              setConfirmOpen(open);
+            }}
+          >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
@@ -347,6 +368,139 @@ function MemberRow({
       ) : null}
     </li>
   );
+}
+
+/**
+ * 나가기는 역할과 무관하게 모두에게 보인다 — 마지막 ADMIN인지는 서버가 판정한다(409).
+ * 가입 시 만들어진 개인 워크스페이스는 본인이 유일 ADMIN이라 이 불변식이 자동으로 막으므로
+ * 별도 UI 분기를 두지 않는다.
+ *
+ * **실패 문구는 토스트가 아니라 다이얼로그 안에 남긴다.** 「마지막 관리자라 나갈 수 없다」는
+ * 방금 한 행동의 실패가 아니라 다른 멤버를 관리자로 올리기 전까지 계속 참인 상태다 —
+ * 토스트로 사라지면 왜 막혔는지 알 수 없다(rule error-loading의 「지속 상태」 줄).
+ * 그래서 전역 토스트를 `suppressErrorToast`로 끈다. 안 끄면 같은 문구가 두 번 뜬다.
+ */
+function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const workspacesQuery = useGetWorkspaces();
+  const leave = useLeaveWorkspace({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [leaveError, setLeaveError] = useState<unknown>(null);
+  const busy = useMemberMutationBusy(workspaceId);
+
+  const leaveMessage = leaveError
+    ? errorMessageOf(leaveError, "워크스페이스를 나가지 못했습니다.")
+    : null;
+
+  return (
+    <section className="mt-8 border-t border-[var(--el-hairline)] pt-8">
+      <h3 className="text-sm font-medium text-[var(--el-ink)]">
+        워크스페이스 나가기
+      </h3>
+      <p className="mt-1 text-xs text-[var(--el-muted)]">
+        이 워크스페이스의 회의 기록과 프로젝트에 더 이상 접근할 수 없게 됩니다.
+        다시 들어오려면 초대를 받아야 합니다.
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-3 h-[30px]"
+        loading={leave.isPending}
+        disabled={busy}
+        onClick={() => {
+          // 지난 실패 안내를 지우고 연다 — 상황이 바뀐 뒤에도 옛 문구가 붙어 있으면 안 된다.
+          setLeaveError(null);
+          setConfirmOpen(true);
+        }}
+      >
+        워크스페이스 나가기
+      </Button>
+
+      {/*
+        요청 중에는 Escape·바깥 클릭으로도 닫히지 않는다. 창만 사라지면 취소한 줄 알지만
+        요청은 계속 가고, 뒤늦게 성공하면 갑자기 다른 워크스페이스로 튕긴다.
+      */}
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (leave.isPending) return;
+          setConfirmOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>이 워크스페이스를 나갈까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              회의 기록과 프로젝트에 더 이상 접근할 수 없게 됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {leaveMessage ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] px-3 py-2.5"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
+              <p className="text-xs leading-relaxed text-[var(--el-body)]">
+                {leaveMessage}
+              </p>
+            </div>
+          ) : null}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={leave.isPending}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              loading={leave.isPending}
+              disabled={leave.isPending}
+              onClick={async () => {
+                setLeaveError(null);
+                const response = await leave
+                  .mutateAsync({ workspaceId })
+                  .catch((error: unknown) => {
+                    setLeaveError(error);
+                    return null;
+                  });
+                if (response?.status !== 204) return;
+                setConfirmOpen(false);
+                // **목적지를 먼저 고른 뒤** 캐시를 걷어낸다 — 순서가 뒤집히면 목록에서 이미
+                // 빠진 뒤라 어디로 갈지 고를 수 없다.
+                const destination = nextWorkspacePath();
+                forgetWorkspace(queryClient, workspaceId);
+                // 떠난 워크스페이스의 노트·프로젝트·멤버도 전부 stale로 둔다 — 접근이 이미 끊겼다.
+                void queryClient.invalidateQueries();
+                router.replace(destination);
+              }}
+            >
+              나가기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
+
+  /**
+   * 목적지는 `auth-callback-client.tsx`가 로그인 직후 쓰는 규칙 그대로다 —
+   * `find(isDefault) ?? items[0]`. 새 규칙을 만들지 않는다.
+   *
+   * 서버는 떠난 곳이 기본이었으면 다른 워크스페이스로 기본을 옮기지만, 그 응답을 기다리지
+   * 않는다. 남은 것 중 아무 데나 유효하면 되고, 옮겨진 기본은 무효화된 조회가 따라온다.
+   */
+  function nextWorkspacePath() {
+    const response = workspacesQuery.data;
+    const items =
+      response !== undefined && response.status === 200 && response.data.success
+        ? (response.data.data?.workspaces ?? [])
+        : [];
+    const remaining = items.filter((item) => item.workspaceId !== workspaceId);
+    const next = remaining.find((item) => item.isDefault) ?? remaining[0];
+    // 남은 워크스페이스가 없으면 홈이 「워크스페이스가 필요합니다」를 그린다.
+    return next ? `/w/${next.workspaceId}` : "/";
+  }
 }
 
 function InviteForm({ workspaceId }: { workspaceId: string }) {
