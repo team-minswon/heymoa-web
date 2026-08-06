@@ -37,13 +37,22 @@ vi.mock("@/components/notes/note-panel", () => ({
     onSharedTurnActiveChange,
   }: {
     tab: string;
-    onTabChange: (tab: "summary") => void;
+    onTabChange: (
+      tab: "summary" | "transcript",
+      options?: { push?: boolean }
+    ) => void;
     onSharedTurnActiveChange?: (active: boolean) => void;
   }) => (
     <>
       <div data-testid="note-panel">{tab}</div>
       <button type="button" onClick={() => onTabChange("summary")}>
         요약 전환
+      </button>
+      <button
+        type="button"
+        onClick={() => onTabChange("transcript", { push: true })}
+      >
+        근거 점프
       </button>
       <button type="button" onClick={() => onSharedTurnActiveChange?.(true)}>
         공유 턴 시작
@@ -135,6 +144,7 @@ describe("NoteView", () => {
   // Next가 탭 클릭을 내비게이션으로 취급하지 않는다. 그래서 여기를 감시한다.
   // `state.replace`(라우터)는 노트 삭제 후 목록으로 나가는 진짜 이동에만 남아 있다.
   const replaceState = vi.fn();
+  const pushState = vi.fn();
 
   beforeEach(() => {
     state.search = "";
@@ -142,7 +152,9 @@ describe("NoteView", () => {
     state.replace.mockReset();
     state.push.mockReset();
     replaceState.mockReset();
+    pushState.mockReset();
     vi.spyOn(window.history, "replaceState").mockImplementation(replaceState);
+    vi.spyOn(window.history, "pushState").mockImplementation(pushState);
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -153,6 +165,32 @@ describe("NoteView", () => {
   function replacedUrls() {
     return replaceState.mock.calls.map((call) => call[2]);
   }
+
+  /**
+   * 근거를 눌러 전사로 건너뛴 뒤 뒤로가기를 누르면 **읽던 요약에 돌아와야 한다.**
+   * `replaceState`로 쓰면 항목이 안 쌓여 뒤로가기가 노트 진입 이전으로 나가고 노트가 닫힌다.
+   */
+  it("근거 점프는 뒤로가기 자리를 남긴다", () => {
+    state.search = "view=full&tab=summary";
+    render(<NoteView workspaceId="w1" noteId="n1" initialQuery={{}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "근거 점프" }));
+
+    expect(pushState.mock.calls.map((call) => call[2])).toEqual([
+      "/w/workspace/notes/note?view=full&tab=transcript",
+    ]);
+  });
+
+  // 탭마다 항목을 쌓으면 다섯 번 누른 사람이 나가는 데 다섯 번을 눌러야 한다.
+  it("탭 클릭은 뒤로가기 자리를 남기지 않는다", () => {
+    state.search = "view=full&tab=transcript";
+    render(<NoteView workspaceId="w1" noteId="n1" initialQuery={{}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "요약 전환" }));
+
+    expect(pushState).not.toHaveBeenCalled();
+    expect(replacedUrls()).toContain("/w/workspace/notes/note?view=full&tab=summary");
+  });
 
   it("announces a meeting state change once through one polite live region", () => {
     state.note = {

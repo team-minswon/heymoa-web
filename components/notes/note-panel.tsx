@@ -72,7 +72,7 @@ export function NotePanel({
   noteId: string;
   view: "side" | "full";
   tab: NoteTab;
-  onTabChange: (tab: NoteTab) => void;
+  onTabChange: (tab: NoteTab, options?: { push?: boolean }) => void;
   onSharedTurnActiveChange?: (active: boolean) => void;
   onClose: () => void;
   onExpand?: () => void;
@@ -242,9 +242,13 @@ export function NotePanel({
     },
     [onTabChange]
   );
+  /**
+   * 근거를 눌러 전사로 건너뛴다. **뒤로가기로 읽던 요약에 돌아올 수 있어야 한다** —
+   * 각주를 따라간 것이지 탭을 고른 것이 아니라서, 이 이동만 히스토리에 자리를 남긴다.
+   */
   const jumpToSegment = useCallback(
     (segmentId: string) => {
-      onTabChange("transcript");
+      onTabChange("transcript", { push: true });
       setFocusSegmentId(segmentId);
     },
     [onTabChange]

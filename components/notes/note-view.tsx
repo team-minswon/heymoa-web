@@ -32,6 +32,17 @@ function replaceNoteSearch(pathname: string, search: string) {
   window.history.replaceState(null, "", `${pathname}?${search}`);
 }
 
+/**
+ * **되돌아올 자리를 남긴다.** 요약의 근거를 눌러 전사로 건너뛰는 것은 탭을 고르는 것과
+ * 다르다 — 각주를 따라간 것이고, 뒤로가기로 읽던 자리에 돌아오는 것이 그 동작의 절반이다.
+ * `replaceState`로 쓰면 뒤로가기가 노트 진입 이전으로 나가 노트가 통째로 닫힌다.
+ *
+ * **탭 클릭에는 안 쓴다.** 탭마다 항목을 쌓으면 다섯 번 누른 사람이 다섯 번 눌러야 나간다.
+ */
+function pushNoteSearch(pathname: string, search: string) {
+  window.history.pushState(null, "", `${pathname}?${search}`);
+}
+
 export function normalizeNoteViewQuery(
   query: {
     view?: string | string[];
@@ -154,7 +165,11 @@ export function NoteView({
     }, 200);
   };
 
-  const setQuery = (updates: Partial<{ view: NoteViewMode; tab: NoteTab }>) => {
+  const setQuery = (
+    updates: Partial<{ view: NoteViewMode; tab: NoteTab }>,
+    /** 뒤로가기로 되돌아올 자리를 남긴다. 근거 점프에만 쓴다. */
+    options?: { push?: boolean }
+  ) => {
     const next = new URLSearchParams(search);
     // 회의 종료 성공 콜백은 쿼리 캐시 구독자가 ENDED로 다시 그리기 직전에 올 수 있다.
     // 여기서 이전 phase로 정규화하면 의도한 summary가 transcript로 유실된다. 이벤트 의도를
@@ -164,6 +179,11 @@ export function NoteView({
     const nextSearch = next.toString();
     if (nextSearch !== search) {
       pendingSearchRef.current = { from: search, to: nextSearch };
+    }
+    // 같은 URL이면 밀지 않는다 — 이미 전사 탭인데 또 쌓으면 뒤로가기가 제자리를 돈다.
+    if (options?.push && nextSearch !== search) {
+      pushNoteSearch(pathname, nextSearch);
+      return;
     }
     replaceNoteSearch(pathname, nextSearch);
   };
@@ -191,7 +211,7 @@ export function NoteView({
         noteId={noteId}
         view={current.view}
         tab={current.tab}
-        onTabChange={(tab) => setQuery({ tab })}
+        onTabChange={(tab, options) => setQuery({ tab }, options)}
         onSharedTurnActiveChange={setSharedTurnActive}
         onClose={closeWithAnim}
         onExpand={
