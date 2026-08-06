@@ -18,6 +18,14 @@ export type TranscriptBlock = {
   timelineEndedAtMs: number;
 };
 
+/** `mm:ss`. 전사 행·아카이브 행·요약의 근거 인용이 같은 표기를 써야 같은 줄로 읽힌다. */
+export function formatOffset(milliseconds: number) {
+  const seconds = Math.floor(milliseconds / 1000);
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
+    seconds % 60
+  ).padStart(2, "0")}`;
+}
+
 const MAX_SEGMENTS_PER_BLOCK = 6;
 const MAX_BLOCK_DURATION_MS = 30_000;
 const MAX_GAP_MS = 1_500;

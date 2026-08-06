@@ -11,14 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNoteSharedChatMessages } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
-import { groupTranscriptSegments } from "@/lib/transcription/presentation";
-
-function formatOffset(milliseconds: number) {
-  const seconds = Math.floor(milliseconds / 1000);
-  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
-    seconds % 60
-  ).padStart(2, "0")}`;
-}
+import {
+  formatOffset,
+  groupTranscriptSegments,
+} from "@/lib/transcription/presentation";
+import {
+  FOCUSED_BLOCK_CLASS,
+  useTranscriptFocus,
+  type TranscriptFocus,
+} from "@/components/notes/use-transcript-focus";
+import { cn } from "@/lib/utils";
 
 /** 바닥에서 이만큼 안쪽이면 "바닥"으로 본다. 스크롤 위치는 소수점으로 떨어진다. */
 const BOTTOM_THRESHOLD_PX = 48;
@@ -90,7 +92,11 @@ function useAwayFromBottom() {
  * `ponytail:` 전사 응답에 세션 벽시계 시작이 생기면 `sessionStart + startedAtMs`로 하나의
  * 타임라인에 인터리브해 올린다 — 그때는 이 세그먼트가 필요 없어진다.
  */
-export function NoteArchive({ noteId }: { noteId: string }) {
+export function NoteArchive({
+  noteId,
+  focusSegmentId,
+  onFocusHandled,
+}: { noteId: string } & TranscriptFocus) {
   // 종료 직후 마운트다 — 전역 staleTime(60초)을 그대로 두면 방금 전 라이브 캐시를 재사용해
   // 마지막 전사·Q&A가 빠질 수 있다. 마운트할 때 최종 상태를 다시 당긴다.
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -122,6 +128,10 @@ export function NoteArchive({ noteId }: { noteId: string }) {
       !(chatQuery.data.status === 200 && chatQuery.data.data.success));
 
   const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
+  const { blockRef, isHighlighted } = useTranscriptFocus(blocks, {
+    focusSegmentId,
+    onFocusHandled,
+  });
 
   return (
     <ScrollArea
@@ -178,8 +188,13 @@ export function NoteArchive({ noteId }: { noteId: string }) {
                 {blocks.map((block) => (
                   <article
                     key={block.blockId}
+                    ref={blockRef(block.blockId)}
                     data-testid="archive-transcript-block"
-                    className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
+                    data-focused={isHighlighted(block.blockId) || undefined}
+                    className={cn(
+                      "grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6",
+                      isHighlighted(block.blockId) && FOCUSED_BLOCK_CLASS
+                    )}
                   >
                     <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
                       {formatOffset(block.timelineStartedAtMs)}

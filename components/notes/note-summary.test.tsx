@@ -32,42 +32,113 @@ vi.mock("@/lib/api/generated/analysis/analysis", () => ({
   useRequestAnalysis: () => ({ mutate: state.requestMock, isPending: false }),
 }));
 
+const onEvidenceSelect = vi.fn();
+
 function renderSummary(isEnded: boolean) {
-  return render(<NoteSummary noteId="01K0000000002" isEnded={isEnded} />);
+  return render(
+    <NoteSummary
+      noteId="01K0000000002"
+      isEnded={isEnded}
+      onEvidenceSelect={onEvidenceSelect}
+    />
+  );
 }
 
-describe("NoteSummary 요약 블록", () => {
+const SUCCEEDED = {
+  status: "SUCCEEDED",
+  sections: [
+    {
+      kind: "OVERVIEW",
+      items: [
+        {
+          itemId: "01K0000000070",
+          content: "결제 실패율이 3%로 올랐다",
+          evidence: [
+            {
+              segmentId: "01K0000000061",
+              text: "그럼 결제 쪽부터 보죠",
+              startedAtMs: 252000,
+            },
+            {
+              segmentId: "01K0000000062",
+              text: "실패율이 어제부터 3%예요",
+              startedAtMs: 271000,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      kind: "ACTION_ITEM",
+      items: [
+        {
+          itemId: "01K0000000071",
+          content: "이번 주 안에 원인을 좁힌다",
+          evidence: [],
+        },
+      ],
+    },
+    { kind: "DECISION", items: [] },
+  ],
+};
+
+describe("NoteSummary 항목 리스트", () => {
   beforeEach(() => {
-    state.analysis = {
-      status: "SUCCEEDED",
-      overview: "출시 일정을 정했습니다.",
-      actionItems: "- 배포 체크리스트 작성",
-      insights: "- 일정 리스크는 QA에 몰려 있습니다.",
-    };
+    state.analysis = structuredClone(SUCCEEDED);
     state.missing = false;
     state.isLoading = false;
     state.isFetching = false;
+    onEvidenceSelect.mockReset();
   });
   afterEach(cleanup);
 
-  // 요약은 끝까지 읽는 글이라 탭으로 가르지 않는다 — 셋을 한 화면에 위에서 아래로 낸다.
-  it("세 블록을 한 화면에 함께 낸다", () => {
-    render(<NoteSummary noteId="01K0000000002" isEnded />);
+  // 세 섹션을 한 화면에 위에서 아래로 낸다 — 탭으로 가르면 회의 하나를 파악하는 데 세 번 눌러야 한다.
+  it("세 섹션 헤딩과 항목을 한 화면에 낸다", () => {
+    renderSummary(true);
 
-    expect(screen.getByText("출시 일정을 정했습니다.")).toBeInTheDocument();
-    expect(screen.getByText("배포 체크리스트 작성")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "개요" })).toBeInTheDocument();
     expect(
-      screen.getByText("일정 리스크는 QA에 몰려 있습니다.")
+      screen.getByRole("region", { name: "액션 아이템" })
     ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "결정" })).toBeInTheDocument();
+    expect(screen.getByText("결제 실패율이 3%로 올랐다")).toBeInTheDocument();
     expect(screen.queryByRole("tab")).toBeNull();
   });
 
-  it("내용이 빈 블록도 제목은 남기고 안내를 보여준다", () => {
-    state.analysis = { ...state.analysis, insights: "" };
-    render(<NoteSummary noteId="01K0000000002" isEnded />);
-
-    expect(screen.getByRole("region", { name: "인사이트" })).toBeInTheDocument();
+  it("빈 섹션도 헤딩은 남기고 안내를 보여준다", () => {
+    renderSummary(true);
     expect(screen.getByText("내용이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("근거는 접힌 채로 시작하고 칩을 눌러야 펼쳐진다", () => {
+    renderSummary(true);
+
+    const chip = screen.getByRole("button", { name: /근거 2/ });
+    expect(chip).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/그럼 결제 쪽부터 보죠/)).toBeNull();
+
+    fireEvent.click(chip);
+
+    expect(chip).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/그럼 결제 쪽부터 보죠/)).toBeInTheDocument();
+    expect(screen.getByText("04:12")).toBeInTheDocument();
+  });
+
+  // 근거 0개는 계약상 정상이다. 빈 칩을 만들면 누를 것이 없는 컨트롤이 생긴다.
+  it("근거가 없는 항목에는 칩을 달지 않는다", () => {
+    renderSummary(true);
+
+    expect(screen.getByText("이번 주 안에 원인을 좁힌다")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /근거/ })).toHaveLength(1);
+  });
+
+  it("인용을 누르면 그 세그먼트로 점프를 요청한다", () => {
+    renderSummary(true);
+
+    fireEvent.click(screen.getByRole("button", { name: /근거 2/ }));
+    fireEvent.click(screen.getByRole("button", { name: /그럼 결제 쪽부터 보죠/ }));
+
+    expect(onEvidenceSelect).toHaveBeenCalledWith("01K0000000061");
   });
 });
 
@@ -83,39 +154,15 @@ describe("NoteSummary", () => {
   afterEach(cleanup);
 
   it("PENDING이면 분석 진행 스켈레톤을 보인다", () => {
-    state.analysis = {
-      status: "PENDING",
-      overview: null,
-      actionItems: null,
-      insights: null,
-    };
+    state.analysis = { status: "PENDING", sections: [] };
     renderSummary(true);
     expect(screen.getByText("회의를 정리하고 있습니다")).toBeTruthy();
-  });
-
-  it("SUCCEEDED면 요약 3종을 한 화면에 마크다운으로 그린다", () => {
-    state.analysis = {
-      status: "SUCCEEDED",
-      overview: "출시 일정을 정했습니다.",
-      actionItems: "- 배포 체크리스트\n- QA 일정 공유",
-      insights: "- 일정 리스크는 QA에 몰려 있습니다.",
-    };
-    const { container } = renderSummary(true);
-
-    expect(screen.getByText("출시 일정을 정했습니다.")).toBeTruthy();
-    expect(screen.getByText("배포 체크리스트")).toBeTruthy();
-    expect(screen.getByText("일정 리스크는 QA에 몰려 있습니다.")).toBeTruthy();
-    expect(container.querySelectorAll("ul li").length).toBeGreaterThanOrEqual(
-      3
-    );
   });
 
   it("FAILED면 사유와 다시 분석 버튼을 보인다", () => {
     state.analysis = {
       status: "FAILED",
-      overview: null,
-      actionItems: null,
-      insights: null,
+      sections: [],
       errorCode: "LLM_TIMEOUT",
       errorMessage: "분석이 시간 초과됐습니다.",
     };
@@ -147,9 +194,7 @@ describe("NoteSummary", () => {
     // 202 뒤 mutation은 끝나지만 refetch가 도착하기 전 낡은 FAILED가 남는다. isFetching 동안 잠근다.
     state.analysis = {
       status: "FAILED",
-      overview: null,
-      actionItems: null,
-      insights: null,
+      sections: [],
       errorCode: "X",
       errorMessage: "실패",
     };
@@ -164,10 +209,16 @@ describe("NoteSummary", () => {
   it("회의가 (다른 참가자에 의해) 종료된 순간 분석을 다시 읽는다", () => {
     // 404가 폴링을 멈춘 상태에서 isEnded가 참으로 바뀌면 자동 생성된 분석을 잡아야 한다.
     state.missing = true;
-    const view = render(<NoteSummary noteId="01K0000000002" isEnded={false} />);
+    const view = renderSummary(false);
     expect(state.refetchMock).not.toHaveBeenCalled();
 
-    view.rerender(<NoteSummary noteId="01K0000000002" isEnded={true} />);
+    view.rerender(
+      <NoteSummary
+        noteId="01K0000000002"
+        isEnded
+        onEvidenceSelect={onEvidenceSelect}
+      />
+    );
     expect(state.refetchMock).toHaveBeenCalled();
   });
 });

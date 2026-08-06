@@ -36,9 +36,35 @@ export const getGetLatestAnalysisResponseMock = (): AnalysisResultResponse => ({
     analysisId: "0K9GVJT2C4Q1Z",
     noteId: "0HZX2K7M9Q4AF",
     status: "SUCCEEDED",
-    overview: "# 개요",
-    actionItems: "- 액션",
-    insights: "- 인사이트",
+    sections: [
+      {
+        kind: "OVERVIEW",
+        items: [
+          {
+            itemId: "0HZX2K7M9Q4AN",
+            content: "결제 실패율이 3%로 올랐다",
+            evidence: [
+              {
+                segmentId: "0HZX2K7M9Q4AH",
+                text: "그럼 결제 쪽부터 보죠",
+                startedAtMs: 252000,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: "ACTION_ITEM",
+        items: [
+          {
+            itemId: "0HZX2K7M9Q4AN",
+            content: "이번 주 안에 원인을 좁힌다",
+            evidence: [],
+          },
+        ],
+      },
+      { kind: "DECISION", items: [] },
+    ],
     errorCode: null,
     errorMessage: null,
   },

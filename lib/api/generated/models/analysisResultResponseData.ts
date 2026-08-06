@@ -5,27 +5,13 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AnalysisResultResponseDataSectionsItem } from "./analysisResultResponseDataSectionsItem";
 import type { AnalysisResultResponseDataStatus } from "./analysisResultResponseDataStatus";
 
 /**
  * 성공 응답 데이터
  */
 export type AnalysisResultResponseData = {
-  /**
-   * 회의 개요 (markdown, 미완료 시 null)
-   * @nullable
-   */
-  overview: string | null;
-  /**
-   * insight (markdown, 미완료 시 null)
-   * @nullable
-   */
-  insights: string | null;
-  /**
-   * action item (markdown, 미완료 시 null)
-   * @nullable
-   */
-  actionItems: string | null;
   /**
    * 에러 메시지 (FAILED일 때)
    * @nullable
@@ -50,6 +36,8 @@ export type AnalysisResultResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
+  /** SUCCEEDED면 OVERVIEW → ACTION_ITEM → DECISION 세 섹션, 그 밖에는 빈 배열 */
+  sections: AnalysisResultResponseDataSectionsItem[];
   /** 분석 잡 상태 */
   status: AnalysisResultResponseDataStatus;
 };

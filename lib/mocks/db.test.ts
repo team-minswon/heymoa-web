@@ -590,9 +590,32 @@ describe("meeting and analysis", () => {
 
     const done = mockDb.getLatestAnalysis(noteId);
     expect(done.status).toBe("SUCCEEDED");
-    expect(done.overview).toBeTruthy();
-    expect(done.actionItems).toBeTruthy();
-    expect(done.insights).toBeTruthy();
+    expect(done.sections.map((section) => section.kind)).toEqual([
+      "OVERVIEW",
+      "ACTION_ITEM",
+      "DECISION",
+    ]);
+    // 근거 0개 항목도 남는다(설계 D2) — 목이 한쪽만 심으면 칩 없는 분기가 안 그려진다.
+    const items = done.sections.flatMap((section) => section.items);
+    expect(items.some((item) => item.evidence.length > 0)).toBe(true);
+    expect(items.some((item) => item.evidence.length === 0)).toBe(true);
+  });
+
+  it("근거는 그 노트에 실제로 있는 세그먼트만 가리킨다", () => {
+    const noteId = "01K0000000002";
+    const segmentIds = new Set(
+      mockDb.listSegments(noteId).map((segment) => segment.segmentId)
+    );
+    mockDb.endMeeting(noteId);
+    const done = mockDb.advanceAnalysis(noteId)!;
+
+    const evidence = done.sections
+      .flatMap((section) => section.items)
+      .flatMap((item) => item.evidence);
+    expect(evidence.length).toBeGreaterThan(0);
+    expect(
+      evidence.every((row) => segmentIds.has(row.segmentId))
+    ).toBe(true);
   });
 
   it("refuses to end a meeting that already ended", () => {

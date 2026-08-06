@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { AlertTriangle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,8 +10,32 @@ import {
   useGetLatestAnalysis,
   useRequestAnalysis,
 } from "@/lib/api/generated/analysis/analysis";
-import type { AnalysisResultResponseData } from "@/lib/api/generated/models";
-import { renderMarkdown } from "@/lib/markdown/render-markdown";
+import type {
+  AnalysisResultResponseData,
+  AnalysisResultResponseDataSectionsItem,
+  AnalysisResultResponseDataSectionsItemItemsItem,
+  AnalysisResultResponseDataSectionsItemKind,
+} from "@/lib/api/generated/models";
+import { formatOffset } from "@/lib/transcription/presentation";
+import { cn } from "@/lib/utils";
+
+/**
+ * 섹션 이름과 순서. 서버도 같은 순서로 내려주지만 여기서 한 번 더 세운다 — 한 섹션이
+ * 통째로 비어 응답에서 빠져도 헤딩 셋은 남아야 "그 칸이 비었다"와 "그 칸이 없다"가
+ * 구분된다.
+ */
+const SECTION_LABELS: Record<
+  AnalysisResultResponseDataSectionsItemKind,
+  string
+> = {
+  OVERVIEW: "개요",
+  ACTION_ITEM: "액션 아이템",
+  DECISION: "결정",
+};
+
+const SECTION_ORDER = Object.keys(
+  SECTION_LABELS
+) as AnalysisResultResponseDataSectionsItemKind[];
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -29,15 +53,18 @@ function statusOf(payload: unknown): string | null {
 
 /**
  * 요약 탭. `GET analyses/latest` 하나가 다섯 화면을 만든다 — 404 빈 상태(오류 아님),
- * PENDING/RUNNING 분석 중(폴링), SUCCEEDED 마크다운 3종, FAILED 재분석. 회의가 종료되기
+ * PENDING/RUNNING 분석 중(폴링), SUCCEEDED 항목 리스트, FAILED 재분석. 회의가 종료되기
  * 전에는 요약이 없으므로 안내만 보인다(요약 만들기는 ENDED에만 — 계약상 MEETING_NOT_ENDED 예방).
  */
 export function NoteSummary({
   noteId,
   isEnded,
+  onEvidenceSelect,
 }: {
   noteId: string;
   isEnded: boolean;
+  /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
+  onEvidenceSelect: (segmentId: string) => void;
 }) {
   const analysisQuery = useGetLatestAnalysis(noteId, {
     query: {
@@ -88,7 +115,12 @@ export function NoteSummary({
   }
 
   if (analysis?.status === "SUCCEEDED") {
-    return <SummarySections analysis={analysis} />;
+    return (
+      <SummarySections
+        analysis={analysis}
+        onEvidenceSelect={onEvidenceSelect}
+      />
+    );
   }
 
   if (analysis?.status === "FAILED") {
@@ -136,8 +168,8 @@ export function NoteSummary({
           </p>
           <p className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
             {isEnded
-              ? "이 회의의 요약을 만들어 개요·액션 아이템·인사이트를 정리합니다."
-              : "회의를 종료하면 개요·액션 아이템·인사이트가 자동으로 정리됩니다."}
+              ? "이 회의의 요약을 만들어 개요·액션 아이템·결정을 정리합니다."
+              : "회의를 종료하면 개요·액션 아이템·결정이 자동으로 정리됩니다."}
           </p>
           {isEnded ? (
             <Button
@@ -193,10 +225,10 @@ function AnalyzingSkeleton() {
         다른 화면으로 옮겨도 됩니다. 정리가 끝나면 이 탭에 나타납니다.
       </p>
       <div className="mt-6 space-y-6" aria-label="분석 진행 중">
-        {["개요", "액션 아이템", "인사이트"].map((label) => (
-          <div key={label} className="space-y-2">
+        {SECTION_ORDER.map((kind) => (
+          <div key={kind} className="space-y-2">
             <p className="text-xs font-medium text-[var(--el-muted)]">
-              {label}
+              {SECTION_LABELS[kind]}
             </p>
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-full" />
@@ -208,41 +240,118 @@ function AnalyzingSkeleton() {
 }
 
 /**
- * 개요 → 액션 아이템 → 인사이트를 한 화면에 위에서 아래로 낸다.
+ * 개요 → 액션 아이템 → 결정을 한 화면에 위에서 아래로 낸다. 탭으로 가르지 않는 이유는
+ * 셋을 오가며 눌러야 회의 하나를 파악할 수 있게 되기 때문이다 — 제목이 경계를 만드니
+ * 스크롤로 족하다.
  *
- * 탭으로 갈라도 봤지만, 요약은 **끝까지 읽는 글**이지 골라 보는 목록이 아니다. 셋을 오가며
- * 눌러야 하면 회의 하나를 파악하는 데 세 번을 눌러야 한다. 제목이 경계를 만드니 스크롤로 족하다.
+ * **본문은 마크다운 덩어리가 아니라 항목 리스트다.** 항목마다 그 항목이 나온 전사 줄이
+ * 붙는다(설계 §heymoa-web). 예전 주석이 "요약은 끝까지 읽는 글"이라고 적었는데, 그 판정은
+ * 이 개편이 뒤집었다 — 읽는 글이면 근거를 매달 자리가 없다.
  */
 function SummarySections({
   analysis,
+  onEvidenceSelect,
 }: {
   analysis: AnalysisResultResponseData;
+  onEvidenceSelect: (segmentId: string) => void;
 }) {
-  const sections = [
-    { label: "개요", body: analysis.overview },
-    { label: "액션 아이템", body: analysis.actionItems },
-    { label: "인사이트", body: analysis.insights },
-  ];
+  const byKind = new Map<string, AnalysisResultResponseDataSectionsItem>(
+    analysis.sections.map((section) => [section.kind, section])
+  );
   return (
     <Shell>
       <div className="space-y-8">
-        {sections.map(({ label, body }) => (
-          <section key={label} aria-label={label}>
-            <h2 className="border-b border-[var(--el-hairline-strong)] pb-2 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-              {label}
-            </h2>
-            <div className="mt-3 space-y-3">
-              {body ? (
-                renderMarkdown(body)
+        {SECTION_ORDER.map((kind) => {
+          const items = byKind.get(kind)?.items ?? [];
+          return (
+            <section key={kind} aria-label={SECTION_LABELS[kind]}>
+              <h2 className="border-b border-[var(--el-hairline-strong)] pb-2 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+                {SECTION_LABELS[kind]}
+              </h2>
+              {items.length ? (
+                <ul className="mt-3">
+                  {items.map((item) => (
+                    <SummaryItem
+                      key={item.itemId}
+                      item={item}
+                      onEvidenceSelect={onEvidenceSelect}
+                    />
+                  ))}
+                </ul>
               ) : (
-                <p className="text-sm text-[var(--el-muted)]">
+                <p className="mt-3 text-sm text-[var(--el-muted)]">
                   내용이 없습니다.
                 </p>
               )}
-            </div>
-          </section>
-        ))}
+            </section>
+          );
+        })}
       </div>
     </Shell>
+  );
+}
+
+/**
+ * 항목 한 줄과 그 근거. **근거는 접힘이 기본이다** — 인용까지 펼쳐 두면 항목 리스트가 다시
+ * 긴 글이 되어 한눈에 훑을 수 없다. 근거가 0개인 항목에는 칩을 달지 않는다(계약상 정상이고,
+ * 빈 칩은 누를 것이 없는 컨트롤이 된다).
+ */
+function SummaryItem({
+  item,
+  onEvidenceSelect,
+}: {
+  item: AnalysisResultResponseDataSectionsItemItemsItem;
+  onEvidenceSelect: (segmentId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const evidenceId = `evidence-${item.itemId}`;
+  return (
+    <li className="border-b border-[var(--el-hairline)] py-3 last:border-b-0">
+      <div className="flex items-start justify-between gap-3">
+        <p className="min-w-0 flex-1 break-keep text-[15px] leading-7 text-[var(--el-ink)]">
+          {item.content}
+        </p>
+        {item.evidence.length ? (
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={evidenceId}
+            onClick={() => setOpen((current) => !current)}
+            className="mt-0.5 flex shrink-0 items-center gap-1 rounded-chip border border-[var(--el-hairline)] px-2 py-1 text-[11px] font-medium text-[var(--el-muted)] transition-colors hover:border-[var(--el-hairline-strong)] hover:text-[var(--el-ink)]"
+          >
+            근거 {item.evidence.length}
+            <ChevronDown
+              aria-hidden
+              className={cn("size-3 transition-transform", open && "rotate-180")}
+            />
+          </button>
+        ) : null}
+      </div>
+      {open ? (
+        <ul
+          id={evidenceId}
+          className="mt-2 space-y-1 border-l-2 border-[var(--el-hairline-strong)] pl-3"
+        >
+          {item.evidence.map((evidence) => (
+            <li key={evidence.segmentId}>
+              {/* 누르면 전사의 그 줄로 간다. **`segmentId`로만 찾는다** — `startedAtMs`는
+                  세션별 오프셋이라 세션이 둘 이상이면 화면의 시각과 어긋난다(APP-398). */}
+              <button
+                type="button"
+                onClick={() => onEvidenceSelect(evidence.segmentId)}
+                className="flex w-full items-baseline justify-between gap-3 rounded-chip px-1 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+              >
+                <span className="min-w-0 break-keep text-[13px] leading-6 text-[var(--el-body)]">
+                  “{evidence.text}”
+                </span>
+                <time className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+                  {formatOffset(evidence.startedAtMs)}
+                </time>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
   );
 }

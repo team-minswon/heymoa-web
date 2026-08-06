@@ -492,6 +492,18 @@ function createSeedState(): StoreState {
       endedAt: "2026-07-12T00:05:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
+    // 시드 분석(아래 `analyses`)이 붙은 종료 노트의 세션이다. 근거 인용이 실제 전사 줄을
+    // 가리켜야 요약 → 전사 점프를 목에서 밟을 수 있다 — 세그먼트가 없으면 칩만 있고
+    // 눌러도 갈 곳이 없다.
+    {
+      sessionId: "01K0000000060",
+      noteId: "01K0000000020",
+      status: "COMPLETED",
+      readyExpiresAt: "2026-07-13T00:10:00Z",
+      startedAt: "2026-07-13T00:00:00Z",
+      endedAt: "2026-07-13T00:06:00Z",
+      endReason: "CLIENT_DISCONNECTED",
+    },
     // READY/ACTIVE 세션은 시드하지 않는다 — `createSession`의 가드가 전역이라(한 유저는
     // 동시에 하나만 녹음) 시드가 하나라도 있으면 모든 세션 생성이 막힌다.
     // `startedAt`·`endedAt`·`endReason`의 null 경로는 `createSession`이 런타임에 만든다.
@@ -544,6 +556,40 @@ function createSeedState(): StoreState {
       text: "확인한 내용은 회의록에 남기겠습니다.",
       startedAtMs: 5000,
       endedAtMs: 7100,
+    },
+    // 시드 분석의 근거가 가리키는 줄들. 블록 묶기(최대 6개·간격 1.5초)를 넘기려고 간격을
+    // 벌려 둔다 — 한 블록에 다 뭉치면 근거 셋이 같은 자리로 점프해 이동을 검증할 수 없다.
+    {
+      segmentId: "01K0000000061",
+      transcriptionSessionId: "01K0000000060",
+      sequence: 1,
+      text: "가입 후 첫 회의를 만들기까지 이탈이 가장 큽니다.",
+      startedAtMs: 12000,
+      endedAtMs: 15200,
+    },
+    {
+      segmentId: "01K0000000062",
+      transcriptionSessionId: "01K0000000060",
+      sequence: 2,
+      text: "문구 문제라기보다 다음에 뭘 해야 하는지가 안 보입니다.",
+      startedAtMs: 40000,
+      endedAtMs: 43800,
+    },
+    {
+      segmentId: "01K0000000063",
+      transcriptionSessionId: "01K0000000060",
+      sequence: 3,
+      text: "그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.",
+      startedAtMs: 92000,
+      endedAtMs: 95500,
+    },
+    {
+      segmentId: "01K0000000064",
+      transcriptionSessionId: "01K0000000060",
+      sequence: 4,
+      text: "재방문 사용자는 같은 구간에서 막히지 않았습니다.",
+      startedAtMs: 145000,
+      endedAtMs: 148700,
     },
   ];
   // 아직 멤버가 아닌 워크스페이스에서 온 초대여야 수락이 실제 합류를 흉내낸다.
@@ -646,19 +692,89 @@ function createSeedState(): StoreState {
     invitations,
     notifications,
     // 완료된 분석을 하나 시드한다. 실제로는 heymoa-ai의 callback이 채우는데 목에는 그걸
-    // 밀어줄 주체가 없어서, 이게 없으면 **요약 화면(개요·액션 아이템·인사이트)을 목에서
+    // 밀어줄 주체가 없어서, 이게 없으면 **요약 화면(개요·액션 아이템·결정)을 목에서
     // 한 번도 볼 수 없다.** 종료된 노트 하나에만 붙여 빈 상태·분석 중 화면도 그대로 남긴다.
+    //
+    // 근거가 **있는 항목과 없는 항목을 둘 다** 심는다 — 계약상 근거 0개가 정상이고(칩 없음),
+    // 한쪽만 심으면 그 분기가 목에서 한 번도 안 그려진다.
     analyses: [
       {
         analysisId: "01K0000000050",
         noteId: "01K0000000020",
         status: "SUCCEEDED",
-        overview:
-          "## 온보딩 이탈 구간\n\n가입 후 첫 회의 생성까지의 이탈이 가장 큽니다. 문구보다 다음에 뭘 해야 하는지가 안 보이는 것이 원인으로 좁혀졌습니다.",
-        actionItems:
-          "- 첫 화면에 회의 만들기 유도 (김민수, 이번 주)\n- 이탈 구간 이벤트 로깅 보강 (한지원)\n- 다음 주 사용자 테스트 5명 모집",
-        insights:
-          "- 이탈은 기능 부족이 아니라 첫 행동이 뭔지 모르는 것에서 옵니다.\n- 재방문 사용자는 같은 구간에서 막히지 않습니다 — 학습 비용은 한 번뿐입니다.",
+        sections: [
+          {
+            kind: "OVERVIEW",
+            items: [
+              {
+                itemId: "01K0000000070",
+                content: "가입 후 첫 회의 생성까지의 이탈이 가장 큽니다.",
+                evidence: [
+                  {
+                    segmentId: "01K0000000061",
+                    text: "가입 후 첫 회의를 만들기까지 이탈이 가장 큽니다.",
+                    startedAtMs: 12000,
+                  },
+                ],
+              },
+              {
+                itemId: "01K0000000071",
+                content:
+                  "원인은 문구가 아니라 다음 행동이 보이지 않는 것으로 좁혀졌습니다.",
+                evidence: [
+                  {
+                    segmentId: "01K0000000062",
+                    text: "문구 문제라기보다 다음에 뭘 해야 하는지가 안 보입니다.",
+                    startedAtMs: 40000,
+                  },
+                  {
+                    segmentId: "01K0000000064",
+                    text: "재방문 사용자는 같은 구간에서 막히지 않았습니다.",
+                    startedAtMs: 145000,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            kind: "ACTION_ITEM",
+            items: [
+              {
+                itemId: "01K0000000072",
+                content: "첫 화면에 회의 만들기 유도를 붙입니다 (김민수, 이번 주)",
+                evidence: [
+                  {
+                    segmentId: "01K0000000063",
+                    text: "그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.",
+                    startedAtMs: 92000,
+                  },
+                ],
+              },
+              // 근거를 못 찾은 항목. 버리지 않고 칩 없이 남긴다(설계 D2).
+              {
+                itemId: "01K0000000073",
+                content: "다음 주 사용자 테스트 참가자 5명을 모집합니다 (한지원)",
+                evidence: [],
+              },
+            ],
+          },
+          {
+            kind: "DECISION",
+            items: [
+              {
+                itemId: "01K0000000074",
+                content: "온보딩 문구 개편보다 첫 행동 유도를 먼저 하기로 했습니다.",
+                evidence: [
+                  {
+                    segmentId: "01K0000000063",
+                    text: "그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.",
+                    startedAtMs: 92000,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
         errorCode: null,
         errorMessage: null,
       },
@@ -1144,9 +1260,8 @@ export const mockDb = {
       analysisId: nextId(),
       noteId,
       status: "PENDING",
-      overview: null,
-      actionItems: null,
-      insights: null,
+      // 계약: 완료 전에는 섹션이 빈 배열이다(null이 아니다).
+      sections: [],
       errorCode: null,
       errorMessage: null,
     };
@@ -1157,15 +1272,62 @@ export const mockDb = {
   /**
    * 대기 중인 분석을 완료로 넘긴다. 실제 서버는 heymoa-ai의 callback으로 채워지지만
    * 목에는 그걸 밀어줄 주체가 없어 폴링 데모와 테스트가 이 함수를 직접 부른다.
+   *
+   * 근거는 **그 노트에 실제로 있는 세그먼트**에서 뽑는다. 고정 id를 박으면 다른 노트를
+   * 종료했을 때 인용을 눌러도 갈 곳이 없어, 목이 되는 척만 하게 된다.
    */
   advanceAnalysis(noteId: string): AnalysisResultResponseData | null {
     const analysis = latestAnalysis(noteId);
     if (!analysis || analysis.status !== "PENDING") return null;
+    const segments = this.listSegments(noteId);
+    const evidenceAt = (...indexes: number[]) =>
+      indexes
+        .map((index) => segments[index])
+        .filter((segment) => segment !== undefined)
+        .map(({ segmentId, text, startedAtMs }) => ({
+          segmentId,
+          text,
+          startedAtMs,
+        }));
     analysis.status = "SUCCEEDED";
-    analysis.overview = "## 회의 개요\n\n출시 일정과 담당을 정했습니다.";
-    analysis.actionItems =
-      "- 배포 체크리스트 작성 (김민수)\n- QA 일정 공유 (한지원)";
-    analysis.insights = "- 일정 리스크는 QA 인력에 몰려 있습니다.";
+    analysis.sections = [
+      {
+        kind: "OVERVIEW",
+        items: [
+          {
+            itemId: nextId(),
+            content: "출시 일정과 담당을 정했습니다.",
+            evidence: evidenceAt(0, 1),
+          },
+        ],
+      },
+      {
+        kind: "ACTION_ITEM",
+        items: [
+          {
+            itemId: nextId(),
+            content: "배포 체크리스트를 작성합니다 (김민수)",
+            evidence: evidenceAt(2),
+          },
+          // 근거를 못 찾은 항목도 남는다(설계 D2) — 칩 없는 분기의 표본이다.
+          {
+            itemId: nextId(),
+            content: "QA 일정을 공유합니다 (한지원)",
+            evidence: [],
+          },
+        ],
+      },
+      {
+        kind: "DECISION",
+        items: [
+          {
+            itemId: nextId(),
+            content: "일정 리스크는 QA 인력에 몰려 있다고 보고 우선 배치합니다.",
+            evidence: evidenceAt(1),
+          },
+        ],
+      },
+    ];
     return copy(analysis);
   },
 

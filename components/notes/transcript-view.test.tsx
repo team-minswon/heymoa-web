@@ -148,7 +148,12 @@ function renderTranscript(phase: SharedChatPhase = "active") {
   });
   const result = render(
     <QueryClientProvider client={client}>
-      <TranscriptView noteId={NOTE_ID} phase={phase} />
+      <TranscriptView
+        noteId={NOTE_ID}
+        phase={phase}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+      />
     </QueryClientProvider>
   );
 
@@ -157,7 +162,12 @@ function renderTranscript(phase: SharedChatPhase = "active") {
     rerenderTranscript: () =>
       result.rerender(
         <QueryClientProvider client={client}>
-          <TranscriptView noteId={NOTE_ID} phase={phase} />
+          <TranscriptView
+        noteId={NOTE_ID}
+        phase={phase}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+      />
         </QueryClientProvider>
       ),
   };

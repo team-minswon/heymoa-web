@@ -12,20 +12,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import {
+  formatOffset,
   groupTranscriptSegments,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
+import {
+  FOCUSED_BLOCK_CLASS,
+  useTranscriptFocus,
+  type TranscriptFocus,
+} from "@/components/notes/use-transcript-focus";
+import { cn } from "@/lib/utils";
 
 const FOLLOW_THRESHOLD_PX = 180;
-
-function formatOffset(milliseconds: number) {
-  const seconds = Math.floor(milliseconds / 1000);
-  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
-    seconds % 60
-  ).padStart(2, "0")}`;
-}
 
 function getDistanceFromBottom(viewport: HTMLElement) {
   return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
@@ -34,10 +34,12 @@ function getDistanceFromBottom(viewport: HTMLElement) {
 export function TranscriptView({
   noteId,
   phase,
+  focusSegmentId,
+  onFocusHandled,
 }: {
   noteId: string;
   phase: SharedChatPhase;
-}) {
+} & TranscriptFocus) {
   const recording = useRecording();
   const liveTranscript = useRecordingTranscript();
   const noteRealtime = useNoteRealtime();
@@ -215,6 +217,16 @@ export function TranscriptView({
     []
   );
 
+  /**
+   * **위 자동 스크롤 뒤에 부른다.** 진행 중 회의는 같은 커밋에서 바닥으로 한 프레임 내리는데,
+   * 이 훅도 rAF로 움직이므로 나중에 등록된 쪽이 남는다. 옮겨 간 뒤에는 scroll 핸들러가
+   * 바닥과의 거리를 다시 재 추종을 끄고, 사용자가 맨 아래로 돌아가면 그대로 되살아난다.
+   */
+  const { blockRef, isHighlighted } = useTranscriptFocus(blocks, {
+    focusSegmentId,
+    onFocusHandled,
+  });
+
   // 여기 스크롤 엔진은 챗봇과 다르다(프로그램 스크롤 가드·라이브 판정). 생김새만 공유한다.
   //
   // **`active`를 보지 않는다.** 스크롤 추적은 회의 상태와 무관하게 도는데 버튼 표시만
@@ -252,11 +264,16 @@ export function TranscriptView({
               {blocks.map((block) => (
                 <article
                   key={block.blockId}
+                  ref={blockRef(block.blockId)}
                   data-testid="transcript-block"
                   data-segment-count={block.segmentIds.length}
                   data-timeline-start-ms={block.timelineStartedAtMs}
                   data-state="final"
-                  className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
+                  data-focused={isHighlighted(block.blockId) || undefined}
+                  className={cn(
+                    "group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5",
+                    isHighlighted(block.blockId) && FOCUSED_BLOCK_CLASS
+                  )}
                 >
                   <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
                     {formatOffset(block.timelineStartedAtMs)}
