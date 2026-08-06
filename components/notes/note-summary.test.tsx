@@ -107,35 +107,40 @@ describe("NoteSummary 항목 리스트", () => {
 
   it("빈 섹션도 헤딩은 남기고 안내를 보여준다", () => {
     renderSummary(true);
-    expect(screen.getByText("내용이 없습니다.")).toBeInTheDocument();
+    expect(screen.getByText("이 회의에서는 나오지 않았습니다.")).toBeInTheDocument();
   });
 
-  it("근거는 접힌 채로 시작하고 칩을 눌러야 펼쳐진다", () => {
+  // 누를 자리는 마커가 아니라 줄 전체다. 마커만 컨트롤이면 문장 전체가 죽은 영역이 된다.
+  it("근거는 접힌 채로 시작하고 항목을 누르면 펼쳐진다", () => {
     renderSummary(true);
 
-    const chip = screen.getByRole("button", { name: /근거 2/ });
-    expect(chip).toHaveAttribute("aria-expanded", "false");
+    const claim = screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ });
+    expect(claim).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/그럼 결제 쪽부터 보죠/)).toBeNull();
 
-    fireEvent.click(chip);
+    fireEvent.click(claim);
 
-    expect(chip).toHaveAttribute("aria-expanded", "true");
+    expect(claim).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/그럼 결제 쪽부터 보죠/)).toBeInTheDocument();
     expect(screen.getByText("04:12")).toBeInTheDocument();
   });
 
-  // 근거 0개는 계약상 정상이다. 빈 칩을 만들면 누를 것이 없는 컨트롤이 생긴다.
-  it("근거가 없는 항목에는 칩을 달지 않는다", () => {
+  // 근거 0개는 계약상 정상이다. 그 항목을 컨트롤로 만들면 눌러도 열릴 것이 없다.
+  it("근거가 없는 항목은 컨트롤이 아니다", () => {
     renderSummary(true);
 
     expect(screen.getByText("이번 주 안에 원인을 좁힌다")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /근거/ })).toHaveLength(1);
+    expect(
+      screen.queryByRole("button", { name: /이번 주 안에 원인을 좁힌다/ })
+    ).toBeNull();
   });
 
   it("인용을 누르면 그 세그먼트로 점프를 요청한다", () => {
     renderSummary(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /근거 2/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ })
+    );
     fireEvent.click(screen.getByRole("button", { name: /그럼 결제 쪽부터 보죠/ }));
 
     expect(onEvidenceSelect).toHaveBeenCalledWith("01K0000000061");

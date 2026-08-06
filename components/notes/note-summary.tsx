@@ -260,27 +260,37 @@ function SummarySections({
   );
   return (
     <Shell>
-      <div className="space-y-8">
+      <div className="space-y-14">
         {SECTION_ORDER.map((kind) => {
           const items = byKind.get(kind)?.items ?? [];
           return (
             <section key={kind} aria-label={SECTION_LABELS[kind]}>
-              <h2 className="border-b border-[var(--el-hairline-strong)] pb-2 font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-                {SECTION_LABELS[kind]}
-              </h2>
+              {/* 개수는 장식이 아니라 훑기 위한 것이다 — 액션이 16개인지 2개인지가
+                  스크롤하기 전에 보여야 어디를 읽을지 정한다. */}
+              <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
+                <h2 className="font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+                  {SECTION_LABELS[kind]}
+                </h2>
+                {items.length ? (
+                  <span className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+                    {items.length}
+                  </span>
+                ) : null}
+              </div>
               {items.length ? (
-                <ul className="mt-3">
+                <ul className="mt-5 space-y-5">
                   {items.map((item) => (
                     <SummaryItem
                       key={item.itemId}
                       item={item}
+                      kind={kind}
                       onEvidenceSelect={onEvidenceSelect}
                     />
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm text-[var(--el-muted)]">
-                  내용이 없습니다.
+                <p className="mt-5 text-sm text-[var(--el-muted)]">
+                  이 회의에서는 나오지 않았습니다.
                 </p>
               )}
             </section>
@@ -292,45 +302,91 @@ function SummarySections({
 }
 
 /**
- * 항목 한 줄과 그 근거. **근거는 접힘이 기본이다** — 인용까지 펼쳐 두면 항목 리스트가 다시
- * 긴 글이 되어 한눈에 훑을 수 없다. 근거가 0개인 항목에는 칩을 달지 않는다(계약상 정상이고,
- * 빈 칩은 누를 것이 없는 컨트롤이 된다).
+ * 항목 한 줄과 그 근거.
+ *
+ * **근거 마커는 문장 바로 뒤에 붙는다.** 오른쪽 끝으로 밀면 820px 폭에서 문장과 마커가
+ * 600px 떨어져 무엇의 근거인지 안 보인다. 각주가 인쇄물에서 이미 푼 문제이고, 이 제품의
+ * 논지("주장 + 출처")가 정확히 각주의 구조다.
+ *
+ * **접힘이 기본이다** — 인용까지 펼쳐 두면 항목 리스트가 다시 긴 글이 되어 훑을 수 없다.
+ * 근거가 0개인 항목에는 마커를 달지 않는다(계약상 정상이고, 빈 마커는 누를 것이 없다).
  */
 function SummaryItem({
   item,
+  kind,
   onEvidenceSelect,
 }: {
   item: AnalysisResultResponseDataSectionsItemItemsItem;
+  kind: AnalysisResultResponseDataSectionsItemKind;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const evidenceId = `evidence-${item.itemId}`;
+  // 개요는 회의를 서술하는 문단이고 액션·결정은 행 단위 항목이다. 성격이 다르니 모양도
+  // 다르게 둔다 — 셋을 같은 목록으로 그리면 30줄이 전부 같은 무게가 된다.
+  const isProse = kind === "OVERVIEW";
+  const hasEvidence = item.evidence.length > 0;
+
+  const claim = (
+    <>
+      {item.content}
+      {hasEvidence ? (
+        <span
+          aria-hidden
+          /* 각주 마커. 컨트롤은 줄 전체이므로 여기는 상태 표시만 한다. */
+          className={cn(
+            "ml-1.5 inline-flex translate-y-[-1px] items-center gap-0.5 rounded-chip px-1.5 py-0.5 align-baseline font-mono text-[11px] tabular-nums transition-colors",
+            open
+              ? "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
+              : "text-[var(--el-muted-soft)] group-hover/claim:bg-[var(--el-surface-strong)] group-hover/claim:text-[var(--el-ink)]"
+          )}
+        >
+          {item.evidence.length}
+          <ChevronDown
+            className={cn("size-3 transition-transform", open && "rotate-180")}
+          />
+        </span>
+      ) : null}
+    </>
+  );
+
   return (
-    <li className="border-b border-[var(--el-hairline)] py-3 last:border-b-0">
-      <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 break-keep text-[15px] leading-7 text-[var(--el-ink)]">
-          {item.content}
+    <li className={cn(!isProse && "relative pl-4")}>
+      {!isProse ? (
+        <span
+          aria-hidden
+          className="absolute left-0 top-[11px] size-1 rounded-full bg-[var(--el-hairline-strong)]"
+        />
+      ) : null}
+      {hasEvidence ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={evidenceId}
+          /* **누를 자리는 마커가 아니라 줄 전체다.** 마커만 컨트롤이면 28px 타깃 옆의
+             문장 전체가 죽은 영역이 된다.
+
+             **선택은 살려 둔다** — 요약은 복사해 가는 글이다. 드래그로 글자를 집은
+             뒤의 mouseup도 click이라, 선택이 남아 있으면 펼치지 않는다. */
+          onClick={() => {
+            if (!window.getSelection()?.isCollapsed) return;
+            setOpen((current) => !current);
+          }}
+          className="group/claim -mx-2 block w-full select-text rounded-block px-2 py-0.5 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+        >
+          <span className="block break-keep text-[15px] leading-7 text-[var(--el-ink)]">
+            {claim}
+          </span>
+        </button>
+      ) : (
+        <p className="break-keep text-[15px] leading-7 text-[var(--el-ink)]">
+          {claim}
         </p>
-        {item.evidence.length ? (
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-controls={evidenceId}
-            onClick={() => setOpen((current) => !current)}
-            className="mt-0.5 flex shrink-0 items-center gap-1 rounded-chip border border-[var(--el-hairline)] px-2 py-1 text-[11px] font-medium text-[var(--el-muted)] transition-colors hover:border-[var(--el-hairline-strong)] hover:text-[var(--el-ink)]"
-          >
-            근거 {item.evidence.length}
-            <ChevronDown
-              aria-hidden
-              className={cn("size-3 transition-transform", open && "rotate-180")}
-            />
-          </button>
-        ) : null}
-      </div>
+      )}
       {open ? (
         <ul
           id={evidenceId}
-          className="mt-2 space-y-1 border-l-2 border-[var(--el-hairline-strong)] pl-3"
+          className="mt-3 space-y-2 border-l border-[var(--el-hairline-strong)] pl-4"
         >
           {item.evidence.map((evidence) => (
             <li key={evidence.segmentId}>
@@ -339,12 +395,16 @@ function SummaryItem({
               <button
                 type="button"
                 onClick={() => onEvidenceSelect(evidence.segmentId)}
-                className="flex w-full items-baseline justify-between gap-3 rounded-chip px-1 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+                className="group flex w-full items-baseline gap-2 rounded-chip py-0.5 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
               >
-                <span className="min-w-0 break-keep text-[13px] leading-6 text-[var(--el-body)]">
-                  “{evidence.text}”
+                <span className="min-w-0 break-keep font-serif text-[15px] leading-7 text-[var(--el-body)]">
+                  {evidence.text}
                 </span>
-                <time className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+                <span
+                  aria-hidden
+                  className="min-w-0 flex-1 translate-y-[-4px] border-b border-dotted border-[var(--el-hairline)]"
+                />
+                <time className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-muted)]">
                   {formatOffset(evidence.startedAtMs)}
                 </time>
               </button>
