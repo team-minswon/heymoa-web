@@ -1,18 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import {
-  CalendarDays,
-  Expand,
-  MoreHorizontal,
-  PanelRightClose,
-  Shrink,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Expand, MoreHorizontal, Shrink, Trash2 } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { usePersonalChat } from "@/components/chat/personal-chat";
-import { MeetingControls } from "@/components/notes/meeting-controls";
+import {
+  MeetingControls,
+  MeetingStatusChip,
+  MeetingViewerChip,
+} from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
 import {
   NoteDetails,
@@ -23,6 +20,7 @@ import {
   NoteAgentRail,
   type RailTab,
 } from "@/components/notes/note-agent-rail";
+import { NoteParticipantAvatars } from "@/components/notes/note-participants";
 import { NoteSummary } from "@/components/notes/note-summary";
 import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
 import { TranscriptView } from "@/components/notes/transcript-view";
@@ -31,8 +29,6 @@ import {
   isNoteRecordingActive,
   useRecording,
 } from "@/components/transcription/recording-provider";
-import { Badge } from "@/components/ui/badge";
-import { formatAppDate } from "@/lib/format/date";
 import { Button } from "@/components/ui/button";
 import { DataBoundary } from "@/components/ui/data-boundary";
 import {
@@ -47,6 +43,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
+import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { cn } from "@/lib/utils";
 
 export type NoteTab = "chat" | "details" | "transcript" | "summary";
@@ -275,6 +272,8 @@ export function NotePanel({
   const paneChrome = isFull
     ? "rounded-panel border border-[var(--el-hairline)] shadow-e2"
     : "";
+  const isViewer = phase === "active" && !isStarter;
+  const meta = note ? buildNoteHeaderMeta(note, { isStarter }) : null;
 
   return (
     <div
@@ -288,178 +287,190 @@ export function NotePanel({
       <div
         className={cn(
           "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white",
+          // 본문 좌우 여백은 **면이 정하고 내용이 읽는다.** design.pen은 side 시트(860)에
+          // 좌우 100을, 전체 뷰 본문(970)에 좌우 64를 준다 — 같은 노트인데 두 값이 다르므로
+          // 헤더·전사·요약·정보가 각자 하드코딩하면 뷰를 바꿀 때마다 네 군데가 어긋난다.
+          // 좁은 화면은 두 뷰가 같다(20 → sm 36).
+          "[--note-gutter:20px] sm:[--note-gutter:36px]",
+          isFull ? "lg:[--note-gutter:64px]" : "lg:[--note-gutter:100px]",
           paneChrome
         )}
       >
-        {/* 이제 두 뷰 다 이 헤더가 노트의 크롬이다 — full도 워크스페이스 상단바를 덮으므로
-            제목·회의 제어·창 제어가 전부 여기 있어야 한다. 그래서 테두리도 뷰로 가르지 않는다.
-            (design.pen `u3yYCX`/`XtEMZ`의 Note Header: 아래 hairline) */}
-        <header className="relative z-10 border-b border-[var(--el-hairline)] bg-white/92 px-5 py-4 backdrop-blur-xl sm:px-9 sm:py-5">
-          <div className="mx-auto flex w-full max-w-[820px] flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
-            <div className="min-w-0 w-full flex-1 lg:w-auto">
-              {/* 회의가 언제 열렸는지는 상세에서만 볼 수 있다 — 목록 계약에는 없다. */}
-              {/* 좁은 화면에서는 생성·시작 시각을 접는다 — 정보 탭이 같은 값을 그리고,
-                  여기 두면 헤더가 세로로 자라 전사가 눌린다(landscape 355px에서 실측). */}
-              <div className="hidden flex-wrap items-center gap-2 lg:flex">
+        {/* 상단바(56). design.pen `KktRX`(side)/`Sghjz`(full) — 배경 없이 아래 hairline만
+            갖고, 안에는 **이동과 창 제어만** 있다: ← 목록으로 · 확장/축소 · 구분선 · 제목 13.
+            오른쪽 Actions는 노트 메뉴(삭제)다.
+
+            두 뷰 다 이 바가 필요하다. 전체 뷰는 워크스페이스 상단바를 통째로 덮으므로 이동할
+            길이 여기밖에 없고, side 시트도 목록 위에 떠서 뒤의 상단바를 누를 수 없다.
+            **별도 「노트 닫기」 버튼은 없앴다** — ← 목록으로와 같은 곳으로 가는 길이 둘이었다.
+
+            정본은 전체 뷰 Actions에 알림 벨(`Tc3e6`)을 두었지만 뺐다. 노트 안에서 알림을
+            여는 흐름이 기획에 없고, 열면 이 면 위에 팝오버가 또 뜬다. 삭제 메뉴가 그 자리를
+            쓴다(전체 뷰에는 워크스페이스 상단바가 없어서 그 메뉴가 갈 곳이 여기뿐이다). */}
+        <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--el-hairline)] px-4 sm:px-8">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* 이동과 창 제어를 한 그룹으로 묶는다 — 스크린리더에서 「목록으로」와 「전체 화면」이
+                제목 빵조각과 섞이면 어느 것이 이동이고 어느 것이 표시인지 알 수 없다. */}
+            <div
+              role="group"
+              aria-label="창 제어"
+              className="flex shrink-0 items-center gap-2"
+            >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="rounded-control text-[var(--el-muted)]"
+              aria-label="목록으로"
+              onClick={onClose}
+            >
+              <ArrowLeft />
+            </Button>
+            {onExpand ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="rounded-control text-[var(--el-muted)]"
+                aria-label={
+                  sharedTurnActive
+                    ? "답변이 끝나면 확장할 수 있습니다"
+                    : "전체 화면으로 보기"
+                }
+                disabled={sharedTurnActive}
+                onClick={onExpand}
+              >
+                <Expand />
+              </Button>
+            ) : null}
+            {/* 확장과 같은 이유로 답변이 흐르는 동안 막는다 — 뷰가 바뀌면 레일의
+                `SharedChatPanel`이 언마운트되고 탭 아래에 새로 마운트되어 SSE가 끊긴다.
+                계약상 부분 응답은 저장되지 않으므로 흐르던 답변이 통째로 사라진다.
+                **개인 챗 턴도 막는다** — 축소하면 레일 슬롯이 사라지고 side에서는 개인
+                패널도 FAB도 감춰져서, 흐르던 답변의 중지·도구 승인에 닿을 길이 없어진다. */}
+            {onCollapse ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="rounded-control text-[var(--el-muted)]"
+                aria-label={
+                  turnActive
+                    ? "답변이 끝나면 축소할 수 있습니다"
+                    : "사이드 뷰로 보기"
+                }
+                disabled={turnActive}
+                onClick={onCollapse}
+              >
+                <Shrink />
+              </Button>
+            ) : null}
+            </div>
+            <span
+              aria-hidden
+              className="h-[18px] w-px shrink-0 bg-[var(--el-hairline)]"
+            />
+            {/* 상단바의 제목은 **지금 어디인지**를 말하는 빵조각이다. 아래 헤더의 큰 제목과
+                같은 값이지만, 전사를 읽어 내려간 뒤에도 이 줄은 남는다. */}
+            <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--el-ink)]">
+              {note?.title ?? "회의 노트"}
+            </span>
+          </div>
+          {/* 기록 중이면 서버가 409로 막는다. 눌러서 실패하게 두지 않고 메뉴를 안 그린다. */}
+          {note && note.meetingStatus !== "IN_PROGRESS" ? (
+            <div className="flex shrink-0 items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="노트 메뉴"
+                      className="rounded-control text-[var(--el-muted)]"
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setDeleteTargetId(noteId)}
+                  >
+                    <Trash2 /> 삭제
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <NoteDeleteDialog
+                noteId={noteId}
+                projectId={note.projectId}
+                title={note.title}
+                open={deleteTargetId === noteId}
+                onOpenChange={(open) => setDeleteTargetId(open ? noteId : null)}
+                onDeleted={onDeleted ?? onClose}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {/* 노트 헤더. design.pen `MZRO0`(side)/`c5cQ8n`(full) — 상태 칩 + 프로젝트 pill →
+            세리프 제목 → 아바타 스택 + 메타 두 줄, 오른쪽에 회의 종료.
+            **테두리는 아래 탭 줄이 갖는다** — 정본은 제목과 탭이 hairline 하나로 닫힌 한
+            덩어리이고, 여기에도 선을 두면 같은 블록 안에 줄이 두 개 그어진다. */}
+        <header className="relative z-10 shrink-0 bg-white px-[var(--note-gutter)] pb-3 pt-5">
+          <div className="mx-auto flex w-full max-w-[820px] items-start justify-between gap-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                {note ? <MeetingStatusChip status={note.meetingStatus} /> : null}
+                {isViewer ? <MeetingViewerChip /> : null}
                 {project ? (
-                  <Badge variant="secondary">{project.name}</Badge>
-                ) : null}
-                {note?.createdAt ? (
-                  <span className="flex items-center gap-1.5 text-xs text-[var(--el-muted)]">
-                    <CalendarDays className="size-3.5" />
-                    {/* 요일을 Intl에 함께 넘기면 괄호 없이 붙는다 — 목록 헤더와 같은 형식으로 조립한다. */}
-                    {formatAppDate(note.createdAt, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}{" "}
-                    ({formatAppDate(note.createdAt, { weekday: "short" })}){" "}
-                    {formatAppDate(note.createdAt, {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
+                  <span className="flex h-5 shrink-0 items-center rounded-full border border-[var(--el-hairline)] px-2 text-[11px] font-medium text-[var(--el-body)]">
+                    {project.name}
                   </span>
                 ) : null}
-                {note?.meetingStartedAt ? (
-                  <time
-                    dateTime={note.meetingStartedAt}
-                    className="text-xs text-[var(--el-muted)]"
-                  >
-                    {formatAppDate(note.meetingStartedAt, {
-                      month: "long",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}{" "}
-                    시작
-                  </time>
-                ) : null}
               </div>
-              <h1 className="truncate font-serif text-lg font-light leading-tight tracking-[-0.03em] text-[var(--el-ink)] lg:mt-2 lg:text-note-title">
+              <h1 className="truncate font-serif text-2xl font-light leading-[1.2] tracking-[-0.024em] text-[var(--el-ink)] lg:text-screen-title">
                 {note?.title ?? "회의 노트"}
               </h1>
-            </div>
-            {/* 전체 화면은 워크스페이스 상단바를 통째로 덮으므로 **회의 제어·창 제어를 노트가
-                직접 가져야 한다** — 예전에는 상단바의 노트 액션 슬롯이 맡았는데, 그 바가 안
-                보이게 되면서 회의 종료·축소가 갈 곳이 없어졌다. side는 계승. */}
-            {/* `flex-nowrap`이다 — 전체 화면의 노트 패널은 레일 440을 뺀 나머지라 좁아질 수
-                있는데, 여기가 감기면 헤더가 세로로 자라 전사 높이를 0까지 밀어낸다
-                (812×375 landscape에서 헤더 278/355 실측). 좁으면 감기지 말고 줄어든다. */}
-            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 lg:w-auto lg:shrink-0 lg:flex-nowrap lg:justify-start">
-              {note ? (
-                // **noteId로 키잉한다.** 안 하면 A의 회의 종료 확인창을 연 채 뒤로가기로 B에
-                // 왔을 때 이 패널이 재마운트되지 않아 `endOpen`이 남고, 대상만 B로 바뀌어
-                // **다른 회의가 종료된다.** 삭제 확인창과 같은 함정이고, 예전에는 상단바의
-                // 노트 액션 슬롯이 `key={activeNoteId}`로 막던 자리다.
-                <MeetingControls
-                  key={noteId}
-                  note={note}
-                  showContext
-                  onMeetingEnded={() => onTabChange("summary")}
-                />
+              {meta ? (
+                // 아바타 스택은 목록 행과 같은 컴포넌트다 — 같은 사람인지 알아야 한다.
+                // 링은 캔버스가 아니라 카드 위에 있으므로 흰색이다(정본 `stroke: $--card`).
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <NoteParticipantAvatars
+                    participants={note?.participants}
+                    max={3}
+                    size="sm"
+                    className="-space-x-1.5 *:data-[slot=avatar]:ring-white"
+                  />
+                  <p className="min-w-0 text-xs leading-[1.5] text-[var(--el-body)]">
+                    <span className="block truncate">
+                      {meta.participantLabel
+                        ? `${meta.participantLabel} · `
+                        : null}
+                      {/* 절대 시각은 기계도 읽어야 한다 — 상대 표현("2일 전")은 목록의 몫이다. */}
+                      <time dateTime={meta.whenIso}>{meta.whenLabel}</time>
+                    </span>
+                    <span className="block truncate">{meta.secondary}</span>
+                  </p>
+                </div>
               ) : null}
-              <div
-                role="group"
-                aria-label="창 제어"
-                className="flex shrink-0 items-center gap-1 border-l border-[var(--el-hairline)] pl-2"
-              >
-                {onExpand ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xl"
-                    className="rounded-full"
-                    aria-label={
-                      sharedTurnActive
-                        ? "답변이 끝나면 확장할 수 있습니다"
-                        : "전체 화면으로 보기"
-                    }
-                    disabled={sharedTurnActive}
-                    onClick={onExpand}
-                  >
-                    <Expand />
-                  </Button>
-                ) : null}
-                {/* 확장과 같은 이유로 답변이 흐르는 동안 막는다 — 뷰가 바뀌면 레일의
-                    `SharedChatPanel`이 언마운트되고 탭 아래에 새로 마운트되어 SSE가 끊긴다.
-                    계약상 부분 응답은 저장되지 않으므로 흐르던 답변이 통째로 사라진다. */}
-                {onCollapse ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xl"
-                    className="rounded-full"
-                    // **개인 챗 턴도 막는다.** 축소하면 레일 슬롯이 사라지고 side에서는
-                    // 개인 패널도 FAB도 감춰져서, 흐르던 답변의 중지·도구 승인에 닿을 길이
-                    // 없어진다. 공유 턴과 같은 이유다.
-                    aria-label={
-                      turnActive
-                        ? "답변이 끝나면 축소할 수 있습니다"
-                        : "사이드 뷰로 보기"
-                    }
-                    disabled={turnActive}
-                    onClick={onCollapse}
-                  >
-                    <Shrink />
-                  </Button>
-                ) : null}
-                {/* 기록 중이면 서버가 409로 막는다. 눌러서 실패하게 두지 않고 메뉴를 안 그린다.
-                    예전에는 이 메뉴가 워크스페이스 상단바의 노트 액션 슬롯에 있었는데, 전체
-                    화면이 그 바를 덮게 되면서 갈 곳이 여기가 됐다. */}
-                {note && note.meetingStatus !== "IN_PROGRESS" ? (
-                  <>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xl"
-                            aria-label="노트 메뉴"
-                            className="rounded-full"
-                          />
-                        }
-                      >
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeleteTargetId(noteId)}
-                        >
-                          <Trash2 /> 삭제
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <NoteDeleteDialog
-                      noteId={noteId}
-                      projectId={note.projectId}
-                      title={note.title}
-                      open={deleteTargetId === noteId}
-                      onOpenChange={(open) =>
-                        setDeleteTargetId(open ? noteId : null)
-                      }
-                      onDeleted={onDeleted ?? onClose}
-                    />
-                  </>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xl"
-                  className="rounded-full"
-                  aria-label="노트 닫기"
-                  onClick={onClose}
-                >
-                  <PanelRightClose />
-                </Button>
-              </div>
             </div>
+            {note ? (
+              // **noteId로 키잉한다.** 안 하면 A의 회의 종료 확인창을 연 채 뒤로가기로 B에
+              // 왔을 때 이 패널이 재마운트되지 않아 `endOpen`이 남고, 대상만 B로 바뀌어
+              // **다른 회의가 종료된다.** 삭제 확인창과 같은 함정이다.
+              <MeetingControls
+                key={noteId}
+                note={note}
+                onMeetingEnded={() => onTabChange("summary")}
+              />
+            ) : null}
           </div>
         </header>
 
         {noteLoadFailed ? (
-          <div className="mx-auto w-full max-w-[820px] px-5 pb-4 sm:px-9">
+          <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-4">
             <InlineRetry
               label="회의 상태를 확인하지 못했습니다."
               onRetry={() => void noteQuery.refetch()}
@@ -472,24 +483,50 @@ export function NotePanel({
           onValueChange={(value) => value && onTabChange(value as NoteTab)}
           className="min-h-0 flex-1 gap-0"
         >
-          <div className="border-b border-[var(--el-hairline)] bg-white px-5 sm:px-9">
+          {/* 탭 줄이 노트 헤더의 마지막 줄이다 — 그래서 hairline을 이쪽이 갖는다. */}
+          <div className="shrink-0 border-b border-[var(--el-hairline)] bg-white px-[var(--note-gutter)] pb-4">
             <div className="mx-auto w-full max-w-[820px]">
-              <TabsList
-                variant="line"
-                className="h-10 w-full justify-start gap-6"
-              >
-                {/* 순서는 정보 → 스크립트 → 요약이고 정보가 기본이다. 회의를 열면 먼저
-                    보이는 것이 제목·참여자·시각이고, 전사는 필요할 때 넘어간다.
-                    라벨은 뷰·상태에 따라 갈리지 않는다 — 같은 탭이 화면마다 다른 이름으로
-                    불리면(전사/실시간 전사/기록) 같은 자리인지 알기 어렵다. */}
-                <TabsTrigger value="details">정보</TabsTrigger>
-                <TabsTrigger value="transcript">스크립트</TabsTrigger>
+              {/* design.pen `U5DbV`/`U9YGl`: 세그먼트 컨트롤이다 — bg secondary · r8 · p4에
+                  칩 하나가 흰 카드로 뜬다. 전체폭 밑줄 탭이 아니다. 정본이 `w-fit`으로 왼쪽에
+                  붙는 이유는 탭이 셋~넷뿐인데 860 폭에 균등 분할하면 라벨 사이가 200px씩
+                  벌어져 한 뭉치로 안 읽히기 때문이다.
+
+                  순서는 정보 → 전사 → 요약이고 정보가 기본이다. 회의를 열면 먼저 보이는 것이
+                  제목·참여자·시각이고, 전사는 필요할 때 넘어간다. 라벨은 뷰·상태에 따라
+                  갈리지 않는다 — 같은 탭이 화면마다 다른 이름으로 불리면 같은 자리인지
+                  알기 어렵다. */}
+              {/* `h-10`이 아니라 `group-data-horizontal/tabs:h-10`이다 — primitive의 기본
+                  높이도 같은 variant 셀렉터라(`group-data-horizontal/tabs:h-8`) 평범한 `h-10`은
+                  tailwind-merge가 충돌로 보지 않아 조용히 32px로 남는다. */}
+              <TabsList className="gap-1 rounded-control bg-[var(--el-surface-strong)] p-1 group-data-horizontal/tabs:h-10">
+                <TabsTrigger
+                  value="details"
+                  className="h-8 flex-none rounded-chip px-3 text-xs"
+                >
+                  정보
+                </TabsTrigger>
+                <TabsTrigger
+                  value="transcript"
+                  className="h-8 flex-none rounded-chip px-3 text-xs"
+                >
+                  전사
+                </TabsTrigger>
                 {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
                 {showSummaryTab ? (
-                  <TabsTrigger value="summary">요약</TabsTrigger>
+                  <TabsTrigger
+                    value="summary"
+                    className="h-8 flex-none rounded-chip px-3 text-xs"
+                  >
+                    요약
+                  </TabsTrigger>
                 ) : null}
                 {showSideChatTab ? (
-                  <TabsTrigger value="chat">챗봇</TabsTrigger>
+                  <TabsTrigger
+                    value="chat"
+                    className="h-8 flex-none rounded-chip px-3 text-xs"
+                  >
+                    챗봇
+                  </TabsTrigger>
                 ) : null}
               </TabsList>
             </div>
@@ -502,7 +539,7 @@ export function NotePanel({
               <div
                 role="region"
                 aria-label="회의 종료 안내"
-                className="mx-5 mt-4 flex shrink-0 items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5 sm:mx-9"
+                className="mx-[var(--note-gutter)] mt-4 flex shrink-0 items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
               >
                 <div>
                   <p className="text-sm font-medium text-[var(--el-ink)]">

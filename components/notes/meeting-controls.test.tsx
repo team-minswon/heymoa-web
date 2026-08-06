@@ -1,13 +1,11 @@
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MeetingControls } from "@/components/notes/meeting-controls";
+import {
+  MeetingControls,
+  MeetingStatusChip,
+  MeetingViewerChip,
+} from "@/components/notes/meeting-controls";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 
 const state = vi.hoisted(() => ({ userId: "user-12345" }));
@@ -41,70 +39,61 @@ function note(overrides: Partial<NoteResponseData>): NoteResponseData {
   } as NoteResponseData;
 }
 
-const renderControls = (n: NoteResponseData, showContext?: boolean) =>
-  render(<MeetingControls note={n} showContext={showContext} />);
+const renderControls = (n: NoteResponseData) =>
+  render(<MeetingControls note={n} />);
+
+describe("MeetingStatusChip", () => {
+  afterEach(cleanup);
+
+  it("기록 중만 붉게 낸다 — 나머지 상태는 사건이 아니라 상태다", () => {
+    const { rerender } = render(<MeetingStatusChip status="IN_PROGRESS" />);
+    expect(screen.getByText("기록 중")).toHaveClass("text-destructive");
+
+    rerender(<MeetingStatusChip status="ENDED" />);
+    expect(screen.getByText("종료됨")).not.toHaveClass("text-destructive");
+  });
+
+  it("라벨은 목록 행과 같은 이름을 쓴다", () => {
+    const { rerender } = render(<MeetingStatusChip status="NOT_STARTED" />);
+    expect(screen.getByText("시작 전")).toBeInTheDocument();
+
+    rerender(<MeetingStatusChip status="PAUSED" />);
+    expect(screen.getByText("중지됨")).toBeInTheDocument();
+  });
+});
+
+describe("MeetingViewerChip", () => {
+  afterEach(cleanup);
+
+  it("참관임을 라벨로 말한다 — 회의 제어가 없는 이유가 그 자리에 남아야 한다", () => {
+    render(<MeetingViewerChip />);
+    expect(screen.getByText("참관")).toBeInTheDocument();
+  });
+});
 
 describe("MeetingControls", () => {
   beforeEach(() => {
     state.userId = "user-12345";
   });
-  afterEach(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
+  afterEach(cleanup);
 
-  it("시작자 · 기록 중이면 상태와 누적 시간과 회의 종료를 보인다", () => {
+  it("시작자 · 기록 중이면 회의 종료만 내놓는다", () => {
     renderControls(note({ meetingStatus: "IN_PROGRESS" }));
 
     expect(screen.getByRole("button", { name: /회의 종료/ })).toBeTruthy();
     expect(screen.getAllByRole("button")).toHaveLength(1);
-    expect(screen.queryByRole("button", { name: /중지/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /재개/ })).toBeNull();
-    expect(screen.getByText("기록 중")).toBeInTheDocument();
+    // 상태 칩은 헤더 첫 줄로, 초 단위 타이머는 레코더 독으로 갔다.
+    expect(screen.queryByText("기록 중")).toBeNull();
+    expect(screen.queryByRole("timer")).toBeNull();
     expect(screen.queryByText("테스트 유저")).toBeNull();
   });
 
-  it("문맥 표시를 요청하면 시작자에게 상태와 시작자명과 종료를 함께 보인다", () => {
+  it("중지됨에서도 시작자는 회의를 끝낼 수 있다", () => {
     renderControls(
-      note({
-        meetingStartedBy: {
-          userId: "user-12345",
-          name: "김민수",
-          email: "minsu@heymoa.com",
-          image: null,
-        },
-      }),
-      true
+      note({ meetingStatus: "PAUSED", activeSessionStartedAt: null })
     );
 
-    expect(screen.getByText("기록 중")).toBeTruthy();
-    expect(screen.getByText("김민수").textContent).toBe(
-      "김민수님이 시작한 회의"
-    );
-    expect(screen.getByRole("button", { name: /회의 종료/ })).toBeTruthy();
-  });
-
-  it("진행 중인 노트 상단은 누적 기록 시간을 초 단위로 갱신한다", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-11T00:23:41Z"));
-    renderControls(
-      note({
-        meetingStartedAt: "2026-07-11T00:00:00Z",
-        recordedDurationMs: 0,
-        activeSessionStartedAt: "2026-07-11T00:00:00Z",
-      })
-    );
-    act(() => vi.advanceTimersByTime(0));
-
-    expect(
-      screen.getByRole("timer", { name: "누적 기록 시간" })
-    ).toHaveTextContent("23:41");
-
-    act(() => vi.advanceTimersByTime(1_000));
-
-    expect(
-      screen.getByRole("timer", { name: "누적 기록 시간" })
-    ).toHaveTextContent("23:42");
+    expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass("h-8");
   });
 
   it("녹음 중에도 회의 종료가 잠기지 않는다", () => {
@@ -117,80 +106,26 @@ describe("MeetingControls", () => {
     ).not.toHaveProperty("disabled", true);
   });
 
-  it("뷰어(시작자 아님)는 버튼 없이 상태와 시작자를 보인다", () => {
+  it("뷰어(시작자 아님)에게는 그룹째 없다", () => {
     state.userId = "user-other";
 
-    renderControls(
-      note({
-        meetingStartedBy: {
-          userId: "user-12345",
-          name: "김민수",
-          email: "minsu@heymoa.com",
-          image: null,
-        },
-      })
-    );
+    const { container } = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
 
-    expect(screen.getByText("기록 중")).toBeTruthy();
-    expect(screen.getByText("김민수").textContent).toBe(
-      "김민수님이 시작한 회의"
-    );
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(container.firstChild).toBeNull();
   });
 
-  it("뷰어의 시작자 이름은 모바일에서도 보이고 전체 설명은 접근 가능하다", () => {
-    state.userId = "user-other";
-
-    renderControls(
-      note({
-        meetingStartedBy: {
-          userId: "user-12345",
-          name: "김민수",
-          email: "minsu@heymoa.com",
-          image: null,
-        },
-      })
+  // `요약 보기` 버튼은 없앴다 — 바로 위 탭 줄에 `요약`이 있어 같은 곳으로 가는 길이 둘이었다.
+  it("종료·미시작에는 아무것도 내놓지 않는다", () => {
+    const ended = render(
+      <MeetingControls
+        note={note({ meetingStatus: "ENDED", activeSessionStartedAt: null })}
+        onMeetingEnded={vi.fn()}
+      />
     );
+    expect(ended.container.firstChild).toBeNull();
+    cleanup();
 
-    const name = screen.getByText("김민수");
-    expect(name.classList.contains("hidden")).toBe(false);
-    expect(name.classList.contains("truncate")).toBe(true);
-    const description = screen.getByText("님이 시작한 회의");
-    expect(description.classList.contains("sr-only")).toBe(true);
-    expect(description.classList.contains("sm:not-sr-only")).toBe(true);
-  });
-
-  it("종료된 회의는 종료 상태와 누적 시간만 보인다", () => {
-    renderControls(note({ meetingStatus: "ENDED" }));
-
-    expect(screen.getByText("종료됨")).toBeTruthy();
-    expect(screen.queryByText("테스트 유저")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
-  });
-
-  it("종료된 회의도 문맥 표시를 요청하면 시작자명을 보이되 종료 버튼은 두지 않는다", () => {
-    renderControls(
-      note({
-        meetingStatus: "ENDED",
-        meetingStartedBy: {
-          userId: "user-12345",
-          name: "김민수",
-          email: "minsu@heymoa.com",
-          image: null,
-        },
-      }),
-      true
-    );
-
-    expect(screen.getByText("종료됨")).toBeTruthy();
-    expect(screen.getByText("김민수").textContent).toBe(
-      "김민수님이 시작한 회의"
-    );
-    expect(screen.queryByRole("button")).toBeNull();
-  });
-
-  it("아직 시작 전이면 상태와 00:00을 그린다", () => {
-    renderControls(
+    const notStarted = renderControls(
       note({
         meetingStatus: "NOT_STARTED",
         meetingStartedBy: null,
@@ -199,11 +134,7 @@ describe("MeetingControls", () => {
         activeSessionStartedAt: null,
       })
     );
-
-    expect(screen.getByText("시작 전")).toBeInTheDocument();
-    expect(
-      screen.getByRole("timer", { name: "누적 기록 시간" })
-    ).toHaveTextContent("00:00");
+    expect(notStarted.container.firstChild).toBeNull();
   });
 
   it("회의 종료를 누르면 확인 다이얼로그를 연다", () => {
@@ -212,51 +143,5 @@ describe("MeetingControls", () => {
     fireEvent.click(screen.getByRole("button", { name: /회의 종료/ }));
 
     expect(screen.getByTestId("end-dialog")).toBeTruthy();
-  });
-
-  it("초마다 바뀌는 누적 타이머는 live region이 아니다", () => {
-    renderControls(note({ meetingStatus: "IN_PROGRESS" }));
-
-    expect(
-      screen.getByRole("timer", { name: "누적 기록 시간" })
-    ).not.toHaveAttribute("aria-live");
-    expect(screen.queryByRole("status", { name: "누적 기록 시간" })).toBeNull();
-  });
-
-  it("서버 상태와 누적 기록 시간을 한 회의 제어 그룹에 표시한다", () => {
-    renderControls(
-      note({
-        meetingStatus: "PAUSED",
-        activeSessionStartedAt: null,
-        recordedDurationMs: 65_000,
-      })
-    );
-
-    expect(
-      screen.getByRole("group", { name: "회의 상태 및 제어" })
-    ).toBeInTheDocument();
-    expect(screen.getByText("중지됨")).toBeInTheDocument();
-    expect(
-      screen.getByRole("timer", { name: "누적 기록 시간" })
-    ).toHaveTextContent("01:05");
-    expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass(
-      "h-7"
-    );
-  });
-
-  // `요약 보기` 버튼은 없앴다 — 바로 위 탭 줄에 `요약`이 있어 같은 곳으로 가는 길이 둘이었다.
-  it("종료된 회의는 회의 종료도 요약 보기도 내놓지 않는다", () => {
-    render(
-      <MeetingControls
-        note={note({
-          meetingStatus: "ENDED",
-          activeSessionStartedAt: null,
-        })}
-        onMeetingEnded={vi.fn()}
-      />
-    );
-
-    expect(screen.queryByRole("button", { name: "요약 보기" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "회의 종료" })).toBeNull();
   });
 });

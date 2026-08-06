@@ -140,7 +140,7 @@ export function NoteArchive({ noteId }: { noteId: string }) {
     >
       <div
         data-testid="note-archive-content"
-        className="mx-auto w-full max-w-[820px] px-5 pb-7 pt-7 sm:px-9 sm:pb-9 sm:pt-9 lg:pb-28"
+        className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-7 pt-5 sm:pb-9 lg:pb-28"
       >
         <Tabs defaultValue="transcript">
           <TabsList variant="line" className="gap-6">

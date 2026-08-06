@@ -15,6 +15,24 @@ function meetingControls(page: Page) {
   return page.getByRole("group", { name: "회의 상태 및 제어" });
 }
 
+/**
+ * 노트 헤더. 상태 칩·제목·메타 두 줄이 여기 있다 — design.pen `MZRO0`/`c5cQ8n`.
+ * 회의 종료는 이 안의 `meetingControls`고, 창 제어는 위 상단바(`KktRX`)에 있다.
+ */
+function noteHeader(page: Page) {
+  return page.locator("header").filter({ has: page.getByRole("heading") });
+}
+
+/**
+ * 누적 기록 시간은 **정보 탭**에 있다. 헤더는 정본대로 분 단위 요약만 그린다
+ * (「기록 42분 (종료 세션 누적)」) — 초 단위로 바뀌는 값은 이 탭이 맡는다.
+ */
+async function cumulativeTimer(page: Page) {
+  const tab = page.getByRole("tab", { name: "정보" });
+  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  return page.getByRole("timer", { name: "누적 기록 시간" });
+}
+
 function recordedSeconds(value: string | null) {
   const [minutes = "0", seconds = "0"] = (value ?? "0:0").split(":");
   return Number(minutes) * 60 + Number(seconds);
@@ -33,7 +51,7 @@ async function createMeetingNote(page: Page) {
   const noteId = new URL(page.url()).pathname.split("/").at(-1);
   expect(noteId).toBeTruthy();
   await expect(
-    meetingControls(page).getByText("시작 전", { exact: true })
+    noteHeader(page).getByText("시작 전", { exact: true })
   ).toBeVisible();
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
@@ -48,7 +66,7 @@ async function startRecording(page: Page, name: "회의 시작" | "재개") {
     timeout: 20_000,
   });
   await expect(
-    meetingControls(page).getByText("기록 중", { exact: true })
+    noteHeader(page).getByText("기록 중", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -58,7 +76,7 @@ async function stopRecording(page: Page) {
     .getByRole("button", { name: "중지" })
     .click();
   await expect(
-    meetingControls(page).getByText("중지됨", { exact: true })
+    noteHeader(page).getByText("중지됨", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "재개" })
@@ -74,7 +92,7 @@ async function endMeeting(page: Page) {
     .getByRole("button", { name: "회의 종료" })
     .click();
   await expect(
-    meetingControls(page).getByText("종료됨", { exact: true })
+    noteHeader(page).getByText("종료됨", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -111,9 +129,12 @@ async function expectForeignViewerTranscript(
     if (viewportSize.width === 375) {
       // 상태·진행자는 이제 **노트 헤더**가 그린다 — 전체 화면이 워크스페이스 상단바를 덮으면서
       // 그 바의 노트 액션 슬롯이 사라졌다.
-      const header = meetingControls(page);
+      const header = noteHeader(page);
       const status = header.getByText("기록 중", { exact: true });
-      const starterName = header.getByText("김서연", { exact: false });
+      // 시작자 이름은 참관자에게만, 메타 둘째 줄에서 말한다.
+      const starterName = header.getByText("김서연님이 기록 중", {
+        exact: false,
+      });
       await expect(status).toBeVisible();
       await expect(starterName).toBeVisible();
       const starterBox = await starterName.boundingBox();
@@ -459,9 +480,7 @@ test("creates a NOT_STARTED note without requesting the microphone", async ({
 
   await createMeetingNote(page);
 
-  await expect(
-    meetingControls(page).getByRole("timer", { name: "누적 기록 시간" })
-  ).toHaveText("00:00");
+  await expect(await cumulativeTimer(page)).toHaveText("00:00");
   expect(
     await page.evaluate(
       () =>
@@ -475,11 +494,7 @@ test("starts and ends a meeting through one confirmation", async ({ page }) => {
   await createMeetingNote(page);
   await startRecording(page, "회의 시작");
   expect(
-    recordedSeconds(
-      await meetingControls(page)
-        .getByRole("timer", { name: "누적 기록 시간" })
-        .textContent()
-    )
+    recordedSeconds(await (await cumulativeTimer(page)).textContent())
   ).toBeLessThan(60);
 
   await endMeeting(page);
@@ -495,9 +510,7 @@ test("freezes cumulative time across stop and end", async ({ page }) => {
   await startRecording(page, "회의 시작");
   await stopRecording(page);
 
-  const timer = meetingControls(page).getByRole("timer", {
-    name: "누적 기록 시간",
-  });
+  const timer = await cumulativeTimer(page);
   const stopped = recordedSeconds(await timer.textContent());
   expect(stopped).toBeGreaterThan(0);
   await page.waitForTimeout(1_100);
@@ -505,7 +518,10 @@ test("freezes cumulative time across stop and end", async ({ page }) => {
 
   await endMeeting(page);
 
-  expect(recordedSeconds(await timer.textContent())).toBe(stopped);
+  // 종료는 요약 탭으로 넘긴다 — 누적 시간은 정보 탭이 들고 있으니 다시 열어서 읽는다.
+  expect(
+    recordedSeconds(await (await cumulativeTimer(page)).textContent())
+  ).toBe(stopped);
 });
 
 test("continues cumulative time across stop, resume, and stop", async ({
@@ -515,9 +531,7 @@ test("continues cumulative time across stop, resume, and stop", async ({
   await startRecording(page, "회의 시작");
   await stopRecording(page);
 
-  const timer = meetingControls(page).getByRole("timer", {
-    name: "누적 기록 시간",
-  });
+  const timer = await cumulativeTimer(page);
   const firstStop = recordedSeconds(await timer.textContent());
   expect(firstStop).toBeGreaterThan(0);
 
@@ -534,7 +548,7 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
   page,
 }) => {
   const noteId = await createMeetingNote(page);
-  await page.getByRole("button", { name: "노트 닫기" }).click();
+  await page.getByRole("button", { name: "목록으로" }).click();
   await page
     .getByRole("link", { name: "주간 제품 회의 노트 열기" })
     .first()
@@ -547,7 +561,7 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
     page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
   ).toBeVisible();
   await expect(
-    meetingControls(page).getByText("시작 전", { exact: true })
+    noteHeader(page).getByText("시작 전", { exact: true })
   ).toBeVisible();
 });
 
@@ -561,11 +575,11 @@ test("shows meeting context and shared chat inside the viewer side panel", async
   const noteSurface = page.getByLabel("노트", { exact: true });
   await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
   await expect(
-    noteSurface.getByText("김서연님이 시작한 회의", { exact: true })
+    noteSurface.getByText("김서연님이 기록 중 · 워크스페이스 멤버에게 공개")
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["정보", "스크립트", "챗봇"]);
+  await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "챗봇"]);
 
   await page.getByRole("tab", { name: "챗봇" }).click();
 
@@ -584,7 +598,7 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   const noteSurface = page.getByLabel("노트", { exact: true });
   await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
   await expect(
-    noteSurface.getByText("테스트 유저님이 시작한 회의", { exact: true })
+    noteSurface.getByText("워크스페이스 멤버에게 공개", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(
@@ -599,9 +613,9 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
     timeout: 20_000,
   });
   await expect(
-    meetingControls(page).getByText("종료됨", { exact: true })
+    noteHeader(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
-  await expect(page.getByRole("tab")).toHaveText(["정보", "스크립트", "요약"]);
+  await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "요약"]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });
@@ -620,7 +634,7 @@ test("ends a meeting and shows the analysis in progress", async ({ page }) => {
     timeout: 20_000,
   });
   await expect(
-    meetingControls(page).getByText("종료됨", { exact: true })
+    noteHeader(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
 });
 
@@ -799,7 +813,7 @@ test("keeps the personal chat scrollable when the thread grows", async ({
  */
 /**
  * 전체 화면은 **사이드바까지 덮는다** (design.pen `XtEMZ`: 1420 = 1440 − 좌우 10, 사이드바
- * 없음). 그래서 목록으로 돌아가는 길은 사이드바가 아니라 노트가 가진 닫기다 — 예전에는
+ * 없음). 그래서 목록으로 돌아가는 길은 사이드바가 아니라 노트 상단바의 ← 목록으로다 — 예전에는
  * 사이드바의 프로젝트를 눌러 나갔다.
  */
 test("covers the sidebar in full view and leaves the note's own close as the way back", async ({
@@ -814,7 +828,7 @@ test("covers the sidebar in full view and leaves the note's own close as the way
     page.locator('[data-slot="sidebar-container"]')
   ).toHaveAttribute("inert", /.*/);
 
-  await page.getByRole("button", { name: "노트 닫기" }).click();
+  await page.getByRole("button", { name: "목록으로" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
 });
 
@@ -1014,8 +1028,8 @@ test("clears the note row spinner after the full-view note is closed", async ({
   await page.getByRole("menuitem", { name: "전체 화면" }).click();
   await expect(page).toHaveURL(/view=full/);
 
-  // 전체 화면이 사이드바를 덮으므로 되돌아가는 길은 노트 자신의 닫기다.
-  await page.getByRole("button", { name: "노트 닫기" }).click();
+  // 전체 화면이 사이드바를 덮으므로 되돌아가는 길은 노트 상단바의 ← 목록으로다.
+  await page.getByRole("button", { name: "목록으로" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
 
   await expect(row.locator(".animate-spin")).toHaveCount(0);
@@ -1048,8 +1062,8 @@ test("switches note tabs without an RSC round trip", async ({ page }) => {
   // 진입 자체의 prefetch·내비게이션은 정당하다. 세는 것은 **탭을 누른 뒤**의 요청뿐이다.
   rscRequests.length = 0;
 
-  await page.getByRole("tab", { name: "스크립트" }).click();
-  await expect(page.getByRole("tab", { name: "스크립트" })).toHaveAttribute(
+  await page.getByRole("tab", { name: "전사" }).click();
+  await expect(page.getByRole("tab", { name: "전사" })).toHaveAttribute(
     "aria-selected",
     "true"
   );

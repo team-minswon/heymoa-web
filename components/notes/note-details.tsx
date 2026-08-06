@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Check, Clock3 } from "lucide-react";
+import { CalendarDays, Check, Clock3, Mic, UserRound } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
 import { NoteParticipantsField } from "@/components/notes/note-participants-field";
+import { ParticipantAvatar } from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,15 @@ import {
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
 import { formatAppDate } from "@/lib/format/date";
+import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
+import { useAlignedNow } from "@/lib/notes/use-aligned-now";
+
+function formatRecordedClock(elapsedMs: number) {
+  const totalSeconds = Math.floor(elapsedMs / 1_000);
+  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(
+    totalSeconds % 60
+  ).padStart(2, "0")}`;
+}
 
 export function NoteDetails({
   noteId,
@@ -31,12 +41,25 @@ export function NoteDetails({
     mutation: { meta: { suppressErrorToast: true } },
   });
   const [feedback, setFeedback] = useState<"saved" | null>(null);
+  const loaded =
+    noteResponse.status === 200 && noteResponse.data.success
+      ? noteResponse.data.data
+      : undefined;
+  // **throw보다 먼저 부른다.** 아래 경계로 던지는 렌더와 정상 렌더가 훅 개수까지 달라지면
+  // 안 된다. 진행 중일 때만 돌고, 세션 시작 초에 맞춰 눈금이 튀지 않게 원점을 넘긴다.
+  const now = useAlignedNow(
+    1_000,
+    loaded?.meetingStatus === "IN_PROGRESS",
+    loaded?.activeSessionStartedAt
+      ? [Date.parse(loaded.activeSessionStartedAt)]
+      : []
+  );
 
   // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
-  if (noteResponse.status !== 200 || !noteResponse.data.success) {
+  if (!loaded) {
     throw new Error("노트를 불러오지 못했습니다.");
   }
-  const note = noteResponse.data.data;
+  const note = loaded;
 
   // 노트 단건과 목록을 함께 무효화한다 — 목록은 projectId별로 조회하므로(workspace-page)
   // 단건만 무효화하면 제목 변경이 목록에 반영되지 않는다.
@@ -51,7 +74,7 @@ export function NoteDetails({
   return (
     <form
       key={`${note.noteId}-${note.updatedAt}`}
-      className="mx-auto w-full max-w-[820px] space-y-10 px-5 pb-36 pt-7 sm:px-9 sm:pt-9"
+      className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] space-y-10 px-[var(--note-gutter)] pb-36 pt-6"
       onSubmit={async (event) => {
         event.preventDefault();
         setFeedback(null);
@@ -129,6 +152,37 @@ export function NoteDetails({
             })}
           </dd>
         </div>
+        {/* 누적 기록 시간과 진행자의 자리는 여기다. 노트 헤더는 정본대로(design.pen `MZRO0`)
+            상태 칩·제목·메타 두 줄만 갖고, 초 단위로 바뀌는 값과 얼굴은 이 탭이 맡는다 —
+            헤더에 함께 두었을 때 그 줄만 소리쳤고 좁은 폭에서 감기며 전사 높이를 눌렀다.
+            헤더의 메타 둘째 줄은 같은 값을 분 단위로 요약한다(「기록 42분」). */}
+        <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
+          <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
+            <Mic className="size-3.5" /> 기록 시간
+          </dt>
+          <dd
+            role="timer"
+            aria-label="누적 기록 시간"
+            className="mt-3 text-sm tabular-nums text-[var(--el-body-strong)]"
+          >
+            {formatRecordedClock(getRecordedDurationMs(note, now ?? 0))}
+          </dd>
+        </div>
+        {note.meetingStartedBy ? (
+          <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
+            <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
+              <UserRound className="size-3.5" /> 진행자
+            </dt>
+            <dd className="mt-3 flex items-center gap-2 text-sm text-[var(--el-body-strong)]">
+              <ParticipantAvatar
+                participant={note.meetingStartedBy}
+                size="sm"
+                isStarter
+              />
+              {note.meetingStartedBy.name}
+            </dd>
+          </div>
+        ) : null}
       </dl>
 
       <div className="flex items-center gap-3 border-t border-[var(--el-hairline)] pt-6">
@@ -152,7 +206,7 @@ export function NoteDetails({
 /** 노트 정보 로딩 스켈레톤. DataBoundary fallback으로 부모(note-panel)가 쓴다. */
 export function NoteDetailsSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-[820px] space-y-5 px-5 pt-7 sm:px-9 sm:pt-9">
+    <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] space-y-5 px-[var(--note-gutter)] pt-6">
       <Skeleton className="h-10 w-2/3" />
       <Skeleton className="h-40 w-full" />
     </div>

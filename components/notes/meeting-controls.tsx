@@ -1,49 +1,82 @@
 "use client";
 
 import { useState } from "react";
-import { Square } from "lucide-react";
+import { CalendarDays, CircleStop, Eye, Pause } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
-import { ParticipantAvatar } from "@/components/notes/note-participants";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { NoteResponseData } from "@/lib/api/generated/models";
-import {
-  getRecordedDurationMs,
-  MEETING_STATUS_LABEL,
-} from "@/lib/notes/meeting-state";
-import { useAlignedNow } from "@/lib/notes/use-aligned-now";
+import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models";
+import { MEETING_STATUS_LABEL } from "@/lib/notes/meeting-state";
+import { cn } from "@/lib/utils";
 
-function formatRecordedClock(elapsedMs: number) {
-  const totalSeconds = Math.floor(elapsedMs / 1_000);
-  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(
-    totalSeconds % 60
-  ).padStart(2, "0")}`;
-}
+/**
+ * 회의 상태 칩. design.pen `u3yYCX`/`XtEMZ`의 Note Header 첫 줄 — 6px 점 또는 아이콘 하나에
+ * 11px semibold 라벨이 붙는다. 배경 없는 칩이라 프로젝트 pill과 나란히 놓여도 안 싸운다.
+ *
+ * **기록 중만 붉다.** 나머지는 muted다 — 종료·중지·시작 전은 사건이 아니라 상태다.
+ * 라벨은 `MEETING_STATUS_LABEL`을 그대로 쓴다(목록 행과 같은 이름). 정본은 「예정」이라고
+ * 적혀 있지만 목록이 「시작 전」으로 부르는 같은 상태라, 화면마다 다르게 부르지 않는다.
+ */
+export function MeetingStatusChip({
+  status,
+}: {
+  status: NoteResponseDataMeetingStatus;
+}) {
+  const live = status === "IN_PROGRESS";
+  const Icon =
+    status === "NOT_STARTED" ? CalendarDays : status === "PAUSED" ? Pause : null;
 
-function RecordedTime({ elapsedMs }: { elapsedMs: number }) {
   return (
     <span
-      role="timer"
-      aria-label="누적 기록 시간"
-      className="text-xs font-medium tabular-nums text-[var(--el-muted)]"
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 text-[11px] font-semibold",
+        live ? "text-destructive" : "text-[var(--el-muted)]"
+      )}
     >
-      {formatRecordedClock(elapsedMs)}
+      {Icon ? (
+        <Icon className="size-3.5" aria-hidden />
+      ) : (
+        <span
+          aria-hidden
+          className={cn(
+            "size-1.5 rounded-full",
+            live ? "bg-destructive" : "bg-[var(--el-muted)]"
+          )}
+        />
+      )}
+      {MEETING_STATUS_LABEL[status]}
     </span>
   );
 }
 
+/**
+ * 참관 칩. 기록 중인데 내가 시작자가 아닐 때 선다 — 회의 제어가 왜 없는지를 그 자리에서
+ * 말해 준다(design.pen `BiafK`). 예전에는 헤더가 시작자 아바타와 이름을 그렸는데, 제어가
+ * 없는 이유는 여전히 화면 어디에도 없었다. 시작자가 누구인지는 아래 메타 줄이 말한다.
+ */
+export function MeetingViewerChip() {
+  return (
+    <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold text-[var(--el-muted)]">
+      <Eye className="size-3.5" aria-hidden />
+      참관
+    </span>
+  );
+}
+
+/**
+ * 회의 제어. design.pen의 Meeting Bar는 **회의 종료 하나뿐이다** — 상태 칩은 헤더 첫 줄로,
+ * 초 단위 타이머는 레코더 독(`qYRCW`)으로 갔다. 예전에는 이 그룹이 상태 배지·누적 타이머·
+ * 시작자 아바타까지 들고 있어서 조용한 헤더에서 이 줄만 소리쳤다.
+ */
 export function MeetingControls({
   note,
   onMeetingEnded,
-  showContext = false,
 }: {
   note: NoteResponseData;
   /** 종료 접수 후 호출 — note-panel이 요약 탭으로 넘긴다. */
   onMeetingEnded?: () => void;
-  /** side 헤더처럼 시작자에게도 상태와 시작자명을 함께 보여 주는 면. */
-  showContext?: boolean;
 }) {
   const { user } = useAuth();
   const [endOpen, setEndOpen] = useState(false);
@@ -52,62 +85,37 @@ export function MeetingControls({
   const isStarter = Boolean(
     user && startedBy && startedBy.userId === user.userId
   );
-  const now = useAlignedNow(
-    1_000,
-    note.meetingStatus === "IN_PROGRESS",
-    note.activeSessionStartedAt ? [Date.parse(note.activeSessionStartedAt)] : []
-  );
-  const showStarter = Boolean(startedBy && (showContext || !isStarter));
   const canEnd =
     isStarter &&
     (note.meetingStatus === "IN_PROGRESS" || note.meetingStatus === "PAUSED");
+
+  if (!canEnd) return null;
 
   return (
     <div
       role="group"
       aria-label="회의 상태 및 제어"
-      // 좁은 폭에서 감기면 이 줄을 품은 노트 헤더가 세로로 자란다 — sm부터는 감지 않고
-      // 줄여서 넘긴다(전사 높이를 0으로 만들던 자리).
-      className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap"
+      className="flex shrink-0 items-center gap-3"
     >
-      <Badge variant="secondary">
-        {MEETING_STATUS_LABEL[note.meetingStatus]}
-      </Badge>
-      <RecordedTime elapsedMs={getRecordedDurationMs(note, now ?? 0)} />
-      {/* 얼굴은 목록 행과 같은 아바타로 낸다 — 이름 하나만 있으면 좁은 폭에서 잘리고,
-          목록에서 본 사람과 같은 사람인지 알 수 없다. */}
-      {showStarter && startedBy ? (
-        <span className="flex min-w-0 items-center gap-1.5">
-          <ParticipantAvatar participant={startedBy} size="sm" isStarter />
-          <span className="max-w-16 truncate text-xs text-[var(--el-muted)] sm:max-w-none">
-            {startedBy.name}
-            <span className="sr-only sm:not-sr-only">님이 시작한 회의</span>
-          </span>
-        </span>
-      ) : null}
-      {canEnd ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          // 붉은 테두리 + 붉은 글자 + h-10이라 조용한 헤더에서 이것만 소리쳤다. 종료는
-          // 다이얼로그가 한 번 더 확인하므로 여기서까지 경고색을 두를 필요가 없다.
-          className="text-destructive hover:text-destructive"
-          onClick={() => setEndOpen(true)}
-        >
-          <Square className="size-3.5" />
-          회의 종료
-        </Button>
-      ) : null}
-      {canEnd ? (
-        <MeetingEndDialog
-          noteId={note.noteId}
-          meetingStatus={note.meetingStatus}
-          open={endOpen}
-          onOpenChange={setEndOpen}
-          onEnded={onMeetingEnded}
-        />
-      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        // design.pen `Dpy5O`: h32 · r8 · destructive 테두리와 글자 · 12px. 예전에 붉은
+        // 테두리를 뺀 것은 이 버튼이 h-10이던 때의 이야기다 — 32px에 12px 글자면 정본대로
+        // 둘러도 헤더에서 튀지 않고, 종료는 다이얼로그가 한 번 더 확인한다.
+        className="h-8 gap-1.5 rounded-control border-destructive px-2.5 text-xs text-destructive hover:text-destructive"
+        onClick={() => setEndOpen(true)}
+      >
+        <CircleStop className="size-4" />
+        회의 종료
+      </Button>
+      <MeetingEndDialog
+        noteId={note.noteId}
+        meetingStatus={note.meetingStatus}
+        open={endOpen}
+        onOpenChange={setEndOpen}
+        onEnded={onMeetingEnded}
+      />
     </div>
   );
 }

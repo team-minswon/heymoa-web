@@ -71,6 +71,10 @@ const noteState = vi.hoisted(() => ({
     meetingStartedAt: "2026-07-29T00:00:00Z",
     recordedDurationMs: 60_000,
     activeSessionStartedAt: "2026-07-29T00:01:00Z" as string | null,
+    participants: [
+      { userId: "u1", name: "테스트 유저", email: "test@heymoa.com" },
+      { userId: "u2", name: "김서연", email: "seoyeon@heymoa.com" },
+    ] as unknown,
   },
 }));
 
@@ -244,6 +248,10 @@ describe("NotePanel", () => {
       meetingStartedAt: "2026-07-29T00:00:00Z",
       recordedDurationMs: 60_000,
       activeSessionStartedAt: "2026-07-29T00:01:00Z",
+      participants: [
+        { userId: "u1", name: "테스트 유저", email: "test@heymoa.com" },
+        { userId: "u2", name: "김서연", email: "seoyeon@heymoa.com" },
+      ],
     };
   });
   it("changes only the controlled tab", () => {
@@ -259,10 +267,12 @@ describe("NotePanel", () => {
       />
     );
 
-    expect(screen.getByRole("tab", { name: "스크립트" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "전사" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
-    expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
+    // 제목은 두 번 나온다 — 상단바의 빵조각(13)과 노트 헤더의 세리프 제목(34)이다.
+    expect(screen.getAllByText("주간 제품 회의")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "주간 제품 회의" })).toBeTruthy();
     expect(screen.getByText("주간")).toBeInTheDocument();
     expect(useGetProject).toHaveBeenCalledWith(
       "01K0000000000",
@@ -525,7 +535,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeTruthy();
   });
 
-  it("side + 활성은 정보·스크립트·챗봇 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
+  it("side + 활성은 정보·전사·챗봇 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -539,7 +549,7 @@ describe("NotePanel", () => {
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
-      "스크립트",
+      "전사",
       "챗봇",
     ]);
     expect(
@@ -585,7 +595,7 @@ describe("NotePanel", () => {
         />
       );
 
-      const started = screen.getByText(/7월 29일.*시작/);
+      const started = screen.getByText(/7월 29일/);
       expect(started.tagName).toBe("TIME");
       expect(started).toHaveAttribute("datetime", "2026-07-29T00:00:00Z");
     }
@@ -880,7 +890,10 @@ describe("NotePanel", () => {
     expect(
       screen.getByRole("group", { name: "회의 상태 및 제어" })
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toBeTruthy();
+    // 목록으로 나가는 길은 상단바의 ← 하나다 — 예전에는 같은 곳으로 가는 「노트 닫기」가
+    // 헤더에 따로 있었다.
+    expect(screen.getByRole("button", { name: "목록으로" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "노트 닫기" })).toBeNull();
     expect(screen.getByRole("button", { name: "사이드 뷰로 보기" })).toBeTruthy();
   });
 
@@ -906,7 +919,7 @@ describe("NotePanel", () => {
     ).toBeDisabled();
   });
 
-  it("side + 종료는 정보·스크립트·요약 탭과 아카이브를 보인다", () => {
+  it("side + 종료는 정보·전사·요약 탭과 아카이브를 보인다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -921,7 +934,7 @@ describe("NotePanel", () => {
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
-      "스크립트",
+      "전사",
       "요약",
     ]);
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
@@ -941,22 +954,29 @@ describe("NotePanel", () => {
       />
     );
 
+    // 상태는 헤더 첫 줄의 칩이다. 시작자에게는 자기 이름을 다시 적지 않는다 — 참관일 때만
+    // 메타 줄이 「OOO님이 기록 중」을 말한다.
     expect(screen.getByText("기록 중")).toBeInTheDocument();
-    expect(screen.getByText("테스트 유저")).toBeInTheDocument();
+    expect(screen.queryByText("참관")).toBeNull();
+    expect(screen.getByText("워크스페이스 멤버에게 공개")).toBeInTheDocument();
+    expect(
+      screen.getByText("워크스페이스 멤버에게 공개").parentElement?.textContent
+    ).toMatch(/^참석자 \d+명 · /);
     expect(
       screen.getByRole("group", { name: "회의 상태 및 제어" })
     ).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "창 제어" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
-      "size-10"
-    );
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
     fireEvent.click(screen.getByRole("button", { name: "종료 확인" }));
 
     expect(onTabChange).toHaveBeenCalledWith("summary");
   });
 
-  it("side 좁은 헤더는 제목과 상태·창 제어 그룹을 쌓고 창 제어 버튼 크기를 유지한다", () => {
+  // 좁은 폭에서 헤더가 세로로 자라 전사 높이를 0까지 밀어낸 적이 있다(812×375 landscape에서
+  // 헤더 278/355 실측). 그 원인은 창 제어·회의 제어·상태·제목이 **한 헤더에 다 있었기**
+  // 때문이다. 지금 창 제어는 높이 56이 고정된 상단바로 나갔고(design.pen `KktRX`), 노트 헤더에
+  // 남은 것은 제목·메타와 회의 종료뿐이라 폭으로 감길 것이 거의 없다.
+  it("창 제어는 고정 높이 상단바에 있고 노트 헤더에는 제목·메타만 남는다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -969,35 +989,22 @@ describe("NotePanel", () => {
       />
     );
 
-    const title = screen.getByRole("heading", { name: "주간 제품 회의" });
-    const headerLayout = title.parentElement?.parentElement;
-    const meetingGroup = screen.getByRole("group", {
-      name: "회의 상태 및 제어",
-    });
     const windowGroup = screen.getByRole("group", { name: "창 제어" });
-    const controlLayout = windowGroup.parentElement;
-
-    // 한 줄로 펴는 지점이 `sm`(640)에서 `lg`(1024)로 내려갔다. 전체 화면의 노트 패널은
-    // 레일 440을 뺀 나머지라, sm에서 펴면 좁은 폭에서 헤더가 세로로 자라 전사 높이를
-    // 0까지 밀어냈다(812×375 landscape에서 헤더 278/355 실측).
-    expect(headerLayout).toHaveClass(
-      "flex-col",
-      "lg:flex-row",
-      "lg:items-start"
-    );
-    expect(controlLayout).toHaveClass(
-      "w-full",
-      "flex-wrap",
-      "justify-between",
-      "lg:w-auto"
-    );
-    expect(meetingGroup).toHaveClass("flex-wrap");
+    const topBar = windowGroup.parentElement?.parentElement;
+    expect(topBar).toHaveClass("h-14", "shrink-0");
+    // 정본은 32×32 버튼이다(`UfrA6`/`BJAQl`).
     expect(
       screen.getByRole("button", { name: "전체 화면으로 보기" })
-    ).toHaveClass("size-10");
-    expect(screen.getByRole("button", { name: "노트 닫기" })).toHaveClass(
-      "size-10"
+    ).toHaveClass("size-8");
+    expect(screen.getByRole("button", { name: "목록으로" })).toHaveClass(
+      "size-8"
     );
+
+    // 헤더는 제목 줄 하나다 — 창 제어가 여기 없으니 감겨서 세로로 자랄 것도 없다.
+    const title = screen.getByRole("heading", { name: "주간 제품 회의" });
+    const headerRow = title.parentElement?.parentElement;
+    expect(headerRow).toHaveClass("items-start", "justify-between");
+    expect(headerRow?.contains(windowGroup)).toBe(false);
   });
 
   it("side 뷰어가 읽는 중 회의가 끝나면 안내 뒤 아카이브를 연다", () => {
@@ -1123,7 +1130,7 @@ describe("NotePanel", () => {
     }
   );
 
-  it("side + 미시작은 정보·스크립트와 회의 시작을 보인다", () => {
+  it("side + 미시작은 정보·전사와 회의 시작을 보인다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
     renderNotePanel(
@@ -1139,7 +1146,7 @@ describe("NotePanel", () => {
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
-      "스크립트",
+      "전사",
     ]);
     expect(
       screen.getByRole("button", { name: "회의 시작" })

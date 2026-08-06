@@ -175,7 +175,7 @@ export function NoteSummary({
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[820px] px-5 pt-7 pb-16 sm:px-9 sm:pt-9">
+    <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-16 pt-6">
       {children}
     </div>
   );
