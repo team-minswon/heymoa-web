@@ -139,12 +139,11 @@ describe("NoteDetails", () => {
     const facts = screen.getByRole("region", { name: "회의 정보" });
     expect(facts.querySelector(".rounded-block")).toBeNull();
 
+    // **표는 헤더가 말하지 않은 것만 담는다.** 회의 상태·프로젝트·시작 시각·참석자는
+    // 바로 위 노트 헤더에 같은 모양으로 이미 있고(칩·pill·메타 두 줄), 참석자는 이 탭의
+    // 편집 필드에도 있어서 세 번 나왔다.
     const rows = [...facts.querySelectorAll("dt")].map((dt) => dt.textContent);
     expect(rows).toEqual([
-      "회의 상태",
-      "프로젝트",
-      "시작 시각",
-      "참석자",
       "진행자",
       "누적 기록 시간",
       "공유 범위",
@@ -165,18 +164,16 @@ describe("NoteDetails", () => {
     ).toHaveTextContent("42:00");
   });
 
-  it("프로젝트는 읽기 전용 한 줄이다 — 바꿀 컨트롤을 두지 않는다", () => {
+  it("헤더가 이미 말하는 것을 표에 다시 적지 않는다", () => {
     renderDetails();
 
     const facts = screen.getByRole("region", { name: "회의 정보" });
-    expect(facts).toHaveTextContent("주간");
-    expect(
-      screen.queryByRole("combobox", { name: /프로젝트/ })
-    ).not.toBeInTheDocument();
-  });
-
-  it("시작 전이면 시작 시각 자리에 그 사실을 적는다", () => {
-    renderDetails();
-    expect(screen.getByText(/2026년 7월 10일/)).toBeInTheDocument();
+    // 상태·프로젝트·시작 시각은 노트 헤더의 칩·pill·메타 줄이 갖는다.
+    expect(facts).not.toHaveTextContent("회의 상태");
+    expect(facts).not.toHaveTextContent("프로젝트");
+    expect(facts).not.toHaveTextContent("시작 시각");
+    // 참석자는 편집 필드가 갖는다 — 표에 읽기 전용으로 또 두면 한 화면에 세 번이 된다.
+    expect(facts).not.toHaveTextContent("참석자");
+    expect(screen.getByText("참석자")).toBeInTheDocument();
   });
 });

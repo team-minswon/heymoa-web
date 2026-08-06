@@ -5,14 +5,8 @@ import { Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
-import {
-  MeetingStatusChip,
-} from "@/components/notes/meeting-controls";
 import { NoteParticipantsField } from "@/components/notes/note-participants-field";
-import {
-  NoteParticipantAvatars,
-  ParticipantAvatar,
-} from "@/components/notes/note-participants";
+import { ParticipantAvatar } from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +17,6 @@ import {
   useGetNoteSuspense,
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
-import { useGetProject } from "@/lib/api/generated/projects/projects";
 import { formatAppDate } from "@/lib/format/date";
 import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
@@ -100,22 +93,14 @@ export function NoteDetails({
       ? [Date.parse(loaded.activeSessionStartedAt)]
       : []
   );
-  // 프로젝트는 **읽기 전용이다** — 계약에 노트의 프로젝트를 바꾸는 길이 없다(`NoteRequest`는
-  // `title`만 받는다). 노트 헤더도 같은 쿼리를 부르므로 키가 같아 요청은 늘지 않는다.
-  const projectQuery = useGetProject(workspaceId, loaded?.projectId ?? "", {
-    query: { enabled: Boolean(loaded?.projectId) },
-  });
-  const project =
-    projectQuery.data?.status === 200 && projectQuery.data.data.success
-      ? projectQuery.data.data.data
-      : undefined;
+  // **프로젝트를 여기서 조회하지 않는다.** 노트 헤더의 pill이 이미 그 이름을 말하고, 계약에
+  // 노트의 프로젝트를 바꾸는 길도 없다(`NoteRequest`는 `title`만 받는다).
 
   // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
   if (!loaded) {
     throw new Error("노트를 불러오지 못했습니다.");
   }
   const note = loaded;
-  const participantCount = note.participants?.length ?? 0;
 
   // 노트 단건과 목록을 함께 무효화한다 — 목록은 projectId별로 조회하므로(workspace-page)
   // 단건만 무효화하면 제목 변경이 목록에 반영되지 않는다.
@@ -204,6 +189,19 @@ export function NoteDetails({
         </div>
       </form>
 
+      {/**
+       * **표는 헤더가 말하지 않은 것만 담는다.**
+       *
+       * 한때 회의 상태·프로젝트·시작 시각·참석자를 여기 다시 적었는데, 넷 다 바로 위
+       * 노트 헤더에 **글자까지 같은 모양으로** 이미 있다(상태 칩, 프로젝트 pill, 메타 두 줄).
+       * 참석자는 더 심해서, 헤더와 이 탭의 편집 필드와 표에 세 번 나왔다.
+       *
+       * 그래서 남긴 기준은 「한 줄 요약에 안 들어가는 사실」이다 —
+       * - 진행자: 헤더는 참관자에게만 이름을 말한다
+       * - 누적 기록 시간: 헤더는 분 단위 요약이고 기록 중에는 아예 안 적는다
+       * - 공유 범위: 헤더 메타 둘째 줄은 종료되면 누적 시간으로 바뀌어 이 값을 놓는다
+       * - 생성·최종 수정: 회의의 사실이 아니라 문서의 이력이라 헤더에 없다
+       */}
       <section aria-labelledby="note-facts-title" className="flex flex-col">
         <h2
           id="note-facts-title"
@@ -212,49 +210,6 @@ export function NoteDetails({
           회의 정보
         </h2>
         <dl className="flex flex-col">
-          <Fact label="회의 상태">
-            <MeetingStatusChip status={note.meetingStatus} />
-          </Fact>
-          {project ? <Fact label="프로젝트">{project.name}</Fact> : null}
-          <Fact label="시작 시각">
-            {note.meetingStartedAt ? (
-              <time dateTime={note.meetingStartedAt}>
-                {formatAppDate(note.meetingStartedAt, {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
-              </time>
-            ) : (
-              // **종료된 회의도 이 자리가 빌 수 있다** — 한 번도 ACTIVE 세션이 없었으면
-              // 계약상 `meetingStartedAt`이 null이다(기록 없이 끝낸 회의). 그때 「아직
-              // 시작하지 않았습니다」라고 적으면 바로 위 「종료됨」과 앞뒤가 안 맞는다.
-              <span className="font-normal text-[var(--el-muted)]">
-                {note.meetingStatus === "NOT_STARTED"
-                  ? "아직 시작하지 않았습니다"
-                  : "기록된 시작 시각이 없습니다"}
-              </span>
-            )}
-          </Fact>
-          <Fact label="참석자">
-            {participantCount > 0 ? (
-              <>
-                <NoteParticipantAvatars
-                  participants={note.participants}
-                  max={3}
-                  size="sm"
-                  className="-space-x-1.5 *:data-[slot=avatar]:ring-white"
-                />
-                <span className="ml-1">{participantCount}명</span>
-              </>
-            ) : (
-              <span className="font-normal text-[var(--el-muted)]">
-                없습니다
-              </span>
-            )}
-          </Fact>
           {note.meetingStartedBy ? (
             <Fact label="진행자">
               <ParticipantAvatar
