@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import {
   EB_Garamond,
   Geist_Mono,
+  Hahmlet,
   Inter,
   Noto_Serif_KR,
 } from "next/font/google";
@@ -45,6 +46,23 @@ const ebGaramond = EB_Garamond({
 const notoSerifKr = Noto_Serif_KR({
   variable: "--font-noto-serif-kr",
   weight: ["300", "400"],
+  preload: false,
+});
+
+/**
+ * **랜딩 히어로 전용 디스플레이 세리프.** Hahmlet은 한글·라틴을 한 벌로 가진 모던 명조라
+ * 히어로 한 화면 안에서 폰트가 갈리지 않는다. 300을 쓰는 것은 `font-serif`와 같은 이유다 —
+ * 세리프 라이트가 이 제품의 디스플레이 시그니처이고 굵게 가지 않는다(`DESIGN.md`).
+ *
+ * **전역 `--font-serif`는 건드리지 않았다.** 나머지 제목은 그대로 EB Garamond + Noto Serif KR이고,
+ * 이 변수는 히어로 `h1`에서만 참조한다.
+ *
+ * `preload: false`는 위 Noto Serif KR과 같은 이유다 — 한글 서브셋이 수백 조각이라
+ * preload가 쓰지도 않을 조각을 끌어온다.
+ */
+const hahmlet = Hahmlet({
+  variable: "--font-hahmlet",
+  weight: ["300"],
   preload: false,
 });
 
@@ -115,7 +133,7 @@ export default async function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${inter.variable} ${geistMono.variable} ${ebGaramond.variable} ${notoSerifKr.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} ${ebGaramond.variable} ${notoSerifKr.variable} ${hahmlet.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers initialUser={initialUser}>

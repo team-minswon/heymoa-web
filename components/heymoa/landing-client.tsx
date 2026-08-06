@@ -1,7 +1,16 @@
 "use client";
 
-import { MotionConfig, motion, type Variants } from "motion/react";
+import {
+  MotionConfig,
+  animate,
+  motion,
+  useMotionValue,
+  useMotionValueEvent,
+  useReducedMotion,
+  type Variants,
+} from "motion/react";
 import { Mic, MessageCircle, Play, Plug, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { LandingCta } from "@/components/heymoa/landing-cta";
 import { Button } from "@/components/ui/button";
@@ -119,6 +128,138 @@ function Orb({
   );
 }
 
+/**
+ * 히어로 둘째 줄에서 순환하는 단어들. **마지막 「가치있게.」에서 멈춘다.**
+ *
+ * 앞의 넷은 미션 M1~M4를 한 단어로 줄인 것이고(맥락을 잇는다 · 막힘을 푼다 · 흐름이 새지 않게
+ * 한다 · 반복을 대신한다), 마지막은 비전 문장 자신이다. 비전 「회의 시간을 가치있게」는
+ * `vision-and-principles.md`의 층위 1이라 **고정**이다 — 그래서 타이핑이 비전을 갈아치우지
+ * 않고, 미션 넷을 지나 비전에 도착한 뒤 그대로 선다. 정지 상태의 화면 = 비전 문장.
+ */
+const VISION = "가치있게.";
+const MISSION_WORDS = ["이어지게", "막히지 않게", "새지 않게", "손 안 가게"];
+const PHRASES = [...MISSION_WORDS, VISION];
+
+/** 폭을 미리 잡을 자리표시. 가장 긴 것을 골라야 타이핑 중 가운데 정렬이 좌우로 흔들리지 않는다. */
+const WIDEST = PHRASES.reduce((a, b) => (b.length > a.length ? b : a));
+
+const TYPE_SEC_PER_CHAR = 0.16;
+const ERASE_SEC_PER_CHAR = 0.07;
+const HOLD_MS = 1100;
+
+/**
+ * 타이핑은 글자 수를 세는 `MotionValue` 하나를 `animate`로 굴리고, 그 값으로 문구를 자른다.
+ * 글자마다 `setTimeout`을 새로 거는 대신 motion이 프레임 루프와 이징을 맡는다.
+ *
+ * **`<motion.span>{motionValue}</motion.span>`으로 넘기지 않는다.** motion 12의 `use-render`는
+ * children이 MotionValue이면 `useMemo(..., [children])`로 `.get()`을 **한 번만** 읽는다 —
+ * MotionValue의 정체성이 안 바뀌니 memo가 영원히 첫 값(빈 문자열)에 머문다. 실제로 커서만
+ * 깜빡이고 글자가 안 나왔다. 그래서 값 변화를 구독해 state로 옮긴다. 같은 문자열이면 React가
+ * 리렌더를 걸러 주므로 60fps 구독이어도 리렌더는 글자 수만큼만 일어난다.
+ *
+ * **reduced motion 분기는 렌더가 아니라 effect 안에 있다.** `useReducedMotion()`은 서버에서
+ * 항상 false로 시작해 클라이언트 첫 렌더에서 실제 값이 되므로, 렌더 중에 가르면 설정을 켠
+ * 사람에게 hydration 불일치가 난다. 하이드레이션 뒤에 마지막 문구로 건너뛴다.
+ */
+function TypedVision() {
+  const reduced = useReducedMotion();
+  const [index, setIndex] = useState(0);
+  const [typed, setTyped] = useState("");
+  const [done, setDone] = useState(false);
+  const phrase = PHRASES[index];
+  const count = useMotionValue(0);
+
+  useMotionValueEvent(count, "change", (v) =>
+    setTyped(phrase.slice(0, Math.round(v))),
+  );
+
+  useEffect(() => {
+    // 움직임을 줄여 달라고 한 사람에게는 순환 없이 비전 문장만 세워 둔다. `index`는 건드리지
+    // 않는다 — 아무것도 애니메이션하지 않으니 어느 문구를 칠 차례인지가 의미가 없다.
+    // 하이드레이션 뒤에야 알 수 있는 브라우저 설정이라 effect 말고 둘 자리가 없다.
+    if (reduced) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setTyped(VISION);
+      setDone(true);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+
+    let cancelled = false;
+    let erasing: ReturnType<typeof animate> | undefined;
+    let hold: ReturnType<typeof setTimeout> | undefined;
+
+    const typing = animate(count, phrase.length, {
+      duration: phrase.length * TYPE_SEC_PER_CHAR,
+      ease: "linear",
+    });
+
+    void typing.finished.then(() => {
+      if (cancelled) return;
+
+      // 마지막 문구에 닿으면 지우지 않는다 — 여기가 비전 문장이고, 화면은 이 상태로 남는다.
+      // 커서도 같이 거둔다. 남겨 두면 다 끝난 화면에서 혼자 깜빡여 아직 뭔가 입력 중인 것처럼
+      // 보이고, 정지 상태의 히어로는 비전 문장 그 자체여야 한다.
+      if (index === PHRASES.length - 1) {
+        setDone(true);
+        return;
+      }
+
+      hold = setTimeout(() => {
+        erasing = animate(count, 0, {
+          duration: phrase.length * ERASE_SEC_PER_CHAR,
+          ease: "linear",
+        });
+        void erasing.finished.then(() => {
+          if (!cancelled) setIndex((i) => i + 1);
+        });
+      }, HOLD_MS);
+    });
+
+    return () => {
+      cancelled = true;
+      typing.stop();
+      erasing?.stop();
+      clearTimeout(hold);
+    };
+  }, [count, index, phrase, reduced]);
+
+  return (
+    // `inline-grid`로 자리표시와 실제 글자를 같은 칸에 겹쳐 둔다. 자리표시가 폭을 잡아 주므로
+    // 글자가 늘고 줄어도 줄 전체가 좌우로 밀리지 않는다.
+    <span className="inline-grid">
+      <span aria-hidden className="invisible col-start-1 row-start-1">
+        {WIDEST}
+      </span>
+      <span
+        aria-hidden
+        className="col-start-1 row-start-1 justify-self-center whitespace-pre"
+      >
+        {typed}
+        {/*
+          커서. 비전 문장에 도착하면 사라진다 — 위 `setDone` 참조.
+          `MotionConfig reducedMotion="user"`가 감싸고 있어 설정을 켠 사람에게는 안 깜빡인다.
+        */}
+        {!done && (
+          <motion.span
+            animate={{ opacity: [1, 1, 0, 0] }}
+            transition={{
+              duration: 1,
+              times: [0, 0.5, 0.5, 1],
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="ml-[0.06em] inline-block w-[0.045em] translate-y-[0.06em] self-stretch bg-[var(--el-ink)] align-baseline"
+            style={{ height: "0.78em" }}
+          />
+        )}
+      </span>
+      {/* 스크린리더와 크롤러에는 애니메이션이 아니라 완성된 비전 문장이 보인다. */}
+      <span className="sr-only">{VISION}</span>
+    </span>
+  );
+}
+
 function Hero() {
   return (
     // `pt`가 `py`보다 큰 것은 상단바 몫이다 — 떠 있는 알약(fixed top-4)이라 문서 흐름에
@@ -161,11 +302,14 @@ function Hero() {
 
         <motion.h1
           variants={fadeInUp}
-          className="mt-8 font-serif text-[52px] leading-[1.02] font-light tracking-[-1.7px] break-keep text-[var(--el-ink)] sm:text-[76px] sm:tracking-[-2.5px] lg:text-[104px] lg:leading-[106px] lg:tracking-[-3.4px]"
+          // 히어로만 Hahmlet 300이다. 전역 `--font-serif`(EB Garamond + Noto Serif KR)는
+          // 그대로 두고 여기서만 앞에 끼운다 — 한글이 없는 글리프는 뒤 스택이 받는다.
+          style={{ fontFamily: "var(--font-hahmlet), var(--font-serif)" }}
+          className="mt-8 text-[52px] leading-[1.02] font-light tracking-[-1.7px] break-keep text-[var(--el-ink)] sm:text-[76px] sm:tracking-[-2.5px] lg:text-[104px] lg:leading-[106px] lg:tracking-[-3.4px]"
         >
           회의 시간을
           <br />
-          가치있게.
+          <TypedVision />
         </motion.h1>
 
         <motion.p
