@@ -331,6 +331,13 @@ function SummaryItem({
     <>
       {item.content}
       {hasEvidence ? (
+        <>
+          {/* 마커는 그림이라 `aria-hidden`이다. 개수는 화면에만 남고 스크린리더에서
+              사라지므로 여기서 말로 준다 — 몇 개인지가 펼칠지 말지의 근거다. */}
+          <span className="sr-only">{` 근거 ${item.evidence.length}개`}</span>
+        </>
+      ) : null}
+      {hasEvidence ? (
         <span
           aria-hidden
           /* 각주 마커. 컨트롤은 줄 전체이므로 여기는 상태 표시만 한다. */
@@ -367,9 +374,14 @@ function SummaryItem({
              문장 전체가 죽은 영역이 된다.
 
              **선택은 살려 둔다** — 요약은 복사해 가는 글이다. 드래그로 글자를 집은
-             뒤의 mouseup도 click이라, 선택이 남아 있으면 펼치지 않는다. */
-          onClick={() => {
-            if (!window.getSelection()?.isCollapsed) return;
+             뒤의 mouseup도 click이라, 선택이 남아 있으면 펼치지 않는다.
+
+             **그 방어는 포인터에만 건다.** 키보드 Space·Enter가 만드는 click은
+             `detail === 0`이고, 선택을 남긴 채 포커스를 옮겨 온 사람은 그것으로도
+             못 펼치게 된다. */
+          onClick={(event) => {
+            const byPointer = event.detail > 0;
+            if (byPointer && !window.getSelection()?.isCollapsed) return;
             setOpen((current) => !current);
           }}
           className="group/claim -mx-2 block w-full select-text rounded-block px-2 py-0.5 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"

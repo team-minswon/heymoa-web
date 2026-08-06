@@ -125,6 +125,15 @@ describe("NoteSummary 항목 리스트", () => {
     expect(screen.getByText("04:12")).toBeInTheDocument();
   });
 
+  // 마커는 그림이라 스크린리더에서 사라진다. 개수는 펼칠지 말지의 근거라 말로도 있어야 한다.
+  it("근거 개수를 접근 가능 이름에 남긴다", () => {
+    renderSummary(true);
+
+    expect(
+      screen.getByRole("button", { name: /근거 2개/ })
+    ).toBeInTheDocument();
+  });
+
   // 근거 0개는 계약상 정상이다. 그 항목을 컨트롤로 만들면 눌러도 열릴 것이 없다.
   it("근거가 없는 항목은 컨트롤이 아니다", () => {
     renderSummary(true);
@@ -133,6 +142,17 @@ describe("NoteSummary 항목 리스트", () => {
     expect(
       screen.queryByRole("button", { name: /이번 주 안에 원인을 좁힌다/ })
     ).toBeNull();
+  });
+
+  // 드래그로 글자를 집은 뒤 Space·Enter를 누르는 사람이 있다. 그 click은 detail===0이라
+  // 선택 방어에 걸리면 안 된다 — 포인터에만 건다.
+  it("선택이 남아 있어도 키보드로는 펼쳐진다", () => {
+    renderSummary(true);
+    const claim = screen.getByRole("button", { name: /결제 실패율이 3%로 올랐다/ });
+
+    fireEvent.click(claim, { detail: 0 });
+
+    expect(claim).toHaveAttribute("aria-expanded", "true");
   });
 
   it("인용을 누르면 그 세그먼트로 점프를 요청한다", () => {
