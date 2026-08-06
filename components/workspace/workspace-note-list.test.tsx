@@ -81,11 +81,38 @@ describe("WorkspaceNoteList", () => {
         isPending={false}
         isError={false}
         onRetry={vi.fn()}
+        onNewMeeting={vi.fn()}
       />
     );
 
     const rows = screen.getAllByTestId("row");
     expect(rows.map((r) => r.textContent)).toEqual(["newest", "older"]);
+  });
+
+  /**
+   * 예전 빈 상태는 "상단바의 **새 노트**로 첫 회의를 시작하면…"이라고 가리키기만 했다.
+   * 프로젝트가 없으면 그 버튼이 비활성이라 **가리키는 곳이 눌리지 않았다** — 누를 수 있는
+   * 것을 이 자리에 둔다.
+   */
+  it("회의가 없으면 누를 수 있는 CTA와 다음 단계를 그린다", () => {
+    const onNewMeeting = vi.fn();
+    render(
+      <WorkspaceNoteList
+        workspaceId="01K0000000000"
+        notes={[]}
+        isPending={false}
+        isError={false}
+        onRetry={vi.fn()}
+        onNewMeeting={onNewMeeting}
+      />
+    );
+
+    expect(screen.getByTestId("workspace-onboarding")).toHaveAttribute(
+      "data-stage",
+      "no-note"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "새 회의 만들기" }));
+    expect(onNewMeeting).toHaveBeenCalledOnce();
   });
 
   it("keeps load errors out of the page and exposes retry through Sonner", async () => {
@@ -97,6 +124,7 @@ describe("WorkspaceNoteList", () => {
         isPending={false}
         isError
         onRetry={onRetry}
+        onNewMeeting={vi.fn()}
       />
     );
 
@@ -129,6 +157,7 @@ describe("WorkspaceNoteList", () => {
         isPending={false}
         isError={false}
         onRetry={vi.fn()}
+        onNewMeeting={vi.fn()}
       />
     );
     act(() => vi.advanceTimersByTime(0));
@@ -163,6 +192,7 @@ describe("WorkspaceNoteList", () => {
         isPending={false}
         isError={false}
         onRetry={vi.fn()}
+        onNewMeeting={vi.fn()}
       />
     );
     act(() => vi.advanceTimersByTime(0));
@@ -185,6 +215,7 @@ describe("WorkspaceNoteList", () => {
         isPending={false}
         isError={false}
         onRetry={vi.fn()}
+        onNewMeeting={vi.fn()}
       />
     );
     act(() => vi.advanceTimersByTime(0));

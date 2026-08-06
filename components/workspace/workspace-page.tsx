@@ -6,6 +6,7 @@ import { useQueries } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
+import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
   getGetNotesQueryOptions,
@@ -45,8 +46,14 @@ function notesFromResponse(
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const { user } = useAuth();
-  const { selectedProjectId, projects, isWorkspacePending, isWorkspaceError } =
-    useWorkspaceShell();
+  const {
+    selectedProjectId,
+    projects,
+    isWorkspacePending,
+    isWorkspaceError,
+    openCreateProject,
+    requestNewMeeting,
+  } = useWorkspaceShell();
   const [filter, setFilter] = useState<NoteFilter>("all");
   const selectedProject = projects.find(
     (project) => project.projectId === selectedProjectId
@@ -115,6 +122,17 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     allNotesQueries.refetch();
   };
 
+  /**
+   * 프로젝트가 하나도 없다 — **제목·개수·필터를 통째로 온보딩으로 바꾼다**(design.pen `kbUlG`).
+   * 「0개의 회의 기록」과 「전체 / 내가 시작」은 걸러 볼 것이 있다는 뜻인데 여기엔 아무것도
+   * 없고, 지금 필요한 것은 무엇을 먼저 해야 하는가 하나다.
+   *
+   * **`isWorkspacePending`을 함께 본다.** 프로젝트 목록이 오기 전에는 `projects`가 빈 배열이라
+   * 이것만 보면 로딩 중 한 프레임 동안 온보딩이 번쩍인다.
+   */
+  const hasNoProject =
+    !isWorkspacePending && !isWorkspaceError && projects.length === 0;
+
   return (
     // 목록은 셸이 아니라 **자기 안에서** 스크롤한다. 문서를 늘리면 셸 컨테이너가 따라 늘어나
     // 그 위에 앉는 노트 full 면이 컨테이너를 다 못 덮는다(APP-252).
@@ -136,6 +154,14 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
               "radial-gradient(circle, var(--el-gradient-mint) 0%, transparent 68%)",
           }}
         />
+        {hasNoProject ? (
+          <WorkspaceOnboarding
+            stage="no-project"
+            onCreateProject={openCreateProject}
+            onNewMeeting={requestNewMeeting}
+          />
+        ) : (
+          <>
         <header className="relative mb-6">
           <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
             {selectedProject?.name ?? "모든 노트"}
@@ -179,7 +205,10 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
             isPending={isPending}
             isError={isError}
             onRetry={retry}
+            onNewMeeting={requestNewMeeting}
           />
+        )}
+          </>
         )}
       </div>
     </section>

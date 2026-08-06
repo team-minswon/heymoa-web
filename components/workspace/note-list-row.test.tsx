@@ -74,6 +74,23 @@ describe("NoteListRow", () => {
     recording.meter = { levelHistory: [0.1, 0.25, 0.7, 0.4, 0.2] };
   });
 
+  /**
+   * **포커스 링은 행이 그린다.** 링을 안쪽 `<Link>`에 두면 그 링크가 행보다 좁아서
+   * (오른쪽 `⋯` 메뉴가 링크 밖에 있다) 선이 행 오른쪽 끝에 못 닿고 메뉴 앞에서 끊긴다 —
+   * hover 배경은 행 전체를 덮으니 같은 자리가 두 가지 크기로 보였다.
+   * jsdom은 px를 못 재니 링이 어느 요소에 걸렸는지로 검사한다.
+   */
+  it("포커스 링을 행에 두고 링크에는 두지 않는다", () => {
+    renderRow(note());
+
+    const link = screen.getByRole("link", { name: /노트 열기/ });
+    expect(link.className).not.toMatch(/focus-visible:ring/);
+
+    const row = link.closest("article");
+    expect(row?.className).toContain("has-[a:focus-visible]:ring-2");
+    expect(row?.className).toContain("has-[a:focus-visible]:ring-inset");
+  });
+
   it("renders a flat row with a live meter while recording", () => {
     renderRow(note());
 

@@ -8,6 +8,7 @@ import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { forgetWorkspace } from "@/lib/workspace/cache";
 
+import { NoteFullSkeleton } from "@/components/notes/note-full-skeleton";
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspacePage } from "@/components/workspace/workspace-page";
 import { WorkspaceRouteSkeleton } from "@/components/workspace/workspace-route-skeleton";
@@ -34,18 +35,31 @@ export function WorkspaceRouteLayout({
 
   useRedirectWhenWorkspaceGone(workspaceId);
 
+  /**
+   * **골격은 곧 나타날 화면과 같은 모양이어야 한다.** 이 경계는 셸(워크스페이스·프로젝트
+   * suspense 조회)과 노트를 함께 감싸므로, `?view=full`로 바로 들어오면 셸이 매달린 동안
+   * fallback이 뜬다. 그런데 전체 뷰는 사이드바도 워크스페이스 상단바도 통째로 덮으므로
+   * (design.pen `XtEMZ`) `WorkspaceRouteSkeleton`을 그리면 **보일 리 없는 사이드바가 잠깐
+   * 뜬 다음 노트가 그 위를 덮는다.** 노트 모양으로 그린다.
+   *
+   * 사이드 뷰는 그대로다 — 시트 뒤에 목록이 실제로 남아 있어 그 골격이 맞다.
+   */
+  const fallback = isFullNote ? (
+    <NoteFullSkeleton />
+  ) : (
+    <WorkspaceRouteSkeleton />
+  );
+
   return (
     <DataBoundary
-      fallback={<WorkspaceRouteSkeleton />}
+      fallback={fallback}
       errorLabel="워크스페이스를 불러오지 못했습니다"
       resetKeys={[workspaceId]}
       // 첫 진입부터 404면(남의 워크스페이스 URL 등) 캐시가 없어 여기까지 던져진다. 이동은
       // 위 훅이 하므로 여기서는 「다시 시도」가 번쩍이지 않게 골격만 유지한다. 나머지 실패
       // (네트워크·500)는 재시도가 의미 있으니 공용 처리 그대로 둔다.
       renderError={(error) =>
-        errorCodeOf(error) === "WORKSPACE_NOT_FOUND" ? (
-          <WorkspaceRouteSkeleton />
-        ) : null
+        errorCodeOf(error) === "WORKSPACE_NOT_FOUND" ? fallback : null
       }
     >
       <WorkspaceAppShell workspaceId={workspaceId} activeNoteId={noteId}>

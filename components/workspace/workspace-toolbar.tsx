@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ExternalLink, Plus, Square } from "lucide-react";
@@ -11,12 +10,11 @@ import {
   useRecordingMeter,
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
-import { NewMeetingDialog } from "@/components/workspace/new-meeting-dialog";
 import { NotificationBell } from "@/components/notification/notification-bell";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { siteConfig } from "@/lib/site";
-import { useCreateMeeting } from "@/lib/workspace/use-create-meeting";
 
 function formatElapsed(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1000);
@@ -124,14 +122,9 @@ export function WorkspaceToolbar({
 }) {
   const router = useRouter();
   const recording = useRecording();
-  const createMeeting = useCreateMeeting(workspaceId);
-  const [newMeetingOpen, setNewMeetingOpen] = useState(false);
-  // 노트 전체 화면이 이 바를 덮으면 **이 바가 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라
-  // `inert`도 덮는 면(`z-30`)도 닿지 않아서, 허브에서 열어 둔 채 뒤로가기로 노트에 오면
-  // 노트 위에 남는다. 셸이 재마운트되지 않으므로 상태가 저절로 사라지지도 않는다.
-  if (covered && newMeetingOpen) {
-    setNewMeetingOpen(false);
-  }
+  // 창은 셸이 소유한다 — 프로젝트가 없으면 프로젝트부터 묻고 회의 창으로 이어 가야 해서,
+  // 두 창이 한 자리에 있어야 이어 붙는다(`workspace-app-shell`).
+  const { requestNewMeeting } = useWorkspaceShell();
 
   const isActive = [
     "requesting-permission",
@@ -175,14 +168,16 @@ export function WorkspaceToolbar({
           <div className="flex shrink-0 items-center gap-2">
             {/* noteId로 키잉한다 — 안 하면 A의 삭제 확인창을 연 채 뒤로가기로 B에 왔을 때
                 그 창이 B 제목으로 남아 엉뚱한 노트를 지운다. */}
+            {/* **프로젝트가 없어도 눌린다.** 예전에는 대상 프로젝트가 없으면 그냥 비활성
+                이었는데, 새 워크스페이스는 항상 그 상태로 시작하므로 처음 들어온 사람이 가장
+                먼저 보는 것이 죽은 버튼이었다. 지금은 누르면 프로젝트를 먼저 묻고 이어서
+                회의 창이 뜬다. */}
             <Button
               type="button"
               size="sm"
               aria-label="새 노트"
               className="h-8 shrink-0 rounded-full px-3"
-              disabled={createMeeting.disabled}
-              loading={createMeeting.isPending}
-              onClick={() => setNewMeetingOpen(true)}
+              onClick={requestNewMeeting}
             >
               <Plus className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만 — 노트 액션·벨이 잘리지 않게. */}
@@ -192,19 +187,6 @@ export function WorkspaceToolbar({
           </div>
         </div>
       </div>
-
-      <NewMeetingDialog
-        open={newMeetingOpen}
-        onOpenChange={setNewMeetingOpen}
-        isPending={createMeeting.isPending}
-        onSubmit={async (title) => {
-          // 만들어졌을 때만 닫는다. 대상 프로젝트가 사라졌거나 응답 guard에 걸리면
-          // 노트도 라우팅도 없는데 창만 닫혀 사용자가 만들어진 줄 안다.
-          const created = await createMeeting.createMeeting(title);
-          if (created) setNewMeetingOpen(false);
-          return created;
-        }}
-      />
 
       <AnimatePresence>
         {isRecordingOtherNote ? (

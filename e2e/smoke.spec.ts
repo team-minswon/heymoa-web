@@ -10,6 +10,8 @@ import { expect, test, type Page } from "@playwright/test";
 const MOCK_WORKSPACE_ID = "01K0000000000";
 const STARTER_NOTE_ID = "01K0000000002";
 const FOREIGN_VIEWER_NOTE_ID = "01K0000000028";
+/** 프로젝트가 하나도 없는 워크스페이스. 온보딩 경로의 유일한 표본이다(`lib/mocks/db.ts`). */
+const EMPTY_WORKSPACE_ID = "01K0000000009";
 
 function meetingControls(page: Page) {
   return page.getByRole("group", { name: "회의 상태 및 제어" });
@@ -542,6 +544,45 @@ test("continues cumulative time across stop, resume, and stop", async ({
   expect(secondStop).toBeGreaterThan(firstStop);
   await page.waitForTimeout(1_100);
   expect(recordedSeconds(await timer.textContent())).toBe(secondStop);
+});
+
+/**
+ * 프로젝트가 없는 워크스페이스가 실제 온보딩 경로다 — 새로 만든 워크스페이스는 항상 이
+ * 상태로 시작한다. 예전에는 상단바 「새 노트」가 비활성이었고 빈 상태가 그 버튼을 가리켰다.
+ *
+ * MSW 목이 아니라 서비스 워커를 지나는 경로에서 본다 — 프로젝트 생성 → 목록 재조회 →
+ * 회의 생성이 이어지는 흐름이라 캐시 무효화 타이밍이 실제로 걸리는 자리다.
+ */
+test("walks a project-less workspace from project to first meeting", async ({
+  page,
+}) => {
+  await page.goto(`/w/${EMPTY_WORKSPACE_ID}`);
+
+  const onboarding = page.getByTestId("workspace-onboarding");
+  await expect(onboarding).toHaveAttribute("data-stage", "no-project");
+  // 걸러 볼 것이 없으니 필터도 개수도 없다.
+  await expect(page.getByRole("group", { name: "노트 필터" })).toHaveCount(0);
+
+  // 「새 노트」는 비활성이 아니다 — 누르면 프로젝트를 먼저 묻는다.
+  await page.getByRole("button", { name: "새 노트" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "첫 프로젝트 만들기" })
+  ).toBeVisible();
+  await page.getByLabel("프로젝트 이름").fill("고객");
+  await page.getByRole("button", { name: "만들기" }).click();
+
+  // 절차가 끊기지 않는다 — 프로젝트를 만들면 회의 창이 바로 이어진다.
+  await expect(page.getByLabel("회의 이름")).toBeVisible();
+  await page.getByLabel("회의 이름").fill("첫 고객 인터뷰");
+  await page.getByRole("button", { name: "만들기" }).click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`/w/${EMPTY_WORKSPACE_ID}/notes/[^?]+\\?view=full`)
+  );
+  // 목록 행의 제목(h3)도 같은 이름이라 노트 헤더의 큰 제목(h1)으로 짚는다.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "첫 고객 인터뷰" })
+  ).toBeVisible();
 });
 
 test("shows the NOT_STARTED recorder dock in the side panel", async ({

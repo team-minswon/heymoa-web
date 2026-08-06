@@ -199,6 +199,16 @@ function createSeedState(): StoreState {
       isDefault: false,
       role: "ADMIN",
     },
+    // **프로젝트가 하나도 없는 워크스페이스.** 새로 만든 워크스페이스는 항상 이 상태로
+    // 시작하는데 목에 표본이 없어서 온보딩 화면을 아무도 못 봤다. 노트도 프로젝트도
+    // 시드하지 않는다 — 비어 있는 것이 이 표본의 내용이다.
+    {
+      workspaceId: "01K0000000009",
+      name: "새 워크스페이스",
+      description: null,
+      isDefault: false,
+      role: "ADMIN",
+    },
   ];
   const projects: ProjectResponseData[] = [
     {
@@ -265,6 +275,15 @@ function createSeedState(): StoreState {
       role: "ADMIN",
       image: user.image,
       joinedAt: "2026-07-03T00:00:00Z",
+    },
+    {
+      workspaceId: workspaces[2].workspaceId,
+      userId: user.userId,
+      name: user.name,
+      email: user.email,
+      role: "ADMIN",
+      image: user.image,
+      joinedAt: "2026-07-05T00:00:00Z",
     },
   ];
 

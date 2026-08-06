@@ -218,12 +218,17 @@ export function NoteListRow({
   // 훑히지 않았다. 제목과 메타를 두 줄로 나눠 **메타의 시작 x를 모든 행에서 같게** 만든다.
   // 배경·카드·그림자는 그대로 없다(FORM SPEC).
   return (
-    <article className="group flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)]">
+    // **포커스 링은 행이 그린다.** 링을 안쪽 `<Link>`에 두면 그 링크가 행보다 좁아서
+    // (오른쪽 `⋯` 메뉴가 링크 밖에 있다) 선이 행 오른쪽 끝에 못 닿고 메뉴 앞에서 끊긴다 —
+    // hover 배경은 행 전체를 덮으니 같은 자리가 두 가지 크기로 보였다.
+    // 조건은 여전히 링크의 `:focus-visible`이다(`has-*`) — 메뉴 버튼에 포커스가 갈 때는
+    // 그 버튼의 링이 따로 있으므로 행까지 두르면 링이 두 겹이 된다.
+    <article className="group flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset">
       <Link
         href={sideHref}
         aria-label={`${note.title} 노트 열기`}
         // self-stretch로 행 전체를 클릭·포커스 영역으로 채운다(빈 위아래도 노트가 열리게).
-        className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none focus-visible:ring-2 focus-visible:ring-[var(--el-ink)]"
+        className="flex min-w-0 flex-1 items-center gap-[14px] self-stretch rounded-control outline-none"
       >
         <NoteRowIcon
           title={note.title}

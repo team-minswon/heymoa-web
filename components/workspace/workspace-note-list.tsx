@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { FileText, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import { toast } from "@/lib/ui/toast";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
+import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
@@ -35,12 +36,15 @@ export function WorkspaceNoteList({
   isPending,
   isError,
   onRetry,
+  onNewMeeting,
 }: {
   workspaceId: string;
   notes: NoteListResponseDataNotesItem[];
   isPending: boolean;
   isError: boolean;
   onRetry: () => void;
+  /** 빈 상태 CTA. 프로젝트가 없으면 셸이 프로젝트를 먼저 묻는다. */
+  onNewMeeting: () => void;
 }) {
   const retryRef = useRef(onRetry);
   const activeMeetingStarts = notes
@@ -100,21 +104,9 @@ export function WorkspaceNoteList({
   }
 
   if (!notes.length) {
-    return (
-      <div className="flex min-h-80 flex-col items-center justify-center rounded-panel border border-dashed border-[var(--el-hairline-strong)] px-6 text-center">
-        <span className="flex size-12 items-center justify-center rounded-full bg-[var(--el-surface-strong)]">
-          <FileText className="size-5 text-[var(--el-muted)]" />
-        </span>
-        <h2 className="mt-5 font-serif text-2xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-          아직 회의 기록이 없습니다
-        </h2>
-        <p className="mt-1 max-w-sm text-sm text-[var(--el-muted)]">
-          상단바의{" "}
-          <span className="font-medium text-[var(--el-ink)]">새 노트</span>로 첫
-          회의를 시작하면 실시간 전사와 확정된 기록이 이곳에 쌓입니다.
-        </p>
-      </div>
-    );
+    // **누를 수 있는 것을 여기 둔다.** 예전에는 "상단바의 새 노트로…"라고 가리키기만 했는데,
+    // 프로젝트가 없으면 그 버튼이 비활성이라 가리키는 곳이 눌리지 않았다.
+    return <WorkspaceOnboarding stage="no-note" onNewMeeting={onNewMeeting} onCreateProject={onNewMeeting} />;
   }
 
   return (

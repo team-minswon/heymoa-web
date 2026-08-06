@@ -37,9 +37,14 @@ describe("mockDb", () => {
   it("seeds the deterministic profile and balanced workspace content", () => {
     expect(mockDb.getCurrentUser()).toEqual(MOCK_USER);
     const workspaces = mockDb.listWorkspaces();
-    expect(workspaces).toHaveLength(2);
-    expect(mockDb.listProjects(workspaces[0].workspaceId)).toHaveLength(2);
-    expect(mockDb.listProjects(workspaces[1].workspaceId)).toHaveLength(2);
+    expect(workspaces).toHaveLength(3);
+    // **id로 짚는다** — `listWorkspaces()`가 내리는 순서는 이 테스트의 관심이 아니고,
+    // 위치로 짚으면 워크스페이스를 하나 더 시드할 때마다 이 줄이 엉뚱하게 깨진다.
+    expect(mockDb.listProjects("01K0000000000")).toHaveLength(2);
+    expect(mockDb.listProjects("01K0000000006")).toHaveLength(2);
+    // 셋째는 **비어 있는 것이 내용이다** — 새로 만든 워크스페이스는 항상 프로젝트 0으로
+    // 시작하고, 그 온보딩 화면의 유일한 표본이다.
+    expect(mockDb.listProjects("01K0000000009")).toHaveLength(0);
     expect(
       workspaces.flatMap((workspace) =>
         mockDb

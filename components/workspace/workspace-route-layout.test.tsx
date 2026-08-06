@@ -190,6 +190,36 @@ describe("워크스페이스 조회가 실패했을 때", () => {
 
   // 첫 진입부터 404면(남의 워크스페이스 URL 등) 캐시가 없어 경계까지 던져진다. 위 훅이
   // 이동을 맡으므로 여기서는 재시도 화면이 번쩍이지 않게만 한다.
+  /**
+   * **골격은 곧 나타날 화면과 같은 모양이어야 한다.** 전체 뷰는 사이드바도 워크스페이스
+   * 상단바도 통째로 덮는데(design.pen `XtEMZ`), 워크스페이스 골격을 그리면 보일 리 없는
+   * 사이드바가 잠깐 뜬 다음 노트가 그 위를 덮는다 — 「같은 화면이 채워지는 중」이 아니라
+   * 화면이 통째로 갈리는 것으로 보인다.
+   *
+   * suspense가 아니라 첫 진입 404 경로로 재현한다 — 둘이 같은 fallback을 쓴다.
+   */
+  it.each([
+    ["view=full&tab=transcript", "노트 불러오는 중", "워크스페이스 불러오는 중"],
+    ["view=side&tab=transcript", "워크스페이스 불러오는 중", "노트 불러오는 중"],
+  ])("%s 골격은 %s다", (search, shown, hidden) => {
+    route.noteId = "note-1";
+    route.search = search;
+    route.shellError = {
+      success: false,
+      data: null,
+      error: { code: "WORKSPACE_NOT_FOUND", message: "없음" },
+    };
+
+    render(
+      <WorkspaceRouteLayout workspaceId="workspace-1">
+        <div />
+      </WorkspaceRouteLayout>
+    );
+
+    expect(screen.getByLabelText(shown)).toBeInTheDocument();
+    expect(screen.queryByLabelText(hidden)).toBeNull();
+  });
+
   it("첫 진입 404는 재시도를 그리지 않는다", async () => {
     route.shellError = {
       success: false,

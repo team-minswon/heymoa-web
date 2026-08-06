@@ -19,7 +19,7 @@ const recordingMeter = vi.hoisted(() => ({
 }));
 const push = vi.hoisted(() => vi.fn());
 const replace = vi.hoisted(() => vi.fn());
-const createMeeting = vi.hoisted(() => vi.fn());
+const requestNewMeeting = vi.hoisted(() => vi.fn());
 const nav = vi.hoisted(() => ({ search: "" }));
 
 vi.mock("next/navigation", () => ({
@@ -30,13 +30,10 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
   useRecordingMeter: () => recordingMeter,
 }));
-vi.mock("@/lib/workspace/use-create-meeting", () => ({
-  useCreateMeeting: () => ({
-    createMeeting,
-    disabled: false,
-    isPending: false,
-    isRecordingCurrent: Boolean(recording.activeNoteId),
-  }),
+// 창은 셸이 소유한다 — 상단바는 「새 노트」를 셸에 **요청**만 한다. 프로젝트가 없을 때
+// 프로젝트 창을 먼저 여는 것은 셸의 일이고 `workspace-app-shell.test.tsx`가 본다.
+vi.mock("@/components/workspace/workspace-app-shell", () => ({
+  useWorkspaceShell: () => ({ requestNewMeeting }),
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   useGetNote: () => ({
@@ -71,7 +68,7 @@ describe("WorkspaceToolbar", () => {
     cleanup();
     push.mockReset();
     replace.mockReset();
-    createMeeting.mockReset();
+    requestNewMeeting.mockReset();
     recording.start.mockReset();
     recording.stop.mockReset();
     recording.activeNoteId = undefined;
@@ -99,14 +96,11 @@ describe("WorkspaceToolbar", () => {
     );
 
     const newNote = screen.getByRole("button", { name: "새 노트" });
+    // **프로젝트가 없어도 눌린다.** 예전에는 대상 프로젝트가 없으면 비활성이라, 새
+    // 워크스페이스에 처음 들어온 사람이 가장 먼저 보는 것이 죽은 버튼이었다.
+    expect(newNote).not.toBeDisabled();
     fireEvent.click(newNote);
-    // 바로 만들지 않는다 — 이름을 먼저 묻는다(생성과 시작을 가른다).
-    expect(createMeeting).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("회의 이름"), {
-      target: { value: "주간 제품 회의" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "만들기" }));
-    expect(createMeeting).toHaveBeenCalledWith("주간 제품 회의");
+    expect(requestNewMeeting).toHaveBeenCalledOnce();
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
     // 노트가 열려 있지 않으면 회의 조작 슬롯은 없다.
     expect(screen.queryByTestId("meeting-controls")).toBeNull();
@@ -183,25 +177,16 @@ describe("WorkspaceToolbar", () => {
       </SidebarProvider>
     );
 
-    const newNote = screen.getByRole("button", { name: "새 노트" });
-    fireEvent.click(newNote);
-    // 다른 노트가 기록 중이어도 진입점은 하나이고, 여전히 이름을 먼저 묻는다.
-    expect(screen.getByLabelText("회의 이름")).toBeInTheDocument();
+    // 다른 노트가 기록 중이어도 진입점은 하나다.
+    expect(screen.getAllByRole("button", { name: "새 노트" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "새 노트" }));
+    expect(requestNewMeeting).toHaveBeenCalledOnce();
   });
 
-  it("전체 노트가 바를 덮으면 열려 있던 「새 노트」 창도 닫는다", () => {
-    // 창은 포털(`z-50`)이라 `inert`도 덮는 면(`z-30`)도 닿지 않는다. 셸은 노트로 이동해도
-    // 재마운트되지 않으니 저절로 사라지지도 않아, 허브에서 열어 둔 창이 노트 위에 남았다.
-    const { rerender } = render(
-      <SidebarProvider>
-        <WorkspaceToolbar workspaceId="01K0000000000" currentLabel="주간" />
-      </SidebarProvider>
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "새 노트" }));
-    expect(screen.getByLabelText("회의 이름")).toBeInTheDocument();
-
-    rerender(
+  it("덮이면 바 전체가 inert가 된다", () => {
+    // 창을 닫는 것은 이제 셸의 일이다(`workspace-app-shell.test.tsx`) — 창을 소유한 쪽이
+    // 닫아야 한다. 여기 남는 것은 바 자신이 포커스에서 빠지는지다.
+    render(
       <SidebarProvider>
         <WorkspaceToolbar
           workspaceId="01K0000000000"
@@ -211,7 +196,9 @@ describe("WorkspaceToolbar", () => {
       </SidebarProvider>
     );
 
-    expect(screen.queryByLabelText("회의 이름")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "새 노트" }).closest("[inert]")
+    ).not.toBeNull();
   });
 
   it("replaces transitional status labels with the shared spinner", () => {

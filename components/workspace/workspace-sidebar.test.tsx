@@ -90,6 +90,7 @@ const props = {
   selectedProjectId: null,
   onSelectProject: vi.fn(),
   onOpenSettings: vi.fn(),
+  onCreateProject: vi.fn(),
 };
 
 function renderSidebar(overrides: Partial<typeof props> = {}) {
@@ -140,12 +141,13 @@ describe("WorkspaceSidebar", () => {
    * 가장 먼저 보는 화면이 그것이었다.
    */
   it("프로젝트가 없으면 라벨 있는 만들기 입구를 낸다", () => {
-    renderSidebar({ projects: [] });
+    const onCreateProject = vi.fn();
+    renderSidebar({ projects: [], onCreateProject });
 
     fireEvent.click(screen.getByRole("button", { name: "프로젝트 만들기" }));
-    expect(
-      screen.getByRole("dialog", { name: "새 프로젝트 만들기" })
-    ).toBeTruthy();
+    // 창은 셸이 소유한다 — 상단바 「새 노트」도 같은 창을 열고, 프로젝트가 없으면 거기서
+    // 회의 창으로 이어 붙기 때문이다(`workspace-app-shell.test.tsx`).
+    expect(onCreateProject).toHaveBeenCalledOnce();
   });
 
   it("프로젝트가 있으면 빈 상태를 안 낸다", () => {
@@ -164,9 +166,7 @@ describe("WorkspaceSidebar", () => {
     expect(props.onSelectProject).toHaveBeenCalledWith("01K0000000001");
 
     fireEvent.click(screen.getByRole("button", { name: "새 프로젝트" }));
-    expect(
-      screen.getByRole("dialog", { name: "새 프로젝트 만들기" })
-    ).toBeInTheDocument();
+    expect(props.onCreateProject).toHaveBeenCalledOnce();
   });
 
   /**

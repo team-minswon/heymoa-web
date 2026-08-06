@@ -63,7 +63,6 @@ import {
 } from "@/components/ui/sidebar";
 import {
   getGetProjectsQueryKey,
-  useCreateProject,
   useDeleteProject,
   useUpdateProject,
   type getProjectsResponse,
@@ -78,10 +77,8 @@ import {
   useGetWorkspaces,
 } from "@/lib/api/generated/workspaces/workspaces";
 
-type ProjectDialogState =
-  | { mode: "create" }
-  | { mode: "rename"; project: ProjectResponseData }
-  | null;
+/** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
+type ProjectDialogState = { project: ProjectResponseData } | null;
 
 export function WorkspaceSidebar({
   workspaceId,
@@ -90,6 +87,7 @@ export function WorkspaceSidebar({
   selectedProjectId,
   onSelectProject,
   onOpenSettings,
+  onCreateProject,
   covered = false,
 }: {
   workspaceId: string;
@@ -98,6 +96,11 @@ export function WorkspaceSidebar({
   selectedProjectId: string | null;
   onSelectProject: (projectId: string | null) => void;
   onOpenSettings: (section: "account" | "workspace") => void;
+  /**
+   * 프로젝트 만들기 창을 연다. **셸이 소유한다** — 입구가 여기 `+`·빈 상태 CTA·상단바
+   * 「새 노트」 셋이고, 「새 노트」는 프로젝트가 없으면 이 창을 먼저 열어야 한다.
+   */
+  onCreateProject: () => void;
   /** 노트 전체 화면이 이 사이드바를 덮고 있는가. 열려 있던 창을 닫는 데 쓴다. */
   covered?: boolean;
 }) {
@@ -106,17 +109,13 @@ export function WorkspaceSidebar({
   const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
   const createWorkspace = useCreateWorkspace();
-  const createProject = useCreateProject({
-    mutation: { meta: { suppressErrorToast: true } },
-  });
   const updateProject = useUpdateProject({
     mutation: { meta: { suppressErrorToast: true } },
   });
   const deleteProject = useDeleteProject({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  const isProjectMutationPending =
-    createProject.isPending || updateProject.isPending;
+  const isProjectMutationPending = updateProject.isPending;
   const [projectDialog, setProjectDialog] = useState<ProjectDialogState>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponseData | null>(
     null
@@ -175,38 +174,23 @@ export function WorkspaceSidebar({
     );
   };
 
-  const handleProjectSubmit = async (formData: FormData) => {
+  const handleProjectRename = async (formData: FormData) => {
     const name = String(formData.get("name") ?? "").trim();
     if (!name || !projectDialog) return;
 
     try {
-      if (projectDialog.mode === "create") {
-        await createProject.mutateAsync({
-          workspaceId,
-          data: { name, description: null },
-        });
-        // 새 프로젝트는 목록의 어디에 끼는지를 서버 정렬이 정하므로 캐시에 손으로 못 넣는다.
-        // 목록이 새로 와야 자리도 맞는다.
-        await refreshProjects();
-        toast.success("프로젝트가 생성되었습니다.");
-      } else {
-        const response = await updateProject.mutateAsync({
-          workspaceId,
-          projectId: projectDialog.project.projectId,
-          data: { name, description: projectDialog.project.description },
-        });
-        if (response.status === 200 && response.data.success) {
-          applyRenamedProject(response.data.data);
-        }
-        toast.success("프로젝트 이름이 변경되었습니다.");
-        void refreshProjects();
+      const response = await updateProject.mutateAsync({
+        workspaceId,
+        projectId: projectDialog.project.projectId,
+        data: { name, description: projectDialog.project.description },
+      });
+      if (response.status === 200 && response.data.success) {
+        applyRenamedProject(response.data.data);
       }
+      toast.success("프로젝트 이름이 변경되었습니다.");
+      void refreshProjects();
     } catch {
-      if (projectDialog.mode === "create") {
-        toast.error("프로젝트 생성에 실패했습니다.");
-      } else {
-        toast.error("프로젝트 이름 변경에 실패했습니다.");
-      }
+      toast.error("프로젝트 이름 변경에 실패했습니다.");
     }
     setProjectDialog(null);
   };
@@ -310,7 +294,7 @@ export function WorkspaceSidebar({
               </button>
               <button
                 aria-label="새 프로젝트"
-                onClick={() => setProjectDialog({ mode: "create" })}
+                onClick={onCreateProject}
                 className="flex size-5 items-center justify-center rounded-chip hover:bg-[var(--el-surface-strong)] text-[var(--el-muted)] hover:text-[var(--el-ink)] transition-colors"
               >
                 <Plus className="size-3.5" />
@@ -326,7 +310,7 @@ export function WorkspaceSidebar({
                 <SidebarMenu className="space-y-0">
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      onClick={() => setProjectDialog({ mode: "create" })}
+                      onClick={onCreateProject}
                       className="h-8 gap-2.5 rounded-control px-2.5 text-[13px] text-[var(--el-muted)]"
                     >
                       <Plus className="size-4 text-[var(--el-muted)]" />
@@ -371,7 +355,7 @@ export function WorkspaceSidebar({
                         >
                           <DropdownMenuItem
                             onClick={() =>
-                              setProjectDialog({ mode: "rename", project })
+                              setProjectDialog({ project })
                             }
                             className="gap-2 rounded-control py-1.5 text-xs"
                           >
@@ -518,20 +502,10 @@ export function WorkspaceSidebar({
         onOpenChange={(open) => !open && setProjectDialog(null)}
       >
         {projectDialog !== null && (
-          <DialogContent
-            aria-label={
-              projectDialog.mode === "rename"
-                ? "프로젝트 이름 변경"
-                : "새 프로젝트 만들기"
-            }
-          >
-            <form action={(formData) => void handleProjectSubmit(formData)}>
+          <DialogContent aria-label="프로젝트 이름 변경">
+            <form action={(formData) => void handleProjectRename(formData)}>
               <DialogHeader>
-                <DialogTitle>
-                  {projectDialog.mode === "rename"
-                    ? "프로젝트 이름 변경"
-                    : "새 프로젝트 만들기"}
-                </DialogTitle>
+                <DialogTitle>프로젝트 이름 변경</DialogTitle>
                 <DialogDescription>
                   노트를 분류할 프로젝트 이름을 입력하세요.
                 </DialogDescription>
@@ -545,11 +519,7 @@ export function WorkspaceSidebar({
                   maxLength={50}
                   required
                   autoFocus
-                  defaultValue={
-                    projectDialog.mode === "rename"
-                      ? projectDialog.project.name
-                      : ""
-                  }
+                  defaultValue={projectDialog.project.name}
                 />
               </div>
               <DialogFooter>

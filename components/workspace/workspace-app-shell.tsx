@@ -22,8 +22,11 @@ import {
   SettingsDialog,
   type SettingsSection,
 } from "@/components/settings/settings-dialog";
+import { CreateProjectDialog } from "@/components/workspace/create-project-dialog";
+import { NewMeetingDialog } from "@/components/workspace/new-meeting-dialog";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
+import { useCreateMeeting } from "@/lib/workspace/use-create-meeting";
 import type {
   ProjectResponseData,
   WorkspaceResponseData,
@@ -35,6 +38,14 @@ type WorkspaceShellState = {
   selectedProjectId: string | null;
   setSelectedProjectId: (projectId: string | null) => void;
   openSettings: (section: SettingsSection) => void;
+  /** 프로젝트 만들기 창을 연다. 사이드바 머리글의 `+`와 빈 상태 CTA가 쓴다. */
+  openCreateProject: () => void;
+  /**
+   * 새 회의를 만들려 한다. **프로젝트가 없으면 프로젝트부터 묻고 이어서 회의 창을 연다** —
+   * 노트는 프로젝트 안에만 생기는데, 예전에는 상단바 버튼이 그냥 비활성이라 왜 못 누르는지도
+   * 무엇을 먼저 해야 하는지도 화면에 없었다.
+   */
+  requestNewMeeting: () => void;
   workspace?: WorkspaceResponseData;
   projects: ProjectResponseData[];
   isWorkspacePending: boolean;
@@ -132,6 +143,24 @@ export function WorkspaceAppShell({
         : [],
     [projectsQuery.data]
   );
+  /**
+   * 프로젝트 만들기 창의 상태. **왜 열렸는지를 함께 담는다** — 「새 노트」에서 온 것이면
+   * 만든 뒤 회의 창으로 이어 가고, 사이드바 `+`에서 온 것이면 거기서 끝난다.
+   */
+  const [createProject, setCreateProject] = useState<
+    null | "standalone" | "then-meeting"
+  >(null);
+  const [newMeetingOpen, setNewMeetingOpen] = useState(false);
+  const hasProject = projects.length > 0;
+  const openCreateProject = useCallback(() => setCreateProject("standalone"), []);
+  const requestNewMeeting = useCallback(() => {
+    if (hasProject) {
+      setNewMeetingOpen(true);
+      return;
+    }
+    setCreateProject("then-meeting");
+  }, [hasProject]);
+
   const value = useMemo(
     () => ({
       selectedProjectId,
@@ -140,15 +169,19 @@ export function WorkspaceAppShell({
         setSettingsSection(section);
         setSettingsOpen(true);
       },
+      openCreateProject,
+      requestNewMeeting,
       workspace,
       projects,
       isWorkspacePending: workspaceQuery.isPending || projectsQuery.isPending,
       isWorkspaceError: workspaceQuery.isError || projectsQuery.isError,
     }),
     [
+      openCreateProject,
       projects,
       projectsQuery.isPending,
       projectsQuery.isError,
+      requestNewMeeting,
       selectedProjectId,
       workspace,
       workspaceQuery.isPending,
@@ -161,6 +194,13 @@ export function WorkspaceAppShell({
   // 노트 전체 화면은 이 셸을 통째로 덮는다(design.pen `XtEMZ`). side 시트는 안 덮는다.
   const isFullNote =
     Boolean(activeNoteId) && searchParams.get("view") !== "side";
+  // 전체 화면이 셸을 덮으면 **셸이 연 창도 같이 닫는다.** 창은 포털(`z-50`)이라 `inert`도
+  // 덮는 면(`z-30`)도 닿지 않고, 셸이 재마운트되지 않아 저절로 사라지지도 않는다 —
+  // 허브에서 열어 둔 채 뒤로가기로 노트에 오면 노트 위에 갇힌 창이 남는다.
+  if (isFullNote && (createProject || newMeetingOpen)) {
+    setCreateProject(null);
+    setNewMeetingOpen(false);
+  }
 
   return (
     <WorkspaceShellContext.Provider value={value}>
@@ -192,6 +232,7 @@ export function WorkspaceAppShell({
                 selectedProjectId={selectedProjectId}
                 onSelectProject={handleSelectProject}
                 onOpenSettings={value.openSettings}
+                onCreateProject={openCreateProject}
                 covered={isFullNote}
               />
             </Sidebar>
@@ -207,10 +248,71 @@ export function WorkspaceAppShell({
               isFullNote={isFullNote}
               closeSettings={closeSettings}
             />
+            {/* 프로젝트·회의 만들기 창은 **셸이 소유한다.** 입구가 사이드바 `+`·상단바
+                「새 노트」·빈 상태 CTA 셋이고, 그중 「새 노트」는 프로젝트가 없으면 프로젝트
+                창을 먼저 열어야 하므로 두 창이 한 자리에 있어야 이어 붙일 수 있다.
+                컨텍스트 안쪽 자식이다 — `useCreateMeeting`이 `useWorkspaceShell()`을 읽는다. */}
+            <WorkspaceCreateDialogs
+              workspaceId={workspaceId}
+              createProject={createProject}
+              onCreateProjectChange={setCreateProject}
+              newMeetingOpen={newMeetingOpen}
+              onNewMeetingChange={setNewMeetingOpen}
+            />
           </SidebarProvider>
         </TooltipProvider>
       </PersonalChatProvider>
     </WorkspaceShellContext.Provider>
+  );
+}
+
+/**
+ * 프로젝트 만들기 → (첫 프로젝트였으면) 새 회의 만들기로 이어지는 두 창.
+ *
+ * 프로젝트를 만든 **직후에만** 회의 창이 이어진다. 처음 들어온 사람에게 절차가 끊기지 않게
+ * 하려는 것이고, 사이드바 `+`로 만드는 둘째·셋째 프로젝트에는 이어 붙일 이유가 없다
+ * (그때는 이미 회의를 만들어 본 사람이다).
+ */
+function WorkspaceCreateDialogs({
+  workspaceId,
+  createProject,
+  onCreateProjectChange,
+  newMeetingOpen,
+  onNewMeetingChange,
+}: {
+  workspaceId: string;
+  createProject: null | "standalone" | "then-meeting";
+  onCreateProjectChange: (next: null | "standalone" | "then-meeting") => void;
+  newMeetingOpen: boolean;
+  onNewMeetingChange: (open: boolean) => void;
+}) {
+  const createMeeting = useCreateMeeting(workspaceId);
+  const chain = createProject === "then-meeting";
+
+  return (
+    <>
+      <CreateProjectDialog
+        workspaceId={workspaceId}
+        open={createProject !== null}
+        first={chain}
+        onOpenChange={(open) => !open && onCreateProjectChange(null)}
+        onCreated={() => {
+          if (chain) onNewMeetingChange(true);
+        }}
+      />
+      <NewMeetingDialog
+        open={newMeetingOpen}
+        onOpenChange={onNewMeetingChange}
+        isPending={createMeeting.isPending}
+        onSubmit={async (title) => {
+          // 만들어졌을 때만 닫는다. 대상 프로젝트가 사라졌거나 응답 guard에 걸리면
+          // 노트도 라우팅도 없는데 창만 닫혀 사용자가 만들어진 줄 안다.
+          const created = await createMeeting.createMeeting(title);
+          if (created) onNewMeetingChange(false);
+          return created;
+        }}
+      />
+    </>
   );
 }
 

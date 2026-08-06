@@ -28,12 +28,23 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   }),
   useRecordingMeter: () => ({ level: 0, levelHistory: [0, 0, 0, 0, 0] }),
 }));
+const shell = vi.hoisted(() => ({
+  selectedProjectId: "01K0000000001" as string | null,
+  projects: [{ projectId: "01K0000000001", name: "모바일 앱" }] as {
+    projectId: string;
+    name: string;
+  }[],
+  openCreateProject: vi.fn(),
+  requestNewMeeting: vi.fn(),
+}));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useWorkspaceShell: () => ({
-    selectedProjectId: "01K0000000001",
-    projects: [{ projectId: "01K0000000001", name: "모바일 앱" }],
+    selectedProjectId: shell.selectedProjectId,
+    projects: shell.projects,
     isWorkspacePending: false,
     isWorkspaceError: false,
+    openCreateProject: shell.openCreateProject,
+    requestNewMeeting: shell.requestNewMeeting,
   }),
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
@@ -100,6 +111,32 @@ describe("WorkspacePage", () => {
     cleanup();
     useGetNotes.mockReset();
     auth.user = { userId: "user-me", name: "나" };
+    shell.selectedProjectId = "01K0000000001";
+    shell.projects = [{ projectId: "01K0000000001", name: "모바일 앱" }];
+    shell.openCreateProject.mockReset();
+    shell.requestNewMeeting.mockReset();
+  });
+
+  /**
+   * 프로젝트가 하나도 없으면 제목·개수·필터가 전부 군더더기다 — 「0개의 회의 기록」과
+   * 「전체 / 내가 시작」은 걸러 볼 것이 있다는 뜻인데 여기엔 아무것도 없고, 지금 필요한
+   * 것은 무엇을 먼저 해야 하는가 하나다(design.pen `kbUlG`).
+   */
+  it("프로젝트가 없으면 제목·필터를 걷고 절차를 그린다", () => {
+    shell.selectedProjectId = null;
+    shell.projects = [];
+    renderPage();
+
+    const onboarding = screen.getByTestId("workspace-onboarding");
+    expect(onboarding).toHaveAttribute("data-stage", "no-project");
+    expect(screen.queryByRole("group", { name: "노트 필터" })).toBeNull();
+    expect(screen.queryByText(/개의 회의 기록/)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "첫 프로젝트 만들기" })
+    );
+    expect(shell.openCreateProject).toHaveBeenCalledOnce();
+    expect(shell.requestNewMeeting).not.toHaveBeenCalled();
   });
 
   it("renders the screen title, count, and flat list without the marketing kicker", () => {
