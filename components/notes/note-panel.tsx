@@ -50,6 +50,12 @@ export type NoteTab = "chat" | "details" | "transcript" | "summary";
 
 const NOTE_SAFETY_POLL_MS = 30_000;
 
+/**
+ * 밑줄 탭 한 칸. `flex-none`이 핵심이다 — primitive의 기본 트리거는 `flex-1`이라 그대로 두면
+ * 셋이 폭을 균등 분할해서 라벨 사이가 200px씩 벌어진다(design.pen은 왼쪽에 `w-fit`으로 붙인다).
+ */
+const TAB_ITEM = "h-9 flex-none px-0 text-xs";
+
 export function NotePanel({
   workspaceId,
   noteId,
@@ -486,45 +492,39 @@ export function NotePanel({
           {/* 탭 줄이 노트 헤더의 마지막 줄이다 — 그래서 hairline을 이쪽이 갖는다. */}
           <div className="shrink-0 border-b border-[var(--el-hairline)] bg-white px-[var(--note-gutter)] pb-4">
             <div className="mx-auto w-full max-w-[820px]">
-              {/* design.pen `U5DbV`/`U9YGl`: 세그먼트 컨트롤이다 — bg secondary · r8 · p4에
-                  칩 하나가 흰 카드로 뜬다. 전체폭 밑줄 탭이 아니다. 정본이 `w-fit`으로 왼쪽에
-                  붙는 이유는 탭이 셋~넷뿐인데 860 폭에 균등 분할하면 라벨 사이가 200px씩
-                  벌어져 한 뭉치로 안 읽히기 때문이다.
+              {/* design.pen `U5DbV`/`U9YGl`: **밑줄 탭이다.** 왼쪽에 `w-fit`으로 붙고
+                  활성 탭만 2px 밑줄을 갖는다 — 세그먼트 알약이었던 적이 있는데, 노트 헤더가
+                  이미 상태 칩·프로젝트 pill·아바타로 채워져 있어서 그 아래 회색 알약이 또
+                  얹히면 크롬이 두 겹으로 읽혔다. 밑줄은 자리를 안 차지하면서 어디인지만 말한다.
+
+                  전체폭 균등 분할이 아니다 — 탭이 셋~넷뿐인데 860 폭에 나누면 라벨 사이가
+                  200px씩 벌어져 한 뭉치로 안 읽힌다.
 
                   순서는 정보 → 전사 → 요약이고 정보가 기본이다. 회의를 열면 먼저 보이는 것이
                   제목·참여자·시각이고, 전사는 필요할 때 넘어간다. 라벨은 뷰·상태에 따라
                   갈리지 않는다 — 같은 탭이 화면마다 다른 이름으로 불리면 같은 자리인지
                   알기 어렵다. */}
-              {/* `h-10`이 아니라 `group-data-horizontal/tabs:h-10`이다 — primitive의 기본
-                  높이도 같은 variant 셀렉터라(`group-data-horizontal/tabs:h-8`) 평범한 `h-10`은
-                  tailwind-merge가 충돌로 보지 않아 조용히 32px로 남는다. */}
-              <TabsList className="gap-1 rounded-control bg-[var(--el-surface-strong)] p-1 group-data-horizontal/tabs:h-10">
-                <TabsTrigger
-                  value="details"
-                  className="h-8 flex-none rounded-chip px-3 text-xs"
-                >
+              {/* 높이를 덮을 때는 `group-data-horizontal/tabs:h-9`처럼 **같은 variant
+                  셀렉터로** 써야 한다 — primitive의 기본값도 그 형태라(`:h-8`) 평범한 `h-9`는
+                  tailwind-merge가 충돌로 보지 않아 조용히 무시된다. */}
+              <TabsList
+                variant="line"
+                className="gap-6 group-data-horizontal/tabs:h-9"
+              >
+                <TabsTrigger value="details" className={TAB_ITEM}>
                   정보
                 </TabsTrigger>
-                <TabsTrigger
-                  value="transcript"
-                  className="h-8 flex-none rounded-chip px-3 text-xs"
-                >
+                <TabsTrigger value="transcript" className={TAB_ITEM}>
                   전사
                 </TabsTrigger>
                 {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
                 {showSummaryTab ? (
-                  <TabsTrigger
-                    value="summary"
-                    className="h-8 flex-none rounded-chip px-3 text-xs"
-                  >
+                  <TabsTrigger value="summary" className={TAB_ITEM}>
                     요약
                   </TabsTrigger>
                 ) : null}
                 {showSideChatTab ? (
-                  <TabsTrigger
-                    value="chat"
-                    className="h-8 flex-none rounded-chip px-3 text-xs"
-                  >
+                  <TabsTrigger value="chat" className={TAB_ITEM}>
                     챗봇
                   </TabsTrigger>
                 ) : null}

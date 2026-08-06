@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Check, Clock3, Mic, UserRound } from "lucide-react";
+import { Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
+import {
+  MeetingStatusChip,
+} from "@/components/notes/meeting-controls";
 import { NoteParticipantsField } from "@/components/notes/note-participants-field";
-import { ParticipantAvatar } from "@/components/notes/note-participants";
+import {
+  NoteParticipantAvatars,
+  ParticipantAvatar,
+} from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +23,7 @@ import {
   useGetNoteSuspense,
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
+import { useGetProject } from "@/lib/api/generated/projects/projects";
 import { formatAppDate } from "@/lib/format/date";
 import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
@@ -26,6 +33,45 @@ function formatRecordedClock(elapsedMs: number) {
   return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(
     totalSeconds % 60
   ).padStart(2, "0")}`;
+}
+
+/** 라벨 + 컨트롤 한 칸. design.pen `OmVNh`: vertical · gap 6 · 라벨 12/600. */
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={htmlFor} className="text-xs font-semibold text-[var(--el-ink)]">
+        {label}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * 「회의 정보」 표의 한 줄. design.pen `M0Bfl`: 키 열 **124 고정** · 값 12px.
+ *
+ * 키 열을 고정하는 이유는 값이 세로로 훑히기 때문이다 — 키 길이에 따라 값이 들쭉날쭉하면
+ * 「무엇이 무엇인지」를 한 줄씩 다시 읽어야 한다.
+ */
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-[30px] items-center gap-3">
+      <dt className="w-[124px] shrink-0 text-xs text-[var(--el-body)]">
+        {label}
+      </dt>
+      <dd className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-[var(--el-ink)]">
+        {children}
+      </dd>
+    </div>
+  );
 }
 
 export function NoteDetails({
@@ -54,12 +100,22 @@ export function NoteDetails({
       ? [Date.parse(loaded.activeSessionStartedAt)]
       : []
   );
+  // 프로젝트는 **읽기 전용이다** — 계약에 노트의 프로젝트를 바꾸는 길이 없다(`NoteRequest`는
+  // `title`만 받는다). 노트 헤더도 같은 쿼리를 부르므로 키가 같아 요청은 늘지 않는다.
+  const projectQuery = useGetProject(workspaceId, loaded?.projectId ?? "", {
+    query: { enabled: Boolean(loaded?.projectId) },
+  });
+  const project =
+    projectQuery.data?.status === 200 && projectQuery.data.data.success
+      ? projectQuery.data.data.data
+      : undefined;
 
   // suspense가 네트워크 실패는 throw하지만, 계약 위반 봉투(200 아님·success=false)도 경계로 보낸다.
   if (!loaded) {
     throw new Error("노트를 불러오지 못했습니다.");
   }
   const note = loaded;
+  const participantCount = note.participants?.length ?? 0;
 
   // 노트 단건과 목록을 함께 무효화한다 — 목록은 projectId별로 조회하므로(workspace-page)
   // 단건만 무효화하면 제목 변경이 목록에 반영되지 않는다.
@@ -71,143 +127,189 @@ export function NoteDetails({
       }),
     ]);
 
+  const timestamp = (iso: string) =>
+    formatAppDate(iso, { dateStyle: "medium", timeStyle: "short" });
+
   return (
-    <form
-      key={`${note.noteId}-${note.updatedAt}`}
-      className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] space-y-10 px-[var(--note-gutter)] pb-36 pt-6"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        setFeedback(null);
-        const form = new FormData(event.currentTarget);
-        const title = String(form.get("title") ?? "").trim();
-        try {
-          await updateNote.mutateAsync({
-            noteId,
-            data: {
-              title: title || "제목 없는 노트",
-            },
-          });
-          await refresh();
-          setFeedback("saved");
-        } catch {
-          toast.error("저장하지 못했습니다. 입력한 내용은 유지됩니다.", {
-            id: `note-save-${noteId}`,
-          });
-        }
-      }}
-    >
-      {/* v5: 대문자 키커 제거 — 세리프 제목만 유지(FORM SPEC). */}
-      <header>
-        <h2 className="font-serif text-section font-light tracking-[-0.025em] text-[var(--el-ink)]">
-          노트 정보
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
-          회의 제목과 기록 시각을 관리합니다.
-        </p>
-      </header>
+    // design.pen `VaEPF`: Body는 vertical · gap 24 · 좌우는 뷰가 정하는 거터다.
+    // **카드가 없다.** 예전에는 제목·참여자·사실이 각자 `rounded-block` 상자에 들어 있었는데,
+    // 카드 넷이 쌓이면 무엇이 편집이고 무엇이 읽기인지 테두리로는 구분되지 않았다.
+    // 지금은 편집만 컨트롤 테두리를 갖고, 읽기는 키/값 표로 눕는다.
+    <div className="mx-auto flex w-full max-w-[calc(820px+2*var(--note-gutter))] flex-col gap-6 px-[var(--note-gutter)] pb-36 pt-6">
+      <form
+        // 저장이 끝나면 `updatedAt`이 바뀌어 이 폼이 재마운트되고 입력이 서버 값으로 돌아온다.
+        // 낙관적 표시 없이 서버가 확정한 것만 보이게 하는 장치다.
+        key={`${note.noteId}-${note.updatedAt}`}
+        className="flex flex-col gap-4"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          setFeedback(null);
+          const form = new FormData(event.currentTarget);
+          const title = String(form.get("title") ?? "").trim();
+          try {
+            await updateNote.mutateAsync({
+              noteId,
+              data: {
+                title: title || "제목 없는 노트",
+              },
+            });
+            await refresh();
+            setFeedback("saved");
+          } catch {
+            toast.error("저장하지 못했습니다. 입력한 내용은 유지됩니다.", {
+              id: `note-save-${noteId}`,
+            });
+          }
+        }}
+      >
+        <Field label="제목" htmlFor="note-title">
+          <Input
+            id="note-title"
+            name="title"
+            defaultValue={note.title}
+            maxLength={200}
+            className="h-9"
+          />
+        </Field>
 
-      <div className="space-y-3 rounded-block border border-[var(--el-hairline)] bg-white p-5 sm:p-6">
-        <Label htmlFor="note-title" className="text-xs text-[var(--el-muted)]">
-          회의 제목
-        </Label>
-        <Input
-          id="note-title"
-          name="title"
-          defaultValue={note.title}
-          maxLength={200}
-          className="h-auto border-0 bg-transparent px-0 py-1 font-serif text-2xl font-light tracking-[-0.02em] shadow-none focus-visible:ring-0"
-        />
-      </div>
+        {/* **회의 상태로 가르지 않는다.** 계약이 "회의 상태와 무관하게 언제나 호출할 수 있다"고
+            못박은 자리다(`PUT /v1/notes/{noteId}/participants`) — 늦게 합류한 사람을 기록 중인
+            회의나 끝난 회의에 뒤늦게 넣는 일은 실제로 생긴다. 정본은 시작 전 화면에서만
+            편집하게 그려 두었지만, 그러면 그 일을 할 방법이 사라진다. */}
+        <Field label="참석자">
+          <NoteParticipantsField
+            noteId={noteId}
+            projectId={note.projectId}
+            workspaceId={workspaceId}
+            participants={note.participants}
+          />
+        </Field>
 
-      <section className="space-y-3 rounded-block border border-[var(--el-hairline)] bg-white p-5 sm:p-6">
-        <Label className="text-xs text-[var(--el-muted)]">참여자</Label>
-        <NoteParticipantsField
-          noteId={noteId}
-          projectId={note.projectId}
-          workspaceId={workspaceId}
-          participants={note.participants}
-        />
-      </section>
-
-      <dl className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
-          <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
-            <CalendarDays className="size-3.5" /> 생성
-          </dt>
-          <dd className="mt-3 text-sm text-[var(--el-body-strong)]">
-            {formatAppDate(note.createdAt, {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </dd>
-        </div>
-        <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
-          <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
-            <Clock3 className="size-3.5" /> 최근 수정
-          </dt>
-          <dd className="mt-3 text-sm text-[var(--el-body-strong)]">
-            {formatAppDate(note.updatedAt, {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </dd>
-        </div>
-        {/* 누적 기록 시간과 진행자의 자리는 여기다. 노트 헤더는 정본대로(design.pen `MZRO0`)
-            상태 칩·제목·메타 두 줄만 갖고, 초 단위로 바뀌는 값과 얼굴은 이 탭이 맡는다 —
-            헤더에 함께 두었을 때 그 줄만 소리쳤고 좁은 폭에서 감기며 전사 높이를 눌렀다.
-            헤더의 메타 둘째 줄은 같은 값을 분 단위로 요약한다(「기록 42분」). */}
-        <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
-          <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
-            <Mic className="size-3.5" /> 기록 시간
-          </dt>
-          <dd
-            role="timer"
-            aria-label="누적 기록 시간"
-            className="mt-3 text-sm tabular-nums text-[var(--el-body-strong)]"
+        {/* 정본은 「변경 사항은 자동 저장됩니다」지만 저장은 명시적으로 둔다. 저장이 끝나면
+            `updatedAt`이 바뀌어 이 폼이 재마운트되므로, 자동 저장은 **타이핑 중에 커서를
+            날린다.** 편집 대상이 제목 하나뿐이라 버튼 하나로 잃는 것도 없다. */}
+        <div className="flex items-center gap-3">
+          <Button
+            type="submit"
+            loading={updateNote.isPending}
+            className="rounded-control px-3.5"
           >
-            {formatRecordedClock(getRecordedDurationMs(note, now ?? 0))}
-          </dd>
+            <Check /> 변경 저장
+          </Button>
+          {feedback === "saved" ? (
+            <span role="status" className="text-xs text-[var(--el-muted)]">
+              저장됨
+            </span>
+          ) : null}
         </div>
-        {note.meetingStartedBy ? (
-          <div className="rounded-block border border-[var(--el-hairline)] bg-white p-5">
-            <dt className="flex items-center gap-2 text-xs font-medium text-[var(--el-muted)]">
-              <UserRound className="size-3.5" /> 진행자
-            </dt>
-            <dd className="mt-3 flex items-center gap-2 text-sm text-[var(--el-body-strong)]">
+      </form>
+
+      <section aria-labelledby="note-facts-title" className="flex flex-col">
+        <h2
+          id="note-facts-title"
+          className="mb-2.5 text-[13px] font-semibold text-[var(--el-ink)]"
+        >
+          회의 정보
+        </h2>
+        <dl className="flex flex-col">
+          <Fact label="회의 상태">
+            <MeetingStatusChip status={note.meetingStatus} />
+          </Fact>
+          {project ? <Fact label="프로젝트">{project.name}</Fact> : null}
+          <Fact label="시작 시각">
+            {note.meetingStartedAt ? (
+              <time dateTime={note.meetingStartedAt}>
+                {formatAppDate(note.meetingStartedAt, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </time>
+            ) : (
+              // **종료된 회의도 이 자리가 빌 수 있다** — 한 번도 ACTIVE 세션이 없었으면
+              // 계약상 `meetingStartedAt`이 null이다(기록 없이 끝낸 회의). 그때 「아직
+              // 시작하지 않았습니다」라고 적으면 바로 위 「종료됨」과 앞뒤가 안 맞는다.
+              <span className="font-normal text-[var(--el-muted)]">
+                {note.meetingStatus === "NOT_STARTED"
+                  ? "아직 시작하지 않았습니다"
+                  : "기록된 시작 시각이 없습니다"}
+              </span>
+            )}
+          </Fact>
+          <Fact label="참석자">
+            {participantCount > 0 ? (
+              <>
+                <NoteParticipantAvatars
+                  participants={note.participants}
+                  max={3}
+                  size="sm"
+                  className="-space-x-1.5 *:data-[slot=avatar]:ring-white"
+                />
+                <span className="ml-1">{participantCount}명</span>
+              </>
+            ) : (
+              <span className="font-normal text-[var(--el-muted)]">
+                없습니다
+              </span>
+            )}
+          </Fact>
+          {note.meetingStartedBy ? (
+            <Fact label="진행자">
               <ParticipantAvatar
                 participant={note.meetingStartedBy}
                 size="sm"
                 isStarter
               />
-              {note.meetingStartedBy.name}
-            </dd>
-          </div>
-        ) : null}
-      </dl>
+              <span className="ml-1">
+                {note.meetingStartedBy.name}
+                <span className="font-normal text-[var(--el-muted)]">
+                  {" · 기록 제어 권한"}
+                </span>
+              </span>
+            </Fact>
+          ) : null}
+          {/* 초 단위로 바뀌는 값은 여기 하나뿐이다 — 노트 헤더는 같은 값을 분 단위로 요약하고
+              (「기록 42분」), 진행 중 라이브 타이머는 레코더 독이 갖는다. */}
+          <Fact label="누적 기록 시간">
+            <span role="timer" aria-label="누적 기록 시간" className="tabular-nums">
+              {formatRecordedClock(getRecordedDurationMs(note, now ?? 0))}
+            </span>
+            <span className="font-normal text-[var(--el-muted)]">
+              · 종료된 구간만 합산
+            </span>
+          </Fact>
+          {/* 정본은 「워크스페이스 멤버 4명 공개」지만 그 수는 노트 계약에 없다 — 참석자 수와
+              헷갈리기도 해서 수를 뺐다(노트 헤더 메타와 같은 판단). */}
+          <Fact label="공유 범위">워크스페이스 멤버에게 공개</Fact>
 
-      <div className="flex items-center gap-3 border-t border-[var(--el-hairline)] pt-6">
-        <Button
-          type="submit"
-          loading={updateNote.isPending}
-          className="rounded-full px-5"
-        >
-          <Check /> 변경 저장
-        </Button>
-        {feedback === "saved" ? (
-          <span role="status" className="text-sm text-muted-foreground">
-            저장됨
-          </span>
-        ) : null}
-      </div>
-    </form>
+          {/* 위는 회의의 사실, 아래는 문서의 이력이다 — 선 하나로 가른다(design.pen `i3zDhK`). */}
+          <div
+            aria-hidden
+            className="my-2.5 h-px w-full bg-[var(--el-hairline)]"
+          />
+          <Fact label="생성">
+            <time dateTime={note.createdAt}>{timestamp(note.createdAt)}</time>
+          </Fact>
+          <Fact label="최종 수정">
+            <time dateTime={note.updatedAt}>{timestamp(note.updatedAt)}</time>
+          </Fact>
+        </dl>
+      </section>
+    </div>
   );
 }
 
 /** 노트 정보 로딩 스켈레톤. DataBoundary fallback으로 부모(note-panel)가 쓴다. */
 export function NoteDetailsSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] space-y-5 px-[var(--note-gutter)] pt-6">
-      <Skeleton className="h-10 w-2/3" />
+    <div className="mx-auto flex w-full max-w-[calc(820px+2*var(--note-gutter))] flex-col gap-6 px-[var(--note-gutter)] pt-6">
+      {/* 기하는 최종 화면에 맞춘다 — 라벨 + h-9 컨트롤 둘, 그다음 표. */}
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-full" />
+      </div>
       <Skeleton className="h-40 w-full" />
     </div>
   );
