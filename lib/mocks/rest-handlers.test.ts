@@ -23,6 +23,28 @@ describe("REST mock handlers", () => {
   });
   afterAll(() => server.close());
 
+  /**
+   * 시작 실패는 전역 토스트를 끄고 프로바이더가 이 문구를 그대로 그린다 — 코드가 문구
+   * 자리에 흘러오면 화면에 `NOTE_NOT_FOUND`가 그대로 뜬다. 문구는 계약의 것이어야 한다.
+   */
+  it("세션 생성 404의 문구는 계약의 한국어다", async () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    mockDb.deleteNote(note.noteId);
+
+    const response = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/transcription-sessions`,
+      { method: "POST" }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error).toMatchObject({
+      code: "NOTE_NOT_FOUND",
+      message: "노트를 찾을 수 없습니다.",
+    });
+  });
+
   it("returns the session details", async () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});

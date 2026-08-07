@@ -1,12 +1,18 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
 import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { forgetWorkspace } from "@/lib/workspace/cache";
+import { notifyWorkspaceGone } from "@/lib/workspace/gone-notice";
+
+import {
+  isWorkspaceRecordingActive,
+  useRecording,
+} from "@/components/transcription/recording-provider";
 
 import { NoteFullSkeleton } from "@/components/notes/note-full-skeleton";
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
@@ -120,7 +126,8 @@ const MEMBERSHIP_POLL_MS = 30_000;
 function useRedirectWhenWorkspaceGone(workspaceId: string) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { error, failureReason } = useGetWorkspace(workspaceId, {
+  const recording = useRecording();
+  const { data, error, failureReason } = useGetWorkspace(workspaceId, {
     query: { refetchInterval: MEMBERSHIP_POLL_MS },
   });
 
@@ -129,10 +136,59 @@ function useRedirectWhenWorkspaceGone(workspaceId: string) {
   // 영영 안 채워진다(브라우저 실측 — 새로고침하면 골격만 남던 것이 이것이다). 404는 다시
   // 물어도 답이 같으니 **첫 실패가 곧 결론**이고, 그 첫 실패가 `failureReason`이다.
   const gone = meansWorkspaceGone(error) || meansWorkspaceGone(failureReason);
+  // 이 워크스페이스를 녹음 중이면 마이크와 소켓을 끊어야 한다. **다른 워크스페이스의 녹음은
+  // 건드리지 않는다** — 녹음은 route를 넘어 살아 있어서 A를 녹음한 채 B를 볼 수 있고,
+  // 그때 B에서 추방당했다고 A의 녹음을 죽이면 하던 일이 이유 없이 끊긴다.
+  const recordingHere = isWorkspaceRecordingActive(recording, workspaceId);
+  const { disconnect } = recording;
+
+  /**
+   * **한 번이라도 들어와 본 곳인가.** 이것이 「쫓겨났다」와 「원래 내 것이 아니었다」를 가른다.
+   *
+   * 남의 워크스페이스 URL을 붙여넣으면 첫 조회부터 404다. 그때도 홈으로 보내는 것은 맞지만
+   * 「나가게 되었습니다」는 거짓말이다 — 들어온 적이 없다.
+   *
+   * 자발적 나가기도 여기 걸린다. 나가기는 `forgetWorkspace`로 상세 조회를 **지우고** 이동하고,
+   * 지워진 자리에 새로 뜬 조회에는 데이터가 없다. 그래서 「내가 눌러서 나갔다」를 따로 표시해
+   * 둘 필요가 없다 — 표시를 쓰면 요청보다 먼저 도착한 404를 못 막고, 소비되지 않은 표시가
+   * 남아 나중의 진짜 추방을 가리는 두 갈래 경계 상태가 생긴다(codex 리뷰 1회차).
+   */
+  const wasMember = data !== undefined;
+  /**
+   * **지금 내가 나가는 중인가.** 30초 폴링이 나가기 DELETE와 겹칠 수 있다 — 서버에서 탈퇴가
+   * 먼저 커밋되고 그 GET의 404가 DELETE의 204보다 먼저 도착하면, 캐시에는 아직 성공 데이터가
+   * 남아 있어 `wasMember`가 참이고 **내가 누른 나가기에 「나가게 되었습니다」가 뜬다.**
+   *
+   * mutation 캐시는 앱 전역이라 설정 시트가 다른 트리에 있어도 여기서 보인다. 요청이 시작될
+   * 때 켜지고 성패와 무관하게 끝나면 꺼지므로 따로 치울 상태가 없다 — 예전에 모듈 수준
+   * 표시를 뒀다가 "요청보다 먼저 온 404를 못 막고, 소비 안 된 표시가 나중의 진짜 추방을
+   * 가린다"는 지적을 받았다(codex 리뷰 1·3회차).
+   */
+  const leavingHere =
+    useIsMutating({
+      predicate: (mutation) =>
+        String(mutation.options.mutationKey?.[0]) === "leaveWorkspace" &&
+        (mutation.state.variables as { workspaceId?: string } | undefined)
+          ?.workspaceId === workspaceId,
+    }) > 0;
 
   useEffect(() => {
     if (!gone) return;
+    // 화면 밖 녹음은 프로바이더가 자기 세션 조회로 직접 끊는다. 여기서 한 번 더 보는 것은
+    // 세션 id가 붙기 전(권한 요청·연결 중)이라 그 조회가 아직 없을 때를 위해서다.
+    // `stop()`이 아니라 `disconnect()`다 — 이미 비멤버라 세션 종료 API도 404로 떨어진다.
+    if (recordingHere) void disconnect();
+    if (wasMember && !leavingHere) notifyWorkspaceGone();
     forgetWorkspace(queryClient, workspaceId);
     router.replace("/");
-  }, [gone, queryClient, router, workspaceId]);
+  }, [
+    disconnect,
+    gone,
+    leavingHere,
+    queryClient,
+    recordingHere,
+    router,
+    wasMember,
+    workspaceId,
+  ]);
 }

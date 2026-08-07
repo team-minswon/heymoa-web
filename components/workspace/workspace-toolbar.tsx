@@ -133,8 +133,19 @@ export function WorkspaceToolbar({
     "stopping",
   ].includes(recording.phase);
 
-  const openNote = (noteId: string) =>
-    router.push(`/w/${workspaceId}/notes/${noteId}?view=side&tab=details`);
+  /**
+   * 녹음 중인 노트로 돌아간다.
+   *
+   * **지금 보고 있는 워크스페이스가 아니라 녹음 중인 워크스페이스로 간다.** 녹음은 route를
+   * 넘어 살아 있어서 A를 녹음한 채 B의 상단바를 볼 수 있는데, 예전에는 여기서 `workspaceId`
+   * (=B)로 링크를 만들어 `/w/B/notes/<A의 노트>`가 됐다. 노트 조회는 워크스페이스를 받지
+   * 않아 A의 노트가 그대로 열리므로 **틀린 줄도 모르고** 그 화면에서 재개하게 되고, 그러면
+   * 녹음의 소속이 B로 기록돼 A의 나가기 잠금과 추방 정리가 둘 다 빗나간다(codex 리뷰 3회차).
+   */
+  const openRecordingNote = (noteId: string) =>
+    router.push(
+      `/w/${recording.activeWorkspaceId ?? workspaceId}/notes/${noteId}?view=side&tab=details`
+    );
 
   const recordingNoteId = recording.activeNoteId ?? recording.session?.noteId;
   const isRecordingOtherNote =
@@ -194,7 +205,7 @@ export function WorkspaceToolbar({
             noteId={recordingNoteId}
             phase={recording.phase}
             elapsedMs={recording.elapsedMs}
-            onOpen={openNote}
+            onOpen={openRecordingNote}
             onStop={() => void recording.stop()}
           />
         ) : null}

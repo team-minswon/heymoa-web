@@ -31,11 +31,27 @@ const state = vi.hoisted(() => ({
   leaveOptions: null as { mutation?: Record<string, unknown> } | null,
   leaveError: null as unknown,
   leavePending: false,
+  /** 지금 녹음 중인 것. `useRecording()`이 돌려줄 것 중 이 화면이 보는 부분이다. */
+  recording: null as { activeWorkspaceId: string; phase: string } | null,
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: state.replaceMock }),
 }));
+vi.mock("@/components/transcription/recording-provider", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/components/transcription/recording-provider")
+  >("@/components/transcription/recording-provider");
+  return {
+    ...actual,
+    // 어느 워크스페이스의 녹음인지 가리는 판정(`isWorkspaceRecordingActive`)은 진짜를 쓴다.
+    useRecording: () => ({
+      activeWorkspaceId: state.recording?.activeWorkspaceId ?? null,
+      phase: state.recording?.phase ?? "idle",
+      session: null,
+    }),
+  };
+});
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspaces: () => ({
     data: {
@@ -212,6 +228,7 @@ describe("MembersSettings", () => {
     state.leaveOptions = null;
     state.leaveError = null;
     state.leavePending = false;
+    state.recording = null;
   });
   afterEach(cleanup);
 
@@ -325,9 +342,7 @@ describe("MembersSettings", () => {
   });
 
   it("만료 지난 초대는 만료됨 배지를 보이고 취소 버튼은 남는다", () => {
-    state.invitations = [
-      pendingInvite({ expiresAt: "2026-07-01T00:00:00Z" }),
-    ];
+    state.invitations = [pendingInvite({ expiresAt: "2026-07-01T00:00:00Z" })];
     renderSettings();
     expect(screen.getByText("만료됨")).toBeTruthy();
     expect(screen.getByRole("button", { name: "취소" })).toBeTruthy();
@@ -361,7 +376,9 @@ describe("MembersSettings", () => {
       within(myRow).queryByRole("button", { name: /내보내기/ })
     ).toBeNull();
     // 자기 역할은 select로 바꿀 수 있어야 한다 — 자기 강등 흐름이 이걸로 된다.
-    expect(within(myRow).getByLabelText("테스트 유저(me@heymoa.com) 역할")).toBeTruthy();
+    expect(
+      within(myRow).getByLabelText("테스트 유저(me@heymoa.com) 역할")
+    ).toBeTruthy();
   });
 
   it("역할을 바꾸면 mutation을 올바른 인자로 부르고 목록을 무효화한다", () => {
@@ -418,7 +435,9 @@ describe("MembersSettings", () => {
     for (const select of screen.getAllByLabelText(/ 역할$/)) {
       expect(select).toBeDisabled();
     }
-    for (const button of screen.getAllByRole("button", { name: / 내보내기$/ })) {
+    for (const button of screen.getAllByRole("button", {
+      name: / 내보내기$/,
+    })) {
       expect(button).toBeDisabled();
     }
   });
@@ -437,7 +456,9 @@ describe("MembersSettings", () => {
     for (const select of screen.getAllByLabelText(/ 역할$/)) {
       expect(select).not.toBeDisabled();
     }
-    for (const button of screen.getAllByRole("button", { name: / 내보내기$/ })) {
+    for (const button of screen.getAllByRole("button", {
+      name: / 내보내기$/,
+    })) {
       expect(button).not.toBeDisabled();
     }
   });
@@ -459,8 +480,11 @@ describe("MembersSettings", () => {
     // suppressErrorToast나 자기 onError로 가로채면 안 된다.
     expect(state.changeRoleOptions?.mutation?.onError).toBeUndefined();
     expect(
-      (state.changeRoleOptions?.mutation as { meta?: { suppressErrorToast?: boolean } } | undefined)
-        ?.meta?.suppressErrorToast
+      (
+        state.changeRoleOptions?.mutation as
+          | { meta?: { suppressErrorToast?: boolean } }
+          | undefined
+      )?.meta?.suppressErrorToast
     ).toBeFalsy();
 
     // 서버가 강등을 받아들이고 목록이 새로 내려온 상태를 재현한다.
@@ -482,7 +506,9 @@ describe("MembersSettings", () => {
     if (!otherRow) throw new Error("김민수 행을 찾지 못했다");
 
     fireEvent.click(
-      within(otherRow).getByRole("button", { name: "김민수(minsu@heymoa.com) 내보내기" })
+      within(otherRow).getByRole("button", {
+        name: "김민수(minsu@heymoa.com) 내보내기",
+      })
     );
 
     const dialog = screen.getByRole("alertdialog");
@@ -496,9 +522,7 @@ describe("MembersSettings", () => {
       })
     );
     // `note-delete-dialog.tsx`와 같은 패턴 — 성공이 확인된 뒤에야 닫는다.
-    await waitFor(() =>
-      expect(screen.queryByRole("alertdialog")).toBeNull()
-    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   });
 });
 
@@ -522,7 +546,9 @@ describe("워크스페이스 나가기", () => {
 
   /** 확인 다이얼로그까지 열어 준다. 나가기는 되돌릴 수 없어 한 번 묻는다. */
   function openLeaveDialog() {
-    fireEvent.click(screen.getByRole("button", { name: "워크스페이스 나가기" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "워크스페이스 나가기" })
+    );
     return screen.getByRole("alertdialog");
   }
 
@@ -548,6 +574,52 @@ describe("워크스페이스 나가기", () => {
     expect(
       screen.getByRole("button", { name: "워크스페이스 나가기" })
     ).toBeDisabled();
+  });
+
+  // **녹음 중에 나가면 마이크와 오디오 전송이 계속 돈다** — 화면은 다른 워크스페이스로
+  // 가는데 `RecordingProvider`는 route를 넘어 살아 있어서 이미 접근할 수 없는 노트로 음성이
+  // 계속 나간다. 그래서 나가기 자체를 막는다.
+  //
+  // 이유를 화면에 남긴다. 잠긴 버튼 + `title`은 터치에 호버가 없고 disabled는 포커스도
+  // 안 받아 왜 못 누르는지가 사라진다(`recording-dock`이 같은 이유로 문구를 그린다).
+  it("이 워크스페이스를 녹음 중이면 나가기가 잠기고 이유가 보인다", () => {
+    state.recording = {
+      activeWorkspaceId: "01K0000000000",
+      phase: "recording",
+    };
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MembersSettings workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
+
+    expect(
+      screen.getByRole("button", { name: "워크스페이스 나가기" })
+    ).toBeDisabled();
+    expect(
+      screen.getByText("녹음을 끝낸 뒤 나갈 수 있습니다.")
+    ).toBeInTheDocument();
+  });
+
+  // 다른 워크스페이스에서 녹음 중인데 여기서 막으면 틀린 잠금이다 — 녹음은 route를 넘어
+  // 살아 있어서 A를 녹음한 채 B의 설정을 열 수 있다.
+  it("다른 워크스페이스를 녹음 중이면 잠그지 않는다", () => {
+    state.recording = {
+      activeWorkspaceId: "01K0000000006",
+      phase: "recording",
+    };
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MembersSettings workspaceId="01K0000000000" />
+      </QueryClientProvider>
+    );
+
+    expect(
+      screen.getByRole("button", { name: "워크스페이스 나가기" })
+    ).toBeEnabled();
+    expect(screen.queryByText("녹음을 끝낸 뒤 나갈 수 있습니다.")).toBeNull();
   });
 
   // 요청 중에 창만 사라지면 취소한 줄 알지만 요청은 계속 간다 — 뒤늦게 성공하면 갑자기
@@ -638,9 +710,9 @@ describe("워크스페이스 나가기", () => {
       const cached = client.getQueryData(["workspaces"]) as {
         data: { data: { workspaces: { workspaceId: string }[] } };
       };
-      expect(
-        cached.data.data.workspaces.map((w) => w.workspaceId)
-      ).toEqual(["01K0000000006"]);
+      expect(cached.data.data.workspaces.map((w) => w.workspaceId)).toEqual([
+        "01K0000000006",
+      ]);
     });
   });
 

@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
-import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import {
   useRecording,
   useRecordingMeter,
@@ -104,27 +103,22 @@ function GlobalRecordingPill({
 
 export function GlobalRecordingIndicator() {
   const pathname = usePathname();
-  const { session, elapsedMs, phase, stop } = useRecording();
+  const { session, activeWorkspaceId, elapsedMs, phase, stop } = useRecording();
   const isVisible =
     !isWorkspaceRoute(pathname) &&
     Boolean(session) &&
     VISIBLE_PHASES.has(phase);
-  const workspacesQuery = useGetWorkspaces({
-    query: { enabled: isVisible, staleTime: 5 * 60 * 1000 },
-  });
-
-  const workspaceEnvelope =
-    workspacesQuery.data?.status === 200
-      ? workspacesQuery.data.data
-      : undefined;
-  const workspaces = workspaceEnvelope?.success
-    ? (workspaceEnvelope.data.workspaces ?? [])
-    : [];
-  const workspaceId =
-    workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
-    workspaces[0]?.workspaceId;
-  const href = workspaceId
-    ? `/w/${workspaceId}/notes/${session?.noteId ?? ""}?view=full&tab=transcript`
+  /**
+   * **녹음 중인 워크스페이스로 돌아간다.** 예전에는 기본 워크스페이스(`find(isDefault) ?? [0]`)를
+   * 골랐는데, 그것은 지금 녹음 중인 곳이 아닐 수 있다 — 기본이 아닌 A를 녹음하다 홈에 오면
+   * `/w/B/notes/<A의 노트>`가 만들어졌다. 노트 조회는 워크스페이스를 받지 않아 A의 노트가
+   * 그대로 그려지므로 **틀린 URL인 줄도 모른 채** 그 화면에서 재개하게 되고, 그러면 녹음의
+   * 소속이 B로 기록돼 A의 나가기 잠금과 추방 정리가 둘 다 빗나간다.
+   *
+   * 이제 `start()`가 소속을 들고 있으니 목록을 뒤질 필요가 없다.
+   */
+  const href = activeWorkspaceId
+    ? `/w/${activeWorkspaceId}/notes/${session?.noteId ?? ""}?view=full&tab=transcript`
     : "#";
 
   return (

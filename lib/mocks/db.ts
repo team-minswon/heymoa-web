@@ -1008,6 +1008,21 @@ function assertProject(projectId: string) {
   );
 }
 
+/**
+ * 그 워크스페이스 **안의** 프로젝트를 찾는다.
+ *
+ * **어긋난 조합은 403이 아니라 404다.** 서버가 `findByWorkspaceIdAndProjectId(...)` 한 번으로
+ * 찾고 없으면 `ProjectNotFoundException`을 던진다(조회·수정·삭제 셋 다). 목이 `FORBIDDEN`을
+ * 주면 "이 워크스페이스의 노트가 아니다"를 코드로 가리는 화면이 목에서만 다르게 동작한다.
+ */
+function assertProjectIn(workspaceId: string, projectId: string) {
+  const project = state.projects.find(
+    (candidate) =>
+      candidate.projectId === projectId && candidate.workspaceId === workspaceId
+  );
+  return project ?? fail("PROJECT_NOT_FOUND");
+}
+
 function findNote(noteId: string) {
   const note = state.notes.find((candidate) => candidate.noteId === noteId);
   return note ?? fail("NOTE_NOT_FOUND");
@@ -1516,7 +1531,9 @@ export const mockDb = {
    * 토큰 수락 — 목의 토큰은 invitationId다. 실서버 계약대로 만료(409)와 이메일
    * 일치(403)를 먼저 본다. 인앱 수락(`acceptInvitation`)은 항상 본인 초대라 안 본다.
    */
-  acceptInvitationByToken(token: string): WorkspaceInvitationActionResponseData {
+  acceptInvitationByToken(
+    token: string
+  ): WorkspaceInvitationActionResponseData {
     const invitation = findInvitation(token);
     // 서버(AcceptWorkspaceInvitationByTokenService)와 같은 순서 — 만료 → 상태 → 이메일 → 멤버
     expireIfNeeded(invitation);
@@ -1696,9 +1713,7 @@ export const mockDb = {
 
   getProject(workspaceId: string, projectId: string): ProjectResponseData {
     assertWorkspace(workspaceId);
-    const project = assertProject(projectId);
-    if (project.workspaceId !== workspaceId) fail("FORBIDDEN");
-    return copy(project);
+    return copy(assertProjectIn(workspaceId, projectId));
   },
 
   updateProject(
@@ -1707,8 +1722,7 @@ export const mockDb = {
     input: ProjectRequest
   ): ProjectResponseData {
     assertWorkspace(workspaceId);
-    const project = assertProject(projectId);
-    if (project.workspaceId !== workspaceId) fail("FORBIDDEN");
+    const project = assertProjectIn(workspaceId, projectId);
     const name = input.name.trim();
     if (!name) fail("BAD_REQUEST");
     project.name = name;
@@ -1719,8 +1733,7 @@ export const mockDb = {
 
   deleteProject(workspaceId: string, projectId: string) {
     assertWorkspace(workspaceId);
-    const project = assertProject(projectId);
-    if (project.workspaceId !== workspaceId) fail("FORBIDDEN");
+    assertProjectIn(workspaceId, projectId);
     if (state.notes.some((note) => note.projectId === projectId)) {
       fail("PROJECT_HAS_NOTES");
     }
@@ -1881,6 +1894,9 @@ export const mockDb = {
 
   createSession(noteId: string): StartTranscriptionSessionResponseData {
     const note = findNote(noteId);
+    // 조회와 같은 규칙 — 권한 승인과 이 POST 사이에 추방됐을 수 있다. 서버는 여기서도
+    // 멤버십을 보고 404 `WORKSPACE_NOT_FOUND`를 준다(`NoteAccessHandler.requireProjectMember`).
+    assertWorkspace(assertProject(note.projectId).workspaceId);
     if (
       note.meetingStartedBy &&
       note.meetingStartedBy.userId !== state.user.userId
@@ -1918,6 +1934,15 @@ export const mockDb = {
 
   getSession(sessionId: string): TranscriptionSessionResponseData {
     const session = findSession(sessionId);
+    // **세션 조회도 멤버십을 본다.** 서버는 노트 → 프로젝트 → 워크스페이스 멤버십을 확인하고
+    // 비멤버에게는 존재를 숨기려고 404 `WORKSPACE_NOT_FOUND`를 준다
+    // (`NoteAccessHandler.requireProjectMember` → `WorkspaceNotFoundException`).
+    //
+    // 이게 없으면 목에서는 추방 뒤에도 200이 와서, 녹음을 끊는 경로(`RecordingProvider`)가
+    // 화면에서는 되는데 목으로는 재현이 안 된다 — 목이 계약과 갈리는 그 자리다.
+    assertWorkspace(
+      assertProject(findNote(session.noteId).projectId).workspaceId
+    );
     expireReadySessions(session.noteId);
     return copy(session) as unknown as TranscriptionSessionResponseData;
   },

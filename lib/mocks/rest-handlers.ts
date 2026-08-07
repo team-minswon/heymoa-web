@@ -539,13 +539,17 @@ export const restHandlers = [
           { status: 409 }
         );
       }
+      // 노트가 지워졌거나(NOTE_NOT_FOUND) 권한 승인과 이 POST 사이에 추방된 경우다
+      // (WORKSPACE_NOT_FOUND). 문구도 계약의 것을 준다 — 시작 실패는 전역 토스트를 끄고
+      // 프로바이더가 이 문구를 그대로 그리므로, 코드를 문구 자리에 흘리면 화면에
+      // `NOTE_NOT_FOUND`가 그대로 뜬다.
       return HttpResponse.json(
         {
           success: false,
           data: null,
           error: {
             code: msg,
-            message: msg,
+            message: CONTRACT_ERROR_MESSAGES[msg] ?? msg,
             details: null,
           },
         },
@@ -563,22 +567,24 @@ export const restHandlers = [
   // 본문 파싱은 반드시 memberResult 안에서 한다. 생성 훅의 `data`가 optional이라 본문 없는
   // 요청이 실제로 날아올 수 있는데, 밖에서 파싱하면 SyntaxError가 그대로 새어 MSW가 500과
   // 스택 트레이스를 돌려준다 — 실제 서버는 같은 입력에 400 봉투를 준다.
-  http.patch("*/v1/workspaces/:workspaceId/members/:userId", ({ params, request }) =>
-    memberResult(async () => {
-      // 좁은 유니온으로 단언하지 않는다 — 단언은 런타임에 아무것도 막지 않으면서 검증이
-      // 끝난 것처럼 보이게 한다. 계약에 없는 역할은 mockDb가 400으로 막는다.
-      const body = await request
-        .json()
-        .catch(() => {
-          throw new Error("BAD_REQUEST");
-        })
-        .then((value) => value as { role?: string });
-      mockDb.changeMemberRole(
-        id(params.workspaceId),
-        id(params.userId),
-        body?.role ?? ""
-      );
-    })
+  http.patch(
+    "*/v1/workspaces/:workspaceId/members/:userId",
+    ({ params, request }) =>
+      memberResult(async () => {
+        // 좁은 유니온으로 단언하지 않는다 — 단언은 런타임에 아무것도 막지 않으면서 검증이
+        // 끝난 것처럼 보이게 한다. 계약에 없는 역할은 mockDb가 400으로 막는다.
+        const body = await request
+          .json()
+          .catch(() => {
+            throw new Error("BAD_REQUEST");
+          })
+          .then((value) => value as { role?: string });
+        mockDb.changeMemberRole(
+          id(params.workspaceId),
+          id(params.userId),
+          body?.role ?? ""
+        );
+      })
   ),
   // 정적 경로(/members/me)가 :userId보다 먼저 와야 한다 — MSW는 등록 순서대로 매칭한다.
   http.delete("*/v1/workspaces/:workspaceId/members/me", ({ params }) =>
@@ -624,7 +630,9 @@ export const restHandlers = [
   // 목 세계의 토큰은 invitationId 그 자체다 — 실서버의 digest 매칭까지 흉내내지 않는다
   http.post("*/v1/invitations/accept-by-token", async ({ request }) => {
     const body = (await request.json()) as { token?: string };
-    return invitationResult(() => mockDb.acceptInvitationByToken(body.token ?? ""));
+    return invitationResult(() =>
+      mockDb.acceptInvitationByToken(body.token ?? "")
+    );
   }),
   http.post("*/v1/invitations/:invitationId/decline", ({ params }) =>
     invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))

@@ -26,10 +26,20 @@ function formatElapsed(elapsedMs: number) {
 
 export function RecordingDock({
   noteId,
+  workspaceId,
   disabledReason = null,
   startLabel = "회의 시작",
 }: {
   noteId: string;
+  /**
+   * 이 노트가 속한 워크스페이스. 녹음은 route를 넘어 살아 있는데 계약이 노트 → 워크스페이스를
+   * 안 알려줘서(노트 응답에 `projectId`만 있다) **시작하는 자리가 알려줘야 한다.**
+   *
+   * **확인되기 전에는 비어 있다.** URL의 값을 그냥 믿으면 `/w/B/notes/<A의 노트>` 같은
+   * 딥링크에서 소속이 B로 잘못 기록된다 — 세션은 A에 생기는데 나가기 잠금과 추방 정리는
+   * B를 본다. 그래서 노트가 속한 프로젝트로 확인될 때까지 시작을 열지 않는다.
+   */
+  workspaceId: string | undefined;
   /**
    * 녹음을 시작할 수 없는 지속 상태의 이유(예: 종료된 회의). 있으면 시작 컨트롤 자리에
    * 이 문구가 대신 선다 — 눌러서 실패하게 두면 "지금 할 수 없음"이 오류로 읽힌다.
@@ -177,8 +187,10 @@ export function RecordingDock({
               variant="ghost"
               size="sm"
               className="h-9 shrink-0 rounded-full px-3 text-xs after:absolute after:-inset-1 after:content-['']"
-              disabled={isOtherNote}
-              onClick={() => void recording.start(noteId)}
+              disabled={isOtherNote || !workspaceId}
+              onClick={() =>
+                workspaceId && void recording.start(noteId, workspaceId)
+              }
             >
               <RotateCcw className="size-3.5" />
               다시 시도
@@ -214,8 +226,12 @@ export function RecordingDock({
               type="button"
               className="relative flex size-9 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45 after:absolute after:-inset-1 after:content-['']"
               aria-label={isOtherNote ? "다른 노트에서 녹음 중" : startLabel}
-              disabled={isOtherNote}
-              onClick={() => void recording.start(noteId)}
+              // 소속이 확인되기 전에는 못 누른다 — 확인 없이 시작하면 잘못된 워크스페이스로
+              // 기록된다. 조회는 곧 끝나고, 어긋난 URL이면 위 `disabledReason`이 이유를 세운다.
+              disabled={isOtherNote || !workspaceId}
+              onClick={() =>
+                workspaceId && void recording.start(noteId, workspaceId)
+              }
             >
               <span className="size-2.5 rounded-full bg-white" aria-hidden />
             </button>

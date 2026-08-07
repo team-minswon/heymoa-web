@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 const recording = vi.hoisted(() => ({
   session: null as null | Record<string, unknown>,
   activeNoteId: undefined as string | undefined,
+  activeWorkspaceId: undefined as string | undefined,
   elapsedMs: 0,
   phase: "idle",
   error: null,
@@ -72,6 +73,7 @@ describe("WorkspaceToolbar", () => {
     recording.start.mockReset();
     recording.stop.mockReset();
     recording.activeNoteId = undefined;
+    recording.activeWorkspaceId = undefined;
     nav.search = "";
   });
   beforeAll(() => {
@@ -160,6 +162,40 @@ describe("WorkspaceToolbar", () => {
     expect(
       screen.queryByRole("button", { name: /일시 정지|재개/ })
     ).not.toBeInTheDocument();
+  });
+
+  /**
+   * **녹음 중인 워크스페이스로 간다.** 녹음은 route를 넘어 살아 있어서 A를 녹음한 채 B의
+   * 상단바를 볼 수 있는데, 여기서 보고 있는 `workspaceId`(=B)로 링크를 만들면
+   * `/w/B/notes/<A의 노트>`가 된다. 노트 조회는 워크스페이스를 받지 않아 A의 노트가 그대로
+   * 열리므로 **틀린 줄도 모르고** 그 화면에서 재개하게 되고, 그러면 녹음 소속이 B로 기록돼
+   * A의 나가기 잠금과 추방 정리가 둘 다 빗나간다.
+   */
+  it("다른 워크스페이스의 녹음으로 돌아갈 때 그 워크스페이스로 간다", () => {
+    recording.session = {
+      sessionId: "01K0000000010",
+      noteId: "01K0000000002",
+      status: "ACTIVE",
+    };
+    recording.activeNoteId = "01K0000000002";
+    recording.activeWorkspaceId = "01K0000000006";
+    recording.phase = "recording";
+
+    render(
+      <SidebarProvider>
+        <WorkspaceToolbar
+          workspaceId="01K0000000000"
+          currentLabel="주간"
+          activeNoteId="01K0000000099"
+        />
+      </SidebarProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "현재 녹음" }));
+
+    expect(push).toHaveBeenCalledWith(
+      "/w/01K0000000006/notes/01K0000000002?view=side&tab=details"
+    );
   });
 
   it("keeps one 새 노트 entry while another note is recording", () => {

@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecordingDock } from "@/components/transcription/recording-dock";
 
+/** 독이 시작할 때 넘겨야 하는 워크스페이스. 계약이 노트에서 알려주지 않는다. */
+const WORKSPACE_ID = "0HZX2K7M9Q4AW";
+
 const recording = vi.hoisted(() => ({
   activeNoteId: "note-1",
   elapsedMs: 0,
@@ -36,7 +39,7 @@ describe("RecordingDock", () => {
     (phase) => {
       recording.phase = phase;
 
-      render(<RecordingDock noteId="note-1" />);
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
       expect(
         screen.getByRole("status", { name: "녹음 처리 중" })
@@ -53,7 +56,13 @@ describe("RecordingDock", () => {
     it("시작 버튼 자리에 이유를 세운다", () => {
       recording.phase = "idle";
 
-      render(<RecordingDock noteId="note-1" disabledReason={reason} />);
+      render(
+        <RecordingDock
+          noteId="note-1"
+          workspaceId={WORKSPACE_ID}
+          disabledReason={reason}
+        />
+      );
 
       // 잠긴 버튼 + title이 아니라 본문이어야 터치·키보드에서도 이유가 보인다.
       expect(screen.getByText(reason)).toBeInTheDocument();
@@ -65,7 +74,13 @@ describe("RecordingDock", () => {
       // 이유를 대신 세우면 내 녹음을 멈출 방법이 사라진다.
       recording.phase = "recording";
 
-      render(<RecordingDock noteId="note-1" disabledReason={reason} />);
+      render(
+        <RecordingDock
+          noteId="note-1"
+          workspaceId={WORKSPACE_ID}
+          disabledReason={reason}
+        />
+      );
 
       expect(screen.getByRole("button", { name: "중지" })).toBeInTheDocument();
       expect(screen.queryByText(reason)).toBeNull();
@@ -78,19 +93,27 @@ describe("RecordingDock", () => {
       recording.phase = "idle";
       recording.start.mockReset();
 
-      render(<RecordingDock noteId="note-1" startLabel={startLabel} />);
+      render(
+        <RecordingDock
+          noteId="note-1"
+          workspaceId={WORKSPACE_ID}
+          startLabel={startLabel}
+        />
+      );
 
       const button = screen.getByRole("button", { name: startLabel });
       expect(button).toHaveClass("size-9");
       fireEvent.click(button);
-      expect(recording.start).toHaveBeenCalledWith("note-1");
+      // 워크스페이스를 같이 넘긴다 — 계약이 노트에서 안 알려주므로 여기서 안 넘기면
+      // 프로바이더가 "어느 워크스페이스를 녹음 중인지"를 영영 모른다.
+      expect(recording.start).toHaveBeenCalledWith("note-1", WORKSPACE_ID);
     }
   );
 
   it("로컬 녹음의 단일 중지 버튼도 시작 버튼과 같은 지름을 쓴다", () => {
     recording.phase = "recording";
 
-    render(<RecordingDock noteId="note-1" />);
+    render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
     expect(screen.getByRole("button", { name: "중지" })).toHaveClass("size-9");
   });
@@ -98,7 +121,7 @@ describe("RecordingDock", () => {
   it("실패 후 다시 시도도 44px 터치 영역을 둔다", () => {
     recording.phase = "failed";
 
-    render(<RecordingDock noteId="note-1" />);
+    render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
     expect(screen.getByRole("button", { name: "다시 시도" })).toHaveClass(
       "h-9"
@@ -108,7 +131,7 @@ describe("RecordingDock", () => {
   it("다른 노트의 failed ACTIVE 세션이 있으면 시작 버튼을 잠근다", () => {
     recording.phase = "failed";
 
-    render(<RecordingDock noteId="note-2" />);
+    render(<RecordingDock noteId="note-2" workspaceId={WORKSPACE_ID} />);
 
     expect(
       screen.getByRole("button", { name: "다른 노트에서 녹음 중" })
@@ -129,7 +152,7 @@ describe("RecordingDock", () => {
       recording.phase = "failed";
       recording.error = reason;
 
-      render(<RecordingDock noteId="note-1" />);
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
       expect(screen.queryByText(reason)).toBeNull();
       expect(
@@ -144,7 +167,7 @@ describe("RecordingDock", () => {
       recording.error = reason;
       recording.session = { noteId: "note-1", status: "ACTIVE" };
 
-      render(<RecordingDock noteId="note-1" />);
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
       expect(screen.queryByRole("button", { name: "닫기" })).toBeNull();
     });
@@ -154,7 +177,7 @@ describe("RecordingDock", () => {
       recording.error = reason;
       recording.session = { noteId: "note-1", status: "INTERRUPTED" };
 
-      render(<RecordingDock noteId="note-1" />);
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
       fireEvent.click(screen.getByRole("button", { name: "닫기" }));
 
       expect(recording.disconnect).toHaveBeenCalledOnce();
@@ -164,7 +187,7 @@ describe("RecordingDock", () => {
       recording.phase = "failed";
       recording.error = null;
 
-      render(<RecordingDock noteId="note-1" />);
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
       expect(screen.queryByRole("alert")).toBeNull();
       expect(

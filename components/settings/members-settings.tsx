@@ -10,6 +10,10 @@ import { AlertTriangle, Info } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import {
+  isWorkspaceRecordingActive,
+  useRecording,
+} from "@/components/transcription/recording-provider";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -126,8 +130,7 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
   const myUserId = user?.userId;
   const orderedMembers = myUserId
     ? [...members].sort(
-        (a, b) =>
-          Number(b.userId === myUserId) - Number(a.userId === myUserId)
+        (a, b) => Number(b.userId === myUserId) - Number(a.userId === myUserId)
       )
     : members;
   // 역할이 확정되기 전(로딩)이나 실패 시엔 관리 조작을 열지 않는다 — MEMBER에게 눌러 봤자
@@ -390,6 +393,14 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [leaveError, setLeaveError] = useState<unknown>(null);
   const busy = useMemberMutationBusy(workspaceId);
+  /**
+   * **녹음 중에는 못 나간다.** 나가도 `RecordingProvider`는 route를 넘어 살아 있어서
+   * (`app/providers.tsx`) 마이크와 소켓이 그대로 남고, 이미 접근할 수 없게 된 노트로 음성을
+   * 계속 보낸다. 권한 요청·연결 중에 나가면 고아 세션까지 생긴다.
+   *
+   * **여기서만 막는다** — 다른 워크스페이스를 녹음 중인 것은 이 화면과 무관하다.
+   */
+  const recordingHere = isWorkspaceRecordingActive(useRecording(), workspaceId);
 
   const leaveMessage = leaveError
     ? errorMessageOf(leaveError, "워크스페이스를 나가지 못했습니다.")
@@ -409,7 +420,7 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
         size="sm"
         className="mt-3 h-[30px]"
         loading={leave.isPending}
-        disabled={busy}
+        disabled={busy || recordingHere}
         onClick={() => {
           // 지난 실패 안내를 지우고 연다 — 상황이 바뀐 뒤에도 옛 문구가 붙어 있으면 안 된다.
           setLeaveError(null);
@@ -418,6 +429,18 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
       >
         워크스페이스 나가기
       </Button>
+
+      {/*
+        오류가 아니라 "지금 할 수 없음"이라 인라인이다(rule `error-loading`) — 토스트로
+        띄우면 사라진 뒤에 왜 못 누르는지 알 수 없다. 잠긴 버튼에 `title`을 다는 것도 안 된다:
+        터치에는 호버가 없고 `disabled`는 포커스도 안 받는다(`recording-dock`이 같은 이유로
+        시작 버튼 자리에 문구를 그린다).
+      */}
+      {recordingHere ? (
+        <p role="status" className="mt-2 text-xs text-[var(--el-muted)]">
+          녹음을 끝낸 뒤 나갈 수 있습니다.
+        </p>
+      ) : null}
 
       {/*
         요청 중에는 Escape·바깥 클릭으로도 닫히지 않는다. 창만 사라지면 취소한 줄 알지만
@@ -451,7 +474,9 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
           ) : null}
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={leave.isPending}>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={leave.isPending}>
+              취소
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               loading={leave.isPending}
@@ -544,7 +569,8 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
     <section>
       <h3 className="text-sm font-medium text-[var(--el-ink)]">멤버 초대</h3>
       <p className="mt-1 text-xs text-[var(--el-muted)]">
-        이메일로 초대합니다. 미가입자도 초대 메일의 링크로 가입해 합류할 수 있습니다.
+        이메일로 초대합니다. 미가입자도 초대 메일의 링크로 가입해 합류할 수
+        있습니다.
       </p>
       <form onSubmit={submit} className="mt-3 space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start">

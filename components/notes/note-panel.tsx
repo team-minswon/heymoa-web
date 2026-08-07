@@ -41,6 +41,7 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
@@ -111,7 +112,14 @@ export function NotePanel({
       ? noteQuery.data.data.data
       : undefined;
   const projectQuery = useGetProject(workspaceId, note?.projectId ?? "", {
-    query: { enabled: Boolean(note?.projectId) },
+    query: {
+      enabled: Boolean(note?.projectId),
+      // **실패해도 스스로 낫는다.** 이 조회가 노트의 소속을 확인해 주고, 확인 전에는 녹음
+      // 시작이 잠긴다. 전역 설정이 `refetchOnWindowFocus: false`라 재시도를 소진한 실패는
+      // 재조회 길이 없으면 새로고침 전에는 영영 안 풀린다(codex 6·7회차).
+      refetchInterval: (query) =>
+        query.state.status === "error" ? NOTE_SAFETY_POLL_MS : false,
+    },
   });
   const project =
     projectQuery.data?.status === 200 && projectQuery.data.data.success
@@ -298,12 +306,38 @@ export function NotePanel({
         (note.meetingStatus === "IN_PROGRESS" ||
           note.meetingStatus === "PAUSED")))
   );
-  const startBlockedReason =
-    note?.meetingStatus === "IN_PROGRESS" &&
-    !localProviderCanControlNote &&
-    !finishedHere
-      ? "다른 탭·기기에서 기록 중입니다."
-      : null;
+  /**
+   * **이 URL의 워크스페이스가 이 노트의 것이 아니다.**
+   *
+   * 노트 조회는 워크스페이스로 범위가 좁혀지지 않아 `/w/B/notes/<A의 노트>`도 A의 노트를
+   * 그대로 그린다. 그 화면에서 녹음을 시작하면 세션은 A에 생기는데 소속은 B로 기록돼
+   * A의 나가기 잠금과 추방 정리가 둘 다 빗나간다. 프로젝트 조회가 그 조합을 판정해 준다 —
+   * 서버가 `findByWorkspaceIdAndProjectId` 한 번으로 찾고 없으면 `PROJECT_NOT_FOUND`다.
+   * `failureReason`도 본다: `error`는 재시도를 소진해야 채워진다(APP-385).
+   */
+  const noteNotInThisWorkspace =
+    errorCodeOf(projectQuery.error) === "PROJECT_NOT_FOUND" ||
+    errorCodeOf(projectQuery.failureReason) === "PROJECT_NOT_FOUND";
+  /**
+   * 독에 넘길 **확인된 소속.** 서버가 확인해 준 값만 쓴다 — 비어 있으면 독이 시작을 안 연다.
+   *
+   * **실패했다고 URL의 값으로 대신하면 안 된다.** 조회가 500으로 끝난 채 시작하면 세션은
+   * A에 생기는데 소속은 B로 기록된다(codex 7회차 — 6회차 반영에서 한 번 틀린 자리다).
+   * 일시적 실패의 복구는 값을 추측하는 것이 아니라 **이유를 보이고 다시 물어보는 것**이다:
+   * 아래 `startBlockedReason`이 이유를 세우고, 위 `refetchInterval`이 다시 물어본다.
+   */
+  const confirmedWorkspaceId = project?.workspaceId;
+  const startBlockedReason = noteNotInThisWorkspace
+    ? "이 노트는 이 워크스페이스에 없습니다."
+    : projectQuery.isError
+      ? // 소속 확인 실패는 시작을 잠근다. 이유 없이 잠긴 버튼만 남기지 않는다 — 위
+        // `refetchInterval`이 30초마다 다시 확인하므로 문구도 그렇게 말한다.
+        "노트 정보를 확인하지 못했습니다. 자동으로 다시 시도합니다."
+      : note?.meetingStatus === "IN_PROGRESS" &&
+          !localProviderCanControlNote &&
+          !finishedHere
+        ? "다른 탭·기기에서 기록 중입니다."
+        : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
 
   // 전체 화면은 **노트(왼쪽) + 에이전트 레일(오른쪽 고정)** 두 패널이다. 사이는 캔버스 10px,
@@ -699,6 +733,9 @@ export function NotePanel({
                 시작 버튼 자리에 이 문구가 선다. */}
               <RecordingDock
                 noteId={noteId}
+                // **URL이 아니라 확인된 소속을 넘긴다.** 조회가 끝나기 전에는 비어 있고,
+                // 독은 그동안 시작을 안 연다 — 확인 전에 누르면 잘못된 워크스페이스로 기록된다.
+                workspaceId={confirmedWorkspaceId}
                 disabledReason={startBlockedReason}
                 startLabel={startLabel}
               />

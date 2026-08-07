@@ -464,9 +464,8 @@ describe("workspace member management", () => {
       mockDb.changeMemberRole(WORKSPACE_ID, OTHER_MEMBER_ID, "OWNER")
     ).toThrow("BAD_REQUEST");
     expect(
-      mockDb
-        .listMembers(WORKSPACE_ID)
-        .find((m) => m.userId === OTHER_MEMBER_ID)?.role
+      mockDb.listMembers(WORKSPACE_ID).find((m) => m.userId === OTHER_MEMBER_ID)
+        ?.role
     ).toBe("MEMBER");
   });
 
@@ -493,12 +492,14 @@ describe("workspace member management", () => {
   });
 
   it("추방은 자기 자신을 대상으로 할 수 없다", () => {
-    expect(() =>
-      mockDb.removeMember(WORKSPACE_ID, MOCK_USER.userId)
-    ).toThrow("BAD_REQUEST");
+    expect(() => mockDb.removeMember(WORKSPACE_ID, MOCK_USER.userId)).toThrow(
+      "BAD_REQUEST"
+    );
     // 실패했으니 멤버 목록은 그대로다.
     expect(
-      mockDb.listMembers(WORKSPACE_ID).some((m) => m.userId === MOCK_USER.userId)
+      mockDb
+        .listMembers(WORKSPACE_ID)
+        .some((m) => m.userId === MOCK_USER.userId)
     ).toBe(true);
   });
 
@@ -514,18 +515,18 @@ describe("workspace member management", () => {
   });
 
   it("추방 대상이 멤버가 아니면 404 코드로 던진다", () => {
-    expect(() =>
-      mockDb.removeMember(WORKSPACE_ID, "01K9999999999")
-    ).toThrow("WORKSPACE_MEMBER_NOT_FOUND");
+    expect(() => mockDb.removeMember(WORKSPACE_ID, "01K9999999999")).toThrow(
+      "WORKSPACE_MEMBER_NOT_FOUND"
+    );
   });
 
   it("ADMIN이 아닌 사람은 추방할 수 없다", () => {
     addSecondAdmin();
     mockDb.changeMemberRole(WORKSPACE_ID, MOCK_USER.userId, "MEMBER");
 
-    expect(() =>
-      mockDb.removeMember(WORKSPACE_ID, OTHER_MEMBER_ID)
-    ).toThrow("WORKSPACE_ACCESS_DENIED");
+    expect(() => mockDb.removeMember(WORKSPACE_ID, OTHER_MEMBER_ID)).toThrow(
+      "WORKSPACE_ACCESS_DENIED"
+    );
   });
 
   it("나가기는 마지막 ADMIN을 막는다", () => {
@@ -758,7 +759,9 @@ describe("노트 삭제", () => {
       .listNotes("01K0000000001")
       .find((row) => row.meetingStatus === "IN_PROGRESS");
     expect(live).toBeDefined();
-    expect(() => mockDb.deleteNote(live!.noteId)).toThrow("MEETING_IN_PROGRESS");
+    expect(() => mockDb.deleteNote(live!.noteId)).toThrow(
+      "MEETING_IN_PROGRESS"
+    );
   });
 
   it("지우면 전사 세그먼트와 요약도 함께 사라진다", () => {
@@ -776,5 +779,62 @@ describe("노트 삭제", () => {
     expect(() => mockDb.getNote(noteId)).toThrow("NOTE_NOT_FOUND");
     expect(() => mockDb.listSegments(noteId)).toThrow("NOTE_NOT_FOUND");
     expect(() => mockDb.getLatestAnalysis(noteId)).toThrow();
+  });
+
+  /**
+   * 서버는 세션 조회에도 멤버십을 본다 — 노트 → 프로젝트 → 워크스페이스를 따라가
+   * 비멤버에게는 존재를 숨기려고 404 `WORKSPACE_NOT_FOUND`를 준다
+   * (`NoteAccessHandler.requireProjectMember` → `WorkspaceNotFoundException`).
+   *
+   * 목이 200을 주면 **추방 뒤 녹음을 끊는 경로가 목에서만 안 돈다.** 화면 검증이 거짓이 된다.
+   */
+  // 권한 승인과 세션 생성 POST 사이에도 추방될 수 있다. 서버는 생성에도 멤버십을 보는데,
+  // 목이 201을 주면 **시작 중 추방 처리 경로가 개발 환경에서만 안 돈다.**
+  it("워크스페이스를 나가면 그 노트의 세션 생성도 404다", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+
+    mockDb.changeMemberRole("01K0000000000", "01K0000000020", "ADMIN");
+    mockDb.leaveWorkspace("01K0000000000");
+
+    expect(() => mockDb.createSession(note.noteId)).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+  });
+
+  it("워크스페이스를 나가면 그 노트의 세션 조회도 404다", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const session = mockDb.createSession(note.noteId);
+    expect(mockDb.getSession(session.sessionId)).toMatchObject({
+      sessionId: session.sessionId,
+    });
+
+    // 나 혼자 ADMIN이면 나갈 수 없다(`LAST_WORKSPACE_ADMIN`). 다른 멤버를 올리고 나간다.
+    mockDb.changeMemberRole("01K0000000000", "01K0000000020", "ADMIN");
+    mockDb.leaveWorkspace("01K0000000000");
+
+    expect(() => mockDb.getSession(session.sessionId)).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+  });
+
+  /**
+   * 워크스페이스와 프로젝트가 어긋난 조합은 **403이 아니라 404다.** 서버가
+   * `findByWorkspaceIdAndProjectId(...)` 한 번으로 찾고 없으면 `ProjectNotFoundException`을
+   * 던진다(조회·수정·삭제 셋 다 같다).
+   *
+   * 목이 `FORBIDDEN`을 주면 `/w/B/notes/<A의 노트>` 딥링크를 판정하는 화면이 목에서만
+   * 다르게 동작한다 — 코드로 가리기 때문이다.
+   */
+  it("다른 워크스페이스의 프로젝트를 조회하면 404다", () => {
+    const mine = mockDb.listProjects("01K0000000000")[0];
+
+    expect(() => mockDb.getProject("01K0000000006", mine.projectId)).toThrow(
+      "PROJECT_NOT_FOUND"
+    );
+    expect(mockDb.getProject("01K0000000000", mine.projectId)).toMatchObject({
+      projectId: mine.projectId,
+    });
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
 import {
   getGetNoteTranscriptQueryKey,
@@ -21,6 +22,8 @@ import {
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
+import { forgetWorkspace } from "@/lib/workspace/cache";
+import { notifyWorkspaceGone } from "@/lib/workspace/gone-notice";
 import {
   BrowserRealtimeSession,
   type RealtimeSessionController,
@@ -57,10 +60,20 @@ export type RecordingPhase =
 export type RecordingContextValue = {
   session: LocalRecordingSession | null;
   activeNoteId: string | null;
+  /**
+   * 녹음 중인 노트가 **어느 워크스페이스의 것인가.**
+   *
+   * 계약이 안 알려준다 — 노트 응답에는 `projectId`만 있고 세션 응답에는 둘 다 없다. 그래서
+   * `start()`가 호출부에서 받아 들고 있는다. 세션이 생기는 길은 `start()` 하나뿐이라
+   * (제품 코드에 `useGetCurrentTranscriptionSession` 사용처가 없고, 세션 폴링은
+   * `session?.sessionId`가 있어야 켜지며, reconcile은 이미 있는 세션만 갱신한다)
+   * 녹음 중인데 이 값이 비어 있는 상태는 생기지 않는다.
+   */
+  activeWorkspaceId: string | null;
   phase: RecordingPhase;
   elapsedMs: number;
   error: string | null;
-  start: (noteId: string) => Promise<void>;
+  start: (noteId: string, workspaceId: string) => Promise<void>;
   stop: () => Promise<boolean>;
   disconnect: () => Promise<void>;
 };
@@ -81,15 +94,16 @@ const ACTIVE_PHASES = new Set<RecordingPhase>([
 ]);
 
 /**
- * 이 노트의 전사 세션이 아직 살아 있는가 — 살아 있으면 회의 중지·종료가 계약상
- * `ACTIVE_TRANSCRIPTION_SESSION`(409)로 막힌다. **`failed`도 세션이 열려 있으면 활성이다**:
- * stop이 실패하면 phase는 failed지만 READY/ACTIVE 세션은 그대로 남아 서버가 여전히 거절한다.
+ * 지금 붙들고 있는 전사 세션이 아직 살아 있는가. **무엇의 녹음인지는 안 본다** — 노트로
+ * 물을지 워크스페이스로 물을지는 아래 두 함수가 정한다.
+ *
+ * 살아 있으면 회의 중지·종료가 계약상 `ACTIVE_TRANSCRIPTION_SESSION`(409)로 막힌다.
+ * **`failed`도 세션이 열려 있으면 활성이다**: stop이 실패하면 phase는 failed지만
+ * READY/ACTIVE 세션은 그대로 남아 서버가 여전히 거절한다.
  */
-export function isNoteRecordingActive(
-  recording: Pick<RecordingContextValue, "activeNoteId" | "session" | "phase">,
-  noteId: string
+function isRecordingLive(
+  recording: Pick<RecordingContextValue, "session" | "phase">
 ): boolean {
-  if (recording.activeNoteId !== noteId) return false;
   // 진행 phase는 세션 id가 붙기 전(권한 요청·연결 중)이라도 활성이다 — 그 사이 pause/end를
   // 열어 두면 뒤늦게 시작이 세션을 만들어 회의를 되살린다.
   if (ACTIVE_PHASES.has(recording.phase)) return true;
@@ -98,6 +112,34 @@ export function isNoteRecordingActive(
     recording.session?.status === "READY" ||
     recording.session?.status === "ACTIVE";
   return recording.phase === "failed" && sessionOpen;
+}
+
+/** 이 **노트**의 전사 세션이 아직 살아 있는가. */
+export function isNoteRecordingActive(
+  recording: Pick<RecordingContextValue, "activeNoteId" | "session" | "phase">,
+  noteId: string
+): boolean {
+  return recording.activeNoteId === noteId && isRecordingLive(recording);
+}
+
+/**
+ * 이 **워크스페이스**에서 녹음이 돌고 있는가 — 나가기를 막고, 추방당하면 정리할 대상인지를
+ * 가른다.
+ *
+ * **다른 워크스페이스의 녹음까지 여기 걸리면 안 된다.** 녹음은 route를 넘어 살아 있어서
+ * (`RecordingProvider`가 `app/providers.tsx`에 있다) A를 녹음한 채 B를 볼 수 있고, 그때
+ * B의 나가기를 잠그면 틀린 잠금이다.
+ */
+export function isWorkspaceRecordingActive(
+  recording: Pick<
+    RecordingContextValue,
+    "activeWorkspaceId" | "session" | "phase"
+  >,
+  workspaceId: string
+): boolean {
+  return (
+    recording.activeWorkspaceId === workspaceId && isRecordingLive(recording)
+  );
 }
 
 /**
@@ -154,6 +196,18 @@ function getStartErrorMessage(cause: unknown) {
     return "전사 세션을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
 
+  // **봉투면 서버 문구를 쓴다.** 전역 mutation 토스트를 끈 뒤로 이 문구가 유일한 안내라,
+  // 여기서 접으면 `ACTIVE_TRANSCRIPTION_SESSION`(다른 탭이 이미 시작) 같은 구체적인 이유가
+  // 「녹음을 시작하지 못했습니다」로 뭉개져 사용자가 같은 재시도를 반복한다.
+  // 계약이 사용자에게 보일 한국어를 담고 있고, web이 코드별 문구를 다시 만들면 갈라진다
+  // (rule `error-loading`). `Error`는 위에서 이미 가렸으므로 봉투일 때만 꺼낸다.
+  if (errorCodeOf(cause) !== null) {
+    return errorMessageOf(
+      cause,
+      "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요."
+    );
+  }
+
   return "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 }
 
@@ -204,9 +258,20 @@ export function RecordingProvider({
   enablePolling?: boolean;
 }) {
   const queryClient = useQueryClient();
-  const startSessionMutation = useStartTranscriptionSession();
+  /**
+   * **전역 mutation 토스트를 끈다.** 시작 실패의 문구는 이 프로바이더가 소유한다 —
+   * 일반 실패는 `error`를 채워 `RecordingErrorToast`가 띄우고, 추방은 `notifyWorkspaceGone()`이
+   * 띄운다. opt-out하지 않으면 `MutationCache.onError`가 서버 문구를 먼저 얹어 **같은 실패에
+   * 토스트가 둘 뜬다**(rule `error-loading`의 「호출부가 이미 자기 토스트를 띄운다」).
+   */
+  const startSessionMutation = useStartTranscriptionSession({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
   const [session, setSession] = useState<LocalRecordingSession | null>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
+    null
+  );
   const [phase, setPhase] = useState<RecordingPhase>("idle");
   const [transcript, dispatchTranscript] = useReducer(
     transcriptReducer,
@@ -222,6 +287,17 @@ export function RecordingProvider({
   const controllerRef = useRef<RealtimeSessionController | null>(null);
   const cancelledControllerRef = useRef<RealtimeSessionController | null>(null);
   const stopPromiseRef = useRef<Promise<boolean> | null>(null);
+  /**
+   * `disconnect()`가 몇 번 돌았나. **진행 중인 `start()`가 자기 결과를 되돌려 놓아도 되는지**를
+   * 가른다 — 값이 바뀌었으면 그 사이에 통째로 정리됐다는 뜻이라 아무것도 쓰지 않는다.
+   *
+   * `cancelled()`만으로는 부족하다. 그쪽은 "이 컨트롤러가 더 이상 주인이 아니다"까지만 알고,
+   * 그때 세션을 **일부러 저장한다** — 사용자가 직접 취소한 경우 서버에 열린 READY 세션이
+   * 남았음을 독이 알려야 하기 때문이다(`recording-dock`이 그걸 보고 「닫기」를 숨긴다).
+   * 강제 정리는 반대다. 화면은 이미 떠났고 phase도 `idle`이라 폴링이 안 도는데 세션만
+   * 되살아나면, 아무도 안 보는 고아 상태가 만료될 때까지 남는다(codex 리뷰 2회차).
+   */
+  const teardownCountRef = useRef(0);
   const smoothedLevelRef = useRef(0);
   const hasOpenSession =
     session?.status === "READY" || session?.status === "ACTIVE";
@@ -234,6 +310,14 @@ export function RecordingProvider({
       enabled: shouldPoll,
       staleTime: 0,
       refetchInterval: shouldPoll ? 3_000 : false,
+      // **탭이 안 보여도 계속 묻는다.** 기본값(false)이면 숨긴 탭에서 타이머가 멈추는데,
+      // 녹음 중에는 그동안에도 **마이크와 소켓이 살아 있다.** 추방당한 사실을 다시 포커스할
+      // 때까지 모르면 권한이 사라진 노트로 음성이 계속 나간다 — 아래 정리 effect가 이
+      // 조회를 신호로 쓰므로 여기서 멈추면 그 정리도 같이 멈춘다(codex 리뷰 2회차).
+      //
+      // 3초 요청이 배경에서도 도는 비용은 이 상황에서만 발생하고, 같은 탭이 이미 오디오를
+      // WebSocket으로 흘려보내는 중이라 그 옆에서는 무시할 만하다.
+      refetchIntervalInBackground: true,
       refetchOnWindowFocus: true,
     },
   });
@@ -418,7 +502,7 @@ export function RecordingProvider({
   ]);
 
   const start = useCallback(
-    async (noteId: string) => {
+    async (noteId: string, workspaceId: string) => {
       if (controllerRef.current || ACTIVE_PHASES.has(phase)) return;
 
       const current = sessionRef.current;
@@ -434,10 +518,12 @@ export function RecordingProvider({
 
       dispatchTranscript({ type: "reset" });
       setActiveNoteId(noteId);
+      setActiveWorkspaceId(workspaceId);
       setCurrentSession(reusableSession);
       setError(null);
       setElapsedMs(0);
       setPhase("requesting-permission");
+      const teardownCount = teardownCountRef.current;
       const controller = runtime.createSession({
         url: getWebSocketUrl(),
         onEvent: handleEvent,
@@ -449,6 +535,8 @@ export function RecordingProvider({
       const cancelled = () =>
         cancelledControllerRef.current === controller ||
         controllerRef.current !== controller;
+      /** 그 사이 `disconnect()`가 돌았나 — 강제 정리라 상태를 되돌려 놓으면 안 된다. */
+      const tornDown = () => teardownCountRef.current !== teardownCount;
 
       try {
         await controller.requestPermission();
@@ -463,7 +551,9 @@ export function RecordingProvider({
           invalidateLifecycleQueries(noteId);
         }
         if (cancelled()) {
-          setCurrentSession(connectionSession);
+          // 사용자가 취소한 것이면 서버에 열린 READY 세션을 화면이 알아야 한다. 강제 정리면
+          // 반대로 아무것도 남기지 않는다 — 넣어 두면 폴링도 안 도는 고아가 된다.
+          if (!tornDown()) setCurrentSession(connectionSession);
           await controller.close();
           return;
         }
@@ -480,6 +570,21 @@ export function RecordingProvider({
         await controller.close();
         if (controllerRef.current !== controller) return;
         controllerRef.current = null;
+        /**
+         * **시작하는 사이에 쫓겨났다.** 세션 조회는 `sessionId`가 있어야 켜지므로 아직
+         * 안 돈다. 그 사이에 다른 워크스페이스로 옮겼으면 화면 쪽 감지기도 언마운트돼서,
+         * 이 404를 일반 실패로 처리하면 **아무도 알려주지 않고 목록 캐시도 안 고친다**
+         * — 「다시 시도」만 남고 눌러도 계속 404다(codex 리뷰 4회차).
+         */
+        if (errorCodeOf(cause) === "WORKSPACE_NOT_FOUND") {
+          notifyWorkspaceGone();
+          forgetWorkspace(queryClient, workspaceId);
+          setPhase("idle");
+          setActiveNoteId(null);
+          setActiveWorkspaceId(null);
+          clearLevel();
+          return;
+        }
         setError(getStartErrorMessage(cause));
         setPhase("failed");
         clearLevel();
@@ -493,6 +598,7 @@ export function RecordingProvider({
       invalidateLifecycleQueries,
       phase,
       publishLevel,
+      queryClient,
       runtime,
       setCurrentSession,
     ]
@@ -535,6 +641,9 @@ export function RecordingProvider({
   }, [clearLevel, failRecording]);
 
   const disconnect = useCallback(async () => {
+    // 진행 중인 `start()`에게 "결과를 되돌려 놓지 마라"고 알린다. 컨트롤러를 비우기 전에
+    // 올려야 그 사이에 끝난 요청도 이 값을 보고 판단한다.
+    teardownCountRef.current += 1;
     const controller = controllerRef.current;
     const current = sessionRef.current;
     controllerRef.current = null;
@@ -545,6 +654,7 @@ export function RecordingProvider({
     setPhase("idle");
     setCurrentSession(null);
     setActiveNoteId(null);
+    setActiveWorkspaceId(null);
     setElapsedMs(0);
     setError(null);
     dispatchTranscript({ type: "reset" });
@@ -552,6 +662,50 @@ export function RecordingProvider({
     await controller?.close();
     if (current) invalidateTranscriptQueries(current.noteId);
   }, [clearLevel, invalidateTranscriptQueries, setCurrentSession]);
+
+  /**
+   * 녹음 중에 그 워크스페이스에서 쫓겨났으면 **보고 있는 화면과 무관하게** 끊는다.
+   *
+   * 화면 쪽 감지(`useRedirectWhenWorkspaceGone`)로는 부족하다 — 그것은 지금 열려 있는
+   * 워크스페이스만 본다. 녹음은 route를 넘어 살아 있어서 **A를 녹음한 채 B나 홈으로 옮길 수
+   * 있고**, 그 상태로 A에서 추방되면 아무 화면도 A를 보고 있지 않아 마이크와 소켓이 그대로
+   * 남는다. 이미 접근할 수 없는 노트로 음성이 계속 나가는 것이 이 이슈의 본체다.
+   *
+   * 여기서는 **자기 세션 조회**가 신호다. 그 조회도 비멤버에게는 같은 404를 준다
+   * (`NoteAccessHandler.requireProjectMember` → `WorkspaceNotFoundException`). 3초 주기라
+   * 화면 폴링(30초)보다 빠르고, 어느 워크스페이스인지 맞혀 볼 필요도 없다 — 실패한 조회가
+   * 곧 이 녹음의 것이다.
+   *
+   * `stop()`이 아니라 `disconnect()`다. 이미 비멤버라 세션 종료 API도 404로 떨어진다.
+   */
+  useEffect(() => {
+    // `error`는 재시도를 다 소진해야 채워지고 그 전에 `paused`로 멈출 수 있다(APP-385).
+    // 404는 다시 물어도 답이 같으니 첫 실패를 본다.
+    const gone =
+      errorCodeOf(sessionQuery.error) === "WORKSPACE_NOT_FOUND" ||
+      errorCodeOf(sessionQuery.failureReason) === "WORKSPACE_NOT_FOUND";
+    if (!gone) return;
+    // **말없이 사라지지 않게 한다.** 화면이 다른 워크스페이스에 있으면 이 경로만 404를 보고,
+    // 그대로 두면 녹음 표시가 이유 없이 없어진다. 보고 있던 중이었다면 화면 쪽도 같은 사건을
+    // 알리는데, 같은 id를 써서 토스트는 하나만 남는다.
+    notifyWorkspaceGone();
+    // **캐시에서도 걷어낸다.** 화면이 그 워크스페이스에 없으면 `useRedirectWhenWorkspaceGone`이
+    // 마운트돼 있지 않아 아무도 목록을 안 고친다 — 사이드바와 홈이 이미 죽은 워크스페이스를
+    // 계속 그리고, 누르면 다시 들어갔다가 쫓겨난다(codex 리뷰 4회차).
+    // `disconnect()`가 `activeWorkspaceId`를 비우므로 그 전에 읽어 둔다.
+    if (activeWorkspaceId) forgetWorkspace(queryClient, activeWorkspaceId);
+    // 정리를 다음 틱으로 미룬다. `disconnect()`가 상태를 여럿 되돌리는데 effect 본문에서
+    // 바로 부르면 렌더 중 연쇄가 된다(`react-hooks/set-state-in-effect`). 위 종료 reconcile도
+    // 같은 이유로 타이머를 거친다.
+    const timer = window.setTimeout(() => void disconnect(), 0);
+    return () => window.clearTimeout(timer);
+  }, [
+    activeWorkspaceId,
+    disconnect,
+    queryClient,
+    sessionQuery.error,
+    sessionQuery.failureReason,
+  ]);
 
   useEffect(() => {
     if (phase !== "recording") return;
@@ -572,6 +726,7 @@ export function RecordingProvider({
     () => ({
       session,
       activeNoteId,
+      activeWorkspaceId,
       phase,
       elapsedMs,
       error,
@@ -579,7 +734,17 @@ export function RecordingProvider({
       stop,
       disconnect,
     }),
-    [session, activeNoteId, phase, elapsedMs, error, start, stop, disconnect]
+    [
+      session,
+      activeNoteId,
+      activeWorkspaceId,
+      phase,
+      elapsedMs,
+      error,
+      start,
+      stop,
+      disconnect,
+    ]
   );
   const meterValue = useMemo<RecordingMeterValue>(
     () => ({ level, levelHistory }),
