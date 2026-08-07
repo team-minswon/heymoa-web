@@ -187,7 +187,6 @@ function createSeedState(): StoreState {
       workspaceId: "01K0000000000",
       name: "테스트 유저의 워크스페이스",
       description: "회의 기록을 모으는 기본 공간입니다.",
-      isDefault: true,
       role: "ADMIN",
     },
     // description은 계약상 nullable이다 — 설명 없는 워크스페이스를 화면이 어떻게 그리는지
@@ -196,7 +195,6 @@ function createSeedState(): StoreState {
       workspaceId: "01K0000000006",
       name: "제품 팀",
       description: null,
-      isDefault: false,
       role: "ADMIN",
     },
     // **프로젝트가 하나도 없는 워크스페이스.** 새로 만든 워크스페이스는 항상 이 상태로
@@ -206,7 +204,6 @@ function createSeedState(): StoreState {
       workspaceId: "01K0000000009",
       name: "새 워크스페이스",
       description: null,
-      isDefault: false,
       role: "ADMIN",
     },
   ];
@@ -1459,12 +1456,7 @@ export const mockDb = {
       (w) => w.workspaceId === workspaceId
     );
     if (workspaceIndex < 0) return;
-    const [left] = state.workspaces.splice(workspaceIndex, 1);
-    // 서버는 떠난 곳이 기본이었으면 가장 먼저 합류한 다른 워크스페이스로 옮긴다
-    // (WorkspaceMemberChangeHandler.repointDefaultWorkspace). 목은 삽입 순서가 합류 순서다.
-    if (left.isDefault && state.workspaces.length > 0) {
-      state.workspaces[0].isDefault = true;
-    }
+    state.workspaces.splice(workspaceIndex, 1);
   },
 
   listInvitations(
@@ -1563,7 +1555,6 @@ export const mockDb = {
     const isSelf = invitation.inviteeEmail === state.user.email;
 
     // 본인이 받은 초대를 수락하면 그 워크스페이스가 목록에 나타나야 한다 — 그게 합류다.
-    // 기본 워크스페이스는 바뀌지 않는다 (계약).
     if (
       isSelf &&
       !state.workspaces.some((w) => w.workspaceId === invitation.workspaceId)
@@ -1572,7 +1563,6 @@ export const mockDb = {
         workspaceId: invitation.workspaceId,
         name: INVITED_WORKSPACE.name,
         description: null,
-        isDefault: false,
         role: invitation.role,
       });
       attachWorkspaceState(invitation.workspaceId, invitation.role);
@@ -1635,12 +1625,10 @@ export const mockDb = {
     return copy(state.user);
   },
 
+  // 서버는 **합류한 순서**로 준다(workspaceMember.createdAt). 목은 삽입 순서가 곧 합류 순서라
+  // 그대로 넘긴다 — 이름순으로 다시 정렬하면 목만 서버와 다른 순서를 보여 준다.
   listWorkspaces(): WorkspaceListResponseDataWorkspacesItem[] {
-    const items = [...state.workspaces].sort((a, b) => {
-      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
-      return a.name.localeCompare(b.name, "ko");
-    });
-    return copy(items);
+    return copy(state.workspaces);
   },
 
   createWorkspace(input: CreateWorkspaceRequest): WorkspaceResponseData {
@@ -1650,7 +1638,6 @@ export const mockDb = {
       workspaceId: nextId(),
       name,
       description: input.description ?? null,
-      isDefault: false,
       role: "ADMIN",
     };
     state.workspaces.push(workspace);
@@ -1672,14 +1659,6 @@ export const mockDb = {
     workspace.name = name;
     workspace.description = input.description ?? null;
     return copy(workspace);
-  },
-
-  setDefaultWorkspace(workspaceId: string): { workspaceId: string } {
-    assertWorkspace(workspaceId);
-    state.workspaces.forEach((workspace) => {
-      workspace.isDefault = workspace.workspaceId === workspaceId;
-    });
-    return { workspaceId };
   },
 
   listProjects(workspaceId: string): ProjectResponseData[] {

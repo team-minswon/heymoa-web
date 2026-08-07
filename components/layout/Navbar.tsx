@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { siteConfig } from "@/lib/site";
+import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -34,9 +35,7 @@ export function Navbar() {
   const workspaces = workspaceEnvelope?.success
     ? (workspaceEnvelope.data.workspaces ?? [])
     : [];
-  const workspaceId =
-    workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
-    workspaces[0]?.workspaceId;
+  const workspaceId = pickWorkspaceId(workspaces);
   const dashboardHref = workspaceId ? `/w/${workspaceId}` : null;
   const logoHref = dashboardHref ?? "/";
   const inWorkspace = pathname.startsWith("/w/");

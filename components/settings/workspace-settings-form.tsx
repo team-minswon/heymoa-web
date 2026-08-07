@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "@/lib/ui/toast";
 import { z } from "zod";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,10 +15,8 @@ import {
   getGetWorkspaceQueryKey,
   getGetWorkspacesQueryKey,
   useGetWorkspaceSuspense,
-  useChangeDefaultWorkspace,
   useUpdateWorkspace,
 } from "@/lib/api/generated/workspaces/workspaces";
-import { usePendingDefaultWorkspaceId } from "@/lib/workspaces/default-workspace";
 
 const workspaceSchema = z.object({
   name: z.string().trim().min(1, "워크스페이스 이름을 입력해 주세요.").max(80),
@@ -44,10 +41,6 @@ export function WorkspaceSettingsForm({
   const update = useUpdateWorkspace({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  const setDefault = useChangeDefaultWorkspace({
-    mutation: { meta: { suppressErrorToast: true } },
-  });
-  const pendingDefaultId = usePendingDefaultWorkspaceId();
   const workspace =
     query.data?.status === 200 && query.data.data.success
       ? query.data.data.data
@@ -90,29 +83,12 @@ export function WorkspaceSettingsForm({
     }
   });
 
-  const makeDefault = async () => {
-    try {
-      await setDefault.mutateAsync({ data: { workspaceId } });
-      await refresh();
-      toast.success("기본 워크스페이스로 설정했습니다.", {
-        id: "workspace-settings-default",
-      });
-    } catch {
-      toast.error("기본 워크스페이스를 변경하지 못했습니다.", {
-        id: "workspace-settings-default",
-      });
-    }
-  };
-
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <div className="flex items-center gap-2">
-          <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
-            워크스페이스 일반
-          </h2>
-          {workspace?.isDefault && <Badge>기본</Badge>}
-        </div>
+        <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
+          워크스페이스 일반
+        </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
           이 공간의 이름과 설명을 관리합니다.
         </p>
@@ -146,28 +122,6 @@ export function WorkspaceSettingsForm({
           변경사항 저장
         </Button>
       </form>
-      {!workspace?.isDefault && (
-        <div className="flex items-center justify-between gap-4 rounded-block border border-[var(--el-hairline)] bg-white p-5">
-          <div>
-            <p className="font-medium">기본 워크스페이스</p>
-            <p className="text-sm text-[var(--el-muted)]">
-              로그인 후 가장 먼저 열 공간으로 지정합니다.
-            </p>
-          </div>
-          {/* 같은 명령을 내 계정 탭의 목록에서도 부를 수 있다. 각자 자기 isPending만 보면
-            설정 탭을 옮기는 것만으로 두 요청이 겹치므로 전역 진행 상태를 함께 본다. */}
-          <Button
-            type="button"
-            variant="outline"
-            loading={pendingDefaultId === workspaceId}
-            disabled={pendingDefaultId !== null}
-            onClick={() => void makeDefault()}
-            className="rounded-full"
-          >
-            기본 워크스페이스로 설정
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

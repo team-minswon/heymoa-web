@@ -236,7 +236,7 @@ export const getAcceptWorkspaceInvitationUrl = (invitationId: string) => {
 };
 
 /**
- * 받은 초대를 수락하고 워크스페이스 멤버가 된다. 초대받은 본인만 수락할 수 있으며 기본 워크스페이스는 바뀌지 않는다.
+ * 받은 초대를 수락하고 워크스페이스 멤버가 된다. 초대받은 본인만 수락할 수 있다.
  * @summary 초대 수락
  */
 export const acceptWorkspaceInvitation = async (

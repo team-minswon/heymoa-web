@@ -11,8 +11,6 @@ import type { WorkspaceResponseDataRole } from "./workspaceResponseDataRole";
  * 성공 응답 데이터
  */
 export type WorkspaceResponseData = {
-  /** 현재 사용자의 기본 워크스페이스 여부 */
-  isDefault: boolean;
   /** 현재 사용자의 워크스페이스 역할 */
   role: WorkspaceResponseDataRole;
   /**

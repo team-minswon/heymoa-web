@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
+import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
 /** design.pen 정본의 마케팅 pill — h48 · px24 · 15px. 제품 면의 `size="xl"`(h40)과 다르다. */
 export const MARKETING_PILL = "h-12 rounded-full px-6 text-[15px]";
@@ -37,9 +38,7 @@ export function LandingCta({
   const envelope =
     workspacesQuery.data?.status === 200 ? workspacesQuery.data.data : undefined;
   const workspaces = envelope?.success ? (envelope.data.workspaces ?? []) : [];
-  const workspaceId =
-    workspaces.find((workspace) => workspace.isDefault)?.workspaceId ??
-    workspaces[0]?.workspaceId;
+  const workspaceId = pickWorkspaceId(workspaces);
 
   if (isAuthenticated) {
     // 조회가 끝나기 전에 「Google 계정으로 시작」을 잠깐 보이면 이미 로그인한 사람에게

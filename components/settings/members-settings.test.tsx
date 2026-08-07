@@ -26,7 +26,7 @@ const state = vi.hoisted(() => ({
   removeCalls: [] as unknown[],
   replaceMock: vi.fn(),
   /** 나가기 뒤 어디로 갈지는 이 목록에서 고른다. 떠나는 곳(01K0000000000)도 아직 들어 있다. */
-  workspaces: [] as { workspaceId: string; isDefault: boolean }[],
+  workspaces: [] as { workspaceId: string }[],
   leaveCalls: [] as unknown[],
   leaveOptions: null as { mutation?: Record<string, unknown> } | null,
   leaveError: null as unknown,
@@ -221,8 +221,8 @@ describe("MembersSettings", () => {
     state.removeCalls = [];
     state.replaceMock.mockReset();
     state.workspaces = [
-      { workspaceId: "01K0000000000", isDefault: true },
-      { workspaceId: "01K0000000006", isDefault: false },
+      { workspaceId: "01K0000000000" },
+      { workspaceId: "01K0000000006" },
     ];
     state.leaveCalls = [];
     state.leaveOptions = null;
@@ -534,8 +534,8 @@ describe("워크스페이스 나가기", () => {
     state.invitations = [];
     state.replaceMock.mockReset();
     state.workspaces = [
-      { workspaceId: "01K0000000000", isDefault: true },
-      { workspaceId: "01K0000000006", isDefault: false },
+      { workspaceId: "01K0000000000" },
+      { workspaceId: "01K0000000006" },
     ];
     state.leaveCalls = [];
     state.leaveOptions = null;
@@ -668,8 +668,8 @@ describe("워크스페이스 나가기", () => {
     );
   });
 
-  // 목적지 규칙은 `auth-callback-client.tsx`의 `find(isDefault) ?? items[0]`을 그대로 쓴다.
-  // 떠나는 워크스페이스가 기본이었으므로 남은 것 중엔 기본이 없고, 첫 항목으로 떨어진다.
+  // 목적지 규칙은 `auth-callback-client.tsx`의 `pickWorkspaceId`를 그대로 쓴다.
+  // 떠나는 워크스페이스를 목록에서 뺀 뒤 고르므로 그리로 되돌아가지 않는다.
   it("나가면 남은 워크스페이스로 이동한다", async () => {
     renderSettings();
     const dialog = openLeaveDialog();
@@ -691,8 +691,8 @@ describe("워크스페이스 나가기", () => {
         success: true,
         data: {
           workspaces: [
-            { workspaceId: "01K0000000000", isDefault: true },
-            { workspaceId: "01K0000000006", isDefault: false },
+            { workspaceId: "01K0000000000" },
+            { workspaceId: "01K0000000006" },
           ],
         },
       },
@@ -717,7 +717,7 @@ describe("워크스페이스 나가기", () => {
   });
 
   it("남은 워크스페이스가 없으면 홈으로 보낸다", async () => {
-    state.workspaces = [{ workspaceId: "01K0000000000", isDefault: true }];
+    state.workspaces = [{ workspaceId: "01K0000000000" }];
     renderSettings();
     const dialog = openLeaveDialog();
 

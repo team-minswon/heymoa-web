@@ -16,7 +16,7 @@ const getWorkspaces = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({ getWorkspaces }));
 
 function workspacesResponse(
-  workspaces: { workspaceId: string; isDefault: boolean }[]
+  workspaces: { workspaceId: string }[]
 ) {
   return { status: 200, data: { success: true, data: { workspaces } } };
 }
@@ -26,16 +26,15 @@ describe("IntegrationsReturnRedirect", () => {
     navState.params = new URLSearchParams("");
     navState.replace.mockClear();
     getWorkspaces.mockReset();
+    window.localStorage.clear();
   });
   afterEach(cleanup);
 
-  it("기본 워크스페이스로 쿼리를 그대로 넘겨 리다이렉트한다", async () => {
+  it("마지막으로 연 워크스페이스로 쿼리를 그대로 넘겨 리다이렉트한다", async () => {
     navState.params = new URLSearchParams("provider=LINEAR&status=connected");
+    window.localStorage.setItem("heymoa:last-workspace", "W2");
     getWorkspaces.mockResolvedValue(
-      workspacesResponse([
-        { workspaceId: "W1", isDefault: false },
-        { workspaceId: "W2", isDefault: true },
-      ])
+      workspacesResponse([{ workspaceId: "W1" }, { workspaceId: "W2" }])
     );
 
     render(<IntegrationsReturnRedirect />);
@@ -47,11 +46,9 @@ describe("IntegrationsReturnRedirect", () => {
     );
   });
 
-  it("기본 워크스페이스가 없으면 첫 번째로 보낸다", async () => {
+  it("기억이 없으면 첫 번째로 보낸다", async () => {
     navState.params = new URLSearchParams("provider=GITHUB&status=connected");
-    getWorkspaces.mockResolvedValue(
-      workspacesResponse([{ workspaceId: "W1", isDefault: false }])
-    );
+    getWorkspaces.mockResolvedValue(workspacesResponse([{ workspaceId: "W1" }]));
 
     render(<IntegrationsReturnRedirect />);
 

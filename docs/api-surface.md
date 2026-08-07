@@ -1,6 +1,6 @@
 # API 표면 (2026-07-23)
 
-`openapi3.yml` **34경로 / 44 operation**이 만드는 화면과 상태. 행 단위는 operation이다 —
+`openapi3.yml` **36경로 / 48 operation**이 만드는 화면과 상태. 행 단위는 operation이다 —
 훅이 operation 단위로 생성되기 때문이다.
 
 **이 문서를 읽는 사람**
@@ -31,7 +31,6 @@
 | `POST /v1/workspaces`                                      | `useCreateWorkspace`        | 워크스페이스 생성          | pending / 400 이름 오류                                                  | 기존 화면(v1)                                                                    |
 | `GET /v1/workspaces/{workspaceId}`                         | `useGetWorkspace`           | 워크스페이스 셸            | 로딩 / 404                                                               | 기존 화면(v1)                                                                    |
 | `PUT /v1/workspaces/{workspaceId}`                         | `useUpdateWorkspace`        | 설정 · 일반                | pending / 403 비ADMIN                                                    | 기존 화면(v1)                                                                    |
-| `PUT /v1/users/me/default-workspace`                       | `useChangeDefaultWorkspace` | 워크스페이스 전환          | pending                                                                  | 기존 화면(v1)                                                                    |
 | `GET /v1/workspaces/{workspaceId}/projects`                | `useGetProjects`            | 사이드바 프로젝트 목록     | 로딩 / 빈 목록                                                           | 기존 화면(v1)                                                                    |
 | `POST /v1/workspaces/{workspaceId}/projects`               | `useCreateProject`          | 프로젝트 생성              | pending / 400                                                            | 기존 화면(v1)                                                                    |
 | `GET /v1/workspaces/{workspaceId}/projects/{projectId}`    | `useGetProject`             | 프로젝트 상세              | 로딩 / 404                                                               | 기존 화면(v1)                                                                    |

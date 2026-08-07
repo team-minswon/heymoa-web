@@ -9,7 +9,6 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
-  ChangeDefaultWorkspaceResponse,
   CreateWorkspaceResponse,
   UpdateWorkspaceResponse,
   WorkspaceListResponse,
@@ -25,7 +24,6 @@ export const getGetWorkspacesResponseMock = (): WorkspaceListResponse => ({
         name: "제품 팀",
         description: "제품을 만드는 팀의 워크스페이스",
         role: "ADMIN",
-        isDefault: false,
       },
     ],
   },
@@ -39,7 +37,6 @@ export const getCreateWorkspaceResponseMock = (): CreateWorkspaceResponse => ({
     name: "제품 팀",
     description: "제품을 만드는 팀의 워크스페이스",
     role: "ADMIN",
-    isDefault: false,
   },
   error: null,
 });
@@ -51,7 +48,6 @@ export const getGetWorkspaceResponseMock = (): WorkspaceResponse => ({
     name: "제품 팀",
     description: "제품을 만드는 팀의 워크스페이스",
     role: "ADMIN",
-    isDefault: false,
   },
   error: null,
 });
@@ -65,13 +61,6 @@ export const getUpdateWorkspaceResponseMock = (): UpdateWorkspaceResponse => ({
   },
   error: null,
 });
-
-export const getChangeDefaultWorkspaceResponseMock =
-  (): ChangeDefaultWorkspaceResponse => ({
-    success: true,
-    data: { workspaceId: "0HZX2K7M9Q4AD" },
-    error: null,
-  });
 
 export const getGetWorkspacesMockHandler = (
   overrideResponse?:
@@ -168,36 +157,9 @@ export const getUpdateWorkspaceMockHandler = (
     options
   );
 };
-
-export const getChangeDefaultWorkspaceMockHandler = (
-  overrideResponse?:
-    | ChangeDefaultWorkspaceResponse
-    | ((
-        info: Parameters<Parameters<typeof http.put>[1]>[0]
-      ) =>
-        | Promise<ChangeDefaultWorkspaceResponse>
-        | ChangeDefaultWorkspaceResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.put(
-    "*/v1/users/me/default-workspace",
-    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getChangeDefaultWorkspaceResponseMock(),
-        { status: 200 }
-      );
-    },
-    options
-  );
-};
 export const getWorkspacesMock = () => [
   getGetWorkspacesMockHandler(),
   getCreateWorkspaceMockHandler(),
   getGetWorkspaceMockHandler(),
   getUpdateWorkspaceMockHandler(),
-  getChangeDefaultWorkspaceMockHandler(),
 ];

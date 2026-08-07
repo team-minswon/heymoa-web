@@ -44,6 +44,7 @@ import {
 } from "@/lib/api/generated/workspace-members/workspace-members";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { forgetWorkspace } from "@/lib/workspace/cache";
+import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 import type {
   WorkspaceInvitationListResponseDataInvitationsItem,
   WorkspaceMemberListResponseDataMembersItem,
@@ -510,10 +511,9 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
 
   /**
    * 목적지는 `auth-callback-client.tsx`가 로그인 직후 쓰는 규칙 그대로다 —
-   * `find(isDefault) ?? items[0]`. 새 규칙을 만들지 않는다.
+   * `pickWorkspaceId`. 새 규칙을 만들지 않는다.
    *
-   * 서버는 떠난 곳이 기본이었으면 다른 워크스페이스로 기본을 옮기지만, 그 응답을 기다리지
-   * 않는다. 남은 것 중 아무 데나 유효하면 되고, 옮겨진 기본은 무효화된 조회가 따라온다.
+   * 떠난 곳이 마지막 방문으로 기억돼 있어도 목록에서 뺀 뒤 고르므로 그리로 되돌아가지 않는다.
    */
   function nextWorkspacePath() {
     const response = workspacesQuery.data;
@@ -522,9 +522,9 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
         ? (response.data.data?.workspaces ?? [])
         : [];
     const remaining = items.filter((item) => item.workspaceId !== workspaceId);
-    const next = remaining.find((item) => item.isDefault) ?? remaining[0];
+    const next = pickWorkspaceId(remaining);
     // 남은 워크스페이스가 없으면 홈으로 보낸다 — 랜딩 CTA가 그 상태를 받아 생성 폼을 연다.
-    return next ? `/w/${next.workspaceId}` : "/";
+    return next ? `/w/${next}` : "/";
   }
 }
 

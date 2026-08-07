@@ -36,7 +36,7 @@ const WITH_WORKSPACE = {
   data: {
     success: true,
     data: {
-      workspaces: [{ workspaceId: "01K0000000000", isDefault: true }],
+      workspaces: [{ workspaceId: "01K0000000000" }],
     },
   },
 };

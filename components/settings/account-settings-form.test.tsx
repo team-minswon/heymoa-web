@@ -1,53 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AccountSettingsForm } from "@/components/settings/account-settings-form";
-
-const mutations = vi.hoisted(() => ({ changeDefaultWorkspace: vi.fn() }));
-const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
-
-vi.mock("@/lib/ui/toast", () => ({ toast }));
-
-vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
-  getGetWorkspacesQueryKey: () => ["/v1/workspaces"],
-  useGetWorkspacesSuspense: () => ({
-    data: {
-      status: 200,
-      data: {
-        success: true,
-        data: {
-          workspaces: [
-            {
-              workspaceId: "01K0000000000",
-              name: "테스트 유저의 워크스페이스",
-              isDefault: true,
-            },
-            { workspaceId: "01K0000000006", name: "제품 팀", isDefault: false },
-          ],
-        },
-      },
-    },
-  }),
-  useChangeDefaultWorkspace: () => ({
-    mutateAsync: mutations.changeDefaultWorkspace,
-    isPending: false,
-  }),
-}));
 
 vi.mock("@/lib/api/generated/users/users", () => ({
   getGetCurrentUserQueryKey: () => ["current-user"],
@@ -86,13 +40,6 @@ describe("AccountSettingsForm", () => {
   afterAll(() => vi.unstubAllGlobals());
   afterEach(cleanup);
 
-  beforeEach(() => {
-    mutations.changeDefaultWorkspace.mockReset();
-    mutations.changeDefaultWorkspace.mockResolvedValue({ status: 200 });
-    toast.error.mockReset();
-    toast.success.mockReset();
-  });
-
   const renderForm = () =>
     render(
       <QueryClientProvider client={new QueryClient()}>
@@ -109,102 +56,15 @@ describe("AccountSettingsForm", () => {
     ).toHaveAttribute("src", expect.stringContaining("test-user.png"));
   });
 
-  it("offers the command only on workspaces that are not already default", () => {
+  /**
+   * 기본 워크스페이스 목록이 여기 있었다(APP-237). 「로그인 후 어디로 갈지」가 브라우저의
+   * 마지막 방문으로 옮겨 가면서 통째로 사라졌고(APP-401), design.pen 설정 > 계정(`LJJWo`)에도
+   * 원래 없던 섹션이라 지우면서 정본에 맞춰졌다. 워크스페이스 조회도 함께 빠져서, 이 탭은
+   * 이제 유저 자원만 그린다.
+   */
+  it("워크스페이스 목록을 그리지 않는다", () => {
     renderForm();
-    const rows = screen.getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
-    // 기본인 행은 배지만 있고 명령이 없다 — 있으면 자기 자신을 기본으로 다시 지정한다.
-    expect(rows[0]).toHaveTextContent("기본");
-    expect(
-      screen.getAllByRole("button", { name: "기본으로 설정" })
-    ).toHaveLength(1);
-  });
-
-  it("changes the default workspace and reports it", async () => {
-    renderForm();
-    fireEvent.click(screen.getByRole("button", { name: "기본으로 설정" }));
-
-    await waitFor(() =>
-      expect(mutations.changeDefaultWorkspace).toHaveBeenCalledWith({
-        data: { workspaceId: "01K0000000006" },
-      })
-    );
-    await waitFor(() => expect(toast.success).toHaveBeenCalled());
-    expect(toast.error).not.toHaveBeenCalled();
-  });
-
-  it("refreshes every workspace detail, not just the new default", async () => {
-    // 옛 기본의 상세 캐시에 isDefault: true가 남으면 그 워크스페이스의 설정이 계속
-    // `기본` 배지를 그린다. 하위 경로(`/projects`)까지 끌어오면 과잉 무효화다.
-    const queryClient = new QueryClient();
-    const invalidated: unknown[] = [];
-    queryClient.setQueryData(["/v1/workspaces/01K0000000000"], { seeded: true });
-    queryClient.setQueryData(["/v1/workspaces/01K0000000006"], { seeded: true });
-    queryClient.setQueryData(["/v1/workspaces/01K0000000000/projects"], {
-      seeded: true,
-    });
-    vi.spyOn(queryClient, "invalidateQueries").mockImplementation(
-      async (filters) => {
-        for (const query of queryClient.getQueryCache().getAll()) {
-          if (filters?.predicate?.(query)) invalidated.push(query.queryKey);
-        }
-        if (filters?.queryKey) invalidated.push(filters.queryKey);
-      }
-    );
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AccountSettingsForm />
-      </QueryClientProvider>
-    );
-    fireEvent.click(screen.getByRole("button", { name: "기본으로 설정" }));
-
-    await waitFor(() => expect(toast.success).toHaveBeenCalled());
-    expect(invalidated).toEqual(
-      expect.arrayContaining([
-        ["/v1/workspaces"],
-        ["/v1/workspaces/01K0000000000"],
-        ["/v1/workspaces/01K0000000006"],
-      ])
-    );
-    expect(invalidated).not.toContainEqual([
-      "/v1/workspaces/01K0000000000/projects",
-    ]);
-  });
-
-  it("shows the server's own wording when the change fails", async () => {
-    mutations.changeDefaultWorkspace.mockRejectedValue({
-      success: false,
-      data: null,
-      error: { code: "WORKSPACE_NOT_FOUND", message: "워크스페이스를 찾을 수 없습니다." },
-    });
-    renderForm();
-    fireEvent.click(screen.getByRole("button", { name: "기본으로 설정" }));
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        "워크스페이스를 찾을 수 없습니다.",
-        expect.anything()
-      )
-    );
-    expect(toast.success).not.toHaveBeenCalled();
-  });
-
-  it("refetches the list after a failure so a stale row cannot linger", async () => {
-    mutations.changeDefaultWorkspace.mockRejectedValue(new Error("gone"));
-    const queryClient = new QueryClient();
-    const invalidate = vi
-      .spyOn(queryClient, "invalidateQueries")
-      .mockResolvedValue(undefined);
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AccountSettingsForm />
-      </QueryClientProvider>
-    );
-    fireEvent.click(screen.getByRole("button", { name: "기본으로 설정" }));
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["/v1/workspaces"] });
+    expect(screen.queryByRole("listitem")).toBeNull();
+    expect(screen.queryByRole("button", { name: "기본으로 설정" })).toBeNull();
   });
 });

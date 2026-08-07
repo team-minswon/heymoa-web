@@ -57,9 +57,8 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
             {
               workspaceId: "01K0000000000",
               name: "김민수의 워크스페이스",
-              isDefault: true,
             },
-            { workspaceId: "01K0000000007", name: "제품 팀", isDefault: false },
+            { workspaceId: "01K0000000007", name: "제품 팀" },
           ],
         },
       },
@@ -74,7 +73,6 @@ const props = {
     workspaceId: "01K0000000000",
     name: "김민수의 워크스페이스",
     description: null,
-    isDefault: true,
     role: "ADMIN" as const,
   },
   projects: [

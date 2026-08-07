@@ -47,13 +47,16 @@ describe("OpenAPI contract", () => {
     expect(api().paths["/v1/workspaces/{workspaceId}"]?.put?.operationId).toBe(
       "updateWorkspace"
     );
-    expect(
-      api().paths["/v1/users/me/default-workspace"]?.put?.operationId
-    ).toBe("changeDefaultWorkspace");
   });
 
-  it("does not expose a language field or default-workspace read route", () => {
+  /**
+   * 기본 워크스페이스는 서버에서 사라졌다(APP-401) — 「로그인 후 어디로 갈지」는 브라우저의
+   * 마지막 방문 기록으로 옮겼다. 계약에 다시 들어오면 그 규칙이 두 벌이 된다.
+   */
+  it("does not expose a language field or any default-workspace surface", () => {
     expect(source).not.toContain("/v1/workspaces/default:");
+    expect(source).not.toContain("/v1/users/me/default-workspace:");
+    expect(source).not.toContain("isDefault:");
     expect(source).not.toMatch(/^\s+language:/m);
   });
 
@@ -193,7 +196,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-185에서 토큰 초대 수락 경로가 추가됐다 (34 → 35).
     // APP-379에서 멤버 관리 경로 둘이 늘었다 (35 → 37) — `members/me`(나가기)와
     // `members/{userId}`(역할 변경 PATCH · 추방 DELETE). 후자는 경로 하나에 메서드 둘이다.
-    expect(paths).toHaveLength(37);
+    // APP-401에서 `users/me/default-workspace`가 사라졌다 (37 → 36).
+    expect(paths).toHaveLength(36);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

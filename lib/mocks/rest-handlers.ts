@@ -9,7 +9,6 @@ import { getGetNotificationsMockHandler } from "@/lib/api/generated/notification
 import { getGetActiveAgentChatMockHandler } from "@/lib/api/generated/agent-chat/agent-chat.msw";
 
 import type {
-  ChangeDefaultWorkspaceRequest,
   CreateWorkspaceRequest,
   ProjectRequest,
   NoteRequest,
@@ -298,19 +297,6 @@ export const restHandlers = [
       BAD_REQUEST
     )
   ),
-  // workspaceId는 path가 아니라 **본문**으로 온다 (PUT /v1/users/me/default-workspace).
-  // params에서 읽으면 언제나 없는 워크스페이스라 기본 워크스페이스가 바뀌지 않았다.
-  http.put("*/v1/users/me/default-workspace", async ({ request }) =>
-    resultOf(
-      async () => {
-        const body = (await request.json()) as ChangeDefaultWorkspaceRequest;
-        return mockDb.setDefaultWorkspace(String(body.workspaceId ?? ""));
-      },
-      notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
-    )
-  ),
-
-  // Projects
   http.get("*/v1/workspaces/:workspaceId/projects", ({ params }) =>
     resultOf(
       () => ({ projects: mockDb.listProjects(id(params.workspaceId)) }),

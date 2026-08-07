@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { getMe } from "@/lib/auth/api";
 import { normalizeReturnTo } from "@/lib/auth/paths";
+import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
 export function AuthCallbackClient({
   urlError,
@@ -68,7 +69,7 @@ export function CallbackProcessor({
             throw new Error("WORKSPACE_LIST_FAILED");
           }
           const items = response.data.data.workspaces ?? [];
-          const selected = items.find((item) => item.isDefault) ?? items[0];
+          const selected = pickWorkspaceId(items);
           // **워크스페이스가 없으면 홈으로 보낸다.** 예전에는 여기서 「새 워크스페이스를 만든 뒤
           // 시작해 주세요」를 그렸는데 이 화면에 만드는 버튼이 없어서, 존재하지 않는 행동을
           // 지시하는 안내였다(APP-402). 홈의 CTA가 그 상태를 받아 생성 폼을 연다.
@@ -76,12 +77,7 @@ export function CallbackProcessor({
             router.replace("/");
             return;
           }
-          if (!items.some((item) => item.isDefault)) {
-            console.error("DEFAULT_WORKSPACE_MISSING", {
-              workspaceIds: items.map((item) => item.workspaceId),
-            });
-          }
-          router.replace(`/w/${selected.workspaceId}`);
+          router.replace(`/w/${selected}`);
         }
       } catch (error) {
         if (!ignore) {

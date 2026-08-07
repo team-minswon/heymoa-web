@@ -74,22 +74,6 @@ describe("REST mock handlers", () => {
     expect((await response.json()).success).toBe(true);
   });
 
-  it("기본 워크스페이스는 path가 아니라 본문의 workspaceId로 바뀐다", async () => {
-    const target = mockDb.listWorkspaces().at(-1)!;
-
-    const response = await fetch(
-      "http://localhost/v1/users/me/default-workspace",
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId: target.workspaceId }),
-      }
-    );
-
-    expect(response.status).toBe(200);
-    expect((await response.json()).data.workspaceId).toBe(target.workspaceId);
-  });
-
   it("한 operation의 실패가 여럿이면 던진 코드를 그대로 쓴다", async () => {
     // createProject는 잘못된 본문이면 400, 없는 워크스페이스면 404다.
     // 기본값으로 덮으면 계약과 어긋난다.

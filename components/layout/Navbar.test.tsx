@@ -54,7 +54,6 @@ const workspaceData = {
         {
           workspaceId: "workspace-1",
           name: "기본 워크스페이스",
-          isDefault: true,
         },
       ],
     },

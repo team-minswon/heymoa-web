@@ -68,21 +68,6 @@ describe("mockDb", () => {
     ).toEqual([]);
   });
 
-  it("keeps exactly one explicit default workspace", () => {
-    const created = mockDb.createWorkspace({
-      name: "제품",
-      description: null,
-    });
-    expect(mockDb.listWorkspaces()[0].isDefault).toBe(true);
-    expect(created.isDefault).toBe(false);
-
-    mockDb.setDefaultWorkspace(created.workspaceId);
-    const defaults = mockDb.listWorkspaces().filter((item) => item.isDefault);
-    expect(defaults).toEqual([
-      expect.objectContaining({ workspaceId: created.workspaceId }),
-    ]);
-  });
-
   it("rejects note creation in a non-existent project", () => {
     expect(() =>
       mockDb.createNote("non-existent-project", { title: "새 노트" })
@@ -556,20 +541,6 @@ describe("workspace member management", () => {
     );
   });
 
-  it("기본 워크스페이스를 떠나면 남은 곳이 기본이 된다", () => {
-    addSecondAdmin();
-    expect(
-      mockDb.listWorkspaces().find((w) => w.workspaceId === WORKSPACE_ID)
-        ?.isDefault
-    ).toBe(true);
-
-    mockDb.leaveWorkspace(WORKSPACE_ID);
-
-    // 서버가 기본 워크스페이스를 재지정한다. 목이 안 하면 기본이 하나도 없는 상태가 되고,
-    // 웹이 기본을 기대하는 자리마다 실제로는 나지 않는 빈 화면을 검증하게 된다.
-    expect(mockDb.listWorkspaces().filter((w) => w.isDefault)).toHaveLength(1);
-  });
-
   it("멤버가 아닌 워크스페이스는 나가기에서 WORKSPACE_NOT_FOUND다 (추방과 다른 코드)", () => {
     // 01K0000000030 — 초대만 와 있고 아직 합류하지 않은 워크스페이스.
     expect(() => mockDb.leaveWorkspace("01K0000000030")).toThrow(
@@ -718,8 +689,6 @@ describe("workspaces gained after seeding", () => {
     expect(
       mockDb.listIntegrations(invitation.workspaceId).map((i) => i.provider)
     ).toEqual(["LINEAR", "GITHUB"]);
-    // 기본 워크스페이스는 바뀌지 않는다 (계약).
-    expect(mockDb.listWorkspaces().filter((w) => w.isDefault)).toHaveLength(1);
   });
 });
 

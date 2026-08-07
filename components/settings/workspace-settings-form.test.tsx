@@ -10,7 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceSettingsForm } from "@/components/settings/workspace-settings-form";
 
 const mutations = vi.hoisted(() => ({
-  changeDefaultWorkspace: vi.fn(),
   updateWorkspace: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
@@ -27,17 +26,12 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
           workspaceId: "01K0000000007",
           name: "제품 팀",
           description: null,
-          isDefault: false,
         },
       },
     },
   }),
   useUpdateWorkspace: () => ({
     mutateAsync: mutations.updateWorkspace,
-    isPending: false,
-  }),
-  useChangeDefaultWorkspace: () => ({
-    mutateAsync: mutations.changeDefaultWorkspace,
     isPending: false,
   }),
 }));
@@ -48,32 +42,25 @@ describe("WorkspaceSettingsForm", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
-    mutations.changeDefaultWorkspace.mockReset();
     mutations.updateWorkspace.mockReset();
-    mutations.changeDefaultWorkspace.mockResolvedValue({ status: 200 });
     mutations.updateWorkspace.mockResolvedValue({ status: 200 });
     toast.error.mockReset();
     toast.success.mockReset();
   });
 
-  it("changes default only through the explicit command", async () => {
+  /**
+   * 「기본 워크스페이스로 설정」 카드가 여기 있었다. 그 명령이 사라지면서(APP-401) 이 화면은
+   * 이름·설명만 다룬다 — design.pen 설정 > 일반에서도 같은 행을 지웠다.
+   */
+  it("기본 워크스페이스 명령을 그리지 않는다", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkspaceSettingsForm workspaceId="01K0000000007" />
       </QueryClientProvider>
     );
-    fireEvent.click(
-      screen.getByRole("button", { name: "기본 워크스페이스로 설정" })
-    );
-    await waitFor(() =>
-      expect(mutations.changeDefaultWorkspace).toHaveBeenCalledWith({
-        data: { workspaceId: "01K0000000007" },
-      })
-    );
-    expect(toast.success).toHaveBeenCalledWith(
-      "기본 워크스페이스로 설정했습니다.",
-      { id: "workspace-settings-default" }
-    );
+    expect(
+      screen.queryByRole("button", { name: "기본 워크스페이스로 설정" })
+    ).toBeNull();
   });
 
   it("reports save failures through Sonner without adding page feedback", async () => {

@@ -8,6 +8,7 @@ import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetWorkspace } from "@/lib/api/generated/workspaces/workspaces";
 import { forgetWorkspace } from "@/lib/workspace/cache";
 import { notifyWorkspaceGone } from "@/lib/workspace/gone-notice";
+import { rememberWorkspaceId } from "@/lib/workspaces/last-workspace";
 
 import {
   isWorkspaceRecordingActive,
@@ -40,6 +41,17 @@ export function WorkspaceRouteLayout({
   const isFullNote = Boolean(noteId) && searchParams.get("view") !== "side";
 
   useRedirectWhenWorkspaceGone(workspaceId);
+
+  // **다음 진입의 목적지가 여기서 정해진다.** 로그인·랜딩·연동 복귀는 전부 `pickWorkspaceId`로
+  // 어디를 열지 고르고, 그 근거가 이 한 줄이다(APP-401 — 서버의 `isDefault`를 대신한다).
+  //
+  // 아래 훅이 「사라진 워크스페이스」를 감지하기 전에 먼저 기록된다. **잘못된 곳으로 보내지는
+  // 않는다** — 기억은 늘 목록으로 검증되고, 없으면 첫 항목으로 떨어진다. 대신 접근 못 하는
+  // `/w/{id}`를 한 번 열면 직전 기억이 덮여 다음 진입이 첫 항목으로 간다. 잃는 것이 기억뿐이고
+  // 최악이 최초 진입과 같은 상태라 조회 성공까지 기다리지 않는다.
+  useEffect(() => {
+    rememberWorkspaceId(workspaceId);
+  }, [workspaceId]);
 
   /**
    * **골격은 곧 나타날 화면과 같은 모양이어야 한다.** 이 경계는 셸(워크스페이스·프로젝트
@@ -120,8 +132,8 @@ const MEMBERSHIP_POLL_MS = 30_000;
  * `app/providers.tsx`에 있다) 키에 워크스페이스가 없어서, A를 녹음하다 B로 옮긴 뒤 A에서
  * 추방되면 **멀쩡한 B에서 쫓겨난다**(codex 리뷰 1회차).
  *
- * 목적지는 홈이다. 로그인한 사람에게는 남은 워크스페이스를 `find(isDefault) ?? [0]`으로
- * 골라 주는 CTA가 이미 있고(`landing-cta.tsx`), 하나도 없으면 그 CTA가 생성 폼을 연다.
+ * 목적지는 홈이다. 로그인한 사람에게는 남은 워크스페이스를 `pickWorkspaceId`로 골라 주는
+ * CTA가 이미 있고(`landing-cta.tsx`), 하나도 없으면 그 CTA가 생성 폼을 연다.
  */
 function useRedirectWhenWorkspaceGone(workspaceId: string) {
   const router = useRouter();
