@@ -21,7 +21,18 @@ function meetingControls(page: Page) {
  * 노트 헤더. 상태 칩·제목·메타 두 줄이 여기 있다 — design.pen `MZRO0`/`c5cQ8n`.
  * 회의 종료는 이 안의 `meetingControls`고, 창 제어는 위 상단바(`KktRX`)에 있다.
  */
-function noteHeader(page: Page) {
+/**
+ * 노트 상단바(56). **상태 칩·제목 빵조각·탭·회의 종료가 여기 있다** — 크롬은 이 한 줄이
+ * 전부다. 전사·요약에서 제목 블록을 걷어냈으므로 상태를 물을 곳은 여기뿐이다.
+ */
+function noteTopBar(page: Page) {
+  return page
+    .locator("div.h-14")
+    .filter({ has: page.getByRole("group", { name: "창 제어" }) });
+}
+
+/** 제목 블록. **정보 탭의 머리글이라 다른 탭에는 없다.** */
+function noteTitleBlock(page: Page) {
   return page.locator("header").filter({ has: page.getByRole("heading") });
 }
 
@@ -53,7 +64,7 @@ async function createMeetingNote(page: Page) {
   const noteId = new URL(page.url()).pathname.split("/").at(-1);
   expect(noteId).toBeTruthy();
   await expect(
-    noteHeader(page).getByText("시작 전", { exact: true })
+    noteTopBar(page).getByText("시작 전", { exact: true })
   ).toBeVisible();
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
@@ -68,7 +79,7 @@ async function startRecording(page: Page, name: "회의 시작" | "재개") {
     timeout: 20_000,
   });
   await expect(
-    noteHeader(page).getByText("기록 중", { exact: true })
+    noteTopBar(page).getByText("기록 중", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -78,7 +89,7 @@ async function stopRecording(page: Page) {
     .getByRole("button", { name: "중지" })
     .click();
   await expect(
-    noteHeader(page).getByText("중지됨", { exact: true })
+    noteTopBar(page).getByText("중지됨", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
   await expect(
     page.getByLabel("녹음 제어").getByRole("button", { name: "재개" })
@@ -94,7 +105,7 @@ async function endMeeting(page: Page) {
     .getByRole("button", { name: "회의 종료" })
     .click();
   await expect(
-    noteHeader(page).getByText("종료됨", { exact: true })
+    noteTopBar(page).getByText("종료됨", { exact: true })
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -129,15 +140,15 @@ async function expectForeignViewerTranscript(
       0
     );
     if (viewportSize.width === 375) {
-      // 상태·진행자는 이제 **노트 헤더**가 그린다 — 전체 화면이 워크스페이스 상단바를 덮으면서
-      // 그 바의 노트 액션 슬롯이 사라졌다.
-      const header = noteHeader(page);
-      const status = header.getByText("기록 중", { exact: true });
-      // 시작자 이름은 참관자에게만, 메타 둘째 줄에서 말한다.
-      const starterName = header.getByText("김서연님이 기록 중", {
+      // 상태는 상단바가, 시작자는 **정보 탭 머리글의 메타 둘째 줄**이 말한다 — 전사는 읽는
+      // 면이라 제목 블록을 걷었다.
+      await expect(
+        noteTopBar(page).getByText("기록 중", { exact: true })
+      ).toBeVisible();
+      await page.getByRole("tab", { name: "정보" }).click();
+      const starterName = noteTitleBlock(page).getByText("김서연님이 기록 중", {
         exact: false,
       });
-      await expect(status).toBeVisible();
       await expect(starterName).toBeVisible();
       const starterBox = await starterName.boundingBox();
       expect(starterBox).not.toBeNull();
@@ -145,6 +156,9 @@ async function expectForeignViewerTranscript(
       expect(starterBox!.x + starterBox!.width).toBeLessThanOrEqual(
         viewportSize.width
       );
+      // 아래에서 전사 블록을 다시 세므로 읽던 탭으로 돌아간다.
+      await page.getByRole("tab", { name: "전사" }).click();
+      await expect(blocks.first()).toBeVisible();
     }
     expect(await blocks.count()).toBeGreaterThan(0);
 
@@ -602,7 +616,7 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
     page.getByLabel("녹음 제어").getByRole("button", { name: "회의 시작" })
   ).toBeVisible();
   await expect(
-    noteHeader(page).getByText("시작 전", { exact: true })
+    noteTopBar(page).getByText("시작 전", { exact: true })
   ).toBeVisible();
 });
 
@@ -615,9 +629,12 @@ test("shows meeting context and shared chat inside the viewer side panel", async
 
   const noteSurface = page.getByLabel("노트", { exact: true });
   await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
+  // 메타 줄은 정보 탭 머리글의 것이다.
+  await page.getByRole("tab", { name: "정보" }).click();
   await expect(
     noteSurface.getByText("김서연님이 기록 중 · 워크스페이스 멤버에게 공개")
   ).toBeVisible();
+  await page.getByRole("tab", { name: "전사" }).click();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
   await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "챗봇"]);
@@ -637,10 +654,17 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   );
 
   const noteSurface = page.getByLabel("노트", { exact: true });
+  // 상태는 상단바가, 공개 범위는 정보 탭 머리글이 말한다.
   await expect(noteSurface.getByText("기록 중", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "정보" }).click();
+  // 제목 블록으로 좁힌다 — 정보 탭의 「회의 정보」 표도 같은 문구를 공유 범위로 적는다.
   await expect(
-    noteSurface.getByText("워크스페이스 멤버에게 공개", { exact: true })
+    noteTitleBlock(page).getByText("워크스페이스 멤버에게 공개", {
+      exact: true,
+    })
   ).toBeVisible();
+  await page.getByRole("tab", { name: "전사" }).click();
+  // 회의 종료는 상단바에 있으니 어느 탭에서든 닿는다.
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(
     page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
@@ -654,7 +678,7 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
     timeout: 20_000,
   });
   await expect(
-    noteHeader(page).getByText("종료됨", { exact: true })
+    noteTopBar(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
   await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "요약"]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
@@ -675,7 +699,7 @@ test("ends a meeting and shows the analysis in progress", async ({ page }) => {
     timeout: 20_000,
   });
   await expect(
-    noteHeader(page).getByText("종료됨", { exact: true })
+    noteTopBar(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
 });
 

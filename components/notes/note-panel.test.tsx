@@ -270,10 +270,11 @@ describe("NotePanel", () => {
     expect(screen.getByRole("tab", { name: "전사" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
-    // 제목은 두 번 나온다 — 상단바의 빵조각(13)과 노트 헤더의 세리프 제목(34)이다.
-    expect(screen.getAllByText("주간 제품 회의")).toHaveLength(2);
-    expect(screen.getByRole("heading", { name: "주간 제품 회의" })).toBeTruthy();
-    expect(screen.getByText("주간")).toBeInTheDocument();
+    // 전사에서는 제목이 **상단바 빵조각 하나뿐이다** — 세리프 제목은 정보 탭의 머리글이다.
+    expect(screen.getAllByText("주간 제품 회의")).toHaveLength(1);
+    expect(
+      screen.queryByRole("heading", { name: "주간 제품 회의" })
+    ).toBeNull();
     expect(useGetProject).toHaveBeenCalledWith(
       "01K0000000000",
       "01K0000000001",
@@ -584,12 +585,13 @@ describe("NotePanel", () => {
   it.each(["full", "side"] as const)(
     "%s는 최초 시작을 절대 시각 time 요소로 보인다",
     (view) => {
+      // 메타 줄은 정보 탭의 머리글에 있다 — 전사·요약은 읽는 면이라 크롬을 걷었다.
       renderNotePanel(
         <NotePanel
           workspaceId="01K0000000000"
           noteId="01K0000000002"
           view={view}
-          tab="transcript"
+          tab="details"
           onTabChange={vi.fn()}
           onClose={vi.fn()}
         />
@@ -941,21 +943,21 @@ describe("NotePanel", () => {
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
   });
 
-  it("side 헤더는 회의 맥락을 보이고 종료 성공 뒤 요약 탭으로 이동한다", () => {
+  it("정보 탭 머리글이 회의 맥락을 보이고 종료 성공 뒤 요약 탭으로 이동한다", () => {
     const onTabChange = vi.fn();
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
         view="side"
-        tab="transcript"
+        tab="details"
         onTabChange={onTabChange}
         onClose={vi.fn()}
       />
     );
 
-    // 상태는 헤더 첫 줄의 칩이다. 시작자에게는 자기 이름을 다시 적지 않는다 — 참관일 때만
-    // 메타 줄이 「OOO님이 기록 중」을 말한다.
+    // 상태 칩은 상단바에 있고, 메타 줄은 정보 탭 머리글에 있다. 시작자에게는 자기 이름을
+    // 다시 적지 않는다 — 참관일 때만 메타 줄이 「OOO님이 기록 중」을 말한다.
     expect(screen.getByText("기록 중")).toBeInTheDocument();
     expect(screen.queryByText("참관")).toBeNull();
     expect(screen.getByText("워크스페이스 멤버에게 공개")).toBeInTheDocument();
@@ -972,11 +974,114 @@ describe("NotePanel", () => {
     expect(onTabChange).toHaveBeenCalledWith("summary");
   });
 
+  /**
+   * **크롬이 700 패널에서 233(33%)을 먹던 것을 걷은 것이 이 구조다.** 세리프 제목(41)과
+   * 메타 두 줄(36)은 전사·요약에서 군더더기였다 — 제목은 상단바 빵조각에, 메타는 정보 탭의
+   * 「회의 정보」 표에 이미 있다.
+   *
+   * **탭이 상단바에 있어야 이게 가능하다.** 탭이 제목 블록 아래에 있으면 탭을 누를 때마다
+   * 줄이 141px씩 오르내려 커서 밑에서 버튼이 도망간다. jsdom은 px를 못 재니 **탭 목록이
+   * 상단바 안에 있는지**로 검사한다.
+   */
+  it("탭은 상단바 안에 있고 제목 블록은 정보 탭만 갖는다", () => {
+    // `rerenderNote`다 — 맨 `rerender`는 프로바이더 래퍼를 벗겨서 `useRecording`이 터진다.
+    const { rerenderNote } = renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const windowGroup = screen.getByRole("group", { name: "창 제어" });
+    const topBar = windowGroup.closest("div.h-14");
+    expect(topBar).toHaveClass("h-14", "shrink-0");
+    // 탭 목록이 그 바 안에 있어야 제목 블록이 켜지든 꺼지든 제자리에 남는다.
+    expect(topBar?.contains(screen.getByRole("tablist"))).toBe(true);
+    // 전사에는 세리프 제목도 메타도 없다.
+    expect(screen.queryByRole("heading", { name: "주간 제품 회의" })).toBeNull();
+    expect(screen.queryByText(/참석자 \d+명/)).toBeNull();
+
+    rerenderNote(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="details"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "주간 제품 회의" })
+    ).toBeInTheDocument();
+    // 탭은 여전히 같은 바 안이다 — 이게 깨지면 탭 줄이 튄다.
+    expect(
+      screen
+        .getByRole("group", { name: "창 제어" })
+        .closest("div.h-14")
+        ?.contains(screen.getByRole("tablist"))
+    ).toBe(true);
+    // 프로젝트 pill도 이 머리글의 것이다 — 전사에서는 상단바가 이미 좁다.
+    expect(screen.getByText("주간")).toBeInTheDocument();
+  });
+
+  /**
+   * 회의 제어는 **상단바 오른쪽**이다. 전사를 보다가 회의를 끝내는 것은 흔한 일인데, 제목
+   * 블록에 묶어 두면 정보 탭까지 다녀와야 한다.
+   *
+   * 노트 메뉴(`⋯`)와 한 자리를 나눠 쓴다 — 삭제는 기록 중에 숨고(서버 409) 회의 종료는
+   * 기록 중·중지됨에만 뜨니 겹치지 않는다.
+   */
+  it("살아 있는 회의는 전사에서도 회의 종료에 닿는다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        onCollapse={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "회의 종료" })).toBeTruthy();
+    // 제목 블록은 여전히 없다 — 제어 한 줄만 섰다.
+    expect(screen.queryByRole("heading", { name: "주간 제품 회의" })).toBeNull();
+  });
+
+  it("종료된 회의의 전사에는 회의 종료를 두지 않는다", () => {
+    noteState.value.meetingStatus = "ENDED";
+    noteState.value.activeSessionStartedAt = null;
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        onCollapse={vi.fn()}
+      />
+    );
+
+    // 종료된 회의에서는 그 자리를 노트 메뉴가 쓴다.
+    expect(screen.queryByRole("button", { name: "회의 종료" })).toBeNull();
+    expect(screen.getByRole("button", { name: "노트 메뉴" })).toBeTruthy();
+    expect(
+      screen.queryByRole("group", { name: "회의 상태 및 제어" })
+    ).toBeNull();
+  });
+
   // 좁은 폭에서 헤더가 세로로 자라 전사 높이를 0까지 밀어낸 적이 있다(812×375 landscape에서
   // 헤더 278/355 실측). 그 원인은 창 제어·회의 제어·상태·제목이 **한 헤더에 다 있었기**
-  // 때문이다. 지금 창 제어는 높이 56이 고정된 상단바로 나갔고(design.pen `KktRX`), 노트 헤더에
-  // 남은 것은 제목·메타와 회의 종료뿐이라 폭으로 감길 것이 거의 없다.
-  it("창 제어는 고정 높이 상단바에 있고 노트 헤더에는 제목·메타만 남는다", () => {
+  // 때문이다. 지금은 창 제어·상태·탭이 모두 높이 56 고정 바에 있다(design.pen `KktRX`).
+  it("창 제어 버튼은 정본대로 32×32다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -989,9 +1094,6 @@ describe("NotePanel", () => {
       />
     );
 
-    const windowGroup = screen.getByRole("group", { name: "창 제어" });
-    const topBar = windowGroup.parentElement?.parentElement;
-    expect(topBar).toHaveClass("h-14", "shrink-0");
     // 정본은 32×32 버튼이다(`UfrA6`/`BJAQl`).
     expect(
       screen.getByRole("button", { name: "전체 화면으로 보기" })
@@ -999,12 +1101,6 @@ describe("NotePanel", () => {
     expect(screen.getByRole("button", { name: "목록으로" })).toHaveClass(
       "size-8"
     );
-
-    // 헤더는 제목 줄 하나다 — 창 제어가 여기 없으니 감겨서 세로로 자랄 것도 없다.
-    const title = screen.getByRole("heading", { name: "주간 제품 회의" });
-    const headerRow = title.parentElement?.parentElement;
-    expect(headerRow).toHaveClass("items-start", "justify-between");
-    expect(headerRow?.contains(windowGroup)).toBe(false);
   });
 
   it("side 뷰어가 읽는 중 회의가 끝나면 안내 뒤 아카이브를 연다", () => {
