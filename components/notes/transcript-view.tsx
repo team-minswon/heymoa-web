@@ -19,7 +19,7 @@ import {
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import {
-  FOCUSED_BLOCK_CLASS,
+  FOCUSED_TEXT_CLASS,
   useTranscriptFocus,
   type TranscriptFocus,
 } from "@/components/notes/use-transcript-focus";
@@ -270,16 +270,19 @@ export function TranscriptView({
                   data-timeline-start-ms={block.timelineStartedAtMs}
                   data-state="final"
                   data-focused={isHighlighted(block.blockId) || undefined}
-                  className={cn(
-                    "group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5",
-                    isHighlighted(block.blockId) && FOCUSED_BLOCK_CLASS
-                  )}
+                  className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
                 >
                   <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
                     {formatOffset(block.timelineStartedAtMs)}
                   </time>
                   <p className="min-w-0 whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
-                    {block.text}
+                    <span
+                      className={cn(
+                        isHighlighted(block.blockId) && FOCUSED_TEXT_CLASS
+                      )}
+                    >
+                      {block.text}
+                    </span>
                   </p>
                 </article>
               ))}

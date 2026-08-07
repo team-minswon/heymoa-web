@@ -282,12 +282,13 @@ describe("NoteArchive", () => {
     });
 
     /**
-     * **짚힌 블록은 색만 바뀐다.** 예전에는 `px-3`이 함께 붙어서 도착한 줄만 글자가 12px
-     * 밀리고 아래 hairline이 24px 짧아졌다 — 찾아간 자리가 도착과 동시에 움직였다.
+     * **형광은 글자에만 칠하고 여백은 건드리지 않는다.** 예전에는 블록 배경을 통째로
+     * 칠하면서 `px-3`이 함께 붙어, 도착한 줄만 글자가 12px 밀리고 아래 hairline이 24px
+     * 짧아졌다 — 찾아간 자리가 도착과 동시에 움직였다.
      *
-     * jsdom은 px를 못 재니 **여백 유틸리티가 붙는지**로 검사한다.
+     * jsdom은 px를 못 재니 **어느 요소에 칠하는지**와 **여백 유틸리티가 붙는지**로 검사한다.
      */
-    it("짚을 때 여백을 바꾸지 않는다 — 색만 바뀐다", () => {
+    it("형광을 글자에만 칠하고 여백은 그대로 둔다", () => {
       seedTwoBlocks();
       render(
         <NoteArchive
@@ -299,11 +300,19 @@ describe("NoteArchive", () => {
 
       const [focused, plain] = screen.getAllByTestId("archive-transcript-block");
       const spacing = (node: Element) =>
-        [...node.classList].filter((name) =>
-          /^-?(p|m)[xytrbl]?-/.test(name)
-        );
+        [...node.classList].filter((name) => /^-?(p|m)[xytrbl]?-/.test(name));
+      // 블록은 짚혀도 그대로다 — 여백도 배경도.
       expect(spacing(focused)).toEqual(spacing(plain));
-      expect(focused.className).toContain("bg-[var(--el-highlight)]");
+      expect(focused.className).not.toContain("--el-highlight");
+
+      // 칠하는 것은 글자를 감싼 인라인 span이다.
+      const mark = focused.querySelector("p > span");
+      expect(mark?.className).toContain("bg-[var(--el-highlight)]");
+      // 인라인 여백은 첫 글자를 밀기 때문에 쓰지 않는다.
+      expect(spacing(mark!)).toEqual([]);
+      expect(
+        plain.querySelector("p > span")?.className ?? ""
+      ).not.toContain("--el-highlight");
     });
 
     it("하이라이트가 끝나면 focus를 비우라고 알린다", () => {

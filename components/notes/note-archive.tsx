@@ -16,7 +16,7 @@ import {
   groupTranscriptSegments,
 } from "@/lib/transcription/presentation";
 import {
-  FOCUSED_BLOCK_CLASS,
+  FOCUSED_TEXT_CLASS,
   useTranscriptFocus,
   type TranscriptFocus,
 } from "@/components/notes/use-transcript-focus";
@@ -191,16 +191,19 @@ export function NoteArchive({
                     ref={blockRef(block.blockId)}
                     data-testid="archive-transcript-block"
                     data-focused={isHighlighted(block.blockId) || undefined}
-                    className={cn(
-                      "grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6",
-                      isHighlighted(block.blockId) && FOCUSED_BLOCK_CLASS
-                    )}
+                    className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
                   >
                     <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
                       {formatOffset(block.timelineStartedAtMs)}
                     </time>
                     <p className="max-w-3xl text-[15px] leading-7 text-[var(--el-ink)]">
-                      {block.text}
+                      <span
+                        className={cn(
+                          isHighlighted(block.blockId) && FOCUSED_TEXT_CLASS
+                        )}
+                      >
+                        {block.text}
+                      </span>
                     </p>
                   </article>
                 ))}

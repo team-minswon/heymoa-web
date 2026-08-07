@@ -72,15 +72,18 @@ export function useTranscriptFocus(
 }
 
 /**
- * 하이라이트된 블록의 공통 표기. 두 전사 화면이 같은 자리를 같은 모양으로 짚는다.
+ * 짚힌 줄의 공통 표기. 두 전사 화면이 같은 자리를 같은 모양으로 짚는다.
  *
- * **배경색만 바꾼다.** 예전에는 `px-3`이 함께 붙어서, 짚히는 순간 그 블록만 글자가 12px
- * 밀리고 아래 hairline이 24px 짧아졌다 — 찾아간 줄이 도착과 동시에 움직이는 셈이다.
- * 여백으로 강조하려면 안 짚힌 블록도 같은 여백을 늘 갖고 있어야 하는데, 그러면 전사
- * 본문 전체의 좌우 정렬이 바뀐다. 색 하나로 끝내는 편이 싸다.
+ * **형광펜은 글자에만 칠한다.** 블록 배경을 통째로 칠하면 시각 열까지 노랗게 물든 띠가
+ * 되어 편집면에서 너무 튀었다. 인라인 span에 얹으면 글자 line box만 덮여서 종이에 펜을
+ * 그은 모양이 된다 — 어느 줄인지는 그것으로 충분히 보인다.
  *
- * **회색이 아니라 형광이다.** `--el-surface-strong`은 hover·열림 표시가 이미 쓰는 값이라
- * 2.4초만 사는 이 표시가 그것들과 구별되지 않았다.
+ * **여백은 건드리지 않는다.** 예전에는 블록에 `px-3`이 함께 붙어서, 짚히는 순간 그 블록만
+ * 글자가 12px 밀리고 아래 hairline이 24px 짧아졌다 — 찾아간 줄이 도착과 동시에 움직이는
+ * 셈이다. 인라인 span의 `px-*`도 첫 글자를 밀기 때문에 같이 쓰지 않는다.
+ *
+ * `box-decoration-clone`이 필요하다 — 두 줄 이상으로 감기는 발화에서 기본값(`slice`)은
+ * 배경을 한 덩어리로 잘라 줄 사이가 비어 보인다.
  */
-export const FOCUSED_BLOCK_CLASS =
-  "rounded-chip bg-[var(--el-highlight)] transition-colors";
+export const FOCUSED_TEXT_CLASS =
+  "rounded-chip box-decoration-clone bg-[var(--el-highlight)] transition-colors";
