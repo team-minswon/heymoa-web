@@ -172,15 +172,27 @@ export function WorkspaceSettingsForm({
   );
 }
 
-/** 워크스페이스 일반 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다. */
+/**
+ * 워크스페이스 일반 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다.
+ *
+ * **머리글은 가리지 않는다** — 화면 제목과 설명은 응답이 아니라 고정 문구다. `h-9` 막대로
+ * 덮었을 때 36이었고 실제 머리글 블록은 68이라, 도착하는 순간 폼이 32px 내려앉았다.
+ */
 export function WorkspaceSettingsFormSkeleton() {
   return (
     <div
       className="mx-auto max-w-2xl space-y-8"
       aria-label="워크스페이스 설정 불러오는 중"
     >
-      <Skeleton className="h-9 w-40" />
-      <Skeleton className="h-64 rounded-panel" />
+      <div>
+        <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
+          워크스페이스 일반
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
+          이 공간의 이름과 설명을 관리합니다.
+        </p>
+      </div>
+      <Skeleton className="h-[262px] rounded-panel" />
     </div>
   );
 }

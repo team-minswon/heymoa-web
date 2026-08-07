@@ -55,7 +55,8 @@ export function AccountSettingsForm() {
         이메일·이름까지 함께 걷지 않도록 자기 경계를 둔다. 바깥 DataBoundary는
         settings-dialog가 계정 탭 전체에 두고 있다. */}
       <DataBoundary
-        fallback={<Skeleton className="h-44 rounded-panel" />}
+        // 실제 이 섹션은 280이다 — `h-44`(176)이면 도착할 때 104px 자란다.
+        fallback={<Skeleton className="h-[280px] rounded-panel" />}
         errorLabel="워크스페이스 목록을 불러오지 못했습니다"
       >
         <DefaultWorkspaceSection />
@@ -165,17 +166,31 @@ function DefaultWorkspaceSection() {
   );
 }
 
-/** 계정 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다. */
+/**
+ * 계정 설정 로딩 스켈레톤. settings-dialog가 DataBoundary fallback으로 쓴다.
+ *
+ * **머리글은 가리지 않는다** — 제목과 설명은 응답이 아니라 고정 문구다. 이 스켈레톤은
+ * 484였고 실제는 654라, 도착하는 순간 아래로 170px 자랐다(머리글 36 vs 68, 카드 셋도
+ * 전부 실제보다 낮았다).
+ */
 export function AccountSettingsFormSkeleton() {
   return (
     <div
       className="mx-auto max-w-2xl space-y-8"
       aria-label="내 계정 설정 불러오는 중"
     >
-      <Skeleton className="h-9 w-28" />
-      <Skeleton className="h-24 rounded-panel" />
-      <Skeleton className="h-20 rounded-panel" />
-      <Skeleton className="h-44 rounded-panel" />
+      <div>
+        <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
+          내 계정
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
+          프로필 정보를 확인합니다.
+        </p>
+      </div>
+      {/* 아바타 + 이메일 카드(106) · 이름 카드(104) · 기본 워크스페이스 카드(280) */}
+      <Skeleton className="h-[106px] rounded-panel" />
+      <Skeleton className="h-[104px] rounded-panel" />
+      <Skeleton className="h-[280px] rounded-panel" />
     </div>
   );
 }

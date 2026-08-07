@@ -178,10 +178,33 @@ describe("NoteSummary", () => {
   });
   afterEach(cleanup);
 
-  it("PENDING이면 분석 진행 스켈레톤을 보인다", () => {
+  /**
+   * **조회와 분석은 다른 기다림이다.** 둘 다 같은 스켈레톤 하나로 그렸었고, 그 화면의 문구가
+   * 「다른 화면으로 옮겨도 됩니다」였다 — 수백 ms 조회에 붙으면 거짓말이다. 반대로 몇 분
+   * 걸리는 분석에 스켈레톤을 쓰면 「곧 이 자리에 들어찬다」는 약속이 거짓이 된다.
+   */
+  it("PENDING이면 스켈레톤이 아니라 진행 표시를 보인다", () => {
     state.analysis = { status: "PENDING", sections: [] };
-    renderSummary(true);
+    const { container } = renderSummary(true);
+
+    expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.getByText("회의를 정리하고 있습니다")).toBeTruthy();
+    expect(screen.getByText(/다른 화면으로 옮겨도 됩니다/)).toBeTruthy();
+    // 끝나는 시각을 모르는 기다림에는 자리표시 막대를 두지 않는다.
+    expect(container.querySelector('[data-slot="skeleton"]')).toBeNull();
+  });
+
+  it("조회 중이면 최종 화면 모양의 스켈레톤을 보인다", () => {
+    state.isLoading = true;
+    const { container } = renderSummary(true);
+
+    // 섹션 제목 셋은 응답이 아니라 고정 순서다 — 스켈레톤이 가리지 않는다.
+    ["개요", "액션 아이템", "결정"].forEach((label) => {
+      expect(screen.getByRole("heading", { name: label })).toBeTruthy();
+    });
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBe(7);
+    // 분석 작업 문구는 조회에 붙지 않는다 — 여기는 몇 분이 걸리는 자리가 아니다.
+    expect(screen.queryByText(/다른 화면으로 옮겨도 됩니다/)).toBeNull();
   });
 
   it("FAILED면 사유와 다시 분석 버튼을 보인다", () => {

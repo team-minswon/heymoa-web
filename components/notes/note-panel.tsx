@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
@@ -427,13 +428,33 @@ export function NotePanel({
               aria-hidden
               className="h-[18px] w-px shrink-0 bg-[var(--el-hairline)]"
             />
-            {note ? <MeetingStatusChip status={note.meetingStatus} /> : null}
+            {/* **아직 없는 값을 그럴듯한 글자로 채우지 않는다.** 예전에는 상태 칩이 없고
+                제목이 「회의 노트」였다 — 그 문자열은 이 노트의 이름으로 읽히고, 도착하면
+                제목이 칩 폭(41) + gap(8)만큼 오른쪽으로 밀렸다.
+
+                지금은 칩과 제목이 **같은 자리를 잡은 채** 비어 있다. 상태 라벨 넷은 모두
+                세 글자(시작 전·기록 중·중지됨·종료됨)라 칩 자리표시가 실제와 같은 폭이다. */}
+            {note ? (
+              <MeetingStatusChip status={note.meetingStatus} />
+            ) : (
+              <span aria-hidden className="flex shrink-0 items-center gap-1.5">
+                <Skeleton className="size-1.5 rounded-full" />
+                <Skeleton className="h-3 w-[27px] rounded-chip" />
+              </span>
+            )}
             {isViewer ? <MeetingViewerChip /> : null}
             {/* 제목은 **지금 어디인지**를 말하는 빵조각이다. 좁아지면 여기가 줄어든다 —
                 옆의 상태 칩과 탭은 줄어들 수 없는 것들이다. */}
-            <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--el-ink)]">
-              {note?.title ?? "회의 노트"}
-            </span>
+            {note ? (
+              <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--el-ink)]">
+                {note.title}
+              </span>
+            ) : (
+              <Skeleton
+                aria-label="노트 불러오는 중"
+                className="h-3.5 w-40 max-w-full rounded-chip"
+              />
+            )}
           </div>
 
           {/* design.pen `U5DbV`/`U9YGl`: **밑줄 탭이다.** 활성 탭만 2px 밑줄을 갖는다.

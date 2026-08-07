@@ -27,6 +27,9 @@ import { cn } from "@/lib/utils";
 
 const FOLLOW_THRESHOLD_PX = 180;
 
+/** 발화 길이는 고르지 않다 — 전부 같은 폭이면 표처럼 보여서 대화로 안 읽힌다. */
+const TRANSCRIPT_SKELETON_WIDTHS = ["58%", "86%", "41%"];
+
 function getDistanceFromBottom(viewport: HTMLElement) {
   return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
 }
@@ -255,9 +258,22 @@ export function TranscriptView({
           aria-label="회의 전사"
         >
           {transcriptQuery.isPending ? (
-            <div className="space-y-4" aria-label="대화 기록 불러오는 중">
-              <Skeleton className="h-24 rounded-block" />
-              <Skeleton className="h-28 rounded-block" />
+            /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `h-24`/`h-28` 막대 둘이라
+               시각 열도 행 경계도 없었고, 도착하는 순간 모양이 통째로 바뀌었다. */
+            <div aria-label="대화 기록 불러오는 중">
+              {TRANSCRIPT_SKELETON_WIDTHS.map((width, row) => (
+                <div
+                  key={row}
+                  className="grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
+                >
+                  <Skeleton className="mt-1 h-3 w-10 rounded-chip sm:w-32" />
+                  {/* 실제 발화는 `text-read`(15)·leading-7이라 한 줄이 28이다 — 막대는 그 줄
+                      안에 놓는다. 막대 높이만 맞추면(16) 행이 12px 낮아진다. */}
+                  <div className="flex h-7 items-center">
+                    <Skeleton className="h-4 rounded-chip" style={{ width }} />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div>

@@ -25,6 +25,9 @@ import { cn } from "@/lib/utils";
 /** 바닥에서 이만큼 안쪽이면 "바닥"으로 본다. 스크롤 위치는 소수점으로 떨어진다. */
 const BOTTOM_THRESHOLD_PX = 48;
 
+/** 발화 길이는 고르지 않다 — 전부 같은 폭이면 표처럼 보여서 대화로 안 읽힌다. */
+const TRANSCRIPT_SKELETON_WIDTHS = ["62%", "84%", "45%"];
+
 /**
  * 바닥에서 멀어졌는지만 본다. **따라가지 않는다.**
  *
@@ -160,12 +163,26 @@ export function NoteArchive({
 
           <TabsContent value="transcript" aria-label="회의 전사 아카이브">
             {transcriptQuery.isPending ? (
-              <div
-                className="mt-6 space-y-4"
-                aria-label="대화 기록 불러오는 중"
-              >
-                <Skeleton className="h-24 rounded-block" />
-                <Skeleton className="h-28 rounded-block" />
+              /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `mt-6`에 `h-24`/`h-28` 막대
+                 둘이라 248이었고 실제는 288이었다 — 첫 줄이 12px 아래에서 시작했고 행
+                 경계도 없어 도착하는 순간 모양이 통째로 바뀌었다. */
+              <div className="mt-3" aria-label="대화 기록 불러오는 중">
+                {[0, 1, 2].map((row) => (
+                  <div
+                    key={row}
+                    className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
+                  >
+                    <Skeleton className="mt-1 h-3 w-10 rounded-chip" />
+                    {/* 실제 발화는 15px·leading-7이라 한 줄이 28이다 — 막대는 그 줄 안에 놓는다.
+                        막대 높이만 맞추면(16) 행이 12px 낮아진다. */}
+                    <div className="flex h-7 items-center">
+                      <Skeleton
+                        className="h-4 rounded-chip"
+                        style={{ width: TRANSCRIPT_SKELETON_WIDTHS[row] }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : transcriptQuery.isError ? (
               // 실패를 "없음"으로 위장하지 않는다 — 아카이브가 TranscriptView의 재시도 경로를

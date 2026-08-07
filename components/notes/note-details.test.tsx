@@ -8,7 +8,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { NoteDetails } from "@/components/notes/note-details";
+import {
+  NoteDetails,
+  NoteDetailsSkeleton,
+} from "@/components/notes/note-details";
 
 const NOTE_ID = "01K0000000002";
 const WORKSPACE_ID = "01K0000000001";
@@ -175,5 +178,30 @@ describe("NoteDetails", () => {
     // 참석자는 편집 필드가 갖는다 — 표에 읽기 전용으로 또 두면 한 화면에 세 번이 된다.
     expect(facts).not.toHaveTextContent("참석자");
     expect(screen.getByText("참석자")).toBeInTheDocument();
+  });
+
+  /**
+   * **스켈레톤은 데이터만 가린다.** 손으로 막대 셋을 쌓았을 때 296이었고 실제는 568이었다 —
+   * 라벨·저장 버튼·「회의 정보」 머리글이 없고 표 다섯 줄이 `h-40` 한 덩어리였다.
+   *
+   * jsdom은 px를 못 재니 **같은 뼈대를 그리는지**로 검사한다. 실제 화면과 같은 라벨·머리글·
+   * 행 수가 나오면 기하는 같은 wrapper(`Field`·`Fact`)가 보장한다.
+   */
+  it("스켈레톤이 실제 화면의 뼈대를 그린다", () => {
+    const { container } = render(<NoteDetailsSkeleton />);
+
+    ["제목", "참석자"].forEach((label) => {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("heading", { name: "회의 정보" })
+    ).toBeInTheDocument();
+    ["진행자", "누적 기록 시간", "공유 범위", "생성", "최종 수정"].forEach(
+      (label) => {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      }
+    );
+    // 사실 표는 다섯 줄이다 — 한 덩어리로 대신하면 도착할 때 높이가 두 배가 된다.
+    expect(container.querySelectorAll("dd").length).toBe(5);
   });
 });

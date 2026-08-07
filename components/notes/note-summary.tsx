@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -106,12 +106,20 @@ export function NoteSummary({
       { onSuccess: () => void analysisQuery.refetch() }
     );
 
+  /**
+   * **조회와 분석은 다른 기다림이다.** 둘 다 `AnalyzingSkeleton` 하나로 그렸는데, 그 화면의
+   * 문구가 「회의를 정리하고 있습니다 · 다른 화면으로 옮겨도 됩니다」였다 — 수백 ms 조회에
+   * 붙으면 거짓말이고, 반대로 몇 분 걸리는 분석에 skeleton을 쓰면 「곧 이 자리에 들어찬다」는
+   * 약속이 거짓이 된다.
+   *
+   * 조회는 곧 이 자리를 채우니 skeleton, 분석은 끝나는 시각을 모르니 진행 표시다.
+   */
   if (analysisQuery.isLoading) {
-    return <AnalyzingSkeleton />;
+    return <SummaryFetchSkeleton />;
   }
 
   if (analysis?.status === "PENDING" || analysis?.status === "RUNNING") {
-    return <AnalyzingSkeleton />;
+    return <AnalyzingProgress />;
   }
 
   if (analysis?.status === "SUCCEEDED") {
@@ -213,27 +221,76 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AnalyzingSkeleton() {
+/** 섹션마다 흔한 항목 수와 길이. 전부 같은 폭이면 항목 리스트가 아니라 블록으로 보인다. */
+const SUMMARY_SKELETON_WIDTHS: Record<string, string[]> = {
+  OVERVIEW: ["78%", "54%"],
+  ACTION_ITEM: ["64%", "82%", "47%"],
+  DECISION: ["71%", "58%"],
+};
+
+/**
+ * 요약 **조회** 스켈레톤. 곧 이 자리를 채울 데이터를 기다리므로 최종 화면
+ * (`SummarySections`)과 같은 뼈대를 그린다 — 섹션 제목 + 밑줄, 그 아래 항목 줄.
+ *
+ * **섹션 제목은 가리지 않는다.** 개요·액션 아이템·결정 셋은 응답이 아니라 고정된 순서다
+ * (`SECTION_ORDER`). 회색 막대로 덮으면 기하만 어긋나고 얻는 것이 없다.
+ */
+function SummaryFetchSkeleton() {
   return (
     <Shell>
-      {/* v5: 대문자 키커 제거 — 세리프 제목만 유지(FORM SPEC). */}
-      <h2 className="font-serif text-section font-light tracking-[-0.025em] text-[var(--el-ink)]">
-        회의를 정리하고 있습니다
-      </h2>
-      {/* 분석은 몇 분이 걸린다 — 여기 붙들려 기다릴 필요가 없다는 것을 말해 준다. */}
-      <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
-        다른 화면으로 옮겨도 됩니다. 정리가 끝나면 이 탭에 나타납니다.
-      </p>
-      <div className="mt-6 space-y-6" aria-label="분석 진행 중">
+      <div className="space-y-14" aria-label="요약 불러오는 중">
         {SECTION_ORDER.map((kind) => (
-          <div key={kind} className="space-y-2">
-            <p className="text-xs font-medium text-[var(--el-muted)]">
-              {SECTION_LABELS[kind]}
-            </p>
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-4 w-full" />
-          </div>
+          <section key={kind}>
+            <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
+              <h2 className="font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+                {SECTION_LABELS[kind]}
+              </h2>
+            </div>
+            <div className="mt-5 space-y-5">
+              {(SUMMARY_SKELETON_WIDTHS[kind] ?? []).map((width, row) => (
+                // 실제 항목은 15px·leading-7이라 한 줄이 28이다.
+                <Skeleton
+                  key={row}
+                  className="h-7 rounded-chip"
+                  style={{ width }}
+                />
+              ))}
+            </div>
+          </section>
         ))}
+      </div>
+    </Shell>
+  );
+}
+
+/**
+ * 분석 **진행** 표시. **skeleton이 아니다** — 분석은 몇 분이 걸리므로 「곧 이 자리에
+ * 들어찬다」는 skeleton의 약속이 성립하지 않는다. 끝나는 시각을 모르는 기다림은 진행
+ * 표시와 「왜 기다리는지」 한 줄로 그린다.
+ *
+ * 상자 모양은 같은 탭의 다른 안내(요약 없음·분석 실패)와 같다 — 같은 자리에 서는 것들이
+ * 저마다 다르게 생기면 무엇이 상태이고 무엇이 내용인지 읽히지 않는다.
+ */
+function AnalyzingProgress() {
+  return (
+    <Shell>
+      <div
+        role="status"
+        className="rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-5"
+      >
+        <div className="flex items-center gap-2.5">
+          <Loader2
+            aria-hidden
+            className="size-4 shrink-0 animate-spin text-[var(--el-muted)]"
+          />
+          <p className="text-sm font-medium text-[var(--el-ink)]">
+            회의를 정리하고 있습니다
+          </p>
+        </div>
+        {/* 분석은 몇 분이 걸린다 — 여기 붙들려 기다릴 필요가 없다는 것을 말해 준다. */}
+        <p className="mt-1.5 pl-[26px] text-xs leading-relaxed text-[var(--el-muted)]">
+          다른 화면으로 옮겨도 됩니다. 정리가 끝나면 이 탭에 나타납니다.
+        </p>
       </div>
     </Shell>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
@@ -67,6 +67,33 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+/**
+ * 정보 탭의 본문 상자. design.pen `VaEPF`: vertical · gap 24 · 좌우는 뷰가 정하는 거터다.
+ *
+ * **스켈레톤과 실제가 같은 것을 쓴다.** 예전에는 두 곳에 같은 클래스 문자열을 손으로
+ * 적어 두었고, 한쪽만 고쳐져 로딩이 끝날 때 본문이 밀렸다.
+ */
+function Body({
+  children,
+  ...rest
+}: { children: React.ReactNode } & React.ComponentProps<"div">) {
+  return (
+    <div
+      {...rest}
+      className="mx-auto flex w-full max-w-[calc(820px+2*var(--note-gutter))] flex-col gap-6 px-[var(--note-gutter)] pb-36 pt-6"
+    >
+      {children}
+    </div>
+  );
+}
+
+/** 회의의 사실과 문서의 이력을 가르는 선 (design.pen `i3zDhK`). */
+function FactDivider() {
+  return (
+    <div aria-hidden className="my-2.5 h-px w-full bg-[var(--el-hairline)]" />
+  );
+}
+
 export function NoteDetails({
   noteId,
   workspaceId,
@@ -116,11 +143,10 @@ export function NoteDetails({
     formatAppDate(iso, { dateStyle: "medium", timeStyle: "short" });
 
   return (
-    // design.pen `VaEPF`: Body는 vertical · gap 24 · 좌우는 뷰가 정하는 거터다.
     // **카드가 없다.** 예전에는 제목·참여자·사실이 각자 `rounded-block` 상자에 들어 있었는데,
     // 카드 넷이 쌓이면 무엇이 편집이고 무엇이 읽기인지 테두리로는 구분되지 않았다.
     // 지금은 편집만 컨트롤 테두리를 갖고, 읽기는 키/값 표로 눕는다.
-    <div className="mx-auto flex w-full max-w-[calc(820px+2*var(--note-gutter))] flex-col gap-6 px-[var(--note-gutter)] pb-36 pt-6">
+    <Body>
       <form
         // 저장이 끝나면 `updatedAt`이 바뀌어 이 폼이 재마운트되고 입력이 서버 값으로 돌아온다.
         // 낙관적 표시 없이 서버가 확정한 것만 보이게 하는 장치다.
@@ -239,11 +265,8 @@ export function NoteDetails({
               헷갈리기도 해서 수를 뺐다(노트 헤더 메타와 같은 판단). */}
           <Fact label="공유 범위">워크스페이스 멤버에게 공개</Fact>
 
-          {/* 위는 회의의 사실, 아래는 문서의 이력이다 — 선 하나로 가른다(design.pen `i3zDhK`). */}
-          <div
-            aria-hidden
-            className="my-2.5 h-px w-full bg-[var(--el-hairline)]"
-          />
+          {/* 위는 회의의 사실, 아래는 문서의 이력이다 — 선 하나로 가른다. */}
+          <FactDivider />
           <Fact label="생성">
             <time dateTime={note.createdAt}>{timestamp(note.createdAt)}</time>
           </Fact>
@@ -252,20 +275,62 @@ export function NoteDetails({
           </Fact>
         </dl>
       </section>
-    </div>
+    </Body>
   );
 }
 
-/** 노트 정보 로딩 스켈레톤. DataBoundary fallback으로 부모(note-panel)가 쓴다. */
+/**
+ * 노트 정보 로딩 스켈레톤. DataBoundary fallback으로 부모(note-panel)가 쓴다.
+ *
+ * **실제 화면과 같은 wrapper(`Body`·`Field`·`Fact`)로 짓는다.** 손으로 막대 몇 개를 쌓았을
+ * 때 296이었고 실제는 568이었다 — 라벨·저장 버튼·「회의 정보」 머리글이 스켈레톤에 없고
+ * 표 다섯 줄이 `h-40` 한 덩어리였다. 도착하는 순간 아래 절반이 밀려 내려왔다.
+ *
+ * **라벨과 머리글은 가리지 않는다.** 그것들은 도착을 기다리는 값이 아니라 화면의 뼈대다.
+ * 그대로 그리면 기하가 자동으로 맞고, 무엇을 불러오는 중인지도 읽힌다.
+ */
 export function NoteDetailsSkeleton() {
   return (
-    <div className="mx-auto flex w-full max-w-[calc(820px+2*var(--note-gutter))] flex-col gap-6 px-[var(--note-gutter)] pt-6">
-      {/* 기하는 최종 화면에 맞춘다 — 라벨 + h-9 컨트롤 둘, 그다음 표. */}
+    <Body aria-label="노트 정보 불러오는 중">
       <div className="flex flex-col gap-4">
-        <Skeleton className="h-9 w-full" />
-        <Skeleton className="h-9 w-full" />
+        <Field label="제목">
+          <Skeleton className="h-9 w-full rounded-control" />
+        </Field>
+        {/* 실측: 참석자 컨트롤 줄은 32(아바타 스택 + `참여자 선택` 버튼), 저장 버튼은 32×105. */}
+        <Field label="참석자">
+          <Skeleton className="h-8 w-56 rounded-control" />
+        </Field>
+        <Skeleton className="h-8 w-[105px] rounded-control" />
       </div>
-      <Skeleton className="h-40 w-full" />
-    </div>
+      <section className="flex flex-col">
+        <h2 className="mb-2.5 text-[13px] font-semibold text-[var(--el-ink)]">
+          회의 정보
+        </h2>
+        <dl className="flex flex-col">
+          {FACT_ROWS.map(({ label, width }) => (
+            <Fragment key={label}>
+              {/* 실제와 같은 자리에 선이 있어야 높이가 맞는다 — 회의의 사실과 문서의 이력. */}
+              {label === "생성" ? <FactDivider /> : null}
+              <Fact label={label}>
+                {/* 값 폭은 실제와 비슷하게 — 전부 같으면 표가 아니라 블록으로 보인다. */}
+                <Skeleton
+                  className="h-3.5 rounded-chip"
+                  style={{ width }}
+                />
+              </Fact>
+            </Fragment>
+          ))}
+        </dl>
+      </section>
+    </Body>
   );
 }
+
+/** 사실 표의 키 열은 데이터가 아니다 — 실제 화면과 같은 순서·같은 라벨을 그린다. */
+const FACT_ROWS = [
+  { label: "진행자", width: 180 },
+  { label: "누적 기록 시간", width: 148 },
+  { label: "공유 범위", width: 132 },
+  { label: "생성", width: 156 },
+  { label: "최종 수정", width: 156 },
+];

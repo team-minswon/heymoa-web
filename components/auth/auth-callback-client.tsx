@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Home, LogIn } from "lucide-react";
+import { AlertTriangle, Home, Loader2, LogIn } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
@@ -132,11 +132,21 @@ export function CallbackProcessor({
     );
   }
 
+  /**
+   * **route fallback(`app/auth/callback/loading.tsx`)과 같은 화면이어야 한다.** 이 컴포넌트는
+   * 그 fallback 바로 뒤에 마운트되는데, 예전에는 spinner가 손으로 만든 CSS 링이고 문구도
+   * 「로그인 처리 중...」이라, 같은 기다림 안에서 모양과 글자가 한 번 갈아치워졌다.
+   *
+   * 여기는 그릴 최종 기하가 없는 전환이라 spinner가 맞다 — skeleton은 채울 자리가 있을 때다.
+   */
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center">
-      <div className="mb-5 size-8 animate-spin rounded-full border-2 border-[var(--el-ink)] border-t-transparent" />
-      <p className="font-serif text-2xl font-light text-[var(--el-ink)]">
-        로그인 처리 중...
+    <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
+      <Loader2 className="mb-5 size-8 animate-spin text-[var(--el-ink)]" />
+      <h1 className="font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+        로그인 중입니다
+      </h1>
+      <p className="mt-2 text-sm text-[var(--el-muted)]">
+        워크스페이스를 준비하고 있습니다.
       </p>
     </div>
   );
