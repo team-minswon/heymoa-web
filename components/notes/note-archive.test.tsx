@@ -281,6 +281,31 @@ describe("NoteArchive", () => {
       expect(blocks[1]).not.toHaveAttribute("data-focused");
     });
 
+    /**
+     * **짚힌 블록은 색만 바뀐다.** 예전에는 `px-3`이 함께 붙어서 도착한 줄만 글자가 12px
+     * 밀리고 아래 hairline이 24px 짧아졌다 — 찾아간 자리가 도착과 동시에 움직였다.
+     *
+     * jsdom은 px를 못 재니 **여백 유틸리티가 붙는지**로 검사한다.
+     */
+    it("짚을 때 여백을 바꾸지 않는다 — 색만 바뀐다", () => {
+      seedTwoBlocks();
+      render(
+        <NoteArchive
+          noteId="01K0000000002"
+          focusSegmentId="s2"
+          onFocusHandled={() => {}}
+        />
+      );
+
+      const [focused, plain] = screen.getAllByTestId("archive-transcript-block");
+      const spacing = (node: Element) =>
+        [...node.classList].filter((name) =>
+          /^-?(p|m)[xytrbl]?-/.test(name)
+        );
+      expect(spacing(focused)).toEqual(spacing(plain));
+      expect(focused.className).toContain("bg-[var(--el-highlight)]");
+    });
+
     it("하이라이트가 끝나면 focus를 비우라고 알린다", () => {
       vi.useFakeTimers();
       try {

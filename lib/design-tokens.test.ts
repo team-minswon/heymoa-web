@@ -20,6 +20,7 @@ describe("design tokens (globals.css)", () => {
     "--text-section",
     "--text-panel-title",
     "--text-read",
+    "--el-highlight",
   ];
 
   it.each(required)("defines %s", (token) => {

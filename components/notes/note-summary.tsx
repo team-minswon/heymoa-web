@@ -407,7 +407,10 @@ function SummaryItem({
               <button
                 type="button"
                 onClick={() => onEvidenceSelect(evidence.segmentId)}
-                className="group flex w-full items-baseline gap-2 rounded-chip py-0.5 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+                /* **여백은 음수 마진으로 낸다.** hover 배경이 글자에 딱 붙어 있어서 짚을
+                   자리처럼 보이지 않았는데, 그냥 `px-2`를 주면 인용문만 오른쪽으로 밀려
+                   위 항목과 줄이 안 맞는다. 안쪽으로 넓히고 밖으로 같은 만큼 당긴다. */
+                className="group -mx-2 flex w-full items-baseline gap-2 rounded-block px-2 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
               >
                 <span className="min-w-0 break-keep font-serif text-[15px] leading-7 text-[var(--el-body)]">
                   {evidence.text}
