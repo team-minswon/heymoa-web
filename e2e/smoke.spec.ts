@@ -574,8 +574,8 @@ test("walks a project-less workspace from project to first meeting", async ({
 
   const onboarding = page.getByTestId("workspace-onboarding");
   await expect(onboarding).toHaveAttribute("data-stage", "no-project");
-  // 걸러 볼 것이 없으니 필터도 개수도 없다.
-  await expect(page.getByRole("group", { name: "노트 필터" })).toHaveCount(0);
+  // 셀 것이 없으니 제목도 개수도 없다.
+  await expect(page.getByText(/개의 회의 기록/)).toHaveCount(0);
 
   // 「새 노트」는 비활성이 아니다 — 누르면 프로젝트를 먼저 묻는다.
   await page.getByRole("button", { name: "새 노트" }).click();

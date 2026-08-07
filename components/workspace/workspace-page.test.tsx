@@ -142,18 +142,17 @@ describe("WorkspacePage", () => {
   });
 
   /**
-   * 프로젝트가 하나도 없으면 제목·개수·필터가 전부 군더더기다 — 「0개의 회의 기록」과
-   * 「전체 / 내가 시작」은 걸러 볼 것이 있다는 뜻인데 여기엔 아무것도 없고, 지금 필요한
-   * 것은 무엇을 먼저 해야 하는가 하나다(design.pen `kbUlG`).
+   * 프로젝트가 하나도 없으면 제목·개수가 군더더기다 — 「0개의 회의 기록」은 셀 것이 있다는
+   * 뜻인데 여기엔 아무것도 없고, 지금 필요한 것은 무엇을 먼저 해야 하는가 하나다
+   * (design.pen `kbUlG`).
    */
-  it("프로젝트가 없으면 제목·필터를 걷고 절차를 그린다", () => {
+  it("프로젝트가 없으면 제목을 걷고 절차를 그린다", () => {
     shell.selectedProjectId = null;
     shell.projects = [];
     renderPage();
 
     const onboarding = screen.getByTestId("workspace-onboarding");
     expect(onboarding).toHaveAttribute("data-stage", "no-project");
-    expect(screen.queryByRole("group", { name: "노트 필터" })).toBeNull();
     expect(screen.queryByText(/개의 회의 기록/)).toBeNull();
 
     fireEvent.click(
@@ -179,42 +178,19 @@ describe("WorkspacePage", () => {
     ).toBeNull();
   });
 
-  it("filters to notes I started via meetingStartedBy", () => {
+  /**
+   * **목록에 필터가 없다.** 「전체 / 내가 시작」이었는데 시작자로 걸러 보는 요구가 실제로
+   * 없었고, 「내가 시작」을 걷으면 남는 칩이 「전체」 하나라 고르는 것이 아니게 된다 —
+   * 줄을 통째로 없앴다. 시작자는 각 행의 아바타가 이미 말한다.
+   */
+  it("시작자 필터 없이 모든 노트를 그린다", () => {
     renderPage();
 
-    const mine = screen.getByRole("button", { name: "내가 시작" });
-    fireEvent.click(mine);
-
-    expect(mine).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("group", { name: "노트 필터" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "내가 시작" })).toBeNull();
+    // 내가 시작한 것(주간 제품 회의)과 남이 시작한 것(리서치 공유)이 함께 선다.
     expect(screen.getByText("주간 제품 회의")).toBeInTheDocument();
-    expect(screen.queryByText("리서치 공유")).toBeNull();
-    expect(screen.getByText(/1개의 회의 기록/)).toBeInTheDocument();
-  });
-
-  it("shows a filter-specific empty state, not '아직 회의 기록이 없습니다', when none are mine", () => {
-    auth.user = { userId: "nobody", name: "X" };
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "내가 시작" }));
-
-    expect(
-      screen.getByText("내가 시작한 회의가 없습니다.")
-    ).toBeInTheDocument();
-    expect(screen.queryByText("아직 회의 기록이 없습니다")).toBeNull();
-  });
-
-  it("does not leak null-owner notes as mine while the user is unresolved", () => {
-    auth.user = null;
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "내가 시작" }));
-
-    // 유저 미해결이면 소유 판별 없이 아무 노트도 '내가 시작'에 걸리지 않는다.
-    expect(screen.queryByText("주간 제품 회의")).toBeNull();
-    expect(screen.queryByText("리서치 공유")).toBeNull();
-    expect(
-      screen.getByText("내가 시작한 회의가 없습니다.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("리서치 공유")).toBeInTheDocument();
   });
 
   it("polls active lists every 10 seconds and inactive lists every 30 seconds", () => {

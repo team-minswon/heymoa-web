@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 
-import { useAuth } from "@/components/auth/auth-provider";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
@@ -15,16 +13,6 @@ import {
   useGetNotes,
 } from "@/lib/api/generated/notes/notes";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
-import { cn } from "@/lib/utils";
-
-type NoteFilter = "all" | "mine";
-
-// v5 목록 필터는 전체와 내가 시작(meetingStartedBy로 판별) 둘뿐이다.
-// meetingStatus 표시는 APP-284가 목록 행에서 맡는다.
-const FILTERS: { key: NoteFilter; label: string }[] = [
-  { key: "all", label: "전체" },
-  { key: "mine", label: "내가 시작" },
-];
 
 export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
 export const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
@@ -46,7 +34,6 @@ function notesFromResponse(
 }
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
-  const { user } = useAuth();
   const {
     selectedProjectId,
     projects,
@@ -55,7 +42,6 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
     openCreateProject,
     requestNewMeeting,
   } = useWorkspaceShell();
-  const [filter, setFilter] = useState<NoteFilter>("all");
   const selectedProject = projects.find(
     (project) => project.projectId === selectedProjectId
   );
@@ -95,25 +81,12 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const notes: NoteListResponseDataNotesItem[] = selectedProjectId
     ? selectedNotes
     : allNotesQueries.notes;
-  // 유저가 아직 안 풀렸으면(undefined) 소유 판별을 하지 않는다 — meetingStartedBy가 null인
-  // 노트의 userId도 undefined라 `undefined === undefined`로 잘못 걸린다.
-  const mineNotes = user
-    ? notes.filter((note) => note.meetingStartedBy?.userId === user.userId)
-    : [];
-  const visibleNotes = filter === "mine" ? mineNotes : notes;
   const isPending = selectedProjectId
     ? singleNotesQuery.isPending
     : isWorkspacePending || allNotesQueries.isPending;
   const isError = selectedProjectId
     ? singleNotesQuery.isError
     : isWorkspaceError || allNotesQueries.isError;
-  // 필터 때문에 비었을 뿐 노트는 있다 — "첫 회의를 시작하세요" 빈 상태는 오해를 준다.
-  const isFilteredEmpty =
-    filter === "mine" &&
-    !isPending &&
-    !isError &&
-    notes.length > 0 &&
-    visibleNotes.length === 0;
 
   const retry = () => {
     if (selectedProjectId) {
@@ -124,9 +97,9 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   };
 
   /**
-   * 프로젝트가 하나도 없다 — **제목·개수·필터를 통째로 온보딩으로 바꾼다**(design.pen `kbUlG`).
-   * 「0개의 회의 기록」과 「전체 / 내가 시작」은 걸러 볼 것이 있다는 뜻인데 여기엔 아무것도
-   * 없고, 지금 필요한 것은 무엇을 먼저 해야 하는가 하나다.
+   * 프로젝트가 하나도 없다 — **제목·개수를 통째로 온보딩으로 바꾼다**(design.pen `kbUlG`).
+   * 「0개의 회의 기록」은 셀 것이 있다는 뜻인데 여기엔 아무것도 없고, 지금 필요한 것은
+   * 무엇을 먼저 해야 하는가 하나다.
    *
    * **`isWorkspacePending`을 함께 본다.** 프로젝트 목록이 오기 전에는 `projects`가 빈 배열이라
    * 이것만 보면 로딩 중 한 프레임 동안 온보딩이 번쩍인다.
@@ -181,52 +154,26 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
           />
         ) : (
           <>
-        <header className="relative mb-6">
-          <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
-            {selectedProject?.name ?? "모든 노트"}
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
-            {visibleNotes.length}개의 회의 기록 · 발화와 결정이 시간순으로
-            보관됩니다.
-          </p>
-        </header>
-        <div
-          role="group"
-          aria-label="노트 필터"
-          className="mb-4 flex items-center gap-1.5 border-b border-[var(--el-hairline)] pb-4"
-        >
-          {FILTERS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={filter === key}
-              onClick={() => setFilter(key)}
-              className={cn(
-                // 칩은 chip 6이다. pill(9999)은 주 CTA와 레코더 독 두 곳뿐. (FORM SPEC)
-                "h-8 rounded-chip px-3.5 text-[13px] font-medium transition-colors",
-                filter === key
-                  ? "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
-                  : "text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)]"
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {isFilteredEmpty ? (
-          <p className="py-16 text-center text-sm text-[var(--el-muted)]">
-            내가 시작한 회의가 없습니다.
-          </p>
-        ) : (
-          <WorkspaceNoteList
-            workspaceId={workspaceId}
-            notes={visibleNotes}
-            isPending={isPending}
-            isError={isError}
-            onRetry={retry}
-            onNewMeeting={requestNewMeeting}
-          />
-        )}
+            {/* **hairline은 헤더가 갖는다.** 예전에는 아래 필터 줄이 들고 있었는데, 「내가 시작」이
+                없어지자 남는 칩이 「전체」 하나뿐이라 줄을 통째로 걷었다(고를 것이 하나면 고르는
+                것이 아니다). 선은 목록의 위 끝을 정하므로 함께 없앨 수 없어 헤더로 옮겼다. */}
+            <header className="relative mb-4 border-b border-[var(--el-hairline)] pb-6">
+              <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
+                {selectedProject?.name ?? "모든 노트"}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
+                {notes.length}개의 회의 기록 · 발화와 결정이 시간순으로
+                보관됩니다.
+              </p>
+            </header>
+            <WorkspaceNoteList
+              workspaceId={workspaceId}
+              notes={notes}
+              isPending={isPending}
+              isError={isError}
+              onRetry={retry}
+              onNewMeeting={requestNewMeeting}
+            />
           </>
         )}
       </div>

@@ -447,7 +447,7 @@ function createSeedState(): StoreState {
       meetingStartedAt: null,
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
-      // 절반은 내가 시작한 회의로 둔다 — `내가 시작` 필터가 빈 목록만 보여주면 검증이 안 된다.
+      // 절반은 내가 시작한 회의로 둔다 — 행의 시작자 아바타가 「나」인 경우도 표본에 있어야 한다.
       //
       // 나머지 절반은 다시 둘로 가른다. **셋 다 필요하다** — 이미지 있는 시작자, 이미지 없는
       // 시작자(한지원), 시작자 자체가 없는 회의. 「시작 전」 노트들도 시작자가 null이지만
