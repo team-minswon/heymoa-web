@@ -121,7 +121,7 @@ const MEMBERSHIP_POLL_MS = 30_000;
  * 추방되면 **멀쩡한 B에서 쫓겨난다**(codex 리뷰 1회차).
  *
  * 목적지는 홈이다. 로그인한 사람에게는 남은 워크스페이스를 `find(isDefault) ?? [0]`으로
- * 골라 주는 CTA가 이미 있고(`landing-cta.tsx`), 하나도 없으면 그 화면이 그 사실을 말한다.
+ * 골라 주는 CTA가 이미 있고(`landing-cta.tsx`), 하나도 없으면 그 CTA가 생성 폼을 연다.
  */
 function useRedirectWhenWorkspaceGone(workspaceId: string) {
   const router = useRouter();

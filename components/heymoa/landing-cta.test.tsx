@@ -8,6 +8,7 @@ const workspaces = vi.hoisted(() => ({
   data: undefined as unknown,
   isPending: false,
   isFetching: false,
+  isError: false,
   refetch: vi.fn(),
 }));
 
@@ -21,6 +22,13 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
 
 vi.mock("@/components/auth/auth-modal", () => ({
   AuthModal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// 다이얼로그 본체는 라우터·쿼리 클라이언트를 요구한다. 여기서 보려는 것은 「어느 CTA가
+// 뜨는가」뿐이라 열렸는지만 드러내는 대역으로 바꾼다.
+vi.mock("@/components/workspace/create-workspace-dialog", () => ({
+  CreateWorkspaceDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="create-workspace-dialog" /> : null,
 }));
 
 const WITH_WORKSPACE = {
@@ -41,6 +49,7 @@ describe("LandingCta", () => {
     workspaces.data = undefined;
     workspaces.isPending = false;
     workspaces.isFetching = false;
+    workspaces.isError = false;
     workspaces.refetch.mockReset();
   });
 
@@ -64,10 +73,11 @@ describe("LandingCta", () => {
     );
   });
 
-  it("조회가 끝났는데 갈 곳이 없으면 스피너를 멈추고 다시 시도를 낸다", () => {
-    // 실패와 빈 결과를 로딩과 같은 스피너로 그리면 CTA가 영원히 돌면서 빠져나갈 길이 없다.
+  it("조회가 실패하면 스피너를 멈추고 다시 시도를 낸다", () => {
+    // 실패를 로딩과 같은 스피너로 그리면 CTA가 영원히 돌면서 빠져나갈 길이 없다.
     auth.status = "authenticated";
     workspaces.data = undefined;
+    workspaces.isError = true;
 
     render(<LandingCta label="Google 계정으로 시작" />);
 
@@ -75,6 +85,24 @@ describe("LandingCta", () => {
     expect(retry).not.toBeDisabled();
     fireEvent.click(retry);
     expect(workspaces.refetch).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * **0개는 재시도로 풀리지 않는다.** 마지막 워크스페이스에서 추방되면 여기가 앱에서 유일하게
+   * 남는 입구다 — 사이드바의 「새 워크스페이스」는 `/w/[workspaceId]` 아래에 있어 닿을 수 없다.
+   */
+  it("조회에 성공했는데 워크스페이스가 0개면 만들기를 낸다", () => {
+    auth.status = "authenticated";
+    workspaces.data = {
+      status: 200,
+      data: { success: true, data: { workspaces: [] } },
+    };
+
+    render(<LandingCta label="Google 계정으로 시작" />);
+
+    expect(screen.queryByRole("button", { name: "대시보드 다시 시도" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /워크스페이스 만들기/ }));
+    expect(screen.getByTestId("create-workspace-dialog")).toBeTruthy();
   });
 
   it("조회 중에는 라벨이 튀지 않게 대시보드 버튼을 로딩으로 둔다", () => {

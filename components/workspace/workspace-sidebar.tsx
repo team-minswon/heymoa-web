@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
@@ -72,8 +73,6 @@ import type {
   WorkspaceResponseData,
 } from "@/lib/api/generated/models";
 import {
-  getGetWorkspacesQueryKey,
-  useCreateWorkspace,
   useGetWorkspaces,
 } from "@/lib/api/generated/workspaces/workspaces";
 
@@ -108,7 +107,6 @@ export function WorkspaceSidebar({
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
-  const createWorkspace = useCreateWorkspace();
   const updateProject = useUpdateProject({
     mutation: { meta: { suppressErrorToast: true } },
   });
@@ -447,55 +445,10 @@ export function WorkspaceSidebar({
         </DropdownMenu>
       </SidebarFooter>
 
-      <Dialog open={workspaceDialogOpen} onOpenChange={setWorkspaceDialogOpen}>
-        <DialogContent aria-label="새 워크스페이스 만들기">
-          <form
-            action={async (formData) => {
-              const name = String(formData.get("name") ?? "").trim();
-              if (!name) return;
-              const response = await createWorkspace.mutateAsync({
-                data: { name, description: null },
-              });
-              if (response.status === 201 && response.data.success) {
-                await queryClient.invalidateQueries({
-                  queryKey: getGetWorkspacesQueryKey(),
-                });
-                setWorkspaceDialogOpen(false);
-                router.push(`/w/${response.data.data.workspaceId}`);
-              }
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>새 워크스페이스</DialogTitle>
-              <DialogDescription>
-                회의 기록을 모을 공간의 이름을 정해 주세요.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-5">
-              <Label htmlFor="new-workspace-name">워크스페이스 이름</Label>
-              <Input
-                id="new-workspace-name"
-                name="name"
-                className="mt-2"
-                required
-                maxLength={80}
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setWorkspaceDialogOpen(false)}
-              >
-                취소
-              </Button>
-              <Button type="submit" loading={createWorkspace.isPending}>
-                만들기
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CreateWorkspaceDialog
+        open={workspaceDialogOpen}
+        onOpenChange={setWorkspaceDialogOpen}
+      />
 
       <Dialog
         open={projectDialog !== null}

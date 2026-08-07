@@ -523,7 +523,7 @@ function LeaveWorkspaceSection({ workspaceId }: { workspaceId: string }) {
         : [];
     const remaining = items.filter((item) => item.workspaceId !== workspaceId);
     const next = remaining.find((item) => item.isDefault) ?? remaining[0];
-    // 남은 워크스페이스가 없으면 홈이 「워크스페이스가 필요합니다」를 그린다.
+    // 남은 워크스페이스가 없으면 홈으로 보낸다 — 랜딩 CTA가 그 상태를 받아 생성 폼을 연다.
     return next ? `/w/${next.workspaceId}` : "/";
   }
 }

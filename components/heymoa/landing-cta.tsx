@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
+import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,7 @@ export function LandingCta({
   className?: string;
 }) {
   const { status } = useAuth();
+  const [createOpen, setCreateOpen] = useState(false);
   const isAuthenticated = status === "authenticated";
   const workspacesQuery = useGetWorkspaces({
     query: { enabled: isAuthenticated, staleTime: 5 * 60 * 1000 },
@@ -58,10 +61,11 @@ export function LandingCta({
         </Button>
       );
     }
-    // **끝났는데 갈 곳이 없으면 로딩을 끝낸다.** 조회 실패와 워크스페이스 0개를 로딩과 같은
-    // 스피너로 그리면 랜딩의 두 CTA가 영원히 돌면서 재시도할 방법도 없다. 실패 문구는
-    // Navbar가 이미 토스트로 띄우므로(같은 쿼리) 여기서는 다시 띄우지 않는다.
-    if (!workspaceId) {
+    // **조회 실패와 워크스페이스 0개는 다른 상태다.** 실패는 재시도로 풀리지만 0개는 아무리
+    // 다시 받아도 0개다 — 예전에는 둘을 같은 「다시 시도」로 그려서, 마지막 워크스페이스에서
+    // 추방된 사람이 누를수록 같은 자리로 돌아오는 버튼만 남았다(APP-402). 실패 문구는 Navbar가
+    // 이미 토스트로 띄우므로(같은 쿼리) 여기서는 다시 띄우지 않는다.
+    if (!workspaceId && workspacesQuery.isError) {
       return (
         <Button
           type="button"
@@ -73,6 +77,23 @@ export function LandingCta({
         >
           다시 시도
         </Button>
+      );
+    }
+    // 워크스페이스가 하나도 없다. **만드는 입구가 여기밖에 없다** — 사이드바의 「새 워크스페이스」는
+    // `/w/[workspaceId]` 아래에 있어서 0개인 사람은 닿을 수 없다.
+    if (!workspaceId) {
+      return (
+        <>
+          <Button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className={cn(MARKETING_PILL, className)}
+          >
+            워크스페이스 만들기
+            <Plus className="size-4" />
+          </Button>
+          <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
+        </>
       );
     }
     // `nativeButton={false}`를 주지 않는다 — base-ui가 dev 경고를 내지만, 그 prop을 주면

@@ -122,4 +122,25 @@ describe("Navbar", () => {
     fireEvent.click(screen.getByRole("button", { name: "대시보드 다시 시도" }));
     expect(workspaceQuery.refetch).toHaveBeenCalledOnce();
   });
+
+  /**
+   * **0개는 실패가 아니다.** 마지막 워크스페이스에서 추방되면 도달하는 정상 상태이고, 같은
+   * 홈의 랜딩 CTA가 그때 「워크스페이스 만들기」를 낸다(APP-402). 여기서 오류 토스트를 띄우면
+   * 방금 안내한 행동을 옆에서 부정하게 되고, 재시도해 봐야 같은 0개가 온다.
+   */
+  it("워크스페이스가 0개여도 오류로 다루지 않는다", () => {
+    workspaceQuery.data = {
+      status: 200,
+      data: { success: true, data: { workspaces: [] } },
+    };
+    workspaceQuery.isError = false;
+    workspaceQuery.isSuccess = true;
+
+    render(<Navbar />);
+
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "대시보드 다시 시도" })
+    ).toBeNull();
+  });
 });

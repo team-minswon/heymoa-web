@@ -25,7 +25,6 @@ export function Navbar() {
     isError: isWorkspacesError,
     isFetching: isFetchingWorkspaces,
     isPending: isWorkspacesPending,
-    isSuccess: isWorkspacesSuccess,
     refetch: refetchWorkspaces,
   } = workspacesQuery;
   const workspaceEnvelope =
@@ -41,17 +40,14 @@ export function Navbar() {
   const dashboardHref = workspaceId ? `/w/${workspaceId}` : null;
   const logoHref = dashboardHref ?? "/";
   const inWorkspace = pathname.startsWith("/w/");
-  const shouldRetryWorkspaces =
-    isWorkspacesError || (isWorkspacesSuccess && dashboardHref === null);
-
+  // **워크스페이스 0개는 실패가 아니다.** 마지막 워크스페이스에서 추방되면 도달하는 정상
+  // 상태이고, 같은 홈의 랜딩 CTA가 그때 「워크스페이스 만들기」를 낸다(APP-402). 여기서
+  // 오류 토스트와 「다시 시도」를 함께 띄우면 방금 안내한 행동을 옆에서 부정하게 되고,
+  // 재시도해 봐야 같은 0개가 온다.
   useEffect(() => {
-    if (!shouldRetryWorkspaces) return;
+    if (!isWorkspacesError) return;
 
-    const message = isWorkspacesError
-      ? "대시보드를 불러오지 못했습니다."
-      : "이동할 워크스페이스를 찾지 못했습니다.";
-
-    toast.error(message, {
+    toast.error("대시보드를 불러오지 못했습니다.", {
       id: "navbar-workspaces",
       description: "잠시 후 다시 확인해 주세요.",
       action: {
@@ -59,7 +55,7 @@ export function Navbar() {
         onClick: () => void refetchWorkspaces(),
       },
     });
-  }, [isWorkspacesError, refetchWorkspaces, shouldRetryWorkspaces]);
+  }, [isWorkspacesError, refetchWorkspaces]);
 
   const handleScroll = (id: string) => {
     if (pathname === "/") {
@@ -152,7 +148,7 @@ export function Navbar() {
                     <span className="sm:hidden">대시보드</span>
                     <span className="hidden sm:inline">대시보드로 이동</span>
                   </Button>
-                ) : (
+                ) : isWorkspacesError ? (
                   <Button
                     type="button"
                     size="xl"
@@ -164,7 +160,7 @@ export function Navbar() {
                   >
                     다시 시도
                   </Button>
-                )}
+                ) : null}
               </div>
             ) : (
               <AuthModal>
