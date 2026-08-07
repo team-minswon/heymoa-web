@@ -45,3 +45,27 @@ export function pickWorkspaceId(
     : undefined;
   return (match ?? items[0])?.workspaceId;
 }
+
+/**
+ * 스위처 목록의 순서. **기억한 워크스페이스가 맨 위**이고 나머지는 서버 순서(합류 순)를
+ * 그대로 지킨다.
+ *
+ * `pickWorkspaceId`가 여는 것과 이 함수가 위로 올리는 것이 같은 값이어야 한다 — 다르면
+ * 「진입하면 열리는 곳」과 「목록의 첫 줄」이 갈린다. 그래서 두 함수가 같은 모듈에 있다.
+ *
+ * **정렬이 아니라 hoist다.** 비교 함수로 짜면 나머지 항목의 상대 순서가 구현에 따라 흔들리고,
+ * 서버가 합류 순으로 주는 의미가 사라진다.
+ *
+ * **새 배열을 돌려준다.** 인자는 쿼리 캐시의 배열이라 제자리 정렬하면 캐시를 망친다.
+ */
+export function sortByLastVisited<T extends { workspaceId: string }>(
+  items: readonly T[]
+): T[] {
+  const remembered = readLastWorkspaceId();
+  const index = remembered
+    ? items.findIndex((item) => item.workspaceId === remembered)
+    : -1;
+  // 기억이 없거나(-1) 이미 맨 위면(0) 손댈 것이 없다.
+  if (index <= 0) return [...items];
+  return [items[index], ...items.slice(0, index), ...items.slice(index + 1)];
+}

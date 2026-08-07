@@ -131,6 +131,8 @@ describe("WorkspaceSidebar", () => {
     cleanup();
     auth.isLoggingOut = false;
     logout.mockReset();
+    // 스위처 순서가 이 값을 읽는다 — 안 비우면 다음 케이스로 새어 순서가 흔들린다.
+    window.localStorage.clear();
   });
 
   /**
@@ -222,6 +224,38 @@ describe("WorkspaceSidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "워크스페이스 전환" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /제품 팀/ }));
     expect(push).toHaveBeenCalledWith("/w/01K0000000007");
+  });
+
+  /**
+   * **기억한 워크스페이스가 목록의 첫 줄이다.** 서버는 합류 순으로 주므로, 지금 보고 있는
+   * 곳이 목록 중간에 체크만 달고 앉아 있었다 — 방금 온 자리를 목록에서 찾아야 했다.
+   */
+  it("마지막으로 방문한 워크스페이스를 목록 맨 위에 둔다", async () => {
+    window.localStorage.setItem("heymoa:last-workspace", "01K0000000007");
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스 전환" }));
+    await screen.findByRole("menuitem", { name: /제품 팀/ });
+
+    // 목록 항목은 만들기·설정보다 앞에 있으므로 앞의 둘만 본다(서버 순서는 김민수 → 제품 팀).
+    const items = screen
+      .getAllByRole("menuitem")
+      .slice(0, 2)
+      .map((item) => item.textContent);
+    expect(items).toEqual(["제품 팀", "김민수의 워크스페이스"]);
+  });
+
+  it("기억이 없으면 서버 순서를 그대로 둔다", async () => {
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스 전환" }));
+    await screen.findByRole("menuitem", { name: /제품 팀/ });
+
+    const items = screen
+      .getAllByRole("menuitem")
+      .slice(0, 2)
+      .map((item) => item.textContent);
+    expect(items).toEqual(["김민수의 워크스페이스", "제품 팀"]);
   });
 
   it("puts the workspace switcher in the header and the user profile in the footer", () => {

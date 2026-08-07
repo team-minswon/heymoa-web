@@ -75,6 +75,7 @@ import type {
 import {
   useGetWorkspaces,
 } from "@/lib/api/generated/workspaces/workspaces";
+import { sortByLastVisited } from "@/lib/workspaces/last-workspace";
 
 /** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
 type ProjectDialogState = { project: ProjectResponseData } | null;
@@ -223,7 +224,14 @@ export function WorkspaceSidebar({
             align="start"
             className="w-64"
           >
-            {workspaces.map((item) => (
+            {/* **기억한 워크스페이스가 맨 위다.** 서버는 합류 순으로 주므로, 지금 보고 있는
+                곳(= 마지막으로 방문한 곳)이 목록 중간에 체크만 달고 앉아 있었다. 방금 온 자리를
+                목록에서 찾아야 하는 것은 순서가 잘못된 것이다.
+
+                아래 체크는 `workspaceId`(URL)로 그리고 순서는 기억한 값으로 정한다 — 대개 같은
+                값이지만, 다른 워크스페이스로 이동하는 찰나에는 URL이 먼저 바뀐다. 그때 체크가
+                따라 움직이고 순서는 다음 방문 기록이 쓰일 때 맞춰지는 편이 낫다. */}
+            {sortByLastVisited(workspaces).map((item) => (
               <DropdownMenuItem
                 key={item.workspaceId}
                 onClick={() => router.push(`/w/${item.workspaceId}`)}
