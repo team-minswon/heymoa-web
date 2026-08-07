@@ -10,10 +10,16 @@ function ScrollArea({
   children,
   overlay,
   viewportRef,
+  viewportClassName,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   overlay?: React.ReactNode;
   viewportRef?: React.Ref<HTMLDivElement>;
+  /**
+   * 뷰포트에 덧붙일 클래스. 세로만 스크롤시키려면 `overflow-x-hidden`이 필요하다 —
+   * 뷰포트는 두 축을 다 스크롤하는데 가로 스크롤바를 안 그리면 손잡이 없는 스크롤이 된다.
+   */
+  viewportClassName?: string;
 }) {
   return (
     <ScrollAreaPrimitive.Root
@@ -24,7 +30,10 @@ function ScrollArea({
       <ScrollAreaPrimitive.Viewport
         ref={viewportRef}
         data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        className={cn(
+          "size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1",
+          viewportClassName
+        )}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

@@ -118,6 +118,30 @@ describe("WorkspacePage", () => {
   });
 
   /**
+   * **목록은 `ScrollArea`로 스크롤한다.** 네이티브 스크롤바는 폭을 먹어서, 목록이 도착해
+   * 스크롤이 생기는 순간 본문이 스크롤바만큼 좁아졌다 — 로딩 직후 폭이 튀는 것이 그것이다.
+   * 게다가 이 컨테이너는 `rounded-panel` + `overflow-hidden` 패널 안이라 네이티브 바가 둥근
+   * 모서리에 붙어 잘린 채 그려졌다.
+   *
+   * jsdom은 px를 못 재니 **어느 컨테이너로 스크롤하는지**로 검사한다.
+   */
+  it("네이티브 스크롤 컨테이너가 아니라 ScrollArea로 스크롤한다", () => {
+    const { container } = renderPage();
+
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    expect(viewport).not.toBeNull();
+    // 네이티브 세로 스크롤러가 남아 있으면 폭 시프트가 그대로다.
+    expect(container.querySelector(".overflow-y-auto")).toBeNull();
+
+    // **가로는 뷰포트에서 잘라야 한다.** 장식 블롭이 콘텐츠 상자 밖으로 나가 가로 스크롤을
+    // 만드는데(1026 폭에서 31px 실측) 세로 바만 그리므로 손잡이 없는 스크롤이 된다.
+    // `!`가 붙어야 한다 — base-ui가 뷰포트에 `overflow: scroll`을 인라인으로 박는다.
+    expect(viewport?.className).toContain("overflow-x-hidden!");
+  });
+
+  /**
    * 프로젝트가 하나도 없으면 제목·개수·필터가 전부 군더더기다 — 「0개의 회의 기록」과
    * 「전체 / 내가 시작」은 걸러 볼 것이 있다는 뜻인데 여기엔 아무것도 없고, 지금 필요한
    * 것은 무엇을 먼저 해야 하는가 하나다(design.pen `kbUlG`).

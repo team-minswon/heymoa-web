@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
   getGetNotesQueryOptions,
@@ -136,10 +137,28 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   return (
     // 목록은 셸이 아니라 **자기 안에서** 스크롤한다. 문서를 늘리면 셸 컨테이너가 따라 늘어나
     // 그 위에 앉는 노트 full 면이 컨테이너를 다 못 덮는다(APP-252).
-    // `overflow-x-hidden`은 장식이다. `overflow-y`만 주면 계산된 `overflow-x`도 `auto`가 되어
-    // 본문이 좁을 때(뷰포트 900 실측) 블롭의 `-right-24`가 96px짜리 가로 스크롤을 만든다.
-    // 자르는 자리는 메인 컬럼 끝이라 APP-226이 없앤 콘텐츠 폭 이음선은 돌아오지 않는다.
-    <section className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+    //
+    // **`overflow-y-auto`가 아니라 `ScrollArea`다.** 네이티브 스크롤바는 폭을 먹어서, 목록이
+    // 도착해 스크롤이 생기는 순간 본문이 스크롤바만큼 좁아졌다 — 로딩 직후 폭이 튀는 것이
+    // 그것이다. 게다가 이 컨테이너는 `rounded-panel`(16) + `overflow-hidden` 패널 **안**이라
+    // 네이티브 바가 둥근 모서리에 붙어 잘린 채 그려졌다.
+    //
+    // `ScrollArea`(base-ui)의 스크롤바는 뷰포트 위에 얹히는 오버레이라 폭을 먹지 않는다 —
+    // 시프트가 사라지고, 「아래에 더 있다」는 신호는 남는다. 노트 쪽 다섯 면(전사·요약·
+    // 아카이브·챗 둘)이 이미 이걸 쓰고 있어서 이 파일만 예외였다.
+    //
+    // 가로는 뷰포트에서 자른다 — 아래 블롭의 `-right-24`가 콘텐츠 상자 밖으로 나가서
+    // 가로 스크롤을 만든다(본문 1026 폭에서 31px 실측). 세로 스크롤바만 그리므로 그 가로
+    // 스크롤은 **손잡이 없는 스크롤**이 된다. 자르는 자리는 패널 끝이라 APP-226이 없앤
+    // 콘텐츠 폭 이음선은 돌아오지 않는다.
+    //
+    // **`!`가 필요하다.** base-ui가 뷰포트에 `overflow: scroll`을 **인라인으로** 박기 때문에
+    // (네이티브 바를 숨기고 스크롤은 살리는 방식) 평범한 클래스로는 못 덮는다. 저자
+    // 스타일시트의 `!important`는 인라인 선언을 이기므로 이게 유일한 길이다.
+    <ScrollArea
+      className="min-h-0 flex-1"
+      viewportClassName="overflow-x-hidden!"
+    >
       {/* 이 박스는 클리핑하지 않는다. 장식 블롭이 콘텐츠 폭(896) 밖까지 뻗는데 여기서 자르면
           부드러운 그라데이션이 캔버스 한복판에서 직선으로 끊겨 이음선처럼 보였다(실측: 화면
           끝보다 144px 앞에서 잘림). 바깥 셸 컨테이너가 이미 overflow-hidden이라 화면
@@ -211,6 +230,6 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
           </>
         )}
       </div>
-    </section>
+    </ScrollArea>
   );
 }
