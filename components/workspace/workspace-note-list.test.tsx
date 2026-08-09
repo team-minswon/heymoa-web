@@ -32,34 +32,52 @@ vi.mock("@/components/workspace/note-list-row", () => ({
   ),
 }));
 
+/**
+ * `meetingStartedAt`이 정렬 키다. `updatedAt`을 일부러 **역순으로** 채워 둔다 — 셋이 같은
+ * 값이면 예전의 `updatedAt` 정렬에서도 같은 답이 나와 이 테스트가 회귀를 못 잡는다.
+ */
 function note(
   noteId: string,
-  updatedAt: string
+  meetingStartedAt: string | null,
+  createdAt = "2026-07-01T00:00:00Z"
 ): NoteListResponseDataNotesItem {
   return {
     noteId,
     projectId: "01K0000000001",
     title: noteId,
-    createdAt: updatedAt,
-    updatedAt,
+    createdAt,
+    updatedAt: "2026-08-09T00:00:00Z",
     lastRecordedAt: null,
     recordedDurationMs: 0,
     activeSessionStartedAt: null,
     meetingStatus: "IN_PROGRESS",
-    meetingStartedAt: null,
+    meetingStartedAt,
     meetingStartedBy: null,
     participants: [],
   };
 }
 
 describe("sortNotesByRecency", () => {
-  it("sorts newest updatedAt first (flat, no date grouping)", () => {
+  it("기록을 시작한 순서 내림차순으로 세운다", () => {
     const sorted = sortNotesByRecency([
       note("older", "2026-07-10T01:00:00Z"),
       note("newest", "2026-07-11T10:00:00Z"),
       note("middle", "2026-07-11T01:00:00Z"),
     ]);
     expect(sorted.map((n) => n.noteId)).toEqual(["newest", "middle", "older"]);
+  });
+
+  it("기록한 적 없는 노트는 만든 시각으로 세운다", () => {
+    const sorted = sortNotesByRecency([
+      note("recorded", "2026-07-10T01:00:00Z"),
+      note("neverRecorded", null, "2026-07-12T00:00:00Z"),
+      note("olderThanBoth", null, "2026-07-01T00:00:00Z"),
+    ]);
+    expect(sorted.map((n) => n.noteId)).toEqual([
+      "neverRecorded",
+      "recorded",
+      "olderThanBoth",
+    ]);
   });
 });
 

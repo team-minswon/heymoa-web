@@ -29,8 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
-import { formatAppDate } from "@/lib/format/date";
-import { formatRelativeTime } from "@/lib/format/relative-time";
 import {
   getRecordedDurationMs,
   MEETING_STATUS_LABEL,
@@ -94,21 +92,6 @@ function NoteRowIcon({
 }
 
 /**
- * 상대 시각("방금/14분 전/어제"). `now`는 목록이 단일 시계로 내려준다 — 행마다 타이머를 두면
- * 노트가 많을 때 렌더가 폭증한다. `now`가 없으면(SSR·첫 렌더·미해결) 짧은 절대 날짜로 두어
- * 하이드레이션을 맞추고, 채워지면 상대 시각으로 교체한다.
- */
-function RelativeTime({ iso, now }: { iso: string; now: number | null }) {
-  return (
-    <span className="shrink-0 text-xs text-[var(--el-muted)] tabular-nums">
-      {now === null
-        ? formatAppDate(iso, { month: "long", day: "numeric" })
-        : formatRelativeTime(iso, now)}
-    </span>
-  );
-}
-
-/**
  * 행의 둘째 줄. **모든 행이 같은 항목을 같은 순서로** 왼쪽 정렬로 낸다.
  *
  * 예전에는 한 줄 오른쪽 끝에 몰아넣고 상태마다 항목을 갈랐다 — 진행자는 중지됨에만,
@@ -117,6 +100,10 @@ function RelativeTime({ iso, now }: { iso: string; now: number | null }) {
  * 불일치를 화면 폭마다 다시 만들었다.
  *
  * 기록 시간은 회의를 시작한 적이 있을 때만 쓴다 — 시작 전의 `0분`은 사실이 아니라 빈칸이다.
+ *
+ * **마지막으로 고친 시각(`13시간 전`)은 걷어냈다**(APP-410). 이 목록에서 찾는 값이 아니고,
+ * 제목만 고쳐도 바뀌어서 날짜 머리글과 어긋났다 — 7월 27일 묶음의 행이 `15분 전`으로 보였다.
+ * 회의가 언제였나는 위의 날짜 머리글이 말한다.
  *
  * 사람 수는 글자로 적고 얼굴은 오른쪽 아바타가 맡는다. 진행자는 그 아바타 줄에서
  * 구분선으로 갈라 세운다(`진행자 | 참여자들`) — 이름까지 여기 적으면 같은 사실이 두 곳에
@@ -167,10 +154,6 @@ function MeetingMeta({
           </span>
         </>
       ) : null}
-      <span aria-hidden="true" className="shrink-0">
-        ·
-      </span>
-      <RelativeTime iso={note.updatedAt} now={now} />
     </span>
   );
 }

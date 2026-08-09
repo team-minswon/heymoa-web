@@ -1,4 +1,5 @@
 import { formatAppDate, getAppDateKey } from "@/lib/format/date";
+import { noteOrderedAt } from "@/lib/notes/meeting-state";
 
 /**
  * 노트 목록의 날짜 묶음.
@@ -7,8 +8,9 @@ import { formatAppDate, getAppDateKey } from "@/lib/format/date";
  * 열렸나"로 찾는 기록이라 요일이 있는 실제 날짜가 훑기에 낫고, 상대 라벨은 시간이 지나면
  * 같은 회의가 다른 이름으로 불린다.
  *
- * 행 우측의 상대 시각(`13시간 전`)은 그대로 둔다 — 그건 "얼마나 최근인가"를 말하고
- * 이 헤더는 "언제인가"를 말한다.
+ * 묶는 값은 정렬과 같은 `noteOrderedAt`이다 — **회의가 열린 날**이고 마지막으로 고친 날이
+ * 아니다. 예전에는 행 우측에 `13시간 전`을 함께 뒀는데, 그게 말하던 "얼마나 최근에 고쳤나"는
+ * 이 목록에서 찾는 값이 아니라 걷어냈다(APP-410).
  */
 export type NoteGroup<T> = {
   key: string;
@@ -38,20 +40,21 @@ function labelFor(iso: string): string {
  *
  * 묶음 기준은 앱 타임존(KST)의 날짜다. UTC로 자르면 자정 근처 회의가 하루 밀린다.
  */
-export function groupNotesByRecency<T extends { updatedAt: string }>(
-  sortedNotes: T[]
-): NoteGroup<T>[] {
+export function groupNotesByRecency<
+  T extends { meetingStartedAt: string | null; createdAt: string },
+>(sortedNotes: T[]): NoteGroup<T>[] {
   const groups: NoteGroup<T>[] = [];
 
   for (const note of sortedNotes) {
-    const key = getAppDateKey(note.updatedAt);
+    const orderedAt = noteOrderedAt(note);
+    const key = getAppDateKey(orderedAt);
     const last = groups.at(-1);
 
     if (last && last.key === key) {
       last.notes.push(note);
       continue;
     }
-    groups.push({ key, label: labelFor(note.updatedAt), notes: [note] });
+    groups.push({ key, label: labelFor(orderedAt), notes: [note] });
   }
 
   return groups;

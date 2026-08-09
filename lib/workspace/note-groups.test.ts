@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { groupNotesByRecency } from "@/lib/workspace/note-groups";
 
-function note(updatedAt: string) {
-  return { updatedAt };
+function note(meetingStartedAt: string) {
+  return { meetingStartedAt, createdAt: meetingStartedAt };
 }
 
 describe("groupNotesByRecency", () => {
@@ -28,7 +28,7 @@ describe("groupNotesByRecency", () => {
 
     expect(groups).toHaveLength(2);
     expect(groups[0].notes).toHaveLength(2);
-    expect(groups[0].notes[0].updatedAt).toBe("2026-07-27T05:00:00Z");
+    expect(groups[0].notes[0].meetingStartedAt).toBe("2026-07-27T05:00:00Z");
   });
 
   it("KST 자정을 넘긴 UTC 시각은 그 다음 날로 묶는다", () => {
@@ -42,6 +42,27 @@ describe("groupNotesByRecency", () => {
       "2026-07-27",
       "2026-07-26",
     ]);
+  });
+
+  it("기록한 적 없는 노트는 만든 날로 묶는다", () => {
+    const groups = groupNotesByRecency([
+      { meetingStartedAt: null, createdAt: "2026-07-27T01:00:00Z" },
+    ]);
+
+    expect(groups.map((group) => group.key)).toEqual(["2026-07-27"]);
+  });
+
+  // 제목만 고쳐도 `updatedAt`이 오늘로 바뀌어 지난주 회의가 오늘 묶음으로 옮겨갔다.
+  it("마지막으로 고친 시각은 묶음에 영향을 주지 않는다", () => {
+    const groups = groupNotesByRecency([
+      {
+        meetingStartedAt: "2026-07-27T01:00:00Z",
+        createdAt: "2026-07-27T00:00:00Z",
+        updatedAt: "2026-08-09T00:00:00Z",
+      },
+    ]);
+
+    expect(groups.map((group) => group.key)).toEqual(["2026-07-27"]);
   });
 
   it("빈 목록은 묶음도 없다", () => {

@@ -76,6 +76,26 @@ export function getRecordedDurationMs(
   return recorded + live;
 }
 
+type NoteOrderFields = Pick<
+  NoteListResponseDataNotesItem,
+  "meetingStartedAt" | "createdAt"
+>;
+
+/**
+ * 노트 목록에서 노트가 서는 시각. **회의를 기록하기 시작한 시각**이고, 한 번도 기록하지
+ * 않았으면 만든 시각이다. 서버의 정렬 기준과 같은 식이다(`openapi3.yml`의 노트 목록 설명).
+ *
+ * **`updatedAt`이 아니다.** 제목만 고쳐도 `updatedAt`이 바뀌어서, 지난주 회의가 오늘 회의보다
+ * 위에 서고 오늘 날짜 묶음으로 옮겨갔다. 회의 목록은 "무엇을 마지막으로 만졌나"가 아니라
+ * "언제 열렸나"로 찾는 기록이다.
+ *
+ * **정렬과 날짜 묶음이 같은 값을 써야 한다.** `groupNotesByRecency`는 입력이 이미 그 키로
+ * 정렬됐다고 전제하므로, 둘이 갈리면 같은 날짜 묶음이 목록에 여러 번 생긴다.
+ */
+export function noteOrderedAt(note: NoteOrderFields): string {
+  return note.meetingStartedAt ?? note.createdAt;
+}
+
 /**
  * 노트 화면에서 개인 챗봇을 감출까. side면 항상 감춘다. full에서는 공유 챗봇 트레이가 레일을
  * 독차지하는 동안(활성·미시작·중지)만 감춘다. 종료에는 개인 챗봇을 남긴다.
