@@ -795,7 +795,7 @@ export const getGetNotesUrl = (projectId: string) => {
 };
 
 /**
- * 프로젝트의 노트 목록을 조회한다.
+ * 프로젝트의 노트 목록을 조회한다. 회의를 기록하기 시작한 시각 내림차순이고, 한 번도 기록하지 않은 노트는 만든 시각으로 선다.
  * @summary 노트 목록 조회
  */
 export const getNotes = async (
