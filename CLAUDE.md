@@ -53,19 +53,19 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 | `lib/<feature>/` | 순수 selector·protocol·service |
 | `lib/api/generated/` | orval 산출물. **편집 금지** (hook이 막습니다) |
 | `lib/mocks/` | MSW. `handlers.ts`는 레지스트리만 모읍니다 |
-| `proxy.ts` | 미들웨어. **`middleware.ts`를 만들지 않습니다** (hook이 막습니다) |
+| `proxy.ts` | 미들웨어. **`middleware.ts`를 만들지 않습니다** (hook이 막습니다). SSR 쪽 토큰 갱신을 페이지 렌더 전에 처리합니다 |
+| `lib/auth/` | 쿠키 인증. `access_token`·`refresh_token`을 백엔드가 HttpOnly로 심습니다 |
+| `lib/api/fetcher.ts` | 클라이언트 401 → `/v1/auth/refresh` → 재시도 |
 
 ## 읽을 문서
 
 | 무엇을 바꾸나 | 먼저 읽을 것 |
 |---|---|
-| route·데이터·인증·로딩·실시간 경계 | [`docs/frontend-architecture.md`](docs/frontend-architecture.md) |
 | 화면의 생김새 | [`DESIGN.md`](DESIGN.md) |
-| API 훅이 어디 생성됐나 | [`docs/generated-api-map.md`](docs/generated-api-map.md) |
 | 코드 리뷰 | [`AGENTS.md`](AGENTS.md) + skill [`code-review`](.claude/skills/code-review/SKILL.md) |
 
 ## 하네스
 
 항상 걸리는 규칙은 `.claude/rules/`에 있고 매 세션 로드됩니다. 부를 때만 읽는 절차는
-`.claude/skills/`입니다. 둘 다 [`harness/v001-2026-07-26/`](harness/v001-2026-07-26/README.md)를
+`.claude/skills/`입니다. 둘 다 [`harness/v002-2026-08-13/`](harness/v002-2026-08-13/README.md)를
 가리키는 심링크입니다. 무엇이 어디 있고 왜 그렇게 나눴는지는 그 README에 있습니다.

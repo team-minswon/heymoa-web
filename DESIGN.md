@@ -302,7 +302,7 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 
 ## Product Surface (제품 면 · v5)
 
-워크스페이스에 들어간 뒤의 화면(사이드바·노트 상세·챗봇·알림·설정)은 마케팅 면과 다른 규칙을 따른다. **왜 다른가:** 마케팅은 흰 배경 위 잡지 조판이고, 제품은 회색 캔버스 위에서 실제로 뜨고 지는 레이어를 구분해야 한다. 마케팅 단일 티어 그림자(`0 4px 16px rgba(0,0,0,0.04)`)는 회색 캔버스에서 안 보인다. 정본 수치는 `docs/design/v5-spec-notes.md`의 SPEC 노트이며, 여기서는 코드 토큰과의 대응만 못박는다.
+워크스페이스에 들어간 뒤의 화면(사이드바·노트 상세·챗봇·알림·설정)은 마케팅 면과 다른 규칙을 따른다. **왜 다른가:** 마케팅은 흰 배경 위 잡지 조판이고, 제품은 회색 캔버스 위에서 실제로 뜨고 지는 레이어를 구분해야 한다. 마케팅 단일 티어 그림자(`0 4px 16px rgba(0,0,0,0.04)`)는 회색 캔버스에서 안 보인다. 정본 수치는 아래 표이며, 여기서는 코드 토큰과의 대응도 함께 못박는다.
 
 ### 공유하는 것 / 나뉘는 것
 
@@ -318,7 +318,7 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 
 **셸은 뷰포트를 꽉 채우지 않는다.** 회색 캔버스(`--el-canvas` `#f5f5f5`) 위에 사이드바가 배경·테두리 없이 그냥 앉고, 본문만 둥근 흰 패널로 뜬다. 사이드바와 패널이 `border-r` 하나로 붙어 있던 예전 「한 셸」이 아니다.
 
-**수치의 정본은 아래 표다.** 값이 나온 곳은 `heymoa/design/design.pen`이지만 **그 파일은 이 저장소 밖이고 git에도 없다**(Pencil 전용 포맷 · 10MB). fresh checkout에서는 열 수 없으므로 노드 ID는 출처 표시일 뿐이고, 구현이 대조할 대상은 이 표와 `e2e/smoke.spec.ts`의 「keeps the shell frame geometry from design.pen」이다 — 그 테스트가 아래 값을 실제로 잰다. `docs/design/v5-spec-notes.md`가 같은 이유로 같은 규약을 쓴다.
+**수치의 정본은 아래 표다.** 값이 나온 곳은 `heymoa/design/design.pen`이지만 **그 파일은 이 저장소 밖이고 git에도 없다**(Pencil 전용 포맷 · 10MB). fresh checkout에서는 열 수 없으므로 노드 ID는 출처 표시일 뿐이고, 구현이 대조할 대상은 이 표와 `e2e/smoke.spec.ts`의 「keeps the shell frame geometry from design.pen」이다 — 그 테스트가 아래 값을 실제로 잰다.
 
 아래는 뷰포트 1440×900 기준 실측값이다.
 
