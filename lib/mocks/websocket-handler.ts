@@ -138,7 +138,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         if (frame.command !== "SEND") return;
 
         const match = frame.headers.destination?.match(
-          /^\/app\/transcription-sessions\/([^/]+)\/(connect|audio|commit|stop)$/
+          /^\/app\/transcription-sessions\/([^/]+)\/(connect|audio|stop)$/
         );
         if (!match) return;
         const [, sessionId, action] = match;
@@ -160,9 +160,17 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           return;
         }
         if (action === "audio") {
-          await scenario.receiveFrame(frame.body);
+          // 목이 계약을 실행 가능하게 만드는 자리다. 서버가 볼 값을 그대로 본다.
+          await scenario.receiveFrame(frame.body, {
+            chunkSeq: Number(frame.headers.chunkSeq),
+            captureSamples: Number(frame.headers.captureSamples),
+          });
         } else {
-          await scenario.receiveFrame(JSON.stringify({ type: action }));
+          // body 는 Uint8Array 라 빈 것도 truthy 다. 길이로 갈라야 한다.
+          const command = frame.body.byteLength
+            ? decoder.decode(frame.body)
+            : JSON.stringify({ type: action, finalChunkSeq: -1 });
+          await scenario.receiveFrame(command);
         }
       });
     });

@@ -28,8 +28,8 @@ describe("MockTranscriptionScenario", () => {
     });
 
     const voiced = new Int16Array(960).fill(12_000).buffer;
-    await scenario.receiveFrame(voiced);
-    await scenario.receiveFrame(voiced);
+    await scenario.receiveFrame(voiced, { chunkSeq: 0, captureSamples: 0 });
+    await scenario.receiveFrame(voiced, { chunkSeq: 1, captureSamples: 960 });
     const partials = send.mock.calls
       .map(([event]) => event)
       .filter((event) => event.type === "partial");
@@ -37,7 +37,9 @@ describe("MockTranscriptionScenario", () => {
     expect(partials[1].utteranceId).toBe(partials[0].utteranceId);
     expect(partials[1].text).toContain(partials[0].text);
 
-    await scenario.receiveFrame('{"type":"commit"}');
+    // `commit` 명령이 사라졌다. 발화 경계는 이제 침묵이 정한다.
+    const silence = new Int16Array(16_000).buffer; // 1초
+    await scenario.receiveFrame(silence, { chunkSeq: 2, captureSamples: 1_920 });
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ type: "final", sequence: 1 })
     );
@@ -56,8 +58,13 @@ describe("MockTranscriptionScenario", () => {
     });
     scenario.open();
 
-    const fifteenSeconds = new Int16Array(24_000 * 15).fill(12_000);
-    await scenario.receiveFrame(fifteenSeconds.buffer);
+    // 계약이 프레임을 32,000 byte(1초)로 묶는다. 15초는 조각 열여섯이다.
+    for (let chunkSeq = 0; chunkSeq < 16; chunkSeq += 1) {
+      await scenario.receiveFrame(new Int16Array(16_000).fill(12_000).buffer, {
+        chunkSeq,
+        captureSamples: chunkSeq * 16_000,
+      });
+    }
 
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ type: "final", sequence: 1 })
@@ -76,9 +83,12 @@ describe("MockTranscriptionScenario", () => {
       script: ["중지 전 확정 문장"],
     });
     scenario.open();
-    await scenario.receiveFrame(new Int16Array(960).fill(12_000).buffer);
+    await scenario.receiveFrame(new Int16Array(960).fill(12_000).buffer, {
+      chunkSeq: 0,
+      captureSamples: 0,
+    });
 
-    await scenario.receiveFrame('{"type":"stop"}');
+    await scenario.receiveFrame('{"type":"stop","finalChunkSeq":0}');
 
     const types = send.mock.calls.map(([event]) => event.type);
     expect(types.slice(-2)).toEqual(["final", "completed"]);

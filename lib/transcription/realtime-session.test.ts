@@ -6,7 +6,7 @@ import {
 
 function setup() {
   const order: string[] = [];
-  let emitChunk!: (chunk: ArrayBuffer) => void;
+  let emitChunk!: (chunk: ArrayBuffer, captureSamples: number) => void;
   let socketOptions!: Parameters<
     NonNullable<RealtimeSessionDependencies["createSocket"]>
   >[0];
@@ -25,9 +25,10 @@ function setup() {
     connect: vi.fn(async () => {
       order.push("socket-connect");
     }),
-    sendAudio: vi.fn(() => true),
-    commit: vi.fn(),
-    stop: vi.fn(() => {
+    sendAudio: vi.fn<
+      (chunk: ArrayBuffer, chunkSeq: number, captureSamples: number) => boolean
+    >(() => true),
+    stop: vi.fn<(finalChunkSeq: number) => void>(() => {
       order.push("socket-stop");
       socketOptions.onEvent({
         type: "completed",
@@ -66,7 +67,8 @@ function setup() {
     order,
     onEvent,
     onFailure,
-    emitChunk: (chunk: ArrayBuffer) => emitChunk(chunk),
+    emitChunk: (chunk: ArrayBuffer, captureSamples = 0) =>
+      emitChunk(chunk, captureSamples),
     emitEvent: (event: Parameters<typeof socketOptions.onEvent>[0]) =>
       socketOptions.onEvent(event),
     closeTransport: (code: number, reason = "") =>
@@ -306,5 +308,74 @@ describe("BrowserRealtimeSession", () => {
     harness.closeTransport(1000);
 
     expect(harness.onFailure).toHaveBeenCalledWith("WebSocket closed (1000)");
+  });
+
+  it("numbers chunks from zero and carries the capture position", async () => {
+    const harness = setup();
+    await harness.controller.connect("0HZX2K7M9Q4AG");
+
+    harness.emitChunk(new ArrayBuffer(3_200), 0);
+    harness.emitChunk(new ArrayBuffer(3_200), 1_600);
+
+    expect(harness.socket.sendAudio.mock.calls.map((call) => call.slice(1))).toEqual([
+      [0, 0],
+      [1, 1_600],
+    ]);
+  });
+
+  it("retries a refused chunk instead of dropping it", async () => {
+    const harness = setup();
+    await harness.controller.connect("0HZX2K7M9Q4AG");
+
+    harness.socket.sendAudio.mockReturnValue(false);
+    harness.emitChunk(new ArrayBuffer(3_200), 0);
+    expect(harness.socket.sendAudio).toHaveBeenCalledOnce();
+
+    harness.socket.sendAudio.mockReturnValue(true);
+    harness.emitChunk(new ArrayBuffer(3_200), 1_600);
+
+    // 거절됐던 0번이 1번보다 먼저 다시 나간다 — 건너뛰면 chunkSeq 에 구멍이 난다
+    expect(harness.socket.sendAudio.mock.calls.map((call) => call[1])).toEqual([
+      0, 0, 1,
+    ]);
+  });
+
+  it("reports the last chunk number on stop", async () => {
+    const harness = setup();
+    await harness.controller.connect("0HZX2K7M9Q4AG");
+    harness.emitChunk(new ArrayBuffer(3_200), 0);
+    harness.emitChunk(new ArrayBuffer(3_200), 1_600);
+
+    await harness.controller.stop();
+
+    expect(harness.socket.stop).toHaveBeenCalledWith(1);
+  });
+
+  it("reports -1 when no chunk was ever sent", async () => {
+    const harness = setup();
+    await harness.controller.connect("0HZX2K7M9Q4AG");
+
+    await harness.controller.stop();
+
+    expect(harness.socket.stop).toHaveBeenCalledWith(-1);
+  });
+
+  it("fails only when nothing gets through for the congestion window", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+
+      harness.socket.sendAudio.mockReturnValue(false);
+      harness.emitChunk(new ArrayBuffer(3_200), 0);
+      vi.advanceTimersByTime(11_000);
+      harness.emitChunk(new ArrayBuffer(3_200), 1_600);
+
+      expect(harness.onFailure).toHaveBeenCalledWith(
+        "네트워크가 느려 오디오 전송을 계속할 수 없습니다."
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

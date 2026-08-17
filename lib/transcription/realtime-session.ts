@@ -1,11 +1,13 @@
 import { PcmAudioCapture } from "@/lib/transcription/audio";
+import { CAPTURE_TUNING } from "@/lib/transcription/capture-config";
 import type { ServerEvent } from "@/lib/transcription/protocol";
+import { ResendBuffer } from "@/lib/transcription/resend-buffer";
 import { TranscriptionSocket } from "@/lib/transcription/socket";
 
 type AudioPort = Pick<PcmAudioCapture, "requestPermission" | "start" | "stop">;
 type SocketPort = Pick<
   TranscriptionSocket,
-  "connect" | "sendAudio" | "commit" | "stop" | "close" | "reconcileConnected"
+  "connect" | "sendAudio" | "stop" | "close" | "reconcileConnected"
 >;
 
 export type RealtimeSessionStatus = "ACTIVE" | "COMPLETED" | "INTERRUPTED";
@@ -13,7 +15,6 @@ export type RealtimeSessionStatus = "ACTIVE" | "COMPLETED" | "INTERRUPTED";
 export type RealtimeSessionController = {
   requestPermission: () => Promise<void>;
   connect: (sessionId: string) => Promise<void>;
-  commit: () => void;
   stop: () => Promise<void>;
   reconcile: (status: RealtimeSessionStatus) => void;
   close: () => Promise<void>;
@@ -28,7 +29,7 @@ export type RealtimeSessionOptions = {
 
 export type RealtimeSessionDependencies = {
   createAudio?: (
-    onChunk: (chunk: ArrayBuffer) => void,
+    onChunk: (chunk: ArrayBuffer, captureSamples: number) => void,
     onLevel: (level: number) => void
   ) => AudioPort;
   createSocket?: (options: {
@@ -41,10 +42,9 @@ export type RealtimeSessionDependencies = {
 
 type TerminalState = "completed" | "failed" | "timeout";
 
-// 전송 정체가 이 시간만큼 연속되면 회복 불가로 판정한다. socket의 백프레셔 임계(96KB)가
-// PCM 2초분이므로 그 5배다 — 일시적 지연은 살아남고, 이 시간 내내 2초 이상 밀린 채였다면
-// 회선이 사실상 죽은 것이다. 정체 중 frame은 버린다(버퍼링하면 메모리가 무한이 된다).
-const MAX_CONGESTION_MS = 10_000;
+// 소켓이 이 시간만큼 연속으로 조각을 안 받으면 회복 불가로 판정한다. 백프레셔 임계(96KB)가
+// PCM 3초분이라 일시적 지연은 살아남고, 이 시간 내내 밀린 채였다면 회선이 사실상 죽은 것이다.
+const MAX_CONGESTION_MS = CAPTURE_TUNING.congestionMs;
 
 export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
@@ -60,6 +60,11 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     | null = null;
   private failed = false;
   private congestedSinceMs: number | null = null;
+  /** 세션 안에서 0부터 1씩. 워크릿도 배처도 세션 경계를 모르므로 여기가 발급한다. */
+  private nextChunkSeq = 0;
+  private readonly resendBuffer = new ResendBuffer(
+    CAPTURE_TUNING.resendBufferMaxBytes
+  );
 
   constructor(
     private readonly options: RealtimeSessionOptions,
@@ -68,7 +73,10 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     const createAudio =
       dependencies.createAudio ??
       ((onChunk, onLevel) => new PcmAudioCapture({ onChunk, onLevel }));
-    this.audio = createAudio((chunk) => this.sendAudio(chunk), options.onLevel);
+    this.audio = createAudio(
+      (chunk, captureSamples) => this.enqueueAudio(chunk, captureSamples),
+      options.onLevel
+    );
   }
 
   async requestPermission() {
@@ -109,10 +117,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     await this.rejectIfStopped(socket);
   }
 
-  commit() {
-    this.socket?.commit();
-  }
-
   stop() {
     this.stopping = true;
     this.stopPromise ??= this.stopOnce();
@@ -137,7 +141,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       }
     );
     try {
-      socket.stop();
+      // 남은 것을 마지막으로 한 번 더 밀어 본다. 그다음 「내가 여기까지 보냈다」를 말한다.
+      this.flushPending();
+      socket.stop(this.nextChunkSeq - 1);
     } catch {
       this.fail("전사 종료 요청을 서버에 보내지 못했습니다.");
       await this.close();
@@ -179,23 +185,57 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     return this.closePromise;
   }
 
-  private sendAudio(chunk: ArrayBuffer) {
+  private enqueueAudio(chunk: ArrayBuffer, captureSamples: number) {
     if (this.closing) return;
-    if (this.socket?.sendAudio(chunk)) {
+    this.resendBuffer.push({
+      chunkSeq: this.nextChunkSeq,
+      captureSamples,
+      body: chunk,
+    });
+    this.nextChunkSeq += 1;
+    this.flushPending();
+  }
+
+  /**
+   * 아직 못 건넨 조각을 순서대로 민다. 소켓이 거절하면 그 자리에서 멈춘다 —
+   * 건너뛰면 `chunkSeq`에 구멍이 나서 서버가 유실로 읽는다.
+   *
+   * 예전에는 거절된 frame을 그냥 버렸다. 이제는 버퍼에 남아 다음에 다시 시도되고,
+   * 정말 회복 못 하면 상한(10 MB)에서 오래된 것부터 밀려난다.
+   */
+  private flushPending() {
+    if (!this.socket) return;
+    let sentAny = false;
+    for (const chunk of this.resendBuffer.unsent()) {
+      if (
+        !this.socket.sendAudio(chunk.body, chunk.chunkSeq, chunk.captureSamples)
+      ) {
+        break;
+      }
+      this.resendBuffer.markSent();
+      sentAny = true;
+    }
+
+    const stalled = this.resendBuffer.unsent().length > 0;
+    if (!stalled) {
       if (this.congestedSinceMs !== null) {
         console.warn(
-          `transcription: 전송 정체 회복, 유실 ${Date.now() - this.congestedSinceMs}ms`
+          `transcription: 전송 정체 회복, ${Date.now() - this.congestedSinceMs}ms 밀렸습니다`
         );
         this.congestedSinceMs = null;
       }
       return;
     }
-    // 일시적 정체는 회복 가능한 상태다. frame은 버리되 녹음은 계속하고,
-    // 정체가 MAX_CONGESTION_MS 연속될 때만 회복 불가로 판정한다.
+
     const now = Date.now();
     if (this.congestedSinceMs === null) {
       this.congestedSinceMs = now;
-      console.warn("transcription: 전송 정체 시작, frame을 버립니다");
+      console.warn("transcription: 전송 정체 시작, 조각을 버퍼에 쌓습니다");
+      return;
+    }
+    // 조금이라도 나갔으면 회선이 살아 있는 것이다. 시계를 다시 잡는다.
+    if (sentAny) {
+      this.congestedSinceMs = now;
       return;
     }
     if (now - this.congestedSinceMs >= MAX_CONGESTION_MS) {
@@ -204,6 +244,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   }
 
   private handleEvent(event: ServerEvent) {
+    if (event.type === "ack") {
+      this.resendBuffer.ackThrough(event.throughChunkSeq);
+    }
     if (event.type === "completed") {
       this.terminalEventReceived = true;
       this.terminalResolve?.("completed");

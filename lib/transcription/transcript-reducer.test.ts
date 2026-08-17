@@ -31,13 +31,13 @@ describe("transcriptReducer", () => {
     });
     const final = transcriptReducer(partial, {
       type: "final",
-      transcriptionSessionId: "0HZX2K7M9Q4AB",
       segmentId: "0HZX2K7M9Q4AD",
       utteranceId: "0HZX2K7M9Q4AC",
       sequence: 1,
       text: "안녕하세요",
       startedAtMs: 0,
       endedAtMs: 1200,
+      speakerLabel: null,
     });
     const completed = transcriptReducer(final, {
       type: "completed",
@@ -114,13 +114,13 @@ describe("transcriptReducer", () => {
 
     const final = transcriptReducer(live, {
       type: "final",
-      transcriptionSessionId: "0HZX2K7M9Q4AB",
       segmentId: "0HZX2K7M9Q4AD",
       utteranceId: "0HZX2K7M9Q4AC",
       sequence: 1,
       text: "안녕하세요 오늘은",
       startedAtMs: 0,
       endedAtMs: 1200,
+      speakerLabel: null,
     });
 
     expect(final.partial).toBeNull();
@@ -138,13 +138,13 @@ describe("transcriptReducer", () => {
 
     const laterFinal = transcriptReducer(orphan, {
       type: "final",
-      transcriptionSessionId: "0HZX2K7M9Q4AB",
       segmentId: "0HZX2K7M9Q4AD",
       utteranceId: "0HZX2K7M9Q4AE",
       sequence: 1,
       text: "다음 발화의 확정",
       startedAtMs: 0,
       endedAtMs: 1200,
+      speakerLabel: null,
     });
 
     expect(laterFinal.partial).toBeNull();

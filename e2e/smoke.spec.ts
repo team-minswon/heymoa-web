@@ -507,6 +507,15 @@ test("creates a NOT_STARTED note without requesting the microphone", async ({
 });
 
 test("starts and ends a meeting through one confirmation", async ({ page }) => {
+  // 목이 조각마다 chunkSeq·captureSamples 헤더를 검사하고 어긋나면 경고를 남긴다.
+  // 여기서 잡히는 것이 서버를 짜기 전에 잡히는 것이다.
+  const frameWarnings: string[] = [];
+  page.on("console", (message) => {
+    if (message.text().startsWith("mock transcription:")) {
+      frameWarnings.push(message.text());
+    }
+  });
+
   await createMeetingNote(page);
   await startRecording(page, "회의 시작");
   expect(
@@ -514,6 +523,8 @@ test("starts and ends a meeting through one confirmation", async ({ page }) => {
   ).toBeLessThan(60);
 
   await endMeeting(page);
+
+  expect(frameWarnings).toEqual([]);
 
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
   await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({

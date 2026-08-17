@@ -5,14 +5,21 @@ import {
   VoiceActivityDetector,
   type VoiceActivityConfig,
 } from "@/lib/mocks/voice-activity";
+import { CAPTURE_CONTRACT } from "@/lib/transcription/capture-config";
 import {
   parseClientCommand,
-  type ClientCommand,
   type ServerEvent,
 } from "@/lib/transcription/protocol";
 
-const AUTO_COMMIT_BYTES = 24_000 * 2 * 15;
-const MAX_FRAME_BYTES = 1_048_576;
+const AUTO_COMMIT_BYTES = CAPTURE_CONTRACT.sampleRate * 2 * 15;
+const MAX_FRAME_BYTES = CAPTURE_CONTRACT.maxFrameBytes;
+/** 서버는 S3 적재(30초)마다 ACK한다. 목은 그보다 자주 보내 재전송 버퍼를 빨리 흔든다. */
+const ACK_EVERY_CHUNKS = 30;
+
+export type AudioFrameHeader = {
+  chunkSeq: number;
+  captureSamples: number;
+};
 
 const KOREAN_MEETING_SCRIPTS = [
   [
@@ -66,6 +73,9 @@ export class MockTranscriptionScenario {
   private partialText = "";
   private utteranceStartedAtMs: number | null = null;
   private lastPartialAtMs = 0;
+  private lastChunkSeq: number | null = null;
+  private lastCaptureEnd: number | null = null;
+  private chunksSinceAck = 0;
   private readonly config: VoiceActivityConfig;
   private readonly detector: VoiceActivityDetector;
   private readonly script: readonly string[];
@@ -90,12 +100,16 @@ export class MockTranscriptionScenario {
     });
   }
 
-  async receiveFrame(frame: string | ArrayBufferLike | ArrayBufferView | Blob) {
+  async receiveFrame(
+    frame: string | ArrayBufferLike | ArrayBufferView | Blob,
+    header?: AudioFrameHeader
+  ) {
     if (this.phase !== "recording") return;
 
     if (typeof frame === "string") {
       try {
-        this.receiveCommand(parseClientCommand(frame));
+        parseClientCommand(frame);
+        this.receiveCommand();
       } catch {
         this.closeWithError(
           {
@@ -129,7 +143,10 @@ export class MockTranscriptionScenario {
       return;
     }
 
-    const frameDurationMs = (buffer.byteLength / 2 / 24_000) * 1000;
+    this.observeHeader(header, buffer.byteLength);
+
+    const frameDurationMs =
+      (buffer.byteLength / 2 / CAPTURE_CONTRACT.sampleRate) * 1000;
     this.recordedDurationMs += frameDurationMs;
     this.bufferedBytes += buffer.byteLength;
     const activity = this.detector.push(frameDurationMs, pcm16Rms(buffer));
@@ -163,12 +180,9 @@ export class MockTranscriptionScenario {
     this.phase = "closed";
   }
 
-  private receiveCommand(command: ClientCommand) {
-    if (command.type === "commit") {
-      this.commitBufferedAudio();
-      return;
-    }
-
+  private receiveCommand() {
+    // `stop` 하나뿐이다. `commit`은 커밋 단위가 없어지면서 사라졌고, 발화 경계는
+    // 이제 침묵(`finalSilenceMs`)과 버퍼 상한이 정한다.
     this.commitBufferedAudio();
     this.phase = "stopping";
     mockDb.updateSessionStatus(this.options.sessionId, "COMPLETED");
@@ -178,6 +192,43 @@ export class MockTranscriptionScenario {
     });
     this.phase = "closed";
     this.options.requestClose?.(1000, "completed");
+  }
+
+  /**
+   * 헤더 둘이 서버가 볼 값과 같은지 본다. 어긋나면 목이 조용히 넘어가는 대신 경고를 남긴다 —
+   * 여기서 잡히는 것이 서버를 짜기 전에 잡히는 것이다.
+   */
+  private observeHeader(header: AudioFrameHeader | undefined, bytes: number) {
+    if (!header || Number.isNaN(header.chunkSeq)) {
+      console.warn("mock transcription: 조각에 chunkSeq 헤더가 없습니다");
+      return;
+    }
+    if (
+      this.lastChunkSeq !== null &&
+      header.chunkSeq !== this.lastChunkSeq + 1
+    ) {
+      // 구멍은 유실이고 되돌아감은 재전송이다. 서버는 전자를 UPLOAD 공백으로 읽는다.
+      console.warn(
+        `mock transcription: chunkSeq 가 ${this.lastChunkSeq} → ${header.chunkSeq} 로 튀었습니다`
+      );
+    }
+    if (
+      this.lastCaptureEnd !== null &&
+      header.captureSamples < this.lastCaptureEnd
+    ) {
+      console.warn(
+        `mock transcription: captureSamples 가 뒷걸음질했습니다 (${this.lastCaptureEnd} → ${header.captureSamples})`
+      );
+    }
+    this.lastChunkSeq = header.chunkSeq;
+    this.lastCaptureEnd =
+      header.captureSamples + bytes / CAPTURE_CONTRACT.bytesPerSample;
+
+    this.chunksSinceAck += 1;
+    if (this.chunksSinceAck >= ACK_EVERY_CHUNKS) {
+      this.chunksSinceAck = 0;
+      this.options.send({ type: "ack", throughChunkSeq: header.chunkSeq });
+    }
   }
 
   private get utteranceId() {
@@ -218,13 +269,14 @@ export class MockTranscriptionScenario {
     });
     this.options.send({
       type: "final",
-      transcriptionSessionId: this.options.sessionId,
       segmentId: segment.segmentId,
       utteranceId,
       sequence: segment.sequence,
       text: segment.text,
       startedAtMs: segment.startedAtMs,
       endedAtMs: segment.endedAtMs,
+      // 화자는 PRO-32가 회의 뒤에 채운다. 실시간에는 항상 null이다.
+      speakerLabel: null,
     });
     this.itemSequence += 1;
     this.sentenceIndex += 1;

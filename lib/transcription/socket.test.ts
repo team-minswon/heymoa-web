@@ -152,13 +152,13 @@ describe("TranscriptionSocket", () => {
     const socket = createSocket();
     const connection = await establish(socket);
 
-    expect(socket.sendAudio(new ArrayBuffer(2))).toBe(false);
+    expect(socket.sendAudio(new ArrayBuffer(2), 0, 0)).toBe(false);
     connection.event({ type: "connected", sessionId });
     await connection.connected;
 
-    expect(socket.sendAudio(new ArrayBuffer(1))).toBe(false);
-    expect(socket.sendAudio(new ArrayBuffer(1_048_578))).toBe(false);
-    expect(socket.sendAudio(new ArrayBuffer(2))).toBe(true);
+    expect(socket.sendAudio(new ArrayBuffer(1), 0, 0)).toBe(false);
+    expect(socket.sendAudio(new ArrayBuffer(32_002), 0, 0)).toBe(false);
+    expect(socket.sendAudio(new ArrayBuffer(2), 0, 0)).toBe(true);
     const subscribeIndex = connection.transport.sent.findIndex((frame) =>
       frameText(frame).startsWith("SUBSCRIBE")
     );
@@ -179,24 +179,33 @@ describe("TranscriptionSocket", () => {
     ).toBe(true);
   });
 
-  it("uses separate STOMP destinations for commit and stop", async () => {
+  it("carries chunkSeq and captureSamples on every audio frame", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
     connection.event({ type: "connected", sessionId });
     await connection.connected;
 
-    socket.commit();
-    socket.stop();
+    expect(socket.sendAudio(new ArrayBuffer(3_200), 12, 19_200)).toBe(true);
 
-    const destinations = connection.transport.sent.map((frame) =>
-      header(frame, "destination")
-    );
-    expect(destinations).toContain(
-      `/app/transcription-sessions/${sessionId}/commit`
-    );
-    expect(destinations).toContain(
-      `/app/transcription-sessions/${sessionId}/stop`
-    );
+    const audio = connection.transport.sent
+      .map(frameText)
+      .find((text) => text.includes(`/${sessionId}/audio`))!;
+    expect(audio).toContain("chunkSeq:12");
+    expect(audio).toContain("captureSamples:19200");
+  });
+
+  it("sends the last chunk number with stop", async () => {
+    const socket = createSocket();
+    const connection = await establish(socket);
+    connection.event({ type: "connected", sessionId });
+    await connection.connected;
+
+    socket.stop(421);
+
+    const stop = connection.transport.sent
+      .map(frameText)
+      .find((text) => text.includes(`/${sessionId}/stop`))!;
+    expect(stop).toContain('"finalChunkSeq":421');
   });
 
   it("rejects audio when the WebSocket send buffer is backlogged", async () => {
@@ -206,7 +215,7 @@ describe("TranscriptionSocket", () => {
     await connection.connected;
     connection.transport.bufferedAmount = 96_001;
 
-    expect(socket.sendAudio(new ArrayBuffer(4_800))).toBe(false);
+    expect(socket.sendAudio(new ArrayBuffer(4_800), 0, 0)).toBe(false);
   });
 
   it("ignores the MSW WebSocket shim's non-draining send buffer", async () => {
@@ -217,7 +226,7 @@ describe("TranscriptionSocket", () => {
     await connection.connected;
     connection.transport.bufferedAmount = 96_001;
 
-    expect(socket.sendAudio(new ArrayBuffer(4_800))).toBe(true);
+    expect(socket.sendAudio(new ArrayBuffer(4_800), 0, 0)).toBe(true);
   });
 
   it("reports a malformed server event and deactivates STOMP", async () => {
@@ -232,7 +241,7 @@ describe("TranscriptionSocket", () => {
     await vi.waitFor(() =>
       expect(onClose).toHaveBeenCalledWith(1008, "invalid server event")
     );
-    expect(socket.sendAudio(new ArrayBuffer(2))).toBe(false);
+    expect(socket.sendAudio(new ArrayBuffer(2), 0, 0)).toBe(false);
   });
 
   it("preserves a server error received before the application session is ready", async () => {

@@ -1,5 +1,6 @@
 import { Client, type StompSubscription } from "@stomp/stompjs";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
+import { CAPTURE_CONTRACT, CAPTURE_TUNING } from "@/lib/transcription/capture-config";
 import {
   parseServerEvent,
   type ServerEvent,
@@ -12,7 +13,11 @@ export type TranscriptionSocketOptions = {
   onClose: (code: number, reason: string) => void;
 };
 
-const MAX_BUFFERED_BYTES = 96_000;
+/**
+ * OS 소켓 버퍼가 밀렸는지만 본다. 「서버가 내구 저장했는가」는 `ResendBuffer`가 본다 —
+ * 소켓을 떠난 조각도 서버가 S3에 쓰기 전에 죽으면 사라지므로 둘은 다른 질문이다.
+ */
+const MAX_BUFFERED_BYTES = CAPTURE_TUNING.backpressureBytes;
 
 export class TranscriptionSocket {
   private client: Client | null = null;
@@ -125,11 +130,19 @@ export class TranscriptionSocket {
     this.reconcileConnection?.();
   }
 
-  sendAudio(chunk: ArrayBuffer): boolean {
+  /**
+   * 헤더가 둘이다. `chunkSeq`는 몇 번째인가, `captureSamples`는 언제인가를 말한다.
+   * 번호만으로는 백그라운드로 못 잡은 20초를 못 잡아낸다 — 번호는 그대로 이어진다.
+   */
+  sendAudio(
+    chunk: ArrayBuffer,
+    chunkSeq: number,
+    captureSamples: number
+  ): boolean {
     if (
       !this.connected ||
-      chunk.byteLength < 2 ||
-      chunk.byteLength > 1_048_576 ||
+      chunk.byteLength < CAPTURE_CONTRACT.minFrameBytes ||
+      chunk.byteLength > CAPTURE_CONTRACT.maxFrameBytes ||
       chunk.byteLength % 2 !== 0
     ) {
       return false;
@@ -146,22 +159,23 @@ export class TranscriptionSocket {
     client.publish({
       destination: this.destination("audio"),
       binaryBody: new Uint8Array(chunk),
-      headers: { "content-type": "application/octet-stream" },
+      headers: {
+        "content-type": "application/octet-stream",
+        chunkSeq: String(chunkSeq),
+        captureSamples: String(captureSamples),
+      },
     });
     return true;
   }
 
-  commit() {
-    this.sendCommand("commit");
-  }
-
-  stop() {
-    this.sendCommand("stop");
-  }
-
-  private sendCommand(command: "commit" | "stop") {
+  /** 조각을 하나도 못 보냈으면 `-1`이다. 서버가 그것으로 「보낸 것이 없다」를 안다. */
+  stop(finalChunkSeq: number) {
     if (this.client?.connected) {
-      this.client.publish({ destination: this.destination(command) });
+      this.client.publish({
+        destination: this.destination("stop"),
+        body: JSON.stringify({ type: "stop", finalChunkSeq }),
+        headers: { "content-type": "application/json" },
+      });
     }
   }
 
@@ -177,7 +191,7 @@ export class TranscriptionSocket {
     await client.deactivate();
   }
 
-  private destination(action: "connect" | "audio" | "commit" | "stop") {
+  private destination(action: "connect" | "audio" | "stop") {
     return `/app/transcription-sessions/${this.options.sessionId}/${action}`;
   }
 }
