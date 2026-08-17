@@ -11,9 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNoteSharedChatMessages } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
+import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
+import { toGapRows } from "@/lib/transcription/gaps";
 import {
+  createSpeakerNameResolver,
   formatOffset,
   groupTranscriptSegments,
+  interleaveTranscript,
 } from "@/lib/transcription/presentation";
 import {
   FOCUSED_TEXT_CLASS,
@@ -109,17 +113,34 @@ export function NoteArchive({
     query: { refetchOnMount: "always" },
   });
 
+  const transcript =
+    transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
+      ? transcriptQuery.data.data.data
+      : null;
   const segments = useMemo(
-    () =>
-      transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
-        ? (transcriptQuery.data.data.data.segments ?? [])
-        : [],
-    [transcriptQuery.data]
+    () => transcript?.segments ?? [],
+    [transcript]
   );
   const blocks = useMemo(
     () => groupTranscriptSegments([...segments]),
     [segments]
   );
+  // 종료된 회의를 여는 자리가 여기다. 공백과 화자를 `TranscriptView`에만 넣으면
+  // 정작 볼 사람이 못 본다.
+  const rows = useMemo(
+    () => interleaveTranscript(blocks, toGapRows(transcript?.gaps ?? [])),
+    [blocks, transcript]
+  );
+  const speakerName = useMemo(
+    () =>
+      createSpeakerNameResolver(
+        transcript?.diarization?.status === "MAPPED"
+          ? transcript.diarization.speakers
+          : []
+      ),
+    [transcript]
+  );
+  const truncated = transcript?.recording?.seal === "TRUNCATED";
 
   const messages =
     chatQuery.data?.status === 200 && chatQuery.data.data.success
@@ -202,29 +223,51 @@ export function NoteArchive({
               </div>
             ) : (
               <div className="mt-3">
-                {blocks.map((block) => (
-                  <article
-                    key={block.blockId}
-                    ref={blockRef(block.blockId)}
-                    data-testid="archive-transcript-block"
-                    data-focused={isHighlighted(block.blockId) || undefined}
-                    className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
+                {rows.map((row) =>
+                  row.type === "gap" ? (
+                    <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
+                  ) : (
+                    <article
+                      key={row.block.blockId}
+                      ref={blockRef(row.block.blockId)}
+                      data-testid="archive-transcript-block"
+                      data-focused={
+                        isHighlighted(row.block.blockId) || undefined
+                      }
+                      className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
+                    >
+                      <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+                        {formatOffset(row.block.startedAtMs)}
+                      </time>
+                      <div className="max-w-3xl">
+                        {speakerName(row.block.speakerLabel) ? (
+                          <p className="mb-1 text-[13px] font-medium text-[var(--el-muted)]">
+                            {speakerName(row.block.speakerLabel)}
+                          </p>
+                        ) : null}
+                        <p className="text-[15px] leading-7 text-[var(--el-ink)]">
+                          <span
+                            className={cn(
+                              isHighlighted(row.block.blockId) &&
+                                FOCUSED_TEXT_CLASS
+                            )}
+                          >
+                            {row.block.text}
+                          </span>
+                        </p>
+                      </div>
+                    </article>
+                  )
+                )}
+                {truncated ? (
+                  <p
+                    data-testid="recording-truncated"
+                    className="py-4 text-sm text-[var(--el-muted)]"
                   >
-                    <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-                      {formatOffset(block.timelineStartedAtMs)}
-                    </time>
-                    <p className="max-w-3xl text-[15px] leading-7 text-[var(--el-ink)]">
-                      <span
-                        className={cn(
-                          isHighlighted(block.blockId) && FOCUSED_TEXT_CLASS
-                        )}
-                      >
-                        {block.text}
-                      </span>
-                    </p>
-                  </article>
-                ))}
-                {!blocks.length ? (
+                    기록이 끝까지 저장되지 못했습니다.
+                  </p>
+                ) : null}
+                {!rows.length ? (
                   <p className="py-8 text-sm text-[var(--el-muted)]">
                     전사된 대화가 없습니다.
                   </p>

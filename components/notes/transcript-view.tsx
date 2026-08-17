@@ -11,9 +11,13 @@ import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-butto
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
+import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
+import { toGapRows } from "@/lib/transcription/gaps";
 import {
+  createSpeakerNameResolver,
   formatOffset,
   groupTranscriptSegments,
+  interleaveTranscript,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
@@ -57,13 +61,11 @@ export function TranscriptView({
       refetchOnWindowFocus: true,
     },
   });
-  const persisted = useMemo(
-    () =>
-      transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
-        ? (transcriptQuery.data.data.data.segments ?? [])
-        : [],
-    [transcriptQuery.data]
-  );
+  const transcript =
+    transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
+      ? transcriptQuery.data.data.data
+      : null;
+  const persisted = useMemo(() => transcript?.segments ?? [], [transcript]);
   const blocks = useMemo(() => {
     const rows = new Map<string, TranscriptPresentationSegment>();
 
@@ -86,6 +88,20 @@ export function TranscriptView({
     noteRealtime.transcript.finalSegments,
     persisted,
   ]);
+  const rows = useMemo(
+    () => interleaveTranscript(blocks, toGapRows(transcript?.gaps ?? [])),
+    [blocks, transcript]
+  );
+  const speakerName = useMemo(
+    () =>
+      createSpeakerNameResolver(
+        transcript?.diarization?.status === "MAPPED"
+          ? transcript.diarization.speakers
+          : []
+      ),
+    [transcript]
+  );
+
   const partialText = useMemo(() => {
     // 살아 있는 partial은 세션당 하나다. 이어 붙이지 않는 것이 핵심이다 — 합치면 확정되지
     // 못한 발화가 화면에 계속 남는다.
@@ -277,31 +293,43 @@ export function TranscriptView({
             </div>
           ) : (
             <div>
-              {blocks.map((block) => (
-                <article
-                  key={block.blockId}
-                  ref={blockRef(block.blockId)}
-                  data-testid="transcript-block"
-                  data-segment-count={block.segmentIds.length}
-                  data-timeline-start-ms={block.timelineStartedAtMs}
-                  data-state="final"
-                  data-focused={isHighlighted(block.blockId) || undefined}
-                  className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
-                >
-                  <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
-                    {formatOffset(block.timelineStartedAtMs)}
-                  </time>
-                  <p className="min-w-0 whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
-                    <span
-                      className={cn(
-                        isHighlighted(block.blockId) && FOCUSED_TEXT_CLASS
-                      )}
-                    >
-                      {block.text}
-                    </span>
-                  </p>
-                </article>
-              ))}
+              {rows.map((row) =>
+                row.type === "gap" ? (
+                  <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
+                ) : (
+                  <article
+                    key={row.block.blockId}
+                    ref={blockRef(row.block.blockId)}
+                    data-testid="transcript-block"
+                    data-segment-count={row.block.segmentIds.length}
+                    data-timeline-start-ms={row.block.startedAtMs}
+                    data-state="final"
+                    data-focused={isHighlighted(row.block.blockId) || undefined}
+                    className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
+                  >
+                    <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
+                      {formatOffset(row.block.startedAtMs)}
+                    </time>
+                    <div className="min-w-0">
+                      {speakerName(row.block.speakerLabel) ? (
+                        <p className="mb-1 text-[13px] font-medium text-[var(--el-muted)]">
+                          {speakerName(row.block.speakerLabel)}
+                        </p>
+                      ) : null}
+                      <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
+                        <span
+                          className={cn(
+                            isHighlighted(row.block.blockId) &&
+                              FOCUSED_TEXT_CLASS
+                          )}
+                        >
+                          {row.block.text}
+                        </span>
+                      </p>
+                    </div>
+                  </article>
+                )
+              )}
 
               {partialText ? (
                 <article

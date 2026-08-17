@@ -33,14 +33,45 @@ export const getGetTranscriptionSessionResponseMock =
 export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
   success: true,
   data: {
+    recording: {
+      startedAt: "2026-08-18T10:00:00Z",
+      seal: "COMPLETE",
+      durationMs: 1820000,
+      audioRetained: true,
+    },
+    diarization: {
+      status: "MAPPED",
+      speakers: [
+        {
+          label: "A",
+          speakingMs: 940000,
+          segmentCount: 128,
+          representativeSegmentId: "0HZX2K7M9Q4AH",
+          assignedParticipantId: "0HZX2K7M9Q4B1",
+          assignedName: "김민수",
+          confirmed: true,
+        },
+      ],
+    },
     segments: [
       {
         segmentId: "0HZX2K7M9Q4AH",
-        transcriptionSessionId: "0HZX2K7M9Q4AG",
         sequence: 1,
         text: "안녕하세요.",
         startedAtMs: 0,
         endedAtMs: 1200,
+        speakerLabel: "A",
+      },
+    ],
+    gaps: [
+      {
+        gapId: "p-0HZX2K7M9Q4AB-612000",
+        kind: "PAUSE",
+        startedAtMs: 612000,
+        endedAtMs: 612000,
+        startedAt: "2026-08-18T10:10:12Z",
+        endedAt: "2026-08-18T10:19:41Z",
+        reason: null,
       },
     ],
   },

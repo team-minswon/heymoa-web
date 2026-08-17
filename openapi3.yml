@@ -2143,13 +2143,36 @@ paths:
                   value:
                     success: true
                     data:
+                      recording:
+                        startedAt: '2026-08-18T10:00:00Z'
+                        seal: COMPLETE
+                        durationMs: 1820000
+                        audioRetained: true
+                      diarization:
+                        status: MAPPED
+                        speakers:
+                        - label: A
+                          speakingMs: 940000
+                          segmentCount: 128
+                          representativeSegmentId: 0HZX2K7M9Q4AH
+                          assignedParticipantId: 0HZX2K7M9Q4B1
+                          assignedName: 김민수
+                          confirmed: true
                       segments:
                       - segmentId: 0HZX2K7M9Q4AH
-                        transcriptionSessionId: 0HZX2K7M9Q4AG
                         sequence: 1
                         text: 안녕하세요.
                         startedAtMs: 0
                         endedAtMs: 1200
+                        speakerLabel: A
+                      gaps:
+                      - gapId: p-0HZX2K7M9Q4AB-612000
+                        kind: PAUSE
+                        startedAtMs: 612000
+                        endedAtMs: 612000
+                        startedAt: '2026-08-18T10:10:12Z'
+                        endedAt: '2026-08-18T10:19:41Z'
+                        reason: null
                     error: null
         '400':
           description: 잘못된 요청
@@ -5910,12 +5933,121 @@ components:
       properties:
         data:
           required:
+          - diarization
+          - gaps
+          - recording
           - segments
           type: object
           properties:
+            recording:
+              required:
+              - audioRetained
+              - durationMs
+              - seal
+              - startedAt
+              type: object
+              description: 회의 축의 원점과 봉인 상태
+              properties:
+                startedAt:
+                  type: string
+                  description: 회의 축의 원점이 되는 실제 시각
+                  format: date-time
+                  nullable: false
+                  example: '2026-08-18T10:00:00Z'
+                seal:
+                  type: string
+                  description: 봉인 판정. OPEN 은 오류가 아니라 아직 판정 전이다
+                  enum:
+                  - OPEN
+                  - COMPLETE
+                  - TRUNCATED
+                  nullable: false
+                  example: COMPLETE
+                durationMs:
+                  type: integer
+                  description: 회의 축 길이. OPEN 이면 지금까지
+                  format: int64
+                  nullable: false
+                  minimum: 0
+                  example: 1820000
+                audioRetained:
+                  type: boolean
+                  description: false 면 소리가 남지 않아 화자 분리를 못 한다
+                  nullable: false
+                  example: true
+              nullable: false
+            diarization:
+              required:
+              - speakers
+              - status
+              type: object
+              description: 화자 분리 진행 상태와 화자 목록
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - NOT_REQUESTED
+                  - ASSEMBLING
+                  - SUBMITTED
+                  - MAPPED
+                  - FAILED
+                  nullable: false
+                  example: MAPPED
+                speakers:
+                  type: array
+                  description: MAPPED 이전에는 빈 배열
+                  items:
+                    required:
+                    - confirmed
+                    - label
+                    - representativeSegmentId
+                    - segmentCount
+                    - speakingMs
+                    type: object
+                    properties:
+                      label:
+                        type: string
+                        description: 정규화된 화자 라벨. 공급자 문자열이 아니다
+                        nullable: false
+                        example: A
+                      speakingMs:
+                        type: integer
+                        format: int64
+                        nullable: false
+                        minimum: 0
+                        example: 940000
+                      segmentCount:
+                        type: integer
+                        nullable: false
+                        minimum: 0
+                        example: 128
+                      representativeSegmentId:
+                        type: string
+                        description: 그 화자의 가장 긴 발화
+                        nullable: false
+                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        minLength: 13
+                        maxLength: 13
+                        example: 0HZX2K7M9Q4AH
+                      assignedParticipantId:
+                        type: string
+                        description: 계정이 아니라 이 회의의 참여 기록을 가리킨다
+                        nullable: true
+                        example: 0HZX2K7M9Q4B1
+                      assignedName:
+                        type: string
+                        nullable: true
+                        example: 김민수
+                      confirmed:
+                        type: boolean
+                        description: null + confirmed 는 「참석자 중에 없다」로 사람이 확정한 것이다
+                        nullable: false
+                        example: true
+                  nullable: false
+              nullable: false
             segments:
               type: array
-              description: 시간순 확정 전사 구간 목록
+              description: 회의 축 오름차순. 한 행이 발화 하나다
               items:
                 required:
                 - endedAtMs
@@ -5923,16 +6055,8 @@ components:
                 - sequence
                 - startedAtMs
                 - text
-                - transcriptionSessionId
                 type: object
                 properties:
-                  sequence:
-                    type: integer
-                    description: 세션 내 구간 순서
-                    nullable: false
-                    example: 1
-                    format: int64
-                    minimum: 0
                   segmentId:
                     type: string
                     description: 확정 전사 구간의 13자리 TSID
@@ -5941,11 +6065,11 @@ components:
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
                     minLength: 13
                     maxLength: 13
-                  endedAtMs:
+                  sequence:
                     type: integer
-                    description: 세션 시작 기준 PCM 구간 종료 밀리초
+                    description: 노트 내 구간 순서
                     nullable: false
-                    example: 1200
+                    example: 1
                     format: int64
                     minimum: 0
                   text:
@@ -5953,21 +6077,80 @@ components:
                     description: 확정 전사 텍스트
                     nullable: false
                     example: 안녕하세요.
-                  transcriptionSessionId:
-                    type: string
-                    description: 전사 세션의 13자리 TSID
-                    nullable: false
-                    example: 0HZX2K7M9Q4AG
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
                   startedAtMs:
                     type: integer
-                    description: 세션 시작 기준 PCM 구간 시작 밀리초
+                    description: 회의 시작 기준 첫 토큰 밀리초
                     nullable: false
                     example: 0
                     format: int64
                     minimum: 0
+                  endedAtMs:
+                    type: integer
+                    description: 회의 시작 기준 마지막 토큰 밀리초
+                    nullable: false
+                    example: 1200
+                    format: int64
+                    minimum: 0
+                  speakerLabel:
+                    type: string
+                    description: 겹침이 0이면 null
+                    nullable: true
+                    example: A
+              nullable: false
+            gaps:
+              type: array
+              description: 소리가 빈 구간. 겹칠 수 있고 셋 다 유도값이다
+              items:
+                required:
+                - endedAt
+                - endedAtMs
+                - gapId
+                - kind
+                - startedAt
+                - startedAtMs
+                type: object
+                properties:
+                  gapId:
+                    type: string
+                    description: 유도한 구간에서 결정적으로 만든다. TSID 가 아니다
+                    nullable: false
+                    example: p-0HZX2K7M9Q4AB-612000
+                  kind:
+                    type: string
+                    description: PAUSE 는 회의 축에서 점이라 두 좌표가 같다
+                    enum:
+                    - PAUSE
+                    - CAPTURE
+                    - UPLOAD
+                    nullable: false
+                    example: PAUSE
+                  startedAtMs:
+                    type: integer
+                    format: int64
+                    nullable: false
+                    minimum: 0
+                    example: 612000
+                  endedAtMs:
+                    type: integer
+                    description: 진행 중이면 지금까지 확인된 끝
+                    format: int64
+                    nullable: false
+                    minimum: 0
+                    example: 612000
+                  startedAt:
+                    type: string
+                    format: date-time
+                    nullable: false
+                    example: '2026-08-18T10:10:12Z'
+                  endedAt:
+                    type: string
+                    description: 진행 중이면 null
+                    format: date-time
+                    nullable: true
+                    example: '2026-08-18T10:19:41Z'
+                  reason:
+                    type: string
+                    nullable: true
               nullable: false
           description: 성공 응답 데이터
           nullable: false

@@ -14,7 +14,6 @@ import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 const NOTE_ID = "01K0000000002";
 const POLLED_SEGMENT = {
   segmentId: "01K0000000100",
-  transcriptionSessionId: "01K0000000010",
   sequence: 1,
   text: "폴링 전 발화입니다.",
   startedAtMs: 0,
@@ -22,7 +21,6 @@ const POLLED_SEGMENT = {
 };
 const NEW_POLLED_SEGMENT = {
   segmentId: "01K0000000101",
-  transcriptionSessionId: "01K0000000010",
   sequence: 2,
   text: "폴링으로 도착한 발화입니다.",
   startedAtMs: 1_000,
@@ -46,7 +44,6 @@ const useGetNoteTranscript = vi.hoisted(() =>
           segments: [
             {
               segmentId: "01K0000000012",
-              transcriptionSessionId: "01K0000000010",
               sequence: 1,
               text: "첫 번째 결정사항입니다.",
               startedAtMs: 0,
@@ -54,7 +51,6 @@ const useGetNoteTranscript = vi.hoisted(() =>
             },
             {
               segmentId: "01K0000000013",
-              transcriptionSessionId: "01K0000000010",
               sequence: 2,
               text: "두 번째 결정사항입니다.",
               startedAtMs: 1_300,
@@ -62,11 +58,10 @@ const useGetNoteTranscript = vi.hoisted(() =>
             },
             {
               segmentId: "01K0000000014",
-              transcriptionSessionId: "01K0000000020",
-              sequence: 1,
+              sequence: 3,
               text: "두 번째 녹음의 첫 문장입니다.",
-              startedAtMs: 0,
-              endedAtMs: 900,
+              startedAtMs: 620_000,
+              endedAtMs: 620_900,
             },
           ],
         },
@@ -110,10 +105,10 @@ function recordingState(partialText = "결과를 정리합니다") {
           segmentId: "01K0000000011",
           utteranceId: "01K0000000200",
           type: "final",
-          sequence: 2,
+          sequence: 4,
           text: "세 번째 녹음의 확정 문장입니다.",
-          startedAtMs: 1_300,
-          endedAtMs: 2_400,
+          startedAtMs: 1_240_000,
+          endedAtMs: 1_241_100,
         },
       ],
     },
@@ -469,7 +464,6 @@ describe("TranscriptView", () => {
       {
         type: "transcript.final",
         segmentId: "01K0000000099",
-        transcriptionSessionId: "01K0000000030",
         utteranceId: "01K0000000201",
         sequence: 3,
         text: "확정됐습니다.",
@@ -481,7 +475,8 @@ describe("TranscriptView", () => {
     renderTranscript();
 
     expect(screen.queryByText("결과를 정리합니다")).toBeNull();
-    expect(screen.getByText("확정됐습니다.")).toBeInTheDocument();
+    // 회의 축에서 앞 발화와 이어져 한 블록으로 묶인다 — 확정 텍스트가 살아 있으면 된다
+    expect(screen.getByText(/확정됐습니다\./)).toBeInTheDocument();
   });
 
   it("내가 녹음자면 토픽이 아니라 내 소켓의 발화를 그린다", () => {

@@ -8,11 +8,6 @@
 
 export type TranscriptResponseDataSegmentsItem = {
   /**
-   * 세션 내 구간 순서
-   * @minimum 0
-   */
-  sequence: number;
-  /**
    * 확정 전사 구간의 13자리 TSID
    * @minLength 13
    * @maxLength 13
@@ -20,22 +15,25 @@ export type TranscriptResponseDataSegmentsItem = {
    */
   segmentId: string;
   /**
-   * 세션 시작 기준 PCM 구간 종료 밀리초
+   * 노트 내 구간 순서
    * @minimum 0
    */
-  endedAtMs: number;
+  sequence: number;
   /** 확정 전사 텍스트 */
   text: string;
   /**
-   * 전사 세션의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
-   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
-   */
-  transcriptionSessionId: string;
-  /**
-   * 세션 시작 기준 PCM 구간 시작 밀리초
+   * 회의 시작 기준 첫 토큰 밀리초
    * @minimum 0
    */
   startedAtMs: number;
+  /**
+   * 회의 시작 기준 마지막 토큰 밀리초
+   * @minimum 0
+   */
+  endedAtMs: number;
+  /**
+   * 겹침이 0이면 null
+   * @nullable
+   */
+  speakerLabel?: string | null;
 };

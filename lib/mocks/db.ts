@@ -30,6 +30,9 @@ import type {
   NoteSharedChatResponseDataMessagesItem,
   NoteSharedChatResponseDataLockPendingApproval,
   WorkspaceResponseData,
+  TranscriptResponseData,
+  TranscriptResponseDataDiarization,
+  TranscriptResponseDataGapsItem,
 } from "@/lib/api/generated/models";
 import { getAppDateKey } from "@/lib/format/date";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
@@ -46,6 +49,40 @@ type AddSegmentInput = Pick<
 type MockSession = Omit<TranscriptionSessionResponseData, "status"> & {
   status: string;
 };
+
+/**
+ * 목이 저장하는 발화. 응답 타입에는 `transcriptionSessionId`가 없다 — 그 필드가 있는 동안
+ * web 이 세션 경계로 타임라인을 이어 붙였다. 소속은 안쪽에서만 들고 있고, 응답으로 나갈 때
+ * 회의 축 좌표로 바뀐다.
+ */
+type StoredSegment = TranscriptResponseDataSegmentsItem & {
+  transcriptionSessionId: string;
+};
+
+/**
+ * 세션마다 회의 축의 원점.
+ *
+ * ```
+ * note_offset_ms(N) = Σ (session_i.ended_at − session_i.started_at)  for i < N
+ * ```
+ *
+ * **세션 길이만 더하고 사이는 안 더한다** — 중지는 회의 축에서 제외다. 서버의 V25
+ * 마이그레이션이 쓰는 것과 같은 식이다.
+ */
+function noteOffsetsMs(sessions: MockSession[]) {
+  const offsets = new Map<string, number>();
+  let accumulated = 0;
+  for (const session of sessions) {
+    offsets.set(session.sessionId, accumulated);
+    if (session.startedAt && session.endedAt) {
+      accumulated += Math.max(
+        0,
+        Date.parse(session.endedAt) - Date.parse(session.startedAt)
+      );
+    }
+  }
+  return offsets;
+}
 
 /** 멤버는 워크스페이스 소속이므로 응답 항목에 없는 workspaceId를 안쪽에서만 들고 있는다. */
 type MockMember = WorkspaceMemberListResponseDataMembersItem & {
@@ -103,7 +140,11 @@ type StoreState = {
   projects: ProjectResponseData[];
   notes: NoteResponseData[];
   sessions: MockSession[];
-  segments: TranscriptResponseDataSegmentsItem[];
+  segments: StoredSegment[];
+  /** 화자 분리 결과. 목이 시나리오로 심는다 — 아직 만드는 흐름이 없다(APP-419·420). */
+  diarizations: Map<string, TranscriptResponseDataDiarization>;
+  /** 세션 사이가 아닌 공백(CAPTURE·UPLOAD). 서버가 오브젝트에서 유도하는 것을 목이 심는다. */
+  extraGaps: Map<string, TranscriptResponseDataGapsItem[]>;
   members: MockMember[];
   invitations: MockInvitation[];
   notifications: NotificationListResponseDataNotificationsItem[];
@@ -505,7 +546,7 @@ function createSeedState(): StoreState {
     // 동시에 하나만 녹음) 시드가 하나라도 있으면 모든 세션 생성이 막힌다.
     // `startedAt`·`endedAt`·`endReason`의 null 경로는 `createSession`이 런타임에 만든다.
   ];
-  const segments: TranscriptResponseDataSegmentsItem[] = [
+  const segments: StoredSegment[] = [
     {
       segmentId: "01K0000000011",
       transcriptionSessionId: sessions[0].sessionId,
@@ -559,6 +600,7 @@ function createSeedState(): StoreState {
     {
       segmentId: "01K0000000061",
       transcriptionSessionId: "01K0000000060",
+      speakerLabel: "A",
       sequence: 1,
       text: "가입 후 첫 회의를 만들기까지 이탈이 가장 큽니다.",
       startedAtMs: 12000,
@@ -567,6 +609,7 @@ function createSeedState(): StoreState {
     {
       segmentId: "01K0000000062",
       transcriptionSessionId: "01K0000000060",
+      speakerLabel: "B",
       sequence: 2,
       text: "문구 문제라기보다 다음에 뭘 해야 하는지가 안 보입니다.",
       startedAtMs: 40000,
@@ -575,6 +618,7 @@ function createSeedState(): StoreState {
     {
       segmentId: "01K0000000063",
       transcriptionSessionId: "01K0000000060",
+      speakerLabel: "A",
       sequence: 3,
       text: "그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.",
       startedAtMs: 92000,
@@ -685,6 +729,66 @@ function createSeedState(): StoreState {
     notes,
     sessions,
     segments,
+    // 화자 분리를 시드한다. 목에 이걸 밀어줄 주체가 없어서(APP-419·420이 서버 몫) 없으면
+    // **화자 이름이 붙은 회의록을 목에서 한 번도 볼 수 없다.**
+    //
+    // 연결된 화자와 안 연결된 화자를 **둘 다** 심는다 — 한쪽만 심으면 `화자 A` 분기가
+    // 목에서 안 그려지고 실서버에서 처음 실행된다.
+    diarizations: new Map<string, TranscriptResponseDataDiarization>([
+      [
+        "01K0000000020",
+        {
+          status: "MAPPED",
+          speakers: [
+            {
+              label: "A",
+              speakingMs: 940_000,
+              segmentCount: 2,
+              representativeSegmentId: "01K0000000021",
+              assignedParticipantId: "01K0000000003",
+              assignedName: "김민수",
+              confirmed: true,
+            },
+            {
+              label: "B",
+              speakingMs: 610_000,
+              segmentCount: 1,
+              representativeSegmentId: "01K0000000022",
+              assignedParticipantId: null,
+              assignedName: null,
+              confirmed: false,
+            },
+          ],
+        },
+      ],
+    ]),
+    // 사고 공백. 끝난 것과 진행 중인 것, 이유가 있는 것과 없는 것을 함께 심는다.
+    extraGaps: new Map<string, TranscriptResponseDataGapsItem[]>([
+      [
+        "01K0000000020",
+        [
+          {
+            gapId: "c-01K0000000020-604000",
+            kind: "CAPTURE",
+            startedAtMs: 604_000,
+            endedAtMs: 620_000,
+            startedAt: "2026-07-13T00:10:04Z",
+            endedAt: "2026-07-13T00:10:20Z",
+            reason: "브라우저가 소리를 만들지 못했습니다",
+          },
+          {
+            // 아직 안 끝난 공백. 화면이 `10:04 – 진행 중`으로 열어 두고 회복하면 닫는다.
+            gapId: "u-01K0000000020-140000",
+            kind: "UPLOAD",
+            startedAtMs: 140_000,
+            endedAtMs: 144_000,
+            startedAt: "2026-07-13T00:02:20Z",
+            endedAt: null,
+            reason: null,
+          },
+        ],
+      ],
+    ]),
     members,
     invitations,
     notifications,
@@ -1966,6 +2070,63 @@ export const mockDb = {
     return copy(session) as unknown as TranscriptionSessionResponseData;
   },
 
+  /**
+   * 화면이 읽는 유일한 조회. **응답 하나에 다 담는다** — 발화·공백·화자·봉인을 따로
+   * 조회하면 네 응답의 시각이 서로 어긋난 순간이 그려진다.
+   */
+  getTranscript(noteId: string): TranscriptResponseData {
+    const note = findNote(noteId);
+    const sessions = state.sessions
+      .filter((session) => session.noteId === noteId)
+      .sort((a, b) => (a.startedAt ?? "").localeCompare(b.startedAt ?? ""));
+    const segments = this.listSegments(noteId);
+    const offsets = noteOffsetsMs(sessions);
+
+    const last = sessions.at(-1);
+    const durationMs =
+      last && last.startedAt && last.endedAt
+        ? (offsets.get(last.sessionId) ?? 0) +
+          Math.max(0, Date.parse(last.endedAt) - Date.parse(last.startedAt))
+        : (segments.at(-1)?.endedAtMs ?? 0);
+
+    // 세션과 세션 사이가 PAUSE 다. 회의 축에서 제외이므로 두 좌표가 같은 **점**이고,
+    // 길이는 벽시계에서만 나온다.
+    const gaps: TranscriptResponseDataGapsItem[] = [];
+    sessions.forEach((session, index) => {
+      const previous = sessions[index - 1];
+      if (!previous?.endedAt || !session.startedAt) return;
+      const at = offsets.get(session.sessionId) ?? 0;
+      gaps.push({
+        gapId: `p-${previous.sessionId}-${at}`,
+        kind: "PAUSE",
+        startedAtMs: at,
+        endedAtMs: at,
+        startedAt: previous.endedAt,
+        endedAt: session.startedAt,
+        reason: null,
+      });
+    });
+
+    return {
+      recording: {
+        startedAt: sessions[0]?.startedAt ?? note.meetingStartedAt ?? note.createdAt,
+        // 봉인은 회의가 끝나야 찍힌다. 진행 중이면 OPEN 이고 그건 오류가 아니다.
+        seal: note.meetingStatus === "ENDED" ? "COMPLETE" : "OPEN",
+        durationMs,
+        // 옛 노트는 전사만 있고 소리가 없다 — 「COMPLETE 인데 조립은 못 한다」가 정상이다.
+        audioRetained: sessions.length > 0,
+      },
+      diarization: state.diarizations.get(noteId) ?? {
+        status: "NOT_REQUESTED",
+        speakers: [],
+      },
+      segments,
+      gaps: [...gaps, ...(state.extraGaps.get(noteId) ?? [])].sort(
+        (a, b) => a.startedAtMs - b.startedAtMs
+      ),
+    };
+  },
+
   listSegments(noteId: string): TranscriptResponseDataSegmentsItem[] {
     findNote(noteId);
     const noteSessions = state.sessions
@@ -1978,6 +2139,10 @@ export const mockDb = {
     const sessionOrder = new Map(
       noteSessions.map((session, index) => [session.sessionId, index])
     );
+    // 서버가 하는 일을 목이 그대로 한다 — 세션 좌표를 회의 축으로 옮기고 노트 내
+    // 순서로 다시 번호를 매긴다. 이 계산이 web 에 남아 있는 동안 다세션 노트의 시각이
+    // 세션마다 00:00 으로 되돌아갔다.
+    const offsets = noteOffsetsMs(noteSessions);
     const segments = state.segments
       .filter((segment) => sessionOrder.has(segment.transcriptionSessionId))
       .sort(
@@ -1985,14 +2150,22 @@ export const mockDb = {
           (sessionOrder.get(a.transcriptionSessionId) ?? 0) -
             (sessionOrder.get(b.transcriptionSessionId) ?? 0) ||
           a.sequence - b.sequence
-      );
+      )
+      .map((segment, index) => {
+        const offset = offsets.get(segment.transcriptionSessionId) ?? 0;
+        return {
+          segmentId: segment.segmentId,
+          sequence: index + 1,
+          text: segment.text,
+          startedAtMs: segment.startedAtMs + offset,
+          endedAtMs: segment.endedAtMs + offset,
+          speakerLabel: segment.speakerLabel ?? null,
+        } satisfies TranscriptResponseDataSegmentsItem;
+      });
     return copy(segments);
   },
 
-  addSegment(
-    sessionId: string,
-    input: AddSegmentInput
-  ): TranscriptResponseDataSegmentsItem {
+  addSegment(sessionId: string, input: AddSegmentInput): StoredSegment {
     findSession(sessionId);
     const sequence =
       Math.max(
@@ -2001,7 +2174,7 @@ export const mockDb = {
           .filter((segment) => segment.transcriptionSessionId === sessionId)
           .map((segment) => segment.sequence)
       ) + 1;
-    const segment: TranscriptResponseDataSegmentsItem = {
+    const segment: StoredSegment = {
       segmentId: nextId(),
       transcriptionSessionId: sessionId,
       sequence,

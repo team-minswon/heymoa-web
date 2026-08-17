@@ -5,12 +5,21 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { TranscriptResponseDataDiarization } from "./transcriptResponseDataDiarization";
+import type { TranscriptResponseDataGapsItem } from "./transcriptResponseDataGapsItem";
+import type { TranscriptResponseDataRecording } from "./transcriptResponseDataRecording";
 import type { TranscriptResponseDataSegmentsItem } from "./transcriptResponseDataSegmentsItem";
 
 /**
  * 성공 응답 데이터
  */
 export type TranscriptResponseData = {
-  /** 시간순 확정 전사 구간 목록 */
+  /** 회의 축의 원점과 봉인 상태 */
+  recording: TranscriptResponseDataRecording;
+  /** 화자 분리 진행 상태와 화자 목록 */
+  diarization: TranscriptResponseDataDiarization;
+  /** 회의 축 오름차순. 한 행이 발화 하나다 */
   segments: TranscriptResponseDataSegmentsItem[];
+  /** 소리가 빈 구간. 겹칠 수 있고 셋 다 유도값이다 */
+  gaps: TranscriptResponseDataGapsItem[];
 };
