@@ -6,13 +6,13 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { TranscriptResponseDataDiarizationSpeakersItem } from "./transcriptResponseDataDiarizationSpeakersItem";
-import type { TranscriptResponseDataDiarizationStatus } from "./transcriptResponseDataDiarizationStatus";
 
 /**
  * 화자 분리 진행 상태와 화자 목록
  */
 export type TranscriptResponseDataDiarization = {
-  status: TranscriptResponseDataDiarizationStatus;
-  /** MAPPED 이전에는 빈 배열 */
+  /** MAPPED 이전에는 빈 배열. 말한 양 내림차순 */
   speakers: TranscriptResponseDataDiarizationSpeakersItem[];
+  /** 화자 분리 진행 상태 */
+  status: string;
 };

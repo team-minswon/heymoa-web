@@ -25,13 +25,13 @@ import type {
 
 import type {
   AppErrorResponse,
-  AssignSpeakerRequest,
   CurrentTranscriptionSessionNullableResponse,
   SpeakerListResponse,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
   UnauthorizedResponse,
+  V1NotesNoteIdSpeakersLabel647408416,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -786,163 +786,6 @@ export function useGetNoteTranscriptSuspense<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type assignNoteSpeakerResponse200 = {
-  data: SpeakerListResponse;
-  status: 200;
-};
-
-export type assignNoteSpeakerResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
-export type assignNoteSpeakerResponse401 = {
-  data: UnauthorizedResponse;
-  status: 401;
-};
-
-export type assignNoteSpeakerResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
-};
-
-export type assignNoteSpeakerResponse404 = {
-  data: AppErrorResponse;
-  status: 404;
-};
-
-export type assignNoteSpeakerResponse409 = {
-  data: AppErrorResponse;
-  status: 409;
-};
-
-export type assignNoteSpeakerResponse422 = {
-  data: AppErrorResponse;
-  status: 422;
-};
-
-export type assignNoteSpeakerResponseSuccess = assignNoteSpeakerResponse200 & {
-  headers: Headers;
-};
-export type assignNoteSpeakerResponseError = (
-  | assignNoteSpeakerResponse400
-  | assignNoteSpeakerResponse401
-  | assignNoteSpeakerResponse403
-  | assignNoteSpeakerResponse404
-  | assignNoteSpeakerResponse409
-  | assignNoteSpeakerResponse422
-) & {
-  headers: Headers;
-};
-
-export type assignNoteSpeakerResponse =
-  | assignNoteSpeakerResponseSuccess
-  | assignNoteSpeakerResponseError;
-
-export const getAssignNoteSpeakerUrl = (noteId: string, label: string) => {
-  return `/v1/notes/${noteId}/speakers/${label}`;
-};
-
-/**
- * 화자 연결은 노트의 속성이 아니라 **화자 라벨의 속성**이고 권한도 다르다 —
- * 노트 수정은 멤버가 하지만 화자 연결은 **참석자만** 한다.
- *
- * `userId: null` 은 「모르겠다」가 아니라 **「참석자 중에 없다」**로 사람이 확정한 것이다.
- * 미결정은 *이 API 를 아직 안 부른 상태*로 표현된다. 되돌릴 값을 따로 두면
- * 「아직 안 봤다」와 「봤는데 모르는 사람이다」가 같은 값이 되어 남은 화자를 셀 수 없다.
- *
- * 응답은 **갱신된 화자 목록 전체**다. 한 명을 연결하면 다른 화자에게서 그 사람이
- * 떨어지므로(한 사람이 두 화자일 수 없다) 부분 응답으로는 화면이 안 맞는다.
- * @summary 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
- */
-export const assignNoteSpeaker = async (
-  noteId: string,
-  label: string,
-  assignSpeakerRequest: AssignSpeakerRequest,
-  options?: RequestInit
-): Promise<assignNoteSpeakerResponse> => {
-  return apiFetch<assignNoteSpeakerResponse>(
-    getAssignNoteSpeakerUrl(noteId, label),
-    {
-      ...options,
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(assignSpeakerRequest),
-    }
-  );
-};
-
-export const getAssignNoteSpeakerMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof assignNoteSpeaker>>,
-    TError,
-    { noteId: string; label: string; data: AssignSpeakerRequest },
-    TContext
-  >;
-  request?: SecondParameter<typeof apiFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof assignNoteSpeaker>>,
-  TError,
-  { noteId: string; label: string; data: AssignSpeakerRequest },
-  TContext
-> => {
-  const mutationKey = ["assignNoteSpeaker"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof assignNoteSpeaker>>,
-    { noteId: string; label: string; data: AssignSpeakerRequest }
-  > = (props) => {
-    const { noteId, label, data } = props ?? {};
-
-    return assignNoteSpeaker(noteId, label, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type AssignNoteSpeakerMutationResult = NonNullable<
-  Awaited<ReturnType<typeof assignNoteSpeaker>>
->;
-export type AssignNoteSpeakerMutationBody = AssignSpeakerRequest;
-export type AssignNoteSpeakerMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
-
-/**
- * @summary 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
- */
-export const useAssignNoteSpeaker = <
-  TError = AppErrorResponse | UnauthorizedResponse,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof assignNoteSpeaker>>,
-      TError,
-      { noteId: string; label: string; data: AssignSpeakerRequest },
-      TContext
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof assignNoteSpeaker>>,
-  TError,
-  { noteId: string; label: string; data: AssignSpeakerRequest },
-  TContext
-> => {
-  return useMutation(getAssignNoteSpeakerMutationOptions(options), queryClient);
-};
 export type startTranscriptionSessionResponse201 = {
   data: StartTranscriptionSessionResponse;
   status: 201;
@@ -1079,6 +922,157 @@ export const useStartTranscriptionSession = <
     getStartTranscriptionSessionMutationOptions(options),
     queryClient
   );
+};
+export type assignNoteSpeakerResponse200 = {
+  data: SpeakerListResponse;
+  status: 200;
+};
+
+export type assignNoteSpeakerResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type assignNoteSpeakerResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type assignNoteSpeakerResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type assignNoteSpeakerResponse422 = {
+  data: AppErrorResponse;
+  status: 422;
+};
+
+export type assignNoteSpeakerResponseSuccess = assignNoteSpeakerResponse200 & {
+  headers: Headers;
+};
+export type assignNoteSpeakerResponseError = (
+  | assignNoteSpeakerResponse401
+  | assignNoteSpeakerResponse403
+  | assignNoteSpeakerResponse404
+  | assignNoteSpeakerResponse422
+) & {
+  headers: Headers;
+};
+
+export type assignNoteSpeakerResponse =
+  | assignNoteSpeakerResponseSuccess
+  | assignNoteSpeakerResponseError;
+
+export const getAssignNoteSpeakerUrl = (noteId: string, label: string) => {
+  return `/v1/notes/${noteId}/speakers/${label}`;
+};
+
+/**
+ * 화자 연결은 노트의 속성이 아니라 화자 라벨의 속성이고 권한도 다르다 — 노트 수정은 멤버가 하지만 화자 연결은 참석자만 한다. 응답은 갱신된 화자 목록 전체다.
+ * @summary 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
+ */
+export const assignNoteSpeaker = async (
+  noteId: string,
+  label: string,
+  v1NotesNoteIdSpeakersLabel647408416?: V1NotesNoteIdSpeakersLabel647408416,
+  options?: RequestInit
+): Promise<assignNoteSpeakerResponse> => {
+  return apiFetch<assignNoteSpeakerResponse>(
+    getAssignNoteSpeakerUrl(noteId, label),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(v1NotesNoteIdSpeakersLabel647408416),
+    }
+  );
+};
+
+export const getAssignNoteSpeakerMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignNoteSpeaker>>,
+    TError,
+    {
+      noteId: string;
+      label: string;
+      data?: V1NotesNoteIdSpeakersLabel647408416;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assignNoteSpeaker>>,
+  TError,
+  { noteId: string; label: string; data?: V1NotesNoteIdSpeakersLabel647408416 },
+  TContext
+> => {
+  const mutationKey = ["assignNoteSpeaker"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assignNoteSpeaker>>,
+    {
+      noteId: string;
+      label: string;
+      data?: V1NotesNoteIdSpeakersLabel647408416;
+    }
+  > = (props) => {
+    const { noteId, label, data } = props ?? {};
+
+    return assignNoteSpeaker(noteId, label, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssignNoteSpeakerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assignNoteSpeaker>>
+>;
+export type AssignNoteSpeakerMutationBody =
+  | V1NotesNoteIdSpeakersLabel647408416
+  | undefined;
+export type AssignNoteSpeakerMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
+ */
+export const useAssignNoteSpeaker = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assignNoteSpeaker>>,
+      TError,
+      {
+        noteId: string;
+        label: string;
+        data?: V1NotesNoteIdSpeakersLabel647408416;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof assignNoteSpeaker>>,
+  TError,
+  { noteId: string; label: string; data?: V1NotesNoteIdSpeakersLabel647408416 },
+  TContext
+> => {
+  return useMutation(getAssignNoteSpeakerMutationOptions(options), queryClient);
 };
 export type getCurrentTranscriptionSessionResponse200 = {
   data: CurrentTranscriptionSessionNullableResponse;

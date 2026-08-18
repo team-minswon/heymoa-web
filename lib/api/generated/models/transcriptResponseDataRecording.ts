@@ -5,21 +5,20 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { TranscriptResponseDataRecordingSeal } from "./transcriptResponseDataRecordingSeal";
 
 /**
  * 회의 축의 원점과 봉인 상태
  */
 export type TranscriptResponseDataRecording = {
+  /** 봉인 판정. OPEN 은 오류가 아니라 아직 판정 전이다 */
+  seal: string;
   /** 회의 축의 원점이 되는 실제 시각 */
   startedAt: string;
-  /** 봉인 판정. OPEN 은 오류가 아니라 아직 판정 전이다 */
-  seal: TranscriptResponseDataRecordingSeal;
+  /** false 면 소리가 남지 않아 화자 분리를 못 한다 */
+  audioRetained: boolean;
   /**
    * 회의 축 길이. OPEN 이면 지금까지
    * @minimum 0
    */
   durationMs: number;
-  /** false 면 소리가 남지 않아 화자 분리를 못 한다 */
-  audioRetained: boolean;
 };

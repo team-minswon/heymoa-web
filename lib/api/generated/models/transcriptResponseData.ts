@@ -18,8 +18,8 @@ export type TranscriptResponseData = {
   recording: TranscriptResponseDataRecording;
   /** 화자 분리 진행 상태와 화자 목록 */
   diarization: TranscriptResponseDataDiarization;
-  /** 회의 축 오름차순. 한 행이 발화 하나다 */
-  segments: TranscriptResponseDataSegmentsItem[];
   /** 소리가 빈 구간. 겹칠 수 있고 셋 다 유도값이다 */
   gaps: TranscriptResponseDataGapsItem[];
+  /** 회의 축 오름차순. 한 행이 발화 하나다 */
+  segments: TranscriptResponseDataSegmentsItem[];
 };

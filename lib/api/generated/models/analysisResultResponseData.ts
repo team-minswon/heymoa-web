@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AnalysisResultResponseDataPrevious } from "./analysisResultResponseDataPrevious";
 import type { AnalysisResultResponseDataSectionsItem } from "./analysisResultResponseDataSectionsItem";
 import type { AnalysisResultResponseDataStatus } from "./analysisResultResponseDataStatus";
 
@@ -12,6 +13,11 @@ import type { AnalysisResultResponseDataStatus } from "./analysisResultResponseD
  * 성공 응답 데이터
  */
 export type AnalysisResultResponseData = {
+  /**
+   * 최신이 FAILED일 때 함께 오는 이전 성공본. 화면이 「(언제) 만든 요약입니다」로 그린다
+   * @nullable
+   */
+  previous?: AnalysisResultResponseDataPrevious;
   /**
    * 에러 메시지 (FAILED일 때)
    * @nullable

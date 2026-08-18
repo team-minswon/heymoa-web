@@ -596,6 +596,7 @@ function createSeedState(): StoreState {
       text: "이번 주 제품 진행 상황을 공유하겠습니다.",
       startedAtMs: 0,
       endedAtMs: 1800,
+      speakerLabel: null,
     },
     {
       segmentId: "01K0000000012",
@@ -604,6 +605,7 @@ function createSeedState(): StoreState {
       text: "첫 번째 안건은 온보딩 개선입니다.",
       startedAtMs: 2200,
       endedAtMs: 4300,
+      speakerLabel: null,
     },
     {
       segmentId: "01K0000000013",
@@ -612,6 +614,7 @@ function createSeedState(): StoreState {
       text: "다음 주까지 사용자 테스트를 진행합니다.",
       startedAtMs: 5000,
       endedAtMs: 7100,
+      speakerLabel: null,
     },
     {
       segmentId: "01K0000000030",
@@ -620,6 +623,7 @@ function createSeedState(): StoreState {
       text: "파트너 요구사항을 먼저 확인하겠습니다.",
       startedAtMs: 0,
       endedAtMs: 1900,
+      speakerLabel: null,
     },
     {
       segmentId: "01K0000000031",
@@ -628,6 +632,7 @@ function createSeedState(): StoreState {
       text: "다음 배포 일정과 책임자를 정리하겠습니다.",
       startedAtMs: 2300,
       endedAtMs: 4500,
+      speakerLabel: null,
     },
     {
       segmentId: "01K0000000032",
@@ -636,6 +641,7 @@ function createSeedState(): StoreState {
       text: "확인한 내용은 회의록에 남기겠습니다.",
       startedAtMs: 5000,
       endedAtMs: 7100,
+      speakerLabel: null,
     },
     // 시드 분석의 근거가 가리키는 줄들. 블록 묶기(최대 6개·간격 1.5초)를 넘기려고 간격을
     // 벌려 둔다 — 한 블록에 다 뭉치면 근거 셋이 같은 자리로 점프해 이동을 검증할 수 없다.
@@ -673,6 +679,7 @@ function createSeedState(): StoreState {
       text: "재방문 사용자는 같은 구간에서 막히지 않았습니다.",
       startedAtMs: 145000,
       endedAtMs: 148700,
+      speakerLabel: null,
     },
   ];
   // 아직 멤버가 아닌 워크스페이스에서 온 초대여야 수락이 실제 합류를 흉내낸다.
@@ -792,7 +799,6 @@ function createSeedState(): StoreState {
             endedAtMs: 620_000,
             startedAt: "2026-07-13T00:10:04Z",
             endedAt: "2026-07-13T00:10:20Z",
-            reason: "브라우저가 소리를 만들지 못했습니다",
           },
           {
             // 아직 안 끝난 공백. 화면이 `02:20 – 진행 중`으로 열어 두고 회복하면 닫는다.
@@ -806,7 +812,6 @@ function createSeedState(): StoreState {
             endedAtMs: 144_000,
             startedAt: "2026-07-13T00:02:20Z",
             endedAt: null,
-            reason: null,
           },
         ],
       ],
@@ -2190,7 +2195,6 @@ export const mockDb = {
         endedAtMs: at,
         startedAt: previous.endedAt,
         endedAt: session.startedAt,
-        reason: null,
       });
     });
 
@@ -2266,6 +2270,8 @@ export const mockDb = {
       segmentId: nextId(),
       transcriptionSessionId: sessionId,
       sequence,
+      // 실시간으로 만들어지는 발화에는 화자가 없다. 회의가 끝난 뒤 PRO-32 가 채운다
+      speakerLabel: null,
       ...input,
     };
     state.segments.push(segment);

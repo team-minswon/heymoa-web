@@ -5,26 +5,27 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { TranscriptResponseDataGapsItemKind } from "./transcriptResponseDataGapsItemKind";
 
 export type TranscriptResponseDataGapsItem = {
-  /** 유도한 구간에서 결정적으로 만든다. TSID 가 아니다 */
-  gapId: string;
-  /** PAUSE 는 회의 축에서 점이라 두 좌표가 같다 */
-  kind: TranscriptResponseDataGapsItemKind;
-  /** @minimum 0 */
-  startedAtMs: number;
-  /**
-   * 진행 중이면 지금까지 확인된 끝
-   * @minimum 0
-   */
-  endedAtMs: number;
-  startedAt: string;
   /**
    * 진행 중이면 null
    * @nullable
    */
   endedAt: string | null;
-  /** @nullable */
-  reason?: string | null;
+  /** PAUSE 는 회의 축에서 점이라 두 좌표가 같다 */
+  kind: string;
+  /** 유도한 구간에서 결정적으로 만든다. TSID 가 아니다 */
+  gapId: string;
+  /** 벽시계 시작 */
+  startedAt: string;
+  /**
+   * 진행 중이면 지금까지 확인된 끝
+   * @minimum 0
+   */
+  endedAtMs: number;
+  /**
+   * 회의 축 시작
+   * @minimum 0
+   */
+  startedAtMs: number;
 };

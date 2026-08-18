@@ -67,6 +67,7 @@ export const getGetLatestAnalysisResponseMock = (): AnalysisResultResponse => ({
     ],
     errorCode: null,
     errorMessage: null,
+    previous: null,
   },
   error: null,
 });

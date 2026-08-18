@@ -64,7 +64,7 @@ export const getGetWorkspacesUrl = () => {
 };
 
 /**
- * 현재 사용자가 참여 중인 워크스페이스 목록을 조회한다.
+ * 현재 사용자가 참여 중인 워크스페이스 목록을 합류한 순서로 조회한다.
  * @summary 워크스페이스 목록 조회
  */
 export const getWorkspaces = async (

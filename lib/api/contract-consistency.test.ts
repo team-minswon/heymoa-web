@@ -17,11 +17,11 @@ describe("REST and WebSocket contract consistency", () => {
 
     // 실시간 final 과 저장된 발화가 같은 필드를 갖는지 본다. 어긋나면 화면이 두 소스를
     // 한 목록에 섞을 때 한쪽만 있는 필드가 조용히 undefined 가 된다.
+    // 손으로 speakerLabel 을 더하던 우회가 있었다. REST 계약이 그것을 required 로 안
+    // 말해서였는데, 서버가 nullable + contractRequired 로 고치면서 필요 없어졌다 (APP-421).
     const restRequired = [
       ...rest.TranscriptResponse.properties.data.properties.segments.items
         .required,
-      // nullable 이지만 키는 항상 온다 — REST 는 required 에 안 넣고 socket 은 넣는다
-      "speakerLabel",
     ].sort();
     const socketRequired = [
       ...asyncapi.components.messages.FinalEvent.payload.required,

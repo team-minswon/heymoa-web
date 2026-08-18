@@ -11,6 +11,6 @@ import type { SpeakerListResponseDataSpeakersItem } from "./speakerListResponseD
  * 성공 응답 데이터
  */
 export type SpeakerListResponseData = {
-  /** 갱신된 화자 목록 전체. 말한 시간 내림차순 */
+  /** 갱신된 화자 목록 **전체**. 한 명을 연결하면 다른 화자에게서 그 사람이 떨어진다 */
   speakers: SpeakerListResponseDataSpeakersItem[];
 };
