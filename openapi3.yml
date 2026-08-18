@@ -2224,6 +2224,164 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/notes/{noteId}/speakers/{label}:
+    put:
+      tags:
+      - Transcription
+      summary: 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
+      description: |
+        화자 연결은 노트의 속성이 아니라 **화자 라벨의 속성**이고 권한도 다르다 —
+        노트 수정은 멤버가 하지만 화자 연결은 **참석자만** 한다.
+
+        `userId: null` 은 「모르겠다」가 아니라 **「참석자 중에 없다」**로 사람이 확정한 것이다.
+        미결정은 *이 API 를 아직 안 부른 상태*로 표현된다. 되돌릴 값을 따로 두면
+        「아직 안 봤다」와 「봤는데 모르는 사람이다」가 같은 값이 되어 남은 화자를 셀 수 없다.
+
+        응답은 **갱신된 화자 목록 전체**다. 한 명을 연결하면 다른 화자에게서 그 사람이
+        떨어지므로(한 사람이 두 화자일 수 없다) 부분 응답으로는 화면이 안 맞는다.
+      operationId: assignNoteSpeaker
+      parameters:
+      - name: noteId
+        in: path
+        description: 노트의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AF
+      - name: label
+        in: path
+        description: 정규화된 화자 라벨
+        required: true
+        schema:
+          type: string
+          nullable: false
+          pattern: ^[A-Z][A-Z0-9]{0,7}$
+        example: A
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignSpeakerRequest'
+            examples:
+              ASSIGN:
+                value:
+                  userId: 0HZX2K7M9Q4AC
+              NOT_A_PARTICIPANT:
+                value:
+                  userId: null
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpeakerListResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      speakers:
+                      - label: A
+                        speakingMs: 940000
+                        segmentCount: 128
+                        representativeSegmentId: 0HZX2K7M9Q4AH
+                        assignedParticipantId: 0HZX2K7M9Q4B1
+                        assignedName: 김민수
+                        confirmed: true
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_NOTE_PARTICIPANT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_NOTE_PARTICIPANT
+                      message: 회의 참석자만 화자를 확인할 수 있습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
+                SPEAKER_LABEL_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SPEAKER_LABEL_NOT_FOUND
+                      message: 해당 화자를 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 화자 분리가 끝나지 않음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                DIARIZATION_NOT_MAPPED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: DIARIZATION_NOT_MAPPED
+                      message: 화자 분리가 아직 끝나지 않았습니다.
+                      details: null
+        '422':
+          description: 연결 대상이 이 노트의 참여자가 아님
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                PARTICIPANT_NOT_IN_NOTE:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PARTICIPANT_NOT_IN_NOTE
+                      message: 회의 참여자가 아닌 사람은 연결할 수 없습니다.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
   /v1/notes/{noteId}/transcription-sessions:
     post:
       tags:
@@ -5911,6 +6069,100 @@ components:
               nullable: false
               example: '2026-07-14T01:02:03Z'
               format: date-time
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    AssignSpeakerRequest:
+      title: AssignSpeakerRequest
+      required:
+      - userId
+      type: object
+      properties:
+        userId:
+          type: string
+          description: |
+            연결할 참석자의 계정. `null` 이면 「참석자 중에 없다」로 확정한다.
+
+            서버는 `(noteId, userId)` 로 `note_participants` 행을 찾아 그 `id` 를 저장한다 —
+            연결의 대상은 계정이 아니라 **이 회의의 참여 기록**이다.
+          nullable: true
+          example: 0HZX2K7M9Q4AC
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+    SpeakerListResponse:
+      title: SpeakerListResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - speakers
+          type: object
+          properties:
+            speakers:
+              type: array
+              description: 갱신된 화자 목록 전체. 말한 시간 내림차순
+              items:
+                type: object
+                required:
+                - confirmed
+                - label
+                - representativeSegmentId
+                - segmentCount
+                - speakingMs
+                properties:
+                  label:
+                    type: string
+                    description: 정규화된 화자 라벨. 공급자 문자열이 아니다
+                    nullable: false
+                    example: A
+                  speakingMs:
+                    type: integer
+                    format: int64
+                    nullable: false
+                    minimum: 0
+                    example: 940000
+                  segmentCount:
+                    type: integer
+                    nullable: false
+                    minimum: 0
+                    example: 128
+                  representativeSegmentId:
+                    type: string
+                    description: 그 화자의 가장 긴 발화
+                    nullable: false
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                    example: 0HZX2K7M9Q4AH
+                  assignedParticipantId:
+                    type: string
+                    description: 계정이 아니라 이 회의의 참여 기록을 가리킨다
+                    nullable: true
+                    example: 0HZX2K7M9Q4B1
+                  assignedName:
+                    type: string
+                    nullable: true
+                    example: 김민수
+                  confirmed:
+                    type: boolean
+                    description: null + confirmed 는 「참석자 중에 없다」로 사람이 확정한 것이다
+                    nullable: false
+                    example: true
+              nullable: false
           description: 성공 응답 데이터
           nullable: false
         success:

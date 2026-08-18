@@ -18,6 +18,7 @@ import type {
 } from "@/lib/api/generated/models";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
+import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
 
 /**
  * 섹션 이름과 순서. 서버도 같은 순서로 내려주지만 여기서 한 번 더 세운다 — 한 섹션이
@@ -124,10 +125,19 @@ export function NoteSummary({
 
   if (analysis?.status === "SUCCEEDED") {
     return (
-      <SummarySections
-        analysis={analysis}
-        onEvidenceSelect={onEvidenceSelect}
-      />
+      <>
+        <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-5">
+          <SpeakerNudgeBanner
+            noteId={noteId}
+            onRegenerate={startAnalysis}
+            isRegenerating={isRequesting}
+          />
+        </div>
+        <SummarySections
+          analysis={analysis}
+          onEvidenceSelect={onEvidenceSelect}
+        />
+      </>
     );
   }
 

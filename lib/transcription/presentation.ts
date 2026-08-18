@@ -119,21 +119,3 @@ export type DiarizationSpeaker = {
   label: string;
   assignedName?: string | null;
 };
-
-/**
- * 라벨이 아니라 **연결된 이름**을 보인다.
- *
- * 연결 안 된 화자는 `화자 A` 로 남는다 — 「참석자 아님」으로 확정한 경우도 같다.
- * 그 사람이 누구인지 우리가 모른다는 것이 사실이고, 다른 말로 꾸미면 거짓이 된다.
- */
-export function createSpeakerNameResolver(speakers: DiarizationSpeaker[]) {
-  const names = new Map(
-    speakers
-      .filter((speaker) => speaker.assignedName)
-      .map((speaker) => [speaker.label, speaker.assignedName!])
-  );
-  return (label: string | null | undefined) => {
-    if (!label) return null;
-    return names.get(label) ?? `화자 ${label}`;
-  };
-}

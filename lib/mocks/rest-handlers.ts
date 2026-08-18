@@ -50,6 +50,10 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
   PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
   NOT_WORKSPACE_MEMBER: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.",
+  NOT_NOTE_PARTICIPANT: "회의 참석자만 화자를 확인할 수 있습니다.",
+  SPEAKER_LABEL_NOT_FOUND: "해당 화자를 찾을 수 없습니다.",
+  DIARIZATION_NOT_MAPPED: "화자 분리가 아직 끝나지 않았습니다.",
+  PARTICIPANT_NOT_IN_NOTE: "회의 참여자가 아닌 사람은 연결할 수 없습니다.",
 };
 
 /**
@@ -61,7 +65,7 @@ const SESSION_CONFLICTS: Record<string, string> = {
 };
 
 /** 권한 문제는 403이다 — 없음(404)이나 상태 충돌(409)과 구분해야 화면이 다르게 다룬다. */
-const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER"]);
+const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER", "NOT_NOTE_PARTICIPANT"]);
 
 const NOT_FOUND_CODES = new Set([
   "NOTE_NOT_FOUND",
@@ -72,6 +76,7 @@ const NOT_FOUND_CODES = new Set([
   "INTEGRATION_NOT_FOUND",
   "NOTIFICATION_NOT_FOUND",
   "AGENT_CHAT_NOT_FOUND",
+  "SPEAKER_LABEL_NOT_FOUND",
 ]);
 
 /** 요청 값이 틀린 것은 400이다 — 없음(404)이나 상태 충돌(409)과 구분한다. */
@@ -93,12 +98,16 @@ const KNOWN_CODES = new Set([
   "MEETING_NOT_ACTIVE",
   "CHAT_LOCKED",
   "NOT_MEETING_STARTER",
+  "DIARIZATION_NOT_MAPPED",
+  // 422 — 연결 대상이 참여자가 아니다. 부른 사람이 아닌 것(403)과 가른다
+  "PARTICIPANT_NOT_IN_NOTE",
 ]);
 
 function statusOf(code: string) {
   if (FORBIDDEN_CODES.has(code)) return 403;
   if (NOT_FOUND_CODES.has(code)) return 404;
   if (BAD_REQUEST_CODES.has(code)) return 400;
+  if (code === "PARTICIPANT_NOT_IN_NOTE") return 422;
   return 409;
 }
 
@@ -478,6 +487,22 @@ export const restHandlers = [
       () => mockDb.getCurrentSession(id(params.noteId)),
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
+  ),
+  http.put(
+    "*/v1/notes/:noteId/speakers/:label",
+    async ({ params, request }) => {
+      const body = (await request.json()) as { userId?: string | null };
+      return resultOf(
+        () => ({
+          speakers: mockDb.assignSpeaker(
+            id(params.noteId),
+            String(params.label),
+            body.userId ?? null
+          ),
+        }),
+        notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+      );
+    }
   ),
   http.get("*/v1/notes/:noteId/transcript", ({ params }) =>
     resultOf(

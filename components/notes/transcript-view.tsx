@@ -12,9 +12,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
+import { SpeakerChip } from "@/components/notes/speaker-chip";
 import { toGapRows } from "@/lib/transcription/gaps";
+import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 import {
-  createSpeakerNameResolver,
   formatOffset,
   groupTranscriptSegments,
   interleaveTranscript,
@@ -92,9 +93,9 @@ export function TranscriptView({
     () => interleaveTranscript(blocks, toGapRows(transcript?.gaps ?? [])),
     [blocks, transcript]
   );
-  const speakerName = useMemo(
+  const speakerOf = useMemo(
     () =>
-      createSpeakerNameResolver(
+      createSpeakerIdentityResolver(
         transcript?.diarization?.status === "MAPPED"
           ? transcript.diarization.speakers
           : []
@@ -311,10 +312,11 @@ export function TranscriptView({
                       {formatOffset(row.block.startedAtMs)}
                     </time>
                     <div className="min-w-0">
-                      {speakerName(row.block.speakerLabel) ? (
-                        <p className="mb-1 text-[13px] font-medium text-[var(--el-muted)]">
-                          {speakerName(row.block.speakerLabel)}
-                        </p>
+                      {speakerOf(row.block.speakerLabel) ? (
+                        <SpeakerChip
+                          identity={speakerOf(row.block.speakerLabel)!}
+                          className="mb-1"
+                        />
                       ) : null}
                       <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
                         <span

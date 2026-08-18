@@ -12,6 +12,10 @@ const state = vi.hoisted(() => ({
   refetchMock: vi.fn(),
 }));
 
+// 배너는 화자 상태만 읽는다. 이 스펙의 대상이 아니므로 목으로 눌러 둔다.
+vi.mock("@/components/notes/speaker-nudge-banner", () => ({
+  SpeakerNudgeBanner: () => null,
+}));
 vi.mock("@/lib/api/generated/analysis/analysis", () => ({
   useGetLatestAnalysis: () => ({
     isLoading: state.isLoading,

@@ -176,6 +176,53 @@ function omit<T extends object, K extends keyof T>(
   return next;
 }
 
+/** 화자 연결이 가리키는 값. `note_participants` 행의 id 자리다. */
+function participantIdOf(userId: string) {
+  return `p-${userId}`;
+}
+
+/**
+ * 시드 화자를 **실제 참여자에서** 만든다.
+ *
+ * 이름을 손으로 박으면 참여자 시드가 바뀔 때 조용히 어긋난다 — 실제로 없는 사람 이름이
+ * 화자에 붙어 있었고, 그 상태로는 「연결을 옮기면 앞 화자에서 떨어진다」가 테스트되지 않는다.
+ */
+function seededDiarizations(
+  notes: NoteResponseData[]
+): Map<string, TranscriptResponseDataDiarization> {
+  const note = notes.find((row) => row.noteId === "01K0000000020");
+  const first = note?.participants[0];
+  if (!first) return new Map();
+  return new Map([
+    [
+      note.noteId,
+      {
+        status: "MAPPED",
+        speakers: [
+          {
+            label: "A",
+            speakingMs: 940_000,
+            segmentCount: 2,
+            representativeSegmentId: "01K0000000061",
+            assignedParticipantId: participantIdOf(first.userId),
+            assignedName: first.name,
+            confirmed: true,
+          },
+          {
+            label: "B",
+            speakingMs: 610_000,
+            segmentCount: 1,
+            representativeSegmentId: "01K0000000062",
+            assignedParticipantId: null,
+            assignedName: null,
+            confirmed: false,
+          },
+        ],
+      },
+    ],
+  ]);
+}
+
 function copy<T>(value: T): T {
   return structuredClone(value);
 }
@@ -729,39 +776,15 @@ function createSeedState(): StoreState {
     notes,
     sessions,
     segments,
-    // 화자 분리를 시드한다. 목에 이걸 밀어줄 주체가 없어서(APP-419·420이 서버 몫) 없으면
-    // **화자 이름이 붙은 회의록을 목에서 한 번도 볼 수 없다.**
+    // 화자 분리를 시드한다. 목에 이걸 밀어줄 주체가 없어서(APP-419·420이 서버 몫)
+    // 없으면 **화자 이름이 붙은 회의록을 목에서 한 번도 볼 수 없다.**
     //
     // 연결된 화자와 안 연결된 화자를 **둘 다** 심는다 — 한쪽만 심으면 `화자 A` 분기가
     // 목에서 안 그려지고 실서버에서 처음 실행된다.
-    diarizations: new Map<string, TranscriptResponseDataDiarization>([
-      [
-        "01K0000000020",
-        {
-          status: "MAPPED",
-          speakers: [
-            {
-              label: "A",
-              speakingMs: 940_000,
-              segmentCount: 2,
-              representativeSegmentId: "01K0000000021",
-              assignedParticipantId: "01K0000000003",
-              assignedName: "김민수",
-              confirmed: true,
-            },
-            {
-              label: "B",
-              speakingMs: 610_000,
-              segmentCount: 1,
-              representativeSegmentId: "01K0000000022",
-              assignedParticipantId: null,
-              assignedName: null,
-              confirmed: false,
-            },
-          ],
-        },
-      ],
-    ]),
+    //
+    // 이름을 손으로 박지 않는다. 참여자 시드가 바뀌면 조용히 어긋나고, 실제로 한 번
+    // 어긋났다 — 없는 사람 이름이 화자에 붙어 있었다.
+    diarizations: seededDiarizations(notes),
     // 사고 공백. 끝난 것과 진행 중인 것, 이유가 있는 것과 없는 것을 함께 심는다.
     extraGaps: new Map<string, TranscriptResponseDataGapsItem[]>([
       [
@@ -2076,6 +2099,67 @@ export const mockDb = {
       if (note.meetingStatus !== "ENDED") note.meetingStatus = "PAUSED";
     }
     return copy(session) as unknown as TranscriptionSessionResponseData;
+  },
+
+  /**
+   * 화자에 참석자를 연결하거나 「참석자 아님」으로 확정한다.
+   *
+   * **한 사람은 한 화자에만 붙는다** — 다른 화자에 이미 붙어 있으면 그쪽에서 떨어진다.
+   * 그래서 응답이 목록 전체다.
+   *
+   * `userId` 를 받아 `note_participants` 행을 찾아 그 `id` 를 저장한다. 연결의 대상은
+   * 계정이 아니라 이 회의의 참여 기록이다 — 나중에 계정 없는 외부 참석자를 열 때
+   * 데이터 마이그레이션이 안 생긴다.
+   */
+  assignSpeaker(
+    noteId: string,
+    label: string,
+    userId: string | null,
+  ): TranscriptResponseDataDiarization["speakers"] {
+    const note = findNote(noteId);
+    const diarization = state.diarizations.get(noteId);
+    if (!diarization || diarization.status !== "MAPPED") {
+      fail("DIARIZATION_NOT_MAPPED");
+    }
+    const speaker = diarization.speakers.find((row) => row.label === label);
+    if (!speaker) {
+      fail("SPEAKER_LABEL_NOT_FOUND");
+    }
+
+    // 부른 사람이 참석자가 아닌 것(403)과 연결 대상이 참석자가 아닌 것(422)은
+    // 사용자가 할 일이 다르므로 가른다.
+    if (!note.participants.some((row) => row.userId === state.user.userId)) {
+      fail("NOT_NOTE_PARTICIPANT");
+    }
+    const participant = userId
+      ? note.participants.find((row) => row.userId === userId)
+      : null;
+    if (userId && !participant) {
+      fail("PARTICIPANT_NOT_IN_NOTE");
+    }
+
+    const speakers = diarization.speakers.map((row) => {
+      if (row.label === label) {
+        return {
+          ...row,
+          assignedParticipantId: participant ? participantIdOf(participant.userId) : null,
+          assignedName: participant?.name ?? null,
+          confirmed: true,
+        };
+      }
+      // 같은 사람이 다른 화자에 붙어 있었다면 떨어진다
+      if (participant && row.assignedParticipantId === participantIdOf(participant.userId)) {
+        return {
+          ...row,
+          assignedParticipantId: null,
+          assignedName: null,
+          confirmed: false,
+        };
+      }
+      return row;
+    });
+    state.diarizations.set(noteId, { ...diarization, speakers });
+    return copy(speakers);
   },
 
   /**

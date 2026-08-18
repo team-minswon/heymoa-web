@@ -695,6 +695,15 @@ export function NotePanel({
               {showArchive ? (
                 <NoteArchive
                   noteId={noteId}
+                  participants={note?.participants ?? []}
+                  // 참석자만 화자를 바꾼다. 회의에 없던 사람은 대표 발화를 봐도
+                  // 짐작할 근거가 없고, 그런 사람이 이름을 달면 회의록이 조용히 틀린다.
+                  canAssignSpeaker={Boolean(
+                    user &&
+                      note?.participants?.some(
+                        (participant) => participant.userId === user.userId
+                      )
+                  )}
                   focusSegmentId={focusSegmentId}
                   onFocusHandled={clearFocusSegment}
                 />

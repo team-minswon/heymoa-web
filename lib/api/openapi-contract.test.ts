@@ -197,7 +197,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-379에서 멤버 관리 경로 둘이 늘었다 (35 → 37) — `members/me`(나가기)와
     // `members/{userId}`(역할 변경 PATCH · 추방 DELETE). 후자는 경로 하나에 메서드 둘이다.
     // APP-401에서 `users/me/default-workspace`가 사라졌다 (37 → 36).
-    expect(paths).toHaveLength(36);
+    // APP-421에서 `notes/{noteId}/speakers/{label}`이 생겼다 (36 → 37).
+    expect(paths).toHaveLength(37);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

@@ -10,7 +10,12 @@ const data = vi.hoisted(() => ({
   chatFails: false,
 }));
 
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: () => {} }),
+}));
 vi.mock("@/lib/api/generated/transcription/transcription", () => ({
+  getGetNoteTranscriptQueryKey: () => ["transcript"],
+  useAssignNoteSpeaker: () => ({ mutate: () => {}, isPending: false }),
   useGetNoteTranscript: () => ({
     isPending: false,
     isError: data.transcriptFails,

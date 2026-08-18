@@ -10,6 +10,7 @@ import type { RequestHandlerOptions } from "msw";
 
 import type {
   CurrentTranscriptionSessionNullableResponse,
+  SpeakerListResponse,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
@@ -72,6 +73,24 @@ export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
         startedAt: "2026-08-18T10:10:12Z",
         endedAt: "2026-08-18T10:19:41Z",
         reason: null,
+      },
+    ],
+  },
+  error: null,
+});
+
+export const getAssignNoteSpeakerResponseMock = (): SpeakerListResponse => ({
+  success: true,
+  data: {
+    speakers: [
+      {
+        label: "A",
+        speakingMs: 940000,
+        segmentCount: 128,
+        representativeSegmentId: "0HZX2K7M9Q4AH",
+        assignedParticipantId: "0HZX2K7M9Q4B1",
+        assignedName: "김민수",
+        confirmed: true,
       },
     ],
   },
@@ -156,6 +175,30 @@ export const getGetNoteTranscriptMockHandler = (
   );
 };
 
+export const getAssignNoteSpeakerMockHandler = (
+  overrideResponse?:
+    | SpeakerListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<SpeakerListResponse> | SpeakerListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notes/:noteId/speakers/:label",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssignNoteSpeakerResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
 export const getStartTranscriptionSessionMockHandler = (
   overrideResponse?:
     | StartTranscriptionSessionResponse
@@ -210,6 +253,7 @@ export const getGetCurrentTranscriptionSessionMockHandler = (
 export const getTranscriptionMock = () => [
   getGetTranscriptionSessionMockHandler(),
   getGetNoteTranscriptMockHandler(),
+  getAssignNoteSpeakerMockHandler(),
   getStartTranscriptionSessionMockHandler(),
   getGetCurrentTranscriptionSessionMockHandler(),
 ];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChatThread } from "@/components/chat/chat-thread";
@@ -9,12 +10,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetNoteSharedChatMessages } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
-import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
+import {
+  getGetNoteTranscriptQueryKey,
+  useAssignNoteSpeaker,
+  useGetNoteTranscript,
+} from "@/lib/api/generated/transcription/transcription";
 import { initialStreamState } from "@/lib/chat/stream-protocol";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
-import { toGapRows } from "@/lib/transcription/gaps";
 import {
-  createSpeakerNameResolver,
+  SpeakerAssignMenu,
+  type SpeakerCandidate,
+} from "@/components/notes/speaker-assign-menu";
+import { toGapRows } from "@/lib/transcription/gaps";
+import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
+import {
   formatOffset,
   groupTranscriptSegments,
   interleaveTranscript,
@@ -101,9 +110,16 @@ function useAwayFromBottom() {
  */
 export function NoteArchive({
   noteId,
+  participants = [],
+  canAssignSpeaker = false,
   focusSegmentId,
   onFocusHandled,
-}: { noteId: string } & TranscriptFocus) {
+}: {
+  noteId: string;
+  participants?: SpeakerCandidate[];
+  /** 참석자만 화자를 바꾼다. 아니면 읽기 전용 — 숨기지는 않는다. */
+  canAssignSpeaker?: boolean;
+} & TranscriptFocus) {
   // 종료 직후 마운트다 — 전역 staleTime(60초)을 그대로 두면 방금 전 라이브 캐시를 재사용해
   // 마지막 전사·Q&A가 빠질 수 있다. 마운트할 때 최종 상태를 다시 당긴다.
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -131,9 +147,9 @@ export function NoteArchive({
     () => interleaveTranscript(blocks, toGapRows(transcript?.gaps ?? [])),
     [blocks, transcript]
   );
-  const speakerName = useMemo(
+  const speakerOf = useMemo(
     () =>
-      createSpeakerNameResolver(
+      createSpeakerIdentityResolver(
         transcript?.diarization?.status === "MAPPED"
           ? transcript.diarization.speakers
           : []
@@ -141,6 +157,18 @@ export function NoteArchive({
     [transcript]
   );
   const truncated = transcript?.recording?.seal === "TRUNCATED";
+
+  const queryClient = useQueryClient();
+  // 응답이 화자 목록 **전체**다 — 한 명을 연결하면 다른 화자에게서 그 사람이 떨어지므로
+  // 부분 갱신으로는 화면이 안 맞는다. 그래서 캐시를 통째로 갈아 끼운다.
+  const assign = useAssignNoteSpeaker({
+    mutation: {
+      onSuccess: () =>
+        queryClient.invalidateQueries({
+          queryKey: getGetNoteTranscriptQueryKey(noteId),
+        }),
+    },
+  });
 
   const messages =
     chatQuery.data?.status === 200 && chatQuery.data.data.success
@@ -240,10 +268,19 @@ export function NoteArchive({
                         {formatOffset(row.block.startedAtMs)}
                       </time>
                       <div className="max-w-3xl">
-                        {speakerName(row.block.speakerLabel) ? (
-                          <p className="mb-1 text-[13px] font-medium text-[var(--el-muted)]">
-                            {speakerName(row.block.speakerLabel)}
-                          </p>
+                        {speakerOf(row.block.speakerLabel) ? (
+                          <SpeakerAssignMenu
+                            identity={speakerOf(row.block.speakerLabel)!}
+                            candidates={participants}
+                            disabled={!canAssignSpeaker}
+                            onAssign={(userId) =>
+                              assign.mutate({
+                                noteId,
+                                label: row.block.speakerLabel!,
+                                data: { userId },
+                              })
+                            }
+                          />
                         ) : null}
                         <p className="text-[15px] leading-7 text-[var(--el-ink)]">
                           <span
