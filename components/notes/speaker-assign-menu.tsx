@@ -10,7 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
+import {
+  speakerTint,
+  type SpeakerIdentity,
+} from "@/lib/transcription/speaker-identity";
 
 export type SpeakerCandidate = {
   userId: string;
@@ -53,7 +56,10 @@ function CandidateAvatar({ candidate }: { candidate: SpeakerCandidate }) {
   return (
     <span
       aria-hidden
-      className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--el-canvas-soft)] text-[10px] text-[var(--el-ink)]"
+      // **칩과 같은 해싱을 쓴다.** 여기만 중립색이면 고를 때 회색이던 사람이 붙는
+      // 순간 파스텔로 바뀌어, 내가 고른 사람이 맞는지 한 번 더 확인하게 된다.
+      className="flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] text-[var(--el-ink)]"
+      style={{ backgroundColor: speakerTint(candidate.name) }}
     >
       {[...candidate.name][0] ?? "?"}
     </span>

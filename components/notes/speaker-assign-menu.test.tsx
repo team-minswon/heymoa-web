@@ -2,7 +2,10 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SpeakerAssignMenu } from "@/components/notes/speaker-assign-menu";
-import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
+import {
+  createSpeakerIdentityResolver,
+  type SpeakerIdentity,
+} from "@/lib/transcription/speaker-identity";
 
 const identity: SpeakerIdentity = {
   displayName: "화자 A",
@@ -150,6 +153,31 @@ describe("SpeakerAssignMenu", () => {
     expect(
       screen.getByRole("menuitem", { name: /박서준/ })
     ).not.toHaveTextContent("화자");
+  });
+
+  // 사진이 없는 사람은 이니셜 아바타로 나오는데, 여기가 중립색이면 고를 때 회색이던
+  // 얼굴이 붙는 순간 파스텔로 바뀐다. 같은 사람이 두 번 다르게 보인다.
+  it("사진이 없으면 붙은 뒤와 같은 색으로 그린다", () => {
+    const { container } = render(
+      <SpeakerAssignMenu
+        identity={identity}
+        candidates={[candidates[0]]}
+        onAssign={vi.fn()}
+      />
+    );
+
+    open();
+
+    // 이 사람을 화자 A 에 붙이면 칩이 쓸 색
+    const afterAssign = createSpeakerIdentityResolver([
+      { label: "A", assignedName: "김철수", assignedUserId: "01K0000000001" },
+    ])("A");
+    const avatar = container.ownerDocument.querySelector<HTMLElement>(
+      '[role="menuitem"] span[aria-hidden]'
+    );
+
+    expect(avatar?.style.backgroundColor).toBe(afterAssign?.tint);
+    expect(avatar?.style.backgroundColor).toBeTruthy();
   });
 
   it("프로필 사진이 있으면 그린다 — 칩과 같은 모양이어야 한다", () => {

@@ -23,6 +23,14 @@ function hash(value: string) {
   return h >>> 0;
 }
 
+/**
+ * 칩 바탕색. **드롭다운도 이걸 부른다** — 고를 때와 붙은 뒤의 얼굴이 다르면 같은 사람인지
+ * 확신할 수 없다. 이름이 붙은 화자는 이름으로, 아직 없으면 라벨로 해싱한다.
+ */
+export function speakerTint(key: string) {
+  return SPEAKER_TINTS[hash(key) % SPEAKER_TINTS.length];
+}
+
 export type SpeakerIdentity = {
   /** 화면에 쓸 이름. 연결 안 됐으면 `화자 A`. */
   displayName: string;
@@ -64,7 +72,7 @@ export function createSpeakerIdentityResolver(speakers: SpeakerIdentitySource[])
 
     return {
       displayName,
-      tint: SPEAKER_TINTS[hash(name ?? label) % SPEAKER_TINTS.length],
+      tint: speakerTint(name ?? label),
       initial: [...displayName][0] ?? "?",
       imageUrl: speaker?.image ?? null,
       unassigned: !speaker?.confirmed,
