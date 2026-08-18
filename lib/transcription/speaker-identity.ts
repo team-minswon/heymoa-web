@@ -37,7 +37,7 @@ export type SpeakerIdentity = {
 };
 
 export type SpeakerIdentitySource = DiarizationSpeaker & {
-  assignedParticipantId?: string | null;
+  assignedUserId?: string | null;
   confirmed?: boolean;
   image?: string | null;
 };

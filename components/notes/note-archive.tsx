@@ -158,6 +158,24 @@ export function NoteArchive({
   );
   const truncated = transcript?.recording?.seal === "TRUNCATED";
 
+  // 한 사람이 두 화자일 수 없다. 이미 붙어 있는 사람을 고르면 **저쪽에서 떨어지므로**,
+  // 그 사실을 후보 목록에 실어 누르기 전에 보이게 한다.
+  const withAssignedLabel = useMemo(() => {
+    const speakers =
+      transcript?.diarization?.status === "MAPPED"
+        ? transcript.diarization.speakers
+        : [];
+    const labelOf = new Map(
+      speakers
+        .filter((speaker) => speaker.assignedUserId)
+        .map((speaker) => [speaker.assignedUserId!, speaker.label])
+    );
+    return participants.map((participant) => ({
+      ...participant,
+      assignedLabel: labelOf.get(participant.userId) ?? null,
+    }));
+  }, [participants, transcript]);
+
   const queryClient = useQueryClient();
   // 응답이 화자 목록 **전체**다 — 한 명을 연결하면 다른 화자에게서 그 사람이 떨어지므로
   // 부분 갱신으로는 화면이 안 맞는다. 그래서 캐시를 통째로 갈아 끼운다.
@@ -271,7 +289,7 @@ export function NoteArchive({
                         {speakerOf(row.block.speakerLabel) ? (
                           <SpeakerAssignMenu
                             identity={speakerOf(row.block.speakerLabel)!}
-                            candidates={participants}
+                            candidates={withAssignedLabel}
                             disabled={!canAssignSpeaker}
                             onAssign={(userId) =>
                               assign.mutate({

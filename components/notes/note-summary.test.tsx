@@ -44,6 +44,7 @@ function renderSummary(isEnded: boolean) {
       noteId="01K0000000002"
       isEnded={isEnded}
       onEvidenceSelect={onEvidenceSelect}
+      onGoToTranscript={vi.fn()}
     />
   );
 }
@@ -269,6 +270,7 @@ describe("NoteSummary", () => {
         noteId="01K0000000002"
         isEnded
         onEvidenceSelect={onEvidenceSelect}
+      onGoToTranscript={vi.fn()}
       />
     );
     expect(state.refetchMock).toHaveBeenCalled();

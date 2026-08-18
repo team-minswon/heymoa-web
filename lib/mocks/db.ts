@@ -176,11 +176,6 @@ function omit<T extends object, K extends keyof T>(
   return next;
 }
 
-/** 화자 연결이 가리키는 값. `note_participants` 행의 id 자리다. */
-function participantIdOf(userId: string) {
-  return `p-${userId}`;
-}
-
 /**
  * 시드 화자를 **실제 참여자에서** 만든다.
  *
@@ -204,7 +199,7 @@ function seededDiarizations(
             speakingMs: 940_000,
             segmentCount: 2,
             representativeSegmentId: "01K0000000061",
-            assignedParticipantId: participantIdOf(first.userId),
+            assignedUserId: first.userId,
             assignedName: first.name,
             confirmed: true,
           },
@@ -213,7 +208,7 @@ function seededDiarizations(
             speakingMs: 610_000,
             segmentCount: 1,
             representativeSegmentId: "01K0000000062",
-            assignedParticipantId: null,
+            assignedUserId: null,
             assignedName: null,
             confirmed: false,
           },
@@ -2142,16 +2137,16 @@ export const mockDb = {
       if (row.label === label) {
         return {
           ...row,
-          assignedParticipantId: participant ? participantIdOf(participant.userId) : null,
+          assignedUserId: participant?.userId ?? null,
           assignedName: participant?.name ?? null,
           confirmed: true,
         };
       }
       // 같은 사람이 다른 화자에 붙어 있었다면 떨어진다
-      if (participant && row.assignedParticipantId === participantIdOf(participant.userId)) {
+      if (participant && row.assignedUserId === participant.userId) {
         return {
           ...row,
-          assignedParticipantId: null,
+          assignedUserId: null,
           assignedName: null,
           confirmed: false,
         };

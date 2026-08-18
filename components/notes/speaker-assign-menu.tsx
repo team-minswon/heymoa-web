@@ -16,6 +16,15 @@ export type SpeakerCandidate = {
   userId: string;
   name: string;
   email: string;
+  /** 프로필 사진. 서버가 `participants[]`로 이미 내려준다. */
+  image?: string | null;
+  /**
+   * 이 사람이 **이미 붙어 있는** 화자 라벨. 없으면 아직 아무 화자도 아니다.
+   *
+   * 한 사람이 두 화자일 수 없어서, 여기 값이 있는 사람을 고르면 저쪽에서 떨어진다.
+   * 그 사실을 **고르기 전에** 알려야 실수를 안 한다.
+   */
+  assignedLabel?: string | null;
 };
 
 /**
@@ -29,6 +38,28 @@ export type SpeakerCandidate = {
  * 사람은 대표 발화를 봐도 짐작할 근거가 없고, 그런 사람이 이름을 달면 회의록이 조용히
  * 틀린다. 대가는 외부 참석자가 온 회의에서 담당자가 빈다는 것이고, 지금은 감수한다.
  */
+/** 칩과 같은 모양이어야 한다 — 고를 때와 확인할 때 같은 사람이 다르게 보이면 안 된다. */
+function CandidateAvatar({ candidate }: { candidate: SpeakerCandidate }) {
+  if (candidate.image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={candidate.image}
+        alt=""
+        className="size-5 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--el-canvas-soft)] text-[10px] text-[var(--el-ink)]"
+    >
+      {[...candidate.name][0] ?? "?"}
+    </span>
+  );
+}
+
 export function SpeakerAssignMenu({
   identity,
   candidates,
@@ -59,8 +90,24 @@ export function SpeakerAssignMenu({
           <DropdownMenuItem
             key={candidate.userId}
             onClick={() => onAssign(candidate.userId)}
+            className="gap-2"
           >
-            <span className="truncate">{candidate.name}</span>
+            <CandidateAvatar candidate={candidate} />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline gap-1.5">
+                <span className="truncate text-[13px]">{candidate.name}</span>
+                {/* 고르면 저쪽에서 떨어진다. 누르기 전에 보여야 한다 */}
+                {candidate.assignedLabel ? (
+                  <span className="shrink-0 text-[11px] text-[var(--el-muted-soft)]">
+                    화자 {candidate.assignedLabel}
+                  </span>
+                ) : null}
+              </span>
+              {/* 동명이인이 갈리는 유일한 단서다 */}
+              <span className="block truncate text-[11px] text-[var(--el-muted-soft)]">
+                {candidate.email}
+              </span>
+            </span>
           </DropdownMenuItem>
         ))}
         {candidates.length ? <DropdownMenuSeparator /> : null}
