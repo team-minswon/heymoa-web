@@ -72,6 +72,13 @@ export type RecordingContextValue = {
   activeWorkspaceId: string | null;
   phase: RecordingPhase;
   elapsedMs: number;
+  /**
+   * 소리는 쌓이는데 **글자만 멈춘** 상태인가 (APP-416).
+   *
+   * 서버만 아는 사실이다 — 받아쓰기 업체 소켓이 끊긴 것을 브라우저는 자막이 멈춘 것으로만
+   * 본다. 회복하면 서버가 `LIVE` 를 보내 되돌린다.
+   */
+  transcriptionDegraded: boolean;
   error: string | null;
   start: (noteId: string, workspaceId: string) => Promise<void>;
   stop: () => Promise<boolean>;
@@ -283,6 +290,7 @@ export function RecordingProvider({
     Array(24).fill(0)
   );
   const [error, setError] = useState<string | null>(null);
+  const [transcriptionDegraded, setTranscriptionDegraded] = useState(false);
   const sessionRef = useRef<LocalRecordingSession | null>(null);
   const controllerRef = useRef<RealtimeSessionController | null>(null);
   const cancelledControllerRef = useRef<RealtimeSessionController | null>(null);
@@ -418,6 +426,10 @@ export function RecordingProvider({
         invalidateTranscriptQueries(sessionRef.current.noteId);
       }
 
+      if (event.type === "capture_state") {
+        setTranscriptionDegraded(event.state === "DEGRADED");
+      }
+
       if (event.type === "completed") {
         const current = sessionRef.current;
         if (current) {
@@ -521,6 +533,8 @@ export function RecordingProvider({
       setActiveWorkspaceId(workspaceId);
       setCurrentSession(reusableSession);
       setError(null);
+      // 지난 회의의 상태를 새 회의로 들고 오지 않는다
+      setTranscriptionDegraded(false);
       setElapsedMs(0);
       setPhase("requesting-permission");
       const teardownCount = teardownCountRef.current;
@@ -729,6 +743,7 @@ export function RecordingProvider({
       activeWorkspaceId,
       phase,
       elapsedMs,
+      transcriptionDegraded,
       error,
       start,
       stop,
@@ -740,6 +755,7 @@ export function RecordingProvider({
       activeWorkspaceId,
       phase,
       elapsedMs,
+      transcriptionDegraded,
       error,
       start,
       stop,

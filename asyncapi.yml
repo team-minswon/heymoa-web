@@ -636,7 +636,11 @@ components:
       description: |
         회복하면 사라지고 **조회 응답에 안 남는다** — 소리가 남는 공백은 기록하지 않기로 했다.
 
-        `DEGRADED` 는 소리는 쌓이는데 전사만 끊긴 상태이고, `LOST` 는 소리까지 못 받는 상태다.
+        `DEGRADED` 는 소리는 쌓이는데 전사만 끊긴 상태다. 업체 소켓이 끊겨 재연결하는 동안 나가고,
+        붙으면 `LIVE` 로 돌아온다. **상태가 바뀔 때만** 나간다.
+
+        `LOST`(조각이 안 온다)를 뺐다 — 조각을 안 보내는 당사자가 그 브라우저라 이미 알고 있고,
+        정말 네트워크가 끊긴 경우엔 이 말이 닿지도 않는다.
       payload:
         type: object
         additionalProperties: false
@@ -647,7 +651,7 @@ components:
             enum: [capture_state]
           state:
             type: string
-            enum: [LIVE, DEGRADED, LOST]
+            enum: [LIVE, DEGRADED]
       examples:
         - name: degraded
           payload:

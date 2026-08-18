@@ -291,6 +291,24 @@ describe("RecordingProvider", () => {
     await expect(first).resolves.toBe(true);
   });
 
+  it("surfaces a degraded transcription and clears it on recovery", async () => {
+    // 소리는 쌓이는데 글자만 멈춘 상태. 서버만 아는 사실이라 이벤트로만 들어온다.
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    await act(async () => {
+      harness
+        .getCallbacks()
+        .onEvent({ type: "capture_state", state: "DEGRADED" });
+    });
+    expect(harness.result.current.transcriptionDegraded).toBe(true);
+
+    await act(async () => {
+      harness.getCallbacks().onEvent({ type: "capture_state", state: "LIVE" });
+    });
+    expect(harness.result.current.transcriptionDegraded).toBe(false);
+  });
+
   it("cancels a deferred permission request before creating a server session", async () => {
     const harness = setup();
     let resolvePermission!: () => void;

@@ -49,9 +49,13 @@ export const serverEventSchema = z.discriminatedUnion("type", [
     throughChunkSeq: z.number().int().min(0),
   }),
   // 살아 있는 동안만 존재한다. 회복하면 사라지고 조회 응답에 안 남는다.
+  //
+  // `LOST`(조각이 안 온다)를 뺐다 — 조각을 안 보내는 당사자가 이 브라우저라 이미 알고 있고,
+  // 정말 네트워크가 끊긴 경우엔 그 말이 닿지도 않는다. 끊긴 사실은 조회의 공백이 더 정확히
+  // 말한다. 남은 하나는 **서버만 아는 것**이다 — 업체가 죽어 소리는 쌓이는데 글자만 멈췄다.
   z.strictObject({
     type: z.literal("capture_state"),
-    state: z.enum(["LIVE", "DEGRADED", "LOST"]),
+    state: z.enum(["LIVE", "DEGRADED"]),
   }),
   z.strictObject({ type: z.literal("completed"), sessionId: tsidSchema }),
   z.strictObject({

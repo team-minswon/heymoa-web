@@ -86,12 +86,17 @@ describe("AsyncAPI transcription protocol", () => {
     ).toMatchObject({ type: "ack", throughChunkSeq: 300 });
   });
 
-  it("accepts the three capture states", () => {
-    for (const state of ["LIVE", "DEGRADED", "LOST"]) {
+  it("accepts the two capture states and rejects the retired one", () => {
+    for (const state of ["LIVE", "DEGRADED"]) {
       expect(
         parseServerEvent(JSON.stringify({ type: "capture_state", state }))
       ).toMatchObject({ type: "capture_state", state });
     }
+    // LOST 를 뺐다. 조각을 안 보내는 당사자가 이 브라우저라 이미 알고 있고, 정말 네트워크가
+    // 끊겼으면 그 말이 닿지도 않는다 — 끊긴 사실은 조회의 공백이 더 정확히 말한다.
+    expect(() =>
+      parseServerEvent('{"type":"capture_state","state":"LOST"}')
+    ).toThrow();
     expect(() =>
       parseServerEvent('{"type":"capture_state","state":"UNKNOWN"}')
     ).toThrow();
