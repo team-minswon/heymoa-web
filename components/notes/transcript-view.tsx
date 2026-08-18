@@ -14,7 +14,10 @@ import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcri
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
 import { SpeakerChip } from "@/components/notes/speaker-chip";
 import { toGapRows } from "@/lib/transcription/gaps";
-import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
+import {
+  createSpeakerIdentityResolver,
+  type SpeakerFace,
+} from "@/lib/transcription/speaker-identity";
 import {
   formatOffset,
   groupTranscriptSegments,
@@ -42,11 +45,14 @@ function getDistanceFromBottom(viewport: HTMLElement) {
 export function TranscriptView({
   noteId,
   phase,
+  participants = [],
   focusSegmentId,
   onFocusHandled,
 }: {
   noteId: string;
   phase: SharedChatPhase;
+  /** 화자에 붙은 사람의 얼굴. 계약의 `speakers[]` 에는 사진이 없다. */
+  participants?: SpeakerFace[];
 } & TranscriptFocus) {
   const recording = useRecording();
   const liveTranscript = useRecordingTranscript();
@@ -98,9 +104,10 @@ export function TranscriptView({
       createSpeakerIdentityResolver(
         transcript?.diarization?.status === "MAPPED"
           ? transcript.diarization.speakers
-          : []
+          : [],
+        participants
       ),
-    [transcript]
+    [transcript, participants]
   );
 
   const partialText = useMemo(() => {

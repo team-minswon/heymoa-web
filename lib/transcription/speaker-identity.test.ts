@@ -90,6 +90,39 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("A")?.initial).toBe("김");
   });
 
+  // **여기가 실제 계약이다.** `speakers[]` 는 `assignedUserId` 만 주고 사진은 참석자
+  // 목록에 있다. 위 테스트가 `image` 를 화자에 직접 얹는 바람에, 아무도 안 잇고 있다는
+  // 사실이 안 보였다 — 화면에서는 붙는 순간 얼굴이 글자로 바뀌었다.
+  it("참석자 목록에서 얼굴을 끌어온다 — 화자에는 userId 만 온다", () => {
+    const resolve = createSpeakerIdentityResolver(
+      [speaker("A", "김민수", { assignedUserId: "01K0000000001" })],
+      [{ userId: "01K0000000001", image: "https://cdn.example.com/kim.png" }]
+    );
+
+    expect(resolve("A")?.imageUrl).toBe("https://cdn.example.com/kim.png");
+  });
+
+  it("사진 없는 사람은 이니셜로 남는다 — 색은 그대로 준다", () => {
+    const resolve = createSpeakerIdentityResolver(
+      [speaker("A", "한지원", { assignedUserId: "01K0000000020" })],
+      [{ userId: "01K0000000020", image: null }]
+    );
+
+    expect(resolve("A")?.imageUrl).toBeNull();
+    expect(resolve("A")?.initial).toBe("한");
+    expect(resolve("A")?.tint).toBeTruthy();
+  });
+
+  it("아직 아무도 안 붙은 화자는 참석자를 봐도 얼굴이 없다", () => {
+    const resolve = createSpeakerIdentityResolver(
+      [speaker("A", null)],
+      [{ userId: "01K0000000001", image: "https://cdn.example.com/kim.png" }]
+    );
+
+    expect(resolve("A")?.imageUrl).toBeNull();
+    expect(resolve("A")?.displayName).toBe("화자 A");
+  });
+
   it("모르는 라벨과 null 을 각각 다루다", () => {
     const resolve = createSpeakerIdentityResolver([]);
 

@@ -51,6 +51,12 @@ export type SpeakerIdentitySource = DiarizationSpeaker & {
 };
 
 /**
+ * 얼굴을 들고 있는 쪽. **계약의 `speakers[]` 에는 사진이 없다** — `assignedUserId` 만 준다.
+ * 사진은 같은 응답의 참석자 목록에 있고, 그 둘을 여기서 잇는다.
+ */
+export type SpeakerFace = { userId: string; image?: string | null };
+
+/**
  * 화자에게 얼굴을 준다. **아무것도 저장하지 않는다** — 렌더 시점에 계산한다.
  *
  * 저장하면 팔레트를 바꿀 때 옛 회의만 옛 색으로 남고, 화자 수가 팔레트보다 많으면 어차피
@@ -59,8 +65,14 @@ export type SpeakerIdentitySource = DiarizationSpeaker & {
  * **한 사람이 두 화자로 쪼개진 경우가 공짜로 풀린다.** 둘을 같은 이름에 연결하면 해싱
  * 입력이 같아져 색이 저절로 맞는다 — 병합 코드가 따로 필요 없다.
  */
-export function createSpeakerIdentityResolver(speakers: SpeakerIdentitySource[]) {
+export function createSpeakerIdentityResolver(
+  speakers: SpeakerIdentitySource[],
+  participants: SpeakerFace[] = []
+) {
   const byLabel = new Map(speakers.map((speaker) => [speaker.label, speaker]));
+  const faceOf = new Map(
+    participants.map((participant) => [participant.userId, participant.image ?? null])
+  );
 
   return (label: string | null | undefined): SpeakerIdentity | null => {
     if (!label) return null;
@@ -74,7 +86,11 @@ export function createSpeakerIdentityResolver(speakers: SpeakerIdentitySource[])
       displayName,
       tint: speakerTint(name ?? label),
       initial: [...displayName][0] ?? "?",
-      imageUrl: speaker?.image ?? null,
+      // **사람이면 사진이 먼저다.** 고를 때 얼굴로 알아본 사람이 붙는 순간 글자로 바뀌면
+      // 같은 사람인지 다시 확인하게 된다. 파스텔은 사진이 없을 때의 대체일 뿐이다
+      imageUrl:
+        speaker?.image ??
+        (speaker?.assignedUserId ? faceOf.get(speaker.assignedUserId) ?? null : null),
       unassigned: !speaker?.confirmed,
     };
   };

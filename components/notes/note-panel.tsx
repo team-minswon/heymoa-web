@@ -277,12 +277,6 @@ export function NotePanel({
     [onTabChange]
   );
   const clearFocusSegment = useCallback(() => setFocusSegmentId(null), []);
-  // 짚을 줄이 없다 — 화자를 확인하러 가는 것이라 탭만 옮긴다.
-  const goToTranscript = useCallback(
-    () => onTabChange("transcript", { push: true }),
-    [onTabChange]
-  );
-
   const recording = useRecording();
   const localProviderCanControlNote =
     isNoteRecordingActive(recording, noteId) &&
@@ -716,6 +710,7 @@ export function NotePanel({
                 <TranscriptView
                   noteId={noteId}
                   phase={phase}
+                  participants={note?.participants ?? []}
                   focusSegmentId={focusSegmentId}
                   onFocusHandled={clearFocusSegment}
                 />
@@ -738,7 +733,6 @@ export function NotePanel({
                   noteId={noteId}
                   isEnded={phase === "ended"}
                   onEvidenceSelect={jumpToSegment}
-                  onGoToTranscript={goToTranscript}
                 />
               </ScrollArea>
             </TabsContent>

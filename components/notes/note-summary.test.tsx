@@ -44,7 +44,6 @@ function renderSummary(isEnded: boolean) {
       noteId="01K0000000002"
       isEnded={isEnded}
       onEvidenceSelect={onEvidenceSelect}
-      onGoToTranscript={vi.fn()}
     />
   );
 }
@@ -288,6 +287,26 @@ describe("NoteSummary", () => {
     expect(screen.queryByRole("button", { name: "요약 만들기" })).toBeNull();
   });
 
+  // **조건이 없다는 것이 요점이다.** 예전에는 화자 상태에 따라 나타났다 사라졌고,
+  // 요약이 이미 이름을 반영했는지 화면이 알 방법이 없어 영영 떠 있기도 했다.
+  it("요약이 있으면 다시 만들기가 언제나 같은 자리에 있다", () => {
+    state.analysis = SUCCEEDED;
+    renderSummary(true);
+
+    expect(
+      screen.getByRole("button", { name: "요약 다시 만들기" })
+    ).toBeTruthy();
+  });
+
+  it("다시 만들기를 누르면 분석을 요청한다", () => {
+    state.analysis = SUCCEEDED;
+    renderSummary(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "요약 다시 만들기" }));
+
+    expect(state.requestMock).toHaveBeenCalled();
+  });
+
   it("요청 뒤 refetch가 끝날 때까지 재분석 버튼을 잠근다 — 중복 202 방지", () => {
     // 202 뒤 mutation은 끝나지만 refetch가 도착하기 전 낡은 FAILED가 남는다. isFetching 동안 잠근다.
     state.analysis = {
@@ -315,7 +334,6 @@ describe("NoteSummary", () => {
         noteId="01K0000000002"
         isEnded
         onEvidenceSelect={onEvidenceSelect}
-      onGoToTranscript={vi.fn()}
       />
     );
     expect(state.refetchMock).toHaveBeenCalled();

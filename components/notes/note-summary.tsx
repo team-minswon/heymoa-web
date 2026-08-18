@@ -81,14 +81,11 @@ export function NoteSummary({
   noteId,
   isEnded,
   onEvidenceSelect,
-  onGoToTranscript,
 }: {
   noteId: string;
   isEnded: boolean;
   /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
   onEvidenceSelect: (segmentId: string) => void;
-  /** 화자를 확인하러 간다. 짚을 줄이 없어 탭만 옮긴다. */
-  onGoToTranscript: () => void;
 }) {
   const analysisQuery = useGetLatestAnalysis(noteId, {
     query: {
@@ -149,12 +146,7 @@ export function NoteSummary({
     return (
       <>
         <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-5">
-          <SpeakerNudgeBanner
-            noteId={noteId}
-            onRegenerate={startAnalysis}
-            isRegenerating={isRequesting}
-            onGoToTranscript={onGoToTranscript}
-          />
+          <SpeakerNudgeBanner noteId={noteId} />
           {analysis.retry ? (
             <RetryStrip
               retry={analysis.retry}
@@ -162,6 +154,21 @@ export function NoteSummary({
               isRetrying={isRequesting}
             />
           ) : null}
+          {/* **조건 없이 늘 같은 자리에 있다.** 예전에는 화자 상태에 따라 문구와 버튼이
+              바뀌는 배너였는데, 언제 눌러야 하는지가 화면마다 달라 읽는 일이 됐다.
+              다시 만들 이유는 화자만이 아니다 — 전사를 고쳤거나 그냥 다시 보고 싶을 때도
+              같은 버튼이면 찾을 것이 없다. */}
+          <div className="mt-3 flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-[30px]"
+              loading={isRequesting}
+              onClick={startAnalysis}
+            >
+              요약 다시 만들기
+            </Button>
+          </div>
         </div>
         <SummarySections
           analysis={analysis}

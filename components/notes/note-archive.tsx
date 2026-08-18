@@ -152,9 +152,10 @@ export function NoteArchive({
       createSpeakerIdentityResolver(
         transcript?.diarization?.status === "MAPPED"
           ? transcript.diarization.speakers
-          : []
+          : [],
+        participants
       ),
-    [transcript]
+    [transcript, participants]
   );
   const truncated = transcript?.recording?.seal === "TRUNCATED";
 
