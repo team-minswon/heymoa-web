@@ -128,13 +128,22 @@ function contractSamples() {
     );
   });
 
-  // 분석은 시드에 없어 모든 노트가 404다. 회의를 끝내 PENDING(결과 전부 null) 하나와
-  // SUCCEEDED(결과 비-null) 하나를 만든다 — 두 쪽이 다 있어야 표본이 성립한다.
+  // 분석은 시드에 없어 모든 노트가 404다. 회의를 끝내 두 표본을 만든다 — **목에서 회의를
+  // 끝낼 수 있는 노트가 넷뿐이고 둘은 아래 세션이 쓴다.** 그래서 이 둘에 최대한 담는다.
+  //
+  //   [0] FAILED           → 결과 `errorCode`·`errorMessage`의 비-null 쪽, `retry`의 null 쪽
+  //   [1] SUCCEEDED + 재요약 진행 중 → 그 반대쪽과 `retry`의 비-null 쪽
   for (const [index, noteId] of [operable[0], operable[1]].entries()) {
     const session = mockDb.createSession(noteId);
     mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
     mockDb.endMeeting(noteId);
-    if (index === 1) mockDb.advanceAnalysis(noteId);
+    if (index === 0) {
+      mockDb.failAnalysis(noteId);
+      continue;
+    }
+    mockDb.advanceAnalysis(noteId);
+    // 요약은 마지막 성공본 하나이므로 이 노트의 본문은 그대로고 `retry`만 붙는다 (APP-421).
+    mockDb.requestAnalysis(noteId);
   }
   // READY 세션은 마지막에 만든다 — 전역 가드가 위 endMeeting들을 막지 않게. 이 세션이
   // `startedAt`·`endedAt`·`endReason`의 null 쪽 표본이다.
@@ -311,19 +320,16 @@ function contractSamples() {
  */
 const KNOWN_ONE_SIDED = new Set([
   "CurrentUserResponse.data.image",
-  // 목에 분석 실패 경로가 없다 — `advanceAnalysis`는 SUCCEEDED로만 넘긴다. 그래서 분석
-  // FAILED 화면(rule `error-loading`이 요구하는 상태)이 목으로 검증되지 않는다.
-  "AnalysisResultResponse.data.errorCode",
-  "AnalysisResultResponse.data.errorMessage",
   // `createAgentChat`이 `title: null`로만 만든다 — 목에 제목을 붙이는 수단이 없다.
   "AgentChatV2NullableResponse.data.title",
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
   "CurrentTranscriptionSessionNullableResponse.data.startedAt",
-  // 목에 분석 실패 경로가 없어(위와 같은 이유) 「실패한 재요청 + 이전 성공본」 조합을
-  // 만들 수 없다. **화면도 아직 이 값을 안 그린다** — 서버가 먼저 내려주게 해 둔 것이라,
-  // 그 화면을 붙일 때 목도 같이 심는다 (APP-421).
-  "AnalysisResultResponse.data.previous",
+  // 재요약의 오류 두 필드는 **실패한 재요약** 표본이 있어야 비-null이 나오는데, 회의를
+  // 끝낼 수 있는 목 노트가 넷뿐이고 둘은 세션이 쓴다. 남은 둘에는 「실패한 분석」과
+  // 「진행 중인 재요약」을 담았다 — 셋째 조합을 놓을 노트가 없다 (APP-421).
+  "AnalysisResultResponse.data.retry.errorCode",
+  "AnalysisResultResponse.data.retry.errorMessage",
 ]);
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */

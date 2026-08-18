@@ -1410,6 +1410,9 @@ export const mockDb = {
       sections: [],
       errorCode: null,
       errorMessage: null,
+      // 서버는 이 키를 항상 보낸다(Jackson이 null을 싣는다). 목이 키를 빼면 web의
+      // 「재요약 없음」 분기가 표본에서 사라진다.
+      retry: null,
     };
     state.analyses.push(analysis);
     return copy(analysis);
@@ -1478,9 +1481,43 @@ export const mockDb = {
     return copy(analysis);
   },
 
+  /**
+   * 요약은 **마지막 성공본 하나**다. 재요약이 돌거나 실패해도 화면의 요약은 그대로 있고
+   * 그 사실만 `retry`로 실린다 (APP-421). 성공본이 없을 때만 진행 중·실패한 잡이 본문이다.
+   */
   getLatestAnalysis(noteId: string): AnalysisResultResponseData {
     findNote(noteId);
-    return copy(latestAnalysis(noteId) ?? fail("ANALYSIS_JOB_NOT_FOUND"));
+    const latest = latestAnalysis(noteId) ?? fail("ANALYSIS_JOB_NOT_FOUND");
+    if (latest.status === "SUCCEEDED") return copy(latest);
+    const shown = [...state.analyses]
+      .reverse()
+      .find(
+        (analysis) =>
+          analysis.noteId === noteId && analysis.status === "SUCCEEDED"
+      );
+    if (!shown) return copy(latest);
+    return copy({
+      ...shown,
+      retry: {
+        analysisId: latest.analysisId,
+        status: latest.status,
+        errorCode: latest.errorCode,
+        errorMessage: latest.errorMessage,
+      },
+    });
+  },
+
+  /**
+   * 대기 중인 분석을 실패로 넘긴다. 실서버는 heymoa-ai 콜백이나 워치독이 밀지만 목에는
+   * 그 주체가 없다 — 실패 화면과 「재요약 실패」 표본을 만들려면 이것이 필요하다.
+   */
+  failAnalysis(noteId: string): AnalysisResultResponseData | null {
+    const analysis = latestAnalysis(noteId);
+    if (!analysis || analysis.status !== "PENDING") return null;
+    analysis.status = "FAILED";
+    analysis.errorCode = "ANALYSIS_TIMEOUT";
+    analysis.errorMessage = "분석이 제한 시간을 초과했습니다.";
+    return copy(analysis);
   },
 
   listIntegrations(

@@ -228,6 +228,51 @@ describe("NoteSummary", () => {
     );
   });
 
+  /**
+   * **재요약을 걸어도 화면이 비면 안 된다.** 요약은 마지막 성공본 하나이고 (APP-421),
+   * 그 위에 「다시 만드는 중」 한 줄만 붙는다. 예전에는 재요청이 화면을 통째로 진행
+   * 표시로 바꿔 멀쩡한 요약이 사라졌다.
+   */
+  it("재요약이 도는 동안에도 요약을 그대로 두고 진행 줄만 얹는다", () => {
+    state.analysis = {
+      ...SUCCEEDED,
+      retry: {
+        analysisId: "01K0000000099",
+        status: "RUNNING",
+        errorCode: null,
+        errorMessage: null,
+      },
+    };
+    renderSummary(true);
+
+    expect(screen.getByText("결제 실패율이 3%로 올랐다")).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByText(/다시 만들고 있습니다/)).toBeTruthy();
+    // 전체 화면 진행 표시로 갈아타지 않는다 — 그러면 요약이 사라진다.
+    expect(screen.queryByText("회의를 정리하고 있습니다")).toBeNull();
+  });
+
+  it("재요약이 실패하면 그 전 요약임을 밝히고 다시 시도를 준다", () => {
+    state.analysis = {
+      ...SUCCEEDED,
+      retry: {
+        analysisId: "01K0000000099",
+        status: "FAILED",
+        errorCode: "ANALYSIS_TIMEOUT",
+        errorMessage: "분석이 제한 시간을 초과했습니다.",
+      },
+    };
+    renderSummary(true);
+
+    expect(screen.getByText("결제 실패율이 3%로 올랐다")).toBeTruthy();
+    expect(screen.getByText(/그 전에 만든 요약입니다/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(state.requestMock).toHaveBeenCalledWith(
+      { noteId: "01K0000000002" },
+      expect.anything()
+    );
+  });
+
   it("종료됐는데 분석이 없으면(404) 요약 만들기를 준다", () => {
     state.missing = true;
     renderSummary(true);

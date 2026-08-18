@@ -3326,7 +3326,11 @@ paths:
                         items: []
                       errorCode: null
                       errorMessage: null
-                      previous: null
+                      retry:
+                        analysisId: "0K9GVJT2C4Q1Z"
+                        status: "RUNNING"
+                        errorCode: null
+                        errorMessage: null
                     error: null
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -5295,218 +5299,6 @@ components:
           enum:
           - "APPROVED"
           - "REJECTED"
-    InternalWorkspaceNotesResponse:
-      title: "InternalWorkspaceNotesResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          type: "object"
-          properties:
-            notes:
-              type: "array"
-              items:
-                required:
-                - "createdAt"
-                - "hasAnalysis"
-                - "meetingStatus"
-                - "noteId"
-                - "title"
-                type: "object"
-                properties:
-                  createdAt:
-                    type: "string"
-                    description: "노트 생성 시각"
-                    nullable: false
-                    example: "2026-07-22T00:00:00Z"
-                    format: "date-time"
-                  hasAnalysis:
-                    type: "boolean"
-                    description: "성공한 분석(요약) 존재 여부 — 깊이 읽을 노트 선별용"
-                    nullable: false
-                    example: true
-                  meetingStatus:
-                    type: "string"
-                    description: "회의 상태 (NOT_STARTED·IN_PROGRESS·PAUSED·ENDED)"
-                    nullable: false
-                    example: "ENDED"
-                    enum:
-                    - "NOT_STARTED"
-                    - "IN_PROGRESS"
-                    - "PAUSED"
-                    - "ENDED"
-                  noteId:
-                    type: "string"
-                    description: "노트 식별자"
-                    nullable: false
-                    example: "0HZX2K7M9Q4AF"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
-                  title:
-                    type: "string"
-                    description: "노트 제목"
-                    nullable: false
-                    example: "7월 3주차 스프린트 회의"
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: "성공 시 null인 오류 정보"
-    AnalysisResultResponse:
-      title: "AnalysisResultResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "analysisId"
-          - "noteId"
-          - "sections"
-          - "status"
-          - "errorCode"
-          - "errorMessage"
-          type: "object"
-          properties:
-            previous:
-              type: "object"
-              description: "최신이 FAILED일 때 함께 오는 이전 성공본. 화면이 「(언제) 만든 요약입니다」로 그린다"
-              nullable: true
-            errorMessage:
-              type: "string"
-              description: "에러 메시지 (FAILED일 때)"
-              nullable: true
-              example: "분석이 제한 시간을 초과했습니다."
-            errorCode:
-              type: "string"
-              description: "에러 코드 (FAILED일 때)"
-              nullable: true
-              example: "ANALYSIS_TIMEOUT"
-            analysisId:
-              type: "string"
-              description: "분석 잡의 13자리 TSID"
-              nullable: false
-              example: "0K9GVJT2C4Q1Z"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            noteId:
-              type: "string"
-              description: "노트의 13자리 TSID"
-              nullable: false
-              example: "0HZX2K7M9Q4AF"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            sections:
-              type: "array"
-              description: "SUCCEEDED면 OVERVIEW → ACTION_ITEM → DECISION 세 섹션, 그 밖\
-                에는 빈 배열"
-              items:
-                required:
-                - "items"
-                - "kind"
-                type: "object"
-                properties:
-                  kind:
-                    type: "string"
-                    description: "항목 종류"
-                    nullable: false
-                    example: "OVERVIEW"
-                    enum:
-                    - "OVERVIEW"
-                    - "ACTION_ITEM"
-                    - "DECISION"
-                  items:
-                    type: "array"
-                    description: "그 섹션의 항목. 뽑을 것이 없었으면 빈 배열"
-                    items:
-                      required:
-                      - "content"
-                      - "evidence"
-                      - "itemId"
-                      type: "object"
-                      properties:
-                        itemId:
-                          type: "string"
-                          description: "항목의 13자리 TSID"
-                          nullable: false
-                          example: "0HZX2K7M9Q4AN"
-                          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
-                        evidence:
-                          type: "array"
-                          description: "이 항목이 나온 전사 줄. 최대 3개, 근거를 못 찾았으면 빈 배열"
-                          items:
-                            required:
-                            - "segmentId"
-                            - "startedAtMs"
-                            - "text"
-                            type: "object"
-                            properties:
-                              segmentId:
-                                type: "string"
-                                description: "전사 세그먼트의 13자리 TSID"
-                                nullable: false
-                                example: "0HZX2K7M9Q4AH"
-                                pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                                minLength: 13
-                                maxLength: 13
-                              text:
-                                type: "string"
-                                description: "그 세그먼트의 발화. `transcript_segments` join\
-                                  \ 결과이고 저장된 사본이 아니다"
-                                nullable: false
-                                example: "그럼 결제 쪽부터 보죠"
-                              startedAtMs:
-                                type: "number"
-                                description: "전사 세션 시작 기준 offset (ms)"
-                                nullable: false
-                                example: "252000"
-                          nullable: false
-                        content:
-                          type: "string"
-                          description: "항목 본문 한 줄"
-                          nullable: false
-                          example: "결제 실패율이 3%로 올랐다"
-                    nullable: false
-              nullable: false
-            status:
-              type: "string"
-              description: "분석 잡 상태"
-              nullable: false
-              example: "SUCCEEDED"
-              enum:
-              - "PENDING"
-              - "RUNNING"
-              - "SUCCEEDED"
-              - "FAILED"
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: "성공 시 null인 오류 정보"
     CreateWorkspaceRequest:
       title: "CreateWorkspaceRequest"
       required:
@@ -6784,100 +6576,6 @@ components:
           enum:
           - null
           description: "성공 시 null인 오류 정보"
-    InternalNoteContextResponse:
-      title: "InternalNoteContextResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "meetingStatus"
-          - "noteId"
-          - "title"
-          - "analysis"
-          type: "object"
-          properties:
-            transcript:
-              type: "array"
-              items:
-                required:
-                - "startMs"
-                - "text"
-                type: "object"
-                properties:
-                  startMs:
-                    type: "integer"
-                    description: "발화 시작 시각 (ms)"
-                    nullable: false
-                    example: 0
-                    format: "int64"
-                  text:
-                    type: "string"
-                    description: "확정(final) 전사 본문, 시간순"
-                    nullable: false
-                    example: "이번 주 배포 이슈부터 볼게요"
-            meetingStatus:
-              type: "string"
-              description: "회의 상태 (NOT_STARTED·IN_PROGRESS·PAUSED·ENDED)"
-              nullable: false
-              example: "ENDED"
-              enum:
-              - "NOT_STARTED"
-              - "IN_PROGRESS"
-              - "PAUSED"
-              - "ENDED"
-            noteId:
-              type: "string"
-              description: "노트 식별자"
-              nullable: false
-              example: "0HZX2K7M9Q4AF"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-            analysis:
-              type: "object"
-              properties:
-                overview:
-                  type: "string"
-                  description: "회의 개요 (markdown)"
-                  nullable: false
-                  example: "배포 이슈 논의…"
-                actionItems:
-                  type: "string"
-                  description: "action item 목록 (markdown)"
-                  nullable: false
-                  example: "- APP-123 수정…"
-                decisions:
-                  type: "string"
-                  description: "결정 목록 (markdown)"
-                  nullable: false
-                  example: "- 다음 주 배포로 정했다"
-              description: "요약 3종 — 성공한 분석이 없으면 null"
-              nullable: true
-              required:
-              - "overview"
-              - "actionItems"
-              - "decisions"
-            title:
-              type: "string"
-              description: "노트 제목"
-              nullable: false
-              example: "7월 3주차 스프린트 회의"
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: "성공 시 null인 오류 정보"
     AgentChatMessagesResponse:
       title: "AgentChatMessagesResponse"
       required:
@@ -7468,6 +7166,183 @@ components:
           enum:
           - null
           description: "성공 시 null인 오류 정보"
+    AnalysisResultResponse:
+      title: "AnalysisResultResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "analysisId"
+          - "noteId"
+          - "sections"
+          - "status"
+          - "errorCode"
+          - "errorMessage"
+          type: "object"
+          properties:
+            errorMessage:
+              type: "string"
+              description: "에러 메시지 (FAILED일 때)"
+              nullable: true
+              example: "분석이 제한 시간을 초과했습니다."
+            errorCode:
+              type: "string"
+              description: "에러 코드 (FAILED일 때)"
+              nullable: true
+              example: "ANALYSIS_TIMEOUT"
+            analysisId:
+              type: "string"
+              description: "분석 잡의 13자리 TSID"
+              nullable: false
+              example: "0K9GVJT2C4Q1Z"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            noteId:
+              type: "string"
+              description: "노트의 13자리 TSID"
+              nullable: false
+              example: "0HZX2K7M9Q4AF"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              minLength: 13
+              maxLength: 13
+            retry:
+              type: "object"
+              properties:
+                errorMessage:
+                  type: "string"
+                  description: "재요약 에러 메시지 (FAILED일 때)"
+                  nullable: true
+                  example: "분석이 제한 시간을 초과했습니다."
+                errorCode:
+                  type: "string"
+                  description: "재요약 에러 코드 (FAILED일 때)"
+                  nullable: true
+                  example: "ANALYSIS_TIMEOUT"
+                analysisId:
+                  type: "string"
+                  description: "재요약 잡의 13자리 TSID"
+                  nullable: false
+                  example: "0K9GVJT2C4Q1Z"
+                  pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                  minLength: 13
+                  maxLength: 13
+                status:
+                  type: "string"
+                  description: "재요약 상태. 성공하면 그것이 요약 본문이 되므로 SUCCEEDED 는 여기 오지 않는다"
+                  nullable: false
+                  example: "RUNNING"
+                  enum:
+                  - "PENDING"
+                  - "RUNNING"
+                  - "FAILED"
+              description: "이 요약보다 나중에 시도된 재요약의 상태. 진행 중이거나 실패했을 때만 온다"
+              nullable: true
+              required:
+              - "analysisId"
+              - "status"
+              - "errorCode"
+              - "errorMessage"
+            sections:
+              type: "array"
+              description: "SUCCEEDED면 OVERVIEW → ACTION_ITEM → DECISION 세 섹션, 그 밖\
+                에는 빈 배열"
+              items:
+                required:
+                - "items"
+                - "kind"
+                type: "object"
+                properties:
+                  kind:
+                    type: "string"
+                    description: "항목 종류"
+                    nullable: false
+                    example: "OVERVIEW"
+                    enum:
+                    - "OVERVIEW"
+                    - "ACTION_ITEM"
+                    - "DECISION"
+                  items:
+                    type: "array"
+                    description: "그 섹션의 항목. 뽑을 것이 없었으면 빈 배열"
+                    items:
+                      required:
+                      - "content"
+                      - "evidence"
+                      - "itemId"
+                      type: "object"
+                      properties:
+                        itemId:
+                          type: "string"
+                          description: "항목의 13자리 TSID"
+                          nullable: false
+                          example: "0HZX2K7M9Q4AN"
+                          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                          minLength: 13
+                          maxLength: 13
+                        evidence:
+                          type: "array"
+                          description: "이 항목이 나온 전사 줄. 최대 3개, 근거를 못 찾았으면 빈 배열"
+                          items:
+                            required:
+                            - "segmentId"
+                            - "startedAtMs"
+                            - "text"
+                            type: "object"
+                            properties:
+                              segmentId:
+                                type: "string"
+                                description: "전사 세그먼트의 13자리 TSID"
+                                nullable: false
+                                example: "0HZX2K7M9Q4AH"
+                                pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                                minLength: 13
+                                maxLength: 13
+                              text:
+                                type: "string"
+                                description: "그 세그먼트의 발화. `transcript_segments` join\
+                                  \ 결과이고 저장된 사본이 아니다"
+                                nullable: false
+                                example: "그럼 결제 쪽부터 보죠"
+                              startedAtMs:
+                                type: "number"
+                                description: "전사 세션 시작 기준 offset (ms)"
+                                nullable: false
+                                example: "252000"
+                          nullable: false
+                        content:
+                          type: "string"
+                          description: "항목 본문 한 줄"
+                          nullable: false
+                          example: "결제 실패율이 3%로 올랐다"
+                    nullable: false
+              nullable: false
+            status:
+              type: "string"
+              description: "분석 잡 상태"
+              nullable: false
+              example: "SUCCEEDED"
+              enum:
+              - "PENDING"
+              - "RUNNING"
+              - "SUCCEEDED"
+              - "FAILED"
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
     ChangeWorkspaceMemberRoleRequest:
       title: "ChangeWorkspaceMemberRoleRequest"
       required:
@@ -7578,46 +7453,6 @@ components:
           enum:
           - null
           description: "성공 시 null인 오류 정보"
-    AnalysisSection:
-      title: "AnalysisSection"
-      type: "object"
-      required:
-      - "kind"
-      - "items"
-      properties:
-        kind:
-          type: "string"
-          description: "항목 종류"
-          enum:
-          - "OVERVIEW"
-          - "ACTION_ITEM"
-          - "DECISION"
-          example: "OVERVIEW"
-        items:
-          type: "array"
-          description: "그 섹션의 항목. 뽑을 것이 없었으면 빈 배열"
-          items:
-            $ref: "#/components/schemas/MeetingItem"
-    MeetingItem:
-      title: "MeetingItem"
-      type: "object"
-      required:
-      - "content"
-      - "evidence"
-      properties:
-        content:
-          type: "string"
-          minLength: 1
-          description: "항목 본문 한 줄. 빈 항목은 저장하지 않고 버린다"
-          example: "결제 실패율이 3%로 올랐다"
-        evidence:
-          type: "array"
-          description: "이 항목이 나온 전사 세그먼트 id. 못 찾았으면 빈 배열"
-          maxItems: 3
-          items:
-            type: "string"
-            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-            example: "0HZX2K7M9Q4AH"
     AppErrorDetail:
       type: "object"
       required:

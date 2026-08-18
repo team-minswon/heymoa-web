@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/generated/analysis/analysis";
 import type {
   AnalysisResultResponseData,
+  AnalysisResultResponseDataRetry,
   AnalysisResultResponseDataSectionsItem,
   AnalysisResultResponseDataSectionsItemItemsItem,
   AnalysisResultResponseDataSectionsItemKind,
@@ -40,22 +41,41 @@ const SECTION_ORDER = Object.keys(
 
 const POLL_INTERVAL_MS = 3_000;
 
-/** 폴링 중인 응답 봉투에서 분석 상태만 꺼낸다 — PENDING/RUNNING일 때만 계속 당긴다. */
-function statusOf(payload: unknown): string | null {
+/**
+ * 폴링 중인 응답 봉투에서 **아직 도는 것이 있나**를 꺼낸다.
+ *
+ * **재요약이 돌 때가 함정이다.** 그때 본문은 마지막 성공본이라 `status`가 `SUCCEEDED`인데,
+ * 실제로는 새 분석이 돌고 있다 (APP-421). `status`만 보면 폴링이 멈춰 다 만든 요약이
+ * 새로고침 전까지 안 들어온다. 재요약 상태가 있으면 그쪽이 판정한다.
+ */
+function runningStatusOf(payload: unknown): string | null {
   const envelope = payload as
     | {
         status?: number;
-        data?: { success?: boolean; data?: { status?: string } };
+        data?: {
+          success?: boolean;
+          data?: { status?: string; retry?: { status?: string } | null };
+        };
       }
     | undefined;
   if (envelope?.status !== 200 || !envelope.data?.success) return null;
-  return envelope.data.data?.status ?? null;
+  const result = envelope.data.data;
+  return result?.retry?.status ?? result?.status ?? null;
+}
+
+/** 아직 끝나지 않은 분석인가. 진행 표시와 폴링이 같은 판정을 쓴다. */
+function isRunning(status: string | null | undefined): boolean {
+  return status === "PENDING" || status === "RUNNING";
 }
 
 /**
  * 요약 탭. `GET analyses/latest` 하나가 다섯 화면을 만든다 — 404 빈 상태(오류 아님),
  * PENDING/RUNNING 분석 중(폴링), SUCCEEDED 항목 리스트, FAILED 재분석. 회의가 종료되기
  * 전에는 요약이 없으므로 안내만 보인다(요약 만들기는 ENDED에만 — 계약상 MEETING_NOT_ENDED 예방).
+ *
+ * **요약은 언제나 하나다.** 서버가 마지막 성공본을 본문으로 주고, 그보다 나중에 시도된
+ * 재요약은 `retry`에 상태만 실려 온다 (APP-421). 그래서 다시 만들기를 눌러도 화면이
+ * 비지 않고, 위에 한 줄(`RetryStrip`)만 붙는다.
  */
 export function NoteSummary({
   noteId,
@@ -75,12 +95,8 @@ export function NoteSummary({
       retry: false,
       // 진행 중인 분석만 폴링한다. 404·실패는 종료 순간의 refetch(아래 effect)와 수동
       // 액션(요약 만들기·다시 시도)이 맡는다 — 없는 분석을 3초마다 무한히 두드리지 않는다.
-      refetchInterval: (query) => {
-        const status = statusOf(query.state.data);
-        return status === "PENDING" || status === "RUNNING"
-          ? POLL_INTERVAL_MS
-          : false;
-      },
+      refetchInterval: (query) =>
+        isRunning(runningStatusOf(query.state.data)) ? POLL_INTERVAL_MS : false,
     },
   });
   const requestAnalysis = useRequestAnalysis();
@@ -103,7 +119,10 @@ export function NoteSummary({
 
   // 202 뒤 refetch가 도착하기 전까지 낡은 FAILED/404가 남고, mutation은 이미 끝나 버튼이 다시
   // 열린다 — 그 창에서 또 누르면 ANALYSIS_IN_PROGRESS(409)다. refetch가 끝날 때까지 함께 잠근다.
-  const isRequesting = requestAnalysis.isPending || analysisQuery.isFetching;
+  const isRequesting =
+    requestAnalysis.isPending ||
+    analysisQuery.isFetching ||
+    isRunning(analysis?.retry?.status);
   const startAnalysis = () =>
     requestAnalysis.mutate(
       { noteId },
@@ -136,6 +155,13 @@ export function NoteSummary({
             isRegenerating={isRequesting}
             onGoToTranscript={onGoToTranscript}
           />
+          {analysis.retry ? (
+            <RetryStrip
+              retry={analysis.retry}
+              onRetry={startAnalysis}
+              isRetrying={isRequesting}
+            />
+          ) : null}
         </div>
         <SummarySections
           analysis={analysis}
@@ -307,6 +333,74 @@ function AnalyzingProgress() {
         </p>
       </div>
     </Shell>
+  );
+}
+
+/**
+ * 요약 위에 붙는 **재요약 한 줄**.
+ *
+ * 요약은 언제나 마지막 성공본 하나다 (APP-421). 재요약을 걸어도 아래 요약은 그대로 있고
+ * 이 줄만 바뀐다 — **화면이 비지 않는 것이 요점이다.** 진행 중이면 지금 무엇이 도는지,
+ * 실패했으면 아래 요약이 그 전 것임을 말해 준다.
+ *
+ * `AnalyzingProgress`와 달리 상자를 얇게 쓴다. 그쪽은 화면 전체가 그것뿐이고 여기는
+ * 요약 위에 얹히는 알림이라, 같은 무게로 그리면 요약보다 먼저 읽힌다.
+ */
+function RetryStrip({
+  retry,
+  onRetry,
+  isRetrying,
+}: {
+  retry: NonNullable<AnalysisResultResponseDataRetry>;
+  onRetry: () => void;
+  isRetrying: boolean;
+}) {
+  if (retry.status === "FAILED") {
+    return (
+      <div
+        role="alert"
+        className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] px-3 py-2.5"
+      >
+        <AlertTriangle
+          aria-hidden
+          className="size-4 shrink-0 text-[var(--el-error)]"
+        />
+        <p className="text-xs leading-relaxed text-[var(--el-ink)]">
+          요약을 다시 만들지 못했습니다. 아래는 그 전에 만든 요약입니다.
+          <span className="text-[var(--el-muted)]">
+            {retry.errorMessage ? ` ${retry.errorMessage}` : null}
+            {retry.errorCode ? ` (${retry.errorCode})` : null}
+          </span>
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto h-[26px]"
+          disabled={isRetrying}
+          onClick={onRetry}
+        >
+          다시 시도
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="status"
+      className="mt-3 flex items-center gap-2.5 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5"
+    >
+      <Loader2
+        aria-hidden
+        className="size-4 shrink-0 animate-spin text-[var(--el-muted)]"
+      />
+      <p className="text-xs leading-relaxed text-[var(--el-ink)]">
+        요약을 다시 만들고 있습니다.
+        <span className="text-[var(--el-muted)]">
+          {" 끝나면 아래 요약이 새것으로 바뀝니다."}
+        </span>
+      </p>
+    </div>
   );
 }
 

@@ -67,7 +67,12 @@ export const getGetLatestAnalysisResponseMock = (): AnalysisResultResponse => ({
     ],
     errorCode: null,
     errorMessage: null,
-    previous: null,
+    retry: {
+      analysisId: "0K9GVJT2C4Q1Z",
+      status: "RUNNING",
+      errorCode: null,
+      errorMessage: null,
+    },
   },
   error: null,
 });

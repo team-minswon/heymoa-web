@@ -5,7 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { AnalysisResultResponseDataPrevious } from "./analysisResultResponseDataPrevious";
+import type { AnalysisResultResponseDataRetry } from "./analysisResultResponseDataRetry";
 import type { AnalysisResultResponseDataSectionsItem } from "./analysisResultResponseDataSectionsItem";
 import type { AnalysisResultResponseDataStatus } from "./analysisResultResponseDataStatus";
 
@@ -13,11 +13,6 @@ import type { AnalysisResultResponseDataStatus } from "./analysisResultResponseD
  * 성공 응답 데이터
  */
 export type AnalysisResultResponseData = {
-  /**
-   * 최신이 FAILED일 때 함께 오는 이전 성공본. 화면이 「(언제) 만든 요약입니다」로 그린다
-   * @nullable
-   */
-  previous?: AnalysisResultResponseDataPrevious;
   /**
    * 에러 메시지 (FAILED일 때)
    * @nullable
@@ -42,6 +37,11 @@ export type AnalysisResultResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
+  /**
+   * 이 요약보다 나중에 시도된 재요약의 상태. 진행 중이거나 실패했을 때만 온다
+   * @nullable
+   */
+  retry?: AnalysisResultResponseDataRetry;
   /** SUCCEEDED면 OVERVIEW → ACTION_ITEM → DECISION 세 섹션, 그 밖에는 빈 배열 */
   sections: AnalysisResultResponseDataSectionsItem[];
   /** 분석 잡 상태 */
