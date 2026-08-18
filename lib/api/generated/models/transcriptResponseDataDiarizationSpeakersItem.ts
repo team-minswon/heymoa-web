@@ -21,10 +21,10 @@ export type TranscriptResponseDataDiarizationSpeakersItem = {
    */
   representativeSegmentId: string;
   /**
-   * 계정이 아니라 이 회의의 참여 기록을 가리킨다
+   * 연결된 참석자의 userId. 저장은 participant_id 로 하지만 계약은 userId 로 말한다 — web 이 participants[] 와 이을 수 있는 열쇠가 그것뿐이다
    * @nullable
    */
-  assignedParticipantId?: string | null;
+  assignedUserId?: string | null;
   /** @nullable */
   assignedName?: string | null;
   /** null + confirmed 는 「참석자 중에 없다」로 사람이 확정한 것이다 */

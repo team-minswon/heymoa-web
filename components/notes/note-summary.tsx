@@ -61,11 +61,14 @@ export function NoteSummary({
   noteId,
   isEnded,
   onEvidenceSelect,
+  onGoToTranscript,
 }: {
   noteId: string;
   isEnded: boolean;
   /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
   onEvidenceSelect: (segmentId: string) => void;
+  /** 화자를 확인하러 간다. 짚을 줄이 없어 탭만 옮긴다. */
+  onGoToTranscript: () => void;
 }) {
   const analysisQuery = useGetLatestAnalysis(noteId, {
     query: {
@@ -131,6 +134,7 @@ export function NoteSummary({
             noteId={noteId}
             onRegenerate={startAnalysis}
             isRegenerating={isRequesting}
+            onGoToTranscript={onGoToTranscript}
           />
         </div>
         <SummarySections

@@ -11,7 +11,7 @@ const speaker = (
   speakingMs: 1_000,
   segmentCount: 1,
   representativeSegmentId: "0HZX2K7M9Q4AD",
-  assignedParticipantId: assignedName ? "0HZX2K7M9Q4B1" : null,
+  assignedUserId: assignedName ? "0HZX2K7M9Q4AC" : null,
   assignedName,
   confirmed: assignedName !== null,
   ...extra,
@@ -31,7 +31,7 @@ describe("createSpeakerIdentityResolver", () => {
   it("「참석자 아님」으로 확정해도 화자 A 로 남는다", () => {
     // 그 사람이 누구인지 우리가 모른다는 것이 사실이다
     const resolve = createSpeakerIdentityResolver([
-      { ...speaker("A"), assignedParticipantId: null, confirmed: true },
+      { ...speaker("A"), assignedUserId: null, confirmed: true },
     ]);
 
     expect(resolve("A")?.displayName).toBe("화자 A");

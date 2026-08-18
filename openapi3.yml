@@ -2155,7 +2155,7 @@ paths:
                           speakingMs: 940000
                           segmentCount: 128
                           representativeSegmentId: 0HZX2K7M9Q4AH
-                          assignedParticipantId: 0HZX2K7M9Q4B1
+                          assignedUserId: 0HZX2K7M9Q4AC
                           assignedName: 김민수
                           confirmed: true
                       segments:
@@ -2291,7 +2291,7 @@ paths:
                         speakingMs: 940000
                         segmentCount: 128
                         representativeSegmentId: 0HZX2K7M9Q4AH
-                        assignedParticipantId: 0HZX2K7M9Q4B1
+                        assignedUserId: 0HZX2K7M9Q4AC
                         assignedName: 김민수
                         confirmed: true
                     error: null
@@ -6148,11 +6148,12 @@ components:
                     minLength: 13
                     maxLength: 13
                     example: 0HZX2K7M9Q4AH
-                  assignedParticipantId:
+                  assignedUserId:
                     type: string
-                    description: 계정이 아니라 이 회의의 참여 기록을 가리킨다
+                    description: 연결된 참석자의 userId. 저장은 participant_id 로 하지만 계약은 userId
+                      로 말한다 — web 이 participants[] 와 이을 수 있는 열쇠가 그것뿐이다
                     nullable: true
-                    example: 0HZX2K7M9Q4B1
+                    example: 0HZX2K7M9Q4AC
                   assignedName:
                     type: string
                     nullable: true
@@ -6281,11 +6282,12 @@ components:
                         minLength: 13
                         maxLength: 13
                         example: 0HZX2K7M9Q4AH
-                      assignedParticipantId:
+                      assignedUserId:
                         type: string
-                        description: 계정이 아니라 이 회의의 참여 기록을 가리킨다
+                        description: 연결된 참석자의 userId. 저장은 participant_id 로 하지만 계약은
+                          userId 로 말한다 — web 이 participants[] 와 이을 수 있는 열쇠가 그것뿐이다
                         nullable: true
-                        example: 0HZX2K7M9Q4B1
+                        example: 0HZX2K7M9Q4AC
                       assignedName:
                         type: string
                         nullable: true
