@@ -345,11 +345,17 @@ export function TranscriptView({
                   data-state="partial"
                   aria-live="polite"
                   aria-atomic="true"
-                  className="mt-2 grid grid-cols-1 gap-2 rounded-chip bg-[var(--el-canvas-soft)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
+                  /* **글이 상자 벽에 붙지 않게 안쪽 여백을 준다.** 그러면서 `-mx-4` 로 그만큼
+                     끌어내 **본문 x 좌표는 확정 행과 같게** 둔다 — 확정되는 순간 같은 자리에서
+                     바뀌어야지, 글자가 옆으로 튀면 읽던 줄을 놓친다. */
+                  className="-mx-4 mt-2 grid grid-cols-1 gap-2 rounded-chip bg-[var(--el-canvas-soft)] px-4 py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
                 >
-                  <span className="flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-600 sm:w-32">
+                  {/* 확정 행의 시각 열과 같은 크기·색이다. 여기만 크고 붉으면 정작 읽어야 할
+                      본문보다 딱지가 먼저 눈에 든다. 살아 있다는 신호는 점이 한다.
+                      「확정 전」은 우리 쪽 말이라 뺐다 — 사람에게는 받아 적는 중인 글이다. */}
+                  <span className="flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap pt-1 text-[11px] text-[var(--el-muted)] sm:w-32">
                     <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
-                    실시간 · 확정 전
+                    받아 적는 중
                   </span>
                   <p className="min-w-0 whitespace-normal break-keep text-read leading-7 text-[var(--el-body)]">
                     {partialText}

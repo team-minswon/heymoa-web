@@ -403,7 +403,7 @@ describe("TranscriptView", () => {
 
     const partial = screen.getByText("결과를 정리합니다").closest("article");
     expect(partial).toHaveAttribute("data-state", "partial");
-    expect(partial).toHaveTextContent("실시간 · 확정 전");
+    expect(partial).toHaveTextContent("받아 적는 중");
 
     // v5: 제품 면 대문자 키커·세리프 헤더 없음(FORM SPEC), 전사 행은 단일 값 grid.
     expect(screen.queryByText("Conversation")).toBeNull();
@@ -434,7 +434,7 @@ describe("TranscriptView", () => {
     const partial = screen
       .getByText(/아주 긴 한국어 회의 문장/)
       .closest("article")!;
-    const partialLabel = screen.getByText("실시간 · 확정 전");
+    const partialLabel = screen.getByText("받아 적는 중");
     const partialBody = partial.querySelector("p");
 
     expect(final.firstElementChild).toHaveClass("sm:w-32");
@@ -450,9 +450,16 @@ describe("TranscriptView", () => {
       "break-keep"
     );
     expect(partialBody).not.toHaveClass("truncate", "break-all");
-    const horizontalPadding = (element: Element) =>
-      [...element.classList].filter((name) => /^(px|pl|pr)-/.test(name));
-    expect(horizontalPadding(partial)).toEqual(horizontalPadding(final));
+    // **본문 x 좌표가 확정 행과 같아야 한다.** 확정되는 순간 같은 자리에서 바뀌어야지,
+    // 글자가 옆으로 튀면 읽던 줄을 놓친다. 실시간 행은 바탕이 있어 안쪽 여백이 필요한데,
+    // 그만큼 음수 여백으로 끌어내 상쇄한다 — 지키는 것은 클래스가 같은지가 아니라 상쇄다.
+    const scale = (element: Element, prefix: RegExp) =>
+      [...element.classList]
+        .map((name) => prefix.exec(name)?.[1])
+        .filter((value): value is string => Boolean(value))
+        .map(Number);
+    expect(scale(final, /^px-(\d+)$/)).toEqual([]);
+    expect(scale(partial, /^px-(\d+)$/)).toEqual(scale(partial, /^-mx-(\d+)$/));
   });
 
   it("dedupes recorder and note-topic partials by utteranceId and hides a finalized partial", () => {
