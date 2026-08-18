@@ -777,9 +777,13 @@ function createSeedState(): StoreState {
             reason: "브라우저가 소리를 만들지 못했습니다",
           },
           {
-            // 아직 안 끝난 공백. 화면이 `10:04 – 진행 중`으로 열어 두고 회복하면 닫는다.
-            gapId: "u-01K0000000020-140000",
-            kind: "UPLOAD",
+            // 아직 안 끝난 공백. 화면이 `02:20 – 진행 중`으로 열어 두고 회복하면 닫는다.
+            //
+            // **UPLOAD 로 두면 안 된다.** 조각 번호에 구멍이 났다는 것은 구멍 **다음** 번호가
+            // 도착해야 알 수 있어서 — 13 이 안 온 것은 14 가 와야 안다 — UPLOAD 공백은
+            // 발견되는 순간 이미 닫혀 있다. 열려 있을 수 있는 것은 CAPTURE 뿐이다.
+            gapId: "c-01K0000000020-140000",
+            kind: "CAPTURE",
             startedAtMs: 140_000,
             endedAtMs: 144_000,
             startedAt: "2026-07-13T00:02:20Z",
@@ -842,7 +846,8 @@ function createSeedState(): StoreState {
             items: [
               {
                 itemId: "01K0000000072",
-                content: "첫 화면에 회의 만들기 유도를 붙입니다 (김민수, 이번 주)",
+                content:
+                  "첫 화면에 회의 만들기 유도를 붙입니다 (김민수, 이번 주)",
                 evidence: [
                   {
                     segmentId: "01K0000000063",
@@ -854,7 +859,8 @@ function createSeedState(): StoreState {
               // 근거를 못 찾은 항목. 버리지 않고 칩 없이 남긴다(설계 D2).
               {
                 itemId: "01K0000000073",
-                content: "다음 주 사용자 테스트 참가자 5명을 모집합니다 (한지원)",
+                content:
+                  "다음 주 사용자 테스트 참가자 5명을 모집합니다 (한지원)",
                 evidence: [],
               },
             ],
@@ -864,7 +870,8 @@ function createSeedState(): StoreState {
             items: [
               {
                 itemId: "01K0000000074",
-                content: "온보딩 문구 개편보다 첫 행동 유도를 먼저 하기로 했습니다.",
+                content:
+                  "온보딩 문구 개편보다 첫 행동 유도를 먼저 하기로 했습니다.",
                 evidence: [
                   {
                     segmentId: "01K0000000063",
@@ -1438,7 +1445,8 @@ export const mockDb = {
         items: [
           {
             itemId: nextId(),
-            content: "일정 리스크는 QA 인력에 몰려 있다고 보고 우선 배치합니다.",
+            content:
+              "일정 리스크는 QA 인력에 몰려 있다고 보고 우선 배치합니다.",
             evidence: evidenceAt(1),
           },
         ],
@@ -2109,7 +2117,8 @@ export const mockDb = {
 
     return {
       recording: {
-        startedAt: sessions[0]?.startedAt ?? note.meetingStartedAt ?? note.createdAt,
+        startedAt:
+          sessions[0]?.startedAt ?? note.meetingStartedAt ?? note.createdAt,
         // 봉인은 회의가 끝나야 찍힌다. 진행 중이면 OPEN 이고 그건 오류가 아니다.
         seal: note.meetingStatus === "ENDED" ? "COMPLETE" : "OPEN",
         durationMs,

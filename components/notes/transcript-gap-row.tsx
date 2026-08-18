@@ -1,15 +1,21 @@
 import {
   formatGapDuration,
+  spansCalendarDays,
   spansVisibleClockMinutes,
   type GapRow,
 } from "@/lib/transcription/gaps";
 import { formatOffset } from "@/lib/transcription/presentation";
 
-function clockTime(iso: string) {
+/**
+ * 날짜는 **필요할 때만** 붙인다. 중지가 날을 넘기면 `14:05에 멈추고 09:20에 재개했습니다`
+ * 가 시간을 거슬러 올라간 것처럼 읽힌다 — 실제로는 이틀 뒤다.
+ */
+function clockTime(iso: string, withDate: boolean) {
   const date = new Date(iso);
-  return `${String(date.getHours()).padStart(2, "0")}:${String(
+  const time = `${String(date.getHours()).padStart(2, "0")}:${String(
     date.getMinutes()
   ).padStart(2, "0")}`;
+  return withDate ? `${date.getMonth() + 1}/${date.getDate()} ${time}` : time;
 }
 
 /**
@@ -24,6 +30,7 @@ function clockTime(iso: string) {
 export function TranscriptGapRow({ row }: { row: GapRow }) {
   const paused = row.kind === "PAUSE";
   const open = row.endedAt === null;
+  const withDate = spansCalendarDays(row);
 
   // 중지는 회의 축에서 점이다 — 축이 안 나아갔으니 끝 좌표가 없다.
   const offsetLabel = paused
@@ -35,8 +42,8 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
   const duration = open ? null : formatGapDuration(row.durationMs);
   const headline = paused
     ? duration
-      ? `${duration} 쉬었습니다`
-      : "쉬었습니다"
+      ? `${duration} 중지했습니다`
+      : "중지했습니다"
     : duration
       ? `${duration} 소리가 없습니다`
       : "소리가 없습니다";
@@ -57,8 +64,8 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
             「왜」는 이 줄이 말한다. 두 끝이 같은 분이면 숨긴다. */}
         {paused && spansVisibleClockMinutes(row) ? (
           <span className="ml-2 text-[13px] text-[var(--el-muted-soft)]">
-            {clockTime(row.startedAt)}에 멈추고 {clockTime(row.endedAt!)}에
-            재개했습니다
+            {clockTime(row.startedAt, withDate)}에 멈추고{" "}
+            {clockTime(row.endedAt!, withDate)}에 재개했습니다
           </span>
         ) : null}
       </p>
