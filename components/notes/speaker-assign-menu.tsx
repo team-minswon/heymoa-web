@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  speakerTint,
+  speakerTintOfLabel,
   type SpeakerIdentity,
 } from "@/lib/transcription/speaker-identity";
 
@@ -42,7 +42,13 @@ export type SpeakerCandidate = {
  * 틀린다. 대가는 외부 참석자가 온 회의에서 담당자가 빈다는 것이고, 지금은 감수한다.
  */
 /** 칩과 같은 모양이어야 한다 — 고를 때와 확인할 때 같은 사람이 다르게 보이면 안 된다. */
-function CandidateAvatar({ candidate }: { candidate: SpeakerCandidate }) {
+function CandidateAvatar({
+  candidate,
+  tint,
+}: {
+  candidate: SpeakerCandidate;
+  tint: string;
+}) {
   if (candidate.image) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -56,10 +62,10 @@ function CandidateAvatar({ candidate }: { candidate: SpeakerCandidate }) {
   return (
     <span
       aria-hidden
-      // **칩과 같은 해싱을 쓴다.** 여기만 중립색이면 고를 때 회색이던 사람이 붙는
-      // 순간 파스텔로 바뀌어, 내가 고른 사람이 맞는지 한 번 더 확인하게 된다.
+      // **붙고 나서 가질 색을 미리 보여준다.** 여기만 중립색이거나 다른 규칙이면, 고를
+      // 때와 붙은 뒤가 달라져 내가 고른 사람이 맞는지 한 번 더 확인하게 된다.
       className="flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] text-[var(--el-ink)]"
-      style={{ backgroundColor: speakerTint(candidate.name) }}
+      style={{ backgroundColor: tint }}
     >
       {[...candidate.name][0] ?? "?"}
     </span>
@@ -98,7 +104,17 @@ export function SpeakerAssignMenu({
             onClick={() => onAssign(candidate.userId)}
             className="gap-2"
           >
-            <CandidateAvatar candidate={candidate} />
+            <CandidateAvatar
+              candidate={candidate}
+              // 이미 다른 화자에 붙어 있으면 **거기 색**이다 — 화면에서 그 색으로 보고
+              // 있는 사람이라 알아보는 단서가 된다. 아직 아무 데도 아니면 여기 붙었을 때
+              // 가질 색을 미리 보여준다
+              tint={
+                candidate.assignedLabel
+                  ? speakerTintOfLabel(candidate.assignedLabel)
+                  : identity.tint
+              }
+            />
             <span className="min-w-0 flex-1">
               <span className="flex items-baseline gap-1.5">
                 <span className="truncate text-[13px]">{candidate.name}</span>

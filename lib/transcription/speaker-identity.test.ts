@@ -38,33 +38,60 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("A")?.unassigned).toBe(false);
   });
 
+  // 이름 없는 화자가 전부 「화」로 나오면 얼굴이 서로를 못 가린다. 가려 주는 글자는 라벨이다.
+  it("이름이 없으면 얼굴에 라벨을 쓴다 — 「화」가 아니다", () => {
+    const resolve = createSpeakerIdentityResolver([speaker("A"), speaker("B")]);
+
+    expect(resolve("A")?.initial).toBe("A");
+    expect(resolve("B")?.initial).toBe("B");
+  });
+
+  it("두 자리 라벨도 그대로 쓴다", () => {
+    const resolve = createSpeakerIdentityResolver([speaker("AA")]);
+
+    expect(resolve("AA")?.initial).toBe("AA");
+  });
+
   it("아직 안 본 화자를 표시한다", () => {
     const resolve = createSpeakerIdentityResolver([speaker("A")]);
 
     expect(resolve("A")?.unassigned).toBe(true);
   });
 
-  it("한 사람이 두 화자로 쪼개져도 색이 같아진다", () => {
-    // 해싱 입력이 이름이라 병합 코드가 따로 필요 없다
-    const resolve = createSpeakerIdentityResolver([
-      speaker("A", "김민수"),
-      speaker("C", "김민수"),
-    ]);
+  // **이름을 붙이는 순간 색이 튀면 안 된다.** 예전에는 이름을 해싱해서 「화자 A」에
+  // 이름을 다는 순간 딴 색이 됐다 — 같은 사람인데 화면에서 다른 사람처럼 보인다.
+  it("이름을 붙여도 색이 안 바뀐다", () => {
+    const before = createSpeakerIdentityResolver([speaker("A")]);
+    const after = createSpeakerIdentityResolver([speaker("A", "김민수")]);
 
-    expect(resolve("A")?.tint).toBe(resolve("C")?.tint);
+    expect(after("A")?.tint).toBe(before("A")?.tint);
   });
 
-  it("다른 사람은 대체로 다른 색을 받는다", () => {
-    const names = ["김민수", "박서준", "이영희", "최지우", "정한별"];
+  // 다섯 색에 화자 넷이면 해싱은 생일 문제로 겹치기 쉽다. 실제로 이웃한 두 화자가
+  // 같은 계열로 나왔다 — 순번으로 배정하면 열 명까지 한 번도 안 겹친다.
+  it("열 명까지 색이 하나도 안 겹친다", () => {
+    const labels = Array.from({ length: 10 }, (_, index) =>
+      String.fromCharCode(65 + index)
+    );
     const resolve = createSpeakerIdentityResolver(
-      names.map((name, index) => speaker(String.fromCharCode(65 + index), name))
+      labels.map((label) => speaker(label))
     );
 
-    const tints = new Set(
-      names.map((_, index) => resolve(String.fromCharCode(65 + index))?.tint)
-    );
-    // 팔레트가 다섯이라 다섯 명이면 겹칠 수 있다. 셋 이상 갈리면 충분하다
-    expect(tints.size).toBeGreaterThanOrEqual(3);
+    const tints = new Set(labels.map((label) => resolve(label)?.tint));
+    expect(tints.size).toBe(10);
+  });
+
+  it("열을 넘으면 되돌아 쓴다 — 이름이 있으니 색만으로 가리지 않는다", () => {
+    const resolve = createSpeakerIdentityResolver([speaker("A"), speaker("K")]);
+
+    // A 가 0 번, K 가 10 번이라 한 바퀴 돈 자리다
+    expect(resolve("K")?.tint).toBe(resolve("A")?.tint);
+  });
+
+  it("모르는 모양의 라벨도 색을 받는다 — 순번을 못 매기면 해싱으로 돈다", () => {
+    const resolve = createSpeakerIdentityResolver([speaker("9X")]);
+
+    expect(resolve("9X")?.tint).toBeTruthy();
   });
 
   it("같은 입력에 같은 색을 준다 — 저장 안 해도 안 흔들린다", () => {
@@ -78,6 +105,17 @@ describe("createSpeakerIdentityResolver", () => {
     // DESIGN.md: never as button fills, never as text colors
     const resolve = createSpeakerIdentityResolver([speaker("A", "김민수")]);
 
+    // 옅은 다섯도 같은 토큰을 섞어 만든다 — 여기서 새 색을 지어내지 않는다
+    const all = createSpeakerIdentityResolver(
+      Array.from({ length: 10 }, (_, index) =>
+        speaker(String.fromCharCode(65 + index))
+      )
+    );
+    for (let index = 0; index < 10; index += 1) {
+      expect(all(String.fromCharCode(65 + index))?.tint).toMatch(
+        /var\(--el-gradient-/
+      );
+    }
     expect(resolve("A")?.tint).toMatch(/^var\(--el-gradient-/);
   });
 

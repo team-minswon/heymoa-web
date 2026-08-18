@@ -171,7 +171,7 @@ describe("SpeakerAssignMenu", () => {
     // 이 사람을 화자 A 에 붙이면 칩이 쓸 색
     const afterAssign = createSpeakerIdentityResolver([
       { label: "A", assignedName: "김철수", assignedUserId: "01K0000000001" },
-    ])("A");
+    ] as never)("A");
     const avatar = container.ownerDocument.querySelector<HTMLElement>(
       '[role="menuitem"] span[aria-hidden]'
     );
