@@ -101,7 +101,7 @@ servers:
     host: api.heymoa.app
     pathname: /ws/transcriptions
     protocol: wss
-    protocolVersion: '1.2'
+    protocolVersion: "1.2"
     description: |
       STOMP WebSocket endpoint. HTTP upgrade 요청에는 access_token cookie와
       서버 CORS allowlist에 포함된 Origin header가 모두 필요하다.
@@ -114,7 +114,7 @@ servers:
       - **STOMP 프레임 상한 1 MiB + 16 KiB** (binary + text 합). 오디오 frame 자체의 상한은
         이보다 훨씬 작다 (PcmAudio 참조).
     security:
-      - $ref: '#/components/securitySchemes/accessCookie'
+      - $ref: "#/components/securitySchemes/accessCookie"
   sseEdge:
     host: api.heymoa.app
     protocol: https
@@ -122,11 +122,11 @@ servers:
       agent 채팅 SSE. 별도 endpoint가 아니라 REST와 같은 public edge이며,
       POST 응답 본문이 `text/event-stream`으로 열린다.
     security:
-      - $ref: '#/components/securitySchemes/accessCookie'
+      - $ref: "#/components/securitySchemes/accessCookie"
 channels:
   connectCommand:
     servers:
-      - $ref: '#/servers/production'
+      - $ref: "#/servers/production"
     address: /app/transcription-sessions/{sessionId}/connect
     title: 전사 stream 연결
     description: |
@@ -142,13 +142,13 @@ channels:
       error(INVALID_CLIENT_MESSAGE)로 중단된다.
     parameters:
       sessionId:
-        $ref: '#/components/parameters/sessionId'
+        $ref: "#/components/parameters/sessionId"
     messages:
       ConnectCommand:
-        $ref: '#/components/messages/ConnectCommand'
+        $ref: "#/components/messages/ConnectCommand"
   audioCommand:
     servers:
-      - $ref: '#/servers/production'
+      - $ref: "#/servers/production"
     address: /app/transcription-sessions/{sessionId}/audio
     title: PCM 오디오 전송
     description: |
@@ -159,13 +159,13 @@ channels:
       종료된다 — audio·stop 모두 같다.
     parameters:
       sessionId:
-        $ref: '#/components/parameters/sessionId'
+        $ref: "#/components/parameters/sessionId"
     messages:
       PcmAudio:
-        $ref: '#/components/messages/PcmAudio'
+        $ref: "#/components/messages/PcmAudio"
   stopCommand:
     servers:
-      - $ref: '#/servers/production'
+      - $ref: "#/servers/production"
     address: /app/transcription-sessions/{sessionId}/stop
     title: 전사 세션 종료
     description: |
@@ -176,13 +176,13 @@ channels:
       확정할 오디오가 없으면 drain 없이 곧바로 completed가 온다.
     parameters:
       sessionId:
-        $ref: '#/components/parameters/sessionId'
+        $ref: "#/components/parameters/sessionId"
     messages:
       StopCommand:
-        $ref: '#/components/messages/StopCommand'
+        $ref: "#/components/messages/StopCommand"
   transcriptionEvents:
     servers:
-      - $ref: '#/servers/production'
+      - $ref: "#/servers/production"
     address: /user/queue/transcription-sessions/{replyId}/events
     title: 현재 STOMP 연결 전용 전사 event
     description: |
@@ -194,25 +194,25 @@ channels:
       deactivate한다. 두 event 중 정확히 하나만, 최대 한 번 온다.
     parameters:
       replyId:
-        $ref: '#/components/parameters/replyId'
+        $ref: "#/components/parameters/replyId"
     messages:
       ConnectedEvent:
-        $ref: '#/components/messages/ConnectedEvent'
+        $ref: "#/components/messages/ConnectedEvent"
       PartialEvent:
-        $ref: '#/components/messages/PartialEvent'
+        $ref: "#/components/messages/PartialEvent"
       FinalEvent:
-        $ref: '#/components/messages/FinalEvent'
+        $ref: "#/components/messages/FinalEvent"
       AckEvent:
-        $ref: '#/components/messages/AckEvent'
+        $ref: "#/components/messages/AckEvent"
       CaptureStateEvent:
-        $ref: '#/components/messages/CaptureStateEvent'
+        $ref: "#/components/messages/CaptureStateEvent"
       CompletedEvent:
-        $ref: '#/components/messages/CompletedEvent'
+        $ref: "#/components/messages/CompletedEvent"
       ErrorEvent:
-        $ref: '#/components/messages/ErrorEvent'
+        $ref: "#/components/messages/ErrorEvent"
   noteTopic:
     servers:
-      - $ref: '#/servers/production'
+      - $ref: "#/servers/production"
     address: /topic/notes/{noteId}
     title: 노트 멤버용 실시간 event
     description: |
@@ -222,29 +222,29 @@ channels:
       이벤트처럼 transaction 밖에서 생긴 이벤트는 즉시 발행된다.
     parameters:
       noteId:
-        $ref: '#/components/parameters/noteId'
+        $ref: "#/components/parameters/noteId"
     messages:
       NoteTranscriptPartialEvent:
-        $ref: '#/components/messages/NoteTranscriptPartialEvent'
+        $ref: "#/components/messages/NoteTranscriptPartialEvent"
       NoteTranscriptFinalEvent:
-        $ref: '#/components/messages/NoteTranscriptFinalEvent'
+        $ref: "#/components/messages/NoteTranscriptFinalEvent"
       NoteMeetingStartedEvent:
-        $ref: '#/components/messages/NoteMeetingStartedEvent'
+        $ref: "#/components/messages/NoteMeetingStartedEvent"
       NoteMeetingEndedEvent:
-        $ref: '#/components/messages/NoteMeetingEndedEvent'
+        $ref: "#/components/messages/NoteMeetingEndedEvent"
       NoteRecordingStartedEvent:
-        $ref: '#/components/messages/NoteRecordingStartedEvent'
+        $ref: "#/components/messages/NoteRecordingStartedEvent"
       NoteRecordingStoppedEvent:
-        $ref: '#/components/messages/NoteRecordingStoppedEvent'
+        $ref: "#/components/messages/NoteRecordingStoppedEvent"
       NoteChatTokenEvent:
-        $ref: '#/components/messages/NoteChatTokenEvent'
+        $ref: "#/components/messages/NoteChatTokenEvent"
       NoteChatMessageEndEvent:
-        $ref: '#/components/messages/NoteChatMessageEndEvent'
+        $ref: "#/components/messages/NoteChatMessageEndEvent"
       NoteChatLockEvent:
-        $ref: '#/components/messages/NoteChatLockEvent'
+        $ref: "#/components/messages/NoteChatLockEvent"
   agentChatStream:
     servers:
-      - $ref: '#/servers/sseEdge'
+      - $ref: "#/servers/sseEdge"
     address: /v1/agent-chats/{chatId}/messages
     title: 개인 챗봇 응답 스트림
     description: |
@@ -255,27 +255,27 @@ channels:
       같은 채팅에 동시 스트림을 막는 잠금은 **없다**.
     parameters:
       chatId:
-        $ref: '#/components/parameters/chatId'
+        $ref: "#/components/parameters/chatId"
     messages:
       MessageStart:
-        $ref: '#/components/messages/MessageStart'
+        $ref: "#/components/messages/MessageStart"
       Token:
-        $ref: '#/components/messages/Token'
+        $ref: "#/components/messages/Token"
       ToolCallStart:
-        $ref: '#/components/messages/ToolCallStart'
+        $ref: "#/components/messages/ToolCallStart"
       ToolApprovalRequest:
-        $ref: '#/components/messages/ToolApprovalRequest'
+        $ref: "#/components/messages/ToolApprovalRequest"
       ToolApprovalResolved:
-        $ref: '#/components/messages/ToolApprovalResolved'
+        $ref: "#/components/messages/ToolApprovalResolved"
       ToolCallResult:
-        $ref: '#/components/messages/ToolCallResult'
+        $ref: "#/components/messages/ToolCallResult"
       MessageEnd:
-        $ref: '#/components/messages/MessageEnd'
+        $ref: "#/components/messages/MessageEnd"
       Error:
-        $ref: '#/components/messages/Error'
+        $ref: "#/components/messages/Error"
   noteSharedChatStream:
     servers:
-      - $ref: '#/servers/sseEdge'
+      - $ref: "#/servers/sseEdge"
     address: /v1/notes/{noteId}/chat/messages
     title: 노트 공유 챗봇 응답 스트림
     description: |
@@ -291,46 +291,46 @@ channels:
       (`GET /v1/notes/{noteId}/chat/messages`)의 `pendingApproval`로 "OO님이 승인 대기 중"을 본다.
     parameters:
       noteId:
-        $ref: '#/components/parameters/noteId'
+        $ref: "#/components/parameters/noteId"
     messages:
       MessageStart:
-        $ref: '#/components/messages/MessageStart'
+        $ref: "#/components/messages/MessageStart"
       Token:
-        $ref: '#/components/messages/Token'
+        $ref: "#/components/messages/Token"
       ToolCallStart:
-        $ref: '#/components/messages/ToolCallStart'
+        $ref: "#/components/messages/ToolCallStart"
       ToolApprovalRequest:
-        $ref: '#/components/messages/ToolApprovalRequest'
+        $ref: "#/components/messages/ToolApprovalRequest"
       ToolApprovalResolved:
-        $ref: '#/components/messages/ToolApprovalResolved'
+        $ref: "#/components/messages/ToolApprovalResolved"
       ToolCallResult:
-        $ref: '#/components/messages/ToolCallResult'
+        $ref: "#/components/messages/ToolCallResult"
       MessageEnd:
-        $ref: '#/components/messages/MessageEnd'
+        $ref: "#/components/messages/MessageEnd"
       Error:
-        $ref: '#/components/messages/Error'
+        $ref: "#/components/messages/Error"
 operations:
   connectTranscription:
     action: receive
     summary: SUBSCRIBE 프레임 직후 빈 body의 SEND로 전사 stream을 연결한다.
     channel:
-      $ref: '#/channels/connectCommand'
+      $ref: "#/channels/connectCommand"
     messages:
-      - $ref: '#/channels/connectCommand/messages/ConnectCommand'
+      - $ref: "#/channels/connectCommand/messages/ConnectCommand"
   receiveTranscriptionAudio:
     action: receive
     summary: STOMP binaryBody로 PCM16 오디오를 전송한다.
     channel:
-      $ref: '#/channels/audioCommand'
+      $ref: "#/channels/audioCommand"
     messages:
-      - $ref: '#/channels/audioCommand/messages/PcmAudio'
+      - $ref: "#/channels/audioCommand/messages/PcmAudio"
   stopTranscription:
     action: receive
     summary: 마지막 chunkSeq 를 싣고 남은 final 을 drain 한 뒤 세션을 완료한다.
     channel:
-      $ref: '#/channels/stopCommand'
+      $ref: "#/channels/stopCommand"
     messages:
-      - $ref: '#/channels/stopCommand/messages/StopCommand'
+      - $ref: "#/channels/stopCommand/messages/StopCommand"
   sendTranscriptionEvent:
     action: send
     summary: 현재 STOMP 연결의 전사 상태와 결과를 보낸다.
@@ -340,15 +340,15 @@ operations:
       성공 후에만 sequence 오름차순으로 전달된다. completed 또는 error는 terminal event이며
       수신한 client는 STOMP 연결을 deactivate한다.
     channel:
-      $ref: '#/channels/transcriptionEvents'
+      $ref: "#/channels/transcriptionEvents"
     messages:
-      - $ref: '#/channels/transcriptionEvents/messages/ConnectedEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/PartialEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/FinalEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/AckEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/CaptureStateEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/CompletedEvent'
-      - $ref: '#/channels/transcriptionEvents/messages/ErrorEvent'
+      - $ref: "#/channels/transcriptionEvents/messages/ConnectedEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/PartialEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/FinalEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/AckEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/CaptureStateEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/CompletedEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/ErrorEvent"
   sendNoteTopicEvent:
     action: send
     summary: 노트 멤버에게 회의·녹음·전사·공유 챗 상태를 팬아웃한다.
@@ -357,17 +357,17 @@ operations:
       commit 뒤에만 발행된다. chat.lock의 locked=false는 정상 종료뿐 아니라 중단 시에도 편집 잠금이
       풀렸음을 알리는 신호다. tool approval 이벤트는 이 토픽에 포함하지 않는다.
     channel:
-      $ref: '#/channels/noteTopic'
+      $ref: "#/channels/noteTopic"
     messages:
-      - $ref: '#/channels/noteTopic/messages/NoteTranscriptPartialEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteTranscriptFinalEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteMeetingStartedEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteMeetingEndedEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteRecordingStartedEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteRecordingStoppedEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteChatTokenEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteChatMessageEndEvent'
-      - $ref: '#/channels/noteTopic/messages/NoteChatLockEvent'
+      - $ref: "#/channels/noteTopic/messages/NoteTranscriptPartialEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteTranscriptFinalEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteMeetingStartedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteMeetingEndedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteRecordingStartedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteRecordingStoppedEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteChatTokenEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteChatMessageEndEvent"
+      - $ref: "#/channels/noteTopic/messages/NoteChatLockEvent"
   receiveAgentChatEvents:
     action: receive
     summary: heymoa-web이 개인 챗봇 응답 이벤트를 SSE로 수신한다.
@@ -375,16 +375,16 @@ operations:
       server가 producer지만 이벤트를 만들지는 않는다 — heymoa-ai의 스트림을 변환 없이 중계하고,
       유저 메시지·`message_end.content`·도구 실행 기록만 자기 DB에 저장(tee)한다.
     channel:
-      $ref: '#/channels/agentChatStream'
+      $ref: "#/channels/agentChatStream"
     messages:
-      - $ref: '#/channels/agentChatStream/messages/MessageStart'
-      - $ref: '#/channels/agentChatStream/messages/Token'
-      - $ref: '#/channels/agentChatStream/messages/ToolCallStart'
-      - $ref: '#/channels/agentChatStream/messages/ToolApprovalRequest'
-      - $ref: '#/channels/agentChatStream/messages/ToolApprovalResolved'
-      - $ref: '#/channels/agentChatStream/messages/ToolCallResult'
-      - $ref: '#/channels/agentChatStream/messages/MessageEnd'
-      - $ref: '#/channels/agentChatStream/messages/Error'
+      - $ref: "#/channels/agentChatStream/messages/MessageStart"
+      - $ref: "#/channels/agentChatStream/messages/Token"
+      - $ref: "#/channels/agentChatStream/messages/ToolCallStart"
+      - $ref: "#/channels/agentChatStream/messages/ToolApprovalRequest"
+      - $ref: "#/channels/agentChatStream/messages/ToolApprovalResolved"
+      - $ref: "#/channels/agentChatStream/messages/ToolCallResult"
+      - $ref: "#/channels/agentChatStream/messages/MessageEnd"
+      - $ref: "#/channels/agentChatStream/messages/Error"
   receiveNoteSharedChatEvents:
     action: receive
     summary: heymoa-web이 공유 챗봇 응답 이벤트를 SSE로 수신한다.
@@ -392,16 +392,16 @@ operations:
       수신자는 입력자다. 도구 실행 기록(`tool_approval_resolved`·`tool_call_result`)은
       회의 상태와 무관하게 저장되므로, 승인 직후 회의가 끝나도 관전자의 히스토리에 남는다.
     channel:
-      $ref: '#/channels/noteSharedChatStream'
+      $ref: "#/channels/noteSharedChatStream"
     messages:
-      - $ref: '#/channels/noteSharedChatStream/messages/MessageStart'
-      - $ref: '#/channels/noteSharedChatStream/messages/Token'
-      - $ref: '#/channels/noteSharedChatStream/messages/ToolCallStart'
-      - $ref: '#/channels/noteSharedChatStream/messages/ToolApprovalRequest'
-      - $ref: '#/channels/noteSharedChatStream/messages/ToolApprovalResolved'
-      - $ref: '#/channels/noteSharedChatStream/messages/ToolCallResult'
-      - $ref: '#/channels/noteSharedChatStream/messages/MessageEnd'
-      - $ref: '#/channels/noteSharedChatStream/messages/Error'
+      - $ref: "#/channels/noteSharedChatStream/messages/MessageStart"
+      - $ref: "#/channels/noteSharedChatStream/messages/Token"
+      - $ref: "#/channels/noteSharedChatStream/messages/ToolCallStart"
+      - $ref: "#/channels/noteSharedChatStream/messages/ToolApprovalRequest"
+      - $ref: "#/channels/noteSharedChatStream/messages/ToolApprovalResolved"
+      - $ref: "#/channels/noteSharedChatStream/messages/ToolCallResult"
+      - $ref: "#/channels/noteSharedChatStream/messages/MessageEnd"
+      - $ref: "#/channels/noteSharedChatStream/messages/Error"
 components:
   securitySchemes:
     accessCookie:
@@ -511,7 +511,7 @@ components:
             type: string
             enum: [connected]
           sessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
       examples:
         - name: connected
           payload:
@@ -525,26 +525,42 @@ components:
         비어 있는 중간 텍스트는 발행하지 않으므로 **partial이 한 번도 오지 않는 발화가 있다.**
         `utteranceId`는 commit(수동·VAD 모두)마다 새로 발급된다 — 확정된 발화의 partial 표시를
         지우고 새 발화를 시작할 기준이다.
+
+        본문이 **두 토막**이다. 업체는 토큰마다 `is_final`을 주는데 예전에는 그것을 이어 붙여
+        문자열 하나(`text`)로 보냈고, 안 바뀔 글자와 다음 snapshot이 갈아치울 글자의 경계가
+        거기서 사라졌다. 화면은 이미 굳은 앞부분까지 통째로 옅게 그릴 수밖에 없었다.
+
+        `confirmedText + pendingText`가 곧 예전의 `text`다. 자를 위치를 정수로 싣지 않는 이유는
+        인덱스가 한 칸만 어긋나도 한글 음절을 가르고, 그 사고가 화면에서 조용하기 때문이다.
+
+        **둘 다 빈 문자열일 수 있다.** 서버는 둘 다 빈 것을 발행하지 않지만 그것은 발행 규칙이지
+        형식이 아니다 — `minLength`로 막으면 규칙이 흔들릴 때 client 파싱이 끊기고 소켓이
+        통째로 닫힌다.
       payload:
         type: object
         additionalProperties: false
-        required: [type, utteranceId, text]
+        required: [type, utteranceId, confirmedText, pendingText]
         properties:
           type:
             type: string
             enum: [partial]
           utteranceId:
-            $ref: '#/components/schemas/Tsid'
-          text:
+            $ref: "#/components/schemas/Tsid"
+          confirmedText:
             type: string
-            minLength: 1
+            description: 업체가 확정한 토큰. 이 발화가 끝날 때까지 안 바뀐다.
             example: 오늘 회의에서는
+          pendingText:
+            type: string
+            description: 다음 snapshot이 통째로 갈아치운다. 앞에 붙는 공백은 어절 경계다.
+            example: " 온보딩"
       examples:
         - name: partial
           payload:
             type: partial
             utteranceId: 0HZX2K7M9Q4AC
-            text: 오늘 회의에서는
+            confirmedText: 오늘 회의에서는
+            pendingText: " 온보딩"
     FinalEvent:
       name: FinalEvent
       title: 저장이 완료된 확정 전사 segment
@@ -561,15 +577,25 @@ components:
       payload:
         type: object
         additionalProperties: false
-        required: [type, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs, speakerLabel]
+        required:
+          [
+            type,
+            segmentId,
+            utteranceId,
+            sequence,
+            text,
+            startedAtMs,
+            endedAtMs,
+            speakerLabel,
+          ]
         properties:
           type:
             type: string
             enum: [final]
           segmentId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           utteranceId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           sequence:
             type: integer
             format: int64
@@ -590,7 +616,7 @@ components:
             minimum: 0
             example: 8230
           speakerLabel:
-            type: [string, 'null']
+            type: [string, "null"]
             description: PRO-32 가 회의 뒤에 채운다. 실시간에는 항상 null 이다.
             example: null
       examples:
@@ -669,7 +695,7 @@ components:
             type: string
             enum: [completed]
           sessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
       examples:
         - name: completed
           payload:
@@ -716,45 +742,67 @@ components:
     NoteTranscriptPartialEvent:
       name: NoteTranscriptPartialEvent
       title: 노트의 진행 중인 누적 전사
+      description: |
+        본문이 두 토막인 근거는 `PartialEvent`에 있다. **뷰어에게도 같은 경계를 준다** —
+        한쪽만 가르면 녹음하는 사람과 보는 사람이 같은 발화를 다른 농도로 읽는다.
       payload:
         type: object
         additionalProperties: false
-        required: [type, transcriptionSessionId, utteranceId, text]
+        required:
+          [
+            type,
+            transcriptionSessionId,
+            utteranceId,
+            confirmedText,
+            pendingText,
+          ]
         properties:
           type:
             type: string
             enum: [transcript.partial]
           transcriptionSessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           utteranceId:
-            $ref: '#/components/schemas/Tsid'
-          text:
+            $ref: "#/components/schemas/Tsid"
+          confirmedText:
             type: string
-            minLength: 1
+          pendingText:
+            type: string
       examples:
         - name: partial
           payload:
             type: transcript.partial
             transcriptionSessionId: 0HZX2K7M9Q4AB
             utteranceId: 0HZX2K7M9Q4AC
-            text: 오늘 회의에서는
+            confirmedText: 오늘 회의에서는
+            pendingText: " 온보딩"
     NoteTranscriptFinalEvent:
       name: NoteTranscriptFinalEvent
       title: 노트에 저장된 확정 전사
       payload:
         type: object
         additionalProperties: false
-        required: [type, transcriptionSessionId, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
+        required:
+          [
+            type,
+            transcriptionSessionId,
+            segmentId,
+            utteranceId,
+            sequence,
+            text,
+            startedAtMs,
+            endedAtMs,
+          ]
         properties:
           type:
             type: string
             enum: [transcript.final]
           transcriptionSessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           segmentId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           utteranceId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           sequence:
             type: integer
             format: int64
@@ -823,7 +871,7 @@ components:
             type: string
             enum: [recording.started]
           transcriptionSessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
       examples:
         - name: started
           payload:
@@ -841,7 +889,7 @@ components:
             type: string
             enum: [recording.stopped]
           transcriptionSessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
       examples:
         - name: stopped
           payload:
@@ -901,13 +949,13 @@ components:
             type: string
             enum: [chat.lock]
           chatId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           locked:
             type: boolean
           lockedByUserId:
             type: string
             nullable: true
-            pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
+            pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
       examples:
         - name: released
           payload:
@@ -929,7 +977,7 @@ components:
         required: [chatId, messageId]
         properties:
           chatId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           messageId:
             type: string
             description: 이 assistant 응답의 id
@@ -1001,7 +1049,7 @@ components:
         properties:
           approvalId:
             allOf:
-              - $ref: '#/components/schemas/Tsid'
+              - $ref: "#/components/schemas/Tsid"
             description: |
               승인 API 호출에 쓰는 id. **heymoa-ai가 13자 TSID로 발급한다** —
               server의 승인 API path와 공유 챗봇 조회 응답(`pendingApproval.approvalId`)에
@@ -1042,7 +1090,7 @@ components:
         required: [approvalId, decision]
         properties:
           approvalId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           decision:
             type: string
             enum: [APPROVED, REJECTED]
@@ -1132,7 +1180,7 @@ components:
   schemas:
     Tsid:
       type: string
-      pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
+      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
       minLength: 13
       maxLength: 13
       example: 0HZX2K7M9Q4AB

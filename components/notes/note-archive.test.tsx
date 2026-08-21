@@ -82,11 +82,13 @@ describe("NoteArchive", () => {
         toolEvent: null,
       },
     ];
-    render(<NoteArchive
+    render(
+      <NoteArchive
         noteId="01K0000000002"
         focusSegmentId={null}
         onFocusHandled={() => {}}
-      />);
+      />
+    );
 
     // 전사와 Q&A는 세그먼트로 갈라 한 번에 하나만 보인다.
     expect(screen.getByText("배포 일정을 정합시다.")).toBeTruthy();
@@ -102,11 +104,13 @@ describe("NoteArchive", () => {
 
   it("전사 로드 실패를 빈 아카이브가 아니라 오류·재시도로 보인다", () => {
     data.transcriptFails = true;
-    render(<NoteArchive
+    render(
+      <NoteArchive
         noteId="01K0000000002"
         focusSegmentId={null}
         onFocusHandled={() => {}}
-      />);
+      />
+    );
     expect(screen.getByText("전사를 불러오지 못했습니다.")).toBeTruthy();
     expect(screen.queryByText("전사된 대화가 없습니다.")).toBeNull();
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
@@ -124,11 +128,13 @@ describe("NoteArchive", () => {
       },
     ];
     data.chatFails = true;
-    render(<NoteArchive
+    render(
+      <NoteArchive
         noteId="01K0000000002"
         focusSegmentId={null}
         onFocusHandled={() => {}}
-      />);
+      />
+    );
     fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
     expect(screen.getByText("챗봇 대화를 불러오지 못했습니다.")).toBeTruthy();
     // 전사 실패와 같은 재시도 경로를 준다.
@@ -147,11 +153,13 @@ describe("NoteArchive", () => {
         text: "짧은 회의.",
       },
     ];
-    render(<NoteArchive
+    render(
+      <NoteArchive
         noteId="01K0000000002"
         focusSegmentId={null}
         onFocusHandled={() => {}}
-      />);
+      />
+    );
     expect(screen.getByText("짧은 회의.")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
@@ -162,11 +170,13 @@ describe("NoteArchive", () => {
   });
 
   it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {
-    render(<NoteArchive
+    render(
+      <NoteArchive
         noteId="01K0000000002"
         focusSegmentId={null}
         onFocusHandled={() => {}}
-      />);
+      />
+    );
 
     const content = screen.getByTestId("note-archive-content");
     expect(content.classList.contains("pb-7")).toBe(true);
@@ -187,11 +197,13 @@ describe("NoteArchive", () => {
           text: "긴 회의.",
         },
       ];
-      const view = render(<NoteArchive
-        noteId="01K0000000002"
-        focusSegmentId={null}
-        onFocusHandled={() => {}}
-      />);
+      const view = render(
+        <NoteArchive
+          noteId="01K0000000002"
+          focusSegmentId={null}
+          onFocusHandled={() => {}}
+        />
+      );
       const viewport = view.container.querySelector<HTMLElement>(
         '[data-slot="scroll-area-viewport"]'
       );
@@ -241,7 +253,7 @@ describe("NoteArchive", () => {
   describe("요약 근거 점프", () => {
     // 세 세그먼트가 한 블록으로 묶이고 blockId는 첫 세그먼트다 — 가운데를 가리키는 DOM
     // 노드가 없으므로 `segmentIds.includes()`로 블록을 찾지 않으면 아무 데도 못 간다.
-    function seedTwoBlocks() {
+    function seedThreeSegments() {
       data.segments = [
         {
           segmentId: "s1",
@@ -249,7 +261,7 @@ describe("NoteArchive", () => {
           sequence: 0,
           startedAtMs: 0,
           endedAtMs: 1000,
-          text: "앞 블록 첫 줄.",
+          text: "첫 줄.",
         },
         {
           segmentId: "s2",
@@ -257,22 +269,23 @@ describe("NoteArchive", () => {
           sequence: 1,
           startedAtMs: 1200,
           endedAtMs: 2000,
-          text: "앞 블록 둘째 줄.",
+          text: "둘째 줄.",
         },
         {
           segmentId: "s3",
           transcriptionSessionId: "sess1",
           sequence: 2,
-          // 간격 1.5초를 넘겨 다음 블록으로 갈린다.
           startedAtMs: 60_000,
           endedAtMs: 61_000,
-          text: "뒤 블록.",
+          text: "셋째 줄.",
         },
       ];
     }
 
-    it("블록 가운데 세그먼트를 가리켜도 그 블록을 짚는다", () => {
-      seedTwoBlocks();
+    it("가리킨 발화를 그 줄에서 정확히 짚는다", () => {
+      // 묶기를 지운 뒤로 행이 곧 세그먼트다 — 예전에는 s2 가 s1 과 한 블록이라
+      // 첫 줄이 짚혔고, 인용이 문단 어디를 가리키는지 표시할 방법이 없었다.
+      seedThreeSegments();
       render(
         <NoteArchive
           noteId="01K0000000002"
@@ -281,20 +294,22 @@ describe("NoteArchive", () => {
         />
       );
 
-      const blocks = screen.getAllByTestId("archive-transcript-block");
-      expect(blocks[0]).toHaveAttribute("data-focused", "true");
-      expect(blocks[1]).not.toHaveAttribute("data-focused");
+      const rows = screen.getAllByTestId("archive-transcript-block");
+      expect(rows).toHaveLength(3);
+      expect(rows[1]).toHaveAttribute("data-focused", "true");
+      expect(rows[0]).not.toHaveAttribute("data-focused");
+      expect(rows[2]).not.toHaveAttribute("data-focused");
     });
 
     /**
-     * **형광은 글자에만 칠하고 여백은 건드리지 않는다.** 예전에는 블록 배경을 통째로
+     * **형광은 글자에만 칠하고 여백은 건드리지 않는다.** 예전에는 행 배경을 통째로
      * 칠하면서 `px-3`이 함께 붙어, 도착한 줄만 글자가 12px 밀리고 아래 hairline이 24px
      * 짧아졌다 — 찾아간 자리가 도착과 동시에 움직였다.
      *
      * jsdom은 px를 못 재니 **어느 요소에 칠하는지**와 **여백 유틸리티가 붙는지**로 검사한다.
      */
     it("형광을 글자에만 칠하고 여백은 그대로 둔다", () => {
-      seedTwoBlocks();
+      seedThreeSegments();
       render(
         <NoteArchive
           noteId="01K0000000002"
@@ -303,10 +318,12 @@ describe("NoteArchive", () => {
         />
       );
 
-      const [focused, plain] = screen.getAllByTestId("archive-transcript-block");
+      const [plain, focused] = screen.getAllByTestId(
+        "archive-transcript-block"
+      );
       const spacing = (node: Element) =>
         [...node.classList].filter((name) => /^-?(p|m)[xytrbl]?-/.test(name));
-      // 블록은 짚혀도 그대로다 — 여백도 배경도.
+      // 행은 짚혀도 그대로다 — 여백도 배경도.
       expect(spacing(focused)).toEqual(spacing(plain));
       expect(focused.className).not.toContain("--el-highlight");
 
@@ -315,15 +332,15 @@ describe("NoteArchive", () => {
       expect(mark?.className).toContain("bg-[var(--el-highlight)]");
       // 인라인 여백은 첫 글자를 밀기 때문에 쓰지 않는다.
       expect(spacing(mark!)).toEqual([]);
-      expect(
-        plain.querySelector("p > span")?.className ?? ""
-      ).not.toContain("--el-highlight");
+      expect(plain.querySelector("p > span")?.className ?? "").not.toContain(
+        "--el-highlight"
+      );
     });
 
     it("하이라이트가 끝나면 focus를 비우라고 알린다", () => {
       vi.useFakeTimers();
       try {
-        seedTwoBlocks();
+        seedThreeSegments();
         const onFocusHandled = vi.fn();
         render(
           <NoteArchive
@@ -343,7 +360,7 @@ describe("NoteArchive", () => {
     });
 
     it("focus가 없으면 아무 블록도 짚지 않는다", () => {
-      seedTwoBlocks();
+      seedThreeSegments();
       render(
         <NoteArchive
           noteId="01K0000000002"

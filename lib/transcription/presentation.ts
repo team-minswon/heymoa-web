@@ -10,15 +10,6 @@ export type TranscriptPresentationSegment = {
   speakerLabel?: string | null;
 };
 
-export type TranscriptBlock = {
-  blockId: string;
-  segmentIds: string[];
-  text: string;
-  startedAtMs: number;
-  endedAtMs: number;
-  speakerLabel: string | null;
-};
-
 /**
  * `h:mm:ss` — 한 시간을 넘으면 시를 붙인다.
  *
@@ -33,80 +24,50 @@ export function formatOffset(milliseconds: number) {
   return `${Math.floor(minutes / 60)}:${pad(minutes % 60)}:${pad(seconds % 60)}`;
 }
 
-const MAX_SEGMENTS_PER_BLOCK = 6;
-const MAX_BLOCK_DURATION_MS = 30_000;
-const MAX_GAP_MS = 1_500;
-const MAX_BLOCK_TEXT_LENGTH = 260;
-
-function normalizeText(text: string) {
-  return text.trim().replace(/\s+/g, " ");
-}
-
 /**
- * 표시용으로 발화를 묶는다. **좌표는 건드리지 않는다** — `withContinuousTimeline` 이
- * 하던 세션 길이 누적은 사라졌다. 브라우저는 중지한 시간도 끊긴 구간의 길이도 모른다.
+ * `groupTranscriptSegments` 를 지웠다 — **세그먼트 하나가 행 하나다.**
+ *
+ * 묶기는 인접 발화를 네 상수(6세그먼트 · 30초 · 1.5초 · 260자)와 화자 동일 조건으로
+ * 한 문단에 이어 붙였다. 지우는 이유가 둘이다.
+ *
+ * 하나. **실시간 `final` 의 `speakerLabel` 은 항상 `null` 이다** — 화자는 회의가 끝난 뒤에
+ * 채워진다. 그래서 녹음 중에는 화자 조건이 없는 것과 같아 숫자 넷만으로 최대 6개가 묶였고,
+ * 종료 후 화자가 도착하면 같은 세그먼트가 **다시** 화자 기준으로 쪼개졌다. 읽던 문단 구조가
+ * 회의가 끝나는 순간 한 번 흔들렸다.
+ *
+ * 둘. 묶인 문단은 가운데 세그먼트를 가리키는 DOM 노드가 없어서, 요약의 근거 인용이 문단
+ * 전체를 짚을 수밖에 없었다. 1:1이면 짚는 자리가 곧 그 발화다.
+ *
+ * 좌표는 예전에도 지금도 안 건드린다. 서버가 준 `startedAtMs` 를 그대로 쓴다.
  */
-export function groupTranscriptSegments(
-  segments: TranscriptPresentationSegment[]
-): TranscriptBlock[] {
-  const blocks: TranscriptBlock[] = [];
-
-  for (const raw of segments) {
-    const segment = { ...raw, text: normalizeText(raw.text) };
-    if (!segment.text) continue;
-    const speakerLabel = segment.speakerLabel ?? null;
-
-    const current = blocks.at(-1);
-    const nextTextLength = current
-      ? current.text.length + 1 + segment.text.length
-      : segment.text.length;
-    const canMerge = Boolean(
-      current &&
-        // 화자가 다르면 가른다. 한 덩어리에 두 사람의 말이 섞이면 라벨이 거짓이 된다.
-        current.speakerLabel === speakerLabel &&
-        segment.startedAtMs - current.endedAtMs <= MAX_GAP_MS &&
-        segment.endedAtMs - current.startedAtMs <= MAX_BLOCK_DURATION_MS &&
-        current.segmentIds.length < MAX_SEGMENTS_PER_BLOCK &&
-        nextTextLength <= MAX_BLOCK_TEXT_LENGTH
-    );
-
-    if (!current || !canMerge) {
-      blocks.push({
-        blockId: segment.segmentId,
-        segmentIds: [segment.segmentId],
-        text: segment.text,
-        startedAtMs: segment.startedAtMs,
-        endedAtMs: segment.endedAtMs,
-        speakerLabel,
-      });
-      continue;
-    }
-
-    current.segmentIds.push(segment.segmentId);
-    current.text = `${current.text} ${segment.text}`;
-    current.endedAtMs = segment.endedAtMs;
-  }
-
-  return blocks;
-}
-
 export type TranscriptRow =
-  | { type: "block"; startedAtMs: number; block: TranscriptBlock }
+  | {
+      type: "segment";
+      startedAtMs: number;
+      segment: TranscriptPresentationSegment;
+    }
   | { type: "gap"; startedAtMs: number; gap: GapRow };
 
 /** 발화와 공백을 회의 축 순서로 한 줄에 세운다. 같은 좌표면 공백이 먼저다. */
 export function interleaveTranscript(
-  blocks: TranscriptBlock[],
+  segments: TranscriptPresentationSegment[],
   gaps: GapRow[]
 ): TranscriptRow[] {
   const rows: TranscriptRow[] = [
     ...gaps.map(
       (gap) => ({ type: "gap", startedAtMs: gap.startedAtMs, gap }) as const
     ),
-    ...blocks.map(
-      (block) =>
-        ({ type: "block", startedAtMs: block.startedAtMs, block }) as const
-    ),
+    // 빈 발화는 서버가 안 보내지만, 오면 빈 행이 되므로 여기서 떨군다.
+    ...segments
+      .filter((segment) => segment.text.trim())
+      .map(
+        (segment) =>
+          ({
+            type: "segment",
+            startedAtMs: segment.startedAtMs,
+            segment,
+          }) as const
+      ),
   ];
   return rows.sort(
     (a, b) =>

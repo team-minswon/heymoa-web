@@ -499,7 +499,8 @@ describe("RecordingProvider", () => {
       harness.getCallbacks().onEvent({
         type: "partial",
         utteranceId: "0HZX2K7M9Q4AC",
-        text: "로그아웃 전 전사",
+        confirmedText: "로그아웃 전",
+        pendingText: " 전사",
       })
     );
 
@@ -570,7 +571,8 @@ describe("RecordingProvider", () => {
       harness.getCallbacks().onEvent({
         type: "partial",
         utteranceId: "0HZX2K7M9Q4AC",
-        text: "이전 전사",
+        confirmedText: "이전",
+        pendingText: " 전사",
       })
     );
     await act(() => harness.result.current.stop());
@@ -588,7 +590,8 @@ describe("RecordingProvider", () => {
       harness.getCallbacks().onEvent({
         type: "partial",
         utteranceId: "0HZX2K7M9Q4AC",
-        text: "완료 전에 수신한 문장",
+        confirmedText: "완료 전에 수신한",
+        pendingText: " 문장",
       })
     );
     sessionQuery.current = {

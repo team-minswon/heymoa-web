@@ -37,7 +37,9 @@ import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
 type ViewerLivePartial = {
   utteranceId: string;
   transcriptionSessionId: string;
-  text: string;
+  /** 두 토막인 근거는 `lib/transcription/protocol.ts` 의 partial 주석에 있다. */
+  confirmedText: string;
+  pendingText: string;
 };
 
 type NoteRealtimeState = {
@@ -82,7 +84,8 @@ function reducer(
         partial: {
           utteranceId: event.utteranceId,
           transcriptionSessionId: event.transcriptionSessionId,
-          text: event.text,
+          confirmedText: event.confirmedText,
+          pendingText: event.pendingText,
         },
       };
     case "transcript.final": {

@@ -20,7 +20,6 @@ import {
 } from "@/lib/transcription/speaker-identity";
 import {
   formatOffset,
-  groupTranscriptSegments,
   interleaveTranscript,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
@@ -73,7 +72,7 @@ export function TranscriptView({
       ? transcriptQuery.data.data.data
       : null;
   const persisted = useMemo(() => transcript?.segments ?? [], [transcript]);
-  const blocks = useMemo(() => {
+  const segments = useMemo(() => {
     const rows = new Map<string, TranscriptPresentationSegment>();
 
     persisted.forEach((segment) => rows.set(segment.segmentId, segment));
@@ -86,9 +85,9 @@ export function TranscriptView({
       });
     }
 
-    // The API already orders sessions chronologically. Grouping is presentation
-    // only: persisted segment identity and session boundaries stay intact.
-    return groupTranscriptSegments([...rows.values()]);
+    // 묶지 않는다 — 세그먼트 하나가 행 하나다(`presentation.ts` 주석 참조).
+    // 순서는 `interleaveTranscript`가 회의 축으로 세운다.
+    return [...rows.values()];
   }, [
     liveForNote,
     liveTranscript.finalSegments,
@@ -96,8 +95,8 @@ export function TranscriptView({
     persisted,
   ]);
   const rows = useMemo(
-    () => interleaveTranscript(blocks, toGapRows(transcript?.gaps ?? [])),
-    [blocks, transcript]
+    () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
+    [segments, transcript]
   );
   const speakerOf = useMemo(
     () =>
@@ -110,7 +109,7 @@ export function TranscriptView({
     [transcript, participants]
   );
 
-  const partialText = useMemo(() => {
+  const partial = useMemo(() => {
     // 살아 있는 partial은 세션당 하나다. 이어 붙이지 않는 것이 핵심이다 — 합치면 확정되지
     // 못한 발화가 화면에 계속 남는다.
     //
@@ -129,8 +128,8 @@ export function TranscriptView({
     const live = ownSocketIsSource
       ? liveTranscript.partial
       : noteRealtime.transcript.partial;
-    if (!live) return "";
-    const confirmed =
+    if (!live) return null;
+    const settled =
       noteRealtime.transcript.finalSegments.some(
         (segment) => segment.utteranceId === live.utteranceId
       ) ||
@@ -138,7 +137,16 @@ export function TranscriptView({
         liveTranscript.finalSegments.some(
           (segment) => segment.utteranceId === live.utteranceId
         ));
-    return confirmed ? "" : live.text.trim();
+    if (settled) return null;
+
+    // **앞쪽 공백만 턴다.** 두 토막 사이의 공백은 어절 경계라 지우면 단어가 붙는다.
+    // 확정 토막이 비어 있으면 미확정 토막이 첫머리이므로 그쪽을 턴다.
+    const confirmedText = live.confirmedText.trimStart();
+    const pendingText = confirmedText
+      ? live.pendingText
+      : live.pendingText.trimStart();
+    if (!confirmedText && !pendingText.trim()) return null;
+    return { confirmedText, pendingText };
   }, [
     liveForNote,
     liveTranscript.finalSegments,
@@ -166,7 +174,14 @@ export function TranscriptView({
   const programmaticScrollRef = useRef(false);
   const programmaticScrollTimerRef = useRef<number | null>(null);
   const [isFollowing, setIsFollowing] = useState(true);
-  const liveContentKey = `${blocks.at(-1)?.blockId ?? ""}:${blocks.at(-1)?.text ?? ""}:${partialText}`;
+  /**
+   * **id 만으로는 부족하다.** 서버는 같은 `segmentId` 로 교정본을 다시 보내고
+   * (`note-realtime-provider` 가 segmentId 로 교체한다), 30초 REST 재조회도 같은 행의
+   * 문장을 길게 바꿔 놓는다. 그때 행 높이는 자라는데 scroll 이벤트는 안 나서, 텍스트를
+   * 빼면 추종 중인 독자가 바닥에서 밀린 채로 남는다 — 「맨 아래로」 버튼도 안 뜬다.
+   */
+  const lastSegment = segments.at(-1);
+  const liveContentKey = `${lastSegment?.segmentId ?? ""}:${lastSegment?.text ?? ""}:${partial?.confirmedText ?? ""}:${partial?.pendingText ?? ""}`;
 
   const updateFollowing = useCallback((next: boolean) => {
     followingRef.current = next;
@@ -249,7 +264,7 @@ export function TranscriptView({
    * 이 훅도 rAF로 움직이므로 나중에 등록된 쪽이 남는다. 옮겨 간 뒤에는 scroll 핸들러가
    * 바닥과의 거리를 다시 재 추종을 끄고, 사용자가 맨 아래로 돌아가면 그대로 되살아난다.
    */
-  const { blockRef, isHighlighted } = useTranscriptFocus(blocks, {
+  const { segmentRef, isHighlighted } = useTranscriptFocus(segments, {
     focusSegmentId,
     onFocusHandled,
   });
@@ -306,33 +321,34 @@ export function TranscriptView({
                   <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
                 ) : (
                   <article
-                    key={row.block.blockId}
-                    ref={blockRef(row.block.blockId)}
+                    key={row.segment.segmentId}
+                    ref={segmentRef(row.segment.segmentId)}
                     data-testid="transcript-block"
-                    data-segment-count={row.block.segmentIds.length}
-                    data-timeline-start-ms={row.block.startedAtMs}
+                    data-timeline-start-ms={row.segment.startedAtMs}
                     data-state="final"
-                    data-focused={isHighlighted(row.block.blockId) || undefined}
+                    data-focused={
+                      isHighlighted(row.segment.segmentId) || undefined
+                    }
                     className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
                   >
                     <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
-                      {formatOffset(row.block.startedAtMs)}
+                      {formatOffset(row.segment.startedAtMs)}
                     </time>
                     <div className="min-w-0">
-                      {speakerOf(row.block.speakerLabel) ? (
+                      {speakerOf(row.segment.speakerLabel) ? (
                         <SpeakerChip
-                          identity={speakerOf(row.block.speakerLabel)!}
+                          identity={speakerOf(row.segment.speakerLabel)!}
                           className="mb-1"
                         />
                       ) : null}
                       <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
                         <span
                           className={cn(
-                            isHighlighted(row.block.blockId) &&
+                            isHighlighted(row.segment.segmentId) &&
                               FOCUSED_TEXT_CLASS
                           )}
                         >
-                          {row.block.text}
+                          {row.segment.text}
                         </span>
                       </p>
                     </div>
@@ -340,7 +356,7 @@ export function TranscriptView({
                 )
               )}
 
-              {partialText ? (
+              {partial ? (
                 <article
                   data-state="partial"
                   aria-live="polite"
@@ -357,14 +373,30 @@ export function TranscriptView({
                     <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
                     받아 적는 중
                   </span>
+                  {/* **한 줄 안에서 농도가 갈린다.** 업체가 확정한 앞부분은 다시 안 바뀌므로
+                      확정 행과 같은 `--el-ink` 로 두고, 다음 snapshot 이 갈아치울 뒷부분만
+                      옅게 둔다. 예전에는 둘을 이어 붙인 문자열 하나만 와서 이미 굳은 글자까지
+                      통째로 흐렸다 — 읽는 사람은 안 바뀔 말을 계속 기다렸다. */}
                   <p className="min-w-0 whitespace-normal break-keep text-read leading-7 text-[var(--el-body)]">
-                    {partialText}
+                    {partial.confirmedText ? (
+                      <span
+                        data-testid="partial-confirmed"
+                        className="text-[var(--el-ink)]"
+                      >
+                        {partial.confirmedText}
+                      </span>
+                    ) : null}
+                    {partial.pendingText ? (
+                      <span data-testid="partial-pending">
+                        {partial.pendingText}
+                      </span>
+                    ) : null}
                     <span className="ml-1 inline-block h-4 w-px animate-pulse bg-[var(--el-muted)] align-middle" />
                   </p>
                 </article>
               ) : null}
 
-              {!blocks.length && !viewerLive && phase === "not-started" ? (
+              {!segments.length && !viewerLive && phase === "not-started" ? (
                 <div className="flex min-h-72 flex-col justify-center border-b border-[var(--el-hairline)] py-12">
                   <span
                     aria-hidden
@@ -382,7 +414,7 @@ export function TranscriptView({
                 </div>
               ) : null}
 
-              {!blocks.length && viewerLive && !partialText ? (
+              {!segments.length && viewerLive && !partial ? (
                 <div className="flex min-h-64 flex-col items-center justify-center text-center">
                   <span className="flex items-end gap-1" aria-hidden>
                     {[0.35, 0.7, 1, 0.55, 0.3].map((height, index) => (
@@ -405,7 +437,7 @@ export function TranscriptView({
                 </div>
               ) : null}
 
-              {!blocks.length && !viewerLive && phase !== "not-started" ? (
+              {!segments.length && !viewerLive && phase !== "not-started" ? (
                 <p className="py-8 text-sm text-[var(--el-muted)]">
                   전사된 대화가 없습니다.
                 </p>

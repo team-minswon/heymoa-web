@@ -35,11 +35,20 @@ describe("MockTranscriptionScenario", () => {
       .filter((event) => event.type === "partial");
     expect(partials).toHaveLength(2);
     expect(partials[1].utteranceId).toBe(partials[0].utteranceId);
-    expect(partials[1].text).toContain(partials[0].text);
+    // 이어 붙인 것이 곧 화면에 나가는 문장이고, 그것은 자라기만 한다.
+    const whole = (event: { confirmedText: string; pendingText: string }) =>
+      `${event.confirmedText}${event.pendingText}`;
+    expect(whole(partials[1])).toContain(whole(partials[0]));
+    // **확정 토막도 자라기만 한다** — 굳은 글자가 뒤로 물러나면 화면이 앞뒤로 흔들린다.
+    expect(partials[1].confirmedText).toContain(partials[0].confirmedText);
+    expect(partials[1].pendingText).not.toBe("");
 
     // `commit` 명령이 사라졌다. 발화 경계는 이제 침묵이 정한다.
     const silence = new Int16Array(16_000).buffer; // 1초
-    await scenario.receiveFrame(silence, { chunkSeq: 2, captureSamples: 1_920 });
+    await scenario.receiveFrame(silence, {
+      chunkSeq: 2,
+      captureSamples: 1_920,
+    });
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ type: "final", sequence: 1 })
     );

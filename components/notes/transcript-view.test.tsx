@@ -26,11 +26,36 @@ const NEW_POLLED_SEGMENT = {
   startedAtMs: 1_000,
   endedAtMs: 1_900,
 };
+/**
+ * 살아 있는 partial 하나를 두 토막으로 만든다. **마지막 어절만 미확정으로 둔다** —
+ * 화면이 한 줄 안에서 농도를 가르는 것을 픽스처가 그대로 재현해야, 이어 붙인 결과만
+ * 보는 단언이 경계가 깨진 것을 놓치지 않는다.
+ */
+function livePartial(utteranceId: string, text: string) {
+  const words = text.split(" ");
+  return words.length > 1
+    ? {
+        utteranceId,
+        confirmedText: words.slice(0, -1).join(" "),
+        pendingText: ` ${words.at(-1)}`,
+      }
+    : { utteranceId, confirmedText: "", pendingText: text };
+}
+
+/**
+ * 살아 있는 partial 행. **`getByText` 로 못 잡는다** — 본문이 확정/미확정 두 `span` 으로
+ * 갈려 있어서 어느 요소의 직접 텍스트도 전체 문장과 같지 않다. 그 갈림이 이 변경의
+ * 핵심이므로 잡는 방법을 바꾸지, 갈림을 되돌리지 않는다.
+ */
+function partialRow() {
+  return document.querySelector('[data-state="partial"]');
+}
+
 const useRecording = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 const noteRealtime = vi.hoisted(() => ({
   transcript: {
-    partial: null as { utteranceId: string; text: string } | null,
+    partial: null as ReturnType<typeof livePartial> | null,
     finalSegments: [] as Array<Record<string, unknown>>,
   },
 }));
@@ -99,7 +124,7 @@ function recordingState(partialText = "결과를 정리합니다") {
     elapsedMs: 3_200,
     error: null,
     transcript: {
-      partial: { utteranceId: "01K0000000201", text: partialText },
+      partial: livePartial("01K0000000201", partialText),
       finalSegments: [
         {
           segmentId: "01K0000000011",
@@ -158,11 +183,11 @@ function renderTranscript(phase: SharedChatPhase = "active") {
       result.rerender(
         <QueryClientProvider client={client}>
           <TranscriptView
-        noteId={NOTE_ID}
-        phase={phase}
-        focusSegmentId={null}
-        onFocusHandled={() => {}}
-      />
+            noteId={NOTE_ID}
+            phase={phase}
+            focusSegmentId={null}
+            onFocusHandled={() => {}}
+          />
         </QueryClientProvider>
       ),
   };
@@ -389,20 +414,20 @@ describe("TranscriptView", () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
-  it("groups adjacent finals into presentation blocks and keeps the partial live", () => {
+  it("확정 발화를 묶지 않고 한 줄에 하나씩 그리며 partial을 살려 둔다", () => {
     renderTranscript();
 
+    // 묶기를 지웠다 — 예전에는 앞의 두 결정사항이 한 블록(`data-segment-count=2`)이었다.
     const blocks = screen.getAllByTestId("transcript-block");
-    expect(blocks).toHaveLength(3);
-    expect(blocks[0]).toHaveAttribute("data-segment-count", "2");
-    expect(blocks[0]).toHaveTextContent(
-      "첫 번째 결정사항입니다. 두 번째 결정사항입니다."
-    );
-    expect(blocks[1]).toHaveTextContent("두 번째 녹음의 첫 문장입니다.");
-    expect(blocks[2]).toHaveTextContent("세 번째 녹음의 확정 문장입니다.");
+    expect(blocks).toHaveLength(4);
+    expect(blocks[0]).toHaveTextContent("첫 번째 결정사항입니다.");
+    expect(blocks[0]).not.toHaveTextContent("두 번째 결정사항입니다.");
+    expect(blocks[1]).toHaveTextContent("두 번째 결정사항입니다.");
+    expect(blocks[2]).toHaveTextContent("두 번째 녹음의 첫 문장입니다.");
+    expect(blocks[3]).toHaveTextContent("세 번째 녹음의 확정 문장입니다.");
 
-    const partial = screen.getByText("결과를 정리합니다").closest("article");
-    expect(partial).toHaveAttribute("data-state", "partial");
+    const partial = partialRow();
+    expect(partial).toHaveTextContent("결과를 정리합니다");
     expect(partial).toHaveTextContent("받아 적는 중");
 
     // v5: 제품 면 대문자 키커·세리프 헤더 없음(FORM SPEC), 전사 행은 단일 값 grid.
@@ -419,6 +444,60 @@ describe("TranscriptView", () => {
         query: expect.objectContaining({ refetchInterval: 30_000 }),
       })
     );
+  });
+
+  it("partial 한 줄 안에서 확정된 앞부분만 확정 행과 같은 농도로 그린다", () => {
+    // 이 변경의 전부다. 업체는 토큰마다 is_final 을 주는데 예전 계약은 그것을 이어 붙인
+    // 문자열 하나만 실었고, 화면은 이미 굳은 글자까지 통째로 옅게 그렸다.
+    useRecording.mockReturnValue({
+      ...recordingState(),
+      transcript: {
+        partial: {
+          utteranceId: "01K0000000501",
+          confirmedText: "오늘 배포는 금요일에",
+          pendingText: " 하지 않기로",
+        },
+        finalSegments: [],
+      },
+    });
+
+    renderTranscript();
+
+    const confirmed = screen.getByTestId("partial-confirmed");
+    const pending = screen.getByTestId("partial-pending");
+
+    expect(confirmed).toHaveTextContent("오늘 배포는 금요일에");
+    expect(pending).toHaveTextContent("하지 않기로");
+    // 확정 토막은 확정 행과 같은 잉크색, 미확정 토막은 부모 `<p>`의 옅은 색을 그대로 쓴다.
+    expect(confirmed).toHaveClass("text-[var(--el-ink)]");
+    expect(pending.className).not.toContain("text-[var(--el-ink)]");
+    expect(partialRow()?.querySelector("p")).toHaveClass(
+      "text-[var(--el-body)]"
+    );
+    // 이어 붙이면 사람이 읽는 한 문장이다 — 어절 경계의 공백이 살아 있어야 한다.
+    expect(partialRow()).toHaveTextContent("오늘 배포는 금요일에 하지 않기로");
+  });
+
+  it("확정 토막이 비어 있으면 미확정 토막만 그린다", () => {
+    // 발화 첫머리다. 업체가 아직 아무 토큰도 확정하지 않았다.
+    useRecording.mockReturnValue({
+      ...recordingState(),
+      transcript: {
+        partial: {
+          utteranceId: "01K0000000502",
+          confirmedText: "",
+          pendingText: " 그러면",
+        },
+        finalSegments: [],
+      },
+    });
+
+    renderTranscript();
+
+    expect(screen.queryByTestId("partial-confirmed")).toBeNull();
+    // 첫머리의 공백은 털어 낸다 — 확정 행과 본문 시작 x 좌표가 어긋나면 안 된다.
+    expect(screen.getByTestId("partial-pending")).toHaveTextContent("그러면");
+    expect(screen.getByTestId("partial-pending").textContent).toBe("그러면");
   });
 
   it("keeps the partial label on one line and wraps Korean text by words without changing the final column width", () => {
@@ -463,10 +542,10 @@ describe("TranscriptView", () => {
   });
 
   it("dedupes recorder and note-topic partials by utteranceId and hides a finalized partial", () => {
-    noteRealtime.transcript.partial = {
-      utteranceId: "01K0000000201",
-      text: "결과를 정리합니다",
-    };
+    noteRealtime.transcript.partial = livePartial(
+      "01K0000000201",
+      "결과를 정리합니다"
+    );
     noteRealtime.transcript.finalSegments = [
       {
         type: "transcript.final",
@@ -481,8 +560,8 @@ describe("TranscriptView", () => {
 
     renderTranscript();
 
-    expect(screen.queryByText("결과를 정리합니다")).toBeNull();
-    // 회의 축에서 앞 발화와 이어져 한 블록으로 묶인다 — 확정 텍스트가 살아 있으면 된다
+    expect(document.querySelector('[data-state="partial"]')).toBeNull();
+    // partial 행 자체가 사라지고 확정 텍스트만 자기 행에 남는다
     expect(screen.getByText(/확정됐습니다\./)).toBeInTheDocument();
   });
 
@@ -492,19 +571,19 @@ describe("TranscriptView", () => {
     useRecording.mockReturnValue({
       ...recordingState(),
       transcript: {
-        partial: { utteranceId: "01K0000000301", text: "지금 말하는 문장" },
+        partial: livePartial("01K0000000301", "지금 말하는 문장"),
         finalSegments: [],
       },
     });
-    noteRealtime.transcript.partial = {
-      utteranceId: "01K0000000300",
-      text: "토픽에 남은 이전 문장",
-    };
+    noteRealtime.transcript.partial = livePartial(
+      "01K0000000300",
+      "토픽에 남은 이전 문장"
+    );
 
     renderTranscript();
 
-    expect(screen.getByText("지금 말하는 문장")).toBeInTheDocument();
-    expect(screen.queryByText("토픽에 남은 이전 문장")).toBeNull();
+    expect(partialRow()).toHaveTextContent("지금 말하는 문장");
+    expect(partialRow()).not.toHaveTextContent("토픽에 남은 이전 문장");
     // 예전에는 두 소스의 partial을 map에 모아 join(" ")했다. 확정되지 못한 발화가
     // 그렇게 남아 회의 내내 앞에 붙었다 — 이어 붙는 형태 자체가 없어야 한다.
     expect(
@@ -519,7 +598,7 @@ describe("TranscriptView", () => {
       ...recordingState(),
       phase: "stopping",
       transcript: {
-        partial: { utteranceId: "01K0000000401", text: "마지막 문장" },
+        partial: livePartial("01K0000000401", "마지막 문장"),
         finalSegments: [],
       },
     });
@@ -527,7 +606,7 @@ describe("TranscriptView", () => {
 
     renderTranscript();
 
-    expect(screen.getByText("마지막 문장")).toBeInTheDocument();
+    expect(partialRow()).toHaveTextContent("마지막 문장");
   });
 
   it("내 녹음이 끝난 뒤에는 다른 탭의 토픽 발화를 그린다", () => {
@@ -538,14 +617,14 @@ describe("TranscriptView", () => {
       phase: "completed",
       transcript: { partial: null, finalSegments: [] },
     });
-    noteRealtime.transcript.partial = {
-      utteranceId: "01K0000000400",
-      text: "다른 탭에서 말하는 중",
-    };
+    noteRealtime.transcript.partial = livePartial(
+      "01K0000000400",
+      "다른 탭에서 말하는 중"
+    );
 
     renderTranscript();
 
-    expect(screen.getByText("다른 탭에서 말하는 중")).toBeInTheDocument();
+    expect(partialRow()).toHaveTextContent("다른 탭에서 말하는 중");
   });
 
   it("exposes sequential transcript additions as an accessible log", () => {

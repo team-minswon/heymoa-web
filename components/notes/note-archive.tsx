@@ -25,7 +25,6 @@ import { toGapRows } from "@/lib/transcription/gaps";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 import {
   formatOffset,
-  groupTranscriptSegments,
   interleaveTranscript,
 } from "@/lib/transcription/presentation";
 import {
@@ -70,7 +69,7 @@ function useAwayFromBottom() {
 
     // **높이 변화는 scroll 이벤트를 내지 않는다.** 두 쿼리(`refetchOnMount: "always"`)가
     // 늦게 도착하면 스크롤 없이도 바닥이 멀어지는데, 그때 다시 재지 않으면 버튼이 안 뜬다.
-    // 블록·메시지 개수를 키로 쓰는 방법도 있지만 개수가 같고 문장만 길어지는 갱신을 놓친다.
+    // 행·메시지 개수를 키로 쓰는 방법도 있지만 개수가 같고 문장만 길어지는 갱신을 놓친다.
     const observer =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(sync);
     observer?.observe(viewport);
@@ -133,19 +132,12 @@ export function NoteArchive({
     transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
       ? transcriptQuery.data.data.data
       : null;
-  const segments = useMemo(
-    () => transcript?.segments ?? [],
-    [transcript]
-  );
-  const blocks = useMemo(
-    () => groupTranscriptSegments([...segments]),
-    [segments]
-  );
+  const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
   // 종료된 회의를 여는 자리가 여기다. 공백과 화자를 `TranscriptView`에만 넣으면
   // 정작 볼 사람이 못 본다.
   const rows = useMemo(
-    () => interleaveTranscript(blocks, toGapRows(transcript?.gaps ?? [])),
-    [blocks, transcript]
+    () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
+    [segments, transcript]
   );
   const speakerOf = useMemo(
     () =>
@@ -199,7 +191,7 @@ export function NoteArchive({
       !(chatQuery.data.status === 200 && chatQuery.data.data.success));
 
   const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
-  const { blockRef, isHighlighted } = useTranscriptFocus(blocks, {
+  const { segmentRef, isHighlighted } = useTranscriptFocus(segments, {
     focusSegmentId,
     onFocusHandled,
   });
@@ -275,27 +267,27 @@ export function NoteArchive({
                     <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
                   ) : (
                     <article
-                      key={row.block.blockId}
-                      ref={blockRef(row.block.blockId)}
+                      key={row.segment.segmentId}
+                      ref={segmentRef(row.segment.segmentId)}
                       data-testid="archive-transcript-block"
                       data-focused={
-                        isHighlighted(row.block.blockId) || undefined
+                        isHighlighted(row.segment.segmentId) || undefined
                       }
                       className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
                     >
                       <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-                        {formatOffset(row.block.startedAtMs)}
+                        {formatOffset(row.segment.startedAtMs)}
                       </time>
                       <div className="max-w-3xl">
-                        {speakerOf(row.block.speakerLabel) ? (
+                        {speakerOf(row.segment.speakerLabel) ? (
                           <SpeakerAssignMenu
-                            identity={speakerOf(row.block.speakerLabel)!}
+                            identity={speakerOf(row.segment.speakerLabel)!}
                             candidates={withAssignedLabel}
                             disabled={!canAssignSpeaker}
                             onAssign={(userId) =>
                               assign.mutate({
                                 noteId,
-                                label: row.block.speakerLabel!,
+                                label: row.segment.speakerLabel!,
                                 data: { userId },
                               })
                             }
@@ -304,11 +296,11 @@ export function NoteArchive({
                         <p className="text-[15px] leading-7 text-[var(--el-ink)]">
                           <span
                             className={cn(
-                              isHighlighted(row.block.blockId) &&
+                              isHighlighted(row.segment.segmentId) &&
                                 FOCUSED_TEXT_CLASS
                             )}
                           >
-                            {row.block.text}
+                            {row.segment.text}
                           </span>
                         </p>
                       </div>

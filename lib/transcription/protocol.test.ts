@@ -27,20 +27,35 @@ describe("AsyncAPI transcription protocol", () => {
     expect(() => parseClientCommand('{"type":"stop"}')).toThrow();
   });
 
-  it("accepts a partial snapshot keyed by utterance ID", () => {
+  it("accepts a partial snapshot split into confirmed and pending halves", () => {
     expect(
       parseServerEvent(
         JSON.stringify({
           type: "partial",
           utteranceId: "0HZX2K7M9Q4AC",
-          text: "안녕하세요",
+          confirmedText: "안녕하세요",
+          pendingText: " 오늘은",
         })
       )
     ).toMatchObject({
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "안녕하세요",
+      confirmedText: "안녕하세요",
+      pendingText: " 오늘은",
     });
+  });
+
+  it("accepts an empty half — 서버 발행 규칙이지 형식이 아니다", () => {
+    expect(
+      parseServerEvent(
+        JSON.stringify({
+          type: "partial",
+          utteranceId: "0HZX2K7M9Q4AC",
+          confirmedText: "",
+          pendingText: "안녕",
+        })
+      )
+    ).toMatchObject({ confirmedText: "", pendingText: "안녕" });
   });
 
   it("accepts a flat final event carrying a nullable speaker label", () => {

@@ -9,11 +9,15 @@ const typeOnly = <T extends string>(type: T) =>
   z.strictObject({ type: z.literal(type) });
 
 export const noteTopicEventSchema = z.discriminatedUnion("type", [
+  // 토막 둘의 근거는 `lib/transcription/protocol.ts` 의 partial 주석에 있다.
+  // **뷰어에게도 같은 경계를 준다** — 한쪽만 가르면 녹음하는 사람과 보는 사람이
+  // 같은 발화를 다른 농도로 읽는다.
   z.strictObject({
     type: z.literal("transcript.partial"),
     transcriptionSessionId: tsidSchema,
     utteranceId: tsidSchema,
-    text: z.string().min(1),
+    confirmedText: z.string(),
+    pendingText: z.string(),
   }),
   z.strictObject({
     type: z.literal("transcript.final"),

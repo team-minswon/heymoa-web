@@ -90,7 +90,8 @@ describe("NoteTopicClient", () => {
         type: "transcript.partial",
         transcriptionSessionId: "01K0000000010",
         utteranceId: "01K0000000100",
-        text: "결정을 정리합니다",
+        confirmedText: "결정을",
+        pendingText: " 정리합니다",
       }),
     });
     deliver({
@@ -104,7 +105,8 @@ describe("NoteTopicClient", () => {
       type: "transcript.partial",
       transcriptionSessionId: "01K0000000010",
       utteranceId: "01K0000000100",
-      text: "결정을 정리합니다",
+      confirmedText: "결정을",
+      pendingText: " 정리합니다",
     });
     expect(onEvent).toHaveBeenNthCalledWith(2, {
       type: "chat.token",

@@ -126,13 +126,15 @@ describe("NoteRealtimeProvider", () => {
       type: "transcript.partial",
       transcriptionSessionId: SESSION_ID,
       utteranceId: UTTERANCE_ID,
-      text: "초안",
+      confirmedText: "",
+      pendingText: "초안",
     });
     emit({
       type: "transcript.partial",
       transcriptionSessionId: SESSION_ID,
       utteranceId: UTTERANCE_ID,
-      text: "수정된 초안",
+      confirmedText: "수정된",
+      pendingText: " 초안",
     });
 
     expect(
@@ -140,7 +142,8 @@ describe("NoteRealtimeProvider", () => {
     ).toEqual(
       expect.objectContaining({
         utteranceId: UTTERANCE_ID,
-        text: "수정된 초안",
+        confirmedText: "수정된",
+        pendingText: " 초안",
       })
     );
 
@@ -361,7 +364,8 @@ describe("NoteRealtimeProvider", () => {
       type: "transcript.partial",
       transcriptionSessionId: newerSessionId,
       utteranceId: UTTERANCE_ID,
-      text: "새 세션의 작성 중 문장",
+      confirmedText: "새 세션의 작성 중",
+      pendingText: " 문장",
     });
     emit({
       type: "recording.stopped",
@@ -373,7 +377,8 @@ describe("NoteRealtimeProvider", () => {
     ).toEqual(
       expect.objectContaining({
         transcriptionSessionId: newerSessionId,
-        text: "새 세션의 작성 중 문장",
+        confirmedText: "새 세션의 작성 중",
+        pendingText: " 문장",
       })
     );
   });
@@ -388,7 +393,8 @@ describe("NoteRealtimeProvider", () => {
       type: "transcript.partial",
       transcriptionSessionId: SESSION_ID,
       utteranceId: UTTERANCE_ID,
-      text: "확정되지 못한 문장",
+      confirmedText: "확정되지 못한",
+      pendingText: " 문장",
     });
     emit({
       type: "transcript.final",
@@ -412,7 +418,8 @@ describe("NoteRealtimeProvider", () => {
       type: "transcript.partial",
       transcriptionSessionId: SESSION_ID,
       utteranceId: UTTERANCE_ID,
-      text: "중지 전에 남은 초안",
+      confirmedText: "중지 전에 남은",
+      pendingText: " 초안",
     });
     emit({
       type: "recording.stopped",
@@ -430,7 +437,8 @@ describe("NoteRealtimeProvider", () => {
       type: "transcript.partial",
       transcriptionSessionId: SESSION_ID,
       utteranceId: UTTERANCE_ID,
-      text: "종료 전에 남은 초안",
+      confirmedText: "종료 전에 남은",
+      pendingText: " 초안",
     });
     emit({ type: "meeting.ended" });
 
@@ -447,7 +455,8 @@ describe("NoteRealtimeProvider", () => {
       type: "transcript.partial",
       transcriptionSessionId: SESSION_ID,
       utteranceId: UTTERANCE_ID,
-      text: "놓칠 수 있는 초안",
+      confirmedText: "놓칠 수 있는",
+      pendingText: " 초안",
     });
     emit({ type: "chat.token", delta: "놓칠 수 있는 토큰" });
 

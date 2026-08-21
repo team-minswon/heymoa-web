@@ -9,17 +9,20 @@ describe("transcriptReducer", () => {
     const first = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "첫 snapshot",
+      confirmedText: "첫",
+      pendingText: " snapshot",
     });
     const second = transcriptReducer(first, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "누적 snapshot",
+      confirmedText: "누적",
+      pendingText: " snapshot",
     });
 
     expect(second.partial).toEqual({
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "누적 snapshot",
+      confirmedText: "누적",
+      pendingText: " snapshot",
     });
   });
 
@@ -27,7 +30,8 @@ describe("transcriptReducer", () => {
     const partial = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "안녕하세요",
+      confirmedText: "안녕하세요",
+      pendingText: "",
     });
     const final = transcriptReducer(partial, {
       type: "final",
@@ -54,7 +58,8 @@ describe("transcriptReducer", () => {
     const partial = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "완료 직전 문장",
+      confirmedText: "완료 직전",
+      pendingText: " 문장",
     });
     const completed = transcriptReducer(partial, {
       type: "completed",
@@ -65,7 +70,8 @@ describe("transcriptReducer", () => {
       transcriptReducer(completed, {
         type: "partial",
         utteranceId: "0HZX2K7M9Q4AC",
-        text: "늦게 도착한 문장",
+        confirmedText: "늦게 도착한",
+        pendingText: " 문장",
       })
     ).toEqual(completed);
   });
@@ -74,7 +80,8 @@ describe("transcriptReducer", () => {
     const partial = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "저장되지 않은 문장",
+      confirmedText: "저장되지 않은",
+      pendingText: " 문장",
     });
 
     expect(
@@ -88,17 +95,20 @@ describe("transcriptReducer", () => {
     const first = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "안녕하세요 오늘은",
+      confirmedText: "안녕하세요",
+      pendingText: " 오늘은",
     });
     const next = transcriptReducer(first, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AE",
-      text: "다음 안건은",
+      confirmedText: "다음",
+      pendingText: " 안건은",
     });
 
     expect(next.partial).toEqual({
       utteranceId: "0HZX2K7M9Q4AE",
-      text: "다음 안건은",
+      confirmedText: "다음",
+      pendingText: " 안건은",
     });
   });
 
@@ -109,7 +119,8 @@ describe("transcriptReducer", () => {
     const live = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AE",
-      text: "다음 안건은",
+      confirmedText: "다음",
+      pendingText: " 안건은",
     });
 
     const final = transcriptReducer(live, {
@@ -133,7 +144,8 @@ describe("transcriptReducer", () => {
     const orphan = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "확정되지 못한 문장",
+      confirmedText: "확정되지 못한",
+      pendingText: " 문장",
     });
 
     const laterFinal = transcriptReducer(orphan, {
@@ -154,7 +166,8 @@ describe("transcriptReducer", () => {
     const previous = transcriptReducer(initialTranscriptState, {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
-      text: "이전 세션",
+      confirmedText: "이전",
+      pendingText: " 세션",
     });
 
     expect(transcriptReducer(previous, { type: "reset" })).toEqual(

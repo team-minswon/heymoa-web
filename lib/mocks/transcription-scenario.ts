@@ -15,6 +15,8 @@ const AUTO_COMMIT_BYTES = CAPTURE_CONTRACT.sampleRate * 2 * 15;
 const MAX_FRAME_BYTES = CAPTURE_CONTRACT.maxFrameBytes;
 /** 서버는 S3 적재(30초)마다 ACK한다. 목은 그보다 자주 보내 재전송 버퍼를 빨리 흔든다. */
 const ACK_EVERY_CHUNKS = 30;
+/** partial 꼬리에서 아직 안 굳은 어절 수. 화면의 두 농도를 실제로 움직이게 하는 값이다. */
+const PENDING_WORD_COUNT = 2;
 
 export type AudioFrameHeader = {
   chunkSeq: number;
@@ -70,7 +72,8 @@ export class MockTranscriptionScenario {
   private sentenceIndex = 0;
   private recordedDurationMs = 0;
   private bufferedBytes = 0;
-  private partialText = "";
+  private partialConfirmed = "";
+  private partialPending = "";
   private utteranceStartedAtMs: number | null = null;
   private lastPartialAtMs = 0;
   private lastChunkSeq: number | null = null;
@@ -235,6 +238,11 @@ export class MockTranscriptionScenario {
     return `01K00000002${String(this.itemSequence).padStart(2, "0")}`;
   }
 
+  /** 화면에 나가는 것 = 확정 + 미확정. 서버의 `UtteranceAccumulator`가 하는 일과 같다. */
+  private get partialText() {
+    return `${this.partialConfirmed}${this.partialPending}`;
+  }
+
   private revealPartial(voicedMs: number) {
     const sentence = this.script[this.sentenceIndex % this.script.length];
     const tokens = sentence.split(" ");
@@ -243,12 +251,23 @@ export class MockTranscriptionScenario {
       Math.floor(voicedMs / this.config.partialEveryMs)
     );
     const tokenCount = Math.min(tokens.length, revealSteps * 3);
-    this.partialText = tokens.slice(0, tokenCount).join(" ");
+    const revealed = tokens.slice(0, tokenCount);
+
+    // **꼬리 두 어절은 아직 안 굳었다.** 업체가 다음 응답에서 통째로 갈아치울 수 있는
+    // 구간이라, 목도 그만큼은 미확정으로 흘려야 화면의 농도 차이가 실제로 움직인다.
+    // 앞은 확정이므로 다시 안 바뀐다 — 이어 붙이면 예전의 한 문자열과 같다.
+    const confirmedCount = Math.max(0, revealed.length - PENDING_WORD_COUNT);
+    this.partialConfirmed = revealed.slice(0, confirmedCount).join(" ");
+    const pendingWords = revealed.slice(confirmedCount).join(" ");
+    this.partialPending =
+      this.partialConfirmed && pendingWords ? ` ${pendingWords}` : pendingWords;
+
     this.lastPartialAtMs = voicedMs;
     this.options.send({
       type: "partial",
       utteranceId: this.utteranceId,
-      text: this.partialText,
+      confirmedText: this.partialConfirmed,
+      pendingText: this.partialPending,
     });
   }
 
@@ -285,7 +304,8 @@ export class MockTranscriptionScenario {
 
   private resetUtterance() {
     this.bufferedBytes = 0;
-    this.partialText = "";
+    this.partialConfirmed = "";
+    this.partialPending = "";
     this.utteranceStartedAtMs = null;
     this.lastPartialAtMs = 0;
     this.detector.reset();

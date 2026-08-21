@@ -9,7 +9,13 @@ import type {
  * 정의한다. 맵으로 쌓으면 final이 오지 않는 발화(빈 확정, 재연결로 폐기된 commit)의 텍스트가
  * 남아 이후 발화에 계속 이어 붙는다.
  */
-export type LivePartial = { utteranceId: string; text: string };
+export type LivePartial = {
+  utteranceId: string;
+  /** 안 바뀌는 앞부분. 확정 행과 같은 농도로 그린다. */
+  confirmedText: string;
+  /** 다음 snapshot 이 갈아치울 뒷부분. 옅게 그린다. */
+  pendingText: string;
+};
 
 export type TranscriptState = {
   partial: LivePartial | null;
@@ -40,7 +46,14 @@ export function transcriptReducer(
   if (event.type === "partial") {
     if (state.completed) return state;
     // 다른 utteranceId면 이전 발화를 대체한다 — 그것이 계약이 말하는 정리 기준이다.
-    return { ...state, partial: { utteranceId: event.utteranceId, text: event.text } };
+    return {
+      ...state,
+      partial: {
+        utteranceId: event.utteranceId,
+        confirmedText: event.confirmedText,
+        pendingText: event.pendingText,
+      },
+    };
   }
 
   if (event.type === "final") {

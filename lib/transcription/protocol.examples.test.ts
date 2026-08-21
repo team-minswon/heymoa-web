@@ -6,8 +6,10 @@ import {
 } from "@/lib/transcription/protocol";
 
 describe("AsyncAPI examples", () => {
-  it("keeps Partial as a full snapshot", () => {
-    expect(protocolExamples.events.partial.text).not.toBe("");
+  it("keeps Partial as a full snapshot split into two halves", () => {
+    const { confirmedText, pendingText } = protocolExamples.events.partial;
+    // 이어 붙이면 곧 예전의 `text` 다. 두 토막이 겹치거나 빠지면 여기서 걸린다.
+    expect(`${confirmedText}${pendingText}`).toBe("현재까지 누적된 문장");
   });
 
   it("parses every documented command and event", () => {
