@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +41,19 @@ const SECTION_ORDER = Object.keys(
 ) as AnalysisResultResponseDataSectionsItemKind[];
 
 const POLL_INTERVAL_MS = 3_000;
+
+/**
+ * 근거를 펼치고 접는 움직임. 레코더 독과 같은 값이다 — 같은 제품 면에서 열리고 닫히는
+ * 것들이 저마다 다른 속도로 움직이면 화면이 한 물건으로 안 읽힌다.
+ *
+ * `bounce: 0` — 되튀면 「무언가 튀어나왔다」가 되는데, 여기서 자라는 것은 방금 누른 항목의
+ * 근거다. 눌린 만큼만 열려야 한다.
+ */
+const EVIDENCE_TRANSITION = {
+  type: "spring" as const,
+  bounce: 0,
+  duration: 0.2,
+};
 
 /**
  * 폴링 중인 응답 봉투에서 **아직 도는 것이 있나**를 꺼낸다.
@@ -493,6 +507,7 @@ function SummaryItem({
   onEvidenceSelect: (segmentId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const reduced = useReducedMotion();
   const evidenceId = `evidence-${item.itemId}`;
   // 개요는 회의를 서술하는 문단이고 액션·결정은 행 단위 항목이다. 성격이 다르니 모양도
   // 다르게 둔다 — 셋을 같은 목록으로 그리면 30줄이 전부 같은 무게가 된다.
@@ -567,38 +582,59 @@ function SummaryItem({
           {claim}
         </p>
       )}
-      {open ? (
-        <ul
-          id={evidenceId}
-          className="mt-3 space-y-2 border-l border-[var(--el-hairline-strong)] pl-4"
-        >
-          {item.evidence.map((evidence) => (
-            <li key={evidence.segmentId}>
-              {/* 누르면 전사의 그 줄로 간다. **`segmentId`로만 찾는다** — `startedAtMs`는
+      {/* **펼침은 높이가 자라는 일이다.** 그냥 마운트하면 근거 서너 줄이 한 프레임에
+          튀어나와 아래 항목들을 통째로 밀어 내려서, 무엇이 새로 생겼고 읽던 줄이 어디로
+          갔는지 눈이 못 따라간다. 200ms 동안 자라면 그 이동이 이어져 보인다.
+
+          **높이는 바깥 껍데기가 갖는다.** `<ul>`에 직접 걸면 `height: 0`에서도 `mt-3`과
+          왼쪽 세로선이 남아 접힌 자리에 3px 짜리 선 토막이 선다. `overflow-hidden` 껍데기가
+          BFC를 세워 그 여백까지 함께 잘라 낸다.
+
+          `initial={false}` — 이미 펼쳐진 채로 다시 보이는 경우(요약 탭이 마운트를 유지한다)
+          까지 애니메이션하면 탭을 돌아올 때마다 전부 다시 자란다. */}
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="evidence"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={reduced ? { duration: 0 } : EVIDENCE_TRANSITION}
+            className="overflow-hidden"
+          >
+            <ul
+              id={evidenceId}
+              className="mt-3 space-y-2 border-l border-[var(--el-hairline-strong)] pl-4"
+            >
+              {item.evidence.map((evidence) => (
+                <li key={evidence.segmentId}>
+                  {/* 누르면 전사의 그 줄로 간다. **`segmentId`로만 찾는다** — `startedAtMs`는
                   세션별 오프셋이라 세션이 둘 이상이면 화면의 시각과 어긋난다(APP-398). */}
-              <button
-                type="button"
-                onClick={() => onEvidenceSelect(evidence.segmentId)}
-                /* **여백은 음수 마진으로 낸다.** hover 배경이 글자에 딱 붙어 있어서 짚을
+                  <button
+                    type="button"
+                    onClick={() => onEvidenceSelect(evidence.segmentId)}
+                    /* **여백은 음수 마진으로 낸다.** hover 배경이 글자에 딱 붙어 있어서 짚을
                    자리처럼 보이지 않았는데, 그냥 `px-2`를 주면 인용문만 오른쪽으로 밀려
                    위 항목과 줄이 안 맞는다. 안쪽으로 넓히고 밖으로 같은 만큼 당긴다. */
-                className="group -mx-2 flex w-full items-baseline gap-2 rounded-block px-2 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
-              >
-                <span className="min-w-0 break-keep font-serif text-[15px] leading-7 text-[var(--el-body)]">
-                  {evidence.text}
-                </span>
-                <span
-                  aria-hidden
-                  className="min-w-0 flex-1 translate-y-[-4px] border-b border-dotted border-[var(--el-hairline)]"
-                />
-                <time className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-muted)]">
-                  {formatOffset(evidence.startedAtMs)}
-                </time>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+                    className="group -mx-2 flex w-full items-baseline gap-2 rounded-block px-2 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+                  >
+                    <span className="min-w-0 break-keep font-serif text-[15px] leading-7 text-[var(--el-body)]">
+                      {evidence.text}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="min-w-0 flex-1 translate-y-[-4px] border-b border-dotted border-[var(--el-hairline)]"
+                    />
+                    <time className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-muted)]">
+                      {formatOffset(evidence.startedAtMs)}
+                    </time>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </li>
   );
 }

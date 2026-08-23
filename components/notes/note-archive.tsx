@@ -28,11 +28,9 @@ import {
   interleaveTranscript,
 } from "@/lib/transcription/presentation";
 import {
-  FOCUSED_TEXT_CLASS,
   useTranscriptFocus,
   type TranscriptFocus,
 } from "@/components/notes/use-transcript-focus";
-import { cn } from "@/lib/utils";
 
 /** 바닥에서 이만큼 안쪽이면 "바닥"으로 본다. 스크롤 위치는 소수점으로 떨어진다. */
 const BOTTOM_THRESHOLD_PX = 48;
@@ -191,10 +189,13 @@ export function NoteArchive({
       !(chatQuery.data.status === 200 && chatQuery.data.data.success));
 
   const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
-  const { segmentRef, isHighlighted } = useTranscriptFocus(segments, {
-    focusSegmentId,
-    onFocusHandled,
-  });
+  const { segmentRef, isHighlighted, markProps } = useTranscriptFocus(
+    segments,
+    {
+      focusSegmentId,
+      onFocusHandled,
+    }
+  );
 
   return (
     <ScrollArea
@@ -269,6 +270,8 @@ export function NoteArchive({
                     <article
                       key={row.segment.segmentId}
                       ref={segmentRef(row.segment.segmentId)}
+                      /* 도착한 줄로 포커스를 옮긴다(`use-transcript-focus` 참조). */
+                      tabIndex={-1}
                       data-testid="archive-transcript-block"
                       data-focused={
                         isHighlighted(row.segment.segmentId) || undefined
@@ -294,12 +297,7 @@ export function NoteArchive({
                           />
                         ) : null}
                         <p className="text-[15px] leading-7 text-[var(--el-ink)]">
-                          <span
-                            className={cn(
-                              isHighlighted(row.segment.segmentId) &&
-                                FOCUSED_TEXT_CLASS
-                            )}
-                          >
+                          <span {...markProps(row.segment.segmentId)}>
                             {row.segment.text}
                           </span>
                         </p>

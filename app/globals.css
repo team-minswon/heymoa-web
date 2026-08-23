@@ -207,3 +207,81 @@
     background: color-mix(in srgb, var(--el-gradient-peach), white 70%);
   }
 }
+
+/**
+ * 근거 → 전사 점프가 짚는 자국. **칠해져 있는 색이 아니라 그어지는 획이다.**
+ *
+ * 예전에는 형광이 그냥 「띡」 하고 켜졌다 꺼졌다. 탭이 통째로 바뀐 뒤라 그 노란 칸은
+ * 도착하고 나서야 눈에 드는 정적인 표시였고, 어느 줄인지 스스로 찾아야 했다. 왼쪽에서
+ * 오른쪽으로 그어지면 그 움직임이 시선을 발화의 첫 글자로 데려간다. 지울 때도 같은
+ * 방향으로 걷어 낸다 — 통째로 꺼지면 「사라졌다」가 아니라 「끊겼다」로 읽힌다.
+ *
+ * **글자를 덮지 않는다.** 줄 전체를 노랗게 칠하면 글자가 형광 안에 잠겨서, 짚은 것이
+ * 아니라 가린 것이 된다. 글자 높이의 2/3만 밑에서부터 칠한다(`0.66em` — 폰트 크기를
+ * 따라가므로 전사와 아카이브 어디서도 같은 비율이다).
+ *
+ * **`%`가 아니라 절대 길이로 자란다.** 이것이 핵심이다. 폭의 백분율로 자라면 여러 줄로
+ * 감긴 발화에서 **긴 줄과 짧은 마지막 줄이 같은 시간에 끝난다** — 짧은 줄의 펜만 느려져서
+ * 한 자국 안에서 속도가 갈린다. `--evidence-span`(모든 줄을 덮고도 남는 길이)까지
+ * 자라게 두면 각 줄은 **제 폭에서 먼저 다 차고 거기서 멈춘다.** 짧은 줄이 먼저 칠해지고
+ * 지울 때도 먼저 걷힌다. 조각을 나눌 필요 없이 `box-decoration-clone`이 알아서 한다.
+ *
+ * `linear`인 이유도 같다 — 속도가 일정해야 「같은 펜」으로 보인다.
+ *
+ * **긋기와 지우기가 두 애니메이션인 이유.** 서로 다른 속성을 만진다(폭 / 시작점). 하나로
+ * 묶으면 키프레임의 `%`가 고정이라 `긋기 : 머물기` 비율을 발화마다 못 바꾼다. 지우개는
+ * 시작을 늦춰 두는데, `forwards`는 **끝난 뒤에만** 적용되므로 지연이 흐르는 동안에는
+ * 아직 아무것도 안 만지고 긋기의 결과가 그대로 보인다.
+ *
+ * 길이와 두 시간은 `use-transcript-focus.ts`가 심어 준다. 여기 fallback은 그것이 없을 때다.
+ */
+.evidence-mark {
+  /* 색은 `background-color`가 아니라 이미지로 깐다 — 색에는 폭이 없어서 획을 못 긋는다. */
+  background-image: linear-gradient(var(--el-highlight), var(--el-highlight));
+  background-repeat: no-repeat;
+  /* 애니메이션이 없을 때(아래 reduced-motion)의 모습이자 획이 다 그어진 모습이다. */
+  background-size: 100% 0.66em;
+  background-position: 0 100%;
+  /* 두 줄 이상으로 감기는 발화는 조각마다 제 획을 갖는다. 기본값 `slice`는 배경을 한
+     덩어리로 잘라 줄 사이가 빈다. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+
+  /* `animation-delay`에 `calc()`가 들어가야 해서 축약형을 안 쓴다 — 축약형 안에서는 시간
+     값 둘 중 어느 쪽인지가 읽는 사람에게도 파서에게도 모호하다. */
+  animation-name: evidence-draw, evidence-erase;
+  animation-duration:
+    var(--evidence-stroke, 480ms), var(--evidence-stroke, 480ms);
+  animation-timing-function: linear, linear;
+  animation-delay:
+    0ms, calc(var(--evidence-stroke, 480ms) + var(--evidence-hold, 1500ms));
+  animation-fill-mode: forwards, forwards;
+}
+
+/* 폭이 자란다 — 제 폭을 넘긴 줄은 거기서 다 찬 채로 멈춘다. */
+@keyframes evidence-draw {
+  from {
+    background-size: 0 0.66em;
+  }
+  to {
+    background-size: var(--evidence-span, 56em) 0.66em;
+  }
+}
+
+/* 시작점이 오른쪽으로 간다 — 왼쪽부터 걷히고, 짧은 줄이 먼저 비워진다. */
+@keyframes evidence-erase {
+  from {
+    background-position: 0 100%;
+  }
+  to {
+    background-position: var(--evidence-span, 56em) 100%;
+  }
+}
+
+/* 획이 오가는 것 자체가 움직임이라 끈다. 표시는 남는다 — 위 정적 값이 다 그어진 밑줄이고,
+   걷어 내는 일은 소유자의 타이머가 그대로 한다. */
+@media (prefers-reduced-motion: reduce) {
+  .evidence-mark {
+    animation: none;
+  }
+}

@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NoteArchive } from "@/components/notes/note-archive";
@@ -279,8 +285,30 @@ describe("NoteArchive", () => {
           endedAtMs: 61_000,
           text: "셋째 줄.",
         },
+        // 여러 줄로 감기는 발화. 형광펜 속도가 고정이면 이 줄은 위 셋보다 오래 그어진다.
+        {
+          segmentId: "s4",
+          transcriptionSessionId: "sess1",
+          sequence: 3,
+          startedAtMs: 120_000,
+          endedAtMs: 140_000,
+          text: "넷째 줄은 아주 길어서 읽기 폭 안에서 여러 줄로 감깁니다. ".repeat(
+            3
+          ),
+        },
       ];
     }
+
+    const penOf = (block: Element) => {
+      const style =
+        block.querySelector("p > span")?.getAttribute("style") ?? "";
+      const read = (name: string, unit: string) =>
+        Number(
+          new RegExp(`--evidence-${name}:\\s*(\\d+)${unit}`).exec(style)?.[1] ??
+            NaN
+        );
+      return { spanEm: read("span", "em"), strokeMs: read("stroke", "ms") };
+    };
 
     it("가리킨 발화를 그 줄에서 정확히 짚는다", () => {
       // 묶기를 지운 뒤로 행이 곧 세그먼트다 — 예전에는 s2 가 s1 과 한 블록이라
@@ -295,10 +323,11 @@ describe("NoteArchive", () => {
       );
 
       const rows = screen.getAllByTestId("archive-transcript-block");
-      expect(rows).toHaveLength(3);
+      expect(rows).toHaveLength(4);
       expect(rows[1]).toHaveAttribute("data-focused", "true");
       expect(rows[0]).not.toHaveAttribute("data-focused");
       expect(rows[2]).not.toHaveAttribute("data-focused");
+      expect(rows[3]).not.toHaveAttribute("data-focused");
     });
 
     /**
@@ -325,16 +354,47 @@ describe("NoteArchive", () => {
         [...node.classList].filter((name) => /^-?(p|m)[xytrbl]?-/.test(name));
       // 행은 짚혀도 그대로다 — 여백도 배경도.
       expect(spacing(focused)).toEqual(spacing(plain));
-      expect(focused.className).not.toContain("--el-highlight");
+      expect(focused.className).not.toContain("evidence-mark");
 
       // 칠하는 것은 글자를 감싼 인라인 span이다.
       const mark = focused.querySelector("p > span");
-      expect(mark?.className).toContain("bg-[var(--el-highlight)]");
+      expect(mark?.className).toContain("evidence-mark");
       // 인라인 여백은 첫 글자를 밀기 때문에 쓰지 않는다.
       expect(spacing(mark!)).toEqual([]);
       expect(plain.querySelector("p > span")?.className ?? "").not.toContain(
-        "--el-highlight"
+        "evidence-mark"
       );
+    });
+
+    /**
+     * **펜 속도가 고정이고 시간이 길이를 따라간다.** 어느 줄이든 같은 시간에 그으면 긴
+     * 발화에서는 펜이 몇 배 빨리 지나가고 짧은 발화에서는 기어가서, 같은 표시가 줄마다
+     * 다른 물건으로 보인다. 표시의 수명도 그만큼 길어지고 짧아진다.
+     */
+    it("긴 발화일수록 길게·오래 긋는다", () => {
+      seedThreeSegments();
+      const { unmount } = render(
+        <NoteArchive
+          noteId="01K0000000002"
+          focusSegmentId="s3"
+          onFocusHandled={() => {}}
+        />
+      );
+      const short = penOf(screen.getAllByTestId("archive-transcript-block")[2]);
+      unmount();
+
+      render(
+        <NoteArchive
+          noteId="01K0000000002"
+          focusSegmentId="s4"
+          onFocusHandled={() => {}}
+        />
+      );
+      const long = penOf(screen.getAllByTestId("archive-transcript-block")[3]);
+
+      // 펜이 지나갈 길이도, 그 시간도 길이를 따라간다 — 속도는 그대로다.
+      expect(long.spanEm).toBeGreaterThan(short.spanEm);
+      expect(long.strokeMs).toBeGreaterThan(short.strokeMs);
     });
 
     it("하이라이트가 끝나면 focus를 비우라고 알린다", () => {
@@ -350,13 +410,43 @@ describe("NoteArchive", () => {
           />
         );
 
+        // 수명은 **긋기 + 머물기 + 지우기**다. 획이 다 지워지기 전에 비우면 표시가
+        // 중간에 끊기고, 늦게 비우면 다 지워진 자리가 남는다.
+        const { strokeMs } = penOf(
+          screen.getAllByTestId("archive-transcript-block")[2]
+        );
+        vi.advanceTimersByTime(strokeMs * 2 + 1_500 - 1);
         expect(onFocusHandled).not.toHaveBeenCalled();
-        vi.advanceTimersByTime(3_000);
+        vi.advanceTimersByTime(1);
         // 안 비우면 전사 탭을 다시 열 때마다 같은 자리로 끌려간다.
         expect(onFocusHandled).toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    /**
+     * **각주를 따라가는 일이 눈에만 일어나면 안 된다.** 인용 버튼은 탭이 바뀌며 사라지고
+     * 포커스는 `<body>`로 떨어지므로, 보지 않는 사람에게는 화면만 바뀌고 아무 일도 안
+     * 일어난 것이 된다. 도착한 발화를 포커스로 잡아야 그 줄이 읽히고 다음 Tab도 거기서
+     * 이어진다.
+     */
+    it("짚은 발화로 포커스를 옮긴다", async () => {
+      seedThreeSegments();
+      render(
+        <NoteArchive
+          noteId="01K0000000002"
+          focusSegmentId="s3"
+          onFocusHandled={() => {}}
+        />
+      );
+
+      // 스크롤·포커스는 다음 프레임에 일어난다(목록이 아직 자라는 중이라서).
+      await waitFor(() =>
+        expect(
+          screen.getAllByTestId("archive-transcript-block")[2]
+        ).toHaveFocus()
+      );
     });
 
     it("focus가 없으면 아무 블록도 짚지 않는다", () => {

@@ -681,6 +681,31 @@ function createSeedState(): StoreState {
       endedAtMs: 148700,
       speakerLabel: null,
     },
+    // **긴 발화.** 위 넷은 전부 한 줄에 끝나서, 목으로는 여러 줄로 감기는 발화를 한 번도
+    // 볼 수 없었다. 그 줄에서만 드러나는 것들이 있다 — 형광이 줄마다 잘리지 않는지
+    // (`box-decoration-clone`), 요약의 인용 줄에서 긴 따옴말과 점선 리더·시각이 어떻게
+    // 눕는지, 짚은 줄로 점프했을 때 `block: "center"`가 어디에 서는지.
+    //
+    // 실제 회의에서 길어지는 말은 정해져 있다 — **관찰을 늘어놓는 말과 결론을 정리하는 말**이다.
+    // 그 둘을 하나씩 둔다(대략 3줄·5줄. 820px 읽기 폭 기준이라 좁은 화면에서는 더 감긴다).
+    {
+      segmentId: "01K0000000065",
+      transcriptionSessionId: "01K0000000060",
+      speakerLabel: "B",
+      sequence: 5,
+      text: "제가 지난주에 신규 가입자 마흔 명 세션을 전부 돌려봤는데요, 대시보드까지는 다들 무리 없이 들어오다가 회의 만들기 버튼 앞에서 평균 이 분 가까이 머물다 그냥 나가더라고요. 화면에 버튼이 없는 게 아니라 그게 지금 눌러야 할 것으로 안 읽히는 겁니다.",
+      startedAtMs: 210000,
+      endedAtMs: 231400,
+    },
+    {
+      segmentId: "01K0000000066",
+      transcriptionSessionId: "01K0000000060",
+      speakerLabel: "A",
+      sequence: 6,
+      text: "정리하면 이렇습니다. 첫째, 가입 직후 화면에서 회의 만들기를 가장 눈에 띄는 자리로 올리고 나머지 진입점은 한 단계 뒤로 미룹니다. 둘째, 회의를 아직 한 번도 안 만든 사람에게는 빈 목록 대신 예시 회의를 하나 깔아 두고 그것부터 열어보게 합니다. 셋째, 이 둘을 이번 스프린트 안에 같이 내고 이 주 뒤에 같은 지표를 다시 봅니다. 문구 개편은 그때 판단해도 늦지 않습니다.",
+      startedAtMs: 268000,
+      endedAtMs: 297600,
+    },
   ];
   // 아직 멤버가 아닌 워크스페이스에서 온 초대여야 수락이 실제 합류를 흉내낸다.
   // 이미 들어가 있는 워크스페이스를 가리키면 수락이 멤버를 중복으로 만든다.
@@ -843,6 +868,13 @@ function createSeedState(): StoreState {
                     text: "가입 후 첫 회의를 만들기까지 이탈이 가장 큽니다.",
                     startedAtMs: 12000,
                   },
+                  // 여러 줄로 감기는 근거. 짧은 한 줄짜리만 있으면 인용 줄의 점선 리더와
+                  // 시각이 긴 따옴말 옆에서 어떻게 서는지가 목에서 한 번도 안 그려진다.
+                  {
+                    segmentId: "01K0000000065",
+                    text: "제가 지난주에 신규 가입자 마흔 명 세션을 전부 돌려봤는데요, 대시보드까지는 다들 무리 없이 들어오다가 회의 만들기 버튼 앞에서 평균 이 분 가까이 머물다 그냥 나가더라고요. 화면에 버튼이 없는 게 아니라 그게 지금 눌러야 할 것으로 안 읽히는 겁니다.",
+                    startedAtMs: 210000,
+                  },
                 ],
               },
               {
@@ -900,6 +932,11 @@ function createSeedState(): StoreState {
                     segmentId: "01K0000000063",
                     text: "그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.",
                     startedAtMs: 92000,
+                  },
+                  {
+                    segmentId: "01K0000000066",
+                    text: "정리하면 이렇습니다. 첫째, 가입 직후 화면에서 회의 만들기를 가장 눈에 띄는 자리로 올리고 나머지 진입점은 한 단계 뒤로 미룹니다. 둘째, 회의를 아직 한 번도 안 만든 사람에게는 빈 목록 대신 예시 회의를 하나 깔아 두고 그것부터 열어보게 합니다. 셋째, 이 둘을 이번 스프린트 안에 같이 내고 이 주 뒤에 같은 지표를 다시 봅니다. 문구 개편은 그때 판단해도 늦지 않습니다.",
+                    startedAtMs: 268000,
                   },
                 ],
               },
@@ -2151,7 +2188,7 @@ export const mockDb = {
   assignSpeaker(
     noteId: string,
     label: string,
-    userId: string | null,
+    userId: string | null
   ): TranscriptResponseDataDiarization["speakers"] {
     const note = findNote(noteId);
     const diarization = state.diarizations.get(noteId);

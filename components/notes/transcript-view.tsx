@@ -26,11 +26,9 @@ import {
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import {
-  FOCUSED_TEXT_CLASS,
   useTranscriptFocus,
   type TranscriptFocus,
 } from "@/components/notes/use-transcript-focus";
-import { cn } from "@/lib/utils";
 
 const FOLLOW_THRESHOLD_PX = 180;
 
@@ -264,10 +262,13 @@ export function TranscriptView({
    * 이 훅도 rAF로 움직이므로 나중에 등록된 쪽이 남는다. 옮겨 간 뒤에는 scroll 핸들러가
    * 바닥과의 거리를 다시 재 추종을 끄고, 사용자가 맨 아래로 돌아가면 그대로 되살아난다.
    */
-  const { segmentRef, isHighlighted } = useTranscriptFocus(segments, {
-    focusSegmentId,
-    onFocusHandled,
-  });
+  const { segmentRef, isHighlighted, markProps } = useTranscriptFocus(
+    segments,
+    {
+      focusSegmentId,
+      onFocusHandled,
+    }
+  );
 
   // 여기 스크롤 엔진은 챗봇과 다르다(프로그램 스크롤 가드·라이브 판정). 생김새만 공유한다.
   //
@@ -323,6 +324,11 @@ export function TranscriptView({
                   <article
                     key={row.segment.segmentId}
                     ref={segmentRef(row.segment.segmentId)}
+                    /* 훅이 도착하는 순간 이 줄에 포커스를 옮긴다 — 키보드·스크린리더도
+                       각주를 따라와야 한다. **짚힌 줄에만 달지 않는다**: 형광이 꺼질 때
+                       속성이 사라지면서 읽던 사람의 포커스를 빼앗는다. `-1`은 Tab 순서에
+                       안 들어가므로 늘 달려 있어도 훑는 데 걸리지 않는다. */
+                    tabIndex={-1}
                     data-testid="transcript-block"
                     data-timeline-start-ms={row.segment.startedAtMs}
                     data-state="final"
@@ -342,12 +348,7 @@ export function TranscriptView({
                         />
                       ) : null}
                       <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
-                        <span
-                          className={cn(
-                            isHighlighted(row.segment.segmentId) &&
-                              FOCUSED_TEXT_CLASS
-                          )}
-                        >
+                        <span {...markProps(row.segment.segmentId)}>
                           {row.segment.text}
                         </span>
                       </p>
