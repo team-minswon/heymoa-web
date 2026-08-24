@@ -30,7 +30,17 @@ import { z } from "zod";
  *    포함하는 축이라 사람이 고치면 `revision`만 오르고 이 값은 그대로다.
  */
 
-/** 공용 13자리 TSID. `note-topic-protocol.ts`와 같은 형태다. */
+/**
+ * 공용 13자리 TSID. `note-topic-protocol.ts`와 같은 형태다.
+ *
+ * **첫 글자를 `[0-9A-F]`로 좁히지 않는다.** APP-459 제안 YAML에 그 strict 패턴이 있지만
+ * 그것은 **취소된 rollout(APP-467~471, 전부 Canceled+archived)을 선반영한 것**이라
+ * 현재 released 계약과 충돌한다. 지금 released 패턴은 이 broad 형태이고 server 생성
+ * OpenAPI도 같을 예정이다.
+ *
+ * 좁히면 released 식별자 중 첫 글자가 `G` 이상인 것이 전부 파싱에서 떨어진다 —
+ * 그 이벤트는 `z.object`의 관대함으로도 못 구한다. 필드 무시와 값 거절은 다르다.
+ */
 const tsidSchema = z
   .string()
   .length(13)

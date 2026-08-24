@@ -138,6 +138,22 @@ describe("draft 계약의 관대함", () => {
     ).toBe(false);
   });
 
+  it("TSID 첫 글자를 좁히지 않는다 — 취소된 rollout 을 선반영하지 않는다", () => {
+    // APP-467~471 은 전부 Canceled+archived 다. 그 strict 패턴(`^[0-9A-F]...`)을 넣으면
+    // released 식별자 중 첫 글자가 G 이상인 것이 통째로 거절된다.
+    for (const candidateId of ["0HZX2K7M9Q4A1", "ZZZZZZZZZZZZZ", "G123456789ABC"]) {
+      expect(
+        contextCandidateHeadSchema.safeParse({ ...head, candidateId }).success
+      ).toBe(true);
+    }
+    // 그래도 형태는 지킨다 — 길이와 제외 문자(I·L·O·U)는 여전히 막는다.
+    for (const bad of ["0HZX2K7M9Q4A", "0HZX2K7M9Q4AI", "0hzx2k7m9q4a1"]) {
+      expect(
+        contextCandidateHeadSchema.safeParse({ ...head, candidateId: bad }).success
+      ).toBe(false);
+    }
+  });
+
   it("revisionSource 는 v1 에서 LIVE 하나뿐이다", () => {
     // APP-458 최종 합의: POSTPROCESS 선예약을 걷었다. 낼 주체가 없는 값을 받아 두면
     // 계약이 존재하지 않는 것을 주장하게 된다.
