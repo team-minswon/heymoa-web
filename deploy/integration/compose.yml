@@ -73,6 +73,13 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8080
+      # **CORS 와 OAuth 리다이렉트가 이 값 하나에 걸린다.** prod 프로파일은
+      # `https://heymoa.app` 로 못박혀 있어서, 통합의 web(`localhost:3000`)에서 오는 요청이
+      # preflight 403 으로 막힌다. 실제로 밟았다 — 브라우저 요청이 전부 죽고 화면이
+      # 「워크스페이스를 불러오지 못했습니다」가 됐다.
+      # Spring 표준 relaxed binding 이라 server 코드는 안 건드린다.
+      APP_WEB_BASEURL: ${PUBLIC_WEB_URL:-http://localhost:3000}
+      APP_API_BASEURL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:18080}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-heymoa}
@@ -132,6 +139,11 @@ services:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
         # 통합에서는 반드시 비운다. `enabled`면 MSW가 붙어 실서버를 안 탄다.
         NEXT_PUBLIC_API_MOCKING: ""
+    environment:
+      # **브라우저가 부를 주소와 다르다.** 위 build arg 는 브라우저용(`localhost:...`)이고,
+      # 컨테이너 안의 SSR·proxy 는 그 주소로 자기 자신을 부르게 된다. 런타임 값이라
+      # 이미지 재빌드 없이 바꾼다.
+      API_BASE_URL: http://server:8080
     ports:
       - "${WEB_PORT:-3000}:3000"
     healthcheck:

@@ -4,8 +4,10 @@ import { cache } from "react";
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
+import { serverApiBaseUrl } from "@/lib/api/server-base-url";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+// 브라우저가 부를 주소와 다를 수 있다 — `lib/api/server-base-url.ts` 주석 참조.
+const apiBaseUrl = serverApiBaseUrl();
 
 function buildServerApiUrl(path: string) {
   if (!apiBaseUrl) {

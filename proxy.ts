@@ -8,8 +8,10 @@ import {
   REFRESH_TOKEN_COOKIE_NAME,
 } from "@/lib/auth/cookies";
 import { isRefreshTokenDead } from "@/lib/auth/refresh-failure";
+import { serverApiBaseUrl } from "@/lib/api/server-base-url";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+// 브라우저가 부를 주소와 다를 수 있다 — `lib/api/server-base-url.ts` 주석 참조.
+const apiBaseUrl = serverApiBaseUrl();
 
 /** `Set-Cookie` 한 줄에서 이름과 값만 뽑는다. 속성은 서버 것을 그대로 흘려보낸다. */
 function parseAuthCookie(setCookie: string) {
