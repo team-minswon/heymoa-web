@@ -30,6 +30,11 @@ services:
     environment:
       # 이 플래그가 없으면 `container.py`가 worker를 조립하지 않고 lane이 통째로 안 돈다.
       LIVE_CONTEXT_ENABLED: "true"
+      # **기본값이 `http://localhost:8080`이라 컨테이너 안에서 자기 자신을 본다.**
+      # 그래서 worker 의 discovery 폴링이 매초 `LiveRetryableError` 로 격리됐다.
+      SERVER_BASE_URL: http://server:8080
+      # server 의 `INTERNAL_API_TOKEN` 과 같아야 한다. 다르면 401 로 같은 증상이 난다.
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-integration-internal-token}
 
   ai-migrate:
     build:
