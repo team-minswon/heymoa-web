@@ -34,10 +34,16 @@ test.describe("살아 있는 발화", () => {
 
     const confirmed = page.getByTestId("partial-confirmed");
     const pending = page.getByTestId("partial-pending");
+    const blocks = page.getByTestId("transcript-block");
 
     // **미확정 토막이 뜬다는 것이 partial 프레임을 실제로 파싱했다는 증거다.**
     // 옛 모양이면 파싱이 던지고 이 자리는 영영 비어 있는다.
     await expect(pending).toBeVisible({ timeout: 30_000 });
+
+    // 확정 행의 기준선을 여기서 잡는다. **partial 이 뜬 뒤**라 REST 전사는 이미 그려졌고,
+    // final 은 아직 안 왔다. `transcript-block` 은 확정 행에만 붙고 살아 있는 행에는
+    // 안 붙으므로 partial 이 이 수를 흔들지 않는다.
+    const before = await blocks.count();
 
     // **둘이 동시에 보여야 한다.** 서버가 두 토막을 이어 붙인 문자열 하나로 보내면 확정
     // 토막이 안 생겨서 이 단언이 깨진다 — 그게 이 테스트의 존재 이유다.
@@ -49,5 +55,13 @@ test.describe("살아 있는 발화", () => {
     // 흐린 채로 화면에 남아 사용자가 계속 기다린다.
     await expect(confirmed).toHaveCount(0, { timeout: 30_000 });
     await expect(pending).toHaveCount(0);
+
+    // **소멸만 보면 부족하다.** final 이 파싱돼 partial 을 걷었는데 확정 행 렌더가 깨지면
+    // 위 두 단언은 그대로 통과한다 — 화면에서는 방금 한 말이 통째로 사라진 것으로 보인다.
+    // 그래서 **행이 정확히 하나 늘었는지**를 센다.
+    //
+    // 문장으로 확인하지 않는다. 같은 문장이 시드에도 있어 `getByText` 는 어느 쪽을 짚었는지
+    // 구분하지 못한다 — 세는 것이 유일하게 갈리는 증거다.
+    await expect(blocks).toHaveCount(before + 1, { timeout: 30_000 });
   });
 });
