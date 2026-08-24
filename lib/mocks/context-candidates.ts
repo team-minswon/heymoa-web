@@ -26,6 +26,12 @@ import type {
  */
 export const CONTEXT_DEMO_NOTE_ID = "01K0000000005";
 
+/**
+ * 목 회의의 시작 벽시계. 페이지를 열 때를 기준으로 42분짜리 회의가 방금 끝난 것처럼 둔다 —
+ * 고정 날짜를 박으면 갱신 띠가 늘 「몇 년 전」이 된다.
+ */
+const MOCK_MEETING_STARTED_AT = Date.now() - 2_600_000;
+
 const SEGMENT = (n: number) => `0HZX2K7M9Q${String(n).padStart(3, "0")}`;
 const CANDIDATE = (n: number) => `0HZX2K7M9QA${String(n).padStart(2, "0")}`;
 export const CONTEXT_EVENT_ID = (n: number) =>
@@ -206,7 +212,11 @@ function range(
     toEndedAtMs: toSequence * 10_000,
     rawDeltaSaturated: false,
     semanticUnitSaturated: false,
-    appliedAt: new Date(toSequence * 10_000).toISOString(),
+    // **회의 경과 ms를 절대 시각으로 쓰면 안 된다.** `new Date(600_000)`은 1970년이라
+    // 갱신 띠가 「490000시간 전」이 된다. 계약의 `appliedAt`은 서버가 적용한 UTC 벽시계다.
+    appliedAt: new Date(
+      MOCK_MEETING_STARTED_AT + toSequence * 10_000
+    ).toISOString(),
     ...over,
   };
 }
