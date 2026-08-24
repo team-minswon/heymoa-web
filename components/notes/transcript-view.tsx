@@ -102,15 +102,22 @@ export function TranscriptView({
     noteRealtime.transcript.finalSegments,
     persisted,
   ]);
+  /**
+   * **복사에 나가는 것은 전사뿐이다.** 마크다운 복사는 회의록이라, 분류 커버리지 같은
+   * 화면 주석이 섞이면 붙여넣은 쪽이 전사에 없던 문장을 갖는다. 그래서 `rows`는 전사만
+   * 담고, 커버리지는 아래 `renderRows`에서만 얹는다.
+   */
   const rows = useMemo(
-    () =>
-      // **전사 공백과 분류 공백은 다른 사건이다.** 소리가 없어 글이 없는 것과, 글은 있는데
-      // 정리가 안 된 것을 같은 문구로 그리면 사용자가 원인을 잘못 읽는다.
-      withCoverageRows(
-        interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
-        noteRealtime.context.state.appliedRanges
-      ),
-    [noteRealtime.context.state.appliedRanges, segments, transcript]
+    () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
+    [segments, transcript]
+  );
+  /**
+   * 화면에 그리는 줄. **전사 공백과 분류 공백은 다른 사건이다** — 소리가 없어 글이 없는
+   * 것과, 글은 있는데 정리가 안 된 것을 같은 문구로 그리면 원인을 잘못 읽는다.
+   */
+  const renderRows = useMemo(
+    () => withCoverageRows(rows, noteRealtime.context.state.appliedRanges),
+    [noteRealtime.context.state.appliedRanges, rows]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";
   const speakerOf = useMemo(
@@ -364,7 +371,7 @@ export function TranscriptView({
             </div>
           ) : (
             <div>
-              {rows.map((row) =>
+              {renderRows.map((row) =>
                 row.type === "gap" ? (
                   <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
                 ) : row.type === "coverage-gap" ? (

@@ -82,6 +82,16 @@ describe("withCoverageRows", () => {
     expect(merged.map((row) => row.type)).toEqual(["segment", "saturated"]);
   });
 
+  it("원본 배열을 건드리지 않는다 — 복사에 나가는 전사와 화면용이 갈린다", () => {
+    // 마크다운 복사는 회의록이라 분류 커버리지 같은 화면 주석이 섞이면 안 된다.
+    // `transcript-view` 가 `rows`(전사) 와 `renderRows`(전사+커버리지) 를 나눠 쓰는 근거다.
+    const rows = [segment(50_000, "a")];
+    const before = [...rows];
+    withCoverageRows(rows, [range(1, 10, { rawDeltaSaturated: true })]);
+    expect(rows).toEqual(before);
+    expect(rows).toHaveLength(1);
+  });
+
   it("포화가 아닌 범위는 아무것도 얹지 않는다", () => {
     expect(withCoverageRows([], [range(1, 10)])).toEqual([]);
   });
