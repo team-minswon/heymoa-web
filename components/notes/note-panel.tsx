@@ -21,6 +21,7 @@ import {
   NoteDetails,
   NoteDetailsSkeleton,
 } from "@/components/notes/note-details";
+import { ContextRail } from "@/components/notes/context-rail";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import {
   NoteAgentRail,
@@ -56,7 +57,12 @@ import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 
-export type NoteTab = "chat" | "details" | "transcript" | "summary";
+export type NoteTab =
+  | "chat"
+  | "context"
+  | "details"
+  | "transcript"
+  | "summary";
 
 const NOTE_SAFETY_POLL_MS = 30_000;
 
@@ -181,7 +187,11 @@ export function NotePanel({
   // 본문 아래 14rem 레인으로 눕는다 — 회의가 죽어 있을 때까지 그 레인을 세우면 전사 높이가
   // 0이 된다(모바일 landscape에서 실측). 그래서 좁은 화면에서는 살아 있을 때만 세운다.
   const meetingLive = phase === "active" || phase === "not-started";
-  const [railTab, setRailTab] = useState<RailTab>("shared");
+  // **기록 중에는 「실시간 정리」가 먼저다.** 회의 중에 「지금 무슨 일이 일어나고 있나」의
+  // 답이 그 화면이다. 끝난 회의를 열면 물어볼 곳(공유 챗)이 먼저다.
+  const [railTab, setRailTab] = useState<RailTab>(
+    phase === "active" ? "context" : "shared"
+  );
   // 개인 챗봇이 한 턴을 굴리는 중이면 레일을 접으면 안 된다 — 중지도 도구 승인도 그 안에만
   // 있는데, 레일이 슬롯을 쥐고 있어 떠 있는 FAB로 되돌아가지도 않는다. 다른 멤버가 회의를
   // 끝내는 순간 좁은 화면에서 답변이 통째로 화면 밖으로 나가던 자리다.
@@ -193,6 +203,7 @@ export function NotePanel({
     phase === "paused" ||
     sharedTurnActive ||
     railTab === "personal" ||
+    railTab === "context" ||
     personalTurnActive;
   /** 어느 쪽이든 한 턴이 도는 중. 뷰를 바꾸면 그 답변에 닿을 길이 끊긴다. */
   const turnActive = sharedTurnActive || personalTurnActive;
@@ -203,6 +214,17 @@ export function NotePanel({
       phase === "paused" ||
       sharedTurnActive ||
       (phase === "unknown" && tab === "chat"));
+  /**
+   * **사이드 뷰에는 레일이 없다.** 전체 뷰는 448 레일에 「실시간 정리」를 얹지만 860 시트에는
+   * 그 자리가 없어서 노트 탭으로 내린다 — 공유 챗이 이미 같은 문제를 그렇게 푼다.
+   * 컴포넌트는 하나이고 서는 자리만 둘이다.
+   */
+  const showSideContextTab =
+    view === "side" &&
+    !noteLoadFailed &&
+    (phase === "active" ||
+      phase === "paused" ||
+      (phase === "unknown" && tab === "context"));
   const sideChatNow = view === "side" && tab === "chat";
   const [sideChatVisit, setSideChatVisit] = useState({
     noteId,
@@ -528,6 +550,11 @@ export function NotePanel({
               <TabsTrigger value="transcript" className={TAB_ITEM}>
                 전사
               </TabsTrigger>
+              {showSideContextTab ? (
+                <TabsTrigger value="context" className={TAB_ITEM}>
+                  실시간 정리
+                </TabsTrigger>
+              ) : null}
               {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
               {showSummaryTab ? (
                 <TabsTrigger value="summary" className={TAB_ITEM}>
@@ -723,6 +750,11 @@ export function NotePanel({
               )}
             </div>
           </TabsContent>
+          {showSideContextTab ? (
+            <TabsContent value="context" className="min-h-0 flex-1">
+              <ContextRail onEvidenceSelect={jumpToSegment} />
+            </TabsContent>
+          ) : null}
           {keepSideChatMounted ? (
             <TabsContent value="chat" keepMounted className="min-h-0 flex-1">
               <SharedChatPanel
@@ -800,6 +832,7 @@ export function NotePanel({
             phase={phase}
             tab={railTab}
             onTabChange={setRailTab}
+            onEvidenceSelect={jumpToSegment}
             foldedOnNarrow={!railLiveNow}
             onSharedTurnActiveChange={handleSharedTurnActiveChange}
           />

@@ -10,6 +10,16 @@ import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { NotePanel } from "@/components/notes/note-panel";
+import { NoteRealtimeProvider } from "@/components/notes/note-realtime-provider";
+
+// 이 파일이 보는 것은 패널이지 소켓이 아니다. 연결은 세우지 않는다.
+vi.mock("@/lib/notes/note-topic-client", () => ({
+  getNoteTopicWebSocketUrl: () => "ws://localhost/ws/transcriptions",
+  NoteTopicClient: class {
+    readonly connect = vi.fn();
+    readonly close = vi.fn().mockResolvedValue(undefined);
+  },
+}));
 import {
   RecordingProvider,
   useRecording,
@@ -236,6 +246,16 @@ const runtime: RecordingRuntime = {
   }),
 };
 
+/**
+ * 기록 중에는 레일이 「실시간 정리」로 열린다. 공유 챗을 보는 테스트는 그 전제를 명시한다 —
+ * 패널은 마운트돼 있지만 `hidden` 이라 접근성 트리에 없다.
+ */
+function openSharedRailTab() {
+  // 사이드 뷰나 죽은 회의에는 레일 자체가 없다. 있을 때만 옮긴다.
+  const trigger = screen.queryByRole("tab", { name: "이 회의" });
+  if (trigger) fireEvent.click(trigger);
+}
+
 function renderNotePanel(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: {
@@ -260,7 +280,9 @@ function renderNotePanel(ui: ReactNode) {
           })),
         }}
       >
-        {node}
+        {/* NotePanel 은 프로덕션에서 항상 NoteRealtimeProvider 안이다
+            (`note-route-client.tsx`). 여기서는 소켓을 띄우지 않고 컨텍스트만 세운다. */}
+        <NoteRealtimeProvider noteId="01K0000000002">{node}</NoteRealtimeProvider>
       </RecordingProvider>
     </QueryClientProvider>
   );
@@ -714,6 +736,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("shared-chat-panel")).toBeTruthy();
 
     // 턴이 흐른다.
+    openSharedRailTab();
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
     // 그 사이 다른 멤버가 회의를 끝낸다(폴링이 ENDED를 올린다).
     noteState.value.meetingStatus = "ENDED";
@@ -744,6 +767,8 @@ describe("NotePanel", () => {
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
       "전사",
+      // 사이드 뷰에는 레일이 없어서 실시간 정리가 노트 탭으로 내려온다.
+      "실시간 정리",
       "챗봇",
     ]);
     expect(
@@ -825,6 +850,7 @@ describe("NotePanel", () => {
     const { rerenderNote } = renderNotePanel(panel("chat"));
     const sharedPanel = screen.getByTestId("shared-chat-panel");
 
+    openSharedRailTab();
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
     rerenderNote(panel("transcript"));
 
@@ -870,6 +896,7 @@ describe("NotePanel", () => {
       />
     );
 
+    openSharedRailTab();
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
 
     expect(
@@ -1107,6 +1134,7 @@ describe("NotePanel", () => {
       />
     );
 
+    openSharedRailTab();
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
 
     expect(
@@ -1340,6 +1368,7 @@ describe("NotePanel", () => {
     );
     const { rerenderNote } = renderNotePanel(panel("chat"));
 
+    openSharedRailTab();
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
     noteState.value.meetingStatus = "ENDED";
     // NoteView가 ended + chat을 즉시 transcript로 정규화한다. 답변 패널은 숨겨도
@@ -1378,6 +1407,7 @@ describe("NotePanel", () => {
     );
     const { rerenderNote } = renderNotePanel(panel);
 
+    openSharedRailTab();
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
     noteState.value.meetingStatus = "ENDED";
     rerenderNote(panel);
@@ -1747,6 +1777,7 @@ describe("NotePanel", () => {
     );
     const { rerenderNote } = renderNotePanel(el);
 
+    openSharedRailTab();
     fireEvent.click(screen.getByRole("button", { name: "턴 시작" }));
     noteState.value.meetingStatus = "ENDED";
     rerenderNote(el);

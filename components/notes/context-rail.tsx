@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ContextCandidateCard } from "@/components/notes/context-candidate-card";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
@@ -47,6 +47,28 @@ function matches(card: ContextCandidateHead, filter: Filter) {
   return filter === "ALL" || card.kind === filter;
 }
 
+/**
+ * 흐르는 시계.
+ *
+ * **렌더 중에 `Date.now()` 를 부르지 않는다.** 순수하지 않아 hydration 이 어긋나고, 더 나쁜
+ * 것은 **다시 렌더될 때만 값이 바뀐다**는 것이다. 사건이 안 오면 이 레일은 몇 분씩 리렌더가
+ * 없으므로 「방금」이 30분째 「방금」으로 남는다 — 갱신 띠가 하려는 일의 정반대다.
+ *
+ * 서버에는 타이머가 없으므로 첫 값은 `null` 이고 서버·클라이언트가 같다. 브라우저에서는
+ * lazy initializer 가 마운트 전에 한 번 잡는다 — effect 안에서 곧장 `setState` 하면
+ * 마운트마다 렌더가 한 번 더 돈다.
+ */
+function useNow(intervalMs: number) {
+  const [now, setNow] = useState<number | null>(() =>
+    typeof window === "undefined" ? null : Date.now()
+  );
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [intervalMs]);
+  return now;
+}
+
 export function ContextRail({
   onEvidenceSelect,
   className,
@@ -72,7 +94,10 @@ export function ContextRail({
     (sum, card) => sum + 1 + card.results.length,
     0
   );
-  const freshness = formatFreshness(context.state.lastBatchAt, Date.now());
+  // 「방금」의 유효 구간이 45초라 그보다 촘촘히 잰다.
+  const now = useNow(20_000);
+  const freshness =
+    now === null ? null : formatFreshness(context.state.lastBatchAt, now);
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", className)}>

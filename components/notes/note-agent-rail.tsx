@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { Lock, Users } from "lucide-react";
 
 import { usePersonalChat } from "@/components/chat/personal-chat";
+import { ContextRail } from "@/components/notes/context-rail";
 import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
 import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
-export type RailTab = "shared" | "personal";
+export type RailTab = "context" | "shared" | "personal";
 
 /**
  * 노트 전체 화면의 오른쪽 레일. design.pen `L4PpR` — 위에 「이 회의 / 내 에이전트」 탭,
@@ -31,6 +32,7 @@ export function NoteAgentRail({
   onTabChange,
   foldedOnNarrow,
   onSharedTurnActiveChange,
+  onEvidenceSelect,
 }: {
   noteId: string;
   phase: SharedChatPhase;
@@ -43,6 +45,8 @@ export function NoteAgentRail({
    */
   foldedOnNarrow: boolean;
   onSharedTurnActiveChange: (active: boolean) => void;
+  /** 근거를 누르면 전사로 옮겨 그 발화를 짚는다. 소유자는 `NotePanel`이다. */
+  onEvidenceSelect: (segmentId: string) => void;
 }) {
   const { setRailSlot } = usePersonalChat();
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
@@ -65,6 +69,11 @@ export function NoteAgentRail({
         // 좁은 화면의 레일 레인은 14rem이라 크롬이 그만큼 대화를 깎는다 — lg 아래에서는 조인다.
         className="flex shrink-0 items-center gap-1 border-b border-[var(--el-hairline)] px-2 py-1.5 lg:p-3"
       >
+        <RailTabButton
+          active={tab === "context"}
+          onSelect={() => onTabChange("context")}
+          label="실시간 정리"
+        />
         <RailTabButton
           active={tab === "shared"}
           onSelect={() => onTabChange("shared")}
@@ -91,10 +100,25 @@ export function NoteAgentRail({
           foldedOnNarrow && "max-lg:hidden"
         )}
       >
-        {tab === "shared"
-          ? "참여자 전원이 함께 봅니다"
-          : "나만 보는 대화 · 워크스페이스 범위"}
+        {tab === "context"
+          ? "끝난 발화에서 남길 변화만 쌓입니다"
+          : tab === "shared"
+            ? "참여자 전원이 함께 봅니다"
+            : "나만 보는 대화 · 워크스페이스 범위"}
       </p>
+
+      <div
+        role="tabpanel"
+        aria-label="실시간 정리"
+        hidden={tab !== "context"}
+        className={cn(
+          "flex min-h-0 flex-1",
+          tab !== "context" && "hidden",
+          foldedOnNarrow && "max-lg:hidden"
+        )}
+      >
+        <ContextRail onEvidenceSelect={onEvidenceSelect} />
+      </div>
 
       <div
         role="tabpanel"
