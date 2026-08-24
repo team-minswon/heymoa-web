@@ -40,8 +40,8 @@ const CONTEXT_SOURCES = [
   "lib/notes/context-candidates/contract.ts",
   "lib/notes/context-candidates/reducer.ts",
   "lib/notes/context-candidates/timeline.ts",
-  "lib/notes/context-candidates/api.ts",
-  "lib/notes/context-candidates/query-keys.ts",
+  "lib/notes/context-candidates/select.ts",
+  // `api.ts`·`query-keys.ts` 는 계약이 도착하며 사라졌다 — orval 생성 훅과 키로 갔다.
   "components/notes/context-rail.tsx",
   "components/notes/context-candidate-card.tsx",
   "components/notes/context-coverage-row.tsx",
@@ -90,10 +90,28 @@ describe("v1 범위 — 기각 표면은 없다", () => {
     ]);
   });
 
-  it("기각 조회를 위한 쿼리 키가 없다", () => {
-    const keys = read("lib/notes/context-candidates/query-keys.ts");
-    expect(keys).not.toMatch(/reject/i);
-    // v1 조회 표면은 둘뿐이다 — snapshot 과 revision history.
-    expect(keys.match(/export function/g)).toHaveLength(2);
+  /**
+   * 쿼리 키는 이제 orval 산출물이다. **계약이 v1 조회 표면을 둘로 묶는다** — snapshot 과
+   * revision history. 기각 조회가 생기면 생성물에 세 번째가 나타나므로 여기서 걸린다.
+   */
+  it("기각 조회를 위한 생성 훅이 없다", () => {
+    const generated = read(
+      "lib/api/generated/context-candidates/context-candidates.ts"
+    );
+    expect(generated).not.toMatch(/reject/i);
+
+    // **선언 수가 아니라 이름 집합으로 센다.** orval 은 훅마다 오버로드를 여럿 내므로
+    // 선언을 세면 생성기 버전이 바뀔 때마다 흔들린다. 이름은 조회 표면 자체다.
+    const hooks = new Set(
+      [...generated.matchAll(/export function (use[A-Za-z]+)</g)].map(
+        (match) => match[1]
+      )
+    );
+    expect([...hooks].sort()).toEqual([
+      "useGetContextCandidateRevisions",
+      "useGetContextCandidateRevisionsSuspense",
+      "useGetContextCandidates",
+      "useGetContextCandidatesSuspense",
+    ]);
   });
 });

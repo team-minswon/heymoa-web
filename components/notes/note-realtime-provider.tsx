@@ -9,7 +9,7 @@ import {
   useReducer,
   useRef,
 } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { getGetNoteSharedChatMessagesQueryKey } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
@@ -35,8 +35,11 @@ import {
   getNoteTopicWebSocketUrl,
   NoteTopicClient,
 } from "@/lib/notes/note-topic-client";
-import { fetchContextCandidates } from "@/lib/notes/context-candidates/api";
-import { getContextCandidatesQueryKey } from "@/lib/notes/context-candidates/query-keys";
+import {
+  getGetContextCandidatesQueryKey,
+  useGetContextCandidates,
+} from "@/lib/api/generated/context-candidates/context-candidates";
+import { selectContextSnapshot } from "@/lib/notes/context-candidates/select";
 import type {
   NoteTopicEvent,
   NoteTopicFinalSegment,
@@ -246,7 +249,7 @@ export function NoteRealtimeProvider({
       });
     const invalidateContext = () =>
       void queryClient.invalidateQueries({
-        queryKey: getContextCandidatesQueryKey(noteId),
+        queryKey: getGetContextCandidatesQueryKey(noteId),
       });
     const catchUp = () => {
       clearInterruption();
@@ -334,10 +337,12 @@ export function NoteRealtimeProvider({
    * `phase`로 막지 않는다. **회의가 끝나도 원장은 남는다** — 사용자가 회의 중에 본 것을
    * 나중에 되짚는 것이 이 화면의 절반이다.
    */
-  const snapshotQuery = useQuery({
-    queryKey: getContextCandidatesQueryKey(noteId),
-    queryFn: () => fetchContextCandidates(noteId),
-    staleTime: 10_000,
+  const snapshotQuery = useGetContextCandidates(noteId, {
+    query: {
+      staleTime: 10_000,
+      /** 두 겹 봉투를 벗기고 성공만 zod 로 통과시킨다 — 근거는 `select.ts` 주석에 있다. */
+      select: selectContextSnapshot,
+    },
   });
   const snapshot = snapshotQuery.data;
   /**

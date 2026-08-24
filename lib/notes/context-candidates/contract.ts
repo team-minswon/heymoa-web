@@ -1,19 +1,28 @@
 import { z } from "zod";
 
+import type { ContextCandidateEvidence as GeneratedEvidence } from "@/lib/api/generated/models/contextCandidateEvidence";
+import type { ContextCandidateRevision as GeneratedRevision } from "@/lib/api/generated/models/contextCandidateRevision";
+import type { ContextClassificationAppliedRange as GeneratedRange } from "@/lib/api/generated/models/contextClassificationAppliedRange";
+
 /**
- * **이 파일은 임시 계약이다.** `openapi3.yml`에 context candidate 경로가 아직 없어서 orval이
- * 훅을 만들지 못한다. 그래서 wire 형태를 여기 한곳에만 두고 화면·MSW·reducer가 전부 이걸
- * 가져다 쓴다.
+ * **이 파일은 WS runtime parser다.** 계약은 이미 `openapi3.yml`에 있고 REST 쪽은 orval
+ * 생성 훅으로 갔다(`api.ts`·`query-keys.ts`는 그때 사라졌다). 그런데 **orval은
+ * `client: "react-query"`라 zod parser를 만들지 않는다** — `note-topic-protocol.ts`가
+ * WS JSON을 실제로 파싱하는 데 이 스키마를 쓰므로 zod는 남았다.
  *
- * **언제 지우나** — heymoa-server의 APP-459가 머지되어 `openapi3.yml`에 두 경로가 들어오면
- * `pnpm orval`을 돌리고 이 파일을 생성 타입의 재수출로 바꾼다. 그때 바뀌는 것은 이 파일뿐이다.
+ * 대신 **생성 타입과 방향성 가드로 묶었다**(파일 아래 `ContextContractGuards`). 서버가
+ * 필드를 바꾸거나 더하면 `tsc`가 먼저 깨진다.
+ *
+ * REST 쪽도 이 스키마를 한 번 더 지난다 — `note-realtime-provider`의 `select`가 성공
+ * 봉투를 여기로 통과시킨다. 두 경로가 같은 판정을 쓰는 편이 갈리지 않는다.
  *
  * **모르는 필드를 버리지 않고 무시한다(`z.object`).** 이 레포의 다른 실시간 스키마는
  * `z.strictObject`인데 여기만 다르고, 이유는 **배포 순서가 web을 마지막에 두기 때문**이다
  * (heymoa-ai → heymoa-server → heymoa-web). server가 필드를 하나 더 실어 보낸 뒤 web이
  * 아직 안 올라간 창이 반드시 생기는데, `strictObject`면 그 동안 **레일이 통째로 빈다.**
- * 모르는 필드는 무시하는 편이 낫다 — 계약이 `openapi3.yml`에 들어와 orval로 생성되면 이
- * 파일과 함께 이 완화도 사라진다.
+ *
+ * 계약이 `additionalProperties: false`로 굳었으니 이 완화의 명분은 약해졌지만, 배포 창은
+ * 그대로 남아 있어 유지한다. **엄격함은 런타임이 아니라 위 타입 가드에서 시끄럽다.**
  *
  * 관대해진 대신 **드리프트를 테스트가 잡는다** — `contract.test.ts`가 필수 필드 누락은
  * 여전히 실패시키고, 모르는 필드는 통과하되 버려지는 것을 고정한다.
@@ -233,6 +242,68 @@ export const contextBatchAppliedSchema = z.object({
   occurredAt: instantSchema,
   range: appliedRangeSchema,
 });
+
+/**
+ * **생성 타입과 어긋나지 않게 묶는다.**
+ *
+ * `orval` 은 `client: "react-query"` 라 TypeScript 타입만 만들고 **zod runtime parser 를
+ * 만들지 않는다.** 그런데 `note-topic-protocol.ts` 는 WS JSON 을 실제로 파싱하는 데 이
+ * 스키마를 쓴다 — 그래서 zod 는 남고, 대신 여기서 생성 타입과 붙여 둔다. 어긋나면
+ * `tsc` 가 먼저 깨진다.
+ *
+ * **방향이 스키마마다 다르다.** 실측으로 확인했다.
+ *
+ * | 스키마 | 양방향 |
+ * |---|---|
+ * | evidence · appliedRange | 성립 |
+ * | head | **한 방향만** |
+ *
+ * head 만 다른 이유는 `oneOf` 다. 생성 타입이 「교차타입 셋의 union」인데 이쪽은 평평한
+ * `z.object` 에 `.refine()` 으로 같은 행렬을 강제한다. **`refine` 은 런타임 검사라 타입에
+ * 안 나타나서** union 의 어느 갈래에도 대입되지 않는다.
+ *
+ * 그래서 head 는 「생성 → 내 타입」 한 방향만 세우고, **필드가 늘어나는 경우는 키 집합으로
+ * 따로 잡는다** — 초과 속성은 대입 가능해서 그 방향만으로는 추가를 못 잡는다.
+ */
+/** 제약이 `true`일 때만 컴파일된다 — 본문은 안 쓰므로 `never`로 둔다. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 제약 자체가 검사다
+type Assert<T extends true> = never;
+type Extends<A, B> = [A] extends [B] ? true : false;
+
+type _guardEvidenceForward = Assert<
+  Extends<z.infer<typeof contextEvidenceSchema>, GeneratedEvidence>
+>;
+type _guardEvidenceBackward = Assert<
+  Extends<GeneratedEvidence, z.infer<typeof contextEvidenceSchema>>
+>;
+type _guardRangeForward = Assert<
+  Extends<z.infer<typeof appliedRangeSchema>, GeneratedRange>
+>;
+type _guardRangeBackward = Assert<
+  Extends<GeneratedRange, z.infer<typeof appliedRangeSchema>>
+>;
+type _guardHeadBackward = Assert<
+  Extends<GeneratedRevision, z.infer<typeof contextCandidateHeadSchema>>
+>;
+/** `keyof` union 은 모든 갈래에 공통인 키다 — 서버가 필드를 더하면 여기서 걸린다. */
+type _guardHeadKeys = Assert<
+  Extends<
+    Exclude<
+      keyof GeneratedRevision,
+      keyof z.infer<typeof contextCandidateHeadSchema>
+    >,
+    never
+  >
+>;
+
+export type ContextContractGuards = [
+  _guardEvidenceForward,
+  _guardEvidenceBackward,
+  _guardRangeForward,
+  _guardRangeBackward,
+  _guardHeadBackward,
+  _guardHeadKeys,
+];
 
 export type ContextCandidateHead = z.infer<typeof contextCandidateHeadSchema>;
 export type ContextEvidence = z.infer<typeof contextEvidenceSchema>;

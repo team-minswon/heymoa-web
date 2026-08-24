@@ -13,7 +13,7 @@ import {
   getGetNotesQueryKey,
 } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
-import { getContextCandidatesQueryKey } from "@/lib/notes/context-candidates/query-keys";
+import { getGetContextCandidatesQueryKey } from "@/lib/api/generated/context-candidates/context-candidates";
 
 type TopicClientOptions = {
   noteId: string;
@@ -406,7 +406,7 @@ describe("NoteRealtimeProvider", () => {
     // meeting.ended 가 note·목록·transcript·chat·후보를, recording.started 가 note·목록을 갱신한다.
     expect(invalidateQueries).toHaveBeenCalledTimes(7);
     expectInvalidated(invalidateQueries, noteKey);
-    expectInvalidated(invalidateQueries, getContextCandidatesQueryKey(NOTE_ID));
+    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
     expect(
       getProjectNotesPredicate(invalidateQueries)({
         queryKey: getGetNotesQueryKey(PROJECT_ID),
@@ -573,7 +573,7 @@ describe("NoteRealtimeProvider", () => {
     });
 
     // REAFFIRM 은 candidate event 가 없어서 이 무효화로만 화면에 수렴한다.
-    expectInvalidated(invalidateQueries, getContextCandidatesQueryKey(NOTE_ID));
+    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
     // 갱신 띠 시각은 수신 시각이 아니라 서버가 준 값이다.
     expect(screen.getByTestId("context-batch-at").textContent).toBe(
       "2026-08-24T02:00:00.000Z"
@@ -597,7 +597,7 @@ describe("NoteRealtimeProvider", () => {
     await act(() => topicClients[0].options.onCatchUp());
 
     expect(screen.getByTestId("context-cards").textContent).toBe("[]");
-    expectInvalidated(invalidateQueries, getContextCandidatesQueryKey(NOTE_ID));
+    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
   });
 
   it("StrictMode의 setup-cleanup-setup에서도 활성 연결을 하나만 남긴다", async () => {

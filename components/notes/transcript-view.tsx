@@ -201,7 +201,19 @@ export function TranscriptView({
    * 빼면 추종 중인 독자가 바닥에서 밀린 채로 남는다 — 「맨 아래로」 버튼도 안 뜬다.
    */
   const lastSegment = segments.at(-1);
-  const liveContentKey = `${lastSegment?.segmentId ?? ""}:${lastSegment?.text ?? ""}:${partial?.confirmedText ?? ""}:${partial?.pendingText ?? ""}`;
+  /**
+   * **커버리지 행도 여기 든다.** 분류 범위는 전사와 **따로, 늦게** 도착한다 — 조회가
+   * 취소·재시도되면 마지막 발화보다 뒤에 붙는다. 그 행들은 전사 행이 아니라서 위 셋 중
+   * 어느 것도 안 바뀌고, 그러면 **추종하던 독자가 그 높이만큼 바닥에서 밀린 채 남는다.**
+   * 「맨 아래로」 버튼도 안 뜬다 — scroll 이벤트가 안 나기 때문이다.
+   *
+   * 실제로 생성 훅으로 바꾸며 밟았다. `signal` 이 붙어 조회가 한 번 끊겼다 다시 오자
+   * 커버리지 행이 뒤늦게 붙어 122px 가 남았다.
+   */
+  const coverageKey = renderRows
+    .filter((row) => row.type === "coverage-gap" || row.type === "saturated")
+    .length;
+  const liveContentKey = `${lastSegment?.segmentId ?? ""}:${lastSegment?.text ?? ""}:${partial?.confirmedText ?? ""}:${partial?.pendingText ?? ""}:${coverageKey}`;
 
   const updateFollowing = useCallback((next: boolean) => {
     followingRef.current = next;

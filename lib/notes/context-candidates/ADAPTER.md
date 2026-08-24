@@ -1,16 +1,25 @@
 # 계약 어댑터 경계
 
-APP-459의 실제 OpenAPI/AsyncAPI가 오면 **여기 적힌 것만 바뀝니다.** 화면 코드는 안 바뀝니다.
+> **교체 완료(2026-08-25).** APP-459/451 최종 생성물
+> (`sha256:5d60e5f8…`)로 미러를 갱신하고 어댑터를 갈아끼웠습니다. 실제로 일어난 일:
+>
+> - `api.ts`·`query-keys.ts` **삭제** — `useGetContextCandidates`와 생성 키로
+> - provider가 생성 훅을 쓰고, 이중 봉투를 `select`에서 벗깁니다
+> - `contract.ts`의 zod는 **남았습니다** — WS 파서가 그걸 씁니다. 대신 생성 타입과
+>   방향성 가드로 묶었습니다
+>
+> 아래는 그 판단의 근거이고, 다음 계약 갱신 때도 같은 절차를 씁니다.
 
 ---
 
 ## 왜 이 문서가 있나
 
-지금 `contract.ts`는 **임시 zod 계약**입니다. server가 아직 web용 조회를 안 냈고
-(`v1/notes/{noteId}/context-candidates` grep 0건), 생성 `openapi3.yml`도 없습니다.
+계약이 없던 동안 `contract.ts`가 **임시 zod 계약**이었습니다. 그것이 코드 전체에 번지면
+교체가 대공사가 되므로 **경계를 좁혀 두었고**, 그 덕에 교체가 조회 경계 안에서 끝났습니다 —
+provider·contract·adapter 문서와 새 `select.ts`, 그리고 삭제된 둘이 움직였고 **카드·레일·
+전사 같은 화면 컴포넌트로는 번지지 않았습니다.**
 
-임시 계약이 코드 전체에 번지면 교체가 대공사가 됩니다. 그래서 **경계를 하나로 좁혀
-두었고**, 이 문서가 그 경계와 교체 절차를 적습니다.
+이 문서는 그 경계와 절차를 적습니다. **다음 계약 갱신에도 같은 절차를 씁니다.**
 
 ---
 
@@ -125,23 +134,22 @@ INTEGRATION_WEB_URL=... INTEGRATION_TOKEN_FILE=... \
 
 ---
 
-## 지금 임시인 것 — 전수
+## 임시였던 것 — 처리 결과
 
-교체 시 **하나도 남기지 않습니다.**
+| # | 무엇 | 결과 |
+|---|---|---|
+| 1 | zod 스키마 전체 (`contract.ts`) | **남았습니다.** orval이 zod parser를 안 만들고 WS가 그걸 씁니다. 생성 타입과 방향성 가드로 묶었습니다 |
+| 2 | `fetchContextCandidates()` (`api.ts`) | **삭제.** `useGetContextCandidates`로 |
+| 3 | 쿼리 키 두 개 (`query-keys.ts`) | **삭제.** `getGetContextCandidatesQueryKey`로 |
+| 4 | `useQuery` 직접 호출 (provider) | **교체.** 두 겹 봉투는 `select.ts`가 벗깁니다 |
+| 5 | MSW 목 응답 | 유지. 계약 확정 모양과 대조했습니다 |
+| 6 | **프롬프트 파일 마운트** | 걷었습니다 — `integration/pro-33-ai`가 수정을 품었습니다 |
+| 7 | **오버레이 compose** | 남았습니다. 세 브랜치가 머지되면 기본 `compose.yml`만으로 lane이 섭니다 |
 
-| # | 무엇 | 어디 | 임시인 이유 |
-|---|---|---|---|
-| 1 | zod 스키마 전체 | `contract.ts` | 계약이 `openapi3.yml`에 없어 orval이 훅을 못 만듦 |
-| 2 | `fetchContextCandidates()` | `api.ts` | 생성 훅 부재. **공용 mutator(`apiFetch`)는 지납니다** — 401 refresh를 우회하지 않으려고 |
-| 3 | 쿼리 키 두 개 | `query-keys.ts` | 생성 키 부재 |
-| 4 | `useQuery` 직접 호출 | `note-realtime-provider.tsx` | 생성 훅이 오면 `useGetNoteContextCandidates`로 |
-| 5 | MSW 목 응답 | `lib/mocks/rest-handlers.ts` · `context-candidates.ts` | 계약 확정 시 모양 재확인 |
-| 6 | **프롬프트 파일 마운트** | `deploy/integration/compose.realtime.yml` | APP-452 수정이 APP-466에 병합되면 제거 (그 파일 주석에 조건 있음) |
-| 7 | **오버레이 compose** | `deploy/integration/compose.realtime.yml` | 세 브랜치가 머지되면 기본 `compose.yml`만으로 lane이 섬 |
-
-**관대함도 임시입니다.** `contract.ts`가 `z.object`(모르는 필드 무시)인 것은 **배포가 web을
-마지막에 두기 때문**입니다. 계약이 생성 타입으로 굳으면 그 완화의 근거가 약해지므로 그때
-다시 판단합니다 — 지금은 서버가 필드를 먼저 실어 보내는 창에서 레일이 통째로 비지 않게 하는
+**관대함은 유지했습니다.** `contract.ts`가 `z.object`(모르는 필드 무시)인 것은 **배포가
+web을 마지막에 두기 때문**입니다. 계약이 `additionalProperties: false`로 굳어 명분은
+약해졌지만 배포 창은 그대로라, 엄격함은 런타임이 아니라 **타입 가드에서** 시끄럽게 했습니다 —
+서버가 필드를 먼저 실어 보내는 창에서 레일이 통째로 비지 않게 하는
 것이 우선입니다.
 
 ---
