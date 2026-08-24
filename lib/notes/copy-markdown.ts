@@ -41,21 +41,6 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
   };
 }
 
-/**
- * 문단이 갈리는 조용한 시간.
- *
- * **서버 형식을 그대로 뽑으면 회의록이 안 된다.** 계약이 「한 행이 발화 하나」라 두 어절짜리
- * 줄이 수백 개 온다. 화자가 같고 쉼이 짧으면 한 문단으로 잇는다.
- *
- * **화면에서 지운 `groupTranscriptSegments`를 되살린 것이 아니다.** 그 묶기가 죽은 이유는
- * 둘 다 화면의 사정이었다 — 화자가 회의 종료 후에 도착해 읽던 문단이 다시 쪼개졌고, 묶인
- * 문단에는 요약 근거가 짚을 DOM 노드가 없었다(`presentation.ts` 참조). 복사는 한 번 뜨고
- * 마는 스냅숏이라 다시 쪼개질 일도, 짚을 노드도 없다.
- *
- * ponytail: 15초는 눈으로 고른 값이다. 너무 잘게 끊기거나 한 덩어리로 뭉치면 여기를 만진다.
- */
-const PARAGRAPH_GAP_MS = 15_000;
-
 function headingLines(meta: NoteMeta, suffix = "") {
   const facts = [
     formatAppDate(meta.whenIso, {
@@ -75,24 +60,13 @@ function headingLines(meta: NoteMeta, suffix = "") {
   return [`# ${meta.title}${suffix}`, "", facts.join(" · ")];
 }
 
-type Paragraph = {
-  /**
-   * 묶는 기준. **이름이 아니라 라벨이다** — 동명이인이 둘 붙으면 이름이 같아져 A와 B의
-   * 발화가 한 문단으로 뭉치고 화자가 바뀐 자리가 사라진다.
-   *
-   * 이름을 안 적는 구간(화자 분리 전)은 라벨이 달라도 화면에 경계가 안 보이므로 `null`
-   * 하나로 묶는다. 안 그러면 이유가 안 보이는 자리에서 문단이 끊긴다.
-   */
-  speakerKey: string | null;
-  speaker: string | null;
-  startedAtMs: number;
-  endedAtMs: number;
-  texts: string[];
-};
-
 /**
  * 전사를 회의록으로 옮긴다. `rows`는 화면이 그리는 것과 **같은 배열**이다 — 실시간으로
  * 들어온 줄까지 이미 섞여 있고, 복사본이 화면과 어긋날 자리가 없다.
+ *
+ * **서버가 가른 대로 둔다.** 발화 하나가 줄 하나이고 저마다 자기 시각을 단다. 인접 발화를
+ * 문단으로 묶어 봤지만 어느 말이 몇 분에 나왔는지가 묶음의 첫 시각으로 뭉개졌다 —
+ * 회의록에서 시각은 되짚을 좌표라 그것을 잃으면서 얻을 것이 없었다.
  */
 export function transcriptToMarkdown({
   note,
@@ -108,25 +82,9 @@ export function transcriptToMarkdown({
   truncated?: boolean;
 }): string {
   const lines = headingLines(note);
-  let block: Paragraph | null = null;
-
-  const flush = () => {
-    if (!block) return;
-    const at = `[${formatOffset(block.startedAtMs)}]`;
-    const body = block.texts.join(" ");
-    // 화자가 없으면 머리글 줄을 따로 세우지 않는다 — 시각만 있는 줄이 홀로 뜬다.
-    lines.push(
-      "",
-      ...(block.speaker
-        ? [`**${block.speaker}** ${at}`, body]
-        : [`${at} ${body}`])
-    );
-    block = null;
-  };
 
   for (const row of rows) {
     if (row.type === "gap") {
-      flush();
       lines.push("", `> ${gapHeadline(row.gap)}`);
       continue;
     }
@@ -134,29 +92,12 @@ export function transcriptToMarkdown({
     const text = row.segment.text.trim();
     if (!text) continue;
     const speaker = speakerNameOf(row.segment.speakerLabel);
-    const speakerKey =
-      speaker === null ? null : (row.segment.speakerLabel ?? null);
+    const at = `[${formatOffset(row.segment.startedAtMs)}]`;
 
-    if (
-      block &&
-      block.speakerKey === speakerKey &&
-      row.segment.startedAtMs - block.endedAtMs <= PARAGRAPH_GAP_MS
-    ) {
-      block.texts.push(text);
-      block.endedAtMs = row.segment.endedAtMs;
-      continue;
-    }
-
-    flush();
-    block = {
-      speakerKey,
-      speaker,
-      startedAtMs: row.segment.startedAtMs,
-      endedAtMs: row.segment.endedAtMs,
-      texts: [text],
-    };
+    // **줄 사이를 비운다.** 마크다운에서 줄바꿈만으로는 문단이 안 갈려서, 붙여 두면
+    // 렌더러가 발화 전부를 한 문단으로 이어 붙인다.
+    lines.push("", speaker ? `**${speaker}** ${at} ${text}` : `${at} ${text}`);
   }
-  flush();
 
   // **완전한 회의록처럼 붙여넣어지면 안 된다.** 화면은 이 줄을 이미 말하고 있다.
   if (truncated) lines.push("", "> 기록이 끝까지 저장되지 못했습니다");
@@ -165,8 +106,8 @@ export function transcriptToMarkdown({
 }
 
 /**
- * 요약을 옮긴다. 근거는 항목 아래 중첩 불릿이다 — 어느 말에서 나온 항목인지가 항목과
- * 같은 덩어리에 붙어 있어야 따로 읽히지 않는다.
+ * 요약을 옮긴다. **근거는 싣지 않는다** — 항목마다 전사 원문이 최대 셋씩 붙어 요약이
+ * 서너 배로 불어난다. 근거를 되짚을 사람은 전사를 복사한다.
  */
 export function summaryToMarkdown({
   note,
@@ -188,12 +129,6 @@ export function summaryToMarkdown({
     }
     for (const item of items) {
       lines.push(`- ${item.content}`);
-      // 근거를 못 찾은 항목은 한 줄로 끝난다. 빈 불릿을 만들지 않는다.
-      for (const evidence of item.evidence) {
-        lines.push(
-          `  - [${formatOffset(evidence.startedAtMs)}] ${evidence.text}`
-        );
-      }
     }
   }
 
