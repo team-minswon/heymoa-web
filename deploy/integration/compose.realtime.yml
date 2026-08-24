@@ -9,24 +9,40 @@
 # 이 파일은 **아직 머지되지 않은 두 브랜치의 워크트리**를 build context로 가리켜 lane을
 # 세운다. 소유는 각 pane이고 **여기서는 참조만 한다 — 그 레포의 파일을 고치지 않는다.**
 #
-# | 조각 | 어디 | 무엇이 들어 있나 |
+# | 조각 | 브랜치 | 무엇이 들어 있나 |
 # |---|---|---|
-# | server | `heymoa-server/.worktrees/app-453` | `V30__context_classification_store.sql`(후보 원장 10개 테이블), `InternalContextClassificationController`(snapshot·apply) |
-# | ai | `~/.cache/codex-worktrees/heymoa-ai-app466` | `infrastructure/workers/live_dispatch.py`, `LIVE_CONTEXT_ENABLED` |
+# | server | `feature/app-459/candidate-revision-delivery` | 후보 원장 10개 테이블(V30), 내부 snapshot·apply, **web용 조회 `GET /v1/notes/{noteId}/context-candidates`**, window 절단 경계 고정 |
+# | ai | `integration/pro-33-ai` | `live_dispatch.py` worker, 프롬프트 출력 키 수정, apply payload의 `contextFromSequence` 송신 |
 #
-# **web 화면은 여전히 후보를 못 봅니다** — 사용자용 조회(APP-459)는 아직 어느 브랜치에도
-# 없습니다. 이 오버레이로 검증할 수 있는 것은 **전사 → 분류 → 원장 저장까지의 왕복**이고,
-# 확인은 DB를 직접 읽어서 합니다.
+# **server context 가 app-453 이 아니라 app-459 다.** app-459 가 app-453 의
+# `572d13e`(window 절단 고정)를 이미 품은 상위집합이고, 거기에 web 이 실제로 읽는 조회
+# 경로가 얹혀 있다. 둘 다 필요하므로 상위집합 하나만 세운다.
+#
+#   git -C <server>/.worktrees/app-459 merge-base --is-ancestor 572d13e HEAD   # → 포함
+#
+# **다만 app-459 는 중간값이지 최종 Docker 대상이 아니다.** 이 워크트리는 아직
+# `01c76e5` 기반이고 `origin/dev`(`4236b6d`)를 다시 얹기 전이다. server pane 이 최신 dev
+# 위에 선형 integration 워크트리를 만들면 `SERVER_LEDGER_ROOT` 기본값을 **그 경로로 한 번
+# 더 바꾼다.** 그때까지 아래 값은 lane 을 세워 보기 위한 잠정값이다.
+#
+#   git -C <server>/.worktrees/app-459 merge-base HEAD origin/dev   # → 01c76e5 (dev 뒤)
+#
+# **web 화면이 후보를 봅니다.** 이전 판에는 「web은 여전히 후보를 못 봅니다」라고 적혀
+# 있었는데, 그것은 APP-459 조회가 어느 브랜치에도 없던 시점의 사실이다. 지금은 컨트롤러와
+# 생성 계약이 모두 있어 **전사 → 분류 → 원장 → 화면**까지가 한 스택에서 확인된다.
+#
+# web 은 **최종 생성 계약을 반영한 브랜치 자체를 build 한다** — 기본 `compose.yml`의 web
+# 서비스가 이 워크트리를 가리키므로 여기서 덮어쓰지 않는다.
 
 services:
   server:
     build:
-      context: ${SERVER_LEDGER_ROOT:-../../../../../heymoa-server/.worktrees/app-453}
+      context: ${SERVER_LEDGER_ROOT:-../../../../../heymoa-server/.worktrees/app-459}
       dockerfile: deploy/app/Dockerfile
 
   ai:
     build:
-      context: ${AI_LIVE_ROOT:-/home/min/.cache/codex-worktrees/heymoa-ai-app466}
+      context: ${AI_LIVE_ROOT:-/home/min/.cache/claude-worktrees/heymoa-ai-combined2}
     environment:
       # 이 플래그가 없으면 `container.py`가 worker를 조립하지 않고 lane이 통째로 안 돈다.
       LIVE_CONTEXT_ENABLED: "true"
@@ -35,25 +51,31 @@ services:
       SERVER_BASE_URL: http://server:8080
       # server 의 `INTERNAL_API_TOKEN` 과 같아야 한다. 다르면 401 로 같은 증상이 난다.
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-integration-internal-token}
-    # ── 걷을 것 ──────────────────────────────────────────────────────────
-    # 아래 `volumes` 는 **임시다.** APP-466 브랜치에 정식 prompt 수정과 stale(window 범위)
-    # 수정이 들어오면 통째로 지운다. 지우는 조건과 확인 방법:
+      # ── 외부 trace 를 막는다 ────────────────────────────────────────────
+      # 통합 스택은 실제 회의 전사를 돌린다. 그 내용이 외부 관측 서비스로 나가면 안 된다.
+      # **`environment` 가 `env_file` 보다 우선**하므로, 이미지 안의 `.env` 에 키가 있어도
+      # 여기서 빈 값으로 덮으면 전송이 서지 않는다. 빈 문자열이어야 한다 — 키를 지우는 것과
+      # 값이 없는 것은 다르고, 클라이언트는 후자를 「비활성」으로 읽는다.
+      LANGFUSE_PUBLIC_KEY: ""
+      LANGFUSE_SECRET_KEY: ""
+      LANGCHAIN_TRACING_V2: "false"
+      LANGSMITH_TRACING: "false"
+      # ai 의 Docker `CMD` 가 `opentelemetry-instrument` 라, 위 셋을 껐어도 SDK 자신은
+      # 여전히 기본 exporter 로 내보내려 한다. `.env` 에 OTEL 값이 없어도 그 시도와 로그
+      # 잡음이 남으므로 server 와 같이 여기서 명시적으로 끈다.
+      OTEL_SDK_DISABLED: "true"
+    # ── 걷은 것 ──────────────────────────────────────────────────────────
+    # 이전 판에는 `prompts.yml` 한 파일을 읽기 전용으로 덮는 임시 마운트가 있었다.
+    # 실시간 분류기 프롬프트에 출력 JSON 키 이름(`role`)이 빠져 모든 delta 가
+    # `SCHEMA_INVALID` 로 떨어졌고, 그 수정이 다른 pane 소유 브랜치에만 있었기 때문이다.
     #
-    #   1. `feat/app-466/live-dispatch` 에 `prompts.yml` 의 출력 키 이름 수정이 들어왔는가
-    #      → `grep -c '"role"' <ai-worktree>/src/heymoa/infrastructure/config/prompts.yml`
-    #   2. 지운 뒤 한 번 돌려 `context_classification_runs` 에 `SCHEMA_INVALID` drop 이
-    #      0 인가 → 0 이면 마운트가 필요 없다
+    # **`integration/pro-33-ai` 가 그 수정을 품어서 지웠다.** 확인:
     #
-    # 걷는 방법: 아래 `volumes:` 블록 두 줄을 지우고 `docker compose ... up -d --build ai`.
-    volumes:
-      # **APP-452 프롬프트 수정을 얹는다.** `feat/app-458/ledger-analysis-input@60a91f2` 의
-      # `prompts.yml` 한 파일이다 — 실시간 분류기 프롬프트에 출력 JSON 키 이름(`role`)이
-      # 빠져 있어 모델이 `{"type": ...}` 로 내고 전부 `SCHEMA_INVALID` 로 떨어졌다.
-      #
-      # APP-452 는 다른 pane 소유라 병합하지 않고 **파일 하나만 마운트로 덮는다.**
-      # 그 수정이 APP-466 브랜치에 들어오면 이 줄을 지운다.
-      - ${AI_PROMPT_FIX:-/home/min/.cache/claude-worktrees/heymoa-ai-app458/src/heymoa/infrastructure/config/prompts.yml}:/app/src/heymoa/infrastructure/config/prompts.yml:ro
+    #   diff -q <app458>/src/heymoa/infrastructure/config/prompts.yml \
+    #           <combined2>/src/heymoa/infrastructure/config/prompts.yml   # → 동일
+    #
+    # 되살릴 일이 있다면 그것은 마운트가 아니라 build context 가 틀린 것이다.
 
   ai-migrate:
     build:
-      context: ${AI_LIVE_ROOT:-/home/min/.cache/codex-worktrees/heymoa-ai-app466}
+      context: ${AI_LIVE_ROOT:-/home/min/.cache/claude-worktrees/heymoa-ai-combined2}

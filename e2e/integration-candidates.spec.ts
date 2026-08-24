@@ -3,11 +3,10 @@ import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * 맥락 후보 레일 — **실서버 대상**. APP-459가 배포되는 순간 초록이 되도록 미리 써 둔다.
+ * 맥락 후보 레일 — **실서버 대상**. APP-459 조회 계약을 실제로 탄다.
  *
- * 지금은 server에 `GET /v1/notes/{noteId}/context-candidates`가 없어(`grep 0건`) 이 파일이
- * 통째로 skip된다. **skip 사유가 곧 「무엇이 아직 없는가」의 자동 확인**이다 — 계약이
- * 들어오면 아무것도 안 고쳐도 돌기 시작한다.
+ * APP-459 조회 경로가 섰다. 스택과 토큰이 없으면 파일이 통째로 skip 되지만, **스택이
+ * 있는데 조회가 죽으면 skip 이 아니라 실패다** — 아래 `beforeAll` 이 진단과 함께 던진다.
  *
  * 같은 세 시나리오의 목 판은 `context-candidates.spec.ts`에 있고 지금 초록이다. 그쪽이
  * 화면의 옳음을, 이쪽이 계약의 도달을 지킨다.
@@ -34,11 +33,14 @@ const WORKSPACE_ID = process.env.INTEGRATION_WORKSPACE_ID ?? "01K0000000010";
 test.skip(!WEB || !TOKEN, "통합 스택과 토큰이 있어야 돈다");
 
 /**
- * **계약이 실제로 있는지 먼저 묻는다.** 없으면 이 파일을 건너뛴다 — 서버가 아직 안 낸 것을
- * 실패로 보고하면 신호가 소음이 된다. 계약이 오면 이 게이트가 저절로 열린다.
+ * **계약이 도달했는지 먼저 묻는다.**
+ *
+ * 예전에는 여기서 `test.skip`을 했다 — server 가 아직 안 낸 것을 실패로 보고하면 신호가
+ * 소음이 되기 때문이었다. **APP-459 가 서고 나면 그 관용이 반대로 위험하다**: 조회가
+ * 404·500 으로 죽어도 세 테스트가 조용히 skip 되어 초록과 구분이 안 된다.
+ *
+ * 그래서 skip 이 아니라 **진단이 붙은 실패**로 바꾼다. 무엇이 왜 안 되는지는 그대로 남긴다.
  */
-let contractReady = false;
-
 test.beforeAll(async ({ request }) => {
   if (!TOKEN) return;
   const res = await request.get(
@@ -49,25 +51,20 @@ test.beforeAll(async ({ request }) => {
     }
   );
   const status = res.status();
-  contractReady = status === 200;
-  if (!contractReady) {
-    // **skip 사유를 남긴다.** 「왜 안 돌았나」가 안 보이면 초록과 구분이 안 된다.
-    // 401 이면 토큰이, 404 면 계약이 아직 없는 것이다 — 둘을 갈라 적는다.
-    const why =
-      status === 401
-        ? "토큰이 안 먹습니다(ACCESS_TOKEN_SECRET 불일치이거나 만료)"
-        : status === 404
-          ? "server 에 조회 경로가 아직 없습니다"
-          : `예상 못 한 응답입니다`;
-    // 이 줄이 skip 의 유일한 근거다 — 없으면 초록과 구분이 안 된다.
-    console.log(
-      `[skip] ${status} @ /v1/notes/${NOTE_ID}/context-candidates — ${why}`
-    );
-  }
+  if (status === 200) return;
+
+  const why =
+    status === 401
+      ? "토큰이 안 먹습니다(ACCESS_TOKEN_SECRET 불일치이거나 만료)"
+      : status === 404
+        ? "server 에 조회 경로가 없습니다 — APP-459 가 안 실린 이미지입니다"
+        : "예상 못 한 응답입니다";
+  throw new Error(
+    `${status} @ /v1/notes/${NOTE_ID}/context-candidates — ${why}`
+  );
 });
 
 test.beforeEach(async ({ context }) => {
-  test.skip(!contractReady, "APP-459 조회 계약 대기 중");
   await context.addCookies([
     {
       name: "access_token",

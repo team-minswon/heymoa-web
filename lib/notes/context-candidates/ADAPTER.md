@@ -16,11 +16,41 @@ APP-459의 실제 OpenAPI/AsyncAPI가 오면 **여기 적힌 것만 바뀝니다
 
 ## 경계 — 세 파일이 전부입니다
 
+> **정정(2026-08-25).** 앞선 판에 「`contract.ts`를 생성 타입 재수출로 바꾼다」고 적었는데
+> **그대로는 불가능합니다.** `orval.config.ts`가 `client: "react-query"`라 TypeScript 타입·훅·
+> MSW만 만들고 **zod runtime parser를 만들지 않습니다.** 그런데 `note-topic-protocol.ts`는
+> WS JSON을 **실제로 파싱**하는 데 이 스키마를 씁니다 — 지우면 파싱할 것이 없어집니다.
+
 | 파일 | 무엇 | 계약이 오면 |
 |---|---|---|
-| **`contract.ts`** | zod 스키마 · 파생 타입 | **생성 타입 재수출로 바뀝니다.** 타입 이름은 그대로 유지합니다 |
+| **`contract.ts`** | zod 스키마 · 파생 타입 | **zod는 남깁니다.** WS 파싱에 필요합니다. 대신 **생성 타입과 묶어** 드리프트를 막습니다(아래) |
 | **`api.ts`** | `fetchContextCandidates()` — 공용 mutator를 지나는 직접 호출 | **삭제.** orval 생성 훅으로 대체 |
 | **`query-keys.ts`** | 수동 쿼리 키 | **삭제.** orval 생성 키로 대체 |
+
+REST(타입·훅·키)는 생성물로 가고, **WS runtime 파서만 손으로 남습니다.**
+
+### 남는 zod가 생성 타입과 어긋나지 않게
+
+`orval`이 파서를 안 주므로 **둘이 갈라질 수 있습니다.** 두 겹으로 막습니다.
+
+1. **타입 바인딩** — 스키마를 생성 타입에 묶습니다. 필드가 빠지거나 타입이 달라지면
+   `tsc`가 먼저 깨집니다.
+
+   ```ts
+   import type { ContextCandidateHeadResponse } from "@/lib/api/generated/models";
+
+   export const contextCandidateHeadSchema: z.ZodType<ContextCandidateHeadResponse> =
+     z.object({ /* … */ });
+   ```
+
+2. **양방향 회귀** — 생성 타입과 `z.infer`가 서로 대입 가능한지 테스트로 고정합니다.
+   한쪽만 보면 optional·nullable 차이를 놓칩니다.
+
+   ```ts
+   // contract.test.ts
+   expectTypeOf<z.infer<typeof contextCandidateHeadSchema>>()
+     .toEqualTypeOf<ContextCandidateHeadResponse>();
+   ```
 
 그 밖은 안 건드립니다.
 
@@ -58,8 +88,9 @@ cp <server>/build/api-spec/openapi3.yml openapi3.yml   # /internal/** 제거
 # 2. 훅 생성
 pnpm orval
 
-# 3. contract.ts 를 재수출로 바꾸고 api.ts · query-keys.ts 삭제
-#    provider 의 useQuery 를 생성 훅으로 교체
+# 3. api.ts · query-keys.ts 삭제, provider 의 useQuery 를 생성 훅으로 교체
+#    contract.ts 의 zod 는 남기되 생성 타입에 바인딩(z.ZodType<Generated>)
+#    AsyncAPI 의 event envelope 를 root asyncapi.yml 과 exact 대조
 
 # 4. 다섯 게이트 (각각 독립 실행)
 pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e

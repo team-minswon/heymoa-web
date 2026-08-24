@@ -64,10 +64,17 @@ test.describe("통합 스택 — 실서버", () => {
     ).toBeVisible();
   });
 
-  test("후보 조회가 실패하면 빈 상태가 아니라 재시도를 보인다", async ({ page }) => {
+  test("후보 조회가 성공해도 전사와 회의 경로가 그대로 산다", async ({ page }) => {
     test.setTimeout(90_000);
-    // APP-459 미구현이면 `/context-candidates` 가 404 다. **그걸 「사건 없음」으로 접으면
-    // 사용자가 후보 0건을 사실로 믿는다.** 실패는 실패로 그리고, 전사는 그대로 돌아야 한다.
+    // **이 테스트는 한 번 뒤집혔다.** APP-459 미구현 시절에는 `/context-candidates` 가
+    // 404 라서 「실패를 빈 상태로 접지 않는가」를 봤다. 이제 그 경로가 서므로 같은 기대를
+    // 두면 실패한다 — 무엇을 지키는지는 그대로고(전사와 회의는 레일과 독립이다) 전제만
+    // 성공으로 바뀐다. 실패 쪽 회귀는 MSW 판(`context-candidates.spec.ts`)이 계속 지킨다.
+    const statuses: number[] = [];
+    page.on("response", (r) => {
+      if (r.url().includes("/context-candidates")) statuses.push(r.status());
+    });
+
     await page.goto(`${WEB}/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full&tab=transcript`, {
       waitUntil: "networkidle",
     });
@@ -76,13 +83,24 @@ test.describe("통합 스택 — 실서버", () => {
     await expect(railTab).toBeVisible({ timeout: 30_000 });
     await railTab.click();
 
-    await expect(page.getByText(/불러오지 못했습니다/)).toBeVisible();
-    await expect(page.getByText(/아직 정리할 발화가 없습니다/)).toHaveCount(0);
+    // 실서버 조회가 실제로 200 이다.
+    await expect.poll(() => statuses.length, { timeout: 30_000 }).toBeGreaterThan(0);
+    expect(statuses).toContain(200);
+
+    // 레일이 정상 표면으로 선다. 「지금까지 N건」은 0건이어도 그려진다 —
+    // **실패 배너가 없다는 것**이 이 테스트의 판정이다.
+    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/불러오지 못했습니다/)).toHaveCount(0);
 
     // 전사는 살아 있다.
     await page.getByRole("tab", { name: "전사" }).click();
     await expect(
       page.getByText("경로 데이터 저장소는 MongoDB로 갑시다")
     ).toBeVisible();
+
+    // 회의 경로도 살아 있다 — 레일은 부가 표면이지 회의의 전제가 아니다.
+    const endMeeting = page.getByRole("button", { name: "회의 종료" });
+    const noteMenu = page.getByRole("button", { name: /노트 메뉴|더보기/ });
+    expect((await endMeeting.count()) + (await noteMenu.count())).toBeGreaterThan(0);
   });
 });
