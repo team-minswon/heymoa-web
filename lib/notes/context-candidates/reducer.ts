@@ -89,15 +89,24 @@ export function reduceContextEvent(
     case "reset":
       return initialContextState;
 
-    case "snapshot":
+    case "snapshot": {
       // REST가 정본이다. 임시로 접어 둔 것을 버리고 이걸로 다시 선다.
+      const ranges = sortRanges(event.appliedRanges);
+      // **갱신 시각도 snapshot 에서 복원한다.** event 로만 채우면, 종료된 회의를 새 탭에서
+      // 열었을 때 범위가 있는데도 갱신 띠가 영원히 빈다 — 그 회의는 더 이상 event 가 안 온다.
+      const latestApplied = ranges.reduce<string | null>(
+        (latest, range) =>
+          !latest || range.appliedAt > latest ? range.appliedAt : latest,
+        null
+      );
       return {
         candidates: byId(event.candidates),
-        appliedRanges: sortRanges(event.appliedRanges),
+        appliedRanges: ranges,
         seenBatchIds: [],
-        lastBatchAt: state.lastBatchAt,
+        lastBatchAt: latestApplied ?? state.lastBatchAt,
         needsRefetch: false,
       };
+    }
 
     case "context.candidate.changed": {
       const next = event.candidate;

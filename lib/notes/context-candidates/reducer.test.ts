@@ -303,6 +303,18 @@ describe("context candidate reducer", () => {
     expect(state.appliedRanges.map((r) => r.fromSequence)).toEqual([1, 11]);
   });
 
+  it("snapshot 만으로도 갱신 시각이 선다 — 종료된 회의는 event 가 안 온다", () => {
+    const settled = reduceContextEvent(initialContextState, {
+      type: "snapshot",
+      candidates: [],
+      appliedRanges: [
+        { ...range({ runKey: "run-1" }), appliedAt: "2026-08-25T01:00:00.000Z" },
+        { ...range({ runKey: "run-2", fromSequence: 11, toSequence: 20 }), appliedAt: "2026-08-25T02:00:00.000Z" },
+      ],
+    });
+    expect(settled.lastBatchAt).toBe("2026-08-25T02:00:00.000Z");
+  });
+
   it("snapshot을 받으면 임시 상태를 버리고 그것으로 선다", () => {
     const live = apply([changed(head({ candidateId: "0HZX2K7M9Q4A1" }))]);
     const settled = reduceContextEvent(live, {

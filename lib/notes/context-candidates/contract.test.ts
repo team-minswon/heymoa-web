@@ -98,6 +98,56 @@ describe("draft 계약의 관대함", () => {
     ).toBe(false);
   });
 
+  it("상태 행렬 밖의 조합을 거절한다", () => {
+    // 필드를 따로 보면 통과하는 조합들이다. 조합으로 봐야 걸린다.
+    const bad = [
+      { status: "OPEN", closeReason: "RETRACTED" },
+      { status: "CLOSED", closeReason: null },
+      // RESOLVED 는 QUESTION 에만 허용된다.
+      { status: "CLOSED", closeReason: "RESOLVED", kind: "DECISION" },
+    ];
+    for (const over of bad) {
+      expect(
+        contextCandidateHeadSchema.safeParse({ ...head, ...over }).success
+      ).toBe(false);
+    }
+    expect(
+      contextCandidateHeadSchema.safeParse({
+        ...head,
+        kind: "QUESTION",
+        status: "CLOSED",
+        closeReason: "RESOLVED",
+      }).success
+    ).toBe(true);
+  });
+
+  it("content 길이는 UTF-16 이 아니라 code point 로 센다", () => {
+    // 이모지는 surrogate pair 라 `String.length` 가 2 다. 계약은 code point 500 이므로
+    // 이모지 500 개는 유효한데, `.max(500)` 이면 1000 으로 보고 거절한다.
+    const emoji500 = "\u{1F600}".repeat(500);
+    expect([...emoji500].length).toBe(500);
+    expect(emoji500.length).toBe(1000);
+    expect(
+      contextCandidateHeadSchema.safeParse({ ...head, content: emoji500 }).success
+    ).toBe(true);
+    expect(
+      contextCandidateHeadSchema.safeParse({
+        ...head,
+        content: "\u{1F600}".repeat(501),
+      }).success
+    ).toBe(false);
+  });
+
+  it("revisionSource 는 v1 에서 LIVE 하나뿐이다", () => {
+    // APP-458 최종 합의: POSTPROCESS 선예약을 걷었다. 낼 주체가 없는 값을 받아 두면
+    // 계약이 존재하지 않는 것을 주장하게 된다.
+    expect(contextCandidateHeadSchema.safeParse(head).success).toBe(true);
+    expect(
+      contextCandidateHeadSchema.safeParse({ ...head, revisionSource: "POSTPROCESS" })
+        .success
+    ).toBe(false);
+  });
+
   it("runKey 는 TSID 가 아니라 opaque 다", () => {
     // APP-466 구현이 지금은 TSID 로 발급해 13자리처럼 보이지만 계약은 64자 opaque 다.
     expect(

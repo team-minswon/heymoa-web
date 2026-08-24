@@ -224,7 +224,11 @@ export function NotePanel({
     !noteLoadFailed &&
     // **회의가 끝나도 남긴다.** 원장은 종료로 지워지지 않고, 회의 중에 본 것을 나중에
     // 되짚는 것이 이 화면의 절반이다. 여기서 탭을 걷으면 사이드 뷰에는 되짚을 길이 없다.
-    phase !== "not-started";
+    //
+    // **`not-started` 는 예외인데, `unknown` 에서 고른 뒤 확정되는 경로가 있다.** 그때
+    // trigger 와 content 만 사라지고 controlled `tab="context"` 는 남아 빈 면이 된다.
+    // 지금 그 탭을 보고 있으면 유지한다 — `showSideChatTab` 이 같은 이유로 같은 모양이다.
+    (phase !== "not-started" || tab === "context");
   const sideChatNow = view === "side" && tab === "chat";
   const [sideChatVisit, setSideChatVisit] = useState({
     noteId,

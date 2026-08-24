@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -173,6 +174,9 @@ type NoteRealtimeValue = {
   context: {
     cards: ContextCard[];
     state: ContextState;
+    /** 원장 조회가 실패했다. **정상 빈 상태와 갈라야 한다.** */
+    failed: boolean;
+    retry: () => void;
   };
   chat: {
     stream: ChatStreamState;
@@ -361,6 +365,11 @@ export function NoteRealtimeProvider({
     void refetchSnapshot();
   }, [needsRefetch, refetchSnapshot]);
 
+  const contextFailed = snapshotQuery.isError;
+  const retryContext = useCallback(() => {
+    void refetchSnapshot();
+  }, [refetchSnapshot]);
+
   const value = useMemo<NoteRealtimeValue>(
     () => ({
       transcript: {
@@ -376,9 +385,13 @@ export function NoteRealtimeProvider({
       context: {
         cards: selectCards(state.context),
         state: state.context,
+        // 실패를 화면까지 올린다. 안 올리면 레일이 「사건이 없다」로 그려서 사용자가
+        // 후보 0건을 사실로 믿는다.
+        failed: contextFailed,
+        retry: retryContext,
       },
     }),
-    [state]
+    [contextFailed, retryContext, state]
   );
   return (
     <NoteRealtimeContext.Provider value={value}>

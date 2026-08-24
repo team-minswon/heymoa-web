@@ -64,10 +64,10 @@ test.describe("통합 스택 — 실서버", () => {
     ).toBeVisible();
   });
 
-  test("후보 조회가 없는 서버에서도 화면이 무너지지 않는다", async ({ page }) => {
+  test("후보 조회가 실패하면 빈 상태가 아니라 재시도를 보인다", async ({ page }) => {
     test.setTimeout(90_000);
-    // APP-459 미구현이면 `/context-candidates` 가 404 다. 그때 레일이 조용한 빈 상태여야
-    // 하고, **전사와 노트는 그대로 돌아야 한다.**
+    // APP-459 미구현이면 `/context-candidates` 가 404 다. **그걸 「사건 없음」으로 접으면
+    // 사용자가 후보 0건을 사실로 믿는다.** 실패는 실패로 그리고, 전사는 그대로 돌아야 한다.
     await page.goto(`${WEB}/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full&tab=transcript`, {
       waitUntil: "networkidle",
     });
@@ -76,9 +76,8 @@ test.describe("통합 스택 — 실서버", () => {
     await expect(railTab).toBeVisible({ timeout: 30_000 });
     await railTab.click();
 
-    await expect(page.getByText(/아직 정리할 발화가 없습니다/)).toBeVisible();
-    // 개수가 0 이어도 완결을 주장하지 않는다.
-    await expect(page.getByText("지금까지 0건")).toBeVisible();
+    await expect(page.getByText(/불러오지 못했습니다/)).toBeVisible();
+    await expect(page.getByText(/아직 정리할 발화가 없습니다/)).toHaveCount(0);
 
     // 전사는 살아 있다.
     await page.getByRole("tab", { name: "전사" }).click();

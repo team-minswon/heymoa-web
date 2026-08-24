@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { ContextCandidateCard } from "@/components/notes/context-candidate-card";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
+import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ContextCandidateHead } from "@/lib/notes/context-candidates/contract";
 import type { ContextCard } from "@/lib/notes/context-candidates/reducer";
@@ -151,7 +152,14 @@ export function ContextRail({
             })}
           </div>
 
-          {visible.length === 0 ? (
+          {context.failed ? (
+            // **조회 실패는 빈 상태가 아니다.** 「사건이 없다」로 그리면 사용자가 후보
+            // 0건을 사실로 믿는다 — 실제로는 서버가 못 답한 것이다.
+            <InlineRetry
+              label="정리 결과를 불러오지 못했습니다."
+              onRetry={context.retry}
+            />
+          ) : visible.length === 0 ? (
             // **오류가 아니다.** 분류할 끝난 발화가 없다는 사실은 정상 경로다.
             <p className="py-2 text-[12px] leading-5 text-[var(--el-muted-soft)]">
               {context.cards.length === 0

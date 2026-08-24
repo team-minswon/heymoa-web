@@ -67,10 +67,13 @@ export const contextOperationSchema = z.enum([
 ]);
 
 /**
- * v1이 실제로 생산하는 값은 `LIVE`뿐이다. **그래도 둘 다 받는다** — 파서가
- * `z.strictObject`라 나중에 값이 하나 늘면 배포를 묶어야 하는데, enum 확장은 안 그렇다.
+ * **v1은 `LIVE` 하나뿐이다.** APP-458 최종 합의에서 POSTPROCESS 선예약을 걷었다 —
+ * 후처리 producer 가 폐기돼 그 값을 낼 주체가 없는데 계약이 존재를 주장하면 안 된다.
+ *
+ * 나중에 producer 가 생기면 **값 추가**로 넓힌다. 값 추가는 필드 추가와 달라서, 그때
+ * 여기 한 줄을 늘리고 web 을 먼저 배포하면 된다. 지금 미리 열어 두면 계약이 거짓말이 된다.
  */
-export const revisionSourceSchema = z.enum(["LIVE", "POSTPROCESS"]);
+export const revisionSourceSchema = z.enum(["LIVE"]);
 
 export const contextEvidenceSchema = z.object({
   segmentId: tsidSchema,
@@ -90,8 +93,19 @@ export const contextCandidateHeadSchema = z.object({
   /** `OPEN`이면 `null`. `RESOLVED`는 `QUESTION`에만 온다. */
   closeReason: z.enum(["RETRACTED", "RESOLVED"]).nullable(),
   revisionSource: revisionSourceSchema,
-  /** NFC 문자열. 계약 상한이 500 code point다. */
-  content: z.string().min(1).max(500),
+  /**
+   * NFC 문자열. 계약 상한이 **500 code point** 다.
+   *
+   * `.max(500)` 을 쓰면 안 된다 — zod 는 `String.length`, 즉 **UTF-16 code unit** 을 센다.
+   * 이모지처럼 surrogate pair 인 글자는 하나가 2로 계산돼, 계약상 유효한 500 code point
+   * 문자열을 web 이 1000 으로 보고 거절한다.
+   */
+  content: z
+    .string()
+    .min(1)
+    .refine((value) => [...value].length <= 500, {
+      message: "content는 500 code point 이하여야 합니다",
+    }),
   /** 시간순 정렬 키. `updatedAt`으로 정렬하면 수정마다 카드가 아래로 튄다. */
   createdSequence: z.number().int().min(1),
   lastEvidenceSequence: z.number().int().min(1),
@@ -99,7 +113,23 @@ export const contextCandidateHeadSchema = z.object({
   /** 결과 후보가 매달린 질문. 질문 자신과 일반 후보는 `null`이다. */
   resolvesCandidateId: tsidSchema.nullable(),
   evidence: z.array(contextEvidenceSchema),
-});
+})
+  /**
+   * **상태 행렬을 강제한다.** 계약(APP-452 spec.md:188-189)이 세 조합만 허용한다 —
+   * `OPEN/null`, `CLOSED/RETRACTED`, 그리고 `QUESTION` 에 한해 `CLOSED/RESOLVED`.
+   *
+   * 필드를 따로 검사하면 「OPEN 인데 RETRACTED」 같은 조합이 통과해 화면이 철회선과
+   * 열림 상태를 동시에 그린다. 조합으로 봐야 걸린다.
+   */
+  .refine(
+    (c) =>
+      (c.status === "OPEN" && c.closeReason === null) ||
+      (c.status === "CLOSED" && c.closeReason === "RETRACTED") ||
+      (c.status === "CLOSED" &&
+        c.closeReason === "RESOLVED" &&
+        c.kind === "QUESTION"),
+    { message: "status·closeReason·kind 조합이 계약 행렬 밖입니다" }
+  );
 
 /**
  * 성공적으로 적용된 분류 배치 하나의 범위. **범위 사이의 구멍이 읽지 못한 구간이다.**

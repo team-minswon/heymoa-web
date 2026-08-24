@@ -51,17 +51,25 @@ function head(
 
 function renderRail(
   candidates: ContextCandidateHead[],
-  over: Partial<ContextState> = {},
-  onEvidenceSelect = vi.fn()
+  over: Partial<ContextState> & { failed?: boolean } = {},
+  onEvidenceSelect = vi.fn(),
+  onRetry = vi.fn()
 ) {
   const state: ContextState = {
     ...initialContextState,
     candidates: Object.fromEntries(candidates.map((c) => [c.candidateId, c])),
     ...over,
   };
-  realtime.value = { context: { cards: selectCards(state), state } };
+  realtime.value = {
+    context: {
+      cards: selectCards(state),
+      state,
+      failed: Boolean((over as { failed?: boolean }).failed),
+      retry: onRetry,
+    },
+  };
   render(<ContextRail onEvidenceSelect={onEvidenceSelect} />);
-  return { onEvidenceSelect };
+  return { onEvidenceSelect, onRetry };
 }
 
 afterEach(cleanup);
@@ -71,6 +79,17 @@ describe("ContextRail", () => {
     renderRail([]);
     expect(screen.getByText(/아직 정리할 발화가 없습니다/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("조회 실패를 정상 빈 상태로 접지 않는다", () => {
+    // **이게 접히면 사용자가 후보 0건을 사실로 믿는다.** 실제로는 서버가 못 답한 것이다.
+    const { onRetry } = renderRail([], { failed: true });
+
+    expect(screen.queryByText(/아직 정리할 발화가 없습니다/)).not.toBeInTheDocument();
+    expect(screen.getByText(/불러오지 못했습니다/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /다시 시도/ }));
+    expect(onRetry).toHaveBeenCalled();
   });
 
   it("개수가 목록에 보이는 카드 수와 같고 완결을 주장하지 않는다", () => {
