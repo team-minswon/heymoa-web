@@ -121,7 +121,7 @@ export function ContextRail({
       >
         <div className="flex flex-col gap-4 p-5">
           <div className="flex items-center gap-2.5">
-            <h3 className="font-serif text-[27px] font-light leading-none tracking-tight text-[var(--el-ink)]">
+            <h3 id="context-rail-heading" className="font-serif text-[27px] font-light leading-none tracking-tight text-[var(--el-ink)]">
               사건 흐름
             </h3>
             {/* **「지금까지」가 진행 중임을 말한다.** 맨 숫자는 「총 N건 = 이게 전부다」로
@@ -131,7 +131,13 @@ export function ContextRail({
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
+          {/* **셋을 묶어 이름을 준다.** 안 묶으면 스크린리더가 「전체 · 안건 · 결정 · 액션」을
+              맥락 없는 토글 넷으로 읽어서, 무엇을 고르는 것인지 알 수 없다. */}
+          <div
+            role="group"
+            aria-label="유형으로 좁히기"
+            className="flex flex-wrap gap-1.5"
+          >
             {FILTERS.map((option) => {
               const active = option.value === filter;
               return (
@@ -185,7 +191,11 @@ export function ContextRail({
                 : "이 유형으로 정리된 사건이 아직 없습니다."}
             </p>
           ) : (
-            <ul className="flex flex-col gap-3.5">
+            // 목록을 제목에 묶는다 — 「사건 흐름」이 이 목록의 이름이다.
+            <ul
+              aria-labelledby="context-rail-heading"
+              className="flex flex-col gap-3.5"
+            >
               {visible.map((card) => (
                 <ContextCandidateCard
                   key={card.candidateId}

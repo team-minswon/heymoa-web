@@ -241,6 +241,42 @@ describe("ContextRail", () => {
     expect(within(parent!).getByText("15% 안쪽이다")).toBeInTheDocument();
   });
 
+  it("스크린리더가 후보·근거·필터를 맥락과 함께 읽는다", () => {
+    renderRail([head({ candidateId: "0HZX2K7M9Q4A1" })]);
+
+    // 필터 넷이 맥락 없는 토글로 흩어지면 무엇을 고르는지 알 수 없다.
+    const filters = screen.getByRole("group", { name: "유형으로 좁히기" });
+    expect(within(filters).getAllByRole("button")).toHaveLength(4);
+    expect(
+      within(filters).getByRole("button", { name: "전체" })
+    ).toHaveAttribute("aria-pressed", "true");
+
+    // 목록에 이름이 있어야 「무엇의 목록인가」가 읽힌다.
+    expect(screen.getByRole("list", { name: "사건 흐름" })).toBeInTheDocument();
+  });
+
+  it("근거 펼침이 키보드로 열리고 상태를 알린다", () => {
+    renderRail([head({ candidateId: "0HZX2K7M9Q4A1" })]);
+    const claim = screen.getByRole("button", { name: /MongoDB를 사용한다/ });
+
+    // 접힘·펼침이 aria 로 드러나야 스크린리더가 상태를 안다.
+    expect(claim).toHaveAttribute("aria-expanded", "false");
+    // 근거 개수는 화면에 아이콘뿐이라 말로도 준다.
+    expect(claim).toHaveAccessibleName(/근거 1개/);
+
+    fireEvent.click(claim);
+    expect(claim).toHaveAttribute("aria-expanded", "true");
+    expect(claim.getAttribute("aria-controls")).toBeTruthy();
+  });
+
+  it("근거가 없는 후보는 펼칠 것이 없으므로 비활성이다", () => {
+    renderRail([head({ candidateId: "0HZX2K7M9Q4A1", evidence: [] })]);
+    const claim = screen.getByRole("button", { name: /MongoDB를 사용한다/ });
+
+    expect(claim).toBeDisabled();
+    expect(claim).not.toHaveAttribute("aria-expanded");
+  });
+
   it("갱신 시각은 서버 값에서 오고 없으면 안 그린다", () => {
     const now = Date.parse("2026-08-24T02:00:00.000Z");
     expect(formatFreshness(null, now)).toBeNull();
