@@ -35,6 +35,8 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+# 통합 compose 의 예제도 커밋한다. 실제 `.env` 는 위 규칙이 계속 막는다.
+!.env.integration.example
 
 # vercel
 .vercel
