@@ -2,8 +2,10 @@ import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
 import {
   CONTEXT_FAILING_NOTE_ID,
+  CONTEXT_SYNTHETIC_LEDGER_NOTE_ID,
   CONTEXT_SNAPSHOT,
 } from "@/lib/mocks/context-candidates";
+import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/context-candidates/__fixtures__/synthetic-ledger-snapshot.json";
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
@@ -424,6 +426,15 @@ export const restHandlers = [
         { success: false, data: null, error: { code: "INTERNAL", message: "…" } },
         { status: 500 }
       );
+    }
+    // **실서버가 실제로 낸 원장.** 손으로 쓴 목은 내가 아는 것만 담아서, 계약을
+    // 오해했으면 목도 같이 틀린다. 이 노트만 실제 wire 를 그대로 싣는다.
+    if (id(params.noteId) === CONTEXT_SYNTHETIC_LEDGER_NOTE_ID) {
+      return HttpResponse.json({
+        success: true,
+        data: SYNTHETIC_LEDGER_SNAPSHOT,
+        error: null,
+      });
     }
     return HttpResponse.json({
       success: true,

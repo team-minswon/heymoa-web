@@ -251,7 +251,7 @@ export function findCoverageGaps(ranges: AppliedRange[]): CoverageGap[] {
  * | semantic unit 상한에 닿았다 | `semanticUnitSaturated` |
  * | **출력 일부가 기록되지 못했다** | `applyStatus === "PARTIAL_RECORDED"` |
  *
- * **셋째를 빠뜨리고 있었다.** 실전사 108발화 실측에서 13런 중 포화는 1건뿐인데 모델 출력
+ * **셋째를 빠뜨리고 있었다.** 합성 시나리오 108발화를 lane 에 태운 실측에서 13런 중 포화는 1건뿐인데 모델 출력
  * 26건이 버려졌다 — 포화만 보면 그 26건이 화면에서 통째로 안 보이고, 구간은 「읽었다」로
  * 표시된다. 범위가 다 찼다는 표시가 내용이 다 담겼다는 뜻으로 읽히는 자리라, 이건 빈 화면
  * 보다 나쁘다. **안심시키는 거짓말이기 때문이다.**

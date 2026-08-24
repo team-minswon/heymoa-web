@@ -33,6 +33,21 @@ export const CONTEXT_DEMO_NOTE_ID = "01K0000000005";
 export const CONTEXT_FAILING_NOTE_ID = "01K0000000006";
 
 /**
+ * **server 가 실제로 적재한 원장을 그대로 그리는 노트.**
+ *
+ * 다른 목은 전부 손으로 쓴 것이라 **내가 아는 것만 담습니다** — 계약을 오해했으면 목도
+ * 같이 틀리고 화면은 멀쩡해 보입니다. 이 노트는 그 눈먼 자리를 덮습니다.
+ *
+ * **입력은 합성 시나리오 108발화이고 실사용자 전사가 아닙니다.** 그것을 lane 에 태워
+ * server 가 낸 결과가 `__fixtures__/synthetic-ledger-snapshot.json` 입니다. 즉 **wire 는
+ * 진짜이고 회의 내용은 합성**입니다 — 이 수치를 실사용 품질 근거로 인용하지 않습니다.
+ *
+ * 픽스처와 그 한계는 `lib/notes/context-candidates/synthetic-ledger-snapshot.test.ts` 가
+ * 설명합니다.
+ */
+export const CONTEXT_SYNTHETIC_LEDGER_NOTE_ID = "01K0000000007";
+
+/**
  * 목 회의의 시작 벽시계. 페이지를 열 때를 기준으로 42분짜리 회의가 방금 끝난 것처럼 둔다 —
  * 고정 날짜를 박으면 갱신 띠가 늘 「몇 년 전」이 된다.
  */

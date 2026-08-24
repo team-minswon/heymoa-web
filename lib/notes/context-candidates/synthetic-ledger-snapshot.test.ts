@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { contextCandidateSnapshotSchema } from "@/lib/notes/context-candidates/contract";
-import real from "@/lib/notes/context-candidates/__fixtures__/real-snapshot.json";
+import ledger from "@/lib/notes/context-candidates/__fixtures__/synthetic-ledger-snapshot.json";
 import {
   findCoverageGaps,
   initialContextState,
@@ -11,21 +11,33 @@ import {
 } from "@/lib/notes/context-candidates/reducer";
 
 /**
- * **손으로 쓴 픽스처가 아니라 서버가 실제로 낸 원장이다.**
+ * **손으로 쓴 픽스처가 아니라 server 가 실제로 적재한 원장이다.**
  *
- * 실전사 108발화(`01K0000000031`)를 lane 에 통째로 태운 결과를 `context_candidates` ·
- * `context_candidate_revisions` · `context_candidate_evidence` ·
- * `context_classification_runs` 에서 조회 계약 모양으로 꺼낸 것이다.
+ * ## 무엇이 진짜이고 무엇이 아닌가 — 먼저 읽을 것
  *
- * **직접 쓴 픽스처는 내가 아는 것만 담는다.** 그래서 계약을 오해했으면 픽스처도 같이
- * 틀리고 테스트는 통과한다. 이 파일은 그 눈먼 자리를 덮는다 — 실제 wire 가 파서를
- * 지나는지, 그리고 그 데이터로 화면이 무엇을 말하는지를 본다.
+ * | | |
+ * |---|---|
+ * | 회의 내용(입력 108발화) | **합성 시나리오다.** 실사용자 전사가 아니다 |
+ * | 원장(이 픽스처) | **진짜다.** server 가 lane 을 돌려 DB 에 적재한 결과다 |
  *
- * 갱신하려면 lane 을 다시 돌린 뒤 같은 조회로 `__fixtures__/real-snapshot.json` 을
- * 덮어쓴다. 숫자가 달라지면 그것이 lane 품질이 달라졌다는 신호다.
+ * 그래서 이 파일이 지키는 것은 **wire 적합성**이다 — server 가 실제로 내는 모양이 내
+ * 파서를 지나는지, 그 데이터로 화면이 무엇을 말하는지. **모델 품질의 근거가 아니다.**
+ *
+ * **이 파일의 수치를 실사용 전사 품질 증거로 인용하지 않는다.** 후보 8건이나 그 recall 은
+ * 합성 대본에 대한 값이라, 실제 회의에서 무엇이 잡히고 무엇이 빠지는지를 말해 주지 않는다.
+ * 그 판정은 AWS 실전사 gate 가 따로 내린다 — 여기서 미리 답한 것으로 치면 안 된다.
+ *
+ * ## 왜 그래도 필요한가
+ *
+ * **직접 쓴 픽스처는 내가 아는 것만 담는다.** 계약을 오해했으면 픽스처도 같이 틀리고
+ * 테스트는 통과한다. 그 눈먼 자리를 덮는 것이 이 파일의 값어치다.
+ *
+ * 출처는 `context_candidates` · `context_candidate_revisions` ·
+ * `context_candidate_evidence` · `context_classification_runs` 를 조회 계약 모양으로
+ * 꺼낸 것이다. 갱신하려면 lane 을 다시 돌린 뒤 같은 조회로 픽스처를 덮어쓴다.
  */
-describe("실서버 원장 — 실전사 108발화", () => {
-  const parsed = contextCandidateSnapshotSchema.parse(real);
+describe("server 가 적재한 원장 — 합성 108발화 입력", () => {
+  const parsed = contextCandidateSnapshotSchema.parse(ledger);
   const state = reduceContextEvent(initialContextState, {
     type: "snapshot",
     ...parsed,
@@ -68,7 +80,7 @@ describe("실서버 원장 — 실전사 108발화", () => {
   /**
    * **여기가 이 파일의 핵심이다.**
    *
-   * 이 회의의 원장 recall 은 대략 8/15 다 — 모델 출력 26건이 버려졌다. 그런데
+   * 이 대본에서 모델 출력 26건이 버려졌다(적용 19). 그런데
    * watermark 는 108 까지 완주했으므로 **범위만 보면 빈 곳이 거의 없다.**
    *
    * 12구간 중 9구간이 `PARTIAL_RECORDED` 다. 이것을 `APPLIED` 와 같이 그리면 화면은
