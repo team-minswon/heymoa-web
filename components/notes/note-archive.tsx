@@ -21,6 +21,8 @@ import {
   SpeakerAssignMenu,
   type SpeakerCandidate,
 } from "@/components/notes/speaker-assign-menu";
+import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
+import { transcriptToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { toGapRows } from "@/lib/transcription/gaps";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 import {
@@ -109,11 +111,14 @@ export function NoteArchive({
   noteId,
   participants = [],
   canAssignSpeaker = false,
+  noteMeta,
   focusSegmentId,
   onFocusHandled,
 }: {
   noteId: string;
   participants?: SpeakerCandidate[];
+  /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
+  noteMeta?: NoteMeta | null;
   /** 참석자만 화자를 바꾼다. 아니면 읽기 전용 — 숨기지는 않는다. */
   canAssignSpeaker?: boolean;
 } & TranscriptFocus) {
@@ -137,17 +142,18 @@ export function NoteArchive({
     () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
     [segments, transcript]
   );
+  const diarized = transcript?.diarization?.status === "MAPPED";
   const speakerOf = useMemo(
     () =>
       createSpeakerIdentityResolver(
-        transcript?.diarization?.status === "MAPPED"
-          ? transcript.diarization.speakers
-          : [],
+        diarized ? transcript!.diarization.speakers : [],
         participants
       ),
-    [transcript, participants]
+    [diarized, transcript, participants]
   );
   const truncated = transcript?.recording?.seal === "TRUNCATED";
+  // 「회의 중 챗봇」에서도 버튼이 서 있으면 무엇이 복사되는지가 모호해진다.
+  const [tab, setTab] = useState("transcript");
 
   // 한 사람이 두 화자일 수 없다. 이미 붙어 있는 사람을 고르면 **저쪽에서 떨어지므로**,
   // 그 사실을 후보 목록에 실어 누르기 전에 보이게 한다.
@@ -197,6 +203,16 @@ export function NoteArchive({
     }
   );
 
+  /**
+   * **두 탭이 스크롤 하나를 나눠 쓴다.** 전사 중간에서 챗봇으로 건너가면 짧은 챗이
+   * `scrollTop`을 자기 길이로 깎고, 돌아왔을 때 읽던 자리가 그 값으로 바뀌어 있다.
+   * 탭을 고르는 것은 다른 것을 보겠다는 뜻이므로 새 패널의 처음에서 시작한다.
+   */
+  const changeTab = (next: string) => {
+    setTab(next);
+    if (viewportRef.current) viewportRef.current.scrollTop = 0;
+  };
+
   return (
     <ScrollArea
       className="h-full"
@@ -216,11 +232,45 @@ export function NoteArchive({
         data-testid="note-archive-content"
         className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-7 pt-5 sm:pb-9 lg:pb-28"
       >
-        <Tabs defaultValue="transcript">
-          <TabsList variant="line" className="gap-6">
-            <TabsTrigger value="transcript">대화 기록</TabsTrigger>
-            <TabsTrigger value="chat">회의 중 챗봇</TabsTrigger>
-          </TabsList>
+        <Tabs value={tab} onValueChange={changeTab}>
+          {/* **전사는 길다.** 아래로 한참 내려간 자리에서 탭을 바꾸거나 복사하려고 맨 위로
+              올라가야 한다면 그 두 가지는 없는 것과 같다 — 스크롤 컨테이너 위에 붙인다.
+              `-mt-5 pt-5`로 콘텐츠의 위 여백을 이 바가 들고 올라간다. 안 그러면 지나가는
+              글이 바 위쪽 20px 틈으로 비친다. */}
+          <div className="sticky top-0 z-10 -mt-5 flex items-center justify-between gap-4 bg-white pt-5">
+            <TabsList variant="line" className="gap-6">
+              <TabsTrigger value="transcript">대화 기록</TabsTrigger>
+              <TabsTrigger value="chat">회의 중 챗봇</TabsTrigger>
+            </TabsList>
+            {/* 재조회가 실패하면 TanStack은 옛 `data`를 그대로 들고 `isError`가 된다 —
+                본문은 오류·재시도로 바뀌는데 여기만 남으면 그 숨은 캐시가 복사된다. */}
+            {tab === "transcript" &&
+            noteMeta &&
+            rows.length &&
+            !transcriptQuery.isError ? (
+              <CopyMarkdownButton
+                label="전사"
+                // **최종 조회가 끝나기 전에는 못 누른다.** 아카이브는 종료 직후 마운트되어
+                // 라이브 캐시를 그대로 보여주며 다시 읽는다(`refetchOnMount: "always"`).
+                // 그 창에서 복사하면 마지막 발화가 빠진 회의록이 남는다.
+                disabled={transcriptQuery.isFetching}
+                build={() =>
+                  transcriptToMarkdown({
+                    note: {
+                      ...noteMeta,
+                      durationMs: transcript?.recording?.durationMs ?? 0,
+                    },
+                    rows,
+                    truncated,
+                    // 화자 분리 전에는 라벨이 있어도 안 적는다 — `화자 A`는 아직 아무도
+                    // 아닌 이름이라, 복사본에서는 시각만 남기는 편이 사실에 가깝다.
+                    speakerNameOf: (label) =>
+                      diarized ? (speakerOf(label)?.displayName ?? null) : null,
+                  })
+                }
+              />
+            ) : null}
+          </div>
 
           <TabsContent value="transcript" aria-label="회의 전사 아카이브">
             {transcriptQuery.isPending ? (

@@ -9,6 +9,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NoteArchive } from "@/components/notes/note-archive";
 
+const NOTE_META = {
+  title: "2월 스프린트 회의",
+  whenIso: "2026-08-25T05:02:00Z",
+  participantCount: 2,
+};
+
 const data = vi.hoisted(() => ({
   segments: [] as unknown[],
   messages: [] as unknown[],
@@ -106,6 +112,45 @@ describe("NoteArchive", () => {
     expect(screen.getByText("배포는 금요일로 정했습니다.")).toBeTruthy();
     expect(screen.getByText("홍길동")).toBeTruthy();
     expect(screen.queryByText("배포 일정을 정합시다.")).toBeNull();
+  });
+
+  it("복사는 대화 기록 탭에만 선다", () => {
+    data.segments = [
+      {
+        segmentId: "s1",
+        transcriptionSessionId: "sess1",
+        sequence: 0,
+        startedAtMs: 0,
+        endedAtMs: 3000,
+        text: "배포 일정을 정합시다.",
+      },
+    ];
+    render(
+      <NoteArchive
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "복사" })).toBeTruthy();
+
+    // 챗봇 탭에서도 서 있으면 무엇이 복사되는지가 모호해진다.
+    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
+    expect(screen.queryByRole("button", { name: "복사" })).toBeNull();
+  });
+
+  it("복사할 전사가 없으면 버튼도 없다", () => {
+    render(
+      <NoteArchive
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "복사" })).toBeNull();
   });
 
   it("전사 로드 실패를 빈 아카이브가 아니라 오류·재시도로 보인다", () => {

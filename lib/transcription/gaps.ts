@@ -124,3 +124,19 @@ export function spansCalendarDays(row: GapRow) {
   const ended = new Date(row.endedAt);
   return started.toDateString() !== ended.toDateString();
 }
+
+/**
+ * 빈 구간 한 줄. **화면과 복사가 같은 문구를 쓴다** — 회의록을 붙여넣은 사람과 화면을 보는
+ * 사람이 같은 10분을 다르게 읽으면 안 된다.
+ *
+ * 진행 중(`endedAt === null`)이면 길이를 말하지 않는다. 아직 안 끝난 구간이라 「약 3분」이
+ * 곧 거짓이 된다.
+ */
+export function gapHeadline(row: GapRow) {
+  const duration =
+    row.endedAt === null ? null : formatGapDuration(row.durationMs);
+  if (row.kind === "PAUSE") {
+    return duration ? `${duration} 중지했습니다` : "중지했습니다";
+  }
+  return duration ? `${duration} 소리가 없습니다` : "소리가 없습니다";
+}

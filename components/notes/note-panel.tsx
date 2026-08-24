@@ -53,6 +53,7 @@ import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { useGetProject } from "@/lib/api/generated/projects/projects";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
+import { toNoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 
 export type NoteTab = "chat" | "details" | "transcript" | "summary";
@@ -134,6 +135,9 @@ export function NotePanel({
       : undefined;
 
   const phase = deriveMeetingPhase(note);
+  // 전사·요약 복사본의 머리말. **여기서 한 번 만든다** — 탭마다 노트를 다시 구독하지
+  // 않는다(rule `architecture`).
+  const noteMeta = note ? toNoteMeta(note) : null;
   const { user } = useAuth();
   const isStarter = Boolean(
     user && note?.meetingStartedBy?.userId === user.userId
@@ -695,6 +699,7 @@ export function NotePanel({
                 <NoteArchive
                   noteId={noteId}
                   participants={note?.participants ?? []}
+                  noteMeta={noteMeta}
                   // 참석자만 화자를 바꾼다. 회의에 없던 사람은 대표 발화를 봐도
                   // 짐작할 근거가 없고, 그런 사람이 이름을 달면 회의록이 조용히 틀린다.
                   canAssignSpeaker={Boolean(
@@ -711,6 +716,7 @@ export function NotePanel({
                   noteId={noteId}
                   phase={phase}
                   participants={note?.participants ?? []}
+                  noteMeta={noteMeta}
                   focusSegmentId={focusSegmentId}
                   onFocusHandled={clearFocusSegment}
                 />
@@ -732,6 +738,7 @@ export function NotePanel({
                 <NoteSummary
                   noteId={noteId}
                   isEnded={phase === "ended"}
+                  noteMeta={noteMeta}
                   onEvidenceSelect={jumpToSegment}
                 />
               </ScrollArea>

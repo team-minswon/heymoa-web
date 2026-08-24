@@ -19,26 +19,11 @@ import type {
   AnalysisResultResponseDataSectionsItemKind,
 } from "@/lib/api/generated/models";
 import { formatOffset } from "@/lib/transcription/presentation";
+import { SECTION_LABELS, SECTION_ORDER } from "@/lib/notes/analysis-sections";
+import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
+import { summaryToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
-
-/**
- * 섹션 이름과 순서. 서버도 같은 순서로 내려주지만 여기서 한 번 더 세운다 — 한 섹션이
- * 통째로 비어 응답에서 빠져도 헤딩 셋은 남아야 "그 칸이 비었다"와 "그 칸이 없다"가
- * 구분된다.
- */
-const SECTION_LABELS: Record<
-  AnalysisResultResponseDataSectionsItemKind,
-  string
-> = {
-  OVERVIEW: "개요",
-  ACTION_ITEM: "액션 아이템",
-  DECISION: "결정",
-};
-
-const SECTION_ORDER = Object.keys(
-  SECTION_LABELS
-) as AnalysisResultResponseDataSectionsItemKind[];
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -94,10 +79,13 @@ function isRunning(status: string | null | undefined): boolean {
 export function NoteSummary({
   noteId,
   isEnded,
+  noteMeta,
   onEvidenceSelect,
 }: {
   noteId: string;
   isEnded: boolean;
+  /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
+  noteMeta?: NoteMeta | null;
   /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
   onEvidenceSelect: (segmentId: string) => void;
 }) {
@@ -172,7 +160,7 @@ export function NoteSummary({
               바뀌는 배너였는데, 언제 눌러야 하는지가 화면마다 달라 읽는 일이 됐다.
               다시 만들 이유는 화자만이 아니다 — 전사를 고쳤거나 그냥 다시 보고 싶을 때도
               같은 버튼이면 찾을 것이 없다. */}
-          <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex items-center justify-end gap-1">
             <Button
               variant="outline"
               size="sm"
@@ -182,6 +170,18 @@ export function NoteSummary({
             >
               요약 다시 만들기
             </Button>
+            {noteMeta ? (
+              <CopyMarkdownButton
+                label="요약"
+                className="h-[30px]"
+                build={() =>
+                  summaryToMarkdown({
+                    note: noteMeta,
+                    sections: analysis.sections,
+                  })
+                }
+              />
+            ) : null}
           </div>
         </div>
         <SummarySections

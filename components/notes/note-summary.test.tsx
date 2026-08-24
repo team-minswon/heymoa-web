@@ -43,6 +43,11 @@ function renderSummary(isEnded: boolean) {
     <NoteSummary
       noteId="01K0000000002"
       isEnded={isEnded}
+      noteMeta={{
+        title: "2월 스프린트 회의",
+        whenIso: "2026-08-25T05:02:00Z",
+        participantCount: 2,
+      }}
       onEvidenceSelect={onEvidenceSelect}
     />
   );

@@ -13,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
 import { SpeakerChip } from "@/components/notes/speaker-chip";
+import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
+import { transcriptToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { toGapRows } from "@/lib/transcription/gaps";
 import {
   createSpeakerIdentityResolver,
@@ -43,6 +45,7 @@ export function TranscriptView({
   noteId,
   phase,
   participants = [],
+  noteMeta,
   focusSegmentId,
   onFocusHandled,
 }: {
@@ -50,6 +53,8 @@ export function TranscriptView({
   phase: SharedChatPhase;
   /** 화자에 붙은 사람의 얼굴. 계약의 `speakers[]` 에는 사진이 없다. */
   participants?: SpeakerFace[];
+  /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
+  noteMeta?: NoteMeta | null;
 } & TranscriptFocus) {
   const recording = useRecording();
   const liveTranscript = useRecordingTranscript();
@@ -96,15 +101,14 @@ export function TranscriptView({
     () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
     [segments, transcript]
   );
+  const diarized = transcript?.diarization?.status === "MAPPED";
   const speakerOf = useMemo(
     () =>
       createSpeakerIdentityResolver(
-        transcript?.diarization?.status === "MAPPED"
-          ? transcript.diarization.speakers
-          : [],
+        diarized ? transcript!.diarization.speakers : [],
         participants
       ),
-    [transcript, participants]
+    [diarized, transcript, participants]
   );
 
   const partial = useMemo(() => {
@@ -291,6 +295,38 @@ export function TranscriptView({
       overlay={followAction}
     >
       <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-7 pt-5 sm:pb-9 lg:pb-28">
+        {/* **머리글이 아니라 손잡이다.** v5가 이 면에서 걷어낸 것은 대문자 키커와 세리프
+            제목이었다 — 위치를 두 번 말하는 글자였다. 이 바는 글자가 아니라 지금 보고 있는
+            것에 대고 할 수 있는 일이고, 아카이브의 같은 자리와 짝을 이룬다. 복사할 것이
+            없으면 서지도 않는다. */}
+        {/* **조회가 실패했으면 서지 않는다.** REST가 실패해도 실시간으로 들어온 줄은
+            화면에 남으므로 `rows`는 차 있다 — 그걸 복사하면 앞부분이 통째로 빠진 회의록이
+            남는다. 화면은 스스로 낫지만 복사본은 안 낫는다. */}
+        {noteMeta && rows.length && !transcriptQuery.isError ? (
+          <div className="sticky top-0 z-10 -mt-5 flex justify-end bg-white pb-2 pt-5">
+            <CopyMarkdownButton
+              label="전사"
+              // 중지 뒤 최종 재조회와 30초 폴링이 도는 동안은 무엇이 최종본인지 모른다.
+              disabled={transcriptQuery.isFetching}
+              build={() =>
+                transcriptToMarkdown({
+                  note: {
+                    ...noteMeta,
+                    durationMs: transcript?.recording?.durationMs ?? 0,
+                  },
+                  // 관전자가 종료 안내에서 안 넘어가면 종료된 회의도 여기 남는다 —
+                  // 아카이브와 같은 봉인 상태를 말해야 한다.
+                  truncated: transcript?.recording?.seal === "TRUNCATED",
+                  // **받아 적는 중인 줄은 빼고 나간다.** `rows`는 확정된 것만 담는다 —
+                  // 아직 바뀔 글자를 회의록에 넣으면 붙여넣은 쪽만 틀린 문장을 갖는다.
+                  rows,
+                  speakerNameOf: (label) =>
+                    diarized ? (speakerOf(label)?.displayName ?? null) : null,
+                })
+              }
+            />
+          </div>
+        ) : null}
         {/* v5: 제품 면 대문자 키커·세리프 헤더 제거 — 탭이 이미 위치를 말한다(FORM SPEC).
             녹음 상태는 상단바·레코더 독이 표시한다. 전사 행이 바로 시작한다. */}
         <section

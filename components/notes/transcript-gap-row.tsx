@@ -1,5 +1,5 @@
 import {
-  formatGapDuration,
+  gapHeadline,
   spansCalendarDays,
   spansVisibleClockMinutes,
   type GapRow,
@@ -39,14 +39,8 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
         open ? "진행 중" : formatOffset(row.endedAtMs)
       }`;
 
-  const duration = open ? null : formatGapDuration(row.durationMs);
-  const headline = paused
-    ? duration
-      ? `${duration} 중지했습니다`
-      : "중지했습니다"
-    : duration
-      ? `${duration} 소리가 없습니다`
-      : "소리가 없습니다";
+  // 문구는 `gaps.ts`가 만든다 — 복사한 회의록도 같은 줄을 쓴다.
+  const headline = gapHeadline(row);
 
   return (
     <div
