@@ -1,6 +1,9 @@
 import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
-import { CONTEXT_SNAPSHOT } from "@/lib/mocks/context-candidates";
+import {
+  CONTEXT_FAILING_NOTE_ID,
+  CONTEXT_SNAPSHOT,
+} from "@/lib/mocks/context-candidates";
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
@@ -412,13 +415,22 @@ export const restHandlers = [
   ),
   // 맥락 후보. **명시적 override로 준다** — 생성 목은 무작위 success:false 를 낸다.
   // 계약이 `openapi3.yml`에 아직 없어 생성 훅 자체가 없기도 하다.
-  http.get("*/v1/notes/:noteId/context-candidates", () =>
-    HttpResponse.json({
+  http.get("*/v1/notes/:noteId/context-candidates", ({ params }) => {
+    // **실패 주입 자리.** 「분석이 실패해도 전사 확인과 회의 종료가 계속된다」를 e2e 로
+    // 지키려면 실패하는 노트가 하나 필요하다. 그 노트에서만 500 을 준다 —
+    // `_mock/foreign-lock` 과 같은 방식이다.
+    if (id(params.noteId) === CONTEXT_FAILING_NOTE_ID) {
+      return HttpResponse.json(
+        { success: false, data: null, error: { code: "INTERNAL", message: "…" } },
+        { status: 500 }
+      );
+    }
+    return HttpResponse.json({
       success: true,
       data: CONTEXT_SNAPSHOT,
       error: null,
-    })
-  ),
+    });
+  }),
   http.get(
     "*/v1/notes/:noteId/context-candidates/:candidateId/revisions",
     ({ params }) => {
