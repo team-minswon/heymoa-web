@@ -18,14 +18,13 @@
 # `572d13e`(window 절단 고정)를 이미 품은 상위집합이고, 거기에 web 이 실제로 읽는 조회
 # 경로가 얹혀 있다. 둘 다 필요하므로 상위집합 하나만 세운다.
 #
-#   git -C <server>/.worktrees/app-459 merge-base --is-ancestor 572d13e HEAD   # → 포함
+#   git -C <server>/.worktrees/pro-33-integration log -1   # → 3ca943d, clean
 #
-# **다만 app-459 는 중간값이지 최종 Docker 대상이 아니다.** 이 워크트리는 아직
-# `01c76e5` 기반이고 `origin/dev`(`4236b6d`)를 다시 얹기 전이다. server pane 이 최신 dev
-# 위에 선형 integration 워크트리를 만들면 `SERVER_LEDGER_ROOT` 기본값을 **그 경로로 한 번
-# 더 바꾼다.** 그때까지 아래 값은 lane 을 세워 보기 위한 잠정값이다.
+# **잠정값이던 app-459 를 걷고 최종 integration 워크트리로 옮겼다.** app-459 는 `01c76e5`
+# 기반이라 최신 dev 뒤였고 워킹 트리도 dirty 였다 — 그 상태를 이미지로 굳히면 편집 중간
+# 상태를 읽는다. `pro-33-integration` 은 셋을 모두 만족한다.
 #
-#   git -C <server>/.worktrees/app-459 merge-base HEAD origin/dev   # → 01c76e5 (dev 뒤)
+#   clean · 최신 origin/dev 포함 · APP-476 partial 두 토막 · APP-459 후보 조회
 #
 # **web 화면이 후보를 봅니다.** 이전 판에는 「web은 여전히 후보를 못 봅니다」라고 적혀
 # 있었는데, 그것은 APP-459 조회가 어느 브랜치에도 없던 시점의 사실이다. 지금은 컨트롤러와
@@ -37,7 +36,7 @@
 services:
   server:
     build:
-      context: ${SERVER_LEDGER_ROOT:-../../../../../heymoa-server/.worktrees/app-459}
+      context: ${SERVER_LEDGER_ROOT:-../../../../../heymoa-server/.worktrees/pro-33-integration}
       dockerfile: deploy/app/Dockerfile
 
   ai:
