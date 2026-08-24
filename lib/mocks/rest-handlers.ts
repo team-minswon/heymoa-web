@@ -1,5 +1,6 @@
 import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
+import { CONTEXT_SNAPSHOT } from "@/lib/mocks/context-candidates";
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
@@ -408,6 +409,29 @@ export const restHandlers = [
       () => mockDb.getNote(id(params.noteId)),
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
+  ),
+  // 맥락 후보. **명시적 override로 준다** — 생성 목은 무작위 success:false 를 낸다.
+  // 계약이 `openapi3.yml`에 아직 없어 생성 훅 자체가 없기도 하다.
+  http.get("*/v1/notes/:noteId/context-candidates", () =>
+    HttpResponse.json({
+      success: true,
+      data: CONTEXT_SNAPSHOT,
+      error: null,
+    })
+  ),
+  http.get(
+    "*/v1/notes/:noteId/context-candidates/:candidateId/revisions",
+    ({ params }) => {
+      const candidateId = id(params.candidateId);
+      const revisions = CONTEXT_SNAPSHOT.candidates.filter(
+        (candidate) => candidate.candidateId === candidateId
+      );
+      return HttpResponse.json({
+        success: true,
+        data: { candidateId, revisions },
+        error: null,
+      });
+    }
   ),
   http.put("*/v1/notes/:noteId/participants", async ({ request, params }) =>
     resultOf(

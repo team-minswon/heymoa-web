@@ -1,6 +1,11 @@
 import { ws } from "msw";
 
 import {
+  CONTEXT_EVENT_ID,
+  CONTEXT_TIMELINE,
+  CONTEXT_APPLIED_RANGES,
+} from "@/lib/mocks/context-candidates";
+import {
   createMockTranscriptionScenario,
   type MockTranscriptionScenario,
 } from "@/lib/mocks/transcription-scenario";
@@ -86,6 +91,9 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
     let subscriptionId = "sub-0";
     let subscriptionDestination = "/user/queue/transcription-events";
     let messageSequence = 1;
+    /** note topic 구독. `/user/queue/...`(녹음자 전용)와 별개다. */
+    const noteTopics = new Map<string, { id: string; destination: string }>();
+    const noteTopicTimers: number[] = [];
 
     const sendEvent = (event: ServerEvent) => {
       client.send(
@@ -102,6 +110,64 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
       );
     };
 
+    /**
+     * **`/topic/notes/{noteId}` 발행은 이 목이 처음 만든다.** 서비스 워커가 붙기 전에는 web이
+     * 후보 화면을 볼 방법이 없었다.
+     *
+     * 실제 주기를 압축해서 흘린다 — 회의 42분을 그대로 기다릴 수 없으므로 `SPEED`로 나눈다.
+     * 압축해도 **사건 사이가 성기다는 성질은 남는다**. 그게 이 화면의 실제 모습이다.
+     */
+    const SPEED = 60;
+    const startNoteTopicFeed = (noteId: string) => {
+      const send = (body: unknown) => {
+        const topic = noteTopics.get(noteId);
+        if (!topic) return;
+        client.send(
+          stompFrame(
+            "MESSAGE",
+            {
+              subscription: topic.id,
+              "message-id": `mock-${messageSequence++}`,
+              destination: topic.destination,
+              "content-type": "application/json",
+            },
+            JSON.stringify(body)
+          )
+        );
+      };
+
+      CONTEXT_TIMELINE.forEach((entry, index) => {
+        noteTopicTimers.push(
+          window.setTimeout(() => {
+            send({
+              type: "context.candidate.changed",
+              eventId: CONTEXT_EVENT_ID(index),
+              occurredAt: new Date(entry.atMs).toISOString(),
+              candidate: entry.candidate,
+            });
+          }, entry.atMs / SPEED)
+        );
+      });
+
+      CONTEXT_APPLIED_RANGES.forEach((coverage, index) => {
+        noteTopicTimers.push(
+          window.setTimeout(() => {
+            send({
+              type: "context.classification.batch.applied",
+              eventId: CONTEXT_EVENT_ID(50 + index),
+              occurredAt: coverage.appliedAt,
+              coverage,
+            });
+          }, coverage.toEndedAtMs / SPEED)
+        );
+      });
+    };
+
+    client.addEventListener("close", () => {
+      noteTopicTimers.forEach((timer) => window.clearTimeout(timer));
+      noteTopicTimers.length = 0;
+    });
+
     client.addEventListener("message", (event) => {
       void parseFrame(event.data).then(async (frame) => {
         if (!frame) return;
@@ -116,8 +182,23 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           return;
         }
         if (frame.command === "SUBSCRIBE") {
+          const destination = frame.headers.destination ?? "";
+          const noteTopic = destination.match(/^\/topic\/notes\/([^/]+)$/);
+          if (noteTopic) {
+            noteTopics.set(noteTopic[1], {
+              id: frame.headers.id,
+              destination,
+            });
+            if (frame.headers.receipt) {
+              client.send(
+                stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt })
+              );
+            }
+            startNoteTopicFeed(noteTopic[1]);
+            return;
+          }
           subscriptionId = frame.headers.id;
-          subscriptionDestination = frame.headers.destination;
+          subscriptionDestination = destination;
           if (frame.headers.receipt) {
             client.send(
               stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt })
