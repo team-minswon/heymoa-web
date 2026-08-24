@@ -648,7 +648,13 @@ test("shows meeting context and shared chat inside the viewer side panel", async
   await page.getByRole("tab", { name: "전사" }).click();
   await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(0);
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "챗봇"]);
+  await expect(page.getByRole("tab")).toHaveText([
+    "정보",
+    "전사",
+    // 사이드 뷰에는 레일이 없어 실시간 정리가 노트 탭으로 내려온다.
+    "실시간 정리",
+    "챗봇",
+  ]);
 
   await page.getByRole("tab", { name: "챗봇" }).click();
 
@@ -746,6 +752,9 @@ test("approves a write tool from the chat card", async ({ page }) => {
 test("streams a shared chat turn inside a note", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
 
+  // 기록 중 레일은 「실시간 정리」로 열린다. 공유 챗은 마운트돼 있지만 hidden 이다.
+  await page.getByRole("tab", { name: "이 회의" }).click();
+
   const panel = page.getByRole("complementary", { name: "회의 챗봇" });
   await panel.getByLabel("메시지").fill("이번 회의에서 정한 것만 정리해줘");
   await panel.getByRole("button", { name: "보내기" }).click();
@@ -764,6 +773,8 @@ test("streams a shared chat turn inside a note", async ({ page }) => {
  */
 test("locks the composer when another member is typing", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
+
+  await page.getByRole("tab", { name: "이 회의" }).click();
 
   const panel = page.getByRole("complementary", { name: "회의 챗봇" });
   await panel.getByLabel("메시지").waitFor();

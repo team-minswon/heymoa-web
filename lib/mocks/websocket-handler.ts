@@ -1,9 +1,10 @@
 import { ws } from "msw";
 
 import {
+  CONTEXT_APPLIED_RANGES,
+  CONTEXT_DEMO_NOTE_ID,
   CONTEXT_EVENT_ID,
   CONTEXT_TIMELINE,
-  CONTEXT_APPLIED_RANGES,
 } from "@/lib/mocks/context-candidates";
 import {
   createMockTranscriptionScenario,
@@ -116,9 +117,17 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
      *
      * 실제 주기를 압축해서 흘린다 — 회의 42분을 그대로 기다릴 수 없으므로 `SPEED`로 나눈다.
      * 압축해도 **사건 사이가 성기다는 성질은 남는다**. 그게 이 화면의 실제 모습이다.
+     *
+     * **압축이 공짜가 아니다.** 60배로 흘리면 note topic event가 4~7초마다 오는데, 그동안
+     * 공유 챗의 30초 안전 폴링이 한 번도 안 돌았다(`smoke.spec.ts` 「locks the composer」가
+     * 그것으로 깨졌다). 실제 주기(배치 15~25초)에서도 같은 일이 일어날 수 있어 별도로
+     * 확인이 필요하다. 여기서는 전용 노트로 가둬 다른 화면을 안 건드린다.
      */
     const SPEED = 60;
     const startNoteTopicFeed = (noteId: string) => {
+      // **전용 노트에서만 흘린다.** 모든 노트에 흘리면 다른 화면의 폴링과 섞인다 —
+      // 실제로 공유 챗의 30초 안전 폴링이 굶어 e2e 하나가 깨졌다(아래 주석).
+      if (noteId !== CONTEXT_DEMO_NOTE_ID) return;
       const send = (body: unknown) => {
         const topic = noteTopics.get(noteId);
         if (!topic) return;

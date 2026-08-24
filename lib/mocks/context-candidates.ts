@@ -20,6 +20,12 @@ import type {
  * - `appliedRanges`의 **구멍 하나**와 **포화 구간 하나**
  */
 
+/**
+ * 후보 피드를 흘리는 전용 노트. e2e가 쓰는 `01K0000000002`와 갈라 둔다 — 그 노트에 함께
+ * 흘렸더니 공유 챗 폴링이 굶어 테스트가 깨졌다.
+ */
+export const CONTEXT_DEMO_NOTE_ID = "01K0000000005";
+
 const SEGMENT = (n: number) => `0HZX2K7M9Q${String(n).padStart(3, "0")}`;
 const CANDIDATE = (n: number) => `0HZX2K7M9QA${String(n).padStart(2, "0")}`;
 export const CONTEXT_EVENT_ID = (n: number) =>
