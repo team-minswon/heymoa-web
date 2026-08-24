@@ -3,6 +3,7 @@ import { parse } from "yaml";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { setupServer } from "msw/node";
 
+import { CONTEXT_SNAPSHOT } from "@/lib/mocks/context-candidates";
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
@@ -177,6 +178,28 @@ function contractSamples() {
     summary: null,
   });
 
+  /**
+   * 후보 revision 이력은 `{candidateId}` 가 있어야 부를 수 있다. **id 를 손으로 박지
+   * 않는다** — 목이 바뀌면 조용히 빈 응답을 부르게 되고, 그러면 nullable 표본이 0개인데도
+   * 이 테스트가 통과한다.
+   *
+   * 목 스냅샷에서 **필요한 성질별로 하나씩** 고른다. `closeReason` 과
+   * `resolvesCandidateId` 가 둘 다 nullable 이라 양쪽 값을 내는 후보가 함께 있어야 한다.
+   */
+  const candidateIds = [
+    ...new Set(
+      [
+        CONTEXT_SNAPSHOT.candidates.find((c) => c.closeReason !== null),
+        CONTEXT_SNAPSHOT.candidates.find((c) => c.resolvesCandidateId !== null),
+        CONTEXT_SNAPSHOT.candidates.find(
+          (c) => c.closeReason === null && c.resolvesCandidateId === null
+        ),
+      ]
+        .filter((c) => c !== undefined)
+        .map((c) => c.candidateId)
+    ),
+  ];
+
   // 채팅은 시드에 없다. 두 스코프를 다 만들어야 `workspaceId`·`noteId`가 양쪽으로 나온다.
   const chatIds = [
     mockDb.createAgentChat({
@@ -290,6 +313,7 @@ function contractSamples() {
         ),
         sessionId: sessionIds,
         chatId: chatIds,
+        candidateId: candidateIds,
       };
       if (params.some((param) => !values[param]?.length)) continue;
       // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).

@@ -8,6 +8,7 @@ export { getTranscriptionMock } from "./transcription/transcription.msw";
 export { getUsersMock } from "./users/users.msw";
 export { getWorkspaceIntegrationMock } from "./workspace-integration/workspace-integration.msw";
 export { getAnalysisMock } from "./analysis/analysis.msw";
+export { getContextCandidatesMock } from "./context-candidates/context-candidates.msw";
 export { getWorkspaceMembersMock } from "./workspace-members/workspace-members.msw";
 export { getProjectsMock } from "./projects/projects.msw";
 export { getNoteSharedChatMock } from "./note-shared-chat/note-shared-chat.msw";

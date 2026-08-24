@@ -79,7 +79,7 @@ export const getCreateAgentChatUrl = () => {
 };
 
 /**
- * 연결할 노트에 접근할 수 없으면 404로 응답한다.
+ * 호출자가 연결할 워크스페이스의 멤버가 아니면 워크스페이스 존재 여부를 은닉하기 위해 404로 응답한다.
  * @summary 채팅 세션 생성
  */
 export const createAgentChat = async (
@@ -212,7 +212,7 @@ export const getGetActiveAgentChatUrl = (params: GetActiveAgentChatParams) => {
 };
 
 /**
- * scope와 대상 식별자가 일치하지 않으면 400으로 응답한다 (workspace→workspaceId 필수, note→noteId 필수).
+ * 현재 유저의 활성 세션을 조회한다(새로고침 후 대화 복원용). 스코프 대상별 최근 활성 세션 1개를 반환하며, 없으면 data가 null이다.
  * @summary 활성 세션 조회
  */
 export const getActiveAgentChat = async (

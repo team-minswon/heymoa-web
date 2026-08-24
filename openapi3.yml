@@ -13,7 +13,7 @@ paths:
       tags:
       - "AgentChat"
       summary: "채팅 세션 생성"
-      description: "연결할 노트에 접근할 수 없으면 404로 응답한다."
+      description: "호출자가 연결할 워크스페이스의 멤버가 아니면 워크스페이스 존재 여부를 은닉하기 위해 404로 응답한다."
       operationId: "createAgentChat"
       requestBody:
         content:
@@ -242,8 +242,8 @@ paths:
       tags:
       - "AgentChat"
       summary: "활성 세션 조회"
-      description: "scope와 대상 식별자가 일치하지 않으면 400으로 응답한다 (workspace→workspaceId 필수,\
-        \ note→noteId 필수)."
+      description: "현재 유저의 활성 세션을 조회한다(새로고침 후 대화 복원용). 스코프 대상별 최근 활성 세션 1개를 반환하며,\
+        \ 없으면 data가 null이다."
       operationId: "getActiveAgentChat"
       parameters:
       - name: "scope"
@@ -1676,6 +1676,88 @@ paths:
           $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
+  /v1/notes/{noteId}/context-candidates:
+    get:
+      tags:
+      - "Context Candidates"
+      summary: "context candidate 목록 조회"
+      description: "노트 멤버가 OPEN/CLOSED candidate head와 성공 적용 범위를 조회한다."
+      operationId: "getContextCandidates"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        description: "노트 식별자"
+        required: true
+        schema:
+          type: "string"
+          description: "노트 식별자"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContextCandidateSnapshotResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      candidates:
+                      - candidateId: "0HZX2K7M9Q4AP"
+                        revision: 1
+                        operation: "CREATE"
+                        revisionSource: "LIVE"
+                        kind: "QUESTION"
+                        status: "OPEN"
+                        closeReason: null
+                        content: "배포 일정을 확정해야 한다"
+                        createdSequence: 1
+                        lastEvidenceSequence: 2
+                        aiSemanticRevisionCount: 0
+                        resolvesCandidateId: null
+                        evidence:
+                        - segmentId: "0HZX2K7M9Q4AH"
+                          sequence: 2
+                          startedAtMs: 1000
+                          endedAtMs: 1900
+                          text: "배포 일정을 확정해야 합니다"
+                          role: "SUPPORTS"
+                      appliedRanges:
+                      - runKey: "live_001"
+                        applyStatus: "APPLIED"
+                        fromSequence: 1
+                        toSequence: 2
+                        fromStartedAtMs: 1000
+                        toEndedAtMs: 1900
+                        rawDeltaSaturated: false
+                        semanticUnitSaturated: true
+                        appliedAt: "2026-07-14T01:02:03.123Z"
+                    error: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
   /v1/notes/{noteId}/meeting-end:
     post:
       tags:
@@ -2345,7 +2427,7 @@ paths:
       parameters:
       - name: "notificationId"
         in: "path"
-        description: "읽음 처리할 알림 식별자"
+        description: ""
         required: true
         schema:
           type: "string"
@@ -2908,7 +2990,7 @@ paths:
       parameters:
       - name: "workspaceId"
         in: "path"
-        description: ""
+        description: "조회할 워크스페이스 식별자"
         required: true
         schema:
           type: "string"
@@ -4007,7 +4089,7 @@ paths:
       parameters:
       - name: "workspaceId"
         in: "path"
-        description: ""
+        description: "나갈 워크스페이스 식별자"
         required: true
         schema:
           type: "string"
@@ -4156,7 +4238,7 @@ paths:
       parameters:
       - name: "workspaceId"
         in: "path"
-        description: ""
+        description: "워크스페이스 식별자"
         required: true
         schema:
           type: "string"
@@ -4168,7 +4250,7 @@ paths:
         example: "0HZX2K7M9Q4AD"
       - name: "userId"
         in: "path"
-        description: ""
+        description: "역할을 바꿀 멤버의 사용자 식별자"
         required: true
         schema:
           type: "string"
@@ -4585,6 +4667,91 @@ paths:
                     error:
                       code: "WORKSPACE_ACCESS_DENIED"
                       message: "워크스페이스를 변경할 권한이 없습니다."
+                      details: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - accessCookie: []
+  /v1/notes/{noteId}/context-candidates/{candidateId}/revisions:
+    get:
+      tags:
+      - "Context Candidates"
+      summary: "context candidate revision history 조회"
+      description: "노트 멤버가 candidate revision history와 전사 근거를 조회한다."
+      operationId: "getContextCandidateRevisions"
+      parameters:
+      - name: "noteId"
+        in: "path"
+        description: "노트 식별자"
+        required: true
+        schema:
+          type: "string"
+          description: "노트 식별자"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AF"
+      - name: "candidateId"
+        in: "path"
+        description: "candidate 식별자"
+        required: true
+        schema:
+          type: "string"
+          description: "candidate 식별자"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+        example: "0HZX2K7M9Q4AP"
+      responses:
+        "200":
+          description: "요청 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContextCandidateRevisionHistoryResponse"
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      candidateId: "0HZX2K7M9Q4AP"
+                      revisions:
+                      - candidateId: "0HZX2K7M9Q4AP"
+                        revision: 1
+                        operation: "RESOLVE"
+                        revisionSource: "LIVE"
+                        kind: "QUESTION"
+                        status: "CLOSED"
+                        closeReason: "RESOLVED"
+                        content: "배포 일정을 확정해야 한다"
+                        createdSequence: 1
+                        lastEvidenceSequence: 2
+                        aiSemanticRevisionCount: 0
+                        resolvesCandidateId: null
+                        evidence:
+                        - segmentId: "0HZX2K7M9Q4AH"
+                          sequence: 2
+                          startedAtMs: 1000
+                          endedAtMs: 1900
+                          text: "배포 일정을 확정해야 합니다"
+                          role: "SUPPORTS"
+                    error: null
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: "NOTE_NOT_FOUND"
+                      message: "노트를 찾을 수 없습니다."
                       details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -7314,6 +7481,13 @@ components:
                                 nullable: false
                                 example: "252000"
                           nullable: false
+                        sourceCandidates:
+                          type: "array"
+                          description: "이 항목이 요청 원장에서 채택한 후보 revision. 없으면 필드를 생략한\
+                            다"
+                          items:
+                            $ref: "#/components/schemas/CandidateRevisionReference"
+                          nullable: false
                         content:
                           type: "string"
                           description: "항목 본문 한 줄"
@@ -7495,6 +7669,327 @@ components:
           description: "필드별 오류 상세"
       description: "오류 정보"
       title: "AppError"
+    CandidateRevisionReference:
+      title: "CandidateRevisionReference"
+      type: "object"
+      required:
+      - "candidateId"
+      - "revision"
+      additionalProperties: false
+      properties:
+        candidateId:
+          type: "string"
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          example: "0K9GVJT2C4Q2B"
+        revision:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          example: 9
+    ContextCandidateSnapshotResponse:
+      title: "ContextCandidateSnapshotResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "candidates"
+          - "appliedRanges"
+          type: "object"
+          properties:
+            candidates:
+              type: "array"
+              items:
+                $ref: "#/components/schemas/ContextCandidateRevision"
+              description: "(createdSequence, candidateId) 오름차순. OPEN/CLOSED를 모두 포\
+                함한다."
+            appliedRanges:
+              type: "array"
+              items:
+                $ref: "#/components/schemas/ContextClassificationAppliedRange"
+              description: "(fromSequence, toSequence, runKey) 오름차순. successful run\
+                \ 전체다."
+          description: "성공 응답 데이터"
+          nullable: false
+          additionalProperties: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    ContextCandidateRevisionHistoryResponse:
+      title: "ContextCandidateRevisionHistoryResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "candidateId"
+          - "revisions"
+          type: "object"
+          properties:
+            candidateId:
+              $ref: "#/components/schemas/Tsid"
+            revisions:
+              type: "array"
+              items:
+                $ref: "#/components/schemas/ContextCandidateRevision"
+              description: "revision 오름차순"
+          description: "성공 응답 데이터"
+          nullable: false
+          additionalProperties: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    Tsid:
+      type: "string"
+      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+      minLength: 13
+      maxLength: 13
+    RunKey:
+      type: "string"
+      pattern: "^[A-Za-z0-9_-]{1,64}$"
+      minLength: 1
+      maxLength: 64
+    CandidateKind:
+      type: "string"
+      enum:
+      - "AGENDA"
+      - "DECISION"
+      - "ACTION_ITEM"
+      - "ISSUE"
+      - "QUESTION"
+      - "STATUS_REPORT"
+      - "INSIGHT"
+    ContextCandidateEvidence:
+      type: "object"
+      additionalProperties: false
+      required:
+      - "segmentId"
+      - "sequence"
+      - "startedAtMs"
+      - "endedAtMs"
+      - "text"
+      - "role"
+      properties:
+        segmentId:
+          $ref: "#/components/schemas/Tsid"
+        sequence:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+        startedAtMs:
+          type: "integer"
+          format: "int64"
+          minimum: 0
+        endedAtMs:
+          type: "integer"
+          format: "int64"
+          minimum: 0
+        text:
+          type: "string"
+        role:
+          type: "string"
+          enum:
+          - "SUPPORTS"
+          - "REFUTES"
+          - "CONDITIONS"
+          - "RETRACTS"
+          - "REFERENCES"
+    ContextCandidateRevision:
+      type: "object"
+      additionalProperties: false
+      required:
+      - "candidateId"
+      - "revision"
+      - "operation"
+      - "revisionSource"
+      - "kind"
+      - "status"
+      - "closeReason"
+      - "content"
+      - "createdSequence"
+      - "lastEvidenceSequence"
+      - "aiSemanticRevisionCount"
+      - "resolvesCandidateId"
+      - "evidence"
+      properties:
+        candidateId:
+          $ref: "#/components/schemas/Tsid"
+        revision:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+        operation:
+          type: "string"
+          enum:
+          - "CREATE"
+          - "AMEND"
+          - "CORRECT"
+          - "RETRACT"
+          - "RESOLVE"
+          description: "revision을 만든 operation event다. RESOLVE result revision도 CREATE가\
+            \ 아니라 RESOLVE다. status와 closeReason을 이 값에서 유도하지 않는다."
+        revisionSource:
+          type: "string"
+          enum:
+          - "LIVE"
+          description: "v1 생산값은 LIVE다. POSTPROCESS는 실제 producer 이슈와 web parser의 선행\
+            \ 수용이 준비된 뒤 additive change로 추가한다."
+        kind:
+          $ref: "#/components/schemas/CandidateKind"
+        status:
+          type: "string"
+          enum:
+          - "OPEN"
+          - "CLOSED"
+        closeReason:
+          type: "string"
+          nullable: true
+          enum:
+          - "RETRACTED"
+          - "RESOLVED"
+          - null
+        content:
+          type: "string"
+          minLength: 1
+          maxLength: 500
+          description: "NFC이며 classifier tiktoken:0.13.0:o200k_base 기준 512 tokens\
+            \ 이하다"
+        createdSequence:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+        lastEvidenceSequence:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+        aiSemanticRevisionCount:
+          type: "integer"
+          format: "int32"
+          minimum: 0
+        resolvesCandidateId:
+          type: "string"
+          nullable: true
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+          minLength: 13
+          maxLength: 13
+          description: "RESOLVE result면 닫힌 Question candidate ID, 아니면 null"
+        evidence:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ContextCandidateEvidence"
+      oneOf:
+      - title: "OpenCandidate"
+        required:
+        - "status"
+        - "closeReason"
+        properties:
+          status:
+            type: "string"
+            enum:
+            - "OPEN"
+          closeReason:
+            nullable: true
+            enum:
+            - null
+      - title: "RetractedCandidate"
+        required:
+        - "status"
+        - "closeReason"
+        properties:
+          status:
+            type: "string"
+            enum:
+            - "CLOSED"
+          closeReason:
+            type: "string"
+            enum:
+            - "RETRACTED"
+      - title: "ResolvedQuestion"
+        required:
+        - "kind"
+        - "status"
+        - "closeReason"
+        properties:
+          kind:
+            type: "string"
+            enum:
+            - "QUESTION"
+          status:
+            type: "string"
+            enum:
+            - "CLOSED"
+          closeReason:
+            type: "string"
+            enum:
+            - "RESOLVED"
+    ContextClassificationAppliedRange:
+      type: "object"
+      additionalProperties: false
+      required:
+      - "runKey"
+      - "applyStatus"
+      - "fromSequence"
+      - "toSequence"
+      - "fromStartedAtMs"
+      - "toEndedAtMs"
+      - "rawDeltaSaturated"
+      - "semanticUnitSaturated"
+      - "appliedAt"
+      properties:
+        runKey:
+          $ref: "#/components/schemas/RunKey"
+        applyStatus:
+          type: "string"
+          enum:
+          - "APPLIED"
+          - "PARTIAL_RECORDED"
+        fromSequence:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+        toSequence:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+        fromStartedAtMs:
+          type: "integer"
+          format: "int64"
+          minimum: 0
+        toEndedAtMs:
+          type: "integer"
+          format: "int64"
+          minimum: 0
+        rawDeltaSaturated:
+          type: "boolean"
+          description: "raw delta가 상한에 닿아 추가 항목이 있을 수 있다. 추가 항목이 반드시 있다는 뜻은 아니다."
+        semanticUnitSaturated:
+          type: "boolean"
+          description: "semantic unit 7개 상한 또는 limit drop으로 추가 항목이 있을 수 있다. 추가 항목이\
+            \ 반드시 있다는 뜻은 아니다."
+        appliedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
   securitySchemes:
     accessCookie:
       type: "apiKey"

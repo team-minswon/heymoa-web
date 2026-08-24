@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { AnalysisResultResponseDataSectionsItemItemsItemEvidenceItem } from "./analysisResultResponseDataSectionsItemItemsItemEvidenceItem";
+import type { CandidateRevisionReference } from "./candidateRevisionReference";
 
 export type AnalysisResultResponseDataSectionsItemItemsItem = {
   /**
@@ -17,6 +18,8 @@ export type AnalysisResultResponseDataSectionsItemItemsItem = {
   itemId: string;
   /** 이 항목이 나온 전사 줄. 최대 3개, 근거를 못 찾았으면 빈 배열 */
   evidence: AnalysisResultResponseDataSectionsItemItemsItemEvidenceItem[];
+  /** 이 항목이 요청 원장에서 채택한 후보 revision. 없으면 필드를 생략한다 */
+  sourceCandidates?: CandidateRevisionReference[];
   /** 항목 본문 한 줄 */
   content: string;
 };
