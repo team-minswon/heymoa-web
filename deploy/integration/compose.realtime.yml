@@ -35,6 +35,14 @@ services:
       SERVER_BASE_URL: http://server:8080
       # server 의 `INTERNAL_API_TOKEN` 과 같아야 한다. 다르면 401 로 같은 증상이 난다.
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-integration-internal-token}
+    volumes:
+      # **APP-452 프롬프트 수정을 얹는다.** `feat/app-458/ledger-analysis-input@60a91f2` 의
+      # `prompts.yml` 한 파일이다 — 실시간 분류기 프롬프트에 출력 JSON 키 이름(`role`)이
+      # 빠져 있어 모델이 `{"type": ...}` 로 내고 전부 `SCHEMA_INVALID` 로 떨어졌다.
+      #
+      # APP-452 는 다른 pane 소유라 병합하지 않고 **파일 하나만 마운트로 덮는다.**
+      # 그 수정이 APP-466 브랜치에 들어오면 이 줄을 지운다.
+      - ${AI_PROMPT_FIX:-/home/min/.cache/claude-worktrees/heymoa-ai-app458/src/heymoa/infrastructure/config/prompts.yml}:/app/src/heymoa/infrastructure/config/prompts.yml:ro
 
   ai-migrate:
     build:
