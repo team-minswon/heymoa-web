@@ -239,7 +239,30 @@ export function findCoverageGaps(ranges: AppliedRange[]): CoverageGap[] {
   return gaps;
 }
 
-/** 하나라도 참이면 「더 있을 수 있어요」다. 두 flag를 화면에서 가르지 않는다 — 할 일이 같다. */
+/**
+ * 「이 구간에 더 있을 수 있어요」로 그릴 범위인가.
+ *
+ * 셋을 가르지 않는다 — 원인은 다르지만 **사용자가 할 일이 같다.** 원인은 wire 에 그대로
+ * 남아 있다.
+ *
+ * | 왜 덜 실렸나 | 필드 |
+ * |---|---|
+ * | 모델이 delta 상한에 닿았다 | `rawDeltaSaturated` |
+ * | semantic unit 상한에 닿았다 | `semanticUnitSaturated` |
+ * | **출력 일부가 기록되지 못했다** | `applyStatus === "PARTIAL_RECORDED"` |
+ *
+ * **셋째를 빠뜨리고 있었다.** 실전사 108발화 실측에서 13런 중 포화는 1건뿐인데 모델 출력
+ * 26건이 버려졌다 — 포화만 보면 그 26건이 화면에서 통째로 안 보이고, 구간은 「읽었다」로
+ * 표시된다. 범위가 다 찼다는 표시가 내용이 다 담겼다는 뜻으로 읽히는 자리라, 이건 빈 화면
+ * 보다 나쁘다. **안심시키는 거짓말이기 때문이다.**
+ *
+ * 이것도 여전히 「덜 실렸을 수 있다」이지 「덜 실렸다」가 아니다. `PARTIAL_RECORDED` 는
+ * 기록되지 못한 출력이 있었다는 뜻이고, 그 출력이 실제로 새 항목이었는지는 모른다.
+ */
 export function isSaturated(range: AppliedRange) {
-  return range.rawDeltaSaturated || range.semanticUnitSaturated;
+  return (
+    range.rawDeltaSaturated ||
+    range.semanticUnitSaturated ||
+    range.applyStatus === "PARTIAL_RECORDED"
+  );
 }

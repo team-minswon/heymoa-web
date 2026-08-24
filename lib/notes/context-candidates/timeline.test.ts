@@ -73,6 +73,23 @@ describe("withCoverageRows", () => {
     expect(merged.map((row) => row.type)).toEqual(["saturated"]);
   });
 
+  /**
+   * **포화 flag 만 보면 드롭이 안 보인다.** 실전사 108발화에서 13런 중 포화는 1건인데
+   * 모델 출력 26건이 버려졌다. 그 구간을 「읽었다」로 그리면 범위가 찼다는 표시가 내용이
+   * 담겼다는 뜻으로 읽힌다 — 빈 화면보다 나쁘다.
+   */
+  it("PARTIAL_RECORDED 도 포화와 같은 자리에 선다 — 사용자가 할 일이 같다", () => {
+    const merged = withCoverageRows(
+      [],
+      [range(1, 10, { applyStatus: "PARTIAL_RECORDED" })]
+    );
+    expect(merged.map((row) => row.type)).toEqual(["saturated"]);
+  });
+
+  it("APPLIED 이고 포화도 아니면 아무것도 안 얹는다", () => {
+    expect(withCoverageRows([], [range(1, 10)])).toEqual([]);
+  });
+
   it("같은 좌표에서는 전사가 먼저다 — 안내가 그 구간 발화보다 위에 서면 안 된다", () => {
     const rows = [segment(100_000, "a")];
     const merged = withCoverageRows(rows, [
