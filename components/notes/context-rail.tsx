@@ -1,0 +1,151 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { ContextCandidateCard } from "@/components/notes/context-candidate-card";
+import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { ContextCandidateHead } from "@/lib/notes/context-candidates/contract";
+import type { ContextCard } from "@/lib/notes/context-candidates/reducer";
+import { cn } from "@/lib/utils";
+
+/**
+ * 회의 중 맥락 후보 레일.
+ *
+ * **이 화면은 실시간 요약이 아니다.** 끝난 발화에서 남길 만한 변화만 사건이 되고, 대부분의
+ * 분석 배치는 사건을 0건 낸다. 그 sparse 함을 감추지 않는다 — 빈도를 올리려고 잡담이나
+ * 진행 중인 생각까지 올리면 신뢰가 먼저 무너진다.
+ *
+ * 그래서 **갱신 띠가 살아 있음을 대신 말한다.** 사건이 안 와도 분석은 돌고 있고, 그 사실을
+ * 따로 보이지 않으면 사용자는 「멈춘 것」과 「남길 것이 없는 것」을 구분하지 못한다.
+ *
+ * 시각의 기준은 서버가 준 `occurredAt` 이다. **수신 시각을 쓰면 안 된다** — 재연결 직후
+ * 「방금」이 되어 한참 전에 멈춘 lane 을 살아 있다고 보고한다.
+ */
+
+type Filter = "ALL" | "AGENDA" | "DECISION" | "ACTION_ITEM";
+
+const FILTERS: Array<{ value: Filter; label: string }> = [
+  { value: "ALL", label: "전체" },
+  { value: "AGENDA", label: "안건" },
+  { value: "DECISION", label: "결정" },
+  { value: "ACTION_ITEM", label: "액션" },
+];
+
+/** 마지막 갱신을 사람 말로. 서버 시각과 지금의 차이다. */
+export function formatFreshness(lastBatchAt: string | null, now: number) {
+  if (!lastBatchAt) return null;
+  const elapsed = now - Date.parse(lastBatchAt);
+  if (!Number.isFinite(elapsed)) return null;
+  if (elapsed < 45_000) return "방금";
+  const minutes = Math.round(elapsed / 60_000);
+  if (minutes < 60) return `${minutes}분 전`;
+  return `${Math.floor(minutes / 60)}시간 전`;
+}
+
+function matches(card: ContextCandidateHead, filter: Filter) {
+  return filter === "ALL" || card.kind === filter;
+}
+
+export function ContextRail({
+  onEvidenceSelect,
+  className,
+}: {
+  onEvidenceSelect: (segmentId: string) => void;
+  className?: string;
+}) {
+  const { context } = useNoteRealtime();
+  const [filter, setFilter] = useState<Filter>("ALL");
+
+  const visible = useMemo<ContextCard[]>(
+    () =>
+      context.cards.filter(
+        (card) =>
+          matches(card, filter) ||
+          card.results.some((result) => matches(result, filter))
+      ),
+    [context.cards, filter]
+  );
+
+  // **목록에 보이는 것과 같은 수를 센다.** 결과 후보도 카드이므로 함께 센다.
+  const total = context.cards.reduce(
+    (sum, card) => sum + 1 + card.results.length,
+    0
+  );
+  const freshness = formatFreshness(context.state.lastBatchAt, Date.now());
+
+  return (
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+      {/* 갱신 띠 — 분석이 살아 있다는 유일한 신호다. */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-2.5">
+        <p className="min-w-0 text-[12px] text-[var(--el-muted)]">
+          끝난 발화만 사건이 됩니다
+        </p>
+        {freshness ? (
+          <time className="ml-auto shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+            {freshness}
+          </time>
+        ) : null}
+      </div>
+
+      <ScrollArea
+        className="min-h-0 flex-1"
+        viewportClassName="overflow-x-hidden!"
+      >
+        <div className="flex flex-col gap-4 p-5">
+          <div className="flex items-center gap-2.5">
+            <h3 className="font-serif text-[27px] font-light leading-none tracking-tight text-[var(--el-ink)]">
+              사건 흐름
+            </h3>
+            {/* **「지금까지」가 진행 중임을 말한다.** 맨 숫자는 「총 N건 = 이게 전부다」로
+                읽히는데 이 원장은 완결이 아니다. */}
+            <span className="ml-auto shrink-0 font-mono text-[13px] tabular-nums text-[var(--el-muted-soft)]">
+              {`지금까지 ${total}건`}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {FILTERS.map((option) => {
+              const active = option.value === filter;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFilter(option.value)}
+                  className={cn(
+                    "h-[26px] rounded-block px-2.5 text-[12px] transition-colors",
+                    active
+                      ? "bg-[var(--el-primary)] font-semibold text-[var(--el-on-primary)]"
+                      : "border border-[var(--el-hairline-strong)] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {visible.length === 0 ? (
+            // **오류가 아니다.** 분류할 끝난 발화가 없다는 사실은 정상 경로다.
+            <p className="py-2 text-[12px] leading-5 text-[var(--el-muted-soft)]">
+              {context.cards.length === 0
+                ? "아직 정리할 발화가 없습니다. 발화가 끝나면 여기에 쌓입니다."
+                : "이 유형으로 정리된 사건이 아직 없습니다."}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3.5">
+              {visible.map((card) => (
+                <ContextCandidateCard
+                  key={card.candidateId}
+                  card={card}
+                  onEvidenceSelect={onEvidenceSelect}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
