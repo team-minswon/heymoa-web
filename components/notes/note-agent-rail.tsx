@@ -60,37 +60,77 @@ export function NoteAgentRail({
 
   const sharedLocked = phase === "ended" || phase === "not-started";
 
+  /**
+   * **WAI-ARIA 탭 계약.** `role="tab"`을 손으로 붙였으면 키보드도 손으로 붙여야 한다 —
+   * 안 그러면 스크린리더가 「탭 목록」이라고 알리는데 방향키가 안 먹는다.
+   *
+   * 셋을 배열로 모으는 이유는 roving tabIndex와 방향키가 **순서를 알아야** 하기 때문이다.
+   */
+  const tabs: Array<{ value: RailTab; label: string; icon?: React.ReactNode }> = [
+    { value: "context", label: "실시간 정리" },
+    {
+      value: "shared",
+      label: "이 회의",
+      icon: sharedLocked ? (
+        <Lock aria-hidden className="size-3.5" />
+      ) : (
+        <Users aria-hidden className="size-3.5" />
+      ),
+    },
+    { value: "personal", label: "내 에이전트" },
+  ];
+  const activeIndex = tabs.findIndex((item) => item.value === tab);
+
+  /**
+   * 방향키로 옮기면 **선택도 함께 바뀐다**(automatic activation). 이 레일의 패널은 전부
+   * 마운트된 채 숨겨져 있어 전환 비용이 없으므로, 화살표만 눌러도 내용이 따라오는 쪽이
+   * 손이 덜 간다. `Home`·`End`는 양 끝이다.
+   */
+  const onTabKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const last = tabs.length - 1;
+    const next =
+      event.key === "ArrowRight"
+        ? activeIndex >= last
+          ? 0
+          : activeIndex + 1
+        : event.key === "ArrowLeft"
+          ? activeIndex <= 0
+            ? last
+            : activeIndex - 1
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? last
+              : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    onTabChange(tabs[next].value);
+    // 포커스도 따라가야 한다 — 안 옮기면 다음 화살표가 옛 탭에서 계산된다.
+    event.currentTarget
+      .querySelectorAll<HTMLButtonElement>('[role="tab"]')
+      [next]?.focus();
+  };
+
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
       <div
         role="tablist"
         aria-label="에이전트"
         aria-orientation="horizontal"
+        onKeyDown={onTabKeyDown}
         // 좁은 화면의 레일 레인은 14rem이라 크롬이 그만큼 대화를 깎는다 — lg 아래에서는 조인다.
         className="flex shrink-0 items-center gap-1 border-b border-[var(--el-hairline)] px-2 py-1.5 lg:p-3"
       >
-        <RailTabButton
-          active={tab === "context"}
-          onSelect={() => onTabChange("context")}
-          label="실시간 정리"
-        />
-        <RailTabButton
-          active={tab === "shared"}
-          onSelect={() => onTabChange("shared")}
-          icon={
-            sharedLocked ? (
-              <Lock aria-hidden className="size-3.5" />
-            ) : (
-              <Users aria-hidden className="size-3.5" />
-            )
-          }
-          label="이 회의"
-        />
-        <RailTabButton
-          active={tab === "personal"}
-          onSelect={() => onTabChange("personal")}
-          label="내 에이전트"
-        />
+        {tabs.map((item) => (
+          <RailTabButton
+            key={item.value}
+            value={item.value}
+            active={item.value === tab}
+            onSelect={() => onTabChange(item.value)}
+            icon={item.icon}
+            label={item.label}
+          />
+        ))}
       </div>
 
       {/* 범위 한 줄 — 누가 이 대화를 보는지가 두 탭을 가르는 전부다. */}
@@ -111,7 +151,8 @@ export function NoteAgentRail({
 
       <div
         role="tabpanel"
-        aria-label="실시간 정리"
+        id={railPanelId("context")}
+        aria-labelledby={railTabId("context")}
         hidden={tab !== "context"}
         className={cn(
           "flex min-h-0 flex-1",
@@ -124,7 +165,8 @@ export function NoteAgentRail({
 
       <div
         role="tabpanel"
-        aria-label="이 회의"
+        id={railPanelId("shared")}
+        aria-labelledby={railTabId("shared")}
         hidden={tab !== "shared"}
         className={cn(
           "flex min-h-0 flex-1",
@@ -143,7 +185,8 @@ export function NoteAgentRail({
       <div
         ref={setSlot}
         role="tabpanel"
-        aria-label="내 에이전트"
+        id={railPanelId("personal")}
+        aria-labelledby={railTabId("personal")}
         hidden={tab !== "personal"}
         className={cn(
           "flex min-h-0 flex-1",
@@ -155,12 +198,21 @@ export function NoteAgentRail({
   );
 }
 
+export function railTabId(value: RailTab) {
+  return `rail-tab-${value}`;
+}
+export function railPanelId(value: RailTab) {
+  return `rail-panel-${value}`;
+}
+
 function RailTabButton({
+  value,
   active,
   onSelect,
   icon,
   label,
 }: {
+  value: RailTab;
   active: boolean;
   onSelect: () => void;
   icon?: React.ReactNode;
@@ -170,7 +222,12 @@ function RailTabButton({
     <button
       type="button"
       role="tab"
+      id={railTabId(value)}
+      aria-controls={railPanelId(value)}
       aria-selected={active}
+      // **roving tabIndex.** 셋 다 0이면 Tab 으로 셋을 다 지나야 한다 — 탭 목록은 하나의
+      // 정거장이고 그 안 이동은 방향키다.
+      tabIndex={active ? 0 : -1}
       onClick={onSelect}
       className={cn(
         "inline-flex h-7 items-center gap-1.5 rounded-chip px-2.5 text-[11px] transition-colors lg:h-8",
