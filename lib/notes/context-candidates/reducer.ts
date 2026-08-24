@@ -1,0 +1,195 @@
+import type {
+  AppliedRange,
+  ContextCandidateHead,
+} from "@/lib/notes/context-candidates/contract";
+
+export type { AppliedRange, ContextCandidateHead };
+
+/**
+ * 후보 event를 화면 상태로 접는 순수 함수. React도 Query도 모른다.
+ *
+ * **전달 보장이 best-effort다.** WebSocket send 실패를 durable retry하지 않으므로 event가
+ * 유실될 수 있다. 그래서 이 리듀서가 하는 일은 「도착한 것을 정확히 접는 것」까지이고,
+ * 「빠진 것을 아는 것」은 `needsRefetch`로 provider에 넘긴다. 정합의 정본은 REST snapshot이다.
+ *
+ * 계약이 만드는 함정 넷을 여기서 못 박는다.
+ *
+ * 1. **`operation`에서 `status`를 유도하지 않는다.** `RESOLVE` 하나가 질문의 `CLOSED`와
+ *    결과의 `OPEN`을 동시에 만든다. 유도 함수는 이 경우 반드시 틀린다.
+ * 2. **정렬 키는 `createdSequence`다.** 도착 순서도 `revision`도 아니다. `AMEND`가 오면
+ *    카드가 제자리에서 바뀌어야지 목록 아래로 튀면 시간순이 무너진다.
+ * 3. **`REAFFIRM`은 event가 없다.** 서버에서는 evidence가 늘고 `lastEvidenceSequence`가
+ *    전진하는데 화면은 신호를 못 받는다. 그래서 batch event를 받으면 provider가 snapshot을
+ *    다시 받아 수렴시킨다 — 근거 개수를 실시간 지표로 쓰면 안 되는 이유다.
+ * 4. **적용 범위의 구멍이 읽지 못한 구간이다.** `REJECTED_OUTPUT`은 apply를 안 거쳐 범위가
+ *    아예 안 생긴다. 그 구간은 실시간으로 영영 오지 않는다.
+ */
+
+export type ContextCard = ContextCandidateHead & {
+  /** `RESOLVE`가 만든 결과 후보. 질문 카드에만 찬다. */
+  results: ContextCandidateHead[];
+};
+
+export type ContextState = {
+  /** `candidateId` → 현재 head. */
+  candidates: Record<string, ContextCandidateHead>;
+  appliedRanges: AppliedRange[];
+  /** 이미 접은 batch `eventId`. best-effort라 같은 것이 두 번 올 수 있다. */
+  seenBatchIds: string[];
+  /** 마지막 배치 적용 시각. **서버 값이다** — 수신 시각을 쓰면 재연결 직후 「방금」이 된다. */
+  lastBatchAt: string | null;
+  /** revision gap을 봤다. provider가 snapshot을 다시 받아야 한다. */
+  needsRefetch: boolean;
+};
+
+export type ContextEvent =
+  | { type: "context.candidate.changed"; eventId: string; occurredAt: string; candidate: ContextCandidateHead }
+  | { type: "context.classification.batch.applied"; eventId: string; occurredAt: string; coverage: AppliedRange }
+  | { type: "snapshot"; candidates: ContextCandidateHead[]; appliedRanges: AppliedRange[] }
+  | { type: "reset" };
+
+export const initialContextState: ContextState = {
+  candidates: {},
+  appliedRanges: [],
+  seenBatchIds: [],
+  lastBatchAt: null,
+  needsRefetch: false,
+};
+
+/** `(fromSequence, toSequence, runKey)` 오름차순. 서버 정렬과 같은 순서다. */
+function sortRanges(ranges: AppliedRange[]) {
+  return [...ranges].sort(
+    (a, b) =>
+      a.fromSequence - b.fromSequence ||
+      a.toSequence - b.toSequence ||
+      a.runKey.localeCompare(b.runKey)
+  );
+}
+
+function byId(candidates: ContextCandidateHead[]) {
+  return Object.fromEntries(candidates.map((c) => [c.candidateId, c]));
+}
+
+export function reduceContextEvent(
+  state: ContextState,
+  event: ContextEvent
+): ContextState {
+  switch (event.type) {
+    case "reset":
+      return initialContextState;
+
+    case "snapshot":
+      // REST가 정본이다. 임시로 접어 둔 것을 버리고 이걸로 다시 선다.
+      return {
+        candidates: byId(event.candidates),
+        appliedRanges: sortRanges(event.appliedRanges),
+        seenBatchIds: [],
+        lastBatchAt: state.lastBatchAt,
+        needsRefetch: false,
+      };
+
+    case "context.candidate.changed": {
+      const next = event.candidate;
+      const current = state.candidates[next.candidateId];
+
+      // 역순·중복. 같은 revision이 다시 와도 여기서 걸린다.
+      if (current && next.revision <= current.revision) return state;
+
+      // 처음 보는데 revision이 1이 아니거나, 이어지지 않으면 사이를 놓쳤다.
+      const expected = current ? current.revision + 1 : 1;
+      const needsRefetch = state.needsRefetch || next.revision !== expected;
+
+      return {
+        ...state,
+        candidates: { ...state.candidates, [next.candidateId]: next },
+        needsRefetch,
+      };
+    }
+
+    case "context.classification.batch.applied": {
+      if (state.seenBatchIds.includes(event.eventId)) return state;
+
+      const withoutRun = state.appliedRanges.filter(
+        (range) => range.runKey !== event.coverage.runKey
+      );
+      return {
+        ...state,
+        appliedRanges: sortRanges([...withoutRun, event.coverage]),
+        seenBatchIds: [...state.seenBatchIds, event.eventId],
+        lastBatchAt: event.coverage.appliedAt,
+      };
+    }
+
+    default:
+      return state;
+  }
+}
+
+/**
+ * 시간순 카드 목록. 결과 후보는 최상위에 두 번 나오지 않고 질문 아래로 들어간다.
+ *
+ * **닫힌 후보를 걸러내지 않는다.** `RESOLVE`로 닫힌 질문을 감추면 사용자가 그 질문을 되짚을
+ * 표면이 없어지고, 철회된 후보는 무엇이 취소됐는지가 화면에서 사라진다.
+ */
+export function selectCards(state: ContextState): ContextCard[] {
+  const all = Object.values(state.candidates);
+  const results = new Map<string, ContextCandidateHead[]>();
+
+  for (const candidate of all) {
+    if (!candidate.resolvesCandidateId) continue;
+    const bucket = results.get(candidate.resolvesCandidateId) ?? [];
+    bucket.push(candidate);
+    results.set(candidate.resolvesCandidateId, bucket);
+  }
+
+  const bySequence = (a: { createdSequence: number }, b: { createdSequence: number }) =>
+    a.createdSequence - b.createdSequence;
+
+  return all
+    .filter((candidate) => {
+      if (!candidate.resolvesCandidateId) return true;
+      // 부모가 아직 안 왔으면 최상위에 남겨 둔다 — 안 그러면 화면에서 사라진다.
+      return !(candidate.resolvesCandidateId in state.candidates);
+    })
+    .sort(bySequence)
+    .map((candidate) => ({
+      ...candidate,
+      results: (results.get(candidate.candidateId) ?? []).sort(bySequence),
+    }));
+}
+
+export type CoverageGap = {
+  fromSequence: number;
+  toSequence: number;
+  fromStartedAtMs: number;
+  toEndedAtMs: number;
+};
+
+/**
+ * 적용 범위 **사이**의 구멍. 분류가 닿지 않은 구간이다.
+ *
+ * **양끝은 판정하지 않는다.** 첫 범위 이전과 마지막 범위 이후가 구멍인지는 note의 확정 전사
+ * 범위를 함께 봐야 알 수 있고, 회의 중에는 「아직 안 왔다」와 구분되지 않는다.
+ */
+export function findCoverageGaps(ranges: AppliedRange[]): CoverageGap[] {
+  const sorted = sortRanges(ranges);
+  const gaps: CoverageGap[] = [];
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const previous = sorted[i - 1];
+    const current = sorted[i];
+    if (current.fromSequence <= previous.toSequence + 1) continue;
+    gaps.push({
+      fromSequence: previous.toSequence + 1,
+      toSequence: current.fromSequence - 1,
+      fromStartedAtMs: previous.toEndedAtMs,
+      toEndedAtMs: current.fromStartedAtMs,
+    });
+  }
+  return gaps;
+}
+
+/** 하나라도 참이면 「더 있을 수 있어요」다. 두 flag를 화면에서 가르지 않는다 — 할 일이 같다. */
+export function isSaturated(range: AppliedRange) {
+  return range.rawDeltaSaturated || range.semanticUnitSaturated;
+}
