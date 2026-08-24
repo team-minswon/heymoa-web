@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ContextCandidateCard } from "@/components/notes/context-candidate-card";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import { InlineRetry } from "@/components/ui/inline-retry";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ContextCandidateHead } from "@/lib/notes/context-candidates/contract";
 import type { ContextCard } from "@/lib/notes/context-candidates/reducer";
@@ -152,7 +153,24 @@ export function ContextRail({
             })}
           </div>
 
-          {context.failed ? (
+          {context.loading ? (
+            // **로딩은 빈 상태가 아니다.** 아직 모르는 것을 「없다」고 말하면, 사용자가
+            // 후보 0건을 사실로 읽는다 — 실패를 빈 상태로 접던 것과 같은 병이다.
+            //
+            // 기하를 실제 카드에 맞춘다. 카드 하나는 본문 한 줄(13/1.6)과 메타 한 줄이고
+            // 목록 gap 은 14 다. 안 맞추면 도착하는 순간 목록이 튄다.
+            <ul
+              aria-label="정리 결과를 불러오는 중"
+              className="flex flex-col gap-3.5"
+            >
+              {[0, 1, 2].map((row) => (
+                <li key={row} className="flex flex-col gap-1.5">
+                  <Skeleton className="h-5 w-[85%]" />
+                  <Skeleton className="h-4 w-28" />
+                </li>
+              ))}
+            </ul>
+          ) : context.failed ? (
             // **조회 실패는 빈 상태가 아니다.** 「사건이 없다」로 그리면 사용자가 후보
             // 0건을 사실로 믿는다 — 실제로는 서버가 못 답한 것이다.
             <InlineRetry

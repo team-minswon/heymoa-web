@@ -51,7 +51,7 @@ function head(
 
 function renderRail(
   candidates: ContextCandidateHead[],
-  over: Partial<ContextState> & { failed?: boolean } = {},
+  over: Partial<ContextState> & { failed?: boolean; loading?: boolean } = {},
   onEvidenceSelect = vi.fn(),
   onRetry = vi.fn()
 ) {
@@ -65,6 +65,7 @@ function renderRail(
       cards: selectCards(state),
       state,
       failed: Boolean((over as { failed?: boolean }).failed),
+      loading: Boolean((over as { loading?: boolean }).loading),
       retry: onRetry,
     },
   };
@@ -79,6 +80,15 @@ describe("ContextRail", () => {
     renderRail([]);
     expect(screen.getByText(/아직 정리할 발화가 없습니다/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("로딩도 빈 상태로 접지 않는다 — 아직 모르는 것을 없다고 하지 않는다", () => {
+    renderRail([], { loading: true });
+
+    expect(screen.queryByText(/아직 정리할 발화가 없습니다/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("정리 결과를 불러오는 중")).toBeInTheDocument();
+    // 실패와도 갈린다 — 셋이 서로 다른 상태다.
+    expect(screen.queryByText(/불러오지 못했습니다/)).not.toBeInTheDocument();
   });
 
   it("조회 실패를 정상 빈 상태로 접지 않는다", () => {

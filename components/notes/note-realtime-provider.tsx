@@ -176,6 +176,8 @@ type NoteRealtimeValue = {
     state: ContextState;
     /** 원장 조회가 실패했다. **정상 빈 상태와 갈라야 한다.** */
     failed: boolean;
+    /** 첫 조회가 아직 안 왔다. **이것도 빈 상태가 아니다** — 모르는 것을 없다고 하면 안 된다. */
+    loading: boolean;
     retry: () => void;
   };
   chat: {
@@ -366,6 +368,9 @@ export function NoteRealtimeProvider({
   }, [needsRefetch, refetchSnapshot]);
 
   const contextFailed = snapshotQuery.isError;
+  // `isPending` 으로 가른다. `isFetching` 은 이미 그려진 데이터의 갱신까지 잡아서,
+  // 배치가 올 때마다 읽던 목록이 skeleton 으로 덮인다.
+  const contextLoading = snapshotQuery.isPending;
   const retryContext = useCallback(() => {
     void refetchSnapshot();
   }, [refetchSnapshot]);
@@ -388,10 +393,11 @@ export function NoteRealtimeProvider({
         // 실패를 화면까지 올린다. 안 올리면 레일이 「사건이 없다」로 그려서 사용자가
         // 후보 0건을 사실로 믿는다.
         failed: contextFailed,
+        loading: contextLoading,
         retry: retryContext,
       },
     }),
-    [contextFailed, retryContext, state]
+    [contextFailed, contextLoading, retryContext, state]
   );
   return (
     <NoteRealtimeContext.Provider value={value}>
