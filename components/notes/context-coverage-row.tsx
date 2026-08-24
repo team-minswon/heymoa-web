@@ -12,6 +12,12 @@ import { formatOffset } from "@/lib/transcription/presentation";
  * **회의 중에는 원인을 단정하지 않는다.** 구멍이 「포기」인지 「아직 진행 중」인지는
  * heymoa-ai 의 attempt 원장에만 있고 이 화면에 오지 않는다. 회의가 끝나면 「진행 중」이
  * 없어지므로 그때는 단정할 수 있다.
+ *
+ * **끝난 뒤 문구가 「기다리라」가 되면 안 된다.** 포기한 구간은 워터마크가 이미 지나가서
+ * 실시간 원장에 영영 안 들어온다(APP-452 spec.md:522-528). 종료 분석은 전사를 그대로
+ * 읽으므로 그 구간의 내용은 요약에 반영되지만, **이 레일은 안 채워진다.** 「종료 후 분석이
+ * 다시 읽습니다」라고 쓰면 사용자가 채워지지 않을 자리에서 기다린다 — 어디를 봐야 하는지를
+ * 말한다.
  */
 export function ContextCoverageGapRow({
   gap,
@@ -30,11 +36,11 @@ export function ContextCoverageGapRow({
       </time>
       <p className="min-w-0 text-read leading-7 text-[var(--el-muted-soft)]">
         {meetingEnded
-          ? "이 구간은 정리되지 않았습니다"
+          ? "이 구간은 실시간 정리에 들어오지 않았습니다"
           : "이 구간은 아직 정리되지 않았습니다"}
         <span className="ml-2 text-[13px] text-[var(--el-muted-soft)]">
           {meetingEnded
-            ? "전사는 남아 있고, 종료 후 분석이 다시 읽습니다"
+            ? "요약은 전사를 그대로 읽습니다 — 이 구간의 내용은 요약에 있습니다"
             : "전사는 계속 기록됩니다"}
         </span>
       </p>
