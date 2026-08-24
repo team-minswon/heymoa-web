@@ -8,6 +8,16 @@ import { z } from "zod";
  * **언제 지우나** — heymoa-server의 APP-459가 머지되어 `openapi3.yml`에 두 경로가 들어오면
  * `pnpm orval`을 돌리고 이 파일을 생성 타입의 재수출로 바꾼다. 그때 바뀌는 것은 이 파일뿐이다.
  *
+ * **모르는 필드를 버리지 않고 무시한다(`z.object`).** 이 레포의 다른 실시간 스키마는
+ * `z.strictObject`인데 여기만 다르고, 이유는 **배포 순서가 web을 마지막에 두기 때문**이다
+ * (heymoa-ai → heymoa-server → heymoa-web). server가 필드를 하나 더 실어 보낸 뒤 web이
+ * 아직 안 올라간 창이 반드시 생기는데, `strictObject`면 그 동안 **레일이 통째로 빈다.**
+ * 모르는 필드는 무시하는 편이 낫다 — 계약이 `openapi3.yml`에 들어와 orval로 생성되면 이
+ * 파일과 함께 이 완화도 사라진다.
+ *
+ * 관대해진 대신 **드리프트를 테스트가 잡는다** — `contract.test.ts`가 필수 필드 누락은
+ * 여전히 실패시키고, 모르는 필드는 통과하되 버려지는 것을 고정한다.
+ *
  * 값의 출처는 heymoa-server의 APP-459 답변(추가 답변 3·4)이고 APP-452 계약과 대조했다.
  * 임의로 넓히거나 좁히지 않는다 — 특히 아래 셋이 실제로 밟은 함정이다.
  *
@@ -62,7 +72,7 @@ export const contextOperationSchema = z.enum([
  */
 export const revisionSourceSchema = z.enum(["LIVE", "POSTPROCESS"]);
 
-export const contextEvidenceSchema = z.strictObject({
+export const contextEvidenceSchema = z.object({
   segmentId: tsidSchema,
   sequence: z.number().int().min(1),
   /** 회의 축. 전사 정렬 축과 같다 — `lib/transcription/presentation.ts`가 이 값으로 세운다. */
@@ -71,7 +81,7 @@ export const contextEvidenceSchema = z.strictObject({
   role: contextEvidenceRoleSchema,
 });
 
-export const contextCandidateHeadSchema = z.strictObject({
+export const contextCandidateHeadSchema = z.object({
   candidateId: tsidSchema,
   revision: z.number().int().min(1),
   operation: contextOperationSchema,
@@ -95,7 +105,7 @@ export const contextCandidateHeadSchema = z.strictObject({
  * 성공적으로 적용된 분류 배치 하나의 범위. **범위 사이의 구멍이 읽지 못한 구간이다.**
  * `REJECTED_OUTPUT`은 여기 안 들어온다 — 그 구간은 실시간으로 영영 오지 않는다.
  */
-export const appliedRangeSchema = z.strictObject({
+export const appliedRangeSchema = z.object({
   runKey: runKeySchema,
   applyStatus: z.enum(["APPLIED", "PARTIAL_RECORDED"]),
   fromSequence: z.number().int().min(1),
@@ -108,18 +118,18 @@ export const appliedRangeSchema = z.strictObject({
   appliedAt: z.string(),
 });
 
-export const contextCandidateSnapshotSchema = z.strictObject({
+export const contextCandidateSnapshotSchema = z.object({
   candidates: z.array(contextCandidateHeadSchema),
   appliedRanges: z.array(appliedRangeSchema),
 });
 
-export const contextCandidateRevisionsSchema = z.strictObject({
+export const contextCandidateRevisionsSchema = z.object({
   candidateId: tsidSchema,
   revisions: z.array(contextCandidateHeadSchema),
 });
 
 /** note topic이 싣는 두 프레임. `note-topic-protocol.ts`가 이걸 union에 넣는다. */
-export const contextCandidateChangedSchema = z.strictObject({
+export const contextCandidateChangedSchema = z.object({
   type: z.literal("context.candidate.changed"),
   /** outbox event ID. **RESOLVE fan-out message가 공유한다** — 그래서 dedupe 키가 아니다. */
   eventId: tsidSchema,
@@ -135,7 +145,7 @@ export const contextCandidateChangedSchema = z.strictObject({
   candidate: contextCandidateHeadSchema,
 });
 
-export const contextBatchAppliedSchema = z.strictObject({
+export const contextBatchAppliedSchema = z.object({
   type: z.literal("context.classification.batch.applied"),
   /** batch의 dedupe 키다. */
   eventId: tsidSchema,
