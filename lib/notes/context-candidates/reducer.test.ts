@@ -42,6 +42,7 @@ function changed(candidate: ContextCandidateHead, eventId = "0HZX2K7M9Q4B1") {
   return {
     type: "context.candidate.changed",
     eventId,
+    changeOrdinal: 0,
     occurredAt: NOW,
     candidate,
   } as const;
@@ -77,7 +78,7 @@ function batch(coverage: ReturnType<typeof rangeBase>, eventId: string) {
     type: "context.classification.batch.applied",
     eventId,
     occurredAt: coverage.appliedAt,
-    coverage,
+    range: coverage,
   } as const;
 }
 

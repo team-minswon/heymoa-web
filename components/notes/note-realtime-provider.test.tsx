@@ -543,12 +543,14 @@ describe("NoteRealtimeProvider", () => {
     emit({
       type: "context.candidate.changed",
       eventId: EVENT_ID,
+      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:03.000Z",
       candidate: candidateHead(),
     });
     emit({
       type: "context.candidate.changed",
       eventId: "01K0000000401",
+      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:10.000Z",
       candidate: candidateHead({ revision: 2, operation: "AMEND" }),
     });
@@ -567,7 +569,7 @@ describe("NoteRealtimeProvider", () => {
       type: "context.classification.batch.applied",
       eventId: "01K0000000500",
       occurredAt: "2026-08-24T02:00:00.000Z",
-      coverage: coverageRange({ appliedAt: "2026-08-24T02:00:00.000Z" }),
+      range: coverageRange({ appliedAt: "2026-08-24T02:00:00.000Z" }),
     });
 
     // REAFFIRM 은 candidate event 가 없어서 이 무효화로만 화면에 수렴한다.
@@ -585,6 +587,7 @@ describe("NoteRealtimeProvider", () => {
     emit({
       type: "context.candidate.changed",
       eventId: EVENT_ID,
+      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:03.000Z",
       candidate: candidateHead(),
     });

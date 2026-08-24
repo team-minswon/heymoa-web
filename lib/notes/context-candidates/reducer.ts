@@ -43,8 +43,19 @@ export type ContextState = {
 };
 
 export type ContextEvent =
-  | { type: "context.candidate.changed"; eventId: string; occurredAt: string; candidate: ContextCandidateHead }
-  | { type: "context.classification.batch.applied"; eventId: string; occurredAt: string; coverage: AppliedRange }
+  | {
+      type: "context.candidate.changed";
+      eventId: string;
+      changeOrdinal: number;
+      occurredAt: string;
+      candidate: ContextCandidateHead;
+    }
+  | {
+      type: "context.classification.batch.applied";
+      eventId: string;
+      occurredAt: string;
+      range: AppliedRange;
+    }
   | { type: "snapshot"; candidates: ContextCandidateHead[]; appliedRanges: AppliedRange[] }
   | { type: "reset" };
 
@@ -110,13 +121,13 @@ export function reduceContextEvent(
       if (state.seenBatchIds.includes(event.eventId)) return state;
 
       const withoutRun = state.appliedRanges.filter(
-        (range) => range.runKey !== event.coverage.runKey
+        (range) => range.runKey !== event.range.runKey
       );
       return {
         ...state,
-        appliedRanges: sortRanges([...withoutRun, event.coverage]),
+        appliedRanges: sortRanges([...withoutRun, event.range]),
         seenBatchIds: [...state.seenBatchIds, event.eventId],
-        lastBatchAt: event.coverage.appliedAt,
+        lastBatchAt: event.range.appliedAt,
       };
     }
 

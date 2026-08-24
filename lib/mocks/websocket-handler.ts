@@ -142,6 +142,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
             send({
               type: "context.candidate.changed",
               eventId: CONTEXT_EVENT_ID(index),
+              changeOrdinal: 0,
               occurredAt: new Date(entry.atMs).toISOString(),
               candidate: entry.candidate,
             });
@@ -156,7 +157,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
               type: "context.classification.batch.applied",
               eventId: CONTEXT_EVENT_ID(50 + index),
               occurredAt: coverage.appliedAt,
-              coverage,
+              range: coverage,
             });
           }, coverage.toEndedAtMs / SPEED)
         );

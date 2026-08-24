@@ -84,7 +84,7 @@ export const contextCandidateHeadSchema = z.strictObject({
   content: z.string().min(1).max(500),
   /** 시간순 정렬 키. `updatedAt`으로 정렬하면 수정마다 카드가 아래로 튄다. */
   createdSequence: z.number().int().min(1),
-  lastEvidenceSequence: z.number().int().min(0),
+  lastEvidenceSequence: z.number().int().min(1),
   aiSemanticRevisionCount: z.number().int().min(0),
   /** 결과 후보가 매달린 질문. 질문 자신과 일반 후보는 `null`이다. */
   resolvesCandidateId: tsidSchema.nullable(),
@@ -121,16 +121,26 @@ export const contextCandidateRevisionsSchema = z.strictObject({
 /** note topic이 싣는 두 프레임. `note-topic-protocol.ts`가 이걸 union에 넣는다. */
 export const contextCandidateChangedSchema = z.strictObject({
   type: z.literal("context.candidate.changed"),
+  /** outbox event ID. **RESOLVE fan-out message가 공유한다** — 그래서 dedupe 키가 아니다. */
   eventId: tsidSchema,
+  /**
+   * 한 outbox event 안의 순번. 일반 operation은 0이고, RESOLVE는 Question이 0,
+   * 결과가 `resultOrdinal + 1`이다(1~3).
+   *
+   * web의 dedupe 키에는 안 들어간다 — 그건 계속 `(candidateId, revision)`이다. 다만 이
+   * 순서 덕분에 **질문이 결과보다 먼저 도착**해서 결과가 부모 없이 뜨는 경로를 안 지난다.
+   */
+  changeOrdinal: z.number().int().min(0).max(3),
   occurredAt: z.string(),
   candidate: contextCandidateHeadSchema,
 });
 
 export const contextBatchAppliedSchema = z.strictObject({
   type: z.literal("context.classification.batch.applied"),
+  /** batch의 dedupe 키다. */
   eventId: tsidSchema,
   occurredAt: z.string(),
-  coverage: appliedRangeSchema,
+  range: appliedRangeSchema,
 });
 
 export type ContextCandidateHead = z.infer<typeof contextCandidateHeadSchema>;
