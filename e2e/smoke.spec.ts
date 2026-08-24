@@ -697,7 +697,13 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   await expect(
     noteTopBar(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
-  await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "요약"]);
+  // 원장은 종료로 지워지지 않는다 — 회의 중에 본 것을 되짚을 자리가 남는다.
+  await expect(page.getByRole("tab")).toHaveText([
+    "정보",
+    "전사",
+    "실시간 정리",
+    "요약",
+  ]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });

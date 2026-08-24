@@ -8,7 +8,7 @@ import {
   useReducer,
   useRef,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { getGetNoteSharedChatMessagesQueryKey } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
@@ -19,6 +19,10 @@ import {
   reduceStreamEvent,
   type ChatStreamState,
 } from "@/lib/chat/stream-protocol";
+import type {
+  AppliedRange,
+  ContextCandidateHead,
+} from "@/lib/notes/context-candidates/contract";
 import {
   initialContextState,
   reduceContextEvent,
@@ -30,6 +34,7 @@ import {
   getNoteTopicWebSocketUrl,
   NoteTopicClient,
 } from "@/lib/notes/note-topic-client";
+import { fetchContextCandidates } from "@/lib/notes/context-candidates/api";
 import { getContextCandidatesQueryKey } from "@/lib/notes/context-candidates/query-keys";
 import type {
   NoteTopicEvent,
@@ -61,7 +66,12 @@ type NoteRealtimeState = {
 type NoteRealtimeAction =
   | { type: "reset" }
   | { type: "event"; event: NoteTopicEvent }
-  | { type: "chat.interrupted" };
+  | { type: "chat.interrupted" }
+  | {
+      type: "snapshot";
+      candidates: ContextCandidateHead[];
+      appliedRanges: AppliedRange[];
+    };
 
 const initialState: NoteRealtimeState = {
   partial: null,
@@ -77,6 +87,10 @@ function reducer(
   action: NoteRealtimeAction
 ): NoteRealtimeState {
   if (action.type === "reset") return initialState;
+  if (action.type === "snapshot") {
+    // REST가 정본이다. 임시로 접어 둔 것을 버리고 이걸로 다시 선다.
+    return { ...state, context: reduceContextEvent(state.context, action) };
+  }
   if (action.type === "chat.interrupted") {
     return {
       ...state,
@@ -306,6 +320,46 @@ export function NoteRealtimeProvider({
       void client.close();
     };
   }, [noteId, queryClient]);
+
+  /**
+   * **원장의 정본은 REST다.** 전달이 best-effort라 event만 쌓으면 새로고침·재연결·회의 종료
+   * 뒤에 화면이 빈다 — 실제로 그렇게 만들었다가 잡았다.
+   *
+   * `phase`로 막지 않는다. **회의가 끝나도 원장은 남는다** — 사용자가 회의 중에 본 것을
+   * 나중에 되짚는 것이 이 화면의 절반이다.
+   */
+  const snapshotQuery = useQuery({
+    queryKey: getContextCandidatesQueryKey(noteId),
+    queryFn: () => fetchContextCandidates(noteId),
+    staleTime: 10_000,
+  });
+  const snapshot = snapshotQuery.data;
+  /**
+   * **`data` 가 아니라 `dataUpdatedAt` 을 본다.** TanStack 은 구조가 같으면 재조회에도 같은
+   * 객체를 돌려주므로, 재연결 catch-up 이 `reset` 으로 상태를 비운 **뒤에** 온 재조회가
+   * effect 를 다시 안 띄운다 — 그러면 화면이 영영 빈 채로 남는다. 실제로 그렇게 비었다.
+   */
+  const snapshotUpdatedAt = snapshotQuery.dataUpdatedAt;
+
+  useEffect(() => {
+    if (!snapshot) return;
+    dispatch({
+      type: "snapshot",
+      candidates: snapshot.candidates,
+      appliedRanges: snapshot.appliedRanges,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 위 주석: 갱신 시각이 트리거다.
+  }, [snapshotUpdatedAt]);
+
+  /**
+   * revision gap을 봤으면 다시 받는다. **event로는 못 메운다** — 빠진 revision은 다시 안 온다.
+   */
+  const needsRefetch = state.context.needsRefetch;
+  const refetchSnapshot = snapshotQuery.refetch;
+  useEffect(() => {
+    if (!needsRefetch) return;
+    void refetchSnapshot();
+  }, [needsRefetch, refetchSnapshot]);
 
   const value = useMemo<NoteRealtimeValue>(
     () => ({

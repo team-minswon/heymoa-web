@@ -1158,6 +1158,8 @@ describe("NotePanel", () => {
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
       "전사",
+      // 원장은 종료로 지워지지 않는다. 회의 중에 본 것을 나중에 되짚을 자리가 남아야 한다.
+      "실시간 정리",
       "요약",
     ]);
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
