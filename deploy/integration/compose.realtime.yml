@@ -1,0 +1,36 @@
+# 실시간 lane 오버레이. **기본 스택 위에 덮어 쓴다.**
+#
+#   docker compose -f compose.yml -f compose.realtime.yml up -d --build
+#
+# 기본 `compose.yml`은 각 레포의 **기본 브랜치**를 세운다. 거기에는 PRO-33 실시간 lane이
+# 없다 — server `dev`에는 후보 원장 테이블이 없고(확인: `context_candidates` 부재), ai
+# `feat/app-452`에는 분류기만 있고 그것을 부르는 worker가 없다.
+#
+# 이 파일은 **아직 머지되지 않은 두 브랜치의 워크트리**를 build context로 가리켜 lane을
+# 세운다. 소유는 각 pane이고 **여기서는 참조만 한다 — 그 레포의 파일을 고치지 않는다.**
+#
+# | 조각 | 어디 | 무엇이 들어 있나 |
+# |---|---|---|
+# | server | `heymoa-server/.worktrees/app-453` | `V30__context_classification_store.sql`(후보 원장 10개 테이블), `InternalContextClassificationController`(snapshot·apply) |
+# | ai | `~/.cache/codex-worktrees/heymoa-ai-app466` | `infrastructure/workers/live_dispatch.py`, `LIVE_CONTEXT_ENABLED` |
+#
+# **web 화면은 여전히 후보를 못 봅니다** — 사용자용 조회(APP-459)는 아직 어느 브랜치에도
+# 없습니다. 이 오버레이로 검증할 수 있는 것은 **전사 → 분류 → 원장 저장까지의 왕복**이고,
+# 확인은 DB를 직접 읽어서 합니다.
+
+services:
+  server:
+    build:
+      context: ${SERVER_LEDGER_ROOT:-../../../../../heymoa-server/.worktrees/app-453}
+      dockerfile: deploy/app/Dockerfile
+
+  ai:
+    build:
+      context: ${AI_LIVE_ROOT:-/home/min/.cache/codex-worktrees/heymoa-ai-app466}
+    environment:
+      # 이 플래그가 없으면 `container.py`가 worker를 조립하지 않고 lane이 통째로 안 돈다.
+      LIVE_CONTEXT_ENABLED: "true"
+
+  ai-migrate:
+    build:
+      context: ${AI_LIVE_ROOT:-/home/min/.cache/codex-worktrees/heymoa-ai-app466}
