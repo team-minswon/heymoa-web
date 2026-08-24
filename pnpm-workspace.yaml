@@ -1,5 +1,52 @@
+# **빌드 스크립트를 명시적으로 거절한다.** pnpm 11 은 승인도 거절도 안 된 스크립트가
+# 있으면 설치를 실패시킨다(`ERR_PNPM_IGNORED_BUILDS`). `ignoredBuiltDependencies` 만으로는
+# 안 꺼지고 이 맵이 판정 자리다. 전부 `false` 인 이유는 이 레포가 그 스크립트의 산출물을
+# 쓰지 않기 때문이다 — 네이티브 바이너리는 optional dependency 로 들어온다.
+allowBuilds:
+  '@asyncapi/cli': false
+  '@hyperjump/json-pointer': false
+  '@hyperjump/json-schema': false
+  '@hyperjump/json-schema-core': false
+  '@hyperjump/pact': false
+  '@scarf/scarf': false
+  'esbuild': false
+  'msw': false
+  'protobufjs': false
+  'sharp': false
+  'unrs-resolver': false
+  'yarn': false
+# **overrides 는 여기 산다.** pnpm 11 부터 `package.json` 의 `pnpm.overrides` 를 읽지
+# 않는다. 거기 두면 새 설치(CI·Docker·새 머신)에서 아래 보안 핀이 조용히 안 걸리고,
+# 락파일에는 남아 있어 `--frozen-lockfile` 이 LOCKFILE_CONFIG_MISMATCH 로 죽는다.
+overrides:
+  postcss: '8.5.19'
+  sharp: '>=0.35.0'
+  'js-yaml@>=4.0.0': '^4.3.0'
+  fast-uri: '>=3.1.4'
+  jsonpath-plus: '>=10.3.0'
+  tar: '>=7.5.16'
+  esbuild: '>=0.28.1'
+  hono: '>=4.12.27'
+  '@hono/node-server': '>=2.0.5'
+  body-parser: '>=2.3.0'
+  fast-xml-parser: '>=5.10.1'
+  linkify-it: '>=5.0.2'
+  'ajv@>=6.0.0 <7.0.0': '^6.12.3'
+  '@babel/core': '>=7.29.6'
+  'next@>=13.0.0 <16.0.0': '^15.5.21'
+# **전부 적어야 한다.** pnpm 11 은 승인도 무시도 안 된 빌드 스크립트가 있으면
+# `ERR_PNPM_IGNORED_BUILDS` 로 설치를 실패시킨다. 목록이 모자라면 새 설치(Docker·CI)가
+# 죽는다 — 로컬은 `node_modules` 가 이미 있어 안 보인다.
 ignoredBuiltDependencies:
+  - '@asyncapi/cli'
+  - '@hyperjump/json-pointer'
+  - '@hyperjump/json-schema'
+  - '@hyperjump/json-schema-core'
+  - '@hyperjump/pact'
+  - '@scarf/scarf'
   - esbuild
   - msw
+  - protobufjs
   - sharp
   - unrs-resolver
+  - yarn
