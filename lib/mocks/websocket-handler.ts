@@ -5,6 +5,8 @@ import {
   CONTEXT_DEMO_NOTE_ID,
   CONTEXT_EVENT_ID,
   CONTEXT_TIMELINE,
+  LIVE_UTTERANCE,
+  LIVE_UTTERANCE_TEXT,
 } from "@/lib/mocks/context-candidates";
 import {
   createMockTranscriptionScenario,
@@ -144,6 +146,47 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           )
         );
       };
+
+      /**
+       * **살아 있는 발화 하나를 먼저 흘린다.** partial 두 토막이 자라다가 final 이 걷는다.
+       *
+       * 후보 피드보다 앞에 두는 것은 의도다 — 첫 후보가 4초 뒤에 오는데 partial 을 그
+       * 뒤에 두면 e2e 가 확인할 창이 회의 끝까지 밀린다.
+       *
+       * final 을 넉넉히 뒤에 둔다. 둘째 partial 과 final 사이가 **두 토막이 동시에 보이는
+       * 유일한 창**이라, 좁으면 테스트가 화면을 못 보고 지나간다.
+       */
+      const live = LIVE_UTTERANCE;
+      const partialFrame = (confirmedText: string, pendingText: string) => ({
+        type: "transcript.partial",
+        transcriptionSessionId: live.transcriptionSessionId,
+        utteranceId: live.utteranceId,
+        confirmedText,
+        pendingText,
+      });
+      noteTopicTimers.push(
+        // 확정 토막이 아직 없다 — 미확정만 뜬다.
+        window.setTimeout(() => send(partialFrame("", live.confirmed)), 700),
+        // 앞이 굳고 뒤가 흐리다. **둘 다 보이는 순간이 여기서 시작된다.**
+        window.setTimeout(
+          () => send(partialFrame(live.confirmed, live.pending)),
+          1_500
+        ),
+        window.setTimeout(
+          () =>
+            send({
+              type: "transcript.final",
+              transcriptionSessionId: live.transcriptionSessionId,
+              segmentId: live.segmentId,
+              utteranceId: live.utteranceId,
+              sequence: live.sequence,
+              text: LIVE_UTTERANCE_TEXT,
+              startedAtMs: live.startedAtMs,
+              endedAtMs: live.endedAtMs,
+            }),
+          6_000
+        )
+      );
 
       CONTEXT_TIMELINE.forEach((entry, index) => {
         noteTopicTimers.push(

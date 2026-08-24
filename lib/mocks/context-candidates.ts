@@ -48,6 +48,39 @@ export const CONTEXT_FAILING_NOTE_ID = "01K0000000006";
 export const CONTEXT_SYNTHETIC_LEDGER_NOTE_ID = "01K0000000007";
 
 /**
+ * **살아 있는 발화 하나.** partial 두 프레임과 그것을 걷는 final 하나다.
+ *
+ * 이걸 두는 이유는 **Playwright 경로가 final 만 지나고 있었기 때문**이다. partial 렌더는
+ * jsdom 컴포넌트 테스트로만 덮여 있어서, 서버가 옛 partial 모양(누적 `text` 한 덩어리)을
+ * 보내도 브라우저 경로의 어느 테스트도 안 깨졌다. 그 경우 web 은 파싱에서 던지고 그 예외는
+ * `note-topic-client` 가 삼키므로, **증상이 「연결이 죽었다」가 아니라 「받아쓰기가 통째로
+ * 안 보인다」**가 된다 — 화면도 콘솔도 조용하다.
+ *
+ * 문장은 `db.ts` 가 이미 심어 둔 것을 그대로 쪼갰다. 새 문구를 만들지 않는다.
+ *
+ * | 프레임 | 확정 | 미확정 | 화면 |
+ * |---|---|---|---|
+ * | 1 | (없음) | `다음 주까지` | 미확정만 |
+ * | 2 | `다음 주까지` | ` 사용자 테스트를 진행합니다.` | **둘 다** |
+ * | final | — | — | 둘 다 걷힘 |
+ *
+ * 둘째 프레임이 핵심이다. 서버가 두 토막을 이어 붙인 문자열 하나로 보내면 확정 토막이
+ * 영영 안 생겨서 그 순간이 안 온다.
+ */
+export const LIVE_UTTERANCE = {
+  transcriptionSessionId: "01K0000000010",
+  utteranceId: "0HZX2K7M9QP01",
+  segmentId: "0HZX2K7M9QP02",
+  sequence: 1,
+  startedAtMs: 0,
+  endedAtMs: 2_400,
+  confirmed: "다음 주까지",
+  pending: " 사용자 테스트를 진행합니다.",
+} as const;
+
+export const LIVE_UTTERANCE_TEXT = `${LIVE_UTTERANCE.confirmed}${LIVE_UTTERANCE.pending}`;
+
+/**
  * 목 회의의 시작 벽시계. 페이지를 열 때를 기준으로 42분짜리 회의가 방금 끝난 것처럼 둔다 —
  * 고정 날짜를 박으면 갱신 띠가 늘 「몇 년 전」이 된다.
  */
