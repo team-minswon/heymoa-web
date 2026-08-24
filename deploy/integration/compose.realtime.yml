@@ -35,6 +35,16 @@ services:
       SERVER_BASE_URL: http://server:8080
       # server 의 `INTERNAL_API_TOKEN` 과 같아야 한다. 다르면 401 로 같은 증상이 난다.
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-integration-internal-token}
+    # ── 걷을 것 ──────────────────────────────────────────────────────────
+    # 아래 `volumes` 는 **임시다.** APP-466 브랜치에 정식 prompt 수정과 stale(window 범위)
+    # 수정이 들어오면 통째로 지운다. 지우는 조건과 확인 방법:
+    #
+    #   1. `feat/app-466/live-dispatch` 에 `prompts.yml` 의 출력 키 이름 수정이 들어왔는가
+    #      → `grep -c '"role"' <ai-worktree>/src/heymoa/infrastructure/config/prompts.yml`
+    #   2. 지운 뒤 한 번 돌려 `context_classification_runs` 에 `SCHEMA_INVALID` drop 이
+    #      0 인가 → 0 이면 마운트가 필요 없다
+    #
+    # 걷는 방법: 아래 `volumes:` 블록 두 줄을 지우고 `docker compose ... up -d --build ai`.
     volumes:
       # **APP-452 프롬프트 수정을 얹는다.** `feat/app-458/ledger-analysis-input@60a91f2` 의
       # `prompts.yml` 한 파일이다 — 실시간 분류기 프롬프트에 출력 JSON 키 이름(`role`)이
