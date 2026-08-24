@@ -13,6 +13,7 @@ import {
   getGetNotesQueryKey,
 } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
+import { getContextCandidatesQueryKey } from "@/lib/notes/context-candidates/query-keys";
 
 type TopicClientOptions = {
   noteId: string;
@@ -46,6 +47,50 @@ const PROJECT_ID = "01K0000000001";
 const SESSION_ID = "01K0000000010";
 const UTTERANCE_ID = "01K0000000100";
 const SEGMENT_ID = "01K0000000200";
+const CANDIDATE_ID = "01K0000000300";
+const EVENT_ID = "01K0000000400";
+
+function candidateHead(over: Record<string, unknown> = {}) {
+  return {
+    candidateId: CANDIDATE_ID,
+    revision: 1,
+    operation: "CREATE",
+    kind: "DECISION",
+    status: "OPEN",
+    closeReason: null,
+    revisionSource: "LIVE",
+    content: "경로 데이터 저장소는 MongoDB를 사용한다",
+    createdSequence: 10,
+    lastEvidenceSequence: 10,
+    aiSemanticRevisionCount: 0,
+    resolvesCandidateId: null,
+    evidence: [
+      {
+        segmentId: SEGMENT_ID,
+        sequence: 10,
+        startedAtMs: 1_872_000,
+        text: "그럼 MongoDB로 갑시다",
+        role: "SUPPORTS",
+      },
+    ],
+    ...over,
+  };
+}
+
+function coverageRange(over: Record<string, unknown> = {}) {
+  return {
+    runKey: "run-1",
+    applyStatus: "APPLIED",
+    fromSequence: 1,
+    toSequence: 10,
+    fromStartedAtMs: 0,
+    toEndedAtMs: 100_000,
+    rawDeltaSaturated: false,
+    semanticUnitSaturated: false,
+    appliedAt: "2026-08-24T01:02:03.000Z",
+    ...over,
+  };
+}
 
 function Probe() {
   const realtime = useNoteRealtime();
@@ -61,6 +106,18 @@ function Probe() {
       <div data-testid="chat-text">{realtime.chat.text}</div>
       <div data-testid="chat-interrupted">
         {String(realtime.chat.interrupted)}
+      </div>
+      <div data-testid="context-cards">
+        {JSON.stringify(
+          realtime.context.cards.map((card) => [
+            card.candidateId,
+            card.revision,
+            card.status,
+          ])
+        )}
+      </div>
+      <div data-testid="context-batch-at">
+        {String(realtime.context.state.lastBatchAt)}
       </div>
     </>
   );
@@ -346,8 +403,10 @@ describe("NoteRealtimeProvider", () => {
 
     expect(queryClient.getQueryData(noteKey)).toBe(endedNote);
     expect(setQueryData).not.toHaveBeenCalled();
-    expect(invalidateQueries).toHaveBeenCalledTimes(6);
+    // meeting.ended 가 note·목록·transcript·chat·후보를, recording.started 가 note·목록을 갱신한다.
+    expect(invalidateQueries).toHaveBeenCalledTimes(7);
     expectInvalidated(invalidateQueries, noteKey);
+    expectInvalidated(invalidateQueries, getContextCandidatesQueryKey(NOTE_ID));
     expect(
       getProjectNotesPredicate(invalidateQueries)({
         queryKey: getGetNotesQueryKey(PROJECT_ID),
@@ -475,6 +534,67 @@ describe("NoteRealtimeProvider", () => {
       invalidateQueries,
       getGetNoteSharedChatMessagesQueryKey(NOTE_ID)
     );
+  });
+
+  it("후보 event가 화면 상태를 즉시 갱신하고 같은 후보를 두 번 만들지 않는다", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead(),
+    });
+    emit({
+      type: "context.candidate.changed",
+      eventId: "01K0000000401",
+      occurredAt: "2026-08-24T01:02:10.000Z",
+      candidate: candidateHead({ revision: 2, operation: "AMEND" }),
+    });
+
+    expect(screen.getByTestId("context-cards").textContent).toBe(
+      JSON.stringify([[CANDIDATE_ID, 2, "OPEN"]])
+    );
+  });
+
+  it("배치 event는 서버 시각을 싣고 후보 조회를 무효화한다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    invalidateQueries.mockClear();
+
+    emit({
+      type: "context.classification.batch.applied",
+      eventId: "01K0000000500",
+      occurredAt: "2026-08-24T02:00:00.000Z",
+      coverage: coverageRange({ appliedAt: "2026-08-24T02:00:00.000Z" }),
+    });
+
+    // REAFFIRM 은 candidate event 가 없어서 이 무효화로만 화면에 수렴한다.
+    expectInvalidated(invalidateQueries, getContextCandidatesQueryKey(NOTE_ID));
+    // 갱신 띠 시각은 수신 시각이 아니라 서버가 준 값이다.
+    expect(screen.getByTestId("context-batch-at").textContent).toBe(
+      "2026-08-24T02:00:00.000Z"
+    );
+  });
+
+  it("재연결 catch-up이 후보 상태를 버리고 조회를 다시 받는다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead(),
+    });
+    expect(screen.getByTestId("context-cards").textContent).not.toBe("[]");
+
+    invalidateQueries.mockClear();
+    await act(() => topicClients[0].options.onCatchUp());
+
+    expect(screen.getByTestId("context-cards").textContent).toBe("[]");
+    expectInvalidated(invalidateQueries, getContextCandidatesQueryKey(NOTE_ID));
   });
 
   it("StrictMode의 setup-cleanup-setup에서도 활성 연결을 하나만 남긴다", async () => {

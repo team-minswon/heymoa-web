@@ -20,9 +20,17 @@ import {
   type ChatStreamState,
 } from "@/lib/chat/stream-protocol";
 import {
+  initialContextState,
+  reduceContextEvent,
+  selectCards,
+  type ContextCard,
+  type ContextState,
+} from "@/lib/notes/context-candidates/reducer";
+import {
   getNoteTopicWebSocketUrl,
   NoteTopicClient,
 } from "@/lib/notes/note-topic-client";
+import { getContextCandidatesQueryKey } from "@/lib/notes/context-candidates/query-keys";
 import type {
   NoteTopicEvent,
   NoteTopicFinalSegment,
@@ -47,6 +55,7 @@ type NoteRealtimeState = {
   finalSegments: NoteTopicFinalSegment[];
   chatStream: ChatStreamState;
   chatLocked: boolean | null;
+  context: ContextState;
 };
 
 type NoteRealtimeAction =
@@ -59,6 +68,7 @@ const initialState: NoteRealtimeState = {
   finalSegments: [],
   chatStream: initialStreamState,
   chatLocked: null,
+  context: initialContextState,
 };
 const TRANSCRIPT_CATCH_UP_DELAY_MS = 500;
 
@@ -135,6 +145,10 @@ function reducer(
         chatLocked: event.locked,
         chatStream: event.locked ? initialStreamState : state.chatStream,
       };
+    // 맥락 후보는 통째로 순수 리듀서에 넘긴다 — 이 파일은 이벤트 의미를 모른다.
+    case "context.candidate.changed":
+    case "context.classification.batch.applied":
+      return { ...state, context: reduceContextEvent(state.context, event) };
     default:
       return state;
   }
@@ -142,6 +156,10 @@ function reducer(
 
 type NoteRealtimeValue = {
   transcript: Pick<NoteRealtimeState, "partial" | "finalSegments">;
+  context: {
+    cards: ContextCard[];
+    state: ContextState;
+  };
   chat: {
     stream: ChatStreamState;
     text: string;
@@ -206,6 +224,10 @@ export function NoteRealtimeProvider({
       void queryClient.invalidateQueries({
         queryKey: getGetNoteSharedChatMessagesQueryKey(noteId),
       });
+    const invalidateContext = () =>
+      void queryClient.invalidateQueries({
+        queryKey: getContextCandidatesQueryKey(noteId),
+      });
     const catchUp = () => {
       clearInterruption();
       clearTranscriptCatchUp();
@@ -213,6 +235,7 @@ export function NoteRealtimeProvider({
       invalidateLifecycle();
       invalidateTranscript();
       invalidateChat();
+      invalidateContext();
     };
     const client = new NoteTopicClient({
       url: getNoteTopicWebSocketUrl(),
@@ -229,6 +252,7 @@ export function NoteRealtimeProvider({
             invalidateLifecycle();
             invalidateTranscript();
             invalidateChat();
+            invalidateContext();
             break;
           case "recording.started":
             invalidateLifecycle();
@@ -264,6 +288,12 @@ export function NoteRealtimeProvider({
             clearInterruption();
             invalidateChat();
             break;
+          // **REAFFIRM 수렴 지점이다.** REAFFIRM 은 candidate event 를 안 만들면서 서버에서는
+          // evidence 를 늘리고 `lastEvidenceSequence` 를 전진시킨다. 배치가 적용될 때마다
+          // snapshot 을 다시 받아야 그 변화가 화면에 온다.
+          case "context.classification.batch.applied":
+            invalidateContext();
+            break;
           default:
             break;
         }
@@ -288,6 +318,10 @@ export function NoteRealtimeProvider({
         text: state.chatStream.text,
         interrupted: state.chatStream.phase === "stalled",
         locked: state.chatLocked,
+      },
+      context: {
+        cards: selectCards(state.context),
+        state: state.context,
       },
     }),
     [state]

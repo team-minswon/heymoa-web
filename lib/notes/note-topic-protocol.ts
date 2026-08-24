@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  contextBatchAppliedSchema,
+  contextCandidateChangedSchema,
+} from "@/lib/notes/context-candidates/contract";
+
 const tsidSchema = z
   .string()
   .length(13)
@@ -48,6 +53,10 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
     messageId: z.string().min(1),
     content: z.string().min(1),
   }),
+  // 맥락 후보. 스키마는 `context-candidates/contract.ts`가 정본이고 여기서 두 벌로 쓰지
+  // 않는다 — REST 목·화면·이 union이 같은 것을 본다.
+  contextCandidateChangedSchema,
+  contextBatchAppliedSchema,
   z.strictObject({
     type: z.literal("chat.lock"),
     chatId: tsidSchema,
@@ -57,6 +66,10 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export type NoteTopicEvent = z.infer<typeof noteTopicEventSchema>;
+export type NoteTopicContextEvent = Extract<
+  NoteTopicEvent,
+  { type: "context.candidate.changed" | "context.classification.batch.applied" }
+>;
 export type NoteTopicFinalSegment = Extract<
   NoteTopicEvent,
   { type: "transcript.final" }
