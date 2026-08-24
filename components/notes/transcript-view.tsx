@@ -7,6 +7,11 @@ import {
   useRecording,
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
+import {
+  ContextCoverageGapRow,
+  ContextSaturatedRow,
+} from "@/components/notes/context-coverage-row";
+import { withCoverageRows } from "@/lib/notes/context-candidates/timeline";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -98,8 +103,14 @@ export function TranscriptView({
     persisted,
   ]);
   const rows = useMemo(
-    () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
-    [segments, transcript]
+    () =>
+      // **전사 공백과 분류 공백은 다른 사건이다.** 소리가 없어 글이 없는 것과, 글은 있는데
+      // 정리가 안 된 것을 같은 문구로 그리면 사용자가 원인을 잘못 읽는다.
+      withCoverageRows(
+        interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
+        noteRealtime.context.state.appliedRanges
+      ),
+    [noteRealtime.context.state.appliedRanges, segments, transcript]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";
   const speakerOf = useMemo(
@@ -356,6 +367,17 @@ export function TranscriptView({
               {rows.map((row) =>
                 row.type === "gap" ? (
                   <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
+                ) : row.type === "coverage-gap" ? (
+                  <ContextCoverageGapRow
+                    key={`coverage-${row.gap.fromSequence}`}
+                    gap={row.gap}
+                    meetingEnded={phase === "ended"}
+                  />
+                ) : row.type === "saturated" ? (
+                  <ContextSaturatedRow
+                    key={`saturated-${row.range.runKey}`}
+                    range={row.range}
+                  />
                 ) : (
                   <article
                     key={row.segment.segmentId}
