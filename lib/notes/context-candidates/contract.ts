@@ -85,11 +85,52 @@ export const contextOperationSchema = z.enum([
  */
 export const revisionSourceSchema = z.enum(["LIVE"]);
 
+/**
+ * **`range.appliedAt`의 wire 표기다.** 생성 OpenAPI가 `format: date-time`에 더해 정규식까지
+ * 못박았다 — 밀리초 세 자리에 `Z`뿐이고 offset 표기는 계약에 없다. 그 정밀도를 여기서 그대로
+ * 받는다. `z.string()`으로 두면 깨진 값이 화면까지 가서 `Invalid Date`가 된다.
+ *
+ * 관대함은 *모르는 필드*를 흘려보내는 것이지, **아는 필드의 깨진 값을 받는 것이 아니다.**
+ */
+export const wireInstantSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+  /**
+   * **정규식은 모양만 본다.** `2026-99-99T99:99:99.999Z`도 그 모양을 만족한다.
+   * 실제로 존재하는 시각인지는 따로 물어야 한다.
+   *
+   * `Date.parse`가 NaN인지만 보면 부족하다 — JS는 `2026-02-31`을 3월 3일로 굴려서
+   * 조용히 통과시킨다. **왕복시켜 같은 문자열로 돌아오는지**를 본다. wire 표기가 정확히
+   * `toISOString()`의 형태라 이 비교가 곧 유효성 검사다.
+   */
+  .refine(
+    (value) => {
+      const parsed = new Date(value);
+      // Invalid Date 에 `toISOString()` 을 부르면 RangeError 를 던진다 — 먼저 거른다.
+      if (Number.isNaN(parsed.getTime())) return false;
+      return parsed.toISOString() === value;
+    },
+    { message: "실제로 존재하는 시각이 아닙니다" }
+  );
+
+/**
+ * **event의 `occurredAt`은 이보다 넓다.** APP-459 AsyncAPI가 `format: date-time`만 정하고
+ * 정규식은 안 두었다. 계약에 없는 정밀도로 좁히면 relay가 표기를 바꿨을 때 이벤트를 통째로
+ * 버린다 — 좁히는 쪽이 안전해 보이지만 여기서는 반대다.
+ */
+export const instantSchema = z.iso.datetime({ offset: true });
+
 export const contextEvidenceSchema = z.object({
   segmentId: tsidSchema,
   sequence: z.number().int().min(1),
   /** 회의 축. 전사 정렬 축과 같다 — `lib/transcription/presentation.ts`가 이 값으로 세운다. */
   startedAtMs: z.number().int().min(0),
+  /**
+   * server 의 `ContextCandidateEvidenceResponse.endedAtMs` 는 **non-null 필수**다.
+   * 빠뜨리면 근거 구간의 끝을 모른 채 시작점만 찍게 되고, 나중에 계약으로 굳을 때
+   * 조용히 드리프트한다. web 이 마지막에 배포되므로 필수로 받아도 안전하다.
+   */
+  endedAtMs: z.number().int().min(0),
   text: z.string(),
   role: contextEvidenceRoleSchema,
 });
@@ -155,7 +196,7 @@ export const appliedRangeSchema = z.object({
   /** 모델이 delta 상한에 닿았다. **더 있다는 확정이 아니라 가능성이다.** */
   rawDeltaSaturated: z.boolean(),
   semanticUnitSaturated: z.boolean(),
-  appliedAt: z.string(),
+  appliedAt: wireInstantSchema,
 });
 
 export const contextCandidateSnapshotSchema = z.object({
@@ -181,7 +222,7 @@ export const contextCandidateChangedSchema = z.object({
    * 순서 덕분에 **질문이 결과보다 먼저 도착**해서 결과가 부모 없이 뜨는 경로를 안 지난다.
    */
   changeOrdinal: z.number().int().min(0).max(3),
-  occurredAt: z.string(),
+  occurredAt: instantSchema,
   candidate: contextCandidateHeadSchema,
 });
 
@@ -189,7 +230,7 @@ export const contextBatchAppliedSchema = z.object({
   type: z.literal("context.classification.batch.applied"),
   /** batch의 dedupe 키다. */
   eventId: tsidSchema,
-  occurredAt: z.string(),
+  occurredAt: instantSchema,
   range: appliedRangeSchema,
 });
 

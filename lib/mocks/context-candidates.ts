@@ -27,6 +27,12 @@ import type {
 export const CONTEXT_DEMO_NOTE_ID = "01K0000000005";
 
 /**
+ * 후보 조회가 **실패하는** 노트. 「분석이 실패해도 전사 확인과 회의 종료가 계속된다」를
+ * e2e 로 지키는 자리다 — 실패를 재현할 수 없으면 그 완료 판단은 말로만 남는다.
+ */
+export const CONTEXT_FAILING_NOTE_ID = "01K0000000006";
+
+/**
  * 목 회의의 시작 벽시계. 페이지를 열 때를 기준으로 42분짜리 회의가 방금 끝난 것처럼 둔다 —
  * 고정 날짜를 박으면 갱신 띠가 늘 「몇 년 전」이 된다.
  */
@@ -61,6 +67,7 @@ function head(
         segmentId: SEGMENT(over.createdSequence),
         sequence: over.createdSequence,
         startedAtMs: evidenceAtMs,
+        endedAtMs: evidenceAtMs + 4_000,
         text: "…",
         role: "SUPPORTS",
       },

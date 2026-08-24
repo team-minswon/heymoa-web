@@ -25,6 +25,7 @@ const head = {
       segmentId: "0HZX2K7M9Q4AH",
       sequence: 10,
       startedAtMs: 1_872_000,
+      endedAtMs: 1_876_000,
       text: "그럼 MongoDB로 갑시다",
       role: "SUPPORTS",
     },
@@ -193,5 +194,59 @@ describe("draft 계약의 관대함", () => {
         closeReason: null,
       }).success
     ).toBe(true);
+  });
+
+  /**
+   * **`appliedAt`은 모양과 유효성을 둘 다 봐야 한다.** 생성 OpenAPI가 밀리초·`Z`까지
+   * 정규식으로 못박은 필드라, 여기서 흘리면 깨진 값이 화면의 「갱신」까지 간다.
+   */
+  describe("appliedAt", () => {
+    const parseRange = (appliedAt: string) =>
+      contextCandidateSnapshotSchema.safeParse({
+        candidates: [],
+        appliedRanges: [{ ...range, appliedAt }],
+      }).success;
+
+    it("계약 표기를 받는다", () => {
+      expect(parseRange("2026-08-25T01:00:00.000Z")).toBe(true);
+    });
+
+    it("모양이 맞아도 존재하지 않는 시각이면 거절한다", () => {
+      // 정규식만 보면 통과한다 — 그래서 정규식만으로는 부족하다.
+      expect(parseRange("2026-99-99T99:99:99.999Z")).toBe(false);
+      // JS 는 이것을 3월로 굴려서 조용히 통과시킨다. 왕복 비교가 그걸 잡는다.
+      expect(parseRange("2026-02-31T01:00:00.000Z")).toBe(false);
+    });
+
+    it("계약에 없는 표기는 거절한다", () => {
+      // offset 표기·밀리초 없음·마이크로초. 셋 다 계약 밖이다.
+      expect(parseRange("2026-08-25T10:00:00.000+09:00")).toBe(false);
+      expect(parseRange("2026-08-25T01:00:00Z")).toBe(false);
+      expect(parseRange("2026-08-25T01:00:00.000000Z")).toBe(false);
+      expect(parseRange("언젠가")).toBe(false);
+    });
+
+    /**
+     * **event 의 `occurredAt` 은 이보다 넓다.** AsyncAPI 가 `format: date-time` 만 정하고
+     * 정규식은 안 두었다 — 계약에 없는 정밀도로 좁히면 relay 가 표기를 바꿨을 때 이벤트를
+     * 통째로 버린다.
+     */
+    it("event 의 occurredAt 은 offset 표기를 받는다", () => {
+      const event = {
+        type: "context.classification.batch.applied",
+        eventId: "0HZX2K7M9Q4B1",
+        range,
+      };
+      expect(
+        contextBatchAppliedSchema.safeParse({
+          ...event,
+          occurredAt: "2026-08-25T10:00:00+09:00",
+        }).success
+      ).toBe(true);
+      expect(
+        contextBatchAppliedSchema.safeParse({ ...event, occurredAt: "언젠가" })
+          .success
+      ).toBe(false);
+    });
   });
 });

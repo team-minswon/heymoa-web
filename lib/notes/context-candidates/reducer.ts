@@ -77,6 +77,26 @@ function sortRanges(ranges: AppliedRange[]) {
   );
 }
 
+/**
+ * **갱신 시각은 뒤로 가지 않는다.** batch event 는 best-effort 이고 relay 가 여럿이라
+ * 늦은 옛 event 가 뒤늦게 도착할 수 있다. 그때 `appliedAt` 을 무조건 덮으면 화면의 「갱신」이
+ * 과거로 뛴다 — `appliedRanges` 가 runKey 로 수렴하듯 이 값도 max 로 수렴시킨다.
+ *
+ * 비교는 시각으로 한다. 문자열 비교는 같은 표기(둘 다 `Z`)일 때만 맞고, offset 표기가
+ * 섞이면 틀린다. 파싱이 안 되는 값은 기존 값을 지킨다.
+ */
+function laterInstant(current: string | null, incoming: string | null) {
+  if (!incoming) return current;
+  // **들어온 값을 먼저 검증한다.** `!current` 를 먼저 보면 malformed 첫 값이 검사 없이
+  // 통과해 화면에서 `Invalid Date` 가 된다 — 상태가 빈 순간이 가장 무방비다.
+  const b = Date.parse(incoming);
+  if (Number.isNaN(b)) return current;
+  if (!current) return incoming;
+  const a = Date.parse(current);
+  if (Number.isNaN(a)) return incoming;
+  return b > a ? incoming : current;
+}
+
 function byId(candidates: ContextCandidateHead[]) {
   return Object.fromEntries(candidates.map((c) => [c.candidateId, c]));
 }
@@ -95,15 +115,14 @@ export function reduceContextEvent(
       // **갱신 시각도 snapshot 에서 복원한다.** event 로만 채우면, 종료된 회의를 새 탭에서
       // 열었을 때 범위가 있는데도 갱신 띠가 영원히 빈다 — 그 회의는 더 이상 event 가 안 온다.
       const latestApplied = ranges.reduce<string | null>(
-        (latest, range) =>
-          !latest || range.appliedAt > latest ? range.appliedAt : latest,
+        (latest, range) => laterInstant(latest, range.appliedAt),
         null
       );
       return {
         candidates: byId(event.candidates),
         appliedRanges: ranges,
         seenBatchIds: [],
-        lastBatchAt: latestApplied ?? state.lastBatchAt,
+        lastBatchAt: laterInstant(state.lastBatchAt, latestApplied),
         needsRefetch: false,
       };
     }
@@ -136,7 +155,7 @@ export function reduceContextEvent(
         ...state,
         appliedRanges: sortRanges([...withoutRun, event.range]),
         seenBatchIds: [...state.seenBatchIds, event.eventId],
-        lastBatchAt: event.range.appliedAt,
+        lastBatchAt: laterInstant(state.lastBatchAt, event.range.appliedAt),
       };
     }
 
@@ -162,8 +181,19 @@ export function selectCards(state: ContextState): ContextCard[] {
     results.set(candidate.resolvesCandidateId, bucket);
   }
 
-  const bySequence = (a: { createdSequence: number }, b: { createdSequence: number }) =>
-    a.createdSequence - b.createdSequence;
+  /**
+   * **계약의 정렬 키는 `(createdSequence, candidateId)` 둘이다.** 한 batch 가 여러 후보를
+   * 같은 sequence 로 낼 수 있어서 `createdSequence` 만 비교하면 동률의 순서가 도착 순서에
+   * 좌우된다 — 같은 원장을 역순 event 로 채운 화면과 snapshot 으로 채운 화면이 달라진다.
+   */
+  const byOrder = (
+    a: { createdSequence: number; candidateId: string },
+    b: { createdSequence: number; candidateId: string }
+  ) =>
+    a.createdSequence - b.createdSequence ||
+    // TSID는 Crockford base32라 코드 단위 비교가 곧 서버의 `ORDER BY candidate_id ASC`다.
+    // `localeCompare`는 로케일에 따라 숫자와 문자의 순서가 달라질 수 있어 쓰지 않는다.
+    (a.candidateId < b.candidateId ? -1 : a.candidateId > b.candidateId ? 1 : 0);
 
   return all
     .filter((candidate) => {
@@ -171,10 +201,10 @@ export function selectCards(state: ContextState): ContextCard[] {
       // 부모가 아직 안 왔으면 최상위에 남겨 둔다 — 안 그러면 화면에서 사라진다.
       return !(candidate.resolvesCandidateId in state.candidates);
     })
-    .sort(bySequence)
+    .sort(byOrder)
     .map((candidate) => ({
       ...candidate,
-      results: (results.get(candidate.candidateId) ?? []).sort(bySequence),
+      results: (results.get(candidate.candidateId) ?? []).sort(byOrder),
     }));
 }
 

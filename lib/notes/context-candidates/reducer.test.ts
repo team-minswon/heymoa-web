@@ -30,6 +30,7 @@ function head(
         segmentId: "0HZX2K7M9Q4AH",
         sequence: 10,
         startedAtMs: 1_872_000,
+        endedAtMs: 1_876_000,
         text: "그럼 MongoDB로 갑시다",
         role: "SUPPORTS",
       },
@@ -59,6 +60,7 @@ function rangeBase(over: {
   toEndedAtMs?: number;
   rawDeltaSaturated?: boolean;
   semanticUnitSaturated?: boolean;
+  appliedAt?: string;
 }) {
   return {
     runKey: over.runKey ?? "run-1",
@@ -69,7 +71,7 @@ function rangeBase(over: {
     toEndedAtMs: over.toEndedAtMs ?? 100_000,
     rawDeltaSaturated: over.rawDeltaSaturated ?? false,
     semanticUnitSaturated: over.semanticUnitSaturated ?? false,
-    appliedAt: NOW,
+    appliedAt: over.appliedAt ?? NOW,
   };
 }
 
@@ -325,5 +327,123 @@ describe("context candidate reducer", () => {
 
     expect(selectCards(settled).map((c) => c.candidateId)).toEqual(["0HZX2K7M9Q4A2"]);
     expect(settled.needsRefetch).toBe(false);
+  });
+
+  /**
+   * **정렬 키는 `(createdSequence, candidateId)` 둘이다.** 한 batch 가 여러 후보를 같은
+   * sequence 로 낼 수 있어서, 앞 키만 비교하면 동률의 순서가 도착 순서에 좌우된다.
+   */
+  it("createdSequence 가 같으면 candidateId 오름차순이다 — 도착 순서와 무관하다", () => {
+    const ids = ["0HZX2K7M9Q4C1", "0HZX2K7M9Q4C2", "0HZX2K7M9Q4C3"];
+    const sameSequence = ids.map((candidateId) =>
+      head({ candidateId, createdSequence: 42 })
+    );
+
+    // 역순으로 밀어 넣어도…
+    const byEvents = apply(
+      [...sameSequence].reverse().map((c, i) => changed(c, `0HZX2K7M9Q4D${i}`))
+    );
+    expect(selectCards(byEvents).map((c) => c.candidateId)).toEqual(ids);
+
+    // …snapshot 으로 역순을 실어도 같은 순서다. 두 경로가 갈리면 새로고침에 화면이 바뀐다.
+    const bySnapshot = apply([
+      {
+        type: "snapshot",
+        candidates: [...sameSequence].reverse(),
+        appliedRanges: [],
+      } as const,
+    ]);
+    expect(selectCards(bySnapshot).map((c) => c.candidateId)).toEqual(ids);
+  });
+
+  it("질문의 결과 목록도 같은 tie-break 를 쓴다", () => {
+    const question = head({
+      candidateId: "0HZX2K7M9Q4E0",
+      kind: "QUESTION",
+      createdSequence: 5,
+    });
+    const results = ["0HZX2K7M9Q4E1", "0HZX2K7M9Q4E2"].map((candidateId) =>
+      head({
+        candidateId,
+        kind: "DECISION",
+        createdSequence: 9,
+        resolvesCandidateId: question.candidateId,
+      })
+    );
+
+    const state = apply(
+      [question, ...[...results].reverse()].map((c, i) =>
+        changed(c, `0HZX2K7M9Q4F${i}`)
+      )
+    );
+    const [card] = selectCards(state);
+    expect(card.results.map((r) => r.candidateId)).toEqual([
+      "0HZX2K7M9Q4E1",
+      "0HZX2K7M9Q4E2",
+    ]);
+  });
+
+  /**
+   * **갱신 시각은 뒤로 안 간다.** batch 는 best-effort 이고 relay 가 여럿이라 늦은 옛
+   * event 가 뒤늦게 온다. 덮어쓰면 화면의 「갱신」이 과거로 뛴다.
+   */
+  it("늦게 도착한 옛 batch 가 lastBatchAt 을 되돌리지 않는다", () => {
+    const later = "2026-08-24T01:10:00.000Z";
+    const earlier = "2026-08-24T01:00:00.000Z";
+
+    const state = apply([
+      batch(range({ runKey: "run-2", appliedAt: later }), "0HZX2K7M9Q4G1"),
+      // 다른 relay 를 늦게 지난 옛 batch.
+      batch(range({ runKey: "run-1", appliedAt: earlier }), "0HZX2K7M9Q4G2"),
+    ]);
+
+    expect(state.lastBatchAt).toBe(later);
+    // 범위 자체는 여전히 둘 다 수렴해 있다 — 시각만 max 를 지킨다.
+    expect(state.appliedRanges).toHaveLength(2);
+  });
+
+  /**
+   * **상태가 빈 순간이 가장 무방비다.** `lastBatchAt` 이 `null` 일 때 검증 없이 받으면
+   * 깨진 값이 그대로 화면까지 가서 `Invalid Date` 가 된다.
+   */
+  it("malformed 시각은 첫 event 여도 lastBatchAt 에 안 앉는다", () => {
+    const broken = apply([
+      batch(range({ appliedAt: "언젠가" }), "0HZX2K7M9Q4J1"),
+    ]);
+    expect(broken.lastBatchAt).toBeNull();
+
+    // 그 뒤 정상 값이 오면 정상적으로 선다.
+    const recovered = apply(
+      [batch(range({ runKey: "run-9", appliedAt: NOW }), "0HZX2K7M9Q4J2")],
+      broken
+    );
+    expect(recovered.lastBatchAt).toBe(NOW);
+  });
+
+  it("malformed 시각만 담긴 첫 snapshot 도 마찬가지다", () => {
+    const state = apply([
+      {
+        type: "snapshot",
+        candidates: [],
+        appliedRanges: [range({ appliedAt: "언젠가" })],
+      } as const,
+    ]);
+    expect(state.lastBatchAt).toBeNull();
+  });
+
+  it("옛 range 만 담긴 snapshot 도 lastBatchAt 을 되돌리지 않는다", () => {
+    const later = "2026-08-24T01:10:00.000Z";
+    const earlier = "2026-08-24T01:00:00.000Z";
+
+    const state = apply([
+      batch(range({ runKey: "run-2", appliedAt: later }), "0HZX2K7M9Q4H1"),
+      {
+        type: "snapshot",
+        candidates: [],
+        appliedRanges: [range({ runKey: "run-1", appliedAt: earlier })],
+      } as const,
+    ]);
+
+    expect(state.lastBatchAt).toBe(later);
   });
 });
