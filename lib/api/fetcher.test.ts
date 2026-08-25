@@ -93,6 +93,18 @@ describe("apiFetch", () => {
     await apiFetch("/v1/notes");
     expect(fetchMock).toHaveBeenCalled();
   });
+
+  it("SSR에서는 컨테이너 내부 API_BASE_URL을 사용한다", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://localhost:18080");
+    vi.stubEnv("API_BASE_URL", "http://server:8080");
+    vi.stubGlobal("window", undefined);
+    vi.resetModules();
+
+    const { buildUrl } = await import("@/lib/api/fetcher");
+
+    expect(buildUrl("/v1/notes")).toBe("http://server:8080/v1/notes");
+    vi.unstubAllEnvs();
+  });
 });
 
 describe("isAuthError", () => {
@@ -147,4 +159,3 @@ describe("prerender 문서", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
-

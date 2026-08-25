@@ -13,12 +13,19 @@ type ApiFetchOptions = RequestInit & {
   skipAuthRefresh?: boolean;
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-
 let refreshPromise: Promise<void> | null = null;
 
+function apiBaseUrl() {
+  // SSR/proxy는 컨테이너 DNS(`server:8080`)를 봐야 하고, 브라우저는 host published
+  // port를 봐야 합니다. public env를 모듈 상수로 고정하면 SSR도 localhost를 호출합니다.
+  return typeof window === "undefined"
+    ? (process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "")
+    : (process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
+}
+
 export function buildUrl(path: string, params?: Record<string, unknown>) {
-  const url = new URL(path, apiBaseUrl || "http://localhost");
+  const baseUrl = apiBaseUrl();
+  const url = new URL(path, baseUrl || "http://localhost");
 
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
@@ -26,7 +33,7 @@ export function buildUrl(path: string, params?: Record<string, unknown>) {
     }
   });
 
-  if (!apiBaseUrl) {
+  if (!baseUrl) {
     return `${url.pathname}${url.search}`;
   }
 
