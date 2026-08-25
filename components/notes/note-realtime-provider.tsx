@@ -206,6 +206,14 @@ export function NoteRealtimeProvider({
   const endedTurnRef = useRef<number | null>(null);
   const interruptionTimerRef = useRef<number | null>(null);
   const transcriptTimerRef = useRef<number | null>(null);
+  /**
+   * WS 콜백은 연결 effect 안에서 한 번 만들어져 그 시점의 값을 가둔다. 재조회가 필요한지는
+   * event 가 올 때마다 **지금** 값을 봐야 하므로 ref 로 읽는다.
+   */
+  const needsRefetchRef = useRef(false);
+  useEffect(() => {
+    needsRefetchRef.current = state.context.needsRefetch;
+  }, [state.context.needsRefetch]);
 
   useEffect(() => {
     const clearInterruption = () => {
@@ -310,6 +318,17 @@ export function NoteRealtimeProvider({
             endedTurnRef.current = turnRef.current;
             clearInterruption();
             invalidateChat();
+            break;
+          /**
+           * **재조회가 실패한 채 갇히지 않게 한다.** `needsRefetch` 는 sticky 이고 그것을
+           * 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면 스스로는 다시 안 돈다.
+           * 그 뒤 오는 candidate event 는 gap 을 못 메운다 — 빠진 revision 은 다시 안 온다.
+           *
+           * batch 는 아래에서 늘 invalidate 하므로 이미 복구 경로가 있다. 배치가 멎은
+           * 구간에서 candidate event 만 오는 경우가 남아서, **그때만** 같은 경로를 연다.
+           */
+          case "context.candidate.changed":
+            if (needsRefetchRef.current) invalidateContext();
             break;
           // **REAFFIRM 수렴 지점이다.** REAFFIRM 은 candidate event 를 안 만들면서 서버에서는
           // evidence 를 늘리고 `lastEvidenceSequence` 를 전진시킨다. 배치가 적용될 때마다

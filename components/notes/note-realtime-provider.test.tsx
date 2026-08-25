@@ -600,6 +600,75 @@ describe("NoteRealtimeProvider", () => {
     expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
   });
 
+  /**
+   * **revision gap 을 본 뒤 재조회가 실패하면 갇힙니다.**
+   *
+   * `needsRefetch` 는 sticky 이고 그것을 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면
+   * 다시 안 돕니다. 그 뒤 오는 candidate event 는 gap 을 못 메웁니다 — 빠진 revision 은
+   * 다시 안 오기 때문입니다.
+   *
+   * **batch 는 이미 복구 경로가 있습니다** — `invalidateContext()` 가 조회를 다시 띄웁니다.
+   * 그런데 candidate event 만 계속 오는 구간(배치가 멎은 회의)에서는 그 경로가 안 열립니다.
+   * 여기서 그 한 갈래를 지킵니다.
+   */
+  it("gap 을 본 뒤에는 candidate event 가 재조회를 깨운다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    // 마운트 catch-up 이 이미 한 번 invalidate 한다. 그 뒤부터를 본다.
+    invalidateQueries.mockClear();
+
+    // revision 1 을 못 보고 2 가 왔다 — 사이를 놓쳤으므로 snapshot 을 다시 받아야 한다.
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead({ revision: 2 }),
+    });
+    expect(invalidateQueries).not.toHaveBeenCalled();
+
+    // jsdom 에는 서버가 없어 그 재조회는 실패한다. 그 상태에서 다음 event 가 와야 한다.
+    invalidateQueries.mockClear();
+    emit({
+      type: "context.candidate.changed",
+      eventId: "01K0000000401",
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:10.000Z",
+      candidate: candidateHead({ candidateId: "01K0000000301", revision: 1 }),
+    });
+
+    await waitFor(() =>
+      expectInvalidated(
+        invalidateQueries,
+        getGetContextCandidatesQueryKey(NOTE_ID)
+      )
+    );
+  });
+
+  it("gap 이 없으면 candidate event 가 조회를 흔들지 않는다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    invalidateQueries.mockClear();
+
+    // revision 1 부터 순서대로면 놓친 것이 없다 — 재조회할 이유가 없다.
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead({ revision: 1 }),
+    });
+    emit({
+      type: "context.candidate.changed",
+      eventId: "01K0000000402",
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:10.000Z",
+      candidate: candidateHead({ candidateId: "01K0000000302", revision: 1 }),
+    });
+
+    expect(invalidateQueries).not.toHaveBeenCalled();
+  });
+
   it("StrictMode의 setup-cleanup-setup에서도 활성 연결을 하나만 남긴다", async () => {
     const view = renderProvider({ strict: true });
 

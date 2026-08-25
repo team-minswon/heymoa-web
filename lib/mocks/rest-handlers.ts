@@ -4,6 +4,10 @@ import {
   CONTEXT_FAILING_NOTE_ID,
   CONTEXT_SYNTHETIC_LEDGER_NOTE_ID,
   CONTEXT_SNAPSHOT,
+  CONTEXT_SWAP_FILLED,
+  CONTEXT_SWAP_NOTE_ID,
+  CONTEXT_SWAP_SNAPSHOT,
+  isSwapFilled,
 } from "@/lib/mocks/context-candidates";
 import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/context-candidates/__fixtures__/synthetic-ledger-snapshot.json";
 
@@ -426,6 +430,18 @@ export const restHandlers = [
         { success: false, data: null, error: { code: "INTERNAL", message: "…" } },
         { status: 500 }
       );
+    }
+    // 커버리지 행이 «교체»되는 노트. 처음에는 구멍 하나만 있고, WS batch 가 그것을
+    // 포화 범위로 채운다 — 행 수는 1로 유지된다.
+    //
+    // **서버 상태가 전진하는 것을 재현해야 한다.** batch 는 `invalidateContext()` 를
+    // 부르고 그 재조회가 옛 스냅샷을 돌려주면 화면이 구멍으로 되돌아간다. 첫 조회 뒤에는
+    // 채워진 범위를 준다 — 실제 서버도 batch 를 적용한 뒤에는 그렇게 답한다.
+    if (id(params.noteId) === CONTEXT_SWAP_NOTE_ID) {
+      const data = isSwapFilled()
+        ? { ...CONTEXT_SWAP_SNAPSHOT, appliedRanges: CONTEXT_SWAP_FILLED }
+        : CONTEXT_SWAP_SNAPSHOT;
+      return HttpResponse.json({ success: true, data, error: null });
     }
     // **실서버가 실제로 낸 원장.** 손으로 쓴 목은 내가 아는 것만 담아서, 계약을
     // 오해했으면 목도 같이 틀린다. 이 노트만 실제 wire 를 그대로 싣는다.

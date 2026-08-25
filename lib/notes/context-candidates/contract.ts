@@ -285,11 +285,19 @@ type _guardRangeBackward = Assert<
 type _guardHeadBackward = Assert<
   Extends<GeneratedRevision, z.infer<typeof contextCandidateHeadSchema>>
 >;
-/** `keyof` union 은 모든 갈래에 공통인 키다 — 서버가 필드를 더하면 여기서 걸린다. */
+/**
+ * **`keyof` 를 그냥 쓰면 안 된다.** union 에 `keyof` 를 걸면 **모든 갈래에 공통인 키**만
+ * 나온다. `ResolvedQuestion` 한 갈래에만 붙은 필드는 교집합에 안 들어와 조용히 빠진다 —
+ * 이 가드의 주석이 「필드를 더하면 걸린다」라고 실제보다 넓게 약속하고 있었다.
+ *
+ * `T extends unknown ? … : never` 로 분배시켜 **갈래별 키의 합집합**을 본다.
+ */
+type KeysOfUnion<T> = T extends unknown ? keyof T : never;
+
 type _guardHeadKeys = Assert<
   Extends<
     Exclude<
-      keyof GeneratedRevision,
+      KeysOfUnion<GeneratedRevision>,
       keyof z.infer<typeof contextCandidateHeadSchema>
     >,
     never

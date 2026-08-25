@@ -443,6 +443,20 @@ function createSeedState(): StoreState {
       meetingStartedBy: null,
       participants: participantsOf(projects[1].projectId, MOCK_USER.userId),
     },
+    // 커버리지 행 «교체» 회귀 전용. 다른 e2e 와 섞이면 무엇이 행을 움직였는지 흐려진다.
+    {
+      noteId: "01K0000000008",
+      projectId: projects[0].projectId,
+      title: "커버리지 추종 확인",
+      createdAt: "2026-07-13T00:00:00Z",
+      updatedAt: "2026-07-13T00:00:00Z",
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: "2026-07-13T00:00:00Z",
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
+      meetingStartedBy: starterOf(MOCK_USER.userId),
+      participants: participantsOf(projects[0].projectId, MOCK_USER.userId),
+    },
     {
       noteId: "01K0000000028",
       projectId: projects[0].projectId,
@@ -563,6 +577,16 @@ function createSeedState(): StoreState {
       endedAt: "2026-07-11T00:02:00Z",
       endReason: "CLIENT_DISCONNECTED",
     },
+    // 커버리지 «교체» 회귀 전용 세션. 전사가 화면을 넘겨야 추종을 잴 수 있다.
+    {
+      sessionId: "01K0000000008",
+      noteId: "01K0000000008",
+      status: "COMPLETED",
+      readyExpiresAt: "2026-07-13T00:10:00Z",
+      startedAt: "2026-07-13T00:00:00Z",
+      endedAt: "2026-07-13T00:05:00Z",
+      endReason: "CLIENT_DISCONNECTED",
+    },
     {
       sessionId: "01K0000000029",
       noteId: "01K0000000028",
@@ -616,6 +640,17 @@ function createSeedState(): StoreState {
       endedAtMs: 7100,
       speakerLabel: null,
     },
+    // 커버리지 «교체» 회귀 전용. 40줄이면 어느 뷰포트에서도 화면을 넘긴다 —
+    // 넘치지 않으면 추종이 성립하는지 자체를 잴 수 없다.
+    ...Array.from({ length: 40 }, (_, index) => ({
+      segmentId: `01K${String(index + 500).padStart(10, "0")}`,
+      transcriptionSessionId: "01K0000000008",
+      sequence: index + 1,
+      text: `커버리지 추종 확인용 발화 ${index + 1}입니다. 화면을 넘기려면 줄이 넉넉해야 합니다.`,
+      startedAtMs: index * 4_000,
+      endedAtMs: index * 4_000 + 1_800,
+      speakerLabel: null,
+    })),
     {
       segmentId: "01K0000000030",
       transcriptionSessionId: "01K0000000029",

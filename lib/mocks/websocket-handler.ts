@@ -5,6 +5,10 @@ import {
   CONTEXT_DEMO_NOTE_ID,
   CONTEXT_EVENT_ID,
   CONTEXT_TIMELINE,
+  CONTEXT_SWAP_FILL,
+  markSwapFilled,
+  resetSwapFill,
+  CONTEXT_SWAP_NOTE_ID,
   LIVE_UTTERANCE,
   LIVE_UTTERANCE_TEXT,
 } from "@/lib/mocks/context-candidates";
@@ -126,10 +130,32 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
      * 확인이 필요하다. 여기서는 전용 노트로 가둬 다른 화면을 안 건드린다.
      */
     const SPEED = 60;
+
+    /**
+     * **커버리지 행 «교체» 전용 피드.** 구멍 하나만 있는 상태에서 그 구멍을 포화 범위로
+     * 채운다 — 행 수는 1로 유지되고 종류만 바뀐다. 개수만 세는 추종 키가 못 보는 전이다.
+     */
+    const startSwapFeed = (noteId: string, send: (body: unknown) => void) => {
+      resetSwapFill();
+      noteTopicTimers.push(
+        window.setTimeout(() => {
+          markSwapFilled();
+          send({
+            type: "context.classification.batch.applied",
+            eventId: CONTEXT_EVENT_ID(90),
+            occurredAt: CONTEXT_SWAP_FILL.appliedAt,
+            range: CONTEXT_SWAP_FILL,
+          });
+        }, 2_500)
+      );
+    };
+
     const startNoteTopicFeed = (noteId: string) => {
       // **전용 노트에서만 흘린다.** 모든 노트에 흘리면 다른 화면의 폴링과 섞인다 —
       // 실제로 공유 챗의 30초 안전 폴링이 굶어 e2e 하나가 깨졌다(아래 주석).
-      if (noteId !== CONTEXT_DEMO_NOTE_ID) return;
+      if (noteId !== CONTEXT_DEMO_NOTE_ID && noteId !== CONTEXT_SWAP_NOTE_ID) {
+        return;
+      }
       const send = (body: unknown) => {
         const topic = noteTopics.get(noteId);
         if (!topic) return;
@@ -146,6 +172,12 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           )
         );
       };
+
+      // 치환 노트는 batch 하나만 흘린다 — 후보 피드를 섞으면 무엇이 행을 움직였는지 흐려진다.
+      if (noteId === CONTEXT_SWAP_NOTE_ID) {
+        startSwapFeed(noteId, send);
+        return;
+      }
 
       /**
        * **살아 있는 발화 하나를 먼저 흘린다.** partial 두 토막이 자라다가 final 이 걷는다.

@@ -51,7 +51,8 @@ describe("mockDb", () => {
           .listProjects(workspace.workspaceId)
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
-    ).toHaveLength(13);
+      // 커버리지 «교체» 회귀 전용 노트가 하나 늘었다 (13 → 14).
+    ).toHaveLength(14);
   });
 
   it("does not seed IN_PROGRESS without a meeting starter", () => {

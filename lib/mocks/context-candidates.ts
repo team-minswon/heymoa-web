@@ -287,6 +287,58 @@ export const CONTEXT_APPLIED_RANGES: AppliedRange[] = [
   range("run-5", 201, 260),
 ];
 
+/**
+ * **커버리지 행이 «교체»되는 노트.** 개수는 그대로인데 종류가 바뀌는 전이를 만든다.
+ *
+ * | | 범위 | 구멍 | 포화 | 행 수 |
+ * |---|---|---|---|---|
+ * | 처음 | `1..8` · `17..24` | `9..16` 하나 | 없음 | **1** |
+ * | batch 뒤 | `9..16`(포화)가 채움 | 없음 | 하나 | **1** |
+ *
+ * 행 수가 1로 유지되므로 **개수만 세는 추종 키는 이 전이를 못 본다.** 두 행은 높이가
+ * 달라서(구멍 행에는 안내 문구가 한 줄 더 붙는다) 추종하던 독자가 그 차이만큼 밀린다.
+ */
+export const CONTEXT_SWAP_NOTE_ID = "01K0000000008";
+
+export const CONTEXT_SWAP_RANGES: AppliedRange[] = [
+  range("swap-1", 1, 8),
+  range("swap-3", 17, 24),
+];
+
+/** 구멍을 채우면서 포화로 들어온다 — 구멍 행이 사라지고 포화 행이 생긴다. */
+export const CONTEXT_SWAP_FILL: AppliedRange = range("swap-2", 9, 16, {
+  rawDeltaSaturated: true,
+});
+
+/** batch 가 적용된 뒤 서버가 돌려주는 범위. 재조회가 화면을 되돌리지 않게 한다. */
+export const CONTEXT_SWAP_FILLED: AppliedRange[] = [
+  CONTEXT_SWAP_RANGES[0],
+  CONTEXT_SWAP_FILL,
+  CONTEXT_SWAP_RANGES[1],
+];
+
+/**
+ * **REST 응답을 WS batch 에 묶는다.** batch 는 `invalidateContext()` 를 부르는데, 그
+ * 재조회가 옛 범위를 돌려주면 화면이 구멍으로 되돌아가 전이가 안 보인다.
+ *
+ * 요청 횟수로 가르면 안 된다 — SSR 도 같은 핸들러를 지나고 모듈 상태가 dev 서버 수명 동안
+ * 남아서, 첫 화면부터 채워진 채로 뜬다(실제로 그렇게 됐다). **batch 를 보낸 사실**만이
+ * 옳은 기준이다.
+ */
+let swapFilled = false;
+export const markSwapFilled = () => {
+  swapFilled = true;
+};
+export const resetSwapFill = () => {
+  swapFilled = false;
+};
+export const isSwapFilled = () => swapFilled;
+
+export const CONTEXT_SWAP_SNAPSHOT = {
+  candidates: [],
+  appliedRanges: CONTEXT_SWAP_RANGES,
+};
+
 export const CONTEXT_SNAPSHOT = {
   candidates: (() => {
     // 타임라인의 마지막 revision 만 head 다.

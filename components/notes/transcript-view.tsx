@@ -209,10 +209,25 @@ export function TranscriptView({
    *
    * 실제로 생성 훅으로 바꾸며 밟았다. `signal` 이 붙어 조회가 한 번 끊겼다 다시 오자
    * 커버리지 행이 뒤늦게 붙어 122px 가 남았다.
+   *
+   * **개수로는 부족하다.** 구멍이 채워지면서 그 범위가 포화로 들어오면 **행 수는 그대로인데
+   * 종류가 바뀐다.** 두 행은 높이가 달라서(구멍 행에는 안내가 한 줄 더 붙는다) 그 차이만큼
+   * 또 밀린다 — 실측 61px 였다.
+   *
+   * 그래서 **행의 기하를 정하는 것만** 담는다. `runKey` 와 `status` 는 안 넣는다 —
+   * `status` 는 이미 `isSaturated()` 가 접어서 행의 존재로 표현되고, `runKey` 가 바뀌어도
+   * 행의 생김새는 안 변한다. 키는 「무엇이 그려지는가」의 대리이지 데이터 지문이 아니다.
    */
   const coverageKey = renderRows
-    .filter((row) => row.type === "coverage-gap" || row.type === "saturated")
-    .length;
+    .map((row) =>
+      row.type === "coverage-gap"
+        ? `g${row.gap.fromSequence}-${row.gap.toSequence}`
+        : row.type === "saturated"
+          ? `s${row.range.fromSequence}-${row.range.toSequence}`
+          : ""
+    )
+    .filter(Boolean)
+    .join(",");
   const liveContentKey = `${lastSegment?.segmentId ?? ""}:${lastSegment?.text ?? ""}:${partial?.confirmedText ?? ""}:${partial?.pendingText ?? ""}:${coverageKey}`;
 
   const updateFollowing = useCallback((next: boolean) => {
