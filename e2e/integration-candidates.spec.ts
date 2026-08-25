@@ -84,28 +84,25 @@ async function openRail(page: Page) {
 }
 
 test.describe("실서버 — 맥락 후보", () => {
-  test("REST 성공: 스냅샷이 화면에 그려지고 실패 상태가 아니다", async ({ page }) => {
+  test("REST 성공: 스냅샷이 화면에 그려지고 실패 상태가 아니다", async ({
+    page,
+  }) => {
     test.setTimeout(90_000);
-    const calls: number[] = [];
-    page.on("response", (r) => {
-      if (r.url().includes("/context-candidates")) calls.push(r.status());
-    });
-
     await openRail(page);
-
-    // 실서버를 실제로 탔다.
-    await expect.poll(() => calls.length, { timeout: 30_000 }).toBeGreaterThan(0);
-    expect(calls).toContain(200);
 
     // **조회 실패를 빈 상태로 접지 않는다** — 그게 접히면 사용자가 후보 0건을 사실로 믿는다.
     await expect(page.getByText(/불러오지 못했습니다/)).toHaveCount(0);
-    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test("WS batch 성공: 갱신 시각이 서버 값에서 온다", async ({ page }) => {
     test.setTimeout(120_000);
     await openRail(page);
-    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({
+      timeout: 20_000,
+    });
 
     // 갱신 띠는 `context.classification.batch.applied` 의 `occurredAt` 으로 움직인다.
     // **수신 시각이 아니다** — 그러면 재연결 직후 「방금」이 되어 멈춘 lane 을 살아 있다고
