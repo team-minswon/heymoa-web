@@ -392,7 +392,15 @@ function PersonalChatPanel({
    * 한 프레임 동안 구분선만 먼저 사라진다.
    */
   const [pendingUserAt, setPendingUserAt] = useState<string | null>(null);
-  const [lastSent, setLastSent] = useState<string | null>(null);
+  /**
+   * 「다시 보내기」가 되살릴 것. **문장만으로는 부족하다** — `send()` 가 `clear()` 로
+   * 칩을 비우므로, 범위를 같이 안 들면 retry 가 `noteIds: []` 로 나간다. 문장에는 마커가
+   * 박혀 있어서 **범위를 잃은 채 마커만 날글자로 다시 보내는** 모양이 된다 (spec §2).
+   */
+  const [lastSent, setLastSent] = useState<{
+    text: string;
+    scope: ScopeChip[];
+  } | null>(null);
   /**
    * ★ 마지막 턴이 남긴 범위 밖 제안. **스트림이 아니라 여기 산다** — 제안은
    * `message_end` 에만 실리고 히스토리에는 담을 자리가 없어서(계약), 스트림 상태에
@@ -740,7 +748,7 @@ function PersonalChatPanel({
         setPendingUserMessage(message);
         setPendingUserAt(new Date().toISOString());
         setPendingScope(scope);
-        setLastSent(message);
+        setLastSent({ text: message, scope });
         // **배열이 원본이다.** 본문 텍스트가 아니라 칩이 범위를 정하므로, 사용자가 본문을
         // 어떻게 편집해도 계약이 안 깨진다. 중복은 보내기 직전에 접는다.
         const final = await stream.send(
@@ -1450,7 +1458,9 @@ function PersonalChatPanel({
                      * 히스토리를 다시 읽어 이어받기로 넘긴다 — 여기서 가릴 것이 없다.
                      */
                     stream.reset();
-                    void send(lastSent);
+                    // **범위를 함께 되살린다.** 안 넘기면 `chips` 를 쓰는데 그것은
+                    // 첫 전송의 `clear()` 가 이미 비웠다.
+                    void send(lastSent.text, lastSent.scope);
                   }}
                   onApprove={approval.approve}
                   approvalCard={approval.card}

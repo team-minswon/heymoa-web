@@ -377,6 +377,40 @@ function write(text: string) {
   return input;
 }
 
+/**
+ * 칩을 **남기고** 뒤에 문장을 붙인다. `write()` 는 `textContent` 를 덮어써서 칩 노드를
+ * 통째로 지운다 — 「칩이 붙은 채로 보낸다」를 재현하려면 이쪽이어야 한다.
+ */
+function appendAfterChips(text: string) {
+  const input = screen.getByRole("textbox", { name: "메시지" });
+  input.append(document.createTextNode(text));
+  const range = document.createRange();
+  range.selectNodeContents(input);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+  fireEvent.input(input);
+  return input;
+}
+
+/**
+ * 프로젝트 칩을 편집기에 박는다. `usePersonalChatScope` 는 회의록만 미리 붙이므로,
+ * 프로젝트 범위를 재현하려면 편집기가 만드는 DOM 을 그대로 흉내 내야 한다
+ * (칩은 React 밖에서 만드는 노드라 컴포넌트를 못 부른다 — `mention-input.tsx:52` 참고).
+ */
+function putProjectChip(id: string, title: string) {
+  const input = screen.getByRole("textbox", { name: "메시지" });
+  const chip = document.createElement("span");
+  chip.setAttribute("data-scope-chip", "project");
+  chip.setAttribute("data-scope-id", id);
+  chip.setAttribute("data-scope-title", title);
+  chip.textContent = title;
+  input.prepend(chip);
+  fireEvent.input(input);
+  return input;
+}
+
 /** 편집기 안에 박힌 칩. 칩이 문장 안에 살아서 별도 목록이 없다. */
 function chipsInInput() {
   return [
@@ -1251,6 +1285,65 @@ describe("PersonalChatProvider", () => {
     await sendMessage("정리해줘");
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+    fireEvent.click(await screen.findByRole("button", { name: "다시 보내기" }));
+
+    await waitFor(() => expect(state.streamCalls).toHaveLength(2));
+    expect(state.streamCalls[1].body).toEqual(state.streamCalls[0].body);
+  });
+
+  /**
+   * ★ **프로젝트 범위가 실제로 와이어로 나가는가.**
+   *
+   * `projectIds` 를 늘 `[]` 로 만들어도 **다섯 게이트가 전부 초록**이었다. 회의록 쪽은
+   * e2e 하나가 우연히 잡지만 프로젝트는 아무도 안 본다.
+   *
+   * 안 덮이면: 사용자가 프로젝트 칩을 붙였는데 **워크스페이스 전체로** 답이 온다.
+   * 오류가 안 나고 답도 그럴듯해서 **틀린 줄도 모른다.**
+   *
+   * spec 완료 기준 첫 줄이 「배열과 마커가 **함께** 나간다」다.
+   */
+  it("★ 프로젝트 칩이 projectIds 로 나간다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    renderChat();
+    openPanel();
+    putProjectChip("01K0000000009", "결제 개편");
+    appendAfterChips("이번 분기 결정 정리해줘");
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+
+    await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+    expect(state.streamCalls[0].body).toMatchObject({
+      noteIds: [],
+      projectIds: ["01K0000000009"],
+    });
+  });
+
+  /**
+   * ★ **「같은 문장」에는 범위가 포함된다.**
+   *
+   * 위 검사는 칩 없이 보내서 양쪽 `noteIds` 가 `[]` 라 **항상 참**이었다 — 자기 fixture 만
+   * 보는 검사다. 실제로는 `send()` 가 `editorRef.current?.clear()` 로 칩을 비우고,
+   * retry 는 override 없이 `chips`(= 이미 `[]`)를 쓴다.
+   *
+   * spec §2 가 이 경로를 이름으로 지목한다 — *"앞 턴의 문장을 새 범위로 다시 보낼 때는
+   * 마커를 먼저 푼다. **지금 그 경로는 「다시 보내기」 하나다.**"* 409 갈래는 그 처리를
+   * 하는데(`unwrapScopeMarkers` + 칩 되박기) retry 갈래에는 없다.
+   *
+   * 안 고치면: 붙였던 회의록이 **날마커 `@[주간 제품 회의](noteId:…)` 로** 말풍선에 뜨고,
+   * 에이전트는 그 회의록을 **안 보고** 답한다. 오류는 안 난다.
+   */
+  it("★ 「다시 보내기」가 범위도 그대로 다시 보낸다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.streamFails = true;
+    renderChat(<NoteScope hidden={false} />);
+    openPanel();
+    // 회의록 안에서 열면 그 회의록이 칩으로 미리 붙는다.
+    await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+    appendAfterChips("정리해줘");
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+
+    await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+    expect(state.streamCalls[0].body).toMatchObject({ noteIds: [NOTE_ID] });
+
     fireEvent.click(await screen.findByRole("button", { name: "다시 보내기" }));
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(2));
