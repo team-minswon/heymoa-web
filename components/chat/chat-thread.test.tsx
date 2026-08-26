@@ -948,6 +948,151 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
     }),
   ];
 
+  /**
+   * ★ **이어지는 생각은 흐를 때처럼 한 줄이다.**
+   *
+   * 스트림은 `thinking_delta` 를 만나는 족족 앞 블록에 **이어 붙인다**(`appendRun`).
+   * 그런데 server 는 **델타마다 한 행**으로 굳히므로, 그대로 펼치면 흐를 때 세 줄이던 것이
+   * 히스토리에서 네 줄이 된다 — 턴이 끝나는 순간 점이 하나 늘고 줄이 밀린다.
+   *
+   * 실측으로 잡은 자리다(3줄 → 4줄). 붙이는 방식도 스트림과 같게 **그냥 잇는다** —
+   * 구분자를 여기서 새로 만들면 흐를 때와 또 달라진다.
+   */
+  it("연달아 온 THINKING 은 한 줄로 잇는다", () => {
+    const { container } = renderThread({
+      messages: [
+        message({
+          role: "THINKING",
+          content: "전사를 훑습니다.",
+          createdAt: "2026-07-24T00:00:02Z",
+        }),
+        message({
+          role: "THINKING",
+          content: "\n찾은 것으로 정리합니다.",
+          createdAt: "2026-07-24T00:00:03Z",
+        }),
+      ],
+    });
+
+    const rows = container.querySelectorAll('[data-step="thinking"]');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain("전사를 훑습니다.");
+    expect(rows[0].textContent).toContain("찾은 것으로 정리합니다.");
+  });
+
+  it("사이에 도구가 끼면 안 잇는다", () => {
+    // 「생각 → 도구 → 생각」은 실제로 세 줄이다. 잇는 것은 **연달아 온 것**뿐이다.
+    const { container } = renderThread({
+      messages: [
+        message({
+          role: "THINKING",
+          content: "전사를 훑습니다.",
+          createdAt: "2026-07-24T00:00:02Z",
+        }),
+        message({
+          role: "TOOL",
+          content: "전사 검색 · 3건",
+          createdAt: "2026-07-24T00:00:03Z",
+          toolEvent: {
+            tool: "transcripts.search",
+            decision: null,
+            status: "success",
+            url: null,
+          },
+        }),
+        message({
+          role: "THINKING",
+          content: "찾은 것으로 정리합니다.",
+          createdAt: "2026-07-24T00:00:04Z",
+        }),
+      ],
+    });
+    // 줄이 셋이라 접혀 있다 — 펴야 안이 보인다.
+    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+
+    expect(container.querySelectorAll('[data-step="thinking"]')).toHaveLength(2);
+  });
+
+  /**
+   * ★ **흐를 때 서 있던 칩이 히스토리에서도 산다.**
+   *
+   * 계약의 `toolEvent` 에는 대상이 없어서, 예전에는 그 회의록으로 가는 문이 턴이 끝나는
+   * 순간 닫혔다. server 가 `tool_call_start` 의 `target` 을 TOOL 행의 `refs` 로 굳히면
+   * 읽는 쪽에서는 여느 행과 같은 `scope` 필드로 온다 — 계약 모양이 안 바뀐다.
+   */
+  it("TOOL 행의 scope 가 대상 칩으로 선다", () => {
+    const onOpenNote = vi.fn();
+    renderThread({
+      onOpenNote,
+      messages: [
+        message({
+          role: "THINKING",
+          content: "회의록을 읽습니다.",
+          createdAt: "2026-07-24T00:00:02Z",
+        }),
+        message({
+          role: "TOOL",
+          content: "회의록 읽기",
+          createdAt: "2026-07-24T00:00:03Z",
+          scope: [
+            {
+              kind: "NOTE",
+              id: "0HZX2K7M9Q4AF",
+              title: "주간 배포 회의",
+              unavailable: false,
+            },
+          ],
+          toolEvent: {
+            tool: "notes.read",
+            decision: null,
+            status: "success",
+            url: null,
+          },
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+
+    // 눌러서 그 회의록으로 가는 문이다 — 글자만 있으면 반쪽이다.
+    fireEvent.click(screen.getByRole("button", { name: /주간 배포 회의/ }));
+    expect(onOpenNote).toHaveBeenCalledWith("0HZX2K7M9Q4AF");
+  });
+
+  it("제목을 잃은 대상은 칩을 안 세운다", () => {
+    // 지워졌거나 권한을 잃으면 `ScopeRefResolver` 가 제목을 지운다. 눌러도 갈 곳이 없다.
+    const { container } = renderThread({
+      messages: [
+        message({
+          role: "THINKING",
+          content: "회의록을 읽습니다.",
+          createdAt: "2026-07-24T00:00:02Z",
+        }),
+        message({
+          role: "TOOL",
+          content: "회의록 읽기",
+          createdAt: "2026-07-24T00:00:03Z",
+          scope: [
+            {
+              kind: "NOTE",
+              id: "0HZX2K7M9Q4AF",
+              title: null,
+              unavailable: true,
+            },
+          ],
+          toolEvent: {
+            tool: "notes.read",
+            decision: null,
+            status: "success",
+            url: null,
+          },
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+
+    expect(container.querySelector("[data-target]")).toBeNull();
+  });
+
   it("THINKING 행이 도구와 같은 묶음의 한 줄로 선다", () => {
     const { container } = renderThread({ messages: TRACE });
 
@@ -977,8 +1122,11 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
       messages: [message({ role: "THINKING", content: "혼자 남은 생각" })],
     });
 
-    // 단계가 하나면 서랍을 안 만든다 — 접었다 폈다 할 것이 하나인 서랍은 서랍이 아니다.
-    expect(container.querySelector('[data-cot="single"]')).toBeTruthy();
+    // 하나여도 서랍이다. 다만 **접어서 아낄 것이 없으므로 편 채로** 선다.
+    expect(container.querySelector('[data-cot="group"]')).toBeTruthy();
+    expect(
+      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
+    ).toBe("true");
     expect(container.textContent).toContain("혼자 남은 생각");
   });
 });

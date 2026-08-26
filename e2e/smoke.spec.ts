@@ -1445,11 +1445,23 @@ test("approves a write tool from the chat card", async ({ page }) => {
 
   await page.getByRole("button", { name: "승인", exact: true }).click();
 
-  // **끝나면 과정은 접힌다.** 흐르는 동안 펼쳐져 있던 묶음이 답이 끝나며 한 줄로 개킨다 —
-  // 답변이 주인공이고 과정은 곁가지라서다. 그래서 기록은 펼쳐야 보인다.
+  // **끝나면 과정은 접힌다** — 답변이 주인공이고 과정은 곁가지라서다. 다만 **줄이 하나뿐인
+  // 묶음은 편 채로 둔다**: 머리글 한 줄로 본문 한 줄을 가리면 아끼는 자리가 없다.
+  //
+  // 그래서 여기서는 **접힌 것만 편다.** 개수로 갈리는 상태를 검사가 미리 알고 있으면, 목의
+  // 프레임이 하나 늘고 주는 것만으로 빨개진다 — 그건 이 검사가 볼 일이 아니다.
+  //
+  // ★ **답이 끝난 뒤에 편다.** 재개가 도는 동안에는 묶음이 이미 펴져 있어 누를 것이 없는데,
+  // 턴이 끝나면 그때 접힌다 — 먼저 누르면 「누른 적 없음」인 채로 접혀 버린다.
+  await expect(page.getByTestId("assistant-message").last()).toContainText(
+    "APP-12",
+    { timeout: 20_000 }
+  );
   const steps = page.getByRole("button", { name: /생각 과정/ });
-  await expect(steps).toBeVisible({ timeout: 20_000 });
-  await steps.click();
+  await expect(steps.first()).toBeVisible({ timeout: 20_000 });
+  for (const each of await steps.all()) {
+    if ((await each.getAttribute("aria-expanded")) === "false") await each.click();
+  }
 
   // 승인 → 실행 기록(외부 링크 포함)이 남는다. **2차에는 `tool_call_start`가 없어서**
   // 합칠 시작 요약이 없다(계약) — 무엇을 하려던 것인지는 그 위의 승인 기록이 말한다.

@@ -6,6 +6,14 @@ import type { Block } from "@/lib/chat/blocks";
 
 afterEach(cleanup);
 
+/**
+ * 서랍을 펴고 본다. `live={false}` 로 그리면 접힌 채로 서므로(끝난 턴의 기본), 안쪽 줄을
+ * 단언하려면 머리글을 한 번 눌러야 한다. 「접혀 있다」 자체를 보는 검사는 이걸 안 쓴다.
+ */
+function open() {
+  fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+}
+
 function tool(
   id: string,
   target: Block extends never ? never : unknown = null
@@ -39,12 +47,37 @@ function approval(
 }
 
 describe("ChainOfThought", () => {
-  it("단계가 하나면 묶지 않는다", () => {
+  /**
+   * ★ **하나여도 서랍이다.**
+   *
+   * 예전에는 하나면 평평하게 그렸다 — 「접었다 폈다 할 것이 하나인 서랍은 서랍이 아니다」가
+   * 이유였다. 그런데 단계는 **하나로 시작해서 늘어난다.** 실측하면 첫 단계에서
+   * `data-cot="single"`, 둘째가 오는 순간 `data-cot="group"` 으로 갈아끼워져 머리글이
+   * 없다가 생기고 레일이 통째로 다시 마운트된다 — 도는 중에 화면이 한 번 튄다.
+   *
+   * 모양이 상태에 따라 갈리지 않는 쪽이 낫다. 하나든 여섯이든 같은 서랍이다.
+   */
+  it("단계가 하나여도 서랍으로 뜬다", () => {
     const { container } = render(
       <ChainOfThought blocks={[tool("c1")]} live={false} />
     );
-    expect(container.querySelector('[data-cot="single"]')).toBeTruthy();
-    expect(container.querySelector('[data-cot="group"]')).toBeNull();
+    expect(container.querySelector('[data-cot="group"]')).toBeTruthy();
+    expect(container.querySelector('[data-cot="single"]')).toBeNull();
+  });
+
+  /**
+   * ★ **접어서 아낄 것이 있을 때만 접어 둔다.**
+   *
+   * 머리글 한 줄로 본문 한 줄을 가리면 누르는 수고만 늘고 화면은 그대로다.
+   * `AnswerRefs` 가 1건에서 편 채로 서는 것과 같은 규칙이다.
+   */
+  it("줄이 하나뿐이면 끝나도 편 채로 둔다", () => {
+    const { container } = render(
+      <ChainOfThought blocks={[tool("c1")]} live={false} />
+    );
+    expect(
+      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
+    ).toBe("true");
   });
 
   it("둘 이상이면 접이식 묶음 하나로 뜬다", () => {
@@ -100,6 +133,7 @@ describe("ChainOfThought", () => {
         onOpenNote={onOpenNote}
       />
     );
+    open();
     fireEvent.click(screen.getByRole("button", { name: /주간 배포 회의/ }));
     expect(onOpenNote).toHaveBeenCalledWith("0HZX2K7M9Q4AF");
   });
@@ -164,6 +198,7 @@ describe("ChainOfThought", () => {
     // 계약이 요약을 저장하지 않아 히스토리에는 없다. 없다고 기계 이름을 대면
     // 카드(사람 말)와 히스토리(기계 이름)가 같은 일을 다르게 부른다.
     render(<ChainOfThought blocks={[approval("APPROVED")]} live={false} />);
+    open();
     expect(screen.getByText("승인함")).toBeTruthy();
     expect(screen.queryByText(/linear\.create_issue/)).toBeNull();
   });
@@ -175,6 +210,7 @@ describe("ChainOfThought", () => {
         live={false}
       />
     );
+    open();
     expect(screen.getByText(/Linear 이슈 'APP 버그 수정' 생성/)).toBeTruthy();
   });
 
@@ -186,6 +222,7 @@ describe("ChainOfThought", () => {
         live={false}
       />
     );
+    open();
     expect(container.querySelector("[data-target]")).toBeNull();
     expect(screen.getByText("c1 검색")).toBeTruthy();
   });

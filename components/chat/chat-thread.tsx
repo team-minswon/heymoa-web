@@ -413,6 +413,21 @@ type HistoryRow = { at: string } & (
  * 승인 기록(`decision`)과 실행 기록(`status`)은 계약상 배타다. 한쪽만 검사하고 나머지를
  * 떨어뜨리면 계약 밖 형태가 반대쪽으로 새어 든다 — 둘 다 아니면 안 그린다.
  */
+/**
+ * TOOL 행의 `scope` 를 스트림과 같은 `target` 모양으로 되돌린다.
+ *
+ * 계약의 `kind` 는 `NOTE`·`PROJECT` 대문자이고 스트림의 `target.kind` 는 소문자다.
+ * 한 벌만 있으니 첫 항목만 본다 — 도구 한 번은 한 곳을 향한다.
+ */
+function historyTarget(
+  scope: HistoryScope | undefined
+): Extract<StepBlock, { kind: "tool" }>["target"] {
+  const first = (scope ?? [])[0];
+  if (!first?.id || !first.title || first.unavailable) return null;
+  const kind = first.kind === "PROJECT" ? "project" : "note";
+  return { kind, id: first.id, title: first.title };
+}
+
 function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
   const event = message.toolEvent;
   if (!event) return null;
@@ -442,8 +457,17 @@ function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
       toolCallId: `history-${index}`,
       tool: event.tool,
       summary: message.content,
-      // 계약의 `toolEvent`에는 대상이 없다. 스트림에서 보이던 회의록 칩은 여기서 사라진다.
-      target: null,
+      /**
+       * ★ **흐를 때 서 있던 칩이 여기서도 산다.**
+       *
+       * `toolEvent` 에는 대상이 없지만 server 가 `tool_call_start` 의 `target` 을 TOOL 행의
+       * `refs` 로 굳혀서, 읽는 쪽에는 **여느 행과 같은 `scope` 필드**로 온다 — 계약 모양이
+       * 안 바뀌었다. 예전에는 여기가 `null` 이라 그 회의록으로 가는 문이 턴이 끝나는 순간
+       * 닫혔고, 머리글의 「회의록 N건」도 같이 사라졌다.
+       *
+       * 제목을 잃은 것(지워졌거나 권한을 잃었다)은 안 세운다 — 눌러도 갈 곳이 없다.
+       */
+      target: historyTarget(message.scope),
       // 인자도 없다 — 승인 행이 들고 있고 그것은 `pendingApproval` 로만 나온다.
       // 확정된 뒤에는 무엇을 실행했는지를 실행 기록 한 줄이 말한다.
       args: null,
@@ -470,8 +494,29 @@ function groupHistory(messages: ThreadMessage[]): HistoryRow[] {
           : toStepBlock(message, index);
       if (!step) return;
       const last = rows.at(-1);
-      if (last?.kind === "steps") last.blocks.push(step);
-      else rows.push({ kind: "steps", at: message.createdAt, blocks: [step] });
+      if (last?.kind === "steps") {
+        /**
+         * ★ **이어지는 생각은 흐를 때처럼 한 줄이다.**
+         *
+         * 스트림은 `thinking_delta` 를 만나는 족족 앞 블록에 이어 붙이는데(`appendRun`),
+         * server 는 **델타마다 한 행**으로 굳힌다 — 그대로 펼치면 흐를 때 세 줄이던 것이
+         * 히스토리에서 네 줄이 되어 턴이 끝나는 순간 점이 하나 늘고 줄이 밀린다.
+         *
+         * **붙이는 방식도 스트림과 같게 그냥 잇는다.** 구분자를 여기서 새로 만들면
+         * 흐를 때와 또 달라진다 — 줄바꿈은 델타 자신이 싣고 온다.
+         */
+        const previous = last.blocks.at(-1);
+        if (previous?.kind === "thinking" && step.kind === "thinking") {
+          last.blocks[last.blocks.length - 1] = {
+            ...previous,
+            text: previous.text + step.text,
+          };
+          return;
+        }
+        last.blocks.push(step);
+      } else {
+        rows.push({ kind: "steps", at: message.createdAt, blocks: [step] });
+      }
       return;
     }
     rows.push({ kind: "message", at: message.createdAt, message });

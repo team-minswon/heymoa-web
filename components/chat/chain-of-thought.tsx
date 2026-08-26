@@ -91,14 +91,17 @@ export function ChainOfThought({
    */
   const running = live && drawn.length === blocks.length;
 
-  // 단계가 하나뿐이면 묶지 않는다. 접었다 폈다 할 것이 하나인 서랍은 서랍이 아니다.
-  if (drawn.length === 1) {
-    return (
-      <div data-cot="single" className={`chat-rise ${RAIL}`}>
-        <StepRow block={drawn[0]} live={running} onOpenNote={onOpenNote} />
-      </div>
-    );
-  }
+  /**
+   * ★ **하나여도 서랍이다.**
+   *
+   * 예전에는 하나면 평평하게 그렸다 — 「접었다 폈다 할 것이 하나인 서랍은 서랍이 아니다」가
+   * 이유였고, 정지 화면만 보면 맞는 말이다. 그런데 **단계는 하나로 시작해서 늘어난다.**
+   * 실측하면 첫 단계에서 `single`, 둘째가 오는 순간 `group` 으로 갈아끼워져 머리글이 없다가
+   * 생기고 레일이 통째로 다시 마운트된다 — 도는 중에 화면이 한 번 튄다.
+   *
+   * 모양이 개수에 따라 갈리지 않는 쪽이 낫다. 하나든 여섯이든 같은 서랍이고, 그래서
+   * 「지금 무엇을 하고 있나」를 찾는 자리가 항상 같은 곳이다.
+   */
   return (
     <Disclosure
       blocks={drawn}
@@ -127,15 +130,23 @@ function Disclosure({
   running: boolean;
   onOpenNote?: (noteId: string) => void;
 }) {
-  const [open, setOpen] = useState(live);
+  /**
+   * ★ **접어서 아낄 것이 있을 때만 접어 둔다.**
+   *
+   * 도는 동안은 펴 둔다(지금 무엇을 하는지가 그 안에 있다). 끝나면 접는데, **줄이 하나면
+   * 접어도 아끼는 자리가 없다** — 머리글 한 줄로 본문 한 줄을 가리는 셈이라 누르는 수고만
+   * 늘고 화면은 그대로다. 「참고한 회의록」이 1건에서 편 채로 서는 것과 같은 규칙이다.
+   */
+  const roomToSave = blocks.length > 1;
+  const [open, setOpen] = useState(live || !roomToSave);
   const reduced = useReducedMotion();
   // 사용자가 손으로 건드렸으면 자동 접힘/펼침이 그걸 덮지 않는다.
   const touched = useRef(false);
 
   useEffect(() => {
     if (touched.current) return;
-    setOpen(live);
-  }, [live]);
+    setOpen(live || !roomToSave);
+  }, [live, roomToSave]);
 
   return (
     <div
@@ -163,17 +174,19 @@ function Disclosure({
               : "size-3.5 shrink-0 text-[var(--el-muted)] transition-transform"
           }
         />
-        {/* ★ **도는 동안에는 지금 하는 일을 말하고, 그 글자가 빛난다.**
-            접힌 줄이 「생각 과정」이라고만 하면 도는 동안 아무 소식이 없다 — 그때 알고
-            싶은 것은 **지금 뭘 하고 있나**다. 끝나면 그 자리가 묶음의 이름으로 돌아간다.
-            ChatGPT·Claude 가 도구 이름을 헤더에 세웠다가 접는 것과 같은 자리다. */}
+        {/* ★ **접혀서 도는 동안에만 지금 하는 일을 말한다.**
+            접힌 줄이 「생각 과정」이라고만 하면 그때 알고 싶은 것(**지금 뭘 하고 있나**)에
+            아무 답이 없다. ChatGPT·Claude 가 도구 이름을 헤더에 세웠다가 접는 자리다.
+
+            **펴져 있으면 안 되풀이한다.** 바로 아래 줄이 같은 글자를 이미 말하고 있어서,
+            둘 다 세우면 같은 문장이 두 벌로 서고 빛도 두 군데서 지나간다. */}
         <span
           className={cn(
             "min-w-0 truncate text-xs",
-            running ? "chat-shimmer" : "text-[var(--el-muted)]"
+            running && !open ? "chat-shimmer" : "text-[var(--el-muted)]"
           )}
         >
-          {running ? currentStep(blocks) : headline(blocks)}
+          {running && !open ? currentStep(blocks) : headline(blocks)}
         </span>
       </button>
       {/* **탁 열리지 않는다.** 높이가 0에서 제 높이까지 자란다 — `note-summary` 의 근거
