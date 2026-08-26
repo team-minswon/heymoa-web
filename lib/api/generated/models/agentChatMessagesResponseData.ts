@@ -5,11 +5,29 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AgentChatMessagesResponseDataActiveTurn } from "./agentChatMessagesResponseDataActiveTurn";
+import type { AgentChatMessagesResponseDataLastTurn } from "./agentChatMessagesResponseDataLastTurn";
 import type { AgentChatMessagesResponseDataMessagesItem } from "./agentChatMessagesResponseDataMessagesItem";
 
 /**
  * 성공 응답 데이터
  */
 export type AgentChatMessagesResponseData = {
-  messages?: AgentChatMessagesResponseDataMessagesItem[];
+  /**
+   * 이 대화의 마지막 턴. 도는 턴이 있으면 activeTurn 과 같은 행이다
+   * @nullable
+   */
+  lastTurn: AgentChatMessagesResponseDataLastTurn;
+  /**
+   * GET /events?after= 에 그대로 넣을 대화 커서. **로그에 굳은 마지막 seq 다** — 커서와 재생 대상이 같은 자료구조에서 나오므로 커서가 재생 가능 범위를 앞설 수 없다. last_seq(블록 천장)가 아니다: 천장을 내려주면 커서가 미래를 가리켜 남은 이벤트를 전부 버린다
+   * @minimum 0
+   */
+  cursor: number;
+  /**
+   * 지금 도는 턴. null 이면 이어받을 것이 없다
+   * @nullable
+   */
+  activeTurn: AgentChatMessagesResponseDataActiveTurn;
+  /** 표시용 메시지. 시간순이고, 없으면 빈 배열이다 */
+  messages: AgentChatMessagesResponseDataMessagesItem[];
 };

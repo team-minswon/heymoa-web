@@ -17,9 +17,7 @@ const NOTE_META = {
 
 const data = vi.hoisted(() => ({
   segments: [] as unknown[],
-  messages: [] as unknown[],
   transcriptFails: false,
-  chatFails: false,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -40,81 +38,15 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
         },
   }),
 }));
-vi.mock("@/lib/api/generated/note-shared-chat/note-shared-chat", () => ({
-  useGetNoteSharedChatMessages: () => ({
-    isError: data.chatFails,
-    refetch: () => {},
-    data: data.chatFails
-      ? undefined
-      : {
-          status: 200,
-          data: {
-            success: true,
-            data: { chatId: "c", messages: data.messages, lock: null },
-          },
-        },
-  }),
-}));
-
 describe("NoteArchive", () => {
   afterEach(() => {
     cleanup();
     data.segments = [];
-    data.messages = [];
     data.transcriptFails = false;
-    data.chatFails = false;
   });
 
-  it("전사와 공유 Q&A를 함께 병치한다", () => {
-    data.segments = [
-      {
-        segmentId: "s1",
-        transcriptionSessionId: "sess1",
-        sequence: 0,
-        startedAtMs: 0,
-        endedAtMs: 3000,
-        text: "배포 일정을 정합시다.",
-      },
-    ];
-    data.messages = [
-      {
-        messageId: "u1",
-        createdAt: "2026-07-24T00:00:00Z",
-        role: "USER",
-        content: "결정된 것만 정리해줘",
-        authorName: "홍길동",
-        toolEvent: null,
-      },
-      {
-        messageId: "a1",
-        createdAt: "2026-07-24T00:00:01Z",
-        role: "ASSISTANT",
-        content: "배포는 금요일로 정했습니다.",
-        authorName: null,
-        toolEvent: null,
-      },
-    ];
-    render(
-      <NoteArchive
-        noteId="01K0000000002"
-        focusSegmentId={null}
-        onFocusHandled={() => {}}
-      />
-    );
 
-    // 전사와 Q&A는 세그먼트로 갈라 한 번에 하나만 보인다.
-    expect(screen.getByText("배포 일정을 정합시다.")).toBeTruthy();
-    expect(screen.queryByText("결정된 것만 정리해줘")).toBeNull();
-
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-
-    expect(screen.getByText("결정된 것만 정리해줘")).toBeTruthy();
-    expect(screen.getByText("배포는 금요일로 정했습니다.")).toBeTruthy();
-    expect(screen.getByText("홍길동")).toBeTruthy();
-    expect(screen.queryByText("배포 일정을 정합시다.")).toBeNull();
-  });
-
-  it("복사는 대화 기록 탭에만 선다", () => {
+  it("전사가 있으면 복사가 선다 — 탭이 없어져도 자리를 지킨다", () => {
     data.segments = [
       {
         segmentId: "s1",
@@ -136,9 +68,9 @@ describe("NoteArchive", () => {
 
     expect(screen.getByRole("button", { name: "복사" })).toBeTruthy();
 
-    // 챗봇 탭에서도 서 있으면 무엇이 복사되는지가 모호해진다.
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-    expect(screen.queryByRole("button", { name: "복사" })).toBeNull();
+    // 공유 챗봇이 사라지며 탭도 함께 없어졌다. 「어느 탭이냐」로 가리던 것이
+    // 「전사가 있느냐」 하나로 줄었다 — 아래 검사가 그 반대쪽을 본다.
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 
   it("복사할 전사가 없으면 버튼도 없다", () => {
@@ -167,58 +99,8 @@ describe("NoteArchive", () => {
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
-  it("Q&A 로드 실패를 빈 섹션으로 삼키지 않는다", () => {
-    data.segments = [
-      {
-        segmentId: "s1",
-        transcriptionSessionId: "sess1",
-        sequence: 0,
-        startedAtMs: 0,
-        endedAtMs: 1000,
-        text: "회의 내용.",
-      },
-    ];
-    data.chatFails = true;
-    render(
-      <NoteArchive
-        noteId="01K0000000002"
-        focusSegmentId={null}
-        onFocusHandled={() => {}}
-      />
-    );
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-    expect(screen.getByText("챗봇 대화를 불러오지 못했습니다.")).toBeTruthy();
-    // 전사 실패와 같은 재시도 경로를 준다.
-    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
-  });
 
   // 탭이 나타났다 사라지면 같은 자리인지 알기 어렵다 — 비어 있어도 탭은 남기고 안내를 준다.
-  it("공유 Q&A가 없어도 탭은 남기고 빈 안내를 보인다", () => {
-    data.segments = [
-      {
-        segmentId: "s1",
-        transcriptionSessionId: "sess1",
-        sequence: 0,
-        startedAtMs: 0,
-        endedAtMs: 1000,
-        text: "짧은 회의.",
-      },
-    ];
-    render(
-      <NoteArchive
-        noteId="01K0000000002"
-        focusSegmentId={null}
-        onFocusHandled={() => {}}
-      />
-    );
-    expect(screen.getByText("짧은 회의.")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-
-    expect(
-      screen.getByText("회의 중 챗봇에 물어본 내용이 없습니다.")
-    ).toBeTruthy();
-  });
 
   it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {
     render(

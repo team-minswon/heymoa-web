@@ -17,10 +17,11 @@ export const MEETING_PRIMARY_ACTION_LABEL = {
 } as const satisfies Record<NoteResponseDataMeetingStatus, string>;
 
 /**
- * 공유 챗봇 컴포저가 갈리는 회의 상태. `unknown`은 노트를 아직 못 읽은 것 —
- * 게이트를 열지도 닫지도 않는다.
+ * 회의 상태를 화면이 쓰는 형태로 접은 값. 계약의 `meetingStatus` 넷에 **`unknown`**을 더한다 —
+ * 노트를 아직 못 읽은 것이라 게이트를 열지도 닫지도 않는다. 지금은 전사 화면과 노트 패널이
+ * 이 값으로 갈린다(탭 구성·레일 폭·폴링 지속).
  */
-export type SharedChatPhase =
+export type MeetingPhase =
   | "active"
   | "not-started"
   | "paused"
@@ -30,11 +31,11 @@ export type SharedChatPhase =
 type MeetingFields = Pick<NoteResponseData, "meetingStatus">;
 
 /**
- * 노트의 회의 상태를 컴포저 상태로 접는다. 순수 함수 — 브라우저 없이 테스트한다.
+ * 노트의 회의 상태를 화면 상태로 접는다. 순수 함수 — 브라우저 없이 테스트한다.
  */
 export function deriveMeetingPhase(
   note: MeetingFields | undefined
-): SharedChatPhase {
+): MeetingPhase {
   if (!note) return "unknown";
   if (note.meetingStatus === "NOT_STARTED") return "not-started";
   if (note.meetingStatus === "PAUSED") return "paused";
@@ -97,16 +98,9 @@ export function noteOrderedAt(note: NoteOrderFields): string {
 }
 
 /**
- * 노트 화면에서 개인 챗봇을 감출까. side면 항상 감춘다. full에서는 공유 챗봇 트레이가 레일을
- * 독차지하는 동안(활성·미시작·중지)만 감춘다. 종료에는 개인 챗봇을 남긴다.
+ * 노트 화면에서 **떠 있는 카드로는** 개인 챗봇을 감출까. 노트 안에서는 **항상** 감춘다.
  *
- * `unknown`은 로딩과 실패 둘 다다. **로딩 중에만** 감춘다(트레이가 곧 뜬다). 조회가 실패하면
- * 트레이도 안 서므로, 여기서 감추면 챗 입구가 전무해진다 — 실패면 개인 챗봇을 남긴다.
- */
-/**
- * 노트 안에서는 **항상** 감춘다.
- *
- * - full: 오른쪽 440은 공유 레일이 상주하는 자리라(design.pen `L4PpR`) 개인 챗봇이 `fixed`로
+ * - full: 오른쪽 440은 에이전트 레일이 상주하는 자리라(design.pen `L4PpR`) 개인 챗봇이 `fixed`로
  *   그 위에 뜨면 챗 UI 둘이 겹친다.
  * - side: 시트와 backdrop이 `z-50`이라 `z-30/40`인 개인 챗봇 패널·FAB는 그 아래 깔린다 —
  *   보여 봐야 누를 수 없다.
@@ -118,9 +112,9 @@ export function isPersonalChatHiddenInNote(view: "side" | "full"): boolean {
   // 노트 안에서는 **떠 있는 카드로는** 항상 감춘다. `fixed`로 뜨면 오른쪽 440의 레일
   // (design.pen `L4PpR`) 위에 겹쳐 챗 UI가 둘이 된다.
   //
-  // 전체 화면에서 개인 챗봇에 못 가는 것은 아니다 — 레일의 「내 에이전트」 탭이 셸의 그 패널을
-  // 자기 자리로 포털해 온다(`note-agent-rail`). 이 값이 참이어야 스코프가 워크스페이스로
-  // 남고, 그게 정본의 「나만 보는 대화 · 워크스페이스 범위」와 맞는다.
+  // 전체 화면에서 개인 챗봇에 못 가는 것은 아니다 — 레일이 셸의 그 패널을 자기 자리로
+  // 포털해 온다(`note-agent-rail`). 이 값이 참이어야 스코프가 워크스페이스로 남고, 그게
+  // 정본의 「나만 보는 대화 · 워크스페이스 범위」와 맞는다.
   return view === "side" || view === "full";
 }
 
@@ -129,7 +123,7 @@ export const MEETING_POLL_MS = 5_000;
 
 /**
  * 노트 상태를 계속 폴링해야 하는가. 종료된 회의는 더 바뀌지 않으므로 멈춘다 —
- * 안 그러면 관전자가 종료 후에도 활성 컴포저를 보고 계속 `MEETING_NOT_ACTIVE`를 받는다.
+ * 안 그러면 끝난 노트를 열어 둔 사람마다 5초짜리 조회가 영원히 돈다.
  */
 export function meetingRefetchInterval(
   note: MeetingFields | undefined

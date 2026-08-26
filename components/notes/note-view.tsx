@@ -11,7 +11,7 @@ import {
   deriveMeetingPhase,
   isPersonalChatHiddenInNote,
   MEETING_STATUS_LABEL,
-  type SharedChatPhase,
+  type MeetingPhase,
 } from "@/lib/notes/meeting-state";
 
 type NoteViewMode = "side" | "full";
@@ -48,8 +48,7 @@ export function normalizeNoteViewQuery(
     view?: string | string[];
     tab?: string | string[];
   },
-  phase: SharedChatPhase,
-  sharedTurnActive = false
+  phase: MeetingPhase
 ): { view: NoteViewMode; tab: NoteTab } {
   const view = query.view === "side" ? "side" : "full";
   const rawTab = query.tab;
@@ -60,17 +59,10 @@ export function normalizeNoteViewQuery(
       : rawTab === "summary" &&
           (view === "full" || phase === "ended" || phase === "unknown")
         ? "summary"
-        : rawTab === "chat" &&
-            view === "side" &&
-            (phase === "active" ||
-              phase === "paused" ||
-              phase === "unknown" ||
-              sharedTurnActive)
-          ? "chat"
-          : rawTab === "transcript"
-            ? "transcript"
-            : // 기본은 정보다 — 회의를 열면 제목·참여자·시각이 먼저 보인다.
-              "details";
+        : rawTab === "transcript"
+          ? "transcript"
+          : // 기본은 정보다 — 회의를 열면 제목·참여자·시각이 먼저 보인다.
+            "details";
   return { view, tab };
 }
 
@@ -92,19 +84,20 @@ export function NoteView({
     tab: searchParams.get("tab") ?? initialQuery.tab,
   };
 
-  // 노트 안에서는 개인 챗봇이 **떠 있는 카드로는** 안 뜬다. 전체 화면에서는 레일의
-  // 「내 에이전트」 탭이 그 패널을 자기 자리로 포털해 온다(`note-agent-rail`).
-  // 감출 뿐 언마운트하지 않아 흐르던 스트림은 산다.
+  // 노트 안에서는 개인 챗봇이 **떠 있는 카드로는** 안 뜬다. 전체 화면에서는 레일이 그 패널을
+  // 자기 자리로 포털해 온다(`note-agent-rail`). 감출 뿐 언마운트하지 않아 흐르던 스트림은 산다.
   const noteQuery = useGetNote(noteId);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
       : undefined;
   const phase = deriveMeetingPhase(note);
-  const [sharedTurnActive, setSharedTurnActive] = useState(false);
-  const current = normalizeNoteViewQuery(requested, phase, sharedTurnActive);
+  const current = normalizeNoteViewQuery(requested, phase);
   usePersonalChatScope({
     noteId,
+    // **제목까지 넘긴다.** 이 화면이 이미 들고 있는 값이라, 안 넘기면 채팅이 같은 노트를
+    // 한 번 더 조회하고 그 왕복(로컬에서도 ~0.9초) 동안 칩이 안 붙는다.
+    title: note?.title ?? null,
     hidden: isPersonalChatHiddenInNote(current.view),
   });
 
@@ -212,7 +205,6 @@ export function NoteView({
         view={current.view}
         tab={current.tab}
         onTabChange={(tab, options) => setQuery({ tab }, options)}
-        onSharedTurnActiveChange={setSharedTurnActive}
         onClose={closeWithAnim}
         onExpand={
           current.view === "side" ? () => setQuery({ view: "full" }) : undefined

@@ -6,7 +6,11 @@ import {
   resetSessionGate,
   SessionExpiredError,
 } from "@/lib/auth/session-gate";
-import { postEventStream, type SseEvent } from "@/lib/api/sse";
+import {
+  getEventStream,
+  postEventStream,
+  type SseEvent,
+} from "@/lib/api/sse";
 
 const encoder = new TextEncoder();
 
@@ -52,8 +56,10 @@ describe("postEventStream", () => {
     );
 
     expect(events).toEqual([
-      { event: "token", data: '{"t":1}' },
-      { event: "message", data: "첫 줄\n둘째 줄" },
+      { event: "token", data: '{"t":1}', id: undefined },
+      // 주석은 하트비트로 올라온다 — 유휴 타이머가 연결이 살아 있음을 아는 유일한 신호다.
+      { event: "heartbeat", data: "{}" },
+      { event: "message", data: "첫 줄\n둘째 줄", id: "7" },
     ]);
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
       "/v1/notes/n1/chat/messages",
@@ -149,5 +155,54 @@ describe("postEventStream 세션 게이트", () => {
     const iterator = postEventStream("/v1/chat", {});
     await expect(iterator.next()).rejects.toBeInstanceOf(SessionExpiredError);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("id: 줄이 커서다", () => {
+  beforeEach(() => resetSessionGate());
+
+  function stub(...chunks: string[]) {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(chunks));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("id: 줄을 프레임에 싣는다", async () => {
+    stub('id: 42\nevent: token\ndata: {"delta":"안"}\n\n');
+    const events = await collect(postEventStream("/v1/x", {}));
+    expect(events).toEqual([
+      { id: "42", event: "token", data: '{"delta":"안"}' },
+    ]);
+  });
+
+  it("id: 는 프레임 단위로만 산다 — 다음 프레임이 물려받지 않는다", async () => {
+    stub("id: 7\nevent: token\ndata: {}\n\nevent: token\ndata: {}\n\n");
+    const events = await collect(postEventStream("/v1/x", {}));
+    expect(events.map((e) => e.id)).toEqual(["7", undefined]);
+  });
+
+  it("재동기화 프레임도 id: 를 싣는다 — 그 번호가 바닥이다", async () => {
+    stub("id: 900\nevent: stream_resync\ndata: {}\n\n");
+    const [event] = await collect(postEventStream("/v1/x", {}));
+    expect(event).toMatchObject({ id: "900", event: "stream_resync" });
+  });
+
+  it("하트비트 주석을 이벤트로 올리되 번호는 없다", async () => {
+    stub(": heartbeat\n\nid: 7\nevent: token\ndata: {}\n\n");
+    const events = await collect(postEventStream("/v1/x", {}));
+    expect(events).toEqual([
+      { event: "heartbeat", data: "{}" },
+      { id: "7", event: "token", data: "{}" },
+    ]);
+  });
+
+  it("getEventStream 은 GET 으로 열고 URL 의 after 를 그대로 쓴다", async () => {
+    const fetchMock = stub("id: 5\nevent: token\ndata: {}\n\n");
+    const events = await collect(getEventStream("/v1/agent-chats/c1/events?after=4"));
+    expect(events).toHaveLength(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("after=4");
+    expect(init.method).toBe("GET");
+    expect(init.headers.Accept).toBe("text/event-stream");
   });
 });

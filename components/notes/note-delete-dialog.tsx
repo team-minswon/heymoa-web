@@ -106,9 +106,9 @@ export function NoteDeleteDialog({
               // 뒤로가기로 돌아갔을 때 지운 회의 내용이 다시 그려진다.
               queryClient.removeQueries({
                 predicate: (query) =>
-                  // 문자열로 펴서 본다. 개인 챗봇의 활성 세션 키는
-                  // `["/v1/agent-chats/active", { scope: "note", noteId }]`처럼 noteId가
-                  // 객체 안에 있어서 최상위 문자열 검사로는 안 걸린다.
+                  // 문자열로 펴서 본다. 노트 상세를 담은 키 중에는
+                  // `["/v1/notes/{noteId}/transcript", { cursor }]`처럼 noteId가 객체
+                  // 안에 있는 것도 있어 최상위 문자열 검사로는 안 걸린다.
                   JSON.stringify(query.queryKey).includes(noteId),
               });
               // 목록은 재조회 전에 행을 먼저 뺀다 — `invalidateQueries`는 재조회가 실패해도

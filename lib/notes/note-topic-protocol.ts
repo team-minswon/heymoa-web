@@ -39,21 +39,6 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
     type: z.literal("recording.stopped"),
     transcriptionSessionId: tsidSchema,
   }),
-  z.strictObject({
-    type: z.literal("chat.token"),
-    delta: z.string().min(1),
-  }),
-  z.strictObject({
-    type: z.literal("chat.message_end"),
-    messageId: z.string().min(1),
-    content: z.string().min(1),
-  }),
-  z.strictObject({
-    type: z.literal("chat.lock"),
-    chatId: tsidSchema,
-    locked: z.boolean(),
-    lockedByUserId: tsidSchema.nullable(),
-  }),
 ]);
 
 export type NoteTopicEvent = z.infer<typeof noteTopicEventSchema>;

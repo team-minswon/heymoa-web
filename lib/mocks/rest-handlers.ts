@@ -1,12 +1,13 @@
 import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
+// 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
+import { agentChatTurnState, runningTurnOf } from "@/lib/mocks/sse-handler";
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
 import { getGetCurrentUserMockHandler } from "@/lib/api/generated/users/users.msw";
 import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/workspaces.msw";
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
-import { getGetActiveAgentChatMockHandler } from "@/lib/api/generated/agent-chat/agent-chat.msw";
 
 import type {
   CreateWorkspaceRequest,
@@ -95,8 +96,6 @@ const KNOWN_CODES = new Set([
   ...FORBIDDEN_CODES,
   ...INVITATION_NOT_FOUND_CODES,
   "PROJECT_HAS_NOTES",
-  "MEETING_NOT_ACTIVE",
-  "CHAT_LOCKED",
   "NOT_MEETING_STARTER",
   "DIARIZATION_NOT_MAPPED",
   // 422 — 연결 대상이 참여자가 아니다. 부른 사람이 아닌 것(403)과 가른다
@@ -722,33 +721,40 @@ export const restHandlers = [
   }),
 
   // Agent chat sessions (SSE 전송은 sse-handler.ts가 맡는다)
-  http.post("*/v1/agent-chats", async ({ request }) => {
-    const body = (await request.json()) as {
-      scope: string;
-      workspaceId?: string | null;
-      noteId?: string | null;
-    };
-    return commandResult(() => mockDb.createAgentChat(body), 201);
+  http.post(
+    "*/v1/workspaces/:workspaceId/agent-chats",
+    async ({ request, params }) => {
+      const body = (await request.json()) as { title?: string | null };
+      return commandResult(
+        () =>
+          mockDb.createAgentChat({
+            workspaceId: id(params.workspaceId),
+            ...body,
+          }),
+        201
+      );
+    }
+  ),
+  /**
+   * 대화 목록. **정렬·상한은 목 DB가, 도는 턴은 스트림이 안다** — 두 출처를 여기서 합친다.
+   * 멤버가 아닌 워크스페이스는 `assertWorkspace`가 404로 은닉한다(계약).
+   */
+  http.get("*/v1/workspaces/:workspaceId/agent-chats", ({ params }) => {
+    const workspaceId = id(params.workspaceId);
+    return commandResult(() => ({
+      chats: mockDb.listAgentChats({ workspaceId }).map((chat) => ({
+        ...chat,
+        runningTurn: runningTurnOf(chat.chatId),
+      })),
+    }));
   }),
-  getGetActiveAgentChatMockHandler(({ request }) => {
-    const url = new URL(request.url);
-    return {
-      success: true,
-      data: mockDb.getActiveAgentChat({
-        scope: url.searchParams.get("scope") ?? "workspace",
-        workspaceId: url.searchParams.get("workspaceId"),
-        noteId: url.searchParams.get("noteId"),
-      }),
-      error: null,
-    };
-  }),
+  // 히스토리와 **이어받기 상태**를 함께 준다. 커서·도는 턴·마지막 턴이 없으면 돌아온
+  // 브라우저는 무엇을 어디서부터 이어야 하는지 알 방법이 없다.
   http.get("*/v1/agent-chats/:chatId/messages", ({ params }) =>
     commandResult(() => ({
       messages: mockDb.getAgentChatMessages(id(params.chatId)),
+      ...agentChatTurnState(id(params.chatId)),
     }))
-  ),
-  http.get("*/v1/notes/:noteId/chat/messages", ({ params }) =>
-    commandResult(() => mockDb.getNoteSharedChat(id(params.noteId)))
   ),
 
   // 목 전용(계약 밖, `_mock` 접두사): 대기 중인 분석을 완료로 넘긴다.
@@ -759,18 +765,4 @@ export const restHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // 목 전용(계약 밖, `_mock` 접두사): 관전자 화면을 재현하려고 남의 잠금을 심는다.
-  // e2e는 페이지 안에서 fetch로 이 경로를 쳐 서비스 워커가 상태를 세우게 한다.
-  http.post(
-    "*/v1/notes/:noteId/_mock/foreign-lock",
-    async ({ request, params }) => {
-      const body = (await request.json().catch(() => ({}))) as {
-        lockedBy?: string | null;
-      };
-      // 명시적 null은 잠금 해제다 — 생략했을 때만 기본 이름을 넣는다(`??`는 null도 덮어 해제를 막는다).
-      const lockedBy = body.lockedBy === undefined ? "김민수" : body.lockedBy;
-      mockDb.seedForeignLock(id(params.noteId), lockedBy);
-      return new HttpResponse(null, { status: 204 });
-    }
-  ),
 ];

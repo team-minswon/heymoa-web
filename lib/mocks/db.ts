@@ -24,16 +24,14 @@ import type {
   MarkNotificationReadResponseData,
   AnalysisResultResponseData,
   ToolConnectionsResponseDataIntegrationsItem,
-  AgentChatV2ResponseData,
+  AgentChatResponseData,
   AgentChatMessagesResponseDataMessagesItem,
-  NoteSharedChatResponseData,
-  NoteSharedChatResponseDataMessagesItem,
-  NoteSharedChatResponseDataLockPendingApproval,
   WorkspaceResponseData,
   TranscriptResponseData,
   TranscriptResponseDataDiarization,
   TranscriptResponseDataGapsItem,
 } from "@/lib/api/generated/models";
+import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 
@@ -122,16 +120,42 @@ type MockIntegration = ToolConnectionsResponseDataIntegrationsItem & {
   workspaceId: string;
 };
 
-/** 개인 챗봇 세션. 활성 세션은 스코프 대상별로 하나다 (워크스페이스 1개 + 노트당 1개). */
-type MockAgentChat = AgentChatV2ResponseData & { active: boolean };
+/**
+ * 메시지 하나에 붙는 범위. 서버 계약(`AgentChatMessagesResponse`)의 그 모양이다.
+ *
+ * ★ **`kind` 가 대문자다.** server 가 도메인 enum(`ScopeRefKind`)을 응답에 그대로 쓰고
+ * Jackson 이 이름을 그대로 낸다 — 그 레포는 전 API 를 그렇게 내고 `ExposedEnumContractTest`
+ * 가 못박고 있다. SSE 는 ai 가 내서 소문자라 **같은 필드가 두 전송에서 두 모양**이고,
+ * 접는 것은 화면의 일이다(`chat-thread.tsx`의 `livingScope`).
+ *
+ * 목이 소문자를 내던 동안 프로젝트 칩이 회의록 칩으로 그려지는 결함이 살아 있었다 —
+ * **목만 통과하는 모양이면 검사가 아무것도 안 지킨다.**
+ */
+export type ScopeRef = {
+  kind: "NOTE" | "PROJECT";
+  id: string;
+  title: string | null;
+  unavailable: boolean;
+};
+
+/**
+ * 개인 챗봇 대화. **활성 플래그가 없다** — 대화가 여럿 살고, 목록의 첫 줄(=`updatedAt`이
+ * 가장 큰 것)이 「마지막으로 쓴 대화」다. `updatedAt`은 응답 밖 필드가 아니라 목록 계약의
+ * 정렬 기준이라 여기 산다.
+ */
+type MockAgentChat = AgentChatResponseData & { updatedAt: string };
+
+/** 목록 상한. 계약이 못박은 값이다 — cursor는 대화가 실제로 쌓일 때. */
+const AGENT_CHAT_LIST_LIMIT = 50;
+
+/** 생성 시점의 제목. 첫 USER 메시지가 이 값일 때만 덮는다. */
+const DEFAULT_AGENT_CHAT_TITLE = "새 대화";
+
+/** 제목 컬럼 상한(`AgentChat.MAX_TITLE_LENGTH`). 목록에서 한 줄로 자르는 것은 CSS가 한다. */
+const MAX_AGENT_CHAT_TITLE_LENGTH = 200;
 
 type MockAgentChatMessage = AgentChatMessagesResponseDataMessagesItem & {
   chatId: string;
-};
-
-/** 공유 챗은 노트에 하나씩 붙는다 — 새 대화도 삭제도 없다 (회의 기록의 일부). */
-type MockSharedChatMessage = NoteSharedChatResponseDataMessagesItem & {
-  noteId: string;
 };
 
 type StoreState = {
@@ -150,16 +174,8 @@ type StoreState = {
   notifications: NotificationListResponseDataNotificationsItem[];
   analyses: AnalysisResultResponseData[];
   integrations: MockIntegration[];
-  sharedChatLocks: Set<string>;
-  /** 현재 유저가 아닌 멤버가 쥔 잠금 (noteId → 이름). 관전자 화면 재현용. */
-  sharedChatForeignLocks: Map<string, string>;
-  sharedChatPendingApprovals: Map<
-    string,
-    NoteSharedChatResponseDataLockPendingApproval
-  >;
   agentChats: MockAgentChat[];
   agentChatMessages: MockAgentChatMessage[];
-  sharedChatMessages: MockSharedChatMessage[];
 };
 
 let state: StoreState;
@@ -240,6 +256,21 @@ function nextTimestamp() {
   return value;
 }
 
+/**
+ * ★ **개인 챗봇이 쓰는 시각. `nextTimestamp()`와 다른 시계다.**
+ *
+ * 그쪽은 결정성을 위해 `2026-07-11T09:00:00Z`에 굳어 있는데, 챗 시드는 「오늘/어제/이번 주」가
+ * 늘 채워지도록 **지금 시각에서 거꾸로** 잡는다. 둘을 섞으면 방금 만든 대화가 굳은 시각을
+ * 받아 목록 **맨 아래**에 「44일 전」으로 서고, 새로고침이 엉뚱한 대화를 연다.
+ *
+ * 같은 밀리초에 여러 번 불려도 순서가 뒤집히지 않게 1ms 씩 앞으로 민다.
+ */
+let agentChatClock = 0;
+function nextAgentChatTimestamp() {
+  agentChatClock = Math.max(Date.now(), agentChatClock + 1);
+  return new Date(agentChatClock).toISOString();
+}
+
 function nextSessionTimestamp() {
   const latest = state.sessions.reduce((latestMs, session) => {
     const candidates = [session.startedAt, session.endedAt]
@@ -262,8 +293,228 @@ function daysAgoIso(daysAgo: number, order = 0): string {
   return new Date(at).toISOString();
 }
 
+/**
+ * ★ **개인 챗봇 대화 시드. 절대 시각을 박지 않는다.**
+ *
+ * 「2026-07-11T18:00:00Z」처럼 굳혀 두면 시간이 지나면서 「오늘」 묶음이 영원히 빈 채로
+ * 남고, 목록의 날짜 묶음과 스레드의 날짜 구분선을 목에서 한 번도 볼 수 없다. 전부 **지금
+ * 시각에서 거꾸로** 잡는다.
+ *
+ * 오늘 자리에만 `Date.now()` 를 직접 쓴다 — `daysAgoIso(0)` 은 앱 타임존 오전 10시라
+ * 새벽에 열면 **미래**가 된다.
+ *
+ * 첫 대화 하나가 스레드 구분선 두 갈래를 다 보여준다: **날짜가 바뀌어 서는 자리**와
+ * **같은 날이라 안 서는 자리**(어제 안에서 세 시간 벌어진 왕복).
+ */
+function seedAgentChats(workspaceId: string) {
+  const minutesAgo = (minutes: number) =>
+    new Date(Date.now() - minutes * 60_000).toISOString();
+  /** 그날(앱 타임존) 오전 10시를 기준으로 `minutes` 분 뒤. */
+  const dayAt = (daysAgo: number, minutes: number) =>
+    new Date(Date.parse(daysAgoIso(daysAgo)) + minutes * 60_000).toISOString();
+
+  const chats: MockAgentChat[] = [];
+  const messages: MockAgentChatMessage[] = [];
+  let turn = 300;
+
+  /** 한 왕복. 답은 질문 8초 뒤라 둘 사이에는 구분선이 안 선다. */
+  const exchange = (
+    chatId: string,
+    askedAt: string,
+    ask: string,
+    answer: string
+  ) => {
+    const turnId = `01K${String(turn).padStart(10, "0")}`;
+    turn += 1;
+    messages.push(
+      {
+        chatId,
+        turnId,
+        createdAt: askedAt,
+        role: "USER",
+        content: ask,
+        scope: [],
+        toolEvent: null,
+      },
+      {
+        chatId,
+        turnId,
+        createdAt: new Date(Date.parse(askedAt) + 8_000).toISOString(),
+        role: "ASSISTANT",
+        content: answer,
+        scope: [],
+        toolEvent: null,
+      }
+    );
+  };
+
+  const chat = (chatId: string, title: string, createdAt: string) => {
+    chats.push({ chatId, workspaceId, title, createdAt, updatedAt: createdAt });
+    return chatId;
+  };
+
+  // 오늘 — 몇 분 전. **스레드 안에서 구분선 세 갈래가 다 보이는 대화다.**
+  const followUp = chat("01K0000000201", "회의 후속 정리", dayAt(1, 320));
+  exchange(
+    followUp,
+    dayAt(1, 320),
+    "지난 회의에서 정한 것만 정리해줘",
+    "세 가지가 남아 있었습니다. 첫 화면 개편, 알림 정책 확정, 그리고 배포 일정 재조정입니다."
+  );
+  // 같은 날 세 시간 뒤 — 날짜가 그대로라 구분선이 안 선다.
+  exchange(
+    followUp,
+    dayAt(1, 496),
+    "그럼 두 번째는?",
+    "알림 정책은 기본값을 끄기로 하고, 켤 사람만 설정에서 켜는 쪽으로 좁혔습니다."
+  );
+  // 오늘 — 날짜가 바뀌어 구분선이 다시 선다.
+  exchange(
+    followUp,
+    minutesAgo(6),
+    "남은 액션 아이템이 뭐야?",
+    "배포 일정 재조정만 남았습니다. 담당자가 아직 안 정해져 있습니다."
+  );
+
+  const onboarding = chat("01K0000000202", "온보딩 문서 초안", minutesAgo(180));
+  exchange(
+    onboarding,
+    minutesAgo(180),
+    "온보딩 문서 초안 잡아줘",
+    "가입 직후 첫 화면부터 첫 회의를 만들기까지를 네 단계로 나눠 적었습니다."
+  );
+
+  const release = chat("01K0000000203", "배포 일정 확인", dayAt(1, 40));
+  exchange(
+    release,
+    dayAt(1, 40),
+    "이번 배포 언제였지?",
+    "이번 주 목요일 오후로 잡혀 있고, 그 전날까지 QA 를 끝내기로 했습니다."
+  );
+
+  const feedback = chat("01K0000000204", "고객 피드백 후속", dayAt(3, 200));
+  exchange(
+    feedback,
+    dayAt(3, 200),
+    "고객 피드백에서 반복된 얘기 있어?",
+    "검색이 느리다는 말이 세 번 나왔습니다. 나머지는 한 번씩입니다."
+  );
+
+  const retro = chat("01K0000000205", "스프린트 회고 정리", dayAt(5, 120));
+  exchange(
+    retro,
+    dayAt(5, 120),
+    "회고에서 나온 개선안만 뽑아줘",
+    "리뷰 대기 시간을 줄이자는 것과 배포 체크리스트를 문서로 남기자는 것 둘입니다."
+  );
+
+  /**
+   * ★ **끝난 뒤에도 생각이 남는가를 보는 자리.**
+   *
+   * 이것 하나가 없으면 그 변경을 확인하려고 매번 살아 있는 턴을 굴려야 하고, 그러면
+   * 「흐를 때」와 「끝난 뒤」를 나란히 못 본다 [W-11]. 여기는 **열자마자 끝난 모습**이다.
+   *
+   * 도구를 두 번 부르고 생각이 그 사이사이에 낀다 — 단계가 여럿 쌓인 묶음이 어떻게
+   * 접히는지가 한 번에 보인다.
+   */
+  const traced = chat("01K0000000208", "생각이 남은 대화", dayAt(2, 60));
+  {
+    const turnId = `01K${String(turn).padStart(10, "0")}`;
+    turn += 1;
+    const at = (seconds: number) =>
+      new Date(Date.parse(dayAt(2, 60)) + seconds * 1_000).toISOString();
+    const step = (
+      seconds: number,
+      role: "THINKING" | "TOOL",
+      content: string,
+      toolEvent: MockAgentChatMessage["toolEvent"] = null
+    ) =>
+      messages.push({
+        chatId: traced,
+        turnId,
+        createdAt: at(seconds),
+        role,
+        content,
+        scope: [],
+        toolEvent,
+      });
+
+    messages.push({
+      chatId: traced,
+      turnId,
+      createdAt: at(0),
+      role: "USER",
+      content: "결제 실패 얘기 언제 나왔고 이슈로도 만들었어?",
+      scope: [],
+      toolEvent: null,
+    });
+    step(2, "THINKING", "먼저 전사에서 결제 실패가 언급된 자리를 찾습니다.");
+    step(4, "TOOL", "전사에서 관련 발화 검색 · 3건 찾음", {
+      tool: "transcripts.search",
+      decision: null,
+      status: "success",
+      url: null,
+    });
+    // 아주 긴 생각 — 접히는지, 아니면 화면을 밀어내는지 보는 자리다.
+    step(
+      6,
+      "THINKING",
+      "세 건 중 두 건은 같은 회의의 같은 대목이라 하나로 봅니다. 남은 한 건은 그보다 " +
+        "이틀 전 회의인데, 그때는 원인을 못 좁히고 다음 회의로 넘겼습니다. 그래서 " +
+        "「언제 나왔나」의 답은 두 회의고, 「이슈로 만들었나」는 아직 확인이 안 됐으니 " +
+        "Linear 를 한 번 더 봐야 합니다."
+    );
+    step(8, "TOOL", "Linear 이슈 검색 · 1건 찾음", {
+      tool: "linear.search_issues",
+      decision: null,
+      status: "success",
+      url: "https://linear.app/heymoa/issue/APP-12",
+    });
+    messages.push({
+      chatId: traced,
+      turnId,
+      createdAt: at(10),
+      role: "ASSISTANT",
+      content:
+        "두 회의에서 나왔습니다. 이틀 전 회의에서는 원인을 못 좁혔고, 어제 회의에서 " +
+        "결제 실패율이 3%로 올랐다는 얘기가 다시 나왔습니다. 이슈는 APP-12 로 이미 " +
+        "만들어져 있습니다.",
+      scope: [],
+      toolEvent: null,
+    });
+  }
+
+  const hiring = chat("01K0000000206", "채용 프로세스 정리", dayAt(40, 180));
+  exchange(
+    hiring,
+    dayAt(40, 180),
+    "채용 절차 어디까지 정해졌어?",
+    "서류·과제·인터뷰 세 단계로 좁혔고 과제 분량은 아직 논의 중입니다."
+  );
+
+  const roadmap = chat("01K0000000207", "지난 분기 로드맵", dayAt(96, 150));
+  exchange(
+    roadmap,
+    dayAt(96, 150),
+    "지난 분기에 뭘 냈지?",
+    "회의 기록과 요약까지 냈고, 연동은 다음 분기로 미뤘습니다."
+  );
+
+  // **`updatedAt` 은 마지막 메시지 시각이다.** 목록 정렬과 줄에 적히는 시각이 같은 값이라야
+  // 「1분 전인데 왜 세 번째 줄」이 안 생긴다.
+  for (const each of chats) {
+    const last = messages
+      .filter((message) => message.chatId === each.chatId)
+      .at(-1);
+    if (last) each.updatedAt = last.createdAt;
+  }
+
+  return { chats, messages };
+}
+
 function createSeedState(): StoreState {
   faker.seed(20260715);
+  const seededChats = seedAgentChats("01K0000000000");
   const user: CurrentUserResponseData = { ...MOCK_USER };
   const workspaces: WorkspaceResponseData[] = [
     {
@@ -510,7 +761,9 @@ function createSeedState(): StoreState {
     // 무작위가 아니라 오늘에 맞춘 값이라 실행 안에서는 결정적이다.
     ...[
       ["01K0000000020", "온보딩 이탈 구간 리뷰", 0, 0],
-      ["01K0000000021", "알림 정책 논의", 0, 1],
+      // **괄호가 든 제목이 목에 하나는 있어야 한다.** 마커의 이스케이프 규칙이
+      // 어긋나면 이런 제목에서만 깨지는데, 표본이 없으면 e2e 가 그 자리를 못 밟는다.
+      ["01K0000000021", "알림 정책 논의 (2차)", 0, 1],
       ["01K0000000022", "고객 피드백 정리", 1, 0],
       ["01K0000000023", "스프린트 회고", 3, 1],
       ["01K0000000024", "로드맵 브레인스토밍", 4, 0],
@@ -948,53 +1201,8 @@ function createSeedState(): StoreState {
       },
     ],
     integrations,
-    sharedChatLocks: new Set<string>(),
-    sharedChatForeignLocks: new Map<string, string>(),
-    sharedChatPendingApprovals: new Map(),
-    agentChats: [],
-    agentChatMessages: [],
-    // 공유 챗봇은 여러 명이 함께 쓰는 화면이라 빈 상태만 보면 발화자·시각 표기를 검증할 수
-    // 없다. 다른 멤버(`authorName`)와 내가 섞인 2왕복을 시드한다.
-    sharedChatMessages: [
-      {
-        messageId: "01K0000000040",
-        noteId: notes[0].noteId,
-        role: "USER",
-        content: "지금까지 나온 액션 아이템 정리해줘",
-        authorName: MOCK_USER.name,
-        createdAt: "2026-07-11T00:06:00Z",
-        toolEvent: null,
-      },
-      {
-        messageId: "01K0000000041",
-        noteId: notes[0].noteId,
-        role: "ASSISTANT",
-        content:
-          "지금까지 2건입니다.\n1. 온보딩 이탈 구간 분석\n2. 다음 주 사용자 테스트 진행",
-        authorName: null,
-        createdAt: "2026-07-11T00:06:30Z",
-        toolEvent: null,
-      },
-      {
-        messageId: "01K0000000042",
-        noteId: notes[0].noteId,
-        role: "USER",
-        content: "두 번째 건 담당자는 정해졌어?",
-        authorName: "박준호",
-        createdAt: "2026-07-11T00:09:00Z",
-        toolEvent: null,
-      },
-      {
-        messageId: "01K0000000043",
-        noteId: notes[0].noteId,
-        role: "ASSISTANT",
-        content:
-          "04:22에 박준호님이 테스트 대상 20명을 제안했고, 05:12에 이서연님이 모집 마감을 금요일로 정했습니다. 담당자는 아직 정해지지 않았습니다.",
-        authorName: null,
-        createdAt: "2026-07-11T00:09:20Z",
-        toolEvent: null,
-      },
-    ],
+    agentChats: seededChats.chats,
+    agentChatMessages: seededChats.messages,
   };
 }
 
@@ -1247,6 +1455,7 @@ function expireReadySessions(noteId: string) {
 function reset() {
   idCounter = 100;
   timestampCounter = 0;
+  agentChatClock = 0;
   state = createSeedState();
 }
 
@@ -1260,62 +1469,58 @@ export const mockDb = {
    * 통과시켜야 패배한 쪽이 오류로 끝난 스트림 대신 409 JSON을 받는다.
    */
   /**
-   * 개인 챗봇 세션을 만든다. 같은 대상의 기존 활성 세션은 비활성으로 내린다 —
-   * "새로운 대화 시작"이 그 동작이고, 다른 대상의 세션에는 영향이 없다.
+   * 개인 챗봇 대화를 만든다. **앞 대화를 안 죽인다** — 목록에 한 줄이 늘 뿐이다.
+   * 예전에는 같은 워크스페이스의 활성 대화를 비활성으로 내렸다(활성은 하나였다).
    */
   createAgentChat(input: {
-    scope: string;
-    workspaceId?: string | null;
-    noteId?: string | null;
-  }): AgentChatV2ResponseData {
-    const scope = input.scope as AgentChatV2ResponseData["scope"];
-    const workspaceId =
-      scope === "workspace" ? (input.workspaceId ?? null) : null;
-    const noteId = scope === "note" ? (input.noteId ?? null) : null;
-    if (scope === "workspace" && !workspaceId) fail("WORKSPACE_NOT_FOUND");
-    if (scope === "note" && !noteId) fail("NOTE_NOT_FOUND");
-    if (workspaceId) assertWorkspace(workspaceId);
-    if (noteId) findNote(noteId);
+    workspaceId: string;
+    title?: string | null;
+  }): AgentChatResponseData {
+    assertWorkspace(input.workspaceId);
 
-    state.agentChats
-      .filter(
-        (chat) =>
-          chat.active &&
-          chat.scope === scope &&
-          chat.workspaceId === workspaceId &&
-          chat.noteId === noteId
-      )
-      .forEach((chat) => {
-        chat.active = false;
-      });
-
+    const now = nextAgentChatTimestamp();
     const chat: MockAgentChat = {
       chatId: nextId(),
-      scope,
-      workspaceId,
-      noteId,
-      title: null,
-      createdAt: nextTimestamp(),
-      active: true,
+      workspaceId: input.workspaceId,
+      title: input.title ?? DEFAULT_AGENT_CHAT_TITLE,
+      createdAt: now,
+      // 아직 아무것도 안 썼어도 방금 만든 것이 맨 위다 — 만들자마자 그 대화로 들어간다.
+      updatedAt: now,
     };
     state.agentChats.push(chat);
-    return copy(omit(chat, ["active"]));
+    return copy(omit(chat, ["updatedAt"]));
   },
 
-  /** 새로고침 후 복원용. 활성 세션이 없으면 null이다 (계약이 nullable로 정의). */
-  getActiveAgentChat(query: {
-    scope: string;
-    workspaceId?: string | null;
-    noteId?: string | null;
-  }): AgentChatV2ResponseData | null {
-    const chat = state.agentChats.find(
-      (candidate) =>
-        candidate.active &&
-        candidate.scope === query.scope &&
-        candidate.workspaceId === (query.workspaceId ?? null) &&
-        candidate.noteId === (query.noteId ?? null)
+  /**
+   * 대화 목록. **정렬과 상한이 계약이다** — `updatedAt` 내림차순이라 첫 번째가 마지막으로
+   * 쓴 대화이고, 새로고침한 화면이 그 줄로 돌아온다. 도는 턴은 스트림의 사실이라 여기
+   * 없다 — 핸들러가 `runningTurnOf`로 붙인다.
+   */
+  listAgentChats(query: { workspaceId: string }) {
+    assertWorkspace(query.workspaceId);
+    return state.agentChats
+      .filter((chat) => chat.workspaceId === query.workspaceId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, AGENT_CHAT_LIST_LIMIT)
+      .map(({ chatId, title, updatedAt }) => ({ chatId, title, updatedAt }));
+  },
+
+  /**
+   * 범위 칩에 쓸 제목. 없으면 null이다 — 지워졌거나 권한이 없다는 뜻이고 **둘을 가르지 않는다.**
+   */
+  findNoteBrief(noteId: string) {
+    return state.notes.find((note) => note.noteId === noteId) ?? null;
+  },
+
+  findProjectBrief(projectId: string) {
+    return (
+      state.projects.find((project) => project.projectId === projectId) ?? null
     );
-    return chat ? copy(omit(chat, ["active"])) : null;
+  },
+
+  /** 이 대화가 어느 워크스페이스의 것인가. 범위 확장 제안이 실재하는 프로젝트를 고르는 데 쓴다. */
+  findAgentChat(chatId: string) {
+    return state.agentChats.find((chat) => chat.chatId === chatId) ?? null;
   },
 
   getAgentChatMessages(
@@ -1331,91 +1536,42 @@ export const mockDb = {
     );
   },
 
-  /** 스트림이 흐르는 동안 server가 하는 tee를 목도 흉내낸다 — 히스토리가 남아야 관전자·복원이 산다. */
+  /** 스트림이 흐르는 동안 server가 하는 tee를 목도 흉내낸다 — 히스토리가 남아야 새로고침 뒤 복원이 산다. */
   appendAgentChatMessage(
     chatId: string,
-    message: Omit<AgentChatMessagesResponseDataMessagesItem, "createdAt">
+    message: Omit<
+      AgentChatMessagesResponseDataMessagesItem,
+      "createdAt" | "turnId"
+    > & { turnId?: string | null }
   ) {
+    const createdAt = nextAgentChatTimestamp();
     state.agentChatMessages.push({
+      // **`turnId`는 없으면 null이다.** 키가 통째로 빠지면 화면이 「어느 턴인지 모른다」와
+      // 「필드가 없다」를 못 가르고, 진행 중 턴의 도구 카드가 두 벌 그려진다.
+      turnId: null,
       ...message,
       chatId,
-      createdAt: nextTimestamp(),
+      createdAt,
     });
-  },
 
-  getNoteSharedChat(noteId: string): NoteSharedChatResponseData {
-    findNote(noteId);
-    // 남의 잠금(관전자)이 내 잠금보다 우선한다 — 관전자 화면을 재현하려면 lockedBy가
-    // 현재 유저가 아니어야 한다.
-    const foreignLocker = state.sharedChatForeignLocks.get(noteId) ?? null;
-    const locked = foreignLocker !== null || state.sharedChatLocks.has(noteId);
-    return copy({
-      chatId: noteId,
-      messages: state.sharedChatMessages
-        .filter((message) => message.noteId === noteId)
-        .map((message) => omit(message, ["noteId"])),
-      lock: {
-        locked,
-        lockedBy:
-          foreignLocker ??
-          (state.sharedChatLocks.has(noteId) ? state.user.name : null),
-        // 관전자는 스트림을 받지 않는다 — 승인 대기를 이 필드의 폴링으로만 본다 (계약).
-        pendingApproval: state.sharedChatPendingApprovals.get(noteId) ?? null,
-      },
-    });
-  },
-
-  /** 관전자 화면 재현: 현재 유저가 아닌 멤버가 입력 중인 잠금을 세운다 (null이면 해제). */
-  seedForeignLock(noteId: string, lockedBy: string | null) {
-    if (lockedBy) state.sharedChatForeignLocks.set(noteId, lockedBy);
-    else state.sharedChatForeignLocks.delete(noteId);
-  },
-
-  appendSharedChatMessage(
-    noteId: string,
-    message: Omit<
-      NoteSharedChatResponseDataMessagesItem,
-      "createdAt" | "messageId"
-    >
-  ) {
-    state.sharedChatMessages.push({
-      ...message,
-      noteId,
-      messageId: nextId(),
-      createdAt: nextTimestamp(),
-    });
-  },
-
-  acquireSharedChatLock(noteId: string) {
-    const note = findNote(noteId);
-    // 계약의 ACTIVE 판정은 IN_PROGRESS만이 아니라 "녹음이 시작됐는가"까지다.
-    // 새 노트는 NOT_STARTED이고, 세션 생성 뒤에만 시작자가 정해진다.
-    if (note.meetingStatus !== "IN_PROGRESS" || !note.meetingStartedBy) {
-      fail("MEETING_NOT_ACTIVE");
+    const chat = state.agentChats.find(
+      (candidate) => candidate.chatId === chatId
+    );
+    if (!chat) return;
+    // **여기서 안 밀면 목록 정렬이 거짓말을 한다.** 생성 시각으로만 두면 옛 대화에 다시
+    // 쓰는 순간 「첫 줄 = 마지막으로 쓴 대화」가 깨지고, 새로고침이 엉뚱한 대화를 연다.
+    chat.updatedAt = createdAt;
+    // 제목이 저절로 붙는다 — 첫 USER 메시지가 기본 제목을 채운다. 사용자가 정한 제목은
+    // 안 덮는다. 실제 서버가 USER 행을 저장할 때 하는 일이다.
+    //
+    // ★ **마커를 사람 말로 되돌린 뒤 자른다.** 안 그러면 목록에
+    // `@[주간 회의](noteId:…) 액션 정리해줘` 가 그대로 뜬다 — 서버가 하는 일과 같다.
+    if (message.role === "USER" && chat.title === DEFAULT_AGENT_CHAT_TITLE) {
+      chat.title = unwrapScopeMarkers(message.content)
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, MAX_AGENT_CHAT_TITLE_LENGTH);
     }
-    // 남의 잠금(시드된 관전자 상태)도 실제로 막아야 계약(다른 멤버 입력 중이면 CHAT_LOCKED)을
-    // 그대로 시연한다 — GET만 잠겼다고 하고 POST는 통과하면 목이 계약과 어긋난다.
-    if (
-      state.sharedChatLocks.has(noteId) ||
-      state.sharedChatForeignLocks.has(noteId)
-    ) {
-      fail("CHAT_LOCKED");
-    }
-    state.sharedChatLocks.add(noteId);
-  },
-
-  releaseSharedChatLock(noteId: string) {
-    state.sharedChatLocks.delete(noteId);
-    state.sharedChatPendingApprovals.delete(noteId);
-  },
-
-  /** 스트림이 승인을 기다리는 동안 관전자에게 보일 대기 상태를 세운다. */
-  setSharedChatPendingApproval(
-    noteId: string,
-    pending: NoteSharedChatResponseDataLockPendingApproval | null
-  ) {
-    if (pending) state.sharedChatPendingApprovals.set(noteId, pending);
-    else state.sharedChatPendingApprovals.delete(noteId);
   },
 
   endMeeting(noteId: string): AnalysisResultResponseData {
@@ -2057,27 +2213,14 @@ export const mockDb = {
         .filter((row) => row.noteId === noteId)
         .map((row) => row.sessionId)
     );
-    const chatIds = new Set(
-      state.agentChats
-        .filter((row) => row.noteId === noteId)
-        .map((row) => row.chatId)
-    );
     state.notes = state.notes.filter((row) => row.noteId !== noteId);
     state.sessions = state.sessions.filter((row) => row.noteId !== noteId);
     state.segments = state.segments.filter(
       (row) => !sessionIds.has(row.transcriptionSessionId)
     );
     state.analyses = state.analyses.filter((row) => row.noteId !== noteId);
-    state.agentChats = state.agentChats.filter((row) => row.noteId !== noteId);
-    state.agentChatMessages = state.agentChatMessages.filter(
-      (row) => !chatIds.has(row.chatId)
-    );
-    state.sharedChatMessages = state.sharedChatMessages.filter(
-      (row) => row.noteId !== noteId
-    );
-    state.sharedChatLocks.delete(noteId);
-    state.sharedChatForeignLocks.delete(noteId);
-    state.sharedChatPendingApprovals.delete(noteId);
+    // **대화는 안 지운다.** 대화가 노트를 참조하지 않게 되면서 이 사슬에서 빠졌다.
+    // 메시지의 `scope`에 남은 죽은 id는 조회할 때 서버가 재검증해 「삭제됨」으로 접는다.
   },
 
   createSession(noteId: string): StartTranscriptionSessionResponseData {

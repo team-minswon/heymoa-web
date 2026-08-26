@@ -16,4 +16,5 @@ export const AgentChatMessagesResponseDataMessagesItemRole = {
   USER: "USER",
   ASSISTANT: "ASSISTANT",
   TOOL: "TOOL",
+  THINKING: "THINKING",
 } as const;

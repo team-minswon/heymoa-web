@@ -6,9 +6,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { AgentChatMessagesResponseDataMessagesItemRole } from "./agentChatMessagesResponseDataMessagesItemRole";
+import type { AgentChatMessagesResponseDataMessagesItemScopeItem } from "./agentChatMessagesResponseDataMessagesItemScopeItem";
 import type { AgentChatMessagesResponseDataMessagesItemToolEvent } from "./agentChatMessagesResponseDataMessagesItemToolEvent";
 
 export type AgentChatMessagesResponseDataMessagesItem = {
+  /**
+   * 이 행을 만든 턴. 진행 중 턴의 행은 스트림 백로그로도 오므로 화면이 이 값으로 두 벌을 하나로 접는다
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  turnId: string | null;
   /** 메시지 시각 */
   createdAt: string;
   /** 메시지 역할 */
@@ -18,6 +25,8 @@ export type AgentChatMessagesResponseDataMessagesItem = {
    * @nullable
    */
   toolEvent: AgentChatMessagesResponseDataMessagesItemToolEvent;
+  /** 이 턴의 범위(USER) 또는 실제로 쓴 근거(ASSISTANT). TOOL이면 빈 배열 */
+  scope: AgentChatMessagesResponseDataMessagesItemScopeItem[];
   /** 메시지 내용 (TOOL이면 표시용 요약) */
   content: string;
 };

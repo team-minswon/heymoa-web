@@ -9,7 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TranscriptView } from "@/components/notes/transcript-view";
-import type { SharedChatPhase } from "@/lib/notes/meeting-state";
+import type { MeetingPhase } from "@/lib/notes/meeting-state";
 
 const NOTE_ID = "01K0000000002";
 const POLLED_SEGMENT = {
@@ -162,7 +162,7 @@ function transcriptResult(segments: unknown[]) {
   };
 }
 
-function renderTranscript(phase: SharedChatPhase = "active") {
+function renderTranscript(phase: MeetingPhase = "active") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });

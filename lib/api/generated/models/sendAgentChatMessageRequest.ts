@@ -8,9 +8,19 @@
 
 export interface SendAgentChatMessageRequest {
   /**
-   * 유저 메시지 (공백만으로 구성 불가)
+   * 이 턴에 볼 프로젝트. 펼치지 않고 에이전트가 그 안에서 찾는다 (최대 20)
+   * @nullable
+   */
+  projectIds?: string[] | null;
+  /**
+   * 유저 메시지 (공백만으로 구성 불가). 문장 안에서 범위를 가리키는 자리는 @[제목](noteId:…) · @[제목](projectId:…) 마커로 표시한다 — 스키마가 강제하지 않으므로 마커가 없는 문장도 그대로 유효하다. 권한은 계속 noteIds·projectIds가 쥐고, 대화 제목은 이 마커를 사람 말로 되돌려 만든다.
    * @minLength 1
    * @pattern [\s\S]*\S[\s\S]*
    */
   message: string;
+  /**
+   * 이 턴에 볼 회의록. 에이전트는 여기서만 찾고, 없으면 확장을 제안한다 (최대 20)
+   * @nullable
+   */
+  noteIds?: string[] | null;
 }

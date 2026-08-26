@@ -91,12 +91,12 @@ describe("NoteDeleteDialog", () => {
     expect(predicate({ queryKey: ["/v1/notes/01K0000000002/transcript"] })).toBe(
       true
     );
-    // 개인 챗봇 활성 세션은 noteId가 객체 안에 있다.
+    // noteId가 객체 안에 있는 키도 걸려야 한다 — 최상위 문자열 검사로는 안 걸린다.
     expect(
       predicate({
         queryKey: [
-          "/v1/agent-chats/active",
-          { scope: "note", noteId: "01K0000000002" },
+          "/v1/notes/01K0000000002/transcript",
+          { cursor: "01K0000000050" },
         ],
       })
     ).toBe(true);

@@ -112,10 +112,11 @@ describe("normalizeNoteViewQuery", () => {
   });
 
   it.each([
-    ["active", "chat", "chat"],
     ["active", "summary", "details"],
-    ["paused", "chat", "chat"],
     ["ended", "summary", "summary"],
+    // `chat`은 계약에서 사라졌다 — 옛 직링크가 와도 조용히 기본 탭으로 접는다.
+    ["active", "chat", "details"],
+    ["paused", "chat", "details"],
     ["ended", "chat", "details"],
     ["not-started", "chat", "details"],
     ["not-started", "summary", "details"],
@@ -128,15 +129,11 @@ describe("normalizeNoteViewQuery", () => {
     }
   );
 
-  it.each(["chat", "summary"] as const)(
-    "preserves a potentially legal side %s query while the phase is unknown",
-    (tab) => {
-      expect(normalizeNoteViewQuery({ view: "side", tab }, "unknown")).toEqual({
-        view: "side",
-        tab,
-      });
-    }
-  );
+  it("preserves a potentially legal side summary query while the phase is unknown", () => {
+    expect(
+      normalizeNoteViewQuery({ view: "side", tab: "summary" }, "unknown")
+    ).toEqual({ view: "side", tab: "summary" });
+  });
 });
 
 describe("NoteView", () => {
@@ -283,36 +280,4 @@ describe("NoteView", () => {
     await waitFor(() => expect(replacedUrls()).toHaveLength(1));
   });
 
-  it("keeps ended side chat reachable until its shared turn finishes", async () => {
-    state.search = "view=side&tab=chat";
-    state.note = {
-      meetingStatus: "IN_PROGRESS",
-      meetingStartedBy: { userId: "starter", name: "시작자" },
-    };
-    const view = render(
-      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "공유 턴 시작" }));
-    state.note = {
-      meetingStatus: "ENDED",
-      meetingStartedBy: { userId: "starter", name: "시작자" },
-    };
-    view.rerender(
-      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
-    );
-
-    expect(screen.getByTestId("note-panel")).toHaveTextContent("chat");
-    expect(replacedUrls()).toEqual([]);
-
-    fireEvent.click(screen.getByRole("button", { name: "공유 턴 끝" }));
-
-    expect(screen.getByTestId("note-panel")).toHaveTextContent("details");
-    await waitFor(() =>
-      expect(replacedUrls()).toContain(
-        "/w/workspace/notes/note?view=side&tab=details"
-      )
-    );
-    expect(state.replace).not.toHaveBeenCalled();
-  });
 });

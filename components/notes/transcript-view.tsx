@@ -25,7 +25,7 @@ import {
   interleaveTranscript,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
-import type { SharedChatPhase } from "@/lib/notes/meeting-state";
+import type { MeetingPhase } from "@/lib/notes/meeting-state";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import {
   useTranscriptFocus,
@@ -50,7 +50,7 @@ export function TranscriptView({
   onFocusHandled,
 }: {
   noteId: string;
-  phase: SharedChatPhase;
+  phase: MeetingPhase;
   /** 화자에 붙은 사람의 얼굴. 계약의 `speakers[]` 에는 사진이 없다. */
   participants?: SpeakerFace[];
   /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */

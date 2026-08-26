@@ -585,9 +585,7 @@ describe("meeting and analysis", () => {
       .flatMap((section) => section.items)
       .flatMap((item) => item.evidence);
     expect(evidence.length).toBeGreaterThan(0);
-    expect(
-      evidence.every((row) => segmentIds.has(row.segmentId))
-    ).toBe(true);
+    expect(evidence.every((row) => segmentIds.has(row.segmentId))).toBe(true);
   });
 
   it("refuses to end a meeting that already ended", () => {
@@ -805,5 +803,146 @@ describe("노트 삭제", () => {
     expect(mockDb.getProject("01K0000000000", mine.projectId)).toMatchObject({
       projectId: mine.projectId,
     });
+  });
+});
+
+describe("대화가 여럿 산다", () => {
+  beforeEach(() => mockDb.reset());
+
+  function workspaceId() {
+    return mockDb.listWorkspaces()[0].workspaceId;
+  }
+
+  it("새 대화가 앞 대화를 안 죽인다 — 목록에 한 줄이 늘 뿐이다", () => {
+    // 시드에 이미 나이 든 대화들이 있다(날짜 묶음을 목에서 보려고). 늘어난 두 줄이
+    // **맨 위에** 서는지만 본다 — 그것이 「안 죽인다」의 내용이다.
+    const before = mockDb.listAgentChats({ workspaceId: workspaceId() }).length;
+    const first = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    const second = mockDb.createAgentChat({ workspaceId: workspaceId() });
+
+    const listed = mockDb
+      .listAgentChats({ workspaceId: workspaceId() })
+      .map((c) => c.chatId);
+    expect(listed).toHaveLength(before + 2);
+    expect(listed.slice(0, 2)).toEqual([second.chatId, first.chatId]);
+  });
+
+  it("★ 방금 만든 대화가 시드보다 위에 선다", () => {
+    // 시드는 「지금」에서 거꾸로 잡은 시각이고 목의 기본 시계는 2026-07-11 에 굳어 있다.
+    // 둘을 섞으면 방금 만든 대화가 목록 **맨 아래**에 「44일 전」으로 선다.
+    const created = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    const [top] = mockDb.listAgentChats({ workspaceId: workspaceId() });
+
+    expect(top.chatId).toBe(created.chatId);
+    expect(Date.parse(top.updatedAt)).toBeGreaterThan(Date.now() - 60_000);
+  });
+
+  it("마지막으로 쓴 대화가 첫 줄이 된다", () => {
+    // **생성 시각으로만 정렬하면 여기서 거짓말이 된다.** 옛 대화에 다시 쓰면 그것이
+    // 마지막으로 쓴 대화이고, 새로고침한 화면이 돌아갈 곳도 거기다.
+    const older = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    mockDb.createAgentChat({ workspaceId: workspaceId() });
+
+    mockDb.appendAgentChatMessage(older.chatId, {
+      role: "USER",
+      content: "다시 물어봅니다",
+      scope: [],
+      toolEvent: null,
+    });
+
+    expect(
+      mockDb.listAgentChats({ workspaceId: workspaceId() })[0].chatId
+    ).toBe(older.chatId);
+  });
+
+  it("첫 USER 메시지가 기본 제목을 채우고, 사용자가 정한 제목은 안 덮는다", () => {
+    const auto = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    const named = mockDb.createAgentChat({
+      workspaceId: workspaceId(),
+      title: "내가 정한 제목",
+    });
+    expect(auto.title).toBe("새 대화");
+
+    for (const chatId of [auto.chatId, named.chatId]) {
+      mockDb.appendAgentChatMessage(chatId, {
+        role: "USER",
+        content: "지난  회의에서\n정한 것만 정리해줘",
+        scope: [],
+        toolEvent: null,
+      });
+      // 두 번째 USER 메시지는 제목을 못 바꾼다 — 이미 기본값이 아니다.
+      mockDb.appendAgentChatMessage(chatId, {
+        role: "USER",
+        content: "그리고 이건 제목이 되면 안 됩니다",
+        scope: [],
+        toolEvent: null,
+      });
+    }
+
+    const titles = Object.fromEntries(
+      mockDb
+        .listAgentChats({ workspaceId: workspaceId() })
+        .map((chat) => [chat.chatId, chat.title])
+    );
+    // 줄바꿈과 이중 공백이 한 줄로 접힌다 — 목록은 한 줄이다.
+    expect(titles[auto.chatId]).toBe("지난 회의에서 정한 것만 정리해줘");
+    expect(titles[named.chatId]).toBe("내가 정한 제목");
+  });
+
+  it("★ 제목에서 마커를 사람 말로 되돌린다", () => {
+    // 안 걷으면 목록에 `@[주간 회의](noteId:…) 액션 정리해줘` 가 그대로 뜬다.
+    // 실제 서버(`AgentChat.fillTitleFromFirstMessage`)가 하는 일과 같아야 한다.
+    const chat = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    mockDb.appendAgentChatMessage(chat.chatId, {
+      role: "USER",
+      content: "@[알림 정책 논의 (2차)](noteId:01K0000000021) 액션 정리해줘",
+      scope: [],
+      toolEvent: null,
+    });
+
+    expect(
+      mockDb
+        .listAgentChats({ workspaceId: workspaceId() })
+        .find((each) => each.chatId === chat.chatId)?.title
+    ).toBe("알림 정책 논의 (2차) 액션 정리해줘");
+  });
+
+  it("제목을 컬럼 상한에서 자른다", () => {
+    const chat = mockDb.createAgentChat({ workspaceId: workspaceId() });
+    mockDb.appendAgentChatMessage(chat.chatId, {
+      role: "USER",
+      content: "가".repeat(300),
+      scope: [],
+      toolEvent: null,
+    });
+
+    expect(
+      mockDb.listAgentChats({ workspaceId: workspaceId() })[0].title
+    ).toHaveLength(200);
+  });
+
+  it("최근 50개까지만 준다", () => {
+    // 상한이 없으면 51번째가 실서버에서 처음 사라진다 — 목이 관대하면 안 보인다.
+    for (let i = 0; i < 55; i += 1) {
+      mockDb.createAgentChat({ workspaceId: workspaceId() });
+    }
+    const chats = mockDb.listAgentChats({ workspaceId: workspaceId() });
+
+    expect(chats).toHaveLength(50);
+    // 잘리는 쪽은 **오래된 쪽**이다.
+    expect(chats[0].updatedAt >= chats[49].updatedAt).toBe(true);
+  });
+
+  it("다른 워크스페이스의 대화는 안 섞이고, 없는 워크스페이스는 404다", () => {
+    const [first, second] = mockDb.listWorkspaces();
+    mockDb.createAgentChat({ workspaceId: first.workspaceId });
+
+    expect(mockDb.listAgentChats({ workspaceId: second.workspaceId })).toEqual(
+      []
+    );
+    // 멤버가 아니면 존재를 은닉한다 (생성과 같은 규칙).
+    expect(() =>
+      mockDb.listAgentChats({ workspaceId: "01KNOTAMEMBER" })
+    ).toThrow("WORKSPACE_NOT_FOUND");
   });
 });

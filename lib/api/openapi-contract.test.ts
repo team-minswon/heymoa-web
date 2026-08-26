@@ -19,6 +19,24 @@ function api() {
 }
 
 describe("OpenAPI contract", () => {
+  /**
+   * ★ **지어낸 스키마 이름을 미러에 들이지 않는다.**
+   *
+   * `restdocs-api-spec` 은 서버 쪽에서 schema 이름을 못 찾으면 경로 + 해시로 짓는다
+   * (`v1-notes-noteId-speakers-label-647408416`). 그대로 복사하면 orval 이 그 이름으로
+   * 타입을 만들고, **경로가 바뀌면 타입 이름도 같이 바뀐다.**
+   *
+   * 서버가 생성 시점에 막게 했지만(`OpenApi3Normalizer.requireNamedSchemas`), 이 미러는
+   * 손으로 쓰는 파일이라 그 게이트를 안 지난다. 여기서 한 번 더 본다.
+   */
+  it("gives every schema a human name — no path hashes", () => {
+    const generated = Object.keys(api().components.schemas).filter((name) =>
+      /\d{6,}/.test(name)
+    );
+
+    expect(generated).toEqual([]);
+  });
+
   it("has no duplicate YAML keys", () => {
     expect(document.errors).toEqual([]);
   });
@@ -230,16 +248,26 @@ describe("contract sync 2026-07-29", () => {
     ).toBe("leaveWorkspace");
   });
 
+  it("공유 챗봇 경로가 남아 있지 않다", () => {
+    expect(
+      Object.keys(api().paths).filter((path) => path.includes("/chat/messages"))
+    ).toEqual([]);
+  });
+
   it("exposes the chat, approval, meeting and analysis operations", () => {
     expect(
       api().paths["/v1/agent-chats/{chatId}/messages"]?.post?.operationId
     ).toBe("sendAgentChatMessage");
     expect(
-      api().paths["/v1/notes/{noteId}/chat/messages"]?.post?.operationId
-    ).toBe("sendNoteSharedChatMessage");
+      api().paths["/v1/agent-chats/{chatId}/events"]?.get?.operationId
+    ).toBe("getAgentChatEvents");
     expect(
-      api().paths["/v1/agent-chats/{chatId}/approvals/{approvalId}"]?.post
+      api().paths["/v1/agent-chats/{chatId}/turns/{turnId}/cancel"]?.post
         ?.operationId
+    ).toBe("cancelAgentChatTurn");
+    expect(
+      api().paths["/v1/agent-chats/{chatId}/approvals/{approvalId}/resolve"]
+        ?.post?.operationId
     ).toBe("resolveToolApproval");
     expect(
       api().paths["/v1/notes/{noteId}/meeting-end"]?.post?.operationId

@@ -24,11 +24,9 @@ import {
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import {
   NoteAgentRail,
-  type RailTab,
 } from "@/components/notes/note-agent-rail";
 import { NoteParticipantAvatars } from "@/components/notes/note-participants";
 import { NoteSummary } from "@/components/notes/note-summary";
-import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
 import { RecordingDegradedNotice } from "@/components/transcription/recording-degraded-notice";
@@ -56,7 +54,8 @@ import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 
-export type NoteTab = "chat" | "details" | "transcript" | "summary";
+/** 공유 챗봇이 사라지면서 `chat`이 빠졌습니다 — 대화는 이제 탭이 아니라 레일입니다. */
+export type NoteTab = "details" | "transcript" | "summary";
 
 const NOTE_SAFETY_POLL_MS = 30_000;
 
@@ -79,7 +78,6 @@ export function NotePanel({
   view,
   tab,
   onTabChange,
-  onSharedTurnActiveChange,
   onClose,
   onExpand,
   onCollapse,
@@ -90,7 +88,6 @@ export function NotePanel({
   view: "side" | "full";
   tab: NoteTab;
   onTabChange: (tab: NoteTab, options?: { push?: boolean }) => void;
-  onSharedTurnActiveChange?: (active: boolean) => void;
   onClose: () => void;
   onExpand?: () => void;
   /** 전체 화면에서 사이드 뷰로 되돌린다. side에서는 안 준다. */
@@ -144,7 +141,6 @@ export function NotePanel({
   );
   // 답변이 흐르는 중에 다른 멤버가 회의를 끝내도 트레이를 바로 걷지 않는다 — 언마운트하면
   // 스트림이 끊기고 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 턴이 끝나면 접는다.
-  const [sharedTurnActive, setSharedTurnActive] = useState(false);
   /**
    * 삭제 확인창이 **어느 노트의 것인가.** boolean이면 A에서 창을 연 뒤 뒤로가기로 B에 왔을 때
    * 이 패널은 재마운트되지 않아 창이 열린 채 대상만 B로 바뀌고, 확인하면 B가 지워진다.
@@ -160,13 +156,6 @@ export function NotePanel({
   if (deleteTargetId !== null && deleteTargetId !== noteId) {
     setDeleteTargetId(null);
   }
-  const handleSharedTurnActiveChange = useCallback(
-    (active: boolean) => {
-      setSharedTurnActive(active);
-      onSharedTurnActiveChange?.(active);
-    },
-    [onSharedTurnActiveChange]
-  );
   const noteLoadFailed = noteQuery.isError && !note;
   // 전체 화면의 레일은 **상주다** — 회의 상태로 여닫지 않고, 닫기 버튼도 없다
   // (design.pen `XtEMZ`/`L4PpR`: 오른쪽 440 고정). 예전에는 회의가 살아 있을 때만 떠서
@@ -181,50 +170,14 @@ export function NotePanel({
   // 본문 아래 14rem 레인으로 눕는다 — 회의가 죽어 있을 때까지 그 레인을 세우면 전사 높이가
   // 0이 된다(모바일 landscape에서 실측). 그래서 좁은 화면에서는 살아 있을 때만 세운다.
   const meetingLive = phase === "active" || phase === "not-started";
-  const [railTab, setRailTab] = useState<RailTab>("shared");
   // 개인 챗봇이 한 턴을 굴리는 중이면 레일을 접으면 안 된다 — 중지도 도구 승인도 그 안에만
   // 있는데, 레일이 슬롯을 쥐고 있어 떠 있는 FAB로 되돌아가지도 않는다. 다른 멤버가 회의를
   // 끝내는 순간 좁은 화면에서 답변이 통째로 화면 밖으로 나가던 자리다.
   const { isTurnActive: personalTurnActive } = usePersonalChat();
-  // 좁은 화면에서 **대화를 펼칠지**. 접혀도 탭 줄은 남는다 — 통째로 감추면 「내 에이전트」를
-  // 고를 버튼까지 감춰져서 종료된 회의에는 들어갈 길이 없어진다(닭이 먼저냐 달걀이 먼저냐).
-  const railLiveNow =
-    meetingLive ||
-    phase === "paused" ||
-    sharedTurnActive ||
-    railTab === "personal" ||
-    personalTurnActive;
-  /** 어느 쪽이든 한 턴이 도는 중. 뷰를 바꾸면 그 답변에 닿을 길이 끊긴다. */
-  const turnActive = sharedTurnActive || personalTurnActive;
-  const showSideChatTab =
-    view === "side" &&
-    !noteLoadFailed &&
-    (phase === "active" ||
-      phase === "paused" ||
-      sharedTurnActive ||
-      (phase === "unknown" && tab === "chat"));
-  const sideChatNow = view === "side" && tab === "chat";
-  const [sideChatVisit, setSideChatVisit] = useState({
-    noteId,
-    visited: sideChatNow,
-  });
-  if (
-    sideChatVisit.noteId !== noteId ||
-    (!sideChatVisit.visited && sideChatNow)
-  ) {
-    setSideChatVisit({
-      noteId,
-      visited: sideChatNow,
-    });
-  }
-  const sideChatVisited =
-    sideChatNow || (sideChatVisit.noteId === noteId && sideChatVisit.visited);
-  const keepSideChatMounted =
-    view === "side" &&
-    !noteLoadFailed &&
-    (tab === "chat" ||
-      sharedTurnActive ||
-      ((phase === "active" || phase === "paused") && sideChatVisited));
+  // 좁은 화면에서 **대화를 펼칠지**.
+  const railLiveNow = meetingLive || phase === "paused" || personalTurnActive;
+  /** 한 턴이 도는 중. 뷰를 바꾸면 그 답변에 닿을 길이 끊긴다. */
+  const turnActive = personalTurnActive;
   const showSummaryTab =
     view === "full" ||
     (view === "side" &&
@@ -248,13 +201,10 @@ export function NotePanel({
       visible: phase === "ended" && !viewerEndTransition,
     });
   }
-  const archiveQueued =
-    phase === "ended" && archiveState.visible && sharedTurnActive;
-  const showViewerEndNotice =
-    phase === "ended" && !isStarter && (!archiveState.visible || archiveQueued);
-  // 종료 아카이브는 흐르던 공유 턴이 끝난 뒤에만 보인다(그 전엔 아직 트레이가 답변을 그린다).
-  const showArchive =
-    phase === "ended" && archiveState.visible && !sharedTurnActive;
+  const showViewerEndNotice = phase === "ended" && !isStarter && !archiveState.visible;
+  // 예전에는 흐르던 **공유** 턴이 끝날 때까지 아카이브를 미뤘다. 개인 대화는 레일에 있고
+  // 본문과 자리를 다투지 않으므로 그 대기가 없어졌다.
+  const showArchive = phase === "ended" && archiveState.visible;
 
   /**
    * 요약의 근거 인용이 짚은 전사 세그먼트. 전사 화면이 그 줄로 옮겨 가 잠깐 하이라이트하고,
@@ -439,21 +389,20 @@ export function NotePanel({
                     size="icon"
                     className="rounded-control text-[var(--el-muted)]"
                     aria-label={
-                      sharedTurnActive
+                      turnActive
                         ? "답변이 끝나면 확장할 수 있습니다"
                         : "전체 화면으로 보기"
                     }
-                    disabled={sharedTurnActive}
+                    disabled={turnActive}
                     onClick={onExpand}
                   >
                     <Expand />
                   </Button>
                 ) : null}
-                {/* 확장과 같은 이유로 답변이 흐르는 동안 막는다 — 뷰가 바뀌면 레일의
-                  `SharedChatPanel`이 언마운트되고 탭 아래에 새로 마운트되어 SSE가 끊긴다.
-                  계약상 부분 응답은 저장되지 않으므로 흐르던 답변이 통째로 사라진다.
-                  **개인 챗 턴도 막는다** — 축소하면 레일 슬롯이 사라지고 side에서는 개인
-                  패널도 FAB도 감춰져서, 흐르던 답변의 중지·도구 승인에 닿을 길이 없어진다. */}
+                {/* 확장과 같은 이유로 답변이 흐르는 동안 막는다 — 축소하면 레일이 슬롯을
+                  놓고(`NoteAgentRail`), side에서는 `isPersonalChatHiddenInNote`가 개인
+                  패널도 FAB도 감춰서 흐르던 답변의 중지·도구 승인에 닿을 길이 없어진다.
+                  계약상 부분 응답은 저장되지 않으므로 놓치면 답변이 통째로 사라진다. */}
                 {onCollapse ? (
                   <Button
                     type="button"
@@ -532,11 +481,6 @@ export function NotePanel({
               {showSummaryTab ? (
                 <TabsTrigger value="summary" className={TAB_ITEM}>
                   요약
-                </TabsTrigger>
-              ) : null}
-              {showSideChatTab ? (
-                <TabsTrigger value="chat" className={TAB_ITEM}>
-                  챗봇
                 </TabsTrigger>
               ) : null}
             </TabsList>
@@ -676,7 +620,7 @@ export function NotePanel({
                   variant="outline"
                   size="sm"
                   className="shrink-0"
-                  disabled={archiveQueued}
+                  disabled={false}
                   onClick={() =>
                     setArchiveState((current) => ({
                       ...current,
@@ -684,7 +628,7 @@ export function NotePanel({
                     }))
                   }
                 >
-                  {archiveQueued
+                  {false
                     ? "답변이 끝나면 이동합니다"
                     : "기록과 요약 보기"}
                 </Button>
@@ -723,15 +667,6 @@ export function NotePanel({
               )}
             </div>
           </TabsContent>
-          {keepSideChatMounted ? (
-            <TabsContent value="chat" keepMounted className="min-h-0 flex-1">
-              <SharedChatPanel
-                noteId={noteId}
-                phase={phase}
-                onTurnActiveChange={handleSharedTurnActiveChange}
-              />
-            </TabsContent>
-          ) : null}
           {showSummaryTab ? (
             <TabsContent value="summary" className="min-h-0 flex-1">
               <ScrollArea className="h-full">
@@ -795,14 +730,7 @@ export function NotePanel({
             !railLiveNow && "max-lg:h-auto max-lg:landscape:h-auto"
           )}
         >
-          <NoteAgentRail
-            noteId={noteId}
-            phase={phase}
-            tab={railTab}
-            onTabChange={setRailTab}
-            foldedOnNarrow={!railLiveNow}
-            onSharedTurnActiveChange={handleSharedTurnActiveChange}
-          />
+          <NoteAgentRail foldedOnNarrow={!railLiveNow} />
         </div>
       ) : null}
     </div>

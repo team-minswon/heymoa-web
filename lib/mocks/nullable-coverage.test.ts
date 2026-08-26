@@ -5,6 +5,10 @@ import { setupServer } from "msw/node";
 
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
+import {
+  resetChatStreamsForTests,
+  seedAgentChatTurnForTests,
+} from "@/lib/mocks/sse-handler";
 
 /**
  * 계약에서 `nullable: true`인 필드는 실서버가 null을 줄 수 있다는 뜻이다. 목이 한쪽 값만
@@ -162,42 +166,63 @@ function contractSamples() {
   // 비-null 쪽을 만든다.
   mockDb.connectIntegration(workspaces[0].workspaceId, "LINEAR");
 
-  // 공유 챗의 `lock`은 아무도 안 잡으면 전부 null이다. 남의 잠금과 승인 대기를 심어
-  // 비-null 쪽을 만든다.
-  mockDb.seedForeignLock(notes[0], "한지원");
-  mockDb.setSharedChatPendingApproval(notes[0], {
-    approvalId: "01K0000000030",
-    tool: "linear_create_issue",
-    summary: "APP-12 이슈를 만듭니다.",
+  /**
+   * 채팅은 시드에 없다. **다섯을 만든다** — 이어받기 필드(`activeTurn`·`lastTurn`)는 턴
+   * 상태에서 나오는데 한 대화가 한 조합만 보여 줄 수 있어서다. 정지 상태의 GET만으로는
+   * 전부 null이라 「목이 양쪽을 다 보여주는가」가 거짓말이 된다.
+   *
+   *   [0] 턴 없음        → activeTurn·lastTurn 의 null 쪽. 히스토리도 이 대화에 담는다
+   *   [1] 도는 턴 + 승인  → pendingApproval·summary 의 비-null 쪽
+   *   [2] 도는 턴만       → 그 셋의 null 쪽
+   *   [3] 도는 턴 + 요약 없는 승인 → pendingApproval.summary 의 null 쪽
+   *   [4] 실패로 끝난 턴  → lastTurn.failureCode·retryable 의 비-null 쪽
+   */
+  const chatIds = Array.from(
+    { length: 5 },
+    () => mockDb.createAgentChat({ workspaceId: workspaces[0].workspaceId }).chatId
+  );
+  const approval = {
+    approvalId: "0K9GVJT2C4Q7F",
+    tool: "linear.create_issue",
+  };
+  seedAgentChatTurnForTests(chatIds[1], {
+    // 인자가 있는 승인 — 카드가 「무엇을 승인하나」를 말하는 쪽.
+    pendingApproval: {
+      ...approval,
+      summary: "이슈를 만들까요?",
+      args: { projectId: "0HZX2K7M9Q4AE", title: "APP 버그 수정" },
+    },
   });
-  // `summary`는 계약상 nullable이다 — 없는 쪽 표본을 다른 노트에 심는다.
-  mockDb.setSharedChatPendingApproval(notes[3], {
-    approvalId: "01K0000000031",
-    tool: "linear_create_issue",
-    summary: null,
+  seedAgentChatTurnForTests(chatIds[2], {});
+  seedAgentChatTurnForTests(chatIds[3], {
+    // 인자도 요약도 없는 승인 — 도구 id 만으로 묻는 쪽.
+    pendingApproval: { ...approval, summary: null, args: null },
   });
-
-  // 채팅은 시드에 없다. 두 스코프를 다 만들어야 `workspaceId`·`noteId`가 양쪽으로 나온다.
-  const chatIds = [
-    mockDb.createAgentChat({
-      scope: "workspace",
-      workspaceId: workspaces[0].workspaceId,
-    }).chatId,
-    mockDb.createAgentChat({ scope: "note", noteId: notes[0] }).chatId,
-  ];
+  seedAgentChatTurnForTests(chatIds[4], {
+    status: "FAILED",
+    failureCode: "UPSTREAM_ERROR",
+    retryable: true,
+  });
 
   /**
    * 메시지가 없으면 `messages[]` 안의 nullable 필드는 값이 0개라 관측조차 안 된다.
    * `toolEvent`의 `decision`과 `status`는 서로 배타라(승인 확정이면 decision, 실행 결과면
    * status) 기록 둘을 다 넣어야 양쪽이 나온다. `url`도 실행 기록에만 있다.
    */
+  // `scope[].title`은 nullable이다 — 지워졌거나 권한이 없으면 제목을 안 싣는다.
+  // 둘을 한 메시지에 담아 null·비-null 양쪽을 만든다.
   mockDb.appendAgentChatMessage(chatIds[0], {
     role: "USER",
+    scope: [
+      { kind: "NOTE", id: notes[0], title: "주간 배포 회의", unavailable: false },
+      { kind: "NOTE", id: "01KDELETED0000", title: null, unavailable: true },
+    ],
     content: "논의된 이슈를 만들어줘",
     toolEvent: null,
   });
   mockDb.appendAgentChatMessage(chatIds[0], {
     role: "TOOL",
+    scope: [],
     content: "이슈 생성을 승인했습니다.",
     toolEvent: {
       tool: "linear_create_issue",
@@ -206,8 +231,11 @@ function contractSamples() {
       url: null,
     },
   });
+  // `turnId`도 nullable이다 — 위 둘은 안 싣고(null 쪽) 이 행만 싣는다(비-null 쪽).
   mockDb.appendAgentChatMessage(chatIds[0], {
     role: "TOOL",
+    turnId: "0K9GVJT2C4Q3B",
+    scope: [],
     content: "APP-12 생성됨",
     toolEvent: {
       tool: "linear_create_issue",
@@ -217,35 +245,6 @@ function contractSamples() {
     },
   });
 
-  // 공유 챗은 `authorName`도 nullable이다 — USER는 값, ASSISTANT/TOOL은 null이다.
-  mockDb.appendSharedChatMessage(notes[0], {
-    role: "USER",
-    content: "이번 회의에서 정한 것만 정리해줘",
-    authorName: "테스트 유저",
-    toolEvent: null,
-  });
-  mockDb.appendSharedChatMessage(notes[0], {
-    role: "TOOL",
-    content: "APP-13 생성됨",
-    authorName: null,
-    toolEvent: {
-      tool: "linear_create_issue",
-      decision: null,
-      status: "success",
-      url: "https://linear.app/minswon/issue/APP-13",
-    },
-  });
-  mockDb.appendSharedChatMessage(notes[0], {
-    role: "TOOL",
-    content: "이슈 생성을 승인했습니다.",
-    authorName: null,
-    toolEvent: {
-      tool: "linear_create_issue",
-      decision: "APPROVED",
-      status: null,
-      url: null,
-    },
-  });
 
   // 시드의 초대는 받은 것(다른 워크스페이스) 하나뿐이라 `/invitations`가 비어 있다.
   mockDb.createInvitation(workspaces[0].workspaceId, {
@@ -259,14 +258,11 @@ function contractSamples() {
    * 유효한 null 표본으로 세게 되고, 핸들러를 계약대로 400으로 고치는 순간 이 테스트가
    * 정상 변경을 막는다. 그래서 여기 손으로 적은 유효 요청만 쓴다.
    */
-  const requiredQuerySamples: Record<string, string[]> = {
-    "/v1/agent-chats/active": [
-      `?scope=workspace&workspaceId=${workspaces[0].workspaceId}`,
-      `?scope=note&noteId=${notes[0]}`,
-      // `data` 자체가 nullable이다 — 활성 챗을 만들지 않은 워크스페이스가 null 쪽 표본이다.
-      `?scope=workspace&workspaceId=${workspaces[1].workspaceId}`,
-    ],
-  };
+  // 지금은 비어 있다 — 대화 목록이 `/v1/workspaces/{workspaceId}/agent-chats`로 옮겨가면서
+  // 마지막 항목이 빠졌다. 그 경로는 `{workspaceId}`가 `tuples`에서 자동으로 채워지고, 대화를
+  // 하나도 안 만든 워크스페이스까지 표본에 든다. 비었다고 이 갈래를 지우지 않는다 — 필수
+  // query를 가진 GET이 계약에 생기면 여기 없다는 이유로 `skipped`가 그것을 드러낸다.
+  const requiredQuerySamples: Record<string, string[]> = {};
 
   const samples: Array<[string, string]> = [];
   const skipped: string[] = [];
@@ -320,8 +316,6 @@ function contractSamples() {
  */
 const KNOWN_ONE_SIDED = new Set([
   "CurrentUserResponse.data.image",
-  // `createAgentChat`이 `title: null`로만 만든다 — 목에 제목을 붙이는 수단이 없다.
-  "AgentChatV2NullableResponse.data.title",
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
   "CurrentTranscriptionSessionNullableResponse.data.startedAt",
@@ -337,7 +331,11 @@ const KNOWN_UNOBSERVED = new Set<string>([]);
 
 describe("nullable 목 표본", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
-  afterEach(() => mockDb.reset());
+  // 목 DB는 리셋하면 같은 chatId를 다시 발급하므로 스트림 상태도 짝으로 비운다.
+  afterEach(() => {
+    mockDb.reset();
+    resetChatStreamsForTests();
+  });
   afterAll(() => server.close());
 
   it("계약의 nullable 필드마다 null과 비-null을 모두 보여준다", async () => {
