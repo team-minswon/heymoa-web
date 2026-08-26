@@ -14,7 +14,11 @@
  * 여기서 정의하고 `stream-protocol`이 다시 내보낸다. 반대로 두면 순수 블록 층이
  * 리듀서를 참조해 의존이 거꾸로 선다.
  */
-export type ToolTarget = { kind: string; id: string | null; title: string | null };
+export type ToolTarget = {
+  kind: string;
+  id: string | null;
+  title: string | null;
+};
 
 export type ApprovalDecision = "APPROVED" | "REJECTED";
 
@@ -173,6 +177,12 @@ export function resolveApproval(
  * 생각·도구·승인 블록은 자리를 지킨다. 그것들은 `content`에 안 들어 있다.
  */
 export function finalizeText(blocks: Block[], content: string): Block[] {
+  // ★ **어긋났을 때만 손을 댄다.** 갈아끼우기는 안전망이지 매 턴의 의식이 아니다.
+  //
+  // 같은데도 새 배열을 만들면 두 가지가 같이 움직인다: 흩어져 있던 본문이 **도구 카드
+  // 아래 한 덩어리로 옮겨 앉고**, 낱말 span 이 전부 새로 마운트돼 `chat-rise` 가 답
+  // 전체에 한 번에 걸린다. 마지막 프레임에서 답이 통째로 다시 떠오르던 것이 이것이다.
+  if (answerText(blocks) === content) return blocks;
   const kept = blocks.filter((block) => block.kind !== "text");
   return content ? [...kept, { kind: "text", text: content }] : kept;
 }

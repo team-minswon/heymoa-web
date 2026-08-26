@@ -158,7 +158,10 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
         : `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve?after=${params.after}`,
     // 재연결 URL의 단일 출처가 생성물이다. `after`가 없으면 처음부터 받는다 —
     // `0`은 생략이 아니라 「버퍼가 비었다」다.
-    getSubscribeAgentChatEventsUrl: (chatId: string, params?: { after?: number }) =>
+    getSubscribeAgentChatEventsUrl: (
+      chatId: string,
+      params?: { after?: number }
+    ) =>
       params?.after === undefined
         ? `/v1/agent-chats/${chatId}/events`
         : `/v1/agent-chats/${chatId}/events?after=${params.after}`,
@@ -1275,9 +1278,9 @@ describe("PersonalChatProvider", () => {
     );
   });
 
-  it("「다시 보내기」가 같은 문장을 다시 보낸다", async () => {
-    // 히스토리가 그 질문을 안 받아 갔을 때만 이 버튼이 선다(POST 가 아예 안 닿았다).
-    // 늘 새 턴이다 — 앞 턴이 살아 있으면 서버가 409로 막고 그 갈래가 이어받기로 넘긴다.
+  it("★ 못 닿은 문장이 컴포저로 돌아오고, 그대로 보내면 같은 몸통이 나간다", async () => {
+    // 「다시 보내기」 버튼이 있던 자리다. 그 버튼이 할 수 있던 일은 한 글자도 못 고치고
+    // 같은 문장을 보내는 것 하나였다 — 되돌려 놓으면 고칠 수도 있고 그대로 보낼 수도 있다.
     state.chats = [chatRow(CHAT_ID)];
     state.streamFails = true;
     renderChat();
@@ -1285,7 +1288,13 @@ describe("PersonalChatProvider", () => {
     await sendMessage("정리해줘");
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
-    fireEvent.click(await screen.findByRole("button", { name: "다시 보내기" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: "메시지" }).textContent
+      ).toContain("정리해줘")
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(2));
     expect(state.streamCalls[1].body).toEqual(state.streamCalls[0].body);
@@ -1331,7 +1340,7 @@ describe("PersonalChatProvider", () => {
    * 안 고치면: 붙였던 회의록이 **날마커 `@[주간 제품 회의](noteId:…)` 로** 말풍선에 뜨고,
    * 에이전트는 그 회의록을 **안 보고** 답한다. 오류는 안 난다.
    */
-  it("★ 「다시 보내기」가 범위도 그대로 다시 보낸다", async () => {
+  it("★ 되돌린 문장이 범위도 함께 들고 온다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     state.streamFails = true;
     renderChat(<NoteScope hidden={false} />);
@@ -1344,7 +1353,11 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.streamCalls[0].body).toMatchObject({ noteIds: [NOTE_ID] });
 
-    fireEvent.click(await screen.findByRole("button", { name: "다시 보내기" }));
+    // ★ **칩이 칩으로 돌아온다.** 마커를 안 풀고 넣으면 같은 범위가 칩 한 벌 + 날글자
+    // 한 벌로 두 번 앉고, 에이전트는 그 회의록을 안 보고 답한다. 오류는 안 난다.
+    await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(2));
     expect(state.streamCalls[1].body).toEqual(state.streamCalls[0].body);
@@ -1830,9 +1843,9 @@ describe("PersonalChatProvider", () => {
       expect(screen.getAllByText("정리해줘")).toHaveLength(1);
     });
 
-    it("히스토리가 그 질문을 안 받아 갔으면 실패 배너를 그대로 둔다", async () => {
-      // POST 가 아예 안 닿은 경우다. 여기서 로컬 사본까지 접으면 히스토리에도 없는
-      // 질문이 화면에서 조용히 사라진다.
+    it("★ 히스토리가 그 질문을 안 받아 갔으면 문장을 컴포저로 되돌린다", async () => {
+      // POST 가 아예 안 닿은 경우다. 여기서 그냥 접으면 히스토리에도 없는 질문이 화면에서
+      // 조용히 사라지고, 「다시 보내기」가 없어졌으므로 다시 칠 방법도 없다.
       state.chats = [chatRow(CHAT_ID)];
       state.streamFails = true;
       renderChat();
@@ -1840,10 +1853,13 @@ describe("PersonalChatProvider", () => {
       await sendMessage("정리해줘");
 
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
-      expect(
-        await screen.findByRole("button", { name: "다시 보내기" })
-      ).toBeTruthy();
-      expect(screen.getAllByText("정리해줘")).toHaveLength(1);
+      // 문장이 컴포저로 돌아와 있다 — 고쳐서 다시 보낼 수도, 그대로 보낼 수도 있다.
+      await waitFor(() =>
+        expect(
+          screen.getByRole("textbox", { name: "메시지" }).textContent
+        ).toContain("정리해줘")
+      );
+      expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
     });
 
     it("★ 중지가 턴을 취소한다", async () => {
@@ -2153,8 +2169,10 @@ describe("PersonalChatProvider", () => {
         .getByTestId("personal-chat-panel")
         .querySelector("header");
       expect(header?.textContent).toContain(`대화 ${CHAT_ID}`);
-      // 부제는 그대로다 — 칩이 없으면 워크스페이스 전체라고 적는다 [W-20].
-      expect(header?.textContent).toContain("나만 보는 대화 · 헤이모아 전체");
+      // 부제가 말하는 것은 **범위 하나**다 — 칩이 없으면 워크스페이스 전체라고 적는다
+      // [W-20]. 「나만 보는 대화」는 개인 챗봇에 개인이라고 적는 것이라 뺐다.
+      expect(header?.textContent).toContain("헤이모아 전체");
+      expect(header?.textContent).not.toContain("나만 보는 대화");
     });
   });
 });

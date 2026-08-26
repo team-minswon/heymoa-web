@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  dropScopeMarkers,
   scopeMarker,
   splitScopeMarkers,
   unwrapScopeMarkers,
@@ -40,24 +41,35 @@ describe("문장을 쪼갠다", () => {
     expect(
       splitScopeMarkers("@[주간 회의](noteId:A) 액션 정리해줘", allow("note:A"))
     ).toEqual([
-      { kind: "note", id: "A", title: "주간 회의", raw: "@[주간 회의](noteId:A)" },
+      {
+        kind: "note",
+        id: "A",
+        title: "주간 회의",
+        raw: "@[주간 회의](noteId:A)",
+      },
       { text: " 액션 정리해줘" },
     ]);
   });
 
   it("id 길이를 안 잰다 — 목과 검사가 짧은 id 를 쓴다", () => {
-    expect(splitScopeMarkers("@[짧다](noteId:n1) 봐", allow("note:n1"))[0]).toMatchObject({
+    expect(
+      splitScopeMarkers("@[짧다](noteId:n1) 봐", allow("note:n1"))[0]
+    ).toMatchObject({
       id: "n1",
     });
   });
 
   // ★ 없는 것을 있는 것처럼 그리는 쪽이 나쁘다
   it("배열에 없는 id 를 가리키는 마커는 글자 그대로 남는다", () => {
-    expect(splitScopeMarkers("@[없는 것](noteId:zzz) 봐", allow("note:aaa"))).toEqual([]);
+    expect(
+      splitScopeMarkers("@[없는 것](noteId:zzz) 봐", allow("note:aaa"))
+    ).toEqual([]);
   });
 
   it("종류가 다르면 같은 id 여도 안 맞춘다", () => {
-    expect(splitScopeMarkers("@[가](projectId:A)", allow("note:A"))).toEqual([]);
+    expect(splitScopeMarkers("@[가](projectId:A)", allow("note:A"))).toEqual(
+      []
+    );
   });
 
   it("맞는 것과 안 맞는 것이 섞이면 맞는 것만 칩이다", () => {
@@ -83,7 +95,9 @@ describe("문장을 쪼갠다", () => {
 
 describe("마커를 되돌린다", () => {
   it("라벨만 남긴다", () => {
-    expect(unwrapScopeMarkers("@[주간 회의](noteId:A) 정리")).toBe("주간 회의 정리");
+    expect(unwrapScopeMarkers("@[주간 회의](noteId:A) 정리")).toBe(
+      "주간 회의 정리"
+    );
   });
 
   it("이스케이프를 푼다", () => {
@@ -92,12 +106,37 @@ describe("마커를 되돌린다", () => {
 
   // ★ 안 풀면 새 배열에 없는 id 를 가리키는 마커가 그대로 나간다
   it("keep 에 든 것만 마커로 남긴다", () => {
-    expect(unwrapScopeMarkers("@[가](noteId:A) @[나](noteId:B)", allow("A"))).toBe(
-      "@[가](noteId:A) 나"
-    );
+    expect(
+      unwrapScopeMarkers("@[가](noteId:A) @[나](noteId:B)", allow("A"))
+    ).toBe("@[가](noteId:A) 나");
   });
 
   it("마커가 없으면 그대로다", () => {
     expect(unwrapScopeMarkers("그냥 문장")).toBe("그냥 문장");
+  });
+});
+
+describe("칩으로 되돌릴 마커는 글자까지 지운다", () => {
+  it("★ 풀지 않고 지운다 — 칩이 제목을 다시 그리므로 두 벌이 된다", () => {
+    // 못 보낸 문장을 컴포저로 되돌릴 때 쓴다. 칩도 같이 다시 박으므로 마커를 제목으로
+    // 풀어 두면 「@[주간 회의](…) 주간 회의 정리해줘」로 나간다.
+    expect(
+      dropScopeMarkers("@[주간 회의](noteId:n1) 정리해줘", new Set(["n1"]))
+    ).toBe("정리해줘");
+  });
+
+  it("칩이 안 될 마커는 사람 말로 남긴다", () => {
+    expect(
+      dropScopeMarkers("@[주간 회의](noteId:n1) 정리해줘", new Set(["other"]))
+    ).toBe("주간 회의 정리해줘");
+  });
+
+  it("지운 자리의 겹공백을 접는다", () => {
+    expect(
+      dropScopeMarkers(
+        "@[A](noteId:n1) @[B](noteId:n2) 정리",
+        new Set(["n1", "n2"])
+      )
+    ).toBe("정리");
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Check,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 import type { Block, ApprovalDecision } from "@/lib/chat/blocks";
+import { cn } from "@/lib/utils";
 
 /**
  * 연속된 생각·도구·승인을 접이식 묶음 하나로.
@@ -19,9 +21,18 @@ import type { Block, ApprovalDecision } from "@/lib/chat/blocks";
  * **직접 만든다.** AI Elements와 assistant-ui는 AI SDK의 `UIMessage` part에 강결합인데
  * heymoa는 서버 중계형 SSE다. 구조만 참고했다.
  *
- * 문구는 여기서 만든다 — ai는 구조만 내린다. 「3단계 · 회의록 2건 검토」는 계약에 없고
- * 블록을 세서 web이 쓴다.
+ * 문구는 여기서 만든다 — ai는 구조만 내린다. 계약에는 없고 블록을 보고 web이 쓴다.
  */
+
+/**
+ * 접었다 펴는 움직임. **눌린 만큼만 열린다** — `note-summary` 의 근거 목록이 쓰는 것과
+ * 같은 값이다. 두 곳이 다른 속도로 열리면 같은 화면에서 따로 논다.
+ */
+const COLLAPSE_TRANSITION = {
+  type: "spring" as const,
+  bounce: 0,
+  duration: 0.22,
+};
 
 export type StepBlock = Exclude<Block, { kind: "text" }>;
 
@@ -32,7 +43,7 @@ export type StepBlock = Exclude<Block, { kind: "text" }>;
  * 무엇이 그 결과에 이르는 길인지가 눈으로 안 갈렸다. 세로선 한 줄이면 「이건 곁가지」가
  * 말해진다. 승인 기록이 이미 쓰던 모양이라 둘이 같은 자리에 선다.
  */
-const RAIL = "border-l-2 border-[var(--el-hairline)] pl-3";
+const RAIL = "border-l border-[var(--el-hairline-strong)] pl-3.5";
 
 /**
  * ★ **그려지는 단계만 센다.**
@@ -117,6 +128,7 @@ function Disclosure({
   onOpenNote?: (noteId: string) => void;
 }) {
   const [open, setOpen] = useState(live);
+  const reduced = useReducedMotion();
   // 사용자가 손으로 건드렸으면 자동 접힘/펼침이 그걸 덮지 않는다.
   const touched = useRef(false);
 
@@ -138,7 +150,10 @@ function Disclosure({
           touched.current = true;
           setOpen((value) => !value);
         }}
-        className="-ml-1 flex w-full items-center gap-1.5 py-0.5 text-left"
+        // ★ **손잡이를 여기서 말한다.** `@layer base` 의 `button { cursor: pointer }` 에
+        // 기대면 Tailwind 를 올릴 때 조용히 뒤집힌다 — 아래 「찾은 곳」의 `<summary>` 도
+        // 같은 이유로 자기 커서를 들고 있다. 여닫는 두 곳이 같은 말을 하게 둔다.
+        className="-ml-1 flex w-full cursor-pointer items-center gap-1.5 py-0.5 text-left"
       >
         <ChevronRight
           aria-hidden
@@ -148,30 +163,59 @@ function Disclosure({
               : "size-3.5 shrink-0 text-[var(--el-muted)] transition-transform"
           }
         />
-        <span className="text-xs text-[var(--el-muted)]">
-          {headline(blocks)}
+        {/* ★ **도는 동안에는 지금 하는 일을 말하고, 그 글자가 빛난다.**
+            접힌 줄이 「생각 과정」이라고만 하면 도는 동안 아무 소식이 없다 — 그때 알고
+            싶은 것은 **지금 뭘 하고 있나**다. 끝나면 그 자리가 묶음의 이름으로 돌아간다.
+            ChatGPT·Claude 가 도구 이름을 헤더에 세웠다가 접는 것과 같은 자리다. */}
+        <span
+          className={cn(
+            "min-w-0 truncate text-xs",
+            running ? "chat-shimmer" : "text-[var(--el-muted)]"
+          )}
+        >
+          {running ? currentStep(blocks) : headline(blocks)}
         </span>
-        {running ? (
-          <Loader2
-            aria-hidden
-            className="size-3 shrink-0 animate-spin text-[var(--el-muted)]"
-          />
-        ) : null}
       </button>
-      {open ? (
-        <div className="space-y-1.5 pt-1.5 pb-0.5">
-          {blocks.map((block, index) => (
-            <StepRow
-              key={stepKey(block, index)}
-              block={block}
-              live={running && index === blocks.length - 1}
-              onOpenNote={onOpenNote}
-            />
-          ))}
-        </div>
-      ) : null}
+      {/* **탁 열리지 않는다.** 높이가 0에서 제 높이까지 자란다 — `note-summary` 의 근거
+          목록과 같은 값이라 같은 화면에서 결이 맞는다. `initial={false}` 는 흐르는 중에
+          이미 펴진 채로 다시 그려질 때 매 토큰 다시 자라지 않게 한다. */}
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="steps"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={reduced ? { duration: 0 } : COLLAPSE_TRANSITION}
+            className="overflow-hidden"
+          >
+            <div className="space-y-1.5 pt-1.5 pb-0.5">
+              {blocks.map((block, index) => (
+                <StepRow
+                  key={stepKey(block, index)}
+                  block={block}
+                  live={running && index === blocks.length - 1}
+                  onOpenNote={onOpenNote}
+                />
+              ))}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
+}
+
+/**
+ * 지금 도는 줄이 무엇인가. **그리는 마지막 줄**이 곧 그것이다 — 승인 대기는 이미
+ * 걸러졌고(`drawable`), 도구 결과가 오면 그 줄이 끝난 것으로 바뀐다.
+ */
+function currentStep(blocks: StepBlock[]): string {
+  const last = blocks.at(-1);
+  if (!last) return "생각 과정";
+  if (last.kind === "thinking") return last.text.split("\n")[0] ?? "생각 과정";
+  if (last.kind === "approval") return last.summary ?? last.tool;
+  return last.summary ?? last.tool;
 }
 
 function stepKey(block: StepBlock, index: number) {
@@ -181,8 +225,8 @@ function stepKey(block: StepBlock, index: number) {
 }
 
 /**
- * 묶음 헤더. 「3단계 · 회의록 2건 검토」처럼 **무엇을 했는지**까지 말한다 — 단계 수만
- * 세면 접힌 채로는 아무 정보가 없다.
+ * 끝난 묶음의 이름. **무엇을 봤는지**까지 말한다 — 이름만 있으면 접힌 채로는 아무 정보가
+ * 없다. 도는 동안에는 이 자리를 `currentStep` 이 대신한다.
  */
 function headline(blocks: StepBlock[]): string {
   const notes = new Set(
@@ -206,8 +250,11 @@ function headline(blocks: StepBlock[]): string {
     projects.size > 0 ? `프로젝트 ${projects.size}개` : null,
   ].filter(Boolean);
 
-  const head = `${blocks.length}단계`;
-  return what.length > 0 ? `${head} · ${what.join(" · ")} 검토` : head;
+  // ★ **개수를 안 센다.** 「3단계」는 사람이 쓰는 말이 아니고 — 몇 번 돌았는지는 접힌
+  // 줄이 답할 일이 아니다. 펴면 줄마다 무엇을 했는지가 이미 적혀 있다. 접힌 줄이 말할
+  // 것은 **무엇에 대한 생각이었나** 하나다(ChatGPT 의 "Thought for 8s", Claude 의
+  // "Thought process" 가 같은 자리다).
+  return what.length > 0 ? `생각 과정 · ${what.join(" · ")}` : "생각 과정";
 }
 
 function StepRow({
@@ -225,7 +272,12 @@ function StepRow({
         <Dot state={live ? "active" : "complete"} />
         {/* 생각이 여럿이면 줄바꿈으로 온다 — `whitespace-pre-line`이 없으면 「찾습니다.
             전사에서」처럼 두 문장이 한 줄로 붙어 버린다. */}
-        <p className="min-w-0 flex-1 text-xs leading-relaxed whitespace-pre-line text-[var(--el-muted)]">
+        <p
+          className={cn(
+            "min-w-0 flex-1 text-xs leading-relaxed whitespace-pre-line",
+            live ? "chat-shimmer" : "text-[var(--el-muted)]"
+          )}
+        >
           {block.text}
         </p>
       </div>
@@ -248,7 +300,9 @@ function StepRow({
               새로고침 뒤에는 사람 말을 되살릴 방법이 없으므로 — **덜 말하되 다른 말을
               하지 않는다.** 무엇을 했는지는 바로 아래 실행 기록이 잇는다. */}
           {block.summary ? ` · ${block.summary}` : null}
-          {block.decision === "REJECTED" ? " — 도구는 실행되지 않았습니다" : null}
+          {block.decision === "REJECTED"
+            ? " — 도구는 실행되지 않았습니다"
+            : null}
         </p>
       </div>
     );
@@ -266,7 +320,17 @@ function StepRow({
         }
       />
       <div className="min-w-0 flex-1">
-        <p className="text-xs leading-relaxed text-[var(--el-muted)]">
+        {/* ★ **도는 줄은 글자 자신이 빛난다.** 왼쪽 점이 이미 도는데 그것만으로는 어느
+            줄이 지금인지 눈에 안 걸린다 — Claude 가 도구 이름에 빛을 지나가게 하는 것과
+            같은 자리다. 끝나면 빛이 멈추고 점이 체크로 바뀐다. */}
+        <p
+          className={cn(
+            "text-xs leading-relaxed",
+            block.status === null && live
+              ? "chat-shimmer"
+              : "text-[var(--el-muted)]"
+          )}
+        >
           {block.summary ?? block.tool}
         </p>
         <TargetChip target={block.target} onOpenNote={onOpenNote} />
@@ -334,7 +398,11 @@ function TargetChip({
   );
 }
 
-function Dot({ state }: { state: "complete" | "active" | "error" | "pending" }) {
+function Dot({
+  state,
+}: {
+  state: "complete" | "active" | "error" | "pending";
+}) {
   if (state === "active")
     return (
       <Loader2
@@ -344,11 +412,17 @@ function Dot({ state }: { state: "complete" | "active" | "error" | "pending" }) 
     );
   if (state === "complete")
     return (
-      <Check aria-hidden className="mt-[3px] size-3 shrink-0 text-[var(--el-muted)]" />
+      <Check
+        aria-hidden
+        className="mt-[3px] size-3 shrink-0 text-[var(--el-muted)]"
+      />
     );
   if (state === "error")
     return (
-      <X aria-hidden className="mt-[3px] size-3 shrink-0 text-[var(--el-error)]" />
+      <X
+        aria-hidden
+        className="mt-[3px] size-3 shrink-0 text-[var(--el-error)]"
+      />
     );
   return (
     <span
@@ -372,16 +446,13 @@ function Dot({ state }: { state: "complete" | "active" | "error" | "pending" }) 
  * - 1건이면 편다. 줄이 이미 그 회의 이름을 말하고 있어 접어도 감춰지는 것이 없는 대신,
  *   칩 하나뿐이라 **아낄 자리도 없다.** 그 칩이 그 회의록으로 가는 유일한 문이라 한 번
  *   더 누르게 만들 이유가 없다.
- * - 여럿이면 접는다. 줄이 개수만 말하므로(「이 답은 3개 회의를 봤습니다」) 감춰지는 것이
- *   있지만, 칩들이 여러 줄로 늘어나 자리를 먹는 것도 이쪽이다. 개수를 먼저 보이고
- *   이름은 물을 때 준다.
+ * - 여럿이면 접는다. 줄이 개수만 말하므로 감춰지는 것이 있지만, 칩들이 여러 줄로
+ *   늘어나 자리를 먹는 것도 이쪽이다. 개수를 먼저 보이고 이름은 물을 때 준다.
  *
- * **`<details>` 를 쓴다.** 열림 상태·키보드·`aria-expanded` 를 브라우저가 준다. 위
- * `Disclosure` 가 버튼과 state 로 된 것은 **`live` 를 따라 저절로 여닫아야 해서**이고,
- * 여기는 그럴 것이 없다. 생김새는 그쪽과 맞춘다(같은 쉐브론, 같은 회전).
- *
- * `open` 은 `refs` 가 정하는데 `refs` 는 답이 끝난 뒤 한 번에 오므로(`message_end`)
- * 값이 도중에 안 바뀐다 — React 가 사용자의 여닫기를 되돌릴 일이 없다.
+ * ★ **`<details>` 를 안 쓴다.** 열림 상태·키보드를 브라우저가 준다는 것이 이유였는데,
+ * 그 대가로 **여는 움직임을 못 만든다** — 브라우저가 내용을 즉시 붙였다 뗀다. 위
+ * `Disclosure` 와 같은 버튼 + state 로 바꾸고 높이를 애니메이션한다. `aria-expanded` 는
+ * 손으로 붙인다. 생김새·움직임이 그쪽과 한 벌이 되는 것이 덤이 아니라 요점이다.
  */
 export function AnswerRefs({
   refs,
@@ -390,41 +461,66 @@ export function AnswerRefs({
   refs: { id: string; title: string }[];
   onOpenNote?: (noteId: string) => void;
 }) {
+  // 하나뿐이면 접어도 아낄 자리가 없고, 그 칩이 회의록으로 가는 유일한 문이다.
+  const [open, setOpen] = useState(refs.length === 1);
+  const reduced = useReducedMotion();
   if (refs.length === 0) return null;
+
   return (
-    <details
+    <div
       data-refs="answer"
-      open={refs.length === 1}
-      className="chat-rise group mt-2 border-t border-dashed border-[var(--el-hairline)] pt-2"
+      data-open={open ? "true" : "false"}
+      className="chat-rise mt-2 border-t border-[var(--el-hairline)] pt-2"
     >
-      {/* 기본 삼각형은 뗀다 — 쉐브론이 이미 그 일을 하고, 둘이 서면 표식이 두 개다. */}
-      <summary className="flex cursor-pointer list-none items-center gap-1 text-xs text-[var(--el-muted)] [&::-webkit-details-marker]:hidden">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="-ml-1 flex w-full cursor-pointer items-center gap-1.5 py-0.5 text-left"
+      >
         <ChevronRight
           aria-hidden
-          className="size-3.5 shrink-0 transition-transform group-open:rotate-90"
+          className={cn(
+            "size-3.5 shrink-0 text-[var(--el-muted)] transition-transform",
+            open && "rotate-90"
+          )}
         />
-        {/* ★ **문구를 안 바꾼다.** `refs` 수로 web 이 만드는 이 두 줄에 판정이 걸려 있다. */}
-        {refs.length === 1
-          ? `찾은 곳: ${refs[0].title} 1건`
-          : `이 답은 ${refs.length}개 회의를 봤습니다`}
-      </summary>
-      <div className="mt-1 flex flex-wrap gap-1.5">
-        {refs.map((ref) => (
-          <button
-            key={ref.id}
-            type="button"
-            onClick={() => onOpenNote?.(ref.id)}
-            disabled={!onOpenNote}
-            className="inline-flex max-w-full items-center gap-1 rounded-full border border-[var(--el-hairline-strong)] px-2 py-0.5 text-[11px] text-[var(--el-body)] disabled:opacity-60 enabled:hover:border-[var(--el-ink)]"
+        {/* ★ **「출처」라고 안 한다.** 계약이 싣는 것은 **본 것**이지 인용한 것이 아니다 —
+            네 개를 보고 하나만 근거로 썼어도 넷이 다 여기 선다. 「출처」는 그것보다 더
+            말하는 단어라 신뢰를 잘못 만든다. 「참고한」이 실제로 한 일이다. */}
+        <span className="text-xs text-[var(--el-muted)]">
+          참고한 회의록 {refs.length}개
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="refs"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={reduced ? { duration: 0 } : COLLAPSE_TRANSITION}
+            className="overflow-hidden"
           >
-            <FileText aria-hidden className="size-3 shrink-0" />
-            <span className="truncate">{ref.title}</span>
-          </button>
-        ))}
-      </div>
-    </details>
+            <div className="flex flex-wrap gap-1.5 pt-1.5">
+              {refs.map((ref) => (
+                <button
+                  key={ref.id}
+                  type="button"
+                  onClick={() => onOpenNote?.(ref.id)}
+                  disabled={!onOpenNote}
+                  className="inline-flex max-w-full cursor-pointer items-center gap-1 rounded-full border border-[var(--el-hairline-strong)] px-2 py-0.5 text-[11px] text-[var(--el-body)] transition-colors disabled:cursor-default disabled:opacity-60 enabled:hover:border-[var(--el-ink)]"
+                >
+                  <FileText aria-hidden className="size-3 shrink-0" />
+                  <span className="truncate">{ref.title}</span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
   );
 }
-
 
 export type { ApprovalDecision };

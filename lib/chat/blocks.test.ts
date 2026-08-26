@@ -14,7 +14,10 @@ import {
   settleTool,
 } from "@/lib/chat/blocks";
 
-const tool = (toolCallId: string, over: Partial<Extract<Block, { kind: "tool" }>> = {}) =>
+const tool = (
+  toolCallId: string,
+  over: Partial<Extract<Block, { kind: "tool" }>> = {}
+) =>
   ({
     toolCallId,
     tool: "search",
@@ -160,6 +163,18 @@ describe("확정 본문이 토큰 합을 이긴다", () => {
       { kind: "thinking", text: "음" },
       { kind: "text", text: "안녕" },
     ]);
+  });
+
+  it("★ 흘린 것과 같으면 아무것도 안 옮긴다 — 마지막 프레임에서 화면이 안 흔들린다", () => {
+    // 갈아끼우기는 **어긋났을 때의 안전망**이지 매 턴의 의식이 아니다. 같은데도 새 배열을
+    // 만들면 본문이 도구 카드 **아래로 옮겨 앉고**, 낱말이 전부 새로 마운트돼 답 전체가
+    // 한 프레임에 다시 떠오른다 — QA 가 본 「마지막에 깜빡인다」의 web 쪽 몫이다.
+    const blocks: Block[] = [
+      { kind: "text", text: "앞" },
+      { kind: "tool", ...tool("t1") },
+      { kind: "text", text: "뒤" },
+    ];
+    expect(finalizeText(blocks, "앞뒤")).toBe(blocks);
   });
 
   it("빈 content 면 본문 블록이 하나도 안 남는다", () => {

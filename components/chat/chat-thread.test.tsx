@@ -29,7 +29,6 @@ function renderThread(
       messages={[]}
       stream={initialStreamState}
       pendingUserMessage={null}
-      onRetry={vi.fn()}
       onApprove={vi.fn()}
       {...props}
     />
@@ -90,7 +89,6 @@ describe("★★ [W-12] 답이 히스토리로 넘어가도 화면이 안 밀린
         stream={initialStreamState}
         pendingUserMessage="그럼 두 번째는?"
         pendingUserAt={askedAt}
-        onRetry={vi.fn()}
         onApprove={vi.fn()}
       />
     );
@@ -117,7 +115,6 @@ describe("★★ [W-12] 답이 히스토리로 넘어가도 화면이 안 밀린
         stream={initialStreamState}
         pendingUserMessage={null}
         pendingUserAt={askedAt}
-        onRetry={vi.fn()}
         onApprove={vi.fn()}
       />
     );
@@ -151,6 +148,92 @@ describe("ChatThread", () => {
     });
     expect(screen.getByText("지난 회의 정리해줘")).toBeTruthy();
     expect(screen.getByText("이렇게 정리했습니다.")).toBeTruthy();
+  });
+
+  /**
+   * ★ **답 아래 손잡이 줄.** 평소에는 안 보이고 그 답에 손이 닿을 때만 뜬다 —
+   * 대화를 읽는 동안 줄마다 버튼이 서 있으면 읽을 것보다 누를 것이 많아진다.
+   */
+  describe("답 아래 손잡이", () => {
+    it("★ 답에는 붙고 질문에는 안 붙는다", () => {
+      const { container } = renderThread({
+        messages: [
+          message({ role: "USER", content: "지난 회의 정리해줘" }),
+          message({ role: "ASSISTANT", content: "이렇게 정리했습니다." }),
+        ],
+      });
+      expect(
+        container.querySelectorAll('[data-testid="message-actions"]')
+      ).toHaveLength(1);
+    });
+
+    it("★ 자리를 늘 잡아 둔다 — 손이 닿을 때 아래가 밀리면 안 된다", () => {
+      const { container } = renderThread({
+        messages: [message({ role: "ASSISTANT", content: "답입니다." })],
+      });
+      const actions = container.querySelector(
+        '[data-testid="message-actions"]'
+      );
+      // 보임/안 보임은 투명도로만 가른다. 조건부 렌더면 뜰 때마다 아래가 밀린다.
+      expect(actions?.className).toContain("opacity-0");
+      expect(actions?.className).toContain("group-hover/msg:opacity-100");
+    });
+
+    it("복사를 누르면 그 답의 글이 클립보드로 간다", async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal("navigator", { clipboard: { writeText } });
+      renderThread({
+        messages: [
+          message({ role: "ASSISTANT", content: "이렇게 정리했습니다." }),
+        ],
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "복사" }));
+
+      expect(writeText).toHaveBeenCalledWith("이렇게 정리했습니다.");
+      await screen.findByRole("button", { name: "복사함" });
+      vi.unstubAllGlobals();
+    });
+
+    it("클립보드가 없는 환경에서도 안 터진다 — 안전하지 않은 출처가 그렇다", () => {
+      vi.stubGlobal("navigator", {});
+      renderThread({
+        messages: [message({ role: "ASSISTANT", content: "답입니다." })],
+      });
+
+      expect(() =>
+        fireEvent.click(screen.getByRole("button", { name: "복사" }))
+      ).not.toThrow();
+      vi.unstubAllGlobals();
+    });
+
+    it("★ 절대 시각이 아니라 상대 시각을 적는다", () => {
+      // 문구는 보는 사람의 로케일이 정한다(`Intl.RelativeTimeFormat`). 그래서 글자를
+      // 못 박지 않고 **성질**을 본다 — 나이가 다르면 다르게 적히고, 원본 타임스탬프는
+      // 한 글자도 안 실린다.
+      const { container } = renderThread({
+        messages: [
+          message({
+            role: "ASSISTANT",
+            content: "방금 답",
+            createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+          }),
+          message({
+            role: "ASSISTANT",
+            content: "지난 답",
+            createdAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
+          }),
+        ],
+      });
+
+      const stamps = [
+        ...container.querySelectorAll('[data-testid="message-actions"] span'),
+      ].map((node) => node.textContent ?? "");
+      expect(stamps).toHaveLength(2);
+      expect(stamps[0]).not.toBe(stamps[1]);
+      expect(stamps.every((text) => text.trim().length > 0)).toBe(true);
+      expect(stamps.some((text) => text.includes("2026"))).toBe(false);
+    });
   });
 
   it("작성자 이름이 없으면(개인 챗봇) 이름을 그리지 않는다", () => {
@@ -273,27 +356,55 @@ describe("ChatThread", () => {
     expect(screen.queryByText("정체 불명")).toBeNull();
   });
 
-  it("스트리밍 중에는 낱말이 각자의 요소로 선다", () => {
-    // 통짜 문장이면 `getByText` 로 찾히겠지만, 그러면 새로 붙은 낱말만 떠오르게 할 수
-    // 없다. **커서는 없다** — 물결처럼 떠오르는 것이 이미 「지금 오고 있다」를 말한다.
+  it("★ 흐르는 동안 글자에 아무것도 안 건다 — 통짜로 그린다", () => {
+    // 한때 낱말마다 `<span>` 을 세워 각자 떠오르게 했다. **커서도 없다** — 「지금 오고
+    // 있다」는 글자가 계속 붙는 것 자체가 말한다.
     const { container } = renderThread({
       stream: streaming({ blocks: body("만들던 중") }),
     });
     const bubble = container.querySelector('[data-testid="assistant-message"]');
     expect(bubble?.textContent).toContain("만들던 중");
-    expect(bubble?.className).toContain("chat-streaming");
-    expect(container.querySelectorAll(".md-w").length).toBeGreaterThan(1);
+    expect(bubble?.getAttribute("data-streaming")).toBe("true");
+    expect(container.querySelector(".md-w")).toBeNull();
     expect(container.querySelector('[data-stream="cursor"]')).toBeNull();
   });
 
-  it("답이 끝나면 낱말이 다시 안 움직인다", () => {
-    // 클래스만 뗀다. 구조를 바꾸면 DOM 이 통째로 다시 마운트돼 답 전체가 한꺼번에
-    // 떠오른다.
+  /**
+   * ★ **고정된 턴 위의 숨 쉴 자리는 한 벌이다.**
+   *
+   * 위에 아무것도 없을 때는 스크롤 상자의 `p-6` 이 이미 그 일을 한다. 거기에 또 얹으면
+   * 새 대화의 첫 구분선만 48px 을 이고 옛 턴들은 16px 이 되어 결이 어긋난다.
+   */
+  it("★ 위에 옛 대화가 없으면 고정 턴이 위 여백을 안 이고 선다", () => {
+    const { container } = renderThread({
+      pendingUserMessage: "지난 회의에서 정한 것만 정리해줘",
+      pendingUserAt: new Date().toISOString(),
+      pinSlackPx: 600,
+    });
+    const pinned = container.querySelector('[data-testid="chat-pinned-turn"]');
+    expect(pinned?.className).not.toContain("pt-6");
+  });
+
+  it("위에 옛 대화가 있으면 이고 선다 — 그때는 상자 위가 곧 뷰포트 위다", () => {
+    const { container } = renderThread({
+      messages: [
+        message({ role: "USER", content: "앞 질문" }),
+        message({ role: "ASSISTANT", content: "앞 답" }),
+      ],
+      pendingUserMessage: "다음 질문",
+      pendingUserAt: new Date().toISOString(),
+      pinSlackPx: 600,
+    });
+    const pinned = container.querySelector('[data-testid="chat-pinned-turn"]');
+    expect(pinned?.className).toContain("pt-6");
+  });
+
+  it("히스토리 말풍선은 흐르는 중으로 안 찍힌다", () => {
     const { container } = renderThread({
       messages: [message({ role: "ASSISTANT", content: "확정된 답입니다." })],
     });
     const bubble = container.querySelector('[data-testid="assistant-message"]');
-    expect(bubble?.className ?? "").not.toContain("chat-streaming");
+    expect(bubble?.getAttribute("data-streaming")).toBeNull();
   });
 
   it("★ [W-09] 말풍선에는 이름도 시각도 안 붙는다 — 시각은 구분선만 말한다", () => {
@@ -324,7 +435,6 @@ describe("ChatThread", () => {
   });
 
   it("error로 끝나면 부분 응답 없이 경고와 재전송만 남는다", () => {
-    const onRetry = vi.fn();
     renderThread({
       stream: {
         ...initialStreamState,
@@ -335,13 +445,13 @@ describe("ChatThread", () => {
           message: "응답 생성에 실패했습니다.",
         },
       },
-      onRetry,
     });
     expect(screen.getByRole("alert").textContent).toContain(
       "응답 생성에 실패했습니다."
     );
-    fireEvent.click(screen.getByRole("button", { name: "다시 보내기" }));
-    expect(onRetry).toHaveBeenCalled();
+    // ★ **버튼이 없다.** 「다시 보내기」가 할 수 있던 일은 같은 문장을 한 글자도 못 고치고
+    // 다시 보내는 것 하나였다. 서버가 문장을 안 받아 갔으면 패널이 컴포저로 되돌린다.
+    expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
   });
 
   /**
@@ -356,7 +466,10 @@ describe("ChatThread", () => {
         phase: "failed",
         blocks: body("만들던 중"),
         retryable: true,
-        error: { code: "STREAM_INTERRUPTED", message: "응답이 중간에 끊겼습니다." },
+        error: {
+          code: "STREAM_INTERRUPTED",
+          message: "응답이 중간에 끊겼습니다.",
+        },
       },
     });
     const partial = container.querySelector('[data-partial="true"]');
@@ -462,20 +575,20 @@ describe("ChatThread", () => {
   });
 
   it("앞 전송이 정리되기 전에는 재전송을 막는다", () => {
-    // 유휴 타이머가 stalled로 표시한 순간에는 잠금이 아직 살아 있다. 여기서 누르면
-    // 안내만 지워지고 재전송은 무시돼 고아 메시지가 남는다.
-    renderThread({
+    // 사용자가 스스로 멈춘 것이라 배너로 알릴 일이 아니다. 여기까지 흐른 답이 흐리게
+    // 서 있는 것이 이미 그 말을 한다.
+    const { container } = renderThread({
       stream: {
         ...initialStreamState,
         phase: "cancelled",
         blocks: body("만들던 중"),
       },
-      isRetryDisabled: true,
     });
-    expect(screen.getByRole("button", { name: "다시 보내기" })).toHaveProperty(
-      "disabled",
-      true
-    );
+    expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      container.querySelector('[data-testid="assistant-message"]')?.className
+    ).toContain("opacity-60");
   });
 
   it("지난 질문이 그때 쓴 범위를 들고 있다", () => {
@@ -541,7 +654,12 @@ describe("ChatThread", () => {
           role: "USER",
           content: "@[아무거나](noteId:xxxx) 정리해줘",
           scope: [
-            { kind: "NOTE", id: "n1", title: "주간 배포 회의", unavailable: false },
+            {
+              kind: "NOTE",
+              id: "n1",
+              title: "주간 배포 회의",
+              unavailable: false,
+            },
           ],
         }),
       ],
@@ -614,7 +732,12 @@ describe("ChatThread", () => {
           role: "USER",
           content: "주간 배포 회의에서 정한 게 뭐야",
           scope: [
-            { kind: "NOTE", id: "n1", title: "주간 배포 회의", unavailable: false },
+            {
+              kind: "NOTE",
+              id: "n1",
+              title: "주간 배포 회의",
+              unavailable: false,
+            },
           ],
         }),
       ],
@@ -639,7 +762,12 @@ describe("ChatThread", () => {
           role: "USER",
           content: "@[결제 개편](projectId:p1) 쪽 얘기 정리해줘",
           scope: [
-            { kind: "PROJECT", id: "p1", title: "결제 개편", unavailable: false },
+            {
+              kind: "PROJECT",
+              id: "p1",
+              title: "결제 개편",
+              unavailable: false,
+            },
           ],
         }),
       ],
@@ -666,7 +794,7 @@ describe("ChatThread", () => {
   });
 
   it("히스토리의 답변도 근거 줄을 남긴다", () => {
-    // 스트림이 끝나면 이 행이 라이브 말풍선을 대신한다. 안 그리면 「찾은 곳: …」이
+    // 스트림이 끝나면 이 행이 라이브 말풍선을 대신한다. 안 그리면 근거 줄이
     // 몇 초 떴다가 사라진다.
     renderThread({
       messages: [
@@ -684,7 +812,7 @@ describe("ChatThread", () => {
         }),
       ],
     });
-    expect(screen.getByText("찾은 곳: 주간 배포 회의 1건")).toBeTruthy();
+    expect(screen.getByText("참고한 회의록 1개")).toBeTruthy();
   });
 
   it("쓸 수 없는 근거는 근거 줄에서 뺀다", () => {

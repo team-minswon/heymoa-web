@@ -87,6 +87,29 @@ export function unwrapScopeMarkers(content: string, keep?: Set<string>) {
   );
 }
 
+/**
+ * ★ **칩으로 되돌릴 마커는 글자까지 지운다.**
+ *
+ * `unwrapScopeMarkers` 는 마커를 **제목 글자로** 되돌린다 — 칩을 다시 안 박는 자리(범위
+ * 넓히기)에서는 그게 맞다. 그런데 못 보낸 문장을 컴포저로 되돌릴 때는 **칩도 같이 다시
+ * 박으므로**, 풀어 두면 같은 이름이 **칩 한 벌 + 날글자 한 벌**로 두 번 앉고 그대로 다시
+ * 보내면 문장이 「@[주간 회의](…) 주간 회의 정리해줘」가 된다.
+ *
+ * 칩이 될 id 의 마커만 지우고 나머지는 사람 말로 되돌린다 — 그것들은 칩이 안 되므로
+ * 글자로 남아야 한다.
+ */
+export function dropScopeMarkers(content: string, ids: Set<string>) {
+  return (
+    content
+      .replace(MARKER, (raw, label: string, _key, id: string) =>
+        ids.has(id) ? "" : unescapeLabel(label)
+      )
+      // 지운 자리에 남는 겹공백을 접는다. 안 접으면 다시 보낸 문장 앞에 공백이 붙는다.
+      .replace(/\s{2,}/g, " ")
+      .trim()
+  );
+}
+
 function unescapeLabel(label: string) {
   return label.replace(/\\(.)/g, "$1");
 }

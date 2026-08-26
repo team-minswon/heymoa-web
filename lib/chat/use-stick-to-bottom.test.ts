@@ -36,12 +36,157 @@ function mount(viewport: HTMLDivElement, tail = "0") {
   );
 }
 
+/**
+ * jsdom 에는 `ResizeObserver` 가 없다. 크기 변화를 손으로 쏠 수 있게 심는다 —
+ * `observe` 한 요소마다 콜백을 모아 두고 `resize()` 가 한 번에 부른다.
+ */
+let resizers: ResizeObserverCallback[] = [];
+
+function installResizeObserver() {
+  resizers = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        resizers.push(callback);
+      }
+      observe() {}
+      disconnect() {}
+    }
+  );
+}
+
+/** 내용이나 뷰포트의 높이가 바뀌었다고 알린다. */
+function resize() {
+  act(() =>
+    resizers.forEach((run) =>
+      run([] as unknown as ResizeObserverEntry[], {} as ResizeObserver)
+    )
+  );
+}
+
 function scroll(viewport: HTMLDivElement, top: number) {
   act(() => {
     viewport.scrollTop = top;
     viewport.dispatchEvent(new Event("scroll"));
   });
 }
+
+describe("미끄러지는 동안 자란 만큼을 나중에 한 번에 안 뛴다", () => {
+  it("★ 창이 열린 사이에 바닥이 자라면 목표를 다시 겨눈다", () => {
+    const viewport = makeViewport({ scrollHeight: 3000 });
+    const moves: { top?: number; behavior?: ScrollBehavior }[] = [];
+    viewport.scrollTo = ((options: ScrollToOptions) =>
+      moves.push(options)) as typeof viewport.scrollTo;
+    const hook = mount(viewport);
+
+    act(() => hook.result.current.scrollToSent());
+    hook.rerender({ tail: "1" });
+    expect(moves).toHaveLength(1);
+
+    // 컴포저가 접히며 늦게 온 높이 · 「생각하는 중」 · 자라는 답 — 전부 여기 걸린다.
+    Object.defineProperty(viewport, "scrollHeight", { value: 3600 });
+    hook.rerender({ tail: "2" });
+
+    expect(moves).toHaveLength(2);
+    expect(moves[1]).toMatchObject({ top: 3600, behavior: "smooth" });
+  });
+
+  it("안 자랐으면 다시 안 건다 — 매 토큰 다시 걸면 애니메이션이 계속 처음부터다", () => {
+    const viewport = makeViewport({ scrollHeight: 3000 });
+    const moves: unknown[] = [];
+    viewport.scrollTo = ((options: ScrollToOptions) =>
+      moves.push(options)) as typeof viewport.scrollTo;
+    const hook = mount(viewport);
+
+    act(() => hook.result.current.scrollToSent());
+    hook.rerender({ tail: "1" });
+    hook.rerender({ tail: "2" });
+    hook.rerender({ tail: "3" });
+
+    expect(moves).toHaveLength(1);
+  });
+});
+
+/**
+ * ★ **`tail` 만 보면 React 가 다시 그릴 때에만 따라간다.**
+ *
+ * 높이는 그것 말고도 자란다 — 접이식이 열리는 220ms 동안, 마크다운 표가 다시 흐를 때,
+ * 폰트가 늦게 올 때, 「생각하는 중」이 서고 사라질 때. 그때는 `tail` 이 안 바뀐다.
+ */
+describe("높이가 변한 것을 직접 본다", () => {
+  it("★ `tail` 이 안 바뀌어도 내용이 자라면 따라간다", () => {
+    installResizeObserver();
+    const viewport = makeViewport({ scrollHeight: 1000, scrollTop: 600 });
+    const hook = mount(viewport);
+    scroll(viewport, 600);
+    expect(hook.result.current.atBottom).toBe(true);
+
+    // 접이식이 열린다 — 다시 그리지 않고 높이만 자란다.
+    Object.defineProperty(viewport, "scrollHeight", { value: 1400 });
+    resize();
+
+    expect(viewport.scrollTop).toBe(1400);
+    vi.unstubAllGlobals();
+  });
+
+  it("떠나 있으면 자라도 안 따라간다", () => {
+    installResizeObserver();
+    const viewport = makeViewport({ scrollHeight: 1000, scrollTop: 600 });
+    mount(viewport);
+    scroll(viewport, 100);
+
+    Object.defineProperty(viewport, "scrollHeight", { value: 1400 });
+    resize();
+
+    expect(viewport.scrollTop).toBe(100);
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("떠난 뒤에는 사람이 끝까지 내려야 다시 붙는다", () => {
+  // ★ 답이 흐르는 동안 살짝만 올려도 다음 토큰에 도로 감기던 것. 48px 안쪽이면
+  // `sync` 가 「아직 바닥」으로 읽고 방금 끊은 추적을 스스로 되살렸다.
+  it("★ 문턱 안쪽으로 조금만 올려도 되살아나지 않는다", () => {
+    const viewport = makeViewport({ scrollTop: 600 });
+    const hook = mount(viewport, "0");
+
+    act(() => {
+      viewport.scrollTop = 570; // 바닥에서 30px — 옛 문턱(48) 안쪽이다
+      viewport.dispatchEvent(new WheelEvent("wheel", { deltaY: -40 }));
+      viewport.dispatchEvent(new Event("scroll"));
+    });
+    expect(hook.result.current.atBottom).toBe(false);
+
+    // 답이 이어진다. 여기서 도로 감기면 안 된다.
+    hook.rerender({ tail: "1" });
+    expect(hook.result.current.atBottom).toBe(false);
+    expect(viewport.scrollTop).toBe(570);
+  });
+
+  it("스크롤바를 끌어 올려도 — 손짓 이벤트가 없어도 — 추적이 끊긴다", () => {
+    const viewport = makeViewport({ scrollTop: 600 });
+    const hook = mount(viewport, "0");
+
+    // 스크롤바 드래그는 `wheel`·`touchmove`·키를 하나도 안 낸다. `scroll` 만 줄줄이 난다 —
+    // 손짓에서 끊는 길이 통째로 없어서, 위로 간 것 자체를 읽어야 한다.
+    scroll(viewport, 600);
+    scroll(viewport, 575); // 바닥에서 25px, 옛 문턱 안쪽
+
+    expect(hook.result.current.atBottom).toBe(false);
+  });
+
+  it("끝까지 내리면 다시 붙는다", () => {
+    const viewport = makeViewport({ scrollTop: 600 });
+    const hook = mount(viewport, "0");
+
+    scroll(viewport, 300);
+    expect(hook.result.current.atBottom).toBe(false);
+
+    scroll(viewport, 600);
+    expect(hook.result.current.atBottom).toBe(true);
+  });
+});
 
 describe("useStickToBottom", () => {
   it("바닥에 있으면 버튼을 띄우지 않는다", () => {
@@ -236,6 +381,22 @@ describe("보내는 순간의 이동은 매번 같아야 한다", () => {
     return calls;
   }
 
+  it("★ 「맨 아래로」도 미끄러진다 — 한 프레임에 안 뛴다", () => {
+    const viewport = makeViewport({ scrollHeight: 3000, scrollTop: 100 });
+    const calls = withScrollTo(viewport);
+    const hook = mount(viewport);
+
+    scroll(viewport, 100);
+    expect(hook.result.current.atBottom).toBe(false);
+
+    act(() => hook.result.current.scrollToBottom());
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ behavior: "smooth", top: 3000 });
+    // 미끄러지는 동안 버튼을 미리 감춘다 — 끝에 툭 사라지면 그게 더 눈에 띈다.
+    expect(hook.result.current.atBottom).toBe(true);
+  });
+
   it("첫 번째도 두 번째도 부드럽게 옮긴다", () => {
     const viewport = makeViewport({ scrollHeight: 1000, scrollTop: 600 });
     const calls = withScrollTo(viewport);
@@ -247,10 +408,12 @@ describe("보내는 순간의 이동은 매번 같아야 한다", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({ behavior: "smooth" });
 
-    // 답이 자란다. 보호 창 안이라 따라가기는 건너뛴다.
+    // 답이 자란다. **즉시 이동으로 갈아타지 않는다** — 자란 만큼 목표만 다시 겨눈다.
+    // 예전에는 창이 닫힐 때까지 미뤘다가 남은 거리를 한 프레임에 뛰었다.
     Object.defineProperty(viewport, "scrollHeight", { value: 1400 });
     hook.rerender({ tail: "12" });
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({ behavior: "smooth", top: 1400 });
 
     // 보호 창이 끝난다.
     act(() => {
@@ -263,8 +426,8 @@ describe("보내는 순간의 이동은 매번 같아야 한다", () => {
     Object.defineProperty(viewport, "scrollHeight", { value: 2000 });
     act(() => hook.result.current.scrollToSent());
     hook.rerender({ tail: "" });
-    expect(calls).toHaveLength(2);
-    expect(calls[1]).toMatchObject({ behavior: "smooth", top: 2000 });
+    expect(calls).toHaveLength(3);
+    expect(calls[2]).toMatchObject({ behavior: "smooth", top: 2000 });
   });
 });
 

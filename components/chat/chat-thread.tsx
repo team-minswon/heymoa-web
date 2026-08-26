@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, memo, useMemo } from "react";
+import { Fragment, memo, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  Check,
   ChevronDown,
+  Copy,
   FileText,
   Folder,
-  PauseCircle,
   PencilLine,
   XCircle,
 } from "lucide-react";
@@ -17,11 +18,13 @@ import {
   type StepBlock,
 } from "@/components/chat/chain-of-thought";
 import { Markdown } from "@/components/chat/markdown";
+import { useSmoothText } from "@/lib/chat/use-smooth-text";
 import { TimeRule } from "@/components/chat/time-rule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AgentChatMessagesResponseDataMessagesItem } from "@/lib/api/generated/models";
 import { groupBlocks } from "@/lib/chat/blocks";
+import { relativeUpdatedAt } from "@/lib/chat/chat-list";
 import { dividerLabel, threadDividers } from "@/lib/chat/time-divider";
 import { scopeChipClass } from "@/lib/chat/scope-chip";
 import { splitScopeMarkers } from "@/lib/chat/scope-marker";
@@ -52,6 +55,13 @@ export type ThreadMessage = AgentChatMessagesResponseDataMessagesItem;
  * `memo` 는 스트리밍 때문이다 — 토큰마다 스레드가 다시 그려지는데 `at` 이 그대로면 `Intl`
  * 포매터를 다시 만들 이유가 없다.
  */
+/**
+ * 스크롤 상자의 위·아래 여백(`p-6`). **원본은 `personal-chat.tsx` 의 그 클래스**이고
+ * 여기서는 「위에 아무것도 없을 때 몇 px 을 덜 줄까」를 재는 데만 쓴다. 저쪽을 고치면
+ * 이 값도 같이 고쳐야 한다 — 어긋나면 첫 대화에 빈 스크롤 칸이 다시 생긴다.
+ */
+const THREAD_PAD_PX = 24;
+
 const TimeDivider = memo(function TimeDivider({ at }: { at: string }) {
   return (
     <TimeRule
@@ -72,8 +82,6 @@ export function ChatThread({
   pendingUserAt,
   pinSlackPx,
   pendingUserScope,
-  onRetry,
-  isRetryDisabled,
   onApprove,
   approvalCard,
   emptyState,
@@ -108,9 +116,6 @@ export function ChatThread({
    * 생기면서 아래가 통째로 밀린다** — 답을 읽던 자리가 어긋난다.
    */
   pendingUserScope?: HistoryScope;
-  onRetry: () => void;
-  /** 앞 전송이 아직 정리되지 않았으면 재전송을 막는다. */
-  isRetryDisabled?: boolean;
   onApprove: (decision: ApprovalDecision) => void;
   /** 훅이 소유하는 승인 카드. pending이 사라진 뒤에도 무효화 카드를 남기려고 stream이 아니라 이걸 그린다. */
   approvalCard?: ApprovalCard | null;
@@ -157,6 +162,21 @@ export function ChatThread({
     }
     return rows.length;
   }, [pendingUserMessage, rows]);
+
+  /**
+   * ★ **위에 아무것도 없으면 그만큼 자리를 덜 준다.**
+   *
+   * 패널이 준 값은 「뷰포트 높이 − 아래 여백」이다. 그런데 스크롤 상자에는 **위 여백도**
+   * 있어서, 위에 옛 대화가 하나도 없으면 그 24px 이 **아무것도 없는 스크롤 칸**으로 남는다 —
+   * 바닥까지 내려도 위로 24px 이 더 열리고, 거기에는 볼 것이 없다. 첫 대화에서 QA 가 본
+   * 「남는 칸」이 이것이다.
+   *
+   * 위에 옛 대화가 있으면 그 24px 은 죽은 자리가 아니라 **그 대화가 보이는 자리**라 그대로 둔다.
+   */
+  const slack =
+    pinSlackPx && pinStart === 0
+      ? Math.max(0, pinSlackPx - THREAD_PAD_PX)
+      : pinSlackPx;
 
   const isLive = stream.phase !== "idle" || stream.content !== null;
   if (messages.length === 0 && !isLive && !pendingUserMessage && emptyState) {
@@ -209,14 +229,19 @@ export function ChatThread({
         /**
          * 위 여백은 **숨 쉴 자리**다. 없으면 구분선이 화면 맨 끝에 붙어 잘린 것처럼 보인다.
          *
+         * ★ **위에 아무것도 없으면 안 준다.** 그때는 상자 위가 뷰포트 위가 아니라 스크롤
+         * 상자의 위 여백(`p-6`) 아래에 앉으므로, 여기서 또 주면 **24px 이 두 벌**이 된다 —
+         * 새 대화의 첫 구분선만 48px 을 이고 있고 옛 턴들은 16px 이라 결이 어긋났다.
+         * 지금은 두 경우 다 **첫 요소 위가 24px** 이다.
+         *
          * ★ **이것은 스크롤 끝을 안 민다.** 한 번 걷었다가 되돌린 자리라 적어 둔다 —
          * 걷은 이유가 「여백만큼 더 내릴 데가 남는다」였는데, 그 전제가 틀렸다. 이 패딩은
          * `minHeight` 를 가진 **같은 상자 안**에 있고 `border-box` 라 높이에 포함된다.
          * 상자 바깥 위는 그대로 뷰포트 위에 맞고, 여백은 그 안에서 내용을 내릴 뿐이다.
          * 「다 내렸는데 위가 조금 비어 있다」가 곧 원하는 그림이고, 거기가 끝이 맞다.
          */
-        className={cn("flex flex-col gap-4", pinSlackPx && "pt-6")}
-        style={pinSlackPx ? { minHeight: pinSlackPx } : undefined}
+        className={cn("flex flex-col gap-4", slack && pinStart > 0 && "pt-6")}
+        style={slack ? { minHeight: slack } : undefined}
       >
         {rows.slice(pinStart).map((item, index) => row(item, pinStart + index))}
 
@@ -234,6 +259,7 @@ export function ChatThread({
         ) : null}
 
         <StreamBlocks stream={stream} onOpenNote={onOpenNote} />
+        <ThinkingLine stream={stream} pending={pendingUserMessage !== null} />
 
         {approvalCard ? (
           <ApprovalPrompt
@@ -246,11 +272,7 @@ export function ChatThread({
         ) : null}
 
         <StreamTail stream={stream} onOpenNote={onOpenNote} />
-        <StreamNotice
-          stream={stream}
-          onRetry={onRetry}
-          isRetryDisabled={isRetryDisabled}
-        />
+        <StreamNotice stream={stream} />
       </div>
     </div>
   );
@@ -292,17 +314,82 @@ function HistoryMessage({
     );
   if (message.role === "ASSISTANT") {
     return (
-      <div className="flex flex-col gap-1.5">
+      // `group/msg` 는 아래 손잡이 줄이 **이 답에 손이 닿았을 때만** 뜨게 하는 이름이다.
+      // 이름을 안 붙이면 스레드 어디에 손이 닿아도 모든 줄이 같이 뜬다.
+      <div className="group/msg flex flex-col gap-1.5">
         <AssistantText content={message.content} />
         {/* 스트림이 끝나면 이 행이 라이브 말풍선을 대신한다. 여기서 안 그리면
-            「찾은 곳: …」이 몇 초 떴다가 사라진다. */}
+            근거 줄이 몇 초 떴다가 사라진다. */}
         <AnswerRefs refs={usableRefs(message.scope)} onOpenNote={onOpenNote} />
+        <MessageActions content={message.content} at={message.createdAt} />
       </div>
     );
   }
 
   // TOOL·THINKING 행은 여기 안 온다 — `groupHistory`가 스트림과 같은 블록으로 접어 낸다.
   return null;
+}
+
+/** 「복사함」이 되돌아가기까지. 눌린 것이 보일 만큼만이고 잰 값은 아니다. */
+const COPIED_MS = 1600;
+
+/**
+ * ★ **답 하나에 딸린 손잡이 줄.**
+ *
+ * 평소에는 **투명하되 자리를 잡고 있다.** 조건부로 그리면 손이 닿는 순간 이 줄의 높이만큼
+ * 아래가 밀려서, 읽던 자리가 커서를 따라 움직인다 — 이 레포가 「조건부로 나타나는 것이 옆을
+ * 밀지 않게 자리를 미리 잡는다」로 못 박아 둔 자리다.
+ *
+ * **포커스에도 뜬다.** 투명도로만 가리면 키보드 사용자는 안 보이는 버튼에 초점이 간다.
+ *
+ * ★ **시각은 여기서만 말한다.** 말풍선에 시각을 안 다는 규칙([W-09])은 그대로다 — 이 줄은
+ * 말풍선 밖이고 평소에는 아예 안 보인다. 구분선이 「언제쯤」을 말하고 이 줄이 물었을 때
+ * 「정확히 얼마 전」을 답한다.
+ */
+function MessageActions({ content, at }: { content: string; at: string }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  const copy = () => {
+    // 안전하지 않은 출처(http)에는 `clipboard` 가 아예 없다. 없으면 조용히 아무 일도 안 한다 —
+    // 여기서 터지면 답 하나가 아니라 스레드가 통째로 안 그려진다.
+    void navigator.clipboard
+      ?.writeText(content)
+      .then(() => setCopied(true))
+      .catch(() => undefined);
+  };
+
+  return (
+    <div
+      data-testid="message-actions"
+      className={cn(
+        "flex h-6 items-center gap-1 text-[var(--el-muted)]",
+        "opacity-0 transition-opacity group-hover/msg:opacity-100",
+        "focus-within:opacity-100 motion-reduce:transition-none"
+      )}
+    >
+      <button
+        type="button"
+        aria-label={copied ? "복사함" : "복사"}
+        onClick={copy}
+        className="flex size-6 cursor-pointer items-center justify-center rounded-control transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
+      >
+        {copied ? (
+          <Check aria-hidden className="size-3.5" />
+        ) : (
+          <Copy aria-hidden className="size-3.5" />
+        )}
+      </button>
+      <span className="text-[11px] tabular-nums">
+        {relativeUpdatedAt(at, new Date())}
+      </span>
+    </div>
+  );
 }
 
 /**
@@ -575,35 +662,57 @@ function ScopeChipMark({
 function AssistantText({
   content,
   partial,
-  live,
   streaming,
 }: {
   content: string;
   partial?: boolean;
-  /**
-   * 스트림이 그리는 말풍선이다. **낱말을 쪼갤지**를 정한다.
-   *
-   * 흐름이 멈춰도 계속 쪼갠 채 둔다 — `message_end` 에서 쪼개기를 끄면 span 이 한꺼번에
-   * 사라지면서 문단이 통째로 다시 그려진다. 히스토리로 넘어갈 때 어차피 한 번 갈리므로
-   * 그 한 번만 남긴다.
-   */
-  live?: boolean;
-  /** 지금 토큰이 흐르고 있다. **떠오르기 애니메이션만** 켠다. */
+  /** 지금 토큰이 흐르고 있다. **고르게 푸는 것**만 켠다 — 글자에는 애니메이션이 없다. */
   streaming?: boolean;
 }) {
+  // 받은 것을 곧바로 안 그린다 — 덩어리로 오는 것을 고른 속도로 푼다(`use-smooth-text`).
+  const shown = useSmoothText(content, Boolean(streaming));
   return (
     <div
       data-testid="assistant-message"
+      data-streaming={streaming ? "true" : undefined}
       data-partial={partial ? "true" : undefined}
-      className={cn(
-        partial && "opacity-60",
-        // 흐르는 동안에만 낱말이 떠오른다. 끝나면 클래스만 떼서 이미 그려진 것은
-        // 그대로 두고 다시 움직이지 않게 한다.
-        streaming && "chat-streaming"
-      )}
+      className={cn(partial && "opacity-60")}
     >
-      <Markdown content={content} animate={live} />
+      <Markdown content={shown} />
     </div>
+  );
+}
+
+/**
+ * ★ **아직 아무것도 안 나온 구간.** 보낸 뒤 첫 프레임까지, 그리고 도구가 도는 사이가
+ * 여기다 — 예전에는 그 자리에 **아무것도 없었다.** 질문만 덩그러니 남아서 보낸 것이
+ * 닿았는지조차 알 수 없었다.
+ *
+ * 스피너를 안 쓴다. 도는 원은 「무언가 돈다」밖에 못 말하고 이 화면에는 이미 도는 것이
+ * 많다. 글자 위로 빛이 지나가면 **그 문장이 지금 살아 있다**는 뜻이 된다.
+ */
+function ThinkingLine({
+  stream,
+  pending,
+}: {
+  stream: ChatStreamState;
+  /**
+   * 말풍선은 섰는데 스트림이 아직 안 열렸다. **새 대화의 첫 문장이 이 자리를 지난다** —
+   * 대화를 만드는 왕복 동안 `phase` 는 아직 `idle` 이라 스트림만 보면 아무것도 못 그린다.
+   */
+  pending: boolean;
+}) {
+  const waiting =
+    stream.phase === "streaming" || (stream.phase === "idle" && pending);
+  if (!waiting || stream.blocks.length > 0) return null;
+  return (
+    <p
+      data-testid="chat-thinking"
+      aria-live="polite"
+      className="chat-shimmer text-xs"
+    >
+      생각하는 중
+    </p>
   );
 }
 
@@ -655,7 +764,6 @@ function StreamBlocks({
             key={`text-${index}`}
             content={group.text}
             partial={isPartial}
-            live
             streaming={stream.phase === "streaming" && index === lastIndex}
           />
         )
@@ -679,95 +787,50 @@ function StreamTail({
   return <AnswerRefs refs={stream.refs} onOpenNote={onOpenNote} />;
 }
 
-function StreamNotice({
-  stream,
-  onRetry,
-  isRetryDisabled,
-}: {
-  stream: ChatStreamState;
-  onRetry: () => void;
-  isRetryDisabled?: boolean;
-}) {
+/**
+ * ★ **「다시 보내기」 버튼은 없다.**
+ *
+ * 그 버튼이 할 수 있던 일은 **같은 문장을 한 글자도 못 고치고 다시 보내는 것** 하나였다.
+ * 실패한 질문은 대개 고쳐서 다시 묻고 싶은 것이고, 중지한 질문은 이미 원하는 만큼 답을
+ * 받은 것이다. 그래서 실패했는데 **서버가 그 문장을 안 받아 갔으면** 문장을 컴포저로
+ * 되돌리고(`send` 의 실패 갈래), 나머지는 히스토리에 그대로 남는다.
+ */
+function StreamNotice({ stream }: { stream: ChatStreamState }) {
   if (stream.phase === "failed") {
     return (
       <Notice
-        tone="error"
         title="응답을 만들지 못했습니다"
         description={
           stream.error?.message ??
           "부분 응답은 저장되지 않았습니다. 다시 보내 주세요."
         }
-        onRetry={onRetry}
-        isRetryDisabled={isRetryDisabled}
       />
     );
   }
-  // 「종료 프레임 없이 끊김」은 더 이상 상태가 아니다 — 재연결을 다 쓰고 포기하면
-  // `failed`로 접히고 위 배너가 그 사유(`STREAM_INTERRUPTED`)를 그린다.
-  if (stream.phase === "cancelled") {
-    return (
-      <div className="flex justify-start">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-[30px]"
-          disabled={isRetryDisabled}
-          onClick={onRetry}
-        >
-          다시 보내기
-        </Button>
-      </div>
-    );
-  }
+  // 중지는 배너를 안 세운다 — 사용자가 스스로 멈춘 것이라 알릴 일이 아니다. 여기까지
+  // 흐른 답이 흐리게(`opacity-60`) 서 있는 것이 이미 그 말을 한다.
   return null;
 }
 
 function Notice({
-  tone,
   title,
   description,
-  onRetry,
-  isRetryDisabled,
 }: {
-  tone: "error" | "neutral";
   title: string;
   description: string;
-  onRetry: () => void;
-  isRetryDisabled?: boolean;
 }) {
-  const isError = tone === "error";
-  const Icon = isError ? AlertTriangle : PauseCircle;
   return (
     <div
       role="alert"
-      className={
-        isError
-          ? "rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3.5"
-          : "rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-3.5"
-      }
+      className="rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3.5"
     >
       <div className="flex gap-2.5">
-        <Icon
-          className={
-            isError
-              ? "mt-0.5 size-4 shrink-0 text-[var(--el-error)]"
-              : "mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
-          }
-        />
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-[var(--el-ink)]">{title}</p>
           <p className="mt-0.5 text-xs leading-relaxed text-[var(--el-muted)]">
             {description}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2.5 h-[30px]"
-            disabled={isRetryDisabled}
-            onClick={onRetry}
-          >
-            다시 보내기
-          </Button>
         </div>
       </div>
     </div>
@@ -827,7 +890,9 @@ function ApprovalArgs({ args }: { args: ToolArgs }) {
               // 접히고, 승인 카드는 스트림 상태가 바뀔 때마다 다시 그려진다.
               <details className="group">
                 <summary className="flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden">
-                  <span className="line-clamp-1 group-open:hidden">{value}</span>
+                  <span className="line-clamp-1 group-open:hidden">
+                    {value}
+                  </span>
                   <span className="hidden text-[var(--el-muted)] group-open:inline">
                     접기
                   </span>

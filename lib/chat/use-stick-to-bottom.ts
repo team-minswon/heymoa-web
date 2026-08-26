@@ -9,6 +9,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const BOTTOM_THRESHOLD_PX = 48;
 
 /**
+ * ★ **떠난 뒤에 다시 붙는 폭. 붙어 있을 때의 폭보다 훨씬 좁다.**
+ *
+ * 한 값으로 두면 답이 흐르는 동안 **살짝만 올려도 다음 토큰에 도로 감긴다** — 30px 올린
+ * 것은 48px 안쪽이라 `sync` 가 「아직 바닥」으로 읽고, 방금 끊은 추적을 스스로 되살린다.
+ * 사용자가 보기에는 스크롤이 잠긴 것과 같다.
+ *
+ * 잘 만든 채팅(ChatGPT · Claude · Slack)이 쓰는 것은 **상태 셋**이다 — 붙어 있다 · 떠나
+ * 있다 · 사람이 스스로 돌아왔다. 떠난 뒤에는 **끝까지 내려야** 다시 붙는다.
+ */
+const REARM_THRESHOLD_PX = 8;
+
+/**
  * 새 내용은 아래로 쌓인다. 유저가 위를 읽고 있을 때 끌어내리지 않도록 **바닥 근처일 때만**
  * 따라간다. 개인 챗봇과 공유 챗봇이 같은 코드를 각자 갖고 있어 하나로 모았다.
  *
@@ -51,14 +63,30 @@ export function useStickToBottom(tail: string) {
   const smoothOnceRef = useRef(false);
   /** 이 시각까지는 스크롤 이벤트를 안 읽는다 — 애니메이션 중간 프레임이다. */
   const smoothUntilRef = useRef(0);
+  /** 지금 미끄러져 가고 있는 목표. **자라면 다시 겨눈다.** */
+  const smoothTargetRef = useRef(0);
   const [atBottom, setAtBottom] = useState(true);
 
+  /**
+   * 마지막으로 **눈으로 본** 스크롤 자리. `scroll` 이벤트에서만 적는다 — 우리가 쓴 값이
+   * 아니라 브라우저가 확정한 값이라야 「위로 갔나」가 참말이 된다(넘겨 쓴 값은 잘린다).
+   * 아직 하나도 못 봤으면 null 이고, 그때는 아무 판정도 안 한다.
+   */
+  const lastTopRef = useRef<number | null>(null);
+
   const sync = useCallback((viewport: HTMLDivElement) => {
+    // 붙어 있을 때와 떠나 있을 때의 폭이 다르다 (`REARM_THRESHOLD_PX`).
+    const limit = stickRef.current ? BOTTOM_THRESHOLD_PX : REARM_THRESHOLD_PX;
     const stuck =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
-      BOTTOM_THRESHOLD_PX;
+      limit;
     stickRef.current = stuck;
     setAtBottom(stuck);
+  }, []);
+
+  /** 우리가 바닥으로 옮긴다. 자리는 안 적는다 — 뒤따르는 `scroll` 이 확정된 값을 준다. */
+  const jumpToBottom = useCallback((viewport: HTMLDivElement) => {
+    viewport.scrollTop = viewport.scrollHeight;
   }, []);
 
   /**
@@ -90,6 +118,17 @@ export function useStickToBottom(tail: string) {
     // **부드럽게 옮기는 동안에는 안 읽는다.** 중간 프레임은 아직 바닥이 아니라서, 읽으면
     // 방금 켠 추적을 스스로 끄고 애니메이션이 끝나기도 전에 따라가기를 잃는다.
     const onScroll = () => {
+      const top = viewport.scrollTop;
+      /**
+       * ★ **올라간 것 자체가 손짓이다.**
+       *
+       * `wheel`·`touchmove`·키만 보면 **스크롤바 드래그가 통째로 빠진다** — 그 셋 중
+       * 아무것도 안 나고 `scroll` 만 난다. 우리가 옮기는 것은 늘 바닥 쪽이라, 앞서 본
+       * 자리보다 위로 간 것은 사람이 한 것으로 봐도 된다.
+       */
+      const previous = lastTopRef.current;
+      lastTopRef.current = top;
+      if (previous !== null && top < previous - 1) release();
       if (Date.now() < smoothUntilRef.current) return;
       sync(viewport);
     };
@@ -121,6 +160,39 @@ export function useStickToBottom(tail: string) {
     };
   }, [release, sync]);
 
+  /**
+   * ★ **높이가 변한 것을 직접 본다.**
+   *
+   * `tail` 만 보면 **React 가 다시 그릴 때에만** 따라갈지 판단한다. 그런데 높이는 그것
+   * 말고도 자란다 — 접이식이 열리는 220ms 동안, 마크다운 표·코드 블록이 다시 흐를 때,
+   * 폰트가 늦게 올 때, 「생각하는 중」이 서고 사라질 때. 그 순간들에는 `tail` 이 안
+   * 바뀌므로 바닥에 붙어 있어도 안 따라갔다.
+   *
+   * 업계 구현(`use-stick-to-bottom`)이 `ResizeObserver` 를 쓰는 이유가 이것이다 —
+   * **무엇이 바뀌었는지 몰라도 「높이가 변했다」만 보면 된다.**
+   *
+   * 뷰포트와 그 안의 내용을 **둘 다** 본다. 뷰포트는 컴포저가 자라거나 접힐 때 바뀌고,
+   * 내용은 답이 자랄 때 바뀐다. 스크롤 자리를 쓰는 것은 어느 요소의 크기도 안 바꾸므로
+   * 되먹임이 없다.
+   */
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    // jsdom 에는 `ResizeObserver` 가 없다 — `personal-chat` 이 같은 자리에서 같이 판다.
+    if (!viewport || typeof ResizeObserver === "undefined") return;
+    const follow = () => {
+      const current = viewportRef.current;
+      if (!current || !stickRef.current) return;
+      // 미끄러지는 중이면 그쪽이 목표를 들고 있다. 여기서 또 옮기면 둘이 다툰다.
+      if (Date.now() < smoothUntilRef.current) return;
+      jumpToBottom(current);
+    };
+    const observer = new ResizeObserver(follow);
+    observer.observe(viewport);
+    const content = viewport.firstElementChild;
+    if (content) observer.observe(content);
+    return () => observer.disconnect();
+  }, [jumpToBottom]);
+
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -151,6 +223,7 @@ export function useStickToBottom(tail: string) {
     ) {
       smoothOnceRef.current = false;
       smoothUntilRef.current = Date.now() + SMOOTH_GUARD_MS;
+      smoothTargetRef.current = viewport.scrollHeight;
       viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
       /**
        * ★ **창이 닫히면 위치로 추측하지 않고, 켜져 있으면 그냥 마무리한다.**
@@ -170,14 +243,36 @@ export function useStickToBottom(tail: string) {
        */
       window.setTimeout(() => {
         const current = viewportRef.current;
-        if (current && stickRef.current) current.scrollTop = current.scrollHeight;
+        if (current && stickRef.current) jumpToBottom(current);
       }, SMOOTH_GUARD_MS);
       return;
     }
     smoothOnceRef.current = false;
-    if (Date.now() < smoothUntilRef.current) return;
-    viewport.scrollTop = viewport.scrollHeight;
-  }, [tail, sync]);
+    if (Date.now() < smoothUntilRef.current) {
+      /**
+       * ★ **미끄러지는 동안 바닥이 자라면 다시 겨눈다.**
+       *
+       * 이 창이 하는 일은 「애니메이션 중간 프레임을 바닥이 아니라고 오해하지 않기」인데,
+       * 그렇다고 **목표까지 굳혀 두면** 창이 열린 사이에 자란 만큼이 통째로 남는다 —
+       * 컴포저가 접히며 늦게 온 뷰포트 높이, 새로 선 「생각하는 중」, 자리를 넘어선 답이
+       * 다 여기 걸린다. 그러면 창이 닫히는 순간 남은 거리를 **한 프레임에 뛴다**(실측
+       * 131px). 그 도약이 「보내면 끼벅한다」의 정체다.
+       *
+       * 자랐을 때만 다시 건다. 매 토큰 다시 걸면 브라우저가 애니메이션을 계속 처음부터
+       * 다시 시작해서 오히려 끊긴다.
+       */
+      if (
+        viewport.scrollHeight > smoothTargetRef.current + 1 &&
+        typeof viewport.scrollTo === "function" &&
+        !prefersReducedMotion()
+      ) {
+        smoothTargetRef.current = viewport.scrollHeight;
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+      }
+      return;
+    }
+    jumpToBottom(viewport);
+  }, [jumpToBottom, tail, sync]);
 
   /**
    * ★ **방금 보낸 질문으로 옮긴다. 무조건 돈다.**
@@ -199,14 +294,39 @@ export function useStickToBottom(tail: string) {
     smoothOnceRef.current = true;
   }, []);
 
+  /**
+   * 「맨 아래로」를 눌렀다. **미끄러져 내려간다** — 한 프레임에 뛰면 어디서 어디로
+   * 갔는지가 안 보이고, 긴 스레드에서는 화면이 그냥 딴 데로 바뀐 것처럼 읽힌다.
+   * 보내는 순간의 이동과 같은 움직임을 쓴다.
+   */
   const scrollToBottom = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight;
-    // 실제로 옮긴 뒤에 상태를 맞춘다 — 먼저 true로 두면 이동이 실패했을 때
-    // 버튼만 사라지고 유저는 위에 남는다.
-    sync(viewport);
-  }, [sync]);
+    // **먼저 붙였다고 쳐 둔다.** 사람이 스스로 돌아온 것이라 좁은
+    // `REARM_THRESHOLD_PX` 가 아니라 원래 폭으로 재야 한다 — 안 그러면 흐르는 중에
+    // 높이가 바뀌어 눌러도 안 붙는 순간이 생긴다.
+    stickRef.current = true;
+    // jsdom 에는 `scrollTo` 가 없고, 움직임을 줄여 달라고 한 사람에게는 안 미끄러진다.
+    if (typeof viewport.scrollTo !== "function" || prefersReducedMotion()) {
+      jumpToBottom(viewport);
+      // 실제로 옮긴 뒤에 상태를 맞춘다 — 먼저 true로 두면 이동이 실패했을 때
+      // 버튼만 사라지고 유저는 위에 남는다.
+      sync(viewport);
+      return;
+    }
+    smoothUntilRef.current = Date.now() + SMOOTH_GUARD_MS;
+    smoothTargetRef.current = viewport.scrollHeight;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+    // 미끄러지는 동안 버튼을 미리 감춘다. 중간 프레임은 아직 바닥이 아니라 위치로 재면
+    // 애니메이션 내내 버튼이 서 있다가 끝에 툭 사라진다.
+    setAtBottom(true);
+    // **그래도 위치로 한 번 확인한다.** 미끄러짐이 아무 일도 안 하는 환경이 실제로 있었다
+    // (헤드리스). 창이 닫히면 실제 자리를 읽어, 아직 위라면 버튼을 되살린다.
+    window.setTimeout(() => {
+      const current = viewportRef.current;
+      if (current) sync(current);
+    }, SMOOTH_GUARD_MS);
+  }, [jumpToBottom, sync]);
 
   return { viewportRef, atBottom, scrollToBottom, scrollToSent };
 }

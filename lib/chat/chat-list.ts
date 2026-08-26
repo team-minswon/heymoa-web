@@ -11,6 +11,14 @@ export type OpenChatStatus = {
   /** `turn_started` 가 준 값. 스트림이 비어 있으면 null이다. */
   turnId: string | null;
   phase: ChatStreamPhase;
+  /**
+   * ★ 이 탭이 **끝나는 것을 본** 턴. `turnId` 와 달리 `stream.reset()` 이 안 지운다.
+   *
+   * 턴이 끝나면 `reset()` 이 `turnId` 를 비우는데, 목록은 아직 한 주기 동안 그 턴을
+   * 「도는 중」으로 들고 있다. 맞출 열쇠가 없으면 아래 「다른 턴 id」 규칙에 걸려
+   * **사라졌던 배지가 다시 선다** — 그 5초가 깜빡임이다.
+   */
+  finishedTurnId: string | null;
 };
 
 function labelOfPhase(phase: ChatStreamPhase): RunningLabel | null {
@@ -38,6 +46,7 @@ function labelOfList(
  * | 다른 대화                  | 목록. 이 탭은 그 대화의 스트림을 안 들고 있다     |
  * | 같은 `turnId`              | **SSE.** 끝난 것을 목록이 아직 모를 뿐이다         |
  * | `null` 인데 스트림이 흐른다 | **SSE.** 시작한 것을 목록이 아직 모를 뿐이다       |
+ * | 끝나는 것을 본 `turnId`     | **SSE.** 끝났다. `reset()` 이 지운 열쇠를 이걸로 맞춘다 |
  * | 다른 `turnId`              | 목록. 이 탭이 모르는 턴이라 목록이 유일한 소식이다 |
  */
 export function runningLabel(
@@ -48,6 +57,8 @@ export function runningLabel(
   if (chat.runningTurn === null || chat.runningTurn.turnId === open.turnId) {
     return labelOfPhase(open.phase);
   }
+  // 끝나는 것을 본 턴이다. 목록이 아직 모르는 것뿐이라 배지를 안 세운다.
+  if (chat.runningTurn.turnId === open.finishedTurnId) return null;
   return labelOfList(chat.runningTurn);
 }
 

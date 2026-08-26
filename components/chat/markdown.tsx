@@ -5,8 +5,6 @@ import { Check, Copy } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { rehypeWordFade } from "@/lib/chat/rehype-word-fade";
-
 /**
  * 답변 본문 렌더.
  *
@@ -32,7 +30,9 @@ import { rehypeWordFade } from "@/lib/chat/rehype-word-fade";
  */
 function languageOf(node: unknown): string | null {
   const first = (
-    node as { children?: { properties?: { className?: unknown } }[] } | undefined
+    node as
+      | { children?: { properties?: { className?: unknown } }[] }
+      | undefined
   )?.children?.[0];
   const classes = first?.properties?.className;
   if (!Array.isArray(classes)) return null;
@@ -82,7 +82,9 @@ function CodeBlock({
           className="inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 py-0.5 text-[11px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
           onClick={async () => {
             try {
-              await navigator.clipboard.writeText(ref.current?.textContent ?? "");
+              await navigator.clipboard.writeText(
+                ref.current?.textContent ?? ""
+              );
             } catch {
               // 클립보드가 없거나 권한이 없다. 「복사됨」이라고 거짓말하지 않는다.
               return;
@@ -159,7 +161,9 @@ const COMPONENTS: Components = {
   ol: ({ children }) => (
     <ol className="my-1.5 list-decimal space-y-0.5 pl-5">{children}</ol>
   ),
-  p: ({ children }) => <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>,
+  p: ({ children }) => (
+    <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>
+  ),
   /**
    * ★ **제목 세 층이 실제로 세 층이다.** 셋 다 같은 굵은 글씨였어서, 답이 길어지면
    * 어디가 절이고 어디가 그 안인지가 안 보였다. 크기·색·위 여백을 층마다 벌린다 —
@@ -194,20 +198,14 @@ const COMPONENTS: Components = {
 
 /** 플러그인 배열도 같은 이유로 고정한다 — 새 배열이면 processor 가 매번 다시 선다. */
 const REMARK = [remarkGfm];
-const REHYPE_ANIMATED = [rehypeWordFade];
-const REHYPE_PLAIN: [] = [];
 
-export function Markdown({
-  content,
-  animate,
-}: {
-  content: string;
-  /**
-   * 낱말을 각자의 요소로 쪼갠다. **흐르는 동안만 켠다** — 끝난 답과 히스토리까지
-   * 쪼개면 DOM 만 무거워지고 얻는 것이 없다.
-   */
-  animate?: boolean;
-}) {
+/**
+ * ★ **낱말을 안 쪼갠다.** 한때 `rehype-word-fade` 가 흐르는 동안 낱말마다 `<span>` 을
+ * 세워 각자 떠오르게 했다. 그것이 스르륵이 아니라 **번쩍**으로 읽혔고, DOM 도 문단
+ * 하나에 span 수십 개로 무거웠다. ChatGPT 도 Claude 도 글자에는 아무것도 안 건다 —
+ * 매끄러움은 `use-smooth-text` 가 토큰을 고르게 풀어 놓는 데서 온다.
+ */
+export function Markdown({ content }: { content: string }) {
   return (
     // ★ `break-words` 는 **긴 URL 때문이다.** 표와 코드블록은 각자 가로 스크롤로 막혀
     // 있지만 링크 글자는 안 막혀 있어서, 끊을 자리가 없는 주소 하나가 좁은 패널(본문
@@ -219,11 +217,7 @@ export function Markdown({
     // 같이 뗐다(「- 상위 / - [ ] 하위」에서 「상위」의 불릿이 사라졌다). 여기 한 줄이면
     // `ul` 과 `ol` 이 함께 걸린다 — 번호 목록 안의 체크박스도 같은 문제였다.
     <div className="chat-md text-sm leading-[1.65] break-words text-[var(--el-body)] [&_.task-list-item]:list-none">
-      <ReactMarkdown
-        remarkPlugins={REMARK}
-        rehypePlugins={animate ? REHYPE_ANIMATED : REHYPE_PLAIN}
-        components={COMPONENTS}
-      >
+      <ReactMarkdown remarkPlugins={REMARK} components={COMPONENTS}>
         {content}
       </ReactMarkdown>
     </div>

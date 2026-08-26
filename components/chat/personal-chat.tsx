@@ -37,7 +37,7 @@ import type { AgentChatMessagesResponseData } from "@/lib/api/generated/models";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { answerText, type ApprovalDecision } from "@/lib/chat/blocks";
 import { runningLabel } from "@/lib/chat/chat-list";
-import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
+import { dropScopeMarkers } from "@/lib/chat/scope-marker";
 import { useScopeCatalog } from "@/lib/chat/use-scope-catalog";
 import {
   failedTurnState,
@@ -204,8 +204,24 @@ export function PersonalChatProvider({
     if (element) setHasOpened(true);
   }, []);
 
+  /** 직전에 감춰져 있었나. **바뀌는 순간**에만 닫아야 다시 열 수 있다. */
+  const wasHiddenRef = useRef(false);
+
   const setNoteScope = useCallback((scope: NoteScope | null) => {
-    setHidden(scope?.hidden ?? false);
+    const nextHidden = scope?.hidden ?? false;
+    /**
+     * ★ **회의록이 열리면 채팅은 감추는 게 아니라 닫는다.**
+     *
+     * 감추기만 하면 `isOpen` 이 참으로 남아서, 회의록 사이드바를 **끄는 순간 채팅이
+     * 제멋대로 다시 열린다.** 사용자는 회의록을 닫았을 뿐인데 안 부른 패널이 튀어나온다.
+     *
+     * 닫아도 언마운트가 아니다(`hasOpened`) — 흐르던 답변은 그대로 살아 있고, FAB 로
+     * 다시 열면 이어서 보인다. **켜지는 순간에만** 닫는 이유는, 매번 닫으면 회의록을
+     * 열어 둔 채로는 채팅을 아예 못 열게 되기 때문이다.
+     */
+    if (nextHidden && !wasHiddenRef.current) setIsOpen(false);
+    wasHiddenRef.current = nextHidden;
+    setHidden(nextHidden);
     // **미루지 않는다.** 대화가 안 갈리므로 답변이 흐르는 중에 바뀌어도 잃을 것이 없다.
     // 같은 값이면 새 객체를 안 세운다 — 노트 화면이 매 렌더 부르므로 그대로 두면
     // 패널이 계속 다시 그려진다.
@@ -392,15 +408,6 @@ function PersonalChatPanel({
    * 한 프레임 동안 구분선만 먼저 사라진다.
    */
   const [pendingUserAt, setPendingUserAt] = useState<string | null>(null);
-  /**
-   * 「다시 보내기」가 되살릴 것. **문장만으로는 부족하다** — `send()` 가 `clear()` 로
-   * 칩을 비우므로, 범위를 같이 안 들면 retry 가 `noteIds: []` 로 나간다. 문장에는 마커가
-   * 박혀 있어서 **범위를 잃은 채 마커만 날글자로 다시 보내는** 모양이 된다 (spec §2).
-   */
-  const [lastSent, setLastSent] = useState<{
-    text: string;
-    scope: ScopeChip[];
-  } | null>(null);
   /**
    * ★ 마지막 턴이 남긴 범위 밖 제안. **스트림이 아니라 여기 산다** — 제안은
    * `message_end` 에만 실리고 히스토리에는 담을 자리가 없어서(계약), 스트림 상태에
@@ -715,12 +722,30 @@ function PersonalChatPanel({
       // 턴이 도는 동안 스코프 전환을 미루게 한다 — 노트를 닫고 나가는 것만으로
       // 패널이 언마운트되면 흐르던 답변이 통째로 사라진다.
       onTurnActiveChange(true);
+      /**
+       * 못 보냈을 때 문장을 컴포저로 되돌린다. **마커를 풀어서 넣는다** — 칩을 아래에서
+       * 다시 박으므로, 안 풀면 같은 범위가 칩 한 벌 + 마커 날글자 한 벌로 두 번 앉는다.
+       */
+      const restoreComposer = () => {
+        // ★ **칩이 될 마커는 글자까지 지운다.** 풀어서 두면 아래에서 칩을 다시 박으므로
+        // 같은 이름이 칩 한 벌 + 날글자 한 벌로 두 번 앉고, 그대로 다시 보내면 문장이
+        // 「@[주간 회의](…) 주간 회의 정리해줘」가 된다.
+        editorRef.current?.append(
+          dropScopeMarkers(message, new Set(scope.map((chip) => chip.id)))
+        );
+        scope.forEach((chip) => editorRef.current?.prepend(chip));
+        setChips(scope);
+      };
       try {
-        const chatId = await ensureSession().catch(() => null);
-        // 실패 문구는 전역 MutationCache가 토스트한다. 입력은 지우지 않는다 —
-        // 세션을 못 만든 채 문장까지 사라지면 다시 보낼 방법이 없다.
-        if (!chatId) return;
-
+        /**
+         * ★ **말풍선을 먼저 세운다 — 세션 생성을 안 기다린다.**
+         *
+         * 예전에는 `ensureSession()` 이 끝나야 질문이 화면에 섰다. 이미 있는 대화에서는
+         * 그것이 공짜라 티가 안 났지만 **새 대화의 첫 문장은 왕복 하나를 통째로 기다렸다** —
+         * 누른 뒤에도 컴포저에 글자가 그대로 있고 화면에는 아무 일도 안 일어난다.
+         * ChatGPT·Claude 는 누르는 즉시 말풍선과 「생각하는 중」을 세운다. 낙관적으로
+         * 세우고 실패했을 때 되돌리는 쪽이 맞다 — 실패는 드물고, 기다림은 매번이다.
+         */
         editorRef.current?.clear();
         /**
          * ★ **여기서 다시 잰다. 이 한 줄이 「질문이 살짝 내려갔다가 뒤늦게 튀어 오르는」
@@ -748,7 +773,17 @@ function PersonalChatPanel({
         setPendingUserMessage(message);
         setPendingUserAt(new Date().toISOString());
         setPendingScope(scope);
-        setLastSent({ text: message, scope });
+
+        const chatId = await ensureSession().catch(() => null);
+        // 실패 문구는 전역 MutationCache가 토스트한다. 낙관적으로 세운 말풍선을 걷고
+        // 문장을 컴포저로 되돌린다 — 세션을 못 만든 채 문장까지 사라지면 다시 보낼
+        // 방법이 없다.
+        if (!chatId) {
+          setPendingUserMessage(null);
+          restoreComposer();
+          return;
+        }
+
         // **배열이 원본이다.** 본문 텍스트가 아니라 칩이 범위를 정하므로, 사용자가 본문을
         // 어떻게 편집해도 계약이 안 깨진다. 중복은 보내기 직전에 접는다.
         const final = await stream.send(
@@ -792,12 +827,7 @@ function PersonalChatPanel({
            */
           if (echoesSent(refreshed, messages.length, message)) return;
           // 이 문장은 서버에 안 닿았다. 지우면 다시 칠 방법이 없으므로 컴포저로 되돌린다.
-          //
-          // ★ **마커를 풀어서 넣는다.** 아래에서 칩을 다시 박으므로, 안 풀면 같은 범위가
-          // 칩 한 벌 + 마커 날글자 한 벌로 두 번 앉는다.
-          editorRef.current?.append(unwrapScopeMarkers(message));
-          scope.forEach((chip) => editorRef.current?.prepend(chip));
-          setChips(scope);
+          restoreComposer();
           return;
         }
         /**
@@ -814,12 +844,19 @@ function PersonalChatPanel({
         if (final?.phase !== "done") {
           if (final?.phase === "failed" && final.turnId === null) {
             const refreshed = await reconcile(chatId);
-            // **받아 갔을 때만 로컬 사본을 접는다.** 안 받아 갔는데(POST가 아예 안 닿았다)
-            // 접으면 히스토리에도 없는 질문이 화면에서 조용히 사라진다.
-            if (echoesSent(refreshed, messages.length, message)) {
-              setPendingUserMessage(null);
-              stream.reset();
-            }
+            setPendingUserMessage(null);
+            stream.reset();
+            // 서버가 받아 갔으면 히스토리에 있다 — 그대로 둔다.
+            if (echoesSent(refreshed, messages.length, message)) return;
+            /**
+             * ★ **서버에 안 닿았다. 문장을 컴포저로 되돌린다.**
+             *
+             * 「다시 보내기」 버튼이 있던 자리다. 그 버튼이 할 수 있던 일은 **한 글자도
+             * 못 고치고 같은 문장을 다시 보내는 것** 하나뿐이었는데, 여기까지 온 질문은
+             * 대개 고쳐서 다시 묻고 싶은 것이다. 되돌려 놓으면 고칠 수도 있고 그대로
+             * 보낼 수도 있다.
+             */
+            restoreComposer();
           }
           return;
         }
@@ -1054,7 +1091,6 @@ function PersonalChatPanel({
     // ★ 굳혀 둔 질문 시각도 함께 푼다 — 안 풀면 옛 `turnBaseline` 자리의 엉뚱한 행에
     // 앞 대화의 시각이 얹힌다.
     setPendingUserAt(null);
-    setLastSent(null);
     // **문장도 범위도 함께 비운다.** 범위는 턴이 드는 값이라 대화가 갈리면 이어질
     // 이유가 없다. 남겨 두면 다음 질문이 앞 대화의 범위로 조용히 나간다.
     editorRef.current?.clear();
@@ -1108,7 +1144,6 @@ function PersonalChatPanel({
     setCreatedChatId(null);
     setIsDraftChat(true);
   }, [clearForChatSwitch, isDraftChat, isSwitchBlocked]);
-
 
   const router = useRouter();
   const openNote = useCallback(
@@ -1234,6 +1269,30 @@ function PersonalChatPanel({
   }, [pendingUserAt, turnBaseline, visibleMessages]);
 
   /**
+   * ★ 이 탭이 **끝나는 것을 본** 턴. `stream.reset()` 이 `turnId` 를 지워도 안 잃는다.
+   *
+   * 안 들고 있으면 답이 히스토리로 넘어가는 순간 배지가 사라졌다가, 목록의 다음 폴링
+   * (5초)까지 「진행 중」으로 **다시 선다** — `runningLabel` 이 그때의 빈 `turnId` 를
+   * 「이 탭이 모르는 턴」으로 읽기 때문이다.
+   *
+   * 종료 phase 에서만 붙든다. 대화를 갈아 끼우느라 부른 `reset()` 은 여기 안 걸린다 —
+   * 그 턴은 서버에서 계속 돌고 있고, 목록이 그것을 말하는 것이 맞다.
+   */
+  const [finishedTurn, setFinishedTurn] = useState<string | null>(null);
+  const settledTurnId =
+    stream.state.turnId !== null &&
+    (stream.state.phase === "done" ||
+      stream.state.phase === "failed" ||
+      stream.state.phase === "cancelled")
+      ? stream.state.turnId
+      : null;
+  // **렌더 중에 맞춘다.** 이펙트로 미루면 그 사이 한 렌더가 낡은 값으로 배지를 그리고,
+  // 그 한 렌더가 정확히 깜빡임이다. 리액트가 권하는 「렌더 중 상태 조정」 자리다.
+  if (settledTurnId !== null && settledTurnId !== finishedTurn) {
+    setFinishedTurn(settledTurnId);
+  }
+
+  /**
    * 목록에 그릴 줄. **배지는 목록과 SSE 를 맞춘 값이다** — 지금 보는 대화는 두 출처에
    * 있고 목록이 한 주기만큼 늦는다 (`runningLabel`).
    */
@@ -1249,9 +1308,10 @@ function PersonalChatPanel({
           chatId: sessionId,
           turnId: stream.state.turnId,
           phase: stream.state.phase,
+          finishedTurnId: finishedTurn,
         }),
       })),
-    [chats, sessionId, stream.state.phase, stream.state.turnId]
+    [chats, finishedTurn, sessionId, stream.state.phase, stream.state.turnId]
   );
 
   /**
@@ -1288,6 +1348,19 @@ function PersonalChatPanel({
   const pinSlackPx =
     pendingUserAt && viewportHeight ? Math.max(0, viewportHeight - 24) : null;
 
+  /** 헤더 첫 줄. 아직 목록에 없는 새 대화는 기본 제목으로 선다. */
+  const headerTitle =
+    chatRows.find((chat) => chat.chatId === sessionId)?.title ?? "새 대화";
+  /**
+   * ★ **제목이 정해지는 중이다.** server 가 첫 턴에서 제목을 지어 내려 줄 때까지 헤더는
+   * 「새 대화」로 서 있는데, 그동안 그 자리가 **비어 있는 것인지 그게 이름인지** 알 수
+   * 없었다. 도는 동안 빛이 지나가면 「곧 바뀐다」가 읽히고, 실제로 바뀔 때 놀라지 않는다.
+   *
+   * 첫 턴에서만이다 — 이름이 이미 있는 대화에서 다음 질문을 보낼 때 제목이 빛나면
+   * 그것도 바뀌는 줄 알게 된다.
+   */
+  const isTitlePending = headerTitle === "새 대화" && isBusy;
+
   const panel = (
     <aside
       data-testid="personal-chat-panel"
@@ -1319,16 +1392,32 @@ function PersonalChatPanel({
           {/* **첫 줄은 지금 보고 있는 대화의 제목이다.** 대화가 여럿 사는 화면에서 「내
               에이전트」는 어느 대화인지를 한 글자도 말하지 않았다. 방금 만든 대화는 아직
               목록에 없어서 기본 제목으로 선다. */}
-          <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-            {chatRows.find((chat) => chat.chatId === sessionId)?.title ??
-              "새 대화"}
+          {/* ★ **제목은 갈아 끼우지 않고 건너온다.** 서버가 첫 턴에서 제목을 정해 내려
+              주는데, 그냥 그리면 「새 대화」가 한 프레임에 딴 글자로 바뀐다 — 이 대화가
+              무엇인지 정해지는 순간인데 눈이 못 따라간다. `key` 가 바뀌면 다시 마운트되고,
+              마운트에 걸린 애니메이션이 그 한 번을 그린다. */}
+          <p
+            key={headerTitle}
+            // **둘은 같이 못 선다.** 둘 다 `animation` 을 잡아서 겹치면 하나가 조용히
+            // 진다. 뜻으로도 배타적이다 — 빛은 「정해지는 중」이고 건너오기는 「정해졌다」다.
+            className={cn(
+              "truncate text-sm font-medium",
+              isTitlePending
+                ? "chat-shimmer"
+                : "chat-title-in text-[var(--el-ink)]"
+            )}
+          >
+            {headerTitle}
           </p>
-          {/* design.pen: 범위는 칩이 말한다. 칩이 없으면 워크스페이스 전체라고 적는다 —
-           **범위를 모르는 채 넓어지지 않게** 하는 것이 이 한 줄의 일이다. */}
-          <p className="truncate text-[11px] text-[var(--el-muted)]">
-            {chips.length
-              ? "나만 보는 대화입니다"
-              : `나만 보는 대화 · ${workspaceName ?? "워크스페이스"} 전체`}
+          {/* design.pen: 범위는 칩이 말한다. 칩이 없을 때만 「어디까지 보나」를 적는다 —
+              **범위를 모르는 채 넓어지지 않게** 하는 것이 이 한 줄의 일이다.
+
+              ★ **「나만 보는 대화」는 뺐다.** 개인 챗봇에 개인이라고 적는 것이라 매 줄
+              아무 말도 안 하고, 정작 중요한 범위를 밀어냈다. 칩이 있으면 범위는 칩이
+              말하므로 이 줄은 비운다 — **높이는 남긴다**(`min-h-4`). 안 남기면 칩을
+              붙이고 떼는 것만으로 헤더가 오르내린다. */}
+          <p className="min-h-4 truncate text-[11px] text-[var(--el-muted)]">
+            {chips.length ? "" : `${workspaceName ?? "워크스페이스"} 전체`}
           </p>
         </div>
         {/* **글자 없이 아이콘만이다.** 셋이 나란히 서는 자리라 라벨을 달면 좁은 폭에서
@@ -1447,21 +1536,6 @@ function PersonalChatPanel({
                     title: chip.title,
                     unavailable: false,
                   }))}
-                  // 유휴 타이머가 stalled로 표시한 순간에는 앞 전송이 아직 `finally`에
-                  // 닿지 않아 잠금이 살아 있다. 그때 reset하면 안내만 지우고 재전송은
-                  // 무시돼 고아 메시지가 남는다.
-                  isRetryDisabled={isBusy || !lastSent}
-                  onRetry={() => {
-                    if (isBusy || !lastSent) return;
-                    /**
-                     * **늘 새 턴이다.** 앞 턴이 아직 살아 있으면 서버가 409로 막고, 그 갈래가
-                     * 히스토리를 다시 읽어 이어받기로 넘긴다 — 여기서 가릴 것이 없다.
-                     */
-                    stream.reset();
-                    // **범위를 함께 되살린다.** 안 넘기면 `chips` 를 쓰는데 그것은
-                    // 첫 전송의 `clear()` 가 이미 비웠다.
-                    void send(lastSent.text, lastSent.scope);
-                  }}
                   onApprove={approval.approve}
                   approvalCard={approval.card}
                   onOpenNote={openNote}

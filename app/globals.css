@@ -317,66 +317,87 @@
 }
 
 /* ── 채팅 스트림의 결 ─────────────────────────────────────────────
-   토큰이 한 글자씩 툭툭 붙는 것이 투박해 보이는 이유는 **경계가 딱딱해서**다.
-   글자가 나타나는 순간을 못 잡으므로(마크다운이 매 토큰 다시 그린다) 대신
-   **자라는 쪽 가장자리를 흐리게** 둔다 — 다음 토큰이 그 흐린 자리를 채운다.
+   ★ **토큰에는 애니메이션을 안 건다.** 한때 낱말마다 `<span>` 으로 쪼개 흐릿하게
+   떠오르게 했는데, 그것이 스르륵이 아니라 **번쩍**으로 읽혔다 — 초점을 잡는 동안
+   읽을 수가 없다. ChatGPT 도 Claude 도 글자에는 아무것도 안 건다. 매끄러움은
+   애니메이션이 아니라 **토큰을 고르게 풀어 놓는 것**에서 온다(`use-smooth-text`).
 
-   블록(도구 카드·생각 단계·승인)은 한 번만 마운트되므로 등장 자체에 애니메이션을
-   건다. 여기가 "도구 표시도 투박하다"에 대한 답이다. */
+   블록(도구 카드·생각 단계·승인)은 한 번만 마운트되므로 등장에만 짧게 건다. */
 @layer utilities {
-  /* 낱말이 저마다 흐릿하게 떠오른다. `rehype-word-fade` 가 쪼개 둔 `.md-w` 하나하나가
-     새로 마운트될 때만 걸리므로, **이미 있던 낱말은 다시 안 움직인다.**
-
-     클래스는 스트리밍 중에만 조상에 붙는다. 끝났다고 `.md-w` 를 없애면 DOM 이 통째로
-     다시 마운트돼 답 전체가 한꺼번에 떠오른다 — 구조는 그대로 두고 이 클래스만 뗀다. */
-  .chat-streaming .md-w {
-    /* 길게, 그리고 **끝에서 오래 머물게.** 짧으면 낱말이 하나씩 딱딱 켜지는 것으로
-       읽히고, 선형이면 중간이 급하다. 앞을 흐리게 오래 끌다 뒤에서 천천히 굳는 곡선이
-       물결처럼 번지는 느낌을 만든다. */
-    animation: chat-word 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  .chat-rise {
+    animation: chat-rise 0.22s cubic-bezier(0.22, 0.68, 0.32, 1) both;
   }
 
-  /* **`display` 를 건드리지 않는다.** `inline-block` 을 주면 낱말이 원자가 되어 줄바꿈
-     자리가 달라진다 — 스트리밍이 끝나 span 이 사라질 때 문단이 다시 흐르는 것처럼
-     보였던 원인이다. 인라인 그대로 두면 span 이 있든 없든 같은 자리에서 끊긴다. */
+  /* 글자 위를 빛이 지나간다. `background-clip: text` 라 **글자 모양 그대로** 밝아진다. */
+  .chat-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--el-muted) 0%,
+      var(--el-muted) 35%,
+      var(--el-ink) 50%,
+      var(--el-muted) 65%,
+      var(--el-muted) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: chat-shimmer 2.1s linear infinite;
+  }
 
-  .chat-rise {
-    animation: chat-rise 0.34s cubic-bezier(0.22, 0.68, 0.32, 1) both;
+  .chat-title-in {
+    animation: chat-title-in 0.32s cubic-bezier(0.22, 0.68, 0.32, 1) both;
   }
 }
 
+/* **흐림을 안 쓴다.** 4px 블러가 걸린 카드는 「나타난다」가 아니라 「초점을 잡는다」로
+   읽힌다. 투명도와 아주 작은 이동이면 등장은 충분히 말해진다. */
 @keyframes chat-rise {
   from {
     opacity: 0;
-    filter: blur(4px);
-    transform: translateY(5px);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
-    filter: blur(0);
     transform: translateY(0);
   }
 }
 
-@keyframes chat-word {
+/* 아직 아무것도 안 내놓은 구간에서 「지금 무슨 일이 일어나고 있다」를 말한다.
+   **스피너가 아니라 글자 자신이 빛난다** — 도는 원은 어디서나 도는 원이지만, 빛이
+   문장 위를 지나가면 그 문장이 지금 살아 있다는 뜻이 된다. Claude 가 쓰는 결이다. */
+@keyframes chat-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* 제목이 서버에서 정해져 내려온다. **띡 갈아 끼우지 않는다** — 「새 대화」에서 실제
+   제목으로 넘어가는 순간이 이 대화가 무엇인지 정해지는 순간이라, 그 자리를 눈이
+   따라갈 만큼은 보여야 한다. */
+@keyframes chat-title-in {
   from {
     opacity: 0;
-    filter: blur(7px);
-    transform: translateY(2px);
-  }
-  60% {
-    filter: blur(1.2px);
+    transform: translateY(-2px);
   }
   to {
     opacity: 1;
-    filter: blur(0);
     transform: translateY(0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .chat-rise,
-  .chat-streaming .md-w {
+  .chat-title-in {
+    animation: none;
+  }
+  /* 빛은 끄되 글자는 남긴다 — `color: transparent` 인 채로 멈추면 문장이 사라진다. */
+  .chat-shimmer {
+    background: none;
+    color: var(--el-muted);
     animation: none;
   }
 }

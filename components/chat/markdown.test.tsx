@@ -46,21 +46,23 @@ describe("Markdown", () => {
       "```sq",
       "SELECT step, count(*)",
     ].join("\n");
-    const { container } = render(<Markdown content={half} animate />);
+    const { container } = render(<Markdown content={half} />);
     expect(container.textContent).toContain("온보딩");
     expect(container.querySelector("pre")).toBeTruthy();
   });
 
-  it("★ 낱말 쪼개기가 표 셀까지 가고 코드 안은 안 건드린다", () => {
-    // 코드는 공백이 의미라 쪼개면 깨진다. 표 셀은 본문이라 같이 떠올라야 한다.
+  it("★ 글자를 쪼개지 않는다 — 문단 하나가 span 수십 개였다", () => {
+    // 낱말마다 요소를 세워 각자 떠오르게 하던 시절의 자국. 스르륵이 아니라 번쩍으로
+    // 읽혔고 DOM 만 무거웠다. 지금은 글자에 아무것도 안 건다.
     const { container } = render(
       <Markdown
-        content={"| 단계 | 비고 |\n| --- | --- |\n| 가입 | 두 낱말 |\n\n`const a = 1`"}
-        animate
+        content={
+          "| 단계 | 비고 |\n| --- | --- |\n| 가입 | 두 낱말 |\n\n`const a = 1`"
+        }
       />
     );
-    expect(container.querySelectorAll("td .md-w").length).toBeGreaterThan(1);
-    expect(container.querySelector("code")?.querySelector(".md-w")).toBeNull();
+    expect(container.querySelector(".md-w")).toBeNull();
+    expect(container.querySelector("td")?.textContent).toBe("가입");
     expect(container.querySelector("code")?.textContent).toBe("const a = 1");
   });
 

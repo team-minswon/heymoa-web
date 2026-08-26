@@ -38,6 +38,21 @@ export type ChatListRow = {
  * **포커스는 부모가 옮긴다.** 뷰가 갈리는 것은 부모가 아는 사실이고, 드롭다운 라이브러리가
  * 해 주던 일을 이제 아무도 안 해 준다 — `backRef` 가 그 손잡이다.
  */
+/**
+ * 진행 배지의 색. **둘이 같은 색을 쓴다** — 「진행 중」과 「승인 대기」는 둘 다 *지금 이
+ * 대화에서 무언가 걸려 있다*는 한 가지 사실이고, 어느 쪽인지는 글자가 말한다. 색까지
+ * 갈라 놓으면 목록을 훑을 때 배지가 두 종류의 신호로 읽혀 오히려 시끄럽다.
+ *
+ * **`secondary` 를 그냥 쓰면 안 된다.** 그 배경(`--el-surface-strong`)이 선택된 줄의
+ * 배경과 **같은 값이라** 지금 보고 있는 대화에서 배지가 통째로 사라진다. 승인 대기가
+ * 정확히 그 자리에 뜬다.
+ *
+ * 범위 칩의 파랑을 빌린다 — 흰 입력창에서도 말풍선 위에서도 같이 앉으라고 뽑은 짝이라
+ * (`--el-scope-project` / `-soft`, 실측 5.0:1) 선택된 줄 위에서도 산다.
+ */
+const LABEL_TONE =
+  "bg-[var(--el-scope-project-soft)] text-[var(--el-scope-project)]";
+
 export function ChatList({
   chats,
   currentChatId,
@@ -114,7 +129,10 @@ export function ChatList({
                     {chat.title}
                   </span>
                   {chat.label ? (
-                    <Badge variant="secondary" className="shrink-0">
+                    <Badge
+                      variant="secondary"
+                      className={cn("shrink-0", LABEL_TONE)}
+                    >
                       {chat.label}
                     </Badge>
                   ) : null}

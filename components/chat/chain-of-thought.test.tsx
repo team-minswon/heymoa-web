@@ -1,15 +1,15 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  AnswerRefs,
-  ChainOfThought,
-} from "@/components/chat/chain-of-thought";
+import { AnswerRefs, ChainOfThought } from "@/components/chat/chain-of-thought";
 import type { Block } from "@/lib/chat/blocks";
 
 afterEach(cleanup);
 
-function tool(id: string, target: Block extends never ? never : unknown = null) {
+function tool(
+  id: string,
+  target: Block extends never ? never : unknown = null
+) {
   return {
     kind: "tool" as const,
     toolCallId: id,
@@ -78,14 +78,17 @@ describe("ChainOfThought", () => {
     ).toBe("false");
   });
 
-  it("헤더가 무엇을 봤는지까지 말한다", () => {
+  it("★ 헤더는 개수를 안 세고 무엇을 봤는지를 말한다", () => {
+    // 「3단계」는 사람이 쓰는 말이 아니고, 몇 번 돌았는지는 접힌 줄이 답할 일이 아니다 —
+    // 펴면 줄마다 무엇을 했는지가 이미 적혀 있다.
     render(
       <ChainOfThought
         blocks={[tool("c1", NOTE), tool("c2", NOTE), tool("c3")]}
         live={false}
       />
     );
-    expect(screen.getByText("3단계 · 회의록 1건 검토")).toBeTruthy();
+    expect(screen.getByText("생각 과정 · 회의록 1건")).toBeTruthy();
+    expect(screen.queryByText(/단계/)).toBeNull();
   });
 
   it("target이 note면 눌러서 그 회의록으로 간다", () => {
@@ -142,15 +145,19 @@ describe("ChainOfThought", () => {
     expect(container.querySelector(".animate-spin")).toBeTruthy();
   });
 
-  it("★ 확정 전 승인은 단계 수에도 안 들어간다", () => {
-    // 화면에 두 줄인데 헤더가 「3단계」라고 하면 헤더가 거짓말을 한다.
-    render(
+  it("★ 확정 전 승인은 그리지도, 헤더에도 안 들어간다", () => {
+    // 확정 전 승인은 「도는 중」이 아니라 사람을 기다리는 중이다. 카드가 따로 서 있다.
+    const { container } = render(
       <ChainOfThought
         blocks={[tool("c1"), tool("c2"), approval(null)]}
         live={false}
       />
     );
-    expect(screen.getByText("2단계")).toBeTruthy();
+    // 접힌 채로 선다(`live={false}`) — 헤더가 곧 요약이다.
+    expect(screen.getByText("생각 과정")).toBeTruthy();
+    expect(
+      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
+    ).toBe("false");
   });
 
   it("★ 승인 기록은 요약이 없으면 도구 id로 흘러내리지 않는다", () => {
@@ -168,9 +175,7 @@ describe("ChainOfThought", () => {
         live={false}
       />
     );
-    expect(
-      screen.getByText(/Linear 이슈 'APP 버그 수정' 생성/)
-    ).toBeTruthy();
+    expect(screen.getByText(/Linear 이슈 'APP 버그 수정' 생성/)).toBeTruthy();
   });
 
   it("모르는 kind는 칩 없이 summary만 그린다", () => {
@@ -187,21 +192,12 @@ describe("ChainOfThought", () => {
 });
 
 describe("AnswerRefs", () => {
-  it("한 건이면 이름을, 여러 건이면 개수를 말한다", () => {
-    const { rerender } = render(
-      <AnswerRefs refs={[{ id: "n1", title: "주간 배포 회의" }]} />
-    );
-    expect(screen.getByText("찾은 곳: 주간 배포 회의 1건")).toBeTruthy();
-    rerender(
-      <AnswerRefs
-        refs={[
-          { id: "n1", title: "a" },
-          { id: "n2", title: "b" },
-          { id: "n3", title: "c" },
-        ]}
-      />
-    );
-    expect(screen.getByText("이 답은 3개 회의를 봤습니다")).toBeTruthy();
+  it("★ 「출처」가 아니라 「참고한」이다 — 본 것이지 인용한 것이 아니다", () => {
+    // 계약이 싣는 것은 **에이전트가 본 것**이다. 넷을 보고 하나만 근거로 썼어도 넷이
+    // 다 여기 선다 — 「출처」는 그것보다 더 말하는 단어라 신뢰를 잘못 만든다.
+    render(<AnswerRefs refs={[{ id: "n1", title: "주간 배포 회의" }]} />);
+    expect(screen.getByText("참고한 회의록 1개")).toBeTruthy();
+    expect(screen.queryByText(/출처/)).toBeNull();
   });
 
   it("근거가 없으면 아무것도 안 그린다", () => {
@@ -212,16 +208,16 @@ describe("AnswerRefs", () => {
   it("★ 접어서 아낄 것이 있을 때만 접어 둔다", () => {
     // 1건은 칩이 하나뿐이라 접어도 아낄 자리가 없고, 그 칩이 회의록으로 가는 유일한
     // 문이다 — 편 채로 둔다.
-    const { container, rerender } = render(
+    const { container } = render(
       <AnswerRefs refs={[{ id: "n1", title: "주간 배포 회의" }]} />
     );
-    const one = container.querySelector<HTMLDetailsElement>(
-      'details[data-refs="answer"]'
-    );
-    expect(one?.open).toBe(true);
+    expect(
+      container.querySelector('[data-refs="answer"]')?.getAttribute("data-open")
+    ).toBe("true");
+    cleanup();
 
     // 여럿이면 칩이 여러 줄로 늘어난다. 줄이 개수를 말하고 있으니 접어 둔다.
-    rerender(
+    const many = render(
       <AnswerRefs
         refs={[
           { id: "n1", title: "a" },
@@ -230,11 +226,12 @@ describe("AnswerRefs", () => {
         ]}
       />
     );
-    const many = container.querySelector<HTMLDetailsElement>(
-      'details[data-refs="answer"]'
-    );
-    expect(many?.open).toBe(false);
+    expect(
+      many.container
+        .querySelector('[data-refs="answer"]')
+        ?.getAttribute("data-open")
+    ).toBe("false");
     // **접혀도 문구는 남는다.** 개수를 말하는 그 줄이 요약이다.
-    expect(screen.getByText("이 답은 3개 회의를 봤습니다")).toBeTruthy();
+    expect(screen.getByText("참고한 회의록 3개")).toBeTruthy();
   });
 });

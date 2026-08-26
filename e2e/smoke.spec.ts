@@ -709,6 +709,24 @@ async function settledScrollTop(viewport: Locator): Promise<number> {
 }
 
 /**
+ * 뷰포트 안에서 요소가 위에서 몇 할쯤에 앉아 있나. `0`이 맨 위, `1`이 맨 아래다.
+ *
+ * ★ **못 잰 회차는 값이 아니라 「아직」이다.** 말풍선은 보내는 동안 `pendingUserMessage`가
+ * 그리다가 턴이 반영되면 히스토리가 그린다 — 같은 커밋에서 같은 자리로 갈아끼우니 사람
+ * 눈에는 안 보이지만, 그 사이에 재면 `boundingBox()`가 null 이다. `!`로 뚫으면 폴링이
+ * **재시도 못 하고 그 자리에서 죽는다**(스위트를 통째로 돌릴 때 실제로 났다). 기준을 절대
+ * 못 넘는 값을 돌려 다음 회차에 다시 재게 한다.
+ */
+function placedIn(viewport: Locator, target: Locator) {
+  return async () => {
+    const box = await target.boundingBox();
+    const frame = await viewport.boundingBox();
+    if (!box || !frame) return Number.POSITIVE_INFINITY;
+    return (box.y - frame.y) / frame.height;
+  };
+}
+
+/**
  * ★ **보낸 질문이 스크롤 맨 위로 간다.** 답이 그 아래 빈 화면에서 흐른다.
  *
  * 두 가지를 잰다. 보낸 직후 질문이 뷰포트 위쪽에 있는 것과, **답이 끝날 때 스크롤이 안
@@ -736,11 +754,7 @@ test("pins the question to the top and does not jump when the answer lands", asy
 
   // 질문이 뷰포트 위쪽 1/3 안에 있다. 예전에는 아래에 남고 답이 밑에서 자랐다.
   // **부드럽게 옮기므로 중간 프레임은 안 붙든다** — 멎은 자리만 본다.
-  const placed = async () => {
-    const box = (await asked.boundingBox())!;
-    const frame = (await viewport.boundingBox())!;
-    return (box.y - frame.y) / frame.height;
-  };
+  const placed = placedIn(viewport, asked);
   await expect.poll(placed, { timeout: 5_000 }).toBeLessThan(0.34);
 
   const scrollTop = () => viewport.evaluate((el) => el.scrollTop);
@@ -755,7 +769,8 @@ test("pins the question to the top and does not jump when the answer lands", asy
   // **몇 px 은 남는다**(실측 8px) — 흐르던 본문이 히스토리 본문으로 갈리며 줄바꿈이 한 칸
   // 달라지고, 과정 묶음이 접힌다. 자리를 걷었다면 여기서 수백 px 이 움직인다.
   expect(Math.abs((await scrollTop()) - during)).toBeLessThan(16);
-  expect(await placed()).toBeLessThan(0.34);
+  // 답이 히스토리로 넘어가는 순간이 곧 말풍선을 갈아끼우는 순간이라 여기서도 폴링한다.
+  await expect.poll(placed, { timeout: 5_000 }).toBeLessThan(0.34);
 
   // ★ **위를 읽고 있었어도 보내면 옮긴다.** 「답을 따라 내려가기」와 다른 일이다 —
   // 보내기는 사용자가 지금 한 행동이라 「아까 위로 올렸었다」가 막을 이유가 안 된다.
@@ -767,13 +782,10 @@ test("pins the question to the top and does not jump when the answer lands", asy
 
   const second = page.getByText("위에서 보내도 올라가야 합니다");
   await expect(second).toBeVisible();
-  const secondPlaced = async () => {
-    const box = (await second.boundingBox())!;
-    const frame = (await viewport.boundingBox())!;
-    return (box.y - frame.y) / frame.height;
-  };
   // 부드럽게 옮기므로 중간 프레임은 안 붙든다 — 멎은 자리만 본다.
-  await expect.poll(secondPlaced, { timeout: 5_000 }).toBeLessThan(0.34);
+  await expect
+    .poll(placedIn(viewport, second), { timeout: 5_000 })
+    .toBeLessThan(0.34);
 });
 
 /**
@@ -1066,13 +1078,19 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
 });
 
 /**
- * ★ **「중지」 뒤 「다시 보내기」가 새 턴을 연다.**
+ * ★ **중지가 잠금을 풀어 다음 질문이 나간다.**
  *
  * 중지는 서버의 턴을 취소하고 화면의 잠금을 푼다. 그 둘 중 하나라도 어긋나면 —
- * 취소가 `activeTurn` 을 안 비우거나 `isBusy` 가 안 풀리면 — 버튼은 보이는데 눌러도
+ * 취소가 `activeTurn` 을 안 비우거나 `isBusy` 가 안 풀리면 — 컴포저는 보이는데 보내도
  * 아무 일이 안 난다. 오류도 로그도 없이 제자리를 돈다.
+ *
+ * **「다시 보내기」 버튼은 없다.** 그 버튼이 할 수 있던 일은 같은 문장을 한 글자도 못
+ * 고치고 보내는 것 하나였다 — 중지한 질문은 이미 원하는 만큼 답을 받은 것이고, 다시
+ * 묻고 싶으면 고쳐서 묻는다.
  */
-test("opens a new turn when retrying after a stop", async ({ page }) => {
+test("unlocks the composer after a stop so the next question goes out", async ({
+  page,
+}) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
 
@@ -1086,10 +1104,15 @@ test("opens a new turn when retrying after a stop", async ({ page }) => {
 
   // 승인을 안 누른 채 접는다 — 만료가 없어진 지금 「중지」가 유일한 탈출구다.
   await page.getByRole("button", { name: "중지" }).click();
+  await expect(page.getByRole("button", { name: "다시 보내기" })).toHaveCount(
+    0
+  );
 
-  const retry = page.getByRole("button", { name: "다시 보내기" });
-  await expect(retry).toBeEnabled({ timeout: 20_000 });
-  await retry.click();
+  // 잠금이 풀렸다 — 다음 질문이 새 턴을 연다.
+  const send = page.getByRole("button", { name: "보내기", exact: true });
+  await expect(send).toBeEnabled({ timeout: 20_000 });
+  await page.getByLabel("메시지").fill("Linear 이슈 만들어줘");
+  await send.click();
 
   // 새 턴이므로 승인 카드가 다시 서고, 승인하면 답이 끝까지 온다.
   const approve = page.getByRole("button", { name: "승인", exact: true });
@@ -1155,7 +1178,7 @@ test("shows the out-of-scope note in the answer refs after widening", async ({
   });
 
   // 둘을 봤다 — 붙인 회의록 하나와 넓혀서 본 하나.
-  await expect(page.getByText("이 답은 2개 회의를 봤습니다")).toBeVisible({
+  await expect(page.getByText("참고한 회의록 2개")).toBeVisible({
     timeout: 20_000,
   });
 });
@@ -1424,7 +1447,7 @@ test("approves a write tool from the chat card", async ({ page }) => {
 
   // **끝나면 과정은 접힌다.** 흐르는 동안 펼쳐져 있던 묶음이 답이 끝나며 한 줄로 개킨다 —
   // 답변이 주인공이고 과정은 곁가지라서다. 그래서 기록은 펼쳐야 보인다.
-  const steps = page.getByRole("button", { name: /단계/ });
+  const steps = page.getByRole("button", { name: /생각 과정/ });
   await expect(steps).toBeVisible({ timeout: 20_000 });
   await steps.click();
 
@@ -1856,11 +1879,11 @@ test("draws the thinking rail from history alone", async ({ page }) => {
     timeout: 20_000,
   });
 
-  // 과정 레일이 답변과 함께 서 있다. **그려지는 단계만 센다** — 헤더의 수가 화면에
+  // 과정 레일이 답변과 함께 서 있다. **확정 전 승인은 안 그린다** — 헤더가 화면에
   // 실제로 그려진 줄 수와 같아야 한다.
-  const rail = thread.getByText(/단계/).last();
+  const rail = thread.getByText(/생각 과정/).last();
   await expect(rail).toBeVisible();
-  await expect(rail).toContainText("단계");
+  await expect(rail).toContainText("생각 과정");
 
   // 흐르는 중이 아니다 — 스트림을 한 번도 안 열었다.
   await expect(page.getByRole("button", { name: "중지" })).toBeHidden();
