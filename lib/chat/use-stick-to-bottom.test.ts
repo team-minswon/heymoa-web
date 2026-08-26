@@ -126,7 +126,55 @@ describe("높이가 변한 것을 직접 본다", () => {
     Object.defineProperty(viewport, "scrollHeight", { value: 1400 });
     resize();
 
-    expect(viewport.scrollTop).toBe(1400);
+    expect(viewport.scrollTop).toBe(1000);
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * ★ **스크롤바로 올린 것을 되돌리지 않는다.**
+   *
+   * `wheel`·터치·키는 `release()` 가 그 자리에서 끊는다. 그런데 **스크롤바 드래그는 그
+   * 셋 중 아무것도 안 나고 `scroll` 만 난다.** `scroll` 은 비동기라, 그 사이 내용이 자라
+   * `ResizeObserver` 가 먼저 돌면 바닥으로 되돌려 버리고 — 뒤늦게 온 `scroll` 은 이미
+   * 바닥이라 「올라갔다」를 못 본다. 사용자에게는 스크롤이 잠긴 것과 같다.
+   *
+   * 실측으로 잡았다: 흐르는 중에 24px 올리면 1.2초 뒤 0px 으로 되감겼고 「맨 아래로」는
+   * 끝내 안 떴다.
+   *
+   * 이벤트 순서에 안 기댄다 — **내가 둔 자리에서 벗어나 있으면 사람이 옮긴 것**이다.
+   * 참조 구현(`use-stick-to-bottom`)의 `ignoreScrollToTop` 과 같은 생각이다.
+   */
+  it("★ 스크롤 이벤트가 늦게 와도 사람이 옮긴 것을 안 되돌린다", () => {
+    installResizeObserver();
+    const viewport = makeViewport({ scrollHeight: 1000, scrollTop: 600 });
+    const hook = mount(viewport);
+    scroll(viewport, 600);
+    expect(hook.result.current.atBottom).toBe(true);
+
+    // 스크롤바를 끌어 30px 올렸다. **`scroll` 이 아직 안 왔다.**
+    viewport.scrollTop = 570;
+    // 그 사이 답이 자라 `ResizeObserver` 가 먼저 돈다.
+    Object.defineProperty(viewport, "scrollHeight", { value: 1400 });
+    resize();
+
+    expect(viewport.scrollTop).toBe(570);
+    expect(hook.result.current.atBottom).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("자란 것만으로는 안 놓는다", () => {
+    // 붙어 있는 동안 자라면 바닥이 멀어질 뿐 **자리는 그대로**다. 이것을 「사람이 옮겼다」로
+    // 읽으면 흐르는 내내 추적이 꺼진다.
+    installResizeObserver();
+    const viewport = makeViewport({ scrollHeight: 1000, scrollTop: 600 });
+    const hook = mount(viewport);
+    scroll(viewport, 600);
+
+    Object.defineProperty(viewport, "scrollHeight", { value: 1400 });
+    resize();
+
+    expect(viewport.scrollTop).toBe(1000);
+    expect(hook.result.current.atBottom).toBe(true);
     vi.unstubAllGlobals();
   });
 
@@ -217,13 +265,15 @@ describe("useStickToBottom", () => {
     const viewport = makeViewport();
     const hook = mount(viewport);
 
-    // 1000 - 590 - 400 = 10 < 48 이므로 바닥으로 본다.
-    scroll(viewport, 590);
+    // ★ **4px 은 흔들림이지 손짓이 아니다.** 예전에는 48px 안쪽이면 다 「바닥」으로 봤는데,
+    // 그 관용치가 곧 QA 가 잡은 버그였다 — 24px 올려도 안 놓였다. 지금 놓는 폭은 다시
+    // 붙는 폭과 같은 8px 이고, 그보다 덜 움직인 것만 흔들림으로 넘긴다.
+    scroll(viewport, 596);
     expect(hook.result.current.atBottom).toBe(true);
 
     act(() => hook.rerender({ tail: "1" }));
 
-    expect(viewport.scrollTop).toBe(1000);
+    expect(viewport.scrollTop).toBe(600);
   });
 
   // 먼저 atBottom을 true로 두면 이동이 실패했을 때 버튼만 사라지고 유저는 위에 남는다.
@@ -255,12 +305,12 @@ describe("useStickToBottom", () => {
     act(() => hook.result.current.scrollToBottom());
 
     expect(hook.result.current.atBottom).toBe(true);
-    expect(viewport.scrollTop).toBe(1000);
+    expect(viewport.scrollTop).toBe(600);
 
     // 다시 붙었으므로 이후 성장도 따라간다.
     viewport.scrollTop = 900;
     act(() => hook.rerender({ tail: "1" }));
-    expect(viewport.scrollTop).toBe(1000);
+    expect(viewport.scrollTop).toBe(600);
   });
 });
 
@@ -284,14 +334,14 @@ describe("보낸 질문으로 옮기기", () => {
     // 보낸 것이 스레드에 붙는다 — `tail`이 바뀌는 그 순간이 옮기는 자리다.
     hook.rerender({ tail: "1" });
 
-    expect(viewport.scrollTop).toBe(1000);
+    expect(viewport.scrollTop).toBe(600);
     expect(hook.result.current.atBottom).toBe(true);
 
     // 추적이 다시 켜져 있어야 답이 자라는 동안 따라 내려간다 — 안 그러면 질문만 위로
     // 가고 답은 화면 밖에서 흐른다.
     Object.defineProperty(viewport, "scrollHeight", { value: 1400 });
     hook.rerender({ tail: "2" });
-    expect(viewport.scrollTop).toBe(1400);
+    expect(viewport.scrollTop).toBe(1000);
   });
 
   /**
@@ -338,7 +388,7 @@ describe("보낸 질문으로 옮기기", () => {
     });
 
     expect(hook.result.current.atBottom).toBe(true);
-    expect(viewport.scrollTop).toBe(1000);
+    expect(viewport.scrollTop).toBe(600);
   });
 
   // 키보드로 읽는 사람도 같은 자리를 밟는다.
@@ -465,12 +515,12 @@ describe("보호 창이 끝날 때 아직 도착 전이어도", () => {
 
       // 손이 안 닿았으므로 추적이 살아 있고, 가던 자리로 마무리했다.
       expect(hook.result.current.atBottom).toBe(true);
-      expect(viewport.scrollTop).toBe(3600);
+      expect(viewport.scrollTop).toBe(3200);
 
       // 그래서 남은 답을 계속 따라간다.
       Object.defineProperty(viewport, "scrollHeight", { value: 4000 });
       hook.rerender({ tail: "12" });
-      expect(viewport.scrollTop).toBe(4000);
+      expect(viewport.scrollTop).toBe(3600);
     } finally {
       vi.useRealTimers();
     }
@@ -503,7 +553,7 @@ describe("보호 창 중에 손이 닿으면", () => {
         vi.advanceTimersByTime(SMOOTH_GUARD_MS + 1);
       });
       expect(hook.result.current.atBottom).toBe(false);
-      expect(viewport.scrollTop).toBe(3000);
+      expect(viewport.scrollTop).toBe(2600);
     } finally {
       vi.useRealTimers();
     }

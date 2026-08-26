@@ -74,6 +74,20 @@ export function useStickToBottom(tail: string) {
    */
   const lastTopRef = useRef<number | null>(null);
 
+  /**
+   * ★ **우리가 마지막으로 둔 자리.** `jumpToBottom` 에서만, 옮긴 뒤 **읽어서** 적는다.
+   *
+   * `ResizeObserver` 가 이것을 본다. `wheel`·터치·키는 `release()` 가 그 자리에서 끊지만
+   * **스크롤바 드래그는 그 셋 중 아무것도 안 나고 `scroll` 만 난다.** `scroll` 은 비동기라,
+   * 그 사이 답이 자라 `ResizeObserver` 가 먼저 돌면 바닥으로 되돌려 버리고 — 뒤늦게 온
+   * `scroll` 은 이미 바닥이라 「올라갔다」를 못 본다. 사용자에게는 스크롤이 잠긴 것과 같다.
+   * 실측: 흐르는 중에 24px 올리면 1.2초 뒤 0px 으로 되감기고 「맨 아래로」는 끝내 안 떴다.
+   *
+   * **이벤트를 기다리지 않는다** — 자리는 이미 옮겨져 있으므로 이벤트 없이도 알 수 있다.
+   * 참조 구현(`use-stick-to-bottom`)의 `ignoreScrollToTop` 과 같은 생각이다.
+   */
+  const anchorRef = useRef<number | null>(null);
+
   const sync = useCallback((viewport: HTMLDivElement) => {
     // 붙어 있을 때와 떠나 있을 때의 폭이 다르다 (`REARM_THRESHOLD_PX`).
     const limit = stickRef.current ? BOTTOM_THRESHOLD_PX : REARM_THRESHOLD_PX;
@@ -84,9 +98,42 @@ export function useStickToBottom(tail: string) {
     setAtBottom(stuck);
   }, []);
 
-  /** 우리가 바닥으로 옮긴다. 자리는 안 적는다 — 뒤따르는 `scroll` 이 확정된 값을 준다. */
+  /**
+   * 우리가 바닥으로 옮긴다. 방향용 값(`lastTopRef`)은 **안 건드린다** — 그쪽은 브라우저가
+   * 확정한 값만 담아야 참말이 된다.
+   *
+   * 대신 `anchorRef` 에 **옮긴 뒤 다시 읽어서** 적는다. 넘겨 쓴 값은 잘리므로
+   * (`scrollHeight` 를 넣어도 실제로는 `scrollHeight - clientHeight` 가 된다), 쓴 값을
+   * 그대로 기억하면 자리 비교가 늘 어긋난다.
+   */
   const jumpToBottom = useCallback((viewport: HTMLDivElement) => {
-    viewport.scrollTop = viewport.scrollHeight;
+    // ★ **바닥값을 직접 쓴다.** `scrollHeight` 를 넣어도 브라우저는 어차피 여기로 자르는데,
+    // 그냥 넘겨 쓰면 **jsdom 은 안 자른다** — 검사에서만 자리가 어긋나 「사람이 옮겼다」로
+    // 읽힌다. 실제 브라우저와 같은 값을 쓰면 둘이 같은 것을 본다.
+    viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
+    anchorRef.current = viewport.scrollTop;
+  }, []);
+
+  /**
+   * ★ **내가 둔 자리에서 벗어나 있으면 사람이 옮긴 것이다.**
+   *
+   * `scroll` 이벤트를 기다리지 않는다 — 스크롤바 드래그는 `scroll` 하나뿐이고 그것이
+   * **비동기**라, 기다리면 토큰 이펙트와 `ResizeObserver` 가 먼저 돌아 바닥으로
+   * 되돌려 버린다. 그러면 뒤늦게 온 `scroll` 은 이미 바닥이라 「올라갔다」를 못 본다.
+   * **자리는 이미 옮겨져 있으므로 이벤트 없이도 알 수 있다.**
+   *
+   * **둘 다 맞아야 참이다.** 자리가 어긋난 것만으로는 부족하다 — 높이가 **줄면**(고정
+   * 자리가 개켜지거나 「생각하는 중」이 사라질 때) 브라우저가 `scrollTop` 을 끌어내리는데,
+   * 그때도 자리는 어긋나지만 **바닥에는 그대로 붙어 있다.** 사람이 올린 것이면 바닥과의
+   * 거리가 함께 벌어진다.
+   *
+   * 참조 구현(`use-stick-to-bottom`)의 `ignoreScrollToTop` 과 같은 생각이다.
+   */
+  const movedByUser = useCallback((viewport: HTMLDivElement) => {
+    const ours = anchorRef.current;
+    if (ours === null) return false;
+    const away = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    return viewport.scrollTop < ours - REARM_THRESHOLD_PX && away > REARM_THRESHOLD_PX;
   }, []);
 
   /**
@@ -184,6 +231,10 @@ export function useStickToBottom(tail: string) {
       if (!current || !stickRef.current) return;
       // 미끄러지는 중이면 그쪽이 목표를 들고 있다. 여기서 또 옮기면 둘이 다툰다.
       if (Date.now() < smoothUntilRef.current) return;
+      if (movedByUser(current)) {
+        release();
+        return;
+      }
       jumpToBottom(current);
     };
     const observer = new ResizeObserver(follow);
@@ -191,11 +242,18 @@ export function useStickToBottom(tail: string) {
     const content = viewport.firstElementChild;
     if (content) observer.observe(content);
     return () => observer.disconnect();
-  }, [jumpToBottom]);
+  }, [jumpToBottom, movedByUser, release]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    /**
+     * ★ **토큰마다 도는 이 자리에도 같은 판정이 필요하다.**
+     *
+     * `ResizeObserver` 만 막아 두면 여기가 그대로 되돌린다 — 오히려 이쪽이 더 자주 돈다.
+     * 실측으로 그 절반만 고치고 「고쳤다」고 할 뻔했다.
+     */
+    if (stickRef.current && movedByUser(viewport)) release();
     if (!stickRef.current) {
       // 따라가지 않을 때도 상태는 갱신한다. 내용이 자라면 바닥에서 더 멀어지므로
       // 버튼이 떠 있어야 한다.
@@ -272,7 +330,7 @@ export function useStickToBottom(tail: string) {
       return;
     }
     jumpToBottom(viewport);
-  }, [jumpToBottom, tail, sync]);
+  }, [jumpToBottom, movedByUser, release, tail, sync]);
 
   /**
    * ★ **방금 보낸 질문으로 옮긴다. 무조건 돈다.**
@@ -292,6 +350,9 @@ export function useStickToBottom(tail: string) {
     stickRef.current = true;
     setAtBottom(true);
     smoothOnceRef.current = true;
+    // ★ **자리에 대한 주장을 버린다.** 안 버리면 `movedByUser` 가 「아까 위로 올라가
+    // 있다」를 읽고 방금 켠 추적을 도로 끈다 — 질문만 위로 가고 답은 화면 밖에서 흐른다.
+    anchorRef.current = null;
   }, []);
 
   /**
@@ -306,6 +367,8 @@ export function useStickToBottom(tail: string) {
     // `REARM_THRESHOLD_PX` 가 아니라 원래 폭으로 재야 한다 — 안 그러면 흐르는 중에
     // 높이가 바뀌어 눌러도 안 붙는 순간이 생긴다.
     stickRef.current = true;
+    // 자리에 대한 주장도 버린다 — `scrollToSent` 와 같은 이유다.
+    anchorRef.current = null;
     // jsdom 에는 `scrollTo` 가 없고, 움직임을 줄여 달라고 한 사람에게는 안 미끄러진다.
     if (typeof viewport.scrollTo !== "function" || prefersReducedMotion()) {
       jumpToBottom(viewport);
