@@ -151,14 +151,14 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
     getResolveToolApprovalUrl: (
       chatId: string,
       approvalId: string,
-      params?: { after?: string }
+      params?: { after?: number }
     ) =>
       params?.after === undefined
         ? `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve`
         : `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve?after=${params.after}`,
     // 재연결 URL의 단일 출처가 생성물이다. `after`가 없으면 처음부터 받는다 —
     // `0`은 생략이 아니라 「버퍼가 비었다」다.
-    getGetAgentChatEventsUrl: (chatId: string, params?: { after?: string }) =>
+    getSubscribeAgentChatEventsUrl: (chatId: string, params?: { after?: number }) =>
       params?.after === undefined
         ? `/v1/agent-chats/${chatId}/events`
         : `/v1/agent-chats/${chatId}/events?after=${params.after}`,

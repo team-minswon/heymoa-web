@@ -14,20 +14,19 @@ import type { AgentChatMessagesResponseDataMessagesItem } from "./agentChatMessa
  */
 export type AgentChatMessagesResponseData = {
   /**
-   * 이 대화의 마지막 턴. 도는 턴이 있으면 activeTurn 과 같은 행이다
-   * @nullable
-   */
-  lastTurn: AgentChatMessagesResponseDataLastTurn;
-  /**
-   * GET /events?after= 에 그대로 넣을 대화 커서. **로그에 굳은 마지막 seq 다** — 커서와 재생 대상이 같은 자료구조에서 나오므로 커서가 재생 가능 범위를 앞설 수 없다. last_seq(블록 천장)가 아니다: 천장을 내려주면 커서가 미래를 가리켜 남은 이벤트를 전부 버린다
+   * 스트림에 붙을 때 「여기까지는 이미 안다」로 쓴다. **activeTurn 이 있으면 그 턴의 시작 경계**이고, 없으면 굳은 마지막 프레임의 번호다 — 도는 턴의 답은 messages 에 아직 없어서 굳은 마지막 번호를 주면 답의 앞부분이 재생에서 사라진다. **null 이 아니다** — 대화가 조용했으면 0 이고, 그것은 「처음부터 다시」가 아니라 「받을 백로그가 없다」는 뜻이다. GET /events?after= 에 그대로 넣는다
    * @minimum 0
    */
   cursor: number;
   /**
-   * 지금 도는 턴. null 이면 이어받을 것이 없다
+   * 이 대화의 마지막 턴(확정 여부 무관). 도는 턴이 있으면 activeTurn 과 같은 행을 가리킨다
+   * @nullable
+   */
+  lastTurn: AgentChatMessagesResponseDataLastTurn;
+  /**
+   * 지금 도는 턴. 없으면 null 이고 그것이 「아무것도 안 돌고 있다」는 뜻이다
    * @nullable
    */
   activeTurn: AgentChatMessagesResponseDataActiveTurn;
-  /** 표시용 메시지. 시간순이고, 없으면 빈 배열이다 */
-  messages: AgentChatMessagesResponseDataMessagesItem[];
+  messages?: AgentChatMessagesResponseDataMessagesItem[];
 };

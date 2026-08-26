@@ -7,7 +7,7 @@
  */
 
 /**
- * 메시지 역할
+ * 메시지 역할. **THINKING 은 모델이 답을 쓰기 전에 흘린 계획 문장**이고 content 만 든다 — scope 는 비고 toolEvent 는 null 이다
  */
 export type AgentChatMessagesResponseDataMessagesItemRole =
   (typeof AgentChatMessagesResponseDataMessagesItemRole)[keyof typeof AgentChatMessagesResponseDataMessagesItemRole];

@@ -234,8 +234,7 @@ paths:
       tags:
         - Workspace Invitations
       summary: 토큰으로 초대 수락
-      description: 초대 이메일 링크의 토큰으로 초대를 수락하고 워크스페이스 멤버가 된다. 로그인 계정 이메일이 초대받은 이메일과 같아야
-        하며, 링크는 생성 1일 후 만료된다.
+      description: 초대 이메일 링크의 토큰으로 초대를 수락하고 워크스페이스 멤버가 된다. 로그인 계정 이메일이 초대받은 이메일과 같아야 하며, 링크는 생성 1일 후 만료된다.
       operationId: acceptInvitationByToken
       requestBody:
         content:
@@ -677,8 +676,7 @@ paths:
       tags:
         - Transcription
       summary: 전사 세션 조회
-      description: 전사 세션의 현재 상태와 종료 정보를 조회한다. READY는 아직 연결 전이므로
-        startedAt·endedAt·endReason이 모두 null이다.
+      description: 전사 세션의 현재 상태와 종료 정보를 조회한다. READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다.
       operationId: getTranscriptionSession
       parameters:
         - name: sessionId
@@ -995,13 +993,9 @@ paths:
     get:
       tags:
         - AgentChat
-      summary: 스트림 이어받기 (SSE)
-      description: "끊긴 스트림을 이어받는다. **?after= 가 1급이다** — GET /messages 의 cursor 를 그대로
-        넣는다. 이어받을 자리는 이것 하나다. 도는 턴이 없으면 밀린 것만 주고 닫는다 — 열어 두면 유휴 대화에서 재연결이 주기마다 빈
-        스트림을 다시 연다. **모든 프레임이 id: 줄을 갖는다** — 커서를 안 미는 프레임은 이제 없다. 재생 가능한 자리보다 앞에서 붙으면
-        첫 프레임이 stream_resync 다: 그 id: 가 「여기까지는 못 준다」이고, 화면은 본문을 히스토리로 다시 세운 뒤 이어지는 프레임을
-        그대로 붙이면 된다."
-      operationId: getAgentChatEvents
+      summary: 이어받기 스트림 (SSE)
+      description: 끊긴 스트림을 커서로 이어받는다. after 보다 큰 프레임을 재생한 뒤 도는 턴이 있으면 실시간으로 잇고, 없으면 밀린 것만 주고 닫는다. 로그가 못 덮는 구간이면 stream_resync 가 먼저 나가고 그 프레임의 id 가 바닥이다. Last-Event-ID 헤더는 읽지 않는다.
+      operationId: subscribeAgentChatEvents
       parameters:
         - name: chatId
           in: path
@@ -1017,16 +1011,15 @@ paths:
           example: 0K9GVJT2C4Q2A
         - name: after
           in: query
-          description: 이 번호보다 **큰** seq 부터 받는다. GET /messages 의 cursor 를 그대로 넣는다. 생략하면
-            0(버퍼에 남은 전부)
+          description: 여기까지는 이미 안다. **GET /messages 의 cursor 를 그대로 넣는다** — 히스토리와 스트림이 같은 좌표계다. 생략하면 0이고 로그에 남은 것을 처음부터 준다
           required: false
           schema:
-            type: string
-            description: 이 번호보다 **큰** seq 부터 받는다. GET /messages 의 cursor 를 그대로 넣는다. 생략하면
-              0(버퍼에 남은 전부)
+            type: integer
+            description: 여기까지는 이미 안다. **GET /messages 의 cursor 를 그대로 넣는다** — 히스토리와 스트림이 같은 좌표계다. 생략하면 0이고 로그에 남은 것을 처음부터 준다
             nullable: false
+            format: int64
             minimum: 0
-          example: "131"
+          example: 128
       responses:
         "200":
           description: 요청 성공
@@ -1036,18 +1029,11 @@ paths:
                 type: string
                 description: SSE 이벤트 스트림. 이벤트별 payload는 AsyncAPI 계약을 따른다.
               examples:
-                getAgentChatEvents_Success:
+                subscribeAgentChatEvents_Success:
                   value: |+
-                    event:message_snapshot
-                    data:{"turnId":"0K9GVJT2C4Q3B","text":"안녕하"}
-
-                    id:132
+                    id:129
                     event:token
-                    data:{"delta":"세요"}
-
-                    id:133
-                    event:message_end
-                    data:{"content":"안녕하세요"}
+                    data:{"delta":"지난 "}
 
         "400":
           description: 잘못된 요청
@@ -1066,6 +1052,36 @@ paths:
                       details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                AGENT_CHAT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_NOT_FOUND
+                      message: 채팅 세션을 찾을 수 없습니다.
+                      details: null
+        "503":
+          description: "503"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                AGENT_CHAT_CAPACITY_EXCEEDED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_CAPACITY_EXCEEDED
+                      message: 지금은 연결이 많아 스트림을 열 수 없습니다.
+                      details: null
       security:
         - accessCookie: []
   /v1/agent-chats/{chatId}/messages:
@@ -1073,10 +1089,7 @@ paths:
       tags:
         - AgentChat
       summary: 채팅 히스토리 조회
-      description: 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을
-        포함하고, THINKING 메시지는 모델이 답을 쓰기 전에 흘린 계획 문장이다 — 답변 본문이 아니라 과정이다.
-        scope는 USER 행이면 그 턴에 붙인 범위, ASSISTANT 행이면 실제로 쓴 근거다 — **조회 시 존재·권한을 다시
-        확인하며**, 지워졌거나 권한이 없으면 unavailable=true이고 제목이 없다.
+      description: 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다.
       operationId: getAgentChatMessages
       parameters:
         - name: chatId
@@ -1124,10 +1137,10 @@ paths:
                           role: ASSISTANT
                           content: 답변
                           scope:
-                            - kind: NOTE
-                              id: 0HZX2K7M9Q4AF
-                              title: 주간 배포 회의
-                              unavailable: false
+                            - kind: PROJECT
+                              id: 0HZX2K7M9Q4AG
+                              title: null
+                              unavailable: true
                           toolEvent: null
                           createdAt: 2026-07-22T00:00:01Z
                         - turnId: 0K9GVJT2C4Q3B
@@ -1140,20 +1153,14 @@ paths:
                             status: success
                             url: https://linear.app/heymoa/issue/APP-123
                           createdAt: 2026-07-22T00:00:02Z
-                      cursor: 131
-                      activeTurn:
-                        turnId: 0K9GVJT2C4Q3B
-                        status: IN_PROGRESS
-                        pendingApproval:
-                          approvalId: 0K9GVJT2C4Q7F
-                          tool: linear.create_issue
-                          summary: 이슈를 만들까요?
-                          args: '{"projectId":"0HZX2K7M9Q4AE","title":"APP 버그 수정"}'
+                      activeTurn: null
                       lastTurn:
                         turnId: 0K9GVJT2C4Q3B
-                        status: IN_PROGRESS
-                        failureCode: null
-                        retryable: null
+                        status: FAILED
+                        failureCode: UPSTREAM_ERROR
+                        retryable: true
+                        pendingApproval: null
+                      cursor: 128
                     error: null
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -1178,11 +1185,7 @@ paths:
       tags:
         - AgentChat
       summary: 메시지 전송 (SSE 중계)
-      description: 메시지를 heymoa-ai로 중계하고 SSE(text/event-stream)로 passthrough한다. **응답
-        스트림이 끊겨도 턴은 계속 돈다** — 다시 붙는 것은 GET /events?after= 다. 한 대화에 도는 턴은
-        하나라, 아직 도는 턴이 있으면 409에 그 턴의 id를 실어 거절한다. noteIds·projectIds가 이 턴의 범위다
-        — 에이전트는 그 안에서만 찾고, 없으면 message_end.scopeMiss로 확장을 제안한다. 이벤트 페이로드 계약은
-        AsyncAPI(asyncapi-web-server.yml) 참고.
+      description: 동시 구독 상한을 넘겼다. **턴은 계속 돈다** — 거부된 것은 이 연결뿐이고, 잠시 뒤 다시 붙으면 버퍼에 쌓인 것부터 이어받는다. 턴을 실패로 그리면 안 된다.
       operationId: sendAgentChatMessage
       parameters:
         - name: chatId
@@ -1203,6 +1206,9 @@ paths:
             schema:
               $ref: "#/components/schemas/SendAgentChatMessageRequest"
             examples:
+              sendAgentChatMessage_AgentChatSubscriptionRejectedException:
+                value:
+                  message: 안녕
               sendAgentChatMessage_AgentChatTurnInProgressException:
                 value:
                   message: 안녕
@@ -1213,12 +1219,17 @@ paths:
                     - 0HZX2K7M9Q4AF
               sendAgentChatMessage_BadRequest:
                 value:
-                  message: "   "
-              sendAgentChatMessage_AgentChatNotFoundException:
+                  message: 안녕
+                  projectIds:
+                    - 짧다
+              sendAgentChatMessage_ScopeOutOfWorkspaceException:
                 value:
                   message: 안녕
                   noteIds:
                     - 0HZX2K7M9Q4AF
+              sendAgentChatMessage_AgentChatNotFoundException:
+                value:
+                  message: 안녕
       responses:
         "200":
           description: 요청 성공
@@ -1230,17 +1241,17 @@ paths:
               examples:
                 sendAgentChatMessage_Success:
                   value: |+
-                    id:129
+                    id:1
                     event:turn_started
-                    data:{"turnId":"0K9GVJT2C4Q3B","startSeq":128}
+                    data:{"turnId":"0K9GVJT2C4Q3B","startSeq":0}
 
-                    id:130
+                    id:2
                     event:token
                     data:{"delta":"안"}
 
-                    id:131
+                    id:3
                     event:message_end
-                    data:{"messageId":"m1","content":"안녕하세요","refs":[{"kind":"note","id":"0HZX2K7M9Q4AF","title":"주간 배포 회의"}]}
+                    data:{"messageId":"m1","content":"안녕하세요"}
 
         "400":
           description: 잘못된 요청
@@ -1256,6 +1267,14 @@ paths:
                     error:
                       code: BAD_REQUEST
                       message: 잘못된 요청입니다.
+                      details: null
+                SCOPE_OUT_OF_WORKSPACE:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SCOPE_OUT_OF_WORKSPACE
+                      message: 이 워크스페이스에서 찾을 수 없는 범위가 있습니다.
                       details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -1287,10 +1306,25 @@ paths:
                     data: null
                     error:
                       code: AGENT_CHAT_TURN_IN_PROGRESS
-                      message: 이미 진행 중인 턴이 있습니다.
+                      message: 이미 답변을 만들고 있습니다.
                       details:
-                        - field: turnId
+                        - field: activeTurnId
                           message: 0K9GVJT2C4Q3B
+        "503":
+          description: "503"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                AGENT_CHAT_CAPACITY_EXCEEDED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_CAPACITY_EXCEEDED
+                      message: 지금은 연결이 많아 스트림을 열 수 없습니다.
+                      details: null
       security:
         - accessCookie: []
   /v1/integrations/{provider}/callback:
@@ -1298,9 +1332,7 @@ paths:
       tags:
         - WorkspaceIntegration
       summary: 워크스페이스 연동 콜백
-      description: provider OAuth 콜백을 처리하고 웹으로 리다이렉트한다. (permitAll) redirect URI는
-        provider에 사전 등록된 고정 경로여야 하므로 워크스페이스 경로를 쓰지 않는다 — workspaceId는 서명된
-        state에서 복원한다.
+      description: provider OAuth 콜백을 처리하고 웹으로 리다이렉트한다. (permitAll) redirect URI는 provider에 사전 등록된 고정 경로여야 하므로 워크스페이스 경로를 쓰지 않는다 — workspaceId는 서명된 state에서 복원한다.
       operationId: completeWorkspaceIntegration
       parameters:
         - name: provider
@@ -1658,8 +1690,7 @@ paths:
       tags:
         - Analysis
       summary: 회의 종료
-      description: 노트의 회의를 종료하고 분석을 시작한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP
-        API는 없다.
+      description: 노트의 회의를 종료하고 분석을 시작한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다.
       operationId: endMeeting
       parameters:
         - name: noteId
@@ -1776,8 +1807,7 @@ paths:
       tags:
         - Notes
       summary: 노트 참여자 교체
-      description: 노트의 참여자를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 참여자를 전원 지운다.
-        워크스페이스 멤버만 참여자가 될 수 있고, 회의 상태와 무관하게 언제나 호출할 수 있다.
+      description: 노트의 참여자를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 참여자를 전원 지운다. 워크스페이스 멤버만 참여자가 될 수 있고, 회의 상태와 무관하게 언제나 호출할 수 있다.
       operationId: replaceNoteParticipants
       parameters:
         - name: noteId
@@ -2203,8 +2233,7 @@ paths:
       tags:
         - Transcription
       summary: 전사 세션 시작
-      description: 노트에 실시간 전사 세션을 READY로 생성한다. READY는 아직 연결 전이므로
-        startedAt·endedAt·endReason이 모두 null이다.
+      description: 노트에 실시간 전사 세션을 READY로 생성한다. READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다.
       operationId: startTranscriptionSession
       parameters:
         - name: noteId
@@ -2588,18 +2617,16 @@ paths:
       tags:
         - AgentChat
       summary: 대화 목록 조회
-      description: 이 워크스페이스에서 호출자가 쓰던 대화를 updatedAt 내림차순 최대 50개 준다. **첫 번째가 마지막으로 쓴
-        대화이고**, 새로고침한 화면은 여기로 돌아온다 — 지금 보고 있는 대화를 서버가 기억하지 않는다. 각 줄의 runningTurn
-        은 진행 배지용이라 본문(partialText)과 승인 카드를 안 싣는다.
+      description: 그 워크스페이스의 **내** 대화 목록. updatedAt 내림차순 최근 50개이고, 첫 번째가 마지막으로 쓴 대화다. **대화는 개인 것이라** 같은 워크스페이스의 남의 대화는 안 나온다. runningTurn 은 살아 있는 턴이고 없으면 null 이다 — **본문도 대기 중인 승인도 안 나른다.**
       operationId: getAgentChats
       parameters:
         - name: workspaceId
           in: path
-          description: 대화가 매이는 워크스페이스 TSID
+          description: 워크스페이스의 13자리 TSID
           required: true
           schema:
             type: string
-            description: 대화가 매이는 워크스페이스 TSID
+            description: 워크스페이스의 13자리 TSID
             nullable: false
             pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
             minLength: 13
@@ -2611,7 +2638,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AgentChatListResponse"
+                $ref: "#/components/schemas/AgentChatsResponse"
               examples:
                 SUCCESS:
                   value:
@@ -2619,14 +2646,14 @@ paths:
                     data:
                       chats:
                         - chatId: 0K9GVJT2C4Q2A
-                          title: 회의 후속 정리
-                          updatedAt: 2026-07-14T01:02:03Z
+                          title: 배포 게이트를 만들어줘
+                          updatedAt: 2026-07-22T00:00:02Z
                           runningTurn:
                             turnId: 0K9GVJT2C4Q3B
                             status: WAITING_APPROVAL
-                        - chatId: 0K9GVJT2C4Q2B
+                        - chatId: 0K9GVJT2C4Q9Z
                           title: 새 대화
-                          updatedAt: 2026-07-14T01:02:03Z
+                          updatedAt: 2026-07-21T00:00:00Z
                           runningTurn: null
                     error: null
         "401":
@@ -2652,9 +2679,7 @@ paths:
       tags:
         - AgentChat
       summary: 채팅 세션 생성
-      description: 대화를 하나 더한다. **앞 대화를 안 죽인다** — 목록에 한 줄이 늘 뿐이고 옛 대화에도 계속 이어 쓸 수 있다.
-        제목을 생략하면 기본값으로 만들고 첫 질문이 저장될 때 그 질문으로 채운다. 스코프(어느 회의록·프로젝트를 볼지)는 대화가 아니라
-        메시지마다 붙는다. 호출자가 워크스페이스 멤버가 아니면 존재를 은닉하기 위해 404다.
+      description: 호출자가 연결할 워크스페이스의 멤버가 아니면 워크스페이스 존재 여부를 은닉하기 위해 404로 응답한다.
       operationId: createAgentChat
       parameters:
         - name: workspaceId
@@ -2663,6 +2688,12 @@ paths:
           required: true
           schema:
             type: string
+            description: 워크스페이스의 13자리 TSID
+            nullable: false
+            pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            minLength: 13
+            maxLength: 13
+          example: 0HZX2K7M9Q4AD
       requestBody:
         content:
           application/json:
@@ -2671,10 +2702,10 @@ paths:
             examples:
               createAgentChat_WorkspaceNotFoundException:
                 value:
-                  title: 워크스페이스 질문
+                  title: 질문
               createAgentChat_Success:
                 value:
-                  title: 회의 후속
+                  title: 질문
       responses:
         "201":
           description: 생성 성공
@@ -2689,7 +2720,7 @@ paths:
                     data:
                       chatId: 0K9GVJT2C4Q2A
                       workspaceId: 0HZX2K7M9Q4AD
-                      title: 회의 후속
+                      title: 질문
                       createdAt: 2026-07-22T00:00:00Z
                     error: null
         "401":
@@ -2867,8 +2898,7 @@ paths:
       tags:
         - Workspace Invitations
       summary: 워크스페이스 초대 생성
-      description: 이메일로 워크스페이스에 초대한다. ADMIN만 초대할 수 있다. 가입자에게는 인앱 알림과 초대 이메일이, 미가입자에게는
-        초대 이메일이 발송되며 링크로 가입 후 합류한다.
+      description: 이메일로 워크스페이스에 초대한다. ADMIN만 초대할 수 있다. 가입자에게는 인앱 알림과 초대 이메일이, 미가입자에게는 초대 이메일이 발송되며 링크로 가입 후 합류한다.
       operationId: createWorkspaceInvitation
       parameters:
         - name: workspaceId
@@ -3323,8 +3353,7 @@ paths:
       tags:
         - Transcription
       summary: 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
-      description: 화자 연결은 노트의 속성이 아니라 화자 라벨의 속성이고 권한도 다르다 — 노트 수정은 멤버가 하지만 화자 연결은 참석자만
-        한다. 응답은 갱신된 화자 목록 전체다.
+      description: 화자 연결은 노트의 속성이 아니라 화자 라벨의 속성이고 권한도 다르다 — 노트 수정은 멤버가 하지만 화자 연결은 참석자만 한다. 응답은 갱신된 화자 목록 전체다.
       operationId: assignNoteSpeaker
       parameters:
         - name: noteId
@@ -3442,8 +3471,7 @@ paths:
       tags:
         - Transcription
       summary: 현재 전사 세션 조회
-      description: 노트의 현재 전사 세션(만료되지 않은 READY 또는 ACTIVE)을 조회한다. READY의 startedAt은
-        null이고, 현재 세션이 없으면 data가 null이다.
+      description: 노트의 현재 전사 세션(만료되지 않은 READY 또는 ACTIVE)을 조회한다. READY의 startedAt은 null이고, 현재 세션이 없으면 data가 null이다.
       operationId: getCurrentTranscriptionSession
       parameters:
         - name: noteId
@@ -4327,13 +4355,8 @@ paths:
     post:
       tags:
         - AgentChat
-      summary: 도구 승인/거절 (SSE 재개 스트림)
-      description: "tool_approval_request 로 끝난 1차 스트림을 이어 간다. **응답이 2차 SSE 스트림이다** —
-        도구 결과도 답변 본문도 이 응답으로 온다. 첫 프레임은 tool_approval_resolved 이고 message_end 로
-        끝난다. 해당 메시지의 입력자 본인만 호출할 수 있다 — 그 외에는 403. 승인 요청이 없거나 이미 처리됐거나 그 턴이 승인
-        대기가 아니면 404다(중지된 턴의 카드가 여기서 걸린다). 실행 자리가 없으면 승인을 되돌리고 503이다 — 잠시 뒤 다시
-        누르면 된다. **만료가 없다**: 승인은 사람이 답할 때까지 살고, 답 없는 대기는 「중지」가 푼다. ?after= 는 GET
-        /events?after= 와 같은 뜻이다 — 생략하면 그 턴의 1차 절반까지 다시 온다."
+      summary: 도구 승인/거절
+      description: 승인 카드에 대한 응답. **새 SSE 를 돌려준다** — 답의 나머지 절반이 이 스트림으로 온다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. after 는 이어받기와 같은 뜻이고, 생략하면 이 재개가 뗀 블록의 시작으로 떨어진다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403.
       operationId: resolveToolApproval
       parameters:
         - name: chatId
@@ -4362,16 +4385,15 @@ paths:
           example: 0K9GVJT2C4Q7F
         - name: after
           in: query
-          description: 이 번호보다 **큰** seq 부터 받는다. 생략하면 이 재개가 뗀 블록의 시작부터라, 그 턴의 1차 절반이 통째로 다시
-            나간다
+          description: 여기까지는 이미 안다. **이어받기와 같은 뜻이지만 없을 때의 값이 다르다** — 여기는 이 재개가 뗀 자리이고, 그보다 앞을 주면 그 자리로 올라간다. 답의 앞부분은 이 스트림이 안 나른다
           required: false
           schema:
-            type: string
-            description: 이 번호보다 **큰** seq 부터 받는다. 생략하면 이 재개가 뗀 블록의 시작부터라, 그 턴의 1차 절반이 통째로
-              다시 나간다
+            type: integer
+            description: 여기까지는 이미 안다. **이어받기와 같은 뜻이지만 없을 때의 값이 다르다** — 여기는 이 재개가 뗀 자리이고, 그보다 앞을 주면 그 자리로 올라간다. 답의 앞부분은 이 스트림이 안 나른다
             nullable: false
+            format: int64
             minimum: 0
-          example: "199"
+          example: 128
       requestBody:
         content:
           application/json:
@@ -4384,6 +4406,9 @@ paths:
               resolveToolApproval_BadRequest:
                 value:
                   decision: MAYBE
+              resolveToolApproval_SubscriptionRejected:
+                value:
+                  decision: APPROVED
               resolveToolApproval_ApprovalNotFoundException:
                 value:
                   decision: REJECTED
@@ -4401,17 +4426,9 @@ paths:
               examples:
                 resolveToolApproval_Success:
                   value: |+
-                    id:201
-                    event:tool_approval_resolved
-                    data:{"approvalId":"0K9GVJT2C4Q7F","decision":"APPROVED"}
-
-                    id:202
-                    event:tool_call_result
-                    data:{"toolCallId":"tc-1","status":"success","summary":"APP-12 생성됨"}
-
-                    id:203
-                    event:message_end
-                    data:{"messageId":"m1","content":"만들었습니다"}
+                    id:129
+                    event:token
+                    data:{"delta":"만"}
 
         "400":
           description: 잘못된 요청
@@ -4460,16 +4477,29 @@ paths:
                       code: APPROVAL_NOT_FOUND
                       message: 승인 요청을 찾을 수 없습니다.
                       details: null
+        "503":
+          description: "503"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorResponse"
+              examples:
+                AGENT_CHAT_CAPACITY_EXCEEDED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_CAPACITY_EXCEEDED
+                      message: 지금은 연결이 많아 스트림을 열 수 없습니다.
+                      details: null
       security:
         - accessCookie: []
   /v1/agent-chats/{chatId}/turns/{turnId}/cancel:
     post:
       tags:
         - AgentChat
-      summary: 턴 취소
-      description: 도는 턴을 멈춘다. **멱등이다** — 이미 끝난 턴에 눌러도 204다(답이 막 끝나는 순간의 중지는 경합이지 오류가
-        아니다). 붙어 있는 스트림은 turn_cancelled 를 받고 곧바로 닫히며, 중계는 다음 입력 행에서 스스로 나간다 — 그
-        둘이 다른 시각인 것이 정상이다.
+      summary: 턴 중지
+      description: "도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 답이 막 끝난 순간에 누른 것은 경합이지 오류가 아니다. DELETE 로 쓰지 않는 이유: 턴 행은 CANCELLED 로 남고 lastTurn 이 그것을 읽는다."
       operationId: cancelAgentChatTurn
       parameters:
         - name: chatId
@@ -4486,11 +4516,11 @@ paths:
           example: 0K9GVJT2C4Q2A
         - name: turnId
           in: path
-          description: 턴의 13자리 TSID. turn_started 이벤트가 유일한 출처다
+          description: 중지할 턴의 13자리 TSID
           required: true
           schema:
             type: string
-            description: 턴의 13자리 TSID. turn_started 이벤트가 유일한 출처다
+            description: 중지할 턴의 13자리 TSID
             nullable: false
             pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
             minLength: 13
@@ -4514,7 +4544,15 @@ paths:
                     data: null
                     error:
                       code: AGENT_CHAT_TURN_NOT_FOUND
-                      message: 턴을 찾을 수 없습니다.
+                      message: 요청한 턴을 찾을 수 없습니다.
+                      details: null
+                AGENT_CHAT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_NOT_FOUND
+                      message: 채팅 세션을 찾을 수 없습니다.
                       details: null
       security:
         - accessCookie: []
@@ -4613,94 +4651,6 @@ paths:
         - accessCookie: []
 components:
   schemas:
-    StartTranscriptionSessionResponse:
-      title: StartTranscriptionSessionResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - endReason
-            - endedAt
-            - noteId
-            - readyExpiresAt
-            - sessionId
-            - startedAt
-            - status
-          type: object
-          properties:
-            readyExpiresAt:
-              type: string
-              description: 전사 연결 대기 만료 시각
-              nullable: false
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            noteId:
-              type: string
-              description: 노트의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AF
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            sessionId:
-              type: string
-              description: 전사 세션의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AG
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            status:
-              type: string
-              description: 전사 세션 상태
-              nullable: false
-              example: READY
-              enum:
-                - READY
-                - ACTIVE
-                - COMPLETED
-                - INTERRUPTED
-            startedAt:
-              type: string
-              description: 전사 시작 시각 (READY면 null)
-              nullable: true
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            endedAt:
-              type: string
-              description: 전사 종료 시각 (READY면 null)
-              nullable: true
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            endReason:
-              type: string
-              description: 전사 종료 사유 (READY면 null)
-              nullable: true
-              example: CLIENT_DISCONNECTED
-              enum:
-                - READY_TIMEOUT
-                - CLIENT_DISCONNECTED
-                - CLIENT_PROTOCOL_ERROR
-                - STT_PROVIDER_ERROR
-                - INTERNAL_ERROR
-                - MEETING_ENDED
-                - MEETING_PAUSED
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
     TranscriptResponse:
       title: TranscriptResponse
       required:
@@ -4931,8 +4881,8 @@ components:
           enum:
             - null
           description: 성공 시 null인 오류 정보
-    RefreshTokensResponse:
-      title: RefreshTokensResponse
+    AgentChatsResponse:
+      title: AgentChatsResponse
       required:
         - data
         - error
@@ -4941,14 +4891,64 @@ components:
       properties:
         data:
           required:
-            - message
+            - chats
           type: object
           properties:
-            message:
-              type: string
-              description: 처리 결과 메시지
+            chats:
+              type: array
+              description: 최근 50개. updatedAt 내림차순
+              items:
+                required:
+                  - chatId
+                  - title
+                  - updatedAt
+                  - runningTurn
+                type: object
+                properties:
+                  runningTurn:
+                    required:
+                      - turnId
+                      - status
+                    type: object
+                    properties:
+                      turnId:
+                        type: string
+                        description: 도는 턴의 13자리 TSID
+                        nullable: false
+                        example: 0K9GVJT2C4Q3B
+                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        minLength: 13
+                        maxLength: 13
+                      status:
+                        type: string
+                        description: "**둘뿐이다** — IN_PROGRESS 와 WAITING_APPROVAL. 확정된 턴은 여기 안 들어온다"
+                        nullable: false
+                        example: WAITING_APPROVAL
+                        enum:
+                          - IN_PROGRESS
+                          - WAITING_APPROVAL
+                    description: 살아 있는 턴. 없으면 null 이고 그때 이 줄에는 배지가 안 붙는다. **본문도 대기 중인 승인도 안 싣는다** — 목록은 폴링으로 돌고 50개분 본문이 주기마다 흐를 이유가 없다
+                    nullable: true
+                  chatId:
+                    type: string
+                    description: 대화의 13자리 TSID
+                    nullable: false
+                    example: 0K9GVJT2C4Q2A
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  title:
+                    type: string
+                    description: 대화 제목. **절대 null 이 아니다** — 빈 값이면 「새 대화」다
+                    nullable: false
+                    example: 배포 게이트를 만들어줘
+                  updatedAt:
+                    type: string
+                    description: 마지막 활동 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
               nullable: false
-              example: 토큰이 갱신되었습니다.
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -5017,26 +5017,6 @@ components:
           enum:
             - null
           description: 성공 시 null인 오류 정보
-    CreateAgentChatRequest:
-      title: CreateAgentChatRequest
-      type: object
-      properties:
-        title:
-          type: string
-          description: 대화 제목. 생략하면 기본값으로 만들고 첫 질문이 저장될 때 그 질문의 앞 200자로 채운다
-          nullable: true
-          example: 회의 후속
-          maxLength: 200
-    AssignSpeakerRequest:
-      type: object
-      properties:
-        userId:
-          type: string
-          description: 연결할 참석자의 userId. null 은 「모르겠다」가 아니라 「참석자 중에 없다」로 확정한 것이다
-          nullable: true
-          example: 0HZX2K7M9Q4AC
-      required:
-        - userId
     CurrentTranscriptionSessionNullableResponse:
       title: CurrentTranscriptionSessionNullableResponse
       required:
@@ -5102,20 +5082,6 @@ components:
           enum:
             - null
           description: 성공 시 null인 오류 정보
-    ResolveToolApprovalRequest:
-      title: ResolveToolApprovalRequest
-      required:
-        - decision
-      type: object
-      properties:
-        decision:
-          type: string
-          description: "승인 결정 (APPROVED: 도구 실행 재개, REJECTED: 도구 미실행)"
-          nullable: false
-          example: APPROVED
-          enum:
-            - APPROVED
-            - REJECTED
     CreateWorkspaceRequest:
       title: CreateWorkspaceRequest
       required:
@@ -5135,225 +5101,6 @@ components:
           nullable: true
           example: 제품을 만드는 팀의 워크스페이스
           maxLength: 1000
-    TranscriptionSessionResponse:
-      title: TranscriptionSessionResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - endReason
-            - endedAt
-            - noteId
-            - readyExpiresAt
-            - sessionId
-            - startedAt
-            - status
-          type: object
-          properties:
-            endReason:
-              type: string
-              description: 전사 종료 사유 (READY면 null)
-              nullable: true
-              example: CLIENT_DISCONNECTED
-              enum:
-                - READY_TIMEOUT
-                - CLIENT_DISCONNECTED
-                - CLIENT_PROTOCOL_ERROR
-                - STT_PROVIDER_ERROR
-                - INTERNAL_ERROR
-                - MEETING_ENDED
-                - MEETING_PAUSED
-            endedAt:
-              type: string
-              description: 전사 종료 시각 (READY면 null)
-              nullable: true
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            startedAt:
-              type: string
-              description: 전사 시작 시각 (READY면 null)
-              nullable: true
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            readyExpiresAt:
-              type: string
-              description: 전사 연결 대기 만료 시각
-              nullable: false
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            noteId:
-              type: string
-              description: 노트의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AF
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            sessionId:
-              type: string
-              description: 전사 세션의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AG
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            status:
-              type: string
-              description: 전사 세션 상태
-              nullable: false
-              example: COMPLETED
-              enum:
-                - READY
-                - ACTIVE
-                - COMPLETED
-                - INTERRUPTED
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    AgentChatResponse:
-      title: AgentChatResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - chatId
-            - createdAt
-            - title
-            - workspaceId
-          type: object
-          properties:
-            createdAt:
-              type: string
-              description: 생성 시각
-              nullable: false
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            chatId:
-              type: string
-              description: 채팅 세션의 13자리 TSID
-              nullable: false
-              example: 0K9GVJT2C4Q2A
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            title:
-              type: string
-              description: 대화 제목 (요청에서 생략하면 기본값)
-              nullable: false
-              example: 회의 후속
-            workspaceId:
-              type: string
-              description: 대화가 매인 워크스페이스
-              nullable: false
-              example: 0HZX2K7M9Q4AD
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    AppErrorResponse:
-      title: AppErrorResponse
-      type: object
-      required:
-        - success
-        - data
-        - error
-      properties:
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: false
-        data:
-          nullable: true
-          enum:
-            - null
-          description: 실패 시 null인 응답 데이터
-        error:
-          $ref: "#/components/schemas/AppError"
-    CreateWorkspaceResponse:
-      title: CreateWorkspaceResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - description
-            - name
-            - role
-            - workspaceId
-          type: object
-          properties:
-            role:
-              type: string
-              description: 현재 사용자의 워크스페이스 역할
-              nullable: false
-              example: ADMIN
-              enum:
-                - ADMIN
-                - MEMBER
-            name:
-              type: string
-              description: 워크스페이스 이름
-              nullable: false
-              example: 제품 팀
-              maxLength: 100
-            description:
-              type: string
-              description: 워크스페이스 설명
-              nullable: true
-              example: 제품을 만드는 팀의 워크스페이스
-              maxLength: 1000
-            workspaceId:
-              type: string
-              description: 워크스페이스의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AD
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
     SpeakerListResponse:
       title: SpeakerListResponse
       required:
@@ -5489,57 +5236,6 @@ components:
           enum:
             - null
           description: 성공 시 null인 오류 정보
-    CreateWorkspaceInvitationRequest:
-      title: CreateWorkspaceInvitationRequest
-      required:
-        - email
-        - role
-      type: object
-      properties:
-        role:
-          type: string
-          description: 수락 시 부여할 워크스페이스 역할
-          nullable: false
-          example: MEMBER
-          enum:
-            - ADMIN
-            - MEMBER
-        email:
-          type: string
-          description: 초대할 사용자의 가입 이메일
-          nullable: false
-          example: kim@example.com
-          format: email
-    LogoutResponse:
-      title: LogoutResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - message
-          type: object
-          properties:
-            message:
-              type: string
-              description: 처리 결과 메시지
-              nullable: false
-              example: 성공적으로 로그아웃했습니다.
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
     NoteRequest:
       title: NoteRequest
       required:
@@ -5637,189 +5333,6 @@ components:
           nullable: true
           example: 제품을 만드는 팀의 워크스페이스
           maxLength: 1000
-    NoteListResponse:
-      title: NoteListResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - notes
-          type: object
-          properties:
-            notes:
-              type: array
-              description: 노트 목록
-              items:
-                required:
-                  - activeSessionStartedAt
-                  - createdAt
-                  - lastRecordedAt
-                  - meetingStartedAt
-                  - meetingStartedBy
-                  - meetingStatus
-                  - noteId
-                  - participants
-                  - projectId
-                  - recordedDurationMs
-                  - title
-                  - updatedAt
-                type: object
-                properties:
-                  meetingStartedAt:
-                    type: string
-                    description: 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
-                    nullable: true
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  createdAt:
-                    type: string
-                    description: 노트 생성 시각
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  lastRecordedAt:
-                    type: string
-                    description: 가장 최근 종료된 전사 세션의 시작 시각
-                    nullable: true
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  meetingStartedBy:
-                    type: object
-                    properties:
-                      image:
-                        type: string
-                        description: 회의 시작자 프로필 이미지 URL (없으면 null)
-                        nullable: true
-                        example: https://cdn.example.com/avatars/hong.png
-                      name:
-                        type: string
-                        description: 회의 시작자 이름
-                        nullable: false
-                        example: 홍길동
-                      userId:
-                        type: string
-                        description: 회의 시작자의 13자리 TSID
-                        nullable: false
-                        example: 0HZX2K7M9Q4AC
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                        minLength: 13
-                        maxLength: 13
-                      email:
-                        type: string
-                        description: 회의 시작자 이메일
-                        nullable: false
-                        example: hong@example.com
-                    description: 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
-                    nullable: true
-                    required:
-                      - userId
-                      - name
-                      - email
-                      - image
-                  recordedDurationMs:
-                    type: integer
-                    description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적
-                      녹음 시간(ms), READY 중단과 진행 중 구간은 0
-                    nullable: false
-                    example: 6500
-                    format: int64
-                    minimum: 0
-                  meetingStatus:
-                    type: string
-                    description: 회의 상태
-                    nullable: false
-                    example: IN_PROGRESS
-                    enum:
-                      - NOT_STARTED
-                      - IN_PROGRESS
-                      - PAUSED
-                      - ENDED
-                  noteId:
-                    type: string
-                    description: 노트의 13자리 TSID
-                    nullable: false
-                    example: 0HZX2K7M9Q4AF
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-                  title:
-                    type: string
-                    description: 노트 제목
-                    nullable: false
-                    example: 주간 회의
-                    maxLength: 200
-                  projectId:
-                    type: string
-                    description: 프로젝트의 13자리 TSID
-                    nullable: false
-                    example: 0HZX2K7M9Q4AE
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-                  activeSessionStartedAt:
-                    type: string
-                    description: 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
-                    nullable: true
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  participants:
-                    type: array
-                    description: 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열
-                    items:
-                      required:
-                        - email
-                        - image
-                        - name
-                        - userId
-                      type: object
-                      properties:
-                        image:
-                          type: string
-                          description: 참여자 프로필 이미지 URL (없으면 null)
-                          nullable: true
-                          example: https://cdn.example.com/avatars/hong.png
-                        name:
-                          type: string
-                          description: 참여자 이름
-                          nullable: false
-                          example: 홍길동
-                        userId:
-                          type: string
-                          description: 참여자의 13자리 TSID
-                          nullable: false
-                          example: 0HZX2K7M9Q4AC
-                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                          minLength: 13
-                          maxLength: 13
-                        email:
-                          type: string
-                          description: 참여자 이메일
-                          nullable: false
-                          example: hong@example.com
-                    nullable: false
-                  updatedAt:
-                    type: string
-                    description: 노트 수정 시각
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-              nullable: false
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
     AcceptInvitationByTokenRequest:
       title: AcceptInvitationByTokenRequest
       required:
@@ -5898,1143 +5411,6 @@ components:
                     example: hong@example.com
                     format: email
               nullable: false
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    NoteResponse:
-      title: NoteResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - activeSessionStartedAt
-            - createdAt
-            - meetingStartedAt
-            - meetingStartedBy
-            - meetingStatus
-            - noteId
-            - participants
-            - projectId
-            - recordedDurationMs
-            - title
-            - updatedAt
-          type: object
-          properties:
-            meetingStartedAt:
-              type: string
-              description: 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
-              nullable: true
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            createdAt:
-              type: string
-              description: 노트 생성 시각
-              nullable: false
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            meetingStartedBy:
-              type: object
-              properties:
-                image:
-                  type: string
-                  description: 회의 시작자 프로필 이미지 URL (없으면 null)
-                  nullable: true
-                  example: https://cdn.example.com/avatars/hong.png
-                name:
-                  type: string
-                  description: 회의 시작자 이름
-                  nullable: false
-                  example: 홍길동
-                userId:
-                  type: string
-                  description: 회의 시작자의 13자리 TSID
-                  nullable: false
-                  example: 0HZX2K7M9Q4AC
-                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                  minLength: 13
-                  maxLength: 13
-                email:
-                  type: string
-                  description: 회의 시작자 이메일
-                  nullable: false
-                  example: hong@example.com
-              description: 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
-              nullable: true
-              required:
-                - userId
-                - name
-                - email
-                - image
-            recordedDurationMs:
-              type: integer
-              description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적
-                녹음 시간(ms), READY 중단과 진행 중 구간은 0
-              nullable: false
-              example: 0
-              format: int64
-              minimum: 0
-            meetingStatus:
-              type: string
-              description: 회의 상태
-              nullable: false
-              example: NOT_STARTED
-              enum:
-                - NOT_STARTED
-                - IN_PROGRESS
-                - PAUSED
-                - ENDED
-            noteId:
-              type: string
-              description: 노트의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AF
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            title:
-              type: string
-              description: 노트 제목
-              nullable: false
-              example: 주간 회의
-              maxLength: 200
-            projectId:
-              type: string
-              description: 프로젝트의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AE
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            activeSessionStartedAt:
-              type: string
-              description: 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
-              nullable: true
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            participants:
-              type: array
-              description: 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열
-              items:
-                required:
-                  - email
-                  - image
-                  - name
-                  - userId
-                type: object
-                properties:
-                  image:
-                    type: string
-                    description: 참여자 프로필 이미지 URL (없으면 null)
-                    nullable: true
-                    example: https://cdn.example.com/avatars/hong.png
-                  name:
-                    type: string
-                    description: 참여자 이름
-                    nullable: false
-                    example: 홍길동
-                  userId:
-                    type: string
-                    description: 참여자의 13자리 TSID
-                    nullable: false
-                    example: 0HZX2K7M9Q4AC
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-                  email:
-                    type: string
-                    description: 참여자 이메일
-                    nullable: false
-                    example: hong@example.com
-              nullable: false
-            updatedAt:
-              type: string
-              description: 노트 수정 시각
-              nullable: false
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    WorkspaceInvitationListResponse:
-      title: WorkspaceInvitationListResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - invitations
-          type: object
-          properties:
-            invitations:
-              type: array
-              description: 대기 중인 초대 목록. 최신순 정렬
-              items:
-                required:
-                  - createdAt
-                  - expiresAt
-                  - invitationId
-                  - inviteeEmail
-                  - inviteeImage
-                  - inviteeName
-                  - inviterName
-                  - role
-                type: object
-                properties:
-                  createdAt:
-                    type: string
-                    description: 초대 생성 시각
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  role:
-                    type: string
-                    description: 수락 시 부여될 워크스페이스 역할
-                    nullable: false
-                    example: MEMBER
-                    enum:
-                      - ADMIN
-                      - MEMBER
-                  inviteeImage:
-                    type: string
-                    description: 초대받은 사용자 프로필 이미지 URL. 등록되지 않은 경우 null
-                    nullable: true
-                    example: https://cdn.heymoa.com/profiles/member.png
-                    format: uri
-                  inviteeEmail:
-                    type: string
-                    description: 초대받은 사용자 이메일
-                    nullable: false
-                    example: kim@example.com
-                    format: email
-                  inviteeName:
-                    type: string
-                    description: 초대받은 사용자 이름. 미가입자 초대는 null
-                    nullable: true
-                    example: 김멤버
-                  invitationId:
-                    type: string
-                    description: 초대 식별자
-                    nullable: false
-                    example: 0HZX2K7M9Q4AK
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-                  expiresAt:
-                    type: string
-                    description: 초대 만료 시각. 지난 뒤에는 수락할 수 없다
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  inviterName:
-                    type: string
-                    description: 초대를 보낸 사용자 이름
-                    nullable: false
-                    example: 홍길동
-              nullable: false
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    WorkspaceInvitationActionResponse:
-      title: WorkspaceInvitationActionResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - invitationId
-            - role
-            - status
-            - workspaceId
-          type: object
-          properties:
-            role:
-              type: string
-              description: 수락 시 부여될 워크스페이스 역할
-              nullable: false
-              example: MEMBER
-              enum:
-                - ADMIN
-                - MEMBER
-            invitationId:
-              type: string
-              description: 초대 식별자
-              nullable: false
-              example: 0HZX2K7M9Q4AK
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            status:
-              type: string
-              description: 처리 후 초대 상태
-              nullable: false
-              example: CANCELED
-              enum:
-                - PENDING
-                - ACCEPTED
-                - DECLINED
-                - CANCELED
-                - EXPIRED
-            workspaceId:
-              type: string
-              description: 초대가 속한 워크스페이스 식별자
-              nullable: false
-              example: 0HZX2K7M9Q4AD
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    NotificationListResponse:
-      title: NotificationListResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - notifications
-            - unreadCount
-          type: object
-          properties:
-            unreadCount:
-              type: integer
-              description: 읽지 않은 알림 개수
-              nullable: false
-              example: 0
-              format: int64
-            notifications:
-              type: array
-              description: 알림 목록. 최신순 최대 50개
-              items:
-                required:
-                  - createdAt
-                  - notificationId
-                  - readAt
-                  - type
-                type: object
-                properties:
-                  createdAt:
-                    type: string
-                    description: 알림 생성 시각
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  invitation:
-                    required:
-                      - expiresAt
-                      - invitationId
-                      - inviterName
-                      - role
-                      - status
-                      - workspaceId
-                      - workspaceName
-                    type: object
-                    properties:
-                      role:
-                        type: string
-                        description: 수락 시 부여될 워크스페이스 역할
-                        nullable: false
-                        example: MEMBER
-                        enum:
-                          - ADMIN
-                          - MEMBER
-                      workspaceName:
-                        type: string
-                        description: 초대된 워크스페이스 이름
-                        nullable: false
-                        example: 제품 팀
-                      invitationId:
-                        type: string
-                        description: 알림이 가리키는 초대 식별자
-                        nullable: false
-                        example: 0HZX2K7M9Q4AK
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                        minLength: 13
-                        maxLength: 13
-                      inviterName:
-                        type: string
-                        description: 초대를 보낸 사용자 이름
-                        nullable: false
-                        example: 홍길동
-                      expiresAt:
-                        type: string
-                        description: 초대 만료 시각. 지난 뒤에는 수락할 수 없다
-                        nullable: false
-                        example: 2026-07-14T01:02:03Z
-                        format: date-time
-                      workspaceId:
-                        type: string
-                        description: 초대된 워크스페이스 식별자
-                        nullable: false
-                        example: 0HZX2K7M9Q4AD
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                        minLength: 13
-                        maxLength: 13
-                      status:
-                        type: string
-                        description: 초대의 현재 상태
-                        nullable: false
-                        example: PENDING
-                        enum:
-                          - PENDING
-                          - ACCEPTED
-                          - DECLINED
-                          - CANCELED
-                          - EXPIRED
-                  notificationId:
-                    type: string
-                    description: 알림 식별자
-                    nullable: false
-                    example: 0HZX2K7M9Q4AJ
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-                  readAt:
-                    type: string
-                    description: 알림을 읽은 시각. 읽지 않았다면 null
-                    nullable: true
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  type:
-                    type: string
-                    description: 알림 종류
-                    nullable: false
-                    example: WORKSPACE_INVITATION
-                    enum:
-                      - WORKSPACE_INVITATION
-              nullable: false
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    AgentChatListResponse:
-      title: AgentChatListResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - chats
-          type: object
-          properties:
-            chats:
-              type: array
-              description: 대화 목록. updatedAt 내림차순 최대 50개
-              items:
-                required:
-                  - chatId
-                  - title
-                  - updatedAt
-                  - runningTurn
-                type: object
-                properties:
-                  runningTurn:
-                    type: object
-                    properties:
-                      turnId:
-                        type: string
-                        description: 도는 턴의 TSID. 폴링이 이것으로 「같은 턴이 아직 돈다」와 「새 턴이 시작됐다」를 가른다
-                        nullable: false
-                        example: 0K9GVJT2C4Q3B
-                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                        minLength: 13
-                        maxLength: 13
-                      status:
-                        type: string
-                        description: 도는 턴의 상태. 승인 대기면 사람이 누를 것이 있다는 뜻이다
-                        nullable: false
-                        example: WAITING_APPROVAL
-                        enum:
-                          - IN_PROGRESS
-                          - WAITING_APPROVAL
-                    description: 지금 도는 턴. 없으면 null 이고 그때 진행 배지를 안 그린다
-                    nullable: true
-                    required:
-                      - turnId
-                      - status
-                  chatId:
-                    type: string
-                    description: 대화의 13자리 TSID
-                    nullable: false
-                    example: 0K9GVJT2C4Q2A
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-                  title:
-                    type: string
-                    description: 대화 제목. 첫 질문으로 저절로 붙고, 아직 질문이 없으면 기본값이다
-                    nullable: false
-                    example: 회의 후속 정리
-                    maxLength: 200
-                  updatedAt:
-                    type: string
-                    description: 마지막으로 쓴 시각. 이 값의 내림차순이 목록 순서다
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-              nullable: false
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    ToolConnectionsResponse:
-      title: ToolConnectionsResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            integrations:
-              type: array
-              items:
-                required:
-                  - connected
-                  - provider
-                  - connectedBy
-                  - connectedAt
-                type: object
-                properties:
-                  connected:
-                    type: boolean
-                    description: 연동 여부
-                    nullable: false
-                    example: true
-                  connectedAt:
-                    type: string
-                    description: 연동 시각 (미연동 시 null)
-                    nullable: true
-                    example: 2026-07-22T00:00:00Z
-                    format: date-time
-                  provider:
-                    type: string
-                    description: 연동 provider
-                    nullable: false
-                    example: LINEAR
-                    enum:
-                      - LINEAR
-                      - GITHUB
-                  connectedBy:
-                    type: string
-                    description: 연동한 ADMIN 표시 이름 (미연동 시 null)
-                    nullable: true
-                    example: 김민수
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    CurrentUserResponse:
-      title: CurrentUserResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - email
-            - image
-            - name
-            - userId
-          type: object
-          properties:
-            image:
-              type: string
-              description: 사용자 프로필 이미지 URL. 등록되지 않은 경우 null
-              nullable: true
-              example: https://cdn.heymoa.com/profiles/member.png
-              format: uri
-            name:
-              type: string
-              description: 사용자 이름
-              nullable: false
-              example: 홍길동
-            userId:
-              type: string
-              description: 사용자의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AC
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            email:
-              type: string
-              description: 사용자 이메일
-              nullable: false
-              example: hong@example.com
-              format: email
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    UpdateWorkspaceResponse:
-      title: UpdateWorkspaceResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - description
-            - name
-            - workspaceId
-          type: object
-          properties:
-            name:
-              type: string
-              description: 워크스페이스 이름
-              nullable: false
-              example: 제품 팀
-            description:
-              type: string
-              description: 워크스페이스 설명
-              nullable: true
-              example: 제품을 만드는 팀의 워크스페이스
-            workspaceId:
-              type: string
-              description: 워크스페이스의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AD
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    AgentChatMessagesResponse:
-      title: AgentChatMessagesResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - cursor
-            - messages
-            - activeTurn
-            - lastTurn
-          type: object
-          properties:
-            lastTurn:
-              type: object
-              properties:
-                retryable:
-                  type: boolean
-                  description: 다시 눌러도 되나. **컬럼이 아니라 failureCode 에서 파생한다**
-                  nullable: true
-                  example: "true"
-                turnId:
-                  type: string
-                  description: 마지막 턴의 13자리 TSID
-                  nullable: false
-                  example: 0K9GVJT2C4Q3B
-                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                  minLength: 13
-                  maxLength: 13
-                failureCode:
-                  type: string
-                  description: FAILED 일 때만 채워진다
-                  nullable: true
-                  example: UPSTREAM_ERROR
-                  enum:
-                    - TURN_TIMEOUT
-                    - UPSTREAM_ERROR
-                    - UPSTREAM_REJECTED
-                    - APPROVAL_EXPIRED
-                    - STREAM_INTERRUPTED
-                    - CAPACITY_EXCEEDED
-                    - INTERNAL_ERROR
-                status:
-                  type: string
-                  description: 턴 상태
-                  nullable: false
-                  example: IN_PROGRESS
-                  enum:
-                    - IN_PROGRESS
-                    - WAITING_APPROVAL
-                    - COMPLETED
-                    - FAILED
-                    - CANCELLED
-              description: 이 대화의 마지막 턴. 도는 턴이 있으면 activeTurn 과 같은 행이다
-              nullable: true
-              required:
-                - turnId
-                - status
-                - failureCode
-                - retryable
-            cursor:
-              type: integer
-              description: "GET /events?after= 에 그대로 넣을 대화 커서. **로그에 굳은 마지막 seq 다** — 커서와 재생 대상이
-                같은 자료구조에서 나오므로 커서가 재생 가능 범위를 앞설 수 없다. last_seq(블록 천장)가 아니다: 천장을 내려주면 커서가
-                미래를 가리켜 남은 이벤트를 전부 버린다"
-              nullable: false
-              example: "131"
-              format: int64
-              minimum: 0
-            activeTurn:
-              type: object
-              properties:
-                turnId:
-                  type: string
-                  description: 도는 턴의 13자리 TSID
-                  nullable: false
-                  example: 0K9GVJT2C4Q3B
-                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                  minLength: 13
-                  maxLength: 13
-                pendingApproval:
-                  type: object
-                  properties:
-                    args:
-                      type: string
-                      description: 모델이 이 도구를 부른 인자를 **직렬화한 JSON 문자열**이다.
-                        서버가 `jsonb` 컬럼을 그대로 내보내므로 SSE `tool_call_start.args`(객체)와
-                        모양이 다르다 — 화면이 파싱해서 접는다. 모양은 도구마다 다르고 서버는
-                        해석하지 않는다. 인자 없는 도구·옛 행은 null
-                      nullable: true
-                    summary:
-                      type: string
-                      description: 사람이 읽을 요약
-                      nullable: true
-                      example: 이슈를 만들까요?
-                    approvalId:
-                      type: string
-                      description: 승인 요청의 13자 TSID (heymoa-ai 발급)
-                      nullable: false
-                      example: 0K9GVJT2C4Q7F
-                      pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                      minLength: 13
-                      maxLength: 13
-                    tool:
-                      type: string
-                      description: 실행하려는 도구
-                      nullable: false
-                      example: linear.create_issue
-                  description: 아직 안 누른 승인. **status 가 WAITING_APPROVAL 일 때만 실린다**
-                  nullable: true
-                  required:
-                    - approvalId
-                    - tool
-                    - summary
-                    - args
-                status:
-                  type: string
-                  description: 턴 상태
-                  nullable: false
-                  example: IN_PROGRESS
-                  enum:
-                    - IN_PROGRESS
-                    - WAITING_APPROVAL
-                    - COMPLETED
-                    - FAILED
-                    - CANCELLED
-              description: 지금 도는 턴. null 이면 이어받을 것이 없다
-              nullable: true
-              required:
-                - turnId
-                - status
-                - pendingApproval
-            messages:
-              type: array
-              description: 표시용 메시지. 시간순이고, 없으면 빈 배열이다
-              items:
-                required:
-                  - content
-                  - createdAt
-                  - role
-                  - scope
-                  - turnId
-                  - toolEvent
-                type: object
-                properties:
-                  turnId:
-                    type: string
-                    description: 이 행을 만든 턴. 진행 중 턴의 행은 스트림 백로그로도 오므로 화면이 이 값으로 두 벌을 하나로 접는다
-                    nullable: true
-                    example: 0K9GVJT2C4Q3B
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                  createdAt:
-                    type: string
-                    description: 메시지 시각
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  role:
-                    type: string
-                    description: 메시지 역할
-                    nullable: false
-                    example: USER
-                    enum:
-                      - USER
-                      - ASSISTANT
-                      - TOOL
-                      - THINKING
-                  toolEvent:
-                    type: object
-                    properties:
-                      decision:
-                        type: string
-                        description: 승인 확정 기록이면 결정, 실행 결과 기록이면 null
-                        nullable: true
-                        example: APPROVED
-                        enum:
-                          - APPROVED
-                          - REJECTED
-                      url:
-                        type: string
-                        description: 생성된 외부 리소스 링크 (없으면 null)
-                        nullable: true
-                        example: https://linear.app/heymoa/issue/APP-123
-                      tool:
-                        type: string
-                        description: 도구 이름
-                        nullable: false
-                        example: linear.create_issue
-                      status:
-                        type: string
-                        description: 실행 결과 기록이면 상태, 승인 확정 기록이면 null
-                        nullable: true
-                        example: success
-                        enum:
-                          - success
-                          - error
-                    description: role=TOOL일 때만 값이 있는 구조화된 승인/도구 실행 기록 (그 외 null)
-                    nullable: true
-                    required:
-                      - tool
-                      - decision
-                      - status
-                      - url
-                  scope:
-                    type: array
-                    description: 이 턴의 범위(USER) 또는 실제로 쓴 근거(ASSISTANT). TOOL이면 빈 배열
-                    items:
-                      type: object
-                      properties:
-                        unavailable:
-                          type: boolean
-                          description: 지워졌거나 권한이 없다. **둘을 구분하지 않는다** — 갈라 표시하면 존재가 샌다
-                          nullable: false
-                          example: "false"
-                        kind:
-                          type: string
-                          description: 범위 종류. **SSE 의 `note`·`project` 와 대소문자가
-                            다르다** — 서버가 도메인 enum 을 응답에 그대로 쓰고 Jackson 이
-                            이름을 그대로 낸다. 화면이 경계에서 접는다
-                          nullable: false
-                          example: NOTE
-                          enum:
-                            - NOTE
-                            - PROJECT
-                        id:
-                          type: string
-                          description: 회의록 또는 프로젝트 TSID
-                          nullable: false
-                          example: 0HZX2K7M9Q4AF
-                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                          minLength: 13
-                          maxLength: 13
-                        title:
-                          type: string
-                          description: 제목. unavailable이면 null이다 — 지워진 것의 제목을 응답에 싣지 않는다
-                          nullable: true
-                          example: 주간 배포 회의
-                      required:
-                        - kind
-                        - id
-                        - title
-                        - unavailable
-                    nullable: false
-                    example: "[]"
-                  content:
-                    type: string
-                    description: 메시지 내용 (TOOL이면 표시용 요약)
-                    nullable: false
-                    example: 질문
-              nullable: false
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    ProjectListResponse:
-      title: ProjectListResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - projects
-          type: object
-          properties:
-            projects:
-              type: array
-              description: 프로젝트 목록
-              items:
-                required:
-                  - createdAt
-                  - description
-                  - name
-                  - projectId
-                  - updatedAt
-                  - workspaceId
-                type: object
-                properties:
-                  createdAt:
-                    type: string
-                    description: 프로젝트 생성 시각
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  name:
-                    type: string
-                    description: 프로젝트 이름
-                    nullable: false
-                    example: 모바일 앱
-                    maxLength: 100
-                  description:
-                    type: string
-                    description: 프로젝트 설명
-                    nullable: true
-                    example: Heymoa 모바일 앱 프로젝트
-                    maxLength: 1000
-                  projectId:
-                    type: string
-                    description: 프로젝트의 13자리 TSID
-                    nullable: false
-                    example: 0HZX2K7M9Q4AE
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-                  updatedAt:
-                    type: string
-                    description: 프로젝트 수정 시각
-                    nullable: false
-                    example: 2026-07-14T01:02:03Z
-                    format: date-time
-                  workspaceId:
-                    type: string
-                    description: 워크스페이스의 13자리 TSID
-                    nullable: false
-                    example: 0HZX2K7M9Q4AD
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-                    minLength: 13
-                    maxLength: 13
-              nullable: false
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    MarkNotificationReadResponse:
-      title: MarkNotificationReadResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - notificationId
-          type: object
-          properties:
-            notificationId:
-              type: string
-              description: 읽음 처리된 알림 식별자
-              nullable: false
-              example: 0HZX2K7M9Q4AJ
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-            - null
-          description: 성공 시 null인 오류 정보
-    ProjectResponse:
-      title: ProjectResponse
-      required:
-        - data
-        - error
-        - success
-      type: object
-      properties:
-        data:
-          required:
-            - createdAt
-            - description
-            - name
-            - projectId
-            - updatedAt
-            - workspaceId
-          type: object
-          properties:
-            createdAt:
-              type: string
-              description: 프로젝트 생성 시각
-              nullable: false
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            name:
-              type: string
-              description: 프로젝트 이름
-              nullable: false
-              example: 모바일 앱
-              maxLength: 100
-            description:
-              type: string
-              description: 프로젝트 설명
-              nullable: true
-              example: Heymoa 모바일 앱 프로젝트
-              maxLength: 1000
-            projectId:
-              type: string
-              description: 프로젝트의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AE
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-            updatedAt:
-              type: string
-              description: 프로젝트 수정 시각
-              nullable: false
-              example: 2026-07-14T01:02:03Z
-              format: date-time
-            workspaceId:
-              type: string
-              description: 워크스페이스의 13자리 TSID
-              nullable: false
-              example: 0HZX2K7M9Q4AD
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -7193,6 +5569,12 @@ components:
                                 nullable: false
                                 example: "252000"
                           nullable: false
+                        sourceCandidates:
+                          type: array
+                          description: 이 항목이 요청 원장에서 채택한 후보 revision. 없으면 필드를 생략한다
+                          items:
+                            $ref: "#/components/schemas/CandidateRevisionReference"
+                          nullable: false
                         content:
                           type: string
                           description: 항목 본문 한 줄
@@ -7222,20 +5604,389 @@ components:
           enum:
             - null
           description: 성공 시 null인 오류 정보
-    ChangeWorkspaceMemberRoleRequest:
-      title: ChangeWorkspaceMemberRoleRequest
+    WorkspaceInvitationListResponse:
+      title: WorkspaceInvitationListResponse
       required:
-        - role
+        - data
+        - error
+        - success
       type: object
       properties:
-        role:
-          type: string
-          description: 바꿀 역할
+        data:
+          required:
+            - invitations
+          type: object
+          properties:
+            invitations:
+              type: array
+              description: 대기 중인 초대 목록. 최신순 정렬
+              items:
+                required:
+                  - createdAt
+                  - expiresAt
+                  - invitationId
+                  - inviteeEmail
+                  - inviteeImage
+                  - inviteeName
+                  - inviterName
+                  - role
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                    description: 초대 생성 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  role:
+                    type: string
+                    description: 수락 시 부여될 워크스페이스 역할
+                    nullable: false
+                    example: MEMBER
+                    enum:
+                      - ADMIN
+                      - MEMBER
+                  inviteeImage:
+                    type: string
+                    description: 초대받은 사용자 프로필 이미지 URL. 등록되지 않은 경우 null
+                    nullable: true
+                    example: https://cdn.heymoa.com/profiles/member.png
+                    format: uri
+                  inviteeEmail:
+                    type: string
+                    description: 초대받은 사용자 이메일
+                    nullable: false
+                    example: kim@example.com
+                    format: email
+                  inviteeName:
+                    type: string
+                    description: 초대받은 사용자 이름. 미가입자 초대는 null
+                    nullable: true
+                    example: 김멤버
+                  invitationId:
+                    type: string
+                    description: 초대 식별자
+                    nullable: false
+                    example: 0HZX2K7M9Q4AK
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  expiresAt:
+                    type: string
+                    description: 초대 만료 시각. 지난 뒤에는 수락할 수 없다
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  inviterName:
+                    type: string
+                    description: 초대를 보낸 사용자 이름
+                    nullable: false
+                    example: 홍길동
+              nullable: false
+          description: 성공 응답 데이터
           nullable: false
-          example: ADMIN
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
           enum:
-            - ADMIN
-            - MEMBER
+            - null
+          description: 성공 시 null인 오류 정보
+    NotificationListResponse:
+      title: NotificationListResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - notifications
+            - unreadCount
+          type: object
+          properties:
+            unreadCount:
+              type: integer
+              description: 읽지 않은 알림 개수
+              nullable: false
+              example: 0
+              format: int64
+            notifications:
+              type: array
+              description: 알림 목록. 최신순 최대 50개
+              items:
+                required:
+                  - createdAt
+                  - notificationId
+                  - readAt
+                  - type
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                    description: 알림 생성 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  invitation:
+                    required:
+                      - expiresAt
+                      - invitationId
+                      - inviterName
+                      - role
+                      - status
+                      - workspaceId
+                      - workspaceName
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        description: 수락 시 부여될 워크스페이스 역할
+                        nullable: false
+                        example: MEMBER
+                        enum:
+                          - ADMIN
+                          - MEMBER
+                      workspaceName:
+                        type: string
+                        description: 초대된 워크스페이스 이름
+                        nullable: false
+                        example: 제품 팀
+                      invitationId:
+                        type: string
+                        description: 알림이 가리키는 초대 식별자
+                        nullable: false
+                        example: 0HZX2K7M9Q4AK
+                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        minLength: 13
+                        maxLength: 13
+                      inviterName:
+                        type: string
+                        description: 초대를 보낸 사용자 이름
+                        nullable: false
+                        example: 홍길동
+                      expiresAt:
+                        type: string
+                        description: 초대 만료 시각. 지난 뒤에는 수락할 수 없다
+                        nullable: false
+                        example: 2026-07-14T01:02:03Z
+                        format: date-time
+                      workspaceId:
+                        type: string
+                        description: 초대된 워크스페이스 식별자
+                        nullable: false
+                        example: 0HZX2K7M9Q4AD
+                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        minLength: 13
+                        maxLength: 13
+                      status:
+                        type: string
+                        description: 초대의 현재 상태
+                        nullable: false
+                        example: PENDING
+                        enum:
+                          - PENDING
+                          - ACCEPTED
+                          - DECLINED
+                          - CANCELED
+                          - EXPIRED
+                  notificationId:
+                    type: string
+                    description: 알림 식별자
+                    nullable: false
+                    example: 0HZX2K7M9Q4AJ
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  readAt:
+                    type: string
+                    description: 알림을 읽은 시각. 읽지 않았다면 null
+                    nullable: true
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  type:
+                    type: string
+                    description: 알림 종류
+                    nullable: false
+                    example: WORKSPACE_INVITATION
+                    enum:
+                      - WORKSPACE_INVITATION
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    AssignSpeakerRequest:
+      title: AssignSpeakerRequest
+      type: object
+      properties:
+        userId:
+          type: string
+          description: 연결할 참석자의 userId. null 은 「모르겠다」가 아니라 「참석자 중에 없다」로 확정한 것이다
+          nullable: true
+          example: 0HZX2K7M9Q4AC
+      required:
+        - userId
+    UpdateWorkspaceResponse:
+      title: UpdateWorkspaceResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - description
+            - name
+            - workspaceId
+          type: object
+          properties:
+            name:
+              type: string
+              description: 워크스페이스 이름
+              nullable: false
+              example: 제품 팀
+            description:
+              type: string
+              description: 워크스페이스 설명
+              nullable: true
+              example: 제품을 만드는 팀의 워크스페이스
+            workspaceId:
+              type: string
+              description: 워크스페이스의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    MarkNotificationReadResponse:
+      title: MarkNotificationReadResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - notificationId
+          type: object
+          properties:
+            notificationId:
+              type: string
+              description: 읽음 처리된 알림 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AJ
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    ProjectResponse:
+      title: ProjectResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - createdAt
+            - description
+            - name
+            - projectId
+            - updatedAt
+            - workspaceId
+          type: object
+          properties:
+            createdAt:
+              type: string
+              description: 프로젝트 생성 시각
+              nullable: false
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            name:
+              type: string
+              description: 프로젝트 이름
+              nullable: false
+              example: 모바일 앱
+              maxLength: 100
+            description:
+              type: string
+              description: 프로젝트 설명
+              nullable: true
+              example: Heymoa 모바일 앱 프로젝트
+              maxLength: 1000
+            projectId:
+              type: string
+              description: 프로젝트의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AE
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            updatedAt:
+              type: string
+              description: 프로젝트 수정 시각
+              nullable: false
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            workspaceId:
+              type: string
+              description: 워크스페이스의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
     NoteParticipantsRequest:
       title: NoteParticipantsRequest
       required:
@@ -7252,36 +6003,172 @@ components:
               - type: string
               - type: number
           nullable: false
-    SendAgentChatMessageRequest:
-      title: SendAgentChatMessageRequest
+    NoteResponse:
+      title: NoteResponse
       required:
-        - message
+        - data
+        - error
+        - success
       type: object
       properties:
-        projectIds:
-          type: array
-          description: 이 턴에 볼 프로젝트. 펼치지 않고 에이전트가 그 안에서 찾는다 (최대 20)
-          nullable: true
-          items:
-            type: string
-          example: []
-        message:
-          type: string
-          description: 유저 메시지 (공백만으로 구성 불가). 문장 안에서 범위를 가리키는 자리는 @[제목](noteId:…) ·
-            @[제목](projectId:…) 마커로 표시한다 — 스키마가 강제하지 않으므로 마커가 없는 문장도 그대로 유효하다. 권한은 계속
-            noteIds·projectIds가 쥐고, 대화 제목은 이 마커를 사람 말로 되돌려 만든다.
+        data:
+          required:
+            - activeSessionStartedAt
+            - createdAt
+            - meetingStartedAt
+            - meetingStartedBy
+            - meetingStatus
+            - noteId
+            - participants
+            - projectId
+            - recordedDurationMs
+            - title
+            - updatedAt
+          type: object
+          properties:
+            createdAt:
+              type: string
+              description: 노트 생성 시각
+              nullable: false
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            meetingStartedBy:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: 회의 시작자 프로필 이미지 URL (없으면 null)
+                  nullable: true
+                  example: https://cdn.example.com/avatars/hong.png
+                name:
+                  type: string
+                  description: 회의 시작자 이름
+                  nullable: false
+                  example: 홍길동
+                userId:
+                  type: string
+                  description: 회의 시작자의 13자리 TSID
+                  nullable: false
+                  example: 0HZX2K7M9Q4AC
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  minLength: 13
+                  maxLength: 13
+                email:
+                  type: string
+                  description: 회의 시작자 이메일
+                  nullable: false
+                  example: hong@example.com
+              description: 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
+              nullable: true
+              required:
+                - userId
+                - name
+                - email
+                - image
+            recordedDurationMs:
+              type: integer
+              description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
+              nullable: false
+              example: 0
+              format: int64
+              minimum: 0
+            meetingStatus:
+              type: string
+              description: 회의 상태
+              nullable: false
+              example: NOT_STARTED
+              enum:
+                - NOT_STARTED
+                - IN_PROGRESS
+                - PAUSED
+                - ENDED
+            noteId:
+              type: string
+              description: 노트의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AF
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            title:
+              type: string
+              description: 노트 제목
+              nullable: false
+              example: 주간 회의
+              maxLength: 200
+            projectId:
+              type: string
+              description: 프로젝트의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AE
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            participants:
+              type: array
+              description: 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열
+              items:
+                required:
+                  - email
+                  - image
+                  - name
+                  - userId
+                type: object
+                properties:
+                  image:
+                    type: string
+                    description: 참여자 프로필 이미지 URL (없으면 null)
+                    nullable: true
+                    example: https://cdn.example.com/avatars/hong.png
+                  name:
+                    type: string
+                    description: 참여자 이름
+                    nullable: false
+                    example: 홍길동
+                  userId:
+                    type: string
+                    description: 참여자의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AC
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  email:
+                    type: string
+                    description: 참여자 이메일
+                    nullable: false
+                    example: hong@example.com
+              nullable: false
+            updatedAt:
+              type: string
+              description: 노트 수정 시각
+              nullable: false
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            meetingStartedAt:
+              type: string
+              description: 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
+              nullable: true
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            activeSessionStartedAt:
+              type: string
+              description: 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
+              nullable: true
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+          description: 성공 응답 데이터
           nullable: false
-          example: 안녕
-          pattern: "[\\s\\S]*\\S[\\s\\S]*"
-          minLength: 1
-        noteIds:
-          type: array
-          description: 이 턴에 볼 회의록. 에이전트는 여기서만 찾고, 없으면 확장을 제안한다 (최대 20)
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
           nullable: true
-          items:
-            type: string
-          example:
-            - 0HZX2K7M9Q4AF
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
     ProjectRequest:
       title: ProjectRequest
       required:
@@ -7301,6 +6188,1208 @@ components:
           nullable: true
           example: Heymoa 모바일 앱 프로젝트
           maxLength: 1000
+    StartTranscriptionSessionResponse:
+      title: StartTranscriptionSessionResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - endReason
+            - endedAt
+            - noteId
+            - readyExpiresAt
+            - sessionId
+            - startedAt
+            - status
+          type: object
+          properties:
+            readyExpiresAt:
+              type: string
+              description: 전사 연결 대기 만료 시각
+              nullable: false
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            noteId:
+              type: string
+              description: 노트의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AF
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            sessionId:
+              type: string
+              description: 전사 세션의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AG
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            status:
+              type: string
+              description: 전사 세션 상태
+              nullable: false
+              example: READY
+              enum:
+                - READY
+                - ACTIVE
+                - COMPLETED
+                - INTERRUPTED
+            startedAt:
+              type: string
+              description: 전사 시작 시각 (READY면 null)
+              nullable: true
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            endedAt:
+              type: string
+              description: 전사 종료 시각 (READY면 null)
+              nullable: true
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            endReason:
+              type: string
+              description: 전사 종료 사유 (READY면 null)
+              nullable: true
+              example: CLIENT_DISCONNECTED
+              enum:
+                - READY_TIMEOUT
+                - CLIENT_DISCONNECTED
+                - CLIENT_PROTOCOL_ERROR
+                - STT_PROVIDER_ERROR
+                - INTERNAL_ERROR
+                - MEETING_ENDED
+                - MEETING_PAUSED
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    SendAgentChatMessageRequest:
+      title: SendAgentChatMessageRequest
+      required:
+        - message
+      type: object
+      properties:
+        projectIds:
+          type: array
+          description: 이 턴에 볼 프로젝트. 기본은 빈 배열
+          nullable: false
+          items:
+            type: string
+            pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            example: 0HZX2K7M9Q4AE
+          maxItems: 20
+        message:
+          type: string
+          description: 유저 메시지 (공백만으로 구성 불가). 범위를 가리키는 자리는 @[제목](noteId:…) 마커로 실리지만 **스키마가 강제하지 않는다** — 마커 없는 문장도 유효하다.
+          nullable: false
+          example: 안녕
+          pattern: "[\\s\\S]*\\S[\\s\\S]*"
+          minLength: 1
+        noteIds:
+          type: array
+          description: 이 턴에 볼 회의록. 기본은 빈 배열
+          nullable: false
+          items:
+            type: string
+            pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            example: 0HZX2K7M9Q4AF
+          maxItems: 20
+    RefreshTokensResponse:
+      title: RefreshTokensResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - message
+          type: object
+          properties:
+            message:
+              type: string
+              description: 처리 결과 메시지
+              nullable: false
+              example: 토큰이 갱신되었습니다.
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    ResolveToolApprovalRequest:
+      title: ResolveToolApprovalRequest
+      required:
+        - decision
+      type: object
+      properties:
+        decision:
+          type: string
+          description: "승인 결정 (APPROVED: 도구 실행 재개, REJECTED: 도구 미실행)"
+          nullable: false
+          example: APPROVED
+          enum:
+            - APPROVED
+            - REJECTED
+    TranscriptionSessionResponse:
+      title: TranscriptionSessionResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - endReason
+            - endedAt
+            - noteId
+            - readyExpiresAt
+            - sessionId
+            - startedAt
+            - status
+          type: object
+          properties:
+            endReason:
+              type: string
+              description: 전사 종료 사유 (READY면 null)
+              nullable: true
+              example: CLIENT_DISCONNECTED
+              enum:
+                - READY_TIMEOUT
+                - CLIENT_DISCONNECTED
+                - CLIENT_PROTOCOL_ERROR
+                - STT_PROVIDER_ERROR
+                - INTERNAL_ERROR
+                - MEETING_ENDED
+                - MEETING_PAUSED
+            endedAt:
+              type: string
+              description: 전사 종료 시각 (READY면 null)
+              nullable: true
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            startedAt:
+              type: string
+              description: 전사 시작 시각 (READY면 null)
+              nullable: true
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            readyExpiresAt:
+              type: string
+              description: 전사 연결 대기 만료 시각
+              nullable: false
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            noteId:
+              type: string
+              description: 노트의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AF
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            sessionId:
+              type: string
+              description: 전사 세션의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AG
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            status:
+              type: string
+              description: 전사 세션 상태
+              nullable: false
+              example: COMPLETED
+              enum:
+                - READY
+                - ACTIVE
+                - COMPLETED
+                - INTERRUPTED
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    AppErrorResponse:
+      title: AppErrorResponse
+      type: object
+      required:
+        - success
+        - data
+        - error
+      properties:
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: false
+        data:
+          nullable: true
+          enum:
+            - null
+          description: 실패 시 null인 응답 데이터
+        error:
+          $ref: "#/components/schemas/AppError"
+    CreateWorkspaceResponse:
+      title: CreateWorkspaceResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - description
+            - name
+            - role
+            - workspaceId
+          type: object
+          properties:
+            role:
+              type: string
+              description: 현재 사용자의 워크스페이스 역할
+              nullable: false
+              example: ADMIN
+              enum:
+                - ADMIN
+                - MEMBER
+            name:
+              type: string
+              description: 워크스페이스 이름
+              nullable: false
+              example: 제품 팀
+              maxLength: 100
+            description:
+              type: string
+              description: 워크스페이스 설명
+              nullable: true
+              example: 제품을 만드는 팀의 워크스페이스
+              maxLength: 1000
+            workspaceId:
+              type: string
+              description: 워크스페이스의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    CreateWorkspaceInvitationRequest:
+      title: CreateWorkspaceInvitationRequest
+      required:
+        - email
+        - role
+      type: object
+      properties:
+        role:
+          type: string
+          description: 수락 시 부여할 워크스페이스 역할
+          nullable: false
+          example: MEMBER
+          enum:
+            - ADMIN
+            - MEMBER
+        email:
+          type: string
+          description: 초대할 사용자의 가입 이메일
+          nullable: false
+          example: kim@example.com
+          format: email
+    LogoutResponse:
+      title: LogoutResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - message
+          type: object
+          properties:
+            message:
+              type: string
+              description: 처리 결과 메시지
+              nullable: false
+              example: 성공적으로 로그아웃했습니다.
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    NoteListResponse:
+      title: NoteListResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - notes
+          type: object
+          properties:
+            notes:
+              type: array
+              description: 노트 목록
+              items:
+                required:
+                  - activeSessionStartedAt
+                  - createdAt
+                  - lastRecordedAt
+                  - meetingStartedAt
+                  - meetingStartedBy
+                  - meetingStatus
+                  - noteId
+                  - participants
+                  - projectId
+                  - recordedDurationMs
+                  - title
+                  - updatedAt
+                type: object
+                properties:
+                  meetingStartedAt:
+                    type: string
+                    description: 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
+                    nullable: true
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  createdAt:
+                    type: string
+                    description: 노트 생성 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  lastRecordedAt:
+                    type: string
+                    description: 가장 최근 종료된 전사 세션의 시작 시각
+                    nullable: true
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  meetingStartedBy:
+                    type: object
+                    properties:
+                      image:
+                        type: string
+                        description: 회의 시작자 프로필 이미지 URL (없으면 null)
+                        nullable: true
+                        example: https://cdn.example.com/avatars/hong.png
+                      name:
+                        type: string
+                        description: 회의 시작자 이름
+                        nullable: false
+                        example: 홍길동
+                      userId:
+                        type: string
+                        description: 회의 시작자의 13자리 TSID
+                        nullable: false
+                        example: 0HZX2K7M9Q4AC
+                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        minLength: 13
+                        maxLength: 13
+                      email:
+                        type: string
+                        description: 회의 시작자 이메일
+                        nullable: false
+                        example: hong@example.com
+                    description: 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
+                    nullable: true
+                    required:
+                      - userId
+                      - name
+                      - email
+                      - image
+                  recordedDurationMs:
+                    type: integer
+                    description: ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
+                    nullable: false
+                    example: 6500
+                    format: int64
+                    minimum: 0
+                  meetingStatus:
+                    type: string
+                    description: 회의 상태
+                    nullable: false
+                    example: IN_PROGRESS
+                    enum:
+                      - NOT_STARTED
+                      - IN_PROGRESS
+                      - PAUSED
+                      - ENDED
+                  noteId:
+                    type: string
+                    description: 노트의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AF
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  title:
+                    type: string
+                    description: 노트 제목
+                    nullable: false
+                    example: 주간 회의
+                    maxLength: 200
+                  projectId:
+                    type: string
+                    description: 프로젝트의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AE
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  activeSessionStartedAt:
+                    type: string
+                    description: 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
+                    nullable: true
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  participants:
+                    type: array
+                    description: 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열
+                    items:
+                      required:
+                        - email
+                        - image
+                        - name
+                        - userId
+                      type: object
+                      properties:
+                        image:
+                          type: string
+                          description: 참여자 프로필 이미지 URL (없으면 null)
+                          nullable: true
+                          example: https://cdn.example.com/avatars/hong.png
+                        name:
+                          type: string
+                          description: 참여자 이름
+                          nullable: false
+                          example: 홍길동
+                        userId:
+                          type: string
+                          description: 참여자의 13자리 TSID
+                          nullable: false
+                          example: 0HZX2K7M9Q4AC
+                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                          minLength: 13
+                          maxLength: 13
+                        email:
+                          type: string
+                          description: 참여자 이메일
+                          nullable: false
+                          example: hong@example.com
+                    nullable: false
+                  updatedAt:
+                    type: string
+                    description: 노트 수정 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    WorkspaceInvitationActionResponse:
+      title: WorkspaceInvitationActionResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - invitationId
+            - role
+            - status
+            - workspaceId
+          type: object
+          properties:
+            role:
+              type: string
+              description: 수락 시 부여될 워크스페이스 역할
+              nullable: false
+              example: MEMBER
+              enum:
+                - ADMIN
+                - MEMBER
+            invitationId:
+              type: string
+              description: 초대 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AK
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            status:
+              type: string
+              description: 처리 후 초대 상태
+              nullable: false
+              example: CANCELED
+              enum:
+                - PENDING
+                - ACCEPTED
+                - DECLINED
+                - CANCELED
+                - EXPIRED
+            workspaceId:
+              type: string
+              description: 초대가 속한 워크스페이스 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    ToolConnectionsResponse:
+      title: ToolConnectionsResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            integrations:
+              type: array
+              items:
+                required:
+                  - connected
+                  - provider
+                  - connectedBy
+                  - connectedAt
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                    description: 연동 여부
+                    nullable: false
+                    example: true
+                  connectedAt:
+                    type: string
+                    description: 연동 시각 (미연동 시 null)
+                    nullable: true
+                    example: 2026-07-22T00:00:00Z
+                    format: date-time
+                  provider:
+                    type: string
+                    description: 연동 provider
+                    nullable: false
+                    example: LINEAR
+                    enum:
+                      - LINEAR
+                      - GITHUB
+                  connectedBy:
+                    type: string
+                    description: 연동한 ADMIN 표시 이름 (미연동 시 null)
+                    nullable: true
+                    example: 김민수
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    AgentChatResponse:
+      title: AgentChatResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - chatId
+            - createdAt
+            - title
+            - workspaceId
+          type: object
+          properties:
+            createdAt:
+              type: string
+              description: 생성 시각
+              nullable: false
+              example: 2026-07-14T01:02:03Z
+              format: date-time
+            chatId:
+              type: string
+              description: 채팅 세션의 13자리 TSID
+              nullable: false
+              example: 0K9GVJT2C4Q2A
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            title:
+              type: string
+              description: 대화 제목
+              nullable: false
+              example: 질문
+            workspaceId:
+              type: string
+              description: 워크스페이스의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    CurrentUserResponse:
+      title: CurrentUserResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - email
+            - image
+            - name
+            - userId
+          type: object
+          properties:
+            image:
+              type: string
+              description: 사용자 프로필 이미지 URL. 등록되지 않은 경우 null
+              nullable: true
+              example: https://cdn.heymoa.com/profiles/member.png
+              format: uri
+            name:
+              type: string
+              description: 사용자 이름
+              nullable: false
+              example: 홍길동
+            userId:
+              type: string
+              description: 사용자의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AC
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            email:
+              type: string
+              description: 사용자 이메일
+              nullable: false
+              example: hong@example.com
+              format: email
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    CreateAgentChatRequest:
+      title: CreateAgentChatRequest
+      type: object
+      properties:
+        title:
+          type: string
+          description: 대화 제목 (생략하면 "새 대화")
+          nullable: false
+          example: 질문
+          maxLength: 200
+    ProjectListResponse:
+      title: ProjectListResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - projects
+          type: object
+          properties:
+            projects:
+              type: array
+              description: 프로젝트 목록
+              items:
+                required:
+                  - createdAt
+                  - description
+                  - name
+                  - projectId
+                  - updatedAt
+                  - workspaceId
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                    description: 프로젝트 생성 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  name:
+                    type: string
+                    description: 프로젝트 이름
+                    nullable: false
+                    example: 모바일 앱
+                    maxLength: 100
+                  description:
+                    type: string
+                    description: 프로젝트 설명
+                    nullable: true
+                    example: Heymoa 모바일 앱 프로젝트
+                    maxLength: 1000
+                  projectId:
+                    type: string
+                    description: 프로젝트의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AE
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  updatedAt:
+                    type: string
+                    description: 프로젝트 수정 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  workspaceId:
+                    type: string
+                    description: 워크스페이스의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AD
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
+    ChangeWorkspaceMemberRoleRequest:
+      title: ChangeWorkspaceMemberRoleRequest
+      required:
+        - role
+      type: object
+      properties:
+        role:
+          type: string
+          description: 바꿀 역할
+          nullable: false
+          example: ADMIN
+          enum:
+            - ADMIN
+            - MEMBER
+    AgentChatMessagesResponse:
+      title: AgentChatMessagesResponse
+      required:
+        - data
+        - error
+        - success
+      type: object
+      properties:
+        data:
+          required:
+            - cursor
+            - activeTurn
+            - lastTurn
+          type: object
+          properties:
+            cursor:
+              type: integer
+              description: 스트림에 붙을 때 「여기까지는 이미 안다」로 쓴다. **activeTurn 이 있으면 그 턴의 시작 경계**이고, 없으면 굳은 마지막 프레임의 번호다 — 도는 턴의 답은 messages 에 아직 없어서 굳은 마지막 번호를 주면 답의 앞부분이 재생에서 사라진다. **null 이 아니다** — 대화가 조용했으면 0 이고, 그것은 「처음부터 다시」가 아니라 「받을 백로그가 없다」는 뜻이다. GET /events?after= 에 그대로 넣는다
+              nullable: false
+              example: 128
+              format: int64
+              minimum: 0
+            lastTurn:
+              required:
+                - retryable
+                - status
+                - turnId
+                - failureCode
+                - pendingApproval
+              type: object
+              properties:
+                retryable:
+                  type: boolean
+                  description: 지금 다시 눌러도 되나. **저장된 값이 아니라 현재 정책에서 파생한다** — 정책이 바뀌면 옛 행의 배너도 같이 바뀐다
+                  nullable: false
+                  example: "true"
+                turnId:
+                  type: string
+                  description: 턴의 13자리 TSID
+                  nullable: false
+                  example: 0K9GVJT2C4Q3B
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  minLength: 13
+                  maxLength: 13
+                failureCode:
+                  type: string
+                  description: FAILED 일 때만 채워진다
+                  nullable: true
+                  example: UPSTREAM_ERROR
+                  enum:
+                    - TURN_TIMEOUT
+                    - UPSTREAM_ERROR
+                    - UPSTREAM_REJECTED
+                    - APPROVAL_EXPIRED
+                    - STREAM_INTERRUPTED
+                    - CAPACITY_EXCEEDED
+                    - INTERNAL_ERROR
+                pendingApproval:
+                  required:
+                    - approvalId
+                    - tool
+                    - summary
+                    - args
+                  type: object
+                  properties:
+                    args:
+                      type: string
+                      description: 도구 인자. **서버가 해석하지 않은 값 그대로**이고 도구마다 모양이 다르다. 인자 없는 도구와 옛 행은 null 이고 그때 카드는 요약만으로 묻는다
+                      nullable: true
+                      example: '{"title":"배포 게이트"}'
+                    summary:
+                      type: string
+                      description: 카드에 띄울 한 줄 요약
+                      nullable: true
+                      example: Linear 이슈를 만듭니다
+                    approvalId:
+                      type: string
+                      description: 승인 요청의 13자리 TSID
+                      nullable: false
+                      example: 0K9GVJT2C4Q7F
+                      pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                      minLength: 13
+                      maxLength: 13
+                    tool:
+                      type: string
+                      description: 승인을 기다리는 도구 이름
+                      nullable: false
+                      example: linear.create_issue
+                  description: "돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다"
+                  nullable: true
+                status:
+                  type: string
+                  description: 턴 상태
+                  nullable: false
+                  example: FAILED
+                  enum:
+                    - IN_PROGRESS
+                    - WAITING_APPROVAL
+                    - COMPLETED
+                    - FAILED
+                    - CANCELLED
+              description: 이 대화의 마지막 턴(확정 여부 무관). 도는 턴이 있으면 activeTurn 과 같은 행을 가리킨다
+              nullable: true
+            activeTurn:
+              required:
+                - retryable
+                - status
+                - turnId
+                - failureCode
+                - pendingApproval
+              type: object
+              properties:
+                retryable:
+                  type: boolean
+                  description: 지금 다시 눌러도 되나. **저장된 값이 아니라 현재 정책에서 파생한다** — 정책이 바뀌면 옛 행의 배너도 같이 바뀐다
+                  nullable: false
+                  example: "true"
+                turnId:
+                  type: string
+                  description: 턴의 13자리 TSID
+                  nullable: false
+                  example: 0K9GVJT2C4Q3B
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  minLength: 13
+                  maxLength: 13
+                failureCode:
+                  type: string
+                  description: FAILED 일 때만 채워진다
+                  nullable: true
+                  example: UPSTREAM_ERROR
+                  enum:
+                    - TURN_TIMEOUT
+                    - UPSTREAM_ERROR
+                    - UPSTREAM_REJECTED
+                    - APPROVAL_EXPIRED
+                    - STREAM_INTERRUPTED
+                    - CAPACITY_EXCEEDED
+                    - INTERNAL_ERROR
+                pendingApproval:
+                  required:
+                    - approvalId
+                    - tool
+                    - summary
+                    - args
+                  type: object
+                  properties:
+                    args:
+                      type: string
+                      description: 도구 인자. **서버가 해석하지 않은 값 그대로**이고 도구마다 모양이 다르다. 인자 없는 도구와 옛 행은 null 이고 그때 카드는 요약만으로 묻는다
+                      nullable: true
+                      example: '{"title":"배포 게이트"}'
+                    summary:
+                      type: string
+                      description: 카드에 띄울 한 줄 요약
+                      nullable: true
+                      example: Linear 이슈를 만듭니다
+                    approvalId:
+                      type: string
+                      description: 승인 요청의 13자리 TSID
+                      nullable: false
+                      example: 0K9GVJT2C4Q7F
+                      pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                      minLength: 13
+                      maxLength: 13
+                    tool:
+                      type: string
+                      description: 승인을 기다리는 도구 이름
+                      nullable: false
+                      example: linear.create_issue
+                  description: "돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다"
+                  nullable: true
+                status:
+                  type: string
+                  description: 턴 상태
+                  nullable: false
+                  example: FAILED
+                  enum:
+                    - IN_PROGRESS
+                    - WAITING_APPROVAL
+                    - COMPLETED
+                    - FAILED
+                    - CANCELLED
+              description: 지금 도는 턴. 없으면 null 이고 그것이 「아무것도 안 돌고 있다」는 뜻이다
+              nullable: true
+            messages:
+              type: array
+              items:
+                required:
+                  - content
+                  - createdAt
+                  - role
+                  - scope
+                  - turnId
+                  - toolEvent
+                type: object
+                properties:
+                  turnId:
+                    type: string
+                    description: 이 행을 만든 턴. **화면이 두 벌을 접는 열쇠다** — 진행 중인 턴의 TOOL·THINKING 행은 히스토리와 스트림 백로그 양쪽에서 오고, 이 값이 없으면 같은 도구 카드가 두 개 그려진다. 턴이 지워진 옛 행은 null 이다
+                    nullable: true
+                    example: 0K9GVJT2C4Q3B
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  createdAt:
+                    type: string
+                    description: 메시지 시각
+                    nullable: false
+                    example: 2026-07-14T01:02:03Z
+                    format: date-time
+                  role:
+                    type: string
+                    description: 메시지 역할. **THINKING 은 모델이 답을 쓰기 전에 흘린 계획 문장**이고 content 만 든다 — scope 는 비고 toolEvent 는 null 이다
+                    nullable: false
+                    example: USER
+                    enum:
+                      - USER
+                      - ASSISTANT
+                      - TOOL
+                      - THINKING
+                  toolEvent:
+                    type: object
+                    properties:
+                      decision:
+                        type: string
+                        description: 승인 확정 기록이면 결정, 실행 결과 기록이면 null
+                        nullable: true
+                        example: APPROVED
+                        enum:
+                          - APPROVED
+                          - REJECTED
+                      url:
+                        type: string
+                        description: 생성된 외부 리소스 링크 (없으면 null)
+                        nullable: true
+                        example: https://linear.app/heymoa/issue/APP-123
+                      tool:
+                        type: string
+                        description: 도구 이름
+                        nullable: false
+                        example: linear.create_issue
+                      status:
+                        type: string
+                        description: 실행 결과 기록이면 상태, 승인 확정 기록이면 null
+                        nullable: true
+                        example: success
+                        enum:
+                          - success
+                          - error
+                    description: role=TOOL일 때만 값이 있는 구조화된 승인/도구 실행 기록 (그 외 null)
+                    nullable: true
+                    required:
+                      - tool
+                      - decision
+                      - status
+                      - url
+                  scope:
+                    type: array
+                    description: USER 행은 그때 **붙인** 것, ASSISTANT 행은 **실제로 본** 것. 없으면 빈 배열
+                    items:
+                      required:
+                        - id
+                        - kind
+                        - unavailable
+                        - title
+                      type: object
+                      properties:
+                        unavailable:
+                          type: boolean
+                          description: 지워졌거나 권한을 잃었다. **둘을 갈라 말하지 않는다** — 갈라 답하면 거기 무언가 있었다는 것이 샌다
+                          nullable: false
+                          example: "false"
+                        kind:
+                          type: string
+                          description: 범위 종류
+                          nullable: false
+                          example: NOTE
+                          enum:
+                            - NOTE
+                            - PROJECT
+                        id:
+                          type: string
+                          description: 대상의 13자리 TSID
+                          nullable: false
+                          example: 0HZX2K7M9Q4AF
+                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                          minLength: 13
+                          maxLength: 13
+                        title:
+                          type: string
+                          description: 대상 제목. **지금 못 보는 것이면 null이다** — `unavailable` 이 참인 항목이 그렇다
+                          nullable: true
+                          example: 주간 배포 회의
+                    nullable: false
+                  content:
+                    type: string
+                    description: 메시지 내용 (TOOL이면 표시용 요약)
+                    nullable: false
+                    example: 질문
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+            - null
+          description: 성공 시 null인 오류 정보
     NoteParticipantListResponse:
       title: NoteParticipantListResponse
       required:
@@ -7361,6 +7450,23 @@ components:
           enum:
             - null
           description: 성공 시 null인 오류 정보
+    CandidateRevisionReference:
+      title: CandidateRevisionReference
+      type: object
+      required:
+        - candidateId
+        - revision
+      additionalProperties: false
+      properties:
+        candidateId:
+          type: string
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          example: 0K9GVJT2C4Q2B
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 9
     AppErrorDetail:
       type: object
       required:

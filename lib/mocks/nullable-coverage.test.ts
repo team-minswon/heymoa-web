@@ -315,6 +315,14 @@ function contractSamples() {
  * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
  */
 const KNOWN_ONE_SIDED = new Set([
+  // **server 가 늘 `null` 을 보낸다.** 계약이 선언만 하고 채우는 경로가 없다
+  // (`변경사항/계약-어긋남.md` 6번 「스키마만 넓다」). 고칠 자리는 server 의
+  // `turnFields()` 헬퍼이고, 그때 이 줄을 지운다.
+  "AgentChatMessagesResponse.data.lastTurn.pendingApproval",
+  // **도는 턴에는 실패 코드가 없다.** `activeTurn` 은 정의상 아직 안 끝났으므로
+  // 이 값은 늘 `null` 이다 — 목이 좁은 게 아니라 뜻이 그렇다. 값이 서는 자리는
+  // `lastTurn.failureCode` 와 `turn_failed` 프레임이고 그쪽은 양쪽 다 관측된다.
+  "AgentChatMessagesResponse.data.activeTurn.failureCode",
   "CurrentUserResponse.data.image",
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
@@ -327,7 +335,15 @@ const KNOWN_ONE_SIDED = new Set([
 ]);
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */
-const KNOWN_UNOBSERVED = new Set<string>([]);
+const KNOWN_UNOBSERVED = new Set<string>([
+  // **server 가 `lastTurn.pendingApproval` 에 늘 `null` 을 보낸다.** 계약이 선언만 하고
+  // 채우는 경로가 없어서, 그 아래 필드는 목이 무엇을 해도 관측될 수 없다.
+  // 목을 억지로 채우면 **실서버가 안 내는 모양을 화면이 믿게 된다** — 그게 이 프로젝트가
+  // 계약 감사에서 찾은 병이다(`변경사항/계약-어긋남.md` 6번, 「스키마만 넓다」).
+  // 고칠 자리는 server 의 `turnFields()` 헬퍼이고, 그때 이 둘을 여기서 지운다.
+  "AgentChatMessagesResponse.data.lastTurn.pendingApproval.args",
+  "AgentChatMessagesResponse.data.lastTurn.pendingApproval.summary",
+]);
 
 describe("nullable 목 표본", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));

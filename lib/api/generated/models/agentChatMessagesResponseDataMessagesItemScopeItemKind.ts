@@ -7,7 +7,7 @@
  */
 
 /**
- * 범위 종류. **SSE 의 `note`·`project` 와 대소문자가 다르다** — 서버가 도메인 enum 을 응답에 그대로 쓰고 Jackson 이 이름을 그대로 낸다. 화면이 경계에서 접는다
+ * 범위 종류
  */
 export type AgentChatMessagesResponseDataMessagesItemScopeItemKind =
   (typeof AgentChatMessagesResponseDataMessagesItemScopeItemKind)[keyof typeof AgentChatMessagesResponseDataMessagesItemScopeItemKind];

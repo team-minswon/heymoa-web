@@ -8,19 +8,19 @@
 import type { AgentChatMessagesResponseDataMessagesItemScopeItemKind } from "./agentChatMessagesResponseDataMessagesItemScopeItemKind";
 
 export type AgentChatMessagesResponseDataMessagesItemScopeItem = {
-  /** 지워졌거나 권한이 없다. **둘을 구분하지 않는다** — 갈라 표시하면 존재가 샌다 */
+  /** 지워졌거나 권한을 잃었다. **둘을 갈라 말하지 않는다** — 갈라 답하면 거기 무언가 있었다는 것이 샌다 */
   unavailable: boolean;
-  /** 범위 종류. **SSE 의 `note`·`project` 와 대소문자가 다르다** — 서버가 도메인 enum 을 응답에 그대로 쓰고 Jackson 이 이름을 그대로 낸다. 화면이 경계에서 접는다 */
+  /** 범위 종류 */
   kind: AgentChatMessagesResponseDataMessagesItemScopeItemKind;
   /**
-   * 회의록 또는 프로젝트 TSID
+   * 대상의 13자리 TSID
    * @minLength 13
    * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   id: string;
   /**
-   * 제목. unavailable이면 null이다 — 지워진 것의 제목을 응답에 싣지 않는다
+   * 대상 제목. **지금 못 보는 것이면 null이다** — `unavailable` 이 참인 항목이 그렇다
    * @nullable
    */
   title: string | null;

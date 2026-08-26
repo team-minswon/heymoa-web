@@ -6,20 +6,18 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { AgentChatMessagesResponseDataLastTurnFailureCode } from "./agentChatMessagesResponseDataLastTurnFailureCode";
+import type { AgentChatMessagesResponseDataLastTurnPendingApproval } from "./agentChatMessagesResponseDataLastTurnPendingApproval";
 import type { AgentChatMessagesResponseDataLastTurnStatus } from "./agentChatMessagesResponseDataLastTurnStatus";
 
 /**
- * 이 대화의 마지막 턴. 도는 턴이 있으면 activeTurn 과 같은 행이다
+ * 이 대화의 마지막 턴(확정 여부 무관). 도는 턴이 있으면 activeTurn 과 같은 행을 가리킨다
  * @nullable
  */
 export type AgentChatMessagesResponseDataLastTurn = {
+  /** 지금 다시 눌러도 되나. **저장된 값이 아니라 현재 정책에서 파생한다** — 정책이 바뀌면 옛 행의 배너도 같이 바뀐다 */
+  retryable: boolean;
   /**
-   * 다시 눌러도 되나. **컬럼이 아니라 failureCode 에서 파생한다**
-   * @nullable
-   */
-  retryable: boolean | null;
-  /**
-   * 마지막 턴의 13자리 TSID
+   * 턴의 13자리 TSID
    * @minLength 13
    * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -30,6 +28,11 @@ export type AgentChatMessagesResponseDataLastTurn = {
    * @nullable
    */
   failureCode: AgentChatMessagesResponseDataLastTurnFailureCode;
+  /**
+   * 돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다
+   * @nullable
+   */
+  pendingApproval: AgentChatMessagesResponseDataLastTurnPendingApproval;
   /** 턴 상태 */
   status: AgentChatMessagesResponseDataLastTurnStatus;
 } | null;

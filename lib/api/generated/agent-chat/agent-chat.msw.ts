@@ -9,13 +9,13 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
-  AgentChatListResponse,
   AgentChatMessagesResponse,
   AgentChatResponse,
+  AgentChatsResponse,
 } from "../models";
 
-export const getGetAgentChatEventsResponseMock = (): string =>
-  'event:message_snapshot\ndata:{"turnId":"0K9GVJT2C4Q3B","text":"안녕하"}\n\nid:132\nevent:token\ndata:{"delta":"세요"}\n\nid:133\nevent:message_end\ndata:{"content":"안녕하세요"}\n\n';
+export const getSubscribeAgentChatEventsResponseMock = (): string =>
+  'id:129\nevent:token\ndata:{"delta":"지난 "}\n\n';
 
 export const getGetAgentChatMessagesResponseMock =
   (): AgentChatMessagesResponse => ({
@@ -51,10 +51,10 @@ export const getGetAgentChatMessagesResponseMock =
           content: "답변",
           scope: [
             {
-              kind: "NOTE",
-              id: "0HZX2K7M9Q4AF",
-              title: "주간 배포 회의",
-              unavailable: false,
+              kind: "PROJECT",
+              id: "0HZX2K7M9Q4AG",
+              title: null,
+              unavailable: true,
             },
           ],
           toolEvent: null,
@@ -74,44 +74,36 @@ export const getGetAgentChatMessagesResponseMock =
           createdAt: "2026-07-22T00:00:02Z",
         },
       ],
-      cursor: 131,
-      activeTurn: {
-        turnId: "0K9GVJT2C4Q3B",
-        status: "IN_PROGRESS",
-        pendingApproval: {
-          approvalId: "0K9GVJT2C4Q7F",
-          tool: "linear.create_issue",
-          summary: "이슈를 만들까요?",
-          args: '{"projectId":"0HZX2K7M9Q4AE","title":"APP 버그 수정"}',
-        },
-      },
+      activeTurn: null,
       lastTurn: {
         turnId: "0K9GVJT2C4Q3B",
-        status: "IN_PROGRESS",
-        failureCode: null,
-        retryable: null,
+        status: "FAILED",
+        failureCode: "UPSTREAM_ERROR",
+        retryable: true,
+        pendingApproval: null,
       },
+      cursor: 128,
     },
     error: null,
   });
 
 export const getSendAgentChatMessageResponseMock = (): string =>
-  'id:129\nevent:turn_started\ndata:{"turnId":"0K9GVJT2C4Q3B","startSeq":128}\n\nid:130\nevent:token\ndata:{"delta":"안"}\n\nid:131\nevent:message_end\ndata:{"messageId":"m1","content":"안녕하세요","refs":[{"kind":"note","id":"0HZX2K7M9Q4AF","title":"주간 배포 회의"}]}\n\n';
+  'id:1\nevent:turn_started\ndata:{"turnId":"0K9GVJT2C4Q3B","startSeq":0}\n\nid:2\nevent:token\ndata:{"delta":"안"}\n\nid:3\nevent:message_end\ndata:{"messageId":"m1","content":"안녕하세요"}\n\n';
 
-export const getGetAgentChatsResponseMock = (): AgentChatListResponse => ({
+export const getGetAgentChatsResponseMock = (): AgentChatsResponse => ({
   success: true,
   data: {
     chats: [
       {
         chatId: "0K9GVJT2C4Q2A",
-        title: "회의 후속 정리",
-        updatedAt: "2026-07-14T01:02:03Z",
+        title: "배포 게이트를 만들어줘",
+        updatedAt: "2026-07-22T00:00:02Z",
         runningTurn: { turnId: "0K9GVJT2C4Q3B", status: "WAITING_APPROVAL" },
       },
       {
-        chatId: "0K9GVJT2C4Q2B",
+        chatId: "0K9GVJT2C4Q9Z",
         title: "새 대화",
-        updatedAt: "2026-07-14T01:02:03Z",
+        updatedAt: "2026-07-21T00:00:00Z",
         runningTurn: null,
       },
     ],
@@ -124,16 +116,16 @@ export const getCreateAgentChatResponseMock = (): AgentChatResponse => ({
   data: {
     chatId: "0K9GVJT2C4Q2A",
     workspaceId: "0HZX2K7M9Q4AD",
-    title: "회의 후속",
+    title: "질문",
     createdAt: "2026-07-22T00:00:00Z",
   },
   error: null,
 });
 
 export const getResolveToolApprovalResponseMock = (): string =>
-  'id:201\nevent:tool_approval_resolved\ndata:{"approvalId":"0K9GVJT2C4Q7F","decision":"APPROVED"}\n\nid:202\nevent:tool_call_result\ndata:{"toolCallId":"tc-1","status":"success","summary":"APP-12 생성됨"}\n\nid:203\nevent:message_end\ndata:{"messageId":"m1","content":"만들었습니다"}\n\n';
+  'id:129\nevent:token\ndata:{"delta":"만"}\n\n';
 
-export const getGetAgentChatEventsMockHandler = (
+export const getSubscribeAgentChatEventsMockHandler = (
   overrideResponse?:
     | string
     | ((
@@ -149,7 +141,7 @@ export const getGetAgentChatEventsMockHandler = (
           ? typeof overrideResponse === "function"
             ? await overrideResponse(info)
             : overrideResponse
-          : getGetAgentChatEventsResponseMock();
+          : getSubscribeAgentChatEventsResponseMock();
       const textBody =
         typeof resolvedBody === "string"
           ? resolvedBody
@@ -213,10 +205,10 @@ export const getSendAgentChatMessageMockHandler = (
 
 export const getGetAgentChatsMockHandler = (
   overrideResponse?:
-    | AgentChatListResponse
+    | AgentChatsResponse
     | ((
         info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) => Promise<AgentChatListResponse> | AgentChatListResponse),
+      ) => Promise<AgentChatsResponse> | AgentChatsResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.get(
@@ -307,7 +299,7 @@ export const getCancelAgentChatTurnMockHandler = (
   );
 };
 export const getAgentChatMock = () => [
-  getGetAgentChatEventsMockHandler(),
+  getSubscribeAgentChatEventsMockHandler(),
   getGetAgentChatMessagesMockHandler(),
   getSendAgentChatMessageMockHandler(),
   getGetAgentChatsMockHandler(),

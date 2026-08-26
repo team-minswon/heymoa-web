@@ -260,7 +260,7 @@ describe("contract sync 2026-07-29", () => {
     ).toBe("sendAgentChatMessage");
     expect(
       api().paths["/v1/agent-chats/{chatId}/events"]?.get?.operationId
-    ).toBe("getAgentChatEvents");
+    ).toBe("subscribeAgentChatEvents");
     expect(
       api().paths["/v1/agent-chats/{chatId}/turns/{turnId}/cancel"]?.post
         ?.operationId

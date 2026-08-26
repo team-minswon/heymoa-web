@@ -5,23 +5,31 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AgentChatMessagesResponseDataActiveTurnFailureCode } from "./agentChatMessagesResponseDataActiveTurnFailureCode";
 import type { AgentChatMessagesResponseDataActiveTurnPendingApproval } from "./agentChatMessagesResponseDataActiveTurnPendingApproval";
 import type { AgentChatMessagesResponseDataActiveTurnStatus } from "./agentChatMessagesResponseDataActiveTurnStatus";
 
 /**
- * 지금 도는 턴. null 이면 이어받을 것이 없다
+ * 지금 도는 턴. 없으면 null 이고 그것이 「아무것도 안 돌고 있다」는 뜻이다
  * @nullable
  */
 export type AgentChatMessagesResponseDataActiveTurn = {
+  /** 지금 다시 눌러도 되나. **저장된 값이 아니라 현재 정책에서 파생한다** — 정책이 바뀌면 옛 행의 배너도 같이 바뀐다 */
+  retryable: boolean;
   /**
-   * 도는 턴의 13자리 TSID
+   * 턴의 13자리 TSID
    * @minLength 13
    * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   turnId: string;
   /**
-   * 아직 안 누른 승인. **status 가 WAITING_APPROVAL 일 때만 실린다**
+   * FAILED 일 때만 채워진다
+   * @nullable
+   */
+  failureCode: AgentChatMessagesResponseDataActiveTurnFailureCode;
+  /**
+   * 돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다
    * @nullable
    */
   pendingApproval: AgentChatMessagesResponseDataActiveTurnPendingApproval;

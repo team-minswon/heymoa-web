@@ -10,7 +10,7 @@
  * 돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다
  * @nullable
  */
-export type AgentChatMessagesResponseDataActiveTurnPendingApproval = {
+export type AgentChatMessagesResponseDataLastTurnPendingApproval = {
   /**
    * 도구 인자. **서버가 해석하지 않은 값 그대로**이고 도구마다 모양이 다르다. 인자 없는 도구와 옛 행은 null 이고 그때 카드는 요약만으로 묻는다
    * @nullable

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
-import { getGetAgentChatEventsUrl } from "@/lib/api/generated/agent-chat/agent-chat";
+import { getSubscribeAgentChatEventsUrl } from "@/lib/api/generated/agent-chat/agent-chat";
 import { getEventStream, postEventStream } from "@/lib/api/sse";
 import { isSessionExpired } from "@/lib/auth/session-gate";
 import {
@@ -192,9 +192,9 @@ export function useChatStream() {
                 : getEventStream(
                     // `after`가 null이면 아직 번호 붙은 프레임을 하나도 못 본 것이라
                     // 처음부터 받는다. **`0`은 null과 다르다** — 「버퍼가 비었다」다.
-                    getGetAgentChatEventsUrl(
+                    getSubscribeAgentChatEventsUrl(
                       chatId,
-                      after === null ? undefined : { after: String(after) }
+                      after === null ? undefined : { after }
                     ),
                     { signal: controller.signal }
                   );

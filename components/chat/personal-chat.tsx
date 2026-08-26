@@ -33,6 +33,7 @@ import {
   useGetAgentChatMessages,
   useGetAgentChats,
 } from "@/lib/api/generated/agent-chat/agent-chat";
+import type { AgentChatMessagesResponseData } from "@/lib/api/generated/models";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { answerText, type ApprovalDecision } from "@/lib/chat/blocks";
 import { runningLabel } from "@/lib/chat/chat-list";
@@ -322,11 +323,14 @@ const EXAMPLE_QUESTIONS = [
  * 다시 하는 것은 흔하다. `frozenMessages` 가 구분선을 얼릴 때 쓰는 것과 같은 자리다.
  */
 function echoesSent(
-  history: { messages: { role: string; content: string }[] } | null,
+  // **구조 타입을 손으로 짓지 않는다.** 예전에는 `{ messages: {...}[] }` 로 적어 뒀는데,
+  // 계약에서 `messages` 가 optional 로 바뀌자 여기만 조용히 갈렸다. 생성 타입을 그대로
+  // 받으면 다음에 또 갈릴 때 컴파일러가 여기서 잡는다.
+  history: AgentChatMessagesResponseData | null,
   baseline: number,
   message: string
 ) {
-  const asked = history?.messages[baseline];
+  const asked = history?.messages?.[baseline];
   return asked?.role === "USER" && asked.content === message;
 }
 
@@ -858,7 +862,7 @@ function PersonalChatPanel({
           getResolveToolApprovalUrl(
             sessionId,
             approvalId,
-            after === null ? undefined : { after: String(after) }
+            after === null ? undefined : { after }
           ),
           { decision }
         );

@@ -9,8 +9,8 @@
 /**
  * 성공 시 null인 오류 정보
  */
-export type AgentChatListResponseError =
-  | (typeof AgentChatListResponseError)[keyof typeof AgentChatListResponseError]
+export type AgentChatsResponseError =
+  | (typeof AgentChatsResponseError)[keyof typeof AgentChatsResponseError]
   | null;
 
-export const AgentChatListResponseError = {} as const;
+export const AgentChatsResponseError = {} as const;

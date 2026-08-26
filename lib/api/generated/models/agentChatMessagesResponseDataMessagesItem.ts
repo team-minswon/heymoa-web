@@ -11,21 +11,23 @@ import type { AgentChatMessagesResponseDataMessagesItemToolEvent } from "./agent
 
 export type AgentChatMessagesResponseDataMessagesItem = {
   /**
-   * 이 행을 만든 턴. 진행 중 턴의 행은 스트림 백로그로도 오므로 화면이 이 값으로 두 벌을 하나로 접는다
+   * 이 행을 만든 턴. **화면이 두 벌을 접는 열쇠다** — 진행 중인 턴의 TOOL·THINKING 행은 히스토리와 스트림 백로그 양쪽에서 오고, 이 값이 없으면 같은 도구 카드가 두 개 그려진다. 턴이 지워진 옛 행은 null 이다
+   * @minLength 13
+   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   turnId: string | null;
   /** 메시지 시각 */
   createdAt: string;
-  /** 메시지 역할 */
+  /** 메시지 역할. **THINKING 은 모델이 답을 쓰기 전에 흘린 계획 문장**이고 content 만 든다 — scope 는 비고 toolEvent 는 null 이다 */
   role: AgentChatMessagesResponseDataMessagesItemRole;
   /**
    * role=TOOL일 때만 값이 있는 구조화된 승인/도구 실행 기록 (그 외 null)
    * @nullable
    */
   toolEvent: AgentChatMessagesResponseDataMessagesItemToolEvent;
-  /** 이 턴의 범위(USER) 또는 실제로 쓴 근거(ASSISTANT). TOOL이면 빈 배열 */
+  /** USER 행은 그때 **붙인** 것, ASSISTANT 행은 **실제로 본** 것. 없으면 빈 배열 */
   scope: AgentChatMessagesResponseDataMessagesItemScopeItem[];
   /** 메시지 내용 (TOOL이면 표시용 요약) */
   content: string;

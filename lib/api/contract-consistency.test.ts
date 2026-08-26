@@ -111,9 +111,19 @@ describe("chat SSE contract", () => {
         .content["text/event-stream"].examples.sendAgentChatMessage_Success
         .value;
 
-    expect(frame).toContain("id:129");
-    expect(frame).toContain('data:{"turnId":"0K9GVJT2C4Q3B","startSeq":128}');
-    expect(frame).not.toContain('"payload"');
+    // **값이 아니라 모양을 본다.** 예전에는 `id:129` 를 그대로 못박았는데, 그 숫자는
+    // 손으로 쓴 미러의 것이었다. 미러를 server 생성물로 갈자 예시 값이 바뀌면서 이 검사가
+    // 빨개졌다 — **계약이 틀린 게 아니라 검사가 픽스처에 묶여 있었다.**
+    const lines = frame.split("\n");
+    // 좌표는 `id:` 줄에 있다. 하나라도 있어야 이어받기가 성립한다.
+    expect(lines.filter((line: string) => /^id:\d+$/.test(line)).length).toBeGreaterThan(0);
+    // 그리고 `data:` 안에는 없다 — 봉투로 감싸면 프레임이 두 겹이 된다.
+    for (const line of lines.filter((line: string) => line.startsWith("data:"))) {
+      expect(line).not.toContain('"seq"');
+      expect(line).not.toContain('"payload"');
+    }
+    // 첫 프레임이 턴을 연다. `startSeq` 가 그 턴의 시작 경계다.
+    expect(frame).toMatch(/event:turn_started\ndata:\{"turnId":"[0-9A-HJKMNP-TV-Z]{13}","startSeq":\d+\}/);
   });
 
   /**

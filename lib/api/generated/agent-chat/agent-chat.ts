@@ -24,15 +24,15 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
-  AgentChatListResponse,
   AgentChatMessagesResponse,
   AgentChatResponse,
+  AgentChatsResponse,
   AppErrorResponse,
   CreateAgentChatRequest,
-  GetAgentChatEventsParams,
   ResolveToolApprovalParams,
   ResolveToolApprovalRequest,
   SendAgentChatMessageRequest,
+  SubscribeAgentChatEventsParams,
   UnauthorizedResponse,
 } from "../models";
 
@@ -40,39 +40,51 @@ import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-export type getAgentChatEventsResponse200 = {
+export type subscribeAgentChatEventsResponse200 = {
   data: string;
   status: 200;
 };
 
-export type getAgentChatEventsResponse400 = {
+export type subscribeAgentChatEventsResponse400 = {
   data: AppErrorResponse;
   status: 400;
 };
 
-export type getAgentChatEventsResponse401 = {
+export type subscribeAgentChatEventsResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
 };
 
-export type getAgentChatEventsResponseSuccess =
-  getAgentChatEventsResponse200 & {
+export type subscribeAgentChatEventsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type subscribeAgentChatEventsResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
+export type subscribeAgentChatEventsResponseSuccess =
+  subscribeAgentChatEventsResponse200 & {
     headers: Headers;
   };
-export type getAgentChatEventsResponseError = (
-  | getAgentChatEventsResponse400
-  | getAgentChatEventsResponse401
+export type subscribeAgentChatEventsResponseError = (
+  | subscribeAgentChatEventsResponse400
+  | subscribeAgentChatEventsResponse401
+  | subscribeAgentChatEventsResponse404
+  | subscribeAgentChatEventsResponse503
 ) & {
   headers: Headers;
 };
 
-export type getAgentChatEventsResponse =
-  | getAgentChatEventsResponseSuccess
-  | getAgentChatEventsResponseError;
+export type subscribeAgentChatEventsResponse =
+  | subscribeAgentChatEventsResponseSuccess
+  | subscribeAgentChatEventsResponseError;
 
-export const getGetAgentChatEventsUrl = (
+export const getSubscribeAgentChatEventsUrl = (
   chatId: string,
-  params?: GetAgentChatEventsParams
+  params?: SubscribeAgentChatEventsParams
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -90,16 +102,16 @@ export const getGetAgentChatEventsUrl = (
 };
 
 /**
- * 끊긴 스트림을 이어받는다. **?after= 가 1급이다** — GET /messages 의 cursor 를 그대로 넣는다. 이어받을 자리는 이것 하나다. 도는 턴이 없으면 밀린 것만 주고 닫는다 — 열어 두면 유휴 대화에서 재연결이 주기마다 빈 스트림을 다시 연다. **모든 프레임이 id: 줄을 갖는다** — 커서를 안 미는 프레임은 이제 없다. 재생 가능한 자리보다 앞에서 붙으면 첫 프레임이 stream_resync 다: 그 id: 가 「여기까지는 못 준다」이고, 화면은 본문을 히스토리로 다시 세운 뒤 이어지는 프레임을 그대로 붙이면 된다.
- * @summary 스트림 이어받기 (SSE)
+ * 끊긴 스트림을 커서로 이어받는다. after 보다 큰 프레임을 재생한 뒤 도는 턴이 있으면 실시간으로 잇고, 없으면 밀린 것만 주고 닫는다. 로그가 못 덮는 구간이면 stream_resync 가 먼저 나가고 그 프레임의 id 가 바닥이다. Last-Event-ID 헤더는 읽지 않는다.
+ * @summary 이어받기 스트림 (SSE)
  */
-export const getAgentChatEvents = async (
+export const subscribeAgentChatEvents = async (
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: RequestInit
-): Promise<getAgentChatEventsResponse> => {
-  return apiFetch<getAgentChatEventsResponse>(
-    getGetAgentChatEventsUrl(chatId, params),
+): Promise<subscribeAgentChatEventsResponse> => {
+  return apiFetch<subscribeAgentChatEventsResponse>(
+    getSubscribeAgentChatEventsUrl(chatId, params),
     {
       ...options,
       method: "GET",
@@ -107,9 +119,9 @@ export const getAgentChatEvents = async (
   );
 };
 
-export const getGetAgentChatEventsQueryKey = (
+export const getSubscribeAgentChatEventsQueryKey = (
   chatId: string,
-  params?: GetAgentChatEventsParams
+  params?: SubscribeAgentChatEventsParams
 ) => {
   return [
     `/v1/agent-chats/${chatId}/events`,
@@ -117,16 +129,16 @@ export const getGetAgentChatEventsQueryKey = (
   ] as const;
 };
 
-export const getGetAgentChatEventsQueryOptions = <
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export const getSubscribeAgentChatEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -137,12 +149,13 @@ export const getGetAgentChatEventsQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetAgentChatEventsQueryKey(chatId, params);
+    queryOptions?.queryKey ??
+    getSubscribeAgentChatEventsQueryKey(chatId, params);
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getAgentChatEvents>>
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>
   > = ({ signal }) =>
-    getAgentChatEvents(chatId, params, { signal, ...requestOptions });
+    subscribeAgentChatEvents(chatId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -150,38 +163,38 @@ export const getGetAgentChatEventsQueryOptions = <
     enabled: chatId !== null && chatId !== undefined,
     ...queryOptions,
   } as UseQueryOptions<
-    Awaited<ReturnType<typeof getAgentChatEvents>>,
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetAgentChatEventsQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getAgentChatEvents>>
+export type SubscribeAgentChatEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof subscribeAgentChatEvents>>
 >;
-export type GetAgentChatEventsQueryError =
+export type SubscribeAgentChatEventsQueryError =
   | AppErrorResponse
   | UnauthorizedResponse;
 
-export function useGetAgentChatEvents<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params: undefined | GetAgentChatEventsParams,
+  params: undefined | SubscribeAgentChatEventsParams,
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAgentChatEvents>>,
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
           TError,
-          Awaited<ReturnType<typeof getAgentChatEvents>>
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>
         >,
         "initialData"
       >;
@@ -191,25 +204,25 @@ export function useGetAgentChatEvents<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetAgentChatEvents<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAgentChatEvents>>,
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
           TError,
-          Awaited<ReturnType<typeof getAgentChatEvents>>
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>
         >,
         "initialData"
       >;
@@ -219,16 +232,16 @@ export function useGetAgentChatEvents<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetAgentChatEvents<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -240,19 +253,19 @@ export function useGetAgentChatEvents<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
- * @summary 스트림 이어받기 (SSE)
+ * @summary 이어받기 스트림 (SSE)
  */
 
-export function useGetAgentChatEvents<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -263,7 +276,7 @@ export function useGetAgentChatEvents<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetAgentChatEventsQueryOptions(
+  const queryOptions = getSubscribeAgentChatEventsQueryOptions(
     chatId,
     params,
     options
@@ -278,19 +291,19 @@ export function useGetAgentChatEvents<
 }
 
 /**
- * @summary 스트림 이어받기 (SSE)
+ * @summary 이어받기 스트림 (SSE)
  */
-export const prefetchGetAgentChatEventsQuery = async <
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export const prefetchSubscribeAgentChatEventsQuery = async <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   queryClient: QueryClient,
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -298,7 +311,7 @@ export const prefetchGetAgentChatEventsQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetAgentChatEventsQueryOptions(
+  const queryOptions = getSubscribeAgentChatEventsQueryOptions(
     chatId,
     params,
     options
@@ -309,16 +322,16 @@ export const prefetchGetAgentChatEventsQuery = async <
   return queryClient;
 };
 
-export const getGetAgentChatEventsSuspenseQueryOptions = <
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export const getSubscribeAgentChatEventsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -329,37 +342,38 @@ export const getGetAgentChatEventsSuspenseQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetAgentChatEventsQueryKey(chatId, params);
+    queryOptions?.queryKey ??
+    getSubscribeAgentChatEventsQueryKey(chatId, params);
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getAgentChatEvents>>
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>
   > = ({ signal }) =>
-    getAgentChatEvents(chatId, params, { signal, ...requestOptions });
+    subscribeAgentChatEvents(chatId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
-    Awaited<ReturnType<typeof getAgentChatEvents>>,
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetAgentChatEventsSuspenseQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getAgentChatEvents>>
+export type SubscribeAgentChatEventsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof subscribeAgentChatEvents>>
 >;
-export type GetAgentChatEventsSuspenseQueryError =
+export type SubscribeAgentChatEventsSuspenseQueryError =
   | AppErrorResponse
   | UnauthorizedResponse;
 
-export function useGetAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params: undefined | GetAgentChatEventsParams,
+  params: undefined | SubscribeAgentChatEventsParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -370,16 +384,16 @@ export function useGetAgentChatEventsSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -390,16 +404,16 @@ export function useGetAgentChatEventsSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -411,19 +425,19 @@ export function useGetAgentChatEventsSuspense<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
- * @summary 스트림 이어받기 (SSE)
+ * @summary 이어받기 스트림 (SSE)
  */
 
-export function useGetAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof getAgentChatEvents>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   chatId: string,
-  params?: GetAgentChatEventsParams,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getAgentChatEvents>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -434,7 +448,7 @@ export function useGetAgentChatEventsSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetAgentChatEventsSuspenseQueryOptions(
+  const queryOptions = getSubscribeAgentChatEventsSuspenseQueryOptions(
     chatId,
     params,
     options
@@ -485,7 +499,7 @@ export const getGetAgentChatMessagesUrl = (chatId: string) => {
 };
 
 /**
- * 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함하고, THINKING 메시지는 모델이 답을 쓰기 전에 흘린 계획 문장이다 — 답변 본문이 아니라 과정이다. scope는 USER 행이면 그 턴에 붙인 범위, ASSISTANT 행이면 실제로 쓴 근거다 — **조회 시 존재·권한을 다시 확인하며**, 지워졌거나 권한이 없으면 unavailable=true이고 제목이 없다.
+ * 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다.
  * @summary 채팅 히스토리 조회
  */
 export const getAgentChatMessages = async (
@@ -843,6 +857,11 @@ export type sendAgentChatMessageResponse409 = {
   status: 409;
 };
 
+export type sendAgentChatMessageResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
 export type sendAgentChatMessageResponseSuccess =
   sendAgentChatMessageResponse200 & {
     headers: Headers;
@@ -852,6 +871,7 @@ export type sendAgentChatMessageResponseError = (
   | sendAgentChatMessageResponse401
   | sendAgentChatMessageResponse404
   | sendAgentChatMessageResponse409
+  | sendAgentChatMessageResponse503
 ) & {
   headers: Headers;
 };
@@ -865,7 +885,7 @@ export const getSendAgentChatMessageUrl = (chatId: string) => {
 };
 
 /**
- * 메시지를 heymoa-ai로 중계하고 SSE(text/event-stream)로 passthrough한다. **응답 스트림이 끊겨도 턴은 계속 돈다** — 다시 붙는 것은 GET /events?after= 다. 한 대화에 도는 턴은 하나라, 아직 도는 턴이 있으면 409에 그 턴의 id를 실어 거절한다. noteIds·projectIds가 이 턴의 범위다 — 에이전트는 그 안에서만 찾고, 없으면 message_end.scopeMiss로 확장을 제안한다. 이벤트 페이로드 계약은 AsyncAPI(asyncapi-web-server.yml) 참고.
+ * 동시 구독 상한을 넘겼다. **턴은 계속 돈다** — 거부된 것은 이 연결뿐이고, 잠시 뒤 다시 붙으면 버퍼에 쌓인 것부터 이어받는다. 턴을 실패로 그리면 안 된다.
  * @summary 메시지 전송 (SSE 중계)
  */
 export const sendAgentChatMessage = async (
@@ -961,7 +981,7 @@ export const useSendAgentChatMessage = <
   );
 };
 export type getAgentChatsResponse200 = {
-  data: AgentChatListResponse;
+  data: AgentChatsResponse;
   status: 200;
 };
 
@@ -994,7 +1014,7 @@ export const getGetAgentChatsUrl = (workspaceId: string) => {
 };
 
 /**
- * 이 워크스페이스에서 호출자가 쓰던 대화를 updatedAt 내림차순 최대 50개 준다. **첫 번째가 마지막으로 쓴 대화이고**, 새로고침한 화면은 여기로 돌아온다 — 지금 보고 있는 대화를 서버가 기억하지 않는다. 각 줄의 runningTurn 은 진행 배지용이라 본문(partialText)과 승인 카드를 안 싣는다.
+ * 그 워크스페이스의 **내** 대화 목록. updatedAt 내림차순 최근 50개이고, 첫 번째가 마지막으로 쓴 대화다. **대화는 개인 것이라** 같은 워크스페이스의 남의 대화는 안 나온다. runningTurn 은 살아 있는 턴이고 없으면 null 이다 — **본문도 대기 중인 승인도 안 나른다.**
  * @summary 대화 목록 조회
  */
 export const getAgentChats = async (
@@ -1330,7 +1350,7 @@ export const getCreateAgentChatUrl = (workspaceId: string) => {
 };
 
 /**
- * 대화를 하나 더한다. **앞 대화를 안 죽인다** — 목록에 한 줄이 늘 뿐이고 옛 대화에도 계속 이어 쓸 수 있다. 제목을 생략하면 기본값으로 만들고 첫 질문이 저장될 때 그 질문으로 채운다. 스코프(어느 회의록·프로젝트를 볼지)는 대화가 아니라 메시지마다 붙는다. 호출자가 워크스페이스 멤버가 아니면 존재를 은닉하기 위해 404다.
+ * 호출자가 연결할 워크스페이스의 멤버가 아니면 워크스페이스 존재 여부를 은닉하기 위해 404로 응답한다.
  * @summary 채팅 세션 생성
  */
 export const createAgentChat = async (
@@ -1442,6 +1462,11 @@ export type resolveToolApprovalResponse404 = {
   status: 404;
 };
 
+export type resolveToolApprovalResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
 export type resolveToolApprovalResponseSuccess =
   resolveToolApprovalResponse200 & {
     headers: Headers;
@@ -1451,6 +1476,7 @@ export type resolveToolApprovalResponseError = (
   | resolveToolApprovalResponse401
   | resolveToolApprovalResponse403
   | resolveToolApprovalResponse404
+  | resolveToolApprovalResponse503
 ) & {
   headers: Headers;
 };
@@ -1480,8 +1506,8 @@ export const getResolveToolApprovalUrl = (
 };
 
 /**
- * tool_approval_request 로 끝난 1차 스트림을 이어 간다. **응답이 2차 SSE 스트림이다** — 도구 결과도 답변 본문도 이 응답으로 온다. 첫 프레임은 tool_approval_resolved 이고 message_end 로 끝난다. 해당 메시지의 입력자 본인만 호출할 수 있다 — 그 외에는 403. 승인 요청이 없거나 이미 처리됐거나 그 턴이 승인 대기가 아니면 404다(중지된 턴의 카드가 여기서 걸린다). 실행 자리가 없으면 승인을 되돌리고 503이다 — 잠시 뒤 다시 누르면 된다. **만료가 없다**: 승인은 사람이 답할 때까지 살고, 답 없는 대기는 「중지」가 푼다. ?after= 는 GET /events?after= 와 같은 뜻이다 — 생략하면 그 턴의 1차 절반까지 다시 온다.
- * @summary 도구 승인/거절 (SSE 재개 스트림)
+ * 승인 카드에 대한 응답. **새 SSE 를 돌려준다** — 답의 나머지 절반이 이 스트림으로 온다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. after 는 이어받기와 같은 뜻이고, 생략하면 이 재개가 뗀 블록의 시작으로 떨어진다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403.
+ * @summary 도구 승인/거절
  */
 export const resolveToolApproval = async (
   chatId: string,
@@ -1571,7 +1597,7 @@ export type ResolveToolApprovalMutationError =
   | UnauthorizedResponse;
 
 /**
- * @summary 도구 승인/거절 (SSE 재개 스트림)
+ * @summary 도구 승인/거절
  */
 export const useResolveToolApproval = <
   TError = AppErrorResponse | UnauthorizedResponse,
@@ -1643,8 +1669,8 @@ export const getCancelAgentChatTurnUrl = (chatId: string, turnId: string) => {
 };
 
 /**
- * 도는 턴을 멈춘다. **멱등이다** — 이미 끝난 턴에 눌러도 204다(답이 막 끝나는 순간의 중지는 경합이지 오류가 아니다). 붙어 있는 스트림은 turn_cancelled 를 받고 곧바로 닫히며, 중계는 다음 입력 행에서 스스로 나간다 — 그 둘이 다른 시각인 것이 정상이다.
- * @summary 턴 취소
+ * 도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 답이 막 끝난 순간에 누른 것은 경합이지 오류가 아니다. DELETE 로 쓰지 않는 이유: 턴 행은 CANCELLED 로 남고 lastTurn 이 그것을 읽는다.
+ * @summary 턴 중지
  */
 export const cancelAgentChatTurn = async (
   chatId: string,
@@ -1707,7 +1733,7 @@ export type CancelAgentChatTurnMutationError =
   | AppErrorResponse;
 
 /**
- * @summary 턴 취소
+ * @summary 턴 중지
  */
 export const useCancelAgentChatTurn = <
   TError = UnauthorizedResponse | AppErrorResponse,

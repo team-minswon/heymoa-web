@@ -8,9 +8,8 @@
 
 export interface CreateAgentChatRequest {
   /**
-   * 대화 제목. 생략하면 기본값으로 만들고 첫 질문이 저장될 때 그 질문의 앞 200자로 채운다
+   * 대화 제목 (생략하면 "새 대화")
    * @maxLength 200
-   * @nullable
    */
-  title?: string | null;
+  title?: string;
 }

@@ -19,10 +19,10 @@ export type AgentChatResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   chatId: string;
-  /** 대화 제목 (요청에서 생략하면 기본값) */
+  /** 대화 제목 */
   title: string;
   /**
-   * 대화가 매인 워크스페이스
+   * 워크스페이스의 13자리 TSID
    * @minLength 13
    * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$

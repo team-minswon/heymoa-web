@@ -1,5 +1,5 @@
 import { viewerDateKey } from "@/lib/format/date";
-import type { AgentChatListResponseDataChatsItem } from "@/lib/api/generated/models";
+import type { AgentChatsResponseDataChatsItem } from "@/lib/api/generated/models";
 import type { ChatStreamPhase } from "@/lib/chat/stream-protocol";
 
 /** 목록 한 줄에 서는 배지. 없으면 그 대화는 지금 아무것도 안 한다. */
@@ -19,7 +19,7 @@ function labelOfPhase(phase: ChatStreamPhase): RunningLabel | null {
 }
 
 function labelOfList(
-  runningTurn: AgentChatListResponseDataChatsItem["runningTurn"]
+  runningTurn: AgentChatsResponseDataChatsItem["runningTurn"]
 ): RunningLabel | null {
   if (!runningTurn) return null;
   return runningTurn.status === "WAITING_APPROVAL" ? "승인 대기" : "진행 중";
@@ -41,7 +41,7 @@ function labelOfList(
  * | 다른 `turnId`              | 목록. 이 탭이 모르는 턴이라 목록이 유일한 소식이다 |
  */
 export function runningLabel(
-  chat: Pick<AgentChatListResponseDataChatsItem, "chatId" | "runningTurn">,
+  chat: Pick<AgentChatsResponseDataChatsItem, "chatId" | "runningTurn">,
   open: OpenChatStatus
 ): RunningLabel | null {
   if (chat.chatId !== open.chatId) return labelOfList(chat.runningTurn);
