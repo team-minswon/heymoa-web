@@ -8,9 +8,21 @@
 
 export interface SendAgentChatMessageRequest {
   /**
-   * 유저 메시지 (공백만으로 구성 불가)
+   * 이 턴에 볼 프로젝트. 기본은 빈 배열
+   * @maxItems 20
+   * @items.pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  projectIds?: string[];
+  /**
+   * 유저 메시지 (공백만으로 구성 불가). 범위를 가리키는 자리는 @[제목](noteId:…) 마커로 실리지만 **스키마가 강제하지 않는다** — 마커 없는 문장도 유효하다.
    * @minLength 1
    * @pattern [\s\S]*\S[\s\S]*
    */
   message: string;
+  /**
+   * 이 턴에 볼 회의록. 기본은 빈 배열
+   * @maxItems 20
+   * @items.pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  noteIds?: string[];
 }

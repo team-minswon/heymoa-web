@@ -5,11 +5,28 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AgentChatMessagesResponseDataActiveTurn } from "./agentChatMessagesResponseDataActiveTurn";
+import type { AgentChatMessagesResponseDataLastTurn } from "./agentChatMessagesResponseDataLastTurn";
 import type { AgentChatMessagesResponseDataMessagesItem } from "./agentChatMessagesResponseDataMessagesItem";
 
 /**
  * 성공 응답 데이터
  */
 export type AgentChatMessagesResponseData = {
+  /**
+   * 스트림에 붙을 때 「여기까지는 이미 안다」로 쓴다. **activeTurn 이 있으면 그 턴의 시작 경계**이고, 없으면 굳은 마지막 프레임의 번호다 — 도는 턴의 답은 messages 에 아직 없어서 굳은 마지막 번호를 주면 답의 앞부분이 재생에서 사라진다. **null 이 아니다** — 대화가 조용했으면 0 이고, 그것은 「처음부터 다시」가 아니라 「받을 백로그가 없다」는 뜻이다. GET /events?after= 에 그대로 넣는다
+   * @minimum 0
+   */
+  cursor: number;
+  /**
+   * 이 대화의 마지막 턴(확정 여부 무관). 도는 턴이 있으면 activeTurn 과 같은 행을 가리킨다
+   * @nullable
+   */
+  lastTurn: AgentChatMessagesResponseDataLastTurn;
+  /**
+   * 지금 도는 턴. 없으면 null 이고 그것이 「아무것도 안 돌고 있다」는 뜻이다
+   * @nullable
+   */
+  activeTurn: AgentChatMessagesResponseDataActiveTurn;
   messages?: AgentChatMessagesResponseDataMessagesItem[];
 };

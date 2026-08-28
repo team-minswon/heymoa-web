@@ -9,8 +9,8 @@
 /**
  * 성공 시 null인 오류 정보
  */
-export type NoteSharedChatResponseError =
-  | (typeof NoteSharedChatResponseError)[keyof typeof NoteSharedChatResponseError]
+export type AgentChatResponseError =
+  | (typeof AgentChatResponseError)[keyof typeof AgentChatResponseError]
   | null;
 
-export const NoteSharedChatResponseError = {} as const;
+export const AgentChatResponseError = {} as const;

@@ -112,12 +112,45 @@ describe("OpenAPI contract", () => {
   it("omits schemas reachable only from internal routes", () => {
     const schemaNames = Object.keys(api().components.schemas);
     for (const name of [
+      "AmendDelta",
+      "AnalysisCandidateEvidenceLink",
+      "AnalysisCandidateLedger",
+      "AnalysisCandidateLedgerEntry",
+      "AnalysisSection",
       "AnalysisResultCallback",
       "AnalysisSucceededCallback",
       "AnalysisFailedCallback",
+      "ApplyRunRequest",
+      "CandidateHead",
+      "ContextAnchors",
+      "ContextClassificationRunResponse",
+      "ContextClassificationSnapshotResponse",
+      "CorrectDelta",
+      "CreateDelta",
+      "DropReason",
+      "DroppedDelta",
+      "Evidence",
+      "InternalNoteContextResponse",
+      "InternalTranscriptSegmentsResponse",
+      "InternalTranscriptUpdatesResponse",
+      "InternalWorkspaceNotesResponse",
+      "MeetingItem",
+      "ReaffirmDelta",
+      "RenderedLine",
+      "ResolveDelta",
+      "ResolveResult",
+      "ResolvedDelta",
+      "RetractDelta",
+      "Sha256",
+      "ShortlistedCandidate",
+      "SnapshotBatch",
+      "SnapshotSegment",
+      "UtcMillisTimestamp",
     ]) {
       expect(schemaNames).not.toContain(name);
     }
+    expect(Object.keys(api().paths)).toHaveLength(39);
+    expect(schemaNames).toHaveLength(52);
   });
 
   it("omits the internal-only security scheme", () => {
@@ -325,15 +358,27 @@ describe("contract sync 2026-07-29", () => {
 
   it("exposes the chat, approval, meeting and analysis operations", () => {
     expect(
+      api().paths["/v1/workspaces/{workspaceId}/agent-chats"]?.get?.operationId
+    ).toBe("getAgentChats");
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/agent-chats"]?.post?.operationId
+    ).toBe("createAgentChat");
+    expect(
       api().paths["/v1/agent-chats/{chatId}/messages"]?.post?.operationId
     ).toBe("sendAgentChatMessage");
     expect(
-      api().paths["/v1/notes/{noteId}/chat/messages"]?.post?.operationId
-    ).toBe("sendNoteSharedChatMessage");
+      api().paths["/v1/agent-chats/{chatId}/events"]?.get?.operationId
+    ).toBe("subscribeAgentChatEvents");
     expect(
-      api().paths["/v1/agent-chats/{chatId}/approvals/{approvalId}"]?.post
+      api().paths[
+        "/v1/agent-chats/{chatId}/approvals/{approvalId}/resolve"
+      ]?.post
         ?.operationId
     ).toBe("resolveToolApproval");
+    expect(
+      api().paths["/v1/agent-chats/{chatId}/turns/{turnId}/cancel"]?.post
+        ?.operationId
+    ).toBe("cancelAgentChatTurn");
     expect(
       api().paths["/v1/notes/{noteId}/meeting-end"]?.post?.operationId
     ).toBe("endMeeting");

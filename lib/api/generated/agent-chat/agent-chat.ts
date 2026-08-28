@@ -25,13 +25,14 @@ import type {
 
 import type {
   AgentChatMessagesResponse,
-  AgentChatV2NullableResponse,
-  AgentChatV2Response,
+  AgentChatResponse,
+  AgentChatsResponse,
   AppErrorResponse,
-  CreateAgentChatV2Request,
-  GetActiveAgentChatParams,
+  CreateAgentChatRequest,
+  ResolveToolApprovalParams,
   ResolveToolApprovalRequest,
   SendAgentChatMessageRequest,
+  SubscribeAgentChatEventsParams,
   UnauthorizedResponse,
 } from "../models";
 
@@ -39,163 +40,52 @@ import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-export type createAgentChatResponse201 = {
-  data: AgentChatV2Response;
-  status: 201;
+export type subscribeAgentChatEventsResponse200 = {
+  data: string;
+  status: 200;
 };
 
-export type createAgentChatResponse400 = {
+export type subscribeAgentChatEventsResponse400 = {
   data: AppErrorResponse;
   status: 400;
 };
 
-export type createAgentChatResponse401 = {
+export type subscribeAgentChatEventsResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
 };
 
-export type createAgentChatResponse404 = {
+export type subscribeAgentChatEventsResponse404 = {
   data: AppErrorResponse;
   status: 404;
 };
 
-export type createAgentChatResponseSuccess = createAgentChatResponse201 & {
-  headers: Headers;
-};
-export type createAgentChatResponseError = (
-  | createAgentChatResponse400
-  | createAgentChatResponse401
-  | createAgentChatResponse404
-) & {
-  headers: Headers;
-};
-
-export type createAgentChatResponse =
-  | createAgentChatResponseSuccess
-  | createAgentChatResponseError;
-
-export const getCreateAgentChatUrl = () => {
-  return `/v1/agent-chats`;
-};
-
-/**
- * 호출자가 연결할 워크스페이스의 멤버가 아니면 워크스페이스 존재 여부를 은닉하기 위해 404로 응답한다.
- * @summary 채팅 세션 생성
- */
-export const createAgentChat = async (
-  createAgentChatV2Request?: CreateAgentChatV2Request,
-  options?: RequestInit
-): Promise<createAgentChatResponse> => {
-  return apiFetch<createAgentChatResponse>(getCreateAgentChatUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createAgentChatV2Request),
-  });
-};
-
-export const getCreateAgentChatMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createAgentChat>>,
-    TError,
-    { data?: CreateAgentChatV2Request },
-    TContext
-  >;
-  request?: SecondParameter<typeof apiFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof createAgentChat>>,
-  TError,
-  { data?: CreateAgentChatV2Request },
-  TContext
-> => {
-  const mutationKey = ["createAgentChat"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createAgentChat>>,
-    { data?: CreateAgentChatV2Request }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return createAgentChat(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type CreateAgentChatMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createAgentChat>>
->;
-export type CreateAgentChatMutationBody = CreateAgentChatV2Request | undefined;
-export type CreateAgentChatMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
-
-/**
- * @summary 채팅 세션 생성
- */
-export const useCreateAgentChat = <
-  TError = AppErrorResponse | UnauthorizedResponse,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof createAgentChat>>,
-      TError,
-      { data?: CreateAgentChatV2Request },
-      TContext
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof createAgentChat>>,
-  TError,
-  { data?: CreateAgentChatV2Request },
-  TContext
-> => {
-  return useMutation(getCreateAgentChatMutationOptions(options), queryClient);
-};
-export type getActiveAgentChatResponse200 = {
-  data: AgentChatV2NullableResponse;
-  status: 200;
-};
-
-export type getActiveAgentChatResponse400 = {
+export type subscribeAgentChatEventsResponse503 = {
   data: AppErrorResponse;
-  status: 400;
+  status: 503;
 };
 
-export type getActiveAgentChatResponse401 = {
-  data: UnauthorizedResponse;
-  status: 401;
-};
-
-export type getActiveAgentChatResponseSuccess =
-  getActiveAgentChatResponse200 & {
+export type subscribeAgentChatEventsResponseSuccess =
+  subscribeAgentChatEventsResponse200 & {
     headers: Headers;
   };
-export type getActiveAgentChatResponseError = (
-  | getActiveAgentChatResponse400
-  | getActiveAgentChatResponse401
+export type subscribeAgentChatEventsResponseError = (
+  | subscribeAgentChatEventsResponse400
+  | subscribeAgentChatEventsResponse401
+  | subscribeAgentChatEventsResponse404
+  | subscribeAgentChatEventsResponse503
 ) & {
   headers: Headers;
 };
 
-export type getActiveAgentChatResponse =
-  | getActiveAgentChatResponseSuccess
-  | getActiveAgentChatResponseError;
+export type subscribeAgentChatEventsResponse =
+  | subscribeAgentChatEventsResponseSuccess
+  | subscribeAgentChatEventsResponseError;
 
-export const getGetActiveAgentChatUrl = (params: GetActiveAgentChatParams) => {
+export const getSubscribeAgentChatEventsUrl = (
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -207,20 +97,21 @@ export const getGetActiveAgentChatUrl = (params: GetActiveAgentChatParams) => {
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v1/agent-chats/active?${stringifiedParams}`
-    : `/v1/agent-chats/active`;
+    ? `/v1/agent-chats/${chatId}/events?${stringifiedParams}`
+    : `/v1/agent-chats/${chatId}/events`;
 };
 
 /**
- * 현재 유저의 활성 세션을 조회한다(새로고침 후 대화 복원용). 스코프 대상별 최근 활성 세션 1개를 반환하며, 없으면 data가 null이다.
- * @summary 활성 세션 조회
+ * 끊긴 스트림을 커서로 이어받는다. after 보다 큰 프레임을 재생한 뒤 도는 턴이 있으면 실시간으로 잇고, 없으면 밀린 것만 주고 닫는다. 로그가 못 덮는 구간이면 stream_resync 가 먼저 나가고 그 프레임의 id 가 바닥이다. Last-Event-ID 헤더는 읽지 않는다.
+ * @summary 이어받기 스트림 (SSE)
  */
-export const getActiveAgentChat = async (
-  params: GetActiveAgentChatParams,
+export const subscribeAgentChatEvents = async (
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: RequestInit
-): Promise<getActiveAgentChatResponse> => {
-  return apiFetch<getActiveAgentChatResponse>(
-    getGetActiveAgentChatUrl(params),
+): Promise<subscribeAgentChatEventsResponse> => {
+  return apiFetch<subscribeAgentChatEventsResponse>(
+    getSubscribeAgentChatEventsUrl(chatId, params),
     {
       ...options,
       method: "GET",
@@ -228,21 +119,26 @@ export const getActiveAgentChat = async (
   );
 };
 
-export const getGetActiveAgentChatQueryKey = (
-  params?: GetActiveAgentChatParams
+export const getSubscribeAgentChatEventsQueryKey = (
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams
 ) => {
-  return [`/v1/agent-chats/active`, ...(params ? [params] : [])] as const;
+  return [
+    `/v1/agent-chats/${chatId}/events`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
-export const getGetActiveAgentChatQueryOptions = <
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export const getSubscribeAgentChatEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -253,44 +149,52 @@ export const getGetActiveAgentChatQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetActiveAgentChatQueryKey(params);
+    queryOptions?.queryKey ??
+    getSubscribeAgentChatEventsQueryKey(chatId, params);
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getActiveAgentChat>>
-  > = ({ signal }) => getActiveAgentChat(params, { signal, ...requestOptions });
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>
+  > = ({ signal }) =>
+    subscribeAgentChatEvents(chatId, params, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getActiveAgentChat>>,
+  return {
+    queryKey,
+    queryFn,
+    enabled: chatId !== null && chatId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetActiveAgentChatQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getActiveAgentChat>>
+export type SubscribeAgentChatEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof subscribeAgentChatEvents>>
 >;
-export type GetActiveAgentChatQueryError =
+export type SubscribeAgentChatEventsQueryError =
   | AppErrorResponse
   | UnauthorizedResponse;
 
-export function useGetActiveAgentChat<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params: undefined | SubscribeAgentChatEventsParams,
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getActiveAgentChat>>,
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
           TError,
-          Awaited<ReturnType<typeof getActiveAgentChat>>
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>
         >,
         "initialData"
       >;
@@ -300,24 +204,25 @@ export function useGetActiveAgentChat<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetActiveAgentChat<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getActiveAgentChat>>,
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
           TError,
-          Awaited<ReturnType<typeof getActiveAgentChat>>
+          Awaited<ReturnType<typeof subscribeAgentChatEvents>>
         >,
         "initialData"
       >;
@@ -327,15 +232,16 @@ export function useGetActiveAgentChat<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetActiveAgentChat<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -347,18 +253,19 @@ export function useGetActiveAgentChat<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
- * @summary 활성 세션 조회
+ * @summary 이어받기 스트림 (SSE)
  */
 
-export function useGetActiveAgentChat<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -369,7 +276,11 @@ export function useGetActiveAgentChat<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetActiveAgentChatQueryOptions(params, options);
+  const queryOptions = getSubscribeAgentChatEventsQueryOptions(
+    chatId,
+    params,
+    options
+  );
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -380,18 +291,19 @@ export function useGetActiveAgentChat<
 }
 
 /**
- * @summary 활성 세션 조회
+ * @summary 이어받기 스트림 (SSE)
  */
-export const prefetchGetActiveAgentChatQuery = async <
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export const prefetchSubscribeAgentChatEventsQuery = async <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
   queryClient: QueryClient,
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -399,22 +311,27 @@ export const prefetchGetActiveAgentChatQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetActiveAgentChatQueryOptions(params, options);
+  const queryOptions = getSubscribeAgentChatEventsQueryOptions(
+    chatId,
+    params,
+    options
+  );
 
   await queryClient.prefetchQuery(queryOptions);
 
   return queryClient;
 };
 
-export const getGetActiveAgentChatSuspenseQueryOptions = <
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export const getSubscribeAgentChatEventsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -425,35 +342,38 @@ export const getGetActiveAgentChatSuspenseQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetActiveAgentChatQueryKey(params);
+    queryOptions?.queryKey ??
+    getSubscribeAgentChatEventsQueryKey(chatId, params);
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getActiveAgentChat>>
-  > = ({ signal }) => getActiveAgentChat(params, { signal, ...requestOptions });
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>
+  > = ({ signal }) =>
+    subscribeAgentChatEvents(chatId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
-    Awaited<ReturnType<typeof getActiveAgentChat>>,
+    Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetActiveAgentChatSuspenseQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getActiveAgentChat>>
+export type SubscribeAgentChatEventsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof subscribeAgentChatEvents>>
 >;
-export type GetActiveAgentChatSuspenseQueryError =
+export type SubscribeAgentChatEventsSuspenseQueryError =
   | AppErrorResponse
   | UnauthorizedResponse;
 
-export function useGetActiveAgentChatSuspense<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params: undefined | SubscribeAgentChatEventsParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -464,15 +384,16 @@ export function useGetActiveAgentChatSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetActiveAgentChatSuspense<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -483,15 +404,16 @@ export function useGetActiveAgentChatSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetActiveAgentChatSuspense<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -503,18 +425,19 @@ export function useGetActiveAgentChatSuspense<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
- * @summary 활성 세션 조회
+ * @summary 이어받기 스트림 (SSE)
  */
 
-export function useGetActiveAgentChatSuspense<
-  TData = Awaited<ReturnType<typeof getActiveAgentChat>>,
+export function useSubscribeAgentChatEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
   TError = AppErrorResponse | UnauthorizedResponse,
 >(
-  params: GetActiveAgentChatParams,
+  chatId: string,
+  params?: SubscribeAgentChatEventsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof getActiveAgentChat>>,
+        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
         TError,
         TData
       >
@@ -525,7 +448,8 @@ export function useGetActiveAgentChatSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetActiveAgentChatSuspenseQueryOptions(
+  const queryOptions = getSubscribeAgentChatEventsSuspenseQueryOptions(
+    chatId,
     params,
     options
   );
@@ -913,6 +837,11 @@ export type sendAgentChatMessageResponse200 = {
   status: 200;
 };
 
+export type sendAgentChatMessageResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type sendAgentChatMessageResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -923,13 +852,26 @@ export type sendAgentChatMessageResponse404 = {
   status: 404;
 };
 
+export type sendAgentChatMessageResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type sendAgentChatMessageResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
 export type sendAgentChatMessageResponseSuccess =
   sendAgentChatMessageResponse200 & {
     headers: Headers;
   };
 export type sendAgentChatMessageResponseError = (
+  | sendAgentChatMessageResponse400
   | sendAgentChatMessageResponse401
   | sendAgentChatMessageResponse404
+  | sendAgentChatMessageResponse409
+  | sendAgentChatMessageResponse503
 ) & {
   headers: Headers;
 };
@@ -943,7 +885,7 @@ export const getSendAgentChatMessageUrl = (chatId: string) => {
 };
 
 /**
- * 메시지를 heymoa-ai로 중계하고 SSE(text/event-stream)로 passthrough한다. 이벤트 페이로드 계약은 AsyncAPI(asyncapi-web-server.yml) 참고.
+ * 이미 도는 턴이 있다. **실패가 아니라 재진입 신호다** — details[0] 에 activeTurnId 가 실리므로 화면은 그 턴을 이어받으면 된다. 오류 배너로 그리면 눌러도 또 막혀 무한 루프가 된다.
  * @summary 메시지 전송 (SSE 중계)
  */
 export const sendAgentChatMessage = async (
@@ -963,7 +905,7 @@ export const sendAgentChatMessage = async (
 };
 
 export const getSendAgentChatMessageMutationOptions = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1007,14 +949,14 @@ export type SendAgentChatMessageMutationBody =
   | SendAgentChatMessageRequest
   | undefined;
 export type SendAgentChatMessageMutationError =
-  | UnauthorizedResponse
-  | AppErrorResponse;
+  | AppErrorResponse
+  | UnauthorizedResponse;
 
 /**
  * @summary 메시지 전송 (SSE 중계)
  */
 export const useSendAgentChatMessage = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(
   options?: {
@@ -1038,9 +980,466 @@ export const useSendAgentChatMessage = <
     queryClient
   );
 };
-export type resolveToolApprovalResponse204 = {
-  data: void;
-  status: 204;
+export type getAgentChatsResponse200 = {
+  data: AgentChatsResponse;
+  status: 200;
+};
+
+export type getAgentChatsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getAgentChatsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getAgentChatsResponseSuccess = getAgentChatsResponse200 & {
+  headers: Headers;
+};
+export type getAgentChatsResponseError = (
+  | getAgentChatsResponse401
+  | getAgentChatsResponse404
+) & {
+  headers: Headers;
+};
+
+export type getAgentChatsResponse =
+  | getAgentChatsResponseSuccess
+  | getAgentChatsResponseError;
+
+export const getGetAgentChatsUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/agent-chats`;
+};
+
+/**
+ * 그 워크스페이스의 **내** 대화 목록. updatedAt 내림차순 최근 50개이고, 첫 번째가 마지막으로 쓴 대화다. **대화는 개인 것이라** 같은 워크스페이스의 남의 대화는 안 나온다. runningTurn 은 살아 있는 턴이고 없으면 null 이다 — **본문도 대기 중인 승인도 안 나른다.**
+ * @summary 대화 목록 조회
+ */
+export const getAgentChats = async (
+  workspaceId: string,
+  options?: RequestInit
+): Promise<getAgentChatsResponse> => {
+  return apiFetch<getAgentChatsResponse>(getGetAgentChatsUrl(workspaceId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAgentChatsQueryKey = (workspaceId: string) => {
+  return [`/v1/workspaces/${workspaceId}/agent-chats`] as const;
+};
+
+export const getGetAgentChatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAgentChatsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentChats>>> = ({
+    signal,
+  }) => getAgentChats(workspaceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAgentChats>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAgentChatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAgentChats>>
+>;
+export type GetAgentChatsQueryError = UnauthorizedResponse | AppErrorResponse;
+
+export function useGetAgentChats<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAgentChats>>,
+          TError,
+          Awaited<ReturnType<typeof getAgentChats>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentChats<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAgentChats>>,
+          TError,
+          Awaited<ReturnType<typeof getAgentChats>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentChats<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 대화 목록 조회
+ */
+
+export function useGetAgentChats<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAgentChatsQueryOptions(workspaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 대화 목록 조회
+ */
+export const prefetchGetAgentChatsQuery = async <
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetAgentChatsQueryOptions(workspaceId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetAgentChatsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChats>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAgentChatsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentChats>>> = ({
+    signal,
+  }) => getAgentChats(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getAgentChats>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAgentChatsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAgentChats>>
+>;
+export type GetAgentChatsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetAgentChatsSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChats>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentChatsSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChats>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentChatsSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChats>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 대화 목록 조회
+ */
+
+export function useGetAgentChatsSuspense<
+  TData = Awaited<ReturnType<typeof getAgentChats>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentChats>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAgentChatsSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export type createAgentChatResponse201 = {
+  data: AgentChatResponse;
+  status: 201;
+};
+
+export type createAgentChatResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type createAgentChatResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type createAgentChatResponseSuccess = createAgentChatResponse201 & {
+  headers: Headers;
+};
+export type createAgentChatResponseError = (
+  | createAgentChatResponse401
+  | createAgentChatResponse404
+) & {
+  headers: Headers;
+};
+
+export type createAgentChatResponse =
+  | createAgentChatResponseSuccess
+  | createAgentChatResponseError;
+
+export const getCreateAgentChatUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/agent-chats`;
+};
+
+/**
+ * 호출자가 연결할 워크스페이스의 멤버가 아니면 워크스페이스 존재 여부를 은닉하기 위해 404로 응답한다.
+ * @summary 채팅 세션 생성
+ */
+export const createAgentChat = async (
+  workspaceId: string,
+  createAgentChatRequest?: CreateAgentChatRequest,
+  options?: RequestInit
+): Promise<createAgentChatResponse> => {
+  return apiFetch<createAgentChatResponse>(getCreateAgentChatUrl(workspaceId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createAgentChatRequest),
+  });
+};
+
+export const getCreateAgentChatMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAgentChat>>,
+    TError,
+    { workspaceId: string; data?: CreateAgentChatRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAgentChat>>,
+  TError,
+  { workspaceId: string; data?: CreateAgentChatRequest },
+  TContext
+> => {
+  const mutationKey = ["createAgentChat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAgentChat>>,
+    { workspaceId: string; data?: CreateAgentChatRequest }
+  > = (props) => {
+    const { workspaceId, data } = props ?? {};
+
+    return createAgentChat(workspaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAgentChatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAgentChat>>
+>;
+export type CreateAgentChatMutationBody = CreateAgentChatRequest | undefined;
+export type CreateAgentChatMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 채팅 세션 생성
+ */
+export const useCreateAgentChat = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAgentChat>>,
+      TError,
+      { workspaceId: string; data?: CreateAgentChatRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAgentChat>>,
+  TError,
+  { workspaceId: string; data?: CreateAgentChatRequest },
+  TContext
+> => {
+  return useMutation(getCreateAgentChatMutationOptions(options), queryClient);
+};
+export type resolveToolApprovalResponse200 = {
+  data: string;
+  status: 200;
 };
 
 export type resolveToolApprovalResponse400 = {
@@ -1063,13 +1462,13 @@ export type resolveToolApprovalResponse404 = {
   status: 404;
 };
 
-export type resolveToolApprovalResponse409 = {
+export type resolveToolApprovalResponse503 = {
   data: AppErrorResponse;
-  status: 409;
+  status: 503;
 };
 
 export type resolveToolApprovalResponseSuccess =
-  resolveToolApprovalResponse204 & {
+  resolveToolApprovalResponse200 & {
     headers: Headers;
   };
 export type resolveToolApprovalResponseError = (
@@ -1077,7 +1476,7 @@ export type resolveToolApprovalResponseError = (
   | resolveToolApprovalResponse401
   | resolveToolApprovalResponse403
   | resolveToolApprovalResponse404
-  | resolveToolApprovalResponse409
+  | resolveToolApprovalResponse503
 ) & {
   headers: Headers;
 };
@@ -1088,23 +1487,37 @@ export type resolveToolApprovalResponse =
 
 export const getResolveToolApprovalUrl = (
   chatId: string,
-  approvalId: string
+  approvalId: string,
+  params?: ResolveToolApprovalParams
 ) => {
-  return `/v1/agent-chats/${chatId}/approvals/${approvalId}`;
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve?${stringifiedParams}`
+    : `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve`;
 };
 
 /**
- * tool_approval_request SSE 이벤트에 대한 응답. 공유·개인 챗봇 공용 (chatId 기준). 해당 메시지의 입력자 본인만 호출할 수 있다 — 관전자는 403. 승인 시 heymoa-ai의 중단된 도구 실행이 재개되고, 거절 시 도구를 실행하지 않고 스트림이 계속된다 (tool_approval_resolved 이벤트로 결과 전파).
+ * 승인 카드에 대한 응답. **새 SSE 를 돌려준다** — 답의 나머지 절반이 이 스트림으로 온다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. after 는 이어받기와 같은 뜻이고, 생략하면 이 재개가 뗀 블록의 시작으로 떨어진다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403.
  * @summary 도구 승인/거절
  */
 export const resolveToolApproval = async (
   chatId: string,
   approvalId: string,
   resolveToolApprovalRequest?: ResolveToolApprovalRequest,
+  params?: ResolveToolApprovalParams,
   options?: RequestInit
 ): Promise<resolveToolApprovalResponse> => {
   return apiFetch<resolveToolApprovalResponse>(
-    getResolveToolApprovalUrl(chatId, approvalId),
+    getResolveToolApprovalUrl(chatId, approvalId, params),
     {
       ...options,
       method: "POST",
@@ -1121,14 +1534,24 @@ export const getResolveToolApprovalMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof resolveToolApproval>>,
     TError,
-    { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
+    {
+      chatId: string;
+      approvalId: string;
+      data?: ResolveToolApprovalRequest;
+      params?: ResolveToolApprovalParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof resolveToolApproval>>,
   TError,
-  { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
+  {
+    chatId: string;
+    approvalId: string;
+    data?: ResolveToolApprovalRequest;
+    params?: ResolveToolApprovalParams;
+  },
   TContext
 > => {
   const mutationKey = ["resolveToolApproval"];
@@ -1142,11 +1565,22 @@ export const getResolveToolApprovalMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof resolveToolApproval>>,
-    { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest }
+    {
+      chatId: string;
+      approvalId: string;
+      data?: ResolveToolApprovalRequest;
+      params?: ResolveToolApprovalParams;
+    }
   > = (props) => {
-    const { chatId, approvalId, data } = props ?? {};
+    const { chatId, approvalId, data, params } = props ?? {};
 
-    return resolveToolApproval(chatId, approvalId, data, requestOptions);
+    return resolveToolApproval(
+      chatId,
+      approvalId,
+      data,
+      params,
+      requestOptions
+    );
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1173,7 +1607,12 @@ export const useResolveToolApproval = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof resolveToolApproval>>,
       TError,
-      { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
+      {
+        chatId: string;
+        approvalId: string;
+        data?: ResolveToolApprovalRequest;
+        params?: ResolveToolApprovalParams;
+      },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -1182,11 +1621,142 @@ export const useResolveToolApproval = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof resolveToolApproval>>,
   TError,
-  { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
+  {
+    chatId: string;
+    approvalId: string;
+    data?: ResolveToolApprovalRequest;
+    params?: ResolveToolApprovalParams;
+  },
   TContext
 > => {
   return useMutation(
     getResolveToolApprovalMutationOptions(options),
+    queryClient
+  );
+};
+export type cancelAgentChatTurnResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type cancelAgentChatTurnResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type cancelAgentChatTurnResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type cancelAgentChatTurnResponseSuccess =
+  cancelAgentChatTurnResponse204 & {
+    headers: Headers;
+  };
+export type cancelAgentChatTurnResponseError = (
+  | cancelAgentChatTurnResponse401
+  | cancelAgentChatTurnResponse404
+) & {
+  headers: Headers;
+};
+
+export type cancelAgentChatTurnResponse =
+  | cancelAgentChatTurnResponseSuccess
+  | cancelAgentChatTurnResponseError;
+
+export const getCancelAgentChatTurnUrl = (chatId: string, turnId: string) => {
+  return `/v1/agent-chats/${chatId}/turns/${turnId}/cancel`;
+};
+
+/**
+ * 존재하지 않거나 소유하지 않은 대화다. 소유권 판정이 턴 판정보다 먼저 지나므로 남의 대화의 턴 존재가 새지 않는다.
+ * @summary 턴 중지
+ */
+export const cancelAgentChatTurn = async (
+  chatId: string,
+  turnId: string,
+  options?: RequestInit
+): Promise<cancelAgentChatTurnResponse> => {
+  return apiFetch<cancelAgentChatTurnResponse>(
+    getCancelAgentChatTurnUrl(chatId, turnId),
+    {
+      ...options,
+      method: "POST",
+    }
+  );
+};
+
+export const getCancelAgentChatTurnMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelAgentChatTurn>>,
+    TError,
+    { chatId: string; turnId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelAgentChatTurn>>,
+  TError,
+  { chatId: string; turnId: string },
+  TContext
+> => {
+  const mutationKey = ["cancelAgentChatTurn"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelAgentChatTurn>>,
+    { chatId: string; turnId: string }
+  > = (props) => {
+    const { chatId, turnId } = props ?? {};
+
+    return cancelAgentChatTurn(chatId, turnId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelAgentChatTurnMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelAgentChatTurn>>
+>;
+
+export type CancelAgentChatTurnMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 턴 중지
+ */
+export const useCancelAgentChatTurn = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof cancelAgentChatTurn>>,
+      TError,
+      { chatId: string; turnId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof cancelAgentChatTurn>>,
+  TError,
+  { chatId: string; turnId: string },
+  TContext
+> => {
+  return useMutation(
+    getCancelAgentChatTurnMutationOptions(options),
     queryClient
   );
 };

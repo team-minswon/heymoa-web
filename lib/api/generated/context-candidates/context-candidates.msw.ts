@@ -45,7 +45,7 @@ export const getGetContextCandidatesResponseMock =
       ],
       appliedRanges: [
         {
-          runKey: "live_001",
+          runKey: "0J00000000RN1",
           applyStatus: "APPLIED",
           fromSequence: 1,
           toSequence: 2,

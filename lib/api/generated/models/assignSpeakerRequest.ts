@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface V1NotesNoteIdSpeakersLabel647408416 {
+export interface AssignSpeakerRequest {
   /**
    * 연결할 참석자의 userId. null 은 「모르겠다」가 아니라 「참석자 중에 없다」로 확정한 것이다
    * @nullable

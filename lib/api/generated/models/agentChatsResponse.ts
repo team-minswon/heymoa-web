@@ -5,14 +5,14 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { AgentChatV2ResponseData } from "./agentChatV2ResponseData";
-import type { AgentChatV2ResponseError } from "./agentChatV2ResponseError";
+import type { AgentChatsResponseData } from "./agentChatsResponseData";
+import type { AgentChatsResponseError } from "./agentChatsResponseError";
 
-export interface AgentChatV2Response {
+export interface AgentChatsResponse {
   /** 성공 응답 데이터 */
-  data: AgentChatV2ResponseData;
+  data: AgentChatsResponseData;
   /** 요청 성공 여부 */
   success: boolean;
   /** 성공 시 null인 오류 정보 */
-  error: AgentChatV2ResponseError;
+  error: AgentChatsResponseError;
 }

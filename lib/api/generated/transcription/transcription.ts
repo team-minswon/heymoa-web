@@ -25,13 +25,13 @@ import type {
 
 import type {
   AppErrorResponse,
+  AssignSpeakerRequest,
   CurrentTranscriptionSessionNullableResponse,
   SpeakerListResponse,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptionSessionResponse,
   UnauthorizedResponse,
-  V1NotesNoteIdSpeakersLabel647408416,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -975,7 +975,7 @@ export const getAssignNoteSpeakerUrl = (noteId: string, label: string) => {
 export const assignNoteSpeaker = async (
   noteId: string,
   label: string,
-  v1NotesNoteIdSpeakersLabel647408416?: V1NotesNoteIdSpeakersLabel647408416,
+  assignSpeakerRequest?: AssignSpeakerRequest,
   options?: RequestInit
 ): Promise<assignNoteSpeakerResponse> => {
   return apiFetch<assignNoteSpeakerResponse>(
@@ -984,7 +984,7 @@ export const assignNoteSpeaker = async (
       ...options,
       method: "PUT",
       headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(v1NotesNoteIdSpeakersLabel647408416),
+      body: JSON.stringify(assignSpeakerRequest),
     }
   );
 };
@@ -996,18 +996,14 @@ export const getAssignNoteSpeakerMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof assignNoteSpeaker>>,
     TError,
-    {
-      noteId: string;
-      label: string;
-      data?: V1NotesNoteIdSpeakersLabel647408416;
-    },
+    { noteId: string; label: string; data?: AssignSpeakerRequest },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof assignNoteSpeaker>>,
   TError,
-  { noteId: string; label: string; data?: V1NotesNoteIdSpeakersLabel647408416 },
+  { noteId: string; label: string; data?: AssignSpeakerRequest },
   TContext
 > => {
   const mutationKey = ["assignNoteSpeaker"];
@@ -1021,11 +1017,7 @@ export const getAssignNoteSpeakerMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof assignNoteSpeaker>>,
-    {
-      noteId: string;
-      label: string;
-      data?: V1NotesNoteIdSpeakersLabel647408416;
-    }
+    { noteId: string; label: string; data?: AssignSpeakerRequest }
   > = (props) => {
     const { noteId, label, data } = props ?? {};
 
@@ -1038,9 +1030,7 @@ export const getAssignNoteSpeakerMutationOptions = <
 export type AssignNoteSpeakerMutationResult = NonNullable<
   Awaited<ReturnType<typeof assignNoteSpeaker>>
 >;
-export type AssignNoteSpeakerMutationBody =
-  | V1NotesNoteIdSpeakersLabel647408416
-  | undefined;
+export type AssignNoteSpeakerMutationBody = AssignSpeakerRequest | undefined;
 export type AssignNoteSpeakerMutationError =
   | UnauthorizedResponse
   | AppErrorResponse;
@@ -1056,11 +1046,7 @@ export const useAssignNoteSpeaker = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof assignNoteSpeaker>>,
       TError,
-      {
-        noteId: string;
-        label: string;
-        data?: V1NotesNoteIdSpeakersLabel647408416;
-      },
+      { noteId: string; label: string; data?: AssignSpeakerRequest },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -1069,7 +1055,7 @@ export const useAssignNoteSpeaker = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof assignNoteSpeaker>>,
   TError,
-  { noteId: string; label: string; data?: V1NotesNoteIdSpeakersLabel647408416 },
+  { noteId: string; label: string; data?: AssignSpeakerRequest },
   TContext
 > => {
   return useMutation(getAssignNoteSpeakerMutationOptions(options), queryClient);
