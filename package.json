@@ -18,7 +18,9 @@
     "test:run": "vitest run",
     "asyncapi:validate": "asyncapi validate asyncapi.yml",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "homelab:up": "node deploy/integration/homelab.mjs up",
+    "homelab:down": "node deploy/integration/homelab.mjs down"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

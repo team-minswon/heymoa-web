@@ -1,0 +1,21 @@
+:8080 {
+	handle /__integration/login {
+		reverse_proxy auth-bootstrap:3001
+	}
+
+	handle /v1/* {
+		reverse_proxy server:8080 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	handle /ws/* {
+		reverse_proxy server:8080 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
