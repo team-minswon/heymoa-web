@@ -206,7 +206,7 @@ describe("ContextRail", () => {
     expect(screen.getByText("전사 31:12 · 31:52")).toBeInTheDocument();
   });
 
-  it("유형 필터가 목록을 좁히지만 개수는 전체를 유지한다", () => {
+  it("사람이 읽는 상위 분류가 목록을 좁히지만 개수는 전체를 유지한다", () => {
     renderRail([
       head({
         candidateId: "0HZX2K7M9Q4A1",
@@ -221,7 +221,7 @@ describe("ContextRail", () => {
       }),
     ]);
 
-    fireEvent.click(screen.getByRole("button", { name: "안건" }));
+    fireEvent.click(screen.getByRole("button", { name: "논의 중 1" }));
 
     expect(screen.getByText("안건 하나")).toBeInTheDocument();
     expect(screen.queryByText(/MongoDB를 사용한다/)).not.toBeInTheDocument();
@@ -229,24 +229,34 @@ describe("ContextRail", () => {
     expect(screen.getByText("지금까지 2건")).toBeInTheDocument();
   });
 
-  it("계약의 후보 유형 일곱 가지를 모두 필터로 드러낸다", () => {
-    renderRail([head({ candidateId: "0HZX2K7M9Q4A1" })]);
+  it("계약의 일곱 kind를 네 개의 사람 중심 탭으로 묶는다", () => {
+    const kinds = [
+      "AGENDA",
+      "DECISION",
+      "ACTION_ITEM",
+      "ISSUE",
+      "QUESTION",
+      "STATUS_REPORT",
+      "INSIGHT",
+    ] as const;
+    renderRail(
+      kinds.map((kind, index) =>
+        head({
+          candidateId: `0HZX2K7M9Q4A${index}`,
+          kind,
+          createdSequence: index + 1,
+        })
+      )
+    );
 
-    const filters = screen.getByRole("group", { name: "유형으로 좁히기" });
+    const filters = screen.getByRole("group", {
+      name: "사건 범위로 좁히기",
+    });
     expect(
       within(filters)
         .getAllByRole("button")
         .map((button) => button.textContent)
-    ).toEqual([
-      "전체",
-      "안건",
-      "결정",
-      "할 일",
-      "이슈",
-      "질문",
-      "보고",
-      "인사이트",
-    ]);
+    ).toEqual(["전체 7", "결론 2", "논의 중 3", "참고 2"]);
   });
 
   it("배치와 후보 event가 어떤 처리로 이어졌는지 시각화한다", () => {
@@ -278,10 +288,40 @@ describe("ContextRail", () => {
     });
 
     const flow = screen.getByRole("region", { name: "실시간 이벤트 처리" });
+    expect(within(flow).getByText("실시간 동기화 정상")).toBeInTheDocument();
+    expect(within(flow).queryByText("배치 적용")).not.toBeInTheDocument();
+
+    fireEvent.click(within(flow).getByRole("button", { name: "처리 내역" }));
+
     expect(within(flow).getByText("배치 적용")).toBeInTheDocument();
     expect(within(flow).getByText("결정 · 내용 정정")).toBeInTheDocument();
     expect(within(flow).getAllByText("반영 완료")).toHaveLength(2);
     expect(screen.getByText("내용 정정")).toBeInTheDocument();
+  });
+
+  it("재동기화 후 복구되면 과거 경고 대신 최신 정상 상태를 보인다", () => {
+    renderRail([head({ candidateId: "0HZX2K7M9Q4A1" })], {
+      activities: [
+        { type: "sync", key: "snapshot-sync", outcome: "RECOVERED" },
+        {
+          type: "candidate",
+          key: "candidate-gap",
+          eventId: "0HZX2K7M9Q4B1",
+          occurredAt: "2026-08-24T01:02:04.000Z",
+          changeOrdinal: 0,
+          candidateId: "0HZX2K7M9Q4A1",
+          revision: 3,
+          kind: "DECISION",
+          operation: "AMEND",
+          outcome: "RESYNC_REQUIRED",
+        },
+      ],
+    });
+
+    const flow = screen.getByRole("region", { name: "실시간 이벤트 처리" });
+    expect(within(flow).getByText("실시간 동기화 정상")).toBeInTheDocument();
+    expect(within(flow).queryByText("정본 확인 필요")).not.toBeInTheDocument();
+    expect(within(flow).queryByText("동기화 완료")).not.toBeInTheDocument();
   });
 
   it("결과 후보가 질문 아래로 들어간다", () => {
@@ -309,14 +349,16 @@ describe("ContextRail", () => {
     expect(within(parent!).getByText("15% 안쪽이다")).toBeInTheDocument();
   });
 
-  it("스크린리더가 후보·근거·필터를 맥락과 함께 읽는다", () => {
+  it("스크린리더가 후보·근거·범위를 맥락과 함께 읽는다", () => {
     renderRail([head({ candidateId: "0HZX2K7M9Q4A1" })]);
 
     // 필터가 맥락 없는 토글로 흩어지면 무엇을 고르는지 알 수 없다.
-    const filters = screen.getByRole("group", { name: "유형으로 좁히기" });
-    expect(within(filters).getAllByRole("button")).toHaveLength(8);
+    const filters = screen.getByRole("group", {
+      name: "사건 범위로 좁히기",
+    });
+    expect(within(filters).getAllByRole("button")).toHaveLength(4);
     expect(
-      within(filters).getByRole("button", { name: "전체" })
+      within(filters).getByRole("button", { name: "전체 1" })
     ).toHaveAttribute("aria-pressed", "true");
 
     // 목록에 이름이 있어야 「무엇의 목록인가」가 읽힌다.

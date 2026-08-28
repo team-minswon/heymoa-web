@@ -200,8 +200,16 @@ export function ContextCandidateCard({
   card: ContextCard;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
+  const reduced = useReducedMotion();
+
   return (
-    <li className="flex flex-col gap-2">
+    <motion.li
+      layout={!reduced}
+      initial={reduced ? false : { opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduced ? 0 : 0.18 }}
+      className="flex flex-col gap-2"
+    >
       <CandidateBody candidate={card} onEvidenceSelect={onEvidenceSelect} />
       {/* `RESOLVE` 는 질문 하나가 답 여럿으로 바뀐 **한 사건**이다. 결과를 최상위에 흩으면
           그 관계가 사라진다. */}
@@ -217,6 +225,6 @@ export function ContextCandidateCard({
           ))}
         </ul>
       ) : null}
-    </li>
+    </motion.li>
   );
 }
