@@ -7,7 +7,6 @@ import {
   NoteRealtimeProvider,
   useNoteRealtime,
 } from "@/components/notes/note-realtime-provider";
-import { getGetNoteSharedChatMessagesQueryKey } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import {
   getGetNoteQueryKey,
   getGetNotesQueryKey,
@@ -102,10 +101,6 @@ function Probe() {
       </div>
       <div data-testid="finals">
         {JSON.stringify(realtime.transcript.finalSegments)}
-      </div>
-      <div data-testid="chat-text">{realtime.chat.text}</div>
-      <div data-testid="chat-interrupted">
-        {String(realtime.chat.interrupted)}
       </div>
       <div data-testid="context-cards">
         {JSON.stringify(
@@ -229,92 +224,6 @@ describe("NoteRealtimeProvider", () => {
     ]);
   });
 
-  it("token은 즉시 이어 붙이고 message_end에서 공유 채팅 히스토리를 무효화한다", async () => {
-    const { invalidateQueries } = renderProvider();
-    await waitFor(() => expect(topicClients).toHaveLength(1));
-
-    emit({ type: "chat.token", delta: "회의 " });
-    emit({ type: "chat.token", delta: "요약" });
-
-    expect(screen.getByTestId("chat-text").textContent).toBe("회의 요약");
-    expect(invalidateQueries).not.toHaveBeenCalled();
-
-    emit({
-      type: "chat.message_end",
-      messageId: "01K0000000300",
-      content: "회의 요약",
-    });
-
-    expectInvalidated(
-      invalidateQueries,
-      getGetNoteSharedChatMessagesQueryKey(NOTE_ID)
-    );
-  });
-
-  it("message_end 없이 lock이 풀린 채 1초가 지나면 중단을 표시하고 히스토리를 다시 받는다", async () => {
-    const { invalidateQueries } = renderProvider();
-    await waitFor(() => expect(topicClients).toHaveLength(1));
-    vi.useFakeTimers();
-
-    emit({
-      type: "chat.lock",
-      chatId: "01K0000000400",
-      locked: true,
-      lockedByUserId: "01K0000000500",
-    });
-    emit({ type: "chat.token", delta: "작성 중" });
-    emit({
-      type: "chat.lock",
-      chatId: "01K0000000400",
-      locked: false,
-      lockedByUserId: null,
-    });
-
-    expect(screen.getByTestId("chat-interrupted").textContent).toBe("false");
-    invalidateQueries.mockClear();
-    act(() => vi.advanceTimersByTime(999));
-    expect(screen.getByTestId("chat-interrupted").textContent).toBe("false");
-
-    act(() => vi.advanceTimersByTime(1));
-
-    expect(screen.getByTestId("chat-interrupted").textContent).toBe("true");
-    expectInvalidated(
-      invalidateQueries,
-      getGetNoteSharedChatMessagesQueryKey(NOTE_ID)
-    );
-  });
-
-  it("lock 해제 유예 안에 message_end가 오면 정상 종료로 처리한다", async () => {
-    const { invalidateQueries } = renderProvider();
-    await waitFor(() => expect(topicClients).toHaveLength(1));
-    vi.useFakeTimers();
-
-    emit({
-      type: "chat.lock",
-      chatId: "01K0000000400",
-      locked: true,
-      lockedByUserId: "01K0000000500",
-    });
-    emit({ type: "chat.token", delta: "완료된 답변" });
-    emit({
-      type: "chat.lock",
-      chatId: "01K0000000400",
-      locked: false,
-      lockedByUserId: null,
-    });
-    emit({
-      type: "chat.message_end",
-      messageId: "01K0000000300",
-      content: "완료된 답변",
-    });
-    invalidateQueries.mockClear();
-
-    act(() => vi.advanceTimersByTime(1_000));
-
-    expect(screen.getByTestId("chat-interrupted").textContent).toBe("false");
-    expect(invalidateQueries).not.toHaveBeenCalled();
-  });
-
   it("상태 이벤트는 exact note와 cached project lists를 즉시, 연속 final은 한 번 묶어 REST를 갱신한다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -404,7 +313,7 @@ describe("NoteRealtimeProvider", () => {
     expect(queryClient.getQueryData(noteKey)).toBe(endedNote);
     expect(setQueryData).not.toHaveBeenCalled();
     // meeting.ended 가 note·목록·transcript·chat·후보를, recording.started 가 note·목록을 갱신한다.
-    expect(invalidateQueries).toHaveBeenCalledTimes(7);
+    expect(invalidateQueries).toHaveBeenCalledTimes(6);
     expectInvalidated(invalidateQueries, noteKey);
     expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
     expect(
@@ -517,12 +426,10 @@ describe("NoteRealtimeProvider", () => {
       confirmedText: "놓칠 수 있는",
       pendingText: " 초안",
     });
-    emit({ type: "chat.token", delta: "놓칠 수 있는 토큰" });
 
     await act(() => topicClients[0].options.onCatchUp());
 
     expect(screen.getByTestId("partials").textContent).toBe("null");
-    expect(screen.getByTestId("chat-text").textContent).toBe("");
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
     expectInvalidated(invalidateQueries, getGetNoteTranscriptQueryKey(NOTE_ID));
     expect(
@@ -530,10 +437,6 @@ describe("NoteRealtimeProvider", () => {
         queryKey: getGetNotesQueryKey(PROJECT_ID),
       } as never)
     ).toBe(true);
-    expectInvalidated(
-      invalidateQueries,
-      getGetNoteSharedChatMessagesQueryKey(NOTE_ID)
-    );
   });
 
   it("후보 event가 화면 상태를 즉시 갱신하고 같은 후보를 두 번 만들지 않는다", async () => {

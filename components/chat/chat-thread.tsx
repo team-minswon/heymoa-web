@@ -10,10 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatAppDate } from "@/lib/format/date";
-import type {
-  AgentChatMessagesResponseDataMessagesItem,
-  NoteSharedChatResponseDataMessagesItem,
-} from "@/lib/api/generated/models";
+import type { AgentChatMessagesResponseDataMessagesItem } from "@/lib/api/generated/models";
 import type {
   ApprovalDecision,
   ChatStreamState,
@@ -28,12 +25,10 @@ import type {
  * 개인·공유 챗봇이 같은 스레드 컴포넌트를 쓴다. 공유 메시지는 USER에 `authorName`(멀티멤버)이
  * 붙고 개인 메시지에는 없다 — 둘 다 받아 공통 필드로 렌더하고 이름은 있을 때만 보인다.
  */
-export type ThreadMessage =
-  | AgentChatMessagesResponseDataMessagesItem
-  | NoteSharedChatResponseDataMessagesItem;
+export type ThreadMessage = AgentChatMessagesResponseDataMessagesItem;
 
-function authorOf(message: ThreadMessage): string | null {
-  return "authorName" in message ? (message.authorName ?? null) : null;
+function authorOf(): string | null {
+  return null;
 }
 
 /** 에이전트의 표시 이름. 사람 발화와 나란히 놓이므로 이름이 있어야 누가 말했는지 읽힌다. */
@@ -175,13 +170,22 @@ function HistoryMessage({ message }: { message: ThreadMessage }) {
     return (
       <UserBubble
         content={message.content}
-        author={authorOf(message)}
+        author={authorOf()}
         createdAt={message.createdAt}
       />
     );
   if (message.role === "ASSISTANT") {
     return (
       <AssistantText content={message.content} createdAt={message.createdAt} />
+    );
+  }
+  if (message.role === "THINKING") {
+    return (
+      <AssistantText
+        content={message.content}
+        createdAt={message.createdAt}
+        showAuthor={false}
+      />
     );
   }
 

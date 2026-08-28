@@ -17,9 +17,6 @@ import {
 vi.mock("@/components/chat/personal-chat", () => ({
   usePersonalChat: () => ({ setRailSlot: vi.fn(), isTurnActive: false }),
 }));
-vi.mock("@/components/notes/shared-chat-panel", () => ({
-  SharedChatPanel: () => <div data-testid="shared-chat" />,
-}));
 // 이 파일이 보는 것은 탭 계약이지 레일 내용이 아니다. 내용은 각자의 테스트가 지킨다.
 vi.mock("@/components/notes/context-rail", () => ({
   ContextRail: () => <div data-testid="context-rail" />,
@@ -29,12 +26,9 @@ function renderRail(tab: RailTab = "context") {
   const onTabChange = vi.fn();
   render(
     <NoteAgentRail
-      noteId="01K0000000002"
-      phase="active"
       tab={tab}
       onTabChange={onTabChange}
       foldedOnNarrow={false}
-      onSharedTurnActiveChange={vi.fn()}
       onEvidenceSelect={vi.fn()}
     />
   );
@@ -48,16 +42,16 @@ describe("NoteAgentRail 키보드 계약", () => {
     renderRail("context");
     const tabs = screen.getAllByRole("tab");
 
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(2);
     // roving tabIndex. 셋 다 0이면 Tab 으로 셋을 다 지나야 한다.
-    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
   });
 
   it("ArrowRight 로 다음 탭으로 옮기고 선택도 따라간다", () => {
     const { onTabChange } = renderRail("context");
     fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowRight" });
-    expect(onTabChange).toHaveBeenCalledWith("shared");
+    expect(onTabChange).toHaveBeenCalledWith("personal");
   });
 
   it("ArrowLeft 는 반대로 가고 양 끝에서 감긴다", () => {
@@ -73,7 +67,7 @@ describe("NoteAgentRail 키보드 계약", () => {
   });
 
   it("Home 과 End 가 양 끝으로 간다", () => {
-    const { onTabChange } = renderRail("shared");
+    const { onTabChange } = renderRail("personal");
     const tablist = screen.getByRole("tablist");
 
     fireEvent.keyDown(tablist, { key: "Home" });
@@ -94,10 +88,10 @@ describe("NoteAgentRail 키보드 계약", () => {
   it("탭과 패널이 id 로 이어진다", () => {
     renderRail("context");
     const tabs = screen.getAllByRole("tab");
-    // 숨은 패널도 함께 본다 — 셋 다 마운트된 채 hidden 이다.
+    // 숨은 패널도 함께 본다 — 둘 다 마운트된 채 hidden 이다.
     const panels = screen.getAllByRole("tabpanel", { hidden: true });
 
-    expect(panels).toHaveLength(3);
+    expect(panels).toHaveLength(2);
     for (const [index, tab] of tabs.entries()) {
       const controls = tab.getAttribute("aria-controls");
       expect(controls).toBeTruthy();

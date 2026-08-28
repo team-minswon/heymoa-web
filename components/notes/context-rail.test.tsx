@@ -86,8 +86,12 @@ describe("ContextRail", () => {
   it("로딩도 빈 상태로 접지 않는다 — 아직 모르는 것을 없다고 하지 않는다", () => {
     renderRail([], { loading: true });
 
-    expect(screen.queryByText(/아직 정리할 발화가 없습니다/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("정리 결과를 불러오는 중")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/아직 정리할 발화가 없습니다/)
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByLabelText("정리 결과를 불러오는 중")
+    ).toBeInTheDocument();
     // 실패와도 갈린다 — 셋이 서로 다른 상태다.
     expect(screen.queryByText(/불러오지 못했습니다/)).not.toBeInTheDocument();
   });
@@ -96,7 +100,9 @@ describe("ContextRail", () => {
     // **이게 접히면 사용자가 후보 0건을 사실로 믿는다.** 실제로는 서버가 못 답한 것이다.
     const { onRetry } = renderRail([], { failed: true });
 
-    expect(screen.queryByText(/아직 정리할 발화가 없습니다/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/아직 정리할 발화가 없습니다/)
+    ).not.toBeInTheDocument();
     expect(screen.getByText(/불러오지 못했습니다/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /다시 시도/ }));
@@ -202,7 +208,11 @@ describe("ContextRail", () => {
 
   it("유형 필터가 목록을 좁히지만 개수는 전체를 유지한다", () => {
     renderRail([
-      head({ candidateId: "0HZX2K7M9Q4A1", kind: "DECISION", createdSequence: 10 }),
+      head({
+        candidateId: "0HZX2K7M9Q4A1",
+        kind: "DECISION",
+        createdSequence: 10,
+      }),
       head({
         candidateId: "0HZX2K7M9Q4A2",
         kind: "AGENDA",
@@ -217,6 +227,61 @@ describe("ContextRail", () => {
     expect(screen.queryByText(/MongoDB를 사용한다/)).not.toBeInTheDocument();
     // 필터는 보는 각도이지 원장의 크기가 아니다.
     expect(screen.getByText("지금까지 2건")).toBeInTheDocument();
+  });
+
+  it("계약의 후보 유형 일곱 가지를 모두 필터로 드러낸다", () => {
+    renderRail([head({ candidateId: "0HZX2K7M9Q4A1" })]);
+
+    const filters = screen.getByRole("group", { name: "유형으로 좁히기" });
+    expect(
+      within(filters)
+        .getAllByRole("button")
+        .map((button) => button.textContent)
+    ).toEqual([
+      "전체",
+      "안건",
+      "결정",
+      "할 일",
+      "이슈",
+      "질문",
+      "보고",
+      "인사이트",
+    ]);
+  });
+
+  it("배치와 후보 event가 어떤 처리로 이어졌는지 시각화한다", () => {
+    renderRail([head({ candidateId: "0HZX2K7M9Q4A1", operation: "CORRECT" })], {
+      activities: [
+        {
+          type: "candidate",
+          key: "candidate-event-0",
+          eventId: "0HZX2K7M9Q4B1",
+          occurredAt: "2026-08-24T01:02:04.000Z",
+          changeOrdinal: 0,
+          candidateId: "0HZX2K7M9Q4A1",
+          revision: 2,
+          kind: "DECISION",
+          operation: "CORRECT",
+          outcome: "APPLIED",
+        },
+        {
+          type: "batch",
+          key: "batch-event",
+          eventId: "0HZX2K7M9Q4C1",
+          occurredAt: "2026-08-24T01:02:03.000Z",
+          fromSequence: 1,
+          toSequence: 10,
+          applyStatus: "APPLIED",
+          outcome: "APPLIED",
+        },
+      ],
+    });
+
+    const flow = screen.getByRole("region", { name: "실시간 이벤트 처리" });
+    expect(within(flow).getByText("배치 적용")).toBeInTheDocument();
+    expect(within(flow).getByText("결정 · 내용 정정")).toBeInTheDocument();
+    expect(within(flow).getAllByText("반영 완료")).toHaveLength(2);
+    expect(screen.getByText("내용 정정")).toBeInTheDocument();
   });
 
   it("결과 후보가 질문 아래로 들어간다", () => {
@@ -247,9 +312,9 @@ describe("ContextRail", () => {
   it("스크린리더가 후보·근거·필터를 맥락과 함께 읽는다", () => {
     renderRail([head({ candidateId: "0HZX2K7M9Q4A1" })]);
 
-    // 필터 넷이 맥락 없는 토글로 흩어지면 무엇을 고르는지 알 수 없다.
+    // 필터가 맥락 없는 토글로 흩어지면 무엇을 고르는지 알 수 없다.
     const filters = screen.getByRole("group", { name: "유형으로 좁히기" });
-    expect(within(filters).getAllByRole("button")).toHaveLength(4);
+    expect(within(filters).getAllByRole("button")).toHaveLength(8);
     expect(
       within(filters).getByRole("button", { name: "전체" })
     ).toHaveAttribute("aria-pressed", "true");

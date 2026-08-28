@@ -16,7 +16,6 @@ import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/context-candidates/__fixtures
 import { getGetCurrentUserMockHandler } from "@/lib/api/generated/users/users.msw";
 import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/workspaces.msw";
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
-import { getGetActiveAgentChatMockHandler } from "@/lib/api/generated/agent-chat/agent-chat.msw";
 
 import type {
   CreateWorkspaceRequest,
@@ -785,33 +784,21 @@ export const restHandlers = [
   }),
 
   // Agent chat sessions (SSE 전송은 sse-handler.ts가 맡는다)
-  http.post("*/v1/agent-chats", async ({ request }) => {
-    const body = (await request.json()) as {
-      scope: string;
-      workspaceId?: string | null;
-      noteId?: string | null;
-    };
-    return commandResult(() => mockDb.createAgentChat(body), 201);
-  }),
-  getGetActiveAgentChatMockHandler(({ request }) => {
-    const url = new URL(request.url);
-    return {
-      success: true,
-      data: mockDb.getActiveAgentChat({
-        scope: url.searchParams.get("scope") ?? "workspace",
-        workspaceId: url.searchParams.get("workspaceId"),
-        noteId: url.searchParams.get("noteId"),
-      }),
-      error: null,
-    };
-  }),
-  http.get("*/v1/agent-chats/:chatId/messages", ({ params }) =>
-    commandResult(() => ({
-      messages: mockDb.getAgentChatMessages(id(params.chatId)),
-    }))
+  http.post(
+    "*/v1/workspaces/:workspaceId/agent-chats",
+    async ({ request, params }) => {
+      const body = (await request.json().catch(() => ({}))) as { title?: string };
+      return commandResult(
+        () => mockDb.createAgentChat({ workspaceId: id(params.workspaceId), ...body }),
+        201
+      );
+    }
   ),
-  http.get("*/v1/notes/:noteId/chat/messages", ({ params }) =>
-    commandResult(() => mockDb.getNoteSharedChat(id(params.noteId)))
+  http.get("*/v1/workspaces/:workspaceId/agent-chats", ({ params }) =>
+    commandResult(() => ({ chats: mockDb.getAgentChats(id(params.workspaceId)) }))
+  ),
+  http.get("*/v1/agent-chats/:chatId/messages", ({ params }) =>
+    commandResult(() => mockDb.getAgentChatMessages(id(params.chatId)))
   ),
 
   // 목 전용(계약 밖, `_mock` 접두사): 대기 중인 분석을 완료로 넘긴다.
@@ -822,18 +809,4 @@ export const restHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // 목 전용(계약 밖, `_mock` 접두사): 관전자 화면을 재현하려고 남의 잠금을 심는다.
-  // e2e는 페이지 안에서 fetch로 이 경로를 쳐 서비스 워커가 상태를 세우게 한다.
-  http.post(
-    "*/v1/notes/:noteId/_mock/foreign-lock",
-    async ({ request, params }) => {
-      const body = (await request.json().catch(() => ({}))) as {
-        lockedBy?: string | null;
-      };
-      // 명시적 null은 잠금 해제다 — 생략했을 때만 기본 이름을 넣는다(`??`는 null도 덮어 해제를 막는다).
-      const lockedBy = body.lockedBy === undefined ? "김민수" : body.lockedBy;
-      mockDb.seedForeignLock(id(params.noteId), lockedBy);
-      return new HttpResponse(null, { status: 204 });
-    }
-  ),
 ];

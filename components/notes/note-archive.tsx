@@ -3,19 +3,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ChatThread } from "@/components/chat/chat-thread";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useGetNoteSharedChatMessages } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import {
   getGetNoteTranscriptQueryKey,
   useAssignNoteSpeaker,
   useGetNoteTranscript,
 } from "@/lib/api/generated/transcription/transcription";
-import { initialStreamState } from "@/lib/chat/stream-protocol";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
 import {
   SpeakerAssignMenu,
@@ -127,9 +123,6 @@ export function NoteArchive({
   const transcriptQuery = useGetNoteTranscript(noteId, {
     query: { refetchOnMount: "always" },
   });
-  const chatQuery = useGetNoteSharedChatMessages(noteId, {
-    query: { refetchOnMount: "always" },
-  });
 
   const transcript =
     transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
@@ -152,8 +145,6 @@ export function NoteArchive({
     [diarized, transcript, participants]
   );
   const truncated = transcript?.recording?.seal === "TRUNCATED";
-  // 「회의 중 챗봇」에서도 버튼이 서 있으면 무엇이 복사되는지가 모호해진다.
-  const [tab, setTab] = useState("transcript");
 
   // 한 사람이 두 화자일 수 없다. 이미 붙어 있는 사람을 고르면 **저쪽에서 떨어지므로**,
   // 그 사실을 후보 목록에 실어 누르기 전에 보이게 한다.
@@ -185,15 +176,6 @@ export function NoteArchive({
     },
   });
 
-  const messages =
-    chatQuery.data?.status === 200 && chatQuery.data.data.success
-      ? (chatQuery.data.data.data.messages ?? [])
-      : [];
-  const chatFailed =
-    chatQuery.isError ||
-    (chatQuery.data !== undefined &&
-      !(chatQuery.data.status === 200 && chatQuery.data.data.success));
-
   const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
   const { segmentRef, isHighlighted, markProps } = useTranscriptFocus(
     segments,
@@ -202,16 +184,6 @@ export function NoteArchive({
       onFocusHandled,
     }
   );
-
-  /**
-   * **두 탭이 스크롤 하나를 나눠 쓴다.** 전사 중간에서 챗봇으로 건너가면 짧은 챗이
-   * `scrollTop`을 자기 길이로 깎고, 돌아왔을 때 읽던 자리가 그 값으로 바뀌어 있다.
-   * 탭을 고르는 것은 다른 것을 보겠다는 뜻이므로 새 패널의 처음에서 시작한다.
-   */
-  const changeTab = (next: string) => {
-    setTab(next);
-    if (viewportRef.current) viewportRef.current.scrollTop = 0;
-  };
 
   return (
     <ScrollArea
@@ -232,20 +204,16 @@ export function NoteArchive({
         data-testid="note-archive-content"
         className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pb-7 pt-5 sm:pb-9 lg:pb-28"
       >
-        <Tabs value={tab} onValueChange={changeTab}>
+        <div>
           {/* **전사는 길다.** 아래로 한참 내려간 자리에서 탭을 바꾸거나 복사하려고 맨 위로
               올라가야 한다면 그 두 가지는 없는 것과 같다 — 스크롤 컨테이너 위에 붙인다.
               `-mt-5 pt-5`로 콘텐츠의 위 여백을 이 바가 들고 올라간다. 안 그러면 지나가는
               글이 바 위쪽 20px 틈으로 비친다. */}
           <div className="sticky top-0 z-10 -mt-5 flex items-center justify-between gap-4 bg-white pt-5">
-            <TabsList variant="line" className="gap-6">
-              <TabsTrigger value="transcript">대화 기록</TabsTrigger>
-              <TabsTrigger value="chat">회의 중 챗봇</TabsTrigger>
-            </TabsList>
+            <h2 className="text-sm font-semibold text-[var(--el-ink)]">대화 기록</h2>
             {/* 재조회가 실패하면 TanStack은 옛 `data`를 그대로 들고 `isError`가 된다 —
                 본문은 오류·재시도로 바뀌는데 여기만 남으면 그 숨은 캐시가 복사된다. */}
-            {tab === "transcript" &&
-            noteMeta &&
+            {noteMeta &&
             rows.length &&
             !transcriptQuery.isError ? (
               <CopyMarkdownButton
@@ -272,7 +240,7 @@ export function NoteArchive({
             ) : null}
           </div>
 
-          <TabsContent value="transcript" aria-label="회의 전사 아카이브">
+          <section aria-label="회의 전사 아카이브">
             {transcriptQuery.isPending ? (
               /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `mt-6`에 `h-24`/`h-28` 막대
                  둘이라 248이었고 실제는 288이었다 — 첫 줄이 12px 아래에서 시작했고 행
@@ -370,43 +338,8 @@ export function NoteArchive({
                 ) : null}
               </div>
             )}
-          </TabsContent>
-
-          {/* 탭은 대화가 없어도 남긴다 — 나타났다 사라지면 같은 자리인지 알기 어렵다. */}
-          <TabsContent value="chat" aria-label="회의 중 챗봇 대화">
-            <div className="mt-6">
-              {chatFailed ? (
-                // 실패를 빈 섹션으로 삼키지 않는다 — 전사와 같은 재시도 경로를 준다.
-                <div role="alert" className="space-y-2">
-                  <p className="text-sm text-[var(--el-muted)]">
-                    챗봇 대화를 불러오지 못했습니다.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-[30px]"
-                    onClick={() => void chatQuery.refetch()}
-                  >
-                    다시 시도
-                  </Button>
-                </div>
-              ) : messages.length ? (
-                // 읽기 전용 아카이브 — 스트림·승인 없이 히스토리만 그린다.
-                <ChatThread
-                  messages={messages}
-                  stream={initialStreamState}
-                  pendingUserMessage={null}
-                  onRetry={() => {}}
-                  onApprove={() => {}}
-                />
-              ) : (
-                <p className="py-8 text-sm text-[var(--el-muted)]">
-                  회의 중 챗봇에 물어본 내용이 없습니다.
-                </p>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+          </section>
+        </div>
       </div>
     </ScrollArea>
   );

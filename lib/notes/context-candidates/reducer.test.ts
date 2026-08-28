@@ -115,7 +115,9 @@ describe("context candidate reducer", () => {
 
   it("현재 revision 이하가 뒤늦게 와도 최신을 되돌리지 않는다", () => {
     const state = apply([
-      changed(head({ candidateId: "0HZX2K7M9Q4A1", revision: 2, content: "최신" })),
+      changed(
+        head({ candidateId: "0HZX2K7M9Q4A1", revision: 2, content: "최신" })
+      ),
       changed(
         head({ candidateId: "0HZX2K7M9Q4A1", revision: 1, content: "옛것" }),
         "0HZX2K7M9Q4B2"
@@ -124,6 +126,11 @@ describe("context candidate reducer", () => {
 
     expect(selectCards(state)[0].content).toBe("최신");
     expect(selectCards(state)[0].revision).toBe(2);
+    expect(state.activities[0]).toMatchObject({
+      type: "candidate",
+      outcome: "ABSORBED",
+      revision: 1,
+    });
   });
 
   it("처음 본 후보가 revision 2 이상이면 재조회를 요구한다", () => {
@@ -131,10 +138,50 @@ describe("context candidate reducer", () => {
     expect(seen.needsRefetch).toBe(false);
 
     const gap = apply(
-      [changed(head({ candidateId: "0HZX2K7M9Q4A9", revision: 3 }), "0HZX2K7M9Q4B3")],
+      [
+        changed(
+          head({ candidateId: "0HZX2K7M9Q4A9", revision: 3 }),
+          "0HZX2K7M9Q4B3"
+        ),
+      ],
       seen
     );
     expect(gap.needsRefetch).toBe(true);
+    expect(gap.activities[0]).toMatchObject({
+      type: "candidate",
+      outcome: "RESYNC_REQUIRED",
+      revision: 3,
+    });
+  });
+
+  it("후보 event의 kind와 operation을 처리 결과와 함께 최근 순서로 남긴다", () => {
+    const state = apply([
+      changed(head({ candidateId: "0HZX2K7M9Q4A1", kind: "AGENDA" })),
+      changed(
+        head({
+          candidateId: "0HZX2K7M9Q4A1",
+          revision: 2,
+          kind: "AGENDA",
+          operation: "CORRECT",
+        }),
+        "0HZX2K7M9Q4B2"
+      ),
+    ]);
+
+    expect(state.activities).toMatchObject([
+      {
+        type: "candidate",
+        kind: "AGENDA",
+        operation: "CORRECT",
+        outcome: "APPLIED",
+      },
+      {
+        type: "candidate",
+        kind: "AGENDA",
+        operation: "CREATE",
+        outcome: "APPLIED",
+      },
+    ]);
   });
 
   it("도착 순서가 아니라 createdSequence로 세운다", () => {
@@ -146,7 +193,9 @@ describe("context candidate reducer", () => {
       ),
     ]);
 
-    expect(selectCards(state).map((card) => card.createdSequence)).toEqual([10, 50]);
+    expect(selectCards(state).map((card) => card.createdSequence)).toEqual([
+      10, 50,
+    ]);
   });
 
   it("RESOLVE는 실린 status를 그대로 쓴다 — operation에서 유도하지 않는다", () => {
@@ -197,7 +246,11 @@ describe("context candidate reducer", () => {
   it("결과 후보가 resolvesCandidateId로 질문에 매달린다", () => {
     const state = apply([
       changed(
-        head({ candidateId: "0HZX2K7M9Q4AQ", kind: "QUESTION", createdSequence: 20 })
+        head({
+          candidateId: "0HZX2K7M9Q4AQ",
+          kind: "QUESTION",
+          createdSequence: 20,
+        })
       ),
       changed(
         head({
@@ -212,7 +265,9 @@ describe("context candidate reducer", () => {
     const question = selectCards(state).find(
       (card) => card.candidateId === "0HZX2K7M9Q4AQ"
     );
-    expect(question?.results.map((r) => r.candidateId)).toEqual(["0HZX2K7M9Q4AR"]);
+    expect(question?.results.map((r) => r.candidateId)).toEqual([
+      "0HZX2K7M9Q4AR",
+    ]);
     // 결과는 최상위에 두 번 나오지 않는다.
     expect(selectCards(state)).toHaveLength(1);
   });
@@ -242,11 +297,35 @@ describe("context candidate reducer", () => {
     ]);
 
     expect(state.appliedRanges).toHaveLength(1);
+    expect(state.activities[0]).toMatchObject({
+      type: "batch",
+      outcome: "ABSORBED",
+    });
+  });
+
+  it("revision gap 뒤 snapshot으로 수렴하면 복구 완료를 남긴다", () => {
+    const gap = apply([
+      changed(head({ candidateId: "0HZX2K7M9Q4A1", revision: 3 })),
+    ]);
+    const recovered = reduceContextEvent(gap, {
+      type: "snapshot",
+      candidates: [head({ candidateId: "0HZX2K7M9Q4A1", revision: 3 })],
+      appliedRanges: [],
+    });
+
+    expect(recovered.needsRefetch).toBe(false);
+    expect(recovered.activities[0]).toMatchObject({
+      type: "sync",
+      outcome: "RECOVERED",
+    });
   });
 
   it("마지막 갱신 시각은 batch의 occurredAt에서 온다", () => {
     const state = apply([
-      batch({ ...range(), appliedAt: "2026-08-24T02:00:00.000Z" }, "0HZX2K7M9Q4C1"),
+      batch(
+        { ...range(), appliedAt: "2026-08-24T02:00:00.000Z" },
+        "0HZX2K7M9Q4C1"
+      ),
     ]);
 
     expect(state.lastBatchAt).toBe("2026-08-24T02:00:00.000Z");
@@ -255,7 +334,12 @@ describe("context candidate reducer", () => {
   it("적용 범위 사이의 구멍이 읽지 못한 구간이다", () => {
     const state = apply([
       batch(
-        range({ fromSequence: 1, toSequence: 10, fromStartedAtMs: 0, toEndedAtMs: 100_000 }),
+        range({
+          fromSequence: 1,
+          toSequence: 10,
+          fromStartedAtMs: 0,
+          toEndedAtMs: 100_000,
+        }),
         "0HZX2K7M9Q4C1"
       ),
       batch(
@@ -271,7 +355,12 @@ describe("context candidate reducer", () => {
     ]);
 
     expect(findCoverageGaps(state.appliedRanges)).toEqual([
-      { fromSequence: 11, toSequence: 15, fromStartedAtMs: 100_000, toEndedAtMs: 160_000 },
+      {
+        fromSequence: 11,
+        toSequence: 15,
+        fromStartedAtMs: 100_000,
+        toEndedAtMs: 160_000,
+      },
     ]);
   });
 
@@ -299,7 +388,10 @@ describe("context candidate reducer", () => {
         range({ runKey: "run-2", fromSequence: 11, toSequence: 20 }),
         "0HZX2K7M9Q4C2"
       ),
-      batch(range({ runKey: "run-1", fromSequence: 1, toSequence: 10 }), "0HZX2K7M9Q4C1"),
+      batch(
+        range({ runKey: "run-1", fromSequence: 1, toSequence: 10 }),
+        "0HZX2K7M9Q4C1"
+      ),
     ]);
 
     expect(state.appliedRanges.map((r) => r.fromSequence)).toEqual([1, 11]);
@@ -310,8 +402,14 @@ describe("context candidate reducer", () => {
       type: "snapshot",
       candidates: [],
       appliedRanges: [
-        { ...range({ runKey: "run-1" }), appliedAt: "2026-08-25T01:00:00.000Z" },
-        { ...range({ runKey: "run-2", fromSequence: 11, toSequence: 20 }), appliedAt: "2026-08-25T02:00:00.000Z" },
+        {
+          ...range({ runKey: "run-1" }),
+          appliedAt: "2026-08-25T01:00:00.000Z",
+        },
+        {
+          ...range({ runKey: "run-2", fromSequence: 11, toSequence: 20 }),
+          appliedAt: "2026-08-25T02:00:00.000Z",
+        },
       ],
     });
     expect(settled.lastBatchAt).toBe("2026-08-25T02:00:00.000Z");
@@ -325,7 +423,9 @@ describe("context candidate reducer", () => {
       appliedRanges: [range()],
     });
 
-    expect(selectCards(settled).map((c) => c.candidateId)).toEqual(["0HZX2K7M9Q4A2"]);
+    expect(selectCards(settled).map((c) => c.candidateId)).toEqual([
+      "0HZX2K7M9Q4A2",
+    ]);
     expect(settled.needsRefetch).toBe(false);
   });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { ContextCandidateCard } from "@/components/notes/context-candidate-card";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
@@ -8,7 +9,15 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ContextCandidateHead } from "@/lib/notes/context-candidates/contract";
-import type { ContextCard } from "@/lib/notes/context-candidates/reducer";
+import {
+  CONTEXT_KIND_LABEL,
+  CONTEXT_OPERATION_LABEL,
+  CONTEXT_OUTCOME_LABEL,
+} from "@/lib/notes/context-candidates/presentation";
+import type {
+  ContextActivity,
+  ContextCard,
+} from "@/lib/notes/context-candidates/reducer";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,14 +34,139 @@ import { cn } from "@/lib/utils";
  * 「방금」이 되어 한참 전에 멈춘 lane 을 살아 있다고 보고한다.
  */
 
-type Filter = "ALL" | "AGENDA" | "DECISION" | "ACTION_ITEM";
+type Filter = "ALL" | ContextCandidateHead["kind"];
 
 const FILTERS: Array<{ value: Filter; label: string }> = [
   { value: "ALL", label: "전체" },
-  { value: "AGENDA", label: "안건" },
-  { value: "DECISION", label: "결정" },
-  { value: "ACTION_ITEM", label: "액션" },
+  ...(
+    [
+      "AGENDA",
+      "DECISION",
+      "ACTION_ITEM",
+      "ISSUE",
+      "QUESTION",
+      "STATUS_REPORT",
+      "INSIGHT",
+    ] as const
+  ).map((value) => ({ value, label: CONTEXT_KIND_LABEL[value] })),
 ];
+
+function activityCopy(activity: ContextActivity) {
+  if (activity.type === "batch") {
+    return {
+      title: "배치 적용",
+      detail: `전사 ${activity.fromSequence}–${activity.toSequence} · ${
+        activity.applyStatus === "APPLIED" ? "전체 기록" : "일부 기록"
+      }`,
+    };
+  }
+  if (activity.type === "sync") {
+    return { title: "REST 정본 동기화", detail: "누락 revision 복구" };
+  }
+  return {
+    title: `${CONTEXT_KIND_LABEL[activity.kind]} · ${
+      CONTEXT_OPERATION_LABEL[activity.operation]
+    }`,
+    detail: `revision ${activity.revision}`,
+  };
+}
+
+function EventProcessingFlow({
+  activities,
+}: {
+  activities: ContextActivity[];
+}) {
+  const reduced = useReducedMotion();
+  const recent = activities.slice(0, 3);
+
+  return (
+    <section
+      aria-label="실시간 이벤트 처리"
+      className="overflow-hidden rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
+    >
+      <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 border-b border-[var(--el-hairline)] px-3 py-2.5">
+        {[
+          ["01", "배치 수신"],
+          ["02", "후보 변경"],
+          ["03", "REST 수렴"],
+        ].map(([step, label], index) => (
+          <div key={step} className="contents">
+            <div className="min-w-0">
+              <span className="block font-mono text-[9px] tabular-nums text-[var(--el-muted-soft)]">
+                {step}
+              </span>
+              <span className="block truncate text-[11px] font-medium text-[var(--el-body-strong)]">
+                {label}
+              </span>
+            </div>
+            {index < 2 ? (
+              <span
+                aria-hidden
+                className="h-px w-3 bg-[var(--el-hairline-strong)]"
+              />
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      {recent.length === 0 ? (
+        <p className="px-3 py-2.5 text-[11px] text-[var(--el-muted-soft)]">
+          이벤트를 기다리고 있습니다
+        </p>
+      ) : (
+        <ol
+          aria-label="최근 처리 내역"
+          className="divide-y divide-[var(--el-hairline)]"
+        >
+          <AnimatePresence initial={false}>
+            {recent.map((activity) => {
+              const copy = activityCopy(activity);
+              const caution = activity.outcome === "RESYNC_REQUIRED";
+              return (
+                <motion.li
+                  layout={!reduced}
+                  key={activity.key}
+                  initial={reduced ? false : { opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: reduced ? 0 : 0.18 }}
+                  className="grid grid-cols-[7px_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-1.5 rounded-full bg-[var(--el-success)]",
+                      activity.outcome === "ABSORBED" &&
+                        "bg-[var(--el-muted-soft)]",
+                      caution && "bg-[var(--el-error)]"
+                    )}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[11px] font-medium text-[var(--el-ink)]">
+                      {copy.title}
+                    </span>
+                    <span className="block truncate font-mono text-[9px] tabular-nums text-[var(--el-muted-soft)]">
+                      {copy.detail}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium text-[var(--el-success-strong)]",
+                      activity.outcome === "ABSORBED" &&
+                        "text-[var(--el-muted)]",
+                      caution && "text-[var(--el-error-strong)]"
+                    )}
+                  >
+                    {CONTEXT_OUTCOME_LABEL[activity.outcome]}
+                  </span>
+                </motion.li>
+              );
+            })}
+          </AnimatePresence>
+        </ol>
+      )}
+    </section>
+  );
+}
 
 /** 마지막 갱신을 사람 말로. 서버 시각과 지금의 차이다. */
 export function formatFreshness(lastBatchAt: string | null, now: number) {
@@ -121,7 +255,10 @@ export function ContextRail({
       >
         <div className="flex flex-col gap-4 p-5">
           <div className="flex items-center gap-2.5">
-            <h3 id="context-rail-heading" className="font-serif text-[27px] font-light leading-none tracking-tight text-[var(--el-ink)]">
+            <h3
+              id="context-rail-heading"
+              className="font-serif text-[27px] font-light leading-none tracking-tight text-[var(--el-ink)]"
+            >
               사건 흐름
             </h3>
             {/* **「지금까지」가 진행 중임을 말한다.** 맨 숫자는 「총 N건 = 이게 전부다」로
@@ -131,8 +268,8 @@ export function ContextRail({
             </span>
           </div>
 
-          {/* **셋을 묶어 이름을 준다.** 안 묶으면 스크린리더가 「전체 · 안건 · 결정 · 액션」을
-              맥락 없는 토글 넷으로 읽어서, 무엇을 고르는 것인지 알 수 없다. */}
+          {/* **분류 체계를 묶어 이름을 준다.** 안 묶으면 스크린리더가 유형 버튼을 맥락 없는
+              토글로 읽어서, 무엇을 고르는 것인지 알 수 없다. */}
           <div
             role="group"
             aria-label="유형으로 좁히기"
@@ -158,6 +295,8 @@ export function ContextRail({
               );
             })}
           </div>
+
+          <EventProcessingFlow activities={context.state.activities} />
 
           {context.loading ? (
             // **로딩은 빈 상태가 아니다.** 아직 모르는 것을 「없다」고 말하면, 사용자가

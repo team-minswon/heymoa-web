@@ -20,11 +20,11 @@ import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-butto
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  getGetActiveAgentChatQueryKey,
+  getGetAgentChatsQueryKey,
   getGetAgentChatMessagesQueryOptions,
   getSendAgentChatMessageUrl,
   useCreateAgentChat,
-  useGetActiveAgentChat,
+  useGetAgentChats,
   useGetAgentChatMessages,
 } from "@/lib/api/generated/agent-chat/agent-chat";
 import { errorCodeOf } from "@/lib/api/error-message";
@@ -277,6 +277,7 @@ function PersonalChatPanel({
   const queryClient = useQueryClient();
   const stream = useChatStream();
   const [createdChatId, setCreatedChatId] = useState<string | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
     null
@@ -287,30 +288,23 @@ function PersonalChatPanel({
   /** 이 턴을 시작할 때의 히스토리 길이. 뒤에 붙은 것만 이 턴으로 본다. */
   const [turnBaseline, setTurnBaseline] = useState(0);
 
-  // 활성 세션 조회 params와 세션 생성 body가 같은 모양이다 (scope + 대상 id).
-  const scopeParams = useMemo(
-    () =>
-      noteId
-        ? ({ scope: "note", noteId } as const)
-        : ({ scope: "workspace", workspaceId } as const),
-    [noteId, workspaceId]
-  );
-
-  const activeQuery = useGetActiveAgentChat(scopeParams);
-  const activeResponse = activeQuery.data;
-  const activeOk =
-    activeResponse?.status === 200 && activeResponse.data.success;
-  const active = activeOk ? activeResponse.data.data : null;
+  const chatsQuery = useGetAgentChats(workspaceId);
+  const chatsResponse = chatsQuery.data;
+  const chatsOk =
+    chatsResponse?.status === 200 && chatsResponse.data.success;
+  const chats = chatsOk ? chatsResponse.data.data.chats : [];
+  const latest = chats[0] ?? null;
+  const selected = chats.find((chat) => chat.chatId === selectedChatId) ?? null;
 
   /**
    * **`200 + data: null`(활성 세션 없음)과 조회 실패는 다르다.** 둘을 같이 null로 접으면
    * 조회가 실패했을 때도 빈 상태를 보이고, 이미 있는 활성 세션 옆에 새 세션을 하나 더 만든다.
    */
-  const isActiveUnavailable =
-    activeQuery.isError || (activeResponse !== undefined && !activeOk);
+  const isChatsUnavailable =
+    chatsQuery.isError || (chatsResponse !== undefined && !chatsOk);
 
   // 방금 만든 세션이 활성 조회보다 먼저 알려지므로 그쪽을 우선한다.
-  const sessionId = createdChatId ?? active?.chatId ?? null;
+  const sessionId = createdChatId ?? selected?.chatId ?? latest?.chatId ?? null;
 
   // 턴이 도는 동안에는 켜지 않는다. 첫 전송은 세션을 만들며 이 쿼리를 켜는데, 그러면
   // (a) `isLoading`이 흐르는 스레드를 스켈레톤으로 덮고 (b) server가 USER 메시지를
@@ -344,7 +338,7 @@ function PersonalChatPanel({
     (messagesQuery.isError || (messagesResponse !== undefined && !messagesOk));
 
   /** 주 데이터를 못 읽은 상태. 전송도, 새 대화도 막는다. */
-  const isUnavailable = isActiveUnavailable || isHistoryUnavailable;
+  const isUnavailable = isChatsUnavailable || isHistoryUnavailable;
 
   /**
    * 히스토리가 방금 끝난 턴을 이미 담고 있는가. 즉시 반영이 실패해 로컬 사본을 남겨 둔 뒤
@@ -368,7 +362,7 @@ function PersonalChatPanel({
 
   // `isPending`을 쓰면 안 된다 — enabled:false인 쿼리도 pending이라 활성 세션이 없을 때
   // 빈 상태 대신 스켈레톤이 영원히 남는다. `isLoading`은 실제로 받아오는 중일 때만 참이다.
-  const isLoading = activeQuery.isLoading || messagesQuery.isLoading;
+  const isLoading = chatsQuery.isLoading || messagesQuery.isLoading;
 
   const noteQuery = useGetNote(noteId ?? "", {
     query: { enabled: Boolean(noteId) },
@@ -401,24 +395,28 @@ function PersonalChatPanel({
     // 없어진 세션(404)은 없는 것으로 친다 — 그래야 새로 만들어 이어갈 수 있다.
     if (sessionId && !isSessionGone) return sessionId;
     // 조회가 실패한 상태에서 만들면 이미 있는 활성 세션 위에 하나를 더 얹는다.
-    if (isActiveUnavailable) return null;
-    const created = await createChat.mutateAsync({ data: scopeParams });
+    if (isChatsUnavailable) return null;
+    const created = await createChat.mutateAsync({
+      workspaceId,
+      data: { title: noteTitle ?? undefined },
+    });
     if (created.status !== 201 || !created.data.success) return null;
     const chatId = created.data.data.chatId;
     setCreatedChatId(chatId);
     // 활성 조회 캐시는 아직 null이다. 갱신하지 않으면 스코프를 옮겼다 돌아왔을 때
     // 방금 만든 세션을 잃고 빈 대화를 보이며, 다음 전송이 세션을 하나 더 만든다.
     void queryClient.invalidateQueries({
-      queryKey: getGetActiveAgentChatQueryKey(scopeParams),
+      queryKey: getGetAgentChatsQueryKey(workspaceId),
     });
     return chatId;
   }, [
     createChat,
-    isActiveUnavailable,
+    isChatsUnavailable,
     isSessionGone,
     queryClient,
-    scopeParams,
     sessionId,
+    noteTitle,
+    workspaceId,
   ]);
 
   const send = useCallback(
@@ -444,6 +442,7 @@ function PersonalChatPanel({
         setLastSent(message);
         const final = await stream.send(getSendAgentChatMessageUrl(chatId), {
           message,
+          noteIds: noteId ? [noteId] : [],
         });
         if (final?.phase !== "idle") return;
 
@@ -482,6 +481,7 @@ function PersonalChatPanel({
       ensureSession,
       isBusy,
       messages.length,
+      noteId,
       onTurnActiveChange,
       queryClient,
       stream,
@@ -493,17 +493,33 @@ function PersonalChatPanel({
     // 실패 문구는 전역 MutationCache가 토스트한다. 여기서 삼키지 않으면
     // 브라우저에 unhandled rejection이 남는다.
     const created = await createChat
-      .mutateAsync({ data: scopeParams })
+      .mutateAsync({
+        workspaceId,
+        data: { title: noteTitle ?? undefined },
+      })
       .catch(() => null);
     if (!created || created.status !== 201 || !created.data.success) return;
     stream.reset();
     setPendingUserMessage(null);
     setLastSent(null);
+    setSelectedChatId(null);
     setCreatedChatId(created.data.data.chatId);
     await queryClient.invalidateQueries({
-      queryKey: getGetActiveAgentChatQueryKey(scopeParams),
+      queryKey: getGetAgentChatsQueryKey(workspaceId),
     });
-  }, [createChat, isBusy, queryClient, scopeParams, stream]);
+  }, [createChat, isBusy, noteTitle, queryClient, stream, workspaceId]);
+
+  const selectChat = useCallback(
+    (chatId: string) => {
+      if (isBusy || chatId === sessionId) return;
+      stream.reset();
+      setPendingUserMessage(null);
+      setLastSent(null);
+      setCreatedChatId(null);
+      setSelectedChatId(chatId);
+    },
+    [isBusy, sessionId, stream]
+  );
 
   const isStreaming =
     stream.state.phase === "streaming" ||
@@ -575,6 +591,36 @@ function PersonalChatPanel({
         )}
       </header>
 
+      {chats.length > 0 ? (
+        <div
+          role="tablist"
+          aria-label="대화 목록"
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-[var(--el-hairline)] px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {chats.map((chat) => {
+            const current = chat.chatId === sessionId;
+            return (
+              <button
+                key={chat.chatId}
+                type="button"
+                role="tab"
+                aria-selected={current}
+                disabled={isBusy}
+                onClick={() => selectChat(chat.chatId)}
+                className={cn(
+                  "max-w-40 shrink-0 truncate rounded-chip px-3 py-1.5 text-xs transition-colors",
+                  current
+                    ? "bg-[var(--el-surface-strong)] font-semibold text-[var(--el-ink)]"
+                    : "text-[var(--el-body)] hover:bg-[var(--el-canvas-soft)]"
+                )}
+              >
+                {chat.title}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       <ScrollArea
         className="min-h-0 flex-1"
         viewportRef={viewportRef}
@@ -598,7 +644,7 @@ function PersonalChatPanel({
                 대화를 불러오지 못했습니다.
               </p>
               <p className="text-xs text-[var(--el-muted)]">
-                {isActiveUnavailable
+                {isChatsUnavailable
                   ? "기존 대화가 있는지 확인하지 못해 새 대화를 시작하지 않습니다."
                   : "이어서 보내면 화면과 실제 대화가 어긋나므로 전송을 막아 둡니다."}
               </p>
@@ -607,8 +653,8 @@ function PersonalChatPanel({
                 size="sm"
                 className="h-[30px]"
                 onClick={() =>
-                  void (isActiveUnavailable
-                    ? activeQuery.refetch()
+                  void (isChatsUnavailable
+                    ? chatsQuery.refetch()
                     : messagesQuery.refetch())
                 }
               >

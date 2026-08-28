@@ -112,9 +112,9 @@ describe("normalizeNoteViewQuery", () => {
   });
 
   it.each([
-    ["active", "chat", "chat"],
+    ["active", "chat", "details"],
     ["active", "summary", "details"],
-    ["paused", "chat", "chat"],
+    ["paused", "chat", "details"],
     ["ended", "summary", "summary"],
     ["ended", "chat", "details"],
     ["not-started", "chat", "details"],
@@ -128,7 +128,7 @@ describe("normalizeNoteViewQuery", () => {
     }
   );
 
-  it.each(["chat", "summary"] as const)(
+  it.each(["summary"] as const)(
     "preserves a potentially legal side %s query while the phase is unknown",
     (tab) => {
       expect(normalizeNoteViewQuery({ view: "side", tab }, "unknown")).toEqual({
@@ -189,7 +189,9 @@ describe("NoteView", () => {
     fireEvent.click(screen.getByRole("button", { name: "요약 전환" }));
 
     expect(pushState).not.toHaveBeenCalled();
-    expect(replacedUrls()).toContain("/w/workspace/notes/note?view=full&tab=summary");
+    expect(replacedUrls()).toContain(
+      "/w/workspace/notes/note?view=full&tab=summary"
+    );
   });
 
   it("announces a meeting state change once through one polite live region", () => {
@@ -283,29 +285,15 @@ describe("NoteView", () => {
     await waitFor(() => expect(replacedUrls()).toHaveLength(1));
   });
 
-  it("keeps ended side chat reachable until its shared turn finishes", async () => {
+  it("제거된 side chat URL은 정보 탭으로 바로 정규화한다", async () => {
     state.search = "view=side&tab=chat";
     state.note = {
       meetingStatus: "IN_PROGRESS",
       meetingStartedBy: { userId: "starter", name: "시작자" },
     };
-    const view = render(
+    render(
       <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
     );
-
-    fireEvent.click(screen.getByRole("button", { name: "공유 턴 시작" }));
-    state.note = {
-      meetingStatus: "ENDED",
-      meetingStartedBy: { userId: "starter", name: "시작자" },
-    };
-    view.rerender(
-      <NoteView workspaceId="workspace" noteId="note" initialQuery={{}} />
-    );
-
-    expect(screen.getByTestId("note-panel")).toHaveTextContent("chat");
-    expect(replacedUrls()).toEqual([]);
-
-    fireEvent.click(screen.getByRole("button", { name: "공유 턴 끝" }));
 
     expect(screen.getByTestId("note-panel")).toHaveTextContent("details");
     await waitFor(() =>

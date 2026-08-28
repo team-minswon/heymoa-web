@@ -9,6 +9,10 @@ import type {
   ContextEvidence,
 } from "@/lib/notes/context-candidates/contract";
 import type { ContextCard } from "@/lib/notes/context-candidates/reducer";
+import {
+  CONTEXT_KIND_LABEL,
+  CONTEXT_OPERATION_LABEL,
+} from "@/lib/notes/context-candidates/presentation";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
@@ -30,16 +34,6 @@ const EVIDENCE_TRANSITION = {
   type: "spring" as const,
   bounce: 0,
   duration: 0.2,
-};
-
-const KIND_LABEL: Record<ContextCandidateHead["kind"], string> = {
-  AGENDA: "안건",
-  DECISION: "결정",
-  ACTION_ITEM: "할 일",
-  ISSUE: "이슈",
-  QUESTION: "질의응답",
-  STATUS_REPORT: "보고",
-  INSIGHT: "인사이트",
 };
 
 function statusNote(candidate: ContextCandidateHead) {
@@ -77,8 +71,7 @@ function CandidateBody({
     <div
       className={cn(
         "flex flex-col gap-1.5",
-        emphasised &&
-          "gap-2 rounded-block bg-[var(--el-canvas-soft)] p-3.5",
+        emphasised && "gap-2 rounded-block bg-[var(--el-canvas-soft)] p-3.5",
         // 철회는 흐리게. **해결은 흐리지 않다** — 성취를 취소처럼 보이게 하면 안 된다.
         retracted && "opacity-55"
       )}
@@ -117,7 +110,10 @@ function CandidateBody({
               )}
             >
               <ChevronDown
-                className={cn("size-3 transition-transform", open && "rotate-180")}
+                className={cn(
+                  "size-3 transition-transform",
+                  open && "rotate-180"
+                )}
               />
             </span>
           </>
@@ -125,11 +121,22 @@ function CandidateBody({
       </button>
 
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-[12px] text-[var(--el-muted)]">
-          {KIND_LABEL[candidate.kind]}
+        <span className="text-[12px] font-medium text-[var(--el-muted)]">
+          {CONTEXT_KIND_LABEL[candidate.kind]}
+        </span>
+        <span
+          className={cn(
+            "rounded-chip border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-1.5 py-0.5 text-[10px] leading-none text-[var(--el-muted-soft)]",
+            candidate.operation === "RETRACT" &&
+              "border-[var(--el-error)]/20 bg-[var(--el-error)]/[0.05] text-[var(--el-error-strong)]"
+          )}
+        >
+          {CONTEXT_OPERATION_LABEL[candidate.operation]}
         </span>
         {note ? (
-          <span className="text-[12px] text-[var(--el-muted-soft)]">{note}</span>
+          <span className="text-[12px] text-[var(--el-muted-soft)]">
+            {note}
+          </span>
         ) : null}
         {/* 사람이 고쳤는지가 아니라 몇 번 바뀌었는지다. v1 에 사람 편집 경로가 없다. */}
         {candidate.aiSemanticRevisionCount > 0 ? (

@@ -173,56 +173,6 @@ function teePersonal(chatId: string, message: string, events: MockSseEvent[]) {
   }
 }
 
-function teeShared(noteId: string, message: string, events: MockSseEvent[]) {
-  mockDb.appendSharedChatMessage(noteId, {
-    role: "USER",
-    content: message,
-    authorName: "테스트 유저",
-    toolEvent: null,
-  });
-  for (const event of events) {
-    if (event.event === "tool_approval_resolved") {
-      const payload = JSON.parse(event.data);
-      mockDb.appendSharedChatMessage(noteId, {
-        role: "TOOL",
-        content:
-          payload.decision === "APPROVED"
-            ? "테스트 유저님이 승인"
-            : "테스트 유저님이 거절",
-        authorName: null,
-        toolEvent: {
-          tool: "linear.create_issue",
-          decision: payload.decision,
-          status: null,
-          url: null,
-        },
-      });
-    }
-    if (event.event === "tool_call_result") {
-      const payload = JSON.parse(event.data);
-      mockDb.appendSharedChatMessage(noteId, {
-        role: "TOOL",
-        content: payload.summary ?? "도구 실행",
-        authorName: null,
-        toolEvent: {
-          tool: "linear.create_issue",
-          decision: null,
-          status: payload.status,
-          url: payload.url ?? null,
-        },
-      });
-    }
-    if (event.event === "message_end") {
-      mockDb.appendSharedChatMessage(noteId, {
-        role: "ASSISTANT",
-        content: JSON.parse(event.data).content,
-        authorName: null,
-        toolEvent: null,
-      });
-    }
-  }
-}
-
 /**
  * 승인이 필요한 메시지면 request까지 흘린 뒤 **실제로 멈춰서** 승인 API를 기다린다.
  * 목이 스스로 승인해 버리면 web은 승인 카드도 거절 경로도 밟을 수 없다.
@@ -271,35 +221,9 @@ export const chatSseHandlers = [
     }
   ),
 
-  http.post("*/v1/notes/:noteId/chat/messages", async ({ request, params }) => {
-    const body = (await request.json()) as { message: string };
-    const noteId = id(params.noteId);
-
-    // 빈 메시지는 잠금을 잡기 전에 막는다 — 잡고 나서 실패하면 잠금이 남는다.
-    if (!body.message?.trim()) return failure("BAD_REQUEST", 400);
-
-    // 게이트는 스트림을 열기 전에 통과시킨다 — 계약상 실패는 SSE가 아니라 JSON으로 온다.
-    try {
-      mockDb.acquireSharedChatLock(noteId);
-    } catch (error) {
-      const code = (error as Error).message;
-      return failure(code, code === "NOTE_NOT_FOUND" ? 404 : 409);
-    }
-
-    return sseResponse(
-      eventSourceFor(noteId, body.message, (pending) =>
-        mockDb.setSharedChatPendingApproval(noteId, pending)
-      ),
-      (sent) => {
-        teeShared(noteId, body.message, sent);
-        mockDb.releaseSharedChatLock(noteId);
-      }
-    );
-  }),
-
   // 승인은 스트림 밖 별도 요청이다. 열려서 기다리는 스트림에 결정을 전달한다.
   http.post(
-    "*/v1/agent-chats/:chatId/approvals/:approvalId",
+    "*/v1/agent-chats/:chatId/approvals/:approvalId/resolve",
     async ({ request, params }) => {
       const approvalId = id(params.approvalId);
       const pending = pendingApprovals.get(approvalId);

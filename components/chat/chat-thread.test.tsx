@@ -11,9 +11,11 @@ afterEach(cleanup);
 
 function message(overrides: Partial<ThreadMessage>): ThreadMessage {
   return {
+    turnId: null,
     createdAt: "2026-07-24T00:00:00Z",
     role: "USER",
     content: "내용",
+    scope: [],
     toolEvent: null,
     ...overrides,
   } as ThreadMessage;
@@ -50,19 +52,16 @@ describe("ChatThread", () => {
     expect(screen.getByText("이렇게 정리했습니다.")).toBeTruthy();
   });
 
-  it("공유 메시지의 작성자 이름을 USER 위에 보인다", () => {
-    // 공유 챗봇은 멀티멤버라 누가 물었는지 보여야 한다. 개인 메시지에는 authorName이 없다.
+  it("생각 메시지를 답변과 구분해 렌더한다", () => {
     renderThread({
       messages: [
         message({
-          role: "USER",
-          content: "배포 이슈 요약해줘",
-          authorName: "홍길동",
+          role: "THINKING",
+          content: "관련 회의록을 찾고 있습니다.",
         }),
       ],
     });
-    expect(screen.getByText("홍길동")).toBeTruthy();
-    expect(screen.getByText("배포 이슈 요약해줘")).toBeTruthy();
+    expect(screen.getByText("관련 회의록을 찾고 있습니다.")).toBeTruthy();
   });
 
   it("작성자 이름이 없으면(개인 챗봇) 이름을 그리지 않는다", () => {

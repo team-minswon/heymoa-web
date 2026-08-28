@@ -19,7 +19,8 @@ const CHAT_ID = "01K0000000003";
 const NEW_CHAT_ID = "01K0000000004";
 
 const state = vi.hoisted(() => ({
-  active: null as { chatId: string; scope: string } | null,
+  active: null as { chatId: string; scope?: string } | null,
+  extraChats: [] as Array<{ chatId: string; title: string }>,
   messages: [] as unknown[],
   createMock: vi.fn(),
   approveMock: vi.fn(),
@@ -42,7 +43,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
-  getGetActiveAgentChatQueryKey: (params: unknown) => ["active", params],
+  getGetAgentChatsQueryKey: (workspaceId: string) => ["chats", workspaceId],
   getGetAgentChatMessagesQueryKey: (chatId: string) => ["messages", chatId],
   // 첫 전송은 방금 만든 chatId로 직접 가져온다 — 훅의 refetch는 아직 빈 id에 묶여 있다.
   getGetAgentChatMessagesQueryOptions: (chatId: string) => ({
@@ -58,17 +59,40 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", () => ({
   }),
   getSendAgentChatMessageUrl: (chatId: string) =>
     `/v1/agent-chats/${chatId}/messages`,
-  useGetActiveAgentChat: (params: unknown) => {
-    state.activeParams.push(params);
+  useGetAgentChats: (workspaceId: string) => {
+    state.activeParams.push(workspaceId);
     return {
-      isPending: false,
+      isPending: state.activeLoading,
       isLoading: state.activeLoading,
+      isError: state.activeFails,
       refetch: vi.fn(),
       data: state.activeLoading
         ? undefined
         : state.activeFails
           ? { status: 500, data: { success: false, data: null } }
-          : { status: 200, data: { success: true, data: state.active } },
+          : {
+              status: 200,
+              data: {
+                success: true,
+                data: {
+                  chats: state.active
+                    ? [
+                        {
+                          chatId: state.active.chatId,
+                          title: "새 대화",
+                          updatedAt: "2026-07-24T00:00:00Z",
+                          runningTurn: null,
+                        },
+                        ...state.extraChats.map((chat, index) => ({
+                          ...chat,
+                          updatedAt: `2026-07-23T00:00:0${index}Z`,
+                          runningTurn: null,
+                        })),
+                      ]
+                    : [],
+                },
+              },
+            },
     };
   },
   useGetAgentChatMessages: (chatId: string, options: unknown) => {
@@ -213,6 +237,7 @@ async function sendMessage(text: string) {
 describe("PersonalChatProvider", () => {
   beforeEach(() => {
     state.active = null;
+    state.extraChats = [];
     state.messages = [];
     state.activeParams = [];
     state.messagesArgs = [];
@@ -267,6 +292,23 @@ describe("PersonalChatProvider", () => {
     expect(screen.getByText("지난 회의 요약입니다.")).toBeTruthy();
   });
 
+  it("여러 대화를 탭으로 보이고 고른 대화의 히스토리로 전환한다", async () => {
+    state.active = { chatId: CHAT_ID, scope: "workspace" };
+    state.extraChats = [{ chatId: NEW_CHAT_ID, title: "스프린트 정리" }];
+    renderChat();
+    openPanel();
+
+    expect(screen.getByRole("tab", { name: "새 대화" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "스프린트 정리" }));
+
+    await waitFor(() =>
+      expect(state.messagesArgs.at(-1)).toMatchObject({ chatId: NEW_CHAT_ID })
+    );
+  });
+
   it("활성 세션이 없으면 첫 전송이 세션을 만들고 그 id로 스트림을 연다", async () => {
     renderChat();
     openPanel();
@@ -274,12 +316,13 @@ describe("PersonalChatProvider", () => {
 
     await waitFor(() => expect(state.createMock).toHaveBeenCalledTimes(1));
     expect(state.createMock).toHaveBeenCalledWith({
-      data: { scope: "workspace", workspaceId: WORKSPACE_ID },
+      workspaceId: WORKSPACE_ID,
+      data: { title: undefined },
     });
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.streamCalls[0]).toEqual({
       url: `/v1/agent-chats/${NEW_CHAT_ID}/messages`,
-      body: { message: "정리해줘" },
+      body: { message: "정리해줘", noteIds: [] },
     });
 
     // 히스토리도 **방금 만든** chatId로 다시 읽어야 한다. 훅의 refetch를 쓰면 아직
@@ -391,10 +434,7 @@ describe("PersonalChatProvider", () => {
     await waitFor(() =>
       expect(screen.getByText("주간 제품 회의")).toBeTruthy()
     );
-    expect(state.activeParams.at(-1)).toEqual({
-      scope: "note",
-      noteId: NOTE_ID,
-    });
+    expect(state.activeParams.at(-1)).toBe(WORKSPACE_ID);
   });
 
   it("닫아도 패널을 언마운트하지 않는다", async () => {
@@ -419,7 +459,7 @@ describe("PersonalChatProvider", () => {
 
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({
-        queryKey: ["active", { scope: "workspace", workspaceId: WORKSPACE_ID }],
+        queryKey: ["chats", WORKSPACE_ID],
       })
     );
   });
@@ -447,10 +487,7 @@ describe("PersonalChatProvider", () => {
     const { rerender, client } = renderChat();
     openPanel();
     await waitFor(() =>
-      expect(state.activeParams.at(-1)).toEqual({
-        scope: "workspace",
-        workspaceId: WORKSPACE_ID,
-      })
+      expect(state.activeParams.at(-1)).toBe(WORKSPACE_ID)
     );
 
     rerender(
@@ -470,10 +507,7 @@ describe("PersonalChatProvider", () => {
       )
     );
     // 감춰졌을 뿐 스코프는 그대로 워크스페이스다.
-    expect(state.activeParams.at(-1)).toEqual({
-      scope: "workspace",
-      workspaceId: WORKSPACE_ID,
-    });
+    expect(state.activeParams.at(-1)).toBe(WORKSPACE_ID);
   });
 
   it("side 모드에서는 버튼이 사라지고 패널이 감춰지지만 스트림은 유지된다", async () => {
@@ -501,10 +535,7 @@ describe("PersonalChatProvider", () => {
     );
     // 감출 뿐 언마운트하지 않는다 — 끊으면 부분 응답이 저장되지 않아 답변이 통째로 사라진다.
     // 스코프가 그대로면 패널 key도 그대로다. 워크스페이스로 돌아갔다면 다시 마운트된 것이다.
-    expect(state.activeParams.at(-1)).toEqual({
-      scope: "note",
-      noteId: NOTE_ID,
-    });
+    expect(state.activeParams.at(-1)).toBe(WORKSPACE_ID);
     expect(screen.queryByRole("button", { name: "개인 챗봇 열기" })).toBeNull();
     expect(state.aborted).toBe(false);
   });
@@ -767,10 +798,7 @@ describe("PersonalChatProvider", () => {
     const { rerender, client } = renderChat(<NoteScope hidden={false} />);
     openPanel();
     await waitFor(() =>
-      expect(state.activeParams.at(-1)).toEqual({
-        scope: "note",
-        noteId: NOTE_ID,
-      })
+      expect(state.activeParams.at(-1)).toBe(WORKSPACE_ID)
     );
 
     // 턴을 시작해 두고 노트를 떠난다.

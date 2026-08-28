@@ -557,7 +557,7 @@ describe("NotePanel", () => {
     );
   });
 
-  it("full + 활성이면 공유 챗봇 트레이가 선다", () => {
+  it("full + 활성이면 실시간 정리·내 에이전트 레일이 선다", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -568,12 +568,14 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
-    expect(
-      screen.getByTestId("shared-chat-panel").getAttribute("data-phase")
-    ).toBe("active");
+    expect(screen.getByTestId("note-agent-rail")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "실시간 정리" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
   });
 
-  it("full + 중지에서도 기존 공유 챗봇 기록을 읽을 수 있다", () => {
+  it("full + 중지에서도 에이전트 레일을 유지한다", () => {
     noteState.value.meetingStatus = "PAUSED";
     noteState.value.activeSessionStartedAt = null;
 
@@ -588,10 +590,7 @@ describe("NotePanel", () => {
       />
     );
 
-    expect(screen.getByTestId("shared-chat-panel")).toHaveAttribute(
-      "data-phase",
-      "paused"
-    );
+    expect(screen.getByTestId("note-agent-rail")).toBeInTheDocument();
   });
 
   it("짧은 landscape에서는 14rem 높이 트레이 대신 bounded side column을 쓴다", () => {
@@ -647,8 +646,10 @@ describe("NotePanel", () => {
       />
     );
 
-    const panel = screen.getByTestId("shared-chat-panel");
-    expect(panel.className).not.toContain("border-l");
+    expect(screen.getByTestId("note-agent-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("note-agent-rail").parentElement).toHaveClass(
+      "lg:gap-2.5"
+    );
   });
 
   it("passes the existing meeting phase to the transcript", () => {
@@ -683,7 +684,7 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
-    expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("note-agent-rail")).toBeInTheDocument();
     // 닫기가 없다 — 레일은 고정이다.
     expect(
       screen.queryByRole("button", { name: /레일 닫기|챗봇 닫기/ })
@@ -706,22 +707,17 @@ describe("NotePanel", () => {
     );
 
     const personal = screen.getByRole("tab", { name: "내 에이전트" });
-    expect(screen.getByRole("tab", { name: "이 회의" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "내 에이전트" })).toHaveAttribute(
       "aria-selected",
       "true"
     );
-    // 고르기 전에는 자리를 넘기지 않는다 — 늘 넘기면 노트를 열기만 해도 개인 챗봇 조회가 걸린다.
-    expect(setRailSlot).not.toHaveBeenCalledWith(expect.any(HTMLElement));
-
-    fireEvent.click(personal);
     expect(personal).toHaveAttribute("aria-selected", "true");
     // 셸의 개인 챗봇이 들어올 자리를 실제로 넘겨줬다.
     expect(setRailSlot).toHaveBeenCalledWith(expect.any(HTMLElement));
-    // 공유 패널은 **감출 뿐 언마운트하지 않는다** — 끊으면 흐르던 답변이 사라진다.
-    expect(screen.getByTestId("shared-chat-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
   });
 
-  it("답변이 흐르는 중 회의가 종료돼도 트레이를 걷지 않고, 턴이 끝나면 아카이브로 넘긴다", () => {
+  it.skip("제거된 공유 턴의 종료 전환", () => {
     const el = (
       <NotePanel
         workspaceId="01K0000000000"
@@ -752,7 +748,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeTruthy();
   });
 
-  it("side + 활성은 정보·전사·챗봇 탭을 두고 챗봇을 탭 패널 안에 둔다", () => {
+  it.skip("제거된 side 공유 챗봇 탭", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -778,7 +774,7 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("side + 중지는 챗봇 기록 탭을 유지한다", () => {
+  it.skip("제거된 side 공유 챗봇 기록 탭", () => {
     noteState.value.meetingStatus = "PAUSED";
     noteState.value.activeSessionStartedAt = null;
 
@@ -836,7 +832,7 @@ describe("NotePanel", () => {
     expect(screen.queryByTestId("shared-chat-panel")).toBeNull();
   });
 
-  it("side 챗봇은 다른 탭으로 이동해도 같은 패널을 keepMounted한다", () => {
+  it.skip("제거된 side 공유 챗봇 keepMounted", () => {
     const panel = (tab: "chat" | "transcript") => (
       <NotePanel
         workspaceId="01K0000000000"
@@ -858,7 +854,7 @@ describe("NotePanel", () => {
     expect(sharedPanel.closest('[data-slot="tabs-content"]')).not.toBeVisible();
   });
 
-  it("side 챗봇의 무턴 초안은 전사 탭으로 이동해도 같은 패널에 남는다", () => {
+  it.skip("제거된 side 공유 챗봇 초안", () => {
     const panel = (tab: "chat" | "transcript") => (
       <NotePanel
         workspaceId="01K0000000000"
@@ -883,7 +879,7 @@ describe("NotePanel", () => {
     expect(sharedPanel.closest('[data-slot="tabs-content"]')).not.toBeVisible();
   });
 
-  it("side 공유 답변이 흐르는 동안 full 확장을 잠근다", () => {
+  it.skip("제거된 side 공유 턴 확장 잠금", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -906,7 +902,7 @@ describe("NotePanel", () => {
     ).toBeDisabled();
   });
 
-  it.each(["chat", "summary"] as const)(
+  it.each(["summary"] as const)(
     "side + unknown 직링크 %s는 대응 탭 패널을 유지한다",
     (tab) => {
       noteState.query = { data: undefined, isError: false };
@@ -922,9 +918,7 @@ describe("NotePanel", () => {
         />
       );
 
-      expect(
-        screen.getByRole("tab", { name: tab === "chat" ? "챗봇" : "요약" })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "요약" })).toBeInTheDocument();
       expect(screen.getByRole("tabpanel")).toBeInTheDocument();
     }
   );
@@ -987,7 +981,7 @@ describe("NotePanel", () => {
     );
   });
 
-  it("좁은 화면에서 접혀도 「내 에이전트」를 고를 수 있다", () => {
+  it.skip("이전 3탭 기준 좁은 화면 접힘", () => {
     // 레일을 통째로 감추면 탭 버튼까지 같이 감춰져서 종료된 회의에는 들어갈 길이 없어진다.
     // 접는 것은 대화뿐이고 탭 줄은 남는다.
     noteState.value.meetingStatus = "ENDED";
@@ -1121,7 +1115,7 @@ describe("NotePanel", () => {
 
   // 뷰가 바뀌면 레일의 SharedChatPanel이 언마운트되고 탭 아래에 새로 마운트되어 SSE가 끊긴다.
   // 계약상 부분 응답은 저장되지 않으므로 흐르던 답변이 통째로 사라진다 — 확장과 같은 이유로 막는다.
-  it("공유 답변이 흐르는 동안 축소를 막는다", () => {
+  it.skip("제거된 공유 턴 축소 잠금", () => {
     renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
@@ -1355,7 +1349,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
 
-  it("side의 공유 턴 중 회의가 끝나도 기록 탭 뒤에서 패널을 보존한다", () => {
+  it.skip("제거된 side 공유 턴 종료 보존", () => {
     authState.userId = "u2";
     const onTabChange = vi.fn();
     const panel = (tab: "chat" | "transcript") => (
@@ -1395,7 +1389,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
 
-  it("side 공유 턴·승인 대기 중 회의가 끝나도 챗봇 탭과 패널에 접근한다", () => {
+  it.skip("제거된 side 공유 턴 승인 대기", () => {
     authState.userId = "u2";
     const panel = (
       <NotePanel
@@ -1765,7 +1759,7 @@ describe("NotePanel", () => {
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
 
-  it("흐르는 답변 중 아카이브를 요청하면 이동 대기를 알린 뒤 턴 종료 후 연다", () => {
+  it.skip("제거된 공유 턴 아카이브 대기", () => {
     authState.userId = "u2";
     const el = (
       <NotePanel

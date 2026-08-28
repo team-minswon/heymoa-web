@@ -163,21 +163,6 @@ function contractSamples() {
   // 비-null 쪽을 만든다.
   mockDb.connectIntegration(workspaces[0].workspaceId, "LINEAR");
 
-  // 공유 챗의 `lock`은 아무도 안 잡으면 전부 null이다. 남의 잠금과 승인 대기를 심어
-  // 비-null 쪽을 만든다.
-  mockDb.seedForeignLock(notes[0], "한지원");
-  mockDb.setSharedChatPendingApproval(notes[0], {
-    approvalId: "01K0000000030",
-    tool: "linear_create_issue",
-    summary: "APP-12 이슈를 만듭니다.",
-  });
-  // `summary`는 계약상 nullable이다 — 없는 쪽 표본을 다른 노트에 심는다.
-  mockDb.setSharedChatPendingApproval(notes[3], {
-    approvalId: "01K0000000031",
-    tool: "linear_create_issue",
-    summary: null,
-  });
-
   /**
    * 후보 revision 이력은 `{candidateId}` 가 있어야 부를 수 있다. **id 를 손으로 박지
    * 않는다** — 목이 바뀌면 조용히 빈 응답을 부르게 되고, 그러면 nullable 표본이 0개인데도
@@ -200,13 +185,15 @@ function contractSamples() {
     ),
   ];
 
-  // 채팅은 시드에 없다. 두 스코프를 다 만들어야 `workspaceId`·`noteId`가 양쪽으로 나온다.
+  // 목은 대화가 비어 있어 히스토리 표본을 직접 만든다.
   const chatIds = [
     mockDb.createAgentChat({
-      scope: "workspace",
       workspaceId: workspaces[0].workspaceId,
     }).chatId,
-    mockDb.createAgentChat({ scope: "note", noteId: notes[0] }).chatId,
+    mockDb.createAgentChat({
+      workspaceId: workspaces[0].workspaceId,
+      title: "둘째 대화",
+    }).chatId,
   ];
 
   /**
@@ -237,36 +224,6 @@ function contractSamples() {
       decision: null,
       status: "success",
       url: "https://linear.app/minswon/issue/APP-12",
-    },
-  });
-
-  // 공유 챗은 `authorName`도 nullable이다 — USER는 값, ASSISTANT/TOOL은 null이다.
-  mockDb.appendSharedChatMessage(notes[0], {
-    role: "USER",
-    content: "이번 회의에서 정한 것만 정리해줘",
-    authorName: "테스트 유저",
-    toolEvent: null,
-  });
-  mockDb.appendSharedChatMessage(notes[0], {
-    role: "TOOL",
-    content: "APP-13 생성됨",
-    authorName: null,
-    toolEvent: {
-      tool: "linear_create_issue",
-      decision: null,
-      status: "success",
-      url: "https://linear.app/minswon/issue/APP-13",
-    },
-  });
-  mockDb.appendSharedChatMessage(notes[0], {
-    role: "TOOL",
-    content: "이슈 생성을 승인했습니다.",
-    authorName: null,
-    toolEvent: {
-      tool: "linear_create_issue",
-      decision: "APPROVED",
-      status: null,
-      url: null,
     },
   });
 
@@ -344,8 +301,11 @@ function contractSamples() {
  */
 const KNOWN_ONE_SIDED = new Set([
   "CurrentUserResponse.data.image",
-  // `createAgentChat`이 `title: null`로만 만든다 — 목에 제목을 붙이는 수단이 없다.
-  "AgentChatV2NullableResponse.data.title",
+  // 목 스토어는 확정된 히스토리만 저장하므로 진행 중인 턴·턴 id는 null 쪽만 보인다.
+  "AgentChatMessagesResponse.data.lastTurn",
+  "AgentChatMessagesResponse.data.activeTurn",
+  "AgentChatMessagesResponse.data.messages[].turnId",
+  "AgentChatsResponse.data.chats[].runningTurn",
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
   "CurrentTranscriptionSessionNullableResponse.data.startedAt",
@@ -357,7 +317,19 @@ const KNOWN_ONE_SIDED = new Set([
 ]);
 
 /** 표본에서 한 번도 관측되지 않는 필드. 비어 있어야 정상이고, 늘면 게이트가 좁아진 것이다. */
-const KNOWN_UNOBSERVED = new Set<string>([]);
+const KNOWN_UNOBSERVED = new Set([
+  // 정적 REST 목은 도는 턴을 심지 않는다. 이 필드들은 SSE 재접속 시나리오에서 다룬다.
+  "AgentChatMessagesResponse.data.lastTurn.failureCode",
+  "AgentChatMessagesResponse.data.lastTurn.pendingApproval",
+  "AgentChatMessagesResponse.data.lastTurn.pendingApproval.args",
+  "AgentChatMessagesResponse.data.lastTurn.pendingApproval.summary",
+  "AgentChatMessagesResponse.data.activeTurn.failureCode",
+  "AgentChatMessagesResponse.data.activeTurn.pendingApproval",
+  "AgentChatMessagesResponse.data.activeTurn.pendingApproval.args",
+  "AgentChatMessagesResponse.data.activeTurn.pendingApproval.summary",
+  // 메시지 scope 표본은 현재 빈 배열과 note 제목이 있는 경로만 만든다.
+  "AgentChatMessagesResponse.data.messages[].scope[].title",
+]);
 
 describe("nullable 목 표본", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));

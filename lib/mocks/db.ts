@@ -24,11 +24,10 @@ import type {
   MarkNotificationReadResponseData,
   AnalysisResultResponseData,
   ToolConnectionsResponseDataIntegrationsItem,
-  AgentChatV2ResponseData,
+  AgentChatResponseData,
+  AgentChatsResponseDataChatsItem,
+  AgentChatMessagesResponseData,
   AgentChatMessagesResponseDataMessagesItem,
-  NoteSharedChatResponseData,
-  NoteSharedChatResponseDataMessagesItem,
-  NoteSharedChatResponseDataLockPendingApproval,
   WorkspaceResponseData,
   TranscriptResponseData,
   TranscriptResponseDataDiarization,
@@ -122,16 +121,10 @@ type MockIntegration = ToolConnectionsResponseDataIntegrationsItem & {
   workspaceId: string;
 };
 
-/** 개인 챗봇 세션. 활성 세션은 스코프 대상별로 하나다 (워크스페이스 1개 + 노트당 1개). */
-type MockAgentChat = AgentChatV2ResponseData & { active: boolean };
+type MockAgentChat = AgentChatResponseData & { updatedAt: string };
 
 type MockAgentChatMessage = AgentChatMessagesResponseDataMessagesItem & {
   chatId: string;
-};
-
-/** 공유 챗은 노트에 하나씩 붙는다 — 새 대화도 삭제도 없다 (회의 기록의 일부). */
-type MockSharedChatMessage = NoteSharedChatResponseDataMessagesItem & {
-  noteId: string;
 };
 
 type StoreState = {
@@ -150,16 +143,9 @@ type StoreState = {
   notifications: NotificationListResponseDataNotificationsItem[];
   analyses: AnalysisResultResponseData[];
   integrations: MockIntegration[];
-  sharedChatLocks: Set<string>;
   /** 현재 유저가 아닌 멤버가 쥔 잠금 (noteId → 이름). 관전자 화면 재현용. */
-  sharedChatForeignLocks: Map<string, string>;
-  sharedChatPendingApprovals: Map<
-    string,
-    NoteSharedChatResponseDataLockPendingApproval
-  >;
   agentChats: MockAgentChat[];
   agentChatMessages: MockAgentChatMessage[];
-  sharedChatMessages: MockSharedChatMessage[];
 };
 
 let state: StoreState;
@@ -983,53 +969,8 @@ function createSeedState(): StoreState {
       },
     ],
     integrations,
-    sharedChatLocks: new Set<string>(),
-    sharedChatForeignLocks: new Map<string, string>(),
-    sharedChatPendingApprovals: new Map(),
     agentChats: [],
     agentChatMessages: [],
-    // 공유 챗봇은 여러 명이 함께 쓰는 화면이라 빈 상태만 보면 발화자·시각 표기를 검증할 수
-    // 없다. 다른 멤버(`authorName`)와 내가 섞인 2왕복을 시드한다.
-    sharedChatMessages: [
-      {
-        messageId: "01K0000000040",
-        noteId: notes[0].noteId,
-        role: "USER",
-        content: "지금까지 나온 액션 아이템 정리해줘",
-        authorName: MOCK_USER.name,
-        createdAt: "2026-07-11T00:06:00Z",
-        toolEvent: null,
-      },
-      {
-        messageId: "01K0000000041",
-        noteId: notes[0].noteId,
-        role: "ASSISTANT",
-        content:
-          "지금까지 2건입니다.\n1. 온보딩 이탈 구간 분석\n2. 다음 주 사용자 테스트 진행",
-        authorName: null,
-        createdAt: "2026-07-11T00:06:30Z",
-        toolEvent: null,
-      },
-      {
-        messageId: "01K0000000042",
-        noteId: notes[0].noteId,
-        role: "USER",
-        content: "두 번째 건 담당자는 정해졌어?",
-        authorName: "박준호",
-        createdAt: "2026-07-11T00:09:00Z",
-        toolEvent: null,
-      },
-      {
-        messageId: "01K0000000043",
-        noteId: notes[0].noteId,
-        role: "ASSISTANT",
-        content:
-          "04:22에 박준호님이 테스트 대상 20명을 제안했고, 05:12에 이서연님이 모집 마감을 금요일로 정했습니다. 담당자는 아직 정해지지 않았습니다.",
-        authorName: null,
-        createdAt: "2026-07-11T00:09:20Z",
-        toolEvent: null,
-      },
-    ],
   };
 }
 
@@ -1290,167 +1231,68 @@ reset();
 export const mockDb = {
   reset,
 
-  /**
-   * 공유 챗은 회의가 ACTIVE일 때 한 번에 한 명만 쓴다. 게이트를 스트림 열기 전에
-   * 통과시켜야 패배한 쪽이 오류로 끝난 스트림 대신 409 JSON을 받는다.
-   */
-  /**
-   * 개인 챗봇 세션을 만든다. 같은 대상의 기존 활성 세션은 비활성으로 내린다 —
-   * "새로운 대화 시작"이 그 동작이고, 다른 대상의 세션에는 영향이 없다.
-   */
   createAgentChat(input: {
-    scope: string;
-    workspaceId?: string | null;
-    noteId?: string | null;
-  }): AgentChatV2ResponseData {
-    const scope = input.scope as AgentChatV2ResponseData["scope"];
-    const workspaceId =
-      scope === "workspace" ? (input.workspaceId ?? null) : null;
-    const noteId = scope === "note" ? (input.noteId ?? null) : null;
-    if (scope === "workspace" && !workspaceId) fail("WORKSPACE_NOT_FOUND");
-    if (scope === "note" && !noteId) fail("NOTE_NOT_FOUND");
-    if (workspaceId) assertWorkspace(workspaceId);
-    if (noteId) findNote(noteId);
-
-    state.agentChats
-      .filter(
-        (chat) =>
-          chat.active &&
-          chat.scope === scope &&
-          chat.workspaceId === workspaceId &&
-          chat.noteId === noteId
-      )
-      .forEach((chat) => {
-        chat.active = false;
-      });
-
+    workspaceId: string;
+    title?: string;
+  }): AgentChatResponseData {
+    assertWorkspace(input.workspaceId);
+    const createdAt = nextTimestamp();
     const chat: MockAgentChat = {
       chatId: nextId(),
-      scope,
-      workspaceId,
-      noteId,
-      title: null,
-      createdAt: nextTimestamp(),
-      active: true,
+      workspaceId: input.workspaceId,
+      title: input.title?.trim() || "새 대화",
+      createdAt,
+      updatedAt: createdAt,
     };
     state.agentChats.push(chat);
-    return copy(omit(chat, ["active"]));
+    return copy(omit(chat, ["updatedAt"]));
   },
 
-  /** 새로고침 후 복원용. 활성 세션이 없으면 null이다 (계약이 nullable로 정의). */
-  getActiveAgentChat(query: {
-    scope: string;
-    workspaceId?: string | null;
-    noteId?: string | null;
-  }): AgentChatV2ResponseData | null {
-    const chat = state.agentChats.find(
-      (candidate) =>
-        candidate.active &&
-        candidate.scope === query.scope &&
-        candidate.workspaceId === (query.workspaceId ?? null) &&
-        candidate.noteId === (query.noteId ?? null)
+  getAgentChats(workspaceId: string): AgentChatsResponseDataChatsItem[] {
+    assertWorkspace(workspaceId);
+    return copy(
+      state.agentChats
+        .filter((chat) => chat.workspaceId === workspaceId)
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+        .map((chat) => ({
+          chatId: chat.chatId,
+          title: chat.title,
+          updatedAt: chat.updatedAt,
+          runningTurn: null,
+        }))
     );
-    return chat ? copy(omit(chat, ["active"])) : null;
   },
 
-  getAgentChatMessages(
-    chatId: string
-  ): AgentChatMessagesResponseDataMessagesItem[] {
+  getAgentChatMessages(chatId: string): AgentChatMessagesResponseData {
     if (!state.agentChats.some((chat) => chat.chatId === chatId)) {
       fail("AGENT_CHAT_NOT_FOUND");
     }
-    return copy(
-      state.agentChatMessages
+    return {
+      messages: copy(state.agentChatMessages
         .filter((message) => message.chatId === chatId)
-        .map((message) => omit(message, ["chatId"]))
-    );
+        .map((message) => omit(message, ["chatId"]))),
+      activeTurn: null,
+      lastTurn: null,
+      cursor: 0,
+    };
   },
 
   /** 스트림이 흐르는 동안 server가 하는 tee를 목도 흉내낸다 — 히스토리가 남아야 관전자·복원이 산다. */
   appendAgentChatMessage(
     chatId: string,
-    message: Omit<AgentChatMessagesResponseDataMessagesItem, "createdAt">
+    message: Omit<
+      AgentChatMessagesResponseDataMessagesItem,
+      "createdAt" | "turnId" | "scope"
+    > &
+      Partial<Pick<AgentChatMessagesResponseDataMessagesItem, "turnId" | "scope">>
   ) {
     state.agentChatMessages.push({
       ...message,
+      turnId: message.turnId ?? null,
+      scope: message.scope ?? [],
       chatId,
       createdAt: nextTimestamp(),
     });
-  },
-
-  getNoteSharedChat(noteId: string): NoteSharedChatResponseData {
-    findNote(noteId);
-    // 남의 잠금(관전자)이 내 잠금보다 우선한다 — 관전자 화면을 재현하려면 lockedBy가
-    // 현재 유저가 아니어야 한다.
-    const foreignLocker = state.sharedChatForeignLocks.get(noteId) ?? null;
-    const locked = foreignLocker !== null || state.sharedChatLocks.has(noteId);
-    return copy({
-      chatId: noteId,
-      messages: state.sharedChatMessages
-        .filter((message) => message.noteId === noteId)
-        .map((message) => omit(message, ["noteId"])),
-      lock: {
-        locked,
-        lockedBy:
-          foreignLocker ??
-          (state.sharedChatLocks.has(noteId) ? state.user.name : null),
-        // 관전자는 스트림을 받지 않는다 — 승인 대기를 이 필드의 폴링으로만 본다 (계약).
-        pendingApproval: state.sharedChatPendingApprovals.get(noteId) ?? null,
-      },
-    });
-  },
-
-  /** 관전자 화면 재현: 현재 유저가 아닌 멤버가 입력 중인 잠금을 세운다 (null이면 해제). */
-  seedForeignLock(noteId: string, lockedBy: string | null) {
-    if (lockedBy) state.sharedChatForeignLocks.set(noteId, lockedBy);
-    else state.sharedChatForeignLocks.delete(noteId);
-  },
-
-  appendSharedChatMessage(
-    noteId: string,
-    message: Omit<
-      NoteSharedChatResponseDataMessagesItem,
-      "createdAt" | "messageId"
-    >
-  ) {
-    state.sharedChatMessages.push({
-      ...message,
-      noteId,
-      messageId: nextId(),
-      createdAt: nextTimestamp(),
-    });
-  },
-
-  acquireSharedChatLock(noteId: string) {
-    const note = findNote(noteId);
-    // 계약의 ACTIVE 판정은 IN_PROGRESS만이 아니라 "녹음이 시작됐는가"까지다.
-    // 새 노트는 NOT_STARTED이고, 세션 생성 뒤에만 시작자가 정해진다.
-    if (note.meetingStatus !== "IN_PROGRESS" || !note.meetingStartedBy) {
-      fail("MEETING_NOT_ACTIVE");
-    }
-    // 남의 잠금(시드된 관전자 상태)도 실제로 막아야 계약(다른 멤버 입력 중이면 CHAT_LOCKED)을
-    // 그대로 시연한다 — GET만 잠겼다고 하고 POST는 통과하면 목이 계약과 어긋난다.
-    if (
-      state.sharedChatLocks.has(noteId) ||
-      state.sharedChatForeignLocks.has(noteId)
-    ) {
-      fail("CHAT_LOCKED");
-    }
-    state.sharedChatLocks.add(noteId);
-  },
-
-  releaseSharedChatLock(noteId: string) {
-    state.sharedChatLocks.delete(noteId);
-    state.sharedChatPendingApprovals.delete(noteId);
-  },
-
-  /** 스트림이 승인을 기다리는 동안 관전자에게 보일 대기 상태를 세운다. */
-  setSharedChatPendingApproval(
-    noteId: string,
-    pending: NoteSharedChatResponseDataLockPendingApproval | null
-  ) {
-    if (pending) state.sharedChatPendingApprovals.set(noteId, pending);
-    else state.sharedChatPendingApprovals.delete(noteId);
   },
 
   endMeeting(noteId: string): AnalysisResultResponseData {
@@ -2092,27 +1934,12 @@ export const mockDb = {
         .filter((row) => row.noteId === noteId)
         .map((row) => row.sessionId)
     );
-    const chatIds = new Set(
-      state.agentChats
-        .filter((row) => row.noteId === noteId)
-        .map((row) => row.chatId)
-    );
     state.notes = state.notes.filter((row) => row.noteId !== noteId);
     state.sessions = state.sessions.filter((row) => row.noteId !== noteId);
     state.segments = state.segments.filter(
       (row) => !sessionIds.has(row.transcriptionSessionId)
     );
     state.analyses = state.analyses.filter((row) => row.noteId !== noteId);
-    state.agentChats = state.agentChats.filter((row) => row.noteId !== noteId);
-    state.agentChatMessages = state.agentChatMessages.filter(
-      (row) => !chatIds.has(row.chatId)
-    );
-    state.sharedChatMessages = state.sharedChatMessages.filter(
-      (row) => row.noteId !== noteId
-    );
-    state.sharedChatLocks.delete(noteId);
-    state.sharedChatForeignLocks.delete(noteId);
-    state.sharedChatPendingApprovals.delete(noteId);
   },
 
   createSession(noteId: string): StartTranscriptionSessionResponseData {

@@ -11,15 +11,8 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { getGetNoteSharedChatMessagesQueryKey } from "@/lib/api/generated/note-shared-chat/note-shared-chat";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
-import {
-  endStream,
-  initialStreamState,
-  reduceStreamEvent,
-  type ChatStreamState,
-} from "@/lib/chat/stream-protocol";
 import type {
   AppliedRange,
   ContextCandidateHead,
@@ -62,15 +55,12 @@ type ViewerLivePartial = {
 type NoteRealtimeState = {
   partial: ViewerLivePartial | null;
   finalSegments: NoteTopicFinalSegment[];
-  chatStream: ChatStreamState;
-  chatLocked: boolean | null;
   context: ContextState;
 };
 
 type NoteRealtimeAction =
   | { type: "reset" }
   | { type: "event"; event: NoteTopicEvent }
-  | { type: "chat.interrupted" }
   | {
       type: "snapshot";
       candidates: ContextCandidateHead[];
@@ -80,8 +70,6 @@ type NoteRealtimeAction =
 const initialState: NoteRealtimeState = {
   partial: null,
   finalSegments: [],
-  chatStream: initialStreamState,
-  chatLocked: null,
   context: initialContextState,
 };
 const TRANSCRIPT_CATCH_UP_DELAY_MS = 500;
@@ -95,14 +83,6 @@ function reducer(
     // REST가 정본이다. 임시로 접어 둔 것을 버리고 이걸로 다시 선다.
     return { ...state, context: reduceContextEvent(state.context, action) };
   }
-  if (action.type === "chat.interrupted") {
-    return {
-      ...state,
-      chatStream: endStream(state.chatStream, "stalled"),
-      chatLocked: false,
-    };
-  }
-
   const event = action.event;
   switch (event.type) {
     case "transcript.partial":
@@ -140,29 +120,6 @@ function reducer(
       };
     case "meeting.ended":
       return { ...state, partial: null };
-    case "chat.token":
-      return {
-        ...state,
-        chatStream: reduceStreamEvent(state.chatStream, {
-          event: "token",
-          data: JSON.stringify({ delta: event.delta }),
-        }),
-      };
-    case "chat.message_end":
-      return {
-        ...state,
-        chatStream: reduceStreamEvent(state.chatStream, {
-          event: "message_end",
-          data: JSON.stringify(event),
-        }),
-        chatLocked: false,
-      };
-    case "chat.lock":
-      return {
-        ...state,
-        chatLocked: event.locked,
-        chatStream: event.locked ? initialStreamState : state.chatStream,
-      };
     // 맥락 후보는 통째로 순수 리듀서에 넘긴다 — 이 파일은 이벤트 의미를 모른다.
     case "context.candidate.changed":
     case "context.classification.batch.applied":
@@ -183,12 +140,6 @@ type NoteRealtimeValue = {
     loading: boolean;
     retry: () => void;
   };
-  chat: {
-    stream: ChatStreamState;
-    text: string;
-    interrupted: boolean;
-    locked: boolean | null;
-  };
 };
 
 const NoteRealtimeContext = createContext<NoteRealtimeValue | null>(null);
@@ -202,9 +153,6 @@ export function NoteRealtimeProvider({
 }) {
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(reducer, initialState);
-  const turnRef = useRef(0);
-  const endedTurnRef = useRef<number | null>(null);
-  const interruptionTimerRef = useRef<number | null>(null);
   const transcriptTimerRef = useRef<number | null>(null);
   /**
    * WS 콜백은 연결 effect 안에서 한 번 만들어져 그 시점의 값을 가둔다. 재조회가 필요한지는
@@ -216,12 +164,6 @@ export function NoteRealtimeProvider({
   }, [state.context.needsRefetch]);
 
   useEffect(() => {
-    const clearInterruption = () => {
-      if (interruptionTimerRef.current !== null) {
-        window.clearTimeout(interruptionTimerRef.current);
-        interruptionTimerRef.current = null;
-      }
-    };
     const invalidateNote = () =>
       void queryClient.invalidateQueries({
         queryKey: getGetNoteQueryKey(noteId),
@@ -251,21 +193,15 @@ export function NoteRealtimeProvider({
         invalidateTranscript();
       }, TRANSCRIPT_CATCH_UP_DELAY_MS);
     };
-    const invalidateChat = () =>
-      void queryClient.invalidateQueries({
-        queryKey: getGetNoteSharedChatMessagesQueryKey(noteId),
-      });
     const invalidateContext = () =>
       void queryClient.invalidateQueries({
         queryKey: getGetContextCandidatesQueryKey(noteId),
       });
     const catchUp = () => {
-      clearInterruption();
       clearTranscriptCatchUp();
       dispatch({ type: "reset" });
       invalidateLifecycle();
       invalidateTranscript();
-      invalidateChat();
       invalidateContext();
     };
     const client = new NoteTopicClient({
@@ -282,7 +218,6 @@ export function NoteRealtimeProvider({
             clearTranscriptCatchUp();
             invalidateLifecycle();
             invalidateTranscript();
-            invalidateChat();
             invalidateContext();
             break;
           case "recording.started":
@@ -295,29 +230,6 @@ export function NoteRealtimeProvider({
             break;
           case "transcript.final":
             scheduleTranscriptCatchUp();
-            break;
-          case "chat.lock":
-            invalidateChat();
-            if (event.locked) {
-              clearInterruption();
-              turnRef.current += 1;
-              endedTurnRef.current = null;
-            } else {
-              const turn = turnRef.current;
-              clearInterruption();
-              // 정상 순서도 unlock 뒤 message_end다. 짧은 유예 동안 terminal이 안 오면
-              // 그때만 중단으로 확정한다.
-              interruptionTimerRef.current = window.setTimeout(() => {
-                if (endedTurnRef.current === turn) return;
-                dispatch({ type: "chat.interrupted" });
-                invalidateChat();
-              }, 1_000);
-            }
-            break;
-          case "chat.message_end":
-            endedTurnRef.current = turnRef.current;
-            clearInterruption();
-            invalidateChat();
             break;
           /**
            * **재조회가 실패한 채 갇히지 않게 한다.** `needsRefetch` 는 sticky 이고 그것을
@@ -343,7 +255,6 @@ export function NoteRealtimeProvider({
     });
     client.connect();
     return () => {
-      clearInterruption();
       clearTranscriptCatchUp();
       void client.close();
     };
@@ -404,12 +315,6 @@ export function NoteRealtimeProvider({
       transcript: {
         partial: state.partial,
         finalSegments: state.finalSegments,
-      },
-      chat: {
-        stream: state.chatStream,
-        text: state.chatStream.text,
-        interrupted: state.chatStream.phase === "stalled",
-        locked: state.chatLocked,
       },
       context: {
         cards: selectCards(state.context),

@@ -48,8 +48,7 @@ export function normalizeNoteViewQuery(
     view?: string | string[];
     tab?: string | string[];
   },
-  phase: SharedChatPhase,
-  sharedTurnActive = false
+  phase: SharedChatPhase
 ): { view: NoteViewMode; tab: NoteTab } {
   const view = query.view === "side" ? "side" : "full";
   const rawTab = query.tab;
@@ -60,14 +59,7 @@ export function normalizeNoteViewQuery(
       : rawTab === "summary" &&
           (view === "full" || phase === "ended" || phase === "unknown")
         ? "summary"
-        : rawTab === "chat" &&
-            view === "side" &&
-            (phase === "active" ||
-              phase === "paused" ||
-              phase === "unknown" ||
-              sharedTurnActive)
-          ? "chat"
-          : rawTab === "transcript"
+        : rawTab === "transcript"
             ? "transcript"
             : // 기본은 정보다 — 회의를 열면 제목·참여자·시각이 먼저 보인다.
               "details";
@@ -101,8 +93,7 @@ export function NoteView({
       ? noteQuery.data.data.data
       : undefined;
   const phase = deriveMeetingPhase(note);
-  const [sharedTurnActive, setSharedTurnActive] = useState(false);
-  const current = normalizeNoteViewQuery(requested, phase, sharedTurnActive);
+  const current = normalizeNoteViewQuery(requested, phase);
   usePersonalChatScope({
     noteId,
     hidden: isPersonalChatHiddenInNote(current.view),
@@ -212,7 +203,6 @@ export function NoteView({
         view={current.view}
         tab={current.tab}
         onTabChange={(tab, options) => setQuery({ tab }, options)}
-        onSharedTurnActiveChange={setSharedTurnActive}
         onClose={closeWithAnim}
         onExpand={
           current.view === "side" ? () => setQuery({ view: "full" }) : undefined

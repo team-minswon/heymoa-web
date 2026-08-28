@@ -56,17 +56,13 @@ describe("REST and WebSocket contract consistency", () => {
     expect(asyncapi.channels.agentChatStream.servers).toEqual([
       { $ref: "#/servers/sseEdge" },
     ]);
-    expect(asyncapi.channels.noteSharedChatStream.servers).toEqual([
-      { $ref: "#/servers/sseEdge" },
-    ]);
   });
 });
 
 describe("chat SSE contract", () => {
-  it("carries the agent chat channels and the eight stream events", () => {
-    expect(Object.keys(asyncapi.channels)).toEqual(
-      expect.arrayContaining(["agentChatStream", "noteSharedChatStream"])
-    );
+  it("carries the private agent chat channel and the eight stream events", () => {
+    expect(Object.keys(asyncapi.channels)).toContain("agentChatStream");
+    expect(Object.keys(asyncapi.channels)).not.toContain("noteSharedChatStream");
     expect(Object.keys(asyncapi.components.messages)).toEqual(
       expect.arrayContaining([
         "MessageStart",

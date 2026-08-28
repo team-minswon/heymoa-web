@@ -30,6 +30,47 @@ export type ContextCard = ContextCandidateHead & {
   results: ContextCandidateHead[];
 };
 
+export type ContextActivityOutcome =
+  | "APPLIED"
+  | "ABSORBED"
+  | "RESYNC_REQUIRED"
+  | "RECOVERED";
+
+/**
+ * 실시간 프레임이 화면 상태에 어떻게 접혔는지 보여 주는 짧은 처리 이력.
+ *
+ * 서버 원장을 복제하는 감사 로그가 아니다. 전달은 best-effort이고 재연결 replay도 없으므로
+ * 최근 프레임만 남기며, 정합성의 정본은 계속 REST snapshot이다.
+ */
+export type ContextActivity =
+  | {
+      type: "candidate";
+      key: string;
+      eventId: string;
+      occurredAt: string;
+      changeOrdinal: number;
+      candidateId: string;
+      revision: number;
+      kind: ContextCandidateHead["kind"];
+      operation: ContextCandidateHead["operation"];
+      outcome: Exclude<ContextActivityOutcome, "RECOVERED">;
+    }
+  | {
+      type: "batch";
+      key: string;
+      eventId: string;
+      occurredAt: string;
+      fromSequence: number;
+      toSequence: number;
+      applyStatus: AppliedRange["applyStatus"];
+      outcome: "APPLIED" | "ABSORBED";
+    }
+  | {
+      type: "sync";
+      key: string;
+      outcome: "RECOVERED";
+    };
+
 export type ContextState = {
   /** `candidateId` → 현재 head. */
   candidates: Record<string, ContextCandidateHead>;
@@ -40,6 +81,8 @@ export type ContextState = {
   lastBatchAt: string | null;
   /** revision gap을 봤다. provider가 snapshot을 다시 받아야 한다. */
   needsRefetch: boolean;
+  /** 가장 최근 처리가 앞에 오는, 화면용 bounded 이력. */
+  activities: ContextActivity[];
 };
 
 export type ContextEvent =
@@ -56,7 +99,11 @@ export type ContextEvent =
       occurredAt: string;
       range: AppliedRange;
     }
-  | { type: "snapshot"; candidates: ContextCandidateHead[]; appliedRanges: AppliedRange[] }
+  | {
+      type: "snapshot";
+      candidates: ContextCandidateHead[];
+      appliedRanges: AppliedRange[];
+    }
   | { type: "reset" };
 
 export const initialContextState: ContextState = {
@@ -65,7 +112,17 @@ export const initialContextState: ContextState = {
   seenBatchIds: [],
   lastBatchAt: null,
   needsRefetch: false,
+  activities: [],
 };
+
+const MAX_ACTIVITIES = 12;
+
+function withActivity(state: ContextState, activity: ContextActivity) {
+  return [
+    activity,
+    ...state.activities.filter((current) => current.key !== activity.key),
+  ].slice(0, MAX_ACTIVITIES);
+}
 
 /** `(fromSequence, toSequence, runKey)` 오름차순. 서버 정렬과 같은 순서다. */
 function sortRanges(ranges: AppliedRange[]) {
@@ -124,6 +181,13 @@ export function reduceContextEvent(
         seenBatchIds: [],
         lastBatchAt: laterInstant(state.lastBatchAt, latestApplied),
         needsRefetch: false,
+        activities: state.needsRefetch
+          ? withActivity(state, {
+              type: "sync",
+              key: `sync-${state.activities[0]?.key ?? "snapshot"}`,
+              outcome: "RECOVERED",
+            })
+          : state.activities,
       };
     }
 
@@ -132,7 +196,23 @@ export function reduceContextEvent(
       const current = state.candidates[next.candidateId];
 
       // 역순·중복. 같은 revision이 다시 와도 여기서 걸린다.
-      if (current && next.revision <= current.revision) return state;
+      if (current && next.revision <= current.revision) {
+        return {
+          ...state,
+          activities: withActivity(state, {
+            type: "candidate",
+            key: `${event.eventId}-${event.changeOrdinal}-absorbed`,
+            eventId: event.eventId,
+            occurredAt: event.occurredAt,
+            changeOrdinal: event.changeOrdinal,
+            candidateId: next.candidateId,
+            revision: next.revision,
+            kind: next.kind,
+            operation: next.operation,
+            outcome: "ABSORBED",
+          }),
+        };
+      }
 
       // 처음 보는데 revision이 1이 아니거나, 이어지지 않으면 사이를 놓쳤다.
       const expected = current ? current.revision + 1 : 1;
@@ -142,11 +222,41 @@ export function reduceContextEvent(
         ...state,
         candidates: { ...state.candidates, [next.candidateId]: next },
         needsRefetch,
+        activities: withActivity(state, {
+          type: "candidate",
+          key: `${event.eventId}-${event.changeOrdinal}`,
+          eventId: event.eventId,
+          occurredAt: event.occurredAt,
+          changeOrdinal: event.changeOrdinal,
+          candidateId: next.candidateId,
+          revision: next.revision,
+          kind: next.kind,
+          operation: next.operation,
+          outcome: next.revision === expected ? "APPLIED" : "RESYNC_REQUIRED",
+        }),
       };
     }
 
     case "context.classification.batch.applied": {
-      if (state.seenBatchIds.includes(event.eventId)) return state;
+      const activity = {
+        type: "batch" as const,
+        key: `${event.eventId}-batch`,
+        eventId: event.eventId,
+        occurredAt: event.occurredAt,
+        fromSequence: event.range.fromSequence,
+        toSequence: event.range.toSequence,
+        applyStatus: event.range.applyStatus,
+      };
+      if (state.seenBatchIds.includes(event.eventId)) {
+        return {
+          ...state,
+          activities: withActivity(state, {
+            ...activity,
+            key: `${activity.key}-absorbed`,
+            outcome: "ABSORBED",
+          }),
+        };
+      }
 
       const withoutRun = state.appliedRanges.filter(
         (range) => range.runKey !== event.range.runKey
@@ -156,6 +266,7 @@ export function reduceContextEvent(
         appliedRanges: sortRanges([...withoutRun, event.range]),
         seenBatchIds: [...state.seenBatchIds, event.eventId],
         lastBatchAt: laterInstant(state.lastBatchAt, event.range.appliedAt),
+        activities: withActivity(state, { ...activity, outcome: "APPLIED" }),
       };
     }
 
@@ -193,7 +304,11 @@ export function selectCards(state: ContextState): ContextCard[] {
     a.createdSequence - b.createdSequence ||
     // TSID는 Crockford base32라 코드 단위 비교가 곧 서버의 `ORDER BY candidate_id ASC`다.
     // `localeCompare`는 로케일에 따라 숫자와 문자의 순서가 달라질 수 있어 쓰지 않는다.
-    (a.candidateId < b.candidateId ? -1 : a.candidateId > b.candidateId ? 1 : 0);
+    (a.candidateId < b.candidateId
+      ? -1
+      : a.candidateId > b.candidateId
+        ? 1
+        : 0);
 
   return all
     .filter((candidate) => {

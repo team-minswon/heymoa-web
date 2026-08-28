@@ -76,7 +76,7 @@ describe("NoteTopicClient", () => {
     ).toBeLessThan(onCatchUp.mock.invocationCallOrder[0]);
   });
 
-  it("partial과 token을 포함한 토픽 payload를 파싱해 직접 전달한다", async () => {
+  it("partial 토픽 payload를 파싱해 직접 전달한다", async () => {
     const { client, onEvent } = createClient();
     client.connect();
     const config = stomp.configs[0];
@@ -94,12 +94,6 @@ describe("NoteTopicClient", () => {
         pendingText: " 정리합니다",
       }),
     });
-    deliver({
-      body: JSON.stringify({
-        type: "chat.token",
-        delta: "요약",
-      }),
-    });
 
     expect(onEvent).toHaveBeenNthCalledWith(1, {
       type: "transcript.partial",
@@ -108,10 +102,7 @@ describe("NoteTopicClient", () => {
       confirmedText: "결정을",
       pendingText: " 정리합니다",
     });
-    expect(onEvent).toHaveBeenNthCalledWith(2, {
-      type: "chat.token",
-      delta: "요약",
-    });
+    expect(onEvent).toHaveBeenCalledTimes(1);
   });
 
   it("지수 backoff로 재연결하고 연결될 때마다 catch-up한다", async () => {

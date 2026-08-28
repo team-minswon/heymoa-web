@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, Users } from "lucide-react";
 
 import { usePersonalChat } from "@/components/chat/personal-chat";
 import { ContextRail } from "@/components/notes/context-rail";
-import { SharedChatPanel } from "@/components/notes/shared-chat-panel";
-import type { SharedChatPhase } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
-export type RailTab = "context" | "shared" | "personal";
+export type RailTab = "context" | "personal";
 
 /**
- * 노트 전체 화면의 오른쪽 레일. design.pen `L4PpR` — 위에 「이 회의 / 내 에이전트」 탭,
+ * 노트 전체 화면의 오른쪽 레일. design.pen `L4PpR` — 위에 「실시간 정리 / 내 에이전트」 탭,
  * 그 아래 범위 한 줄, 나머지는 고른 탭의 대화다.
  *
  * **탭이 필요한 이유는 회의가 끝나기 때문이다.** 공유 챗봇은 살아 있는 회의에 붙은 것이라
@@ -26,16 +23,11 @@ export type RailTab = "context" | "shared" | "personal";
  * **포털**해 온다. 새로 그리면 같은 스코프의 세션이 두 벌이 된다.
  */
 export function NoteAgentRail({
-  noteId,
-  phase,
   tab,
   onTabChange,
   foldedOnNarrow,
-  onSharedTurnActiveChange,
   onEvidenceSelect,
 }: {
-  noteId: string;
-  phase: SharedChatPhase;
   /** 좁은 화면에서 레일을 접을지가 이 값에 걸려 있어서 소유자는 `NotePanel`이다. */
   tab: RailTab;
   onTabChange: (tab: RailTab) => void;
@@ -44,7 +36,6 @@ export function NoteAgentRail({
    * 에이전트」를 고를 버튼까지 같이 감춰져서 종료된 회의에는 들어갈 길이 없어진다.
    */
   foldedOnNarrow: boolean;
-  onSharedTurnActiveChange: (active: boolean) => void;
   /** 근거를 누르면 전사로 옮겨 그 발화를 짚는다. 소유자는 `NotePanel`이다. */
   onEvidenceSelect: (segmentId: string) => void;
 }) {
@@ -58,8 +49,6 @@ export function NoteAgentRail({
     return () => setRailSlot(null);
   }, [setRailSlot, slot, tab]);
 
-  const sharedLocked = phase === "ended" || phase === "not-started";
-
   /**
    * **WAI-ARIA 탭 계약.** `role="tab"`을 손으로 붙였으면 키보드도 손으로 붙여야 한다 —
    * 안 그러면 스크린리더가 「탭 목록」이라고 알리는데 방향키가 안 먹는다.
@@ -68,15 +57,6 @@ export function NoteAgentRail({
    */
   const tabs: Array<{ value: RailTab; label: string; icon?: React.ReactNode }> = [
     { value: "context", label: "실시간 정리" },
-    {
-      value: "shared",
-      label: "이 회의",
-      icon: sharedLocked ? (
-        <Lock aria-hidden className="size-3.5" />
-      ) : (
-        <Users aria-hidden className="size-3.5" />
-      ),
-    },
     { value: "personal", label: "내 에이전트" },
   ];
   const activeIndex = tabs.findIndex((item) => item.value === tab);
@@ -144,9 +124,7 @@ export function NoteAgentRail({
             말하므로 여기서 반복하면 같은 문장이 두 줄로 선다(실제로 그랬다). */}
         {tab === "context"
           ? "참여자 전원이 같은 내용을 봅니다"
-          : tab === "shared"
-            ? "참여자 전원이 함께 봅니다"
-            : "나만 보는 대화 · 워크스페이스 범위"}
+          : "나만 보는 대화 · 현재 회의 범위"}
       </p>
 
       <div
@@ -161,24 +139,6 @@ export function NoteAgentRail({
         )}
       >
         <ContextRail onEvidenceSelect={onEvidenceSelect} />
-      </div>
-
-      <div
-        role="tabpanel"
-        id={railPanelId("shared")}
-        aria-labelledby={railTabId("shared")}
-        hidden={tab !== "shared"}
-        className={cn(
-          "flex min-h-0 flex-1",
-          tab !== "shared" && "hidden",
-          foldedOnNarrow && "max-lg:hidden"
-        )}
-      >
-        <SharedChatPanel
-          noteId={noteId}
-          phase={phase}
-          onTurnActiveChange={onSharedTurnActiveChange}
-        />
       </div>
 
       {/* 셸의 개인 챗봇 패널이 이 안으로 들어온다. 비어 있는 동안에도 자리는 남긴다. */}

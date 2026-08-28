@@ -65,7 +65,7 @@ describe("NoteArchive", () => {
     data.chatFails = false;
   });
 
-  it("전사와 공유 Q&A를 함께 병치한다", () => {
+  it("종료 아카이브에는 전사만 남긴다", () => {
     data.segments = [
       {
         segmentId: "s1",
@@ -102,19 +102,12 @@ describe("NoteArchive", () => {
       />
     );
 
-    // 전사와 Q&A는 세그먼트로 갈라 한 번에 하나만 보인다.
     expect(screen.getByText("배포 일정을 정합시다.")).toBeTruthy();
     expect(screen.queryByText("결정된 것만 정리해줘")).toBeNull();
-
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-
-    expect(screen.getByText("결정된 것만 정리해줘")).toBeTruthy();
-    expect(screen.getByText("배포는 금요일로 정했습니다.")).toBeTruthy();
-    expect(screen.getByText("홍길동")).toBeTruthy();
-    expect(screen.queryByText("배포 일정을 정합시다.")).toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 
-  it("복사는 대화 기록 탭에만 선다", () => {
+  it("전사가 있으면 복사 버튼이 선다", () => {
     data.segments = [
       {
         segmentId: "s1",
@@ -136,9 +129,7 @@ describe("NoteArchive", () => {
 
     expect(screen.getByRole("button", { name: "복사" })).toBeTruthy();
 
-    // 챗봇 탭에서도 서 있으면 무엇이 복사되는지가 모호해진다.
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-    expect(screen.queryByRole("button", { name: "복사" })).toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 
   it("복사할 전사가 없으면 버튼도 없다", () => {
@@ -167,7 +158,7 @@ describe("NoteArchive", () => {
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
-  it("Q&A 로드 실패를 빈 섹션으로 삼키지 않는다", () => {
+  it("공유 Q&A 조회 상태는 아카이브에 영향을 주지 않는다", () => {
     data.segments = [
       {
         segmentId: "s1",
@@ -186,14 +177,11 @@ describe("NoteArchive", () => {
         onFocusHandled={() => {}}
       />
     );
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-    expect(screen.getByText("챗봇 대화를 불러오지 못했습니다.")).toBeTruthy();
-    // 전사 실패와 같은 재시도 경로를 준다.
-    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+    expect(screen.getByText("회의 내용.")).toBeTruthy();
+    expect(screen.queryByText("챗봇 대화를 불러오지 못했습니다.")).toBeNull();
   });
 
-  // 탭이 나타났다 사라지면 같은 자리인지 알기 어렵다 — 비어 있어도 탭은 남기고 안내를 준다.
-  it("공유 Q&A가 없어도 탭은 남기고 빈 안내를 보인다", () => {
+  it("공유 Q&A가 없어도 전사만 그린다", () => {
     data.segments = [
       {
         segmentId: "s1",
@@ -213,11 +201,7 @@ describe("NoteArchive", () => {
     );
     expect(screen.getByText("짧은 회의.")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("tab", { name: "회의 중 챗봇" }));
-
-    expect(
-      screen.getByText("회의 중 챗봇에 물어본 내용이 없습니다.")
-    ).toBeTruthy();
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 
   it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {

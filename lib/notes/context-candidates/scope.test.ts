@@ -39,6 +39,7 @@ const REJECTION_IDENTIFIERS = [
 const CONTEXT_SOURCES = [
   "lib/notes/context-candidates/contract.ts",
   "lib/notes/context-candidates/reducer.ts",
+  "lib/notes/context-candidates/presentation.ts",
   "lib/notes/context-candidates/timeline.ts",
   "lib/notes/context-candidates/select.ts",
   // `api.ts`·`query-keys.ts` 는 계약이 도착하며 사라졌다 — orval 생성 훅과 키로 갔다.
@@ -53,7 +54,8 @@ describe("v1 범위 — 기각 표면은 없다", () => {
     for (const path of CONTEXT_SOURCES) {
       const source = read(path);
       for (const identifier of REJECTION_IDENTIFIERS) {
-        if (source.includes(identifier)) offenders.push(`${path}: ${identifier}`);
+        if (source.includes(identifier))
+          offenders.push(`${path}: ${identifier}`);
       }
     }
     expect(offenders).toEqual([]);
@@ -64,7 +66,9 @@ describe("v1 범위 — 기각 표면은 없다", () => {
     const parsed = contextCandidateSnapshotSchema.parse({
       candidates: [],
       appliedRanges: [],
-      rejectedCandidates: [{ candidateId: "0HZX2K7M9Q4A1", reason: "없는 내용" }],
+      rejectedCandidates: [
+        { candidateId: "0HZX2K7M9Q4A1", reason: "없는 내용" },
+      ],
     });
 
     expect(parsed).not.toHaveProperty("rejectedCandidates");

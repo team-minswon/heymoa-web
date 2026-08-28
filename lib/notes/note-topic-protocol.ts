@@ -44,25 +44,10 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
     type: z.literal("recording.stopped"),
     transcriptionSessionId: tsidSchema,
   }),
-  z.strictObject({
-    type: z.literal("chat.token"),
-    delta: z.string().min(1),
-  }),
-  z.strictObject({
-    type: z.literal("chat.message_end"),
-    messageId: z.string().min(1),
-    content: z.string().min(1),
-  }),
   // 맥락 후보. 스키마는 `context-candidates/contract.ts`가 정본이고 여기서 두 벌로 쓰지
   // 않는다 — REST 목·화면·이 union이 같은 것을 본다.
   contextCandidateChangedSchema,
   contextBatchAppliedSchema,
-  z.strictObject({
-    type: z.literal("chat.lock"),
-    chatId: tsidSchema,
-    locked: z.boolean(),
-    lockedByUserId: tsidSchema.nullable(),
-  }),
 ]);
 
 export type NoteTopicEvent = z.infer<typeof noteTopicEventSchema>;
