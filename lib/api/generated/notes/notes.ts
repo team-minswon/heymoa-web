@@ -25,6 +25,9 @@ import type {
 
 import type {
   AppErrorResponse,
+  CreatedNoteGuestParticipantResponse,
+  NoteGuestParticipantRequest,
+  NoteGuestParticipantsRequest,
   NoteListResponse,
   NoteParticipantListResponse,
   NoteParticipantsRequest,
@@ -662,7 +665,7 @@ export const getReplaceNoteParticipantsUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 참여자를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 참여자를 전원 지운다. 워크스페이스 멤버만 참여자가 될 수 있고, 회의 상태와 무관하게 언제나 호출할 수 있다.
+ * 노트의 **계정 참여자**를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 계정 참여자를 전원 지운다. 워크스페이스 멤버 또는 이미 이 회의의 참여자만 이 목록에 들어갈 수 있다 - 멤버를 내보내도 참여 기록은 남으므로, 전체 교체에서 그 사람을 함께 실어 유지할 수 있다. 참여자가 아니었던 사람은 넣을 수 없다. 회의 상태와 무관하게 언제나 호출할 수 있다. 계정 없는 임시 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants/guests 가 맡는다.
  * @summary 노트 참여자 교체
  */
 export const replaceNoteParticipants = async (
@@ -1214,4 +1217,270 @@ export const useCreateNote = <
   TContext
 > => {
   return useMutation(getCreateNoteMutationOptions(options), queryClient);
+};
+export type replaceNoteGuestParticipantsResponse200 = {
+  data: NoteParticipantListResponse;
+  status: 200;
+};
+
+export type replaceNoteGuestParticipantsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type replaceNoteGuestParticipantsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type replaceNoteGuestParticipantsResponseSuccess =
+  replaceNoteGuestParticipantsResponse200 & {
+    headers: Headers;
+  };
+export type replaceNoteGuestParticipantsResponseError = (
+  | replaceNoteGuestParticipantsResponse401
+  | replaceNoteGuestParticipantsResponse404
+) & {
+  headers: Headers;
+};
+
+export type replaceNoteGuestParticipantsResponse =
+  | replaceNoteGuestParticipantsResponseSuccess
+  | replaceNoteGuestParticipantsResponseError;
+
+export const getReplaceNoteGuestParticipantsUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/participants/guests`;
+};
+
+/**
+ * 이 회의의 **임시 참여자만** 요청한 목록으로 통째로 교체한다. 빈 배열이면 임시 참여자를 전원 뺀다. 계정 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants 가 맡는다. 다른 워크스페이스의 임시 참여자를 넣으려 하면 거절한다.
+ * @summary 회의 임시 참여자 교체
+ */
+export const replaceNoteGuestParticipants = async (
+  noteId: string,
+  noteGuestParticipantsRequest?: NoteGuestParticipantsRequest,
+  options?: RequestInit
+): Promise<replaceNoteGuestParticipantsResponse> => {
+  return apiFetch<replaceNoteGuestParticipantsResponse>(
+    getReplaceNoteGuestParticipantsUrl(noteId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(noteGuestParticipantsRequest),
+    }
+  );
+};
+
+export const getReplaceNoteGuestParticipantsMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replaceNoteGuestParticipants>>,
+    TError,
+    { noteId: string; data?: NoteGuestParticipantsRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replaceNoteGuestParticipants>>,
+  TError,
+  { noteId: string; data?: NoteGuestParticipantsRequest },
+  TContext
+> => {
+  const mutationKey = ["replaceNoteGuestParticipants"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replaceNoteGuestParticipants>>,
+    { noteId: string; data?: NoteGuestParticipantsRequest }
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return replaceNoteGuestParticipants(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplaceNoteGuestParticipantsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replaceNoteGuestParticipants>>
+>;
+export type ReplaceNoteGuestParticipantsMutationBody =
+  | NoteGuestParticipantsRequest
+  | undefined;
+export type ReplaceNoteGuestParticipantsMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 회의 임시 참여자 교체
+ */
+export const useReplaceNoteGuestParticipants = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replaceNoteGuestParticipants>>,
+      TError,
+      { noteId: string; data?: NoteGuestParticipantsRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof replaceNoteGuestParticipants>>,
+  TError,
+  { noteId: string; data?: NoteGuestParticipantsRequest },
+  TContext
+> => {
+  return useMutation(
+    getReplaceNoteGuestParticipantsMutationOptions(options),
+    queryClient
+  );
+};
+export type createNoteGuestParticipantResponse201 = {
+  data: CreatedNoteGuestParticipantResponse;
+  status: 201;
+};
+
+export type createNoteGuestParticipantResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type createNoteGuestParticipantResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type createNoteGuestParticipantResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type createNoteGuestParticipantResponseSuccess =
+  createNoteGuestParticipantResponse201 & {
+    headers: Headers;
+  };
+export type createNoteGuestParticipantResponseError = (
+  | createNoteGuestParticipantResponse400
+  | createNoteGuestParticipantResponse401
+  | createNoteGuestParticipantResponse404
+) & {
+  headers: Headers;
+};
+
+export type createNoteGuestParticipantResponse =
+  | createNoteGuestParticipantResponseSuccess
+  | createNoteGuestParticipantResponseError;
+
+export const getCreateNoteGuestParticipantUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/participants/guests`;
+};
+
+/**
+ * 계정 없는 사람을 이름만으로 만들어 이 회의의 참여자로 넣는다. 만들어진 임시 참여자는 워크스페이스가 소유하므로 같은 워크스페이스의 다음 회의에서 다시 고를 수 있다. 이름이 같은 임시 참여자를 여럿 만들 수 있다 - 동명이인이 정상 입력이라 막지 않는다. 응답은 그 회의의 참여자 전원이다.
+ * @summary 임시 참여자 생성
+ */
+export const createNoteGuestParticipant = async (
+  noteId: string,
+  noteGuestParticipantRequest?: NoteGuestParticipantRequest,
+  options?: RequestInit
+): Promise<createNoteGuestParticipantResponse> => {
+  return apiFetch<createNoteGuestParticipantResponse>(
+    getCreateNoteGuestParticipantUrl(noteId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(noteGuestParticipantRequest),
+    }
+  );
+};
+
+export const getCreateNoteGuestParticipantMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createNoteGuestParticipant>>,
+    TError,
+    { noteId: string; data?: NoteGuestParticipantRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createNoteGuestParticipant>>,
+  TError,
+  { noteId: string; data?: NoteGuestParticipantRequest },
+  TContext
+> => {
+  const mutationKey = ["createNoteGuestParticipant"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createNoteGuestParticipant>>,
+    { noteId: string; data?: NoteGuestParticipantRequest }
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return createNoteGuestParticipant(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateNoteGuestParticipantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createNoteGuestParticipant>>
+>;
+export type CreateNoteGuestParticipantMutationBody =
+  | NoteGuestParticipantRequest
+  | undefined;
+export type CreateNoteGuestParticipantMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 임시 참여자 생성
+ */
+export const useCreateNoteGuestParticipant = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createNoteGuestParticipant>>,
+      TError,
+      { noteId: string; data?: NoteGuestParticipantRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createNoteGuestParticipant>>,
+  TError,
+  { noteId: string; data?: NoteGuestParticipantRequest },
+  TContext
+> => {
+  return useMutation(
+    getCreateNoteGuestParticipantMutationOptions(options),
+    queryClient
+  );
 };

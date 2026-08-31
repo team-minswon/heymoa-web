@@ -105,16 +105,24 @@ export type SpeakerIdentity = {
 };
 
 export type SpeakerIdentitySource = DiarizationSpeaker & {
-  assignedUserId?: string | null;
+  assignedParticipantId?: string | null;
   confirmed?: boolean;
   image?: string | null;
 };
 
 /**
- * 얼굴을 들고 있는 쪽. **계약의 `speakers[]` 에는 사진이 없다** — `assignedUserId` 만 준다.
+ * 얼굴을 들고 있는 쪽. **계약의 `speakers[]` 에는 사진이 없다** — 붙은 사람의 식별자만 준다.
  * 사진은 같은 응답의 참석자 목록에 있고, 그 둘을 여기서 잇는다.
+ *
+ * **잇는 열쇠가 `participantId`다** (APP-491). 계정으로 이으면 계정 없는 임시 참여자는
+ * 그 값이 없어 전부 한 칸에 뭉치고, 남의 사진이 실릴 수 있다.
  */
-export type SpeakerFace = { userId: string; image?: string | null };
+export type SpeakerFace = {
+  participantId: string;
+  /** 발화 단위 지정이 이 이름을 쓴다 — 그 줄에는 라벨의 이름 대신 이 사람이 선다. */
+  name?: string | null;
+  image?: string | null;
+};
 
 /**
  * 화자에게 얼굴을 준다. **아무것도 저장하지 않는다** — 렌더 시점에 계산한다.
@@ -122,9 +130,14 @@ export type SpeakerFace = { userId: string; image?: string | null };
  * 저장하면 팔레트를 바꿀 때 옛 회의만 옛 색으로 남고, 화자 수가 팔레트보다 많으면 어차피
  * 겹치므로 안정성을 약속할 수도 없다.
  *
- * **색은 라벨이 정한다.** 이름이 아니라 라벨이라 이름을 붙여도 색이 안 바뀐다. 한 사람이
- * 두 화자에 걸치는 경우는 서버가 막으므로(연결하면 이전 화자에서 떨어진다) 색으로 병합을
- * 표현할 일이 없다.
+ * **색은 라벨이 정한다.** 이름이 아니라 라벨이라 이름을 붙여도 색이 안 바뀐다.
+ *
+ * V31 부터 **한 사람이 여러 화자를 맡을 수 있다.** 그래도 색을 사람 기준으로 안 바꾼다 —
+ * 색은 「이 목소리 덩어리」의 표시이고 이름과는 별개다. 그래서 화자 A·B 를 둘 다 한 사람으로
+ * 두면 같은 이름이 두 색으로 나오는데, 그것이 실제로 일어난 일(목소리는 둘로 나뉘었고
+ * 사람은 하나다)에 가깝다. 얼굴(사진·이니셜)이 같아서 알아보는 데는 그쪽이 단서다.
+ *
+ * 발화 단위 지정도 같은 규칙이다 — 그 줄은 **이름과 얼굴만** 바뀌고 색은 라벨 것을 쓴다.
  */
 export function createSpeakerIdentityResolver(
   speakers: SpeakerIdentitySource[],
@@ -132,11 +145,45 @@ export function createSpeakerIdentityResolver(
 ) {
   const byLabel = new Map(speakers.map((speaker) => [speaker.label, speaker]));
   const faceOf = new Map(
-    participants.map((participant) => [participant.userId, participant.image ?? null])
+    participants.map((participant) => [
+      participant.participantId,
+      participant.image ?? null,
+    ])
+  );
+  const nameOf = new Map(
+    participants.map((participant) => [
+      participant.participantId,
+      participant.name ?? null,
+    ])
   );
 
-  return (label: string | null | undefined): SpeakerIdentity | null => {
+  return (
+    label: string | null | undefined,
+    /**
+     * 이 발화에만 붙은 참여 기록. 있으면 **라벨의 이름을 이긴다** — 더 좁은 범위를 사람이
+     * 나중에 골랐다는 뜻이라서다.
+     *
+     * 목록에 없는 참여 기록이면 무시하고 라벨을 따른다. 참석자에서 빠진 사람이 전사에
+     * 이름만 남는 것보다, 라벨의 답으로 돌아가는 편이 덜 틀린다.
+     */
+    overriddenParticipantId?: string | null
+  ): SpeakerIdentity | null => {
     if (!label) return null;
+    const overriddenName = overriddenParticipantId
+      ? (nameOf.get(overriddenParticipantId) ?? null)
+      : null;
+    if (overriddenName) {
+      return {
+        displayName: overriddenName,
+        // **색은 그대로 라벨 것이다.** 이 줄도 여전히 목소리 덩어리 A 에 속한다 —
+        // 우리가 고친 것은 거기 붙일 이름뿐이다.
+        tint: speakerTintOfLabel(label),
+        initial: initialOf(overriddenName, label),
+        imageUrl: faceOf.get(overriddenParticipantId!) ?? null,
+        // 사람이 이 줄을 콕 집어 골랐다. 「아직 아무도 안 본 화자」가 아니다
+        unassigned: false,
+      };
+    }
     const speaker = byLabel.get(label);
     const name = speaker?.assignedName ?? null;
     // 「참석자 아님」으로 확정한 화자도 `화자 A` 로 남는다. 그 사람이 누구인지 우리가
@@ -151,7 +198,9 @@ export function createSpeakerIdentityResolver(
       // 같은 사람인지 다시 확인하게 된다. 파스텔은 사진이 없을 때의 대체일 뿐이다
       imageUrl:
         speaker?.image ??
-        (speaker?.assignedUserId ? faceOf.get(speaker.assignedUserId) ?? null : null),
+        (speaker?.assignedParticipantId
+          ? (faceOf.get(speaker.assignedParticipantId) ?? null)
+          : null),
       unassigned: !speaker?.confirmed,
     };
   };

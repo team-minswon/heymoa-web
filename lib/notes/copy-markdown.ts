@@ -76,8 +76,16 @@ export function transcriptToMarkdown({
 }: {
   note: NoteMeta;
   rows: TranscriptRow[];
-  /** 화자 분리 전이면 늘 `null`을 준다 — 그때는 시각만 남는다. */
-  speakerNameOf: (label: string | null | undefined) => string | null;
+  /**
+   * 화면에 선 이름을 그대로 준다. 화자 분리 전이면 늘 `null`을 주고, 그때는 시각만 남는다.
+   *
+   * **발화 단위 지정까지 넘긴다** — 화면에서 고친 이름이 복사본에서 옛 이름으로 돌아가면,
+   * 남에게 보내는 쪽이 틀린 회의록이 된다.
+   */
+  speakerNameOf: (
+    label: string | null | undefined,
+    assignedParticipantId?: string | null
+  ) => string | null;
   /** 봉인이 `TRUNCATED`인가. 화면이 말하는 손실을 복사본도 말해야 한다. */
   truncated?: boolean;
 }): string {
@@ -91,7 +99,10 @@ export function transcriptToMarkdown({
 
     const text = row.segment.text.trim();
     if (!text) continue;
-    const speaker = speakerNameOf(row.segment.speakerLabel);
+    const speaker = speakerNameOf(
+      row.segment.speakerLabel,
+      row.segment.assignedParticipantId
+    );
     const at = `[${formatOffset(row.segment.startedAtMs)}]`;
 
     // **줄 사이를 비운다.** 마크다운에서 줄바꿈만으로는 문단이 안 갈려서, 붙여 두면

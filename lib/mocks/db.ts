@@ -158,6 +158,14 @@ type MockAgentChatMessage = AgentChatMessagesResponseDataMessagesItem & {
   chatId: string;
 };
 
+/** 임시 참여자. 응답에 없는 `workspaceId`를 목이 소유 판정에 쓴다. */
+type MockWorkspaceGuest = {
+  guestId: string;
+  workspaceId: string;
+  displayName: string;
+  createdAt: string;
+};
+
 type StoreState = {
   user: CurrentUserResponseData;
   workspaces: WorkspaceResponseData[];
@@ -170,6 +178,8 @@ type StoreState = {
   /** 세션 사이가 아닌 공백(CAPTURE·UPLOAD). 서버가 오브젝트에서 유도하는 것을 목이 심는다. */
   extraGaps: Map<string, TranscriptResponseDataGapsItem[]>;
   members: MockMember[];
+  /** 워크스페이스가 소유하는 계정 없는 참여자 (APP-490). */
+  workspaceGuests: MockWorkspaceGuest[];
   invitations: MockInvitation[];
   notifications: NotificationListResponseDataNotificationsItem[];
   analyses: AnalysisResultResponseData[];
@@ -215,6 +225,7 @@ function seededDiarizations(
             speakingMs: 940_000,
             segmentCount: 2,
             representativeSegmentId: "01K0000000061",
+            assignedParticipantId: first.participantId,
             assignedUserId: first.userId,
             assignedName: first.name,
             confirmed: true,
@@ -224,6 +235,7 @@ function seededDiarizations(
             speakingMs: 610_000,
             segmentCount: 1,
             representativeSegmentId: "01K0000000062",
+            assignedParticipantId: null,
             assignedUserId: null,
             assignedName: null,
             confirmed: false,
@@ -232,6 +244,228 @@ function seededDiarizations(
       },
     ],
   ]);
+}
+
+/**
+ * 발화 단위 화자 지정을 하나 심는다 (V31).
+ *
+ * **목에 하나도 없으면 이 기능이 목에서 한 번도 안 그려진다.** 계약의 `assignedParticipantId`
+ * 도 늘 `null` 이라 nullable 표본이 한쪽으로 기운다.
+ *
+ * 심는 자리는 **화자 A 의 두 발화 중 하나**다. A 는 첫 참여자로 지정돼 있으므로, 그 중 한
+ * 줄만 다른 사람으로 두면 「라벨은 맞는데 이 줄만 남의 말」이라는 실제 상황이 된다.
+ * 이름을 손으로 박지 않는다 — 참여자 시드가 바뀌면 조용히 어긋난다.
+ */
+function seedSegmentOverride(
+  notes: NoteResponseData[],
+  segments: StoredSegment[]
+) {
+  const note = notes.find((row) => row.noteId === "01K0000000020");
+  // 라벨 A 에 붙은 사람과 **다른** 사람이라야 「이 줄만 다르다」가 보인다
+  const other = note?.participants[1];
+  const segment = segments.find((row) => row.segmentId === "01K0000000063");
+  if (!other || !segment) return;
+  segment.assignedParticipantId = other.participantId;
+}
+
+/**
+ * 계정 참여자와 임시 참여자가 한 목록에 섞이므로 **채워진 이름으로 정렬**한다.
+ * 서버의 `coalesce(user.name, workspace_guests.display_name)` 정렬과 같은 값이다.
+ */
+function sortParticipants(
+  participants: NoteResponseData["participants"]
+): NoteResponseData["participants"] {
+  return [...participants].sort(
+    (a, b) =>
+      a.name.localeCompare(b.name) ||
+      a.participantId.localeCompare(b.participantId)
+  );
+}
+
+/**
+ * 회의에서 빠진 사람의 화자 연결을 끊는다.
+ *
+ * 서버에서는 목이 흉내 낼 코드가 아니라 **DB 제약**이다 —
+ * `speaker_assignments.participant_id`의 `ON DELETE CASCADE`가 한다. 목이 이걸 안 하면
+ * 회의에서 뺀 사람의 이름이 화자에 계속 붙어 있어, 목으로만 보는 화면이 서버와 갈라진다.
+ *
+ * **`participantId`가 `null`인 행은 안 지운다.** 그것은 「참석자 중에 없다」로 사람이 확정한
+ * 답이라 참여자를 어떻게 바꿔도 남아야 한다.
+ */
+function detachSpeakers(noteId: string, participantIds: string[]) {
+  if (participantIds.length === 0) return;
+  // **발화 단위 지정을 먼저 지운다** (V31). 서버는 참여 기록 FK 의 CASCADE 가 가져가는데,
+  // 목에는 CASCADE 가 없어 없는 기록을 가리킨 채 남는다 — 전사가 주인 없는 이름을 낸다.
+  // 화자 분리가 없는 회의도 지나야 하므로 아래 early return 보다 위에 둔다.
+  for (const segment of segmentsOfNote(noteId)) {
+    if (
+      segment.assignedParticipantId &&
+      participantIds.includes(segment.assignedParticipantId)
+    ) {
+      segment.assignedParticipantId = null;
+    }
+  }
+  const diarization = state.diarizations.get(noteId);
+  if (!diarization) return;
+  state.diarizations.set(noteId, {
+    ...diarization,
+    speakers: diarization.speakers.map((speaker) =>
+      speaker.assignedParticipantId &&
+      participantIds.includes(speaker.assignedParticipantId)
+        ? {
+            ...speaker,
+            assignedParticipantId: null,
+            assignedUserId: null,
+            assignedName: null,
+            confirmed: false,
+          }
+        : speaker
+    ),
+  });
+}
+
+/** 연동이 회의 하나에서 만나는 것. 서버의 네 값과 같은 모양이다. */
+type GuestLinkEntry = {
+  noteId: string;
+  title: string;
+  /** 계약이 목록을 **최근순**으로 자르라고 한다. 그 기준이다. */
+  createdAt: string;
+  guestParticipantId: string;
+  guestHasSpeaker: boolean;
+  accountParticipantId: string | null;
+};
+
+/**
+ * 그 참여 기록에 **화자가 하나라도 붙어 있나.** 라벨이 아니라 참/거짓인 이유는 V31 부터 한
+ * 기록이 화자 여럿을 들 수 있어서다 — 쓰는 쪽은 「붙었나」만 본다.
+ *
+ * **발화 단위 지정도 화자로 센다.** 라벨은 없고 그 줄만 지정한 기록을 지우면 그 지정이
+ * 함께 사라진다.
+ */
+function hasSpeaker(noteId: string, participantId: string) {
+  const onLabel = state.diarizations
+    .get(noteId)
+    ?.speakers.some((row) => row.assignedParticipantId === participantId);
+  const onSegment = state.segments.some(
+    (segment) => segment.assignedParticipantId === participantId
+  );
+  return Boolean(onLabel) || onSegment;
+}
+
+/**
+ * 미리보기와 실행이 **같은 판정을 공유한다.** 각자 세면 「바뀔 회의」와 「바뀐 회의」가
+ * 어긋나는데, 연동은 되돌릴 수 없어 사후에 고칠 방법이 없다.
+ */
+function planGuestLink(
+  workspaceId: string,
+  guestId: string,
+  targetUserId: string
+) {
+  requireWorkspaceAdmin(workspaceId);
+  const guest = state.workspaceGuests.find(
+    (row) => row.guestId === guestId && row.workspaceId === workspaceId
+  );
+  if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+  const isMember = state.members.some(
+    (row) => row.workspaceId === workspaceId && row.userId === targetUserId
+  );
+  if (!isMember) fail("WORKSPACE_MEMBER_NOT_FOUND");
+
+  const entries: GuestLinkEntry[] = [];
+  for (const note of state.notes) {
+    const guestRow = note.participants.find((row) => row.guestId === guestId);
+    if (!guestRow) continue;
+    const accountRow = note.participants.find(
+      (row) => row.userId === targetUserId
+    );
+    entries.push({
+      noteId: note.noteId,
+      title: note.title,
+      createdAt: note.createdAt,
+      guestParticipantId: guestRow.participantId,
+      guestHasSpeaker: hasSpeaker(note.noteId, guestRow.participantId),
+      accountParticipantId: accountRow?.participantId ?? null,
+    });
+  }
+  // **모든 회의가 합쳐진다** (V31). APP-492 는 양쪽이 서로 다른 화자에 붙어 있으면
+  // 건너뛰었는데 — 합치면 한 사람이 두 화자가 되고 유니크가 그것을 막았다 — 그 유니크가
+  // 사라지면서 건너뛸 이유도 함께 사라졌다.
+  return { changed: entries };
+}
+
+/** 목록은 100건에서 자르고 **개수는 절대 안 자른다** — 서버와 같은 규칙이다. */
+const MAX_LISTED_NOTES = 100;
+
+function guestLinkResultOf(plan: { changed: GuestLinkEntry[] }) {
+  return {
+    changedNoteCount: plan.changed.length,
+    // **계약이 「최근순 최대 100건」이다.** `planGuestLink` 는 시드 배열 순서로 만드는데,
+    // 새 노트가 뒤에 붙으므로 그대로 자르면 **오래된 100건**이 나간다 — 서버와 반대다.
+    changedNotes: [...plan.changed]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, MAX_LISTED_NOTES)
+      .map((entry) => ({ noteId: entry.noteId, title: entry.title })),
+  };
+}
+
+/** 주인이 바뀌면 화자 목록이 들고 있는 이름·계정도 함께 바뀐다. */
+function renameSpeaker(
+  noteId: string,
+  participantId: string,
+  target: { userId: string; name: string }
+) {
+  const diarization = state.diarizations.get(noteId);
+  if (!diarization) return;
+  state.diarizations.set(noteId, {
+    ...diarization,
+    speakers: diarization.speakers.map((row) =>
+      row.assignedParticipantId === participantId
+        ? { ...row, assignedUserId: target.userId, assignedName: target.name }
+        : row
+    ),
+  });
+}
+
+/**
+ * 그 회의에 속한 발화들. **세그먼트는 세션에 매달려 있어** 노트로 바로 못 고른다 —
+ * 노트를 안 가리고 라벨만 보면 다른 회의의 같은 라벨까지 걸린다(서버는 note_id 로 가른다).
+ */
+function segmentsOfNote(noteId: string) {
+  const sessionIds = new Set(
+    state.sessions
+      .filter((session) => session.noteId === noteId)
+      .map((session) => session.sessionId)
+  );
+  return state.segments.filter((segment) =>
+    sessionIds.has(segment.transcriptionSessionId)
+  );
+}
+
+/**
+ * 사라질 참여 기록에 붙어 있던 화자를 살아남을 기록으로 옮긴다 (V31).
+ *
+ * 서버는 `ON DELETE CASCADE` 라 옮기지 않으면 화자가 조용히 사라지고, 목은 CASCADE 가 없어
+ * 지워진 기록을 가리킨 채 남는다 — **증상은 다르지만 둘 다 이름을 잃는다.**
+ *
+ * 라벨 지정과 발화 단위 지정을 **둘 다** 옮긴다.
+ */
+function repointSpeakers(noteId: string, fromId: string, toId: string) {
+  const diarization = state.diarizations.get(noteId);
+  if (diarization) {
+    state.diarizations.set(noteId, {
+      ...diarization,
+      speakers: diarization.speakers.map((row) =>
+        row.assignedParticipantId === fromId
+          ? { ...row, assignedParticipantId: toId }
+          : row
+      ),
+    });
+  }
+  for (const segment of segmentsOfNote(noteId)) {
+    if (segment.assignedParticipantId === fromId) {
+      segment.assignedParticipantId = toId;
+    }
+  }
 }
 
 function copy<T>(value: T): T {
@@ -643,12 +877,41 @@ function createSeedState(): StoreState {
         )
       )
       .filter((member) => member !== undefined)
-      .map(({ userId, name, email, image }) => ({ userId, name, email, image }))
+      .map(({ userId, name, email, image }) => ({
+        participantId: nextId(),
+        userId,
+        guestId: null,
+        name,
+        email,
+        image,
+      }))
       .sort(
         (a, b) =>
-          a.name.localeCompare(b.name) || a.userId.localeCompare(b.userId)
+          a.name.localeCompare(b.name) ||
+          a.participantId.localeCompare(b.participantId)
       );
   };
+  /**
+   * 시드 임시 참여자 하나 (APP-490).
+   *
+   * 안 두면 목 표본에 **계정 없는 참여자가 한 번도 안 나온다** — `userId`·`email`·`guestId`가
+   * 계약상 nullable인데 목이 한쪽 값만 보여주게 되고, 그 상태로는 화면이 계정 없는 사람을
+   * 제대로 그리는지 브라우저에서 확인할 수가 없다. `nullable-coverage` 테스트가 그걸 잡는다.
+   */
+  const seededGuest: MockWorkspaceGuest = {
+    guestId: "01K0000000900",
+    workspaceId: workspaces[0].workspaceId,
+    displayName: "박서준",
+    createdAt: "2026-07-08T00:00:00Z",
+  };
+  const guestParticipant = () => ({
+    participantId: "01K0000000901",
+    userId: null,
+    guestId: seededGuest.guestId,
+    name: seededGuest.displayName,
+    email: null,
+    image: null,
+  });
   /**
    * 회의 시작자. 계약이 참여자와 **같은 네 필드**를 내리므로 목도 같은 모양으로 시드한다 —
    * 예전에는 시작자만 userId·name이라 화면이 이미지를 참여자 목록에서 빌려 왔고, 그
@@ -675,11 +938,15 @@ function createSeedState(): StoreState {
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: starterOf(MOCK_USER.userId),
-      participants: participantsOf(
-        projects[0].projectId,
-        MOCK_USER.userId,
-        "01K0000000020"
-      ),
+      // 계정 참여자 둘과 임시 참여자 하나가 섞인 회의. 이 프로젝트가 여는 것이 그 조합이다.
+      participants: sortParticipants([
+        ...participantsOf(
+          projects[0].projectId,
+          MOCK_USER.userId,
+          "01K0000000020"
+        ),
+        guestParticipant(),
+      ]),
     },
     {
       noteId: "01K0000000005",
@@ -850,6 +1117,7 @@ function createSeedState(): StoreState {
       startedAtMs: 0,
       endedAtMs: 1800,
       speakerLabel: null,
+      assignedParticipantId: null,
     },
     {
       segmentId: "01K0000000012",
@@ -859,6 +1127,7 @@ function createSeedState(): StoreState {
       startedAtMs: 2200,
       endedAtMs: 4300,
       speakerLabel: null,
+      assignedParticipantId: null,
     },
     {
       segmentId: "01K0000000013",
@@ -868,6 +1137,7 @@ function createSeedState(): StoreState {
       startedAtMs: 5000,
       endedAtMs: 7100,
       speakerLabel: null,
+      assignedParticipantId: null,
     },
     {
       segmentId: "01K0000000030",
@@ -877,6 +1147,7 @@ function createSeedState(): StoreState {
       startedAtMs: 0,
       endedAtMs: 1900,
       speakerLabel: null,
+      assignedParticipantId: null,
     },
     {
       segmentId: "01K0000000031",
@@ -886,6 +1157,7 @@ function createSeedState(): StoreState {
       startedAtMs: 2300,
       endedAtMs: 4500,
       speakerLabel: null,
+      assignedParticipantId: null,
     },
     {
       segmentId: "01K0000000032",
@@ -895,6 +1167,7 @@ function createSeedState(): StoreState {
       startedAtMs: 5000,
       endedAtMs: 7100,
       speakerLabel: null,
+      assignedParticipantId: null,
     },
     // 시드 분석의 근거가 가리키는 줄들. 블록 묶기(최대 6개·간격 1.5초)를 넘기려고 간격을
     // 벌려 둔다 — 한 블록에 다 뭉치면 근거 셋이 같은 자리로 점프해 이동을 검증할 수 없다.
@@ -902,6 +1175,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000061",
       transcriptionSessionId: "01K0000000060",
       speakerLabel: "A",
+      assignedParticipantId: null,
       sequence: 1,
       text: "가입 후 첫 회의를 만들기까지 이탈이 가장 큽니다.",
       startedAtMs: 12000,
@@ -911,6 +1185,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000062",
       transcriptionSessionId: "01K0000000060",
       speakerLabel: "B",
+      assignedParticipantId: null,
       sequence: 2,
       text: "문구 문제라기보다 다음에 뭘 해야 하는지가 안 보입니다.",
       startedAtMs: 40000,
@@ -920,6 +1195,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000063",
       transcriptionSessionId: "01K0000000060",
       speakerLabel: "A",
+      assignedParticipantId: null,
       sequence: 3,
       text: "그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.",
       startedAtMs: 92000,
@@ -933,6 +1209,7 @@ function createSeedState(): StoreState {
       startedAtMs: 145000,
       endedAtMs: 148700,
       speakerLabel: null,
+      assignedParticipantId: null,
     },
     // **긴 발화.** 위 넷은 전부 한 줄에 끝나서, 목으로는 여러 줄로 감기는 발화를 한 번도
     // 볼 수 없었다. 그 줄에서만 드러나는 것들이 있다 — 형광이 줄마다 잘리지 않는지
@@ -945,6 +1222,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000065",
       transcriptionSessionId: "01K0000000060",
       speakerLabel: "B",
+      assignedParticipantId: null,
       sequence: 5,
       text: "제가 지난주에 신규 가입자 마흔 명 세션을 전부 돌려봤는데요, 대시보드까지는 다들 무리 없이 들어오다가 회의 만들기 버튼 앞에서 평균 이 분 가까이 머물다 그냥 나가더라고요. 화면에 버튼이 없는 게 아니라 그게 지금 눌러야 할 것으로 안 읽히는 겁니다.",
       startedAtMs: 210000,
@@ -954,6 +1232,7 @@ function createSeedState(): StoreState {
       segmentId: "01K0000000066",
       transcriptionSessionId: "01K0000000060",
       speakerLabel: "A",
+      assignedParticipantId: null,
       sequence: 6,
       text: "정리하면 이렇습니다. 첫째, 가입 직후 화면에서 회의 만들기를 가장 눈에 띄는 자리로 올리고 나머지 진입점은 한 단계 뒤로 미룹니다. 둘째, 회의를 아직 한 번도 안 만든 사람에게는 빈 목록 대신 예시 회의를 하나 깔아 두고 그것부터 열어보게 합니다. 셋째, 이 둘을 이번 스프린트 안에 같이 내고 이 주 뒤에 같은 지표를 다시 봅니다. 문구 개편은 그때 판단해도 늦지 않습니다.",
       startedAtMs: 268000,
@@ -1049,6 +1328,8 @@ function createSeedState(): StoreState {
       connectedAt: null,
     }))
   );
+  // 발화 단위 지정을 하나 심는다 — 없으면 목에서 이 기능이 한 번도 안 그려진다
+  seedSegmentOverride(notes, segments);
   return {
     user,
     workspaces,
@@ -1056,6 +1337,8 @@ function createSeedState(): StoreState {
     notes,
     sessions,
     segments,
+    // 시드하지 않는다 — 「한 명도 없는 것이 정상」이 이 화면의 빈 상태다.
+    workspaceGuests: [seededGuest],
     // 화자 분리를 시드한다. 목에 이걸 밀어줄 주체가 없어서(APP-419·420이 서버 몫)
     // 없으면 **화자 이름이 붙은 회의록을 목에서 한 번도 볼 수 없다.**
     //
@@ -1344,6 +1627,14 @@ function assertWorkspace(workspaceId: string) {
  * 워크스페이스가 아예 없는 것도 남의 워크스페이스인 것도 똑같이 404로 존재를 숨긴다.
  * 둘을 `caller?.role !== "ADMIN"` 하나로 합치면 비멤버에게 그 워크스페이스가 있다고 알려준다.
  */
+/** 이 워크스페이스를 볼 수 있나. 없는 워크스페이스와 떠난 워크스페이스가 같은 답을 받는다. */
+function requireWorkspaceMember(workspaceId: string) {
+  const caller = state.members.find(
+    (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
+  );
+  if (!caller) fail("WORKSPACE_NOT_FOUND");
+}
+
 function requireWorkspaceAdmin(workspaceId: string) {
   const caller = state.members.find(
     (m) => m.workspaceId === workspaceId && m.userId === state.user.userId
@@ -1402,6 +1693,82 @@ function assertProjectIn(workspaceId: string, projectId: string) {
 function findNote(noteId: string) {
   const note = state.notes.find((candidate) => candidate.noteId === noteId);
   return note ?? fail("NOTE_NOT_FOUND");
+}
+
+/**
+ * 화자로 가리킨 대상을 이 회의의 참여 기록으로 바꾼다. **참여자가 아닌 멤버는 넣는다.**
+ *
+ * 서버 `NoteParticipantJoinHandler` 와 같은 규칙이다 — 화자 후보가 워크스페이스 멤버
+ * 전원이라, 아직 참여 기록이 없는 사람을 고를 수 있다.
+ *
+ * 순서가 규칙이다: **이미 참여자면 멤버십을 안 본다.** 워크스페이스를 떠난 사람도 이 회의의
+ * 참여자면 그대로 쓴다. 기록은 지키되 새로 붙이는 길은 멤버에게만 연다.
+ */
+function resolveOrJoinParticipant(
+  note: NoteResponseData,
+  target: {
+    participantId?: string | null;
+    userId?: string | null;
+    guestId?: string | null;
+  }
+) {
+  const keys = [target.participantId, target.userId, target.guestId].filter(Boolean);
+  if (keys.length > 1) fail("BAD_REQUEST");
+  if (keys.length === 0) return null;
+
+  if (target.participantId) {
+    const found = note.participants.find(
+      (row) => row.participantId === target.participantId
+    );
+    return found ?? fail("PARTICIPANT_NOT_IN_NOTE");
+  }
+
+  const workspaceId = state.projects.find(
+    (project) => project.projectId === note.projectId
+  )?.workspaceId;
+
+  if (target.guestId) {
+    const already = note.participants.find((row) => row.guestId === target.guestId);
+    if (already) return already;
+
+    // 임시 참여자도 워크스페이스가 소유한다. 남의 워크스페이스 것은 못 붙인다.
+    const guest = state.workspaceGuests.find(
+      (row) => row.guestId === target.guestId && row.workspaceId === workspaceId
+    );
+    if (!guest) fail("PARTICIPANT_NOT_IN_NOTE");
+
+    const joinedGuest = {
+      participantId: nextId(),
+      userId: null,
+      guestId: guest.guestId,
+      name: guest.displayName,
+      email: null,
+      image: null,
+    };
+    note.participants = sortParticipants([...note.participants, joinedGuest]);
+    return joinedGuest;
+  }
+
+  const existing = note.participants.find((row) => row.userId === target.userId);
+  if (existing) return existing;
+
+  const member = state.members.find(
+    (row) => row.userId === target.userId && row.workspaceId === workspaceId
+  );
+  if (!member) fail("PARTICIPANT_NOT_IN_NOTE");
+
+  const joined = {
+    participantId: nextId(),
+    userId: member.userId,
+    guestId: null,
+    name: member.name,
+    email: member.email,
+    image: member.image,
+  };
+  // **계약이 이름 오름차순이다.** push 로 끝내면 새로 넣은 사람만 늘 맨 뒤라, 목과 e2e 가
+  // 서버와 다른 순서를 검증하게 된다.
+  note.participants = sortParticipants([...note.participants, joined]);
+  return joined;
 }
 
 function findSession(sessionId: string): MockSession {
@@ -2136,7 +2503,9 @@ export const mockDb = {
       // 서버(CreateNoteService)가 만든 사람을 참여자로 넣는다.
       participants: [
         {
+          participantId: nextId(),
           userId: state.user.userId,
+          guestId: null,
           name: state.user.name,
           email: state.user.email,
           image: state.user.image,
@@ -2160,21 +2529,276 @@ export const mockDb = {
       (member) => member.workspaceId === project?.workspaceId
     );
     const unique = [...new Set(userIds)];
+    // **이미 이 회의의 참여자면 멤버가 아니어도 남길 수 있다.** 멤버를 내보내도 참여 기록은
+    // 남는데 이건 전체 교체라, 「현재 멤버」만 받으면 나간 사람이 낀 회의록은 참여자를
+    // 아무것도 못 고친다 — 다른 멤버 하나 더하는 저장까지 거절된다. 서버와 같은 규칙이다.
+    const currentUserIds = note.participants
+      .map((row) => row.userId)
+      .filter((userId): userId is string => Boolean(userId));
     if (
       unique.some(
-        (userId) => !workspaceMembers.some((m) => m.userId === userId)
+        (userId) =>
+          !workspaceMembers.some((m) => m.userId === userId) &&
+          !currentUserIds.includes(userId)
       )
     ) {
       fail("NOT_WORKSPACE_MEMBER");
     }
-    note.participants = workspaceMembers
+    /**
+     * **남는 사람의 `participantId`를 새로 발급하지 않는다.** 서버가 차집합으로 저장하는
+     * 이유와 같다(APP-480) — 화자 연결이 참여 기록을 가리키므로 id가 바뀌면 그 노트의
+     * 화자가 통째로 풀린다. 목이 매번 새로 발급하면 화면에서만 그 결함이 재현된다.
+     *
+     * **임시 참여자는 건드리지 않는다** (APP-490). 이 요청의 뜻이 계정 참여자로 좁혀졌다.
+     */
+    const keptGuests = note.participants.filter((row) => row.guestId !== null);
+    const existingByUserId = new Map(
+      note.participants
+        .filter((row) => row.userId !== null)
+        .map((row) => [row.userId as string, row])
+    );
+    // **떠난 참여자도 재구성 원본에 넣는다.** 위 검증이 「이미 참여자면 멤버가 아니어도
+    // 된다」를 허용하는데, 멤버 목록만 훑으면 그 사람이 요청에 실려 와도 조용히 빠진다 —
+    // 화자 연결까지 `detachSpeakers` 로 함께 풀린다. 서버는 보존한다.
+    const rebuildSource = [
+      ...workspaceMembers,
+      ...note.participants
+        .filter(
+          (row) =>
+            row.userId !== null &&
+            !workspaceMembers.some((member) => member.userId === row.userId)
+        )
+        .map((row) => ({
+          userId: row.userId as string,
+          name: row.name,
+          email: row.email,
+          image: row.image,
+        })),
+    ];
+    const accounts = rebuildSource
       .filter((member) => unique.includes(member.userId))
-      .map(({ userId, name, email, image }) => ({ userId, name, email, image }))
+      .map(({ userId, name, email, image }) => {
+        const existing = existingByUserId.get(userId);
+        return {
+          participantId: existing?.participantId ?? nextId(),
+          userId,
+          guestId: null,
+          name,
+          email,
+          image,
+        };
+      });
+    const removedAccounts = note.participants.filter(
+      (row) => row.userId !== null && !unique.includes(row.userId)
+    );
+    note.participants = sortParticipants([...accounts, ...keptGuests]);
+    detachSpeakers(
+      noteId,
+      removedAccounts.map((row) => row.participantId)
+    );
+    return copy({ participants: note.participants });
+  },
+
+  /** 이름만으로 임시 참여자를 만들어 이 회의에 곧바로 넣는다 (APP-490). */
+  createNoteGuestParticipant(noteId: string, displayName: string) {
+    const note = findNote(noteId);
+    const workspaceId = state.projects.find(
+      (row) => row.projectId === note.projectId
+    )?.workspaceId;
+    if (!workspaceId) fail("NOTE_NOT_FOUND");
+
+    // 서버의 singleLine(): 제어문자를 공백으로 접고 양끝을 자른다. 거부가 아니라 접는다.
+    const name = displayName.replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ").trim();
+    if (name.length === 0 || name.length > 100) fail("BAD_REQUEST");
+
+    const guest: MockWorkspaceGuest = {
+      guestId: nextId(),
+      workspaceId,
+      displayName: name,
+      createdAt: nextTimestamp(),
+    };
+    state.workspaceGuests.push(guest);
+    const participantId = nextId();
+    note.participants = sortParticipants([
+      ...note.participants,
+      {
+        participantId,
+        userId: null,
+        guestId: guest.guestId,
+        name,
+        email: null,
+        image: null,
+      },
+    ]);
+    // **만든 사람을 짚어 준다.** 같은 이름을 막지 않으므로 목록만으로는 어느 것이 방금
+    // 만든 것인지 가릴 수 없다 — 서버와 같은 계약이다.
+    return copy({ participantId, participants: note.participants });
+  },
+
+  /** 이 회의의 **임시 참여자만** 전체 교체한다. 계정 참여자는 안 건드린다. */
+  replaceNoteGuestParticipants(noteId: string, guestIds: string[]) {
+    const note = findNote(noteId);
+    const workspaceId = state.projects.find(
+      (row) => row.projectId === note.projectId
+    )?.workspaceId;
+    const unique = [...new Set(guestIds)];
+    const guests = unique.map((guestId) => {
+      const guest = state.workspaceGuests.find(
+        (row) => row.guestId === guestId && row.workspaceId === workspaceId
+      );
+      // 다른 워크스페이스 것을 넣으려 하면 없는 것으로 본다 — 신뢰 경계다.
+      if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+      return guest;
+    });
+
+    const keptAccounts = note.participants.filter((row) => row.userId !== null);
+    const existingByGuestId = new Map(
+      note.participants
+        .filter((row) => row.guestId !== null)
+        .map((row) => [row.guestId as string, row])
+    );
+    // 남는 사람의 participantId 를 유지한다 — 화자 연결이 그 값을 가리킨다.
+    const next = guests.map((guest) => ({
+      participantId:
+        existingByGuestId.get(guest.guestId)?.participantId ?? nextId(),
+      userId: null,
+      guestId: guest.guestId,
+      name: guest.displayName,
+      email: null,
+      image: null,
+    }));
+    const removed = note.participants.filter(
+      (row) => row.guestId !== null && !unique.includes(row.guestId)
+    );
+    note.participants = sortParticipants([...keptAccounts, ...next]);
+    // 서버의 ON DELETE CASCADE 를 흉내 낸다 — 회의에서 빠진 사람의 화자 연결은 끊긴다.
+    detachSpeakers(noteId, removed.map((row) => row.participantId));
+    return copy({ participants: note.participants });
+  },
+
+  /**
+   * 임시 참여자를 지운다. **되돌릴 수 없다** — 그 참여 기록과 거기 붙은 화자 연결이
+   * 함께 사라진다. 서버에서는 `ON DELETE CASCADE` 가 하는 일이라 목이 흉내 낸다.
+   */
+  deleteWorkspaceGuest(workspaceId: string, guestId: string) {
+    requireWorkspaceAdmin(workspaceId);
+    const guest = state.workspaceGuests.find(
+      (row) => row.guestId === guestId && row.workspaceId === workspaceId
+    );
+    if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+
+    let affectedNoteCount = 0;
+    for (const note of state.notes) {
+      const removed = note.participants.filter(
+        (row) => row.guestId === guestId
+      );
+      if (removed.length === 0) continue;
+      affectedNoteCount += 1;
+      note.participants = note.participants.filter(
+        (row) => row.guestId !== guestId
+      );
+      detachSpeakers(
+        note.noteId,
+        removed.map((row) => row.participantId)
+      );
+    }
+    state.workspaceGuests = state.workspaceGuests.filter(
+      (row) => row.guestId !== guestId
+    );
+    return copy({ affectedNoteCount });
+  },
+
+  /** 연동 미리보기. **아무것도 안 바꾼다** — 실행과 같은 판정을 같은 모양으로 돌려준다. */
+  previewWorkspaceGuestLink(
+    workspaceId: string,
+    guestId: string,
+    targetUserId: string
+  ) {
+    return copy(guestLinkResultOf(planGuestLink(workspaceId, guestId, targetUserId)));
+  },
+
+  /**
+   * 임시 참여자를 계정과 잇는다. **참여 기록의 `participantId` 를 유지한다** — 화자 연결이
+   * 그 값을 가리키므로 지우고 새로 만들면 그 사람이 나온 모든 회의의 화자가 풀린다.
+   */
+  linkWorkspaceGuest(
+    workspaceId: string,
+    guestId: string,
+    targetUserId: string
+  ) {
+    const plan = planGuestLink(workspaceId, guestId, targetUserId);
+    const target = state.members.find(
+      (row) => row.workspaceId === workspaceId && row.userId === targetUserId
+    )!;
+
+    for (const entry of plan.changed) {
+      const note = findNote(entry.noteId);
+      if (entry.accountParticipantId && !entry.guestHasSpeaker) {
+        // 계정 기록을 남기고 임시 기록을 지운다 — 화자가 안 붙어 있어 잃을 것이 없다.
+        note.participants = note.participants.filter(
+          (row) => row.participantId !== entry.guestParticipantId
+        );
+      } else {
+        // **지우기보다 먼저 옮긴다.** 사라질 계정 기록에도 화자가 붙어 있으면(V31 부터
+        // 열린 경우다) 그대로 지울 때 그 화자가 주인을 잃는다.
+        if (entry.accountParticipantId) {
+          repointSpeakers(
+            entry.noteId,
+            entry.accountParticipantId,
+            entry.guestParticipantId
+          );
+        }
+        // **화자가 붙은 쪽을 남기고** 반대쪽을 지운다. 그래야 화자 연결이 산다.
+        note.participants = note.participants
+          .filter((row) => row.participantId !== entry.accountParticipantId)
+          .map((row) =>
+            row.participantId === entry.guestParticipantId
+              ? {
+                  ...row,
+                  userId: targetUserId,
+                  guestId: null,
+                  name: target.name,
+                  email: target.email,
+                  image: target.image,
+                }
+              : row
+          );
+        // 화자 목록이 들고 있는 이름도 함께 바뀐다.
+        renameSpeaker(entry.noteId, entry.guestParticipantId, target);
+      }
+      note.participants = sortParticipants(note.participants);
+    }
+
+    // 모든 회의가 합쳐졌으므로 임시 참여자를 남길 이유가 없다 (V31).
+    state.workspaceGuests = state.workspaceGuests.filter(
+      (row) => row.guestId !== guestId
+    );
+    return copy(guestLinkResultOf(plan));
+  },
+
+  /** 워크스페이스의 임시 참여자 목록. 멤버 누구나 본다 — 참석자 후보를 세우는 데 쓰인다. */
+  listWorkspaceGuests(workspaceId: string) {
+    // **없는 워크스페이스를 빈 목록으로 접지 않는다.** 계약이 404 를 말하는데 200 + `[]` 로
+    // 답하면, 목에서는 접근 오류가 「한 명도 없음」과 똑같이 보이고 그 상태로 테스트도
+    // 통과한다 — 화면은 되는데 실제로는 안 되는 자리가 여기서 생긴다.
+    requireWorkspaceMember(workspaceId);
+    const guests = state.workspaceGuests
+      .filter((guest) => guest.workspaceId === workspaceId)
+      .map((guest) => ({
+        guestId: guest.guestId,
+        displayName: guest.displayName,
+        // 그 임시 참여자가 참여자로 들어가 있는 회의 수. 지우기 전에 보여줄 영향 범위다.
+        noteCount: state.notes.filter((note) =>
+          note.participants.some((row) => row.guestId === guest.guestId)
+        ).length,
+        createdAt: guest.createdAt,
+      }))
       .sort(
         (a, b) =>
-          a.name.localeCompare(b.name) || a.userId.localeCompare(b.userId)
+          a.displayName.localeCompare(b.displayName) ||
+          a.guestId.localeCompare(b.guestId)
       );
-    return copy({ participants: note.participants });
+    return copy({ guests });
   },
 
   getNote(noteId: string): NoteResponseData {
@@ -2319,19 +2943,25 @@ export const mockDb = {
   },
 
   /**
-   * 화자에 참석자를 연결하거나 「참석자 아님」으로 확정한다.
+   * 화자에 참석자를 연결하거나 「참석자 아님」으로 확정한다. **「모든 발화에 적용」이다.**
    *
-   * **한 사람은 한 화자에만 붙는다** — 다른 화자에 이미 붙어 있으면 그쪽에서 떨어진다.
-   * 그래서 응답이 목록 전체다.
+   * **한 사람이 여러 화자를 맡을 수 있다** (V31). 예전에는 새로 붙이면 앞 화자에서
+   * 떨어졌는데, pyannote 가 한 사람을 둘로 쪼갠 회의에서 그것이 고칠수록 나빠지게 만들었다.
    *
-   * `userId` 를 받아 `note_participants` 행을 찾아 그 `id` 를 저장한다. 연결의 대상은
-   * 계정이 아니라 이 회의의 참여 기록이다 — 나중에 계정 없는 외부 참석자를 열 때
-   * 데이터 마이그레이션이 안 생긴다.
+   * 이 화자에 달린 **발화 단위 지정은 함께 지운다** — 그래야 「모든」이 말 그대로가 된다.
+   *
+   * **대상을 참여 기록으로 가리킨다** (APP-491). 계정 없는 임시 참여자는 `userId` 가 없어
+   * 그 계약으로는 가리킬 수가 없다. 겸용 `userId` 도 계속 받는다 — 옛 web 이 아직 그것으로
+   * 보내고, APP-496 이 배포 뒤에 뗀다.
    */
   assignSpeaker(
     noteId: string,
     label: string,
-    userId: string | null
+    target: {
+      participantId?: string | null;
+      userId?: string | null;
+      guestId?: string | null;
+    }
   ): TranscriptResponseDataDiarization["speakers"] {
     const note = findNote(noteId);
     const diarization = state.diarizations.get(noteId);
@@ -2343,40 +2973,74 @@ export const mockDb = {
       fail("SPEAKER_LABEL_NOT_FOUND");
     }
 
-    // 부른 사람이 참석자가 아닌 것(403)과 연결 대상이 참석자가 아닌 것(422)은
-    // 사용자가 할 일이 다르므로 가른다.
-    if (!note.participants.some((row) => row.userId === state.user.userId)) {
-      fail("NOT_NOTE_PARTICIPANT");
-    }
-    const participant = userId
-      ? note.participants.find((row) => row.userId === userId)
-      : null;
-    if (userId && !participant) {
-      fail("PARTICIPANT_NOT_IN_NOTE");
-    }
+    const participant = resolveOrJoinParticipant(note, target);
 
     const speakers = diarization.speakers.map((row) => {
       if (row.label === label) {
         return {
           ...row,
+          assignedParticipantId: participant?.participantId ?? null,
+          // 겸용. 임시 참여자가 붙으면 비고, 이름은 그래도 나온다.
           assignedUserId: participant?.userId ?? null,
           assignedName: participant?.name ?? null,
           confirmed: true,
         };
       }
-      // 같은 사람이 다른 화자에 붙어 있었다면 떨어진다
-      if (participant && row.assignedUserId === participant.userId) {
-        return {
-          ...row,
-          assignedUserId: null,
-          assignedName: null,
-          confirmed: false,
-        };
-      }
+      // 다른 화자는 그대로 둔다. 같은 사람이 붙어 있어도 안 떨어진다 (V31)
       return row;
     });
     state.diarizations.set(noteId, { ...diarization, speakers });
+
+    // 이 화자의 발화 단위 지정을 지운다. **다른 화자 것도, 다른 회의 것도 안 건드린다** —
+    // 사람이 고른 것은 이 회의 이 화자의 「모든 발화」다. 라벨은 회의마다 독립이라 노트를
+    // 안 가리면 다른 회의의 같은 라벨까지 쓸어간다.
+    for (const segment of segmentsOfNote(noteId)) {
+      if (segment.speakerLabel === label && segment.assignedParticipantId) {
+        segment.assignedParticipantId = null;
+      }
+    }
     return copy(speakers);
+  },
+
+  /**
+   * **발화 하나에만** 참석자를 붙이거나, 붙였던 것을 뗀다 (V31).
+   *
+   * 대상이 없으면 **해제**다 — 그 발화는 다시 화자 라벨의 지정을 따른다.
+   * 라벨 지정의 `null`(「참석자 중에 없다」)과 뜻이 다르다.
+   */
+  assignSegmentSpeaker(
+    noteId: string,
+    segmentId: string,
+    target: {
+      participantId?: string | null;
+      userId?: string | null;
+      guestId?: string | null;
+    }
+  ): { segmentId: string; assignedParticipantId: string | null } {
+    const note = findNote(noteId);
+    const sessionIds = new Set(
+      state.sessions
+        .filter((session) => session.noteId === noteId)
+        .map((session) => session.sessionId)
+    );
+    const segment = state.segments.find(
+      (row) =>
+        row.segmentId === segmentId &&
+        sessionIds.has(row.transcriptionSessionId)
+    );
+    // 발화 id 는 식별자만 있으면 보낼 수 있는 값이라, 이 회의 것인지 보는 게 신뢰 경계다
+    if (!segment) fail("TRANSCRIPT_SEGMENT_NOT_FOUND");
+    // 화면은 라벨이 붙은 줄에만 메뉴를 띄운다. 라벨 없는 줄에 저장하면 화면에서 다시
+    // 지울 방법이 없는 값이 남는다
+    if (!segment.speakerLabel) fail("SEGMENT_NOT_DIARIZED");
+
+    const participant = resolveOrJoinParticipant(note, target);
+    if (!participant) {
+      segment.assignedParticipantId = null;
+      return { segmentId, assignedParticipantId: null };
+    }
+    segment.assignedParticipantId = participant.participantId;
+    return { segmentId, assignedParticipantId: participant.participantId };
   },
 
   /**
@@ -2469,6 +3133,7 @@ export const mockDb = {
           startedAtMs: segment.startedAtMs + offset,
           endedAtMs: segment.endedAtMs + offset,
           speakerLabel: segment.speakerLabel ?? null,
+          assignedParticipantId: segment.assignedParticipantId ?? null,
         } satisfies TranscriptResponseDataSegmentsItem;
       });
     return copy(segments);
@@ -2489,6 +3154,7 @@ export const mockDb = {
       sequence,
       // 실시간으로 만들어지는 발화에는 화자가 없다. 회의가 끝난 뒤 PRO-32 가 채운다
       speakerLabel: null,
+      assignedParticipantId: null,
       ...input,
     };
     state.segments.push(segment);

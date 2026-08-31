@@ -44,8 +44,31 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
           recordedDurationMs: 2_520_000,
           activeSessionStartedAt: null,
           participants: [
-            { userId: "user-1", name: "김서연", email: "a@b.c", image: null },
-            { userId: "user-2", name: "박준호", email: "d@e.f", image: null },
+            {
+              participantId: "part-1",
+              userId: "user-1",
+              guestId: null,
+              name: "김서연",
+              email: "a@b.c",
+              image: null,
+            },
+            {
+              participantId: "part-2",
+              userId: "user-2",
+              guestId: null,
+              name: "박준호",
+              email: "d@e.f",
+              image: null,
+            },
+            // 계정 없는 참여자도 이 표에 선다 (APP-490).
+            {
+              participantId: "part-3",
+              userId: null,
+              guestId: "guest-1",
+              name: "박서준",
+              email: null,
+              image: null,
+            },
           ],
         },
       },
@@ -56,6 +79,21 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useReplaceNoteGuestParticipants: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+  useCreateNoteGuestParticipant: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+}));
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  getGetWorkspaceGuestsQueryKey: (workspaceId: string) => [
+    "guests",
+    workspaceId,
+  ],
+  useGetWorkspaceGuests: () => ({ isPending: false, data: undefined }),
 }));
 vi.mock(
   "@/lib/api/generated/workspace-members/workspace-members",

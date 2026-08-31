@@ -8,6 +8,13 @@ export type TranscriptPresentationSegment = {
   startedAtMs: number;
   endedAtMs: number;
   speakerLabel?: string | null;
+  /**
+   * 이 발화에만 사람이 붙인 참여 기록. `null`/없음이면 [speakerLabel]의 지정을 따른다.
+   *
+   * 실시간 전사(`TranscriptView`)에는 없는 값이다 — 회의가 끝나고 화자가 나뉜 뒤라야
+   * 붙일 수 있어서 선택 필드로 둔다.
+   */
+  assignedParticipantId?: string | null;
 };
 
 /**

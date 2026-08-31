@@ -61,6 +61,21 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   }),
   getGetWorkspacesQueryKey: () => ["workspaces"],
   getGetWorkspaceQueryKey: (id: string) => ["workspace", id],
+  // 임시 참여자 자리는 이 파일의 검증 대상이 아니다 — 빈 목록으로 두고
+  // `workspace-guests-settings.test.tsx`가 그쪽을 지킨다.
+  getGetWorkspaceGuestsQueryKey: (id: string) => ["guests", id],
+  useGetWorkspaceGuests: () => ({
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+    data: { status: 200, data: { success: true, data: { guests: [] } } },
+  }),
+  useDeleteWorkspaceGuest: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useLinkWorkspaceGuest: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  usePreviewWorkspaceGuestLink: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }));
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { userId: "user-12345" } }),

@@ -10,6 +10,7 @@ import type { RequestHandlerOptions } from "msw";
 
 import type {
   CurrentTranscriptionSessionNullableResponse,
+  SegmentSpeakerResponse,
   SpeakerListResponse,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
@@ -48,6 +49,7 @@ export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
           speakingMs: 940000,
           segmentCount: 128,
           representativeSegmentId: "0HZX2K7M9Q4AH",
+          assignedParticipantId: "0HZX2K7M9Q4AP",
           assignedUserId: "0HZX2K7M9Q4AC",
           assignedName: "홍길동",
           confirmed: true,
@@ -62,6 +64,7 @@ export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
         startedAtMs: 0,
         endedAtMs: 1200,
         speakerLabel: null,
+        assignedParticipantId: null,
       },
     ],
     gaps: [
@@ -102,6 +105,7 @@ export const getAssignNoteSpeakerResponseMock = (): SpeakerListResponse => ({
         speakingMs: 940000,
         segmentCount: 128,
         representativeSegmentId: "0HZX2K7M9Q4AH",
+        assignedParticipantId: "0HZX2K7M9Q4AP",
         assignedUserId: "0HZX2K7M9Q4AC",
         assignedName: "홍길동",
         confirmed: true,
@@ -120,6 +124,16 @@ export const getGetCurrentTranscriptionSessionResponseMock =
       status: "READY",
       readyExpiresAt: "2026-07-14T01:02:03Z",
       startedAt: null,
+    },
+    error: null,
+  });
+
+export const getAssignSegmentSpeakerResponseMock =
+  (): SegmentSpeakerResponse => ({
+    success: true,
+    data: {
+      segmentId: "0HZX2K7M9Q4AH",
+      assignedParticipantId: "0HZX2K7M9Q4AP",
     },
     error: null,
   });
@@ -249,10 +263,35 @@ export const getGetCurrentTranscriptionSessionMockHandler = (
     options
   );
 };
+
+export const getAssignSegmentSpeakerMockHandler = (
+  overrideResponse?:
+    | SegmentSpeakerResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<SegmentSpeakerResponse> | SegmentSpeakerResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/notes/:noteId/segments/:segmentId/speaker",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssignSegmentSpeakerResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getTranscriptionMock = () => [
   getGetTranscriptionSessionMockHandler(),
   getGetNoteTranscriptMockHandler(),
   getStartTranscriptionSessionMockHandler(),
   getAssignNoteSpeakerMockHandler(),
   getGetCurrentTranscriptionSessionMockHandler(),
+  getAssignSegmentSpeakerMockHandler(),
 ];

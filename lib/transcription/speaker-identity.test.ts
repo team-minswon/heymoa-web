@@ -11,7 +11,7 @@ const speaker = (
   speakingMs: 1_000,
   segmentCount: 1,
   representativeSegmentId: "0HZX2K7M9Q4AD",
-  assignedUserId: assignedName ? "0HZX2K7M9Q4AC" : null,
+  assignedParticipantId: assignedName ? "0HZX2K7M9Q4AP" : null,
   assignedName,
   confirmed: assignedName !== null,
   ...extra,
@@ -31,7 +31,7 @@ describe("createSpeakerIdentityResolver", () => {
   it("「참석자 아님」으로 확정해도 화자 A 로 남는다", () => {
     // 그 사람이 누구인지 우리가 모른다는 것이 사실이다
     const resolve = createSpeakerIdentityResolver([
-      { ...speaker("A"), assignedUserId: null, confirmed: true },
+      { ...speaker("A"), assignedParticipantId: null, confirmed: true },
     ]);
 
     expect(resolve("A")?.displayName).toBe("화자 A");
@@ -128,13 +128,16 @@ describe("createSpeakerIdentityResolver", () => {
     expect(resolve("A")?.initial).toBe("김");
   });
 
-  // **여기가 실제 계약이다.** `speakers[]` 는 `assignedUserId` 만 주고 사진은 참석자
+  // **여기가 실제 계약이다.** `speakers[]` 는 붙은 사람의 식별자만 주고 사진은 참석자
   // 목록에 있다. 위 테스트가 `image` 를 화자에 직접 얹는 바람에, 아무도 안 잇고 있다는
   // 사실이 안 보였다 — 화면에서는 붙는 순간 얼굴이 글자로 바뀌었다.
-  it("참석자 목록에서 얼굴을 끌어온다 — 화자에는 userId 만 온다", () => {
+  //
+  // 잇는 열쇠는 **참여 기록**이다(APP-491). 계정으로 이으면 계정 없는 사람은 그 값이
+  // 없어 전부 한 칸에 뭉치고, 남의 사진이 실릴 수 있다.
+  it("참석자 목록에서 얼굴을 끌어온다 — 화자에는 참여 기록 식별자만 온다", () => {
     const resolve = createSpeakerIdentityResolver(
-      [speaker("A", "김민수", { assignedUserId: "01K0000000001" })],
-      [{ userId: "01K0000000001", image: "https://cdn.example.com/kim.png" }]
+      [speaker("A", "김민수", { assignedParticipantId: "01K0000000101" })],
+      [{ participantId: "01K0000000101", image: "https://cdn.example.com/kim.png" }]
     );
 
     expect(resolve("A")?.imageUrl).toBe("https://cdn.example.com/kim.png");
@@ -142,8 +145,8 @@ describe("createSpeakerIdentityResolver", () => {
 
   it("사진 없는 사람은 이니셜로 남는다 — 색은 그대로 준다", () => {
     const resolve = createSpeakerIdentityResolver(
-      [speaker("A", "한지원", { assignedUserId: "01K0000000020" })],
-      [{ userId: "01K0000000020", image: null }]
+      [speaker("A", "한지원", { assignedParticipantId: "01K0000000120" })],
+      [{ participantId: "01K0000000120", image: null }]
     );
 
     expect(resolve("A")?.imageUrl).toBeNull();
@@ -154,7 +157,7 @@ describe("createSpeakerIdentityResolver", () => {
   it("아직 아무도 안 붙은 화자는 참석자를 봐도 얼굴이 없다", () => {
     const resolve = createSpeakerIdentityResolver(
       [speaker("A", null)],
-      [{ userId: "01K0000000001", image: "https://cdn.example.com/kim.png" }]
+      [{ participantId: "01K0000000101", image: "https://cdn.example.com/kim.png" }]
     );
 
     expect(resolve("A")?.imageUrl).toBeNull();
@@ -166,5 +169,64 @@ describe("createSpeakerIdentityResolver", () => {
 
     expect(resolve(null)).toBeNull();
     expect(resolve("Z")?.displayName).toBe("화자 Z");
+  });
+});
+
+describe("발화 단위 화자 지정", () => {
+  const speakers = [
+    { label: "A", assignedName: "김민수", assignedParticipantId: "p-1" },
+  ] as never;
+  const participants = [
+    { participantId: "p-1", name: "김민수", image: null },
+    { participantId: "p-2", name: "박서준", image: "https://cdn/park.png" },
+  ];
+
+  /** 더 좁은 범위를 사람이 나중에 골랐다는 뜻이다. */
+  it("라벨의 이름을 이긴다", () => {
+    const resolve = createSpeakerIdentityResolver(speakers, participants);
+
+    expect(resolve("A")?.displayName).toBe("김민수");
+    expect(resolve("A", "p-2")?.displayName).toBe("박서준");
+  });
+
+  it("얼굴도 그 사람 것으로 바뀐다", () => {
+    const resolve = createSpeakerIdentityResolver(speakers, participants);
+
+    expect(resolve("A", "p-2")?.imageUrl).toBe("https://cdn/park.png");
+    expect(resolve("A", "p-2")?.initial).toBe("박");
+  });
+
+  /**
+   * **색은 라벨이 정한다.** 이 줄도 여전히 목소리 덩어리 A 에 속한다 — 우리가 고친 것은
+   * 거기 붙일 이름뿐이다.
+   */
+  it("색은 라벨 것을 그대로 쓴다", () => {
+    const resolve = createSpeakerIdentityResolver(speakers, participants);
+
+    expect(resolve("A", "p-2")?.tint).toBe(resolve("A")?.tint);
+  });
+
+  /** 사람이 이 줄을 콕 집어 골랐다. 「아직 아무도 안 본 화자」가 아니다. */
+  it("사람이 고른 줄이므로 미확인이 아니다", () => {
+    const unconfirmed = [{ label: "B" }] as never;
+    const resolve = createSpeakerIdentityResolver(unconfirmed, participants);
+
+    expect(resolve("B")?.unassigned).toBe(true);
+    expect(resolve("B", "p-2")?.unassigned).toBe(false);
+  });
+
+  /**
+   * 참석자에서 빠진 사람이 전사에 이름만 남는 것보다, 라벨의 답으로 돌아가는 편이 덜 틀리다.
+   */
+  it("목록에 없는 참여 기록이면 라벨을 따른다", () => {
+    const resolve = createSpeakerIdentityResolver(speakers, participants);
+
+    expect(resolve("A", "p-사라짐")?.displayName).toBe("김민수");
+  });
+
+  it("값이 없으면 지금까지와 똑같다", () => {
+    const resolve = createSpeakerIdentityResolver(speakers, participants);
+
+    expect(resolve("A", null)).toEqual(resolve("A"));
   });
 });

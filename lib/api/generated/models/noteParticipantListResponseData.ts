@@ -11,6 +11,6 @@ import type { NoteParticipantListResponseDataParticipantsItem } from "./notePart
  * 성공 응답 데이터
  */
 export type NoteParticipantListResponseData = {
-  /** 교체 후의 참여자 목록. 이름 오름차순이다 */
+  /** 그 회의의 참여자 전원. 계정 참여자와 임시 참여자가 섞여 이름 오름차순이다 */
   participants: NoteParticipantListResponseDataParticipantsItem[];
 };

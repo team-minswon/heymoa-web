@@ -42,8 +42,14 @@ codex exec review --base dev
 요청하지도 반영하지도 않습니다. 무엇을 어떤 라벨로 적는지는 skill
 [`code-review`](../code-review/SKILL.md)가 정합니다.
 
-`--base`와 함께 프롬프트를 위치 인자로 넘길 수 있습니다. `--title` 옵션은 없습니다
-(codex-cli 0.145.0 실측).
+`--base`·`--commit`·`--uncommitted` 는 **프롬프트(위치 인자)와 함께 못 씁니다.** 셋 중 하나를
+쓰면 리뷰 지시를 따로 못 넣습니다 — `error: the argument '--base <BRANCH>' cannot be used with
+'[PROMPT]'` 로 끊깁니다. `--title` 은 **있지만** 리뷰 요약에 표시할 제목일 뿐이라 리뷰 방향을
+바꾸지 않습니다 (codex-cli 0.149.1 실측).
+
+> **버전이 올라가며 뒤집힌 자리입니다.** 0.145.0 에서는 `--base` 와 프롬프트를 함께 넘길 수
+> 있었고 `--title` 이 없었습니다. 안 되면 `codex exec review --help` 로 확인하고 이 줄을
+> 고칩니다.
 
 P1·P2를 고치고 다시 돌립니다. **레포에 리뷰 기록 파일을 만들지 않습니다** — 회차는 이슈 댓글 ④로 남깁니다.
 

@@ -58,7 +58,7 @@ export type NoteListResponseDataNotesItem = {
    * @nullable
    */
   activeSessionStartedAt: string | null;
-  /** 회의 참여자 목록. 워크스페이스 멤버만 등록되며 이름 오름차순이다. 없으면 빈 배열 */
+  /** 회의 참여자 목록. 워크스페이스 멤버와 계정 없는 임시 참여자가 섞여 이름 오름차순이다. 없으면 빈 배열 */
   participants: NoteListResponseDataNotesItemParticipantsItem[];
   /** 노트 수정 시각 */
   updatedAt: string;

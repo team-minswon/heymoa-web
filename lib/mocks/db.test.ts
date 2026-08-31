@@ -549,6 +549,34 @@ describe("workspace member management", () => {
   });
 });
 
+describe("참여자 전체 교체와 떠난 사람", () => {
+  const WORKSPACE_ID = "01K0000000000";
+  const NOTE_ID = "01K0000000020";
+
+  /**
+   * 서버는 **이미 이 회의의 참여자면 멤버가 아니어도** 전체 교체에 실어 유지할 수 있다.
+   * 목이 멤버 목록만 훑으면 그 사람이 조용히 빠지고 화자 연결까지 풀린다 — 목과 서버가
+   * 갈라지면 화면 테스트가 전부 거짓으로 통과한다.
+   */
+  it("내보낸 멤버도 요청에 실으면 참여자로 남는다", () => {
+    const before = mockDb.getNote(NOTE_ID).participants.filter((row) => row.userId);
+    const departing = before.find((row) => row.userId !== mockDb.getCurrentUser().userId)!;
+
+    mockDb.removeMember(WORKSPACE_ID, departing.userId!);
+
+    mockDb.replaceNoteParticipants(
+      NOTE_ID,
+      before.map((row) => row.userId!)
+    );
+
+    const after = mockDb.getNote(NOTE_ID).participants;
+    const kept = after.find((row) => row.userId === departing.userId);
+    expect(kept).toBeDefined();
+    // 참여 기록 id 가 그대로여야 화자 연결이 산다 (APP-480)
+    expect(kept!.participantId).toBe(departing.participantId);
+  });
+});
+
 describe("meeting and analysis", () => {
   beforeEach(() => mockDb.reset());
 

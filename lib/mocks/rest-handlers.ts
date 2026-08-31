@@ -51,10 +51,16 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_NOT_FOUND: "워크스페이스를 찾을 수 없습니다.",
   PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
   NOT_WORKSPACE_MEMBER: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.",
-  NOT_NOTE_PARTICIPANT: "회의 참석자만 화자를 확인할 수 있습니다.",
-  SPEAKER_LABEL_NOT_FOUND: "해당 화자를 찾을 수 없습니다.",
+  SPEAKER_LABEL_NOT_FOUND: "그 화자를 찾을 수 없습니다.",
   DIARIZATION_NOT_MAPPED: "화자 분리가 아직 끝나지 않았습니다.",
-  PARTICIPANT_NOT_IN_NOTE: "회의 참여자가 아닌 사람은 연결할 수 없습니다.",
+  PARTICIPANT_NOT_IN_NOTE: "이 회의의 화자로 지정할 수 없는 대상입니다.",
+  TRANSCRIPT_SEGMENT_NOT_FOUND: "그 발화를 찾을 수 없습니다.",
+  SEGMENT_NOT_DIARIZED: "화자가 나뉘지 않은 발화입니다.",
+  WORKSPACE_GUEST_NOT_FOUND: "임시 참여자를 찾을 수 없습니다.",
+  WORKSPACE_MEMBER_NOT_FOUND: "워크스페이스 멤버를 찾을 수 없습니다.",
+  CONCURRENT_GUEST_LINK: "연동 중에 회의가 바뀌었습니다. 다시 시도해 주세요.",
+  WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
+  BAD_REQUEST: "잘못된 요청입니다.",
 };
 
 /**
@@ -66,7 +72,12 @@ const SESSION_CONFLICTS: Record<string, string> = {
 };
 
 /** 권한 문제는 403이다 — 없음(404)이나 상태 충돌(409)과 구분해야 화면이 다르게 다룬다. */
-const FORBIDDEN_CODES = new Set(["NOT_MEETING_STARTER", "NOT_NOTE_PARTICIPANT"]);
+const FORBIDDEN_CODES = new Set([
+  "NOT_MEETING_STARTER",
+  // ADMIN 만 임시 참여자를 연동·삭제한다. 여기 없으면 `statusOf` 가 409 로 떨어뜨려
+  // 계약(403)과 갈리고, `KNOWN_CODES` 밖이라 `resultOf` 는 아예 guest 404 로 덮는다.
+  "WORKSPACE_ACCESS_DENIED",
+]);
 
 const NOT_FOUND_CODES = new Set([
   "NOTE_NOT_FOUND",
@@ -78,10 +89,14 @@ const NOT_FOUND_CODES = new Set([
   "NOTIFICATION_NOT_FOUND",
   "AGENT_CHAT_NOT_FOUND",
   "SPEAKER_LABEL_NOT_FOUND",
+  "WORKSPACE_GUEST_NOT_FOUND",
+  "WORKSPACE_MEMBER_NOT_FOUND",
+  // 그 발화가 이 회의의 것이 아니다. 「그 화자가 없다」와 가른다 — 화면이 할 일이 다르다
+  "TRANSCRIPT_SEGMENT_NOT_FOUND",
 ]);
 
 /** 요청 값이 틀린 것은 400이다 — 없음(404)이나 상태 충돌(409)과 구분한다. */
-const BAD_REQUEST_CODES = new Set(["NOT_WORKSPACE_MEMBER"]);
+const BAD_REQUEST_CODES = new Set(["NOT_WORKSPACE_MEMBER", "BAD_REQUEST"]);
 
 const NOT_WORKSPACE_MEMBER = {
   code: "NOT_WORKSPACE_MEMBER",
@@ -100,6 +115,10 @@ const KNOWN_CODES = new Set([
   "DIARIZATION_NOT_MAPPED",
   // 422 — 연결 대상이 참여자가 아니다. 부른 사람이 아닌 것(403)과 가른다
   "PARTICIPANT_NOT_IN_NOTE",
+  // 409 — 라벨이 안 붙은 발화. 화면은 여기에 메뉴를 안 띄우므로 직접 요청일 때만 난다
+  "SEGMENT_NOT_DIARIZED",
+  // 409 — 연동이 회의를 잠그는 사이 그 사람이 다른 회의에 추가됐다. **재시도로 푸는 자리다**
+  "CONCURRENT_GUEST_LINK",
 ]);
 
 function statusOf(code: string) {
@@ -121,9 +140,15 @@ function commandResult<T>(run: () => T, okStatus = 200) {
     const code = (error as Error).message;
     return HttpResponse.json(
       {
+        // **원시 코드를 문구로 쓰지 않는다.** `errorMessageOf` 가 이 값을 화면에 그대로
+        // 그리므로, 실서버 봉투와 갈리면 목에서는 멀쩡하던 문구가 실제로는 코드로 나온다.
         success: false,
         data: null,
-        error: { code, message: code, details: null },
+        error: {
+          code,
+          message: CONTRACT_ERROR_MESSAGES[code] ?? code,
+          details: null,
+        },
       },
       {
         status: FORBIDDEN_CODES.has(code)
@@ -420,6 +445,72 @@ export const restHandlers = [
       NOT_WORKSPACE_MEMBER
     )
   ),
+  // 계정 없는 참여자는 경로가 따로다 - 한 요청에 섞으면 멤버를 하나 바꿀 때마다 임시
+  // 참여자가 함께 지워지고 그 화자 연결이 CASCADE 로 날아간다.
+  http.post(
+    "*/v1/notes/:noteId/participants/guests",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.createNoteGuestParticipant(
+            id(params.noteId),
+            ((await request.json()) as { displayName?: string }).displayName ??
+              ""
+          ),
+        notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."),
+        201
+      )
+  ),
+  http.put(
+    "*/v1/notes/:noteId/participants/guests",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.replaceNoteGuestParticipants(
+            id(params.noteId),
+            ((await request.json()) as { guestIds?: string[] }).guestIds ?? []
+          ),
+        notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+      )
+  ),
+  http.get("*/v1/workspaces/:workspaceId/guests", ({ params }) =>
+    commandResult(() => mockDb.listWorkspaceGuests(id(params.workspaceId)))
+  ),
+  http.delete("*/v1/workspaces/:workspaceId/guests/:guestId", ({ params }) =>
+    commandResult(() =>
+      mockDb.deleteWorkspaceGuest(id(params.workspaceId), id(params.guestId))
+    )
+  ),
+  // 미리보기와 실행이 같은 요청·응답 모양이다 — 사람이 확인한 것과 일어난 일을 맞춰
+  // 볼 수 있어야 한다. 연동은 되돌릴 수 없어 그 대조가 유일한 사후 확인이다.
+  http.post(
+    "*/v1/workspaces/:workspaceId/guests/:guestId/link-preview",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.previewWorkspaceGuestLink(
+            id(params.workspaceId),
+            id(params.guestId),
+            ((await request.json()) as { targetUserId?: string })
+              .targetUserId ?? ""
+          ),
+        notFound("WORKSPACE_GUEST_NOT_FOUND", "임시 참여자를 찾을 수 없습니다.")
+      )
+  ),
+  http.post(
+    "*/v1/workspaces/:workspaceId/guests/:guestId/link",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.linkWorkspaceGuest(
+            id(params.workspaceId),
+            id(params.guestId),
+            ((await request.json()) as { targetUserId?: string })
+              .targetUserId ?? ""
+          ),
+        notFound("WORKSPACE_GUEST_NOT_FOUND", "임시 참여자를 찾을 수 없습니다.")
+      )
+  ),
   http.patch("*/v1/notes/:noteId", async ({ request, params }) =>
     resultOf(
       async () =>
@@ -490,15 +581,42 @@ export const restHandlers = [
   http.put(
     "*/v1/notes/:noteId/speakers/:label",
     async ({ params, request }) => {
-      const body = (await request.json()) as { userId?: string | null };
+      const body = (await request.json()) as {
+        participantId?: string | null;
+        userId?: string | null;
+        guestId?: string | null;
+      };
       return resultOf(
         () => ({
-          speakers: mockDb.assignSpeaker(
-            id(params.noteId),
-            String(params.label),
-            body.userId ?? null
-          ),
+          speakers: mockDb.assignSpeaker(id(params.noteId), String(params.label), {
+            participantId: body.participantId ?? null,
+            userId: body.userId ?? null,
+            guestId: body.guestId ?? null,
+          }),
         }),
+        notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+      );
+    }
+  ),
+  http.put(
+    "*/v1/notes/:noteId/segments/:segmentId/speaker",
+    async ({ params, request }) => {
+      const body = (await request.json()) as {
+        participantId?: string | null;
+        userId?: string | null;
+        guestId?: string | null;
+      };
+      return resultOf(
+        () =>
+          mockDb.assignSegmentSpeaker(
+            id(params.noteId),
+            String(params.segmentId),
+            {
+              participantId: body.participantId ?? null,
+              userId: body.userId ?? null,
+              guestId: body.guestId ?? null,
+            }
+          ),
         notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
       );
     }

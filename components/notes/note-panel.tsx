@@ -635,23 +635,26 @@ export function NotePanel({
               </div>
             ) : null}
             <div className="min-h-0 flex-1">
-              {/* 종료된 회의는 전사 탭이 아카이브(전사 + 공유 Q&A)가 된다. */}
+              {/* 종료된 회의는 전사 탭이 아카이브가 된다. */}
               {/* 요약 → 전사 점프는 **양쪽 다** 된다. 요약이 있는 상태는 대개 아카이브
                   경로지만, 관전자가 종료 안내에서 아직 넘어가지 않았으면 같은 탭에
                   `TranscriptView`가 서 있다. */}
               {showArchive ? (
                 <NoteArchive
+                  // **URL이 아니라 확인된 소속을 넘긴다.** 위 `RecordingDock`과 같은 이유다 —
+                  // `/w/B/notes/<A의 노트>` 로 들어오면 B의 멤버·임시 참여자가 후보로 서고,
+                  // 고르면 422 로 거절되거나 **A에 이미 있는 사람을 못 찾아 동명이인을 또
+                  // 만든다.** 확인 전에는 비어 있고, 그동안 아카이브가 만들기를 안 연다.
+                  workspaceId={confirmedWorkspaceId}
+                  // **noteId로 키잉한다.** 위 `MeetingControls`와 같은 함정이다 — A의 「모든
+                  // 발화에 적용」 확인창을 연 채 뒤로가기로 B에 오면 이 패널이 재마운트되지
+                  // 않아 그 상태가 남고, 대상만 B로 바뀌어 **다른 회의의 화자가 바뀐다.**
+                  key={noteId}
                   noteId={noteId}
+                  // **이 회의의 참여자 전부다.** 화자 지정이 참여 기록 식별자로 대상을
+                  // 말하게 되면서(APP-491) 계정 없는 사람도 그대로 후보가 된다.
                   participants={note?.participants ?? []}
                   noteMeta={noteMeta}
-                  // 참석자만 화자를 바꾼다. 회의에 없던 사람은 대표 발화를 봐도
-                  // 짐작할 근거가 없고, 그런 사람이 이름을 달면 회의록이 조용히 틀린다.
-                  canAssignSpeaker={Boolean(
-                    user &&
-                      note?.participants?.some(
-                        (participant) => participant.userId === user.userId
-                      )
-                  )}
                   focusSegmentId={focusSegmentId}
                   onFocusHandled={clearFocusSegment}
                 />
@@ -686,7 +689,7 @@ export function NotePanel({
                 errorLabel="노트를 불러오지 못했습니다"
                 resetKeys={[noteId]}
               >
-                <NoteDetails noteId={noteId} workspaceId={workspaceId} />
+                <NoteDetails noteId={noteId} workspaceId={confirmedWorkspaceId} />
               </DataBoundary>
             </ScrollArea>
           </TabsContent>

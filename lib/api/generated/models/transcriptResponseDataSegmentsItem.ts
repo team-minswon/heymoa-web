@@ -36,4 +36,12 @@ export type TranscriptResponseDataSegmentsItem = {
    * @minimum 0
    */
   startedAtMs: number;
+  /**
+   * 이 발화에만 사람이 붙인 참여 기록. null 이면 speakerLabel 의 지정을 따른다
+   * @minLength 13
+   * @maxLength 13
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  assignedParticipantId: string | null;
 };

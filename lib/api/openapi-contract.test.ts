@@ -216,7 +216,14 @@ describe("contract sync 2026-07-29", () => {
     // `members/{userId}`(역할 변경 PATCH · 추방 DELETE). 후자는 경로 하나에 메서드 둘이다.
     // APP-401에서 `users/me/default-workspace`가 사라졌다 (37 → 36).
     // APP-421에서 `notes/{noteId}/speakers/{label}`이 생겼다 (36 → 37).
-    expect(paths).toHaveLength(37);
+    // APP-490·492에서 임시 참여자 경로 다섯이 늘었다 (37 → 42) —
+    // `notes/{noteId}/participants/guests`(만들기 POST · 전체 교체 PUT),
+    // `workspaces/{workspaceId}/guests`(목록),
+    // `.../guests/{guestId}`(삭제), `.../guests/{guestId}/link`,
+    // `.../guests/{guestId}/link-preview`.
+    // V31에서 발화 단위 화자 지정이 생겼다 (42 → 43) —
+    // `notes/{noteId}/segments/{segmentId}/speaker`.
+    expect(paths).toHaveLength(43);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

@@ -107,7 +107,9 @@ vi.mock("@/components/chat/personal-chat", () => ({
   usePersonalChat: () => ({ setRailSlot, ...personalChat }),
 }));
 vi.mock("@/components/notes/note-archive", () => ({
-  NoteArchive: () => <div data-testid="note-archive" />,
+  NoteArchive: ({ workspaceId }: { workspaceId?: string }) => (
+    <div data-testid="note-archive" data-workspace={workspaceId ?? ""} />
+  ),
 }));
 vi.mock("@/components/notes/note-summary", () => ({
   NoteSummary: ({ isEnded }: { isEnded: boolean }) => (
@@ -637,6 +639,51 @@ describe("NotePanel", () => {
 
 
 
+  /**
+   * **아카이브도 URL 값을 받으면 안 된다.** 화자 후보를 워크스페이스에서 세우므로,
+   * `/w/B/notes/<A의 노트>` 면 B 의 멤버가 후보로 서고 고르면 422 로 거절되거나
+   * **A 에 이미 있는 사람을 못 찾아 동명이인을 또 만든다.** 독과 같은 규칙이다.
+   */
+  it("소속이 확인되기 전에는 아카이브에 워크스페이스를 안 넘긴다", () => {
+    noteState.value.meetingStatus = "ENDED";
+    projectPending.value = true;
+
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("note-archive")).toHaveAttribute(
+      "data-workspace",
+      ""
+    );
+  });
+
+  it("확인된 소속을 아카이브에 넘긴다", () => {
+    noteState.value.meetingStatus = "ENDED";
+
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("note-archive")).toHaveAttribute(
+      "data-workspace",
+      "01K0000000000"
+    );
+  });
 
   it.each(["full", "side"] as const)(
     "%s는 최초 시작을 절대 시각 time 요소로 보인다",

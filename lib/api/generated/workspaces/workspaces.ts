@@ -27,9 +27,13 @@ import type {
   AppErrorResponse,
   CreateWorkspaceRequest,
   CreateWorkspaceResponse,
+  DeleteWorkspaceGuestResponse,
+  GuestLinkResponse,
+  LinkWorkspaceGuestRequest,
   UnauthorizedResponse,
   UpdateWorkspaceRequest,
   UpdateWorkspaceResponse,
+  WorkspaceGuestListResponse,
   WorkspaceListResponse,
   WorkspaceResponse,
 } from "../models";
@@ -932,4 +936,806 @@ export const useUpdateWorkspace = <
   TContext
 > => {
   return useMutation(getUpdateWorkspaceMutationOptions(options), queryClient);
+};
+export type getWorkspaceGuestsResponse200 = {
+  data: WorkspaceGuestListResponse;
+  status: 200;
+};
+
+export type getWorkspaceGuestsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getWorkspaceGuestsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getWorkspaceGuestsResponseSuccess =
+  getWorkspaceGuestsResponse200 & {
+    headers: Headers;
+  };
+export type getWorkspaceGuestsResponseError = (
+  | getWorkspaceGuestsResponse401
+  | getWorkspaceGuestsResponse404
+) & {
+  headers: Headers;
+};
+
+export type getWorkspaceGuestsResponse =
+  | getWorkspaceGuestsResponseSuccess
+  | getWorkspaceGuestsResponseError;
+
+export const getGetWorkspaceGuestsUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/guests`;
+};
+
+/**
+ * 워크스페이스가 소유한 계정 없는 참여자 목록을 이름 오름차순으로 조회한다. 참석자 후보와 화자 지정 후보를 세우는 데 쓰이므로 멤버 누구나 부를 수 있다. noteCount는 그 임시 참여자가 참여자로 들어가 있는 회의 수이고, 삭제 전에 무엇을 잃는지 보여주는 값이다. 이름이 같은 임시 참여자가 여럿 있을 수 있다.
+ * @summary 워크스페이스 임시 참여자 목록 조회
+ */
+export const getWorkspaceGuests = async (
+  workspaceId: string,
+  options?: RequestInit
+): Promise<getWorkspaceGuestsResponse> => {
+  return apiFetch<getWorkspaceGuestsResponse>(
+    getGetWorkspaceGuestsUrl(workspaceId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetWorkspaceGuestsQueryKey = (workspaceId: string) => {
+  return [`/v1/workspaces/${workspaceId}/guests`] as const;
+};
+
+export const getGetWorkspaceGuestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceGuestsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceGuests>>
+  > = ({ signal }) =>
+    getWorkspaceGuests(workspaceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceGuests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceGuestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceGuests>>
+>;
+export type GetWorkspaceGuestsQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetWorkspaceGuests<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceGuests>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceGuests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceGuests<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceGuests>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceGuests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceGuests<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 임시 참여자 목록 조회
+ */
+
+export function useGetWorkspaceGuests<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceGuestsQueryOptions(workspaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 워크스페이스 임시 참여자 목록 조회
+ */
+export const prefetchGetWorkspaceGuestsQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceGuestsQueryOptions(workspaceId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceGuestsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceGuestsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceGuests>>
+  > = ({ signal }) =>
+    getWorkspaceGuests(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceGuests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceGuestsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceGuests>>
+>;
+export type GetWorkspaceGuestsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetWorkspaceGuestsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceGuestsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceGuestsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 임시 참여자 목록 조회
+ */
+
+export function useGetWorkspaceGuestsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceGuests>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceGuests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceGuestsSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export type deleteWorkspaceGuestResponse200 = {
+  data: DeleteWorkspaceGuestResponse;
+  status: 200;
+};
+
+export type deleteWorkspaceGuestResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type deleteWorkspaceGuestResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type deleteWorkspaceGuestResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type deleteWorkspaceGuestResponseSuccess =
+  deleteWorkspaceGuestResponse200 & {
+    headers: Headers;
+  };
+export type deleteWorkspaceGuestResponseError = (
+  | deleteWorkspaceGuestResponse401
+  | deleteWorkspaceGuestResponse403
+  | deleteWorkspaceGuestResponse404
+) & {
+  headers: Headers;
+};
+
+export type deleteWorkspaceGuestResponse =
+  | deleteWorkspaceGuestResponseSuccess
+  | deleteWorkspaceGuestResponseError;
+
+export const getDeleteWorkspaceGuestUrl = (
+  workspaceId: string,
+  guestId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/guests/${guestId}`;
+};
+
+/**
+ * 임시 참여자를 지운다. **되돌릴 수 없다** - 그 사람의 회의 참여 기록과 거기 붙어 있던 화자 연결이 함께 사라진다. ADMIN만 부를 수 있고, 응답으로 실제 참여 기록이 사라진 회의 수를 돌려준다.
+ * @summary 워크스페이스 임시 참여자 삭제
+ */
+export const deleteWorkspaceGuest = async (
+  workspaceId: string,
+  guestId: string,
+  options?: RequestInit
+): Promise<deleteWorkspaceGuestResponse> => {
+  return apiFetch<deleteWorkspaceGuestResponse>(
+    getDeleteWorkspaceGuestUrl(workspaceId, guestId),
+    {
+      ...options,
+      method: "DELETE",
+    }
+  );
+};
+
+export const getDeleteWorkspaceGuestMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWorkspaceGuest>>,
+    TError,
+    { workspaceId: string; guestId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWorkspaceGuest>>,
+  TError,
+  { workspaceId: string; guestId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteWorkspaceGuest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWorkspaceGuest>>,
+    { workspaceId: string; guestId: string }
+  > = (props) => {
+    const { workspaceId, guestId } = props ?? {};
+
+    return deleteWorkspaceGuest(workspaceId, guestId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteWorkspaceGuestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWorkspaceGuest>>
+>;
+
+export type DeleteWorkspaceGuestMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 워크스페이스 임시 참여자 삭제
+ */
+export const useDeleteWorkspaceGuest = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWorkspaceGuest>>,
+      TError,
+      { workspaceId: string; guestId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWorkspaceGuest>>,
+  TError,
+  { workspaceId: string; guestId: string },
+  TContext
+> => {
+  return useMutation(
+    getDeleteWorkspaceGuestMutationOptions(options),
+    queryClient
+  );
+};
+export type linkWorkspaceGuestResponse200 = {
+  data: GuestLinkResponse;
+  status: 200;
+};
+
+export type linkWorkspaceGuestResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type linkWorkspaceGuestResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type linkWorkspaceGuestResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type linkWorkspaceGuestResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type linkWorkspaceGuestResponseSuccess =
+  linkWorkspaceGuestResponse200 & {
+    headers: Headers;
+  };
+export type linkWorkspaceGuestResponseError = (
+  | linkWorkspaceGuestResponse401
+  | linkWorkspaceGuestResponse403
+  | linkWorkspaceGuestResponse404
+  | linkWorkspaceGuestResponse409
+) & {
+  headers: Headers;
+};
+
+export type linkWorkspaceGuestResponse =
+  | linkWorkspaceGuestResponseSuccess
+  | linkWorkspaceGuestResponseError;
+
+export const getLinkWorkspaceGuestUrl = (
+  workspaceId: string,
+  guestId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/guests/${guestId}/link`;
+};
+
+/**
+ * 임시 참여자를 워크스페이스 멤버 한 명과 잇는다. **되돌릴 수 없다** - 그 사람이 나온 모든 회의록의 참여 기록이 그 계정 것이 되고, 참여 기록 식별자를 유지하므로 화자 연결은 풀리지 않는다. **건너뛰는 회의가 없다** - 그 계정이 같은 회의에서 이미 다른 화자에 붙어 있어도 두 화자를 그대로 들고 합친다. 한 사람이 여러 화자를 맡을 수 있게 되면서 사람이 판단할 것이 없어졌다. ADMIN만 부를 수 있고, 실행하면 임시 참여자 자체가 사라진다.
+ * @summary 임시 참여자와 계정 연동
+ */
+export const linkWorkspaceGuest = async (
+  workspaceId: string,
+  guestId: string,
+  linkWorkspaceGuestRequest?: LinkWorkspaceGuestRequest,
+  options?: RequestInit
+): Promise<linkWorkspaceGuestResponse> => {
+  return apiFetch<linkWorkspaceGuestResponse>(
+    getLinkWorkspaceGuestUrl(workspaceId, guestId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(linkWorkspaceGuestRequest),
+    }
+  );
+};
+
+export const getLinkWorkspaceGuestMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof linkWorkspaceGuest>>,
+    TError,
+    { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof linkWorkspaceGuest>>,
+  TError,
+  { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest },
+  TContext
+> => {
+  const mutationKey = ["linkWorkspaceGuest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof linkWorkspaceGuest>>,
+    { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest }
+  > = (props) => {
+    const { workspaceId, guestId, data } = props ?? {};
+
+    return linkWorkspaceGuest(workspaceId, guestId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LinkWorkspaceGuestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof linkWorkspaceGuest>>
+>;
+export type LinkWorkspaceGuestMutationBody =
+  | LinkWorkspaceGuestRequest
+  | undefined;
+export type LinkWorkspaceGuestMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 임시 참여자와 계정 연동
+ */
+export const useLinkWorkspaceGuest = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof linkWorkspaceGuest>>,
+      TError,
+      {
+        workspaceId: string;
+        guestId: string;
+        data?: LinkWorkspaceGuestRequest;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof linkWorkspaceGuest>>,
+  TError,
+  { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest },
+  TContext
+> => {
+  return useMutation(
+    getLinkWorkspaceGuestMutationOptions(options),
+    queryClient
+  );
+};
+export type previewWorkspaceGuestLinkResponse200 = {
+  data: GuestLinkResponse;
+  status: 200;
+};
+
+export type previewWorkspaceGuestLinkResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type previewWorkspaceGuestLinkResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type previewWorkspaceGuestLinkResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type previewWorkspaceGuestLinkResponseSuccess =
+  previewWorkspaceGuestLinkResponse200 & {
+    headers: Headers;
+  };
+export type previewWorkspaceGuestLinkResponseError = (
+  | previewWorkspaceGuestLinkResponse401
+  | previewWorkspaceGuestLinkResponse403
+  | previewWorkspaceGuestLinkResponse404
+) & {
+  headers: Headers;
+};
+
+export type previewWorkspaceGuestLinkResponse =
+  | previewWorkspaceGuestLinkResponseSuccess
+  | previewWorkspaceGuestLinkResponseError;
+
+export const getPreviewWorkspaceGuestLinkUrl = (
+  workspaceId: string,
+  guestId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/guests/${guestId}/link-preview`;
+};
+
+/**
+ * 연동하면 어느 회의가 바뀌는지 미리 본다. **아무것도 바꾸지 않으며** 여러 번 불러도 된다. 응답 모양이 실행과 같아서 사람이 확인한 것과 일어난 일을 맞춰 볼 수 있다. 개수는 언제나 정확하고 목록은 100건에서 자르므로, 개수와 목록 길이가 다르면 잘린 것이다.
+ * @summary 임시 참여자 연동 미리보기
+ */
+export const previewWorkspaceGuestLink = async (
+  workspaceId: string,
+  guestId: string,
+  linkWorkspaceGuestRequest?: LinkWorkspaceGuestRequest,
+  options?: RequestInit
+): Promise<previewWorkspaceGuestLinkResponse> => {
+  return apiFetch<previewWorkspaceGuestLinkResponse>(
+    getPreviewWorkspaceGuestLinkUrl(workspaceId, guestId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(linkWorkspaceGuestRequest),
+    }
+  );
+};
+
+export const getPreviewWorkspaceGuestLinkMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewWorkspaceGuestLink>>,
+    TError,
+    { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewWorkspaceGuestLink>>,
+  TError,
+  { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest },
+  TContext
+> => {
+  const mutationKey = ["previewWorkspaceGuestLink"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewWorkspaceGuestLink>>,
+    { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest }
+  > = (props) => {
+    const { workspaceId, guestId, data } = props ?? {};
+
+    return previewWorkspaceGuestLink(
+      workspaceId,
+      guestId,
+      data,
+      requestOptions
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewWorkspaceGuestLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewWorkspaceGuestLink>>
+>;
+export type PreviewWorkspaceGuestLinkMutationBody =
+  | LinkWorkspaceGuestRequest
+  | undefined;
+export type PreviewWorkspaceGuestLinkMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 임시 참여자 연동 미리보기
+ */
+export const usePreviewWorkspaceGuestLink = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewWorkspaceGuestLink>>,
+      TError,
+      {
+        workspaceId: string;
+        guestId: string;
+        data?: LinkWorkspaceGuestRequest;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewWorkspaceGuestLink>>,
+  TError,
+  { workspaceId: string; guestId: string; data?: LinkWorkspaceGuestRequest },
+  TContext
+> => {
+  return useMutation(
+    getPreviewWorkspaceGuestLinkMutationOptions(options),
+    queryClient
+  );
 };

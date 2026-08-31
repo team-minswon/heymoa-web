@@ -13,7 +13,7 @@ export type SpeakerListResponseDataSpeakersItem = {
    */
   speakingMs: number;
   /**
-   * 연결된 참석자 이름
+   * 연결된 사람의 이름. 계정 이름이거나 임시 참여자 이름이다
    * @nullable
    */
   assignedName: string | null;
@@ -29,8 +29,11 @@ export type SpeakerListResponseDataSpeakersItem = {
   /** 사람이 답했나. null + confirmed 는 「참석자 중에 없다」로 확정한 것이다 */
   confirmed: boolean;
   /**
-   * 연결된 참석자의 userId. 저장은 participant_id 지만 계약은 userId 로 말한다
+   * 겸용. 연결된 참석자의 userId 로, **임시 참여자가 붙으면 null 이다** - 이 값만 보고 미지정으로 읽으면 안 된다
+   * @minLength 13
+   * @maxLength 13
    * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   assignedUserId: string | null;
   /**
@@ -38,4 +41,12 @@ export type SpeakerListResponseDataSpeakersItem = {
    * @minimum 0
    */
   segmentCount: number;
+  /**
+   * 연결된 참여 기록. 계정 여부와 상관없이 붙은 사람을 가리킨다. null + confirmed 는 「참석자 중에 없다」
+   * @minLength 13
+   * @maxLength 13
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  assignedParticipantId: string | null;
 };

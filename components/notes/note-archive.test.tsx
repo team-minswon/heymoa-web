@@ -9,6 +9,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NoteArchive } from "@/components/notes/note-archive";
 
+// 이 테스트는 화자 후보에 멤버를 섞지 않는다 — 멤버 조회는 목이 없으면 빈 목록이라
+// 후보가 이 회의의 참여자로 좁아진다. 그 자리는 아래 「워크스페이스 멤버」 테스트가 본다.
+const WORKSPACE_ID = "01K0000000000";
+
 const NOTE_META = {
   title: "2월 스프린트 회의",
   whenIso: "2026-08-25T05:02:00Z",
@@ -17,34 +21,107 @@ const NOTE_META = {
 
 const data = vi.hoisted(() => ({
   segments: [] as unknown[],
+  diarization: null as unknown,
+  /** 다시 읽었을 때 서버가 주는 발화. `null`이면 캐시와 같은 것을 준다. */
+  refetched: null as unknown[] | null,
   transcriptFails: false,
 }));
+
+const spies = vi.hoisted(() => ({
+  assignLabel: vi.fn(),
+  assignSegment: vi.fn(),
+  createGuest: vi.fn(),
+}));
+
+/** 화자 후보에 섞이는 워크스페이스 멤버. 비우면 후보가 이 회의의 참여자로 좁아진다. */
+const members = vi.hoisted(() => ({ rows: [] as unknown[] }));
+/** 워크스페이스의 임시 참여자. 이 회의에 없는 사람은 **검색해야** 후보로 나온다. */
+const guests = vi.hoisted(() => ({ rows: [] as unknown[] }));
 
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: () => {} }),
 }));
+vi.mock("@/lib/api/generated/notes/notes", () => ({
+  getGetNoteQueryKey: (noteId: string) => ["note", noteId],
+  useCreateNoteGuestParticipant: () => ({
+    mutateAsync: spies.createGuest,
+    isPending: false,
+  }),
+}));
 vi.mock("@/lib/api/generated/transcription/transcription", () => ({
   getGetNoteTranscriptQueryKey: () => ["transcript"],
-  useAssignNoteSpeaker: () => ({ mutate: () => {}, isPending: false }),
+  useAssignNoteSpeaker: () => ({
+    mutate: spies.assignLabel,
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+  useAssignSegmentSpeaker: () => ({
+    mutate: spies.assignSegment,
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
   useGetNoteTranscript: () => ({
     isPending: false,
     isError: data.transcriptFails,
-    refetch: () => {},
+    refetch: () =>
+      Promise.resolve({
+        data: {
+          status: 200,
+          data: {
+            success: true,
+            data: {
+              segments: data.refetched ?? data.segments,
+              diarization: data.diarization,
+            },
+          },
+        },
+      }),
     data: data.transcriptFails
       ? undefined
       : {
           status: 200,
-          data: { success: true, data: { segments: data.segments } },
+          data: {
+            success: true,
+            data: { segments: data.segments, diarization: data.diarization },
+          },
         },
   }),
 }));
+// **`enabled` 를 지킨다.** 소속이 확인되기 전에는 조회를 안 걸어야 하는데, 목이 늘 데이터를
+// 주면 화면이 「후보를 다 읽었다」로 믿어 그 규칙을 아무도 안 지킨다.
+const candidateQuery = (rows: unknown[], key: string) => (
+  _id: string,
+  options?: { query?: { enabled?: boolean } }
+) =>
+  options?.query?.enabled === false
+    ? { data: undefined, isPending: true, isError: false, refetch: vi.fn() }
+    : {
+        data: { status: 200, data: { success: true, data: { [key]: rows } } },
+        isPending: false,
+        isError: false,
+        refetch: vi.fn(),
+      };
+
+vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
+  getGetWorkspaceMembersQueryKey: (id: string) => ["members", id],
+  useGetWorkspaceMembers: (id: string, options?: never) =>
+    candidateQuery(members.rows, "members")(id, options),
+}));
+vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
+  getGetWorkspaceGuestsQueryKey: (id: string) => ["guests", id],
+  useGetWorkspaceGuests: (id: string, options?: never) =>
+    candidateQuery(guests.rows, "guests")(id, options),
+}));
+
 describe("NoteArchive", () => {
   afterEach(() => {
     cleanup();
     data.segments = [];
+    data.diarization = null;
     data.transcriptFails = false;
+    spies.assignLabel.mockReset();
+    spies.assignSegment.mockReset();
   });
-
 
   it("전사가 있으면 복사가 선다 — 탭이 없어져도 자리를 지킨다", () => {
     data.segments = [
@@ -59,6 +136,7 @@ describe("NoteArchive", () => {
     ];
     render(
       <NoteArchive
+        workspaceId={WORKSPACE_ID}
         noteId="01K0000000002"
         noteMeta={NOTE_META}
         focusSegmentId={null}
@@ -76,6 +154,7 @@ describe("NoteArchive", () => {
   it("복사할 전사가 없으면 버튼도 없다", () => {
     render(
       <NoteArchive
+        workspaceId={WORKSPACE_ID}
         noteId="01K0000000002"
         noteMeta={NOTE_META}
         focusSegmentId={null}
@@ -89,6 +168,7 @@ describe("NoteArchive", () => {
     data.transcriptFails = true;
     render(
       <NoteArchive
+        workspaceId={WORKSPACE_ID}
         noteId="01K0000000002"
         focusSegmentId={null}
         onFocusHandled={() => {}}
@@ -105,6 +185,7 @@ describe("NoteArchive", () => {
   it("모바일은 본문 하단 여백을 줄이고 데스크톱 독 여백은 유지한다", () => {
     render(
       <NoteArchive
+        workspaceId={WORKSPACE_ID}
         noteId="01K0000000002"
         focusSegmentId={null}
         onFocusHandled={() => {}}
@@ -132,6 +213,7 @@ describe("NoteArchive", () => {
       ];
       const view = render(
         <NoteArchive
+        workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId={null}
           onFocusHandled={() => {}}
@@ -243,6 +325,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
+        workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s2"
           onFocusHandled={() => {}}
@@ -268,6 +351,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
+        workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s2"
           onFocusHandled={() => {}}
@@ -302,6 +386,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       const { unmount } = render(
         <NoteArchive
+        workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s3"
           onFocusHandled={() => {}}
@@ -312,6 +397,7 @@ describe("NoteArchive", () => {
 
       render(
         <NoteArchive
+        workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s4"
           onFocusHandled={() => {}}
@@ -331,6 +417,7 @@ describe("NoteArchive", () => {
         const onFocusHandled = vi.fn();
         render(
           <NoteArchive
+        workspaceId={WORKSPACE_ID}
             noteId="01K0000000002"
             focusSegmentId="s3"
             onFocusHandled={onFocusHandled}
@@ -362,6 +449,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
+        workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId="s3"
           onFocusHandled={() => {}}
@@ -380,6 +468,7 @@ describe("NoteArchive", () => {
       seedThreeSegments();
       render(
         <NoteArchive
+        workspaceId={WORKSPACE_ID}
           noteId="01K0000000002"
           focusSegmentId={null}
           onFocusHandled={() => {}}
@@ -392,5 +481,293 @@ describe("NoteArchive", () => {
           .some((block) => block.hasAttribute("data-focused"))
       ).toBe(false);
     });
+  });
+
+  // ── 화자 지정 범위 ──────────────────────────────────────────────────────────
+
+  const MEMBER = {
+    participantId: "01K0000000101",
+    userId: "01K0000000001",
+    name: "한지원",
+    email: "jiwon@heymoa.com",
+  };
+  const GUEST = {
+    participantId: "01K0000000102",
+    userId: null,
+    name: "박서준",
+    email: null,
+  };
+
+  /** 화자 A 는 한지원. 두 발화 중 뒤쪽 한 줄만 박서준으로 개별 지정돼 있다. */
+  function seedDiarizedNote() {
+    // 다시 읽기는 기본으로 캐시와 같은 것을 준다 — 그 차이를 보는 테스트만 따로 세운다.
+    data.refetched = null;
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        {
+          label: "A",
+          speakingMs: 9000,
+          segmentCount: 2,
+          representativeSegmentId: "s1",
+          assignedParticipantId: MEMBER.participantId,
+          assignedUserId: MEMBER.userId,
+          assignedName: MEMBER.name,
+          confirmed: true,
+        },
+      ],
+    };
+    data.segments = [
+      {
+        segmentId: "s1",
+        transcriptionSessionId: "sess1",
+        sequence: 0,
+        startedAtMs: 0,
+        endedAtMs: 3000,
+        text: "배포 일정을 정합시다.",
+        speakerLabel: "A",
+        assignedParticipantId: null,
+      },
+      {
+        segmentId: "s2",
+        transcriptionSessionId: "sess1",
+        sequence: 1,
+        startedAtMs: 4000,
+        endedAtMs: 7000,
+        text: "저는 다음 주가 낫습니다.",
+        speakerLabel: "A",
+        assignedParticipantId: GUEST.participantId,
+      },
+    ];
+  }
+
+  function renderDiarized() {
+    seedDiarizedNote();
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={[MEMBER, GUEST]}
+      />
+    );
+  }
+
+  /** 라벨은 한지원인데 그 줄만 박서준이다 — 이 기능이 보이는 자리다. */
+  it("개별로 지정한 발화는 그 줄만 다른 이름으로 선다", () => {
+    renderDiarized();
+
+    const chips = screen.getAllByTestId("speaker-chip");
+    expect(chips[0]).toHaveTextContent("한지원");
+    expect(chips[1]).toHaveTextContent("박서준");
+  });
+
+  /**
+   * **말없이 사라지면 「분명 고쳤는데」가 된다.** 서버는 어차피 지우지만, 그 몇 줄은
+   * 사람이 콕 집어 고쳐 둔 것이라 누르기 전에 말해야 한다.
+   */
+  it("개별 지정이 남은 화자에 전체 적용하면 먼저 확인한다", async () => {
+    renderDiarized();
+
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+
+    expect(
+      await screen.findByText(/개별로 지정한 발화가 1개/)
+    ).toBeInTheDocument();
+    // 확인 전에는 아무것도 안 보낸다
+    expect(spies.assignLabel).not.toHaveBeenCalled();
+  });
+
+  it("확인하면 그때 전체 적용을 보낸다", async () => {
+    renderDiarized();
+
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "모든 발화에 적용" }));
+
+    await waitFor(() =>
+      expect(spies.assignLabel).toHaveBeenCalledWith({
+        noteId: "01K0000000002",
+        label: "A",
+        data: { participantId: MEMBER.participantId },
+      })
+    );
+  });
+
+  /**
+   * **만들기가 확인보다 앞서면 취소가 취소가 아니다.** 임시 참여자와 참여 기록은 이미
+   * 영구히 생긴 뒤라, 사람은 취소했는데 워크스페이스에 이름이 하나 남는다.
+   */
+  it("개별 지정이 남은 화자에 새 이름을 만들면 확인 전에는 안 만든다", async () => {
+    renderDiarized();
+
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
+    fireEvent.input(screen.getByRole("combobox", { name: /참석자 검색/ }), {
+      target: { value: "정하윤" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /"정하윤" 추가/ }));
+
+    expect(
+      await screen.findByText(/개별로 지정한 발화가 1개/)
+    ).toBeInTheDocument();
+    expect(spies.createGuest).not.toHaveBeenCalled();
+  });
+
+  it("취소하면 아무것도 안 보낸다", async () => {
+    renderDiarized();
+
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "취소" }));
+
+    expect(spies.assignLabel).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **캐시로 세면 남의 수정을 못 본다.** 종료된 전사는 마운트할 때만 당기므로, 다른 사람이
+   * 그 사이 발화 하나를 고쳤으면 여기서는 0으로 보인다 — 그대로 보내면 서버가 **경고 없이**
+   * 그 지정을 지운다. 0으로 보일 때 한 번 더 읽는 이유다.
+   */
+  /**
+   * **URL 의 워크스페이스로 후보를 세우면 안 된다.** `/w/B/notes/<A의 노트>` 로 들어오면
+   * 소속이 확인되기 전인데, 그때 B 의 멤버를 후보로 세우면 고르는 순간 422 로 거절되고
+   * A 에 이미 있는 사람을 못 찾아 **동명이인을 또 만든다.**
+   */
+  it("소속이 확인되기 전에는 만들기를 안 연다", async () => {
+    seedDiarizedNote();
+    render(
+      <NoteArchive
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={[MEMBER, GUEST]}
+      />
+    );
+
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
+    fireEvent.input(screen.getByRole("combobox", { name: /참석자 검색/ }), {
+      target: { value: "정하윤" },
+    });
+
+    expect(screen.queryByRole("button", { name: /추가/ })).toBeNull();
+    expect(screen.getByText(/불러오는 중/)).toBeInTheDocument();
+  });
+
+  it("캐시엔 없어도 다시 읽어 개별 지정을 찾아내면 확인한다", async () => {
+    seedDiarizedNote();
+    // 캐시에는 개별 지정이 없다
+    data.segments = (data.segments as { assignedParticipantId?: string | null }[]).map(
+      (segment) => ({ ...segment, assignedParticipantId: null })
+    );
+    // 그런데 서버는 하나 갖고 있다
+    data.refetched = (data.segments as { speakerLabel?: string | null }[]).map(
+      (segment, index) =>
+        index === 0 ? { ...segment, assignedParticipantId: GUEST.participantId } : segment
+    );
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={[MEMBER, GUEST]}
+      />
+    );
+
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+
+    expect(await screen.findByText(/개별로 지정한 발화가 1개/)).toBeInTheDocument();
+    expect(spies.assignLabel).not.toHaveBeenCalled();
+  });
+
+  /** 지울 개별 지정이 없으면 확인이 끼어들 이유가 없다. */
+  it("개별 지정이 없는 화자는 확인 없이 바로 적용한다", async () => {
+    data.refetched = null;
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        {
+          label: "A",
+          speakingMs: 3000,
+          segmentCount: 1,
+          representativeSegmentId: "s1",
+          assignedParticipantId: null,
+          assignedUserId: null,
+          assignedName: null,
+          confirmed: false,
+        },
+      ],
+    };
+    data.segments = [
+      {
+        segmentId: "s1",
+        transcriptionSessionId: "sess1",
+        sequence: 0,
+        startedAtMs: 0,
+        endedAtMs: 3000,
+        text: "배포 일정을 정합시다.",
+        speakerLabel: "A",
+        assignedParticipantId: null,
+      },
+    ];
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={[MEMBER, GUEST]}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("speaker-assign-trigger"));
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+
+    // **개별 지정이 0으로 보이면 전사를 다시 읽고 나서 보낸다** — 캐시가 남의 수정을 못 봤을
+    // 수 있어서다. 그래서 여기도 기다린다.
+    await waitFor(() => expect(spies.assignLabel).toHaveBeenCalled());
+    expect(screen.queryByText(/개별로 지정한 발화/)).toBeNull();
+  });
+
+  it("현재 발화에만 적용은 그 발화로 보낸다", async () => {
+    renderDiarized();
+
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[0]);
+    fireEvent.click(screen.getByRole("radio", { name: "현재 발화에만 적용" }));
+    fireEvent.click(screen.getByRole("option", { name: /박서준/ }));
+
+    await waitFor(() =>
+      expect(spies.assignSegment).toHaveBeenCalledWith({
+        noteId: "01K0000000002",
+        segmentId: "s1",
+        data: { participantId: GUEST.participantId },
+      })
+    );
+    // 라벨은 안 건드린다
+    expect(spies.assignLabel).not.toHaveBeenCalled();
+  });
+
+  it("개별 지정 해제는 그 발화만 라벨로 되돌린다", async () => {
+    renderDiarized();
+
+    // 두 번째 줄이 개별 지정된 발화다
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[1]);
+    fireEvent.click(screen.getByRole("radio", { name: "현재 발화에만 적용" }));
+    fireEvent.click(screen.getByRole("button", { name: "개별 지정 해제" }));
+
+    await waitFor(() =>
+      expect(spies.assignSegment).toHaveBeenCalledWith({
+        noteId: "01K0000000002",
+        segmentId: "s2",
+        data: { participantId: null },
+      })
+    );
   });
 });

@@ -10,7 +10,10 @@ import type { RequestHandlerOptions } from "msw";
 
 import type {
   CreateWorkspaceResponse,
+  DeleteWorkspaceGuestResponse,
+  GuestLinkResponse,
   UpdateWorkspaceResponse,
+  WorkspaceGuestListResponse,
   WorkspaceListResponse,
   WorkspaceResponse,
 } from "../models";
@@ -61,6 +64,48 @@ export const getUpdateWorkspaceResponseMock = (): UpdateWorkspaceResponse => ({
   },
   error: null,
 });
+
+export const getGetWorkspaceGuestsResponseMock =
+  (): WorkspaceGuestListResponse => ({
+    success: true,
+    data: {
+      guests: [
+        {
+          guestId: "0HZX2K7M9Q4AR",
+          displayName: "박서준",
+          noteCount: 3,
+          createdAt: "2026-07-14T01:02:03Z",
+        },
+      ],
+    },
+    error: null,
+  });
+
+export const getDeleteWorkspaceGuestResponseMock =
+  (): DeleteWorkspaceGuestResponse => ({
+    success: true,
+    data: { affectedNoteCount: 3 },
+    error: null,
+  });
+
+export const getLinkWorkspaceGuestResponseMock = (): GuestLinkResponse => ({
+  success: true,
+  data: {
+    changedNoteCount: 4,
+    changedNotes: [{ noteId: "0HZX2K7M9Q4AF", title: "주간 회의" }],
+  },
+  error: null,
+});
+
+export const getPreviewWorkspaceGuestLinkResponseMock =
+  (): GuestLinkResponse => ({
+    success: true,
+    data: {
+      changedNoteCount: 4,
+      changedNotes: [{ noteId: "0HZX2K7M9Q4AF", title: "주간 회의" }],
+    },
+    error: null,
+  });
 
 export const getGetWorkspacesMockHandler = (
   overrideResponse?:
@@ -157,9 +202,111 @@ export const getUpdateWorkspaceMockHandler = (
     options
   );
 };
+
+export const getGetWorkspaceGuestsMockHandler = (
+  overrideResponse?:
+    | WorkspaceGuestListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<WorkspaceGuestListResponse> | WorkspaceGuestListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/guests",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetWorkspaceGuestsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getDeleteWorkspaceGuestMockHandler = (
+  overrideResponse?:
+    | DeleteWorkspaceGuestResponse
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0]
+      ) =>
+        | Promise<DeleteWorkspaceGuestResponse>
+        | DeleteWorkspaceGuestResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.delete(
+    "*/v1/workspaces/:workspaceId/guests/:guestId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeleteWorkspaceGuestResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getLinkWorkspaceGuestMockHandler = (
+  overrideResponse?:
+    | GuestLinkResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<GuestLinkResponse> | GuestLinkResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/guests/:guestId/link",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLinkWorkspaceGuestResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getPreviewWorkspaceGuestLinkMockHandler = (
+  overrideResponse?:
+    | GuestLinkResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<GuestLinkResponse> | GuestLinkResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/guests/:guestId/link-preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewWorkspaceGuestLinkResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getWorkspacesMock = () => [
   getGetWorkspacesMockHandler(),
   getCreateWorkspaceMockHandler(),
   getGetWorkspaceMockHandler(),
   getUpdateWorkspaceMockHandler(),
+  getGetWorkspaceGuestsMockHandler(),
+  getDeleteWorkspaceGuestMockHandler(),
+  getLinkWorkspaceGuestMockHandler(),
+  getPreviewWorkspaceGuestLinkMockHandler(),
 ];

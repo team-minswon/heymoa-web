@@ -8,8 +8,27 @@
 
 export interface AssignSpeakerRequest {
   /**
-   * 연결할 참석자의 userId. null 은 「모르겠다」가 아니라 「참석자 중에 없다」로 확정한 것이다
+   * 연결할 참여 기록의 13자리 TSID. userId 와 함께 보낼 수 없다. 셋 다 없으면 「모르겠다」가 아니라 「참석자 중에 없다」로 확정한 것이다
+   * @minLength 13
+   * @maxLength 13
    * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
-  userId: string | null;
+  participantId?: string | null;
+  /**
+   * 연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 이 회의 밖의 임시 참여자까지 닿는다
+   * @minLength 13
+   * @maxLength 13
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  guestId?: string | null;
+  /**
+   * 연결할 계정의 userId. participantId 와 함께 보낼 수 없다. **이 회의의 참여자가 아니면 참여자로 넣고 연결한다** - 화자 후보가 워크스페이스 멤버 전원이라 아직 참여 기록이 없는 사람을 고를 수 있다. 계정 없는 임시 참여자는 이 값으로 가리킬 수 없다
+   * @minLength 13
+   * @maxLength 13
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  userId?: string | null;
 }

@@ -14,16 +14,37 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+/**
+ * 회의 참여자. **계정이 없을 수 있다** (APP-490).
+ *
+ * `participantId`가 이 회의 안에서의 신원이고 화자 지정이 가리키는 값이다. `userId`가 비어
+ * 있으면 계정 없는 임시 참여자이고, 그때는 `guestId`가 채워진다 — 그 값이 워크스페이스 임시
+ * 참여자 목록과 이어 주는 유일한 열쇠다(`participantId`는 이 회의 안에서만 뜻이 있다).
+ */
 export type Participant = {
-  userId: string;
+  participantId: string;
+  userId: string | null;
+  guestId: string | null;
   name: string;
-  email: string;
+  email: string | null;
   image?: string | null;
 };
 
-/** 이름이 비었을 때도 아바타가 빈 원으로 남지 않게 이메일 앞글자까지 떨어진다. */
-function initial(participant: Participant) {
-  return (participant.name.trim() || participant.email).slice(0, 1);
+/**
+ * 아바타가 실제로 읽는 것만. 회의 시작자처럼 **참여 기록이 아닌 사람**도 같은 얼굴로 그려야
+ * 해서, 아바타의 입력을 참여 기록 전체가 아니라 이만큼으로 좁혀 둔다.
+ */
+export type ParticipantFace = Pick<Participant, "name" | "email" | "image">;
+
+/** 계정 없는 사람에게 이메일 자리에 대신 세우는 말. */
+export const EXTERNAL_LABEL = "외부";
+
+/**
+ * 이름이 비었을 때도 아바타가 빈 원으로 남지 않게 이메일 앞글자까지 떨어진다.
+ * 계정 없는 사람은 이메일도 없어 마지막으로 `?`가 선다.
+ */
+function initial(participant: ParticipantFace) {
+  return (participant.name.trim() || participant.email || "?").slice(0, 1);
 }
 
 export function ParticipantAvatar({
@@ -33,7 +54,7 @@ export function ParticipantAvatar({
   isStarter = false,
   interactive = true,
 }: {
-  participant: Participant;
+  participant: ParticipantFace;
   className?: string;
   size?: "sm" | "default" | "lg";
   /**
@@ -60,9 +81,9 @@ export function ParticipantAvatar({
 
   if (!interactive) return avatar;
 
-  const who = participant.email
-    ? `${participant.name} (${participant.email})`
-    : participant.name;
+  // 계정 없는 사람은 이메일 자리에 「외부」가 선다. 아바타 모양은 안 바꾼다 — 이 크기에서
+  // 배지는 뜻 없는 점으로만 보였고, 구분은 이 라벨이 한다.
+  const who = `${participant.name} (${participant.email ?? EXTERNAL_LABEL})`;
 
   return (
     <Tooltip>
@@ -82,9 +103,9 @@ export function ParticipantAvatar({
           {participant.name}
           {isStarter ? " · 진행자" : ""}
         </span>
-        {participant.email ? (
-          <span className="opacity-70">{participant.email}</span>
-        ) : null}
+        <span className="opacity-70">
+          {participant.email ?? EXTERNAL_LABEL}
+        </span>
       </TooltipContent>
     </Tooltip>
   );
@@ -127,7 +148,7 @@ export function NoteParticipantAvatars({
     >
       {shown.map((participant) => (
         <ParticipantAvatar
-          key={participant.userId}
+          key={participant.participantId}
           participant={participant}
           size={size}
         />
@@ -151,7 +172,7 @@ export function NoteParticipantAvatars({
           {/* 접힌 사람은 hover로만 알 수 있다 — 이름을 다 적는다. */}
           <TooltipContent className="flex-col items-start gap-0.5">
             {hidden.map((participant) => (
-              <span key={participant.userId}>{participant.name}</span>
+              <span key={participant.participantId}>{participant.name}</span>
             ))}
           </TooltipContent>
         </Tooltip>

@@ -99,7 +99,12 @@ export function NoteDetails({
   workspaceId,
 }: {
   noteId: string;
-  workspaceId: string;
+  /**
+   * **URL 이 아니라 확인된 소속이다.** `/w/B/notes/<A의 노트>` 로 들어오면 URL 은 B 인데
+   * 이 노트는 A 것이다. 그대로 쓰면 B 의 후보가 서고, A 에만 있는 이름을 쳐도 못 찾아
+   * **동명이인을 또 만든다.** 확인 전에는 `undefined` 다 — 전사 화면과 같은 규칙이다.
+   */
+  workspaceId?: string;
 }) {
   const queryClient = useQueryClient();
   const noteResponse = useGetNoteSuspense(noteId).data;

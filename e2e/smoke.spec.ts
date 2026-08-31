@@ -25,6 +25,10 @@ const STARTER_NOTE_ID = "01K0000000002";
 const FOREIGN_VIEWER_NOTE_ID = "01K0000000028";
 /** 프로젝트가 하나도 없는 워크스페이스. 온보딩 경로의 유일한 표본이다(`lib/mocks/db.ts`). */
 const EMPTY_WORKSPACE_ID = "01K0000000009";
+/** 화자 분리가 끝난 유일한 종료 노트. 화자 지정을 밟을 수 있는 자리다(`lib/mocks/db.ts`). */
+const DIARIZED_NOTE_ID = "01K0000000020";
+/** 시드의 MEMBER. 이 회의의 참여자이기도 하다 — 아래 테스트가 뺐다가 다시 넣는다. */
+const MEMBER_NAME = "한지원";
 
 function meetingControls(page: Page) {
   return page.getByRole("group", { name: "회의 상태 및 제어" });
@@ -1899,4 +1903,351 @@ test("draws the thinking rail from history alone", async ({ page }) => {
 
   // 흐르는 중이 아니다 — 스트림을 한 번도 안 열었다.
   await expect(page.getByRole("button", { name: "중지" })).toBeHidden();
+});
+
+/**
+ * 계정 없는 참여자를 만들고 고르는 왕복 (APP-490 · 493).
+ *
+ * **vitest로는 못 본다.** 후보 목록은 워크스페이스 임시 참여자 조회와 멤버 조회를 합쳐
+ * 세우고, 만들기는 서비스 워커를 지나 목 DB를 바꾼 뒤 두 조회를 다시 읽는다 — jsdom은
+ * 그 경로를 지나지 않아 훅을 목으로 갈아끼워야 하고, 그러면 정작 왕복이 검증되지 않는다.
+ */
+test("creates a guest participant from the attendee field and keeps members untouched", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=details`
+  );
+
+  // 시드에 임시 참여자가 하나 있다 — 계정 없는 사람이 계정 참여자와 나란히 선다.
+  const existingGuest = page.getByLabel("박서준 (외부)");
+  await expect(existingGuest.first()).toBeVisible();
+
+  await page.getByRole("combobox", { name: "참여자 선택" }).click();
+  const search = page.getByRole("combobox", { name: /참여자 검색/ });
+
+  // 정확히 같은 이름이면 추가가 안 뜬다 — 실수로 동명이인을 만드는 것을 막는다.
+  await search.fill("박서준");
+  await expect(page.getByRole("button", { name: /"박서준" 추가/ })).toHaveCount(
+    0
+  );
+
+  await search.fill("이도현");
+  await page.getByRole("button", { name: /"이도현" 추가/ }).click();
+
+  // 만든 사람이 곧바로 아바타에 나타난다.
+  await expect(page.getByLabel("이도현 (외부)").first()).toBeVisible();
+});
+
+/**
+ * **멤버를 빼도 임시 참여자가 남는다.** 이 이슈의 핵심 완료 기준이고, 저장 요청을 계정과
+ * 임시 둘로 가른 이유다 — 한 요청에 섞어 보내면 멤버 하나를 바꿀 때마다 임시 참여자가
+ * 함께 지워지고 그 화자 연결이 CASCADE 로 날아간다.
+ */
+test("keeps guest participants when an account member is removed", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=details`
+  );
+  await expect(page.getByLabel("박서준 (외부)").first()).toBeVisible();
+
+  await page.getByRole("combobox", { name: "참여자 선택" }).click();
+  const options = page.getByRole("option");
+  // 계정 참여자 하나를 뺀다. 이름이 아니라 선택 상태로 고른다 — 시드 순서에 안 묶인다.
+  const selectedAccount = options
+    .filter({ hasText: "@" })
+    .and(page.locator('[aria-selected="true"]'))
+    .first();
+  await selectedAccount.click();
+  await page.keyboard.press("Escape");
+
+  // 저장이 돌아온 뒤에도 임시 참여자는 그대로다.
+  await expect(page.getByLabel("박서준 (외부)").first()).toBeVisible();
+});
+
+/**
+ * 화자 후보가 **이 회의의 참여자를 넘어** 워크스페이스 멤버 전원이다. 참여자로 안 찍힌
+ * 사람을 화자로 못 고르면, 회의록을 정리하는 사람이 먼저 정보 화면에 가서 체크하고
+ * 돌아와야 한다. 고르면 **서버가 같은 요청 안에서 참여자로 넣는다.**
+ *
+ * **vitest로는 못 본다** — 두 화면(정보·전사)과 두 요청(참여자 교체·화자 지정)을 가로지르고,
+ * 「참여자가 다시 체크된다」는 결과가 서버가 만든 참여 기록을 화면이 다시 읽어야 나온다.
+ */
+test("assigns a workspace member who is not yet a participant and checks them in", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=side&tab=details`
+  );
+
+  // 시드는 멤버 전원이 이미 참여자다. 한 명을 빼서 「멤버인데 참여자는 아닌」 상태를 만든다.
+  const field = page.getByRole("combobox", { name: "참여자 선택" });
+  const memberOption = () =>
+    page.getByRole("option", { name: new RegExp(MEMBER_NAME) });
+
+  await field.click();
+  await expect(memberOption()).toHaveAttribute("aria-selected", "true");
+  await memberOption().click();
+  await expect(memberOption()).toHaveAttribute("aria-selected", "false");
+  await page.keyboard.press("Escape");
+
+  // 전사에서 그 사람을 화자로 고른다 — 참여자가 아닌데도 후보에 있어야 한다.
+  await page.getByRole("tab", { name: "전사" }).click();
+  await page.getByLabel("화자 B 화자 지정").first().click();
+  await memberOption().click();
+
+  await expect(page.getByLabel(`${MEMBER_NAME} 화자 지정`).first()).toBeVisible();
+
+  // **정보 화면에서도 참여자로 다시 체크돼 있다.** 서버가 지정과 함께 넣은 것이다.
+  await page.getByRole("tab", { name: "정보" }).click();
+  await field.click();
+  await expect(memberOption()).toHaveAttribute("aria-selected", "true");
+});
+
+/**
+ * **같은 이름이 하나 더 만들어지던 자리다.**
+ *
+ * 박서준은 워크스페이스의 임시 참여자인데 이 회의의 참여자는 아니다. 전사 드롭다운의 후보가
+ * 이 회의 사람뿐이라 「＋ "박서준" 추가」가 떴고, 누르면 **같은 이름의 임시 참여자가 하나 더**
+ * 생겼다. 정보 화면에서는 후보에 있어서 안 그랬다 — 두 화면이 서로 다르게 굴었다.
+ *
+ * **vitest로는 못 본다** — 후보를 합치는 곳(note-archive)과 ＋를 감추는 곳(메뉴)이 다른
+ * 컴포넌트이고, 목 서버의 임시 참여자 목록까지 세 조각이 이어져야 드러난다.
+ */
+test("offers an existing workspace guest instead of creating a duplicate name", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=side&tab=transcript`
+  );
+
+  await page.getByLabel("화자 B 화자 지정").first().click();
+  const search = page.getByRole("combobox", { name: /참석자 검색/ });
+
+  // 이 회의 사람이 아니라 검색 전에는 안 보인다 — 회의와 무관한 이름으로 목록이 안 불어난다.
+  await expect(page.getByRole("option", { name: /박서준/ })).toHaveCount(0);
+
+  await search.fill("박서준");
+
+  // **＋ 추가가 아니라 그 사람이 뜬다.**
+  await expect(page.getByRole("button", { name: /"박서준" 추가/ })).toHaveCount(0);
+  await page.getByRole("option", { name: /박서준/ }).click();
+
+  await expect(page.getByLabel("박서준 화자 지정").first()).toBeVisible();
+
+  // 고르면 이 회의의 참여자가 된다. 임시 참여자는 여전히 하나뿐이다.
+  await page.getByRole("tab", { name: "정보" }).click();
+  await expect(page.getByLabel("박서준 (외부)").first()).toBeVisible();
+});
+
+/**
+ * 읽던 자리에서 이름을 만들어 화자에 붙인다 (APP-494).
+ *
+ * **vitest로는 못 본다** — 만들기 응답에서 새 참여 기록을 집어 곧바로 화자 지정을 부르는
+ * 두 요청의 왕복이고, 그 사이를 서비스 워커가 지난다. 훅을 목으로 갈아끼우면 정작 그
+ * 이어짐이 검증되지 않는다.
+ */
+test("creates a guest from the transcript and assigns the speaker in place", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=side&tab=transcript`
+  );
+
+  // 아직 아무도 안 붙은 화자를 연다. 같은 화자가 전사 여러 줄에 서므로 첫 칩을 쓴다.
+  await page.getByLabel("화자 B 화자 지정").first().click();
+
+  const search = page.getByRole("combobox", { name: /참석자 검색/ });
+  await search.fill("이도현");
+  await page.getByRole("button", { name: /"이도현" 추가/ }).click();
+
+  // 만든 사람이 그 화자에 붙어 칩이 이름으로 바뀐다.
+  await expect(page.getByLabel("이도현 화자 지정").first()).toBeVisible();
+
+  // **참석자 목록에도 곧바로 나타난다** — 만든 사람은 이 회의의 참여자이기도 하다.
+  await page.getByRole("tab", { name: "정보" }).click();
+  await expect(page.getByLabel("이도현 (외부)").first()).toBeVisible();
+});
+
+/**
+ * 「이름 안 붙임」은 사람이 확정한 답이라 미결정과 다른 값이다. 문구만 바뀌고 저장하는
+ * 값은 그대로 `null`이다.
+ */
+test("confirms a speaker as unnamed without clearing the human answer", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=side&tab=transcript`
+  );
+
+  const trigger = page.getByLabel("화자 B 화자 지정").first();
+  // 아직 아무도 안 본 화자에는 점이 붙어 있다.
+  await expect(trigger.locator("[data-unassigned]")).toHaveCount(1);
+
+  await trigger.click();
+  await page.getByRole("button", { name: "이름 안 붙임" }).click();
+
+  // 이름은 여전히 `화자 B`다 — 그 사람이 누구인지 우리가 모른다는 것이 사실이다.
+  await expect(trigger).toBeVisible();
+  // 사람이 답했으므로 점이 사라진다. 미결정과 갈리는 유일한 신호다.
+  await expect(trigger.locator("[data-unassigned]")).toHaveCount(0);
+});
+
+/**
+ * **이 프로젝트가 존재하는 이유를 한 번에 밟는다** (PRO-41).
+ *
+ * 계정 없는 사람을 만들어 화자에 붙이고 → 계정과 이으면 → 그 회의록이 전부 그 계정으로
+ * 이어지는데 **화자 연결은 하나도 안 풀린다.** 참여 기록의 식별자를 유지하기로 한 판단이
+ * 값을 하는 자리가 여기다 — 지우고 새로 만들었으면 CASCADE 로 전부 날아갔다.
+ */
+test("links a guest to an account and keeps the speaker assignment", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=side&tab=transcript`
+  );
+
+  // ① 읽던 자리에서 이름을 만들어 화자 B 에 붙인다.
+  await page.getByLabel("화자 B 화자 지정").first().click();
+  await page
+    .getByRole("combobox", { name: /참석자 검색/ })
+    .fill("최유진");
+  await page.getByRole("button", { name: /"최유진" 추가/ }).click();
+  await expect(page.getByLabel("최유진 화자 지정").first()).toBeVisible();
+
+  // ② 설정 › 멤버에서 그 사람을 계정과 잇는다.
+  //
+  // **문서를 다시 로드하지 않는다.** 목 DB 가 페이지 모듈 상태라 새로고침하면 방금 만든
+  // 임시 참여자가 사라진다 — 노트를 닫고 사이드바로 가는 클라이언트 이동만 한다.
+  await page.getByRole("button", { name: "목록으로" }).click();
+  await page.getByRole("button", { name: "워크스페이스 전환" }).click();
+  await page.getByRole("menuitem", { name: "워크스페이스 설정" }).click();
+  await page.getByRole("button", { name: "멤버" }).click();
+
+  const guestRow = page.getByRole("listitem").filter({ hasText: "최유진" });
+  await expect(guestRow).toBeVisible();
+  await guestRow.getByRole("button", { name: "연동" }).click();
+  await page.getByRole("button", { name: /한지원/ }).click();
+
+  // ③ 되돌릴 수 없다는 사실이 실행 전에 보인다.
+  await expect(page.getByText("되돌릴 수 없습니다.")).toBeVisible();
+  await page.getByRole("button", { name: "연동", exact: true }).click();
+  await page.getByRole("button", { name: "확인" }).click();
+
+  // ④ 연동한 사람은 임시 참여자 목록에서 사라진다.
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "최유진" })
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  // ⑤ 그 회의록을 다시 연다. **여기서도 새로고침하지 않는다** — 목록에서 클라이언트 이동이다.
+  await page
+    .locator("article", { hasText: "온보딩 이탈 구간 리뷰" })
+    .first()
+    .click();
+  await page.getByRole("tab", { name: "전사" }).click();
+
+  // **화자 연결이 안 풀렸다.** 화자 B 가 이제 그 계정 이름으로 선다.
+  await expect(page.getByLabel("한지원 화자 지정").first()).toBeVisible();
+  await expect(page.getByLabel("최유진 화자 지정")).toHaveCount(0);
+});
+
+/**
+ * 화자 A 는 시드가 「테스트 유저」로 지정해 둔다. 화자 B 는 아직 아무도 아니고, 화자 A 의
+ * 발화 중 한 줄(`01K0000000063`)만 「한지원」으로 개별 지정돼 있다.
+ */
+const TRANSCRIPT_URL = `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=side&tab=transcript`;
+/** 화자 A 의 발화 둘. 앞 줄은 라벨을 따르고, 뒤 줄에만 개별 지정이 걸려 있다. */
+const PLAIN_LINE = "가입 후 첫 회의를 만들기까지";
+const OVERRIDDEN_LINE = "그럼 첫 화면에 회의 만들기를";
+
+function transcriptLine(page: Page, text: string) {
+  return page.locator('[data-testid="archive-transcript-block"]', {
+    hasText: text,
+  });
+}
+
+/**
+ * **이 기능이 존재하는 이유** — pyannote 가 3명 회의를 4명으로 쪼개면 「화자 1과 2는 같은
+ * 사람」이 사람이 할 수 있는 유일한 정정인데, 예전에는 두 번째를 붙이는 순간 첫 번째가
+ * 비어 고칠수록 나빠졌다.
+ */
+test("assigns one person to two speakers without losing the first", async ({
+  page,
+}) => {
+  await page.goto(TRANSCRIPT_URL);
+
+  await expect(page.getByLabel("테스트 유저 화자 지정").first()).toBeVisible();
+
+  // 화자 A 에 이미 붙어 있는 사람을 화자 B 에도 붙인다.
+  await page.getByLabel("화자 B 화자 지정").first().click();
+  await page.getByRole("option", { name: /테스트 유저/ }).click();
+
+  // **앞 화자가 그대로 남는다.** 예전에는 여기서 화자 A 가 이름을 잃었다.
+  await expect(page.getByLabel("화자 B 화자 지정")).toHaveCount(0);
+  await expect(page.getByLabel("화자 A 화자 지정")).toHaveCount(0);
+  await expect(
+    transcriptLine(page, PLAIN_LINE).getByTestId("speaker-chip")
+  ).toContainText("테스트 유저");
+});
+
+/** 라벨은 맞는데 그 줄 하나만 남의 말로 붙은 경우. */
+test("reassigns a single utterance without touching the rest of the speaker", async ({
+  page,
+}) => {
+  await page.goto(TRANSCRIPT_URL);
+
+  const plain = transcriptLine(page, PLAIN_LINE);
+  const overridden = transcriptLine(page, OVERRIDDEN_LINE);
+
+  // 같은 화자 A 인데 이름이 다르다 — 뒤 줄에만 개별 지정이 걸려 있다.
+  await expect(plain.getByTestId("speaker-chip")).toContainText("테스트 유저");
+  await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
+
+  // 앞 줄만 한지원으로 옮긴다.
+  await plain.getByTestId("speaker-assign-trigger").click();
+  await page.getByRole("radio", { name: "현재 발화에만 적용" }).check();
+  await page.getByRole("option", { name: /한지원/ }).click();
+  await expect(plain.getByTestId("speaker-chip")).toContainText("한지원");
+
+  // 되돌린다 — **그 줄만** 다시 라벨을 따르고 뒤 줄은 그대로다.
+  await plain.getByTestId("speaker-assign-trigger").click();
+  await page.getByRole("radio", { name: "현재 발화에만 적용" }).check();
+  await page.getByRole("button", { name: "개별 지정 해제" }).click();
+
+  await expect(plain.getByTestId("speaker-chip")).toContainText("테스트 유저");
+  await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
+});
+
+/**
+ * **말없이 사라지면 「분명 고쳤는데」가 된다.** 「모든 발화에 적용」은 그 화자의 개별
+ * 지정을 지우므로, 누르기 전에 몇 건인지 말하고 취소할 길을 준다.
+ */
+test("warns before a label-wide assign wipes per-utterance fixes", async ({
+  page,
+}) => {
+  await page.goto(TRANSCRIPT_URL);
+
+  const plain = transcriptLine(page, PLAIN_LINE);
+  const overridden = transcriptLine(page, OVERRIDDEN_LINE);
+  await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
+
+  // 화자 A 전체를 한지원으로 옮긴다 — 그 화자에 개별 지정이 하나 남아 있다.
+  await page.getByLabel("테스트 유저 화자 지정").first().click();
+  await page.getByRole("option", { name: /한지원/ }).click();
+  await expect(page.getByText(/개별로 지정한 발화가 1개/)).toBeVisible();
+
+  // 취소하면 아무것도 안 바뀐다.
+  await page.getByRole("button", { name: "취소" }).click();
+  await expect(plain.getByTestId("speaker-chip")).toContainText("테스트 유저");
+
+  // 확인하면 그 화자의 모든 줄이 같은 사람이 된다.
+  await page.getByLabel("테스트 유저 화자 지정").first().click();
+  await page.getByRole("option", { name: /한지원/ }).click();
+  await page.getByRole("button", { name: "모든 발화에 적용" }).click();
+
+  await expect(plain.getByTestId("speaker-chip")).toContainText("한지원");
+  await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
+  await expect(page.getByLabel("테스트 유저 화자 지정")).toHaveCount(0);
 });

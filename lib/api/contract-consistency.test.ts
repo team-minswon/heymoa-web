@@ -24,7 +24,13 @@ describe("REST and WebSocket contract consistency", () => {
     const restRequired = [
       ...rest.TranscriptResponse.properties.data.properties.segments.items
         .required,
-    ].sort();
+    ]
+      // **일부러 어긋난 필드다** (V31). 발화 단위 화자 지정은 화자가 나뉜 뒤라야 붙는데,
+      // 화자 분리는 회의가 끝난 다음이다. 실시간으로 막 도착한 발화에는 원리적으로 있을
+      // 수 없어서, 저쪽에 required 로 넣으면 서버가 늘 null 을 실어 보내는 거짓 필드가 된다.
+      // 화면 타입(`TranscriptPresentationSegment`)이 이 필드만 선택으로 선언해 받는다.
+      .filter((field: string) => field !== "assignedParticipantId")
+      .sort();
     const socketRequired = [
       ...asyncapi.components.messages.FinalEvent.payload.required,
     ]

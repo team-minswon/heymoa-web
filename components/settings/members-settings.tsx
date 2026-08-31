@@ -9,6 +9,7 @@ import { z } from "zod";
 import { AlertTriangle, Info } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { WorkspaceGuestsSettings } from "@/components/settings/workspace-guests-settings";
 import {
   isWorkspaceRecordingActive,
   useRecording,
@@ -201,6 +202,10 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
           />
         </div>
       ) : null}
+
+      {/* 멤버 목록과 **섞지 않는다** — 역할 변경·내보내기가 임시 참여자에게도 있는
+          것처럼 읽힌다. 목록은 전원이 보고 관리만 ADMIN이다. */}
+      <WorkspaceGuestsSettings workspaceId={workspaceId} canManage={canManage} />
 
       <LeaveWorkspaceSection workspaceId={workspaceId} />
     </div>

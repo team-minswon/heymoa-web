@@ -49,21 +49,61 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
   );
 }
 
+/**
+ * **조합 중인 글자로도 목록을 거른다.**
+ *
+ * base-ui 는 조합이 끝나기 전까지 controlled 값을 안 올린다. 그런데 **한글은 한 글자가 곧
+ * 조합**이라, 「박」을 친 순간 목록이 하나도 안 좁혀지고 남 이름이 그대로 선다.
+ *
+ * **입력값에는 손대지 않는다.** `inputValue` 에 조합 중인 값을 되쓰면 조합이 깨진다 — 그래서
+ * 넘길 `items` 만 여기서 한 번 더 거른다. 조합이 끝나면 base-ui 도 같은 기준으로 거르므로
+ * 결과가 같다. `textOf` 는 반드시 `itemToStringLabel` 과 **같은 값**이어야 한다.
+ */
+export function filterByTyped<T>(
+  items: T[],
+  typed: string,
+  textOf: (item: T) => string
+): T[] {
+  const needle = typed.trim().toLowerCase();
+  if (!needle) return items;
+  return items.filter((item) => textOf(item).toLowerCase().includes(needle));
+}
+
 function ComboboxInput({
   className,
   children,
   disabled = false,
   showTrigger = true,
   showClear = false,
+  onTypedValueChange,
+  onInput,
   ...props
 }: ComboboxPrimitive.Input.Props & {
   showTrigger?: boolean;
   showClear?: boolean;
+  /**
+   * 사람이 **친 그대로**의 값. 한글 조합 중인 마지막 글자까지 들어 있다.
+   *
+   * base-ui 는 조합 중에 controlled 값을 일부러 안 올린다 — 옵션이 조기에 걸러져 `Empty`
+   * 가 잘못 뜨는 것을 막으려는 것이고, 거르기에는 그 판단이 맞다. 문제는 **입력값 자체를
+   * 쓰는 자리**다. 「이민형」을 치면 「형」이 아직 조합 중이라 `onValueChange` 는 「이민」에
+   * 머물고, 그 값으로 「＋ "이민" 추가」를 그리면 이름이 한 글자 모자란 채로 만들어진다.
+   *
+   * 이름을 짓는 자리(「＋ 추가」)가 이쪽을 쓴다. **거르기도 이쪽을 쓴다** — 처음에는 base-ui
+   * 값을 그대로 뒀는데, 한글에서 한 글자를 쳐도 목록이 안 좁혀졌다. 목록은
+   * [filterByTyped] 로 거른다.
+   * base-ui 의 controlled 값에 되쓰지 않으므로 조합을 깨뜨리지 않는다.
+   */
+  onTypedValueChange?: (value: string) => void;
 }) {
   return (
     <InputGroup className={cn("w-auto", className)}>
       <ComboboxPrimitive.Input
         render={<InputGroupInput disabled={disabled} />}
+        onInput={(event) => {
+          onTypedValueChange?.(event.currentTarget.value);
+          onInput?.(event);
+        }}
         {...props}
       />
       <InputGroupAddon align="inline-end">

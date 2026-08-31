@@ -25,8 +25,10 @@ import type {
 
 import type {
   AppErrorResponse,
+  AssignSegmentSpeakerRequest,
   AssignSpeakerRequest,
   CurrentTranscriptionSessionNullableResponse,
+  SegmentSpeakerResponse,
   SpeakerListResponse,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
@@ -928,14 +930,14 @@ export type assignNoteSpeakerResponse200 = {
   status: 200;
 };
 
+export type assignNoteSpeakerResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
 export type assignNoteSpeakerResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
-};
-
-export type assignNoteSpeakerResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
 };
 
 export type assignNoteSpeakerResponse404 = {
@@ -952,8 +954,8 @@ export type assignNoteSpeakerResponseSuccess = assignNoteSpeakerResponse200 & {
   headers: Headers;
 };
 export type assignNoteSpeakerResponseError = (
+  | assignNoteSpeakerResponse400
   | assignNoteSpeakerResponse401
-  | assignNoteSpeakerResponse403
   | assignNoteSpeakerResponse404
   | assignNoteSpeakerResponse422
 ) & {
@@ -969,7 +971,7 @@ export const getAssignNoteSpeakerUrl = (noteId: string, label: string) => {
 };
 
 /**
- * 화자 연결은 노트의 속성이 아니라 화자 라벨의 속성이고 권한도 다르다 — 노트 수정은 멤버가 하지만 화자 연결은 참석자만 한다. 응답은 갱신된 화자 목록 전체다.
+ * 화자 연결은 노트의 속성이 아니라 화자 라벨의 속성이다. **노트에 닿는 워크스페이스 멤버면 누구나 고친다** - 회의록을 정리하는 사람이 그 회의에 안 들어간 경우가 흔하다. 대상을 가리키는 열쇠가 둘이고 뜻이 다르다 - participantId 는 이 회의의 참여 기록(임시 참여자와 나간 사람 포함), userId 와 guestId 는 각각 계정과 임시 참여자이고 **참여자가 아니면 참여자로 넣는다**. 둘 이상을 함께 보내면 거절한다. 응답은 갱신된 화자 목록 전체다. 이 화자에 달린 발화 단위 지정은 함께 지워진다 - 「모든 발화에 적용」이 말 그대로가 되도록.
  * @summary 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
  */
 export const assignNoteSpeaker = async (
@@ -990,7 +992,7 @@ export const assignNoteSpeaker = async (
 };
 
 export const getAssignNoteSpeakerMutationOptions = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1032,14 +1034,14 @@ export type AssignNoteSpeakerMutationResult = NonNullable<
 >;
 export type AssignNoteSpeakerMutationBody = AssignSpeakerRequest | undefined;
 export type AssignNoteSpeakerMutationError =
-  | UnauthorizedResponse
-  | AppErrorResponse;
+  | AppErrorResponse
+  | UnauthorizedResponse;
 
 /**
  * @summary 화자에 참석자를 연결하거나 「참석자 아님」으로 확정
  */
 export const useAssignNoteSpeaker = <
-  TError = UnauthorizedResponse | AppErrorResponse,
+  TError = AppErrorResponse | UnauthorizedResponse,
   TContext = unknown,
 >(
   options?: {
@@ -1439,3 +1441,156 @@ export function useGetCurrentTranscriptionSessionSuspense<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type assignSegmentSpeakerResponse200 = {
+  data: SegmentSpeakerResponse;
+  status: 200;
+};
+
+export type assignSegmentSpeakerResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type assignSegmentSpeakerResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type assignSegmentSpeakerResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type assignSegmentSpeakerResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type assignSegmentSpeakerResponse422 = {
+  data: AppErrorResponse;
+  status: 422;
+};
+
+export type assignSegmentSpeakerResponseSuccess =
+  assignSegmentSpeakerResponse200 & {
+    headers: Headers;
+  };
+export type assignSegmentSpeakerResponseError = (
+  | assignSegmentSpeakerResponse400
+  | assignSegmentSpeakerResponse401
+  | assignSegmentSpeakerResponse404
+  | assignSegmentSpeakerResponse409
+  | assignSegmentSpeakerResponse422
+) & {
+  headers: Headers;
+};
+
+export type assignSegmentSpeakerResponse =
+  | assignSegmentSpeakerResponseSuccess
+  | assignSegmentSpeakerResponseError;
+
+export const getAssignSegmentSpeakerUrl = (
+  noteId: string,
+  segmentId: string
+) => {
+  return `/v1/notes/${noteId}/segments/${segmentId}/speaker`;
+};
+
+/**
+ * 라벨은 맞는데 그 줄 하나만 남의 말로 붙은 경우를 고친다. 라벨 전체를 옮기는 PUT /v1/notes/{noteId}/speakers/{label} 과 짝이고, 권한도 대상 규칙도 같다. 대상이 없으면 개별 지정을 해제한다 - 그 발화는 다시 라벨의 지정을 따른다. 라벨 지정의 null(「참석자 중에 없다」)과 뜻이 다르다. 응답은 그 발화 한 줄이다 - 딸려 바뀌는 화자가 없다.
+ * @summary 발화 하나에만 참석자를 연결하거나 개별 지정을 해제
+ */
+export const assignSegmentSpeaker = async (
+  noteId: string,
+  segmentId: string,
+  assignSegmentSpeakerRequest?: AssignSegmentSpeakerRequest,
+  options?: RequestInit
+): Promise<assignSegmentSpeakerResponse> => {
+  return apiFetch<assignSegmentSpeakerResponse>(
+    getAssignSegmentSpeakerUrl(noteId, segmentId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(assignSegmentSpeakerRequest),
+    }
+  );
+};
+
+export const getAssignSegmentSpeakerMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignSegmentSpeaker>>,
+    TError,
+    { noteId: string; segmentId: string; data?: AssignSegmentSpeakerRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assignSegmentSpeaker>>,
+  TError,
+  { noteId: string; segmentId: string; data?: AssignSegmentSpeakerRequest },
+  TContext
+> => {
+  const mutationKey = ["assignSegmentSpeaker"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assignSegmentSpeaker>>,
+    { noteId: string; segmentId: string; data?: AssignSegmentSpeakerRequest }
+  > = (props) => {
+    const { noteId, segmentId, data } = props ?? {};
+
+    return assignSegmentSpeaker(noteId, segmentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssignSegmentSpeakerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assignSegmentSpeaker>>
+>;
+export type AssignSegmentSpeakerMutationBody =
+  | AssignSegmentSpeakerRequest
+  | undefined;
+export type AssignSegmentSpeakerMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 발화 하나에만 참석자를 연결하거나 개별 지정을 해제
+ */
+export const useAssignSegmentSpeaker = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assignSegmentSpeaker>>,
+      TError,
+      { noteId: string; segmentId: string; data?: AssignSegmentSpeakerRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof assignSegmentSpeaker>>,
+  TError,
+  { noteId: string; segmentId: string; data?: AssignSegmentSpeakerRequest },
+  TContext
+> => {
+  return useMutation(
+    getAssignSegmentSpeakerMutationOptions(options),
+    queryClient
+  );
+};
