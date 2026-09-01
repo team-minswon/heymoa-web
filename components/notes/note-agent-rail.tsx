@@ -113,19 +113,21 @@ export function NoteAgentRail({
         ))}
       </div>
 
-      {/* 범위 한 줄 — 누가 이 대화를 보는지가 두 탭을 가르는 전부다. */}
-      <p
-        className={cn(
-          "shrink-0 px-3 py-1 text-[11px] font-medium text-[var(--el-body)] lg:py-2",
-          foldedOnNarrow && "max-lg:hidden"
-        )}
-      >
-        {/* 이 줄은 **누가 보는지**를 말한다. 무엇이 쌓이는지는 레일의 갱신 띠가 이미
-            말하므로 여기서 반복하면 같은 문장이 두 줄로 선다(실제로 그랬다). */}
-        {tab === "context"
-          ? "참여자 전원이 같은 내용을 봅니다"
-          : "나만 보는 대화 · 현재 회의 범위"}
-      </p>
+      {/* 범위 한 줄 — 누가 이 대화를 보는지를 말한다.
+          **「실시간 정리」에는 두지 않는다.** 그 레일은 바로 아래에 제 설명(「끝난 발화에서
+          남길 만한 변화만 쌓입니다」)을 이미 달고 있어서, 여기까지 문장을 세우면 탭을
+          누르자마자 안내가 두 줄로 겹친다. 개인 챗은 그런 줄이 없어 이 한 줄이 유일하게
+          범위를 말한다 — 남의 눈에 안 보인다는 사실은 화면 어디에도 다시 안 나온다. */}
+      {tab === "personal" ? (
+        <p
+          className={cn(
+            "shrink-0 px-3 py-1 text-[11px] font-medium text-[var(--el-body)] lg:py-2",
+            foldedOnNarrow && "max-lg:hidden"
+          )}
+        >
+          나만 보는 대화 · 현재 회의 범위
+        </p>
+      ) : null}
 
       <div
         role="tabpanel"

@@ -29,20 +29,20 @@ export function ContextCoverageGapRow({
   return (
     <div
       data-testid="context-coverage-gap"
-      className="grid grid-cols-1 gap-2 border-b border-dashed border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
+      className="flex flex-col items-center gap-1.5 rounded-[12px] bg-[var(--el-canvas-soft)] px-6 py-[22px]"
     >
-      <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] sm:w-32">
+      <time className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
         {`${formatOffset(gap.fromStartedAtMs)} – ${formatOffset(gap.toEndedAtMs)}`}
       </time>
-      <p className="min-w-0 text-read leading-7 text-[var(--el-muted-soft)]">
+      <p className="text-[13px] font-medium text-[var(--el-muted)]">
         {meetingEnded
           ? "이 구간은 실시간 정리에 들어오지 않았습니다"
           : "이 구간은 아직 정리되지 않았습니다"}
-        <span className="ml-2 text-[13px] text-[var(--el-muted-soft)]">
-          {meetingEnded
-            ? "요약은 전사를 그대로 읽습니다 — 이 구간의 내용은 요약에 있습니다"
-            : "전사는 계속 기록됩니다"}
-        </span>
+      </p>
+      <p className="min-w-0 text-center text-[12px] leading-relaxed text-[var(--el-muted-soft)]">
+        {meetingEnded
+          ? "요약은 전사를 그대로 읽습니다 — 이 구간의 내용은 요약에 있습니다"
+          : "전사는 계속 기록됩니다"}
       </p>
     </div>
   );
@@ -61,12 +61,12 @@ export function ContextSaturatedRow({ range }: { range: AppliedRange }) {
   return (
     <div
       data-testid="context-saturated"
-      className="grid grid-cols-1 gap-2 border-b border-dashed border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
+      className="flex flex-col items-center gap-1.5 rounded-[12px] bg-[var(--el-canvas-soft)] px-6 py-[22px]"
     >
-      <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] sm:w-32">
+      <time className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
         {`${formatOffset(range.fromStartedAtMs)} – ${formatOffset(range.toEndedAtMs)}`}
       </time>
-      <p className="min-w-0 text-read leading-7 text-[var(--el-muted-soft)]">
+      <p className="text-[13px] font-medium text-[var(--el-muted)]">
         이 구간에 항목이 더 있을 수 있어요
       </p>
     </div>

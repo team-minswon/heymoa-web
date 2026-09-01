@@ -12,12 +12,22 @@ import type {
  *
  * 무작위를 쓰지 않는다. 이 파일의 값은 전부 고정이다.
  *
- * 담은 것 넷:
- * - 결정·안건·질의응답·보고·할 일 — v1 kind만. **논의안은 없다**(계약에 없다)
- * - `AMEND` — 같은 카드가 제자리에서 바뀌는 경로
+ * 담은 것:
+ * - **kind 일곱 전부.** 「참고」가 보고만으로 채워지면 인사이트가 화면에 한 번도 안 뜬다
+ * - **operation 다섯 전부** — `CREATE`·`AMEND`·`CORRECT`·`RETRACT`·`RESOLVE`
  * - `RESOLVE` — 질문 1장이 닫히고 결과 1장이 열리는 원자 도착
- * - `RETRACT` — 철회. 취소선으로 남는다
+ * - **답을 기다리는 질문** — 열린 질문이 정상 상태다. 닫힌 것만 담으면 「답 대기」를 못 본다
+ * - **근거 2개** — 전사 시각이 「전사 A · B」로 늘어나는 경로
+ *
+ * **근거 0개는 담지 않는다.** 계약의 `z.array` 가 빈 배열을 막지 않아 한때 목에 넣었지만,
+ * 실서버 산출물(`__fixtures__/synthetic-ledger-snapshot.json`)은 8건 전부 1~2개이고
+ * `lastEvidenceSequence` 도 `min(1)` 이다 — 근거가 있다는 전제의 계약이다. 목이 그 상태를
+ * 담으면 **전사 시각이 없는 카드**가 화면에 서서, 일어나지 않을 경우를 보고 레이아웃을
+ * 정하게 된다. 화면이 그래도 안 깨지는지는 `context-rail.test.tsx` 가 지킨다.
  * - `appliedRanges`의 **구멍 하나**와 **포화 구간 하나**
+ *
+ * **세 필터가 각각 볼 만큼 있어야 한다.** 한 묶음이 한둘이면 그 화면의 리듬을 눈으로 못
+ * 정한다 — 카드 하나짜리 목록은 어떤 간격을 줘도 괜찮아 보인다.
  */
 
 /**
@@ -98,9 +108,19 @@ function head(
     content: string;
     createdSequence: number;
     evidenceAtMs: number;
+    /**
+     * 근거로 실린 **실제 발화**. 문자열 하나면 근거 한 줄, 배열이면 그 수만큼이고 빈 배열은
+     * 근거 없는 후보다.
+     *
+     * **`"…"` 같은 자리표시자를 쓰지 않는다.** 근거를 펼쳤을 때 줄이 어디서 감기는지,
+     * 긴 발화와 짧은 발화가 섞이면 목록이 어떤 리듬이 되는지를 화면에서 봐야 하는데
+     * 한 글자짜리 자리표시자로는 그게 전부 감춰진다 — 전부 같은 높이로 곱게 선다.
+     */
+    evidenceText: string | readonly string[];
   }
 ): ContextCandidateHead {
-  const { evidenceAtMs, ...rest } = over;
+  const { evidenceAtMs, evidenceText, ...rest } = over;
+  const texts = typeof evidenceText === "string" ? [evidenceText] : evidenceText;
   return {
     revision: 1,
     operation: "CREATE",
@@ -110,16 +130,16 @@ function head(
     lastEvidenceSequence: over.createdSequence,
     aiSemanticRevisionCount: 0,
     resolvesCandidateId: null,
-    evidence: [
-      {
-        segmentId: SEGMENT(over.createdSequence),
-        sequence: over.createdSequence,
-        startedAtMs: evidenceAtMs,
-        endedAtMs: evidenceAtMs + 4_000,
-        text: "…",
-        role: "SUPPORTS",
-      },
-    ],
+    // 둘째 근거부터는 5 발화 뒤(50초 뒤)에 붙은 것으로 둔다 — 같은 사건을 두 번에 걸쳐
+    // 말한 모양이다. 첫 근거는 주장을 받치고, 뒤는 조건을 단다.
+    evidence: texts.map((text, index) => ({
+      segmentId: SEGMENT(over.createdSequence + index * 5),
+      sequence: over.createdSequence + index * 5,
+      startedAtMs: evidenceAtMs + index * 50_000,
+      endedAtMs: evidenceAtMs + index * 50_000 + 4_000,
+      text,
+      role: index === 0 ? "SUPPORTS" : "CONDITIONS",
+    })),
     ...rest,
   };
 }
@@ -137,6 +157,33 @@ export const CONTEXT_TIMELINE: Array<{
       content: "MongoDB 도입 검토",
       createdSequence: 24,
       evidenceAtMs: 242_000,
+      evidenceText: "스키마가 분기마다 바뀌는데 문서형으로 가는 게 맞는지 이번에 한 번 정리하고 갔으면 합니다",
+    }),
+  },
+  // **인사이트.** 이 kind 가 한 건도 없어서 「참고」가 보고만으로 채워지고, 거터에서 가장
+  // 긴 라벨(4자)이 화면에 한 번도 안 떴다 — 열 폭을 그 라벨로 잡아 놓고 눈으로 못 본 셈이다.
+  {
+    atMs: 380_000,
+    candidate: head({
+      candidateId: CANDIDATE(8),
+      kind: "INSIGHT",
+      content: "읽기 쏠림은 특정 시간대에만 생긴다",
+      createdSequence: 38,
+      evidenceAtMs: 380_000,
+      evidenceText: "지표를 보면 오전 아홉 시하고 오후 여섯 시 앞뒤 삼십 분에만 몰려요",
+    }),
+  },
+  // **답을 기다리는 질문.** 유일한 질문이 곧 RESOLVE 로 닫혀서 「답 대기」 문구가 어느
+  // 화면에도 안 나온다 — 열린 질문이 정상 상태인데 목이 그것을 안 담고 있었다.
+  {
+    atMs: 512_000,
+    candidate: head({
+      candidateId: CANDIDATE(9),
+      kind: "QUESTION",
+      content: "샤딩 키를 바꾸면 마이그레이션이 얼마나 걸리나",
+      createdSequence: 51,
+      evidenceAtMs: 512_000,
+      evidenceText: "샤딩 키를 바꾸면 재분배가 몇 시간짜리인지 재 본 사람 있나요",
     }),
   },
   {
@@ -147,6 +194,7 @@ export const CONTEXT_TIMELINE: Array<{
       content: "인덱스를 줄이면 조회 손해가 얼마나 되나",
       createdSequence: 62,
       evidenceAtMs: 620_000,
+      evidenceText: "인덱스를 절반으로 줄이면 조회가 얼마나 느려지는지가 관건입니다",
     }),
   },
   {
@@ -157,6 +205,7 @@ export const CONTEXT_TIMELINE: Array<{
       content: "스테이징 이관은 지난주에 끝났다",
       createdSequence: 100,
       evidenceAtMs: 1_002_000,
+      evidenceText: "스테이징은 지난주 목요일에 넘겼고 지금 이틀째 돌고 있습니다",
     }),
   },
   {
@@ -167,6 +216,7 @@ export const CONTEXT_TIMELINE: Array<{
       content: "인덱스 벤치마크 수치는 금요일까지 정리",
       createdSequence: 119,
       evidenceAtMs: 1_190_000,
+      evidenceText: "벤치마크는 금요일까지 정리해서 올리겠습니다",
     }),
   },
   // 같은 카드가 제자리에서 바뀐다. 목록 아래로 튀면 안 된다.
@@ -178,10 +228,37 @@ export const CONTEXT_TIMELINE: Array<{
       content: "인덱스 벤치마크 수치는 금요일까지 정리 · 담당 한지원",
       createdSequence: 119,
       evidenceAtMs: 1_190_000,
+      evidenceText: "벤치마크는 금요일까지 정리해서 올리겠습니다",
       revision: 2,
       operation: "AMEND",
       aiSemanticRevisionCount: 1,
       lastEvidenceSequence: 131,
+    }),
+  },
+  {
+    atMs: 1_450_000,
+    candidate: head({
+      candidateId: CANDIDATE(10),
+      kind: "ACTION_ITEM",
+      content: "스테이징에 인덱스 변경 먼저 적용",
+      createdSequence: 145,
+      evidenceAtMs: 1_450_000,
+      evidenceText: "인덱스 변경은 스테이징에 먼저 걸어 보고 운영에 올리시죠",
+    }),
+  },
+  {
+    atMs: 1_540_000,
+    candidate: head({
+      candidateId: CANDIDATE(3),
+      kind: "STATUS_REPORT",
+      content: "스테이징 이관은 지난주에 끝났다 · 남은 이슈 2건",
+      createdSequence: 100,
+      evidenceAtMs: 1_002_000,
+      evidenceText: "스테이징은 지난주 목요일에 넘겼고 지금 이틀째 돌고 있습니다",
+      revision: 2,
+      operation: "AMEND",
+      aiSemanticRevisionCount: 1,
+      lastEvidenceSequence: 154,
     }),
   },
   // RESOLVE — 질문이 닫히고 결과가 열린다. 둘이 한 배치에 온다.
@@ -193,6 +270,7 @@ export const CONTEXT_TIMELINE: Array<{
       content: "인덱스를 줄이면 조회 손해가 얼마나 되나",
       createdSequence: 62,
       evidenceAtMs: 620_000,
+      evidenceText: "인덱스를 절반으로 줄이면 조회가 얼마나 느려지는지가 관건입니다",
       revision: 2,
       operation: "RESOLVE",
       status: "CLOSED",
@@ -209,6 +287,7 @@ export const CONTEXT_TIMELINE: Array<{
       content: "조회 손해는 15% 안쪽으로 측정됐다",
       createdSequence: 164,
       evidenceAtMs: 1_640_000,
+      evidenceText: "재 봤는데 최악이 십오 퍼센트 정도였고 평균은 그보다 훨씬 낮았습니다",
       operation: "RESOLVE",
       resolvesCandidateId: CANDIDATE(2),
     }),
@@ -221,6 +300,7 @@ export const CONTEXT_TIMELINE: Array<{
       content: "경로 데이터 저장소는 MongoDB를 사용한다",
       createdSequence: 187,
       evidenceAtMs: 1_872_000,
+      evidenceText: "그럼 경로 데이터는 몽고디비로 가는 걸로 정리하겠습니다",
     }),
   },
   // 철회. 카드가 사라지지 않고 취소선으로 남는다.
@@ -232,12 +312,68 @@ export const CONTEXT_TIMELINE: Array<{
       content: "MongoDB 도입 검토",
       createdSequence: 24,
       evidenceAtMs: 242_000,
+      evidenceText: "스키마가 분기마다 바뀌는데 문서형으로 가는 게 맞는지 이번에 한 번 정리하고 갔으면 합니다",
       revision: 2,
       operation: "RETRACT",
       status: "CLOSED",
       closeReason: "RETRACTED",
       aiSemanticRevisionCount: 1,
       lastEvidenceSequence: 210,
+    }),
+  },
+  {
+    atMs: 2_240_000,
+    candidate: head({
+      candidateId: CANDIDATE(11),
+      kind: "INSIGHT",
+      content: "장애의 절반이 배포 직후 30분에 몰린다",
+      createdSequence: 224,
+      evidenceAtMs: 2_240_000,
+      evidenceText: "지난 분기 장애 티켓을 시간대로 찍어 보니 절반이 배포 직후 삼십 분 안에 났습니다",
+    }),
+  },
+  // **근거가 둘인 후보.** 메타의 전사 시각이 「전사 A · B」로 늘어나는 경로다 — 하나짜리만
+  // 있으면 그 줄이 길어졌을 때 메타가 어떻게 접히는지 볼 수 없다.
+  {
+    atMs: 2_310_000,
+    candidate: head({
+      candidateId: CANDIDATE(12),
+      kind: "AGENDA",
+      content: "다음 스프린트 범위",
+      createdSequence: 231,
+      evidenceAtMs: 2_310_000,
+      evidenceText: [
+        "다음 스프린트에 뭘 넣을지 오늘 대충이라도 잡고 가시죠",
+        "다만 마이그레이션이 물리면 범위는 다시 봐야 합니다",
+      ],
+      lastEvidenceSequence: 236,
+    }),
+  },
+  {
+    atMs: 2_330_000,
+    candidate: head({
+      candidateId: CANDIDATE(11),
+      kind: "INSIGHT",
+      content: "장애의 절반이 배포 직후 30분에 몰린다 · 대부분 설정 변경",
+      createdSequence: 224,
+      evidenceAtMs: 2_240_000,
+      evidenceText:
+        "지난 분기 장애 티켓을 시간대로 찍어 보니 절반이 배포 직후 삼십 분 안에 났습니다",
+      revision: 2,
+      operation: "AMEND",
+      aiSemanticRevisionCount: 1,
+      lastEvidenceSequence: 233,
+    }),
+  },
+  {
+    atMs: 2_400_000,
+    candidate: head({
+      candidateId: CANDIDATE(13),
+      kind: "DECISION",
+      content: "읽기 전용 복제본은 두 대로 시작한다",
+      createdSequence: 240,
+      evidenceAtMs: 2_400_000,
+      evidenceText: "복제본은 일단 최소로 띄우고 부하를 보면서 늘리겠습니다",
     }),
   },
   {
@@ -248,6 +384,39 @@ export const CONTEXT_TIMELINE: Array<{
       content: "장애 대응 runbook이 비어 있다",
       createdSequence: 248,
       evidenceAtMs: 2_480_000,
+      evidenceText: "런북 문서가 제목만 있고 안이 비어 있습니다",
+    }),
+  },
+  // **`CORRECT`.** 다섯 operation 중 이것만 목에 없어서 「내용 정정」 칩이 한 번도 안 떴다.
+  // `AMEND`(보강)와 다른 말인데 화면에서 나란히 본 적이 없었다.
+  {
+    atMs: 2_520_000,
+    candidate: head({
+      candidateId: CANDIDATE(13),
+      kind: "DECISION",
+      content: "읽기 전용 복제본은 세 대로 시작한다",
+      createdSequence: 240,
+      evidenceAtMs: 2_400_000,
+      evidenceText: "복제본은 일단 최소로 띄우고 부하를 보면서 늘리겠습니다",
+      revision: 2,
+      operation: "CORRECT",
+      aiSemanticRevisionCount: 1,
+      lastEvidenceSequence: 252,
+    }),
+  },
+  {
+    atMs: 2_560_000,
+    candidate: head({
+      candidateId: CANDIDATE(7),
+      kind: "ISSUE",
+      content: "장애 대응 runbook이 비어 있다 · 담당자도 미정",
+      createdSequence: 248,
+      evidenceAtMs: 2_480_000,
+      evidenceText: "런북 문서가 제목만 있고 안이 비어 있습니다",
+      revision: 2,
+      operation: "AMEND",
+      aiSemanticRevisionCount: 1,
+      lastEvidenceSequence: 256,
     }),
   },
 ];

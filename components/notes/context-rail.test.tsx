@@ -203,7 +203,8 @@ describe("ContextRail", () => {
         ],
       }),
     ]);
-    expect(screen.getByText("전사 31:12 · 31:52")).toBeInTheDocument();
+    // 「전사」 접두는 없다 — 제목 줄 오른끝이라 무엇의 시각인지가 자리로 드러난다.
+    expect(screen.getByText("31:12 · 31:52")).toBeInTheDocument();
   });
 
   it("사람이 읽는 상위 분류가 목록을 좁히지만 개수는 전체를 유지한다", () => {
@@ -252,10 +253,12 @@ describe("ContextRail", () => {
     const filters = screen.getByRole("group", {
       name: "사건 범위로 좁히기",
     });
+    // **읽는 이름으로 본다.** 라벨과 개수가 다른 요소라(개수만 mono) `textContent` 는
+    // 「전체7」로 붙는다 — 사람이 듣는 것은 `aria-label` 쪽이다.
     expect(
       within(filters)
         .getAllByRole("button")
-        .map((button) => button.textContent)
+        .map((button) => button.getAttribute("aria-label"))
     ).toEqual(["전체 7", "결론 2", "논의 중 3", "참고 2"]);
   });
 
@@ -361,7 +364,12 @@ describe("ContextRail", () => {
       within(filters).getByRole("button", { name: "전체 1" })
     ).toHaveAttribute("aria-pressed", "true");
 
-    // 목록에 이름이 있어야 「무엇의 목록인가」가 읽힌다.
+    // 목록에 이름이 있어야 「무엇의 목록인가」가 읽힌다. **「전체」는 유형으로 묶이므로
+    // 그 이름이 유형이다** — 묶음 단위로 읽어야 훑는 순서가 화면과 같아진다.
+    expect(screen.getByRole("list", { name: "결정" })).toBeInTheDocument();
+
+    // 좁혀 놓으면 묶음이 하나뿐이라 목록이 섹션 제목에 묶인다.
+    fireEvent.click(screen.getByRole("button", { name: /^결론/ }));
     expect(screen.getByRole("list", { name: "사건 흐름" })).toBeInTheDocument();
   });
 
