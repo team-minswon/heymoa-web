@@ -130,12 +130,46 @@ describe("OpenAPI contract", () => {
   it("omits schemas reachable only from internal routes", () => {
     const schemaNames = Object.keys(api().components.schemas);
     for (const name of [
+      "AmendDelta",
+      "AnalysisCandidateEvidenceLink",
+      "AnalysisCandidateLedger",
+      "AnalysisCandidateLedgerEntry",
+      "AnalysisSection",
       "AnalysisResultCallback",
       "AnalysisSucceededCallback",
       "AnalysisFailedCallback",
+      "ApplyRunRequest",
+      "CandidateHead",
+      "ContextAnchors",
+      "ContextCandidateOperationsResponse",
+      "ContextClassificationRunResponse",
+      "ContextClassificationSnapshotResponse",
+      "CorrectDelta",
+      "CreateDelta",
+      "DropReason",
+      "DroppedDelta",
+      "Evidence",
+      "InternalNoteContextResponse",
+      "InternalTranscriptSegmentsResponse",
+      "InternalTranscriptUpdatesResponse",
+      "InternalWorkspaceNotesResponse",
+      "MeetingItem",
+      "ReaffirmDelta",
+      "RenderedLine",
+      "ResolveDelta",
+      "ResolveResult",
+      "ResolvedDelta",
+      "RetractDelta",
+      "Sha256",
+      "ShortlistedCandidate",
+      "SnapshotBatch",
+      "SnapshotSegment",
+      "UtcMillisTimestamp",
     ]) {
       expect(schemaNames).not.toContain(name);
     }
+    expect(Object.keys(api().paths)).toHaveLength(45);
+    expect(schemaNames).toHaveLength(61);
   });
 
   it("omits the internal-only security scheme", () => {
@@ -223,8 +257,102 @@ describe("contract sync 2026-07-29", () => {
     // `.../guests/{guestId}/link-preview`.
     // V31에서 발화 단위 화자 지정이 생겼다 (42 → 43) —
     // `notes/{noteId}/segments/{segmentId}/speaker`.
-    expect(paths).toHaveLength(43);
+    // APP-459에서 후보 조회와 revision 이력 둘이 늘었다 (43 → 45) —
+    // `notes/{noteId}/context-candidates`와 `.../context-candidates/{candidateId}/revisions`.
+    expect(paths).toHaveLength(45);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
+  });
+
+  /**
+   * **미러는 public 만 담는다.** internal 경로를 지우면서 그 경로에서만 닿던 스키마를 남기면
+   * 계약에 죽은 정의가 쌓이고, orval 이 아무도 안 쓰는 타입을 만든다.
+   *
+   * 여기서는 **도달 가능성으로 판정한다** — 이름을 나열하면 계약이 바뀔 때마다 낡는다.
+   */
+  it("public 경로에서 닿지 않는 스키마를 남기지 않는다", () => {
+    const doc = api() as unknown as Record<string, unknown>;
+    const components = doc.components as {
+      schemas: Record<string, unknown>;
+      responses?: Record<string, unknown>;
+      securitySchemes?: Record<string, unknown>;
+    };
+
+    const collect = (node: unknown, into: Set<string>) => {
+      if (Array.isArray(node)) {
+        for (const item of node) collect(item, into);
+        return;
+      }
+      if (!node || typeof node !== "object") return;
+      for (const [key, value] of Object.entries(node)) {
+        if (key === "$ref" && typeof value === "string") {
+          const name = value.split("/").pop();
+          if (value.includes("/schemas/") && name) into.add(name);
+          continue;
+        }
+        collect(value, into);
+      }
+    };
+
+    const seeds = new Set<string>();
+    collect(doc.paths, seeds);
+    collect(components.responses ?? {}, seeds);
+
+    const reachable = new Set<string>();
+    const stack = [...seeds];
+    while (stack.length > 0) {
+      const name = stack.pop()!;
+      if (reachable.has(name) || !(name in components.schemas)) continue;
+      reachable.add(name);
+      const next = new Set<string>();
+      collect(components.schemas[name], next);
+      stack.push(...next);
+    }
+
+    expect(
+      Object.keys(components.schemas).filter((name) => !reachable.has(name))
+    ).toEqual([]);
+    // internal 전용 인증 수단도 남기지 않는다.
+    expect(Object.keys(components.securitySchemes ?? {})).toEqual([
+      "accessCookie",
+    ]);
+  });
+
+  /**
+   * APP-459 후보 계약. **`oneOf` 세 갈래가 상태 행렬 자체다** — 하나라도 빠지면
+   * 「OPEN 인데 RETRACTED」 같은 조합이 계약상 유효해진다.
+   */
+  it("후보 계약의 상태 행렬과 v1 생산값을 고정한다", () => {
+    const schemas = (api() as unknown as Record<string, never>)
+      .components as unknown as { schemas: Record<string, never> };
+    const revision = schemas.schemas.ContextCandidateRevision as unknown as {
+      oneOf: { title: string }[];
+      properties: Record<string, { enum?: unknown[]; nullable?: boolean }>;
+    };
+
+    expect(revision.oneOf.map((branch) => branch.title)).toEqual([
+      "OpenCandidate",
+      "RetractedCandidate",
+      "ResolvedQuestion",
+    ]);
+    expect(revision.properties.status.enum).toEqual(["OPEN", "CLOSED"]);
+    expect(revision.properties.closeReason.enum).toEqual([
+      "RETRACTED",
+      "RESOLVED",
+      null,
+    ]);
+    expect(revision.properties.closeReason.nullable).toBe(true);
+    // POSTPROCESS 는 producer 가 없어 v1 계약에서 걷혔다.
+    expect(revision.properties.revisionSource.enum).toEqual(["LIVE"]);
+  });
+
+  it("APP-459 public 두 경로가 미러에 있다", () => {
+    expect(
+      api().paths["/v1/notes/{noteId}/context-candidates"]?.get?.operationId
+    ).toBe("getContextCandidates");
+    expect(
+      api().paths["/v1/notes/{noteId}/context-candidates/{candidateId}/revisions"]
+        ?.get?.operationId
+    ).toBe("getContextCandidateRevisions");
   });
 
   it("exposes the invitation, notification and member operations", () => {
@@ -262,6 +390,12 @@ describe("contract sync 2026-07-29", () => {
   });
 
   it("exposes the chat, approval, meeting and analysis operations", () => {
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/agent-chats"]?.get?.operationId
+    ).toBe("getAgentChats");
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/agent-chats"]?.post?.operationId
+    ).toBe("createAgentChat");
     expect(
       api().paths["/v1/agent-chats/{chatId}/messages"]?.post?.operationId
     ).toBe("sendAgentChatMessage");

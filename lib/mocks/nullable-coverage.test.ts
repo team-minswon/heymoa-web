@@ -3,6 +3,7 @@ import { parse } from "yaml";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { setupServer } from "msw/node";
 
+import { CONTEXT_SNAPSHOT } from "@/lib/mocks/context-candidates";
 import { mockDb } from "@/lib/mocks/db";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 import {
@@ -167,6 +168,28 @@ function contractSamples() {
   mockDb.connectIntegration(workspaces[0].workspaceId, "LINEAR");
 
   /**
+   * 후보 revision 이력은 `{candidateId}` 가 있어야 부를 수 있다. **id 를 손으로 박지
+   * 않는다** — 목이 바뀌면 조용히 빈 응답을 부르게 되고, 그러면 nullable 표본이 0개인데도
+   * 이 테스트가 통과한다.
+   *
+   * 목 스냅샷에서 **필요한 성질별로 하나씩** 고른다. `closeReason` 과
+   * `resolvesCandidateId` 가 둘 다 nullable 이라 양쪽 값을 내는 후보가 함께 있어야 한다.
+   */
+  const candidateIds = [
+    ...new Set(
+      [
+        CONTEXT_SNAPSHOT.candidates.find((c) => c.closeReason !== null),
+        CONTEXT_SNAPSHOT.candidates.find((c) => c.resolvesCandidateId !== null),
+        CONTEXT_SNAPSHOT.candidates.find(
+          (c) => c.closeReason === null && c.resolvesCandidateId === null
+        ),
+      ]
+        .filter((c) => c !== undefined)
+        .map((c) => c.candidateId)
+    ),
+  ];
+
+  /**
    * 채팅은 시드에 없다. **다섯을 만든다** — 이어받기 필드(`activeTurn`·`lastTurn`)는 턴
    * 상태에서 나오는데 한 대화가 한 조합만 보여 줄 수 있어서다. 정지 상태의 GET만으로는
    * 전부 null이라 「목이 양쪽을 다 보여주는가」가 거짓말이 된다.
@@ -245,7 +268,6 @@ function contractSamples() {
     },
   });
 
-
   // 시드의 초대는 받은 것(다른 워크스페이스) 하나뿐이라 `/invitations`가 비어 있다.
   mockDb.createInvitation(workspaces[0].workspaceId, {
     email: "invitee@heymoa.com",
@@ -286,6 +308,7 @@ function contractSamples() {
         ),
         sessionId: sessionIds,
         chatId: chatIds,
+        candidateId: candidateIds,
       };
       if (params.some((param) => !values[param]?.length)) continue;
       // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).

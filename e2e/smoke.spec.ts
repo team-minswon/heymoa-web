@@ -300,6 +300,8 @@ test("keeps the mobile recorder dock outside the transcript above a bounded chat
 
   await expect(page.getByTestId("transcript-block").first()).toBeVisible();
   await expect(dock).toBeVisible();
+  // 기록 중 레일은 「실시간 정리」로 열린다 — 개인 대화는 탭을 골라야 슬롯을 받는다.
+  await tray.getByRole("tab", { name: "내 에이전트" }).click();
   await expect(tray.getByLabel("메시지")).toBeVisible();
 
   const [transcriptBox, dockBox, trayBox] = await Promise.all([
@@ -345,6 +347,8 @@ test("keeps the recorder dock and transcript visible in mobile landscape", async
 
   await expect.soft(transcriptViewport).toBeVisible();
   await expect(dock).toBeVisible();
+  // 기록 중 레일은 「실시간 정리」로 열린다 — 개인 대화는 탭을 골라야 슬롯을 받는다.
+  await tray.getByRole("tab", { name: "내 에이전트" }).click();
   await expect(tray.getByLabel("메시지")).toBeVisible();
 
   const [surfaceBox, mainBox, transcriptBox, dockBox, trayBox] =
@@ -1394,7 +1398,13 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   await expect(
     noteTopBar(page).getByText("종료됨", { exact: true })
   ).toBeVisible();
-  await expect(page.getByRole("tab")).toHaveText(["정보", "전사", "요약"]);
+  // 원장은 종료로 지워지지 않는다 — 회의 중에 본 것을 되짚는 자리가 남는다.
+  await expect(page.getByRole("tab")).toHaveText([
+    "정보",
+    "전사",
+    "실시간 정리",
+    "요약",
+  ]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });

@@ -12,6 +12,7 @@ import {
   getGetNotesQueryKey,
 } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
+import { getGetContextCandidatesQueryKey } from "@/lib/api/generated/context-candidates/context-candidates";
 
 type TopicClientOptions = {
   noteId: string;
@@ -45,6 +46,50 @@ const PROJECT_ID = "01K0000000001";
 const SESSION_ID = "01K0000000010";
 const UTTERANCE_ID = "01K0000000100";
 const SEGMENT_ID = "01K0000000200";
+const CANDIDATE_ID = "01K0000000300";
+const EVENT_ID = "01K0000000400";
+
+function candidateHead(over: Record<string, unknown> = {}) {
+  return {
+    candidateId: CANDIDATE_ID,
+    revision: 1,
+    operation: "CREATE",
+    kind: "DECISION",
+    status: "OPEN",
+    closeReason: null,
+    revisionSource: "LIVE",
+    content: "경로 데이터 저장소는 MongoDB를 사용한다",
+    createdSequence: 10,
+    lastEvidenceSequence: 10,
+    aiSemanticRevisionCount: 0,
+    resolvesCandidateId: null,
+    evidence: [
+      {
+        segmentId: SEGMENT_ID,
+        sequence: 10,
+        startedAtMs: 1_872_000,
+        text: "그럼 MongoDB로 갑시다",
+        role: "SUPPORTS",
+      },
+    ],
+    ...over,
+  };
+}
+
+function coverageRange(over: Record<string, unknown> = {}) {
+  return {
+    runKey: "0RDDJRN000001",
+    applyStatus: "APPLIED",
+    fromSequence: 1,
+    toSequence: 10,
+    fromStartedAtMs: 0,
+    toEndedAtMs: 100_000,
+    rawDeltaSaturated: false,
+    semanticUnitSaturated: false,
+    appliedAt: "2026-08-24T01:02:03.000Z",
+    ...over,
+  };
+}
 
 function Probe() {
   const realtime = useNoteRealtime();
@@ -56,6 +101,18 @@ function Probe() {
       </div>
       <div data-testid="finals">
         {JSON.stringify(realtime.transcript.finalSegments)}
+      </div>
+      <div data-testid="context-cards">
+        {JSON.stringify(
+          realtime.context.cards.map((card) => [
+            card.candidateId,
+            card.revision,
+            card.status,
+          ])
+        )}
+      </div>
+      <div data-testid="context-batch-at">
+        {String(realtime.context.state.lastBatchAt)}
       </div>
     </>
   );
@@ -167,9 +224,6 @@ describe("NoteRealtimeProvider", () => {
     ]);
   });
 
-
-
-
   it("상태 이벤트는 exact note와 cached project lists를 즉시, 연속 final은 한 번 묶어 REST를 갱신한다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -258,9 +312,10 @@ describe("NoteRealtimeProvider", () => {
 
     expect(queryClient.getQueryData(noteKey)).toBe(endedNote);
     expect(setQueryData).not.toHaveBeenCalled();
-    // 공유 챗 히스토리 무효화가 빠져 하나 줄었다.
-    expect(invalidateQueries).toHaveBeenCalledTimes(5);
+    // meeting.ended 가 note·목록·transcript·후보를, recording.started 가 note·목록을 갱신한다.
+    expect(invalidateQueries).toHaveBeenCalledTimes(6);
     expectInvalidated(invalidateQueries, noteKey);
+    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
     expect(
       getProjectNotesPredicate(invalidateQueries)({
         queryKey: getGetNotesQueryKey(PROJECT_ID),
@@ -382,6 +437,173 @@ describe("NoteRealtimeProvider", () => {
       } as never)
     ).toBe(true);
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
+  });
+
+  it("후보 event가 화면 상태를 즉시 갱신하고 같은 후보를 두 번 만들지 않는다", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead(),
+    });
+    emit({
+      type: "context.candidate.changed",
+      eventId: "01K0000000401",
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:10.000Z",
+      candidate: candidateHead({ revision: 2, operation: "AMEND" }),
+    });
+
+    expect(screen.getByTestId("context-cards").textContent).toBe(
+      JSON.stringify([[CANDIDATE_ID, 2, "OPEN"]])
+    );
+  });
+
+  it("노트가 바뀌면 이전 노트의 후보·처리 상태를 즉시 비운다", async () => {
+    // catch-up 의 reset 만 믿으면 WS 가 붙기 전까지(또는 못 붙으면 영영) A 의 원장이
+    // B 에 그대로 보인다.
+    const { rerender, queryClient } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead(),
+    });
+    expect(screen.getByTestId("context-cards").textContent).not.toBe(
+      JSON.stringify([])
+    );
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NoteRealtimeProvider noteId="01K0000000005">
+          <Probe />
+        </NoteRealtimeProvider>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByTestId("context-cards").textContent).toBe(
+      JSON.stringify([])
+    );
+  });
+
+  it("배치 event는 서버 시각을 싣고 후보 조회를 무효화한다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    invalidateQueries.mockClear();
+
+    emit({
+      type: "context.classification.batch.applied",
+      eventId: "01K0000000500",
+      occurredAt: "2026-08-24T02:00:00.000Z",
+      range: coverageRange({ appliedAt: "2026-08-24T02:00:00.000Z" }),
+    });
+
+    // REAFFIRM 은 candidate event 가 없어서 이 무효화로만 화면에 수렴한다.
+    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
+    // 갱신 띠 시각은 수신 시각이 아니라 서버가 준 값이다.
+    expect(screen.getByTestId("context-batch-at").textContent).toBe(
+      "2026-08-24T02:00:00.000Z"
+    );
+  });
+
+  it("재연결 catch-up은 원장을 비우지 않고 조회만 다시 받는다", async () => {
+    // 비우면 그 직후의 snapshot 재조회가 실패했을 때(캐시가 남아 isLoadingError도 거짓)
+    // 다시 채울 경로가 없어 「정리된 사건이 없습니다」가 영구히 남는다. 원장은 낡은 것을
+    // 되돌리지 않는 snapshot 병합으로 수렴시키고, catch-up이 버리는 것은 전사뿐이다.
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead(),
+    });
+
+    invalidateQueries.mockClear();
+    await act(() => topicClients[0].options.onCatchUp());
+
+    expect(screen.getByTestId("context-cards").textContent).toBe(
+      JSON.stringify([[CANDIDATE_ID, 1, "OPEN"]])
+    );
+    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
+  });
+
+  /**
+   * **revision gap 을 본 뒤 재조회가 실패하면 갇힙니다.**
+   *
+   * `needsRefetch` 는 sticky 이고 그것을 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면
+   * 다시 안 돕니다. 그 뒤 오는 candidate event 는 gap 을 못 메웁니다 — 빠진 revision 은
+   * 다시 안 오기 때문입니다.
+   *
+   * **batch 는 이미 복구 경로가 있습니다** — `invalidateContext()` 가 조회를 다시 띄웁니다.
+   * 그런데 candidate event 만 계속 오는 구간(배치가 멎은 회의)에서는 그 경로가 안 열립니다.
+   * 여기서 그 한 갈래를 지킵니다.
+   */
+  it("gap 을 본 뒤에는 candidate event 가 재조회를 깨운다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    // 마운트 catch-up 이 이미 한 번 invalidate 한다. 그 뒤부터를 본다.
+    invalidateQueries.mockClear();
+
+    // revision 1 을 못 보고 2 가 왔다 — 사이를 놓쳤으므로 snapshot 을 다시 받아야 한다.
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead({ revision: 2 }),
+    });
+    expect(invalidateQueries).not.toHaveBeenCalled();
+
+    // jsdom 에는 서버가 없어 그 재조회는 실패한다. 그 상태에서 다음 event 가 와야 한다.
+    invalidateQueries.mockClear();
+    emit({
+      type: "context.candidate.changed",
+      eventId: "01K0000000401",
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:10.000Z",
+      candidate: candidateHead({ candidateId: "01K0000000301", revision: 1 }),
+    });
+
+    await waitFor(() =>
+      expectInvalidated(
+        invalidateQueries,
+        getGetContextCandidatesQueryKey(NOTE_ID)
+      )
+    );
+  });
+
+  it("gap 이 없으면 candidate event 가 조회를 흔들지 않는다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    invalidateQueries.mockClear();
+
+    // revision 1 부터 순서대로면 놓친 것이 없다 — 재조회할 이유가 없다.
+    emit({
+      type: "context.candidate.changed",
+      eventId: EVENT_ID,
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      candidate: candidateHead({ revision: 1 }),
+    });
+    emit({
+      type: "context.candidate.changed",
+      eventId: "01K0000000402",
+      changeOrdinal: 0,
+      occurredAt: "2026-08-24T01:02:10.000Z",
+      candidate: candidateHead({ candidateId: "01K0000000302", revision: 1 }),
+    });
+
+    expect(invalidateQueries).not.toHaveBeenCalled();
   });
 
   it("StrictMode의 setup-cleanup-setup에서도 활성 연결을 하나만 남긴다", async () => {

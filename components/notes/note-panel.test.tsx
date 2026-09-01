@@ -10,11 +10,21 @@ import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { NotePanel } from "@/components/notes/note-panel";
+import { NoteRealtimeProvider } from "@/components/notes/note-realtime-provider";
 import {
   RecordingProvider,
   useRecording,
   type RecordingRuntime,
 } from "@/components/transcription/recording-provider";
+
+// 이 파일이 보는 것은 패널이지 소켓이 아니다. 연결은 세우지 않는다.
+vi.mock("@/lib/notes/note-topic-client", () => ({
+  getNoteTopicWebSocketUrl: () => "ws://localhost/ws/transcriptions",
+  NoteTopicClient: class {
+    readonly connect = vi.fn();
+    readonly close = vi.fn().mockResolvedValue(undefined);
+  },
+}));
 
 const useGetProject = vi.hoisted(() => vi.fn());
 const noteRefetch = vi.hoisted(() => vi.fn());
@@ -243,7 +253,9 @@ function renderNotePanel(ui: ReactNode) {
           })),
         }}
       >
-        {node}
+        {/* NotePanel 은 프로덕션에서 항상 NoteRealtimeProvider 안이다
+            (`note-route-client.tsx`). 여기서는 소켓을 띄우지 않고 컨텍스트만 세운다. */}
+        <NoteRealtimeProvider noteId="01K0000000002">{node}</NoteRealtimeProvider>
       </RecordingProvider>
     </QueryClientProvider>
   );
@@ -618,8 +630,8 @@ describe("NotePanel", () => {
   });
 
   it("종료된 회의에서도 레일에 물어볼 곳이 남는다", () => {
-    // 예전에는 「이 회의 / 내 에이전트」 두 탭이었고, 공유 챗봇은 ENDED면 컴포저가 잠겼다.
-    // 지금은 레일이 통째로 개인 대화라 회의 상태와 무관하게 물어볼 수 있다.
+    // 레일은 「실시간 정리 / 내 에이전트」 두 탭이다. 끝난 회의를 열면 물어볼 곳이
+    // 먼저라 「내 에이전트」가 기본이고, 셸의 개인 챗봇 슬롯을 실제로 넘겨받는다.
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -633,8 +645,134 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getByTestId("note-agent-rail")).toBeInTheDocument();
-    // 탭이 없다 — 하나뿐이라 고를 것이 없다.
-    expect(screen.queryByRole("tab", { name: "이 회의" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "내 에이전트" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    // 셸의 개인 챗봇이 들어올 자리를 실제로 넘겨줬다.
+    expect(setRailSlot).toHaveBeenCalledWith(expect.any(HTMLElement));
+  });
+
+  it("기록 중에는 「실시간 정리」가 레일의 기본 탭이다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("tab", { name: "실시간 정리" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    // 「내 에이전트」를 고르기 전에는 슬롯을 넘기지 않는다 — 노트를 열기만 해도 개인
+    // 챗봇이 마운트되면 「열기 전에는 조회하지 않는다」는 규칙이 깨진다.
+    expect(setRailSlot).not.toHaveBeenCalledWith(expect.any(HTMLElement));
+  });
+
+  it("시작 전 노트에서 회의가 시작되면 레일 기본이 실시간 정리로 따라간다", () => {
+    // useState 초기화는 한 번뿐이라, 시작 전(personal 기본)에 마운트된 채 회의가 시작되면
+    // 기본값이 phase를 따라 다시 서야 한다. 사용자가 직접 고른 선택은 지킨다.
+    noteState.value.meetingStatus = "NOT_STARTED";
+    const el = (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(el);
+    expect(screen.getByRole("tab", { name: "내 에이전트" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+
+    noteState.value.meetingStatus = "IN_PROGRESS";
+    rerenderNote(el);
+
+    expect(screen.getByRole("tab", { name: "실시간 정리" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+  });
+
+  it("사용자가 고른 레일 탭은 회의 상태가 바뀌어도 지킨다", () => {
+    noteState.value.meetingStatus = "NOT_STARTED";
+    const el = (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(el);
+    fireEvent.click(screen.getByRole("tab", { name: "내 에이전트" }));
+
+    noteState.value.meetingStatus = "IN_PROGRESS";
+    rerenderNote(el);
+
+    expect(screen.getByRole("tab", { name: "내 에이전트" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+  });
+
+  it("종료된 회의는 좁은 화면에서 대화를 접고, 탭을 고르면 펼친다", () => {
+    // 레일을 통째로 감추면 탭 버튼까지 같이 감춰져 들어갈 길이 없어진다 — 접는 것은
+    // 대화뿐이고 탭 줄은 남는다. 탭 값으로 펼침을 가르면 항상 참이 되어 접힘이 죽는다.
+    noteState.value.meetingStatus = "ENDED";
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const rail = screen.getByTestId("note-agent-rail");
+    // 종료된 회의는 좁은 화면에서 대화를 접는다 — 전사 높이를 지키기 위해서다.
+    expect(rail).toHaveClass("max-lg:h-auto");
+
+    fireEvent.click(screen.getByRole("tab", { name: "내 에이전트" }));
+
+    expect(screen.getByTestId("note-agent-rail")).not.toHaveClass(
+      "max-lg:h-auto"
+    );
+  });
+
+  it("사이드 뷰에서는 실시간 정리가 노트 탭으로 내려온다", () => {
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="context"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    // 사이드 860 시트에는 오른쪽 레일 자리가 없다 — 같은 컴포넌트가 탭으로 선다.
+    expect(screen.queryByTestId("note-agent-rail")).toBeNull();
+    expect(
+      screen.getByRole("tab", { name: "실시간 정리" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "실시간 이벤트 처리" })
+    ).toBeInTheDocument();
   });
 
 
@@ -908,7 +1046,7 @@ describe("NotePanel", () => {
     ).toBeTruthy();
   });
 
-  it("side + 종료는 정보·전사·요약 탭과 아카이브를 보인다", () => {
+  it("side + 종료는 정보·전사·실시간 정리·요약 탭과 아카이브를 보인다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -924,6 +1062,8 @@ describe("NotePanel", () => {
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
       "전사",
+      // 원장은 종료로 지워지지 않는다 — 회의 중에 본 것을 되짚는 자리라 종료 뒤에도 남는다.
+      "실시간 정리",
       "요약",
     ]);
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();

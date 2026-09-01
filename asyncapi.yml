@@ -8,7 +8,7 @@
 asyncapi: 3.0.0
 info:
   title: Heymoa web ↔ server 비동기 계약 (전사 STOMP·노트 토픽 + agent 채팅 SSE)
-  version: 2.1.0
+  version: 3.0.0
   description: |
     브라우저와 heymoa-server 사이의 비동기 구간은 둘이다. 프로토콜도 수명도 다르다.
 
@@ -278,6 +278,10 @@ channels:
         $ref: "#/components/messages/NoteRecordingStartedEvent"
       NoteRecordingStoppedEvent:
         $ref: "#/components/messages/NoteRecordingStoppedEvent"
+      ContextCandidateChanged:
+        $ref: "#/components/messages/ContextCandidateChanged"
+      ContextClassificationBatchApplied:
+        $ref: "#/components/messages/ContextClassificationBatchApplied"
   agentChatStream:
     servers:
       - $ref: "#/servers/sseEdge"
@@ -372,6 +376,19 @@ operations:
       transcript.partial은 같은 utteranceId의 누적 snapshot이고 transcript.final은 저장 transaction
       commit 뒤에만 발행된다. 챗 이벤트(chat.token·chat.message_end·chat.lock)는 공유 챗봇과 함께
       이 토픽에서 사라졌다. tool approval 이벤트도 포함하지 않는다.
+
+      context candidate WebSocket 전달은 빠른 알림일 뿐 transport replay를 제공하지 않는다.
+      guarantee: best-effort
+      outbox order: (occurredAt, eventId)
+      RESOLVE fan-out order: changeOrdinal
+      RESOLVE changes are synchronously published in ascending changeOrdinal order before broker delivery.
+      public message identity: (eventId, changeOrdinal)
+      candidate state dedup: (candidateId, revision)
+      batch dedup: eventId
+      recovery: GET /v1/notes/{noteId}/context-candidates
+      client는 중복·역순 event를 위 key로 흡수하고 revision gap 또는 reconnect를 발견하면 REST snapshot을
+      다시 읽어 수렴한다. 서버 relay는 DB advisory transaction lock과 저장 순서로 outbox를 직렬화하고,
+      STOMP broker는 preservePublishOrder를 사용하지만 WebSocket 전달 성공 자체는 보장하지 않는다.
     channel:
       $ref: "#/channels/noteTopic"
     messages:
@@ -381,6 +398,8 @@ operations:
       - $ref: "#/channels/noteTopic/messages/NoteMeetingEndedEvent"
       - $ref: "#/channels/noteTopic/messages/NoteRecordingStartedEvent"
       - $ref: "#/channels/noteTopic/messages/NoteRecordingStoppedEvent"
+      - $ref: "#/channels/noteTopic/messages/ContextCandidateChanged"
+      - $ref: "#/channels/noteTopic/messages/ContextClassificationBatchApplied"
   receiveAgentChatEvents:
     action: receive
     summary: heymoa-web이 개인 챗봇 응답 이벤트를 SSE로 수신한다.
@@ -1301,6 +1320,59 @@ components:
           payload:
             code: LLM_PROVIDER_ERROR
             message: 응답 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.
+    ContextCandidateChanged:
+      name: ContextCandidateChanged
+      title: 후보 revision 변경
+      payload:
+        $ref: "#/components/schemas/ContextCandidateChangedPayload"
+      examples:
+        - name: resolveResult
+          payload:
+            type: context.candidate.changed
+            eventId: 0K9GVJT2C4Q1Z
+            changeOrdinal: 1
+            occurredAt: '2026-08-25T01:02:03.456Z'
+            candidate:
+              candidateId: 0HZX2K7M9Q4AF
+              revision: 1
+              operation: RESOLVE
+              revisionSource: LIVE
+              kind: DECISION
+              status: OPEN
+              closeReason: null
+              content: 출시일을 확정했습니다.
+              createdSequence: 8
+              lastEvidenceSequence: 8
+              aiSemanticRevisionCount: 0
+              resolvesCandidateId: 0HZX2K7M9Q4AE
+              evidence:
+                - segmentId: 0HZX2K7M9Q4AH
+                  sequence: 8
+                  startedAtMs: 5000
+                  endedAtMs: 8000
+                  text: 출시일은 9월 1일입니다.
+                  role: SUPPORTS
+    ContextClassificationBatchApplied:
+      name: ContextClassificationBatchApplied
+      title: 문맥 분류 batch 적용
+      payload:
+        $ref: "#/components/schemas/ContextClassificationBatchAppliedPayload"
+      examples:
+        - name: partialRecorded
+          payload:
+            type: context.classification.batch.applied
+            eventId: 0HZX2K7M9Q4AN
+            occurredAt: '2026-08-25T01:02:03.456Z'
+            range:
+              runKey: 0J00000000RN1
+              applyStatus: PARTIAL_RECORDED
+              fromSequence: 25
+              toSequence: 32
+              fromStartedAtMs: 10000
+              toEndedAtMs: 20000
+              rawDeltaSaturated: true
+              semanticUnitSaturated: false
+              appliedAt: '2026-08-25T01:02:03.456Z'
   schemas:
     Tsid:
       type: string
@@ -1336,3 +1408,147 @@ components:
           $ref: "#/components/schemas/Tsid"
         title:
           type: string
+    RunKey:
+      type: string
+      pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
+      minLength: 13
+      maxLength: 13
+      description: heymoa-ai 가 만드는 멱등 키다. URL path 에 나가는 외부 식별자라 TSID 13자다.
+    UtcMillisTimestamp:
+      type: string
+      format: date-time
+      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$'
+    CandidateKind:
+      type: string
+      enum: [AGENDA, DECISION, ACTION_ITEM, ISSUE, QUESTION, STATUS_REPORT, INSIGHT]
+    ContextCandidateChangedPayload:
+      type: object
+      additionalProperties: false
+      required: [type, eventId, changeOrdinal, occurredAt, candidate]
+      properties:
+        type:
+          type: string
+          const: context.candidate.changed
+        eventId:
+          $ref: "#/components/schemas/Tsid"
+        changeOrdinal:
+          type: integer
+          minimum: 0
+          maximum: 3
+        occurredAt:
+          $ref: "#/components/schemas/UtcMillisTimestamp"
+        candidate:
+          $ref: "#/components/schemas/ContextCandidateRevision"
+    ContextClassificationBatchAppliedPayload:
+      type: object
+      additionalProperties: false
+      required: [type, eventId, occurredAt, range]
+      properties:
+        type:
+          type: string
+          const: context.classification.batch.applied
+        eventId:
+          $ref: "#/components/schemas/Tsid"
+        occurredAt:
+          $ref: "#/components/schemas/UtcMillisTimestamp"
+        range:
+          $ref: "#/components/schemas/ContextClassificationAppliedRange"
+    ContextCandidateEvidence:
+      type: object
+      additionalProperties: false
+      required: [segmentId, sequence, startedAtMs, endedAtMs, text, role]
+      properties:
+        segmentId:
+          $ref: "#/components/schemas/Tsid"
+        sequence: {type: integer, format: int64, minimum: 1}
+        startedAtMs: {type: integer, format: int64, minimum: 0}
+        endedAtMs: {type: integer, format: int64, minimum: 0}
+        text: {type: string}
+        role:
+          type: string
+          enum: [SUPPORTS, REFUTES, CONDITIONS, RETRACTS, REFERENCES]
+    ContextCandidateRevision:
+      type: object
+      additionalProperties: false
+      required: [candidateId, revision, operation, revisionSource, kind, status, closeReason, content, createdSequence, lastEvidenceSequence, aiSemanticRevisionCount, resolvesCandidateId, evidence]
+      properties:
+        candidateId:
+          $ref: "#/components/schemas/Tsid"
+        revision: {type: integer, format: int64, minimum: 1}
+        operation:
+          type: string
+          enum: [CREATE, AMEND, CORRECT, RETRACT, RESOLVE]
+          description: revision을 만든 operation event다. RESOLVE result revision도 CREATE가 아니라 RESOLVE다. status와 closeReason을 이 값에서 유도하지 않는다.
+        revisionSource:
+          type: string
+          enum: [LIVE]
+          description: v1 생산값은 LIVE다. POSTPROCESS는 실제 producer 이슈와 web parser의 선행 수용이 준비된 뒤 additive change로 추가한다.
+        kind:
+          $ref: "#/components/schemas/CandidateKind"
+        status:
+          type: string
+          enum: [OPEN, CLOSED]
+        closeReason:
+          type: string
+          nullable: true
+          enum: [RETRACTED, RESOLVED, null]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: NFC이며 classifier tiktoken:0.13.0:o200k_base 기준 512 tokens 이하다
+        createdSequence: {type: integer, format: int64, minimum: 1}
+        lastEvidenceSequence: {type: integer, format: int64, minimum: 1}
+        aiSemanticRevisionCount: {type: integer, format: int32, minimum: 0}
+        resolvesCandidateId:
+          type: string
+          nullable: true
+          pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
+          minLength: 13
+          maxLength: 13
+          description: RESOLVE result면 닫힌 Question candidate ID, 아니면 null
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextCandidateEvidence"
+      oneOf:
+        - title: OpenCandidate
+          required: [status, closeReason]
+          properties:
+            status: {type: string, enum: [OPEN]}
+            closeReason: {nullable: true, enum: [null]}
+        - title: RetractedCandidate
+          required: [status, closeReason]
+          properties:
+            status: {type: string, enum: [CLOSED]}
+            closeReason: {type: string, enum: [RETRACTED]}
+        - title: ResolvedQuestion
+          required: [kind, status, closeReason]
+          properties:
+            kind: {type: string, enum: [QUESTION]}
+            status: {type: string, enum: [CLOSED]}
+            closeReason: {type: string, enum: [RESOLVED]}
+    ContextClassificationAppliedRange:
+      type: object
+      additionalProperties: false
+      required: [runKey, applyStatus, fromSequence, toSequence, fromStartedAtMs, toEndedAtMs, rawDeltaSaturated, semanticUnitSaturated, appliedAt]
+      properties:
+        runKey:
+          $ref: "#/components/schemas/RunKey"
+        applyStatus:
+          type: string
+          enum: [APPLIED, PARTIAL_RECORDED]
+        fromSequence: {type: integer, format: int64, minimum: 1}
+        toSequence: {type: integer, format: int64, minimum: 1}
+        fromStartedAtMs: {type: integer, format: int64, minimum: 0}
+        toEndedAtMs: {type: integer, format: int64, minimum: 0}
+        rawDeltaSaturated:
+          type: boolean
+          description: raw delta가 상한에 닿아 추가 항목이 있을 수 있다. 추가 항목이 반드시 있다는 뜻은 아니다.
+        semanticUnitSaturated:
+          type: boolean
+          description: semantic unit 7개 상한 또는 limit drop으로 추가 항목이 있을 수 있다. 추가 항목이 반드시 있다는 뜻은 아니다.
+        appliedAt:
+          type: string
+          format: date-time
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$'

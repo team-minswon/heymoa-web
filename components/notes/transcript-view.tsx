@@ -7,6 +7,11 @@ import {
   useRecording,
   useRecordingTranscript,
 } from "@/components/transcription/recording-provider";
+import {
+  ContextCoverageGapRow,
+  ContextSaturatedRow,
+} from "@/components/notes/context-coverage-row";
+import { withCoverageRows } from "@/lib/notes/context-candidates/timeline";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,9 +102,22 @@ export function TranscriptView({
     noteRealtime.transcript.finalSegments,
     persisted,
   ]);
+  /**
+   * **복사에 나가는 것은 전사뿐이다.** 마크다운 복사는 회의록이라, 분류 커버리지 같은
+   * 화면 주석이 섞이면 붙여넣은 쪽이 전사에 없던 문장을 갖는다. 그래서 `rows`는 전사만
+   * 담고, 커버리지는 아래 `renderRows`에서만 얹는다.
+   */
   const rows = useMemo(
     () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
     [segments, transcript]
+  );
+  /**
+   * 화면에 그리는 줄. **전사 공백과 분류 공백은 다른 사건이다** — 소리가 없어 글이 없는
+   * 것과, 글은 있는데 정리가 안 된 것을 같은 문구로 그리면 원인을 잘못 읽는다.
+   */
+  const renderRows = useMemo(
+    () => withCoverageRows(rows, noteRealtime.context.state.appliedRanges),
+    [noteRealtime.context.state.appliedRanges, rows]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";
   const speakerOf = useMemo(
@@ -183,7 +201,34 @@ export function TranscriptView({
    * 빼면 추종 중인 독자가 바닥에서 밀린 채로 남는다 — 「맨 아래로」 버튼도 안 뜬다.
    */
   const lastSegment = segments.at(-1);
-  const liveContentKey = `${lastSegment?.segmentId ?? ""}:${lastSegment?.text ?? ""}:${partial?.confirmedText ?? ""}:${partial?.pendingText ?? ""}`;
+  /**
+   * **커버리지 행도 여기 든다.** 분류 범위는 전사와 **따로, 늦게** 도착한다 — 조회가
+   * 취소·재시도되면 마지막 발화보다 뒤에 붙는다. 그 행들은 전사 행이 아니라서 위 셋 중
+   * 어느 것도 안 바뀌고, 그러면 **추종하던 독자가 그 높이만큼 바닥에서 밀린 채 남는다.**
+   * 「맨 아래로」 버튼도 안 뜬다 — scroll 이벤트가 안 나기 때문이다.
+   *
+   * 실제로 생성 훅으로 바꾸며 밟았다. `signal` 이 붙어 조회가 한 번 끊겼다 다시 오자
+   * 커버리지 행이 뒤늦게 붙어 122px 가 남았다.
+   *
+   * **개수로는 부족하다.** 구멍이 채워지면서 그 범위가 포화로 들어오면 **행 수는 그대로인데
+   * 종류가 바뀐다.** 두 행은 높이가 달라서(구멍 행에는 안내가 한 줄 더 붙는다) 그 차이만큼
+   * 또 밀린다 — 실측 61px 였다.
+   *
+   * 그래서 **행의 기하를 정하는 것만** 담는다. `runKey` 와 `status` 는 안 넣는다 —
+   * `status` 는 이미 `isSaturated()` 가 접어서 행의 존재로 표현되고, `runKey` 가 바뀌어도
+   * 행의 생김새는 안 변한다. 키는 「무엇이 그려지는가」의 대리이지 데이터 지문이 아니다.
+   */
+  const coverageKey = renderRows
+    .map((row) =>
+      row.type === "coverage-gap"
+        ? `g${row.gap.fromSequence}-${row.gap.toSequence}`
+        : row.type === "saturated"
+          ? `s${row.range.fromSequence}-${row.range.toSequence}`
+          : ""
+    )
+    .filter(Boolean)
+    .join(",");
+  const liveContentKey = `${lastSegment?.segmentId ?? ""}:${lastSegment?.text ?? ""}:${partial?.confirmedText ?? ""}:${partial?.pendingText ?? ""}:${coverageKey}`;
 
   const updateFollowing = useCallback((next: boolean) => {
     followingRef.current = next;
@@ -353,9 +398,20 @@ export function TranscriptView({
             </div>
           ) : (
             <div>
-              {rows.map((row) =>
+              {renderRows.map((row) =>
                 row.type === "gap" ? (
                   <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
+                ) : row.type === "coverage-gap" ? (
+                  <ContextCoverageGapRow
+                    key={`coverage-${row.gap.fromSequence}`}
+                    gap={row.gap}
+                    meetingEnded={phase === "ended"}
+                  />
+                ) : row.type === "saturated" ? (
+                  <ContextSaturatedRow
+                    key={`saturated-${row.range.runKey}`}
+                    range={row.range}
+                  />
                 ) : (
                   <article
                     key={row.segment.segmentId}

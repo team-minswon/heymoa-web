@@ -19,6 +19,12 @@ import {
   useAssignSegmentSpeaker,
   useGetNoteTranscript,
 } from "@/lib/api/generated/transcription/transcription";
+import {
+  ContextCoverageGapRow,
+  ContextSaturatedRow,
+} from "@/components/notes/context-coverage-row";
+import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
+import { withCoverageRows } from "@/lib/notes/context-candidates/timeline";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
 import {
   SpeakerAssignMenu,
@@ -179,6 +185,27 @@ export function NoteArchive({
     () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
     [segments, transcript]
   );
+  // 분류 커버리지도 같은 이유로 여기 얹는다 — 원장은 종료로 지워지지 않는데, 덜 실린
+  // 구간 경고가 회의 중(`TranscriptView`)에만 보이면 되짚는 사람이 공백을 사실로 믿는다.
+  // **양끝도 넘긴다** — 종료된 전사에서는 첫/마지막 분류 실행이 거절된 구간이 범위 사이가
+  // 아니라 선두·후미로 남는데, 진행 중과 달리 「아직 안 왔다」는 해명이 안 통한다.
+  const noteRealtime = useNoteRealtime();
+  const renderRows = useMemo(() => {
+    const first = segments[0];
+    const last = segments[segments.length - 1];
+    return withCoverageRows(
+      rows,
+      noteRealtime.context.state.appliedRanges,
+      first && last
+        ? {
+            fromSequence: first.sequence,
+            toSequence: last.sequence,
+            fromStartedAtMs: first.startedAtMs,
+            toEndedAtMs: last.endedAtMs,
+          }
+        : null
+    );
+  }, [noteRealtime.context.state.appliedRanges, rows, segments]);
   const diarized = transcript?.diarization?.status === "MAPPED";
   // **참석자에 이름이 실려 있어야 한다.** 발화 단위 지정은 라벨이 아니라 사람을 가리키므로,
   // 그 줄에 쓸 이름을 참석자 목록에서 찾는다.
@@ -630,9 +657,22 @@ export function NoteArchive({
               </div>
             ) : (
               <div className="mt-3">
-                {rows.map((row) =>
+                {renderRows.map((row) =>
                   row.type === "gap" ? (
                     <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
+                  ) : row.type === "coverage-gap" ? (
+                    <ContextCoverageGapRow
+                      key={`coverage-${row.gap.fromSequence}`}
+                      gap={row.gap}
+                      // 아카이브는 종료된 회의만 그린다 — 「전사는 계속 기록됩니다」류
+                      // 진행형 안내가 붙으면 거짓이 된다.
+                      meetingEnded
+                    />
+                  ) : row.type === "saturated" ? (
+                    <ContextSaturatedRow
+                      key={`saturated-${row.range.runKey}`}
+                      range={row.range}
+                    />
                   ) : (
                     <article
                       key={row.segment.segmentId}

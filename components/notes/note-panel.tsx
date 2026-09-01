@@ -21,9 +21,11 @@ import {
   NoteDetails,
   NoteDetailsSkeleton,
 } from "@/components/notes/note-details";
+import { ContextRail } from "@/components/notes/context-rail";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import {
   NoteAgentRail,
+  type RailTab,
 } from "@/components/notes/note-agent-rail";
 import { NoteParticipantAvatars } from "@/components/notes/note-participants";
 import { NoteSummary } from "@/components/notes/note-summary";
@@ -54,8 +56,11 @@ import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 
-/** 공유 챗봇이 사라지면서 `chat`이 빠졌습니다 — 대화는 이제 탭이 아니라 레일입니다. */
-export type NoteTab = "details" | "transcript" | "summary";
+/**
+ * 공유 챗봇이 사라지면서 `chat`이 빠졌습니다 — 대화는 이제 탭이 아니라 레일입니다.
+ * `context`는 사이드 뷰 전용입니다 — 전체 뷰에서는 레일이 그 자리를 맡습니다.
+ */
+export type NoteTab = "context" | "details" | "transcript" | "summary";
 
 const NOTE_SAFETY_POLL_MS = 30_000;
 
@@ -165,19 +170,81 @@ export function NotePanel({
   // 확인하는 중」을 그리면 같은 실패가 두 가지 뜻으로 보인다. side 경로는 이미 같은 조건으로
   // 챗 탭을 뺀다. 캐시가 있으면 `note`가 살아 있어 여기 걸리지 않으므로, 흐르던 스트림이
   // 일시적 조회 실패로 끊기지는 않는다.
-  const showSharedTray = view === "full" && !noteLoadFailed;
+  const showAgentRail = view === "full" && !noteLoadFailed;
   // **상주는 넓은 화면 규칙이다.** 정본은 1440 캔버스이고, 좁은 화면에서 레일은 옆이 아니라
   // 본문 아래 14rem 레인으로 눕는다 — 회의가 죽어 있을 때까지 그 레인을 세우면 전사 높이가
   // 0이 된다(모바일 landscape에서 실측). 그래서 좁은 화면에서는 살아 있을 때만 세운다.
   const meetingLive = phase === "active" || phase === "not-started";
+  // **기록 중에는 「실시간 정리」가 먼저다.** 회의 중에 「지금 무슨 일이 일어나고 있나」의
+  // 답이 그 화면이다. 끝난 회의를 열면 물어볼 곳(내 에이전트)이 먼저다.
+  //
+  // 상태에 **주어(noteId)와 근거(phase)를 함께 담는다** — 이 패널은 노트가 바뀌어도
+  // 재마운트되지 않아서(`deleteTargetId`와 같은 함정), 값만 담으면 A의 선택이 B에 남는다.
+  // phase를 담는 이유는 시작 전 노트를 연 채 회의를 시작하면 기본값이 「실시간 정리」로
+  // 따라가야 해서다 — 사용자가 직접 고른 뒤에는 그 선택을 지킨다.
+  const defaultRailTab = (p: ReturnType<typeof deriveMeetingPhase>): RailTab =>
+    p === "active" ? "context" : "personal";
+  const [rail, setRail] = useState<{
+    noteId: string;
+    phase: ReturnType<typeof deriveMeetingPhase>;
+    tab: RailTab;
+    /** 사용자가 직접 골랐다 — phase가 바뀌어도 기본값으로 되돌리지 않는다. */
+    chosen: boolean;
+    /** 좁은 화면에서 접힌 레일을 펼쳤다. 탭 값으로 가르면 항상 참이라 접힘이 죽는다. */
+    touched: boolean;
+  }>(() => ({
+    noteId,
+    phase,
+    tab: defaultRailTab(phase),
+    chosen: false,
+    touched: false,
+  }));
+  // 렌더 중 보정 — effect로 미루면 이전 노트/이전 phase의 탭이 한 프레임 그려진다.
+  if (rail.noteId !== noteId) {
+    setRail({
+      noteId,
+      phase,
+      tab: defaultRailTab(phase),
+      chosen: false,
+      touched: false,
+    });
+  } else if (rail.phase !== phase) {
+    setRail({
+      ...rail,
+      phase,
+      tab: rail.chosen ? rail.tab : defaultRailTab(phase),
+    });
+  }
+  const railTab = rail.tab;
+  const railTouched = rail.touched;
+  const setRailTab = useCallback((tab: RailTab) => {
+    setRail((current) => ({ ...current, tab, chosen: true, touched: true }));
+  }, []);
   // 개인 챗봇이 한 턴을 굴리는 중이면 레일을 접으면 안 된다 — 중지도 도구 승인도 그 안에만
   // 있는데, 레일이 슬롯을 쥐고 있어 떠 있는 FAB로 되돌아가지도 않는다. 다른 멤버가 회의를
   // 끝내는 순간 좁은 화면에서 답변이 통째로 화면 밖으로 나가던 자리다.
   const { isTurnActive: personalTurnActive } = usePersonalChat();
-  // 좁은 화면에서 **대화를 펼칠지**.
-  const railLiveNow = meetingLive || phase === "paused" || personalTurnActive;
-  /** 한 턴이 도는 중. 뷰를 바꾸면 그 답변에 닿을 길이 끊긴다. */
+  // 좁은 화면에서 **대화를 펼칠지**. 접혀도 탭 줄은 남는다 — 통째로 감추면 「내 에이전트」를
+  // 고를 버튼까지 감춰져서 종료된 회의에는 들어갈 길이 없어진다(닭이 먼저냐 달걀이 먼저냐).
+  const railLiveNow =
+    meetingLive || phase === "paused" || railTouched || personalTurnActive;
+  /** 어느 쪽이든 한 턴이 도는 중. 뷰를 바꾸면 그 답변에 닿을 길이 끊긴다. */
   const turnActive = personalTurnActive;
+  /**
+   * **사이드 뷰에는 레일이 없다.** 전체 뷰는 448 레일에 「실시간 정리」를 얹지만 860 시트에는
+   * 그 자리가 없어서 노트 탭으로 내린다 — 공유 챗이 이미 같은 문제를 그렇게 푼다.
+   * 컴포넌트는 하나이고 서는 자리만 둘이다.
+   */
+  const showSideContextTab =
+    view === "side" &&
+    !noteLoadFailed &&
+    // **회의가 끝나도 남긴다.** 원장은 종료로 지워지지 않고, 회의 중에 본 것을 나중에
+    // 되짚는 것이 이 화면의 절반이다. 여기서 탭을 걷으면 사이드 뷰에는 되짚을 길이 없다.
+    //
+    // **`not-started` 는 예외인데, `unknown` 에서 고른 뒤 확정되는 경로가 있다.** 그때
+    // trigger 와 content 만 사라지고 controlled `tab="context"` 는 남아 빈 면이 된다.
+    // 지금 그 탭을 보고 있으면 유지한다 — `showSideChatTab` 이 같은 이유로 같은 모양이다.
+    (phase !== "not-started" || tab === "context");
   const showSummaryTab =
     view === "full" ||
     (view === "side" &&
@@ -477,6 +544,11 @@ export function NotePanel({
               <TabsTrigger value="transcript" className={TAB_ITEM}>
                 전사
               </TabsTrigger>
+              {showSideContextTab ? (
+                <TabsTrigger value="context" className={TAB_ITEM}>
+                  실시간 정리
+                </TabsTrigger>
+              ) : null}
               {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
               {showSummaryTab ? (
                 <TabsTrigger value="summary" className={TAB_ITEM}>
@@ -670,6 +742,14 @@ export function NotePanel({
               )}
             </div>
           </TabsContent>
+          {showSideContextTab ? (
+            <TabsContent value="context" className="min-h-0 flex-1">
+              <ContextRail
+                onEvidenceSelect={jumpToSegment}
+                meetingEnded={phase === "ended"}
+              />
+            </TabsContent>
+          ) : null}
           {showSummaryTab ? (
             <TabsContent value="summary" className="min-h-0 flex-1">
               <ScrollArea className="h-full">
@@ -716,7 +796,7 @@ export function NotePanel({
         ) : null}
       </div>
 
-      {showSharedTray ? (
+      {showAgentRail ? (
         // 넓은 화면은 우측 레일(440 — design.pen `L4PpR`), 좁은 세로 화면은 본문 아래
         // 스택이다. 짧은 가로 화면은 14rem 높이 floor가 전사를 밀어내므로 옆 열로 둔다.
         //
@@ -733,7 +813,13 @@ export function NotePanel({
             !railLiveNow && "max-lg:h-auto max-lg:landscape:h-auto"
           )}
         >
-          <NoteAgentRail foldedOnNarrow={!railLiveNow} />
+          <NoteAgentRail
+            tab={railTab}
+            onTabChange={setRailTab}
+            onEvidenceSelect={jumpToSegment}
+            foldedOnNarrow={!railLiveNow}
+            meetingEnded={phase === "ended"}
+          />
         </div>
       ) : null}
     </div>

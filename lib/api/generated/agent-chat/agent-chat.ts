@@ -885,7 +885,7 @@ export const getSendAgentChatMessageUrl = (chatId: string) => {
 };
 
 /**
- * 동시 구독 상한을 넘겼다. **턴은 계속 돈다** — 거부된 것은 이 연결뿐이고, 잠시 뒤 다시 붙으면 버퍼에 쌓인 것부터 이어받는다. 턴을 실패로 그리면 안 된다.
+ * 메시지를 heymoa-ai로 중계하고 SSE(text/event-stream)로 passthrough한다. 이벤트 페이로드 계약은 AsyncAPI(asyncapi-web-server.yml) 참고. 검증은 스트림을 열기 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400이다. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받고(오류 배너로 그리면 눌러도 또 막혀 무한 루프가 된다), 동시 구독 상한을 넘겼으면 턴은 계속 도니 잠시 뒤 다시 붙어 버퍼부터 이어받으면 된다.
  * @summary 메시지 전송 (SSE 중계)
  */
 export const sendAgentChatMessage = async (
@@ -1350,7 +1350,7 @@ export const getCreateAgentChatUrl = (workspaceId: string) => {
 };
 
 /**
- * 호출자가 연결할 워크스페이스의 멤버가 아니면 워크스페이스 존재 여부를 은닉하기 위해 404로 응답한다.
+ * 워크스페이스 아래에 대화를 하나 만든다. 제목을 생략하면 기본값("새 대화")으로 만든다. **범위(어느 회의록·프로젝트를 볼지)는 대화가 아니라 메시지마다 붙는다.** 호출자가 워크스페이스의 멤버가 아니면 존재 여부를 은닉하기 위해 404로 응답한다.
  * @summary 채팅 세션 생성
  */
 export const createAgentChat = async (
@@ -1506,7 +1506,7 @@ export const getResolveToolApprovalUrl = (
 };
 
 /**
- * 승인 카드에 대한 응답. **새 SSE 를 돌려준다** — 답의 나머지 절반이 이 스트림으로 온다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. after 는 이어받기와 같은 뜻이고, 생략하면 이 재개가 뗀 블록의 시작으로 떨어진다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403.
+ * 승인 카드에 대한 응답. **새 SSE 를 돌려준다** — 답의 나머지 절반이 이 스트림으로 온다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. after 는 이어받기와 같은 뜻이고, 생략하면 이 재개가 뗀 블록의 시작으로 떨어진다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리·만료됐으면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다.
  * @summary 도구 승인/거절
  */
 export const resolveToolApproval = async (
@@ -1669,7 +1669,7 @@ export const getCancelAgentChatTurnUrl = (chatId: string, turnId: string) => {
 };
 
 /**
- * 도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 답이 막 끝난 순간에 누른 것은 경합이지 오류가 아니다. DELETE 로 쓰지 않는 이유: 턴 행은 CANCELLED 로 남고 lastTurn 이 그것을 읽는다.
+ * 도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 답이 막 끝난 순간에 누른 것은 경합이지 오류가 아니다. DELETE 로 쓰지 않는 이유: 턴 행은 CANCELLED 로 남고 lastTurn 이 그것을 읽는다. 소유권 판정이 턴 판정보다 먼저라 없거나 소유하지 않은 대화는 404로 끝나 남의 턴 존재가 새지 않고, 그 대화에 그 턴이 없으면 **대화 없음(AGENT_CHAT_NOT_FOUND)으로 접지 않은** 별도 404다.
  * @summary 턴 중지
  */
 export const cancelAgentChatTurn = async (

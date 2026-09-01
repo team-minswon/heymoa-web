@@ -2,6 +2,18 @@ import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
 // 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
 import { agentChatTurnState, runningTurnOf } from "@/lib/mocks/sse-handler";
+import {
+  CONTEXT_DEMO_NOTE_ID,
+  CONTEXT_FAILING_NOTE_ID,
+  CONTEXT_SYNTHETIC_LEDGER_NOTE_ID,
+  CONTEXT_SNAPSHOT,
+  CONTEXT_SWAP_FILLED,
+  CONTEXT_SWAP_NOTE_ID,
+  CONTEXT_SWAP_SNAPSHOT,
+  CONTEXT_TIMELINE,
+  isSwapFilled,
+} from "@/lib/mocks/context-candidates";
+import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/context-candidates/__fixtures__/synthetic-ledger-snapshot.json";
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
@@ -432,6 +444,75 @@ export const restHandlers = [
       () => mockDb.getNote(id(params.noteId)),
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
+  ),
+  // 맥락 후보. **명시적 override로 준다** — 생성 목은 무작위 success:false 를 낸다.
+  // 계약이 `openapi3.yml`에 아직 없어 생성 훅 자체가 없기도 하다.
+  http.get("*/v1/notes/:noteId/context-candidates", ({ params }) => {
+    // **실패 주입 자리.** 「분석이 실패해도 전사 확인과 회의 종료가 계속된다」를 e2e 로
+    // 지키려면 실패하는 노트가 하나 필요하다. 그 노트에서만 500 을 준다 —
+    // `_mock/foreign-lock` 과 같은 방식이다.
+    if (id(params.noteId) === CONTEXT_FAILING_NOTE_ID) {
+      return HttpResponse.json(
+        { success: false, data: null, error: { code: "INTERNAL", message: "…" } },
+        { status: 500 }
+      );
+    }
+    // 커버리지 행이 «교체»되는 노트. 처음에는 구멍 하나만 있고, WS batch 가 그것을
+    // 포화 범위로 채운다 — 행 수는 1로 유지된다.
+    //
+    // **서버 상태가 전진하는 것을 재현해야 한다.** batch 는 `invalidateContext()` 를
+    // 부르고 그 재조회가 옛 스냅샷을 돌려주면 화면이 구멍으로 되돌아간다. 첫 조회 뒤에는
+    // 채워진 범위를 준다 — 실제 서버도 batch 를 적용한 뒤에는 그렇게 답한다.
+    if (id(params.noteId) === CONTEXT_SWAP_NOTE_ID) {
+      const data = isSwapFilled()
+        ? { ...CONTEXT_SWAP_SNAPSHOT, appliedRanges: CONTEXT_SWAP_FILLED }
+        : CONTEXT_SWAP_SNAPSHOT;
+      return HttpResponse.json({ success: true, data, error: null });
+    }
+    // **실서버가 실제로 낸 원장.** 손으로 쓴 목은 내가 아는 것만 담아서, 계약을
+    // 오해했으면 목도 같이 틀린다. 이 노트만 실제 wire 를 그대로 싣는다.
+    if (id(params.noteId) === CONTEXT_SYNTHETIC_LEDGER_NOTE_ID) {
+      return HttpResponse.json({
+        success: true,
+        data: SYNTHETIC_LEDGER_SNAPSHOT,
+        error: null,
+      });
+    }
+    // **없는 노트는 실서버처럼 404다.** 그리고 데모 원장은 전용 노트에만 준다 — 아무
+    // 노트에나 같은 스냅샷을 돌려주면 근거 클릭이 그 노트에 없는 전사를 가리킨다.
+    return resultOf(() => {
+      mockDb.getNote(id(params.noteId));
+      return id(params.noteId) === CONTEXT_DEMO_NOTE_ID
+        ? CONTEXT_SNAPSHOT
+        : { candidates: [], appliedRanges: [] };
+    }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."));
+  }),
+  http.get(
+    "*/v1/notes/:noteId/context-candidates/:candidateId/revisions",
+    ({ params }) =>
+      resultOf(() => {
+        mockDb.getNote(id(params.noteId));
+        const candidateId = id(params.candidateId);
+        /**
+         * **이력 전체를 준다(계약: revision 오름차순).** 스냅샷은 후보별 최신 head 하나라
+         * 그것만 거르면 AMEND·RETRACT 를 거친 후보도 revision 하나로 보인다 — 이력 UI 가
+         * 목에서 검증이 안 된다. 지난 판은 데모 피드(`CONTEXT_TIMELINE`)가 들고 있다.
+         */
+        const byRevision = new Map(
+          [
+            ...CONTEXT_TIMELINE.filter(
+              (entry) => entry.candidate.candidateId === candidateId
+            ).map((entry) => entry.candidate),
+            ...CONTEXT_SNAPSHOT.candidates.filter(
+              (candidate) => candidate.candidateId === candidateId
+            ),
+          ].map((candidate) => [candidate.revision, candidate] as const)
+        );
+        const revisions = [...byRevision.values()].sort(
+          (a, b) => a.revision - b.revision
+        );
+        return { candidateId, revisions };
+      }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."))
   ),
   http.put("*/v1/notes/:noteId/participants", async ({ request, params }) =>
     resultOf(

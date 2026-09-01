@@ -51,7 +51,8 @@ describe("mockDb", () => {
           .listProjects(workspace.workspaceId)
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
-    ).toHaveLength(13);
+    // 13 + 후보 e2e 전용 셋 — 커버리지 추종(0008)·정리 실패(0006)·합성 원장(0007).
+    ).toHaveLength(16);
   });
 
   it("does not seed IN_PROGRESS without a meeting starter", () => {

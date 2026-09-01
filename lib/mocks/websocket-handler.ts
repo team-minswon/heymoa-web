@@ -1,6 +1,18 @@
 import { ws } from "msw";
 
 import {
+  CONTEXT_APPLIED_RANGES,
+  CONTEXT_DEMO_NOTE_ID,
+  CONTEXT_EVENT_ID,
+  CONTEXT_TIMELINE,
+  CONTEXT_SWAP_FILL,
+  markSwapFilled,
+  resetSwapFill,
+  CONTEXT_SWAP_NOTE_ID,
+  LIVE_UTTERANCE,
+  LIVE_UTTERANCE_TEXT,
+} from "@/lib/mocks/context-candidates";
+import {
   createMockTranscriptionScenario,
   type MockTranscriptionScenario,
 } from "@/lib/mocks/transcription-scenario";
@@ -86,6 +98,9 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
     let subscriptionId = "sub-0";
     let subscriptionDestination = "/user/queue/transcription-events";
     let messageSequence = 1;
+    /** note topic 구독. `/user/queue/...`(녹음자 전용)와 별개다. */
+    const noteTopics = new Map<string, { id: string; destination: string }>();
+    const noteTopicTimers: number[] = [];
 
     const sendEvent = (event: ServerEvent) => {
       client.send(
@@ -102,6 +117,142 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
       );
     };
 
+    /**
+     * **`/topic/notes/{noteId}` 발행은 이 목이 처음 만든다.** 서비스 워커가 붙기 전에는 web이
+     * 후보 화면을 볼 방법이 없었다.
+     *
+     * 실제 주기를 압축해서 흘린다 — 회의 42분을 그대로 기다릴 수 없으므로 `SPEED`로 나눈다.
+     * 압축해도 **사건 사이가 성기다는 성질은 남는다**. 그게 이 화면의 실제 모습이다.
+     *
+     * **압축이 공짜가 아니다.** 60배로 흘리면 note topic event가 4~7초마다 오는데, 그동안
+     * 공유 챗의 30초 안전 폴링이 한 번도 안 돌았다(`smoke.spec.ts` 「locks the composer」가
+     * 그것으로 깨졌다). 실제 주기(배치 15~25초)에서도 같은 일이 일어날 수 있어 별도로
+     * 확인이 필요하다. 여기서는 전용 노트로 가둬 다른 화면을 안 건드린다.
+     */
+    const SPEED = 60;
+
+    /**
+     * **커버리지 행 «교체» 전용 피드.** 구멍 하나만 있는 상태에서 그 구멍을 포화 범위로
+     * 채운다 — 행 수는 1로 유지되고 종류만 바뀐다. 개수만 세는 추종 키가 못 보는 전이다.
+     */
+    const startSwapFeed = (noteId: string, send: (body: unknown) => void) => {
+      resetSwapFill();
+      noteTopicTimers.push(
+        window.setTimeout(() => {
+          markSwapFilled();
+          send({
+            type: "context.classification.batch.applied",
+            eventId: CONTEXT_EVENT_ID(90),
+            occurredAt: CONTEXT_SWAP_FILL.appliedAt,
+            range: CONTEXT_SWAP_FILL,
+          });
+        }, 2_500)
+      );
+    };
+
+    const startNoteTopicFeed = (noteId: string) => {
+      // **전용 노트에서만 흘린다.** 모든 노트에 흘리면 다른 화면의 폴링과 섞인다 —
+      // 실제로 공유 챗의 30초 안전 폴링이 굶어 e2e 하나가 깨졌다(아래 주석).
+      if (noteId !== CONTEXT_DEMO_NOTE_ID && noteId !== CONTEXT_SWAP_NOTE_ID) {
+        return;
+      }
+      const send = (body: unknown) => {
+        const topic = noteTopics.get(noteId);
+        if (!topic) return;
+        client.send(
+          stompFrame(
+            "MESSAGE",
+            {
+              subscription: topic.id,
+              "message-id": `mock-${messageSequence++}`,
+              destination: topic.destination,
+              "content-type": "application/json",
+            },
+            JSON.stringify(body)
+          )
+        );
+      };
+
+      // 치환 노트는 batch 하나만 흘린다 — 후보 피드를 섞으면 무엇이 행을 움직였는지 흐려진다.
+      if (noteId === CONTEXT_SWAP_NOTE_ID) {
+        startSwapFeed(noteId, send);
+        return;
+      }
+
+      /**
+       * **살아 있는 발화 하나를 먼저 흘린다.** partial 두 토막이 자라다가 final 이 걷는다.
+       *
+       * 후보 피드보다 앞에 두는 것은 의도다 — 첫 후보가 4초 뒤에 오는데 partial 을 그
+       * 뒤에 두면 e2e 가 확인할 창이 회의 끝까지 밀린다.
+       *
+       * final 을 넉넉히 뒤에 둔다. 둘째 partial 과 final 사이가 **두 토막이 동시에 보이는
+       * 유일한 창**이라, 좁으면 테스트가 화면을 못 보고 지나간다.
+       */
+      const live = LIVE_UTTERANCE;
+      const partialFrame = (confirmedText: string, pendingText: string) => ({
+        type: "transcript.partial",
+        transcriptionSessionId: live.transcriptionSessionId,
+        utteranceId: live.utteranceId,
+        confirmedText,
+        pendingText,
+      });
+      noteTopicTimers.push(
+        // 확정 토막이 아직 없다 — 미확정만 뜬다.
+        window.setTimeout(() => send(partialFrame("", live.confirmed)), 700),
+        // 앞이 굳고 뒤가 흐리다. **둘 다 보이는 순간이 여기서 시작된다.**
+        window.setTimeout(
+          () => send(partialFrame(live.confirmed, live.pending)),
+          1_500
+        ),
+        window.setTimeout(
+          () =>
+            send({
+              type: "transcript.final",
+              transcriptionSessionId: live.transcriptionSessionId,
+              segmentId: live.segmentId,
+              utteranceId: live.utteranceId,
+              sequence: live.sequence,
+              text: LIVE_UTTERANCE_TEXT,
+              startedAtMs: live.startedAtMs,
+              endedAtMs: live.endedAtMs,
+            }),
+          6_000
+        )
+      );
+
+      CONTEXT_TIMELINE.forEach((entry, index) => {
+        noteTopicTimers.push(
+          window.setTimeout(() => {
+            send({
+              type: "context.candidate.changed",
+              eventId: CONTEXT_EVENT_ID(index),
+              changeOrdinal: 0,
+              occurredAt: new Date(entry.atMs).toISOString(),
+              candidate: entry.candidate,
+            });
+          }, entry.atMs / SPEED)
+        );
+      });
+
+      CONTEXT_APPLIED_RANGES.forEach((coverage, index) => {
+        noteTopicTimers.push(
+          window.setTimeout(() => {
+            send({
+              type: "context.classification.batch.applied",
+              eventId: CONTEXT_EVENT_ID(50 + index),
+              occurredAt: coverage.appliedAt,
+              range: coverage,
+            });
+          }, coverage.toEndedAtMs / SPEED)
+        );
+      });
+    };
+
+    client.addEventListener("close", () => {
+      noteTopicTimers.forEach((timer) => window.clearTimeout(timer));
+      noteTopicTimers.length = 0;
+    });
+
     client.addEventListener("message", (event) => {
       void parseFrame(event.data).then(async (frame) => {
         if (!frame) return;
@@ -116,8 +267,23 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           return;
         }
         if (frame.command === "SUBSCRIBE") {
+          const destination = frame.headers.destination ?? "";
+          const noteTopic = destination.match(/^\/topic\/notes\/([^/]+)$/);
+          if (noteTopic) {
+            noteTopics.set(noteTopic[1], {
+              id: frame.headers.id,
+              destination,
+            });
+            if (frame.headers.receipt) {
+              client.send(
+                stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt })
+              );
+            }
+            startNoteTopicFeed(noteTopic[1]);
+            return;
+          }
           subscriptionId = frame.headers.id;
-          subscriptionDestination = frame.headers.destination;
+          subscriptionDestination = destination;
           if (frame.headers.receipt) {
             client.send(
               stompFrame("RECEIPT", { "receipt-id": frame.headers.receipt })

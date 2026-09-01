@@ -38,6 +38,13 @@ const members = vi.hoisted(() => ({ rows: [] as unknown[] }));
 /** 워크스페이스의 임시 참여자. 이 회의에 없는 사람은 **검색해야** 후보로 나온다. */
 const guests = vi.hoisted(() => ({ rows: [] as unknown[] }));
 
+// 이 파일이 보는 것은 아카이브지 실시간 배선이 아니다 — 커버리지 원장은 비워 둔다.
+vi.mock("@/components/notes/note-realtime-provider", () => ({
+  useNoteRealtime: () => ({
+    context: { state: { appliedRanges: [] } },
+  }),
+}));
+
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: () => {} }),
 }));
