@@ -59,6 +59,17 @@ const MAX_CONGESTION_MS = CAPTURE_TUNING.congestionMs;
 // STOMP 재연결(소켓 수준)과는 다른 층이다. 이것은 **세션을 다시 여는** 횟수다.
 const MAX_REOPEN_ATTEMPTS = 5;
 
+// 재개를 거절당했을 때 다시 묻기까지의 간격. **합이 63초라 서버의
+// `transcription.watchdog.stale-after` 60초를 넘긴다** — 서버가 죽으면 옛 세션이 `ACTIVE` 로
+// 남아 그 시간 동안 `startSession` 이 거절되므로, 더 짧게 포기하면 **이중화가 대비하는 바로
+// 그 경우에** 재개가 안 된다.
+//
+// 지수인 이유는 상한이 아니라 **흔한 경우** 때문이다. 서버가 금방 돌아오면 1초 만에 붙는다.
+const REOPEN_BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 32_000];
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
   private socket: SocketPort | null = null;
@@ -299,12 +310,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
     await this.socket?.close().catch(() => undefined);
     this.socket = null;
-    let sessionId: string | null = null;
-    try {
-      sessionId = await reopenSession();
-    } catch {
-      sessionId = null;
-    }
+    const sessionId = await this.requestSession(reopenSession);
     if (this.stopping || this.closing || this.failed) return;
     if (!sessionId) {
       this.fail(reason);
@@ -317,6 +323,29 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       await this.openSocket(sessionId);
     } catch {
       this.fail(reason);
+    }
+  }
+
+  /**
+   * 새 세션을 얻을 때까지 [REOPEN_BACKOFF_MS] 를 따라 다시 묻는다. 다 소진하면 `null`.
+   *
+   * **거절과 오류를 같게 다룬다.** 둘 다 원인이 「서버가 아직 옛 세션을 들고 있다」이고,
+   * 그것은 기다리면 풀린다 — 서버 워치독이 걷거나 시작 경로의 게으른 정리가 걷는다.
+   */
+  private async requestSession(
+    reopenSession: () => Promise<string | null>
+  ): Promise<string | null> {
+    for (let attempt = 0; ; attempt += 1) {
+      if (this.stopping || this.closing || this.failed) return null;
+      try {
+        const sessionId = await reopenSession();
+        if (sessionId) return sessionId;
+      } catch {
+        // 다음 간격에서 다시 묻는다
+      }
+      const delay = REOPEN_BACKOFF_MS[attempt];
+      if (delay === undefined) return null;
+      await sleep(delay);
     }
   }
 
