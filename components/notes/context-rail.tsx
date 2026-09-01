@@ -75,6 +75,20 @@ const GROUP_ORDER: ReadonlyArray<ContextCandidateHead["kind"]> = [
   "INSIGHT",
 ];
 
+/** 아무것도 안 접힌 상태. 노트가 바뀐 프레임에서 매번 새 Set 을 만들지 않는다. */
+const NO_COLLAPSED: ReadonlySet<string> = new Set();
+
+/**
+ * 묶음이 접히고 펼쳐지는 움직임. `context-candidate-card.tsx` · `note-summary.tsx` 와 같은
+ * 값이다 — 같은 면에서 열리고 닫히는 것들이 저마다 다른 속도로 움직이면 화면이 한 물건으로
+ * 안 읽힌다.
+ */
+const GROUP_TRANSITION = {
+  type: "spring" as const,
+  bounce: 0,
+  duration: 0.2,
+};
+
 // 내부 동기화 용어(배치·REST·revision)를 제품 화면에 내보내지 않는다 — rule `architecture`
 // 「제품 UI가 내부를 드러내지 않습니다」. 사용자가 읽는 것은 무엇이 정리됐는가뿐이다.
 function activityCopy(activity: ContextActivity): {
@@ -324,18 +338,41 @@ export function ContextRail({
   meetingEnded?: boolean;
 }) {
   const { context, noteId } = useNoteRealtime();
-  // **필터에 주어(noteId)를 담는다.** 이 레일은 노트가 바뀌어도 재마운트되지 않아서,
-  // 값만 담으면 A에서 고른 유형이 B에 남아 빈 원장으로 오해하게 만든다.
-  const [filterState, setFilterState] = useState<{
+  const reduced = useReducedMotion();
+  // **화면 상태에 주어(noteId)를 담는다.** 이 레일은 노트가 바뀌어도 재마운트되지 않아서,
+  // 값만 담으면 A에서 고른 유형이 B에 남아 빈 원장으로 오해하게 만든다. **접어 둔 묶음도
+  // 같다** — A에서 접은 「결정」이 B에서 접힌 채로 서면 그 회의에 결정이 없는 것으로 읽힌다.
+  const [railState, setRailState] = useState<{
     noteId: string;
     filter: Filter;
-  }>({ noteId, filter: "ALL" });
-  // 렌더 중 보정 — effect로 미루면 이전 노트의 필터가 한 프레임 적용된다.
-  if (filterState.noteId !== noteId) {
-    setFilterState({ noteId, filter: "ALL" });
+    collapsed: ReadonlySet<string>;
+  }>({ noteId, filter: "ALL", collapsed: NO_COLLAPSED });
+  // 렌더 중 보정 — effect로 미루면 이전 노트의 상태가 한 프레임 적용된다.
+  if (railState.noteId !== noteId) {
+    setRailState({ noteId, filter: "ALL", collapsed: NO_COLLAPSED });
   }
-  const filter = filterState.noteId === noteId ? filterState.filter : "ALL";
-  const setFilter = (next: Filter) => setFilterState({ noteId, filter: next });
+  const ofThisNote = railState.noteId === noteId;
+  const filter = ofThisNote ? railState.filter : "ALL";
+  const setFilter = (next: Filter) =>
+    setRailState((current) => ({ ...current, noteId, filter: next }));
+  /**
+   * **접어 둔 묶음.** 없는 것이 기본이다 — 처음 열었을 때 접혀 있으면 회의 중에 무엇이
+   * 쌓였는지 보려고 매번 일곱 번 펴야 한다.
+   *
+   * 담아 두는 것은 **접힌 쪽**이다. 펼친 쪽을 담으면 나중에 생긴 유형이 접힌 채로 나타난다 —
+   * 실시간 원장이라 묶음은 회의 도중에 새로 생긴다.
+   *
+   * 필터를 오가도 남는다. 「결정」을 접어 두고 다른 칩을 봤다가 「전체」로 돌아왔을 때
+   * 다시 펴져 있으면 접은 일이 없던 일이 된다. **노트를 넘기면 지워진다** — 필터와 함께
+   * `railState` 가 진다.
+   */
+  const collapsed = ofThisNote ? railState.collapsed : NO_COLLAPSED;
+  const toggleGroup = (kind: string) =>
+    setRailState((current) => {
+      const next = new Set(current.collapsed);
+      if (!next.delete(kind)) next.add(kind);
+      return { ...current, noteId, collapsed: next };
+    });
   /**
    * **「전체」를 훑는 화면으로 그릴지.**
    *
@@ -546,49 +583,111 @@ export function ContextRail({
                 const headingId = group.kind
                   ? `context-group-${group.kind}`
                   : "context-rail-heading";
+                const listId = group.kind
+                  ? `context-group-list-${group.kind}`
+                  : undefined;
+                // 머리가 없는 화면(유형을 좁혀 놓은 네 벌)은 접을 손잡이도 없다 — 늘 펴져 있다.
+                const open = group.kind === null || !collapsed.has(group.kind);
+                const list = (
+                  <ul
+                    id={listId}
+                    aria-labelledby={headingId}
+                    className={cn(
+                      "flex flex-col gap-[11px]",
+                      // 머리와 목록 사이 11. **머리가 아니라 목록이 진다** — 머리에 두면
+                      // 접었을 때 빈 여백만 남아 묶음 간격이 들쭉날쭉해진다.
+                      group.kind && "pt-[11px]"
+                    )}
+                  >
+                    {group.cards.map((card) => (
+                      <ContextCandidateCard
+                        key={card.candidateId}
+                        card={card}
+                        onEvidenceSelect={onEvidenceSelect}
+                        kindInGroupHeader={group.kind !== null}
+                      />
+                    ))}
+                  </ul>
+                );
                 return (
                   <section key={group.kind ?? "all"}>
                     {group.kind ? (
                       // pen `A3guYz`: 아이콘 · 라벨 · **남는 폭을 채우는 줄** · mono 개수.
                       // 줄이 라벨과 개수 사이를 지나서 머리 자체가 구분선 노릇을 한다.
-                      <div className="flex items-center gap-[9px] px-0.5 pb-[11px]">
-                        {(() => {
-                          const KindIcon = CONTEXT_KIND_ICON[group.kind];
-                          return (
-                            <KindIcon
-                              aria-hidden
-                              className="size-[15px] shrink-0 text-[var(--el-body)]"
-                            />
-                          );
-                        })()}
-                        <h4
-                          id={headingId}
-                          className="text-[14px] font-semibold text-[var(--el-ink)]"
+                      //
+                      // **머리 전체가 접는 손잡이다.** 오른쪽 표시만 누를 자리로 두면 440
+                      // 레일에서 14px 짜리 과녁 옆의 머리 전체가 죽은 영역이 된다.
+                      // `-my-1 py-1` — 과녁만 위아래로 넓히고 자리는 그대로 둔다.
+                      // `id` 는 h4 가 아니라 라벨에 붙는다 — 머리 전체를 버튼으로 만들면서
+                      // h4 안에 개수까지 들어와, h4 를 가리키면 목록 이름이 「결정 4」가 된다.
+                      <h4>
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          aria-controls={listId}
+                          onClick={() => toggleGroup(group.kind)}
+                          className="group/head -my-1 flex w-full items-center gap-[9px] px-0.5 py-1 text-left"
                         >
-                          {CONTEXT_KIND_LABEL[group.kind]}
-                        </h4>
-                        <span
-                          aria-hidden
-                          className="h-px min-w-0 flex-1 bg-[var(--el-hairline)]"
-                        />
-                        <span className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-                          {group.cards.length}
-                        </span>
-                      </div>
+                          {(() => {
+                            const KindIcon = CONTEXT_KIND_ICON[group.kind];
+                            return (
+                              <KindIcon
+                                aria-hidden
+                                className="size-[15px] shrink-0 text-[var(--el-body)]"
+                              />
+                            );
+                          })()}
+                          <span
+                            id={headingId}
+                            className="text-[14px] font-semibold text-[var(--el-ink)]"
+                          >
+                            {CONTEXT_KIND_LABEL[group.kind]}
+                          </span>
+                          <span
+                            aria-hidden
+                            className="h-px min-w-0 flex-1 bg-[var(--el-hairline)]"
+                          />
+                          {/* **개수는 접어도 남는다** — 접힌 묶음에 무엇이 몇 건 들었는지가
+                              펼칠지 말지의 근거다. */}
+                          <span className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+                            {group.cards.length}
+                          </span>
+                          <ChevronDown
+                            aria-hidden
+                            className={cn(
+                              "size-3.5 shrink-0 transition-[transform,color]",
+                              open
+                                ? "rotate-180 text-[var(--el-muted)]"
+                                : "text-[var(--el-muted-soft)]",
+                              "group-hover/head:text-[var(--el-ink)]"
+                            )}
+                          />
+                        </button>
+                      </h4>
                     ) : null}
-                    <ul
-                      aria-labelledby={headingId}
-                      className="flex flex-col gap-[11px]"
-                    >
-                      {group.cards.map((card) => (
-                        <ContextCandidateCard
-                          key={card.candidateId}
-                          card={card}
-                          onEvidenceSelect={onEvidenceSelect}
-                          kindInGroupHeader={group.kind !== null}
-                        />
-                      ))}
-                    </ul>
+                    {/* 접힘은 높이가 줄어드는 일이다 — 그냥 언마운트하면 아래 묶음들이 한
+                        프레임에 위로 튀어 어디를 접었는지 눈이 못 따라간다. 높이는
+                        `overflow-hidden` 껍데기가 지고 목록의 `pt-11`까지 함께 잘린다. */}
+                    {group.kind ? (
+                      <AnimatePresence initial={false}>
+                        {open ? (
+                          <motion.div
+                            key="cards"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={
+                              reduced ? { duration: 0 } : GROUP_TRANSITION
+                            }
+                            className="overflow-hidden"
+                          >
+                            {list}
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    ) : (
+                      list
+                    )}
                   </section>
                 );
               })}

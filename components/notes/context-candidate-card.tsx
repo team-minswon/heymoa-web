@@ -48,12 +48,23 @@ function statusNote(candidate: ContextCandidateHead) {
 /**
  * 근거가 실린 전사 시각. **「전사」 접두 없이 시각만** 적는다(design.pen 신판 `owfEJ`) —
  * 제목 줄 오른끝에 붙어서 무엇의 시각인지가 자리로 이미 드러난다.
+ *
+ * **첫 시각 하나만 적고 나머지는 개수로 접는다.** 제목은 `flex-1`이고 이 줄은 `shrink-0`이라
+ * 시각이 길어지면 늘 제목이 진다 — 근거가 다섯인 카드에서 440 레일의 제목이 낱말마다
+ * 줄바꿈됐다. 시각을 늘어놓아도 읽는 사람은 없고, 다섯 개 전부는 펼친 근거 목록에 줄마다
+ * 그대로 붙어 있다. 여기서 필요한 것은 **언제 나온 이야기인가** 하나다.
  */
 function EvidenceTimes({ evidence }: { evidence: ContextEvidence[] }) {
-  if (evidence.length === 0) return null;
+  const first = evidence[0];
+  if (!first) return null;
   return (
     <span className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-      {evidence.map((item) => formatOffset(item.startedAtMs)).join(" · ")}
+      {formatOffset(first.startedAtMs)}
+      {evidence.length > 1 ? (
+        <span className="text-[var(--el-hairline-strong)]">
+          {` +${evidence.length - 1}`}
+        </span>
+      ) : null}
     </span>
   );
 }

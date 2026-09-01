@@ -179,7 +179,7 @@ describe("ContextRail", () => {
     expect(onEvidenceSelect).toHaveBeenCalledWith("0HZX2K7M9Q4AH");
   });
 
-  it("근거가 여럿이면 시각도 여럿 적는다", () => {
+  it("근거가 여럿이면 첫 시각과 나머지 개수를 적는다", () => {
     renderRail([
       head({
         candidateId: "0HZX2K7M9Q4A1",
@@ -204,7 +204,10 @@ describe("ContextRail", () => {
       }),
     ]);
     // 「전사」 접두는 없다 — 제목 줄 오른끝이라 무엇의 시각인지가 자리로 드러난다.
-    expect(screen.getByText("31:12 · 31:52")).toBeInTheDocument();
+    // 시각을 다 늘어놓으면 제목이 그만큼 밀려 낱말마다 접힌다 — 첫 시각 + 나머지 개수다.
+    expect(screen.getByText(/31:12/)).toBeInTheDocument();
+    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(screen.queryByText(/31:52/)).not.toBeInTheDocument();
   });
 
   it("사람이 읽는 상위 분류가 목록을 좁히지만 개수는 전체를 유지한다", () => {
@@ -371,6 +374,39 @@ describe("ContextRail", () => {
     // 좁혀 놓으면 묶음이 하나뿐이라 목록이 섹션 제목에 묶인다.
     fireEvent.click(screen.getByRole("button", { name: /^결론/ }));
     expect(screen.getByRole("list", { name: "사건 흐름" })).toBeInTheDocument();
+  });
+
+  it("묶음 머리로 유형별로 접고, 접어도 개수는 남는다", () => {
+    renderRail([
+      head({ candidateId: "0HZX2K7M9Q4A1", kind: "DECISION" }),
+      head({
+        candidateId: "0HZX2K7M9Q4A2",
+        kind: "ACTION_ITEM",
+        content: "랜딩 페이지 디자인을 고친다",
+      }),
+    ]);
+
+    // 처음에는 다 펴져 있다 — 접힌 채로 시작하면 무엇이 쌓였는지 보려고 매번 펴야 한다.
+    const decision = screen.getByRole("button", { name: /^결정/ });
+    expect(decision).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/MongoDB를 사용한다/)).toBeInTheDocument();
+
+    // 접는 순간 카드가 사라지는 것이 아니라 높이가 줄어든다 — 목록이 실제로 빠지는 것은
+    // 그 움직임이 끝난 뒤라, 지금 확인할 것은 상태와 접근성 트리다.
+    fireEvent.click(decision);
+    expect(decision).toHaveAttribute("aria-expanded", "false");
+    // 접힌 묶음에 몇 건 들었는지가 펼칠지 말지의 근거다.
+    expect(decision).toHaveAccessibleName(/1/);
+
+    // **묶음마다 따로 접힌다.** 하나를 접었다고 옆 묶음까지 닫히면 접기가 아니라 필터다.
+    expect(
+      screen.getByRole("button", { name: /^할 일/ })
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/랜딩 페이지 디자인/)).toBeInTheDocument();
+
+    fireEvent.click(decision);
+    expect(decision).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/MongoDB를 사용한다/)).toBeInTheDocument();
   });
 
   it("근거 펼침이 키보드로 열리고 상태를 알린다", () => {
