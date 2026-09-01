@@ -217,6 +217,9 @@ describe("OpenAPI contract", () => {
       // 회의 상태 머신(APP-120)이 추가한 둘. `MEETING_PAUSED`는 이전 세션의 종료 사유라
       // 현재 MeetingStatus에 PAUSED가 있어도 역직렬화를 위해 남겨 둔다.
       "MEETING_ENDED",
+      // 워치독이 조각이 끊긴 세션을 닫은 것(APP-531). `CLIENT_DISCONNECTED`와 가른 이유는
+      // 워치독이 원인을 모르기 때문이다 — 브라우저가 끊었는지 서버가 죽었는지 구분이 안 된다.
+      "HEARTBEAT_TIMEOUT",
       "MEETING_PAUSED",
     ]);
   });
