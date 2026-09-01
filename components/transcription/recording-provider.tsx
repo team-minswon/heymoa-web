@@ -544,6 +544,20 @@ export function RecordingProvider({
         onLevel: publishLevel,
         onFailure: (message) =>
           failRecording(getRuntimeFailureMessage(message)),
+        // 전송이 끊기면 **새 세션을 연다.** 같은 세션에는 못 붙는다 — 서버가 disconnect 때
+        // 세션을 닫고 `READY` 만 다시 받는다(APP-531). 회의 축은 새 세션이 이어받는다.
+        onReconnectNeeded: async () => {
+          if (cancelled() || tornDown()) return null;
+          try {
+            const resumed = await api.startSession(noteId);
+            if (cancelled() || tornDown()) return null;
+            setCurrentSession(resumed);
+            invalidateLifecycleQueries(noteId);
+            return resumed.sessionId;
+          } catch {
+            return null;
+          }
+        },
       });
       controllerRef.current = controller;
       const cancelled = () =>

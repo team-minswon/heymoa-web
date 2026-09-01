@@ -25,6 +25,14 @@ export type RealtimeSessionOptions = {
   onEvent: (event: ServerEvent) => void;
   onLevel: (level: number) => void;
   onFailure: (message: string) => void;
+  /**
+   * 전송이 예기치 않게 끊겼을 때 **새 전사 세션을 열어** id 를 돌려준다. 못 열면 `null`.
+   *
+   * 같은 세션에 다시 붙는 것이 아니다 — 서버가 disconnect 때 세션을 `INTERRUPTED` 로 닫고
+   * `requireConnectable` 이 `READY` 만 받는다(APP-531). 회의 축은 새 세션이 이어받는다
+   * (`activate` 가 `sumEndedDurationMs` 로 원점을 잡는다).
+   */
+  onReconnectNeeded?: () => Promise<string | null>;
 };
 
 export type RealtimeSessionDependencies = {
@@ -46,6 +54,11 @@ type TerminalState = "completed" | "failed" | "timeout";
 // PCM 3초분이라 일시적 지연은 살아남고, 이 시간 내내 밀린 채였다면 회선이 사실상 죽은 것이다.
 const MAX_CONGESTION_MS = CAPTURE_TUNING.congestionMs;
 
+// 한 녹음에서 세션을 새로 여는 횟수의 상한. 넘으면 실패로 넘겨 사용자가 알게 한다 —
+// 서버가 오래 죽어 있는데 브라우저만 영원히 두드리면 화면이 「녹음 중」인 채로 거짓말을 한다.
+// STOMP 재연결(소켓 수준)과는 다른 층이다. 이것은 **세션을 다시 여는** 횟수다.
+const MAX_REOPEN_ATTEMPTS = 5;
+
 export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
   private socket: SocketPort | null = null;
@@ -62,6 +75,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private congestedSinceMs: number | null = null;
   /** 세션 안에서 0부터 1씩. 워크릿도 배처도 세션 경계를 모르므로 여기가 발급한다. */
   private nextChunkSeq = 0;
+  private reopenAttempts = 0;
   private readonly resendBuffer = new ResendBuffer(
     CAPTURE_TUNING.resendBufferMaxBytes
   );
@@ -89,6 +103,11 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       throw new Error("REALTIME_SESSION_CLOSED");
     }
     if (this.socket) throw new Error("REALTIME_SESSION_ALREADY_CONNECTED");
+    await this.openSocket(sessionId);
+  }
+
+  /** 소켓을 열고 마이크를 켠다. 최초 연결과 재개가 같은 길을 쓴다. */
+  private async openSocket(sessionId: string) {
     const createSocket =
       this.dependencies.createSocket ??
       ((socketOptions) => new TranscriptionSocket(socketOptions));
@@ -106,7 +125,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
           void this.close();
           return;
         }
-        this.fail(reason || `WebSocket closed (${code})`);
+        void this.reopen(reason || `WebSocket closed (${code})`);
       },
     });
     this.socket = socket;
@@ -257,6 +276,48 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
     this.options.onEvent(event);
     if (event.type === "error") void this.close();
+  }
+
+  /**
+   * 끊긴 전송을 **새 세션으로** 잇는다. 못 이으면 그때 실패로 넘긴다.
+   *
+   * 못 보낸 조각은 **버린다.** `ResendBuffer` 는 「ACK 못 받은 것을 같은 세션에 다시」를 위한
+   * 것인데 세션이 갈리면 그 전제가 없다 — 옛 세션 시간대의 소리를 새 세션에 넣으면 회의 축에서
+   * 뒤로 밀린다. 끊긴 구간은 `chunk_seq` 공백으로 남는 것이 정직하다.
+   */
+  private async reopen(reason: string) {
+    if (this.stopping || this.closing || this.failed) return;
+    const reopenSession = this.options.onReconnectNeeded;
+    if (!reopenSession) {
+      this.fail(reason);
+      return;
+    }
+    this.reopenAttempts += 1;
+    if (this.reopenAttempts > MAX_REOPEN_ATTEMPTS) {
+      this.fail(reason);
+      return;
+    }
+    await this.socket?.close().catch(() => undefined);
+    this.socket = null;
+    let sessionId: string | null = null;
+    try {
+      sessionId = await reopenSession();
+    } catch {
+      sessionId = null;
+    }
+    if (this.stopping || this.closing || this.failed) return;
+    if (!sessionId) {
+      this.fail(reason);
+      return;
+    }
+    // 새 세션은 조각 번호가 0부터다. 옛 버퍼를 들고 가면 서버가 구멍으로 읽는다.
+    this.resendBuffer.reset();
+    this.nextChunkSeq = 0;
+    try {
+      await this.openSocket(sessionId);
+    } catch {
+      this.fail(reason);
+    }
   }
 
   private fail(message: string) {
