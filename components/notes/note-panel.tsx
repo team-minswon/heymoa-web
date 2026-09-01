@@ -742,8 +742,15 @@ export function NotePanel({
               )}
             </div>
           </TabsContent>
+          {/* **`flex flex-col` 이 있어야 레일이 스크롤한다.** `TabsContent` 는 block 이라
+              이게 없으면 레일 루트의 `flex-1` 이 걸릴 데가 없어 높이가 내용만큼 자란다 —
+              안쪽 `ScrollArea` 가 넘칠 일이 없어져 스크롤바가 아예 안 생기고 목록이 패널
+              밖으로 흘러 나간다. 전사 탭이 같은 클래스를 쓰는 이유도 같다. */}
           {showSideContextTab ? (
-            <TabsContent value="context" className="min-h-0 flex-1">
+            <TabsContent
+              value="context"
+              className="flex min-h-0 flex-1 flex-col"
+            >
               <ContextRail
                 onEvidenceSelect={jumpToSegment}
                 meetingEnded={phase === "ended"}
