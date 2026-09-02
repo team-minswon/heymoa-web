@@ -138,12 +138,19 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers initialUser={initialUser}>
           <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
+            {/* 키보드 첫 탭이 nav 링크 전부를 지나지 않게. 포커스 전에는 화면 밖에 있다. */}
+            <a
+              href="#main"
+              className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:z-50 focus-visible:rounded-lg focus-visible:bg-[var(--el-ink)] focus-visible:px-4 focus-visible:py-2.5 focus-visible:text-[14px] focus-visible:font-semibold focus-visible:text-[var(--el-canvas)]"
+            >
+              본문으로 건너뛰기
+            </a>
             <NavbarGate>
               <Navbar />
             </NavbarGate>
             <GlobalRecordingIndicator />
 
-            <main className="flex-1 flex flex-col">{children}</main>
+            <main id="main" className="flex-1 flex flex-col">{children}</main>
 
             <FooterGate>
               <Footer />

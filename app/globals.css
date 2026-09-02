@@ -212,6 +212,55 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* **랜딩(마케팅 크림 면) 전용 토큰.** 제품 면의 `--el-*`와 섞이지 않게 `.landing-surface`
+   안에서만 산다 — 전역에 두면 워크스페이스까지 크림으로 물든다. 이름을 `--lp-*`로 가른 것도
+   같은 이유다. 값은 design.pen `y5u1hJ`(TA · Tiro 대조판)에서 그대로 떴다.
+
+   흐림 두 값을 나눠 둔 것은 대비 때문이다 — `--lp-faint`(#b5a698)는 목업 스크린샷 **안쪽**
+   에서만 쓴다(2.2:1, 앱 화면을 그린 삽화라 실제 앱을 따른다). 페이지가 직접 하는 말은
+   `--lp-muted`(#7c6e62, 4.65:1)를 쓴다. 둘을 바꿔 쓰면 본문이 대비를 잃는다. */
+/* 푸터는 `.landing-surface` **밖**에 산다 — 레이아웃이 페이지 바깥에 얹기 때문이다. 값만
+   같이 쓰고 면의 칠(크림 배경)은 안 받는다. */
+.landing-surface,
+.landing-footer {
+  --lp-canvas: #faf8f5;
+  --lp-cream: #fdf4e4;
+  --lp-cream-soft: #f7efe3;
+  --lp-card: #ffffff;
+  --lp-ink: #33231a;
+  --lp-body: #57493f;
+  --lp-muted: #7c6e62;
+  --lp-faint: #b5a698;
+  --lp-rule: #e6ded4;
+  --lp-rule-soft: #f0eae1;
+  --lp-rule-strong: #cfc6ba;
+  --lp-dark: #2e1f17;
+  --lp-dark-soft: #3a2a1f;
+  --lp-dark-rule: #54402f;
+  --lp-on-dark: #f6efe6;
+  --lp-on-dark-soft: #b7a696;
+  --lp-green: #366c4f;
+  --lp-green-soft: #8fb89f;
+  --lp-accent: #4a3225;
+  --lp-rec: #b0472a;
+  --lp-rec-soft: #f7e6e0;
+  --lp-rec-ink: #8a3f26;
+}
+
+.landing-surface {
+  background: var(--lp-canvas);
+  color: var(--lp-ink);
+}
+
+/* 시안의 기본 조판으로 되돌린다. `body`가 깔아 둔 0.16px 트래킹과 24px 행간은 제품 면의
+   값이고, 여기서 상속되면 명시 행간을 안 준 요소마다 몇 px씩 부푼다 — 「왜 만드나」의 칩
+   줄이 줄마다 7px씩 커져서 섹션이 72px 밀렸다. 값을 준 곳은 각자 덮어쓴다. */
+.landing-surface,
+.landing-footer {
+  letter-spacing: normal;
+  line-height: normal;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
