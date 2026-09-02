@@ -103,7 +103,10 @@ export function Features() {
           </h2>
         </div>
 
-        <div className="grid gap-3.5 lg:grid-cols-2 lg:gap-6">
+        {/* 두 열로 갈리는 지점을 `md`로 당긴다 — 768에서 한 열이면 카드가 728px로 늘어나고,
+            그 안의 목업은 350px 카드에 맞춰 그린 11px 조판이라 텅 빈 판처럼 보인다.
+            두 열이면 카드가 357px로 시안의 350에 붙는다. */}
+        <div className="grid gap-3.5 md:grid-cols-2 lg:gap-6">
           {CARDS.map((c) => (
             <div
               key={c.title}
