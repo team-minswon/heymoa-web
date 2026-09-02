@@ -48,7 +48,7 @@ export function Faq() {
   const baseId = useId();
 
   return (
-    <section id="faq" className={`${SECTION_X} ${SECTION_TOP}`}>
+    <section id="faq" className={`${SECTION_X} ${SECTION_TOP} scroll-mt-24`}>
       <div className={`${CONTAINER} flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-20`}>
         <div className="flex shrink-0 flex-col gap-3 lg:w-[340px] lg:gap-3.5">
           <Eyebrow>자주 묻는 질문</Eyebrow>

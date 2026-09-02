@@ -20,8 +20,12 @@ export function Principle() {
           <p className="m-0 text-[13px] font-semibold tracking-[0.4px] text-[var(--lp-green-soft)]">
             원칙
           </p>
-          <h2 className="m-0 mt-3 max-w-[640px] text-balance break-keep text-[25px] lg:mt-0 font-extrabold leading-[1.32] tracking-[-0.8px] text-[var(--lp-on-dark)] lg:text-[40px] lg:leading-[1.3] lg:tracking-[-1.4px]">
-            근거 없이 남기지 않고, 승인 없이 내보내지 않습니다.
+          {/* 넓은 화면에서는 절마다 줄을 끊는다 — 시안이 `<br>`로 그렇게 짰고, 그래야
+              「무엇을 안 하나」 둘이 나란히 읽힌다. 자동 균형에 맡기면 「승인」이 첫 줄
+              끝에 붙어 두 절이 뒤섞인다. 좁은 화면은 그냥 흘려 보낸다. */}
+          <h2 className="m-0 mt-3 max-w-[640px] text-balance break-keep text-[25px] font-extrabold leading-[1.32] tracking-[-0.8px] text-[var(--lp-on-dark)] lg:mt-0 lg:text-[40px] lg:leading-[1.3] lg:tracking-[-1.4px]">
+            <span className="lg:block">근거 없이 남기지 않고,</span>{" "}
+            <span className="lg:block">승인 없이 내보내지 않습니다.</span>
           </h2>
           <p className="m-0 mt-4 max-w-[620px] break-keep text-[14.5px] leading-[1.78] text-[var(--lp-on-dark-soft)] lg:mt-0 lg:text-[16px] lg:leading-[1.75]">
             정리된 항목에는 그 말이 나온 자리가 근거로 붙습니다. 지난 회의를 다시

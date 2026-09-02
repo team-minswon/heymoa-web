@@ -90,9 +90,10 @@ const STEPS: Step[] = [
           01:24
         </span>
         <span className="flex-1" />
-        <span className="text-[12px] text-[var(--lp-muted)]">마이크 입력</span>
-        <span aria-hidden className="block h-[5px] w-14 shrink-0 overflow-hidden rounded-full bg-[var(--lp-rule)]">
-          <span className="block h-[5px] w-8 bg-[var(--lp-green)]" />
+        {/* 350px 카드에서는 라벨이 미터를 밀어낸다 — 시안도 좁은 화면에서는 뺐다. */}
+        <span className="hidden text-[12px] text-[var(--lp-muted)] lg:inline">마이크 입력</span>
+        <span aria-hidden className="block h-[5px] w-12 shrink-0 overflow-hidden rounded-full bg-[var(--lp-rule)] lg:w-14">
+          <span className="block h-[5px] w-[29px] bg-[var(--lp-green)] lg:w-[34px]" />
         </span>
       </div>
     ),

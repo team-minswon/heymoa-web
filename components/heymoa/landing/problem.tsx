@@ -64,7 +64,7 @@ const ROWS: Row[] = [
 
 export function Problem() {
   return (
-    <section id="why" className={`${SECTION_X} ${SECTION_TOP}`}>
+    <section id="why" className={`${SECTION_X} ${SECTION_TOP} scroll-mt-24`}>
       <div className={CONTAINER}>
         <Eyebrow>왜 만드나</Eyebrow>
         <SectionTitle className="max-w-[900px]">

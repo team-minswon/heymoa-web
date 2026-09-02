@@ -152,7 +152,11 @@ export default async function RootLayout({
             </NavbarGate>
             <GlobalRecordingIndicator />
 
-            <main id="main" className="flex-1 flex flex-col">{children}</main>
+            {/* `tabIndex={-1}`이 있어야 건너뛰기 링크가 포커스를 여기로 옮긴다 — 없으면 해시만
+                바뀌고 포커스는 body에 남아 다음 Tab이 다시 nav로 돌아간다. */}
+            <main id="main" tabIndex={-1} className="flex-1 flex flex-col">
+              {children}
+            </main>
 
             <FooterGate>
               <Footer />
