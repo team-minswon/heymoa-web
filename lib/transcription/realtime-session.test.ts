@@ -42,12 +42,17 @@ function setup() {
   };
   const onFailure = vi.fn();
   const onEvent = vi.fn();
+  const onReconnectNeeded = vi.fn<() => Promise<string | null>>(async () => {
+    order.push("reopen");
+    return "0HZX2K7M9Q4AH";
+  });
   const controller = new BrowserRealtimeSession(
     {
       url: "ws://localhost/ws/transcriptions",
       onEvent,
       onLevel: vi.fn(),
       onFailure,
+      onReconnectNeeded,
     },
     {
       createAudio: (onChunk) => {
@@ -67,6 +72,7 @@ function setup() {
     order,
     onEvent,
     onFailure,
+    onReconnectNeeded,
     emitChunk: (chunk: ArrayBuffer, captureSamples = 0) =>
       emitChunk(chunk, captureSamples),
     emitEvent: (event: Parameters<typeof socketOptions.onEvent>[0]) =>
@@ -301,13 +307,80 @@ describe("BrowserRealtimeSession", () => {
     expect(harness.socket.reconcileConnected).toHaveBeenCalledOnce();
   });
 
-  it("treats an unexpected normal WebSocket close as a failure", async () => {
+  // 끊긴 세션에는 다시 못 붙는다 — 서버가 disconnect 때 세션을 INTERRUPTED 로 닫고
+  // `requireConnectable` 이 READY 만 받는다(APP-531). 그래서 재연결은 **새 세션을 여는 것**이다.
+  it("reopens a fresh session when the transport drops unexpectedly", async () => {
     const harness = setup();
     await harness.controller.connect("0HZX2K7M9Q4AG");
+    harness.order.length = 0;
 
-    harness.closeTransport(1000);
+    harness.closeTransport(1006, "");
+    await vi.waitFor(() => expect(harness.onReconnectNeeded).toHaveBeenCalled());
 
-    expect(harness.onFailure).toHaveBeenCalledWith("WebSocket closed (1000)");
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    expect(harness.order).toContain("reopen");
+    expect(harness.order).toContain("socket-connect");
+  });
+
+  // 서버가 죽어 있으면 옛 세션이 ACTIVE 로 남아 `startSession` 이 거절당한다. 첫 거절에
+  // 포기하면 **이중화가 노리는 바로 그 경우에** 재개가 안 된다.
+  it("retries the reopen with backoff instead of giving up on the first rejection", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      harness.onReconnectNeeded
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+      harness.order.length = 0;
+
+      harness.closeTransport(1006, "");
+      await vi.advanceTimersByTimeAsync(4_000);
+
+      expect(harness.onFailure).not.toHaveBeenCalled();
+      expect(harness.onReconnectNeeded).toHaveBeenCalledTimes(3);
+      expect(harness.order).toContain("socket-connect");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // 서버가 오래 죽어 있으면 브라우저가 영원히 두드리면 안 된다. 다만 그 「오래」가
+  // 서버 `transcription.watchdog.stale-after` 60초보다 짧으면 안 된다.
+  it("fails only after the backoff outlasts the server stale-after", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      harness.onReconnectNeeded.mockResolvedValue(null);
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+
+      harness.closeTransport(1006, "");
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(harness.onFailure).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(harness.onFailure).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // 1000 이어도 `reason` 이 "completed" 가 아니면 예기치 않은 종료다. 이제는 즉시 실패가
+  // 아니라 재개를 시도하고, **다 소진했을 때** 그 이유를 그대로 들고 실패한다.
+  it("surfaces the close reason when an unexpected normal close cannot reopen", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      harness.onReconnectNeeded.mockResolvedValue(null);
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+
+      harness.closeTransport(1000);
+      await vi.advanceTimersByTimeAsync(65_000);
+
+      expect(harness.onFailure).toHaveBeenCalledWith("WebSocket closed (1000)");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("numbers chunks from zero and carries the capture position", async () => {

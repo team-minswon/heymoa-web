@@ -25,6 +25,14 @@ export type RealtimeSessionOptions = {
   onEvent: (event: ServerEvent) => void;
   onLevel: (level: number) => void;
   onFailure: (message: string) => void;
+  /**
+   * 전송이 예기치 않게 끊겼을 때 **새 전사 세션을 열어** id 를 돌려준다. 못 열면 `null`.
+   *
+   * 같은 세션에 다시 붙는 것이 아니다 — 서버가 disconnect 때 세션을 `INTERRUPTED` 로 닫고
+   * `requireConnectable` 이 `READY` 만 받는다(APP-531). 회의 축은 새 세션이 이어받는다
+   * (`activate` 가 `sumEndedDurationMs` 로 원점을 잡는다).
+   */
+  onReconnectNeeded?: () => Promise<string | null>;
 };
 
 export type RealtimeSessionDependencies = {
@@ -46,6 +54,22 @@ type TerminalState = "completed" | "failed" | "timeout";
 // PCM 3초분이라 일시적 지연은 살아남고, 이 시간 내내 밀린 채였다면 회선이 사실상 죽은 것이다.
 const MAX_CONGESTION_MS = CAPTURE_TUNING.congestionMs;
 
+// 한 녹음에서 세션을 새로 여는 횟수의 상한. 넘으면 실패로 넘겨 사용자가 알게 한다 —
+// 서버가 오래 죽어 있는데 브라우저만 영원히 두드리면 화면이 「녹음 중」인 채로 거짓말을 한다.
+// STOMP 재연결(소켓 수준)과는 다른 층이다. 이것은 **세션을 다시 여는** 횟수다.
+const MAX_REOPEN_ATTEMPTS = 5;
+
+// 재개를 거절당했을 때 다시 묻기까지의 간격. **합이 63초라 서버의
+// `transcription.watchdog.stale-after` 60초를 넘긴다** — 서버가 죽으면 옛 세션이 `ACTIVE` 로
+// 남아 그 시간 동안 `startSession` 이 거절되므로, 더 짧게 포기하면 **이중화가 대비하는 바로
+// 그 경우에** 재개가 안 된다.
+//
+// 지수인 이유는 상한이 아니라 **흔한 경우** 때문이다. 서버가 금방 돌아오면 1초 만에 붙는다.
+const REOPEN_BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 32_000];
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
   private socket: SocketPort | null = null;
@@ -62,6 +86,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private congestedSinceMs: number | null = null;
   /** 세션 안에서 0부터 1씩. 워크릿도 배처도 세션 경계를 모르므로 여기가 발급한다. */
   private nextChunkSeq = 0;
+  private reopenAttempts = 0;
   private readonly resendBuffer = new ResendBuffer(
     CAPTURE_TUNING.resendBufferMaxBytes
   );
@@ -89,6 +114,11 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       throw new Error("REALTIME_SESSION_CLOSED");
     }
     if (this.socket) throw new Error("REALTIME_SESSION_ALREADY_CONNECTED");
+    await this.openSocket(sessionId);
+  }
+
+  /** 소켓을 열고 마이크를 켠다. 최초 연결과 재개가 같은 길을 쓴다. */
+  private async openSocket(sessionId: string) {
     const createSocket =
       this.dependencies.createSocket ??
       ((socketOptions) => new TranscriptionSocket(socketOptions));
@@ -106,7 +136,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
           void this.close();
           return;
         }
-        this.fail(reason || `WebSocket closed (${code})`);
+        void this.reopen(reason || `WebSocket closed (${code})`);
       },
     });
     this.socket = socket;
@@ -257,6 +287,66 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
     this.options.onEvent(event);
     if (event.type === "error") void this.close();
+  }
+
+  /**
+   * 끊긴 전송을 **새 세션으로** 잇는다. 못 이으면 그때 실패로 넘긴다.
+   *
+   * 못 보낸 조각은 **버린다.** `ResendBuffer` 는 「ACK 못 받은 것을 같은 세션에 다시」를 위한
+   * 것인데 세션이 갈리면 그 전제가 없다 — 옛 세션 시간대의 소리를 새 세션에 넣으면 회의 축에서
+   * 뒤로 밀린다. 끊긴 구간은 `chunk_seq` 공백으로 남는 것이 정직하다.
+   */
+  private async reopen(reason: string) {
+    if (this.stopping || this.closing || this.failed) return;
+    const reopenSession = this.options.onReconnectNeeded;
+    if (!reopenSession) {
+      this.fail(reason);
+      return;
+    }
+    this.reopenAttempts += 1;
+    if (this.reopenAttempts > MAX_REOPEN_ATTEMPTS) {
+      this.fail(reason);
+      return;
+    }
+    await this.socket?.close().catch(() => undefined);
+    this.socket = null;
+    const sessionId = await this.requestSession(reopenSession);
+    if (this.stopping || this.closing || this.failed) return;
+    if (!sessionId) {
+      this.fail(reason);
+      return;
+    }
+    // 새 세션은 조각 번호가 0부터다. 옛 버퍼를 들고 가면 서버가 구멍으로 읽는다.
+    this.resendBuffer.reset();
+    this.nextChunkSeq = 0;
+    try {
+      await this.openSocket(sessionId);
+    } catch {
+      this.fail(reason);
+    }
+  }
+
+  /**
+   * 새 세션을 얻을 때까지 [REOPEN_BACKOFF_MS] 를 따라 다시 묻는다. 다 소진하면 `null`.
+   *
+   * **거절과 오류를 같게 다룬다.** 둘 다 원인이 「서버가 아직 옛 세션을 들고 있다」이고,
+   * 그것은 기다리면 풀린다 — 서버 워치독이 걷거나 시작 경로의 게으른 정리가 걷는다.
+   */
+  private async requestSession(
+    reopenSession: () => Promise<string | null>
+  ): Promise<string | null> {
+    for (let attempt = 0; ; attempt += 1) {
+      if (this.stopping || this.closing || this.failed) return null;
+      try {
+        const sessionId = await reopenSession();
+        if (sessionId) return sessionId;
+      } catch {
+        // 다음 간격에서 다시 묻는다
+      }
+      const delay = REOPEN_BACKOFF_MS[attempt];
+      if (delay === undefined) return null;
+      await sleep(delay);
+    }
   }
 
   private fail(message: string) {

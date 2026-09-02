@@ -7324,6 +7324,7 @@ components:
               - "STT_PROVIDER_ERROR"
               - "INTERNAL_ERROR"
               - "MEETING_ENDED"
+              - "HEARTBEAT_TIMEOUT"
               - "MEETING_PAUSED"
           description: "성공 응답 데이터"
           nullable: false
@@ -7483,6 +7484,7 @@ components:
               - "STT_PROVIDER_ERROR"
               - "INTERNAL_ERROR"
               - "MEETING_ENDED"
+              - "HEARTBEAT_TIMEOUT"
               - "MEETING_PAUSED"
             endedAt:
               type: "string"
