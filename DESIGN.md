@@ -292,6 +292,12 @@ FAQ의 답은 **접혀도 DOM에 남긴다.** 지우면 `aria-controls`가 없�
 랜딩에는 **스크롤 리빌이 없다.** 앞 판은 `motion/react`로 밴드마다 올라왔지만 이 면은 정지
 조판이라 파일 전체가 서버 컴포넌트다(움직이는 것은 로그인 상태를 보는 `LandingCta` 하나).
 
+**그래서 JS 없이도 다 읽힌다.** 프로덕션 빌드에서 JS를 끄고 확인했다 — 밴드 아홉, 제목
+서른셋, FAQ 첫 답까지 그대로 뜬다. `app/(main)/layout.tsx`에서 `PageTransition`을 뺀 것이
+그 조건이다: 그것은 `motion`의 `initial={{opacity:0}}`이라 서버가 `opacity:0`인 HTML을
+내보내고, 하이드레이션이 끝나야 보인다. 이 그룹에는 라우트가 하나뿐이라 `key={pathname}`이
+바뀔 일도 없어서, 전환이 아니라 첫 페인트를 200ms 늦추는 일만 했다.
+
 앵커 이동은 `scroll-behavior: smooth`를 `html`에 걸지 않고 **버튼의 `scrollIntoView`로** 한다 —
 전역으로 걸면 라우트 이동의 「맨 위로 복귀」까지 애니메이션이 붙는다. 대상 섹션은
 `scroll-mt-24`로 떠 있는 상단바 몫을 비운다. 앵커는 `#features`와 `#how-it-works` 둘이다.
