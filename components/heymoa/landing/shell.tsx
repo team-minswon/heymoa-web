@@ -14,6 +14,20 @@ export const CONTAINER = "mx-auto w-full max-w-[1120px]";
 export const SECTION_TOP = "pt-16 lg:pt-[104px]";
 
 /**
+ * 화자마다 다른 원 색. 제품 샷의 22px 원과 「기능 소개」 카드의 18px 원이 같은 값을 쓴다 —
+ * 두 곳이 갈리면 같은 사람이 화면마다 다른 색이 된다.
+ *
+ * 더 작은 목업(`mocks.tsx`의 17px)은 이 지도를 안 쓴다. 그 크기에서는 색만 튀고 누가
+ * 누구인지는 안 읽혀서 시안도 한 색으로 통일했다.
+ */
+export const SPEAKER_TINT: Record<string, string> = {
+  김민서: "#366c4f",
+  박지훈: "#8a5a3c",
+  이서연: "#3d5a80",
+  정우재: "#7a4a63",
+};
+
+/**
  * 초록 eyebrow. 섹션마다 하나씩 붙고, 무엇을 말하는 자리인지만 표시한다.
  * 대비 5.8:1 (#366c4f on #faf8f5).
  */

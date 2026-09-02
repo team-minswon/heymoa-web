@@ -1,6 +1,8 @@
 import { ArrowUp, ChevronDown, Copy, PencilLine, Sparkles } from "lucide-react";
 import type { CSSProperties } from "react";
 
+import { SPEAKER_TINT } from "@/components/heymoa/landing/shell";
+
 /**
  * 「기능 소개」 카드 여섯 개가 저마다 품는 앱 화면 조각.
  *
@@ -20,18 +22,11 @@ import type { CSSProperties } from "react";
 /** 창의 안쪽 여백. 좁은 화면은 여섯이 모두 같고, 넓은 화면만 목업마다 다르다. */
 const WINDOW = "flex h-full flex-col px-3 py-[11px]";
 
-const AVATAR: Record<string, string> = {
-  김민서: "#366c4f",
-  박지훈: "#8a5a3c",
-  이서연: "#3d5a80",
-  정우재: "#7a4a63",
-};
-
 function Avatar({ who, className = "size-5" }: { who: string; className?: string }) {
   return (
     <span
       aria-hidden
-      style={{ background: AVATAR[who] }}
+      style={{ background: SPEAKER_TINT[who] }}
       className={`flex shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${className}`}
     >
       {who.slice(0, 1)}
@@ -61,7 +56,7 @@ export function TranscriptPane() {
         {lines.map(([at, who, text]) => (
           <li
             key={at}
-            style={{ "--tint": AVATAR[who] } as CSSProperties}
+            style={{ "--tint": SPEAKER_TINT[who] } as CSSProperties}
             className="flex gap-2 lg:gap-[9px] lg:border-t lg:border-[var(--lp-rule-soft)] lg:py-2.5"
           >
             <span className="w-[30px] shrink-0 font-mono text-[9.5px] leading-[1.7] tabular-nums text-[var(--lp-faint)] lg:w-[34px] lg:text-[10px]">

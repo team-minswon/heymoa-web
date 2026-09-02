@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { CONTAINER, SECTION_X } from "@/components/heymoa/landing/shell";
+import { CONTAINER, SECTION_X, SPEAKER_TINT } from "@/components/heymoa/landing/shell";
 
 /**
  * 히어로 아래 제품 화면.
@@ -24,18 +24,15 @@ import { CONTAINER, SECTION_X } from "@/components/heymoa/landing/shell";
  *
  * 그래서 두 벌을 그리고 `lg`로 가른다. 구조가 달라서 한 트리에 `lg:` 덧칠로는 안 된다.
  *
+ * **목업 안에는 제목 태그를 안 쓴다.** 「3차 스프린트 킥오프」나 「전사」는 그린 화면의
+ * 일부지 이 문서의 절이 아니다 — `h2`로 두면 제목으로 훑는 사람의 목록에 끼어들어 무엇을
+ * 가리키는지 알 수 없는 항목이 된다. 시안이 굵게 그린 것은 시각적 무게였지 위계가 아니다.
+ * 같은 이유로 목업 안의 누를 것들도 링크가 아니라 `<span>`이다.
+ *
  * **이 안의 글자는 삽화다.** 시각 `#b5a698`이나 9~11px 라벨은 페이지가 하는 말이 아니라
  * 앱 화면을 그린 그림이라 실제 앱의 크기와 색을 따른다. 페이지가 직접 하는 말(`--lp-body`
  * 이상)과 섞어 쓰지 않는다 — 대비 기준이 다르다.
  */
-
-/** 데스크톱 창만 화자 색을 나눈다. 390의 18px 원에서는 시안도 중립 회색 하나로 뒀다. */
-const TINT: Record<string, string> = {
-  김민서: "#366c4f",
-  박지훈: "#8a5a3c",
-  이서연: "#3d5a80",
-  정우재: "#7a4a63",
-};
 
 type Line = { at: string; who: string; text: string };
 
@@ -140,9 +137,9 @@ function TranscriptCardSm() {
           <span aria-hidden className="block size-[5px] rounded-full bg-[#8a7a6d]" />
           <span className="text-[9.5px] font-semibold text-[var(--lp-body)]">종료됨</span>
         </span>
-        <h2 className="m-0 min-w-0 flex-1 truncate break-keep text-[14px] font-bold text-[var(--lp-ink)]">
+        <span className="min-w-0 flex-1 truncate break-keep text-[14px] font-bold text-[var(--lp-ink)]">
           3차 스프린트 킥오프
-        </h2>
+        </span>
       </div>
 
       <div className="flex items-center gap-1 px-[13px] pt-[9px]">
@@ -299,9 +296,9 @@ function Topbar() {
           <span aria-hidden className="block size-1.5 shrink-0 rounded-full bg-[#8a7a6d]" />
           <span className="text-[11px] font-semibold text-[var(--lp-body)]">종료됨</span>
         </span>
-        <h2 className="m-0 truncate break-keep text-[14px] font-semibold text-[var(--lp-ink)]">
+        <span className="truncate break-keep text-[14px] font-semibold text-[var(--lp-ink)]">
           3차 스프린트 킥오프
-        </h2>
+        </span>
       </div>
       <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--lp-rule-soft)] p-[3px]">
         {(["정보", "전사", "요약"] as const).map((t) => (
@@ -326,7 +323,7 @@ function Transcript() {
   return (
     <div className="flex min-w-0 flex-1 flex-col px-5 pt-4 pb-6">
       <div className="flex items-center justify-between">
-        <h3 className="m-0 text-[13px] font-semibold text-[#8a7a6d]">전사</h3>
+        <span className="text-[13px] font-semibold text-[#8a7a6d]">전사</span>
         <span className="flex items-center gap-1.5 rounded-[7px] border border-[var(--lp-rule)] px-2.5 py-[5px]">
           <Copy aria-hidden className="size-3 text-[#8a7a6d]" />
           <span className="text-[11px] font-medium text-[var(--lp-body)]">복사</span>
@@ -343,7 +340,7 @@ function Transcript() {
             </span>
             <span
               aria-hidden
-              style={{ background: TINT[l.who] }}
+              style={{ background: SPEAKER_TINT[l.who] }}
               className="flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
             >
               {l.who.slice(0, 1)}
@@ -381,7 +378,7 @@ function Rail() {
 
       <div className="flex flex-col px-3.5 pt-3.5 pb-5">
         <div className="flex items-center justify-between">
-          <h3 className="m-0 break-keep text-[14px] font-bold text-[var(--lp-ink)]">사건 흐름</h3>
+          <span className="break-keep text-[14px] font-bold text-[var(--lp-ink)]">사건 흐름</span>
           <div className="flex items-center gap-1 rounded-full bg-[var(--lp-rule-soft)] px-[9px] py-[3px]">
             <span className="text-[10.5px] font-medium text-[#8a7a6d]">지금까지</span>
             <span className="font-mono text-[10.5px] font-semibold tabular-nums text-[var(--lp-body)]">

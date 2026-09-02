@@ -18,10 +18,15 @@ const jsonLd = {
   operatingSystem: "Web",
   url: siteConfig.url,
   description: siteConfig.description,
+  // 「기능 소개」가 세는 여섯과 같게 둔다 — 페이지가 여섯을 말하는데 구조화 데이터가 셋만
+  // 말하면 검색 결과에 뜨는 목록이 화면과 갈린다.
   featureList: [
-    "실시간 회의 기록",
-    "회의 맥락과 결정사항 요약",
-    "담당자별 액션 아이템 정리",
+    "실시간 전사",
+    "실시간 정리",
+    "회의 중 질의",
+    "자동 정리",
+    "Linear · GitHub 로 내보내기",
+    "멤버 초대",
   ],
   inLanguage: "ko-KR",
 };
