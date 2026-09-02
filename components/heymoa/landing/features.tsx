@@ -110,27 +110,27 @@ export function Features() {
               className="box-border flex flex-col rounded-[18px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-3 lg:p-3.5"
             >
               {/* 크림 패널이 앱 화면을 받친다 — 창을 바로 흰 카드 위에 두면 경계가 사라진다. */}
-              <div className="box-border overflow-hidden rounded-xl bg-[var(--lp-cream)] p-3.5 lg:p-4">
+              <div className="box-border overflow-hidden rounded-xl bg-[var(--lp-cream)] p-3 lg:p-4">
                 <div className="box-border overflow-hidden rounded-[10px] lg:h-[244px] border border-[var(--lp-rule)] bg-[var(--lp-card)] shadow-[0_2px_8px_#33231a12]">
                   {c.mock}
                 </div>
               </div>
-              <div className="flex flex-col gap-2.5 px-1.5 pt-5 pb-3 lg:px-2.5 lg:pt-[22px]">
-                <h3 className="m-0 break-keep text-[20px] font-bold tracking-[-0.5px] text-[var(--lp-ink)] lg:text-[22px]">
+              <div className="flex flex-col px-1.5 pt-4 pb-1.5 lg:gap-2.5 lg:px-2.5 lg:pt-[22px] lg:pb-3">
+                <h3 className="m-0 break-keep text-[17px] font-bold tracking-[-0.4px] text-[var(--lp-ink)] lg:text-[22px] lg:tracking-[-0.5px]">
                   {c.title}
                 </h3>
-                <p className="m-0 text-[14px] leading-[1.7] text-[var(--lp-body)] lg:text-[14.5px]">
+                <p className="m-0 mt-2 text-[15px] leading-[1.7] text-[var(--lp-body)] lg:mt-0 lg:text-[14.5px]">
                   {c.lead}
                 </p>
-                <ul className="m-0 flex list-none flex-col gap-2 p-0 pt-2.5">
+                <ul className="m-0 mt-[13px] flex list-none flex-col gap-2 p-0 lg:mt-0 lg:pt-2.5">
                   {c.bullets.map((b) => (
                     <li key={b} className="flex gap-2">
                       <Check
                         aria-hidden
-                        className="mt-[3px] size-3.5 shrink-0 text-[var(--lp-green)]"
+                        className="mt-[3px] size-[13px] shrink-0 text-[var(--lp-green)] lg:size-3.5"
                         strokeWidth={2.5}
                       />
-                      <span className="break-keep text-[13px] leading-[1.5] text-[var(--lp-body)] lg:text-[13.5px]">
+                      <span className="break-keep text-[14px] leading-[1.5] text-[var(--lp-body)] lg:text-[13.5px]">
                         {b}
                       </span>
                     </li>
