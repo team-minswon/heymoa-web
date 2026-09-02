@@ -89,9 +89,13 @@ export async function* postEventStream(
 /**
  * GET으로 여는 같은 스트림. **재연결·재진입 전용**이다.
  *
- * 네이티브 `EventSource`를 안 쓴다 — 쿠키 인증에 `credentials: "include"`가 필요하고
- * 401 refresh를 transport가 지고 있는데 `EventSource`는 둘 다 못 한다. 그래서
- * **`Last-Event-ID` 헤더가 안 나간다** — 이어받을 자리는 URL의 `?after=` 하나다.
+ * 네이티브 `EventSource`를 안 쓰는 이유는 **401 refresh 하나**다. 상태 코드를 못 보고
+ * (`onerror`가 이유를 안 준다) 자동 재연결에 우리 손이 안 닿아 「401 → refresh → 재시도」를
+ * 끼울 자리가 없다. 비-2xx의 JSON 에러 봉투를 그대로 던지는 것도 못 한다.
+ * **쿠키는 이유가 아니다** — 동일 오리진이면 자동으로 가고, 교차 오리진이면
+ * `new EventSource(url, { withCredentials: true })`로 간다.
+ * 대신 fetch를 쓰는 대가로 **`Last-Event-ID` 헤더가 안 나간다** — 이어받을 자리는 URL의
+ * `?after=` 하나다.
  *
  * 커서는 **URL에 이미 들어 있다.** 어디까지 받았는지를 이 층은 모른다.
  */
