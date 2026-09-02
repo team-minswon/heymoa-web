@@ -28,7 +28,7 @@ export function ClosingCta() {
         <div className="mt-6.5 flex w-full max-w-[350px] flex-col gap-[9px] lg:mt-8 lg:w-auto lg:max-w-none lg:flex-row lg:items-center lg:gap-3">
           <LandingCta
             label="Google 계정으로 시작"
-            className="h-[50px] w-full justify-center gap-2 rounded-full border-0 bg-[var(--lp-dark)] px-7 text-[15px] font-semibold text-[var(--lp-on-dark)] hover:bg-[var(--lp-accent)] lg:h-auto lg:w-auto lg:py-[15px]"
+            className="h-[50px] w-full justify-center gap-2 rounded-full border border-transparent bg-[var(--lp-dark)] px-7 text-[15px] font-semibold text-[var(--lp-on-dark)] hover:bg-[var(--lp-accent)] lg:h-auto lg:w-auto lg:py-[15px]"
           />
           <a
             href="#how-it-works"

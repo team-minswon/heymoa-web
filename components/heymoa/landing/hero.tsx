@@ -49,11 +49,15 @@ export function Hero() {
           </p>
         </div>
 
-        {/* 모바일은 세로로 쌓아 전폭, 데스크톱은 나란히. 둘 다 pill(h50+)이라 탭 타깃이 넉넉하다. */}
+        {/* 모바일은 세로로 쌓아 전폭, 데스크톱은 나란히. 둘 다 pill(h50)이라 탭 타깃이 넉넉하다.
+            주 버튼의 `border-transparent`는 강제 색상 모드(윈도우 고대비) 대비다 — 그 모드는
+            배경색을 지우므로, 테두리가 없으면 배경만 입은 버튼이 맨 글자로 주저앉아 보조
+            버튼과 구분이 사라진다. 시안은 테두리가 없어 2px 낮지만, 그 대신 두 버튼의
+            높이가 맞는다. */}
         <div className="mt-[26px] flex w-full max-w-[350px] flex-col gap-[9px] lg:mt-[34px] lg:w-auto lg:max-w-none lg:flex-row lg:items-center lg:gap-3">
           <LandingCta
             label="Google 계정으로 시작"
-            className="h-[50px] w-full justify-center gap-2 rounded-full border-0 bg-[var(--lp-dark)] px-7 text-[15px] font-semibold text-[var(--lp-on-dark)] hover:bg-[var(--lp-accent)] lg:h-auto lg:w-auto lg:py-[15px]"
+            className="h-[50px] w-full justify-center gap-2 rounded-full border border-transparent bg-[var(--lp-dark)] px-7 text-[15px] font-semibold text-[var(--lp-on-dark)] hover:bg-[var(--lp-accent)] lg:h-auto lg:w-auto lg:py-[15px]"
           />
           <a
             href="#how-it-works"
