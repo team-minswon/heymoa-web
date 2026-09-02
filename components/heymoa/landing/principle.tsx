@@ -15,24 +15,24 @@ export function Principle() {
     <section
       className={`${SECTION_X} mt-16 bg-[var(--lp-dark)] py-14 lg:mt-[104px] lg:py-23`}
     >
-      <div className={`${CONTAINER} flex flex-col gap-8 lg:flex-row lg:gap-14`}>
-        <div className="min-w-0 flex-1">
+      <div className={`${CONTAINER} flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-18`}>
+        <div className="flex min-w-0 flex-1 flex-col gap-3 lg:gap-[18px]">
           <p className="m-0 text-[13px] font-semibold tracking-[0.4px] text-[var(--lp-green-soft)]">
             원칙
           </p>
-          <h2 className="m-0 mt-3 max-w-[640px] text-balance break-keep text-[25px] font-extrabold leading-[1.32] tracking-[-0.8px] text-[var(--lp-on-dark)] lg:mt-3.5 lg:text-[40px] lg:leading-[1.25] lg:tracking-[-1.4px]">
+          <h2 className="m-0 max-w-[640px] text-balance break-keep text-[25px] font-extrabold leading-[1.32] tracking-[-0.8px] text-[var(--lp-on-dark)] lg:text-[40px] lg:leading-[1.3] lg:tracking-[-1.4px]">
             근거 없이 남기지 않고, 승인 없이 내보내지 않습니다.
           </h2>
-          <p className="m-0 mt-4 max-w-[620px] break-keep text-[14.5px] leading-[1.78] text-[var(--lp-on-dark-soft)] lg:text-[16px] lg:leading-[1.75]">
+          <p className="m-0 max-w-[620px] break-keep text-[14.5px] leading-[1.78] text-[var(--lp-on-dark-soft)] lg:text-[16px] lg:leading-[1.75]">
             정리된 항목에는 그 말이 나온 자리가 근거로 붙습니다. 지난 회의를 다시
             꺼낼 때 그 회의의 전사에서 근거를 찾아 답합니다. 외부 도구로 나가는
             일은 사람이 승인한 것만입니다.
           </p>
-          <ul className="m-0 mt-5 flex list-none flex-wrap gap-1.5 p-0 lg:gap-2">
+          <ul className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 lg:gap-2">
             {["근거 연결", "승인 게이트", "프로젝트별 보관"].map((t) => (
               <li
                 key={t}
-                className="rounded-full border border-[var(--lp-dark-rule)] px-3 py-1.5 text-[12px] font-medium text-[var(--lp-on-dark)] lg:text-[12.5px]"
+                className="rounded-full border border-[var(--lp-dark-rule)] px-3 py-1.5 text-[12px] font-medium text-[var(--lp-on-dark)] lg:px-[13px] lg:py-[7px] lg:text-[12.5px]"
               >
                 {t}
               </li>
@@ -40,14 +40,14 @@ export function Principle() {
           </ul>
         </div>
 
-        <div className="box-border w-full shrink-0 rounded-2xl border border-[var(--lp-dark-rule)] bg-[var(--lp-dark-soft)] p-5 lg:w-[420px] lg:p-7">
-          <p className="m-0 font-mono text-[11.5px] font-semibold text-[var(--lp-green-soft)]">
+        <div className="box-border flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-[var(--lp-dark-rule)] bg-[var(--lp-dark-soft)] p-5 lg:w-[420px] lg:gap-4 lg:rounded-[18px] lg:p-7">
+          <p className="m-0 self-start rounded-full border border-[var(--lp-dark-rule)] px-2.5 py-[5px] font-mono text-[10.5px] font-medium text-[var(--lp-on-dark-soft)]">
             예시 문안
           </p>
-          <p className="m-0 mt-3 break-keep font-serif text-[16px] font-medium leading-[1.75] text-[var(--lp-on-dark)] lg:text-[18px]">
+          <p className="m-0 break-keep font-serif text-[17px] font-medium leading-[1.6] text-[var(--lp-on-dark)] lg:text-[20px]">
             “결정은 회의록에 있는데, 왜 그렇게 정했는지는 아무 데도 없습니다.”
           </p>
-          <p className="m-0 mt-3.5 break-keep text-[12.5px] leading-[1.7] text-[var(--lp-on-dark-soft)] lg:text-[13px]">
+          <p className="m-0 break-keep text-[12.5px] leading-[1.65] text-[var(--lp-on-dark-soft)] lg:text-[13px]">
             그 「왜」를 전사 줄로 붙여 두는 것이 이 제품이 하는 일입니다.
           </p>
         </div>

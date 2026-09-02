@@ -122,7 +122,7 @@ export function Features() {
                 <p className="m-0 text-[14px] leading-[1.7] text-[var(--lp-body)] lg:text-[14.5px]">
                   {c.lead}
                 </p>
-                <ul className="m-0 mt-1.5 flex list-none flex-col gap-2 p-0">
+                <ul className="m-0 flex list-none flex-col gap-2 p-0 pt-2.5">
                   {c.bullets.map((b) => (
                     <li key={b} className="flex gap-2">
                       <Check

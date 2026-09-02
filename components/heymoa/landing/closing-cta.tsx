@@ -1,7 +1,7 @@
 import { CalendarCheck } from "lucide-react";
 
 import { LandingCta } from "@/components/heymoa/landing-cta";
-import { CONTAINER, SECTION_X } from "@/components/heymoa/landing/shell";
+import { SECTION_X } from "@/components/heymoa/landing/shell";
 
 /**
  * 닫는 CTA. 시안은 아이콘 · 안내 한 줄 · 큰 제목 · 버튼 둘 · 잔글씨 순서다.
@@ -12,7 +12,7 @@ import { CONTAINER, SECTION_X } from "@/components/heymoa/landing/shell";
 export function ClosingCta() {
   return (
     <section className={`${SECTION_X} py-16 lg:py-28`}>
-      <div className={`${CONTAINER} flex flex-col items-center`}>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col items-center">
         <span className="flex size-11 items-center justify-center rounded-[14px] border border-[var(--lp-rule)] bg-[var(--lp-cream)]">
           <CalendarCheck aria-hidden className="size-[21px] text-[var(--lp-accent)]" />
         </span>
@@ -28,11 +28,11 @@ export function ClosingCta() {
         <div className="mt-7 flex w-full max-w-[350px] flex-col gap-2.5 lg:mt-8 lg:w-auto lg:max-w-none lg:flex-row lg:items-center lg:gap-3">
           <LandingCta
             label="Google 계정으로 시작"
-            className="h-[50px] w-full justify-center gap-2 rounded-full border-0 bg-[var(--lp-dark)] px-7 text-[15px] font-semibold text-[var(--lp-on-dark)] hover:bg-[var(--lp-accent)] lg:h-[54px] lg:w-auto"
+            className="h-auto w-full justify-center gap-2 rounded-full border-0 bg-[var(--lp-dark)] px-7 py-[15px] text-[15px] font-semibold text-[var(--lp-on-dark)] hover:bg-[var(--lp-accent)] lg:w-auto"
           />
           <a
             href="#how-it-works"
-            className="flex h-[50px] w-full items-center justify-center rounded-full border border-[var(--lp-rule)] bg-[var(--lp-card)] px-7 text-[15px] font-semibold text-[var(--lp-ink)] transition-colors hover:bg-[var(--lp-cream)] lg:h-[54px] lg:w-auto"
+            className="flex w-full items-center justify-center rounded-full border border-[var(--lp-rule)] bg-[var(--lp-card)] px-7 py-[15px] text-[15px] font-semibold text-[var(--lp-ink)] transition-colors hover:bg-[var(--lp-cream)] lg:w-auto"
           >
             작동 방식 보기
           </a>

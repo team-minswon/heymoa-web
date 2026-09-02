@@ -75,7 +75,7 @@ export function Problem() {
           본 세 장면입니다.
         </SectionLead>
 
-        <ul className="m-0 mt-7 flex list-none flex-col p-0 lg:mt-14">
+        <ul className="m-0 mt-7 flex list-none flex-col p-0 lg:mt-11">
           {ROWS.map((row, i) => (
             <li
               key={row.mark}

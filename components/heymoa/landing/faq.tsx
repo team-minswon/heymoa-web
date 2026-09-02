@@ -49,10 +49,10 @@ export function Faq() {
 
   return (
     <section id="faq" className={`${SECTION_X} ${SECTION_TOP}`}>
-      <div className={`${CONTAINER} flex flex-col gap-8 lg:flex-row lg:gap-14`}>
-        <div className="shrink-0 lg:w-[340px]">
+      <div className={`${CONTAINER} flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-20`}>
+        <div className="flex shrink-0 flex-col gap-3 lg:w-[340px] lg:gap-3.5">
           <Eyebrow>자주 묻는 질문</Eyebrow>
-          <h2 className="m-0 mt-3 text-balance break-keep text-[25px] font-extrabold leading-[1.3] tracking-[-0.8px] text-[var(--lp-ink)] lg:mt-3.5 lg:text-[40px] lg:leading-[1.25] lg:tracking-[-1.4px]">
+          <h2 className="m-0 text-balance break-keep text-[25px] font-extrabold leading-[1.3] tracking-[-0.8px] text-[var(--lp-ink)] lg:text-[40px] lg:leading-[1.25] lg:tracking-[-1.4px]">
             먼저 확인하실 것
           </h2>
         </div>
@@ -64,7 +64,7 @@ export function Faq() {
             return (
               <li
                 key={item.q}
-                className={`border-t border-[var(--lp-rule)] ${i === QA.length - 1 ? "border-b" : ""}`}
+                className={`flex flex-col border-t border-[var(--lp-rule)] py-5 lg:py-6 ${i === QA.length - 1 ? "border-b" : ""}`}
               >
                 <h3 className="m-0">
                   <button
@@ -78,22 +78,22 @@ export function Faq() {
                         return next;
                       })
                     }
-                    className="flex w-full cursor-pointer items-start gap-4 border-0 bg-transparent px-0 py-5 text-left lg:gap-5 lg:py-6"
+                    className="flex min-h-[26px] w-full cursor-pointer items-start gap-4 border-0 bg-transparent p-0 text-left lg:gap-5"
                   >
                     <span className="min-w-0 flex-1 break-keep text-[17px] font-bold leading-[1.5] tracking-[-0.3px] text-[var(--lp-ink)] lg:text-[18px] lg:tracking-[-0.4px]">
                       {item.q}
                     </span>
                     {isOpen ? (
-                      <Minus aria-hidden className="mt-1 size-[18px] shrink-0 text-[var(--lp-muted)]" />
+                      <Minus aria-hidden className="size-[18px] shrink-0 text-[#8a7a6d]" />
                     ) : (
-                      <Plus aria-hidden className="mt-1 size-[18px] shrink-0 text-[var(--lp-muted)]" />
+                      <Plus aria-hidden className="size-[18px] shrink-0 text-[#8a7a6d]" />
                     )}
                   </button>
                 </h3>
                 {isOpen ? (
                   <p
                     id={panelId}
-                    className="m-0 max-w-[640px] break-keep pb-6 text-[14.5px] leading-[1.8] text-[var(--lp-body)] lg:text-[15px]"
+                    className="m-0 mt-3 max-w-[640px] break-keep text-[14.5px] leading-[1.8] text-[var(--lp-body)] lg:text-[15px]"
                   >
                     {item.a}
                   </p>
