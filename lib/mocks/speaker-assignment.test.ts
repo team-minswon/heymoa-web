@@ -109,14 +109,16 @@ describe("mockDb.assignSpeaker", () => {
       .getTranscript(NOTE_ID)
       .diarization.speakers.find((row) => row.label === "B")!;
     expect(speaker.assignedParticipantId).toBe(guest.participantId);
+    // **임시 참여자도 이름이 나온다.** 여기가 비면 「이름 안 붙임」과 화면에서 섞인다.
     expect(speaker.assignedName).toBe(guest.name);
-    // **겸용 필드는 빈다.** 이 값만 보고 「붙은 사람 없음」으로 읽으면 안 된다.
-    expect(speaker.assignedUserId).toBeNull();
     expect(speaker.confirmed).toBe(true);
   });
 
-  /** 겸용 경로. 옛 web 이 배포되기 전까지 이 요청이 계속 온다. */
-  it("옛 userId 로 보내도 새 필드가 함께 채워진다", () => {
+  /**
+   * **요청의 `userId` 는 안 뗐다.** 겸용으로 두었던 값이지만 아직 참여자가 아닌 멤버를
+   * 가리키는 유일한 열쇠라 영구적인 뜻을 갖는다 — 응답만 정리했다(APP-496).
+   */
+  it("계정으로 보내도 참여 기록으로 붙는다", () => {
     const member = mockDb
       .getNote(NOTE_ID)
       .participants.find((row) => row.userId !== null)!;
@@ -127,7 +129,6 @@ describe("mockDb.assignSpeaker", () => {
       .getTranscript(NOTE_ID)
       .diarization.speakers.find((row) => row.label === "B")!;
     expect(speaker.assignedParticipantId).toBe(member.participantId);
-    expect(speaker.assignedUserId).toBe(member.userId);
   });
 
   it("참여 기록과 계정을 함께 보내면 거절한다", () => {

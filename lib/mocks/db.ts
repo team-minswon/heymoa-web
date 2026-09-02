@@ -226,7 +226,6 @@ function seededDiarizations(
             segmentCount: 2,
             representativeSegmentId: "01K0000000061",
             assignedParticipantId: first.participantId,
-            assignedUserId: first.userId,
             assignedName: first.name,
             confirmed: true,
           },
@@ -236,7 +235,6 @@ function seededDiarizations(
             segmentCount: 1,
             representativeSegmentId: "01K0000000062",
             assignedParticipantId: null,
-            assignedUserId: null,
             assignedName: null,
             confirmed: false,
           },
@@ -315,7 +313,6 @@ function detachSpeakers(noteId: string, participantIds: string[]) {
         ? {
             ...speaker,
             assignedParticipantId: null,
-            assignedUserId: null,
             assignedName: null,
             confirmed: false,
           }
@@ -420,7 +417,7 @@ function renameSpeaker(
     ...diarization,
     speakers: diarization.speakers.map((row) =>
       row.assignedParticipantId === participantId
-        ? { ...row, assignedUserId: target.userId, assignedName: target.name }
+        ? { ...row, assignedName: target.name }
         : row
     ),
   });
@@ -3048,8 +3045,6 @@ export const mockDb = {
         return {
           ...row,
           assignedParticipantId: participant?.participantId ?? null,
-          // 겸용. 임시 참여자가 붙으면 비고, 이름은 그래도 나온다.
-          assignedUserId: participant?.userId ?? null,
           assignedName: participant?.name ?? null,
           confirmed: true,
         };

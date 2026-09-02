@@ -51,8 +51,8 @@ describe("SpeakerNudgeBanner", () => {
     const { container } = renderBanner({
       status: "MAPPED",
       speakers: [
-        { label: "A", assignedUserId: "01K0000000009", confirmed: true },
-        { label: "B", assignedUserId: null, confirmed: false },
+        { label: "A", confirmed: true },
+        { label: "B", confirmed: false },
       ],
     });
 
