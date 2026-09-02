@@ -31,9 +31,9 @@ const STEPS: Step[] = [
     body: "워크스페이스가 하나 만들어집니다. 설치할 것도, 카드 등록도 없습니다.",
     control: (
       <div className="flex justify-center">
-        <span className="flex items-center gap-2.5 rounded-lg border border-[var(--lp-rule-strong)] px-5 py-2.5">
+        <span className="flex items-center gap-2.5 rounded-lg border border-[var(--lp-rule-strong)] px-[18px] py-[11px] lg:px-5 lg:py-2.5">
           <span aria-hidden className="size-4 shrink-0 rounded-full bg-[var(--lp-rule)]" />
-          <span className="text-[13.5px] font-semibold text-[var(--lp-ink)]">
+          <span className="text-[13px] font-semibold text-[var(--lp-ink)] lg:text-[13.5px]">
             Google 계정으로 계속하기
           </span>
         </span>
@@ -52,7 +52,7 @@ const STEPS: Step[] = [
         <div className="mt-2.5 rounded-lg border border-[var(--lp-rule)] px-3 py-2.5">
           <span className="text-[12.5px] text-[var(--lp-muted)]">온보딩 개선</span>
         </div>
-        <p className="m-0 mt-2 break-keep text-[11.5px] leading-[1.5] text-[var(--lp-muted)]">
+        <p className="m-0 mt-2 break-keep text-[12px] leading-[1.5] text-[var(--lp-muted)] lg:text-[11.5px]">
           회의를 묶는 상자입니다. 팀·제품·고객 단위로 짓습니다
         </p>
       </>
@@ -133,18 +133,20 @@ const STEPS: Step[] = [
       /* 「작동 방식」 카드의 `ApprovalCard`를 쓰지 않는다 — 여기서는 승인 카드가 뜬다는
          사실만 보이면 되고, 호출 줄까지 그리면 걸음 하나가 다른 걸음보다 55px 커진다. */
       <>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--lp-rule-soft)] px-2.5 py-1">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--lp-rule-soft)] px-[9px] py-1">
           <PencilLine aria-hidden className="size-3 shrink-0 text-[var(--lp-body)]" />
-          <span className="text-[10.5px] font-semibold text-[var(--lp-body)]">쓰기 도구</span>
+          <span className="text-[11px] font-semibold text-[var(--lp-body)] lg:text-[10.5px]">
+            쓰기 도구
+          </span>
         </span>
-        <p className="m-0 mt-2.5 break-keep text-[13px] font-bold text-[var(--lp-ink)]">
+        <p className="m-0 mt-2.5 break-keep text-[13.5px] font-bold text-[var(--lp-ink)] lg:text-[13px]">
           Linear 에 이슈를 만들까요?
         </p>
-        <div className="mt-2.5 flex gap-2">
-          <span className="rounded-lg bg-[var(--lp-dark)] px-[15px] py-[7px] text-[11.5px] font-semibold text-[var(--lp-on-dark)]">
+        <div className="mt-3 flex gap-2 lg:mt-2.5">
+          <span className="rounded-lg bg-[var(--lp-dark)] px-4 py-2 text-[12px] font-semibold text-[var(--lp-on-dark)] lg:px-[15px] lg:py-[7px] lg:text-[11.5px]">
             승인
           </span>
-          <span className="rounded-lg border border-[var(--lp-rule-strong)] px-[15px] py-[7px] text-[11.5px] text-[var(--lp-body)]">
+          <span className="rounded-lg border border-[var(--lp-rule-strong)] px-4 py-2 text-[12px] text-[var(--lp-body)] lg:px-[15px] lg:py-[7px] lg:text-[11.5px]">
             거절
           </span>
         </div>
@@ -172,7 +174,7 @@ export function Flow() {
                 i === STEPS.length - 1 ? "border-b border-[var(--lp-rule)]" : ""
               }`}
             >
-              <span className="w-11 shrink-0 font-mono text-[22px] font-semibold leading-none tabular-nums text-[var(--lp-muted)] lg:text-[26px]">
+              <span className="w-11 shrink-0 font-mono text-[22px] font-semibold leading-[1.3] tabular-nums text-[var(--lp-muted)] lg:text-[26px] lg:leading-none">
                 {s.n}
               </span>
               <div className="shrink-0 lg:w-[470px]">
@@ -183,7 +185,7 @@ export function Flow() {
                   {s.body}
                 </p>
               </div>
-              <div className="box-border min-w-0 flex-1 rounded-[10px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-4 lg:px-5 lg:py-[18px]">
+              <div className="box-border mt-1 min-w-0 flex-1 rounded-[10px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-4 lg:mt-0 lg:px-5 lg:py-[18px]">
                 {s.control}
               </div>
             </li>

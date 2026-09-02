@@ -40,7 +40,7 @@ export function Steps() {
   return (
     <section
       id="how-it-works"
-      className={`${SECTION_X} scroll-mt-24 border-y border-[var(--lp-rule)] bg-[var(--lp-card)] py-14 lg:pt-23 lg:pb-24`}
+      className={`${SECTION_X} scroll-mt-24 border-y border-[var(--lp-rule)] bg-[var(--lp-card)] pt-14 pb-15 lg:pt-23 lg:pb-24`}
     >
       <div className={`${CONTAINER} flex flex-col gap-6.5 lg:gap-10`}>
         {/* 이 섹션만 머리글이 가운데다 — 흰 밴드로 면이 바뀌는 자리라 시안이 축을 옮겼다. */}
@@ -55,14 +55,14 @@ export function Steps() {
           {CARDS.map(({ n, icon: Icon, title, line, mock }) => (
             <div
               key={n}
-              className="box-border flex flex-col gap-3 rounded-2xl border border-[var(--lp-rule)] bg-[var(--lp-canvas)] p-5 lg:p-6"
+              className="box-border flex flex-col gap-[11px] rounded-2xl border border-[var(--lp-rule)] bg-[var(--lp-canvas)] p-5 lg:gap-3 lg:p-6"
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--lp-muted)]">
+                <span className="font-mono text-[12px] font-semibold tabular-nums text-[var(--lp-muted)] lg:text-[13px]">
                   {n}
                 </span>
-                <span className="flex size-[34px] items-center justify-center rounded-[10px] bg-[var(--lp-cream)]">
-                  <Icon aria-hidden className="size-[17px] text-[var(--lp-accent)]" />
+                <span className="flex size-8 items-center justify-center rounded-[10px] bg-[var(--lp-cream)] lg:size-[34px]">
+                  <Icon aria-hidden className="size-4 text-[var(--lp-accent)] lg:size-[17px]" />
                 </span>
               </div>
               <h3 className="m-0 break-keep text-[18px] font-bold tracking-[-0.4px] text-[var(--lp-ink)] lg:text-[20px]">
@@ -71,7 +71,7 @@ export function Steps() {
               <p className="m-0 break-keep text-[13.5px] leading-[1.65] text-[var(--lp-body)] lg:text-[14.5px]">
                 {line}
               </p>
-              <div className="box-border overflow-hidden rounded-[10px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-3 lg:h-[184px]">
+              <div className="box-border overflow-hidden rounded-[10px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-[11px] lg:h-[184px] lg:p-3">
                 {mock}
               </div>
             </div>

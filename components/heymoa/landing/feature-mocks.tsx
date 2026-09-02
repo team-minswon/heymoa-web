@@ -1,15 +1,24 @@
 import { ArrowUp, ChevronDown, Copy, PencilLine, Sparkles } from "lucide-react";
+import type { CSSProperties } from "react";
 
 /**
  * 「기능 소개」 카드 여섯 개가 저마다 품는 앱 화면 조각.
  *
  * **`mocks.tsx`와 크기가 다르다.** 저쪽은 「작동 방식」의 작은 카드용이라 9~10px로 줄여
- * 그렸고, 여기는 244px 창이라 앱의 실제 크기(11~12px)에 가깝다. 같은 화면을 두 배율로
- * 그리는 것이라 한쪽으로 합치면 어느 한쪽이 뭉개진다.
+ * 그렸고, 여기는 앱의 실제 크기(11~12px)에 가깝다. 같은 화면을 두 배율로 그리는 것이라
+ * 한쪽으로 합치면 어느 한쪽이 뭉개진다.
+ *
+ * **셋은 좁은 화면에서 다시 그린다.** 전사는 줄 사이를 구분선 대신 9px 간격으로 두고,
+ * 질의는 답변 카드의 테두리를 벗고, 자동 정리는 라벨 밑줄을 가는 선 하나로 바꾼다 —
+ * 350px 카드 안에서 테두리가 겹치면 창이 아니라 격자로 보인다. 나머지 셋(실시간 정리 ·
+ * 내보내기 · 초대)은 두 폭이 같은 그림이라 그대로 쓴다.
  *
  * 여기 글자도 전부 삽화다 — `--lp-faint`(2.2:1)를 쓰는 것은 앱 화면의 흐린 보조 텍스트를
  * 따라 그리기 때문이고, 페이지가 직접 하는 말이 아니다.
  */
+
+/** 창의 안쪽 여백. 좁은 화면은 여섯이 모두 같고, 넓은 화면만 목업마다 다르다. */
+const WINDOW = "flex h-full flex-col px-3 py-[11px]";
 
 const AVATAR: Record<string, string> = {
   김민서: "#366c4f",
@@ -18,7 +27,7 @@ const AVATAR: Record<string, string> = {
   정우재: "#7a4a63",
 };
 
-function Avatar({ who, className = "size-[18px]" }: { who: string; className?: string }) {
+function Avatar({ who, className = "size-5" }: { who: string; className?: string }) {
   return (
     <span
       aria-hidden
@@ -38,24 +47,37 @@ export function TranscriptPane() {
     ["01:02", "정우재", "온보딩 이탈 로그 수집은 제가 맡겠습니다."],
   ];
   return (
-    <div className="flex h-full flex-col px-3 pt-2.5 pb-1">
-      <div className="flex items-center justify-between pb-2">
-        <span className="text-[11px] font-semibold text-[#8a7a6d]">전사</span>
-        <span className="flex items-center gap-1 rounded-md border border-[var(--lp-rule)] px-2 py-[3px]">
+    <div className={`${WINDOW} lg:pt-2.5 lg:pb-1`}>
+      <div className="flex items-center justify-between border-b border-[var(--lp-rule-soft)] pb-[9px] lg:border-b-0 lg:pb-2">
+        <span className="text-[11.5px] font-bold text-[var(--lp-ink)] lg:text-[11px] lg:font-semibold lg:text-[#8a7a6d]">
+          전사
+        </span>
+        <span className="flex items-center gap-1 rounded-[7px] border border-[var(--lp-rule)] px-2 py-[3px] lg:gap-1.5 lg:rounded-md">
           <Copy aria-hidden className="size-2.5 text-[#8a7a6d]" />
-          <span className="text-[10px] font-medium text-[var(--lp-body)]">복사</span>
+          <span className="text-[9px] font-medium text-[var(--lp-body)] lg:text-[10px]">복사</span>
         </span>
       </div>
-      <ul className="m-0 list-none p-0">
+      <ul className="m-0 flex list-none flex-col gap-[9px] p-0 pt-2.5 lg:gap-0 lg:pt-0">
         {lines.map(([at, who, text]) => (
-          <li key={at} className="flex gap-[9px] border-t border-[var(--lp-rule-soft)] py-2.5">
-            <span className="w-[34px] shrink-0 font-mono text-[10px] leading-[1.7] tabular-nums text-[var(--lp-faint)]">
+          <li
+            key={at}
+            style={{ "--tint": AVATAR[who] } as CSSProperties}
+            className="flex gap-2 lg:gap-[9px] lg:border-t lg:border-[var(--lp-rule-soft)] lg:py-2.5"
+          >
+            <span className="w-[30px] shrink-0 font-mono text-[9.5px] leading-[1.7] tabular-nums text-[var(--lp-faint)] lg:w-[34px] lg:text-[10px]">
               {at}
             </span>
-            <Avatar who={who} />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[10.5px] font-semibold text-[var(--lp-ink)]">{who}</span>
-              <span className="break-keep text-[11.5px] leading-[1.6] text-[var(--lp-body)]">
+            <span
+              aria-hidden
+              className="flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--lp-rule-soft)] text-[8px] font-semibold text-[var(--lp-body)] lg:size-[18px] lg:bg-[var(--tint)] lg:text-[9px] lg:font-bold lg:text-white"
+            >
+              {who.slice(0, 1)}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-px">
+              <span className="text-[9px] font-semibold text-[#8a7a6d] lg:text-[10.5px]">
+                {who}
+              </span>
+              <span className="break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[11.5px] lg:leading-[1.6] lg:text-[var(--lp-body)]">
                 {text}
               </span>
             </span>
@@ -79,7 +101,7 @@ export function RailFlow() {
     ["참고", "1", false],
   ];
   return (
-    <div className="flex h-full flex-col p-3">
+    <div className={`${WINDOW} lg:p-3`}>
       <div className="flex items-center gap-2 border-b border-[var(--lp-rule-soft)] pb-[9px]">
         <span className="text-[11.5px] font-bold text-[var(--lp-ink)]">사건 흐름</span>
         <span className="flex-1" />
@@ -148,22 +170,33 @@ export function RailFlow() {
   );
 }
 
-/** 회의 중 질의 — 레일 챗의 한 왕복. 답변 아래 참고한 회의록 칩이 붙는다. */
+/**
+ * 회의 중 질의 — 레일 챗의 한 왕복. 답변 아래 참고한 회의록 칩이 붙는다.
+ *
+ * 좁은 화면에서는 답변이 카드를 벗는다 — 창이 이미 카드라 안에 또 테두리를 두면 겹친다.
+ * 질문 말풍선도 오른쪽에 붙는다(넓은 화면은 왼쪽 정렬).
+ */
 export function ChatAsk() {
   return (
-    <div className="flex h-full flex-col p-3">
-      <div className="self-start rounded-[12px_12px_4px_12px] bg-[#f7efe3] px-3 py-[9px]">
-        <span className="text-[11.5px] font-medium text-[var(--lp-ink)]">
+    <div className={`${WINDOW} gap-[9px] lg:gap-0 lg:p-3`}>
+      <div className="max-w-[80%] self-end rounded-[12px_12px_4px_12px] bg-[var(--lp-rule-soft)] px-[11px] py-2 lg:max-w-none lg:self-start lg:bg-[#f7efe3] lg:px-3 lg:py-[9px]">
+        <span className="break-keep text-[11px] leading-[1.5] font-medium text-[var(--lp-ink)] lg:text-[11.5px]">
           결제 화면 개편은 왜 미뤘나요?
         </span>
       </div>
 
-      <div className="mt-2.5 flex flex-col gap-2 rounded-[4px_12px_12px_12px] border border-[var(--lp-rule)] bg-[var(--lp-card)] px-3 py-[11px]">
+      <div className="flex flex-col gap-1.5 lg:mt-2.5 lg:gap-2 lg:rounded-[4px_12px_12px_12px] lg:border lg:border-[var(--lp-rule)] lg:bg-[var(--lp-card)] lg:px-3 lg:py-[11px]">
         <div className="flex items-center gap-1.5">
-          <Sparkles aria-hidden className="size-3 shrink-0 text-[var(--lp-accent)]" />
-          <span className="text-[10.5px] font-semibold text-[var(--lp-accent)]">HeyMoa</span>
+          <span
+            aria-hidden
+            className="block size-[15px] shrink-0 rounded-full border border-[var(--lp-rule)] bg-[var(--lp-cream)] lg:hidden"
+          />
+          <Sparkles aria-hidden className="hidden size-3 shrink-0 text-[var(--lp-accent)] lg:block" />
+          <span className="text-[10px] font-semibold text-[var(--lp-accent)] lg:text-[10.5px]">
+            HeyMoa
+          </span>
         </div>
-        <p className="m-0 break-keep text-[11.5px] leading-[1.65] text-[var(--lp-body)]">
+        <p className="m-0 break-keep text-[11px] leading-[1.65] text-[var(--lp-body)] lg:text-[11.5px]">
           온보딩 이탈 지표를 먼저 보기로 해서 다음 스프린트로 미뤘습니다. 2차 회의에서
           정해진 결정입니다.
         </p>
@@ -171,7 +204,7 @@ export function ChatAsk() {
           {["2차 회의", "이번 회의"].map((chip) => (
             <span
               key={chip}
-              className="rounded-full bg-[var(--lp-rule-soft)] px-[7px] py-[3px] text-[9.5px] font-medium text-[var(--lp-body)]"
+              className="rounded-full border border-[var(--lp-rule)] bg-[var(--lp-canvas)] px-2 py-[3px] text-[9.5px] font-medium text-[var(--lp-body)] lg:border-0 lg:bg-[var(--lp-rule-soft)] lg:px-[7px]"
             >
               {chip}
             </span>
@@ -179,8 +212,11 @@ export function ChatAsk() {
         </div>
       </div>
 
-      <div className="mt-2.5 flex items-center justify-between rounded-full border border-[var(--lp-rule-strong)] px-2.5 py-2">
-        <span className="text-[11px] text-[var(--lp-faint)]">회의 중에 물어보기</span>
+      <div className="flex items-center gap-[7px] rounded-full border border-[var(--lp-rule)] bg-[var(--lp-canvas)] px-2.5 py-2 lg:mt-2.5 lg:border-[var(--lp-rule-strong)] lg:bg-transparent">
+        <span className="text-[10.5px] text-[var(--lp-faint)] lg:text-[11px]">
+          회의 중에 물어보기
+        </span>
+        <span className="flex-1" />
         <ArrowUp aria-hidden className="size-3 shrink-0 text-[#8a7a6d]" />
       </div>
     </div>
@@ -209,28 +245,35 @@ export function SummaryList() {
     ["결정", "2", [["결제 화면 개편은 다음 스프린트로 미룹니다.", "+3"]]],
   ];
   return (
-    <div className="flex h-full flex-col px-3.5 py-3">
+    <div className={`${WINDOW} gap-[11px] lg:gap-0 lg:px-3.5 lg:py-3`}>
       {groups.map(([label, count, items], gi) => (
-        <div key={label} className={gi > 0 ? "mt-4" : ""}>
-          <div className="flex items-end justify-between border-b border-[var(--lp-rule-soft)] pb-1.5">
-            <p className="m-0 font-serif text-[13px] font-semibold text-[var(--lp-ink)]">
+        <div key={label} className={gi > 0 ? "lg:mt-4" : ""}>
+          <div className="flex items-center gap-[7px] lg:items-end lg:justify-between lg:gap-0 lg:border-b lg:border-[var(--lp-rule-soft)] lg:pb-1.5">
+            <p className="m-0 font-serif text-[10.5px] font-semibold text-[#8a7a6d] lg:text-[13px] lg:text-[var(--lp-ink)]">
               {label}
             </p>
-            <span className="font-mono text-[10px] font-medium tabular-nums text-[var(--lp-faint)]">
+            <span aria-hidden className="block h-px flex-1 bg-[var(--lp-rule-soft)] lg:hidden" />
+            <span className="font-mono text-[9.5px] font-semibold tabular-nums text-[var(--lp-faint)] lg:text-[10px] lg:font-medium">
               {count}
             </span>
           </div>
           <ul className="m-0 list-none p-0">
-            {items.map(([text, more]) => (
-              <li key={text} className="flex gap-2 pt-[9px]">
-                <span className="min-w-0 flex-1 break-keep text-[11.5px] leading-[1.6] text-[var(--lp-body)]">
+            {items.map(([text, more], ii) => (
+              <li
+                key={text}
+                className={`flex gap-2 ${ii === 0 ? "mt-[7px]" : "mt-[5px]"} lg:mt-0 lg:pt-[9px]`}
+              >
+                <span className="min-w-0 flex-1 break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[11.5px] lg:leading-[1.6] lg:text-[var(--lp-body)]">
                   {text}
                 </span>
-                <span className="flex shrink-0 items-center gap-[5px] pt-0.5">
+                <span className="flex shrink-0 items-center gap-[5px] lg:pt-0.5">
                   <span className="font-mono text-[9.5px] font-semibold tabular-nums text-[#8a7a6d]">
                     {more}
                   </span>
-                  <ChevronDown aria-hidden className="size-[11px] text-[var(--lp-faint)]" />
+                  <ChevronDown
+                    aria-hidden
+                    className="hidden size-[11px] text-[var(--lp-faint)] lg:block"
+                  />
                 </span>
               </li>
             ))}
@@ -249,8 +292,8 @@ export function SummaryList() {
  */
 export function ApprovalThread() {
   return (
-    <div className="flex h-full flex-col gap-[9px] px-3.5 py-3">
-      <div className="max-w-[76%] self-end rounded-[12px_12px_4px_12px] bg-[var(--lp-rule-soft)] px-[11px] py-2">
+    <div className={`${WINDOW} gap-[9px] lg:px-3.5 lg:py-3`}>
+      <div className="max-w-[80%] self-end rounded-[12px_12px_4px_12px] bg-[var(--lp-rule-soft)] px-[11px] py-2 lg:max-w-[76%]">
         <span className="break-keep text-[11px] leading-[1.5] text-[var(--lp-ink)]">
           온보딩 이탈 로그 수집, Linear 이슈로 만들어 줘
         </span>
@@ -290,7 +333,7 @@ export function InviteList() {
     ["이서연", "초대함"],
   ];
   return (
-    <div className="flex h-full flex-col p-3">
+    <div className={`${WINDOW} lg:p-3`}>
       <div className="flex items-center gap-2 border-b border-[var(--lp-rule-soft)] pb-[9px]">
         <span className="text-[11.5px] font-bold text-[var(--lp-ink)]">멤버</span>
         <span className="flex-1" />
@@ -311,7 +354,7 @@ export function InviteList() {
           key={who}
           className={`flex items-center gap-[9px] border-t border-[var(--lp-rule-soft)] py-[11px] ${i === 0 ? "mt-1.5" : ""}`}
         >
-          <Avatar who={who} className="size-5" />
+          <Avatar who={who} />
           <span className="min-w-0 flex-1 text-[11px] font-semibold text-[var(--lp-ink)]">
             {who}
           </span>
