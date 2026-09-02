@@ -417,9 +417,11 @@ function Rail() {
           ))}
         </div>
 
-        {GROUPS.map(({ kind, count, head: Head, mark: Mark, items }) => (
+        {GROUPS.map(({ kind, count, head: Head, mark: Mark, items }, gi) => (
           <div key={kind}>
-            <div className="mt-3.5 flex items-center gap-2 px-0.5">
+            <div
+              className={`mt-3.5 flex items-center gap-2 px-0.5 ${gi > 0 ? "lg:mt-4" : ""}`}
+            >
               <Head aria-hidden className="size-[13px] shrink-0 text-[#8a7a6d]" />
               <span className="text-[11.5px] font-semibold text-[var(--lp-body)]">{kind}</span>
               <span aria-hidden className="block h-px flex-1 bg-[var(--lp-rule)]" />
@@ -428,7 +430,9 @@ function Rail() {
               </span>
               <ChevronDown aria-hidden className="size-[13px] shrink-0 text-[var(--lp-faint)]" />
             </div>
-            <ul className="m-0 list-none p-0">
+            {/* 마지막 묶음 아래 16px — 시안이 레일 바닥을 띄워 둔 값이다. 없으면 창이
+                왼쪽 전사 기둥보다 18px 짧아진다. */}
+            <ul className={`m-0 list-none p-0 ${gi === GROUPS.length - 1 ? "mb-4" : ""}`}>
               {items.map((it) => (
                 <li
                   key={it.title}
