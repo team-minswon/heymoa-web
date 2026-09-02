@@ -92,15 +92,17 @@ export function Navbar() {
         <nav
           className={`${inWorkspace ? "hidden" : "hidden md:flex"} items-center gap-8 text-[15px] font-medium text-[var(--el-muted)]`}
         >
+          {/* `min-h-6`는 WCAG 2.2 AA의 24px 최소 타깃이다 — 15px 글자에 여백이 없어 22.5px
+              줄상자 그대로 22~23px였다. 알약이 40px라 겉보기는 안 바뀐다. */}
           <button
             onClick={() => handleScroll("features")}
-            className="hover:text-[var(--el-ink)] transition cursor-pointer"
+            className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
             기능 소개
           </button>
           <button
             onClick={() => handleScroll("how-it-works")}
-            className="hover:text-[var(--el-ink)] transition cursor-pointer"
+            className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
             작동 방식
           </button>
