@@ -90,14 +90,15 @@ export function Faq() {
                     )}
                   </button>
                 </h3>
-                {isOpen ? (
-                  <p
-                    id={panelId}
-                    className="m-0 mt-3 max-w-[640px] break-keep text-[14.5px] leading-[1.8] text-[var(--lp-body)] lg:text-[15px]"
-                  >
-                    {item.a}
-                  </p>
-                ) : null}
+                {/* 닫혀도 DOM에 남긴다 — 지우면 `aria-controls`가 없는 id를 가리키고,
+                    페이지 내 찾기(Ctrl+F)도 접힌 답을 못 찾는다. `hidden`이라 높이는 0이다. */}
+                <p
+                  id={panelId}
+                  hidden={!isOpen}
+                  className="m-0 mt-3 max-w-[640px] break-keep text-[14.5px] leading-[1.8] text-[var(--lp-body)] lg:text-[15px]"
+                >
+                  {item.a}
+                </p>
               </li>
             );
           })}

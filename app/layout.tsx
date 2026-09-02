@@ -138,10 +138,12 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers initialUser={initialUser}>
           <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
-            {/* 키보드 첫 탭이 nav 링크 전부를 지나지 않게. 포커스 전에는 화면 밖에 있다. */}
+            {/* 키보드 첫 탭이 nav 링크 전부를 지나지 않게. 포커스 전에는 화면 밖에 있다.
+                `focus-visible`이 아니라 `focus`인 것은 이 링크에 닿는 길이 키보드뿐이라서다 —
+                브라우저의 focus-visible 휴리스틱에 맡기면 안 뜨는 경우가 생긴다. */}
             <a
               href="#main"
-              className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:z-50 focus-visible:rounded-lg focus-visible:bg-[var(--el-ink)] focus-visible:px-4 focus-visible:py-2.5 focus-visible:text-[14px] focus-visible:font-semibold focus-visible:text-[var(--el-canvas)]"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-[var(--el-ink)] focus:px-4 focus:py-2.5 focus:text-[14px] focus:font-semibold focus:text-[var(--el-canvas)]"
             >
               본문으로 건너뛰기
             </a>
