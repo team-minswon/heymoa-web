@@ -272,3 +272,103 @@ describe("AnswerRefs", () => {
     expect(screen.getByText("참고한 회의록 3개")).toBeTruthy();
   });
 });
+
+/**
+ * ★ **등장 애니메이션은 흐를 때 한 번이다.**
+ *
+ * 답이 끝나면 같은 단계가 히스토리 컴포넌트로 다시 마운트되는데, 거기에 `chat-rise` 가
+ * 붙어 있으면 방금 본 레일이 **한 번 더 떠오른다** — 2026-09-03 실측에서 답 끝 번쩍임의
+ * 본체였다. 끝난 묶음은 소리 없이 선다.
+ */
+describe("등장 애니메이션", () => {
+  it("끝난 묶음(live=false)에는 등장 애니메이션이 안 붙는다", () => {
+    const { container } = render(
+      <ChainOfThought blocks={[tool("c1"), tool("c2")]} live={false} />
+    );
+    expect(
+      container
+        .querySelector('[data-cot="group"]')
+        ?.classList.contains("chat-rise")
+    ).toBe(false);
+    open();
+    expect(container.querySelector(".chat-rise")).toBeNull();
+  });
+
+  it("흐르는 묶음(live)에는 붙는다", () => {
+    const { container } = render(<ChainOfThought blocks={[tool("c1")]} live />);
+    expect(
+      container
+        .querySelector('[data-cot="group"]')
+        ?.classList.contains("chat-rise")
+    ).toBe(true);
+  });
+
+  it("히스토리 근거 줄은 소리 없이 선다", () => {
+    const { container } = render(
+      <AnswerRefs refs={[{ id: "n1", title: "주간 배포 회의" }]} />
+    );
+    expect(
+      container
+        .querySelector('[data-refs="answer"]')
+        ?.classList.contains("chat-rise")
+    ).toBe(false);
+  });
+
+  it("흐르다 끝난 근거 줄만 떠오른다", () => {
+    const { container } = render(
+      <AnswerRefs refs={[{ id: "n1", title: "주간 배포 회의" }]} animate />
+    );
+    expect(
+      container
+        .querySelector('[data-refs="answer"]')
+        ?.classList.contains("chat-rise")
+    ).toBe(true);
+  });
+});
+
+/**
+ * ★ **단계 사이의 빈 구간도 「도는 중」이다.**
+ *
+ * 도구 결과가 오고 다음 생각·토큰이 오기까지 모델이 도는 몇 초가 있다. 그 사이 마지막 줄은
+ * 체크로 굳어 있고 빛나는 글자가 하나도 없어서 **멈춘 것처럼 보였다.**
+ */
+describe("단계 사이의 「생각하는 중」", () => {
+  it("도구가 끝났는데 다음 단계가 아직이면 「생각하는 중」이 선다", () => {
+    render(<ChainOfThought blocks={[tool("c1")]} live />);
+    expect(screen.getByText("생각하는 중")).toBeTruthy();
+  });
+
+  it("접혀 있으면 머리글이 그 말을 한다", () => {
+    render(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live />);
+    fireEvent.click(screen.getByRole("button", { expanded: true }));
+    expect(screen.getByRole("button", { expanded: false }).textContent).toBe(
+      "생각하는 중"
+    );
+  });
+
+  it("도구가 아직 도는 중이면 겹치지 않는다", () => {
+    render(<ChainOfThought blocks={[{ ...tool("c1"), status: null }]} live />);
+    expect(screen.queryByText("생각하는 중")).toBeNull();
+  });
+
+  it("생각이 흐르는 중이면 그 줄이 이미 빛난다 — 겹치지 않는다", () => {
+    render(
+      <ChainOfThought
+        blocks={[tool("c1"), { kind: "thinking", text: "다음을 찾습니다." }]}
+        live
+      />
+    );
+    expect(screen.queryByText("생각하는 중")).toBeNull();
+  });
+
+  it("끝난 묶음에는 없다", () => {
+    render(<ChainOfThought blocks={[tool("c1")]} live={false} />);
+    open();
+    expect(screen.queryByText("생각하는 중")).toBeNull();
+  });
+
+  it("승인을 기다리는 동안도 없다 — 도는 것이 아니라 사람을 기다린다", () => {
+    render(<ChainOfThought blocks={[tool("c1"), approval(null)]} live />);
+    expect(screen.queryByText("생각하는 중")).toBeNull();
+  });
+});

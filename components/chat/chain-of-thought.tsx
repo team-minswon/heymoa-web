@@ -152,7 +152,9 @@ function Disclosure({
     <div
       data-cot="group"
       data-open={open ? "true" : "false"}
-      className={`chat-rise ${RAIL}`}
+      // ★ **떠오르는 것은 흐를 때 한 번이다.** 끝난 묶음은 히스토리 컴포넌트로 다시
+      // 마운트되는데, 거기서 또 떠오르면 방금 본 레일이 한 번 더 번쩍인다(2026-09-03 실측).
+      className={cn(live && "chat-rise", RAIL)}
     >
       <button
         type="button"
@@ -208,9 +210,21 @@ function Disclosure({
                   key={stepKey(block, index)}
                   block={block}
                   live={running && index === blocks.length - 1}
+                  animate={live}
                   onOpenNote={onOpenNote}
                 />
               ))}
+              {/* ★ **단계 사이의 빈 구간.** 도구 결과가 오고 다음 생각·토큰이 오기까지
+                  모델이 도는 몇 초가 있다. 마지막 줄은 체크로 굳었고 빛나는 글자가 없어
+                  멈춘 것처럼 보였다. 그 사이만 이 줄이 선다. */}
+              {running && betweenSteps(blocks) ? (
+                <div className="flex gap-2" data-step="pending">
+                  <Dot state="active" />
+                  <p className="chat-shimmer min-w-0 flex-1 text-xs leading-relaxed">
+                    생각하는 중
+                  </p>
+                </div>
+              ) : null}
             </div>
           </motion.div>
         ) : null}
@@ -226,9 +240,21 @@ function Disclosure({
 function currentStep(blocks: StepBlock[]): string {
   const last = blocks.at(-1);
   if (!last) return "생각 과정";
+  if (betweenSteps(blocks)) return "생각하는 중";
   if (last.kind === "thinking") return last.text.split("\n")[0] ?? "생각 과정";
   if (last.kind === "approval") return last.summary ?? last.tool;
   return last.summary ?? last.tool;
+}
+
+/**
+ * 마지막 단계는 끝났는데 다음이 아직 안 왔다. 생각은 마지막이면 언제나 도는 중이고(그 줄이
+ * 빛난다), 도구는 결과가 왔으면 끝, 승인은 확정 전이면 이미 걸러졌으니 확정된 것만 온다.
+ */
+function betweenSteps(blocks: StepBlock[]): boolean {
+  const last = blocks.at(-1);
+  if (!last || last.kind === "thinking") return false;
+  if (last.kind === "tool") return last.status !== null;
+  return last.decision !== null;
 }
 
 function stepKey(block: StepBlock, index: number) {
@@ -273,15 +299,19 @@ function headline(blocks: StepBlock[]): string {
 function StepRow({
   block,
   live,
+  animate,
   onOpenNote,
 }: {
   block: StepBlock;
   live: boolean;
+  /** 이 묶음이 흐르는 중이라 새 줄이 떠오르며 선다. 끝난 묶음은 소리 없이 선다. */
+  animate: boolean;
   onOpenNote?: (noteId: string) => void;
 }) {
+  const row = cn(animate && "chat-rise", "flex gap-2");
   if (block.kind === "thinking") {
     return (
-      <div className="chat-rise flex gap-2" data-step="thinking">
+      <div className={row} data-step="thinking">
         <Dot state={live ? "active" : "complete"} />
         {/* 생각이 여럿이면 줄바꿈으로 온다 — `whitespace-pre-line`이 없으면 「찾습니다.
             전사에서」처럼 두 문장이 한 줄로 붙어 버린다. */}
@@ -301,7 +331,7 @@ function StepRow({
     // 확정 전에는 승인 카드가 따로 서 있다 — 여기 기록은 결정이 온 뒤에만 남는다.
     if (!block.decision) return null;
     return (
-      <div className="chat-rise flex gap-2" data-step="approval">
+      <div className={row} data-step="approval">
         <Dot state="complete" />
         <p className="min-w-0 flex-1 text-xs leading-relaxed text-[var(--el-muted)]">
           <span className="font-medium text-[var(--el-body-strong)]">
@@ -322,7 +352,7 @@ function StepRow({
   }
 
   return (
-    <div className="chat-rise flex gap-2" data-step="tool">
+    <div className={row} data-step="tool">
       <Dot
         state={
           block.status === "error"
@@ -469,9 +499,12 @@ function Dot({
  */
 export function AnswerRefs({
   refs,
+  animate = false,
   onOpenNote,
 }: {
   refs: { id: string; title: string }[];
+  /** 방금 흐르다 끝난 답의 근거 줄이라 떠오르며 선다. 히스토리 행은 소리 없이 선다. */
+  animate?: boolean;
   onOpenNote?: (noteId: string) => void;
 }) {
   // 하나뿐이면 접어도 아낄 자리가 없고, 그 칩이 회의록으로 가는 유일한 문이다.
@@ -483,7 +516,10 @@ export function AnswerRefs({
     <div
       data-refs="answer"
       data-open={open ? "true" : "false"}
-      className="chat-rise mt-2 border-t border-[var(--el-hairline)] pt-2"
+      className={cn(
+        animate && "chat-rise",
+        "mt-2 border-t border-[var(--el-hairline)] pt-2"
+      )}
     >
       <button
         type="button"

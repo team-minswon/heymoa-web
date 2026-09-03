@@ -342,7 +342,9 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: chat-shimmer 2.1s linear infinite;
+    /* 2.1s 는 빛이 문장을 훑고 지나가는 것이 아니라 스쳐 가는 것으로 읽혔다. 눈이 따라갈
+       만큼 — Claude 의 도구 이름 빛과 비슷한 걸음이다. */
+    animation: chat-shimmer 3s linear infinite;
   }
 
   .chat-title-in {

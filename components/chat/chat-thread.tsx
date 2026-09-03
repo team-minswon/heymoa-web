@@ -818,8 +818,12 @@ function StreamBlocks({
 }
 
 /**
- * 답변이 끝난 뒤에만 서는 것들 — 근거 줄과 범위 확장 제안. 흐르는 중에 그리면 아직
- * 안 끝난 답에 결론을 붙이게 된다.
+ * 답변이 끝난 뒤에만 서는 것 — 근거 줄. 흐르는 중에 그리면 아직 안 끝난 답에 결론을
+ * 붙이게 된다.
+ *
+ * ★ **`done` 이 그 순간이다.** 예전 조건(`phase !== "idle" || content === null` 이면 null)은
+ * `content` 가 있을 때 `phase` 가 `idle` 인 적이 없어 **한 번도 렌더되지 않았다** — 근거
+ * 줄이 히스토리로 갈아끼울 때 처음 튀어 들어와 높이가 한 프레임에 뛰었다(2026-09-03 실측).
  */
 function StreamTail({
   stream,
@@ -828,8 +832,8 @@ function StreamTail({
   stream: ChatStreamState;
   onOpenNote?: (noteId: string) => void;
 }) {
-  if (stream.phase !== "idle" || stream.content === null) return null;
-  return <AnswerRefs refs={stream.refs} onOpenNote={onOpenNote} />;
+  if (stream.phase !== "done") return null;
+  return <AnswerRefs refs={stream.refs} animate onOpenNote={onOpenNote} />;
 }
 
 /**

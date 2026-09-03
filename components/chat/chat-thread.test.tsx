@@ -1186,3 +1186,35 @@ describe("승인 카드가 무엇을 승인하는지 보여준다", () => {
     expect(short.container.querySelector("details")).toBeNull();
   });
 });
+
+/**
+ * ★ **근거 줄은 `message_end` 에 선다.**
+ *
+ * refs 는 `message_end` 에 실려 오는데 예전 `StreamTail` 은 `phase !== "idle"` 이면 아무것도
+ * 안 그리는 조건이라 **한 번도 렌더되지 않았다.** 근거 줄이 히스토리로 갈아끼울 때 처음
+ * 튀어 들어와 높이가 한 프레임에 뛰었다(2026-09-03 실측).
+ */
+describe("message_end 뒤의 근거 줄", () => {
+  it("★ 답이 끝나면 히스토리를 기다리지 않고 근거 줄이 바로 선다", () => {
+    renderThread({
+      stream: {
+        ...initialStreamState,
+        phase: "done",
+        content: "금요일입니다.",
+        blocks: body("금요일입니다."),
+        refs: [{ kind: "note", id: "n1", title: "주간 배포 회의" }],
+      },
+    });
+    expect(screen.getByText("참고한 회의록 1개")).toBeTruthy();
+  });
+
+  it("흐르는 중에는 아직 안 선다 — 결론을 미리 붙이지 않는다", () => {
+    renderThread({
+      stream: streaming({
+        blocks: body("금요"),
+        refs: [{ kind: "note", id: "n1", title: "주간 배포 회의" }],
+      }),
+    });
+    expect(screen.queryByText(/참고한 회의록/)).toBeNull();
+  });
+});
