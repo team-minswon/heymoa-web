@@ -68,12 +68,12 @@ function isAbnormalEnd(phase: ChatStreamPhase): boolean {
  * 승인 상태 기계. 개인·공유 챗봇이 같은 흐름을 쓰므로 여기로 뺐다.
  *
  * **보낸 것이 확정은 아니다.** approve는 낙관적으로 결과를 뒤집지 않고 `submitted`로만
- * 간다 — 확정은 2차 스트림의 첫 프레임(`tool_approval_resolved`)이 `pending`을 지우며
+ * 간다 — 확정은 재접속한 스트림의 첫 프레임(`tool_approval_resolved`)이 `pending`을 지우며
  * 반영한다. 무효화는 두 입구가 한 화면으로 수렴한다: 종료 오류(403/404)와, 승인을
  * 기다리다 스트림이 비정상 종료해 `pending`이 소실되는 것. 후자를 위해 직전 승인을
  * 붙잡아 무효화 카드로 남긴다.
  *
- * **보내는 일은 여기서 안 한다.** 응답이 2차 스트림이라 그건 스트림 훅의 일이고, 여기로는
+ * **보내는 일은 여기서 안 한다.** 202 뒤 스트림에 다시 붙는 것은 컴포넌트의 일이고, 여기로는
  * `resolve`가 주입된다 — 실패면 사유를, 열렸으면 null을 돌려준다.
  */
 export function useToolApproval({
@@ -126,7 +126,7 @@ export function useToolApproval({
     (decision: ApprovalDecision) => {
       const target = pending;
       if (!target) return;
-      // 보낸 것일 뿐 — 확정은 2차 스트림이 한다. 그 사이 버튼을 잠그지 않으면 중복 결정이
+      // 보낸 것일 뿐 — 확정은 재접속한 스트림이 한다. 그 사이 버튼을 잠그지 않으면 중복 결정이
       // 나가므로 **보내기 전에** 잠근다(카드가 `submitted`면 버튼이 disabled다).
       setSubmittedId(target.approvalId);
       void resolve(target.approvalId, decision).then((error) => {

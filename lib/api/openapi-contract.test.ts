@@ -169,7 +169,8 @@ describe("OpenAPI contract", () => {
       expect(schemaNames).not.toContain(name);
     }
     expect(Object.keys(api().paths)).toHaveLength(45);
-    expect(schemaNames).toHaveLength(61);
+    // APP-551: 턴 스트림 계약이 `AgentChatTurnResponse`(202 {turnId}) 하나를 더한다.
+    expect(schemaNames).toHaveLength(62);
   });
 
   it("omits the internal-only security scheme", () => {
@@ -403,8 +404,9 @@ describe("contract sync 2026-07-29", () => {
       api().paths["/v1/agent-chats/{chatId}/messages"]?.post?.operationId
     ).toBe("sendAgentChatMessage");
     expect(
-      api().paths["/v1/agent-chats/{chatId}/events"]?.get?.operationId
-    ).toBe("subscribeAgentChatEvents");
+      api().paths["/v1/agent-chats/{chatId}/turns/{turnId}/events"]?.get
+        ?.operationId
+    ).toBe("subscribeAgentChatTurnEvents");
     expect(
       api().paths["/v1/agent-chats/{chatId}/turns/{turnId}/cancel"]?.post
         ?.operationId

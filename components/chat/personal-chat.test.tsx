@@ -16,11 +16,24 @@ import {
 // 근거 칩·도구 칩을 누르면 그 회의록으로 간다 — 이 테스트는 라우터 밖에서 돈다.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
+/** 보내기 실패의 토스트는 `send()` 가 직접 띄운다 — 409 만 조용해야 한다. */
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
+
 const WORKSPACE_ID = "01K0000000001";
 const NOTE_ID = "01K0000000002";
 const CHAT_ID = "01K0000000003";
 const NEW_CHAT_ID = "01K0000000004";
 const OTHER_CHAT_ID = "01K0000000005";
+/** `POST /messages` 의 202 가 주는 턴 id. 스트림 URL 이 이걸로 만들어진다. */
+const TURN_ID = "0K9GVJT2C4Q3B";
+/** 승인 카드 프레임의 `id:`. 승인 뒤 재접속이 `after` 에 넣는 값이다. */
+const APPROVAL_ENTRY_ID = "3-0";
+
+function eventsUrl(chatId: string, turnId: string, after?: string) {
+  const url = `/v1/agent-chats/${chatId}/turns/${turnId}/events`;
+  return after === undefined ? url : `${url}?after=${after}`;
+}
 
 /**
  * 목록 한 줄. **정렬은 서버가 한다** — 여기서는 배열 순서가 곧 `updatedAt` 내림차순이고,
@@ -57,8 +70,8 @@ const state = vi.hoisted(() => ({
   /** 대화 목록이 주는 것. 첫 줄이 마지막으로 쓴 대화다. */
   chats: [] as { chatId: string; title: string; runningTurn: unknown }[],
   messages: [] as unknown[],
-  /** `GET /messages`가 히스토리 옆에 싣는 이어받기 상태. */
-  cursor: 0,
+  /** `GET /messages`가 히스토리 옆에 싣는 재생 시작점. null 이면 처음부터다. */
+  cursor: null as string | null,
   activeTurn: null as ActiveTurn,
   /** 대화별 도는 턴. 없는 대화는 `activeTurn` 을 쓴다. */
   activeTurnByChat: {} as Record<string, ActiveTurn>,
@@ -68,12 +81,19 @@ const state = vi.hoisted(() => ({
     failureCode: string | null;
     retryable: boolean | null;
   } | null,
-  /** 이어받기가 `GET /events`로 받는 프레임. `id:` 줄이 곧 seq다. */
+  /** 이어받기가 턴 스트림에서 받는 프레임. `id:` 줄이 곧 커서다. */
   resumeFrames: [] as { event: string; data: string; id?: string }[],
+  /** 열린 스트림 URL 전부 — 첫 연결·재접속·재진입이 같은 문으로 들어온다. */
   resumeUrls: [] as string[],
+  /** 스트림이 열리기도 전에 던질 것. 410 이 여기로 온다. */
+  resumeFailure: null as unknown,
+  /** 「POST 가 먼저, GET 이 나중」을 재는 순서 로그. */
+  order: [] as string[],
   createMock: vi.fn(),
   cancelMock: vi.fn(),
   approveMock: vi.fn(),
+  /** 지금 스트림이 어느 흐름을 흘려야 하나. 202 가 오면 send, 승인 202 가 오면 approval 이다. */
+  mode: "resume" as "resume" | "send" | "approval",
   refetchMock: vi.fn(),
   refetchedChatIds: [] as string[],
   chatsFail: false,
@@ -84,15 +104,13 @@ const state = vi.hoisted(() => ({
   createPending: false,
   chatsParams: [] as unknown[],
   messagesArgs: [] as unknown[],
-  streamCalls: [] as { url: string; body: unknown }[],
+  streamCalls: [] as { chatId: string; body: unknown }[],
   aborted: false,
   holdStream: false,
-  /** 스트림을 아예 못 연다. 실패 배너와 「다시 보내기」가 뜨는 유일한 경로다. */
+  /** `POST /messages` 가 실패한다. 문장이 컴포저로 돌아오는 유일한 경로다. */
   streamFails: false,
   /** 그때 던지는 오류 봉투. 409는 실패가 아니라 이어받기라 갈래가 다르다. */
   streamFailure: null as unknown,
-  /** 스트림이 `turn_started`를 낸다 — 서버에 턴이 실제로 생겼다는 유일한 신호다. */
-  streamTurnId: null as string | null,
   /** 시작한 뒤 `turn_cancelled`로 굳는다. 「중지」가 만드는 그 결말이다. */
   cancelsAfterStart: false,
   /** 이어받기 스트림을 열어 둔다 — 중지 버튼이 떠 있어야 누를 수 있다. */
@@ -145,26 +163,53 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
         };
       },
     }),
-    getSendAgentChatMessageUrl: (chatId: string) =>
-      `/v1/agent-chats/${chatId}/messages`,
-    // 2차도 `?after=`를 받는다. 없으면 서버가 그 턴의 1차 절반을 통째로 다시 보낸다.
-    getResolveToolApprovalUrl: (
+    // 스트림 URL의 단일 출처가 생성물이다. `after`가 없으면 턴의 처음부터 받는다.
+    getSubscribeAgentChatTurnEventsUrl: (
       chatId: string,
-      approvalId: string,
-      params?: { after?: number }
-    ) =>
-      params?.after === undefined
-        ? `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve`
-        : `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve?after=${params.after}`,
-    // 재연결 URL의 단일 출처가 생성물이다. `after`가 없으면 처음부터 받는다 —
-    // `0`은 생략이 아니라 「버퍼가 비었다」다.
-    getSubscribeAgentChatEventsUrl: (
-      chatId: string,
-      params?: { after?: number }
-    ) =>
-      params?.after === undefined
-        ? `/v1/agent-chats/${chatId}/events`
-        : `/v1/agent-chats/${chatId}/events?after=${params.after}`,
+      turnId: string,
+      params?: { after?: string }
+    ) => eventsUrl(chatId, turnId, params?.after),
+    /** `POST /messages`. 202 `{turnId}` 로 끝나고 프레임은 턴 스트림으로 온다. */
+    useSendAgentChatMessage: () => ({
+      mutateAsync: async ({
+        chatId,
+        data,
+      }: {
+        chatId: string;
+        data: unknown;
+      }) => {
+        state.order.push("send");
+        state.streamCalls.push({ chatId, body: data });
+        if (state.streamFails) {
+          throw (
+            state.streamFailure ?? {
+              success: false,
+              data: null,
+              error: { code: "LLM_PROVIDER_ERROR", message: "응답 생성 실패" },
+            }
+          );
+        }
+        state.mode = "send";
+        return {
+          status: 202,
+          data: { success: true, data: { turnId: TURN_ID } },
+        };
+      },
+      isPending: false,
+    }),
+    /** 승인. 202 만 주고 나머지 절반은 같은 턴 스트림에 `after` 를 넣어 다시 붙어 받는다. */
+    useResolveToolApproval: () => ({
+      mutateAsync: async (variables: unknown) => {
+        state.approveMock(variables);
+        if (state.approvalError) throw state.approvalError;
+        state.mode = "approval";
+        return {
+          status: 202,
+          data: { success: true, data: { turnId: TURN_ID } },
+        };
+      },
+      isPending: false,
+    }),
     useGetAgentChats: (workspaceId: string) => {
       state.chatsParams.push(workspaceId);
       return {
@@ -231,38 +276,44 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
 });
 
 vi.mock("@/lib/api/sse", () => ({
-  // 이어받기가 이 문으로 들어온다. 빈 채로 두면 곧바로 EOF이고, 그건 실패가 아니라
-  // 재연결 신호다 — `cursor: 0`(버퍼가 비었다) 경로가 정확히 그 모양이다.
-  getEventStream: async function* (url: string) {
-    state.resumeUrls.push(url);
-    for (const frame of state.resumeFrames) yield frame;
-    if (state.holdResume) await new Promise<void>(() => {});
-  },
-  postEventStream: async function* (
+  /**
+   * 첫 연결도 재접속도 재진입도 이 문 하나다. 무엇을 흘릴지는 `state.mode` 가 가른다 —
+   * 202 를 받은 뒤면 새 턴의 프레임, 승인 202 뒤면 나머지 절반, 그 밖에는 이어받기 프레임.
+   */
+  getEventStream: async function* (
     url: string,
-    body: unknown,
     options?: { signal?: AbortSignal }
   ) {
-    state.streamCalls.push({ url, body });
-    // **모든 프레임이 `id:` 줄을 갖는다.** 계약이 그렇고, 안 실으면 화면 커서가 한 번도
-    // 안 움직여 `?after=` 를 쓰는 자리를 목으로 하나도 못 밟는다. 2차는 새 블록이다.
-    let seq = url.includes("/approvals/") ? 1_000 : 0;
-    const framed = (event: string, payload: unknown) => ({
-      event,
-      data: JSON.stringify(payload),
-      id: String((seq += 1)),
-    });
+    state.order.push("open");
+    state.resumeUrls.push(url);
     options?.signal?.addEventListener("abort", () => {
       state.aborted = true;
     });
-    // **승인 응답이 2차 스트림이다.** 같은 문으로 들어오고 URL로만 갈린다.
-    if (url.includes("/approvals/")) {
-      state.approveMock({ url, body });
-      if (state.approvalError) throw state.approvalError;
+    if (state.resumeFailure) throw state.resumeFailure;
+    // 붙잡아 둔 스트림도 abort 에는 풀린다 — 실제 전송이 그렇다(중지가 여기서 끊는다).
+    const untilAbort = () =>
+      new Promise<void>((resolve) =>
+        options?.signal?.addEventListener("abort", () => resolve())
+      );
+    if (state.mode === "resume") {
+      for (const frame of state.resumeFrames) yield frame;
+      if (state.holdResume) await untilAbort();
+      return;
+    }
+    // **모든 프레임이 `id:` 줄을 갖는다.** 계약이 그렇고, 안 실으면 화면 커서가 한 번도
+    // 안 움직여 `?after=` 를 쓰는 자리를 목으로 하나도 못 밟는다.
+    let seq = 0;
+    const framed = (event: string, payload: unknown) => ({
+      event,
+      data: JSON.stringify(payload),
+      id: `${(seq += 1)}-0`,
+    });
+    if (state.mode === "approval") {
       // 확정은 이 스트림의 첫 프레임이 한다 — 그때까지 붙잡아 둔다.
       await new Promise<void>((resolve) => {
         state.releaseStream = resolve;
       });
+      seq = 3;
       yield framed("tool_approval_resolved", {
         approvalId: "0K9GVJT2C4Q7F",
         decision: "APPROVED",
@@ -277,38 +328,31 @@ vi.mock("@/lib/api/sse", () => ({
       });
       return;
     }
-    if (state.streamFails) {
-      throw (
-        state.streamFailure ?? {
-          success: false,
-          data: null,
-          error: { code: "LLM_PROVIDER_ERROR", message: "응답 생성 실패" },
-        }
-      );
-    }
-    if (state.streamTurnId) {
-      yield framed("turn_started", { turnId: state.streamTurnId, startSeq: 0 });
-    }
     if (state.cancelsAfterStart) {
-      yield framed("turn_cancelled", { turnId: state.streamTurnId });
+      yield framed("turn_cancelled", { turnId: TURN_ID });
       return;
     }
     yield framed("message_start", { chatId: CHAT_ID, messageId: "m1" });
     yield framed("token", { delta: "정리했" });
     if (state.approvalStream) {
+      // `id:` 가 `APPROVAL_ENTRY_ID` 다 — 승인 뒤 재접속이 이 값을 `after` 에 넣는다.
       yield framed("tool_approval_request", {
         approvalId: "0K9GVJT2C4Q7F",
         toolCallId: "call_02",
         tool: "linear.create_issue",
         summary: "Linear 이슈 생성",
       });
-      // **1차는 여기서 끝난다.** 이어질 프레임은 승인 API의 2차 스트림이 낸다.
+      // **스트림은 여기서 닫힌다.** 이어질 프레임은 승인 202 뒤의 재접속이 받는다.
       return;
     }
     if (state.holdStream) {
-      await new Promise<void>((resolve) => {
-        state.releaseStream = resolve;
-      });
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          state.releaseStream = resolve;
+        }),
+        untilAbort(),
+      ]);
+      if (options?.signal?.aborted) return;
     }
     yield framed("message_end", {
       messageId: "m1",
@@ -449,8 +493,10 @@ describe("PersonalChatProvider", () => {
     state.holdStream = false;
     state.streamFails = false;
     state.streamFailure = null;
-    state.streamTurnId = null;
     state.cancelsAfterStart = false;
+    state.mode = "resume";
+    state.order = [];
+    state.resumeFailure = null;
     state.holdResume = false;
     state.approvalStream = false;
     state.approvalError = null;
@@ -464,7 +510,7 @@ describe("PersonalChatProvider", () => {
     state.createPending = false;
     state.refetchMock.mockReset();
     state.refetchedChatIds = [];
-    state.cursor = 0;
+    state.cursor = null;
     state.activeTurn = null;
     state.activeTurnByChat = {};
     state.lastTurn = null;
@@ -476,6 +522,7 @@ describe("PersonalChatProvider", () => {
       data: { success: true, data: { chatId: NEW_CHAT_ID } },
     });
     state.approveMock.mockReset();
+    toastError.mockReset();
   });
 
   afterEach(cleanup);
@@ -520,7 +567,7 @@ describe("PersonalChatProvider", () => {
     });
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.streamCalls[0]).toEqual({
-      url: `/v1/agent-chats/${NEW_CHAT_ID}/messages`,
+      chatId: NEW_CHAT_ID,
       // **범위가 요청 본문에 실린다.** 붙인 것이 없으면 빈 배열이고, 그것이 곧
       // "워크스페이스 전체가 범위"라는 뜻이다.
       body: {
@@ -529,6 +576,11 @@ describe("PersonalChatProvider", () => {
         projectIds: [],
       },
     });
+    // ★ **POST → 202 → GET 순서다.** 스트림은 턴 id 로 열리고 첫 연결에는 `after` 가 없다.
+    await waitFor(() =>
+      expect(state.resumeUrls).toEqual([eventsUrl(NEW_CHAT_ID, TURN_ID)])
+    );
+    expect(state.order.slice(0, 2)).toEqual(["send", "open"]);
 
     // 히스토리도 **방금 만든** chatId로 다시 읽어야 한다. 훅의 refetch를 쓰면 아직
     // 빈 id에 묶여 있어 `/v1/agent-chats//messages`를 부른다.
@@ -543,9 +595,24 @@ describe("PersonalChatProvider", () => {
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.createMock).not.toHaveBeenCalled();
-    expect(state.streamCalls[0].url).toBe(
-      `/v1/agent-chats/${CHAT_ID}/messages`
-    );
+    expect(state.streamCalls[0].chatId).toBe(CHAT_ID);
+  });
+
+  it("★ 202 가 준 turnId 가 상태에 선다 — 중지가 그 값으로 취소한다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.holdStream = true;
+    renderChat();
+    openPanel();
+    await sendMessage("정리해줘");
+
+    await waitFor(() => expect(state.releaseStream).not.toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "중지" }));
+
+    expect(state.cancelMock).toHaveBeenCalledWith({
+      chatId: CHAT_ID,
+      turnId: TURN_ID,
+    });
+    state.releaseStream?.();
   });
 
   it("정상 종료 뒤 히스토리를 다시 읽고 스트림을 비운다", async () => {
@@ -671,9 +738,7 @@ describe("PersonalChatProvider", () => {
 
     await waitFor(() => expect(state.createMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
-    expect(state.streamCalls[0].url).toBe(
-      `/v1/agent-chats/${NEW_CHAT_ID}/messages`
-    );
+    expect(state.streamCalls[0].chatId).toBe(NEW_CHAT_ID);
   });
 
   it("새 대화가 범위도 함께 비운다", async () => {
@@ -1072,9 +1137,18 @@ describe("PersonalChatProvider", () => {
       true
     );
     expect(state.approveMock).toHaveBeenCalledTimes(1);
-    // ★ **커서를 실어 보낸다.** 없으면 서버가 이 재개가 뗀 블록의 시작부터 재생해
-    // 그 턴의 1차 절반이 통째로 다시 온다.
-    expect(state.approveMock.mock.calls[0][0].url).toContain("?after=");
+    // ★ **승인 요청에는 `after` 가 없다.** 202 뒤 같은 턴 스트림에 카드의 id 를 `after`
+    // 에 넣어 다시 붙는다 — 카드까지 다시 받으면 화면이 승인 대기로 되돌아간다.
+    expect(state.approveMock).toHaveBeenCalledWith({
+      chatId: CHAT_ID,
+      approvalId: "0K9GVJT2C4Q7F",
+      data: { decision: "APPROVED" },
+    });
+    await waitFor(() =>
+      expect(state.resumeUrls.at(-1)).toBe(
+        eventsUrl(CHAT_ID, TURN_ID, APPROVAL_ENTRY_ID)
+      )
+    );
 
     state.releaseStream?.();
   });
@@ -1367,11 +1441,11 @@ describe("PersonalChatProvider", () => {
    * ★ 재진입 네 갈래. `activeTurn`이 가르고, 없으면 `lastTurn`만 본다.
    */
   describe("돌아오면 이어받는다", () => {
-    function frame(event: string, payload: unknown, seq?: number) {
+    function frame(event: string, payload: unknown, id?: string) {
       return {
         event,
         data: JSON.stringify(payload),
-        ...(seq === undefined ? {} : { id: String(seq) }),
+        ...(id === undefined ? {} : { id }),
       };
     }
 
@@ -1387,27 +1461,26 @@ describe("PersonalChatProvider", () => {
       };
     }
 
-    it("★ activeTurn이 있으면 cursor부터 GET /events로 잇고 누적 전문을 그린다", async () => {
+    it("★ activeTurn이 있으면 cursor부터 턴 스트림으로 잇고 누적 전문을 그린다", async () => {
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
         pendingApproval: null,
       };
       state.resumeFrames = [
-        // **본문은 재생이 그린다.** `partialText` 가 걷혀서 화면이 여는 자리에 본문이
-        // 없다 — 커서 뒤부터 오는 이 프레임들이 유일한 출처다.
-        frame("token", { delta: "안녕하" }, 132),
-        frame("token", { delta: "세요" }, 133),
+        // **본문은 재생이 그린다.** 커서 뒤부터 오는 이 프레임들이 유일한 출처다.
+        frame("token", { delta: "안녕하" }, "1735689600000-5"),
+        frame("token", { delta: "세요" }, "1735689600000-6"),
       ];
       renderChat();
       openPanel();
 
-      // 커서가 그대로 `?after=`에 들어간다. 안 들어가면 버퍼가 통째로 재생된다.
+      // 커서가 그대로 `?after=`에 들어간다. 안 들어가면 카드까지 통째로 다시 온다.
       await waitFor(() =>
         expect(state.resumeUrls).toContain(
-          `/v1/agent-chats/${CHAT_ID}/events?after=131`
+          eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B", "1735689600000-4")
         )
       );
       // 재생이 그린 본문. 화면이 이 프레임들을 안 접으면 답이 통째로 빈다.
@@ -1417,47 +1490,55 @@ describe("PersonalChatProvider", () => {
     });
 
     /**
-     * ★★ **서버가 「못 준다」고 말한 자리를 히스토리가 메운다.**
+     * ★★ **서버가 「스트림이 사라졌다」고 말한 자리를 히스토리가 메운다.**
      *
-     * `stream_resync` 는 로그 바닥 아래에서 붙었다는 뜻이라, 그 구간은 재생으로 안 온다.
-     * **안 읽으면 그 구간이 화면에서 조용히 사라진다** — 오류도 로그도 없이.
-     *
-     * 되찾는 행을 **앞 턴**의 것으로 두는 것이 요점이다. 흐르는 턴의 행은 스트림 블록과
-     * 겹쳐 그려지지 않게 화면이 접고 있어서, 그 행으로 재면 재조회가 실제로 화면에 닿았는지
-     * 판정이 안 선다. 로그가 앞에서 버리는 것도 **먼저 굳은 턴의 프레임**이라 이쪽이 실제
-     * 모양이다.
+     * `410` 은 턴은 끝났고 스트림은 TTL 로 사라졌다는 뜻이라, 그 답은 재생으로 안 온다.
+     * **안 읽으면 그 답이 화면에서 조용히 사라진다** — 오류도 로그도 없이. 다시 읽은
+     * 뒤에는 로컬 스트림을 비워 히스토리가 그 답을 그리고 컴포저가 풀린다.
      */
-    it("★ stream_resync 를 받으면 히스토리를 다시 읽고 그 결과가 화면에 선다", async () => {
+    it("★ 410 을 받으면 히스토리를 다시 읽고 그 결과가 화면에 선다", async () => {
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
         pendingApproval: null,
       };
       state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
-      // 재조회가 실제로 왕복을 돌았을 때만 이 행이 생긴다.
+      // 재조회가 실제로 왕복을 돌았을 때만 이 행이 생긴다 — 그 사이 서버에서 굳은 답이다.
       state.onRefetch = () => {
         state.messages = [
-          historyRow("ASSISTANT", "잃어버린 앞 턴의 답", "0K9GVJT2C4Q3A"),
           historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
+          historyRow("ASSISTANT", "TTL 뒤에 읽은 답", "0K9GVJT2C4Q3B"),
         ];
+        state.activeTurn = null;
+        state.lastTurn = {
+          turnId: "0K9GVJT2C4Q3B",
+          status: "COMPLETED",
+          failureCode: null,
+          retryable: null,
+        };
       };
-      // 흐르는 중에 온다. 스트림을 열어 둬야 `streaming` 그대로다.
-      state.holdResume = true;
-      state.resumeFrames = [
-        frame("stream_resync", {}, 900),
-        // 마크다운이 낱말마다 `<span>`으로 쪼개서 공백 없는 한 낱말로 둔다.
-        frame("token", { delta: "뒷부분" }, 901),
-      ];
+      state.resumeFailure = {
+        success: false,
+        data: null,
+        error: { code: "SSE_STREAM_GONE", message: "스트림이 사라졌습니다." },
+      };
       renderChat();
       openPanel();
 
       // 히스토리 쿼리는 흐르는 동안 `enabled: false`라 이 왕복은 `reconcile()`만 낼 수 있다.
       await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
-      expect(await screen.findByText("잃어버린 앞 턴의 답")).toBeTruthy();
-      // 커서는 바닥까지 올라가고 그 뒤 프레임은 그대로 붙는다 — resync 는 종료가 아니다.
-      expect(await screen.findByText("뒷부분")).toBeTruthy();
+      expect(await screen.findByText("TTL 뒤에 읽은 답")).toBeTruthy();
+      // 재연결은 없다 — 스트림은 한 번만 열렸다.
+      expect(state.resumeUrls).toHaveLength(1);
+      // 로컬 스트림이 비워져 전송이 풀린다.
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+          "disabled",
+          false
+        )
+      );
     });
 
     /**
@@ -1471,7 +1552,7 @@ describe("PersonalChatProvider", () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
         state.chats = [chatRow(CHAT_ID)];
-        state.cursor = 131;
+        state.cursor = "1735689600000-4";
         state.activeTurn = {
           turnId: "0K9GVJT2C4Q3B",
           status: "IN_PROGRESS",
@@ -1508,9 +1589,9 @@ describe("PersonalChatProvider", () => {
       }
     });
 
-    it("★ cursor가 0이어도 잇는다 — 버퍼가 빈 것이지 오류가 아니다", async () => {
+    it("★ cursor가 null 이어도 잇는다 — after 없이 처음부터 연다", async () => {
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 0;
+      state.cursor = null;
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
@@ -1521,9 +1602,7 @@ describe("PersonalChatProvider", () => {
       openPanel();
 
       await waitFor(() =>
-        expect(state.resumeUrls).toContain(
-          `/v1/agent-chats/${CHAT_ID}/events?after=0`
-        )
+        expect(state.resumeUrls).toContain(eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B"))
       );
       expect(screen.queryByText("응답을 받지 못했습니다.")).toBeNull();
     });
@@ -1532,7 +1611,7 @@ describe("PersonalChatProvider", () => {
       // `GET /events`는 도는 턴이 없으면(`hasLiveTurn = IN_PROGRESS`) 밀린 것만 주고
       // 곧바로 닫는다 — 열면 그 EOF가 재연결 루프를 태운다. 상태만 세우는 것이 맞다.
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 140;
+      state.cursor = "1735689600000-9";
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "WAITING_APPROVAL",
@@ -1552,7 +1631,7 @@ describe("PersonalChatProvider", () => {
     it("★ 남이 시작한 턴이 돌면 전송을 잠근다", async () => {
       // `isSending`은 이 탭의 이번 전송만 안다 — 열어 두면 두 번째 메시지가 409를 받는다.
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
@@ -1596,7 +1675,7 @@ describe("PersonalChatProvider", () => {
       // `lastTurn.turnId === activeTurn.turnId`가 정상이다. 안 가리면 흐르는 답 위에
       // 실패가 뜬다.
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
@@ -1618,7 +1697,7 @@ describe("PersonalChatProvider", () => {
     it("★ 진행 중 턴의 도구 카드를 두 벌 그리지 않는다", async () => {
       // TOOL 행이 히스토리와 스트림 백로그 양쪽에서 온다. 접는 열쇠는 `turnId`다.
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
@@ -1655,7 +1734,7 @@ describe("PersonalChatProvider", () => {
             tool: "transcripts.search",
             summary: "전사에서 관련 발화 검색",
           },
-          132
+          "1735689600000-5"
         ),
       ];
       renderChat();
@@ -1710,6 +1789,44 @@ describe("PersonalChatProvider", () => {
       expect(restored.textContent).not.toContain("noteId:");
     });
 
+    it("★ 409 는 토스트를 띄우지 않는다 — 오류가 아니라 이어받기다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      state.streamFails = true;
+      state.streamFailure = {
+        success: false,
+        data: null,
+        error: {
+          code: "AGENT_CHAT_TURN_IN_PROGRESS",
+          message: "이미 진행 중인 턴이 있습니다.",
+          details: [{ field: "turnId", message: "0K9GVJT2C4Q3B" }],
+        },
+      };
+      renderChat();
+      openPanel();
+      await sendMessage("정리해줘");
+
+      await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
+      expect(toastError).not.toHaveBeenCalled();
+    });
+
+    it("그 밖의 실패는 서버 문구를 토스트한다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      state.streamFails = true;
+      state.streamFailure = {
+        success: false,
+        data: null,
+        error: { code: "AGENT_CHAT_NOT_FOUND", message: "대화를 찾을 수 없습니다." },
+      };
+      renderChat();
+      openPanel();
+      await sendMessage("정리해줘");
+
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith("대화를 찾을 수 없습니다.")
+      );
+      expect(toastError).toHaveBeenCalledTimes(1);
+    });
+
     it("★ 409가 온 문장이 히스토리에 이미 있으면 컴포저로 안 되돌린다", async () => {
       // 열쇠를 걷은 뒤 **응답을 못 받은 전송의 재시도도 409로 온다.** 그때 이 문장은 이미
       // 서버에 있고 히스토리가 곧 그린다 — 되돌리면 화면에 한 벌, 컴포저에 한 벌이 된다.
@@ -1752,13 +1869,12 @@ describe("PersonalChatProvider", () => {
       // `clientTurnKey` 였고, 이제 **실패한 전송이 스스로 히스토리를 다시 읽는다** —
       // 안 읽으면 「다시 보내기」가 턴을 하나 더 열어 답이 두 벌 나온다.
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.streamFails = true;
       state.resumeFrames = [
-        // **본문은 재생이 그린다.** `partialText` 가 걷혀서 화면이 여는 자리에 본문이
-        // 없다 — 커서 뒤부터 오는 이 프레임들이 유일한 출처다.
-        frame("token", { delta: "안녕하" }, 132),
-        frame("token", { delta: "세요" }, 133),
+        // **본문은 재생이 그린다.** 커서 뒤부터 오는 이 프레임들이 유일한 출처다.
+        frame("token", { delta: "안녕하" }, "1735689600000-5"),
+        frame("token", { delta: "세요" }, "1735689600000-6"),
       ];
       // 보내는 사이에 서버 쪽이 달라졌다 — POST 응답은 못 받았지만 턴과 USER 행은 생겼다.
       state.onRefetch = () => {
@@ -1786,7 +1902,7 @@ describe("PersonalChatProvider", () => {
       // 커서부터 이어받는다. **POST 는 한 번뿐이다** — 답이 두 벌 나오는 길이 그것뿐이다.
       await waitFor(() =>
         expect(state.resumeUrls).toContain(
-          `/v1/agent-chats/${CHAT_ID}/events?after=131`
+          eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B", "1735689600000-4")
         )
       );
       expect(state.streamCalls).toHaveLength(1);
@@ -1864,7 +1980,7 @@ describe("PersonalChatProvider", () => {
 
     it("★ 중지가 턴을 취소한다", async () => {
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
@@ -1877,11 +1993,53 @@ describe("PersonalChatProvider", () => {
       await waitFor(() => expect(state.resumeUrls).toHaveLength(1));
       fireEvent.click(await screen.findByRole("button", { name: "중지" }));
 
-      // `turnId`의 출처는 `turn_started`(또는 `activeTurn`) 하나다.
+      // `turnId`의 출처는 `activeTurn`(또는 202 본문) 하나다.
       expect(state.cancelMock).toHaveBeenCalledWith({
         chatId: CHAT_ID,
         turnId: "0K9GVJT2C4Q3B",
       });
+    });
+
+    /**
+     * ★ **중지는 부분 답을 저장한다.** 취소 뒤 다시 읽은 히스토리에 그 턴의 ASSISTANT
+     * 행이 오면 로컬 사본을 접는다 — 안 접으면 끊긴 문장이 두 벌 그려진다.
+     */
+    it("★ 중지 뒤 히스토리가 부분 답을 담아 오면 로컬 사본을 접는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      state.cursor = null;
+      state.activeTurn = {
+        turnId: "0K9GVJT2C4Q3B",
+        status: "IN_PROGRESS",
+        pendingApproval: null,
+      };
+      state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
+      state.resumeFrames = [frame("token", { delta: "반쯤" }, "1-0")];
+      state.holdResume = true;
+      state.onRefetch = () => {
+        state.messages = [
+          historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
+          historyRow("ASSISTANT", "반쯤", "0K9GVJT2C4Q3B"),
+        ];
+        state.activeTurn = null;
+        state.lastTurn = {
+          turnId: "0K9GVJT2C4Q3B",
+          status: "CANCELLED",
+          failureCode: null,
+          retryable: null,
+        };
+      };
+      renderChat();
+      openPanel();
+
+      expect(await screen.findByText("반쯤")).toBeTruthy();
+      fireEvent.click(await screen.findByRole("button", { name: "중지" }));
+
+      await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
+      await waitFor(() => expect(screen.getAllByText("반쯤")).toHaveLength(1));
+      expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+        "disabled",
+        false
+      );
     });
   });
 
@@ -1896,7 +2054,7 @@ describe("PersonalChatProvider", () => {
           pendingApproval: null,
         },
       };
-      state.cursor = 131;
+      state.cursor = "1735689600000-4";
       state.holdResume = true;
     }
 
@@ -1919,9 +2077,7 @@ describe("PersonalChatProvider", () => {
 
       await sendMessage("B에서 물어볼래");
       await waitFor(() => expect(state.streamCalls).toHaveLength(1));
-      expect(state.streamCalls[0].url).toBe(
-        `/v1/agent-chats/${OTHER_CHAT_ID}/messages`
-      );
+      expect(state.streamCalls[0].chatId).toBe(OTHER_CHAT_ID);
     });
 
     it("★ 목록이 남의 턴을 말해도 전송을 잠그지 않는다", () => {

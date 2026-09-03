@@ -44,9 +44,10 @@ protocol이 React를 알면 파싱을 테스트할 수 없습니다. 지금 전�
 | reducer | 순수 함수. 이벤트 → 화면 상태 | `transcript-reducer.ts` | `use-chat-stream.ts` |
 | provider | lifecycle 소유, Query 캐시와 연결 | `recording-provider.tsx` | — |
 
-- **transport는 공용, protocol은 feature별입니다.** SSE-over-POST는 `lib/api/sse.ts`의
-  `postEventStream()`을 씁니다 — 네이티브 `EventSource`는 GET 전용이고 orval은 스트리밍
-  훅을 생성하지 못합니다. 401 refresh는 transport가, payload 파싱은 feature protocol이 맡습니다.
+- **transport는 공용, protocol은 feature별입니다.** SSE 는 `lib/api/sse.ts`의
+  `getEventStream()`을 씁니다 — orval은 스트리밍 훅을 생성하지 못하고, 네이티브
+  `EventSource`는 401 refresh 를 끼울 자리가 없습니다. 401 refresh는 transport가, payload
+  파싱은 feature protocol이 맡습니다.
 - **폴링은 TanStack Query가 소유합니다.** `refetchInterval` + `enabled` 게이팅만 씁니다.
   별도 폴링 루프나 폴링 추상화를 만들지 않습니다. (경과 시간 카운터처럼 폴링이 아닌 타이머는
   여기 안 걸립니다.)

@@ -8,7 +8,7 @@ export type RunningLabel = "진행 중" | "승인 대기";
 /** 지금 열려 있는 대화에 대해 **SSE 가 아는 것**. 목록보다 항상 빠르다. */
 export type OpenChatStatus = {
   chatId: string | null;
-  /** `turn_started` 가 준 값. 스트림이 비어 있으면 null이다. */
+  /** `POST` 의 202 본문(또는 `activeTurn`)이 준 값. 스트림이 비어 있으면 null이다. */
   turnId: string | null;
   phase: ChatStreamPhase;
   /**

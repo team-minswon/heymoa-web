@@ -22,13 +22,15 @@ API 호출은 `lib/api/generated/`의 Orval 훅으로 합니다. 직접 `fetch()
 
 `lib/api/fetcher.ts`가 401 → `/v1/auth/refresh` → 재시도를 자동으로 합니다.
 
-**생성됐어도 못 쓰는 훅이 셋 있습니다.** 응답 형태가 JSON이 아니라 생성 훅의 전제를
+**생성됐어도 못 쓰는 훅이 둘 있습니다.** 응답 형태가 JSON이 아니라 생성 훅의 전제를
 벗어납니다.
 
 | 훅 | 왜 | 대신 |
 |---|---|---|
-| `sendAgentChatMessage`·`sendNoteSharedChatMessage` | 응답이 `text/event-stream`이라 훅이 스트림을 못 읽고 한 덩어리로 다룹니다 | `lib/api/sse.ts`의 `postEventStream()` |
+| `subscribeAgentChatTurnEvents` | 응답이 `text/event-stream`이라 훅이 스트림을 못 읽고 한 덩어리로 다룹니다 | `lib/api/sse.ts`의 `getEventStream()` (URL 은 생성된 `getSubscribeAgentChatTurnEventsUrl()`) |
 | `startWorkspaceIntegration` | 계약이 **302 리다이렉트**라 본문이 HTML이고 `apiFetch`의 JSON 파싱이 깨집니다 | `window.location.assign()`으로 이동 (`workspace-integrations-settings.tsx`) |
+
+`sendAgentChatMessage`·`resolveToolApproval` 은 `202 {turnId}` JSON 이라 생성 훅으로 씁니다.
 
 목 환경에서 연동 왕복은 `/mock-oauth`가 대신합니다 — MSW는 최상위 내비게이션을 못 가로채
 그 이동을 재현할 수 없습니다.

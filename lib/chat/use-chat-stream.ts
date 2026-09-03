@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
-import { getSubscribeAgentChatEventsUrl } from "@/lib/api/generated/agent-chat/agent-chat";
-import { getEventStream, postEventStream } from "@/lib/api/sse";
+import { getSubscribeAgentChatTurnEventsUrl } from "@/lib/api/generated/agent-chat/agent-chat";
+import { getEventStream } from "@/lib/api/sse";
 import { isSessionExpired } from "@/lib/auth/session-gate";
 import {
   endStream,
@@ -34,7 +34,7 @@ export const RECONNECT_BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 15_000, 15_000]
 /**
  * 더 볼 것이 없는 상태. 여기 닿으면 재연결하지 않는다.
  *
- * **`awaiting_approval`이 여기 있다.** 승인 요청은 1차 스트림의 마지막 프레임이고 server가
+ * **`awaiting_approval`이 여기 있다.** 승인 요청은 그 구간의 마지막 프레임이고 server가
  * 곧바로 구독을 닫는다 — 그 EOF를 재연결 신호로 읽으면 백오프 여섯 번(45초)을 돌다
  * **포기 표시가 되어 승인 카드가 무효화 카드에 덮인다.** 다음 프레임은 승인 API의
  * 응답으로 온다.
@@ -45,11 +45,12 @@ function isSettled(phase: ChatStreamState["phase"]) {
 }
 
 /**
- * `postEventStream`을 리듀서에 물려 채팅 한 턴을 굴린다.
+ * `getEventStream`을 리듀서에 물려 채팅 한 턴을 굴린다.
  *
- * **끊긴다고 턴이 끝나는 것이 아니다.** 서버는 대화 스코프 버퍼에 이벤트를 쌓아 두므로,
- * 전송이 닫혀도 턴은 계속 돌고 `GET /events?after=`로 이어받을 수 있다. 그래서 EOF는
- * 성공도 실패도 아니고 **재연결 신호**다. `stalled`는 「재연결을 포기했다」에만 쓴다.
+ * **끊긴다고 턴이 끝나는 것이 아니다.** 프레임은 턴 스트림에 남아 있으므로, 전송이
+ * 닫혀도 턴은 계속 돌고 마지막 `id:` 를 `after` 에 넣어 같은 주소로 이어받을 수 있다.
+ * 그래서 EOF는 성공도 실패도 아니고 **재연결 신호**다. `stalled`는 「재연결을 포기했다」에만
+ * 쓴다. 예외는 `410` 하나 — 스트림이 사라진 것이라 히스토리를 다시 읽는다.
  */
 export function useChatStream() {
   const [state, setState] = useState<ChatStreamState>(initialStreamState);
@@ -86,7 +87,7 @@ export function useChatStream() {
    * 사용자가 멈췄다. **재연결 금지 플래그를 함께 세운다** — 안 세우면 끊은 답이
    * 재연결과 함께 다시 나타난다.
    *
-   * **승인 대기는 안 도는데도 접는다.** 1차 스트림이 `tool_approval_request`로 정상
+   * **승인 대기는 안 도는데도 접는다.** 스트림이 `tool_approval_request`로 정상
    * 종료해 루프가 이미 빠져나와 있어서, 여기서 `runningRef`만 보고 돌아가면 「중지」가
    * 아무 일도 안 하고 `isBusy`가 영영 참이 된다 — 승인 만료가 없어진 지금 이것이
    * 승인 카드를 띄운 대화의 **유일한 탈출구**다.
@@ -141,18 +142,18 @@ export function useChatStream() {
    * 훅이 돌려주는 `state`는 호출부 클로저에서 이전 렌더의 값이라 믿을 수 없다.
    * 지나간 스트림(새 대화로 갈아탄 경우)이면 null이다.
    *
-   * `post`가 null이면 **이어받기**다 — 첫 연결부터 `GET /events?after=`이고, `seed`가
-   * 이미 흐른 자리를 담고 있다. 나머지(재연결·백오프·중지)는 두 경로가 똑같다.
+   * 첫 연결도 재접속도 `GET …/turns/{turnId}/events` 하나다. `seed` 가 시작 자리를
+   * 담는다 — 새 턴이면 `startedState`, 재진입이면 `resumedState`, 승인 뒤면 지금 상태.
+   * `after` 는 `seed.cursor` 부터 이어 본 마지막 `id:` 이고 null 이면 빼서 처음부터 받는다.
    *
-   * **재연결 URL은 `chatId`로 만든다.** 예전에는 POST 대상(`…/messages`)을 형제 경로로
-   * 치환했는데, 승인 API(`…/approvals/{id}/resolve`)는 그 정규식에 안 걸려 재연결이 POST 경로를
-   * GET으로 두드렸다. 생성물이 경로의 단일 출처다.
+   * **POST 는 여기 없다.** 턴을 여는 것은 컴포넌트의 생성 훅이고, 그 실패는 mutation
+   * 실패로 처리된다 — 못 열린 POST 는 재연결 대상이 아니다.
    */
-  const run = useCallback(
+  const open = useCallback(
     async (
       chatId: string,
-      seed: ChatStreamState,
-      post: { url: string; body: Record<string, unknown> } | null
+      turnId: string,
+      seed: ChatStreamState
     ): Promise<ChatStreamState | null> => {
       // 한 번에 한 턴이다. 계약도 같은 규칙을 건다.
       if (runningRef.current) return null;
@@ -164,11 +165,9 @@ export function useChatStream() {
 
       apply(seed);
 
-      /** 시작이면 첫 연결만 POST다. 그 뒤는 전부 `GET /events?after=`로 이어받는다. */
-      let isFirstConnection = post !== null;
       /**
        * 다음에 얼마나 기다리나. **연결 횟수가 아니라 시간표의 자리다** — 탭이 돌아오면
-       * 0으로 되감는다(그렇다고 다시 POST를 걸지는 않는다).
+       * 0으로 되감는다.
        */
       let backoff = 0;
 
@@ -176,33 +175,22 @@ export function useChatStream() {
         while (true) {
           const controller = new AbortController();
           controllerRef.current = controller;
-          /** 이번 연결이 프레임을 하나라도 냈나. 못 열린 것과 중간에 끊긴 것을 가른다. */
-          let opened = false;
           let failure: unknown = null;
-          const isPost = isFirstConnection;
           armIdle();
 
           try {
-            const after = stateRef.current.seq;
-            const source =
-              isFirstConnection && post !== null
-                ? postEventStream(post.url, post.body, {
-                    signal: controller.signal,
-                  })
-                : getEventStream(
-                    // `after`가 null이면 아직 번호 붙은 프레임을 하나도 못 본 것이라
-                    // 처음부터 받는다. **`0`은 null과 다르다** — 「버퍼가 비었다」다.
-                    getSubscribeAgentChatEventsUrl(
-                      chatId,
-                      after === null ? undefined : { after }
-                    ),
-                    { signal: controller.signal }
-                  );
-            isFirstConnection = false;
+            const after = stateRef.current.cursor;
+            const source = getEventStream(
+              getSubscribeAgentChatTurnEventsUrl(
+                chatId,
+                turnId,
+                after === null ? undefined : { after }
+              ),
+              { signal: controller.signal }
+            );
 
             for await (const event of source) {
               if (!isCurrent()) return null;
-              opened = true;
               const next = reduceStreamEvent(stateRef.current, event);
               apply(next);
               // 흐르는 중일 때만 다시 건다. 승인 대기에는 열린 연결이 없고,
@@ -228,31 +216,20 @@ export function useChatStream() {
           // 않고 reject해도 답변은 이미 왔고 서버에도 남았다.
           if (isSettled(stateRef.current.phase)) return stateRef.current;
 
-          // **첫 POST가 열리지도 못한 것은 재연결 대상이 아니다.** 404·400·409는 다시
-          // 걸어도 같은 답이고, 서버 문구를 그대로 보여야 사용자가 무엇을 할지 안다.
-          // 세션 만료도 마찬가지다 — 재시도가 게이트를 계속 두드린다.
-          const isOpenFailure = failure !== null && !opened;
-          if ((isPost && isOpenFailure) || isSessionExpired()) {
-            // **승인 POST가 못 열린 것은 화면을 덮지 않는다.** 실패로 접으면 여기까지
-            // 흐른 반쪽 답과 승인 카드가 같이 사라지고 「중지」밖에 안 남는다. 카드를
-            // 되살리고 사유만 싣는다 — 503(자리 없음)은 잠시 뒤 다시 누르면 되는 실패다.
-            if (seed.pendingApproval !== null) {
-              apply({
-                ...stateRef.current,
-                phase: "awaiting_approval",
-                pendingApproval: seed.pendingApproval,
-                error: {
-                  code: errorCodeOf(failure) ?? "STREAM_FAILED",
-                  message: errorMessageOf(failure, "승인을 처리하지 못했습니다."),
-                },
-              });
-              return stateRef.current;
-            }
+          // **410 — 턴은 끝났고 스트림은 사라졌다.** 다시 붙어도 같은 답이다. 상태는
+          // 그대로 두고 `needsResync` 만 세운다 — 컴포넌트의 resync 효과가 히스토리를
+          // 다시 읽어 그 사이 굳은 답을 세운다.
+          if (errorCodeOf(failure) === "SSE_STREAM_GONE") {
+            apply({ ...stateRef.current, needsResync: true });
+            return stateRef.current;
+          }
+
+          // 세션 만료는 재시도가 게이트를 계속 두드릴 뿐이다.
+          if (isSessionExpired()) {
             apply({
               ...stateRef.current,
               phase: "failed",
-              // 부분 응답은 저장되지 않는다. 생각·도구 블록은 남긴다 — 무엇을 하다
-              // 끊겼는지가 사유의 절반이다 (리듀서의 `error` 갈래와 같은 규칙).
+              // 생각·도구 블록은 남긴다 — 무엇을 하다 끊겼는지가 사유의 절반이다.
               blocks: stateRef.current.blocks.filter(
                 (block) => block.kind !== "text"
               ),
@@ -295,36 +272,16 @@ export function useChatStream() {
     [apply, armIdle, clearIdle, sleep]
   );
 
-  /** 새 턴을 시작한다. */
-  const send = useCallback(
-    (chatId: string, url: string, body: Record<string, unknown>) =>
-      run(chatId, { ...initialStreamState, phase: "streaming" }, { url, body }),
-    [run]
-  );
-
   /**
-   * 돌아왔더니 턴이 아직 돈다 — `GET /messages`가 준 자리에서 이어받는다.
-   *
-   * **`seed.seq`가 그대로 `?after=`가 된다.** `0`이면 「버퍼에 아무것도 없다」는 뜻이고
-   * `GET /events`가 곧바로 닫힌다 — 그 EOF는 실패가 아니라 재연결 신호다.
+   * 돌아왔더니 턴이 아직 돈다 — `GET /messages`가 준 자리(`resumedState`)에서 이어받는다.
+   * `seed.cursor` 가 null 이면 처음부터다.
    */
   const resume = useCallback(
-    (chatId: string, seed: ChatStreamState) => run(chatId, seed, null),
-    [run]
-  );
-
-  /**
-   * 승인을 보내고 **그 응답을 2차 스트림으로 받는다.** 도구 결과도 답변 본문도 이 응답으로
-   * 온다 — 계약이 뒤집힌 자리다.
-   *
-   * 시드는 **`stateRef.current`**다. 호출부 클로저의 `state`는 한 렌더 낡아서, 그걸 시드로
-   * 쓰면 여기까지 흐른 반쪽 답과 커서를 잃는다. `pendingApproval`은 남겨 둔다 —
-   * 카드가 `submitted`로 서 있어야 두 번 눌리지 않는다.
-   */
-  const resolveApproval = useCallback(
-    (chatId: string, url: string, body: Record<string, unknown>) =>
-      run(chatId, { ...stateRef.current, phase: "streaming" }, { url, body }),
-    [run]
+    (chatId: string, seed: ChatStreamState) =>
+      seed.turnId === null
+        ? Promise.resolve<ChatStreamState | null>(null)
+        : open(chatId, seed.turnId, seed),
+    [open]
   );
 
   /**
@@ -361,5 +318,5 @@ export function useChatStream() {
     []
   );
 
-  return { state, send, resume, resolveApproval, seed, stop, reset };
+  return { state, open, resume, seed, stop, reset };
 }

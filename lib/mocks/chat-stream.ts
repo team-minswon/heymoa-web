@@ -198,8 +198,8 @@ function tokens(text: string): MockSseEvent[] {
 }
 
 /**
- * 승인이 필요한 스트림의 조각. **두 스트림으로 갈린다** — 1차가 `before`를 흘리고
- * `tool_approval_request`로 끝나면, 승인 API의 응답(2차)이 `after(decision)`를 흘린다.
+ * 승인이 필요한 스트림의 조각. **두 번에 나눠 흘린다** — `before`가 `tool_approval_request`로
+ * 끝나 스트림이 닫히면, 승인 API 의 202 뒤 같은 턴 스트림에 `after(decision)`가 이어진다.
  * 목이 스스로 승인해 버리면 web은 승인 대기 UI도 거절 경로도 밟을 수 없다.
  */
 export type ApprovalPlan = {

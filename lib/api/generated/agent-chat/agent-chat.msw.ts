@@ -11,11 +11,9 @@ import type { RequestHandlerOptions } from "msw";
 import type {
   AgentChatMessagesResponse,
   AgentChatResponse,
+  AgentChatTurnStartedResponse,
   AgentChatsResponse,
 } from "../models";
-
-export const getSubscribeAgentChatEventsResponseMock = (): string =>
-  'id:129\nevent:token\ndata:{"delta":"지난 "}\n\n';
 
 export const getGetAgentChatMessagesResponseMock =
   (): AgentChatMessagesResponse => ({
@@ -82,13 +80,17 @@ export const getGetAgentChatMessagesResponseMock =
         retryable: true,
         pendingApproval: null,
       },
-      cursor: 128,
+      cursor: null,
     },
     error: null,
   });
 
-export const getSendAgentChatMessageResponseMock = (): string =>
-  'id:1\nevent:turn_started\ndata:{"turnId":"0K9GVJT2C4Q3B","startSeq":0}\n\nid:2\nevent:token\ndata:{"delta":"안"}\n\nid:3\nevent:message_end\ndata:{"messageId":"m1","content":"안녕하세요"}\n\n';
+export const getSendAgentChatMessageResponseMock =
+  (): AgentChatTurnStartedResponse => ({
+    success: true,
+    data: { turnId: "0K9GVJT2C4Q3B" },
+    error: null,
+  });
 
 export const getGetAgentChatsResponseMock = (): AgentChatsResponse => ({
   success: true,
@@ -122,35 +124,15 @@ export const getCreateAgentChatResponseMock = (): AgentChatResponse => ({
   error: null,
 });
 
-export const getResolveToolApprovalResponseMock = (): string =>
-  'id:129\nevent:token\ndata:{"delta":"만"}\n\n';
+export const getResolveToolApprovalResponseMock =
+  (): AgentChatTurnStartedResponse => ({
+    success: true,
+    data: { turnId: "0K9GVJT2C4Q3B" },
+    error: null,
+  });
 
-export const getSubscribeAgentChatEventsMockHandler = (
-  overrideResponse?:
-    | string
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) => Promise<string> | string),
-  options?: RequestHandlerOptions
-) => {
-  return http.get(
-    "*/v1/agent-chats/:chatId/events",
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-      const resolvedBody =
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getSubscribeAgentChatEventsResponseMock();
-      const textBody =
-        typeof resolvedBody === "string"
-          ? resolvedBody
-          : JSON.stringify(resolvedBody ?? null);
-      return HttpResponse.text(textBody, { status: 200 });
-    },
-    options
-  );
-};
+export const getSubscribeAgentChatTurnEventsResponseMock = (): string =>
+  'id:1735689600001-0\nevent:token\ndata:{"delta":"안"}\n\nid:1735689600002-0\nevent:message_end\ndata:{"messageId":"m1","content":"안녕하세요"}\n\n';
 
 export const getGetAgentChatMessagesMockHandler = (
   overrideResponse?:
@@ -178,26 +160,25 @@ export const getGetAgentChatMessagesMockHandler = (
 
 export const getSendAgentChatMessageMockHandler = (
   overrideResponse?:
-    | string
+    | AgentChatTurnStartedResponse
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<string> | string),
+      ) =>
+        | Promise<AgentChatTurnStartedResponse>
+        | AgentChatTurnStartedResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.post(
     "*/v1/agent-chats/:chatId/messages",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      const resolvedBody =
+      return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === "function"
             ? await overrideResponse(info)
             : overrideResponse
-          : getSendAgentChatMessageResponseMock();
-      const textBody =
-        typeof resolvedBody === "string"
-          ? resolvedBody
-          : JSON.stringify(resolvedBody ?? null);
-      return HttpResponse.text(textBody, { status: 200 });
+          : getSendAgentChatMessageResponseMock(),
+        { status: 202 }
+      );
     },
     options
   );
@@ -253,26 +234,25 @@ export const getCreateAgentChatMockHandler = (
 
 export const getResolveToolApprovalMockHandler = (
   overrideResponse?:
-    | string
+    | AgentChatTurnStartedResponse
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<string> | string),
+      ) =>
+        | Promise<AgentChatTurnStartedResponse>
+        | AgentChatTurnStartedResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.post(
     "*/v1/agent-chats/:chatId/approvals/:approvalId/resolve",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      const resolvedBody =
+      return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === "function"
             ? await overrideResponse(info)
             : overrideResponse
-          : getResolveToolApprovalResponseMock();
-      const textBody =
-        typeof resolvedBody === "string"
-          ? resolvedBody
-          : JSON.stringify(resolvedBody ?? null);
-      return HttpResponse.text(textBody, { status: 200 });
+          : getResolveToolApprovalResponseMock(),
+        { status: 202 }
+      );
     },
     options
   );
@@ -298,12 +278,39 @@ export const getCancelAgentChatTurnMockHandler = (
     options
   );
 };
+
+export const getSubscribeAgentChatTurnEventsMockHandler = (
+  overrideResponse?:
+    | string
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<string> | string),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/agent-chats/:chatId/turns/:turnId/events",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const resolvedBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSubscribeAgentChatTurnEventsResponseMock();
+      const textBody =
+        typeof resolvedBody === "string"
+          ? resolvedBody
+          : JSON.stringify(resolvedBody ?? null);
+      return HttpResponse.text(textBody, { status: 200 });
+    },
+    options
+  );
+};
 export const getAgentChatMock = () => [
-  getSubscribeAgentChatEventsMockHandler(),
   getGetAgentChatMessagesMockHandler(),
   getSendAgentChatMessageMockHandler(),
   getGetAgentChatsMockHandler(),
   getCreateAgentChatMockHandler(),
   getResolveToolApprovalMockHandler(),
   getCancelAgentChatTurnMockHandler(),
+  getSubscribeAgentChatTurnEventsMockHandler(),
 ];

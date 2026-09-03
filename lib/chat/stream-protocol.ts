@@ -1,18 +1,20 @@
 /**
  * 채팅 SSE 이벤트를 화면 상태로 접는 순수 리듀서.
  *
- * 계약은 `asyncapi.yml`의 `agentChatStream` 채널이고 이벤트는 아홉 종 + **턴 이벤트 다섯**이다.
+ * 계약은 `asyncapi.yml`의 `agentChatStream` 채널이고 이벤트는 아홉 종 + **턴 이벤트 둘**이다.
  * 진입점은 개인 챗봇 하나뿐이다 — 공유 챗봇은 사라졌다.
  *
  * **봉투는 없다.** `data:`에 실리는 것은 payload 하나뿐이다.
  *
  * ```
- * id: 129
- * event: turn_started
- * data: {"turnId":"…","startSeq":128}
+ * id: 1735689600000-0
+ * event: token
+ * data: {"delta":"지난 "}
  * ```
  *
- * `seq`는 `id:` 줄에만, `turnId`는 `turn_started`의 payload에만 있다. `chatId`는 아예 안 온다.
+ * 커서는 `id:` 줄에만 있다. `turnId`는 프레임에서 오지 않는다 — `POST` 의 `202` 본문이나
+ * `GET /messages` 의 `activeTurn` 이 주고, `startedState`·`resumedState` 가 세운다.
+ * `chatId`는 아예 안 온다.
  *
  * 계약이 만드는 함정 넷을 여기서 못 박는다.
  *
@@ -23,11 +25,6 @@
  *    이어진다. `error` 이벤트와 절대 같은 갈래에 두지 않는다.
  * 3. **종료 이벤트 없이 끊기는 경로가 있다.** 스트림이 그냥 닫히면 `stalled`다 —
  *    처리하지 않으면 영원히 로딩이다.
- * 5. **`seq`에 구멍이 있다.** 턴마다 1000 블록으로 떼어 발급하므로 `40 → 1001`이 정상이다
- *    (server U-04). 「구멍 = 유실」로 읽으면 턴 경계마다 resync가 돈다.
- * 6. **모든 프레임이 `id:` 줄을 갖는다.** 좌표 없던 `message_snapshot`은 걷혔다 —
- *    커서를 안 밀어 뒤따르는 백로그와 겹쳤고 답의 꼬리가 두 벌 그려졌다. `stream_resync`도
- *    이제 번호를 갖고, 그 번호가 **바닥**이다(「이 아래로는 못 준다」).
  * 4. **모르는 이벤트로 화면이 죽지 않는다.** 하지만 `default`가 조용히 삼키기만 하면
  *    새 이벤트가 계약에만 있고 화면에는 없는 상태가 오래 간다 — `thinking_delta`가
  *    실제로 그랬다. 아는 이벤트는 여기 전부 적혀 있어야 한다.
@@ -57,8 +54,7 @@ import type { ApprovalDecision, ToolArgs, ToolTarget } from "@/lib/chat/blocks";
  *
  * `personal-chat.tsx`의 `isStreaming`이 phase로 갈리므로 새 값 하나가 컴포저의 중지 버튼을
  * 조용히 지운다. 새 이벤트는 여기 여섯 중 하나로 접는다 —
- * `message_end`→`done` · `turn_failed`→`failed` · `turn_cancelled`→`cancelled` ·
- * `stream_resync`→`streaming`(+`needsResync`) · `turn_started`→그대로.
+ * `message_end`→`done` · `turn_failed`→`failed` · `turn_cancelled`→`cancelled`.
  *
  * **재연결 중에도 `streaming`이다.** 「종료 프레임 없이 끊김」은 상태가 아니라
  * 재연결 신호라 여기 자리가 없다. 백오프를 다 돌고 포기하면 그때 `failed`로 접는다.
@@ -89,15 +85,16 @@ export type ChatStreamState = {
   phase: ChatStreamPhase;
   messageId: string | null;
   /**
-   * 이 턴의 id. **`turn_started`가 유일한 출처다** — `POST /messages` 응답이 곧 스트림이라
-   * 본문을 읽기 전에는 알 수 없다. 취소(`POST /turns/{turnId}/cancel`)가 이걸 기다린다.
+   * 이 턴의 id. 프레임에서 오지 않는다 — `POST` 의 `202` 본문(`startedState`)이나
+   * `GET /messages` 의 `activeTurn`(`resumedState`)이 준다. 취소와 스트림 URL 이 이걸 쓴다.
    */
   turnId: string | null;
   /**
-   * 대화 스코프 커서. 재접속이 `GET /events?after=`에 넣는 값이다.
-   * **단조 증가만 한다.** null이면 아직 번호 붙은 프레임을 하나도 못 봤다는 뜻이다.
+   * 마지막에 본 `id:`. 재접속이 `GET …/turns/{turnId}/events?after=`에 넣는 값이다.
+   * 불투명한 문자열이라 **크기 비교가 없다.** null이면 아직 `id:` 붙은 프레임을 하나도
+   * 못 봤다는 뜻이고, 그때는 `after` 를 빼고 처음부터 받는다.
    */
-  seq: number | null;
+  cursor: string | null;
   /** 생각·도구·승인·본문이 한 배열에 시간 순서대로. */
   blocks: Block[];
   /** 확정된 답변. message_end 전에는 null이다. */
@@ -132,9 +129,9 @@ export type ChatStreamState = {
    * 「히스토리부터 다시 읽어라」. **phase가 아니라 불리언이다** — 새 phase를 만들면
    * `personal-chat.tsx`의 `isStreaming`이 갈려 컴포저의 중지 버튼이 조용히 사라진다.
    *
-   * **읽는 자리가 있어야 뜻이 있다.** `personal-chat.tsx`의 재조회 효과가 이 값을 보고
-   * `GET /messages`를 다시 당긴다 — 세우기만 하고 아무도 안 읽으면 서버가 「못 준다」고
-   * 말한 구간이 화면에서 조용히 사라진다.
+   * 세우는 곳은 훅이다 — 스트림이 `410` 으로 사라졌을 때. **읽는 자리가 있어야 뜻이
+   * 있다.** `personal-chat.tsx`의 재조회 효과가 이 값을 보고 `GET /messages`를 다시
+   * 당긴다 — 세우기만 하고 아무도 안 읽으면 끝난 턴이 화면에 영영 안 온다.
    */
   needsResync: boolean;
 };
@@ -143,7 +140,7 @@ export const initialStreamState: ChatStreamState = {
   phase: "idle",
   messageId: null,
   turnId: null,
-  seq: null,
+  cursor: null,
   blocks: [],
   content: null,
   refs: [],
@@ -153,12 +150,16 @@ export const initialStreamState: ChatStreamState = {
   needsResync: false,
 };
 
+/** `POST` 가 `202` 로 턴을 열었다. 프레임은 아직 하나도 없고 커서도 없다. */
+export function startedState(input: { turnId: string }): ChatStreamState {
+  return { ...initialStreamState, phase: "streaming", turnId: input.turnId };
+}
+
 /**
  * 돌아왔더니 턴이 아직 돌고 있다 — `GET /messages`가 준 것으로 화면을 세운다.
  *
- * **본문을 여기서 안 그린다.** `partialText`가 걷혔다 — 누적본은 주기적으로만 내려쓰고
- * 커서는 지금까지 발행된 번호라 그 사이 토큰이 어디서도 안 왔다. 이제 본문은 `?after=`가
- * 부르는 **재생**이 그리고, 도구·생각은 히스토리의 TOOL·THINKING 행이 그린다.
+ * **본문을 여기서 안 그린다.** 본문은 `?after=`가 부르는 **재생**이 그리고, 도구·생각은
+ * 히스토리의 TOOL·THINKING 행이 그린다. `cursor` 가 null 이면 턴의 처음부터 다시 받는다.
  *
  * **`content`를 세우면 안 된다.** `content !== null`이 세 곳에서 「턴이 끝났다」로 읽혀서,
  * 안 끝난 답에 「찾은 곳」 줄이 붙는다.
@@ -167,7 +168,7 @@ export const initialStreamState: ChatStreamState = {
  * 카드를 세우는 것은 값이 있느냐이지 상태 이름이 아니다 — 두 곳에서 정하면 판정이 갈린다.
  */
 export function resumedState(input: {
-  cursor: number;
+  cursor: string | null;
   turnId: string;
   pendingApproval: {
     approvalId: string;
@@ -180,8 +181,7 @@ export function resumedState(input: {
     ...initialStreamState,
     phase: input.pendingApproval ? "awaiting_approval" : "streaming",
     turnId: input.turnId,
-    // **0이면 null이 아니다.** 「버퍼에 아무것도 없다」는 뜻이고 `?after=0`으로 물어야 한다.
-    seq: input.cursor,
+    cursor: input.cursor,
     pendingApproval: input.pendingApproval,
   };
 }
@@ -271,42 +271,26 @@ const TURN_FAILURE_MESSAGES: Record<string, string> = {
 };
 
 /**
- * 이 프레임의 번호. **출처는 `id:` 줄 하나다.**
+ * 커서를 옮긴다. **마지막에 본 것이 커서다** — 크기 비교도 중복 거르기도 없다. 프레임은
+ * 순서대로 오고 `after` 는 배타라 겹치지 않는다. 같은 id 가 두 번 오면 그건 server 버그다.
  *
- * `data:`에는 payload만 실린다 — `seq`도 `turnId`도 `chatId`도 안 들어간다. 봉투를 기대해
- * payload를 한 겹 더 벗기려 들면 전부 `undefined`가 되고, **에러도 로그도 없이** 화면이
+ * 하트비트는 `id:` 가 없어 커서를 안 옮긴다. `data:` 에는 커서가 없다 — 봉투를 기대해
+ * payload 를 한 겹 더 벗기려 들면 전부 `undefined` 가 되고, 에러도 로그도 없이 화면이
  * 빈 채로 흐른다.
- *
- * 지금 계약에서는 **모든 프레임이 이 줄을 갖는다.** 그래도 `null`을 남기는 이유는
- * 좌표 없는 프레임이 다시 생겼을 때 0으로 접지 않기 위해서다 — 0으로 접으면 커서가
- * 되감겨 대화 버퍼가 통째로 재생되고 답이 두 벌 그려진다.
  */
-function seqOf(id: string | undefined): number | null {
-  if (id === undefined) return null;
-  const value = Number(id);
-  return Number.isFinite(value) ? value : null;
+function advanceCursor(
+  current: string | null,
+  id: string | undefined
+): string | null {
+  return id === undefined ? current : id;
 }
 
 /**
- * 커서를 옮긴다. **단조 증가만.**
- *
- * - `stream_resync`의 번호는 **바닥**이라 커서를 그 자리까지 올린다. 이어지는 재생이
- *   정확히 그 뒤부터라, 안 올리면 그 프레임들을 「이미 지나온 번호」로 전부 버린다
- * - 턴 경계에 **구멍**이 있다(`40 → 1001`). 구멍은 아무 일도 일으키지 않는다 —
- *   「구멍 = 유실」로 읽으면 턴마다 resync가 돈다
- */
-function advanceCursor(current: number | null, seq: number | null): number | null {
-  if (seq === null) return current;
-  return current === null || seq > current ? seq : current;
-}
-
-/**
- * 화면이 아는 이벤트. **계약의 13종이 여기 전부 있어야 한다** — `contract-consistency`가
+ * 화면이 아는 이벤트. **계약의 11종이 여기 전부 있어야 한다** — `contract-consistency`가
  * `asyncapi.yml`과 기계로 대조한다. 그 검사가 「모르는 이벤트를 조용히 삼킨다」의
  * 구조적 방어다: 계약에만 있고 화면에는 없는 상태가 오래 가는 것을 막는다.
  */
 export const KNOWN_EVENTS: ReadonlySet<string> = new Set([
-  "turn_started",
   "message_start",
   "token",
   "thinking_delta",
@@ -318,7 +302,6 @@ export const KNOWN_EVENTS: ReadonlySet<string> = new Set([
   "error",
   "turn_failed",
   "turn_cancelled",
-  "stream_resync",
 ]);
 
 /** 계약 이벤트는 아니지만 전송이 올리는 것. 커서를 안 밀고 아무 일도 안 한다. */
@@ -328,12 +311,6 @@ export function reduceStreamEvent(
   state: ChatStreamState,
   event: { event: string; data: string; id?: string }
 ): ChatStreamState {
-  const seq = seqOf(event.id);
-
-  // 이미 지나온 번호다. 재접속 백로그가 겹칠 때 같은 프레임을 두 번 접으면 답변이
-  // 두 벌이 된다. `after=`는 배타이지만 web이 스스로 막는다.
-  if (seq !== null && state.seq !== null && seq <= state.seq) return state;
-
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(event.data) as Record<string, unknown>;
@@ -341,29 +318,15 @@ export function reduceStreamEvent(
     // 계약 밖 프레임으로 화면을 깨뜨리지 않는다. 다만 **커서는 멈추면 안 된다** —
     // `data:`는 ai가 준 것을 그대로 박은 것이라 깨질 수 있지만 `id:` 줄은 서버가 쓴다.
     // 여기서 멈추면 재접속이 영영 옛 자리부터 다시 받는다.
-    return { ...state, seq: advanceCursor(state.seq, seq) };
+    return { ...state, cursor: advanceCursor(state.cursor, event.id) };
   }
 
-  const base: ChatStreamState = { ...state, seq: advanceCursor(state.seq, seq) };
+  const base: ChatStreamState = {
+    ...state,
+    cursor: advanceCursor(state.cursor, event.id),
+  };
 
   switch (event.event) {
-    /**
-     * **여기서 「흐르는 중」이 된다.** 첫 토큰을 기다렸다 켜면 답 말풍선이 그때 생겨
-     * 레이아웃이 밀리고 읽던 자리가 어긋난다 — 말풍선을 먼저 세워 자리를 잡아 둔다.
-     *
-     * **대칭 종료를 기다리지 않는다.** 성공 종료는 `message_end`가 겸하므로 짝이 되는
-     * `turn_completed` 같은 것은 오지 않는다.
-     *
-     * `turnId`의 **유일한 출처**다 — `POST /messages` 응답이 곧 스트림이라 본문을 읽기
-     * 전에는 알 수 없고, 중지가 이 값을 기다린다.
-     */
-    case "turn_started":
-      return {
-        ...base,
-        phase: "streaming",
-        turnId: text(payload.turnId) ?? base.turnId,
-      };
-
     /**
      * 스트림을 열기 전 실패(`UPSTREAM_REJECTED`)는 `error` 이벤트가 **없다.** 이 갈래가
      * 없으면 그 경로가 `default`로 삼켜지고 EOF에서 stalled가 되어, 사용자는
@@ -388,32 +351,8 @@ export function reduceStreamEvent(
       return { ...base, phase: "cancelled", pendingApproval: null };
 
     /**
-     * **「이 번호 아래로는 못 준다」.** `id:` 줄이 그 바닥이고 payload는 `{}`다 —
-     * 뜻이 전부 번호에 있어서 `advanceCursor`가 커서를 거기까지 올린다. 이 프레임으로
-     * 스트림이 끝나지 않는다: 바로 뒤로 재생과 드레인이 그대로 이어진다.
-     *
-     * **phase는 `streaming` 그대로**다. 새 phase를 만들면 `isStreaming`이 갈려 컴포저의
-     * 중지 버튼이 사라진다. 대신 둘을 한다.
-     *
-     * 1. `needsResync`를 세운다 — `personal-chat.tsx`가 보고 히스토리를 다시 읽는다
-     * 2. **여기까지 그린 본문을 버린다.** 바닥 아래가 안 오므로 남겨 두면 앞과 뒤가
-     *    이어 붙어 **구멍이 안 보이는 한 덩어리**가 된다 — 없는 글이 남는 것이라
-     *    `turn_failed`·`error` 갈래와 같은 규칙으로 접는다. 확정 본문은
-     *    `message_end.content`가 통째로 갈아끼운다.
-     *
-     * 생각·도구 블록은 남긴다: 무엇을 하다 밀렸는지가 사유의 절반이고, 그 자리는
-     * 히스토리의 TOOL·THINKING 행이 겹쳐 그리지 않게 화면이 이미 접고 있다.
-     */
-    case "stream_resync":
-      return {
-        ...base,
-        needsResync: true,
-        blocks: base.blocks.filter((block) => block.kind !== "text"),
-      };
-
-    /**
-     * **상태를 리셋하지 않는다.** 버퍼는 대화 스코프라 재접속 백로그에 `message_start`가
-     * 섞여 오고, 리셋하면 방금 복원한 블록을 지운다. 새 턴의 초기화는 훅의 `send()`가 한다.
+     * **상태를 리셋하지 않는다.** 승인 뒤 재개나 재생에 `message_start`가 다시 올 수
+     * 있고, 리셋하면 방금 복원한 블록을 지운다. 새 턴의 초기화는 `startedState`가 한다.
      */
     case "message_start":
       return {
@@ -543,7 +482,7 @@ export function reduceStreamEvent(
       if (!INERT_EVENTS.has(event.event)) {
         console.warn(`[chat] 모르는 SSE 이벤트: ${event.event}`);
       }
-      // 커서는 옮긴다(`base`) — 모르는 이벤트도 번호를 먹었으면 이미 지나온 자리다.
+      // 커서는 옮긴다(`base`) — 모르는 이벤트도 `id:` 를 먹었으면 이미 지나온 자리다.
       return base;
   }
 }

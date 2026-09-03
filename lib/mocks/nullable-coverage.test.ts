@@ -209,6 +209,8 @@ function contractSamples() {
     tool: "linear.create_issue",
   };
   seedAgentChatTurnForTests(chatIds[1], {
+    // 승인 카드가 섰던 턴 — `cursor` 가 그 카드의 entry id 인 쪽.
+    approvalEntryId: "1735689600000-4",
     // 인자가 있는 승인 — 카드가 「무엇을 승인하나」를 말하는 쪽.
     pendingApproval: {
       ...approval,

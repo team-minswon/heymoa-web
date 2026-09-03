@@ -9,13 +9,12 @@ export type SseEvent = {
   event: string;
   data: string;
   /**
-   * `id:` 줄. 서버가 여기에 `seq`를 싣는다 — **버리면 커서가 없어 `?after=`를 못 부른다.**
+   * `id:` 줄. 서버가 여기에 entry id 를 싣는다 — **버리면 커서가 없어 `?after=`를 못 부른다.**
    *
-   * 없을 수 있다. 하트비트는 SSE 주석이라 번호가 아예 없다. 그래서 `undefined`가
-   * 「0」이 아니라 **「이 프레임은 커서를 안 옮긴다」**다.
+   * 없을 수 있다. 하트비트는 SSE 주석이라 id 가 아예 없다. 그래서 `undefined`가
+   * **「이 프레임은 커서를 안 옮긴다」**다.
    *
-   * 문자열로 낸다. **이 층은 숫자로 안 바꾼다** — 커서 비교는 리듀서의 일이고, 여기서
-   * `Number()`를 하면 서버가 못 보낸 값이 조용히 `NaN`이 되어 그 자리에서 사라진다.
+   * 문자열 그대로다. 불투명한 값이라 이 층도 리듀서도 해석하지 않는다.
    */
   id?: string;
 };
@@ -49,6 +48,22 @@ async function connect(
     return connect(url, init, true);
   }
 
+  // **410 은 「턴은 끝났고 스트림은 사라졌다」다.** 재연결 대상이 아니라 히스토리를 다시
+  // 읽을 신호라, 훅이 한 코드로 가를 수 있게 접는다. 서버 문구는 남긴다.
+  if (response.status === 410) {
+    const envelope = await response.json().catch(() => null);
+    throw {
+      success: false,
+      data: null,
+      error: {
+        code: "SSE_STREAM_GONE",
+        message:
+          typeof envelope?.error?.message === "string"
+            ? envelope.error.message
+            : "스트림이 사라졌습니다.",
+      },
+    };
+  }
   if (!response.ok) {
     throw await response
       .json()
@@ -61,33 +76,9 @@ async function connect(
 }
 
 /**
- * POST 요청의 text/event-stream 응답을 SseEvent 단위로 순회한다.
+ * text/event-stream 응답을 SseEvent 단위로 순회한다. 첫 연결도 재접속도 이 하나다.
  * 이벤트 payload의 스키마 검증은 하지 않는다 — feature protocol의 몫이다.
  * 소비자가 루프를 끝내거나 signal이 abort되면 스트림을 정리한다.
- */
-export async function* postEventStream(
-  url: string,
-  body: Record<string, unknown>,
-  { signal }: { signal?: AbortSignal } = {}
-): AsyncGenerator<SseEvent, void, undefined> {
-  // **`connect`를 제너레이터 안에서 부른다.** 밖에서 부르면 아무도 순회하지 않은 사이에
-  // 요청이 먼저 나가고, 그 promise가 reject하면 처리되지 않은 rejection으로 남는다.
-  yield* frames(
-    await connect(
-      url,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal,
-      },
-      false
-    )
-  );
-}
-
-/**
- * GET으로 여는 같은 스트림. **재연결·재진입 전용**이다.
  *
  * 네이티브 `EventSource`를 안 쓰는 이유는 **401 refresh 하나**다. 상태 코드를 못 보고
  * (`onerror`가 이유를 안 준다) 자동 재연결에 우리 손이 안 닿아 「401 → refresh → 재시도」를
@@ -98,6 +89,9 @@ export async function* postEventStream(
  * `?after=` 하나다.
  *
  * 커서는 **URL에 이미 들어 있다.** 어디까지 받았는지를 이 층은 모른다.
+ *
+ * **`connect`를 제너레이터 안에서 부른다.** 밖에서 부르면 아무도 순회하지 않은 사이에
+ * 요청이 먼저 나가고, 그 promise가 reject하면 처리되지 않은 rejection으로 남는다.
  */
 export async function* getEventStream(
   url: string,
@@ -106,7 +100,7 @@ export async function* getEventStream(
   yield* frames(await connect(url, { method: "GET", signal }, false));
 }
 
-/** 프레이밍만. 응답을 여는 것은 위 둘이 한다. */
+/** 프레이밍만. 응답을 여는 것은 `getEventStream` 이 한다. */
 async function* frames(
   response: Response
 ): AsyncGenerator<SseEvent, void, undefined> {
@@ -144,7 +138,7 @@ async function* frames(
         }
         // 주석은 하트비트다. **버리지 않고 이벤트로 올린다** — 40초 유휴 타이머가
         // 「연결이 죽었나」를 재려면 연결이 살아 있다는 유일한 신호가 여기로 와야 한다.
-        // 번호가 없으므로 커서를 안 민다.
+        // id 가 없으므로 커서를 안 민다.
         if (line.startsWith(":")) {
           yield { event: "heartbeat", data: "{}" };
           continue;
@@ -158,7 +152,7 @@ async function* frames(
         if (field === "event") eventType = value_;
         else if (field === "data") dataLines.push(value_);
         // **`id:`는 프레임 단위로만 산다.** SSE 명세의 "last event ID" 버퍼는 프레임을
-        // 넘어 유지되지만, 그 규칙을 따르면 번호 없는 프레임이 앞 프레임의 번호를 물려받아
+        // 넘어 유지되지만, 그 규칙을 따르면 id 없는 프레임이 앞 프레임의 id 를 물려받아
         // 「커서를 안 옮긴다」를 표현할 수 없다.
         else if (field === "id") eventId = value_;
         // retry 등 그 외 필드는 사용하지 않는다.

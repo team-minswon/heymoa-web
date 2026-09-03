@@ -86,7 +86,7 @@ export const CHAT_SCENARIOS = {
   resync: {
     keyword: "밀리게 해줘",
     kind: "transport",
-    what: "로그의 앞을 버려 **바닥**을 올린다. 그 아래 커서로 붙은 재접속이 `stream_resync` 를 먼저 받고, 스트림은 안 닫힌 채 나머지가 이어진다",
+    what: "첫 연결이 두 프레임 뒤에 끊기고 턴은 곧바로 끝난다. 재접속이 **410** 을 받아 화면이 히스토리를 다시 읽는 자리",
   },
 } as const satisfies Record<
   string,

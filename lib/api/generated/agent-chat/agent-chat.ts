@@ -26,443 +26,19 @@ import type {
 import type {
   AgentChatMessagesResponse,
   AgentChatResponse,
+  AgentChatTurnStartedResponse,
   AgentChatsResponse,
   AppErrorResponse,
   CreateAgentChatRequest,
-  ResolveToolApprovalParams,
   ResolveToolApprovalRequest,
   SendAgentChatMessageRequest,
-  SubscribeAgentChatEventsParams,
+  SubscribeAgentChatTurnEventsParams,
   UnauthorizedResponse,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-export type subscribeAgentChatEventsResponse200 = {
-  data: string;
-  status: 200;
-};
-
-export type subscribeAgentChatEventsResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
-export type subscribeAgentChatEventsResponse401 = {
-  data: UnauthorizedResponse;
-  status: 401;
-};
-
-export type subscribeAgentChatEventsResponse404 = {
-  data: AppErrorResponse;
-  status: 404;
-};
-
-export type subscribeAgentChatEventsResponse503 = {
-  data: AppErrorResponse;
-  status: 503;
-};
-
-export type subscribeAgentChatEventsResponseSuccess =
-  subscribeAgentChatEventsResponse200 & {
-    headers: Headers;
-  };
-export type subscribeAgentChatEventsResponseError = (
-  | subscribeAgentChatEventsResponse400
-  | subscribeAgentChatEventsResponse401
-  | subscribeAgentChatEventsResponse404
-  | subscribeAgentChatEventsResponse503
-) & {
-  headers: Headers;
-};
-
-export type subscribeAgentChatEventsResponse =
-  | subscribeAgentChatEventsResponseSuccess
-  | subscribeAgentChatEventsResponseError;
-
-export const getSubscribeAgentChatEventsUrl = (
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams
-) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? "null" : String(value));
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/v1/agent-chats/${chatId}/events?${stringifiedParams}`
-    : `/v1/agent-chats/${chatId}/events`;
-};
-
-/**
- * 끊긴 스트림을 커서로 이어받는다. after 보다 큰 프레임을 재생한 뒤 도는 턴이 있으면 실시간으로 잇고, 없으면 밀린 것만 주고 닫는다. 로그가 못 덮는 구간이면 stream_resync 가 먼저 나가고 그 프레임의 id 가 바닥이다. Last-Event-ID 헤더는 읽지 않는다.
- * @summary 이어받기 스트림 (SSE)
- */
-export const subscribeAgentChatEvents = async (
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: RequestInit
-): Promise<subscribeAgentChatEventsResponse> => {
-  return apiFetch<subscribeAgentChatEventsResponse>(
-    getSubscribeAgentChatEventsUrl(chatId, params),
-    {
-      ...options,
-      method: "GET",
-    }
-  );
-};
-
-export const getSubscribeAgentChatEventsQueryKey = (
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams
-) => {
-  return [
-    `/v1/agent-chats/${chatId}/events`,
-    ...(params ? [params] : []),
-  ] as const;
-};
-
-export const getSubscribeAgentChatEventsQueryOptions = <
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ??
-    getSubscribeAgentChatEventsQueryKey(chatId, params);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof subscribeAgentChatEvents>>
-  > = ({ signal }) =>
-    subscribeAgentChatEvents(chatId, params, { signal, ...requestOptions });
-
-  return {
-    queryKey,
-    queryFn,
-    enabled: chatId !== null && chatId !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type SubscribeAgentChatEventsQueryResult = NonNullable<
-  Awaited<ReturnType<typeof subscribeAgentChatEvents>>
->;
-export type SubscribeAgentChatEventsQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
-
-export function useSubscribeAgentChatEvents<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params: undefined | SubscribeAgentChatEventsParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-          TError,
-          Awaited<ReturnType<typeof subscribeAgentChatEvents>>
-        >,
-        "initialData"
-      >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSubscribeAgentChatEvents<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-          TError,
-          Awaited<ReturnType<typeof subscribeAgentChatEvents>>
-        >,
-        "initialData"
-      >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSubscribeAgentChatEvents<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-/**
- * @summary 이어받기 스트림 (SSE)
- */
-
-export function useSubscribeAgentChatEvents<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getSubscribeAgentChatEventsQueryOptions(
-    chatId,
-    params,
-    options
-  );
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-/**
- * @summary 이어받기 스트림 (SSE)
- */
-export const prefetchSubscribeAgentChatEventsQuery = async <
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  queryClient: QueryClient,
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-): Promise<QueryClient> => {
-  const queryOptions = getSubscribeAgentChatEventsQueryOptions(
-    chatId,
-    params,
-    options
-  );
-
-  await queryClient.prefetchQuery(queryOptions);
-
-  return queryClient;
-};
-
-export const getSubscribeAgentChatEventsSuspenseQueryOptions = <
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ??
-    getSubscribeAgentChatEventsQueryKey(chatId, params);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof subscribeAgentChatEvents>>
-  > = ({ signal }) =>
-    subscribeAgentChatEvents(chatId, params, { signal, ...requestOptions });
-
-  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
-    Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
-
-export type SubscribeAgentChatEventsSuspenseQueryResult = NonNullable<
-  Awaited<ReturnType<typeof subscribeAgentChatEvents>>
->;
-export type SubscribeAgentChatEventsSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
-
-export function useSubscribeAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params: undefined | SubscribeAgentChatEventsParams,
-  options: {
-    query: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSubscribeAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSubscribeAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-/**
- * @summary 이어받기 스트림 (SSE)
- */
-
-export function useSubscribeAgentChatEventsSuspense<
-  TData = Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
->(
-  chatId: string,
-  params?: SubscribeAgentChatEventsParams,
-  options?: {
-    query?: Partial<
-      UseSuspenseQueryOptions<
-        Awaited<ReturnType<typeof subscribeAgentChatEvents>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof apiFetch>;
-  },
-  queryClient?: QueryClient
-): UseSuspenseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getSubscribeAgentChatEventsSuspenseQueryOptions(
-    chatId,
-    params,
-    options
-  );
-
-  const query = useSuspenseQuery(
-    queryOptions,
-    queryClient
-  ) as UseSuspenseQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
 
 export type getAgentChatMessagesResponse200 = {
   data: AgentChatMessagesResponse;
@@ -499,7 +75,7 @@ export const getGetAgentChatMessagesUrl = (chatId: string) => {
 };
 
 /**
- * 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다.
+ * 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다. cursor 는 도는 턴의 스트림에 붙을 때 after 로 넣는 재생 시작점이다.
  * @summary 채팅 히스토리 조회
  */
 export const getAgentChatMessages = async (
@@ -832,9 +408,9 @@ export function useGetAgentChatMessagesSuspense<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type sendAgentChatMessageResponse200 = {
-  data: string;
-  status: 200;
+export type sendAgentChatMessageResponse202 = {
+  data: AgentChatTurnStartedResponse;
+  status: 202;
 };
 
 export type sendAgentChatMessageResponse400 = {
@@ -857,13 +433,8 @@ export type sendAgentChatMessageResponse409 = {
   status: 409;
 };
 
-export type sendAgentChatMessageResponse503 = {
-  data: AppErrorResponse;
-  status: 503;
-};
-
 export type sendAgentChatMessageResponseSuccess =
-  sendAgentChatMessageResponse200 & {
+  sendAgentChatMessageResponse202 & {
     headers: Headers;
   };
 export type sendAgentChatMessageResponseError = (
@@ -871,7 +442,6 @@ export type sendAgentChatMessageResponseError = (
   | sendAgentChatMessageResponse401
   | sendAgentChatMessageResponse404
   | sendAgentChatMessageResponse409
-  | sendAgentChatMessageResponse503
 ) & {
   headers: Headers;
 };
@@ -885,8 +455,8 @@ export const getSendAgentChatMessageUrl = (chatId: string) => {
 };
 
 /**
- * 메시지를 heymoa-ai로 중계하고 SSE(text/event-stream)로 passthrough한다. 이벤트 페이로드 계약은 AsyncAPI(asyncapi-web-server.yml) 참고. 검증은 스트림을 열기 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400이다. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받고(오류 배너로 그리면 눌러도 또 막혀 무한 루프가 된다), 동시 구독 상한을 넘겼으면 턴은 계속 도니 잠시 뒤 다시 붙어 버퍼부터 이어받으면 된다.
- * @summary 메시지 전송 (SSE 중계)
+ * 질문을 접수하고 **202 로 턴 id 를 돌려준다.** 프레임은 이 응답으로 오지 않는다 — GET /v1/agent-chats/{chatId}/turns/{turnId}/events 로 붙어 받는다 (이벤트 계약은 asyncapi-web-server.yml). heymoa-ai 호출이 실패해도 202 다: 턴은 FAILED 로 굳고 스트림의 첫 프레임이 turn_failed 다. 검증은 접수 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받는다.
+ * @summary 메시지 전송 (턴 접수)
  */
 export const sendAgentChatMessage = async (
   chatId: string,
@@ -953,7 +523,7 @@ export type SendAgentChatMessageMutationError =
   | UnauthorizedResponse;
 
 /**
- * @summary 메시지 전송 (SSE 중계)
+ * @summary 메시지 전송 (턴 접수)
  */
 export const useSendAgentChatMessage = <
   TError = AppErrorResponse | UnauthorizedResponse,
@@ -1437,9 +1007,9 @@ export const useCreateAgentChat = <
 > => {
   return useMutation(getCreateAgentChatMutationOptions(options), queryClient);
 };
-export type resolveToolApprovalResponse200 = {
-  data: string;
-  status: 200;
+export type resolveToolApprovalResponse202 = {
+  data: AgentChatTurnStartedResponse;
+  status: 202;
 };
 
 export type resolveToolApprovalResponse400 = {
@@ -1462,13 +1032,8 @@ export type resolveToolApprovalResponse404 = {
   status: 404;
 };
 
-export type resolveToolApprovalResponse503 = {
-  data: AppErrorResponse;
-  status: 503;
-};
-
 export type resolveToolApprovalResponseSuccess =
-  resolveToolApprovalResponse200 & {
+  resolveToolApprovalResponse202 & {
     headers: Headers;
   };
 export type resolveToolApprovalResponseError = (
@@ -1476,7 +1041,6 @@ export type resolveToolApprovalResponseError = (
   | resolveToolApprovalResponse401
   | resolveToolApprovalResponse403
   | resolveToolApprovalResponse404
-  | resolveToolApprovalResponse503
 ) & {
   headers: Headers;
 };
@@ -1487,37 +1051,23 @@ export type resolveToolApprovalResponse =
 
 export const getResolveToolApprovalUrl = (
   chatId: string,
-  approvalId: string,
-  params?: ResolveToolApprovalParams
+  approvalId: string
 ) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? "null" : String(value));
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve?${stringifiedParams}`
-    : `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve`;
+  return `/v1/agent-chats/${chatId}/approvals/${approvalId}/resolve`;
 };
 
 /**
- * 승인 카드에 대한 응답. **새 SSE 를 돌려준다** — 답의 나머지 절반이 이 스트림으로 온다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. after 는 이어받기와 같은 뜻이고, 생략하면 이 재개가 뗀 블록의 시작으로 떨어진다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리·만료됐으면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다.
+ * 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor(카드의 entryId) 를 after 로 넣어 다시 붙는다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다.
  * @summary 도구 승인/거절
  */
 export const resolveToolApproval = async (
   chatId: string,
   approvalId: string,
   resolveToolApprovalRequest?: ResolveToolApprovalRequest,
-  params?: ResolveToolApprovalParams,
   options?: RequestInit
 ): Promise<resolveToolApprovalResponse> => {
   return apiFetch<resolveToolApprovalResponse>(
-    getResolveToolApprovalUrl(chatId, approvalId, params),
+    getResolveToolApprovalUrl(chatId, approvalId),
     {
       ...options,
       method: "POST",
@@ -1534,24 +1084,14 @@ export const getResolveToolApprovalMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof resolveToolApproval>>,
     TError,
-    {
-      chatId: string;
-      approvalId: string;
-      data?: ResolveToolApprovalRequest;
-      params?: ResolveToolApprovalParams;
-    },
+    { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
     TContext
   >;
   request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof resolveToolApproval>>,
   TError,
-  {
-    chatId: string;
-    approvalId: string;
-    data?: ResolveToolApprovalRequest;
-    params?: ResolveToolApprovalParams;
-  },
+  { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
   TContext
 > => {
   const mutationKey = ["resolveToolApproval"];
@@ -1565,22 +1105,11 @@ export const getResolveToolApprovalMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof resolveToolApproval>>,
-    {
-      chatId: string;
-      approvalId: string;
-      data?: ResolveToolApprovalRequest;
-      params?: ResolveToolApprovalParams;
-    }
+    { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest }
   > = (props) => {
-    const { chatId, approvalId, data, params } = props ?? {};
+    const { chatId, approvalId, data } = props ?? {};
 
-    return resolveToolApproval(
-      chatId,
-      approvalId,
-      data,
-      params,
-      requestOptions
-    );
+    return resolveToolApproval(chatId, approvalId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1607,12 +1136,7 @@ export const useResolveToolApproval = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof resolveToolApproval>>,
       TError,
-      {
-        chatId: string;
-        approvalId: string;
-        data?: ResolveToolApprovalRequest;
-        params?: ResolveToolApprovalParams;
-      },
+      { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
       TContext
     >;
     request?: SecondParameter<typeof apiFetch>;
@@ -1621,12 +1145,7 @@ export const useResolveToolApproval = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof resolveToolApproval>>,
   TError,
-  {
-    chatId: string;
-    approvalId: string;
-    data?: ResolveToolApprovalRequest;
-    params?: ResolveToolApprovalParams;
-  },
+  { chatId: string; approvalId: string; data?: ResolveToolApprovalRequest },
   TContext
 > => {
   return useMutation(
@@ -1669,7 +1188,7 @@ export const getCancelAgentChatTurnUrl = (chatId: string, turnId: string) => {
 };
 
 /**
- * 도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 답이 막 끝난 순간에 누른 것은 경합이지 오류가 아니다. DELETE 로 쓰지 않는 이유: 턴 행은 CANCELLED 로 남고 lastTurn 이 그것을 읽는다. 소유권 판정이 턴 판정보다 먼저라 없거나 소유하지 않은 대화는 404로 끝나 남의 턴 존재가 새지 않고, 그 대화에 그 턴이 없으면 **대화 없음(AGENT_CHAT_NOT_FOUND)으로 접지 않은** 별도 404다.
+ * 도는 턴을 세운다. **멱등이다** — 이미 끝난 턴에 눌러도 204다. 그때까지 흘린 token 을 이어 붙인 부분 답이 히스토리에 남고, 붙어 있던 스트림은 turn_cancelled 로 닫힌다. 소유권 판정이 턴 판정보다 먼저라 없거나 소유하지 않은 대화는 404로 끝나 남의 턴 존재가 새지 않고, 그 대화에 그 턴이 없으면 **대화 없음(AGENT_CHAT_NOT_FOUND)으로 접지 않은** 별도 404다.
  * @summary 턴 중지
  */
 export const cancelAgentChatTurn = async (
@@ -1760,3 +1279,453 @@ export const useCancelAgentChatTurn = <
     queryClient
   );
 };
+export type subscribeAgentChatTurnEventsResponse200 = {
+  data: string;
+  status: 200;
+};
+
+export type subscribeAgentChatTurnEventsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type subscribeAgentChatTurnEventsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type subscribeAgentChatTurnEventsResponse410 = {
+  data: AppErrorResponse;
+  status: 410;
+};
+
+export type subscribeAgentChatTurnEventsResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
+export type subscribeAgentChatTurnEventsResponseSuccess =
+  subscribeAgentChatTurnEventsResponse200 & {
+    headers: Headers;
+  };
+export type subscribeAgentChatTurnEventsResponseError = (
+  | subscribeAgentChatTurnEventsResponse401
+  | subscribeAgentChatTurnEventsResponse404
+  | subscribeAgentChatTurnEventsResponse410
+  | subscribeAgentChatTurnEventsResponse503
+) & {
+  headers: Headers;
+};
+
+export type subscribeAgentChatTurnEventsResponse =
+  | subscribeAgentChatTurnEventsResponseSuccess
+  | subscribeAgentChatTurnEventsResponseError;
+
+export const getSubscribeAgentChatTurnEventsUrl = (
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/agent-chats/${chatId}/turns/${turnId}/events?${stringifiedParams}`
+    : `/v1/agent-chats/${chatId}/turns/${turnId}/events`;
+};
+
+/**
+ * 턴 하나의 프레임을 나르는 SSE. POST /messages 나 POST …/resolve 의 202 가 준 turnId 로 붙는다. after 보다 뒤의 프레임부터 순서대로 오고 id 줄이 entry id 다 — 재접속할 때 마지막으로 본 id 를 after 로 돌려준다. Last-Event-ID 헤더도 같은 뜻이고 둘 다 있으면 after 다. 종료 프레임(message_end · turn_failed · turn_cancelled · tool_approval_request) 뒤에 닫힌다. error 는 닫지 않고 뒤따르는 turn_failed 에서 닫는다. 하트비트는 주석 `: keepalive` 10초, 절대 상한 30분. 턴이 아직 안 시작해 스트림이 없어도 200 으로 열고 기다린다. 턴은 끝났는데 스트림이 TTL 로 사라졌으면 410 — GET /messages 를 다시 읽는다. 이벤트 계약은 asyncapi-web-server.yml.
+ * @summary 턴 스트림 (SSE)
+ */
+export const subscribeAgentChatTurnEvents = async (
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: RequestInit
+): Promise<subscribeAgentChatTurnEventsResponse> => {
+  return apiFetch<subscribeAgentChatTurnEventsResponse>(
+    getSubscribeAgentChatTurnEventsUrl(chatId, turnId, params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getSubscribeAgentChatTurnEventsQueryKey = (
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams
+) => {
+  return [
+    `/v1/agent-chats/${chatId}/turns/${turnId}/events`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getSubscribeAgentChatTurnEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getSubscribeAgentChatTurnEventsQueryKey(chatId, turnId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>
+  > = ({ signal }) =>
+    subscribeAgentChatTurnEvents(chatId, turnId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      chatId !== null &&
+      chatId !== undefined &&
+      turnId !== null &&
+      turnId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SubscribeAgentChatTurnEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>
+>;
+export type SubscribeAgentChatTurnEventsQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useSubscribeAgentChatTurnEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params: undefined | SubscribeAgentChatTurnEventsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+          TError,
+          Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useSubscribeAgentChatTurnEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+          TError,
+          Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useSubscribeAgentChatTurnEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 턴 스트림 (SSE)
+ */
+
+export function useSubscribeAgentChatTurnEvents<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getSubscribeAgentChatTurnEventsQueryOptions(
+    chatId,
+    turnId,
+    params,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 턴 스트림 (SSE)
+ */
+export const prefetchSubscribeAgentChatTurnEventsQuery = async <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getSubscribeAgentChatTurnEventsQueryOptions(
+    chatId,
+    turnId,
+    params,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getSubscribeAgentChatTurnEventsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getSubscribeAgentChatTurnEventsQueryKey(chatId, turnId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>
+  > = ({ signal }) =>
+    subscribeAgentChatTurnEvents(chatId, turnId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SubscribeAgentChatTurnEventsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>
+>;
+export type SubscribeAgentChatTurnEventsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useSubscribeAgentChatTurnEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params: undefined | SubscribeAgentChatTurnEventsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useSubscribeAgentChatTurnEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useSubscribeAgentChatTurnEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 턴 스트림 (SSE)
+ */
+
+export function useSubscribeAgentChatTurnEventsSuspense<
+  TData = Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  chatId: string,
+  turnId: string,
+  params?: SubscribeAgentChatTurnEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof subscribeAgentChatTurnEvents>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getSubscribeAgentChatTurnEventsSuspenseQueryOptions(
+    chatId,
+    turnId,
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

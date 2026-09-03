@@ -434,7 +434,8 @@ test("streams chat tokens through the service worker", async ({ page }) => {
       body: JSON.stringify({}),
     }).then((response) => response.json());
 
-    const stream = await fetch(
+    // **POST 는 202 로 끝난다.** 프레임은 그 뒤 턴 스트림으로 온다.
+    const accepted = await fetch(
       `/v1/agent-chats/${created.data.chatId}/messages`,
       {
         method: "POST",
@@ -443,45 +444,53 @@ test("streams chat tokens through the service worker", async ({ page }) => {
         body: JSON.stringify({ message: "요약해줘" }),
       }
     );
+    const { data } = await accepted.json();
+    const stream = await fetch(
+      `/v1/agent-chats/${created.data.chatId}/turns/${data.turnId}/events`,
+      { credentials: "include" }
+    );
 
     const text = await stream.text();
-    // 프레임에 `id:` 줄이 붙어 `event:`가 더는 첫 줄이 아니다.
-    return text
-      .split("\n\n")
-      .filter((block) => block.includes("event:"))
-      .map((block) => {
-        const lines = block.split("\n");
-        const idLine = lines.find((each) => each.startsWith("id:"));
-        return {
-          event: lines
-            .find((each) => each.startsWith("event:"))!
-            .slice("event:".length)
-            .trim(),
-          // **커서는 `id:` 줄에서만 온다.** `data:`는 payload 하나뿐이다.
-          seq: idLine === undefined ? null : Number(idLine.slice("id:".length)),
-          data: JSON.parse(
-            lines
-              .find((each) => each.startsWith("data:"))!
-              .slice("data:".length)
-          ) as Record<string, unknown>,
-        };
-      });
+    return {
+      status: accepted.status,
+      events: text
+        .split("\n\n")
+        .filter((block) => block.includes("event:"))
+        .map((block) => {
+          const lines = block.split("\n");
+          const idLine = lines.find((each) => each.startsWith("id:"));
+          return {
+            event: lines
+              .find((each) => each.startsWith("event:"))!
+              .slice("event:".length)
+              .trim(),
+            // **커서는 `id:` 줄에서만 온다.** `data:`는 payload 하나뿐이다.
+            id: idLine === undefined ? null : idLine.slice("id:".length).trim(),
+            data: JSON.parse(
+              lines
+                .find((each) => each.startsWith("data:"))!
+                .slice("data:".length)
+            ) as Record<string, unknown>,
+          };
+        }),
+    };
   });
 
-  // 턴이 릴레이보다 먼저 열리므로 `turn_started`가 사실상 첫 프레임이다.
-  expect(events[0].event).toBe("turn_started");
-  expect(events.at(-1)!.event).toBe("message_end");
-  // 커서가 서비스 워커 경로에서도 `id:` 줄로 온다 — 봉투가 아니라 여기서 나온다.
-  expect(events.every((event) => typeof event.seq === "number")).toBe(true);
-  expect(events.every((event) => !("payload" in event.data))).toBe(true);
+  expect(events.status).toBe(202);
+  // `turn_started` 는 없다 — turnId 는 202 본문이 줬다.
+  expect(events.events[0].event).toBe("message_start");
+  expect(events.events.at(-1)!.event).toBe("message_end");
+  // 커서가 서비스 워커 경로에서도 `id:` 줄로 오고, 숫자가 아니라 entry id 문자열이다.
+  expect(events.events.every((event) => /^\d+-\d+$/.test(event.id ?? ""))).toBe(true);
+  expect(events.events.every((event) => !("payload" in event.data))).toBe(true);
 });
 
 /**
  * ★ **연결을 끊어도 턴은 살아 있다.** 서비스 워커 경로에서만 뜻이 있는 확인이다 —
  * vitest는 jsdom이라 여기를 한 번도 안 지난다.
  *
- * 여기서 못박는 것은 아래 계층이다 — **응답을 끊어도 턴이 계속 돌고 `GET /events?after=`가
- * 나머지를 준다.** 화면이 그걸 실제로 잇는지는 아래 「새로고침해도…」가 본다.
+ * 여기서 못박는 것은 아래 계층이다 — **스트림을 끊어도 턴이 계속 돌고 같은 주소에
+ * `?after=`를 넣으면 나머지를 준다.** 화면이 그걸 실제로 잇는지는 `chat-turn-stream.spec.ts`가 본다.
  */
 test("resumes a dropped chat stream through the service worker", async ({
   page,
@@ -502,23 +511,25 @@ test("resumes a dropped chat stream through the service worker", async ({
     }).then((response) => response.json());
     const chatId = created.data.chatId as string;
 
-    const stream = await fetch(`/v1/agent-chats/${chatId}/messages`, {
+    const { data } = await fetch(`/v1/agent-chats/${chatId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ message: "요약해줘" }),
-    });
+    }).then((response) => response.json());
+    const events = `/v1/agent-chats/${chatId}/turns/${data.turnId}/events`;
+    const stream = await fetch(events, { credentials: "include" });
 
-    // 첫 프레임만 받고 끊는다 — 새로고침·탭 닫기가 하는 것과 같다.
+    // 첫 청크만 받고 끊는다 — 새로고침·탭 닫기가 하는 것과 같다.
     const reader = stream.body!.getReader();
     const first = new TextDecoder().decode((await reader.read()).value);
     void reader.cancel();
-    const cursor = Number(first.match(/^id: (\d+)/m)![1]);
+    // 마지막에 본 `id:` 가 커서다. 불투명한 문자열이라 그대로 넣는다.
+    const cursor = [...first.matchAll(/^id: (\S+)/gm)].at(-1)![1];
 
-    const rest = await fetch(
-      `/v1/agent-chats/${chatId}/events?after=${cursor}`,
-      { credentials: "include" }
-    ).then((response) => response.text());
+    const rest = await fetch(`${events}?after=${cursor}`, {
+      credentials: "include",
+    }).then((response) => response.text());
 
     return {
       cursor,
@@ -535,16 +546,16 @@ test("resumes a dropped chat stream through the service worker", async ({
     };
   });
 
-  expect(resumed.cursor).toBeGreaterThan(0);
+  expect(resumed.cursor).toMatch(/^\d+-\d+$/);
   expect(resumed.events.at(-1)).toBe("message_end");
 });
 
 /**
  * ★★ **이 작업 전체의 인수 조건 — 돌아오면 이어받는다.**
  *
- * 패널 밖에서 턴을 시작하고 응답을 끊는다. 그러면 화면은 그 턴을 **모른 채** 열리고,
+ * 패널 밖에서 턴을 시작하고 스트림은 열지 않는다. 그러면 화면은 그 턴을 **모른 채** 열리고,
  * 이을 수 있는 근거는 `GET /messages`가 주는 `activeTurn`·`cursor`뿐이다. 그 뒤는
- * `GET /events?after=`가 서비스 워커 경로로 흐른다.
+ * `GET …/turns/{turnId}/events?after=`가 서비스 워커 경로로 흐른다.
  *
  * **새로고침으로는 못 잰다.** MSW 목의 상태가 페이지 힙에 살아서 새 문서면 대화 자체가
  * 사라진다 — 다른 탭·다른 세션에서 시작된 턴으로 같은 경로를 밟는다.
@@ -569,19 +580,13 @@ test("picks up a turn that started outside the panel", async ({ page }) => {
       body: JSON.stringify({}),
     }).then((response) => response.json());
 
-    const stream = await fetch(
-      `/v1/agent-chats/${created.data.chatId}/messages`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ message: "Linear 이슈 만들어줘" }),
-      }
-    );
-    // 첫 프레임만 받고 끊는다. 턴은 응답과 무관하게 계속 돈다.
-    const reader = stream.body!.getReader();
-    await reader.read();
-    void reader.cancel();
+    // 202 만 받고 스트림은 안 연다. 턴은 응답과 무관하게 계속 돈다.
+    await fetch(`/v1/agent-chats/${created.data.chatId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ message: "Linear 이슈 만들어줘" }),
+    });
   }, MOCK_WORKSPACE_ID);
 
   await page.getByRole("button", { name: "개인 챗봇 열기" }).click();

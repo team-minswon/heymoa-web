@@ -105,31 +105,26 @@ describe("chat SSE contract", () => {
   });
 
   /**
-   * ★ **봉투를 안 씌운다** (`03-계약 §3`). 번호를 `id:` 줄과 payload 두 곳에 두면
+   * ★ **봉투를 안 씌운다** (`03-계약 §3`). 커서를 `id:` 줄과 payload 두 곳에 두면
    * 언젠가 갈리고, 그때 커서가 어느 쪽을 믿을지가 코드마다 달라진다.
    *
    * 리듀서 쪽은 `stream-protocol.test.ts` 가 본다. 여기서 보는 것은 **계약이 그렇게
    * 적혀 있나**다 — 예시가 봉투를 쓰기 시작하면 그것이 곧 계약 변경이다.
    */
-  it("커서가 id: 줄에 있고 data 안에는 없다", () => {
+  it("커서가 id: 줄에 있고 문자열이며 data 안에는 없다", () => {
     const frame =
-      openapi.paths["/v1/agent-chats/{chatId}/messages"].post.responses["200"]
-        .content["text/event-stream"].examples.sendAgentChatMessage_Success
-        .value;
+      openapi.paths["/v1/agent-chats/{chatId}/turns/{turnId}/events"].get
+        .responses["200"].content["text/event-stream"].examples
+        .subscribeAgentChatTurnEvents_Success.value;
 
-    // **값이 아니라 모양을 본다.** 예전에는 `id:129` 를 그대로 못박았는데, 그 숫자는
-    // 손으로 쓴 미러의 것이었다. 미러를 server 생성물로 갈자 예시 값이 바뀌면서 이 검사가
-    // 빨개졌다 — **계약이 틀린 게 아니라 검사가 픽스처에 묶여 있었다.**
     const lines = frame.split("\n");
-    // 좌표는 `id:` 줄에 있다. 하나라도 있어야 이어받기가 성립한다.
-    expect(lines.filter((line: string) => /^id:\d+$/.test(line)).length).toBeGreaterThan(0);
+    // 좌표는 `id:` 줄에 있고 Redis Stream entry id 꼴이다 — 숫자 하나가 아니다.
+    expect(lines.filter((line: string) => /^id:\d+-\d+$/.test(line)).length).toBeGreaterThan(0);
     // 그리고 `data:` 안에는 없다 — 봉투로 감싸면 프레임이 두 겹이 된다.
     for (const line of lines.filter((line: string) => line.startsWith("data:"))) {
       expect(line).not.toContain('"seq"');
       expect(line).not.toContain('"payload"');
     }
-    // 첫 프레임이 턴을 연다. `startSeq` 가 그 턴의 시작 경계다.
-    expect(frame).toMatch(/event:turn_started\ndata:\{"turnId":"[0-9A-HJKMNP-TV-Z]{13}","startSeq":\d+\}/);
   });
 
   /**
@@ -137,21 +132,52 @@ describe("chat SSE contract", () => {
    * 「지금 뭐가 도나」(`activeTurn`). 하나만 빠져도 재진입이 원리적으로 불가능한데,
    * 각각은 다른 화면이 쓰는 값이라 하나가 빠져도 나머지 화면은 멀쩡해 보인다.
    */
-  it("이어받기 경로가 온전하다 — cursor · ?after= · activeTurn", () => {
+  it("이어받기 경로가 온전하다 — cursor · ?after= · activeTurn · 202 {turnId}", () => {
     const data =
       openapi.components.schemas.AgentChatMessagesResponse.properties.data;
 
     expect(data.required).toContain("cursor");
+    // 재생 시작점은 불투명한 문자열이고 없으면 null(처음부터)이다.
+    expect(data.properties.cursor).toMatchObject({ type: "string", nullable: true });
     expect(Object.keys(data.properties)).toEqual(
       expect.arrayContaining(["cursor", "activeTurn", "lastTurn"])
     );
-    // 진행 중 턴의 행은 스트림 백로그로도 온다. 이 값이 없으면 도구 카드가 두 벌 그려진다.
+    // 진행 중 턴의 행은 스트림 재생으로도 온다. 이 값이 없으면 도구 카드가 두 벌 그려진다.
     expect(data.properties.messages.items.properties.turnId).toBeDefined();
 
-    const events = openapi.paths["/v1/agent-chats/{chatId}/events"].get;
+    // 진입점은 턴 스코프 하나다 — 대화 스코프 `/events` 는 없다.
+    expect(Object.keys(openapi.paths)).not.toContain("/v1/agent-chats/{chatId}/events");
+    const events =
+      openapi.paths["/v1/agent-chats/{chatId}/turns/{turnId}/events"].get;
+    expect(events.operationId).toBe("subscribeAgentChatTurnEvents");
     expect(events.parameters.map((each: { name: string }) => each.name)).toEqual(
-      expect.arrayContaining(["chatId", "after"])
+      expect.arrayContaining(["chatId", "turnId", "after"])
     );
+    expect(
+      events.parameters.find((each: { name: string }) => each.name === "after").schema.type
+    ).toBe("string");
+    expect(Object.keys(events.responses)).toEqual(
+      expect.arrayContaining(["200", "404", "410", "503"])
+    );
+
+    // POST 둘은 202 JSON 이다 — 스트림은 응답 본문이 아니다.
+    const post = openapi.paths["/v1/agent-chats/{chatId}/messages"].post;
+    expect(post.responses["200"]).toBeUndefined();
+    expect(
+      post.responses["202"].content["application/json"].schema.$ref
+    ).toBe("#/components/schemas/AgentChatTurnStartedResponse");
+    const resolve =
+      openapi.paths["/v1/agent-chats/{chatId}/approvals/{approvalId}/resolve"].post;
+    expect(resolve.responses["200"]).toBeUndefined();
+    expect(
+      resolve.responses["202"].content["application/json"].schema.$ref
+    ).toBe("#/components/schemas/AgentChatTurnStartedResponse");
+    expect(resolve.parameters.map((each: { name: string }) => each.name)).not.toContain(
+      "after"
+    );
+    expect(
+      openapi.components.schemas.AgentChatTurnStartedResponse.properties.data.required
+    ).toEqual(["turnId"]);
     expect(
       openapi.paths["/v1/agent-chats/{chatId}/turns/{turnId}/cancel"].post
         .operationId

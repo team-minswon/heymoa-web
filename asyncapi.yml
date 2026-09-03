@@ -8,15 +8,15 @@
 asyncapi: 3.0.0
 info:
   title: Heymoa web ↔ server 비동기 계약 (전사 STOMP·노트 토픽 + agent 채팅 SSE)
-  version: 3.0.0
+  version: 4.0.0
   description: |
     브라우저와 heymoa-server 사이의 비동기 구간은 둘이다. 프로토콜도 수명도 다르다.
 
     | | 전사 | agent 채팅 |
     |---|---|---|
-    | 프로토콜 | STOMP 1.2 over WebSocket (`wss`) | SSE (`POST` 응답 본문) |
+    | 프로토콜 | STOMP 1.2 over WebSocket (`wss`) | SSE (`GET …/turns/{turnId}/events`) |
     | 서버 | `production` | `sseEdge` |
-    | 생산자 | heymoa-server | heymoa-ai (server는 passthrough) |
+    | 생산자 | heymoa-server | heymoa-ai (Valkey Stream 에 쓰고 server 가 읽어 흘린다) |
     | 수명 | 회의 녹음 구간 전체 | 메시지 한 건의 응답 |
 
     공통: 인증은 `access_token` cookie 하나이고, 브라우저는 heymoa-ai에 직접 연결하지 않는다 —
@@ -55,84 +55,75 @@ info:
 
     ## 2. agent 채팅 SSE 구간
 
-    web이 유저 메시지를 POST하면 그 **응답 본문**이 `text/event-stream`으로 스트리밍된다.
-    진입점은 둘이고 이벤트 포맷은 같다.
+    유저 메시지 `POST /v1/agent-chats/{chatId}/messages` 는 `202 {turnId}` 로 끝난다(스키마는
+    openapi3-server.yml). 프레임은 그 뒤 브라우저가 여는 **하나의 진입점**으로 온다.
 
-    - 시작: `POST /v1/agent-chats/{chatId}/messages`
-    - 이어받기: `GET /v1/agent-chats/{chatId}/events?after={cursor}`
+    - `GET /v1/agent-chats/{chatId}/turns/{turnId}/events?after={entryId}`
 
-    **끊긴다고 턴이 끝나는 것이 아니다.** server가 대화 스코프 버퍼에 이벤트를 쌓으므로
-    전송이 닫혀도 턴은 계속 돌고, 두 번째 진입점이 `after` 뒤부터 이어 준다. 커서의 출처는
-    `GET /v1/agent-chats/{chatId}/messages`의 `cursor`다.
+    첫 연결도 재접속도 같은 길이다. `after` 가 없으면 턴의 처음부터, 있으면 그 뒤부터 준다.
+    `Last-Event-ID` 헤더도 같은 뜻으로 받는다(둘 다 있으면 `after`).
+
+    **끊긴다고 턴이 끝나는 것이 아니다.** 프레임은 heymoa-ai 가 Valkey Stream `heymoa:turn:{turnId}`
+    에 쓰고 server 는 그것을 읽어 흘릴 뿐이라, 브라우저가 닫혀도 server 가 죽어도 턴은 계속
+    돈다. 돌아온 브라우저는 마지막 `id:` 를 `after` 에 넣어 다시 붙는다. 페이지를 새로 연 브라우저는
+    `GET /v1/agent-chats/{chatId}/messages` 의 `activeTurn.turnId` 와 `cursor` 로 붙는다.
 
     **범위는 대화가 아니라 이 요청이 든다.** 본문의 `noteIds`·`projectIds`가 이 턴에 **먼저 볼 곳**이고
     담장이 아니다 — 거기 없으면 워크스페이스 안에서 더 찾는다. 못 넘는 선은 워크스페이스 하나뿐이고
     그것은 범위가 아니라 권한이다. **넓힌 것은 `message_end.refs`에 서서 드러난다.**
 
-    실제 이벤트 생산자는 heymoa-ai이고 server는 **변환 없이 통과(passthrough)**시키면서
-    히스토리만 자기 DB에 저장(tee)한다. 그래서 이 구간과 server↔ai 구간의 이벤트 포맷은
-    반드시 같다 (asyncapi-server-ai.yml이 아래 message들을 $ref한다).
+    실제 이벤트 생산자는 heymoa-ai이고 server는 `data` 를 **변환 없이** 흘리면서 턴이 끝날 때
+    히스토리만 자기 DB에 저장한다. 그래서 이 구간과 server↔ai 구간(asyncapi-server-ai.yml)의
+    `data` 스키마는 같다.
 
-    턴 이벤트 넷(`turn_started`·`turn_failed`·`turn_cancelled`·`stream_resync`)은 예외다 —
-    **server가 스스로 만든다.** ai는 이것들을 모른다.
+    턴 이벤트 둘(`turn_failed`·`turn_cancelled`)은 예외다 — **server가 스스로 만든다.** ai는 이것들을 모른다.
 
     ### 프레임은 `id:` + `event:` + `data:`다
 
     ```
-    id: 129
-    event: turn_started
-    data: {"turnId":"0K9GVJT2C4Q3B","startSeq":128}
+    id: 1735689600000-0
+    event: token
+    data: {"delta":"회의에서 정한"}
     ```
 
-    `id:` 줄이 **대화 스코프 커서(`seq`)**다. 턴 스코프가 아니다 — 승인 흐름이 한 턴을 두
-    스트림으로 자르므로 턴으로 번호를 매기면 그 이음매에서 커서가 뒤로 돈다. web은 이 값을
-    그대로 `?after=`에 넣는다.
+    `id:` 줄이 **Valkey Stream 의 entry id** 다. 브라우저에게는 불투명한 문자열이다 — 크기를 비교하지
+    않고, 마지막에 본 것을 그대로 `?after=`에 넣는다. 승인으로 턴이 멈췄다 재개돼도 같은 스트림에
+    이어지므로 커서가 승인 경계를 넘는다.
 
-    **봉투는 없다.** `data:`에 실리는 것은 payload 하나뿐이고 `seq`·`chatId`는 `data`에
-    들어가지 않는다. 그래서 `seq`의 출처는 `id:` 줄 하나다.
+    **봉투는 없다.** `data:`에 실리는 것은 payload 하나뿐이고 `chatId`·`turnId` 는 URL 이 든다.
 
-    번호는 턴마다 블록으로 발급되므로 **구멍이 정상이다**(`40 → 1001`). 구멍을 유실로
-    읽으면 턴 경계마다 재동기화가 돈다.
-
-    **모든 프레임이 `id:` 줄을 갖는다.** 좌표 없는 프레임(`message_snapshot`)은 걷혔다 —
-    그것이 커서를 안 밀어 뒤따르는 백로그와 겹쳤고, 답의 꼬리가 두 벌 그려졌다.
-    `stream_resync`도 이제 번호를 갖는다 — 그 번호가 「여기까지는 못 준다」는 **바닥**이다.
+    **`id:` 가 없는 프레임은 하트비트뿐이다.** 주석 프레임이라 커서를 안 옮긴다. `turn_started` 와
+    `stream_resync` 는 사라졌다 — `turnId` 는 `202` 본문이 주고, 스트림이 사라진 것은 `410` 이 말한다.
 
     ### 스트림은 두 가지로 끝난다 — 그리고 세 번째가 있다
 
     1. `message_end` — 정상. `content`가 완성된 응답 전문이고 server가 이 값을 저장한다.
-       **성공 terminal을 따로 만들지 않고 이것이 겸한다** — `turn_started`의 대칭 종료를
-       기다리면 영영 안 끝난다.
+       **server 는 이 프레임을 보내기 전에 저장한다.** 받자마자 `GET /messages` 를 읽어도 답이 있다.
     2. `turn_failed` — 턴이 실패로 확정됐다. `error`가 앞서 올 수도 있고 **안 올 수도 있다**
-       (`UPSTREAM_REJECTED`는 스트림을 열기 전 실패라 `error`가 없다).
-    3. **종료 이벤트 없이 연결만 끊긴다.** 이제 이것은 실패가 아니다 — **턴은 서버에서 살아
-       있을 수 있다.** web은 `GET /events?after=`로 다시 붙고, 포기했을 때만 정지로 그린다.
+       (ai 가 요청을 거절했으면 `error` 없이 이것이 첫 프레임이다).
+    3. **종료 이벤트 없이 연결만 끊긴다.** 이것은 실패가 아니다 — **턴은 서버에서 살아 있을 수
+       있다.** web은 같은 URL 에 `after` 를 넣어 다시 붙고, 포기했을 때만 정지로 그린다.
 
-    `turn_cancelled`도 terminal이다. server는 이 셋(`message_end`·`turn_failed`·
-    `turn_cancelled`) 중 하나를 흘려보낸 뒤 **구독을 닫는다** — 안 닫으면 유휴 대화에서
-    web의 재연결 타이머가 영원히 돈다. 도는 턴이 없으면 `GET /events`는 밀린 것만 주고
-    곧바로 닫으므로, **EOF 자체를 실패로 읽으면 안 된다.**
+    `turn_cancelled`도 terminal이다. server는 이 셋(`message_end`·`turn_failed`·`turn_cancelled`)
+    또는 `tool_approval_request` 를 흘려보낸 뒤 **연결을 닫는다.** `error` 는 닫지 않는다 —
+    뒤따르는 `turn_failed` 가 닫는다.
+
+    턴이 끝났고 스트림이 TTL(마지막 프레임 뒤 600초)로 사라졌으면 `410` 이다. web 은
+    `GET /messages` 를 다시 읽는다 — 답은 거기 있다.
 
     ### heartbeat
 
     server는 SSE comment(`: keepalive`)를 **20초 이하 간격**(현재 구현 10초)으로 보낸다.
     프록시·로드 밸런서의 유휴 타임아웃에 **도는 턴**이 먼저 끊기는 것을 막기 위함이다.
     승인 대기는 근거가 아니다 — `tool_approval_request`가 스트림을 끝내므로 대기가
-    스트림을 붙잡지 않는다.
+    스트림을 붙잡지 않는다. comment는 이벤트가 아니라 web은 무시하면 된다.
 
-    이 타이머는 **upstream과 독립**이다 — heymoa-ai의 keepalive는 server가 소비하고 흘려보내지
-    않으므로, 도구 실행 지연·LLM 장고로 upstream이 조용해도 간격은 지켜진다. 이벤트가 흐르는
-    구간에서도 멈추지 않는다. comment는 이벤트가 아니라 web은 무시하면 된다
-    (EventSource·fetch 파서 모두 자동 무시).
-
-    스트림 절대 상한은 **30분**이다. 좀비 스트림 방지용이며 정상 수명 제어는 upstream 유휴
-    타임아웃(60초)이 한다.
+    스트림 절대 상한은 **30분**이다. 좀비 스트림 방지용이다.
 
     ### 스트림이 열리기 전의 실패는 SSE가 아니라 JSON이다
 
-    소유권(404)과 **범위가 워크스페이스 밖일 때**(404)는 스트림을 열기 전 동기 단계에서 끝난다.
-    범위 실패는 "없음"과 "권한 없음"을 가르지 않는다 — 가르면 워크스페이스 밖 id의 존재가 샌다.
-    web은 응답 Content-Type을 보고 갈라야 한다 — 이 경우는 SSE가 아니라 평소의 오류 JSON이다
+    소유권(404)·다른 대화의 턴(404)·스트림 소멸(410)·구독 상한(503)은 스트림을 열기 전 동기 단계에서
+    끝난다. web은 응답 Content-Type을 보고 갈라야 한다 — 이 경우는 SSE가 아니라 평소의 오류 JSON이다
     (본문 스키마는 openapi3-server.yml).
 defaultContentType: application/json
 servers:
@@ -159,7 +150,7 @@ servers:
     protocol: https
     description: |
       agent 채팅 SSE. 별도 endpoint가 아니라 REST와 같은 public edge이며,
-      POST 응답 본문이 `text/event-stream`으로 열린다.
+      `GET /v1/agent-chats/{chatId}/turns/{turnId}/events` 가 `text/event-stream` 으로 열린다.
     security:
       - $ref: "#/components/securitySchemes/accessCookie"
 channels:
@@ -278,39 +269,38 @@ channels:
         $ref: "#/components/messages/NoteRecordingStartedEvent"
       NoteRecordingStoppedEvent:
         $ref: "#/components/messages/NoteRecordingStoppedEvent"
-      ContextCandidateChanged:
-        $ref: "#/components/messages/ContextCandidateChanged"
-      ContextClassificationBatchApplied:
-        $ref: "#/components/messages/ContextClassificationBatchApplied"
+      ProposalChanged:
+        $ref: "#/components/messages/ProposalChanged"
+      TranscriptAnalysisRunApplied:
+        $ref: "#/components/messages/TranscriptAnalysisRunApplied"
   agentChatStream:
     servers:
       - $ref: "#/servers/sseEdge"
-    address: /v1/agent-chats/{chatId}/messages
-    title: 개인 챗봇 응답 스트림
+    address: /v1/agent-chats/{chatId}/turns/{turnId}/events
+    title: 개인 챗봇 턴 스트림
     description: |
-      요청 본문은 `{message, noteIds, projectIds}`이고(스키마는
-      openapi3-server.yml), 응답 본문이 이 채널의 이벤트를 나르는 SSE 스트림이다.
-      **같은 이벤트를 `GET /v1/agent-chats/{chatId}/events?after=`도 나른다** — 끊긴 뒤
-      이어받는 진입점이고, 주소만 다르지 프레임은 같다.
+      `POST /v1/agent-chats/{chatId}/messages` 가 `202 {turnId}` 로 연 턴의 프레임을 나르는 SSE 스트림이다.
+      `?after={entryId}` 로 그 뒤부터 이어받는다. 첫 연결과 재접속이 같은 주소다.
 
-      **범위는 턴마다 붙는다** — 대화가 아니라 이 메시지가 든다. 같은 대화 안에서 매 질문의
+      **범위는 턴마다 붙는다** — 대화가 아니라 그 메시지가 든다. 같은 대화 안에서 매 질문의
       범위가 다를 수 있고, 히스토리의 USER 행이 그때 쓴 범위를 그대로 들고 있다.
 
       **한 대화에 도는 턴은 하나다.** 도는 중에 또 보내면 409에 그 턴의 id가 실려 온다.
-      그건 실패가 아니라 **이어받기 신호**다 — 무엇을 어디서부터 이어야 하는지는 히스토리가
-      알고, `GET /v1/agent-chats/{chatId}/messages`가 `activeTurn`과 `cursor`를 준다.
+      그건 실패가 아니라 **이어받기 신호**다 — `GET /v1/agent-chats/{chatId}/messages`가
+      `activeTurn`과 `cursor`를 준다.
+
+      승인으로 턴이 멈추면 `tool_approval_request` 로 닫히고, 승인 `POST …/resolve` 가 `202` 로 답한 뒤
+      **같은 주소**에 `after` 를 넣어 다시 붙으면 나머지 절반이 온다.
     parameters:
       chatId:
         $ref: "#/components/parameters/chatId"
+      turnId:
+        $ref: "#/components/parameters/turnId"
     messages:
-      TurnStarted:
-        $ref: "#/components/messages/TurnStarted"
       TurnFailed:
         $ref: "#/components/messages/TurnFailed"
       TurnCancelled:
         $ref: "#/components/messages/TurnCancelled"
-      StreamResync:
-        $ref: "#/components/messages/StreamResync"
       MessageStart:
         $ref: "#/components/messages/MessageStart"
       Token:
@@ -377,17 +367,16 @@ operations:
       commit 뒤에만 발행된다. 챗 이벤트(chat.token·chat.message_end·chat.lock)는 공유 챗봇과 함께
       이 토픽에서 사라졌다. tool approval 이벤트도 포함하지 않는다.
 
-      context candidate WebSocket 전달은 빠른 알림일 뿐 transport replay를 제공하지 않는다.
+      proposal WebSocket 전달은 빠른 알림일 뿐 transport replay를 제공하지 않는다.
       guarantee: best-effort
-      outbox order: (occurredAt, eventId)
-      RESOLVE fan-out order: changeOrdinal
-      RESOLVE changes are synchronously published in ascending changeOrdinal order before broker delivery.
-      public message identity: (eventId, changeOrdinal)
-      candidate state dedup: (candidateId, revision)
-      batch dedup: eventId
-      recovery: GET /v1/notes/{noteId}/context-candidates
+      publish order: run completion order, then change order within the run, run message last
+      RESOLVE fan-out order: send order (closed target revision first, then result revisions)
+      public message identity: proposal (proposalId, revision), run runId
+      proposal state dedup: (proposalId, revision)
+      batch dedup: runId
+      recovery: GET /v1/notes/{noteId}/proposals
       client는 중복·역순 event를 위 key로 흡수하고 revision gap 또는 reconnect를 발견하면 REST snapshot을
-      다시 읽어 수렴한다. 서버 relay는 DB advisory transaction lock과 저장 순서로 outbox를 직렬화하고,
+      다시 읽어 수렴한다. 서버는 DB advisory transaction lock과 저장 순서로 발행을 직렬화하고,
       STOMP broker는 preservePublishOrder를 사용하지만 WebSocket 전달 성공 자체는 보장하지 않는다.
     channel:
       $ref: "#/channels/noteTopic"
@@ -398,28 +387,23 @@ operations:
       - $ref: "#/channels/noteTopic/messages/NoteMeetingEndedEvent"
       - $ref: "#/channels/noteTopic/messages/NoteRecordingStartedEvent"
       - $ref: "#/channels/noteTopic/messages/NoteRecordingStoppedEvent"
-      - $ref: "#/channels/noteTopic/messages/ContextCandidateChanged"
-      - $ref: "#/channels/noteTopic/messages/ContextClassificationBatchApplied"
+      - $ref: "#/channels/noteTopic/messages/ProposalChanged"
+      - $ref: "#/channels/noteTopic/messages/TranscriptAnalysisRunApplied"
   receiveAgentChatEvents:
     action: receive
-    summary: heymoa-web이 개인 챗봇 응답 이벤트를 SSE로 수신한다.
+    summary: heymoa-web이 개인 챗봇 턴의 프레임을 SSE로 수신한다.
     description: |
-      server가 producer지만 이벤트를 만들지는 않는다 — heymoa-ai의 스트림을 변환 없이 중계하고,
-      유저 메시지·`message_end.content`·`message_end.refs`·도구 실행 기록만 자기 DB에 저장(tee)한다.
+      server가 producer지만 이벤트를 만들지는 않는다 — heymoa-ai 가 Valkey Stream 에 쓴 프레임을
+      읽어 변환 없이 흘리고, 턴이 끝날 때 유저 메시지·`message_end.content`·`message_end.refs`·
+      도구 실행 기록·생각을 자기 DB에 저장한다.
 
-      **변환이 없으므로 이벤트를 늘리는 데 server 코드가 안 든다.** thinking_delta와
-      tool_call_start.target이 그렇게 들어왔다 — `refs`는 tee를 위해, `tool_call_start.args`는
-      승인 행에 굳히려고 server가 읽는다.
-
-      **턴 이벤트 다섯은 반대다** — ai가 모르고 server가 만든다. 턴 행·이벤트 버퍼·취소
-      엔드포인트가 server 것이라, 「지금 어느 턴이 도나」를 아는 곳이 server뿐이다.
+      **턴 이벤트 둘은 반대다** — ai가 모르고 server가 만든다. 턴 행·취소 엔드포인트가 server 것이라,
+      「이 턴이 어떻게 끝났나」를 굳히는 곳이 server뿐이다.
     channel:
       $ref: "#/channels/agentChatStream"
     messages:
-      - $ref: "#/channels/agentChatStream/messages/TurnStarted"
       - $ref: "#/channels/agentChatStream/messages/TurnFailed"
       - $ref: "#/channels/agentChatStream/messages/TurnCancelled"
-      - $ref: "#/channels/agentChatStream/messages/StreamResync"
       - $ref: "#/channels/agentChatStream/messages/MessageStart"
       - $ref: "#/channels/agentChatStream/messages/Token"
       - $ref: "#/channels/agentChatStream/messages/ThinkingDelta"
@@ -453,6 +437,12 @@ components:
       description: heymoa-server가 발급한 개인 채팅 세션 id (13자 TSID)
       examples:
         - 0HZX2K7M9Q4AE
+    turnId:
+      description: |
+        `POST /v1/agent-chats/{chatId}/messages` 의 `202` 본문이 준 턴 id (13자 TSID).
+        승인으로 멈췄다 재개돼도 같은 턴이다.
+      examples:
+        - 0K9GVJT2C4Q3B
     noteId:
       description: 구독할 노트의 13자리 TSID
       examples:
@@ -926,40 +916,16 @@ components:
     #
     # payload를 additionalProperties로 닫지 않는다: server는 이벤트를 파싱하지 않고 통과시키므로
     # heymoa-ai가 필드를 더해도 web까지 그대로 도착한다. web은 모르는 필드를 무시한다.
-    # 아래 다섯은 **server가 만든다.** ai는 이 이벤트들을 모른다 — 턴 행·이벤트 버퍼·취소
+    # 아래 둘은 **server가 만든다.** ai는 이 이벤트들을 모른다 — 턴 행·취소
     # 엔드포인트가 server 것이고, 「지금 어느 턴이 도나」를 아는 곳이 거기뿐이다.
-    TurnStarted:
-      name: turn_started
-      title: 턴 시작
-      description: |
-        턴 행이 생겼다. **릴레이보다 먼저 발행되므로 사실상 이 턴의 첫 프레임이다.**
-
-        **`turnId`의 유일한 출처다.** `POST /messages`의 응답이 곧 스트림이라 본문을 읽기
-        전에는 알 수 없고, 취소(`POST /turns/{turnId}/cancel`)가 이 값을 기다린다.
-
-        **성공 terminal이 아니다** — 대칭 종료가 없다. 정상 종료는 `message_end`가 겸한다.
-      payload:
-        type: object
-        required: [turnId, startSeq]
-        properties:
-          turnId:
-            $ref: "#/components/schemas/Tsid"
-          startSeq:
-            type: integer
-            format: int64
-            description: 이 턴이 낸 첫 이벤트 직전의 커서. 턴을 처음부터 다시 받을 때 쓴다
-      examples:
-        - name: turnStarted
-          payload:
-            turnId: 0K9GVJT2C4Q3B
-            startSeq: 128
     TurnFailed:
       name: turn_failed
       title: 턴 실패 확정
       description: |
         terminal. `error`가 앞서 올 수도 있고 **안 올 수도 있다** — `UPSTREAM_REJECTED`는
-        스트림을 열기 전 ai가 4xx로 거절한 것이라 `error` 이벤트가 없다. 이 갈래를 안 열면
-        그 경로가 조용히 삼켜지고 화면이 EOF까지 로딩으로 남는다.
+        ai가 턴 시작 요청을 4xx로 거절한 것이라 `error` 이벤트가 없고 이것이 첫 프레임이다.
+        server 가 턴을 실패로 굳히면서 스트림에 쓴다(ai 의 `error` 뒤에도, 워치독의 시간 초과에도).
+        이 갈래를 안 열면 그 경로가 조용히 삼켜지고 화면이 EOF까지 로딩으로 남는다.
 
         **사람이 읽을 문구는 안 싣는다.** `code`가 닫힌 enum이라 web이 문구를 만든다 —
         server가 문구를 보내면 같은 실패의 표현이 두 곳에 갈린다.
@@ -995,10 +961,10 @@ components:
       title: 턴 취소 확정
       description: |
         terminal. **발행하는 것은 `POST /v1/agent-chats/{chatId}/turns/{turnId}/cancel`
-        하나뿐이다** — 릴레이는 취소를 알아채고 스스로 나갈 뿐 이 이벤트를 안 쏜다(두 벌이 된다).
+        하나뿐이다** — ai 는 취소 키를 보고 조용히 멈출 뿐 이 이벤트를 안 쓴다(두 벌이 된다).
 
         취소 API의 204는 「접수했다」가 아니라 **「굳혔다」**이고 멱등이다(이미 끝난 턴에도
-        204). 화면이 멈추는 신호는 204가 아니라 이 프레임이다.
+        204). 그때까지 흐른 토큰은 부분 답으로 저장된다. 화면이 멈추는 신호는 204가 아니라 이 프레임이다.
       payload:
         type: object
         required: [turnId]
@@ -1009,39 +975,14 @@ components:
         - name: turnCancelled
           payload:
             turnId: 0K9GVJT2C4Q3B
-    StreamResync:
-      name: stream_resync
-      title: 「이 번호 아래로는 못 준다」 (바닥)
-      description: |
-        요청한 `after`가 로그의 **바닥 아래**였다. 로그는 무한하지 않아서(개수 상한) 긴 답
-        하나가 자기 앞부분을 스스로 버릴 수 있고, 그 구간은 재생으로 못 채운다. 그대로 이어
-        붙이면 **오류 없이 본문에 구멍이 난다.**
-
-        **좌표가 있는 신호다.** `id:` 줄에 실리는 것이 그 바닥(버린 마지막 `seq`)이고,
-        payload는 `{}`다 — 뜻이 전부 번호에 있다. 걷힌 `message_snapshot`과 헷갈리지 말 것:
-        그것은 「좌표 없는 본문」이었고 이것은 「못 준다」는 **좌표 있는 말**이다.
-
-        **이 프레임으로 스트림이 끝나지 않는다.** 뒤로 재생과 드레인이 그대로 이어진다 —
-        닫으면 도는 턴의 나머지가 이 연결로 안 와서 화면이 멈춘다. web은 커서를 이 번호로
-        올린 뒤 `GET /messages`를 **다시 읽어** 본문을 세우고, 이어지는 프레임을 그대로 붙인다.
-        안 읽으면 구멍이 난 채로 조용히 흘러간다.
-
-        **어느 턴의 사실도 아니라** `turnId`는 없다.
-      payload:
-        type: object
-        properties: {}
-      examples:
-        - name: streamResync
-          payload: {}
     MessageStart:
       name: message_start
       title: 응답 시작
       description: |
         assistant 응답 스트림의 시작.
 
-        **한 턴에 여러 번 올 수 있다** — 승인 흐름이 한 턴을 두 스트림으로 자른다. 그리고
-        버퍼가 대화 스코프라 재접속 백로그에도 섞여 온다. **받고 상태를 리셋하면 방금
-        복원한 블록을 지운다.**
+        **한 턴에 여러 번 올 수 있다** — 승인 흐름이 한 턴을 두 조각으로 자른다. 재접속 재생에도
+        섞여 온다. **받고 상태를 리셋하면 방금 복원한 블록을 지운다.**
       payload:
         type: object
         required: [chatId, messageId]
@@ -1149,10 +1090,11 @@ components:
       description: |
         agent가 쓰기 도구를 실행하기 전 입력자 승인을 요청한다.
 
-        **이 이벤트가 1차 스트림의 마지막 프레임이다** — server는 이것을 흘려보낸 뒤 턴을
-        `WAITING_APPROVAL`로 세우고 구독을 닫는다. 그러니 **EOF를 실패로 읽으면 안 된다.**
-        승인 API(`POST /v1/agent-chats/{chatId}/approvals/{approvalId}`)의 **응답이 2차
-        스트림**이고, 그 첫 프레임이 tool_approval_resolved다.
+        **이 이벤트가 첫 조각의 마지막 프레임이다** — server는 턴을 `WAITING_APPROVAL`로
+        굳힌 뒤 이것을 흘려보내고 연결을 닫는다. 그러니 **EOF를 실패로 읽으면 안 된다.**
+        승인 API(`POST /v1/agent-chats/{chatId}/approvals/{approvalId}/resolve`)가 `202` 로 답하면
+        **같은 턴 스트림에 `after`(이 카드의 `id:`)를 넣어 다시 붙는다.** 그 첫 프레임이
+        tool_approval_resolved다.
 
         **만료가 없다** — 승인은 사람이 답할 때까지 산다. 답 없는 대기를 푸는 것은 취소 API뿐이고,
         취소된 턴의 카드는 승인 API에서 404로 걸린다(그 턴이 `WAITING_APPROVAL`이 아니다).
@@ -1196,8 +1138,8 @@ components:
         REJECTED면 도구를 실행하지 않고 agent가 거절을 반영해 응답을 이어간다 —
         **어느 쪽이든 스트림은 정상 종료(message_end)된다.**
 
-        server는 이 이벤트를 받은 시점에 승인 상태를 확정하고 히스토리에 기록한다.
-        **이 이벤트는 승인 API 응답(2차 스트림)의 첫 프레임으로 온다** — 별도의 204는 없다.
+        server는 턴이 끝날 때 이 이벤트로 승인 상태를 확정하고 히스토리에 기록한다.
+        **재개 조각의 첫 프레임으로 온다** — 승인 API 는 `202` 만 준다.
         확정의 단일 출처는 이 이벤트다.
       payload:
         type: object
@@ -1320,20 +1262,18 @@ components:
           payload:
             code: LLM_PROVIDER_ERROR
             message: 응답 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.
-    ContextCandidateChanged:
-      name: ContextCandidateChanged
-      title: 후보 revision 변경
+    ProposalChanged:
+      name: ProposalChanged
+      title: 명제 판 변경
       payload:
-        $ref: "#/components/schemas/ContextCandidateChangedPayload"
+        $ref: "#/components/schemas/ProposalChangedPayload"
       examples:
         - name: resolveResult
           payload:
-            type: context.candidate.changed
-            eventId: 0K9GVJT2C4Q1Z
-            changeOrdinal: 1
+            type: proposal.changed
             occurredAt: '2026-08-25T01:02:03.456Z'
-            candidate:
-              candidateId: 0HZX2K7M9Q4AF
+            proposal:
+              proposalId: 0HZX2K7M9Q4AF
               revision: 1
               operation: RESOLVE
               revisionSource: LIVE
@@ -1344,27 +1284,26 @@ components:
               createdSequence: 8
               lastEvidenceSequence: 8
               aiSemanticRevisionCount: 0
-              resolvesCandidateId: 0HZX2K7M9Q4AE
-              evidence:
+              resolvesProposalId: 0HZX2K7M9Q4AE
+              citations:
                 - segmentId: 0HZX2K7M9Q4AH
                   sequence: 8
                   startedAtMs: 5000
                   endedAtMs: 8000
                   text: 출시일은 9월 1일입니다.
                   role: SUPPORTS
-    ContextClassificationBatchApplied:
-      name: ContextClassificationBatchApplied
-      title: 문맥 분류 batch 적용
+    TranscriptAnalysisRunApplied:
+      name: TranscriptAnalysisRunApplied
+      title: 전사 분석 run 적용
       payload:
-        $ref: "#/components/schemas/ContextClassificationBatchAppliedPayload"
+        $ref: "#/components/schemas/TranscriptAnalysisRunAppliedPayload"
       examples:
         - name: partialRecorded
           payload:
-            type: context.classification.batch.applied
-            eventId: 0HZX2K7M9Q4AN
+            type: transcript-analysis-run.applied
             occurredAt: '2026-08-25T01:02:03.456Z'
             range:
-              runKey: 0J00000000RN1
+              runId: 0J00000000RN1
               applyStatus: PARTIAL_RECORDED
               fromSequence: 25
               toSequence: 32
@@ -1408,7 +1347,7 @@ components:
           $ref: "#/components/schemas/Tsid"
         title:
           type: string
-    RunKey:
+    RunId:
       type: string
       pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
       minLength: 13
@@ -1418,42 +1357,34 @@ components:
       type: string
       format: date-time
       pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$'
-    CandidateKind:
+    ProposalKind:
       type: string
       enum: [AGENDA, DECISION, ACTION_ITEM, ISSUE, QUESTION, STATUS_REPORT, INSIGHT]
-    ContextCandidateChangedPayload:
+    ProposalChangedPayload:
       type: object
       additionalProperties: false
-      required: [type, eventId, changeOrdinal, occurredAt, candidate]
+      required: [type, occurredAt, proposal]
       properties:
         type:
           type: string
-          const: context.candidate.changed
-        eventId:
-          $ref: "#/components/schemas/Tsid"
-        changeOrdinal:
-          type: integer
-          minimum: 0
-          maximum: 3
+          const: proposal.changed
         occurredAt:
           $ref: "#/components/schemas/UtcMillisTimestamp"
-        candidate:
-          $ref: "#/components/schemas/ContextCandidateRevision"
-    ContextClassificationBatchAppliedPayload:
+        proposal:
+          $ref: "#/components/schemas/ProposalRevision"
+    TranscriptAnalysisRunAppliedPayload:
       type: object
       additionalProperties: false
-      required: [type, eventId, occurredAt, range]
+      required: [type, occurredAt, range]
       properties:
         type:
           type: string
-          const: context.classification.batch.applied
-        eventId:
-          $ref: "#/components/schemas/Tsid"
+          const: transcript-analysis-run.applied
         occurredAt:
           $ref: "#/components/schemas/UtcMillisTimestamp"
         range:
-          $ref: "#/components/schemas/ContextClassificationAppliedRange"
-    ContextCandidateEvidence:
+          $ref: "#/components/schemas/TranscriptAnalysisRunRange"
+    ProposalCitation:
       type: object
       additionalProperties: false
       required: [segmentId, sequence, startedAtMs, endedAtMs, text, role]
@@ -1467,12 +1398,12 @@ components:
         role:
           type: string
           enum: [SUPPORTS, REFUTES, CONDITIONS, RETRACTS, REFERENCES]
-    ContextCandidateRevision:
+    ProposalRevision:
       type: object
       additionalProperties: false
-      required: [candidateId, revision, operation, revisionSource, kind, status, closeReason, content, createdSequence, lastEvidenceSequence, aiSemanticRevisionCount, resolvesCandidateId, evidence]
+      required: [proposalId, revision, operation, revisionSource, kind, status, closeReason, content, createdSequence, lastEvidenceSequence, aiSemanticRevisionCount, resolvesProposalId, citations]
       properties:
-        candidateId:
+        proposalId:
           $ref: "#/components/schemas/Tsid"
         revision: {type: integer, format: int64, minimum: 1}
         operation:
@@ -1484,7 +1415,7 @@ components:
           enum: [LIVE]
           description: v1 생산값은 LIVE다. POSTPROCESS는 실제 producer 이슈와 web parser의 선행 수용이 준비된 뒤 additive change로 추가한다.
         kind:
-          $ref: "#/components/schemas/CandidateKind"
+          $ref: "#/components/schemas/ProposalKind"
         status:
           type: string
           enum: [OPEN, CLOSED]
@@ -1496,28 +1427,28 @@ components:
           type: string
           minLength: 1
           maxLength: 500
-          description: NFC이며 classifier tiktoken:0.13.0:o200k_base 기준 512 tokens 이하다
+          description: NFC이며 code point 500 이하다
         createdSequence: {type: integer, format: int64, minimum: 1}
         lastEvidenceSequence: {type: integer, format: int64, minimum: 1}
         aiSemanticRevisionCount: {type: integer, format: int32, minimum: 0}
-        resolvesCandidateId:
+        resolvesProposalId:
           type: string
           nullable: true
           pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
           minLength: 13
           maxLength: 13
-          description: RESOLVE result면 닫힌 Question candidate ID, 아니면 null
-        evidence:
+          description: RESOLVE result면 닫힌 Question proposal ID, 아니면 null
+        citations:
           type: array
           items:
-            $ref: "#/components/schemas/ContextCandidateEvidence"
+            $ref: "#/components/schemas/ProposalCitation"
       oneOf:
-        - title: OpenCandidate
+        - title: OpenProposal
           required: [status, closeReason]
           properties:
             status: {type: string, enum: [OPEN]}
             closeReason: {nullable: true, enum: [null]}
-        - title: RetractedCandidate
+        - title: RetractedProposal
           required: [status, closeReason]
           properties:
             status: {type: string, enum: [CLOSED]}
@@ -1528,13 +1459,13 @@ components:
             kind: {type: string, enum: [QUESTION]}
             status: {type: string, enum: [CLOSED]}
             closeReason: {type: string, enum: [RESOLVED]}
-    ContextClassificationAppliedRange:
+    TranscriptAnalysisRunRange:
       type: object
       additionalProperties: false
-      required: [runKey, applyStatus, fromSequence, toSequence, fromStartedAtMs, toEndedAtMs, rawDeltaSaturated, semanticUnitSaturated, appliedAt]
+      required: [runId, applyStatus, fromSequence, toSequence, fromStartedAtMs, toEndedAtMs, rawDeltaSaturated, semanticUnitSaturated, appliedAt]
       properties:
-        runKey:
-          $ref: "#/components/schemas/RunKey"
+        runId:
+          $ref: "#/components/schemas/RunId"
         applyStatus:
           type: string
           enum: [APPLIED, PARTIAL_RECORDED]

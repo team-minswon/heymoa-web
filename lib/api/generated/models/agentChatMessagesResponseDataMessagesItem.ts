@@ -11,7 +11,7 @@ import type { AgentChatMessagesResponseDataMessagesItemToolEvent } from "./agent
 
 export type AgentChatMessagesResponseDataMessagesItem = {
   /**
-   * 이 행을 만든 턴. **화면이 두 벌을 접는 열쇠다** — 진행 중인 턴의 TOOL·THINKING 행은 히스토리와 스트림 백로그 양쪽에서 오고, 이 값이 없으면 같은 도구 카드가 두 개 그려진다. 턴이 지워진 옛 행은 null 이다
+   * 이 행을 만든 턴. **화면이 두 벌을 접는 열쇠다** — 진행 중인 턴의 TOOL·THINKING 행은 히스토리와 스트림 재생 양쪽에서 오고, 이 값이 없으면 같은 도구 카드가 두 개 그려진다. 턴이 지워진 옛 행은 null 이다
    * @minLength 13
    * @maxLength 13
    * @nullable

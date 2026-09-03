@@ -26,15 +26,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   getGetAgentChatMessagesQueryOptions,
   getGetAgentChatsQueryKey,
-  getResolveToolApprovalUrl,
-  getSendAgentChatMessageUrl,
   useCancelAgentChatTurn,
   useCreateAgentChat,
   useGetAgentChatMessages,
   useGetAgentChats,
+  useResolveToolApproval,
+  useSendAgentChatMessage,
 } from "@/lib/api/generated/agent-chat/agent-chat";
 import type { AgentChatMessagesResponseData } from "@/lib/api/generated/models";
-import { errorCodeOf } from "@/lib/api/error-message";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
+import { isAuthError } from "@/lib/api/fetcher";
+import { toast } from "@/lib/ui/toast";
 import { answerText, type ApprovalDecision } from "@/lib/chat/blocks";
 import { runningLabel } from "@/lib/chat/chat-list";
 import { dropScopeMarkers } from "@/lib/chat/scope-marker";
@@ -43,6 +45,7 @@ import {
   failedTurnState,
   initialStreamState,
   resumedState,
+  startedState,
   toolArgs,
 } from "@/lib/chat/stream-protocol";
 import { useChatStream } from "@/lib/chat/use-chat-stream";
@@ -467,7 +470,7 @@ function PersonalChatPanel({
   // 스트림 전에 저장하므로 그 응답이 `pendingUserMessage`와 겹쳐 두 번 보인다.
   // 턴이 끝난 뒤의 반영은 `send()`가 직접 `fetchQuery`로 한다.
   //
-  // **`isSending`만으로는 부족하다.** 승인 대기에서 1차가 정상 종료하면 `send()`가
+  // **`isSending`만으로는 부족하다.** 승인 요청으로 스트림이 닫히면 `send()`가
   // 돌아와 `isSending`이 풀리는데, 그 사이 히스토리가 켜지면 저장된 USER 행이
   // `pendingUserMessage`와 겹쳐 **말풍선이 두 벌**이 된다. 스트림이 서 있는 동안은
   // 승인 대기도 「도는 중」이다.
@@ -484,12 +487,12 @@ function PersonalChatPanel({
    * 재진입을 가르는 값 셋. **`activeTurn`이 갈래를 정한다** — 있으면 이어받고, 없으면
    * `lastTurn`이 실패로 끝났는지만 본다.
    *
-   * `cursor`는 그대로 `?after=`에 들어간다. **`0`이 정상값이다** — 「버퍼에 아무것도
-   * 없다」는 뜻이고 `GET /events`가 곧바로 닫힌다.
+   * `cursor`는 그대로 `?after=`에 들어간다. 도는 턴에 승인 카드가 있었으면 그 카드의
+   * entry id 이고, 그 밖에는 `null` — 턴의 처음부터 다시 받는다.
    */
   const activeTurn = history?.activeTurn ?? null;
   const lastTurn = history?.lastTurn ?? null;
-  const cursor = history?.cursor ?? 0;
+  const cursor = history?.cursor ?? null;
 
   /**
    * 세션이 아예 없다(404). 이건 막다른 길이 아니라 **빈 대화**다 — 새로 만들면 된다.
@@ -516,20 +519,30 @@ function PersonalChatPanel({
    * 히스토리가 스스로 성공하면 같은 턴이 두 벌 그려진다 — 그때는 로컬 사본을 가린다.
    *
    * 대화 전체에서 같은 문장을 찾으면 **예전 답변**에 걸린다(같은 질문을 다시 하면 흔하다).
-   * 턴을 시작할 때의 길이를 기준선으로 두고 그 뒤에 붙은 것만 본다. 정상 종료된 턴에만
-   * 적용해서 실패·정지 안내까지 가려 버리지 않는다.
+   * 턴을 시작할 때의 길이를 기준선으로 두고 그 뒤에 붙은 것만 본다. 실패 안내까지 가려
+   * 버리지 않게 정상 종료에만 적용한다.
+   *
+   * **중지도 같은 자리다.** server 가 취소를 정산하며 부분 답을 ASSISTANT 행으로 남기므로,
+   * 그 턴의 행이 히스토리에 오면 끊긴 문장이 두 벌 서지 않게 로컬 사본을 접는다.
    */
   const isTurnReconciled =
     messagesOk &&
-    stream.state.phase === "done" &&
-    stream.state.content !== null &&
-    messages
-      .slice(turnBaseline)
-      .some(
-        (message) =>
-          message.role === "ASSISTANT" &&
-          message.content === stream.state.content
-      );
+    ((stream.state.phase === "done" &&
+      stream.state.content !== null &&
+      messages
+        .slice(turnBaseline)
+        .some(
+          (message) =>
+            message.role === "ASSISTANT" &&
+            message.content === stream.state.content
+        )) ||
+      (stream.state.phase === "cancelled" &&
+        stream.state.turnId !== null &&
+        messages.some(
+          (message) =>
+            message.role === "ASSISTANT" &&
+            message.turnId === stream.state.turnId
+        )));
 
   // `isPending`을 쓰면 안 된다 — enabled:false인 쿼리도 pending이라 대화가 없을 때
   // 빈 상태 대신 스켈레톤이 영원히 남는다. `isLoading`은 실제로 받아오는 중일 때만 참이다.
@@ -565,6 +578,20 @@ function PersonalChatPanel({
   const editorRef = useRef<MentionHandle | null>(null);
 
   const createChat = useCreateAgentChat();
+  /**
+   * `202 {turnId}` 로 끝난다. 프레임은 그 뒤 `stream.open` 이 턴 스트림에서 받는다.
+   * **409 는 오류가 아니라 이어받기 신호**라 전역 토스트를 끄고 `send()` 가 코드로 갈라 띄운다.
+   */
+  const sendMessage = useSendAgentChatMessage({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
+  /**
+   * 승인도 `202` 다. 실패는 카드가 인라인으로 사유를 그린다(`useToolApproval`) —
+   * 전역 토스트까지 뜨면 두 개가 겹친다.
+   */
+  const resolveApprovalMutation = useResolveToolApproval({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
 
   /**
    * **전송을** 막는 상태. 여섯 다 "지금 보내면 엉뚱한 대화에 닿는다"는 같은 이유다.
@@ -786,80 +813,70 @@ function PersonalChatPanel({
 
         // **배열이 원본이다.** 본문 텍스트가 아니라 칩이 범위를 정하므로, 사용자가 본문을
         // 어떻게 편집해도 계약이 안 깨진다. 중복은 보내기 직전에 접는다.
-        const final = await stream.send(
-          chatId,
-          getSendAgentChatMessageUrl(chatId),
-          {
-            message,
-            noteIds: [
-              ...new Set(
-                scope
-                  .filter((chip) => chip.kind === "note")
-                  .map((chip) => chip.id)
-              ),
-            ],
-            projectIds: [
-              ...new Set(
-                scope
-                  .filter((chip) => chip.kind === "project")
-                  .map((chip) => chip.id)
-              ),
-            ],
+        const accepted = await sendMessage
+          .mutateAsync({
+            chatId,
+            data: {
+              message,
+              noteIds: [
+                ...new Set(
+                  scope
+                    .filter((chip) => chip.kind === "note")
+                    .map((chip) => chip.id)
+                ),
+              ],
+              projectIds: [
+                ...new Set(
+                  scope
+                    .filter((chip) => chip.kind === "project")
+                    .map((chip) => chip.id)
+                ),
+              ],
+            },
+          })
+          .catch((error: unknown) => ({ error }));
+        if ("error" in accepted || accepted.status !== 202) {
+          /**
+           * **409는 실패가 아니라 이어받기 신호다.** 이미 도는 턴이 있다는 뜻이고, 무엇을
+           * 어디서부터 이어야 하는지는 히스토리가 안다. 오류 배너 + 「다시 보내기」로 그리면
+           * 그 버튼이 또 409를 받아 **무한 루프**가 된다 — 멀티탭과 새로고침 직후가 이 경로다.
+           *
+           * 409 본문에 `turnId`가 실려 오지만 안 읽는다. 왕복 하나를 아끼는 값일 뿐이고,
+           * 이어받을 자리(`cursor`)는 어차피 히스토리에만 있다 — 재진입 효과가 그것으로 연다.
+           *
+           * ★ **그 밖의 실패는 POST 가 닿았는지 화면이 모른다.** 서버 문구를 토스트하고
+           * (409 만 조용히 — 세션 만료는 게이트가 이미 말한다), 여기서는 **히스토리
+           * 재조회**로 턴이 생겼는지 본다. 살아 있는 턴이 있으면 재진입 효과가 이어받고,
+           * 그 사이 끝났으면 답이 그대로 그려진다 — 둘 다 「다시 보내기」가 턴을 하나 더
+           * 여는 것을 막는다.
+           */
+          const failure = "error" in accepted ? accepted.error : null;
+          if (
+            errorCodeOf(failure) !== "AGENT_CHAT_TURN_IN_PROGRESS" &&
+            !isAuthError(failure)
+          ) {
+            toast.error(errorMessageOf(failure, "요청을 처리하지 못했습니다."));
           }
-        );
-        /**
-         * **409는 실패가 아니라 이어받기 신호다.** 이미 도는 턴이 있다는 뜻이고, 무엇을
-         * 어디서부터 이어야 하는지는 히스토리가 안다. 오류 배너 + 「다시 보내기」로 그리면
-         * 그 버튼이 또 409를 받아 **무한 루프**가 된다 — 멀티탭과 새로고침 직후가 이 경로다.
-         *
-         * 409 본문에 `turnId`가 실려 오지만 안 읽는다. 왕복 하나를 아끼는 값일 뿐이고,
-         * 이어받을 자리(`cursor`)는 어차피 히스토리에만 있다.
-         */
-        if (final?.error?.code === "AGENT_CHAT_TURN_IN_PROGRESS") {
           setPendingUserMessage(null);
           stream.reset();
           const refreshed = await reconcile(chatId);
           /**
            * ★ **서버가 이 문장을 이미 받았을 수 있다.** 응답을 못 받은 전송을 다시 보낸 것도
-           * 여기로 오기 때문이다 — 열쇠가 있을 때는 그 갈래가 200 재생이라 여기 안 왔다.
-           * 그때 컴포저로 되돌리면 같은 질문이 **화면에 한 벌 + 컴포저에 한 벌**이 된다.
-           * 히스토리가 안 받아 간 문장만 되돌린다(겹쳐 보낸 질문).
+           * 여기로 오기 때문이다. 그때 컴포저로 되돌리면 같은 질문이 **화면에 한 벌 +
+           * 컴포저에 한 벌**이 된다. 히스토리가 안 받아 간 문장만 되돌린다.
            */
           if (echoesSent(refreshed, messages.length, message)) return;
-          // 이 문장은 서버에 안 닿았다. 지우면 다시 칠 방법이 없으므로 컴포저로 되돌린다.
+          /**
+           * ★ **서버에 안 닿았다. 문장을 컴포저로 되돌린다.** 「다시 보내기」 버튼이 있던
+           * 자리다 — 되돌려 놓으면 고칠 수도 있고 그대로 보낼 수도 있다.
+           */
           restoreComposer();
           return;
         }
-        /**
-         * ★ **POST가 열리지도 못했다 — 서버에 턴이 생겼는지 화면이 모른다.**
-         *
-         * 이 창을 막던 것이 `clientTurnKey`였고, 그 자리를 **히스토리 재조회**가 대신한다.
-         * 다시 읽어서 살아 있는 턴이 있으면 위 재진입 효과가 `GET /events`로 이어받고,
-         * 그 사이 끝났으면 답이 그대로 그려진다 — 둘 다 「다시 보내기」가 턴을 하나 더
-         * 여는 것을 막는다. `activeTurn`이 서는 순간 `isBusy`가 그 버튼을 스스로 잠근다.
-         *
-         * **`turnId`를 이미 봤으면 여기 안 온다.** 그 턴은 분명히 서버에 있고 실패·중지
-         * 배너가 이미 그것을 그리고 있다. 모르는 것은 못 연 POST 하나뿐이다.
-         */
-        if (final?.phase !== "done") {
-          if (final?.phase === "failed" && final.turnId === null) {
-            const refreshed = await reconcile(chatId);
-            setPendingUserMessage(null);
-            stream.reset();
-            // 서버가 받아 갔으면 히스토리에 있다 — 그대로 둔다.
-            if (echoesSent(refreshed, messages.length, message)) return;
-            /**
-             * ★ **서버에 안 닿았다. 문장을 컴포저로 되돌린다.**
-             *
-             * 「다시 보내기」 버튼이 있던 자리다. 그 버튼이 할 수 있던 일은 **한 글자도
-             * 못 고치고 같은 문장을 다시 보내는 것** 하나뿐이었는데, 여기까지 온 질문은
-             * 대개 고쳐서 다시 묻고 싶은 것이다. 되돌려 놓으면 고칠 수도 있고 그대로
-             * 보낼 수도 있다.
-             */
-            restoreComposer();
-          }
-          return;
-        }
+        // 202 가 준 턴 id 로 스트림을 연다. 첫 연결이라 `after` 는 없다.
+        const turnId = accepted.data.data.turnId;
+        const final = await stream.open(chatId, turnId, startedState({ turnId }));
+        if (final?.phase !== "done") return;
 
         // **히스토리로 넘기기 전에 붙든다.** 스트림이 비워지면 제안도 같이 사라진다.
         // 정상 종료일 때만 히스토리로 넘긴다.
@@ -880,37 +897,44 @@ function PersonalChatPanel({
       onTurnActiveChange,
       reconcile,
       scrollToSent,
+      sendMessage,
       stream,
     ]
   );
 
   /**
-   * 승인을 보낸다. **응답이 2차 스트림이다** — 도구 결과도 답변 본문도 이 응답으로 온다.
-   * 그래서 꼬리가 `send()`와 같다: 정상 종료면 히스토리로 넘기고 로컬 사본을 접는다.
+   * 승인을 보낸다. `202` 가 오면 **같은 턴 스트림에 지금 커서를 넣어 다시 붙는다** —
+   * 도구 결과도 답변 본문도 그 뒤로 온다. 그래서 꼬리가 `send()`와 같다: 정상 종료면
+   * 히스토리로 넘기고 로컬 사본을 접는다.
    *
-   * 실패 사유를 돌려준다 — 카드가 그걸로 「다시 눌러도 소용없나」를 가른다.
+   * 실패 사유를 돌려준다 — 카드가 그걸로 「다시 눌러도 소용없나」를 가른다. 실패하면 스트림을
+   * 안 열었으므로 카드는 그대로 서 있다.
+   *
+   * 시드는 `stream.state` 다. 승인 대기에는 열린 연결이 없어 이 값이 한 렌더 낡을 일이
+   * 없고, 커서가 카드의 id 라 `after` 가 카드 **뒤**부터를 부른다. `pendingApproval`은
+   * 남겨 둔다 — 카드가 `submitted`로 서 있어야 두 번 눌리지 않는다.
    */
   const resolveApproval = useCallback(
     async (approvalId: string, decision: ApprovalDecision) => {
-      if (!sessionId) return null;
+      const turnId = stream.state.turnId;
+      if (!sessionId || !turnId) return null;
       setIsSending(true);
-      // 2차가 도는 동안에도 패널을 치우면 안 된다 — 답의 나머지가 통째로 사라진다.
+      // 나머지가 도는 동안에도 패널을 치우면 안 된다 — 답의 나머지가 통째로 사라진다.
       onTurnActiveChange(true);
       try {
-        // **`?after=`를 실어 보낸다.** 없으면 서버가 이 재개가 뗀 블록의 시작부터
-        // 재생해 **그 턴의 1차 절반을 통째로 다시 보낸다** — 단조 커서가 전부 버리므로
-        // 화면은 멀쩡하지만 그 낭비가 그대로 와이어를 탄다. 한 렌더 낡은 값이라도
-        // 실제 커서보다 작을 뿐이라 프레임을 잃지 않는다.
-        const after = stream.state.seq;
-        const final = await stream.resolveApproval(
-          sessionId,
-          getResolveToolApprovalUrl(
-            sessionId,
-            approvalId,
-            after === null ? undefined : { after }
-          ),
-          { decision }
-        );
+        const accepted = await resolveApprovalMutation
+          .mutateAsync({ chatId: sessionId, approvalId, data: { decision } })
+          .catch((error: unknown) => ({ error }));
+        if ("error" in accepted) {
+          return {
+            code: errorCodeOf(accepted.error) ?? "STREAM_FAILED",
+            message: errorMessageOf(accepted.error, "승인을 처리하지 못했습니다."),
+          };
+        }
+        const final = await stream.open(sessionId, turnId, {
+          ...stream.state,
+          phase: "streaming",
+        });
         if (final?.phase !== "done") return final?.error ?? null;
         if (!(await reconcile(sessionId))) return null;
         setPendingUserMessage(null);
@@ -921,7 +945,7 @@ function PersonalChatPanel({
         onTurnActiveChange(false);
       }
     },
-    [onTurnActiveChange, reconcile, sessionId, stream]
+    [onTurnActiveChange, reconcile, resolveApprovalMutation, sessionId, stream]
   );
 
   const approval = useToolApproval({
@@ -935,14 +959,13 @@ function PersonalChatPanel({
    *
    * | `activeTurn` | `lastTurn` | 무엇을 하나 |
    * |---|---|---|
-   * | 있다 | (같은 턴인 것이 **정상**이다) | `cursor`부터 `GET /events`로 잇는다 |
+   * | 있다 | (같은 턴인 것이 **정상**이다) | `cursor`부터 턴 스트림으로 잇는다 |
    * | 없다 | `FAILED` | 실패 배너만 세운다. 이을 스트림이 없다 |
    * | 없다 | 그 밖 | 히스토리만 그린다 |
-   * | 있다·`cursor === 0` | | 그래도 잇는다 — 버퍼가 빈 것이지 오류가 아니다 |
+   * | 있다·`cursor === null` | | 그래도 잇는다 — `after` 없이 턴의 처음부터다 |
    *
-   * **승인 대기는 스트림을 안 연다.** `GET /events`는 도는 턴이 없으면 밀린 것만 주고
-   * 곧바로 닫으므로(`hasLiveTurn = IN_PROGRESS`) 여는 순간 EOF다. 상태만 세우고, 다음
-   * 프레임은 승인 API가 여는 2차 스트림으로 받는다.
+   * **승인 대기는 스트림을 안 연다.** 턴 스트림은 승인 카드 뒤에 닫혀 있어 여는 순간
+   * EOF다. 상태만 세우고, 다음 프레임은 승인 `202` 뒤 `after` 를 넣은 재접속이 받는다.
    */
   const handledTurnRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1012,11 +1035,15 @@ function PersonalChatPanel({
    *
    * | 신호 | 누가 말했나 |
    * |---|---|
-   * | `needsResync` (`stream_resync`) | **서버가 말했다.** 로그 바닥 아래에서 붙어서 그 구간을 재생으로 못 준다 |
+   * | `needsResync` (`410`) | **서버가 말했다.** 턴은 끝났고 스트림은 TTL 로 사라져 재생으로 못 준다 |
    * | `stalled` | **아무도 안 말한다.** 재연결을 여섯 번 하고 포기했다 |
    *
-   * 둘 다 `GET /messages`가 유일한 사실이 된다. **안 읽으면 본문에 구멍이 난 채로
-   * 조용히 흘러간다** — 오류도 로그도 없이. 이 설계가 없애려던 실패가 그것이다.
+   * 둘 다 `GET /messages`가 유일한 사실이 된다. **안 읽으면 끝난 답이 화면에 영영 안
+   * 온다** — 오류도 로그도 없이. 이 설계가 없애려던 실패가 그것이다.
+   *
+   * `410` 은 한 걸음 더 간다 — 스트림이 사라졌으니 이을 것이 없고, 다시 읽은 히스토리가
+   * 그 답을 그린다. 로컬 스트림을 비워야 `isStreaming` 이 풀리고 컴포저가 열린다.
+   * `gaveUp` 은 그대로다: 턴이 server 에서 아직 돌 수 있어 배너가 맞다.
    *
    * **`messagesQuery`로는 못 한다.** 흐르는 동안 `enabled`가 꺼져 있고, 켜져도 전역
    * `staleTime` 60초에 걸려 방금 굳은 답이 안 온다. `reconcile()`은 `fetchQuery`라
@@ -1046,15 +1073,10 @@ function PersonalChatPanel({
     const key = `${sessionId}:${stream.state.turnId ?? ""}:${reason}`;
     if (resyncedTurnRef.current === key) return;
     resyncedTurnRef.current = key;
-    void reconcile(sessionId);
-  }, [
-    reconcile,
-    sessionId,
-    stream.state.error?.code,
-    stream.state.needsResync,
-    stream.state.phase,
-    stream.state.turnId,
-  ]);
+    void reconcile(sessionId).then((refreshed) => {
+      if (refreshed && reason === "resync") stream.reset();
+    });
+  }, [reconcile, sessionId, stream]);
 
   /**
    * 중지. **두 가지를 같이 한다** — 이 탭의 구독을 끊고(즉시 멈춘 것처럼 보인다),
