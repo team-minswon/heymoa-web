@@ -110,9 +110,12 @@ export function ProductShot() {
         <RailCardSm />
       </div>
 
-      {/* 넓은 매트 — 창 하나 */}
+      {/* 넓은 매트 — 창 하나.
+          `zoom`으로 줄인다. 최대 폭만 줄이면 안쪽 글이 다시 흘러 세로가 같은 비율로 안 줄고,
+          `scale`은 레이아웃 상자를 그대로 둬서 아래에 빈 자리가 남는다. `zoom`은 상자까지
+          같이 줄어서 가로·세로가 정확히 같은 비율로 작아진다. */}
       <div
-        className={`${CONTAINER} box-border hidden rounded-[24px] border border-[var(--lp-rule)] bg-[var(--lp-cream)] p-6 lg:block`}
+        className={`${CONTAINER} box-border hidden rounded-[24px] border border-[var(--lp-rule)] bg-[var(--lp-cream)] p-6 lg:block lg:[zoom:0.92]`}
       >
         <div className="overflow-hidden rounded-[14px] border border-[var(--lp-rule)] bg-[var(--lp-card)] shadow-[0_10px_28px_-6px_#33231a1f]">
           <DesktopWindow />
