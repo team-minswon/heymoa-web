@@ -217,6 +217,40 @@ describe("ProductShot 대본", () => {
     }
   });
 
+  it("다 돌면 다시 보기가 서고, 누르면 처음부터 다시 돈다", () => {
+    vi.useFakeTimers();
+    try {
+      render(<ProductShot />);
+      const replay = () =>
+        screen.queryAllByRole("button", { name: /처음부터 다시 보기/ });
+
+      // 도는 동안에는 없다.
+      expect(replay()).toHaveLength(0);
+
+      // 탭 하나를 못 박아 두고 끝까지 돌린다.
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "실시간 정리" })[0]);
+      });
+      play();
+      expect(replay().length).toBeGreaterThan(0);
+
+      act(() => {
+        fireEvent.click(replay()[0]);
+      });
+
+      // 처음으로 돌아갔다 — 회의는 다시 기록 중이고 사건도 셋이다.
+      expect(screen.getAllByText("기록 중").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("지금까지 3건").length).toBeGreaterThan(0);
+      // **고정도 같이 풀린다.** 안 풀면 대본이 옮기려는 자리마다 막혀 반쪽만 보인다.
+      play();
+      expect(
+        screen.getAllByRole("tab", { name: "내 에이전트" })[0]
+      ).toHaveAttribute("aria-selected", "true");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("모션을 줄였으면 대본을 안 돌리고 끝 상태로 둔다", () => {
     window.matchMedia = matchMedia(true);
     render(<ProductShot />);
@@ -224,6 +258,10 @@ describe("ProductShot 대본", () => {
     // 타이머를 한 번도 안 돌렸는데 이미 끝나 있다.
     expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
     expect(screen.getAllByText("개요").length).toBeGreaterThan(0);
+    // 돌릴 것이 없으니 다시 보기도 안 낸다.
+    expect(
+      screen.queryAllByRole("button", { name: /처음부터 다시 보기/ })
+    ).toHaveLength(0);
   });
 });
 

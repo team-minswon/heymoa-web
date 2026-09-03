@@ -245,6 +245,10 @@ export type Demo = {
   ask: (item: Ask) => void;
   /** 레일을 만졌다 — 레일 탭만 그 자리에 못 박는다. 대본은 계속 돈다. */
   pinRail: () => void;
+  /** 대본이 끝났고 다시 돌릴 수 있는가. 모션을 줄인 사람에게는 돌릴 것이 없다. */
+  replayable: boolean;
+  /** 처음부터 다시. 고정해 둔 탭과 손으로 보낸 질문까지 되돌린다. */
+  replay: () => void;
 };
 
 /**
@@ -346,6 +350,19 @@ export function useDemo(seen: boolean): Demo {
     setRailOverride((v) => v ?? view.railTab);
   }, [view.railTab]);
 
+  /**
+   * 처음부터 다시. **고정해 둔 탭과 손으로 보낸 질문까지 되돌린다** — 탭이 못 박힌 채로
+   * 다시 돌면 대본이 옮기려는 자리마다 막혀서 반쪽만 보인다.
+   */
+  const replay = useCallback(() => {
+    setCursor(0);
+    setProgress(0);
+    setNoteOverride(null);
+    setRailOverride(null);
+    setExtra([]);
+    setManualTyping(null);
+  }, []);
+
   useEffect(() => {
     if (!playing) return;
     const beat = BEATS[cursor];
@@ -431,5 +448,7 @@ export function useDemo(seen: boolean): Demo {
     typing: manualTyping !== null ? manualTyping : view.scriptAsk ? progress : null,
     ask,
     pinRail,
+    replayable: done && !skip,
+    replay,
   };
 }

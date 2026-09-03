@@ -12,6 +12,7 @@ import {
   Loader2,
   Minimize2,
   MoreHorizontal,
+  RotateCcw,
   Sparkles,
   UserPlus,
 } from "lucide-react";
@@ -46,7 +47,8 @@ import {
  * **그리고 실제로 눌린다.** 정보·전사·요약과 실시간 정리·내 에이전트가 진짜 탭이고, 사건
  * 범위 칩과 묶음 접기, 예시 질문이 다 동작한다. 누르면 **그 기둥의 탭만** 그
  * 자리에 못 박히고 대본은 계속 돈다 — 눌러 보라고 해 놓고 화면이 딴 데로 가도 안 되지만,
- * 거기서 대본까지 끊으면 보여 주려던 것이 통째로 사라진다.
+ * 거기서 대본까지 끊으면 보여 주려던 것이 통째로 사라진다. 다 돌고 나면 창 아래에
+ * 「처음부터 다시 보기」가 선다 — 스크롤로 지나쳐 놓친 사람에게 남는 유일한 길이다.
  *
  * **눌리는 것을 그리는 순간 진짜 탭이어야 한다.** `role="tablist"`와 방향키 이동
  * (roving tabIndex)까지 앱과 같게 둔다. 반대로 앱 화면을 **흉내만 내는** 것들(뒤로·
@@ -161,6 +163,21 @@ export function ProductShot() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* **자리를 미리 잡는다.** 대본이 끝날 때 버튼이 끼어들면 아래 밴드가 통째로 밀린다.
+          도는 동안은 비어 있고 끝나면 그 자리에 선다. */}
+      <div className="flex h-8 items-center justify-center pt-3 lg:pt-4">
+        {demo.replayable ? (
+          <button
+            type="button"
+            onClick={demo.replay}
+            className="inline-flex min-h-6 items-center gap-1.5 rounded-full px-2 text-[13px] font-medium text-[var(--lp-muted)] transition-colors hover:text-[var(--lp-ink)]"
+          >
+            <RotateCcw aria-hidden className="size-3.5" />
+            처음부터 다시 보기
+          </button>
+        ) : null}
       </div>
     </section>
   );
