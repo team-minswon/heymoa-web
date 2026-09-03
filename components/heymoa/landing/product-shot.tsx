@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ArrowUp,
   Bot,
@@ -136,6 +136,41 @@ type NoteTab = (typeof NOTE_TABS)[number];
 const RAIL_TABS = ["실시간 정리", "내 에이전트"] as const;
 type RailTab = (typeof RAIL_TABS)[number];
 
+/**
+ * 「내 에이전트」에서 눌러 볼 수 있는 왕복.
+ *
+ * **답은 이 회의에 실제로 있는 말만 쓴다** — 위의 `TRANSCRIPT` · `GROUPS` · `SUMMARY`에서
+ * 짚을 수 있는 것뿐이다. 화면 어디에도 없는 사실을 답하면, 「사실 대조판」이라고 말하는
+ * 페이지가 제 말을 먼저 어긴다.
+ *
+ * `SEED`는 처음부터 떠 있는 왕복이라 탭을 열자마자 빈 화면이 아니다.
+ */
+type Ask = { q: string; a: string; refs: string[] };
+
+const SEED: Ask = {
+  q: "결제 화면 개편은 왜 미뤘나요?",
+  a: "온보딩 이탈 지표를 먼저 보기로 해서 다음 스프린트로 미뤘습니다. 2차 회의에서 정해진 결정입니다.",
+  refs: ["2차 회의", "이번 회의"],
+};
+
+const ASKS: Ask[] = [
+  {
+    q: "정해진 할 일은 뭔가요?",
+    a: "둘입니다. 온보딩 이탈 로그 수집 초안을 목요일까지 올리기로 했고, 카드 결제 실패 재시도 정책을 정하기로 했습니다. 둘 다 아직 논의 중으로 남아 있습니다.",
+    refs: ["이번 회의"],
+  },
+  {
+    q: "온보딩 이탈을 왜 먼저 보나요?",
+    a: "온보딩 이탈 지표를 이번 주 기준선으로 삼기로 해서입니다. 지난주에 남긴 가설 두 개를 먼저 정리하기로 했습니다.",
+    refs: ["이번 회의"],
+  },
+  {
+    q: "제가 없던 사이에 뭐가 정해졌나요?",
+    a: "결정 둘입니다. 결제 화면 개편은 다음 스프린트로 미루고, 온보딩 이탈 지표를 이번 주 기준선으로 삼기로 했습니다. 미룬 이유는 2차 회의에 남아 있습니다.",
+    refs: ["2차 회의", "이번 회의"],
+  },
+];
+
 export function ProductShot() {
   /**
    * 창 하나가 상태를 다 갖는다. 좁은 화면의 카드 둘은 같은 상태를 나눠 쓰므로, 폭이
@@ -146,6 +181,9 @@ export function ProductShot() {
   const [scope, setScope] = useState<Scope>("전체");
   /** 접힌 묶음. 기본은 다 펼침이라 **닫힌 것만** 담는다. */
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
+  const [turns, setTurns] = useState<Ask[]>(() => [SEED]);
+  /** 마지막 답에서 드러난 글자 수. `null`이면 흐르는 것이 없다. */
+  const [typing, setTyping] = useState<number | null>(null);
   const uid = useId();
 
   const toggleGroup = (kind: string) =>
@@ -155,7 +193,36 @@ export function ProductShot() {
       return next;
     });
 
-  const shared = { scope, setScope, closed, toggleGroup, uid };
+  /**
+   * 답을 통째로 붙이지 않고 흘린다 — 앱은 SSE로 델타를 이어 붙인다
+   * (`lib/chat/stream-protocol.ts`). 한 번에 나타나면 「이미 적혀 있던 글」로 보인다.
+   *
+   * **앞 턴이 흐르는 동안은 못 보낸다.** 앱 컴포저도 전송만 막는다(`chat-composer.tsx`).
+   * 모션을 줄인 사람에게는 흘리지 않고 바로 세운다.
+   */
+  const ask = (item: Ask) => {
+    if (typing !== null) return;
+    setTurns((list) => [...list, item]);
+    // `transcript-view.tsx`와 같은 가드다 — jsdom에는 `matchMedia`가 없을 수 있다.
+    const reduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setTyping(reduced ? null : 0);
+  };
+
+  useEffect(() => {
+    if (typing === null) return;
+    const full = turns[turns.length - 1].a;
+    // 끝을 타이머 안에서 판정한다 — 효과 본문에서 바로 `setTyping(null)`을 부르면
+    // 렌더가 한 번 더 도는 것을 eslint가 잡는다(`react-hooks/set-state-in-effect`).
+    const id = window.setTimeout(
+      () => setTyping((n) => (n === null || n + 2 >= full.length ? null : n + 2)),
+      16
+    );
+    return () => window.clearTimeout(id);
+  }, [turns, typing]);
+
+  const shared = { scope, setScope, closed, toggleGroup, uid, turns, typing, ask };
 
   return (
     <section className={`${SECTION_X} flex flex-col items-center pt-9 pb-16 lg:pt-14 lg:pb-25`}>
@@ -531,6 +598,9 @@ type RailShared = {
   closed: ReadonlySet<string>;
   toggleGroup: (kind: string) => void;
   uid: string;
+  turns: Ask[];
+  typing: number | null;
+  ask: (item: Ask) => void;
 };
 
 function RailPanels({
@@ -546,9 +616,18 @@ function RailPanels({
       // 넓은 화면은 노트 쪽과 같은 값이라 두 기둥의 바닥선이 맞는다.
       className={`overflow-hidden ${compact ? "h-[532px]" : "h-[676px]"}`}
     >
-      <div key={tab} data-panel>
+      {/* `h-full` — 에이전트 패널은 컴포저를 바닥에 붙이고 대화만 흐르게 해야 해서
+          자기 높이를 알아야 한다. 실시간 정리는 원래대로 넘치는 만큼 잘린다. */}
+      <div key={tab} data-panel className="h-full">
         {tab === "실시간 정리" ? <ContextPanel compact={compact} {...shared} /> : null}
-        {tab === "내 에이전트" ? <AgentPanel compact={compact} /> : null}
+        {tab === "내 에이전트" ? (
+          <AgentPanel
+            compact={compact}
+            turns={shared.turns}
+            typing={shared.typing}
+            ask={shared.ask}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -713,57 +792,125 @@ function ContextPanel({
 /**
  * 개인 챗. **범위 한 줄이 이 화면의 요점이다** — 남의 눈에 안 보인다는 사실은 화면
  * 어디에도 다시 안 나온다(`note-agent-rail.tsx`).
+ *
+ * **여기서 실제로 물어볼 수 있다.** 준비된 질문을 누르면 답이 흐르고 참고한 회의록이
+ * 붙는다. 입력창을 열어 두고 아무 문장이나 받는 쪽이 더 그럴듯하지만, 그러려면 비로그인
+ * 질의를 받는 서버가 있어야 하고 없이 흉내만 내면 「사실 대조판」이 첫 화면부터 거짓이 된다.
+ * 그래서 **답이 실제로 있는 질문만** 낸다.
  */
-function AgentPanel({ compact }: { compact?: boolean }) {
+function AgentPanel({
+  compact,
+  turns,
+  typing,
+  ask,
+}: { compact?: boolean } & Pick<RailShared, "turns" | "typing" | "ask">) {
+  const threadRef = useRef<HTMLDivElement>(null);
+
+  // 흐르는 동안 바닥에 붙여 둔다. `scrollIntoView`가 아니라 `scrollTop`이다 — 이 패널은
+  // 좁은 화면용과 넓은 화면용 두 벌이 다 마운트돼 있어서, 숨은 쪽이 페이지를 끌고 간다.
+  useEffect(() => {
+    const el = threadRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [turns, typing]);
+
+  const last = turns.length - 1;
+
   return (
     <div className={`flex h-full flex-col ${compact ? "px-[13px] pb-3.5" : "px-3 pb-4"}`}>
       <p
-        className={`m-0 font-medium text-[var(--lp-body)] ${compact ? "px-0 py-1.5 text-[10px]" : "px-1 py-2 text-[11px]"}`}
+        className={`m-0 shrink-0 font-medium text-[var(--lp-body)] ${compact ? "px-0 py-1.5 text-[10px]" : "px-1 py-2 text-[11px]"}`}
       >
         나만 보는 대화 · 현재 회의 범위
       </p>
 
-      <div className={`flex flex-col ${compact ? "gap-2.5 pt-1" : "gap-3 pt-2"}`}>
-        <div
-          className={`max-w-[82%] self-end rounded-[12px_12px_4px_12px] bg-[var(--lp-rule-soft)] ${compact ? "px-2.5 py-1.5" : "px-3 py-2"}`}
-        >
-          <span
-            className={`break-keep leading-[1.5] text-[var(--lp-ink)] ${compact ? "text-[10.5px]" : "text-[11.5px]"}`}
-          >
-            결제 화면 개편은 왜 미뤘나요?
-          </span>
-        </div>
-
-        <div className={`flex flex-col ${compact ? "gap-1.5" : "gap-2"}`}>
-          <div className="flex items-center gap-1.5">
-            <Sparkles aria-hidden className="size-3 shrink-0 text-[var(--lp-accent)]" />
-            <span
-              className={`font-semibold text-[var(--lp-accent)] ${compact ? "text-[10px]" : "text-[10.5px]"}`}
+      {/* 흐르는 중에는 답을 `aria-hidden`으로 둔다 — 글자마다 읽어 주면 한 문장을 수십 번
+          듣는다. 다 흐르면 통째로 드러나 live 영역이 한 번 읽는다. */}
+      <div
+        ref={threadRef}
+        aria-live="polite"
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${compact ? "gap-2.5 pt-1" : "gap-3 pt-2"}`}
+      >
+        {turns.map((turn, i) => {
+          const streaming = i === last && typing !== null;
+          return (
+            <div
+              key={`${i}-${turn.q}`}
+              className={`flex shrink-0 flex-col ${compact ? "gap-2.5" : "gap-3"}`}
             >
-              HeyMoa
-            </span>
-          </div>
-          <p
-            className={`m-0 break-keep leading-[1.65] text-[var(--lp-body)] ${compact ? "text-[10.5px]" : "text-[11.5px]"}`}
-          >
-            온보딩 이탈 지표를 먼저 보기로 해서 다음 스프린트로 미뤘습니다. 2차 회의에서
-            정해진 결정입니다.
-          </p>
-          <div className="flex flex-wrap items-center gap-[5px]">
-            {["2차 회의", "이번 회의"].map((chip) => (
-              <span
-                key={chip}
-                className={`rounded-full bg-[var(--lp-rule-soft)] font-medium text-[var(--lp-body)] ${compact ? "px-2 py-[3px] text-[9.5px]" : "px-[7px] py-[3px] text-[9.5px]"}`}
+              <div
+                className={`max-w-[82%] self-end rounded-[12px_12px_4px_12px] bg-[var(--lp-rule-soft)] ${compact ? "px-2.5 py-1.5" : "px-3 py-2"}`}
               >
-                {chip}
-              </span>
-            ))}
-          </div>
+                <span
+                  className={`break-keep leading-[1.5] text-[var(--lp-ink)] ${compact ? "text-[10.5px]" : "text-[11.5px]"}`}
+                >
+                  {turn.q}
+                </span>
+              </div>
+
+              <div className={`flex flex-col ${compact ? "gap-1.5" : "gap-2"}`}>
+                <div className="flex items-center gap-1.5">
+                  <Sparkles aria-hidden className="size-3 shrink-0 text-[var(--lp-accent)]" />
+                  <span
+                    className={`font-semibold text-[var(--lp-accent)] ${compact ? "text-[10px]" : "text-[10.5px]"}`}
+                  >
+                    HeyMoa
+                  </span>
+                </div>
+                <p
+                  aria-hidden={streaming || undefined}
+                  className={`m-0 break-keep leading-[1.65] text-[var(--lp-body)] ${compact ? "text-[10.5px]" : "text-[11.5px]"}`}
+                >
+                  {streaming ? turn.a.slice(0, typing ?? 0) : turn.a}
+                </p>
+                {/* 근거는 **답이 끝난 뒤에** 선다. 흐르는 중에 그리면 아직 안 읽은 회의록이
+                    이미 붙은 것처럼 보인다(`chat-thread.tsx`가 같은 자리를 그렇게 가른다). */}
+                {streaming ? null : (
+                  <div className="flex flex-wrap items-center gap-[5px]">
+                    {turn.refs.map((chip) => (
+                      <span
+                        key={chip}
+                        className={`rounded-full bg-[var(--lp-rule-soft)] font-medium text-[var(--lp-body)] ${compact ? "px-2 py-[3px] text-[9.5px]" : "px-[7px] py-[3px] text-[9.5px]"}`}
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* **「예시 질문」이라고 적는다.** 앱에는 이 줄이 없다 — 랜딩이 눌러 보라고 놓은
+          것이라서, 라벨을 빼면 앱에 있는 기능처럼 읽힌다. */}
+      <div className={`shrink-0 ${compact ? "pt-2.5" : "pt-3"}`}>
+        <p
+          className={`m-0 text-[var(--lp-faint)] ${compact ? "text-[9.5px]" : "text-[10px]"}`}
+        >
+          예시 질문
+        </p>
+        <div
+          role="group"
+          aria-label="예시 질문"
+          className={`flex flex-wrap gap-1.5 ${compact ? "pt-1.5" : "pt-2"}`}
+        >
+          {ASKS.map((item) => (
+            <button
+              key={item.q}
+              type="button"
+              disabled={typing !== null}
+              onClick={() => ask(item)}
+              className={`flex min-h-6 shrink-0 items-center rounded-full border border-[var(--lp-rule)] font-medium text-[var(--lp-body)] transition-colors hover:border-[var(--lp-rule-strong)] hover:text-[var(--lp-ink)] disabled:opacity-45 ${compact ? "px-2 text-[10px]" : "px-[11px] text-[11px]"}`}
+            >
+              {item.q}
+            </button>
+          ))}
         </div>
       </div>
 
       <div
-        className={`mt-auto flex items-center gap-[7px] rounded-full border border-[var(--lp-rule-strong)] ${compact ? "px-2.5 py-2" : "px-3 py-2.5"}`}
+        className={`mt-3 flex shrink-0 items-center gap-[7px] rounded-full border border-[var(--lp-rule-strong)] ${compact ? "px-2.5 py-2" : "px-3 py-2.5"}`}
       >
         <span className={`text-[var(--lp-faint)] ${compact ? "text-[10.5px]" : "text-[11px]"}`}>
           이 회의에 대해 물어보기
