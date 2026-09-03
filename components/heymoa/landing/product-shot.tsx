@@ -43,7 +43,7 @@ import {
  * `use-demo.ts`에 있고 여기는 그 상태를 그리기만 한다.
  *
  * **그리고 실제로 눌린다.** 정보·전사·요약과 실시간 정리·내 에이전트가 진짜 탭이고, 사건
- * 범위 칩과 묶음 접기, 예시 질문, 회의 종료가 다 동작한다. 누르면 **그 기둥의 탭만** 그
+ * 범위 칩과 묶음 접기, 예시 질문이 다 동작한다. 누르면 **그 기둥의 탭만** 그
  * 자리에 못 박히고 대본은 계속 돈다 — 눌러 보라고 해 놓고 화면이 딴 데로 가도 안 되지만,
  * 거기서 대본까지 끊으면 보여 주려던 것이 통째로 사라진다.
  *
@@ -111,7 +111,7 @@ export function ProductShot() {
             <span className="min-w-0 flex-1 truncate break-keep text-[14px] font-bold text-[var(--lp-ink)]">
               3차 스프린트 킥오프
             </span>
-            {demo.ended ? null : <EndButton onEnd={demo.endMeeting} compact />}
+            {demo.ended ? null : <EndButton compact />}
           </div>
           <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} compact />
           <NotePanels demo={demo} uid={uid} compact />
@@ -144,7 +144,7 @@ export function ProductShot() {
                     3차 스프린트 킥오프
                   </span>
                 </div>
-                {demo.ended ? null : <EndButton onEnd={demo.endMeeting} />}
+                {demo.ended ? null : <EndButton />}
                 <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} />
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--lp-rule)]">
                   <MoreHorizontal aria-hidden className="size-4 text-[#8a7a6d]" />
@@ -195,22 +195,21 @@ function StatusChip({ ended, compact }: { ended: boolean; compact?: boolean }) {
  * 회의 종료. 앱의 Meeting Bar는 **이 버튼 하나뿐이다**(`meeting-controls.tsx` —
  * h32 · r8 · destructive 테두리와 글자 · 12px).
  *
- * 진짜로 눌린다 — 누르면 대본을 끝까지 감아 종료와 요약까지 한 번에 보여 준다. 앱은 여기서
- * 확인 다이얼로그를 한 번 더 띄우지만(`meeting-end-dialog.tsx`) 그건 되돌릴 수 없는 일을
- * 막는 장치라, 아무것도 안 지우는 이 그림에는 두지 않는다.
+ * **그림이다.** 한때 진짜로 눌렸는데, 누르는 순간 기록 중이던 회의가 종료로 확 넘어가서
+ * 「내가 뭘 부순 건가」로 읽혔다 — 앱에서는 다이얼로그가 한 번 더 묻고 되돌릴 수 없는
+ * 일이라는 것을 말해 주지만(`meeting-end-dialog.tsx`), 랜딩에서 그 확인창까지 그리면
+ * 이 자리가 회의 종료를 배우는 화면이 되어 버린다. 대본이 제때 누른다.
  */
-function EndButton({ onEnd, compact }: { onEnd: () => void; compact?: boolean }) {
+function EndButton({ compact }: { compact?: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={onEnd}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--lp-rec)] font-medium text-[var(--lp-rec-ink)] transition-colors hover:bg-[var(--lp-rec-soft)] ${
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--lp-rec)] font-medium text-[var(--lp-rec-ink)] ${
         compact ? "h-6 px-1.5 text-[10px]" : "h-8 px-2.5 text-[12px]"
       }`}
     >
       <CircleStop aria-hidden className={compact ? "size-3" : "size-4"} />
       회의 종료
-    </button>
+    </span>
   );
 }
 

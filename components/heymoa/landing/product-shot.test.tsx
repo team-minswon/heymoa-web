@@ -176,31 +176,23 @@ describe("ProductShot 대본", () => {
     }
   });
 
-  it("회의 종료를 누르면 남은 대목을 지나 종료부터 이어서 돈다", () => {
+  /**
+   * 「회의 종료」는 그림이다. 한때 진짜로 눌렸는데, 누르는 순간 기록 중이던 회의가 종료로
+   * 확 넘어가서 「내가 뭘 부순 건가」로 읽혔다. 눌러도 할 일이 없는 것을 버튼으로 두면
+   * 탭 순회에 빈 정거장이 늘 뿐이라, 뒤로·전체화면·복사와 같은 `<span>`이다.
+   */
+  it("회의 종료는 그림이라 눌리지 않는다", () => {
     vi.useFakeTimers();
     try {
       render(<ProductShot />);
 
-      act(() => {
-        fireEvent.click(screen.getAllByRole("button", { name: "회의 종료" })[0]);
-      });
-
-      // 종료는 곧바로. 요약은 아직 도는 중이라 절이 하나도 없다.
-      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("회의 종료").length).toBeGreaterThan(0);
       expect(screen.queryAllByRole("button", { name: "회의 종료" })).toHaveLength(0);
-      expect(screen.queryAllByText("액션 아이템")).toHaveLength(0);
 
+      // 회의를 끝내는 것은 대본이다.
       play();
-
-      // 이어서 정리가 선다. 건너뛴 발화도 지나온 것으로 쳐서 다 적혀 있다 —
-      // 요약이 근거로 드는 시각(01:19)이 전사에 없으면 안 된다.
-      expect(screen.getAllByText("액션 아이템").length).toBeGreaterThan(0);
-      act(() => {
-        fireEvent.click(screen.getAllByRole("tab", { name: "전사" })[0]);
-      });
-      expect(
-        screen.getAllByText(/오늘 남길 건 여기까지입니다/).length
-      ).toBeGreaterThan(0);
+      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+      expect(screen.queryAllByText("회의 종료")).toHaveLength(0);
     } finally {
       vi.useRealTimers();
     }

@@ -213,9 +213,6 @@ const BEATS: Beat[] = [
 
 export const LAST = BEATS.length;
 
-/** 「회의 종료」를 누르면 여기로 건너뛴다. 앞의 말과 사건은 지나온 것으로 친다. */
-const END_AT = BEATS.findIndex((b) => b.t === "end");
-
 /** 한 글자가 전사에 찍히는 간격과, 줄이 확정된 뒤 다음 말까지 쉬는 시간. */
 const SAY_MS = 26;
 const HOLD: Record<Beat["t"], number> = {
@@ -253,8 +250,6 @@ export type Demo = {
   ask: (item: Ask) => void;
   /** 레일을 만졌다 — 레일 탭만 그 자리에 못 박는다. 대본은 계속 돈다. */
   pinRail: () => void;
-  /** 「회의 종료」를 눌렀다 — 남은 말과 사건을 지나 종료 대목으로 건너뛰고 이어서 돈다. */
-  endMeeting: () => void;
 };
 
 /**
@@ -355,18 +350,6 @@ export function useDemo(seen: boolean): Demo {
     setRailOverride((v) => v ?? view.railTab);
   }, [view.railTab]);
 
-  /**
-   * 「회의 종료」. 남은 말과 사건은 **지나온 것으로 친다** — 커서를 종료 대목으로 옮기면
-   * 그 앞의 대목이 전부 확정된 것으로 파생되므로 전사 여덟 줄과 사건 다섯이 다 선다.
-   *
-   * 통째로 건너뛰지 않고 여기까지만 감는 이유는, 종료 뒤가 이 대본에서 가장 볼 만한
-   * 대목이기 때문이다 — 칩이 바뀌고, 요약 탭이 열리고, 정리가 절 단위로 선다.
-   */
-  const endMeeting = useCallback(() => {
-    setCursor((c) => Math.max(c, END_AT));
-    setProgress(0);
-  }, []);
-
   useEffect(() => {
     if (!playing) return;
     const beat = BEATS[cursor];
@@ -451,6 +434,5 @@ export function useDemo(seen: boolean): Demo {
     typing: manualTyping !== null ? manualTyping : view.scriptAsk ? progress : null,
     ask,
     pinRail,
-    endMeeting,
   };
 }
