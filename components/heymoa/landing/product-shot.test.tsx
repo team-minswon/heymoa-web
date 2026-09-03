@@ -122,7 +122,39 @@ describe("ProductShot 대본", () => {
     }
   });
 
-  it("손대면 대본을 놓고, 보고 있던 탭에 머문다", () => {
+  it("탭을 누르면 그 탭에 머물되 대본은 계속 돈다", () => {
+    vi.useFakeTimers();
+    try {
+      render(<ProductShot />);
+
+      // 레일을 만졌다. 대본은 나중에 「내 에이전트」로 옮기려 한다.
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "실시간 정리" })[0]);
+      });
+
+      play();
+
+      // 탭은 안 뺏겼다.
+      expect(
+        screen.getAllByRole("tab", { name: "실시간 정리" })[0]
+      ).toHaveAttribute("aria-selected", "true");
+      // **그런데 내용은 끝까지 찼다** — 예전에는 여기서 대본이 통째로 감겨 버렸다.
+      expect(screen.getAllByText("지금까지 5건").length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText("카드 결제 실패 재시도 정책 정하기").length
+      ).toBeGreaterThan(0);
+      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * 고정의 예외 하나. 회의가 끝나면 **앱이** 요약 탭으로 넘긴다
+   * (`meeting-controls.tsx`의 `onMeetingEnded` → `note-panel.tsx`). 그 이동은 대본이
+   * 부리는 것이 아니라 앱이 하는 일이라 방문자의 고정을 이긴다.
+   */
+  it("회의가 끝나면 고정해 둔 노트 탭도 요약으로 넘어간다", () => {
     vi.useFakeTimers();
     try {
       render(<ProductShot />);
@@ -130,31 +162,48 @@ describe("ProductShot 대본", () => {
       act(() => {
         fireEvent.click(screen.getAllByRole("tab", { name: "정보" })[0]);
       });
+      expect(screen.getAllByText("회의 정보").length).toBeGreaterThan(0);
 
-      // 대본은 끝까지 감겼다 — 회의는 종료됐고 사건도 다 올라왔다.
-      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("지금까지 5건").length).toBeGreaterThan(0);
+      play();
 
-      play(200);
-
-      // 그래도 화면은 방금 고른 탭이다. 대본의 마지막 탭(요약)으로 끌려가지 않는다.
-      expect(screen.getAllByRole("tab", { name: "정보" })[0]).toHaveAttribute(
+      expect(screen.getAllByRole("tab", { name: "요약" })[0]).toHaveAttribute(
         "aria-selected",
         "true"
       );
-      expect(screen.getAllByText("회의 정보").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("개요").length).toBeGreaterThan(0);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("회의 종료를 누르면 종료와 요약이 한 번에 선다", () => {
-    render(<ProductShot />);
+  it("회의 종료를 누르면 남은 대목을 지나 종료부터 이어서 돈다", () => {
+    vi.useFakeTimers();
+    try {
+      render(<ProductShot />);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "회의 종료" })[0]);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("button", { name: "회의 종료" })[0]);
+      });
 
-    expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
-    expect(screen.queryAllByRole("button", { name: "회의 종료" })).toHaveLength(0);
+      // 종료는 곧바로. 요약은 아직 도는 중이라 절이 하나도 없다.
+      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+      expect(screen.queryAllByRole("button", { name: "회의 종료" })).toHaveLength(0);
+      expect(screen.queryAllByText("액션 아이템")).toHaveLength(0);
+
+      play();
+
+      // 이어서 정리가 선다. 건너뛴 발화도 지나온 것으로 쳐서 다 적혀 있다 —
+      // 요약이 근거로 드는 시각(01:19)이 전사에 없으면 안 된다.
+      expect(screen.getAllByText("액션 아이템").length).toBeGreaterThan(0);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "전사" })[0]);
+      });
+      expect(
+        screen.getAllByText(/오늘 남길 건 여기까지입니다/).length
+      ).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("모션을 줄였으면 대본을 안 돌리고 끝 상태로 둔다", () => {

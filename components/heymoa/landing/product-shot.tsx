@@ -43,8 +43,9 @@ import {
  * `use-demo.ts`에 있고 여기는 그 상태를 그리기만 한다.
  *
  * **그리고 실제로 눌린다.** 정보·전사·요약과 실시간 정리·내 에이전트가 진짜 탭이고, 사건
- * 범위 칩과 묶음 접기, 예시 질문, 회의 종료가 다 동작한다. 무엇이든 누르면 대본은 끝까지
- * 감기고 손을 뗀다 — 눌러 보라고 해 놓고 화면이 딴 데로 가면 안 된다.
+ * 범위 칩과 묶음 접기, 예시 질문, 회의 종료가 다 동작한다. 누르면 **그 기둥의 탭만** 그
+ * 자리에 못 박히고 대본은 계속 돈다 — 눌러 보라고 해 놓고 화면이 딴 데로 가도 안 되지만,
+ * 거기서 대본까지 끊으면 보여 주려던 것이 통째로 사라진다.
  *
  * **눌리는 것을 그리는 순간 진짜 탭이어야 한다.** `role="tablist"`와 방향키 이동
  * (roving tabIndex)까지 앱과 같게 둔다. 반대로 앱 화면을 **흉내만 내는** 것들(뒤로·
@@ -80,14 +81,14 @@ export function ProductShot() {
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
   const uid = useId();
 
-  // 범위 칩과 묶음 접기도 「손댔다」에 든다 — 대본이 계속 돌면 방금 좁힌 목록에 새 카드가
-  // 끼어들어 읽던 자리가 밀린다.
+  // 범위 칩과 묶음 접기는 레일을 만진 것이다 — 걸러 보는 중에 대본이 탭을 옮기면 방금
+  // 좁힌 목록이 통째로 사라진다. 카드가 계속 쌓이는 것은 그대로 둔다.
   const setScope = (s: Scope) => {
-    demo.takeOver();
+    demo.pinRail();
     setRawScope(s);
   };
   const toggleGroup = (kind: string) => {
-    demo.takeOver();
+    demo.pinRail();
     setClosed((current) => {
       const next = new Set(current);
       if (!next.delete(kind)) next.add(kind);
@@ -110,7 +111,7 @@ export function ProductShot() {
             <span className="min-w-0 flex-1 truncate break-keep text-[14px] font-bold text-[var(--lp-ink)]">
               3차 스프린트 킥오프
             </span>
-            {demo.ended ? null : <EndButton onEnd={demo.takeOver} compact />}
+            {demo.ended ? null : <EndButton onEnd={demo.endMeeting} compact />}
           </div>
           <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} compact />
           <NotePanels demo={demo} uid={uid} compact />
@@ -143,7 +144,7 @@ export function ProductShot() {
                     3차 스프린트 킥오프
                   </span>
                 </div>
-                {demo.ended ? null : <EndButton onEnd={demo.takeOver} />}
+                {demo.ended ? null : <EndButton onEnd={demo.endMeeting} />}
                 <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} />
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--lp-rule)]">
                   <MoreHorizontal aria-hidden className="size-4 text-[#8a7a6d]" />

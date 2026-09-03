@@ -20,11 +20,19 @@ import {
  * 뒤에 되감으면 다 찬 전사가 한 프레임 보였다가 비는 것이 보인다. 앞으로만 가면 그 깜빡임이
  * 아예 없다.
  *
- * ## 손대면 대본을 놓는다
+ * ## 손대면 **탭만** 고정한다
  *
- * 방문자가 탭이든 칩이든 하나라도 누르면 대본을 끝까지 감고 멈춘다(`takeOver`). 보고 있던
- * 탭은 그대로 두고 내용만 다 채운다 — 누르자마자 화면이 딴 데로 가면 눌러 보라고 해 놓고
- * 뺏는 셈이다.
+ * 방문자가 누르면 그 기둥의 탭을 그 자리에 못 박고(`noteOverride`·`railOverride`), **대본은
+ * 계속 돈다.** 뺏지 말아야 할 것은 탭이지 내용이 아니다 — 누르자마자 화면이 딴 데로 가면
+ * 눌러 보라고 해 놓고 뺏는 셈이지만, 거기서 대본까지 끊으면 이번엔 보여 주려던 것이
+ * 통째로 사라진다. 전사를 고른 사람은 줄이 계속 들어오는 것을 보고, 사건 흐름을 고른
+ * 사람은 카드가 계속 쌓이는 것을 본다.
+ *
+ * **고정은 만진 기둥에만 건다.** 노트 탭을 눌렀다고 레일까지 멈추지 않는다.
+ *
+ * 예외가 하나 있다. 회의가 끝나면 앱이 **요약 탭으로 넘긴다**(`meeting-controls.tsx`의
+ * `onMeetingEnded` → `note-panel.tsx`). 그 이동은 대본이 부리는 것이 아니라 앱이 하는
+ * 일이라 고정을 이긴다 — `force`가 붙은 대목이 그것이다.
  *
  * 모션을 줄인 사람에게는 대본을 아예 안 돌린다. 처음부터 끝 상태다.
  */
@@ -170,7 +178,7 @@ const THINK_MS = 620;
 export const BASE_LINES = 5;
 export const BASE_EVENTS = 3;
 
-type Beat = { ms?: number } & (
+type Beat = { ms?: number; force?: true } & (
   | { t: "say"; i: number }
   | { t: "event" }
   | { t: "rail"; v: RailTab }
@@ -196,13 +204,17 @@ const BEATS: Beat[] = [
   { t: "ask", i: 2 },
   { t: "end" },
   // 종료 직후의 요약 탭은 「회의를 정리하고 있습니다」다. 그 화면이 지나가도록 길게 쉰다.
-  { t: "note", v: "요약", ms: 1700 },
+  // `force` — 회의가 끝나면 앱이 요약 탭으로 넘긴다. 방문자가 고정해 둔 탭도 이건 이긴다.
+  { t: "note", v: "요약", ms: 1700, force: true },
   { t: "summary" },
   { t: "summary" },
   { t: "summary" },
 ];
 
 export const LAST = BEATS.length;
+
+/** 「회의 종료」를 누르면 여기로 건너뛴다. 앞의 말과 사건은 지나온 것으로 친다. */
+const END_AT = BEATS.findIndex((b) => b.t === "end");
 
 /** 한 글자가 전사에 찍히는 간격과, 줄이 확정된 뒤 다음 말까지 쉬는 시간. */
 const SAY_MS = 26;
@@ -239,10 +251,10 @@ export type Demo = {
   turns: Ask[];
   typing: number | null;
   ask: (item: Ask) => void;
-  /** 대본이 아직 도는 중인가. */
-  running: boolean;
-  /** 무엇이든 눌렸다 — 대본을 끝까지 감고 손을 뗀다. */
-  takeOver: () => void;
+  /** 레일을 만졌다 — 레일 탭만 그 자리에 못 박는다. 대본은 계속 돈다. */
+  pinRail: () => void;
+  /** 「회의 종료」를 눌렀다 — 남은 말과 사건을 지나 종료 대목으로 건너뛰고 이어서 돈다. */
+  endMeeting: () => void;
 };
 
 /**
@@ -287,7 +299,6 @@ const reduced = () =>
 export function useDemo(seen: boolean): Demo {
   const [raw, setCursor] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [stopped, setStopped] = useState(false);
   const [noteOverride, setNoteOverride] = useState<NoteTab | null>(null);
   const [railOverride, setRailOverride] = useState<RailTab | null>(null);
   /** 방문자가 직접 누른 질문. 대본의 것 뒤에 붙는다. */
@@ -301,7 +312,8 @@ export function useDemo(seen: boolean): Demo {
   const skip = seen && reduced();
   const cursor = skip ? LAST : raw;
   const done = cursor >= LAST;
-  const playing = seen && !skip && !stopped && !done;
+  // **누른다고 멈추지 않는다.** 멈추는 것은 탭 이동뿐이고 그건 아래 `noteTab`·`railTab`이 판다.
+  const playing = seen && !skip && !done;
 
   /**
    * 즉시 적용되는 대목은 커서가 **닿는 순간** 반영된다(탭 이동 · 사건 · 종료 · 요약 절).
@@ -338,14 +350,22 @@ export function useDemo(seen: boolean): Demo {
     };
   }, [cursor, progress]);
 
-  const takeOver = useCallback(() => {
-    setStopped(true);
-    if (done) return;
-    // 보고 있던 탭은 그 자리에 둔다 — 커서를 끝으로 감으면 대본의 마지막 탭으로 끌려간다.
-    setNoteOverride((v) => v ?? view.noteTab);
+  /** 레일을 만졌다. 지금 보고 있는 탭을 그대로 못 박는다 — 내용은 계속 흐른다. */
+  const pinRail = useCallback(() => {
     setRailOverride((v) => v ?? view.railTab);
-    setCursor(LAST);
-  }, [done, view.noteTab, view.railTab]);
+  }, [view.railTab]);
+
+  /**
+   * 「회의 종료」. 남은 말과 사건은 **지나온 것으로 친다** — 커서를 종료 대목으로 옮기면
+   * 그 앞의 대목이 전부 확정된 것으로 파생되므로 전사 여덟 줄과 사건 다섯이 다 선다.
+   *
+   * 통째로 건너뛰지 않고 여기까지만 감는 이유는, 종료 뒤가 이 대본에서 가장 볼 만한
+   * 대목이기 때문이다 — 칩이 바뀌고, 요약 탭이 열리고, 정리가 절 단위로 선다.
+   */
+  const endMeeting = useCallback(() => {
+    setCursor((c) => Math.max(c, END_AT));
+    setProgress(0);
+  }, []);
 
   useEffect(() => {
     if (!playing) return;
@@ -358,7 +378,10 @@ export function useDemo(seen: boolean): Demo {
     };
     const next = () =>
       setCursor((c) => {
-        setProgress(enter(BEATS[c + 1]));
+        const upcoming = BEATS[c + 1];
+        // 앱이 하는 이동은 방문자가 못 박아 둔 탭도 이긴다(회의가 끝나면 요약 탭이다).
+        if (upcoming?.t === "note" && upcoming.force) setNoteOverride(null);
+        setProgress(enter(upcoming));
         return c + 1;
       });
 
@@ -381,12 +404,12 @@ export function useDemo(seen: boolean): Demo {
   /** 손으로 보내는 질문. 대본과 같은 결로 흐른다(먼저 생각하고, 그다음 글자). */
   const ask = useCallback(
     (item: Ask) => {
-      takeOver();
+      pinRail();
       if (manualTyping !== null) return;
       setExtra((list) => [...list, item]);
       setManualTyping(reduced() ? null : THINKING);
     },
-    [manualTyping, takeOver]
+    [manualTyping, pinRail]
   );
 
   useEffect(() => {
@@ -416,14 +439,9 @@ export function useDemo(seen: boolean): Demo {
     ended: view.ended,
     noteTab: noteOverride ?? view.noteTab,
     railTab: railOverride ?? view.railTab,
-    setNoteTab: (v) => {
-      takeOver();
-      setNoteOverride(v);
-    },
-    setRailTab: (v) => {
-      takeOver();
-      setRailOverride(v);
-    },
+    // 고른 탭이 곧 고정이다. **만진 기둥에만 건다** — 노트를 눌렀다고 레일까지 멈추지 않는다.
+    setNoteTab: setNoteOverride,
+    setRailTab: setRailOverride,
     turns: [
       SEED,
       ...view.scriptTurns,
@@ -432,7 +450,7 @@ export function useDemo(seen: boolean): Demo {
     ],
     typing: manualTyping !== null ? manualTyping : view.scriptAsk ? progress : null,
     ask,
-    running: playing,
-    takeOver,
+    pinRail,
+    endMeeting,
   };
 }
