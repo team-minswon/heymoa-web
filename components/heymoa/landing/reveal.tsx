@@ -1,10 +1,17 @@
 "use client";
 
-import { cloneElement, useCallback } from "react";
-import type { ReactElement, Ref } from "react";
+import { useCallback } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 /**
- * 스크롤에 맞춰 한 번 올라온다.
+ * 스크롤에 맞춰 한 번 올라온다. 감쌀 요소를 **직접 그린다**.
+ *
+ * `cloneElement`로 자식에 ref만 얹는 쪽이 DOM은 깔끔하지만 그렇게 하면 터진다 — 여기 오는
+ * 자식은 서버 컴포넌트라 클라이언트에서 복제할 수 있는 엘리먼트가 아니다
+ * (`Element type is invalid`). 그래서 `div` 하나를 더 그리고 그것을 관찰한다.
+ *
+ * `className`과 나머지 속성은 그대로 넘긴다 — 기능 카드처럼 **이 래퍼가 곧 카드**여야
+ * 하는 자리가 있어서다(격자 칸이 하나 더 끼면 카드 높이가 안 맞는다).
  *
  * **JS가 없으면 아무것도 감추지 않는다.** 숨김 상태를 서버 HTML에 넣지 않고 붙은 뒤에
  * `data-reveal`을 단다 — `PageTransition`이 `opacity:0`인 HTML을 내보내는 바람에 JS를 끄면
@@ -13,16 +20,15 @@ import type { ReactElement, Ref } from "react";
  * **이미 보이는 것은 건드리지 않는다.** 붙는 시점에 뷰포트 안이면 그대로 둔다 — 안 그러면
  * 보이던 것이 하이드레이션 순간 사라졌다 다시 떠서 깜빡인다.
  *
- * **축소 모션이면 통째로 건너뛴다.** 아래로 미는 연출은 전정 자극이 되는 종류라
- * `prefers-reduced-motion`을 존중해야 한다.
+ * **축소 모션이면 통째로 건너뛴다.** 아래로 미는 연출은 전정 자극이 되는 종류다.
  *
  * 한 번 뜨면 관찰을 끊는다 — 스크롤을 되돌릴 때마다 다시 튀면 읽는 흐름이 끊긴다.
- *
- * 콜백 ref로 다는 이유는 자식이 서버에서 그려진 엘리먼트라서다. `cloneElement`로 ref만
- * 얹으면 그 아래 트리는 서버 컴포넌트로 남는다.
  */
-export function Reveal({ children }: { children: ReactElement<{ ref?: Ref<HTMLElement> }> }) {
-  const attach = useCallback((el: HTMLElement | null) => {
+export function Reveal({
+  children,
+  ...rest
+}: ComponentPropsWithoutRef<"div"> & { children: ReactNode }) {
+  const attach = useCallback((el: HTMLDivElement | null) => {
     if (!el) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (el.getBoundingClientRect().top < window.innerHeight) return;
@@ -41,5 +47,9 @@ export function Reveal({ children }: { children: ReactElement<{ ref?: Ref<HTMLEl
     return () => io.disconnect();
   }, []);
 
-  return cloneElement(children, { ref: attach });
+  return (
+    <div ref={attach} {...rest}>
+      {children}
+    </div>
+  );
 }

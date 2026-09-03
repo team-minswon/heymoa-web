@@ -110,10 +110,12 @@ export function Features() {
         <div className="grid gap-3.5 md:grid-cols-2 lg:gap-6">
           {CARDS.map((c) => (
             // 밴드가 아니라 카드마다 뜬다 — 목업 안의 줄은 카드가 뜬 뒤에 하나씩 들어온다.
-            <Reveal key={c.title}>
-            <div
+            // `Reveal`이 카드 그 자체다. 래퍼를 하나 더 끼우면 격자 칸이 갈려 카드 높이가
+            // 서로 안 맞는다.
+            <Reveal
+              key={c.title}
               data-lift
-              className="box-border flex flex-col rounded-[18px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-3 lg:p-3.5"
+              className="box-border flex h-full flex-col rounded-[18px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-3 lg:p-3.5"
             >
               {/* 크림 패널이 앱 화면을 받친다 — 창을 바로 흰 카드 위에 두면 경계가 사라진다. */}
               <div className="box-border overflow-hidden rounded-xl bg-[var(--lp-cream)] p-3 lg:p-4">
@@ -143,7 +145,6 @@ export function Features() {
                   ))}
                 </ul>
               </div>
-            </div>
             </Reveal>
           ))}
         </div>
