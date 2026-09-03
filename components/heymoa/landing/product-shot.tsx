@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import {
   ArrowUp,
   Bot,
+  Check,
   ChevronDown,
   ChevronLeft,
   CircleStop,
@@ -12,6 +13,7 @@ import {
   Minimize2,
   MoreHorizontal,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
 
 import { CONTAINER, SECTION_X, SPEAKER_TINT } from "@/components/heymoa/landing/shell";
@@ -22,7 +24,6 @@ import {
   CONTEXT,
   CONTEXT_ICON,
   CONTEXT_KINDS,
-  FACTS,
   NOTE_TABS,
   OUTCOMES,
   RAIL_TABS,
@@ -111,7 +112,7 @@ export function ProductShot() {
             <span className="min-w-0 flex-1 truncate break-keep text-[14px] font-bold text-[var(--lp-ink)]">
               3차 스프린트 킥오프
             </span>
-            {demo.ended ? null : <EndButton compact />}
+            <EndButton pressing={demo.pressing} gone={demo.ended} compact />
           </div>
           <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} compact />
           <NotePanels demo={demo} uid={uid} compact />
@@ -144,7 +145,7 @@ export function ProductShot() {
                     3차 스프린트 킥오프
                   </span>
                 </div>
-                {demo.ended ? null : <EndButton />}
+                <EndButton pressing={demo.pressing} gone={demo.ended} />
                 <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} />
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--lp-rule)]">
                   <MoreHorizontal aria-hidden className="size-4 text-[#8a7a6d]" />
@@ -199,11 +200,29 @@ function StatusChip({ ended, compact }: { ended: boolean; compact?: boolean }) {
  * 「내가 뭘 부순 건가」로 읽혔다 — 앱에서는 다이얼로그가 한 번 더 묻고 되돌릴 수 없는
  * 일이라는 것을 말해 주지만(`meeting-end-dialog.tsx`), 랜딩에서 그 확인창까지 그리면
  * 이 자리가 회의 종료를 배우는 화면이 되어 버린다. 대본이 제때 누른다.
+ *
+ * **누르는 순간을 보여 준다.** 버튼이 그냥 사라지고 칩만 바뀌면 「누가 눌렀다」는 순간이
+ * 화면 어디에도 없다 — 눌리면 눌린 티가 나고(0.62초), 그다음에 회의가 끝나며 자리를 접는다.
+ *
+ * **끝나도 언마운트하지 않는다.** 지우면 85px짜리 버튼이 한 프레임에 없어진다 — 옆 자리가
+ * 밀리지는 않지만(제목이 `flex-1`이라 그 폭을 먹는다) 팝으로 읽힌다. 폭을 접어서 내보내면
+ * 눌러서 사라진 것으로 읽힌다.
  */
-function EndButton({ compact }: { compact?: boolean }) {
+function EndButton({
+  pressing,
+  gone,
+  compact,
+}: {
+  pressing: boolean;
+  gone: boolean;
+  compact?: boolean;
+}) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--lp-rec)] font-medium text-[var(--lp-rec-ink)] ${
+      aria-hidden={gone || undefined}
+      data-pressing={pressing ? "" : undefined}
+      data-gone={gone ? "" : undefined}
+      className={`lp-end inline-flex shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-lg border border-[var(--lp-rec)] font-medium text-[var(--lp-rec-ink)] ${
         compact ? "h-6 px-1.5 text-[10px]" : "h-8 px-2.5 text-[12px]"
       }`}
     >
@@ -365,7 +384,13 @@ function NotePanels({
       {/* `key`로 다시 마운트시켜 탭마다 새로 들게 한다 — 전이로는 같은 노드가 남아
           안 걸린다. */}
       <div key={tab} data-panel className="h-full">
-        {tab === "정보" ? <DetailsPanel ended={demo.ended} compact={compact} /> : null}
+        {tab === "정보" ? (
+          <DetailsPanel
+            ended={demo.ended}
+            at={demo.live?.line.at ?? demo.lines[demo.lines.length - 1].at}
+            compact={compact}
+          />
+        ) : null}
         {tab === "전사" ? (
           <TranscriptPanel lines={demo.lines} live={demo.live} compact={compact} />
         ) : null}
@@ -377,35 +402,181 @@ function NotePanels({
   );
 }
 
-function DetailsPanel({ ended, compact }: { ended: boolean; compact?: boolean }) {
-  // 누적 기록 시간은 **기록 중에 아예 안 적는다**(`note-details.tsx`) — 도는 동안 적으면
-  // 그 값이 최종인 것처럼 읽힌다.
-  const facts = FACTS.filter((f) => ended || !f.ended);
+/**
+ * 정보 탭. **카드가 없다** — 위는 편집(제목 · 참석자 · 변경 저장), 아래는 읽기(회의 정보
+ * 표)이고 그 구분은 컨트롤 테두리가 한다(`note-details.tsx`).
+ *
+ * 표는 **헤더가 말하지 않은 것만** 담는다. 회의 상태·프로젝트·시작 시각은 바로 위 상단바에
+ * 이미 있어서 여기 다시 안 적는다. 그리고 위 셋(회의의 사실)과 아래 둘(문서의 이력) 사이에
+ * 선이 하나 있다. 줄마다 밑줄을 긋지 않는다 — 앱의 `Fact`는 테두리가 없다.
+ *
+ * 컨트롤은 전부 그림이다. 이 랜딩에서 고칠 제목도 부를 서버도 없다.
+ */
+function DetailsPanel({
+  ended,
+  at,
+  compact,
+}: {
+  ended: boolean;
+  /** 지금까지 기록된 시각. 종료되면 최종값으로 굳는다. */
+  at: string;
+  compact?: boolean;
+}) {
+  const facts: Array<[string, React.ReactNode]> = [
+    [
+      "진행자",
+      <>
+        <Face who="김민서" compact={compact} />
+        <span className="ml-1">
+          김민서
+          <span className="font-normal text-[var(--lp-muted)]">
+            {" · 기록 제어 권한"}
+          </span>
+        </span>
+      </>,
+    ],
+    [
+      "누적 기록 시간",
+      <>
+        <span className="tabular-nums">{ended ? "01:52" : at}</span>
+        <span className="font-normal text-[var(--lp-muted)]">
+          {" · 종료된 구간만 합산"}
+        </span>
+      </>,
+    ],
+    ["공유 범위", "워크스페이스 멤버에게 공개"],
+    ["생성", "2026년 9월 1일 오후 2:00"],
+    ["최종 수정", "2026년 9월 1일 오후 2:02"],
+  ];
+
   return (
-    <div className={compact ? "px-[13px] py-3.5" : "px-5 py-5"}>
-      <p className={`m-0 mb-2.5 font-semibold text-[var(--lp-ink)] ${compact ? "text-[11.5px]" : "text-[13px]"}`}>
-        회의 정보
-      </p>
-      <dl className="m-0 flex flex-col">
-        {facts.map(({ k, v }) => (
-          <div
-            key={k}
-            className={`flex gap-3 border-b border-[var(--lp-rule-soft)] ${compact ? "py-2" : "py-2.5"}`}
+    <div
+      className={`flex flex-col ${compact ? "gap-4 px-[13px] py-3.5" : "gap-5 px-5 py-5"}`}
+    >
+      <div className={`flex flex-col ${compact ? "gap-3" : "gap-3.5"}`}>
+        <Field label="제목" compact={compact}>
+          <span
+            className={`flex items-center rounded-lg border border-[var(--lp-rule-strong)] bg-[var(--lp-card)] text-[var(--lp-ink)] ${
+              compact ? "h-7 px-2 text-[11px]" : "h-8 px-2.5 text-[12px]"
+            }`}
           >
-            <dt
-              className={`shrink-0 text-[var(--lp-body)] ${compact ? "w-[76px] text-[10px]" : "w-[104px] text-[11.5px]"}`}
+            3차 스프린트 킥오프
+          </span>
+        </Field>
+
+        <Field label="참석자" compact={compact}>
+          <div className={`flex flex-wrap items-center ${compact ? "gap-2" : "gap-2.5"}`}>
+            <span className="flex items-center">
+              {["김민서", "박지훈", "이서연", "정우재"].map((who, i) => (
+                <Face
+                  key={who}
+                  who={who}
+                  compact={compact}
+                  className={i === 0 ? "" : "-ml-1.5 ring-2 ring-[var(--lp-card)]"}
+                />
+              ))}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border border-[var(--lp-rule)] font-medium text-[var(--lp-body)] ${
+                compact ? "h-6 px-2 text-[10px]" : "h-7 px-2.5 text-[11px]"
+              }`}
             >
-              {k}
-            </dt>
-            <dd
-              className={`m-0 min-w-0 break-keep text-[var(--lp-ink)] ${compact ? "text-[10.5px]" : "text-[12px]"}`}
-            >
-              {v}
-            </dd>
+              <UserPlus aria-hidden className={compact ? "size-3" : "size-3.5"} />
+              참여자 선택
+            </span>
           </div>
-        ))}
-      </dl>
+        </Field>
+
+        <span
+          className={`inline-flex w-fit items-center gap-1.5 rounded-lg bg-[var(--lp-dark)] font-medium text-[var(--lp-on-dark)] ${
+            compact ? "h-6 px-2.5 text-[10px]" : "h-7 px-3 text-[11.5px]"
+          }`}
+        >
+          <Check aria-hidden className={compact ? "size-3" : "size-3.5"} />
+          변경 저장
+        </span>
+      </div>
+
+      <section className="flex flex-col">
+        <p
+          className={`m-0 font-semibold text-[var(--lp-ink)] ${compact ? "mb-2 text-[11px]" : "mb-2.5 text-[12.5px]"}`}
+        >
+          회의 정보
+        </p>
+        <dl className="m-0 flex flex-col">
+          {facts.map(([k, v]) => (
+            <Fragment key={k}>
+              {/* 위는 회의의 사실, 아래는 문서의 이력 — 선 하나로 가른다. */}
+              {k === "생성" ? (
+                <span
+                  aria-hidden
+                  className={`block h-px w-full bg-[var(--lp-rule)] ${compact ? "my-2" : "my-2.5"}`}
+                />
+              ) : null}
+              <div
+                className={`flex items-center ${compact ? "min-h-[24px] gap-2.5" : "min-h-[26px] gap-3"}`}
+              >
+                <dt
+                  className={`shrink-0 text-[var(--lp-body)] ${compact ? "w-[76px] text-[10px]" : "w-[104px] text-[11.5px]"}`}
+                >
+                  {k}
+                </dt>
+                <dd
+                  className={`m-0 flex min-w-0 items-center gap-1.5 break-keep font-medium text-[var(--lp-ink)] ${compact ? "text-[10.5px]" : "text-[12px]"}`}
+                >
+                  {v}
+                </dd>
+              </div>
+            </Fragment>
+          ))}
+        </dl>
+      </section>
     </div>
+  );
+}
+
+/** 라벨 + 컨트롤 한 칸(`note-details.tsx`의 `Field` — 세로 · gap 6 · 라벨 12/600). */
+function Field({
+  label,
+  compact,
+  children,
+}: {
+  label: string;
+  compact?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span
+        className={`font-semibold text-[var(--lp-ink)] ${compact ? "text-[10px]" : "text-[11px]"}`}
+      >
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+/** 참여자 아바타. 전사 줄의 화자 칩과 같은 색을 쓴다. */
+function Face({
+  who,
+  compact,
+  className = "",
+}: {
+  who: string;
+  compact?: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden
+      style={{ background: SPEAKER_TINT[who] }}
+      className={`flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${
+        compact ? "size-[18px] text-[8px]" : "size-[22px] text-[9px]"
+      } ${className}`}
+    >
+      {who.slice(0, 1)}
+    </span>
   );
 }
 

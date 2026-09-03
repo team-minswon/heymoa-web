@@ -348,6 +348,51 @@
   scale: 0.985;
 }
 
+/* 「회의 종료」가 눌리는 순간. 손가락이 닿았다가 떨어지는 결이다 — 짧게 눌러 들어갔다가
+   테두리 색을 머금은 채 제자리로 돌아온다. 그다음 대목에서 회의가 끝난다. */
+.landing-surface .lp-end[data-pressing] {
+  animation: lp-press 0.62s cubic-bezier(0.22, 0.68, 0.32, 1) both;
+}
+
+@keyframes lp-press {
+  0% {
+    scale: 1;
+    background: transparent;
+  }
+  18% {
+    scale: 0.93;
+    background: var(--lp-rec-soft);
+  }
+  55% {
+    scale: 1.01;
+    background: var(--lp-rec-soft);
+  }
+  100% {
+    scale: 1;
+    background: var(--lp-rec-soft);
+  }
+}
+
+/* 회의가 끝나면 앱은 이 버튼을 지운다. **언마운트하지 않고 폭을 접는다** — 한 프레임에
+   없애면 팝으로 읽힌다. 음수 여백이 남는 `gap` 하나를 먹는다. */
+.landing-surface .lp-end {
+  max-inline-size: 12rem;
+  transition:
+    max-inline-size 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    margin 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease-out,
+    opacity 0.22s ease-out;
+}
+
+.landing-surface .lp-end[data-gone] {
+  max-inline-size: 0;
+  padding-inline: 0;
+  margin-inline-start: -0.75rem;
+  border-color: transparent;
+  opacity: 0;
+}
+
 /* 받아 적는 중인 줄은 **말풍선으로 섰다가 확정되면 색만 빠진다**. 안쪽 여백을 음수 여백이
    정확히 상쇄해 두어서, 말풍선이 붙어 있든 없든 글자 자리가 한 픽셀도 안 움직인다. */
 .landing-surface .lp-said {
@@ -430,6 +475,14 @@
   }
 
   .landing-surface .lp-caret {
+    animation: none;
+  }
+
+  .landing-surface .lp-end {
+    transition: none;
+  }
+
+  .landing-surface .lp-end[data-pressing] {
     animation: none;
   }
 }

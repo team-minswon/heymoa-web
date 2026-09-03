@@ -52,20 +52,6 @@ export const TRANSCRIPT: Line[] = [
   { at: "01:48", who: "김민서", text: "네. 승인 화면에서 확인하고 내보내겠습니다. 오늘 남길 건 여기까지입니다." },
 ];
 
-/**
- * 「회의 정보」 표. 라벨은 `note-details.tsx`의 `Fact`가 쓰는 것 그대로다.
- *
- * `ended`가 붙은 줄은 **종료된 뒤에만** 선다 — 누적 기록 시간은 기록 중에 아예 안 적는다
- * (`note-details.tsx`).
- */
-export const FACTS: Array<{ k: string; v: string; ended?: true }> = [
-  { k: "진행자", v: "김민서 · 기록 제어 권한" },
-  { k: "누적 기록 시간", v: "01:52", ended: true },
-  { k: "공유 범위", v: "워크스페이스 멤버에게 공개" },
-  { k: "생성", v: "2026년 9월 1일 오후 2:00" },
-  { k: "최종 수정", v: "2026년 9월 1일 오후 2:02" },
-];
-
 /** 요약 탭. 라벨과 순서는 `lib/notes/analysis-sections.ts`가 정한 것 그대로다. */
 export const SUMMARY: Array<[string, Array<[string, string]>]> = [
   [
@@ -184,6 +170,8 @@ type Beat = { ms?: number; force?: true } & (
   | { t: "rail"; v: RailTab }
   | { t: "note"; v: NoteTab }
   | { t: "ask"; i: number }
+  /** 「회의 종료」가 눌리는 순간. 눌리는 것과 끝나는 것을 다른 대목으로 나눈다. */
+  | { t: "press" }
   | { t: "end" }
   | { t: "summary" }
 );
@@ -202,6 +190,9 @@ const BEATS: Beat[] = [
   { t: "say", i: 7 },
   { t: "rail", v: "내 에이전트" },
   { t: "ask", i: 2 },
+  // **누르는 것과 끝나는 것을 나눈다.** 한 대목으로 두면 버튼이 사라지고 칩이 바뀌는 것만
+  // 남아서, 정작 「누가 눌렀다」는 순간이 화면에 없다.
+  { t: "press" },
   { t: "end" },
   // 종료 직후의 요약 탭은 「회의를 정리하고 있습니다」다. 그 화면이 지나가도록 길게 쉰다.
   // `force` — 회의가 끝나면 앱이 요약 탭으로 넘긴다. 방문자가 고정해 둔 탭도 이건 이긴다.
@@ -221,6 +212,8 @@ const HOLD: Record<Beat["t"], number> = {
   rail: 780,
   note: 780,
   ask: 1500,
+  // 눌린 티가 나고 손을 뗄 만큼. 이보다 짧으면 깜빡임이고 길면 멈춘 것처럼 보인다.
+  press: 620,
   end: 1100,
   summary: 640,
 };
@@ -241,6 +234,8 @@ export type Demo = {
   /** 드러난 요약 절 수. 0이면 아직 정리 중이다. */
   summary: number;
   ended: boolean;
+  /** 「회의 종료」가 지금 눌리는 중인가. */
+  pressing: boolean;
   noteTab: NoteTab;
   railTab: RailTab;
   setNoteTab: (v: NoteTab) => void;
@@ -333,6 +328,7 @@ export function useDemo(seen: boolean): Demo {
       events: BASE_EVENTS + seen.filter((b) => b.t === "event").length,
       summary: seen.filter((b) => b.t === "summary").length,
       ended: seen.some((b) => b.t === "end"),
+      pressing: now?.t === "press",
       noteTab: seen.reduce<NoteTab>((v, b) => (b.t === "note" ? b.v : v), "전사"),
       railTab: seen.reduce<RailTab>(
         (v, b) => (b.t === "rail" ? b.v : v),
@@ -420,6 +416,7 @@ export function useDemo(seen: boolean): Demo {
     events: view.events,
     summary: view.summary,
     ended: view.ended,
+    pressing: view.pressing,
     noteTab: noteOverride ?? view.noteTab,
     railTab: railOverride ?? view.railTab,
     // 고른 탭이 곧 고정이다. **만진 기둥에만 건다** — 노트를 눌렀다고 레일까지 멈추지 않는다.

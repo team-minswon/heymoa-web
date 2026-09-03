@@ -63,6 +63,17 @@ function play(steps = 3000) {
   }
 }
 
+/** 조건이 참이 될 때까지만 당긴다. 참이 됐으면 참, 끝까지 안 되면 거짓. */
+function playUntil(hit: () => boolean, steps = 3000) {
+  for (let i = 0; i < steps; i += 1) {
+    if (hit()) return true;
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+  }
+  return hit();
+}
+
 /**
  * 제품 화면은 **혼자 한 바퀴 돈다** — 말이 전사에 받아 적히고, 사건 흐름에 쌓이고,
  * 에이전트가 답하고, 회의를 끝내면 요약이 나온다.
@@ -181,18 +192,26 @@ describe("ProductShot 대본", () => {
    * 확 넘어가서 「내가 뭘 부순 건가」로 읽혔다. 눌러도 할 일이 없는 것을 버튼으로 두면
    * 탭 순회에 빈 정거장이 늘 뿐이라, 뒤로·전체화면·복사와 같은 `<span>`이다.
    */
-  it("회의 종료는 그림이라 눌리지 않는다", () => {
+  it("회의 종료는 그림이고, 눌리는 순간이 화면에 남는다", () => {
     vi.useFakeTimers();
     try {
       render(<ProductShot />);
 
-      expect(screen.getAllByText("회의 종료").length).toBeGreaterThan(0);
+      const end = () => screen.getAllByText("회의 종료")[0].closest(".lp-end");
+      expect(end()).not.toBeNull();
       expect(screen.queryAllByRole("button", { name: "회의 종료" })).toHaveLength(0);
 
-      // 회의를 끝내는 것은 대본이다.
+      // 끝나기 전에 **눌리는 대목**을 지난다 — 이게 없으면 버튼이 그냥 사라지고 칩만 바뀐다.
+      expect(playUntil(() => end()?.hasAttribute("data-pressing") ?? false)).toBe(
+        true
+      );
+      expect(screen.queryAllByText("종료됨")).toHaveLength(0);
+
       play();
+
       expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
-      expect(screen.queryAllByText("회의 종료")).toHaveLength(0);
+      // 노드는 남고 자리만 접힌다 — 한 프레임에 없애면 팝으로 읽힌다.
+      expect(end()?.hasAttribute("data-gone")).toBe(true);
     } finally {
       vi.useRealTimers();
     }
