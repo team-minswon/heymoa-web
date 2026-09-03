@@ -7,8 +7,8 @@ import { ProductShot } from "@/components/heymoa/landing/product-shot";
  * 랜딩의 제품 화면에서 **실제로 물어볼 수 있다**. 여기서 지키는 것은 셋이다.
  *
  * 1. 준비된 질문을 누르면 그 왕복이 대화에 쌓인다
- * 2. 답이 흐르는 동안에는 근거가 아직 안 붙고 다음 질문도 못 보낸다
- * 3. 모션을 줄인 사람에게는 흘리지 않고 통째로 선다
+ * 2. 답보다 먼저 「생각하는 중」이 서고, 그동안 근거는 안 붙고 다음 질문도 못 보낸다
+ * 3. 모션을 줄인 사람에게는 생각도 흐름도 없이 통째로 선다
  *
  * 2가 이 파일의 요점이다. 흐르는 중에 근거를 그리면 **아직 안 읽은 회의록이 이미 붙은
  * 것처럼** 보이고, 그건 이 랜딩이 하는 「사실 대조판」이라는 약속을 화면이 먼저 어기는 것이다.
@@ -53,7 +53,7 @@ describe("ProductShot 내 에이전트", () => {
     expect(screen.getAllByText(question).length).toBeGreaterThan(1);
   });
 
-  it("답이 흐르는 동안에는 근거가 안 붙고 다음 질문도 못 보낸다", () => {
+  it("먼저 생각하고, 흐르는 동안에는 근거가 안 붙고 다음 질문도 못 보낸다", () => {
     vi.useFakeTimers();
     try {
       render(<ProductShot />);
@@ -68,6 +68,9 @@ describe("ProductShot 내 에이전트", () => {
         fireEvent.click(buttons[2]);
       });
 
+      // 답보다 먼저 「생각하는 중」이 선다 — 질문과 답이 같은 프레임에 서면 이미 적혀
+      // 있던 글로 읽힌다.
+      expect(screen.getAllByText("생각하는 중").length).toBeGreaterThan(0);
       expect(refs()).toBe(before);
       expect(buttons[0]).toBeDisabled();
 
@@ -86,7 +89,7 @@ describe("ProductShot 내 에이전트", () => {
     }
   });
 
-  it("모션을 줄였으면 흘리지 않고 통째로 세운다", () => {
+  it("모션을 줄였으면 생각도 흐름도 없이 통째로 세운다", () => {
     window.matchMedia = matchMedia(true);
     vi.useFakeTimers();
     try {
@@ -100,6 +103,7 @@ describe("ProductShot 내 에이전트", () => {
 
       // 타이머를 한 번도 안 돌렸는데 근거가 이미 서 있다.
       expect(screen.getAllByText("2차 회의").length).toBeGreaterThan(before);
+      expect(screen.queryByText("생각하는 중")).toBeNull();
       expect(buttons[0]).not.toBeDisabled();
     } finally {
       vi.useRealTimers();

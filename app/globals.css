@@ -348,6 +348,25 @@
   scale: 0.985;
 }
 
+/* 제품 샷의 「생각하는 중」. 앱의 `.chat-shimmer`와 같은 결이고 색만 랜딩 토큰이다 —
+   글자 위로 빛이 지나가면 그 문장이 지금 살아 있다는 뜻이 된다. 키프레임은 앱 것을
+   그대로 쓴다(`@keyframes chat-shimmer`). */
+.landing-surface .lp-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--lp-faint) 0%,
+    var(--lp-faint) 35%,
+    var(--lp-ink) 50%,
+    var(--lp-faint) 65%,
+    var(--lp-faint) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: chat-shimmer 2.1s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-surface [data-reveal],
   .landing-surface [data-reveal] [data-stagger],
@@ -367,6 +386,13 @@
   .landing-surface a:active,
   .landing-surface button:active {
     scale: none;
+  }
+
+  /* 빛은 끄되 글자는 남긴다 — `color: transparent` 인 채로 멈추면 문장이 사라진다. */
+  .landing-surface .lp-shimmer {
+    background: none;
+    color: var(--lp-faint);
+    animation: none;
   }
 }
 

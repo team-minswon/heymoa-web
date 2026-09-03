@@ -153,6 +153,12 @@ const SEED: Ask = {
   refs: ["2차 회의", "이번 회의"],
 };
 
+/** 「생각하는 중」을 뜻하는 진행값. 0 이상은 드러난 글자 수라 음수 하나를 따로 쓴다. */
+const THINKING = -1;
+
+/** 답이 흐르기 전에 머무는 시간. 앱에서 첫 델타가 오기까지와 비슷한 길이다. */
+const THINK_MS = 620;
+
 const ASKS: Ask[] = [
   {
     q: "정해진 할 일은 뭔가요?",
@@ -182,7 +188,10 @@ export function ProductShot() {
   /** 접힌 묶음. 기본은 다 펼침이라 **닫힌 것만** 담는다. */
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
   const [turns, setTurns] = useState<Ask[]>(() => [SEED]);
-  /** 마지막 답에서 드러난 글자 수. `null`이면 흐르는 것이 없다. */
+  /**
+   * 마지막 답의 진행. `null`이면 끝났거나 시작 전, `-1`이면 생각하는 중, 0 이상이면
+   * 그만큼 글자가 드러났다.
+   */
   const [typing, setTyping] = useState<number | null>(null);
   const uid = useId();
 
@@ -194,11 +203,13 @@ export function ProductShot() {
     });
 
   /**
-   * 답을 통째로 붙이지 않고 흘린다 — 앱은 SSE로 델타를 이어 붙인다
-   * (`lib/chat/stream-protocol.ts`). 한 번에 나타나면 「이미 적혀 있던 글」로 보인다.
+   * 답을 통째로 붙이지 않는다. **먼저 생각하고**(`THINK_MS`) 그다음 글자가 흐른다 —
+   * 앱은 스트림이 열릴 때까지 「생각하는 중」을 세우고(`chat-thread.tsx`의 `ThinkingLine`),
+   * 본문은 SSE 델타로 이어 붙인다(`lib/chat/stream-protocol.ts`). 질문과 답이 같은
+   * 프레임에 서면 「이미 적혀 있던 글」로 읽힌다.
    *
    * **앞 턴이 흐르는 동안은 못 보낸다.** 앱 컴포저도 전송만 막는다(`chat-composer.tsx`).
-   * 모션을 줄인 사람에게는 흘리지 않고 바로 세운다.
+   * 모션을 줄인 사람에게는 생각도 흐름도 없이 바로 세운다.
    */
   const ask = (item: Ask) => {
     if (typing !== null) return;
@@ -207,11 +218,15 @@ export function ProductShot() {
     const reduced =
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setTyping(reduced ? null : 0);
+    setTyping(reduced ? null : THINKING);
   };
 
   useEffect(() => {
     if (typing === null) return;
+    if (typing === THINKING) {
+      const id = window.setTimeout(() => setTyping(0), THINK_MS);
+      return () => window.clearTimeout(id);
+    }
     const full = turns[turns.length - 1].a;
     // 끝을 타이머 안에서 판정한다 — 효과 본문에서 바로 `setTyping(null)`을 부르면
     // 렌더가 한 번 더 도는 것을 eslint가 잡는다(`react-hooks/set-state-in-effect`).
@@ -831,7 +846,8 @@ function AgentPanel({
         className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${compact ? "gap-2.5 pt-1" : "gap-3 pt-2"}`}
       >
         {turns.map((turn, i) => {
-          const streaming = i === last && typing !== null;
+          const running = i === last && typing !== null;
+          const thinking = running && typing === THINKING;
           return (
             <div
               key={`${i}-${turn.q}`}
@@ -856,15 +872,26 @@ function AgentPanel({
                     HeyMoa
                   </span>
                 </div>
-                <p
-                  aria-hidden={streaming || undefined}
-                  className={`m-0 break-keep leading-[1.65] text-[var(--lp-body)] ${compact ? "text-[10.5px]" : "text-[11.5px]"}`}
-                >
-                  {streaming ? turn.a.slice(0, typing ?? 0) : turn.a}
-                </p>
+                {/* 아직 아무것도 안 내놓은 구간. **스피너를 안 쓴다** — 도는 원은 어디서나
+                    도는 원이지만, 빛이 문장 위를 지나가면 그 문장이 지금 살아 있다는
+                    뜻이 된다(앱의 `ThinkingLine`이 같은 결이다). */}
+                {thinking ? (
+                  <p
+                    className={`lp-shimmer m-0 ${compact ? "text-[10.5px]" : "text-[11.5px]"}`}
+                  >
+                    생각하는 중
+                  </p>
+                ) : (
+                  <p
+                    aria-hidden={running || undefined}
+                    className={`m-0 break-keep leading-[1.65] text-[var(--lp-body)] ${compact ? "text-[10.5px]" : "text-[11.5px]"}`}
+                  >
+                    {running ? turn.a.slice(0, typing ?? 0) : turn.a}
+                  </p>
+                )}
                 {/* 근거는 **답이 끝난 뒤에** 선다. 흐르는 중에 그리면 아직 안 읽은 회의록이
                     이미 붙은 것처럼 보인다(`chat-thread.tsx`가 같은 자리를 그렇게 가른다). */}
-                {streaming ? null : (
+                {running ? null : (
                   <div className="flex flex-wrap items-center gap-[5px]">
                     {turn.refs.map((chip) => (
                       <span
