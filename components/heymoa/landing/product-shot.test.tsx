@@ -35,6 +35,138 @@ function openAgent() {
   return { asks, buttons: within(asks).getAllByRole("button") };
 }
 
+/**
+ * `IntersectionObserver`를 곧바로 「보인다」로 대답하는 대역. jsdom에는 이게 없어서
+ * 그냥 두면 대본이 아예 안 돈다.
+ */
+function seeImmediately() {
+  class Immediate {
+    constructor(private cb: IntersectionObserverCallback) {}
+    observe() {
+      this.cb(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        this as unknown as IntersectionObserver
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal("IntersectionObserver", Immediate);
+}
+
+/** 대본이 멈출 때까지 타이머를 조금씩 당긴다. 한 번에 당기면 효과가 안 따라온다. */
+function play(steps = 3000) {
+  for (let i = 0; i < steps; i += 1) {
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+  }
+}
+
+/**
+ * 제품 화면은 **혼자 한 바퀴 돈다** — 말이 전사에 받아 적히고, 사건 흐름에 쌓이고,
+ * 에이전트가 답하고, 회의를 끝내면 요약이 나온다.
+ *
+ * 여기서 지키는 것은 대본의 **끝**과 **놓는 법** 둘이다. 중간 프레임을 하나하나 재면
+ * 시간 상수를 만질 때마다 깨지고, 정작 깨지면 안 되는 것은 「끝까지 간다」와 「손대면
+ * 멈춘다」다.
+ */
+describe("ProductShot 대본", () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  beforeEach(() => {
+    window.matchMedia = matchMedia(false);
+    seeImmediately();
+  });
+
+  it("전사 · 사건 흐름 · 에이전트를 지나 종료와 요약까지 간다", () => {
+    vi.useFakeTimers();
+    try {
+      render(<ProductShot />);
+
+      expect(screen.getAllByText("기록 중").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("지금까지 3건").length).toBeGreaterThan(0);
+      // 종료 전 요약 탭의 문구는 앱 것 그대로다.
+      expect(screen.queryAllByText("개요")).toHaveLength(0);
+
+      play();
+
+      // 대본은 요약 탭과 에이전트 레일에서 끝난다.
+      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/결정 둘입니다/).length).toBeGreaterThan(0);
+      for (const label of ["개요", "액션 아이템", "결정"]) {
+        expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+      }
+
+      // 전사로 돌아가면 마지막 발화까지 받아 적혀 있다.
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "전사" })[0]);
+      });
+      expect(
+        screen.getAllByText(/오늘 남길 건 여기까지입니다/).length
+      ).toBeGreaterThan(0);
+
+      // 사건 흐름으로 돌아가면 둘이 더 올라와 있다.
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "실시간 정리" })[0]);
+      });
+      expect(screen.getAllByText("지금까지 5건").length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText("카드 결제 실패 재시도 정책 정하기").length
+      ).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("손대면 대본을 놓고, 보고 있던 탭에 머문다", () => {
+    vi.useFakeTimers();
+    try {
+      render(<ProductShot />);
+
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "정보" })[0]);
+      });
+
+      // 대본은 끝까지 감겼다 — 회의는 종료됐고 사건도 다 올라왔다.
+      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("지금까지 5건").length).toBeGreaterThan(0);
+
+      play(200);
+
+      // 그래도 화면은 방금 고른 탭이다. 대본의 마지막 탭(요약)으로 끌려가지 않는다.
+      expect(screen.getAllByRole("tab", { name: "정보" })[0]).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
+      expect(screen.getAllByText("회의 정보").length).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("회의 종료를 누르면 종료와 요약이 한 번에 선다", () => {
+    render(<ProductShot />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "회의 종료" })[0]);
+
+    expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole("button", { name: "회의 종료" })).toHaveLength(0);
+  });
+
+  it("모션을 줄였으면 대본을 안 돌리고 끝 상태로 둔다", () => {
+    window.matchMedia = matchMedia(true);
+    render(<ProductShot />);
+
+    // 타이머를 한 번도 안 돌렸는데 이미 끝나 있다.
+    expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("개요").length).toBeGreaterThan(0);
+  });
+});
+
 describe("ProductShot 내 에이전트", () => {
   afterEach(cleanup);
 

@@ -6,28 +6,50 @@ import {
   Bot,
   ChevronDown,
   ChevronLeft,
-  CircleCheck,
-  CircleQuestionMark,
+  CircleStop,
   Copy,
+  Loader2,
   Minimize2,
   MoreHorizontal,
   Sparkles,
-  SquareCheck,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 import { CONTAINER, SECTION_X, SPEAKER_TINT } from "@/components/heymoa/landing/shell";
+import {
+  ASKS,
+  BASE_EVENTS,
+  BASE_LINES,
+  CONTEXT,
+  CONTEXT_ICON,
+  CONTEXT_KINDS,
+  FACTS,
+  NOTE_TABS,
+  OUTCOMES,
+  RAIL_TABS,
+  SUMMARY,
+  THINKING,
+  useDemo,
+  useInView,
+  type Demo,
+  type Line,
+  type NoteTab,
+  type RailTab,
+  type Scope,
+} from "@/components/heymoa/landing/use-demo";
 
 /**
- * 히어로 아래 제품 화면. **실제로 눌린다** — 정보·전사·요약과 실시간 정리·내 에이전트가
- * 진짜 탭이고, 사건 범위 칩과 묶음 접기도 동작한다. 그림만 보여 주는 것보다 앱이 어떤지가
- * 훨씬 빨리 전해진다.
+ * 히어로 아래 제품 화면. **혼자 한 바퀴 돈다** — 말이 전사로 받아 적히고, 사건 흐름에
+ * 쌓이고, 에이전트가 답하고, 회의를 끝내면 요약이 나온다. 대본과 시간은
+ * `use-demo.ts`에 있고 여기는 그 상태를 그리기만 한다.
+ *
+ * **그리고 실제로 눌린다.** 정보·전사·요약과 실시간 정리·내 에이전트가 진짜 탭이고, 사건
+ * 범위 칩과 묶음 접기, 예시 질문, 회의 종료가 다 동작한다. 무엇이든 누르면 대본은 끝까지
+ * 감기고 손을 뗀다 — 눌러 보라고 해 놓고 화면이 딴 데로 가면 안 된다.
  *
  * **눌리는 것을 그리는 순간 진짜 탭이어야 한다.** `role="tablist"`와 방향키 이동
- * (roving tabIndex)까지 앱과 같게 둔다 — 버튼처럼 생겼는데 키보드로 못 쓰면 눌러 보라고
- * 해 놓고 못 누르게 막는 셈이다. 반대로 앱 화면을 **흉내만 내는** 것들(뒤로·전체화면·
- * 노트 메뉴·복사)은 여전히 `<span>`이다. 눌러도 할 일이 없는 것을 버튼으로 두면 탭 순회에
- * 빈 정거장이 늘 뿐이다.
+ * (roving tabIndex)까지 앱과 같게 둔다. 반대로 앱 화면을 **흉내만 내는** 것들(뒤로·
+ * 전체화면·노트 메뉴·복사)은 여전히 `<span>`이다 — 눌러도 할 일이 없는 것을 버튼으로 두면
+ * 탭 순회에 빈 정거장이 늘 뿐이다.
  *
  * **좁은 화면과 넓은 화면이 다른 그림이다.** 아트보드 1440은 크림 매트 위에 창 하나를 얹고
  * 그 안을 전사와 레일로 나누지만, 390은 매트 안에 카드 **둘**을 세로로 쌓는다 — 390px에서
@@ -38,225 +60,65 @@ import { CONTAINER, SECTION_X, SPEAKER_TINT } from "@/components/heymoa/landing/
  * 밴드가 통째로 올라온다. 앱도 고정 높이 뷰포트 안에서 스크롤하므로 이쪽이 실제에 가깝다.
  *
  * **구조는 시안이 아니라 실제 앱을 따른다**(`note-panel.tsx` · `context-rail.tsx` ·
- * `note-archive.tsx` · `note-details.tsx` · `note-summary.tsx`). 이 랜딩의 전제가
- * 「사실 대조판」이라, 목업이 앱과 어긋나면 목업이 틀린 것이다.
+ * `note-archive.tsx` · `note-details.tsx` · `note-summary.tsx` · `meeting-controls.tsx`).
+ * 이 랜딩의 전제가 「사실 대조판」이라, 목업이 앱과 어긋나면 목업이 틀린 것이다.
  *
  * **이 안의 글자는 삽화다.** 시각 `#b5a698`이나 9~11px 라벨은 페이지가 하는 말이 아니라
  * 앱 화면을 그린 그림이라 실제 앱의 크기와 색을 따른다. 페이지가 직접 하는 말(`--lp-body`
  * 이상)과 섞어 쓰지 않는다 — 대비 기준이 다르다.
  */
 
-type Line = { at: string; who: string; text: string };
-
-const TRANSCRIPT: Line[] = [
-  { at: "00:00", who: "김민서", text: "이번 스프린트는 온보딩 이탈부터 봅니다. 지난주에 남긴 가설 두 개를 먼저 정리하죠." },
-  { at: "00:14", who: "박지훈", text: "지난 회의에서 결제 화면 개편은 다음으로 미뤘습니다. 그 결정 그대로 갑니다." },
-  { at: "00:31", who: "이서연", text: "저는 이번에 합류해서 그 맥락을 모릅니다. 왜 미뤘는지 다시 볼 수 있을까요?" },
-  { at: "00:44", who: "김민서", text: "에이전트가 근거를 붙여 뒀어요. 오른쪽 정리에서 결정 항목을 펼치면 됩니다." },
-  { at: "01:02", who: "정우재", text: "그럼 온보딩 이탈 로그 수집은 제가 맡겠습니다. 이번 주 목요일까지 초안 올릴게요." },
-  { at: "01:19", who: "박지훈", text: "좋습니다. 그 작업은 Linear 이슈로 바로 내보내는 게 좋겠어요." },
-  { at: "01:33", who: "이서연", text: "그 이슈에 이 회의 결정을 근거로 같이 붙여 주세요. 다음에 들어올 사람도 볼 수 있게요." },
-  { at: "01:48", who: "김민서", text: "네. 승인 화면에서 확인하고 내보내겠습니다. 오늘 남길 건 여기까지입니다." },
-];
-
-/** 「회의 정보」 표. 라벨은 `note-details.tsx`의 `Fact`가 쓰는 것 그대로다. */
-const FACTS: Array<[string, string]> = [
-  ["진행자", "김민서 · 기록 제어 권한"],
-  ["누적 기록 시간", "01:52"],
-  ["공유 범위", "워크스페이스 멤버에게 공개"],
-  ["생성", "2026년 9월 1일 오후 2:00"],
-  ["최종 수정", "2026년 9월 1일 오후 2:02"],
-];
-
-/** 요약 탭. 라벨과 순서는 `lib/notes/analysis-sections.ts`가 정한 것 그대로다. */
-const SUMMARY: Array<[string, Array<[string, string]>]> = [
-  [
-    "개요",
-    [["온보딩 이탈을 이번 스프린트의 첫 기준선으로 잡고, 결제 화면 개편은 뒤로 미뤘습니다.", "00:00"]],
-  ],
-  [
-    "액션 아이템",
-    [
-      ["온보딩 이탈 로그 수집 초안을 목요일까지 올립니다.", "01:02"],
-      ["정리된 업무를 Linear 이슈로 내보냅니다.", "01:19"],
-    ],
-  ],
-  ["결정", [["결제 화면 개편은 다음 스프린트로 미룹니다.", "00:14"]]],
-];
-
-/**
- * 레일 항목의 메타. **실제 컴포넌트가 붙이는 말만 쓴다** — 유형, 동작(새로 포착 · 내용 보강 ·
- * 내용 정정 · 철회 · 질문 해결), 상태(철회됨 · 답변됨 · 답 대기), 그리고 「수정 N」.
- * 「근거 3」이나 「승인 전」 같은 말은 코드에 없다.
- *
- * `outcome`은 범위 칩이 거르는 값이고, `metaSm`은 좁은 카드용이라 유형을 뺀다.
- */
-type Outcome = "결론" | "논의 중" | "참고";
-type Item = { title: string; at: string; more: number; meta: string; metaSm: string; outcome: Outcome };
-
-/**
- * 아이콘은 `lib/notes/context-candidates/presentation.ts`의 `CONTEXT_KIND_ICON` 그대로다 —
- * 결정 `CircleCheck` · 할 일 `SquareCheck` · 질문 `CircleQuestionMark`. 묶음 머리와 카드가
- * **같은 아이콘**을 쓴다(앱이 그렇다).
- */
-type Group = { kind: string; icon: LucideIcon; items: Item[] };
-
-const GROUPS: Group[] = [
-  {
-    kind: "결정",
-    icon: CircleCheck,
-    items: [
-      { title: "결제 화면 개편은 다음 스프린트로 미룬다", at: "00:14", more: 3, meta: "결정 · 내용 보강", metaSm: "내용 보강", outcome: "결론" },
-      { title: "온보딩 이탈 지표를 이번 주 기준선으로 삼는다", at: "00:52", more: 2, meta: "결정 · 수정 1", metaSm: "수정 1", outcome: "결론" },
-    ],
-  },
-  {
-    kind: "할 일",
-    icon: SquareCheck,
-    items: [
-      { title: "온보딩 이탈 로그 수집 초안 · 목요일", at: "01:02", more: 2, meta: "할 일", metaSm: "", outcome: "논의 중" },
-      { title: "카드 결제 실패 재시도 정책 정하기", at: "01:19", more: 1, meta: "할 일 · 수정 1", metaSm: "수정 1", outcome: "논의 중" },
-    ],
-  },
-  {
-    kind: "질문",
-    icon: CircleQuestionMark,
-    items: [
-      { title: "결제 화면 개편을 미룬 이유는 무엇인가", at: "00:31", more: 2, meta: "질문 · 답변됨 · 수정 1", metaSm: "답변됨 · 수정 1", outcome: "참고" },
-    ],
-  },
-];
-
-const OUTCOMES = ["전체", "결론", "논의 중", "참고"] as const;
-type Scope = (typeof OUTCOMES)[number];
-
-const NOTE_TABS = ["정보", "전사", "요약"] as const;
-type NoteTab = (typeof NOTE_TABS)[number];
-
-const RAIL_TABS = ["실시간 정리", "내 에이전트"] as const;
-type RailTab = (typeof RAIL_TABS)[number];
-
-/**
- * 「내 에이전트」에서 눌러 볼 수 있는 왕복.
- *
- * **답은 이 회의에 실제로 있는 말만 쓴다** — 위의 `TRANSCRIPT` · `GROUPS` · `SUMMARY`에서
- * 짚을 수 있는 것뿐이다. 화면 어디에도 없는 사실을 답하면, 「사실 대조판」이라고 말하는
- * 페이지가 제 말을 먼저 어긴다.
- *
- * `SEED`는 처음부터 떠 있는 왕복이라 탭을 열자마자 빈 화면이 아니다.
- */
-type Ask = { q: string; a: string; refs: string[] };
-
-const SEED: Ask = {
-  q: "결제 화면 개편은 왜 미뤘나요?",
-  a: "온보딩 이탈 지표를 먼저 보기로 해서 다음 스프린트로 미뤘습니다. 2차 회의에서 정해진 결정입니다.",
-  refs: ["2차 회의", "이번 회의"],
-};
-
-/** 「생각하는 중」을 뜻하는 진행값. 0 이상은 드러난 글자 수라 음수 하나를 따로 쓴다. */
-const THINKING = -1;
-
-/** 답이 흐르기 전에 머무는 시간. 앱에서 첫 델타가 오기까지와 비슷한 길이다. */
-const THINK_MS = 620;
-
-const ASKS: Ask[] = [
-  {
-    q: "정해진 할 일은 뭔가요?",
-    a: "둘입니다. 온보딩 이탈 로그 수집 초안을 목요일까지 올리기로 했고, 카드 결제 실패 재시도 정책을 정하기로 했습니다. 둘 다 아직 논의 중으로 남아 있습니다.",
-    refs: ["이번 회의"],
-  },
-  {
-    q: "온보딩 이탈을 왜 먼저 보나요?",
-    a: "온보딩 이탈 지표를 이번 주 기준선으로 삼기로 해서입니다. 지난주에 남긴 가설 두 개를 먼저 정리하기로 했습니다.",
-    refs: ["이번 회의"],
-  },
-  {
-    q: "제가 없던 사이에 뭐가 정해졌나요?",
-    a: "결정 둘입니다. 결제 화면 개편은 다음 스프린트로 미루고, 온보딩 이탈 지표를 이번 주 기준선으로 삼기로 했습니다. 미룬 이유는 2차 회의에 남아 있습니다.",
-    refs: ["2차 회의", "이번 회의"],
-  },
-];
-
 export function ProductShot() {
   /**
    * 창 하나가 상태를 다 갖는다. 좁은 화면의 카드 둘은 같은 상태를 나눠 쓰므로, 폭이
    * 바뀌어도 보던 탭이 그대로 남는다.
    */
-  const [noteTab, setNoteTab] = useState<NoteTab>("전사");
-  const [railTab, setRailTab] = useState<RailTab>("실시간 정리");
-  const [scope, setScope] = useState<Scope>("전체");
+  const [seen, watch] = useInView();
+  const demo = useDemo(seen);
+  const [scope, setRawScope] = useState<Scope>("전체");
   /** 접힌 묶음. 기본은 다 펼침이라 **닫힌 것만** 담는다. */
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
-  const [turns, setTurns] = useState<Ask[]>(() => [SEED]);
-  /**
-   * 마지막 답의 진행. `null`이면 끝났거나 시작 전, `-1`이면 생각하는 중, 0 이상이면
-   * 그만큼 글자가 드러났다.
-   */
-  const [typing, setTyping] = useState<number | null>(null);
   const uid = useId();
 
-  const toggleGroup = (kind: string) =>
+  // 범위 칩과 묶음 접기도 「손댔다」에 든다 — 대본이 계속 돌면 방금 좁힌 목록에 새 카드가
+  // 끼어들어 읽던 자리가 밀린다.
+  const setScope = (s: Scope) => {
+    demo.takeOver();
+    setRawScope(s);
+  };
+  const toggleGroup = (kind: string) => {
+    demo.takeOver();
     setClosed((current) => {
       const next = new Set(current);
       if (!next.delete(kind)) next.add(kind);
       return next;
     });
-
-  /**
-   * 답을 통째로 붙이지 않는다. **먼저 생각하고**(`THINK_MS`) 그다음 글자가 흐른다 —
-   * 앱은 스트림이 열릴 때까지 「생각하는 중」을 세우고(`chat-thread.tsx`의 `ThinkingLine`),
-   * 본문은 SSE 델타로 이어 붙인다(`lib/chat/stream-protocol.ts`). 질문과 답이 같은
-   * 프레임에 서면 「이미 적혀 있던 글」로 읽힌다.
-   *
-   * **앞 턴이 흐르는 동안은 못 보낸다.** 앱 컴포저도 전송만 막는다(`chat-composer.tsx`).
-   * 모션을 줄인 사람에게는 생각도 흐름도 없이 바로 세운다.
-   */
-  const ask = (item: Ask) => {
-    if (typing !== null) return;
-    setTurns((list) => [...list, item]);
-    // `transcript-view.tsx`와 같은 가드다 — jsdom에는 `matchMedia`가 없을 수 있다.
-    const reduced =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setTyping(reduced ? null : THINKING);
   };
 
-  useEffect(() => {
-    if (typing === null) return;
-    if (typing === THINKING) {
-      const id = window.setTimeout(() => setTyping(0), THINK_MS);
-      return () => window.clearTimeout(id);
-    }
-    const full = turns[turns.length - 1].a;
-    // 끝을 타이머 안에서 판정한다 — 효과 본문에서 바로 `setTyping(null)`을 부르면
-    // 렌더가 한 번 더 도는 것을 eslint가 잡는다(`react-hooks/set-state-in-effect`).
-    const id = window.setTimeout(
-      () => setTyping((n) => (n === null || n + 2 >= full.length ? null : n + 2)),
-      16
-    );
-    return () => window.clearTimeout(id);
-  }, [turns, typing]);
-
-  const shared = { scope, setScope, closed, toggleGroup, uid, turns, typing, ask };
+  const shared = { scope, setScope, closed, toggleGroup, uid, demo };
 
   return (
-    <section className={`${SECTION_X} flex flex-col items-center pt-9 pb-16 lg:pt-14 lg:pb-25`}>
+    <section
+      ref={watch}
+      className={`${SECTION_X} flex flex-col items-center pt-9 pb-16 lg:pt-14 lg:pb-25`}
+    >
       {/* 좁은 매트 — 카드 둘 */}
       <div className="box-border flex w-full flex-col gap-2.5 rounded-[20px] bg-[var(--lp-cream)] p-3 lg:hidden">
         <div className={`${CARD} overflow-hidden`}>
           <div className="flex items-center gap-2 border-b border-[var(--lp-rule-soft)] px-[13px] py-[11px]">
-            <StatusChip compact />
+            <StatusChip ended={demo.ended} compact />
             <span className="min-w-0 flex-1 truncate break-keep text-[14px] font-bold text-[var(--lp-ink)]">
               3차 스프린트 킥오프
             </span>
+            {demo.ended ? null : <EndButton onEnd={demo.takeOver} compact />}
           </div>
-          <NoteTabList value={noteTab} onChange={setNoteTab} uid={uid} compact />
-          <NotePanels tab={noteTab} uid={uid} compact />
+          <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} compact />
+          <NotePanels demo={demo} uid={uid} compact />
         </div>
 
         <div className={CARD}>
-          <RailTabList value={railTab} onChange={setRailTab} uid={uid} compact />
-          <RailPanels tab={railTab} compact {...shared} />
+          <RailTabList value={demo.railTab} onChange={demo.setRailTab} uid={uid} compact />
+          <RailPanels compact {...shared} />
         </div>
       </div>
 
@@ -276,23 +138,24 @@ export function ProductShot() {
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <ChevronLeft aria-hidden className="size-[17px] shrink-0 text-[var(--lp-body)]" />
                   <Minimize2 aria-hidden className="size-[15px] shrink-0 text-[var(--lp-faint)]" />
-                  <StatusChip />
+                  <StatusChip ended={demo.ended} />
                   <span className="truncate break-keep text-[14px] font-semibold text-[var(--lp-ink)]">
                     3차 스프린트 킥오프
                   </span>
                 </div>
-                <NoteTabList value={noteTab} onChange={setNoteTab} uid={uid} />
+                {demo.ended ? null : <EndButton onEnd={demo.takeOver} />}
+                <NoteTabList value={demo.noteTab} onChange={demo.setNoteTab} uid={uid} />
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--lp-rule)]">
                   <MoreHorizontal aria-hidden className="size-4 text-[#8a7a6d]" />
                 </span>
               </div>
-              <NotePanels tab={noteTab} uid={uid} />
+              <NotePanels demo={demo} uid={uid} />
             </div>
 
             <div className="box-border flex w-[360px] shrink-0 flex-col border-l border-[var(--lp-rule-soft)] bg-[var(--lp-canvas)]">
               {/* 레일 헤더도 h-14 — 상단바와 바닥선이 맞아야 두 기둥이 한 창으로 읽힌다. */}
-              <RailTabList value={railTab} onChange={setRailTab} uid={uid} />
-              <RailPanels tab={railTab} {...shared} />
+              <RailTabList value={demo.railTab} onChange={demo.setRailTab} uid={uid} />
+              <RailPanels {...shared} />
             </div>
           </div>
         </div>
@@ -304,19 +167,49 @@ export function ProductShot() {
 const CARD =
   "box-border rounded-[14px] border border-[var(--lp-rule)] bg-[var(--lp-card)] shadow-[0_2px_8px_#33231a12]";
 
-function StatusChip({ compact }: { compact?: boolean }) {
+/**
+ * 회의 상태 칩. **기록 중만 붉다** — 종료는 사건이 아니라 상태다
+ * (`meeting-controls.tsx`의 `MeetingStatusChip`). 라벨도 앱의 `MEETING_STATUS_LABEL`
+ * 그대로다.
+ */
+function StatusChip({ ended, compact }: { ended: boolean; compact?: boolean }) {
   return (
     <span
       className={`flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--lp-rule-soft)] ${compact ? "px-2 py-[3px]" : "px-[9px] py-1"}`}
     >
       <span
         aria-hidden
-        className={`block shrink-0 rounded-full bg-[#8a7a6d] ${compact ? "size-[5px]" : "size-1.5"}`}
+        className={`block shrink-0 rounded-full ${ended ? "bg-[#8a7a6d]" : "bg-[var(--lp-rec)]"} ${compact ? "size-[5px]" : "size-1.5"}`}
       />
-      <span className={`font-semibold text-[var(--lp-body)] ${compact ? "text-[9.5px]" : "text-[11px]"}`}>
-        종료됨
+      <span
+        className={`font-semibold ${ended ? "text-[var(--lp-body)]" : "text-[var(--lp-rec-ink)]"} ${compact ? "text-[9.5px]" : "text-[11px]"}`}
+      >
+        {ended ? "종료됨" : "기록 중"}
       </span>
     </span>
+  );
+}
+
+/**
+ * 회의 종료. 앱의 Meeting Bar는 **이 버튼 하나뿐이다**(`meeting-controls.tsx` —
+ * h32 · r8 · destructive 테두리와 글자 · 12px).
+ *
+ * 진짜로 눌린다 — 누르면 대본을 끝까지 감아 종료와 요약까지 한 번에 보여 준다. 앱은 여기서
+ * 확인 다이얼로그를 한 번 더 띄우지만(`meeting-end-dialog.tsx`) 그건 되돌릴 수 없는 일을
+ * 막는 장치라, 아무것도 안 지우는 이 그림에는 두지 않는다.
+ */
+function EndButton({ onEnd, compact }: { onEnd: () => void; compact?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onEnd}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--lp-rec)] font-medium text-[var(--lp-rec-ink)] transition-colors hover:bg-[var(--lp-rec-soft)] ${
+        compact ? "h-6 px-1.5 text-[10px]" : "h-8 px-2.5 text-[12px]"
+      }`}
+    >
+      <CircleStop aria-hidden className={compact ? "size-3" : "size-4"} />
+      회의 종료
+    </button>
   );
 }
 
@@ -450,7 +343,16 @@ function RailTabList({
  * 높이를 고정한다 — 탭마다 길이가 달라서 그대로 두면 정보 탭을 누를 때 아래 밴드가
  * 통째로 올라온다. 앱도 고정 높이 뷰포트 안에서 스크롤한다.
  */
-function NotePanels({ tab, uid, compact }: { tab: NoteTab; uid: string; compact?: boolean }) {
+function NotePanels({
+  demo,
+  uid,
+  compact,
+}: {
+  demo: Demo;
+  uid: string;
+  compact?: boolean;
+}) {
+  const tab = demo.noteTab;
   return (
     <div
       role="tabpanel"
@@ -462,23 +364,30 @@ function NotePanels({ tab, uid, compact }: { tab: NoteTab; uid: string; compact?
     >
       {/* `key`로 다시 마운트시켜 탭마다 새로 들게 한다 — 전이로는 같은 노드가 남아
           안 걸린다. */}
-      <div key={tab} data-panel>
-        {tab === "정보" ? <DetailsPanel compact={compact} /> : null}
-        {tab === "전사" ? <TranscriptPanel compact={compact} /> : null}
-        {tab === "요약" ? <SummaryPanel compact={compact} /> : null}
+      <div key={tab} data-panel className="h-full">
+        {tab === "정보" ? <DetailsPanel ended={demo.ended} compact={compact} /> : null}
+        {tab === "전사" ? (
+          <TranscriptPanel lines={demo.lines} live={demo.live} compact={compact} />
+        ) : null}
+        {tab === "요약" ? (
+          <SummaryPanel ended={demo.ended} shown={demo.summary} compact={compact} />
+        ) : null}
       </div>
     </div>
   );
 }
 
-function DetailsPanel({ compact }: { compact?: boolean }) {
+function DetailsPanel({ ended, compact }: { ended: boolean; compact?: boolean }) {
+  // 누적 기록 시간은 **기록 중에 아예 안 적는다**(`note-details.tsx`) — 도는 동안 적으면
+  // 그 값이 최종인 것처럼 읽힌다.
+  const facts = FACTS.filter((f) => ended || !f.ended);
   return (
     <div className={compact ? "px-[13px] py-3.5" : "px-5 py-5"}>
       <p className={`m-0 mb-2.5 font-semibold text-[var(--lp-ink)] ${compact ? "text-[11.5px]" : "text-[13px]"}`}>
         회의 정보
       </p>
       <dl className="m-0 flex flex-col">
-        {FACTS.map(([k, v]) => (
+        {facts.map(({ k, v }) => (
           <div
             key={k}
             className={`flex gap-3 border-b border-[var(--lp-rule-soft)] ${compact ? "py-2" : "py-2.5"}`}
@@ -505,11 +414,41 @@ function DetailsPanel({ compact }: { compact?: boolean }) {
  * (`note-archive.tsx`의 `grid-cols-[66px_1fr]`). 화자 이름을 본문 옆에 세우지 않는다.
  *
  * 크기는 앱의 0.85배다. 실제 값(본문 15/28)을 그대로 쓰면 여덟 줄이 창 높이를 넘는다.
+ *
+ * **받아 적는 중인 줄은 말풍선으로 선다.** 자리와 여백은 확정된 줄과 **똑같고** 배경과
+ * 모서리만 다르다 — 확정되는 순간 색만 빠지므로 글자가 한 픽셀도 안 움직인다. 앱에는 이
+ * 중간 상태가 없다(전사는 확정된 것만 온다). 랜딩이 「말이 이렇게 들어옵니다」를 보이려고
+ * 두는 장면이라, 0.4초 뒤에 사라진다.
  */
-function TranscriptPanel({ compact }: { compact?: boolean }) {
-  const lines = compact ? TRANSCRIPT.slice(0, 4) : TRANSCRIPT;
+function TranscriptPanel({
+  lines,
+  live,
+  compact,
+}: {
+  lines: Line[];
+  live: { line: Line; text: string } | null;
+  compact?: boolean;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rows: Array<{ line: Line; typed?: string }> = [
+    ...lines.map((line) => ({ line })),
+    ...(live ? [{ line: live.line, typed: live.text }] : []),
+  ];
+  // 새 줄이 들어오는 동안만 바닥에 붙인다. 처음부터 붙이면 좁은 화면이 첫 줄을 지나친
+  // 채로 뜬다. `scrollIntoView`가 아니라 `scrollTop`이다 — 이 패널은 좁은 화면용과 넓은
+  // 화면용 두 벌이 다 마운트돼 있어서 숨은 쪽이 페이지를 끌고 간다.
+  const grew = rows.length > BASE_LINES;
+  useEffect(() => {
+    if (!grew) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [grew, rows.length, live?.text]);
+
   return (
-    <div className={compact ? "px-[13px] pt-2.5 pb-3" : "px-5 pt-4 pb-5"}>
+    <div
+      ref={scrollRef}
+      className={`h-full overflow-y-auto ${compact ? "px-[13px] pt-2.5 pb-3" : "px-5 pt-4 pb-5"}`}
+    >
       <div className="flex justify-end">
         <span
           className={`flex items-center gap-1.5 rounded-lg border border-[var(--lp-rule)] ${compact ? "px-[9px] py-1" : "px-2.5 py-[5px]"}`}
@@ -521,10 +460,12 @@ function TranscriptPanel({ compact }: { compact?: boolean }) {
         </span>
       </div>
       <ul className={`m-0 list-none p-0 ${compact ? "" : "mt-1"}`}>
-        {lines.map((l, i) => (
+        {rows.map(({ line, typed }, i) => (
           <li
-            key={l.at}
-            data-stagger
+            key={line.at}
+            // 처음부터 있던 줄만 순서대로 든다. 대본이 올린 줄은 이미 말풍선으로 떠 있던
+            // 것이라 다시 등장시킬 필요가 없다.
+            data-stagger={i < BASE_LINES ? "" : undefined}
             style={{ "--i": i } as React.CSSProperties}
             className={`grid border-b border-[var(--lp-rule-soft)] ${
               compact ? "grid-cols-[34px_1fr] gap-2.5 py-2.5" : "grid-cols-[56px_1fr] gap-5 py-3.5"
@@ -533,7 +474,7 @@ function TranscriptPanel({ compact }: { compact?: boolean }) {
             <span
               className={`font-mono tabular-nums text-[var(--lp-faint)] ${compact ? "text-[9.5px]" : "pt-0.5 text-[10px]"}`}
             >
-              {l.at}
+              {line.at}
             </span>
             <div className="min-w-0">
               <span
@@ -541,19 +482,23 @@ function TranscriptPanel({ compact }: { compact?: boolean }) {
               >
                 <span
                   aria-hidden
-                  style={{ background: SPEAKER_TINT[l.who] }}
+                  style={{ background: SPEAKER_TINT[line.who] }}
                   className={`flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${
                     compact ? "size-[15px] text-[8px]" : "size-[17px] text-[9px]"
                   }`}
                 >
-                  {l.who.slice(0, 1)}
+                  {line.who.slice(0, 1)}
                 </span>
-                {l.who}
+                {line.who}
               </span>
+              {/* 음수 여백이 안쪽 여백을 정확히 상쇄한다 — 말풍선이 붙었다 빠져도 글자
+                  자리가 그대로다. */}
               <p
-                className={`m-0 mt-0.5 break-keep text-[var(--lp-ink)] ${compact ? "text-[11.5px] leading-[1.65]" : "text-[13px] leading-[1.75]"}`}
+                data-live={typed === undefined ? undefined : ""}
+                className={`lp-said m-0 mt-0.5 -mx-2 -my-1 break-keep px-2 py-1 text-[var(--lp-ink)] ${compact ? "text-[11.5px] leading-[1.65]" : "text-[13px] leading-[1.75]"}`}
               >
-                {l.text}
+                {typed ?? line.text}
+                {typed === undefined ? null : <span aria-hidden className="lp-caret" />}
               </p>
             </div>
           </li>
@@ -563,12 +508,56 @@ function TranscriptPanel({ compact }: { compact?: boolean }) {
   );
 }
 
-/** 개요 → 액션 아이템 → 결정을 위에서 아래로. 항목 뒤에 근거 마커가 붙는다. */
-function SummaryPanel({ compact }: { compact?: boolean }) {
+/**
+ * 개요 → 액션 아이템 → 결정을 위에서 아래로. 항목 뒤에 근거 마커가 붙는다.
+ *
+ * 문구는 앱 것 그대로다 — 끝나기 전에는 「요약은 회의가 끝나면 생성됩니다」, 도는 동안은
+ * 「회의를 정리하고 있습니다」(`note-summary.tsx`).
+ */
+function SummaryPanel({
+  ended,
+  shown,
+  compact,
+}: {
+  ended: boolean;
+  shown: number;
+  compact?: boolean;
+}) {
+  if (!ended || shown === 0) {
+    return (
+      <div className={compact ? "px-[13px] py-3.5" : "px-5 py-5"}>
+        <div
+          className={`rounded-xl border border-[var(--lp-rule)] bg-[var(--lp-canvas)] ${compact ? "p-3.5" : "p-5"}`}
+        >
+          <div className="flex items-center gap-2.5">
+            {ended ? (
+              <Loader2
+                aria-hidden
+                className={`shrink-0 animate-spin text-[var(--lp-muted)] ${compact ? "size-3.5" : "size-4"}`}
+              />
+            ) : null}
+            <p
+              className={`m-0 font-medium text-[var(--lp-ink)] ${compact ? "text-[11.5px]" : "text-[13px]"}`}
+            >
+              {ended ? "회의를 정리하고 있습니다" : "요약은 회의가 끝나면 생성됩니다"}
+            </p>
+          </div>
+          <p
+            className={`m-0 mt-1.5 break-keep leading-[1.6] text-[var(--lp-muted)] ${compact ? "text-[10px]" : "text-[11.5px]"} ${ended ? (compact ? "pl-6" : "pl-[26px]") : ""}`}
+          >
+            {ended
+              ? "다른 화면으로 옮겨도 됩니다. 정리가 끝나면 이 탭에 나타납니다."
+              : "회의를 종료하면 개요 · 액션 아이템 · 결정이 자동으로 정리됩니다."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex flex-col ${compact ? "gap-5 px-[13px] py-3.5" : "gap-8 px-5 py-5"}`}>
-      {SUMMARY.map(([label, items]) => (
-        <section key={label}>
+      {SUMMARY.slice(0, shown).map(([label, items]) => (
+        <section key={label} data-enter style={{ "--i": 0 } as React.CSSProperties}>
           <div className="flex items-baseline justify-between gap-4 border-b border-[var(--lp-rule-strong)] pb-2">
             <p
               className={`m-0 font-serif font-light tracking-[-0.025em] text-[var(--lp-ink)] ${compact ? "text-[15px]" : "text-[18px]"}`}
@@ -613,16 +602,14 @@ type RailShared = {
   closed: ReadonlySet<string>;
   toggleGroup: (kind: string) => void;
   uid: string;
-  turns: Ask[];
-  typing: number | null;
-  ask: (item: Ask) => void;
+  demo: Demo;
 };
 
 function RailPanels({
-  tab,
   compact,
   ...shared
-}: RailShared & { tab: RailTab; compact?: boolean }) {
+}: RailShared & { compact?: boolean }) {
+  const tab = shared.demo.railTab;
   return (
     <div
       role="tabpanel"
@@ -638,9 +625,9 @@ function RailPanels({
         {tab === "내 에이전트" ? (
           <AgentPanel
             compact={compact}
-            turns={shared.turns}
-            typing={shared.typing}
-            ask={shared.ask}
+            turns={shared.demo.turns}
+            typing={shared.demo.typing}
+            ask={shared.demo.ask}
           />
         ) : null}
       </div>
@@ -655,12 +642,21 @@ function ContextPanel({
   closed,
   toggleGroup,
   uid,
+  demo,
 }: RailShared & { compact?: boolean }) {
+  // 드러난 것만 센다 — 아직 안 올라온 사건이 개수에만 미리 잡히면 칩이 거짓말을 한다.
+  const seen = CONTEXT.slice(0, demo.events);
   const count = (s: Scope) =>
-    GROUPS.flatMap((g) => g.items).filter((i) => s === "전체" || i.outcome === s).length;
-  const visible = GROUPS.map((g) => ({
-    ...g,
-    items: g.items.filter((i) => scope === "전체" || i.outcome === scope),
+    seen.filter((i) => s === "전체" || i.outcome === s).length;
+  const groups = CONTEXT_KINDS.map((kind) => ({
+    kind,
+    icon: CONTEXT_ICON[kind],
+    items: seen
+      .map((item, index) => ({ item, index }))
+      .filter(
+        ({ item }) =>
+          item.kind === kind && (scope === "전체" || item.outcome === scope)
+      ),
   })).filter((g) => g.items.length > 0);
 
   return (
@@ -677,7 +673,7 @@ function ContextPanel({
         <span
           className={`ml-auto shrink-0 rounded-full border border-[var(--lp-rule)] bg-[var(--lp-card)] tabular-nums text-[var(--lp-muted)] ${compact ? "px-2 py-px text-[10px]" : "px-[9px] py-[3px] text-[10.5px]"}`}
         >
-          지금까지 5건
+          지금까지 {demo.events}건
         </span>
       </div>
 
@@ -718,7 +714,7 @@ function ContextPanel({
         })}
       </div>
 
-      {visible.map(({ kind, icon: Icon, items }) => {
+      {groups.map(({ kind, icon: Icon, items }) => {
         const open = !closed.has(kind);
         const listId = `${uid}-group-${kind}`;
         return (
@@ -751,9 +747,12 @@ function ContextPanel({
             </button>
             {open ? (
               <ul id={listId} className={`m-0 flex list-none flex-col p-0 ${compact ? "gap-[7px]" : "gap-2"}`}>
-                {items.map((it) => (
+                {items.map(({ item: it, index }) => (
                   <li
                     key={it.title}
+                    // 대본이 올린 카드만 든다. 처음부터 있던 셋은 밴드가 뜰 때 이미 섰다.
+                    data-enter={index >= BASE_EVENTS ? "" : undefined}
+                    style={{ "--i": 0 } as React.CSSProperties}
                     className={`flex rounded-xl border border-[var(--lp-rule)] bg-[var(--lp-card)] shadow-[0_1px_2px_#33231a10] ${
                       compact ? "gap-2.5 px-3 py-2.5" : "gap-[11px] px-3.5 py-[13px]"
                     }`}
@@ -765,32 +764,33 @@ function ContextPanel({
                       <Icon className={compact ? "size-3 text-[var(--lp-body)]" : "size-3.5 text-[var(--lp-body)]"} />
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <div className="flex items-start gap-2.5">
-                        <p
-                          className={`m-0 min-w-0 flex-1 break-keep font-medium leading-[1.45] tracking-[-0.1px] text-[var(--lp-ink)] ${compact ? "text-[11px]" : "text-[12.5px]"}`}
+                      <div className="flex items-start gap-2">
+                        <span
+                          className={`min-w-0 flex-1 break-keep font-medium leading-[1.45] text-[var(--lp-ink)] ${compact ? "text-[11.5px]" : "text-[12.5px]"}`}
                         >
                           {it.title}
-                        </p>
-                        <span className="flex shrink-0 items-center gap-1.5 pt-px">
-                          <span
-                            className={`font-mono tabular-nums text-[var(--lp-faint)] ${compact ? "text-[9.5px]" : "text-[10px]"}`}
-                          >
-                            {it.at}
-                          </span>
-                          <span
-                            className={`font-mono tabular-nums text-[#8a7a6d] ${compact ? "text-[9.5px]" : "text-[10px]"}`}
-                          >
-                            +{it.more}
-                          </span>
-                          {compact ? null : (
-                            <ChevronDown aria-hidden className="size-3 text-[var(--lp-faint)]" />
-                          )}
                         </span>
+                        <span
+                          className={`shrink-0 font-mono tabular-nums text-[var(--lp-faint)] ${compact ? "text-[9.5px]" : "text-[10px]"}`}
+                        >
+                          {it.at}
+                        </span>
+                        <span
+                          className={`shrink-0 font-mono tabular-nums text-[var(--lp-faint)] ${compact ? "text-[9.5px]" : "text-[10px]"}`}
+                        >
+                          +{it.more}
+                        </span>
+                        <ChevronDown
+                          aria-hidden
+                          className="size-3 shrink-0 text-[var(--lp-faint)]"
+                        />
                       </div>
                       {(compact ? it.metaSm : it.meta) ? (
-                        <p className={`m-0 text-[#8a7a6d] ${compact ? "text-[10px]" : "text-[11px]"}`}>
+                        <span
+                          className={`text-[var(--lp-muted)] ${compact ? "text-[9.5px]" : "text-[10.5px]"}`}
+                        >
                           {compact ? it.metaSm : it.meta}
-                        </p>
+                        </span>
                       ) : null}
                     </div>
                   </li>
@@ -818,7 +818,7 @@ function AgentPanel({
   turns,
   typing,
   ask,
-}: { compact?: boolean } & Pick<RailShared, "turns" | "typing" | "ask">) {
+}: { compact?: boolean } & Pick<Demo, "turns" | "typing" | "ask">) {
   const threadRef = useRef<HTMLDivElement>(null);
 
   // 흐르는 동안 바닥에 붙여 둔다. `scrollIntoView`가 아니라 `scrollTop`이다 — 이 패널은

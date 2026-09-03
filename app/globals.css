@@ -348,6 +348,35 @@
   scale: 0.985;
 }
 
+/* 받아 적는 중인 줄은 **말풍선으로 섰다가 확정되면 색만 빠진다**. 안쪽 여백을 음수 여백이
+   정확히 상쇄해 두어서, 말풍선이 붙어 있든 없든 글자 자리가 한 픽셀도 안 움직인다. */
+.landing-surface .lp-said {
+  border-radius: 10px;
+  background: transparent;
+  transition: background-color 0.45s ease-out;
+}
+
+.landing-surface .lp-said[data-live] {
+  background: var(--lp-cream);
+}
+
+/* 지금 이 자리에 찍히는 중이라는 표시. */
+.landing-surface .lp-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: var(--lp-rec);
+  animation: lp-caret 1s steps(2, start) infinite;
+}
+
+@keyframes lp-caret {
+  to {
+    opacity: 0;
+  }
+}
+
 /* 제품 샷의 「생각하는 중」. 앱의 `.chat-shimmer`와 같은 결이고 색만 랜딩 토큰이다 —
    글자 위로 빛이 지나가면 그 문장이 지금 살아 있다는 뜻이 된다. 키프레임은 앱 것을
    그대로 쓴다(`@keyframes chat-shimmer`). */
@@ -392,6 +421,15 @@
   .landing-surface .lp-shimmer {
     background: none;
     color: var(--lp-faint);
+    animation: none;
+  }
+
+  /* 대본을 아예 안 돌리므로 여기 걸릴 일은 없지만, 규칙을 화면 쪽에만 두지 않는다. */
+  .landing-surface .lp-said {
+    transition: none;
+  }
+
+  .landing-surface .lp-caret {
     animation: none;
   }
 }
