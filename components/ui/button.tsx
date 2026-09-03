@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
@@ -51,6 +52,30 @@ export interface ButtonProps
   loading?: boolean;
 }
 
+/**
+ * children을 감싸는 래퍼라 아이콘과 라벨은 버튼이 아니라 이 span의 flex 아이템이다 —
+ * 버튼의 gap이 여기까지 내려오지 않으면 둘이 붙는다. `gap-inherit`은 Tailwind에 없는
+ * 클래스라 계산값이 `normal`(0)이었다. 임의 속성으로 실제 상속시킨다.
+ */
+function ButtonLabel({
+  hidden,
+  children,
+}: {
+  hidden?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center justify-center [gap:inherit]",
+        hidden && "opacity-0 pointer-events-none"
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 function Button({
   className,
   variant = "default",
@@ -69,19 +94,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {/*
-        children을 감싸는 래퍼라 아이콘과 라벨은 버튼이 아니라 이 span의 flex 아이템이다 —
-        버튼의 gap이 여기까지 내려오지 않으면 둘이 붙는다. `gap-inherit`은 Tailwind에 없는
-        클래스라 계산값이 `normal`(0)이었다. 임의 속성으로 실제 상속시킨다.
-      */}
-      <span
-        className={cn(
-          "inline-flex items-center justify-center [gap:inherit]",
-          loading && "opacity-0 pointer-events-none"
-        )}
-      >
-        {children}
-      </span>
+      <ButtonLabel hidden={loading}>{children}</ButtonLabel>
       {loading && (
         <span className="absolute inset-0 flex items-center justify-center">
           <Loader2 className="size-4 animate-spin" />
@@ -91,4 +104,31 @@ function Button({
   );
 }
 
-export { Button, buttonVariants };
+/**
+ * 이동하는 CTA. `Button`에 `render={<Link/>}`를 주면 base-ui가 「앵커인데 nativeButton이
+ * 참이다」라고 dev 경고를 내고, 그 경고를 끄려고 `nativeButton={false}`를 주면 이번엔
+ * 앵커에 `role="button"`이 붙어 링크가 링크로 안 읽힌다. **이동은 링크다** — primitive를
+ * 안 거치고 클래스만 쓴다.
+ *
+ * children 구조는 `Button`과 같다(같은 `ButtonLabel`). 옆 자리의 로딩 자리표시가 공용
+ * `Button`이라 래퍼가 다르면 폭이 어긋난다.
+ */
+function LinkButton({
+  className,
+  variant,
+  size,
+  children,
+  ...props
+}: React.ComponentProps<typeof Link> & VariantProps<typeof buttonVariants>) {
+  return (
+    <Link
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    >
+      <ButtonLabel>{children}</ButtonLabel>
+    </Link>
+  );
+}
+
+export { Button, LinkButton, buttonVariants };

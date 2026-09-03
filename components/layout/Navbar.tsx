@@ -10,7 +10,7 @@ import { toast } from "@/lib/ui/toast";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { siteConfig } from "@/lib/site";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
@@ -127,14 +127,14 @@ export function Navbar() {
                   <span className="hidden sm:inline">로그아웃</span>
                 </Button>
                 {dashboardHref ? (
-                  <Button
-                    render={<Link href={dashboardHref} />}
+                  <LinkButton
+                    href={dashboardHref}
                     size="xl"
                     className="rounded-full bg-[var(--el-primary)] px-4 text-white hover:bg-[var(--el-primary-active)] sm:px-5 sm:text-[15px]"
                   >
                     <span className="sm:hidden">대시보드</span>
                     <span className="hidden sm:inline">대시보드로 이동</span>
-                  </Button>
+                  </LinkButton>
                 ) : isWorkspacesPending ? (
                   // children이 위 확정 버튼과 같아야 폭이 안 튄다. `min-w-24 sm:min-w-36`으로
                   // 덮어 두었었는데 그 144px이 실제 확정 폭 138.1px보다 커서 반대로 6px

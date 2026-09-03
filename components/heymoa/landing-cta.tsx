@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ArrowRight, Plus } from "lucide-react";
 
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
@@ -95,17 +94,14 @@ export function LandingCta({
         </>
       );
     }
-    // `nativeButton={false}`를 주지 않는다 — base-ui가 dev 경고를 내지만, 그 prop을 주면
-    // 앵커에 `role="button"`이 붙어 링크가 아니게 된다. 이동하는 것은 링크로 읽혀야 한다.
-    // Navbar의 대시보드 버튼도 같은 자리에서 같은 선택을 한다.
     return (
-      <Button
-        render={<Link href={`/w/${workspaceId}`} />}
+      <LinkButton
+        href={`/w/${workspaceId}`}
         className={cn(MARKETING_PILL, className)}
       >
         대시보드로 이동
         <ArrowRight className="size-4" />
-      </Button>
+      </LinkButton>
     );
   }
 
