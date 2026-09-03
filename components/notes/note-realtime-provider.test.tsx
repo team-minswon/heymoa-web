@@ -118,10 +118,42 @@ function Probe() {
   );
 }
 
-function renderProvider({ strict = false }: { strict?: boolean } = {}) {
+/** 노트 조회 봉투. 소켓을 열지 말지는 이 안의 `meetingStatus` 가 정한다. */
+function noteEnvelope(meetingStatus: string, noteId = NOTE_ID) {
+  return {
+    status: 200,
+    headers: new Headers(),
+    data: {
+      success: true,
+      error: null,
+      data: {
+        noteId,
+        projectId: PROJECT_ID,
+        title: "회의",
+        meetingStatus,
+      },
+    },
+  };
+}
+
+function renderProvider({
+  strict = false,
+  meetingStatus = "IN_PROGRESS",
+}: {
+  strict?: boolean;
+  /** `null` 이면 캐시를 안 심는다 — 상태를 모르는 채 마운트되는 경우. */
+  meetingStatus?: string | null;
+} = {}) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    // 노트 조회는 화면이 서버에서 미리 받아 온 것을 쓴다. 여기서는 심어 두고 다시 안 받는다.
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
+  if (meetingStatus !== null) {
+    queryClient.setQueryData(
+      getGetNoteQueryKey(NOTE_ID),
+      noteEnvelope(meetingStatus)
+    );
+  }
   const invalidateQueries = vi
     .spyOn(queryClient, "invalidateQueries")
     .mockResolvedValue(undefined);
@@ -160,15 +192,16 @@ function getProjectNotesPredicate(invalidateQueries: ReturnType<typeof vi.fn>) {
   return filters.predicate;
 }
 
-describe("NoteRealtimeProvider", () => {
-  beforeEach(() => {
-    topicClients.length = 0;
-  });
+beforeEach(() => {
+  topicClients.length = 0;
+});
 
-  afterEach(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+describe("NoteRealtimeProvider", () => {
 
   it("partial은 utteranceId로 교체하고 final은 segmentId로 중복 제거한다", async () => {
     renderProvider();
@@ -310,7 +343,8 @@ describe("NoteRealtimeProvider", () => {
       meetingStatus: "IN_PROGRESS",
     });
 
-    expect(queryClient.getQueryData(noteKey)).toBe(endedNote);
+    // 구조 공유로 참조는 바뀔 수 있다. 덮어쓰지 않았다는 것은 아래 spy 가 지킨다.
+    expect(queryClient.getQueryData(noteKey)).toEqual(endedNote);
     expect(setQueryData).not.toHaveBeenCalled();
     // meeting.ended 가 note·목록·transcript·후보를, recording.started 가 note·목록을 갱신한다.
     expect(invalidateQueries).toHaveBeenCalledTimes(6);
@@ -480,6 +514,10 @@ describe("NoteRealtimeProvider", () => {
       JSON.stringify([])
     );
 
+    queryClient.setQueryData(
+      getGetNoteQueryKey("01K0000000005"),
+      noteEnvelope("IN_PROGRESS", "01K0000000005")
+    );
     rerender(
       <QueryClientProvider client={queryClient}>
         <NoteRealtimeProvider noteId="01K0000000005">
@@ -618,5 +656,54 @@ describe("NoteRealtimeProvider", () => {
     view.unmount();
 
     expect(topicClients[1].close).toHaveBeenCalledOnce();
+  });
+});
+
+/**
+ * ★ **소켓은 아직 무언가 올 수 있는 노트에만 연다.**
+ *
+ * 이 토픽의 여덟 이벤트 중 끝난 회의에서 올 수 있는 것은 회의 직후 분석이 도는 동안의 후보·배치
+ * 둘뿐이다. 지난 노트를 읽는 탭마다 연결이 하나씩 서 있었고, 2대에서 배포할 때 그 전부가
+ * 재연결을 했다. 반대로 **시작 전 노트는 열어야 한다** — 동료가 녹음을 시작하면 그 소켓으로
+ * `meeting.started` 가 온다.
+ */
+describe("소켓을 여는 조건", () => {
+  it("끝난 노트에 들어오면 소켓을 안 연다", async () => {
+    renderProvider({ meetingStatus: "ENDED" });
+    await act(async () => {});
+    expect(topicClients).toHaveLength(0);
+  });
+
+  it("시작 전 노트는 연다 — 동료가 시작하면 그 소켓으로 온다", async () => {
+    renderProvider({ meetingStatus: "NOT_STARTED" });
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    expect(topicClients[0].connect).toHaveBeenCalledOnce();
+  });
+
+  it("열린 뒤 회의가 끝나도 나갈 때까지 유지한다 — 직후의 분석 배치를 놓치지 않게", async () => {
+    const { queryClient } = renderProvider({ meetingStatus: "IN_PROGRESS" });
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    act(() => {
+      queryClient.setQueryData(getGetNoteQueryKey(NOTE_ID), noteEnvelope("ENDED"));
+    });
+    await act(async () => {});
+
+    expect(topicClients).toHaveLength(1);
+    expect(topicClients[0].close).not.toHaveBeenCalled();
+  });
+
+  it("상태를 모르는 동안은 안 열고, 알게 되면 연다", async () => {
+    const { queryClient } = renderProvider({ meetingStatus: null });
+    await act(async () => {});
+    expect(topicClients).toHaveLength(0);
+
+    act(() => {
+      queryClient.setQueryData(
+        getGetNoteQueryKey(NOTE_ID),
+        noteEnvelope("IN_PROGRESS")
+      );
+    });
+    await waitFor(() => expect(topicClients).toHaveLength(1));
   });
 });

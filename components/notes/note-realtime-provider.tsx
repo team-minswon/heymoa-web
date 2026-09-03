@@ -8,10 +8,11 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
+import { getGetNoteQueryKey, useGetNote } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 import type {
   AppliedRange,
@@ -185,11 +186,37 @@ export function NoteRealtimeProvider({
     needsRefetchRef.current = state.context.needsRefetch;
   }, [state.context.needsRefetch]);
 
+  /**
+   * ★ **소켓은 아직 무언가 올 수 있는 노트에만 연다.**
+   *
+   * 이 토픽으로 끝난 회의에서 올 수 있는 것은 회의 직후 분석이 도는 동안의 후보·배치뿐이다.
+   * 지난 노트를 읽는 탭마다 연결이 하나씩 서 있었고, 2대에서 배포하면 그 전부가 재연결을 한다.
+   * **시작 전 노트는 연다** — 동료가 녹음을 시작하면 이 소켓으로 `meeting.started` 가 온다.
+   *
+   * 판정은 노트 조회의 `meetingStatus` 다. 노트 화면이 서버에서 미리 받아 오므로 요청이 늘지
+   * 않고, 아직 모르면 알 때까지 안 연다. **한 번 열었으면 상태가 바뀌어도 나갈 때까지 유지한다**
+   * — 회의를 끝내는 순간 닫으면 그 직후 오는 분석 배치를 놓친다. `socketFor` 가 그 래치다.
+   */
+  const noteQuery = useGetNote(noteId);
+  const meetingStatus =
+    noteQuery.data?.status === 200 && noteQuery.data.data.success
+      ? noteQuery.data.data.data.meetingStatus
+      : undefined;
+  const [socketFor, setSocketFor] = useState<string | null>(null);
+  const shouldOpen = meetingStatus !== undefined && meetingStatus !== "ENDED";
+  // 렌더 중에 세우는 파생 상태다. effect 로 미루면 한 렌더 늦고 lint 도 막는다.
+  if (shouldOpen && socketFor !== noteId) setSocketFor(noteId);
+  const socketOpen = socketFor === noteId;
+
   useEffect(() => {
     // **노트가 바뀌면 즉시 비운다.** catch-up 의 reset 만 믿으면 WS 가 붙기 전까지
     // (또는 못 붙으면 영영) 이전 노트의 partial·후보·처리 내역이 새 노트에 그대로 보인다.
     // 마운트 직후에는 이미 initialState 라 no-op 이다.
     dispatch({ type: "reset", noteId });
+  }, [noteId]);
+
+  useEffect(() => {
+    if (!socketOpen) return;
     const invalidateNote = () =>
       void queryClient.invalidateQueries({
         queryKey: getGetNoteQueryKey(noteId),
@@ -284,7 +311,7 @@ export function NoteRealtimeProvider({
       clearTranscriptCatchUp();
       void client.close();
     };
-  }, [noteId, queryClient]);
+  }, [noteId, queryClient, socketOpen]);
 
   /**
    * **원장의 정본은 REST다.** 전달이 best-effort라 event만 쌓으면 새로고침·재연결·회의 종료
