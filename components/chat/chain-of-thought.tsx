@@ -253,8 +253,12 @@ function currentStep(blocks: StepBlock[]): string {
 function betweenSteps(blocks: StepBlock[]): boolean {
   const last = blocks.at(-1);
   if (!last || last.kind === "thinking") return false;
-  if (last.kind === "tool") return last.status !== null;
-  return last.decision !== null;
+  // 승인된 도구는 승인 블록 **뒤가 아니라 앞**에 서 있고 결과가 올 때까지 `status: null` 이다.
+  // 마지막만 보면 그 실행 중에 「생각하는 중」이 겹친다.
+  if (blocks.some((block) => block.kind === "tool" && block.status === null)) {
+    return false;
+  }
+  return true;
 }
 
 function stepKey(block: StepBlock, index: number) {

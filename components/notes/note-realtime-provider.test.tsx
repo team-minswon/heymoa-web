@@ -202,7 +202,6 @@ afterEach(() => {
 });
 
 describe("NoteRealtimeProvider", () => {
-
   it("partial은 utteranceId로 교체하고 final은 segmentId로 중복 제거한다", async () => {
     renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -349,7 +348,10 @@ describe("NoteRealtimeProvider", () => {
     // meeting.ended 가 note·목록·transcript·후보를, recording.started 가 note·목록을 갱신한다.
     expect(invalidateQueries).toHaveBeenCalledTimes(6);
     expectInvalidated(invalidateQueries, noteKey);
-    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
+    expectInvalidated(
+      invalidateQueries,
+      getGetContextCandidatesQueryKey(NOTE_ID)
+    );
     expect(
       getProjectNotesPredicate(invalidateQueries)({
         queryKey: getGetNotesQueryKey(PROJECT_ID),
@@ -544,7 +546,10 @@ describe("NoteRealtimeProvider", () => {
     });
 
     // REAFFIRM 은 candidate event 가 없어서 이 무효화로만 화면에 수렴한다.
-    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
+    expectInvalidated(
+      invalidateQueries,
+      getGetContextCandidatesQueryKey(NOTE_ID)
+    );
     // 갱신 띠 시각은 수신 시각이 아니라 서버가 준 값이다.
     expect(screen.getByTestId("context-batch-at").textContent).toBe(
       "2026-08-24T02:00:00.000Z"
@@ -572,7 +577,10 @@ describe("NoteRealtimeProvider", () => {
     expect(screen.getByTestId("context-cards").textContent).toBe(
       JSON.stringify([[CANDIDATE_ID, 1, "OPEN"]])
     );
-    expectInvalidated(invalidateQueries, getGetContextCandidatesQueryKey(NOTE_ID));
+    expectInvalidated(
+      invalidateQueries,
+      getGetContextCandidatesQueryKey(NOTE_ID)
+    );
   });
 
   /**
@@ -685,12 +693,38 @@ describe("소켓을 여는 조건", () => {
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
     act(() => {
-      queryClient.setQueryData(getGetNoteQueryKey(NOTE_ID), noteEnvelope("ENDED"));
+      queryClient.setQueryData(
+        getGetNoteQueryKey(NOTE_ID),
+        noteEnvelope("ENDED")
+      );
     });
     await act(async () => {});
 
     expect(topicClients).toHaveLength(1);
     expect(topicClients[0].close).not.toHaveBeenCalled();
+  });
+
+  it("끝난 노트로 옮기면 이전 소켓을 닫고 새로 열지 않는다", async () => {
+    const { rerender, queryClient } = renderProvider({
+      meetingStatus: "IN_PROGRESS",
+    });
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    queryClient.setQueryData(
+      getGetNoteQueryKey("01K0000000005"),
+      noteEnvelope("ENDED", "01K0000000005")
+    );
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NoteRealtimeProvider noteId="01K0000000005">
+          <Probe />
+        </NoteRealtimeProvider>
+      </QueryClientProvider>
+    );
+    await act(async () => {});
+
+    expect(topicClients[0].close).toHaveBeenCalledOnce();
+    expect(topicClients).toHaveLength(1);
   });
 
   it("상태를 모르는 동안은 안 열고, 알게 되면 연다", async () => {

@@ -1010,7 +1010,9 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
     // 줄이 셋이라 접혀 있다 — 펴야 안이 보인다.
     fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
 
-    expect(container.querySelectorAll('[data-step="thinking"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-step="thinking"]')).toHaveLength(
+      2
+    );
   });
 
   /**

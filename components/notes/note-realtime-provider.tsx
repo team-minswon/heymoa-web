@@ -12,7 +12,10 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { getGetNoteQueryKey, useGetNote } from "@/lib/api/generated/notes/notes";
+import {
+  getGetNoteQueryKey,
+  useGetNote,
+} from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 import type {
   AppliedRange,
@@ -332,8 +335,13 @@ export function NoteRealtimeProvider({
        * 저주기로 확인한다. 종료 뒤에는 원장이 더 안 자라 폴링할 이유가 없다.
        */
       refetchInterval: () => {
-        const response = queryClient.getQueryData(getGetNoteQueryKey(noteId)) as
-          | { status: number; data: { success: boolean; data: { meetingStatus?: string } } }
+        const response = queryClient.getQueryData(
+          getGetNoteQueryKey(noteId)
+        ) as
+          | {
+              status: number;
+              data: { success: boolean; data: { meetingStatus?: string } };
+            }
           | undefined;
         const note =
           response?.status === 200 && response.data.success

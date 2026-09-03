@@ -367,6 +367,25 @@ describe("단계 사이의 「생각하는 중」", () => {
     expect(screen.queryByText("생각하는 중")).toBeNull();
   });
 
+  it("승인된 도구가 도는 동안도 없다 — 승인 블록이 마지막이어도 도구가 아직 살아 있다", () => {
+    render(
+      <ChainOfThought
+        blocks={[{ ...tool("c9"), status: null }, approval("APPROVED")]}
+        live
+      />
+    );
+    expect(screen.queryByText("생각하는 중")).toBeNull();
+  });
+
+  it("흐르는 묶음의 줄은 떠오르며 선다", () => {
+    const { container } = render(<ChainOfThought blocks={[tool("c1")]} live />);
+    expect(
+      container
+        .querySelector('[data-step="tool"]')
+        ?.classList.contains("chat-rise")
+    ).toBe(true);
+  });
+
   it("승인을 기다리는 동안도 없다 — 도는 것이 아니라 사람을 기다린다", () => {
     render(<ChainOfThought blocks={[tool("c1"), approval(null)]} live />);
     expect(screen.queryByText("생각하는 중")).toBeNull();
