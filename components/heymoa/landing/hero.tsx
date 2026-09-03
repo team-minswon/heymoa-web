@@ -28,15 +28,15 @@ export function Hero() {
       className={`${SECTION_X} flex flex-col items-center pt-[138px] lg:pt-[174px]`}
     >
       <div className={`${CONTAINER} flex flex-col items-center`}>
-        <p className="m-0 text-[15px] font-medium text-[var(--lp-muted)]">
+        <p data-enter style={{ "--i": 0 } as React.CSSProperties} className="m-0 text-[15px] font-medium text-[var(--lp-muted)]">
           회의 기록에서 멈추지 않습니다
         </p>
 
-        <h1 className="m-0 mt-[11px] max-w-[350px] text-balance break-keep text-center text-[38px] font-extrabold leading-[1.18] tracking-[-1.3px] text-[var(--lp-ink)] lg:mt-[14px] lg:max-w-[840px] lg:text-[76px] lg:leading-[1.14] lg:tracking-[-2.4px]">
+        <h1 data-enter style={{ "--i": 1 } as React.CSSProperties} className="m-0 mt-[11px] max-w-[350px] text-balance break-keep text-center text-[38px] font-extrabold leading-[1.18] tracking-[-1.3px] text-[var(--lp-ink)] lg:mt-[14px] lg:max-w-[840px] lg:text-[76px] lg:leading-[1.14] lg:tracking-[-2.4px]">
           회의 시간을 새지 않게
         </h1>
 
-        <div className="mt-5 flex max-w-[340px] flex-col items-center gap-[5px] lg:mt-[26px] lg:max-w-[700px] lg:gap-1.5">
+        <div data-enter style={{ "--i": 2 } as React.CSSProperties} className="mt-5 flex max-w-[340px] flex-col items-center gap-[5px] lg:mt-[26px] lg:max-w-[700px] lg:gap-1.5">
           <p className="m-0 break-keep text-center text-[16px] leading-[1.72] text-[var(--lp-body)] lg:text-[17px] lg:leading-[1.7]">
             팀은 계속 바뀝니다. 그때마다 지난 회의의 맥락이 사라지고 같은 논의를
             다시 합니다.
@@ -54,7 +54,7 @@ export function Hero() {
             배경색을 지우므로, 테두리가 없으면 배경만 입은 버튼이 맨 글자로 주저앉아 보조
             버튼과 구분이 사라진다. 시안은 테두리가 없어 2px 낮지만, 그 대신 두 버튼의
             높이가 맞는다. */}
-        <div className="mt-[26px] flex w-full max-w-[350px] flex-col gap-[9px] lg:mt-[34px] lg:w-auto lg:max-w-none lg:flex-row lg:items-center lg:gap-3">
+        <div data-enter style={{ "--i": 3 } as React.CSSProperties} className="mt-[26px] flex w-full max-w-[350px] flex-col gap-[9px] lg:mt-[34px] lg:w-auto lg:max-w-none lg:flex-row lg:items-center lg:gap-3">
           <LandingCta
             label="Google 계정으로 시작"
             className="h-[50px] w-full justify-center gap-2 rounded-full border border-transparent bg-[var(--lp-dark)] px-7 text-[15px] font-semibold text-[var(--lp-on-dark)] hover:bg-[var(--lp-accent)] lg:h-auto lg:w-auto lg:py-[15px]"
@@ -67,7 +67,7 @@ export function Hero() {
           </a>
         </div>
 
-        <p className="m-0 mt-[15px] text-[13.5px] text-[var(--lp-muted)] lg:mt-[18px] lg:text-[13px]">
+        <p data-enter style={{ "--i": 4 } as React.CSSProperties} className="m-0 mt-[15px] text-[13.5px] text-[var(--lp-muted)] lg:mt-[18px] lg:text-[13px]">
           설치할 것 없음 · 신용카드 없음
         </p>
       </div>

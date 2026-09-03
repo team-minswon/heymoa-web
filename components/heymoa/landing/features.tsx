@@ -15,6 +15,7 @@ import {
   SECTION_TOP,
   SECTION_X,
 } from "@/components/heymoa/landing/shell";
+import { Reveal } from "@/components/heymoa/landing/reveal";
 
 /**
  * 「기능 소개」. 카드 여섯을 2열 3행으로 세운다.
@@ -108,8 +109,10 @@ export function Features() {
             두 열이면 카드가 357px로 시안의 350에 붙는다. */}
         <div className="grid gap-3.5 md:grid-cols-2 lg:gap-6">
           {CARDS.map((c) => (
+            // 밴드가 아니라 카드마다 뜬다 — 목업 안의 줄은 카드가 뜬 뒤에 하나씩 들어온다.
+            <Reveal key={c.title}>
             <div
-              key={c.title}
+              data-lift
               className="box-border flex flex-col rounded-[18px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-3 lg:p-3.5"
             >
               {/* 크림 패널이 앱 화면을 받친다 — 창을 바로 흰 카드 위에 두면 경계가 사라진다. */}
@@ -141,6 +144,7 @@ export function Features() {
                 </ul>
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
       </div>

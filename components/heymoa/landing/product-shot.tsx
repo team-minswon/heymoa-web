@@ -378,9 +378,13 @@ function NotePanels({ tab, uid, compact }: { tab: NoteTab; uid: string; compact?
       // 비지만, 앱도 고정 높이 뷰포트라 그쪽이 실제에 가깝다.
       className={`overflow-hidden ${compact ? "h-[372px]" : "h-[676px]"}`}
     >
-      {tab === "정보" ? <DetailsPanel compact={compact} /> : null}
-      {tab === "전사" ? <TranscriptPanel compact={compact} /> : null}
-      {tab === "요약" ? <SummaryPanel compact={compact} /> : null}
+      {/* `key`로 다시 마운트시켜 탭마다 새로 들게 한다 — 전이로는 같은 노드가 남아
+          안 걸린다. */}
+      <div key={tab} data-panel>
+        {tab === "정보" ? <DetailsPanel compact={compact} /> : null}
+        {tab === "전사" ? <TranscriptPanel compact={compact} /> : null}
+        {tab === "요약" ? <SummaryPanel compact={compact} /> : null}
+      </div>
     </div>
   );
 }
@@ -435,9 +439,11 @@ function TranscriptPanel({ compact }: { compact?: boolean }) {
         </span>
       </div>
       <ul className={`m-0 list-none p-0 ${compact ? "" : "mt-1"}`}>
-        {lines.map((l) => (
+        {lines.map((l, i) => (
           <li
             key={l.at}
+            data-stagger
+            style={{ "--i": i } as React.CSSProperties}
             className={`grid border-b border-[var(--lp-rule-soft)] ${
               compact ? "grid-cols-[34px_1fr] gap-2.5 py-2.5" : "grid-cols-[56px_1fr] gap-5 py-3.5"
             }`}
@@ -540,8 +546,10 @@ function RailPanels({
       // 넓은 화면은 노트 쪽과 같은 값이라 두 기둥의 바닥선이 맞는다.
       className={`overflow-hidden ${compact ? "h-[532px]" : "h-[676px]"}`}
     >
-      {tab === "실시간 정리" ? <ContextPanel compact={compact} {...shared} /> : null}
-      {tab === "내 에이전트" ? <AgentPanel compact={compact} /> : null}
+      <div key={tab} data-panel>
+        {tab === "실시간 정리" ? <ContextPanel compact={compact} {...shared} /> : null}
+        {tab === "내 에이전트" ? <AgentPanel compact={compact} /> : null}
+      </div>
     </div>
   );
 }

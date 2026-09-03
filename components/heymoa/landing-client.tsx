@@ -3,6 +3,7 @@ import { Faq } from "@/components/heymoa/landing/faq";
 import { Features } from "@/components/heymoa/landing/features";
 import { Flow } from "@/components/heymoa/landing/flow";
 import { Hero } from "@/components/heymoa/landing/hero";
+import { Reveal } from "@/components/heymoa/landing/reveal";
 import { Principle } from "@/components/heymoa/landing/principle";
 import { Problem } from "@/components/heymoa/landing/problem";
 import { ProductShot } from "@/components/heymoa/landing/product-shot";
@@ -48,15 +49,32 @@ export function LandingClient() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* 히어로는 감싸지 않는다 — 첫 화면이라 올라올 자리가 없다. 「기능 소개」도 밴드가
+          아니라 **카드마다** 뜬다(`features.tsx`) — 1780px짜리 밴드를 통째로 켜면 아래
+          카드들은 보이기도 전에 애니메이션이 끝나 있다. */}
       <Hero />
-      <ProductShot />
-      <Steps />
-      <Flow />
-      <Problem />
+      <Reveal>
+        <ProductShot />
+      </Reveal>
+      <Reveal>
+        <Steps />
+      </Reveal>
+      <Reveal>
+        <Flow />
+      </Reveal>
+      <Reveal>
+        <Problem />
+      </Reveal>
       <Features />
-      <Principle />
-      <Faq />
-      <ClosingCta />
+      <Reveal>
+        <Principle />
+      </Reveal>
+      <Reveal>
+        <Faq />
+      </Reveal>
+      <Reveal>
+        <ClosingCta />
+      </Reveal>
     </div>
   );
 }

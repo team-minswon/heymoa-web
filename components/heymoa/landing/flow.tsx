@@ -171,6 +171,8 @@ export function Flow() {
           {STEPS.map((s, i) => (
             <li
               key={s.n}
+              data-stagger
+              style={{ "--i": i } as React.CSSProperties}
               className={`flex flex-col gap-2.5 border-t border-[var(--lp-rule)] py-6 lg:flex-row lg:gap-9 lg:py-[30px] ${
                 i === STEPS.length - 1 ? "border-b border-[var(--lp-rule)]" : ""
               }`}

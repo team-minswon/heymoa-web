@@ -79,6 +79,8 @@ export function Problem() {
           {ROWS.map((row, i) => (
             <li
               key={row.mark}
+              data-stagger
+              style={{ "--i": i } as React.CSSProperties}
               className={`flex flex-col gap-2.5 border-t border-[var(--lp-rule)] py-[22px] lg:flex-row lg:gap-12 lg:py-9 ${
                 i === ROWS.length - 1 ? "border-b border-[var(--lp-rule)]" : ""
               }`}

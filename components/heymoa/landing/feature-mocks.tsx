@@ -1,40 +1,27 @@
-import { ArrowUp, ChevronDown, Copy, PencilLine, Sparkles } from "lucide-react";
-import type { CSSProperties } from "react";
+import { ArrowUp, ChevronDown, CircleCheck, Copy, PencilLine, Sparkles } from "lucide-react";
 
 import { SPEAKER_TINT } from "@/components/heymoa/landing/shell";
 
 /**
- * 「기능 소개」 카드 여섯 개가 저마다 품는 앱 화면 조각.
+ * 「기능 소개」 카드 여섯이 저마다 품는 앱 화면 조각.
  *
- * **`mocks.tsx`와 크기가 다르다.** 저쪽은 「작동 방식」의 작은 카드용이라 9~10px로 줄여
- * 그렸고, 여기는 앱의 실제 크기(11~12px)에 가깝다. 같은 화면을 두 배율로 그리는 것이라
- * 한쪽으로 합치면 어느 한쪽이 뭉개진다.
+ * **시안이 아니라 실제 앱을 따른다.** 이 랜딩의 전제가 「사실 대조판」이라, 목업이 앱과
+ * 어긋나면 목업이 틀린 것이다. 제품 샷과 같은 해부를 카드 크기로 줄여 그린다 —
+ * 전사는 두 칸 격자, 레일은 아이콘 상자를 단 카드, 요약은 세리프 제목과 근거 마커,
+ * 챗은 오른쪽 정렬 말풍선이다.
  *
- * **셋은 좁은 화면에서 다시 그린다.** 전사는 줄 사이를 구분선 대신 9px 간격으로 두고,
- * 질의는 답변 카드의 테두리를 벗고, 자동 정리는 라벨 밑줄을 가는 선 하나로 바꾼다 —
- * 350px 카드 안에서 테두리가 겹치면 창이 아니라 격자로 보인다. 나머지 셋(실시간 정리 ·
- * 내보내기 · 초대)은 두 폭이 같은 그림이라 그대로 쓴다.
+ * **승인 카드가 가장 많이 틀렸었다.** 앱은 도구 id(`linear.create_issue`)를 제목으로
+ * 쓰지 않는다 — 그 자리에는 사람 말 요약이 들어가고, 「쓰기 도구」 배지는 요약 **오른쪽**에
+ * 선다(`chat-thread.tsx`의 `ApprovalPrompt`). 인자는 그 아래 `dl`로 붙는다.
  *
- * 여기 글자도 전부 삽화다 — `--lp-faint`(2.2:1)를 쓰는 것은 앱 화면의 흐린 보조 텍스트를
- * 따라 그리기 때문이고, 페이지가 직접 하는 말이 아니다.
+ * **여기 글자는 전부 삽화다.** `--lp-faint`(2.2:1)를 쓰는 것은 앱 화면의 흐린 보조
+ * 텍스트를 따라 그리기 때문이고, 페이지가 직접 하는 말이 아니다.
  */
 
-/** 창의 안쪽 여백. 좁은 화면은 여섯이 모두 같고, 넓은 화면만 목업마다 다르다. */
+/** 창의 안쪽 여백. 여섯이 모두 같다 — 앱의 노트 패널이 그렇다. */
 const WINDOW = "flex h-full flex-col px-3 py-[11px]";
 
-function Avatar({ who, className = "size-5" }: { who: string; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      style={{ background: SPEAKER_TINT[who] }}
-      className={`flex shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${className}`}
-    >
-      {who.slice(0, 1)}
-    </span>
-  );
-}
-
-/** 실시간 전사 — 전사 패널. */
+/** 실시간 전사 — 전사 패널. 두 칸 격자에 시각과 (화자 한 줄 + 본문). */
 export function TranscriptPane() {
   const lines: Array<[string, string, string]> = [
     ["00:31", "이서연", "저는 이번에 합류해서 그 맥락을 모릅니다."],
@@ -42,40 +29,38 @@ export function TranscriptPane() {
     ["01:02", "정우재", "온보딩 이탈 로그 수집은 제가 맡겠습니다."],
   ];
   return (
-    <div className={`${WINDOW} lg:pt-2.5 lg:pb-1`}>
-      <div className="flex items-center justify-between border-b border-[var(--lp-rule-soft)] pb-[9px] lg:border-b-0 lg:pb-2">
-        <span className="text-[11.5px] font-bold text-[var(--lp-ink)] lg:text-[11px] lg:font-semibold lg:text-[#8a7a6d]">
-          전사
-        </span>
-        <span className="flex items-center gap-1 rounded-[7px] border border-[var(--lp-rule)] px-2 py-[3px] lg:gap-1.5 lg:rounded-md">
+    <div className={WINDOW}>
+      <div className="flex justify-end">
+        <span className="flex items-center gap-1 rounded-md border border-[var(--lp-rule)] px-2 py-[3px]">
           <Copy aria-hidden className="size-2.5 text-[#8a7a6d]" />
-          <span className="text-[9px] font-medium text-[var(--lp-body)] lg:text-[10px]">복사</span>
+          <span className="text-[9.5px] font-medium text-[var(--lp-body)]">복사</span>
         </span>
       </div>
-      <ul className="m-0 flex list-none flex-col gap-[9px] p-0 pt-2.5 lg:gap-0 lg:pt-0">
-        {lines.map(([at, who, text]) => (
+      <ul className="m-0 mt-1 list-none p-0">
+        {lines.map(([at, who, text], i) => (
           <li
             key={at}
-            style={{ "--tint": SPEAKER_TINT[who] } as CSSProperties}
-            className="flex gap-2 lg:gap-[9px] lg:border-t lg:border-[var(--lp-rule-soft)] lg:py-2.5"
+            className="grid grid-cols-[38px_1fr] gap-3 border-b border-[var(--lp-rule-soft)] py-2.5"
+            data-stagger style={{ "--i": i } as React.CSSProperties}
           >
-            <span className="w-[30px] shrink-0 font-mono text-[9.5px] leading-[1.7] tabular-nums text-[var(--lp-faint)] lg:w-[34px] lg:text-[10px]">
+            <span className="pt-px font-mono text-[9.5px] tabular-nums text-[var(--lp-faint)]">
               {at}
             </span>
-            <span
-              aria-hidden
-              className="flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--lp-rule-soft)] text-[8px] font-semibold text-[var(--lp-body)] lg:size-[18px] lg:bg-[var(--tint)] lg:text-[9px] lg:font-bold lg:text-white"
-            >
-              {who.slice(0, 1)}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-px">
-              <span className="text-[9px] font-semibold text-[#8a7a6d] lg:text-[10.5px]">
+            <div className="min-w-0">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-[var(--lp-muted)]">
+                <span
+                  aria-hidden
+                  style={{ background: SPEAKER_TINT[who] }}
+                  className="flex size-[15px] shrink-0 items-center justify-center rounded-full text-[8px] font-semibold text-white"
+                >
+                  {who.slice(0, 1)}
+                </span>
                 {who}
               </span>
-              <span className="break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[11.5px] lg:leading-[1.6] lg:text-[var(--lp-body)]">
+              <p className="m-0 mt-0.5 break-keep text-[11px] leading-[1.6] text-[var(--lp-ink)]">
                 {text}
-              </span>
-            </span>
+              </p>
+            </div>
           </li>
         ))}
       </ul>
@@ -95,34 +80,38 @@ export function RailFlow() {
     ["논의 중", "2", false],
     ["참고", "1", false],
   ];
+  const cards: Array<[string, string, string, boolean]> = [
+    ["결제 화면 개편은 다음 스프린트로 미룬다", "+3", "결정 · 내용 보강", false],
+    ["결제 화면을 이번 스프린트에 넣는다", "+1", "결정 · 철회됨", true],
+  ];
   return (
-    <div className={`${WINDOW} lg:p-3`}>
-      <div className="flex items-center gap-2 border-b border-[var(--lp-rule-soft)] pb-[9px]">
-        <span className="text-[11.5px] font-bold text-[var(--lp-ink)]">사건 흐름</span>
-        <span className="flex-1" />
-        <span className="hidden text-[10px] text-[var(--lp-muted)] lg:inline">지금까지</span>
-        <span className="font-mono text-[10px] font-semibold tabular-nums text-[var(--lp-accent)]">
-          5건
+    <div className={WINDOW}>
+      <div className="flex items-center gap-2 border-b border-[var(--lp-rule-soft)] pb-2">
+        <span className="text-[12px] font-semibold tracking-[-0.3px] text-[var(--lp-ink)]">
+          사건 흐름
+        </span>
+        <span className="ml-auto shrink-0 rounded-full border border-[var(--lp-rule)] bg-[var(--lp-card)] px-2 py-px text-[9.5px] tabular-nums text-[var(--lp-muted)]">
+          지금까지 5건
         </span>
       </div>
 
-      <div className="flex gap-[5px] pt-2.5">
+      <div className="flex gap-1 pt-2.5">
         {filters.map(([label, n, on]) => (
           <span
             key={label}
             className={`flex items-center gap-1 rounded-full px-2 py-[3px] ${
               on
-                ? "bg-[var(--lp-dark)]"
+                ? "bg-[var(--lp-dark)] shadow-[0_1px_3px_#33231a18]"
                 : "border border-[var(--lp-rule)] bg-[var(--lp-canvas)]"
             }`}
           >
             <span
-              className={`text-[9px] ${on ? "font-semibold text-[var(--lp-on-dark)]" : "font-medium text-[var(--lp-body)]"}`}
+              className={`text-[9px] ${on ? "font-semibold text-[var(--lp-on-dark)]" : "font-medium text-[var(--lp-muted)]"}`}
             >
               {label}
             </span>
             <span
-              className={`font-mono text-[9px] font-semibold tabular-nums ${on ? "text-[var(--lp-on-dark-soft)]" : "text-[var(--lp-muted)]"}`}
+              className={`font-mono text-[9px] tabular-nums ${on ? "text-[var(--lp-on-dark-soft)]" : "text-[var(--lp-faint)]"}`}
             >
               {n}
             </span>
@@ -130,76 +119,82 @@ export function RailFlow() {
         ))}
       </div>
 
-      <div className="flex items-center gap-2 pt-[13px]">
-        <span className="text-[10.5px] font-semibold text-[var(--lp-body)]">결정</span>
+      <div className="flex items-center gap-2 pt-3">
+        <CircleCheck aria-hidden className="size-[13px] shrink-0 text-[var(--lp-body)]" />
+        <span className="text-[10.5px] font-semibold text-[var(--lp-ink)]">결정</span>
         <span aria-hidden className="block h-px flex-1 bg-[var(--lp-rule)]" />
-        <span className="font-mono text-[9.5px] font-semibold tabular-nums text-[var(--lp-muted)]">
-          2
-        </span>
+        <span className="font-mono text-[9.5px] tabular-nums text-[var(--lp-faint)]">2</span>
+        <ChevronDown aria-hidden className="size-3 shrink-0 text-[var(--lp-faint)]" />
       </div>
 
-      <div className="mt-[9px] rounded-[9px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-2.5">
-        <div className="flex gap-2">
-          <span className="min-w-0 flex-1 break-keep text-[11px] font-semibold leading-[1.45] text-[var(--lp-ink)]">
-            결제 화면 개편은 다음 스프린트로 미룬다
-          </span>
-          <span className="shrink-0 font-mono text-[9.5px] font-semibold tabular-nums text-[var(--lp-muted)]">
-            +3
-          </span>
-        </div>
-        <span className="mt-1 block text-[10px] text-[var(--lp-muted)]">내용 보강</span>
-      </div>
-
-      <div className="mt-[7px] rounded-[9px] border border-[var(--lp-rule)] bg-[var(--lp-canvas)] p-2.5">
-        <div className="flex gap-2">
-          <span className="min-w-0 flex-1 break-keep text-[11px] font-semibold leading-[1.45] text-[var(--lp-muted)] line-through">
-            결제 화면을 이번 스프린트에 넣는다
-          </span>
-          <span className="shrink-0 font-mono text-[9.5px] font-semibold tabular-nums text-[var(--lp-muted)]">
-            +1
-          </span>
-        </div>
-        <span className="mt-1 block text-[10px] text-[var(--lp-muted)]">철회됨</span>
-      </div>
+      <ul className="m-0 mt-2 flex list-none flex-col gap-[7px] p-0">
+        {cards.map(([title, more, meta, withdrawn], i) => (
+          <li
+            key={title}
+            data-stagger style={{ "--i": i } as React.CSSProperties}
+            className={`flex gap-2.5 rounded-[10px] border border-[var(--lp-rule)] px-2.5 py-2 shadow-[0_1px_2px_#33231a10] ${withdrawn ? "bg-[var(--lp-canvas)]" : "bg-[var(--lp-card)]"}`}
+          >
+            <span
+              aria-hidden
+              className="flex size-[22px] shrink-0 items-center justify-center rounded-lg border border-[var(--lp-rule)] bg-[var(--lp-canvas)]"
+            >
+              <CircleCheck className="size-3 text-[var(--lp-body)]" />
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+              <div className="flex gap-2">
+                <p
+                  className={`m-0 min-w-0 flex-1 break-keep text-[10.5px] font-medium leading-[1.45] tracking-[-0.1px] ${
+                    withdrawn
+                      ? "text-[var(--lp-muted)] line-through"
+                      : "text-[var(--lp-ink)]"
+                  }`}
+                >
+                  {title}
+                </p>
+                <span className="shrink-0 pt-px font-mono text-[9px] tabular-nums text-[#8a7a6d]">
+                  {more}
+                </span>
+              </div>
+              <p className="m-0 text-[9.5px] text-[#8a7a6d]">{meta}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
 /**
- * 회의 중 질의 — 레일 챗의 한 왕복. 답변 아래 참고한 회의록 칩이 붙는다.
+ * 회의 중 질의 — 레일 챗의 한 왕복.
  *
- * 좁은 화면에서는 답변이 카드를 벗는다 — 창이 이미 카드라 안에 또 테두리를 두면 겹친다.
- * 질문 말풍선도 오른쪽에 붙는다(넓은 화면은 왼쪽 정렬).
+ * 질문 말풍선은 **오른쪽**에 붙는다(`chat-thread.tsx`의 `UserBubble`은 `justify-end`다).
+ * 답변에는 말풍선이 없다 — 본문 그대로 흐르고 아래에 참고한 회의록 칩이 붙는다.
  */
 export function ChatAsk() {
   return (
-    <div className={`${WINDOW} gap-[9px] lg:gap-0 lg:p-3`}>
-      <div className="max-w-[80%] self-end rounded-[12px_12px_4px_12px] bg-[var(--lp-rule-soft)] px-[11px] py-2 lg:max-w-none lg:self-start lg:bg-[#f7efe3] lg:px-3 lg:py-[9px]">
-        <span className="break-keep text-[11px] leading-[1.5] font-medium text-[var(--lp-ink)] lg:text-[11.5px]">
-          결제 화면 개편은 왜 미뤘나요?
-        </span>
+    <div className={`${WINDOW} gap-2`}>
+      <div className="flex justify-end">
+        <p className="m-0 max-w-[85%] rounded-xl bg-[var(--lp-rule-soft)] px-2.5 py-1.5">
+          <span className="break-keep text-[10.5px] leading-[1.5] text-[var(--lp-ink)]">
+            결제 화면 개편은 왜 미뤘나요?
+          </span>
+        </p>
       </div>
 
-      <div className="flex flex-col gap-1.5 lg:mt-2.5 lg:gap-2 lg:rounded-[4px_12px_12px_12px] lg:border lg:border-[var(--lp-rule)] lg:bg-[var(--lp-card)] lg:px-3 lg:py-[11px]">
+      <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5">
-          <span
-            aria-hidden
-            className="block size-[15px] shrink-0 rounded-full border border-[var(--lp-rule)] bg-[var(--lp-cream)] lg:hidden"
-          />
-          <Sparkles aria-hidden className="hidden size-3 shrink-0 text-[var(--lp-accent)] lg:block" />
-          <span className="text-[10px] font-semibold text-[var(--lp-accent)] lg:text-[10.5px]">
-            HeyMoa
-          </span>
+          <Sparkles aria-hidden className="size-3 shrink-0 text-[var(--lp-accent)]" />
+          <span className="text-[10px] font-semibold text-[var(--lp-accent)]">HeyMoa</span>
         </div>
-        <p className="m-0 break-keep text-[11px] leading-[1.65] text-[var(--lp-body)] lg:text-[11.5px]">
+        <p className="m-0 break-keep text-[10.5px] leading-[1.65] text-[var(--lp-body)]">
           온보딩 이탈 지표를 먼저 보기로 해서 다음 스프린트로 미뤘습니다. 2차 회의에서
           정해진 결정입니다.
         </p>
-        <div className="flex items-center gap-[5px]">
+        <div className="flex flex-wrap items-center gap-1">
           {["2차 회의", "이번 회의"].map((chip) => (
             <span
               key={chip}
-              className="rounded-full border border-[var(--lp-rule)] bg-[var(--lp-canvas)] px-2 py-[3px] text-[9.5px] font-medium text-[var(--lp-body)] lg:border-0 lg:bg-[var(--lp-rule-soft)] lg:px-[7px]"
+              className="rounded-full bg-[var(--lp-rule-soft)] px-2 py-[3px] text-[9px] font-medium text-[var(--lp-body)]"
             >
               {chip}
             </span>
@@ -207,10 +202,8 @@ export function ChatAsk() {
         </div>
       </div>
 
-      <div className="flex items-center gap-[7px] rounded-full border border-[var(--lp-rule)] bg-[var(--lp-canvas)] px-2.5 py-2 lg:mt-2.5 lg:border-[var(--lp-rule-strong)] lg:bg-transparent">
-        <span className="text-[10.5px] text-[var(--lp-faint)] lg:text-[11px]">
-          회의 중에 물어보기
-        </span>
+      <div className="mt-auto flex items-center gap-1.5 rounded-full border border-[var(--lp-rule-strong)] px-2.5 py-1.5">
+        <span className="text-[10px] text-[var(--lp-faint)]">이 회의에 대해 물어보기</span>
         <span className="flex-1" />
         <ArrowUp aria-hidden className="size-3 shrink-0 text-[#8a7a6d]" />
       </div>
@@ -220,60 +213,47 @@ export function ChatAsk() {
 
 /**
  * 자동 정리 — 종료 뒤 요약 탭.
- * 라벨 셋은 `lib/notes/analysis-sections.ts`가 정한 것 그대로다.
+ *
+ * 라벨 셋은 `lib/notes/analysis-sections.ts`가 정한 것 그대로이고, 근거 마커는 문장
+ * **바로 뒤**에 붙는다(`note-summary.tsx`) — 오른쪽 끝으로 밀면 무엇의 근거인지 안 보인다.
  */
 export function SummaryList() {
-  const groups: Array<[string, string, Array<[string, string]>]> = [
-    [
-      "개요",
-      "1",
-      [["온보딩 이탈을 이번 스프린트의 첫 기준선으로 잡고, 결제 화면 개편은 뒤로 미뤘습니다.", "+3"]],
-    ],
+  const groups: Array<[string, Array<[string, string]>]> = [
+    ["개요", [["온보딩 이탈을 이번 스프린트의 첫 기준선으로 잡았습니다.", "00:00"]]],
     [
       "액션 아이템",
-      "2",
       [
-        ["온보딩 이탈 로그 수집 초안을 목요일까지 올립니다.", "+2"],
-        ["정리된 업무를 Linear 이슈로 내보냅니다.", "+1"],
+        ["온보딩 이탈 로그 수집 초안을 목요일까지 올립니다.", "01:02"],
+        ["정리된 업무를 Linear 이슈로 내보냅니다.", "01:19"],
       ],
     ],
-    ["결정", "2", [["결제 화면 개편은 다음 스프린트로 미룹니다.", "+3"]]],
+    ["결정", [["결제 화면 개편은 다음 스프린트로 미룹니다.", "00:14"]]],
   ];
   return (
-    <div className={`${WINDOW} gap-[11px] lg:gap-0 lg:px-3.5 lg:py-3`}>
-      {groups.map(([label, count, items], gi) => (
-        <div key={label} className={gi > 0 ? "lg:mt-4" : ""}>
-          <div className="flex items-center gap-[7px] lg:items-end lg:justify-between lg:gap-0 lg:border-b lg:border-[var(--lp-rule-soft)] lg:pb-1.5">
-            <p className="m-0 font-serif text-[10.5px] font-semibold text-[#8a7a6d] lg:text-[13px] lg:text-[var(--lp-ink)]">
+    <div className={`${WINDOW} gap-3`}>
+      {groups.map(([label, items], gi) => (
+        <section key={label} data-stagger style={{ "--i": gi } as React.CSSProperties}>
+          <div className="flex items-baseline justify-between gap-3 border-b border-[var(--lp-rule-strong)] pb-1">
+            <p className="m-0 font-serif text-[12px] font-light tracking-[-0.025em] text-[var(--lp-ink)]">
               {label}
             </p>
-            <span aria-hidden className="block h-px flex-1 bg-[var(--lp-rule-soft)] lg:hidden" />
-            <span className="font-mono text-[9.5px] font-semibold tabular-nums text-[var(--lp-faint)] lg:text-[10px] lg:font-medium">
-              {count}
+            <span className="font-mono text-[9px] tabular-nums text-[var(--lp-faint)]">
+              {items.length}
             </span>
           </div>
-          <ul className="m-0 list-none p-0">
-            {items.map(([text, more], ii) => (
-              <li
-                key={text}
-                className={`flex gap-2 ${ii === 0 ? "mt-[7px]" : "mt-[5px]"} lg:mt-0 lg:pt-[9px]`}
-              >
-                <span className="min-w-0 flex-1 break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[11.5px] lg:leading-[1.6] lg:text-[var(--lp-body)]">
-                  {text}
-                </span>
-                <span className="flex shrink-0 items-center gap-[5px] lg:pt-0.5">
-                  <span className="font-mono text-[9.5px] font-semibold tabular-nums text-[#8a7a6d]">
-                    {more}
+          <ul className="m-0 mt-1.5 list-none space-y-1 p-0">
+            {items.map(([text, at]) => (
+              <li key={text}>
+                <p className="m-0 break-keep text-[10px] leading-[1.55] text-[var(--lp-ink)]">
+                  {text}{" "}
+                  <span className="ml-0.5 inline-flex items-center rounded-full border border-[var(--lp-rule)] bg-[var(--lp-canvas)] px-1 py-px align-middle font-mono text-[8px] tabular-nums text-[var(--lp-muted)]">
+                    {at}
                   </span>
-                  <ChevronDown
-                    aria-hidden
-                    className="hidden size-[11px] text-[var(--lp-faint)] lg:block"
-                  />
-                </span>
+                </p>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       ))}
     </div>
   );
@@ -282,36 +262,49 @@ export function SummaryList() {
 /**
  * 도구로 내보내기 — 스레드 안의 승인 카드.
  *
- * **일괄 대기열이 아니다.** 호출 하나마다 뜨는 카드이고 버튼은 「승인」과 「거절」 둘뿐이다
- * (`chat-thread.tsx`의 `ApprovalPrompt`).
+ * **도구 id를 제목으로 안 쓴다.** 앱은 그 자리에 사람 말 요약을 넣고, 「쓰기 도구」 배지는
+ * 요약 **오른쪽**에 선다. 인자는 아래 `dl`로 붙는다(`chat-thread.tsx`).
+ *
+ * **일괄 대기열이 아니다.** 호출 하나마다 뜨는 카드이고 버튼은 「승인」과 「거절」 둘뿐이다.
  */
 export function ApprovalThread() {
   return (
-    <div className={`${WINDOW} gap-[9px] lg:px-3.5 lg:py-3`}>
-      <div className="max-w-[80%] self-end rounded-[12px_12px_4px_12px] bg-[var(--lp-rule-soft)] px-[11px] py-2 lg:max-w-[76%]">
-        <span className="break-keep text-[11px] leading-[1.5] text-[var(--lp-ink)]">
-          온보딩 이탈 로그 수집, Linear 이슈로 만들어 줘
-        </span>
-      </div>
-      <div className="flex flex-col rounded-xl border border-[var(--lp-rule)] bg-[var(--lp-canvas)] px-3 py-[11px]">
-        <span className="inline-flex items-center gap-[5px] self-start rounded-full bg-[var(--lp-rule-soft)] px-2 py-[3px]">
-          <PencilLine aria-hidden className="size-2.5 shrink-0 text-[var(--lp-body)]" />
-          <span className="text-[9.5px] font-semibold text-[var(--lp-body)]">쓰기 도구</span>
-        </span>
-        <p className="m-0 mt-[9px] break-keep text-[12px] font-bold leading-[1.45] text-[var(--lp-ink)]">
-          Linear 에 이슈를 만들까요?
+    <div className={`${WINDOW} gap-2`}>
+      <div className="flex justify-end">
+        <p className="m-0 max-w-[85%] rounded-xl bg-[var(--lp-rule-soft)] px-2.5 py-1.5">
+          <span className="break-keep text-[10.5px] leading-[1.5] text-[var(--lp-ink)]">
+            온보딩 이탈 로그 수집, Linear 이슈로 만들어 줘
+          </span>
         </p>
-        <div className="mt-2 flex flex-col gap-1 rounded-lg border border-[var(--lp-rule)] bg-[var(--lp-card)] px-2.5 py-2">
-          <span className="font-mono text-[9.5px] text-[#8a7a6d]">linear.create_issue</span>
-          <span className="break-keep text-[10.5px] leading-[1.45] text-[var(--lp-body)]">
-            온보딩 이탈 로그 수집 초안 올리기
+      </div>
+
+      <div className="rounded-xl border border-[var(--lp-rule)] bg-[var(--lp-card)] p-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <p className="m-0 min-w-0 flex-1 break-keep text-[10.5px] leading-[1.5] text-[var(--lp-ink)]">
+            Linear 이슈 「온보딩 이탈 로그 수집 초안」 생성
+          </p>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--lp-rule-soft)] px-1.5 py-px">
+            <PencilLine aria-hidden className="size-2.5 text-[var(--lp-body)]" />
+            <span className="text-[8.5px] font-semibold text-[var(--lp-body)]">쓰기 도구</span>
           </span>
         </div>
-        <div className="mt-[11px] flex items-center gap-[7px]">
-          <span className="rounded-lg bg-[var(--lp-dark)] px-3.5 py-[7px] text-[11px] font-semibold text-[var(--lp-on-dark)]">
+
+        <dl className="m-0 mt-2 flex flex-col gap-0.5">
+          <div className="flex gap-2">
+            <dt className="w-11 shrink-0 font-mono text-[9px] leading-4 font-medium text-[var(--lp-muted)]">
+              title
+            </dt>
+            <dd className="m-0 min-w-0 flex-1 break-keep text-[9.5px] leading-4 text-[var(--lp-body)]">
+              온보딩 이탈 로그 수집 초안
+            </dd>
+          </div>
+        </dl>
+
+        <div className="mt-2.5 flex gap-1.5">
+          <span className="rounded-lg bg-[var(--lp-accent)] px-3 py-1 text-[10px] font-semibold text-[var(--lp-on-dark)]">
             승인
           </span>
-          <span className="rounded-lg border border-[var(--lp-rule-strong)] px-3.5 py-[7px] text-[11px] font-medium text-[var(--lp-body)]">
+          <span className="rounded-lg border border-[var(--lp-rule-strong)] bg-[var(--lp-card)] px-3 py-1 text-[10px] font-medium text-[var(--lp-body)]">
             거절
           </span>
         </div>
@@ -328,18 +321,19 @@ export function InviteList() {
     ["이서연", "초대함"],
   ];
   return (
-    <div className={`${WINDOW} lg:p-3`}>
-      <div className="flex items-center gap-2 border-b border-[var(--lp-rule-soft)] pb-[9px]">
-        <span className="text-[11.5px] font-bold text-[var(--lp-ink)]">멤버</span>
-        <span className="flex-1" />
-        <span className="font-mono text-[10px] tabular-nums text-[var(--lp-muted)]">3명</span>
+    <div className={WINDOW}>
+      <div className="flex items-center gap-2 border-b border-[var(--lp-rule-soft)] pb-2">
+        <span className="text-[12px] font-semibold text-[var(--lp-ink)]">멤버</span>
+        <span className="ml-auto font-mono text-[9.5px] tabular-nums text-[var(--lp-muted)]">
+          3명
+        </span>
       </div>
 
-      <div className="flex gap-1.5 pt-[11px]">
-        <span className="box-border min-w-0 flex-1 rounded-lg border border-[var(--lp-rule)] px-2.5 py-[7px] text-[10.5px] text-[var(--lp-muted)]">
+      <div className="flex gap-1.5 pt-2.5">
+        <span className="box-border min-w-0 flex-1 rounded-lg border border-[var(--lp-rule)] px-2.5 py-1.5 text-[10px] text-[var(--lp-muted)]">
           seoyeon@example.com
         </span>
-        <span className="shrink-0 rounded-lg bg-[var(--lp-dark)] px-3 py-[7px] text-[10.5px] font-semibold text-[var(--lp-on-dark)]">
+        <span className="shrink-0 rounded-lg bg-[var(--lp-dark)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--lp-on-dark)]">
           초대
         </span>
       </div>
@@ -347,18 +341,25 @@ export function InviteList() {
       {members.map(([who, role], i) => (
         <div
           key={who}
-          className={`flex items-center gap-[9px] border-t border-[var(--lp-rule-soft)] py-[11px] ${i === 0 ? "mt-1.5" : ""}`}
+          data-stagger style={{ "--i": i } as React.CSSProperties}
+          className={`flex items-center gap-2 border-t border-[var(--lp-rule-soft)] py-2 ${i === 0 ? "mt-1.5" : ""}`}
         >
-          <Avatar who={who} />
-          <span className="min-w-0 flex-1 text-[11px] font-semibold text-[var(--lp-ink)]">
+          <span
+            aria-hidden
+            style={{ background: SPEAKER_TINT[who] }}
+            className="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+          >
+            {who.slice(0, 1)}
+          </span>
+          <span className="min-w-0 flex-1 text-[10.5px] font-medium text-[var(--lp-ink)]">
             {who}
           </span>
           {role === "관리자" ? (
-            <span className="shrink-0 rounded-full bg-[var(--lp-rule-soft)] px-2 py-[3px] text-[9.5px] font-semibold text-[var(--lp-accent)]">
+            <span className="shrink-0 rounded-full bg-[var(--lp-rule-soft)] px-2 py-px text-[9px] font-semibold text-[var(--lp-accent)]">
               {role}
             </span>
           ) : (
-            <span className="shrink-0 text-[9.5px] text-[var(--lp-muted)]">{role}</span>
+            <span className="shrink-0 text-[9px] text-[var(--lp-muted)]">{role}</span>
           )}
         </div>
       ))}

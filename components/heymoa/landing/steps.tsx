@@ -52,9 +52,12 @@ export function Steps() {
         </div>
 
         <div className="grid gap-3.5 lg:grid-cols-3 lg:gap-5">
-          {CARDS.map(({ n, icon: Icon, title, line, mock }) => (
+          {CARDS.map(({ n, icon: Icon, title, line, mock }, i) => (
             <div
               key={n}
+              data-lift
+              data-stagger
+              style={{ "--i": i } as React.CSSProperties}
               className="box-border flex flex-col gap-[11px] rounded-2xl border border-[var(--lp-rule)] bg-[var(--lp-canvas)] p-5 lg:gap-3 lg:p-6"
             >
               <div className="flex items-center justify-between">

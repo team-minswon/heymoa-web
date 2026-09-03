@@ -260,6 +260,116 @@
   color: var(--lp-ink);
 }
 
+/* ── 랜딩의 움직임 ──────────────────────────────────────────────────────────
+   **셋을 가른다.** 스크롤 리빌은 JS가 붙여 주는 `data-reveal`에만 걸리고(없으면 아무것도
+   안 감춘다), 진입 애니메이션과 상태 전이는 순수 CSS라 JS 없이도 돈다. `PageTransition`이
+   `opacity:0`인 HTML을 내보내는 바람에 JS를 끄면 화면이 통째로 비어 있던 적이 있어서,
+   **감추는 일은 JS가 켜졌을 때만** 한다.
+
+   `translate`를 쓰는 것은 `transform`을 안 건드리기 위해서다 — 목업 안에 `transform`을
+   쓰는 것(펼침 화살표)이 있어 겹치면 서로 지운다. */
+
+.landing-surface [data-reveal] {
+  opacity: 0;
+  translate: 0 16px;
+  transition:
+    opacity 0.55s ease-out,
+    translate 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-surface [data-reveal][data-shown] {
+  opacity: 1;
+  translate: none;
+}
+
+/* 목업 안의 줄은 카드가 뜬 **뒤에** 하나씩 들어온다 — 「한 줄씩 들어옵니다」가 카드가 하는
+   말이라, 그 말을 그림이 그대로 한다. 순번은 `--i`로 받는다(고정 규칙을 늘리지 않는다). */
+.landing-surface [data-reveal] [data-stagger] {
+  opacity: 0;
+  translate: 0 6px;
+  transition:
+    opacity 0.4s ease-out,
+    translate 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-surface [data-shown] [data-stagger] {
+  opacity: 1;
+  translate: none;
+  transition-delay: calc(0.2s + var(--i, 0) * 0.07s);
+}
+
+/* 히어로는 첫 화면이라 올라올 자리가 없다 — 스크롤이 아니라 **뜨자마자** 든다.
+   CSS 애니메이션이라 JS와 무관하고, 끝나면 반드시 보이는 상태다. */
+@keyframes lp-rise {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+
+.landing-surface [data-enter] {
+  animation: lp-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.07s);
+}
+
+/* 탭 패널은 바뀔 때마다 다시 든다. `key`가 바뀌어 다시 마운트되므로 전이가 아니라
+   애니메이션이어야 한다. 짧게 둔다 — 탭은 연속으로 누르는 것이라 길면 밀린다. */
+@keyframes lp-panel-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+.landing-surface [data-panel] {
+  animation: lp-panel-in 0.24s ease-out both;
+}
+
+/* FAQ는 펼칠 때만 든다. 접기는 즉시다 — `hidden`이 걸려야 접힌 답이 스크린 리더와
+   페이지 내 찾기에서 빠지는데, 그 상태로는 애니메이션할 것이 없다. */
+.landing-surface [data-faq-answer] {
+  animation: lp-panel-in 0.28s ease-out both;
+}
+
+/* 누를 수 있는 것은 눌린 티가 난다. */
+.landing-surface [data-lift] {
+  transition:
+    translate 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s ease-out;
+}
+
+.landing-surface [data-lift]:hover {
+  translate: 0 -2px;
+  box-shadow: 0 8px 24px -10px #33231a2e;
+}
+
+.landing-surface a:active,
+.landing-surface button:active {
+  scale: 0.985;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-surface [data-reveal],
+  .landing-surface [data-reveal] [data-stagger],
+  .landing-surface [data-enter],
+  .landing-surface [data-panel],
+  .landing-surface [data-faq-answer] {
+    opacity: 1;
+    translate: none;
+    animation: none;
+    transition: none;
+  }
+
+  .landing-surface [data-lift]:hover {
+    translate: none;
+  }
+
+  .landing-surface a:active,
+  .landing-surface button:active {
+    scale: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

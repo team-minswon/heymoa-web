@@ -95,6 +95,7 @@ export function Faq() {
                 <p
                   id={panelId}
                   hidden={!isOpen}
+                  data-faq-answer={isOpen ? "" : undefined}
                   className="m-0 mt-3 max-w-[640px] break-keep text-[14.5px] leading-[1.8] text-[var(--lp-body)] lg:text-[15px]"
                 >
                   {item.a}
