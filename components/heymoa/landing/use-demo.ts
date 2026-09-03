@@ -30,9 +30,14 @@ import {
  *
  * **고정은 만진 기둥에만 건다.** 노트 탭을 눌렀다고 레일까지 멈추지 않는다.
  *
- * 예외가 하나 있다. 회의가 끝나면 앱이 **요약 탭으로 넘긴다**(`meeting-controls.tsx`의
- * `onMeetingEnded` → `note-panel.tsx`). 그 이동은 대본이 부리는 것이 아니라 앱이 하는
- * 일이라 고정을 이긴다 — `force`가 붙은 대목이 그것이다.
+ * **장면이 바뀌는 이동은 고정을 이긴다**(`force`). 대본이 탭을 옮기는 자리는 둘뿐이고 둘 다
+ * 새 장면의 시작이다 — 레일이 「내 에이전트」로 가는 것(질의 장면)과, 회의가 끝나 요약
+ * 탭으로 가는 것. 고정이 이것까지 막으면 방문자가 아무거나 한 번 눌렀다는 이유로 **장면
+ * 하나가 통째로 사라진다.** 고정이 지키는 것은 「방금 누른 것이 곧바로 되돌려지지 않는
+ * 다」까지이고, 다음 장면에는 같이 간다. 뒤에는 「처음부터 다시 보기」가 있다.
+ *
+ * 요약 탭으로 가는 이동은 그 위에 근거가 하나 더 있다 — 회의가 끝나면 **앱이** 그렇게
+ * 한다(`meeting-controls.tsx`의 `onMeetingEnded` → `note-panel.tsx`).
  *
  * 모션을 줄인 사람에게는 대본을 아예 안 돌린다. 처음부터 끝 상태다.
  */
@@ -188,7 +193,8 @@ const BEATS: Beat[] = [
   { t: "say", i: 6 },
   { t: "event" },
   { t: "say", i: 7 },
-  { t: "rail", v: "내 에이전트" },
+  // `force` — 질의 장면의 시작이다. 레일을 만져 둔 방문자도 여기서는 같이 간다.
+  { t: "rail", v: "내 에이전트", force: true },
   { t: "ask", i: 2 },
   // **누르는 것과 끝나는 것을 나눈다.** 한 대목으로 두면 버튼이 사라지고 칩이 바뀌는 것만
   // 남아서, 정작 「누가 눌렀다」는 순간이 화면에 없다.
@@ -378,8 +384,12 @@ export function useDemo(seen: boolean): Demo {
     const next = () =>
       setCursor((c) => {
         const upcoming = BEATS[c + 1];
-        // 앱이 하는 이동은 방문자가 못 박아 둔 탭도 이긴다(회의가 끝나면 요약 탭이다).
-        if (upcoming?.t === "note" && upcoming.force) setNoteOverride(null);
+        // 장면이 바뀌는 이동은 방문자가 못 박아 둔 탭도 이긴다 — 안 그러면 아무거나 한 번
+        // 눌렀다는 이유로 장면 하나가 통째로 안 보인다.
+        if (upcoming?.force) {
+          if (upcoming.t === "note") setNoteOverride(null);
+          if (upcoming.t === "rail") setRailOverride(null);
+        }
         setProgress(enter(upcoming));
         return c + 1;
       });

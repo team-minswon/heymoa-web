@@ -138,23 +138,53 @@ describe("ProductShot 대본", () => {
     try {
       render(<ProductShot />);
 
-      // 레일을 만졌다. 대본은 나중에 「내 에이전트」로 옮기려 한다.
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "실시간 정리" })[0]);
+      });
+
+      // 사건이 하나 더 올라올 때까지만 돌린다 — 다음 장면(질의)에 닿기 전이다.
+      expect(
+        playUntil(() => screen.queryAllByText("지금까지 4건").length > 0)
+      ).toBe(true);
+
+      // 방금 누른 탭은 안 뺏겼고, **내용은 계속 찬다** — 예전에는 여기서 대본이 통째로
+      // 감겨 버렸다.
+      expect(
+        screen.getAllByRole("tab", { name: "실시간 정리" })[0]
+      ).toHaveAttribute("aria-selected", "true");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * 고정이 **장면까지 막지는 않는다.** 대본이 탭을 옮기는 자리는 둘뿐이고 둘 다 새 장면의
+   * 시작이다(질의 · 요약). 고정이 이것까지 막으면 방문자가 아무거나 한 번 눌렀다는 이유로
+   * 장면 하나가 통째로 안 보인다.
+   */
+  it("레일을 만져 뒀어도 질의 장면에는 같이 넘어간다", () => {
+    vi.useFakeTimers();
+    try {
+      render(<ProductShot />);
+
       act(() => {
         fireEvent.click(screen.getAllByRole("tab", { name: "실시간 정리" })[0]);
       });
 
       play();
 
-      // 탭은 안 뺏겼다.
       expect(
-        screen.getAllByRole("tab", { name: "실시간 정리" })[0]
+        screen.getAllByRole("tab", { name: "내 에이전트" })[0]
       ).toHaveAttribute("aria-selected", "true");
-      // **그런데 내용은 끝까지 찼다** — 예전에는 여기서 대본이 통째로 감겨 버렸다.
+      expect(screen.getAllByText(/결정 둘입니다/).length).toBeGreaterThan(0);
+      // 못 본 채 지나간 것은 없다 — 사건 흐름도 끝까지 찼다.
+      act(() => {
+        fireEvent.click(screen.getAllByRole("tab", { name: "실시간 정리" })[0]);
+      });
       expect(screen.getAllByText("지금까지 5건").length).toBeGreaterThan(0);
       expect(
         screen.getAllByText("카드 결제 실패 재시도 정책 정하기").length
       ).toBeGreaterThan(0);
-      expect(screen.getAllByText("종료됨").length).toBeGreaterThan(0);
     } finally {
       vi.useRealTimers();
     }
