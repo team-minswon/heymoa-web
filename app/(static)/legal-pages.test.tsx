@@ -16,7 +16,11 @@ describe("HeyMoa legal pages", () => {
     expect(
       screen.getByRole("heading", { name: "개인정보 처리방침", level: 1 })
     ).toBeInTheDocument();
-    expect(screen.getByText(/실시간 음성 인식에는 ElevenLabs/)).toBeVisible();
+    // 실제로 쓰는 사업자를 적었는지 본다. 예전에는 안 쓰는 이름(ElevenLabs)이 적혀 있었다.
+    expect(screen.getByText(/실시간 음성 인식은 Soniox/)).toBeVisible();
+    expect(screen.getByText(/화자 분리는 pyannote\.ai/)).toBeVisible();
+    expect(screen.getByText(/국외에서 처리합니다/)).toBeVisible();
+    expect(screen.queryByText(/ElevenLabs/)).not.toBeInTheDocument();
     expect(screen.queryByText(/이미지 검사|진짜그림/)).not.toBeInTheDocument();
   });
 
