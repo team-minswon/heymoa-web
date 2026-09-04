@@ -10,7 +10,7 @@ import { toast } from "@/lib/ui/toast";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { siteConfig } from "@/lib/site";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
@@ -92,15 +92,17 @@ export function Navbar() {
         <nav
           className={`${inWorkspace ? "hidden" : "hidden md:flex"} items-center gap-8 text-[15px] font-medium text-[var(--el-muted)]`}
         >
+          {/* `min-h-6`는 WCAG 2.2 AA의 24px 최소 타깃이다 — 15px 글자에 여백이 없어 22.5px
+              줄상자 그대로 22~23px였다. 알약이 40px라 겉보기는 안 바뀐다. */}
           <button
             onClick={() => handleScroll("features")}
-            className="hover:text-[var(--el-ink)] transition cursor-pointer"
+            className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
             기능 소개
           </button>
           <button
             onClick={() => handleScroll("how-it-works")}
-            className="hover:text-[var(--el-ink)] transition cursor-pointer"
+            className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
             작동 방식
           </button>
@@ -125,14 +127,14 @@ export function Navbar() {
                   <span className="hidden sm:inline">로그아웃</span>
                 </Button>
                 {dashboardHref ? (
-                  <Button
-                    render={<Link href={dashboardHref} />}
+                  <LinkButton
+                    href={dashboardHref}
                     size="xl"
                     className="rounded-full bg-[var(--el-primary)] px-4 text-white hover:bg-[var(--el-primary-active)] sm:px-5 sm:text-[15px]"
                   >
                     <span className="sm:hidden">대시보드</span>
                     <span className="hidden sm:inline">대시보드로 이동</span>
-                  </Button>
+                  </LinkButton>
                 ) : isWorkspacesPending ? (
                   // children이 위 확정 버튼과 같아야 폭이 안 튄다. `min-w-24 sm:min-w-36`으로
                   // 덮어 두었었는데 그 144px이 실제 확정 폭 138.1px보다 커서 반대로 6px

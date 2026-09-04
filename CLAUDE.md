@@ -44,7 +44,7 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 | 경로 | 무엇 |
 |---|---|
 | `app/(main)/` | Navbar + Footer가 있는 페이지 (마케팅 면) |
-| `app/(static)/` | 약관 등 정적 페이지 (축약 footer) |
+| `app/(static)/` | 약관 등 정적 페이지. 랜딩과 같은 마케팅 면입니다 |
 | `app/auth/` | 인증 흐름 |
 | `app/w/` · `app/settings/` | 워크스페이스 이후 (제품 면) |
 | `components/ui/` | shadcn/ui primitive. 제품 의미를 모릅니다 |

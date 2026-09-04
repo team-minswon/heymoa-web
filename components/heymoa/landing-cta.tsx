@@ -1,24 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ArrowRight, Plus } from "lucide-react";
 
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/components/auth/auth-provider";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { cn } from "@/lib/utils";
 import { pickWorkspaceId } from "@/lib/workspaces/last-workspace";
 
-/** design.pen 정본의 마케팅 pill — h48 · px24 · 15px. 제품 면의 `size="xl"`(h40)과 다르다. */
+/** 랜딩의 마케팅 pill — h48 · px24 · 15px. 제품 면의 `size="xl"`(h40)과 다르다. */
 export const MARKETING_PILL = "h-12 rounded-full px-6 text-[15px]";
 
 /**
  * 랜딩의 주 CTA. 비로그인이면 로그인 모달을, 로그인 상태면 대시보드 링크를 낸다.
  *
- * design.pen은 비로그인 화면(`UWqm8`)만 그린다 — 로그인한 사람에게 「Google 계정으로 시작」을
+ * 아트보드는 비로그인 화면만 그린다 — 로그인한 사람에게 「Google 계정으로 시작」을
  * 보이면 이미 가진 것을 다시 권하는 셈이라 라벨과 행선지를 상태로 가른다. 워크스페이스 조회는
  * Navbar와 같은 쿼리 키라 캐시를 그대로 쓴다(추가 요청이 없다).
  */
@@ -95,17 +94,14 @@ export function LandingCta({
         </>
       );
     }
-    // `nativeButton={false}`를 주지 않는다 — base-ui가 dev 경고를 내지만, 그 prop을 주면
-    // 앵커에 `role="button"`이 붙어 링크가 아니게 된다. 이동하는 것은 링크로 읽혀야 한다.
-    // Navbar의 대시보드 버튼도 같은 자리에서 같은 선택을 한다.
     return (
-      <Button
-        render={<Link href={`/w/${workspaceId}`} />}
+      <LinkButton
+        href={`/w/${workspaceId}`}
         className={cn(MARKETING_PILL, className)}
       >
         대시보드로 이동
         <ArrowRight className="size-4" />
-      </Button>
+      </LinkButton>
     );
   }
 

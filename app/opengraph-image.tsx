@@ -10,6 +10,17 @@ export const size = {
 };
 export const contentType = "image/png";
 
+/**
+ * 공유 카드. **색만 랜딩에 맞췄다** — 문구는 `siteConfig`가 정하는 사이트 전체의 설명이라
+ * 그대로 둔다.
+ *
+ * 원래 민트(`#f0fdf4`)에 초록 타일(`#16a34a`)이었는데, 그 값은 이 저장소 어디에도 안 남은
+ * 옛 방향이다(`#16a34a`는 `--el-success`로만 살아 있고 그건 의미색이지 브랜드색이 아니다).
+ * 링크를 받은 사람이 크림 면으로 들어오는데 카드만 민트면 첫인상이 어긋난다.
+ *
+ * `--lp-*`를 못 쓰는 자리다 — `ImageResponse`는 CSS 변수를 모르는 별도 렌더러라 값을 직접
+ * 적는다. 랜딩 토큰이 바뀌면 여기도 같이 고친다.
+ */
 export default function Image() {
   return new ImageResponse(
     <div
@@ -19,8 +30,8 @@ export default function Image() {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        background: "#f0fdf4",
-        color: "#0a0a0a",
+        background: "#faf8f5",
+        color: "#33231a",
         padding: 72,
         fontFamily: "sans-serif",
       }}
@@ -42,8 +53,8 @@ export default function Image() {
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 18,
-            background: "#16a34a",
-            color: "#ffffff",
+            background: "#2e1f17",
+            color: "#f6efe6",
           }}
         >
           H
@@ -67,7 +78,7 @@ export default function Image() {
             maxWidth: 880,
             fontSize: 30,
             lineHeight: 1.45,
-            color: "#3a3a3a",
+            color: "#57493f",
           }}
         >
           회의 중 함께 듣고, 맥락을 정리하며, 실행 가능한 액션 아이템으로

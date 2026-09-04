@@ -82,6 +82,12 @@ protocol이 React를 알면 파싱을 테스트할 수 없습니다. 지금 전�
   (hook `block-forbidden-writes.sh`가 생성을 막습니다.)
 - proxy를 고친 뒤 dev 서버가 옛 동작을 보이면 `pnpm dev:clean`으로 `.next`를 지우고 다시 띄웁니다.
   항상 지울 필요는 없습니다 — 실제로 밟았을 때의 회피책이지 절차가 아닙니다.
+  **`app/globals.css`의 `@keyframes`를 고쳤는데 옛 애니메이션이 그대로일 때도 같은 자리입니다.**
+  같은 파일의 JS는 반영되는데 CSS만 낡아 있어서 코드를 의심하게 됩니다 — dev 서버를 껐다
+  켜도 안 풀리고 `.next`를 지워야 풀립니다.
+  **`pnpm build`와 dev 서버를 번갈아 돌린 뒤 `pnpm test:e2e`가 무더기로 깨질 때도 같습니다.**
+  둘이 `.next`를 나눠 쓰다 섞이면 코드와 무관한 화면이 나옵니다 — 실제로 `context-candidates`
+  5개가 통째로 깨졌고, 브랜치를 되돌려도 그대로였다가 `.next`를 지우니 한 번에 통과했습니다.
 
 ## Hydration
 
