@@ -202,7 +202,7 @@ export const CONTEXT: Item[] = [
 ];
 
 /**
- * 아이콘은 `lib/notes/context-candidates/presentation.ts`의 `CONTEXT_KIND_ICON` 그대로다.
+ * 아이콘은 `lib/notes/proposals/presentation.ts`의 `CONTEXT_KIND_ICON` 그대로다.
  * 묶음 머리와 카드가 **같은 아이콘**을 쓴다(앱이 그렇다).
  */
 export const CONTEXT_ICON: Record<ContextKind, LucideIcon> = {

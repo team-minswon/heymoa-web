@@ -70,7 +70,7 @@ import {
  * **패널 높이를 고정한다.** 탭마다 내용 길이가 달라서 그대로 두면 정보 탭을 누를 때 아래
  * 밴드가 통째로 올라온다. 앱도 고정 높이 뷰포트 안에서 스크롤하므로 이쪽이 실제에 가깝다.
  *
- * **구조는 시안이 아니라 실제 앱을 따른다**(`note-panel.tsx` · `context-rail.tsx` ·
+ * **구조는 시안이 아니라 실제 앱을 따른다**(`note-panel.tsx` · `proposal-rail.tsx` ·
  * `note-archive.tsx` · `note-details.tsx` · `note-summary.tsx` · `meeting-controls.tsx`).
  * 이 랜딩의 전제가 「사실 대조판」이라, 목업이 앱과 어긋나면 목업이 틀린 것이다.
  *

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { usePersonalChat } from "@/components/chat/personal-chat";
-import { ContextRail } from "@/components/notes/context-rail";
+import { ProposalRail } from "@/components/notes/proposal-rail";
 import { cn } from "@/lib/utils";
 
 export type RailTab = "context" | "personal";
@@ -39,7 +39,7 @@ export function NoteAgentRail({
   foldedOnNarrow: boolean;
   /** 근거를 누르면 전사로 옮겨 그 발화를 짚는다. 소유자는 `NotePanel`이다. */
   onEvidenceSelect: (segmentId: string) => void;
-  /** 종료된 회의의 레일 문구는 진행형이면 안 된다 — `ContextRail`로 그대로 내린다. */
+  /** 종료된 회의의 레일 문구는 진행형이면 안 된다 — `ProposalRail`로 그대로 내린다. */
   meetingEnded?: boolean;
 }) {
   const { setRailSlot } = usePersonalChat();
@@ -143,7 +143,7 @@ export function NoteAgentRail({
           foldedOnNarrow && "max-lg:hidden"
         )}
       >
-        <ContextRail
+        <ProposalRail
           onEvidenceSelect={onEvidenceSelect}
           meetingEnded={meetingEnded}
         />

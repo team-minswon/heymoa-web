@@ -11,7 +11,7 @@ import {
   CONTEXT_SWAP_NOTE_ID,
   LIVE_UTTERANCE,
   LIVE_UTTERANCE_TEXT,
-} from "@/lib/mocks/context-candidates";
+} from "@/lib/mocks/proposals";
 import {
   createMockTranscriptionScenario,
   type MockTranscriptionScenario,
@@ -141,7 +141,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         window.setTimeout(() => {
           markSwapFilled();
           send({
-            type: "context.classification.batch.applied",
+            type: "transcript-analysis-run.applied",
             eventId: CONTEXT_EVENT_ID(90),
             occurredAt: CONTEXT_SWAP_FILL.appliedAt,
             range: CONTEXT_SWAP_FILL,
@@ -224,11 +224,11 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         noteTopicTimers.push(
           window.setTimeout(() => {
             send({
-              type: "context.candidate.changed",
+              type: "proposal.changed",
               eventId: CONTEXT_EVENT_ID(index),
               changeOrdinal: 0,
               occurredAt: new Date(entry.atMs).toISOString(),
-              candidate: entry.candidate,
+              proposal: entry.proposal,
             });
           }, entry.atMs / SPEED)
         );
@@ -238,7 +238,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         noteTopicTimers.push(
           window.setTimeout(() => {
             send({
-              type: "context.classification.batch.applied",
+              type: "transcript-analysis-run.applied",
               eventId: CONTEXT_EVENT_ID(50 + index),
               occurredAt: coverage.appliedAt,
               range: coverage,

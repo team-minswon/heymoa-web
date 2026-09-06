@@ -22,9 +22,9 @@ import {
 import {
   ContextCoverageGapRow,
   ContextSaturatedRow,
-} from "@/components/notes/context-coverage-row";
+} from "@/components/notes/proposal-coverage-row";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
-import { withCoverageRows } from "@/lib/notes/context-candidates/timeline";
+import { withCoverageRows } from "@/lib/notes/proposals/timeline";
 import { TranscriptGapRow } from "@/components/notes/transcript-gap-row";
 import {
   SpeakerAssignMenu,
@@ -195,7 +195,7 @@ export function NoteArchive({
     const last = segments[segments.length - 1];
     return withCoverageRows(
       rows,
-      noteRealtime.context.state.appliedRanges,
+      noteRealtime.context.state.runs,
       first && last
         ? {
             fromSequence: first.sequence,
@@ -205,7 +205,7 @@ export function NoteArchive({
           }
         : null
     );
-  }, [noteRealtime.context.state.appliedRanges, rows, segments]);
+  }, [noteRealtime.context.state.runs, rows, segments]);
   const diarized = transcript?.diarization?.status === "MAPPED";
   // **참석자에 이름이 실려 있어야 한다.** 발화 단위 지정은 라벨이 아니라 사람을 가리키므로,
   // 그 줄에 쓸 이름을 참석자 목록에서 찾는다.
@@ -670,7 +670,7 @@ export function NoteArchive({
                     />
                   ) : row.type === "saturated" ? (
                     <ContextSaturatedRow
-                      key={`saturated-${row.range.runKey}`}
+                      key={`saturated-${row.range.runId}`}
                       range={row.range}
                     />
                   ) : (

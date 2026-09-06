@@ -13,7 +13,7 @@ import { expect, test } from "@playwright/test";
  * ```
  *
  * 두 행은 높이가 다릅니다 — 구멍 행에는 「전사는 계속 기록됩니다」 같은 안내가 한 줄 더
- * 붙습니다(`context-coverage-row.tsx`). 그래서 추종하던 독자가 그 차이만큼 바닥에서
+ * 붙습니다(`proposal-coverage-row.tsx`). 그래서 추종하던 독자가 그 차이만큼 바닥에서
  * 밀린 채 남고, **scroll 이벤트가 안 나서 「맨 아래로」 버튼조차 안 뜹니다.**
  *
  * jsdom 으로는 못 잡습니다 — 높이가 0 이라 추종이 성립하는지 자체를 볼 수 없습니다.
