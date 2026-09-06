@@ -3,7 +3,6 @@ import { ws } from "msw";
 import {
   CONTEXT_APPLIED_RANGES,
   CONTEXT_DEMO_NOTE_ID,
-  CONTEXT_EVENT_ID,
   CONTEXT_TIMELINE,
   CONTEXT_SWAP_FILL,
   markSwapFilled,
@@ -11,7 +10,7 @@ import {
   CONTEXT_SWAP_NOTE_ID,
   LIVE_UTTERANCE,
   LIVE_UTTERANCE_TEXT,
-} from "@/lib/mocks/context-candidates";
+} from "@/lib/mocks/proposals";
 import {
   createMockTranscriptionScenario,
   type MockTranscriptionScenario,
@@ -141,8 +140,7 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         window.setTimeout(() => {
           markSwapFilled();
           send({
-            type: "context.classification.batch.applied",
-            eventId: CONTEXT_EVENT_ID(90),
+            type: "transcript-analysis-run.applied",
             occurredAt: CONTEXT_SWAP_FILL.appliedAt,
             range: CONTEXT_SWAP_FILL,
           });
@@ -220,26 +218,23 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         )
       );
 
-      CONTEXT_TIMELINE.forEach((entry, index) => {
+      CONTEXT_TIMELINE.forEach((entry) => {
         noteTopicTimers.push(
           window.setTimeout(() => {
             send({
-              type: "context.candidate.changed",
-              eventId: CONTEXT_EVENT_ID(index),
-              changeOrdinal: 0,
+              type: "proposal.changed",
               occurredAt: new Date(entry.atMs).toISOString(),
-              candidate: entry.candidate,
+              proposal: entry.proposal,
             });
           }, entry.atMs / SPEED)
         );
       });
 
-      CONTEXT_APPLIED_RANGES.forEach((coverage, index) => {
+      CONTEXT_APPLIED_RANGES.forEach((coverage) => {
         noteTopicTimers.push(
           window.setTimeout(() => {
             send({
-              type: "context.classification.batch.applied",
-              eventId: CONTEXT_EVENT_ID(50 + index),
+              type: "transcript-analysis-run.applied",
               occurredAt: coverage.appliedAt,
               range: coverage,
             });

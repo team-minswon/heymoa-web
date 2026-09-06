@@ -14,7 +14,7 @@ import { expect, test } from "@playwright/test";
  * 그래서 여기서 보는 것은 「전사가 보이는가」가 아니라 **「미확정 토막이 실제로 도착해
  * 그려지는가」**입니다.
  *
- * 프레임은 `lib/mocks/context-candidates.ts`의 `LIVE_UTTERANCE`가 정하고
+ * 프레임은 `lib/mocks/proposals.ts`의 `LIVE_UTTERANCE`가 정하고
  * `lib/mocks/websocket-handler.ts`가 전용 노트에만 흘립니다.
  */
 

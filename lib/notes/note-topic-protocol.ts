@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import {
   contextBatchAppliedSchema,
-  contextCandidateChangedSchema,
-} from "@/lib/notes/context-candidates/contract";
+  proposalChangedSchema,
+} from "@/lib/notes/proposals/contract";
 
 const tsidSchema = z
   .string()
@@ -44,16 +44,16 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
     type: z.literal("recording.stopped"),
     transcriptionSessionId: tsidSchema,
   }),
-  // 맥락 후보. 스키마는 `context-candidates/contract.ts`가 정본이고 여기서 두 벌로 쓰지
+  // 맥락 후보. 스키마는 `proposals/contract.ts`가 정본이고 여기서 두 벌로 쓰지
   // 않는다 — REST 목·화면·이 union이 같은 것을 본다.
-  contextCandidateChangedSchema,
+  proposalChangedSchema,
   contextBatchAppliedSchema,
 ]);
 
 export type NoteTopicEvent = z.infer<typeof noteTopicEventSchema>;
 export type NoteTopicContextEvent = Extract<
   NoteTopicEvent,
-  { type: "context.candidate.changed" | "context.classification.batch.applied" }
+  { type: "proposal.changed" | "transcript-analysis-run.applied" }
 >;
 export type NoteTopicFinalSegment = Extract<
   NoteTopicEvent,

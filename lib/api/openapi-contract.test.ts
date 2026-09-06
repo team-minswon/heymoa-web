@@ -130,40 +130,26 @@ describe("OpenAPI contract", () => {
   it("omits schemas reachable only from internal routes", () => {
     const schemaNames = Object.keys(api().components.schemas);
     for (const name of [
-      "AmendDelta",
       "AnalysisCandidateEvidenceLink",
       "AnalysisCandidateLedger",
       "AnalysisCandidateLedgerEntry",
-      "AnalysisSection",
-      "AnalysisResultCallback",
-      "AnalysisSucceededCallback",
       "AnalysisFailedCallback",
-      "ApplyRunRequest",
-      "CandidateHead",
-      "ContextAnchors",
-      "ContextCandidateOperationsResponse",
-      "ContextClassificationRunResponse",
-      "ContextClassificationSnapshotResponse",
-      "CorrectDelta",
-      "CreateDelta",
+      "AnalysisResultCallback",
+      "AnalysisSection",
+      "AnalysisSucceededCallback",
+      "ApplyTranscriptAnalysisRunRequest",
       "DropReason",
-      "DroppedDelta",
-      "Evidence",
       "InternalNoteContextResponse",
       "InternalTranscriptSegmentsResponse",
       "InternalTranscriptUpdatesResponse",
       "InternalWorkspaceNotesResponse",
       "MeetingItem",
-      "ReaffirmDelta",
-      "RenderedLine",
-      "ResolveDelta",
-      "ResolveResult",
-      "ResolvedDelta",
-      "RetractDelta",
-      "Sha256",
-      "ShortlistedCandidate",
+      "ProposalChangesResponse",
+      "ProposalHead",
       "SnapshotBatch",
       "SnapshotSegment",
+      "TranscriptAnalysisRunResponse",
+      "TranscriptAnalysisSnapshotResponse",
       "UtcMillisTimestamp",
     ]) {
       expect(schemaNames).not.toContain(name);
@@ -263,6 +249,8 @@ describe("contract sync 2026-07-29", () => {
     // `notes/{noteId}/segments/{segmentId}/speaker`.
     // APP-459에서 후보 조회와 revision 이력 둘이 늘었다 (43 → 45) —
     // `notes/{noteId}/context-candidates`와 `.../context-candidates/{candidateId}/revisions`.
+    // APP-557(PRO-45)에서 그 둘이 `notes/{noteId}/proposals`와
+    // `.../proposals/{proposalId}/revisions`로 이름을 바꿨다. 개수는 그대로다.
     expect(paths).toHaveLength(45);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
@@ -322,20 +310,21 @@ describe("contract sync 2026-07-29", () => {
   });
 
   /**
-   * APP-459 후보 계약. **`oneOf` 세 갈래가 상태 행렬 자체다** — 하나라도 빠지면
-   * 「OPEN 인데 RETRACTED」 같은 조합이 계약상 유효해진다.
+   * APP-459 후보 계약이 PRO-45 에서 명제(proposal) 어휘가 됐다. **`oneOf` 세 갈래가
+   * 상태 행렬 자체다** — 하나라도 빠지면 「OPEN 인데 RETRACTED」 같은 조합이 계약상
+   * 유효해진다.
    */
-  it("후보 계약의 상태 행렬과 v1 생산값을 고정한다", () => {
+  it("명제 계약의 상태 행렬과 v1 생산값을 고정한다", () => {
     const schemas = (api() as unknown as Record<string, never>)
       .components as unknown as { schemas: Record<string, never> };
-    const revision = schemas.schemas.ContextCandidateRevision as unknown as {
+    const revision = schemas.schemas.ProposalRevision as unknown as {
       oneOf: { title: string }[];
       properties: Record<string, { enum?: unknown[]; nullable?: boolean }>;
     };
 
     expect(revision.oneOf.map((branch) => branch.title)).toEqual([
-      "OpenCandidate",
-      "RetractedCandidate",
+      "OpenProposal",
+      "RetractedProposal",
       "ResolvedQuestion",
     ]);
     expect(revision.properties.status.enum).toEqual(["OPEN", "CLOSED"]);
@@ -349,14 +338,14 @@ describe("contract sync 2026-07-29", () => {
     expect(revision.properties.revisionSource.enum).toEqual(["LIVE"]);
   });
 
-  it("APP-459 public 두 경로가 미러에 있다", () => {
+  it("명제 public 두 경로가 미러에 있다", () => {
+    expect(api().paths["/v1/notes/{noteId}/proposals"]?.get?.operationId).toBe(
+      "getProposals"
+    );
     expect(
-      api().paths["/v1/notes/{noteId}/context-candidates"]?.get?.operationId
-    ).toBe("getContextCandidates");
-    expect(
-      api().paths["/v1/notes/{noteId}/context-candidates/{candidateId}/revisions"]
-        ?.get?.operationId
-    ).toBe("getContextCandidateRevisions");
+      api().paths["/v1/notes/{noteId}/proposals/{proposalId}/revisions"]?.get
+        ?.operationId
+    ).toBe("getProposalRevisions");
   });
 
   it("exposes the invitation, notification and member operations", () => {

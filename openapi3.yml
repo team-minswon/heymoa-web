@@ -195,21 +195,6 @@ paths:
           type: string
         example: 203.0.113.10, 10.0.0.1
       responses:
-        '401':
-          description: 인증 필요
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                INVALID_REFRESH_TOKEN:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: INVALID_REFRESH_TOKEN
-                      message: 세션이 만료되었습니다. 다시 로그인해 주세요.
-                      details: null
         '200':
           description: 요청 성공
           headers:
@@ -228,6 +213,21 @@ paths:
                     data:
                       message: 토큰이 갱신되었습니다.
                     error: null
+        '401':
+          description: 인증 필요
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                INVALID_REFRESH_TOKEN:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVALID_REFRESH_TOKEN
+                      message: 세션이 만료되었습니다. 다시 로그인해 주세요.
+                      details: null
       security: []
   /v1/invitations/accept-by-token:
     post:
@@ -242,10 +242,10 @@ paths:
             schema:
               $ref: '#/components/schemas/AcceptInvitationByTokenRequest'
             examples:
-              acceptInvitationByToken_InvitationExpiredException:
+              acceptInvitationByToken_AlreadyWorkspaceMemberException:
                 value:
                   token: 3q2wF0rQvXzYbA1cD2eF3gH4iJ5kL6mN7oP8rS9tUvw
-              acceptInvitationByToken_AlreadyWorkspaceMemberException:
+              acceptInvitationByToken_InvitationEmailMismatchException:
                 value:
                   token: 3q2wF0rQvXzYbA1cD2eF3gH4iJ5kL6mN7oP8rS9tUvw
               acceptInvitationByToken_InvitationNotFoundException:
@@ -260,7 +260,7 @@ paths:
               acceptInvitationByToken_InvitationNotPendingException:
                 value:
                   token: 3q2wF0rQvXzYbA1cD2eF3gH4iJ5kL6mN7oP8rS9tUvw
-              acceptInvitationByToken_InvitationEmailMismatchException:
+              acceptInvitationByToken_InvitationExpiredException:
                 value:
                   token: 3q2wF0rQvXzYbA1cD2eF3gH4iJ5kL6mN7oP8rS9tUvw
       responses:
@@ -271,14 +271,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                INVITATION_EXPIRED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: INVITATION_EXPIRED
-                      message: 만료된 초대입니다.
-                      details: null
                 ALREADY_WORKSPACE_MEMBER:
                   value:
                     success: false
@@ -294,6 +286,29 @@ paths:
                     error:
                       code: INVITATION_NOT_PENDING
                       message: 이미 처리된 초대입니다.
+                      details: null
+                INVITATION_EXPIRED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVITATION_EXPIRED
+                      message: 만료된 초대입니다.
+                      details: null
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                INVITATION_EMAIL_MISMATCH:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVITATION_EMAIL_MISMATCH
+                      message: 초대 대상 이메일이 아닙니다.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -341,21 +356,6 @@ paths:
                       role: MEMBER
                       status: ACCEPTED
                     error: null
-        '403':
-          description: 권한 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                INVITATION_EMAIL_MISMATCH:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: INVITATION_EMAIL_MISMATCH
-                      message: 초대 대상 이메일이 아닙니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -388,6 +388,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
                 PROJECT_NOT_FOUND:
                   value:
                     success: false
@@ -403,29 +411,6 @@ paths:
                     error:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: NOTE_NOT_FOUND
-                      message: 노트를 찾을 수 없습니다.
-                      details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
                       details: null
         '200':
           description: 요청 성공
@@ -466,6 +451,21 @@ paths:
                         email: null
                         image: null
                     error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -505,8 +505,6 @@ paths:
                       code: MEETING_IN_PROGRESS
                       message: 기록 중인 회의는 삭제할 수 없습니다.
                       details: null
-        '204':
-          description: 처리 성공
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -514,14 +512,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
                 NOTE_NOT_FOUND:
                   value:
                     success: false
@@ -538,6 +528,16 @@ paths:
                       code: PROJECT_NOT_FOUND
                       message: 프로젝트를 찾을 수 없습니다.
                       details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '204':
+          description: 처리 성공
         '400':
           description: 잘못된 요청
           content:
@@ -582,22 +582,68 @@ paths:
             schema:
               $ref: '#/components/schemas/NoteRequest'
             examples:
-              updateNote_Success:
-                value:
-                  title: 주간 회의
-              updateNote_WorkspaceNotFoundException:
+              updateNote_NoteNotFoundException:
                 value:
                   title: 주간 회의
               updateNote_ProjectNotFoundException:
                 value:
                   title: 주간 회의
-              updateNote_NoteNotFoundException:
+              updateNote_WorkspaceNotFoundException:
                 value:
                   title: 주간 회의
               updateNote_BadRequest:
                 value:
                   title: ''
+              updateNote_Success:
+                value:
+                  title: 주간 회의
       responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '200':
           description: 요청 성공
           content:
@@ -637,52 +683,6 @@ paths:
                         email: null
                         image: null
                     error: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: NOTE_NOT_FOUND
-                      message: 노트를 찾을 수 없습니다.
-                      details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -708,21 +708,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AG
       responses:
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -730,14 +715,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
                 TRANSCRIPTION_SESSION_NOT_FOUND:
                   value:
                     success: false
@@ -762,6 +739,14 @@ paths:
                       code: PROJECT_NOT_FOUND
                       message: 프로젝트를 찾을 수 없습니다.
                       details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
         '200':
           description: 요청 성공
           content:
@@ -781,6 +766,21 @@ paths:
                       endedAt: '2026-07-14T01:02:03Z'
                       endReason: CLIENT_DISCONNECTED
                     error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -793,21 +793,6 @@ paths:
       description: 현재 인증된 사용자의 기본 정보를 조회한다.
       operationId: getCurrentUser
       responses:
-        '404':
-          description: 사용자를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                USER_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: USER_NOT_FOUND
-                      message: 사용자를 찾을 수 없습니다.
-                      details: null
         '200':
           description: 현재 사용자 조회 성공
           content:
@@ -824,6 +809,21 @@ paths:
                       email: hong@example.com
                       image: https://cdn.heymoa.com/profiles/member.png
                     error: null
+        '404':
+          description: 사용자를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                USER_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: USER_NOT_FOUND
+                      message: 사용자를 찾을 수 없습니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -849,6 +849,36 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AD
       responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '200':
           description: 요청 성공
           content:
@@ -865,36 +895,6 @@ paths:
                       description: 제품을 만드는 팀의 워크스페이스
                       role: ADMIN
                     error: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -924,11 +924,7 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateWorkspaceRequest'
             examples:
-              updateWorkspace_BadRequest:
-                value:
-                  name: ''
-                  description: null
-              updateWorkspace_Success:
+              updateWorkspace_WorkspaceAccessDeniedException:
                 value:
                   name: 제품 팀
                   description: 제품을 만드는 팀의 워크스페이스
@@ -936,25 +932,44 @@ paths:
                 value:
                   name: 제품 팀
                   description: 제품을 만드는 팀의 워크스페이스
-              updateWorkspace_WorkspaceAccessDeniedException:
+              updateWorkspace_Success:
                 value:
                   name: 제품 팀
                   description: 제품을 만드는 팀의 워크스페이스
+              updateWorkspace_BadRequest:
+                value:
+                  name: ''
+                  description: null
       responses:
-        '400':
-          description: 잘못된 요청
+        '403':
+          description: 권한 없음
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BAD_REQUEST:
+                WORKSPACE_ACCESS_DENIED:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
                       details: null
         '200':
           description: 요청 성공
@@ -971,35 +986,20 @@ paths:
                       name: 제품 팀
                       description: 제품을 만드는 팀의 워크스페이스
                     error: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
+        '400':
+          description: 잘못된 요청
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_NOT_FOUND:
+                BAD_REQUEST:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-        '403':
-          description: 권한 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_ACCESS_DENIED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_ACCESS_DENIED
-                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -1130,16 +1130,6 @@ paths:
               sendAgentChatMessage_AgentChatTurnInProgressException:
                 value:
                   message: 안녕
-              sendAgentChatMessage_Success:
-                value:
-                  message: 안녕
-                  noteIds:
-                  - 0HZX2K7M9Q4AF
-              sendAgentChatMessage_BadRequest:
-                value:
-                  message: 안녕
-                  projectIds:
-                  - 짧다
               sendAgentChatMessage_ScopeOutOfWorkspaceException:
                 value:
                   message: 안녕
@@ -1148,6 +1138,16 @@ paths:
               sendAgentChatMessage_AgentChatNotFoundException:
                 value:
                   message: 안녕
+              sendAgentChatMessage_BadRequest:
+                value:
+                  message: 안녕
+                  projectIds:
+                  - 짧다
+              sendAgentChatMessage_Success:
+                value:
+                  message: 안녕
+                  noteIds:
+                  - 0HZX2K7M9Q4AF
       responses:
         '409':
           description: 요청 상태 충돌
@@ -1166,19 +1166,6 @@ paths:
                       details:
                       - field: activeTurnId
                         message: 0K9GVJT2C4Q3B
-        '202':
-          description: '202'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AgentChatTurnStartedResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      turnId: 0K9GVJT2C4Q3B
-                    error: null
         '400':
           description: 잘못된 요청
           content:
@@ -1186,14 +1173,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
                 SCOPE_OUT_OF_WORKSPACE:
                   value:
                     success: false
@@ -1201,6 +1180,14 @@ paths:
                     error:
                       code: SCOPE_OUT_OF_WORKSPACE
                       message: 이 워크스페이스에서 찾을 수 없는 범위가 있습니다.
+                      details: null
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -1217,6 +1204,19 @@ paths:
                       code: AGENT_CHAT_NOT_FOUND
                       message: 채팅 세션을 찾을 수 없습니다.
                       details: null
+        '202':
+          description: '202'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentChatTurnStartedResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      turnId: 0K9GVJT2C4Q3B
+                    error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -1304,6 +1304,36 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AK
       responses:
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                INVITATION_NOT_PENDING:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVITATION_NOT_PENDING
+                      message: 이미 처리된 초대입니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                INVITATION_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVITATION_NOT_FOUND
+                      message: 초대를 찾을 수 없습니다.
+                      details: null
         '403':
           description: 권한 없음
           content:
@@ -1335,36 +1365,6 @@ paths:
                       role: MEMBER
                       status: ACCEPTED
                     error: null
-        '409':
-          description: 요청 상태 충돌
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                INVITATION_NOT_PENDING:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: INVITATION_NOT_PENDING
-                      message: 이미 처리된 초대입니다.
-                      details: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                INVITATION_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: INVITATION_NOT_FOUND
-                      message: 초대를 찾을 수 없습니다.
-                      details: null
         '400':
           description: 잘못된 요청
           content:
@@ -1506,6 +1506,21 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AF
       responses:
+        '202':
+          description: '202'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      analysisId: 0K9GVJT2C4Q1Z
+                      noteId: 0HZX2K7M9Q4AF
+                      status: PENDING
+                    error: null
         '409':
           description: 요청 상태 충돌
           content:
@@ -1536,13 +1551,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_NOT_FOUND:
+                NOTE_NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
                       details: null
                 PROJECT_NOT_FOUND:
                   value:
@@ -1552,113 +1567,16 @@ paths:
                       code: PROJECT_NOT_FOUND
                       message: 프로젝트를 찾을 수 없습니다.
                       details: null
-                NOTE_NOT_FOUND:
+                WORKSPACE_NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: NOTE_NOT_FOUND
-                      message: 노트를 찾을 수 없습니다.
-                      details: null
-        '202':
-          description: '202'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AnalysisResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      analysisId: 0K9GVJT2C4Q1Z
-                      noteId: 0HZX2K7M9Q4AF
-                      status: PENDING
-                    error: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-      security:
-      - accessCookie: []
-  /v1/notes/{noteId}/context-candidates:
-    get:
-      tags:
-      - Context Candidates
-      summary: context candidate 목록 조회
-      description: 노트 멤버가 OPEN/CLOSED candidate head와 성공 적용 범위를 조회한다.
-      operationId: getContextCandidates
-      parameters:
-      - name: noteId
-        in: path
-        description: 노트 식별자
-        required: true
-        schema:
-          type: string
-          description: 노트 식별자
-          nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-          minLength: 13
-          maxLength: 13
-        example: 0HZX2K7M9Q4AF
-      responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: NOTE_NOT_FOUND
-                      message: 노트를 찾을 수 없습니다.
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '200':
-          description: 요청 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ContextCandidateSnapshotResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      candidates:
-                      - candidateId: 0HZX2K7M9Q4AP
-                        revision: 1
-                        operation: CREATE
-                        revisionSource: LIVE
-                        kind: QUESTION
-                        status: OPEN
-                        closeReason: null
-                        content: 배포 일정을 확정해야 한다
-                        createdSequence: 1
-                        lastEvidenceSequence: 2
-                        aiSemanticRevisionCount: 0
-                        resolvesCandidateId: null
-                        evidence:
-                        - segmentId: 0HZX2K7M9Q4AH
-                          sequence: 2
-                          startedAtMs: 1000
-                          endedAtMs: 1900
-                          text: 배포 일정을 확정해야 합니다
-                          role: SUPPORTS
-                      appliedRanges:
-                      - runKey: 0J00000000RN1
-                        applyStatus: APPLIED
-                        fromSequence: 1
-                        toSequence: 2
-                        fromStartedAtMs: 1000
-                        toEndedAtMs: 1900
-                        rawDeltaSaturated: false
-                        semanticUnitSaturated: true
-                        appliedAt: '2026-07-14T01:02:03.123Z'
-                    error: null
       security:
       - accessCookie: []
   /v1/notes/{noteId}/meeting-end:
@@ -1682,37 +1600,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AF
       responses:
-        '409':
-          description: 요청 상태 충돌
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                ACTIVE_TRANSCRIPTION_SESSION:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: ACTIVE_TRANSCRIPTION_SESSION
-                      message: 이미 진행 가능한 전사 세션이 있습니다.
-                      details: null
-                MEETING_NOT_STARTED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: MEETING_NOT_STARTED
-                      message: 아직 시작하지 않은 회의입니다.
-                      details: null
-                MEETING_ALREADY_ENDED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: MEETING_ALREADY_ENDED
-                      message: 이미 종료된 회의입니다.
-                      details: null
         '403':
           description: 권한 없음
           content:
@@ -1728,6 +1615,37 @@ paths:
                       code: NOT_MEETING_STARTER
                       message: 회의 시작자만 조작할 수 있습니다.
                       details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                MEETING_ALREADY_ENDED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_ALREADY_ENDED
+                      message: 이미 종료된 회의입니다.
+                      details: null
+                MEETING_NOT_STARTED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_NOT_STARTED
+                      message: 아직 시작하지 않은 회의입니다.
+                      details: null
+                ACTIVE_TRANSCRIPTION_SESSION:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: ACTIVE_TRANSCRIPTION_SESSION
+                      message: 이미 진행 가능한 전사 세션이 있습니다.
+                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -1735,14 +1653,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
                 NOTE_NOT_FOUND:
                   value:
                     success: false
@@ -1750,6 +1660,14 @@ paths:
                     error:
                       code: NOTE_NOT_FOUND
                       message: 노트를 찾을 수 없습니다.
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
                       details: null
                 WORKSPACE_NOT_FOUND:
                   value:
@@ -1809,6 +1727,14 @@ paths:
                   userIds:
                   - 0HZX2K7M9Q4AC
               replaceNoteParticipants_NotWorkspaceMemberException:
+                value:
+                  userIds:
+                  - 0HZX2K7M9Q4AC
+              replaceNoteParticipants_NoteNotFoundException:
+                value:
+                  userIds:
+                  - 0HZX2K7M9Q4AC
+              replaceNoteParticipants_WorkspaceNotFoundException:
                 value:
                   userIds:
                   - 0HZX2K7M9Q4AC
@@ -2016,14 +1942,6 @@ paths:
                   - 0HZX2K7M9Q4AC
                   - 0HZX2K7M9Q4AC
                   - 0HZX2K7M9Q4AC
-              replaceNoteParticipants_NoteNotFoundException:
-                value:
-                  userIds:
-                  - 0HZX2K7M9Q4AC
-              replaceNoteParticipants_WorkspaceNotFoundException:
-                value:
-                  userIds:
-                  - 0HZX2K7M9Q4AC
       responses:
         '200':
           description: 요청 성공
@@ -2100,6 +2018,88 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/notes/{noteId}/proposals:
+    get:
+      tags:
+      - Proposals
+      summary: 명제 목록 조회
+      description: 노트 멤버가 명제 head 와 적용된 run 구간을 조회한다.
+      operationId: getProposals
+      parameters:
+      - name: noteId
+        in: path
+        description: 노트 식별자
+        required: true
+        schema:
+          type: string
+          description: 노트 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AF
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProposalsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      proposals:
+                      - proposalId: 0HZX2K7M9Q4AP
+                        revision: 1
+                        operation: CREATE
+                        revisionSource: LIVE
+                        kind: QUESTION
+                        status: OPEN
+                        closeReason: null
+                        content: 배포 일정을 확정해야 한다
+                        createdSequence: 1
+                        lastEvidenceSequence: 2
+                        aiSemanticRevisionCount: 0
+                        resolvesProposalId: null
+                        citations:
+                        - segmentId: 0HZX2K7M9Q4AH
+                          sequence: 2
+                          startedAtMs: 1000
+                          endedAtMs: 1900
+                          text: 배포 일정을 확정해야 합니다
+                          role: SUPPORTS
+                      runs:
+                      - runId: 0J00000000RN1
+                        applyStatus: APPLIED
+                        fromSequence: 1
+                        toSequence: 2
+                        fromStartedAtMs: 1000
+                        toEndedAtMs: 1900
+                        rawDeltaSaturated: false
+                        semanticUnitSaturated: true
+                        appliedAt: '2026-07-14T01:02:03.123Z'
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
   /v1/notes/{noteId}/transcript:
     get:
       tags:
@@ -2121,6 +2121,52 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AF
       responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '200':
           description: 요청 성공
           content:
@@ -2163,52 +2209,6 @@ paths:
                         startedAt: '2026-08-18T10:10:12Z'
                         endedAt: '2026-08-18T10:19:41Z'
                     error: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: NOTE_NOT_FOUND
-                      message: 노트를 찾을 수 없습니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -2256,14 +2256,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
                 NOTE_NOT_FOUND:
                   value:
                     success: false
@@ -2271,6 +2263,14 @@ paths:
                     error:
                       code: NOTE_NOT_FOUND
                       message: 노트를 찾을 수 없습니다.
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
                       details: null
                 WORKSPACE_NOT_FOUND:
                   value:
@@ -2287,14 +2287,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                MEETING_ALREADY_ENDED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: MEETING_ALREADY_ENDED
-                      message: 이미 종료된 회의입니다.
-                      details: null
                 ACTIVE_TRANSCRIPTION_SESSION:
                   value:
                     success: false
@@ -2302,6 +2294,14 @@ paths:
                     error:
                       code: ACTIVE_TRANSCRIPTION_SESSION
                       message: 이미 진행 가능한 전사 세션이 있습니다.
+                      details: null
+                MEETING_ALREADY_ENDED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_ALREADY_ENDED
+                      message: 이미 종료된 회의입니다.
                       details: null
         '201':
           description: 생성 성공
@@ -2336,7 +2336,7 @@ paths:
       parameters:
       - name: notificationId
         in: path
-        description: 읽음 처리할 알림 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -2347,34 +2347,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AJ
       responses:
-        '200':
-          description: 요청 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MarkNotificationReadResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      notificationId: 0HZX2K7M9Q4AJ
-                    error: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                NOTIFICATION_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: NOTIFICATION_NOT_FOUND
-                      message: 알림을 찾을 수 없습니다.
-                      details: null
         '400':
           description: 잘못된 요청
           content:
@@ -2390,6 +2362,34 @@ paths:
                       code: BAD_REQUEST
                       message: 잘못된 요청입니다.
                       details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTIFICATION_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTIFICATION_NOT_FOUND
+                      message: 알림을 찾을 수 없습니다.
+                      details: null
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkNotificationReadResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      notificationId: 0HZX2K7M9Q4AJ
+                    error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -2415,29 +2415,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AE
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
         '200':
           description: 요청 성공
           content:
@@ -2479,6 +2456,29 @@ paths:
                           email: null
                           image: null
                     error: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
         '400':
           description: 잘못된 요청
           content:
@@ -2523,19 +2523,57 @@ paths:
             schema:
               $ref: '#/components/schemas/NoteRequest'
             examples:
-              createNote_Success:
-                value:
-                  title: 주간 회의
               createNote_BadRequest:
                 value:
                   title: ''
-              createNote_WorkspaceNotFoundException:
-                value:
-                  title: 주간 회의
               createNote_ProjectNotFoundException:
                 value:
                   title: 주간 회의
+              createNote_WorkspaceNotFoundException:
+                value:
+                  title: 주간 회의
+              createNote_Success:
+                value:
+                  title: 주간 회의
       responses:
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
         '201':
           description: 생성 성공
           content:
@@ -2571,44 +2609,6 @@ paths:
                         email: null
                         image: null
                     error: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -2764,21 +2764,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AD
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
         '200':
           description: 요청 성공
           content:
@@ -2796,6 +2781,21 @@ paths:
                         noteCount: 3
                         createdAt: '2026-07-14T01:02:03Z'
                     error: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -2897,6 +2897,21 @@ paths:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
                       details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -2933,21 +2948,6 @@ paths:
                         createdAt: '2026-07-14T01:02:03Z'
                         expiresAt: '2026-07-15T01:02:03Z'
                     error: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -2977,15 +2977,11 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateWorkspaceInvitationRequest'
             examples:
-              createWorkspaceInvitation_DuplicatePendingInvitationException:
-                value:
-                  email: kim@example.com
-                  role: MEMBER
               createWorkspaceInvitation_BadRequest:
                 value:
                   email: not-an-email
                   role: MEMBER
-              createWorkspaceInvitation_Success:
+              createWorkspaceInvitation_WorkspaceNotFoundException:
                 value:
                   email: kim@example.com
                   role: MEMBER
@@ -2993,7 +2989,7 @@ paths:
                 value:
                   email: kim@example.com
                   role: MEMBER
-              createWorkspaceInvitation_WorkspaceNotFoundException:
+              createWorkspaceInvitation_DuplicatePendingInvitationException:
                 value:
                   email: kim@example.com
                   role: MEMBER
@@ -3001,30 +2997,11 @@ paths:
                 value:
                   email: kim@example.com
                   role: MEMBER
+              createWorkspaceInvitation_Success:
+                value:
+                  email: kim@example.com
+                  role: MEMBER
       responses:
-        '409':
-          description: 요청 상태 충돌
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                DUPLICATE_PENDING_INVITATION:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: DUPLICATE_PENDING_INVITATION
-                      message: 이미 대기 중인 초대가 있습니다.
-                      details: null
-                ALREADY_WORKSPACE_MEMBER:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: ALREADY_WORKSPACE_MEMBER
-                      message: 이미 워크스페이스 멤버입니다.
-                      details: null
         '400':
           description: 잘못된 요청
           content:
@@ -3039,6 +3016,59 @@ paths:
                     error:
                       code: BAD_REQUEST
                       message: 잘못된 요청입니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                ALREADY_WORKSPACE_MEMBER:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: ALREADY_WORKSPACE_MEMBER
+                      message: 이미 워크스페이스 멤버입니다.
+                      details: null
+                DUPLICATE_PENDING_INVITATION:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: DUPLICATE_PENDING_INVITATION
+                      message: 이미 대기 중인 초대가 있습니다.
+                      details: null
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
                       details: null
         '201':
           description: 생성 성공
@@ -3056,36 +3086,6 @@ paths:
                       role: MEMBER
                       status: PENDING
                     error: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-        '403':
-          description: 권한 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_ACCESS_DENIED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_ACCESS_DENIED
-                      message: 워크스페이스를 변경할 권한이 없습니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -3100,7 +3100,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: ''
+        description: 조회할 워크스페이스 식별자
         required: true
         schema:
           type: string
@@ -3111,36 +3111,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AD
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
         '200':
           description: 요청 성공
           content:
@@ -3160,6 +3130,36 @@ paths:
                         role: ADMIN
                         joinedAt: '2026-07-14T01:02:03Z'
                     error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -3185,6 +3185,36 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AD
       responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '200':
           description: 요청 성공
           content:
@@ -3204,36 +3234,6 @@ paths:
                         createdAt: '2026-07-14T01:02:03Z'
                         updatedAt: '2026-07-14T01:02:03Z'
                     error: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -3263,10 +3263,6 @@ paths:
             schema:
               $ref: '#/components/schemas/ProjectRequest'
             examples:
-              createProject_WorkspaceNotFoundException:
-                value:
-                  name: 모바일 앱
-                  description: Heymoa 모바일 앱 프로젝트
               createProject_BadRequest:
                 value:
                   name: ''
@@ -3275,22 +3271,11 @@ paths:
                 value:
                   name: 모바일 앱
                   description: Heymoa 모바일 앱 프로젝트
+              createProject_WorkspaceNotFoundException:
+                value:
+                  name: 모바일 앱
+                  description: Heymoa 모바일 앱 프로젝트
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
         '400':
           description: 잘못된 요청
           content:
@@ -3324,6 +3309,21 @@ paths:
                       createdAt: '2026-07-14T01:02:03Z'
                       updatedAt: '2026-07-14T01:02:03Z'
                     error: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -3349,21 +3349,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AF
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                ANALYSIS_JOB_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: ANALYSIS_JOB_NOT_FOUND
-                      message: 분석 잡을 찾을 수 없습니다.
-                      details: null
         '200':
           description: 요청 성공
           content:
@@ -3402,6 +3387,21 @@ paths:
                         errorCode: null
                         errorMessage: null
                     error: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                ANALYSIS_JOB_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: ANALYSIS_JOB_NOT_FOUND
+                      message: 분석 잡을 찾을 수 없습니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -3510,41 +3510,33 @@ paths:
             schema:
               $ref: '#/components/schemas/NoteGuestParticipantRequest'
             examples:
-              createNoteGuestParticipant_WorkspaceNotFoundException:
+              createNoteGuestParticipant_BadRequest:
+                value:
+                  displayName: 가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가
+              createNoteGuestParticipant_Success:
                 value:
                   displayName: 박서준
               createNoteGuestParticipant_NoteNotFoundException:
                 value:
                   displayName: 박서준
-              createNoteGuestParticipant_Success:
+              createNoteGuestParticipant_WorkspaceNotFoundException:
                 value:
                   displayName: 박서준
-              createNoteGuestParticipant_BadRequest:
-                value:
-                  displayName: 가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
+        '400':
+          description: 잘못된 요청
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_NOT_FOUND:
+                BAD_REQUEST:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: NOTE_NOT_FOUND
-                      message: 노트를 찾을 수 없습니다.
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details: null
         '201':
           description: 생성 성공
@@ -3572,20 +3564,28 @@ paths:
                         email: null
                         image: null
                     error: null
-        '400':
-          description: 잘못된 요청
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BAD_REQUEST:
+                NOTE_NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -3601,7 +3601,7 @@ paths:
       parameters:
       - name: noteId
         in: path
-        description: ''
+        description: 노트의 13자리 TSID
         required: true
         schema:
           type: string
@@ -3613,7 +3613,7 @@ paths:
         example: 0HZX2K7M9Q4AF
       - name: label
         in: path
-        description: ''
+        description: 정규화된 화자 라벨
         required: true
         schema:
           type: string
@@ -3627,49 +3627,34 @@ paths:
             schema:
               $ref: '#/components/schemas/AssignSpeakerRequest'
             examples:
-              assignNoteSpeaker_SpeakerLabelNotFoundException:
-                value:
-                  participantId: null
-              assignNoteSpeaker_ParticipantNotInNoteException:
-                value:
-                  participantId: 0HZX2K7M9Q4AQ
-              assignNoteSpeaker_Success:
-                value:
-                  participantId: 0HZX2K7M9Q4AP
               assignNoteSpeaker_BadRequest:
                 value:
                   participantId: 0HZX2K7M9Q4AP
                   userId: 0HZX2K7M9Q4AC
+              assignNoteSpeaker_Success:
+                value:
+                  participantId: 0HZX2K7M9Q4AP
+              assignNoteSpeaker_ParticipantNotInNoteException:
+                value:
+                  participantId: 0HZX2K7M9Q4AQ
+              assignNoteSpeaker_SpeakerLabelNotFoundException:
+                value:
+                  participantId: null
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
+        '400':
+          description: 잘못된 요청
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                SPEAKER_LABEL_NOT_FOUND:
+                BAD_REQUEST:
                   value:
                     success: false
                     data: null
                     error:
-                      code: SPEAKER_LABEL_NOT_FOUND
-                      message: 그 화자를 찾을 수 없습니다.
-                      details: null
-        '422':
-          description: '422'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                PARTICIPANT_NOT_IN_NOTE:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PARTICIPANT_NOT_IN_NOTE
-                      message: 이 회의의 화자로 지정할 수 없는 대상입니다.
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details: null
         '200':
           description: 요청 성공
@@ -3691,20 +3676,35 @@ paths:
                         assignedName: 홍길동
                         confirmed: true
                     error: null
-        '400':
-          description: 잘못된 요청
+        '422':
+          description: '422'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                BAD_REQUEST:
+                PARTICIPANT_NOT_IN_NOTE:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
+                      code: PARTICIPANT_NOT_IN_NOTE
+                      message: 이 회의의 화자로 지정할 수 없는 대상입니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                SPEAKER_LABEL_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SPEAKER_LABEL_NOT_FOUND
+                      message: 그 화자를 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -3731,52 +3731,6 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AF
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-                NOTE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: NOTE_NOT_FOUND
-                      message: 노트를 찾을 수 없습니다.
-                      details: null
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
         '200':
           description: 요청 성공
           content:
@@ -3794,6 +3748,52 @@ paths:
                       readyExpiresAt: '2026-07-14T01:02:03Z'
                       startedAt: null
                     error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
+                PROJECT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -3831,6 +3831,19 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AR
       responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteWorkspaceGuestResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      affectedNoteCount: 3
+                    error: null
         '403':
           description: 권한 없음
           content:
@@ -3846,19 +3859,6 @@ paths:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
                       details: null
-        '200':
-          description: 요청 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteWorkspaceGuestResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      affectedNoteCount: 3
-                    error: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -3911,8 +3911,6 @@ paths:
           - GITHUB
         example: LINEAR
       responses:
-        '204':
-          description: 처리 성공
         '403':
           description: 권한 없음
           content:
@@ -3928,21 +3926,8 @@ paths:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
                       details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
+        '204':
+          description: 처리 성공
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -3957,6 +3942,21 @@ paths:
                     error:
                       code: INTEGRATION_NOT_FOUND
                       message: 연동을 찾을 수 없습니다.
+                      details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -3995,6 +3995,36 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AK
       responses:
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                INVITATION_NOT_PENDING:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVITATION_NOT_PENDING
+                      message: 이미 처리된 초대입니다.
+                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -4018,20 +4048,20 @@ paths:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
                       details: null
-        '403':
-          description: 권한 없음
+        '400':
+          description: 잘못된 요청
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                WORKSPACE_ACCESS_DENIED:
+                BAD_REQUEST:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_ACCESS_DENIED
-                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details: null
         '200':
           description: 요청 성공
@@ -4049,36 +4079,6 @@ paths:
                       role: MEMBER
                       status: CANCELED
                     error: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
-        '409':
-          description: 요청 상태 충돌
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                INVITATION_NOT_PENDING:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: INVITATION_NOT_PENDING
-                      message: 이미 처리된 초대입니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -4093,7 +4093,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: ''
+        description: 나갈 워크스페이스 식별자
         required: true
         schema:
           type: string
@@ -4104,6 +4104,8 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AD
       responses:
+        '204':
+          description: 처리 성공
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -4134,8 +4136,6 @@ paths:
                       code: LAST_WORKSPACE_ADMIN
                       message: 워크스페이스에는 관리자가 최소 한 명 있어야 합니다.
                       details: null
-        '204':
-          description: 처리 성공
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -4173,6 +4173,138 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AM
       responses:
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_MEMBER_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_MEMBER_NOT_FOUND
+                      message: 워크스페이스 멤버를 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '204':
+          description: 처리 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+    patch:
+      tags:
+      - Workspace Members
+      summary: 워크스페이스 멤버 역할 변경
+      description: 멤버의 역할을 ADMIN·MEMBER로 바꾼다. ADMIN만 호출할 수 있고, 마지막 ADMIN은 강등할 수 없다.
+      operationId: changeWorkspaceMemberRole
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스 식별자
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AD
+      - name: userId
+        in: path
+        description: 역할을 바꿀 멤버의 사용자 식별자
+        required: true
+        schema:
+          type: string
+          description: 역할을 바꿀 멤버의 사용자 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeWorkspaceMemberRoleRequest'
+            examples:
+              changeWorkspaceMemberRole_Success:
+                value:
+                  role: ADMIN
+              changeWorkspaceMemberRole_BadRequest:
+                value:
+                  role: OWNER
+              changeWorkspaceMemberRole_WorkspaceNotFoundException:
+                value:
+                  role: ADMIN
+              changeWorkspaceMemberRole_WorkspaceMemberNotFoundException:
+                value:
+                  role: ADMIN
+              changeWorkspaceMemberRole_Forbidden:
+                value:
+                  role: ADMIN
+              changeWorkspaceMemberRole_LastWorkspaceAdminException:
+                value:
+                  role: MEMBER
+      responses:
+        '204':
+          description: 처리 성공
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -4196,98 +4328,6 @@ paths:
                       code: WORKSPACE_MEMBER_NOT_FOUND
                       message: 워크스페이스 멤버를 찾을 수 없습니다.
                       details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
-        '204':
-          description: 처리 성공
-        '403':
-          description: 권한 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_ACCESS_DENIED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_ACCESS_DENIED
-                      message: 워크스페이스를 변경할 권한이 없습니다.
-                      details: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-      security:
-      - accessCookie: []
-    patch:
-      tags:
-      - Workspace Members
-      summary: 워크스페이스 멤버 역할 변경
-      description: 멤버의 역할을 ADMIN·MEMBER로 바꾼다. ADMIN만 호출할 수 있고, 마지막 ADMIN은 강등할 수 없다.
-      operationId: changeWorkspaceMemberRole
-      parameters:
-      - name: workspaceId
-        in: path
-        description: ''
-        required: true
-        schema:
-          type: string
-          description: 워크스페이스 식별자
-          nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-          minLength: 13
-          maxLength: 13
-        example: 0HZX2K7M9Q4AD
-      - name: userId
-        in: path
-        description: ''
-        required: true
-        schema:
-          type: string
-          description: 역할을 바꿀 멤버의 사용자 식별자
-          nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-          minLength: 13
-          maxLength: 13
-        example: 0HZX2K7M9Q4AM
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChangeWorkspaceMemberRoleRequest'
-            examples:
-              changeWorkspaceMemberRole_Forbidden:
-                value:
-                  role: ADMIN
-              changeWorkspaceMemberRole_LastWorkspaceAdminException:
-                value:
-                  role: MEMBER
-              changeWorkspaceMemberRole_Success:
-                value:
-                  role: ADMIN
-              changeWorkspaceMemberRole_WorkspaceNotFoundException:
-                value:
-                  role: ADMIN
-              changeWorkspaceMemberRole_BadRequest:
-                value:
-                  role: OWNER
-              changeWorkspaceMemberRole_WorkspaceMemberNotFoundException:
-                value:
-                  role: ADMIN
-      responses:
         '403':
           description: 권한 없음
           content:
@@ -4317,46 +4357,6 @@ paths:
                     error:
                       code: LAST_WORKSPACE_ADMIN
                       message: 워크스페이스에는 관리자가 최소 한 명 있어야 합니다.
-                      details: null
-        '204':
-          description: 처리 성공
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                WORKSPACE_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-                WORKSPACE_MEMBER_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: WORKSPACE_MEMBER_NOT_FOUND
-                      message: 워크스페이스 멤버를 찾을 수 없습니다.
-                      details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -4395,6 +4395,24 @@ paths:
           maxLength: 13
         example: 0HZX2K7M9Q4AE
       responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      projectId: 0HZX2K7M9Q4AE
+                      workspaceId: 0HZX2K7M9Q4AD
+                      name: 모바일 앱
+                      description: Heymoa 모바일 앱 프로젝트
+                      createdAt: '2026-07-14T01:02:03Z'
+                      updatedAt: '2026-07-14T01:02:03Z'
+                    error: null
         '400':
           description: 잘못된 요청
           content:
@@ -4433,24 +4451,6 @@ paths:
                       code: PROJECT_NOT_FOUND
                       message: 프로젝트를 찾을 수 없습니다.
                       details: null
-        '200':
-          description: 요청 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      projectId: 0HZX2K7M9Q4AE
-                      workspaceId: 0HZX2K7M9Q4AD
-                      name: 모바일 앱
-                      description: Heymoa 모바일 앱 프로젝트
-                      createdAt: '2026-07-14T01:02:03Z'
-                      updatedAt: '2026-07-14T01:02:03Z'
-                    error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -4492,7 +4492,15 @@ paths:
             schema:
               $ref: '#/components/schemas/ProjectRequest'
             examples:
+              updateProject_BadRequest:
+                value:
+                  name: ''
+                  description: null
               updateProject_Success:
+                value:
+                  name: 모바일 앱
+                  description: Heymoa 모바일 앱 프로젝트
+              updateProject_WorkspaceNotFoundException:
                 value:
                   name: 모바일 앱
                   description: Heymoa 모바일 앱 프로젝트
@@ -4500,15 +4508,22 @@ paths:
                 value:
                   name: 모바일 앱
                   description: Heymoa 모바일 앱 프로젝트
-              updateProject_BadRequest:
-                value:
-                  name: ''
-                  description: null
-              updateProject_WorkspaceNotFoundException:
-                value:
-                  name: 모바일 앱
-                  description: Heymoa 모바일 앱 프로젝트
       responses:
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
         '200':
           description: 요청 성공
           content:
@@ -4534,14 +4549,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                PROJECT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: PROJECT_NOT_FOUND
-                      message: 프로젝트를 찾을 수 없습니다.
-                      details: null
                 WORKSPACE_NOT_FOUND:
                   value:
                     success: false
@@ -4550,20 +4557,13 @@ paths:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
                       details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
+                PROJECT_NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
+                      code: PROJECT_NOT_FOUND
+                      message: 프로젝트를 찾을 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -4603,20 +4603,20 @@ paths:
       responses:
         '204':
           description: 처리 성공
-        '409':
-          description: 요청 상태 충돌
+        '400':
+          description: 잘못된 요청
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                PROJECT_HAS_NOTES:
+                BAD_REQUEST:
                   value:
                     success: false
                     data: null
                     error:
-                      code: PROJECT_HAS_NOTES
-                      message: 노트가 있는 프로젝트는 삭제할 수 없습니다.
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -4641,21 +4641,6 @@ paths:
                       code: PROJECT_NOT_FOUND
                       message: 프로젝트를 찾을 수 없습니다.
                       details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
-                      details: null
         '403':
           description: 권한 없음
           content:
@@ -4670,6 +4655,21 @@ paths:
                     error:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                PROJECT_HAS_NOTES:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PROJECT_HAS_NOTES
+                      message: 노트가 있는 프로젝트는 삭제할 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -4713,19 +4713,34 @@ paths:
             schema:
               $ref: '#/components/schemas/ResolveToolApprovalRequest'
             examples:
+              resolveToolApproval_ApprovalNotFoundException:
+                value:
+                  decision: REJECTED
               resolveToolApproval_Success:
                 value:
                   decision: APPROVED
               resolveToolApproval_BadRequest:
                 value:
                   decision: MAYBE
-              resolveToolApproval_ApprovalNotFoundException:
-                value:
-                  decision: REJECTED
               resolveToolApproval_NotApprovalOwnerException:
                 value:
                   decision: APPROVED
       responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                APPROVAL_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: APPROVAL_NOT_FOUND
+                      message: 승인 요청을 찾을 수 없습니다.
+                      details: null
         '202':
           description: '202'
           content:
@@ -4753,21 +4768,6 @@ paths:
                     error:
                       code: BAD_REQUEST
                       message: 잘못된 요청입니다.
-                      details: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                APPROVAL_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: APPROVAL_NOT_FOUND
-                      message: 승인 요청을 찾을 수 없습니다.
                       details: null
         '403':
           description: 권한 없음
@@ -4821,8 +4821,6 @@ paths:
           maxLength: 13
         example: 0K9GVJT2C4Q3B
       responses:
-        '204':
-          description: 처리 성공
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -4830,14 +4828,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
-                AGENT_CHAT_TURN_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: AGENT_CHAT_TURN_NOT_FOUND
-                      message: 요청한 턴을 찾을 수 없습니다.
-                      details: null
                 AGENT_CHAT_NOT_FOUND:
                   value:
                     success: false
@@ -4846,6 +4836,16 @@ paths:
                       code: AGENT_CHAT_NOT_FOUND
                       message: 채팅 세션을 찾을 수 없습니다.
                       details: null
+                AGENT_CHAT_TURN_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_TURN_NOT_FOUND
+                      message: 요청한 턴을 찾을 수 없습니다.
+                      details: null
+        '204':
+          description: 처리 성공
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -4899,21 +4899,6 @@ paths:
           type: string
         example: 1735689600000-0
       responses:
-        '410':
-          description: '410'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                AGENT_CHAT_STREAM_GONE:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: AGENT_CHAT_STREAM_GONE
-                      message: 스트림이 사라졌습니다. 히스토리를 다시 읽어 주세요.
-                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -4961,6 +4946,21 @@ paths:
 
 
                     '
+        '410':
+          description: '410'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_CHAT_STREAM_GONE:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_STREAM_GONE
+                      message: 스트림이 사라졌습니다. 히스토리를 다시 읽어 주세요.
+                      details: null
         '503':
           description: '503'
           content:
@@ -4980,17 +4980,17 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
-  /v1/notes/{noteId}/context-candidates/{candidateId}/revisions:
+  /v1/notes/{noteId}/proposals/{proposalId}/revisions:
     get:
       tags:
-      - Context Candidates
-      summary: context candidate revision history 조회
-      description: 노트 멤버가 candidate revision history와 전사 근거를 조회한다.
-      operationId: getContextCandidateRevisions
+      - Proposals
+      summary: 명제 판 이력 조회
+      description: 노트 멤버가 명제의 판 이력과 인용을 조회한다.
+      operationId: getProposalRevisions
       parameters:
       - name: noteId
         in: path
-        description: 노트 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -5000,33 +5000,35 @@ paths:
           minLength: 13
           maxLength: 13
         example: 0HZX2K7M9Q4AF
-      - name: candidateId
+      - name: proposalId
         in: path
-        description: candidate 식별자
+        description: ''
         required: true
         schema:
           type: string
-          description: candidate 식별자
+          description: 명제 식별자
           nullable: false
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
           minLength: 13
           maxLength: 13
         example: 0HZX2K7M9Q4AP
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '200':
           description: 요청 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContextCandidateRevisionHistoryResponse'
+                $ref: '#/components/schemas/ProposalRevisionHistoryResponse'
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
-                      candidateId: 0HZX2K7M9Q4AP
+                      proposalId: 0HZX2K7M9Q4AP
                       revisions:
-                      - candidateId: 0HZX2K7M9Q4AP
+                      - proposalId: 0HZX2K7M9Q4AP
                         revision: 1
                         operation: RESOLVE
                         revisionSource: LIVE
@@ -5037,8 +5039,8 @@ paths:
                         createdSequence: 1
                         lastEvidenceSequence: 2
                         aiSemanticRevisionCount: 0
-                        resolvesCandidateId: null
-                        evidence:
+                        resolvesProposalId: null
+                        citations:
                         - segmentId: 0HZX2K7M9Q4AH
                           sequence: 2
                           startedAtMs: 1000
@@ -5061,8 +5063,6 @@ paths:
                       code: NOTE_NOT_FOUND
                       message: 노트를 찾을 수 없습니다.
                       details: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
   /v1/notes/{noteId}/segments/{segmentId}/speaker:
@@ -5103,6 +5103,12 @@ paths:
             schema:
               $ref: '#/components/schemas/AssignSegmentSpeakerRequest'
             examples:
+              assignSegmentSpeaker_TranscriptSegmentNotFoundException:
+                value:
+                  participantId: 0HZX2K7M9Q4AP
+              assignSegmentSpeaker_SegmentNotDiarizedException:
+                value:
+                  participantId: 0HZX2K7M9Q4AP
               assignSegmentSpeaker_ParticipantNotInNoteException:
                 value:
                   participantId: 0HZX2K7M9Q4AQ
@@ -5113,13 +5119,37 @@ paths:
               assignSegmentSpeaker_Success:
                 value:
                   participantId: 0HZX2K7M9Q4AP
-              assignSegmentSpeaker_TranscriptSegmentNotFoundException:
-                value:
-                  participantId: 0HZX2K7M9Q4AP
-              assignSegmentSpeaker_SegmentNotDiarizedException:
-                value:
-                  participantId: 0HZX2K7M9Q4AP
       responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                TRANSCRIPT_SEGMENT_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: TRANSCRIPT_SEGMENT_NOT_FOUND
+                      message: 그 발화를 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                SEGMENT_NOT_DIARIZED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SEGMENT_NOT_DIARIZED
+                      message: 화자가 나뉘지 않은 발화입니다.
+                      details: null
         '422':
           description: '422'
           content:
@@ -5164,36 +5194,6 @@ paths:
                       segmentId: 0HZX2K7M9Q4AH
                       assignedParticipantId: 0HZX2K7M9Q4AP
                     error: null
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                TRANSCRIPT_SEGMENT_NOT_FOUND:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: TRANSCRIPT_SEGMENT_NOT_FOUND
-                      message: 그 발화를 찾을 수 없습니다.
-                      details: null
-        '409':
-          description: 요청 상태 충돌
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                SEGMENT_NOT_DIARIZED:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: SEGMENT_NOT_DIARIZED
-                      message: 화자가 나뉘지 않은 발화입니다.
-                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -5239,16 +5239,16 @@ paths:
               linkWorkspaceGuest_WorkspaceAccessDeniedException:
                 value:
                   targetUserId: 0HZX2K7M9Q4AM
-              linkWorkspaceGuest_ConcurrentGuestLinkException:
-                value:
-                  targetUserId: 0HZX2K7M9Q4AM
               linkWorkspaceGuest_WorkspaceMemberNotFoundException:
                 value:
                   targetUserId: 0HZX2K7M9Q4AM
-              linkWorkspaceGuest_WorkspaceGuestNotFoundException:
+              linkWorkspaceGuest_Success:
                 value:
                   targetUserId: 0HZX2K7M9Q4AM
-              linkWorkspaceGuest_Success:
+              linkWorkspaceGuest_ConcurrentGuestLinkException:
+                value:
+                  targetUserId: 0HZX2K7M9Q4AM
+              linkWorkspaceGuest_WorkspaceGuestNotFoundException:
                 value:
                   targetUserId: 0HZX2K7M9Q4AM
       responses:
@@ -5266,21 +5266,6 @@ paths:
                     error:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
-                      details: null
-        '409':
-          description: 요청 상태 충돌
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                CONCURRENT_GUEST_LINK:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: CONCURRENT_GUEST_LINK
-                      message: 연동 중에 회의가 바뀌었습니다. 다시 시도해 주세요.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -5321,6 +5306,21 @@ paths:
                       - noteId: 0HZX2K7M9Q4AF
                         title: 주간 회의
                     error: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                CONCURRENT_GUEST_LINK:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: CONCURRENT_GUEST_LINK
+                      message: 연동 중에 회의가 바뀌었습니다. 다시 시도해 주세요.
+                      details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -5363,35 +5363,19 @@ paths:
             schema:
               $ref: '#/components/schemas/LinkWorkspaceGuestRequest'
             examples:
-              previewWorkspaceGuestLink_Success:
-                value:
-                  targetUserId: 0HZX2K7M9Q4AM
               previewWorkspaceGuestLink_WorkspaceMemberNotFoundException:
-                value:
-                  targetUserId: 0HZX2K7M9Q4AM
-              previewWorkspaceGuestLink_WorkspaceAccessDeniedException:
                 value:
                   targetUserId: 0HZX2K7M9Q4AM
               previewWorkspaceGuestLink_WorkspaceGuestNotFoundException:
                 value:
                   targetUserId: 0HZX2K7M9Q4AM
+              previewWorkspaceGuestLink_WorkspaceAccessDeniedException:
+                value:
+                  targetUserId: 0HZX2K7M9Q4AM
+              previewWorkspaceGuestLink_Success:
+                value:
+                  targetUserId: 0HZX2K7M9Q4AM
       responses:
-        '200':
-          description: 요청 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GuestLinkResponse'
-              examples:
-                SUCCESS:
-                  value:
-                    success: true
-                    data:
-                      changedNoteCount: 4
-                      changedNotes:
-                      - noteId: 0HZX2K7M9Q4AF
-                        title: 주간 회의
-                    error: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -5430,6 +5414,22 @@ paths:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
                       details: null
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestLinkResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      changedNoteCount: 4
+                      changedNotes:
+                      - noteId: 0HZX2K7M9Q4AF
+                        title: 주간 회의
+                    error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -5467,6 +5467,32 @@ paths:
           - GITHUB
         example: LINEAR
       responses:
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '302':
+          description: '302'
+          headers:
+            Location:
+              description: provider의 OAuth authorize URL
+              schema:
+                type: string
+            Set-Cookie:
+              description: CSRF 방지용 nonce 쿠키(HttpOnly)
+              schema:
+                type: string
         '403':
           description: 권한 없음
           content:
@@ -5482,17 +5508,6 @@ paths:
                       code: WORKSPACE_ACCESS_DENIED
                       message: 워크스페이스를 변경할 권한이 없습니다.
                       details: null
-        '302':
-          description: '302'
-          headers:
-            Location:
-              description: provider의 OAuth authorize URL
-              schema:
-                type: string
-            Set-Cookie:
-              description: CSRF 방지용 nonce 쿠키(HttpOnly)
-              schema:
-                type: string
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -5507,21 +5522,6 @@ paths:
                     error:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
-                      details: null
-        '400':
-          description: 잘못된 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppErrorResponse'
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: BAD_REQUEST
-                      message: 잘못된 요청입니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -6227,40 +6227,6 @@ components:
               minimum: 0
           description: 성공 응답 데이터
           nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: 성공 시 null인 오류 정보
-    ContextCandidateRevisionHistoryResponse:
-      title: ContextCandidateRevisionHistoryResponse
-      required:
-      - data
-      - error
-      - success
-      type: object
-      properties:
-        data:
-          required:
-          - candidateId
-          - revisions
-          type: object
-          properties:
-            candidateId:
-              $ref: '#/components/schemas/Tsid'
-            revisions:
-              type: array
-              items:
-                $ref: '#/components/schemas/ContextCandidateRevision'
-              description: revision 오름차순
-          description: 성공 응답 데이터
-          nullable: false
-          additionalProperties: false
         success:
           type: boolean
           description: 요청 성공 여부
@@ -7003,39 +6969,6 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
-    MarkNotificationReadResponse:
-      title: MarkNotificationReadResponse
-      required:
-      - data
-      - error
-      - success
-      type: object
-      properties:
-        data:
-          required:
-          - notificationId
-          type: object
-          properties:
-            notificationId:
-              type: string
-              description: 읽음 처리된 알림 식별자
-              nullable: false
-              example: 0HZX2K7M9Q4AJ
-              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-              minLength: 13
-              maxLength: 13
-          description: 성공 응답 데이터
-          nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: 성공 시 null인 오류 정보
     ProjectResponse:
       title: ProjectResponse
       required:
@@ -7091,6 +7024,39 @@ components:
               description: 워크스페이스의 13자리 TSID
               nullable: false
               example: 0HZX2K7M9Q4AD
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    MarkNotificationReadResponse:
+      title: MarkNotificationReadResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - notificationId
+          type: object
+          properties:
+            notificationId:
+              type: string
+              description: 읽음 처리된 알림 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AJ
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
               minLength: 13
               maxLength: 13
@@ -7314,43 +7280,6 @@ components:
               example: 토큰이 갱신되었습니다.
           description: 성공 응답 데이터
           nullable: false
-        success:
-          type: boolean
-          description: 요청 성공 여부
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: 성공 시 null인 오류 정보
-    ContextCandidateSnapshotResponse:
-      title: ContextCandidateSnapshotResponse
-      required:
-      - data
-      - error
-      - success
-      type: object
-      properties:
-        data:
-          required:
-          - candidates
-          - appliedRanges
-          type: object
-          properties:
-            candidates:
-              type: array
-              items:
-                $ref: '#/components/schemas/ContextCandidateRevision'
-              description: (createdSequence, candidateId) 오름차순. OPEN/CLOSED를 모두 포함한다.
-            appliedRanges:
-              type: array
-              items:
-                $ref: '#/components/schemas/ContextClassificationAppliedRange'
-              description: (fromSequence, toSequence, runKey) 오름차순. successful run 전체다.
-          description: 성공 응답 데이터
-          nullable: false
-          additionalProperties: false
         success:
           type: boolean
           description: 요청 성공 여부
@@ -7629,6 +7558,43 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    ProposalsResponse:
+      title: ProposalsResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - proposals
+          - runs
+          type: object
+          properties:
+            proposals:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProposalRevision'
+              description: (createdSequence, proposalId) 오름차순. OPEN/CLOSED 를 모두 포함한다.
+            runs:
+              type: array
+              items:
+                $ref: '#/components/schemas/TranscriptAnalysisRunRange'
+              description: (fromSequence, toSequence, runId) 오름차순. 적용된 run 전체다.
+          description: 성공 응답 데이터
+          nullable: false
+          additionalProperties: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
     TranscriptionSessionResponse:
       title: TranscriptionSessionResponse
       required:
@@ -7784,6 +7750,40 @@ components:
               maxLength: 13
           description: 성공 응답 데이터
           nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    ProposalRevisionHistoryResponse:
+      title: ProposalRevisionHistoryResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - proposalId
+          - revisions
+          type: object
+          properties:
+            proposalId:
+              $ref: '#/components/schemas/Tsid'
+            revisions:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProposalRevision'
+              description: 판 오름차순
+          description: 성공 응답 데이터
+          nullable: false
+          additionalProperties: false
         success:
           type: boolean
           description: 요청 성공 여부
@@ -8893,13 +8893,13 @@ components:
       pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
       minLength: 13
       maxLength: 13
-    RunKey:
+    RunId:
       type: string
       pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
       minLength: 13
       maxLength: 13
       description: heymoa-ai 가 만드는 멱등 키다. URL path 에 나가는 외부 식별자라 TSID 13자다.
-    CandidateKind:
+    ProposalKind:
       type: string
       enum:
       - AGENDA
@@ -8909,7 +8909,7 @@ components:
       - QUESTION
       - STATUS_REPORT
       - INSIGHT
-    ContextCandidateEvidence:
+    ProposalCitation:
       type: object
       additionalProperties: false
       required:
@@ -8944,11 +8944,11 @@ components:
           - CONDITIONS
           - RETRACTS
           - REFERENCES
-    ContextCandidateRevision:
+    ProposalRevision:
       type: object
       additionalProperties: false
       required:
-      - candidateId
+      - proposalId
       - revision
       - operation
       - revisionSource
@@ -8959,10 +8959,10 @@ components:
       - createdSequence
       - lastEvidenceSequence
       - aiSemanticRevisionCount
-      - resolvesCandidateId
-      - evidence
+      - resolvesProposalId
+      - citations
       properties:
-        candidateId:
+        proposalId:
           $ref: '#/components/schemas/Tsid'
         revision:
           type: integer
@@ -8983,7 +8983,7 @@ components:
           - LIVE
           description: v1 생산값은 LIVE다. POSTPROCESS는 실제 producer 이슈와 web parser의 선행 수용이 준비된 뒤 additive change로 추가한다.
         kind:
-          $ref: '#/components/schemas/CandidateKind'
+          $ref: '#/components/schemas/ProposalKind'
         status:
           type: string
           enum:
@@ -9000,7 +9000,7 @@ components:
           type: string
           minLength: 1
           maxLength: 500
-          description: NFC이며 classifier tiktoken:0.13.0:o200k_base 기준 512 tokens 이하다
+          description: NFC이며 code point 500 이하다
         createdSequence:
           type: integer
           format: int64
@@ -9013,19 +9013,19 @@ components:
           type: integer
           format: int32
           minimum: 0
-        resolvesCandidateId:
+        resolvesProposalId:
           type: string
           nullable: true
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
           minLength: 13
           maxLength: 13
-          description: RESOLVE result면 닫힌 Question candidate ID, 아니면 null
-        evidence:
+          description: RESOLVE result면 닫힌 Question proposal ID, 아니면 null
+        citations:
           type: array
           items:
-            $ref: '#/components/schemas/ContextCandidateEvidence'
+            $ref: '#/components/schemas/ProposalCitation'
       oneOf:
-      - title: OpenCandidate
+      - title: OpenProposal
         required:
         - status
         - closeReason
@@ -9038,7 +9038,7 @@ components:
             nullable: true
             enum:
             - null
-      - title: RetractedCandidate
+      - title: RetractedProposal
         required:
         - status
         - closeReason
@@ -9069,11 +9069,11 @@ components:
             type: string
             enum:
             - RESOLVED
-    ContextClassificationAppliedRange:
+    TranscriptAnalysisRunRange:
       type: object
       additionalProperties: false
       required:
-      - runKey
+      - runId
       - applyStatus
       - fromSequence
       - toSequence
@@ -9083,8 +9083,8 @@ components:
       - semanticUnitSaturated
       - appliedAt
       properties:
-        runKey:
-          $ref: '#/components/schemas/RunKey'
+        runId:
+          $ref: '#/components/schemas/RunId'
         applyStatus:
           type: string
           enum:

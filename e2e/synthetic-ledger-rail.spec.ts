@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import ledger from "../lib/notes/context-candidates/__fixtures__/synthetic-ledger-snapshot.json";
+import ledger from "../lib/notes/proposals/__fixtures__/synthetic-ledger-snapshot.json";
 
 /**
  * **server 가 실제로 적재한 원장을 화면에 그린다.**
@@ -17,7 +17,7 @@ import ledger from "../lib/notes/context-candidates/__fixtures__/synthetic-ledge
  * 결함과 무관하게 빨개지고, 그 빨강은 아무것도 안 알려 줍니다.
  *
  * 순수 함수 층의 같은 검증은
- * `lib/notes/context-candidates/synthetic-ledger-snapshot.test.ts` 에 있습니다.
+ * `lib/notes/proposals/synthetic-ledger-snapshot.test.ts` 에 있습니다.
  * 그쪽이 상태를, 이쪽이 화면을 봅니다.
  */
 
@@ -25,9 +25,9 @@ const WORKSPACE_ID = "01K0000000000";
 /** `CONTEXT_SYNTHETIC_LEDGER_NOTE_ID`. 이 노트만 server 적재 원장을 싣는다. */
 const NOTE_ID = "01K0000000007";
 
-const CANDIDATE_COUNT = ledger.candidates.length;
+const CANDIDATE_COUNT = ledger.proposals.length;
 /** 화면이 경고를 세워야 하는 구간 — 포화이거나 출력이 덜 실렸거나. */
-const WARNED_RANGES = ledger.appliedRanges.filter(
+const WARNED_RANGES = ledger.runs.filter(
   (r) =>
     r.rawDeltaSaturated ||
     r.semanticUnitSaturated ||
@@ -49,9 +49,9 @@ test.describe("server 적재 원장 — 화면", () => {
     // **내용의 옳음을 주장하지 않는다** — 이 원장에는 `ACTION_ITEM` 을 `DECISION` 으로 낸
     // 오분류가 섞여 있다. 그것까지 「맞다」고 쓰면 테스트가 오분류를 정답으로 문서화하고,
     // 나중에 그게 고쳐질 때 수정을 막는다. 여기서 보는 것은 **후보가 화면에 닿는가**다.
-    await expect(page.getByText(ledger.candidates[0].content)).toBeVisible();
+    await expect(page.getByText(ledger.proposals[0].content)).toBeVisible();
     await expect(
-      page.getByText(ledger.candidates[ledger.candidates.length - 1].content)
+      page.getByText(ledger.proposals[ledger.proposals.length - 1].content)
     ).toBeVisible();
   });
 
@@ -65,7 +65,7 @@ test.describe("server 적재 원장 — 화면", () => {
       timeout: 30_000,
     });
 
-    const amended = ledger.candidates.find((c) => c.revision > 1);
+    const amended = ledger.proposals.find((c) => c.revision > 1);
     expect(amended, "픽스처에 개정된 후보가 없으면 이 검사는 의미가 없다").toBeTruthy();
     await expect(page.getByText(amended!.content)).toHaveCount(1);
   });
@@ -76,7 +76,7 @@ test.describe("server 적재 원장 — 화면", () => {
       timeout: 30_000,
     });
 
-    const retracted = ledger.candidates.filter(
+    const retracted = ledger.proposals.filter(
       (c) => c.closeReason === "RETRACTED"
     ).length;
     await expect(page.getByText("철회됨")).toHaveCount(retracted);
@@ -111,7 +111,7 @@ test.describe("server 적재 원장 — 화면", () => {
 
     // 근거가 없는 카드는 사용자가 출처를 확인할 방법이 없다.
     await page
-      .getByRole("button", { name: new RegExp(escape(ledger.candidates[0].content)) })
+      .getByRole("button", { name: new RegExp(escape(ledger.proposals[0].content)) })
       .first()
       .click();
     // 신판(pen `owfEJ`)은 「전사」 접두 없이 시각만 적는다 — 펼친 근거 행의 시각을 본다.

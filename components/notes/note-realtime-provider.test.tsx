@@ -12,7 +12,7 @@ import {
   getGetNotesQueryKey,
 } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
-import { getGetContextCandidatesQueryKey } from "@/lib/api/generated/context-candidates/context-candidates";
+import { getGetProposalsQueryKey } from "@/lib/api/generated/proposals/proposals";
 
 type TopicClientOptions = {
   noteId: string;
@@ -47,11 +47,10 @@ const SESSION_ID = "01K0000000010";
 const UTTERANCE_ID = "01K0000000100";
 const SEGMENT_ID = "01K0000000200";
 const CANDIDATE_ID = "01K0000000300";
-const EVENT_ID = "01K0000000400";
 
-function candidateHead(over: Record<string, unknown> = {}) {
+function proposalHead(over: Record<string, unknown> = {}) {
   return {
-    candidateId: CANDIDATE_ID,
+    proposalId: CANDIDATE_ID,
     revision: 1,
     operation: "CREATE",
     kind: "DECISION",
@@ -62,8 +61,8 @@ function candidateHead(over: Record<string, unknown> = {}) {
     createdSequence: 10,
     lastEvidenceSequence: 10,
     aiSemanticRevisionCount: 0,
-    resolvesCandidateId: null,
-    evidence: [
+    resolvesProposalId: null,
+    citations: [
       {
         segmentId: SEGMENT_ID,
         sequence: 10,
@@ -78,7 +77,7 @@ function candidateHead(over: Record<string, unknown> = {}) {
 
 function coverageRange(over: Record<string, unknown> = {}) {
   return {
-    runKey: "0RDDJRN000001",
+    runId: "0RDDJRN000001",
     applyStatus: "APPLIED",
     fromSequence: 1,
     toSequence: 10,
@@ -105,7 +104,7 @@ function Probe() {
       <div data-testid="context-cards">
         {JSON.stringify(
           realtime.context.cards.map((card) => [
-            card.candidateId,
+            card.proposalId,
             card.revision,
             card.status,
           ])
@@ -184,8 +183,8 @@ function expectInvalidated(
 
 function getProjectNotesPredicate(invalidateQueries: ReturnType<typeof vi.fn>) {
   const filters = invalidateQueries.mock.calls
-    .map(([candidate]) => candidate)
-    .find((candidate) => candidate && "predicate" in candidate);
+    .map(([proposal]) => proposal)
+    .find((proposal) => proposal && "predicate" in proposal);
   if (!filters?.predicate) {
     throw new Error("project note list invalidation was not called");
   }
@@ -350,7 +349,7 @@ describe("NoteRealtimeProvider", () => {
     expectInvalidated(invalidateQueries, noteKey);
     expectInvalidated(
       invalidateQueries,
-      getGetContextCandidatesQueryKey(NOTE_ID)
+      getGetProposalsQueryKey(NOTE_ID)
     );
     expect(
       getProjectNotesPredicate(invalidateQueries)({
@@ -480,18 +479,14 @@ describe("NoteRealtimeProvider", () => {
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
     emit({
-      type: "context.candidate.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:03.000Z",
-      candidate: candidateHead(),
+      proposal: proposalHead(),
     });
     emit({
-      type: "context.candidate.changed",
-      eventId: "01K0000000401",
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:10.000Z",
-      candidate: candidateHead({ revision: 2, operation: "AMEND" }),
+      proposal: proposalHead({ revision: 2, operation: "AMEND" }),
     });
 
     expect(screen.getByTestId("context-cards").textContent).toBe(
@@ -506,11 +501,9 @@ describe("NoteRealtimeProvider", () => {
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
     emit({
-      type: "context.candidate.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:03.000Z",
-      candidate: candidateHead(),
+      proposal: proposalHead(),
     });
     expect(screen.getByTestId("context-cards").textContent).not.toBe(
       JSON.stringify([])
@@ -539,16 +532,15 @@ describe("NoteRealtimeProvider", () => {
     invalidateQueries.mockClear();
 
     emit({
-      type: "context.classification.batch.applied",
-      eventId: "01K0000000500",
+      type: "transcript-analysis-run.applied",
       occurredAt: "2026-08-24T02:00:00.000Z",
       range: coverageRange({ appliedAt: "2026-08-24T02:00:00.000Z" }),
     });
 
-    // REAFFIRM 은 candidate event 가 없어서 이 무효화로만 화면에 수렴한다.
+    // REAFFIRM 은 proposal event 가 없어서 이 무효화로만 화면에 수렴한다.
     expectInvalidated(
       invalidateQueries,
-      getGetContextCandidatesQueryKey(NOTE_ID)
+      getGetProposalsQueryKey(NOTE_ID)
     );
     // 갱신 띠 시각은 수신 시각이 아니라 서버가 준 값이다.
     expect(screen.getByTestId("context-batch-at").textContent).toBe(
@@ -564,11 +556,9 @@ describe("NoteRealtimeProvider", () => {
     await waitFor(() => expect(topicClients).toHaveLength(1));
 
     emit({
-      type: "context.candidate.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:03.000Z",
-      candidate: candidateHead(),
+      proposal: proposalHead(),
     });
 
     invalidateQueries.mockClear();
@@ -579,7 +569,7 @@ describe("NoteRealtimeProvider", () => {
     );
     expectInvalidated(
       invalidateQueries,
-      getGetContextCandidatesQueryKey(NOTE_ID)
+      getGetProposalsQueryKey(NOTE_ID)
     );
   });
 
@@ -587,14 +577,14 @@ describe("NoteRealtimeProvider", () => {
    * **revision gap 을 본 뒤 재조회가 실패하면 갇힙니다.**
    *
    * `needsRefetch` 는 sticky 이고 그것을 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면
-   * 다시 안 돕니다. 그 뒤 오는 candidate event 는 gap 을 못 메웁니다 — 빠진 revision 은
+   * 다시 안 돕니다. 그 뒤 오는 proposal event 는 gap 을 못 메웁니다 — 빠진 revision 은
    * 다시 안 오기 때문입니다.
    *
    * **batch 는 이미 복구 경로가 있습니다** — `invalidateContext()` 가 조회를 다시 띄웁니다.
-   * 그런데 candidate event 만 계속 오는 구간(배치가 멎은 회의)에서는 그 경로가 안 열립니다.
+   * 그런데 proposal event 만 계속 오는 구간(배치가 멎은 회의)에서는 그 경로가 안 열립니다.
    * 여기서 그 한 갈래를 지킵니다.
    */
-  it("gap 을 본 뒤에는 candidate event 가 재조회를 깨운다", async () => {
+  it("gap 을 본 뒤에는 proposal event 가 재조회를 깨운다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
     // 마운트 catch-up 이 이미 한 번 invalidate 한다. 그 뒤부터를 본다.
@@ -602,51 +592,43 @@ describe("NoteRealtimeProvider", () => {
 
     // revision 1 을 못 보고 2 가 왔다 — 사이를 놓쳤으므로 snapshot 을 다시 받아야 한다.
     emit({
-      type: "context.candidate.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:03.000Z",
-      candidate: candidateHead({ revision: 2 }),
+      proposal: proposalHead({ revision: 2 }),
     });
     expect(invalidateQueries).not.toHaveBeenCalled();
 
     // jsdom 에는 서버가 없어 그 재조회는 실패한다. 그 상태에서 다음 event 가 와야 한다.
     invalidateQueries.mockClear();
     emit({
-      type: "context.candidate.changed",
-      eventId: "01K0000000401",
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:10.000Z",
-      candidate: candidateHead({ candidateId: "01K0000000301", revision: 1 }),
+      proposal: proposalHead({ proposalId: "01K0000000301", revision: 1 }),
     });
 
     await waitFor(() =>
       expectInvalidated(
         invalidateQueries,
-        getGetContextCandidatesQueryKey(NOTE_ID)
+        getGetProposalsQueryKey(NOTE_ID)
       )
     );
   });
 
-  it("gap 이 없으면 candidate event 가 조회를 흔들지 않는다", async () => {
+  it("gap 이 없으면 proposal event 가 조회를 흔들지 않는다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
     invalidateQueries.mockClear();
 
     // revision 1 부터 순서대로면 놓친 것이 없다 — 재조회할 이유가 없다.
     emit({
-      type: "context.candidate.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:03.000Z",
-      candidate: candidateHead({ revision: 1 }),
+      proposal: proposalHead({ revision: 1 }),
     });
     emit({
-      type: "context.candidate.changed",
-      eventId: "01K0000000402",
-      changeOrdinal: 0,
+      type: "proposal.changed",
       occurredAt: "2026-08-24T01:02:10.000Z",
-      candidate: candidateHead({ candidateId: "01K0000000302", revision: 1 }),
+      proposal: proposalHead({ proposalId: "01K0000000302", revision: 1 }),
     });
 
     expect(invalidateQueries).not.toHaveBeenCalled();

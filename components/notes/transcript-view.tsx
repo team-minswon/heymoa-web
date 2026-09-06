@@ -10,8 +10,8 @@ import {
 import {
   ContextCoverageGapRow,
   ContextSaturatedRow,
-} from "@/components/notes/context-coverage-row";
-import { withCoverageRows } from "@/lib/notes/context-candidates/timeline";
+} from "@/components/notes/proposal-coverage-row";
+import { withCoverageRows } from "@/lib/notes/proposals/timeline";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -116,8 +116,8 @@ export function TranscriptView({
    * 것과, 글은 있는데 정리가 안 된 것을 같은 문구로 그리면 원인을 잘못 읽는다.
    */
   const renderRows = useMemo(
-    () => withCoverageRows(rows, noteRealtime.context.state.appliedRanges),
-    [noteRealtime.context.state.appliedRanges, rows]
+    () => withCoverageRows(rows, noteRealtime.context.state.runs),
+    [noteRealtime.context.state.runs, rows]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";
   const speakerOf = useMemo(
@@ -214,8 +214,8 @@ export function TranscriptView({
    * 종류가 바뀐다.** 두 행은 높이가 달라서(구멍 행에는 안내가 한 줄 더 붙는다) 그 차이만큼
    * 또 밀린다 — 실측 61px 였다.
    *
-   * 그래서 **행의 기하를 정하는 것만** 담는다. `runKey` 와 `status` 는 안 넣는다 —
-   * `status` 는 이미 `isSaturated()` 가 접어서 행의 존재로 표현되고, `runKey` 가 바뀌어도
+   * 그래서 **행의 기하를 정하는 것만** 담는다. `runId` 와 `status` 는 안 넣는다 —
+   * `status` 는 이미 `isSaturated()` 가 접어서 행의 존재로 표현되고, `runId` 가 바뀌어도
    * 행의 생김새는 안 변한다. 키는 「무엇이 그려지는가」의 대리이지 데이터 지문이 아니다.
    */
   const coverageKey = renderRows
@@ -409,7 +409,7 @@ export function TranscriptView({
                   />
                 ) : row.type === "saturated" ? (
                   <ContextSaturatedRow
-                    key={`saturated-${row.range.runKey}`}
+                    key={`saturated-${row.range.runId}`}
                     range={row.range}
                   />
                 ) : (

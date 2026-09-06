@@ -18,25 +18,25 @@ import {
 } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 import type {
-  AppliedRange,
-  ContextCandidateHead,
-} from "@/lib/notes/context-candidates/contract";
+  RunRange,
+  ProposalHead,
+} from "@/lib/notes/proposals/contract";
 import {
   initialContextState,
   reduceContextEvent,
   selectCards,
   type ContextCard,
   type ContextState,
-} from "@/lib/notes/context-candidates/reducer";
+} from "@/lib/notes/proposals/reducer";
 import {
   getNoteTopicWebSocketUrl,
   NoteTopicClient,
 } from "@/lib/notes/note-topic-client";
 import {
-  getGetContextCandidatesQueryKey,
-  useGetContextCandidates,
-} from "@/lib/api/generated/context-candidates/context-candidates";
-import { selectContextSnapshot } from "@/lib/notes/context-candidates/select";
+  getGetProposalsQueryKey,
+  useGetProposals,
+} from "@/lib/api/generated/proposals/proposals";
+import { selectContextSnapshot } from "@/lib/notes/proposals/select";
 import type {
   NoteTopicEvent,
   NoteTopicFinalSegment,
@@ -76,8 +76,8 @@ type NoteRealtimeAction =
   | { type: "event"; event: NoteTopicEvent }
   | {
       type: "snapshot";
-      candidates: ContextCandidateHead[];
-      appliedRanges: AppliedRange[];
+      proposals: ProposalHead[];
+      runs: RunRange[];
     };
 
 const initialState: NoteRealtimeState = {
@@ -142,8 +142,8 @@ function reducer(
     case "meeting.ended":
       return { ...state, partial: null };
     // 맥락 후보는 통째로 순수 리듀서에 넘긴다 — 이 파일은 이벤트 의미를 모른다.
-    case "context.candidate.changed":
-    case "context.classification.batch.applied":
+    case "proposal.changed":
+    case "transcript-analysis-run.applied":
       return { ...state, context: reduceContextEvent(state.context, event) };
     default:
       return state;
@@ -251,7 +251,7 @@ export function NoteRealtimeProvider({
     };
     const invalidateContext = () =>
       void queryClient.invalidateQueries({
-        queryKey: getGetContextCandidatesQueryKey(noteId),
+        queryKey: getGetProposalsQueryKey(noteId),
       });
     const catchUp = () => {
       clearTranscriptCatchUp();
@@ -290,18 +290,18 @@ export function NoteRealtimeProvider({
           /**
            * **재조회가 실패한 채 갇히지 않게 한다.** `needsRefetch` 는 sticky 이고 그것을
            * 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면 스스로는 다시 안 돈다.
-           * 그 뒤 오는 candidate event 는 gap 을 못 메운다 — 빠진 revision 은 다시 안 온다.
+           * 그 뒤 오는 proposal event 는 gap 을 못 메운다 — 빠진 revision 은 다시 안 온다.
            *
            * batch 는 아래에서 늘 invalidate 하므로 이미 복구 경로가 있다. 배치가 멎은
-           * 구간에서 candidate event 만 오는 경우가 남아서, **그때만** 같은 경로를 연다.
+           * 구간에서 proposal event 만 오는 경우가 남아서, **그때만** 같은 경로를 연다.
            */
-          case "context.candidate.changed":
+          case "proposal.changed":
             if (needsRefetchRef.current) invalidateContext();
             break;
-          // **REAFFIRM 수렴 지점이다.** REAFFIRM 은 candidate event 를 안 만들면서 서버에서는
-          // evidence 를 늘리고 `lastEvidenceSequence` 를 전진시킨다. 배치가 적용될 때마다
+          // **REAFFIRM 수렴 지점이다.** REAFFIRM 은 proposal event 를 안 만들면서 서버에서는
+          // citations 를 늘리고 `lastEvidenceSequence` 를 전진시킨다. 배치가 적용될 때마다
           // snapshot 을 다시 받아야 그 변화가 화면에 온다.
-          case "context.classification.batch.applied":
+          case "transcript-analysis-run.applied":
             invalidateContext();
             break;
           default:
@@ -323,7 +323,7 @@ export function NoteRealtimeProvider({
    * `phase`로 막지 않는다. **회의가 끝나도 원장은 남는다** — 사용자가 회의 중에 본 것을
    * 나중에 되짚는 것이 이 화면의 절반이다.
    */
-  const snapshotQuery = useGetContextCandidates(noteId, {
+  const snapshotQuery = useGetProposals(noteId, {
     query: {
       staleTime: 10_000,
       /** 두 겹 봉투를 벗기고 성공만 zod 로 통과시킨다 — 근거는 `select.ts` 주석에 있다. */
@@ -363,8 +363,8 @@ export function NoteRealtimeProvider({
     if (!snapshot) return;
     dispatch({
       type: "snapshot",
-      candidates: snapshot.candidates,
-      appliedRanges: snapshot.appliedRanges,
+      proposals: snapshot.proposals,
+      runs: snapshot.runs,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 위 주석: 갱신 시각이 트리거다.
   }, [snapshotUpdatedAt]);

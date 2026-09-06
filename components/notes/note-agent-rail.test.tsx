@@ -18,8 +18,8 @@ vi.mock("@/components/chat/personal-chat", () => ({
   usePersonalChat: () => ({ setRailSlot: vi.fn(), isTurnActive: false }),
 }));
 // 이 파일이 보는 것은 탭 계약이지 레일 내용이 아니다. 내용은 각자의 테스트가 지킨다.
-vi.mock("@/components/notes/context-rail", () => ({
-  ContextRail: () => <div data-testid="context-rail" />,
+vi.mock("@/components/notes/proposal-rail", () => ({
+  ProposalRail: () => <div data-testid="proposal-rail" />,
 }));
 
 function renderRail(tab: RailTab = "context") {

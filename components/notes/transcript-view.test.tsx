@@ -61,7 +61,7 @@ const noteRealtime = vi.hoisted(() => ({
   // 분류 커버리지가 전사 축에 얹히므로 이 파일도 그 자리를 준다.
   context: {
     cards: [] as Array<Record<string, unknown>>,
-    state: { appliedRanges: [] as Array<Record<string, unknown>> },
+    state: { runs: [] as Array<Record<string, unknown>> },
   },
 }));
 const useGetNoteTranscript = vi.hoisted(() =>

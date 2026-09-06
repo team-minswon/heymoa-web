@@ -12,8 +12,8 @@ import {
   CONTEXT_SWAP_SNAPSHOT,
   CONTEXT_TIMELINE,
   isSwapFilled,
-} from "@/lib/mocks/context-candidates";
-import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/context-candidates/__fixtures__/synthetic-ledger-snapshot.json";
+} from "@/lib/mocks/proposals";
+import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/proposals/__fixtures__/synthetic-ledger-snapshot.json";
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
@@ -447,7 +447,7 @@ export const restHandlers = [
   ),
   // 맥락 후보. **명시적 override로 준다** — 생성 목은 무작위 success:false 를 낸다.
   // 계약이 `openapi3.yml`에 아직 없어 생성 훅 자체가 없기도 하다.
-  http.get("*/v1/notes/:noteId/context-candidates", ({ params }) => {
+  http.get("*/v1/notes/:noteId/proposals", ({ params }) => {
     // **실패 주입 자리.** 「분석이 실패해도 전사 확인과 회의 종료가 계속된다」를 e2e 로
     // 지키려면 실패하는 노트가 하나 필요하다. 그 노트에서만 500 을 준다 —
     // `_mock/foreign-lock` 과 같은 방식이다.
@@ -465,7 +465,7 @@ export const restHandlers = [
     // 채워진 범위를 준다 — 실제 서버도 batch 를 적용한 뒤에는 그렇게 답한다.
     if (id(params.noteId) === CONTEXT_SWAP_NOTE_ID) {
       const data = isSwapFilled()
-        ? { ...CONTEXT_SWAP_SNAPSHOT, appliedRanges: CONTEXT_SWAP_FILLED }
+        ? { ...CONTEXT_SWAP_SNAPSHOT, runs: CONTEXT_SWAP_FILLED }
         : CONTEXT_SWAP_SNAPSHOT;
       return HttpResponse.json({ success: true, data, error: null });
     }
@@ -484,15 +484,15 @@ export const restHandlers = [
       mockDb.getNote(id(params.noteId));
       return id(params.noteId) === CONTEXT_DEMO_NOTE_ID
         ? CONTEXT_SNAPSHOT
-        : { candidates: [], appliedRanges: [] };
+        : { proposals: [], runs: [] };
     }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."));
   }),
   http.get(
-    "*/v1/notes/:noteId/context-candidates/:candidateId/revisions",
+    "*/v1/notes/:noteId/proposals/:proposalId/revisions",
     ({ params }) =>
       resultOf(() => {
         mockDb.getNote(id(params.noteId));
-        const candidateId = id(params.candidateId);
+        const proposalId = id(params.proposalId);
         /**
          * **이력 전체를 준다(계약: revision 오름차순).** 스냅샷은 후보별 최신 head 하나라
          * 그것만 거르면 AMEND·RETRACT 를 거친 후보도 revision 하나로 보인다 — 이력 UI 가
@@ -501,17 +501,17 @@ export const restHandlers = [
         const byRevision = new Map(
           [
             ...CONTEXT_TIMELINE.filter(
-              (entry) => entry.candidate.candidateId === candidateId
-            ).map((entry) => entry.candidate),
-            ...CONTEXT_SNAPSHOT.candidates.filter(
-              (candidate) => candidate.candidateId === candidateId
+              (entry) => entry.proposal.proposalId === proposalId
+            ).map((entry) => entry.proposal),
+            ...CONTEXT_SNAPSHOT.proposals.filter(
+              (proposal) => proposal.proposalId === proposalId
             ),
-          ].map((candidate) => [candidate.revision, candidate] as const)
+          ].map((proposal) => [proposal.revision, proposal] as const)
         );
         const revisions = [...byRevision.values()].sort(
           (a, b) => a.revision - b.revision
         );
-        return { candidateId, revisions };
+        return { proposalId, revisions };
       }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."))
   ),
   http.put("*/v1/notes/:noteId/participants", async ({ request, params }) =>

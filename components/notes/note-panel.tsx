@@ -21,7 +21,7 @@ import {
   NoteDetails,
   NoteDetailsSkeleton,
 } from "@/components/notes/note-details";
-import { ContextRail } from "@/components/notes/context-rail";
+import { ProposalRail } from "@/components/notes/proposal-rail";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import {
   NoteAgentRail,
@@ -751,7 +751,7 @@ export function NotePanel({
               value="context"
               className="flex min-h-0 flex-1 flex-col"
             >
-              <ContextRail
+              <ProposalRail
                 onEvidenceSelect={jumpToSegment}
                 meetingEnded={phase === "ended"}
               />
