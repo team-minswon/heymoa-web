@@ -3,7 +3,6 @@ import { ws } from "msw";
 import {
   CONTEXT_APPLIED_RANGES,
   CONTEXT_DEMO_NOTE_ID,
-  CONTEXT_EVENT_ID,
   CONTEXT_TIMELINE,
   CONTEXT_SWAP_FILL,
   markSwapFilled,
@@ -142,7 +141,6 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
           markSwapFilled();
           send({
             type: "transcript-analysis-run.applied",
-            eventId: CONTEXT_EVENT_ID(90),
             occurredAt: CONTEXT_SWAP_FILL.appliedAt,
             range: CONTEXT_SWAP_FILL,
           });
@@ -220,13 +218,11 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         )
       );
 
-      CONTEXT_TIMELINE.forEach((entry, index) => {
+      CONTEXT_TIMELINE.forEach((entry) => {
         noteTopicTimers.push(
           window.setTimeout(() => {
             send({
               type: "proposal.changed",
-              eventId: CONTEXT_EVENT_ID(index),
-              changeOrdinal: 0,
               occurredAt: new Date(entry.atMs).toISOString(),
               proposal: entry.proposal,
             });
@@ -234,12 +230,11 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
         );
       });
 
-      CONTEXT_APPLIED_RANGES.forEach((coverage, index) => {
+      CONTEXT_APPLIED_RANGES.forEach((coverage) => {
         noteTopicTimers.push(
           window.setTimeout(() => {
             send({
               type: "transcript-analysis-run.applied",
-              eventId: CONTEXT_EVENT_ID(50 + index),
               occurredAt: coverage.appliedAt,
               range: coverage,
             });

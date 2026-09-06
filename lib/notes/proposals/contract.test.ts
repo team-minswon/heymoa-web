@@ -61,8 +61,6 @@ describe("draft 계약의 관대함", () => {
     expect(() =>
       proposalChangedSchema.parse({
         type: "proposal.changed",
-        eventId: "0HZX2K7M9Q4B1",
-        changeOrdinal: 0,
         occurredAt: "2026-08-25T01:00:00.000Z",
         proposal: head,
         traceId: "나중에 붙을 수도 있는 것",
@@ -72,7 +70,6 @@ describe("draft 계약의 관대함", () => {
     expect(() =>
       contextBatchAppliedSchema.parse({
         type: "transcript-analysis-run.applied",
-        eventId: "0HZX2K7M9Q4C1",
         occurredAt: range.appliedAt,
         range: { ...range, newFlag: true },
       })
@@ -241,7 +238,6 @@ describe("draft 계약의 관대함", () => {
     it("event 의 occurredAt 은 확정 계약대로 밀리초 Z 표기만 받는다", () => {
       const event = {
         type: "transcript-analysis-run.applied",
-        eventId: "0HZX2K7M9Q4B1",
         range,
       };
       expect(

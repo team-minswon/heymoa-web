@@ -46,9 +46,7 @@ export type ContextActivity =
   | {
       type: "proposal";
       key: string;
-      eventId: string;
       occurredAt: string;
-      changeOrdinal: number;
       proposalId: string;
       revision: number;
       kind: ProposalHead["kind"];
@@ -58,7 +56,7 @@ export type ContextActivity =
   | {
       type: "batch";
       key: string;
-      eventId: string;
+      runId: string;
       occurredAt: string;
       fromSequence: number;
       toSequence: number;
@@ -75,8 +73,8 @@ export type ContextState = {
   /** `proposalId` → 현재 head. */
   proposals: Record<string, ProposalHead>;
   runs: RunRange[];
-  /** 이미 접은 batch `eventId`. best-effort라 같은 것이 두 번 올 수 있다. */
-  seenBatchIds: string[];
+  /** 이미 접은 run 의 `runId`. best-effort라 같은 것이 두 번 올 수 있다. */
+  seenRunIds: string[];
   /** 마지막 배치 적용 시각. **서버 값이다** — 수신 시각을 쓰면 재연결 직후 「방금」이 된다. */
   lastBatchAt: string | null;
   /** revision gap을 봤다. provider가 snapshot을 다시 받아야 한다. */
@@ -88,14 +86,11 @@ export type ContextState = {
 export type ContextEvent =
   | {
       type: "proposal.changed";
-      eventId: string;
-      changeOrdinal: number;
       occurredAt: string;
       proposal: ProposalHead;
     }
   | {
       type: "transcript-analysis-run.applied";
-      eventId: string;
       occurredAt: string;
       range: RunRange;
     }
@@ -109,7 +104,7 @@ export type ContextEvent =
 export const initialContextState: ContextState = {
   proposals: {},
   runs: [],
-  seenBatchIds: [],
+  seenRunIds: [],
   lastBatchAt: null,
   needsRefetch: false,
   activities: [],
@@ -201,7 +196,7 @@ export function reduceContextEvent(
         runs: ranges,
         // 비우지 않는다 — snapshot이 이벤트로 이미 얹은 범위를 안 실었을 수 있고,
         // 그때 같은 batch가 재전달되면 중복 처리 내역이 선다.
-        seenBatchIds: state.seenBatchIds,
+        seenRunIds: state.seenRunIds,
         lastBatchAt: laterInstant(state.lastBatchAt, latestApplied),
         needsRefetch: false,
         activities: state.needsRefetch
@@ -224,10 +219,8 @@ export function reduceContextEvent(
           ...state,
           activities: withActivity(state, {
             type: "proposal",
-            key: `${event.eventId}-${event.changeOrdinal}-absorbed`,
-            eventId: event.eventId,
+            key: `${next.proposalId}-${next.revision}-absorbed`,
             occurredAt: event.occurredAt,
-            changeOrdinal: event.changeOrdinal,
             proposalId: next.proposalId,
             revision: next.revision,
             kind: next.kind,
@@ -247,10 +240,8 @@ export function reduceContextEvent(
         needsRefetch,
         activities: withActivity(state, {
           type: "proposal",
-          key: `${event.eventId}-${event.changeOrdinal}`,
-          eventId: event.eventId,
+          key: `${next.proposalId}-${next.revision}`,
           occurredAt: event.occurredAt,
-          changeOrdinal: event.changeOrdinal,
           proposalId: next.proposalId,
           revision: next.revision,
           kind: next.kind,
@@ -263,14 +254,14 @@ export function reduceContextEvent(
     case "transcript-analysis-run.applied": {
       const activity = {
         type: "batch" as const,
-        key: `${event.eventId}-batch`,
-        eventId: event.eventId,
+        key: `${event.range.runId}-batch`,
+        runId: event.range.runId,
         occurredAt: event.occurredAt,
         fromSequence: event.range.fromSequence,
         toSequence: event.range.toSequence,
         applyStatus: event.range.applyStatus,
       };
-      if (state.seenBatchIds.includes(event.eventId)) {
+      if (state.seenRunIds.includes(event.range.runId)) {
         return {
           ...state,
           activities: withActivity(state, {
@@ -287,7 +278,7 @@ export function reduceContextEvent(
       return {
         ...state,
         runs: sortRanges([...withoutRun, event.range]),
-        seenBatchIds: [...state.seenBatchIds, event.eventId],
+        seenRunIds: [...state.seenRunIds, event.range.runId],
         lastBatchAt: laterInstant(state.lastBatchAt, event.range.appliedAt),
         activities: withActivity(state, { ...activity, outcome: "APPLIED" }),
       };

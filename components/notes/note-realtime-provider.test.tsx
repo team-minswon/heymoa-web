@@ -47,7 +47,6 @@ const SESSION_ID = "01K0000000010";
 const UTTERANCE_ID = "01K0000000100";
 const SEGMENT_ID = "01K0000000200";
 const CANDIDATE_ID = "01K0000000300";
-const EVENT_ID = "01K0000000400";
 
 function proposalHead(over: Record<string, unknown> = {}) {
   return {
@@ -481,15 +480,11 @@ describe("NoteRealtimeProvider", () => {
 
     emit({
       type: "proposal.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:03.000Z",
       proposal: proposalHead(),
     });
     emit({
       type: "proposal.changed",
-      eventId: "01K0000000401",
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:10.000Z",
       proposal: proposalHead({ revision: 2, operation: "AMEND" }),
     });
@@ -507,8 +502,6 @@ describe("NoteRealtimeProvider", () => {
 
     emit({
       type: "proposal.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:03.000Z",
       proposal: proposalHead(),
     });
@@ -540,7 +533,6 @@ describe("NoteRealtimeProvider", () => {
 
     emit({
       type: "transcript-analysis-run.applied",
-      eventId: "01K0000000500",
       occurredAt: "2026-08-24T02:00:00.000Z",
       range: coverageRange({ appliedAt: "2026-08-24T02:00:00.000Z" }),
     });
@@ -565,8 +557,6 @@ describe("NoteRealtimeProvider", () => {
 
     emit({
       type: "proposal.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:03.000Z",
       proposal: proposalHead(),
     });
@@ -603,8 +593,6 @@ describe("NoteRealtimeProvider", () => {
     // revision 1 을 못 보고 2 가 왔다 — 사이를 놓쳤으므로 snapshot 을 다시 받아야 한다.
     emit({
       type: "proposal.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:03.000Z",
       proposal: proposalHead({ revision: 2 }),
     });
@@ -614,8 +602,6 @@ describe("NoteRealtimeProvider", () => {
     invalidateQueries.mockClear();
     emit({
       type: "proposal.changed",
-      eventId: "01K0000000401",
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:10.000Z",
       proposal: proposalHead({ proposalId: "01K0000000301", revision: 1 }),
     });
@@ -636,15 +622,11 @@ describe("NoteRealtimeProvider", () => {
     // revision 1 부터 순서대로면 놓친 것이 없다 — 재조회할 이유가 없다.
     emit({
       type: "proposal.changed",
-      eventId: EVENT_ID,
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:03.000Z",
       proposal: proposalHead({ revision: 1 }),
     });
     emit({
       type: "proposal.changed",
-      eventId: "01K0000000402",
-      changeOrdinal: 0,
       occurredAt: "2026-08-24T01:02:10.000Z",
       proposal: proposalHead({ proposalId: "01K0000000302", revision: 1 }),
     });

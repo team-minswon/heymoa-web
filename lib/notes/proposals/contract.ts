@@ -224,24 +224,18 @@ export const proposalRevisionsSchema = z.object({
 /** note topic이 싣는 두 프레임. `note-topic-protocol.ts`가 이걸 union에 넣는다. */
 export const proposalChangedSchema = z.object({
   type: z.literal("proposal.changed"),
-  /** outbox event ID. **RESOLVE fan-out message가 공유한다** — 그래서 dedupe 키가 아니다. */
-  eventId: tsidSchema,
   /**
-   * 한 outbox event 안의 순번. 일반 operation은 0이고, RESOLVE는 Question이 0,
-   * 결과가 `resultOrdinal + 1`이다(1~3).
-   *
-   * web의 dedupe 키에는 안 들어간다 — 그건 계속 `(proposalId, revision)`이다. 다만 이
-   * 순서 덕분에 **질문이 결과보다 먼저 도착**해서 결과가 부모 없이 뜨는 경로를 안 지난다.
+   * PRO-45 계약에는 outbox `eventId` 도 `changeOrdinal` 도 없다 — 발행이 outbox 복사본
+   * 없이 원장 행에서 투영되면서(APP-546) 메타가 사라졌다. dedupe 키는 계속
+   * `(proposalId, revision)` 이다.
    */
-  changeOrdinal: z.number().int().min(0).max(3),
   occurredAt: wireInstantSchema,
   proposal: proposalHeadSchema,
 });
 
 export const contextBatchAppliedSchema = z.object({
   type: z.literal("transcript-analysis-run.applied"),
-  /** batch의 dedupe 키다. */
-  eventId: tsidSchema,
+  /** dedupe 키는 `range.runId` 다. 계약에 별도 event ID 가 없다. */
   occurredAt: wireInstantSchema,
   range: runRangeSchema,
 });

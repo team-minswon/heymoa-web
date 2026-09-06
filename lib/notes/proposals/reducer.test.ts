@@ -39,11 +39,9 @@ function head(
   };
 }
 
-function changed(proposal: ProposalHead, eventId = "0HZX2K7M9Q4B1") {
+function changed(proposal: ProposalHead) {
   return {
     type: "proposal.changed",
-    eventId,
-    changeOrdinal: 0,
     occurredAt: NOW,
     proposal,
   } as const;
@@ -75,10 +73,9 @@ function rangeBase(over: {
   };
 }
 
-function batch(coverage: ReturnType<typeof rangeBase>, eventId: string) {
+function batch(coverage: ReturnType<typeof rangeBase>) {
   return {
     type: "transcript-analysis-run.applied",
-    eventId,
     occurredAt: coverage.appliedAt,
     range: coverage,
   } as const;
@@ -102,8 +99,7 @@ describe("context proposal reducer", () => {
           operation: "AMEND",
           content: "경로 데이터 저장소는 MongoDB를 쓰되 샤딩은 미룬다",
           aiSemanticRevisionCount: 1,
-        }),
-        "0HZX2K7M9Q4B2"
+        })
       ),
     ]);
 
@@ -119,8 +115,7 @@ describe("context proposal reducer", () => {
         head({ proposalId: "0HZX2K7M9Q4A1", revision: 2, content: "최신" })
       ),
       changed(
-        head({ proposalId: "0HZX2K7M9Q4A1", revision: 1, content: "옛것" }),
-        "0HZX2K7M9Q4B2"
+        head({ proposalId: "0HZX2K7M9Q4A1", revision: 1, content: "옛것" })
       ),
     ]);
 
@@ -140,8 +135,7 @@ describe("context proposal reducer", () => {
     const gap = apply(
       [
         changed(
-          head({ proposalId: "0HZX2K7M9Q4A9", revision: 3 }),
-          "0HZX2K7M9Q4B3"
+          head({ proposalId: "0HZX2K7M9Q4A9", revision: 3 })
         ),
       ],
       seen
@@ -163,8 +157,7 @@ describe("context proposal reducer", () => {
           revision: 2,
           kind: "AGENDA",
           operation: "CORRECT",
-        }),
-        "0HZX2K7M9Q4B2"
+        })
       ),
     ]);
 
@@ -188,8 +181,7 @@ describe("context proposal reducer", () => {
     const state = apply([
       changed(head({ proposalId: "0HZX2K7M9Q4A2", createdSequence: 50 })),
       changed(
-        head({ proposalId: "0HZX2K7M9Q4A1", createdSequence: 10 }),
-        "0HZX2K7M9Q4B2"
+        head({ proposalId: "0HZX2K7M9Q4A1", createdSequence: 10 })
       ),
     ]);
 
@@ -223,8 +215,7 @@ describe("context proposal reducer", () => {
           resolvesProposalId: "0HZX2K7M9Q4AQ",
           content: "조회 손해는 15% 안쪽이다",
           createdSequence: 21,
-        }),
-        "0HZX2K7M9Q4B2"
+        })
       ),
     ]);
 
@@ -257,8 +248,7 @@ describe("context proposal reducer", () => {
           proposalId: "0HZX2K7M9Q4AR",
           resolvesProposalId: "0HZX2K7M9Q4AQ",
           createdSequence: 21,
-        }),
-        "0HZX2K7M9Q4B2"
+        })
       ),
     ]);
 
@@ -289,12 +279,9 @@ describe("context proposal reducer", () => {
     expect(selectCards(state)[0].closeReason).toBe("RETRACTED");
   });
 
-  it("같은 eventId의 batch가 두 번 와도 범위를 한 번만 센다", () => {
+  it("같은 runId의 run 이 두 번 와도 범위를 한 번만 센다", () => {
     const coverage = range({ runId: "run-1" });
-    const state = apply([
-      batch(coverage, "0HZX2K7M9Q4C1"),
-      batch(coverage, "0HZX2K7M9Q4C1"),
-    ]);
+    const state = apply([batch(coverage), batch(coverage)]);
 
     expect(state.runs).toHaveLength(1);
     expect(state.activities[0]).toMatchObject({
@@ -323,8 +310,7 @@ describe("context proposal reducer", () => {
   it("마지막 갱신 시각은 batch의 occurredAt에서 온다", () => {
     const state = apply([
       batch(
-        { ...range(), appliedAt: "2026-08-24T02:00:00.000Z" },
-        "0HZX2K7M9Q4C1"
+        { ...range(), appliedAt: "2026-08-24T02:00:00.000Z" }
       ),
     ]);
 
@@ -339,8 +325,7 @@ describe("context proposal reducer", () => {
           toSequence: 10,
           fromStartedAtMs: 0,
           toEndedAtMs: 100_000,
-        }),
-        "0HZX2K7M9Q4C1"
+        })
       ),
       batch(
         range({
@@ -349,8 +334,7 @@ describe("context proposal reducer", () => {
           toSequence: 25,
           fromStartedAtMs: 160_000,
           toEndedAtMs: 250_000,
-        }),
-        "0HZX2K7M9Q4C3"
+        })
       ),
     ]);
 
@@ -366,7 +350,7 @@ describe("context proposal reducer", () => {
 
   it("범위가 이어지면 구멍이 없다", () => {
     const state = apply([
-      batch(range({ fromSequence: 1, toSequence: 10 }), "0HZX2K7M9Q4C1"),
+      batch(range({ fromSequence: 1, toSequence: 10 })),
       batch(
         range({
           runId: "run-2",
@@ -374,8 +358,7 @@ describe("context proposal reducer", () => {
           toSequence: 20,
           fromStartedAtMs: 100_000,
           toEndedAtMs: 200_000,
-        }),
-        "0HZX2K7M9Q4C2"
+        })
       ),
     ]);
 
@@ -385,12 +368,10 @@ describe("context proposal reducer", () => {
   it("범위가 도착 순서와 무관하게 fromSequence로 정렬된다", () => {
     const state = apply([
       batch(
-        range({ runId: "run-2", fromSequence: 11, toSequence: 20 }),
-        "0HZX2K7M9Q4C2"
+        range({ runId: "run-2", fromSequence: 11, toSequence: 20 })
       ),
       batch(
-        range({ runId: "run-1", fromSequence: 1, toSequence: 10 }),
-        "0HZX2K7M9Q4C1"
+        range({ runId: "run-1", fromSequence: 1, toSequence: 10 })
       ),
     ]);
 
@@ -421,8 +402,7 @@ describe("context proposal reducer", () => {
     const live = apply([
       changed(head({ proposalId: "0HZX2K7M9Q4A1" })),
       changed(
-        head({ proposalId: "0HZX2K7M9Q4A1", revision: 2, operation: "AMEND" }),
-        "0HZX2K7M9Q4E2"
+        head({ proposalId: "0HZX2K7M9Q4A1", revision: 2, operation: "AMEND" })
       ),
     ]);
     const settled = reduceContextEvent(live, {
@@ -456,7 +436,7 @@ describe("context proposal reducer", () => {
 
     // 역순으로 밀어 넣어도…
     const byEvents = apply(
-      [...sameSequence].reverse().map((c, i) => changed(c, `0HZX2K7M9Q4D${i}`))
+      [...sameSequence].reverse().map((c) => changed(c))
     );
     expect(selectCards(byEvents).map((c) => c.proposalId)).toEqual(ids);
 
@@ -487,8 +467,8 @@ describe("context proposal reducer", () => {
     );
 
     const state = apply(
-      [question, ...[...results].reverse()].map((c, i) =>
-        changed(c, `0HZX2K7M9Q4F${i}`)
+      [question, ...[...results].reverse()].map((c) =>
+        changed(c)
       )
     );
     const [card] = selectCards(state);
@@ -507,9 +487,9 @@ describe("context proposal reducer", () => {
     const earlier = "2026-08-24T01:00:00.000Z";
 
     const state = apply([
-      batch(range({ runId: "run-2", appliedAt: later }), "0HZX2K7M9Q4G1"),
+      batch(range({ runId: "run-2", appliedAt: later })),
       // 다른 relay 를 늦게 지난 옛 batch.
-      batch(range({ runId: "run-1", appliedAt: earlier }), "0HZX2K7M9Q4G2"),
+      batch(range({ runId: "run-1", appliedAt: earlier })),
     ]);
 
     expect(state.lastBatchAt).toBe(later);
@@ -523,13 +503,13 @@ describe("context proposal reducer", () => {
    */
   it("malformed 시각은 첫 event 여도 lastBatchAt 에 안 앉는다", () => {
     const broken = apply([
-      batch(range({ appliedAt: "언젠가" }), "0HZX2K7M9Q4J1"),
+      batch(range({ appliedAt: "언젠가" })),
     ]);
     expect(broken.lastBatchAt).toBeNull();
 
     // 그 뒤 정상 값이 오면 정상적으로 선다.
     const recovered = apply(
-      [batch(range({ runId: "run-9", appliedAt: NOW }), "0HZX2K7M9Q4J2")],
+      [batch(range({ runId: "run-9", appliedAt: NOW }))],
       broken
     );
     expect(recovered.lastBatchAt).toBe(NOW);
@@ -551,7 +531,7 @@ describe("context proposal reducer", () => {
     const earlier = "2026-08-24T01:00:00.000Z";
 
     const state = apply([
-      batch(range({ runId: "run-2", appliedAt: later }), "0HZX2K7M9Q4H1"),
+      batch(range({ runId: "run-2", appliedAt: later })),
       {
         type: "snapshot",
         proposals: [],

@@ -271,9 +271,7 @@ describe("ProposalRail", () => {
         {
           type: "proposal",
           key: "proposal-event-0",
-          eventId: "0HZX2K7M9Q4B1",
           occurredAt: "2026-08-24T01:02:04.000Z",
-          changeOrdinal: 0,
           proposalId: "0HZX2K7M9Q4A1",
           revision: 2,
           kind: "DECISION",
@@ -283,7 +281,7 @@ describe("ProposalRail", () => {
         {
           type: "batch",
           key: "batch-event",
-          eventId: "0HZX2K7M9Q4C1",
+          runId: "0HZX2K7M9Q4C1",
           occurredAt: "2026-08-24T01:02:03.000Z",
           fromSequence: 1,
           toSequence: 10,
@@ -312,9 +310,7 @@ describe("ProposalRail", () => {
         {
           type: "proposal",
           key: "proposal-gap",
-          eventId: "0HZX2K7M9Q4B1",
           occurredAt: "2026-08-24T01:02:04.000Z",
-          changeOrdinal: 0,
           proposalId: "0HZX2K7M9Q4A1",
           revision: 3,
           kind: "DECISION",
