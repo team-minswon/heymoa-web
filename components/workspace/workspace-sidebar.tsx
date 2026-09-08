@@ -2,21 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Check,
-  Folder,
-  MoreHorizontal,
-  NotebookText,
-  Pencil,
-  Plus,
-  Settings,
-  LogOut,
-  Trash2,
-  ChevronsUpDown,
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { BookOpen, Check, ChevronDown, ChevronRight, ChevronsUpDown, Folder, Loader2, LogOut, MoreHorizontal, NotebookText, Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
@@ -359,6 +345,17 @@ export function WorkspaceSidebar({
                           align="start"
                           className="rounded-panel"
                         >
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(
+                                `/w/${workspaceId}/projects/${project.projectId}`
+                              )
+                            }
+                            className="gap-2 rounded-control py-1.5 text-xs"
+                          >
+                            <BookOpen className="size-3.5 text-[var(--el-muted)]" />
+                            <span>프로젝트 요약</span>
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
                               setProjectDialog({ project })
