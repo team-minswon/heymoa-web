@@ -844,6 +844,13 @@ export function MeetingReview({
 
   return (
     <div data-testid="meeting-review" className="space-y-8">
+      {reviewQuery.isRefetchError ? (
+        // 읽던 검토본은 두고 재조회 실패만 옆에 적는다.
+        <InlineRetry
+          onRetry={() => void reviewQuery.refetch()}
+          label="검토본을 다시 불러오지 못했습니다. 아래는 마지막으로 받은 내용입니다"
+        />
+      ) : null}
       <ReviewGate
         screen={screen}
         isStarter={isStarter}

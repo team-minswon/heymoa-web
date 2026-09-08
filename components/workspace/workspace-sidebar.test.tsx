@@ -33,6 +33,7 @@ const projectApi = vi.hoisted(() => ({
 
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   getGetProjectsQueryKey: () => ["projects"],
+  getGetProjectQueryKey: (_workspaceId: string, projectId: string) => ["project", projectId],
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateProject: () => ({
     mutateAsync: projectApi.updateMock,

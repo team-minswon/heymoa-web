@@ -133,12 +133,21 @@ export function ProjectConceptSummary({
               label="요약을 불러오지 못했습니다"
             />
           ) : (
-            <SummaryBody
-              summary={summary}
-              workspaceId={workspaceId}
-              refreshing={refresh.isPending}
-              onRefresh={() => refresh.mutate()}
-            />
+            <>
+              {summaryQuery.isRefetchError ? (
+                // 읽던 내용은 두고 실패만 옆에 적는다 — 갱신 뒤 재조회가 실패하면 옛 결과가 최신처럼 보인다.
+                <InlineRetry
+                  onRetry={() => void summaryQuery.refetch()}
+                  label="요약을 다시 불러오지 못했습니다. 아래는 마지막으로 받은 내용입니다"
+                />
+              ) : null}
+              <SummaryBody
+                summary={summary}
+                workspaceId={workspaceId}
+                refreshing={refresh.isPending}
+                onRefresh={() => refresh.mutate()}
+              />
+            </>
           )}
         </div>
       </div>

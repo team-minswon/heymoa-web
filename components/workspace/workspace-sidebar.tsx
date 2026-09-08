@@ -49,6 +49,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
+  getGetProjectQueryKey,
   getGetProjectsQueryKey,
   useDeleteProject,
   useUpdateProject,
@@ -137,6 +138,10 @@ export function WorkspaceSidebar({
    * 맞추는 뒷정리로만 남는다.
    */
   const applyRenamedProject = (project: ProjectResponseData) => {
+    // 프로젝트 요약 화면은 목록이 아니라 상세를 구독한다. 폴링이 없으니 여기서 같이 새로 받는다.
+    void queryClient.invalidateQueries({
+      queryKey: getGetProjectQueryKey(workspaceId, project.projectId),
+    });
     queryClient.setQueryData(
       getGetProjectsQueryKey(workspaceId),
       (previous: getProjectsResponse | undefined) => {
