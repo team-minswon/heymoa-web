@@ -75,8 +75,12 @@ export function ReviewItemCard({
   /** 미저장 편집이 남아 있는가. 있으면 그 편집의 기준 revision 을 지킨다 — 다시 열어도 갱신하지 않는다. */
   const hasPending = shown.content !== item.content || shown.included !== item.included;
 
+  // 편집 중 다른 창이 승인하면 권한이 사라진다. 열린 편집기는 그 순간 닫히고 저장도 나가지 않는다.
+  const isEditing = editing && canEdit;
+
   const commitContent = () => {
     setEditing(false);
+    if (!canEdit) return;
     const next = draft.trim();
     // 서버 값과 같아졌어도 미저장 편집이 남아 있으면 그것을 갈아야 한다. 기준 revision 은
     // 명시적 「내 편집 유지」에서만 오르므로 미저장이 있을 때는 여기서 덮지 않는다.
@@ -127,7 +131,7 @@ export function ReviewItemCard({
           {item.citations.length === 0 ? <StatusChip>근거 없음</StatusChip> : null}
         </div>
 
-        {editing ? (
+        {isEditing ? (
           <textarea
             autoFocus
             aria-label="항목 내용"
@@ -227,7 +231,7 @@ export function ReviewItemCard({
                 className={cn("h-7", !unreviewed && "ml-auto")}
                 onClick={beginEditing}
                 // 충돌 대조 중에는 먼저 고른다 — 수정으로 대조를 우회하지 않는다.
-                disabled={saving || editing || conflict !== null}
+                disabled={saving || isEditing || conflict !== null}
               >
                 수정
               </Button>

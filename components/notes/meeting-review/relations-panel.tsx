@@ -217,11 +217,14 @@ function RelationRow({
   /** 이름 수정을 연 시점의 revision. 제출은 이 값으로 CAS 를 건다. */
   const [modifyBase, setModifyBase] = useState(relation.revision);
   const openModify = () => {
-    setLabel(relation.judgement.label ?? relation.label);
-    setModifyBase(relation.revision);
+    // 저장에 실패한 미저장 이름이 있으면 그것과 그 기준 revision 에서 다시 시작한다.
+    setLabel(pending?.label ?? relation.judgement.label ?? relation.label);
+    setModifyBase(pending?.baseRevision ?? relation.revision);
     setModifying(true);
     onDraftChange?.(`relation:${relation.relationId}`, true);
   };
+  /** 충돌 대조 중에는 판정 버튼을 잠근다 — 먼저 고르지 않으면 최신 revision 으로 남의 판정을 덮는다. */
+  const judgementLocked = saving || conflict !== null;
   const closeModify = () => {
     setModifying(false);
     onDraftChange?.(`relation:${relation.relationId}`, false);
@@ -365,20 +368,21 @@ function RelationRow({
                   variant={status === "ACCEPTED" ? "default" : "outline"}
                   className="h-7"
                   loading={saving}
+                  disabled={conflict !== null}
                   onClick={() =>
                     onJudge(relation.relationId, { judgement: "ACCEPTED", baseRevision: relation.revision })
                   }
                 >
                   수락
                 </Button>
-                <Button size="sm" variant="ghost" className="h-7" disabled={saving} onClick={openModify}>
+                <Button size="sm" variant="ghost" className="h-7" disabled={judgementLocked} onClick={openModify}>
                   수정
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   className="h-7"
-                  disabled={saving}
+                  disabled={judgementLocked}
                   onClick={() =>
                     onJudge(relation.relationId, { judgement: "REJECTED", baseRevision: relation.revision })
                   }
