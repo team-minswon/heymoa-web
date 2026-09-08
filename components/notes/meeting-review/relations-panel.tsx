@@ -69,12 +69,15 @@ export function RelationsPanel({
   // 두 층은 독립이다. 한 층이라도 준비됐으면 그 관계는 보여 주고, 나머지 층의 기다림·실패는
   // 그 층의 안내로만 적는다. 둘 다 준비 전일 때만 틀 전체가 기다린다.
   const anyReady = hasContent(layers.IN_MEETING) || hasContent(layers.PROJECT);
-  const status: RegionStatus = anyReady
-    ? layers.IN_MEETING === "STALE" || layers.PROJECT === "STALE"
-      ? "STALE"
-      : "READY"
-    : combinedStatus(layers.IN_MEETING, layers.PROJECT);
   const anyFailed = layers.IN_MEETING === "FAILED" || layers.PROJECT === "FAILED";
+  // 한 층이라도 실패했으면 틀을 기다림으로 접지 않는다 — 접으면 실패 안내까지 가려져 전체가
+  // 순조로운 것처럼 보인다. 층별 안내(LayerNotice)가 실패와 기다림을 각각 적는다.
+  const status: RegionStatus =
+    anyReady || anyFailed
+      ? layers.IN_MEETING === "STALE" || layers.PROJECT === "STALE"
+        ? "STALE"
+        : "READY"
+      : combinedStatus(layers.IN_MEETING, layers.PROJECT);
   // 판정이 도는 동안은 재요청을 그리지 않는다 — 서버가 RECHECK_IN_PROGRESS 로 거절한다.
   const anyGenerating = layers.IN_MEETING === "GENERATING" || layers.PROJECT === "GENERATING";
   const visibleRelations = screen.relations.filter((relation) => hasContent(layers[relation.layer]));
@@ -172,9 +175,9 @@ function LayerNotice({ layer, status }: { layer: "IN_MEETING" | "PROJECT"; statu
   );
 }
 
-/** 두 층의 준비 상태를 하나로 접는다. 기다림 > 실패 > 오래됨 > 빈 > 준비 순으로 보수적이다. */
+/** 두 층의 준비 상태를 하나로 접는다(둘 다 내용·실패가 없을 때). 기다림 > 오래됨 > 빈 > 준비. */
 function combinedStatus(a: RegionStatus, b: RegionStatus): RegionStatus {
-  const rank: RegionStatus[] = ["GENERATING", "NOT_READY", "FAILED", "STALE", "READY", "EMPTY"];
+  const rank: RegionStatus[] = ["GENERATING", "NOT_READY", "STALE", "READY", "EMPTY"];
   if (a === "EMPTY" && b === "EMPTY") return "EMPTY";
   const pick = rank.find((status) => status === a || status === b);
   return pick === "EMPTY" ? "READY" : (pick ?? "READY");

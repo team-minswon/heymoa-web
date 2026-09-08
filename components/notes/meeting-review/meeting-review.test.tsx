@@ -233,6 +233,31 @@ describe("RelationWebView · RelationsPanel", () => {
     expect(approved.getAttribute("role")).toBeNull();
   });
 
+  it("한 층이 실패하면 다른 층이 판정 중이어도 실패 안내가 보인다", () => {
+    const base = sampleReview();
+    const scr = toReviewScreen({
+      ...base,
+      readiness: { ...base.readiness, inMeetingRelations: "FAILED", projectRelations: "GENERATING" },
+    });
+    render(
+      <RelationsPanel
+        screen={scr}
+        edits={initialEdits(scr.reviewVersion)}
+        selectedItemId={null}
+        canEdit
+        onSelectItem={noop}
+        onJudge={noop}
+        onKeepLocal={noop}
+        onTakeServer={noop}
+        onRecheck={noop}
+        recheckPending={false}
+        onEvidenceSelect={noop}
+      />
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("이번 회의 안 연결: 판정하지 못했습니다");
+    expect(screen.getByRole("status")).toHaveTextContent("이전 확정과의 연결: 판정하고 있습니다");
+  });
+
   it("프로젝트 레벨 관계는 이전 확정과 이번 회의를 나란히, 효과를 함께 그린다", () => {
     const scr = toReviewScreen(sampleReview());
     render(
