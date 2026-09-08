@@ -9,8 +9,14 @@ import type { EditsState } from "@/lib/notes/meeting-review/edits";
  */
 const store = new Map<string, EditsState>();
 
+/**
+ * 되찾을 때 `saving` 은 비운다 — 언마운트된 reducer 는 완료를 받지 못하므로 그 표시가 남으면
+ * 버튼이 잠긴 채다. 미저장 편집은 그대로라 다시 저장하면 되고, 이미 저장됐으면 재조회가 같은
+ * 값을 보여 준다.
+ */
 export function loadEdits(noteId: string): EditsState | undefined {
-  return store.get(noteId);
+  const state = store.get(noteId);
+  return state ? { ...state, saving: new Set() } : undefined;
 }
 
 export function storeEdits(noteId: string, state: EditsState) {

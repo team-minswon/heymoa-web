@@ -174,7 +174,8 @@ export function MeetingReview({
   const applyMutation = useCallback(
     (result: { reviewVersion: number; item?: ReviewItem; relation?: ReviewRelation; approval?: ApprovalGate }) => {
       queryClient.setQueryData(reviewKey, (old: typeof review) =>
-        old
+        // 재조회가 더 새 검토본을 먼저 받았으면 늦은 저장 응답의 본문은 버린다 — 버전만 지킨다.
+        old && result.reviewVersion >= old.reviewVersion
           ? {
               ...old,
               reviewVersion: Math.max(old.reviewVersion, result.reviewVersion),
@@ -204,7 +205,7 @@ export function MeetingReview({
         bumpVersion(currentReviewVersion);
         // 서버의 현재 값을 캐시에 반영한다 — 「내 편집 유지」 뒤의 재시도가 새 revision 으로 나간다.
         queryClient.setQueryData(reviewKey, (old: typeof review) =>
-          old
+          old && (currentReviewVersion ?? 0) >= old.reviewVersion
             ? {
                 ...old,
                 reviewVersion: Math.max(old.reviewVersion, currentReviewVersion ?? 0),
@@ -365,8 +366,11 @@ export function MeetingReview({
   useEffect(() => {
     pendingRef.current = { ...edits.pendingItems };
   }, [edits.pendingItems]);
-  /** 관계 판정의 미저장분. 승인 전 순차 저장이 읽는다. */
+  /** 관계 판정의 미저장분. reducer 가 정본이고 여기는 저장 흐름의 동기 거울이다. */
   const pendingRelationsRef = useRef<Record<string, RelationEdit>>({});
+  useEffect(() => {
+    pendingRelationsRef.current = { ...edits.pendingRelations };
+  }, [edits.pendingRelations]);
 
   /** 편집 완료 단위로 저장한다. 성공이면 서버 값으로 수렴하고 실패면 편집을 남긴다. */
   const commitItem = useCallback(
@@ -450,10 +454,13 @@ export function MeetingReview({
       return;
     }
     if (Object.keys(editsRef.current.conflicts).length > 0 || editsRef.current.saving.size > 0) return;
-    for (const [itemId, edit] of Object.entries(pendingRef.current)) {
+    // reducer 가 정본이다 — 탭을 옮겼다 돌아와 되찾은 편집도 여기에만 있을 수 있다.
+    const items = { ...editsRef.current.pendingItems, ...pendingRef.current };
+    for (const [itemId, edit] of Object.entries(items)) {
       if (!(await commitItem(itemId, edit))) return;
     }
-    for (const [relationId, edit] of Object.entries(pendingRelationsRef.current)) {
+    const relations = { ...editsRef.current.pendingRelations, ...pendingRelationsRef.current };
+    for (const [relationId, edit] of Object.entries(relations)) {
       if (!(await commitRelation(relationId, edit))) return;
     }
     if (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -226,6 +226,12 @@ function RelationRow({
     setModifying(false);
     onDraftChange?.(`relation:${relation.relationId}`, false);
   };
+  // 재검토로 층이 GENERATING 이 되면 이 행이 사라진다. 열린 폼의 초안 등록을 같이 걷는다.
+  useEffect(() => {
+    if (!modifying) return;
+    const key = `relation:${relation.relationId}`;
+    return () => onDraftChange?.(key, false);
+  }, [modifying, relation.relationId, onDraftChange]);
   /** 이번 회의 쪽 끝점. 방향(`from`/`to`)이 아니라 `type === "REVIEW"` 로 고른다. */
   const reviewEndpoint = relation.from.type === "REVIEW" ? relation.from : relation.to;
   const status = pending?.judgement ?? relation.judgement.status;

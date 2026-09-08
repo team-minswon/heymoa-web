@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -142,6 +142,11 @@ function RegionBlock({
     setAdding(false);
     onDraftChange?.(draftKey, false);
   };
+  // 영역이 사라지면(재조회로 영역이 바뀜) 열린 폼의 초안 등록도 걷는다.
+  useEffect(() => {
+    if (!adding) return;
+    return () => onDraftChange?.(draftKey, false);
+  }, [adding, draftKey, onDraftChange]);
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [kind, setKind] = useState<string>(
