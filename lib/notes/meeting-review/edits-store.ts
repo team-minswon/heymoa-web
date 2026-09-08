@@ -1,4 +1,4 @@
-import type { EditsState } from "@/lib/notes/meeting-review/edits";
+import { reduceEdits, type EditsAction, type EditsState } from "@/lib/notes/meeting-review/edits";
 
 /**
  * 노트별 편집 상태의 보관소. `summary` 탭의 패널은 탭을 옮기면 언마운트되는데, 근거를
@@ -25,4 +25,14 @@ export function storeEdits(noteId: string, state: EditsState) {
 
 export function clearEdits(noteId: string) {
   store.delete(noteId);
+}
+
+/**
+ * 저장 흐름이 끝났을 때 보관소에도 같은 사건을 적용한다. 패널이 언마운트된 뒤 도착한
+ * 응답은 reducer 의 `dispatch` 로는 닿지 않으므로, 여기서 적용해야 되찾은 상태가 이미
+ * 저장된 편집을 다시 보내지 않는다.
+ */
+export function settleStoredEdits(noteId: string, action: EditsAction) {
+  const state = store.get(noteId);
+  if (state) store.set(noteId, reduceEdits(state, action));
 }

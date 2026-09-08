@@ -74,8 +74,10 @@ export function ReviewItemCard({
 
   const commitContent = () => {
     setEditing(false);
-    if (draft.trim() !== item.content) {
-      onEdit(item.itemId, { content: draft.trim(), baseRevision });
+    const next = draft.trim();
+    // 서버 값과 같아졌어도 미저장 편집이 남아 있으면(`shown` 이 서버와 다르면) 그것을 갈아야 한다.
+    if (next !== item.content || shown.content !== item.content) {
+      onEdit(item.itemId, { content: next, baseRevision });
       onCommit(item.itemId);
     }
   };
@@ -139,7 +141,7 @@ export function ReviewItemCard({
           <button
             type="button"
             onClick={() => onSelect(item.itemId)}
-            onDoubleClick={() => canEdit && beginEditing()}
+            onDoubleClick={() => canEdit && !saving && beginEditing()}
             className="block w-full text-left text-[14px] leading-[1.55] text-[var(--el-ink)]"
           >
             {shown.content}

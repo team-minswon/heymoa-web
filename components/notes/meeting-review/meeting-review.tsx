@@ -25,7 +25,12 @@ import {
   type ReviewItem,
   type ReviewRelation,
 } from "@/lib/notes/meeting-review/contract";
-import { clearEdits, loadEdits, storeEdits } from "@/lib/notes/meeting-review/edits-store";
+import {
+  clearEdits,
+  loadEdits,
+  settleStoredEdits,
+  storeEdits,
+} from "@/lib/notes/meeting-review/edits-store";
 import {
   initialEdits,
   reduceEdits,
@@ -242,13 +247,21 @@ export function MeetingReview({
           return;
         }
         // 항목 자체가 아니라 검토본 버전이 어긋났다. 다시 읽고 편집은 남긴다.
-        dispatch({ type: "failed", key, message: conflict.data.message });
+        const failed = { type: "failed" as const, key, message: conflict.data.message };
+        dispatch(failed);
+        settleStoredEdits(noteId, failed);
         void invalidateReview();
         return;
       }
-      dispatch({ type: "failed", key, message: errorMessageOf(error, "잠시 뒤 다시 시도해 주세요.") });
+      const failed = {
+        type: "failed" as const,
+        key,
+        message: errorMessageOf(error, "잠시 뒤 다시 시도해 주세요."),
+      };
+      dispatch(failed);
+      settleStoredEdits(noteId, failed);
     },
-    [invalidateReview, bumpVersion, queryClient, reviewKey]
+    [invalidateReview, bumpVersion, queryClient, reviewKey, noteId]
   );
 
   // 인라인으로 그리므로 전역 토스트는 끈다(`error-loading.md`).
@@ -285,9 +298,27 @@ export function MeetingReview({
     meta: { suppressErrorToast: true },
     mutationFn: (input: { regionId?: string; kind: string; content: string }) =>
       createReviewItem(noteId, { expectedReviewVersion: versionRef.current, ...input }),
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       bumpVersion(result.reviewVersion);
       dispatch({ type: "sync-version", reviewVersion: result.reviewVersion });
+      // 생성된 항목을 먼저 캐시에 넣고 영역에 잇는다 — 재조회가 실패해도 화면에 남는다.
+      queryClient.setQueryData(reviewKey, (old: typeof review) => {
+        if (!old || !result.item || result.reviewVersion < old.reviewVersion) return old;
+        const item = result.item;
+        return {
+          ...old,
+          reviewVersion: result.reviewVersion,
+          items: old.items.some((entry) => entry.itemId === item.itemId)
+            ? old.items
+            : [...old.items, item],
+          regions: old.regions.map((region) =>
+            region.regionId === variables.regionId && !region.itemIds.includes(item.itemId)
+              ? { ...region, itemIds: [...region.itemIds, item.itemId] }
+              : region
+          ),
+          approval: result.approval ?? old.approval,
+        };
+      });
       void invalidateReview();
     },
     onError: () => void invalidateReview(),
@@ -372,31 +403,43 @@ export function MeetingReview({
     pendingRelationsRef.current = { ...edits.pendingRelations };
   }, [edits.pendingRelations]);
 
+  /** 같은 키의 저장이 도는 동안 두 번째 저장을 막는다. reducer 의 `saving` 보다 동기로 앞선다. */
+  const inFlightRef = useRef<Set<EditKey>>(new Set());
+
   /** 편집 완료 단위로 저장한다. 성공이면 서버 값으로 수렴하고 실패면 편집을 남긴다. */
   const commitItem = useCallback(
     async (itemId: string, edit: ItemEdit): Promise<boolean> => {
       const key: EditKey = `item:${itemId}`;
+      if (inFlightRef.current.has(key)) return false;
+      inFlightRef.current.add(key);
       dispatch({ type: "saving", key });
       try {
         const result = await saveItem.mutateAsync({ itemId, edit });
         bumpVersion(result.reviewVersion);
         // 응답을 먼저 캐시에 반영한다 — 재조회가 늦거나 실패해도 저장한 값과 revision 이 남는다.
         applyMutation(result);
-        dispatch({ type: "saved", key, reviewVersion: result.reviewVersion });
+        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion };
+        dispatch(saved);
+        // 패널이 언마운트된 뒤 도착했어도 보관소에는 닿아야 한다.
+        settleStoredEdits(noteId, saved);
         pendingRef.current = withoutKey(pendingRef.current, itemId);
         void invalidateReview();
         return true;
       } catch (error) {
         settleFailure(key, error, edit);
         return false;
+      } finally {
+        inFlightRef.current.delete(key);
       }
     },
-    [saveItem, invalidateReview, settleFailure, bumpVersion, applyMutation]
+    [saveItem, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId]
   );
 
   const commitRelation = useCallback(
     async (relationId: string, edit: RelationEdit): Promise<boolean> => {
       const key: EditKey = `relation:${relationId}`;
+      if (inFlightRef.current.has(key)) return false;
+      inFlightRef.current.add(key);
       pendingRelationsRef.current = { ...pendingRelationsRef.current, [relationId]: edit };
       dispatch({ type: "edit-relation", relationId, edit });
       dispatch({ type: "saving", key });
@@ -404,16 +447,20 @@ export function MeetingReview({
         const result = await saveRelation.mutateAsync({ relationId, edit });
         bumpVersion(result.reviewVersion);
         applyMutation(result);
-        dispatch({ type: "saved", key, reviewVersion: result.reviewVersion });
+        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion };
+        dispatch(saved);
+        settleStoredEdits(noteId, saved);
         pendingRelationsRef.current = withoutKey(pendingRelationsRef.current, relationId);
         void invalidateReview();
         return true;
       } catch (error) {
         settleFailure(key, error, edit);
         return false;
+      } finally {
+        inFlightRef.current.delete(key);
       }
     },
-    [saveRelation, invalidateReview, settleFailure, bumpVersion, applyMutation]
+    [saveRelation, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId]
   );
 
   const onEditItem = useCallback((itemId: string, edit: ItemEdit) => {
