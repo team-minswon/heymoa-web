@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   loadDraft,
   storeDraft,
   type AddItemDraft,
+  type AddItemResult,
 } from "@/lib/notes/meeting-review/draft-store";
 import type { ReviewScreen, ScreenRegion } from "@/lib/notes/meeting-review/select";
 import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
@@ -162,8 +163,8 @@ function RegionBlock({
     clearDraft(noteId, draftKey);
   };
 
-  const [submitting, setSubmitting] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(restored?.pending !== undefined);
+  const [failure, setFailure] = useState<string | null>(restored?.failure ?? null);
   const [kind, setKindState] = useState<string>(
     restored?.kind ??
       (proposalKindSchema.options.includes(region.kind as never) ? region.kind : "DECISION")
@@ -179,17 +180,49 @@ function RegionBlock({
   };
   const regionId = region.regionId === "unplaced" ? undefined : region.regionId;
 
+  /**
+   * 요청의 결과를 이 폼에 반영한다. 요청 자체는 보관소에 있어 폼이 재마운트돼도 같은 약속을
+   * 이어 받는다 — 응답 전에 side ↔ full 을 오가도 「추가」가 다시 살아나지 않는다.
+   */
+  const pendingRef = useRef<Promise<AddItemResult> | null>(restored?.pending ?? null);
+  useEffect(() => {
+    const request = pendingRef.current;
+    if (!request) return;
+    let live = true;
+    void request.then((result) => {
+      if (!live) return;
+      pendingRef.current = null;
+      setSubmitting(false);
+      if (result.ok) {
+        setContentState("");
+        setAdding(false);
+      } else {
+        setFailure(result.message);
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   /** 성공했을 때만 비운다 — 실패하면 쓴 내용을 남기고 사유를 보여 준다. 요청 중에는 다시 못 보낸다. */
   const submit = async () => {
     const trimmed = content.trim();
     if (!trimmed || submitting || !canEdit) return;
     setSubmitting(true);
     setFailure(null);
-    const result = await onAddItem(regionId, kind, trimmed);
+    // 결과의 보관소 반영은 폼과 무관하게 한다 — 언마운트된 채 성공하면 초안이 지워져야 새 폼이 안 뜬다.
+    const request = onAddItem(regionId, kind, trimmed).then((result) => {
+      if (result.ok) clearDraft(noteId, draftKey);
+      else storeDraft<AddItemDraft>(noteId, draftKey, { kind, content: trimmed, failure: result.message });
+      return result;
+    });
+    storeDraft<AddItemDraft>(noteId, draftKey, { kind, content: trimmed, pending: request });
+    const result = await request;
     setSubmitting(false);
     if (result.ok) {
       setContentState("");
-      closeAdd();
+      setAdding(false);
     } else {
       setFailure(result.message);
     }

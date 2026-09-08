@@ -5,7 +5,15 @@
  * 재마운트로 사라진다. 편집 보관소(`edits-store`)는 제출된 편집만 갖고 작성 중인 글자는 모르니
  * 여기 따로 둔다. 제출·취소하면 지운다. 문서와 함께 사라지는 메모리다.
  */
-export type AddItemDraft = { kind: string; content: string };
+export type AddItemResult = { ok: true } | { ok: false; message: string };
+export type AddItemDraft = {
+  kind: string;
+  content: string;
+  /** 보낸 요청. 폼이 재마운트돼도 이 약속을 이어 받아 같은 내용을 두 번 보내지 않는다. */
+  pending?: Promise<AddItemResult>;
+  /** 마지막 요청의 실패 사유. 성공은 초안 자체를 지우므로 여기 남지 않는다. */
+  failure?: string;
+};
 export type ModifyRelationDraft = { label: string; baseRevision: number };
 
 const store = new Map<string, Map<string, unknown>>();

@@ -83,6 +83,7 @@ export function NotePanel({
   view,
   tab,
   initialFocusSegmentId,
+  onFocusHandled,
   onTabChange,
   onClose,
   onExpand,
@@ -95,6 +96,8 @@ export function NotePanel({
   tab: NoteTab;
   /** 진입 URL 의 `segment`. 전사 탭에서 그 발화를 짚고 비운다. */
   initialFocusSegmentId?: string | null;
+  /** 짚은 발화의 표시가 끝났다. 진입 URL 의 `segment` 를 걷을 자리다 — 재마운트가 되풀이하지 않게. */
+  onFocusHandled?: () => void;
   onTabChange: (tab: NoteTab, options?: { push?: boolean }) => void;
   onClose: () => void;
   onExpand?: () => void;
@@ -302,7 +305,10 @@ export function NotePanel({
     },
     [onTabChange]
   );
-  const clearFocusSegment = useCallback(() => setFocusSegmentId(null), []);
+  const clearFocusSegment = useCallback(() => {
+    setFocusSegmentId(null);
+    onFocusHandled?.();
+  }, [onFocusHandled]);
   const recording = useRecording();
   const localProviderCanControlNote =
     isNoteRecordingActive(recording, noteId) &&
