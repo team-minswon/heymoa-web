@@ -22,8 +22,10 @@ import type {
 } from "@/lib/notes/meeting-review/contract";
 import { getConceptSummaryQueryKey } from "@/lib/notes/meeting-review/query-keys";
 
-/** 생성 중일 때만 도는 저주기 폴링. 준비 신호가 계약에 없다. */
+/** 생성 중일 때 도는 폴링. 준비 신호가 계약에 없다. */
 export const CONCEPT_SUMMARY_POLL_MS = 4_000;
+/** 열어 둔 동안 다른 창의 승인으로 기준이 바뀐 것을 잡는 저주기 재조회. */
+export const CONCEPT_SUMMARY_SAFETY_POLL_MS = 30_000;
 
 const STATUS_LABEL: Record<ConceptSummaryStatus, string> = {
   NONE: "아직 요약이 없습니다",
@@ -75,7 +77,9 @@ export function ProjectConceptSummary({
     queryFn: () => fetchConceptSummary(projectId),
     retry: false,
     refetchInterval: (query) =>
-      query.state.data?.status === "GENERATING" ? CONCEPT_SUMMARY_POLL_MS : false,
+      query.state.data?.status === "GENERATING"
+        ? CONCEPT_SUMMARY_POLL_MS
+        : CONCEPT_SUMMARY_SAFETY_POLL_MS,
   });
   const refresh = useMutation({
     mutationFn: () => refreshConceptSummary(projectId),
@@ -96,6 +100,11 @@ export function ProjectConceptSummary({
               <h2 className="truncate text-[18px] font-semibold tracking-[-0.01em] text-[var(--el-ink)]">
                 {project.name}
               </h2>
+            ) : projectQuery.isError ? (
+              <InlineRetry
+                onRetry={() => void projectQuery.refetch()}
+                label="프로젝트 정보를 불러오지 못했습니다"
+              />
             ) : (
               <Skeleton className="mt-1 h-6 w-48" />
             )}

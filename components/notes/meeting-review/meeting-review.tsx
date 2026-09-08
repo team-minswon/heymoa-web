@@ -30,6 +30,7 @@ import {
   loadEdits,
   settleStoredEdits,
   storeEdits,
+  subscribeEdits,
 } from "@/lib/notes/meeting-review/edits-store";
 import {
   initialEdits,
@@ -133,8 +134,9 @@ export function MeetingReview({
     storeEdits(noteId, edits);
   }, [noteId, edits]);
   useEffect(() => {
-    if (review?.approved) clearEdits(noteId);
-  }, [noteId, review?.approved]);
+    // 언마운트 중 끝난 저장이 보관소에 먼저 닿는다. 되돌아온 화면은 그 완료를 여기서 받는다.
+    return subscribeEdits(noteId, (state) => dispatch({ type: "replace", state }));
+  }, [noteId]);
   /**
    * 저장의 CAS 에 실을 검토본 버전. reducer 의 값과 같지만 **동기로** 앞선다 — 연속 저장이
    * 한 렌더 안에서 이어질 때 클로저의 옛 버전을 다시 보내지 않기 위해서다.
@@ -151,6 +153,13 @@ export function MeetingReview({
       dispatch({ type: "sync-version", reviewVersion: review.reviewVersion });
     }
   }, [review, bumpVersion]);
+  const approvedVersion = review?.approved?.approvalVersion ?? null;
+  useEffect(() => {
+    // 승인됐으면(이 창이든 다른 창이든) 미저장 편집을 확정 내용과 섞지 않는다. 보관소도 비운다.
+    if (approvedVersion === null) return;
+    clearEdits(noteId);
+    dispatch({ type: "reset", reviewVersion: versionRef.current });
+  }, [noteId, approvedVersion]);
   /** 편집·충돌·저장 중 상태의 최신 거울. 승인 클릭처럼 렌더 뒤 이벤트에서 읽는다. */
   const editsRef = useRef(edits);
   useEffect(() => {

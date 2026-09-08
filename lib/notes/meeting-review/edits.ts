@@ -73,7 +73,11 @@ export type EditsAction =
   | { type: "keep-local"; key: EditKey }
   | { type: "take-server"; key: EditKey }
   /** 충돌을 「내 편집 유지」로 푼 뒤 기준 revision 을 서버 값으로 올린다. */
-  | { type: "rebase"; key: EditKey; revision: number };
+  | { type: "rebase"; key: EditKey; revision: number }
+  /** 회의가 (다른 창에서) 승인됐다. 미저장 편집은 확정 내용에 섞이지 않게 걷는다. */
+  | { type: "reset"; reviewVersion: number }
+  /** 보관소가 언마운트 중 완료를 받았다. 그 상태를 그대로 받는다. */
+  | { type: "replace"; state: EditsState };
 
 function without<T>(record: Record<string, T>, key: string): Record<string, T> {
   if (!(key in record)) return record;
@@ -177,6 +181,12 @@ export function reduceEdits(state: EditsState, action: EditsAction): EditsState 
         ? { ...state, pendingRelations: { ...state.pendingRelations, [id]: { ...edit, baseRevision: action.revision } } }
         : state;
     }
+
+    case "reset":
+      return initialEdits(Math.max(state.reviewVersion, action.reviewVersion));
+
+    case "replace":
+      return action.state;
 
     case "take-server": {
       const [kind, id] = splitKey(action.key);
