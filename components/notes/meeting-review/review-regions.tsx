@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import type { ReviewItem } from "@/lib/notes/meeting-review/contract";
 import type { EditsState } from "@/lib/notes/meeting-review/edits";
 import { effectiveItem } from "@/lib/notes/meeting-review/edits";
-import { clearDraft, loadDraft, storeDraft } from "@/lib/notes/meeting-review/draft-store";
+import {
+  clearDraft,
+  loadDraft,
+  storeDraft,
+  type AddItemDraft,
+} from "@/lib/notes/meeting-review/draft-store";
 import type { ReviewScreen, ScreenRegion } from "@/lib/notes/meeting-review/select";
 import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
 import { proposalKindSchema } from "@/lib/notes/proposals/contract";
@@ -138,8 +143,8 @@ function RegionBlock({
   onDraftChange?: (key: string, open: boolean) => void;
 }) {
   const draftKey = `add:${region.regionId}`;
-  // side ↔ full 전환의 재마운트를 넘긴다 — 작성 중이던 내용이 있으면 폼을 연 채 되찾는다.
-  const restored = loadDraft(noteId, draftKey);
+  // side ↔ full 전환의 재마운트를 넘긴다 — 작성 중이던 내용·유형이 있으면 폼을 연 채 되찾는다.
+  const restored = loadDraft<AddItemDraft>(noteId, draftKey);
   const [adding, setAdding] = useState(restored !== undefined);
   // 승인으로 권한이 사라지면 열린 폼도 닫힌다. 초안 등록은 폼이 실제로 보이는 동안만이다.
   const showForm = adding && canEdit;
@@ -150,7 +155,7 @@ function RegionBlock({
   }, [showForm, draftKey, onDraftChange]);
   const openAdd = () => {
     setAdding(true);
-    storeDraft(noteId, draftKey, content);
+    storeDraft<AddItemDraft>(noteId, draftKey, { kind, content });
   };
   const closeAdd = () => {
     setAdding(false);
@@ -159,13 +164,18 @@ function RegionBlock({
 
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const [kind, setKind] = useState<string>(
-    proposalKindSchema.options.includes(region.kind as never) ? region.kind : "DECISION"
+  const [kind, setKindState] = useState<string>(
+    restored?.kind ??
+      (proposalKindSchema.options.includes(region.kind as never) ? region.kind : "DECISION")
   );
-  const [content, setContentState] = useState(restored ?? "");
+  const [content, setContentState] = useState(restored?.content ?? "");
   const setContent = (value: string) => {
     setContentState(value);
-    storeDraft(noteId, draftKey, value);
+    storeDraft<AddItemDraft>(noteId, draftKey, { kind, content: value });
+  };
+  const setKind = (value: string) => {
+    setKindState(value);
+    storeDraft<AddItemDraft>(noteId, draftKey, { kind: value, content });
   };
   const regionId = region.regionId === "unplaced" ? undefined : region.regionId;
 
@@ -216,6 +226,7 @@ function RegionBlock({
             <select
               aria-label="유형"
               value={kind}
+              disabled={submitting}
               onChange={(event) => setKind(event.target.value)}
               className="h-8 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas)] px-2 text-[12px] text-[var(--el-ink)]"
             >
@@ -229,6 +240,8 @@ function RegionBlock({
               autoFocus
               aria-label="추가할 내용"
               value={content}
+              // 요청 중에는 잠근다 — 그새 더 쓴 글자가 응답과 함께 사라지지 않게.
+              disabled={submitting}
               onChange={(event) => setContent(event.target.value)}
               rows={2}
               className="min-w-0 flex-1 resize-y rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas)] px-2 py-1.5 text-[14px] leading-[1.55] text-[var(--el-ink)] outline-none focus-visible:border-[var(--el-hairline-strong)]"
