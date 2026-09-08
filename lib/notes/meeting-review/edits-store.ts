@@ -11,13 +11,12 @@ const store = new Map<string, EditsState>();
 const listeners = new Map<string, Set<(state: EditsState) => void>>();
 
 /**
- * 되찾을 때 `saving` 은 비운다 — 언마운트된 reducer 는 완료를 받지 못하므로 그 표시가 남으면
- * 버튼이 잠긴 채다. 미저장 편집은 그대로라 다시 저장하면 되고, 이미 저장됐으면 재조회가 같은
- * 값을 보여 준다.
+ * `saving` 도 그대로 되찾는다. 언마운트된 화면이 보낸 요청은 같은 문서 안에서 반드시 끝나고,
+ * 그 완료는 `settleStoredEdits` 로 여기 닿아 잠금을 푼다. 비우면 응답 전에 돌아온 화면이
+ * 같은 편집을 한 번 더 보내 자기 중복 요청의 409 를 보게 된다.
  */
 export function loadEdits(noteId: string): EditsState | undefined {
-  const state = store.get(noteId);
-  return state ? { ...state, saving: new Set() } : undefined;
+  return store.get(noteId);
 }
 
 export function storeEdits(noteId: string, state: EditsState) {

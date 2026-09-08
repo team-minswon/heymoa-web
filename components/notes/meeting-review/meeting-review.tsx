@@ -444,7 +444,8 @@ export function MeetingReview({
   const commitItem = useCallback(
     async (itemId: string, edit: ItemEdit): Promise<boolean> => {
       const key: EditKey = `item:${itemId}`;
-      if (inFlightRef.current.has(key)) return false;
+      // 이 화면이 보낸 것이든, 재마운트 전 화면이 보내 아직 도는 것이든 같은 키는 다시 안 보낸다.
+      if (inFlightRef.current.has(key) || editsRef.current.saving.has(key)) return false;
       inFlightRef.current.add(key);
       dispatch({ type: "saving", key });
       try {
@@ -474,7 +475,7 @@ export function MeetingReview({
   const commitRelation = useCallback(
     async (relationId: string, edit: RelationEdit): Promise<boolean> => {
       const key: EditKey = `relation:${relationId}`;
-      if (inFlightRef.current.has(key)) return false;
+      if (inFlightRef.current.has(key) || editsRef.current.saving.has(key)) return false;
       inFlightRef.current.add(key);
       pendingRelationsRef.current = { ...pendingRelationsRef.current, [relationId]: edit };
       dispatch({ type: "edit-relation", relationId, edit });

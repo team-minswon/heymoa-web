@@ -115,16 +115,22 @@ describe("reduceEdits", () => {
 });
 
 describe("edits-store", () => {
-  it("되찾을 때 저장 중 표시는 비우고 편집·충돌은 남긴다", async () => {
-    const { clearEdits, loadEdits, storeEdits } = await import("@/lib/notes/meeting-review/edits-store");
+  it("되찾을 때 저장 중 잠금도 남고, 보관소에 닿은 완료가 그 잠금을 푼다", async () => {
+    const { clearEdits, loadEdits, settleStoredEdits, storeEdits } = await import(
+      "@/lib/notes/meeting-review/edits-store"
+    );
     const state = apply([
       { type: "edit-item", itemId: ITEM.decision, edit: { content: "고침" } },
       { type: "saving", key: `item:${ITEM.decision}` },
     ]);
     storeEdits("note-1", state);
     const restored = loadEdits("note-1")!;
-    expect(restored.saving.size).toBe(0);
+    // 응답 전에 돌아온 화면이 같은 편집을 다시 보내면 안 된다.
+    expect(restored.saving.has(`item:${ITEM.decision}`)).toBe(true);
     expect(restored.pendingItems[ITEM.decision]).toEqual({ content: "고침" });
+    settleStoredEdits("note-1", { type: "saved", key: `item:${ITEM.decision}`, reviewVersion: 5 });
+    expect(loadEdits("note-1")!.saving.size).toBe(0);
+    expect(loadEdits("note-1")!.pendingItems).toEqual({});
     clearEdits("note-1");
     expect(loadEdits("note-1")).toBeUndefined();
   });

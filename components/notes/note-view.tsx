@@ -106,6 +106,8 @@ export function NoteView({
   });
 
   const [isOpen, setIsOpen] = useState(false);
+  // 서버가 준 `segment` 는 한 번만 쓴다. 처리한 뒤 재마운트가 fallback 으로 다시 읽으면 안 된다.
+  const [initialSegmentConsumed, setInitialSegmentConsumed] = useState(false);
   const pendingSearchRef = useRef<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
@@ -211,8 +213,11 @@ export function NoteView({
         view={current.view}
         tab={current.tab}
         // 다른 화면(프로젝트 요약의 근거)에서 발화 하나를 가리키고 들어온다. 첫 진입에만 쓴다.
-        initialFocusSegmentId={searchParams.get("segment") ?? initialQuery.segment ?? null}
+        initialFocusSegmentId={
+          searchParams.get("segment") ?? (initialSegmentConsumed ? null : initialQuery.segment) ?? null
+        }
         onFocusHandled={() => {
+          setInitialSegmentConsumed(true);
           if (!searchParams.has("segment")) return;
           const next = new URLSearchParams(search);
           next.delete("segment");
