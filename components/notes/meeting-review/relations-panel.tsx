@@ -325,9 +325,19 @@ function RelationRow({
       {conflict?.kind === "relation" ? (
         <div role="alert" className="space-y-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3 text-[12px]">
           <p className="font-medium text-[var(--el-ink)]">다른 곳에서 먼저 판정됐습니다</p>
-          <p className="text-[var(--el-muted)]">
-            내 판정 {JUDGEMENT_LABEL[conflict.local.judgement]} · 서버 {JUDGEMENT_LABEL[conflict.server.judgement.status]}
-          </p>
+          {/* 판정이 같아도 이름이 다를 수 있다(둘 다 「수정 수락」). 무엇을 덮는지 보이게 이름도 대조한다. */}
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[var(--el-muted)]">
+            <dt>내 판정</dt>
+            <dd className="text-[var(--el-ink)]">
+              {JUDGEMENT_LABEL[conflict.local.judgement]}
+              {conflict.local.label ? ` · ${conflict.local.label}` : ""}
+            </dd>
+            <dt>서버</dt>
+            <dd className="text-[var(--el-ink)]">
+              {JUDGEMENT_LABEL[conflict.server.judgement.status]}
+              {conflict.server.judgement.label ? ` · ${conflict.server.judgement.label}` : ""}
+            </dd>
+          </dl>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => onKeepLocal(relation.relationId)}>
               내 판정 유지
