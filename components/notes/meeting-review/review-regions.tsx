@@ -36,7 +36,11 @@ export function ReviewRegions({
   edits: EditsState;
   selectedItemId: string | null;
   canEdit: boolean;
-  onAddItem: (regionId: string | undefined, kind: string, content: string) => void;
+  onAddItem: (
+    regionId: string | undefined,
+    kind: string,
+    content: string
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
   actions: ItemActions;
 }) {
   const renderItem = (item: ReviewItem, kindInHeader: boolean) => (
@@ -98,22 +102,36 @@ function RegionBlock({
 }: {
   region: ScreenRegion;
   canEdit: boolean;
-  onAddItem: (regionId: string | undefined, kind: string, content: string) => void;
+  onAddItem: (
+    regionId: string | undefined,
+    kind: string,
+    content: string
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
   children: React.ReactNode;
 }) {
   const [adding, setAdding] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const [kind, setKind] = useState<string>(
     proposalKindSchema.options.includes(region.kind as never) ? region.kind : "DECISION"
   );
   const [content, setContent] = useState("");
   const regionId = region.regionId === "unplaced" ? undefined : region.regionId;
 
-  const submit = () => {
+  /** 성공했을 때만 비운다 — 실패하면 쓴 내용을 남기고 사유를 보여 준다. 요청 중에는 다시 못 보낸다. */
+  const submit = async () => {
     const trimmed = content.trim();
-    if (!trimmed) return;
-    onAddItem(regionId, kind, trimmed);
-    setContent("");
-    setAdding(false);
+    if (!trimmed || submitting) return;
+    setSubmitting(true);
+    setFailure(null);
+    const result = await onAddItem(regionId, kind, trimmed);
+    setSubmitting(false);
+    if (result.ok) {
+      setContent("");
+      setAdding(false);
+    } else {
+      setFailure(result.message);
+    }
   };
 
   return (
@@ -139,7 +157,7 @@ function RegionBlock({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            submit();
+            void submit();
           }}
           className="flex flex-col gap-2 rounded-[12px] border border-dashed border-[var(--el-hairline-strong)] p-3"
         >
@@ -165,11 +183,16 @@ function RegionBlock({
               className="min-w-0 flex-1 resize-y rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas)] px-2 py-1.5 text-[14px] leading-[1.55] text-[var(--el-ink)] outline-none focus-visible:border-[var(--el-hairline-strong)]"
             />
           </div>
+          {failure ? (
+            <p role="alert" className="text-[12px] text-[var(--el-error-strong)]">
+              추가하지 못했습니다 · {failure}
+            </p>
+          ) : null}
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" type="button" onClick={() => setAdding(false)}>
+            <Button size="sm" variant="ghost" type="button" disabled={submitting} onClick={() => setAdding(false)}>
               취소
             </Button>
-            <Button size="sm" type="submit" disabled={!content.trim()}>
+            <Button size="sm" type="submit" loading={submitting} disabled={!content.trim()}>
               추가
             </Button>
           </div>

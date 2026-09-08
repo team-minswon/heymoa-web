@@ -28,7 +28,7 @@ describe("ReviewGate", () => {
         unsavedCount={0}
         approving={false}
         rejected={null}
-        approval={null}
+        approvalDetail={null}
         onApprove={noop}
         onJumpTo={noop}
       />
@@ -48,7 +48,7 @@ describe("ReviewGate", () => {
         unsavedCount={2}
         approving={false}
         rejected={null}
-        approval={null}
+        approvalDetail={null}
         onApprove={noop}
         onJumpTo={onJumpTo}
       />
@@ -71,7 +71,7 @@ describe("ReviewGate", () => {
         unsavedCount={0}
         approving={false}
         rejected={null}
-        approval={sampleApproval()}
+        approvalDetail={{ status: "ready", data: sampleApproval() }}
         onApprove={noop}
         onJumpTo={noop}
       />
@@ -89,12 +89,35 @@ describe("ReviewGate", () => {
         unsavedCount={0}
         approving={false}
         rejected={{ code: "PROJECT_VERSION_CONFLICT", message: "x" }}
-        approval={null}
+        approvalDetail={null}
         onApprove={noop}
         onJumpTo={noop}
       />
     );
     expect(screen.getByRole("alert")).toHaveTextContent("프로젝트의 승인 버전이 바뀌었습니다");
+  });
+
+  it("승인 상세 조회가 실패해도 「확정됨」이고 승인 버튼으로 되돌아가지 않는다", () => {
+    const review = sampleReview({
+      approved: { approvalVersion: 3, approvedAt: "2026-09-01T11:00:00.000Z", approvedBy: "01J0000000001" },
+    });
+    const retry = vi.fn();
+    render(
+      <ReviewGate
+        screen={toReviewScreen(review)}
+        isStarter
+        unsavedCount={0}
+        approving={false}
+        rejected={null}
+        approvalDetail={{ status: "error", retry }}
+        onApprove={noop}
+        onJumpTo={noop}
+      />
+    );
+    expect(screen.getByText("프로젝트 지식으로 확정됨")).toBeInTheDocument();
+    expect(screen.queryByTestId("approve-meeting")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /다시 시도|재시도/ }));
+    expect(retry).toHaveBeenCalled();
   });
 });
 

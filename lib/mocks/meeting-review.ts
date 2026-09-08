@@ -149,7 +149,7 @@ function seedNote(noteId: string, options: SeedOptions): NoteState {
     approvals: new Map(),
     generatingPolls: 0,
     recheckPolls: 0,
-    nextId: 100,
+    nextId: 0,
   };
 }
 
@@ -163,9 +163,10 @@ function stateOf(noteId: string, options: SeedOptions = {}): NoteState {
   return state;
 }
 
+/** 13자를 지킨다 — 접두 11자 + 두 자리. 한 노트에 99개까지면 목으로 충분하다. */
 function newId(state: NoteState) {
   state.nextId += 1;
-  return `0HZX2K7M9RN${String(state.nextId).padStart(2, "0")}`;
+  return `0HZX2K7M9RN${String(state.nextId % 100).padStart(2, "0")}`;
 }
 
 /** 서버 판정을 흉내낸다. web 은 이 값을 다시 계산하지 않는다. */

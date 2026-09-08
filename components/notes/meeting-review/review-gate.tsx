@@ -3,6 +3,8 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { InlineRetry } from "@/components/ui/inline-retry";
+import { Skeleton } from "@/components/ui/skeleton";
 import type {
   ApprovalBlockerCode,
   ApprovalRejected,
@@ -31,6 +33,11 @@ const REJECT_LABEL: Record<ApprovalRejected["code"], string> = {
   PROJECT_VERSION_CONFLICT: "프로젝트의 승인 버전이 바뀌었습니다. 비교를 다시 해야 합니다",
 };
 
+export type ApprovalDetail =
+  | { status: "loading" }
+  | { status: "error"; retry: () => void }
+  | { status: "ready"; data: MeetingApproval };
+
 /**
  * 「검토·확정」 영역. 무엇이 남았는지, 저장됐는지, 승인할 수 있는지.
  *
@@ -38,7 +45,8 @@ const REJECT_LABEL: Record<ApprovalRejected["code"], string> = {
  * `canApprove` 를 다시 계산하지 않는다. 미저장 편집이 있으면 승인 전에 먼저 저장한다 —
  * 그 흐름은 provider 가 갖고 여기는 버튼과 사유만 그린다.
  *
- * 「검토본」과 「확정됨」을 배지로 가른다. 승인 전 화면 어디에도 「확정」이 없다.
+ * **승인 사실은 검토본의 `approved` 메타가 정한다.** 승인 상세 조회가 실패해도 「미승인」으로
+ * 되돌아가지 않는다 — 실패와 없음은 다르다. 「검토본」과 「확정됨」을 배지로 가른다.
  */
 export function ReviewGate({
   screen,
@@ -46,7 +54,7 @@ export function ReviewGate({
   unsavedCount,
   approving,
   rejected,
-  approval,
+  approvalDetail,
   onApprove,
   onJumpTo,
 }: {
@@ -55,18 +63,23 @@ export function ReviewGate({
   unsavedCount: number;
   approving: boolean;
   rejected: ApprovalRejected | null;
-  approval: MeetingApproval | null;
+  /** 승인됐을 때의 상세 조회 상태. 미승인이면 null. */
+  approvalDetail: ApprovalDetail | null;
   onApprove: () => void;
   onJumpTo: (target: { itemId?: string; relationId?: string }) => void;
 }) {
-  const approved = approval ?? null;
+  const isApproved = Boolean(screen.approved);
   const blockers = screen.approval.blockers;
 
   return (
-    <section data-testid="review-gate" className="space-y-3 rounded-[12px] border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4">
+    <section
+      data-testid="review-gate"
+      data-approved={isApproved ? "" : undefined}
+      className="space-y-3 rounded-[12px] border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4"
+    >
       <header className="flex flex-wrap items-center gap-2">
         <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--el-ink)]">검토·확정</h3>
-        {approved ? (
+        {isApproved ? (
           <StatusChip tone="ok">프로젝트 지식으로 확정됨</StatusChip>
         ) : (
           <StatusChip>검토본 · 아직 확정되지 않음</StatusChip>
@@ -74,27 +87,17 @@ export function ReviewGate({
         {unsavedCount > 0 ? <StatusChip tone="warn">저장 안 된 편집 {unsavedCount}</StatusChip> : null}
       </header>
 
-      {approved ? (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
-          <dt className="text-[var(--el-muted)]">승인</dt>
-          <dd className="text-[var(--el-ink)]">
-            {formatAppDate(approved.approvedAt, { dateStyle: "medium", timeStyle: "short" })}
-          </dd>
-          <dt className="text-[var(--el-muted)]">승인 버전</dt>
-          <dd className="tabular-nums text-[var(--el-ink)]">{approved.approvalVersion}</dd>
-          <dt className="text-[var(--el-muted)]">승인 항목</dt>
-          <dd className="tabular-nums text-[var(--el-ink)]">
-            {approved.items.length} · 연결 {approved.relations.length}
-          </dd>
-          <dt className="text-[var(--el-muted)]">승인 당시 평가</dt>
-          <dd className="text-[var(--el-ink)]">
-            {approved.evaluationRef
-              ? approved.evaluationRef.status === "READY"
-                ? `버전 ${approved.evaluationRef.resultVersion ?? "—"}`
-                : "평가 없이 승인됨"
-              : "평가 없이 승인됨"}
-          </dd>
-        </dl>
+      {isApproved ? (
+        approvalDetail?.status === "ready" ? (
+          <ApprovedSummary approved={approvalDetail.data} />
+        ) : approvalDetail?.status === "error" ? (
+          <InlineRetry onRetry={approvalDetail.retry} label="승인 상세를 불러오지 못했습니다" />
+        ) : (
+          <div aria-label="승인 상세를 불러오는 중" className="space-y-1.5">
+            <Skeleton className="h-4 w-[52%]" />
+            <Skeleton className="h-4 w-[38%]" />
+          </div>
+        )
       ) : (
         <>
           <ul className="space-y-1 text-[13px]">
@@ -153,5 +156,28 @@ export function ReviewGate({
         </>
       )}
     </section>
+  );
+}
+
+function ApprovedSummary({ approved }: { approved: MeetingApproval }) {
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
+      <dt className="text-[var(--el-muted)]">승인</dt>
+      <dd className="text-[var(--el-ink)]">
+        {formatAppDate(approved.approvedAt, { dateStyle: "medium", timeStyle: "short" })}
+      </dd>
+      <dt className="text-[var(--el-muted)]">승인 버전</dt>
+      <dd className="tabular-nums text-[var(--el-ink)]">{approved.approvalVersion}</dd>
+      <dt className="text-[var(--el-muted)]">승인 항목</dt>
+      <dd className="tabular-nums text-[var(--el-ink)]">
+        {approved.items.length} · 연결 {approved.relations.length}
+      </dd>
+      <dt className="text-[var(--el-muted)]">승인 당시 평가</dt>
+      <dd className="text-[var(--el-ink)]">
+        {approved.evaluationRef && approved.evaluationRef.status === "READY"
+          ? `버전 ${approved.evaluationRef.resultVersion ?? "—"}`
+          : "평가 없이 승인됨"}
+      </dd>
+    </dl>
   );
 }

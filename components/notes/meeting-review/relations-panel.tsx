@@ -70,10 +70,10 @@ export function RelationsPanel({
       emptyLabel="이 회의에서 제안된 연결이 없습니다."
       failedLabel="연결을 판정하지 못했습니다. 다시 판정을 요청할 수 있습니다."
       aside={
-        canEdit && staleCount > 0 ? (
+        canEdit && (staleCount > 0 || status === "FAILED") ? (
           <Button size="sm" variant="outline" className="h-7" loading={recheckPending} onClick={onRecheck}>
             <RefreshCw aria-hidden className="size-3.5" />
-            오래된 {staleCount}건 재검토
+            {status === "FAILED" ? "다시 판정 요청" : `오래된 ${staleCount}건 재검토`}
           </Button>
         ) : null
       }
