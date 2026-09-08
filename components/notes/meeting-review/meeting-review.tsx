@@ -25,6 +25,7 @@ import {
   type ReviewItem,
   type ReviewRelation,
 } from "@/lib/notes/meeting-review/contract";
+import { clearEdits, loadEdits, storeEdits } from "@/lib/notes/meeting-review/edits-store";
 import {
   initialEdits,
   reduceEdits,
@@ -111,7 +112,14 @@ export function MeetingReview({
     retry: false,
   });
 
-  const [edits, dispatch] = useReducer(reduceEdits, 0, initialEdits);
+  // 탭을 옮겨 언마운트돼도 되찾는다 — 근거를 보러 갔다 오는 것은 검토의 일부다.
+  const [edits, dispatch] = useReducer(reduceEdits, noteId, (id) => loadEdits(id) ?? initialEdits(0));
+  useEffect(() => {
+    storeEdits(noteId, edits);
+  }, [noteId, edits]);
+  useEffect(() => {
+    if (review?.approved) clearEdits(noteId);
+  }, [noteId, review?.approved]);
   /**
    * 저장의 CAS 에 실을 검토본 버전. reducer 의 값과 같지만 **동기로** 앞선다 — 연속 저장이
    * 한 렌더 안에서 이어질 때 클로저의 옛 버전을 다시 보내지 않기 위해서다.
@@ -263,10 +271,11 @@ export function MeetingReview({
     mutationFn: async ({ relationId, edit }: { relationId: string; edit: RelationEdit }) => {
       const relation = latestRelation(relationId);
       if (!relation) throw new Error("관계를 찾을 수 없습니다.");
+      const { baseRevision, ...fields } = edit;
       return judgeRelation(noteId, relationId, {
         expectedReviewVersion: versionRef.current,
-        expectedRelationRevision: relation.revision,
-        ...edit,
+        expectedRelationRevision: baseRevision ?? relation.revision,
+        ...fields,
       });
     },
   });
@@ -420,8 +429,26 @@ export function MeetingReview({
    * 실려야 해서 병렬로 보낼 수 없다. 충돌이 남아 있거나 하나라도 실패하면 승인하지 않는다.
    * 판정은 클릭 시점의 클로저가 아니라 저장 결과와 최신 거울로 한다.
    */
+  /** 열려 있는 작성 폼(항목 추가·관계 이름 수정). 승인은 이것이 비어야 나간다. */
+  const draftsRef = useRef<Set<string>>(new Set());
+  const [draftCount, setDraftCount] = useState(0);
+  const onDraftChange = useCallback((key: string, open: boolean) => {
+    const next = new Set(draftsRef.current);
+    if (open) next.add(key);
+    else next.delete(key);
+    draftsRef.current = next;
+    setDraftCount(next.size);
+  }, []);
+
   const onApprove = useCallback(async () => {
     setRejected(null);
+    if (draftsRef.current.size > 0) {
+      setRejected({
+        code: "REQUEST_FAILED",
+        message: "작성 중인 항목 추가나 연결 이름 수정이 있습니다. 저장하거나 취소한 뒤 승인해 주세요.",
+      });
+      return;
+    }
     if (Object.keys(editsRef.current.conflicts).length > 0 || editsRef.current.saving.size > 0) return;
     for (const [itemId, edit] of Object.entries(pendingRef.current)) {
       if (!(await commitItem(itemId, edit))) return;
@@ -466,7 +493,8 @@ export function MeetingReview({
   const unsavedCount =
     Object.keys(edits.pendingItems).length +
     Object.keys(edits.pendingRelations).length +
-    Object.keys(edits.conflicts).length;
+    Object.keys(edits.conflicts).length +
+    draftCount;
 
   const itemActions = {
     onSelect: setSelectedItemId,
@@ -475,13 +503,16 @@ export function MeetingReview({
     // 남아 있는 편집이 있으면 그것을 함께 저장한다 — 빈 저장으로 편집을 지우지 않는다.
     onMarkReviewed: (itemId: string) => void commitItem(itemId, pendingRef.current[itemId] ?? {}),
     onKeepLocal: (itemId: string) => {
-      // 사용자가 내 편집을 고른 뒤에만 기준 revision 을 서버 값으로 올린다.
+      // 사용자가 내 편집을 고른 뒤에만 기준 revision 을 서버 값으로 올린다. reducer 와 ref 둘 다.
       const conflict = editsRef.current.conflicts[`item:${itemId}`];
-      if (conflict?.kind === "item" && pendingRef.current[itemId]) {
-        pendingRef.current = {
-          ...pendingRef.current,
-          [itemId]: { ...pendingRef.current[itemId], baseRevision: conflict.server.revision },
-        };
+      if (conflict?.kind === "item") {
+        dispatch({ type: "rebase", key: `item:${itemId}`, revision: conflict.server.revision });
+        if (pendingRef.current[itemId]) {
+          pendingRef.current = {
+            ...pendingRef.current,
+            [itemId]: { ...pendingRef.current[itemId], baseRevision: conflict.server.revision },
+          };
+        }
       }
       dispatch({ type: "keep-local", key: `item:${itemId}` });
     },
@@ -520,6 +551,7 @@ export function MeetingReview({
         canEdit={canEdit}
         onAddItem={onAddItem}
         actions={itemActions}
+        onDraftChange={onDraftChange}
       />
       <EvaluationPanel
         evaluation={screen.evaluation}
@@ -533,7 +565,20 @@ export function MeetingReview({
         canEdit={canEdit}
         onSelectItem={(itemId) => jumpTo({ itemId })}
         onJudge={(relationId, edit) => void commitRelation(relationId, edit)}
-        onKeepLocal={(relationId) => dispatch({ type: "keep-local", key: `relation:${relationId}` })}
+        onKeepLocal={(relationId) => {
+          const conflict = editsRef.current.conflicts[`relation:${relationId}`];
+          if (conflict?.kind === "relation") {
+            dispatch({ type: "rebase", key: `relation:${relationId}`, revision: conflict.server.revision });
+            if (pendingRelationsRef.current[relationId]) {
+              pendingRelationsRef.current = {
+                ...pendingRelationsRef.current,
+                [relationId]: { ...pendingRelationsRef.current[relationId], baseRevision: conflict.server.revision },
+              };
+            }
+          }
+          dispatch({ type: "keep-local", key: `relation:${relationId}` });
+        }}
+        onDraftChange={onDraftChange}
         onTakeServer={(relationId) => {
           pendingRelationsRef.current = withoutKey(pendingRelationsRef.current, relationId);
           dispatch({ type: "take-server", key: `relation:${relationId}` });

@@ -25,6 +25,8 @@ export type RelationEdit = {
   judgement: "ACCEPTED" | "MODIFIED" | "REJECTED";
   label?: string;
   note?: string | null;
+  /** 판정을 시작한 시점의 관계 revision. 항목의 `baseRevision` 과 같은 뜻이다. */
+  baseRevision?: number;
 };
 
 export type EditKey = `item:${string}` | `relation:${string}`;
@@ -69,7 +71,9 @@ export type EditsAction =
   | { type: "conflict"; key: EditKey; conflict: Conflict }
   | { type: "failed"; key: EditKey; message: string }
   | { type: "keep-local"; key: EditKey }
-  | { type: "take-server"; key: EditKey };
+  | { type: "take-server"; key: EditKey }
+  /** 충돌을 「내 편집 유지」로 푼 뒤 기준 revision 을 서버 값으로 올린다. */
+  | { type: "rebase"; key: EditKey; revision: number };
 
 function without<T>(record: Record<string, T>, key: string): Record<string, T> {
   if (!(key in record)) return record;
@@ -159,6 +163,20 @@ export function reduceEdits(state: EditsState, action: EditsAction): EditsState 
     case "keep-local":
       // 로컬 편집을 그대로 두고 충돌 표시만 걷는다. 다음 저장이 새 버전으로 나간다.
       return { ...state, conflicts: without(state.conflicts, action.key) };
+
+    case "rebase": {
+      const [kind, id] = splitKey(action.key);
+      if (kind === "item") {
+        const edit = state.pendingItems[id];
+        return edit
+          ? { ...state, pendingItems: { ...state.pendingItems, [id]: { ...edit, baseRevision: action.revision } } }
+          : state;
+      }
+      const edit = state.pendingRelations[id];
+      return edit
+        ? { ...state, pendingRelations: { ...state.pendingRelations, [id]: { ...edit, baseRevision: action.revision } } }
+        : state;
+    }
 
     case "take-server": {
       const [kind, id] = splitKey(action.key);

@@ -39,6 +39,7 @@ export function RelationsPanel({
   onRecheck,
   recheckPending,
   onEvidenceSelect,
+  onDraftChange,
 }: {
   screen: ReviewScreen;
   edits: EditsState;
@@ -51,6 +52,8 @@ export function RelationsPanel({
   onRecheck: () => void;
   recheckPending: boolean;
   onEvidenceSelect: (segmentId: string) => void;
+  /** 이름 수정 폼이 열리거나 닫혔다. 승인 전 검사가 작성 중인 초안을 센다. */
+  onDraftChange?: (key: string, open: boolean) => void;
 }) {
   const layers = {
     IN_MEETING: screen.readiness.inMeetingRelations,
@@ -130,6 +133,7 @@ export function RelationsPanel({
               onKeepLocal={onKeepLocal}
               onTakeServer={onTakeServer}
               onEvidenceSelect={onEvidenceSelect}
+              onDraftChange={onDraftChange}
             />
           ))}
         </ul>
@@ -189,6 +193,7 @@ function RelationRow({
   onKeepLocal,
   onTakeServer,
   onEvidenceSelect,
+  onDraftChange,
 }: {
   relation: ReviewRelation;
   screen: ReviewScreen;
@@ -204,10 +209,25 @@ function RelationRow({
   onKeepLocal: (relationId: string) => void;
   onTakeServer: (relationId: string) => void;
   onEvidenceSelect: (segmentId: string) => void;
+  onDraftChange?: (key: string, open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [modifying, setModifying] = useState(false);
   const [label, setLabel] = useState(relation.judgement.label ?? relation.label);
+  /** 이름 수정을 연 시점의 revision. 제출은 이 값으로 CAS 를 건다. */
+  const [modifyBase, setModifyBase] = useState(relation.revision);
+  const openModify = () => {
+    setLabel(relation.judgement.label ?? relation.label);
+    setModifyBase(relation.revision);
+    setModifying(true);
+    onDraftChange?.(`relation:${relation.relationId}`, true);
+  };
+  const closeModify = () => {
+    setModifying(false);
+    onDraftChange?.(`relation:${relation.relationId}`, false);
+  };
+  /** 이번 회의 쪽 끝점. 방향(`from`/`to`)이 아니라 `type === "REVIEW"` 로 고른다. */
+  const reviewEndpoint = relation.from.type === "REVIEW" ? relation.from : relation.to;
   const status = pending?.judgement ?? relation.judgement.status;
   const shownLabel = pending?.label ?? relation.judgement.label ?? relation.label;
 
@@ -261,7 +281,7 @@ function RelationRow({
           </div>
           <div className="rounded-block border border-[var(--el-hairline)] p-2">
             <dt className="text-[var(--el-muted)]">이번 회의</dt>
-            <dd className="mt-0.5 text-[13px] text-[var(--el-ink)]">{endpointText(relation.from, relation, screen)}</dd>
+            <dd className="mt-0.5 text-[13px] text-[var(--el-ink)]">{endpointText(reviewEndpoint, relation, screen)}</dd>
           </div>
           {relation.effect ? (
             <div className="col-span-2 text-[var(--el-muted)]">
@@ -311,8 +331,12 @@ function RelationRow({
                 className="flex items-center gap-1"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  setModifying(false);
-                  onJudge(relation.relationId, { judgement: "MODIFIED", label: label.trim() || relation.label });
+                  closeModify();
+                  onJudge(relation.relationId, {
+                    judgement: "MODIFIED",
+                    label: label.trim() || relation.label,
+                    baseRevision: modifyBase,
+                  });
                 }}
               >
                 <input
@@ -324,7 +348,7 @@ function RelationRow({
                 <Button size="sm" type="submit" className="h-7">
                   수정 수락
                 </Button>
-                <Button size="sm" variant="ghost" type="button" className="h-7" onClick={() => setModifying(false)}>
+                <Button size="sm" variant="ghost" type="button" className="h-7" onClick={closeModify}>
                   취소
                 </Button>
               </form>
@@ -335,11 +359,13 @@ function RelationRow({
                   variant={status === "ACCEPTED" ? "default" : "outline"}
                   className="h-7"
                   loading={saving}
-                  onClick={() => onJudge(relation.relationId, { judgement: "ACCEPTED" })}
+                  onClick={() =>
+                    onJudge(relation.relationId, { judgement: "ACCEPTED", baseRevision: relation.revision })
+                  }
                 >
                   수락
                 </Button>
-                <Button size="sm" variant="ghost" className="h-7" disabled={saving} onClick={() => setModifying(true)}>
+                <Button size="sm" variant="ghost" className="h-7" disabled={saving} onClick={openModify}>
                   수정
                 </Button>
                 <Button
@@ -347,7 +373,9 @@ function RelationRow({
                   variant="ghost"
                   className="h-7"
                   disabled={saving}
-                  onClick={() => onJudge(relation.relationId, { judgement: "REJECTED" })}
+                  onClick={() =>
+                    onJudge(relation.relationId, { judgement: "REJECTED", baseRevision: relation.revision })
+                  }
                 >
                   기각
                 </Button>

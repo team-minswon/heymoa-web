@@ -37,6 +37,7 @@ export function ReviewRegions({
   canEdit,
   onAddItem,
   actions,
+  onDraftChange,
 }: {
   screen: ReviewScreen;
   edits: EditsState;
@@ -48,6 +49,8 @@ export function ReviewRegions({
     content: string
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
   actions: ItemActions;
+  /** 추가 폼이 열리거나 닫혔다. 승인 전 검사가 작성 중인 초안을 센다. */
+  onDraftChange?: (key: string, open: boolean) => void;
 }) {
   const renderItem = (item: ReviewItem, kindInHeader: boolean) => (
     <ReviewItemCard
@@ -87,6 +90,7 @@ export function ReviewRegions({
             region={region}
             canEdit={canEdit}
             onAddItem={onAddItem}
+            onDraftChange={onDraftChange}
           >
             {region.items.map((item) => renderItem(item, region.kind === item.kind))}
           </RegionBlock>
@@ -101,6 +105,7 @@ export function ReviewRegions({
             region={{ regionId: "unplaced", title: "기타", kind: "", items: screen.unplacedItems }}
             canEdit={canEdit}
             onAddItem={onAddItem}
+            onDraftChange={onDraftChange}
           >
             {screen.unplacedItems.map((item) => renderItem(item, false))}
           </RegionBlock>
@@ -115,6 +120,7 @@ function RegionBlock({
   canEdit,
   onAddItem,
   children,
+  onDraftChange,
 }: {
   region: ScreenRegion;
   canEdit: boolean;
@@ -124,8 +130,18 @@ function RegionBlock({
     content: string
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
   children: React.ReactNode;
+  onDraftChange?: (key: string, open: boolean) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const draftKey = `add:${region.regionId}`;
+  const openAdd = () => {
+    setAdding(true);
+    onDraftChange?.(draftKey, true);
+  };
+  const closeAdd = () => {
+    setAdding(false);
+    onDraftChange?.(draftKey, false);
+  };
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [kind, setKind] = useState<string>(
@@ -144,7 +160,7 @@ function RegionBlock({
     setSubmitting(false);
     if (result.ok) {
       setContent("");
-      setAdding(false);
+      closeAdd();
     } else {
       setFailure(result.message);
     }
@@ -160,7 +176,7 @@ function RegionBlock({
         {canEdit && !adding ? (
           <button
             type="button"
-            onClick={() => setAdding(true)}
+            onClick={openAdd}
             className="inline-flex items-center gap-1 text-[12px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
           >
             <Plus aria-hidden className="size-3.5" />
@@ -205,7 +221,7 @@ function RegionBlock({
             </p>
           ) : null}
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" type="button" disabled={submitting} onClick={() => setAdding(false)}>
+            <Button size="sm" variant="ghost" type="button" disabled={submitting} onClick={closeAdd}>
               취소
             </Button>
             <Button size="sm" type="submit" loading={submitting} disabled={!content.trim()}>
