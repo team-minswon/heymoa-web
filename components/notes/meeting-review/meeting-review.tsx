@@ -55,6 +55,12 @@ import { ReviewRegions } from "./review-regions";
  * 메시지가 생기면 이 값은 사라진다(`ADAPTER.md`).
  */
 export const MEETING_REVIEW_POLL_MS = 4_000;
+/**
+ * 준비가 끝난 뒤에도 승인 전까지는 저주기로 다시 읽는다 — 다른 창의 편집·승인이 이 화면에
+ * 닿는 경로가 이것뿐이다(전역이 `refetchOnWindowFocus: false` 이고 noteTopic 에 검토 이벤트가 없다).
+ * 승인되면 검토본은 더 안 자라므로 멈춘다. 노트 조회의 안전 폴링과 같은 무늬다.
+ */
+export const MEETING_REVIEW_SAFETY_POLL_MS = 30_000;
 
 const TSID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -105,8 +111,12 @@ export function MeetingReview({
     queryKey: getMeetingReviewQueryKey(noteId),
     queryFn: () => fetchMeetingReview(noteId),
     retry: false,
-    refetchInterval: (query) =>
-      query.state.data && needsPolling(query.state.data.readiness) ? MEETING_REVIEW_POLL_MS : false,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return false;
+      if (needsPolling(data.readiness)) return MEETING_REVIEW_POLL_MS;
+      return data.approved ? false : MEETING_REVIEW_SAFETY_POLL_MS;
+    },
   });
   const review = reviewQuery.data;
 

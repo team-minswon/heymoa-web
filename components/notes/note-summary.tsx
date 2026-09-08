@@ -301,6 +301,8 @@ export function NoteSummary(props: {
       {props.isEnded ? (
         <Shell>
           <MeetingReview
+            // 노트가 바뀌면 편집 reducer·CAS 기준을 새로 시작한다. 이전 노트의 편집이 섞이면 안 된다.
+            key={props.noteId}
             noteId={props.noteId}
             onEvidenceSelect={props.onEvidenceSelect}
             onItemsReady={setItemsReady}
