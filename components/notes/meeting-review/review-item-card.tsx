@@ -72,12 +72,16 @@ export function ReviewItemCard({
     setEditing(true);
   };
 
+  /** 미저장 편집이 남아 있는가. 있으면 그 편집의 기준 revision 을 지킨다 — 다시 열어도 갱신하지 않는다. */
+  const hasPending = shown.content !== item.content || shown.included !== item.included;
+
   const commitContent = () => {
     setEditing(false);
     const next = draft.trim();
-    // 서버 값과 같아졌어도 미저장 편집이 남아 있으면(`shown` 이 서버와 다르면) 그것을 갈아야 한다.
-    if (next !== item.content || shown.content !== item.content) {
-      onEdit(item.itemId, { content: next, baseRevision });
+    // 서버 값과 같아졌어도 미저장 편집이 남아 있으면 그것을 갈아야 한다. 기준 revision 은
+    // 명시적 「내 편집 유지」에서만 오르므로 미저장이 있을 때는 여기서 덮지 않는다.
+    if (next !== item.content || hasPending) {
+      onEdit(item.itemId, hasPending ? { content: next } : { content: next, baseRevision });
       onCommit(item.itemId);
     }
   };
@@ -85,7 +89,6 @@ export function ReviewItemCard({
   const toggleIncluded = () => {
     // 미저장 편집이 있으면 그 편집의 기준 revision 을 그대로 둔다 — 여기서 최신값으로 덮으면
     // 충돌 대조 없이 남의 저장을 덮어쓴다. 없을 때만 지금 revision 이 기준이다.
-    const hasPending = shown.content !== item.content || shown.included !== item.included;
     onEdit(item.itemId, hasPending ? { included: !shown.included } : { included: !shown.included, baseRevision: item.revision });
     onCommit(item.itemId);
   };
@@ -144,7 +147,7 @@ export function ReviewItemCard({
           <button
             type="button"
             onClick={() => onSelect(item.itemId)}
-            onDoubleClick={() => canEdit && !saving && beginEditing()}
+            onDoubleClick={() => canEdit && !saving && conflict === null && beginEditing()}
             className="block w-full text-left text-[14px] leading-[1.55] text-[var(--el-ink)]"
           >
             {shown.content}
@@ -223,7 +226,8 @@ export function ReviewItemCard({
                 variant="ghost"
                 className={cn("h-7", !unreviewed && "ml-auto")}
                 onClick={beginEditing}
-                disabled={saving || editing}
+                // 충돌 대조 중에는 먼저 고른다 — 수정으로 대조를 우회하지 않는다.
+                disabled={saving || editing || conflict !== null}
               >
                 수정
               </Button>
