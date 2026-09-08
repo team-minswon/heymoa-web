@@ -72,9 +72,15 @@ type NoteFromCache = {
 export function MeetingReview({
   noteId,
   onEvidenceSelect,
+  onItemsReady,
 }: {
   noteId: string;
   onEvidenceSelect: (segmentId: string) => void;
+  /**
+   * 회의 결과 영역이 기다림을 벗어났는가. 부모가 「이전 분석」의 접힘을 정하는 데 쓴다 —
+   * 명제가 준비되기 전에는 실제로 도는 구식 분석의 진행 표시를 가리지 않는다.
+   */
+  onItemsReady?: (ready: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -102,6 +108,11 @@ export function MeetingReview({
   useEffect(() => {
     if (review) dispatch({ type: "sync-version", reviewVersion: review.reviewVersion });
   }, [review]);
+  const itemsStatus = review?.readiness.items;
+  useEffect(() => {
+    if (!itemsStatus) return;
+    onItemsReady?.(itemsStatus !== "NOT_READY" && itemsStatus !== "GENERATING");
+  }, [itemsStatus, onItemsReady]);
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [rejected, setRejected] = useState<ApprovalRejected | null>(null);

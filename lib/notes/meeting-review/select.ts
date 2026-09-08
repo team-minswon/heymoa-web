@@ -23,7 +23,7 @@ export type ScreenRegion = {
 export type ReviewScreen = {
   noteId: string;
   reviewVersion: number;
-  projectApprovalVersion: number;
+  projectApprovalVersion: number | null;
   readiness: MeetingReview["readiness"];
   regions: ScreenRegion[];
   /** 영역에 안 들어간 항목(사람이 추가하고 영역을 안 정한 것 등). */

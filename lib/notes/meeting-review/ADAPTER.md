@@ -39,5 +39,8 @@
 - 개념 요약 상태 6종과 `basis`/`current` 버전 쌍
 - 준비 완료 신호. 지금은 폴링(`select.ts` 의 `needsPolling`)이고 noteTopic 메시지가 생기면
   `note-topic-protocol.ts` 에 붙인다
+- 승인 항목의 업무 상태. server APP-462 spec(@461583b)이 `OPEN | COMPLETED | CANCELLED` 를
+  관계 kind·현재 유효성과 별개의 저장 값으로 정했다. 제안에는 아직 없고, 승인본 조회에
+  실리면 `approvedItemSchema` 에 더해 확정 뒤 화면이 그린다
 
 이 목록은 이슈 댓글로 server 에 넘겼다.

@@ -39,7 +39,8 @@ export const regionStatusSchema = z.enum([
 export const itemRefSchema = z.object({
   type: z.enum(["APPROVED", "REVIEW"]),
   itemId: tsidSchema,
-  revision: z.number().int().min(0),
+  /** revision 은 1부터다(server 확인). */
+  revision: z.number().int().min(1),
 });
 
 /** 정본의 ProposalCitation 에 화자 이름·라벨이 얹힌다. 이름이 없으면 라벨만 그린다. */
@@ -55,7 +56,7 @@ export const originalProposalRefSchema = z.object({
 
 export const reviewItemSchema = z.object({
   itemId: tsidSchema,
-  revision: z.number().int().min(0),
+  revision: z.number().int().min(1),
   /** 사람이 추가한 항목은 null 이다. 원본이 있어도 검토 항목 ID 로 대체하지 않는다. */
   originalProposalRef: originalProposalRefSchema.nullable(),
   kind: proposalKindSchema,
@@ -81,9 +82,12 @@ export const regionSchema = z.object({
   itemIds: z.array(tsidSchema),
 });
 
+/** AI 실행의 결과 버전은 TSID 문자열이다(server 확인). 숫자로 바꾸지 않는다. */
+const resultVersionSchema = tsidSchema.nullable();
+
 export const evaluationSchema = z.object({
   status: regionStatusSchema,
-  resultVersion: z.number().int().nullable(),
+  resultVersion: resultVersionSchema,
   inputVersion: z.string().nullable().optional(),
   generatedAt: wireInstantSchema.nullable().optional(),
   stale: z.boolean(),
@@ -108,12 +112,13 @@ export const relationJudgementSchema = z.object({
 
 export const relationSchema = z.object({
   relationId: tsidSchema,
-  revision: z.number().int().min(0),
+  revision: z.number().int().min(1),
   layer: z.enum(["IN_MEETING", "PROJECT"]),
   /** 열린 문자열. server 도 web 도 분기하지 않는다. */
   kind: z.string(),
   label: z.string(),
-  definitionVersion: z.string(),
+  /** 양의 정수(server 확인). 의미가 바뀌면 오른다. web 은 보여만 준다. */
+  definitionVersion: z.number().int().min(1),
   from: itemRefSchema,
   to: itemRefSchema,
   rationale: z.string(),
@@ -125,7 +130,7 @@ export const relationSchema = z.object({
   previousApproved: z
     .object({
       itemId: tsidSchema,
-      revision: z.number().int().min(0),
+      revision: z.number().int().min(1),
       kind: proposalKindSchema,
       content: z.string(),
       approvedAt: wireInstantSchema,
@@ -165,7 +170,8 @@ export const meetingReviewSchema = z.object({
   noteId: tsidSchema,
   /** 검토본 CAS. 저장마다 응답의 값으로 갱신한다. */
   reviewVersion: z.number().int().min(0),
-  projectApprovalVersion: z.number().int().min(0),
+  /** 비교한 프로젝트 승인 버전. 승인본이 없으면 null 이다 — 0 을 사실처럼 만들지 않는다(server 확인). */
+  projectApprovalVersion: z.number().int().min(1).nullable(),
   readiness: z.object({
     items: regionStatusSchema,
     evaluation: regionStatusSchema,
@@ -229,7 +235,7 @@ export const approvalRejectedSchema = z.object({
 
 export const approvedItemSchema = z.object({
   itemId: tsidSchema,
-  revision: z.number().int().min(0),
+  revision: z.number().int().min(1),
   reviewItemId: tsidSchema,
   kind: proposalKindSchema,
   content: z.string(),
@@ -250,7 +256,7 @@ export const meetingApprovalSchema = z.object({
   evaluationRef: z
     .object({
       status: regionStatusSchema,
-      resultVersion: z.number().int().nullable(),
+      resultVersion: resultVersionSchema,
     })
     .nullable()
     .optional(),
@@ -291,7 +297,7 @@ export const conceptSummarySchema = z.object({
   /** 이 요약이 읽은 기준. 오래됨 판정은 server 가 하고 web 은 두 버전을 보여만 준다. */
   basis: summaryBasisSchema,
   current: summaryBasisSchema.partial().optional(),
-  resultVersion: z.number().int().nullable(),
+  resultVersion: resultVersionSchema,
   generatedAt: wireInstantSchema.nullable().optional(),
   error: z.string().nullable().optional(),
   sections: z.object({

@@ -60,7 +60,7 @@ export function ReviewRegions({
     <RegionFrame
       title="회의 결과"
       status={screen.readiness.items}
-      waitingLabel="회의 명제를 정리하고 있습니다. 다른 화면으로 옮겨도 됩니다."
+      waitingLabel="회의 명제를 정리하는 중입니다. 준비되면 여기에 보입니다. 다른 화면으로 옮겨도 됩니다."
       emptyLabel="이 회의에서 정리된 명제가 없습니다."
       failedLabel="명제를 준비하지 못했습니다. 회의 기록은 그대로 남아 있습니다."
       testId="review-regions"

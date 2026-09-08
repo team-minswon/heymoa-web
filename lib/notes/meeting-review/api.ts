@@ -141,7 +141,8 @@ export async function recheckRelations(
 export type ApproveMeetingInput = {
   idempotencyKey: string;
   reviewVersion: number;
-  projectApprovalVersion: number;
+  /** 승인본이 없으면 null. 0 으로 바꾸지 않는다. */
+  projectApprovalVersion: number | null;
 };
 
 export function approveMeeting(

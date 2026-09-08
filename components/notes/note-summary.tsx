@@ -289,14 +289,22 @@ export function NoteSummary(props: {
   noteMeta?: NoteMeta | null;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
-  const [legacyOpen, setLegacyOpen] = useState(false);
+  // 명제가 아직 준비되지 않은 동안(방금 끝난 회의)은 구식 분석이 실제로 도는 시간이라
+  // 그 진행 표시를 가리지 않는다. 준비되면 접는다. 사용자가 누르면 그 값이 이긴다.
+  const [itemsReady, setItemsReady] = useState(true);
+  const [legacyToggle, setLegacyToggle] = useState<boolean | null>(null);
+  const legacyOpen = legacyToggle ?? !itemsReady;
   // 구식 화면은 **같은 자리에 늘 마운트**한다. 회의가 끝나는 순간 그 안의 refetch 가
   // 돌아야 하는데(아래 `wasEndedRef`), 분기마다 다른 부모에 두면 remount 돼 그 순간을 놓친다.
   return (
     <div>
       {props.isEnded ? (
         <Shell>
-          <MeetingReview noteId={props.noteId} onEvidenceSelect={props.onEvidenceSelect} />
+          <MeetingReview
+            noteId={props.noteId}
+            onEvidenceSelect={props.onEvidenceSelect}
+            onItemsReady={setItemsReady}
+          />
         </Shell>
       ) : null}
       <div data-testid="legacy-analysis" data-collapsed={props.isEnded && !legacyOpen ? "" : undefined}>
@@ -305,7 +313,7 @@ export function NoteSummary(props: {
             <button
               type="button"
               aria-expanded={legacyOpen}
-              onClick={() => setLegacyOpen((value) => !value)}
+              onClick={() => setLegacyToggle(!legacyOpen)}
               className="border-t border-[var(--el-hairline)] pt-4 text-[13px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
             >
               이전 분석 (명제 이전 방식의 요약) {legacyOpen ? "접기" : "펼치기"}

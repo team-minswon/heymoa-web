@@ -29,6 +29,8 @@ import {
  */
 
 export const REVIEW_GENERATING_NOTE_ID = "01K0000000023";
+/** 처음부터 요약이 있는 프로젝트(`db.ts` 의 첫 프로젝트 「주간」). 나머지는 첫 조회가 생성을 시작한다. */
+export const SUMMARY_READY_PROJECT_ID = "01K0000000001";
 export const REVIEW_FAILED_EVALUATION_NOTE_ID = "01K0000000024";
 
 /** 두 번 조회한 뒤 준비된다. 「끝나는 시각이 정해지지 않은 작업」을 짧게 흉내낸다. */
@@ -62,13 +64,67 @@ type SummaryState = {
 let notes = new Map<string, NoteState>();
 let summaries = new Map<string, SummaryState>();
 
+/**
+ * MSW 브라우저 목의 핸들러는 페이지 메모리에서 돈다 — 새로고침이면 상태가 사라진다.
+ * 「새로고침 뒤에도 저장된 검토본이 복원된다」를 e2e 로 보려면 서버 쪽 기억을 흉내내야
+ * 하므로 `sessionStorage` 에 적는다. node(vitest)에는 없으니 그때는 메모리뿐이다.
+ */
+const STORAGE_KEY = "heymoa:mock:meeting-review";
+
+function persist() {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        notes: [...notes].map(([id, state]) => [id, { ...state, approvals: [...state.approvals] }]),
+        summaries: [...summaries],
+      })
+    );
+  } catch {
+    // 저장 불가(용량·프라이빗 창)는 목의 기능이 아니라 무시한다.
+  }
+}
+
+function restore() {
+  if (typeof sessionStorage === "undefined" || notes.size > 0 || summaries.size > 0) return;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as {
+      notes: [string, Omit<NoteState, "approvals"> & { approvals: [string, MeetingApproval][] }][];
+      summaries: [string, SummaryState][];
+    };
+    notes = new Map(
+      parsed.notes.map(([id, state]) => [id, { ...state, approvals: new Map(state.approvals) }])
+    );
+    summaries = new Map(parsed.summaries);
+  } catch {
+    // 깨진 저장은 버린다.
+  }
+}
+
 export function resetMeetingReviewMock() {
   notes = new Map();
   summaries = new Map();
+  if (typeof sessionStorage !== "undefined") sessionStorage.removeItem(STORAGE_KEY);
 }
 
-function seedNote(noteId: string): NoteState {
+export type SeedOptions = {
+  /** 방금 끝난 회의. 명제 정리가 아직이라 회의 결과부터 기다린다(두 번 조회 뒤 준비). */
+  justEnded?: boolean;
+};
+
+function seedNote(noteId: string, options: SeedOptions): NoteState {
   const review = sampleReview({ noteId });
+  if (options.justEnded) {
+    review.readiness = {
+      items: "GENERATING",
+      evaluation: "NOT_READY",
+      inMeetingRelations: "NOT_READY",
+      projectRelations: "NOT_READY",
+    };
+  }
   if (noteId === REVIEW_GENERATING_NOTE_ID) {
     review.readiness = { ...review.readiness, evaluation: "GENERATING" };
     review.evaluation = { ...review.evaluation, status: "GENERATING", sections: [] };
@@ -97,10 +153,11 @@ function seedNote(noteId: string): NoteState {
   };
 }
 
-function stateOf(noteId: string): NoteState {
+function stateOf(noteId: string, options: SeedOptions = {}): NoteState {
+  restore();
   let state = notes.get(noteId);
   if (!state) {
-    state = seedNote(noteId);
+    state = seedNote(noteId, options);
     notes.set(noteId, state);
   }
   return state;
@@ -145,11 +202,26 @@ function refreshGate(state: NoteState, isStarter: boolean) {
   state.review.approval = gateOf(state.review, isStarter);
 }
 
-export function readMeetingReview(noteId: string, isStarter: boolean): MeetingReview {
-  const state = stateOf(noteId);
+export function readMeetingReview(
+  noteId: string,
+  isStarter: boolean,
+  options: SeedOptions = {}
+): MeetingReview {
+  const state = stateOf(noteId, options);
   const { review } = state;
 
-  if (review.readiness.evaluation === "GENERATING") {
+  if (review.readiness.items === "GENERATING") {
+    state.generatingPolls += 1;
+    if (state.generatingPolls >= GENERATING_POLLS) {
+      review.readiness = {
+        items: "READY",
+        evaluation: "READY",
+        inMeetingRelations: "READY",
+        projectRelations: "READY",
+      };
+      state.generatingPolls = 0;
+    }
+  } else if (review.readiness.evaluation === "GENERATING") {
     state.generatingPolls += 1;
     if (state.generatingPolls >= GENERATING_POLLS) {
       review.readiness = { ...review.readiness, evaluation: "READY" };
@@ -170,6 +242,7 @@ export function readMeetingReview(noteId: string, isStarter: boolean): MeetingRe
   }
 
   refreshGate(state, isStarter);
+  persist();
   return structuredClone(review);
 }
 
@@ -231,6 +304,7 @@ export function createReviewItemMock(
   if (region) region.itemIds.push(item.itemId);
   state.review.reviewVersion += 1;
   refreshGate(state, isStarter);
+  persist();
   return {
     reviewVersion: state.review.reviewVersion,
     item: structuredClone(item),
@@ -255,13 +329,14 @@ export function updateReviewItemMock(
   const state = stateOf(noteId);
   const item = state.review.items.find((candidate) => candidate.itemId === itemId);
   if (!item) throw new MockApiError(404, "REVIEW_ITEM_NOT_FOUND", "검토 항목을 찾을 수 없습니다.");
-  assertReviewVersion(state, input.expectedReviewVersion);
+  // 항목 충돌을 먼저 본다 — 서버의 현재 항목을 실어 줄 수 있어 화면이 대조를 그린다.
   if (input.expectedItemRevision !== item.revision) {
     throw new MockApiError(409, "ITEM_REVISION_CONFLICT", "이 항목이 다른 곳에서 먼저 바뀌었습니다.", {
       currentReviewVersion: state.review.reviewVersion,
       current: { item: structuredClone(item) },
     });
   }
+  assertReviewVersion(state, input.expectedReviewVersion);
 
   if (input.content !== undefined && input.content !== item.content) {
     item.content = input.content;
@@ -278,6 +353,7 @@ export function updateReviewItemMock(
   );
   state.review.reviewVersion += 1;
   refreshGate(state, isStarter);
+  persist();
   return {
     reviewVersion: state.review.reviewVersion,
     item: structuredClone(item),
@@ -301,13 +377,13 @@ export function judgeRelationMock(
   const state = stateOf(noteId);
   const relation = state.review.relations.find((candidate) => candidate.relationId === relationId);
   if (!relation) throw new MockApiError(404, "RELATION_NOT_FOUND", "관계를 찾을 수 없습니다.");
-  assertReviewVersion(state, input.expectedReviewVersion);
   if (input.expectedRelationRevision !== relation.revision) {
     throw new MockApiError(409, "RELATION_REVISION_CONFLICT", "이 관계가 다른 곳에서 먼저 바뀌었습니다.", {
       currentReviewVersion: state.review.reviewVersion,
       current: { relation: structuredClone(relation) },
     });
   }
+  assertReviewVersion(state, input.expectedReviewVersion);
 
   relation.judgement = {
     status: input.judgement,
@@ -317,6 +393,7 @@ export function judgeRelationMock(
   relation.revision += 1;
   state.review.reviewVersion += 1;
   refreshGate(state, isStarter);
+  persist();
   return {
     reviewVersion: state.review.reviewVersion,
     relation: structuredClone(relation),
@@ -338,13 +415,14 @@ export function recheckRelationsMock(
   state.review.readiness = { ...state.review.readiness, inMeetingRelations: "GENERATING" };
   state.recheckPolls = 0;
   refreshGate(state, isStarter);
+  persist();
 }
 
 export function approveMeetingMock(
   noteId: string,
   isStarter: boolean,
   currentUserId: string,
-  input: { idempotencyKey: string; reviewVersion: number; projectApprovalVersion: number }
+  input: { idempotencyKey: string; reviewVersion: number; projectApprovalVersion: number | null }
 ): MeetingApproval {
   const state = stateOf(noteId);
   const replay = state.approvals.get(input.idempotencyKey);
@@ -359,7 +437,7 @@ export function approveMeetingMock(
       approval: structuredClone(state.review.approval),
     });
   }
-  if (input.projectApprovalVersion !== state.review.projectApprovalVersion) {
+  if ((input.projectApprovalVersion ?? null) !== state.review.projectApprovalVersion) {
     throw new MockApiError(409, "PROJECT_VERSION_CONFLICT", "프로젝트 승인 버전이 바뀌었습니다.", {
       currentProjectApprovalVersion: state.review.projectApprovalVersion,
       approval: structuredClone(state.review.approval),
@@ -382,7 +460,7 @@ export function approveMeetingMock(
   const base = sampleApproval();
   const approval: MeetingApproval = {
     ...base,
-    approvalVersion: state.review.projectApprovalVersion + 1,
+    approvalVersion: (state.review.projectApprovalVersion ?? 0) + 1,
     approvedAt: "2026-09-08T12:00:00.000Z",
     approvedBy: currentUserId.length === 13 ? currentUserId : base.approvedBy,
     reviewVersion: state.review.reviewVersion,
@@ -416,6 +494,7 @@ export function approveMeetingMock(
   };
   state.review.projectApprovalVersion = approval.approvalVersion;
   state.review.reviewVersion += 1;
+  persist();
   return structuredClone(approval);
 }
 
@@ -436,9 +515,11 @@ export function markSummaryStale(projectId: string, approvalVersion: number) {
     status: state.summary.status === "NONE" ? "NONE" : "STALE",
     current: { ...state.summary.basis, approvalVersion },
   };
+  persist();
 }
 
 function summaryStateOf(projectId: string, seedReady: boolean): SummaryState {
+  restore();
   let state = summaries.get(projectId);
   if (!state) {
     const summary = seedReady
@@ -475,7 +556,7 @@ export function readConceptSummary(projectId: string, seedReady: boolean): Conce
       const ready = sampleConceptSummary({ projectId });
       state.summary = {
         ...ready,
-        resultVersion: (state.summary.resultVersion ?? 0) + 1,
+        resultVersion: nextResultVersion(state.summary.resultVersion),
         basis: state.summary.current
           ? { ...ready.basis, ...state.summary.current }
           : ready.basis,
@@ -483,6 +564,7 @@ export function readConceptSummary(projectId: string, seedReady: boolean): Conce
       };
     }
   }
+  persist();
   return structuredClone(state.summary);
 }
 
@@ -493,6 +575,13 @@ export function refreshConceptSummaryMock(projectId: string, seedReady: boolean)
   }
   state.summary = { ...state.summary, status: "GENERATING" };
   state.polls = 0;
+  persist();
+}
+
+/** AI 의 결과 버전은 TSID 문자열이다(server 확인). 마지막 두 자리를 올려 다음 판을 만든다. */
+function nextResultVersion(previous: string | null) {
+  const n = previous ? Number.parseInt(previous.slice(-2), 10) + 1 : 1;
+  return `0HZX2K7M9RV${String(n).padStart(2, "0")}`;
 }
 
 /** 테스트와 핸들러가 같은 항목 ID 를 가리키게 재수출한다. */

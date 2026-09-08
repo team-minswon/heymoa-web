@@ -117,7 +117,7 @@ export function sampleRelations(): ReviewRelation[] {
       layer: "IN_MEETING",
       kind: "DERIVES_ACTION",
       label: "실행 항목을 만든다",
-      definitionVersion: "1",
+      definitionVersion: 1,
       from: review(ITEM.decision),
       to: review(ITEM.action),
       rationale: "출시일 확정에서 QA 일정 조정이 따라 나왔다",
@@ -134,7 +134,7 @@ export function sampleRelations(): ReviewRelation[] {
       layer: "IN_MEETING",
       kind: "CONDITIONS",
       label: "조건을 건다",
-      definitionVersion: "1",
+      definitionVersion: 1,
       from: review(ITEM.issue),
       to: review(ITEM.decision),
       rationale: "인증 완료가 출시일의 조건이다",
@@ -151,7 +151,7 @@ export function sampleRelations(): ReviewRelation[] {
       layer: "IN_MEETING",
       kind: "SOME_FUTURE_KIND",
       label: "근거 없는 연결",
-      definitionVersion: "3",
+      definitionVersion: 3,
       from: review(ITEM.agenda),
       to: review(ITEM.issue),
       rationale: "모델이 근거를 못 찾았다",
@@ -168,7 +168,7 @@ export function sampleRelations(): ReviewRelation[] {
       layer: "PROJECT",
       kind: "SUPERSEDES",
       label: "이전 결정을 대체한다",
-      definitionVersion: "1",
+      definitionVersion: 1,
       from: review(ITEM.decision),
       to: { type: "APPROVED", itemId: APPROVED_PREVIOUS, revision: 3 },
       rationale: "이전 회의의 8월 말 출시 결정을 9월 말로 바꾼다",
@@ -221,7 +221,7 @@ export function sampleReview(over: Partial<MeetingReview> = {}): MeetingReview {
     items: sampleItems(),
     evaluation: {
       status: "READY",
-      resultVersion: 1,
+      resultVersion: "0HZX2K7M9RE01",
       inputVersion: "in-1",
       generatedAt: "2026-09-01T10:05:00.000Z",
       stale: false,
@@ -285,7 +285,7 @@ export function sampleApproval(): MeetingApproval {
       stale: false,
     })),
     analysisRef: { analysisId: "0K9GVJT2C4Q1Z" },
-    evaluationRef: { status: "READY", resultVersion: 1 },
+    evaluationRef: { status: "READY", resultVersion: "0HZX2K7M9RE01" },
   };
 }
 
@@ -297,7 +297,7 @@ export function sampleConceptSummary(
     status: "READY",
     basis: { descriptionRevision: 2, approvalVersion: 3 },
     current: { descriptionRevision: 2, approvalVersion: 3 },
-    resultVersion: 1,
+    resultVersion: "0HZX2K7M9RV01",
     generatedAt: "2026-09-01T11:05:00.000Z",
     error: null,
     sections: {

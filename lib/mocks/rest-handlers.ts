@@ -2,6 +2,7 @@ import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
 import {
   MockApiError,
+  SUMMARY_READY_PROJECT_ID,
   approveMeetingMock,
   createReviewItemMock,
   judgeRelationMock,
@@ -320,10 +321,12 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
  */
 function reviewResult<T>(run: () => T, okStatus = 200) {
   try {
+    // 202 접수도 봉투를 싣는다 — `apiFetch` 가 본문을 JSON 으로 읽으므로 빈 본문은 실패가 된다.
     const data = run();
-    return data === undefined
-      ? new HttpResponse(null, { status: okStatus })
-      : HttpResponse.json({ success: true, data, error: null }, { status: okStatus });
+    return HttpResponse.json(
+      { success: true, data: data === undefined ? null : data, error: null },
+      { status: okStatus }
+    );
   } catch (error) {
     if (error instanceof MockApiError) {
       return HttpResponse.json(
@@ -344,11 +347,9 @@ function isMeetingStarter(noteId: string) {
   return note.meetingStartedBy?.userId === mockDb.getCurrentUser().userId;
 }
 
-/** 첫 프로젝트만 처음부터 요약이 있다. 둘째는 첫 조회가 생성을 시작한다. */
+/** 「주간」 프로젝트만 처음부터 요약이 있다. 나머지는 첫 조회가 생성을 시작한다. */
 function summarySeededReady(projectId: string) {
-  const first = mockDb.listWorkspaces()[0]?.workspaceId;
-  const projects = first ? mockDb.listProjects(first) : [];
-  return projects[0]?.projectId === projectId;
+  return projectId === SUMMARY_READY_PROJECT_ID;
 }
 
 export const restHandlers = [
@@ -1009,7 +1010,13 @@ export const restHandlers = [
 
   // 검토·승인·개념 요약 (APP-464). 제안 계약 — 정본에 들어오면 생성 MSW 와 대조한다.
   http.get("*/v1/notes/:noteId/meeting-review", ({ params }) =>
-    reviewResult(() => readMeetingReview(id(params.noteId), isMeetingStarter(id(params.noteId))))
+    reviewResult(() => {
+      const noteId = id(params.noteId);
+      // 시드에서 끝난 노트는 시작 시각이 null 이고, 이 세션에서 끝낸 노트만 시작 시각이 있다.
+      // 후자는 방금 끝난 회의라 명제 정리를 기다리는 것부터 보여 준다.
+      const justEnded = mockDb.getNote(noteId).meetingStartedAt !== null;
+      return readMeetingReview(noteId, isMeetingStarter(noteId), { justEnded });
+    })
   ),
   http.post("*/v1/notes/:noteId/meeting-review/items", async ({ params, request }) => {
     const body = (await request.json()) as Parameters<typeof createReviewItemMock>[2];

@@ -184,7 +184,7 @@ describe("meeting-review 목 저장소", () => {
     readConceptSummary(projectId, false);
     const ready = readConceptSummary(projectId, false);
     expect(ready.status).toBe("READY");
-    expect(ready.resultVersion).toBe(1);
+    expect(ready.resultVersion).toBe("0HZX2K7M9RV01");
 
     markSummaryStale(projectId, 9);
     const stale = readConceptSummary(projectId, false);
@@ -197,7 +197,7 @@ describe("meeting-review 목 저장소", () => {
     readConceptSummary(projectId, false);
     const refreshed = readConceptSummary(projectId, false);
     expect(refreshed.status).toBe("READY");
-    expect(refreshed.resultVersion).toBe(2);
+    expect(refreshed.resultVersion).toBe("0HZX2K7M9RV02");
     expect(refreshed.basis.approvalVersion).toBe(9);
   });
 });
