@@ -14,6 +14,11 @@ import type { ReviewItem, ReviewRelation } from "@/lib/notes/meeting-review/cont
 export type ItemEdit = {
   content?: string;
   included?: boolean;
+  /**
+   * 편집을 시작한 시점의 항목 revision. CAS 는 이 값을 보낸다 — 편집 중 다른 창의 저장이
+   * 폴링으로 들어와도 최신 revision 으로 그 변경을 덮지 않고 충돌로 잡는다.
+   */
+  baseRevision?: number;
 };
 
 export type RelationEdit = {

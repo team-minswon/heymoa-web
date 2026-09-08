@@ -161,7 +161,7 @@ describe("ReviewItemCard", () => {
     expect(onCommit).not.toHaveBeenCalled();
     fireEvent.blur(textarea);
     expect(onEdit).toHaveBeenCalledTimes(1);
-    expect(onEdit).toHaveBeenCalledWith(item.itemId, { content: "고친 내용 12" });
+    expect(onEdit).toHaveBeenCalledWith(item.itemId, { content: "고친 내용 12", baseRevision: item.revision });
     expect(onCommit).toHaveBeenCalledTimes(1);
   });
 

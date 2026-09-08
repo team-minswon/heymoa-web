@@ -1015,7 +1015,8 @@ export const restHandlers = [
       // 시드에서 끝난 노트는 시작 시각이 null 이고, 이 세션에서 끝낸 노트만 시작 시각이 있다.
       // 후자는 방금 끝난 회의라 명제 정리를 기다리는 것부터 보여 준다.
       const justEnded = mockDb.getNote(noteId).meetingStartedAt !== null;
-      return readMeetingReview(noteId, isMeetingStarter(noteId), { justEnded });
+      const segmentIds = mockDb.listSegments(noteId).map((segment) => segment.segmentId);
+      return readMeetingReview(noteId, isMeetingStarter(noteId), { justEnded, segmentIds });
     })
   ),
   http.post("*/v1/notes/:noteId/meeting-review/items", async ({ params, request }) => {

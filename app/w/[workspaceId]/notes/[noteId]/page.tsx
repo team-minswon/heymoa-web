@@ -8,7 +8,11 @@ export default async function NoteRoute({
   searchParams,
 }: {
   params: Promise<{ workspaceId: string; noteId: string }>;
-  searchParams: Promise<{ view?: string | string[]; tab?: string | string[] }>;
+  searchParams: Promise<{
+    view?: string | string[];
+    tab?: string | string[];
+    segment?: string | string[];
+  }>;
 }) {
   const [{ workspaceId, noteId }, query] = await Promise.all([
     params,
@@ -24,6 +28,7 @@ export default async function NoteRoute({
         initialQuery={{
           view: Array.isArray(query.view) ? query.view[0] : query.view,
           tab: Array.isArray(query.tab) ? query.tab[0] : query.tab,
+          segment: Array.isArray(query.segment) ? query.segment[0] : query.segment,
         }}
       />
     </HydrationBoundary>

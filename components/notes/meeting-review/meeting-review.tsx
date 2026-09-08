@@ -248,10 +248,12 @@ export function MeetingReview({
     mutationFn: async ({ itemId, edit }: { itemId: string; edit: ItemEdit }) => {
       const item = latestItem(itemId);
       if (!item) throw new Error("항목을 찾을 수 없습니다.");
+      const { baseRevision, ...fields } = edit;
       return updateReviewItem(noteId, itemId, {
         expectedReviewVersion: versionRef.current,
-        expectedItemRevision: item.revision,
-        ...edit,
+        // 편집을 시작한 시점의 revision 이 있으면 그것이 기준이다. 없으면(검토 완료·제외) 최신.
+        expectedItemRevision: baseRevision ?? item.revision,
+        ...fields,
       });
     },
   });
@@ -314,6 +316,20 @@ export function MeetingReview({
       idempotencyKeyRef.current = null;
       setRejected(null);
       queryClient.setQueryData(getMeetingApprovalQueryKey(noteId), approval);
+      // 승인 메타를 검토본 캐시에 먼저 쓴다 — 이어지는 재조회가 실패해도 화면이 미승인으로 돌아가지 않는다.
+      queryClient.setQueryData(reviewKey, (old: typeof review) =>
+        old
+          ? {
+              ...old,
+              approved: {
+                approvalVersion: approval.approvalVersion,
+                approvedAt: approval.approvedAt,
+                approvedBy: approval.approvedBy,
+              },
+              projectApprovalVersion: approval.approvalVersion,
+            }
+          : old
+      );
       void invalidateReview();
       if (note?.projectId) {
         void queryClient.invalidateQueries({ queryKey: getConceptSummaryQueryKey(note.projectId) });
@@ -456,8 +472,19 @@ export function MeetingReview({
     onSelect: setSelectedItemId,
     onEdit: onEditItem,
     onCommit: onCommitItem,
-    onMarkReviewed: (itemId: string) => void commitItem(itemId, {}),
-    onKeepLocal: (itemId: string) => dispatch({ type: "keep-local", key: `item:${itemId}` }),
+    // 남아 있는 편집이 있으면 그것을 함께 저장한다 — 빈 저장으로 편집을 지우지 않는다.
+    onMarkReviewed: (itemId: string) => void commitItem(itemId, pendingRef.current[itemId] ?? {}),
+    onKeepLocal: (itemId: string) => {
+      // 사용자가 내 편집을 고른 뒤에만 기준 revision 을 서버 값으로 올린다.
+      const conflict = editsRef.current.conflicts[`item:${itemId}`];
+      if (conflict?.kind === "item" && pendingRef.current[itemId]) {
+        pendingRef.current = {
+          ...pendingRef.current,
+          [itemId]: { ...pendingRef.current[itemId], baseRevision: conflict.server.revision },
+        };
+      }
+      dispatch({ type: "keep-local", key: `item:${itemId}` });
+    },
     onTakeServer: (itemId: string) => {
       pendingRef.current = withoutKey(pendingRef.current, itemId);
       dispatch({ type: "take-server", key: `item:${itemId}` });

@@ -82,6 +82,7 @@ export function NotePanel({
   noteId,
   view,
   tab,
+  initialFocusSegmentId,
   onTabChange,
   onClose,
   onExpand,
@@ -92,6 +93,8 @@ export function NotePanel({
   noteId: string;
   view: "side" | "full";
   tab: NoteTab;
+  /** 진입 URL 의 `segment`. 전사 탭에서 그 발화를 짚고 비운다. */
+  initialFocusSegmentId?: string | null;
   onTabChange: (tab: NoteTab, options?: { push?: boolean }) => void;
   onClose: () => void;
   onExpand?: () => void;
@@ -278,7 +281,9 @@ export function NotePanel({
    * 끝나면 **비운다** — 안 비우면 전사 탭을 다시 열 때마다 같은 자리로 끌려간다.
    * 탭을 옮기는 것도 같은 이유로 비운다(점프는 그 직후 다시 세운다).
    */
-  const [focusSegmentId, setFocusSegmentId] = useState<string | null>(null);
+  const [focusSegmentId, setFocusSegmentId] = useState<string | null>(
+    initialFocusSegmentId ?? null
+  );
   const handleTabChange = useCallback(
     (next: NoteTab) => {
       setFocusSegmentId(null);

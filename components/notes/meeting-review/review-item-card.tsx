@@ -65,21 +65,23 @@ export function ReviewItemCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(shown.content);
   /** 편집을 여는 순간의 값에서 시작한다. 열려 있는 동안 서버 값이 바뀌어도 입력을 덮지 않는다. */
+  const [baseRevision, setBaseRevision] = useState(item.revision);
   const beginEditing = () => {
     setDraft(shown.content);
+    setBaseRevision(item.revision);
     setEditing(true);
   };
 
   const commitContent = () => {
     setEditing(false);
     if (draft.trim() !== item.content) {
-      onEdit(item.itemId, { content: draft.trim() });
+      onEdit(item.itemId, { content: draft.trim(), baseRevision });
       onCommit(item.itemId);
     }
   };
 
   const toggleIncluded = () => {
-    onEdit(item.itemId, { included: !shown.included });
+    onEdit(item.itemId, { included: !shown.included, baseRevision: item.revision });
     onCommit(item.itemId);
   };
 

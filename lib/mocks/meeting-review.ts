@@ -113,10 +113,37 @@ export function resetMeetingReviewMock() {
 export type SeedOptions = {
   /** 방금 끝난 회의. 명제 정리가 아직이라 회의 결과부터 기다린다(두 번 조회 뒤 준비). */
   justEnded?: boolean;
+  /**
+   * 이 노트의 실제 전사 segment ID. 표본의 인용을 여기에 얹어 근거 → 전사 이동이 목에서도
+   * 실제 발화에 닿게 한다. 전사가 없는 노트는 표본 ID 그대로다(닿을 곳이 없다).
+   */
+  segmentIds?: readonly string[];
 };
 
 function seedNote(noteId: string, options: SeedOptions): NoteState {
   const review = sampleReview({ noteId });
+  if (options.segmentIds && options.segmentIds.length > 0) {
+    const ids = options.segmentIds;
+    const bySequence = new Map<number, string>();
+    const remap = <T extends { segmentId: string; sequence: number }>(citation: T): T => {
+      const id = bySequence.get(citation.sequence) ?? ids[bySequence.size % ids.length];
+      bySequence.set(citation.sequence, id);
+      return { ...citation, segmentId: id };
+    };
+    review.items = review.items.map((item) => ({ ...item, citations: item.citations.map(remap) }));
+    review.relations = review.relations.map((relation) => ({
+      ...relation,
+      citations: relation.citations.map(remap),
+    }));
+    review.evaluation = {
+      ...review.evaluation,
+      citations: review.evaluation.citations.map(remap),
+      sections: review.evaluation.sections.map((section) => ({
+        ...section,
+        citations: section.citations.map(remap),
+      })),
+    };
+  }
   if (options.justEnded) {
     review.readiness = {
       items: "GENERATING",

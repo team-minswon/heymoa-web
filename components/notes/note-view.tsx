@@ -77,7 +77,7 @@ export function NoteView({
 }: {
   workspaceId: string;
   noteId: string;
-  initialQuery: { view?: string; tab?: string };
+  initialQuery: { view?: string; tab?: string; segment?: string };
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -208,6 +208,8 @@ export function NoteView({
         noteId={noteId}
         view={current.view}
         tab={current.tab}
+        // 다른 화면(프로젝트 요약의 근거)에서 발화 하나를 가리키고 들어온다. 첫 진입에만 쓴다.
+        initialFocusSegmentId={searchParams.get("segment") ?? initialQuery.segment ?? null}
         onTabChange={(tab, options) => setQuery({ tab }, options)}
         onClose={closeWithAnim}
         onExpand={

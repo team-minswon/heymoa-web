@@ -281,9 +281,11 @@ function StatementRow({
                 {source.citations && source.citations.length > 0 ? (
                   <CitationList
                     citations={source.citations}
-                    onEvidenceSelect={() => {
+                    onEvidenceSelect={(segmentId) => {
                       if (source.noteId) {
-                        router.push(`/w/${workspaceId}/notes/${source.noteId}?tab=transcript`);
+                        router.push(
+                          `/w/${workspaceId}/notes/${source.noteId}?tab=transcript&segment=${segmentId}`
+                        );
                       }
                     }}
                   />
