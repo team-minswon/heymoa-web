@@ -6,7 +6,12 @@ import { ArrowRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RegionStatus, ReviewRelation } from "@/lib/notes/meeting-review/contract";
 import type { Conflict, EditsState, RelationEdit } from "@/lib/notes/meeting-review/edits";
-import { clearDraft, loadDraft, storeDraft } from "@/lib/notes/meeting-review/draft-store";
+import {
+  clearDraft,
+  loadDraft,
+  storeDraft,
+  type ModifyRelationDraft,
+} from "@/lib/notes/meeting-review/draft-store";
 import { layoutRelationWeb } from "@/lib/notes/meeting-review/relation-web";
 import type { ReviewScreen } from "@/lib/notes/meeting-review/select";
 import { cn } from "@/lib/utils";
@@ -215,19 +220,22 @@ function RelationRow({
   const [open, setOpen] = useState(false);
   const draftKey = `modify:${relation.relationId}`;
   // side ↔ full 전환의 재마운트를 넘긴다 — 수정 중이던 이름이 있으면 폼을 연 채 되찾는다.
-  const restored = loadDraft(screen.noteId, draftKey);
+  const restored = loadDraft<ModifyRelationDraft>(screen.noteId, draftKey);
   const [modifying, setModifying] = useState(restored !== undefined);
-  const [label, setLabelState] = useState(restored ?? relation.judgement.label ?? relation.label);
+  const [label, setLabelState] = useState(restored?.label ?? relation.judgement.label ?? relation.label);
+  /** 이름 수정을 연 시점의 revision. 제출은 이 값으로 CAS 를 건다. 초안과 함께 되찾는다. */
+  const [modifyBase, setModifyBase] = useState(restored?.baseRevision ?? relation.revision);
   const setLabel = (value: string) => {
     setLabelState(value);
-    storeDraft(screen.noteId, draftKey, value);
+    storeDraft<ModifyRelationDraft>(screen.noteId, draftKey, { label: value, baseRevision: modifyBase });
   };
-  /** 이름 수정을 연 시점의 revision. 제출은 이 값으로 CAS 를 건다. */
-  const [modifyBase, setModifyBase] = useState(relation.revision);
   const openModify = () => {
     // 저장에 실패한 미저장 이름이 있으면 그것과 그 기준 revision 에서 다시 시작한다.
-    setLabel(pending?.label ?? relation.judgement.label ?? relation.label);
-    setModifyBase(pending?.baseRevision ?? relation.revision);
+    const base = pending?.baseRevision ?? relation.revision;
+    const initial = pending?.label ?? relation.judgement.label ?? relation.label;
+    setLabelState(initial);
+    setModifyBase(base);
+    storeDraft<ModifyRelationDraft>(screen.noteId, draftKey, { label: initial, baseRevision: base });
     setModifying(true);
   };
   const closeModify = () => {
