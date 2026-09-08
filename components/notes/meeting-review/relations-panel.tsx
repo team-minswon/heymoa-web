@@ -6,6 +6,7 @@ import { ArrowRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RegionStatus, ReviewRelation } from "@/lib/notes/meeting-review/contract";
 import type { Conflict, EditsState, RelationEdit } from "@/lib/notes/meeting-review/edits";
+import { clearDraft, loadDraft, storeDraft } from "@/lib/notes/meeting-review/draft-store";
 import { layoutRelationWeb } from "@/lib/notes/meeting-review/relation-web";
 import type { ReviewScreen } from "@/lib/notes/meeting-review/select";
 import { cn } from "@/lib/utils";
@@ -212,8 +213,15 @@ function RelationRow({
   onDraftChange?: (key: string, open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [modifying, setModifying] = useState(false);
-  const [label, setLabel] = useState(relation.judgement.label ?? relation.label);
+  const draftKey = `modify:${relation.relationId}`;
+  // side ↔ full 전환의 재마운트를 넘긴다 — 수정 중이던 이름이 있으면 폼을 연 채 되찾는다.
+  const restored = loadDraft(screen.noteId, draftKey);
+  const [modifying, setModifying] = useState(restored !== undefined);
+  const [label, setLabelState] = useState(restored ?? relation.judgement.label ?? relation.label);
+  const setLabel = (value: string) => {
+    setLabelState(value);
+    storeDraft(screen.noteId, draftKey, value);
+  };
   /** 이름 수정을 연 시점의 revision. 제출은 이 값으로 CAS 를 건다. */
   const [modifyBase, setModifyBase] = useState(relation.revision);
   const openModify = () => {
@@ -222,11 +230,14 @@ function RelationRow({
     setModifyBase(pending?.baseRevision ?? relation.revision);
     setModifying(true);
   };
+  const closeModify = () => {
+    setModifying(false);
+    clearDraft(screen.noteId, draftKey);
+  };
   // 승인으로 권한이 사라지면 열린 폼도 닫힌다. 초안 등록은 폼이 실제로 보이는 동안만이다.
   const showModify = modifying && canEdit;
   /** 충돌 대조 중에는 판정 버튼을 잠근다 — 먼저 고르지 않으면 최신 revision 으로 남의 판정을 덮는다. */
   const judgementLocked = saving || conflict !== null;
-  const closeModify = () => setModifying(false);
   // 폼이 보이는 동안만 초안으로 등록한다. 재검토로 행이 사라지거나 권한이 사라지면 자동으로 걷힌다.
   useEffect(() => {
     if (!showModify) return;

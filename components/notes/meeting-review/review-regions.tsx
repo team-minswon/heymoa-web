@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { ReviewItem } from "@/lib/notes/meeting-review/contract";
 import type { EditsState } from "@/lib/notes/meeting-review/edits";
 import { effectiveItem } from "@/lib/notes/meeting-review/edits";
+import { clearDraft, loadDraft, storeDraft } from "@/lib/notes/meeting-review/draft-store";
 import type { ReviewScreen, ScreenRegion } from "@/lib/notes/meeting-review/select";
 import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
 import { proposalKindSchema } from "@/lib/notes/proposals/contract";
@@ -87,6 +88,7 @@ export function ReviewRegions({
         {screen.regions.map((region) => (
           <RegionBlock
             key={region.regionId}
+            noteId={screen.noteId}
             region={region}
             canEdit={canEdit}
             onAddItem={onAddItem}
@@ -103,6 +105,7 @@ export function ReviewRegions({
         {screen.unplacedItems.length > 0 || (openAlthoughEmpty && nothingToShow) ? (
           <RegionBlock
             region={{ regionId: "unplaced", title: "기타", kind: "", items: screen.unplacedItems }}
+            noteId={screen.noteId}
             canEdit={canEdit}
             onAddItem={onAddItem}
             onDraftChange={onDraftChange}
@@ -116,12 +119,14 @@ export function ReviewRegions({
 }
 
 function RegionBlock({
+  noteId,
   region,
   canEdit,
   onAddItem,
   children,
   onDraftChange,
 }: {
+  noteId: string;
   region: ScreenRegion;
   canEdit: boolean;
   onAddItem: (
@@ -132,8 +137,10 @@ function RegionBlock({
   children: React.ReactNode;
   onDraftChange?: (key: string, open: boolean) => void;
 }) {
-  const [adding, setAdding] = useState(false);
   const draftKey = `add:${region.regionId}`;
+  // side ↔ full 전환의 재마운트를 넘긴다 — 작성 중이던 내용이 있으면 폼을 연 채 되찾는다.
+  const restored = loadDraft(noteId, draftKey);
+  const [adding, setAdding] = useState(restored !== undefined);
   // 승인으로 권한이 사라지면 열린 폼도 닫힌다. 초안 등록은 폼이 실제로 보이는 동안만이다.
   const showForm = adding && canEdit;
   useEffect(() => {
@@ -141,15 +148,25 @@ function RegionBlock({
     onDraftChange?.(draftKey, true);
     return () => onDraftChange?.(draftKey, false);
   }, [showForm, draftKey, onDraftChange]);
-  const openAdd = () => setAdding(true);
-  const closeAdd = () => setAdding(false);
+  const openAdd = () => {
+    setAdding(true);
+    storeDraft(noteId, draftKey, content);
+  };
+  const closeAdd = () => {
+    setAdding(false);
+    clearDraft(noteId, draftKey);
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [kind, setKind] = useState<string>(
     proposalKindSchema.options.includes(region.kind as never) ? region.kind : "DECISION"
   );
-  const [content, setContent] = useState("");
+  const [content, setContentState] = useState(restored ?? "");
+  const setContent = (value: string) => {
+    setContentState(value);
+    storeDraft(noteId, draftKey, value);
+  };
   const regionId = region.regionId === "unplaced" ? undefined : region.regionId;
 
   /** 성공했을 때만 비운다 — 실패하면 쓴 내용을 남기고 사유를 보여 준다. 요청 중에는 다시 못 보낸다. */
@@ -161,7 +178,7 @@ function RegionBlock({
     const result = await onAddItem(regionId, kind, trimmed);
     setSubmitting(false);
     if (result.ok) {
-      setContent("");
+      setContentState("");
       closeAdd();
     } else {
       setFailure(result.message);

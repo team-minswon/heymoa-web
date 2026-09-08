@@ -581,7 +581,8 @@ export function MeetingReview({
   }
 
   const screen = toReviewScreen(review);
-  const canEdit = isStarter && !review.approved;
+  // 승인 요청이 도는 동안은 잠근다 — 그새 고친 것은 이미 나간 승인에 없고, 성공하면 사라진다.
+  const canEdit = isStarter && !review.approved && !approve.isPending;
   const unsavedCount =
     Object.keys(edits.pendingItems).length +
     Object.keys(edits.pendingRelations).length +
