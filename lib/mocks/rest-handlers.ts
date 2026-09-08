@@ -1,5 +1,18 @@
 import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
+import {
+  MockApiError,
+  approveMeetingMock,
+  createReviewItemMock,
+  judgeRelationMock,
+  markSummaryStale,
+  readConceptSummary,
+  readMeetingApproval,
+  readMeetingReview,
+  recheckRelationsMock,
+  refreshConceptSummaryMock,
+  updateReviewItemMock,
+} from "@/lib/mocks/meeting-review";
 // 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
 import { agentChatTurnState, runningTurnOf } from "@/lib/mocks/sse-handler";
 import {
@@ -298,6 +311,44 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
       }
     );
   }
+}
+
+/**
+ * 검토·승인·개념 요약(APP-464). **계약이 아직 없어 제안 형태를 흘린다** —
+ * `lib/mocks/meeting-review.ts` 머리에 이유가 있다. 실패는 `MockApiError` 가 상태·코드·
+ * 추가 필드(409 의 `current` 등)를 들고 오고, 여기서는 봉투만 입힌다.
+ */
+function reviewResult<T>(run: () => T, okStatus = 200) {
+  try {
+    const data = run();
+    return data === undefined
+      ? new HttpResponse(null, { status: okStatus })
+      : HttpResponse.json({ success: true, data, error: null }, { status: okStatus });
+  } catch (error) {
+    if (error instanceof MockApiError) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: { code: error.code, message: error.message, ...error.extra },
+        },
+        { status: error.status }
+      );
+    }
+    throw error;
+  }
+}
+
+function isMeetingStarter(noteId: string) {
+  const note = mockDb.getNote(noteId);
+  return note.meetingStartedBy?.userId === mockDb.getCurrentUser().userId;
+}
+
+/** 첫 프로젝트만 처음부터 요약이 있다. 둘째는 첫 조회가 생성을 시작한다. */
+function summarySeededReady(projectId: string) {
+  const first = mockDb.listWorkspaces()[0]?.workspaceId;
+  const projects = first ? mockDb.listProjects(first) : [];
+  return projects[0]?.projectId === projectId;
 }
 
 export const restHandlers = [
@@ -954,6 +1005,94 @@ export const restHandlers = [
       messages: mockDb.getAgentChatMessages(id(params.chatId)),
       ...agentChatTurnState(id(params.chatId)),
     }))
+  ),
+
+  // 검토·승인·개념 요약 (APP-464). 제안 계약 — 정본에 들어오면 생성 MSW 와 대조한다.
+  http.get("*/v1/notes/:noteId/meeting-review", ({ params }) =>
+    reviewResult(() => readMeetingReview(id(params.noteId), isMeetingStarter(id(params.noteId))))
+  ),
+  http.post("*/v1/notes/:noteId/meeting-review/items", async ({ params, request }) => {
+    const body = (await request.json()) as Parameters<typeof createReviewItemMock>[2];
+    return reviewResult(
+      () => createReviewItemMock(id(params.noteId), isMeetingStarter(id(params.noteId)), body),
+      201
+    );
+  }),
+  http.patch(
+    "*/v1/notes/:noteId/meeting-review/items/:itemId",
+    async ({ params, request }) => {
+      const body = (await request.json()) as Parameters<typeof updateReviewItemMock>[3];
+      return reviewResult(() =>
+        updateReviewItemMock(
+          id(params.noteId),
+          isMeetingStarter(id(params.noteId)),
+          id(params.itemId),
+          body
+        )
+      );
+    }
+  ),
+  http.patch(
+    "*/v1/notes/:noteId/meeting-review/relations/:relationId",
+    async ({ params, request }) => {
+      const body = (await request.json()) as Parameters<typeof judgeRelationMock>[3];
+      return reviewResult(() =>
+        judgeRelationMock(
+          id(params.noteId),
+          isMeetingStarter(id(params.noteId)),
+          id(params.relationId),
+          body
+        )
+      );
+    }
+  ),
+  http.post(
+    "*/v1/notes/:noteId/meeting-review/relations/recheck",
+    async ({ params, request }) => {
+      const body = (await request.json()) as { expectedReviewVersion: number };
+      return reviewResult(
+        () =>
+          recheckRelationsMock(
+            id(params.noteId),
+            isMeetingStarter(id(params.noteId)),
+            body.expectedReviewVersion
+          ),
+        202
+      );
+    }
+  ),
+  http.post("*/v1/notes/:noteId/meeting-approval", async ({ params, request }) => {
+    const body = (await request.json()) as Parameters<typeof approveMeetingMock>[3];
+    const noteId = id(params.noteId);
+    return reviewResult(() => {
+      const approval = approveMeetingMock(
+        noteId,
+        isMeetingStarter(noteId),
+        mockDb.getCurrentUser().userId,
+        body
+      );
+      const note = mockDb.getNote(noteId);
+      if (note.projectId) markSummaryStale(note.projectId, approval.approvalVersion);
+      return approval;
+    });
+  }),
+  http.get("*/v1/notes/:noteId/meeting-approval", ({ params }) =>
+    reviewResult(() => readMeetingApproval(id(params.noteId)))
+  ),
+  http.get("*/v1/projects/:projectId/concept-summary", ({ params }) =>
+    reviewResult(() =>
+      readConceptSummary(id(params.projectId), summarySeededReady(id(params.projectId)))
+    )
+  ),
+  http.post("*/v1/projects/:projectId/concept-summary/refresh", ({ params }) =>
+    reviewResult(
+      () =>
+        refreshConceptSummaryMock(
+          id(params.projectId),
+          summarySeededReady(id(params.projectId))
+        ),
+      202
+    )
   ),
 
   // 목 전용(계약 밖, `_mock` 접두사): 대기 중인 분석을 완료로 넘긴다.
