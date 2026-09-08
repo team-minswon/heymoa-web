@@ -29,6 +29,11 @@ export type WebEdge = {
   citationCount: number;
   stale: boolean;
   judgement: ReviewRelation["judgement"]["status"];
+  /**
+   * 같은 두 끝점 사이의 간선 순서. 0 이 가운데, ±1·±2… 가 위아래 — 양방향이나 이름이 다른
+   * 관계가 둘 이상이면 선과 이름이 겹치지 않게 그리는 쪽이 이만큼 비켜 놓는다.
+   */
+  lane: number;
   x1: number;
   y1: number;
   x2: number;
@@ -132,6 +137,7 @@ export function layoutRelationWeb(
         citationCount: relation.citations.length,
         stale: relation.stale,
         judgement: relation.judgement.status,
+        lane: 0,
         x1: side === "left" ? node.x : centerX,
         y1: side === "left" ? node.y : height / 2,
         x2: side === "left" ? centerX : node.x,
@@ -142,6 +148,18 @@ export function layoutRelationWeb(
 
   place(incoming, "left", leftX);
   place(outgoing, "right", rightX);
+
+  // 같은 끝점 쌍(방향 무관)끼리 묶어 가운데부터 위아래로 벌린다.
+  const groups = new Map<string, WebEdge[]>();
+  for (const edge of edges) {
+    const key = [edge.from, edge.to].sort().join("|");
+    groups.set(key, [...(groups.get(key) ?? []), edge]);
+  }
+  for (const group of groups.values()) {
+    group.forEach((edge, index) => {
+      edge.lane = index - (group.length - 1) / 2;
+    });
+  }
 
   return { width, height, nodes, edges };
 }

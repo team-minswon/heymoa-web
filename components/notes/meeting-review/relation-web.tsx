@@ -38,14 +38,14 @@ export function RelationWebView({
         const x1 = from.x + (from.x < to.x ? nodeWidth / 2 : -nodeWidth / 2);
         const x2 = to.x + (from.x < to.x ? -nodeWidth / 2 : nodeWidth / 2);
         const midX = (x1 + x2) / 2;
-        const midY = (from.y + to.y) / 2;
+        // 같은 끝점 사이의 간선은 lane 만큼 휘어 나간다. 이름도 그 곡선의 꼭지에 붙는다.
+        const bend = edge.lane * 28;
+        const midY = (from.y + to.y) / 2 + bend;
         return (
-          <g key={edge.id} data-testid="relation-edge" data-judgement={edge.judgement} className={cn(edge.stale && "opacity-50")}>
-            <line
-              x1={x1}
-              y1={from.y}
-              x2={x2}
-              y2={to.y}
+          <g key={edge.id} data-testid="relation-edge" data-judgement={edge.judgement} data-lane={edge.lane} className={cn(edge.stale && "opacity-50")}>
+            <path
+              d={`M${x1},${from.y} Q${midX},${midY + bend} ${x2},${to.y}`}
+              fill="none"
               className="stroke-[var(--el-muted)]"
               strokeWidth={1.25}
               strokeDasharray={edge.citationCount === 0 ? "4 3" : undefined}

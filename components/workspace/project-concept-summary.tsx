@@ -90,6 +90,8 @@ export function ProjectConceptSummary({
 
   const close = () => router.push(`/w/${workspaceId}`);
   const summary = summaryQuery.data;
+  // 권한 거부는 캐시된 데이터보다 먼저다 — 재조회가 403 이어도 Query 는 옛 이름·설명·요약을 남긴다.
+  const forbidden = errorIsForbidden(summaryQuery.error) || errorIsForbidden(projectQuery.error);
 
   return (
     <NoteRouteSurface view="side" isOpen={isOpen} onClose={close}>
@@ -97,7 +99,7 @@ export function ProjectConceptSummary({
         <header className="flex items-start gap-3 border-b border-[var(--el-hairline)] px-6 py-4">
           <div className="min-w-0 flex-1">
             <p className="text-[12px] text-[var(--el-muted)]">프로젝트 개념 요약</p>
-            {project ? (
+            {forbidden ? null : project ? (
               <h2 className="truncate text-[18px] font-semibold tracking-[-0.01em] text-[var(--el-ink)]">
                 {project.name}
               </h2>
@@ -109,7 +111,7 @@ export function ProjectConceptSummary({
             ) : (
               <Skeleton className="mt-1 h-6 w-48" />
             )}
-            {project?.description ? (
+            {!forbidden && project?.description ? (
               <p className="mt-1 text-[13px] leading-[1.5] text-[var(--el-body)]">{project.description}</p>
             ) : null}
           </div>
@@ -121,8 +123,7 @@ export function ProjectConceptSummary({
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {summaryQuery.isLoading ? (
             <SummarySkeleton />
-          ) : errorIsForbidden(summaryQuery.error) ? (
-            // 데이터 유무보다 먼저 — 폴링이 거부되면 Query 는 옛 data 를 남긴다.
+          ) : forbidden ? (
             <p role="alert" className="text-[13px] text-[var(--el-muted)]">
               이 프로젝트의 요약을 볼 권한이 없습니다.
             </p>

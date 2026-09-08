@@ -216,7 +216,7 @@ describe("RelationWebView · RelationsPanel", () => {
     render(<RelationWebView layout={layout} onSelectNode={noop} />);
     const edge = screen.getByTestId("relation-edge");
     expect(edge).toHaveTextContent("근거 없는 연결 · 근거 없음");
-    expect(edge.querySelector("line")?.getAttribute("stroke-dasharray")).toBe("4 3");
+    expect(edge.querySelector("path")?.getAttribute("stroke-dasharray")).toBe("4 3");
   });
 
   it("노드를 누르면 그 항목이 선택된다. APPROVED 끝점은 눌리지 않는다", () => {
