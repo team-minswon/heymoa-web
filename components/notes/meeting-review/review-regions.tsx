@@ -62,6 +62,7 @@ export function ReviewRegions({
   const renderItem = (item: ReviewItem, kindInHeader: boolean) => (
     <ReviewItemCard
       key={item.itemId}
+      noteId={screen.noteId}
       item={item}
       shown={effectiveItem(edits, item)}
       unreviewed={screen.unreviewedItemIds.has(item.itemId)}

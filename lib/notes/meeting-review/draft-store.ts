@@ -15,6 +15,8 @@ export type AddItemDraft = {
   failure?: string;
 };
 export type ModifyRelationDraft = { label: string; baseRevision: number };
+/** 항목 내용 편집기. 서버 저장은 blur 에만 나가므로 그 전에 떠나면 여기서만 되찾는다. */
+export type EditItemDraft = { content: string; baseRevision: number };
 
 const store = new Map<string, Map<string, unknown>>();
 

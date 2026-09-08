@@ -6,6 +6,12 @@ import { AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ReviewItem } from "@/lib/notes/meeting-review/contract";
 import type { Conflict, ItemEdit } from "@/lib/notes/meeting-review/edits";
+import {
+  clearDraft,
+  loadDraft,
+  storeDraft,
+  type EditItemDraft,
+} from "@/lib/notes/meeting-review/draft-store";
 import { CONTEXT_KIND_ICON, CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +25,7 @@ export type ReviewItemCardProps = {
   unreviewed: boolean;
   relationCount: number;
   selected: boolean;
+  noteId: string;
   canEdit: boolean;
   saving: boolean;
   conflict: Conflict | null;
@@ -42,6 +49,7 @@ export type ReviewItemCardProps = {
  * **승인 전 항목은 「검토본」이다.** 어디에도 「확정」이라는 말을 쓰지 않는다.
  */
 export function ReviewItemCard({
+  noteId,
   item,
   shown,
   unreviewed,
@@ -62,14 +70,26 @@ export function ReviewItemCard({
 }: ReviewItemCardProps) {
   const KindIcon = CONTEXT_KIND_ICON[shown.kind];
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(shown.content);
+  // 입력 중 떠났다 돌아와도(뒤로가기·탭 이동·side↔full) 쓰던 글자와 기준 revision 을 되찾는다.
+  const draftKey = `edit:${item.itemId}`;
+  const restored = loadDraft<EditItemDraft>(noteId, draftKey);
+  const [editing, setEditingState] = useState(restored !== undefined);
+  const [draft, setDraftState] = useState(restored?.content ?? shown.content);
   /** 편집을 여는 순간의 값에서 시작한다. 열려 있는 동안 서버 값이 바뀌어도 입력을 덮지 않는다. */
-  const [baseRevision, setBaseRevision] = useState(item.revision);
+  const [baseRevision, setBaseRevision] = useState(restored?.baseRevision ?? item.revision);
+  const setDraft = (content: string) => {
+    setDraftState(content);
+    storeDraft<EditItemDraft>(noteId, draftKey, { content, baseRevision });
+  };
+  const setEditing = (next: boolean) => {
+    setEditingState(next);
+    if (!next) clearDraft(noteId, draftKey);
+  };
   const beginEditing = () => {
-    setDraft(shown.content);
+    setDraftState(shown.content);
     setBaseRevision(item.revision);
-    setEditing(true);
+    storeDraft<EditItemDraft>(noteId, draftKey, { content: shown.content, baseRevision: item.revision });
+    setEditingState(true);
   };
 
   /** 미저장 편집이 남아 있는가. 있으면 그 편집의 기준 revision 을 지킨다 — 다시 열어도 갱신하지 않는다. */
@@ -140,7 +160,7 @@ export function ReviewItemCard({
             onBlur={commitContent}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
-                setDraft(item.content);
+                setDraftState(item.content);
                 setEditing(false);
               }
             }}

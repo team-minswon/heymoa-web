@@ -124,6 +124,7 @@ describe("ReviewGate", () => {
 describe("ReviewItemCard", () => {
   const item = sampleReview().items.find((entry) => entry.itemId === ITEM.humanAdded)!;
   const base = {
+    noteId: "note-test",
     item,
     shown: item,
     unreviewed: true,
