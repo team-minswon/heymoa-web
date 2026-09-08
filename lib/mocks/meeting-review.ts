@@ -54,6 +54,8 @@ type NoteState = {
   generatingPolls: number;
   recheckPolls: number;
   nextId: number;
+  /** 준비되면 보여 줄 평가. 실제 segment 로 매핑한 것을 GENERATING 이 덮지 않게 따로 둔다. */
+  readyEvaluation: MeetingReview["evaluation"];
 };
 
 type SummaryState = {
@@ -152,6 +154,7 @@ function seedNote(noteId: string, options: SeedOptions): NoteState {
       projectRelations: "NOT_READY",
     };
   }
+  const readyEvaluation = review.evaluation;
   if (noteId === REVIEW_GENERATING_NOTE_ID) {
     review.readiness = { ...review.readiness, evaluation: "GENERATING" };
     review.evaluation = { ...review.evaluation, status: "GENERATING", sections: [] };
@@ -172,6 +175,7 @@ function seedNote(noteId: string, options: SeedOptions): NoteState {
   }
   return {
     review,
+    readyEvaluation,
     approval: null,
     approvals: new Map(),
     generatingPolls: 0,
@@ -253,7 +257,7 @@ export function readMeetingReview(
     state.generatingPolls += 1;
     if (state.generatingPolls >= GENERATING_POLLS) {
       review.readiness = { ...review.readiness, evaluation: "READY" };
-      review.evaluation = { ...sampleReview().evaluation, status: "READY" };
+      review.evaluation = { ...state.readyEvaluation, status: "READY" };
     }
   }
   if (review.readiness.inMeetingRelations === "GENERATING") {

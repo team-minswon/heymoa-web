@@ -89,6 +89,9 @@ type NoteFromCache = {
  * 노트는 다시 구독하지 않는다 — 셸이 이미 읽었으므로 캐시에서 `meetingStartedBy` 와
  * `projectId` 만 꺼낸다(`note-realtime-provider` 와 같은 방식).
  */
+/** 노트별로 도는 승인 흐름. 재마운트된 화면이 이어 받아 잠근다. 문서와 함께 사라진다. */
+const approvalInFlight = new Map<string, Promise<void>>();
+
 export function MeetingReview({
   noteId,
   onEvidenceSelect,
@@ -530,8 +533,22 @@ export function MeetingReview({
     setDraftCount(next.size);
   }, []);
 
-  /** 승인 준비(미저장 저장)부터 요청 응답까지의 잠금. `approve.isPending` 보다 먼저 켜진다. */
-  const [preparingApproval, setPreparingApproval] = useState(false);
+  /**
+   * 승인 준비(미저장 저장)부터 요청 응답까지의 잠금. `approve.isPending` 보다 먼저 켜지고,
+   * side ↔ full 재마운트를 넘긴다 — 새 화면도 노트별 진행 중 승인을 보고 같이 잠근다.
+   */
+  const [preparingApproval, setPreparingApproval] = useState(() => approvalInFlight.has(noteId));
+  useEffect(() => {
+    const flow = approvalInFlight.get(noteId);
+    if (!flow) return;
+    let live = true;
+    void flow.finally(() => {
+      if (live) setPreparingApproval(false);
+    });
+    return () => {
+      live = false;
+    };
+  }, [noteId]);
   const draftsBlock = useCallback(() => {
     if (draftsRef.current.size === 0) return false;
     setRejected({
@@ -546,7 +563,7 @@ export function MeetingReview({
     if (draftsBlock()) return;
     if (Object.keys(editsRef.current.conflicts).length > 0 || editsRef.current.saving.size > 0) return;
     setPreparingApproval(true);
-    try {
+    const flow = (async () => {
     // reducer 가 정본이다 — 탭을 옮겼다 돌아와 되찾은 편집도 여기에만 있을 수 있다.
     const items = { ...editsRef.current.pendingItems, ...pendingRef.current };
     for (const [itemId, edit] of Object.entries(items)) {
@@ -565,10 +582,15 @@ export function MeetingReview({
     // 저장하는 동안 열린 초안이 없는지 요청 직전에 다시 본다.
     if (draftsBlock()) return;
     await approve.mutateAsync().catch(() => undefined);
+    })();
+    approvalInFlight.set(noteId, flow);
+    try {
+      await flow;
     } finally {
+      approvalInFlight.delete(noteId);
       setPreparingApproval(false);
     }
-  }, [approve, commitItem, commitRelation, draftsBlock]);
+  }, [approve, commitItem, commitRelation, draftsBlock, noteId]);
 
   const jumpTo = useCallback((target: { itemId?: string; relationId?: string }) => {
     if (target.itemId) setSelectedItemId(target.itemId);

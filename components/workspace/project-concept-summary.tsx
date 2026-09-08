@@ -83,8 +83,9 @@ export function ProjectConceptSummary({
   });
   const refresh = useMutation({
     mutationFn: () => refreshConceptSummary(projectId),
+    // 재조회가 GENERATING 을 가져올 때까지 pending 을 붙든다 — 그새 또 누르면 중복 요청이다.
     onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: getConceptSummaryQueryKey(projectId) }),
+      queryClient.invalidateQueries({ queryKey: getConceptSummaryQueryKey(projectId) }),
   });
 
   const close = () => router.push(`/w/${workspaceId}`);
