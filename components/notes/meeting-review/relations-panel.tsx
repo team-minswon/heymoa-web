@@ -221,20 +221,19 @@ function RelationRow({
     setLabel(pending?.label ?? relation.judgement.label ?? relation.label);
     setModifyBase(pending?.baseRevision ?? relation.revision);
     setModifying(true);
-    onDraftChange?.(`relation:${relation.relationId}`, true);
   };
+  // 승인으로 권한이 사라지면 열린 폼도 닫힌다. 초안 등록은 폼이 실제로 보이는 동안만이다.
+  const showModify = modifying && canEdit;
   /** 충돌 대조 중에는 판정 버튼을 잠근다 — 먼저 고르지 않으면 최신 revision 으로 남의 판정을 덮는다. */
   const judgementLocked = saving || conflict !== null;
-  const closeModify = () => {
-    setModifying(false);
-    onDraftChange?.(`relation:${relation.relationId}`, false);
-  };
-  // 재검토로 층이 GENERATING 이 되면 이 행이 사라진다. 열린 폼의 초안 등록을 같이 걷는다.
+  const closeModify = () => setModifying(false);
+  // 폼이 보이는 동안만 초안으로 등록한다. 재검토로 행이 사라지거나 권한이 사라지면 자동으로 걷힌다.
   useEffect(() => {
-    if (!modifying) return;
+    if (!showModify) return;
     const key = `relation:${relation.relationId}`;
+    onDraftChange?.(key, true);
     return () => onDraftChange?.(key, false);
-  }, [modifying, relation.relationId, onDraftChange]);
+  }, [showModify, relation.relationId, onDraftChange]);
   /** 이번 회의 쪽 끝점. 방향(`from`/`to`)이 아니라 `type === "REVIEW"` 로 고른다. */
   const reviewEndpoint = relation.from.type === "REVIEW" ? relation.from : relation.to;
   const status = pending?.judgement ?? relation.judgement.status;
@@ -335,7 +334,7 @@ function RelationRow({
         </button>
         {canEdit ? (
           <div className="ml-auto flex items-center gap-1">
-            {modifying ? (
+            {showModify ? (
               <form
                 className="flex items-center gap-1"
                 onSubmit={(event) => {

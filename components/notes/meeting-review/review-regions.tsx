@@ -134,19 +134,16 @@ function RegionBlock({
 }) {
   const [adding, setAdding] = useState(false);
   const draftKey = `add:${region.regionId}`;
-  const openAdd = () => {
-    setAdding(true);
-    onDraftChange?.(draftKey, true);
-  };
-  const closeAdd = () => {
-    setAdding(false);
-    onDraftChange?.(draftKey, false);
-  };
-  // 영역이 사라지면(재조회로 영역이 바뀜) 열린 폼의 초안 등록도 걷는다.
+  // 승인으로 권한이 사라지면 열린 폼도 닫힌다. 초안 등록은 폼이 실제로 보이는 동안만이다.
+  const showForm = adding && canEdit;
   useEffect(() => {
-    if (!adding) return;
+    if (!showForm) return;
+    onDraftChange?.(draftKey, true);
     return () => onDraftChange?.(draftKey, false);
-  }, [adding, draftKey, onDraftChange]);
+  }, [showForm, draftKey, onDraftChange]);
+  const openAdd = () => setAdding(true);
+  const closeAdd = () => setAdding(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [kind, setKind] = useState<string>(
@@ -158,7 +155,7 @@ function RegionBlock({
   /** 성공했을 때만 비운다 — 실패하면 쓴 내용을 남기고 사유를 보여 준다. 요청 중에는 다시 못 보낸다. */
   const submit = async () => {
     const trimmed = content.trim();
-    if (!trimmed || submitting) return;
+    if (!trimmed || submitting || !canEdit) return;
     setSubmitting(true);
     setFailure(null);
     const result = await onAddItem(regionId, kind, trimmed);
@@ -190,7 +187,7 @@ function RegionBlock({
         ) : null}
       </div>
       <ul className="space-y-2">{children}</ul>
-      {adding ? (
+      {showForm ? (
         <form
           onSubmit={(event) => {
             event.preventDefault();

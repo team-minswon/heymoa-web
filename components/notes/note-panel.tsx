@@ -763,7 +763,8 @@ export function NotePanel({
             </TabsContent>
           ) : null}
           {showSummaryTab ? (
-            <TabsContent value="summary" className="min-h-0 flex-1">
+            <TabsContent value="summary" keepMounted className="min-h-0 flex-1">
+              {/* keepMounted: 검토 편집 중 근거를 보러 전사 탭에 다녀와도 작성 중인 초안이 살아 있게 마운트를 유지한다(APP-464). */}
               <ScrollArea className="h-full">
                 <NoteSummary
                   noteId={noteId}

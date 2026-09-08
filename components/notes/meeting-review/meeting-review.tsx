@@ -160,6 +160,16 @@ export function MeetingReview({
     clearEdits(noteId);
     dispatch({ type: "reset", reviewVersion: versionRef.current });
   }, [noteId, approvedVersion]);
+  /**
+   * 검토본 하나의 저장은 **직렬**이다. 두 요청이 같은 `expectedReviewVersion` 으로 나가면
+   * 둘째는 반드시 충돌하므로, 앞 응답의 버전을 받은 뒤에 다음을 보낸다.
+   */
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const enqueue = useCallback(<T,>(run: () => Promise<T>): Promise<T> => {
+    const next = queueRef.current.then(run, run);
+    queueRef.current = next.catch(() => undefined);
+    return next;
+  }, []);
   /** 편집·충돌·저장 중 상태의 최신 거울. 승인 클릭처럼 렌더 뒤 이벤트에서 읽는다. */
   const editsRef = useRef(edits);
   useEffect(() => {
@@ -350,13 +360,13 @@ export function MeetingReview({
   const onAddItem = useCallback(
     async (regionId: string | undefined, kind: string, content: string) => {
       try {
-        await addItem.mutateAsync({ regionId, kind, content });
+        await enqueue(() => addItem.mutateAsync({ regionId, kind, content }));
         return { ok: true as const };
       } catch (error) {
         return { ok: false as const, message: errorMessageOf(error, "항목을 추가하지 못했습니다.") };
       }
     },
-    [addItem]
+    [addItem, enqueue]
   );
 
   const recheck = useMutation({
@@ -429,6 +439,7 @@ export function MeetingReview({
   /** 같은 키의 저장이 도는 동안 두 번째 저장을 막는다. reducer 의 `saving` 보다 동기로 앞선다. */
   const inFlightRef = useRef<Set<EditKey>>(new Set());
 
+
   /** 편집 완료 단위로 저장한다. 성공이면 서버 값으로 수렴하고 실패면 편집을 남긴다. */
   const commitItem = useCallback(
     async (itemId: string, edit: ItemEdit): Promise<boolean> => {
@@ -437,7 +448,7 @@ export function MeetingReview({
       inFlightRef.current.add(key);
       dispatch({ type: "saving", key });
       try {
-        const result = await saveItem.mutateAsync({ itemId, edit });
+        const result = await enqueue(() => saveItem.mutateAsync({ itemId, edit }));
         bumpVersion(result.reviewVersion);
         // 응답을 먼저 캐시에 반영한다 — 재조회가 늦거나 실패해도 저장한 값과 revision 이 남는다.
         applyMutation(result);
@@ -457,7 +468,7 @@ export function MeetingReview({
         inFlightRef.current.delete(key);
       }
     },
-    [saveItem, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId]
+    [saveItem, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId, enqueue]
   );
 
   const commitRelation = useCallback(
@@ -469,7 +480,7 @@ export function MeetingReview({
       dispatch({ type: "edit-relation", relationId, edit });
       dispatch({ type: "saving", key });
       try {
-        const result = await saveRelation.mutateAsync({ relationId, edit });
+        const result = await enqueue(() => saveRelation.mutateAsync({ relationId, edit }));
         bumpVersion(result.reviewVersion);
         applyMutation(result);
         const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion, submitted: edit };
@@ -487,7 +498,7 @@ export function MeetingReview({
         inFlightRef.current.delete(key);
       }
     },
-    [saveRelation, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId]
+    [saveRelation, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId, enqueue]
   );
 
   const onEditItem = useCallback((itemId: string, edit: ItemEdit) => {
