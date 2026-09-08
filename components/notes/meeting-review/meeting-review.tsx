@@ -22,6 +22,7 @@ import {
   reviewConflictSchema,
   type ApprovalGate,
   type MeetingApproval,
+  type MeetingReview as MeetingReviewData,
   type ReviewItem,
   type ReviewRelation,
 } from "@/lib/notes/meeting-review/contract";
@@ -44,7 +45,10 @@ import {
   getMeetingApprovalQueryKey,
   getMeetingReviewQueryKey,
 } from "@/lib/notes/meeting-review/query-keys";
-import { needsPolling, toReviewScreen } from "@/lib/notes/meeting-review/select";
+import {
+  needsPolling,
+  toReviewScreen,
+} from "@/lib/notes/meeting-review/select";
 
 import { EvaluationPanel } from "./evaluation-panel";
 import { RelationsPanel } from "./relations-panel";
@@ -72,7 +76,10 @@ export function newIdempotencyKey() {
   return Array.from(bytes, (byte) => TSID_ALPHABET[byte % 32]).join("");
 }
 
-function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T> {
+function withoutKey<T>(
+  record: Record<string, T>,
+  key: string
+): Record<string, T> {
   const next = { ...record };
   delete next[key];
   return next;
@@ -80,7 +87,10 @@ function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T
 
 type NoteFromCache = {
   status: number;
-  data: { success: boolean; data: { projectId: string; meetingStartedBy: { userId: string } | null } };
+  data: {
+    success: boolean;
+    data: { projectId: string; meetingStartedBy: { userId: string } | null };
+  };
 };
 
 /**
@@ -91,6 +101,12 @@ type NoteFromCache = {
  */
 /** 노트별로 도는 승인 흐름. 재마운트된 화면이 이어 받아 잠근다. 문서와 함께 사라진다. */
 const approvalInFlight = new Map<string, Promise<void>>();
+/**
+ * 노트별 저장 큐의 꼬리. 검토본 하나의 저장은 **직렬**이다 — 두 요청이 같은
+ * `expectedReviewVersion` 으로 나가면 둘째는 반드시 충돌한다. 화면이 재마운트돼도 앞 화면이
+ * 보낸 저장의 뒤에 서야 하므로 컴포넌트 밖에 둔다.
+ */
+const saveQueue = new Map<string, Promise<unknown>>();
 
 export function MeetingReview({
   noteId,
@@ -107,9 +123,14 @@ export function MeetingReview({
 }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const note = (queryClient.getQueryData(getGetNoteQueryKey(noteId)) as NoteFromCache | undefined)
-    ?.data.data;
-  const isStarter = Boolean(user && note?.meetingStartedBy?.userId === user.userId);
+  const note = (
+    queryClient.getQueryData(getGetNoteQueryKey(noteId)) as
+      | NoteFromCache
+      | undefined
+  )?.data.data;
+  const isStarter = Boolean(
+    user && note?.meetingStartedBy?.userId === user.userId
+  );
 
   const reviewQuery = useQuery({
     queryKey: getMeetingReviewQueryKey(noteId),
@@ -132,24 +153,36 @@ export function MeetingReview({
   });
 
   // 탭을 옮겨 언마운트돼도 되찾는다 — 근거를 보러 갔다 오는 것은 검토의 일부다.
-  const [edits, dispatch] = useReducer(reduceEdits, noteId, (id) => loadEdits(id) ?? initialEdits(0));
+  const [edits, dispatch] = useReducer(
+    reduceEdits,
+    noteId,
+    (id) => loadEdits(id) ?? initialEdits(0)
+  );
   useEffect(() => {
     storeEdits(noteId, edits);
   }, [noteId, edits]);
   useEffect(() => {
     // 언마운트 중 끝난 저장이 보관소에 먼저 닿는다. 되돌아온 화면은 그 완료를 여기서 받는다.
-    return subscribeEdits(noteId, (state) => dispatch({ type: "replace", state }));
+    return subscribeEdits(noteId, (state) =>
+      dispatch({ type: "replace", state })
+    );
   }, [noteId]);
   /**
    * 저장의 CAS 에 실을 검토본 버전. reducer 의 값과 같지만 **동기로** 앞선다 — 연속 저장이
    * 한 렌더 안에서 이어질 때 클로저의 옛 버전을 다시 보내지 않기 위해서다.
    */
   const versionRef = useRef(0);
-  const bumpVersion = useCallback((reviewVersion: number | null | undefined) => {
-    if (typeof reviewVersion === "number" && reviewVersion > versionRef.current) {
-      versionRef.current = reviewVersion;
-    }
-  }, []);
+  const bumpVersion = useCallback(
+    (reviewVersion: number | null | undefined) => {
+      if (
+        typeof reviewVersion === "number" &&
+        reviewVersion > versionRef.current
+      ) {
+        versionRef.current = reviewVersion;
+      }
+    },
+    []
+  );
   useEffect(() => {
     if (review) {
       bumpVersion(review.reviewVersion);
@@ -163,16 +196,36 @@ export function MeetingReview({
     clearEdits(noteId);
     dispatch({ type: "reset", reviewVersion: versionRef.current });
   }, [noteId, approvedVersion]);
+  /** 앞 저장의 응답 반영이 끝난 뒤에 다음을 보낸다. `run` 안에서 반영까지 마쳐야 한다. */
+  const enqueue = useCallback(
+    <T,>(run: () => Promise<T>): Promise<T> => {
+      const tail = saveQueue.get(noteId) ?? Promise.resolve();
+      const next = tail.then(run, run);
+      saveQueue.set(
+        noteId,
+        next.catch(() => undefined)
+      );
+      return next;
+    },
+    [noteId]
+  );
   /**
-   * 검토본 하나의 저장은 **직렬**이다. 두 요청이 같은 `expectedReviewVersion` 으로 나가면
-   * 둘째는 반드시 충돌하므로, 앞 응답의 버전을 받은 뒤에 다음을 보낸다.
+   * CAS 에 실을 버전. 이 화면의 ref 뿐 아니라 보관소와 캐시도 본다 — 재마운트 전 화면이 큐에서
+   * 막 끝낸 저장의 버전은 effect 가 돌기 전엔 ref 에 없다.
    */
-  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
-  const enqueue = useCallback(<T,>(run: () => Promise<T>): Promise<T> => {
-    const next = queueRef.current.then(run, run);
-    queueRef.current = next.catch(() => undefined);
-    return next;
-  }, []);
+  const casVersion = useCallback(
+    () =>
+      Math.max(
+        versionRef.current,
+        loadEdits(noteId)?.reviewVersion ?? 0,
+        (
+          queryClient.getQueryData(getMeetingReviewQueryKey(noteId)) as
+            | MeetingReviewData
+            | undefined
+        )?.reviewVersion ?? 0
+      ),
+    [noteId, queryClient]
+  );
   /** 편집·충돌·저장 중 상태의 최신 거울. 승인 클릭처럼 렌더 뒤 이벤트에서 읽는다. */
   const editsRef = useRef(edits);
   useEffect(() => {
@@ -203,13 +256,21 @@ export function MeetingReview({
   const [rejected, setRejected] = useState<ApprovalFailure | null>(null);
 
   const invalidateReview = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: getMeetingReviewQueryKey(noteId) }),
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: getMeetingReviewQueryKey(noteId),
+      }),
     [queryClient, noteId]
   );
 
   /** 저장 응답(항목·관계·게이트·버전)을 캐시에 겹쳐 쓴다. 재조회는 그 뒤에 수렴시킨다. */
   const applyMutation = useCallback(
-    (result: { reviewVersion: number; item?: ReviewItem; relation?: ReviewRelation; approval?: ApprovalGate }) => {
+    (result: {
+      reviewVersion: number;
+      item?: ReviewItem;
+      relation?: ReviewRelation;
+      approval?: ApprovalGate;
+    }) => {
       queryClient.setQueryData(reviewKey, (old: typeof review) =>
         // 재조회가 더 새 검토본을 먼저 받았으면 늦은 저장 응답의 본문은 버린다 — 버전만 지킨다.
         old && result.reviewVersion >= old.reviewVersion
@@ -217,11 +278,15 @@ export function MeetingReview({
               ...old,
               reviewVersion: Math.max(old.reviewVersion, result.reviewVersion),
               items: result.item
-                ? old.items.map((entry) => (entry.itemId === result.item!.itemId ? result.item! : entry))
+                ? old.items.map((entry) =>
+                    entry.itemId === result.item!.itemId ? result.item! : entry
+                  )
                 : old.items,
               relations: result.relation
                 ? old.relations.map((entry) =>
-                    entry.relationId === result.relation!.relationId ? result.relation! : entry
+                    entry.relationId === result.relation!.relationId
+                      ? result.relation!
+                      : entry
                   )
                 : old.relations,
               approval: result.approval ?? old.approval,
@@ -245,13 +310,22 @@ export function MeetingReview({
           old && (currentReviewVersion ?? 0) >= old.reviewVersion
             ? {
                 ...old,
-                reviewVersion: Math.max(old.reviewVersion, currentReviewVersion ?? 0),
+                reviewVersion: Math.max(
+                  old.reviewVersion,
+                  currentReviewVersion ?? 0
+                ),
                 items: current?.item
-                  ? old.items.map((entry) => (entry.itemId === current.item!.itemId ? current.item! : entry))
+                  ? old.items.map((entry) =>
+                      entry.itemId === current.item!.itemId
+                        ? current.item!
+                        : entry
+                    )
                   : old.items,
                 relations: current?.relation
                   ? old.relations.map((entry) =>
-                      entry.relationId === current.relation!.relationId ? current.relation! : entry
+                      entry.relationId === current.relation!.relationId
+                        ? current.relation!
+                        : entry
                     )
                   : old.relations,
               }
@@ -261,7 +335,12 @@ export function MeetingReview({
           const action = {
             type: "conflict" as const,
             key,
-            conflict: { kind: "item" as const, local: local as ItemEdit, server: current.item, currentReviewVersion },
+            conflict: {
+              kind: "item" as const,
+              local: local as ItemEdit,
+              server: current.item,
+              currentReviewVersion,
+            },
           };
           dispatch(action);
           settleStoredEdits(noteId, action);
@@ -283,7 +362,11 @@ export function MeetingReview({
           return;
         }
         // 항목 자체가 아니라 검토본 버전이 어긋났다. 다시 읽고 편집은 남긴다.
-        const failed = { type: "failed" as const, key, message: conflict.data.message };
+        const failed = {
+          type: "failed" as const,
+          key,
+          message: conflict.data.message,
+        };
         dispatch(failed);
         settleStoredEdits(noteId, failed);
         void invalidateReview();
@@ -303,12 +386,18 @@ export function MeetingReview({
   // 인라인으로 그리므로 전역 토스트는 끈다(`error-loading.md`).
   const saveItem = useMutation({
     meta: { suppressErrorToast: true },
-    mutationFn: async ({ itemId, edit }: { itemId: string; edit: ItemEdit }) => {
+    mutationFn: async ({
+      itemId,
+      edit,
+    }: {
+      itemId: string;
+      edit: ItemEdit;
+    }) => {
       const item = latestItem(itemId);
       if (!item) throw new Error("항목을 찾을 수 없습니다.");
       const { baseRevision, ...fields } = edit;
       return updateReviewItem(noteId, itemId, {
-        expectedReviewVersion: versionRef.current,
+        expectedReviewVersion: casVersion(),
         // 편집을 시작한 시점의 revision 이 있으면 그것이 기준이다. 없으면(검토 완료·제외) 최신.
         expectedItemRevision: baseRevision ?? item.revision,
         ...fields,
@@ -318,12 +407,18 @@ export function MeetingReview({
 
   const saveRelation = useMutation({
     meta: { suppressErrorToast: true },
-    mutationFn: async ({ relationId, edit }: { relationId: string; edit: RelationEdit }) => {
+    mutationFn: async ({
+      relationId,
+      edit,
+    }: {
+      relationId: string;
+      edit: RelationEdit;
+    }) => {
       const relation = latestRelation(relationId);
       if (!relation) throw new Error("관계를 찾을 수 없습니다.");
       const { baseRevision, ...fields } = edit;
       return judgeRelation(noteId, relationId, {
-        expectedReviewVersion: versionRef.current,
+        expectedReviewVersion: casVersion(),
         expectedRelationRevision: baseRevision ?? relation.revision,
         ...fields,
       });
@@ -333,13 +428,17 @@ export function MeetingReview({
   const addItem = useMutation({
     meta: { suppressErrorToast: true },
     mutationFn: (input: { regionId?: string; kind: string; content: string }) =>
-      createReviewItem(noteId, { expectedReviewVersion: versionRef.current, ...input }),
+      createReviewItem(noteId, {
+        expectedReviewVersion: casVersion(),
+        ...input,
+      }),
     onSuccess: (result, variables) => {
       bumpVersion(result.reviewVersion);
       dispatch({ type: "sync-version", reviewVersion: result.reviewVersion });
       // 생성된 항목을 먼저 캐시에 넣고 영역에 잇는다 — 재조회가 실패해도 화면에 남는다.
       queryClient.setQueryData(reviewKey, (old: typeof review) => {
-        if (!old || !result.item || result.reviewVersion < old.reviewVersion) return old;
+        if (!old || !result.item || result.reviewVersion < old.reviewVersion)
+          return old;
         const item = result.item;
         return {
           ...old,
@@ -348,7 +447,8 @@ export function MeetingReview({
             ? old.items
             : [...old.items, item],
           regions: old.regions.map((region) =>
-            region.regionId === variables.regionId && !region.itemIds.includes(item.itemId)
+            region.regionId === variables.regionId &&
+            !region.itemIds.includes(item.itemId)
               ? { ...region, itemIds: [...region.itemIds, item.itemId] }
               : region
           ),
@@ -366,15 +466,19 @@ export function MeetingReview({
         await enqueue(() => addItem.mutateAsync({ regionId, kind, content }));
         return { ok: true as const };
       } catch (error) {
-        return { ok: false as const, message: errorMessageOf(error, "항목을 추가하지 못했습니다.") };
+        return {
+          ok: false as const,
+          message: errorMessageOf(error, "항목을 추가하지 못했습니다."),
+        };
       }
     },
     [addItem, enqueue]
   );
 
   const recheck = useMutation({
-    mutationFn: () => recheckRelations(noteId, versionRef.current),
-    onSuccess: () => void invalidateReview(),
+    mutationFn: () => recheckRelations(noteId, casVersion()),
+    // 재조회가 GENERATING 을 가져올 때까지 pending 을 붙든다 — 그새 또 누르면 중복 요청이다.
+    onSuccess: () => invalidateReview(),
   });
 
   const idempotencyKeyRef = useRef<string | null>(null);
@@ -385,7 +489,7 @@ export function MeetingReview({
       idempotencyKeyRef.current ??= newIdempotencyKey();
       return approveMeeting(noteId, {
         idempotencyKey: idempotencyKeyRef.current,
-        reviewVersion: versionRef.current,
+        reviewVersion: casVersion(),
         projectApprovalVersion: review.projectApprovalVersion,
       });
     },
@@ -409,11 +513,15 @@ export function MeetingReview({
       );
       void invalidateReview();
       if (note?.projectId) {
-        void queryClient.invalidateQueries({ queryKey: getConceptSummaryQueryKey(note.projectId) });
+        void queryClient.invalidateQueries({
+          queryKey: getConceptSummaryQueryKey(note.projectId),
+        });
       }
     },
     onError: (error) => {
-      const parsed = approvalRejectedSchema.safeParse((error as { error?: unknown } | null)?.error);
+      const parsed = approvalRejectedSchema.safeParse(
+        (error as { error?: unknown } | null)?.error
+      );
       if (parsed.success) {
         setRejected(parsed.data);
         // 서버가 준 게이트·버전으로 화면을 맞춘다. 검토본은 건드리지 않는다.
@@ -422,7 +530,10 @@ export function MeetingReview({
         // 계약 밖 실패(네트워크·500)는 충돌로 위장하지 않고 서버 문구 그대로 보여 준다.
         setRejected({
           code: "REQUEST_FAILED",
-          message: errorMessageOf(error, errorCodeOf(error) ?? "승인하지 못했습니다."),
+          message: errorMessageOf(
+            error,
+            errorCodeOf(error) ?? "승인하지 못했습니다."
+          ),
         });
       }
     },
@@ -442,72 +553,118 @@ export function MeetingReview({
   /** 같은 키의 저장이 도는 동안 두 번째 저장을 막는다. reducer 의 `saving` 보다 동기로 앞선다. */
   const inFlightRef = useRef<Set<EditKey>>(new Set());
 
-
   /** 편집 완료 단위로 저장한다. 성공이면 서버 값으로 수렴하고 실패면 편집을 남긴다. */
   const commitItem = useCallback(
     async (itemId: string, edit: ItemEdit): Promise<boolean> => {
       const key: EditKey = `item:${itemId}`;
       // 이 화면이 보낸 것이든, 재마운트 전 화면이 보내 아직 도는 것이든 같은 키는 다시 안 보낸다.
-      if (inFlightRef.current.has(key) || editsRef.current.saving.has(key)) return false;
+      if (inFlightRef.current.has(key) || editsRef.current.saving.has(key))
+        return false;
       inFlightRef.current.add(key);
       dispatch({ type: "saving", key });
-      try {
-        const result = await enqueue(() => saveItem.mutateAsync({ itemId, edit }));
-        bumpVersion(result.reviewVersion);
-        // 응답을 먼저 캐시에 반영한다 — 재조회가 늦거나 실패해도 저장한 값과 revision 이 남는다.
-        applyMutation(result);
-        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion, submitted: edit };
-        dispatch(saved);
-        // 패널이 언마운트된 뒤 도착했어도 보관소에는 닿아야 한다.
-        settleStoredEdits(noteId, saved);
-        if (JSON.stringify(pendingRef.current[itemId]) === JSON.stringify(edit)) {
-          pendingRef.current = withoutKey(pendingRef.current, itemId);
+      // 응답 반영까지 큐 안에서 끝낸다 — 다음 저장이 이 저장의 버전을 보고 나가게.
+      return enqueue(async () => {
+        try {
+          const result = await saveItem.mutateAsync({ itemId, edit });
+          bumpVersion(result.reviewVersion);
+          // 응답을 먼저 캐시에 반영한다 — 재조회가 늦거나 실패해도 저장한 값과 revision 이 남는다.
+          applyMutation(result);
+          const saved = {
+            type: "saved" as const,
+            key,
+            reviewVersion: result.reviewVersion,
+            submitted: edit,
+          };
+          dispatch(saved);
+          // 패널이 언마운트된 뒤 도착했어도 보관소에는 닿아야 한다.
+          settleStoredEdits(noteId, saved);
+          if (
+            JSON.stringify(pendingRef.current[itemId]) === JSON.stringify(edit)
+          ) {
+            pendingRef.current = withoutKey(pendingRef.current, itemId);
+          }
+          void invalidateReview();
+          return true;
+        } catch (error) {
+          settleFailure(key, error, edit);
+          return false;
+        } finally {
+          inFlightRef.current.delete(key);
         }
-        void invalidateReview();
-        return true;
-      } catch (error) {
-        settleFailure(key, error, edit);
-        return false;
-      } finally {
-        inFlightRef.current.delete(key);
-      }
+      });
     },
-    [saveItem, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId, enqueue]
+    [
+      saveItem,
+      invalidateReview,
+      settleFailure,
+      bumpVersion,
+      applyMutation,
+      noteId,
+      enqueue,
+    ]
   );
 
   const commitRelation = useCallback(
     async (relationId: string, edit: RelationEdit): Promise<boolean> => {
       const key: EditKey = `relation:${relationId}`;
-      if (inFlightRef.current.has(key) || editsRef.current.saving.has(key)) return false;
+      if (inFlightRef.current.has(key) || editsRef.current.saving.has(key))
+        return false;
       inFlightRef.current.add(key);
-      pendingRelationsRef.current = { ...pendingRelationsRef.current, [relationId]: edit };
+      pendingRelationsRef.current = {
+        ...pendingRelationsRef.current,
+        [relationId]: edit,
+      };
       dispatch({ type: "edit-relation", relationId, edit });
       dispatch({ type: "saving", key });
-      try {
-        const result = await enqueue(() => saveRelation.mutateAsync({ relationId, edit }));
-        bumpVersion(result.reviewVersion);
-        applyMutation(result);
-        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion, submitted: edit };
-        dispatch(saved);
-        settleStoredEdits(noteId, saved);
-        if (JSON.stringify(pendingRelationsRef.current[relationId]) === JSON.stringify(edit)) {
-          pendingRelationsRef.current = withoutKey(pendingRelationsRef.current, relationId);
+      return enqueue(async () => {
+        try {
+          const result = await saveRelation.mutateAsync({ relationId, edit });
+          bumpVersion(result.reviewVersion);
+          applyMutation(result);
+          const saved = {
+            type: "saved" as const,
+            key,
+            reviewVersion: result.reviewVersion,
+            submitted: edit,
+          };
+          dispatch(saved);
+          settleStoredEdits(noteId, saved);
+          if (
+            JSON.stringify(pendingRelationsRef.current[relationId]) ===
+            JSON.stringify(edit)
+          ) {
+            pendingRelationsRef.current = withoutKey(
+              pendingRelationsRef.current,
+              relationId
+            );
+          }
+          void invalidateReview();
+          return true;
+        } catch (error) {
+          settleFailure(key, error, edit);
+          return false;
+        } finally {
+          inFlightRef.current.delete(key);
         }
-        void invalidateReview();
-        return true;
-      } catch (error) {
-        settleFailure(key, error, edit);
-        return false;
-      } finally {
-        inFlightRef.current.delete(key);
-      }
+      });
     },
-    [saveRelation, invalidateReview, settleFailure, bumpVersion, applyMutation, noteId, enqueue]
+    [
+      saveRelation,
+      invalidateReview,
+      settleFailure,
+      bumpVersion,
+      applyMutation,
+      noteId,
+      enqueue,
+    ]
   );
 
   const onEditItem = useCallback((itemId: string, edit: ItemEdit) => {
     dispatch({ type: "edit-item", itemId, edit });
-    pendingRef.current = { ...pendingRef.current, [itemId]: { ...pendingRef.current[itemId], ...edit } };
+    pendingRef.current = {
+      ...pendingRef.current,
+      [itemId]: { ...pendingRef.current[itemId], ...edit },
+    };
   }, []);
   const onCommitItem = useCallback(
     (itemId: string) => {
@@ -537,7 +694,9 @@ export function MeetingReview({
    * 승인 준비(미저장 저장)부터 요청 응답까지의 잠금. `approve.isPending` 보다 먼저 켜지고,
    * side ↔ full 재마운트를 넘긴다 — 새 화면도 노트별 진행 중 승인을 보고 같이 잠근다.
    */
-  const [preparingApproval, setPreparingApproval] = useState(() => approvalInFlight.has(noteId));
+  const [preparingApproval, setPreparingApproval] = useState(() =>
+    approvalInFlight.has(noteId)
+  );
   useEffect(() => {
     const flow = approvalInFlight.get(noteId);
     if (!flow) return;
@@ -553,7 +712,8 @@ export function MeetingReview({
     if (draftsRef.current.size === 0) return false;
     setRejected({
       code: "REQUEST_FAILED",
-      message: "작성 중인 항목 추가나 연결 이름 수정이 있습니다. 저장하거나 취소한 뒤 승인해 주세요.",
+      message:
+        "작성 중인 항목 추가나 연결 이름 수정이 있습니다. 저장하거나 취소한 뒤 승인해 주세요.",
     });
     return true;
   }, []);
@@ -561,27 +721,34 @@ export function MeetingReview({
   const onApprove = useCallback(async () => {
     setRejected(null);
     if (draftsBlock()) return;
-    if (Object.keys(editsRef.current.conflicts).length > 0 || editsRef.current.saving.size > 0) return;
+    if (
+      Object.keys(editsRef.current.conflicts).length > 0 ||
+      editsRef.current.saving.size > 0
+    )
+      return;
     setPreparingApproval(true);
     const flow = (async () => {
-    // reducer 가 정본이다 — 탭을 옮겼다 돌아와 되찾은 편집도 여기에만 있을 수 있다.
-    const items = { ...editsRef.current.pendingItems, ...pendingRef.current };
-    for (const [itemId, edit] of Object.entries(items)) {
-      if (!(await commitItem(itemId, edit))) return;
-    }
-    const relations = { ...editsRef.current.pendingRelations, ...pendingRelationsRef.current };
-    for (const [relationId, edit] of Object.entries(relations)) {
-      if (!(await commitRelation(relationId, edit))) return;
-    }
-    if (
-      Object.keys(pendingRef.current).length > 0 ||
-      Object.keys(pendingRelationsRef.current).length > 0
-    ) {
-      return;
-    }
-    // 저장하는 동안 열린 초안이 없는지 요청 직전에 다시 본다.
-    if (draftsBlock()) return;
-    await approve.mutateAsync().catch(() => undefined);
+      // reducer 가 정본이다 — 탭을 옮겼다 돌아와 되찾은 편집도 여기에만 있을 수 있다.
+      const items = { ...editsRef.current.pendingItems, ...pendingRef.current };
+      for (const [itemId, edit] of Object.entries(items)) {
+        if (!(await commitItem(itemId, edit))) return;
+      }
+      const relations = {
+        ...editsRef.current.pendingRelations,
+        ...pendingRelationsRef.current,
+      };
+      for (const [relationId, edit] of Object.entries(relations)) {
+        if (!(await commitRelation(relationId, edit))) return;
+      }
+      if (
+        Object.keys(pendingRef.current).length > 0 ||
+        Object.keys(pendingRelationsRef.current).length > 0
+      ) {
+        return;
+      }
+      // 저장하는 동안 열린 초안이 없는지 요청 직전에 다시 본다.
+      if (draftsBlock()) return;
+      await approve.mutateAsync().catch(() => undefined);
     })();
     approvalInFlight.set(noteId, flow);
     try {
@@ -592,32 +759,46 @@ export function MeetingReview({
     }
   }, [approve, commitItem, commitRelation, draftsBlock, noteId]);
 
-  const jumpTo = useCallback((target: { itemId?: string; relationId?: string }) => {
-    if (target.itemId) setSelectedItemId(target.itemId);
-    const selector = target.itemId
-      ? `[data-item-id="${target.itemId}"]`
-      : `[data-relation-id="${target.relationId}"]`;
-    document.querySelector(selector)?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, []);
+  const jumpTo = useCallback(
+    (target: { itemId?: string; relationId?: string }) => {
+      if (target.itemId) setSelectedItemId(target.itemId);
+      const selector = target.itemId
+        ? `[data-item-id="${target.itemId}"]`
+        : `[data-relation-id="${target.relationId}"]`;
+      document
+        .querySelector(selector)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    },
+    []
+  );
 
   if (reviewQuery.isLoading) {
     return <ReviewSkeleton />;
   }
   if (!review) {
     // 권한 없음(403)은 항목·근거를 싣지 않는다. 빈 자리에 사유만 남긴다.
-    if (errorCodeOf(reviewQuery.error) === "FORBIDDEN" || errorCodeOf(reviewQuery.error) === "NOT_MEETING_PARTICIPANT") {
+    if (
+      errorCodeOf(reviewQuery.error) === "FORBIDDEN" ||
+      errorCodeOf(reviewQuery.error) === "NOT_MEETING_PARTICIPANT"
+    ) {
       return (
         <p role="alert" className="text-[13px] text-[var(--el-muted)]">
           이 회의의 검토본을 볼 권한이 없습니다.
         </p>
       );
     }
-    return <InlineRetry onRetry={() => void reviewQuery.refetch()} label="검토본을 불러오지 못했습니다" />;
+    return (
+      <InlineRetry
+        onRetry={() => void reviewQuery.refetch()}
+        label="검토본을 불러오지 못했습니다"
+      />
+    );
   }
 
   const screen = toReviewScreen(review);
   // 승인 요청이 도는 동안은 잠근다 — 그새 고친 것은 이미 나간 승인에 없고, 성공하면 사라진다.
-  const canEdit = isStarter && !review.approved && !approve.isPending && !preparingApproval;
+  const canEdit =
+    isStarter && !review.approved && !approve.isPending && !preparingApproval;
   const unsavedCount =
     Object.keys(edits.pendingItems).length +
     Object.keys(edits.pendingRelations).length +
@@ -629,16 +810,24 @@ export function MeetingReview({
     onEdit: onEditItem,
     onCommit: onCommitItem,
     // 남아 있는 편집이 있으면 그것을 함께 저장한다 — 빈 저장으로 편집을 지우지 않는다.
-    onMarkReviewed: (itemId: string) => void commitItem(itemId, pendingRef.current[itemId] ?? {}),
+    onMarkReviewed: (itemId: string) =>
+      void commitItem(itemId, pendingRef.current[itemId] ?? {}),
     onKeepLocal: (itemId: string) => {
       // 사용자가 내 편집을 고른 뒤에만 기준 revision 을 서버 값으로 올린다. reducer 와 ref 둘 다.
       const conflict = editsRef.current.conflicts[`item:${itemId}`];
       if (conflict?.kind === "item") {
-        dispatch({ type: "rebase", key: `item:${itemId}`, revision: conflict.server.revision });
+        dispatch({
+          type: "rebase",
+          key: `item:${itemId}`,
+          revision: conflict.server.revision,
+        });
         if (pendingRef.current[itemId]) {
           pendingRef.current = {
             ...pendingRef.current,
-            [itemId]: { ...pendingRef.current[itemId], baseRevision: conflict.server.revision },
+            [itemId]: {
+              ...pendingRef.current[itemId],
+              baseRevision: conflict.server.revision,
+            },
           };
         }
       }
@@ -696,11 +885,18 @@ export function MeetingReview({
         onKeepLocal={(relationId) => {
           const conflict = editsRef.current.conflicts[`relation:${relationId}`];
           if (conflict?.kind === "relation") {
-            dispatch({ type: "rebase", key: `relation:${relationId}`, revision: conflict.server.revision });
+            dispatch({
+              type: "rebase",
+              key: `relation:${relationId}`,
+              revision: conflict.server.revision,
+            });
             if (pendingRelationsRef.current[relationId]) {
               pendingRelationsRef.current = {
                 ...pendingRelationsRef.current,
-                [relationId]: { ...pendingRelationsRef.current[relationId], baseRevision: conflict.server.revision },
+                [relationId]: {
+                  ...pendingRelationsRef.current[relationId],
+                  baseRevision: conflict.server.revision,
+                },
               };
             }
           }
@@ -708,7 +904,10 @@ export function MeetingReview({
         }}
         onDraftChange={onDraftChange}
         onTakeServer={(relationId) => {
-          pendingRelationsRef.current = withoutKey(pendingRelationsRef.current, relationId);
+          pendingRelationsRef.current = withoutKey(
+            pendingRelationsRef.current,
+            relationId
+          );
           dispatch({ type: "take-server", key: `relation:${relationId}` });
           void invalidateReview();
         }}
@@ -725,7 +924,9 @@ function ReviewSkeleton() {
   return (
     <div aria-label="검토본을 불러오는 중" className="space-y-8">
       <div className="space-y-3 rounded-[12px] border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4">
-        <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">검토·확정</h3>
+        <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">
+          검토·확정
+        </h3>
         <Skeleton className="h-4 w-[60%]" />
         <Skeleton className="h-9 w-[132px]" />
       </div>

@@ -75,6 +75,8 @@ export function RelationsPanel({
       : "READY"
     : combinedStatus(layers.IN_MEETING, layers.PROJECT);
   const anyFailed = layers.IN_MEETING === "FAILED" || layers.PROJECT === "FAILED";
+  // 판정이 도는 동안은 재요청을 그리지 않는다 — 서버가 RECHECK_IN_PROGRESS 로 거절한다.
+  const anyGenerating = layers.IN_MEETING === "GENERATING" || layers.PROJECT === "GENERATING";
   const visibleRelations = screen.relations.filter((relation) => hasContent(layers[relation.layer]));
   const layout = useMemo(
     () =>
@@ -93,7 +95,7 @@ export function RelationsPanel({
       emptyLabel="이 회의에서 제안된 연결이 없습니다."
       failedLabel="연결을 판정하지 못했습니다. 다시 판정을 요청할 수 있습니다."
       aside={
-        canEdit && (staleCount > 0 || anyFailed) ? (
+        canEdit && !anyGenerating && (staleCount > 0 || anyFailed) ? (
           <Button size="sm" variant="outline" className="h-7" loading={recheckPending} onClick={onRecheck}>
             <RefreshCw aria-hidden className="size-3.5" />
             {anyFailed ? "다시 판정 요청" : `오래된 ${staleCount}건 재검토`}
