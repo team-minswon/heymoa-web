@@ -775,18 +775,19 @@ export function MeetingReview({
   if (reviewQuery.isLoading) {
     return <ReviewSkeleton />;
   }
+  // 권한 없음(403)은 항목·근거를 싣지 않는다. 빈 자리에 사유만 남긴다. 데이터 유무보다 먼저 —
+  // 폴링이 거부되면 Query 는 옛 data 를 남기는데, 그것을 계속 보이면 안 된다.
+  if (
+    errorCodeOf(reviewQuery.error) === "FORBIDDEN" ||
+    errorCodeOf(reviewQuery.error) === "NOT_MEETING_PARTICIPANT"
+  ) {
+    return (
+      <p role="alert" className="text-[13px] text-[var(--el-muted)]">
+        이 회의의 검토본을 볼 권한이 없습니다.
+      </p>
+    );
+  }
   if (!review) {
-    // 권한 없음(403)은 항목·근거를 싣지 않는다. 빈 자리에 사유만 남긴다.
-    if (
-      errorCodeOf(reviewQuery.error) === "FORBIDDEN" ||
-      errorCodeOf(reviewQuery.error) === "NOT_MEETING_PARTICIPANT"
-    ) {
-      return (
-        <p role="alert" className="text-[13px] text-[var(--el-muted)]">
-          이 회의의 검토본을 볼 권한이 없습니다.
-        </p>
-      );
-    }
     return (
       <InlineRetry
         onRetry={() => void reviewQuery.refetch()}

@@ -121,17 +121,16 @@ export function ProjectConceptSummary({
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {summaryQuery.isLoading ? (
             <SummarySkeleton />
+          ) : errorIsForbidden(summaryQuery.error) ? (
+            // 데이터 유무보다 먼저 — 폴링이 거부되면 Query 는 옛 data 를 남긴다.
+            <p role="alert" className="text-[13px] text-[var(--el-muted)]">
+              이 프로젝트의 요약을 볼 권한이 없습니다.
+            </p>
           ) : !summary ? (
-            errorIsForbidden(summaryQuery.error) ? (
-              <p role="alert" className="text-[13px] text-[var(--el-muted)]">
-                이 프로젝트의 요약을 볼 권한이 없습니다.
-              </p>
-            ) : (
-              <InlineRetry
-                onRetry={() => void summaryQuery.refetch()}
-                label="요약을 불러오지 못했습니다"
-              />
-            )
+            <InlineRetry
+              onRetry={() => void summaryQuery.refetch()}
+              label="요약을 불러오지 못했습니다"
+            />
           ) : (
             <SummaryBody
               summary={summary}
