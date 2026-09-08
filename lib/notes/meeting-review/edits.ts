@@ -67,7 +67,8 @@ export type EditsAction =
   | { type: "edit-item"; itemId: string; edit: ItemEdit }
   | { type: "edit-relation"; relationId: string; edit: RelationEdit }
   | { type: "saving"; key: EditKey }
-  | { type: "saved"; key: EditKey; reviewVersion: number }
+  /** `submitted` 가 있으면 그 편집만 걷는다 — 늦은 응답이 그새 새로 쌓인 편집을 지우지 않게. */
+  | { type: "saved"; key: EditKey; reviewVersion: number; submitted?: ItemEdit | RelationEdit }
   | { type: "conflict"; key: EditKey; conflict: Conflict }
   | { type: "failed"; key: EditKey; message: string }
   | { type: "keep-local"; key: EditKey }
@@ -128,15 +129,20 @@ export function reduceEdits(state: EditsState, action: EditsAction): EditsState 
 
     case "saved": {
       const [kind, id] = splitKey(action.key);
+      const pending = kind === "item" ? state.pendingItems[id] : state.pendingRelations[id];
+      const clears =
+        action.submitted === undefined ||
+        pending === undefined ||
+        JSON.stringify(pending) === JSON.stringify(action.submitted);
       const next: EditsState = {
         ...state,
         saving: withoutKey(state.saving, action.key),
-        conflicts: without(state.conflicts, action.key),
+        conflicts: clears ? without(state.conflicts, action.key) : state.conflicts,
         failures: without(state.failures, action.key),
         pendingItems:
-          kind === "item" ? without(state.pendingItems, id) : state.pendingItems,
+          kind === "item" && clears ? without(state.pendingItems, id) : state.pendingItems,
         pendingRelations:
-          kind === "relation"
+          kind === "relation" && clears
             ? without(state.pendingRelations, id)
             : state.pendingRelations,
       };

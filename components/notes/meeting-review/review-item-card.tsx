@@ -83,7 +83,10 @@ export function ReviewItemCard({
   };
 
   const toggleIncluded = () => {
-    onEdit(item.itemId, { included: !shown.included, baseRevision: item.revision });
+    // 미저장 편집이 있으면 그 편집의 기준 revision 을 그대로 둔다 — 여기서 최신값으로 덮으면
+    // 충돌 대조 없이 남의 저장을 덮어쓴다. 없을 때만 지금 revision 이 기준이다.
+    const hasPending = shown.content !== item.content || shown.included !== item.included;
+    onEdit(item.itemId, hasPending ? { included: !shown.included } : { included: !shown.included, baseRevision: item.revision });
     onCommit(item.itemId);
   };
 
@@ -229,6 +232,8 @@ export function ReviewItemCard({
                 variant="ghost"
                 className="h-7"
                 loading={saving}
+                // 충돌 대조 중에는 먼저 고른다 — 제외/복원이 대조를 건너뛰고 저장되면 안 된다.
+                disabled={conflict !== null}
                 onClick={toggleIncluded}
               >
                 {shown.included ? "제외" : "복원"}

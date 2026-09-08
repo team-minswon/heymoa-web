@@ -245,24 +245,28 @@ export function MeetingReview({
             : old
         );
         if (key.startsWith("item:") && current?.item) {
-          dispatch({
-            type: "conflict",
+          const action = {
+            type: "conflict" as const,
             key,
-            conflict: { kind: "item", local: local as ItemEdit, server: current.item, currentReviewVersion },
-          });
+            conflict: { kind: "item" as const, local: local as ItemEdit, server: current.item, currentReviewVersion },
+          };
+          dispatch(action);
+          settleStoredEdits(noteId, action);
           return;
         }
         if (key.startsWith("relation:") && current?.relation) {
-          dispatch({
-            type: "conflict",
+          const action = {
+            type: "conflict" as const,
             key,
             conflict: {
-              kind: "relation",
+              kind: "relation" as const,
               local: local as RelationEdit,
               server: current.relation,
               currentReviewVersion,
             },
-          });
+          };
+          dispatch(action);
+          settleStoredEdits(noteId, action);
           return;
         }
         // 항목 자체가 아니라 검토본 버전이 어긋났다. 다시 읽고 편집은 남긴다.
@@ -437,11 +441,13 @@ export function MeetingReview({
         bumpVersion(result.reviewVersion);
         // 응답을 먼저 캐시에 반영한다 — 재조회가 늦거나 실패해도 저장한 값과 revision 이 남는다.
         applyMutation(result);
-        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion };
+        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion, submitted: edit };
         dispatch(saved);
         // 패널이 언마운트된 뒤 도착했어도 보관소에는 닿아야 한다.
         settleStoredEdits(noteId, saved);
-        pendingRef.current = withoutKey(pendingRef.current, itemId);
+        if (JSON.stringify(pendingRef.current[itemId]) === JSON.stringify(edit)) {
+          pendingRef.current = withoutKey(pendingRef.current, itemId);
+        }
         void invalidateReview();
         return true;
       } catch (error) {
@@ -466,10 +472,12 @@ export function MeetingReview({
         const result = await saveRelation.mutateAsync({ relationId, edit });
         bumpVersion(result.reviewVersion);
         applyMutation(result);
-        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion };
+        const saved = { type: "saved" as const, key, reviewVersion: result.reviewVersion, submitted: edit };
         dispatch(saved);
         settleStoredEdits(noteId, saved);
-        pendingRelationsRef.current = withoutKey(pendingRelationsRef.current, relationId);
+        if (JSON.stringify(pendingRelationsRef.current[relationId]) === JSON.stringify(edit)) {
+          pendingRelationsRef.current = withoutKey(pendingRelationsRef.current, relationId);
+        }
         void invalidateReview();
         return true;
       } catch (error) {
