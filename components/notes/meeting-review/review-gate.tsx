@@ -33,6 +33,9 @@ const REJECT_LABEL: Record<ApprovalRejected["code"], string> = {
   PROJECT_VERSION_CONFLICT: "프로젝트의 승인 버전이 바뀌었습니다. 비교를 다시 해야 합니다",
 };
 
+/** server 의 구조화된 거부, 또는 계약 밖 실패(네트워크·500). 후자는 서버 문구를 그대로 쓴다. */
+export type ApprovalFailure = ApprovalRejected | { code: "REQUEST_FAILED"; message: string };
+
 export type ApprovalDetail =
   | { status: "loading" }
   | { status: "error"; retry: () => void }
@@ -62,7 +65,7 @@ export function ReviewGate({
   isStarter: boolean;
   unsavedCount: number;
   approving: boolean;
-  rejected: ApprovalRejected | null;
+  rejected: ApprovalFailure | null;
   /** 승인됐을 때의 상세 조회 상태. 미승인이면 null. */
   approvalDetail: ApprovalDetail | null;
   onApprove: () => void;
@@ -136,7 +139,9 @@ export function ReviewGate({
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
               <div className="text-[13px]">
                 <p className="font-medium text-[var(--el-ink)]">승인되지 않았습니다</p>
-                <p className="text-[var(--el-muted)]">{REJECT_LABEL[rejected.code] ?? rejected.message}</p>
+                <p className="text-[var(--el-muted)]">
+                  {rejected.code === "REQUEST_FAILED" ? rejected.message : REJECT_LABEL[rejected.code]}
+                </p>
               </div>
             </div>
           ) : null}

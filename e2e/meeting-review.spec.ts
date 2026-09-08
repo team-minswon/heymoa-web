@@ -98,13 +98,13 @@ test.describe("검토·확정 화면", () => {
     test.setTimeout(90_000);
     await openReview(page, STARTER_NOTE_ID);
 
-    // 미검토 항목 둘: 이슈는 제외했다 복원, 사람 추가 항목은 제외.
-    for (const itemId of ["0HZX2K7M9R004", "0HZX2K7M9R005"]) {
-      const card = page.locator(`[data-item-id="${itemId}"]`);
-      await card.getByRole("button", { name: "제외" }).click();
-      await expect(card.getByText("제외됨")).toBeVisible();
-    }
-    await page.locator('[data-item-id="0HZX2K7M9R004"]').getByRole("button", { name: "복원" }).click();
+    // 미검토 항목 둘: 이슈는 내용 그대로 「검토 완료」, 사람 추가 항목은 제외.
+    const issue = page.locator('[data-item-id="0HZX2K7M9R004"]');
+    await issue.getByRole("button", { name: "검토 완료" }).click();
+    await expect(issue.getByText("미검토")).toHaveCount(0);
+    const human = page.locator('[data-item-id="0HZX2K7M9R005"]');
+    await human.getByRole("button", { name: "제외" }).click();
+    await expect(human.getByText("제외됨")).toBeVisible();
     const gate = page.getByTestId("review-gate");
     // 저장은 완료 단위라 server 게이트가 갱신될 때까지 기다린다 — 다음 저장의 CAS 가 그 버전을 쓴다.
     await expect(gate.getByText("미검토 항목")).toHaveCount(0);

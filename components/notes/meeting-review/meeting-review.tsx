@@ -20,8 +20,10 @@ import {
 import {
   approvalRejectedSchema,
   reviewConflictSchema,
-  type ApprovalRejected,
+  type ApprovalGate,
   type MeetingApproval,
+  type ReviewItem,
+  type ReviewRelation,
 } from "@/lib/notes/meeting-review/contract";
 import {
   initialEdits,
@@ -39,7 +41,7 @@ import { needsPolling, toReviewScreen } from "@/lib/notes/meeting-review/select"
 
 import { EvaluationPanel } from "./evaluation-panel";
 import { RelationsPanel } from "./relations-panel";
-import { ReviewGate } from "./review-gate";
+import { ReviewGate, type ApprovalFailure } from "./review-gate";
 import { ReviewRegions } from "./review-regions";
 
 /**
@@ -153,11 +155,35 @@ export function MeetingReview({
   }, [itemsStatus, onItemsReady]);
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [rejected, setRejected] = useState<ApprovalRejected | null>(null);
+  const [rejected, setRejected] = useState<ApprovalFailure | null>(null);
 
   const invalidateReview = useCallback(
     () => queryClient.invalidateQueries({ queryKey: getMeetingReviewQueryKey(noteId) }),
     [queryClient, noteId]
+  );
+
+  /** 저장 응답(항목·관계·게이트·버전)을 캐시에 겹쳐 쓴다. 재조회는 그 뒤에 수렴시킨다. */
+  const applyMutation = useCallback(
+    (result: { reviewVersion: number; item?: ReviewItem; relation?: ReviewRelation; approval?: ApprovalGate }) => {
+      queryClient.setQueryData(reviewKey, (old: typeof review) =>
+        old
+          ? {
+              ...old,
+              reviewVersion: Math.max(old.reviewVersion, result.reviewVersion),
+              items: result.item
+                ? old.items.map((entry) => (entry.itemId === result.item!.itemId ? result.item! : entry))
+                : old.items,
+              relations: result.relation
+                ? old.relations.map((entry) =>
+                    entry.relationId === result.relation!.relationId ? result.relation! : entry
+                  )
+                : old.relations,
+              approval: result.approval ?? old.approval,
+            }
+          : old
+      );
+    },
+    [queryClient, reviewKey]
   );
 
   /** 저장 실패를 갈라 reducer 로 보낸다. 409 는 충돌, 나머지는 문구. */
@@ -300,8 +326,9 @@ export function MeetingReview({
         // 서버가 준 게이트·버전으로 화면을 맞춘다. 검토본은 건드리지 않는다.
         void invalidateReview();
       } else {
+        // 계약 밖 실패(네트워크·500)는 충돌로 위장하지 않고 서버 문구 그대로 보여 준다.
         setRejected({
-          code: "REVIEW_VERSION_CONFLICT",
+          code: "REQUEST_FAILED",
           message: errorMessageOf(error, errorCodeOf(error) ?? "승인하지 못했습니다."),
         });
       }
@@ -324,6 +351,8 @@ export function MeetingReview({
       try {
         const result = await saveItem.mutateAsync({ itemId, edit });
         bumpVersion(result.reviewVersion);
+        // 응답을 먼저 캐시에 반영한다 — 재조회가 늦거나 실패해도 저장한 값과 revision 이 남는다.
+        applyMutation(result);
         dispatch({ type: "saved", key, reviewVersion: result.reviewVersion });
         pendingRef.current = withoutKey(pendingRef.current, itemId);
         void invalidateReview();
@@ -333,7 +362,7 @@ export function MeetingReview({
         return false;
       }
     },
-    [saveItem, invalidateReview, settleFailure, bumpVersion]
+    [saveItem, invalidateReview, settleFailure, bumpVersion, applyMutation]
   );
 
   const commitRelation = useCallback(
@@ -345,6 +374,7 @@ export function MeetingReview({
       try {
         const result = await saveRelation.mutateAsync({ relationId, edit });
         bumpVersion(result.reviewVersion);
+        applyMutation(result);
         dispatch({ type: "saved", key, reviewVersion: result.reviewVersion });
         pendingRelationsRef.current = withoutKey(pendingRelationsRef.current, relationId);
         void invalidateReview();
@@ -354,7 +384,7 @@ export function MeetingReview({
         return false;
       }
     },
-    [saveRelation, invalidateReview, settleFailure, bumpVersion]
+    [saveRelation, invalidateReview, settleFailure, bumpVersion, applyMutation]
   );
 
   const onEditItem = useCallback((itemId: string, edit: ItemEdit) => {
@@ -426,6 +456,7 @@ export function MeetingReview({
     onSelect: setSelectedItemId,
     onEdit: onEditItem,
     onCommit: onCommitItem,
+    onMarkReviewed: (itemId: string) => void commitItem(itemId, {}),
     onKeepLocal: (itemId: string) => dispatch({ type: "keep-local", key: `item:${itemId}` }),
     onTakeServer: (itemId: string) => {
       pendingRef.current = withoutKey(pendingRef.current, itemId);

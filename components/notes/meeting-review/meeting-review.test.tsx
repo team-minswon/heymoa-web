@@ -137,6 +137,7 @@ describe("ReviewItemCard", () => {
     onSelect: noop,
     onEdit: noop,
     onCommit: noop,
+    onMarkReviewed: noop,
     onKeepLocal: noop,
     onTakeServer: noop,
     onEvidenceSelect: noop,
@@ -191,6 +192,13 @@ describe("ReviewItemCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "내 편집 유지" }));
     expect(onKeepLocal).toHaveBeenCalledWith(item.itemId);
     expect(onTakeServer).not.toHaveBeenCalled();
+  });
+
+  it("미검토 항목은 내용을 바꾸지 않고도 「검토 완료」로 저장한다", () => {
+    const onMarkReviewed = vi.fn();
+    render(<ul><ReviewItemCard {...base} onMarkReviewed={onMarkReviewed} /></ul>);
+    fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
+    expect(onMarkReviewed).toHaveBeenCalledWith(item.itemId);
   });
 
   it("편집 권한이 없으면 수정·제외 컨트롤이 없다", () => {

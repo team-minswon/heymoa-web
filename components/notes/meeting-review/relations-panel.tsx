@@ -52,7 +52,21 @@ export function RelationsPanel({
   recheckPending: boolean;
   onEvidenceSelect: (segmentId: string) => void;
 }) {
-  const status = combinedStatus(screen.readiness.inMeetingRelations, screen.readiness.projectRelations);
+  const layers = {
+    IN_MEETING: screen.readiness.inMeetingRelations,
+    PROJECT: screen.readiness.projectRelations,
+  } as const;
+  const hasContent = (status: RegionStatus) => status === "READY" || status === "STALE";
+  // 두 층은 독립이다. 한 층이라도 준비됐으면 그 관계는 보여 주고, 나머지 층의 기다림·실패는
+  // 그 층의 안내로만 적는다. 둘 다 준비 전일 때만 틀 전체가 기다린다.
+  const anyReady = hasContent(layers.IN_MEETING) || hasContent(layers.PROJECT);
+  const status: RegionStatus = anyReady
+    ? layers.IN_MEETING === "STALE" || layers.PROJECT === "STALE"
+      ? "STALE"
+      : "READY"
+    : combinedStatus(layers.IN_MEETING, layers.PROJECT);
+  const anyFailed = layers.IN_MEETING === "FAILED" || layers.PROJECT === "FAILED";
+  const visibleRelations = screen.relations.filter((relation) => hasContent(layers[relation.layer]));
   const layout = useMemo(
     () =>
       selectedItemId
@@ -70,16 +84,21 @@ export function RelationsPanel({
       emptyLabel="이 회의에서 제안된 연결이 없습니다."
       failedLabel="연결을 판정하지 못했습니다. 다시 판정을 요청할 수 있습니다."
       aside={
-        canEdit && (staleCount > 0 || status === "FAILED") ? (
+        canEdit && (staleCount > 0 || anyFailed) ? (
           <Button size="sm" variant="outline" className="h-7" loading={recheckPending} onClick={onRecheck}>
             <RefreshCw aria-hidden className="size-3.5" />
-            {status === "FAILED" ? "다시 판정 요청" : `오래된 ${staleCount}건 재검토`}
+            {anyFailed ? "다시 판정 요청" : `오래된 ${staleCount}건 재검토`}
           </Button>
         ) : null
       }
       testId="review-relations"
     >
       <div className="space-y-4">
+        {(["IN_MEETING", "PROJECT"] as const).map((layer) =>
+          hasContent(layers[layer]) ? null : (
+            <LayerNotice key={layer} layer={layer} status={layers[layer]} />
+          )
+        )}
         {layout ? (
           <div className="rounded-[12px] border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-2">
             <RelationWebView layout={layout} onSelectNode={onSelectItem} />
@@ -90,7 +109,7 @@ export function RelationsPanel({
           </p>
         )}
         <ul className="space-y-2">
-          {screen.relations.map((relation) => (
+          {visibleRelations.map((relation) => (
             <RelationRow
               key={relation.relationId}
               relation={relation}
@@ -116,6 +135,28 @@ export function RelationsPanel({
         </ul>
       </div>
     </RegionFrame>
+  );
+}
+
+const LAYER_LABEL = { IN_MEETING: "이번 회의 안 연결", PROJECT: "이전 확정과의 연결" } as const;
+
+/** 준비되지 않은 층 하나의 안내. 다른 층의 관계를 가리지 않는다. */
+function LayerNotice({ layer, status }: { layer: "IN_MEETING" | "PROJECT"; status: RegionStatus }) {
+  const label = LAYER_LABEL[layer];
+  if (status === "EMPTY") {
+    return <p className="text-[12px] text-[var(--el-muted-soft)]">{label}: 제안된 연결이 없습니다.</p>;
+  }
+  if (status === "FAILED") {
+    return (
+      <p role="alert" className="text-[12px] text-[var(--el-error-strong)]">
+        {label}: 판정하지 못했습니다. 다시 판정을 요청할 수 있습니다.
+      </p>
+    );
+  }
+  return (
+    <p role="status" className="text-[12px] text-[var(--el-muted)]">
+      {label}: 판정하고 있습니다.
+    </p>
   );
 }
 

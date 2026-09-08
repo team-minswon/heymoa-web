@@ -28,6 +28,8 @@ export type ReviewItemCardProps = {
   onEdit: (itemId: string, edit: ItemEdit) => void;
   /** 편집 완료 단위 — blur · 제외/복원 누름. 키 입력마다 부르지 않는다. */
   onCommit: (itemId: string) => void;
+  /** 내용을 바꾸지 않고 「봤다」를 저장한다. 미검토 항목에만 보인다. */
+  onMarkReviewed: (itemId: string) => void;
   onKeepLocal: (itemId: string) => void;
   onTakeServer: (itemId: string) => void;
   onEvidenceSelect: (segmentId: string) => void;
@@ -53,6 +55,7 @@ export function ReviewItemCard({
   onSelect,
   onEdit,
   onCommit,
+  onMarkReviewed,
   onKeepLocal,
   onTakeServer,
   onEvidenceSelect,
@@ -197,10 +200,21 @@ export function ReviewItemCard({
           </button>
           {canEdit ? (
             <>
+              {unreviewed ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto h-7"
+                  loading={saving}
+                  onClick={() => onMarkReviewed(item.itemId)}
+                >
+                  검토 완료
+                </Button>
+              ) : null}
               <Button
                 size="sm"
                 variant="ghost"
-                className="ml-auto h-7"
+                className={cn("h-7", !unreviewed && "ml-auto")}
                 onClick={beginEditing}
                 disabled={saving || editing}
               >

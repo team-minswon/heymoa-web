@@ -16,7 +16,13 @@ import { ReviewItemCard, type ReviewItemCardProps } from "./review-item-card";
 
 type ItemActions = Pick<
   ReviewItemCardProps,
-  "onSelect" | "onEdit" | "onCommit" | "onKeepLocal" | "onTakeServer" | "onEvidenceSelect"
+  | "onSelect"
+  | "onEdit"
+  | "onCommit"
+  | "onMarkReviewed"
+  | "onKeepLocal"
+  | "onTakeServer"
+  | "onEvidenceSelect"
 >;
 
 /**
@@ -60,10 +66,15 @@ export function ReviewRegions({
     />
   );
 
+  // 빈 검토본에서도 사람이 첫 항목을 넣을 수 있어야 한다. 서버가 EMPTY 라고 해도 편집 권한이
+  // 있으면 틀은 열어 두고, 빈 안내와 추가 폼만 그린다.
+  const nothingToShow = screen.regions.length === 0 && screen.unplacedItems.length === 0;
+  const openAlthoughEmpty =
+    canEdit && (screen.readiness.items === "EMPTY" || (screen.readiness.items === "READY" && nothingToShow));
   return (
     <RegionFrame
       title="회의 결과"
-      status={screen.readiness.items}
+      status={openAlthoughEmpty ? "READY" : screen.readiness.items}
       waitingLabel="회의 명제를 정리하는 중입니다. 준비되면 여기에 보입니다. 다른 화면으로 옮겨도 됩니다."
       emptyLabel="이 회의에서 정리된 명제가 없습니다."
       failedLabel="명제를 준비하지 못했습니다. 회의 기록은 그대로 남아 있습니다."
@@ -80,7 +91,12 @@ export function ReviewRegions({
             {region.items.map((item) => renderItem(item, region.kind === item.kind))}
           </RegionBlock>
         ))}
-        {screen.unplacedItems.length > 0 ? (
+        {openAlthoughEmpty && nothingToShow ? (
+          <p className="text-[13px] text-[var(--el-muted-soft)]">
+            이 회의에서 정리된 명제가 없습니다. 빠진 결과가 있으면 직접 추가할 수 있습니다.
+          </p>
+        ) : null}
+        {screen.unplacedItems.length > 0 || (openAlthoughEmpty && nothingToShow) ? (
           <RegionBlock
             region={{ regionId: "unplaced", title: "기타", kind: "", items: screen.unplacedItems }}
             canEdit={canEdit}
