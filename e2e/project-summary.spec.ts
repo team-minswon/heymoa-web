@@ -27,6 +27,21 @@ test.describe("프로젝트 개념 요약", () => {
     const statement = surface.getByTestId("summary-statement").nth(1);
     await statement.getByRole("button", { name: /근거 \d/ }).click();
     await expect(statement.getByRole("link", { name: "회의 열기" })).toBeVisible();
+
+    // 근거 인용은 이 프로젝트의 실제 노트 전사로 간다 — 목 표본의 가짜 id 가 아니라.
+    const noteHref = await statement.getByRole("link", { name: "회의 열기" }).getAttribute("href");
+    const noteId = noteHref?.match(/notes\/([^/?]+)/)?.[1];
+    expect(noteId).toBeTruthy();
+    await statement.locator("ul button").first().click();
+    await expect(page).toHaveURL(new RegExp(`/notes/${noteId}\\?tab=transcript&segment=`));
+    await expect(page.getByRole("tabpanel", { name: "전사" }).getByTestId("archive-transcript-block").first()).toBeVisible();
+    // 하이라이트는 잠깐이라 잡지 않는다. 대신 URL 의 segment 가 그 노트의 실제 전사에 있는지 본다.
+    const segmentId = new URL(page.url()).searchParams.get("segment");
+    const segmentIds = await page.evaluate(async (id) => {
+      const body = await (await fetch(`/v1/notes/${id}/transcript`)).json();
+      return (body.data?.segments ?? []).map((segment: { segmentId: string }) => segment.segmentId);
+    }, noteId);
+    expect(segmentIds).toContain(segmentId);
   });
 
   test("요약이 없는 프로젝트는 첫 조회가 생성을 시작하고 준비되면 채워진다", async ({ page }) => {

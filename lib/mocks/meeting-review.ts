@@ -546,12 +546,16 @@ export function markSummaryStale(projectId: string, approvalVersion: number) {
   persist();
 }
 
-function summaryStateOf(projectId: string, seedReady: boolean): SummaryState {
+function summaryStateOf(
+  projectId: string,
+  seedReady: boolean,
+  evidence: SummarySeedOptions["evidence"] = null
+): SummaryState {
   restore();
   let state = summaries.get(projectId);
   if (!state) {
     const summary = seedReady
-      ? sampleConceptSummary({ projectId })
+      ? bindSummaryEvidence(sampleConceptSummary({ projectId }), evidence)
       : sampleConceptSummary({
           projectId,
           status: "NONE",
@@ -571,8 +575,43 @@ function summaryStateOf(projectId: string, seedReady: boolean): SummaryState {
  * `seedReady` 가 거짓인 프로젝트는 첫 조회가 생성을 시작한다(NONE → GENERATING → READY).
  * 참이면 처음부터 READY 다. 어느 쪽인지는 핸들러가 프로젝트 순서로 정한다.
  */
-export function readConceptSummary(projectId: string, seedReady: boolean): ConceptSummary {
-  const state = summaryStateOf(projectId, seedReady);
+export type SummarySeedOptions = {
+  /** 근거가 가리킬 이 프로젝트의 실제 목 노트와 그 전사 segment. 없으면 표본 그대로다. */
+  evidence?: { noteId: string; segmentIds: readonly string[] } | null;
+};
+
+/** 표본 요약의 근거를 실제 노트·전사에 얹는다. 링크와 인용이 목에서도 닿게. */
+function bindSummaryEvidence(summary: ConceptSummary, evidence: SummarySeedOptions["evidence"]): ConceptSummary {
+  if (!evidence || evidence.segmentIds.length === 0) return summary;
+  const ids = evidence.segmentIds;
+  const bySequence = new Map<number, string>();
+  const remap = <T extends { segmentId: string; sequence: number }>(citation: T): T => {
+    const id = bySequence.get(citation.sequence) ?? ids[bySequence.size % ids.length];
+    bySequence.set(citation.sequence, id);
+    return { ...citation, segmentId: id };
+  };
+  const sections = Object.fromEntries(
+    Object.entries(summary.sections).map(([key, statements]) => [
+      key,
+      statements.map((statement) => ({
+        ...statement,
+        sources: statement.sources.map((source) =>
+          source.type === "APPROVED_ITEM"
+            ? { ...source, noteId: evidence.noteId, citations: source.citations?.map(remap) }
+            : source
+        ),
+      })),
+    ])
+  ) as ConceptSummary["sections"];
+  return { ...summary, sections };
+}
+
+export function readConceptSummary(
+  projectId: string,
+  seedReady: boolean,
+  options: SummarySeedOptions = {}
+): ConceptSummary {
+  const state = summaryStateOf(projectId, seedReady, options.evidence);
   if (state.summary.status === "NONE") {
     state.summary = { ...state.summary, status: "GENERATING" };
     state.polls = 0;
@@ -581,7 +620,7 @@ export function readConceptSummary(projectId: string, seedReady: boolean): Conce
   if (state.summary.status === "GENERATING") {
     state.polls += 1;
     if (state.polls >= GENERATING_POLLS) {
-      const ready = sampleConceptSummary({ projectId });
+      const ready = bindSummaryEvidence(sampleConceptSummary({ projectId }), options.evidence);
       state.summary = {
         ...ready,
         resultVersion: nextResultVersion(state.summary.resultVersion),

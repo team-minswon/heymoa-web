@@ -1088,9 +1088,18 @@ export const restHandlers = [
     reviewResult(() => readMeetingApproval(id(params.noteId)))
   ),
   http.get("*/v1/projects/:projectId/concept-summary", ({ params }) =>
-    reviewResult(() =>
-      readConceptSummary(id(params.projectId), summarySeededReady(id(params.projectId)))
-    )
+    reviewResult(() => {
+      const projectId = id(params.projectId);
+      // 근거는 이 프로젝트의 끝난 노트 중 전사가 있는 것을 가리킨다 — 링크와 인용이 실제로 닿게.
+      const note = mockDb
+        .listNotes(projectId)
+        .find((candidate) => candidate.meetingStatus === "ENDED" && mockDb.listSegments(candidate.noteId).length > 0)
+        ?? mockDb.listNotes(projectId).find((candidate) => candidate.meetingStatus === "ENDED");
+      const evidence = note
+        ? { noteId: note.noteId, segmentIds: mockDb.listSegments(note.noteId).map((segment) => segment.segmentId) }
+        : null;
+      return readConceptSummary(projectId, summarySeededReady(projectId), { evidence });
+    })
   ),
   http.post("*/v1/projects/:projectId/concept-summary/refresh", ({ params }) =>
     reviewResult(

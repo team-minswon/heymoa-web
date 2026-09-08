@@ -529,16 +529,23 @@ export function MeetingReview({
     setDraftCount(next.size);
   }, []);
 
+  /** 승인 준비(미저장 저장)부터 요청 응답까지의 잠금. `approve.isPending` 보다 먼저 켜진다. */
+  const [preparingApproval, setPreparingApproval] = useState(false);
+  const draftsBlock = useCallback(() => {
+    if (draftsRef.current.size === 0) return false;
+    setRejected({
+      code: "REQUEST_FAILED",
+      message: "작성 중인 항목 추가나 연결 이름 수정이 있습니다. 저장하거나 취소한 뒤 승인해 주세요.",
+    });
+    return true;
+  }, []);
+
   const onApprove = useCallback(async () => {
     setRejected(null);
-    if (draftsRef.current.size > 0) {
-      setRejected({
-        code: "REQUEST_FAILED",
-        message: "작성 중인 항목 추가나 연결 이름 수정이 있습니다. 저장하거나 취소한 뒤 승인해 주세요.",
-      });
-      return;
-    }
+    if (draftsBlock()) return;
     if (Object.keys(editsRef.current.conflicts).length > 0 || editsRef.current.saving.size > 0) return;
+    setPreparingApproval(true);
+    try {
     // reducer 가 정본이다 — 탭을 옮겼다 돌아와 되찾은 편집도 여기에만 있을 수 있다.
     const items = { ...editsRef.current.pendingItems, ...pendingRef.current };
     for (const [itemId, edit] of Object.entries(items)) {
@@ -554,8 +561,13 @@ export function MeetingReview({
     ) {
       return;
     }
-    approve.mutate();
-  }, [approve, commitItem, commitRelation]);
+    // 저장하는 동안 열린 초안이 없는지 요청 직전에 다시 본다.
+    if (draftsBlock()) return;
+    await approve.mutateAsync().catch(() => undefined);
+    } finally {
+      setPreparingApproval(false);
+    }
+  }, [approve, commitItem, commitRelation, draftsBlock]);
 
   const jumpTo = useCallback((target: { itemId?: string; relationId?: string }) => {
     if (target.itemId) setSelectedItemId(target.itemId);
@@ -582,7 +594,7 @@ export function MeetingReview({
 
   const screen = toReviewScreen(review);
   // 승인 요청이 도는 동안은 잠근다 — 그새 고친 것은 이미 나간 승인에 없고, 성공하면 사라진다.
-  const canEdit = isStarter && !review.approved && !approve.isPending;
+  const canEdit = isStarter && !review.approved && !approve.isPending && !preparingApproval;
   const unsavedCount =
     Object.keys(edits.pendingItems).length +
     Object.keys(edits.pendingRelations).length +
@@ -623,7 +635,7 @@ export function MeetingReview({
         screen={screen}
         isStarter={isStarter}
         unsavedCount={unsavedCount}
-        approving={approve.isPending}
+        approving={approve.isPending || preparingApproval}
         rejected={rejected}
         approvalDetail={
           !review.approved
