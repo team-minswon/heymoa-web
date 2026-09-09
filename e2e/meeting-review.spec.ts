@@ -18,8 +18,11 @@ test.describe("회의 검토본", () => {
     await openSummary(page, REVIEW_NOTE_ID);
     const headings = page.getByTestId("meeting-review").getByRole("heading", { level: 2 });
     await expect(headings).toHaveText(["결론", "논의 중", "참고"]);
-    // 참고는 접혀서 시작한다.
+    // 논의 중·참고는 접혀서 시작한다. 본문은 결정·할 일이다.
+    await expect(page.getByText("가입 후 첫 회의를 만들기까지의 이탈이")).not.toBeVisible();
     await expect(page.getByText("문구가 아니라 다음에 할 일이 보이지 않는")).not.toBeVisible();
+    await page.getByRole("button", { name: "논의 중" }).click();
+    await expect(page.getByText("가입 후 첫 회의를 만들기까지의 이탈이")).toBeVisible();
 
     await page.getByRole("button", { name: /첫 화면에서 회의 만들기를/ }).click();
     await expect(page.getByText("그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.")).toBeVisible();

@@ -97,9 +97,12 @@ export function MeetingReview({
     // 저장이 시작되면 날아가고 있는 조회를 끊는다. 늦게 도착한 옛 검토본이 방금 저장한
     // 응답을 캐시에서 덮지 않게.
     onMutate: () => queryClient.cancelQueries({ queryKey }),
-    onSuccess: (response: { status: number; data: unknown }) => {
+    onSuccess: async (response: { status: number; data: unknown }) => {
       // mutator 는 2xx 만 resolve 한다. 그 본문은 전부 검토본 응답이다.
       if (response.status !== 200 && response.status !== 201) return;
+      // 저장 도중에 시작된 조회(창 포커스 등)는 `onMutate` 가 못 끊었다. 캐시에 쓰기 직전에
+      // 한 번 더 끊는다 — 늦게 오는 옛 검토본이 방금 저장한 판을 덮지 않게.
+      await queryClient.cancelQueries({ queryKey });
       queryClient.setQueryData<getMeetingReviewResponse200>(queryKey, {
         data: response.data as MeetingReviewResponse,
         status: 200,
@@ -205,11 +208,12 @@ export function MeetingReview({
       <div className="mt-6 space-y-14">
         {groups.map((group) => (
           <ReviewGroupSection key={group.key} group={group}>
-            {(rows) =>
+            {(rows, showExcluded) =>
               rows.map((item) => (
                 <ReviewItemRow
                   key={item.itemId}
                   item={item}
+                  hidden={!item.included && !showExcluded}
                   evidence={resolveCitations(item.citations, segments)}
                   transcript={transcript}
                   reviewVersion={review.reviewVersion}
@@ -236,11 +240,12 @@ function ReviewGroupSection({
   children,
 }: {
   group: ReviewGroup;
-  children: (rows: ReviewItem[]) => React.ReactNode;
+  children: (rows: ReviewItem[], showExcluded: boolean) => React.ReactNode;
 }) {
   const [open, setOpen] = useState(!group.collapsed);
   const [showExcluded, setShowExcluded] = useState(false);
-  const total = group.items.length + group.excluded.length;
+  const total = group.items.length;
+  const live = total - group.excludedCount;
   return (
     <section aria-label={group.label} data-testid={`review-group-${group.key}`}>
       <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
@@ -263,34 +268,29 @@ function ReviewGroupSection({
         </button>
         {total ? (
           <span className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-            {total}
+            {live}
           </span>
         ) : null}
       </div>
       {/* 접어도 **언마운트하지 않는다.** 저장 중이거나 거절된 편집기가 줄 안에 있다 — 접었다
-          펼치면 초안과 실패 안내가 사라진다. `hidden` 속성이라 접근성 트리에서도 빠진다. */}
+          펼치면 초안과 실패 안내가 사라진다. `hidden` 속성이라 접근성 트리에서도 빠진다.
+          제외한 줄도 같은 이유로 자기 자리에 숨긴다. */}
       <div hidden={!open}>
-        {group.items.length ? (
-          <ul className="mt-5 space-y-5">{children(group.items)}</ul>
-        ) : (
+        {live === 0 ? (
           <p className="mt-5 text-sm text-[var(--el-muted)]">
-            {group.excluded.length ? "남은 항목이 없습니다." : "이 회의에서는 나오지 않았습니다."}
+            {total ? "남은 항목이 없습니다." : "이 회의에서는 나오지 않았습니다."}
           </p>
-        )}
-        {group.excluded.length ? (
-          <div className="mt-4">
-            <button
-              type="button"
-              aria-expanded={showExcluded}
-              onClick={() => setShowExcluded((value) => !value)}
-              className="text-[12px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
-            >
-              제외 {group.excluded.length}개 {showExcluded ? "접기" : "펼치기"}
-            </button>
-            <ul hidden={!showExcluded} className="mt-3 space-y-5">
-              {children(group.excluded)}
-            </ul>
-          </div>
+        ) : null}
+        {total ? <ul className="mt-5 space-y-5">{children(group.items, showExcluded)}</ul> : null}
+        {group.excludedCount ? (
+          <button
+            type="button"
+            aria-expanded={showExcluded}
+            onClick={() => setShowExcluded((value) => !value)}
+            className="mt-4 text-[12px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+          >
+            제외 {group.excludedCount}개 {showExcluded ? "접기" : "펼치기"}
+          </button>
         ) : null}
       </div>
     </section>

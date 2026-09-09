@@ -115,7 +115,7 @@ describe("MeetingReview", () => {
     const headings = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
     expect(headings).toEqual(["결론"]);
     const outcome = screen.getByRole("region", { name: "결론" });
-    expect(within(outcome).getByText("3")).toBeInTheDocument();
+    expect(within(outcome).getByText("2")).toBeInTheDocument();
     const visibleRows = within(outcome)
       .getAllByTestId("review-item")
       .filter((row) => !row.closest("[hidden]"));
@@ -250,6 +250,23 @@ describe("MeetingReview", () => {
     fireEvent.click(screen.getByRole("button", { name: "결론" }));
     expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue("QA 일정을 여섯째 주로 당긴다");
     expect(screen.getByRole("alert")).toHaveTextContent("검토본이 변경되었습니다.");
+  });
+
+  it("다른 창이 항목을 제외해도 열린 편집기는 그 자리에 남는다", () => {
+    const view = renderReview();
+    const row = screen.getByText("QA 일정을 당긴다").closest("li")!;
+    fireEvent.click(within(row).getByRole("button", { name: "수정" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), {
+      target: { value: "QA 일정을 일곱째 주로 당긴다" },
+    });
+    state.review = {
+      reviewVersion: 8,
+      items: [item({ itemId: "a", kind: "ACTION_ITEM", content: "QA 일정을 당긴다", included: false, revision: 4 })],
+    };
+    view.rerender(<MeetingReview noteId="n" canEdit onEvidenceSelect={onEvidenceSelect} />);
+    expect(screen.getByRole("textbox", { name: "항목 내용", hidden: true })).toHaveValue(
+      "QA 일정을 일곱째 주로 당긴다"
+    );
   });
 
   it("거절되면 편집기를 닫지 않고 사유를 그 줄에 남긴다", async () => {

@@ -83,6 +83,7 @@ function LegacySummary({
   isEnded,
   noteMeta,
   onEvidenceSelect,
+  active = true,
 }: SummaryProps) {
   const analysisQuery = useGetLatestAnalysis(noteId, {
     query: {
@@ -102,6 +103,12 @@ function LegacySummary({
     if (isEnded && !wasEndedRef.current) void refetch();
     wasEndedRef.current = isEnded;
   }, [isEnded, refetch]);
+  // 탭으로 돌아온 순간. 첫 마운트는 query 자신이 읽으니 활성 전환에만 반응한다.
+  const wasActiveRef = useRef(active);
+  useEffect(() => {
+    if (active && !wasActiveRef.current) void refetch();
+    wasActiveRef.current = active;
+  }, [active, refetch]);
 
   const response = analysisQuery.data;
   const analysis =
@@ -272,6 +279,11 @@ function LegacySummary({
 type SummaryProps = {
   noteId: string;
   isEnded: boolean;
+  /**
+   * 요약 탭이 지금 보이는가. 탭이 `keepMounted` 라 재진입해도 재마운트 조회가 없다 — 다른
+   * 참여자가 다시 분석한 결과를 받으려면 탭으로 돌아온 순간 한 번 읽어야 한다.
+   */
+  active?: boolean;
   /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
   noteMeta?: NoteMeta | null;
   /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */

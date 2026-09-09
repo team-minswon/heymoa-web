@@ -766,6 +766,7 @@ export function NotePanel({
                   isEnded={phase === "ended"}
                   noteMeta={noteMeta}
                   canEdit={isStarter}
+                  active={tab === "summary"}
                   onEvidenceSelect={jumpToSegment}
                 />
               </ScrollArea>

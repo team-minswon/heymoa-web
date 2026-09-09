@@ -40,11 +40,11 @@ export const REVIEW_GROUPS: ReadonlyArray<{
   key: ReviewGroupKey;
   label: string;
   kinds: ReadonlySet<ReviewKind>;
-  /** 처음부터 접어 둔다. 참고는 고칠 일이 드물다 — 개수만 보이면 된다. */
+  /** 처음부터 접어 둔다. 본문은 결정·할 일이고 나머지는 개수만 보이면 된다. */
   collapsed: boolean;
 }> = [
   { key: "OUTCOME", label: "결론", kinds: CONTEXT_OUTCOME_KINDS, collapsed: false },
-  { key: "DISCUSSION", label: "논의 중", kinds: CONTEXT_DISCUSSION_KINDS, collapsed: false },
+  { key: "DISCUSSION", label: "논의 중", kinds: CONTEXT_DISCUSSION_KINDS, collapsed: true },
   { key: "REFERENCE", label: "참고", kinds: CONTEXT_REFERENCE_KINDS, collapsed: true },
 ];
 
@@ -52,10 +52,12 @@ export type ReviewGroup = {
   key: ReviewGroupKey;
   label: string;
   collapsed: boolean;
-  /** 승인 대상. 유형 차례로 선다. */
+  /**
+   * 유형 차례로 선 항목 전부. 제외한 것도 **자기 자리에** 있다 — 화면이 숨길 뿐 목록에서
+   * 옮기지 않는다. 옮기면 줄이 재마운트돼 열린 편집기와 충돌 안내가 사라진다.
+   */
   items: ReviewItem[];
-  /** 제외한 항목. 묶음 끝에 접어 둔다 — 복원할 수 있어야 하니 없애지는 않는다. */
-  excluded: ReviewItem[];
+  excludedCount: number;
 };
 
 /**
@@ -74,8 +76,8 @@ export function groupReviewItems(items: readonly ReviewItem[]): ReviewGroup[] {
         key,
         label,
         collapsed,
-        items: own.filter((item) => item.included),
-        excluded: own.filter((item) => !item.included),
+        items: own,
+        excludedCount: own.filter((item) => !item.included).length,
       },
     ];
   });

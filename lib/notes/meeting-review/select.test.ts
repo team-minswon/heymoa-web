@@ -36,7 +36,7 @@ describe("groupReviewItems", () => {
       ["REFERENCE", ["i"]],
     ]);
     expect(groups[0].label).toBe("결론");
-    expect(groups[2].collapsed).toBe(true);
+    expect(groups.map((group) => group.collapsed)).toEqual([false, true, true]);
   });
 
   it("결론은 비어도 남고 다른 묶음은 항목이 있을 때만 선다", () => {
@@ -45,13 +45,13 @@ describe("groupReviewItems", () => {
     expect(groups[0].items).toEqual([]);
   });
 
-  it("제외한 항목은 묶음의 excluded 로 따로 나간다", () => {
+  it("제외한 항목도 자기 자리에 남고 개수만 따로 센다", () => {
     const groups = groupReviewItems([
       item({ itemId: "x", kind: "DECISION", included: false }),
       item({ itemId: "d", kind: "DECISION" }),
     ]);
-    expect(groups[0].items.map((row) => row.itemId)).toEqual(["d"]);
-    expect(groups[0].excluded.map((row) => row.itemId)).toEqual(["x"]);
+    expect(groups[0].items.map((row) => row.itemId)).toEqual(["x", "d"]);
+    expect(groups[0].excludedCount).toBe(1);
   });
 });
 

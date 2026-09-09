@@ -347,4 +347,16 @@ describe("NoteSummary", () => {
     );
     expect(state.refetchMock).toHaveBeenCalled();
   });
+
+  it("요약 탭으로 돌아오면 분석을 다시 읽는다", () => {
+    state.analysis = { status: "SUCCEEDED", sections: [], retry: null };
+    const view = render(
+      <NoteSummary noteId="01K0000000002" isEnded active={false} onEvidenceSelect={onEvidenceSelect} />
+    );
+    state.refetchMock.mockClear();
+    view.rerender(
+      <NoteSummary noteId="01K0000000002" isEnded active onEvidenceSelect={onEvidenceSelect} />
+    );
+    expect(state.refetchMock).toHaveBeenCalledTimes(1);
+  });
 });

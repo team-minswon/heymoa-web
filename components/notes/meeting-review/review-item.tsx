@@ -30,11 +30,14 @@ export function ReviewItemRow({
   evidence,
   transcript,
   reviewVersion,
+  hidden,
   canEdit,
   onEvidenceSelect,
   onSave,
 }: {
   item: ReviewItem;
+  /** 제외한 줄이 접혀 있다. 언마운트가 아니라 숨김이다 — 열린 편집기를 잃지 않는다. */
+  hidden?: boolean;
   /** 지금 화면이 읽은 검토본 판. 편집을 여는 순간의 값이 그 편집의 CAS 기준이 된다. */
   reviewVersion: number;
   /** 인용을 전사 줄로 푼 것. 전사가 아직 없으면 빈 배열이다. */
@@ -135,6 +138,7 @@ export function ReviewItemRow({
       data-testid="review-item"
       data-item-id={item.itemId}
       data-excluded={item.included ? undefined : ""}
+      hidden={hidden}
       className="group/row relative pl-6"
     >
       {/* 유형은 머리글이 아니라 줄 앞의 표식이다. 레일과 같은 아이콘이라 어느 쪽에서 봐도 같다. */}
