@@ -14,7 +14,9 @@ import {
   CONTEXT_KIND_ICON,
   CONTEXT_KIND_LABEL,
   CONTEXT_OPERATION_LABEL,
+  CONTEXT_DISCUSSION_KINDS,
   CONTEXT_OUTCOME_KINDS,
+  CONTEXT_REFERENCE_KINDS,
   CONTEXT_OUTCOME_LABEL,
 } from "@/lib/notes/proposals/presentation";
 import type {
@@ -46,16 +48,8 @@ const FILTERS: Array<{
 }> = [
   { value: "ALL", label: "전체" },
   { value: "OUTCOME", label: "결론", kinds: CONTEXT_OUTCOME_KINDS },
-  {
-    value: "DISCUSSION",
-    label: "논의 중",
-    kinds: new Set(["AGENDA", "ISSUE", "QUESTION"]),
-  },
-  {
-    value: "REFERENCE",
-    label: "참고",
-    kinds: new Set(["STATUS_REPORT", "INSIGHT"]),
-  },
+  { value: "DISCUSSION", label: "논의 중", kinds: CONTEXT_DISCUSSION_KINDS },
+  { value: "REFERENCE", label: "참고", kinds: CONTEXT_REFERENCE_KINDS },
 ];
 
 /**

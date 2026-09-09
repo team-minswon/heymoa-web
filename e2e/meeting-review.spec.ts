@@ -17,7 +17,9 @@ test.describe("회의 검토본", () => {
   test("섹션을 kind 순서로 세우고 근거를 펼치면 전사 줄이 보인다", async ({ page }) => {
     await openSummary(page, REVIEW_NOTE_ID);
     const headings = page.getByTestId("meeting-review").getByRole("heading", { level: 2 });
-    await expect(headings).toHaveText(["안건", "결정", "할 일", "이슈", "질문", "인사이트"]);
+    await expect(headings).toHaveText(["결론", "논의 중", "참고"]);
+    // 참고는 접혀서 시작한다.
+    await expect(page.getByText("문구가 아니라 다음에 할 일이 보이지 않는")).toHaveCount(0);
 
     await page.getByRole("button", { name: /첫 화면에서 회의 만들기를/ }).click();
     await expect(page.getByText("그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.")).toBeVisible();
@@ -37,10 +39,14 @@ test.describe("회의 검토본", () => {
 
     await row.hover();
     await row.getByRole("button", { name: "제외" }).click();
-    await expect(row).toHaveAttribute("data-excluded", "");
-    await row.hover();
-    await row.getByRole("button", { name: "복원" }).click();
-    await expect(row).not.toHaveAttribute("data-excluded", "");
+    // 제외하면 묶음 끝의 접힌 목록으로 옮겨 간다.
+    await expect(row).toHaveCount(0);
+    await page.getByRole("button", { name: /제외 \d개 펼치기/ }).click();
+    const excluded = page.getByTestId("review-item").filter({ hasText: "예시 회의 둘을" });
+    await expect(excluded).toHaveAttribute("data-excluded", "");
+    await excluded.hover();
+    await excluded.getByRole("button", { name: "복원" }).click();
+    await expect(page.getByTestId("review-item").filter({ hasText: "예시 회의 둘을" })).not.toHaveAttribute("data-excluded", "");
   });
 
   test("시작자가 아니면 읽기만 한다", async ({ page }) => {
@@ -58,8 +64,7 @@ test.describe("회의 검토본", () => {
     await page.getByRole("combobox", { name: "항목 종류" }).selectOption("ACTION_ITEM");
     await page.getByRole("textbox", { name: "항목 내용" }).fill("로드맵 초안을 다음 주에 공유한다");
     await page.getByRole("button", { name: "추가", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "할 일" })).toBeVisible();
     await expect(page.getByText("로드맵 초안을 다음 주에 공유한다")).toBeVisible();
-    await expect(page.getByText("직접 추가")).toBeVisible();
+    await expect(page.getByText("담당 미정 · 기한 미정")).toBeVisible();
   });
 });

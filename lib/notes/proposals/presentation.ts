@@ -21,6 +21,12 @@ import type { ContextActivityOutcome } from "@/lib/notes/proposals/reducer";
  */
 export const CONTEXT_OUTCOME_KINDS: ReadonlySet<ProposalHead["kind"]> =
   new Set(["DECISION", "ACTION_ITEM"]);
+/** 「논의 중」 — 아직 닫히지 않은 것. 레일 필터와 종료 뒤 검토본이 같은 집합을 본다. */
+export const CONTEXT_DISCUSSION_KINDS: ReadonlySet<ProposalHead["kind"]> =
+  new Set(["AGENDA", "ISSUE", "QUESTION"]);
+/** 「참고」 — 고칠 일이 드물어 대개 그대로 두는 것. */
+export const CONTEXT_REFERENCE_KINDS: ReadonlySet<ProposalHead["kind"]> =
+  new Set(["STATUS_REPORT", "INSIGHT"]);
 
 /**
  * 유형 아이콘. design.pen 신판 「실시간 정리 리디자인」(`O8CpER`)이 유형마다 하나씩 정한다.

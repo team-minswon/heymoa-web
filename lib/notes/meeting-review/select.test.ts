@@ -22,26 +22,36 @@ function item(over: Partial<ReviewItem> & Pick<ReviewItem, "itemId" | "kind">): 
 }
 
 describe("groupReviewItems", () => {
-  it("kind 순서로 묶고 빈 kind 는 섹션을 만들지 않는다", () => {
-    const sections = groupReviewItems([
+  it("결론 → 논의 중 → 참고로 묶고 묶음 안은 유형 차례다", () => {
+    const groups = groupReviewItems([
+      item({ itemId: "i", kind: "INSIGHT" }),
       item({ itemId: "a", kind: "ACTION_ITEM" }),
+      item({ itemId: "q", kind: "QUESTION" }),
       item({ itemId: "d", kind: "DECISION" }),
       item({ itemId: "g", kind: "AGENDA" }),
     ]);
-    expect(sections.map((section) => section.kind)).toEqual([
-      "AGENDA",
-      "DECISION",
-      "ACTION_ITEM",
+    expect(groups.map((group) => [group.key, group.items.map((row) => row.itemId)])).toEqual([
+      ["OUTCOME", ["d", "a"]],
+      ["DISCUSSION", ["g", "q"]],
+      ["REFERENCE", ["i"]],
     ]);
-    expect(sections[0].label).toBe("안건");
+    expect(groups[0].label).toBe("결론");
+    expect(groups[2].collapsed).toBe(true);
   });
 
-  it("제외한 항목도 자기 섹션 자리에 남긴다", () => {
-    const sections = groupReviewItems([
-      item({ itemId: "x", kind: "ISSUE", included: false }),
+  it("결론은 비어도 남고 다른 묶음은 항목이 있을 때만 선다", () => {
+    const groups = groupReviewItems([item({ itemId: "s", kind: "STATUS_REPORT" })]);
+    expect(groups.map((group) => group.key)).toEqual(["OUTCOME", "REFERENCE"]);
+    expect(groups[0].items).toEqual([]);
+  });
+
+  it("제외한 항목은 묶음의 excluded 로 따로 나간다", () => {
+    const groups = groupReviewItems([
+      item({ itemId: "x", kind: "DECISION", included: false }),
+      item({ itemId: "d", kind: "DECISION" }),
     ]);
-    expect(sections).toHaveLength(1);
-    expect(sections[0].items[0].included).toBe(false);
+    expect(groups[0].items.map((row) => row.itemId)).toEqual(["d"]);
+    expect(groups[0].excluded.map((row) => row.itemId)).toEqual(["x"]);
   });
 });
 

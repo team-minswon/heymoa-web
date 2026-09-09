@@ -3,19 +3,23 @@ import type {
   MeetingReviewResponseDataItemsItemKind,
   TranscriptResponseDataSegmentsItem,
 } from "@/lib/api/generated/models";
-import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
+import {
+  CONTEXT_DISCUSSION_KINDS,
+  CONTEXT_KIND_LABEL,
+  CONTEXT_OUTCOME_KINDS,
+  CONTEXT_REFERENCE_KINDS,
+} from "@/lib/notes/proposals/presentation";
 
 export type ReviewItem = MeetingReviewResponseDataItemsItem;
 export type ReviewKind = MeetingReviewResponseDataItemsItemKind;
 
 /**
- * 섹션 순서. 서버는 항목을 평평한 목록으로 주므로 화면이 묶고 세운다. 요약 탭의
- * 개요·액션 아이템·결정과 같은 역할이다 — 회의를 훑는 순서가 곧 섹션 순서다.
+ * 유형의 차례. 묶음 안에서 항목이 서는 순서다. 레일의 `GROUP_ORDER` 와 같다.
  */
 export const REVIEW_KIND_ORDER: readonly ReviewKind[] = [
-  "AGENDA",
   "DECISION",
   "ACTION_ITEM",
+  "AGENDA",
   "ISSUE",
   "QUESTION",
   "STATUS_REPORT",
@@ -25,20 +29,55 @@ export const REVIEW_KIND_ORDER: readonly ReviewKind[] = [
 /** 실시간 정리 레일과 같은 이름을 쓴다. 두 화면이 같은 명제를 다르게 부르지 않는다. */
 export const REVIEW_KIND_LABEL: Record<ReviewKind, string> = CONTEXT_KIND_LABEL;
 
-export type ReviewSection = {
-  kind: ReviewKind;
+export type ReviewGroupKey = "OUTCOME" | "DISCUSSION" | "REFERENCE";
+
+/**
+ * 세 묶음 — 결론 → 논의 중 → 참고. 유형 일곱을 머리글로 세우면 회의가 아니라 양식으로
+ * 읽힌다. 종료 직후 레일(design.pen G5 `ywpDW`)이 이렇게 묶고, 검토본도 같은 집합을 본다.
+ * 읽는 사람이 묻는 것은 「이렇게 합의한 게 맞나」라 결론이 먼저다.
+ */
+export const REVIEW_GROUPS: ReadonlyArray<{
+  key: ReviewGroupKey;
   label: string;
+  kinds: ReadonlySet<ReviewKind>;
+  /** 처음부터 접어 둔다. 참고는 고칠 일이 드물다 — 개수만 보이면 된다. */
+  collapsed: boolean;
+}> = [
+  { key: "OUTCOME", label: "결론", kinds: CONTEXT_OUTCOME_KINDS, collapsed: false },
+  { key: "DISCUSSION", label: "논의 중", kinds: CONTEXT_DISCUSSION_KINDS, collapsed: false },
+  { key: "REFERENCE", label: "참고", kinds: CONTEXT_REFERENCE_KINDS, collapsed: true },
+];
+
+export type ReviewGroup = {
+  key: ReviewGroupKey;
+  label: string;
+  collapsed: boolean;
+  /** 승인 대상. 유형 차례로 선다. */
   items: ReviewItem[];
+  /** 제외한 항목. 묶음 끝에 접어 둔다 — 복원할 수 있어야 하니 없애지는 않는다. */
+  excluded: ReviewItem[];
 };
 
 /**
- * 항목을 kind 순서로 묶는다. **항목이 없는 kind는 섹션을 만들지 않는다** — 일곱 머리글 중
- * 넷이 비어 있으면 회의가 아니라 양식으로 읽힌다. 제외한 항목은 자기 자리에 남긴다(복원할 수 있다).
+ * 항목을 세 묶음으로 나눈다. **결론은 비어도 남긴다** — 「이 회의는 결론이 없다」는 그 자체가
+ * 검토할 사실이다. 다른 묶음은 항목이 있을 때만 선다.
  */
-export function groupReviewItems(items: readonly ReviewItem[]): ReviewSection[] {
-  return REVIEW_KIND_ORDER.flatMap((kind) => {
-    const own = items.filter((item) => item.kind === kind);
-    return own.length ? [{ kind, label: REVIEW_KIND_LABEL[kind], items: own }] : [];
+export function groupReviewItems(items: readonly ReviewItem[]): ReviewGroup[] {
+  const rank = new Map(REVIEW_KIND_ORDER.map((kind, index) => [kind, index]));
+  const byKind = (a: ReviewItem, b: ReviewItem) =>
+    (rank.get(a.kind) ?? 99) - (rank.get(b.kind) ?? 99);
+  return REVIEW_GROUPS.flatMap(({ key, label, kinds, collapsed }) => {
+    const own = items.filter((item) => kinds.has(item.kind)).sort(byKind);
+    if (own.length === 0 && key !== "OUTCOME") return [];
+    return [
+      {
+        key,
+        label,
+        collapsed,
+        items: own.filter((item) => item.included),
+        excluded: own.filter((item) => !item.included),
+      },
+    ];
   });
 }
 

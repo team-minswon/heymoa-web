@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,11 @@ import {
   REVIEW_KIND_ORDER,
   groupReviewItems,
   resolveCitations,
+  type ReviewGroup,
+  type ReviewItem,
   type ReviewKind,
 } from "@/lib/notes/meeting-review/select";
+import { cn } from "@/lib/utils";
 
 import {
   ReviewItemRow,
@@ -167,7 +171,7 @@ export function MeetingReview({
         await queryClient.invalidateQueries({ queryKey });
         throw error;
       });
-  const sections = groupReviewItems(review.items);
+  const groups = groupReviewItems(review.items);
 
   return (
     <div data-testid="meeting-review">
@@ -198,39 +202,96 @@ export function MeetingReview({
           }
         />
       ) : null}
-      {sections.length ? (
-        <div className="mt-6 space-y-14">
-          {sections.map((section) => (
-            <section key={section.kind} aria-label={section.label}>
-              <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
-                <h2 className="font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
-                  {section.label}
-                </h2>
-                <span className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-                  {section.items.length}
-                </span>
-              </div>
-              <ul className="mt-5 space-y-5">
-                {section.items.map((item) => (
-                  <ReviewItemRow
-                    key={item.itemId}
-                    item={item}
-                    evidence={resolveCitations(item.citations, segments)}
-                    transcript={transcript}
-                    reviewVersion={review.reviewVersion}
-                    canEdit={canEdit}
-                    onEvidenceSelect={onEvidenceSelect}
-                    onSave={save}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-6 text-sm text-[var(--el-muted)]">검토할 항목이 없습니다.</p>
-      )}
+      <div className="mt-6 space-y-14">
+        {groups.map((group) => (
+          <ReviewGroupSection key={group.key} group={group}>
+            {(rows) =>
+              rows.map((item) => (
+                <ReviewItemRow
+                  key={item.itemId}
+                  item={item}
+                  evidence={resolveCitations(item.citations, segments)}
+                  transcript={transcript}
+                  reviewVersion={review.reviewVersion}
+                  canEdit={canEdit}
+                  onEvidenceSelect={onEvidenceSelect}
+                  onSave={save}
+                />
+              ))
+            }
+          </ReviewGroupSection>
+        ))}
+      </div>
     </div>
+  );
+}
+
+/**
+ * 묶음 하나. 요약 탭의 섹션과 같은 머리글(세리프 제목 + 개수 + 헤어라인)이고, 접을 수 있다.
+ * 참고는 처음부터 접혀 있다. 제외한 항목은 묶음 끝에 「제외 N개」로 접는다 — 승인 범위의
+ * 일부라 없애지 않고, 읽는 흐름에서는 비켜 둔다.
+ */
+function ReviewGroupSection({
+  group,
+  children,
+}: {
+  group: ReviewGroup;
+  children: (rows: ReviewItem[]) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(!group.collapsed);
+  const [showExcluded, setShowExcluded] = useState(false);
+  const total = group.items.length + group.excluded.length;
+  return (
+    <section aria-label={group.label} data-testid={`review-group-${group.key}`}>
+      <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="group/head flex items-baseline gap-2 text-left"
+        >
+          <h2 className="font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+            {group.label}
+          </h2>
+          <ChevronDown
+            aria-hidden
+            className={cn(
+              "size-3.5 translate-y-[-2px] text-[var(--el-muted-soft)] transition-transform group-hover/head:text-[var(--el-ink)]",
+              open && "rotate-180"
+            )}
+          />
+        </button>
+        {total ? (
+          <span className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+            {total}
+          </span>
+        ) : null}
+      </div>
+      {open ? (
+        <>
+          {group.items.length ? (
+            <ul className="mt-5 space-y-5">{children(group.items)}</ul>
+          ) : (
+            <p className="mt-5 text-sm text-[var(--el-muted)]">
+              {group.excluded.length ? "남은 항목이 없습니다." : "이 회의에서는 나오지 않았습니다."}
+            </p>
+          )}
+          {group.excluded.length ? (
+            <div className="mt-4">
+              <button
+                type="button"
+                aria-expanded={showExcluded}
+                onClick={() => setShowExcluded((value) => !value)}
+                className="text-[12px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+              >
+                제외 {group.excluded.length}개 {showExcluded ? "접기" : "펼치기"}
+              </button>
+              {showExcluded ? <ul className="mt-3 space-y-5">{children(group.excluded)}</ul> : null}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </section>
   );
 }
 

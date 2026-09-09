@@ -6,7 +6,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessageOf } from "@/lib/api/error-message";
-import type { Evidence, ReviewItem } from "@/lib/notes/meeting-review/select";
+import { REVIEW_KIND_LABEL, type Evidence, type ReviewItem } from "@/lib/notes/meeting-review/select";
+import { CONTEXT_KIND_ICON } from "@/lib/notes/proposals/presentation";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
@@ -95,12 +96,16 @@ export function ReviewItemRow({
     setEditing(true);
   };
 
-  const meta = [
-    item.assigneeText ? `담당 ${item.assigneeText}` : null,
-    item.dueText ? `기한 ${item.dueText}` : null,
-    item.originalProposalRef === null ? "직접 추가" : null,
-    item.edited ? "고침" : null,
-  ].filter(Boolean);
+  // 할 일은 담당·기한이 비어 있는 것도 보여야 한다 — 채울 자리가 있다는 뜻이다. 다른 유형은
+  // 값이 있을 때만 적는다. 「고침」「직접 추가」는 본인이 한 일이라 적지 않는다.
+  const meta =
+    item.kind === "ACTION_ITEM"
+      ? [`담당 ${item.assigneeText ?? "미정"}`, `기한 ${item.dueText ?? "미정"}`]
+      : [
+          item.assigneeText ? `담당 ${item.assigneeText}` : null,
+          item.dueText ? `기한 ${item.dueText}` : null,
+        ].filter(Boolean);
+  const KindIcon = CONTEXT_KIND_ICON[item.kind];
 
   const claim = (
     <>
@@ -130,12 +135,14 @@ export function ReviewItemRow({
       data-testid="review-item"
       data-item-id={item.itemId}
       data-excluded={item.included ? undefined : ""}
-      className="group/row relative pl-4"
+      className="group/row relative pl-6"
     >
-      <span
+      {/* 유형은 머리글이 아니라 줄 앞의 표식이다. 레일과 같은 아이콘이라 어느 쪽에서 봐도 같다. */}
+      <KindIcon
         aria-hidden
-        className="absolute left-0 top-[11px] size-1 rounded-full bg-[var(--el-hairline-strong)]"
+        className="absolute left-0 top-[7px] size-3.5 text-[var(--el-muted-soft)]"
       />
+      <span className="sr-only">{REVIEW_KIND_LABEL[item.kind]} </span>
       {editing ? (
         <Textarea
           autoFocus

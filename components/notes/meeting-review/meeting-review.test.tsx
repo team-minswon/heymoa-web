@@ -110,13 +110,31 @@ describe("MeetingReview", () => {
   });
   afterEach(cleanup);
 
-  it("kind 순서로 섹션을 세우고 개수와 메타를 적는다", () => {
+  it("결론 묶음 하나에 유형 차례로 서고, 제외는 접힌다", () => {
     renderReview();
     const headings = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
-    expect(headings).toEqual(["결정", "할 일"]);
-    expect(within(screen.getByRole("region", { name: "결정" })).getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("담당 한지원")).toBeInTheDocument();
+    expect(headings).toEqual(["결론"]);
+    const outcome = screen.getByRole("region", { name: "결론" });
+    expect(within(outcome).getByText("3")).toBeInTheDocument();
+    expect(within(outcome).getAllByTestId("review-item").map((row) => row.textContent)).toEqual([
+      expect.stringContaining("출시일을 9월 말로 확정한다"),
+      expect.stringContaining("QA 일정을 당긴다"),
+    ]);
+    expect(screen.getByText("담당 한지원 · 기한 미정")).toBeInTheDocument();
+    expect(screen.queryByText("제외된 결정")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "제외 1개 펼치기" }));
     expect(screen.getByText("제외된 결정").closest("li")).toHaveAttribute("data-excluded");
+  });
+
+  it("참고는 처음부터 접혀 있고 머리글을 누르면 펼쳐진다", () => {
+    state.review = {
+      reviewVersion: 7,
+      items: [item({ itemId: "s", kind: "STATUS_REPORT", content: "배포는 끝났다" })],
+    };
+    renderReview();
+    expect(screen.queryByText("배포는 끝났다")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "참고" }));
+    expect(screen.getByText("배포는 끝났다")).toBeInTheDocument();
   });
 
   it("근거는 접힌 채 시작하고 누르면 전사 줄을 풀어 보인다", () => {
