@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   // 산출물 경로가 `.worktrees/` 아래로 한 겹 더 들어간다.
   outputFileTracingRoot: path.join(__dirname),
   turbopack: { root: path.join(__dirname) },
+  // dev 서버를 tailscale serve 같은 다른 호스트명으로 열 때만. 없으면 localhost만 허용.
+  allowedDevOrigins: process.env.NEXT_ALLOWED_DEV_ORIGINS?.split(",").filter(Boolean),
   experimental: {
     // 매치 안 되는 URL을 `app/global-not-found.tsx`가 받는다. 없으면 그 URL들이 루트
     // 레이아웃을 거쳐 렌더되어, 아무 경로마다 SSR 유저 조회가 실서버로 나간다.
