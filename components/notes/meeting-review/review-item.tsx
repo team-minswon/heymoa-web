@@ -31,11 +31,14 @@ export function ReviewItemRow({
   transcript,
   reviewVersion,
   hidden,
+  locked,
   canEdit,
   onEvidenceSelect,
   onSave,
 }: {
   item: ReviewItem;
+  /** 검토본의 다른 줄이 저장 중이다. 같은 판으로 보내면 409 라 이 줄의 변경도 기다린다. */
+  locked?: boolean;
   /** 제외한 줄이 접혀 있다. 언마운트가 아니라 숨김이다 — 열린 편집기를 잃지 않는다. */
   hidden?: boolean;
   /** 지금 화면이 읽은 검토본 판. 편집을 여는 순간의 값이 그 편집의 CAS 기준이 된다. */
@@ -67,6 +70,11 @@ export function ReviewItemRow({
 
   const save = async (patch: ItemPatch, at: SaveBase) => {
     if (savingRef.current) return;
+    if (locked) {
+      // 편집기는 열어 두고 초안을 지킨다. 다른 줄의 응답이 오면 다시 Enter 로 보낸다.
+      setFailure("다른 항목을 저장하는 중입니다. 잠시 뒤 다시 저장해 주세요.");
+      return;
+    }
     savingRef.current = true;
     setPending(true);
     setFailure(null);
@@ -197,13 +205,13 @@ export function ReviewItemRow({
           {canEdit ? (
             <span className="flex shrink-0 gap-2.5 pt-1 text-[12px] text-[var(--el-muted)] opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
               {item.included ? (
-                <button type="button" disabled={pending} onClick={beginEditing} className="hover:text-[var(--el-ink)]">
+                <button type="button" disabled={pending || locked} onClick={beginEditing} className="hover:text-[var(--el-ink)]">
                   수정
                 </button>
               ) : null}
               <button
                 type="button"
-                disabled={pending}
+                disabled={pending || locked}
                 onClick={() => void save({ included: !item.included }, currentBase())}
                 className="hover:text-[var(--el-ink)]"
               >
@@ -228,7 +236,7 @@ export function ReviewItemRow({
               <button
                 type="button"
                 data-retry-save
-                disabled={pending}
+                disabled={pending || locked}
                 onClick={() => {
                   const next = draft.trim();
                   if (next) void save({ content: next }, currentBase());

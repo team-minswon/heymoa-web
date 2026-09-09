@@ -126,6 +126,9 @@ export function MeetingReview({
   });
 
   const [adding, setAdding] = useState(false);
+  // 검토본 CAS 는 항목이 아니라 검토본 단위다. 한 줄의 저장이 끝나기 전에 다른 줄이 같은 판으로
+  // 보내면 남의 변경 없이도 409 다. 그래서 잠금도 검토본 단위로 형제 컨트롤까지 건다.
+  const saving = update.isPending || add.isPending;
 
   if (reviewQuery.isLoading) return <ReviewSkeleton />;
 
@@ -185,7 +188,7 @@ export function MeetingReview({
             variant="outline"
             size="sm"
             className="h-[30px]"
-            disabled={adding}
+            disabled={adding || saving}
             onClick={() => setAdding(true)}
           >
             항목 추가
@@ -194,7 +197,7 @@ export function MeetingReview({
       ) : null}
       {adding ? (
         <AddItemForm
-          pending={add.isPending}
+          pending={saving}
           onCancel={() => setAdding(false)}
           onSubmit={(kind, content) =>
             add
@@ -218,6 +221,7 @@ export function MeetingReview({
                   evidence={resolveCitations(item.citations, segments)}
                   transcript={transcript}
                   reviewVersion={review.reviewVersion}
+                  locked={saving}
                   canEdit={canEdit}
                   onEvidenceSelect={onEvidenceSelect}
                   onSave={save}

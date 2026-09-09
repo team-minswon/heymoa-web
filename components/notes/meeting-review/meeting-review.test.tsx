@@ -18,6 +18,7 @@ const state = vi.hoisted(() => ({
   },
   transcriptError: false,
   transcriptRefetch: vi.fn(),
+  updatePending: false,
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({
@@ -36,7 +37,7 @@ vi.mock("@/lib/api/generated/meeting-review/meeting-review", () => ({
       ? { status: 200, data: { success: true, data: { noteId: "n", reviewId: "r", ...state.review } } }
       : undefined,
   }),
-  useUpdateMeetingReviewItem: () => ({ mutateAsync: state.update, isPending: false }),
+  useUpdateMeetingReviewItem: () => ({ mutateAsync: state.update, isPending: state.updatePending }),
   useCreateMeetingReviewItem: () => ({ mutateAsync: state.add, isPending: false }),
   useCreateMeetingReview: () => ({ mutate: state.create, isPending: false }),
 }));
@@ -104,6 +105,7 @@ describe("MeetingReview", () => {
       ],
     };
     state.transcriptError = false;
+    state.updatePending = false;
     state.update.mockReset().mockResolvedValue({ data: { success: true, data: {} } });
     state.add.mockReset();
     state.create.mockReset();
@@ -267,6 +269,15 @@ describe("MeetingReview", () => {
     expect(screen.getByRole("textbox", { name: "항목 내용", hidden: true })).toHaveValue(
       "QA 일정을 일곱째 주로 당긴다"
     );
+  });
+
+  it("한 줄이 저장 중이면 다른 줄의 변경과 항목 추가도 잠근다", () => {
+    state.updatePending = true;
+    renderReview();
+    expect(screen.getByRole("button", { name: "항목 추가" })).toBeDisabled();
+    const other = screen.getByText("출시일을 9월 말로 확정한다").closest("li")!;
+    expect(within(other).getByRole("button", { name: "제외" })).toBeDisabled();
+    expect(within(other).getByRole("button", { name: "수정" })).toBeDisabled();
   });
 
   it("거절되면 편집기를 닫지 않고 사유를 그 줄에 남긴다", async () => {
