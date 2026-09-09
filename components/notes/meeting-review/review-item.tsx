@@ -11,6 +11,8 @@ import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
 export type ItemPatch = { content?: string; included?: boolean };
+/** 저장의 CAS 기준 — 사용자가 이 편집을 시작할 때 읽은 판. */
+export type SaveBase = { reviewVersion: number; itemRevision: number };
 /** 전사 조회의 상태. 인용을 줄로 풀 수 있는지가 여기 달렸다. */
 export type TranscriptState = { status: "loading" | "error" | "ready"; retry: () => void };
 
@@ -26,18 +28,21 @@ export function ReviewItemRow({
   item,
   evidence,
   transcript,
+  reviewVersion,
   canEdit,
   onEvidenceSelect,
   onSave,
 }: {
   item: ReviewItem;
+  /** 지금 화면이 읽은 검토본 판. 편집을 여는 순간의 값이 그 편집의 CAS 기준이 된다. */
+  reviewVersion: number;
   /** 인용을 전사 줄로 푼 것. 전사가 아직 없으면 빈 배열이다. */
   evidence: Evidence[];
   transcript: TranscriptState;
   canEdit: boolean;
   onEvidenceSelect: (segmentId: string) => void;
   /** 거절은 reject 다. 이 줄이 사유를 그린다. */
-  onSave: (itemId: string, patch: ItemPatch) => Promise<unknown>;
+  onSave: (itemId: string, patch: ItemPatch, base: SaveBase) => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -48,11 +53,15 @@ export function ReviewItemRow({
   const evidenceId = `evidence-${item.itemId}`;
   const citationCount = item.citations.length;
 
-  const save = async (patch: ItemPatch) => {
+  // 편집기를 연 순간의 판. 열려 있는 동안 폴링이 새 판을 가져와도 이 값으로 저장해 409 를 받는다.
+  const [base, setBase] = useState<SaveBase | null>(null);
+  const currentBase = (): SaveBase => ({ reviewVersion, itemRevision: item.revision });
+
+  const save = async (patch: ItemPatch, at: SaveBase) => {
     setPending(true);
     setFailure(null);
     try {
-      await onSave(item.itemId, patch);
+      await onSave(item.itemId, patch, at);
       setEditing(false);
     } catch (error) {
       setFailure(errorMessageOf(error, "저장하지 못했습니다."));
@@ -67,11 +76,12 @@ export function ReviewItemRow({
       setDraft(item.content);
       return;
     }
-    void save({ content: next });
+    void save({ content: next }, base ?? currentBase());
   };
   const beginEditing = () => {
     setDraft(item.content);
     setFailure(null);
+    setBase(currentBase());
     setEditing(true);
   };
 
@@ -169,7 +179,7 @@ export function ReviewItemRow({
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => void save({ included: !item.included })}
+                onClick={() => void save({ included: !item.included }, currentBase())}
                 className="hover:text-[var(--el-ink)]"
               >
                 {item.included ? "제외" : "복원"}

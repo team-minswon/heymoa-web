@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({
   update: vi.fn(),
   add: vi.fn(),
   create: vi.fn(),
-  client: { setQueryData: vi.fn(), invalidateQueries: vi.fn() },
+  client: { setQueryData: vi.fn(), invalidateQueries: vi.fn(), cancelQueries: vi.fn() },
   transcriptError: false,
   transcriptRefetch: vi.fn(),
 }));
@@ -145,6 +145,25 @@ describe("MeetingReview", () => {
       data: { content: "QA 일정을 셋째 주로 당긴다", expectedReviewVersion: 7, expectedItemRevision: 3 },
     });
     expect(await screen.findByText("QA 일정을 당긴다")).toBeInTheDocument();
+  });
+
+  it("편집 중 새 판이 와도 편집을 연 순간의 판으로 저장한다", () => {
+    const view = renderReview();
+    const row = screen.getByText("QA 일정을 당긴다").closest("li")!;
+    fireEvent.click(within(row).getByRole("button", { name: "수정" }));
+    // 폴링이 남의 변경을 받아 왔다 — 검토본 8판, 이 항목 4판.
+    state.review = {
+      reviewVersion: 8,
+      items: [item({ itemId: "a", kind: "ACTION_ITEM", content: "QA 일정을 당긴다", revision: 4 })],
+    };
+    view.rerender(<MeetingReview noteId="n" canEdit onEvidenceSelect={onEvidenceSelect} />);
+    const editor = screen.getByRole("textbox", { name: "항목 내용" });
+    fireEvent.change(editor, { target: { value: "QA 일정을 넷째 주로 당긴다" } });
+    fireEvent.keyDown(editor, { key: "Enter" });
+    expect(state.update.mock.calls[0][0].data).toMatchObject({
+      expectedReviewVersion: 7,
+      expectedItemRevision: 3,
+    });
   });
 
   it("거절되면 편집기를 닫지 않고 사유를 그 줄에 남긴다", async () => {

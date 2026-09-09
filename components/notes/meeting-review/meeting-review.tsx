@@ -26,7 +26,12 @@ import {
   type ReviewKind,
 } from "@/lib/notes/meeting-review/select";
 
-import { ReviewItemRow, type ItemPatch, type TranscriptState } from "./review-item";
+import {
+  ReviewItemRow,
+  type ItemPatch,
+  type SaveBase,
+  type TranscriptState,
+} from "./review-item";
 
 /**
  * 종료된 회의의 검토본. `summary` 탭의 본문이다.
@@ -85,6 +90,9 @@ export function MeetingReview({
   // 응답이 검토본 전체다. 캐시에 바로 쓰면 재조회 없이 새 revision 으로 다음 저장을 잇는다.
   // 항목 추가는 201 로 오지만 조회 캐시는 200 만 검토본으로 읽으니 상태 코드를 맞춰 넣는다.
   const settle = {
+    // 저장이 시작되면 날아가고 있는 조회를 끊는다. 늦게 도착한 옛 검토본이 방금 저장한
+    // 응답을 캐시에서 덮지 않게.
+    onMutate: () => queryClient.cancelQueries({ queryKey }),
     onSuccess: (response: { status: number; data: unknown }) => {
       // mutator 는 2xx 만 resolve 한다. 그 본문은 전부 검토본 응답이다.
       if (response.status !== 200 && response.status !== 201) return;
@@ -135,19 +143,18 @@ export function MeetingReview({
     return <InlineRetry label="검토본을 불러오지 못했습니다" onRetry={() => void reviewQuery.refetch()} />;
   }
 
-  const save = (itemId: string, patch: ItemPatch) => {
-    const item = review.items.find((row) => row.itemId === itemId);
-    if (!item) return Promise.reject(new Error("항목을 찾을 수 없습니다."));
-    return update.mutateAsync({
+  // CAS 기준은 **사용자가 읽은 판**이다. 줄이 편집을 열 때 잡아 둔 값을 그대로 보낸다 —
+  // 편집 중 폴링이 새 판을 받아 와도 그것으로 갈아타면 남의 변경 위에 조용히 덮어쓴다.
+  const save = (itemId: string, patch: ItemPatch, base: SaveBase) =>
+    update.mutateAsync({
       noteId,
       itemId,
       data: {
         ...patch,
-        expectedReviewVersion: review.reviewVersion,
-        expectedItemRevision: item.revision,
+        expectedReviewVersion: base.reviewVersion,
+        expectedItemRevision: base.itemRevision,
       },
     });
-  };
   const sections = groupReviewItems(review.items);
 
   return (
@@ -198,6 +205,7 @@ export function MeetingReview({
                     item={item}
                     evidence={resolveCitations(item.citations, segments)}
                     transcript={transcript}
+                    reviewVersion={review.reviewVersion}
                     canEdit={canEdit}
                     onEvidenceSelect={onEvidenceSelect}
                     onSave={save}
