@@ -116,13 +116,17 @@ describe("MeetingReview", () => {
     expect(headings).toEqual(["결론"]);
     const outcome = screen.getByRole("region", { name: "결론" });
     expect(within(outcome).getByText("3")).toBeInTheDocument();
-    expect(within(outcome).getAllByTestId("review-item").map((row) => row.textContent)).toEqual([
+    const visibleRows = within(outcome)
+      .getAllByTestId("review-item")
+      .filter((row) => !row.closest("[hidden]"));
+    expect(visibleRows.map((row) => row.textContent)).toEqual([
       expect.stringContaining("출시일을 9월 말로 확정한다"),
       expect.stringContaining("QA 일정을 당긴다"),
     ]);
     expect(screen.getByText("담당 한지원 · 기한 미정")).toBeInTheDocument();
-    expect(screen.queryByText("제외된 결정")).not.toBeInTheDocument();
+    expect(screen.getByText("제외된 결정")).not.toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "제외 1개 펼치기" }));
+    expect(screen.getByText("제외된 결정")).toBeVisible();
     expect(screen.getByText("제외된 결정").closest("li")).toHaveAttribute("data-excluded");
   });
 
@@ -132,9 +136,9 @@ describe("MeetingReview", () => {
       items: [item({ itemId: "s", kind: "STATUS_REPORT", content: "배포는 끝났다" })],
     };
     renderReview();
-    expect(screen.queryByText("배포는 끝났다")).not.toBeInTheDocument();
+    expect(screen.getByText("배포는 끝났다")).not.toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "참고" }));
-    expect(screen.getByText("배포는 끝났다")).toBeInTheDocument();
+    expect(screen.getByText("배포는 끝났다")).toBeVisible();
   });
 
   it("근거는 접힌 채 시작하고 누르면 전사 줄을 풀어 보인다", () => {
@@ -227,6 +231,25 @@ describe("MeetingReview", () => {
       expectedReviewVersion: 9,
       expectedItemRevision: 5,
     });
+  });
+
+  it("묶음을 접어도 거절된 편집기와 초안이 남는다", async () => {
+    state.update.mockRejectedValue({
+      success: false,
+      data: null,
+      error: { code: "MEETING_REVIEW_CONFLICT", message: "검토본이 변경되었습니다." },
+    });
+    renderReview();
+    const row = screen.getByText("QA 일정을 당긴다").closest("li")!;
+    fireEvent.click(within(row).getByRole("button", { name: "수정" }));
+    const editor = screen.getByRole("textbox", { name: "항목 내용" });
+    fireEvent.change(editor, { target: { value: "QA 일정을 여섯째 주로 당긴다" } });
+    fireEvent.keyDown(editor, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "결론" }));
+    await screen.findByRole("alert", { hidden: true });
+    fireEvent.click(screen.getByRole("button", { name: "결론" }));
+    expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue("QA 일정을 여섯째 주로 당긴다");
+    expect(screen.getByRole("alert")).toHaveTextContent("검토본이 변경되었습니다.");
   });
 
   it("거절되면 편집기를 닫지 않고 사유를 그 줄에 남긴다", async () => {

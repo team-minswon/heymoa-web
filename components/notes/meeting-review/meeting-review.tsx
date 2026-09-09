@@ -267,30 +267,32 @@ function ReviewGroupSection({
           </span>
         ) : null}
       </div>
-      {open ? (
-        <>
-          {group.items.length ? (
-            <ul className="mt-5 space-y-5">{children(group.items)}</ul>
-          ) : (
-            <p className="mt-5 text-sm text-[var(--el-muted)]">
-              {group.excluded.length ? "남은 항목이 없습니다." : "이 회의에서는 나오지 않았습니다."}
-            </p>
-          )}
-          {group.excluded.length ? (
-            <div className="mt-4">
-              <button
-                type="button"
-                aria-expanded={showExcluded}
-                onClick={() => setShowExcluded((value) => !value)}
-                className="text-[12px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
-              >
-                제외 {group.excluded.length}개 {showExcluded ? "접기" : "펼치기"}
-              </button>
-              {showExcluded ? <ul className="mt-3 space-y-5">{children(group.excluded)}</ul> : null}
-            </div>
-          ) : null}
-        </>
-      ) : null}
+      {/* 접어도 **언마운트하지 않는다.** 저장 중이거나 거절된 편집기가 줄 안에 있다 — 접었다
+          펼치면 초안과 실패 안내가 사라진다. `hidden` 속성이라 접근성 트리에서도 빠진다. */}
+      <div hidden={!open}>
+        {group.items.length ? (
+          <ul className="mt-5 space-y-5">{children(group.items)}</ul>
+        ) : (
+          <p className="mt-5 text-sm text-[var(--el-muted)]">
+            {group.excluded.length ? "남은 항목이 없습니다." : "이 회의에서는 나오지 않았습니다."}
+          </p>
+        )}
+        {group.excluded.length ? (
+          <div className="mt-4">
+            <button
+              type="button"
+              aria-expanded={showExcluded}
+              onClick={() => setShowExcluded((value) => !value)}
+              className="text-[12px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+            >
+              제외 {group.excluded.length}개 {showExcluded ? "접기" : "펼치기"}
+            </button>
+            <ul hidden={!showExcluded} className="mt-3 space-y-5">
+              {children(group.excluded)}
+            </ul>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }

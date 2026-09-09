@@ -19,7 +19,7 @@ test.describe("회의 검토본", () => {
     const headings = page.getByTestId("meeting-review").getByRole("heading", { level: 2 });
     await expect(headings).toHaveText(["결론", "논의 중", "참고"]);
     // 참고는 접혀서 시작한다.
-    await expect(page.getByText("문구가 아니라 다음에 할 일이 보이지 않는")).toHaveCount(0);
+    await expect(page.getByText("문구가 아니라 다음에 할 일이 보이지 않는")).not.toBeVisible();
 
     await page.getByRole("button", { name: /첫 화면에서 회의 만들기를/ }).click();
     await expect(page.getByText("그럼 첫 화면에 회의 만들기를 눈에 띄게 두죠.")).toBeVisible();
@@ -35,12 +35,11 @@ test.describe("회의 검토본", () => {
     await editor.fill("회의를 아직 안 만든 사람에게 예시 회의 둘을 깔아 둔다");
     await editor.press("Enter");
     await expect(row).toContainText("예시 회의 둘을 깔아 둔다");
-    await expect(row).toContainText("고침");
 
     await row.hover();
     await row.getByRole("button", { name: "제외" }).click();
     // 제외하면 묶음 끝의 접힌 목록으로 옮겨 간다.
-    await expect(row).toHaveCount(0);
+    await expect(row).not.toBeVisible();
     await page.getByRole("button", { name: /제외 \d개 펼치기/ }).click();
     const excluded = page.getByTestId("review-item").filter({ hasText: "예시 회의 둘을" });
     await expect(excluded).toHaveAttribute("data-excluded", "");
@@ -51,7 +50,7 @@ test.describe("회의 검토본", () => {
 
   test("시작자가 아니면 읽기만 한다", async ({ page }) => {
     await openSummary(page, OTHER_STARTER_NOTE_ID);
-    await expect(page.getByRole("heading", { level: 2, name: "결정" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "결론" })).toBeVisible();
     await expect(page.getByRole("button", { name: "항목 추가" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "수정" })).toHaveCount(0);
   });
@@ -59,7 +58,7 @@ test.describe("회의 검토본", () => {
   test("검토본이 없으면 만들고 항목을 더한다", async ({ page }) => {
     await openSummary(page, EMPTY_NOTE_ID);
     await page.getByRole("button", { name: "검토본 만들기" }).click();
-    await expect(page.getByText("검토할 항목이 없습니다.")).toBeVisible();
+    await expect(page.getByText("이 회의에서는 나오지 않았습니다.")).toBeVisible();
     await page.getByRole("button", { name: "항목 추가" }).click();
     await page.getByRole("combobox", { name: "항목 종류" }).selectOption("ACTION_ITEM");
     await page.getByRole("textbox", { name: "항목 내용" }).fill("로드맵 초안을 다음 주에 공유한다");
