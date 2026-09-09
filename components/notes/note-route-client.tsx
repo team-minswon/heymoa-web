@@ -10,7 +10,7 @@ export function NoteRouteClient({
 }: {
   workspaceId: string;
   noteId: string;
-  initialQuery: { view?: string; tab?: string };
+  initialQuery: { view?: string; tab?: string; segment?: string };
 }) {
   return (
     <NoteRealtimeProvider noteId={noteId}>

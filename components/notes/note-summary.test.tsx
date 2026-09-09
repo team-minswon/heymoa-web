@@ -13,6 +13,12 @@ const state = vi.hoisted(() => ({
 }));
 
 // 배너는 화자 상태만 읽는다. 이 스펙의 대상이 아니므로 목으로 눌러 둔다.
+// 이 파일은 구식 analysis 화면(「이전 분석」)만 본다. 검토·확정 화면(APP-464)은 QueryClient 와
+// 목 서버가 필요해 자기 테스트(`meeting-review/meeting-review.test.tsx`)와 e2e 가 본다.
+vi.mock("@/components/notes/meeting-review/meeting-review", () => ({
+  MeetingReview: () => null,
+}));
+
 vi.mock("@/components/notes/speaker-nudge-banner", () => ({
   SpeakerNudgeBanner: () => null,
 }));

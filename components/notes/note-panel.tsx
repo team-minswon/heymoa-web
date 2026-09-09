@@ -82,6 +82,8 @@ export function NotePanel({
   noteId,
   view,
   tab,
+  initialFocusSegmentId,
+  onFocusHandled,
   onTabChange,
   onClose,
   onExpand,
@@ -92,6 +94,10 @@ export function NotePanel({
   noteId: string;
   view: "side" | "full";
   tab: NoteTab;
+  /** 진입 URL 의 `segment`. 전사 탭에서 그 발화를 짚고 비운다. */
+  initialFocusSegmentId?: string | null;
+  /** 짚은 발화의 표시가 끝났다. 진입 URL 의 `segment` 를 걷을 자리다 — 재마운트가 되풀이하지 않게. */
+  onFocusHandled?: () => void;
   onTabChange: (tab: NoteTab, options?: { push?: boolean }) => void;
   onClose: () => void;
   onExpand?: () => void;
@@ -278,7 +284,9 @@ export function NotePanel({
    * 끝나면 **비운다** — 안 비우면 전사 탭을 다시 열 때마다 같은 자리로 끌려간다.
    * 탭을 옮기는 것도 같은 이유로 비운다(점프는 그 직후 다시 세운다).
    */
-  const [focusSegmentId, setFocusSegmentId] = useState<string | null>(null);
+  const [focusSegmentId, setFocusSegmentId] = useState<string | null>(
+    initialFocusSegmentId ?? null
+  );
   const handleTabChange = useCallback(
     (next: NoteTab) => {
       setFocusSegmentId(null);
@@ -297,7 +305,10 @@ export function NotePanel({
     },
     [onTabChange]
   );
-  const clearFocusSegment = useCallback(() => setFocusSegmentId(null), []);
+  const clearFocusSegment = useCallback(() => {
+    setFocusSegmentId(null);
+    onFocusHandled?.();
+  }, [onFocusHandled]);
   const recording = useRecording();
   const localProviderCanControlNote =
     isNoteRecordingActive(recording, noteId) &&
@@ -758,7 +769,8 @@ export function NotePanel({
             </TabsContent>
           ) : null}
           {showSummaryTab ? (
-            <TabsContent value="summary" className="min-h-0 flex-1">
+            <TabsContent value="summary" keepMounted className="min-h-0 flex-1">
+              {/* keepMounted: 검토 편집 중 근거를 보러 전사 탭에 다녀와도 작성 중인 초안이 살아 있게 마운트를 유지한다(APP-464). */}
               <ScrollArea className="h-full">
                 <NoteSummary
                   noteId={noteId}

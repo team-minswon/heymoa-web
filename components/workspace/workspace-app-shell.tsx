@@ -93,11 +93,12 @@ export function WorkspaceAppShell({
     (projectId: string | null) => {
       setSelectedProjectId(projectId);
 
-      if (activeNoteId) {
+      // 노트 면과 프로젝트 요약 면은 둘 다 목록을 덮는다 — 필터만 바꾸면 안 움직인 것처럼 보인다.
+      if (activeNoteId || pathname.includes("/projects/")) {
         router.push(`/w/${workspaceId}`);
       }
     },
-    [activeNoteId, router, workspaceId]
+    [activeNoteId, pathname, router, workspaceId]
   );
 
   // OAuth 연동 승인 후 서버가 /w/{workspaceId}?provider=&status=로 돌려보낸다(APP-194).

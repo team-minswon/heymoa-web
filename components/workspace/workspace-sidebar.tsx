@@ -2,21 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Check,
-  Folder,
-  MoreHorizontal,
-  NotebookText,
-  Pencil,
-  Plus,
-  Settings,
-  LogOut,
-  Trash2,
-  ChevronsUpDown,
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { BookOpen, Check, ChevronDown, ChevronRight, ChevronsUpDown, Folder, Loader2, LogOut, MoreHorizontal, NotebookText, Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
@@ -63,6 +49,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
+  getGetProjectQueryKey,
   getGetProjectsQueryKey,
   useDeleteProject,
   useUpdateProject,
@@ -151,6 +138,10 @@ export function WorkspaceSidebar({
    * 맞추는 뒷정리로만 남는다.
    */
   const applyRenamedProject = (project: ProjectResponseData) => {
+    // 프로젝트 요약 화면은 목록이 아니라 상세를 구독한다. 폴링이 없으니 여기서 같이 새로 받는다.
+    void queryClient.invalidateQueries({
+      queryKey: getGetProjectQueryKey(workspaceId, project.projectId),
+    });
     queryClient.setQueryData(
       getGetProjectsQueryKey(workspaceId),
       (previous: getProjectsResponse | undefined) => {
@@ -359,6 +350,17 @@ export function WorkspaceSidebar({
                           align="start"
                           className="rounded-panel"
                         >
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(
+                                `/w/${workspaceId}/projects/${project.projectId}`
+                              )
+                            }
+                            className="gap-2 rounded-control py-1.5 text-xs"
+                          >
+                            <BookOpen className="size-3.5 text-[var(--el-muted)]" />
+                            <span>프로젝트 요약</span>
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
                               setProjectDialog({ project })

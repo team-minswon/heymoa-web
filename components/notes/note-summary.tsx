@@ -22,6 +22,8 @@ import { formatOffset } from "@/lib/transcription/presentation";
 import { SECTION_LABELS, SECTION_ORDER } from "@/lib/notes/analysis-sections";
 import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { summaryToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
+
+import { MeetingReview } from "./meeting-review/meeting-review";
 import { cn } from "@/lib/utils";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
 
@@ -76,7 +78,7 @@ function isRunning(status: string | null | undefined): boolean {
  * 재요약은 `retry`에 상태만 실려 온다 (APP-421). 그래서 다시 만들기를 눌러도 화면이
  * 비지 않고, 위에 한 줄(`RetryStrip`)만 붙는다.
  */
-export function NoteSummary({
+function LegacySummary({
   noteId,
   isEnded,
   noteMeta,
@@ -271,6 +273,61 @@ export function NoteSummary({
         </Button>
       </div>
     </Shell>
+  );
+}
+
+/**
+ * `summary` 탭의 진입점.
+ *
+ * **회의가 끝났으면 명제 기반 검토·확정 화면이 본문이다**(APP-464). 구식 analysis 는
+ * 「이전 분석」으로 접어 아래에 둔다 — 같은 명제를 두 탭에 다르게 보여 주지 않으려고
+ * 새 탭을 만들지 않았다. 끝나기 전에는 지금까지의 요약 준비 안내 그대로다.
+ */
+export function NoteSummary(props: {
+  noteId: string;
+  isEnded: boolean;
+  noteMeta?: NoteMeta | null;
+  onEvidenceSelect: (segmentId: string) => void;
+}) {
+  // 명제가 아직 준비되지 않은 동안(방금 끝난 회의)은 구식 분석이 실제로 도는 시간이라
+  // 그 진행 표시를 가리지 않는다. 준비되면 접는다. 사용자가 누르면 그 값이 이긴다.
+  const [itemsReady, setItemsReady] = useState(true);
+  const [legacyToggle, setLegacyToggle] = useState<boolean | null>(null);
+  const legacyOpen = legacyToggle ?? !itemsReady;
+  // 구식 화면은 **같은 자리에 늘 마운트**한다. 회의가 끝나는 순간 그 안의 refetch 가
+  // 돌아야 하는데(아래 `wasEndedRef`), 분기마다 다른 부모에 두면 remount 돼 그 순간을 놓친다.
+  return (
+    <div>
+      {props.isEnded ? (
+        <Shell>
+          <MeetingReview
+            // 노트가 바뀌면 편집 reducer·CAS 기준을 새로 시작한다. 이전 노트의 편집이 섞이면 안 된다.
+            key={props.noteId}
+            noteId={props.noteId}
+            onEvidenceSelect={props.onEvidenceSelect}
+            onItemsReady={setItemsReady}
+          />
+        </Shell>
+      ) : null}
+      <div data-testid="legacy-analysis" data-collapsed={props.isEnded && !legacyOpen ? "" : undefined}>
+        {props.isEnded ? (
+          <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)]">
+            <button
+              type="button"
+              aria-expanded={legacyOpen}
+              onClick={() => setLegacyToggle(!legacyOpen)}
+              className="border-t border-[var(--el-hairline)] pt-4 text-[13px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+            >
+              이전 분석 (명제 이전 방식의 요약) {legacyOpen ? "접기" : "펼치기"}
+            </button>
+          </div>
+        ) : null}
+        {/* 접힘은 클래스로 — `hidden` 속성은 jsdom 의 접근성 트리에서도 빠져 구식 화면 테스트가 못 본다. */}
+        <div className={cn(props.isEnded && !legacyOpen && "hidden")}>
+          <LegacySummary {...props} />
+        </div>
+      </div>
+    </div>
   );
 }
 

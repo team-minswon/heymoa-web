@@ -77,7 +77,7 @@ export function NoteView({
 }: {
   workspaceId: string;
   noteId: string;
-  initialQuery: { view?: string; tab?: string };
+  initialQuery: { view?: string; tab?: string; segment?: string };
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -106,6 +106,8 @@ export function NoteView({
   });
 
   const [isOpen, setIsOpen] = useState(false);
+  // 서버가 준 `segment` 는 한 번만 쓴다. 처리한 뒤 재마운트가 fallback 으로 다시 읽으면 안 된다.
+  const [initialSegmentConsumed, setInitialSegmentConsumed] = useState(false);
   const pendingSearchRef = useRef<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
@@ -173,6 +175,8 @@ export function NoteView({
     // 먼저 URL에 쓰고, 위 effect가 다음 렌더의 실제 phase로 유효하지 않은 조합만 고친다.
     next.set("view", updates.view ?? current.view);
     next.set("tab", updates.tab ?? current.tab);
+    // 탭·뷰를 고른 순간 근거 점프는 끝난 것이다. 남겨 두면 재마운트가 그 자리로 다시 끌고 간다.
+    next.delete("segment");
     const nextSearch = next.toString();
     if (nextSearch !== search) {
       pendingSearchRef.current = { from: search, to: nextSearch };
@@ -208,6 +212,17 @@ export function NoteView({
         noteId={noteId}
         view={current.view}
         tab={current.tab}
+        // 다른 화면(프로젝트 요약의 근거)에서 발화 하나를 가리키고 들어온다. 첫 진입에만 쓴다.
+        initialFocusSegmentId={
+          searchParams.get("segment") ?? (initialSegmentConsumed ? null : initialQuery.segment) ?? null
+        }
+        onFocusHandled={() => {
+          setInitialSegmentConsumed(true);
+          if (!searchParams.has("segment")) return;
+          const next = new URLSearchParams(search);
+          next.delete("segment");
+          replaceNoteSearch(pathname, next.toString());
+        }}
         onTabChange={(tab, options) => setQuery({ tab }, options)}
         onClose={closeWithAnim}
         onExpand={
