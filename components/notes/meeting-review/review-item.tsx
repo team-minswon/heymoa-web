@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
@@ -57,7 +57,13 @@ export function ReviewItemRow({
   const [base, setBase] = useState<SaveBase | null>(null);
   const currentBase = (): SaveBase => ({ reviewVersion, itemRevision: item.revision });
 
+  // **동기 잠금.** Enter 저장이 `pending` 으로 textarea 를 비활성화하면 그 순간 blur 가 나서
+  // `commitContent` 를 한 번 더 부른다. state 는 아직 안 바뀐 뒤라 ref 로 막는다.
+  const savingRef = useRef(false);
+
   const save = async (patch: ItemPatch, at: SaveBase) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setPending(true);
     setFailure(null);
     try {
@@ -68,10 +74,12 @@ export function ReviewItemRow({
       // 충돌을 봤으면 사용자는 서버 값을 알고 있다. 다음 저장은 최신 판을 기준으로 한다.
       setBase(null);
     } finally {
+      savingRef.current = false;
       setPending(false);
     }
   };
   const commitContent = () => {
+    if (savingRef.current) return;
     const next = draft.trim();
     if (!next || next === item.content) {
       setEditing(false);

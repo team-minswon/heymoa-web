@@ -143,6 +143,9 @@ describe("MeetingReview", () => {
     const editor = screen.getByRole("textbox", { name: "항목 내용" });
     fireEvent.change(editor, { target: { value: "QA 일정을 셋째 주로 당긴다" } });
     fireEvent.keyDown(editor, { key: "Enter" });
+    // 저장이 textarea 를 비활성화하며 내는 blur 는 두 번째 저장이 아니다.
+    fireEvent.blur(editor);
+    expect(state.update).toHaveBeenCalledTimes(1);
     expect(state.update).toHaveBeenCalledWith({
       noteId: "n",
       itemId: "a",
