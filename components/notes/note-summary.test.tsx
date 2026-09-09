@@ -16,6 +16,10 @@ const state = vi.hoisted(() => ({
 vi.mock("@/components/notes/speaker-nudge-banner", () => ({
   SpeakerNudgeBanner: () => null,
 }));
+// 검토본 화면은 자기 스펙(`meeting-review.test.tsx`)이 본다. 여기서는 구식 요약만 본다.
+vi.mock("@/components/notes/meeting-review/meeting-review", () => ({
+  MeetingReview: () => null,
+}));
 vi.mock("@/lib/api/generated/analysis/analysis", () => ({
   useGetLatestAnalysis: () => ({
     isLoading: state.isLoading,

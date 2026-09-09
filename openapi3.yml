@@ -1696,6 +1696,147 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/notes/{noteId}/meeting-review:
+    get:
+      tags:
+      - MeetingReview
+      summary: getMeetingReview
+      description: 종료된 회의의 별도 검토본 저장·조회입니다. 생성·추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+      operationId: getMeetingReview
+      parameters:
+      - name: noteId
+        in: path
+        description: 회의 식별자
+        required: true
+        schema:
+          type: string
+          description: 회의 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AF
+      responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                MEETING_REVIEW_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_REVIEW_NOT_FOUND
+                      message: 검토본 또는 항목을 찾을 수 없습니다.
+                      details: null
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingReviewResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: 0HZX2K7M9Q4AF
+                      reviewId: 0K9GVJT2C4Q1Z
+                      reviewVersion: 2
+                      items:
+                      - itemId: 0HZX2K7M9Q4AN
+                        revision: 1
+                        kind: ACTION_ITEM
+                        content: 검토한 업무
+                        included: true
+                        citations:
+                        - segmentId: 0HZX2K7M9Q4AH
+                          role: SUPPORTS
+                        originalProposalRef:
+                          proposalId: 0HZX2K7M9Q4AG
+                          revision: 1
+                        authoredByUserId: null
+                        edited: false
+                        assigneeText: null
+                        dueText: 다음 회의 전
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+    post:
+      tags:
+      - MeetingReview
+      summary: createMeetingReview
+      description: 종료된 회의의 별도 검토본 저장·조회입니다. 생성·추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+      operationId: createMeetingReview
+      parameters:
+      - name: noteId
+        in: path
+        description: 회의 식별자
+        required: true
+        schema:
+          type: string
+          description: 회의 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AF
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingReviewResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: 0HZX2K7M9Q4AF
+                      reviewId: 0K9GVJT2C4Q1Z
+                      reviewVersion: 2
+                      items:
+                      - itemId: 0HZX2K7M9Q4AN
+                        revision: 1
+                        kind: ACTION_ITEM
+                        content: 검토한 업무
+                        included: true
+                        citations:
+                        - segmentId: 0HZX2K7M9Q4AH
+                          role: SUPPORTS
+                        originalProposalRef:
+                          proposalId: 0HZX2K7M9Q4AG
+                          revision: 1
+                        authoredByUserId: null
+                        edited: false
+                        assigneeText: null
+                        dueText: 다음 회의 전
+                    error: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                MEETING_NOT_ENDED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_NOT_ENDED
+                      message: 회의가 아직 종료되지 않았습니다.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
   /v1/notes/{noteId}/participants:
     put:
       tags:
@@ -3406,6 +3547,128 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/notes/{noteId}/meeting-review/items:
+    post:
+      tags:
+      - MeetingReview
+      summary: createMeetingReviewItem
+      description: 종료된 회의의 별도 검토본 저장·조회입니다. 생성·추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+      operationId: createMeetingReviewItem
+      parameters:
+      - name: noteId
+        in: path
+        description: 회의 식별자
+        required: true
+        schema:
+          type: string
+          description: 회의 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AF
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMeetingReviewItemRequest'
+            examples:
+              createMeetingReviewItem_MeetingReviewConflictException:
+                value:
+                  expectedReviewVersion: 1
+                  kind: ACTION_ITEM
+                  content: 검토한 업무
+                  assigneeText: null
+                  dueText: 다음 회의 전
+                  citations:
+                  - segmentId: 0HZX2K7M9Q4AH
+                    role: SUPPORTS
+              createMeetingReviewItem_Success:
+                value:
+                  expectedReviewVersion: 1
+                  kind: ACTION_ITEM
+                  content: 검토한 업무
+                  assigneeText: null
+                  dueText: 다음 회의 전
+                  citations:
+                  - segmentId: 0HZX2K7M9Q4AH
+                    role: SUPPORTS
+              createMeetingReviewItem_BadRequest:
+                value:
+                  expectedReviewVersion: 0
+                  kind: ACTION_ITEM
+                  content: 검토한 업무
+                  assigneeText: null
+                  dueText: 다음 회의 전
+                  citations:
+                  - segmentId: 0HZX2K7M9Q4AH
+                    role: SUPPORTS
+      responses:
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                MEETING_REVIEW_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_REVIEW_CONFLICT
+                      message: 검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요.
+                      details: null
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingReviewResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: 0HZX2K7M9Q4AF
+                      reviewId: 0K9GVJT2C4Q1Z
+                      reviewVersion: 2
+                      items:
+                      - itemId: 0HZX2K7M9Q4AN
+                        revision: 1
+                        kind: ACTION_ITEM
+                        content: 검토한 업무
+                        included: true
+                        citations:
+                        - segmentId: 0HZX2K7M9Q4AH
+                          role: SUPPORTS
+                        originalProposalRef:
+                          proposalId: 0HZX2K7M9Q4AG
+                          revision: 1
+                        authoredByUserId: null
+                        edited: false
+                        assigneeText: null
+                        dueText: 다음 회의 전
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
   /v1/notes/{noteId}/participants/guests:
     put:
       tags:
@@ -4931,21 +5194,15 @@ paths:
                 description: SSE 이벤트 스트림. 이벤트별 payload는 AsyncAPI 계약을 따른다.
               examples:
                 subscribeAgentChatTurnEvents_Success:
-                  value: 'id:1735689600001-0
-
+                  value: |+
+                    id:1735689600001-0
                     event:token
-
                     data:{"delta":"안"}
 
-
                     id:1735689600002-0
-
                     event:message_end
-
                     data:{"messageId":"m1","content":"안녕하세요"}
 
-
-                    '
         '410':
           description: '410'
           content:
@@ -4975,6 +5232,134 @@ paths:
                     error:
                       code: AGENT_CHAT_CAPACITY_EXCEEDED
                       message: 지금은 연결이 많아 스트림을 열 수 없습니다.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/notes/{noteId}/meeting-review/items/{itemId}:
+    patch:
+      tags:
+      - MeetingReview
+      summary: updateMeetingReviewItem
+      description: 종료된 회의의 별도 검토본 저장·조회입니다. 생성·추가·편집은 회의 시작자, 조회는 멤버에게 허용합니다. 버전 충돌 시 GET으로 다시 읽습니다. 준비·관계·승인 상태는 이 응답에 포함하지 않습니다.
+      operationId: updateMeetingReviewItem
+      parameters:
+      - name: noteId
+        in: path
+        description: 회의 식별자
+        required: true
+        schema:
+          type: string
+          description: 회의 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AF
+      - name: itemId
+        in: path
+        description: 검토 항목 ID
+        required: true
+        schema:
+          type: string
+          description: 검토 항목 ID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          minLength: 13
+          maxLength: 13
+        example: 0HZX2K7M9Q4AN
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingReviewItemRequest'
+            examples:
+              updateMeetingReviewItem_Success:
+                value:
+                  expectedReviewVersion: 1
+                  expectedItemRevision: 1
+                  content: 검토한 업무
+                  included: true
+                  assigneeText: null
+                  dueText: 다음 회의 전
+              updateMeetingReviewItem_Forbidden:
+                value:
+                  expectedReviewVersion: 1
+                  expectedItemRevision: 1
+                  content: 검토한 업무
+                  included: true
+                  assigneeText: null
+                  dueText: 다음 회의 전
+              updateMeetingReviewItem_MeetingReviewConflictException:
+                value:
+                  expectedReviewVersion: 1
+                  expectedItemRevision: 1
+                  content: 검토한 업무
+                  included: true
+                  assigneeText: null
+                  dueText: 다음 회의 전
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingReviewResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      noteId: 0HZX2K7M9Q4AF
+                      reviewId: 0K9GVJT2C4Q1Z
+                      reviewVersion: 2
+                      items:
+                      - itemId: 0HZX2K7M9Q4AN
+                        revision: 1
+                        kind: ACTION_ITEM
+                        content: 검토한 업무
+                        included: true
+                        citations:
+                        - segmentId: 0HZX2K7M9Q4AH
+                          role: SUPPORTS
+                        originalProposalRef:
+                          proposalId: 0HZX2K7M9Q4AG
+                          revision: 1
+                        authoredByUserId: null
+                        edited: false
+                        assigneeText: null
+                        dueText: 다음 회의 전
+                    error: null
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOT_MEETING_STARTER:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOT_MEETING_STARTER
+                      message: 회의 시작자만 조작할 수 있습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                MEETING_REVIEW_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_REVIEW_CONFLICT
+                      message: 검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -6924,6 +7309,75 @@ components:
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
           minLength: 13
           maxLength: 13
+    AddMeetingReviewItemRequest:
+      title: AddMeetingReviewItemRequest
+      required:
+      - content
+      - expectedReviewVersion
+      - kind
+      type: object
+      properties:
+        citations:
+          type: array
+          description: 선택한 같은 회의 전사. 생략 시 빈 목록
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                description: 인용 역할
+                nullable: false
+                enum:
+                - SUPPORTS
+                - REFUTES
+                - CONDITIONS
+                - RETRACTS
+                - REFERENCES
+              segmentId:
+                type: string
+                description: 같은 회의 전사 ID
+                nullable: false
+                example: 0HZX2K7M9Q4AH
+                pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                minLength: 13
+                maxLength: 13
+            required:
+            - segmentId
+            - role
+          nullable: false
+        expectedReviewVersion:
+          type: integer
+          description: 읽은 검토본 버전
+          nullable: false
+          format: int64
+          minimum: 1
+        kind:
+          type: string
+          description: 추가할 항목 종류
+          nullable: false
+          enum:
+          - AGENDA
+          - DECISION
+          - ACTION_ITEM
+          - ISSUE
+          - QUESTION
+          - STATUS_REPORT
+          - INSIGHT
+        dueText:
+          type: string
+          description: 기한 원문. 추정 정규화하지 않습니다
+          nullable: true
+          minLength: 1
+        assigneeText:
+          type: string
+          description: 담당 원문. 추정 정규화하지 않습니다
+          nullable: true
+          minLength: 1
+        content:
+          type: string
+          description: 사람이 작성한 내용
+          nullable: false
+          minLength: 1
     UpdateWorkspaceResponse:
       title: UpdateWorkspaceResponse
       required:
@@ -7488,6 +7942,44 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    UpdateMeetingReviewItemRequest:
+      title: UpdateMeetingReviewItemRequest
+      required:
+      - expectedItemRevision
+      - expectedReviewVersion
+      type: object
+      properties:
+        expectedReviewVersion:
+          type: integer
+          description: 읽은 검토본 버전
+          nullable: false
+          format: int64
+          minimum: 1
+        dueText:
+          type: string
+          description: 생략 시 유지, null은 해제, 빈 문자열은 거절합니다
+          nullable: true
+          minLength: 1
+        included:
+          type: boolean
+          description: 포함/제외. 생략 시 유지, null은 거절합니다
+          nullable: false
+        assigneeText:
+          type: string
+          description: 생략 시 유지, null은 해제, 빈 문자열은 거절합니다
+          nullable: true
+          minLength: 1
+        content:
+          type: string
+          description: 생략 시 유지. null과 빈 내용은 거절합니다
+          nullable: false
+          minLength: 1
+        expectedItemRevision:
+          type: integer
+          description: 읽은 항목 버전
+          nullable: false
+          format: int64
+          minimum: 1
     AssignSegmentSpeakerRequest:
       title: AssignSegmentSpeakerRequest
       type: object
@@ -7585,6 +8077,178 @@ components:
           description: 성공 응답 데이터
           nullable: false
           additionalProperties: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    MeetingReviewResponse:
+      title: MeetingReviewResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - items
+          - noteId
+          - reviewId
+          - reviewVersion
+          type: object
+          properties:
+            reviewVersion:
+              type: integer
+              description: 검토본 CAS 버전
+              nullable: false
+              format: int64
+              minimum: 1
+            noteId:
+              type: string
+              description: 회의 식별자
+              nullable: false
+              example: 0HZX2K7M9Q4AF
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+            items:
+              type: array
+              description: 저장된 검토 항목. 제외 항목도 포함합니다
+              items:
+                required:
+                - citations
+                - content
+                - edited
+                - included
+                - itemId
+                - kind
+                - originalProposalRef
+                - revision
+                - assigneeText
+                - dueText
+                - authoredByUserId
+                type: object
+                properties:
+                  itemId:
+                    type: string
+                    description: 서버 발급 검토 항목 ID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AN
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  citations:
+                    type: array
+                    description: 이 항목에 저장된 전사 참조
+                    items:
+                      required:
+                      - role
+                      - segmentId
+                      type: object
+                      properties:
+                        role:
+                          type: string
+                          description: 저장된 인용 역할
+                          nullable: false
+                          enum:
+                          - SUPPORTS
+                          - REFUTES
+                          - CONDITIONS
+                          - RETRACTS
+                          - REFERENCES
+                        segmentId:
+                          type: string
+                          description: 같은 회의의 전사 ID
+                          nullable: false
+                          example: 0HZX2K7M9Q4AH
+                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                          minLength: 13
+                          maxLength: 13
+                  edited:
+                    type: boolean
+                    description: 사람이 수정한 항목 여부
+                  kind:
+                    type: string
+                    description: 항목 종류
+                    nullable: false
+                    enum:
+                    - AGENDA
+                    - DECISION
+                    - ACTION_ITEM
+                    - ISSUE
+                    - QUESTION
+                    - STATUS_REPORT
+                    - INSIGHT
+                  originalProposalRef:
+                    type: object
+                    properties:
+                      proposalId:
+                        type: string
+                        description: 원본 명제 ID
+                        nullable: false
+                        example: 0HZX2K7M9Q4AG
+                        pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        minLength: 13
+                        maxLength: 13
+                      revision:
+                        type: integer
+                        description: 원본 명제 판
+                        nullable: false
+                        format: int64
+                        minimum: 1
+                    description: 원본 명제 출처. 사람 추가는 null
+                    nullable: true
+                    required:
+                    - proposalId
+                    - revision
+                  dueText:
+                    type: string
+                    description: 기한 원문. 미지정은 null
+                    nullable: true
+                    minLength: 1
+                  included:
+                    type: boolean
+                    description: 검토 대상 포함 여부
+                  authoredByUserId:
+                    type: string
+                    description: 사람 추가 항목의 작성자. 원본 복사 항목은 null
+                    nullable: true
+                    example: 0HZX2K7M9Q4AC
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    minLength: 13
+                    maxLength: 13
+                  assigneeText:
+                    type: string
+                    description: 담당 원문. 미지정은 null
+                    nullable: true
+                    minLength: 1
+                  content:
+                    type: string
+                    description: 검토한 내용
+                    nullable: false
+                    minLength: 1
+                  revision:
+                    type: integer
+                    description: 항목 CAS 버전
+                    nullable: false
+                    format: int64
+                    minimum: 1
+            reviewId:
+              type: string
+              description: 별도 검토본 식별자
+              nullable: false
+              example: 0K9GVJT2C4Q1Z
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              minLength: 13
+              maxLength: 13
+          description: 성공 응답 데이터
+          nullable: false
         success:
           type: boolean
           description: 요청 성공 여부

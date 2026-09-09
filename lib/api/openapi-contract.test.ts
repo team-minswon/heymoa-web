@@ -154,9 +154,10 @@ describe("OpenAPI contract", () => {
     ]) {
       expect(schemaNames).not.toContain(name);
     }
-    expect(Object.keys(api().paths)).toHaveLength(45);
+    expect(Object.keys(api().paths)).toHaveLength(48);
     // APP-551: 턴 스트림 계약이 `AgentChatTurnResponse`(202 {turnId}) 하나를 더한다.
-    expect(schemaNames).toHaveLength(62);
+    // APP-464(server APP-460): 회의 검토본 응답·항목 추가·수정 요청 셋을 더한다 (62 → 65).
+    expect(schemaNames).toHaveLength(65);
   });
 
   it("omits the internal-only security scheme", () => {
@@ -251,7 +252,10 @@ describe("contract sync 2026-07-29", () => {
     // `notes/{noteId}/context-candidates`와 `.../context-candidates/{candidateId}/revisions`.
     // APP-557(PRO-45)에서 그 둘이 `notes/{noteId}/proposals`와
     // `.../proposals/{proposalId}/revisions`로 이름을 바꿨다. 개수는 그대로다.
-    expect(paths).toHaveLength(45);
+    // APP-464(server APP-460)에서 회의 검토본 경로 셋이 늘었다 (45 → 48) —
+    // `notes/{noteId}/meeting-review`(조회 GET · 생성 POST), `.../meeting-review/items`,
+    // `.../meeting-review/items/{itemId}`.
+    expect(paths).toHaveLength(48);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

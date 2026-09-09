@@ -758,12 +758,14 @@ export function NotePanel({
             </TabsContent>
           ) : null}
           {showSummaryTab ? (
-            <TabsContent value="summary" className="min-h-0 flex-1">
+            <TabsContent value="summary" keepMounted className="min-h-0 flex-1">
+              {/* keepMounted: 검토 편집 중 근거를 보러 전사 탭에 다녀와도 열린 편집기가 살아 있다(APP-464). */}
               <ScrollArea className="h-full">
                 <NoteSummary
                   noteId={noteId}
                   isEnded={phase === "ended"}
                   noteMeta={noteMeta}
+                  canEdit={isStarter}
                   onEvidenceSelect={jumpToSegment}
                 />
               </ScrollArea>

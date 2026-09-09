@@ -13,6 +13,7 @@ import {
   CONTEXT_TIMELINE,
   isSwapFilled,
 } from "@/lib/mocks/proposals";
+import { meetingReviewHandlers } from "@/lib/mocks/meeting-review";
 import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/proposals/__fixtures__/synthetic-ledger-snapshot.json";
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
@@ -964,4 +965,7 @@ export const restHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+
+  // 회의 검토본 (APP-464). 시드·CAS·시작자 게이트는 `meeting-review.ts` 가 정한다.
+  ...meetingReviewHandlers,
 ];

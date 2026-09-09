@@ -25,6 +25,8 @@ import { summaryToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { cn } from "@/lib/utils";
 import { SpeakerNudgeBanner } from "@/components/notes/speaker-nudge-banner";
 
+import { MeetingReview } from "./meeting-review/meeting-review";
+
 const POLL_INTERVAL_MS = 3_000;
 
 /**
@@ -76,19 +78,12 @@ function isRunning(status: string | null | undefined): boolean {
  * 재요약은 `retry`에 상태만 실려 온다 (APP-421). 그래서 다시 만들기를 눌러도 화면이
  * 비지 않고, 위에 한 줄(`RetryStrip`)만 붙는다.
  */
-export function NoteSummary({
+function LegacySummary({
   noteId,
   isEnded,
   noteMeta,
   onEvidenceSelect,
-}: {
-  noteId: string;
-  isEnded: boolean;
-  /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
-  noteMeta?: NoteMeta | null;
-  /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
-  onEvidenceSelect: (segmentId: string) => void;
-}) {
+}: SummaryProps) {
   const analysisQuery = useGetLatestAnalysis(noteId, {
     query: {
       retry: false,
@@ -271,6 +266,65 @@ export function NoteSummary({
         </Button>
       </div>
     </Shell>
+  );
+}
+
+type SummaryProps = {
+  noteId: string;
+  isEnded: boolean;
+  /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
+  noteMeta?: NoteMeta | null;
+  /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
+  onEvidenceSelect: (segmentId: string) => void;
+};
+
+/**
+ * `summary` 탭의 진입점.
+ *
+ * **회의가 끝났으면 검토본이 본문이다**(APP-464). 구식 analysis 는 「이전 분석」으로 접어
+ * 아래에 둔다 — 같은 회의를 두 탭에 다르게 보여 주지 않으려고 새 탭을 만들지 않았다.
+ * 검토본이 아직 없으면 구식 분석을 편 채로 둔다. 그때는 그것이 유일한 내용이다.
+ * 끝나기 전에는 지금까지의 요약 준비 안내 그대로다.
+ */
+export function NoteSummary(props: SummaryProps & { canEdit?: boolean }) {
+  const [hasReview, setHasReview] = useState(false);
+  const [legacyToggle, setLegacyToggle] = useState<boolean | null>(null);
+  const legacyOpen = legacyToggle ?? !hasReview;
+  // 구식 화면은 **같은 자리에 늘 마운트**한다. 회의가 끝나는 순간 그 안의 refetch 가
+  // 돌아야 하는데(`wasEndedRef`), 분기마다 다른 부모에 두면 remount 돼 그 순간을 놓친다.
+  return (
+    <div>
+      {props.isEnded ? (
+        <Shell>
+          <MeetingReview
+            // 노트가 바뀌면 편집기·폼 상태를 새로 시작한다.
+            key={props.noteId}
+            noteId={props.noteId}
+            canEdit={props.canEdit ?? false}
+            onEvidenceSelect={props.onEvidenceSelect}
+            onHasReview={setHasReview}
+          />
+        </Shell>
+      ) : null}
+      <div data-testid="legacy-analysis" data-collapsed={props.isEnded && !legacyOpen ? "" : undefined}>
+        {props.isEnded ? (
+          <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)]">
+            <button
+              type="button"
+              aria-expanded={legacyOpen}
+              onClick={() => setLegacyToggle(!legacyOpen)}
+              className="border-t border-[var(--el-hairline)] pt-4 text-[13px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+            >
+              이전 분석 {legacyOpen ? "접기" : "펼치기"}
+            </button>
+          </div>
+        ) : null}
+        {/* 접힘은 클래스로 — `hidden` 속성은 jsdom 의 접근성 트리에서도 빠져 구식 화면 테스트가 못 본다. */}
+        <div className={cn(props.isEnded && !legacyOpen && "hidden")}>
+          <LegacySummary {...props} />
+        </div>
+      </div>
+    </div>
   );
 }
 
