@@ -26,7 +26,7 @@ import {
   type ReviewKind,
 } from "@/lib/notes/meeting-review/select";
 
-import { ReviewItemRow, type ItemPatch } from "./review-item";
+import { ReviewItemRow, type ItemPatch, type TranscriptState } from "./review-item";
 
 /**
  * 종료된 회의의 검토본. `summary` 탭의 본문이다.
@@ -51,8 +51,18 @@ export function MeetingReview({
 }) {
   const queryClient = useQueryClient();
   const queryKey = getGetMeetingReviewQueryKey(noteId);
-  const reviewQuery = useGetMeetingReview(noteId, { query: { retry: false } });
-  const transcriptQuery = useGetNoteTranscript(noteId, { query: { staleTime: 60_000 } });
+  const reviewQuery = useGetMeetingReview(noteId, {
+    query: {
+      retry: false,
+      // 시작자의 편집은 응답으로 캐시에 들어온다. 읽기만 하는 참여자는 남의 변경을 받을
+      // 길이 없으니 저주기 폴링과 창 포커스로 따라간다. 요약 탭이 keepMounted 라 재마운트 refetch 는 없다.
+      refetchOnWindowFocus: true,
+      refetchInterval: canEdit ? false : 30_000,
+    },
+  });
+  const transcriptQuery = useGetNoteTranscript(noteId, {
+    query: { staleTime: 60_000, refetchOnWindowFocus: true },
+  });
 
   const review =
     reviewQuery.data?.status === 200 && reviewQuery.data.data.success
@@ -63,6 +73,11 @@ export function MeetingReview({
     transcriptQuery.data?.status === 200 && transcriptQuery.data.data.success
       ? transcriptQuery.data.data.data.segments
       : [];
+  // 전사가 아직 없거나 못 받은 것과 인용이 전사에 없는 것은 다른 일이다. 근거 줄이 가른다.
+  const transcript: TranscriptState = {
+    status: transcriptQuery.isLoading ? "loading" : transcriptQuery.isError ? "error" : "ready",
+    retry: () => void transcriptQuery.refetch(),
+  };
 
   const hasReview = review !== null;
   useEffect(() => onHasReview?.(hasReview), [hasReview, onHasReview]);
@@ -182,6 +197,7 @@ export function MeetingReview({
                     key={item.itemId}
                     item={item}
                     evidence={resolveCitations(item.citations, segments)}
+                    transcript={transcript}
                     canEdit={canEdit}
                     onEvidenceSelect={onEvidenceSelect}
                     onSave={save}

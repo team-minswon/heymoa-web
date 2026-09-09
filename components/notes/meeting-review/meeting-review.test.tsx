@@ -12,6 +12,8 @@ const state = vi.hoisted(() => ({
   add: vi.fn(),
   create: vi.fn(),
   client: { setQueryData: vi.fn(), invalidateQueries: vi.fn() },
+  transcriptError: false,
+  transcriptRefetch: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({
@@ -36,7 +38,10 @@ vi.mock("@/lib/api/generated/meeting-review/meeting-review", () => ({
 }));
 vi.mock("@/lib/api/generated/transcription/transcription", () => ({
   useGetNoteTranscript: () => ({
-    data: {
+    isLoading: false,
+    isError: state.transcriptError,
+    refetch: state.transcriptRefetch,
+    data: state.transcriptError ? undefined : {
       status: 200,
       data: {
         success: true,
@@ -94,6 +99,7 @@ describe("MeetingReview", () => {
         item({ itemId: "x", kind: "DECISION", content: "제외된 결정", included: false }),
       ],
     };
+    state.transcriptError = false;
     state.update.mockReset().mockResolvedValue({ data: { success: true, data: {} } });
     state.add.mockReset();
     state.create.mockReset();
@@ -115,6 +121,15 @@ describe("MeetingReview", () => {
     fireEvent.click(screen.getByRole("button", { name: /근거 1개/ }));
     fireEvent.click(screen.getByRole("button", { name: /출시일을 9월 말로 확정합니다\./ }));
     expect(onEvidenceSelect).toHaveBeenCalledWith("seg-1");
+  });
+
+  it("전사를 못 받았으면 근거 없음이 아니라 실패와 다시 시도를 보인다", () => {
+    state.transcriptError = true;
+    renderReview();
+    fireEvent.click(screen.getByRole("button", { name: /근거 1개/ }));
+    expect(screen.getByRole("alert")).toHaveTextContent("전사를 불러오지 못했습니다.");
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(state.transcriptRefetch).toHaveBeenCalled();
   });
 
   it("수정은 Enter 로 저장하고 읽은 검토본·항목 버전을 함께 보낸다", async () => {

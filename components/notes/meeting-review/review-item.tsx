@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,8 @@ import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
 export type ItemPatch = { content?: string; included?: boolean };
+/** 전사 조회의 상태. 인용을 줄로 풀 수 있는지가 여기 달렸다. */
+export type TranscriptState = { status: "loading" | "error" | "ready"; retry: () => void };
 
 /**
  * 검토 항목 한 줄. 요약 탭의 `SummaryItem`과 같은 문법이다 — 글줄 하나, 문장 뒤 각주 마커,
@@ -23,6 +25,7 @@ export type ItemPatch = { content?: string; included?: boolean };
 export function ReviewItemRow({
   item,
   evidence,
+  transcript,
   canEdit,
   onEvidenceSelect,
   onSave,
@@ -30,6 +33,7 @@ export function ReviewItemRow({
   item: ReviewItem;
   /** 인용을 전사 줄로 푼 것. 전사가 아직 없으면 빈 배열이다. */
   evidence: Evidence[];
+  transcript: TranscriptState;
   canEdit: boolean;
   onEvidenceSelect: (segmentId: string) => void;
   /** 거절은 reject 다. 이 줄이 사유를 그린다. */
@@ -221,6 +225,18 @@ export function ReviewItemRow({
                     </button>
                   </li>
                 ))
+              ) : transcript.status === "loading" ? (
+                <li role="status" className="flex items-center gap-2 text-[13px] text-[var(--el-muted)]">
+                  <Loader2 aria-hidden className="size-3.5 animate-spin" />
+                  전사를 불러오는 중입니다.
+                </li>
+              ) : transcript.status === "error" ? (
+                <li role="alert" className="flex items-center gap-2 text-[13px] text-[var(--el-muted)]">
+                  전사를 불러오지 못했습니다.
+                  <button type="button" onClick={transcript.retry} className="text-[var(--el-ink)] underline underline-offset-2">
+                    다시 시도
+                  </button>
+                </li>
               ) : (
                 <li className="text-[13px] text-[var(--el-muted-soft)]">전사에서 그 발화를 찾지 못했습니다.</li>
               )}
