@@ -108,8 +108,9 @@ export function MeetingReview({
         status: 200,
       });
     },
-    // 거절(대개 409)이면 서버 판이 앞섰다. 다시 읽어야 다음 저장의 CAS 가 맞는다.
-    onError: () => void queryClient.invalidateQueries({ queryKey }),
+    // 거절(대개 409)이면 서버 판이 앞섰다. 다시 읽어야 다음 저장의 CAS 가 맞는다. Promise 를
+    // 돌려줘 재조회가 끝날 때까지 `isPending` 이 풀리지 않게 한다 — 그 전에 다시 누르면 같은 충돌이다.
+    onError: () => queryClient.invalidateQueries({ queryKey }),
   };
   const create = useCreateMeetingReview({ mutation: settle });
   // 항목 저장의 거절은 아래 `save` 가 재조회를 기다린 뒤 돌려준다. 여기서 또 invalidate 하지 않는다.
