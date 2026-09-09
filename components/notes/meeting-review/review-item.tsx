@@ -65,6 +65,8 @@ export function ReviewItemRow({
       setEditing(false);
     } catch (error) {
       setFailure(errorMessageOf(error, "저장하지 못했습니다."));
+      // 충돌을 봤으면 사용자는 서버 값을 알고 있다. 다음 저장은 최신 판을 기준으로 한다.
+      setBase(null);
     } finally {
       setPending(false);
     }
@@ -134,7 +136,11 @@ export function ReviewItemRow({
           rows={2}
           disabled={pending}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={commitContent}
+          onBlur={(event) => {
+            // 「최신 판 위에 저장」으로 가는 포커스 이동이다. 여기서 저장하면 그 클릭이 죽는다.
+            if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.retrySave !== undefined) return;
+            commitContent();
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
@@ -202,6 +208,7 @@ export function ReviewItemRow({
               서버 값 「{item.content}」
               <button
                 type="button"
+                data-retry-save
                 disabled={pending}
                 onClick={() => {
                   const next = draft.trim();

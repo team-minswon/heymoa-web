@@ -190,7 +190,11 @@ describe("MeetingReview", () => {
     view.rerender(<MeetingReview noteId="n" canEdit onEvidenceSelect={onEvidenceSelect} />);
     expect(screen.getByRole("alert")).toHaveTextContent("서버 값 「QA 일정을 남이 고쳤다」");
     expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue("QA 일정을 다섯째 주로 당긴다");
-    fireEvent.click(screen.getByRole("button", { name: "최신 판 위에 저장" }));
+    // 버튼으로 포커스가 옮겨 가는 blur 는 저장하지 않는다 — 그러면 클릭이 죽는다.
+    const retry = screen.getByRole("button", { name: "최신 판 위에 저장" });
+    fireEvent.blur(screen.getByRole("textbox", { name: "항목 내용" }), { relatedTarget: retry });
+    expect(state.update).toHaveBeenCalledTimes(1);
+    fireEvent.click(retry);
     expect(state.update.mock.calls[1][0].data).toMatchObject({
       content: "QA 일정을 다섯째 주로 당긴다",
       expectedReviewVersion: 9,
