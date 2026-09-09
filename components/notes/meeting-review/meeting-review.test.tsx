@@ -166,6 +166,38 @@ describe("MeetingReview", () => {
     });
   });
 
+  it("충돌 뒤에는 초안을 지킨 채 최신 판 위에 다시 저장할 수 있다", async () => {
+    state.update
+      .mockRejectedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "MEETING_REVIEW_CONFLICT", message: "검토본이 변경되었습니다." },
+      })
+      .mockResolvedValueOnce({ status: 200, data: { success: true, data: {} } });
+    const view = renderReview();
+    const row = screen.getByText("QA 일정을 당긴다").closest("li")!;
+    fireEvent.click(within(row).getByRole("button", { name: "수정" }));
+    const editor = screen.getByRole("textbox", { name: "항목 내용" });
+    fireEvent.change(editor, { target: { value: "QA 일정을 다섯째 주로 당긴다" } });
+    fireEvent.keyDown(editor, { key: "Enter" });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("검토본이 변경되었습니다.");
+    // 거절 뒤 재조회가 최신 판을 가져왔다.
+    state.review = {
+      reviewVersion: 9,
+      items: [item({ itemId: "a", kind: "ACTION_ITEM", content: "QA 일정을 남이 고쳤다", revision: 5 })],
+    };
+    view.rerender(<MeetingReview noteId="n" canEdit onEvidenceSelect={onEvidenceSelect} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("서버 값 「QA 일정을 남이 고쳤다」");
+    expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue("QA 일정을 다섯째 주로 당긴다");
+    fireEvent.click(screen.getByRole("button", { name: "최신 판 위에 저장" }));
+    expect(state.update.mock.calls[1][0].data).toMatchObject({
+      content: "QA 일정을 다섯째 주로 당긴다",
+      expectedReviewVersion: 9,
+      expectedItemRevision: 5,
+    });
+  });
+
   it("거절되면 편집기를 닫지 않고 사유를 그 줄에 남긴다", async () => {
     state.update.mockRejectedValue({
       success: false,

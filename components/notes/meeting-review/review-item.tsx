@@ -195,6 +195,24 @@ export function ReviewItemRow({
       {failure ? (
         <p role="alert" className="mt-1 text-[12px] text-[var(--el-error-strong)]">
           {failure}
+          {editing ? (
+            // 거절 뒤 부모는 최신 검토본을 다시 읽는다. 초안은 그대로 두고, 지금 서버 값을 보여 준
+            // 뒤 그 판을 기준으로 다시 저장할 길을 준다 — Escape 로 초안을 버리게 하지 않는다.
+            <span className="ml-2 text-[var(--el-muted)]">
+              서버 값 「{item.content}」
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  const next = draft.trim();
+                  if (next) void save({ content: next }, currentBase());
+                }}
+                className="ml-2 text-[var(--el-ink)] underline underline-offset-2"
+              >
+                최신 판 위에 저장
+              </button>
+            </span>
+          ) : null}
         </p>
       ) : null}
 
