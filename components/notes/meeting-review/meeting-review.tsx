@@ -105,8 +105,13 @@ export function MeetingReview({
     onError: () => void queryClient.invalidateQueries({ queryKey }),
   };
   const create = useCreateMeetingReview({ mutation: settle });
+  // 항목 저장의 거절은 아래 `save` 가 재조회를 기다린 뒤 돌려준다. 여기서 또 invalidate 하지 않는다.
   const update = useUpdateMeetingReviewItem({
-    mutation: { ...settle, meta: { suppressErrorToast: true } },
+    mutation: {
+      onMutate: settle.onMutate,
+      onSuccess: settle.onSuccess,
+      meta: { suppressErrorToast: true },
+    },
   });
   const add = useCreateMeetingReviewItem({
     mutation: { ...settle, meta: { suppressErrorToast: true } },
@@ -146,15 +151,22 @@ export function MeetingReview({
   // CAS 기준은 **사용자가 읽은 판**이다. 줄이 편집을 열 때 잡아 둔 값을 그대로 보낸다 —
   // 편집 중 폴링이 새 판을 받아 와도 그것으로 갈아타면 남의 변경 위에 조용히 덮어쓴다.
   const save = (itemId: string, patch: ItemPatch, base: SaveBase) =>
-    update.mutateAsync({
-      noteId,
-      itemId,
-      data: {
-        ...patch,
-        expectedReviewVersion: base.reviewVersion,
-        expectedItemRevision: base.itemRevision,
-      },
-    });
+    update
+      .mutateAsync({
+        noteId,
+        itemId,
+        data: {
+          ...patch,
+          expectedReviewVersion: base.reviewVersion,
+          expectedItemRevision: base.itemRevision,
+        },
+      })
+      .catch(async (error: unknown) => {
+        // 거절(대개 409)이면 서버 판이 앞섰다. 최신 판이 캐시에 들어올 때까지 줄의 잠금을
+        // 붙든다 — 그 전에 「최신 판 위에 저장」을 누르면 같은 충돌을 되풀이한다.
+        await queryClient.invalidateQueries({ queryKey });
+        throw error;
+      });
   const sections = groupReviewItems(review.items);
 
   return (

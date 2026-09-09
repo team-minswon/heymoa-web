@@ -11,7 +11,11 @@ const state = vi.hoisted(() => ({
   update: vi.fn(),
   add: vi.fn(),
   create: vi.fn(),
-  client: { setQueryData: vi.fn(), invalidateQueries: vi.fn(), cancelQueries: vi.fn() },
+  client: {
+    setQueryData: vi.fn(),
+    invalidateQueries: vi.fn().mockResolvedValue(undefined),
+    cancelQueries: vi.fn().mockResolvedValue(undefined),
+  },
   transcriptError: false,
   transcriptRefetch: vi.fn(),
 }));
@@ -182,6 +186,8 @@ describe("MeetingReview", () => {
     fireEvent.keyDown(editor, { key: "Enter" });
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("검토본이 변경되었습니다.");
+    // 거절은 최신 판 재조회를 기다린 뒤에야 줄에 닿는다.
+    expect(state.client.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["review", "n"] });
     // 거절 뒤 재조회가 최신 판을 가져왔다.
     state.review = {
       reviewVersion: 9,
