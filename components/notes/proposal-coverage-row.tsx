@@ -43,8 +43,8 @@ export function ContextCoverageGapRow({
           있다. 확실한 것은 전사 자신뿐이다. */}
       <p className="min-w-0 text-center text-[12px] leading-relaxed text-[var(--el-muted-soft)]">
         {meetingEnded
-          ? "이 구간의 내용은 전사에서 그대로 확인할 수 있습니다"
-          : "전사는 계속 기록됩니다"}
+          ? "이 구간의 내용은 스크립트에서 그대로 확인할 수 있습니다"
+          : "스크립트는 계속 기록됩니다"}
       </p>
     </div>
   );

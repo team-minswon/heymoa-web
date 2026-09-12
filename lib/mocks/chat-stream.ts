@@ -29,7 +29,7 @@ export const GENERAL_CHAT_ANSWERS = [
   "이번 회의에서는 온보딩 이탈과 알림 정책 두 가지를 다뤘습니다. 가입 직후 3분 안에 빠져나가는 비율이 40%를 넘어 프로필 설정 단계를 원인으로 보고, 입력 항목을 여섯 개에서 두 개로 줄이는 안을 검토했습니다. 다음 주 사용자 테스트로 효과를 확인하기로 했습니다.",
   "지금까지 확정된 액션 아이템은 세 건입니다. 온보딩 프로필 항목 축소안 확정, 신규 가입 첫 세션 대상 테스트 시나리오 작성, 테스트 참가자 20명 모집(금요일 마감)입니다. 담당자는 첫 번째 건만 정해졌고 나머지는 아직 언급되지 않았습니다.",
   "알림 논의는 발송 방식에서 시작했습니다. 지금은 이벤트마다 개별 푸시가 나가는데, 하루 알림 수가 많다는 피드백이 반복돼 묶어서 보내는 방향을 검토했습니다. 묶음 기준과 주기를 먼저 정한 뒤 채널별 예외를 다루는 순서가 좋겠다는 의견이 있었습니다.",
-  "말씀하신 부분은 회의 후반 08분경에 다뤄졌습니다. 알림 클릭률이 지난 분기 대비 절반 아래로 떨어졌고 알림을 아예 끄는 사용자도 늘고 있어, 정책부터 다시 보기로 했습니다. 구체적인 수치는 전사 기록에서 확인할 수 있습니다.",
+  "말씀하신 부분은 회의 후반 08분경에 다뤄졌습니다. 알림 클릭률이 지난 분기 대비 절반 아래로 떨어졌고 알림을 아예 끄는 사용자도 늘고 있어, 정책부터 다시 보기로 했습니다. 구체적인 수치는 스크립트에서 확인할 수 있습니다.",
   "결정과 남은 논의를 나눠 보면, 결정은 온보딩 입력 항목 축소와 사용자 테스트 진행 두 가지입니다. 남은 논의는 알림 묶음 기준과 알림 설정 화면 개선인데, 후자는 다음 사이클 백로그로 넘겼습니다.",
   "해당 안건은 이번 회의 범위에서는 결론이 나지 않았습니다. 테스트 범위를 첫 세션으로 좁힌 결정은 결과 해석을 쉽게 하지만 재방문 시점의 이탈은 확인할 수 없어, 후속 회차가 필요하다는 점이 함께 언급됐습니다.",
 ];
@@ -391,7 +391,7 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
   if (hasScenario(input.message, "capacity")) {
     return [
       start,
-      ...thinking("전사에서 관련 발화를 찾습니다."),
+      ...thinking("스크립트에서 관련 발화를 찾습니다."),
       frame("turn_failed", {
         turnId: input.turnId ?? tsid(`${input.chatId}:${input.turn ?? 0}:turn`),
         code: "CAPACITY_EXCEEDED",
@@ -425,7 +425,7 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
       frame("tool_call_start", {
         toolCallId,
         tool: "transcripts.search",
-        summary: "전사에서 관련 발화 검색",
+        summary: "스크립트에서 관련 발화 검색",
         target: pinned,
       }),
       frame("tool_call_result", {
@@ -456,14 +456,14 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
       [
         {
           tool: "transcripts.search",
-          summary: "전사에서 결제 실패 언급 검색",
+          summary: "스크립트에서 결제 실패 언급 검색",
           found: "3건 찾음",
-          plan: "먼저 전사에서 결제 실패가 언급된 자리를 찾습니다.",
+          plan: "먼저 스크립트에서 결제 실패가 언급된 자리를 찾습니다.",
         },
         {
           tool: "notes_read",
           summary: `${note.title} 본문 읽기`,
-          found: "요약 + 전사 8000자",
+          found: "요약 + 스크립트 8000자",
           plan: "찾은 대목이 어느 회의인지 확인하려고 그 회의록을 폅니다.",
         },
         {
@@ -513,12 +513,12 @@ export function buildChatEvents(input: BuildInput): MockSseEvent[] {
       // 이 넷이 없으면 진행 표시가 화면에 붙었는지 목으로 확인할 방법이 없다.
       ...thinking(
         `${note.title}에서 물어보신 내용을 찾습니다.`,
-        "전사에서 관련 발화를 먼저 훑겠습니다."
+        "스크립트에서 관련 발화를 먼저 훑겠습니다."
       ),
       frame("tool_call_start", {
         toolCallId,
         tool: "transcripts.search",
-        summary: "전사에서 관련 발화 검색",
+        summary: "스크립트에서 관련 발화 검색",
         target: { kind: "note", id: note.id, title: note.title },
       }),
       frame("tool_call_result", {

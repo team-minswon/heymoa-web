@@ -184,7 +184,7 @@ export function MeetingEndDialog({
           <AlertDialogDescription>
             {meetingStatus === "IN_PROGRESS"
               ? "현재 기록을 먼저 안전하게 저장한 뒤 회의를 종료하고 요약을 시작합니다."
-              : "회의를 종료하고 요약을 시작합니다. 이후에는 전사를 다시 시작할 수 없습니다."}
+              : "회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할 수 없습니다."}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

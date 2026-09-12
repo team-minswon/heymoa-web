@@ -16,9 +16,10 @@ import {
   filterByTyped,
 } from "@/components/ui/combobox";
 import {
-  speakerTintOfLabel,
+  speakerAvatarName,
   type SpeakerIdentity,
 } from "@/lib/transcription/speaker-identity";
+import { PersonAvatar } from "@/components/heymoa/person-avatar";
 
 export type SpeakerCandidate = {
   /**
@@ -101,37 +102,6 @@ const SCOPES: ReadonlyArray<{ value: AssignScope; label: string }> = [
   { value: "label", label: "이 화자의 모든 발화에 적용" },
   { value: "segment", label: "현재 발화에만 적용" },
 ];
-
-/** 칩과 같은 모양이어야 한다 — 고를 때와 확인할 때 같은 사람이 다르게 보이면 안 된다. */
-function CandidateAvatar({
-  candidate,
-  tint,
-}: {
-  candidate: SpeakerCandidate;
-  tint: string;
-}) {
-  if (candidate.image) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={candidate.image}
-        alt=""
-        className="size-5 shrink-0 rounded-full object-cover"
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      // **붙고 나서 가질 색을 미리 보여준다.** 여기만 중립색이거나 다른 규칙이면, 고를
-      // 때와 붙은 뒤가 달라져 내가 고른 사람이 맞는지 한 번 더 확인하게 된다.
-      className="flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] text-[var(--el-ink)]"
-      style={{ backgroundColor: tint }}
-    >
-      {[...candidate.name][0] ?? "?"}
-    </span>
-  );
-}
 
 /**
  * 읽다가 「이 사람 아닌데」를 알아본 **그 자리**가 고치는 자리다.
@@ -227,7 +197,20 @@ export function SpeakerAssignMenu({
   // 누구나 고친다. 지금 이것을 켜는 곳은 임시 참여자를 **만드는 동안**뿐이다(두 왕복이라
   // 그 사이 다른 메뉴가 저장하면 늦게 도착한 쪽이 되돌린다). 참여 여부를 여기 다시
   // 연결하면 이번에 뗀 제한이 되살아난다.
-  if (disabled) return <SpeakerChip identity={identity} className="mb-1" />;
+  /**
+   * 잠긴 동안에도 **같은 상자**를 세운다.
+   *
+   * 예전에는 칩만 그대로 내보냈는데, 칩은 `inline-flex` 라 인라인 줄상자에 앉고 버튼은
+   * `flex` 라 블록 상자다. 줄상자에는 글꼴의 strut 이 붙어 높이가 달라져서, **화자를
+   * 지정하는 순간 그 줄이 몇 px 튀었다가 돌아왔다.** 여백·안쪽 여백도 같이 맞춘다.
+   */
+  if (disabled) {
+    return (
+      <span className="mb-1 -mx-1 flex items-center rounded-chip px-1">
+        <SpeakerChip identity={identity} />
+      </span>
+    );
+  }
 
   const trimmedSearch = typed.trim();
   // **검색 전에는 이 회의 밖 사람을 안 보여준다.** 아래 `canCreateGuest` 는 그래도 후보
@@ -322,19 +305,20 @@ export function SpeakerAssignMenu({
               value={candidate}
               className="gap-2"
             >
-              <span aria-hidden="true" className="contents">
-                <CandidateAvatar
-                  candidate={candidate}
-                  // 이미 다른 화자에 붙어 있으면 **거기 색**이다 — 화면에서 그 색으로 보고
-                  // 있는 사람이라 알아보는 단서가 된다. 아직 아무 데도 아니면 여기 붙었을 때
-                  // 가질 색을 미리 보여준다
-                  tint={
-                    candidate.assignedLabels?.length
-                      ? speakerTintOfLabel(candidate.assignedLabels[0])
-                      : identity.tint
-                  }
-                />
-              </span>
+              {/**
+                * 전사의 칩과 **같은 규칙**이다 (`speakerAvatarName`). 이미 화자로 붙어
+                * 있으면 거기 얼굴이라, 화면에서 그 얼굴로 보던 사람을 알아본다.
+                *
+                * **아직 아무 데도 아닌 사람에게 이 화자의 얼굴을 미리 보여주면 안 된다.**
+                * 그러면 아무도 안 붙은 회의에서 후보 전원이 같은 얼굴로 서서, 얼굴이
+                * 아무것도 안 가리키는 장식이 된다. 그 사람 것으로 고른다.
+                */}
+              <PersonAvatar
+                name={speakerAvatarName(candidate.assignedLabels ?? [], {
+                  hashKey: candidateKey(candidate),
+                })}
+                image={candidate.image}
+              />
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline gap-1.5">
                   <span className="truncate text-[13px]">{candidate.name}</span>

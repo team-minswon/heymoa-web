@@ -350,7 +350,7 @@ export function TranscriptView({
         {noteMeta && rows.length && !transcriptQuery.isError ? (
           <div className="sticky top-0 z-10 -mt-5 flex justify-end bg-white pb-2 pt-5">
             <CopyMarkdownButton
-              label="전사"
+              label="스크립트"
               // 중지 뒤 최종 재조회와 30초 폴링이 도는 동안은 무엇이 최종본인지 모른다.
               disabled={transcriptQuery.isFetching}
               build={() =>
@@ -376,7 +376,7 @@ export function TranscriptView({
             녹음 상태는 상단바·레코더 독이 표시한다. 전사 행이 바로 시작한다. */}
         <section
           role={transcriptQuery.isPending ? undefined : "log"}
-          aria-label="회의 전사"
+          aria-label="회의 스크립트"
         >
           {transcriptQuery.isPending ? (
             /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `h-24`/`h-28` 막대 둘이라
@@ -532,7 +532,7 @@ export function TranscriptView({
 
               {!segments.length && !viewerLive && phase !== "not-started" ? (
                 <p className="py-8 text-sm text-[var(--el-muted)]">
-                  전사된 대화가 없습니다.
+                  스크립트가 없습니다.
                 </p>
               ) : null}
             </div>

@@ -5,15 +5,11 @@ import {
   SpeakerAssignMenu,
   type SpeakerCandidate,
 } from "@/components/notes/speaker-assign-menu";
-import {
-  createSpeakerIdentityResolver,
-  type SpeakerIdentity,
-} from "@/lib/transcription/speaker-identity";
+import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
 
 const identity: SpeakerIdentity = {
   displayName: "화자 A",
-  tint: "var(--el-gradient-sky)",
-  initial: "화",
+  avatarName: "label:A",
   imageUrl: null,
   unassigned: true,
 };
@@ -97,7 +93,7 @@ describe("SpeakerAssignMenu", () => {
 
     expect(
       screen.getAllByRole("option").map((item) => item.textContent)
-    ).toEqual(["김김철수kim@example.com", "박박서준park@example.com"]);
+    ).toEqual(["김철수kim@example.com", "박서준park@example.com"]);
     expect(
       screen.getByRole("button", { name: "이름 안 붙임" })
     ).toBeInTheDocument();
@@ -425,7 +421,7 @@ describe("SpeakerAssignMenu", () => {
 
     expect(
       screen.getAllByRole("option").map((item) => item.textContent)
-    ).toEqual(["박박서준park@example.com"]);
+    ).toEqual(["박서준park@example.com"]);
   });
 
   it("정확히 같은 이름을 치면 추가가 안 뜬다", () => {
@@ -536,33 +532,31 @@ describe("SpeakerAssignMenu", () => {
     expect(screen.queryByRole("button", { name: /추가/ })).toBeNull();
   });
 
-  // 사진이 없는 사람은 이니셜 아바타로 나오는데, 여기가 중립색이면 고를 때 회색이던
-  // 얼굴이 붙는 순간 파스텔로 바뀐다. 같은 사람이 두 번 다르게 보인다.
-  it("사진이 없으면 붙은 뒤와 같은 색으로 그린다", () => {
+  /**
+   * **후보마다 제 얼굴이다.** 예전에는 아직 아무 화자도 아닌 사람에게 *지금 고치는 화자*의
+   * 색을 미리 보여줬다 — 「붙으면 이 색이 된다」는 뜻이었는데, 아무도 안 붙은 회의에서는
+   * 후보 전원이 같은 색으로 서서 얼굴이 아무것도 안 가리키는 장식이 됐다.
+   */
+  it("후보마다 다른 얼굴이다 — 이 화자의 얼굴을 전원에게 미리 칠하지 않는다", () => {
     const { container } = render(
       <SpeakerAssignMenu
         identity={identity}
-        candidates={[candidates[0]]}
+        candidates={candidates}
         onAssign={vi.fn()}
       />
     );
 
     open();
 
-    // 이 사람을 화자 A 에 붙이면 칩이 쓸 색
-    const afterAssign = createSpeakerIdentityResolver([
-      {
-        label: "A",
-        assignedName: "김철수",
-        assignedParticipantId: "01K0000000101",
-      },
-    ] as never)("A");
-    const avatar = container.ownerDocument.querySelector<HTMLElement>(
-      '[role="option"] span[aria-hidden] span[aria-hidden]'
-    );
+    // `boring-avatars` 는 이름을 SVG 모양으로 바꾼다 — 그 마크업이 곧 그 사람의 얼굴이다.
+    const faces = [
+      ...container.ownerDocument.querySelectorAll<SVGElement>(
+        '[role="option"] svg'
+      ),
+    ].map((svg) => svg.innerHTML.replace(/_r_[a-z0-9]+_/g, ""));
 
-    expect(avatar?.style.backgroundColor).toBe(afterAssign?.tint);
-    expect(avatar?.style.backgroundColor).toBeTruthy();
+    expect(faces.length).toBeGreaterThan(1);
+    expect(new Set(faces).size).toBe(faces.length);
   });
 
   // ── 지정 범위 ──────────────────────────────────────────────────────────────

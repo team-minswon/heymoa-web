@@ -449,7 +449,7 @@ function NotePanels({
             compact={compact}
           />
         ) : null}
-        {tab === "전사" ? (
+        {tab === "스크립트" ? (
           <TranscriptPanel
             lines={demo.lines}
             live={demo.live}

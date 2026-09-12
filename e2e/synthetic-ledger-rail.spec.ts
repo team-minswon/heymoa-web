@@ -90,13 +90,13 @@ test.describe("server 적재 원장 — 화면", () => {
    * **하나만 보이는지 세는 것으로는 부족하다.** 포화 flag 가 붙은 구간이 따로 있으면
    * `applyStatus` 를 안 봐도 한 줄은 뜬다. 그래서 개수로 센다.
    */
-  test("덜 실린 구간이 전사에서 경고로 보인다", async ({ page }) => {
+  test("덜 실린 구간이 스크립트에서 경고로 보인다", async ({ page }) => {
     test.setTimeout(90_000);
     await expect(page.getByText(`지금까지 ${CANDIDATE_COUNT}건`)).toBeVisible({
       timeout: 30_000,
     });
 
-    await page.getByRole("tab", { name: "전사" }).click();
+    await page.getByRole("tab", { name: "스크립트" }).click();
     await expect(page.getByTestId("context-saturated")).toHaveCount(
       WARNED_RANGES,
       { timeout: 30_000 }

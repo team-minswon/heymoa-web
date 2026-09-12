@@ -139,7 +139,7 @@ describe("RecordingDock", () => {
   });
 
   describe("실패 사유", () => {
-    const reason = "실시간 전사 처리에 실패했습니다.";
+    const reason = "실시간 스크립트 처리에 실패했습니다.";
 
     afterEach(() => {
       recording.error = null;

@@ -175,7 +175,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       this.flushPending();
       socket.stop(this.nextChunkSeq - 1);
     } catch {
-      this.fail("전사 종료 요청을 서버에 보내지 못했습니다.");
+      this.fail("스크립트 종료 요청을 서버에 보내지 못했습니다.");
       await this.close();
       return;
     }
@@ -187,7 +187,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     globalThis.clearTimeout(timeoutId!);
     this.terminalResolve = null;
     if (state === "timeout") {
-      this.fail("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+      this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
     }
     await this.close();
   }

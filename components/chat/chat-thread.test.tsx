@@ -296,7 +296,7 @@ describe("ChatThread", () => {
       messages: [
         message({
           role: "TOOL",
-          content: "전사에서 관련 발화 검색 · 3건 찾음",
+          content: "스크립트에서 관련 발화 검색 · 3건 찾음",
           toolEvent: {
             tool: "transcripts.search",
             decision: null,
@@ -306,7 +306,7 @@ describe("ChatThread", () => {
         }),
       ],
     });
-    expect(screen.getByText("전사에서 관련 발화 검색 · 3건 찾음")).toBeTruthy();
+    expect(screen.getByText("스크립트에서 관련 발화 검색 · 3건 찾음")).toBeTruthy();
     expect(screen.queryByText("transcripts.search")).toBeNull();
     expect(screen.queryByText("완료")).toBeNull();
   });

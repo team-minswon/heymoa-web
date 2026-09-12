@@ -161,7 +161,7 @@ describe("ProductShot 대본", () => {
 
       // 전사로 돌아가면 마지막 발화까지 받아 적혀 있다.
       act(() => {
-        fireEvent.click(screen.getAllByRole("tab", { name: "전사" })[0]);
+        fireEvent.click(screen.getAllByRole("tab", { name: "스크립트" })[0]);
       });
       expect(
         screen.getAllByText(/오늘 남길 건 여기까지입니다/).length
@@ -332,7 +332,7 @@ describe("ProductShot 대본", () => {
       );
 
       // 고정이 풀려 대본의 첫 화면(전사)으로 돌아왔다.
-      expect(screen.getAllByRole("tab", { name: "전사" })[0]).toHaveAttribute(
+      expect(screen.getAllByRole("tab", { name: "스크립트" })[0]).toHaveAttribute(
         "aria-selected",
         "true"
       );
@@ -357,7 +357,7 @@ describe("ProductShot 대본", () => {
 
       expect(playToEnd()).toBe(true);
       act(() => {
-        fireEvent.click(screen.getAllByRole("tab", { name: "전사" })[0]);
+        fireEvent.click(screen.getAllByRole("tab", { name: "스크립트" })[0]);
       });
 
       // 사람 이름이 아니다 — 그건 사용자가 붙인다.

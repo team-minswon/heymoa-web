@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
   getGetWorkspaceGuestsQueryKey,
   useDeleteWorkspaceGuest,
@@ -210,9 +211,8 @@ function GuestRow({
 }) {
   return (
     <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--el-surface-strong)] text-[11px] text-[var(--el-ink)]">
-        {[...guest.displayName][0] ?? "?"}
-      </span>
+      {/* 색은 `guestId` 가 정한다 — 이름은 겹치고(박도현·박순영) 개명하면 튄다. */}
+      <PersonAvatar name={guest.guestId} size={28} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm text-[var(--el-ink)]">
           {guest.displayName}

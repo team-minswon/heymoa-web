@@ -71,8 +71,12 @@ describe("NoteParticipantAvatars", () => {
     ).toBeInTheDocument();
   });
 
-  it("이름이 비어 있으면 이메일 첫 글자로 떨어진다", () => {
-    render(
+  /**
+   * 얼굴에 글자를 안 얹는다 — 이름은 늘 툴팁에 있다. **이름이 비어도 빈 원으로 남으면 안
+   * 된다**: 얼굴은 그 사람의 변하지 않는 식별자에서 나오므로 이름이 없어도 그려진다.
+   */
+  it("이름이 비어도 얼굴은 그려진다", () => {
+    const { container } = render(
       <NoteParticipantAvatars
         participants={[
           {
@@ -86,7 +90,29 @@ describe("NoteParticipantAvatars", () => {
       />
     );
 
-    expect(screen.getByText("z")).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeTruthy();
+    // 얼굴에 글자를 안 얹는다.
+    expect(container.textContent).toBe("");
+  });
+
+  // 같은 열쇠면 같은 얼굴이다 — 저장하지 않아도 흔들리지 않는다.
+  it("같은 사람은 늘 같은 얼굴이다", () => {
+    const person = {
+      participantId: "01K0000000101",
+      userId: "01K0000000001",
+      guestId: null,
+      name: "한지원",
+      email: "jiwon@heymoa.com",
+    };
+    // React 가 매 렌더 새로 뽑는 `useId` 마스크 id 는 얼굴이 아니다 — 빼고 본다.
+    const orb = () =>
+      render(<NoteParticipantAvatars participants={[person]} />)
+        .container.querySelector("svg")
+        ?.innerHTML.replace(/_r_[a-z0-9]+_/g, "");
+
+    const first = orb();
+    cleanup();
+    expect(orb()).toBe(first);
   });
 
   it("계정 없는 참여자는 이메일 자리에 「외부」가 선다", () => {
@@ -109,13 +135,5 @@ describe("NoteParticipantAvatars", () => {
     expect(screen.getByLabelText("외부인2 (외부)")).toBeInTheDocument();
   });
 
-  it("이름도 이메일도 없으면 물음표로 떨어진다", () => {
-    render(
-      <NoteParticipantAvatars
-        participants={[{ ...guest(0), name: "  " }]}
-      />
-    );
 
-    expect(screen.getByText("?")).toBeInTheDocument();
-  });
 });

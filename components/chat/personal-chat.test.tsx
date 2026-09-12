@@ -1716,7 +1716,7 @@ describe("PersonalChatProvider", () => {
           createdAt: "2026-07-24T00:00:01Z",
           turnId: "0K9GVJT2C4Q3B",
           role: "TOOL",
-          content: "전사에서 관련 발화 검색",
+          content: "스크립트에서 관련 발화 검색",
           scope: [],
           toolEvent: {
             tool: "transcripts.search",
@@ -1732,7 +1732,7 @@ describe("PersonalChatProvider", () => {
           {
             toolCallId: "call_01",
             tool: "transcripts.search",
-            summary: "전사에서 관련 발화 검색",
+            summary: "스크립트에서 관련 발화 검색",
           },
           "1735689600000-5"
         ),
@@ -1742,7 +1742,7 @@ describe("PersonalChatProvider", () => {
 
       await waitFor(() => expect(state.resumeUrls).toHaveLength(1));
       expect(
-        await screen.findAllByText("전사에서 관련 발화 검색")
+        await screen.findAllByText("스크립트에서 관련 발화 검색")
       ).toHaveLength(1);
       // 질문은 스트림에 안 실린다 — 접으면 이어받기 화면에서 사라진다.
       expect(screen.getByText("이슈 만들어줘")).toBeTruthy();

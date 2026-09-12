@@ -104,6 +104,26 @@
   --el-gradient-sky: #a8c8e8;
   --el-gradient-rose: #e8b8c4;
 
+  /* 아바타 구슬. 위 파스텔 다섯의 **hue 만** 가져와 세 스톱을 만든다 — 좌상 하이라이트,
+     중앙 원색, 우하로 색상을 돌린 깊은 색. 새 색상을 들이지 않는다.
+
+     ★ **깊이는 어둡게가 아니라 색상 회전에서 온다.** 같은 색을 ink 로 누르면 그늘로 보이고
+     구슬로는 안 보인다. 회전값(차가운 색 +44~61°, 따뜻한 색 −10~−17°)은 HeroUI 아바타
+     이미지를 픽셀 단위로 떠서 잰 값이다.
+
+     얼굴에 글자를 얹지 않으므로 대비 하한이 없다 — 글자를 다시 넣으려면 채도부터 내려야 한다.
+     뒤 다섯(-soft)은 열한 번째 화자부터 되돌아 쓰는 자리다. */
+  --el-orb-mint: radial-gradient(circle at 28% 22%, hsl(163 62% 88%), hsl(163 60% 68%) 45%, hsl(211 66% 62%));
+  --el-orb-peach: radial-gradient(circle at 28% 22%, hsl(23 62% 88%), hsl(23 60% 68%) 45%, hsl(6 66% 62%));
+  --el-orb-lavender: radial-gradient(circle at 28% 22%, hsl(264 62% 88%), hsl(264 60% 68%) 45%, hsl(325 66% 62%));
+  --el-orb-sky: radial-gradient(circle at 28% 22%, hsl(210 62% 88%), hsl(210 60% 68%) 45%, hsl(254 66% 62%));
+  --el-orb-rose: radial-gradient(circle at 28% 22%, hsl(345 62% 88%), hsl(345 60% 68%) 45%, hsl(335 66% 62%));
+  --el-orb-mint-soft: radial-gradient(circle at 28% 22%, hsl(163 58% 94%), hsl(163 52% 81%) 45%, hsl(211 56% 76%));
+  --el-orb-peach-soft: radial-gradient(circle at 28% 22%, hsl(23 58% 94%), hsl(23 52% 81%) 45%, hsl(6 56% 76%));
+  --el-orb-lavender-soft: radial-gradient(circle at 28% 22%, hsl(264 58% 94%), hsl(264 52% 81%) 45%, hsl(325 56% 76%));
+  --el-orb-sky-soft: radial-gradient(circle at 28% 22%, hsl(210 58% 94%), hsl(210 52% 81%) 45%, hsl(254 56% 76%));
+  --el-orb-rose-soft: radial-gradient(circle at 28% 22%, hsl(345 58% 94%), hsl(345 52% 81%) 45%, hsl(335 56% 76%));
+
   --el-success: #16a34a;
   --el-error: #dc2626;
 
@@ -540,6 +560,47 @@
   .landing-surface [data-turn] {
     animation: none;
   }
+}
+
+
+/**
+ * 사람 하나를 가리키는 구슬. 색은 `--orb-*` 커스텀 속성이 정하고 TS 는 숫자만 준다 —
+ * 색 값은 여기 남는다.
+ *
+ * **`:root` 의 변수로 두면 안 된다.** 커스텀 속성 안의 `var()` 는 *선언한 자리*에서
+ * 치환되므로, `--el-orb: …var(--orb-hue)…` 를 `:root` 에 두면 거기서 `--orb-hue` 가 없어
+ * 값 전체가 무효가 되고 요소에 각도를 실어도 이미 늦다. 클래스로 둬야 쓰는 요소에서
+ * 치환된다.
+ *
+ * **oklch 다.** hsl 은 같은 L 이라도 노랑이 파랑보다 훨씬 밝아 보여서, 색상만 돌리면 어떤
+ * 사람은 허옇고 어떤 사람은 묵직한 구슬을 받는다. oklch 는 L 이 지각 밝기라 색상을 한 바퀴
+ * 돌려도 무게가 같다.
+ *
+ * **켜가 셋이다** (`boring-avatars` 의 marble 과 같은 생각). 바탕 하나로는 색상각이 겹치는
+ * 순간 두 사람이 똑같아진다. 위에 얹는 두 덩이의 색상각과 자리를 따로 해싱하면 같은 계열
+ * 안에서도 무늬가 갈린다.
+ *
+ * 바깥 고리를 `--orb-shift`(기본 40°) 만큼 돌리는 것이 깊이를 만든다 — HeroUI 아바타를
+ * 픽셀로 뜯어 얻은 규칙이고, 어둡게 까는 것보다 맑다.
+ */
+.el-orb {
+  background:
+    radial-gradient(
+      circle at var(--orb-x2, 70%) var(--orb-y2, 75%),
+      oklch(0.8 0.13 calc(var(--orb-hue, 210) + var(--orb-hue2, 40))) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      circle at var(--orb-x1, 25%) var(--orb-y1, 80%),
+      oklch(0.9 0.09 calc(var(--orb-hue, 210) - var(--orb-hue1, 35))) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 28% 22%,
+      oklch(0.94 0.045 var(--orb-hue, 210)),
+      oklch(0.84 0.105 var(--orb-hue, 210)) 45%,
+      oklch(0.73 0.145 calc(var(--orb-hue, 210) + var(--orb-shift, 40)))
+    );
 }
 
 @layer base {

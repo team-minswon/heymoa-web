@@ -59,7 +59,7 @@ describe("NoteDeleteDialog", () => {
     // "삭제됩니다"만 쓰면 전사·요약·대화까지 사라지는 것을 알 수 없다.
     expect(
       screen.getByText(
-        "전사와 요약, 챗봇 대화가 함께 사라집니다. 되돌릴 수 없습니다."
+        "스크립트와 요약, 챗봇 대화가 함께 사라집니다. 되돌릴 수 없습니다."
       )
     ).toBeInTheDocument();
   });

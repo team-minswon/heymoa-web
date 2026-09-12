@@ -29,6 +29,8 @@ const data = vi.hoisted(() => ({
 
 const spies = vi.hoisted(() => ({
   assignLabel: vi.fn(),
+  /** 화자 패널의 초기화가 쓰는 쪽. 라벨마다 한 번씩 부른다. */
+  assignLabelAsync: vi.fn(() => Promise.resolve({ status: 200 })),
   assignSegment: vi.fn(),
   createGuest: vi.fn(),
 }));
@@ -59,7 +61,7 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
   getGetNoteTranscriptQueryKey: () => ["transcript"],
   useAssignNoteSpeaker: () => ({
     mutate: spies.assignLabel,
-    mutateAsync: vi.fn(),
+    mutateAsync: spies.assignLabelAsync,
     isPending: false,
   }),
   useAssignSegmentSpeaker: () => ({
@@ -127,6 +129,7 @@ describe("NoteArchive", () => {
     data.diarization = null;
     data.transcriptFails = false;
     spies.assignLabel.mockReset();
+    spies.assignLabelAsync.mockClear();
     spies.assignSegment.mockReset();
   });
 
@@ -171,7 +174,7 @@ describe("NoteArchive", () => {
     expect(screen.queryByRole("button", { name: "복사" })).toBeNull();
   });
 
-  it("전사 로드 실패를 빈 아카이브가 아니라 오류·재시도로 보인다", () => {
+  it("스크립트 로드 실패를 빈 아카이브가 아니라 오류·재시도로 보인다", () => {
     data.transcriptFails = true;
     render(
       <NoteArchive
@@ -181,8 +184,8 @@ describe("NoteArchive", () => {
         onFocusHandled={() => {}}
       />
     );
-    expect(screen.getByText("전사를 불러오지 못했습니다.")).toBeTruthy();
-    expect(screen.queryByText("전사된 대화가 없습니다.")).toBeNull();
+    expect(screen.getByText("스크립트를 불러오지 못했습니다.")).toBeTruthy();
+    expect(screen.queryByText("스크립트가 없습니다.")).toBeNull();
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
@@ -439,7 +442,7 @@ describe("NoteArchive", () => {
         vi.advanceTimersByTime(strokeMs * 2 + 1_500 - 1);
         expect(onFocusHandled).not.toHaveBeenCalled();
         vi.advanceTimersByTime(1);
-        // 안 비우면 전사 탭을 다시 열 때마다 같은 자리로 끌려간다.
+        // 안 비우면 스크립트 탭을 다시 열 때마다 같은 자리로 끌려간다.
         expect(onFocusHandled).toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
@@ -774,5 +777,430 @@ describe("NoteArchive", () => {
         data: { participantId: null },
       })
     );
+  });
+
+  // ── 화자 패널 ───────────────────────────────────────────────────────────────
+
+  const SILENT = {
+    participantId: "01K0000000103",
+    userId: "01K0000000003",
+    name: "조용한 사람",
+    email: "quiet@heymoa.com",
+  };
+
+  /**
+   * A 는 한지원, B 는 아무도 안 붙었고, C 는 「참석자 아님」으로만 확정됐다.
+   * 조용한 사람은 참여자인데 한 마디도 안 했다.
+   */
+  function renderPanelNote(people: unknown[] = [MEMBER, SILENT]) {
+    data.refetched = null;
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        {
+          label: "A",
+          speakingMs: 3000,
+          segmentCount: 1,
+          representativeSegmentId: "s1",
+          assignedParticipantId: MEMBER.participantId,
+          assignedName: MEMBER.name,
+          confirmed: true,
+        },
+        {
+          label: "B",
+          speakingMs: 1000,
+          segmentCount: 1,
+          representativeSegmentId: "s2",
+          assignedParticipantId: null,
+          assignedName: null,
+          confirmed: false,
+        },
+        {
+          label: "C",
+          speakingMs: 1000,
+          segmentCount: 1,
+          representativeSegmentId: "s3",
+          assignedParticipantId: null,
+          assignedName: null,
+          confirmed: true,
+        },
+      ],
+    };
+    data.segments = ["A", "B", "C"].map((label, index) => ({
+      segmentId: `s${index + 1}`,
+      transcriptionSessionId: "sess1",
+      sequence: index,
+      startedAtMs: index * 4000,
+      endedAtMs: index * 4000 + 3000,
+      text: `발화 ${index}`,
+      speakerLabel: label,
+      assignedParticipantId: null,
+    }));
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={people as never}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "화자" }));
+  }
+
+  /**
+   * 화자를 붙이려면 전사를 훑으며 「화자 A」를 찾아야 했다. 이 버튼이 그 일을 대신한다 —
+   * 누를 때마다 아직 누구인지 모르는 화자의 발화로 넘어가고, 끝에서 처음으로 돈다.
+   */
+  it("「미지정」을 누르면 미지정 화자를 차례로 넘긴다", async () => {
+    renderPanelNote();
+    // 패널은 닫고 전사에서 쓴다 — 넘기는 도구가 제 목적지를 가리면 안 된다.
+    fireEvent.keyDown(document.body, { key: "Escape" });
+
+    const next = await screen.findByRole("button", { name: /미지정 2/ });
+    const focusedText = () =>
+      screen
+        .getAllByTestId("archive-transcript-block")
+        .find((block) => block.hasAttribute("data-focused"))?.textContent;
+
+    fireEvent.click(next);
+    await waitFor(() => expect(focusedText()).toContain("발화 1"));
+
+    fireEvent.click(next);
+    await waitFor(() => expect(focusedText()).toContain("발화 2"));
+
+    // 끝에서 처음으로 돈다 — 마지막에서 멈추면 되짚으려고 패널을 다시 열어야 한다.
+    fireEvent.click(next);
+    await waitFor(() => expect(focusedText()).toContain("발화 1"));
+  });
+
+  /**
+   * 회의에 화자가 다섯인데 워크스페이스 멤버가 스무 명이면, 다음 라벨에 붙일 사람은 거의
+   * 확실히 앞에서 이미 고른 그 다섯 중 하나다. 순서를 안 주면 매번 다시 찾는다.
+   */
+  it("이미 화자로 고른 사람이 후보 맨 위에 선다", () => {
+    // **뒤집어 넘긴다.** 서버가 준 이름 순서에서 이미 고른 사람이 뒤에 있을 때
+    // 정렬이 일하는지가 이 검사의 전부다.
+    renderPanelNote([SILENT, MEMBER]);
+    fireEvent.keyDown(document.body, { key: "Escape" });
+
+    // 화자 B(미지정)의 메뉴를 연다 — 여기서 고를 사람이 위에 있어야 한다.
+    fireEvent.click(screen.getAllByTestId("speaker-assign-trigger")[1]);
+
+    const names = screen
+      .getAllByRole("option")
+      .map((option) => option.textContent ?? "");
+    // MEMBER 는 화자 A 에 붙어 있고 SILENT 는 아무 데도 안 붙었다.
+    expect(names[0]).toContain(MEMBER.name);
+    expect(names[0]).toContain("화자 A");
+  });
+
+  /**
+   * 서버가 지정마다 그 노트 행을 `FOR UPDATE` 로 잠근다. 동시에 보내면 어차피 줄을 서고,
+   * 기다리는 동안 라벨 수만큼 커넥션과 트랜잭션을 쥔 채로 있는다.
+   */
+  it("초기화는 한 번에 하나씩 보낸다", async () => {
+    let release!: () => void;
+    spies.assignLabelAsync.mockImplementationOnce(
+      () => new Promise((resolve) => (release = () => resolve({ status: 200 })))
+    );
+    renderPanelNote();
+    // A 와 C 둘을 되돌리게 만든다.
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        ...(data.diarization as { speakers: unknown[] }).speakers.slice(0, 2),
+        {
+          label: "C",
+          speakingMs: 1000,
+          segmentCount: 1,
+          representativeSegmentId: "s3",
+          assignedParticipantId: GUEST.participantId,
+          assignedName: GUEST.name,
+          confirmed: true,
+        },
+      ],
+    };
+
+    fireEvent.click(screen.getByRole("button", { name: /전체 초기화/ }));
+    await screen.findByRole("alertdialog");
+    fireEvent.click(screen.getByRole("button", { name: "전체 초기화" }));
+
+    await waitFor(() =>
+      expect(spies.assignLabelAsync).toHaveBeenCalledTimes(1)
+    );
+    // 첫 요청이 아직 도는 동안에는 두 번째가 안 나간다.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(spies.assignLabelAsync).toHaveBeenCalledTimes(1);
+
+    release();
+    await waitFor(() =>
+      expect(spies.assignLabelAsync).toHaveBeenCalledTimes(2)
+    );
+  });
+
+  /**
+   * TanStack 은 재조회가 실패해도 옛 `data` 를 들고 있다. 본문은 오류 화면으로 바뀌는데
+   * 도구만 남으면, 「첫 발화로」가 사라진 DOM 을 짚고 낡은 수치가 멀쩡한 결과처럼 선다.
+   */
+  it("전사를 다시 읽지 못하면 화자 도구도 내린다", () => {
+    renderPanelNote();
+    // 패널이 열려 있으면 바깥이 inert 라 상단바를 못 짚는다 — 닫고 본다.
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.getByRole("button", { name: "화자" })).toBeTruthy();
+
+    cleanup();
+    data.transcriptFails = true;
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={[MEMBER]}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "화자" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /미지정/ })).toBeNull();
+  });
+
+  it("다 붙인 회의에는 「미지정」 버튼이 없다", () => {
+    renderDiarized();
+    expect(screen.queryByRole("button", { name: /미지정/ })).toBeNull();
+  });
+
+  // 회의에 앉아 듣기만 한 사람이 실제로 있다. 말한 사람만 세면 그 사람은 목록에서 사라져
+  // 「이 회의에 없던 사람」으로 읽힌다.
+  it("한 마디도 안 한 참여자도 패널에 선다", () => {
+    renderPanelNote();
+
+    expect(screen.getByText("조용한 사람")).toBeTruthy();
+    expect(screen.getByText("말한 기록 없음")).toBeTruthy();
+  });
+
+  it("미지정 화자가 맨 위에 선다 — 이 패널을 여는 이유가 대개 그것이다", () => {
+    renderPanelNote();
+
+    const names = screen
+      .getAllByTestId("speaker-panel-row")
+      .map((row) => row.textContent);
+    expect(names[0]).toContain("화자 B");
+    expect(names[1]).toContain("화자 C");
+  });
+
+  /**
+   * 초기화는 **이름이 붙은 라벨만** 되돌린다. 「참석자 아님」으로 확정한 C 는 화면에 이미
+   * `화자 C` 라 되돌릴 것이 없고, 서버에는 확정을 무를 API 가 없다.
+   */
+  it("전체 초기화는 이름이 붙은 라벨에만 빈 본문을 보낸다", async () => {
+    renderPanelNote();
+
+    fireEvent.click(screen.getByRole("button", { name: /전체 초기화/ }));
+    // 대상은 서버에 다시 물어 세므로 확인창이 한 박자 뒤에 선다.
+    await screen.findByRole("alertdialog");
+    fireEvent.click(screen.getByRole("button", { name: "전체 초기화" }));
+
+    await waitFor(() =>
+      expect(spies.assignLabelAsync).toHaveBeenCalledTimes(1)
+    );
+    expect(spies.assignLabelAsync).toHaveBeenCalledWith({
+      noteId: "01K0000000002",
+      label: "A",
+      data: { participantId: null },
+    });
+  });
+
+  /**
+   * 초기화를 걸어 놓고 패널을 닫으면 전사의 메뉴는 그대로 살아 있었다. 거기서 개별 지정을
+   * 끝내도 **늦게 도착한 초기화 PUT 이 그 지정을 지운다** — 라벨 PUT 이 그 화자의 발화 단위
+   * 지정을 함께 지우기 때문이다. 같은 라벨을 두고 두 경로가 경쟁하므로 잠금을 공유한다.
+   */
+  it("초기화가 도는 동안에는 전사의 화자 지정도 잠긴다", async () => {
+    let release!: () => void;
+    spies.assignLabelAsync.mockImplementationOnce(
+      () => new Promise((resolve) => (release = () => resolve({ status: 200 })))
+    );
+    renderPanelNote();
+
+    fireEvent.click(screen.getByRole("button", { name: /전체 초기화/ }));
+    // 대상은 서버에 다시 물어 세므로 확인창이 한 박자 뒤에 선다.
+    await screen.findByRole("alertdialog");
+    fireEvent.click(screen.getByRole("button", { name: "전체 초기화" }));
+
+    // 잠긴 메뉴는 누를 자리 없이 칩만 남는다 (`SpeakerAssignMenu` 의 `disabled` 분기).
+    await waitFor(() =>
+      expect(screen.queryByTestId("speaker-assign-trigger")).toBeNull()
+    );
+
+    release();
+    await waitFor(() =>
+      expect(screen.queryAllByTestId("speaker-assign-trigger").length).toBeGreaterThan(0)
+    );
+  });
+
+  /**
+   * 인용으로 간 뒤 형광이 사라지기 전에 패널에서 이동을 누르면, 예전에는 패널만 닫히고
+   * 화면이 안 움직였다 — 소유자가 든 옛 `focusSegmentId` 가 새 점프를 이겼다.
+   */
+  it("형광이 남아 있어도 방금 누른 이동이 이긴다", async () => {
+    data.refetched = null;
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        {
+          label: "A",
+          speakingMs: 3000,
+          segmentCount: 1,
+          representativeSegmentId: "s1",
+          assignedParticipantId: MEMBER.participantId,
+          assignedName: MEMBER.name,
+          confirmed: true,
+        },
+        {
+          label: "B",
+          speakingMs: 3000,
+          segmentCount: 1,
+          representativeSegmentId: "s2",
+          assignedParticipantId: null,
+          assignedName: null,
+          confirmed: false,
+        },
+      ],
+    };
+    data.segments = ["A", "B"].map((label, index) => ({
+      segmentId: `s${index + 1}`,
+      transcriptionSessionId: "sess1",
+      sequence: index,
+      startedAtMs: index * 4000,
+      endedAtMs: index * 4000 + 3000,
+      text: `발화 ${index}`,
+      speakerLabel: label,
+      assignedParticipantId: null,
+    }));
+    // 요약의 근거 인용이 s1 을 짚어 둔 상태다 — 아직 형광이 안 끝나 소유자가 안 비웠다.
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId="s1"
+        onFocusHandled={() => {}}
+        participants={[MEMBER]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "화자" }));
+
+    const unassignedRow = screen
+      .getAllByTestId("speaker-panel-row")
+      .find((row) => row.textContent?.startsWith("화자 B"))!;
+    fireEvent.click(unassignedRow.querySelector("button")!);
+
+    await waitFor(() => {
+      const focused = screen
+        .getAllByTestId("archive-transcript-block")
+        .filter((block) => block.hasAttribute("data-focused"));
+      expect(focused).toHaveLength(1);
+      expect(focused[0].textContent).toContain("발화 1");
+    });
+  });
+
+  /**
+   * 종료된 전사는 마운트할 때만 당긴다. 그 사이 남이 화자 C 에 이름을 붙였으면 캐시에는
+   * 없고, 그대로 보내면 「전체 초기화」가 C 를 조용히 건너뛴다 — 다시 읽는 순간 지운 줄
+   * 알았던 이름이 돌아와 있다.
+   */
+  it("초기화 대상은 서버에 다시 물어 센다", async () => {
+    renderPanelNote();
+    // 남이 방금 화자 C 에 이름을 붙였다. 캐시에는 A 만 있다.
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        ...(data.diarization as { speakers: unknown[] }).speakers.slice(0, 2),
+        {
+          label: "C",
+          speakingMs: 1000,
+          segmentCount: 1,
+          representativeSegmentId: "s3",
+          assignedParticipantId: GUEST.participantId,
+          assignedName: GUEST.name,
+          confirmed: true,
+        },
+      ],
+    };
+
+    fireEvent.click(screen.getByRole("button", { name: /전체 초기화/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("alertdialog").textContent).toContain("화자 2개")
+    );
+    fireEvent.click(screen.getByRole("button", { name: "전체 초기화" }));
+
+    await waitFor(() =>
+      expect(spies.assignLabelAsync).toHaveBeenCalledTimes(2)
+    );
+    expect(
+      spies.assignLabelAsync.mock.calls
+        .map((call) => (call as unknown as [{ label: string }])[0].label)
+        .sort()
+    ).toEqual(["A", "C"]);
+  });
+
+  it("다시 읽지 못하면 초기화를 멈춘다 — 실패를 「되돌릴 것 없음」으로 안 읽는다", async () => {
+    renderPanelNote();
+    data.transcriptFails = true;
+
+    fireEvent.click(screen.getByRole("button", { name: /전체 초기화/ }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(spies.assignLabelAsync).not.toHaveBeenCalled();
+  });
+
+  it("되돌릴 이름이 없으면 초기화가 잠긴다", () => {
+    data.refetched = null;
+    data.diarization = {
+      status: "MAPPED",
+      speakers: [
+        {
+          label: "A",
+          speakingMs: 3000,
+          segmentCount: 1,
+          representativeSegmentId: "s1",
+          assignedParticipantId: null,
+          assignedName: null,
+          confirmed: true,
+        },
+      ],
+    };
+    data.segments = [
+      {
+        segmentId: "s1",
+        transcriptionSessionId: "sess1",
+        sequence: 0,
+        startedAtMs: 0,
+        endedAtMs: 3000,
+        text: "발화",
+        speakerLabel: "A",
+        assignedParticipantId: null,
+      },
+    ];
+    render(
+      <NoteArchive
+        workspaceId={WORKSPACE_ID}
+        noteId="01K0000000002"
+        noteMeta={NOTE_META}
+        focusSegmentId={null}
+        onFocusHandled={() => {}}
+        participants={[MEMBER]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "화자" }));
+
+    expect(
+      screen
+        .getByRole("button", { name: /전체 초기화/ })
+        .hasAttribute("disabled")
+    ).toBe(true);
   });
 });

@@ -251,11 +251,11 @@ describe("TranscriptionSocket", () => {
     connection.event({
       type: "error",
       code: "STT_CONNECTION_FAILED",
-      message: "실시간 전사 서버 연결에 실패했습니다.",
+      message: "실시간 스크립트 서버 연결에 실패했습니다.",
     });
 
     await expect(connection.connected).rejects.toThrow(
-      "실시간 전사 서버 연결에 실패했습니다."
+      "실시간 스크립트 서버 연결에 실패했습니다."
     );
   });
 });

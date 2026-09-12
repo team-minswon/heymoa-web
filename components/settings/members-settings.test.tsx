@@ -221,6 +221,19 @@ async function invite(email: string) {
   fireEvent.click(screen.getByRole("button", { name: "초대" }));
 }
 
+/**
+ * 역할을 고른다. 네이티브 `<select>` 가 아니라 base-ui `Select` 라 값 이벤트가 아니라
+ * **열고 고르는** 두 동작이다 — 실제 사용자가 하는 것과 같다.
+ */
+async function pickRole(label: string, option: string) {
+  fireEvent.click(screen.getByLabelText(label));
+  const item = await screen.findByRole("option", { name: option });
+  // base-ui `Select` 는 포인터로 고른다 — `click` 만으로는 값이 안 바뀐다.
+  fireEvent.pointerDown(item, { pointerType: "mouse", button: 0 });
+  fireEvent.pointerUp(item, { pointerType: "mouse", button: 0 });
+  fireEvent.click(item);
+}
+
 describe("MembersSettings", () => {
   beforeEach(() => {
     state.myRole = "ADMIN";
@@ -396,7 +409,28 @@ describe("MembersSettings", () => {
     ).toBeTruthy();
   });
 
-  it("역할을 바꾸면 mutation을 올바른 인자로 부르고 목록을 무효화한다", () => {
+  /**
+   * **날짜 열이 행마다 다른 자리에서 시작하면 안 된다.** 내 행에는 「내보내기」가 없고,
+   * 역할은 고칠 수 있으면 select·없으면 칩이라 폭이 다르다 — 자리를 안 잡아 두면 두 줄의
+   * 날짜가 서로 어긋난다. jsdom 은 px 를 못 재니 자리 상자가 양쪽에 다 있는지로 본다.
+   */
+  it("역할·내보내기 자리를 폭 고정으로 잡아 날짜 열이 어긋나지 않는다", () => {
+    renderSettings();
+    const rows = ["테스트 유저", "김민수"].map((name) => {
+      const row = screen.getByText(name).closest("li");
+      if (!row) throw new Error(`${name} 행을 찾지 못했다`);
+      return row;
+    });
+
+    for (const row of rows) {
+      const slots = [...row.querySelectorAll("div")].map((el) => el.className);
+      expect(slots.some((cls) => cls.includes("w-[104px]"))).toBe(true);
+      // 버튼이 없는 행에도 그 자리는 남아 있어야 한다.
+      expect(slots.some((cls) => cls.includes("w-[72px]"))).toBe(true);
+    }
+  });
+
+  it("역할을 바꾸면 mutation을 올바른 인자로 부르고 목록을 무효화한다", async () => {
     const client = new QueryClient();
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     render(
@@ -405,9 +439,7 @@ describe("MembersSettings", () => {
       </QueryClientProvider>
     );
 
-    fireEvent.change(screen.getByLabelText("김민수(minsu@heymoa.com) 역할"), {
-      target: { value: "ADMIN" },
-    });
+    await pickRole("김민수(minsu@heymoa.com) 역할", "관리자");
 
     expect(state.changeRoleCalls).toContainEqual({
       workspaceId: "01K0000000000",
@@ -480,12 +512,10 @@ describe("MembersSettings", () => {
 
   // canManage는 멤버 목록에서 나온다 — 목록이 새로 내려오면 관리 UI는 저절로 사라져야 하고,
   // 그 실패(예: 마지막 관리자 409)를 컴포넌트가 직접 토스트로 띄우면 전역 토스트와 겹친다.
-  it("자기를 MEMBER로 강등한 뒤 목록이 갱신되면 관리 UI가 사라진다", () => {
+  it("자기를 MEMBER로 강등한 뒤 목록이 갱신되면 관리 UI가 사라진다", async () => {
     const { rerender } = renderSettings();
 
-    fireEvent.change(screen.getByLabelText("테스트 유저(me@heymoa.com) 역할"), {
-      target: { value: "MEMBER" },
-    });
+    await pickRole("테스트 유저(me@heymoa.com) 역할", "멤버");
     expect(state.changeRoleCalls).toContainEqual({
       workspaceId: "01K0000000000",
       userId: "user-12345",

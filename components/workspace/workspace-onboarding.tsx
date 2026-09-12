@@ -57,7 +57,7 @@ export function WorkspaceOnboarding({
       <p className="mt-2 max-w-md text-sm leading-6 text-[var(--el-body)]">
         {first
           ? "회의는 프로젝트 안에 만들어집니다. 하나만 만들어 두면 바로 회의를 시작할 수 있습니다."
-          : "회의를 만들고 시작하면 대화가 실시간으로 전사되고, 끝나면 개요 · 액션 아이템 · 인사이트로 정리됩니다."}
+          : "회의를 만들고 시작하면 대화가 실시간으로 스크립트에 쌓이고, 끝나면 개요 · 액션 아이템 · 인사이트로 정리됩니다."}
       </p>
       {/* 좁은 화면에서는 세로로 쌓는다 — 250×3이면 750이라 셸 패널 안에서 감긴다. */}
       <ol className="mt-7 flex w-full max-w-3xl flex-col gap-3 text-left sm:flex-row">

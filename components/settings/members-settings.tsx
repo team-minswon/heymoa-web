@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { AlertTriangle, Info } from "lucide-react";
 
@@ -25,6 +25,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -263,6 +271,10 @@ function MemberRow({
 
   return (
     <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+      {/* **임시 참여자 목록과 같은 얼굴이다.** 한쪽에만 구슬이 있으면 같은 설정 화면에서
+          사람이 두 가지로 그려진다. 색은 `userId` 가 정한다 — 이름은 겹치고(김민수가 둘)
+          개명하면 튄다. */}
+      <PersonAvatar name={member.userId} image={member.image} size={28} />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--el-ink)]">
           <span className="truncate">{member.name}</span>
@@ -277,26 +289,37 @@ function MemberRow({
         </p>
       </div>
 
-      {canManage ? (
-        <select
-          aria-label={`${memberLabel(member)} 역할`}
-          value={member.role}
-          disabled={busy}
-          onChange={(event) =>
-            changeRole.mutate({
-              workspaceId,
-              userId: member.userId,
-              data: { role: event.target.value as "ADMIN" | "MEMBER" },
-            })
-          }
-          className="h-[30px] shrink-0 rounded-control border border-[var(--el-hairline)] bg-white px-2 text-xs"
-        >
-          <option value="MEMBER">멤버</option>
-          <option value="ADMIN">관리자</option>
-        </select>
-      ) : (
-        <RoleChip role={member.role} />
-      )}
+      {/* **역할 자리 폭을 고정한다.** 「관리자」와 「멤버」는 글자 수가 다르고, 고칠 수
+          있는 행은 select·없는 행은 칩이라 폭이 또 달라진다 — 그대로 두면 행마다 날짜가
+          시작하는 자리가 어긋난다. */}
+      <div className="flex w-[104px] shrink-0 justify-end">
+        {canManage ? (
+          <Select
+            // **값이 아니라 라벨을 그린다.** 안 주면 트리거에 `ADMIN`·`MEMBER` 가 그대로
+            // 서서 목록의 「관리자」·「멤버」와 두 말이 섞인다.
+            items={ROLE_LABEL}
+            value={member.role}
+            onValueChange={(role) =>
+              changeRole.mutate({
+                workspaceId,
+                userId: member.userId,
+                data: { role: role as "ADMIN" | "MEMBER" },
+              })
+            }
+            disabled={busy}
+          >
+            <SelectTrigger aria-label={`${memberLabel(member)} 역할`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="MEMBER">멤버</SelectItem>
+              <SelectItem value="ADMIN">관리자</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <RoleChip role={member.role} />
+        )}
+      </div>
 
       {/*
         가입일은 모바일에서 숨긴다. 375px에서 행 안쪽은 약 290px인데 역할 select와 내보내기
@@ -311,6 +334,9 @@ function MemberRow({
         })}
       </p>
 
+      {/* **내보내기 자리는 버튼이 없어도 비워 둔다.** 내 행에는 그 버튼이 없는데 자리까지
+          없애면 그 행만 날짜가 오른쪽 끝까지 밀려, 두 줄의 날짜가 서로 다른 자리에 선다. */}
+      <div className="flex w-[72px] shrink-0 justify-end">
       {canManage && !isMe ? (
         <>
           {/*
@@ -322,7 +348,7 @@ function MemberRow({
           <Button
             variant="outline"
             size="sm"
-            className="h-[30px] shrink-0"
+            className="shrink-0"
             aria-label={`${memberLabel(member)} 내보내기`}
             loading={remove.isPending}
             disabled={busy}
@@ -375,6 +401,7 @@ function MemberRow({
           </AlertDialog>
         </>
       ) : null}
+      </div>
     </li>
   );
 }
@@ -586,7 +613,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
             <Input
               id="invite-email"
               type="email"
-              placeholder="name@company.com"
+              placeholder="name@gmail.com"
               aria-invalid={
                 Boolean(inviteError) || Boolean(form.formState.errors.email)
               }
@@ -607,14 +634,27 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
             <Label htmlFor="invite-role" className="sr-only">
               역할
             </Label>
-            <select
-              id="invite-role"
-              {...form.register("role")}
-              className="h-8 rounded-control border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <option value="MEMBER">멤버</option>
-              <option value="ADMIN">관리자</option>
-            </select>
+            {/* **`Controller` 로 잇는다.** `form.watch()` 는 매번 새 값을 돌려주는 API 라
+                React Compiler 가 이 컴포넌트의 메모를 통째로 포기한다(컴파일 경고). */}
+            <Controller
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <Select
+                  items={ROLE_LABEL}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger id="invite-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MEMBER">멤버</SelectItem>
+                    <SelectItem value="ADMIN">관리자</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
           <Button type="submit" loading={isSubmitting} className="rounded-full">
             초대

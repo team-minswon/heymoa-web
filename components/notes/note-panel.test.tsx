@@ -317,7 +317,7 @@ describe("NotePanel", () => {
       />
     );
 
-    expect(screen.getByRole("tab", { name: "전사" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "스크립트" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "정보" }));
     expect(onTabChange).toHaveBeenCalledWith("details");
     // 전사에서는 제목이 **상단바 빵조각 하나뿐이다** — 세리프 제목은 정보 탭의 머리글이다.
@@ -1046,7 +1046,7 @@ describe("NotePanel", () => {
     ).toBeTruthy();
   });
 
-  it("side + 종료는 정보·전사·실시간 정리·요약 탭과 아카이브를 보인다", () => {
+  it("side + 종료는 정보·스크립트·실시간 정리·요약 탭과 아카이브를 보인다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -1061,7 +1061,7 @@ describe("NotePanel", () => {
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
-      "전사",
+      "스크립트",
       // 원장은 종료로 지워지지 않는다 — 회의 중에 본 것을 되짚는 자리라 종료 뒤에도 남는다.
       "실시간 정리",
       "요약",
@@ -1290,7 +1290,7 @@ describe("NotePanel", () => {
     }
   );
 
-  it("side + 미시작은 정보·전사와 회의 시작을 보인다", () => {
+  it("side + 미시작은 정보·스크립트와 회의 시작을 보인다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
     renderNotePanel(
@@ -1306,7 +1306,7 @@ describe("NotePanel", () => {
 
     expect(screen.getAllByRole("tab").map((item) => item.textContent)).toEqual([
       "정보",
-      "전사",
+      "스크립트",
     ]);
     expect(
       screen.getByRole("button", { name: "회의 시작" })

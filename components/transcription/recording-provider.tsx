@@ -196,11 +196,11 @@ function getStartErrorMessage(cause: unknown) {
     message === "WEBSOCKET_CONNECTION_FAILED" ||
     message === "STOMP_APPLICATION_READY_TIMEOUT"
   ) {
-    return "실시간 전사 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요.";
+    return "실시간 스크립트 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요.";
   }
 
   if (message === "SESSION_CREATE_FAILED") {
-    return "전사 세션을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    return "스크립트 세션을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
 
   // **봉투면 서버 문구를 쓴다.** 전역 mutation 토스트를 끈 뒤로 이 문구가 유일한 안내라,
@@ -225,7 +225,7 @@ function getRuntimeFailureMessage(message: string) {
   if (message.includes("완료 응답") || message.includes("종료 요청")) {
     return "마지막 기록을 정리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
-  return "실시간 전사 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
+  return "실시간 스크립트 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
 }
 
 function getInterruptedMessage(endReason: string | null) {
@@ -235,7 +235,7 @@ function getInterruptedMessage(endReason: string | null) {
   if (endReason === "CLIENT_DISCONNECTED") {
     return "실시간 연결이 종료되어 녹음을 중단했습니다.";
   }
-  return "서버에서 전사 세션이 중단되었습니다.";
+  return "서버에서 스크립트 세션이 중단되었습니다.";
 }
 
 function getWebSocketUrl() {

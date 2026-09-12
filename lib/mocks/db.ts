@@ -34,6 +34,14 @@ import type {
 import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
+import {
+  MENTORING_GUEST_IDS,
+  MENTORING_NOTE_ID,
+  MENTORING_PARTICIPANT_IDS,
+  MENTORING_SESSION_ID,
+  mentoringDiarization,
+  mentoringSegments,
+} from "@/lib/mocks/fixtures/mentoring-note";
 
 const ACTIVE_STATUSES = new Set<string>(["READY", "ACTIVE"]);
 
@@ -679,8 +687,8 @@ function seedAgentChats(workspaceId: string) {
       scope: [],
       toolEvent: null,
     });
-    step(2, "THINKING", "먼저 전사에서 결제 실패가 언급된 자리를 찾습니다.");
-    step(4, "TOOL", "전사에서 관련 발화 검색 · 3건 찾음", {
+    step(2, "THINKING", "먼저 스크립트에서 결제 실패가 언급된 자리를 찾습니다.");
+    step(4, "TOOL", "스크립트에서 관련 발화 검색 · 3건 찾음", {
       tool: "transcripts.search",
       decision: null,
       status: "success",
@@ -901,6 +909,25 @@ function createSeedState(): StoreState {
     displayName: "박서준",
     createdAt: "2026-07-08T00:00:00Z",
   };
+  /**
+   * 실제 멘토링에 온 넷. 계정이 없어 전부 임시 참여자다 — 참여자에게 `userId` 도 `guestId` 도
+   * 없으면 참석자 필드가 그들을 한 열쇠로 다뤄 하나씩 고를 수 없고, 저장이 깨진다.
+   *
+   * 이동준 멘토님이 라벨 D·E 둘을 갖는 사람이라 화자 패널의 묶음 판정에 쓰인다.
+   */
+  const mentoringGuests: MockWorkspaceGuest[] = (
+    [
+      [MENTORING_GUEST_IDS.hanJiwon, "한지원"],
+      [MENTORING_GUEST_IDS.shark, "상어"],
+      [MENTORING_GUEST_IDS.kimMinsu, "김민수"],
+      [MENTORING_GUEST_IDS.mentorLee, "이동준 멘토님"],
+    ] as const
+  ).map(([guestId, displayName]) => ({
+    guestId,
+    workspaceId: workspaces[0].workspaceId,
+    displayName,
+    createdAt: "2026-09-11T00:00:00Z",
+  }));
   const guestParticipant = () => ({
     participantId: "01K0000000901",
     userId: null,
@@ -1115,6 +1142,56 @@ function createSeedState(): StoreState {
               MOCK_USER.userId
             ),
     })),
+    /**
+     * 실제 멘토링 회의(63분·494발화). 화자 다섯이 사람 넷에 붙고 **한 명이 라벨 둘을**
+     * 가진다 — 지어낸 시드로는 안 나오는 모양이라 그대로 떠 왔다.
+     */
+    {
+      noteId: MENTORING_NOTE_ID,
+      projectId: projects[0].projectId,
+      title: "9/11 팀 이동준 멘토님 - 정규멘토링",
+      createdAt: "2026-09-11T01:45:00Z",
+      updatedAt: "2026-09-11T02:48:18Z",
+      meetingStatus: "ENDED",
+      meetingStartedAt: "2026-09-11T01:45:00Z",
+      recordedDurationMs: 3_797_080,
+      activeSessionStartedAt: null,
+      meetingStartedBy: starterOf(MOCK_USER.userId),
+      participants: [
+        {
+          participantId: MENTORING_PARTICIPANT_IDS.hanJiwon,
+          userId: null,
+          guestId: MENTORING_GUEST_IDS.hanJiwon,
+          name: "한지원",
+          email: null,
+          image: null,
+        },
+        {
+          participantId: MENTORING_PARTICIPANT_IDS.shark,
+          userId: null,
+          guestId: MENTORING_GUEST_IDS.shark,
+          name: "상어",
+          email: null,
+          image: null,
+        },
+        {
+          participantId: MENTORING_PARTICIPANT_IDS.kimMinsu,
+          userId: null,
+          guestId: MENTORING_GUEST_IDS.kimMinsu,
+          name: "김민수",
+          email: null,
+          image: null,
+        },
+        {
+          participantId: MENTORING_PARTICIPANT_IDS.mentorLee,
+          userId: null,
+          guestId: MENTORING_GUEST_IDS.mentorLee,
+          name: "이동준 멘토님",
+          email: null,
+          image: null,
+        },
+      ],
+    },
   ];
   const sessions: MockSession[] = [
     {
@@ -1155,6 +1232,15 @@ function createSeedState(): StoreState {
       readyExpiresAt: "2026-07-13T00:10:00Z",
       startedAt: "2026-07-13T00:00:00Z",
       endedAt: "2026-07-13T00:06:00Z",
+      endReason: "CLIENT_DISCONNECTED",
+    },
+    {
+      sessionId: MENTORING_SESSION_ID,
+      noteId: MENTORING_NOTE_ID,
+      status: "COMPLETED",
+      readyExpiresAt: "2026-09-11T02:58:00Z",
+      startedAt: "2026-09-11T01:45:00Z",
+      endedAt: "2026-09-11T02:48:18Z",
       endReason: "CLIENT_DISCONNECTED",
     },
     // READY/ACTIVE 세션은 시드하지 않는다 — `createSession`의 가드가 전역이라(한 유저는
@@ -1303,6 +1389,14 @@ function createSeedState(): StoreState {
       startedAtMs: 268000,
       endedAtMs: 297600,
     },
+    /**
+     * 실제 멘토링 회의 494 발화. 화자 패널이 그릴 분포가 여기서 나온다.
+     *
+     * **베껴서 넣는다.** 발화 단위 지정(`assignSegmentSpeaker`)이 세그먼트를 제자리에서
+     * 고치는데, 모듈의 배열을 그대로 펼치면 `reset()` 이 다시 씨를 뿌려도 그 수정이 남는다 —
+     * 초기화가 초기화가 아니게 되고, 지웠던 참여자를 가리키는 id 가 살아남는다.
+     */
+    ...mentoringSegments.map((segment) => ({ ...segment })),
   ];
   // 아직 멤버가 아닌 워크스페이스에서 온 초대여야 수락이 실제 합류를 흉내낸다.
   // 이미 들어가 있는 워크스페이스를 가리키면 수락이 멤버를 중복으로 만든다.
@@ -1403,7 +1497,7 @@ function createSeedState(): StoreState {
     sessions,
     segments,
     // 시드하지 않는다 — 「한 명도 없는 것이 정상」이 이 화면의 빈 상태다.
-    workspaceGuests: [seededGuest],
+    workspaceGuests: [seededGuest, ...mentoringGuests],
     // 화자 분리를 시드한다. 목에 이걸 밀어줄 주체가 없어서(APP-419·420이 서버 몫)
     // 없으면 **화자 이름이 붙은 회의록을 목에서 한 번도 볼 수 없다.**
     //
@@ -1412,7 +1506,10 @@ function createSeedState(): StoreState {
     //
     // 이름을 손으로 박지 않는다. 참여자 시드가 바뀌면 조용히 어긋나고, 실제로 한 번
     // 어긋났다 — 없는 사람 이름이 화자에 붙어 있었다.
-    diarizations: seededDiarizations(notes),
+    diarizations: new Map([
+      ...seededDiarizations(notes),
+      [MENTORING_NOTE_ID, mentoringDiarization],
+    ]),
     // 사고 공백. 끝난 것과 진행 중인 것, 이유가 있는 것과 없는 것을 함께 심는다.
     extraGaps: new Map<string, TranscriptResponseDataGapsItem[]>([
       [

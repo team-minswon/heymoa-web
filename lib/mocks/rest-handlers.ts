@@ -79,7 +79,7 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
  * 전사 세션 생성이 409로 거절되는 이유들. 문구는 계약(`openapi3.yml`)의 409 예시 그대로다.
  */
 const SESSION_CONFLICTS: Record<string, string> = {
-  ACTIVE_TRANSCRIPTION_SESSION: "이미 진행 가능한 전사 세션이 있습니다.",
+  ACTIVE_TRANSCRIPTION_SESSION: "이미 진행 가능한 스크립트 세션이 있습니다.",
   MEETING_ALREADY_ENDED: "이미 종료된 회의입니다.",
 };
 
@@ -649,7 +649,7 @@ export const restHandlers = [
       () => mockDb.getSession(id(params.sessionId)),
       notFound(
         "TRANSCRIPTION_SESSION_NOT_FOUND",
-        "전사 세션을 찾을 수 없습니다."
+        "스크립트 세션을 찾을 수 없습니다."
       )
     )
   ),

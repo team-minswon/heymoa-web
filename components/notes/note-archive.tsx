@@ -48,6 +48,9 @@ import {
   isProjectNotesQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
+import { SpeakerPanel, SpeakerTools } from "@/components/notes/speaker-panel";
+import { summarizeSpeakers } from "@/lib/notes/speaker-stats";
+import { toast } from "@/lib/ui/toast";
 import { toGapRows } from "@/lib/transcription/gaps";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 import {
@@ -140,6 +143,50 @@ const countOverrides = (
   rows.filter(
     (segment) => segment.speakerLabel === label && segment.assignedParticipantId
   ).length;
+
+/**
+ * 「전체 초기화」가 빈 본문 PUT 을 보낼 라벨. **이름이 붙은 것만이다.**
+ *
+ * `confirmed` 로 세면 안 된다 — 그 PUT 은 라벨의 *이름*을 지울 뿐 확정 자체는 남긴다(서버의
+ * `confirmed` 는 「사람이 답했나」라서 되돌릴 API 가 없다). 그걸로 세면 초기화를 누른 뒤에도
+ * 버튼이 계속 「되돌릴 것이 있다」고 서 있는다. 「참석자 아님」으로 확정한 라벨도 화면에는
+ * 이미 `화자 A` 라 되돌릴 것이 없다.
+ *
+ * 발화 단위 지정만 걸린 라벨은 넣는다. 라벨 PUT 이 그 화자의 개별 지정을 함께 지우므로
+ * (`deleteByNoteIdAndSpeakerLabel`), 빠뜨리면 그 줄만 옛 이름으로 남는다.
+ */
+const labelsToReset = (
+  diarization:
+    | {
+        status?: string;
+        speakers?: ReadonlyArray<{
+          label: string;
+          assignedParticipantId?: string | null;
+          assignedName?: string | null;
+        }>;
+      }
+    | null
+    | undefined,
+  segments: ReadonlyArray<{
+    speakerLabel?: string | null;
+    assignedParticipantId?: string | null;
+  }>
+) => {
+  const labels = new Set<string>();
+  if (diarization?.status === "MAPPED") {
+    for (const speaker of diarization.speakers ?? []) {
+      if (speaker.assignedParticipantId || speaker.assignedName) {
+        labels.add(speaker.label);
+      }
+    }
+  }
+  for (const segment of segments) {
+    if (segment.assignedParticipantId && segment.speakerLabel) {
+      labels.add(segment.speakerLabel);
+    }
+  }
+  return [...labels];
+};
 
 /** 이 회의의 참여자. 아직 참여자가 아닌 후보와 달리 참여 기록을 반드시 갖는다. */
 type NoteParticipantFace = SpeakerCandidate & { participantId: string };
@@ -298,10 +345,23 @@ export function NoteArchive({
       labels.push(speaker.label);
       labelsOf.set(speaker.assignedParticipantId, labels);
     }
-    const joined = participants.map((participant) => ({
-      ...participant,
-      assignedLabels: labelsOf.get(participant.participantId) ?? [],
-    }));
+    /**
+     * **이미 화자로 고른 사람이 맨 위다.** 회의에 화자가 다섯인데 워크스페이스 멤버가
+     * 스무 명이면, 다음 라벨에 붙일 사람은 거의 확실히 앞에서 이미 고른 그 다섯 중
+     * 하나다. 순서를 안 주면 그 다섯을 매번 목록에서 다시 찾는다.
+     *
+     * 그 안의 순서는 서버가 준 이름 오름차순 그대로다(`sort` 가 안정 정렬이다).
+     */
+    const joined = participants
+      .map((participant) => ({
+        ...participant,
+        assignedLabels: labelsOf.get(participant.participantId) ?? [],
+      }))
+      .sort(
+        (a, b) =>
+          Number(Boolean(b.assignedLabels.length)) -
+          Number(Boolean(a.assignedLabels.length))
+      );
     // **아직 참여자가 아닌 멤버도 후보다.** 참여자로 안 찍힌 사람을 화자로 못 고르면,
     // 회의록을 정리하는 사람이 먼저 정보 화면에 가서 체크하고 돌아와야 한다. 고르는 순간
     // 서버가 참여자로 넣으므로 여기서는 참여 기록 없이(`participantId: null`) 올린다.
@@ -546,13 +606,184 @@ export function NoteArchive({
 
 
   const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
+  /**
+   * 지금 짚고 있는 발화. **요약의 근거 인용과 화자 패널의 「여기로 가기」가 한 자리를 쓴다** —
+   * 도착한 줄을 형광으로 긋고 포커스를 옮기는 동작이 둘 다 필요하고, 두 벌로 만들면 같은
+   * 점프가 화면 안에서 두 가지로 움직인다.
+   *
+   * **나중에 누른 쪽이 이긴다.** 소유자의 `focusSegmentId` 를 우선하면, 인용으로 간 뒤
+   * 형광이 사라지기 전에 패널에서 이동을 누를 때 패널만 닫히고 화면은 안 움직인다 — 지나간
+   * 요청이 방금 누른 것을 막는다. 반대 방향도 같아서, 새 인용이 오면 그것이 최신이다.
+   */
+  const [focusedSegmentId, setFocusedSegmentId] = useState<string | null>(
+    focusSegmentId
+  );
+  // 「prop 이 바뀌면 상태를 맞춘다」 — effect 가 아니라 렌더 중에 한다. effect 로 하면 한 번
+  // 옛 값으로 그린 뒤 두 번째 렌더에서 고쳐, 지나간 인용의 형광이 한 프레임 스친다.
+  const [lastCitation, setLastCitation] = useState<string | null>(focusSegmentId);
+  if (focusSegmentId !== lastCitation) {
+    setLastCitation(focusSegmentId);
+    if (focusSegmentId) setFocusedSegmentId(focusSegmentId);
+  }
+  const clearFocus = useCallback(() => {
+    setFocusedSegmentId(null);
+    onFocusHandled();
+  }, [onFocusHandled]);
+  const jumpToSegment = useCallback(
+    (segmentId: string) => {
+      // 소유자가 든 옛 인용을 함께 비운다. 안 비우면 그 값이 남아 위 effect 가 다시 돌 때
+      // 되살아난다.
+      onFocusHandled();
+      setFocusedSegmentId(segmentId);
+    },
+    [onFocusHandled]
+  );
   const { segmentRef, isHighlighted, markProps } = useTranscriptFocus(
     segments,
-    {
-      focusSegmentId,
-      onFocusHandled,
-    }
+    { focusSegmentId: focusedSegmentId, onFocusHandled: clearFocus }
   );
+
+  const [panelOpen, setPanelOpen] = useState(false);
+  /** 회의 길이. 패널의 머리글과 타임라인 축이 **같은 값**을 써야 둘이 같은 회의를 그린다. */
+  const meetingDurationMs =
+    transcript?.recording?.durationMs ||
+    (segments.length ? segments[segments.length - 1].endedAtMs : 0);
+  const speakerStats = useMemo(
+    () =>
+      diarized
+        ? summarizeSpeakers({
+            segments,
+            speakers: transcript!.diarization.speakers,
+            participants,
+            durationMs: meetingDurationMs,
+          })
+        : [],
+    [diarized, transcript, segments, participants, meetingDurationMs]
+  );
+  /** 아직 누구인지 모르는 화자. 갈 곳이 있는 것만 — 발화가 없으면 넘길 자리가 없다. */
+  const unassignedStats = speakerStats.filter(
+    (stat) => stat.unassigned && stat.firstSegmentId
+  );
+  /**
+   * 「미지정」을 눌러 지금까지 넘어간 횟수. **어느 화자였나가 아니라 몇 번째냐를 센다** —
+   * 이름을 붙이면 그 화자가 목록에서 빠지므로 라벨을 기억해 두면 다음 자리를 잃는다.
+   */
+  const [unassignedCursor, setUnassignedCursor] = useState(0);
+  const jumpToNextUnassigned = useCallback(() => {
+    if (!unassignedStats.length) return;
+    // 끝에서 처음으로 돈다 — 마지막에서 멈추면 되짚으려고 패널을 다시 열어야 한다.
+    const index = unassignedCursor % unassignedStats.length;
+    setUnassignedCursor(index + 1);
+    // 패널의 「지정하러 가기」와 같은 곳으로 간다.
+    jumpToSegment(unassignedStats[index].firstSegmentId!);
+  }, [unassignedStats, unassignedCursor, jumpToSegment]);
+  /**
+   * 되돌릴 것이 있는 라벨. **이름이 붙은 것만 센다.**
+   *
+   * `confirmed` 로 세면 안 된다 — 초기화가 보내는 빈 본문 PUT 은 그 라벨의 *이름*을 지울
+   * 뿐 확정 자체는 남긴다(서버의 `confirmed` 는 「사람이 답했나」라서 되돌릴 API 가 없다).
+   * 그걸로 세면 초기화를 누른 뒤에도 버튼이 계속 「되돌릴 것이 있다」고 서 있는다.
+   * 「참석자 아님」으로 확정한 라벨도 화면에는 이미 `화자 A` 라 되돌릴 것이 없다.
+   *
+   * 발화 단위 지정만 걸린 라벨은 넣는다. 라벨 PUT 이 그 화자의 개별 지정을 함께 지우므로
+   * (`deleteByNoteIdAndSpeakerLabel`), 빠뜨리면 그 줄만 옛 이름으로 남는다.
+   */
+  // 버튼을 잠글지만 정한다. **보낼 목록은 이것이 아니다** — 캐시는 낡을 수 있어서,
+  // 실제 대상은 `requestReset` 이 서버에 다시 물어 센다.
+  const resettableLabels = useMemo(
+    () => labelsToReset(transcript?.diarization, segments),
+    [transcript, segments]
+  );
+
+  /**
+   * 초기화 전용 mutation. **위의 `assign` 과 나눈 이유가 갱신 횟수다** — 그쪽은 성공마다
+   * 네 갈래를 다시 읽는데, 라벨 다섯이면 그 왕복이 스무 번이 된다. 여기서는 전부 보낸 뒤
+   * 한 번만 읽는다. 실패 토스트도 라벨마다 뜨지 않게 끄고 아래에서 한 줄로 모은다.
+   */
+  const resetSpeaker = useAssignNoteSpeaker({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
+  const [resetting, setResetting] = useState(false);
+  /** 확인을 기다리는 초기화. **대상을 들고 있다** — 확인창이 센 것과 보낸 것이 같아야 한다. */
+  const [pendingReset, setPendingReset] = useState<string[] | null>(null);
+
+  /**
+   * 되돌릴 라벨을 **서버에 다시 물어서** 정한다.
+   *
+   * 종료된 전사는 마운트할 때만 당기므로, 그 사이 다른 사람이 화자 B 에 이름을 붙였으면
+   * 캐시에는 없다 — 그대로 보내면 「전체 초기화」가 B 를 조용히 건너뛰고, 다시 읽는 순간
+   * 지운 줄 알았던 이름이 돌아와 있다. 위 `overrideCountOf` 와 같은 이유, 같은 처방이다.
+   *
+   * **못 읽었으면 `null` 이다.** 실패를 「되돌릴 것 없음」으로 번역하면 아무 일도 안 하고
+   * 끝난 것처럼 닫힌다.
+   */
+  const requestReset = useCallback(async () => {
+    setResetting(true);
+    try {
+      const fresh = await transcriptQuery.refetch();
+      const payload =
+        !fresh?.isError && fresh?.data?.status === 200 && fresh.data.data.success
+          ? fresh.data.data.data
+          : null;
+      if (!payload) {
+        toast.error("화자를 다시 읽지 못해 초기화를 멈췄습니다.");
+        return;
+      }
+      const labels = labelsToReset(payload.diarization, payload.segments ?? []);
+      if (!labels.length) return;
+      setPendingReset(labels);
+    } catch {
+      toast.error("화자를 다시 읽지 못해 초기화를 멈췄습니다.");
+    } finally {
+      setResetting(false);
+    }
+  }, [transcriptQuery]);
+
+  const resetSpeakers = useCallback(async (labels: string[]) => {
+    setResetting(true);
+    try {
+      /**
+       * **한 번에 하나씩 보낸다.** 서버가 지정마다 그 노트 행을 `FOR UPDATE` 로 잠그므로
+       * (`AssignNoteSpeakerService` → `requireNoteProjectForUpdate`) 동시에 보내도 어차피
+       * 줄을 서고, 기다리는 동안 라벨 수만큼 커넥션과 트랜잭션을 쥔 채로 있게 된다.
+       * 병렬이 벌어 주는 것이 없고 비용만 있다.
+       *
+       * 하나가 실패해도 멈추지 않는다 — 되돌릴 수 있는 만큼은 되돌리는 편이 낫다.
+       */
+      let failed = 0;
+      for (const label of labels) {
+        try {
+          await resetSpeaker.mutateAsync({
+            noteId,
+            label,
+            data: { participantId: null },
+          });
+        } catch {
+          failed += 1;
+        }
+      }
+      // **부분 실패를 성공으로 보이지 않는다.** 몇은 되돌아가고 몇은 남은 화면을 말없이
+      // 내주면, 사람은 남은 이름을 「초기화가 안 지우는 것」으로 읽는다.
+      if (failed) toast.error(`화자 ${failed}개를 되돌리지 못했습니다.`);
+    } finally {
+      // **다시 읽을 때까지 잠근 채로 둔다.** PUT 이 끝난 순간에 풀면 화면은 아직 옛 이름을
+      // 들고 있고, 그 사이 누른 지정이 곧 도착할 초기화 결과에 덮인다.
+      await refreshAfterAssign();
+      setResetting(false);
+    }
+  }, [resetSpeaker, noteId, refreshAfterAssign]);
+
+  /**
+   * 화자를 건드리는 요청이 하나라도 도는 중인가. **초기화와 지정이 같은 잠금을 쓴다** —
+   * 둘은 같은 라벨을 두고 경쟁하고, 늦게 도착한 쪽이 먼저 끝난 쪽을 지운다. 초기화를 걸어
+   * 놓고 패널을 닫으면 전사의 메뉴가 살아 있던 자리가 정확히 그것이었다.
+   */
+  const speakerMutating =
+    createGuest.isPending ||
+    assign.isPending ||
+    assignSegment.isPending ||
+    resolvingOverrides ||
+    resetting;
 
   return (
     <ScrollArea
@@ -583,12 +814,24 @@ export function NoteArchive({
           위에 붙인다. `-mt-5 pt-5`로 콘텐츠의 위 여백을 이 바가 들고 올라간다. 안 그러면
           지나가는 글이 바 위쪽 20px 틈으로 비친다.
         */}
-        <div className="sticky top-0 z-10 -mt-5 flex items-center justify-end bg-white pt-5">
+        <div className="sticky top-0 z-10 -mt-5 flex items-center justify-end gap-1 bg-white pt-5">
+          {/* 화자가 나뉘기 전에는 열어도 빈 목록이라 안 내보낸다.
+
+              **다시 읽기가 실패했으면 같이 내린다.** TanStack 은 실패해도 옛 `data` 를 들고
+              있어 `diarized` 가 계속 참인데, 본문은 오류 화면으로 바뀌어 있다 — 도구만 남으면
+              「첫 발화로」가 없는 DOM 을 짚고 낡은 수치가 멀쩡한 결과처럼 선다. */}
+          {diarized && !transcriptQuery.isError ? (
+            <SpeakerTools
+              onOpen={() => setPanelOpen(true)}
+              onNextUnassigned={jumpToNextUnassigned}
+              unassignedCount={unassignedStats.length}
+            />
+          ) : null}
           {/* 재조회가 실패하면 TanStack은 옛 `data`를 그대로 들고 `isError`가 된다 —
               본문은 오류·재시도로 바뀌는데 여기만 남으면 그 숨은 캐시가 복사된다. */}
           {noteMeta && rows.length && !transcriptQuery.isError ? (
             <CopyMarkdownButton
-              label="전사"
+              label="스크립트"
               // **최종 조회가 끝나기 전에는 못 누른다.** 아카이브는 종료 직후 마운트되어
               // 라이브 캐시를 그대로 보여주며 다시 읽는다(`refetchOnMount: "always"`).
               // 그 창에서 복사하면 마지막 발화가 빠진 회의록이 남는다.
@@ -616,7 +859,7 @@ export function NoteArchive({
           ) : null}
         </div>
 
-        <div aria-label="회의 전사 아카이브">
+        <div aria-label="회의 스크립트">
             {transcriptQuery.isPending ? (
               /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `mt-6`에 `h-24`/`h-28` 막대
                  둘이라 248이었고 실제는 288이었다 — 첫 줄이 12px 아래에서 시작했고 행
@@ -644,7 +887,7 @@ export function NoteArchive({
               // 대체하므로 그 실패 피드백을 여기서 되살린다.
               <div role="alert" className="mt-6 space-y-2">
                 <p className="text-sm text-[var(--el-ink)]">
-                  전사를 불러오지 못했습니다.
+                  스크립트를 불러오지 못했습니다.
                 </p>
                 <Button
                   variant="outline"
@@ -709,12 +952,7 @@ export function NoteArchive({
                             // `createGuest` 만 보면 POST 가 끝난 시점에 풀려 **첫 PUT 이 아직
                             // 도는 동안** 다음 지정이 나가고, 둘의 도착 순서가 뒤집히면 화면이
                             // 앞 선택으로 되돌아간다. 지정끼리도 같은 경쟁이라 함께 잠근다.
-                            disabled={
-                              createGuest.isPending ||
-                              assign.isPending ||
-                              assignSegment.isPending ||
-                              resolvingOverrides
-                            }
+                            disabled={speakerMutating}
                             candidatesFailed={candidatesFailed}
                             candidatesPending={candidatesPending}
                             onRetryCandidates={retryCandidates}
@@ -782,12 +1020,56 @@ export function NoteArchive({
                 ) : null}
                 {!rows.length ? (
                   <p className="py-8 text-sm text-[var(--el-muted)]">
-                    전사된 대화가 없습니다.
+                    스크립트가 없습니다.
                   </p>
                 ) : null}
               </div>
             )}
         </div>
+        <SpeakerPanel
+          // 도구와 같은 이유로 닫는다 — 열어 둔 채로 실패하면 짚을 자리가 사라진다.
+          open={panelOpen && !transcriptQuery.isError}
+          onOpenChange={setPanelOpen}
+          stats={speakerStats}
+          durationMs={meetingDurationMs}
+          onJump={jumpToSegment}
+          onReset={() => void requestReset()}
+          resetting={resetting}
+          // 지정이 도는 동안에는 초기화도 못 누른다 — 반대 방향의 같은 경쟁이다.
+          resettable={resettableLabels.length > 0 && !speakerMutating}
+        />
+
+        {/* **초기화는 사람이 한 답을 전부 지운다.** 되돌릴 방법이 없어(서버는 옛 지정을
+            안 들고 있다) 누르기 전에 무엇이 사라지는지 세어 말한다. */}
+        <AlertDialog
+          open={pendingReset !== null}
+          onOpenChange={(next) => {
+            if (!next) setPendingReset(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>지정한 화자를 모두 되돌립니다</AlertDialogTitle>
+              <AlertDialogDescription>
+                {`화자 ${pendingReset?.length ?? 0}개에 붙인 이름과 개별로 고친 발화가 사라지고, AI가 나눈 「화자 A」로 돌아갑니다. 되돌릴 수 없습니다.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (!pendingReset) return;
+                  // 확인창이 센 그 목록을 그대로 보낸다 — 다시 세면 물어본 것과 달라진다.
+                  void resetSpeakers(pendingReset);
+                  setPendingReset(null);
+                }}
+              >
+                전체 초기화
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* **「모든 발화에 적용」이 무엇을 지우는지 누르기 전에 말한다.**
 
             서버는 어차피 그 화자의 발화 단위 지정을 지운다 — 「모든」이 말 그대로여야 하기

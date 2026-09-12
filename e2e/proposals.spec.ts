@@ -75,7 +75,7 @@ test.describe("맥락 후보 레일", () => {
     expect(after).not.toBe("지금까지 0건");
   });
 
-  test("분석이 실패해도 전사와 회의 종료가 계속된다", async ({ page }) => {
+  test("분석이 실패해도 스크립트와 회의 종료가 계속된다", async ({ page }) => {
     test.setTimeout(90_000);
     // spec 「완료 판단」의 마지막 줄이다. 후보 조회가 죽어도 **회의를 계속할 수 있어야**
     // 한다 — 실시간 정리는 부가 표면이지 회의의 전제가 아니다.
@@ -91,8 +91,8 @@ test.describe("맥락 후보 레일", () => {
     await expect(page.getByText(/아직 정리할 발화가 없습니다/)).toHaveCount(0);
 
     // **전사는 그대로 돈다.**
-    await page.getByRole("tab", { name: "전사" }).click();
-    await expect(page.getByRole("log", { name: "회의 전사" })).toBeVisible();
+    await page.getByRole("tab", { name: "스크립트" }).click();
+    await expect(page.getByRole("log", { name: "회의 스크립트" })).toBeVisible();
 
     // **회의 종료 경로도 살아 있다.** 이 노트가 기록 중이면 그 컨트롤이 있어야 한다.
     const endMeeting = page.getByRole("button", { name: "회의 종료" });
@@ -102,7 +102,7 @@ test.describe("맥락 후보 레일", () => {
     ).toBeGreaterThan(0);
   });
 
-  test("근거를 눌러 전사의 그 발화로 간다", async ({ page }) => {
+  test("근거를 눌러 스크립트의 그 발화로 간다", async ({ page }) => {
     test.setTimeout(60_000);
     await openRail(page);
     await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({ timeout: 20_000 });

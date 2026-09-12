@@ -78,7 +78,7 @@ export function NoteDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>「{title}」을 삭제할까요?</AlertDialogTitle>
           <AlertDialogDescription>
-            전사와 요약, 챗봇 대화가 함께 사라집니다. 되돌릴 수 없습니다.
+            스크립트와 요약, 챗봇 대화가 함께 사라집니다. 되돌릴 수 없습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

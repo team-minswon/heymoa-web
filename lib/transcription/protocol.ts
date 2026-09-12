@@ -136,7 +136,7 @@ export const protocolExamples = {
     error: {
       type: "error",
       code: "STT_TRANSCRIPTION_FAILED",
-      message: "전사 처리에 실패했습니다.",
+      message: "스크립트 처리에 실패했습니다.",
     },
   },
 } as const satisfies {

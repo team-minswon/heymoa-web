@@ -31,7 +31,7 @@ test("커버리지 행이 교체돼도 바닥 추종이 끊기지 않는다", as
     `/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full&tab=transcript`
   );
 
-  const log = page.getByRole("log", { name: "회의 전사" });
+  const log = page.getByRole("log", { name: "회의 스크립트" });
   await expect(log).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("transcript-block").first()).toBeVisible();
 

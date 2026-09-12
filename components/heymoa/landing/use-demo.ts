@@ -217,7 +217,7 @@ export const CONTEXT_KINDS: ContextKind[] = ["결정", "할 일", "질문"];
 export const OUTCOMES = ["전체", "결론", "논의 중", "참고"] as const;
 export type Scope = (typeof OUTCOMES)[number];
 
-export const NOTE_TABS = ["정보", "전사", "요약"] as const;
+export const NOTE_TABS = ["정보", "스크립트", "요약"] as const;
 export type NoteTab = (typeof NOTE_TABS)[number];
 
 export const RAIL_TABS = ["실시간 정리", "내 에이전트"] as const;
@@ -473,7 +473,7 @@ export function useDemo({
       pressing: now?.t === "press",
       noteTab: seen.reduce<NoteTab>(
         (v, b) => (b.t === "note" ? b.v : v),
-        "전사"
+        "스크립트"
       ),
       railTab: seen.reduce<RailTab>(
         (v, b) => (b.t === "rail" ? b.v : v),

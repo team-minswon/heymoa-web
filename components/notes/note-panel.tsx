@@ -275,7 +275,7 @@ export function NotePanel({
 
   /**
    * 요약의 근거 인용이 짚은 전사 세그먼트. 전사 화면이 그 줄로 옮겨 가 잠깐 하이라이트하고,
-   * 끝나면 **비운다** — 안 비우면 전사 탭을 다시 열 때마다 같은 자리로 끌려간다.
+   * 끝나면 **비운다** — 안 비우면 스크립트 탭을 다시 열 때마다 같은 자리로 끌려간다.
    * 탭을 옮기는 것도 같은 이유로 비운다(점프는 그 직후 다시 세운다).
    */
   const [focusSegmentId, setFocusSegmentId] = useState<string | null>(null);
@@ -542,7 +542,7 @@ export function NotePanel({
                 정보
               </TabsTrigger>
               <TabsTrigger value="transcript" className={TAB_ITEM}>
-                전사
+                스크립트
               </TabsTrigger>
               {showSideContextTab ? (
                 <TabsTrigger value="context" className={TAB_ITEM}>
@@ -707,7 +707,7 @@ export function NotePanel({
               </div>
             ) : null}
             <div className="min-h-0 flex-1">
-              {/* 종료된 회의는 전사 탭이 아카이브가 된다. */}
+              {/* 종료된 회의는 스크립트 탭이 아카이브가 된다. */}
               {/* 요약 → 전사 점프는 **양쪽 다** 된다. 요약이 있는 상태는 대개 아카이브
                   경로지만, 관전자가 종료 안내에서 아직 넘어가지 않았으면 같은 탭에
                   `TranscriptView`가 서 있다. */}
@@ -745,7 +745,7 @@ export function NotePanel({
           {/* **`flex flex-col` 이 있어야 레일이 스크롤한다.** `TabsContent` 는 block 이라
               이게 없으면 레일 루트의 `flex-1` 이 걸릴 데가 없어 높이가 내용만큼 자란다 —
               안쪽 `ScrollArea` 가 넘칠 일이 없어져 스크롤바가 아예 안 생기고 목록이 패널
-              밖으로 흘러 나간다. 전사 탭이 같은 클래스를 쓰는 이유도 같다. */}
+              밖으로 흘러 나간다. 스크립트 탭이 같은 클래스를 쓰는 이유도 같다. */}
           {showSideContextTab ? (
             <TabsContent
               value="context"

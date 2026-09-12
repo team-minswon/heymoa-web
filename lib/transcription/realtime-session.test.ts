@@ -231,7 +231,7 @@ describe("BrowserRealtimeSession", () => {
     await expect(harness.controller.stop()).resolves.toBeUndefined();
 
     expect(harness.onFailure).toHaveBeenCalledWith(
-      "전사 종료 요청을 서버에 보내지 못했습니다."
+      "스크립트 종료 요청을 서버에 보내지 못했습니다."
     );
   });
 

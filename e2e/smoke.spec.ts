@@ -29,6 +29,12 @@ const EMPTY_WORKSPACE_ID = "01K0000000009";
 const DIARIZED_NOTE_ID = "01K0000000020";
 /** 시드의 MEMBER. 이 회의의 참여자이기도 하다 — 아래 테스트가 뺐다가 다시 넣는다. */
 const MEMBER_NAME = "한지원";
+/**
+ * **이메일까지 짚는다.** 워크스페이스에 같은 이름의 임시 참여자가 있다(멘토링 시드) —
+ * 이름만으로는 후보 둘이 잡혀 어느 쪽을 검사하는지 못 가른다. 계정 있는 사람을 가리는
+ * 단서가 이메일이고, 제품도 같은 이유로 후보 줄에 이메일을 함께 그린다.
+ */
+const MEMBER_EMAIL = "jiwon@heymoa.com";
 
 function meetingControls(page: Page) {
   return page.getByRole("group", { name: "회의 상태 및 제어" });
@@ -174,14 +180,14 @@ async function expectForeignViewerTranscript(
         viewportSize.width
       );
       // 아래에서 전사 블록을 다시 세므로 읽던 탭으로 돌아간다.
-      await page.getByRole("tab", { name: "전사" }).click();
+      await page.getByRole("tab", { name: "스크립트" }).click();
       await expect(blocks.first()).toBeVisible();
     }
     expect(await blocks.count()).toBeGreaterThan(0);
 
     const transcriptViewport = page
       .locator('[data-slot="scroll-area"]')
-      .filter({ has: page.getByRole("log", { name: "회의 전사" }) })
+      .filter({ has: page.getByRole("log", { name: "회의 스크립트" }) })
       .locator('[data-slot="scroll-area-viewport"]');
     await expect(transcriptViewport).toBeVisible();
     await expect
@@ -290,7 +296,7 @@ test("keeps the mobile recorder dock outside the transcript above a bounded chat
     `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=full&tab=transcript`
   );
 
-  const transcriptLog = page.getByRole("log", { name: "회의 전사" });
+  const transcriptLog = page.getByRole("log", { name: "회의 스크립트" });
   const transcriptViewport = page
     .locator('[data-slot="scroll-area"]')
     .filter({ has: transcriptLog })
@@ -337,7 +343,7 @@ test("keeps the recorder dock and transcript visible in mobile landscape", async
   const surface = page.locator('[data-surface="full"]');
   const panel = surface.locator(":scope > div").first();
   const main = panel.locator(":scope > div").first();
-  const transcriptLog = page.getByRole("log", { name: "회의 전사" });
+  const transcriptLog = page.getByRole("log", { name: "회의 스크립트" });
   const transcriptViewport = page
     .locator('[data-slot="scroll-area"]')
     .filter({ has: transcriptLog })
@@ -1386,7 +1392,7 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
       exact: true,
     })
   ).toBeVisible();
-  await page.getByRole("tab", { name: "전사" }).click();
+  await page.getByRole("tab", { name: "스크립트" }).click();
   // 회의 종료는 상단바에 있으니 어느 탭에서든 닿는다.
   await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(
@@ -1406,7 +1412,7 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   // 원장은 종료로 지워지지 않는다 — 회의 중에 본 것을 되짚는 자리가 남는다.
   await expect(page.getByRole("tab")).toHaveText([
     "정보",
-    "전사",
+    "스크립트",
     "실시간 정리",
     "요약",
   ]);
@@ -1861,8 +1867,8 @@ test("switches note tabs without an RSC round trip", async ({ page }) => {
   // 진입 자체의 prefetch·내비게이션은 정당하다. 세는 것은 **탭을 누른 뒤**의 요청뿐이다.
   rscRequests.length = 0;
 
-  await page.getByRole("tab", { name: "전사" }).click();
-  await expect(page.getByRole("tab", { name: "전사" })).toHaveAttribute(
+  await page.getByRole("tab", { name: "스크립트" }).click();
+  await expect(page.getByRole("tab", { name: "스크립트" })).toHaveAttribute(
     "aria-selected",
     "true"
   );
@@ -1999,7 +2005,7 @@ test("assigns a workspace member who is not yet a participant and checks them in
   // 시드는 멤버 전원이 이미 참여자다. 한 명을 빼서 「멤버인데 참여자는 아닌」 상태를 만든다.
   const field = page.getByRole("combobox", { name: "참여자 선택" });
   const memberOption = () =>
-    page.getByRole("option", { name: new RegExp(MEMBER_NAME) });
+    page.getByRole("option", { name: new RegExp(MEMBER_EMAIL) });
 
   await field.click();
   await expect(memberOption()).toHaveAttribute("aria-selected", "true");
@@ -2008,7 +2014,7 @@ test("assigns a workspace member who is not yet a participant and checks them in
   await page.keyboard.press("Escape");
 
   // 전사에서 그 사람을 화자로 고른다 — 참여자가 아닌데도 후보에 있어야 한다.
-  await page.getByRole("tab", { name: "전사" }).click();
+  await page.getByRole("tab", { name: "스크립트" }).click();
   await page.getByLabel("화자 B 화자 지정").first().click();
   await memberOption().click();
 
@@ -2161,7 +2167,7 @@ test("links a guest to an account and keeps the speaker assignment", async ({
     .locator("article", { hasText: "온보딩 이탈 구간 리뷰" })
     .first()
     .click();
-  await page.getByRole("tab", { name: "전사" }).click();
+  await page.getByRole("tab", { name: "스크립트" }).click();
 
   // **화자 연결이 안 풀렸다.** 화자 B 가 이제 그 계정 이름으로 선다.
   await expect(page.getByLabel("한지원 화자 지정").first()).toBeVisible();

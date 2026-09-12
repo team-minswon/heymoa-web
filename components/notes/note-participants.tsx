@@ -1,17 +1,12 @@
 "use client";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarGroup,
-  AvatarGroupCount,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PersonAvatar, personAvatarKey } from "@/components/heymoa/person-avatar";
 import { cn } from "@/lib/utils";
 
 /**
@@ -34,18 +29,18 @@ export type Participant = {
  * 아바타가 실제로 읽는 것만. 회의 시작자처럼 **참여 기록이 아닌 사람**도 같은 얼굴로 그려야
  * 해서, 아바타의 입력을 참여 기록 전체가 아니라 이만큼으로 좁혀 둔다.
  */
-export type ParticipantFace = Pick<Participant, "name" | "email" | "image">;
+export type ParticipantFace = Pick<Participant, "name" | "email" | "image"> &
+  Partial<Pick<Participant, "participantId" | "userId" | "guestId">>;
 
 /** 계정 없는 사람에게 이메일 자리에 대신 세우는 말. */
 export const EXTERNAL_LABEL = "외부";
 
 /**
- * 이름이 비었을 때도 아바타가 빈 원으로 남지 않게 이메일 앞글자까지 떨어진다.
- * 계정 없는 사람은 이메일도 없어 마지막으로 `?`가 선다.
+ * `Avatar` 의 크기 이름을 실제 px 로. **`components/ui/avatar.tsx` 의 값과 같아야 한다** —
+ * 거기서 `sm`=`size-6`(24), 기본=`size-8`(32), `lg`=`size-10`(40) 이다. 한 단계씩 작게
+ * 잡아 두었더니 참석자 스택만 다른 화면보다 작았다.
  */
-function initial(participant: ParticipantFace) {
-  return (participant.name.trim() || participant.email || "?").slice(0, 1);
-}
+const AVATAR_PX = { sm: 24, default: 32, lg: 40 } as const;
 
 export function ParticipantAvatar({
   participant,
@@ -68,15 +63,15 @@ export function ParticipantAvatar({
    */
   interactive?: boolean;
 }) {
+  // **전사의 화자 칩·화자 패널과 같은 얼굴이다.** 네 화면에서 같은 사람이 같은 그림으로
+  // 선다. 이름은 늘 옆이나 툴팁에 있어 얼굴에 글자를 안 얹는다.
   const avatar = (
-    <Avatar size={size} className={className}>
-      {participant.image ? (
-        <AvatarImage src={participant.image} alt="" />
-      ) : null}
-      <AvatarFallback className="bg-[var(--el-surface-strong)] text-[10px] text-[var(--el-ink)]">
-        {initial(participant)}
-      </AvatarFallback>
-    </Avatar>
+    <PersonAvatar
+      name={personAvatarKey(participant)}
+      image={participant.image}
+      size={AVATAR_PX[size]}
+      className={className}
+    />
   );
 
   if (!interactive) return avatar;

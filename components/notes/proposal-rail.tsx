@@ -98,7 +98,7 @@ function activityCopy(activity: ContextActivity): {
   if (activity.type === "batch") {
     return {
       title: "정리 반영",
-      detail: `전사 ${activity.fromSequence}–${activity.toSequence} · ${
+      detail: `스크립트 ${activity.fromSequence}–${activity.toSequence} · ${
         activity.applyStatus === "APPLIED" ? "전체 기록" : "일부 기록"
       }`,
     };

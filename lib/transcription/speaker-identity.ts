@@ -1,32 +1,5 @@
+import { personAvatarKey } from "@/components/heymoa/person-avatar";
 import type { DiarizationSpeaker } from "@/lib/transcription/presentation";
-
-/**
- * 파스텔 다섯. `DESIGN.md` 가 이 색들을 **배경으로만** 쓰라고 못박는다 —
- * 「never as button fills, never as text colors」. 그래서 이니셜 칩의 바탕으로만 쓰고
- * 글자는 기존 전경색을 그대로 둔다.
- *
- * **새 색을 만들지 않는다.** 브랜드 팔레트가 다섯이고, 여섯째 화자를 위해 여기서 색을
- * 하나 지어내면 그때부터 이 파일이 디자인 시스템의 두 번째 원본이 된다. 대신 같은
- * 다섯을 옅게 한 번 더 돌려 **열 자리**를 만든다.
- */
-const SPEAKER_HUES = [
-  "var(--el-gradient-sky)",
-  "var(--el-gradient-peach)",
-  "var(--el-gradient-mint)",
-  "var(--el-gradient-lavender)",
-  "var(--el-gradient-rose)",
-] as const;
-
-/**
- * 열 자리. 앞 다섯은 원색, 뒤 다섯은 흰색을 섞어 옅게 한 것이다.
- *
- * **여섯 명이 넘는 회의는 드물다.** 그보다 흔한 것은 서넛인데, 거기서 색이 겹치거나
- * 비슷해 보이는 것이 실제 불만이었다 — 그건 아래 순번 배정이 푼다.
- */
-const SPEAKER_TINTS = [
-  ...SPEAKER_HUES,
-  ...SPEAKER_HUES.map((hue) => `color-mix(in srgb, ${hue}, white 45%)`),
-] as const;
 
 /**
  * `A`→0, `B`→1 … `Z`→25, `AA`→26. 서버의 라벨 생성(`SpeakerLabel`)과 정확히 뒤집는 짝이다.
@@ -45,59 +18,54 @@ function indexOfLabel(label: string) {
   return index - 1;
 }
 
-/** FNV-1a. 짧고 결정적이면 된다 — 암호용이 아니다. */
-function hash(value: string) {
-  let h = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    h ^= value.charCodeAt(index);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-}
-
 /**
- * 이름으로 색을 고른다. **드롭다운이 이걸 쓴다** — 거기서는 아직 라벨이 없고 사람만 있다.
- * 붙고 나면 [speakerTintOfLabel] 이 라벨로 고르므로 색이 바뀌는데, 드롭다운은 「이 사람이
- * 누구인가」를 보는 자리라 얼굴(사진·이니셜)이 알아보는 단서이고 색은 거들 뿐이다.
+ * 라벨을 **순번 순**으로 세운다. 기본 `sort()` 는 글자 순이라 `["AA","B"]` 를 그대로 두는데,
+ * 서버의 라벨 생성 순서로는 `B` 가 먼저다. 색을 「가장 이른 라벨」에서 가져오는 곳이 둘이라
+ * (전사의 칩과 화자 패널) 둘이 다른 규칙을 쓰면 같은 사람이 두 색으로 선다.
  */
-export function speakerTint(key: string) {
-  return SPEAKER_TINTS[hash(key) % SPEAKER_TINTS.length];
+export function compareLabels(a: string, b: string) {
+  const left = indexOfLabel(a);
+  const right = indexOfLabel(b);
+  // 글자 라벨이 아니면 순번이 없다. 뒤로 보내고 저희끼리는 글자 순이다
+  if (left === null || right === null) return a.localeCompare(b);
+  return left - right;
 }
 
 /**
- * 얼굴에 넣을 글자.
+ * 얼굴 열쇠를 정하는 **하나뿐인 규칙.**
  *
- * **이름이 없으면 라벨을 그대로 쓴다.** 예전에는 화면 이름(`화자 A`)의 첫 글자를 잘라
- * 썼는데, 그러면 이름 없는 화자가 **전부 「화」**가 되어 얼굴이 서로를 못 가린다 —
- * 정작 가려 주는 글자는 뒤에 붙은 `A` 쪽이다.
- */
-function initialOf(name: string | null, label: string) {
-  if (name) return [...name][0] ?? "?";
-  // `AA` 같은 두 자리도 있다. 20px 칩에 두 자는 들어간다
-  return label.slice(0, 2) || "?";
-}
-
-/**
- * 라벨 순번으로 색을 고른다. **이름이 붙어도 색이 안 바뀐다** — 예전에는 이름을 해싱해서
- * 「화자 A」에 이름을 다는 순간 색이 딴 것으로 튀었다.
+ * 전사의 칩과 화자 패널이 둘 다 이것을 부른다 — 규칙을 두 벌로 두면 같은 사람이 두 화면에서
+ * 다른 얼굴로 서고, 실제로 두 번 그랬다.
  *
- * 열을 넘으면 되돌아 쓴다. 그때는 색이 겹치지만, 이름이 함께 있으므로 색만으로 가려야 할
- * 일은 아니다.
+ * 1. 가진 라벨이 있으면 **가장 이른 라벨**. 라벨 둘을 맡아도 얼굴 하나다
+ * 2. 아직 아무도 안 붙은 화자는 제 라벨
+ * 3. 라벨을 안 가진 사람(발화 하나만 돌려받았거나 한 마디도 안 했다)은 제 식별자
+ *
+ * @param ownedLabels 이 사람이 **가진** 라벨. 발화 하나만 얹힌 라벨은 가진 것이 아니다
+ * @param fallback `label` 은 아직 아무도 안 붙은 화자의 라벨, `hashKey` 는 마지막 수단
  */
-export function speakerTintOfLabel(label: string) {
-  const index = indexOfLabel(label);
-  // 글자 라벨이 아니면 순번을 못 매긴다. 그때만 해싱으로 돌아간다
-  if (index === null) return speakerTint(label);
-  return SPEAKER_TINTS[index % SPEAKER_TINTS.length];
+export function speakerAvatarName(
+  ownedLabels: readonly string[],
+  fallback: { label?: string | null; hashKey: string }
+) {
+  // 누구인지 알면 **그 사람의 얼굴**이다. 라벨을 섞으면 안 된다 — 같은 사람이 전사에서는
+  // 이 얼굴, 참석자 목록에서는 저 얼굴로 서게 된다.
+  if (ownedLabels.length) return fallback.hashKey;
+  // 아직 누구인지 모르는 화자. **라벨만으로는 안 된다** — 라벨은 회의마다 다시 쓰여서,
+  // 다른 회의의 화자 A 가 같은 얼굴로 서면 서로 다른 두 사람이 한 얼굴이 된다.
+  if (fallback.label) return `label:${fallback.label}`;
+  return fallback.hashKey;
 }
 
 export type SpeakerIdentity = {
   /** 화면에 쓸 이름. 연결 안 됐으면 `화자 A`. */
   displayName: string;
-  /** 칩 바탕. 배경으로만 쓴다. */
-  tint: string;
-  /** 프로필 사진이 없을 때 그릴 글자. 이름이 있으면 그 첫 글자, 없으면 라벨. */
-  initial: string;
+  /**
+   * 얼굴을 그릴 열쇠. `PersonAvatar` 의 `name` 으로 넘긴다 — 같은 열쇠면 같은 얼굴이다.
+   *
+   * **글자를 얹지 않는다.** 이름이 늘 옆에 있어 글자가 가려 주는 것이 없다.
+   */
+  avatarName: string;
   /** 계정이 연결됐으면 사진 URL. */
   imageUrl: string | null;
   /** 아직 아무도 안 본 화자. 점을 찍어 이름을 붙일 이유를 만든다. */
@@ -119,6 +87,9 @@ export type SpeakerIdentitySource = DiarizationSpeaker & {
  */
 export type SpeakerFace = {
   participantId: string;
+  /** 워크스페이스에서 안 변하는 열쇠. 없으면 `participantId` 로 떨어진다. */
+  userId?: string | null;
+  guestId?: string | null;
   /** 발화 단위 지정이 이 이름을 쓴다 — 그 줄에는 라벨의 이름 대신 이 사람이 선다. */
   name?: string | null;
   image?: string | null;
@@ -130,20 +101,41 @@ export type SpeakerFace = {
  * 저장하면 팔레트를 바꿀 때 옛 회의만 옛 색으로 남고, 화자 수가 팔레트보다 많으면 어차피
  * 겹치므로 안정성을 약속할 수도 없다.
  *
- * **색은 라벨이 정한다.** 이름이 아니라 라벨이라 이름을 붙여도 색이 안 바뀐다.
+ * **색은 사람이 정한다. 그 사람의 가장 이른 라벨로.**
  *
- * V31 부터 **한 사람이 여러 화자를 맡을 수 있다.** 그래도 색을 사람 기준으로 안 바꾼다 —
- * 색은 「이 목소리 덩어리」의 표시이고 이름과는 별개다. 그래서 화자 A·B 를 둘 다 한 사람으로
- * 두면 같은 이름이 두 색으로 나오는데, 그것이 실제로 일어난 일(목소리는 둘로 나뉘었고
- * 사람은 하나다)에 가깝다. 얼굴(사진·이니셜)이 같아서 알아보는 데는 그쪽이 단서다.
+ * V31 부터 한 사람이 여러 화자를 맡을 수 있다. 예전에는 라벨마다 색을 줬고 「목소리 덩어리의
+ * 표시」라고 적어 뒀는데, 화면에서는 **이름도 얼굴도 같은 두 줄이 다른 색으로** 섰다 —
+ * 보는 사람은 목소리 덩어리를 보는 것이 아니라 사람을 보고 있어서, 그냥 「왜 색이 두 개지」가
+ * 된다. 이동준 멘토님이 라벨 D·E 를 함께 가진 실제 회의에서 그게 드러났다.
  *
- * 발화 단위 지정도 같은 규칙이다 — 그 줄은 **이름과 얼굴만** 바뀌고 색은 라벨 것을 쓴다.
+ * 사람의 색을 **가장 이른 라벨**에서 가져오면 순번 배정의 「열까지 안 겹친다」를 그대로
+ * 쓰면서 사람 하나가 색 하나를 갖는다. 아직 아무도 안 붙은 화자는 제 라벨 색 그대로다 —
+ * 이름을 붙여도 그 사람의 첫 라벨이 곧 그 라벨이라 색이 안 튄다.
+ *
+ * 발화 단위 지정도 같다. 그 줄은 이름·사진과 함께 **색도** 그 사람 것이 된다.
  */
 export function createSpeakerIdentityResolver(
   speakers: SpeakerIdentitySource[],
   participants: SpeakerFace[] = []
 ) {
   const byLabel = new Map(speakers.map((speaker) => [speaker.label, speaker]));
+  /** 사람 → 그 사람이 **가진** 라벨. 색은 [speakerOrb] 이 이것으로 정한다. */
+  const ownedLabelsOf = new Map<string, string[]>();
+  for (const speaker of speakers) {
+    const participantId = speaker.assignedParticipantId;
+    if (!participantId) continue;
+    ownedLabelsOf.set(participantId, [
+      ...(ownedLabelsOf.get(participantId) ?? []),
+      speaker.label,
+    ]);
+  }
+  /** 사람 → 얼굴 열쇠. 참석자 목록·설정과 **같은 함수**로 만든다. */
+  const keyOf = new Map(
+    participants.map((participant) => [
+      participant.participantId,
+      personAvatarKey(participant),
+    ])
+  );
   const faceOf = new Map(
     participants.map((participant) => [
       participant.participantId,
@@ -175,10 +167,14 @@ export function createSpeakerIdentityResolver(
     if (overriddenName) {
       return {
         displayName: overriddenName,
-        // **색은 그대로 라벨 것이다.** 이 줄도 여전히 목소리 덩어리 A 에 속한다 —
-        // 우리가 고친 것은 거기 붙일 이름뿐이다.
-        tint: speakerTintOfLabel(label),
-        initial: initialOf(overriddenName, label),
+        // 이름도 얼굴도 이 사람 것이다 — 얼굴만 라벨에 남으면 같은 사람이 둘로 보인다.
+        avatarName: speakerAvatarName(
+          ownedLabelsOf.get(overriddenParticipantId!) ?? [],
+          {
+            hashKey:
+              keyOf.get(overriddenParticipantId!) ?? overriddenParticipantId!,
+          }
+        ),
         imageUrl: faceOf.get(overriddenParticipantId!) ?? null,
         // 사람이 이 줄을 콕 집어 골랐다. 「아직 아무도 안 본 화자」가 아니다
         unassigned: false,
@@ -192,8 +188,16 @@ export function createSpeakerIdentityResolver(
 
     return {
       displayName,
-      tint: speakerTintOfLabel(label),
-      initial: initialOf(name, label),
+      avatarName: speaker?.assignedParticipantId
+        ? speakerAvatarName(
+            ownedLabelsOf.get(speaker.assignedParticipantId) ?? [],
+            {
+              hashKey:
+                keyOf.get(speaker.assignedParticipantId) ??
+                speaker.assignedParticipantId,
+            }
+          )
+        : speakerAvatarName([], { label, hashKey: label }),
       // **사람이면 사진이 먼저다.** 고를 때 얼굴로 알아본 사람이 붙는 순간 글자로 바뀌면
       // 같은 사람인지 다시 확인하게 된다. 파스텔은 사진이 없을 때의 대체일 뿐이다
       imageUrl:

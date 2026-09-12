@@ -357,7 +357,7 @@ describe("TranscriptView", () => {
 
       renderTranscript(phase);
 
-      expect(screen.getByText("전사된 대화가 없습니다.")).toBeInTheDocument();
+      expect(screen.getByText("스크립트가 없습니다.")).toBeInTheDocument();
       expect(
         screen.queryByText(/기록을 시작하고 평소처럼 대화하세요/)
       ).toBeNull();
@@ -635,14 +635,14 @@ describe("TranscriptView", () => {
   it("exposes sequential transcript additions as an accessible log", () => {
     renderTranscript();
 
-    expect(screen.getByRole("log", { name: "회의 전사" })).toBeInTheDocument();
+    expect(screen.getByRole("log", { name: "회의 스크립트" })).toBeInTheDocument();
   });
 
   it("reserves floating dock clearance only at desktop widths", () => {
     renderTranscript();
 
     const content = screen.getByRole("log", {
-      name: "회의 전사",
+      name: "회의 스크립트",
     }).parentElement;
 
     expect(content).toHaveClass("pb-7", "sm:pb-9", "lg:pb-28");
@@ -660,7 +660,7 @@ describe("TranscriptView", () => {
 
     renderTranscript();
 
-    expect(screen.queryByRole("log", { name: "회의 전사" })).toBeNull();
+    expect(screen.queryByRole("log", { name: "회의 스크립트" })).toBeNull();
   });
 
   it("shows a retryable toast instead of inserting a transcript error into the page", async () => {

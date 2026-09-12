@@ -29,7 +29,7 @@ export function Principle() {
           </h2>
           <p className="m-0 mt-4 max-w-[620px] break-keep text-[14.5px] leading-[1.78] text-[var(--lp-on-dark-soft)] lg:mt-0 lg:text-[16px] lg:leading-[1.75]">
             정리된 항목에는 그 말이 나온 자리가 근거로 붙습니다. 지난 회의를 다시
-            꺼낼 때 그 회의의 전사에서 근거를 찾아 답합니다. 외부 도구로 나가는
+            꺼낼 때 그 회의의 스크립트에서 근거를 찾아 답합니다. 외부 도구로 나가는
             일은 사람이 승인한 것만입니다.
           </p>
           <ul className="m-0 mt-5 flex list-none flex-wrap items-center gap-[7px] p-0 lg:mt-0 lg:gap-2">
@@ -52,7 +52,7 @@ export function Principle() {
             “결정은 회의록에 있는데, 왜 그렇게 정했는지는 아무 데도 없습니다.”
           </p>
           <p className="m-0 mt-3.5 break-keep text-[12.5px] leading-[1.7] text-[var(--lp-on-dark-soft)] lg:mt-0 lg:text-[13px] lg:leading-[1.65]">
-            그 「왜」를 전사 줄로 붙여 두는 것이 이 제품이 하는 일입니다.
+            그 「왜」를 스크립트 줄로 붙여 두는 것이 이 제품이 하는 일입니다.
           </p>
         </div>
       </div>

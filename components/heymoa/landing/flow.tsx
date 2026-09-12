@@ -79,7 +79,7 @@ const STEPS: Step[] = [
   {
     n: 4,
     title: "기록을 시작합니다",
-    body: "마이크 권한이 필요합니다. 대화가 실시간으로 전사되고, 오른쪽 「실시간 정리」에 남길 만한 항목이 쌓입니다.",
+    body: "마이크 권한이 필요합니다. 대화가 실시간으로 스크립트에 쌓이고, 오른쪽 「실시간 정리」에 남길 만한 항목이 쌓입니다.",
     control: (
       <div className="flex items-center gap-3.5">
         <span className="flex shrink-0 items-center gap-2 rounded-full bg-[var(--lp-dark)] px-4 py-2.5">

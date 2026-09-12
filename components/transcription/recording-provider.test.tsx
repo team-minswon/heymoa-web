@@ -214,7 +214,7 @@ describe("RecordingProvider", () => {
 
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.error).toBe(
-      "실시간 전사 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요."
+      "실시간 스크립트 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요."
     );
     expect(harness.controller.close).toHaveBeenCalled();
   });
@@ -347,7 +347,7 @@ describe("RecordingProvider", () => {
     harness.controller.stop.mockImplementationOnce(async () => {
       harness
         .getCallbacks()
-        .onFailure("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
     });
 
     let stopped = true;
@@ -382,7 +382,7 @@ describe("RecordingProvider", () => {
     harness.controller.stop.mockImplementationOnce(async () => {
       harness
         .getCallbacks()
-        .onFailure("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
     });
     await act(() => harness.result.current.stop());
 
@@ -424,7 +424,7 @@ describe("RecordingProvider", () => {
       stopping = harness.result.current.stop();
       harness
         .getCallbacks()
-        .onFailure("전사 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
     });
     sessionQuery.current = {
       data: {
@@ -525,7 +525,7 @@ describe("RecordingProvider", () => {
 
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.error).toBe(
-      "실시간 전사 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요."
+      "실시간 스크립트 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요."
     );
     expect(harness.controller.close).toHaveBeenCalled();
   });
@@ -540,12 +540,12 @@ describe("RecordingProvider", () => {
       harness.getCallbacks().onEvent({
         type: "error",
         code: "STT_TRANSCRIPTION_FAILED",
-        message: "실시간 전사 처리에 실패했습니다.",
+        message: "실시간 스크립트 처리에 실패했습니다.",
       })
     );
 
     expect(harness.result.current.error).toBe(
-      "실시간 전사 처리에 실패했습니다."
+      "실시간 스크립트 처리에 실패했습니다."
     );
   });
 
