@@ -1,5 +1,7 @@
 import { compareLabels } from "@/lib/transcription/speaker-identity";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
+import { personAvatarKey } from "@/components/heymoa/person-avatar";
+import { speakerAvatarName } from "@/lib/transcription/speaker-identity";
 
 /** 화자 하나가 말한 분량. 저장하지 않고 화면이 그릴 때 센다. */
 export type SpeakerStat = {
@@ -11,6 +13,14 @@ export type SpeakerStat = {
    */
   key: string;
   name: string;
+  /**
+   * 얼굴을 그릴 열쇠. `PersonAvatar` 의 `name` 으로 그대로 넘긴다.
+   *
+   * **[key] 로 대신 그리면 안 된다.** [key] 는 이 회의 안의 참여 기록이고 얼굴 열쇠는
+   * 워크스페이스에서 안 변하는 `guestId`·`userId` 다 — 임시 참여자는 회의마다 참여
+   * 기록이 새로 생겨서, [key] 로 그리면 같은 사람이 전사·참석자 목록과 다른 얼굴로 섰다.
+   */
+  avatarName: string;
   /** 계정 참여자의 프로필 사진. 없으면 구슬을 그린다. */
   image: string | null;
   /** 이 줄의 발화들이 속한 라벨 전부. 순번 순이다. */
@@ -58,6 +68,9 @@ export const TIMELINE_BINS = 48;
 
 type ParticipantInput = {
   participantId: string;
+  /** 워크스페이스에서 안 변하는 열쇠. 얼굴은 이것으로 그린다 — `personAvatarKey` 가 정한다. */
+  userId?: string | null;
+  guestId?: string | null;
   name: string;
   image?: string | null;
 };
@@ -114,6 +127,12 @@ export function summarizeSpeakers({
     ]);
   }
 
+  /**
+   * 줄 → 얼굴 열쇠. **줄을 묶는 열쇠와 다르다.** 묶기는 이 회의의 `participantId` 로
+   * 해야 하고(임시 참여자 둘이 이름만 같아도 갈라야 한다), 얼굴은 워크스페이스에서
+   * 안 변하는 값으로 그려야 전사·참석자 목록과 같은 사람이 같은 얼굴로 선다.
+   */
+  const hashKeyOf = new Map<string, string>();
   const rows = new Map<string, SpeakerStat>();
   const firstStartedAtMs = new Map<string, number>();
   /**
@@ -139,11 +158,17 @@ export function summarizeSpeakers({
       segment.assignedParticipantId ?? speaker?.assignedParticipantId ?? null;
     const person = participantId ? personOf.get(participantId) : undefined;
     const key = participantId ? participantId : `label:${label}`;
+    // 참여자 목록에 없는 사람은 `participantId` 로 떨어진다 — 그 값밖에 아는 게 없다.
+    hashKeyOf.set(
+      key,
+      participantId ? personAvatarKey(person ?? { participantId }) : key
+    );
 
     const row =
       rows.get(key) ??
       ({
         key,
+        avatarName: "",
         name: participantId
           ? (person?.name ?? nameFallback.get(participantId) ?? "이름 없는 참여자")
           : `화자 ${label}`,
@@ -195,8 +220,10 @@ export function summarizeSpeakers({
 
   for (const participant of participants) {
     if (rows.has(participant.participantId)) continue;
+    hashKeyOf.set(participant.participantId, personAvatarKey(participant));
     rows.set(participant.participantId, {
       key: participant.participantId,
+      avatarName: "",
       name: participant.name,
       image: participant.image ?? null,
       labels: [],
@@ -216,6 +243,12 @@ export function summarizeSpeakers({
     row.labels.sort(compareLabels);
     row.ownedLabels.sort(compareLabels);
     row.share = total > 0 ? row.speakingMs / total : 0;
+    // **라벨을 정렬한 뒤다.** `speakerAvatarName` 이 「가장 이른 라벨」을 쓰는데,
+    // 정렬 전에 부르면 도착 순서가 얼굴을 정해 새로고침마다 색이 튄다.
+    row.avatarName = speakerAvatarName(row.ownedLabels, {
+      label: row.unassigned ? row.labels[0] : null,
+      hashKey: hashKeyOf.get(row.key) ?? row.key,
+    });
     const peak = Math.max(...row.timeline);
     if (peak > 0) row.timeline = row.timeline.map((ms) => ms / peak);
   }

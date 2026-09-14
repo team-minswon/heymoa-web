@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/tooltip";
 import { formatSpeakingTime, type SpeakerStat } from "@/lib/notes/speaker-stats";
 import { formatOffset } from "@/lib/transcription/presentation";
-import { speakerAvatarName } from "@/lib/transcription/speaker-identity";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { cn } from "@/lib/utils";
 
@@ -36,17 +35,6 @@ import { cn } from "@/lib/utils";
 
 /** 한 줄이 들어오는 데 걸리는 시간과 줄 사이 간격. 목록이 위에서 아래로 한 번 훑고 선다. */
 const ROW_STAGGER_S = 0.035;
-
-/**
- * 그 줄의 얼굴 열쇠. **규칙은 `speakerAvatarName` 하나뿐이다** — 전사의 칩이 같은 것을
- * 부른다. 목록에서 고른 사람을 본문에서 얼굴로 되찾는 것이 이 아바타의 일이고, 두 곳이
- * 갈리면 그 일을 못 한다.
- */
-const avatarNameOf = (stat: SpeakerStat) =>
-  speakerAvatarName(stat.ownedLabels, {
-    label: stat.unassigned ? stat.labels[0] : null,
-    hashKey: stat.key,
-  });
 
 function Sparkline({ timeline, dim }: { timeline: number[]; dim: boolean }) {
   return (
@@ -99,7 +87,7 @@ function SpeakerRow({
     >
       <div className="flex items-center gap-2">
         <PersonAvatar
-          name={avatarNameOf(stat)}
+          name={stat.avatarName}
           image={stat.image}
           size={24}
           className={cn(silent && "opacity-45")}

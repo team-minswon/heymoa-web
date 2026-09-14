@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { summarizeSpeakers } from "@/lib/notes/speaker-stats";
-import { speakerAvatarName } from "@/lib/transcription/speaker-identity";
+import { personAvatarKey } from "@/components/heymoa/person-avatar";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
 
@@ -28,17 +28,11 @@ const segment = (
   assignedParticipantId,
 });
 
-/** 패널 한 줄이 그리는 얼굴. `speaker-panel.tsx` 의 `avatarNameOf` 와 같은 식이다. */
-const panelOrb = (stat: {
-  ownedLabels: string[];
-  labels: string[];
-  unassigned: boolean;
-  key: string;
-}) =>
-  speakerAvatarName(stat.ownedLabels, {
-    label: stat.unassigned ? stat.labels[0] : null,
-    hashKey: stat.key,
-  });
+/**
+ * 패널 한 줄이 그리는 얼굴. **`speaker-panel.tsx` 가 그리는 바로 그 값이다** —
+ * 예전에는 여기서 같은 식을 다시 써서 거울이었고, 그래서 화면만 틀려도 검사는 초록이었다.
+ */
+const panelOrb = (stat: { avatarName: string }) => stat.avatarName;
 
 describe("패널의 얼굴과 전사의 칩", () => {
   // pyannote 가 한 사람을 둘로 쪼갠 실제 회의(이동준 멘토님이 라벨 D·E)에서 드러났다.
@@ -99,5 +93,41 @@ describe("패널의 얼굴과 전사의 칩", () => {
 
     expect(panelOrb(stats[0])).toEqual(resolve("AA")?.avatarName);
     expect(panelOrb(stats[0])).toEqual(resolve("B")?.avatarName);
+  });
+});
+
+/**
+ * 임시 참여자는 회의마다 `participantId` 가 새로 생기고 `guestId` 만 워크스페이스에서
+ * 안 변한다. 그래서 얼굴 열쇠는 `guestId` 여야 한다 — `personAvatarKey` 가 그렇게 정한다.
+ *
+ * 위 검사들이 이걸 못 봤다. 참여자를 전부 `{participantId, name, image}` 로만 만들어서
+ * `guestId` 가 없었고, 없으면 `personAvatarKey` 가 `participantId` 로 떨어져 두 쪽이
+ * 우연히 같아진다. **갈리게 하는 바로 그 필드가 검사에 없었다.**
+ */
+describe("계정 없는 임시 참여자", () => {
+  it("전사·참석자 목록과 같은 얼굴이다", () => {
+    const speakers = [
+      { label: "A", assignedParticipantId: "p-guest", assignedName: "강성욱 멘토님", confirmed: true },
+    ];
+    const participants = [
+      { participantId: "p-guest", userId: null, guestId: "g-1", name: "강성욱 멘토님", image: null },
+    ];
+    const resolve = createSpeakerIdentityResolver(speakers as never, participants);
+    const stats = summarizeSpeakers({ segments: [segment(1, "A")], speakers, participants });
+
+    expect(panelOrb(stats[0])).toEqual(resolve("A")?.avatarName);
+  });
+
+  it("한 마디도 안 한 임시 참여자도 같은 얼굴이다", () => {
+    const participants = [
+      { participantId: "p-silent", userId: null, guestId: "g-2", name: "황성윤", image: null },
+    ];
+    const resolve = createSpeakerIdentityResolver([] as never, participants);
+    const stats = summarizeSpeakers({ segments: [], speakers: [], participants });
+
+    const silent = stats.find((stat) => stat.name === "황성윤")!;
+    // 발화가 없으면 화자로 못 부르니, 참석자 목록이 쓰는 열쇠와 직접 견준다.
+    expect(panelOrb(silent)).toEqual(personAvatarKey(participants[0]));
+    expect(resolve).toBeTypeOf("function");
   });
 });
