@@ -28,7 +28,7 @@ import {
   type RailTab,
 } from "@/components/notes/note-agent-rail";
 import { NoteParticipantAvatars } from "@/components/notes/note-participants";
-import { NoteSummary } from "@/components/notes/note-summary";
+import { ReviewTab } from "@/components/notes/review/review-tab";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
 import { RecordingDegradedNotice } from "@/components/transcription/recording-degraded-notice";
@@ -429,9 +429,16 @@ export function NotePanel({
             제목 블록과 함께 사라지면 그걸 알 길이 없어진다.
 
             정본은 전체 뷰 Actions에 알림 벨(`Tc3e6`)을 두었지만 뺐다 — 노트 안에서 알림을
-            여는 흐름이 기획에 없고, 열면 이 면 위에 팝오버가 또 뜬다. */}
-          <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--el-hairline)] px-4 sm:px-8">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            여는 흐름이 기획에 없고, 열면 이 면 위에 팝오버가 또 뜬다.
+
+            좁은 화면(sm 미만)에서는 탭이 둘째 줄로 내려간다. 한 줄에 창 제어 · 상태 · 탭 · 메뉴가
+            다 서면 제목이 0px로 줄어 어느 회의인지 안 보였다. 줄 수는 탭과 상관없이 늘 둘이라
+            탭이 제자리라는 약속은 그대로다. */}
+          <div
+            data-slot="note-top-bar"
+            className="flex shrink-0 flex-wrap items-center gap-x-3 border-b border-[var(--el-hairline)] px-4 sm:h-14 sm:flex-nowrap sm:px-8"
+          >
+            <div className="flex h-14 min-w-0 flex-1 items-center gap-2">
               {/* 이동과 창 제어를 한 그룹으로 묶는다 — 스크린리더에서 「목록으로」와 「전체 화면」이
                 제목 빵조각과 섞이면 어느 것이 이동이고 어느 것이 표시인지 알 수 없다. */}
               <div
@@ -536,7 +543,7 @@ export function NotePanel({
               충돌로 보지 않아 조용히 무시된다. 여기서는 상단바 높이에 맞춰 `h-14`다. */}
             <TabsList
               variant="line"
-              className="shrink-0 gap-5 group-data-horizontal/tabs:h-14"
+              className="shrink-0 gap-5 group-data-horizontal/tabs:h-14 max-sm:order-last max-sm:w-full max-sm:justify-start max-sm:group-data-horizontal/tabs:h-11"
             >
               <TabsTrigger value="details" className={TAB_ITEM}>
                 정보
@@ -760,11 +767,16 @@ export function NotePanel({
           {showSummaryTab ? (
             <TabsContent value="summary" className="min-h-0 flex-1">
               <ScrollArea className="h-full">
-                <NoteSummary
+                <ReviewTab
                   noteId={noteId}
+                  workspaceId={confirmedWorkspaceId}
+                  projectId={note?.projectId}
                   isEnded={phase === "ended"}
+                  isStarter={isStarter}
                   noteMeta={noteMeta}
+                  participants={note?.participants ?? []}
                   onEvidenceSelect={jumpToSegment}
+                  onOpenTranscript={() => handleTabChange("transcript")}
                 />
               </ScrollArea>
             </TabsContent>

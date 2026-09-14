@@ -5,6 +5,8 @@ import { setupServer } from "msw/node";
 
 import { CONTEXT_SNAPSHOT } from "@/lib/mocks/proposals";
 import { mockDb } from "@/lib/mocks/db";
+import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
+import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 import {
   resetChatStreamsForTests,
@@ -19,7 +21,11 @@ import {
  * 시드만 찌르면 오판한다 (`startedAt` 같은 필드는 `createSession`이 런타임에 null로 만든다).
  * 그래서 목록·상세를 전수로 훑고, 세션은 생성 직후 상태까지 함께 본다.
  */
-const server = setupServer(...restHandlers);
+const server = setupServer(
+  ...meetingFlowHandlers,
+  ...projectTaskHandlers,
+  ...restHandlers
+);
 const contract = parse(readFileSync("openapi3.yml", "utf8"));
 
 function nullableLeaves(schema: unknown, path = ""): string[] {
@@ -142,6 +148,8 @@ function contractSamples() {
     const session = mockDb.createSession(noteId);
     mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
     mockDb.endMeeting(noteId);
+    // 회의 종료는 구형 결과를 만들지 않는다. 지난 노트의 결과 모양을 보려고 직접 쌓는다.
+    mockDb.requestAnalysis(noteId);
     if (index === 0) {
       mockDb.failAnalysis(noteId);
       continue;
@@ -310,7 +318,9 @@ function contractSamples() {
         ),
         sessionId: sessionIds,
         chatId: chatIds,
-        proposalId: proposalIds,
+        // 검토 항목의 원본 명제는 판이 여럿인 것부터 앞에 선다. 앞의 몇 개로 이력 모양이 다 나온다.
+        proposalId: [...proposalIds, ...meetingFlow.proposalIds().slice(0, 12)],
+        taskId: projectTasks.ids(),
       };
       if (params.some((param) => !values[param]?.length)) continue;
       // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).

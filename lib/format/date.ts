@@ -63,3 +63,12 @@ export function formatAppDate(
     timeZone: APP_TIME_ZONE,
   }).format(date);
 }
+
+/** `2026-09-19` → 「9월 19일 (토)」. 날짜만 있는 값이라 서울 자정으로 읽는다. */
+export function formatDueDate(value: string) {
+  return formatAppDate(`${value}T00:00:00+09:00`, {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+}

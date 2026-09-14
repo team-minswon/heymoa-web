@@ -26,6 +26,9 @@ import type {
 import type {
   AppErrorResponse,
   CreatedNoteGuestParticipantResponse,
+  NoteAgendaListResponse,
+  NoteAgendaRequest,
+  NoteAgendaResponse,
   NoteGuestParticipantRequest,
   NoteGuestParticipantsRequest,
   NoteListResponse,
@@ -624,6 +627,454 @@ export const useUpdateNote = <
 > => {
   return useMutation(getUpdateNoteMutationOptions(options), queryClient);
 };
+export type getNoteAgendasResponse200 = {
+  data: NoteAgendaListResponse;
+  status: 200;
+};
+
+export type getNoteAgendasResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getNoteAgendasResponseSuccess = getNoteAgendasResponse200 & {
+  headers: Headers;
+};
+export type getNoteAgendasResponseError = getNoteAgendasResponse401 & {
+  headers: Headers;
+};
+
+export type getNoteAgendasResponse =
+  | getNoteAgendasResponseSuccess
+  | getNoteAgendasResponseError;
+
+export const getGetNoteAgendasUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/agendas`;
+};
+
+/**
+ * 노트 멤버가 회의 전·중에 사전 안건을 만들고 고치고 지운다. 회의가 끝나면 쓰기는 409 MEETING_ALREADY_ENDED 다. 안건은 회의 분석 요청의 입력으로만 쓰이고 검토본·프로젝트 지식에 들어가지 않는다.
+ * @summary 사전 안건 목록 조회
+ */
+export const getNoteAgendas = async (
+  noteId: string,
+  options?: RequestInit
+): Promise<getNoteAgendasResponse> => {
+  return apiFetch<getNoteAgendasResponse>(getGetNoteAgendasUrl(noteId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetNoteAgendasQueryKey = (noteId: string) => {
+  return [`/v1/notes/${noteId}/agendas`] as const;
+};
+
+export const getGetNoteAgendasQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNoteAgendas>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetNoteAgendasQueryKey(noteId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getNoteAgendas>>> = ({
+    signal,
+  }) => getNoteAgendas(noteId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: noteId !== null && noteId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getNoteAgendas>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNoteAgendasQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNoteAgendas>>
+>;
+export type GetNoteAgendasQueryError = UnauthorizedResponse;
+
+export function useGetNoteAgendas<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNoteAgendas>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNoteAgendas>>,
+          TError,
+          Awaited<ReturnType<typeof getNoteAgendas>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteAgendas<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNoteAgendas>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNoteAgendas>>,
+          TError,
+          Awaited<ReturnType<typeof getNoteAgendas>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteAgendas<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNoteAgendas>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 사전 안건 목록 조회
+ */
+
+export function useGetNoteAgendas<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNoteAgendas>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetNoteAgendasQueryOptions(noteId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 사전 안건 목록 조회
+ */
+export const prefetchGetNoteAgendasQuery = async <
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNoteAgendas>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetNoteAgendasQueryOptions(noteId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetNoteAgendasSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteAgendas>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetNoteAgendasQueryKey(noteId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getNoteAgendas>>> = ({
+    signal,
+  }) => getNoteAgendas(noteId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getNoteAgendas>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNoteAgendasSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNoteAgendas>>
+>;
+export type GetNoteAgendasSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetNoteAgendasSuspense<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteAgendas>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteAgendasSuspense<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteAgendas>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteAgendasSuspense<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteAgendas>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 사전 안건 목록 조회
+ */
+
+export function useGetNoteAgendasSuspense<
+  TData = Awaited<ReturnType<typeof getNoteAgendas>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteAgendas>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetNoteAgendasSuspenseQueryOptions(noteId, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export type createNoteAgendaResponse201 = {
+  data: NoteAgendaResponse;
+  status: 201;
+};
+
+export type createNoteAgendaResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type createNoteAgendaResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type createNoteAgendaResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type createNoteAgendaResponseSuccess = createNoteAgendaResponse201 & {
+  headers: Headers;
+};
+export type createNoteAgendaResponseError = (
+  | createNoteAgendaResponse400
+  | createNoteAgendaResponse401
+  | createNoteAgendaResponse409
+) & {
+  headers: Headers;
+};
+
+export type createNoteAgendaResponse =
+  | createNoteAgendaResponseSuccess
+  | createNoteAgendaResponseError;
+
+export const getCreateNoteAgendaUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/agendas`;
+};
+
+/**
+ * 노트 멤버가 회의 전·중에 사전 안건을 만들고 고치고 지운다. 회의가 끝나면 쓰기는 409 MEETING_ALREADY_ENDED 다. 안건은 회의 분석 요청의 입력으로만 쓰이고 검토본·프로젝트 지식에 들어가지 않는다.
+ * @summary 사전 안건 생성
+ */
+export const createNoteAgenda = async (
+  noteId: string,
+  noteAgendaRequest?: NoteAgendaRequest,
+  options?: RequestInit
+): Promise<createNoteAgendaResponse> => {
+  return apiFetch<createNoteAgendaResponse>(getCreateNoteAgendaUrl(noteId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(noteAgendaRequest),
+  });
+};
+
+export const getCreateNoteAgendaMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createNoteAgenda>>,
+    TError,
+    { noteId: string; data?: NoteAgendaRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createNoteAgenda>>,
+  TError,
+  { noteId: string; data?: NoteAgendaRequest },
+  TContext
+> => {
+  const mutationKey = ["createNoteAgenda"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createNoteAgenda>>,
+    { noteId: string; data?: NoteAgendaRequest }
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return createNoteAgenda(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateNoteAgendaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createNoteAgenda>>
+>;
+export type CreateNoteAgendaMutationBody = NoteAgendaRequest | undefined;
+export type CreateNoteAgendaMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 사전 안건 생성
+ */
+export const useCreateNoteAgenda = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createNoteAgenda>>,
+      TError,
+      { noteId: string; data?: NoteAgendaRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createNoteAgenda>>,
+  TError,
+  { noteId: string; data?: NoteAgendaRequest },
+  TContext
+> => {
+  return useMutation(getCreateNoteAgendaMutationOptions(options), queryClient);
+};
 export type replaceNoteParticipantsResponse200 = {
   data: NoteParticipantListResponse;
   status: 200;
@@ -1217,6 +1668,243 @@ export const useCreateNote = <
   TContext
 > => {
   return useMutation(getCreateNoteMutationOptions(options), queryClient);
+};
+export type updateNoteAgendaResponse200 = {
+  data: NoteAgendaResponse;
+  status: 200;
+};
+
+export type updateNoteAgendaResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type updateNoteAgendaResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type updateNoteAgendaResponseSuccess = updateNoteAgendaResponse200 & {
+  headers: Headers;
+};
+export type updateNoteAgendaResponseError = (
+  | updateNoteAgendaResponse401
+  | updateNoteAgendaResponse404
+) & {
+  headers: Headers;
+};
+
+export type updateNoteAgendaResponse =
+  | updateNoteAgendaResponseSuccess
+  | updateNoteAgendaResponseError;
+
+export const getUpdateNoteAgendaUrl = (noteId: string, agendaId: string) => {
+  return `/v1/notes/${noteId}/agendas/${agendaId}`;
+};
+
+/**
+ * 노트 멤버가 회의 전·중에 사전 안건을 만들고 고치고 지운다. 회의가 끝나면 쓰기는 409 MEETING_ALREADY_ENDED 다. 안건은 회의 분석 요청의 입력으로만 쓰이고 검토본·프로젝트 지식에 들어가지 않는다.
+ * @summary 사전 안건 수정
+ */
+export const updateNoteAgenda = async (
+  noteId: string,
+  agendaId: string,
+  noteAgendaRequest?: NoteAgendaRequest,
+  options?: RequestInit
+): Promise<updateNoteAgendaResponse> => {
+  return apiFetch<updateNoteAgendaResponse>(
+    getUpdateNoteAgendaUrl(noteId, agendaId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(noteAgendaRequest),
+    }
+  );
+};
+
+export const getUpdateNoteAgendaMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateNoteAgenda>>,
+    TError,
+    { noteId: string; agendaId: string; data?: NoteAgendaRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateNoteAgenda>>,
+  TError,
+  { noteId: string; agendaId: string; data?: NoteAgendaRequest },
+  TContext
+> => {
+  const mutationKey = ["updateNoteAgenda"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateNoteAgenda>>,
+    { noteId: string; agendaId: string; data?: NoteAgendaRequest }
+  > = (props) => {
+    const { noteId, agendaId, data } = props ?? {};
+
+    return updateNoteAgenda(noteId, agendaId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateNoteAgendaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateNoteAgenda>>
+>;
+export type UpdateNoteAgendaMutationBody = NoteAgendaRequest | undefined;
+export type UpdateNoteAgendaMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+/**
+ * @summary 사전 안건 수정
+ */
+export const useUpdateNoteAgenda = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateNoteAgenda>>,
+      TError,
+      { noteId: string; agendaId: string; data?: NoteAgendaRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateNoteAgenda>>,
+  TError,
+  { noteId: string; agendaId: string; data?: NoteAgendaRequest },
+  TContext
+> => {
+  return useMutation(getUpdateNoteAgendaMutationOptions(options), queryClient);
+};
+export type deleteNoteAgendaResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteNoteAgendaResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type deleteNoteAgendaResponseSuccess = deleteNoteAgendaResponse204 & {
+  headers: Headers;
+};
+export type deleteNoteAgendaResponseError = deleteNoteAgendaResponse401 & {
+  headers: Headers;
+};
+
+export type deleteNoteAgendaResponse =
+  | deleteNoteAgendaResponseSuccess
+  | deleteNoteAgendaResponseError;
+
+export const getDeleteNoteAgendaUrl = (noteId: string, agendaId: string) => {
+  return `/v1/notes/${noteId}/agendas/${agendaId}`;
+};
+
+/**
+ * 노트 멤버가 회의 전·중에 사전 안건을 만들고 고치고 지운다. 회의가 끝나면 쓰기는 409 MEETING_ALREADY_ENDED 다. 안건은 회의 분석 요청의 입력으로만 쓰이고 검토본·프로젝트 지식에 들어가지 않는다.
+ * @summary 사전 안건 삭제
+ */
+export const deleteNoteAgenda = async (
+  noteId: string,
+  agendaId: string,
+  options?: RequestInit
+): Promise<deleteNoteAgendaResponse> => {
+  return apiFetch<deleteNoteAgendaResponse>(
+    getDeleteNoteAgendaUrl(noteId, agendaId),
+    {
+      ...options,
+      method: "DELETE",
+    }
+  );
+};
+
+export const getDeleteNoteAgendaMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteNoteAgenda>>,
+    TError,
+    { noteId: string; agendaId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteNoteAgenda>>,
+  TError,
+  { noteId: string; agendaId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteNoteAgenda"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteNoteAgenda>>,
+    { noteId: string; agendaId: string }
+  > = (props) => {
+    const { noteId, agendaId } = props ?? {};
+
+    return deleteNoteAgenda(noteId, agendaId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteNoteAgendaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteNoteAgenda>>
+>;
+
+export type DeleteNoteAgendaMutationError = UnauthorizedResponse;
+
+/**
+ * @summary 사전 안건 삭제
+ */
+export const useDeleteNoteAgenda = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteNoteAgenda>>,
+      TError,
+      { noteId: string; agendaId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteNoteAgenda>>,
+  TError,
+  { noteId: string; agendaId: string },
+  TContext
+> => {
+  return useMutation(getDeleteNoteAgendaMutationOptions(options), queryClient);
 };
 export type replaceNoteGuestParticipantsResponse200 = {
   data: NoteParticipantListResponse;

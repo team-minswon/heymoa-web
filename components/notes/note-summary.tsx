@@ -81,9 +81,12 @@ export function NoteSummary({
   isEnded,
   noteMeta,
   onEvidenceSelect,
+  readOnly = false,
 }: {
   noteId: string;
   isEnded: boolean;
+  /** 지난 노트의 구형 결과. 새 회의 분석은 이 결과를 다시 만들지 않으므로 요청 버튼을 두지 않는다. */
+  readOnly?: boolean;
   /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
   noteMeta?: NoteMeta | null;
   /** 근거 인용을 눌렀다. 소유자가 전사 탭으로 옮기고 그 줄을 짚는다. */
@@ -149,7 +152,8 @@ export function NoteSummary({
       <>
         <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-5">
           <SpeakerNudgeBanner noteId={noteId} />
-          {analysis.retry ? (
+          {/* 읽기 전용(분석 흐름 밖의 지난 노트)은 재요약을 요청할 수 없어 다시 시도를 두지 않는다 */}
+          {analysis.retry && !readOnly ? (
             <RetryStrip
               retry={analysis.retry}
               onRetry={startAnalysis}
@@ -161,15 +165,17 @@ export function NoteSummary({
               다시 만들 이유는 화자만이 아니다 — 전사를 고쳤거나 그냥 다시 보고 싶을 때도
               같은 버튼이면 찾을 것이 없다. */}
           <div className="mt-3 flex items-center justify-end gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-[30px]"
-              loading={isRequesting}
-              onClick={startAnalysis}
-            >
-              요약 다시 만들기
-            </Button>
+            {readOnly ? null : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-[30px]"
+                loading={isRequesting}
+                onClick={startAnalysis}
+              >
+                요약 다시 만들기
+              </Button>
+            )}
             {noteMeta ? (
               <CopyMarkdownButton
                 label="요약"
@@ -209,15 +215,17 @@ export function NoteSummary({
                 {analysis.errorMessage ?? "분석을 완료하지 못했습니다."}
                 {analysis.errorCode ? ` (${analysis.errorCode})` : null}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 h-[30px]"
-                disabled={isRequesting}
-                onClick={startAnalysis}
-              >
-                다시 분석
-              </Button>
+              {readOnly ? null : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 h-[30px]"
+                  disabled={isRequesting}
+                  onClick={startAnalysis}
+                >
+                  다시 분석
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -236,11 +244,14 @@ export function NoteSummary({
               : "요약은 회의가 끝나면 생성됩니다"}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-[var(--el-muted)]">
-            {isEnded
-              ? "이 회의의 요약을 만들어 개요·액션 아이템·결정을 정리합니다."
-              : "회의를 종료하면 개요·액션 아이템·결정이 자동으로 정리됩니다."}
+            {!isEnded
+              ? "회의를 종료하면 개요·액션 아이템·결정이 자동으로 정리됩니다."
+              : readOnly
+                ? "이 회의에는 만들어 둔 요약이 없습니다."
+                : "이 회의의 요약을 만들어 개요·액션 아이템·결정을 정리합니다."}
           </p>
-          {isEnded ? (
+          {/* 읽기 전용(분석 흐름 밖의 지난 노트)은 새 요약을 요청할 수 없다 */}
+          {isEnded && !readOnly ? (
             <Button
               size="sm"
               className="mt-3 h-[30px]"

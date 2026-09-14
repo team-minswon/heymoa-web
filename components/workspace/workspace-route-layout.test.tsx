@@ -24,6 +24,7 @@ const GONE = {
 
 const route = vi.hoisted(() => ({
   noteId: undefined as string | undefined,
+  pathname: "/w/01K90000000000",
   search: "",
   replaceMock: vi.fn(),
   /** 셸이 렌더 중 던질 것. null이면 정상 렌더다. */
@@ -48,6 +49,7 @@ const route = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ noteId: route.noteId }),
+  usePathname: () => route.pathname,
   useSearchParams: () => new URLSearchParams(route.search),
   useRouter: () => ({ replace: route.replaceMock }),
 }));
@@ -152,6 +154,7 @@ function stateOf(client: QueryClient) {
 
 function resetRoute() {
   route.noteId = undefined;
+  route.pathname = `/w/${WORKSPACE_ID}`;
   route.search = "";
   route.replaceMock.mockReset();
   route.shellError = null;
@@ -177,6 +180,15 @@ describe("WorkspaceRouteLayout", () => {
       "data-active-note-id",
       "note-1"
     );
+  });
+
+  it("할 일 화면에서는 노트 목록을 마운트하지 않는다", () => {
+    route.pathname = `/w/${WORKSPACE_ID}/tasks`;
+
+    renderLayout(makeQueryClient(), <div>할 일 화면</div>);
+
+    expect(screen.queryByText("워크스페이스 목록")).not.toBeInTheDocument();
+    expect(screen.getByText("할 일 화면")).toBeInTheDocument();
   });
 
   it("keeps the workspace page mounted for a full-screen note (sidebar retained)", () => {

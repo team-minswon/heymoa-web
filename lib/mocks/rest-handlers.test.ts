@@ -10,9 +10,10 @@ import {
 import { setupServer } from "msw/node";
 
 import { mockDb } from "@/lib/mocks/db";
+import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
 
-const server = setupServer(...restHandlers);
+const server = setupServer(...meetingFlowHandlers, ...restHandlers);
 
 describe("REST mock handlers", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -459,16 +460,19 @@ describe("meeting and integration handlers", () => {
     expect((await response.json()).error.code).toBe("MEETING_NOT_STARTED");
   });
 
-  it("accepts a meeting end with 202 and queues an analysis", async () => {
+  it("ends a meeting with 204 and starts the meeting analysis", async () => {
     const note = startedNote();
 
     const response = await fetch(
       `http://localhost/v1/notes/${note.noteId}/meeting-end`,
       { method: "POST" }
     );
+    const flow = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/analyses/flow`
+    );
 
-    expect(response.status).toBe(202);
-    expect((await response.json()).data.status).toBe("PENDING");
+    expect(response.status).toBe(204);
+    expect((await flow.json()).data.status).toBe("ANALYZING");
   });
 
 

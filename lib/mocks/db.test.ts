@@ -582,10 +582,11 @@ describe("참여자 전체 교체와 떠난 사람", () => {
 describe("meeting and analysis", () => {
   beforeEach(() => mockDb.reset());
 
-  it("ending a meeting queues an analysis that later completes", () => {
+  it("a legacy analysis request later completes", () => {
     const noteId = startedNoteId();
 
     mockDb.endMeeting(noteId);
+    mockDb.requestAnalysis(noteId);
     expect(mockDb.getLatestAnalysis(noteId).status).toBe("PENDING");
 
     mockDb.advanceAnalysis(noteId);
@@ -609,6 +610,7 @@ describe("meeting and analysis", () => {
       mockDb.listSegments(noteId).map((segment) => segment.segmentId)
     );
     mockDb.endMeeting(noteId);
+    mockDb.requestAnalysis(noteId);
     const done = mockDb.advanceAnalysis(noteId)!;
 
     const evidence = done.sections
@@ -744,7 +746,7 @@ describe("only the meeting starter can operate a meeting", () => {
     const session = mockDb.createSession(note.noteId);
     mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
 
-    expect(mockDb.endMeeting(note.noteId)).toBeTruthy();
+    expect(() => mockDb.endMeeting(note.noteId)).not.toThrow();
   });
 });
 

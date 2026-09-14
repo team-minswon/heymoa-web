@@ -121,9 +121,9 @@ vi.mock("@/components/notes/note-archive", () => ({
     <div data-testid="note-archive" data-workspace={workspaceId ?? ""} />
   ),
 }));
-vi.mock("@/components/notes/note-summary", () => ({
-  NoteSummary: ({ isEnded }: { isEnded: boolean }) => (
-    <div data-testid="note-summary" data-ended={isEnded} />
+vi.mock("@/components/notes/review/review-tab", () => ({
+  ReviewTab: ({ isEnded }: { isEnded: boolean }) => (
+    <div data-testid="review-tab" data-ended={isEnded} />
   ),
 }));
 vi.mock("@/components/notes/meeting-end-dialog", () => ({
@@ -1030,7 +1030,7 @@ describe("NotePanel", () => {
       />
     );
     expect(screen.getByRole("tab", { name: "요약" })).toBeTruthy();
-    expect(screen.getByTestId("note-summary")).toBeTruthy();
+    expect(screen.getByTestId("review-tab")).toBeTruthy();
     // 전체 화면이 워크스페이스 상단바를 통째로 덮으므로 **회의 제어·창 제어를 노트가 직접
     // 갖는다.** 예전에는 셸 상단바의 노트 액션 슬롯이 맡았고, 그 바가 안 보이게 되면서
     // 회의 종료·축소·닫기가 갈 곳이 없어졌다.
@@ -1124,8 +1124,9 @@ describe("NotePanel", () => {
     );
 
     const windowGroup = screen.getByRole("group", { name: "창 제어" });
-    const topBar = windowGroup.closest("div.h-14");
-    expect(topBar).toHaveClass("h-14", "shrink-0");
+    const topBar = windowGroup.closest('[data-slot="note-top-bar"]');
+    // 넓은 화면은 56 한 줄, 좁은 화면은 제목 줄 56 + 탭 줄 두 줄이다 — 어느 쪽이든 탭과 무관하게 고정이다.
+    expect(topBar).toHaveClass("sm:h-14", "shrink-0");
     // 탭 목록이 그 바 안에 있어야 제목 블록이 켜지든 꺼지든 제자리에 남는다.
     expect(topBar?.contains(screen.getByRole("tablist"))).toBe(true);
     // 전사에는 세리프 제목도 메타도 없다.
@@ -1150,7 +1151,7 @@ describe("NotePanel", () => {
     expect(
       screen
         .getByRole("group", { name: "창 제어" })
-        .closest("div.h-14")
+        .closest('[data-slot="note-top-bar"]')
         ?.contains(screen.getByRole("tablist"))
     ).toBe(true);
     // 프로젝트 pill도 이 머리글의 것이다 — 전사에서는 상단바가 이미 좁다.

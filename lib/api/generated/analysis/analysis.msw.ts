@@ -8,27 +8,25 @@
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { AnalysisResponse, AnalysisResultResponse } from "../models";
+import type {
+  AnalysisResultResponse,
+  MeetingAnalysisFlowResponse,
+  MeetingAnalysisRequestResponse,
+} from "../models";
 
-export const getRequestAnalysisResponseMock = (): AnalysisResponse => ({
-  success: true,
-  data: {
-    analysisId: "0K9GVJT2C4Q1Z",
-    noteId: "0HZX2K7M9Q4AF",
-    status: "PENDING",
-  },
-  error: null,
-});
+export const getRequestAnalysisResponseMock =
+  (): MeetingAnalysisRequestResponse => ({
+    success: true,
+    data: { noteId: "0HZX2K7M9Q4AF", requestId: "0K9GVJT2C4Q1Z" },
+    error: null,
+  });
 
-export const getEndMeetingResponseMock = (): AnalysisResponse => ({
-  success: true,
-  data: {
-    analysisId: "0K9GVJT2C4Q1Z",
-    noteId: "0HZX2K7M9Q4AF",
-    status: "PENDING",
-  },
-  error: null,
-});
+export const getGetAnalysisFlowResponseMock =
+  (): MeetingAnalysisFlowResponse => ({
+    success: true,
+    data: { noteId: "0HZX2K7M9Q4AF", status: "REVIEWABLE" },
+    error: null,
+  });
 
 export const getGetLatestAnalysisResponseMock = (): AnalysisResultResponse => ({
   success: true,
@@ -79,10 +77,12 @@ export const getGetLatestAnalysisResponseMock = (): AnalysisResultResponse => ({
 
 export const getRequestAnalysisMockHandler = (
   overrideResponse?:
-    | AnalysisResponse
+    | MeetingAnalysisRequestResponse
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<AnalysisResponse> | AnalysisResponse),
+      ) =>
+        | Promise<MeetingAnalysisRequestResponse>
+        | MeetingAnalysisRequestResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.post(
@@ -103,22 +103,43 @@ export const getRequestAnalysisMockHandler = (
 
 export const getEndMeetingMockHandler = (
   overrideResponse?:
-    | AnalysisResponse
+    | void
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<AnalysisResponse> | AnalysisResponse),
+      ) => Promise<void> | void),
   options?: RequestHandlerOptions
 ) => {
   return http.post(
     "*/v1/notes/:noteId/meeting-end",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
+
+export const getGetAnalysisFlowMockHandler = (
+  overrideResponse?:
+    | MeetingAnalysisFlowResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<MeetingAnalysisFlowResponse> | MeetingAnalysisFlowResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/notes/:noteId/analyses/flow",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === "function"
             ? await overrideResponse(info)
             : overrideResponse
-          : getEndMeetingResponseMock(),
-        { status: 202 }
+          : getGetAnalysisFlowResponseMock(),
+        { status: 200 }
       );
     },
     options
@@ -151,5 +172,6 @@ export const getGetLatestAnalysisMockHandler = (
 export const getAnalysisMock = () => [
   getRequestAnalysisMockHandler(),
   getEndMeetingMockHandler(),
+  getGetAnalysisFlowMockHandler(),
   getGetLatestAnalysisMockHandler(),
 ];
