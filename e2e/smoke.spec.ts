@@ -50,7 +50,7 @@ function meetingControls(page: Page) {
  */
 function noteTopBar(page: Page) {
   return page
-    .locator("div.h-14")
+    .locator('[data-slot="note-top-bar"]')
     .filter({ has: page.getByRole("group", { name: "창 제어" }) });
 }
 
@@ -1271,7 +1271,7 @@ test("starts and ends a meeting through one confirmation", async ({ page }) => {
   expect(frameWarnings).toEqual([]);
 
   await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-  await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
+  await expect(page.getByText("회의를 분석하는 중입니다")).toBeVisible({
     timeout: 20_000,
   });
 });
@@ -1403,7 +1403,7 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   const dialog = page.getByRole("alertdialog");
   await dialog.getByRole("button", { name: "회의 종료" }).click();
 
-  await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
+  await expect(page.getByText("회의를 분석하는 중입니다")).toBeVisible({
     timeout: 20_000,
   });
   await expect(
@@ -1430,7 +1430,7 @@ test("ends a meeting and shows the analysis in progress", async ({ page }) => {
   await dialog.getByRole("button", { name: "회의 종료" }).click();
 
   // 종료 → 분석 PENDING → 요약 탭이 분석 진행으로.
-  await expect(page.getByText("회의를 정리하고 있습니다")).toBeVisible({
+  await expect(page.getByText("회의를 분석하는 중입니다")).toBeVisible({
     timeout: 20_000,
   });
   await expect(

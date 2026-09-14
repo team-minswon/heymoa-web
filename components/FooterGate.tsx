@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import React from "react";
 
-import { isWorkspaceRoute } from "@/lib/routes/app-route";
+import { isChromelessRoute } from "@/lib/routes/app-route";
 
 /**
  * 푸터를 어디에 세울지만 판다. **어떤 푸터인지는 `Footer`가 경로로 가른다** — 한때 여기서
@@ -14,8 +14,7 @@ import { isWorkspaceRoute } from "@/lib/routes/app-route";
 export function FooterGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // 인증 콜백과 워크스페이스 안쪽은 푸터를 아예 안 세운다.
-  if (pathname === "/auth/callback" || isWorkspaceRoute(pathname)) {
+  if (isChromelessRoute(pathname)) {
     return null;
   }
 

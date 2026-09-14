@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,12 +13,14 @@ import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
 
 const navState = vi.hoisted(() => ({
   params: new URLSearchParams(""),
+  pathname: "/w/01K0000000000",
+  push: vi.fn(),
   replace: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: navState.replace }),
+  useRouter: () => ({ push: navState.push, replace: navState.replace }),
   useSearchParams: () => navState.params,
-  usePathname: () => "/w/01K0000000000",
+  usePathname: () => navState.pathname,
 }));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("@/lib/ui/toast", () => ({ toast: toastMock }));
@@ -102,6 +105,8 @@ describe("WorkspaceAppShell", () => {
 
   beforeEach(() => {
     navState.params = new URLSearchParams("");
+    navState.pathname = "/w/01K0000000000";
+    navState.push.mockClear();
     navState.replace.mockClear();
     toastMock.success.mockClear();
     toastMock.error.mockClear();
@@ -152,6 +157,23 @@ describe("WorkspaceAppShell", () => {
       "border",
       "border-[var(--el-hairline)]"
     );
+  });
+
+  it("할 일 화면에서는 상단바가 할 일을 말하고, 모든 노트를 누르면 목록으로 옮긴다", () => {
+    navState.pathname = "/w/01K0000000000/tasks";
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkspaceAppShell workspaceId="01K0000000000">
+          <p>할 일 목록</p>
+        </WorkspaceAppShell>
+      </QueryClientProvider>
+    );
+
+    expect(
+      within(screen.getByRole("main")).getAllByText("할 일").length
+    ).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "모든 노트" }));
+    expect(navState.push).toHaveBeenCalledWith("/w/01K0000000000");
   });
 
   it("OAuth 복귀 쿼리로 연동 결과 토스트를 띄우고 쿼리를 지운다", async () => {

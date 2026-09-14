@@ -93,11 +93,12 @@ export function WorkspaceAppShell({
     (projectId: string | null) => {
       setSelectedProjectId(projectId);
 
-      if (activeNoteId) {
+      // 할 일 화면에서 고르면 목록이 없는 자리라 같은 이유로 목록으로 옮긴다.
+      if (activeNoteId || pathname !== `/w/${workspaceId}`) {
         router.push(`/w/${workspaceId}`);
       }
     },
-    [activeNoteId, router, workspaceId]
+    [activeNoteId, pathname, router, workspaceId]
   );
 
   // OAuth 연동 승인 후 서버가 /w/{workspaceId}?provider=&status=로 돌려보낸다(APP-194).
@@ -189,8 +190,10 @@ export function WorkspaceAppShell({
     ]
   );
   const currentLabel =
-    projects.find((project) => project.projectId === selectedProjectId)?.name ??
-    "모든 노트";
+    pathname === `/w/${workspaceId}/tasks`
+      ? "할 일"
+      : (projects.find((project) => project.projectId === selectedProjectId)
+          ?.name ?? "모든 노트");
   // 노트 전체 화면은 이 셸을 통째로 덮는다(design.pen `XtEMZ`). side 시트는 안 덮는다.
   const isFullNote =
     Boolean(activeNoteId) && searchParams.get("view") !== "side";

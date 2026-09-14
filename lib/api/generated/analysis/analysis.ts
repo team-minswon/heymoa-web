@@ -24,9 +24,10 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
-  AnalysisResponse,
   AnalysisResultResponse,
   AppErrorResponse,
+  MeetingAnalysisFlowResponse,
+  MeetingAnalysisRequestResponse,
   UnauthorizedResponse,
 } from "../models";
 
@@ -35,13 +36,18 @@ import { apiFetch } from "../../fetcher";
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export type requestAnalysisResponse202 = {
-  data: AnalysisResponse;
+  data: MeetingAnalysisRequestResponse;
   status: 202;
 };
 
 export type requestAnalysisResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
+};
+
+export type requestAnalysisResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
 };
 
 export type requestAnalysisResponse404 = {
@@ -59,6 +65,7 @@ export type requestAnalysisResponseSuccess = requestAnalysisResponse202 & {
 };
 export type requestAnalysisResponseError = (
   | requestAnalysisResponse401
+  | requestAnalysisResponse403
   | requestAnalysisResponse404
   | requestAnalysisResponse409
 ) & {
@@ -74,8 +81,8 @@ export const getRequestAnalysisUrl = (noteId: string) => {
 };
 
 /**
- * 종료된 회의의 노트를 다시 분석한다.
- * @summary 재분석 요청
+ * 회의 시작자가 분석 실패·요청 전 노트의 회의 분석을 다시 요청한다. 다른 상태면 409 이고, 결과는 콜백으로 온다.
+ * @summary 분석 재요청
  */
 export const requestAnalysis = async (
   noteId: string,
@@ -134,7 +141,7 @@ export type RequestAnalysisMutationError =
   | AppErrorResponse;
 
 /**
- * @summary 재분석 요청
+ * @summary 분석 재요청
  */
 export const useRequestAnalysis = <
   TError = UnauthorizedResponse | AppErrorResponse,
@@ -158,9 +165,9 @@ export const useRequestAnalysis = <
 > => {
   return useMutation(getRequestAnalysisMutationOptions(options), queryClient);
 };
-export type endMeetingResponse202 = {
-  data: AnalysisResponse;
-  status: 202;
+export type endMeetingResponse204 = {
+  data: void;
+  status: 204;
 };
 
 export type endMeetingResponse401 = {
@@ -183,7 +190,7 @@ export type endMeetingResponse409 = {
   status: 409;
 };
 
-export type endMeetingResponseSuccess = endMeetingResponse202 & {
+export type endMeetingResponseSuccess = endMeetingResponse204 & {
   headers: Headers;
 };
 export type endMeetingResponseError = (
@@ -204,7 +211,7 @@ export const getEndMeetingUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 회의를 종료하고 분석을 시작한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다.
+ * 노트의 회의를 종료한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다.
  * @summary 회의 종료
  */
 export const endMeeting = async (
@@ -286,6 +293,351 @@ export const useEndMeeting = <
 > => {
   return useMutation(getEndMeetingMutationOptions(options), queryClient);
 };
+export type getAnalysisFlowResponse200 = {
+  data: MeetingAnalysisFlowResponse;
+  status: 200;
+};
+
+export type getAnalysisFlowResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getAnalysisFlowResponseSuccess = getAnalysisFlowResponse200 & {
+  headers: Headers;
+};
+export type getAnalysisFlowResponseError = getAnalysisFlowResponse401 & {
+  headers: Headers;
+};
+
+export type getAnalysisFlowResponse =
+  | getAnalysisFlowResponseSuccess
+  | getAnalysisFlowResponseError;
+
+export const getGetAnalysisFlowUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/analyses/flow`;
+};
+
+/**
+ * 노트의 회의 뒤 분석 흐름 상태를 조회한다. 워크스페이스 멤버가 읽고, 저장된 사실에서 조회 때 계산한다.
+ * @summary 회의 뒤 분석 흐름 조회
+ */
+export const getAnalysisFlow = async (
+  noteId: string,
+  options?: RequestInit
+): Promise<getAnalysisFlowResponse> => {
+  return apiFetch<getAnalysisFlowResponse>(getGetAnalysisFlowUrl(noteId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAnalysisFlowQueryKey = (noteId: string) => {
+  return [`/v1/notes/${noteId}/analyses/flow`] as const;
+};
+
+export const getGetAnalysisFlowQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAnalysisFlowQueryKey(noteId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalysisFlow>>> = ({
+    signal,
+  }) => getAnalysisFlow(noteId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: noteId !== null && noteId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisFlow>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAnalysisFlowQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalysisFlow>>
+>;
+export type GetAnalysisFlowQueryError = UnauthorizedResponse;
+
+export function useGetAnalysisFlow<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAnalysisFlow>>,
+          TError,
+          Awaited<ReturnType<typeof getAnalysisFlow>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAnalysisFlow<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAnalysisFlow>>,
+          TError,
+          Awaited<ReturnType<typeof getAnalysisFlow>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAnalysisFlow<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 회의 뒤 분석 흐름 조회
+ */
+
+export function useGetAnalysisFlow<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAnalysisFlowQueryOptions(noteId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 회의 뒤 분석 흐름 조회
+ */
+export const prefetchGetAnalysisFlowQuery = async <
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetAnalysisFlowQueryOptions(noteId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetAnalysisFlowSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAnalysisFlowQueryKey(noteId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalysisFlow>>> = ({
+    signal,
+  }) => getAnalysisFlow(noteId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisFlow>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAnalysisFlowSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalysisFlow>>
+>;
+export type GetAnalysisFlowSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetAnalysisFlowSuspense<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAnalysisFlowSuspense<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAnalysisFlowSuspense<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 회의 뒤 분석 흐름 조회
+ */
+
+export function useGetAnalysisFlowSuspense<
+  TData = Awaited<ReturnType<typeof getAnalysisFlow>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAnalysisFlow>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAnalysisFlowSuspenseQueryOptions(noteId, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
 export type getLatestAnalysisResponse200 = {
   data: AnalysisResultResponse;
   status: 200;

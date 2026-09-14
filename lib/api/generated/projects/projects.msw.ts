@@ -8,7 +8,13 @@
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { ProjectListResponse, ProjectResponse } from "../models";
+import type {
+  ProjectListResponse,
+  ProjectResponse,
+  ProjectTaskListResponse,
+  ProjectTaskResponse,
+  ProjectTaskRevisionListResponse,
+} from "../models";
 
 export const getGetProjectsResponseMock = (): ProjectListResponse => ({
   success: true,
@@ -65,6 +71,69 @@ export const getUpdateProjectResponseMock = (): ProjectResponse => ({
   },
   error: null,
 });
+
+export const getGetProjectTasksResponseMock = (): ProjectTaskListResponse => ({
+  success: true,
+  data: {
+    tasks: [
+      {
+        taskId: "0K9GVJT2C4Q21",
+        revision: 1,
+        content: "배포 체크리스트를 만든다",
+        taskStatus: "OPEN",
+        assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+        due: "2026-09-18",
+      },
+    ],
+  },
+  error: null,
+});
+
+export const getCreateProjectTaskResponseMock = (): ProjectTaskResponse => ({
+  success: true,
+  data: {
+    taskId: "0K9GVJT2C4Q21",
+    revision: 1,
+    content: "배포 체크리스트를 만든다",
+    taskStatus: "OPEN",
+    assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+    due: "2026-09-18",
+  },
+  error: null,
+});
+
+export const getUpdateProjectTaskResponseMock = (): ProjectTaskResponse => ({
+  success: true,
+  data: {
+    taskId: "0K9GVJT2C4Q21",
+    revision: 2,
+    content: "배포 체크리스트를 만든다",
+    taskStatus: "COMPLETED",
+    assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+    due: "2026-09-18",
+  },
+  error: null,
+});
+
+export const getGetProjectTaskRevisionsResponseMock =
+  (): ProjectTaskRevisionListResponse => ({
+    success: true,
+    data: {
+      revisions: [
+        {
+          revision: 1,
+          content: "배포 체크리스트를 만든다",
+          taskStatus: "OPEN",
+          assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+          due: "2026-09-18",
+          approvalId: null,
+          changedBy: "0HZX2K7M9Q4AC",
+          changedAt: "2026-07-14T01:02:03Z",
+        },
+      ],
+    },
+    error: null,
+  });
 
 export const getGetProjectsMockHandler = (
   overrideResponse?:
@@ -182,10 +251,112 @@ export const getDeleteProjectMockHandler = (
     options
   );
 };
+
+export const getGetProjectTasksMockHandler = (
+  overrideResponse?:
+    | ProjectTaskListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<ProjectTaskListResponse> | ProjectTaskListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/projects/:projectId/tasks",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetProjectTasksResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getCreateProjectTaskMockHandler = (
+  overrideResponse?:
+    | ProjectTaskResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<ProjectTaskResponse> | ProjectTaskResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/projects/:projectId/tasks",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateProjectTaskResponseMock(),
+        { status: 201 }
+      );
+    },
+    options
+  );
+};
+
+export const getUpdateProjectTaskMockHandler = (
+  overrideResponse?:
+    | ProjectTaskResponse
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<ProjectTaskResponse> | ProjectTaskResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/workspaces/:workspaceId/projects/:projectId/tasks/:taskId",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateProjectTaskResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getGetProjectTaskRevisionsMockHandler = (
+  overrideResponse?:
+    | ProjectTaskRevisionListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) =>
+        | Promise<ProjectTaskRevisionListResponse>
+        | ProjectTaskRevisionListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/projects/:projectId/tasks/:taskId/revisions",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetProjectTaskRevisionsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getProjectsMock = () => [
   getGetProjectsMockHandler(),
   getCreateProjectMockHandler(),
   getGetProjectMockHandler(),
   getUpdateProjectMockHandler(),
   getDeleteProjectMockHandler(),
+  getGetProjectTasksMockHandler(),
+  getCreateProjectTaskMockHandler(),
+  getUpdateProjectTaskMockHandler(),
+  getGetProjectTaskRevisionsMockHandler(),
 ];

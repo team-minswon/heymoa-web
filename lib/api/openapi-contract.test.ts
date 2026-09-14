@@ -154,9 +154,11 @@ describe("OpenAPI contract", () => {
     ]) {
       expect(schemaNames).not.toContain(name);
     }
-    expect(Object.keys(api().paths)).toHaveLength(45);
+    expect(Object.keys(api().paths)).toHaveLength(56);
     // APP-551: 턴 스트림 계약이 `AgentChatTurnResponse`(202 {turnId}) 하나를 더한다.
-    expect(schemaNames).toHaveLength(62);
+    // 회의 뒤 흐름(흐름·검토본·확정·사전 안건·할 일) 스키마 16개가 늘고, 구형 분석 생성
+    // 응답 `AnalysisResponse` 가 빠진다 (62 → 77). 회의 요약 조회가 `MeetingReviewSummaryResponse` 를 더한다 (77 → 78).
+    expect(schemaNames).toHaveLength(78);
   });
 
   it("omits the internal-only security scheme", () => {
@@ -251,7 +253,11 @@ describe("contract sync 2026-07-29", () => {
     // `notes/{noteId}/context-candidates`와 `.../context-candidates/{candidateId}/revisions`.
     // APP-557(PRO-45)에서 그 둘이 `notes/{noteId}/proposals`와
     // `.../proposals/{proposalId}/revisions`로 이름을 바꿨다. 개수는 그대로다.
-    expect(paths).toHaveLength(45);
+    // 회의 뒤 흐름 경로 열이 늘었다 (45 → 55) —
+    // `analyses/flow`, `meeting-review`·`.../items`·`.../items/{itemId}`, `approval`,
+    // `agendas`·`agendas/{agendaId}`, `projects/{projectId}/tasks`·`.../{taskId}`·`.../revisions`.
+    // 회의 요약 조회가 늘었다 (55 → 56) — `meeting-review/summary`.
+    expect(paths).toHaveLength(56);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

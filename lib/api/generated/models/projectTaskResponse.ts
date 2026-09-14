@@ -5,14 +5,14 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { AnalysisResponseData } from "./analysisResponseData";
-import type { AnalysisResponseError } from "./analysisResponseError";
+import type { ProjectTaskResponseData } from "./projectTaskResponseData";
+import type { ProjectTaskResponseError } from "./projectTaskResponseError";
 
-export interface AnalysisResponse {
+export interface ProjectTaskResponse {
   /** 성공 응답 데이터 */
-  data: AnalysisResponseData;
+  data: ProjectTaskResponseData;
   /** 요청 성공 여부 */
   success: boolean;
   /** 성공 시 null인 오류 정보 */
-  error: AnalysisResponseError;
+  error: ProjectTaskResponseError;
 }

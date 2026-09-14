@@ -38,11 +38,12 @@ vi.mock("@/lib/api/generated/analysis/analysis", () => ({
 
 const onEvidenceSelect = vi.fn();
 
-function renderSummary(isEnded: boolean) {
+function renderSummary(isEnded: boolean, readOnly = false) {
   return render(
     <NoteSummary
       noteId="01K0000000002"
       isEnded={isEnded}
+      readOnly={readOnly}
       noteMeta={{
         title: "2월 스프린트 회의",
         whenIso: "2026-08-25T05:02:00Z",
@@ -277,12 +278,35 @@ describe("NoteSummary", () => {
     );
   });
 
+  it("읽기 전용이면 재요약이 실패해 있어도 다시 시도를 두지 않는다", () => {
+    state.analysis = {
+      ...SUCCEEDED,
+      retry: {
+        analysisId: "01K0000000099",
+        status: "FAILED",
+        errorCode: "ANALYSIS_TIMEOUT",
+        errorMessage: "분석이 제한 시간을 초과했습니다.",
+      },
+    };
+    renderSummary(true, true);
+
+    expect(screen.getByText("결제 실패율이 3%로 올랐다")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+  });
+
   it("종료됐는데 분석이 없으면(404) 요약 만들기를 준다", () => {
     state.missing = true;
     renderSummary(true);
     expect(screen.getByText("아직 요약이 없습니다")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "요약 만들기" }));
     expect(state.requestMock).toHaveBeenCalled();
+  });
+
+  it("읽기 전용이면 분석이 없어도(404) 요약 만들기를 두지 않는다", () => {
+    state.missing = true;
+    renderSummary(true, true);
+    expect(screen.getByText("이 회의에는 만들어 둔 요약이 없습니다.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "요약 만들기" })).toBeNull();
   });
 
   it("종료 전에는 안내만 보이고 요약 만들기 버튼이 없다", () => {

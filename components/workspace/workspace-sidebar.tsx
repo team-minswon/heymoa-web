@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Check,
   Folder,
@@ -15,6 +16,7 @@ import {
   ChevronsUpDown,
   ChevronDown,
   ChevronRight,
+  ListTodo,
   Loader2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -105,6 +107,8 @@ export function WorkspaceSidebar({
   covered?: boolean;
 }) {
   const router = useRouter();
+  const tasksHref = `/w/${workspaceId}/tasks`;
+  const onTasks = usePathname() === tasksHref;
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
@@ -272,12 +276,22 @@ export function WorkspaceSidebar({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    isActive={selectedProjectId === null}
+                    isActive={selectedProjectId === null && !onTasks}
                     onClick={() => onSelectProject(null)}
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
                     <NotebookText className="size-4 text-[var(--el-muted)]" />
                     <span>모든 노트</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    render={<Link href={tasksHref} />}
+                    isActive={onTasks}
+                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+                  >
+                    <ListTodo className="size-4 text-[var(--el-muted)]" />
+                    <span>할 일</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

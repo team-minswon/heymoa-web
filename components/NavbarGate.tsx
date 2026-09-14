@@ -2,13 +2,12 @@
 
 import { usePathname } from "next/navigation";
 
-import { isWorkspaceRoute } from "@/lib/routes/app-route";
+import { isChromelessRoute } from "@/lib/routes/app-route";
 
 export function NavbarGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Hide Navbar on the authentication callback page
-  if (pathname === "/auth/callback" || isWorkspaceRoute(pathname)) {
+  if (isChromelessRoute(pathname)) {
     return null;
   }
 

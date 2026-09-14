@@ -1981,17 +1981,24 @@ function expireReadySessions(noteId: string) {
   }
 }
 
+/** 목 DB 밖에 상태를 두는 목 모듈이 같은 시점에 비우도록 거는 자리. */
+const resetListeners = new Set<() => void>();
+
 function reset() {
   idCounter = 100;
   timestampCounter = 0;
   agentChatClock = 0;
   state = createSeedState();
+  for (const listener of resetListeners) listener();
 }
 
 reset();
 
 export const mockDb = {
   reset,
+  onReset(listener: () => void) {
+    resetListeners.add(listener);
+  },
 
   /**
    * 공유 챗은 회의가 ACTIVE일 때 한 번에 한 명만 쓴다. 게이트를 스트림 열기 전에
@@ -2103,7 +2110,8 @@ export const mockDb = {
     }
   },
 
-  endMeeting(noteId: string): AnalysisResultResponseData {
+  /** 회의 뒤 분석은 `meeting-flow` 목이 이어받는다. 여기서는 회의 상태만 닫는다. */
+  endMeeting(noteId: string): void {
     const note = findNote(noteId);
     if (note.meetingStatus === "NOT_STARTED") fail("MEETING_NOT_STARTED");
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
@@ -2111,9 +2119,12 @@ export const mockDb = {
     // 계약: 진행 중인 전사가 있으면 409. web은 stop을 먼저 보내고 다시 호출해야 한다.
     if (hasActiveSession(noteId)) fail("ACTIVE_TRANSCRIPTION_SESSION");
     note.meetingStatus = "ENDED";
-    return this.requestAnalysis(noteId);
   },
 
+  /**
+   * 구형 요약 결과를 하나 쌓는다. 새 회의는 구형 결과를 만들지 않으므로 HTTP 경로가 없고,
+   * 지난 노트의 읽기 전용 요약 화면과 그 표본을 만드는 테스트만 쓴다.
+   */
   requestAnalysis(noteId: string): AnalysisResultResponseData {
     const note = findNote(noteId);
     if (note.meetingStatus !== "ENDED") fail("MEETING_NOT_ENDED");

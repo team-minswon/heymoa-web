@@ -7,7 +7,9 @@ import { getGetNoteQueryOptions } from "@/lib/api/generated/notes/notes";
 import {
   getGetProjectQueryOptions,
   getGetProjectsQueryOptions,
+  getGetProjectTasksQueryOptions,
 } from "@/lib/api/generated/projects/projects";
+import { okData } from "@/lib/api/ok-data";
 import { getGetNoteTranscriptQueryOptions } from "@/lib/api/generated/transcription/transcription";
 import { getGetWorkspaceQueryOptions } from "@/lib/api/generated/workspaces/workspaces";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
@@ -47,6 +49,36 @@ export async function prefetchWorkspaceShell({
       getGetProjectsQueryOptions(workspaceId, { request: request })
     ),
   ]);
+  return dehydrate(queryClient);
+}
+
+/**
+ * 할 일 화면의 주 데이터는 프로젝트마다의 할 일이다. 워크스페이스 단위 조회가 없어 프로젝트 목록을 먼저
+ * 읽고 프로젝트마다 받는다. 한 프로젝트가 실패해도 나머지는 그린다 — 실패한 것은 화면이 다시 시도를 둔다.
+ */
+export async function prefetchTasksRoute({
+  workspaceId,
+}: {
+  workspaceId: string;
+}): Promise<DehydratedState> {
+  const queryClient = makeQueryClient();
+
+  if (shouldEnableMocking()) {
+    return dehydrate(queryClient);
+  }
+
+  const request = await getServerApiRequestOptions();
+  const projectsResult = await queryClient
+    .fetchQuery(getGetProjectsQueryOptions(workspaceId, { request: request }))
+    .catch(() => undefined);
+  const projects = okData(projectsResult)?.projects ?? [];
+  await Promise.allSettled(
+    projects.map((project) =>
+      queryClient.prefetchQuery(
+        getGetProjectTasksQueryOptions(workspaceId, project.projectId, { request: request })
+      )
+    )
+  );
   return dehydrate(queryClient);
 }
 

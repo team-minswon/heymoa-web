@@ -5,26 +5,27 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { AnalysisResponseDataStatus } from "./analysisResponseDataStatus";
 
-/**
- * 성공 응답 데이터
- */
-export type AnalysisResponseData = {
+export type NoteAgendaListResponseDataAgendasItem = {
+  /** 만든 시각 */
+  createdAt: string;
   /**
-   * 분석 잡의 13자리 TSID
+   * 만든 사람의 사용자 ID
    * @minLength 13
    * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
-  analysisId: string;
+  createdBy: string;
   /**
-   * 노트의 13자리 TSID
+   * 사전 안건의 13자리 TSID
    * @minLength 13
    * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
-  noteId: string;
-  /** 분석 잡 상태 */
-  status: AnalysisResponseDataStatus;
+  agendaId: string;
+  /**
+   * 안건 내용
+   * @minLength 1
+   */
+  content: string;
 };

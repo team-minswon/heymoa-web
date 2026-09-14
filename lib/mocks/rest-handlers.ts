@@ -1,5 +1,6 @@
 import { HttpResponse, http } from "msw";
 import { mockDb } from "@/lib/mocks/db";
+import { meetingFlow } from "@/lib/mocks/meeting-flow";
 // 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
 import { agentChatTurnState, runningTurnOf } from "@/lib/mocks/sse-handler";
 import {
@@ -857,12 +858,15 @@ export const restHandlers = [
     }))
   ),
 
-  http.post("*/v1/notes/:noteId/meeting-end", ({ params }) =>
-    commandResult(() => mockDb.endMeeting(id(params.noteId)), 202)
-  ),
-  http.post("*/v1/notes/:noteId/analyses", ({ params }) =>
-    commandResult(() => mockDb.requestAnalysis(id(params.noteId)), 202)
-  ),
+  http.post("*/v1/notes/:noteId/meeting-end", ({ params }) => {
+    const noteId = id(params.noteId);
+    const failed = commandResult(() => {
+      mockDb.endMeeting(noteId);
+      meetingFlow.onMeetingEnded(noteId);
+    });
+    // 계약은 bodyless 204다. 실패 봉투만 그대로 돌려준다.
+    return failed.status === 200 ? new HttpResponse(null, { status: 204 }) : failed;
+  }),
   http.delete(
     "*/v1/workspaces/:workspaceId/integrations/:provider",
     ({ params }) => {
@@ -955,13 +959,5 @@ export const restHandlers = [
       ...agentChatTurnState(id(params.chatId)),
     }))
   ),
-
-  // 목 전용(계약 밖, `_mock` 접두사): 대기 중인 분석을 완료로 넘긴다.
-  // 실제로는 heymoa-ai의 callback이 채우는데 목에는 그걸 밀어줄 주체가 없어,
-  // 이게 없으면 **요약 화면(개요·액션 아이템·인사이트)을 목에서 한 번도 볼 수 없다.**
-  http.post("*/v1/notes/:noteId/_mock/advance-analysis", ({ params }) => {
-    mockDb.advanceAnalysis(id(params.noteId));
-    return new HttpResponse(null, { status: 204 });
-  }),
 
 ];

@@ -33,3 +33,9 @@ export function errorMessageOf(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }
+
+/**
+ * 판 충돌(409) 안내. 거절된 자리에 인라인으로 그리므로 서버 문구가 아니라 이 한 문장을 쓴다 —
+ * 검토 줄 · 할 일 제안 · 할 일 목록 · 항목 추가가 같은 일을 같은 말로 알린다.
+ */
+export const CONFLICT_MESSAGE = "다른 사람이 먼저 수정해 최신 내용을 불러왔습니다.";

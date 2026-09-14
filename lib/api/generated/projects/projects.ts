@@ -25,10 +25,15 @@ import type {
 
 import type {
   AppErrorResponse,
+  CreateProjectTaskRequest,
   ProjectListResponse,
   ProjectRequest,
   ProjectResponse,
+  ProjectTaskListResponse,
+  ProjectTaskResponse,
+  ProjectTaskRevisionListResponse,
   UnauthorizedResponse,
+  UpdateProjectTaskRequest,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -1145,3 +1150,1125 @@ export const useDeleteProject = <
 > => {
   return useMutation(getDeleteProjectMutationOptions(options), queryClient);
 };
+export type getProjectTasksResponse200 = {
+  data: ProjectTaskListResponse;
+  status: 200;
+};
+
+export type getProjectTasksResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getProjectTasksResponseSuccess = getProjectTasksResponse200 & {
+  headers: Headers;
+};
+export type getProjectTasksResponseError = getProjectTasksResponse401 & {
+  headers: Headers;
+};
+
+export type getProjectTasksResponse =
+  | getProjectTasksResponseSuccess
+  | getProjectTasksResponseError;
+
+export const getGetProjectTasksUrl = (
+  workspaceId: string,
+  projectId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/projects/${projectId}/tasks`;
+};
+
+/**
+ * 프로젝트의 할 일 전체를 ID 오름차순으로 조회한다.
+ * @summary 할 일 목록 조회
+ */
+export const getProjectTasks = async (
+  workspaceId: string,
+  projectId: string,
+  options?: RequestInit
+): Promise<getProjectTasksResponse> => {
+  return apiFetch<getProjectTasksResponse>(
+    getGetProjectTasksUrl(workspaceId, projectId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetProjectTasksQueryKey = (
+  workspaceId: string,
+  projectId: string
+) => {
+  return [`/v1/workspaces/${workspaceId}/projects/${projectId}/tasks`] as const;
+};
+
+export const getGetProjectTasksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetProjectTasksQueryKey(workspaceId, projectId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectTasks>>> = ({
+    signal,
+  }) => getProjectTasks(workspaceId, projectId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      workspaceId !== null &&
+      workspaceId !== undefined &&
+      projectId !== null &&
+      projectId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProjectTasks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProjectTasksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProjectTasks>>
+>;
+export type GetProjectTasksQueryError = UnauthorizedResponse;
+
+export function useGetProjectTasks<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectTasks>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectTasks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTasks<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectTasks>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectTasks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTasks<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 할 일 목록 조회
+ */
+
+export function useGetProjectTasks<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetProjectTasksQueryOptions(
+    workspaceId,
+    projectId,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 할 일 목록 조회
+ */
+export const prefetchGetProjectTasksQuery = async <
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetProjectTasksQueryOptions(
+    workspaceId,
+    projectId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetProjectTasksSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetProjectTasksQueryKey(workspaceId, projectId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectTasks>>> = ({
+    signal,
+  }) => getProjectTasks(workspaceId, projectId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getProjectTasks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProjectTasksSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProjectTasks>>
+>;
+export type GetProjectTasksSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetProjectTasksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTasksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTasksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 할 일 목록 조회
+ */
+
+export function useGetProjectTasksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetProjectTasksSuspenseQueryOptions(
+    workspaceId,
+    projectId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export type createProjectTaskResponse201 = {
+  data: ProjectTaskResponse;
+  status: 201;
+};
+
+export type createProjectTaskResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type createProjectTaskResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type createProjectTaskResponseSuccess = createProjectTaskResponse201 & {
+  headers: Headers;
+};
+export type createProjectTaskResponseError = (
+  | createProjectTaskResponse400
+  | createProjectTaskResponse401
+) & {
+  headers: Headers;
+};
+
+export type createProjectTaskResponse =
+  | createProjectTaskResponseSuccess
+  | createProjectTaskResponseError;
+
+export const getCreateProjectTaskUrl = (
+  workspaceId: string,
+  projectId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/projects/${projectId}/tasks`;
+};
+
+/**
+ * 워크스페이스 멤버가 프로젝트에 할 일을 만든다. 판 1 이력이 남고 프로젝트 승인 판이 오른다.
+ * @summary 할 일 생성
+ */
+export const createProjectTask = async (
+  workspaceId: string,
+  projectId: string,
+  createProjectTaskRequest?: CreateProjectTaskRequest,
+  options?: RequestInit
+): Promise<createProjectTaskResponse> => {
+  return apiFetch<createProjectTaskResponse>(
+    getCreateProjectTaskUrl(workspaceId, projectId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createProjectTaskRequest),
+    }
+  );
+};
+
+export const getCreateProjectTaskMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProjectTask>>,
+    TError,
+    { workspaceId: string; projectId: string; data?: CreateProjectTaskRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProjectTask>>,
+  TError,
+  { workspaceId: string; projectId: string; data?: CreateProjectTaskRequest },
+  TContext
+> => {
+  const mutationKey = ["createProjectTask"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProjectTask>>,
+    { workspaceId: string; projectId: string; data?: CreateProjectTaskRequest }
+  > = (props) => {
+    const { workspaceId, projectId, data } = props ?? {};
+
+    return createProjectTask(workspaceId, projectId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProjectTaskMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProjectTask>>
+>;
+export type CreateProjectTaskMutationBody =
+  | CreateProjectTaskRequest
+  | undefined;
+export type CreateProjectTaskMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 할 일 생성
+ */
+export const useCreateProjectTask = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createProjectTask>>,
+      TError,
+      {
+        workspaceId: string;
+        projectId: string;
+        data?: CreateProjectTaskRequest;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createProjectTask>>,
+  TError,
+  { workspaceId: string; projectId: string; data?: CreateProjectTaskRequest },
+  TContext
+> => {
+  return useMutation(getCreateProjectTaskMutationOptions(options), queryClient);
+};
+export type updateProjectTaskResponse200 = {
+  data: ProjectTaskResponse;
+  status: 200;
+};
+
+export type updateProjectTaskResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type updateProjectTaskResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type updateProjectTaskResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type updateProjectTaskResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
+export type updateProjectTaskResponseSuccess = updateProjectTaskResponse200 & {
+  headers: Headers;
+};
+export type updateProjectTaskResponseError = (
+  | updateProjectTaskResponse400
+  | updateProjectTaskResponse401
+  | updateProjectTaskResponse404
+  | updateProjectTaskResponse409
+) & {
+  headers: Headers;
+};
+
+export type updateProjectTaskResponse =
+  | updateProjectTaskResponseSuccess
+  | updateProjectTaskResponseError;
+
+export const getUpdateProjectTaskUrl = (
+  workspaceId: string,
+  projectId: string,
+  taskId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}`;
+};
+
+/**
+ * 할 일의 값을 통째로 바꾼다. 읽은 판이 낡았으면 409 이고, 값이 같으면 판이 오르지 않는다. 바뀌면 이력이 남고 프로젝트 승인 판이 오른다.
+ * @summary 할 일 수정
+ */
+export const updateProjectTask = async (
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  updateProjectTaskRequest?: UpdateProjectTaskRequest,
+  options?: RequestInit
+): Promise<updateProjectTaskResponse> => {
+  return apiFetch<updateProjectTaskResponse>(
+    getUpdateProjectTaskUrl(workspaceId, projectId, taskId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateProjectTaskRequest),
+    }
+  );
+};
+
+export const getUpdateProjectTaskMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProjectTask>>,
+    TError,
+    {
+      workspaceId: string;
+      projectId: string;
+      taskId: string;
+      data?: UpdateProjectTaskRequest;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProjectTask>>,
+  TError,
+  {
+    workspaceId: string;
+    projectId: string;
+    taskId: string;
+    data?: UpdateProjectTaskRequest;
+  },
+  TContext
+> => {
+  const mutationKey = ["updateProjectTask"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProjectTask>>,
+    {
+      workspaceId: string;
+      projectId: string;
+      taskId: string;
+      data?: UpdateProjectTaskRequest;
+    }
+  > = (props) => {
+    const { workspaceId, projectId, taskId, data } = props ?? {};
+
+    return updateProjectTask(
+      workspaceId,
+      projectId,
+      taskId,
+      data,
+      requestOptions
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProjectTaskMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProjectTask>>
+>;
+export type UpdateProjectTaskMutationBody =
+  | UpdateProjectTaskRequest
+  | undefined;
+export type UpdateProjectTaskMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+
+/**
+ * @summary 할 일 수정
+ */
+export const useUpdateProjectTask = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateProjectTask>>,
+      TError,
+      {
+        workspaceId: string;
+        projectId: string;
+        taskId: string;
+        data?: UpdateProjectTaskRequest;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateProjectTask>>,
+  TError,
+  {
+    workspaceId: string;
+    projectId: string;
+    taskId: string;
+    data?: UpdateProjectTaskRequest;
+  },
+  TContext
+> => {
+  return useMutation(getUpdateProjectTaskMutationOptions(options), queryClient);
+};
+export type getProjectTaskRevisionsResponse200 = {
+  data: ProjectTaskRevisionListResponse;
+  status: 200;
+};
+
+export type getProjectTaskRevisionsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getProjectTaskRevisionsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getProjectTaskRevisionsResponseSuccess =
+  getProjectTaskRevisionsResponse200 & {
+    headers: Headers;
+  };
+export type getProjectTaskRevisionsResponseError = (
+  | getProjectTaskRevisionsResponse401
+  | getProjectTaskRevisionsResponse404
+) & {
+  headers: Headers;
+};
+
+export type getProjectTaskRevisionsResponse =
+  | getProjectTaskRevisionsResponseSuccess
+  | getProjectTaskRevisionsResponseError;
+
+export const getGetProjectTaskRevisionsUrl = (
+  workspaceId: string,
+  projectId: string,
+  taskId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}/revisions`;
+};
+
+/**
+ * 할 일의 판 이력을 판 오름차순으로 조회한다.
+ * @summary 할 일 이력 조회
+ */
+export const getProjectTaskRevisions = async (
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: RequestInit
+): Promise<getProjectTaskRevisionsResponse> => {
+  return apiFetch<getProjectTaskRevisionsResponse>(
+    getGetProjectTaskRevisionsUrl(workspaceId, projectId, taskId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetProjectTaskRevisionsQueryKey = (
+  workspaceId: string,
+  projectId: string,
+  taskId: string
+) => {
+  return [
+    `/v1/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}/revisions`,
+  ] as const;
+};
+
+export const getGetProjectTaskRevisionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetProjectTaskRevisionsQueryKey(workspaceId, projectId, taskId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProjectTaskRevisions>>
+  > = ({ signal }) =>
+    getProjectTaskRevisions(workspaceId, projectId, taskId, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      workspaceId !== null &&
+      workspaceId !== undefined &&
+      projectId !== null &&
+      projectId !== undefined &&
+      taskId !== null &&
+      taskId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProjectTaskRevisionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProjectTaskRevisions>>
+>;
+export type GetProjectTaskRevisionsQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetProjectTaskRevisions<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectTaskRevisions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTaskRevisions<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectTaskRevisions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTaskRevisions<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 할 일 이력 조회
+ */
+
+export function useGetProjectTaskRevisions<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetProjectTaskRevisionsQueryOptions(
+    workspaceId,
+    projectId,
+    taskId,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary 할 일 이력 조회
+ */
+export const prefetchGetProjectTaskRevisionsQuery = async <
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetProjectTaskRevisionsQueryOptions(
+    workspaceId,
+    projectId,
+    taskId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetProjectTaskRevisionsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetProjectTaskRevisionsQueryKey(workspaceId, projectId, taskId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProjectTaskRevisions>>
+  > = ({ signal }) =>
+    getProjectTaskRevisions(workspaceId, projectId, taskId, {
+      signal,
+      ...requestOptions,
+    });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProjectTaskRevisionsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProjectTaskRevisions>>
+>;
+export type GetProjectTaskRevisionsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetProjectTaskRevisionsSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTaskRevisionsSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectTaskRevisionsSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 할 일 이력 조회
+ */
+
+export function useGetProjectTaskRevisionsSuspense<
+  TData = Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectTaskRevisions>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetProjectTaskRevisionsSuspenseQueryOptions(
+    workspaceId,
+    projectId,
+    taskId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
