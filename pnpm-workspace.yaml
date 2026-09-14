@@ -3,18 +3,10 @@
 # 안 꺼지고 이 맵이 판정 자리다. 전부 `false` 인 이유는 이 레포가 그 스크립트의 산출물을
 # 쓰지 않기 때문이다 — 네이티브 바이너리는 optional dependency 로 들어온다.
 allowBuilds:
-  '@asyncapi/cli': false
-  '@hyperjump/json-pointer': false
-  '@hyperjump/json-schema': false
-  '@hyperjump/json-schema-core': false
-  '@hyperjump/pact': false
-  '@scarf/scarf': false
   'esbuild': false
   'msw': false
-  'protobufjs': false
   'sharp': false
   'unrs-resolver': false
-  'yarn': false
 # **overrides 는 여기 산다.** pnpm 11 부터 `package.json` 의 `pnpm.overrides` 를 읽지
 # 않는다. 거기 두면 새 설치(CI·Docker·새 머신)에서 아래 보안 핀이 조용히 안 걸리고,
 # 락파일에는 남아 있어 `--frozen-lockfile` 이 LOCKFILE_CONFIG_MISMATCH 로 죽는다.
@@ -38,15 +30,7 @@ overrides:
 # `ERR_PNPM_IGNORED_BUILDS` 로 설치를 실패시킨다. 목록이 모자라면 새 설치(Docker·CI)가
 # 죽는다 — 로컬은 `node_modules` 가 이미 있어 안 보인다.
 ignoredBuiltDependencies:
-  - '@asyncapi/cli'
-  - '@hyperjump/json-pointer'
-  - '@hyperjump/json-schema'
-  - '@hyperjump/json-schema-core'
-  - '@hyperjump/pact'
-  - '@scarf/scarf'
   - esbuild
   - msw
-  - protobufjs
   - sharp
   - unrs-resolver
-  - yarn
