@@ -496,6 +496,24 @@ function PersonalChatPanel({
   const cursor = history?.cursor ?? null;
 
   /**
+   * ★ **도는 턴의 답 조각.** [APP-632] 뒤로 히스토리가 안 굳은 구간을 행으로 실어 주고
+   * 커서를 그 구간 끝으로 준다 — 재생은 **커서 뒤 토큰만** 준다.
+   *
+   * 그래서 이 조각을 스트림의 첫 본문 블록으로 넘기고(`resumedState`) 히스토리 쪽 그 행은
+   * 접는다(`visibleMessages`). 둘 중 하나만 하면 답이 두 덩어리로 서거나 앞부분이 사라진다.
+   *
+   * 커서가 없으면 재생이 턴의 처음부터 오므로 넘길 것이 없다.
+   */
+  const partialAnswer = useMemo(() => {
+    const turnId = activeTurn?.turnId;
+    if (!turnId || cursor === null) return null;
+    const answers = messages.filter(
+      (message) => message.role === "ASSISTANT" && message.turnId === turnId
+    );
+    return answers[answers.length - 1]?.content ?? null;
+  }, [activeTurn?.turnId, cursor, messages]);
+
+  /**
    * 세션이 아예 없다(404). 이건 막다른 길이 아니라 **빈 대화**다 — 새로 만들면 된다.
    * 다른 실패와 섞어 잠그면 유일한 복구 경로까지 막힌다.
    */
@@ -991,6 +1009,7 @@ function PersonalChatPanel({
 
     const resumed = resumedState({
       cursor,
+      partialAnswer,
       turnId: activeTurn.turnId,
       pendingApproval: activeTurn.pendingApproval
         ? {
@@ -1024,6 +1043,7 @@ function PersonalChatPanel({
     history,
     isSending,
     lastTurn,
+    partialAnswer,
     reconcile,
     sessionId,
     stream,
@@ -1267,7 +1287,7 @@ function PersonalChatPanel({
    * | | 누가 그리나 |
    * |---|---|
    * | `phase === "streaming"` 이고 `cursor === null` | 재생이 턴의 처음부터 온다 — 히스토리를 접는다 |
-   * | `cursor !== null` | 정산이 승인 카드까지를 굳혔고 재생은 그 **뒤**부터다 — 겹칠 자리가 없다 |
+   * | `cursor !== null` | 생각·도구는 히스토리가 유일한 출처다(재생은 커서 뒤부터). **답만 접는다** — 그 조각은 `partialAnswer` 로 스트림이 들고 갔다 [APP-632] |
    * | `awaiting_approval` | **열린 스트림이 아예 없다**(카드 프레임이 스트림을 닫는다) — 히스토리가 유일한 출처다 |
    *
    * 접으면 카드 앞의 생각·도구를 아무도 안 그린다 [APP-627]. 승인 대기를 따로 적는 것은
@@ -1285,9 +1305,19 @@ function PersonalChatPanel({
    */
   const visibleMessages = useMemo(() => {
     const turnId = stream.state.turnId;
-    if (stream.state.phase !== "streaming" || !turnId || cursor !== null) {
-      return messages;
+    if (!turnId) return messages;
+    // `done` 까지 접는 것은 턴이 끝나고 `reconcile` 이 굳은 행을 가져오기까지의 한 창
+    // 때문이다 — 그 사이 히스토리의 조각과 스트림의 전문이 같이 선다.
+    if (
+      cursor !== null &&
+      (stream.state.phase === "streaming" || stream.state.phase === "done")
+    ) {
+      return messages.filter(
+        (message) =>
+          !(message.role === "ASSISTANT" && message.turnId === turnId)
+      );
     }
+    if (stream.state.phase !== "streaming") return messages;
     return messages.filter(
       (message) => message.role === "USER" || message.turnId !== turnId
     );

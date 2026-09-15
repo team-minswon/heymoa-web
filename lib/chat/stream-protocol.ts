@@ -176,13 +176,27 @@ export function resumedState(input: {
     summary: string | null;
     args: ToolArgs;
   } | null;
+  /**
+   * 히스토리가 실어 준 도는 턴의 답 조각 [APP-632]. 재생은 **커서 뒤 토큰만** 주므로 이것을
+   * 첫 본문 블록으로 깔아야 답이 한 덩어리가 된다 — 안 깔면 「앞 조각」은 히스토리가,
+   * 「뒷 조각」은 재생이 그려 두 덩어리로 선다.
+   *
+   * **승인 대기에는 안 깐다.** 열린 스트림이 없어 히스토리가 유일한 출처이고, 깔면 같은
+   * 글이 두 번 선다.
+   */
+  partialAnswer?: string | null;
 }): ChatStreamState {
+  const awaitingApproval = input.pendingApproval !== null;
   return {
     ...initialStreamState,
-    phase: input.pendingApproval ? "awaiting_approval" : "streaming",
+    phase: awaitingApproval ? "awaiting_approval" : "streaming",
     turnId: input.turnId,
     cursor: input.cursor,
     pendingApproval: input.pendingApproval,
+    blocks:
+      !awaitingApproval && input.partialAnswer
+        ? appendText([], input.partialAnswer)
+        : [],
   };
 }
 

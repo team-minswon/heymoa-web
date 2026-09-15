@@ -14,7 +14,7 @@ import type { AgentChatMessagesResponseDataMessagesItem } from "./agentChatMessa
  */
 export type AgentChatMessagesResponseData = {
   /**
-   * 도는 턴의 스트림에 붙을 때 GET …/turns/{turnId}/events?after= 에 **그대로** 넣는 재생 시작점. **DB 행과 안 겹치는 자리다** — 도는 턴에 승인 카드가 있었으면 마지막 카드의 entryId 이고 (카드까지의 행은 이미 히스토리에 있다), 그 밖에는 null 이라 처음부터 재생한다. 불투명한 문자열이고 크기 비교를 하지 않는다
+   * 도는 턴의 스트림에 붙을 때 GET …/turns/{turnId}/events?after= 에 **그대로** 넣는 재생 시작점. **messages 가 어디까지 실렸는지와 한 몸이다** — 도는 턴의 안 굳은 구간은 이미 messages 에 있으므로 이 값이 그 구간의 마지막 프레임이고, 스트림은 그 뒤 새 것만 준다. 승인 대기 중이면 마지막 카드의 entryId 다(카드 뒤에는 아무것도 없다). 도는 턴이 없으면 null 이다. 불투명한 문자열이고 크기 비교를 하지 않는다
    * @nullable
    */
   cursor: string | null;

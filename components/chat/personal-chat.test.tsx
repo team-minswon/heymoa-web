@@ -1461,6 +1461,46 @@ describe("PersonalChatProvider", () => {
       };
     }
 
+    /**
+     * ★★ **밀린 것을 히스토리가 실어 주면 답은 한 덩어리여야 한다** [APP-632].
+     *
+     * 서버가 도는 턴의 안 굳은 구간을 행으로 실어 주고 커서를 그 구간 끝으로 준다. 그러면
+     * 답 조각이 **히스토리에도 있고** 재생은 그 뒤 토큰만 준다 — 둘을 안 이으면 「안녕」과
+     * 「하세요」가 따로 선다. 이 어긋남은 오류를 안 낸다. 커서 타입이 그대로라 계약 생성도
+     * 타입 검사도 안 잡는다.
+     */
+    it("★ 히스토리가 실어 준 답 조각에 재생이 이어 붙는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      state.cursor = "1735689600000-6";
+      state.activeTurn = {
+        turnId: "0K9GVJT2C4Q3B",
+        status: "IN_PROGRESS",
+        pendingApproval: null,
+      };
+      state.messages = [
+        historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
+        historyRow("THINKING", "전사를 봅니다.", "0K9GVJT2C4Q3B"),
+        historyRow("ASSISTANT", "안녕", "0K9GVJT2C4Q3B"),
+      ];
+      state.resumeFrames = [
+        frame("token", { delta: "하세요" }, "1735689600000-7"),
+      ];
+      renderChat();
+      openPanel();
+
+      await waitFor(() =>
+        expect(state.resumeUrls).toContain(
+          eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B", "1735689600000-6")
+        )
+      );
+      // 한 덩어리로 선다.
+      expect(await screen.findByText("안녕하세요")).toBeTruthy();
+      // 조각이 따로 남아 있으면 안 된다.
+      expect(screen.queryByText("안녕")).toBeNull();
+      // 생각 줄은 히스토리가 유일한 출처다 — 재생은 커서 뒤부터라 다시 안 온다.
+      expect(screen.getByText("전사를 봅니다.")).toBeTruthy();
+    });
+
     it("★ activeTurn이 있으면 cursor부터 턴 스트림으로 잇고 누적 전문을 그린다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = "1735689600000-4";

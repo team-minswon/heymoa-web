@@ -75,7 +75,7 @@ export const getGetAgentChatMessagesUrl = (chatId: string) => {
 };
 
 /**
- * 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다. cursor 는 도는 턴의 스트림에 붙을 때 after 로 넣는 재생 시작점이다.
+ * 채팅 세션의 표시용 메시지를 시간순 조회한다. TOOL 메시지는 승인/도구 실행 기록(toolEvent)을 포함한다. **도는 턴이 있으면 아직 안 굳은 구간도 행으로 실어 준다** — 밀린 것을 한 덩어리로 받는 자리다. cursor 는 그 구간의 끝이고, 스트림은 그 뒤 새 것만 준다.
  * @summary 채팅 히스토리 조회
  */
 export const getAgentChatMessages = async (
@@ -1057,7 +1057,7 @@ export const getResolveToolApprovalUrl = (
 };
 
 /**
- * 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor(카드의 entryId) 를 after 로 넣어 다시 붙는다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다.
+ * 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor 를 after 로 넣어 다시 붙는다 — 승인 대기 중이면 그 값이 카드의 entryId 다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다.
  * @summary 도구 승인/거절
  */
 export const resolveToolApproval = async (
