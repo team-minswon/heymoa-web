@@ -105,6 +105,22 @@ export function useChatStream() {
   }, [apply]);
 
   /**
+   * 도는 루프를 버린다. **`runIdRef`를 먼저 올린다** — 버려진 루프가 연결 EOF 에서 풀리든
+   * 백오프 잠에서 깨든 `isCurrent()`에서 빠져나가게 하고, 연결과 잠을 지금 끊어 그 순간을
+   * 앞당긴다. `abort()`만 하면 루프는 그 EOF 를 재연결 신호로 읽고 시간표 여섯 칸(45초)을
+   * 서버에 다시 붙는다 — 워크스페이스를 떠나 provider 가 내려간 뒤에도(APP-558).
+   */
+  const discard = useCallback(() => {
+    runIdRef.current += 1;
+    controllerRef.current?.abort();
+    wakeRef.current?.();
+    controllerRef.current = null;
+    wakeRef.current = null;
+    runningRef.current = false;
+    clearIdle();
+  }, [clearIdle]);
+
+  /**
    * ★ 이 스트림을 **버린다.** 대화를 갈아 끼울 때가 유일한 쓰임이다.
    *
    * `runningRef`를 여기서 바로 내린다. `abort()`는 전송이 실제로 풀릴 때까지 비동기라,
@@ -115,12 +131,9 @@ export function useChatStream() {
    * 버린 루프가 나중에 풀려도 `runIdRef`가 이미 올라가 있어 상태를 못 덮는다.
    */
   const reset = useCallback(() => {
-    runIdRef.current += 1;
-    stop();
-    runningRef.current = false;
-    clearIdle();
+    discard();
     apply(initialStreamState);
-  }, [apply, clearIdle, stop]);
+  }, [apply, discard]);
 
   /** 백오프. 탭 복귀·온라인 복귀가 깨우면 남은 시간을 안 기다린다. */
   const sleep = useCallback((ms: number) => {
@@ -310,13 +323,8 @@ export function useChatStream() {
     };
   }, []);
 
-  useEffect(
-    () => () => {
-      controllerRef.current?.abort();
-      if (idleRef.current) clearTimeout(idleRef.current);
-    },
-    []
-  );
+  // 언마운트는 대화를 갈아 끼우는 것과 같다 — 화면이 없는데 루프만 남기지 않는다.
+  useEffect(() => discard, [discard]);
 
   return { state, open, resume, seed, stop, reset };
 }

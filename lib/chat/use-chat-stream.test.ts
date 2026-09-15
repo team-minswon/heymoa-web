@@ -404,6 +404,49 @@ describe("끊겨도 다시 붙는다", () => {
     expect(answerText(result.current.state.blocks)).toBe("앞부분 뒷부분");
   });
 
+  it("★ 언마운트하면 백오프가 다 지나도 다시 붙지 않는다", async () => {
+    // 개인 채팅 provider 는 워크스페이스 셸에 산다 — 워크스페이스를 떠나면 화면은 없는데
+    // 버려진 루프가 EOF 를 재연결 신호로 읽고 여섯 번(45초) 서버에 다시 붙었다.
+    const opened = wire();
+    const { result, unmount } = renderHook(() => useChatStream());
+
+    await act(async () => {
+      void result.current.open(CHAT_ID, TURN_ID, startedState({ turnId: TURN_ID }));
+    });
+    await act(async () => opened[0].conn.push(START));
+    await act(async () => opened[0].conn.finish());
+    expect(result.current.state.phase).toBe("streaming");
+
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(
+        RECONNECT_BACKOFF_MS.reduce((sum, ms) => sum + ms, 0)
+      );
+    });
+
+    expect(opened).toHaveLength(1);
+  });
+
+  it("★ 흐르는 중에 언마운트하면 연결을 끊고 그 EOF 로도 다시 붙지 않는다", async () => {
+    const opened = wire();
+    const { result, unmount } = renderHook(() => useChatStream());
+
+    await act(async () => {
+      void result.current.open(CHAT_ID, TURN_ID, startedState({ turnId: TURN_ID }));
+    });
+    await act(async () => opened[0].conn.push(START));
+
+    unmount();
+    expect(opened[0].conn.aborted).toBe(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(
+        RECONNECT_BACKOFF_MS.reduce((sum, ms) => sum + ms, 0)
+      );
+    });
+
+    expect(opened).toHaveLength(1);
+  });
+
   it("프레임을 하나도 못 봤으면 재연결도 after 없이 간다", async () => {
     const opened = wire();
     const { result } = renderHook(() => useChatStream());
