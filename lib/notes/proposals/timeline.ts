@@ -1,7 +1,6 @@
 import type { RunRange } from "@/lib/notes/proposals/contract";
 import {
   findCoverageGaps,
-  isSaturated,
   type CoverageGap,
 } from "@/lib/notes/proposals/reducer";
 import type { TranscriptRow } from "@/lib/transcription/presentation";
@@ -16,9 +15,11 @@ import type { TranscriptRow } from "@/lib/transcription/presentation";
  * 자리가 어긋난다.
  */
 
-export type ContextTimelineRow =
-  | { type: "coverage-gap"; startedAtMs: number; gap: CoverageGap }
-  | { type: "saturated"; startedAtMs: number; range: RunRange };
+export type ContextTimelineRow = {
+  type: "coverage-gap";
+  startedAtMs: number;
+  gap: CoverageGap;
+};
 
 export type MergedTranscriptRow = TranscriptRow | ContextTimelineRow;
 
@@ -92,14 +93,6 @@ export function withCoverageRows(
           gap,
         }) as const
     ),
-    ...runs.filter(isSaturated).map(
-      (range) =>
-        ({
-          type: "saturated",
-          startedAtMs: range.toEndedAtMs,
-          range,
-        }) as const
-    ),
   ];
 
   if (overlays.length === 0) return rows;
@@ -113,5 +106,5 @@ export function withCoverageRows(
 }
 
 function isOverlay(row: MergedTranscriptRow) {
-  return row.type === "coverage-gap" || row.type === "saturated";
+  return row.type === "coverage-gap";
 }

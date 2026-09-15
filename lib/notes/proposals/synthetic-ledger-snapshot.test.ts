@@ -5,7 +5,6 @@ import ledger from "@/lib/notes/proposals/__fixtures__/synthetic-ledger-snapshot
 import {
   findCoverageGaps,
   initialContextState,
-  isSaturated,
   reduceContextEvent,
   selectCards,
 } from "@/lib/notes/proposals/reducer";
@@ -35,7 +34,7 @@ import {
  * 그래서 **기대값을 픽스처에서 유도한다.** `toHaveLength(8)` 처럼 박아 두면 픽스처를
  * 재생성하는 순간 web 결함과 무관하게 빨개지고, 그 빨강은 아무것도 안 알려 준다. 여기서
  * 지키는 것은 개수가 아니라 **불변식**이다 — 순서가 오름차순인가, 개정이 카드를 늘리지
- * 않는가, 덜 실린 구간이 경고로 서는가.
+ * 않는가, server가 보낸 부분 반영·포화 사실이 보존되는가.
  *
  * 출처는 `context_candidates` · `context_candidate_revisions` ·
  * `context_candidate_evidence` · `context_classification_runs` 를 조회 계약 모양으로
@@ -86,29 +85,19 @@ describe("server 가 적재한 원장 — 합성 108발화 입력", () => {
     );
   });
 
-  /**
-   * **여기가 이 파일의 핵심이다.**
-   *
-   * watermark 가 끝까지 전진하면 **범위만 보면 빈 곳이 거의 없다.** 그런데 그중 상당수가
-   * `PARTIAL_RECORDED` — 출력 일부가 기록되지 못한 구간이다. 이것을 `APPLIED` 와 같이
-   * 그리면 화면은 「다 정리됨」이라고 말하고, 사용자는 그것을 「빠진 게 없음」으로 읽는다.
-   * 빈 화면보다 나쁘다 — 안심시키는 거짓말이기 때문이다.
-   */
-  it("덜 실린 구간을 「읽었다」로 그리지 않는다", () => {
+  it("부분 반영·포화 정보는 화면 정책과 분리된 wire 사실로 보존한다", () => {
     const partial = state.runs.filter(
       (r) => r.applyStatus === "PARTIAL_RECORDED"
     );
-    // 이 원장에 그런 구간이 실제로 있어야 검사가 성립한다.
     expect(partial.length).toBeGreaterThan(0);
-
-    // 전부 경고로 서야 한다 — 하나라도 빠지면 그 구간이 「정리 완료」로 보인다.
-    expect(partial.every((r) => isSaturated(r))).toBe(true);
-
-    // 포화 flag 만 봤다면 놓쳤을 구간이 실제로 있다 — 그래서 applyStatus 가 필요했다.
-    const missedBySaturationOnly = partial.filter(
-      (r) => !r.rawDeltaSaturated && !r.semanticUnitSaturated
-    );
-    expect(missedBySaturationOnly.length).toBeGreaterThan(0);
+    expect(
+      state.runs.some(
+        (r) => r.rawDeltaSaturated || r.semanticUnitSaturated
+      )
+    ).toBe(true);
+    expect(
+      partial.some((r) => !r.rawDeltaSaturated && !r.semanticUnitSaturated)
+    ).toBe(true);
   });
 
   /**

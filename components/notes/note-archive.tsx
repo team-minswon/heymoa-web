@@ -21,7 +21,6 @@ import {
 } from "@/lib/api/generated/transcription/transcription";
 import {
   ContextCoverageGapRow,
-  ContextSaturatedRow,
 } from "@/components/notes/proposal-coverage-row";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import { withCoverageRows } from "@/lib/notes/proposals/timeline";
@@ -910,11 +909,6 @@ export function NoteArchive({
                       // 아카이브는 종료된 회의만 그린다 — 「전사는 계속 기록됩니다」류
                       // 진행형 안내가 붙으면 거짓이 된다.
                       meetingEnded
-                    />
-                  ) : row.type === "saturated" ? (
-                    <ContextSaturatedRow
-                      key={`saturated-${row.range.runId}`}
-                      range={row.range}
                     />
                   ) : (
                     <article

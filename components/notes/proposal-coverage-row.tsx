@@ -1,4 +1,3 @@
-import type { RunRange } from "@/lib/notes/proposals/contract";
 import type { CoverageGap } from "@/lib/notes/proposals/reducer";
 import { formatOffset } from "@/lib/transcription/presentation";
 
@@ -45,31 +44,6 @@ export function ContextCoverageGapRow({
         {meetingEnded
           ? "이 구간의 내용은 스크립트에서 그대로 확인할 수 있습니다"
           : "스크립트는 계속 기록됩니다"}
-      </p>
-    </div>
-  );
-}
-
-/**
- * 모델이 한 배치에서 상한에 닿았다.
- *
- * **「더 있다」가 아니라 「더 있을 수 있다」다.** 상한 도달은 가능성이지 확정이 아니라서,
- * 단정하면 있지도 않은 누락을 사용자가 찾게 된다.
- *
- * 두 flag(`rawDeltaSaturated`·`semanticUnitSaturated`)를 화면에서 가르지 않는다 — 원인은
- * 다르지만 사용자가 할 일이 같다. 원인은 wire 에 그대로 남아 있다.
- */
-export function ContextSaturatedRow({ range }: { range: RunRange }) {
-  return (
-    <div
-      data-testid="context-saturated"
-      className="flex flex-col items-center gap-1.5 rounded-[12px] bg-[var(--el-canvas-soft)] px-6 py-[22px]"
-    >
-      <time className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-        {`${formatOffset(range.fromStartedAtMs)} – ${formatOffset(range.toEndedAtMs)}`}
-      </time>
-      <p className="text-[13px] font-medium text-[var(--el-muted)]">
-        이 구간에 항목이 더 있을 수 있어요
       </p>
     </div>
   );

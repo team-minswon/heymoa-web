@@ -361,10 +361,13 @@ describe("검토본이 서기 전과 뒤", () => {
     renderTab("01K0000000022");
     expect(await screen.findByText("회의를 분석하는 중입니다")).toBeInTheDocument();
     expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "화자 나누기: 완료" })).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "분석: 진행 중" })).toBeInTheDocument();
   });
 
   it("분석이 실패하면 회의 시작자가 다시 요청해 진행으로 넘어간다", async () => {
     renderTab("01K0000000026");
+    expect(await screen.findByRole("listitem", { name: "분석: 실패" })).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "다시 분석" }));
     expect(await screen.findByText("회의를 분석하는 중입니다")).toBeInTheDocument();
   });

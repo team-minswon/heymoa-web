@@ -26,13 +26,6 @@ const WORKSPACE_ID = "01K0000000000";
 const NOTE_ID = "01K0000000007";
 
 const CANDIDATE_COUNT = ledger.proposals.length;
-/** 화면이 경고를 세워야 하는 구간 — 포화이거나 출력이 덜 실렸거나. */
-const WARNED_RANGES = ledger.runs.filter(
-  (r) =>
-    r.rawDeltaSaturated ||
-    r.semanticUnitSaturated ||
-    r.applyStatus === "PARTIAL_RECORDED"
-).length;
 
 test.describe("server 적재 원장 — 화면", () => {
   test.beforeEach(async ({ page }) => {
@@ -82,25 +75,17 @@ test.describe("server 적재 원장 — 화면", () => {
     await expect(page.getByText("철회됨")).toHaveCount(retracted);
   });
 
-  /**
-   * watermark 가 끝까지 전진하면 **범위만 보면 거의 다 찬다.** 그중 `PARTIAL_RECORDED` 는
-   * 출력 일부가 기록되지 못한 구간이라, 「정리 완료」로 그리면 사용자는 빠진 게 없다고
-   * 읽는다 — 빈 화면보다 나쁘다.
-   *
-   * **하나만 보이는지 세는 것으로는 부족하다.** 포화 flag 가 붙은 구간이 따로 있으면
-   * `applyStatus` 를 안 봐도 한 줄은 뜬다. 그래서 개수로 센다.
-   */
-  test("덜 실린 구간이 스크립트에서 경고로 보인다", async ({ page }) => {
+  test("부분 반영·포화 안내를 스크립트에 표시하지 않는다", async ({ page }) => {
     test.setTimeout(90_000);
     await expect(page.getByText(`지금까지 ${CANDIDATE_COUNT}건`)).toBeVisible({
       timeout: 30_000,
     });
 
     await page.getByRole("tab", { name: "스크립트" }).click();
-    await expect(page.getByTestId("context-saturated")).toHaveCount(
-      WARNED_RANGES,
-      { timeout: 30_000 }
-    );
+    await expect(page.getByRole("log", { name: "회의 스크립트" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("이 구간에 항목이 더 있을 수 있어요")).toHaveCount(0);
   });
 
   test("근거를 펼쳐 출처를 따라갈 수 있다", async ({ page }) => {

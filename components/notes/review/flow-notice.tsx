@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle, Check, LoaderCircle, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -74,13 +74,26 @@ export function FlowNotice({
         {STEPS.map((label, at) => {
           const done = at < index;
           const now = at === index;
+          const failed = now && state === "failed";
+          const running = now && state === "running";
+          const stepState = done
+            ? "완료"
+            : failed
+              ? "실패"
+              : running
+                ? "진행 중"
+                : "대기";
           return (
-            <li key={label} className="flex items-center gap-2.5">
+            <li
+              key={label}
+              aria-label={`${label}: ${stepState}`}
+              className="flex items-center gap-2.5"
+            >
               {at > 0 ? (
                 <span
                   aria-hidden
                   className={cn(
-                    "h-px w-7 transition-colors duration-200 ease-out motion-reduce:transition-none",
+                    "hidden h-px w-7 transition-colors duration-200 ease-out motion-reduce:transition-none sm:block",
                     at <= index ? "bg-[var(--el-hairline-strong)]" : "bg-[var(--el-hairline)]"
                   )}
                 />
@@ -94,11 +107,23 @@ export function FlowNotice({
                   !done && !now && "text-[var(--el-muted-soft)]"
                 )}
               >
-                {done ? <Check aria-hidden className="size-3" strokeWidth={3} /> : null}
-                {now && state === "running" ? <Spinner small /> : null}
-                {now && state === "failed" ? (
-                  <AlertTriangle aria-hidden className="size-3 text-[var(--el-error)]" />
-                ) : null}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "inline-flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold",
+                    done && "border-[var(--el-ink)] bg-[var(--el-ink)] text-[var(--el-on-primary)]",
+                    failed && "border-[var(--el-error)] bg-[var(--el-error)] text-[var(--el-on-primary)]",
+                    running && "border-[var(--el-hairline-strong)] text-[var(--el-ink)]",
+                    !done && !failed && !running && "border-[var(--el-hairline-strong)] text-[var(--el-muted-soft)]"
+                  )}
+                >
+                  {done ? <Check className="size-3" strokeWidth={3} /> : null}
+                  {failed ? <X className="size-3" strokeWidth={3} /> : null}
+                  {running ? (
+                    <LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />
+                  ) : null}
+                  {!done && !failed && !running ? at + 1 : null}
+                </span>
                 {label}
               </span>
             </li>
@@ -167,14 +192,11 @@ export function FlowNotice({
   );
 }
 
-function Spinner({ small = false }: { small?: boolean }) {
+function Spinner() {
   return (
     <span
       aria-hidden
-      className={cn(
-        "block shrink-0 animate-spin rounded-full border-[var(--el-hairline-strong)] border-t-[var(--el-ink)] motion-reduce:animate-none",
-        small ? "size-3 border-[1.5px]" : "size-[18px] border-2"
-      )}
+      className="block size-[18px] shrink-0 animate-spin rounded-full border-2 border-[var(--el-hairline-strong)] border-t-[var(--el-ink)] motion-reduce:animate-none"
     />
   );
 }
