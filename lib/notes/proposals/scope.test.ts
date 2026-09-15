@@ -40,12 +40,10 @@ const CONTEXT_SOURCES = [
   "lib/notes/proposals/contract.ts",
   "lib/notes/proposals/reducer.ts",
   "lib/notes/proposals/presentation.ts",
-  "lib/notes/proposals/timeline.ts",
   "lib/notes/proposals/select.ts",
   // `api.ts`·`query-keys.ts` 는 계약이 도착하며 사라졌다 — orval 생성 훅과 키로 갔다.
   "components/notes/proposal-rail.tsx",
   "components/notes/proposal-card.tsx",
-  "components/notes/proposal-coverage-row.tsx",
 ];
 
 describe("v1 범위 — 기각 표면은 없다", () => {

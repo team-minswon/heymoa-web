@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  findCoverageGaps,
   initialContextState,
   reduceContextEvent,
   selectCards,
@@ -315,54 +314,6 @@ describe("context proposal reducer", () => {
     ]);
 
     expect(state.lastBatchAt).toBe("2026-08-24T02:00:00.000Z");
-  });
-
-  it("적용 범위 사이의 구멍이 읽지 못한 구간이다", () => {
-    const state = apply([
-      batch(
-        range({
-          fromSequence: 1,
-          toSequence: 10,
-          fromStartedAtMs: 0,
-          toEndedAtMs: 100_000,
-        })
-      ),
-      batch(
-        range({
-          runId: "run-3",
-          fromSequence: 16,
-          toSequence: 25,
-          fromStartedAtMs: 160_000,
-          toEndedAtMs: 250_000,
-        })
-      ),
-    ]);
-
-    expect(findCoverageGaps(state.runs)).toEqual([
-      {
-        fromSequence: 11,
-        toSequence: 15,
-        fromStartedAtMs: 100_000,
-        toEndedAtMs: 160_000,
-      },
-    ]);
-  });
-
-  it("범위가 이어지면 구멍이 없다", () => {
-    const state = apply([
-      batch(range({ fromSequence: 1, toSequence: 10 })),
-      batch(
-        range({
-          runId: "run-2",
-          fromSequence: 11,
-          toSequence: 20,
-          fromStartedAtMs: 100_000,
-          toEndedAtMs: 200_000,
-        })
-      ),
-    ]);
-
-    expect(findCoverageGaps(state.runs)).toEqual([]);
   });
 
   it("범위가 도착 순서와 무관하게 fromSequence로 정렬된다", () => {

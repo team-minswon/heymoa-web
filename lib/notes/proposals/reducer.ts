@@ -21,8 +21,6 @@ export type { RunRange, ProposalHead };
  * 3. **`REAFFIRM`은 event가 없다.** 서버에서는 evidence가 늘고 `lastEvidenceSequence`가
  *    전진하는데 화면은 신호를 못 받는다. 그래서 batch event를 받으면 provider가 snapshot을
  *    다시 받아 수렴시킨다 — 근거 개수를 실시간 지표로 쓰면 안 되는 이유다.
- * 4. **적용 범위의 구멍이 읽지 못한 구간이다.** `REJECTED_OUTPUT`은 apply를 안 거쳐 범위가
- *    아예 안 생긴다. 그 구간은 실시간으로 영영 오지 않는다.
  */
 
 export type ContextCard = ProposalHead & {
@@ -337,33 +335,3 @@ export function selectCards(state: ContextState): ContextCard[] {
     }));
 }
 
-export type CoverageGap = {
-  fromSequence: number;
-  toSequence: number;
-  fromStartedAtMs: number;
-  toEndedAtMs: number;
-};
-
-/**
- * 적용 범위 **사이**의 구멍. 분류가 닿지 않은 구간이다.
- *
- * **양끝은 판정하지 않는다.** 첫 범위 이전과 마지막 범위 이후가 구멍인지는 note의 확정 전사
- * 범위를 함께 봐야 알 수 있고, 회의 중에는 「아직 안 왔다」와 구분되지 않는다.
- */
-export function findCoverageGaps(ranges: RunRange[]): CoverageGap[] {
-  const sorted = sortRanges(ranges);
-  const gaps: CoverageGap[] = [];
-
-  for (let i = 1; i < sorted.length; i += 1) {
-    const previous = sorted[i - 1];
-    const current = sorted[i];
-    if (current.fromSequence <= previous.toSequence + 1) continue;
-    gaps.push({
-      fromSequence: previous.toSequence + 1,
-      toSequence: current.fromSequence - 1,
-      fromStartedAtMs: previous.toEndedAtMs,
-      toEndedAtMs: current.fromStartedAtMs,
-    });
-  }
-  return gaps;
-}

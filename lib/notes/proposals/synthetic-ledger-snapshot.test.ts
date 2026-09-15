@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { proposalSnapshotSchema } from "@/lib/notes/proposals/contract";
 import ledger from "@/lib/notes/proposals/__fixtures__/synthetic-ledger-snapshot.json";
 import {
-  findCoverageGaps,
   initialContextState,
   reduceContextEvent,
   selectCards,
@@ -98,28 +97,6 @@ describe("server 가 적재한 원장 — 합성 108발화 입력", () => {
     expect(
       partial.some((r) => !r.rawDeltaSaturated && !r.semanticUnitSaturated)
     ).toBe(true);
-  });
-
-  /**
-   * 적용되지 못한 배치(`REJECTED_OUTPUT`)는 `runs` 에 안 들어오므로 **구멍으로
-   * 정직하게 보인다.** 구멍이 범위 사이에만 생기는지도 함께 본다.
-   */
-  it("범위 구멍이 실제 빈 구간과 맞는다", () => {
-    const sorted = [...state.runs].sort(
-      (a, b) => a.fromSequence - b.fromSequence
-    );
-    const expected = sorted.flatMap((range, i) => {
-      const previous = sorted[i - 1];
-      if (!previous || range.fromSequence <= previous.toSequence + 1) return [];
-      return [
-        { fromSequence: previous.toSequence + 1, toSequence: range.fromSequence - 1 },
-      ];
-    });
-    expect(
-      findCoverageGaps(state.runs).map(
-        ({ fromSequence, toSequence }) => ({ fromSequence, toSequence })
-      )
-    ).toEqual(expected);
   });
 
   it("갱신 시각이 서버 값에서 온다", () => {
