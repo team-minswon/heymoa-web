@@ -1074,7 +1074,11 @@ function PersonalChatPanel({
     if (resyncedTurnRef.current === key) return;
     resyncedTurnRef.current = key;
     void reconcile(sessionId).then((refreshed) => {
-      if (refreshed && reason === "resync") stream.reset();
+      if (!refreshed) return;
+      // 포기한 쪽도 **히스토리가 「끝났다」고 답하면** 로컬 사본을 버린다. 그대로 두면 방금
+      // 굳은 행과 이미 받아 둔 프레임이 같은 생각·도구 줄을 두 벌 그린다. 실패는 안 잃는다 —
+      // `lastTurn` 이 FAILED 면 위의 seed 가 배너를 코드까지 붙여 다시 세운다.
+      if (reason === "resync" || !refreshed.activeTurn) stream.reset();
     });
   }, [reconcile, sessionId, stream]);
 
@@ -1093,8 +1097,22 @@ function PersonalChatPanel({
     cancelTurn.mutate(
       { chatId: sessionId, turnId },
       {
-        // 취소된 턴의 기록과 `activeTurn: null`을 다시 읽는다. 안 읽으면 잠금이 안 풀린다.
-        onSuccess: () => void reconcile(sessionId),
+        /**
+         * 취소된 턴의 기록과 `activeTurn: null`을 다시 읽는다. 안 읽으면 잠금이 안 풀린다.
+         *
+         * ★ **다 읽었으면 로컬 사본을 버린다 — `send()` 의 정상 종료와 같은 꼬리다.**
+         * `isTurnReconciled` 에 맡기면 **토큰이 하나도 없던 중지가 안 접힌다**: server 는
+         * 부분 답이 없으면 ASSISTANT 행을 안 쓰는데 그 행이 곧 접는 열쇠라, 생각하다 멈춘
+         * 턴의 생각·도구 줄이 스트림과 히스토리에서 두 벌로 선다.
+         *
+         * 무효화된 승인 카드는 안 잃는다 — `useToolApproval` 이 들고 있다.
+         */
+        onSuccess: () =>
+          void reconcile(sessionId).then((refreshed) => {
+            if (!refreshed) return;
+            setPendingUserMessage(null);
+            stream.reset();
+          }),
       }
     );
   }, [cancelTurn, reconcile, sessionId, stream]);
@@ -1238,9 +1256,27 @@ function PersonalChatPanel({
   /**
    * ★ **도구 카드가 두 벌 그려지는 자리를 여기서 접는다.**
    *
-   * 진행 중 턴의 `TOOL` 행은 히스토리(server가 흐르는 동안 tee한다)와 스트림 백로그
-   * **양쪽**에서 온다. `groupHistory`와 `StreamBlocks`는 서로를 모르므로 둘 다 그린다.
-   * 접는 열쇠는 `messages[].turnId`다.
+   * 진행 중 턴의 `TOOL`·`THINKING` 행은 히스토리와 스트림 백로그 **양쪽**에서 올 수 있다.
+   * `groupHistory`와 `StreamBlocks`는 서로를 모르므로 둘 다 그린다. 접는 열쇠는
+   * `messages[].turnId`다.
+   *
+   * ★★ **판정은 상태 이름이 아니라 「지금 재생이 그 행들을 다시 싣고 있나」다** — server 와
+   * 같은 기준이다. 접는 것은 **스트림이 턴의 처음부터 재생하는 동안**뿐이고, 조건이 둘이다.
+   *
+   * | | 누가 그리나 |
+   * |---|---|
+   * | `phase === "streaming"` 이고 `cursor === null` | 재생이 턴의 처음부터 온다 — 히스토리를 접는다 |
+   * | `cursor !== null` | 정산이 승인 카드까지를 굳혔고 재생은 그 **뒤**부터다 — 겹칠 자리가 없다 |
+   * | `awaiting_approval` | **열린 스트림이 아예 없다**(카드 프레임이 스트림을 닫는다) — 히스토리가 유일한 출처다 |
+   *
+   * 접으면 카드 앞의 생각·도구를 아무도 안 그린다 [APP-627]. 승인 대기를 따로 적는 것은
+   * 커서가 **없으면서** 재생도 없는 조합이 실제로 있기 때문이다 — 턴 스트림 키는 600초에
+   * 사라지고 사람을 기다리는 동안은 수명이 안 갱신돼서(`AgentChatStreamKeys.TTL`), 10분
+   * 넘게 선 카드는 `cursor === null` 로 돌아온다.
+   *
+   * **`stream.state.cursor` 가 아니라 히스토리의 `cursor` 다.** 앞의 값은 프레임마다
+   * 밀려서 재생이 시작된 자리를 잊는다 — 처음부터 재생하는 턴도 첫 프레임에서 non-null 이
+   * 된다.
    *
    * **`USER` 행은 안 접는다** — 스트림에 안 실리므로 접으면 이어받기 화면에서 질문이
    * 사라진다. 흐르는 동안에만 접는 것도 같은 이유다: 턴이 끝나면 그리는 쪽이 히스토리
@@ -1248,11 +1284,13 @@ function PersonalChatPanel({
    */
   const visibleMessages = useMemo(() => {
     const turnId = stream.state.turnId;
-    if (!isStreaming || !turnId) return messages;
+    if (stream.state.phase !== "streaming" || !turnId || cursor !== null) {
+      return messages;
+    }
     return messages.filter(
       (message) => message.role === "USER" || message.turnId !== turnId
     );
-  }, [isStreaming, messages, stream.state.turnId]);
+  }, [cursor, messages, stream.state.phase, stream.state.turnId]);
 
   /**
    * ★★ **방금 보낸 질문의 시각을 보낼 때 쓴 값으로 굳힌다.**
