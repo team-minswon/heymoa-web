@@ -129,6 +129,27 @@ function playUntil(hit: () => boolean, steps = 1500) {
  * 시간 상수를 만질 때마다 깨지고, 정작 깨지면 안 되는 것은 「끝까지 간다」와 「손대면
  * 멈춘다」다.
  */
+/**
+ * 이 파일은 가짜 시계로 대본 한 바퀴(90초)를 `act` 1500번으로 돌린다. 혼자 돌면 한
+ * 테스트가 0.6초지만 server·AI 회귀 검사와 나란히 돌면 CPU 를 나눠 써서 vitest 기본
+ * 제한(5초)을 넘긴 적이 있다(APP-626). 기다림은 전부 상한이 있다 — `play(n)` 은 걸음
+ * 수가 정해져 있고 `playUntil` 은 상한에서 거짓을 돌려줘 단언이 잡는다 — 그래서 제한을
+ * 늘려도 무한 대기가 숨지 않는다. 전역 `testTimeout` 은 안 올린다 — 다른 파일의 진짜
+ * 멈춤까지 가린다.
+ */
+vi.setConfig({ testTimeout: 20_000 });
+
+describe("play 도우미", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("playUntil 은 상한에 닿으면 거짓으로 끝난다 — 무한 대기가 없다", () => {
+    vi.useFakeTimers();
+    expect(playUntil(() => false, 3)).toBe(false);
+  });
+});
+
 describe("ProductShot 대본", () => {
   afterEach(() => {
     cleanup();
@@ -218,11 +239,11 @@ describe("ProductShot 대본", () => {
         fireEvent.click(screen.getAllByRole("tab", { name: "실시간 정리" })[0]);
       });
 
-      play();
-
+      // 질의 장면의 답이 서는 순간까지만 당긴다. 넉넉히 1500걸음을 다 돌면 요약을 지나
+      // 한 바퀴를 더 돌아 이 파일에서 가장 비싼 테스트가 된다(APP-626).
       expect(
-        screen.getAllByRole("tab", { name: "내 에이전트" })[0]
-      ).toHaveAttribute("aria-selected", "true");
+        playUntil(() => screen.queryAllByText(/결정 둘입니다/).length > 0)
+      ).toBe(true);
       expect(screen.getAllByText(/결정 둘입니다/).length).toBeGreaterThan(0);
       // 못 본 채 지나간 것은 없다 — 사건 흐름도 끝까지 찼다.
       act(() => {
