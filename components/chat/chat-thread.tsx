@@ -851,7 +851,7 @@ function StreamNotice({ stream }: { stream: ChatStreamState }) {
         title="응답을 만들지 못했습니다"
         description={
           stream.error?.message ??
-          "부분 응답은 저장되지 않았습니다. 다시 보내 주세요."
+          "연결이 끊겼습니다. 새로고침하면 지금까지 굳은 답이 보입니다."
         }
       />
     );

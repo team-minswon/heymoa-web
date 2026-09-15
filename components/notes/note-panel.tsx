@@ -145,7 +145,7 @@ export function NotePanel({
     user && note?.meetingStartedBy?.userId === user.userId
   );
   // 답변이 흐르는 중에 다른 멤버가 회의를 끝내도 트레이를 바로 걷지 않는다 — 언마운트하면
-  // 스트림이 끊기고 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 턴이 끝나면 접는다.
+  // 흐르는 화면과 중지·승인에 닿을 길을 잃는다. 턴이 끝나면 접는다.
   /**
    * 삭제 확인창이 **어느 노트의 것인가.** boolean이면 A에서 창을 연 뒤 뒤로가기로 B에 왔을 때
    * 이 패널은 재마운트되지 않아 창이 열린 채 대상만 B로 바뀌고, 확인하면 B가 지워진다.
@@ -476,7 +476,7 @@ export function NotePanel({
                 {/* 확장과 같은 이유로 답변이 흐르는 동안 막는다 — 축소하면 레일이 슬롯을
                   놓고(`NoteAgentRail`), side에서는 `isPersonalChatHiddenInNote`가 개인
                   패널도 FAB도 감춰서 흐르던 답변의 중지·도구 승인에 닿을 길이 없어진다.
-                  계약상 부분 응답은 저장되지 않으므로 놓치면 답변이 통째로 사라진다. */}
+                  승인은 만료가 없어서, 놓치면 그 턴이 사람을 기다린 채로 선다. */}
                 {onCollapse ? (
                   <Button
                     type="button"

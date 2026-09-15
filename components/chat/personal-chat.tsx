@@ -94,7 +94,8 @@ const PersonalChatContext = createContext<PersonalChatState | null>(null);
  * 계산되고 끝에서만 뒤집힌다. 그래서 들어올 때는 즉시 보이고 나갈 때는 끝까지 보인다.
  *
  * `display:none`(=`hidden`)으로는 이 두 가지를 같이 할 수 없어서 예전에는 그냥 툭 사라졌다.
- * 언마운트는 여전히 금지다 — 흐르던 스트림이 끊기면 계약상 부분 응답은 저장되지 않는다.
+ * 언마운트는 여전히 금지다 — 답은 server 가 굳혀 남지만 흐르는 화면과 중지·승인에 닿는
+ * 길을 잃는다.
  *
  * `starting:`은 **첫 마운트**용이다. 패널은 한 번 열기 전에는 아예 없어서, 이게 없으면
  * 첫 열기만 애니메이션 없이 나타난다.
@@ -145,8 +146,8 @@ export function usePersonalChat() {
 
 /**
  * 노트 화면이 자기 스코프를 등록한다. full이면 개인 챗봇이 노트 스코프가 되고,
- * side면 감춘다 — **감출 뿐 언마운트하지 않는다.** 흐르던 스트림을 끊으면 계약상
- * 부분 응답은 저장되지 않으므로 답변이 통째로 사라진다.
+ * side면 감춘다 — **감출 뿐 언마운트하지 않는다.** 끊으면 답이 사라지는 것은 아니지만
+ * (워치독이 굳힌다) 흐르는 화면과 중지·승인 카드에 닿을 길을 잃는다.
  */
 export function usePersonalChatScope(scope: NoteScope | null) {
   const { setNoteScope } = usePersonalChat();
@@ -178,15 +179,15 @@ export function PersonalChatProvider({
   const [isOpen, setIsOpen] = useState(false);
   /**
    * 한 번이라도 열었는가. 열기 전에는 패널을 마운트하지 않고(조회를 걸지 않는다),
-   * 한 번 열면 **닫아도 마운트를 유지한다** — 언마운트하면 흐르던 스트림이 끊기고
-   * 계약상 부분 응답은 저장되지 않아 답변이 통째로 사라진다. 닫기도 감추기다.
+   * 한 번 열면 **닫아도 마운트를 유지한다** — 언마운트하면 흐르는 화면과 중지·승인에
+   * 닿을 길을 잃는다. 닫기도 감추기다.
    */
   const [hasOpened, setHasOpened] = useState(false);
   const [hidden, setHidden] = useState(false);
   /**
    * 패널이 붙어 있는 노트. **감춰진 동안에는 바꾸지 않는다** — 워크스페이스 답변이 흐르는 중에
    * 노트를 side로 열면 스코프가 바뀌고, 그러면 패널 key가 바뀌어 언마운트되며 스트림이 끊긴다.
-   * 계약상 부분 응답은 저장되지 않으므로 답변이 통째로 사라진다. 감추기는 감추기일 뿐이다.
+   * 흐르는 화면과 중지·승인에 닿을 길을 잃는다. 감추기는 감추기일 뿐이다.
    */
   const [scopeNote, setScopeNote] = useState<{
     noteId: string;
@@ -202,8 +203,8 @@ export function PersonalChatProvider({
   const setRailSlot = useCallback((element: HTMLElement | null) => {
     setRailSlotState(element);
     // 레일에서 처음 열었어도 **연 것은 연 것이다.** 이걸 안 세우면 레일을 떠나는 순간
-    // (축소·닫기·뒤로가기) `hasOpened`가 거짓이라 패널이 언마운트되고, 흐르던 답변이
-    // 계약상 저장되지 않은 채 사라진다.
+    // (축소·닫기·뒤로가기) `hasOpened`가 거짓이라 패널이 언마운트되고, 흐르던 답변의
+    // 중지·도구 승인에 닿을 길이 끊긴다.
     if (element) setHasOpened(true);
   }, []);
 
@@ -386,7 +387,7 @@ function PersonalChatPanel({
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   /**
    * 헤더 아래 상자가 지금 무엇을 보이고 있나. **둘 다 마운트된 채** 옆으로 교대한다 —
-   * 스레드를 언마운트하면 흐르던 답이 통째로 사라지고(계약상 부분 응답 미저장), 스크롤
+   * 스레드를 언마운트하면 흐르던 답을 화면에서 잃고(행은 server 가 굳힌다) 스크롤
    * 위치도 잃는다.
    */
   const [view, setView] = useState<"thread" | "history">("thread");

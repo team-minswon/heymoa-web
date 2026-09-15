@@ -26,7 +26,7 @@ import { matchScope, type ScopeCandidate } from "@/lib/chat/use-scope-catalog";
  *
  * **입력을 막지 않습니다.** 답을 읽으면서 다음 질문을 적어 두는 것이 자연스럽고, 막으면
  * 그 사이 떠오른 문장을 다른 데 적어야 합니다. 막는 것은 **전송뿐**입니다 — 앞 턴이
- * 끝나기 전에 보내면 그 스트림이 끊기고 계약상 부분 응답은 저장되지 않습니다.
+ * 끝나기 전에 보내면 그 스트림이 끊기고 흐르던 답을 화면에서 잃습니다.
  */
 export function ChatComposer({
   inputRef,

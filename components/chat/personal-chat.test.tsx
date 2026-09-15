@@ -828,7 +828,7 @@ describe("PersonalChatProvider", () => {
   });
 
   it("닫아도 패널을 언마운트하지 않는다", async () => {
-    // 언마운트하면 useChatStream이 abort하고, 계약상 부분 응답은 저장되지 않아
+    // 언마운트하면 useChatStream이 abort해서 흐르는 화면과 승인에 닿을 길을 잃고,
     // 흐르던 답변이 통째로 사라진다. 닫기도 감추기다.
     renderChat();
     openPanel();
@@ -872,7 +872,7 @@ describe("PersonalChatProvider", () => {
 
   it("워크스페이스 스코프로 열려 있을 때 노트를 side로 열어도 패널이 갈리지 않는다", async () => {
     // 스코프가 바뀌면 패널 key가 바뀌어 언마운트되고, 흐르던 스트림이 끊긴다.
-    // 계약상 부분 응답은 저장되지 않으므로 답변이 통째로 사라진다.
+    // 흐르는 화면과 중지·승인에 닿을 길을 잃는다.
     state.chats = [chatRow(CHAT_ID)];
     const { rerender, client } = renderChat();
     openPanel();
@@ -921,7 +921,7 @@ describe("PersonalChatProvider", () => {
         "data-hidden"
       )
     );
-    // 감출 뿐 언마운트하지 않는다 — 끊으면 부분 응답이 저장되지 않아 답변이 통째로 사라진다.
+    // 감출 뿐 언마운트하지 않는다 — 끊으면 흐르는 화면과 중지·승인에 닿을 길을 잃는다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
     expect(screen.queryByRole("button", { name: "개인 챗봇 열기" })).toBeNull();
     expect(state.aborted).toBe(false);
@@ -2371,7 +2371,7 @@ describe("PersonalChatProvider", () => {
 
     it("★ 기록은 뜨는 레이어가 아니라 스레드와 같은 상자를 나눠 쓴다", () => {
       // 둘 다 마운트된 채 겹쳐 교대한다. 스레드를 언마운트하면 흐르던 답이 통째로
-      // 사라지고(계약상 부분 응답 미저장) 스크롤 위치도 잃는다.
+      // 화면에서 사라지고(행은 server 가 굳힌다) 스크롤 위치도 잃는다.
       state.chats = [chatRow(CHAT_ID)];
       state.messages = [
         {

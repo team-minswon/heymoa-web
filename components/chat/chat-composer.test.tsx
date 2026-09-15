@@ -107,7 +107,7 @@ describe("ChatComposer", () => {
   });
 
   it("답변이 흐르는 동안 Enter는 보내지 않는다", () => {
-    // 앞 턴이 끝나기 전에 보내면 그 스트림이 끊기고 부분 응답은 저장되지 않는다.
+    // 앞 턴이 끝나기 전에 보내면 그 스트림이 끊기고 흐르던 답을 화면에서 잃는다.
     const onSubmit = vi.fn();
     const { input } = renderComposer({ isBusy: true, onSubmit });
     write(input, "다음 질문");
