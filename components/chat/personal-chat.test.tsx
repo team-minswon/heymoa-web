@@ -1694,10 +1694,104 @@ describe("PersonalChatProvider", () => {
       expect(screen.queryByText("응답을 받지 못했습니다.")).toBeNull();
     });
 
+    /**
+     * ★★ **카드 앞의 생각·도구는 히스토리에만 있다.**
+     *
+     * server 는 이어받기 커서를 승인 카드의 entry id 로 준다 — 카드까지의 행은 정산이
+     * 이미 굳혔으므로 재생에 안 싣는다. 그 행을 화면까지 접으면 **아무도 안 그린다.**
+     */
+    it("★ 커서로 이어받은 턴은 카드 앞 생각·도구를 히스토리가 그린다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      state.cursor = APPROVAL_ENTRY_ID;
+      state.activeTurn = {
+        turnId: "0K9GVJT2C4Q3B",
+        status: "WAITING_APPROVAL",
+        pendingApproval: {
+          approvalId: "0K9GVJT2C4Q7F",
+          tool: "linear.create_issue",
+          summary: "Linear 이슈 생성",
+        },
+      };
+      state.messages = [
+        historyRow("USER", "이슈 만들어줘", "0K9GVJT2C4Q3B"),
+        historyRow("THINKING", "필요한 팀을 확인하겠습니다.", "0K9GVJT2C4Q3B"),
+        {
+          ...historyRow("TOOL", "Linear 팀 목록 · 1건", "0K9GVJT2C4Q3B"),
+          toolEvent: {
+            tool: "linear.list_teams",
+            decision: null,
+            status: "success",
+            url: null,
+          },
+        },
+      ];
+      renderChat();
+      openPanel();
+
+      expect(await screen.findByRole("button", { name: "승인" })).toBeTruthy();
+      // 승인 대기는 스트림을 안 연다 — 이 행들의 출처는 히스토리 하나뿐이다.
+      expect(state.resumeUrls).toHaveLength(0);
+
+      // 끝난 묶음은 접힌 채로 선다. 안쪽 줄을 보려면 머리글을 한 번 눌러야 한다.
+      fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+      expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(1);
+      expect(screen.getAllByText("Linear 팀 목록 · 1건")).toHaveLength(1);
+      // 카드를 세우는 것은 `pendingApproval` 하나다 — 히스토리에는 카드 행이 없다.
+      expect(screen.getAllByRole("button", { name: "승인" })).toHaveLength(1);
+    });
+
+    /**
+     * ★★ **승인 대기에는 열린 스트림이 없다 — 커서가 없어도 히스토리가 유일한 출처다.**
+     *
+     * 턴 스트림의 Redis 키는 600초 뒤 사라지고 승인 대기 중에는 쓰기가 없어 수명이 안
+     * 갱신된다(`AgentChatStreamKeys.TTL`). 10분 넘게 카드를 세워 두면 server 가 커서를
+     * 못 찾아 `null` 로 답하는데, 그것을 「처음부터 재생한다」로 읽고 접으면 재생할 스트림도
+     * 없어서 **아무도 안 그린다.**
+     */
+    it("★ 승인 대기는 커서가 없어도 히스토리를 접지 않는다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      state.cursor = null;
+      state.activeTurn = {
+        turnId: "0K9GVJT2C4Q3B",
+        status: "WAITING_APPROVAL",
+        pendingApproval: {
+          approvalId: "0K9GVJT2C4Q7F",
+          tool: "linear.create_issue",
+          summary: "Linear 이슈 생성",
+        },
+      };
+      state.messages = [
+        historyRow("USER", "이슈 만들어줘", "0K9GVJT2C4Q3B"),
+        historyRow("THINKING", "필요한 팀을 확인하겠습니다.", "0K9GVJT2C4Q3B"),
+        {
+          ...historyRow("TOOL", "Linear 팀 목록 · 1건", "0K9GVJT2C4Q3B"),
+          toolEvent: {
+            tool: "linear.list_teams",
+            decision: null,
+            status: "success",
+            url: null,
+          },
+        },
+      ];
+      renderChat();
+      openPanel();
+
+      expect(await screen.findByRole("button", { name: "승인" })).toBeTruthy();
+      expect(state.resumeUrls).toHaveLength(0);
+
+      fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+      expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(1);
+      expect(screen.getAllByText("Linear 팀 목록 · 1건")).toHaveLength(1);
+      expect(screen.getAllByRole("button", { name: "승인" })).toHaveLength(1);
+    });
+
     it("★ 진행 중 턴의 도구 카드를 두 벌 그리지 않는다", async () => {
       // TOOL 행이 히스토리와 스트림 백로그 양쪽에서 온다. 접는 열쇠는 `turnId`다.
+      //
+      // **`cursor` 가 null 이어야 이 자리가 실제로 생긴다** — 그때만 재생이 턴의 처음부터
+      // 오므로 굳은 행과 겹친다. 카드 커서로 이어받은 턴은 그 뒤부터만 재생돼 안 겹친다.
       state.chats = [chatRow(CHAT_ID)];
-      state.cursor = "1735689600000-4";
+      state.cursor = null;
       state.activeTurn = {
         turnId: "0K9GVJT2C4Q3B",
         status: "IN_PROGRESS",
@@ -1976,6 +2070,56 @@ describe("PersonalChatProvider", () => {
         ).toContain("정리해줘")
       );
       expect(screen.queryByRole("button", { name: "다시 보내기" })).toBeNull();
+    });
+
+    /**
+     * ★★ **토큰이 하나도 없는 중지.** server 는 부분 답이 없으면 ASSISTANT 행을 안 쓰고
+     * (`SettleAgentChatTurnHandler` 의 `partialAnswerOf`), 그 구간의 THINKING·TOOL 행만
+     * 굳힌다. 로컬 사본을 접는 열쇠를 「ASSISTANT 행」에서만 찾으면 이 자리는 영영 안 접혀
+     * 같은 생각 줄이 스트림과 히스토리에서 **두 벌**로 선다 — 생각하다 멈추는 것이 중지의
+     * 가장 흔한 모습이다.
+     */
+    it("★ 토큰 없이 중지해도 생각 줄이 두 벌로 안 그려진다", async () => {
+      state.chats = [chatRow(CHAT_ID)];
+      state.cursor = null;
+      state.activeTurn = {
+        turnId: "0K9GVJT2C4Q3B",
+        status: "IN_PROGRESS",
+        pendingApproval: null,
+      };
+      state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
+      state.resumeFrames = [
+        frame("thinking_delta", { text: "전사를 훑습니다" }, "1-0"),
+      ];
+      state.holdResume = true;
+      renderChat();
+      openPanel();
+
+      await waitFor(() => expect(state.resumeUrls).toHaveLength(1));
+      expect(await screen.findByText("전사를 훑습니다")).toBeTruthy();
+      // 목이 `after` 를 안 보고 매 연결마다 같은 프레임을 다시 준다 — server 는 안 그런다.
+      state.resumeFrames = [];
+      // 토큰이 없으니 ASSISTANT 행이 없다. 굳는 것은 생각 줄뿐이다.
+      state.onRefetch = () => {
+        state.messages = [
+          historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
+          historyRow("THINKING", "전사를 훑습니다", "0K9GVJT2C4Q3B"),
+        ];
+        state.activeTurn = null;
+        state.lastTurn = {
+          turnId: "0K9GVJT2C4Q3B",
+          status: "CANCELLED",
+          failureCode: null,
+          retryable: null,
+        };
+      };
+
+      fireEvent.click(await screen.findByRole("button", { name: "중지" }));
+      await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
+      await waitFor(() =>
+        expect(screen.getAllByText("전사를 훑습니다")).toHaveLength(1)
+      );
+      expect(screen.getAllByText("정리해줘")).toHaveLength(1);
     });
 
     it("★ 중지가 턴을 취소한다", async () => {
