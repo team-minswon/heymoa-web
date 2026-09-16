@@ -22,13 +22,17 @@ export function isAuthCookieName(name: string): name is AuthCookieName {
  * `.heymoa.app` 도메인 쿠키는 그대로 남습니다. 그러면 무효해진 refresh token이 브라우저에
  * 영구히 박혀 모든 내비게이션이 재발급을 다시 시도합니다 (APP-344, 재발급 실패율 74%).
  *
- * 로컬 서버는 쿠키를 host-only로 심으므로 이 Domain이 안 맞아 삭제가 무시됩니다. 로컬
- * 기본값은 MSW(`.env.local`의 `NEXT_PUBLIC_API_MOCKING=enabled`)라 proxy가 곧바로 반환하고
- * 이 경로를 지나지 않습니다. 실서버를 로컬로 붙여 쓰다가 만료된 쿠키가 안 지워지면 그때
- * 환경별로 가릅니다.
+ * **그때가 와서 환경별로 갈랐습니다** (APP-641). 랩(`env-001.realillust.com` 등)은 서버가
+ * host-only로 심는데 여기만 `.heymoa.app`을 봐서, 만료된 쿠키가 영영 안 지워졌습니다.
+ * 빈 문자열을 주면 host-only 삭제입니다 -- `??`여야 합니다, `||`면 빈 값이 다시 기본값으로
+ * 튑니다. 기본값을 남겨 두므로 운영은 그대로입니다.
+ *
+ * 로컬 기본값은 MSW(`.env.local`의 `NEXT_PUBLIC_API_MOCKING=enabled`)라 proxy가 곧바로
+ * 반환하고 이 경로를 지나지 않습니다.
  *
  * **쿠키를 새로 심을 때는 이 값을 쓰지 않습니다.** 갱신 응답의 `Set-Cookie`를 그대로
  * 흘려보내므로 Domain·Secure·SameSite·Max-Age의 원본은 서버 하나입니다. 여기가 필요한 것은
  * 서버 응답 없이 web이 혼자 지워야 하는 삭제 경로뿐입니다.
  */
-export const AUTH_COOKIE_DOMAIN = ".heymoa.app";
+export const AUTH_COOKIE_DOMAIN =
+  process.env.AUTH_COOKIE_DOMAIN ?? ".heymoa.app";

@@ -68,7 +68,11 @@ function clearAuthCookies() {
   const response = NextResponse.next();
 
   AUTH_COOKIE_NAMES.forEach((name) => {
-    response.cookies.delete({ name, domain: AUTH_COOKIE_DOMAIN, path: "/" });
+    response.cookies.delete({
+      name,
+      domain: AUTH_COOKIE_DOMAIN || undefined,
+      path: "/",
+    });
   });
 
   return response;

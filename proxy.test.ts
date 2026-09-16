@@ -10,9 +10,14 @@ function requestWithRefreshToken() {
   });
 }
 
-async function loadProxy() {
+async function loadProxy(authCookieDomain?: string) {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://api.example.test");
+
+  if (authCookieDomain !== undefined) {
+    vi.stubEnv("AUTH_COOKIE_DOMAIN", authCookieDomain);
+  }
+
   return (await import("@/proxy")).proxy;
 }
 
@@ -140,6 +145,21 @@ describe("proxy token refresh", () => {
     setCookies.forEach((setCookie) => {
       expect(setCookie).toContain("Domain=.heymoa.app");
       expect(setCookie).toContain("Path=/");
+    });
+  });
+
+  // 랩은 서브도메인마다 환경이라 서버가 host-only로 심는다 (APP-641). 빈 값이 곧
+  // host-only 삭제다 — `||`로 읽으면 빈 문자열이 다시 `.heymoa.app`으로 튄다.
+  it("omits Domain when AUTH_COOKIE_DOMAIN is empty", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(invalidRefreshTokenResponse());
+    const proxy = await loadProxy("");
+
+    const response = await proxy(requestWithRefreshToken());
+    const setCookies = response.headers.getSetCookie();
+
+    expect(setCookies).toHaveLength(2);
+    setCookies.forEach((setCookie) => {
+      expect(setCookie).not.toContain("Domain=");
     });
   });
 
