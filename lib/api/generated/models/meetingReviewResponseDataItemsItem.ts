@@ -21,8 +21,6 @@ export type MeetingReviewResponseDataItemsItem = {
   taskChanges: MeetingReviewResponseDataItemsItemTaskChangesItem[];
   /**
    * 사람 추가 항목의 작성자. 원본 복사 항목은 null
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
@@ -39,8 +37,6 @@ export type MeetingReviewResponseDataItemsItem = {
   revision: number;
   /**
    * 서버 발급 검토 항목 ID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   itemId: string;

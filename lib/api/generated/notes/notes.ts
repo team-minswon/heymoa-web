@@ -48,11 +48,6 @@ export type getNoteResponse200 = {
   status: 200;
 };
 
-export type getNoteResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getNoteResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -66,11 +61,7 @@ export type getNoteResponse404 = {
 export type getNoteResponseSuccess = getNoteResponse200 & {
   headers: Headers;
 };
-export type getNoteResponseError = (
-  | getNoteResponse400
-  | getNoteResponse401
-  | getNoteResponse404
-) & {
+export type getNoteResponseError = (getNoteResponse401 | getNoteResponse404) & {
   headers: Headers;
 };
 
@@ -100,7 +91,7 @@ export const getGetNoteQueryKey = (noteId: string) => {
 
 export const getGetNoteQueryOptions = <
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -131,11 +122,11 @@ export const getGetNoteQueryOptions = <
 export type GetNoteQueryResult = NonNullable<
   Awaited<ReturnType<typeof getNote>>
 >;
-export type GetNoteQueryError = AppErrorResponse | UnauthorizedResponse;
+export type GetNoteQueryError = UnauthorizedResponse | AppErrorResponse;
 
 export function useGetNote<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options: {
@@ -158,7 +149,7 @@ export function useGetNote<
 };
 export function useGetNote<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -181,7 +172,7 @@ export function useGetNote<
 };
 export function useGetNote<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -200,7 +191,7 @@ export function useGetNote<
 
 export function useGetNote<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -228,7 +219,7 @@ export function useGetNote<
  */
 export const prefetchGetNoteQuery = async <
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   noteId: string,
@@ -248,7 +239,7 @@ export const prefetchGetNoteQuery = async <
 
 export const getGetNoteSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -280,11 +271,11 @@ export const getGetNoteSuspenseQueryOptions = <
 export type GetNoteSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getNote>>
 >;
-export type GetNoteSuspenseQueryError = AppErrorResponse | UnauthorizedResponse;
+export type GetNoteSuspenseQueryError = UnauthorizedResponse | AppErrorResponse;
 
 export function useGetNoteSuspense<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options: {
@@ -303,7 +294,7 @@ export function useGetNoteSuspense<
 };
 export function useGetNoteSuspense<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -322,7 +313,7 @@ export function useGetNoteSuspense<
 };
 export function useGetNoteSuspense<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -345,7 +336,7 @@ export function useGetNoteSuspense<
 
 export function useGetNoteSuspense<
   TData = Awaited<ReturnType<typeof getNote>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -379,11 +370,6 @@ export type deleteNoteResponse204 = {
   status: 204;
 };
 
-export type deleteNoteResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type deleteNoteResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -403,7 +389,6 @@ export type deleteNoteResponseSuccess = deleteNoteResponse204 & {
   headers: Headers;
 };
 export type deleteNoteResponseError = (
-  | deleteNoteResponse400
   | deleteNoteResponse401
   | deleteNoteResponse404
   | deleteNoteResponse409
@@ -434,7 +419,7 @@ export const deleteNote = async (
 };
 
 export const getDeleteNoteMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -475,13 +460,13 @@ export type DeleteNoteMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteNote>>
 >;
 
-export type DeleteNoteMutationError = AppErrorResponse | UnauthorizedResponse;
+export type DeleteNoteMutationError = UnauthorizedResponse | AppErrorResponse;
 
 /**
  * @summary 노트 삭제
  */
 export const useDeleteNote = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(
   options?: {
@@ -1216,11 +1201,6 @@ export type getNotesResponse200 = {
   status: 200;
 };
 
-export type getNotesResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getNotesResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -1235,7 +1215,6 @@ export type getNotesResponseSuccess = getNotesResponse200 & {
   headers: Headers;
 };
 export type getNotesResponseError = (
-  | getNotesResponse400
   | getNotesResponse401
   | getNotesResponse404
 ) & {
@@ -1268,7 +1247,7 @@ export const getGetNotesQueryKey = (projectId: string) => {
 
 export const getGetNotesQueryOptions = <
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {
@@ -1299,11 +1278,11 @@ export const getGetNotesQueryOptions = <
 export type GetNotesQueryResult = NonNullable<
   Awaited<ReturnType<typeof getNotes>>
 >;
-export type GetNotesQueryError = AppErrorResponse | UnauthorizedResponse;
+export type GetNotesQueryError = UnauthorizedResponse | AppErrorResponse;
 
 export function useGetNotes<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options: {
@@ -1326,7 +1305,7 @@ export function useGetNotes<
 };
 export function useGetNotes<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {
@@ -1349,7 +1328,7 @@ export function useGetNotes<
 };
 export function useGetNotes<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {
@@ -1368,7 +1347,7 @@ export function useGetNotes<
 
 export function useGetNotes<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {
@@ -1396,7 +1375,7 @@ export function useGetNotes<
  */
 export const prefetchGetNotesQuery = async <
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   projectId: string,
@@ -1416,7 +1395,7 @@ export const prefetchGetNotesQuery = async <
 
 export const getGetNotesSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {
@@ -1449,12 +1428,12 @@ export type GetNotesSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getNotes>>
 >;
 export type GetNotesSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetNotesSuspense<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options: {
@@ -1473,7 +1452,7 @@ export function useGetNotesSuspense<
 };
 export function useGetNotesSuspense<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {
@@ -1492,7 +1471,7 @@ export function useGetNotesSuspense<
 };
 export function useGetNotesSuspense<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {
@@ -1515,7 +1494,7 @@ export function useGetNotesSuspense<
 
 export function useGetNotesSuspense<
   TData = Awaited<ReturnType<typeof getNotes>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
   options?: {

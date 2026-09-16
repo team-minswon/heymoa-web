@@ -16,8 +16,6 @@ export type WorkspaceInvitationActionResponseData = {
   role: WorkspaceInvitationActionResponseDataRole;
   /**
    * 초대 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   invitationId: string;
@@ -25,8 +23,6 @@ export type WorkspaceInvitationActionResponseData = {
   status: WorkspaceInvitationActionResponseDataStatus;
   /**
    * 초대가 속한 워크스페이스 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;

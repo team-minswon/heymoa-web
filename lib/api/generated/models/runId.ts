@@ -8,8 +8,6 @@
 
 /**
  * heymoa-ai 가 만드는 멱등 키다. URL path 에 나가는 외부 식별자라 TSID 13자다.
- * @minLength 13
- * @maxLength 13
  * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
  */
 export type RunId = string;

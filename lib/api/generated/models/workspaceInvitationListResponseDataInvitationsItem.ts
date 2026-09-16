@@ -26,8 +26,6 @@ export type WorkspaceInvitationListResponseDataInvitationsItem = {
   inviteeName: string | null;
   /**
    * 초대 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   invitationId: string;

@@ -26,8 +26,6 @@ export type WorkspaceResponseData = {
   description: string | null;
   /**
    * 워크스페이스의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;

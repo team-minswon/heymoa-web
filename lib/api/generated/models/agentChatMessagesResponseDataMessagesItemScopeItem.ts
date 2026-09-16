@@ -14,8 +14,6 @@ export type AgentChatMessagesResponseDataMessagesItemScopeItem = {
   kind: AgentChatMessagesResponseDataMessagesItemScopeItemKind;
   /**
    * 대상의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   id: string;

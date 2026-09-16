@@ -12,15 +12,11 @@
 export type SegmentSpeakerResponseData = {
   /**
    * 지정한 발화의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   segmentId: string;
   /**
    * 이 발화에만 붙은 참여 기록. null 이면 개별 지정이 없다 - 그 발화는 화자 라벨의 지정을 따른다
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */

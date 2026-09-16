@@ -12,8 +12,6 @@ export type AddMeetingReviewItemRequestCitationsItem = {
   role: AddMeetingReviewItemRequestCitationsItemRole;
   /**
    * 같은 회의 전사 ID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   segmentId: string;

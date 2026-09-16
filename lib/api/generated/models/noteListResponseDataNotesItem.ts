@@ -36,8 +36,6 @@ export type NoteListResponseDataNotesItem = {
   meetingStatus: NoteListResponseDataNotesItemMeetingStatus;
   /**
    * 노트의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
@@ -48,8 +46,6 @@ export type NoteListResponseDataNotesItem = {
   title: string;
   /**
    * 프로젝트의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   projectId: string;

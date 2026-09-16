@@ -11,15 +11,11 @@ export type NoteAgendaListResponseDataAgendasItem = {
   createdAt: string;
   /**
    * 만든 사람의 사용자 ID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   createdBy: string;
   /**
    * 사전 안건의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   agendaId: string;

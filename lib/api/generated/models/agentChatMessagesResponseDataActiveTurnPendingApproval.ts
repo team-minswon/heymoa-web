@@ -23,8 +23,6 @@ export type AgentChatMessagesResponseDataActiveTurnPendingApproval = {
   summary: string | null;
   /**
    * 승인 요청의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   approvalId: string;

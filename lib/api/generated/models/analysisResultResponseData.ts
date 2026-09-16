@@ -25,15 +25,11 @@ export type AnalysisResultResponseData = {
   errorCode: string | null;
   /**
    * 분석 잡의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   analysisId: string;
   /**
    * 노트의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;

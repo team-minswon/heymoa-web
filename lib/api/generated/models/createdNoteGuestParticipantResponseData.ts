@@ -13,8 +13,6 @@ import type { CreatedNoteGuestParticipantResponseDataParticipantsItem } from "./
 export type CreatedNoteGuestParticipantResponseData = {
   /**
    * 방금 만든 참여 기록의 13자리 TSID. 같은 이름을 막지 않으므로 목록에서 이름으로 되찾으면 동명이인이 섞였을 때 엉뚱한 사람이 골라진다 - 화자를 붙일 때 이 값을 쓴다
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   participantId: string;

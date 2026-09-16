@@ -12,8 +12,6 @@
 export type AgentChatTurnStartedResponseData = {
   /**
    * 재개된 턴의 13자리 TSID. 승인 전과 같은 턴이다
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   turnId: string;

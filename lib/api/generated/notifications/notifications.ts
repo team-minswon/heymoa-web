@@ -359,11 +359,6 @@ export type markNotificationReadResponse200 = {
   status: 200;
 };
 
-export type markNotificationReadResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type markNotificationReadResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -379,7 +374,6 @@ export type markNotificationReadResponseSuccess =
     headers: Headers;
   };
 export type markNotificationReadResponseError = (
-  | markNotificationReadResponse400
   | markNotificationReadResponse401
   | markNotificationReadResponse404
 ) & {
@@ -412,7 +406,7 @@ export const markNotificationRead = async (
 };
 
 export const getMarkNotificationReadMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -454,14 +448,14 @@ export type MarkNotificationReadMutationResult = NonNullable<
 >;
 
 export type MarkNotificationReadMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 /**
  * @summary 알림 읽음 처리
  */
 export const useMarkNotificationRead = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(
   options?: {

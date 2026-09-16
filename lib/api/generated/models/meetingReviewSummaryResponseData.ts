@@ -18,16 +18,12 @@ export type MeetingReviewSummaryResponseData = {
   topics: MeetingReviewSummaryResponseDataTopicsItem[];
   /**
    * AI 가 낸 SUMMARY 결과 판. SUCCEEDED 일 때만 있습니다
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   resultVersion: string | null;
   /**
    * 회의 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;

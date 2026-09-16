@@ -19,8 +19,6 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItemAssigneeValue = {
   name?: string;
   /**
    * 회의 라벨 담당의 회의 ID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId?: string;
@@ -32,8 +30,6 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItemAssigneeValue = {
   label?: string;
   /**
    * 사람 담당의 계정·임시 참여자 ID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   id?: string;
