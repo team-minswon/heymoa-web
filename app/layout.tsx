@@ -15,7 +15,7 @@ import { NavbarGate } from "@/components/NavbarGate";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
 import { Toaster } from "@/components/ui/toast";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
-import { siteConfig } from "@/lib/site";
+import { robotsDirective, siteConfig } from "@/lib/site";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -110,17 +110,7 @@ export const metadata: Metadata = {
     title: siteConfig.name,
     description: siteConfig.description,
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
+  robots: robotsDirective,
 };
 
 export default async function RootLayout({
