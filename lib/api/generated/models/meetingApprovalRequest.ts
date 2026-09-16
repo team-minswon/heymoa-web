@@ -9,15 +9,11 @@
 export interface MeetingApprovalRequest {
   /**
    * 확정 요청 식별자. 같은 ID 와 같은 본문의 재전송은 저장 결과로 수렴
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   requestId: string;
   /**
    * 확정할 검토본
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   reviewId: string;

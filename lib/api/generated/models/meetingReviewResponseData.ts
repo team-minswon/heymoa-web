@@ -18,8 +18,6 @@ export type MeetingReviewResponseData = {
   reviewVersion: number;
   /**
    * 회의 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
@@ -27,8 +25,6 @@ export type MeetingReviewResponseData = {
   items: MeetingReviewResponseDataItemsItem[];
   /**
    * 별도 검토본 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   reviewId: string;

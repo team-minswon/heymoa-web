@@ -9,8 +9,6 @@
 export type NoteResponseDataParticipantsItem = {
   /**
    * 참여 기록의 13자리 TSID. 화자 지정이 가리키는 값이다
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   participantId: string;
@@ -23,16 +21,12 @@ export type NoteResponseDataParticipantsItem = {
   name: string;
   /**
    * 임시 참여자의 13자리 TSID (계정 참여자면 null)
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   guestId: string | null;
   /**
    * 계정 참여자의 13자리 TSID (임시 참여자면 null)
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */

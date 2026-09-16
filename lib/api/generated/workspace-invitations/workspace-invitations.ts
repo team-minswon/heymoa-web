@@ -188,11 +188,6 @@ export type acceptWorkspaceInvitationResponse200 = {
   status: 200;
 };
 
-export type acceptWorkspaceInvitationResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type acceptWorkspaceInvitationResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -218,7 +213,6 @@ export type acceptWorkspaceInvitationResponseSuccess =
     headers: Headers;
   };
 export type acceptWorkspaceInvitationResponseError = (
-  | acceptWorkspaceInvitationResponse400
   | acceptWorkspaceInvitationResponse401
   | acceptWorkspaceInvitationResponse403
   | acceptWorkspaceInvitationResponse404
@@ -253,7 +247,7 @@ export const acceptWorkspaceInvitation = async (
 };
 
 export const getAcceptWorkspaceInvitationMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -295,14 +289,14 @@ export type AcceptWorkspaceInvitationMutationResult = NonNullable<
 >;
 
 export type AcceptWorkspaceInvitationMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 /**
  * @summary 초대 수락
  */
 export const useAcceptWorkspaceInvitation = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(
   options?: {
@@ -331,11 +325,6 @@ export type declineWorkspaceInvitationResponse200 = {
   status: 200;
 };
 
-export type declineWorkspaceInvitationResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type declineWorkspaceInvitationResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -361,7 +350,6 @@ export type declineWorkspaceInvitationResponseSuccess =
     headers: Headers;
   };
 export type declineWorkspaceInvitationResponseError = (
-  | declineWorkspaceInvitationResponse400
   | declineWorkspaceInvitationResponse401
   | declineWorkspaceInvitationResponse403
   | declineWorkspaceInvitationResponse404
@@ -396,7 +384,7 @@ export const declineWorkspaceInvitation = async (
 };
 
 export const getDeclineWorkspaceInvitationMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -438,14 +426,14 @@ export type DeclineWorkspaceInvitationMutationResult = NonNullable<
 >;
 
 export type DeclineWorkspaceInvitationMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 /**
  * @summary 초대 거절
  */
 export const useDeclineWorkspaceInvitation = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(
   options?: {
@@ -474,11 +462,6 @@ export type getWorkspaceInvitationsResponse200 = {
   status: 200;
 };
 
-export type getWorkspaceInvitationsResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getWorkspaceInvitationsResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -499,7 +482,6 @@ export type getWorkspaceInvitationsResponseSuccess =
     headers: Headers;
   };
 export type getWorkspaceInvitationsResponseError = (
-  | getWorkspaceInvitationsResponse400
   | getWorkspaceInvitationsResponse401
   | getWorkspaceInvitationsResponse403
   | getWorkspaceInvitationsResponse404
@@ -538,7 +520,7 @@ export const getGetWorkspaceInvitationsQueryKey = (workspaceId: string) => {
 
 export const getGetWorkspaceInvitationsQueryOptions = <
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -578,12 +560,12 @@ export type GetWorkspaceInvitationsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getWorkspaceInvitations>>
 >;
 export type GetWorkspaceInvitationsQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetWorkspaceInvitations<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options: {
@@ -610,7 +592,7 @@ export function useGetWorkspaceInvitations<
 };
 export function useGetWorkspaceInvitations<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -637,7 +619,7 @@ export function useGetWorkspaceInvitations<
 };
 export function useGetWorkspaceInvitations<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -660,7 +642,7 @@ export function useGetWorkspaceInvitations<
 
 export function useGetWorkspaceInvitations<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -695,7 +677,7 @@ export function useGetWorkspaceInvitations<
  */
 export const prefetchGetWorkspaceInvitationsQuery = async <
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   workspaceId: string,
@@ -722,7 +704,7 @@ export const prefetchGetWorkspaceInvitationsQuery = async <
 
 export const getGetWorkspaceInvitationsSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -757,12 +739,12 @@ export type GetWorkspaceInvitationsSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getWorkspaceInvitations>>
 >;
 export type GetWorkspaceInvitationsSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetWorkspaceInvitationsSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options: {
@@ -781,7 +763,7 @@ export function useGetWorkspaceInvitationsSuspense<
 };
 export function useGetWorkspaceInvitationsSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -800,7 +782,7 @@ export function useGetWorkspaceInvitationsSuspense<
 };
 export function useGetWorkspaceInvitationsSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -823,7 +805,7 @@ export function useGetWorkspaceInvitationsSuspense<
 
 export function useGetWorkspaceInvitationsSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceInvitations>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -1008,11 +990,6 @@ export type cancelWorkspaceInvitationResponse200 = {
   status: 200;
 };
 
-export type cancelWorkspaceInvitationResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type cancelWorkspaceInvitationResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -1038,7 +1015,6 @@ export type cancelWorkspaceInvitationResponseSuccess =
     headers: Headers;
   };
 export type cancelWorkspaceInvitationResponseError = (
-  | cancelWorkspaceInvitationResponse400
   | cancelWorkspaceInvitationResponse401
   | cancelWorkspaceInvitationResponse403
   | cancelWorkspaceInvitationResponse404
@@ -1077,7 +1053,7 @@ export const cancelWorkspaceInvitation = async (
 };
 
 export const getCancelWorkspaceInvitationMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1119,14 +1095,14 @@ export type CancelWorkspaceInvitationMutationResult = NonNullable<
 >;
 
 export type CancelWorkspaceInvitationMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 /**
  * @summary 초대 취소
  */
 export const useCancelWorkspaceInvitation = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(
   options?: {

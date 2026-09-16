@@ -43,8 +43,6 @@ export type ProposalRevision =
       aiSemanticRevisionCount: number;
       /**
        * RESOLVE result면 닫힌 Question proposal ID, 아니면 null
-       * @minLength 13
-       * @maxLength 13
        * @nullable
        * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
        */
@@ -80,8 +78,6 @@ export type ProposalRevision =
       aiSemanticRevisionCount: number;
       /**
        * RESOLVE result면 닫힌 Question proposal ID, 아니면 null
-       * @minLength 13
-       * @maxLength 13
        * @nullable
        * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
        */
@@ -118,8 +114,6 @@ export type ProposalRevision =
       aiSemanticRevisionCount: number;
       /**
        * RESOLVE result면 닫힌 Question proposal ID, 아니면 null
-       * @minLength 13
-       * @maxLength 13
        * @nullable
        * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
        */

@@ -45,11 +45,6 @@ export type getProjectsResponse200 = {
   status: 200;
 };
 
-export type getProjectsResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getProjectsResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -64,7 +59,6 @@ export type getProjectsResponseSuccess = getProjectsResponse200 & {
   headers: Headers;
 };
 export type getProjectsResponseError = (
-  | getProjectsResponse400
   | getProjectsResponse401
   | getProjectsResponse404
 ) & {
@@ -99,7 +93,7 @@ export const getGetProjectsQueryKey = (workspaceId: string) => {
 
 export const getGetProjectsQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -133,11 +127,11 @@ export const getGetProjectsQueryOptions = <
 export type GetProjectsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProjects>>
 >;
-export type GetProjectsQueryError = AppErrorResponse | UnauthorizedResponse;
+export type GetProjectsQueryError = UnauthorizedResponse | AppErrorResponse;
 
 export function useGetProjects<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options: {
@@ -160,7 +154,7 @@ export function useGetProjects<
 };
 export function useGetProjects<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -183,7 +177,7 @@ export function useGetProjects<
 };
 export function useGetProjects<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -202,7 +196,7 @@ export function useGetProjects<
 
 export function useGetProjects<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -230,7 +224,7 @@ export function useGetProjects<
  */
 export const prefetchGetProjectsQuery = async <
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   workspaceId: string,
@@ -250,7 +244,7 @@ export const prefetchGetProjectsQuery = async <
 
 export const getGetProjectsSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -284,12 +278,12 @@ export type GetProjectsSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProjects>>
 >;
 export type GetProjectsSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetProjectsSuspense<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options: {
@@ -308,7 +302,7 @@ export function useGetProjectsSuspense<
 };
 export function useGetProjectsSuspense<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -327,7 +321,7 @@ export function useGetProjectsSuspense<
 };
 export function useGetProjectsSuspense<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -350,7 +344,7 @@ export function useGetProjectsSuspense<
 
 export function useGetProjectsSuspense<
   TData = Awaited<ReturnType<typeof getProjects>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -511,11 +505,6 @@ export type getProjectResponse200 = {
   status: 200;
 };
 
-export type getProjectResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getProjectResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -530,7 +519,6 @@ export type getProjectResponseSuccess = getProjectResponse200 & {
   headers: Headers;
 };
 export type getProjectResponseError = (
-  | getProjectResponse400
   | getProjectResponse401
   | getProjectResponse404
 ) & {
@@ -572,7 +560,7 @@ export const getGetProjectQueryKey = (
 
 export const getGetProjectQueryOptions = <
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -611,11 +599,11 @@ export const getGetProjectQueryOptions = <
 export type GetProjectQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProject>>
 >;
-export type GetProjectQueryError = AppErrorResponse | UnauthorizedResponse;
+export type GetProjectQueryError = UnauthorizedResponse | AppErrorResponse;
 
 export function useGetProject<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -639,7 +627,7 @@ export function useGetProject<
 };
 export function useGetProject<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -663,7 +651,7 @@ export function useGetProject<
 };
 export function useGetProject<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -683,7 +671,7 @@ export function useGetProject<
 
 export function useGetProject<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -716,7 +704,7 @@ export function useGetProject<
  */
 export const prefetchGetProjectQuery = async <
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   workspaceId: string,
@@ -741,7 +729,7 @@ export const prefetchGetProjectQuery = async <
 
 export const getGetProjectSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -776,12 +764,12 @@ export type GetProjectSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProject>>
 >;
 export type GetProjectSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetProjectSuspense<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -801,7 +789,7 @@ export function useGetProjectSuspense<
 };
 export function useGetProjectSuspense<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -821,7 +809,7 @@ export function useGetProjectSuspense<
 };
 export function useGetProjectSuspense<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -845,7 +833,7 @@ export function useGetProjectSuspense<
 
 export function useGetProjectSuspense<
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   projectId: string,
@@ -1015,11 +1003,6 @@ export type deleteProjectResponse204 = {
   status: 204;
 };
 
-export type deleteProjectResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type deleteProjectResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -1044,7 +1027,6 @@ export type deleteProjectResponseSuccess = deleteProjectResponse204 & {
   headers: Headers;
 };
 export type deleteProjectResponseError = (
-  | deleteProjectResponse400
   | deleteProjectResponse401
   | deleteProjectResponse403
   | deleteProjectResponse404
@@ -1080,7 +1062,7 @@ export const deleteProject = async (
 };
 
 export const getDeleteProjectMutationOptions = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1122,14 +1104,14 @@ export type DeleteProjectMutationResult = NonNullable<
 >;
 
 export type DeleteProjectMutationError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 /**
  * @summary 프로젝트 삭제
  */
 export const useDeleteProject = <
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
   TContext = unknown,
 >(
   options?: {

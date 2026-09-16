@@ -19,8 +19,6 @@ export type TranscriptResponseDataDiarizationSpeakersItem = {
   assignedName: string | null;
   /**
    * 가장 긴 발화. 목소리를 기억 못 해도 말투로 짚을 수 있다
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   representativeSegmentId: string;
@@ -35,8 +33,6 @@ export type TranscriptResponseDataDiarizationSpeakersItem = {
   segmentCount: number;
   /**
    * 연결된 참여 기록. 계정 여부와 상관없이 붙은 사람을 가리킨다. null + confirmed 는 「참석자 중에 없다」
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */

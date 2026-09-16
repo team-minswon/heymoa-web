@@ -15,15 +15,11 @@ export type MeetingReviewSummaryResponseDataTopicsItemSentencesItemRelationsItem
     kind: string;
     /**
      * 관계 출발 항목
-     * @minLength 13
-     * @maxLength 13
      * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
      */
     sourceItemId: string;
     /**
      * 관계 도착 항목
-     * @minLength 13
-     * @maxLength 13
      * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
      */
     targetItemId: string;

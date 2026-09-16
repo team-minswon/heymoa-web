@@ -15,8 +15,6 @@ export type UpdateMeetingReviewItemRequestDecisionsItem = {
   decision: UpdateMeetingReviewItemRequestDecisionsItemDecision;
   /**
    * 대체 제안은 대상 노드 ID, 기존 할 일 변경 제안은 대상 할 일 ID. 같은 대상을 두 번 줄 수 없습니다
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   targetId: string;

@@ -20,8 +20,6 @@ export type NoteListResponseDataNotesItemMeetingStartedBy = {
   name: string;
   /**
    * 회의 시작자의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   userId: string;

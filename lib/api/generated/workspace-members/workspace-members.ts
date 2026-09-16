@@ -39,11 +39,6 @@ export type getWorkspaceMembersResponse200 = {
   status: 200;
 };
 
-export type getWorkspaceMembersResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getWorkspaceMembersResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -59,7 +54,6 @@ export type getWorkspaceMembersResponseSuccess =
     headers: Headers;
   };
 export type getWorkspaceMembersResponseError = (
-  | getWorkspaceMembersResponse400
   | getWorkspaceMembersResponse401
   | getWorkspaceMembersResponse404
 ) & {
@@ -97,7 +91,7 @@ export const getGetWorkspaceMembersQueryKey = (workspaceId: string) => {
 
 export const getGetWorkspaceMembersQueryOptions = <
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -137,12 +131,12 @@ export type GetWorkspaceMembersQueryResult = NonNullable<
   Awaited<ReturnType<typeof getWorkspaceMembers>>
 >;
 export type GetWorkspaceMembersQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetWorkspaceMembers<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options: {
@@ -169,7 +163,7 @@ export function useGetWorkspaceMembers<
 };
 export function useGetWorkspaceMembers<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -196,7 +190,7 @@ export function useGetWorkspaceMembers<
 };
 export function useGetWorkspaceMembers<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -219,7 +213,7 @@ export function useGetWorkspaceMembers<
 
 export function useGetWorkspaceMembers<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -251,7 +245,7 @@ export function useGetWorkspaceMembers<
  */
 export const prefetchGetWorkspaceMembersQuery = async <
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   workspaceId: string,
@@ -275,7 +269,7 @@ export const prefetchGetWorkspaceMembersQuery = async <
 
 export const getGetWorkspaceMembersSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -310,12 +304,12 @@ export type GetWorkspaceMembersSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getWorkspaceMembers>>
 >;
 export type GetWorkspaceMembersSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetWorkspaceMembersSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options: {
@@ -334,7 +328,7 @@ export function useGetWorkspaceMembersSuspense<
 };
 export function useGetWorkspaceMembersSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -353,7 +347,7 @@ export function useGetWorkspaceMembersSuspense<
 };
 export function useGetWorkspaceMembersSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {
@@ -376,7 +370,7 @@ export function useGetWorkspaceMembersSuspense<
 
 export function useGetWorkspaceMembersSuspense<
   TData = Awaited<ReturnType<typeof getWorkspaceMembers>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
   options?: {

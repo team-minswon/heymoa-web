@@ -18,8 +18,6 @@ export type MeetingReviewResponseDataItemsItemReplacementsItemTarget = {
   noteTitle: string;
   /**
    * 지식 노드 ID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   itemId: string;
@@ -32,8 +30,6 @@ export type MeetingReviewResponseDataItemsItemReplacementsItemTarget = {
   kind: MeetingReviewResponseDataItemsItemReplacementsItemTargetKind;
   /**
    * 그 노드를 확정한 회의
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;

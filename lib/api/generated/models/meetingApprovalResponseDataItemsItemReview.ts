@@ -12,8 +12,6 @@
 export type MeetingApprovalResponseDataItemsItemReview = {
   /**
    * 검토 항목
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   itemId: string;

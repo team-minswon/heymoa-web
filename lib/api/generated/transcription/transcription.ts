@@ -45,11 +45,6 @@ export type getTranscriptionSessionResponse200 = {
   status: 200;
 };
 
-export type getTranscriptionSessionResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getTranscriptionSessionResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -65,7 +60,6 @@ export type getTranscriptionSessionResponseSuccess =
     headers: Headers;
   };
 export type getTranscriptionSessionResponseError = (
-  | getTranscriptionSessionResponse400
   | getTranscriptionSessionResponse401
   | getTranscriptionSessionResponse404
 ) & {
@@ -103,7 +97,7 @@ export const getGetTranscriptionSessionQueryKey = (sessionId: string) => {
 
 export const getGetTranscriptionSessionQueryOptions = <
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -143,12 +137,12 @@ export type GetTranscriptionSessionQueryResult = NonNullable<
   Awaited<ReturnType<typeof getTranscriptionSession>>
 >;
 export type GetTranscriptionSessionQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetTranscriptionSession<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options: {
@@ -175,7 +169,7 @@ export function useGetTranscriptionSession<
 };
 export function useGetTranscriptionSession<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -202,7 +196,7 @@ export function useGetTranscriptionSession<
 };
 export function useGetTranscriptionSession<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -225,7 +219,7 @@ export function useGetTranscriptionSession<
 
 export function useGetTranscriptionSession<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -260,7 +254,7 @@ export function useGetTranscriptionSession<
  */
 export const prefetchGetTranscriptionSessionQuery = async <
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   sessionId: string,
@@ -287,7 +281,7 @@ export const prefetchGetTranscriptionSessionQuery = async <
 
 export const getGetTranscriptionSessionSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -322,12 +316,12 @@ export type GetTranscriptionSessionSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getTranscriptionSession>>
 >;
 export type GetTranscriptionSessionSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options: {
@@ -346,7 +340,7 @@ export function useGetTranscriptionSessionSuspense<
 };
 export function useGetTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -365,7 +359,7 @@ export function useGetTranscriptionSessionSuspense<
 };
 export function useGetTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -388,7 +382,7 @@ export function useGetTranscriptionSessionSuspense<
 
 export function useGetTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   sessionId: string,
   options?: {
@@ -425,11 +419,6 @@ export type getNoteTranscriptResponse200 = {
   status: 200;
 };
 
-export type getNoteTranscriptResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getNoteTranscriptResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -444,7 +433,6 @@ export type getNoteTranscriptResponseSuccess = getNoteTranscriptResponse200 & {
   headers: Headers;
 };
 export type getNoteTranscriptResponseError = (
-  | getNoteTranscriptResponse400
   | getNoteTranscriptResponse401
   | getNoteTranscriptResponse404
 ) & {
@@ -479,7 +467,7 @@ export const getGetNoteTranscriptQueryKey = (noteId: string) => {
 
 export const getGetNoteTranscriptQueryOptions = <
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -518,12 +506,12 @@ export type GetNoteTranscriptQueryResult = NonNullable<
   Awaited<ReturnType<typeof getNoteTranscript>>
 >;
 export type GetNoteTranscriptQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetNoteTranscript<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options: {
@@ -550,7 +538,7 @@ export function useGetNoteTranscript<
 };
 export function useGetNoteTranscript<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -577,7 +565,7 @@ export function useGetNoteTranscript<
 };
 export function useGetNoteTranscript<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -600,7 +588,7 @@ export function useGetNoteTranscript<
 
 export function useGetNoteTranscript<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -632,7 +620,7 @@ export function useGetNoteTranscript<
  */
 export const prefetchGetNoteTranscriptQuery = async <
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   noteId: string,
@@ -656,7 +644,7 @@ export const prefetchGetNoteTranscriptQuery = async <
 
 export const getGetNoteTranscriptSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -690,12 +678,12 @@ export type GetNoteTranscriptSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getNoteTranscript>>
 >;
 export type GetNoteTranscriptSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetNoteTranscriptSuspense<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options: {
@@ -714,7 +702,7 @@ export function useGetNoteTranscriptSuspense<
 };
 export function useGetNoteTranscriptSuspense<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -733,7 +721,7 @@ export function useGetNoteTranscriptSuspense<
 };
 export function useGetNoteTranscriptSuspense<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -756,7 +744,7 @@ export function useGetNoteTranscriptSuspense<
 
 export function useGetNoteTranscriptSuspense<
   TData = Awaited<ReturnType<typeof getNoteTranscript>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1067,11 +1055,6 @@ export type getCurrentTranscriptionSessionResponse200 = {
   status: 200;
 };
 
-export type getCurrentTranscriptionSessionResponse400 = {
-  data: AppErrorResponse;
-  status: 400;
-};
-
 export type getCurrentTranscriptionSessionResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
@@ -1087,7 +1070,6 @@ export type getCurrentTranscriptionSessionResponseSuccess =
     headers: Headers;
   };
 export type getCurrentTranscriptionSessionResponseError = (
-  | getCurrentTranscriptionSessionResponse400
   | getCurrentTranscriptionSessionResponse401
   | getCurrentTranscriptionSessionResponse404
 ) & {
@@ -1125,7 +1107,7 @@ export const getGetCurrentTranscriptionSessionQueryKey = (noteId: string) => {
 
 export const getGetCurrentTranscriptionSessionQueryOptions = <
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1165,12 +1147,12 @@ export type GetCurrentTranscriptionSessionQueryResult = NonNullable<
   Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
 >;
 export type GetCurrentTranscriptionSessionQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetCurrentTranscriptionSession<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options: {
@@ -1197,7 +1179,7 @@ export function useGetCurrentTranscriptionSession<
 };
 export function useGetCurrentTranscriptionSession<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1224,7 +1206,7 @@ export function useGetCurrentTranscriptionSession<
 };
 export function useGetCurrentTranscriptionSession<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1247,7 +1229,7 @@ export function useGetCurrentTranscriptionSession<
 
 export function useGetCurrentTranscriptionSession<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1282,7 +1264,7 @@ export function useGetCurrentTranscriptionSession<
  */
 export const prefetchGetCurrentTranscriptionSessionQuery = async <
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   queryClient: QueryClient,
   noteId: string,
@@ -1309,7 +1291,7 @@ export const prefetchGetCurrentTranscriptionSessionQuery = async <
 
 export const getGetCurrentTranscriptionSessionSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1344,12 +1326,12 @@ export type GetCurrentTranscriptionSessionSuspenseQueryResult = NonNullable<
   Awaited<ReturnType<typeof getCurrentTranscriptionSession>>
 >;
 export type GetCurrentTranscriptionSessionSuspenseQueryError =
-  | AppErrorResponse
-  | UnauthorizedResponse;
+  | UnauthorizedResponse
+  | AppErrorResponse;
 
 export function useGetCurrentTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options: {
@@ -1368,7 +1350,7 @@ export function useGetCurrentTranscriptionSessionSuspense<
 };
 export function useGetCurrentTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1387,7 +1369,7 @@ export function useGetCurrentTranscriptionSessionSuspense<
 };
 export function useGetCurrentTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {
@@ -1410,7 +1392,7 @@ export function useGetCurrentTranscriptionSessionSuspense<
 
 export function useGetCurrentTranscriptionSessionSuspense<
   TData = Awaited<ReturnType<typeof getCurrentTranscriptionSession>>,
-  TError = AppErrorResponse | UnauthorizedResponse,
+  TError = UnauthorizedResponse | AppErrorResponse,
 >(
   noteId: string,
   options?: {

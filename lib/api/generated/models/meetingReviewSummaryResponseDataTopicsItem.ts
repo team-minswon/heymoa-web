@@ -19,8 +19,6 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
   alsoItemIds: string[];
   /**
    * 뿌리 안건 항목. 어느 안건에도 닿지 않는 묶음이면 null
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
@@ -42,8 +40,6 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
   relations: MeetingReviewSummaryResponseDataTopicsItemRelationsItem[];
   /**
    * 그래프에서 가운데 둘 항목. 관계 없는 묶음이면 null
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */

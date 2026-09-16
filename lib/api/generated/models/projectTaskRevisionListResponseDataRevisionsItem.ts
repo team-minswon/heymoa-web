@@ -16,8 +16,6 @@ export type ProjectTaskRevisionListResponseDataRevisionsItem = {
   due: string | null;
   /**
    * 이 판을 만든 사람의 사용자 ID. 회의 확정이 만든 판이면 null
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
@@ -26,8 +24,6 @@ export type ProjectTaskRevisionListResponseDataRevisionsItem = {
   changedAt: string;
   /**
    * 이 판을 만든 회의 확정 기록. 사람이 바꾼 판이면 null
-   * @minLength 13
-   * @maxLength 13
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */

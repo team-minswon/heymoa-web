@@ -15,8 +15,6 @@ export type NotificationListResponseDataNotificationsItemInvitation = {
   workspaceName: string;
   /**
    * 알림이 가리키는 초대 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   invitationId: string;
@@ -26,8 +24,6 @@ export type NotificationListResponseDataNotificationsItemInvitation = {
   expiresAt: string;
   /**
    * 초대된 워크스페이스 식별자
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;

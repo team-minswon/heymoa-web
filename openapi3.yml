@@ -379,8 +379,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "404":
@@ -413,21 +411,6 @@ paths:
                     error:
                       code: "NOTE_NOT_FOUND"
                       message: "노트를 찾을 수 없습니다."
-                      details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
                       details: null
         "200":
           description: "요청 성공"
@@ -488,8 +471,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "409":
@@ -548,21 +529,6 @@ paths:
                       code: "PROJECT_NOT_FOUND"
                       message: "프로젝트를 찾을 수 없습니다."
                       details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -583,8 +549,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
@@ -715,25 +679,8 @@ paths:
           description: "전사 세션의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AG"
       responses:
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -856,8 +803,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "200":
@@ -876,21 +821,6 @@ paths:
                       description: "제품을 만드는 팀의 워크스페이스"
                       role: "ADMIN"
                     error: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -926,8 +856,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       requestBody:
         content:
@@ -1035,8 +963,6 @@ paths:
           description: "채팅 세션의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q2A"
       responses:
         "200":
@@ -1135,8 +1061,6 @@ paths:
           description: "채팅 세션의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q2A"
       requestBody:
         content:
@@ -1155,8 +1079,28 @@ paths:
               sendAgentChatMessage_BadRequest:
                 value:
                   message: "안녕"
-                  projectIds:
-                  - "짧다"
+                  noteIds:
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
+                  - "0HZX2K7M9Q4AF"
               sendAgentChatMessage_ScopeOutOfWorkspaceException:
                 value:
                   message: "안녕"
@@ -1319,8 +1263,6 @@ paths:
           description: "수락할 초대 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AK"
       responses:
         "403":
@@ -1384,21 +1326,6 @@ paths:
                       code: "INVITATION_NOT_FOUND"
                       message: "초대를 찾을 수 없습니다."
                       details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -1420,8 +1347,6 @@ paths:
           description: "거절할 초대 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AK"
       responses:
         "403":
@@ -1438,21 +1363,6 @@ paths:
                     error:
                       code: "INVITATION_ACCESS_DENIED"
                       message: "초대를 처리할 권한이 없습니다."
-                      details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
                       details: null
         "409":
           description: "요청 상태 충돌"
@@ -1522,8 +1432,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "200":
@@ -1564,8 +1472,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
@@ -1651,8 +1557,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "409":
@@ -1740,8 +1644,6 @@ paths:
           description: "확정할 회의"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
@@ -1861,8 +1763,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "409":
@@ -1966,8 +1866,6 @@ paths:
           description: "회의 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "404":
@@ -2072,8 +1970,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
@@ -2394,8 +2290,6 @@ paths:
           description: "노트 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "401":
@@ -2476,8 +2370,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "200":
@@ -2522,21 +2414,6 @@ paths:
                         startedAt: "2026-08-18T10:10:12Z"
                         endedAt: "2026-08-18T10:19:41Z"
                     error: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -2590,8 +2467,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "403":
@@ -2703,8 +2578,6 @@ paths:
           description: "읽음 처리할 알림 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AJ"
       responses:
         "200":
@@ -2735,21 +2608,6 @@ paths:
                       code: "NOTIFICATION_NOT_FOUND"
                       message: "알림을 찾을 수 없습니다."
                       details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -2772,8 +2630,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       responses:
         "404":
@@ -2840,21 +2696,6 @@ paths:
                           email: null
                           image: null
                     error: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -2875,8 +2716,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       requestBody:
         content:
@@ -2993,8 +2832,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "404":
@@ -3057,8 +2894,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       requestBody:
         content:
@@ -3127,8 +2962,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "404":
@@ -3184,8 +3017,6 @@ paths:
           description: "워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "404":
@@ -3245,8 +3076,6 @@ paths:
           description: "조회할 워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "403":
@@ -3300,21 +3129,6 @@ paths:
                         createdAt: "2026-07-14T01:02:03Z"
                         expiresAt: "2026-07-15T01:02:03Z"
                     error: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -3336,8 +3150,6 @@ paths:
           description: "초대할 워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       requestBody:
         content:
@@ -3475,8 +3287,6 @@ paths:
           description: "조회할 워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "404":
@@ -3493,21 +3303,6 @@ paths:
                     error:
                       code: "WORKSPACE_NOT_FOUND"
                       message: "워크스페이스를 찾을 수 없습니다."
-                      details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
                       details: null
         "200":
           description: "요청 성공"
@@ -3549,8 +3344,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "200":
@@ -3572,21 +3365,6 @@ paths:
                         createdAt: "2026-07-14T01:02:03Z"
                         updatedAt: "2026-07-14T01:02:03Z"
                     error: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -3622,8 +3400,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       requestBody:
         content:
@@ -3714,8 +3490,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       - name: "agendaId"
         in: "path"
@@ -3726,8 +3500,6 @@ paths:
           description: "사전 안건의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q21"
       requestBody:
         content:
@@ -3794,8 +3566,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       - name: "agendaId"
         in: "path"
@@ -3806,8 +3576,6 @@ paths:
           description: "사전 안건의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q21"
       responses:
         "204":
@@ -3833,8 +3601,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "200":
@@ -3872,8 +3638,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "404":
@@ -3951,8 +3715,6 @@ paths:
           description: "회의 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
@@ -4111,8 +3873,6 @@ paths:
           description: "회의 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "404":
@@ -4236,8 +3996,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
@@ -4316,8 +4074,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       requestBody:
         content:
@@ -4428,8 +4184,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       - name: "label"
         in: "path"
@@ -4548,8 +4302,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       responses:
         "404":
@@ -4582,21 +4334,6 @@ paths:
                     error:
                       code: "PROJECT_NOT_FOUND"
                       message: "프로젝트를 찾을 수 없습니다."
-                      details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
                       details: null
         "200":
           description: "요청 성공"
@@ -4637,8 +4374,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "guestId"
         in: "path"
@@ -4649,8 +4384,6 @@ paths:
           description: "임시 참여자의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AR"
       responses:
         "403":
@@ -4717,8 +4450,6 @@ paths:
           description: "워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "provider"
         in: "path"
@@ -4801,8 +4532,6 @@ paths:
           description: "초대가 속한 워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "invitationId"
         in: "path"
@@ -4813,8 +4542,6 @@ paths:
           description: "취소할 초대 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AK"
       responses:
         "404":
@@ -4871,21 +4598,6 @@ paths:
                       role: "MEMBER"
                       status: "CANCELED"
                     error: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "409":
           description: "요청 상태 충돌"
           content:
@@ -4922,8 +4634,6 @@ paths:
           description: "나갈 워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       responses:
         "404":
@@ -4979,8 +4689,6 @@ paths:
           description: "워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "userId"
         in: "path"
@@ -4991,8 +4699,6 @@ paths:
           description: "내보낼 멤버의 사용자 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AM"
       responses:
         "404":
@@ -5071,8 +4777,6 @@ paths:
           description: "워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "userId"
         in: "path"
@@ -5083,8 +4787,6 @@ paths:
           description: "역할을 바꿀 멤버의 사용자 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AM"
       requestBody:
         content:
@@ -5202,8 +4904,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "projectId"
         in: "path"
@@ -5214,25 +4914,8 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       responses:
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -5294,8 +4977,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "projectId"
         in: "path"
@@ -5306,8 +4987,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       requestBody:
         content:
@@ -5408,8 +5087,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "projectId"
         in: "path"
@@ -5420,8 +5097,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       responses:
         "204":
@@ -5464,21 +5139,6 @@ paths:
                       code: "PROJECT_NOT_FOUND"
                       message: "프로젝트를 찾을 수 없습니다."
                       details: null
-        "400":
-          description: "잘못된 요청"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AppErrorResponse"
-              examples:
-                BAD_REQUEST:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: "BAD_REQUEST"
-                      message: "잘못된 요청입니다."
-                      details: null
         "403":
           description: "권한 없음"
           content:
@@ -5519,8 +5179,6 @@ paths:
           description: "채팅 세션의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q2A"
       - name: "approvalId"
         in: "path"
@@ -5531,8 +5189,6 @@ paths:
           description: "승인 요청의 13자 TSID (heymoa-ai 발급)"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q7F"
       requestBody:
         content:
@@ -5635,8 +5291,6 @@ paths:
           description: "채팅 세션의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q2A"
       - name: "turnId"
         in: "path"
@@ -5647,8 +5301,6 @@ paths:
           description: "중지할 턴의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q3B"
       responses:
         "204":
@@ -5703,8 +5355,6 @@ paths:
           description: "채팅 세션의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q2A"
       - name: "turnId"
         in: "path"
@@ -5715,8 +5365,6 @@ paths:
           description: "턴의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q3B"
       - name: "after"
         in: "query"
@@ -5824,8 +5472,6 @@ paths:
           description: "회의 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       - name: "itemId"
         in: "path"
@@ -5836,8 +5482,6 @@ paths:
           description: "검토 항목 ID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AN"
       requestBody:
         content:
@@ -5992,8 +5636,6 @@ paths:
           description: "노트 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       - name: "proposalId"
         in: "path"
@@ -6004,8 +5646,6 @@ paths:
           description: "명제 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AP"
       responses:
         "401":
@@ -6079,8 +5719,6 @@ paths:
           description: "노트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AF"
       - name: "segmentId"
         in: "path"
@@ -6091,8 +5729,6 @@ paths:
           description: "발화의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AH"
       requestBody:
         content:
@@ -6215,8 +5851,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "guestId"
         in: "path"
@@ -6227,8 +5861,6 @@ paths:
           description: "임시 참여자의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AR"
       requestBody:
         content:
@@ -6344,8 +5976,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "guestId"
         in: "path"
@@ -6356,8 +5986,6 @@ paths:
           description: "임시 참여자의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AR"
       requestBody:
         content:
@@ -6453,8 +6081,6 @@ paths:
           description: "워크스페이스 식별자"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "provider"
         in: "path"
@@ -6546,8 +6172,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "projectId"
         in: "path"
@@ -6558,8 +6182,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       responses:
         "200":
@@ -6604,8 +6226,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "projectId"
         in: "path"
@@ -6616,8 +6236,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       requestBody:
         content:
@@ -6696,8 +6314,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "projectId"
         in: "path"
@@ -6708,8 +6324,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       - name: "taskId"
         in: "path"
@@ -6720,8 +6334,6 @@ paths:
           description: "할 일의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q21"
       requestBody:
         content:
@@ -6853,8 +6465,6 @@ paths:
           description: "워크스페이스의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AD"
       - name: "projectId"
         in: "path"
@@ -6865,8 +6475,6 @@ paths:
           description: "프로젝트의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0HZX2K7M9Q4AE"
       - name: "taskId"
         in: "path"
@@ -6877,8 +6485,6 @@ paths:
           description: "할 일의 13자리 TSID"
           nullable: false
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         example: "0K9GVJT2C4Q21"
       responses:
         "200":
@@ -6946,8 +6552,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             status:
               type: "string"
               description: "흐름 상태. 분석 실패·요청 전이면 회의 시작자가 다시 요청할 수 있다"
@@ -7009,8 +6613,6 @@ components:
                         nullable: false
                         example: "0K9GVJT2C4Q3B"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       status:
                         type: "string"
                         description: "**둘뿐이다** — IN_PROGRESS 와 WAITING_APPROVAL. 확\
@@ -7029,8 +6631,6 @@ components:
                     nullable: false
                     example: "0K9GVJT2C4Q2A"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   title:
                     type: "string"
                     description: "대화 제목. **절대 null 이 아니다** — 빈 값이면 「새 대화」다"
@@ -7097,8 +6697,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AD"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -7151,8 +6749,6 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AC"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   changedAt:
                     type: "string"
                     description: "이 판을 저장한 시각"
@@ -7165,8 +6761,6 @@ components:
                     nullable: true
                     example: "0K9GVJT2C4Q1Z"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   assignee:
                     type: "object"
                     properties:
@@ -7181,8 +6775,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AF"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       label:
                         type: "string"
                         description: "회의 라벨 담당의 화자 라벨"
@@ -7195,8 +6787,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AC"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       type:
                         type: "string"
                         description: "담당 종류"
@@ -7271,16 +6861,12 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AC"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             agendaId:
               type: "string"
               description: "사전 안건의 13자리 TSID"
               nullable: false
               example: "0K9GVJT2C4Q21"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             content:
               type: "string"
               description: "안건 내용"
@@ -7328,16 +6914,12 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             sessionId:
               type: "string"
               description: "전사 세션의 13자리 TSID"
               nullable: false
               example: "0HZX2K7M9Q4AG"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             status:
               type: "string"
               description: "현재 전사 세션 상태"
@@ -7394,8 +6976,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AF"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   title:
                     type: "string"
                     description: "회의 제목"
@@ -7485,8 +7065,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AP"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   image:
                     type: "string"
                     description: "참여자 프로필 이미지 URL (없거나 임시 참여자면 null)"
@@ -7503,16 +7081,12 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AR"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   userId:
                     type: "string"
                     description: "계정 참여자의 13자리 TSID (임시 참여자면 null)"
                     nullable: true
                     example: "0HZX2K7M9Q4AC"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   email:
                     type: "string"
                     description: "참여자 이메일 (임시 참여자면 null)"
@@ -7626,8 +7200,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AD"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
               nullable: false
           description: "성공 응답 데이터"
           nullable: false
@@ -7671,8 +7243,6 @@ components:
           nullable: true
           example: "0HZX2K7M9Q4AP"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         guestId:
           type: "string"
           description: "연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이\
@@ -7680,8 +7250,6 @@ components:
           nullable: true
           example: "0HZX2K7M9Q4AR"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         userId:
           type: "string"
           description: "연결할 계정의 userId. participantId 와 함께 보낼 수 없다. **이 회의의 참여자가 아\
@@ -7690,8 +7258,6 @@ components:
           nullable: true
           example: "0HZX2K7M9Q4AC"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
     AcceptInvitationByTokenRequest:
       title: "AcceptInvitationByTokenRequest"
       required:
@@ -7761,8 +7327,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AC"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   email:
                     type: "string"
                     description: "멤버 이메일"
@@ -7816,16 +7380,12 @@ components:
               nullable: false
               example: "0K9GVJT2C4Q1Z"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             noteId:
               type: "string"
               description: "노트의 13자리 TSID"
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             retry:
               type: "object"
               properties:
@@ -7845,8 +7405,6 @@ components:
                   nullable: false
                   example: "0K9GVJT2C4Q1Z"
                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
                 status:
                   type: "string"
                   description: "재요약 상태. 성공하면 그것이 요약 본문이 되므로 SUCCEEDED 는 여기 오지 않는다"
@@ -7898,8 +7456,6 @@ components:
                           nullable: false
                           example: "0HZX2K7M9Q4AN"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                         evidence:
                           type: "array"
                           description: "이 항목이 나온 전사 줄. 최대 3개, 근거를 못 찾았으면 빈 배열"
@@ -7916,8 +7472,6 @@ components:
                                 nullable: false
                                 example: "0HZX2K7M9Q4AH"
                                 pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                                minLength: 13
-                                maxLength: 13
                               text:
                                 type: "string"
                                 description: "그 세그먼트의 발화. `transcript_segments` join\
@@ -8031,8 +7585,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AK"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   expiresAt:
                     type: "string"
                     description: "초대 만료 시각. 지난 뒤에는 수락할 수 없다"
@@ -8124,8 +7676,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AK"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       inviterName:
                         type: "string"
                         description: "초대를 보낸 사용자 이름"
@@ -8143,8 +7693,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AD"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       status:
                         type: "string"
                         description: "초대의 현재 상태"
@@ -8162,8 +7710,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AJ"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   readAt:
                     type: "string"
                     description: "알림을 읽은 시각. 읽지 않았다면 null"
@@ -8220,8 +7766,6 @@ components:
                 nullable: false
                 example: "0HZX2K7M9Q4AH"
                 pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                minLength: 13
-                maxLength: 13
             required:
             - "segmentId"
             - "role"
@@ -8265,8 +7809,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AC"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             type:
               type: "string"
               description: "담당 종류"
@@ -8305,16 +7847,12 @@ components:
               nullable: false
               example: "0K9GVJT2C4Q1Z"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             noteId:
               type: "string"
               description: "노트의 13자리 TSID"
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -8339,8 +7877,6 @@ components:
           nullable: false
           example: "0HZX2K7M9Q4AM"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
     UpdateWorkspaceResponse:
       title: "UpdateWorkspaceResponse"
       required:
@@ -8372,8 +7908,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AD"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -8414,8 +7948,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             items:
               type: "array"
               description: "저장된 검토 항목. 제외 항목도 포함합니다"
@@ -8507,8 +8039,6 @@ components:
                                   nullable: false
                                   example: "0HZX2K7M9Q4AF"
                                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                                  minLength: 13
-                                  maxLength: 13
                                 label:
                                   type: "string"
                                   description: "회의 라벨 담당의 화자 라벨"
@@ -8521,8 +8051,6 @@ components:
                                   nullable: false
                                   example: "0HZX2K7M9Q4AC"
                                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                                  minLength: 13
-                                  maxLength: 13
                                 type:
                                   type: "string"
                                   description: "담당 종류"
@@ -8559,8 +8087,6 @@ components:
                               nullable: false
                               example: "0K9GVJT2C4Q21"
                               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                              minLength: 13
-                              maxLength: 13
                             revision:
                               type: "integer"
                               description: "할 일 판"
@@ -8574,8 +8100,6 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AC"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   content:
                     type: "string"
                     description: "검토한 내용"
@@ -8593,8 +8117,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AN"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   citations:
                     type: "array"
                     description: "이 항목에 저장된 전사 참조"
@@ -8620,8 +8142,6 @@ components:
                           nullable: false
                           example: "0HZX2K7M9Q4AH"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                   due:
                     type: "string"
                     description: "기한 날짜. 할 일·이슈·질문 항목만 가집니다. 없으면 null"
@@ -8686,8 +8206,6 @@ components:
                               nullable: false
                               example: "0K9GVJT2C4Q21"
                               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                              minLength: 13
-                              maxLength: 13
                             endedAt:
                               type: "string"
                               description: "이 노드가 끝났으면 그 시각. 확정 전에는 다른 확정이 끝낸 것이고\
@@ -8711,8 +8229,6 @@ components:
                               nullable: false
                               example: "0HZX2K7M9Q4AF"
                               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                              minLength: 13
-                              maxLength: 13
                             approvedAt:
                               type: "string"
                               description: "그 노드를 확정한 시각"
@@ -8744,8 +8260,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AF"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       label:
                         type: "string"
                         description: "회의 라벨 담당의 화자 라벨"
@@ -8758,8 +8272,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AC"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       type:
                         type: "string"
                         description: "담당 종류"
@@ -8782,8 +8294,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AG"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       revision:
                         type: "integer"
                         description: "원본 명제 판"
@@ -8804,8 +8314,6 @@ components:
               nullable: false
               example: "0K9GVJT2C4Q1Z"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -8841,8 +8349,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             label:
               type: "string"
               description: "회의 라벨 담당의 화자 라벨"
@@ -8855,8 +8361,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AC"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             type:
               type: "string"
               description: "담당 종류"
@@ -8892,39 +8396,6 @@ components:
           example: 1
           format: "int64"
           minimum: 1
-    MarkNotificationReadResponse:
-      title: "MarkNotificationReadResponse"
-      required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
-      properties:
-        data:
-          required:
-          - "notificationId"
-          type: "object"
-          properties:
-            notificationId:
-              type: "string"
-              description: "읽음 처리된 알림 식별자"
-              nullable: false
-              example: "0HZX2K7M9Q4AJ"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
-          description: "성공 응답 데이터"
-          nullable: false
-        success:
-          type: "boolean"
-          description: "요청 성공 여부"
-          nullable: false
-          example: true
-        error:
-          nullable: true
-          enum:
-          - null
-          description: "성공 시 null인 오류 정보"
     ProjectResponse:
       title: "ProjectResponse"
       required:
@@ -8967,8 +8438,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AE"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             updatedAt:
               type: "string"
               description: "프로젝트 수정 시각"
@@ -8981,8 +8450,37 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AD"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
+          description: "성공 응답 데이터"
+          nullable: false
+        success:
+          type: "boolean"
+          description: "요청 성공 여부"
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: "성공 시 null인 오류 정보"
+    MarkNotificationReadResponse:
+      title: "MarkNotificationReadResponse"
+      required:
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
+      properties:
+        data:
+          required:
+          - "notificationId"
+          type: "object"
+          properties:
+            notificationId:
+              type: "string"
+              description: "읽음 처리된 알림 식별자"
+              nullable: false
+              example: "0HZX2K7M9Q4AJ"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -9053,8 +8551,6 @@ components:
                   nullable: false
                   example: "0K9GVJT2C4Q3B"
                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
                 failureCode:
                   type: "string"
                   description: "FAILED 일 때만 채워진다"
@@ -9093,8 +8589,6 @@ components:
                       nullable: false
                       example: "0K9GVJT2C4Q7F"
                       pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                      minLength: 13
-                      maxLength: 13
                     tool:
                       type: "string"
                       description: "승인을 기다리는 도구 이름"
@@ -9139,8 +8633,6 @@ components:
                   nullable: false
                   example: "0K9GVJT2C4Q3B"
                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
                 failureCode:
                   type: "string"
                   description: "FAILED 일 때만 채워진다"
@@ -9179,8 +8671,6 @@ components:
                       nullable: false
                       example: "0K9GVJT2C4Q7F"
                       pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                      minLength: 13
-                      maxLength: 13
                     tool:
                       type: "string"
                       description: "승인을 기다리는 도구 이름"
@@ -9223,8 +8713,6 @@ components:
                     nullable: true
                     example: "0K9GVJT2C4Q3B"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   createdAt:
                     type: "string"
                     description: "메시지 시각"
@@ -9310,8 +8798,6 @@ components:
                           nullable: false
                           example: "0HZX2K7M9Q4AF"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                         title:
                           type: "string"
                           description: "대상 제목. **지금 못 보는 것이면 null이다** — `unavailable`\
@@ -9359,8 +8845,6 @@ components:
               nullable: false
               example: "0K9GVJT2C4Q3B"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -9423,16 +8907,12 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             sessionId:
               type: "string"
               description: "전사 세션의 13자리 TSID"
               nullable: false
               example: "0HZX2K7M9Q4AG"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             status:
               type: "string"
               description: "전사 세션 상태"
@@ -9581,8 +9061,6 @@ components:
                   nullable: false
                   example: "0HZX2K7M9Q4AF"
                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
                 label:
                   type: "string"
                   description: "회의 라벨 담당의 화자 라벨"
@@ -9595,8 +9073,6 @@ components:
                   nullable: false
                   example: "0HZX2K7M9Q4AC"
                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
                 type:
                   type: "string"
                   description: "담당 종류"
@@ -9629,8 +9105,6 @@ components:
               nullable: false
               example: "0K9GVJT2C4Q21"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             revision:
               type: "integer"
               description: "할 일 판"
@@ -9752,8 +9226,6 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AN"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   outline:
                     required:
                     - "actionItems"
@@ -9777,8 +9249,6 @@ components:
                               nullable: false
                               example: "0HZX2K7M9Q4AN"
                               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                              minLength: 13
-                              maxLength: 13
                             progressItemIds:
                               type: "array"
                               description: "이 할 일의 진행을 알린 현황"
@@ -9818,8 +9288,6 @@ components:
                               nullable: false
                               example: "0HZX2K7M9Q4AN"
                               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                              minLength: 13
-                              maxLength: 13
                       issues:
                         type: "array"
                         description: "이슈"
@@ -9836,8 +9304,6 @@ components:
                               nullable: false
                               example: "0HZX2K7M9Q4AN"
                               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                              minLength: 13
-                              maxLength: 13
                             resolvedByItemIds:
                               type: "array"
                               description: "이 이슈를 해결하는 결정"
@@ -9931,16 +9397,12 @@ components:
                                 nullable: false
                                 example: "0HZX2K7M9Q4AN"
                                 pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                                minLength: 13
-                                maxLength: 13
                               targetItemId:
                                 type: "string"
                                 description: "관계 도착 항목"
                                 nullable: false
                                 example: "0HZX2K7M9Q4AN"
                                 pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                                minLength: 13
-                                maxLength: 13
                   members:
                     type: "array"
                     description: "이 주제에 소속된 검토 항목"
@@ -9957,8 +9419,6 @@ components:
                           nullable: false
                           example: "0HZX2K7M9Q4AN"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                         kind:
                           type: "string"
                           description: "항목 종류"
@@ -10027,8 +9487,6 @@ components:
                           nullable: false
                           example: "0HZX2K7M9Q4AN"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                         label:
                           type: "string"
                           description: "관계 이름"
@@ -10040,16 +9498,12 @@ components:
                           nullable: false
                           example: "0HZX2K7M9Q4AN"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                   centerItemId:
                     type: "string"
                     description: "그래프에서 가운데 둘 항목. 관계 없는 묶음이면 null"
                     nullable: true
                     example: "0HZX2K7M9Q4AN"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   title:
                     type: "string"
                     description: "뿌리 안건이 있으면 그 안건 본문, 없으면 AI 가 쓴 한 줄"
@@ -10067,16 +9521,12 @@ components:
               nullable: true
               example: "0K9GVJT2C4Q1Z"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             noteId:
               type: "string"
               description: "회의 식별자"
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             headline:
               required:
               - "text"
@@ -10202,8 +9652,6 @@ components:
                   nullable: false
                   example: "0HZX2K7M9Q4AC"
                   pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                  minLength: 13
-                  maxLength: 13
                 email:
                   type: "string"
                   description: "회의 시작자 이메일"
@@ -10240,8 +9688,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             title:
               type: "string"
               description: "노트 제목"
@@ -10254,8 +9700,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AE"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             participants:
               type: "array"
               description: "회의 참여자 목록. 워크스페이스 멤버와 계정 없는 임시 참여자가 섞여 이름 오름차순이다. 없으면\
@@ -10276,8 +9720,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AP"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   image:
                     type: "string"
                     description: "참여자 프로필 이미지 URL (없거나 임시 참여자면 null)"
@@ -10294,16 +9736,12 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AR"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   userId:
                     type: "string"
                     description: "계정 참여자의 13자리 TSID (임시 참여자면 null)"
                     nullable: true
                     example: "0HZX2K7M9Q4AC"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   email:
                     type: "string"
                     description: "참여자 이메일 (임시 참여자면 null)"
@@ -10371,8 +9809,6 @@ components:
           nullable: true
           example: "0HZX2K7M9Q4AP"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         guestId:
           type: "string"
           description: "연결할 임시 참여자의 guestId. 계정 없는 사람은 userId 가 없어 이것으로 가리킨다. **이\
@@ -10380,8 +9816,6 @@ components:
           nullable: true
           example: "0HZX2K7M9Q4AR"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         userId:
           type: "string"
           description: "이 발화에 붙일 계정의 userId. 라벨 지정과 같은 규칙이다 - **이 회의의 참여자가 아니면 참여자\
@@ -10389,8 +9823,6 @@ components:
           nullable: true
           example: "0HZX2K7M9Q4AC"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
     SegmentSpeakerResponse:
       title: "SegmentSpeakerResponse"
       required:
@@ -10411,8 +9843,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AH"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             assignedParticipantId:
               type: "string"
               description: "이 발화에만 붙은 참여 기록. null 이면 개별 지정이 없다 - 그 발화는 화자 라벨의 지정을\
@@ -10420,8 +9850,6 @@ components:
               nullable: true
               example: "0HZX2K7M9Q4AP"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -10529,16 +9957,12 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AF"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             sessionId:
               type: "string"
               description: "전사 세션의 13자리 TSID"
               nullable: false
               example: "0HZX2K7M9Q4AG"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             status:
               type: "string"
               description: "전사 세션 상태"
@@ -10603,8 +10027,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AD"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -10733,8 +10155,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AR"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
               nullable: false
           description: "성공 응답 데이터"
           nullable: false
@@ -10814,16 +10234,12 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AC"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   agendaId:
                     type: "string"
                     description: "사전 안건의 13자리 TSID"
                     nullable: false
                     example: "0K9GVJT2C4Q21"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   content:
                     type: "string"
                     description: "안건 내용"
@@ -10864,8 +10280,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AC"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             type:
               type: "string"
               description: "담당 종류"
@@ -10930,8 +10344,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AH"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   label:
                     type: "string"
                     description: "정규화된 화자 라벨"
@@ -10956,8 +10368,6 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AP"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
               nullable: false
           description: "성공 응답 데이터"
           nullable: false
@@ -11001,8 +10411,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AK"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             status:
               type: "string"
               description: "처리 후 초대 상태"
@@ -11020,8 +10428,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AD"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -11048,16 +10454,12 @@ components:
           nullable: false
           example: "0K9GVJT2C4Q1Z"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         reviewId:
           type: "string"
           description: "확정할 검토본"
           nullable: false
           example: "0HZX2K7M9Q4AF"
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
         reviewRevision:
           type: "integer"
           description: "검토본의 현재 판"
@@ -11129,8 +10531,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AF"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       label:
                         type: "string"
                         description: "회의 라벨 담당의 화자 라벨"
@@ -11143,8 +10543,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AC"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       type:
                         type: "string"
                         description: "담당 종류"
@@ -11177,8 +10575,6 @@ components:
                     nullable: false
                     example: "0K9GVJT2C4Q21"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   revision:
                     type: "integer"
                     description: "할 일 판"
@@ -11289,8 +10685,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AC"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             email:
               type: "string"
               description: "사용자 이메일"
@@ -11337,8 +10731,6 @@ components:
               nullable: false
               example: "0K9GVJT2C4Q2A"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             title:
               type: "string"
               description: "대화 제목"
@@ -11350,8 +10742,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AD"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
           description: "성공 응답 데이터"
           nullable: false
         success:
@@ -11415,8 +10805,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AE"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       revision:
                         type: "integer"
                         description: "노드의 동결 판 또는 할 일 판"
@@ -11437,8 +10825,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AN"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       revision:
                         type: "integer"
                         description: "검토 항목 판"
@@ -11561,8 +10947,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AH"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       label:
                         type: "string"
                         description: "정규화된 화자 라벨"
@@ -11588,8 +10972,6 @@ components:
                         nullable: true
                         example: "0HZX2K7M9Q4AP"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                   nullable: false
                 status:
                   type: "string"
@@ -11673,8 +11055,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AH"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   endedAtMs:
                     type: "integer"
                     description: "회의 시작 기준 마지막 토큰 밀리초"
@@ -11706,8 +11086,6 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AP"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
               nullable: false
           description: "성공 응답 데이터"
           nullable: false
@@ -11771,8 +11149,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AE"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   updatedAt:
                     type: "string"
                     description: "프로젝트 수정 시각"
@@ -11785,8 +11161,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AD"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
               nullable: false
           description: "성공 응답 데이터"
           nullable: false
@@ -11841,8 +11215,6 @@ components:
                 nullable: false
                 example: "0K9GVJT2C4Q21"
                 pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                minLength: 13
-                maxLength: 13
             required:
             - "targetId"
             - "decision"
@@ -11862,8 +11234,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AC"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             type:
               type: "string"
               description: "담당 종류"
@@ -11926,8 +11296,6 @@ components:
               nullable: false
               example: "0HZX2K7M9Q4AQ"
               pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-              minLength: 13
-              maxLength: 13
             participants:
               type: "array"
               description: "그 회의의 참여자 전원. 계정 참여자와 임시 참여자가 섞여 이름 오름차순이다"
@@ -11947,8 +11315,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AP"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   image:
                     type: "string"
                     description: "참여자 프로필 이미지 URL (없거나 임시 참여자면 null)"
@@ -11965,16 +11331,12 @@ components:
                     nullable: true
                     example: "0HZX2K7M9Q4AR"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   userId:
                     type: "string"
                     description: "계정 참여자의 13자리 TSID (임시 참여자면 null)"
                     nullable: true
                     example: "0HZX2K7M9Q4AC"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   email:
                     type: "string"
                     description: "참여자 이메일 (임시 참여자면 null)"
@@ -12062,8 +11424,6 @@ components:
                         nullable: false
                         example: "0HZX2K7M9Q4AC"
                         pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                        minLength: 13
-                        maxLength: 13
                       email:
                         type: "string"
                         description: "회의 시작자 이메일"
@@ -12100,8 +11460,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AF"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   title:
                     type: "string"
                     description: "노트 제목"
@@ -12114,8 +11472,6 @@ components:
                     nullable: false
                     example: "0HZX2K7M9Q4AE"
                     pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                    minLength: 13
-                    maxLength: 13
                   activeSessionStartedAt:
                     type: "string"
                     description: "현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)"
@@ -12142,8 +11498,6 @@ components:
                           nullable: false
                           example: "0HZX2K7M9Q4AP"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                         image:
                           type: "string"
                           description: "참여자 프로필 이미지 URL (없거나 임시 참여자면 null)"
@@ -12160,16 +11514,12 @@ components:
                           nullable: true
                           example: "0HZX2K7M9Q4AR"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                         userId:
                           type: "string"
                           description: "계정 참여자의 13자리 TSID (임시 참여자면 null)"
                           nullable: true
                           example: "0HZX2K7M9Q4AC"
                           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-                          minLength: 13
-                          maxLength: 13
                         email:
                           type: "string"
                           description: "참여자 이메일 (임시 참여자면 null)"
@@ -12215,13 +11565,9 @@ components:
     Tsid:
       type: "string"
       pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-      minLength: 13
-      maxLength: 13
     RunId:
       type: "string"
       pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-      minLength: 13
-      maxLength: 13
       description: "heymoa-ai 가 만드는 멱등 키다. URL path 에 나가는 외부 식별자라 TSID 13자다."
     ProposalKind:
       type: "string"
@@ -12343,8 +11689,6 @@ components:
           type: "string"
           nullable: true
           pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-          minLength: 13
-          maxLength: 13
           description: "RESOLVE result면 닫힌 Question proposal ID, 아니면 null"
         citations:
           type: "array"

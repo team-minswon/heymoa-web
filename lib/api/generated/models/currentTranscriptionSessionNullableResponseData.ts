@@ -16,15 +16,11 @@ export type CurrentTranscriptionSessionNullableResponseData = {
   readyExpiresAt: string;
   /**
    * 노트의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
   /**
    * 전사 세션의 13자리 TSID
-   * @minLength 13
-   * @maxLength 13
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   sessionId: string;
