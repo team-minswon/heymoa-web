@@ -11,26 +11,29 @@ allowBuilds:
 # 않는다. 거기 두면 새 설치(CI·Docker·새 머신)에서 아래 보안 핀이 조용히 안 걸리고,
 # 락파일에는 남아 있어 `--frozen-lockfile` 이 LOCKFILE_CONFIG_MISMATCH 로 죽는다.
 overrides:
-  postcss: '8.5.19'
-  sharp: '>=0.35.0'
-  'js-yaml@>=4.0.0': '^4.3.0'
-  fast-uri: '>=3.1.4'
-  jsonpath-plus: '>=10.3.0'
-  tar: '>=7.5.16'
-  esbuild: '>=0.28.1'
-  hono: '>=4.12.27'
-  '@hono/node-server': '>=2.0.5'
-  body-parser: '>=2.3.0'
-  fast-xml-parser: '>=5.10.1'
-  linkify-it: '>=5.0.2'
-  'ajv@>=6.0.0 <7.0.0': '^6.12.3'
+  # 보안 핀. Dependabot/`pnpm audit` 이 가리키는 취약 범위만 좁게 잡는다 — 넓게 잡으면
+  # 다른 major 를 쓰는 소비자(ajv 의 fast-uri 3, eslint 의 js-yaml 4)까지 끌려간다.
   '@babel/core': '>=7.29.6'
-  'next@>=13.0.0 <16.0.0': '^15.5.21'
-# **전부 적어야 한다.** pnpm 11 은 승인도 무시도 안 된 빌드 스크립트가 있으면
-# `ERR_PNPM_IGNORED_BUILDS` 로 설치를 실패시킨다. 목록이 모자라면 새 설치(Docker·CI)가
-# 죽는다 — 로컬은 `node_modules` 가 이미 있어 안 보인다.
-ignoredBuiltDependencies:
-  - esbuild
-  - msw
-  - sharp
-  - unrs-resolver
+  '@hono/node-server': '>=2.0.5'
+  'ajv@>=6.0.0 <7.0.0': ^6.12.3
+  'baseline-browser-mapping@>=2.0.0 <2.11.0': '>=2.11.0'
+  body-parser: '>=2.3.0'
+  'brace-expansion@>=5.0.0 <5.0.12': '>=5.0.12'
+  'browserslist@<=4.28.6': '>=4.28.7'
+  esbuild: '>=0.28.1'
+  'fast-uri@<4.0.0': '>=3.1.4'
+  'fast-uri@>=4.0.0 <4.1.3': '>=4.1.3'
+  fast-xml-parser: '>=5.10.1'
+  hono: '>=4.13.5'
+  'ip-address@>=10.0.0 <10.3.1': '>=10.3.1'
+  'js-yaml@>=4.0.0 <5.0.0': '>=4.3.2'
+  jsonpath-plus: '>=10.3.0'
+  linkify-it: '>=5.0.2'
+  'nanoid@<3.3.18': '>=3.3.18'
+  'next@>=13.0.0 <16.0.0': ^15.5.21
+  'postcss@<8.5.23': '>=8.5.23'
+  'postcss-selector-parser@>=7.1.0 <7.1.3': '>=7.1.3'
+  'qs@<6.16.0': '>=6.16.0'
+  sharp: '>=0.35.4'
+  tar: '>=7.5.16'
+  'undici@>=7.0.0 <7.29.0': '>=7.29.0 <8'
