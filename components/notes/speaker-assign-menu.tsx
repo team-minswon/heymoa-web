@@ -19,7 +19,10 @@ import {
   speakerAvatarName,
   type SpeakerIdentity,
 } from "@/lib/transcription/speaker-identity";
-import { PersonAvatar } from "@/components/heymoa/person-avatar";
+import {
+  PersonAvatar,
+  personAvatarKey,
+} from "@/components/heymoa/person-avatar";
 
 export type SpeakerCandidate = {
   /**
@@ -315,7 +318,7 @@ export function SpeakerAssignMenu({
                 */}
               <PersonAvatar
                 name={speakerAvatarName(candidate.assignedLabels ?? [], {
-                  hashKey: candidateKey(candidate),
+                  hashKey: personAvatarKey(candidate),
                 })}
                 image={candidate.image}
               />

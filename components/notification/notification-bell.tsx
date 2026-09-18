@@ -37,7 +37,7 @@ const STATUS_LABEL: Record<string, string> = {
 /**
  * 알림 벨. 계약상 알림은 **초대(WORKSPACE_INVITATION) 하나**뿐이라 렌더 분기는
  * `invitation.status`가 전부다 — PENDING이면 수락/거절, 아니면 상태 라벨(항목은 남는다).
- * 벌크 읽음 엔드포인트가 없어 행을 클릭하면 읽음 처리한다.
+ * 벌크 읽음 엔드포인트가 없어 미읽음 점이나 행 본문을 클릭하면 읽음 처리한다.
  */
 export function NotificationBell() {
   const queryClient = useQueryClient();
@@ -273,7 +273,17 @@ function NotificationRow({
           className="mt-1.5 size-2 shrink-0 rounded-full bg-transparent"
         />
       )}
-      <div className="min-w-0 flex-1">
+      {/* 본문도 읽음 처리한다. 이메일 링크로 수락한 초대는 벨 밖에서 끝나 점만 남는데,
+          8px 점 하나가 유일한 길이면 사람은 「아무리 눌러도 안 된다」고 느낀다. 수락·거절
+          버튼은 제 손으로 읽음을 보내므로 그 클릭은 여기서 받지 않는다. */}
+      <div
+        className="min-w-0 flex-1"
+        onClick={(event) => {
+          if (!unread) return;
+          if ((event.target as HTMLElement).closest("button")) return;
+          onClick();
+        }}
+      >
         {invitation ? (
           <>
             <p className="text-sm leading-relaxed text-[var(--el-ink)]">

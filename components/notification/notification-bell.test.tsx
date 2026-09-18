@@ -225,6 +225,38 @@ describe("NotificationBell", () => {
     );
   });
 
+  /**
+   * 이메일 링크로 수락한 초대는 벨 밖에서 처리돼 읽음이 안 남는다. 남은 길이 8px 점 하나면
+   * 사람은 「아무리 눌러도 안 된다」고 느낀다 — 본문을 눌러도 읽혀야 한다 (APP-649).
+   */
+  it("처리된 초대 행의 본문을 누르면 읽음 처리한다", async () => {
+    state.notifications = [invitation("ACCEPTED", null)];
+    renderBell();
+    await openBell();
+    fireEvent.click(screen.getByText(/초대했습니다/));
+    expect(state.markMock).toHaveBeenCalledWith(
+      { notificationId: "n-ACCEPTED" },
+      expect.anything()
+    );
+  });
+
+  it("이미 읽은 행의 본문을 눌러도 다시 읽음 처리하지 않는다", async () => {
+    state.notifications = [invitation("ACCEPTED", "2026-07-25T00:00:00Z")];
+    renderBell();
+    await openBell();
+    fireEvent.click(screen.getByText(/초대했습니다/));
+    expect(state.markMock).not.toHaveBeenCalled();
+  });
+
+  /** 수락 버튼은 제 손으로 읽음을 보낸다. 본문 클릭까지 겹치면 같은 알림에 두 번 나간다. */
+  it("PENDING 초대의 수락 버튼을 누르면 읽음 처리는 한 번만 나간다", async () => {
+    state.notifications = [invitation("PENDING", null)];
+    renderBell();
+    await openBell();
+    fireEvent.click(screen.getByRole("button", { name: "수락" }));
+    expect(state.markMock).toHaveBeenCalledTimes(1);
+  });
+
   it("알림이 없으면 빈 상태 문구를 보인다", async () => {
     renderBell();
     await openBell();

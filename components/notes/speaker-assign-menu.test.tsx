@@ -6,6 +6,10 @@ import {
   type SpeakerCandidate,
 } from "@/components/notes/speaker-assign-menu";
 import type { SpeakerIdentity } from "@/lib/transcription/speaker-identity";
+import {
+  PersonAvatar,
+  personAvatarKey,
+} from "@/components/heymoa/person-avatar";
 
 const identity: SpeakerIdentity = {
   displayName: "화자 A",
@@ -557,6 +561,44 @@ describe("SpeakerAssignMenu", () => {
 
     expect(faces.length).toBeGreaterThan(1);
     expect(new Set(faces).size).toBe(faces.length);
+  });
+
+  /**
+   * **패널·칩과 같은 얼굴이어야 한다.** 얼굴 열쇠는 `personAvatarKey` 하나가 정한다 —
+   * 게스트는 `guestId`, 계정은 `userId`. 드롭다운만 참여 기록 id 로 그리면 사진이 없는
+   * 게스트가 패널에서는 이 얼굴, 여기서는 저 얼굴로 선다 (APP-649).
+   */
+  it("이미 화자로 붙은 게스트는 패널과 같은 열쇠로 얼굴을 그린다", () => {
+    const attachedGuest: SpeakerCandidate = {
+      participantId: "01K0000000201",
+      userId: null,
+      guestId: "01K0000000401",
+      name: "이도현",
+      email: null,
+      assignedLabels: ["C"],
+    };
+    const { container } = render(
+      <SpeakerAssignMenu
+        identity={identity}
+        candidates={[attachedGuest]}
+        onAssign={vi.fn()}
+      />
+    );
+    const expected = render(
+      <PersonAvatar name={personAvatarKey(attachedGuest)} />
+    );
+
+    open();
+
+    const face = (svg: SVGElement | null) =>
+      svg?.innerHTML.replace(/_r_[a-z0-9]+_/g, "");
+    expect(
+      face(
+        container.ownerDocument.querySelector<SVGElement>(
+          '[role="option"] svg'
+        )
+      )
+    ).toBe(face(expected.container.querySelector("svg")));
   });
 
   // ── 지정 범위 ──────────────────────────────────────────────────────────────
