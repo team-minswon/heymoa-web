@@ -10,7 +10,6 @@ import {
   getGetProjectTasksQueryOptions,
 } from "@/lib/api/generated/projects/projects";
 import { okData } from "@/lib/api/ok-data";
-import { getGetNoteTranscriptQueryOptions } from "@/lib/api/generated/transcription/transcription";
 import { getGetWorkspaceQueryOptions } from "@/lib/api/generated/workspaces/workspaces";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { makeQueryClient } from "@/lib/query/query-client";
@@ -97,16 +96,20 @@ export async function prefetchNoteRoute({
 
   const request = await getServerApiRequestOptions();
 
-  const noteTask = queryClient.fetchQuery(
-    getGetNoteQueryOptions(noteId, { request: request })
-  );
-  const transcriptTask = queryClient.prefetchQuery(
-    getGetNoteTranscriptQueryOptions(noteId, { request: request })
-  );
-  const [noteResult] = await Promise.all([
-    noteTask.catch(() => null),
-    transcriptTask.catch(() => undefined),
-  ]);
+  /**
+   * **전사를 안 기다린다.** 이 라우트에는 `loading.tsx` 가 없어서, 여기서 await 하는 것이
+   * 곧 첫 페인트다 — 브라우저는 이 함수가 끝날 때까지 **이전 화면 그대로** 있는다. 전사가
+   * 제일 느린데 그것이 노트를 여는 시간을 통째로 잡고 있었다 (APP-679).
+   *
+   * 클라이언트가 읽으면 `TranscriptView`·`NoteArchive` 의 스켈레톤이 그 자리를 채운다 —
+   * 행 격자까지 실제와 맞춰 둔 것이 이미 있다.
+   *
+   * `getNote` 는 남긴다. 껍데기(제목·상태·탭 구성)가 그 값에 달려 있어 클라이언트로 미루면
+   * 껍데기까지 흔들린다.
+   */
+  const noteResult = await queryClient
+    .fetchQuery(getGetNoteQueryOptions(noteId, { request: request }))
+    .catch(() => null);
 
   if (
     noteResult?.status === 200 &&
