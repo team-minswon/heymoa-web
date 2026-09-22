@@ -110,7 +110,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "name"
+                        message: "비울 수 없습니다."
         "201":
           description: "생성 성공"
           content:
@@ -319,7 +321,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "token"
+                        message: "비울 수 없습니다."
         "200":
           description: "요청 성공"
           content:
@@ -649,7 +653,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "title"
+                        message: "비울 수 없습니다."
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -887,7 +893,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "name"
+                        message: "비울 수 없습니다."
         "200":
           description: "요청 성공"
           content:
@@ -1147,7 +1155,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "noteIds"
+                        message: "길이는 0~20 여야 합니다."
                 SCOPE_OUT_OF_WORKSPACE:
                   value:
                     success: false
@@ -1496,7 +1506,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "content"
+                        message: "비울 수 없습니다."
         "201":
           description: "생성 성공"
           content:
@@ -1679,7 +1691,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "reviewRevision"
+                        message: "1 이상이어야 합니다."
         "200":
           description: "요청 성공"
           content:
@@ -2238,7 +2252,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "userIds"
+                        message: "길이는 0~200 여야 합니다."
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -2778,7 +2794,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "title"
+                        message: "비울 수 없습니다."
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -3212,7 +3230,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "email"
+                        message: "이메일 형식이 아닙니다."
         "201":
           description: "생성 성공"
           content:
@@ -3442,7 +3462,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "name"
+                        message: "비울 수 없습니다."
         "201":
           description: "생성 성공"
           content:
@@ -3828,7 +3850,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "expectedReviewVersion"
+                        message: "1 이상이어야 합니다."
         "409":
           description: "요청 상태 충돌"
           content:
@@ -4151,7 +4175,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "displayName"
+                        message: "길이가 상한을 넘습니다."
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -4272,7 +4298,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "targetExclusive"
+                        message: "participantId·userId·guestId 중 하나만 보낼 수 있습니다."
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -5059,7 +5087,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "name"
+                        message: "비울 수 없습니다."
         "401":
           $ref: "#/components/responses/Unauthorized"
       security:
@@ -5229,7 +5259,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "decision"
+                        message: "형식이 올바르지 않습니다."
         "404":
           description: "요청한 리소스를 찾을 수 없음"
           content:
@@ -5775,7 +5807,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "targetExclusive"
+                        message: "participantId·userId·guestId 중 하나만 보낼 수 있습니다."
         "200":
           description: "요청 성공"
           content:
@@ -6263,7 +6297,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "content"
+                        message: "비울 수 없습니다."
         "201":
           description: "생성 성공"
           content:
@@ -6421,7 +6457,9 @@ paths:
                     error:
                       code: "BAD_REQUEST"
                       message: "잘못된 요청입니다."
-                      details: null
+                      details:
+                      - field: "assignee.shapeValid"
+                        message: "사람 담당은 id, 회의 라벨 담당은 noteId·label 만 가집니다."
         "409":
           description: "요청 상태 충돌"
           content:
