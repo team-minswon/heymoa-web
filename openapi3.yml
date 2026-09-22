@@ -188,13 +188,6 @@ paths:
         schema:
           type: "string"
         example: "Heymoa Docs Client"
-      - name: "X-Forwarded-For"
-        in: "header"
-        description: "프록시가 전달한 클라이언트 IP 목록"
-        required: false
-        schema:
-          type: "string"
-        example: "203.0.113.10, 10.0.0.1"
       responses:
         "401":
           description: "인증 필요"
