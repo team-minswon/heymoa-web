@@ -13,6 +13,7 @@ import {
   ComboboxTrigger,
 } from "@/components/ui/combobox";
 import {
+  assigneeImageOf,
   assigneeKey,
   describeAssignee,
   type AssigneeChoice,
@@ -28,9 +29,15 @@ export function choiceName(choice: AssigneeChoice) {
 export function AssigneeFace({
   value,
   placeholder,
+  image,
 }: {
   value: AssigneeValue | null;
   placeholder?: string;
+  /**
+   * 값이 못 들고 온 계정 사진. **서버는 담당을 풀 때 사진을 안 싣는다** — 사람 목록에는
+   * 있으므로 부르는 쪽이 같은 열쇠로 찾아 넘긴다 (APP-678).
+   */
+  image?: string | null;
 }) {
   const view = describeAssignee(value);
   if (!view) {
@@ -40,7 +47,7 @@ export function AssigneeFace({
   }
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] text-[var(--el-ink)]">
-      <PersonAvatar name={view.avatarKey} size={18} />
+      <PersonAvatar name={view.avatarKey} image={image ?? view.image} size={18} />
       <span className={cn("truncate", view.unnamed && "text-[var(--el-muted)]")}>
         {view.name}
       </span>
@@ -76,11 +83,12 @@ export function AssigneeCell({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const selectedImage = assigneeImageOf(choices, value);
 
   if (!editable) {
     return (
       <span className={cn("inline-flex h-7 min-w-0 items-center", className)}>
-        <AssigneeFace value={value} />
+        <AssigneeFace value={value} image={selectedImage} />
       </span>
     );
   }
@@ -110,7 +118,7 @@ export function AssigneeCell({
               className
             )}
           >
-            <AssigneeFace value={value} placeholder={placeholder} />
+            <AssigneeFace value={value} placeholder={placeholder} image={selectedImage} />
           </button>
         }
       />

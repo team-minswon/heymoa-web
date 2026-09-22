@@ -22,6 +22,7 @@ import {
   useUpdateProjectTask,
 } from "@/lib/api/generated/projects/projects";
 import {
+  assigneeImageOf,
   assigneeKey,
   assigneeRequestOf,
   type AssigneeChoice,
@@ -241,7 +242,16 @@ export function TaskChangeSuggestion({
       {task && change.assignee ? (
         <Diff
           label="담당"
-          from={task.assignee ? <AssigneeFace value={task.assignee} /> : "없음"}
+          from={
+            task.assignee ? (
+              <AssigneeFace
+                value={task.assignee}
+                image={assigneeImageOf(choices, task.assignee)}
+              />
+            ) : (
+              "없음"
+            )
+          }
           to={
             <Pick editable={!locked}>
               <AssigneeCell

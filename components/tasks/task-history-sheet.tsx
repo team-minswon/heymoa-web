@@ -24,7 +24,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ProjectTaskRevisionListResponseDataRevisionsItem } from "@/lib/api/generated/models";
 import { okData } from "@/lib/api/ok-data";
 import { useGetProjectTaskRevisions } from "@/lib/api/generated/projects/projects";
-import { describeAssignee, type AssigneeChoice } from "@/lib/assignees/describe";
+import {
+  assigneeImageOf,
+  describeAssignee,
+  type AssigneeChoice,
+} from "@/lib/assignees/describe";
 import { formatAppDate } from "@/lib/format/date";
 import { TASK_STATUS_LABEL, type TaskEntry } from "@/lib/tasks/task-groups";
 
@@ -208,7 +212,11 @@ function HistoryBody({
                 onChange={(assignee) => setDraft({ ...draft, assignee })}
               />
             ) : (
-              <AssigneeFace value={task.assignee} placeholder="없음" />
+              <AssigneeFace
+                value={task.assignee}
+                placeholder="없음"
+                image={assigneeImageOf(choices, task.assignee)}
+              />
             )}
           </dd>
           <dt className="text-[var(--el-muted)]">기한</dt>

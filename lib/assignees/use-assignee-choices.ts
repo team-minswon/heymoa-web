@@ -30,6 +30,7 @@ export function useAssigneeChoices(
         type: "USER" as const,
         id: member.userId,
         name: member.name,
+        image: member.image,
       })),
       ...(guestRows ?? []).map((guest) => ({
         type: "GUEST" as const,
