@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronDown, Sparkles } from "lucide-react";
 
@@ -353,6 +353,8 @@ export function ProposalRail({
   }
   const ofThisNote = railState.noteId === noteId;
   const filter = ofThisNote ? railState.filter : "ALL";
+  // 칩은 바로 바뀌고 목록은 뒤따른다. 수백 장을 다시 그리는 동안 누른 칩이 멈춰 보이지 않게
+  const listFilter = useDeferredValue(filter);
   const setFilter = (next: Filter) =>
     setRailState((current) => ({ ...current, noteId, filter: next }));
   /**
@@ -382,7 +384,7 @@ export function ProposalRail({
    * 켜 두든 꺼 두든 **테두리는 두 벌이 같이 쓴다** — 다른 것은 안쪽 배치뿐이다.
    */
   const SCAN_ALL_TAB = true;
-  const scan = SCAN_ALL_TAB && filter === "ALL";
+  const scan = SCAN_ALL_TAB && listFilter === "ALL";
 
   const proposals = useMemo(
     () => context.cards.flatMap((card) => [card, ...card.results]),
@@ -397,13 +399,36 @@ export function ProposalRail({
   const visible = useMemo<ContextCard[]>(
     () =>
       context.cards
-        .map((card) => ({
-          ...card,
-          results: card.results.filter((result) => matches(result, filter)),
-        }))
-        .filter((card) => matches(card, filter) || card.results.length > 0),
-    [context.cards, filter]
+        .map((card) => {
+          // 거를 것이 없으면 카드를 그대로 둔다 — 새 객체면 memo 한 카드가 매번 다시 그려진다
+          const results = card.results.filter((result) => matches(result, listFilter));
+          return results.length === card.results.length ? card : { ...card, results };
+        })
+        .filter((card) => matches(card, listFilter) || card.results.length > 0),
+    [context.cards, listFilter]
   );
+  /**
+   * 이미 도착한 카드. 여기 없는 것만 들어오는 동작을 한다 — 필터를 오가며 다시 마운트된
+   * 카드까지 움직이면 수백 장이 한꺼번에 애니메이션을 돈다. 첫 스냅샷도 움직이지 않는다.
+   */
+  const [arrival, setArrival] = useState(() => ({
+    proposals,
+    fresh: NO_COLLAPSED as ReadonlySet<string>,
+  }));
+  // 렌더 중 보정 — 원장이 바뀐 그 렌더에서 새 카드를 가려야 그 카드가 들어오며 움직인다
+  if (arrival.proposals !== proposals) {
+    const known = new Set(arrival.proposals.map((proposal) => proposal.proposalId));
+    setArrival({
+      proposals,
+      // 빈 원장에서 처음 채워진 것은 도착이 아니라 불러오기다
+      fresh:
+        known.size === 0
+          ? NO_COLLAPSED
+          : new Set(
+              proposals.map((proposal) => proposal.proposalId).filter((id) => !known.has(id))
+            ),
+    });
+  }
 
   /**
    * 유형별 묶음. **비어 있는 유형은 머리도 안 그린다** — 그 회의에 안 나온 종류의 제목만
@@ -605,6 +630,7 @@ export function ProposalRail({
                         card={card}
                         onEvidenceSelect={onEvidenceSelect}
                         kindInGroupHeader={group.kind !== null}
+                        entering={arrival.fresh.has(card.proposalId)}
                       />
                     ))}
                   </ul>

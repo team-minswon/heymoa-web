@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, memo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 
@@ -265,15 +265,21 @@ function ProposalBody({
  * 왼쪽 26 배지가 유형을 아이콘으로 말하고 — 묶음 머리와 **같은 아이콘**이라 카드 하나만
  * 봐도 어느 묶음의 것인지 안다 — 오른쪽 본문이 제목·시각·메타를 진다.
  */
-export function ProposalCard({
+export const ProposalCard = memo(function ProposalCard({
   card,
   onEvidenceSelect,
   kindInGroupHeader,
+  entering = true,
 }: {
   card: ContextCard;
   onEvidenceSelect: (segmentId: string) => void;
   /** 유형을 묶음 머리가 이미 말했다 — 그 아래 모든 줄에 같은 단어를 반복하지 않는다. */
   kindInGroupHeader: boolean;
+  /**
+   * 새로 도착한 카드인가. 필터를 바꿔 다시 마운트된 카드까지 들어오는 동작을 하면 수백 장이
+   * 한꺼번에 움직여 칩을 누를 때마다 버벅인다.
+   */
+  entering?: boolean;
 }) {
   const reduced = useReducedMotion();
   const KindIcon = CONTEXT_KIND_ICON[card.kind];
@@ -281,7 +287,7 @@ export function ProposalCard({
   return (
     <motion.li
       layout={!reduced}
-      initial={reduced ? false : { opacity: 0, y: -6 }}
+      initial={reduced || !entering ? false : { opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : 0.18 }}
       className="flex gap-[11px] rounded-[12px] border border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-3.5 py-[13px] shadow-[0_1px_2px_#00000010]"
@@ -314,4 +320,4 @@ export function ProposalCard({
       </div>
     </motion.li>
   );
-}
+});

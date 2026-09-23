@@ -98,8 +98,12 @@ function coverageRange(over: Record<string, unknown> = {}) {
   };
 }
 
+/** 렌더마다 받은 카드 배열. 참조가 같아야 레일이 다시 안 그린다. */
+const seenCards: unknown[] = [];
+
 function Probe() {
   const realtime = useNoteRealtime();
+  seenCards.push(realtime.context.cards);
 
   return (
     <>
@@ -628,6 +632,34 @@ describe("NoteRealtimeProvider", () => {
       } as never)
     ).toBe(true);
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
+  });
+
+  /**
+   * 전사 조각은 초당 여러 번 온다. 그때마다 카드 배열을 새로 만들면 실시간 정리의 카드
+   * 수백 장이 매번 다시 그려져 칩을 눌러도 버벅인다.
+   */
+  it("전사 조각이 와도 후보 카드 배열은 그대로다", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    emit({
+      type: "proposal.changed",
+      occurredAt: "2026-08-24T01:02:03.000Z",
+      proposal: proposalHead(),
+    });
+    const before = seenCards.at(-1);
+
+    emit({
+      type: "transcript.partial",
+      transcriptionSessionId: SESSION_ID,
+      utteranceId: UTTERANCE_ID,
+      confirmedText: "",
+      pendingText: "초안",
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("partials").textContent).toContain("초안")
+    );
+    expect(seenCards.at(-1)).toBe(before);
   });
 
   it("후보 event가 화면 상태를 즉시 갱신하고 같은 후보를 두 번 만들지 않는다", async () => {

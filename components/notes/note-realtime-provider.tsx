@@ -419,6 +419,8 @@ export function NoteRealtimeProvider({
     void refetchSnapshot();
   }, [refetchSnapshot]);
 
+  // 전사 조각은 context 를 안 건드린다. 거기에 묶어야 조각마다 카드 수백 장이 다시 안 그려진다
+  const cards = useMemo(() => selectCards(state.context), [state.context]);
   const value = useMemo<NoteRealtimeValue>(
     () => ({
       noteId,
@@ -429,7 +431,7 @@ export function NoteRealtimeProvider({
         finalSegments: state.finalSegments,
       },
       context: {
-        cards: selectCards(state.context),
+        cards,
         state: state.context,
         // 실패를 화면까지 올린다. 안 올리면 레일이 「사건이 없다」로 그려서 사용자가
         // 후보 0건을 사실로 믿는다.
@@ -439,6 +441,7 @@ export function NoteRealtimeProvider({
       },
     }),
     [
+      cards,
       contextFailed,
       contextLoading,
       noteId,
