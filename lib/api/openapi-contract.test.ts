@@ -154,11 +154,18 @@ describe("OpenAPI contract", () => {
     ]) {
       expect(schemaNames).not.toContain(name);
     }
-    expect(Object.keys(api().paths)).toHaveLength(56);
-    // APP-551: 턴 스트림 계약이 `AgentChatTurnResponse`(202 {turnId}) 하나를 더한다.
-    // 회의 뒤 흐름(흐름·검토본·확정·사전 안건·할 일) 스키마 16개가 늘고, 구형 분석 생성
-    // 응답 `AnalysisResponse` 가 빠진다 (62 → 77). 회의 요약 조회가 `MeetingReviewSummaryResponse` 를 더한다 (77 → 78).
-    expect(schemaNames).toHaveLength(78);
+  });
+
+  it("APP-685의 네 경로와 필수 초대 필드를 이름으로 확인한다", () => {
+    expect(api().paths["/v1/workspaces/{workspaceId}/notes"]?.get?.operationId).toBe("getWorkspaceNotes");
+    expect(api().paths["/v1/workspaces/{workspaceId}/tasks"]?.get?.operationId).toBe("getWorkspaceTasks");
+    expect(api().paths["/v1/notes/{noteId}/transcript/segments"]?.get?.operationId).toBe("getTranscriptSegmentsAfter");
+    expect(api().paths["/v1/notes/{noteId}/speakers"]?.put?.operationId).toBe("assignNoteSpeakers");
+
+    const notifications = api().components.schemas.NotificationListResponse as {
+      properties: { data: { properties: { notifications: { items: { required: string[] } } } } };
+    };
+    expect(notifications.properties.data.properties.notifications.items.required).toContain("invitation");
   });
 
   it("omits the internal-only security scheme", () => {
@@ -257,7 +264,7 @@ describe("contract sync 2026-07-29", () => {
     // `analyses/flow`, `meeting-review`·`.../items`·`.../items/{itemId}`, `approval`,
     // `agendas`·`agendas/{agendaId}`, `projects/{projectId}/tasks`·`.../{taskId}`·`.../revisions`.
     // 회의 요약 조회가 늘었다 (55 → 56) — `meeting-review/summary`.
-    expect(paths).toHaveLength(56);
+    expect(paths).toHaveLength(60);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

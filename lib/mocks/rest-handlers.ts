@@ -423,6 +423,14 @@ export const restHandlers = [
   ),
 
   // Notes
+  // 워크스페이스 단위 목록 (APP-685). 전에는 web 이 프로젝트마다 요청을 보내고 결과를
+  // `flatMap` 한 뒤 서버와 같은 규칙으로 다시 정렬했다.
+  http.get("*/v1/workspaces/:workspaceId/notes", ({ params }) =>
+    resultOf(
+      () => ({ notes: mockDb.listWorkspaceNotes(id(params.workspaceId)) }),
+      notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
+    )
+  ),
   http.get("*/v1/projects/:projectId/notes", ({ params }) =>
     resultOf(
       () => ({ notes: mockDb.listNotes(id(params.projectId)) }),
@@ -660,6 +668,33 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
   ),
+  /**
+   * 화자 벌크 (APP-685). **본문에 실린 라벨만 바꾼다** — 여기 없는 라벨의 확정은 그대로다.
+   * 전체 교체로 읽으면 「참석자 중에 없다」 확정을 지우는 길이 열리는데 되돌릴 API 가 없다.
+   *
+   * 라벨 하나의 규칙은 단건 경로와 **같은 함수**를 쓴다. 서버도 그렇게 핸들러 하나로 모았다.
+   */
+  http.put("*/v1/notes/:noteId/speakers", async ({ params, request }) => {
+    const body = (await request.json()) as {
+      assignments?: Array<{
+        label: string;
+        participantId?: string | null;
+        userId?: string | null;
+        guestId?: string | null;
+      }>;
+    };
+    return resultOf(() => {
+      let speakers = mockDb.getTranscript(id(params.noteId)).diarization.speakers;
+      for (const assignment of body.assignments ?? []) {
+        speakers = mockDb.assignSpeaker(id(params.noteId), assignment.label, {
+          participantId: assignment.participantId ?? null,
+          userId: assignment.userId ?? null,
+          guestId: assignment.guestId ?? null,
+        });
+      }
+      return { speakers };
+    }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."));
+  }),
   http.put(
     "*/v1/notes/:noteId/speakers/:label",
     async ({ params, request }) => {
@@ -708,6 +743,28 @@ export const restHandlers = [
       () => mockDb.getTranscript(id(params.noteId)),
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
+  ),
+  /**
+   * 커서 뒤 증분 (APP-685). **덧붙기 전용이다** — 이미 내려간 발화의 화자 지정 변경은 이
+   * 경로로 안 보이고, 그 수렴은 전체 조회가 맡는다.
+   *
+   * 커서는 `(startedAtMs, sequence)` 복합이다. 한쪽만 비교하면 같은 밀리초의 뒤엣것이
+   * 조용히 빠진다 — 서버가 그렇게 비교하므로 목도 같아야 그 버그가 목에서 재현된다.
+   */
+  http.get("*/v1/notes/:noteId/transcript/segments", ({ params, request }) =>
+    resultOf(() => {
+      const url = new URL(request.url);
+      const afterStartedAtMs = Number(url.searchParams.get("afterStartedAtMs") ?? 0);
+      const afterSequence = Number(url.searchParams.get("afterSequence") ?? 0);
+      const { segments } = mockDb.getTranscript(id(params.noteId));
+      return {
+        segments: segments.filter(
+          (segment) =>
+            segment.startedAtMs > afterStartedAtMs ||
+            (segment.startedAtMs === afterStartedAtMs && segment.sequence > afterSequence)
+        ),
+      };
+    }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."))
   ),
   // Hand-written (not the Orval getStartTranscriptionSessionMockHandler): needs
   // 201/409 status codes the generated wrapper can't express.
@@ -858,14 +915,14 @@ export const restHandlers = [
     }))
   ),
 
+  // 응답이 **갱신된 노트**다 (APP-685). 204 였을 때 화면이 종료 뒤 상태를 지어냈다.
   http.post("*/v1/notes/:noteId/meeting-end", ({ params }) => {
     const noteId = id(params.noteId);
-    const failed = commandResult(() => {
-      mockDb.endMeeting(noteId);
+    return commandResult(() => {
+      const note = mockDb.endMeeting(noteId);
       meetingFlow.onMeetingEnded(noteId);
+      return note;
     });
-    // 계약은 bodyless 204다. 실패 봉투만 그대로 돌려준다.
-    return failed.status === 200 ? new HttpResponse(null, { status: 204 }) : failed;
   }),
   http.delete(
     "*/v1/workspaces/:workspaceId/integrations/:provider",

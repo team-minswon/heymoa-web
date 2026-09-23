@@ -9,30 +9,9 @@ import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
-import { isMeetingActive, noteOrderedAt } from "@/lib/notes/meeting-state";
+import { isMeetingActive } from "@/lib/notes/meeting-state";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 import { groupNotesByRecency } from "@/lib/workspace/note-groups";
-
-/**
- * 회의를 기록하기 시작한 시각 내림차순(`noteOrderedAt`). 순서의 주인은 이 함수 하나다 —
- * 묶기(`groupNotesByRecency`)는 정렬하지 않고 같은 키만 다시 쓴다.
- *
- * 예전에는 `updatedAt`으로 세웠는데, 제목만 고쳐도 그 노트가 맨 위로 튀어 올랐다. 서버가
- * 이미 같은 기준으로 내려주지만(APP-410) 여기서 다시 세우므로 그쪽만 고쳐서는 화면이 안 바뀐다.
- *
- * APP-162는 프레임 LHXhy를 근거로 날짜 그룹을 없앴지만, 노트가 쌓이면 상대 시각만으로는
- * 훑기 어렵다는 판단으로 2026-07-26(APP-211)에 날짜 묶음을 되살렸다. 행 자체는 FORM SPEC
- * 정본(52·한 줄) 그대로이고 헤더만 위에 붙는다.
- */
-export function sortNotesByRecency(
-  notes: NoteListResponseDataNotesItem[]
-): NoteListResponseDataNotesItem[] {
-  return [...notes].sort(
-    (a, b) =>
-      Date.parse(noteOrderedAt(b)) - Date.parse(noteOrderedAt(a)) ||
-      b.noteId.localeCompare(a.noteId)
-  );
-}
 
 export function WorkspaceNoteList({
   workspaceId,
@@ -122,7 +101,7 @@ export function WorkspaceNoteList({
 
   return (
     <div data-testid="workspace-note-list">
-      {groupNotesByRecency(sortNotesByRecency(notes)).map((group) => (
+      {groupNotesByRecency(notes).map((group) => (
         <section key={group.key}>
           <h2 className="px-3 pt-5 pb-2 text-xs font-medium text-[var(--el-muted)]">
             {group.label}

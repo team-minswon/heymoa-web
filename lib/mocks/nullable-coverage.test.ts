@@ -125,17 +125,14 @@ function contractSamples() {
 
   const notes = tuples.filter((tuple) => tuple.noteId).map((t) => t.noteId!);
 
-  // 현재 유저가 시작·종료할 수 있는 노트는 미시작이거나 현재 유저가 시작한 진행 중 노트다.
-  // **위치가 아니라 상태로 고른다** —
-  // 시드에 종료된 노트가 늘면 `notes[0]`이 그쪽으로 바뀌어 표본 생성이 통째로 깨진다.
+  // 분석 표본을 만들 노트에는 열린 세션이 없어야 한다. 진행 중인 시드는 실제
+  // ACTIVE 세션을 가지므로, 미시작·중지된 노트만 골라 세션 생성 → 종료를 검사한다.
+  // **위치가 아니라 상태로 고른다** — 시드가 늘어도 표본 생성이 흔들리지 않는다.
   // 현재 목 DB의 정본인 상세 상태로 고른다.
-  const currentUserId = mockDb.getCurrentUser().userId;
   const operable = notes.filter((noteId) => {
     const note = mockDb.getNote(noteId);
     return (
-      note.meetingStatus === "NOT_STARTED" ||
-      (note.meetingStatus === "IN_PROGRESS" &&
-        note.meetingStartedBy?.userId === currentUserId)
+      note.meetingStatus === "NOT_STARTED" || note.meetingStatus === "PAUSED"
     );
   });
 
@@ -158,7 +155,7 @@ function contractSamples() {
     // 요약은 마지막 성공본 하나이므로 이 노트의 본문은 그대로고 `retry`만 붙는다 (APP-421).
     mockDb.requestAnalysis(noteId);
   }
-  // READY 세션은 마지막에 만든다 — 전역 가드가 위 endMeeting들을 막지 않게. 이 세션이
+  // READY 세션은 마지막에 만든다. 이 세션이
   // `startedAt`·`endedAt`·`endReason`의 null 쪽 표본이다.
   // 방금 종료한 둘 말고 아직 진행 중인 노트에 만든다 — 종료된 회의는 세션을 못 만든다.
   const unstartedSession = mockDb.createSession(operable[2]);
@@ -210,7 +207,8 @@ function contractSamples() {
    */
   const chatIds = Array.from(
     { length: 5 },
-    () => mockDb.createAgentChat({ workspaceId: workspaces[0].workspaceId }).chatId
+    () =>
+      mockDb.createAgentChat({ workspaceId: workspaces[0].workspaceId }).chatId
   );
   const approval = {
     approvalId: "0K9GVJT2C4Q7F",
@@ -247,7 +245,12 @@ function contractSamples() {
   mockDb.appendAgentChatMessage(chatIds[0], {
     role: "USER",
     scope: [
-      { kind: "NOTE", id: notes[0], title: "주간 배포 회의", unavailable: false },
+      {
+        kind: "NOTE",
+        id: notes[0],
+        title: "주간 배포 회의",
+        unavailable: false,
+      },
       { kind: "NOTE", id: "01KDELETED0000", title: null, unavailable: true },
     ],
     content: "논의된 이슈를 만들어줘",
@@ -290,23 +293,28 @@ function contractSamples() {
    * 유효한 null 표본으로 세게 되고, 핸들러를 계약대로 400으로 고치는 순간 이 테스트가
    * 정상 변경을 막는다. 그래서 여기 손으로 적은 유효 요청만 쓴다.
    */
-  // 지금은 비어 있다 — 대화 목록이 `/v1/workspaces/{workspaceId}/agent-chats`로 옮겨가면서
-  // 마지막 항목이 빠졌다. 그 경로는 `{workspaceId}`가 `tuples`에서 자동으로 채워지고, 대화를
-  // 하나도 안 만든 워크스페이스까지 표본에 든다. 비었다고 이 갈래를 지우지 않는다 — 필수
-  // query를 가진 GET이 계약에 생기면 여기 없다는 이유로 `skipped`가 그것을 드러낸다.
-  const requiredQuerySamples: Record<string, string[]> = {};
+  const requiredQuerySamples: Record<string, string[]> = {
+    // 전사 증분 조회 (APP-685). **커서 둘을 함께** 보내는 것이 유효한 요청이다 — 한쪽만
+    // 보내면 같은 밀리초의 발화가 조용히 빠진다. 0 부터면 처음부터이므로 전체와 같은 표본을
+    // 낸다.
+    "/v1/notes/{noteId}/transcript/segments": [
+      "?afterStartedAtMs=0&afterSequence=0",
+    ],
+  };
 
   const samples: Array<[string, string]> = [];
   const skipped: string[] = [];
   for (const { path, schema, params, requiredQuery } of jsonGetOperations()) {
+    // 필수 query 는 손으로 적은 유효 요청을 쓰되, `{param}` 은 아래 전개에 그대로 맡긴다 —
+    // 쿼리 때문에 경로 채우기를 건너뛰면 그 operation 이 표본에서 통째로 빠진다.
+    let queries = [""];
     if (requiredQuery.length > 0) {
-      const queries = requiredQuerySamples[path];
-      if (!queries) {
+      const sampled = requiredQuerySamples[path];
+      if (!sampled) {
         skipped.push(`${path} — 필수 query ${requiredQuery}의 표본이 없습니다`);
         continue;
       }
-      for (const query of queries) samples.push([schema, `${path}${query}`]);
-      continue;
+      queries = sampled;
     }
     // 파라미터가 없는 operation은 시드 조합과 무관하게 한 번만 부른다.
     const proposals = params.length === 0 ? [{}] : tuples;
@@ -330,7 +338,9 @@ function contractSamples() {
           values[param].map((value) => url.replace(`{${param}}`, value))
         );
       }
-      for (const url of urls) samples.push([schema, url]);
+      for (const url of urls) {
+        for (const query of queries) samples.push([schema, `${url}${query}`]);
+      }
       filled += urls.length;
     }
     if (filled === 0) skipped.push(`${path} — 채울 수 없는 param: ${params}`);
@@ -350,6 +360,11 @@ function contractSamples() {
  * `members-settings`가 아직 아바타를 그리지 않아 화면에서는 지나지 않는다.
  */
 const KNOWN_ONE_SIDED = new Set([
+  // **목의 알림은 한 쪽뿐이다.** 커서는 `hasMore` 가 참일 때만 값이 있는데, 그러려면 시드에
+  // 알림을 50건 넘게 심어야 한다 — 모든 테스트가 그만큼 느려지는 값을 이 한 필드 때문에
+  // 치르지 않는다. 서버 쪽은 `GetNotificationsService` 가 한 건 더 읽어 정하고 IT 가 본다.
+  "NotificationListResponse.data.nextCreatedAt",
+  "NotificationListResponse.data.nextNotificationId",
   // **server 가 늘 `null` 을 보낸다.** 계약이 선언만 하고 채우는 경로가 없다
   // (`변경사항/계약-어긋남.md` 6번 「스키마만 넓다」). 고칠 자리는 server 의
   // `turnFields()` 헬퍼이고, 그때 이 줄을 지운다.

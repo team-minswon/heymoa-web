@@ -39,11 +39,6 @@ export type approveMeetingReviewResponse401 = {
   status: 401;
 };
 
-export type approveMeetingReviewResponse403 = {
-  data: ErrorResponse;
-  status: 403;
-};
-
 export type approveMeetingReviewResponse409 = {
   data: ErrorResponse;
   status: 409;
@@ -56,7 +51,6 @@ export type approveMeetingReviewResponseSuccess =
 export type approveMeetingReviewResponseError = (
   | approveMeetingReviewResponse400
   | approveMeetingReviewResponse401
-  | approveMeetingReviewResponse403
   | approveMeetingReviewResponse409
 ) & {
   headers: Headers;

@@ -11,7 +11,8 @@ import type { NotificationListResponseDataNotificationsItemType } from "./notifi
 export type NotificationListResponseDataNotificationsItem = {
   /** 알림 생성 시각 */
   createdAt: string;
-  invitation?: NotificationListResponseDataNotificationsItemInvitation;
+  /** 워크스페이스 초대 정보. 모든 알림에 포함된다 */
+  invitation: NotificationListResponseDataNotificationsItemInvitation;
   /**
    * 알림 식별자
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$

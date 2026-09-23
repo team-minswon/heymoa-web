@@ -459,14 +459,6 @@ function startAnalysis(noteId: string) {
   target.runningSince.set(noteId, Date.now());
 }
 
-function requireStarter(noteId: string) {
-  const note = mockDb.getNote(noteId);
-  if (note.meetingStartedBy?.userId !== mockDb.getCurrentUser().userId) {
-    failWith("NOT_MEETING_STARTER", 403, "회의 시작자만 조작할 수 있습니다.");
-  }
-  return note;
-}
-
 function reviewOf(noteId: string) {
   mockDb.getNote(noteId);
   return (
@@ -495,7 +487,6 @@ function view(review: StoredReview): MeetingReviewResponseData {
 }
 
 function editableReview(noteId: string, expectedReviewVersion: number) {
-  requireStarter(noteId);
   const review = reviewOf(noteId);
   if (flowOf(noteId) !== "REVIEWABLE" || expectedReviewVersion !== review.reviewVersion) {
     failWith(...CONFLICT);
@@ -576,7 +567,7 @@ export const meetingFlowHandlers = [
   http.post("*/v1/notes/:noteId/analyses", ({ params }) =>
     respond(() => {
       const noteId = paramId(params.noteId);
-      requireStarter(noteId);
+      mockDb.getNote(noteId);
       const status = flowOf(noteId);
       if (status !== "ANALYSIS_FAILED" && status !== "NOT_REQUESTED") {
         failWith("MEETING_ANALYSIS_CONFLICT", 409, "저장된 분석 요청 또는 결과와 일치하지 않습니다.");
@@ -677,7 +668,7 @@ export const meetingFlowHandlers = [
   http.post("*/v1/notes/:noteId/approval", async ({ params, request }) =>
     respond(async () => {
       const noteId = paramId(params.noteId);
-      const note = requireStarter(noteId);
+      const note = mockDb.getNote(noteId);
       const body = (await request.json()) as MeetingApprovalRequest;
       const target = store();
       const saved = target.approvals.get(noteId);

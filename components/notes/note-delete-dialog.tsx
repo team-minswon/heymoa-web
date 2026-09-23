@@ -14,10 +14,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  getGetNotesQueryKey,
-  useDeleteNote,
-} from "@/lib/api/generated/notes/notes";
+import { useDeleteNote } from "@/lib/api/generated/notes/notes";
+import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 
 /** 목록 캐시에서 그 노트 행만 뺀다. 모양이 예상과 다르면 손대지 않는다. */
 function dropNoteFromList(current: unknown, noteId: string) {
@@ -49,7 +47,6 @@ function dropNoteFromList(current: unknown, noteId: string) {
  */
 export function NoteDeleteDialog({
   noteId,
-  projectId,
   title,
   open,
   onOpenChange,
@@ -57,7 +54,6 @@ export function NoteDeleteDialog({
 }: {
   noteId: string;
   /** 목록 쿼리 키가 프로젝트 단위라 무효화에 필요하다. */
-  projectId: string;
   title: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -113,11 +109,16 @@ export function NoteDeleteDialog({
               });
               // 목록은 재조회 전에 행을 먼저 뺀다 — `invalidateQueries`는 재조회가 실패해도
               // resolve하고 옛 데이터를 남겨서, 지운 행이 그대로 보인다.
-              const notesKey = getGetNotesQueryKey(projectId);
-              queryClient.setQueryData(notesKey, (current: unknown) =>
-                dropNoteFromList(current, noteId)
+              //
+              // **목록이 둘이다** (APP-685). 프로젝트 것만 빼면 「모든 노트」 화면에 지운 행이
+              // 그대로 서 있다. 캐시에 있는 것만 손대므로 없는 키는 그냥 지나간다.
+              queryClient.setQueriesData(
+                { predicate: ({ queryKey }) => isNoteListQueryKey(queryKey) },
+                (current: unknown) => dropNoteFromList(current, noteId)
               );
-              await queryClient.invalidateQueries({ queryKey: notesKey });
+              await queryClient.invalidateQueries({
+                predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
+              });
               toast.success("회의를 삭제했습니다.");
               onOpenChange(false);
               onDeleted?.();

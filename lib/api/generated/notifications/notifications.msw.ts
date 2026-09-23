@@ -35,6 +35,9 @@ export const getGetNotificationsResponseMock =
         },
       ],
       unreadCount: 0,
+      hasMore: false,
+      nextCreatedAt: null,
+      nextNotificationId: null,
     },
     error: null,
   });

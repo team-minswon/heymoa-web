@@ -53,7 +53,7 @@ export function TaskRow({
   /** 이력 시트를 내용 고치기로 연다 */
   onEdit: () => void;
 }) {
-  const { task } = entry;
+  const task = entry;
   const done = task.taskStatus !== "OPEN";
   const struck = done || completing;
   const editable = !done && !pending;

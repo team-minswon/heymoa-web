@@ -13,35 +13,36 @@ const entry = (
   due: string | null,
   taskStatus: "OPEN" | "COMPLETED" | "CANCELLED" = "OPEN"
 ): TaskEntry => ({
+  taskId: content,
   projectId: "p1",
   projectName: "제품",
-  task: { taskId: content, content, taskStatus, assignee: null, due, revision: 1 },
+  content,
+  taskStatus,
+  assignee: null,
+  due,
+  revision: 1,
 });
 
 describe("filterTasks", () => {
   const mine: TaskEntry = {
+    taskId: "a",
     projectId: "p1",
     projectName: "제품",
-    task: {
-      taskId: "a",
-      content: "내 것",
-      taskStatus: "OPEN",
-      assignee: { type: "USER", id: "me", name: "나" },
-      due: null,
-      revision: 1,
-    },
+    content: "내 것",
+    taskStatus: "OPEN",
+    assignee: { type: "USER", id: "me", name: "나" },
+    due: null,
+    revision: 1,
   };
   const speaker: TaskEntry = {
+    taskId: "b",
     projectId: "p2",
     projectName: "리서치",
-    task: {
-      taskId: "b",
-      content: "화자 것",
-      taskStatus: "OPEN",
-      assignee: { type: "SPEAKER_LABEL", noteId: "n", label: "C" },
-      due: null,
-      revision: 1,
-    },
+    content: "화자 것",
+    taskStatus: "OPEN",
+    assignee: { type: "SPEAKER_LABEL", noteId: "n", label: "C" },
+    due: null,
+    revision: 1,
   };
 
   it("내 할 일은 계정으로 풀린 담당만, 프로젝트는 그 프로젝트만 남긴다", () => {
@@ -69,7 +70,7 @@ describe("groupTasks", () => {
       "2026-09-16"
     );
 
-    expect(groups.map((group) => [group.label, group.entries.map((e) => e.task.content)])).toEqual([
+    expect(groups.map((group) => [group.label, group.entries.map((e) => e.content)])).toEqual([
       ["기한 지남", ["지남"]],
       ["이번 주", ["오늘", "나중 이번 주"]],
       ["다음 주 이후", ["다음 주"]],
@@ -94,10 +95,10 @@ describe("tasksWithStatus", () => {
       entry("취소", null, "CANCELLED"),
       entry("진행", null),
     ];
-    expect(tasksWithStatus(all, "COMPLETED").map((e) => e.task.content)).toEqual([
+    expect(tasksWithStatus(all, "COMPLETED").map((e) => e.content)).toEqual([
       "먼저 끝남",
       "늦게 끝남",
     ]);
-    expect(tasksWithStatus(all, "CANCELLED").map((e) => e.task.content)).toEqual(["취소"]);
+    expect(tasksWithStatus(all, "CANCELLED").map((e) => e.content)).toEqual(["취소"]);
   });
 });

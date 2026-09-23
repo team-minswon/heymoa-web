@@ -11,8 +11,20 @@ import type { NotificationListResponseDataNotificationsItem } from "./notificati
  * 성공 응답 데이터
  */
 export type NotificationListResponseData = {
-  /** 읽지 않은 알림 개수 */
+  /**
+   * 다음 요청에 그대로 실을 커서. 더 없으면 null
+   * @nullable
+   */
+  nextCreatedAt: string | null;
+  /** 커서 뒤에 더 있나. 총 개수를 세지 않고 한 건 더 읽어 정한다 */
+  hasMore: boolean;
+  /** 읽지 않은 알림 개수. **목록과 같은 조인**으로 센다 - 전에는 조인 없이 세서, 초대가 지워진 알림이 세어지는데 목록에 안 나와 뱃지가 안 꺼졌다 */
   unreadCount: number;
-  /** 알림 목록. 최신순 최대 50개 */
+  /**
+   * 커서의 짝. `createdAt` 만으로는 같은 시각의 알림이 조용히 빠진다
+   * @nullable
+   */
+  nextNotificationId: string | null;
+  /** 알림 목록. 최신순 한 쪽 최대 50개 */
   notifications: NotificationListResponseDataNotificationsItem[];
 };

@@ -75,15 +75,13 @@ describe("TaskHistorySheet", () => {
     ({
       projectId: "p1",
       projectName: "제품",
-      task: {
-        taskId: "t1",
-        content: "스테이징에 올린다",
-        taskStatus: "OPEN",
-        assignee: null,
-        due: "2026-09-19",
-        revision: 2,
-        ...task,
-      },
+      taskId: "t1",
+      content: "스테이징에 올린다",
+      taskStatus: "OPEN",
+      assignee: null,
+      due: "2026-09-19",
+      revision: 2,
+      ...task,
     }) as unknown as TaskEntry;
 
   const answer = (revisions: Revision[]) => ({

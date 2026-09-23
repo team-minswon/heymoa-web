@@ -26,7 +26,7 @@ import {
 import {
   isNoteQueryKey,
   isNoteTranscriptQueryKey,
-  isProjectNotesQueryKey,
+  isNoteListQueryKey,
 } from "@/lib/notes/query-keys";
 import { useGetWorkspaceMembers } from "@/lib/api/generated/workspace-members/workspace-members";
 import { useQueryClient } from "@tanstack/react-query";
@@ -348,7 +348,7 @@ function LinkGuestDialog({
         queryClient.invalidateQueries({ predicate: isNoteQueryKey }),
         queryClient.invalidateQueries({ predicate: isNoteTranscriptQueryKey }),
         queryClient.invalidateQueries({
-          predicate: (query) => isProjectNotesQueryKey(query.queryKey),
+          predicate: (query) => isNoteListQueryKey(query.queryKey),
         }),
       ]);
     } catch {
@@ -586,7 +586,7 @@ function DeleteGuestDialog({
       queryClient.invalidateQueries({ predicate: isNoteQueryKey }),
       queryClient.invalidateQueries({ predicate: isNoteTranscriptQueryKey }),
       queryClient.invalidateQueries({
-        predicate: (query) => isProjectNotesQueryKey(query.queryKey),
+        predicate: (query) => isNoteListQueryKey(query.queryKey),
       }),
     ]);
     onClose();

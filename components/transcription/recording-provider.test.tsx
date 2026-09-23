@@ -664,6 +664,39 @@ describe("RecordingProvider", () => {
       } as never)
     ).toBe(true);
   });
+
+  it("★ 남이 회의를 끝낸 것을 장애로 말하지 않는다", async () => {
+    // 권한이 「시작자만」에서 「멤버 누구나」로 열리면서(APP-685) 자주 일어나게 됐다.
+    // 전에는 `MEETING_ENDED` 가 기본 문구로 떨어져 「서버에서 스크립트 세션이 중단되었습니다」로
+    // 보였다 — 정상적으로 끝난 회의가 녹음하던 사람에게는 장애로 읽힌다.
+    // **정상적으로 녹음 중이어야 한다.** 이미 failed 면 재조정이 통째로 건너뛰어져서
+    // 이 문구가 나올 자리 자체가 없다.
+    const harness = setup({ enablePolling: true });
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(harness.result.current.phase).toBe("recording");
+    sessionQuery.current = {
+      data: {
+        status: 200,
+        data: {
+          success: true,
+          data: {
+            ...session,
+            status: "INTERRUPTED",
+            endedAt: "2026-07-15T00:02:00Z",
+            endReason: "MEETING_ENDED",
+          },
+        },
+      },
+      isFetching: false,
+      dataUpdatedAt: Date.now(),
+    };
+
+    harness.rerender();
+
+    await waitFor(() =>
+      expect(harness.result.current.error).toBe("회의가 종료되어 기록을 마쳤습니다.")
+    );
+  });
 });
 
 /**

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, CircleStop, Eye, Pause } from "lucide-react";
+import { CalendarDays, CircleStop, Pause } from "lucide-react";
 
-import { useAuth } from "@/components/auth/auth-provider";
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
 import { Button } from "@/components/ui/button";
 import type { NoteResponseData } from "@/lib/api/generated/models";
@@ -26,7 +25,11 @@ export function MeetingStatusChip({
 }) {
   const live = status === "IN_PROGRESS";
   const Icon =
-    status === "NOT_STARTED" ? CalendarDays : status === "PAUSED" ? Pause : null;
+    status === "NOT_STARTED"
+      ? CalendarDays
+      : status === "PAUSED"
+        ? Pause
+        : null;
 
   return (
     <span
@@ -52,20 +55,6 @@ export function MeetingStatusChip({
 }
 
 /**
- * 참관 칩. 기록 중인데 내가 시작자가 아닐 때 선다 — 회의 제어가 왜 없는지를 그 자리에서
- * 말해 준다(design.pen `BiafK`). 예전에는 헤더가 시작자 아바타와 이름을 그렸는데, 제어가
- * 없는 이유는 여전히 화면 어디에도 없었다. 시작자가 누구인지는 아래 메타 줄이 말한다.
- */
-export function MeetingViewerChip() {
-  return (
-    <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold text-[var(--el-muted)]">
-      <Eye className="size-3.5" aria-hidden />
-      참관
-    </span>
-  );
-}
-
-/**
  * 회의 제어. design.pen의 Meeting Bar는 **회의 종료 하나뿐이다** — 상태 칩은 헤더 첫 줄로,
  * 초 단위 타이머는 레코더 독(`qYRCW`)으로 갔다. 예전에는 이 그룹이 상태 배지·누적 타이머·
  * 시작자 아바타까지 들고 있어서 조용한 헤더에서 이 줄만 소리쳤다.
@@ -78,16 +67,10 @@ export function MeetingControls({
   /** 종료 접수 후 호출 — note-panel이 요약 탭으로 넘긴다. */
   onMeetingEnded?: () => void;
 }) {
-  const { user } = useAuth();
   const [endOpen, setEndOpen] = useState(false);
 
-  const startedBy = note.meetingStartedBy;
-  const isStarter = Boolean(
-    user && startedBy && startedBy.userId === user.userId
-  );
   const canEnd =
-    isStarter &&
-    (note.meetingStatus === "IN_PROGRESS" || note.meetingStatus === "PAUSED");
+    note.meetingStatus === "IN_PROGRESS" || note.meetingStatus === "PAUSED";
 
   if (!canEnd) return null;
 

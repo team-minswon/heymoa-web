@@ -6,6 +6,7 @@ import { useState } from "react";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
   getGetProjectTaskRevisionsQueryKey,
+  getGetWorkspaceTasksQueryKey,
   getGetProjectTasksQueryKey,
   useUpdateProjectTask,
 } from "@/lib/api/generated/projects/projects";
@@ -43,11 +44,16 @@ export function useTaskUpdate(workspaceId: string) {
 
   /** 저장이 받아들여졌는지를 돌려준다. 편집을 닫을지 부르는 쪽이 이것으로 정한다 */
   const save = async (entry: TaskEntry, patch: TaskPatch): Promise<boolean> => {
-    const { task } = entry;
+    const task = entry;
     const refresh = () =>
       Promise.all([
         queryClient.invalidateQueries({
           queryKey: getGetProjectTasksQueryKey(workspaceId, entry.projectId),
+        }),
+        // 워크스페이스 단위 목록이 읽는 자리다 (APP-685). 프로젝트 키만 비우면 이 화면의
+        // 목록이 안 바뀐다 — 에러도 경고도 없이 낡은 값이 남는다.
+        queryClient.invalidateQueries({
+          queryKey: getGetWorkspaceTasksQueryKey(workspaceId),
         }),
         queryClient.invalidateQueries({
           queryKey: getGetProjectTaskRevisionsQueryKey(workspaceId, entry.projectId, task.taskId),

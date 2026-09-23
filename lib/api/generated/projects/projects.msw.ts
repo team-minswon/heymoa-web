@@ -46,6 +46,31 @@ export const getCreateProjectResponseMock = (): ProjectResponse => ({
   error: null,
 });
 
+export const getGetWorkspaceTasksResponseMock =
+  (): ProjectTaskListResponse => ({
+    success: true,
+    data: {
+      tasks: [
+        {
+          taskId: "0K9GVJT2C4Q21",
+          projectId: "0HZX2K7M9Q4AE",
+          projectName: "모바일 앱",
+          revision: 1,
+          content: "배포 체크리스트를 만든다",
+          taskStatus: "OPEN",
+          assignee: {
+            type: "USER",
+            id: "0HZX2K7M9Q4AC",
+            name: "민수",
+            image: "https://cdn.example.com/avatars/hong.png",
+          },
+          due: "2026-09-18",
+        },
+      ],
+    },
+    error: null,
+  });
+
 export const getGetProjectResponseMock = (): ProjectResponse => ({
   success: true,
   data: {
@@ -78,10 +103,17 @@ export const getGetProjectTasksResponseMock = (): ProjectTaskListResponse => ({
     tasks: [
       {
         taskId: "0K9GVJT2C4Q21",
+        projectId: "0HZX2K7M9Q4AE",
+        projectName: "모바일 앱",
         revision: 1,
         content: "배포 체크리스트를 만든다",
         taskStatus: "OPEN",
-        assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+        assignee: {
+          type: "USER",
+          id: "0HZX2K7M9Q4AC",
+          name: "민수",
+          image: "https://cdn.example.com/avatars/hong.png",
+        },
         due: "2026-09-18",
       },
     ],
@@ -93,10 +125,17 @@ export const getCreateProjectTaskResponseMock = (): ProjectTaskResponse => ({
   success: true,
   data: {
     taskId: "0K9GVJT2C4Q21",
+    projectId: "0HZX2K7M9Q4AE",
+    projectName: "모바일 앱",
     revision: 1,
     content: "배포 체크리스트를 만든다",
     taskStatus: "OPEN",
-    assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+    assignee: {
+      type: "USER",
+      id: "0HZX2K7M9Q4AC",
+      name: "민수",
+      image: "https://cdn.example.com/avatars/hong.png",
+    },
     due: "2026-09-18",
   },
   error: null,
@@ -106,10 +145,17 @@ export const getUpdateProjectTaskResponseMock = (): ProjectTaskResponse => ({
   success: true,
   data: {
     taskId: "0K9GVJT2C4Q21",
+    projectId: "0HZX2K7M9Q4AE",
+    projectName: "모바일 앱",
     revision: 2,
     content: "배포 체크리스트를 만든다",
     taskStatus: "COMPLETED",
-    assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+    assignee: {
+      type: "USER",
+      id: "0HZX2K7M9Q4AC",
+      name: "민수",
+      image: "https://cdn.example.com/avatars/hong.png",
+    },
     due: "2026-09-18",
   },
   error: null,
@@ -124,7 +170,12 @@ export const getGetProjectTaskRevisionsResponseMock =
           revision: 1,
           content: "배포 체크리스트를 만든다",
           taskStatus: "OPEN",
-          assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+          assignee: {
+            type: "USER",
+            id: "0HZX2K7M9Q4AC",
+            name: "민수",
+            image: "https://cdn.example.com/avatars/hong.png",
+          },
           due: "2026-09-18",
           approvalId: null,
           changedBy: "0HZX2K7M9Q4AC",
@@ -177,6 +228,30 @@ export const getCreateProjectMockHandler = (
             : overrideResponse
           : getCreateProjectResponseMock(),
         { status: 201 }
+      );
+    },
+    options
+  );
+};
+
+export const getGetWorkspaceTasksMockHandler = (
+  overrideResponse?:
+    | ProjectTaskListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<ProjectTaskListResponse> | ProjectTaskListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/tasks",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetWorkspaceTasksResponseMock(),
+        { status: 200 }
       );
     },
     options
@@ -352,6 +427,7 @@ export const getGetProjectTaskRevisionsMockHandler = (
 export const getProjectsMock = () => [
   getGetProjectsMockHandler(),
   getCreateProjectMockHandler(),
+  getGetWorkspaceTasksMockHandler(),
   getGetProjectMockHandler(),
   getUpdateProjectMockHandler(),
   getDeleteProjectMockHandler(),

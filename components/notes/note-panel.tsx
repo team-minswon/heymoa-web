@@ -14,9 +14,9 @@ import { usePersonalChat } from "@/components/chat/personal-chat";
 import {
   MeetingControls,
   MeetingStatusChip,
-  MeetingViewerChip,
 } from "@/components/notes/meeting-controls";
 import { NoteArchive } from "@/components/notes/note-archive";
+import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import {
   NoteDetails,
   NoteDetailsSkeleton,
@@ -48,9 +48,7 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { errorCodeOf } from "@/lib/api/error-message";
 import { useGetNote } from "@/lib/api/generated/notes/notes";
-import { useGetProject } from "@/lib/api/generated/projects/projects";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
@@ -61,8 +59,6 @@ import { cn } from "@/lib/utils";
  * `context`는 사이드 뷰 전용입니다 — 전체 뷰에서는 레일이 그 자리를 맡습니다.
  */
 export type NoteTab = "context" | "details" | "transcript" | "summary";
-
-const NOTE_SAFETY_POLL_MS = 30_000;
 
 /**
  * 밑줄 탭 한 칸. 상단바(56) 안에 살아서 높이가 `h-14`다 — 활성 밑줄이 상단바의 hairline
@@ -103,39 +99,21 @@ export function NotePanel({
    */
   onDeleted?: () => void;
 }) {
-  const noteQuery = useGetNote(noteId, {
-    query: {
-      // 토픽 구독이 조용히 거절되는 server 계약의 복구망. 5초 주 경로는 제거하고
-      // 종료 전 상태만 저주기로 확인한다.
-      refetchInterval: (query) => {
-        const response = query.state.data;
-        const note =
-          response?.status === 200 && response.data.success
-            ? response.data.data
-            : undefined;
-        return note?.meetingStatus === "ENDED" ? false : NOTE_SAFETY_POLL_MS;
-      },
-    },
-  });
+  const noteRealtime = useNoteRealtime();
+  const noteQuery = useGetNote(noteId);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
       : undefined;
-  const projectQuery = useGetProject(workspaceId, note?.projectId ?? "", {
-    query: {
-      enabled: Boolean(note?.projectId),
-      // **실패해도 스스로 낫는다.** 이 조회가 노트의 소속을 확인해 주고, 확인 전에는 녹음
-      // 시작이 잠긴다. 전역 설정이 `refetchOnWindowFocus: false`라 재시도를 소진한 실패는
-      // 재조회 길이 없으면 새로고침 전에는 영영 안 풀린다(codex 6·7회차).
-      refetchInterval: (query) =>
-        query.state.status === "error" ? NOTE_SAFETY_POLL_MS : false,
-    },
-  });
-  const project =
-    projectQuery.data?.status === 200 && projectQuery.data.data.success
-      ? projectQuery.data.data.data
-      : undefined;
-
+  /**
+   * **2단 폭포수가 사라졌다** (APP-685). 전에는 노트를 받은 뒤 `useGetProject` 를 한 번 더
+   * 돌려 소속을 확인했고, 그 조회가 끝나기 전에는 **회의 시작 버튼이 잠겼다.** 이제 노트
+   * 응답이 소속과 프로젝트 이름을 같이 싣는다 — 서버가 접근 검증에서 이미 읽은 값이라
+   * 조회가 늘지도 않는다.
+   *
+   * **확인된 소속이라는 뜻은 그대로다.** 이 값은 서버가 멤버십을 검증한 뒤 그 검증에 쓴
+   * 프로젝트에서 낸 것이라, 프로젝트 조회가 확인해 주던 것과 같은 사실이다.
+   */
   const phase = deriveMeetingPhase(note);
   // 전사·요약 복사본의 머리말. **여기서 한 번 만든다** — 탭마다 노트를 다시 구독하지
   // 않는다(rule `architecture`).
@@ -268,7 +246,8 @@ export function NotePanel({
       visible: phase === "ended" && !viewerEndTransition,
     });
   }
-  const showViewerEndNotice = phase === "ended" && !isStarter && !archiveState.visible;
+  const showViewerEndNotice =
+    phase === "ended" && !isStarter && !archiveState.visible;
   // 예전에는 흐르던 **공유** 턴이 끝날 때까지 아카이브를 미뤘다. 개인 대화는 레일에 있고
   // 본문과 자리를 다투지 않으므로 그 대기가 없어졌다.
   const showArchive = phase === "ended" && archiveState.visible;
@@ -322,7 +301,7 @@ export function NotePanel({
       // 이 창에서 끈 뒤 다른 탭이 재개했을 때 낡은 로컬 세션이 그 활성 세션을 계속 가려
       // "회의 시작"이 열리고 누르면 409가 난다. 남이 재개하면 노트의 활성 세션 시작 시각이
       // 내 것과 달라지므로 그 순간부터 다시 차단으로 돌아간다.
-      // (`isFetching`으로 가리면 30초 안전 폴링마다 그 틈이 다시 열린다.)
+      // (`isFetching`으로 가리면 일반 재조회 때마다 그 틈이 다시 열린다.)
       note?.activeSessionStartedAt === recording.session.startedAt) ||
       (recording.phase === "failed" &&
         recording.session.status === "INTERRUPTED"));
@@ -333,9 +312,8 @@ export function NotePanel({
   const showDock = Boolean(
     note &&
     (note.meetingStatus === "NOT_STARTED" ||
-      (isStarter &&
-        (note.meetingStatus === "IN_PROGRESS" ||
-          note.meetingStatus === "PAUSED")))
+      note.meetingStatus === "IN_PROGRESS" ||
+      note.meetingStatus === "PAUSED")
   );
   /**
    * **이 URL의 워크스페이스가 이 노트의 것이 아니다.**
@@ -346,29 +324,27 @@ export function NotePanel({
    * 서버가 `findByWorkspaceIdAndProjectId` 한 번으로 찾고 없으면 `PROJECT_NOT_FOUND`다.
    * `failureReason`도 본다: `error`는 재시도를 소진해야 채워진다(APP-385).
    */
+  // URL 의 워크스페이스와 노트의 실제 소속이 다르다. 전에는 프로젝트 조회의 404 로 알았다.
   const noteNotInThisWorkspace =
-    errorCodeOf(projectQuery.error) === "PROJECT_NOT_FOUND" ||
-    errorCodeOf(projectQuery.failureReason) === "PROJECT_NOT_FOUND";
+    note !== undefined && note.workspaceId !== workspaceId;
   /**
    * 독에 넘길 **확인된 소속.** 서버가 확인해 준 값만 쓴다 — 비어 있으면 독이 시작을 안 연다.
    *
    * **실패했다고 URL의 값으로 대신하면 안 된다.** 조회가 500으로 끝난 채 시작하면 세션은
    * A에 생기는데 소속은 B로 기록된다(codex 7회차 — 6회차 반영에서 한 번 틀린 자리다).
    * 일시적 실패의 복구는 값을 추측하는 것이 아니라 **이유를 보이고 다시 물어보는 것**이다:
-   * 아래 `startBlockedReason`이 이유를 세우고, 위 `refetchInterval`이 다시 물어본다.
+   * 아래 `startBlockedReason`이 이유를 세우고, 사용자가 다시 조회할 수 있다.
    */
-  const confirmedWorkspaceId = project?.workspaceId;
+  const confirmedWorkspaceId = noteNotInThisWorkspace
+    ? undefined
+    : note?.workspaceId;
   const startBlockedReason = noteNotInThisWorkspace
     ? "이 노트는 이 워크스페이스에 없습니다."
-    : projectQuery.isError
-      ? // 소속 확인 실패는 시작을 잠근다. 이유 없이 잠긴 버튼만 남기지 않는다 — 위
-        // `refetchInterval`이 30초마다 다시 확인하므로 문구도 그렇게 말한다.
-        "노트 정보를 확인하지 못했습니다. 자동으로 다시 시도합니다."
-      : note?.meetingStatus === "IN_PROGRESS" &&
-          !localProviderCanControlNote &&
-          !finishedHere
-        ? "다른 탭·기기에서 기록 중입니다."
-        : null;
+    : note?.meetingStatus === "IN_PROGRESS" &&
+        !localProviderCanControlNote &&
+        !finishedHere
+      ? "다른 탭·기기에서 기록 중입니다."
+      : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
 
   // 전체 화면은 **노트(왼쪽) + 에이전트 레일(오른쪽 고정)** 두 패널이다. 사이는 캔버스 10px,
@@ -377,7 +353,6 @@ export function NotePanel({
   const paneChrome = isFull
     ? "rounded-panel border border-[var(--el-hairline)] shadow-e2"
     : "";
-  const isViewer = phase === "active" && !isStarter;
   const meta = note ? buildNoteHeaderMeta(note, { isStarter }) : null;
   /**
    * 회의 제어(`MeetingControls`)가 실제로 그릴 것이 있는가. **조건을 여기서 한 번 더 적는
@@ -386,8 +361,7 @@ export function NotePanel({
    * (`MeetingControls`는 같은 조건에서 `null`을 돌려준다.)
    */
   const canEndMeeting =
-    isStarter &&
-    (note?.meetingStatus === "IN_PROGRESS" || note?.meetingStatus === "PAUSED");
+    note?.meetingStatus === "IN_PROGRESS" || note?.meetingStatus === "PAUSED";
 
   return (
     <div
@@ -516,7 +490,6 @@ export function NotePanel({
                   <Skeleton className="h-3 w-[27px] rounded-chip" />
                 </span>
               )}
-              {isViewer ? <MeetingViewerChip /> : null}
               {/* 제목은 **지금 어디인지**를 말하는 빵조각이다. 좁아지면 여기가 줄어든다 —
                 옆의 상태 칩과 탭은 줄어들 수 없는 것들이다. */}
               {note ? (
@@ -606,7 +579,6 @@ export function NotePanel({
                 </DropdownMenu>
                 <NoteDeleteDialog
                   noteId={noteId}
-                  projectId={note.projectId}
                   title={note.title}
                   open={deleteTargetId === noteId}
                   onOpenChange={(open) =>
@@ -632,9 +604,9 @@ export function NotePanel({
             <header className="relative z-10 shrink-0 border-b border-[var(--el-hairline)] bg-white px-[var(--note-gutter)] pb-5 pt-5">
               <div className="mx-auto flex w-full max-w-[820px] items-start justify-between gap-4">
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  {project ? (
+                  {note ? (
                     <span className="flex h-5 w-fit shrink-0 items-center rounded-full border border-[var(--el-hairline)] px-2 text-[11px] font-medium text-[var(--el-body)]">
-                      {project.name}
+                      {note.projectName}
                     </span>
                   ) : null}
                   <h1 className="truncate font-serif text-2xl font-light leading-[1.2] tracking-[-0.024em] text-[var(--el-ink)] lg:text-screen-title">
@@ -675,6 +647,27 @@ export function NotePanel({
               />
             </div>
           ) : null}
+          {noteRealtime.subscriptionIssue ? (
+            <div
+              role="alert"
+              className="mx-[var(--note-gutter)] mt-3 flex shrink-0 items-center justify-between gap-3 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-3 text-sm text-[var(--el-body)]"
+            >
+              <span>
+                {noteRealtime.subscriptionIssue === "ALREADY_SUBSCRIBED"
+                  ? "실시간 연결이 중복되어 새 소식을 받지 못하고 있습니다. 화면을 새로고침해 주세요."
+                  : "실시간 연결 인원이 가득 찼습니다. 잠시 뒤 다시 연결합니다."}
+              </span>
+              {noteRealtime.subscriptionIssue === "TOO_MANY_SUBSCRIBERS" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={noteRealtime.retrySubscription}
+                >
+                  다시 시도
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           <TabsContent
             value="transcript"
             className="flex min-h-0 flex-1 flex-col"
@@ -707,9 +700,7 @@ export function NotePanel({
                     }))
                   }
                 >
-                  {false
-                    ? "답변이 끝나면 이동합니다"
-                    : "기록과 요약 보기"}
+                  {false ? "답변이 끝나면 이동합니다" : "기록과 요약 보기"}
                 </Button>
               </div>
             ) : null}
@@ -772,7 +763,6 @@ export function NotePanel({
                   workspaceId={confirmedWorkspaceId}
                   projectId={note?.projectId}
                   isEnded={phase === "ended"}
-                  isStarter={isStarter}
                   noteMeta={noteMeta}
                   participants={note?.participants ?? []}
                   onEvidenceSelect={jumpToSegment}
@@ -788,7 +778,10 @@ export function NotePanel({
                 errorLabel="노트를 불러오지 못했습니다"
                 resetKeys={[noteId]}
               >
-                <NoteDetails noteId={noteId} workspaceId={confirmedWorkspaceId} />
+                <NoteDetails
+                  noteId={noteId}
+                  workspaceId={confirmedWorkspaceId}
+                />
               </DataBoundary>
             </ScrollArea>
           </TabsContent>

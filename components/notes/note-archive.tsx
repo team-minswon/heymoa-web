@@ -39,7 +39,7 @@ import {
 import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { transcriptToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import {
-  isProjectNotesQueryKey,
+  isNoteListQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
 import { SpeakerPanel, SpeakerTools } from "@/components/notes/speaker-panel";
@@ -169,7 +169,9 @@ const labelsToReset = (
   const labels = new Set<string>();
   if (diarization?.status === "MAPPED") {
     for (const speaker of diarization.speakers ?? []) {
-      if (speaker.assignedParticipantId || speaker.assignedName) {
+      // `assignedName` 을 같이 안 본다 (APP-685). 그 값은 서버가 `assignedParticipantId` 로
+      // 조인해 만든 사본이라 **참여 기록 없이 이름만 있는 화자는 존재할 수 없다.**
+      if (speaker.assignedParticipantId) {
         labels.add(speaker.label);
       }
     }
@@ -389,7 +391,7 @@ export function NoteArchive({
       Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) }),
         queryClient.invalidateQueries({ predicate: (query) => isWorkspaceGuestsQueryKey(query.queryKey) }),
-        queryClient.invalidateQueries({ predicate: (query) => isProjectNotesQueryKey(query.queryKey) }),
+        queryClient.invalidateQueries({ predicate: (query) => isNoteListQueryKey(query.queryKey) }),
       ]),
     [queryClient, noteId]
   );

@@ -22,6 +22,17 @@ export type ProjectTaskResponseData = {
    * @nullable
    */
   assignee: ProjectTaskResponseDataAssignee;
+  /**
+   * 그 프로젝트의 이름. 워크스페이스 단위 조회에서 할 일마다 다르다
+   * @minLength 1
+   * @maxLength 100
+   */
+  projectName: string;
+  /**
+   * 그 할 일이 속한 프로젝트의 13자리 TSID
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  projectId: string;
   /** 할 일 상태. 삭제 대신 CANCELLED 로 둔다 */
   taskStatus: ProjectTaskResponseDataTaskStatus;
   /** 할 일 내용 */

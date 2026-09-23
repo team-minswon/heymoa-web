@@ -11,6 +11,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
 
+/**
+ * **종료 응답이 갱신된 노트다** (APP-685). 전에는 204 라 화면이 종료 뒤 상태를 스스로
+ * 지어냈고, 녹음 길이를 브라우저의 `Date.now()` 로 계산했다.
+ */
+const ENDED_NOTE = {
+  status: 200 as const,
+  data: {
+    success: true as const,
+    data: {
+      noteId: "01K0000000002",
+      meetingStatus: "ENDED",
+      meetingEndedAt: "2026-07-29T00:00:05.000Z",
+      recordedDurationMs: 15_000,
+      activeSessionStartedAt: null,
+    },
+  },
+};
+
 const state = vi.hoisted(() => ({
   activeNoteId: null as string | null,
   phase: "idle" as string,
@@ -105,7 +123,7 @@ describe("MeetingEndDialog", () => {
 
   it("종료가 접수되면 onEnded를 불러 요약 탭으로 넘긴다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
-      options?.onSuccess?.()
+      options?.onSuccess?.(ENDED_NOTE)
     );
     const onEnded = vi.fn();
     renderDialog(onEnded);
@@ -115,7 +133,7 @@ describe("MeetingEndDialog", () => {
 
   it("종료가 접수되면 프로젝트 노트 목록도 즉시 갱신한다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
-      options?.onSuccess?.()
+      options?.onSuccess?.(ENDED_NOTE)
     );
     const { client } = renderDialog();
     const invalidateQueries = vi.spyOn(client, "invalidateQueries");
@@ -138,7 +156,7 @@ describe("MeetingEndDialog", () => {
   // 녹음 시작이 열린다 — 계약이 종료된 회의의 세션 생성을 안 막아 서버도 안 잡아 준다.
   it("종료 직후 캐시의 회의 상태를 ENDED로 먼저 적는다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
-      options?.onSuccess?.()
+      options?.onSuccess?.(ENDED_NOTE)
     );
     const { client } = renderDialog();
     client.setQueryData(["note", "01K0000000002"], {
@@ -161,7 +179,7 @@ describe("MeetingEndDialog", () => {
 
   it("종료 전에 시작된 노트 조회가 늦게 끝나도 ENDED를 되돌리지 않는다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
-      options?.onSuccess?.()
+      options?.onSuccess?.(ENDED_NOTE)
     );
     const { client } = renderDialog();
     const queryKey = ["note", "01K0000000002"];
@@ -207,30 +225,11 @@ describe("MeetingEndDialog", () => {
     ).toBe("ENDED");
   });
 
-  it("서버가 활성 세션으로 막으면(로컬은 대기여도) 차단 상태로 바꾸고 다시 시도를 준다", () => {
-    // 다른 탭·기기의 녹음이나 새로고침으로 로컬 상태를 잃어도 서버 409가 권위다.
-    state.endMock.mockImplementation((_vars, options) =>
-      options?.onError?.({
-        success: false,
-        data: null,
-        error: { code: "ACTIVE_TRANSCRIPTION_SESSION", message: "녹음 중" },
-      })
-    );
-    const { close, reopen } = renderDialog();
-    // 처음엔 대기 → 회의 종료.
-    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
-    // 409 → 차단 안내 + 다시 시도. 전역 토스트는 끄고 인라인만.
-    expect(screen.getByText(/다른 탭·기기에서 기록 중입니다/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
-    expect(state.toastError).not.toHaveBeenCalled();
-
-    // 닫았다 다시 열면 차단 상태를 접는다(그 사이 원격 녹음이 끝났을 수 있다).
-    close();
-    reopen();
-    expect(screen.queryByText(/다른 탭·기기에서 기록 중입니다/)).toBeNull();
-    expect(screen.getByRole("button", { name: "회의 종료" })).toBeTruthy();
-  });
-
+  /**
+   * **`ACTIVE_TRANSCRIPTION_SESSION` 차단이 사라졌다** (APP-685). 서버가 열린 세션을 거절
+   * 대신 닫으므로 그 409 가 더 이상 오지 않는다. 그 거절이 강제하던 「STOMP stop →
+   * completed 대기 → REST」 순서도 같이 사라졌다.
+   */
   it("IN_PROGRESS 확인 한 번으로 stop 성공을 기다린 뒤 회의를 종료한다", async () => {
     state.activeNoteId = "01K0000000002";
     state.phase = "recording";
@@ -252,15 +251,16 @@ describe("MeetingEndDialog", () => {
     await waitFor(() => expect(state.endMock).toHaveBeenCalledOnce());
   });
 
-  it("직접 종료 낙관 상태에 마지막 활성 구간을 포함한다", async () => {
+  /**
+   * **지어내지 않고 서버가 준 것을 그대로 넣는다.** 전에는 `Date.now()` 로 마지막 구간을
+   * 계산해 캐시에 썼다 — 시계가 서로 다른 두 사람이 같은 회의를 다른 길이로 봤다.
+   */
+  it("종료 응답의 노트를 그대로 캐시에 넣는다", async () => {
     state.activeNoteId = "01K0000000002";
     state.phase = "recording";
     state.stopMock.mockResolvedValue(true);
     state.endMock.mockImplementation((_vars, options) =>
-      options?.onSuccess?.()
-    );
-    vi.spyOn(Date, "now").mockReturnValue(
-      Date.parse("2026-07-29T00:00:05.000Z")
+      options?.onSuccess?.(ENDED_NOTE)
     );
     const { client } = renderDialog(undefined, "IN_PROGRESS");
     const queryKey = ["note", "01K0000000002"];
@@ -283,59 +283,16 @@ describe("MeetingEndDialog", () => {
       expect(
         (
           client.getQueryData(queryKey) as {
-            data: {
-              data: {
-                meetingStatus: string;
-                recordedDurationMs: number;
-                activeSessionStartedAt: string | null;
-              };
-            };
+            data: { data: Record<string, unknown> };
           }
         ).data.data
       ).toMatchObject({
         meetingStatus: "ENDED",
+        // 서버가 찍은 시각이다. 브라우저 시계가 아니다.
+        meetingEndedAt: "2026-07-29T00:00:05.000Z",
         recordedDurationMs: 15_000,
         activeSessionStartedAt: null,
       })
-    );
-  });
-
-  it("READY 스냅샷이면 로컬 ACTIVE 시작 시각으로 마지막 구간을 보정한다", async () => {
-    state.activeNoteId = "01K0000000002";
-    state.phase = "recording";
-    state.sessionStartedAt = "2026-07-29T00:00:00.000Z";
-    state.stopMock.mockResolvedValue(true);
-    state.endMock.mockImplementation((_vars, options) =>
-      options?.onSuccess?.()
-    );
-    vi.spyOn(Date, "now").mockReturnValue(
-      Date.parse("2026-07-29T00:00:05.000Z")
-    );
-    const { client } = renderDialog(undefined, "IN_PROGRESS");
-    const queryKey = ["note", "01K0000000002"];
-    client.setQueryData(queryKey, {
-      status: 200,
-      data: {
-        success: true,
-        data: {
-          noteId: "01K0000000002",
-          meetingStatus: "IN_PROGRESS",
-          recordedDurationMs: 10_000,
-          activeSessionStartedAt: null,
-        },
-      },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
-
-    await waitFor(() =>
-      expect(
-        (
-          client.getQueryData(queryKey) as {
-            data: { data: { recordedDurationMs: number } };
-          }
-        ).data.data.recordedDurationMs
-      ).toBe(15_000)
     );
   });
 
@@ -395,7 +352,12 @@ describe("MeetingEndDialog", () => {
     expect(state.endMock).toHaveBeenCalledOnce();
   });
 
-  it("다른 탭이 먼저 종료한 409도 ENDED로 수렴한다", async () => {
+  /**
+   * **409 는 지어내지 않고 다시 묻는다** (APP-685). 이미 끝난 회의라 응답에 노트가 없는데,
+   * 그 자리에서 ENDED 를 써 넣으면 종료 시각·녹음 길이를 우리가 만들어 내게 된다. 이제
+   * 서버가 그 값을 주므로 무효화하고 받아 오는 편이 짧고 정확하다.
+   */
+  it("다른 탭이 먼저 종료한 409면 노트를 다시 묻는다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
       options?.onError?.({
         success: false,
@@ -417,17 +379,13 @@ describe("MeetingEndDialog", () => {
 
     await waitFor(() => expect(onEnded).toHaveBeenCalledOnce());
     expect(
-      (
-        client.getQueryData(["note", "01K0000000002"]) as {
-          data: { data: { meetingStatus: string } };
-        }
-      ).data.data.meetingStatus
-    ).toBe("ENDED");
+      client.getQueryState(["note", "01K0000000002"])?.isInvalidated
+    ).toBe(true);
   });
 
   it("진행 중인 PAUSED 조회 취소가 끝난 뒤 ENDED를 캐시에 쓴다", async () => {
     state.endMock.mockImplementation((_vars, options) =>
-      options?.onSuccess?.()
+      options?.onSuccess?.(ENDED_NOTE)
     );
     const { client } = renderDialog();
     const queryKey = ["note", "01K0000000002"];

@@ -181,7 +181,14 @@ export function createSpeakerIdentityResolver(
       };
     }
     const speaker = byLabel.get(label);
-    const name = speaker?.assignedName ?? null;
+    /**
+     * **이름의 원본은 참여자 목록이다** (APP-685). 계약의 `assignedName` 은 지정 당시의
+     * 사본이라 사람이 개명하면 낡는다 — 같은 사실을 `speaker-stats` 의 주석이 먼저 적어 뒀다.
+     * FK 가 `ON DELETE CASCADE` 라 `assignedParticipantId` 는 예외 없이 이 목록 안에 있다.
+     */
+    const name = speaker?.assignedParticipantId
+      ? (nameOf.get(speaker.assignedParticipantId) ?? null)
+      : null;
     // 「참석자 아님」으로 확정한 화자도 `화자 A` 로 남는다. 그 사람이 누구인지 우리가
     // 모른다는 것이 사실이고, 다른 말로 꾸미면 거짓이 된다.
     const displayName = name ?? `화자 ${label}`;

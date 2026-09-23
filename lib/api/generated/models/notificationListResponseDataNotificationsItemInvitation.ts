@@ -8,6 +8,9 @@
 import type { NotificationListResponseDataNotificationsItemInvitationRole } from "./notificationListResponseDataNotificationsItemInvitationRole";
 import type { NotificationListResponseDataNotificationsItemInvitationStatus } from "./notificationListResponseDataNotificationsItemInvitationStatus";
 
+/**
+ * 워크스페이스 초대 정보. 모든 알림에 포함된다
+ */
 export type NotificationListResponseDataNotificationsItemInvitation = {
   /** 수락 시 부여될 워크스페이스 역할 */
   role: NotificationListResponseDataNotificationsItemInvitationRole;

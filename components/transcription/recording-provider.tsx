@@ -13,7 +13,10 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
-import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/models";
+import type {
+  StartTranscriptionSessionResponseData,
+  TranscriptionSessionResponseDataEndReason,
+} from "@/lib/api/generated/models";
 import {
   getGetNoteTranscriptQueryKey,
   useGetTranscriptionSession,
@@ -21,7 +24,7 @@ import {
 } from "@/lib/api/generated/transcription/transcription";
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
-import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
+import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 import { forgetWorkspace } from "@/lib/workspace/cache";
 import { notifyWorkspaceGone } from "@/lib/workspace/gone-notice";
 import {
@@ -228,14 +231,36 @@ function getRuntimeFailureMessage(message: string) {
   return "실시간 스크립트 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
 }
 
-function getInterruptedMessage(endReason: string | null) {
-  if (endReason === "STT_PROVIDER_ERROR") {
-    return "음성 인식 서비스 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
+/**
+ * **타입을 계약으로 좁힌다.** `string` 이던 동안 exhaustive 검사가 죽어 있었고, 값이 늘어도
+ * 아무 데서도 안 알려줬다.
+ *
+ * **`MEETING_ENDED` 를 오류로 말하지 않는다** (APP-685). 남이 회의를 끝낸 것은 정상이고,
+ * 권한이 시작자에서 「멤버 누구나」로 열리면서 **자주 일어나게 됐다.** 전에는 「서버에서
+ * 스크립트 세션이 중단되었습니다」로 떨어져서, 정상적으로 끝난 회의가 녹음하던 사람에게는
+ * 장애로 보였다. `MEETING_PAUSED` 도 같다 — 누군가 회의를 멈춘 것이다.
+ */
+function getInterruptedMessage(
+  endReason: TranscriptionSessionResponseDataEndReason
+) {
+  switch (endReason) {
+    case "MEETING_ENDED":
+      return "회의가 종료되어 기록을 마쳤습니다.";
+    case "MEETING_PAUSED":
+      return "회의가 일시중지되어 기록을 멈췄습니다.";
+    case "STT_PROVIDER_ERROR":
+      return "음성 인식 서비스 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
+    case "CLIENT_DISCONNECTED":
+      return "실시간 연결이 종료되어 녹음을 중단했습니다.";
+    case "READY_TIMEOUT":
+      return "녹음을 시작하지 못해 세션이 만료되었습니다. 다시 시도해 주세요.";
+    case "HEARTBEAT_TIMEOUT":
+      return "연결이 끊긴 채로 오래 있어 기록을 중단했습니다.";
+    case "CLIENT_PROTOCOL_ERROR":
+    case "INTERNAL_ERROR":
+    case null:
+      return "서버에서 스크립트 세션이 중단되었습니다.";
   }
-  if (endReason === "CLIENT_DISCONNECTED") {
-    return "실시간 연결이 종료되어 녹음을 중단했습니다.";
-  }
-  return "서버에서 스크립트 세션이 중단되었습니다.";
 }
 
 function getWebSocketUrl() {
@@ -382,7 +407,7 @@ export function RecordingProvider({
 
   const invalidateNoteListQueries = useCallback(() => {
     void queryClient.invalidateQueries({
-      predicate: ({ queryKey }) => isProjectNotesQueryKey(queryKey),
+      predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
     });
   }, [queryClient]);
 

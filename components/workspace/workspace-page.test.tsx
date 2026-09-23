@@ -10,6 +10,7 @@ const auth = vi.hoisted(() => ({
   } | null,
 }));
 const useGetNotes = vi.hoisted(() => vi.fn());
+const useGetWorkspaceNotes = vi.hoisted(() => vi.fn());
 
 // 목록 행이 이동 진행 표시를 위해 경로·쿼리를 읽는다(APP-215).
 vi.mock("next/navigation", () => ({
@@ -47,50 +48,66 @@ vi.mock("@/components/workspace/workspace-app-shell", () => ({
     requestNewMeeting: shell.requestNewMeeting,
   }),
 }));
+const NOTE_LIST = vi.hoisted(() => ({
+  status: 200,
+  data: {
+    success: true,
+    data: {
+      notes: [
+        {
+          noteId: "01K0000000002",
+          projectId: "01K0000000001",
+          title: "주간 제품 회의",
+          createdAt: "2026-07-10T00:00:00Z",
+          updatedAt: "2026-07-11T00:00:00Z",
+          lastRecordedAt: null,
+          recordedDurationMs: 0,
+          meetingStatus: "IN_PROGRESS",
+          meetingStartedAt: "2026-07-11T00:00:00Z",
+          meetingStartedBy: { userId: "user-me", name: "나" },
+          participants: [],
+        },
+        {
+          noteId: "01K0000000003",
+          projectId: "01K0000000001",
+          title: "리서치 공유",
+          createdAt: "2026-07-09T00:00:00Z",
+          updatedAt: "2026-07-10T00:00:00Z",
+          lastRecordedAt: null,
+          recordedDurationMs: 0,
+          meetingStatus: "ENDED",
+          meetingStartedAt: "2026-07-09T00:00:00Z",
+          meetingStartedBy: { userId: "user-other", name: "남" },
+          participants: [],
+        },
+      ],
+    },
+  },
+}));
+
 vi.mock("@/lib/api/generated/notes/notes", () => ({
-  getGetNotesQueryOptions: vi.fn(),
   // 행이 삭제 다이얼로그를 그리므로 그 훅도 목에 있어야 한다.
-  getGetNotesQueryKey: (projectId: string) => [`/v1/projects/${projectId}/notes`],
+  getGetNotesQueryKey: (projectId: string) => [
+    `/v1/projects/${projectId}/notes`,
+  ],
   useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useGetNotes: (...args: unknown[]) => {
     useGetNotes(...args);
     return {
-      data: {
-        status: 200,
-        data: {
-          success: true,
-          data: {
-            notes: [
-              {
-                noteId: "01K0000000002",
-                projectId: "01K0000000001",
-                title: "주간 제품 회의",
-                createdAt: "2026-07-10T00:00:00Z",
-                updatedAt: "2026-07-11T00:00:00Z",
-                lastRecordedAt: null,
-                recordedDurationMs: 0,
-                meetingStatus: "IN_PROGRESS",
-                meetingStartedAt: "2026-07-11T00:00:00Z",
-                meetingStartedBy: { userId: "user-me", name: "나" },
-                participants: [],
-              },
-              {
-                noteId: "01K0000000003",
-                projectId: "01K0000000001",
-                title: "리서치 공유",
-                createdAt: "2026-07-09T00:00:00Z",
-                updatedAt: "2026-07-10T00:00:00Z",
-                lastRecordedAt: null,
-                recordedDurationMs: 0,
-                meetingStatus: "ENDED",
-                meetingStartedAt: "2026-07-09T00:00:00Z",
-                meetingStartedBy: { userId: "user-other", name: "남" },
-                participants: [],
-              },
-            ],
-          },
-        },
-      },
+      data: NOTE_LIST,
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+  },
+  /**
+   * **팬아웃이 사라진 자리** (APP-685). 전에는 프로젝트마다 `getGetNotesQueryOptions` 를
+   * `useQueries` 로 돌리고 결과를 합쳤다. 이제 워크스페이스 단위 조회 하나다.
+   */
+  useGetWorkspaceNotes: (...args: unknown[]) => {
+    useGetWorkspaceNotes(...args);
+    return {
+      data: NOTE_LIST,
       isPending: false,
       isError: false,
       refetch: vi.fn(),
@@ -155,9 +172,7 @@ describe("WorkspacePage", () => {
     expect(onboarding).toHaveAttribute("data-stage", "no-project");
     expect(screen.queryByText(/개의 회의 기록/)).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "첫 프로젝트 만들기" })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "첫 프로젝트 만들기" }));
     expect(shell.openCreateProject).toHaveBeenCalledOnce();
     expect(shell.requestNewMeeting).not.toHaveBeenCalled();
   });

@@ -120,7 +120,7 @@ export function TaskHistorySheet({
       <SheetContent side="right" className="w-full gap-0 sm:max-w-[480px]">
         {shown ? (
           <HistoryBody
-            key={`${shown.task.taskId}:${startEditing}`}
+            key={`${shown.taskId}:${startEditing}`}
             workspaceId={workspaceId}
             entry={shown}
             startEditing={startEditing}
@@ -152,7 +152,7 @@ function HistoryBody({
   conflict: boolean;
   onSave: (patch: TaskPatch) => Promise<boolean>;
 }) {
-  const { task } = entry;
+  const task = entry;
   const done = task.taskStatus !== "OPEN";
   const StatusIcon = STATUS_ICON[task.taskStatus];
   const [draft, setDraft] = useState<{

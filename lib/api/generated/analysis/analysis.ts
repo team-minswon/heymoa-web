@@ -28,6 +28,7 @@ import type {
   AppErrorResponse,
   MeetingAnalysisFlowResponse,
   MeetingAnalysisRequestResponse,
+  NoteResponse,
   UnauthorizedResponse,
 } from "../models";
 
@@ -63,11 +64,6 @@ export type requestAnalysisResponse401 = {
   status: 401;
 };
 
-export type requestAnalysisResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
-};
-
 export type requestAnalysisResponse404 = {
   data: AppErrorResponse;
   status: 404;
@@ -83,7 +79,6 @@ export type requestAnalysisResponseSuccess = requestAnalysisResponse202 & {
 };
 export type requestAnalysisResponseError = (
   | requestAnalysisResponse401
-  | requestAnalysisResponse403
   | requestAnalysisResponse404
   | requestAnalysisResponse409
 ) & {
@@ -99,7 +94,7 @@ export const getRequestAnalysisUrl = (noteId: string) => {
 };
 
 /**
- * 회의 시작자가 분석 실패·요청 전 노트의 회의 분석을 다시 요청한다. 다른 상태면 409 이고, 결과는 콜백으로 온다.
+ * **워크스페이스 멤버 누구나** 분석 실패·요청 전 노트의 회의 분석을 다시 요청한다. 다른 상태면 409 이고, 결과는 콜백으로 온다. 응답에 **요청 뒤의 흐름 상태**가 실린다.
  * @summary 분석 재요청
  */
 export const requestAnalysis = async (
@@ -186,19 +181,14 @@ export const useRequestAnalysis = <
 > => {
   return useMutation(getRequestAnalysisMutationOptions(options), queryClient);
 };
-export type endMeetingResponse204 = {
-  data: void;
-  status: 204;
+export type endMeetingResponse200 = {
+  data: NoteResponse;
+  status: 200;
 };
 
 export type endMeetingResponse401 = {
   data: UnauthorizedResponse;
   status: 401;
-};
-
-export type endMeetingResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
 };
 
 export type endMeetingResponse404 = {
@@ -211,12 +201,11 @@ export type endMeetingResponse409 = {
   status: 409;
 };
 
-export type endMeetingResponseSuccess = endMeetingResponse204 & {
+export type endMeetingResponseSuccess = endMeetingResponse200 & {
   headers: Headers;
 };
 export type endMeetingResponseError = (
   | endMeetingResponse401
-  | endMeetingResponse403
   | endMeetingResponse404
   | endMeetingResponse409
 ) & {
@@ -232,7 +221,7 @@ export const getEndMeetingUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 회의를 종료한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다.
+ * **워크스페이스 멤버 누구나** 노트의 회의를 종료한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다. **응답이 갱신된 노트다** - 없는 동안 화면이 종료 시각을 브라우저의 Date.now() 로 지어냈다. 열려 있던 전사 세션은 서버가 닫고 봉인한다 - 전에는 ACTIVE 세션을 409 로 거절했다.
  * @summary 회의 종료
  */
 export const endMeeting = async (

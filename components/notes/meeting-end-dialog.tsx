@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
+  type endMeetingResponse,
   getGetLatestAnalysisQueryKey,
   useEndMeeting,
 } from "@/lib/api/generated/analysis/analysis";
@@ -30,8 +31,7 @@ import {
   type getNoteResponse,
 } from "@/lib/api/generated/notes/notes";
 import type { NoteResponseData } from "@/lib/api/generated/models";
-import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
-import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
+import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 
 /** 기록 중이면 로컬 stop 성공을 확인한 뒤 같은 확인 흐름에서 회의를 종료한다. */
 export function MeetingEndDialog({
@@ -54,8 +54,6 @@ export function MeetingEndDialog({
   const endMeeting = useEndMeeting({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  /** 서버가 활성 전사 세션으로 종료를 막았는가(로컬 상태로는 안 보일 수 있다). */
-  const [serverBlocked, setServerBlocked] = useState(false);
   const [stopFailed, setStopFailed] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 
@@ -64,56 +62,34 @@ export function MeetingEndDialog({
   const [context, setContext] = useState(`${noteId}:${open}`);
   if (context !== `${noteId}:${open}`) {
     setContext(`${noteId}:${open}`);
-    if (serverBlocked) setServerBlocked(false);
     if (stopFailed) setStopFailed(false);
   }
 
   const localRecording = isNoteRecordingActive(recording, noteId);
   const starting = isRecordingStarting(recording, noteId);
-  const convergeEnded = async (
-    stoppedAt?: number,
-    localSessionStartedAt?: string | null
-  ) => {
-    await queryClient.cancelQueries({
-      queryKey: getGetNoteQueryKey(noteId),
-    });
-    queryClient.setQueryData<getNoteResponse>(
-      getGetNoteQueryKey(noteId),
-      (prev) =>
-        prev?.status === 200 && prev.data.success
-          ? {
-              ...prev,
-              data: {
-                ...prev.data,
-                data: {
-                  ...prev.data.data,
-                  ...(stoppedAt === undefined
-                    ? {}
-                    : {
-                        recordedDurationMs: getRecordedDurationMs(
-                          {
-                            ...prev.data.data,
-                            activeSessionStartedAt:
-                              prev.data.data.activeSessionStartedAt ??
-                              localSessionStartedAt ??
-                              null,
-                          },
-                          stoppedAt
-                        ),
-                        activeSessionStartedAt: null,
-                      }),
-                  meetingStatus: "ENDED",
-                },
-              },
-            }
-          : prev
-    );
+  /**
+   * **서버가 준 노트를 그대로 캐시에 넣는다** (APP-685).
+   *
+   * 전에는 종료가 204 라 화면이 종료 뒤 상태를 **스스로 지어냈다** — 녹음 길이를 브라우저의
+   * `Date.now()` 로 계산했고, 시계가 서로 다른 두 사람이 같은 회의를 다른 길이로 봤다.
+   * 이제 응답이 갱신된 노트이고 `meetingEndedAt` 은 서버가 찍은 시각이다.
+   */
+  const convergeEnded = async (ended?: endMeetingResponse) => {
+    await queryClient.cancelQueries({ queryKey: getGetNoteQueryKey(noteId) });
+    if (ended?.status === 200 && ended.data.success) {
+      // 종료 응답과 노트 조회는 **같은 `NoteResponse`** 다. 서버가 그렇게 맞춰 뒀다.
+      queryClient.setQueryData<getNoteResponse>(
+        getGetNoteQueryKey(noteId),
+        ended as unknown as getNoteResponse
+      );
+    } else {
+      // 이미 끝난 회의였다 — 응답에 노트가 없다. 지어내지 말고 다시 묻는다.
+      void queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) });
+    }
     onOpenChange(false);
+    // 목록 항목이 상태와 시간을 보여주므로 같이 비운다. 응답 하나로는 못 대신한다.
     void queryClient.invalidateQueries({
-      queryKey: getGetNoteQueryKey(noteId),
-    });
-    void queryClient.invalidateQueries({
-      predicate: ({ queryKey }) => isProjectNotesQueryKey(queryKey),
+      predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
     });
     void queryClient.invalidateQueries({
       queryKey: getGetLatestAnalysisQueryKey(noteId),
@@ -121,25 +97,20 @@ export function MeetingEndDialog({
     onEnded?.();
   };
 
-  const requestEnd = (
-    stoppedAt?: number,
-    localSessionStartedAt?: string | null
-  ) =>
+  /**
+   * **`ACTIVE_TRANSCRIPTION_SESSION` 분기가 사라졌다** (APP-685). 서버가 열린 세션을 거절
+   * 대신 닫으므로 그 409 가 더 이상 오지 않는다. 그 거절이 강제하던 「STOMP stop → completed
+   * 대기 → REST」 순서도 같이 사라졌다 — 아래에서 로컬 스트림을 먼저 끊는 것은 마이크를
+   * 놓기 위해서지 서버가 요구해서가 아니다.
+   */
+  const requestEnd = () =>
     endMeeting.mutate(
       { noteId },
       {
-        onSuccess: () => {
-          setServerBlocked(false);
-          void convergeEnded(stoppedAt, localSessionStartedAt);
-        },
+        onSuccess: (response) => void convergeEnded(response),
         onError: (error) => {
-          const code = errorCodeOf(error);
-          if (code === "MEETING_ALREADY_ENDED") {
-            void convergeEnded(stoppedAt, localSessionStartedAt);
-            return;
-          }
-          if (code === "ACTIVE_TRANSCRIPTION_SESSION") {
-            setServerBlocked(true);
+          if (errorCodeOf(error) === "MEETING_ALREADY_ENDED") {
+            void convergeEnded();
             return;
           }
           toast.error(errorMessageOf(error, "회의를 종료하지 못했습니다."));
@@ -150,8 +121,6 @@ export function MeetingEndDialog({
   const confirmEnd = async () => {
     if (starting) return;
     setStopFailed(false);
-    let stoppedAt: number | undefined;
-    let localSessionStartedAt: string | null | undefined;
     if (
       meetingStatus === "IN_PROGRESS" &&
       localRecording &&
@@ -170,10 +139,8 @@ export function MeetingEndDialog({
         setStopFailed(true);
         return;
       }
-      localSessionStartedAt = recording.session?.startedAt;
-      stoppedAt = Date.now();
     }
-    requestEnd(stoppedAt, localSessionStartedAt);
+    requestEnd();
   };
 
   return (
@@ -193,7 +160,7 @@ export function MeetingEndDialog({
           녹음 상태 · {meetingStatus === "IN_PROGRESS" ? "기록 중" : "중지됨"}
         </div>
 
-        {stopFailed || serverBlocked ? (
+        {stopFailed ? (
           <div
             role="alert"
             className="flex items-start gap-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3"
@@ -221,7 +188,7 @@ export function MeetingEndDialog({
                 children으로 폭을 잡으므로, 문구를 바꾸면 스피너가 도는 동안 버튼이
                 「회의 종료」→「기록 저장 중…」으로 늘어난다. 무엇이 진행 중인지는 위
                 본문이 말한다. */}
-            {serverBlocked ? "다시 시도" : "회의 종료"}
+            회의 종료
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

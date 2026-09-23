@@ -22,11 +22,14 @@ export const getGetNoteResponseMock = (): NoteResponse => ({
   data: {
     noteId: "0HZX2K7M9Q4AF",
     projectId: "0HZX2K7M9Q4AE",
+    workspaceId: "0HZX2K7M9Q4AD",
+    projectName: "모바일 앱",
     title: "주간 회의",
     createdAt: "2026-07-14T01:02:03Z",
     updatedAt: "2026-07-14T01:02:03Z",
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: "2026-07-14T01:02:03Z",
+    meetingEndedAt: null,
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
     meetingStartedBy: {
@@ -62,11 +65,14 @@ export const getUpdateNoteResponseMock = (): NoteResponse => ({
   data: {
     noteId: "0HZX2K7M9Q4AF",
     projectId: "0HZX2K7M9Q4AE",
+    workspaceId: "0HZX2K7M9Q4AD",
+    projectName: "모바일 앱",
     title: "주간 회의",
     createdAt: "2026-07-14T01:02:03Z",
     updatedAt: "2026-07-14T01:02:03Z",
     meetingStatus: "IN_PROGRESS",
     meetingStartedAt: "2026-07-14T01:02:03Z",
+    meetingEndedAt: null,
     recordedDurationMs: 6500,
     activeSessionStartedAt: "2026-07-14T01:02:03Z",
     meetingStartedBy: {
@@ -156,6 +162,7 @@ export const getGetNotesResponseMock = (): NoteListResponse => ({
       {
         noteId: "0HZX2K7M9Q4AF",
         projectId: "0HZX2K7M9Q4AE",
+        projectName: "모바일 앱",
         title: "주간 회의",
         createdAt: "2026-07-14T01:02:03Z",
         updatedAt: "2026-07-14T01:02:03Z",
@@ -199,11 +206,14 @@ export const getCreateNoteResponseMock = (): NoteResponse => ({
   data: {
     noteId: "0HZX2K7M9Q4AF",
     projectId: "0HZX2K7M9Q4AE",
+    workspaceId: "0HZX2K7M9Q4AD",
+    projectName: "모바일 앱",
     title: "주간 회의",
     createdAt: "2026-07-14T01:02:03Z",
     updatedAt: "2026-07-14T01:02:03Z",
     meetingStatus: "NOT_STARTED",
     meetingStartedAt: null,
+    meetingEndedAt: null,
     recordedDurationMs: 0,
     activeSessionStartedAt: null,
     meetingStartedBy: null,
@@ -223,6 +233,52 @@ export const getCreateNoteResponseMock = (): NoteResponse => ({
         name: "박서준",
         email: null,
         image: null,
+      },
+    ],
+  },
+  error: null,
+});
+
+export const getGetWorkspaceNotesResponseMock = (): NoteListResponse => ({
+  success: true,
+  data: {
+    notes: [
+      {
+        noteId: "0HZX2K7M9Q4AF",
+        projectId: "0HZX2K7M9Q4AE",
+        projectName: "모바일 앱",
+        title: "주간 회의",
+        createdAt: "2026-07-14T01:02:03Z",
+        updatedAt: "2026-07-14T01:02:03Z",
+        meetingStatus: "IN_PROGRESS",
+        meetingStartedAt: "2026-07-14T01:02:03Z",
+        lastRecordedAt: "2026-07-14T01:02:03Z",
+        recordedDurationMs: 6500,
+        activeSessionStartedAt: "2026-07-14T01:02:03Z",
+        meetingStartedBy: {
+          userId: "0HZX2K7M9Q4AC",
+          name: "홍길동",
+          email: "hong@example.com",
+          image: "https://cdn.example.com/avatars/hong.png",
+        },
+        participants: [
+          {
+            participantId: "0HZX2K7M9Q4AP",
+            userId: "0HZX2K7M9Q4AC",
+            guestId: null,
+            name: "홍길동",
+            email: "hong@example.com",
+            image: "https://cdn.example.com/avatars/hong.png",
+          },
+          {
+            participantId: "0HZX2K7M9Q4AQ",
+            userId: null,
+            guestId: "0HZX2K7M9Q4AR",
+            name: "박서준",
+            email: null,
+            image: null,
+          },
+        ],
       },
     ],
   },
@@ -482,6 +538,30 @@ export const getCreateNoteMockHandler = (
   );
 };
 
+export const getGetWorkspaceNotesMockHandler = (
+  overrideResponse?:
+    | NoteListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<NoteListResponse> | NoteListResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/notes",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetWorkspaceNotesResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
 export const getUpdateNoteAgendaMockHandler = (
   overrideResponse?:
     | NoteAgendaResponse
@@ -585,6 +665,7 @@ export const getNotesMock = () => [
   getReplaceNoteParticipantsMockHandler(),
   getGetNotesMockHandler(),
   getCreateNoteMockHandler(),
+  getGetWorkspaceNotesMockHandler(),
   getUpdateNoteAgendaMockHandler(),
   getDeleteNoteAgendaMockHandler(),
   getReplaceNoteGuestParticipantsMockHandler(),

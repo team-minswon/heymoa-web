@@ -548,6 +548,361 @@ export const useCreateProject = <
 > => {
   return useMutation(getCreateProjectMutationOptions(options), queryClient);
 };
+export type getWorkspaceTasksResponse200 = {
+  data: ProjectTaskListResponse;
+  status: 200;
+};
+
+export type getWorkspaceTasksResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getWorkspaceTasksResponseSuccess = getWorkspaceTasksResponse200 & {
+  headers: Headers;
+};
+export type getWorkspaceTasksResponseError = getWorkspaceTasksResponse401 & {
+  headers: Headers;
+};
+
+export type getWorkspaceTasksResponse =
+  | getWorkspaceTasksResponseSuccess
+  | getWorkspaceTasksResponseError;
+
+export const getGetWorkspaceTasksUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/tasks`;
+};
+
+/**
+ * 워크스페이스의 모든 프로젝트를 가로지르는 할 일 목록. 정렬 규칙은 프로젝트 단위 조회와 같다.
+ * @summary 워크스페이스 할 일 목록 조회
+ */
+export const getWorkspaceTasks = async (
+  workspaceId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getWorkspaceTasksResponse> => {
+  return apiFetch<getWorkspaceTasksResponse>(
+    getGetWorkspaceTasksUrl(workspaceId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetWorkspaceTasksQueryKey = (workspaceId: string) => {
+  return [`/v1/workspaces/${workspaceId}/tasks`] as const;
+};
+
+export const getGetWorkspaceTasksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceTasksQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceTasks>>
+  > = ({ signal }) =>
+    getWorkspaceTasks(workspaceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceTasks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceTasksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceTasks>>
+>;
+export type GetWorkspaceTasksQueryError = UnauthorizedResponse;
+
+export function useGetWorkspaceTasks<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceTasks>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceTasks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceTasks<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceTasks>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceTasks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceTasks<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 할 일 목록 조회
+ */
+
+export function useGetWorkspaceTasks<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceTasksQueryOptions(workspaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 워크스페이스 할 일 목록 조회
+ */
+export const prefetchGetWorkspaceTasksQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceTasksQueryOptions(workspaceId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceTasksSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceTasksQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceTasks>>
+  > = ({ signal }) =>
+    getWorkspaceTasks(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceTasks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceTasksSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceTasks>>
+>;
+export type GetWorkspaceTasksSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetWorkspaceTasksSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceTasksSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceTasksSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 할 일 목록 조회
+ */
+
+export function useGetWorkspaceTasksSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceTasks>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceTasks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceTasksSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type getProjectResponse200 = {
   data: ProjectResponse;
   status: 200;

@@ -8,10 +8,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  sortNotesByRecency,
-  WorkspaceNoteList,
-} from "@/components/workspace/workspace-note-list";
+import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
@@ -44,6 +41,7 @@ function note(
   return {
     noteId,
     projectId: "01K0000000001",
+    projectName: "주간",
     title: noteId,
     createdAt,
     updatedAt: "2026-08-09T00:00:00Z",
@@ -56,30 +54,6 @@ function note(
     participants: [],
   };
 }
-
-describe("sortNotesByRecency", () => {
-  it("기록을 시작한 순서 내림차순으로 세운다", () => {
-    const sorted = sortNotesByRecency([
-      note("older", "2026-07-10T01:00:00Z"),
-      note("newest", "2026-07-11T10:00:00Z"),
-      note("middle", "2026-07-11T01:00:00Z"),
-    ]);
-    expect(sorted.map((n) => n.noteId)).toEqual(["newest", "middle", "older"]);
-  });
-
-  it("기록한 적 없는 노트는 만든 시각으로 세운다", () => {
-    const sorted = sortNotesByRecency([
-      note("recorded", "2026-07-10T01:00:00Z"),
-      note("neverRecorded", null, "2026-07-12T00:00:00Z"),
-      note("olderThanBoth", null, "2026-07-01T00:00:00Z"),
-    ]);
-    expect(sorted.map((n) => n.noteId)).toEqual([
-      "neverRecorded",
-      "recorded",
-      "olderThanBoth",
-    ]);
-  });
-});
 
 describe("WorkspaceNoteList", () => {
   beforeEach(() => toast.error.mockReset());
@@ -104,13 +78,13 @@ describe("WorkspaceNoteList", () => {
     expect(screen.queryByLabelText("노트 불러오는 중")).toBeNull();
   });
 
-  it("renders a flat recency-ordered list", () => {
+  it("서버가 준 순서를 다시 정렬하지 않고 날짜별로 묶는다", () => {
     render(
       <WorkspaceNoteList
         workspaceId="01K0000000000"
         notes={[
-          note("older", "2026-07-10T01:00:00Z"),
           note("newest", "2026-07-11T10:00:00Z"),
+          note("older", "2026-07-10T01:00:00Z"),
         ]}
         isPending={false}
         isError={false}

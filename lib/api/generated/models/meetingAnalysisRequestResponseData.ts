@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { MeetingAnalysisRequestResponseDataFlowStatus } from "./meetingAnalysisRequestResponseDataFlowStatus";
 
 /**
  * 성공 응답 데이터
@@ -20,4 +21,6 @@ export type MeetingAnalysisRequestResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
+  /** **요청을 보낸 뒤**의 흐름 상태. 없는 동안 화면이 다음 상태를 스스로 정해 캐시에 썼다 */
+  flowStatus: MeetingAnalysisRequestResponseDataFlowStatus;
 };

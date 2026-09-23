@@ -3,30 +3,13 @@ import { mockDb } from "@/lib/mocks/db";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
 
 /**
- * 아직 진행 중인 회의 노트. **위치가 아니라 상태로 고른다** — 시드에 종료된 노트가 늘면
- * `[0]`이 그쪽으로 바뀌어 회의 조작 테스트가 통째로 깨진다(실제로 겪었다).
- */
-function firstNoteId() {
-  const workspaceId = mockDb.listWorkspaces()[0].workspaceId;
-  const noteId = mockDb
-    .listProjects(workspaceId)
-    .flatMap((project) => mockDb.listNotes(project.projectId))
-    .find(
-      (candidate) =>
-        candidate.meetingStatus === "IN_PROGRESS" &&
-        candidate.meetingStartedBy?.userId === MOCK_USER.userId
-    )?.noteId;
-  if (!noteId) throw new Error("진행 중인 노트가 시드에 없다");
-  return noteId;
-}
-
-/**
- * 회의 조작(종료·중지·재개)은 시작자만 할 수 있다. 녹음을 시작해야 시작자가 정해지므로
- * 그 상태의 노트를 만들어 쓴다. 세션은 바로 끝내 활성 전사 검사에 걸리지 않게 한다.
+ * 이미 진행 중인 시드에는 열린 세션이 있다. 회의 조작 검사는 전사가 있는 0002의
+ * 열린 세션을 끝내어, 근거 인용까지 검증하면서 실제 세션 전이를 따른다.
  */
 function startedNoteId() {
-  const noteId = firstNoteId();
-  const session = mockDb.createSession(noteId);
+  const noteId = "01K0000000002";
+  const session = mockDb.getCurrentSession(noteId);
+  if (!session) throw new Error("진행 중인 시드의 열린 세션이 없다");
   mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
   return noteId;
 }
@@ -51,8 +34,8 @@ describe("mockDb", () => {
           .listProjects(workspace.workspaceId)
           .flatMap((project) => mockDb.listNotes(project.projectId))
       )
-    // 13 + 후보 e2e 전용 셋(커버리지 추종 0008·정리 실패 0006·합성 원장 0007)
-    // + 실제 멘토링 회의 하나(화자 패널용 실데이터).
+      // 13 + 후보 e2e 전용 셋(커버리지 추종 0008·정리 실패 0006·합성 원장 0007)
+      // + 실제 멘토링 회의 하나(화자 패널용 실데이터).
     ).toHaveLength(17);
   });
 
@@ -68,6 +51,24 @@ describe("mockDb", () => {
           note.meetingStatus === "IN_PROGRESS" && note.meetingStartedBy === null
       )
     ).toEqual([]);
+  });
+
+  it("진행 중인 시드는 실제 열린 세션을 갖고 중지된 시드에는 없다", () => {
+    const notes = mockDb
+      .listWorkspaces()
+      .flatMap((workspace) => mockDb.listProjects(workspace.workspaceId))
+      .flatMap((project) => mockDb.listNotes(project.projectId));
+
+    for (const note of notes) {
+      const current = mockDb.getCurrentSession(note.noteId);
+      if (note.meetingStatus === "IN_PROGRESS") {
+        expect(current, note.noteId).not.toBeNull();
+        expect(current?.status).toBe("ACTIVE");
+        expect(note.activeSessionStartedAt).toBe(current?.startedAt);
+      } else {
+        expect(current, note.noteId).toBeNull();
+      }
+    }
   });
 
   it("rejects note creation in a non-existent project", () => {
@@ -228,13 +229,11 @@ describe("mockDb", () => {
   });
 
   it("derives lastRecordedAt from completed sessions, not a newer active session", () => {
-    const session = mockDb.createSession("01K0000000002");
-    mockDb.updateSessionStatus(session.sessionId, "ACTIVE");
-
     const note = mockDb
       .listNotes("01K0000000001")
       .find((candidate) => candidate.noteId === "01K0000000002");
 
+    expect(mockDb.getCurrentSession("01K0000000002")?.status).toBe("ACTIVE");
     expect(note?.lastRecordedAt).toBe("2026-07-11T00:00:00Z");
   });
 
@@ -264,6 +263,60 @@ describe("mockDb", () => {
 
     expect(foreignNote).toBeDefined();
     expect(mockDb.listSegments(foreignNote!.noteId)).toHaveLength(3);
+  });
+
+  it("★ 종료가 소리 흐르던 세션을 닫으면 봉인이 TRUNCATED 다", () => {
+    // 목에 봉인 상태가 아예 없어서 회의가 끝나면 무조건 COMPLETE 였다. 그래서 화면의 잘림
+    // 분기 둘(아카이브 배지·회의록 복사 표시)이 목에서 한 번도 안 지나갔다.
+    const [project] = mockDb.listProjects("01K0000000000");
+    const note = mockDb.createNote(project.projectId, { title: "잘린 회의" });
+    mockDb.updateSessionStatus(
+      mockDb.createSession(note.noteId).sessionId,
+      "ACTIVE"
+    );
+
+    mockDb.endMeeting(note.noteId);
+
+    const { recording } = mockDb.getTranscript(note.noteId);
+    expect(recording.seal).toBe("TRUNCATED");
+    expect(recording.audioRetained).toBe(true);
+  });
+
+  it("★ 한 조각도 안 받은 READY 만 있으면 자를 것이 없다", () => {
+    const [project] = mockDb.listProjects("01K0000000000");
+    const note = mockDb.createNote(project.projectId, {
+      title: "소리 없는 회의",
+    });
+    mockDb.createSession(note.noteId);
+
+    mockDb.endMeeting(note.noteId);
+
+    const { recording } = mockDb.getTranscript(note.noteId);
+    expect(recording.seal).toBe("COMPLETE");
+    expect(recording.audioRetained).toBe(false);
+  });
+
+  it("★ 방금 만든 노트가 시드보다 위에 선다", () => {
+    // 목의 시계가 굳은 과거였고 시드 노트에는 그보다 뒤인 날짜가 박혀 있어서, 만든 노트가
+    // 워크스페이스 목록 **맨 아래**에 섰다. 팬아웃을 없애며 전역 정렬이 되자 드러났다.
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const created = mockDb.createNote(project.projectId, { title: "새 노트" });
+
+    const [top] = mockDb.listWorkspaceNotes("01K0000000000");
+
+    expect(top.noteId).toBe(created.noteId);
+  });
+
+  it("제목만 고쳐도 회의 목록의 시작 순서는 바뀌지 않는다", () => {
+    const projectId = mockDb.listProjects("01K0000000000")[0].projectId;
+    const older = mockDb.createNote(projectId, { title: "먼저 만든 노트" });
+    const newer = mockDb.createNote(projectId, { title: "나중에 만든 노트" });
+    mockDb.updateNote(older.noteId, { title: "제목만 수정" });
+
+    const ids = mockDb
+      .listWorkspaceNotes("01K0000000000")
+      .map((note) => note.noteId);
+    expect(ids.indexOf(newer.noteId)).toBeLessThan(ids.indexOf(older.noteId));
   });
 });
 
@@ -561,8 +614,12 @@ describe("참여자 전체 교체와 떠난 사람", () => {
    * 갈라지면 화면 테스트가 전부 거짓으로 통과한다.
    */
   it("내보낸 멤버도 요청에 실으면 참여자로 남는다", () => {
-    const before = mockDb.getNote(NOTE_ID).participants.filter((row) => row.userId);
-    const departing = before.find((row) => row.userId !== mockDb.getCurrentUser().userId)!;
+    const before = mockDb
+      .getNote(NOTE_ID)
+      .participants.filter((row) => row.userId);
+    const departing = before.find(
+      (row) => row.userId !== mockDb.getCurrentUser().userId
+    )!;
 
     mockDb.removeMember(WORKSPACE_ID, departing.userId!);
 
@@ -797,6 +854,17 @@ describe("노트 삭제", () => {
     mockDb.leaveWorkspace("01K0000000000");
 
     expect(() => mockDb.createSession(note.noteId)).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+  });
+
+  it("워크스페이스를 나가면 그 노트 목록도 404다", () => {
+    mockDb.changeMemberRole("01K0000000000", "01K0000000020", "ADMIN");
+    mockDb.leaveWorkspace("01K0000000000");
+    expect(() => mockDb.listWorkspaceNotes("01K0000000000")).toThrow(
+      "WORKSPACE_NOT_FOUND"
+    );
+    expect(() => mockDb.listWorkspaceNotes("01K9999999999")).toThrow(
       "WORKSPACE_NOT_FOUND"
     );
   });

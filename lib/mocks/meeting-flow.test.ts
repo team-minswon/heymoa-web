@@ -59,8 +59,8 @@ describe("흐름 상태", () => {
     expect(await flow("01K0000000022")).toBe("REVIEWABLE");
   });
 
-  it("다시 요청은 시작자만, 실패 · 요청 전 상태에서만 받는다", async () => {
-    expect((await api("/v1/notes/01K0000000023/analyses", "POST")).status).toBe(403);
+  it("다시 요청은 시작자가 아니어도 실패 · 요청 전 상태에서 받는다", async () => {
+    expect((await api("/v1/notes/01K0000000023/analyses", "POST")).status).toBe(202);
     expect((await api(`/v1/notes/${MENTORING_NOTE_ID}/analyses`, "POST")).body.error.code).toBe(
       "MEETING_ANALYSIS_CONFLICT"
     );
@@ -94,7 +94,7 @@ describe("요약", () => {
 });
 
 describe("검토 항목 추가 · 수정", () => {
-  it("시작자가 아니면 403, 할 일이 아닌 항목의 담당은 400, 빈 내용은 400 이다", async () => {
+  it("시작자가 아니어도 편집하고, 할 일이 아닌 항목의 담당과 빈 내용은 400 이다", async () => {
     const other = await review("01K0000000021");
     expect(
       (await api("/v1/notes/01K0000000021/meeting-review/items", "POST", {
@@ -102,7 +102,7 @@ describe("검토 항목 추가 · 수정", () => {
         kind: "DECISION",
         content: "x",
       })).status
-    ).toBe(403);
+    ).toBe(201);
 
     const current = await review(MENTORING_NOTE_ID);
     const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items`;
@@ -181,6 +181,17 @@ describe("검토 항목 추가 · 수정", () => {
 });
 
 describe("확정", () => {
+  it("회의 시작자가 아닌 멤버도 검토본을 확정한다", async () => {
+    const current = await review("01K0000000021");
+    const approved = await api("/v1/notes/01K0000000021/approval", "POST", {
+      requestId: "0K9GVJT2C4Q1Z",
+      reviewId: current.reviewId,
+      reviewRevision: current.reviewVersion,
+    });
+    expect(approved.status).toBe(200);
+    expect(await flow("01K0000000021")).toBe("CONFIRMED");
+  });
+
   it("선택을 저장하고, 확정은 저장된 끝내기를 끝내며 할 일을 만들고 같은 재전송은 같은 결과로 모은다", async () => {
     let current = await review(MENTORING_NOTE_ID);
     const owner = current.items.find(

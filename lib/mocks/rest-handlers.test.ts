@@ -248,9 +248,8 @@ describe("workspace member management handlers", () => {
     expect(response.status).toBe(204);
     expect(await response.text()).toBe("");
     expect(
-      mockDb
-        .listMembers(WORKSPACE_ID)
-        .find((m) => m.userId === OTHER_MEMBER_ID)?.role
+      mockDb.listMembers(WORKSPACE_ID).find((m) => m.userId === OTHER_MEMBER_ID)
+        ?.role
     ).toBe("ADMIN");
   });
 
@@ -287,9 +286,8 @@ describe("workspace member management handlers", () => {
     expect(response.status).toBe(400);
     expect((await response.json()).error.code).toBe("BAD_REQUEST");
     expect(
-      mockDb
-        .listMembers(WORKSPACE_ID)
-        .find((m) => m.userId === OTHER_MEMBER_ID)?.role
+      mockDb.listMembers(WORKSPACE_ID).find((m) => m.userId === OTHER_MEMBER_ID)
+        ?.role
     ).toBe("MEMBER");
   });
 
@@ -404,7 +402,8 @@ describe("meeting and integration handlers", () => {
   });
   afterAll(() => server.close());
 
-  it("rejects a transcription session started by another meeting starter", async () => {
+  // 서버가 시작·재개를 시작자로 묶지 않는다 (APP-685). 목만 403 을 내고 있었다.
+  it("lets a member record a meeting someone else started", async () => {
     const foreignNote = mockDb
       .listWorkspaces()
       .flatMap((workspace) => mockDb.listProjects(workspace.workspaceId))
@@ -417,21 +416,35 @@ describe("meeting and integration handlers", () => {
       );
 
     expect(foreignNote).toBeDefined();
+    // 시드의 진행 중 회의에는 실제 열린 세션이 있다. 그 세션이 중지된 뒤
+    // 비시작자 멤버가 재개할 수 있는지를 본다.
+    const current = mockDb.getCurrentSession(foreignNote!.noteId);
+    expect(current?.status).toBe("ACTIVE");
+    mockDb.updateSessionStatus(current!.sessionId, "COMPLETED");
     const response = await fetch(
       `http://localhost/v1/notes/${foreignNote!.noteId}/transcription-sessions`,
       { method: "POST" }
     );
-    const body = await response.json();
 
-    expect(response.status).toBe(403);
-    expect(body).toMatchObject({
-      success: false,
-      data: null,
-      error: {
-        code: "NOT_MEETING_STARTER",
-        message: "회의 시작자만 조작할 수 있습니다.",
-      },
-    });
+    expect(response.status).toBe(201);
+  });
+
+  // 열린 세션 검사가 노트를 안 보고 있었다 — 다른 회의의 녹음이 이 회의를 막았다.
+  it("does not let another note's open session block this one", async () => {
+    const [project] = mockDb.listProjects("01K0000000000");
+    const busy = mockDb.createNote(project.projectId, { title: "먼저 녹음" });
+    const other = mockDb.createNote(project.projectId, { title: "나중 녹음" });
+    mockDb.updateSessionStatus(
+      mockDb.createSession(busy.noteId).sessionId,
+      "ACTIVE"
+    );
+
+    const response = await fetch(
+      `http://localhost/v1/notes/${other.noteId}/transcription-sessions`,
+      { method: "POST" }
+    );
+
+    expect(response.status).toBe(201);
   });
 
   it("returns 409 when ending a meeting that already ended", async () => {
@@ -447,7 +460,7 @@ describe("meeting and integration handlers", () => {
     expect((await response.json()).error.code).toBe("MEETING_ALREADY_ENDED");
   });
 
-  it("returns 409 MEETING_NOT_STARTED before the starter permission error", async () => {
+  it("returns 409 MEETING_NOT_STARTED for a meeting that never began", async () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
 
@@ -460,7 +473,7 @@ describe("meeting and integration handlers", () => {
     expect((await response.json()).error.code).toBe("MEETING_NOT_STARTED");
   });
 
-  it("ends a meeting with 204 and starts the meeting analysis", async () => {
+  it("ends a meeting with the updated note and starts the meeting analysis", async () => {
     const note = startedNote();
 
     const response = await fetch(
@@ -471,10 +484,15 @@ describe("meeting and integration handlers", () => {
       `http://localhost/v1/notes/${note.noteId}/analyses/flow`
     );
 
-    expect(response.status).toBe(204);
+    expect(response.status).toBe(200);
+    // 종료 시각을 화면이 지어내지 않으려면 응답이 그것을 싣고 있어야 한다 (APP-685).
+    expect((await response.json()).data).toMatchObject({
+      meetingStatus: "ENDED",
+      meetingEndedAt: expect.any(String),
+      activeSessionStartedAt: null,
+    });
     expect((await flow.json()).data.status).toBe("ANALYZING");
   });
-
 
   // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 화면이
   // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 409 예시 그대로여야

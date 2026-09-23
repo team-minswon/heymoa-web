@@ -25,6 +25,7 @@ import type {
 
 import type {
   AppErrorResponse,
+  GetNotificationsParams,
   MarkNotificationReadResponse,
   NotificationListResponse,
   UnauthorizedResponse,
@@ -73,43 +74,66 @@ export type getNotificationsResponse =
   | getNotificationsResponseSuccess
   | getNotificationsResponseError;
 
-export const getGetNotificationsUrl = () => {
-  return `/v1/notifications`;
+export const getGetNotificationsUrl = (params?: GetNotificationsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/notifications?${stringifiedParams}`
+    : `/v1/notifications`;
 };
 
 /**
- * 현재 사용자의 알림을 최신순으로 최대 50개 조회하고 읽지 않은 알림 개수를 함께 반환한다.
+ * 현재 사용자의 알림을 최신순으로 조회한다. 커서는 (createdAt, notificationId) 복합이고 둘을 함께 보낸다 - 한쪽만 보내면 같은 시각의 알림이 조용히 빠진다. 읽지 않은 개수는 목록과 같은 조인으로 세므로 뱃지와 목록이 안 갈린다.
  * @summary 알림 목록 조회
  */
 export const getNotifications = async (
+  params?: GetNotificationsParams,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<getNotificationsResponse> => {
-  return apiFetch<getNotificationsResponse>(getGetNotificationsUrl(), {
+  return apiFetch<getNotificationsResponse>(getGetNotificationsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetNotificationsQueryKey = () => {
-  return [`/v1/notifications`] as const;
+export const getGetNotificationsQueryKey = (
+  params?: GetNotificationsParams
+) => {
+  return [`/v1/notifications`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetNotificationsQueryOptions = <
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<Awaited<ReturnType<typeof getNotifications>>, TError, TData>
-  >;
-  request?: SecondParameter<typeof apiFetch>;
-}) => {
+>(
+  params?: GetNotificationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNotifications>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetNotificationsQueryKey();
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNotificationsQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getNotifications>>
-  > = ({ signal }) => getNotifications({ signal, ...requestOptions });
+  > = ({ signal }) => getNotifications(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getNotifications>>,
@@ -127,6 +151,7 @@ export function useGetNotifications<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params: undefined | GetNotificationsParams,
   options: {
     query: Partial<
       UseQueryOptions<
@@ -153,6 +178,7 @@ export function useGetNotifications<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params?: GetNotificationsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -179,6 +205,7 @@ export function useGetNotifications<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params?: GetNotificationsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -201,6 +228,7 @@ export function useGetNotifications<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params?: GetNotificationsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -215,7 +243,7 @@ export function useGetNotifications<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetNotificationsQueryOptions(options);
+  const queryOptions = getGetNotificationsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -233,6 +261,7 @@ export const prefetchGetNotificationsQuery = async <
   TError = UnauthorizedResponse,
 >(
   queryClient: QueryClient,
+  params?: GetNotificationsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -244,7 +273,7 @@ export const prefetchGetNotificationsQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetNotificationsQueryOptions(options);
+  const queryOptions = getGetNotificationsQueryOptions(params, options);
 
   await queryClient.prefetchQuery(queryOptions);
 
@@ -254,23 +283,27 @@ export const prefetchGetNotificationsQuery = async <
 export const getGetNotificationsSuspenseQueryOptions = <
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
->(options?: {
-  query?: Partial<
-    UseSuspenseQueryOptions<
-      Awaited<ReturnType<typeof getNotifications>>,
-      TError,
-      TData
-    >
-  >;
-  request?: SecondParameter<typeof apiFetch>;
-}) => {
+>(
+  params?: GetNotificationsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNotifications>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetNotificationsQueryKey();
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNotificationsQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getNotifications>>
-  > = ({ signal }) => getNotifications({ signal, ...requestOptions });
+  > = ({ signal }) => getNotifications(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
     Awaited<ReturnType<typeof getNotifications>>,
@@ -288,6 +321,7 @@ export function useGetNotificationsSuspense<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params: undefined | GetNotificationsParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
@@ -306,6 +340,7 @@ export function useGetNotificationsSuspense<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params?: GetNotificationsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -324,6 +359,7 @@ export function useGetNotificationsSuspense<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params?: GetNotificationsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -346,6 +382,7 @@ export function useGetNotificationsSuspense<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = UnauthorizedResponse,
 >(
+  params?: GetNotificationsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -360,7 +397,7 @@ export function useGetNotificationsSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetNotificationsSuspenseQueryOptions(options);
+  const queryOptions = getGetNotificationsSuspenseQueryOptions(params, options);
 
   const query = useSuspenseQuery(
     queryOptions,

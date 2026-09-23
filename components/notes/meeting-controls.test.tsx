@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MeetingControls,
   MeetingStatusChip,
-  MeetingViewerChip,
 } from "@/components/notes/meeting-controls";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 
@@ -62,15 +61,6 @@ describe("MeetingStatusChip", () => {
   });
 });
 
-describe("MeetingViewerChip", () => {
-  afterEach(cleanup);
-
-  it("참관임을 라벨로 말한다 — 회의 제어가 없는 이유가 그 자리에 남아야 한다", () => {
-    render(<MeetingViewerChip />);
-    expect(screen.getByText("참관")).toBeInTheDocument();
-  });
-});
-
 describe("MeetingControls", () => {
   beforeEach(() => {
     state.userId = "user-12345";
@@ -93,7 +83,9 @@ describe("MeetingControls", () => {
       note({ meetingStatus: "PAUSED", activeSessionStartedAt: null })
     );
 
-    expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass("h-8");
+    expect(screen.getByRole("button", { name: "회의 종료" })).toHaveClass(
+      "h-8"
+    );
   });
 
   it("녹음 중에도 회의 종료가 잠기지 않는다", () => {
@@ -106,12 +98,14 @@ describe("MeetingControls", () => {
     ).not.toHaveProperty("disabled", true);
   });
 
-  it("뷰어(시작자 아님)에게는 그룹째 없다", () => {
+  it("시작자가 아닌 멤버도 회의를 끝낼 수 있다", () => {
     state.userId = "user-other";
 
-    const { container } = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
+    renderControls(note({ meetingStatus: "IN_PROGRESS" }));
 
-    expect(container.firstChild).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "회의 종료" })
+    ).toBeInTheDocument();
   });
 
   // `요약 보기` 버튼은 없앴다 — 바로 위 탭 줄에 `요약`이 있어 같은 곳으로 가는 길이 둘이었다.

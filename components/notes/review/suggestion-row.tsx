@@ -18,7 +18,6 @@ import type {
 } from "@/lib/api/generated/models";
 import {
   getGetProjectTaskRevisionsQueryKey,
-  getGetProjectTasksQueryKey,
   useUpdateProjectTask,
 } from "@/lib/api/generated/projects/projects";
 import {
@@ -30,7 +29,7 @@ import {
 } from "@/lib/assignees/describe";
 import { toast } from "@/lib/ui/toast";
 import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
-import { TASK_STATUS_LABEL } from "@/lib/tasks/task-groups";
+import { isProjectTaskQueryKey, TASK_STATUS_LABEL } from "@/lib/tasks/task-groups";
 import { cn } from "@/lib/utils";
 
 /** 제안 한 줄의 틀. 무엇에 대한 제안인지 · 무엇이 바뀌는지 · 받을지를 한 줄에 둔다. */
@@ -137,7 +136,6 @@ export function TaskChangeSuggestion({
   onChoose: (next: Choice) => Promise<boolean>;
 }) {
   const queryClient = useQueryClient();
-  const tasksKey = getGetProjectTasksQueryKey(workspaceId, projectId);
   const update = useUpdateProjectTask({ mutation: { meta: { suppressErrorToast: true } } });
   const [assignee, setAssignee] = useState<AssigneeValue | null | undefined>(
     change.assignee ? change.assignee.value : undefined
@@ -171,8 +169,11 @@ export function TaskChangeSuggestion({
       });
       setConflict(false);
       // 목록과 함께 그 할 일의 이력도 다시 읽는다. 이력 시트를 다시 열었을 때 바뀌기 전 판이 서면 안 된다.
+      // **목록은 둘이다** (APP-685) — 프로젝트 키만 비우면 「모든 할 일」이 낡은 값을 들고 남는다.
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: tasksKey }),
+        queryClient.invalidateQueries({
+          predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
+        }),
         queryClient.invalidateQueries({
           queryKey: getGetProjectTaskRevisionsQueryKey(workspaceId, projectId, task.taskId),
         }),
@@ -181,7 +182,9 @@ export function TaskChangeSuggestion({
     } catch (error) {
       if (errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT") {
         setConflict(true);
-        await queryClient.invalidateQueries({ queryKey: tasksKey });
+        await queryClient.invalidateQueries({
+          predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
+        });
       } else {
         toast.error(errorMessageOf(error, "할 일을 바꾸지 못했습니다."));
       }

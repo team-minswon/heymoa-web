@@ -30,7 +30,12 @@ export const getGetMeetingReviewResponseMock = (): MeetingReviewResponse => ({
         originalProposalRef: { proposalId: "0HZX2K7M9Q4AG", revision: 1 },
         authoredByUserId: null,
         edited: false,
-        assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+        assignee: {
+          type: "USER",
+          id: "0HZX2K7M9Q4AC",
+          name: "민수",
+          image: "https://cdn.example.com/avatars/hong.png",
+        },
         due: "2026-09-18",
         replacements: [
           {
@@ -55,7 +60,12 @@ export const getGetMeetingReviewResponseMock = (): MeetingReviewResponse => ({
             target: { itemId: "0K9GVJT2C4Q21", revision: 2 },
             status: "COMPLETED",
             assignee: {
-              value: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+              value: {
+                type: "USER",
+                id: "0HZX2K7M9Q4AC",
+                name: "민수",
+                image: "https://cdn.example.com/avatars/hong.png",
+              },
             },
             due: { value: "2026-09-18" },
             reason: "회의에서 끝났다고 말했습니다",
@@ -86,7 +96,12 @@ export const getCreateMeetingReviewItemResponseMock =
           originalProposalRef: { proposalId: "0HZX2K7M9Q4AG", revision: 1 },
           authoredByUserId: null,
           edited: false,
-          assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+          assignee: {
+            type: "USER",
+            id: "0HZX2K7M9Q4AC",
+            name: "민수",
+            image: "https://cdn.example.com/avatars/hong.png",
+          },
           due: "2026-09-18",
           replacements: [
             {
@@ -111,7 +126,12 @@ export const getCreateMeetingReviewItemResponseMock =
               target: { itemId: "0K9GVJT2C4Q21", revision: 2 },
               status: "COMPLETED",
               assignee: {
-                value: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+                value: {
+                  type: "USER",
+                  id: "0HZX2K7M9Q4AC",
+                  name: "민수",
+                  image: "https://cdn.example.com/avatars/hong.png",
+                },
               },
               due: { value: "2026-09-18" },
               reason: "회의에서 끝났다고 말했습니다",
@@ -214,7 +234,12 @@ export const getUpdateMeetingReviewItemResponseMock =
           originalProposalRef: { proposalId: "0HZX2K7M9Q4AG", revision: 1 },
           authoredByUserId: null,
           edited: false,
-          assignee: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+          assignee: {
+            type: "USER",
+            id: "0HZX2K7M9Q4AC",
+            name: "민수",
+            image: "https://cdn.example.com/avatars/hong.png",
+          },
           due: "2026-09-18",
           replacements: [
             {
@@ -239,7 +264,12 @@ export const getUpdateMeetingReviewItemResponseMock =
               target: { itemId: "0K9GVJT2C4Q21", revision: 2 },
               status: "COMPLETED",
               assignee: {
-                value: { type: "USER", id: "0HZX2K7M9Q4AC", name: "민수" },
+                value: {
+                  type: "USER",
+                  id: "0HZX2K7M9Q4AC",
+                  name: "민수",
+                  image: "https://cdn.example.com/avatars/hong.png",
+                },
               },
               due: { value: "2026-09-18" },
               reason: "회의에서 끝났다고 말했습니다",

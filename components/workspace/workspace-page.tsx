@@ -1,16 +1,15 @@
 "use client";
 
-import { useQueries } from "@tanstack/react-query";
-
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import {
-  getGetNotesQueryOptions,
   type getNotesResponse,
+  type getWorkspaceNotesResponse,
   useGetNotes,
+  useGetWorkspaceNotes,
 } from "@/lib/api/generated/notes/notes";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
 
@@ -27,6 +26,14 @@ export function noteListRefetchInterval(
 
 function notesFromResponse(
   response: getNotesResponse | undefined
+): NoteListResponseDataNotesItem[] | undefined {
+  return response?.status === 200 && response.data.success
+    ? response.data.data.notes
+    : undefined;
+}
+
+function workspaceNotesFromResponse(
+  response: getWorkspaceNotesResponse | undefined
 ): NoteListResponseDataNotesItem[] | undefined {
   return response?.status === 200 && response.data.success
     ? response.data.data.notes
@@ -52,48 +59,30 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
         noteListRefetchInterval(notesFromResponse(query.state.data)),
     },
   });
-  const allNotesQueries = useQueries({
-    queries: selectedProjectId
-      ? []
-      : projects.map((project) =>
-          getGetNotesQueryOptions(project.projectId, {
-            query: {
-              refetchInterval: (query) =>
-                noteListRefetchInterval(notesFromResponse(query.state.data)),
-            },
-          })
-        ),
-    combine: (results) => ({
-      notes: results.flatMap((result) =>
-        result.data?.status === 200 && result.data.data.success
-          ? (result.data.data.data.notes ?? [])
-          : []
-      ),
-      isPending: results.some((result) => result.isPending),
-      isError: results.some((result) => result.isError),
-      refetch: () => results.forEach((result) => void result.refetch()),
-    }),
+  /**
+   * **팬아웃이 사라졌다** (APP-685). 전에는 프로젝트마다 요청을 보내고 `flatMap` 한 뒤
+   * **서버와 같은 규칙으로 다시 정렬**했다 — 같은 순서를 두 곳이 정하면 한쪽만 고쳐도 화면이
+   * 안 바뀐다. 이제 서버가 워크스페이스 단위로 한 번에 세워 준다.
+   */
+  const allNotesQuery = useGetWorkspaceNotes(workspaceId, {
+    query: {
+      enabled: selectedProjectId === null,
+      refetchInterval: (query) =>
+        noteListRefetchInterval(workspaceNotesFromResponse(query.state.data)),
+    },
   });
-  const selectedNotes =
-    singleNotesQuery.data?.status === 200 && singleNotesQuery.data.data.success
-      ? (singleNotesQuery.data.data.data.notes ?? [])
-      : [];
   const notes: NoteListResponseDataNotesItem[] = selectedProjectId
-    ? selectedNotes
-    : allNotesQueries.notes;
+    ? (notesFromResponse(singleNotesQuery.data) ?? [])
+    : (workspaceNotesFromResponse(allNotesQuery.data) ?? []);
   const isPending = selectedProjectId
     ? singleNotesQuery.isPending
-    : isWorkspacePending || allNotesQueries.isPending;
+    : isWorkspacePending || allNotesQuery.isPending;
   const isError = selectedProjectId
     ? singleNotesQuery.isError
-    : isWorkspaceError || allNotesQueries.isError;
+    : isWorkspaceError || allNotesQuery.isError;
 
   const retry = () => {
-    if (selectedProjectId) {
-      void singleNotesQuery.refetch();
-      return;
-    }
-    allNotesQueries.refetch();
+    void (selectedProjectId ? singleNotesQuery : allNotesQuery).refetch();
   };
 
   /**

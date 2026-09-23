@@ -12,14 +12,54 @@ import type {
   AnalysisResultResponse,
   MeetingAnalysisFlowResponse,
   MeetingAnalysisRequestResponse,
+  NoteResponse,
 } from "../models";
 
 export const getRequestAnalysisResponseMock =
   (): MeetingAnalysisRequestResponse => ({
     success: true,
-    data: { noteId: "0HZX2K7M9Q4AF", requestId: "0K9GVJT2C4Q1Z" },
+    data: {
+      noteId: "0HZX2K7M9Q4AF",
+      requestId: "0K9GVJT2C4Q1Z",
+      flowStatus: "ANALYZING",
+    },
     error: null,
   });
+
+export const getEndMeetingResponseMock = (): NoteResponse => ({
+  success: true,
+  data: {
+    noteId: "0HZX2K7M9Q4AF",
+    projectId: "0HZX2K7M9Q4AE",
+    workspaceId: "0HZX2K7M9Q4AD",
+    projectName: "모바일 앱",
+    title: "주간 회의",
+    createdAt: "2026-07-14T01:02:03Z",
+    updatedAt: "2026-07-14T01:02:03Z",
+    meetingStatus: "ENDED",
+    meetingStartedAt: "2026-07-14T01:02:03Z",
+    meetingEndedAt: "2026-07-14T01:02:03Z",
+    recordedDurationMs: 6500,
+    activeSessionStartedAt: null,
+    meetingStartedBy: {
+      userId: "0HZX2K7M9Q4AC",
+      name: "홍길동",
+      email: "hong@example.com",
+      image: "https://cdn.example.com/avatars/hong.png",
+    },
+    participants: [
+      {
+        participantId: "0HZX2K7M9Q4AP",
+        userId: "0HZX2K7M9Q4AC",
+        guestId: null,
+        name: "홍길동",
+        email: "hong@example.com",
+        image: "https://cdn.example.com/avatars/hong.png",
+      },
+    ],
+  },
+  error: null,
+});
 
 export const getGetAnalysisFlowResponseMock =
   (): MeetingAnalysisFlowResponse => ({
@@ -32,6 +72,7 @@ export const getGetLatestAnalysisResponseMock = (): AnalysisResultResponse => ({
   success: true,
   data: {
     analysisId: "0K9GVJT2C4Q1Z",
+    analysisRunning: true,
     noteId: "0HZX2K7M9Q4AF",
     status: "SUCCEEDED",
     sections: [
@@ -103,20 +144,23 @@ export const getRequestAnalysisMockHandler = (
 
 export const getEndMeetingMockHandler = (
   overrideResponse?:
-    | void
+    | NoteResponse
     | ((
         info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<void> | void),
+      ) => Promise<NoteResponse> | NoteResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.post(
     "*/v1/notes/:noteId/meeting-end",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      if (typeof overrideResponse === "function") {
-        await overrideResponse(info);
-      }
-
-      return new HttpResponse(null, { status: 204 });
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getEndMeetingResponseMock(),
+        { status: 200 }
+      );
     },
     options
   );

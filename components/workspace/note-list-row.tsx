@@ -287,7 +287,6 @@ export function NoteListRow({
 
       <NoteDeleteDialog
         noteId={note.noteId}
-        projectId={note.projectId}
         title={note.title}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}

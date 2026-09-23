@@ -40,6 +40,8 @@ export type AnalysisResultResponseData = {
   retry?: AnalysisResultResponseDataRetry;
   /** SUCCEEDED면 OVERVIEW → ACTION_ITEM → DECISION 세 섹션, 그 밖에는 빈 배열 */
   sections: AnalysisResultResponseDataSectionsItem[];
+  /** 지금 분석이 돌고 있나. **성공본이 있으면 `retry` 쪽, 첫 분석이면 이 응답 자신의 `status`** 라 화면이 매번 둘을 가르면 한쪽을 빠뜨린다 */
+  analysisRunning: boolean;
   /** 분석 잡 상태 */
   status: AnalysisResultResponseDataStatus;
 };

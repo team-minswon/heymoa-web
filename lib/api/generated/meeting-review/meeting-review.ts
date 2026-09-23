@@ -958,11 +958,6 @@ export type updateMeetingReviewItemResponse401 = {
   status: 401;
 };
 
-export type updateMeetingReviewItemResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
-};
-
 export type updateMeetingReviewItemResponse409 = {
   data: AppErrorResponse;
   status: 409;
@@ -974,7 +969,6 @@ export type updateMeetingReviewItemResponseSuccess =
   };
 export type updateMeetingReviewItemResponseError = (
   | updateMeetingReviewItemResponse401
-  | updateMeetingReviewItemResponse403
   | updateMeetingReviewItemResponse409
 ) & {
   headers: Headers;

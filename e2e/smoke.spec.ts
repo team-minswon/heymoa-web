@@ -158,10 +158,9 @@ async function expectForeignViewerTranscript(
     await expect(blocks.first()).toContainText(
       "파트너 요구사항을 먼저 확인하겠습니다."
     );
-    await expect(page.getByLabel("녹음 제어")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "회의 종료" })).toHaveCount(
-      0
-    );
+    await expect(page.getByLabel("녹음 제어")).toBeVisible();
+    await expect(page.getByText("다른 탭·기기에서 기록 중입니다.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
     if (viewportSize.width === 375) {
       // 상태는 상단바가, 시작자는 **정보 탭 머리글의 메타 둘째 줄**이 말한다 — 전사는 읽는
       // 면이라 제목 블록을 걷었다.
@@ -233,7 +232,7 @@ test("renders the workspace surface from mock data", async ({ page }) => {
   await expect(page.getByText("테스트 유저의 워크스페이스")).toBeVisible();
 });
 
-test("renders the foreign viewer transcript without recording controls", async ({
+test("renders the foreign viewer transcript with observer controls", async ({
   page,
 }) => {
   await page.addInitScript((transcriptPath) => {
@@ -1386,10 +1385,9 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
 }) => {
   const noteId = await createMeetingNote(page);
   await page.getByRole("button", { name: "목록으로" }).click();
-  await page
-    .getByRole("link", { name: "주간 제품 회의 노트 열기" })
-    .first()
-    .click();
+  // **제목으로 짚지 않는다.** 같은 이름의 시드 노트가 있어서 `.first()` 가 그쪽을 집었고,
+  // 워크스페이스 전역 정렬로 바뀌자(APP-685) 어느 쪽이 위인지도 시드 날짜에 달리게 됐다.
+  await page.locator(`a[href*="/notes/${noteId}"]`).first().click();
   await expect(page).toHaveURL(
     `/w/${MOCK_WORKSPACE_ID}/notes/${noteId}?view=side&tab=details`
   );

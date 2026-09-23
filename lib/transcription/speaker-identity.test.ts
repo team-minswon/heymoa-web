@@ -19,11 +19,15 @@ const speaker = (
 });
 
 describe("createSpeakerIdentityResolver", () => {
+  /**
+   * **이름은 참여자 목록에서 온다** (APP-685). 화자에 실린 `assignedName` 은 지정 당시의
+   * 사본이라 개명하면 낡는다 — 화면은 늘 참여자 목록을 함께 넘긴다.
+   */
   it("연결된 화자는 이름을, 안 된 화자는 라벨을 보인다", () => {
-    const resolve = createSpeakerIdentityResolver([
-      speaker("A", "김민수"),
-      speaker("B"),
-    ]);
+    const resolve = createSpeakerIdentityResolver(
+      [speaker("A", "김민수"), speaker("B")],
+      [{ participantId: "0HZX2K7M9Q4AP", name: "김민수" }]
+    );
 
     expect(resolve("A")?.displayName).toBe("김민수");
     expect(resolve("B")?.displayName).toBe("화자 B");

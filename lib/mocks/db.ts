@@ -185,6 +185,14 @@ type StoreState = {
   diarizations: Map<string, TranscriptResponseDataDiarization>;
   /** 세션 사이가 아닌 공백(CAPTURE·UPLOAD). 서버가 오브젝트에서 유도하는 것을 목이 심는다. */
   extraGaps: Map<string, TranscriptResponseDataGapsItem[]>;
+  /**
+   * 봉인 도장이 **TRUNCATED 인 노트만** 담는다 (APP-685).
+   *
+   * 서버는 `notes.recording_seal` 을 두고 종료가 ACTIVE 세션을 닫을 때 TRUNCATED 를 찍는다.
+   * 목에는 그 상태가 아예 없어서 회의가 끝나면 무조건 COMPLETE 였고, 그래서 **화면의 잘림
+   * 분기 둘이 목에서 한 번도 안 지나갔다** — 아카이브 배지와 회의록 복사의 잘림 표시다.
+   */
+  truncatedNotes: Set<string>;
   members: MockMember[];
   /** 워크스페이스가 소유하는 계정 없는 참여자 (APP-490). */
   workspaceGuests: MockWorkspaceGuest[];
@@ -198,7 +206,6 @@ type StoreState = {
 
 let state: StoreState;
 let idCounter = 100;
-let timestampCounter = 0;
 
 /** 응답에 없는 내부 전용 필드를 떼어낸다 (멤버·초대의 workspaceId 등). */
 function omit<T extends object, K extends keyof T>(
@@ -487,28 +494,22 @@ function nextId() {
   return id;
 }
 
-function nextTimestamp() {
-  const value = new Date(
-    Date.parse("2026-07-11T09:00:00Z") + timestampCounter * 1000
-  ).toISOString();
-  timestampCounter += 1;
-  return value;
-}
-
 /**
- * ★ **개인 챗봇이 쓰는 시각. `nextTimestamp()`와 다른 시계다.**
+ * ★ **목이 만드는 것의 시각. 굳은 값을 쓰지 않는다.**
  *
- * 그쪽은 결정성을 위해 `2026-07-11T09:00:00Z`에 굳어 있는데, 챗 시드는 「오늘/어제/이번 주」가
- * 늘 채워지도록 **지금 시각에서 거꾸로** 잡는다. 둘을 섞으면 방금 만든 대화가 굳은 시각을
- * 받아 목록 **맨 아래**에 「44일 전」으로 서고, 새로고침이 엉뚱한 대화를 연다.
+ * 전에는 `2026-07-11T09:00:00Z`에 굳어 있었고, 시드 노트에는 그보다 **뒤인** 날짜가 박혀
+ * 있었다. 그래서 방금 만든 노트가 목록 맨 아래에 섰다 — 챗 쪽에서 먼저 밟고 시계를 하나 더
+ * 만들어 피했던 것과 같은 병이다. 시계는 하나면 된다.
  *
  * 같은 밀리초에 여러 번 불려도 순서가 뒤집히지 않게 1ms 씩 앞으로 민다.
  */
-let agentChatClock = 0;
-function nextAgentChatTimestamp() {
-  agentChatClock = Math.max(Date.now(), agentChatClock + 1);
-  return new Date(agentChatClock).toISOString();
+let mockClock = 0;
+function nextTimestamp() {
+  mockClock = Math.max(Date.now(), mockClock + 1);
+  return new Date(mockClock).toISOString();
 }
+
+const nextAgentChatTimestamp = nextTimestamp;
 
 function nextSessionTimestamp() {
   const latest = state.sessions.reduce((latestMs, session) => {
@@ -524,12 +525,19 @@ function nextSessionTimestamp() {
  * 오늘로부터 `daysAgo`일 전의 시각. 앱 타임존(KST) 날짜가 정확히 그 날이 되도록
  * UTC 01시대에 놓는다 — 자정 근처에 두면 KST 기준 날짜가 하루 밀려 묶음이 어긋난다.
  * `order`는 같은 날 안의 정렬만 벌리는 분 단위 오프셋이다.
+ *
+ * ★ **미래로 넘어가지 않게 잘라낸다.** `daysAgo=0` 은 앱 타임존 오전 10시라 그 전에 열면
+ * 아직 오지 않은 시각이 되고, 그 시드는 **방금 만든 것보다도 위**에 선다. 챗 시드가 먼저
+ * 밟아 `Date.now()` 로 피해 갔던 자리인데 노트 시드는 그대로였다.
  */
 function daysAgoIso(daysAgo: number, order = 0): string {
   const todayUtcMidnight = Date.parse(`${getAppDateKey(new Date())}T00:00:00Z`);
   const at =
     todayUtcMidnight - daysAgo * 86_400_000 + 3_600_000 - order * 60_000;
-  return new Date(at).toISOString();
+  // 음수 `daysAgo` 는 일부러 미래를 잡는 자리다(초대 만료). 거기까지 자르지 않는다.
+  const capped =
+    daysAgo >= 0 ? Math.min(at, Date.now() - order * 60_000 - 1_000) : at;
+  return new Date(capped).toISOString();
 }
 
 /**
@@ -687,7 +695,11 @@ function seedAgentChats(workspaceId: string) {
       scope: [],
       toolEvent: null,
     });
-    step(2, "THINKING", "먼저 스크립트에서 결제 실패가 언급된 자리를 찾습니다.");
+    step(
+      2,
+      "THINKING",
+      "먼저 스크립트에서 결제 실패가 언급된 자리를 찾습니다."
+    );
     step(4, "TOOL", "스크립트에서 관련 발화 검색 · 3건 찾음", {
       tool: "transcripts.search",
       decision: null,
@@ -950,7 +962,25 @@ function createSeedState(): StoreState {
     const { name, email, image } = member;
     return { userId, name, email, image };
   };
-  const notes: NoteResponseData[] = [
+  /**
+   * **프로젝트에서 나오는 셋은 손으로 안 쓴다.** `workspaceId`·`projectName` 은 서버가 접근
+   * 검증에서 이미 읽은 프로젝트에서 그대로 나오고(APP-685), 시드마다 손으로 적으면 프로젝트를
+   * 옮길 때 한 줄만 낡는다. `meetingEndedAt` 은 종료한 회의만 값이 있다.
+   */
+  type SeedNote = Omit<
+    NoteResponseData,
+    "workspaceId" | "projectName" | "meetingEndedAt"
+  > & { meetingEndedAt?: string | null };
+  const withProjectScope = (note: SeedNote): NoteResponseData => {
+    const project = projects.find((it) => it.projectId === note.projectId);
+    return {
+      ...note,
+      workspaceId: project?.workspaceId ?? workspaces[0].workspaceId,
+      projectName: project?.name ?? "알 수 없는 프로젝트",
+      meetingEndedAt: note.meetingEndedAt ?? null,
+    };
+  };
+  const noteSeeds: SeedNote[] = [
     {
       noteId: "01K0000000002",
       projectId: projects[0].projectId,
@@ -986,18 +1016,16 @@ function createSeedState(): StoreState {
       participants: participantsOf(projects[1].projectId, MOCK_USER.userId),
     },
     // 후보 조회가 500 을 내는 노트 (`CONTEXT_FAILING_NOTE_ID`). **노트 자체는 정상으로
-    // 실려야 한다** — 죽는 것은 후보 표면뿐이고, 전사와 회의 종료가 계속되는지가 e2e 의
-    // 요점이라 기록 중 + 내가 시작한 상태로 둔다.
+    // 실려야 한다** — 죽는 것은 후보 표면뿐이고, 전사와 회의 종료는 계속된다.
     {
       noteId: "01K0000000006",
       projectId: projects[0].projectId,
       title: "정리 실패 재현 회의",
-      // 커버리지 노트(0008)보다 과거로 둔다 — listNotes 가 updatedAt 내림차순이라
-      // 이 노트가 앞서면 「첫 진행 중 노트」를 잡는 vitest 헬퍼가 이쪽으로 쏠린다.
+      // 커버리지 노트(0008)보다 과거로 둔다.
       createdAt: "2026-07-05T00:00:00Z",
       updatedAt: "2026-07-05T00:00:00Z",
-      meetingStatus: "IN_PROGRESS",
-      meetingStartedAt: "2026-07-05T00:00:00Z",
+      meetingStatus: "PAUSED",
+      meetingStartedAt: null,
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: starterOf(MOCK_USER.userId),
@@ -1010,8 +1038,8 @@ function createSeedState(): StoreState {
       title: "합성 원장 검증 회의",
       createdAt: "2026-07-05T01:00:00Z",
       updatedAt: "2026-07-05T01:00:00Z",
-      meetingStatus: "IN_PROGRESS",
-      meetingStartedAt: "2026-07-05T01:00:00Z",
+      meetingStatus: "PAUSED",
+      meetingStartedAt: null,
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: starterOf(MOCK_USER.userId),
@@ -1024,7 +1052,7 @@ function createSeedState(): StoreState {
       title: "커버리지 추종 확인",
       createdAt: "2026-07-13T00:00:00Z",
       updatedAt: "2026-07-13T00:00:00Z",
-      meetingStatus: "IN_PROGRESS",
+      meetingStatus: "PAUSED",
       meetingStartedAt: "2026-07-13T00:00:00Z",
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
@@ -1107,41 +1135,54 @@ function createSeedState(): StoreState {
       ["01K0000000025", "디자인 시스템 점검", 9, 1],
       ["01K0000000026", "분기 계획 세션", 20, 0],
       ["01K0000000027", "파트너십 킥오프", 45, 1],
-    ].map(([noteId, title, daysAgo, projectIndex], index) => ({
-      noteId: noteId as string,
-      projectId: projects[projectIndex as number].projectId,
-      title: title as string,
-      createdAt: daysAgoIso(daysAgo as number, index),
-      updatedAt: daysAgoIso(daysAgo as number, index),
-      meetingStatus: "ENDED" as const,
-      meetingStartedAt: null,
-      recordedDurationMs: 0,
-      activeSessionStartedAt: null,
-      // 절반은 내가 시작한 회의로 둔다 — 행의 시작자 아바타가 「나」인 경우도 표본에 있어야 한다.
-      //
-      // 나머지 절반은 다시 둘로 가른다. **셋 다 필요하다** — 이미지 있는 시작자, 이미지 없는
-      // 시작자(한지원), 시작자 자체가 없는 회의. 「시작 전」 노트들도 시작자가 null이지만
-      // 그건 표본이 못 된다: `nullable-coverage`가 그 노트들로 세션을 만들면서 시작자를
-      // 채워 버려, **종료된 이 노트들만이 null 쪽을 끝까지 들고 있다.**
-      meetingStartedBy:
-        (projectIndex as number) === 0
-          ? starterOf(MOCK_USER.userId)
-          : (index as number) < 4
-            ? starterOf("01K0000000020")
-            : null,
-      // 넘침(+N) 표시를 화면에서 볼 수 있게 절반은 참여자를 둘 다 넣는다.
-      participants:
-        index % 2 === 0
-          ? participantsOf(
-              projects[projectIndex as number].projectId,
-              MOCK_USER.userId,
-              "01K0000000020"
-            )
-          : participantsOf(
-              projects[projectIndex as number].projectId,
-              MOCK_USER.userId
-            ),
-    })),
+    ].map(([noteId, title, daysAgo, projectIndex], index) => {
+      // **한 번 계산해 셋이 나눠 쓴다.** 세 번 부르면 상한(`Date.now()`)에 걸리는 시각대에서
+      // 호출 사이의 실제 몇 ms 가 섞여, 같은 순간이어야 할 셋이 조금씩 어긋난다.
+      const at = daysAgoIso(daysAgo as number, index);
+      return {
+        noteId: noteId as string,
+        projectId: projects[projectIndex as number].projectId,
+        title: title as string,
+        createdAt: at,
+        updatedAt: at,
+        meetingStatus: "ENDED" as const,
+        meetingStartedAt: null,
+        /**
+         * **끝난 회의는 종료 시각이 있다** (APP-685). 계약이 「안 끝났으면 null」이라고 말하므로
+         * ENDED 인데 null 이면 목이 계약을 어긴다 — 화면이 그 조합을 정상으로 보고 만들어진다.
+         *
+         * 한 번도 녹음하지 않은 회의라 `meetingStartedAt` 은 그대로 null 이다. 종료는 녹음과
+         * 무관하게 누를 수 있다.
+         */
+        meetingEndedAt: at,
+        recordedDurationMs: 0,
+        activeSessionStartedAt: null,
+        // 절반은 내가 시작한 회의로 둔다 — 행의 시작자 아바타가 「나」인 경우도 표본에 있어야 한다.
+        //
+        // 나머지 절반은 다시 둘로 가른다. **셋 다 필요하다** — 이미지 있는 시작자, 이미지 없는
+        // 시작자(한지원), 시작자 자체가 없는 회의. 「시작 전」 노트들도 시작자가 null이지만
+        // 그건 표본이 못 된다: `nullable-coverage`가 그 노트들로 세션을 만들면서 시작자를
+        // 채워 버려, **종료된 이 노트들만이 null 쪽을 끝까지 들고 있다.**
+        meetingStartedBy:
+          (projectIndex as number) === 0
+            ? starterOf(MOCK_USER.userId)
+            : (index as number) < 4
+              ? starterOf("01K0000000020")
+              : null,
+        // 넘침(+N) 표시를 화면에서 볼 수 있게 절반은 참여자를 둘 다 넣는다.
+        participants:
+          index % 2 === 0
+            ? participantsOf(
+                projects[projectIndex as number].projectId,
+                MOCK_USER.userId,
+                "01K0000000020"
+              )
+            : participantsOf(
+                projects[projectIndex as number].projectId,
+                MOCK_USER.userId
+              ),
+      };
+    }),
     /**
      * 실제 멘토링 회의(63분·494발화). 화자 다섯이 사람 넷에 붙고 **한 명이 라벨 둘을**
      * 가진다 — 지어낸 시드로는 안 나오는 모양이라 그대로 떠 왔다.
@@ -1154,6 +1195,8 @@ function createSeedState(): StoreState {
       updatedAt: "2026-09-11T02:48:18Z",
       meetingStatus: "ENDED",
       meetingStartedAt: "2026-09-11T01:45:00Z",
+      // 서버가 찍는 종료 시각 (APP-685). 없는 동안 화면이 브라우저의 `Date.now()` 로 지어냈다.
+      meetingEndedAt: "2026-09-11T02:48:18Z",
       recordedDurationMs: 3_797_080,
       activeSessionStartedAt: null,
       meetingStartedBy: starterOf(MOCK_USER.userId),
@@ -1193,6 +1236,9 @@ function createSeedState(): StoreState {
       ],
     },
   ];
+  const notes: NoteResponseData[] = noteSeeds.map(withProjectScope);
+  const liveSessionStartedAt = new Date(Date.now() - 5_000).toISOString();
+  const liveSessionReadyExpiresAt = new Date(Date.now() + 60_000).toISOString();
   const sessions: MockSession[] = [
     {
       sessionId: "01K0000000010",
@@ -1202,6 +1248,45 @@ function createSeedState(): StoreState {
       startedAt: "2026-07-11T00:00:00Z",
       endedAt: "2026-07-11T00:02:00Z",
       endReason: "CLIENT_DISCONNECTED",
+    },
+    // 진행 중인 시드에는 실제 열린 세션이 있어야 한다. 0002·0028은 앞선 완료 세션이
+    // 회의 시작 시각을 정하고, 이 세션이 지금 다른 탭에서 진행되는 녹음을 나타낸다.
+    {
+      sessionId: "01K0000000402",
+      noteId: "01K0000000002",
+      status: "ACTIVE",
+      readyExpiresAt: liveSessionReadyExpiresAt,
+      startedAt: liveSessionStartedAt,
+      endedAt: null,
+      endReason: null,
+    },
+    {
+      sessionId: "01K0000000428",
+      noteId: "01K0000000028",
+      status: "ACTIVE",
+      readyExpiresAt: liveSessionReadyExpiresAt,
+      startedAt: liveSessionStartedAt,
+      endedAt: null,
+      endReason: null,
+    },
+    // READY 만료는 회의를 PAUSED 로 돌리고 회의 시작 시각은 남기지 않는다.
+    {
+      sessionId: "01K0000000406",
+      noteId: "01K0000000006",
+      status: "INTERRUPTED",
+      readyExpiresAt: "2026-07-05T00:01:00Z",
+      startedAt: null,
+      endedAt: "2026-07-05T00:01:00Z",
+      endReason: "READY_TIMEOUT",
+    },
+    {
+      sessionId: "01K0000000407",
+      noteId: "01K0000000007",
+      status: "INTERRUPTED",
+      readyExpiresAt: "2026-07-05T01:01:00Z",
+      startedAt: null,
+      endedAt: "2026-07-05T01:01:00Z",
+      endReason: "READY_TIMEOUT",
     },
     {
       sessionId: "01K0000000029",
@@ -1243,9 +1328,7 @@ function createSeedState(): StoreState {
       endedAt: "2026-09-11T02:48:18Z",
       endReason: "CLIENT_DISCONNECTED",
     },
-    // READY/ACTIVE 세션은 시드하지 않는다 — `createSession`의 가드가 전역이라(한 유저는
-    // 동시에 하나만 녹음) 시드가 하나라도 있으면 모든 세션 생성이 막힌다.
-    // `startedAt`·`endedAt`·`endReason`의 null 경로는 `createSession`이 런타임에 만든다.
+    // 열린 세션 가드는 노트별이다. 새 노트의 세션 생성은 위 진행 중 시드와 독립적이다.
   ];
   const segments: StoredSegment[] = [
     {
@@ -1511,6 +1594,7 @@ function createSeedState(): StoreState {
       [MENTORING_NOTE_ID, mentoringDiarization],
     ]),
     // 사고 공백. 끝난 것과 진행 중인 것, 이유가 있는 것과 없는 것을 함께 심는다.
+    truncatedNotes: new Set<string>(),
     extraGaps: new Map<string, TranscriptResponseDataGapsItem[]>([
       [
         "01K0000000020",
@@ -1553,6 +1637,8 @@ function createSeedState(): StoreState {
         analysisId: "01K0000000050",
         noteId: "01K0000000020",
         status: "SUCCEEDED",
+        // 성공본이고 재요약도 없다 — 돌고 있지 않다.
+        analysisRunning: false,
         sections: [
           {
             kind: "OVERVIEW",
@@ -1700,20 +1786,6 @@ function resolveInvitation(
     role: invitation.role,
     status,
   });
-}
-
-/** 회의 종료는 시작자만 할 수 있다 (계약 403 NOT_MEETING_STARTER). */
-function requireMeetingStarter(note: NoteResponseData) {
-  if (note.meetingStartedBy?.userId !== state.user.userId) {
-    fail("NOT_MEETING_STARTER");
-  }
-}
-
-function hasActiveSession(noteId: string) {
-  return state.sessions.some(
-    (session) =>
-      session.noteId === noteId && ACTIVE_STATUSES.has(session.status)
-  );
 }
 
 function latestAnalysis(noteId: string) {
@@ -1874,7 +1946,9 @@ function resolveOrJoinParticipant(
     guestId?: string | null;
   }
 ) {
-  const keys = [target.participantId, target.userId, target.guestId].filter(Boolean);
+  const keys = [target.participantId, target.userId, target.guestId].filter(
+    Boolean
+  );
   if (keys.length > 1) fail("BAD_REQUEST");
   if (keys.length === 0) return null;
 
@@ -1890,7 +1964,9 @@ function resolveOrJoinParticipant(
   )?.workspaceId;
 
   if (target.guestId) {
-    const already = note.participants.find((row) => row.guestId === target.guestId);
+    const already = note.participants.find(
+      (row) => row.guestId === target.guestId
+    );
     if (already) return already;
 
     // 임시 참여자도 워크스페이스가 소유한다. 남의 워크스페이스 것은 못 붙인다.
@@ -1911,7 +1987,9 @@ function resolveOrJoinParticipant(
     return joinedGuest;
   }
 
-  const existing = note.participants.find((row) => row.userId === target.userId);
+  const existing = note.participants.find(
+    (row) => row.userId === target.userId
+  );
   if (existing) return existing;
 
   const member = state.members.find(
@@ -1986,13 +2064,48 @@ const resetListeners = new Set<() => void>();
 
 function reset() {
   idCounter = 100;
-  timestampCounter = 0;
-  agentChatClock = 0;
+  mockClock = 0;
   state = createSeedState();
   for (const listener of resetListeners) listener();
 }
 
 reset();
+
+/** 노트 목록의 조립부. 프로젝트 단위와 워크스페이스 단위가 **같은 것을 쓴다**. */
+function listNotesWhere(
+  match: (note: NoteResponseData) => boolean
+): NoteListResponseDataNotesItem[] {
+  state.notes.filter(match).forEach((note) => expireReadySessions(note.noteId));
+  const notes = state.notes
+    .filter(match)
+    .sort(
+      (a, b) =>
+        (b.meetingStartedAt ?? b.createdAt).localeCompare(
+          a.meetingStartedAt ?? a.createdAt
+        ) || b.noteId.localeCompare(a.noteId)
+    )
+    .map((note) => {
+      const startedAt = state.sessions
+        .filter(
+          (session) =>
+            session.noteId === note.noteId && session.endedAt !== null
+        )
+        .map((session) => session.startedAt)
+        .filter((value): value is string => value !== null)
+        .sort((a, b) => b.localeCompare(a))[0];
+      return {
+        ...note,
+        lastRecordedAt: startedAt ?? null,
+        recordedDurationMs: getRecordedDurationMs(note.noteId),
+        activeSessionStartedAt:
+          state.sessions.find(
+            (session) =>
+              session.noteId === note.noteId && session.status === "ACTIVE"
+          )?.startedAt ?? null,
+      };
+    });
+  return copy(notes);
+}
 
 export const mockDb = {
   reset,
@@ -2111,14 +2224,33 @@ export const mockDb = {
   },
 
   /** 회의 뒤 분석은 `meeting-flow` 목이 이어받는다. 여기서는 회의 상태만 닫는다. */
-  endMeeting(noteId: string): void {
+  /**
+   * **세 가지가 바뀌었다** (APP-685).
+   *
+   * 1. 응답이 **갱신된 노트**다. 204 였을 때 화면이 종료 뒤 상태를 지어냈다
+   * 2. 시작자만이 아니라 **워크스페이스 멤버 누구나** 끝낼 수 있다
+   * 3. 열려 있던 전사 세션을 409 로 거절하지 않고 **서버가 닫는다**
+   */
+  endMeeting(noteId: string): NoteResponseData {
     const note = findNote(noteId);
     if (note.meetingStatus === "NOT_STARTED") fail("MEETING_NOT_STARTED");
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
-    requireMeetingStarter(note);
-    // 계약: 진행 중인 전사가 있으면 409. web은 stop을 먼저 보내고 다시 호출해야 한다.
-    if (hasActiveSession(noteId)) fail("ACTIVE_TRANSCRIPTION_SESSION");
+    const endedAt = nextTimestamp();
+    for (const session of state.sessions) {
+      if (session.noteId !== noteId || !ACTIVE_STATUSES.has(session.status)) {
+        continue;
+      }
+      // **소리가 흐르던 세션만 봉인한다.** READY 는 한 조각도 안 받았으므로 자를 것이 없다 —
+      // 서버가 `wasActive` 로 가르는 그 자리다.
+      if (session.status === "ACTIVE") state.truncatedNotes.add(noteId);
+      session.status = "INTERRUPTED";
+      session.endedAt = endedAt;
+      session.endReason = "MEETING_ENDED";
+    }
     note.meetingStatus = "ENDED";
+    note.meetingEndedAt = endedAt;
+    note.updatedAt = endedAt;
+    return this.getNote(noteId);
   },
 
   /**
@@ -2139,6 +2271,8 @@ export const mockDb = {
       analysisId: nextId(),
       noteId,
       status: "PENDING",
+      // 방금 만들었으니 돌고 있다. 서버는 이 값을 `retry ?? status` 로 답한다 (APP-685).
+      analysisRunning: true,
       // 계약: 완료 전에는 섹션이 빈 배열이다(null이 아니다).
       sections: [],
       errorCode: null,
@@ -2505,12 +2639,17 @@ export const mockDb = {
   },
 
   listNotifications(): NotificationListResponseData {
+    const notifications = [...state.notifications].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt)
+    );
     return copy({
-      notifications: [...state.notifications].sort((a, b) =>
-        b.createdAt.localeCompare(a.createdAt)
-      ),
+      notifications,
       unreadCount: state.notifications.filter((item) => item.readAt === null)
         .length,
+      // 목은 한 쪽만 돌려준다 — 커서 왕복까지 흉내 낼 이유가 없다.
+      hasMore: false,
+      nextCreatedAt: null,
+      nextNotificationId: null,
     });
   },
 
@@ -2626,50 +2765,39 @@ export const mockDb = {
 
   listNotes(projectId: string): NoteListResponseDataNotesItem[] {
     assertProject(projectId);
-    state.notes
-      .filter((note) => note.projectId === projectId)
-      .forEach((note) => expireReadySessions(note.noteId));
-    const notes = state.notes
-      .filter((note) => note.projectId === projectId)
-      .sort(
-        (a, b) =>
-          b.updatedAt.localeCompare(a.updatedAt) ||
-          b.noteId.localeCompare(a.noteId)
-      )
-      .map((note) => {
-        const startedAt = state.sessions
-          .filter(
-            (session) =>
-              session.noteId === note.noteId && session.endedAt !== null
-          )
-          .map((session) => session.startedAt)
-          .filter((value): value is string => value !== null)
-          .sort((a, b) => b.localeCompare(a))[0];
-        return {
-          ...note,
-          lastRecordedAt: startedAt ?? null,
-          recordedDurationMs: getRecordedDurationMs(note.noteId),
-          activeSessionStartedAt:
-            state.sessions.find(
-              (session) =>
-                session.noteId === note.noteId && session.status === "ACTIVE"
-            )?.startedAt ?? null,
-        };
-      });
-    return copy(notes);
+    return listNotesWhere((note) => note.projectId === projectId);
+  },
+
+  /**
+   * 워크스페이스의 노트 전부 (APP-685). **조립부는 프로젝트 단위와 한 벌이다** — 정렬 규칙이
+   * 두 곳에 생기면 팬아웃을 없애도 순서가 갈린다. 서버도 같은 이유로 where 절만 갈랐다.
+   */
+  listWorkspaceNotes(workspaceId: string): NoteListResponseDataNotesItem[] {
+    assertWorkspace(workspaceId);
+    requireWorkspaceMember(workspaceId);
+    const projectIds = new Set(
+      state.projects
+        .filter((project) => project.workspaceId === workspaceId)
+        .map((project) => project.projectId)
+    );
+    return listNotesWhere((note) => projectIds.has(note.projectId));
   },
 
   createNote(projectId: string, input: Partial<NoteRequest>): NoteResponseData {
-    assertProject(projectId);
+    const project = assertProject(projectId);
     const createdAt = nextTimestamp();
     const note: NoteResponseData = {
       noteId: nextId(),
       projectId,
+      // 서버는 접근 검증에서 이미 읽은 프로젝트에서 이 둘을 낸다 (APP-685).
+      workspaceId: project.workspaceId,
+      projectName: project.name,
       title: input.title?.trim() || "제목 없는 노트",
       createdAt,
       updatedAt: createdAt,
       meetingStatus: "NOT_STARTED",
       meetingStartedAt: null,
+      meetingEndedAt: null,
       recordedDurationMs: 0,
       activeSessionStartedAt: null,
       meetingStartedBy: null,
@@ -2781,7 +2909,9 @@ export const mockDb = {
     if (!workspaceId) fail("NOTE_NOT_FOUND");
 
     // 서버의 singleLine(): 제어문자를 공백으로 접고 양끝을 자른다. 거부가 아니라 접는다.
-    const name = displayName.replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ").trim();
+    const name = displayName
+      .replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ")
+      .trim();
     if (name.length === 0 || name.length > 100) fail("BAD_REQUEST");
 
     const guest: MockWorkspaceGuest = {
@@ -2845,7 +2975,10 @@ export const mockDb = {
     );
     note.participants = sortParticipants([...keptAccounts, ...next]);
     // 서버의 ON DELETE CASCADE 를 흉내 낸다 — 회의에서 빠진 사람의 화자 연결은 끊긴다.
-    detachSpeakers(noteId, removed.map((row) => row.participantId));
+    detachSpeakers(
+      noteId,
+      removed.map((row) => row.participantId)
+    );
     return copy({ participants: note.participants });
   },
 
@@ -2887,7 +3020,9 @@ export const mockDb = {
     guestId: string,
     targetUserId: string
   ) {
-    return copy(guestLinkResultOf(planGuestLink(workspaceId, guestId, targetUserId)));
+    return copy(
+      guestLinkResultOf(planGuestLink(workspaceId, guestId, targetUserId))
+    );
   },
 
   /**
@@ -3025,18 +3160,23 @@ export const mockDb = {
     // 조회와 같은 규칙 — 권한 승인과 이 POST 사이에 추방됐을 수 있다. 서버는 여기서도
     // 멤버십을 보고 404 `WORKSPACE_NOT_FOUND`를 준다(`NoteAccessHandler.requireProjectMember`).
     assertWorkspace(assertProject(note.projectId).workspaceId);
-    if (
-      note.meetingStartedBy &&
-      note.meetingStartedBy.userId !== state.user.userId
-    ) {
-      fail("NOT_MEETING_STARTER");
-    }
     // 계약의 409에 `MEETING_ALREADY_ENDED`가 생겨(APP-214, server@a582684) 목도 막는다.
     // **서버는 원래부터 막고 있었다** — 없던 것은 계약뿐이었고, 그래서 목과 생성 클라이언트만
     // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
     expireReadySessions(noteId);
-    if (state.sessions.some((session) => ACTIVE_STATUSES.has(session.status))) {
+    // **시작자 제한이 없다** (APP-685). 서버가 시작·재개를 시작자로 묶지 않는다 — 둘이
+    // 동시에 눌러도 아래 열린 세션 검사가 둘째를 「이미 녹음 중」으로 막고, 그것이 사용자에게
+    // 사실인 말이다.
+    //
+    // **그리고 그 검사는 이 노트만 본다.** 전에는 `noteId` 필터가 없어서 **다른 노트의**
+    // 열린 세션이 이 노트의 녹음을 막았다. 서버는 `findOpenByNoteIdForUpdate(noteId)` 다.
+    if (
+      state.sessions.some(
+        (session) =>
+          session.noteId === noteId && ACTIVE_STATUSES.has(session.status)
+      )
+    ) {
       fail("ACTIVE_TRANSCRIPTION_SESSION");
     }
     const session: MockSession = {
@@ -3048,7 +3188,8 @@ export const mockDb = {
       endedAt: null,
       endReason: null,
     };
-    // 회의 시작자는 녹음을 처음 시작한 유저다 (계약). 이후 시작자만 회의를 종료할 수 있다.
+    // 회의 시작자는 녹음을 처음 시작한 유저다 (계약). **권한이 아니라 기록이다** (APP-685) —
+    // 종료도 재개도 시작자로 묶이지 않는다.
     note.meetingStartedBy ??= {
       userId: state.user.userId,
       name: state.user.name,
@@ -3255,10 +3396,18 @@ export const mockDb = {
         startedAt:
           sessions[0]?.startedAt ?? note.meetingStartedAt ?? note.createdAt,
         // 봉인은 회의가 끝나야 찍힌다. 진행 중이면 OPEN 이고 그건 오류가 아니다.
-        seal: note.meetingStatus === "ENDED" ? "COMPLETE" : "OPEN",
+        // **자른 채 끝난 회의는 TRUNCATED 다** — 종료가 소리 흐르던 세션을 닫은 경우다.
+        seal: state.truncatedNotes.has(noteId)
+          ? "TRUNCATED"
+          : note.meetingStatus === "ENDED"
+            ? "COMPLETE"
+            : "OPEN",
         durationMs,
+        // **소리가 실제로 흐른 세션이 있어야 한다** (APP-685). 세션이 있기만 하면 참으로
+        // 두면, 한 조각도 못 받고 만료된 READY 뿐인 노트가 「조립할 소리가 있다」고 말한다.
+        // 서버는 오브젝트 존재를 직접 본다(`audioObjectRepository.existsByNoteId`).
         // 옛 노트는 전사만 있고 소리가 없다 — 「COMPLETE 인데 조립은 못 한다」가 정상이다.
-        audioRetained: sessions.length > 0,
+        audioRetained: sessions.some((session) => session.startedAt !== null),
       },
       diarization: state.diarizations.get(noteId) ?? {
         status: "NOT_REQUESTED",

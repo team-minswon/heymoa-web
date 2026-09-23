@@ -30,6 +30,9 @@ describe("summarizeSpeakers", () => {
     const rows = summarizeSpeakers({
       segments: [segment(1, "A", 1000)],
       speakers: [speaker("A", "p1", "한지원"), speaker("B", "p2", "상어")],
+      // **참여자를 비워 넘긴다.** 이 함수는 발화가 없는 참여자에게도 빈 줄을 만들어 주므로
+      // (참석자 목록이 그 사람을 보여야 한다), 여기서 유도하면 이 테스트의 주제가 흐려진다.
+      participants: [],
     });
 
     expect(rows.map((row) => row.key)).toEqual(["p1"]);
@@ -49,6 +52,10 @@ describe("summarizeSpeakers", () => {
         speaker("E", "mentor", "이동준 멘토님"),
         speaker("A", "p1", "한지원"),
       ],
+      participants: [
+        { participantId: "mentor", name: "이동준 멘토님" },
+        { participantId: "p1", name: "한지원" },
+      ],
     });
 
     expect(rows).toHaveLength(2);
@@ -64,6 +71,10 @@ describe("summarizeSpeakers", () => {
     const rows = summarizeSpeakers({
       segments: [segment(1, "A", 1000), segment(2, "B", 5000)],
       speakers: [speaker("A", "p1", "한지원"), speaker("B", "p2", "상어")],
+      participants: [
+        { participantId: "p1", name: "한지원" },
+        { participantId: "p2", name: "상어" },
+      ],
     });
 
     expect(rows.map((row) => row.name)).toEqual(["상어", "한지원"]);
@@ -289,5 +300,13 @@ describe("summarizeSpeakers", () => {
     });
 
     expect(rows[0]).toMatchObject({ name: "한지원", image: "u.png" });
+  });
+
+  it("참여자 목록이 없으면 화자에 저장된 옛 이름을 대신 쓰지 않는다", () => {
+    const rows = summarizeSpeakers({
+      segments: [segment(1, "A", 1000)],
+      speakers: [speaker("A", "p1", "옛 이름")],
+    });
+    expect(rows[0].name).toBe("이름 없는 참여자");
   });
 });

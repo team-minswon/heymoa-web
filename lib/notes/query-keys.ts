@@ -1,9 +1,21 @@
-const PROJECT_NOTES_QUERY_PATTERN = /^\/v1\/projects\/[^/]+\/notes$/;
+/**
+ * 노트 목록 **둘 다**. 프로젝트 단위와 워크스페이스 단위가 같은 행을 그린다.
+ *
+ * **워크스페이스 키를 빼면 아무 소리도 안 난다** (APP-685). 「모든 노트」 화면이 종료 상태·
+ * 바뀐 제목·지운 행을 다음 폴링까지 들고 있을 뿐이라, 에러도 경고도 없이 낡은 목록만 남는다.
+ * 할 일 쪽에서 같은 자리를 먼저 밟고도 노트 쪽을 안 고쳤다 — `query-keys.test.ts` 가 지킨다.
+ */
+const NOTE_LIST_QUERY_PATTERNS = [
+  /^\/v1\/projects\/[^/]+\/notes$/,
+  /^\/v1\/workspaces\/[^/]+\/notes$/,
+];
 
-export function isProjectNotesQueryKey(queryKey: readonly unknown[]) {
+export function isNoteListQueryKey(queryKey: readonly unknown[]) {
   return (
     typeof queryKey[0] === "string" &&
-    PROJECT_NOTES_QUERY_PATTERN.test(queryKey[0])
+    NOTE_LIST_QUERY_PATTERNS.some((pattern) =>
+      pattern.test(queryKey[0] as string)
+    )
   );
 }
 

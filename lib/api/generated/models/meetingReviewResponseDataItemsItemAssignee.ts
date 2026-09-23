@@ -12,6 +12,8 @@ import type { MeetingReviewResponseDataItemsItemAssigneeType } from "./meetingRe
  * @nullable
  */
 export type MeetingReviewResponseDataItemsItemAssignee = {
+  /** 사람 담당의 프로필 이미지 URL. 사진이 없거나 임시 참여자면 키가 빠진다 */
+  image?: string;
   /**
    * 사람 담당의 현재 이름
    * @minLength 1

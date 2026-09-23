@@ -27,11 +27,14 @@ import type {
   AppErrorResponse,
   AssignSegmentSpeakerRequest,
   AssignSpeakerRequest,
+  AssignSpeakersRequest,
   CurrentTranscriptionSessionNullableResponse,
+  GetTranscriptSegmentsAfterParams,
   SegmentSpeakerResponse,
   SpeakerListResponse,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
+  TranscriptSegmentListResponse,
   TranscriptionSessionResponse,
   UnauthorizedResponse,
 } from "../models";
@@ -432,6 +435,155 @@ export function useGetTranscriptionSessionSuspense<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type assignNoteSpeakersResponse200 = {
+  data: SpeakerListResponse;
+  status: 200;
+};
+
+export type assignNoteSpeakersResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type assignNoteSpeakersResponseSuccess =
+  assignNoteSpeakersResponse200 & {
+    headers: Headers;
+  };
+export type assignNoteSpeakersResponseError = assignNoteSpeakersResponse401 & {
+  headers: Headers;
+};
+
+export type assignNoteSpeakersResponse =
+  | assignNoteSpeakersResponseSuccess
+  | assignNoteSpeakersResponseError;
+
+export const getAssignNoteSpeakersUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/speakers`;
+};
+
+/**
+ * 본문에 실린 라벨만 바꾸는 멱등 벌크다. 여기 없는 라벨의 지정은 그대로 남는다 - 전체 교체로 읽으면 「참석자 중에 없다」 확정을 지우게 되는데 그것을 되돌릴 API 가 없다. 라벨 하나의 규칙은 단건 경로와 같고, 같은 본문을 두 번 보내면 결과가 같다.
+ * @summary 화자 여럿을 한 번에 연결
+ */
+export const assignNoteSpeakers = async (
+  noteId: string,
+  assignSpeakersRequest?: AssignSpeakersRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<assignNoteSpeakersResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<assignNoteSpeakersResponse>(
+    getAssignNoteSpeakersUrl(noteId),
+    {
+      ...options,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(assignSpeakersRequest),
+    }
+  );
+};
+
+export const getAssignNoteSpeakersMutationKey = () =>
+  ["assignNoteSpeakers"] as const;
+
+export const getAssignNoteSpeakersMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignNoteSpeakers>>,
+    TError,
+    AssignNoteSpeakersMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assignNoteSpeakers>>,
+  TError,
+  AssignNoteSpeakersMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssignNoteSpeakersMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assignNoteSpeakers>>,
+    AssignNoteSpeakersMutationVariables
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return assignNoteSpeakers(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssignNoteSpeakersMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assignNoteSpeakers>>
+>;
+export type AssignNoteSpeakersMutationBody = AssignSpeakersRequest | undefined;
+export type AssignNoteSpeakersMutationError = UnauthorizedResponse;
+export type AssignNoteSpeakersMutationVariables = {
+  noteId: string;
+  data?: AssignSpeakersRequest;
+};
+
+/**
+ * @summary 화자 여럿을 한 번에 연결
+ */
+export const useAssignNoteSpeakers = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assignNoteSpeakers>>,
+      TError,
+      AssignNoteSpeakersMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof assignNoteSpeakers>>,
+  TError,
+  AssignNoteSpeakersMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getAssignNoteSpeakersMutationOptions(options),
+    queryClient
+  );
+};
 export type getNoteTranscriptResponse200 = {
   data: TranscriptResponse;
   status: 200;
@@ -804,11 +956,6 @@ export type startTranscriptionSessionResponse401 = {
   status: 401;
 };
 
-export type startTranscriptionSessionResponse403 = {
-  data: AppErrorResponse;
-  status: 403;
-};
-
 export type startTranscriptionSessionResponse404 = {
   data: AppErrorResponse;
   status: 404;
@@ -825,7 +972,6 @@ export type startTranscriptionSessionResponseSuccess =
   };
 export type startTranscriptionSessionResponseError = (
   | startTranscriptionSessionResponse401
-  | startTranscriptionSessionResponse403
   | startTranscriptionSessionResponse404
   | startTranscriptionSessionResponse409
 ) & {
@@ -1104,6 +1250,407 @@ export const useAssignNoteSpeaker = <
 > => {
   return useMutation(getAssignNoteSpeakerMutationOptions(options), queryClient);
 };
+export type getTranscriptSegmentsAfterResponse200 = {
+  data: TranscriptSegmentListResponse;
+  status: 200;
+};
+
+export type getTranscriptSegmentsAfterResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getTranscriptSegmentsAfterResponseSuccess =
+  getTranscriptSegmentsAfterResponse200 & {
+    headers: Headers;
+  };
+export type getTranscriptSegmentsAfterResponseError =
+  getTranscriptSegmentsAfterResponse401 & {
+    headers: Headers;
+  };
+
+export type getTranscriptSegmentsAfterResponse =
+  | getTranscriptSegmentsAfterResponseSuccess
+  | getTranscriptSegmentsAfterResponseError;
+
+export const getGetTranscriptSegmentsAfterUrl = (
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/notes/${noteId}/transcript/segments?${stringifiedParams}`
+    : `/v1/notes/${noteId}/transcript/segments`;
+};
+
+/**
+ * 커서 뒤에 새로 붙은 발화만 조회한다. 커서는 (startedAtMs, sequence) 복합이고 정렬 축과 같다. 덧붙기 전용이라 이미 내려간 발화의 화자 지정 변경은 이 경로로 보이지 않는다 — 그 수렴은 전체 조회가 맡는다.
+ * @summary 전사 구간 증분 조회
+ */
+export const getTranscriptSegmentsAfter = async (
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getTranscriptSegmentsAfterResponse> => {
+  return apiFetch<getTranscriptSegmentsAfterResponse>(
+    getGetTranscriptSegmentsAfterUrl(noteId, params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetTranscriptSegmentsAfterQueryKey = (
+  noteId: string,
+  params?: GetTranscriptSegmentsAfterParams
+) => {
+  return [
+    `/v1/notes/${noteId}/transcript/segments`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetTranscriptSegmentsAfterQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetTranscriptSegmentsAfterQueryKey(noteId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>
+  > = ({ signal }) =>
+    getTranscriptSegmentsAfter(noteId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: noteId !== null && noteId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetTranscriptSegmentsAfterQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>
+>;
+export type GetTranscriptSegmentsAfterQueryError = UnauthorizedResponse;
+
+export function useGetTranscriptSegmentsAfter<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+          TError,
+          Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTranscriptSegmentsAfter<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+          TError,
+          Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTranscriptSegmentsAfter<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 전사 구간 증분 조회
+ */
+
+export function useGetTranscriptSegmentsAfter<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetTranscriptSegmentsAfterQueryOptions(
+    noteId,
+    params,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 전사 구간 증분 조회
+ */
+export const prefetchGetTranscriptSegmentsAfterQuery = async <
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetTranscriptSegmentsAfterQueryOptions(
+    noteId,
+    params,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetTranscriptSegmentsAfterSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetTranscriptSegmentsAfterQueryKey(noteId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>
+  > = ({ signal }) =>
+    getTranscriptSegmentsAfter(noteId, params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetTranscriptSegmentsAfterSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>
+>;
+export type GetTranscriptSegmentsAfterSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetTranscriptSegmentsAfterSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTranscriptSegmentsAfterSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTranscriptSegmentsAfterSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 전사 구간 증분 조회
+ */
+
+export function useGetTranscriptSegmentsAfterSuspense<
+  TData = Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+  TError = UnauthorizedResponse,
+>(
+  noteId: string,
+  params: GetTranscriptSegmentsAfterParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getTranscriptSegmentsAfter>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetTranscriptSegmentsAfterSuspenseQueryOptions(
+    noteId,
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type getCurrentTranscriptionSessionResponse200 = {
   data: CurrentTranscriptionSessionNullableResponse;
   status: 200;

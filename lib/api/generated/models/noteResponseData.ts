@@ -13,18 +13,6 @@ import type { NoteResponseDataParticipantsItem } from "./noteResponseDataPartici
  * 성공 응답 데이터
  */
 export type NoteResponseData = {
-  /** 노트 생성 시각 */
-  createdAt: string;
-  /**
-   * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
-   * @nullable
-   */
-  meetingStartedBy: NoteResponseDataMeetingStartedBy;
-  /**
-   * ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
-   * @minimum 0
-   */
-  recordedDurationMs: number;
   /** 회의 상태 */
   meetingStatus: NoteResponseDataMeetingStatus;
   /**
@@ -37,6 +25,24 @@ export type NoteResponseData = {
    * @maxLength 200
    */
   title: string;
+  /** 노트 생성 시각 */
+  createdAt: string;
+  /**
+   * 회의 시작자 (녹음을 최초로 시작한 유저, 녹음 전이면 null)
+   * @nullable
+   */
+  meetingStartedBy: NoteResponseDataMeetingStartedBy;
+  /**
+   * ACTIVE였고 종료된 COMPLETED/INTERRUPTED 세션의 startedAt~endedAt 구간만 합산한 누적 녹음 시간(ms), READY 중단과 진행 중 구간은 0
+   * @minimum 0
+   */
+  recordedDurationMs: number;
+  /**
+   * 프로젝트 이름. 노트 하나만 받은 화면이 프로젝트를 다시 조회하지 않게 싣는다
+   * @minLength 1
+   * @maxLength 100
+   */
+  projectName: string;
   /**
    * 프로젝트의 13자리 TSID
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
@@ -44,6 +50,11 @@ export type NoteResponseData = {
   projectId: string;
   /** 회의 참여자 목록. 워크스페이스 멤버와 계정 없는 임시 참여자가 섞여 이름 오름차순이다. 없으면 빈 배열 */
   participants: NoteResponseDataParticipantsItem[];
+  /**
+   * 워크스페이스의 13자리 TSID
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  workspaceId: string;
   /** 노트 수정 시각 */
   updatedAt: string;
   /**
@@ -51,6 +62,11 @@ export type NoteResponseData = {
    * @nullable
    */
   meetingStartedAt: string | null;
+  /**
+   * 서버가 찍은 회의 종료 시각 (안 끝났으면 null)
+   * @nullable
+   */
+  meetingEndedAt: string | null;
   /**
    * 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
    * @nullable

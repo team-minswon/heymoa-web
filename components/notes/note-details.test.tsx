@@ -147,12 +147,15 @@ describe("NoteDetails", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("저장에 성공하면 노트 단건과 목록을 함께 무효화한다", async () => {
+  it("★ 저장에 성공하면 노트 단건과 목록 둘을 함께 무효화한다", async () => {
+    // **호출 인자가 아니라 캐시 상태를 본다.** 「어떤 키로 불렀나」를 단언하면 구현을 되읽는
+    // 거울이 되고, 실제로 목록 키가 둘로 늘었을 때 초록인 채 지나갔다 (APP-685).
     mutateAsync.mockResolvedValueOnce({ status: 200 });
     const client = new QueryClient();
-    const invalidate = vi
-      .spyOn(client, "invalidateQueries")
-      .mockResolvedValue(undefined);
+    const projectNotesKey = [`/v1/projects/${PROJECT_ID}/notes`];
+    const workspaceNotesKey = [`/v1/workspaces/${WORKSPACE_ID}/notes`];
+    client.setQueryData(projectNotesKey, { status: 200 });
+    client.setQueryData(workspaceNotesKey, { status: 200 });
     render(
       <QueryClientProvider client={client}>
         <NoteDetails noteId={NOTE_ID} workspaceId={WORKSPACE_ID} />
@@ -161,12 +164,10 @@ describe("NoteDetails", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "변경 저장" }));
 
-    await waitFor(() => {
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["note", NOTE_ID] });
-      expect(invalidate).toHaveBeenCalledWith({
-        queryKey: ["notes", PROJECT_ID],
-      });
-    });
+    await waitFor(() =>
+      expect(client.getQueryState(projectNotesKey)?.isInvalidated).toBe(true)
+    );
+    expect(client.getQueryState(workspaceNotesKey)?.isInvalidated).toBe(true);
   });
 
   /**

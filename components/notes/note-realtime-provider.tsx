@@ -17,10 +17,7 @@ import {
   useGetNote,
 } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
-import type {
-  RunRange,
-  ProposalHead,
-} from "@/lib/notes/proposals/contract";
+import type { RunRange, ProposalHead } from "@/lib/notes/proposals/contract";
 import {
   initialContextState,
   reduceContextEvent,
@@ -40,8 +37,10 @@ import { selectContextSnapshot } from "@/lib/notes/proposals/select";
 import type {
   NoteTopicEvent,
   NoteTopicFinalSegment,
+  NoteSubscriptionRejected,
 } from "@/lib/notes/note-topic-protocol";
-import { isProjectNotesQueryKey } from "@/lib/notes/query-keys";
+import { isNoteListQueryKey } from "@/lib/notes/query-keys";
+import { applyNoteLifecycleEvent } from "@/lib/notes/note-lifecycle-cache";
 
 /**
  * 뷰어도 살아 있는 partial은 하나만 든다 — 근거는 `lib/transcription/transcript-reducer.ts`의
@@ -87,8 +86,6 @@ const initialState: NoteRealtimeState = {
   context: initialContextState,
 };
 const TRANSCRIPT_CATCH_UP_DELAY_MS = 500;
-/** 토픽 무이벤트 구간의 안전 폴링 주기. 노트 조회의 안전 폴링과 같은 값이다. */
-const CONTEXT_SAFETY_POLL_MS = 30_000;
 
 function reducer(
   state: NoteRealtimeState,
@@ -153,6 +150,8 @@ function reducer(
 type NoteRealtimeValue = {
   /** 이 컨텍스트가 지금 어느 노트의 것인가. 노트 전환에 지역 상태를 리셋할 주어다. */
   noteId: string;
+  subscriptionIssue: "ALREADY_SUBSCRIBED" | "TOO_MANY_SUBSCRIBERS" | null;
+  retrySubscription: () => void;
   transcript: Pick<NoteRealtimeState, "partial" | "finalSegments">;
   context: {
     cards: ContextCard[];
@@ -169,9 +168,11 @@ const NoteRealtimeContext = createContext<NoteRealtimeValue | null>(null);
 
 export function NoteRealtimeProvider({
   noteId,
+  onNotMember,
   children,
 }: {
   noteId: string;
+  onNotMember?: () => void;
   children: React.ReactNode;
 }) {
   const queryClient = useQueryClient();
@@ -180,6 +181,18 @@ export function NoteRealtimeProvider({
   // 여기서 거르지 않으면 이전 노트의 상태로 새 노트의 자식들이 한 프레임 그려진다.
   const state = rawState.noteId === noteId ? rawState : initialState;
   const transcriptTimerRef = useRef<number | null>(null);
+  const retrySubscriptionRef = useRef<(() => void) | null>(null);
+  const [subscriptionIssueState, setSubscriptionIssueState] = useState<{
+    noteId: string;
+    reason: "ALREADY_SUBSCRIBED" | "TOO_MANY_SUBSCRIBERS";
+  } | null>(null);
+  const subscriptionIssue =
+    subscriptionIssueState?.noteId === noteId
+      ? subscriptionIssueState.reason
+      : null;
+  const retrySubscription = useCallback(() => {
+    retrySubscriptionRef.current?.();
+  }, []);
   /**
    * WS 콜백은 연결 effect 안에서 한 번 만들어져 그 시점의 값을 가둔다. 재조회가 필요한지는
    * event 가 올 때마다 **지금** 값을 봐야 하므로 ref 로 읽는다.
@@ -220,13 +233,19 @@ export function NoteRealtimeProvider({
 
   useEffect(() => {
     if (!socketOpen) return;
+    let retryTimer: number | null = null;
+    let retryDelayMs = 5_000;
+    const clearRetry = () => {
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+      retryTimer = null;
+    };
     const invalidateNote = () =>
       void queryClient.invalidateQueries({
         queryKey: getGetNoteQueryKey(noteId),
       });
     const invalidateNoteLists = () =>
       void queryClient.invalidateQueries({
-        predicate: ({ queryKey }) => isProjectNotesQueryKey(queryKey),
+        predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
       });
     const invalidateLifecycle = () => {
       invalidateNote();
@@ -263,25 +282,50 @@ export function NoteRealtimeProvider({
     const client = new NoteTopicClient({
       url: getNoteTopicWebSocketUrl(),
       noteId,
+      onSubscriptionRejected: (rejection: NoteSubscriptionRejected) => {
+        clearRetry();
+        if (rejection.reason === "NOT_MEMBER") {
+          onNotMember?.();
+          return;
+        }
+        setSubscriptionIssueState({ noteId, reason: rejection.reason });
+        if (rejection.reason === "TOO_MANY_SUBSCRIBERS") {
+          retryTimer = window.setTimeout(
+            () => client.retrySubscription(),
+            retryDelayMs
+          );
+          retryDelayMs = Math.min(retryDelayMs * 2, 30_000);
+        }
+      },
       onCatchUp: catchUp,
       onEvent: (event) => {
+        clearRetry();
+        retryDelayMs = 5_000;
+        setSubscriptionIssueState(null);
         dispatch({ type: "event", event });
         switch (event.type) {
           case "meeting.started":
+            applyNoteLifecycleEvent(queryClient, noteId, event);
+            // 이벤트는 시작자와 updatedAt을 싣지 않는다. 즉시 반영한 상태 뒤에
+            // REST를 읽어 두 필드와 목록 행을 서버 값으로 수렴시킨다.
             invalidateLifecycle();
             break;
           case "meeting.ended":
             clearTranscriptCatchUp();
+            applyNoteLifecycleEvent(queryClient, noteId, event);
+            // 종료 시각과 updatedAt도 이벤트에 없으므로 상세·목록을 다시 읽는다.
             invalidateLifecycle();
             invalidateTranscript();
             invalidateContext();
             break;
           case "recording.started":
-            invalidateLifecycle();
+            if (!applyNoteLifecycleEvent(queryClient, noteId, event))
+              invalidateLifecycle();
             break;
           case "recording.stopped":
             clearTranscriptCatchUp();
-            invalidateLifecycle();
+            if (!applyNoteLifecycleEvent(queryClient, noteId, event))
+              invalidateLifecycle();
             invalidateTranscript();
             break;
           case "transcript.final":
@@ -309,12 +353,18 @@ export function NoteRealtimeProvider({
         }
       },
     });
+    retrySubscriptionRef.current = () => {
+      clearRetry();
+      client.retrySubscription();
+    };
     client.connect();
     return () => {
       clearTranscriptCatchUp();
+      clearRetry();
+      retrySubscriptionRef.current = null;
       void client.close();
     };
-  }, [noteId, queryClient, socketOpen]);
+  }, [noteId, onNotMember, queryClient, socketOpen]);
 
   /**
    * **원장의 정본은 REST다.** 전달이 best-effort라 event만 쌓으면 새로고침·재연결·회의 종료
@@ -328,27 +378,6 @@ export function NoteRealtimeProvider({
       staleTime: 10_000,
       /** 두 겹 봉투를 벗기고 성공만 zod 로 통과시킨다 — 근거는 `select.ts` 주석에 있다. */
       select: selectContextSnapshot,
-      /**
-       * **토픽이 조용히 거절되는 server 계약의 복구망.** 구독 상한·권한 재검사는 오류
-       * 프레임 없이 구독만 끊는다(asyncapi) — 그러면 이벤트도 재연결도 없어 REST 정본이
-       * 회의 내내 안 움직인다. 노트 조회의 안전 폴링과 같은 무늬로, 종료 전에만
-       * 저주기로 확인한다. 종료 뒤에는 원장이 더 안 자라 폴링할 이유가 없다.
-       */
-      refetchInterval: () => {
-        const response = queryClient.getQueryData(
-          getGetNoteQueryKey(noteId)
-        ) as
-          | {
-              status: number;
-              data: { success: boolean; data: { meetingStatus?: string } };
-            }
-          | undefined;
-        const note =
-          response?.status === 200 && response.data.success
-            ? response.data.data
-            : undefined;
-        return note?.meetingStatus === "ENDED" ? false : CONTEXT_SAFETY_POLL_MS;
-      },
     },
   });
   const snapshot = snapshotQuery.data;
@@ -393,6 +422,8 @@ export function NoteRealtimeProvider({
   const value = useMemo<NoteRealtimeValue>(
     () => ({
       noteId,
+      subscriptionIssue,
+      retrySubscription,
       transcript: {
         partial: state.partial,
         finalSegments: state.finalSegments,
@@ -407,7 +438,15 @@ export function NoteRealtimeProvider({
         retry: retryContext,
       },
     }),
-    [contextFailed, contextLoading, noteId, retryContext, state]
+    [
+      contextFailed,
+      contextLoading,
+      noteId,
+      retryContext,
+      retrySubscription,
+      state,
+      subscriptionIssue,
+    ]
   );
   return (
     <NoteRealtimeContext.Provider value={value}>

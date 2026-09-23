@@ -1791,6 +1791,361 @@ export const useCreateNote = <
 > => {
   return useMutation(getCreateNoteMutationOptions(options), queryClient);
 };
+export type getWorkspaceNotesResponse200 = {
+  data: NoteListResponse;
+  status: 200;
+};
+
+export type getWorkspaceNotesResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getWorkspaceNotesResponseSuccess = getWorkspaceNotesResponse200 & {
+  headers: Headers;
+};
+export type getWorkspaceNotesResponseError = getWorkspaceNotesResponse401 & {
+  headers: Headers;
+};
+
+export type getWorkspaceNotesResponse =
+  | getWorkspaceNotesResponseSuccess
+  | getWorkspaceNotesResponseError;
+
+export const getGetWorkspaceNotesUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/notes`;
+};
+
+/**
+ * 워크스페이스의 모든 프로젝트를 가로지르는 노트 목록. 정렬 규칙은 프로젝트 단위 조회와 같다.
+ * @summary 워크스페이스 노트 목록 조회
+ */
+export const getWorkspaceNotes = async (
+  workspaceId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getWorkspaceNotesResponse> => {
+  return apiFetch<getWorkspaceNotesResponse>(
+    getGetWorkspaceNotesUrl(workspaceId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetWorkspaceNotesQueryKey = (workspaceId: string) => {
+  return [`/v1/workspaces/${workspaceId}/notes`] as const;
+};
+
+export const getGetWorkspaceNotesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>
+  > = ({ signal }) =>
+    getWorkspaceNotes(workspaceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceNotesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceNotes>>
+>;
+export type GetWorkspaceNotesQueryError = UnauthorizedResponse;
+
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceNotes>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceNotes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceNotes>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceNotes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 노트 목록 조회
+ */
+
+export function useGetWorkspaceNotes<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceNotesQueryOptions(workspaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 워크스페이스 노트 목록 조회
+ */
+export const prefetchGetWorkspaceNotesQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceNotesQueryOptions(workspaceId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceNotesSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>
+  > = ({ signal }) =>
+    getWorkspaceNotes(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceNotes>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceNotesSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceNotes>>
+>;
+export type GetWorkspaceNotesSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 노트 목록 조회
+ */
+
+export function useGetWorkspaceNotesSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceNotes>>,
+  TError = UnauthorizedResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceNotes>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceNotesSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type updateNoteAgendaResponse200 = {
   data: NoteAgendaResponse;
   status: 200;

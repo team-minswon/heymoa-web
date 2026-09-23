@@ -11,29 +11,54 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
   useDeleteNote: () => ({ mutateAsync: deleteNote, isPending: false }),
 }));
 
-const removeQueries = vi.hoisted(() => vi.fn());
-const setQueryData = vi.hoisted(() => vi.fn());
-vi.mock("@tanstack/react-query", async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  return {
-    ...actual,
-    useQueryClient: () => ({
-      removeQueries,
-      setQueryData,
-      invalidateQueries: vi.fn().mockResolvedValue(undefined),
-    }),
-  };
-});
+/**
+ * **queryClient 를 손으로 흉내 내지 않는다.** 예전에는 `setQueryData`·`removeQueries` 를
+ * `vi.fn()` 으로 갈아끼우고 「무엇을 어떤 인자로 불렀나」를 단언했다. 그러면 구현을 그대로
+ * 되읽는 거울이 되고, 실제로 목록 키가 둘로 늘었을 때 **초록인 채 지나갔다.**
+ *
+ * 진짜 캐시를 세우고 **그 안에 무엇이 남았는지**를 본다.
+ */
 
 const toastSuccess = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { success: toastSuccess } }));
 
+const PROJECT_NOTES_KEY = ["/v1/projects/01K0000000001/notes"];
+const WORKSPACE_NOTES_KEY = ["/v1/workspaces/01K0000000000/notes"];
+
+/** 두 목록에 같은 두 행을 세운다. 지운 뒤 **양쪽 다** 한 행만 남아야 한다. */
+function listPayload() {
+  return {
+    status: 200,
+    data: {
+      success: true,
+      data: { notes: [{ noteId: "01K0000000002" }, { noteId: "01K0000000009" }] },
+    },
+  };
+}
+
+function notesIn(client: QueryClient, key: readonly unknown[]) {
+  const cached = client.getQueryData(key) as
+    | { data?: { data?: { notes?: { noteId: string }[] } } }
+    | undefined;
+  return cached?.data?.data?.notes?.map((note) => note.noteId);
+}
+
 function renderDialog(onDeleted?: () => void) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(PROJECT_NOTES_KEY, listPayload());
+  client.setQueryData(WORKSPACE_NOTES_KEY, listPayload());
+  client.setQueryData(["/v1/notes/01K0000000002"], { status: 200 });
+  client.setQueryData(
+    ["/v1/notes/01K0000000002/transcript", { cursor: "01K0000000050" }],
+    { status: 200 }
+  );
+  client.setQueryData(["/v1/notes/01K0000000009"], { status: 200 });
+  render(
+    <QueryClientProvider client={client}>
       <NoteDeleteDialog
         noteId="01K0000000002"
-        projectId="01K0000000001"
         title="주간 제품 회의"
         open
         onOpenChange={() => {}}
@@ -41,6 +66,7 @@ function renderDialog(onDeleted?: () => void) {
       />
     </QueryClientProvider>
   );
+  return client;
 }
 
 describe("NoteDeleteDialog", () => {
@@ -48,8 +74,6 @@ describe("NoteDeleteDialog", () => {
     cleanup();
     deleteNote.mockReset();
     toastSuccess.mockReset();
-    removeQueries.mockReset();
-    setQueryData.mockReset();
   });
 
   it("무엇이 함께 사라지는지와 되돌릴 수 없음을 문구로 말한다", () => {
@@ -81,46 +105,37 @@ describe("NoteDeleteDialog", () => {
   it("그 노트를 키에 담은 캐시를 전부 버린다", async () => {
     // 단건만 지우면 전사·요약·공유 채팅이 각자 키로 살아남아 뒤로가기에서 되살아난다.
     deleteNote.mockResolvedValue({ status: 204 });
-    renderDialog();
+    const client = renderDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "삭제" }));
 
-    await waitFor(() => expect(removeQueries).toHaveBeenCalled());
-    const { predicate } = removeQueries.mock.calls[0][0];
-    expect(predicate({ queryKey: ["/v1/notes/01K0000000002"] })).toBe(true);
-    expect(predicate({ queryKey: ["/v1/notes/01K0000000002/transcript"] })).toBe(
-      true
+    await waitFor(() =>
+      expect(client.getQueryData(["/v1/notes/01K0000000002"])).toBeUndefined()
     );
-    // noteId가 객체 안에 있는 키도 걸려야 한다 — 최상위 문자열 검사로는 안 걸린다.
+    // noteId 가 객체 안에 있는 키도 같이 사라져야 한다 — 최상위 문자열 검사로는 안 걸린다.
     expect(
-      predicate({
-        queryKey: [
-          "/v1/notes/01K0000000002/transcript",
-          { cursor: "01K0000000050" },
-        ],
-      })
-    ).toBe(true);
-    expect(predicate({ queryKey: ["/v1/notes/01K0000000009"] })).toBe(false);
+      client.getQueryData([
+        "/v1/notes/01K0000000002/transcript",
+        { cursor: "01K0000000050" },
+      ])
+    ).toBeUndefined();
+    // 남의 노트는 그대로다.
+    expect(client.getQueryData(["/v1/notes/01K0000000009"])).toBeDefined();
   });
 
-  it("목록 캐시에서 행을 먼저 뺀 뒤 재검증한다", async () => {
-    // invalidateQueries는 재조회가 실패해도 resolve하고 옛 데이터를 남긴다.
+  it("★ 목록 둘 다에서 행을 먼저 뺀다", async () => {
+    // `invalidateQueries` 는 재조회가 실패해도 resolve 하고 옛 데이터를 남긴다. 그래서
+    // 재검증 전에 행을 직접 뺀다 — **그리고 목록은 둘이다** (APP-685). 프로젝트 것만 빼면
+    // 「모든 노트」 화면에 지운 회의가 그대로 서 있다.
     deleteNote.mockResolvedValue({ status: 204 });
-    renderDialog();
+    const client = renderDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "삭제" }));
 
-    await waitFor(() => expect(setQueryData).toHaveBeenCalled());
-    const [key, updater] = setQueryData.mock.calls[0];
-    expect(key).toEqual(["/v1/projects/01K0000000001/notes"]);
-    const next = updater({
-      status: 200,
-      data: {
-        success: true,
-        data: { notes: [{ noteId: "01K0000000002" }, { noteId: "01K0000000009" }] },
-      },
-    });
-    expect(next.data.data.notes).toEqual([{ noteId: "01K0000000009" }]);
+    await waitFor(() =>
+      expect(notesIn(client, PROJECT_NOTES_KEY)).toEqual(["01K0000000009"])
+    );
+    expect(notesIn(client, WORKSPACE_NOTES_KEY)).toEqual(["01K0000000009"]);
   });
 
   it("후처리가 끝날 때까지 버튼을 다시 열지 않는다", async () => {

@@ -10,6 +10,7 @@ import {
 import {
   getGetNoteQueryKey,
   getGetNotesQueryKey,
+  getGetWorkspaceNotesQueryKey,
 } from "@/lib/api/generated/notes/notes";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 import { getGetProposalsQueryKey } from "@/lib/api/generated/proposals/proposals";
@@ -18,6 +19,11 @@ type TopicClientOptions = {
   noteId: string;
   onEvent: (event: Record<string, unknown>) => void;
   onCatchUp: () => void | Promise<void>;
+  onSubscriptionRejected: (rejection: {
+    type: "subscription.rejected";
+    noteId: string;
+    reason: "NOT_MEMBER" | "ALREADY_SUBSCRIBED" | "TOO_MANY_SUBSCRIBERS";
+  }) => void;
 };
 
 const topicClients = vi.hoisted(
@@ -26,6 +32,7 @@ const topicClients = vi.hoisted(
       options: TopicClientOptions;
       connect: ReturnType<typeof vi.fn>;
       close: ReturnType<typeof vi.fn>;
+      retrySubscription: ReturnType<typeof vi.fn>;
     }>
 );
 
@@ -34,6 +41,7 @@ vi.mock("@/lib/notes/note-topic-client", () => ({
   NoteTopicClient: class {
     readonly connect = vi.fn();
     readonly close = vi.fn().mockResolvedValue(undefined);
+    readonly retrySubscription = vi.fn();
 
     constructor(readonly options: TopicClientOptions) {
       topicClients.push(this);
@@ -113,6 +121,9 @@ function Probe() {
       <div data-testid="context-batch-at">
         {String(realtime.context.state.lastBatchAt)}
       </div>
+      <div data-testid="subscription-issue">
+        {realtime.subscriptionIssue ?? "connected"}
+      </div>
     </>
   );
 }
@@ -138,10 +149,12 @@ function noteEnvelope(meetingStatus: string, noteId = NOTE_ID) {
 function renderProvider({
   strict = false,
   meetingStatus = "IN_PROGRESS",
+  onNotMember,
 }: {
   strict?: boolean;
   /** `null` 이면 캐시를 안 심는다 — 상태를 모르는 채 마운트되는 경우. */
   meetingStatus?: string | null;
+  onNotMember?: () => void;
 } = {}) {
   const queryClient = new QueryClient({
     // 노트 조회는 화면이 서버에서 미리 받아 온 것을 쓴다. 여기서는 심어 두고 다시 안 받는다.
@@ -158,7 +171,7 @@ function renderProvider({
     .mockResolvedValue(undefined);
   const provider = (
     <QueryClientProvider client={queryClient}>
-      <NoteRealtimeProvider noteId={NOTE_ID}>
+      <NoteRealtimeProvider noteId={NOTE_ID} onNotMember={onNotMember}>
         <Probe />
       </NoteRealtimeProvider>
     </QueryClientProvider>
@@ -201,6 +214,47 @@ afterEach(() => {
 });
 
 describe("NoteRealtimeProvider", () => {
+  it("구독 거절 사유에 따라 목록 이동, 연결 오류, 재시도를 가른다", async () => {
+    const onNotMember = vi.fn();
+    renderProvider({ onNotMember });
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    const reject = topicClients[0].options.onSubscriptionRejected;
+
+    act(() =>
+      reject({
+        type: "subscription.rejected",
+        noteId: NOTE_ID,
+        reason: "ALREADY_SUBSCRIBED",
+      })
+    );
+    expect(screen.getByTestId("subscription-issue")).toHaveTextContent(
+      "ALREADY_SUBSCRIBED"
+    );
+
+    vi.useFakeTimers();
+    act(() =>
+      reject({
+        type: "subscription.rejected",
+        noteId: NOTE_ID,
+        reason: "TOO_MANY_SUBSCRIBERS",
+      })
+    );
+    expect(screen.getByTestId("subscription-issue")).toHaveTextContent(
+      "TOO_MANY_SUBSCRIBERS"
+    );
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(topicClients[0].retrySubscription).toHaveBeenCalledOnce();
+
+    act(() =>
+      reject({
+        type: "subscription.rejected",
+        noteId: NOTE_ID,
+        reason: "NOT_MEMBER",
+      })
+    );
+    expect(onNotMember).toHaveBeenCalledOnce();
+  });
+
   it("partial은 utteranceId로 교체하고 final은 segmentId로 중복 제거한다", async () => {
     renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -347,15 +401,117 @@ describe("NoteRealtimeProvider", () => {
     // meeting.ended 가 note·목록·transcript·후보를, recording.started 가 note·목록을 갱신한다.
     expect(invalidateQueries).toHaveBeenCalledTimes(6);
     expectInvalidated(invalidateQueries, noteKey);
-    expectInvalidated(
-      invalidateQueries,
-      getGetProposalsQueryKey(NOTE_ID)
-    );
+    expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID));
     expect(
       getProjectNotesPredicate(invalidateQueries)({
         queryKey: getGetNotesQueryKey(PROJECT_ID),
       } as never)
     ).toBe(true);
+  });
+
+  it("회의 이벤트는 상태를 즉시 갱신하고 누락된 시작자·종료 시각은 REST로 수렴시킨다", async () => {
+    const { invalidateQueries, queryClient } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    const listEnvelope = {
+      status: 200,
+      headers: new Headers(),
+      data: {
+        success: true,
+        error: null,
+        data: {
+          notes: [
+            {
+              noteId: "01K0000000004",
+              meetingStatus: "NOT_STARTED",
+              meetingStartedAt: null,
+              recordedDurationMs: 0,
+              activeSessionStartedAt: null,
+              createdAt: "2026-08-18T09:30:00.000Z",
+            },
+            {
+              noteId: NOTE_ID,
+              meetingStatus: "NOT_STARTED",
+              meetingStartedAt: null,
+              recordedDurationMs: 0,
+              activeSessionStartedAt: null,
+              createdAt: "2026-08-18T09:00:00.000Z",
+            },
+          ],
+        },
+      },
+    };
+    const projectKey = getGetNotesQueryKey(PROJECT_ID);
+    const workspaceKey = getGetWorkspaceNotesQueryKey("01K0000000009");
+    queryClient.setQueryData(projectKey, listEnvelope);
+    queryClient.setQueryData(workspaceKey, listEnvelope);
+    invalidateQueries.mockClear();
+
+    emit({
+      type: "meeting.started",
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: "2026-08-18T10:00:00.000Z",
+      recordedDurationMs: 15_000,
+      activeSessionStartedAt: "2026-08-18T10:00:00.000Z",
+    });
+
+    expect(
+      queryClient.getQueryData<ReturnType<typeof noteEnvelope>>(
+        getGetNoteQueryKey(NOTE_ID)
+      )?.data.data
+    ).toMatchObject({
+      meetingStatus: "IN_PROGRESS",
+      recordedDurationMs: 15_000,
+    });
+    for (const key of [projectKey, workspaceKey]) {
+      expect(
+        queryClient.getQueryData<typeof listEnvelope>(key)?.data.data.notes[0]
+      ).toMatchObject({
+        noteId: NOTE_ID,
+        meetingStatus: "IN_PROGRESS",
+        recordedDurationMs: 15_000,
+      });
+    }
+    expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
+    expect(
+      getProjectNotesPredicate(invalidateQueries)({
+        queryKey: projectKey,
+      } as never)
+    ).toBe(true);
+    expect(
+      getProjectNotesPredicate(invalidateQueries)({
+        queryKey: workspaceKey,
+      } as never)
+    ).toBe(true);
+    invalidateQueries.mockClear();
+
+    emit({
+      type: "meeting.ended",
+      meetingStatus: "ENDED",
+      meetingStartedAt: "2026-08-18T10:00:00.000Z",
+      recordedDurationMs: 30_000,
+      activeSessionStartedAt: null,
+    });
+    expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
+    expect(
+      getProjectNotesPredicate(invalidateQueries)({
+        queryKey: projectKey,
+      } as never)
+    ).toBe(true);
+    invalidateQueries.mockClear();
+    emit({
+      type: "recording.started",
+      transcriptionSessionId: SESSION_ID,
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: "2026-08-18T10:00:00.000Z",
+      recordedDurationMs: 15_000,
+      activeSessionStartedAt: "2026-08-18T10:00:00.000Z",
+    });
+    expect(
+      queryClient.getQueryData<ReturnType<typeof noteEnvelope>>(
+        getGetNoteQueryKey(NOTE_ID)
+      )?.data.data.meetingStatus
+    ).toBe("ENDED");
+    expect(invalidateQueries).not.toHaveBeenCalled();
   });
 
   it("a stale stopped event from session A does not clear session B partials", async () => {
@@ -538,10 +694,7 @@ describe("NoteRealtimeProvider", () => {
     });
 
     // REAFFIRM 은 proposal event 가 없어서 이 무효화로만 화면에 수렴한다.
-    expectInvalidated(
-      invalidateQueries,
-      getGetProposalsQueryKey(NOTE_ID)
-    );
+    expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID));
     // 갱신 띠 시각은 수신 시각이 아니라 서버가 준 값이다.
     expect(screen.getByTestId("context-batch-at").textContent).toBe(
       "2026-08-24T02:00:00.000Z"
@@ -567,10 +720,7 @@ describe("NoteRealtimeProvider", () => {
     expect(screen.getByTestId("context-cards").textContent).toBe(
       JSON.stringify([[CANDIDATE_ID, 1, "OPEN"]])
     );
-    expectInvalidated(
-      invalidateQueries,
-      getGetProposalsQueryKey(NOTE_ID)
-    );
+    expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID));
   });
 
   /**
@@ -607,10 +757,7 @@ describe("NoteRealtimeProvider", () => {
     });
 
     await waitFor(() =>
-      expectInvalidated(
-        invalidateQueries,
-        getGetProposalsQueryKey(NOTE_ID)
-      )
+      expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID))
     );
   });
 

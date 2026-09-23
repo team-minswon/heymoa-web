@@ -265,35 +265,24 @@ describe("TranscriptView", () => {
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
   });
 
-  it("keeps a low-frequency transcript safety poll while the server meeting is active", () => {
+  it("실시간 전사는 이벤트로 받고 active 조회는 재진입 때 다시 읽는다", () => {
     useRecording.mockReturnValue(idleState());
 
     renderTranscript("active");
 
-    expect(useGetNoteTranscript).toHaveBeenCalledWith(
-      NOTE_ID,
-      expect.objectContaining({
-        query: expect.objectContaining({
-          staleTime: 0,
-          refetchInterval: 30_000,
-        }),
-      })
-    );
+    expect(useGetNoteTranscript).toHaveBeenCalledWith(NOTE_ID, {
+      query: { staleTime: 0, refetchOnWindowFocus: true },
+    });
   });
 
-  it("does not poll the persisted transcript before the server meeting starts", () => {
+  it("시작 전 전사는 60초 캐시를 쓰고 주기 조회를 하지 않는다", () => {
     useRecording.mockReturnValue(idleState());
 
     renderTranscript("not-started");
 
-    expect(useGetNoteTranscript).toHaveBeenCalledWith(
-      NOTE_ID,
-      expect.objectContaining({
-        query: expect.objectContaining({
-          refetchInterval: false,
-        }),
-      })
-    );
+    expect(useGetNoteTranscript).toHaveBeenCalledWith(NOTE_ID, {
+      query: { staleTime: 60_000, refetchOnWindowFocus: true },
+    });
   });
 
   it("lands on the latest transcript after an active viewer finishes loading", () => {
@@ -443,12 +432,6 @@ describe("TranscriptView", () => {
       "sm:grid-cols-[max-content_minmax(0,1fr)]"
     );
     expect(blocks[0].className).toContain("gap-5");
-    expect(useGetNoteTranscript).toHaveBeenCalledWith(
-      NOTE_ID,
-      expect.objectContaining({
-        query: expect.objectContaining({ refetchInterval: 30_000 }),
-      })
-    );
   });
 
   it("partial 한 줄 안에서 확정된 앞부분만 확정 행과 같은 농도로 그린다", () => {
@@ -635,7 +618,9 @@ describe("TranscriptView", () => {
   it("exposes sequential transcript additions as an accessible log", () => {
     renderTranscript();
 
-    expect(screen.getByRole("log", { name: "회의 스크립트" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("log", { name: "회의 스크립트" })
+    ).toBeInTheDocument();
   });
 
   it("reserves floating dock clearance only at desktop widths", () => {

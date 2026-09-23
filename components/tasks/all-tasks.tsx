@@ -1,6 +1,5 @@
 "use client";
 
-import { useQueries } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -17,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
-import { getGetProjectTasksQueryOptions } from "@/lib/api/generated/projects/projects";
+import { useGetWorkspaceTasks } from "@/lib/api/generated/projects/projects";
 import { okData } from "@/lib/api/ok-data";
 import { useAssigneeChoices } from "@/lib/assignees/use-assignee-choices";
 import { getAppDateKey } from "@/lib/format/date";
@@ -42,39 +41,25 @@ const VIEWS: ReadonlyArray<{ value: TaskStatus; label: string; empty: string }> 
 type StatusSnapshot = Map<string, TaskStatus>;
 
 /**
- * 프로젝트를 가로지르는 할 일. 워크스페이스 단위 조회가 없어 프로젝트마다 읽어 합친다.
+ * 프로젝트를 가로지르는 할 일.
+ *
+ * **팬아웃이 사라졌다** (APP-685). 전에는 프로젝트마다 요청을 보내고 결과를 합치면서
+ * `useQueries` 결과 배열의 **인덱스로** 프로젝트를 대조해 이름을 붙였다 — 요청 하나가 실패해
+ * 배열이 밀리면 남의 프로젝트 이름이 붙는다. 지금은 할 일이 자기 프로젝트를 들고 온다.
  */
 export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const { projects, isWorkspacePending } = useWorkspaceShell();
   const { user } = useAuth();
   const { choices, failed: choicesFailed, retry: retryChoices } = useAssigneeChoices(workspaceId);
-  const results = useQueries({
-    queries: projects.map((project) =>
-      getGetProjectTasksQueryOptions(workspaceId, project.projectId)
-    ),
-  });
+  const result = useGetWorkspaceTasks(workspaceId);
   const today = getAppDateKey(new Date());
 
-  const entries: TaskEntry[] = [];
-  const failed: Array<{ projectId: string; name: string; retry: () => void }> = [];
-  results.forEach((result, index) => {
-    const project = projects[index];
-    const data = okData(result.data);
-    if (data) {
-      for (const task of data.tasks) {
-        entries.push({ projectId: project.projectId, projectName: project.name, task });
-      }
-    }
-    // 읽어 둔 목록이 있어도 다시 읽기가 실패했으면 알린다 — 낡은 목록만 보이면 실패를 모른다.
-    if (result.isError || (!data && !result.isPending)) {
-      failed.push({
-        projectId: project.projectId,
-        name: project.name,
-        retry: () => void result.refetch(),
-      });
-    }
-  });
-  const isPending = isWorkspacePending || results.some((result) => result.isPending);
+  const data = okData(result.data);
+  const entries: TaskEntry[] = data?.tasks ?? [];
+  // 읽어 둔 목록이 있어도 다시 읽기가 실패했으면 알린다 — 낡은 목록만 보이면 실패를 모른다.
+  const failed =
+    result.isError || (!data && !result.isPending) ? () => void result.refetch() : null;
+  const isPending = isWorkspacePending || result.isPending;
 
   const [view, setView] = useState<TaskStatus>("OPEN");
   /** 사람이 보기를 바꿨는가. 첫 목록은 그대로 서고, 바꿀 때만 목록이 들어온다. */
@@ -91,14 +76,14 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const { save, pendingOf, conflictTaskId } = useTaskUpdate(workspaceId);
 
   // 줄에 그리는 것이 바뀌면 목록도 새로 묶는다 — 판뿐 아니라 프로젝트 이름도 줄에 선다.
-  const signature = entries.map((e) => `${e.task.taskId}:${e.task.revision}:${e.projectName}`).join("|");
+  const signature = entries.map((e) => `${e.taskId}:${e.revision}:${e.projectName}`).join("|");
   const filterKey = `${mine}:${activeProjectId}`;
   const visible = filterTasks(entries, {
     assigneeUserId: mine ? (user?.userId ?? null) : null,
     projectId: activeProjectId,
   });
   const countOf = (status: TaskStatus) =>
-    visible.filter((entry) => entry.task.taskStatus === status).length;
+    visible.filter((task) => task.taskStatus === status).length;
   const groups = useMemo(
     () =>
       view === "OPEN"
@@ -117,37 +102,37 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
     setPrevious(snapshot?.statuses ?? null);
     setSnapshot({
       signature,
-      statuses: new Map(entries.map((e) => [e.task.taskId, e.task.taskStatus])),
+      statuses: new Map(entries.map((e) => [e.taskId, e.taskStatus])),
     });
   }
 
-  const historyEntry = entries.find((e) => e.task.taskId === historyTaskId) ?? null;
+  const historyEntry = entries.find((e) => e.taskId === historyTaskId) ?? null;
   const filtering = mine || activeProjectId !== null;
 
   const renderRows = (list: TaskEntry[]) => (
     <ul>
       {list.map((entry) => (
         <TaskRow
-          key={entry.task.taskId}
+          key={entry.taskId}
           entry={entry}
           choices={choices}
           today={today}
-          pending={pendingOf(entry.task.taskId) !== null}
-          completing={![null, entry.task.taskStatus].includes(pendingOf(entry.task.taskId))}
-          arrived={previous !== null && previous.get(entry.task.taskId) !== entry.task.taskStatus}
-          conflict={conflictTaskId === entry.task.taskId}
+          pending={pendingOf(entry.taskId) !== null}
+          completing={![null, entry.taskStatus].includes(pendingOf(entry.taskId))}
+          arrived={previous !== null && previous.get(entry.taskId) !== entry.taskStatus}
+          conflict={conflictTaskId === entry.taskId}
           onToggleDone={() =>
-            save(entry, { taskStatus: entry.task.taskStatus === "OPEN" ? "COMPLETED" : "OPEN" })
+            save(entry, { taskStatus: entry.taskStatus === "OPEN" ? "COMPLETED" : "OPEN" })
           }
           onAssign={(assignee) => save(entry, { assignee })}
           onDue={(due) => save(entry, { due })}
           onOpenHistory={() => {
             setHistoryEditing(false);
-            setHistoryTaskId(entry.task.taskId);
+            setHistoryTaskId(entry.taskId);
           }}
           onEdit={() => {
             setHistoryEditing(true);
-            setHistoryTaskId(entry.task.taskId);
+            setHistoryTaskId(entry.taskId);
           }}
         />
       ))}
@@ -252,15 +237,14 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               />
             ) : null}
 
-            {failed.map((project) => (
+            {failed ? (
               <InlineRetry
-                key={project.projectId}
                 variant="line"
-                label={`${project.name}의 할 일을 불러오지 못했습니다.`}
-                onRetry={project.retry}
+                label="할 일을 불러오지 못했습니다."
+                onRetry={failed}
                 className="p-2"
               />
-            ))}
+            ) : null}
 
             {isPending && groups.length === 0 ? (
               <ul aria-label="할 일 불러오는 중">
@@ -284,7 +268,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                   switched && "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
                 )}
               >
-                {groups.length === 0 && failed.length === 0 ? (
+                {groups.length === 0 && failed === null ? (
                   <p className="px-2 py-10 text-center text-sm text-[var(--el-muted)]">
                     {projects.length === 0
                       ? "프로젝트가 없습니다."
@@ -326,8 +310,8 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
         entry={historyEntry}
         startEditing={historyEditing}
         choices={choices}
-        pending={historyEntry !== null && pendingOf(historyEntry.task.taskId) !== null}
-        conflict={historyEntry !== null && conflictTaskId === historyEntry.task.taskId}
+        pending={historyEntry !== null && pendingOf(historyEntry.taskId) !== null}
+        conflict={historyEntry !== null && conflictTaskId === historyEntry.taskId}
         onSave={(patch) => (historyEntry ? save(historyEntry, patch) : Promise.resolve(false))}
         onOpenChange={(open) => !open && setHistoryTaskId(null)}
       />

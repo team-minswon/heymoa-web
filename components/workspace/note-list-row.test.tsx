@@ -36,6 +36,7 @@ function note(
   return {
     noteId: "01K0000000002",
     projectId: "01K0000000001",
+    projectName: "주간",
     title: "주간 제품 회의",
     createdAt: "2026-07-11T00:00:00Z",
     updatedAt: "2026-07-11T00:00:00Z",

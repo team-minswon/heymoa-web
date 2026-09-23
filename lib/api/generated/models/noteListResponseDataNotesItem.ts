@@ -10,6 +10,23 @@ import type { NoteListResponseDataNotesItemMeetingStatus } from "./noteListRespo
 import type { NoteListResponseDataNotesItemParticipantsItem } from "./noteListResponseDataNotesItemParticipantsItem";
 
 export type NoteListResponseDataNotesItem = {
+  /** 회의 상태 */
+  meetingStatus: NoteListResponseDataNotesItemMeetingStatus;
+  /**
+   * 노트의 13자리 TSID
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  noteId: string;
+  /**
+   * 노트 제목
+   * @maxLength 200
+   */
+  title: string;
+  /**
+   * 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
+   * @nullable
+   */
+  activeSessionStartedAt: string | null;
   /**
    * 최초 ACTIVE 전사 세션의 시작 시각 (한 번도 ACTIVE가 아니면 null)
    * @nullable
@@ -32,28 +49,17 @@ export type NoteListResponseDataNotesItem = {
    * @minimum 0
    */
   recordedDurationMs: number;
-  /** 회의 상태 */
-  meetingStatus: NoteListResponseDataNotesItemMeetingStatus;
   /**
-   * 노트의 13자리 TSID
-   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   * 그 노트가 속한 프로젝트 이름. 워크스페이스 단위 조회에서 노트마다 다르다
+   * @minLength 1
+   * @maxLength 100
    */
-  noteId: string;
-  /**
-   * 노트 제목
-   * @maxLength 200
-   */
-  title: string;
+  projectName: string;
   /**
    * 프로젝트의 13자리 TSID
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   projectId: string;
-  /**
-   * 현재 ACTIVE 전사 세션의 시작 시각 (READY 또는 활성 세션이 없으면 null)
-   * @nullable
-   */
-  activeSessionStartedAt: string | null;
   /** 회의 참여자 목록. 워크스페이스 멤버와 계정 없는 임시 참여자가 섞여 이름 오름차순이다. 없으면 빈 배열 */
   participants: NoteListResponseDataNotesItemParticipantsItem[];
   /** 노트 수정 시각 */

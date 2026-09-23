@@ -206,10 +206,24 @@ function seed(): StoredTask[] {
 
 const all = () => (tasks ??= seed());
 
+/** 서버는 프로젝트를 조인해 이름을 싣는다. 목도 같은 출처를 봐야 이름이 갈리지 않는다. */
+function projectNameOf(projectId: string): string {
+  const workspaceId = workspaceOfProject(projectId);
+  return (
+    mockDb
+      .listProjects(workspaceId)
+      .find((project) => project.projectId === projectId)?.name ?? "알 수 없는 프로젝트"
+  );
+}
+
 function view(task: StoredTask): ProjectTaskResponseData {
   const head = current(task);
   return {
     taskId: task.taskId,
+    // 워크스페이스 단위 목록에서 할 일마다 프로젝트가 다르다 (APP-685). 전에는 web 이
+    // `useQueries` 결과 배열의 **인덱스로** 프로젝트를 대조해 이름을 붙였다.
+    projectId: task.projectId,
+    projectName: projectNameOf(task.projectId),
     content: head.content,
     taskStatus: head.taskStatus,
     assignee: resolveAssignee(workspaceOfProject(task.projectId), head.assignee),
@@ -239,6 +253,14 @@ function tasksOf(workspaceId: string, projectId: string) {
     failWith("PROJECT_NOT_FOUND", 404, "프로젝트를 찾을 수 없습니다.");
   }
   return all().filter((task) => task.projectId === projectId);
+}
+
+/** 그 워크스페이스의 모든 프로젝트를 가로지르는 할 일. 서버가 조인 하나로 낸다. */
+function workspaceTasksOf(workspaceId: string) {
+  const projectIds = new Set(
+    mockDb.listProjects(workspaceId).map((project) => project.projectId)
+  );
+  return all().filter((task) => projectIds.has(task.projectId));
 }
 
 function taskOf(workspaceId: string, projectId: string, taskId: string) {
@@ -295,6 +317,12 @@ export const projectTasks = {
 };
 
 export const projectTaskHandlers = [
+  // 워크스페이스 단위 목록 (APP-685). 프로젝트 단위 경로도 남는다 — 프로젝트 하나만 보는
+  // 화면이 따로 있다.
+  http.get("*/v1/workspaces/:workspaceId/tasks", ({ params }) =>
+    respond(() => ({ tasks: workspaceTasksOf(paramId(params.workspaceId)).map(view) }))
+  ),
+
   http.get("*/v1/workspaces/:workspaceId/projects/:projectId/tasks", ({ params }) =>
     respond(() => ({
       tasks: tasksOf(paramId(params.workspaceId), paramId(params.projectId)).map(view),

@@ -26,7 +26,6 @@ vi.mock("@/lib/notes/note-topic-client", () => ({
   },
 }));
 
-const useGetProject = vi.hoisted(() => vi.fn());
 const noteRefetch = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({
   userId: "u1",
@@ -82,6 +81,10 @@ const noteState = vi.hoisted(() => ({
     noteId: "01K0000000002",
     title: "주간 제품 회의",
     projectId: "01K0000000001",
+    // **노트 응답이 소속과 프로젝트 이름을 싣는다** (APP-685). 전에는 이 둘을 얻으려고
+    // 프로젝트 조회를 한 번 더 돌렸고, 그 왕복이 끝나기 전에는 회의 시작이 잠겼다.
+    workspaceId: "01K0000000000" as string,
+    projectName: "모바일 앱",
     meetingStatus: "IN_PROGRESS" as string,
     meetingStartedBy: { userId: "u1", name: "테스트 유저" } as unknown,
     meetingStartedAt: "2026-07-29T00:00:00Z",
@@ -152,67 +155,6 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
       data: { status: 200, data: { success: true, data: noteState.value } },
     },
 }));
-/** URL의 워크스페이스가 이 노트의 것이 아니면 서버가 `PROJECT_NOT_FOUND`를 준다. */
-const projectGone = vi.hoisted(() => ({ value: false }));
-/** 프로젝트 조회가 아직 안 끝난 상태. 소속이 확인되기 전이다. */
-const projectPending = vi.hoisted(() => ({ value: false }));
-/** 프로젝트 조회가 500 등으로 실패. 어긋난 URL이라는 증거는 아니다. */
-const projectFailed = vi.hoisted(() => ({ value: false }));
-vi.mock("@/lib/api/generated/projects/projects", () => ({
-  useGetProject: (...args: unknown[]) => {
-    useGetProject(...args);
-    if (projectPending.value) {
-      return {
-        data: undefined,
-        isError: false,
-        error: null,
-        failureReason: null,
-      };
-    }
-    if (projectFailed.value) {
-      return {
-        data: undefined,
-        isError: true,
-        error: new Error("Internal Server Error"),
-        failureReason: new Error("Internal Server Error"),
-      };
-    }
-    if (projectGone.value) {
-      return {
-        data: undefined,
-        isError: false,
-        error: null,
-        // 재시도가 남아 있어도 첫 실패로 판정해야 한다(APP-385).
-        failureReason: {
-          success: false,
-          data: null,
-          error: {
-            code: "PROJECT_NOT_FOUND",
-            message: "프로젝트를 찾을 수 없습니다.",
-          },
-        },
-      };
-    }
-    return {
-      isError: false,
-      error: null,
-      failureReason: null,
-      data: {
-        status: 200,
-        data: {
-          success: true,
-          data: {
-            projectId: "01K0000000001",
-            // 실제 응답에 있는 값이다(`ProjectResponseData`). 노트의 **확인된** 소속이라
-            // 독은 이 값으로만 녹음을 시작한다 — URL을 믿지 않는다.
-            workspaceId: "01K0000000000",
-            name: "주간",
-          },
-        },
-      },
-    };
-  },
-}));
 
 const runtime: RecordingRuntime = {
   createSession: (options) => ({
@@ -255,7 +197,9 @@ function renderNotePanel(ui: ReactNode) {
       >
         {/* NotePanel 은 프로덕션에서 항상 NoteRealtimeProvider 안이다
             (`note-route-client.tsx`). 여기서는 소켓을 띄우지 않고 컨텍스트만 세운다. */}
-        <NoteRealtimeProvider noteId="01K0000000002">{node}</NoteRealtimeProvider>
+        <NoteRealtimeProvider noteId="01K0000000002">
+          {node}
+        </NoteRealtimeProvider>
       </RecordingProvider>
     </QueryClientProvider>
   );
@@ -277,9 +221,6 @@ describe("NotePanel", () => {
   });
   afterEach(() => {
     cleanup();
-    projectGone.value = false;
-    projectPending.value = false;
-    projectFailed.value = false;
     noteRefetch.mockReset();
     authState.userId = "u1";
     recordingState.activeNoteId = null;
@@ -293,6 +234,8 @@ describe("NotePanel", () => {
       noteId: "01K0000000002",
       title: "주간 제품 회의",
       projectId: "01K0000000001",
+      workspaceId: "01K0000000000",
+      projectName: "모바일 앱",
       meetingStatus: "IN_PROGRESS",
       meetingStartedBy: { userId: "u1", name: "테스트 유저" },
       meetingStartedAt: "2026-07-29T00:00:00Z",
@@ -325,13 +268,6 @@ describe("NotePanel", () => {
     expect(
       screen.queryByRole("heading", { name: "주간 제품 회의" })
     ).toBeNull();
-    expect(useGetProject).toHaveBeenCalledWith(
-      "01K0000000000",
-      "01K0000000001",
-      // 실패 자기 복구용 refetchInterval은 별도 테스트가 동작으로 검증한다 — 여기서는
-      // 어느 프로젝트를 물었는지만 본다.
-      { query: expect.objectContaining({ enabled: true }) }
-    );
   });
 
   /**
@@ -379,13 +315,14 @@ describe("NotePanel", () => {
    * 그대로 그려진다. 여기서 녹음을 시작하면 세션은 A에 생기는데 소속은 B로 기록돼 A의
    * 나가기 잠금과 추방 정리가 둘 다 빗나간다.
    *
-   * 프로젝트 조회가 그 어긋남을 판정해 준다(`PROJECT_NOT_FOUND`). 독은 감추지 않고 시작
-   * 자리에 이유를 세운다 — 감추면 레이아웃이 흔들린다.
+   * **노트 응답이 소속을 싣는다** (APP-685). 전에는 프로젝트 조회의 `PROJECT_NOT_FOUND` 로
+   * 판정했고, 그 왕복이 끝나기까지 회의 시작이 잠겨 있었다. 독은 감추지 않고 시작 자리에
+   * 이유를 세운다 — 감추면 레이아웃이 흔들린다.
    */
   it("다른 워크스페이스의 노트 URL이면 시작을 막고 이유를 보인다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
-    projectGone.value = true;
+    noteState.value.workspaceId = "01K0000000099";
 
     renderNotePanel(
       <NotePanel
@@ -408,35 +345,10 @@ describe("NotePanel", () => {
 
   // **확인 전에는 시작을 열지 않는다.** 프로젝트 조회가 끝나기 전에 눌리면 URL의 값으로
   // 시작하게 되는데, `/w/B/notes/<A의 노트>`면 세션은 A에 생기고 소속은 B로 기록된다.
-  it("노트 소속이 확인되기 전에는 시작을 못 누른다", () => {
+  it("노트가 아직 안 왔으면 시작을 못 누른다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
-    projectPending.value = true;
-
-    renderNotePanel(
-      <NotePanel
-        workspaceId="01K0000000000"
-        noteId="01K0000000002"
-        view="full"
-        tab="transcript"
-        onTabChange={vi.fn()}
-        onClose={vi.fn()}
-      />
-    );
-
-    expect(screen.getByRole("button", { name: "회의 시작" })).toBeDisabled();
-  });
-
-  /**
-   * **일시적 실패의 복구는 값을 추측하는 것이 아니다.** 500이 왔다고 URL의 워크스페이스로
-   * 시작하면 `/w/B/notes/<A의 노트>`에서 소속이 B로 잘못 기록된다(codex 7회차 — 6회차
-   * 반영이 그렇게 한 번 틀렸다). 대신 이유를 세우고, 조회가 30초마다 스스로 다시 돈다 —
-   * 이유 없이 잠긴 버튼만 남기는 것(6회차 지적)도 아니다.
-   */
-  it("프로젝트 조회가 실패하면 시작을 막고 이유를 보이며 스스로 다시 확인한다", () => {
-    noteState.value.meetingStatus = "NOT_STARTED";
-    noteState.value.meetingStartedBy = null;
-    projectFailed.value = true;
+    noteState.query = { data: undefined, isError: false, refetch: noteRefetch };
 
     renderNotePanel(
       <NotePanel
@@ -450,24 +362,13 @@ describe("NotePanel", () => {
     );
 
     expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
-    expect(
-      screen.getByText(
-        "노트 정보를 확인하지 못했습니다. 자동으로 다시 시도합니다."
-      )
-    ).toBeInTheDocument();
-
-    // 복구 경로 — 실패 상태에서만 재조회 타이머가 돈다.
-    const options = useGetProject.mock.calls.at(-1)?.[2] as {
-      query: { refetchInterval: (query: unknown) => number | false };
-    };
-    expect(
-      options.query.refetchInterval({ state: { status: "error" } })
-    ).toBeGreaterThan(0);
-    expect(
-      options.query.refetchInterval({ state: { status: "success" } })
-    ).toBe(false);
   });
 
+  /**
+   * **프로젝트 조회 실패라는 상태가 사라졌다** (APP-685). 소속이 노트 응답에 실리므로 그
+   * 조회 자체가 없고, 노트 조회가 실패하면 패널이 통째로 못 서는 기존 경로를 탄다.
+   * 「소속만 확인 못 한 채 버튼이 잠긴」 상태는 이제 만들 수 없다.
+   */
   it("shows five microphone bars in the compact recording dock", async () => {
     noteState.value.meetingStatus = "NOT_STARTED";
     noteState.value.meetingStartedBy = null;
@@ -529,8 +430,6 @@ describe("NotePanel", () => {
       ).toBeDisabled()
     );
   });
-
-
 
   it("짧은 landscape에서는 14rem 높이 트레이 대신 bounded side column을 쓴다", () => {
     renderNotePanel(
@@ -775,16 +674,16 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
-
-
   /**
    * **아카이브도 URL 값을 받으면 안 된다.** 화자 후보를 워크스페이스에서 세우므로,
    * `/w/B/notes/<A의 노트>` 면 B 의 멤버가 후보로 서고 고르면 422 로 거절되거나
    * **A 에 이미 있는 사람을 못 찾아 동명이인을 또 만든다.** 독과 같은 규칙이다.
    */
-  it("소속이 확인되기 전에는 아카이브에 워크스페이스를 안 넘긴다", () => {
+  it("URL 과 노트의 소속이 다르면 아카이브에 워크스페이스를 안 넘긴다", () => {
     noteState.value.meetingStatus = "ENDED";
-    projectPending.value = true;
+    // 소속이 **확인 안 된** 상태는 이제 「노트가 아직 안 왔다」뿐이고 그때는 아카이브 자체가
+    // 안 선다. 남은 위험은 URL 과 실제 소속이 어긋난 경우다 (APP-685).
+    noteState.value.workspaceId = "01K0000000099";
 
     renderNotePanel(
       <NotePanel
@@ -877,9 +776,7 @@ describe("NotePanel", () => {
         />
       );
 
-      expect(
-        screen.getByRole("tab", { name: "요약" })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "요약" })).toBeInTheDocument();
       expect(screen.getByRole("tabpanel")).toBeInTheDocument();
     }
   );
@@ -941,7 +838,6 @@ describe("NotePanel", () => {
       "max-lg:h-auto"
     );
   });
-
 
   it("노트를 옮겼다 돌아와도 삭제 확인창이 되살아나지 않는다", async () => {
     noteState.value.meetingStatus = "ENDED";
@@ -1130,7 +1026,9 @@ describe("NotePanel", () => {
     // 탭 목록이 그 바 안에 있어야 제목 블록이 켜지든 꺼지든 제자리에 남는다.
     expect(topBar?.contains(screen.getByRole("tablist"))).toBe(true);
     // 전사에는 세리프 제목도 메타도 없다.
-    expect(screen.queryByRole("heading", { name: "주간 제품 회의" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "주간 제품 회의" })
+    ).toBeNull();
     expect(screen.queryByText(/참석자 \d+명/)).toBeNull();
 
     rerenderNote(
@@ -1155,7 +1053,7 @@ describe("NotePanel", () => {
         ?.contains(screen.getByRole("tablist"))
     ).toBe(true);
     // 프로젝트 pill도 이 머리글의 것이다 — 전사에서는 상단바가 이미 좁다.
-    expect(screen.getByText("주간")).toBeInTheDocument();
+    expect(screen.getByText("모바일 앱")).toBeInTheDocument();
   });
 
   /**
@@ -1180,7 +1078,9 @@ describe("NotePanel", () => {
 
     expect(screen.getByRole("button", { name: "회의 종료" })).toBeTruthy();
     // 제목 블록은 여전히 없다 — 제어 한 줄만 섰다.
-    expect(screen.queryByRole("heading", { name: "주간 제품 회의" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "주간 제품 회의" })
+    ).toBeNull();
   });
 
   it("종료된 회의의 전사에는 회의 종료를 두지 않는다", () => {
@@ -1259,8 +1159,6 @@ describe("NotePanel", () => {
     expect(screen.queryByTestId("transcript-view")).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
-
-
 
   it.each(["summary"] as const)(
     "side 조회가 실패하면 이유와 재시도를 보이고 %s 지속 UI는 숨긴다",
@@ -1435,12 +1333,20 @@ describe("NotePanel", () => {
       ).toBeInTheDocument();
     });
 
-    it("IN_PROGRESS 뷰어에게는 독이 없다", () => {
+    it("IN_PROGRESS 비시작 멤버에게도 원격 기록 안내와 종료 제어를 보인다", () => {
       authState.userId = "u2";
 
       renderDock(view);
 
-      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
+      expect(screen.getByLabelText("녹음 제어")).toBeInTheDocument();
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+      ).toBeInTheDocument();
+      if (view === "side") {
+        expect(
+          screen.getByRole("button", { name: "회의 종료" })
+        ).toBeInTheDocument();
+      }
     });
 
     it("PAUSED 시작자는 재개 독을 본다", () => {
@@ -1455,6 +1361,16 @@ describe("NotePanel", () => {
           screen.getByRole("button", { name: "회의 종료" })
         ).toBeInTheDocument();
       }
+    });
+
+    it("PAUSED 비시작 멤버도 재개 독을 본다", () => {
+      authState.userId = "u2";
+      noteState.value.meetingStatus = "PAUSED";
+      noteState.value.activeSessionStartedAt = null;
+
+      renderDock(view);
+
+      expect(screen.getByRole("button", { name: "재개" })).toBeInTheDocument();
     });
 
     it.each(["NOT_STARTED", "PAUSED"] as const)(
@@ -1541,12 +1457,15 @@ describe("NotePanel", () => {
       expect(noteRefetch).toHaveBeenCalledOnce();
     });
 
-    it("다른 사용자가 시작한 진행 중 회의에서는 독을 숨긴다", () => {
+    it("다른 사용자가 시작한 진행 중 회의에서는 원격 기록을 안내한다", () => {
       authState.userId = "u2";
 
       renderStartGate();
 
-      expect(screen.queryByLabelText("녹음 제어")).toBeNull();
+      expect(screen.getByLabelText("녹음 제어")).toBeInTheDocument();
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+      ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "회의 시작" })).toBeNull();
     });
 
@@ -1604,7 +1523,6 @@ describe("NotePanel", () => {
     expect(screen.queryByTestId("transcript-view")).toBeNull();
     expect(screen.getByTestId("note-archive")).toBeInTheDocument();
   });
-
 
   it("종료된 회의를 처음 열면 바로 아카이브를 보인다", () => {
     authState.userId = "u2";

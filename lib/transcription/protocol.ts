@@ -88,12 +88,24 @@ export const serverEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("completed"), sessionId: tsidSchema }),
   z.object({
     type: z.literal("error"),
+    /**
+     * **값 추가는 필드 추가와 다르다.** 위의 관대함(`z.object`)은 모르는 **필드**만 흘려
+     * 보내고, `z.enum` 밖의 **값**은 그대로 거절한다 — 그리고 이 소켓의 파싱 실패는
+     * `onClose(1008)` 이라 **녹음이 끊긴다.** 그래서 서버가 새 코드를 내보내기 **전에**
+     * 여기가 먼저 배포돼야 한다 (APP-685/686).
+     *
+     * 앞의 다섯과 뒤의 둘이 갈리는 기준은 **재시도가 의미 있는가**다.
+     */
     code: z.enum([
       "INVALID_CLIENT_MESSAGE",
       "INVALID_AUDIO_FRAME",
       "STT_CONNECTION_FAILED",
       "STT_TRANSCRIPTION_FAILED",
       "INTERNAL_ERROR",
+      /** 이 스트림의 주인이 아니다. 재시도해도 같다. */
+      "NOT_SESSION_OWNER",
+      /** 없는 세션·이미 닫힘·회의 종료·중복 연결·접근 불가. 재시도해도 같다. */
+      "SESSION_NOT_CONNECTABLE",
     ]),
     message: z.string().min(1),
   }),

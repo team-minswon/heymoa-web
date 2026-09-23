@@ -104,14 +104,6 @@ export function summarizeSpeakers({
   const personOf = new Map(
     participants.map((participant) => [participant.participantId, participant])
   );
-  // 화자에 실린 이름은 참여자 목록에 없는 사람(참여자에서 빠졌거나 목록을 안 넘긴 화면)의
-  // 대체다. 원본은 참여자 목록이다 — 지정 당시의 사본이라 개명하면 낡는다.
-  const nameFallback = new Map(
-    speakers
-      .filter((speaker) => speaker.assignedParticipantId && speaker.assignedName)
-      .map((speaker) => [speaker.assignedParticipantId!, speaker.assignedName!])
-  );
-
   /**
    * 사람 → 그 사람이 **가진** 라벨. **발화가 아니라 화자 지정이 정한다** — A·B 를 가진
    * 사람의 A 발화를 전부 남에게 개별 지정하면 그 사람의 줄에는 A 가 한 번도 안 들어오고,
@@ -170,7 +162,7 @@ export function summarizeSpeakers({
         key,
         avatarName: "",
         name: participantId
-          ? (person?.name ?? nameFallback.get(participantId) ?? "이름 없는 참여자")
+          ? (person?.name ?? "이름 없는 참여자")
           : `화자 ${label}`,
         image: person?.image ?? null,
         labels: [],

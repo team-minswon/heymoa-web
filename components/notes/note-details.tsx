@@ -13,12 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getGetNoteQueryKey,
-  getGetNotesQueryKey,
   useGetNoteSuspense,
   useUpdateNote,
 } from "@/lib/api/generated/notes/notes";
 import { formatAppDate } from "@/lib/format/date";
 import { getRecordedDurationMs } from "@/lib/notes/meeting-state";
+import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 import { useAlignedNow } from "@/lib/notes/use-aligned-now";
 
 function formatRecordedClock(elapsedMs: number) {
@@ -134,13 +134,13 @@ export function NoteDetails({
   }
   const note = loaded;
 
-  // 노트 단건과 목록을 함께 무효화한다 — 목록은 projectId별로 조회하므로(workspace-page)
-  // 단건만 무효화하면 제목 변경이 목록에 반영되지 않는다.
+  // 노트 단건과 **목록 둘 다** 무효화한다. 단건만 비우면 제목 변경이 목록에 안 나타나고,
+  // 프로젝트 목록만 비우면 「모든 노트」 화면이 옛 제목을 들고 남는다 (APP-685).
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) }),
       queryClient.invalidateQueries({
-        queryKey: getGetNotesQueryKey(note.projectId),
+        predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
       }),
     ]);
 

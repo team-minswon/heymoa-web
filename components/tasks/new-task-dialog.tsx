@@ -17,11 +17,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  getGetProjectTasksQueryKey,
-  useCreateProjectTask,
-} from "@/lib/api/generated/projects/projects";
+import { useCreateProjectTask } from "@/lib/api/generated/projects/projects";
 import { assigneeRequestOf, type AssigneeChoice } from "@/lib/assignees/describe";
+import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 
 /**
  * 회의 밖에서 생긴 할 일을 프로젝트에 더한다. 담당은 사람만 고른다 — 화자는 회의 안에서만 뜻이 있다.
@@ -70,8 +68,10 @@ export function NewTaskDialog({
       },
       {
         onSuccess: () => {
+          // **목록이 둘이다** (APP-685). 프로젝트 키만 비우면 방금 만든 할 일이
+          // 「모든 할 일」 화면에 안 나타난다 — 에러도 경고도 없다.
           void queryClient.invalidateQueries({
-            queryKey: getGetProjectTasksQueryKey(workspaceId, target),
+            predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
           });
           close();
         },

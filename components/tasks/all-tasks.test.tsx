@@ -6,11 +6,16 @@ import { AllTasks } from "@/components/tasks/all-tasks";
 
 const mutate = vi.hoisted(() => vi.fn());
 const createTask = vi.hoisted(() => vi.fn());
-const stalledProject = vi.hoisted(() => ({ id: "" }));
+/**
+ * **할 일이 자기 프로젝트를 들고 온다** (APP-685). 전에는 프로젝트마다 따로 받아 합치면서
+ * `useQueries` 결과 배열의 **인덱스로** 프로젝트를 대조했다.
+ */
 const TASKS = vi.hoisted(() => ({
   p1: [
-    { taskId: "t1", content: "지난 할 일", taskStatus: "OPEN", assignee: null, due: "2026-09-15", revision: 3 },
+    { projectId: "p1", projectName: "제품", taskId: "t1", content: "지난 할 일", taskStatus: "OPEN", assignee: null, due: "2026-09-15", revision: 3 },
     {
+      projectId: "p1",
+      projectName: "제품",
       taskId: "t2",
       content: "이번 주 할 일",
       taskStatus: "OPEN",
@@ -20,10 +25,10 @@ const TASKS = vi.hoisted(() => ({
     },
   ],
   p2: [
-    { taskId: "t3", content: "다음 주 할 일", taskStatus: "OPEN", assignee: null, due: "2026-09-25", revision: 1 },
-    { taskId: "t4", content: "기한 없는 할 일", taskStatus: "OPEN", assignee: null, due: null, revision: 1 },
-    { taskId: "t5", content: "끝낸 할 일", taskStatus: "COMPLETED", assignee: null, due: null, revision: 2 },
-    { taskId: "t6", content: "접은 할 일", taskStatus: "CANCELLED", assignee: null, due: null, revision: 2 },
+    { projectId: "p2", projectName: "리서치", taskId: "t3", content: "다음 주 할 일", taskStatus: "OPEN", assignee: null, due: "2026-09-25", revision: 1 },
+    { projectId: "p2", projectName: "리서치", taskId: "t4", content: "기한 없는 할 일", taskStatus: "OPEN", assignee: null, due: null, revision: 1 },
+    { projectId: "p2", projectName: "리서치", taskId: "t5", content: "끝낸 할 일", taskStatus: "COMPLETED", assignee: null, due: null, revision: 2 },
+    { projectId: "p2", projectName: "리서치", taskId: "t6", content: "접은 할 일", taskStatus: "CANCELLED", assignee: null, due: null, revision: 2 },
   ],
 }));
 
@@ -45,15 +50,16 @@ vi.mock("@/lib/assignees/use-assignee-choices", () => ({
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: vi.fn() } }));
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   getGetProjectTasksQueryKey: (_: string, projectId: string) => [`tasks/${projectId}`],
-  getGetProjectTasksQueryOptions: (_: string, projectId: "p1" | "p2") => ({
-    queryKey: [`tasks/${projectId}`],
-    queryFn: async () => {
-      if (stalledProject.id === projectId) return new Promise(() => {});
-      return {
-        status: 200,
-        data: { success: true, data: { tasks: TASKS[projectId] }, error: null },
-      };
+  getGetWorkspaceTasksQueryKey: () => ["workspace-tasks"],
+  // 팬아웃이 사라졌다 — 워크스페이스 단위 조회 하나가 두 프로젝트의 할 일을 다 낸다.
+  useGetWorkspaceTasks: () => ({
+    data: {
+      status: 200,
+      data: { success: true, data: { tasks: [...TASKS.p1, ...TASKS.p2] }, error: null },
     },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
   }),
   getGetProjectTaskRevisionsQueryKey: () => ["revisions"],
   useGetProjectTaskRevisions: () => ({
@@ -85,21 +91,7 @@ describe("AllTasks", () => {
     vi.useRealTimers();
     mutate.mockReset();
     createTask.mockReset();
-    stalledProject.id = "";
     cleanup();
-  });
-
-  it("다른 프로젝트의 첫 조회가 남아 있어도 받은 할 일은 스켈레톤으로 덮지 않는다", async () => {
-    stalledProject.id = "p2";
-    renderScreen();
-
-    expect(await screen.findByText("지난 할 일")).toBeTruthy();
-    expect(screen.queryByLabelText("할 일 불러오는 중")).toBeNull();
-
-    // 받은 행이 있어도 현재 보기에 맞는 행이 없다면 아직 빈 상태라고 단정할 수 없다.
-    fireEvent.click(screen.getByRole("radio", { name: "완료" }));
-    expect(screen.getByLabelText("할 일 불러오는 중")).toBeTruthy();
-    expect(screen.queryByText("완료한 할 일이 없습니다.")).toBeNull();
   });
 
   it("프로젝트를 섞어 기한 묶음 차례로 세우고 개수를 붙인다", async () => {

@@ -66,7 +66,6 @@ export function TranscriptView({
   const transcriptQuery = useGetNoteTranscript(noteId, {
     query: {
       staleTime: serverActive ? 0 : 60_000,
-      refetchInterval: serverActive ? 30_000 : false,
       refetchOnWindowFocus: true,
     },
   });
@@ -178,7 +177,7 @@ export function TranscriptView({
   const [isFollowing, setIsFollowing] = useState(true);
   /**
    * **id 만으로는 부족하다.** 서버는 같은 `segmentId` 로 교정본을 다시 보내고
-   * (`note-realtime-provider` 가 segmentId 로 교체한다), 30초 REST 재조회도 같은 행의
+   * (`note-realtime-provider` 가 segmentId 로 교체한다), 재연결 REST 재조회도 같은 행의
    * 문장을 길게 바꿔 놓는다. 그때 행 높이는 자라는데 scroll 이벤트는 안 나서, 텍스트를
    * 빼면 추종 중인 독자가 바닥에서 밀린 채로 남는다 — 「맨 아래로」 버튼도 안 뜬다.
    */
@@ -306,7 +305,7 @@ export function TranscriptView({
           <div className="sticky top-0 z-10 -mt-5 flex justify-end bg-white pb-2 pt-5">
             <CopyMarkdownButton
               label="스크립트"
-              // 중지 뒤 최종 재조회와 30초 폴링이 도는 동안은 무엇이 최종본인지 모른다.
+              // 중지 뒤 최종 재조회가 도는 동안은 무엇이 최종본인지 모른다.
               disabled={transcriptQuery.isFetching}
               build={() =>
                 transcriptToMarkdown({
