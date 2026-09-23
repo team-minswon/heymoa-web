@@ -6,6 +6,7 @@ import { AllTasks } from "@/components/tasks/all-tasks";
 
 const mutate = vi.hoisted(() => vi.fn());
 const createTask = vi.hoisted(() => vi.fn());
+const stalledProject = vi.hoisted(() => ({ id: "" }));
 const TASKS = vi.hoisted(() => ({
   p1: [
     { taskId: "t1", content: "지난 할 일", taskStatus: "OPEN", assignee: null, due: "2026-09-15", revision: 3 },
@@ -46,10 +47,13 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
   getGetProjectTasksQueryKey: (_: string, projectId: string) => [`tasks/${projectId}`],
   getGetProjectTasksQueryOptions: (_: string, projectId: "p1" | "p2") => ({
     queryKey: [`tasks/${projectId}`],
-    queryFn: async () => ({
-      status: 200,
-      data: { success: true, data: { tasks: TASKS[projectId] }, error: null },
-    }),
+    queryFn: async () => {
+      if (stalledProject.id === projectId) return new Promise(() => {});
+      return {
+        status: 200,
+        data: { success: true, data: { tasks: TASKS[projectId] }, error: null },
+      };
+    },
   }),
   getGetProjectTaskRevisionsQueryKey: () => ["revisions"],
   useGetProjectTaskRevisions: () => ({
@@ -81,7 +85,21 @@ describe("AllTasks", () => {
     vi.useRealTimers();
     mutate.mockReset();
     createTask.mockReset();
+    stalledProject.id = "";
     cleanup();
+  });
+
+  it("다른 프로젝트의 첫 조회가 남아 있어도 받은 할 일은 스켈레톤으로 덮지 않는다", async () => {
+    stalledProject.id = "p2";
+    renderScreen();
+
+    expect(await screen.findByText("지난 할 일")).toBeTruthy();
+    expect(screen.queryByLabelText("할 일 불러오는 중")).toBeNull();
+
+    // 받은 행이 있어도 현재 보기에 맞는 행이 없다면 아직 빈 상태라고 단정할 수 없다.
+    fireEvent.click(screen.getByRole("radio", { name: "완료" }));
+    expect(screen.getByLabelText("할 일 불러오는 중")).toBeTruthy();
+    expect(screen.queryByText("완료한 할 일이 없습니다.")).toBeNull();
   });
 
   it("프로젝트를 섞어 기한 묶음 차례로 세우고 개수를 붙인다", async () => {

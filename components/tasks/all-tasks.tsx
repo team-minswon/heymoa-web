@@ -262,7 +262,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               />
             ))}
 
-            {isPending ? (
+            {isPending && groups.length === 0 ? (
               <ul aria-label="할 일 불러오는 중">
                 {["62%", "48%", "71%", "55%", "66%", "40%"].map((width) => (
                   <li key={width} className={cn(TASK_ROW_GRID, "min-h-11")}>

@@ -75,7 +75,8 @@ export function WorkspaceNoteList({
     });
   }, [isError, workspaceId]);
 
-  if (isPending) {
+  // 다른 프로젝트의 목록을 읽는 중이어도 이미 받은 노트는 유지한다.
+  if (isPending && notes.length === 0) {
     return (
       <div aria-label="노트 불러오는 중">
         {Array.from({ length: 6 }).map((_, index) => (
@@ -110,7 +111,13 @@ export function WorkspaceNoteList({
   if (!notes.length) {
     // **누를 수 있는 것을 여기 둔다.** 예전에는 "상단바의 새 노트로…"라고 가리키기만 했는데,
     // 프로젝트가 없으면 그 버튼이 비활성이라 가리키는 곳이 눌리지 않았다.
-    return <WorkspaceOnboarding stage="no-note" onNewMeeting={onNewMeeting} onCreateProject={onNewMeeting} />;
+    return (
+      <WorkspaceOnboarding
+        stage="no-note"
+        onNewMeeting={onNewMeeting}
+        onCreateProject={onNewMeeting}
+      />
+    );
   }
 
   return (

@@ -95,6 +95,7 @@ const state = vi.hoisted(() => ({
   /** 지금 스트림이 어느 흐름을 흘려야 하나. 202 가 오면 send, 승인 202 가 오면 approval 이다. */
   mode: "resume" as "resume" | "send" | "approval",
   refetchMock: vi.fn(),
+  chatsRefetchMock: vi.fn(),
   refetchedChatIds: [] as string[],
   chatsFail: false,
   refreshFails: false,
@@ -217,7 +218,7 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
         isLoading: state.chatsLoading,
         // 폴링이라 배경 재조회가 늘 돌고 있다. 잠금이 이 값을 보면 주기마다 잠긴다.
         isFetching: true,
-        refetch: vi.fn(),
+        refetch: state.chatsRefetchMock,
         data: state.chatsLoading
           ? undefined
           : state.chatsFail
@@ -509,6 +510,7 @@ describe("PersonalChatProvider", () => {
     state.chatsLoading = false;
     state.createPending = false;
     state.refetchMock.mockReset();
+    state.chatsRefetchMock.mockReset();
     state.refetchedChatIds = [];
     state.cursor = null;
     state.activeTurn = null;
@@ -615,15 +617,58 @@ describe("PersonalChatProvider", () => {
     state.releaseStream?.();
   });
 
-  it("정상 종료 뒤 히스토리를 다시 읽고 스트림을 비운다", async () => {
+  it("정상 종료 뒤 히스토리를 다시 읽고 현재 답변을 유지한다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     renderChat();
     openPanel();
     await sendMessage("정리해줘");
 
     await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
-    // 스트림이 비워지면 진행 중 텍스트가 사라진다.
-    await waitFor(() => expect(screen.queryByText("정리했습니다.")).toBeNull());
+    expect(screen.getByText("정리했습니다.")).toBeTruthy();
+  });
+
+  it("새 대화의 첫 답이 저장된 뒤에도 보던 말풍선을 다시 만들지 않는다", async () => {
+    state.holdStream = true;
+    state.onRefetch = () => {
+      state.messages = [
+        {
+          turnId: TURN_ID,
+          createdAt: new Date().toISOString(),
+          role: "USER",
+          content: "정리해줘",
+          scope: [],
+          toolEvent: null,
+        },
+        {
+          turnId: TURN_ID,
+          createdAt: new Date().toISOString(),
+          role: "ASSISTANT",
+          content: "정리했습니다.",
+          scope: [],
+          toolEvent: null,
+        },
+      ];
+    };
+    renderChat();
+    openPanel();
+    await sendMessage("정리해줘");
+
+    await waitFor(() => expect(state.releaseStream).not.toBeNull());
+    const answer = screen.getByTestId("assistant-message");
+    const question = screen.getByText("정리해줘");
+    state.releaseStream?.();
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
+        "disabled",
+        false
+      )
+    );
+    expect(state.refetchedChatIds).toContain(NEW_CHAT_ID);
+    expect(screen.getByTestId("assistant-message")).toBe(answer);
+    expect(screen.getByText("정리해줘")).toBe(question);
+    expect(screen.getAllByTestId("assistant-message")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "복사" })).toBeTruthy();
   });
 
   it("히스토리 갱신이 실패하면 방금 끝난 턴을 지우지 않는다", async () => {
@@ -638,6 +683,66 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
     expect(screen.getByText("정리했습니다.")).toBeTruthy();
     expect(screen.getByText("정리해줘")).toBeTruthy();
+  });
+
+  it("완료 직후 히스토리 조회가 실패해도 답변을 오류 화면으로 교체하지 않는다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.holdStream = true;
+    renderChat();
+    openPanel();
+    await sendMessage("정리해줘");
+    await waitFor(() => expect(state.releaseStream).not.toBeNull());
+    state.historyFails = true;
+    state.refreshFails = true;
+    state.releaseStream?.();
+
+    await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
+    expect(screen.getByText("정리했습니다.")).toBeTruthy();
+    expect(screen.getByText("정리해줘")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "답변은 화면에 남아 있습니다."
+    );
+  });
+
+  it("완료된 답변을 보는 중 목록 재조회가 실패하면 목록을 다시 시도한다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    const { rerender, client } = renderChat();
+    openPanel();
+    await sendMessage("정리해줘");
+    expect(await screen.findByText("정리했습니다.")).toBeTruthy();
+
+    state.chatsFail = true;
+    rerender(
+      <QueryClientProvider client={client}>
+        <PersonalChatProvider
+          workspaceId={WORKSPACE_ID}
+          workspaceName="헤이모아"
+        >
+          {null}
+        </PersonalChatProvider>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "대화 목록을 다시 읽지 못했습니다."
+    );
+    expect(screen.getByText("정리했습니다.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(state.chatsRefetchMock).toHaveBeenCalledOnce();
+    expect(state.refetchMock).not.toHaveBeenCalled();
+  });
+
+  it("기본 대화에서 보내면 목록 순서가 바뀌어도 완료된 턴을 그 대화에 둔다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    renderChat();
+    openPanel();
+    await sendMessage("정리해줘");
+    expect(await screen.findByText("정리했습니다.")).toBeTruthy();
+
+    state.chats = [chatRow(OTHER_CHAT_ID), chatRow(CHAT_ID)];
+    fireEvent.click(historyButton());
+    expect(state.messagesArgs.at(-1)).toMatchObject({ chatId: CHAT_ID });
+    expect(screen.getByText("정리했습니다.")).toBeTruthy();
   });
 
   it("목록 조회가 실패하면 빈 상태 대신 오류를 보이고 대화를 만들지 않는다", async () => {
@@ -1061,12 +1166,14 @@ describe("PersonalChatProvider", () => {
     // 히스토리가 뒤늦게 그 턴을 담아 온다.
     state.messages = [
       {
+        turnId: TURN_ID,
         createdAt: "2026-07-24T00:00:00Z",
         role: "USER",
         content: "정리해줘",
         toolEvent: null,
       },
       {
+        turnId: TURN_ID,
         createdAt: "2026-07-24T00:00:01Z",
         role: "ASSISTANT",
         content: "정리했습니다.",
@@ -1153,10 +1260,10 @@ describe("PersonalChatProvider", () => {
     state.releaseStream?.();
   });
 
-  it("★ 2차가 끝나면 히스토리를 다시 읽고 로컬 사본을 접는다", async () => {
+  it("★ 2차가 끝나면 히스토리를 다시 읽되 이 탭의 로컬 말풍선을 유지한다", async () => {
     // 승인 응답이 **이 턴의 나머지**라 꼬리가 `send()`와 같아야 한다. 다시 안 읽으면
-    // `activeTurn`이 안 비어 전송이 잠긴 채 남고, 로컬 사본을 안 접으면 server가 tee한
-    // 답과 겹쳐 두 벌이 된다.
+    // `activeTurn`이 안 비어 전송이 잠긴 채 남는다. 서버 행은 캐시에 보관하고
+    // 화면의 로컬 말풍선은 유지해야 같은 턴이 두 벌 보이거나 번쩍이지 않는다.
     state.chats = [chatRow(CHAT_ID)];
     state.approvalStream = true;
     renderChat();
@@ -1166,22 +1273,25 @@ describe("PersonalChatProvider", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "승인" })).toBeTruthy()
     );
+    const question = screen.getByText("이슈 만들어줘");
     // 1차는 승인 요청에서 끝났을 뿐이라 아직 아무것도 다시 읽지 않았다.
     expect(state.refetchedChatIds).toEqual([]);
 
-    // server가 흐르는 동안 tee한 기록. 2차가 끝나면 화면이 이쪽으로 갈아탄다.
+    // server가 흐르는 동안 tee한 기록. 2차가 끝나도 DOM은 로컬 사본을 유지한다.
     state.messages = [
       {
         createdAt: "2026-07-24T00:00:00Z",
         role: "USER",
         content: "이슈 만들어줘",
         toolEvent: null,
+        turnId: TURN_ID,
       },
       {
         createdAt: "2026-07-24T00:00:02Z",
         role: "ASSISTANT",
         content: "만들었습니다.",
         toolEvent: null,
+        turnId: TURN_ID,
       },
     ];
     fireEvent.click(screen.getByRole("button", { name: "승인" }));
@@ -1193,6 +1303,7 @@ describe("PersonalChatProvider", () => {
       expect(screen.getAllByText("만들었습니다.")).toHaveLength(1)
     );
     expect(screen.getAllByText("이슈 만들어줘")).toHaveLength(1);
+    expect(screen.getByText("이슈 만들어줘")).toBe(question);
     // 확정됐으니 카드도 사라진다.
     expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
   });
@@ -1827,7 +1938,9 @@ describe("PersonalChatProvider", () => {
 
       // 끝난 묶음은 접힌 채로 선다. 안쪽 줄을 보려면 머리글을 한 번 눌러야 한다.
       fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
-      expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(1);
+      expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(
+        1
+      );
       expect(screen.getAllByText("Linear 팀 목록 · 1건")).toHaveLength(1);
       // 카드를 세우는 것은 `pendingApproval` 하나다 — 히스토리에는 카드 행이 없다.
       expect(screen.getAllByRole("button", { name: "승인" })).toHaveLength(1);
@@ -1873,7 +1986,9 @@ describe("PersonalChatProvider", () => {
       expect(state.resumeUrls).toHaveLength(0);
 
       fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
-      expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(1);
+      expect(screen.getAllByText("필요한 팀을 확인하겠습니다.")).toHaveLength(
+        1
+      );
       expect(screen.getAllByText("Linear 팀 목록 · 1건")).toHaveLength(1);
       expect(screen.getAllByRole("button", { name: "승인" })).toHaveLength(1);
     });
@@ -2002,7 +2117,10 @@ describe("PersonalChatProvider", () => {
       state.streamFailure = {
         success: false,
         data: null,
-        error: { code: "AGENT_CHAT_NOT_FOUND", message: "대화를 찾을 수 없습니다." },
+        error: {
+          code: "AGENT_CHAT_NOT_FOUND",
+          message: "대화를 찾을 수 없습니다.",
+        },
       };
       renderChat();
       openPanel();

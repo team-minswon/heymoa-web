@@ -88,6 +88,22 @@ describe("WorkspaceNoteList", () => {
     cleanup();
   });
 
+  it("다른 프로젝트가 로딩 중이어도 이미 받은 노트 행을 유지한다", () => {
+    render(
+      <WorkspaceNoteList
+        workspaceId="01K0000000000"
+        notes={[note("loaded", "2026-07-11T10:00:00Z")]}
+        isPending
+        isError={false}
+        onRetry={vi.fn()}
+        onNewMeeting={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("loaded")).toBeTruthy();
+    expect(screen.queryByLabelText("노트 불러오는 중")).toBeNull();
+  });
+
   it("renders a flat recency-ordered list", () => {
     render(
       <WorkspaceNoteList

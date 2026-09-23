@@ -487,7 +487,9 @@ test("streams chat tokens through the service worker", async ({ page }) => {
   expect(events.events[0].event).toBe("message_start");
   expect(events.events.at(-1)!.event).toBe("message_end");
   // 커서가 서비스 워커 경로에서도 `id:` 줄로 오고, 숫자가 아니라 entry id 문자열이다.
-  expect(events.events.every((event) => /^\d+-\d+$/.test(event.id ?? ""))).toBe(true);
+  expect(events.events.every((event) => /^\d+-\d+$/.test(event.id ?? ""))).toBe(
+    true
+  );
   expect(events.events.every((event) => !("payload" in event.data))).toBe(true);
 });
 
@@ -1090,10 +1092,35 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
 
   // MSW 응답은 시드 기반 풀에서 뽑혀 문장이 매번 다를 수 있다 — 어시스턴트 답변이 스트리밍돼
   // 실제 문장(모든 후보가 "습니다."로 끝남)으로 채워지는지만 확인한다.
-  await expect(page.getByTestId("assistant-message").last()).toContainText(
-    "습니다",
-    { timeout: 20_000 }
-  );
+  const liveAnswer = page.getByTestId("assistant-message").last();
+  await expect(liveAnswer).toHaveAttribute("data-streaming", "true");
+  const liveNode = await liveAnswer.elementHandle();
+  await expect(liveAnswer).toContainText("습니다", { timeout: 20_000 });
+  expect(await liveNode?.evaluate((node) => node.isConnected)).toBe(true);
+  await expect(
+    page.getByRole("button", { name: "보내기", exact: true })
+  ).toBeEnabled({ timeout: 20_000 });
+  // 첫 답이 저장된 히스토리로 넘어가도 읽던 DOM은 그대로여야 한다. 새 노드로
+  // 갈아 끼우면 내용이 같아도 완료 순간 한 프레임 번쩍인다.
+  expect(await liveNode?.evaluate((node) => node.isConnected)).toBe(true);
+  expect(
+    await page.evaluate(
+      (node) =>
+        node === document.querySelector('[data-testid="assistant-message"]'),
+      liveNode
+    )
+  ).toBe(true);
+
+  // 다음 전송은 저장된 첫 턴을 히스토리로 넘기고 같은 대화에 두 번째 턴을 연다.
+  await page.getByLabel("메시지").fill("한 번 더 정리해줘");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await expect(page.getByTestId("assistant-message")).toHaveCount(2, {
+    timeout: 20_000,
+  });
+  await expect(page.getByText("요약해줘", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("한 번 더 정리해줘", { exact: true })
+  ).toBeVisible();
 });
 
 /**
@@ -1485,7 +1512,8 @@ test("approves a write tool from the chat card", async ({ page }) => {
   const steps = page.getByRole("button", { name: /생각 과정/ });
   await expect(steps.first()).toBeVisible({ timeout: 20_000 });
   for (const each of await steps.all()) {
-    if ((await each.getAttribute("aria-expanded")) === "false") await each.click();
+    if ((await each.getAttribute("aria-expanded")) === "false")
+      await each.click();
   }
 
   // 승인 → 실행 기록(외부 링크 포함)이 남는다. **2차에는 `tool_call_start`가 없어서**
@@ -2018,7 +2046,9 @@ test("assigns a workspace member who is not yet a participant and checks them in
   await page.getByLabel("화자 B 화자 지정").first().click();
   await memberOption().click();
 
-  await expect(page.getByLabel(`${MEMBER_NAME} 화자 지정`).first()).toBeVisible();
+  await expect(
+    page.getByLabel(`${MEMBER_NAME} 화자 지정`).first()
+  ).toBeVisible();
 
   // **정보 화면에서도 참여자로 다시 체크돼 있다.** 서버가 지정과 함께 넣은 것이다.
   await page.getByRole("tab", { name: "정보" }).click();
@@ -2052,7 +2082,9 @@ test("offers an existing workspace guest instead of creating a duplicate name", 
   await search.fill("박서준");
 
   // **＋ 추가가 아니라 그 사람이 뜬다.**
-  await expect(page.getByRole("button", { name: /"박서준" 추가/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /"박서준" 추가/ })).toHaveCount(
+    0
+  );
   await page.getByRole("option", { name: /박서준/ }).click();
 
   await expect(page.getByLabel("박서준 화자 지정").first()).toBeVisible();
@@ -2131,9 +2163,7 @@ test("links a guest to an account and keeps the speaker assignment", async ({
 
   // ① 읽던 자리에서 이름을 만들어 화자 B 에 붙인다.
   await page.getByLabel("화자 B 화자 지정").first().click();
-  await page
-    .getByRole("combobox", { name: /참석자 검색/ })
-    .fill("최유진");
+  await page.getByRole("combobox", { name: /참석자 검색/ }).fill("최유진");
   await page.getByRole("button", { name: /"최유진" 추가/ }).click();
   await expect(page.getByLabel("최유진 화자 지정").first()).toBeVisible();
 

@@ -397,7 +397,7 @@ function PersonalChatPanel({
    * 대화는 첫 전송에서 `ensureSession()` 이 만든다.
    */
   const [isDraftChat, setIsDraftChat] = useState(false);
-  /** 방금 보낸 질문이 쓴 범위. 히스토리가 받아 줄 때까지 화면 높이를 맞춰 둔다. */
+  /** 방금 보낸 질문이 쓴 범위. 다음 질문 전까지 로컬 턴을 같은 모양으로 둔다. */
   const [pendingScope, setPendingScope] = useState<ScopeChip[]>([]);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
     null
@@ -534,8 +534,9 @@ function PersonalChatPanel({
   const isUnavailable = isChatsUnavailable || isHistoryUnavailable;
 
   /**
-   * 히스토리가 방금 끝난 턴을 이미 담고 있는가. 즉시 반영이 실패해 로컬 사본을 남겨 둔 뒤
-   * 히스토리가 스스로 성공하면 같은 턴이 두 벌 그려진다 — 그때는 로컬 사본을 가린다.
+   * 히스토리가 방금 끝난 턴을 이미 담고 있는가. 이 탭에서 보낸 정상 턴은 로컬 DOM을
+   * 유지하고 서버 행을 가린다. 이어받은 턴이나 중지된 턴은 서버 행이 준비됐을 때
+   * 로컬 사본을 접어 두 벌이 되지 않게 한다.
    *
    * 대화 전체에서 같은 문장을 찾으면 **예전 답변**에 걸린다(같은 질문을 다시 하면 흔하다).
    * 턴을 시작할 때의 길이를 기준선으로 두고 그 뒤에 붙은 것만 본다. 실패 안내까지 가려
@@ -544,9 +545,12 @@ function PersonalChatPanel({
    * **중지도 같은 자리다.** server 가 취소를 정산하며 부분 답을 ASSISTANT 행으로 남기므로,
    * 그 턴의 행이 히스토리에 오면 끊긴 문장이 두 벌 서지 않게 로컬 사본을 접는다.
    */
+  const isShowingLocalTurn =
+    stream.state.phase === "done" && pendingUserMessage !== null;
   const isTurnReconciled =
     messagesOk &&
-    ((stream.state.phase === "done" &&
+    ((!isShowingLocalTurn &&
+      stream.state.phase === "done" &&
       stream.state.content !== null &&
       messages
         .slice(turnBaseline)
@@ -566,6 +570,9 @@ function PersonalChatPanel({
   // `isPending`을 쓰면 안 된다 — enabled:false인 쿼리도 pending이라 대화가 없을 때
   // 빈 상태 대신 스켈레톤이 영원히 남는다. `isLoading`은 실제로 받아오는 중일 때만 참이다.
   const isLoading = chatsQuery.isLoading || messagesQuery.isLoading;
+  // 첫 전송 후 히스토리 쿼리가 켜지는 짧은 동안에도 완료된 로컬 턴은 이미 화면에 있다.
+  // 그 자리를 스켈레톤으로 덮으면 말풍선 DOM이 사라졌다 다시 생겨 번쩍인다.
+  const isThreadLoading = isLoading && !isShowingLocalTurn;
 
   /** 이 턴에 붙은 범위. **대화가 아니라 메시지가 갖는다.** */
   const [chips, setChips] = useState<ScopeChip[]>([]);
@@ -655,7 +662,12 @@ function PersonalChatPanel({
 
   const ensureSession = useCallback(async () => {
     // 없어진 세션(404)은 없는 것으로 친다 — 그래야 새로 만들어 이어갈 수 있다.
-    if (sessionId && !isSessionGone) return sessionId;
+    if (sessionId && !isSessionGone) {
+      // 목록 첫 줄을 보고 보낸 경우에도 이 대화를 고정한다. 폴링으로 다른 대화가
+      // 첫 줄이 되어도 진행 중이거나 완료된 로컬 턴이 그쪽에 붙으면 안 된다.
+      setSelectedChatId(sessionId);
+      return sessionId;
+    }
     // 조회가 실패한 상태에서 만들면 이미 있는 대화 위에 하나를 더 얹는다.
     if (isChatsUnavailable) return null;
     const created = await createChat.mutateAsync({ workspaceId, data: {} });
@@ -680,8 +692,8 @@ function PersonalChatPanel({
   ]);
 
   /**
-   * 끝난 턴을 히스토리로 넘긴다. server가 tee한 기록을 다시 읽은 **뒤에** 스트림을 비워야
-   * 말풍선이 잠깐 사라지지 않는다.
+   * 끝난 턴의 서버 기록을 캐시에 받는다. 이 탭에서 보낸 턴은 현재 DOM을 그대로 두고,
+   * 다음 질문이나 대화 전환에서 이 기록을 쓴다. 재진입한 턴은 성공한 뒤 스트림을 비운다.
    *
    * `invalidateQueries`는 갱신이 실패해도 resolve한다 — 그걸 믿고 지우면 방금 끝난 턴이
    * 화면에서 사라진다. 다시 읽은 결과가 실제로 성공했을 때만 넘긴다.
@@ -763,6 +775,11 @@ function PersonalChatPanel({
       // 세션 생성부터 히스토리 반영까지가 한 트랜잭션이다. 스트리밍 구간만 잠그면
       // 생성 중 두 번째 전송이 세션을 하나 더 만들고, 반영 중 두 번째 전송은
       // 아래 `stream.reset()`에 먹혀 조용히 사라진다.
+      // 완료된 턴은 화면에 남겨 DOM 교체를 피한다. 다음 질문을 보낼 때 저장된
+      // 히스토리로 넘기고 새 턴의 낙관적 말풍선을 같은 배치에 세운다.
+      if (stream.state.phase === "done" && pendingUserMessage !== null) {
+        stream.reset();
+      }
       setIsSending(true);
       // 새 질문이다 — 앞 턴의 제안은 이 질문과 무관하다.
       // 턴이 도는 동안 스코프 전환을 미루게 한다 — 노트를 닫고 나가는 것만으로
@@ -894,14 +911,18 @@ function PersonalChatPanel({
         }
         // 202 가 준 턴 id 로 스트림을 연다. 첫 연결이라 `after` 는 없다.
         const turnId = accepted.data.data.turnId;
-        const final = await stream.open(chatId, turnId, startedState({ turnId }));
+        const final = await stream.open(
+          chatId,
+          turnId,
+          startedState({ turnId })
+        );
         if (final?.phase !== "done") return;
 
         // **히스토리로 넘기기 전에 붙든다.** 스트림이 비워지면 제안도 같이 사라진다.
         // 정상 종료일 때만 히스토리로 넘긴다.
         if (!(await reconcile(chatId))) return;
-        setPendingUserMessage(null);
-        stream.reset();
+        // 여기서 스트림과 낙관적 질문을 비우면 완료된 턴의 DOM 전체가 히스토리
+        // 행으로 다시 만들어져 답변이 번쩍인다. 캐시만 갱신하고 현재 턴은 유지한다.
       } finally {
         setIsSending(false);
         onTurnActiveChange(false);
@@ -914,6 +935,7 @@ function PersonalChatPanel({
       measureViewport,
       messages.length,
       onTurnActiveChange,
+      pendingUserMessage,
       reconcile,
       scrollToSent,
       sendMessage,
@@ -924,7 +946,7 @@ function PersonalChatPanel({
   /**
    * 승인을 보낸다. `202` 가 오면 **같은 턴 스트림에 지금 커서를 넣어 다시 붙는다** —
    * 도구 결과도 답변 본문도 그 뒤로 온다. 그래서 꼬리가 `send()`와 같다: 정상 종료면
-   * 히스토리로 넘기고 로컬 사본을 접는다.
+   * 히스토리와 맞춘다. 이 탭에서 보낸 질문은 완료된 로컬 턴을 그대로 둔다.
    *
    * 실패 사유를 돌려준다 — 카드가 그걸로 「다시 눌러도 소용없나」를 가른다. 실패하면 스트림을
    * 안 열었으므로 카드는 그대로 서 있다.
@@ -947,7 +969,10 @@ function PersonalChatPanel({
         if ("error" in accepted) {
           return {
             code: errorCodeOf(accepted.error) ?? "STREAM_FAILED",
-            message: errorMessageOf(accepted.error, "승인을 처리하지 못했습니다."),
+            message: errorMessageOf(
+              accepted.error,
+              "승인을 처리하지 못했습니다."
+            ),
           };
         }
         const final = await stream.open(sessionId, turnId, {
@@ -956,15 +981,23 @@ function PersonalChatPanel({
         });
         if (final?.phase !== "done") return final?.error ?? null;
         if (!(await reconcile(sessionId))) return null;
-        setPendingUserMessage(null);
-        stream.reset();
+        // 이 탭의 질문이면 서버 행으로 교체하지 않고 완료된 말풍선을 유지한다.
+        // 다른 탭에서 시작한 턴을 이어받았다면 로컬 질문이 없으므로 캐시로 넘긴다.
+        if (pendingUserMessage === null) stream.reset();
         return null;
       } finally {
         setIsSending(false);
         onTurnActiveChange(false);
       }
     },
-    [onTurnActiveChange, reconcile, resolveApprovalMutation, sessionId, stream]
+    [
+      onTurnActiveChange,
+      pendingUserMessage,
+      reconcile,
+      resolveApprovalMutation,
+      sessionId,
+      stream,
+    ]
   );
 
   const approval = useToolApproval({
@@ -1306,6 +1339,11 @@ function PersonalChatPanel({
   const visibleMessages = useMemo(() => {
     const turnId = stream.state.turnId;
     if (!turnId) return messages;
+    // 끝난 턴도 지금 그려 둔 질문·답변 DOM을 유지한다. 같은 턴의 서버 행은
+    // 캐시에만 두었다가 다음 전송이나 대화 전환에서 사용한다.
+    if (isShowingLocalTurn) {
+      return messages.filter((message) => message.turnId !== turnId);
+    }
     // `done` 까지 접는 것은 턴이 끝나고 `reconcile` 이 굳은 행을 가져오기까지의 한 창
     // 때문이다 — 그 사이 히스토리의 조각과 스트림의 전문이 같이 선다.
     if (
@@ -1321,7 +1359,13 @@ function PersonalChatPanel({
     return messages.filter(
       (message) => message.role === "USER" || message.turnId !== turnId
     );
-  }, [cursor, messages, stream.state.phase, stream.state.turnId]);
+  }, [
+    cursor,
+    isShowingLocalTurn,
+    messages,
+    stream.state.phase,
+    stream.state.turnId,
+  ]);
 
   /**
    * ★★ **방금 보낸 질문의 시각을 보낼 때 쓴 값으로 굳힌다.**
@@ -1576,13 +1620,13 @@ function PersonalChatPanel({
             }
           >
             <div className="flex min-h-full flex-col justify-end p-6">
-              {isLoading ? (
+              {isThreadLoading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-4 w-2/3" />
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-1/2" />
                 </div>
-              ) : isUnavailable ? (
+              ) : isUnavailable && !isShowingLocalTurn ? (
                 // 주 데이터를 못 읽었다 — 빈 상태로 그리면 이미 있는 대화를 없는 것처럼 보인다.
                 <div role="alert" className="space-y-2">
                   <p className="text-sm text-[var(--el-ink)]">
@@ -1684,6 +1728,28 @@ function PersonalChatPanel({
                   <p className="mt-2 text-xs text-[var(--el-muted)]">
                     승인을 기다리는 동안에는 입력할 수 없습니다.
                   </p>
+                ) : null}
+                {isUnavailable && isShowingLocalTurn ? (
+                  <div
+                    role="alert"
+                    className="mt-2 flex items-center gap-2 text-xs text-[var(--el-muted)]"
+                  >
+                    <span>
+                      {isChatsUnavailable ? "대화 목록" : "대화 기록"}을 다시
+                      읽지 못했습니다. 답변은 화면에 남아 있습니다.
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        void (isChatsUnavailable
+                          ? chatsQuery.refetch()
+                          : messagesQuery.refetch())
+                      }
+                    >
+                      다시 시도
+                    </Button>
+                  </div>
                 ) : null}
               </>
             }

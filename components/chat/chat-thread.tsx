@@ -240,7 +240,11 @@ export function ChatThread({
          * 상자 바깥 위는 그대로 뷰포트 위에 맞고, 여백은 그 안에서 내용을 내릴 뿐이다.
          * 「다 내렸는데 위가 조금 비어 있다」가 곧 원하는 그림이고, 거기가 끝이 맞다.
          */
-        className={cn("flex flex-col gap-4", slack && pinStart > 0 && "pt-6")}
+        className={cn(
+          "flex flex-col gap-4",
+          slack && pinStart > 0 && "pt-6",
+          stream.phase === "done" && pendingUserMessage && "group/msg"
+        )}
         style={slack ? { minHeight: slack } : undefined}
       >
         {rows.slice(pinStart).map((item, index) => row(item, pinStart + index))}
@@ -272,6 +276,9 @@ export function ChatThread({
         ) : null}
 
         <StreamTail stream={stream} onOpenNote={onOpenNote} />
+        {stream.phase === "done" && pendingUserMessage && pendingUserAt ? (
+          <MessageActions content={stream.content ?? ""} at={pendingUserAt} />
+        ) : null}
         <StreamNotice stream={stream} />
       </div>
     </div>
