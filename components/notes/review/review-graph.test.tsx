@@ -1,5 +1,5 @@
 import { useImperativeHandle, type Ref } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ReviewGraph } from "@/components/notes/review/review-graph";
@@ -127,6 +127,7 @@ async function renderGraph(onSelect = vi.fn(), selectedItemId: string | null = n
 const graphProps = () => forceGraph.props as Props & {
   graphData: { nodes: Array<{ id: string; hub: boolean; item: unknown; x: number; y: number }> };
   onNodeClick: (node: unknown) => void;
+  onNodeHover: (node: unknown) => void;
   onRenderFramePost: (ctx: CanvasRenderingContext2D, scale: number) => void;
 };
 
@@ -134,7 +135,12 @@ const graphProps = () => forceGraph.props as Props & {
 function drawnLabels(scale = 1) {
   const texts: string[] = [];
   const ctx = new Proxy({} as Record<string, unknown>, {
-    get: (target, key) => (key === "fillText" ? (text: string) => texts.push(text) : target[key as string] ?? (() => {})),
+    get: (target, key) =>
+      key === "fillText"
+        ? (text: string) => texts.push(text)
+        : key === "measureText"
+          ? (text: string) => ({ width: text.length * 6 })
+          : (target[key as string] ?? (() => {})),
     set: (target, key, value) => ((target[key as string] = value), true),
   });
   graphProps().onRenderFramePost(ctx as unknown as CanvasRenderingContext2D, scale);
@@ -214,6 +220,26 @@ describe("ReviewGraph", () => {
     expect(drawnLabels(1)).toEqual(["01"]);
     expect(drawnLabels(1.5)).toEqual(["01 요금"]);
     expect(drawnLabels(3)).toEqual(expect.arrayContaining(["01 요금", "요금 계산표를 고친다"]));
+  });
+
+  it("가운데 허브에 올리면 잘린 주제 이름을 온전히 보여 준다", async () => {
+    await renderGraph();
+    const hub = graphProps().graphData.nodes.find((node) => node.hub)!;
+
+    act(() => graphProps().onNodeHover(hub));
+
+    expect(screen.getByRole("tooltip").textContent).toContain("01 요금");
+    expect(screen.getByRole("tooltip").textContent).toContain("항목 2");
+  });
+
+  it("겹치는 항목 이름은 먼저 자리 잡은 쪽만 적는다", async () => {
+    await renderGraph();
+    for (const node of graphProps().graphData.nodes) Object.assign(node, { x: 0, y: 0 });
+
+    const texts = drawnLabels(3);
+
+    expect(texts).toContain("01 요금");
+    expect(texts.filter((text) => text !== "01 요금")).toHaveLength(0);
   });
 
   it("좁은 화면에서는 주제 이름 대신 번호만 남긴다", async () => {

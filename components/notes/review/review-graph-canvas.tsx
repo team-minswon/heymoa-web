@@ -171,32 +171,56 @@ export default function ReviewGraphCanvas({
   );
 
   // 이름은 모든 점 위에 한 번 더 그린다. 점과 같이 그리면 나중에 그린 점이 앞선 이름을 덮는다.
+  // 이미 그린 이름이나 점과 겹치는 이름은 건너뛴다 — 허브, 불 켜진 이웃, 나머지 순으로 자리를 먼저 잡는다.
   const drawLabels = useCallback(
     (ctx: CanvasRenderingContext2D, scale: number) => {
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.lineJoin = "round";
-      const write = (node: GraphNodeObject, text: string, size: number, weight: number, color: string) => {
+      const taken: [number, number, number, number][] = [];
+      const write = (
+        node: GraphNodeObject,
+        text: string,
+        size: number,
+        weight: number,
+        color: string,
+        force = false
+      ) => {
         ctx.font = `${weight} ${size / scale}px Inter, system-ui, sans-serif`;
+        const x = node.x ?? 0;
+        const y = (node.y ?? 0) + screenRadius(node.radius, node.hub, scale) + 2 / scale;
+        const half = ctx.measureText(text).width / 2;
+        const box: [number, number, number, number] = [x - half, y, x + half, y + (size + 2) / scale];
+        // ponytail: 이름끼리 전부 견준다(O(n²)). 이름 수백 개면 한 틀에 1ms 안쪽이다.
+        const overlaps = taken.some(([l, t, r, b]) => box[0] < r && box[2] > l && box[1] < b && box[3] > t);
+        if (overlaps && !force) return false;
+        taken.push(box);
         ctx.lineWidth = 3 / scale;
         ctx.strokeStyle = tokens.canvas;
-        const y = (node.y ?? 0) + screenRadius(node.radius, node.hub, scale) + 2 / scale;
-        ctx.strokeText(text, node.x ?? 0, y);
+        ctx.strokeText(text, x, y);
         ctx.fillStyle = color;
-        ctx.fillText(text, node.x ?? 0, y);
+        ctx.fillText(text, x, y);
+        return true;
       };
-      for (const node of data.nodes) {
-        if (node.hub || scale < LABEL_ZOOM || dimmed(node.id)) continue;
-        write(node, clip(node.label, 18), 10, 400, tokens.muted);
-      }
       for (const node of data.nodes) {
         if (!node.hub) continue;
         ctx.globalAlpha = dimmed(node.id) ? 0.25 : 1;
         const [ordinal, ...rest] = node.label.split(" ");
         const title = scale >= TOPIC_NAME_ZOOM || node.degree >= BIG_TOPIC ? rest.join(" ") : "";
-        write(node, labelLimit > 0 && title ? `${ordinal} ${clip(title, labelLimit)}` : ordinal, 11.5, 600, tokens.ink);
+        const named = labelLimit > 0 && title ? `${ordinal} ${clip(title, labelLimit)}` : ordinal;
+        if (!write(node, named, 11.5, 600, tokens.ink)) write(node, ordinal, 11.5, 600, tokens.ink, true);
       }
       ctx.globalAlpha = 1;
+      if (scale < LABEL_ZOOM) return;
+      const items = data.nodes.filter((node) => !node.hub && !dimmed(node.id));
+      // 점도 자리를 차지한다. 남의 점을 덮는 이름은 적지 않는다
+      for (const node of items) {
+        const radius = screenRadius(node.radius, node.hub, scale);
+        const [x, y] = [node.x ?? 0, node.y ?? 0];
+        taken.push([x - radius, y - radius, x + radius, y + radius]);
+      }
+      if (lit) items.sort((a, b) => Number(lit.has(b.id)) - Number(lit.has(a.id)));
+      for (const node of items) write(node, clip(node.label, 18), 10, 400, tokens.muted);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dimmed 는 lit 만 읽는다
     [data, tokens, labelLimit, lit]

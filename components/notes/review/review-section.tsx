@@ -95,6 +95,8 @@ export function ReviewSection({
         key={item.itemId}
         item={item}
         topic={(() => {
+          // 한 주제로 거르는 동안은 모든 줄이 같은 주제다. 줄마다 적으면 소음이다
+          if (topicTitle !== null) return null;
           const ordinal = topicOf(item.itemId);
           return ordinal === null ? null : { ordinal, title: topicTitleOf(ordinal) };
         })()}
@@ -148,7 +150,7 @@ export function ReviewSection({
       ) : null}
 
       {section.items.length === 0 ? (
-        <p className="py-1.5 text-[13px] text-[var(--el-muted-soft)]">{EMPTY_TEXT[section.key]}</p>
+        <p className="py-1.5 text-[13px] text-[var(--el-muted-soft)]">{topicTitle !== null ? "이 주제에는 없습니다." : EMPTY_TEXT[section.key]}</p>
       ) : null}
 
       {head.map(row)}

@@ -107,9 +107,10 @@ describe("검토 가능한 회의", () => {
         name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다",
       })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "주제 02차별점과 요금"
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("주제 02 · 항목 1");
+    expect(
+      screen.getByRole("heading", { name: "차별점과 요금" })
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "전체 보기" }));
     expect(

@@ -11,7 +11,7 @@ import { ItemTrail } from "@/components/notes/review/item-trail";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewSection } from "@/components/notes/review/review-section";
-import { TopicFilterBar, TopicIndex } from "@/components/notes/review/topic-index";
+import { TopicIndex, TopicScope } from "@/components/notes/review/topic-index";
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import {
@@ -42,8 +42,18 @@ import {
 } from "@/lib/notes/review/confirm";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
-import { KIND_LABEL, REVIEW_SECTIONS, sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
-import { resolvedItemIds, topicChips, topicIndex, topicNumber } from "@/lib/notes/review/topics";
+import {
+  KIND_LABEL,
+  REVIEW_SECTIONS,
+  sectionsOf,
+  type ReviewItem,
+} from "@/lib/notes/review/sections";
+import {
+  resolvedItemIds,
+  topicChips,
+  topicIndex,
+  topicNumber,
+} from "@/lib/notes/review/topics";
 import { useReviewEditor } from "@/lib/notes/review/use-review-editor";
 import {
   createSpeakerIdentityResolver,
@@ -67,7 +77,10 @@ const TSID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
  */
 function newRequestId() {
   const bytes = crypto.getRandomValues(new Uint8Array(13));
-  return Array.from(bytes, (byte, index) => TSID_ALPHABET[index === 0 ? byte % 8 : byte % 32]).join("");
+  return Array.from(
+    bytes,
+    (byte, index) => TSID_ALPHABET[index === 0 ? byte % 8 : byte % 32]
+  ).join("");
 }
 
 export function ReviewBoard({
@@ -98,9 +111,12 @@ export function ReviewBoard({
   });
   const editor = useReviewEditor(noteId);
   // 기존 할 일 반영은 제안 줄 안에서 돈다. 확정이 그 저장보다 앞서지 않게 여기서도 센다.
-  const applyingTasks = useIsMutating({ mutationKey: ["updateProjectTask"] }) > 0;
+  const applyingTasks =
+    useIsMutating({ mutationKey: ["updateProjectTask"] }) > 0;
   // 거절 까닭은 확정 줄과 확인창에 남기므로 전역 토스트를 끈다(두 번 뜨지 않게).
-  const approve = useApproveMeetingReview({ mutation: { meta: { suppressErrorToast: true } } });
+  const approve = useApproveMeetingReview({
+    mutation: { meta: { suppressErrorToast: true } },
+  });
   const [approveError, setApproveError] = useState<string | null>(null);
 
   const [view, setView] = useState<View>("summary");
@@ -114,16 +130,23 @@ export function ReviewBoard({
   const tasks = okData(tasksQuery.data)?.tasks ?? null;
 
   const items = useMemo(() => review?.items ?? [], [review]);
-  const itemsById = useMemo(() => new Map(items.map((item) => [item.itemId, item])), [items]);
+  const itemsById = useMemo(
+    () => new Map(items.map((item) => [item.itemId, item])),
+    [items]
+  );
   const topics = useMemo(() => topicIndex(summary), [summary]);
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
   const topicEntries = useMemo(() => topicChips(summary), [summary]);
   const resolved = useMemo(() => resolvedItemIds(summary), [summary]);
   const topicTitleOf = (ordinal: number) =>
     topicEntries.find((entry) => entry.ordinal === ordinal)?.title ?? "";
-  const selectedTopic = topicEntries.find((entry) => entry.ordinal === topic) ?? null;
+  const selectedTopic =
+    topicEntries.find((entry) => entry.ordinal === topic) ?? null;
   const sections = sectionsOf(items, topicOf, topic);
-  const tasksById = useMemo(() => new Map((tasks ?? []).map((task) => [task.taskId, task])), [tasks]);
+  const tasksById = useMemo(
+    () => new Map((tasks ?? []).map((task) => [task.taskId, task])),
+    [tasks]
+  );
   const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
   const speakers = transcript?.diarization.speakers;
 
@@ -131,7 +154,11 @@ export function ReviewBoard({
     () =>
       (speakers ?? [])
         .filter((speaker) => !speaker.assignedParticipantId)
-        .map((speaker) => ({ type: "SPEAKER_LABEL", noteId, label: speaker.label })),
+        .map((speaker) => ({
+          type: "SPEAKER_LABEL",
+          noteId,
+          label: speaker.label,
+        })),
     [speakers, noteId]
   );
   const {
@@ -161,19 +188,27 @@ export function ReviewBoard({
   const confirmSummary = confirmSummaryOf(items);
   const includedCount = items.filter((item) => item.included).length;
   const unnamedAssigned = items.filter(
-    (item) => item.included && item.kind === "ACTION_ITEM" && item.assignee?.type === "SPEAKER_LABEL"
+    (item) =>
+      item.included &&
+      item.kind === "ACTION_ITEM" &&
+      item.assignee?.type === "SPEAKER_LABEL"
   ).length;
   const editable = canEdit && !confirmed;
 
   // 제안의 선택은 검토본에 저장한다 — 새로고침하거나 다른 참석자가 열어도 같은 선택이 보인다.
-  const choose = (item: ReviewItem, targetId: string, decision: "END" | "APPLIED" | "KEEP") =>
-    editor.updateItem(item.itemId, { decisions: [{ targetId, decision }] });
+  const choose = (
+    item: ReviewItem,
+    targetId: string,
+    decision: "END" | "APPLIED" | "KEEP"
+  ) => editor.updateItem(item.itemId, { decisions: [{ targetId, decision }] });
   const saving = editor.busyItemId !== null;
   // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
   const confirmBlocked = confirmBlockReason({
     saving,
     applyingTasks,
-    hasTaskChanges: items.some((item) => item.included && item.taskChanges.length > 0),
+    hasTaskChanges: items.some(
+      (item) => item.included && item.taskChanges.length > 0
+    ),
     unchosen: unchosenSuggestionCount(items, (taskId) => tasksById.has(taskId)),
     tasks:
       !workspaceId || !projectId || tasksQuery.isPending
@@ -183,7 +218,8 @@ export function ReviewBoard({
           : "failed",
   });
 
-  const toggleItem = (itemId: string) => setOpenItemId((current) => (current === itemId ? null : itemId));
+  const toggleItem = (itemId: string) =>
+    setOpenItemId((current) => (current === itemId ? null : itemId));
 
   const selectLinked = (itemId: string) => {
     setTopic(null);
@@ -199,7 +235,13 @@ export function ReviewBoard({
             replacement={replacement}
             choice={choiceOf(replacement.decision)}
             disabled={!editable || !item.included || saving}
-            onChoose={(next) => choose(item, replacement.target.itemId, next === "change" ? "END" : "KEEP")}
+            onChoose={(next) =>
+              choose(
+                item,
+                replacement.target.itemId,
+                next === "change" ? "END" : "KEEP"
+              )
+            }
           />
         ))}
         {item.taskChanges.map((change) =>
@@ -212,10 +254,18 @@ export function ReviewBoard({
               projectId={projectId}
               choices={assigneeChoices}
               choice={choiceOf(change.decision)}
-              taskState={tasksQuery.isPending ? "pending" : tasks ? "ready" : "failed"}
+              taskState={
+                tasksQuery.isPending ? "pending" : tasks ? "ready" : "failed"
+              }
               onRetryTask={() => void tasksQuery.refetch()}
               disabled={!editable || saving || !item.included}
-              onChoose={(next) => choose(item, change.target.itemId, next === "change" ? "APPLIED" : "KEEP")}
+              onChoose={(next) =>
+                choose(
+                  item,
+                  change.target.itemId,
+                  next === "change" ? "APPLIED" : "KEEP"
+                )
+              }
             />
           ) : (
             <p
@@ -243,7 +293,13 @@ export function ReviewBoard({
           noteId={noteId}
           item={item}
           segments={segments}
-          scriptState={transcriptQuery.isPending ? "pending" : transcript ? "ready" : "failed"}
+          scriptState={
+            transcriptQuery.isPending
+              ? "pending"
+              : transcript
+                ? "ready"
+                : "failed"
+          }
           onRetryScript={() => void transcriptQuery.refetch()}
           resolveSpeaker={resolveSpeaker}
           onOpenScript={onOpenScript}
@@ -258,23 +314,35 @@ export function ReviewBoard({
       reviewRevision: review.reviewVersion,
     };
     const key = JSON.stringify(body);
-    if (lastRequest.current?.body !== key) lastRequest.current = { body: key, id: newRequestId() };
+    if (lastRequest.current?.body !== key)
+      lastRequest.current = { body: key, id: newRequestId() };
     setApproveError(null);
     try {
-      await approve.mutateAsync({ noteId, data: { requestId: lastRequest.current.id, ...body } });
+      await approve.mutateAsync({
+        noteId,
+        data: { requestId: lastRequest.current.id, ...body },
+      });
       toast.success("검토를 완료했습니다");
       moveFlowStatus(queryClient, noteId, "CONFIRMED");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getGetAnalysisFlowQueryKey(noteId) }),
-        queryClient.invalidateQueries({ queryKey: getGetMeetingReviewQueryKey(noteId) }),
+        queryClient.invalidateQueries({
+          queryKey: getGetAnalysisFlowQueryKey(noteId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: getGetMeetingReviewQueryKey(noteId),
+        }),
         // 노트의 프로젝트를 아직 모를 수도 있어 할 일 · 할 일 이력 조회를 통째로 다시 읽힌다.
-        queryClient.invalidateQueries({ predicate: (query) => isProjectTaskQueryKey(query.queryKey) }),
+        queryClient.invalidateQueries({
+          predicate: (query) => isProjectTaskQueryKey(query.queryKey),
+        }),
       ]);
       return true;
     } catch (error) {
       // 서버 문구를 확정 줄에 남긴다. 판이 낡아 거절됐을 수 있으니 검토본도 다시 읽는다.
       setApproveError(errorMessageOf(error, "검토를 완료하지 못했습니다."));
-      await queryClient.invalidateQueries({ queryKey: getGetMeetingReviewQueryKey(noteId) });
+      await queryClient.invalidateQueries({
+        queryKey: getGetMeetingReviewQueryKey(noteId),
+      });
       return false;
     }
   };
@@ -296,7 +364,8 @@ export function ReviewBoard({
             {confirmed ? "확정됨" : "검토 중"}
           </span>
           <span className="text-xs text-[var(--el-muted)]">
-            항목 {includedCount}개{summary?.topics.length ? ` · 주제 ${summary.topics.length}개` : ""}
+            항목 {includedCount}개
+            {summary?.topics.length ? ` · 주제 ${summary.topics.length}개` : ""}
           </span>
           <SegmentedControl
             label="보기"
@@ -317,7 +386,10 @@ export function ReviewBoard({
           />
         ) : null}
 
-        <div key={view} className="animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none">
+        <div
+          key={view}
+          className="animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
+        >
           {view === "summary" ? (
             <>
               <ReviewOverview
@@ -326,51 +398,75 @@ export function ReviewBoard({
                 failed={summaryQuery.isError}
                 onRetry={() => void summaryQuery.refetch()}
               />
-              <TopicIndex topics={topicEntries} topic={topic} onTopicChange={setTopic} />
-              {selectedTopic ? (
-                <TopicFilterBar entry={selectedTopic} onClear={() => setTopic(null)} />
-              ) : null}
-              {sections.map((section) => (
-                <ReviewSection
-                  key={section.key}
-                  section={section}
-                  topicOf={topicOf}
-                  topicTitleOf={topicTitleOf}
-                  topicTitle={selectedTopic?.title ?? null}
-                  canEdit={editable}
-                  choices={assigneeChoices}
-                  openItemId={openItemId}
-                  busyItemId={editor.busyItemId}
-                  conflictItemId={editor.conflictItemId}
-                  adding={editor.adding}
-                  hint={
-                    editable && section.key === "ACTION_ITEM" && section.items.length > 0
-                      ? "담당과 기한은 칸을 눌러 바로 고칩니다"
-                      : undefined
-                  }
-                  aside={
-                    section.key === "ACTION_ITEM" && unnamedAssigned > 0 ? (
-                      <>
-                        <span>이름 없는 화자에게 걸린 할 일 {unnamedAssigned}</span>
-                        <button
-                          type="button"
-                          onClick={onOpenTranscript}
-                          className="inline-flex h-[26px] items-center rounded-full border border-[var(--el-hairline-strong)] px-2.5 text-xs font-medium text-[var(--el-ink)] hover:bg-[var(--el-canvas-soft)]"
-                        >
-                          화자 이름 붙이기
-                        </button>
-                      </>
-                    ) : undefined
-                  }
-                  onToggleItem={toggleItem}
-                  onSaveItem={editor.updateItem}
-                  onAddItem={(kind, content) => editor.addItem({ kind, content, citations: [] })}
-                  onDismissConflict={editor.dismissConflict}
-                  renderDetail={detailOf}
-                  suggestionsOf={suggestionsOf}
-                  isResolved={(itemId) => resolved.has(itemId)}
-                />
-              ))}
+              <TopicIndex
+                topics={topicEntries}
+                topic={topic}
+                onTopicChange={setTopic}
+              />
+              {(() => {
+                const list = (
+                  <>
+                    {sections.map((section) => (
+                      <ReviewSection
+                        key={section.key}
+                        section={section}
+                        topicOf={topicOf}
+                        topicTitleOf={topicTitleOf}
+                        topicTitle={selectedTopic?.title ?? null}
+                        canEdit={editable}
+                        choices={assigneeChoices}
+                        openItemId={openItemId}
+                        busyItemId={editor.busyItemId}
+                        conflictItemId={editor.conflictItemId}
+                        adding={editor.adding}
+                        hint={
+                          editable &&
+                          section.key === "ACTION_ITEM" &&
+                          section.items.length > 0
+                            ? "담당과 기한은 칸을 눌러 바로 고칩니다"
+                            : undefined
+                        }
+                        aside={
+                          section.key === "ACTION_ITEM" &&
+                          unnamedAssigned > 0 ? (
+                            <>
+                              <span>
+                                이름 없는 화자에게 걸린 할 일 {unnamedAssigned}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={onOpenTranscript}
+                                className="inline-flex h-[26px] items-center rounded-full border border-[var(--el-hairline-strong)] px-2.5 text-xs font-medium text-[var(--el-ink)] hover:bg-[var(--el-canvas-soft)]"
+                              >
+                                화자 이름 붙이기
+                              </button>
+                            </>
+                          ) : undefined
+                        }
+                        onToggleItem={toggleItem}
+                        onSaveItem={editor.updateItem}
+                        onAddItem={(kind, content) =>
+                          editor.addItem({ kind, content, citations: [] })
+                        }
+                        onDismissConflict={editor.dismissConflict}
+                        renderDetail={detailOf}
+                        suggestionsOf={suggestionsOf}
+                        isResolved={(itemId) => resolved.has(itemId)}
+                      />
+                    ))}
+                  </>
+                );
+                return selectedTopic ? (
+                  <TopicScope
+                    entry={selectedTopic}
+                    onClear={() => setTopic(null)}
+                  >
+                    {list}
+                  </TopicScope>
+                ) : (
+                  list
+                );
+              })()}
             </>
           ) : (
             <div>
@@ -389,10 +485,22 @@ export function ReviewBoard({
                 />
               ) : summaryQuery.isPending ? (
                 // 요약이 오기 전에 「주제 묶음이 없다」고 말하지 않는다. 그래프 판 크기로 자리만 잡는다.
-                <Skeleton aria-label="그래프 불러오는 중" className="aspect-[840/520] w-full rounded-block" />
+                <Skeleton
+                  aria-label="그래프 불러오는 중"
+                  className="aspect-[840/520] w-full rounded-block"
+                />
               ) : (
                 <ReviewGraph
-                  summary={summary ?? { noteId, status: "NOT_AVAILABLE", resultVersion: null, headline: null, lead: [], topics: [] }}
+                  summary={
+                    summary ?? {
+                      noteId,
+                      status: "NOT_AVAILABLE",
+                      resultVersion: null,
+                      headline: null,
+                      lead: [],
+                      topics: [],
+                    }
+                  }
                   items={items}
                   selectedItemId={openItemId}
                   onSelect={setOpenItemId}
@@ -414,7 +522,11 @@ export function ReviewBoard({
                     {topicOf(selected.itemId) !== null ? (
                       <span className="text-xs whitespace-nowrap text-[var(--el-muted)] max-sm:hidden">
                         {topicNumber(topicOf(selected.itemId)!)}{" "}
-                        {summary?.topics.find((row) => row.ordinal === topicOf(selected.itemId))?.title}
+                        {
+                          summary?.topics.find(
+                            (row) => row.ordinal === topicOf(selected.itemId)
+                          )?.title
+                        }
                       </span>
                     ) : null}
                     <button
@@ -469,7 +581,10 @@ export function ReviewBoardSkeleton() {
         {REVIEW_SECTIONS.slice(0, 3).map((section) => (
           <SectionBlock key={section.key} title={section.label}>
             {["78%", "64%", "71%"].map((width) => (
-              <div key={width} className="flex h-10 items-center border-b border-[var(--el-hairline-soft)]">
+              <div
+                key={width}
+                className="flex h-10 items-center border-b border-[var(--el-hairline-soft)]"
+              >
                 <Skeleton className="h-4 rounded-chip" style={{ width }} />
               </div>
             ))}

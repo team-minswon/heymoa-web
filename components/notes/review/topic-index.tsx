@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Collapse } from "@/components/heymoa/collapse";
 import { ShowMoreButton } from "@/components/heymoa/show-more-button";
@@ -37,12 +37,19 @@ export function TopicIndex({
       key={entry.ordinal}
       entry={entry}
       selected={topic === entry.ordinal}
-      onSelect={() => onTopicChange(topic === entry.ordinal ? null : entry.ordinal)}
+      dimmed={topic !== null && topic !== entry.ordinal}
+      onSelect={() =>
+        onTopicChange(topic === entry.ordinal ? null : entry.ordinal)
+      }
     />
   );
 
   return (
-    <SectionBlock title="주제" count={topics.length} copy={{ build: () => topicsToMarkdown(topics) }}>
+    <SectionBlock
+      title="주제"
+      count={topics.length}
+      copy={{ build: () => topicsToMarkdown(topics) }}
+    >
       <ul aria-label="주제 목차" className="-mx-2">
         {head.map(row)}
       </ul>
@@ -66,10 +73,13 @@ export function TopicIndex({
 function TopicRow({
   entry,
   selected,
+  dimmed,
   onSelect,
 }: {
   entry: TopicChip;
   selected: boolean;
+  /** 다른 주제로 거르는 중이다. 고른 줄이 한눈에 서도록 물러선다 */
+  dimmed: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -80,10 +90,20 @@ function TopicRow({
         onClick={onSelect}
         className={cn(
           "grid w-full grid-cols-[22px_minmax(0,1fr)_auto] items-baseline gap-x-3 rounded-control px-2 py-2.5 text-left transition-colors duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)]",
-          selected ? "bg-[var(--el-surface-strong)]" : "hover:bg-[var(--el-canvas-soft)]"
+          selected
+            ? "bg-[var(--el-surface-strong)]"
+            : "hover:bg-[var(--el-canvas-soft)]",
+          dimmed && "opacity-50 hover:opacity-100"
         )}
       >
-        <span className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+        <span
+          className={cn(
+            "font-mono text-[11px] tabular-nums",
+            selected
+              ? "font-semibold text-[var(--el-ink)]"
+              : "text-[var(--el-muted-soft)]"
+          )}
+        >
           {topicNumber(entry.ordinal)}
         </span>
         <span className="min-w-0">
@@ -109,31 +129,49 @@ function TopicRow({
   );
 }
 
-/** 주제로 거른 동안 섹션 위에 붙는다. 무엇으로 거르고 있는지와 푸는 길을 한 줄에 둔다. */
-export function TopicFilterBar({
+/**
+ * 주제로 거른 동안 섹션을 감싼다. 주제 이름을 제목으로 세우고, 그 아래 결정 · 할 일 · 이슈 · 참고를
+ * 왼쪽 세로줄 하나로 묶어 「이 주제의 항목」으로 읽히게 한다. 제목 줄은 스크롤해도 위에 붙는다.
+ */
+export function TopicScope({
   entry,
   onClear,
+  children,
 }: {
   entry: TopicChip;
   onClear: () => void;
+  children: ReactNode;
 }) {
   return (
-    <div
-      role="status"
-      className="sticky top-0 z-10 mt-2 flex items-center gap-2.5 rounded-control bg-[var(--el-surface-strong)] px-3 py-2 text-[13px] animate-in fade-in-0 slide-in-from-top-1 duration-200 ease-out motion-reduce:animate-none"
-    >
-      <span className="font-mono text-[11px] whitespace-nowrap text-[var(--el-muted)]">
-        주제 {topicNumber(entry.ordinal)}
-      </span>
-      <span className="min-w-0 flex-1 truncate font-medium text-[var(--el-ink)]">{entry.title}</span>
-      <button
-        type="button"
-        onClick={onClear}
-        className="inline-flex shrink-0 items-center gap-1 text-xs text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+    <div className="mt-4 animate-in fade-in-0 slide-in-from-top-1 duration-200 ease-out motion-reduce:animate-none">
+      <div
+        role="status"
+        className="sticky top-0 z-10 flex items-center gap-3 bg-[var(--el-surface-card)] pt-3 pb-3"
       >
-        <X aria-hidden className="size-3.5" />
-        전체 보기
-      </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-[var(--el-muted)]">
+            <span className="font-mono tabular-nums">
+              주제 {topicNumber(entry.ordinal)}
+            </span>
+            <span aria-hidden> · </span>
+            <span className="tabular-nums">항목 {entry.count}</span>
+          </p>
+          <h3 className="mt-0.5 truncate text-[17px] leading-6 font-semibold text-[var(--el-ink)]">
+            {entry.title}
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-control px-2.5 text-[13px] text-[var(--el-muted)] hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--el-ink)]"
+        >
+          <X aria-hidden className="size-3.5" />
+          전체 보기
+        </button>
+      </div>
+      <div className="border-l-2 border-[var(--el-hairline-strong)] pl-4 sm:pl-6">
+        {children}
+      </div>
     </div>
   );
 }

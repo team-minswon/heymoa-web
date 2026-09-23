@@ -20,7 +20,7 @@ import {
   neighborsOf,
   toForceGraph,
   topicNumber,
-  type GraphNode,
+  type ForceNode,
 } from "@/lib/notes/review/graph-model";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ const ZOOM_RANGE: [number, number] = [0.2, 8];
 export const NARROW_LABEL_WIDTH = 480;
 const SHORT_LABEL_WIDTH = 720;
 
-type Tooltip = { node: GraphNode; x: number; y: number };
+type Tooltip = { node: ForceNode; x: number; y: number };
 
 export function ReviewGraph({
   summary,
@@ -118,9 +118,9 @@ export function ReviewGraph({
       setHoveredId(id);
       const node = id ? nodeById.get(id) : undefined;
       const api = graphRef.current;
-      if (!node?.item || !api) return setTooltip(null);
+      if (!node || !api) return setTooltip(null);
       const at = api.graph2ScreenCoords(node.x ?? 0, node.y ?? 0);
-      setTooltip({ node: node.item, x: at.x, y: at.y });
+      setTooltip({ node, x: at.x, y: at.y });
     },
     [nodeById]
   );
@@ -254,14 +254,24 @@ export function ReviewGraph({
             )}
             style={{ left: tooltip.x, top: Math.min(Math.max(tooltip.y, 40), height - 40) }}
           >
-            <p className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--el-muted)]">
-              <RoleDot role={tooltip.node.role} />
-              {CONTEXT_KIND_LABEL[tooltip.node.kind]}
-              {tooltip.node.group !== null
-                ? ` · ${topicNumber(tooltip.node.group)} ${graph.topics.get(tooltip.node.group) ?? ""}`
-                : " · 주제 밖"}
-            </p>
-            <p className="mt-1.5 text-[13px] leading-[19px] text-[var(--el-ink)]">{tooltip.node.content}</p>
+            {tooltip.node.item ? (
+              <>
+                <p className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--el-muted)]">
+                  <RoleDot role={tooltip.node.item.role} />
+                  {CONTEXT_KIND_LABEL[tooltip.node.item.kind]}
+                  {tooltip.node.item.group !== null
+                    ? ` · ${topicNumber(tooltip.node.item.group)} ${graph.topics.get(tooltip.node.item.group) ?? ""}`
+                    : " · 주제 밖"}
+                </p>
+                <p className="mt-1.5 text-[13px] leading-[19px] text-[var(--el-ink)]">{tooltip.node.item.content}</p>
+              </>
+            ) : (
+              // 허브 이름은 그래프 위에서 잘린다. 온전한 이름은 여기서만 읽힌다
+              <>
+                <p className="text-[11px] font-medium text-[var(--el-muted)]">주제 · 항목 {tooltip.node.degree}</p>
+                <p className="mt-1.5 text-[13px] leading-[19px] font-semibold text-[var(--el-ink)]">{tooltip.node.label}</p>
+              </>
+            )}
           </div>
         ) : null}
 
