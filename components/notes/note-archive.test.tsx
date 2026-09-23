@@ -25,6 +25,18 @@ const data = vi.hoisted(() => ({
   /** 다시 읽었을 때 서버가 주는 발화. `null`이면 캐시와 같은 것을 준다. */
   refetched: null as unknown[] | null,
   transcriptFails: false,
+  flowStatus: "REVIEWABLE" as string,
+}));
+
+type PollOptions = {
+  query?: {
+    refetchInterval?: (query: { state: { data: unknown } }) => number | false;
+  };
+};
+/** 조회 훅이 받은 옵션. 폴링 판정을 캐시 데이터로 직접 불러 본다. */
+const polled = vi.hoisted(() => ({
+  transcript: undefined as PollOptions | undefined,
+  flow: undefined as PollOptions | undefined,
 }));
 
 const spies = vi.hoisted(() => ({
@@ -69,32 +81,45 @@ vi.mock("@/lib/api/generated/transcription/transcription", () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
-  useGetNoteTranscript: () => ({
-    isPending: false,
-    isError: data.transcriptFails,
-    refetch: () =>
-      Promise.resolve({
-        data: {
-          status: 200,
+  useGetNoteTranscript: (_noteId: string, options?: PollOptions) => {
+    polled.transcript = options;
+    return {
+      isPending: false,
+      isError: data.transcriptFails,
+      refetch: () =>
+        Promise.resolve({
           data: {
-            success: true,
+            status: 200,
             data: {
-              segments: data.refetched ?? data.segments,
-              diarization: data.diarization,
+              success: true,
+              data: {
+                segments: data.refetched ?? data.segments,
+                diarization: data.diarization,
+              },
             },
           },
-        },
-      }),
-    data: data.transcriptFails
-      ? undefined
-      : {
-          status: 200,
-          data: {
-            success: true,
-            data: { segments: data.segments, diarization: data.diarization },
+        }),
+      data: data.transcriptFails
+        ? undefined
+        : {
+            status: 200,
+            data: {
+              success: true,
+              data: { segments: data.segments, diarization: data.diarization },
+            },
           },
-        },
-  }),
+    };
+  },
+}));
+const flowEnvelope = (status: string) => ({
+  status: 200,
+  data: { success: true, data: { noteId: "n1", status } },
+});
+vi.mock("@/lib/api/generated/analysis/analysis", () => ({
+  useGetAnalysisFlow: (_noteId: string, options?: PollOptions) => {
+    polled.flow = options;
+    return { data: flowEnvelope(data.flowStatus) };
+  },
 }));
 // **`enabled` 를 지킨다.** 소속이 확인되기 전에는 조회를 안 걸어야 하는데, 목이 늘 데이터를
 // 주면 화면이 「후보를 다 읽었다」로 믿어 그 규칙을 아무도 안 지킨다.
@@ -1202,5 +1227,70 @@ describe("NoteArchive", () => {
         .getByRole("button", { name: /전체 초기화/ })
         .hasAttribute("disabled")
     ).toBe(true);
+  });
+
+  describe("회의가 끝난 뒤 연 노트의 화자 분리", () => {
+    const renderArchive = () =>
+      render(
+        <NoteArchive
+          noteId="n1"
+          workspaceId={WORKSPACE_ID}
+          focusSegmentId={null}
+          onFocusHandled={() => {}}
+        />
+      );
+    const transcriptInterval = (status: string) =>
+      polled.transcript?.query?.refetchInterval?.({
+        state: {
+          data: {
+            status: 200,
+            data: {
+              success: true,
+              data: { segments: [], diarization: { status, speakers: [] } },
+            },
+          },
+        },
+      }) ?? false;
+    const flowInterval = (status: string) =>
+      polled.flow?.query?.refetchInterval?.({
+        state: { data: flowEnvelope(status) },
+      }) ?? false;
+
+    afterEach(() => {
+      data.flowStatus = "REVIEWABLE";
+    });
+
+    it("화자를 나누는 동안 전사를 다시 읽는다 — 소켓 없이 열린 화면도 결과를 받는다", () => {
+      data.flowStatus = "DIARIZING";
+      renderArchive();
+
+      expect(transcriptInterval("NOT_REQUESTED")).toBe(5_000);
+      expect(transcriptInterval("ASSEMBLING")).toBe(5_000);
+      expect(flowInterval("DIARIZING")).toBe(5_000);
+    });
+
+    it("흐름이 먼저 넘어가도 전사가 아직 분리 중이면 한 번 더 읽는다", () => {
+      data.flowStatus = "ANALYZING";
+      renderArchive();
+
+      expect(transcriptInterval("SUBMITTED")).toBe(5_000);
+    });
+
+    it("분리가 끝났거나 실패했으면 멈춘다 — 지난 노트는 두드리지 않는다", () => {
+      renderArchive();
+
+      expect(transcriptInterval("MAPPED")).toBe(false);
+      expect(transcriptInterval("FAILED")).toBe(false);
+      expect(transcriptInterval("NOT_REQUESTED")).toBe(false);
+      for (const status of [
+        "NOT_APPLICABLE",
+        "NOT_REQUESTED",
+        "ANALYZING",
+        "REVIEWABLE",
+        "CONFIRMED",
+      ]) {
+        expect(flowInterval(status)).toBe(false);
+      }
+    });
   });
 });

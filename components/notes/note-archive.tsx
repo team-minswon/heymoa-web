@@ -13,6 +13,8 @@ import {
   getGetNoteQueryKey,
   useCreateNoteGuestParticipant,
 } from "@/lib/api/generated/notes/notes";
+import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
+import { okData } from "@/lib/api/ok-data";
 import {
   getGetNoteTranscriptQueryKey,
   useAssignNoteSpeaker,
@@ -58,6 +60,7 @@ import {
 
 /** 바닥에서 이만큼 안쪽이면 "바닥"으로 본다. 스크롤 위치는 소수점으로 떨어진다. */
 const BOTTOM_THRESHOLD_PX = 48;
+const DIARIZATION_POLL_MS = 5_000;
 
 /** 발화 길이는 고르지 않다 — 전부 같은 폭이면 표처럼 보여서 대화로 안 읽힌다. */
 const TRANSCRIPT_SKELETON_WIDTHS = ["62%", "84%", "45%"];
@@ -211,10 +214,29 @@ export function NoteArchive({
   /** 복사본 머리말. 셸이 읽어 내린다 — 여기서 노트를 다시 구독하지 않는다. */
   noteMeta?: NoteMeta | null;
 } & TranscriptFocus) {
+  // 종료 뒤에 연 화면에는 노트 소켓이 없어 화자 분리 결과가 오지 않는다. 분리가 끝날
+  // 때까지만 전사를 다시 읽는다. 봉인 전에는 전사가 NOT_REQUESTED 라 흐름 상태로 가른다.
+  const flowQuery = useGetAnalysisFlow(noteId, {
+    query: {
+      refetchInterval: (query) =>
+        okData(query.state.data)?.status === "DIARIZING"
+          ? DIARIZATION_POLL_MS
+          : false,
+    },
+  });
+  const diarizing = okData(flowQuery.data)?.status === "DIARIZING";
   // 종료 직후 마운트다 — 전역 staleTime(60초)을 그대로 두면 방금 전 라이브 캐시를 재사용해
   // 마지막 전사가 빠질 수 있다. 마운트할 때 최종 상태를 다시 당긴다.
   const transcriptQuery = useGetNoteTranscript(noteId, {
-    query: { refetchOnMount: "always" },
+    query: {
+      refetchOnMount: "always",
+      refetchInterval: (query) => {
+        const status = okData(query.state.data)?.diarization?.status;
+        return diarizing || status === "ASSEMBLING" || status === "SUBMITTED"
+          ? DIARIZATION_POLL_MS
+          : false;
+      },
+    },
   });
 
   const transcript =
