@@ -1,9 +1,52 @@
+import { useImperativeHandle, type Ref } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import type { MeetingReviewResponseDataItemsItem } from "@/lib/api/generated/models";
 import type { MeetingReviewSummary, SummaryTopic } from "@/lib/notes/review/summary";
+
+type Props = Record<string, unknown> & { ref?: Ref<unknown> };
+
+/**
+ * 캔버스는 jsdom 에서 그려지지 않는다. 라이브러리 자리에 받은 속성과 API 만 남기는 대역을 둔다.
+ * 그리기 콜백은 가짜 붓으로 불러 무엇을 적는지 본다.
+ */
+const forceGraph = vi.hoisted(() => ({
+  props: null as Props | null,
+  api: {
+    zoom: vi.fn(() => 1),
+    zoomToFit: vi.fn(),
+    centerAt: vi.fn(),
+    graph2ScreenCoords: vi.fn((x: number, y: number) => ({ x: 100 + x * 0, y: 100 + y * 0 })),
+    d3Force: vi.fn(),
+    d3ReheatSimulation: vi.fn(),
+  },
+}));
+
+vi.mock("react-force-graph-2d", () => ({
+  default: function ForceGraphDouble(props: Props) {
+    forceGraph.props = props;
+    useImperativeHandle(props.ref, () => forceGraph.api);
+    return <canvas />;
+  },
+}));
+
+let panelWidth = 840;
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+      observe() {
+        this.callback([{ contentRect: { width: panelWidth } } as ResizeObserverEntry], this as unknown as ResizeObserver);
+      }
+      disconnect() {}
+      unobserve() {}
+    }
+  );
+});
 
 function reviewItem(
   itemId: string,
@@ -72,88 +115,112 @@ const items = [
   reviewItem("x", "ACTION_ITEM", { content: "뺀 항목", included: false }),
 ];
 
-const FIT = "0 0 840 520";
-// 한 번 확대(×1.25)하면 가운데를 둔 채 보이는 폭이 840/1.25 = 672 가 된다.
-const ZOOMED = "84 52 672 416";
-
-function renderGraph(onSelect = vi.fn()) {
+async function renderGraph(onSelect = vi.fn(), selectedItemId: string | null = null) {
   const view = render(
-    <ReviewGraph summary={summary} items={items} selectedItemId={null} onSelect={onSelect} />
+    <ReviewGraph summary={summary} items={items} selectedItemId={selectedItemId} onSelect={onSelect} />
   );
-  const viewBox = () =>
-    screen.getByRole("group", { name: "주제별로 묶은 항목 그래프" }).getAttribute("viewBox");
-  return { ...view, onSelect, viewBox };
+  // 캔버스는 브라우저에서만 불러온다(next/dynamic, ssr: false)
+  await vi.waitFor(() => expect(forceGraph.props).not.toBeNull());
+  return { ...view, onSelect };
+}
+
+const graphProps = () => forceGraph.props as Props & {
+  graphData: { nodes: Array<{ id: string; hub: boolean; item: unknown; x: number; y: number }> };
+  onNodeClick: (node: unknown) => void;
+  onRenderFramePost: (ctx: CanvasRenderingContext2D, scale: number) => void;
+};
+
+/** 이름 그리기를 가짜 붓으로 돌려 적힌 글자를 모은다 */
+function drawnLabels(scale = 1) {
+  const texts: string[] = [];
+  const ctx = new Proxy({} as Record<string, unknown>, {
+    get: (target, key) => (key === "fillText" ? (text: string) => texts.push(text) : target[key as string] ?? (() => {})),
+    set: (target, key, value) => ((target[key as string] = value), true),
+  });
+  graphProps().onRenderFramePost(ctx as unknown as CanvasRenderingContext2D, scale);
+  return texts;
 }
 
 describe("ReviewGraph", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    forceGraph.props = null;
+    panelWidth = 840;
   });
 
-  it("포함한 항목만 점으로 그리고, 누르거나 Enter·Space 로 그 항목을 고른다", () => {
-    const { container, onSelect } = renderGraph();
+  it("주제는 허브 점, 포함한 항목만 항목 점으로 넘긴다", async () => {
+    await renderGraph();
 
-    expect(container.querySelectorAll("[data-item-id]")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" }));
-    expect(onSelect).toHaveBeenCalledWith("a1");
+    expect(graphProps().graphData.nodes.map((node) => [node.id, node.hub])).toEqual([
+      ["topic:1", true],
+      ["d1", false],
+      ["a1", false],
+    ]);
+  });
+
+  it("캔버스에서 항목을 누르면 그 항목을 고르고, 허브를 누르면 고르지 않고 판을 그리로 옮긴다", async () => {
+    const { onSelect } = await renderGraph();
+    const [hub, decision] = graphProps().graphData.nodes;
+
+    graphProps().onNodeClick(decision);
+    expect(onSelect).toHaveBeenCalledWith("d1");
+
+    graphProps().onNodeClick(hub);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(forceGraph.api.centerAt).toHaveBeenCalledWith(hub.x, hub.y, 300);
+  });
+
+  it("캔버스를 못 쓰는 사람을 위해 같은 항목을 버튼 목록으로 두고, 누르면 고른다", async () => {
+    const { onSelect } = await renderGraph(vi.fn(), "d1");
 
     const decision = screen.getByRole("button", { name: "결정 요금은 회의 시간 기준으로 계산한다" });
-    fireEvent.keyDown(decision, { key: "Enter" });
-    expect(onSelect).toHaveBeenLastCalledWith("d1");
-    fireEvent.keyDown(screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" }), { key: " " });
-    expect(onSelect).toHaveBeenLastCalledWith("a1");
+    expect(decision.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" }));
+    expect(onSelect).toHaveBeenCalledWith("a1");
+    expect(screen.queryByRole("button", { name: /뺀 항목/ })).toBeNull();
   });
 
-  it("확대·축소 버튼이 보이는 영역을 바꾸고 맞춤이 처음으로 되돌린다", () => {
-    const { viewBox } = renderGraph();
+  it("목록의 항목에 초점이 오면 그 항목의 설명 상자를 연다", async () => {
+    await renderGraph();
 
-    expect(viewBox()).toBe(FIT);
-    expect(screen.getByRole("button", { name: "축소" })).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "맞춤" })).toHaveProperty("disabled", true);
+    fireEvent.focus(screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" }));
+
+    expect(screen.getByRole("tooltip").textContent).toContain("01 요금");
+    expect(screen.getByRole("tooltip").textContent).toContain("요금 계산표를 고친다");
+  });
+
+  it("확대 · 축소 · 맞춤 버튼과 + · − · 0 키가 판 배율을 바꾼다", async () => {
+    await renderGraph();
 
     fireEvent.click(screen.getByRole("button", { name: "확대" }));
-    expect(viewBox()).toBe(ZOOMED);
-
+    expect(forceGraph.api.zoom).toHaveBeenLastCalledWith(1.25, 200);
+    fireEvent.click(screen.getByRole("button", { name: "축소" }));
+    expect(forceGraph.api.zoom).toHaveBeenLastCalledWith(0.8, 200);
     fireEvent.click(screen.getByRole("button", { name: "맞춤" }));
-    expect(viewBox()).toBe(FIT);
-  });
+    expect(forceGraph.api.zoomToFit).toHaveBeenCalledTimes(1);
 
-  it("그래프에 초점이 있으면 + · − · 0 으로 확대하고 되돌린다", () => {
-    const { viewBox } = renderGraph();
     const node = screen.getByRole("button", { name: "할 일 요금 계산표를 고친다" });
-
     fireEvent.keyDown(node, { key: "+" });
-    expect(viewBox()).toBe(ZOOMED);
-    fireEvent.keyDown(node, { key: "-" });
-    expect(viewBox()).toBe(FIT);
-    fireEvent.keyDown(node, { key: "+" });
+    expect(forceGraph.api.zoom).toHaveBeenLastCalledWith(1.25, 200);
     fireEvent.keyDown(node, { key: "0" });
-    expect(viewBox()).toBe(FIT);
+    expect(forceGraph.api.zoomToFit).toHaveBeenCalledTimes(2);
   });
 
-  it("좁은 화면에서는 주제 이름 대신 번호만 남긴다", () => {
-    const labelTexts = () =>
-      [...document.querySelectorAll("[data-topic-label]")].map((node) => node.textContent?.trim());
+  it("주제는 늘 적되 멀리서 작은 주제는 번호만, 항목 이름은 확대했을 때만 적는다", async () => {
+    await renderGraph();
 
-    renderGraph();
-    expect(labelTexts()).toEqual(["01 요금"]);
-    cleanup();
+    expect(drawnLabels(1)).toEqual(["01"]);
+    expect(drawnLabels(1.5)).toEqual(["01 요금"]);
+    expect(drawnLabels(3)).toEqual(expect.arrayContaining(["01 요금", "요금 계산표를 고친다"]));
+  });
 
-    // 그려진 폭을 390px 로 알린다
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        constructor(private readonly callback: ResizeObserverCallback) {}
-        observe() {
-          this.callback([{ contentRect: { width: 390 } } as ResizeObserverEntry], this as unknown as ResizeObserver);
-        }
-        disconnect() {}
-        unobserve() {}
-      }
-    );
-    renderGraph();
-    expect(labelTexts()).toEqual(["01"]);
+  it("좁은 화면에서는 주제 이름 대신 번호만 남긴다", async () => {
+    panelWidth = 390;
+    await renderGraph();
+
+    expect(drawnLabels(1.5)).toEqual(["01"]);
   });
 
   it("주제 묶음이 없으면 빈 그래프 대신 한 줄로 말한다", () => {

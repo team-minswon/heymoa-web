@@ -71,6 +71,9 @@ type State = {
 /** 화자 분리 → 분석 → 검토 가능이 목에서 각각 이만큼 걸린다. 화면의 진행 표시를 볼 만큼만 둔다. */
 export const MOCK_STEP_MS = 6_000;
 
+/** 항목 317개 · 주제 21개 검토본을 가진 노트. 그래프가 실제 규모에서 어떻게 보이는지 여기서 본다. */
+export const LARGE_REVIEW_NOTE_ID = "01K0000000027";
+
 /** 흐름 상태 표본. 종료된 시드 노트마다 한 상태씩 둬서 요약 탭의 모든 갈래를 목에서 밟는다. */
 const SEEDED_FLOWS: Record<string, FlowStatus> = {
   "01K0000000020": "NOT_APPLICABLE",
@@ -81,6 +84,7 @@ const SEEDED_FLOWS: Record<string, FlowStatus> = {
   "01K0000000025": "DIARIZING",
   "01K0000000026": "ANALYSIS_FAILED",
   [MENTORING_NOTE_ID]: "REVIEWABLE",
+  [LARGE_REVIEW_NOTE_ID]: "REVIEWABLE",
 };
 
 const MEETING_DATE = Date.UTC(2026, 8, 11);
@@ -139,6 +143,7 @@ function store(): State {
   seedMentoringReview(state);
   seedSmallReview(state, "01K0000000021", false);
   seedSmallReview(state, "01K0000000024", true);
+  seedLargeReview(state, LARGE_REVIEW_NOTE_ID);
   return state;
 }
 
@@ -392,6 +397,82 @@ function buildSummary(
     lead: REVIEW_SEED_LEAD,
     topics,
   };
+}
+
+/**
+ * 큰 검토본. 주제 크기를 1~60 으로 고르지 않게 두고, 주제 안 관계 · 주제를 넘는 관계 ·
+ * 「다른 주제에도 속함」을 섞는다. 무작위는 고정 씨앗이라 열 때마다 같다.
+ */
+function seedLargeReview(target: State, noteId: string) {
+  let seed = 7;
+  const random = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const pick = <T,>(rows: readonly T[]) => rows[Math.floor(random() * rows.length)];
+  const kinds: Kind[] = ["DECISION", "ACTION_ITEM", "ACTION_ITEM", "ISSUE", "QUESTION", "INSIGHT", "STATUS_REPORT"];
+  const words = ["요금", "온보딩", "알림", "검색", "권한", "배포", "지표", "문서", "보안", "결제", "초대", "동기화"];
+  const sizes = [60, 42, 33, 27, 22, 18, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 1, 1];
+  const item = (kind: Kind, content: string): StoredItem => ({
+    itemId: nextId("01KI"),
+    revision: 1,
+    kind,
+    content,
+    included: true,
+    edited: false,
+    authoredByUserId: null,
+    originalProposalRef: { proposalId: nextId("01KP"), revision: 1 },
+    citations: [],
+    assignee: null,
+    due: null,
+    replacements: [],
+    taskChanges: [],
+  });
+  const groups = sizes.map((size, index) => {
+    const title = `${words[index % words.length]} ${index + 1}차 논의`;
+    return Array.from({ length: size }, (_, at) =>
+      at === 0 && size >= 3 ? item("AGENDA", title) : item(pick(kinds), `${title} · 항목 ${at + 1}`)
+    );
+  });
+  const loose = Array.from({ length: 17 }, (_, at) => item(pick(kinds), `주제 밖 항목 ${at + 1}`));
+  target.reviews.set(noteId, { reviewId: nextId("01KR"), noteId, reviewVersion: 1, items: [...groups.flat(), ...loose] });
+
+  const relation = (source: StoredItem, to: StoredItem, kind: string, label: string): SummaryRelation => ({
+    sourceItemId: source.itemId,
+    targetItemId: to.itemId,
+    kind,
+    label,
+    reason: label,
+    judgment: "PROPOSED",
+    evidence: [],
+  });
+  const topics = groups.map((items, index): SummaryTopic => {
+    const center = items[0];
+    const relations = [
+      ...items.slice(1).filter(() => random() < 0.4).map((row) => relation(center, row, "ABOUT", "주제")),
+      ...items.slice(2).filter(() => random() < 0.35).map((row) => relation(pick(items), row, "LEADS_TO", "후속")),
+      ...(random() < 0.5 ? [relation(pick(items), pick(pick(groups)), "SUPPORTS", "근거")] : []),
+    ];
+    const open = items.filter((row) => (row.kind === "ISSUE" || row.kind === "QUESTION") && random() < 0.5);
+    return {
+      ordinal: index + 1,
+      title: center.kind === "AGENDA" ? center.content : `${words[index % words.length]} ${index + 1}차 논의`,
+      agendaItemId: center.kind === "AGENDA" ? center.itemId : null,
+      centerItemId: center.itemId,
+      members: items.map((row) => ({ itemId: row.itemId, kind: row.kind, uncertain: false })),
+      alsoItemIds: random() < 0.4 ? [pick(pick(groups)).itemId] : [],
+      relations,
+      sentences: [],
+      outline: { decisions: [], actionItems: [], issues: [], observationItemIds: [] },
+      openItemIds: open.map((row) => row.itemId),
+      signals: { itemCount: items.length, conclusionCount: 0, openCount: open.length, agendaSequence: null },
+    };
+  });
+  target.summaries.set(noteId, {
+    noteId,
+    status: "SUCCEEDED",
+    resultVersion: nextId("01KV"),
+    headline: null,
+    lead: [],
+    topics,
+  });
 }
 
 /** 전사가 없는 노트의 작은 검토본. 요약은 실패로 두어 요약 없는 화면의 표본이 된다. */
