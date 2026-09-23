@@ -1525,6 +1525,29 @@ describe("PersonalChatProvider", () => {
    * 안 고치면: 붙였던 회의록이 **날마커 `@[주간 제품 회의](noteId:…)` 로** 말풍선에 뜨고,
    * 에이전트는 그 회의록을 **안 보고** 답한다. 오류는 안 난다.
    */
+  /**
+   * ★ **보내고 나서도 회의록 칩이 남는다.** 보낼 때 편집기를 비우는 것은 사용자의 거절이
+   * 아니다. 거절로 치면 두 번째 질문부터 회의록 없이 나가는데, 레일은 계속 「현재 회의 범위」라고
+   * 말한다 — lab 에서 모든 턴이 `notes=0` 으로 갔다.
+   */
+  it("★ 회의록 안에서 보낸 다음 질문도 그 회의록을 범위로 들고 간다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    renderChat(<NoteScope hidden={false} />);
+    openPanel();
+    await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+    appendAfterChips("누가 무슨 일을 맡았어?");
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+
+    await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
+    await waitFor(() => expect(screen.getByRole("button", { name: "보내기" })).toBeTruthy());
+    appendAfterChips("그중 가장 급한 건?");
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+
+    await waitFor(() => expect(state.streamCalls).toHaveLength(2));
+    expect(state.streamCalls[1].body).toMatchObject({ noteIds: [NOTE_ID] });
+  });
+
   it("★ 되돌린 문장이 범위도 함께 들고 온다", async () => {
     state.chats = [chatRow(CHAT_ID)];
     state.streamFails = true;

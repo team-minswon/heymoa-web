@@ -586,6 +586,7 @@ function PersonalChatPanel({
   // 무엇을 붙였는지 모른다.
   /** 이미 박아 넣은 프리필. 두 번 넣지 않는다 — 편집기는 자기 DOM 을 스스로 든다. */
   const prefilledRef = useRef<Set<string>>(new Set());
+  const clearingForSendRef = useRef(false);
 
   const prefillSuggested = useCallback(() => {
     const noteId = suggestedNote?.noteId;
@@ -796,7 +797,13 @@ function PersonalChatPanel({
         editorRef.current?.append(
           dropScopeMarkers(message, new Set(scope.map((chip) => chip.id)))
         );
-        scope.forEach((chip) => editorRef.current?.prepend(chip));
+        // 보낼 때 회의록 칩을 다시 붙여 뒀으므로 이미 있는 칩은 또 박지 않는다
+        const present = new Set(
+          (editorRef.current?.read().chips ?? []).map((chip) => `${chip.kind}:${chip.id}`)
+        );
+        scope
+          .filter((chip) => !present.has(`${chip.kind}:${chip.id}`))
+          .forEach((chip) => editorRef.current?.prepend(chip));
         setChips(scope);
       };
       try {
@@ -809,7 +816,12 @@ function PersonalChatPanel({
          * ChatGPT·Claude 는 누르는 즉시 말풍선과 「생각하는 중」을 세운다. 낙관적으로
          * 세우고 실패했을 때 되돌리는 쪽이 맞다 — 실패는 드물고, 기다림은 매번이다.
          */
+        clearingForSendRef.current = true;
         editorRef.current?.clear();
+        clearingForSendRef.current = false;
+        // 회의록 안에 서 있으면 다음 질문에도 그 회의록이 힌트다 — 새 대화와 같은 규칙
+        prefilledRef.current.clear();
+        prefillSuggested();
         /**
          * ★ **여기서 다시 잰다. 이 한 줄이 「질문이 살짝 내려갔다가 뒤늦게 튀어 오르는」
          * 것을 막는다.**
@@ -936,6 +948,7 @@ function PersonalChatPanel({
       messages.length,
       onTurnActiveChange,
       pendingUserMessage,
+      prefillSuggested,
       reconcile,
       scrollToSent,
       sendMessage,
@@ -1260,10 +1273,13 @@ function PersonalChatPanel({
    * 나갔다 오는 것만으로 방금 지운 칩이 되살아납니다.
    */
   const handleChipsChange = useCallback((next: ScopeChip[]) => {
-    const present = new Set(next.map((chip) => `${chip.kind}:${chip.id}`));
-    prefilledRef.current.forEach((noteId) => {
-      if (!present.has(`note:${noteId}`)) dismissedRef.current.add(noteId);
-    });
+    // 보내면서 비운 것은 거절이 아니다. 거절로 치면 두 번째 질문부터 회의록 없이 나간다
+    if (!clearingForSendRef.current) {
+      const present = new Set(next.map((chip) => `${chip.kind}:${chip.id}`));
+      prefilledRef.current.forEach((noteId) => {
+        if (!present.has(`note:${noteId}`)) dismissedRef.current.add(noteId);
+      });
+    }
     setChips(next);
   }, []);
 
