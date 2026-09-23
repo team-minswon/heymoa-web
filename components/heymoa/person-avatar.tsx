@@ -52,10 +52,19 @@ export function personAvatarKey(person: {
   );
 }
 
+/**
+ * 아직 아무도 안 붙은 화자의 얼굴 열쇠. 전사의 칩과 요약·할 일의 담당 칸이 **둘 다 이것을 쓴다** —
+ * 담당 칸만 노트 id 를 섞어서 같은 「화자 B」가 두 얼굴로 섰다.
+ */
+export function unnamedSpeakerAvatarKey(label: string) {
+  return `label:${label}`;
+}
+
 export function PersonAvatar({
   name,
   image,
   size = 20,
+  alt = "",
   className,
 }: {
   /** 그 사람을 가리키는 변하지 않는 열쇠. 이름이 아니라 식별자다. */
@@ -63,6 +72,8 @@ export function PersonAvatar({
   /** 계정 사진. 있으면 **사진이 먼저다** — 얼굴로 알아본 사람이 그림으로 바뀌면 안 된다. */
   image?: string | null;
   size?: number;
+  /** 사진이 그 자체로 내용인 자리(계정 설정)만 준다. 이름이 늘 옆에 있는 칩·목록은 비운다 */
+  alt?: string;
   className?: string;
 }) {
   if (image) {
@@ -70,7 +81,7 @@ export function PersonAvatar({
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={image}
-        alt=""
+        alt={alt}
         // **`data-slot="avatar"` 를 단다.** `AvatarGroup` 이 그 값으로 겹친 얼굴에 흰 테를
         // 두르는데(`*:data-[slot=avatar]:ring-2`), 없으면 스택에서 얼굴끼리 그냥 겹친다.
         data-slot="avatar"

@@ -1,4 +1,7 @@
-import { personAvatarKey } from "@/components/heymoa/person-avatar";
+import {
+  personAvatarKey,
+  unnamedSpeakerAvatarKey,
+} from "@/components/heymoa/person-avatar";
 import type { DiarizationSpeaker } from "@/lib/transcription/presentation";
 
 /**
@@ -51,9 +54,7 @@ export function speakerAvatarName(
   // 누구인지 알면 **그 사람의 얼굴**이다. 라벨을 섞으면 안 된다 — 같은 사람이 전사에서는
   // 이 얼굴, 참석자 목록에서는 저 얼굴로 서게 된다.
   if (ownedLabels.length) return fallback.hashKey;
-  // 아직 누구인지 모르는 화자. **라벨만으로는 안 된다** — 라벨은 회의마다 다시 쓰여서,
-  // 다른 회의의 화자 A 가 같은 얼굴로 서면 서로 다른 두 사람이 한 얼굴이 된다.
-  if (fallback.label) return `label:${fallback.label}`;
+  if (fallback.label) return unnamedSpeakerAvatarKey(fallback.label);
   return fallback.hashKey;
 }
 

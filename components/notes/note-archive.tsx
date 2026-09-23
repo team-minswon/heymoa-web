@@ -42,6 +42,7 @@ import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { transcriptToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
 import {
   isNoteListQueryKey,
+  isSpeakerAssigneeQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
 import { SpeakerPanel, SpeakerTools } from "@/components/notes/speaker-panel";
@@ -437,8 +438,15 @@ export function NoteArchive({
     // 참여자가 늘면 **노트 하나만 낡는 게 아니다** — 회의 목록의 참여자 아바타와 설정의
     // 임시 참여자 「쓰이는 회의록 수」도 같이 뒤처진다. `refreshGuestSources` 가 그 셋을
     // 이미 갖고 있어 전사만 더한다.
-    () => Promise.all([refreshTranscript(), refreshGuestSources()]),
-    [refreshTranscript, refreshGuestSources]
+    () =>
+      Promise.all([
+        refreshTranscript(),
+        refreshGuestSources(),
+        queryClient.invalidateQueries({
+          predicate: (query) => isSpeakerAssigneeQueryKey(noteId, query.queryKey),
+        }),
+      ]),
+    [refreshTranscript, refreshGuestSources, queryClient, noteId]
   );
   // 라벨 지정은 그 화자의 **발화 단위 지정을 함께 지운다** — 응답에 그 사실이 안 실리므로
   // 전사를 통째로 다시 읽는다.

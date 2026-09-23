@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,12 +24,12 @@ export function AccountSettingsForm() {
         </p>
       </div>
       <div className="flex items-center gap-5 rounded-panel border border-[var(--el-hairline)] bg-white p-6">
-        <Avatar className="size-14">
-          {user.image ? (
-            <AvatarImage src={user.image} alt={`${user.name} 프로필`} />
-          ) : null}
-          <AvatarFallback>{user.name.slice(0, 1)}</AvatarFallback>
-        </Avatar>
+        <PersonAvatar
+          name={user.userId}
+          image={user.image}
+          alt={`${user.name} 프로필`}
+          size={56}
+        />
         <div className="min-w-0 flex-1 space-y-2">
           <Label htmlFor="account-email">이메일</Label>
           <Input id="account-email" value={user.email} disabled />

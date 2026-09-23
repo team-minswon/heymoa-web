@@ -258,7 +258,7 @@ function TrailNode({
                         {formatOffset(line.startedAtMs)}
                       </span>
                       <span className="flex min-w-0 items-center gap-1.5 pt-0.5 text-[11.5px] font-medium text-[var(--el-muted)] max-sm:hidden">
-                        {speaker ? <PersonAvatar name={speaker.avatarName} size={16} /> : null}
+                        {speaker ? <PersonAvatar name={speaker.avatarName} image={speaker.imageUrl} size={16} /> : null}
                         <span className="truncate">{speaker?.displayName ?? "화자 없음"}</span>
                       </span>
                       <span

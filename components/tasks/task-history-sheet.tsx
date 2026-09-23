@@ -69,14 +69,21 @@ function subject(name: string) {
 const STATUS_ICON = { OPEN: Circle, COMPLETED: CircleCheck, CANCELLED: CircleSlash } as const;
 
 /** 누가 바꿨나. 사람은 얼굴과 굵은 이름으로, 회의 확정은 문장으로만 선다. */
-function Author({ revision, nameOf }: { revision: Revision; nameOf: (userId: string) => string | undefined }) {
+function Author({
+  revision,
+  personOf,
+}: {
+  revision: Revision;
+  personOf: (userId: string) => { name: string; image?: string | null } | undefined;
+}) {
   if (revision.approvalId) {
     return <>{revision.revision === 1 ? "회의 확정으로 생겼습니다" : "회의 확정으로 바뀌었습니다"}</>;
   }
-  const name = (revision.changedBy && nameOf(revision.changedBy)) || "알 수 없는 사람";
+  const person = revision.changedBy ? personOf(revision.changedBy) : undefined;
+  const name = person?.name || "알 수 없는 사람";
   return (
     <span className="inline-flex items-center gap-1.5">
-      <PersonAvatar name={revision.changedBy ?? name} size={18} />
+      <PersonAvatar name={revision.changedBy ?? name} image={person?.image} size={18} />
       <span>
         <b className="font-semibold">{name}</b>
         {subject(name).slice(name.length)} {revision.revision === 1 ? "만들었습니다" : "바꿨습니다"}
@@ -164,9 +171,9 @@ function HistoryBody({
   );
   const query = useGetProjectTaskRevisions(workspaceId, entry.projectId, task.taskId);
   const revisions = okData(query.data)?.revisions ?? null;
-  const nameOf = (userId: string) => {
+  const personOf = (userId: string) => {
     for (const choice of choices) {
-      if (choice.type === "USER" && choice.id === userId) return choice.name;
+      if (choice.type === "USER" && choice.id === userId) return choice;
     }
     return undefined;
   };
@@ -320,7 +327,7 @@ function HistoryBody({
                     }`}
                   />
                   <p className="flex flex-wrap items-center gap-x-2 text-[13px] text-[var(--el-ink)]">
-                    <Author revision={revision} nameOf={nameOf} />
+                    <Author revision={revision} personOf={personOf} />
                     <span className="text-xs text-[var(--el-muted-soft)]">
                       {formatAppDate(revision.changedAt, {
                         month: "long",

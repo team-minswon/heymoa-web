@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { describeAssignee } from "@/lib/assignees/describe";
 import { summarizeSpeakers } from "@/lib/notes/speaker-stats";
 import { personAvatarKey } from "@/components/heymoa/person-avatar";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
@@ -129,5 +130,32 @@ describe("계정 없는 임시 참여자", () => {
     // 발화가 없으면 화자로 못 부르니, 참석자 목록이 쓰는 열쇠와 직접 견준다.
     expect(panelOrb(silent)).toEqual(personAvatarKey(participants[0]));
     expect(resolve).toBeTypeOf("function");
+  });
+});
+
+/**
+ * **요약의 담당 칸과 전사의 칩도 같은 얼굴이어야 한다.** 담당은 `describeAssignee` 가, 칩은
+ * 화자 해석기가 얼굴을 정해서 둘이 따로 자랐고, 이름 없는 화자에서 열쇠가 갈렸다.
+ */
+describe("요약의 담당 칸과 전사의 칩", () => {
+  it("아직 아무도 안 붙은 화자는 같은 얼굴이다", () => {
+    const resolve = createSpeakerIdentityResolver([
+      { label: "B", assignedParticipantId: null, confirmed: false },
+    ] as never);
+
+    expect(
+      describeAssignee({ type: "SPEAKER_LABEL", noteId: "n1", label: "B" })?.avatarKey
+    ).toEqual(resolve("B")?.avatarName);
+  });
+
+  it("사람이 붙은 화자는 담당으로 풀린 그 사람과 같은 얼굴이다", () => {
+    const resolve = createSpeakerIdentityResolver(
+      [{ label: "B", assignedParticipantId: "p1", confirmed: true }] as never,
+      [{ participantId: "p1", userId: "u1", name: "QA 비" }]
+    );
+
+    expect(describeAssignee({ type: "USER", id: "u1", name: "QA 비" })?.avatarKey).toEqual(
+      resolve("B")?.avatarName
+    );
   });
 });

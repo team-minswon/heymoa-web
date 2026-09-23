@@ -24,7 +24,7 @@ import { toast } from "@/lib/ui/toast";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -197,8 +197,6 @@ export function WorkspaceSidebar({
     }
     setProjectDialog(null);
   };
-
-  const initials = user?.name?.trim().slice(0, 1) || "H";
 
   return (
     <>
@@ -420,12 +418,7 @@ export function WorkspaceSidebar({
                   <Loader2 className="size-4 animate-spin text-[var(--el-muted)]" />
                 </span>
               ) : (
-                <Avatar className="size-7 shrink-0 rounded-full">
-                  <AvatarImage src={user?.image ?? undefined} alt="" />
-                  <AvatarFallback className="rounded-full bg-[var(--el-primary)] text-[var(--el-on-primary)] text-[11px] font-semibold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <PersonAvatar name={user?.userId ?? "?"} image={user?.image} size={28} />
               )}
               <div className="min-w-0 flex-1 text-left">
                 <p className="block truncate text-[13px] font-semibold text-[var(--el-ink)] leading-tight">

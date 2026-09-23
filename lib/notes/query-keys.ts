@@ -1,3 +1,5 @@
+import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
+
 /**
  * 노트 목록 **둘 다**. 프로젝트 단위와 워크스페이스 단위가 같은 행을 그린다.
  *
@@ -31,6 +33,20 @@ export function isWorkspaceGuestsQueryKey(queryKey: readonly unknown[]) {
   return (
     typeof queryKey[0] === "string" &&
     WORKSPACE_GUESTS_QUERY_PATTERN.test(queryKey[0])
+  );
+}
+
+/**
+ * 화자 지정이 낡게 만드는 조회. 담당은 회의 라벨로 저장되고 조회 때 사람으로 풀리므로, 그 회의의
+ * 검토본과 할 일 목록이 지정 전 이름·얼굴을 들고 남는다.
+ */
+export function isSpeakerAssigneeQueryKey(
+  noteId: string,
+  queryKey: readonly unknown[]
+) {
+  return (
+    queryKey[0] === `/v1/notes/${noteId}/meeting-review` ||
+    isProjectTaskQueryKey(queryKey)
   );
 }
 

@@ -1,3 +1,5 @@
+import { unnamedSpeakerAvatarKey } from "@/components/heymoa/person-avatar";
+
 /**
  * 담당을 사람 말로 푸는 규칙 하나. 검토 화면과 할 일 화면이 같은 사람을 같은 이름·얼굴로 세운다.
  *
@@ -31,7 +33,7 @@ export function describeAssignee(
   if (value.type === "SPEAKER_LABEL") {
     return {
       name: `화자 ${value.label ?? ""}`.trim(),
-      avatarKey: `label:${value.noteId ?? ""}:${value.label ?? ""}`,
+      avatarKey: unnamedSpeakerAvatarKey(value.label ?? ""),
       image: null,
       unnamed: true,
     };
