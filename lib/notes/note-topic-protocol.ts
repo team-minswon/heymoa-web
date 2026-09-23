@@ -11,20 +11,28 @@ const tsidSchema = z
   .regex(/^[0-9A-HJKMNP-TV-Z]{13}$/);
 
 const typeOnly = <T extends string>(type: T) =>
-  z.strictObject({ type: z.literal(type) });
+  z.object({ type: z.literal(type) });
 
+/**
+ * **모르는 필드를 거부하지 않는다(`z.object`).** `proposals/contract.ts` 가 이미 같은
+ * 판단을 내렸고 이 union 은 그 스키마 둘을 그대로 품는다 — 한 union 안에서 갈래마다
+ * 엄격함이 다를 이유가 없다.
+ *
+ * 거부의 대가는 여기서 무음이다(`try{}catch{}`). 이벤트만 사라지고 안전 폴링이 버티므로
+ * 눈에 안 보이고, 그래서 더 오래 산다.
+ */
 export const noteTopicEventSchema = z.discriminatedUnion("type", [
   // 토막 둘의 근거는 `lib/transcription/protocol.ts` 의 partial 주석에 있다.
   // **뷰어에게도 같은 경계를 준다** — 한쪽만 가르면 녹음하는 사람과 보는 사람이
   // 같은 발화를 다른 농도로 읽는다.
-  z.strictObject({
+  z.object({
     type: z.literal("transcript.partial"),
     transcriptionSessionId: tsidSchema,
     utteranceId: tsidSchema,
     confirmedText: z.string(),
     pendingText: z.string(),
   }),
-  z.strictObject({
+  z.object({
     type: z.literal("transcript.final"),
     transcriptionSessionId: tsidSchema,
     segmentId: tsidSchema,
@@ -36,11 +44,11 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
   }),
   typeOnly("meeting.started"),
   typeOnly("meeting.ended"),
-  z.strictObject({
+  z.object({
     type: z.literal("recording.started"),
     transcriptionSessionId: tsidSchema,
   }),
-  z.strictObject({
+  z.object({
     type: z.literal("recording.stopped"),
     transcriptionSessionId: tsidSchema,
   }),

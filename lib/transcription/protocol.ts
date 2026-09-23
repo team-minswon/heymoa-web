@@ -12,13 +12,14 @@ const tsidSchema = z
  * 총 샘플 수는 안 보낸다 — 서버가 바이트를 세면 되고, 브라우저에게 물으면 추측이 계약으로 굳는다.
  */
 export const clientCommandSchema = z.discriminatedUnion("type", [
+  // 나가는 쪽은 web 이 producer 라 아래 서버 이벤트와 달리 엄격하게 둔다.
   z.strictObject({
     type: z.literal("stop"),
     finalChunkSeq: z.number().int().min(-1),
   }),
 ]);
 
-const finalEventSchema = z.strictObject({
+const finalEventSchema = z.object({
   type: z.literal("final"),
   // transcriptionSessionId 를 뺐다. 있는 동안 web 이 세션 경계로 타임라인을 이어 붙였고,
   // 브라우저는 중지한 시간도 끊긴 구간의 길이도 모른다.
@@ -46,7 +47,7 @@ const finalEventSchema = z.strictObject({
  * **둘 다 빌 수 있다.** 서버는 빈 것을 안 보내지만, 그것은 발행 규칙이지 형식이 아니다.
  * 여기서 `min(1)` 로 막으면 규칙이 흔들릴 때 파싱이 끊기고 소켓이 통째로 닫힌다.
  */
-const partialEventSchema = z.strictObject({
+const partialEventSchema = z.object({
   type: z.literal("partial"),
   utteranceId: tsidSchema,
   /** 업체가 확정한 토큰. 이 발화가 끝날 때까지 안 바뀐다. */
@@ -55,13 +56,23 @@ const partialEventSchema = z.strictObject({
   pendingText: z.string(),
 });
 
+/**
+ * **모르는 필드를 거부하지 않는다(`z.object`).** 근거는 `lib/notes/proposals/contract.ts`
+ * 상단에 이미 적혀 있다 — 배포가 heymoa-ai → heymoa-server → heymoa-web 순이라 server 가
+ * 필드를 하나 더 실은 뒤 web 이 아직 안 올라간 창이 **반드시** 생긴다.
+ *
+ * 여기서는 그 창의 대가가 특히 비싸다. 이 소켓의 파싱 실패는 `onClose(1008)` + `close()` 로
+ * 이어져 **녹음 중인 세션이 끊긴다** — 노트 토픽 쪽의 무음 삼킴과 다르다.
+ *
+ * 드리프트는 server 의 `AsyncApiContractTest`·`AsyncApiMessageCoverageTest` 가 잡는다.
+ */
 export const serverEventSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("connected"), sessionId: tsidSchema }),
+  z.object({ type: z.literal("connected"), sessionId: tsidSchema }),
   partialEventSchema,
   finalEventSchema,
   // throughChunkSeq 까지 내구 쓰기가 끝났다. 누적값이라 조각마다 안 보내도 된다.
   // 소리의 내구성만 증명한다 — 그 구간의 전사가 저장됐다는 뜻이 아니다.
-  z.strictObject({
+  z.object({
     type: z.literal("ack"),
     throughChunkSeq: z.number().int().min(0),
   }),
@@ -70,12 +81,12 @@ export const serverEventSchema = z.discriminatedUnion("type", [
   // `LOST`(조각이 안 온다)를 뺐다 — 조각을 안 보내는 당사자가 이 브라우저라 이미 알고 있고,
   // 정말 네트워크가 끊긴 경우엔 그 말이 닿지도 않는다. 끊긴 사실은 조회의 공백이 더 정확히
   // 말한다. 남은 하나는 **서버만 아는 것**이다 — 업체가 죽어 소리는 쌓이는데 글자만 멈췄다.
-  z.strictObject({
+  z.object({
     type: z.literal("capture_state"),
     state: z.enum(["LIVE", "DEGRADED"]),
   }),
-  z.strictObject({ type: z.literal("completed"), sessionId: tsidSchema }),
-  z.strictObject({
+  z.object({ type: z.literal("completed"), sessionId: tsidSchema }),
+  z.object({
     type: z.literal("error"),
     code: z.enum([
       "INVALID_CLIENT_MESSAGE",

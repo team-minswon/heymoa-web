@@ -75,24 +75,28 @@ describe("AsyncAPI transcription protocol", () => {
     ).toMatchObject({ type: "final", sequence: 1, speakerLabel: null });
   });
 
-  it("rejects a final that still carries the session id", () => {
-    // 이 필드가 있는 동안 web 이 세션 경계로 타임라인을 이어 붙였다. 계약에서 빼야
-    // 그 코드가 되살아날 수 없다.
-    expect(() =>
-      parseServerEvent(
-        JSON.stringify({
-          type: "final",
-          transcriptionSessionId: "0HZX2K7M9Q4AB",
-          segmentId: "0HZX2K7M9Q4AD",
-          utteranceId: "0HZX2K7M9Q4AC",
-          sequence: 1,
-          text: "확정된 문장",
-          startedAtMs: 0,
-          endedAtMs: 1200,
-          speakerLabel: null,
-        })
-      )
-    ).toThrow();
+  it("drops a final that still carries the session id", () => {
+    // 이 필드가 있는 동안 web 이 세션 경계로 타임라인을 이어 붙였다. 계약에서 뺐으니
+    // 그 코드가 되살아날 수 없어야 한다.
+    //
+    // **던지는 것으로는 그것을 못 지킨다.** 스키마가 관대해지면서 판정이 「거절」에서
+    // 「버림」으로 바뀌었다 — 서버가 실어 보내도 파싱을 지난 값에는 없다. 금지의 근거는
+    // 같고, 대가가 다르다: 거절했다면 이 소켓은 녹음 중에 닫혔다.
+    const parsed = parseServerEvent(
+      JSON.stringify({
+        type: "final",
+        transcriptionSessionId: "0HZX2K7M9Q4AB",
+        segmentId: "0HZX2K7M9Q4AD",
+        utteranceId: "0HZX2K7M9Q4AC",
+        sequence: 1,
+        text: "확정된 문장",
+        startedAtMs: 0,
+        endedAtMs: 1200,
+        speakerLabel: null,
+      })
+    );
+
+    expect(parsed).not.toHaveProperty("transcriptionSessionId");
   });
 
   it("accepts the cumulative durability ack", () => {
@@ -114,6 +118,42 @@ describe("AsyncAPI transcription protocol", () => {
     ).toThrow();
     expect(() =>
       parseServerEvent('{"type":"capture_state","state":"UNKNOWN"}')
+    ).toThrow();
+  });
+});
+
+describe("배포 창을 견딘다 — 서버가 먼저 필드를 실어도", () => {
+  // 이 소켓의 파싱 실패는 `onClose(1008)` + `close()` 로 이어져 **녹음 중인 세션이 끊긴다**.
+  // 노트 토픽 쪽의 무음 삼킴과 대가가 다르다.
+  it("모르는 필드가 붙어도 이벤트가 살아 있고 그 필드는 버려진다", () => {
+    const parsed = parseServerEvent(
+      JSON.stringify({
+        type: "final",
+        segmentId: "0HZX2K7M9Q4AD",
+        utteranceId: "0HZX2K7M9Q4AC",
+        sequence: 1,
+        text: "확정된 문장입니다.",
+        startedAtMs: 1200,
+        endedAtMs: 4100,
+        speakerLabel: null,
+        recordedDurationMs: 90_000,
+      })
+    );
+
+    expect(parsed).toMatchObject({ type: "final", sequence: 1 });
+    expect(parsed).not.toHaveProperty("recordedDurationMs");
+  });
+
+  it("관대함은 모르는 필드까지다 — 아는 필드의 깨진 값은 그대로 거절한다", () => {
+    expect(() =>
+      parseServerEvent('{"type":"connected","sessionId":"너무짧다"}')
+    ).toThrow();
+  });
+
+  // 나가는 쪽은 web 이 producer 다. 넓힐 이유가 없고, 넓히면 우리 버그가 조용해진다.
+  it("보내는 명령은 여전히 엄격하다", () => {
+    expect(() =>
+      parseClientCommand('{"type":"stop","finalChunkSeq":1,"extra":true}')
     ).toThrow();
   });
 });
