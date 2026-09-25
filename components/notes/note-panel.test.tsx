@@ -528,9 +528,7 @@ describe("NotePanel", () => {
     ).toBeNull();
   });
 
-  it("종료된 회의에서도 레일에 물어볼 곳이 남는다", () => {
-    // 레일은 「실시간 정리 / 내 에이전트」 두 탭이다. 끝난 회의를 열면 물어볼 곳이
-    // 먼저라 「내 에이전트」가 기본이고, 셸의 개인 챗봇 슬롯을 실제로 넘겨받는다.
+  it("종료된 회의에서도 레일은 실시간 정리가 기본이고 물어볼 곳이 남는다", () => {
     noteState.value.meetingStatus = "ENDED";
     renderNotePanel(
       <NotePanel
@@ -544,11 +542,13 @@ describe("NotePanel", () => {
     );
 
     expect(screen.getByTestId("note-agent-rail")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "내 에이전트" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "실시간 정리" })).toHaveAttribute(
       "aria-selected",
       "true"
     );
-    // 셸의 개인 챗봇이 들어올 자리를 실제로 넘겨줬다.
+    expect(setRailSlot).not.toHaveBeenCalledWith(expect.any(HTMLElement));
+
+    fireEvent.click(screen.getByRole("tab", { name: "내 에이전트" }));
     expect(setRailSlot).toHaveBeenCalledWith(expect.any(HTMLElement));
   });
 
@@ -573,11 +573,9 @@ describe("NotePanel", () => {
     expect(setRailSlot).not.toHaveBeenCalledWith(expect.any(HTMLElement));
   });
 
-  it("시작 전 노트에서 회의가 시작되면 레일 기본이 실시간 정리로 따라간다", () => {
-    // useState 초기화는 한 번뿐이라, 시작 전(personal 기본)에 마운트된 채 회의가 시작되면
-    // 기본값이 phase를 따라 다시 서야 한다. 사용자가 직접 고른 선택은 지킨다.
+  it("시작 전 노트도 레일 기본은 실시간 정리다", () => {
     noteState.value.meetingStatus = "NOT_STARTED";
-    const el = (
+    renderNotePanel(
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
@@ -587,19 +585,31 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
-    const { rerenderNote } = renderNotePanel(el);
-    expect(screen.getByRole("tab", { name: "내 에이전트" })).toHaveAttribute(
-      "aria-selected",
-      "true"
-    );
-
-    noteState.value.meetingStatus = "IN_PROGRESS";
-    rerenderNote(el);
 
     expect(screen.getByRole("tab", { name: "실시간 정리" })).toHaveAttribute(
       "aria-selected",
       "true"
     );
+  });
+
+  it("회의 시작을 누르면 스크립트 탭으로 옮긴다", () => {
+    noteState.value.meetingStatus = "NOT_STARTED";
+    noteState.value.meetingStartedBy = null;
+    const onTabChange = vi.fn();
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="details"
+        onTabChange={onTabChange}
+        onClose={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "회의 시작" }));
+
+    expect(onTabChange).toHaveBeenCalledWith("transcript");
   });
 
   it("사용자가 고른 레일 탭은 회의 상태가 바뀌어도 지킨다", () => {

@@ -153,50 +153,24 @@ export function NotePanel({
   // 본문 아래 14rem 레인으로 눕는다 — 회의가 죽어 있을 때까지 그 레인을 세우면 전사 높이가
   // 0이 된다(모바일 landscape에서 실측). 그래서 좁은 화면에서는 살아 있을 때만 세운다.
   const meetingLive = phase === "active" || phase === "not-started";
-  // **기록 중에는 「실시간 정리」가 먼저다.** 회의 중에 「지금 무슨 일이 일어나고 있나」의
-  // 답이 그 화면이다. 끝난 회의를 열면 물어볼 곳(내 에이전트)이 먼저다.
+  // **레일은 「실시간 정리」가 기본이다** — 회의 상태와 무관하게. 사용자가 고른 탭은 지킨다.
   //
-  // 상태에 **주어(noteId)와 근거(phase)를 함께 담는다** — 이 패널은 노트가 바뀌어도
-  // 재마운트되지 않아서(`deleteTargetId`와 같은 함정), 값만 담으면 A의 선택이 B에 남는다.
-  // phase를 담는 이유는 시작 전 노트를 연 채 회의를 시작하면 기본값이 「실시간 정리」로
-  // 따라가야 해서다 — 사용자가 직접 고른 뒤에는 그 선택을 지킨다.
-  const defaultRailTab = (p: ReturnType<typeof deriveMeetingPhase>): RailTab =>
-    p === "active" ? "context" : "personal";
+  // 상태에 **주어(noteId)를 함께 담는다** — 이 패널은 노트가 바뀌어도 재마운트되지
+  // 않아서(`deleteTargetId`와 같은 함정), 값만 담으면 A의 선택이 B에 남는다.
   const [rail, setRail] = useState<{
     noteId: string;
-    phase: ReturnType<typeof deriveMeetingPhase>;
     tab: RailTab;
-    /** 사용자가 직접 골랐다 — phase가 바뀌어도 기본값으로 되돌리지 않는다. */
-    chosen: boolean;
     /** 좁은 화면에서 접힌 레일을 펼쳤다. 탭 값으로 가르면 항상 참이라 접힘이 죽는다. */
     touched: boolean;
-  }>(() => ({
-    noteId,
-    phase,
-    tab: defaultRailTab(phase),
-    chosen: false,
-    touched: false,
-  }));
-  // 렌더 중 보정 — effect로 미루면 이전 노트/이전 phase의 탭이 한 프레임 그려진다.
+  }>(() => ({ noteId, tab: "context", touched: false }));
+  // 렌더 중 보정 — effect로 미루면 이전 노트의 탭이 한 프레임 그려진다.
   if (rail.noteId !== noteId) {
-    setRail({
-      noteId,
-      phase,
-      tab: defaultRailTab(phase),
-      chosen: false,
-      touched: false,
-    });
-  } else if (rail.phase !== phase) {
-    setRail({
-      ...rail,
-      phase,
-      tab: rail.chosen ? rail.tab : defaultRailTab(phase),
-    });
+    setRail({ noteId, tab: "context", touched: false });
   }
   const railTab = rail.tab;
   const railTouched = rail.touched;
   const setRailTab = useCallback((tab: RailTab) => {
-    setRail((current) => ({ ...current, tab, chosen: true, touched: true }));
+    setRail((current) => ({ ...current, tab, touched: true }));
   }, []);
   // 개인 챗봇이 한 턴을 굴리는 중이면 레일을 접으면 안 된다 — 중지도 도구 승인도 그 안에만
   // 있는데, 레일이 슬롯을 쥐고 있어 떠 있는 FAB로 되돌아가지도 않는다. 다른 멤버가 회의를
@@ -802,6 +776,7 @@ export function NotePanel({
                 workspaceId={confirmedWorkspaceId}
                 disabledReason={startBlockedReason}
                 startLabel={startLabel}
+                onStart={() => onTabChange("transcript")}
               />
             </div>
           </div>

@@ -29,6 +29,7 @@ export function RecordingDock({
   workspaceId,
   disabledReason = null,
   startLabel = "회의 시작",
+  onStart,
 }: {
   noteId: string;
   /**
@@ -46,6 +47,7 @@ export function RecordingDock({
    */
   disabledReason?: string | null;
   startLabel?: "회의 시작" | "재개";
+  onStart?: () => void;
 }) {
   const recording = useRecording();
   const meter = useRecordingMeter();
@@ -229,9 +231,11 @@ export function RecordingDock({
               // 소속이 확인되기 전에는 못 누른다 — 확인 없이 시작하면 잘못된 워크스페이스로
               // 기록된다. 조회는 곧 끝나고, 어긋난 URL이면 위 `disabledReason`이 이유를 세운다.
               disabled={isOtherNote || !workspaceId}
-              onClick={() =>
-                workspaceId && void recording.start(noteId, workspaceId)
-              }
+              onClick={() => {
+                if (!workspaceId) return;
+                void recording.start(noteId, workspaceId);
+                onStart?.();
+              }}
             >
               <span className="size-2.5 rounded-full bg-white" aria-hidden />
             </button>
