@@ -451,4 +451,25 @@ describe("BrowserRealtimeSession", () => {
       vi.useRealTimers();
     }
   });
+
+  it("남이 회의를 끝내 서버가 completed 를 보내면 마이크를 끄고 정체 실패로 넘기지 않는다", async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = setup();
+      await harness.controller.connect("0HZX2K7M9Q4AG");
+
+      harness.emitEvent({ type: "completed", sessionId: "0HZX2K7M9Q4AG" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(harness.audio.stop).toHaveBeenCalled();
+
+      harness.socket.sendAudio.mockReturnValue(false);
+      harness.emitChunk(new ArrayBuffer(3_200), 0);
+      vi.advanceTimersByTime(11_000);
+      harness.emitChunk(new ArrayBuffer(3_200), 1_600);
+
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

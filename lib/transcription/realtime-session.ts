@@ -286,7 +286,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       this.terminalResolve?.("failed");
     }
     this.options.onEvent(event);
-    if (event.type === "error") void this.close();
+    // 남이 회의를 끝내면 서버가 먼저 `completed` 를 보낸다. 소켓은 스스로 닫혀 `onClose` 가
+    // 안 불리므로 여기서 닫지 않으면 마이크가 켜진 채 정체 감시가 「네트워크」 실패를 낸다.
+    if (event.type === "error" || event.type === "completed") void this.close();
   }
 
   /**
