@@ -221,7 +221,7 @@ export const getEndMeetingUrl = (noteId: string) => {
 };
 
 /**
- * **워크스페이스 멤버 누구나** 노트의 회의를 종료한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다. **응답이 갱신된 노트다** - 없는 동안 화면이 종료 시각을 브라우저의 Date.now() 로 지어냈다. 열려 있던 전사 세션은 서버가 닫고 봉인한다 - 전에는 ACTIVE 세션을 409 로 거절했다.
+ * **워크스페이스 멤버 누구나** 노트의 회의를 종료한다. PAUSED 회의도 이 API로 종료하며 별도 pause/resume HTTP API는 없다. **응답이 갱신된 노트다** - 없는 동안 화면이 종료 시각을 브라우저의 Date.now() 로 지어냈다. **녹음 중(IN_PROGRESS)이면 409 MEETING_RECORDING 이다** - 녹음자가 중지하거나 연결이 끊겨 PAUSED 가 된 뒤 종료한다. 시작만 하고 연결하지 못해 만료된 세션만 남은 회의는 종료하고 그 세션을 닫는다.
  * @summary 회의 종료
  */
 export const endMeeting = async (
