@@ -35,6 +35,7 @@ import { logTranscription } from "@/lib/transcription/log";
 import {
   BrowserRealtimeSession,
   clientInstanceId,
+  rememberRecordingNote,
   type BufferState,
   type ConnectionNotice,
   type RealtimeSessionController,
@@ -471,6 +472,15 @@ export function RecordingProvider({
     degradedTimerRef.current = undefined;
     setTranscriptionDegraded(false);
   }, []);
+
+  // idle 은 건드리지 않는다 — 새로고침한 탭의 첫 상태가 idle 이고, 그때 지우면 독이 제 녹음에 잠긴다.
+  useEffect(() => {
+    if (activeNoteId && isRecordingLive({ phase, session })) {
+      rememberRecordingNote(activeNoteId);
+    } else if (phase !== "idle") {
+      rememberRecordingNote(null);
+    }
+  }, [activeNoteId, phase, session]);
 
   const setCurrentSession = useCallback(
     (next: LocalRecordingSession | null) => {

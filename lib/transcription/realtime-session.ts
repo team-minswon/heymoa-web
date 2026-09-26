@@ -154,6 +154,38 @@ export function clientInstanceId() {
   return tabInstanceId;
 }
 
+const RECORDING_NOTE_KEY = "heymoa.transcription.recordingNote";
+
+/**
+ * 이 탭이 녹음 중인 노트. 새로고침에도 남는다 — 서버는 같은 탭의 새 시작을 받아 옛 세션을 닫으므로(D-16)
+ * 그 노트의 독을 「다른 탭에서 기록 중」으로 잠그면 안 된다. 탭 표시를 같이 적어 창 복제로 넘어온 값은 안 맞는다.
+ */
+export function rememberRecordingNote(noteId: string | null) {
+  try {
+    if (noteId) {
+      sessionStorage.setItem(
+        RECORDING_NOTE_KEY,
+        `${clientInstanceId()}:${noteId}`
+      );
+    } else {
+      sessionStorage.removeItem(RECORDING_NOTE_KEY);
+    }
+  } catch {
+    // 저장소가 막힌 창은 예전처럼 워치독을 기다린다
+  }
+}
+
+export function isRecordingNoteOfThisTab(noteId: string) {
+  try {
+    return (
+      sessionStorage.getItem(RECORDING_NOTE_KEY) ===
+      `${clientInstanceId()}:${noteId}`
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 녹음 한 번 = 세션 하나. 소켓은 그 세션에 붙는 부착이라 끊기면 **같은 세션에** 다시 붙고,
  * 서버가 확정한 조각 다음부터 버퍼에서 다시 보낸다. `chunkSeq` 는 녹음 내내 이어진다.

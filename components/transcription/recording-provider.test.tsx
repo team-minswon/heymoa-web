@@ -6,7 +6,10 @@ import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
-import { clientInstanceId } from "@/lib/transcription/realtime-session";
+import {
+  clientInstanceId,
+  isRecordingNoteOfThisTab,
+} from "@/lib/transcription/realtime-session";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isWorkspaceRecordingActive,
@@ -1250,12 +1253,17 @@ describe("같은 세션에 다시 붙는 동안", () => {
   it("다른 탭이나 기기가 이어받으면 그렇다고 말하고 이 탭의 녹음을 놓는다", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    // 새로고침해도 이 탭이 녹음하던 노트를 안다 — 독이 제 녹음에 잠기지 않는다(D-16)
+    expect(isRecordingNoteOfThisTab(session.noteId)).toBe(true);
 
     act(() =>
       harness
         .getCallbacks()
         .onEvent({ type: "superseded", sessionId: session.sessionId })
     );
+
+    // 남의 것이 된 녹음을 제 것으로 기억하면 새로고침 뒤 독이 409 로 가는 시작을 연다
+    expect(isRecordingNoteOfThisTab(session.noteId)).toBe(false);
 
     expect(harness.result.current.error).toBe(
       "다른 탭이나 기기에서 이 녹음을 이어받았습니다."

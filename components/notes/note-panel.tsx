@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import {
   ArrowLeft,
   Expand,
@@ -53,6 +53,10 @@ import { useGetNote } from "@/lib/api/generated/notes/notes";
 import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
+import {
+  isRecordingNoteOfThisTab,
+  rememberRecordingNote,
+} from "@/lib/transcription/realtime-session";
 import { cn } from "@/lib/utils";
 
 /**
@@ -73,6 +77,8 @@ const TAB_ITEM =
   // 그대로 두면 바 밖으로 5px 떨어져 본문 위에 떠 있는 짧은 막대로 보인다. 덮을 때는 기본값과
   // 같은 variant 셀렉터로 써야 한다 — 평범한 `after:bottom-0`은 조용히 무시된다.
   "h-14 flex-none px-0 text-xs group-data-horizontal/tabs:after:bottom-0";
+
+const noopSubscribe = () => () => {};
 
 export function NotePanel({
   workspaceId,
@@ -313,11 +319,32 @@ export function NotePanel({
   const confirmedWorkspaceId = noteNotInThisWorkspace
     ? undefined
     : note?.workspaceId;
+  // 새로고침한 탭은 제 녹음을 모른다. 서버가 같은 탭의 새 시작을 받으므로(D-16) 잠그지 않는다.
+  // sessionStorage 라 서버 렌더는 false 로 맞춘다.
+  const recordingHereBeforeReload = useSyncExternalStore(
+    noopSubscribe,
+    () => isRecordingNoteOfThisTab(noteId),
+    () => false
+  );
+  // 회의가 녹음 중을 벗어났으면 그 녹음은 끝났다. 남겨 두면 다른 기기가 재개한 녹음까지 제 것으로 읽는다.
+  const meetingNotRecording =
+    note !== undefined && note.meetingStatus !== "IN_PROGRESS";
+  const recordingNoteLive = isNoteRecordingActive(recording, noteId);
+  useEffect(() => {
+    if (
+      meetingNotRecording &&
+      !recordingNoteLive &&
+      recordingHereBeforeReload
+    ) {
+      rememberRecordingNote(null);
+    }
+  }, [meetingNotRecording, recordingNoteLive, recordingHereBeforeReload]);
   const startBlockedReason = noteNotInThisWorkspace
     ? "이 노트는 이 워크스페이스에 없습니다."
     : note?.meetingStatus === "IN_PROGRESS" &&
         !localProviderCanControlNote &&
-        !finishedHere
+        !finishedHere &&
+        !recordingHereBeforeReload
       ? "다른 탭·기기에서 기록 중입니다."
       : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";
