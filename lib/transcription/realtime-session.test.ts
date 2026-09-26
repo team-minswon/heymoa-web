@@ -375,13 +375,29 @@ describe("BrowserRealtimeSession", () => {
     );
   });
 
-  it("uses DB reconciliation to recover a missed connected event", async () => {
+  // connected 가 끝내 안 오고 폴링(ACTIVE)만 connect() 를 푼 경우. 어디까지 저장됐는지 모르는 부착에는 보내지 않는다
+  it("connected 를 못 받은 채 폴링이 시작을 풀면 다시 붙어 받은 connected 로 보내고 멈출 수 있다", async () => {
+    vi.useFakeTimers();
     const harness = setup();
-    await harness.controller.connect(SESSION_ID);
+    harness.server.gate = new Promise(() => undefined);
+    const connecting = harness.controller.connect(SESSION_ID);
+    await vi.advanceTimersByTimeAsync(0);
 
     harness.controller.reconcile("ACTIVE");
+    await connecting;
+    harness.emitChunk();
+    harness.emitChunk();
+    expect(harness.sentSeqs(harness.sockets[0])).toEqual([]);
 
-    expect(harness.socket.reconcileConnected).toHaveBeenCalledOnce();
+    harness.server.gate = null;
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(harness.sockets).toHaveLength(2);
+    expect(harness.sockets[0].close).toHaveBeenCalled();
+    expect(harness.sentSeqs(harness.sockets[1])).toEqual([0, 1]);
+
+    await harness.controller.stop();
+    expect(harness.sockets[1].stop).toHaveBeenCalledWith(1);
+    expect(harness.onFailure).not.toHaveBeenCalled();
   });
 
   it("numbers chunks from zero and carries the capture position", async () => {
@@ -551,7 +567,11 @@ describe("같은 세션에 다시 붙는다", () => {
     await harness.controller.connect(SESSION_ID);
     const first = harness.socket;
 
-    harness.emitEvent({ type: "reattach", delayMs: 2_000, reason: "SERVER_DRAINING" });
+    harness.emitEvent({
+      type: "reattach",
+      delayMs: 2_000,
+      reason: "SERVER_DRAINING",
+    });
     expect(first.close).toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1_999);
     expect(harness.sockets).toHaveLength(1);
@@ -567,7 +587,11 @@ describe("같은 세션에 다시 붙는다", () => {
     await harness.controller.connect(SESSION_ID);
     const first = harness.socket;
 
-    harness.emitEvent({ type: "reattach", delayMs: 0, reason: "SERVER_DRAINING" });
+    harness.emitEvent({
+      type: "reattach",
+      delayMs: 0,
+      reason: "SERVER_DRAINING",
+    });
     first.options.onClose(1006, "");
     await vi.advanceTimersByTimeAsync(10_000);
 
@@ -1202,7 +1226,11 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     harness.emitChunk();
     await vi.advanceTimersByTimeAsync(500);
     // 붙자마자 다시 밀리면 간격이 늘어난다
-    for (const reason of ["SERVER_DRAINING", "BUFFER_FULL", "STORE_INCOMPLETE"]) {
+    for (const reason of [
+      "SERVER_DRAINING",
+      "BUFFER_FULL",
+      "STORE_INCOMPLETE",
+    ]) {
       harness.emitEvent({ type: "reattach", delayMs: 0, reason });
       await vi.advanceTimersByTimeAsync(3_000);
     }
@@ -1313,6 +1341,56 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     expect(harness.onFailure).toHaveBeenCalledTimes(1);
   });
 
+  // 조금씩 나가면 정체 감시(10초)는 매번 시계를 다시 잡는다. 올리기 대기도 60초 안이어야 한다
+  it("밀린 소리가 9초에 한 조각씩만 나가도 stop 을 누른 지 60초에 한 번 실패로 끝낸다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    let lastAcceptedAt = Date.now();
+    harness.socket.sendAudio.mockImplementation(() => {
+      if (Date.now() - lastAcceptedAt < 9_000) return false;
+      lastAcceptedAt = Date.now();
+      return true;
+    });
+    for (let i = 0; i < 30; i += 1) harness.emitChunk();
+
+    let settled = false;
+    void harness.controller.stop().then(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(59_900);
+    expect(settled).toBe(false);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(settled).toBe(true);
+    expect(harness.onFailure).toHaveBeenCalledTimes(1);
+    expect(harness.onFailure).toHaveBeenCalledWith(
+      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다."
+    );
+    expect(harness.socket.close).toHaveBeenCalled();
+  });
+
+  it("멈출 때 다시 붙기가 끝나지 않아도 60초에 끝낸다 — 창이 닫혀도 붙잡힌 connect 를 기다리지 않는다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.emitChunk();
+    // 붙는 인사가 끝나지 않는 망: connect() 가 영영 안 풀린다
+    harness.server.gate = new Promise(() => undefined);
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(harness.sockets).toHaveLength(2);
+    let settled = false;
+    void harness.controller.stop().then(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(61_000);
+
+    expect(settled).toBe(true);
+    expect(harness.onFailure).toHaveBeenCalledTimes(1);
+  });
+
   it("소켓이 붙지 않은 채 멈추면 닫고 끝났다는 줄을 남긴다", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const harness = setup();
@@ -1398,6 +1476,41 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     const count = lines().length;
     for (let i = 0; i < 50; i += 1) harness.emitChunk();
     expect(lines()).toHaveLength(count);
+  });
+});
+
+/**
+ * 새 창에 sessionStorage 가 복사되는 두 길(opener 를 가진 window.open, 탭 복제)과 새로고침을 가른다.
+ * 모듈을 다시 불러오는 것이 문서 하나가 새로 뜨는 것이다.
+ */
+describe("탭 식별 clientInstanceId (D-16)", () => {
+  const KEY = "heymoa.transcription.clientInstanceId";
+  const load = async () => {
+    vi.resetModules();
+    return (await import("@/lib/transcription/realtime-session"))
+      .clientInstanceId;
+  };
+  afterEach(() => {
+    sessionStorage.clear();
+    window.name = "";
+  });
+
+  it("새로고침한 같은 탭은 같은 값을 보낸다", async () => {
+    const first = (await load())();
+
+    expect((await load())()).toBe(first);
+  });
+
+  it("sessionStorage 를 물려받은 새 창은 다른 값을 만든다", async () => {
+    const opener = (await load())();
+    // 새 창: 저장소는 복사되지만 창 이름은 비어 있다
+    window.name = "";
+    expect(sessionStorage.getItem(KEY)).toBe(opener);
+
+    const child = (await load())();
+
+    expect(child).not.toBe(opener);
+    expect((await load())()).toBe(child);
   });
 });
 

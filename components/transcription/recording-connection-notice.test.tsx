@@ -80,6 +80,24 @@ describe("RecordingConnectionNotice", () => {
     expect(alert).not.toHaveTextContent("이 기기에");
   });
 
+  // 영수증 노랑이 10초에 먼저 뜬 채 한도에 닿는 것이 이 길의 보통 순서다
+  it.each([{ cause: "no_receipt", sinceMs: 0 }, DISCONNECTED] as const)(
+    "노랑($cause)이 떠 있어도 한도에 닿아 소리를 받지 않으면 저장 중이라고 하지 않는다",
+    (current) => {
+      render(
+        notice({
+          notice: current,
+          buffer: buffer({ pendingMs: 300_000, paused: true }),
+        })
+      );
+
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent("저장이 밀려 녹음을 잠시 멈췄어요");
+      expect(alert).not.toHaveTextContent("이 기기에 저장 중");
+      expect(screen.queryByRole("status")).toBeNull();
+    }
+  );
+
   it("다시 붙은 뒤 밀린 소리를 올리는 진행률을 말한다", () => {
     render(
       notice({

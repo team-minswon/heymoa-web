@@ -54,6 +54,17 @@ type ScenarioOptions = {
 
 type ScenarioPhase = "connecting" | "recording" | "stopping" | "closed";
 
+/**
+ * 서버의 S3 정본을 흉내 낸다. 부착(시나리오)을 넘어 세션마다 남는다.
+ * `durableThroughSeq` 는 0 번부터 빈칸 없이 받은 끝이다 — 빈칸 뒤 번호를 받아도 오르지 않는다.
+ */
+type Durability = { epoch: number; received: Set<number>; throughSeq: number };
+const durability = new Map<string, Durability>();
+
+function advance(state: Durability) {
+  while (state.received.has(state.throughSeq + 1)) state.throughSeq += 1;
+}
+
 function stableIndex(value: string, length: number) {
   let hash = 0;
   for (const character of value) {
@@ -79,6 +90,9 @@ export class MockTranscriptionScenario {
   private lastChunkSeq: number | null = null;
   private lastCaptureEnd: number | null = null;
   private chunksSinceAck = 0;
+  private durable!: Durability;
+  /** 이 부착이 받은 번호. 다시 보낸 조각은 조용히 버린다. */
+  private readonly attachReceived = new Set<number>();
   private readonly config: VoiceActivityConfig;
   private readonly detector: VoiceActivityDetector;
   private readonly script: readonly string[];
@@ -93,16 +107,36 @@ export class MockTranscriptionScenario {
       ];
   }
 
-  open() {
+  /** `resendFromSeq`: 브라우저가 들고 있는 가장 앞 번호. 그 앞은 기다리지 않는다. */
+  open(resendFromSeq?: number) {
     if (this.phase !== "connecting") return;
+    const { sessionId } = this.options;
+    if (
+      mockDb.getSession(sessionId).status === "READY" ||
+      !durability.has(sessionId)
+    ) {
+      durability.set(sessionId, {
+        epoch: 0,
+        received: new Set(),
+        throughSeq: -1,
+      });
+    }
+    this.durable = durability.get(sessionId)!;
+    this.durable.epoch += 1;
+    if (resendFromSeq !== undefined && Number.isInteger(resendFromSeq)) {
+      this.durable.throughSeq = Math.max(
+        this.durable.throughSeq,
+        resendFromSeq - 1
+      );
+      advance(this.durable);
+    }
     this.phase = "recording";
-    mockDb.updateSessionStatus(this.options.sessionId, "ACTIVE");
+    mockDb.updateSessionStatus(sessionId, "ACTIVE");
     this.options.send({
       type: "connected",
-      sessionId: this.options.sessionId,
-      epoch: 1,
-      // 목은 정본을 안 들고 있다. 붙을 때마다 브라우저 버퍼 전부를 다시 받는다.
-      durableThroughSeq: -1,
+      sessionId,
+      epoch: this.durable.epoch,
+      durableThroughSeq: this.durable.throughSeq,
     });
   }
 
@@ -113,9 +147,9 @@ export class MockTranscriptionScenario {
     if (this.phase !== "recording") return;
 
     if (typeof frame === "string") {
+      let finalChunkSeq: number;
       try {
-        parseClientCommand(frame);
-        this.receiveCommand();
+        ({ finalChunkSeq } = parseClientCommand(frame));
       } catch {
         this.closeWithError(
           {
@@ -124,7 +158,9 @@ export class MockTranscriptionScenario {
           },
           1008
         );
+        return;
       }
+      this.receiveStop(finalChunkSeq);
       return;
     }
 
@@ -149,7 +185,7 @@ export class MockTranscriptionScenario {
       return;
     }
 
-    this.observeHeader(header, buffer.byteLength);
+    if (!this.observeHeader(header, buffer.byteLength)) return;
 
     const frameDurationMs =
       (buffer.byteLength / 2 / CAPTURE_CONTRACT.sampleRate) * 1000;
@@ -186,9 +222,17 @@ export class MockTranscriptionScenario {
     this.phase = "closed";
   }
 
-  private receiveCommand() {
-    // `stop` 하나뿐이다. `commit`은 커밋 단위가 없어지면서 사라졌고, 발화 경계는
-    // 이제 침묵(`finalSilenceMs`)과 버퍼 상한이 정한다.
+  private receiveStop(finalChunkSeq: number) {
+    // 서버처럼 finalChunkSeq 까지 빈칸 없이 받았을 때만 끝낸다. 세션은 열어 둔다
+    if (finalChunkSeq > this.durable.throughSeq) {
+      this.options.send({
+        type: "reattach",
+        delayMs: 0,
+        reason: "STORE_INCOMPLETE",
+      });
+      return;
+    }
+    // 발화 경계는 침묵(`finalSilenceMs`)과 버퍼 상한이 정한다.
     this.commitBufferedAudio();
     this.phase = "stopping";
     mockDb.updateSessionStatus(this.options.sessionId, "COMPLETED");
@@ -202,39 +246,51 @@ export class MockTranscriptionScenario {
 
   /**
    * 헤더 둘이 서버가 볼 값과 같은지 본다. 어긋나면 목이 조용히 넘어가는 대신 경고를 남긴다 —
-   * 여기서 잡히는 것이 서버를 짜기 전에 잡히는 것이다.
+   * 여기서 잡히는 것이 서버를 짜기 전에 잡히는 것이다. 받을 조각이면 true.
+   *
+   * 번호는 건너뛰어도 된다(가장 새 3초가 먼저 오고 앞은 늦게 온다). 이미 저장했거나 이 부착이
+   * 받은 번호는 서버처럼 조용히 버린다.
    */
   private observeHeader(header: AudioFrameHeader | undefined, bytes: number) {
     if (!header || Number.isNaN(header.chunkSeq)) {
       console.warn("mock transcription: 조각에 chunkSeq 헤더가 없습니다");
-      return;
+      return true;
+    }
+    const { chunkSeq, captureSamples } = header;
+    if (
+      chunkSeq <= this.durable.throughSeq ||
+      this.attachReceived.has(chunkSeq)
+    ) {
+      return false;
     }
     if (
       this.lastChunkSeq !== null &&
-      header.chunkSeq !== this.lastChunkSeq + 1
-    ) {
-      // 구멍은 유실이고 되돌아감은 재전송이다. 서버는 전자를 UPLOAD 공백으로 읽는다.
-      console.warn(
-        `mock transcription: chunkSeq 가 ${this.lastChunkSeq} → ${header.chunkSeq} 로 튀었습니다`
-      );
-    }
-    if (
+      chunkSeq === this.lastChunkSeq + 1 &&
       this.lastCaptureEnd !== null &&
-      header.captureSamples < this.lastCaptureEnd
+      captureSamples < this.lastCaptureEnd
     ) {
       console.warn(
-        `mock transcription: captureSamples 가 뒷걸음질했습니다 (${this.lastCaptureEnd} → ${header.captureSamples})`
+        `mock transcription: captureSamples 가 뒷걸음질했습니다 (${this.lastCaptureEnd} → ${captureSamples})`
       );
     }
-    this.lastChunkSeq = header.chunkSeq;
+    this.lastChunkSeq = chunkSeq;
     this.lastCaptureEnd =
-      header.captureSamples + bytes / CAPTURE_CONTRACT.bytesPerSample;
+      captureSamples + bytes / CAPTURE_CONTRACT.bytesPerSample;
+    this.attachReceived.add(chunkSeq);
+    this.durable.received.add(chunkSeq);
+    advance(this.durable);
 
     this.chunksSinceAck += 1;
     if (this.chunksSinceAck >= ACK_EVERY_CHUNKS) {
       this.chunksSinceAck = 0;
-      this.options.send({ type: "ack", throughChunkSeq: header.chunkSeq });
+      if (this.durable.throughSeq >= 0) {
+        this.options.send({
+          type: "ack",
+          throughChunkSeq: this.durable.throughSeq,
+        });
+      }
     }
+    return true;
   }
 
   private get utteranceId() {

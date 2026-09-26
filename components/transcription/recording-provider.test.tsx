@@ -350,6 +350,42 @@ describe("RecordingProvider", () => {
     vi.useRealTimers();
   });
 
+  it("업체 멈춤 5초 전에 녹음을 마치면 끝난 녹음에 멈춤 알림이 뜨지 않는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    vi.useFakeTimers();
+    act(() =>
+      harness
+        .getCallbacks()
+        .onEvent({ type: "capture_state", state: "DEGRADED" })
+    );
+
+    await act(() => harness.result.current.stop());
+    act(() => vi.advanceTimersByTime(10_000));
+
+    expect(harness.result.current.phase).toBe("completed");
+    expect(harness.result.current.transcriptionDegraded).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("업체 멈춤 알림이 떠 있던 녹음을 정리하면 알림도 걷는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    vi.useFakeTimers();
+    act(() =>
+      harness
+        .getCallbacks()
+        .onEvent({ type: "capture_state", state: "DEGRADED" })
+    );
+    act(() => vi.advanceTimersByTime(6_000));
+    expect(harness.result.current.transcriptionDegraded).toBe(true);
+
+    await act(() => harness.result.current.disconnect());
+
+    expect(harness.result.current.transcriptionDegraded).toBe(false);
+    vi.useRealTimers();
+  });
+
   it("cancels a deferred permission request before creating a server session", async () => {
     const harness = setup();
     let resolvePermission!: () => void;
@@ -1164,6 +1200,33 @@ describe("같은 세션에 다시 붙는 동안", () => {
     expect(leave()).toBe(false);
   });
 
+  it("정리(disconnect)하면 남은 소리 수치도 비워 탭을 놓는다", async () => {
+    cleanup();
+    const harness = setup();
+    const leave = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    act(() =>
+      harness.getCallbacks().onBufferChange?.({
+        pendingMs: 3_000,
+        limitMs: 300_000,
+        paused: false,
+        upload: null,
+      })
+    );
+    act(() => harness.getCallbacks().onMicrophoneChange?.("muted", 0));
+
+    await act(() => harness.result.current.disconnect());
+
+    expect(harness.result.current.phase).toBe("idle");
+    expect(harness.result.current.buffer).toBeNull();
+    expect(harness.result.current.microphone).toBe("live");
+    expect(leave()).toBe(false);
+  });
+
   it("다른 탭이나 기기가 이어받으면 그렇다고 말하고 이 탭의 녹음을 놓는다", async () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1265,7 +1328,9 @@ describe("끊김 창과 끝 (APP-705)", () => {
     });
 
     it("노트 폴링으로 종료를 알면 버린 초를 한 번 말하고 멈춤 문구를 걷는다", async () => {
-      const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+      const info = vi
+        .spyOn(console, "info")
+        .mockImplementation(() => undefined);
       apiFetchMock.mockResolvedValue(noteWith("IN_PROGRESS"));
       const harness = await dropAfterWindow(12_300);
       await act(() => vi.advanceTimersByTimeAsync(3_000));
@@ -1296,7 +1361,11 @@ describe("끊김 창과 끝 (APP-705)", () => {
         [
           "[transcription]",
           "notice",
-          { state: "shown", cause: "meeting_ended_after_drop", droppedMs: 12_300 },
+          {
+            state: "shown",
+            cause: "meeting_ended_after_drop",
+            droppedMs: 12_300,
+          },
         ],
       ]);
     });

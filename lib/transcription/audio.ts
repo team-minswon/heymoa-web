@@ -202,23 +202,30 @@ export class PcmAudioCapture {
   }
 
   private watchMicrophone(context: AudioContext, stream: MediaStream) {
-    const emit = (state: MicrophoneState) => this.options.onState?.(state);
     const [track] = stream.getAudioTracks();
-    context.onstatechange = () => {
+    // 이벤트 하나가 다른 쪽 상태를 덮으면 소리가 안 오는데 경고가 걷힌다. 매번 둘의 지금 값으로 판정한다
+    const report = () => {
       // Safari 는 전화·다른 앱이 오디오를 가져가면 "interrupted" 로 간다(타입엔 없다)
+      const contextState = context.state as string;
+      let state: MicrophoneState = "live";
+      if (track?.readyState === "ended") state = "ended";
+      else if (track?.muted) state = "muted";
+      else if (contextState !== "running") state = "suspended";
+      this.options.onState?.(state);
+    };
+    context.onstatechange = () => {
       const state = context.state as string;
-      if (state === "running") emit("live");
-      else if (state === "suspended" || state === "interrupted") {
-        emit("suspended");
+      if (state === "suspended" || state === "interrupted") {
         void context.resume().catch(() => undefined);
       }
+      report();
     };
     if (!track) return;
-    track.onended = () => emit("ended");
-    track.onmute = () => emit("muted");
-    track.onunmute = () => emit("live");
+    track.onended = report;
+    track.onmute = report;
+    track.onunmute = report;
     this.onDeviceChange = () => {
-      if (track.readyState === "ended") emit("ended");
+      if (track.readyState === "ended") report();
     };
     navigator.mediaDevices.addEventListener(
       "devicechange",

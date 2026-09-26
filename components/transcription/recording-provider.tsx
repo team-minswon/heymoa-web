@@ -456,6 +456,13 @@ export function RecordingProvider({
 
   useEffect(() => () => window.clearTimeout(degradedTimerRef.current), []);
 
+  /** 늦게 도는 5초 타이머가 끝난 녹음에 멈춤 알림을 되살리지 않게 녹음이 끝나는 모든 길에서 부른다. */
+  const clearDegraded = useCallback(() => {
+    window.clearTimeout(degradedTimerRef.current);
+    degradedTimerRef.current = undefined;
+    setTranscriptionDegraded(false);
+  }, []);
+
   const setCurrentSession = useCallback(
     (next: LocalRecordingSession | null) => {
       sessionRef.current = next;
@@ -527,8 +534,7 @@ export function RecordingProvider({
   const failRecording = useCallback(
     (message: string) => {
       dispatchTranscript({ type: "clear-partials" });
-      window.clearTimeout(degradedTimerRef.current);
-      degradedTimerRef.current = undefined;
+      clearDegraded();
       setError(message);
       setPhase("failed");
       setConnectionNotice(null);
@@ -539,7 +545,7 @@ export function RecordingProvider({
       const current = sessionRef.current;
       if (current) invalidateTranscriptQueries(current.noteId);
     },
-    [clearLevel, invalidateTranscriptQueries, setPhase]
+    [clearDegraded, clearLevel, invalidateTranscriptQueries, setPhase]
   );
 
   const handleEvent = useCallback(
@@ -590,6 +596,7 @@ export function RecordingProvider({
           invalidateLifecycleQueries(current.noteId, true);
         }
         setPhase("completed");
+        clearDegraded();
         clearLevel();
       }
 
@@ -613,6 +620,7 @@ export function RecordingProvider({
     },
     [
       setPhase,
+      clearDegraded,
       clearLevel,
       failRecording,
       invalidateLifecycleQueries,
@@ -651,6 +659,7 @@ export function RecordingProvider({
         });
         setCurrentSession(serverSession);
         setPhase("completed");
+        clearDegraded();
         clearLevel();
         invalidateLifecycleQueries(serverSession.noteId, true);
         return;
@@ -686,6 +695,7 @@ export function RecordingProvider({
     return () => window.clearTimeout(reconcileTimer);
   }, [
     setPhase,
+    clearDegraded,
     clearLevel,
     failRecording,
     invalidateLifecycleQueries,
@@ -715,9 +725,7 @@ export function RecordingProvider({
       setCurrentSession(reusableSession);
       setError(null);
       // 지난 회의의 상태를 새 회의로 들고 오지 않는다
-      window.clearTimeout(degradedTimerRef.current);
-      degradedTimerRef.current = undefined;
-      setTranscriptionDegraded(false);
+      clearDegraded();
       setConnectionNotice(null);
       setBuffer(null);
       setMicrophone("live");
@@ -805,6 +813,7 @@ export function RecordingProvider({
     [
       setPhase,
       api,
+      clearDegraded,
       clearLevel,
       failRecording,
       handleEvent,
@@ -870,12 +879,23 @@ export function RecordingProvider({
     setActiveWorkspaceId(null);
     setElapsedMs(0);
     setError(null);
+    clearDegraded();
     setConnectionNotice(null);
+    // 남은 소리 수치가 남으면 phase 가 idle 이어도 탭 닫기를 붙잡는다
+    setBuffer(null);
+    setMicrophone("live");
+    droppedMsRef.current = 0;
     dispatchTranscript({ type: "reset" });
 
     await controller?.close();
     if (current) invalidateTranscriptQueries(current.noteId);
-  }, [clearLevel, invalidateTranscriptQueries, setCurrentSession, setPhase]);
+  }, [
+    clearDegraded,
+    clearLevel,
+    invalidateTranscriptQueries,
+    setCurrentSession,
+    setPhase,
+  ]);
 
   /**
    * 녹음 중에 그 워크스페이스에서 쫓겨났으면 **보고 있는 화면과 무관하게** 끊는다.

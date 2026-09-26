@@ -129,19 +129,25 @@ let tabInstanceId: string | null = null;
 const TAB_INSTANCE_KEY = "heymoa.transcription.clientInstanceId";
 /**
  * 탭 수명 동안 하나. 같은 탭의 재부착과 다른 탭·기기의 부착을 서버가 가른다.
- * sessionStorage 는 새로고침을 넘어 남는다. 새로고침한 탭의 시작 요청도 같은 값이라 서버가
- * 옛 세션을 리스가 살아 있어도 곧바로 닫는다(D-16).
+ * 새로고침한 탭의 시작 요청도 같은 값이라 서버가 옛 세션을 리스가 살아 있어도 곧바로 닫는다(D-16).
+ *
+ * sessionStorage 는 opener 를 가진 새 창에도 복사된다. 같은 값이면 서버가 그 창의 시작을 이 탭의
+ * 재시작으로 읽어 이 탭의 녹음을 닫는다. 창 이름은 새로고침에는 남고 새 창에는 안 넘어가서, 둘이
+ * 맞을 때만 이어 쓴다.
  */
 export function clientInstanceId() {
   if (tabInstanceId) return tabInstanceId;
   try {
-    tabInstanceId = sessionStorage.getItem(TAB_INSTANCE_KEY);
+    const stored = sessionStorage.getItem(TAB_INSTANCE_KEY);
+    if (stored && window.name === stored) tabInstanceId = stored;
   } catch {
     // Node 실험 틀·저장소가 막힌 창
   }
-  tabInstanceId ??= crypto.randomUUID();
+  if (tabInstanceId) return tabInstanceId;
+  tabInstanceId = crypto.randomUUID();
   try {
     sessionStorage.setItem(TAB_INSTANCE_KEY, tabInstanceId);
+    window.name = tabInstanceId;
   } catch {
     // 위와 같다
   }
@@ -247,6 +253,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     window.addEventListener("online", this.handleOnline);
     await this.attach();
     await this.rejectIfStopped();
+    // 폴링(ACTIVE)이 connect() 를 먼저 풀었다. connected 없이는 어디까지 저장됐는지 몰라 보낼 수 없다
+    if (!this.attached) void this.reattach("no_receive", "connected missing");
     await this.audio.start();
     await this.rejectIfStopped();
     this.startPump();
@@ -273,12 +281,15 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
    */
   private async stopOnce() {
     if (this.closing) return this.closePromise ?? Promise.resolve();
+    const since = Date.now();
+    const deadline = since + STOP_TOTAL_MS;
+    /** stop 경로의 모든 기다림은 이것을 거친다. 조금씩 나가는 올리기나 끝나지 않는 부착이 상한을 넘기지 못한다. */
+    const untilDeadline = (work: Promise<unknown>) =>
+      Promise.race([work, sleep(Math.max(0, deadline - Date.now()))]);
     // Browser audio cleanup can reject after the final PCM batch was flushed
     // (for example when AudioContext was already closed). The server stop must
     // still be sent so an ACTIVE session is not left behind.
-    await this.stopAudio().catch(() => undefined);
-    const since = Date.now();
-    const deadline = since + STOP_TOTAL_MS;
+    await untilDeadline(this.stopAudio().catch(() => undefined));
     let reattaches = 0;
     const closeUnattached = () => {
       logTranscription("stop", {
@@ -290,10 +301,12 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     };
     for (;;) {
       // 다시 잇는 중이면 이은 뒤에 남은 소리를 보내고 멈춘다
-      if (this.reattaching) await this.reattaching;
+      if (this.reattaching) await untilDeadline(this.reattaching);
+      if (Date.now() >= deadline) break;
       if (!this.socket || !this.attached) return closeUnattached();
       // 회의 끝이 올리기 끝이 아니다. 밀린 것을 다 건넨 뒤에 stop 을 보낸다
-      await this.sendAllForStop();
+      await this.sendAllForStop(deadline);
+      if (Date.now() >= deadline) break;
       const socket = this.socket;
       if (this.closing || !socket || !this.attached) return closeUnattached();
       const remainingMs = deadline - Date.now();
@@ -306,30 +319,34 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
         continue;
       }
       if (state === "reattach" || state === "timeout") {
-        if (Date.now() >= deadline) {
-          logTranscription("stop", {
-            step: "timeout",
-            scope: "total",
-            elapsedMs: Date.now() - since,
-            reattaches,
-          });
-        }
+        if (Date.now() >= deadline) break;
         this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
       }
       await this.close();
       return;
     }
+    logTranscription("stop", {
+      step: "timeout",
+      scope: "total",
+      elapsedMs: Date.now() - since,
+      reattaches,
+      unsentMs: Math.round(
+        (this.resendBuffer?.unsentBytes ?? 0) / BYTES_PER_MS
+      ),
+    });
+    this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+    await this.close();
   }
 
-  /** 막힌 소켓은 정체 감시가 다시 붙이고, 끊긴 채 30초면 창이 닫는다. */
-  private async sendAllForStop() {
+  /** 막힌 소켓은 정체 감시가 다시 붙이고, 끊긴 채 30초면 창이 닫는다. 조금씩 나가는 소켓은 deadline 이 끊는다. */
+  private async sendAllForStop(deadline: number) {
     const unsent = this.resendBuffer.unsentBytes;
     if (unsent > 0) {
       this.uploadBaselineBytes ??= unsent;
       this.reportBuffer();
     }
     while (this.resendBuffer.unsentBytes > 0) {
-      if (this.closing || this.failed) return;
+      if (this.closing || this.failed || Date.now() >= deadline) return;
       await sleep(PUMP_MS);
     }
   }

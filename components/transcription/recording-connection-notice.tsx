@@ -28,8 +28,8 @@ export function RecordingConnectionNotice({
   microphone: MicrophoneState;
   finishing: boolean;
 }) {
-  // 붙어 있는데 서버 저장이 밀려 메모리 한도에 닿았다. 끊긴 채로는 창(30초)이 먼저 닫힌다
-  if (buffer?.paused && !notice && !finishing) {
+  // 한도에 닿아 새 소리를 받지 않는다. 노랑(영수증 10초)이 먼저 떠 있어도 「저장 중」이라 하면 거짓이다
+  if (buffer?.paused && !finishing) {
     return (
       <Pill role="alert" tone="danger" Icon={PauseCircle}>
         저장이 밀려 녹음을 잠시 멈췄어요 · 저장되면 이어서 녹음해요

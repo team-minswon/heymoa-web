@@ -309,8 +309,11 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
             send: sendEvent,
             requestClose: (code, reason) => client.close(code, reason),
           });
+          const resendFromSeq = frame.headers.resendFromSeq;
           try {
-            scenario.open();
+            scenario.open(
+              resendFromSeq === undefined ? undefined : Number(resendFromSeq)
+            );
           } catch {
             client.close(1008, "session not found");
           }

@@ -140,6 +140,7 @@ describe("PcmAudioCapture 마이크 상태", () => {
   function stubBrowser() {
     const track = new EventTarget() as EventTarget & {
       readyState: string;
+      muted: boolean;
       stop: () => void;
       onended: (() => void) | null;
       onmute: (() => void) | null;
@@ -147,6 +148,7 @@ describe("PcmAudioCapture 마이크 상태", () => {
     };
     Object.assign(track, {
       readyState: "live",
+      muted: false,
       stop: vi.fn(),
       onended: null,
       onmute: null,
@@ -222,14 +224,54 @@ describe("PcmAudioCapture 마이크 상태", () => {
     const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
     await capture.start();
 
+    browser.track.muted = true;
     browser.track.onmute?.();
     expect(onState).toHaveBeenLastCalledWith("muted");
+    browser.track.muted = false;
     browser.track.onunmute?.();
     expect(onState).toHaveBeenLastCalledWith("live");
 
     browser.track.readyState = "ended";
     browser.track.onended?.();
     expect(onState).toHaveBeenLastCalledWith("ended");
+  });
+
+  // 브라우저는 이벤트 전에 track.muted·context.state 를 먼저 바꾼다. 마지막 이벤트가 아니라 둘의 지금 값이 답이다
+  it("트랙이 음소거된 채면 컨텍스트가 다시 돌아도 live 로 되돌리지 않는다", async () => {
+    const browser = stubBrowser();
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+    const context = browser.contexts[0];
+
+    browser.track.muted = true;
+    browser.track.onmute?.();
+    context.state = "suspended";
+    context.onstatechange?.();
+    context.state = "running";
+    context.onstatechange?.();
+
+    expect(onState).toHaveBeenLastCalledWith("muted");
+  });
+
+  it("컨텍스트가 멈춘 채면 트랙 음소거가 풀려도 live 로 되돌리지 않는다", async () => {
+    const browser = stubBrowser();
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+    const context = browser.contexts[0];
+
+    context.state = "suspended";
+    context.onstatechange?.();
+    browser.track.muted = true;
+    browser.track.onmute?.();
+    browser.track.muted = false;
+    browser.track.onunmute?.();
+    expect(onState).toHaveBeenLastCalledWith("suspended");
+
+    context.state = "running";
+    context.onstatechange?.();
+    expect(onState).toHaveBeenLastCalledWith("live");
   });
 
   it("기기가 빠져 트랙이 끝났으면 devicechange 에서도 ended 를 올린다", async () => {
