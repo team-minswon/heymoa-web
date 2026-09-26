@@ -9,6 +9,7 @@ import type { TranscriptResponseDataDiarization } from "./transcriptResponseData
 import type { TranscriptResponseDataGapsItem } from "./transcriptResponseDataGapsItem";
 import type { TranscriptResponseDataRecording } from "./transcriptResponseDataRecording";
 import type { TranscriptResponseDataSegmentsItem } from "./transcriptResponseDataSegmentsItem";
+import type { TranscriptResponseDataTranscriptGapsItem } from "./transcriptResponseDataTranscriptGapsItem";
 
 /**
  * 성공 응답 데이터
@@ -18,6 +19,8 @@ export type TranscriptResponseData = {
   recording: TranscriptResponseDataRecording;
   /** 화자 분리 진행 상태와 화자 목록 */
   diarization: TranscriptResponseDataDiarization;
+  /** 소리는 저장됐는데 받아쓰지 못한 구간. 저장된 발화가 덮는 부분은 뺐고 종류가 달라 겹칠 수 있다. gaps 와 따로 온다 — gaps 의 공백은 소리 자체가 빈 구간이다 */
+  transcriptGaps: TranscriptResponseDataTranscriptGapsItem[];
   /** 소리가 빈 구간. 겹칠 수 있고 셋 다 유도값이다 */
   gaps: TranscriptResponseDataGapsItem[];
   /** 회의 축 오름차순. 한 행이 발화 하나다 */

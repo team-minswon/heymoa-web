@@ -123,6 +123,14 @@ export const serverEventSchema = z.discriminatedUnion("type", [
       "SESSION_NOT_CONNECTABLE",
     ]),
     message: z.string().min(1),
+    /**
+     * 같은 code 안에서 화면이 할 말을 가를 때만 온다. 지금은 `SESSION_NOT_CONNECTABLE` 에만 붙는다.
+     * 모르는 값은 없는 것으로 읽는다 — code 와 달리 이 값 하나로 녹음을 끊을 까닭이 없다.
+     */
+    reason: z
+      .enum(["MEETING_ENDED", "SESSION_CLOSED"])
+      .optional()
+      .catch(undefined),
   }),
 ]);
 
@@ -192,6 +200,12 @@ export const protocolExamples = {
       type: "error",
       code: "STT_TRANSCRIPTION_FAILED",
       message: "스크립트 처리에 실패했습니다.",
+    },
+    meetingEnded: {
+      type: "error",
+      code: "SESSION_NOT_CONNECTABLE",
+      message: "회의가 끝나 이 녹음을 더 받을 수 없습니다.",
+      reason: "MEETING_ENDED",
     },
   },
 } as const satisfies {

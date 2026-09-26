@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type { TranscriptResponseDataTranscriptGapsItemKind as TranscriptGapKind } from "@/lib/api/generated/models";
 import {
   formatGapDuration,
+  gapHeadline,
+  isGapOpen,
   spansCalendarDays,
   spansVisibleClockMinutes,
   toGapRows,
@@ -179,5 +182,75 @@ describe("spansCalendarDays", () => {
   it("진행 중이면 끝이 없으니 false 다", () => {
     const [row] = toGapRows([gap({ endedAt: null })]);
     expect(spansCalendarDays(row)).toBe(false);
+  });
+});
+
+describe("전사 공백 줄 (APP-706)", () => {
+  const untranscribed = (
+    gapId: string,
+    startedAtMs: number,
+    endedAtMs: number,
+    kind: TranscriptGapKind = "NOT_SENT"
+  ) => ({ gapId, kind, startedAtMs, endedAtMs });
+
+  it("종류가 달라도 겹치거나 맞닿으면 한 줄로 합친다", () => {
+    const rows = toGapRows(
+      [],
+      [
+        untranscribed("t1", 10_000, 14_000, "UNANSWERED"),
+        untranscribed("t2", 12_000, 20_000, "NOT_SENT"),
+        untranscribed("t3", 20_000, 22_000, "TRIM"),
+        untranscribed("t4", 40_000, 45_000, "TRIM"),
+      ]
+    );
+
+    expect(rows).toMatchObject([
+      {
+        kind: "UNTRANSCRIBED",
+        startedAtMs: 10_000,
+        endedAtMs: 22_000,
+        durationMs: 12_000,
+      },
+      { kind: "UNTRANSCRIBED", startedAtMs: 40_000, endedAtMs: 45_000 },
+    ]);
+  });
+
+  it("소리 공백과 겹치면 소리 공백이 이긴다 — 남은 1초 미만 조각은 버린다", () => {
+    const rows = toGapRows(
+      [
+        gap({
+          gapId: "l",
+          kind: "CAPTURE",
+          startedAtMs: 10_000,
+          endedAtMs: 30_000,
+        }),
+      ],
+      [
+        untranscribed("t1", 5_000, 12_000), // 앞 5초가 남는다
+        untranscribed("t2", 29_500, 40_000), // 뒤 10초가 남는다
+        untranscribed("t3", 15_000, 20_000), // 통째로 가려진다
+        untranscribed("t4", 30_000, 30_600), // 1초 미만
+      ]
+    );
+
+    expect(
+      rows.map(({ kind, startedAtMs, endedAtMs }) => [
+        kind,
+        startedAtMs,
+        endedAtMs,
+      ])
+    ).toEqual([
+      ["UNTRANSCRIBED", 5_000, 10_000],
+      ["LOST", 10_000, 30_000],
+      ["UNTRANSCRIBED", 30_000, 40_000],
+    ]);
+    expect(new Set(rows.map((row) => row.gapId)).size).toBe(rows.length);
+  });
+
+  it("소리는 저장됐다고 말하고, 끝이 있는 구간이다", () => {
+    const [row] = toGapRows([], [untranscribed("t1", 0, 90_000)]);
+
+    expect(gapHeadline(row)).toBe("약 2분 받아쓰지 못했어요 · 소리는 저장됨");
+    expect(isGapOpen(row)).toBe(false);
   });
 });

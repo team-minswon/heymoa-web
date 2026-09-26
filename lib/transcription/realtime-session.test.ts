@@ -1254,3 +1254,95 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     expect(lines()).toHaveLength(count);
   });
 });
+
+describe("다시 붙거나 정체가 풀리면 가장 새 3초부터 실시간 (APP-706)", () => {
+  /** n 번째 조각. 100ms 씩 이어지는 캡처 위치를 단다. */
+  const emitAt = (harness: ReturnType<typeof setup>, n: number) =>
+    harness.emitChunk(new ArrayBuffer(3_200), n * 1_600);
+  const range = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  const liveLines = (info: { mock: { calls: unknown[][] } }) =>
+    info.mock.calls
+      .filter((call) => call[0] === "[transcription]" && call[1] === "live")
+      .map((call) => call[2]);
+
+  it("10초 밀린 뒤 다시 붙으면 가장 새 3초의 시작이 먼저 나가고, 그 앞은 뒤에 늦은 조각으로 간다", async () => {
+    vi.useFakeTimers();
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+
+    harness.closeTransport(1006);
+    for (let n = 0; n < 100; n += 1) emitAt(harness, n); // 0..99, 10초
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(harness.sockets).toHaveLength(2);
+    expect(harness.sentSeqs(harness.socket)).toEqual([
+      ...range(70, 99),
+      ...range(0, 69),
+    ]);
+    expect(liveLines(info)).toEqual([
+      {
+        cause: "reattach",
+        reason: "socket_closed",
+        liveLagMs: 3_000,
+        lateChunks: 70,
+      },
+    ]);
+  });
+
+  it("3초 이하로 밀렸으면 전부 실시간으로 순서대로 보낸다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+
+    harness.closeTransport(1006);
+    for (let n = 0; n < 30; n += 1) emitAt(harness, n); // 3.0초
+    await vi.advanceTimersByTimeAsync(500);
+    emitAt(harness, 30);
+
+    expect(harness.sentSeqs(harness.socket)).toEqual(range(0, 30));
+  });
+
+  it("전송 정체가 풀릴 때도 같은 규칙이다 — 이미 보낸 것은 다시 보내지 않는다", async () => {
+    vi.useFakeTimers();
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    for (let n = 0; n < 5; n += 1) emitAt(harness, n); // 0..4 는 나갔다
+
+    harness.socket.sendAudio.mockReturnValue(false);
+    for (let n = 5; n < 65; n += 1) {
+      emitAt(harness, n); // 6초 막힘
+      vi.advanceTimersByTime(100);
+      harness.activity();
+    }
+    harness.socket.sendAudio.mockReturnValue(true);
+    emitAt(harness, 65);
+
+    expect(harness.sockets).toHaveLength(1);
+    expect(harness.acceptedSeqs(harness.socket)).toEqual([
+      ...range(0, 4),
+      ...range(36, 65),
+      ...range(5, 35),
+    ]);
+    expect(liveLines(info)).toEqual([
+      { cause: "congestion", liveLagMs: 3_000, lateChunks: 31 },
+    ]);
+  });
+
+  it("잠깐 막혔다 풀리면 줄을 바꾸지 않고 남기지도 않는다", async () => {
+    vi.useFakeTimers();
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+
+    harness.socket.sendAudio.mockReturnValue(false);
+    for (let n = 0; n < 20; n += 1) emitAt(harness, n);
+    harness.socket.sendAudio.mockReturnValue(true);
+    emitAt(harness, 20);
+
+    expect(harness.acceptedSeqs(harness.socket)).toEqual(range(0, 20));
+    expect(liveLines(info)).toEqual([]);
+  });
+});

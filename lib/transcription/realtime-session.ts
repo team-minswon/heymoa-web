@@ -11,7 +11,7 @@ import {
   isTerminalError,
   type ServerEvent,
 } from "@/lib/transcription/protocol";
-import { ResendBuffer } from "@/lib/transcription/resend-buffer";
+import { ResendBuffer, type CatchUp } from "@/lib/transcription/resend-buffer";
 import {
   TranscriptionSocket,
   type ReconnectReason,
@@ -176,6 +176,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private churn = 0;
   private failed = false;
   private congestedSinceMs: number | null = null;
+  /** 정체 동안 가장 새 3초 뒤로 넘긴 조각. 정체가 풀릴 때 한 줄로 남긴다. */
+  private congestionCatchUp: CatchUp | null = null;
   private lastInboundAt = 0;
   private pumpTimer: ReturnType<typeof setInterval> | null = null;
   private nextChunkSeq = 0;
@@ -475,7 +477,15 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       this.attachedAt = Date.now();
       this.disconnectedSince = null;
       this.resendBuffer.ackThrough(event.durableThroughSeq);
-      this.resendBuffer.rewind();
+      const catchUp = this.resendBuffer.rewind();
+      this.congestionCatchUp = null;
+      if (this.reconnectReason !== "initial") {
+        logTranscription("live", {
+          cause: "reattach",
+          reason: this.reconnectReason,
+          ...catchUp,
+        });
+      }
       this.uploadBaselineBytes =
         this.resendBuffer.unsentBytes > 0
           ? this.resendBuffer.unsentBytes
@@ -724,6 +734,14 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
    */
   private flushPending() {
     if (!this.socket || !this.attached) return;
+    const catchUp = this.resendBuffer.catchUp();
+    if (catchUp.lateChunks > 0) {
+      this.congestionCatchUp = {
+        lateChunks:
+          (this.congestionCatchUp?.lateChunks ?? 0) + catchUp.lateChunks,
+        liveLagMs: catchUp.liveLagMs,
+      };
+    }
     let sentAny = false;
     let refused = false;
     for (
@@ -744,6 +762,13 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
 
     if (!refused) {
       this.congestedSinceMs = null;
+      if (this.congestionCatchUp) {
+        logTranscription("live", {
+          cause: "congestion",
+          ...this.congestionCatchUp,
+        });
+        this.congestionCatchUp = null;
+      }
       return;
     }
     const now = Date.now();

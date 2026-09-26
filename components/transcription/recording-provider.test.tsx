@@ -38,7 +38,11 @@ vi.mock("@/lib/ui/toast", () => ({
   toast: { error: toastError, success: vi.fn(), dismiss: vi.fn() },
 }));
 
-const startRequest = vi.hoisted(() => vi.fn());
+const apiFetchMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/api/fetcher", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/fetcher")>()),
+  apiFetch: apiFetchMock,
+}));
 
 const sessionQuery = vi.hoisted(() => ({
   current: {
@@ -55,7 +59,6 @@ vi.mock(
       typeof import("@/lib/api/generated/transcription/transcription")
     >()),
     useGetTranscriptionSession: () => sessionQuery.current,
-    startTranscriptionSession: startRequest,
   })
 );
 
@@ -303,22 +306,47 @@ describe("RecordingProvider", () => {
     await expect(first).resolves.toBe(true);
   });
 
-  it("surfaces a degraded transcription and clears it on recovery", async () => {
-    // 소리는 쌓이는데 글자만 멈춘 상태. 서버만 아는 사실이라 이벤트로만 들어온다.
+  // 소리는 쌓이는데 글자만 멈춘 상태. 서버만 아는 사실이라 이벤트로만 들어온다.
+  // 운영 503 은 1초에 풀렸다 — 5초 이어질 때만 알린다(D-23)
+  it("업체 멈춤이 5초 이어질 때만 알리고, 회복하면 곧바로 걷는다", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    vi.useFakeTimers();
+    const emit = (state: "LIVE" | "DEGRADED") =>
+      act(() =>
+        harness.getCallbacks().onEvent({ type: "capture_state", state })
+      );
 
-    await act(async () => {
-      harness
-        .getCallbacks()
-        .onEvent({ type: "capture_state", state: "DEGRADED" });
-    });
+    emit("DEGRADED");
+    act(() => vi.advanceTimersByTime(4_000));
+    expect(harness.result.current.transcriptionDegraded).toBe(false);
+    act(() => vi.advanceTimersByTime(2_000));
     expect(harness.result.current.transcriptionDegraded).toBe(true);
 
-    await act(async () => {
-      harness.getCallbacks().onEvent({ type: "capture_state", state: "LIVE" });
-    });
+    emit("LIVE");
     expect(harness.result.current.transcriptionDegraded).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("4초 만에 회복한 업체 멈춤은 끝까지 알리지 않는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    vi.useFakeTimers();
+
+    act(() =>
+      harness
+        .getCallbacks()
+        .onEvent({ type: "capture_state", state: "DEGRADED" })
+    );
+    act(() => vi.advanceTimersByTime(4_000));
+    expect(harness.result.current.transcriptionDegraded).toBe(false);
+    act(() =>
+      harness.getCallbacks().onEvent({ type: "capture_state", state: "LIVE" })
+    );
+    act(() => vi.advanceTimersByTime(10_000));
+
+    expect(harness.result.current.transcriptionDegraded).toBe(false);
+    vi.useRealTimers();
   });
 
   it("cancels a deferred permission request before creating a server session", async () => {
@@ -919,9 +947,7 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.result.current.error).toBe("이미 종료된 회의입니다.");
   });
 
-  // 서버 문구 「이미 진행 가능한 전사 세션이 있습니다」는 녹음자 기기가 끊겨 세션이 정리되기를
-  // 기다리는 동안에도 나온다. 기다리면 된다는 것을 말해야 같은 재시도를 멈춘다(D-10)
-  it("다른 참가자의 녹음 세션에 막히면 기다리면 된다고 말한다", async () => {
+  it("다른 기기가 녹음 중이라 막히면 그렇게 말한다", async () => {
     const harness = setup();
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
       success: false,
@@ -935,7 +961,28 @@ describe("시작하는 사이에 쫓겨나면", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
     expect(harness.result.current.error).toBe(
-      "다른 기기에서 이 회의를 녹음하고 있어요. 그 기기의 연결이 끊겼다면 녹음이 정리된 뒤(약 2분) 녹음할 수 있어요."
+      "다른 기기에서 이 회의를 녹음하고 있어요."
+    );
+  });
+
+  // 녹음자 기기가 끊겨 server 가 세션을 정리하기를 기다리는 중이다. 기다리면 된다는 것을 말해야
+  // 같은 재시도를 멈춘다(D-10)
+  it("녹음하던 기기가 끊겨 막히면 정리될 때까지 기다리면 된다고 말한다", async () => {
+    const harness = setup();
+    vi.mocked(harness.api.startSession).mockRejectedValueOnce({
+      success: false,
+      data: null,
+      error: {
+        code: "RECORDER_DISCONNECTED",
+        message:
+          "녹음하던 기기와 연결이 끊겨 있습니다. 잠시 뒤 다시 시작해 주세요.",
+      },
+    });
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(harness.result.current.error).toBe(
+      "녹음하던 기기와 연결이 끊겼어요. 그 기기의 녹음이 정리되면(약 1분) 녹음할 수 있어요."
     );
   });
 
@@ -1224,8 +1271,46 @@ describe("끊김 창과 끝 (APP-705)", () => {
     );
   });
 
-  it("시작 요청에 이 탭의 clientInstanceId 를 싣는다", async () => {
-    startRequest.mockResolvedValueOnce({
+  it("거절에 reason MEETING_ENDED 가 붙으면 폴링을 기다리지 않고 못 올린 소리를 말한다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    act(() => harness.getCallbacks().onBufferChange?.(pending(8_000)));
+
+    act(() =>
+      harness.getCallbacks().onEvent({
+        type: "error",
+        code: "SESSION_NOT_CONNECTABLE",
+        message: "회의가 끝나 이 녹음을 더 받을 수 없습니다.",
+        reason: "MEETING_ENDED",
+      })
+    );
+
+    expect(harness.result.current.phase).toBe("failed");
+    expect(harness.result.current.error).toBe(
+      "회의가 끝나 이 기기에 남은 소리 8초를 올리지 못했어요."
+    );
+  });
+
+  it("남은 소리 없이 회의가 끝나 거절되면 회의 종료 문구를 쓴다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    act(() =>
+      harness.getCallbacks().onEvent({
+        type: "error",
+        code: "SESSION_NOT_CONNECTABLE",
+        message: "회의가 끝나 이 녹음을 더 받을 수 없습니다.",
+        reason: "MEETING_ENDED",
+      })
+    );
+
+    expect(harness.result.current.error).toBe(
+      "회의가 종료되어 기록을 마쳤습니다."
+    );
+  });
+
+  it("시작 요청 본문에 이 탭의 clientInstanceId 를 싣는다 — 생성된 훅 그대로", async () => {
+    apiFetchMock.mockResolvedValueOnce({
       status: 201,
       data: { success: true, data: session, error: null },
     });
@@ -1233,10 +1318,13 @@ describe("끊김 창과 끝 (APP-705)", () => {
 
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
-    expect(startRequest).toHaveBeenCalledWith(
-      session.noteId,
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `/v1/notes/${session.noteId}/transcription-sessions`
+      ),
       expect.objectContaining({
-        data: { clientInstanceId: clientInstanceId() },
+        method: "POST",
+        body: JSON.stringify({ clientInstanceId: clientInstanceId() }),
       })
     );
     expect(harness.result.current.phase).toBe("recording");

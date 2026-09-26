@@ -19,7 +19,6 @@ import type {
 } from "@/lib/api/generated/models";
 import {
   getGetNoteTranscriptQueryKey,
-  startTranscriptionSession,
   useGetTranscriptionSession,
   useStartTranscriptionSession,
 } from "@/lib/api/generated/transcription/transcription";
@@ -216,10 +215,13 @@ function getStartErrorMessage(cause: unknown) {
     return "실시간 스크립트 서버에 연결하지 못했습니다. 로그인 상태와 서버 연결을 확인해 주세요.";
   }
 
-  // 서버 문구는 「이미 진행 가능한 전사 세션이 있습니다」다. 녹음자 기기가 끊겨 server 가 세션을
-  // 정리하기(약 2분)를 기다리는 동안에도 이 코드가 나서, 기다리면 된다는 것을 여기서 말한다(D-10)
   if (errorCodeOf(cause) === "ACTIVE_TRANSCRIPTION_SESSION") {
-    return "다른 기기에서 이 회의를 녹음하고 있어요. 그 기기의 연결이 끊겼다면 녹음이 정리된 뒤(약 2분) 녹음할 수 있어요.";
+    return "다른 기기에서 이 회의를 녹음하고 있어요.";
+  }
+
+  // 녹음자 기기의 리스가 식어 server 가 세션을 정리(60초)하기를 기다리는 중이다. 기다리면 된다는 것을 말한다(D-10)
+  if (errorCodeOf(cause) === "RECORDER_DISCONNECTED") {
+    return "녹음하던 기기와 연결이 끊겼어요. 그 기기의 녹음이 정리되면(약 1분) 녹음할 수 있어요.";
   }
 
   if (message === "SESSION_CREATE_FAILED") {
@@ -242,6 +244,8 @@ function getStartErrorMessage(cause: unknown) {
 }
 
 const SUPERSEDED_MESSAGE = "다른 탭이나 기기에서 이 녹음을 이어받았습니다.";
+/** 운영 503 은 1초에 풀렸다. 이만큼 이어질 때만 받아쓰기 멈춤을 알린다(D-23). */
+const DEGRADED_NOTICE_AFTER_MS = 5_000;
 const DROPPED_MESSAGE = "연결이 끊겨 녹음을 멈췄어요.";
 
 /** 재개 창(30초)이 끝나 컨트롤러가 녹음을 멈췄다. 연결이 돌아와도 저절로 다시 켜지 않는다(D-04). */
@@ -288,6 +292,13 @@ function getInterruptedMessage(
   }
 }
 
+/** 끊긴 사이 회의가 끝나면 이 기기에 남은 소리는 올릴 세션이 없다(D-10). */
+function meetingEndedMessage(pendingMs: number) {
+  return pendingMs > 0
+    ? `회의가 끝나 이 기기에 남은 소리 ${Math.max(1, Math.round(pendingMs / 1_000))}초를 올리지 못했어요.`
+    : getInterruptedMessage("MEETING_ENDED");
+}
+
 function getWebSocketUrl() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -322,14 +333,7 @@ export function RecordingProvider({
    * 토스트가 둘 뜬다**(rule `error-loading`의 「호출부가 이미 자기 토스트를 띄운다」).
    */
   const startSessionMutation = useStartTranscriptionSession({
-    mutation: {
-      meta: { suppressErrorToast: true },
-      // 계약 미러에는 아직 본문이 없다(APP-697). 모르는 필드는 server 가 무시한다(D-16)
-      mutationFn: ({ noteId }) =>
-        startTranscriptionSession(noteId, {
-          data: { clientInstanceId: clientInstanceId() },
-        }),
-    },
+    mutation: { meta: { suppressErrorToast: true } },
   });
   const [session, setSession] = useState<LocalRecordingSession | null>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
@@ -357,6 +361,7 @@ export function RecordingProvider({
   );
   const [error, setError] = useState<string | null>(null);
   const [transcriptionDegraded, setTranscriptionDegraded] = useState(false);
+  const degradedTimerRef = useRef<number | undefined>(undefined);
   const [connectionNotice, setConnectionNotice] =
     useState<ConnectionNotice | null>(null);
   const [buffer, setBuffer] = useState<BufferState | null>(null);
@@ -408,6 +413,8 @@ export function RecordingProvider({
     noticeRef.current = connectionNotice;
   }, [buffer, connectionNotice]);
 
+  useEffect(() => () => window.clearTimeout(degradedTimerRef.current), []);
+
   const setCurrentSession = useCallback(
     (next: LocalRecordingSession | null) => {
       sessionRef.current = next;
@@ -435,10 +442,12 @@ export function RecordingProvider({
     () =>
       apiOverride ?? {
         startSession: async (noteId) => {
-          const response = await startSessionMutation.mutateAsync({ noteId });
-          // 200 은 같은 사용자가 이미 연 세션을 돌려받은 것이다(멱등). 계약 미러는 아직 201 만 적는다.
-          const opened =
-            response.status === 201 || (response.status as number) === 200;
+          const response = await startSessionMutation.mutateAsync({
+            noteId,
+            data: { clientInstanceId: clientInstanceId() },
+          });
+          // 200 은 같은 사용자가 이미 연 READY 세션을 돌려받은 것이다(멱등)
+          const opened = response.status === 201 || response.status === 200;
           if (!opened || !response.data.success || !response.data.data) {
             throw new Error("SESSION_CREATE_FAILED");
           }
@@ -477,6 +486,8 @@ export function RecordingProvider({
   const failRecording = useCallback(
     (message: string) => {
       dispatchTranscript({ type: "clear-partials" });
+      window.clearTimeout(degradedTimerRef.current);
+      degradedTimerRef.current = undefined;
       setError(message);
       setPhase("failed");
       setConnectionNotice(null);
@@ -505,7 +516,26 @@ export function RecordingProvider({
       }
 
       if (event.type === "capture_state") {
-        setTranscriptionDegraded(event.state === "DEGRADED");
+        // LIVE 는 새 업체 연결이 처음 답할 때 온다. 무응답 동안은 DEGRADED 가 이어진다
+        window.clearTimeout(degradedTimerRef.current);
+        degradedTimerRef.current = undefined;
+        if (event.state === "DEGRADED") {
+          degradedTimerRef.current = window.setTimeout(() => {
+            degradedTimerRef.current = undefined;
+            logTranscription("notice", { state: "shown", cause: "degraded" });
+            setTranscriptionDegraded(true);
+          }, DEGRADED_NOTICE_AFTER_MS);
+        } else {
+          setTranscriptionDegraded((shown) => {
+            if (shown) {
+              logTranscription("notice", {
+                state: "cleared",
+                cause: "degraded",
+              });
+            }
+            return false;
+          });
+        }
       }
 
       if (event.type === "completed") {
@@ -526,7 +556,12 @@ export function RecordingProvider({
       if (event.type === "error" && isTerminalError(event)) {
         // 계약이 사용자에게 보일 한국어 메시지를 담고 있다(message: min 1). 코드별로 다시
         // 쓰면 서버가 바뀔 때마다 갈라진다 — rule error-loading "문구는 서버 것을 쓴다".
-        failRecording(event.message);
+        // 회의 종료만은 이 기기에 남은 소리를 같이 말해야 해서 web 이 만든다
+        failRecording(
+          event.reason === "MEETING_ENDED"
+            ? meetingEndedMessage(bufferRef.current?.pendingMs ?? 0)
+            : event.message
+        );
       }
 
       // 이 세션은 이제 다른 탭·기기의 것이다. 들고 있으면 이 탭이 회의 제어를 막는다.
@@ -589,12 +624,13 @@ export function RecordingProvider({
         setCurrentSession(serverSession);
         invalidateLifecycleQueries(serverSession.noteId, true);
         // 끊긴 채(또는 재부착이 거절된 뒤) 회의가 끝나면 이 기기에 남은 소리는 올릴 세션이 없다(D-10)
+        // 거절 reason 이 없는 옛 server 는 이 폴링으로만 안다
         const pendingMs = bufferRef.current?.pendingMs ?? 0;
         const lostMessage =
           serverSession.endReason === "MEETING_ENDED" &&
           pendingMs > 0 &&
           (phase === "failed" || noticeRef.current?.cause === "disconnected")
-            ? `회의가 끝나 이 기기에 남은 소리 ${Math.max(1, Math.round(pendingMs / 1_000))}초를 올리지 못했어요.`
+            ? meetingEndedMessage(pendingMs)
             : null;
         if (phase !== "failed") {
           controllerRef.current?.reconcile("INTERRUPTED");
@@ -638,6 +674,8 @@ export function RecordingProvider({
       setCurrentSession(reusableSession);
       setError(null);
       // 지난 회의의 상태를 새 회의로 들고 오지 않는다
+      window.clearTimeout(degradedTimerRef.current);
+      degradedTimerRef.current = undefined;
       setTranscriptionDegraded(false);
       setConnectionNotice(null);
       setBuffer(null);

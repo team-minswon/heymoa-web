@@ -95,13 +95,33 @@ describe("ResendBuffer", () => {
     expect(drain(target)).toEqual([0, 1, 2]);
   });
 
-  it("rewind 뒤에 들어온 실시간이 밀린 것보다 먼저 나간다", () => {
+  it("rewind 하면 가장 새 3초와 그 뒤에 들어온 것이 먼저, 그 앞은 밀린 것으로 뒤에 나간다", () => {
     const target = buffer();
-    [0, 1, 2].forEach((n) => target.push(chunk(n)));
-    target.rewind();
-    target.push(chunk(3));
+    for (let n = 0; n < 40; n += 1) target.push(chunk(n)); // 4초
 
-    expect(drain(target)).toEqual([3, 0, 1, 2]);
+    expect(target.rewind()).toEqual({ lateChunks: 10, liveLagMs: 3_000 });
+    target.push(chunk(40));
+
+    expect(drain(target)).toEqual([
+      ...Array.from({ length: 31 }, (_, i) => 10 + i),
+      ...Array.from({ length: 10 }, (_, i) => i),
+    ]);
+  });
+
+  it("catchUp 은 보낸 것을 건드리지 않고 안 보낸 실시간 중 3초보다 오래된 것만 넘긴다", () => {
+    const target = buffer();
+    for (let n = 0; n < 5; n += 1) target.push(chunk(n));
+    drain(target); // 0..4 는 나갔다
+    for (let n = 5; n < 65; n += 1) target.push(chunk(n));
+
+    expect(target.catchUp()).toEqual({ lateChunks: 30, liveLagMs: 3_000 });
+    expect(target.catchUp()).toEqual({ lateChunks: 0, liveLagMs: 3_000 });
+
+    expect(drain(target)).toEqual([
+      ...Array.from({ length: 30 }, (_, i) => 35 + i),
+      ...Array.from({ length: 30 }, (_, i) => 5 + i),
+    ]);
+    expect(target.unsentBytes).toBe(0);
   });
 
   it("한도에서는 버리지 않고 거절하며, 90% 아래로 빠져야 다시 받는다", () => {

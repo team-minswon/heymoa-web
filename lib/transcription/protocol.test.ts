@@ -99,6 +99,24 @@ describe("AsyncAPI transcription protocol", () => {
     expect(parsed).not.toHaveProperty("transcriptionSessionId");
   });
 
+  it("모르는 error reason 은 없는 것으로 읽고 녹음을 끊지 않는다", () => {
+    expect(
+      parseServerEvent(
+        JSON.stringify({
+          type: "error",
+          code: "SESSION_NOT_CONNECTABLE",
+          message: "연결할 수 없는 전사 세션입니다.",
+          reason: "SOMETHING_NEW",
+        })
+      )
+    ).toEqual({
+      type: "error",
+      code: "SESSION_NOT_CONNECTABLE",
+      message: "연결할 수 없는 전사 세션입니다.",
+      reason: undefined,
+    });
+  });
+
   it("accepts the cumulative durability ack", () => {
     expect(
       parseServerEvent('{"type":"ack","throughChunkSeq":300}')

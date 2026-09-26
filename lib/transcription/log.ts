@@ -6,6 +6,7 @@ export type TranscriptionLogEvent =
   | "phase"
   | "notice"
   | "reconnect"
+  | "live"
   | "ack"
   | "stop"
   | "offline"

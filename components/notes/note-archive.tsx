@@ -248,7 +248,11 @@ export function NoteArchive({
   // 종료된 회의를 여는 자리가 여기다. 공백과 화자를 `TranscriptView`에만 넣으면
   // 정작 볼 사람이 못 본다.
   const rows = useMemo(
-    () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
+    () =>
+      interleaveTranscript(
+        segments,
+        toGapRows(transcript?.gaps ?? [], transcript?.transcriptGaps)
+      ),
     [segments, transcript]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";

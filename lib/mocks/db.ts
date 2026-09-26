@@ -30,6 +30,7 @@ import type {
   TranscriptResponseData,
   TranscriptResponseDataDiarization,
   TranscriptResponseDataGapsItem,
+  TranscriptResponseDataTranscriptGapsItem,
 } from "@/lib/api/generated/models";
 import { unwrapScopeMarkers } from "@/lib/chat/scope-marker";
 import { getAppDateKey } from "@/lib/format/date";
@@ -185,6 +186,8 @@ type StoreState = {
   diarizations: Map<string, TranscriptResponseDataDiarization>;
   /** 세션 사이가 아닌 공백(CAPTURE·UPLOAD). 서버가 오브젝트에서 유도하는 것을 목이 심는다. */
   extraGaps: Map<string, TranscriptResponseDataGapsItem[]>;
+  /** 받아쓰지 못한 구간. 서버가 업체 연결에서 기록하는 것을 목이 심는다(APP-706). */
+  transcriptGaps: Map<string, TranscriptResponseDataTranscriptGapsItem[]>;
   members: MockMember[];
   /** 워크스페이스가 소유하는 계정 없는 참여자 (APP-490). */
   workspaceGuests: MockWorkspaceGuest[];
@@ -1614,6 +1617,28 @@ function createSeedState(): StoreState {
         ],
       ],
     ]),
+    // 소리 공백과 겹친 것(소리 공백이 이긴다)과 홀로 선 것을 함께 심는다.
+    transcriptGaps: new Map<string, TranscriptResponseDataTranscriptGapsItem[]>(
+      [
+        [
+          "01K0000000020",
+          [
+            {
+              gapId: "tn-01K0000000020-0-598000",
+              kind: "NOT_SENT",
+              startedAtMs: 598_000,
+              endedAtMs: 612_000,
+            },
+            {
+              gapId: "tu-01K0000000020-1-300000",
+              kind: "UNANSWERED",
+              startedAtMs: 300_000,
+              endedAtMs: 318_000,
+            },
+          ],
+        ],
+      ]
+    ),
     members,
     invitations,
     notifications,
@@ -3393,6 +3418,7 @@ export const mockDb = {
       gaps: [...gaps, ...(state.extraGaps.get(noteId) ?? [])].sort(
         (a, b) => a.startedAtMs - b.startedAtMs
       ),
+      transcriptGaps: state.transcriptGaps.get(noteId) ?? [],
     };
   },
 

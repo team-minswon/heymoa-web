@@ -1,5 +1,6 @@
 import {
   gapHeadline,
+  isGapOpen,
   spansCalendarDays,
   spansVisibleClockMinutes,
   type GapRow,
@@ -29,7 +30,7 @@ function clockTime(iso: string, withDate: boolean) {
  */
 export function TranscriptGapRow({ row }: { row: GapRow }) {
   const paused = row.kind === "PAUSE";
-  const open = row.endedAt === null;
+  const open = isGapOpen(row);
   const withDate = spansCalendarDays(row);
 
   // 중지는 회의 축에서 점이다 — 축이 안 나아갔으니 끝 좌표가 없다.
@@ -58,7 +59,7 @@ export function TranscriptGapRow({ row }: { row: GapRow }) {
             「왜」는 이 줄이 말한다. 두 끝이 같은 분이면 숨긴다. */}
         {paused && spansVisibleClockMinutes(row) ? (
           <span className="ml-2 text-[13px] text-[var(--el-muted-soft)]">
-            {clockTime(row.startedAt, withDate)}에 멈추고{" "}
+            {clockTime(row.startedAt!, withDate)}에 멈추고{" "}
             {clockTime(row.endedAt!, withDate)}에 재개했습니다
           </span>
         ) : null}
