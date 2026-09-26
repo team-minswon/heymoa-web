@@ -161,6 +161,17 @@ describe("MeetingControls", () => {
     expect(screen.getByTestId("end-dialog")).toBeTruthy();
   });
 
+  // 시작만 누르고 소켓을 못 붙인 채 떠난 회의는 IN_PROGRESS 로 남는다. 서버는 활성 세션이 없으면
+  // 종료를 받으므로(APP-694) 화면도 막지 않는다 — 막으면 아무도 끝낼 수 없다.
+  it("기록 중이어도 활성 세션이 없으면 누구나 끝낼 수 있다", () => {
+    state.userId = "user-other";
+    renderControls(
+      note({ meetingStatus: "IN_PROGRESS", activeSessionStartedAt: null })
+    );
+
+    expect(screen.getByRole("button", { name: "회의 종료" })).toBeEnabled();
+  });
+
   // `요약 보기` 버튼은 없앴다 — 바로 위 탭 줄에 `요약`이 있어 같은 곳으로 가는 길이 둘이었다.
   it("종료·미시작에는 아무것도 내놓지 않는다", () => {
     const ended = render(
