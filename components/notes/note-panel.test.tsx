@@ -42,6 +42,10 @@ const recordingState = vi.hoisted(() => ({
     | null,
   /** 노트가 들고 있는 활성 세션이 이 세션인지 가르는 값. */
   sessionStartedAt: null as string | null,
+  reconnecting: null as { sinceMs: number; pendingMs: number } | null,
+  buffer: null as
+    | import("@/lib/transcription/realtime-session").BufferState
+    | null,
 }));
 
 vi.mock("@/components/transcription/recording-provider", async () => {
@@ -56,6 +60,8 @@ vi.mock("@/components/transcription/recording-provider", async () => {
         ? {
             activeNoteId: recordingState.activeNoteId,
             phase: recordingState.phase,
+            reconnecting: recordingState.reconnecting,
+            buffer: recordingState.buffer,
             ...(recordingState.sessionStatus
               ? {
                   session: {
@@ -160,7 +166,12 @@ const runtime: RecordingRuntime = {
   createSession: (options) => ({
     requestPermission: vi.fn().mockResolvedValue(undefined),
     connect: vi.fn(async (sessionId: string) =>
-      options.onEvent({ type: "connected", sessionId })
+      options.onEvent({
+        type: "connected",
+        sessionId,
+        epoch: 1,
+        durableThroughSeq: -1,
+      })
     ),
     commit: vi.fn(),
     stop: vi.fn(async () =>
@@ -230,6 +241,8 @@ describe("NotePanel", () => {
     personalChat.isTurnActive = false;
     setRailSlot.mockReset();
     recordingState.sessionStartedAt = null;
+    recordingState.reconnecting = null;
+    recordingState.buffer = null;
     noteState.value = {
       noteId: "01K0000000002",
       title: "주간 제품 회의",
@@ -1245,8 +1258,8 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
-  function renderDock(view: "side" | "full") {
-    renderNotePanel(
+  function dockElement(view: "side" | "full") {
+    return (
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
@@ -1256,6 +1269,11 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
+  }
+
+  function renderDock(view: "side" | "full") {
+    const rendered = renderNotePanel(dockElement(view));
+    return { rerender: rendered.rerenderNote };
   }
 
   describe.each(["full", "side"] as const)("%s 회의 제어 행렬", (view) => {
@@ -1269,6 +1287,51 @@ describe("NotePanel", () => {
       expect(
         screen.getByRole("button", { name: "회의 시작" })
       ).toBeInTheDocument();
+    });
+
+    // 같은 세션에 다시 붙는 동안 소리는 이 기기에 쌓인다. 타이머만 돌면 무엇이 남는지 모른다.
+    it("5초 넘게 끊기면 이 기기에 저장 중이라고 말하고, 이으면 걷는다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "recording";
+      recordingState.reconnecting = {
+        sinceMs: Date.now() - 10_000,
+        pendingMs: 3_000,
+      };
+      recordingState.buffer = {
+        pendingMs: 13_000,
+        limitMs: 3_600_000,
+        persistent: true,
+        paused: false,
+        upload: null,
+      };
+
+      const { rerender } = renderDock(view);
+
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "연결이 불안정해요 · 소리는 이 기기에 저장 중 (0:13)"
+      );
+
+      recordingState.reconnecting = null;
+      rerender(dockElement(view));
+
+      expect(screen.queryByText(/연결이 불안정해요/)).toBeNull();
+    });
+
+    it("멈추는 중에 밀린 것을 올리면 저장 마무리 진행률을 보인다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "stopping";
+      recordingState.buffer = {
+        pendingMs: 40_000,
+        limitMs: 3_600_000,
+        persistent: true,
+        paused: false,
+        upload: { percent: 40, remainingMs: 24_000 },
+      };
+
+      renderDock(view);
+
+      // 독도 멈추는 중 spinner 로 status 를 하나 더 든다
+      expect(screen.getByText("저장 마무리 중… 40%")).toBeInTheDocument();
     });
 
     it("IN_PROGRESS 로컬 시작자는 중지 독을 본다", () => {

@@ -34,11 +34,13 @@ function GlobalRecordingPill({
   href,
   elapsedMs,
   phase,
+  paused,
   onStop,
 }: {
   href: string;
   elapsedMs: number;
   phase: RecordingPhase;
+  paused: boolean;
   onStop: () => void;
 }) {
   const { level, levelHistory } = useRecordingMeter();
@@ -84,6 +86,11 @@ function GlobalRecordingPill({
         <span className="font-mono text-xs tabular-nums">
           {formatElapsed(elapsedMs)}
         </span>
+        {paused ? (
+          <span role="alert" className="text-xs font-medium text-destructive">
+            녹음 멈춤 · 기기 저장 공간이 찼어요
+          </span>
+        ) : null}
       </Link>
       <div className="h-5 w-px bg-[var(--el-hairline)]" />
       <Button
@@ -103,9 +110,14 @@ function GlobalRecordingPill({
 
 export function GlobalRecordingIndicator() {
   const pathname = usePathname();
-  const { session, activeWorkspaceId, elapsedMs, phase, stop } = useRecording();
+  const { session, activeWorkspaceId, elapsedMs, phase, buffer, stop } =
+    useRecording();
+  const paused = Boolean(buffer?.paused);
+  // 한도 멈춤 안내는 녹음 중인 노트 패널에만 있다. 그 노트를 안 보고 있으면 워크스페이스 안에서도 여기서 알린다
+  const pausedAway =
+    paused && !pathname.includes(`/notes/${session?.noteId ?? ""}`);
   const isVisible =
-    !isWorkspaceRoute(pathname) &&
+    (!isWorkspaceRoute(pathname) || pausedAway) &&
     Boolean(session) &&
     VISIBLE_PHASES.has(phase);
   /**
@@ -128,6 +140,7 @@ export function GlobalRecordingIndicator() {
           href={href}
           elapsedMs={elapsedMs}
           phase={phase}
+          paused={paused}
           onStop={() => void stop()}
         />
       ) : null}

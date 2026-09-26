@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -6,6 +6,7 @@ import type { StartTranscriptionSessionResponseData } from "@/lib/api/generated/
 import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
+import type { StoredRecording } from "@/lib/transcription/audio-store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isWorkspaceRecordingActive,
@@ -69,7 +70,10 @@ const session: StartTranscriptionSessionResponseData = {
 const WORKSPACE_ID = "0HZX2K7M9Q4AW";
 const OTHER_WORKSPACE_ID = "0HZX2K7M9Q4AX";
 
-function setup({ enablePolling = false } = {}) {
+function setup({
+  enablePolling = false,
+  stored,
+}: { enablePolling?: boolean; stored?: StoredRecording[] } = {}) {
   sessionQuery.current = {
     data: undefined,
     isFetching: false,
@@ -85,7 +89,12 @@ function setup({ enablePolling = false } = {}) {
     }),
     connect: vi.fn(async () => {
       order.push("realtime-connect");
-      callbacks.onEvent({ type: "connected", sessionId: session.sessionId });
+      callbacks.onEvent({
+        type: "connected",
+        sessionId: session.sessionId,
+        epoch: 1,
+        durableThroughSeq: -1,
+      });
     }),
     commit: vi.fn(() => order.push("commit")),
     stop: vi.fn(async () => {
@@ -96,12 +105,16 @@ function setup({ enablePolling = false } = {}) {
     close: vi.fn(async () => {
       order.push("realtime-close");
     }),
+    resume: vi.fn(async () => {
+      order.push("resume");
+    }),
   };
   const runtime: RecordingRuntime = {
     createSession: vi.fn((options) => {
       callbacks = options;
       return controller;
     }),
+    ...(stored ? { findStoredRecordings: vi.fn(async () => stored) } : {}),
   };
   const api: RecordingApi = {
     startSession: vi.fn(async () => session),
@@ -539,14 +552,35 @@ describe("RecordingProvider", () => {
     act(() =>
       harness.getCallbacks().onEvent({
         type: "error",
+        code: "SESSION_NOT_CONNECTABLE",
+        message: "다른 기기에서 이 녹음을 진행 중입니다.",
+      })
+    );
+    // 컨트롤러도 같은 사건으로 onFailure 를 부른다. 서버 문구를 덮으면 안 된다.
+    act(() =>
+      harness.getCallbacks().onFailure("다른 기기에서 이 녹음을 진행 중입니다.")
+    );
+
+    expect(harness.result.current.error).toBe(
+      "다른 기기에서 이 녹음을 진행 중입니다."
+    );
+  });
+
+  // 업체 장애·서버 내부 오류는 같은 세션에 다시 붙으면 풀린다. 컨트롤러가 다시 붙는다.
+  it("does not fail on a retryable in-band error", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    act(() =>
+      harness.getCallbacks().onEvent({
+        type: "error",
         code: "STT_TRANSCRIPTION_FAILED",
         message: "실시간 스크립트 처리에 실패했습니다.",
       })
     );
 
-    expect(harness.result.current.error).toBe(
-      "실시간 스크립트 처리에 실패했습니다."
-    );
+    expect(harness.result.current.phase).toBe("recording");
+    expect(harness.result.current.error).toBeNull();
   });
 
   it("does not remain stuck in stopping when cleanup fails", async () => {
@@ -694,7 +728,9 @@ describe("RecordingProvider", () => {
     harness.rerender();
 
     await waitFor(() =>
-      expect(harness.result.current.error).toBe("회의가 종료되어 기록을 마쳤습니다.")
+      expect(harness.result.current.error).toBe(
+        "회의가 종료되어 기록을 마쳤습니다."
+      )
     );
   });
 });
@@ -924,5 +960,257 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.result.current.phase).toBe("idle");
     expect(harness.result.current.error).toBeNull();
     expect(harness.result.current.activeWorkspaceId).toBeNull();
+  });
+});
+
+/**
+ * 세션은 녹음 한 번이고 소켓은 거기 붙는 부착이다. 끊겨도 컨트롤러가 **같은 세션에** 다시
+ * 붙는다. 그래서 3초 폴링은 표시용이고, 녹음을 끝내는 것은 회의 쪽 결정뿐이다.
+ */
+describe("같은 세션에 다시 붙는 동안", () => {
+  function interrupted(
+    endReason: "CLIENT_DISCONNECTED" | "HEARTBEAT_TIMEOUT" | "MEETING_PAUSED"
+  ): SessionQueryMock {
+    return {
+      data: {
+        status: 200,
+        data: {
+          success: true,
+          data: {
+            ...session,
+            status: "INTERRUPTED",
+            endedAt: "2026-07-15T00:02:00Z",
+            endReason,
+          },
+        },
+      },
+      isFetching: false,
+      dataUpdatedAt: Date.now(),
+    };
+  }
+
+  it("새 세션을 달라고 하는 콜백을 넘기지 않는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(harness.getCallbacks()).not.toHaveProperty("onReconnectNeeded");
+  });
+
+  it.each(["CLIENT_DISCONNECTED", "HEARTBEAT_TIMEOUT"] as const)(
+    "폴링이 %s 를 봐도 녹음을 끝내지 않는다",
+    async (endReason) => {
+      const harness = setup({ enablePolling: true });
+      await act(() =>
+        harness.result.current.start(session.noteId, WORKSPACE_ID)
+      );
+      sessionQuery.current = interrupted(endReason);
+
+      harness.rerender();
+      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+
+      expect(harness.result.current.phase).toBe("recording");
+      expect(harness.result.current.error).toBeNull();
+      expect(harness.controller.close).not.toHaveBeenCalled();
+    }
+  );
+
+  it("회의가 일시중지됐으면 녹음을 멈춘다", async () => {
+    const harness = setup({ enablePolling: true });
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    sessionQuery.current = interrupted("MEETING_PAUSED");
+
+    harness.rerender();
+
+    await waitFor(() =>
+      expect(harness.result.current.error).toBe(
+        "회의가 일시중지되어 기록을 멈췄습니다."
+      )
+    );
+    expect(harness.result.current.phase).toBe("failed");
+  });
+
+  it("다시 잇는 동안의 시각과 저장 대기량을 내보내고, 이으면 걷는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    act(() =>
+      harness.getCallbacks().onReconnectChange?.({
+        sinceMs: 1_000,
+        pendingMs: 4_200,
+      })
+    );
+    expect(harness.result.current.reconnecting).toEqual({
+      sinceMs: 1_000,
+      pendingMs: 4_200,
+    });
+    expect(harness.result.current.phase).toBe("recording");
+
+    act(() => harness.getCallbacks().onReconnectChange?.(null));
+    expect(harness.result.current.reconnecting).toBeNull();
+  });
+
+  it("버퍼 상태와 마이크 상태를 내보내고, 새 녹음에서 걷는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    const state = {
+      pendingMs: 12_000,
+      limitMs: 3_600_000,
+      persistent: true,
+      paused: false,
+      upload: null,
+    };
+
+    act(() => harness.getCallbacks().onBufferChange?.(state));
+    act(() => harness.getCallbacks().onMicrophoneChange?.("ended", 0));
+
+    expect(harness.result.current.buffer).toEqual(state);
+    expect(harness.result.current.microphone).toBe("ended");
+    expect(harness.runtime.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({ noteId: session.noteId })
+    );
+
+    await act(() => harness.result.current.stop());
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(harness.result.current.buffer).toBeNull();
+  });
+
+  it("녹음 중에는 탭을 닫으려 하면 붙잡고, 끝나면 놓는다", async () => {
+    // 이 파일은 자동 cleanup 이 없어 앞 테스트의 녹음 중 provider 가 window 에 남아 있다
+    cleanup();
+    const harness = setup();
+    const leave = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(leave()).toBe(false);
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(leave()).toBe(true);
+
+    await act(() => harness.result.current.stop());
+    expect(leave()).toBe(false);
+  });
+
+  it("녹음이 끝났어도 서버가 확정 안 한 소리가 남아 있으면 탭을 붙잡는다", async () => {
+    cleanup();
+    const harness = setup();
+    const leave = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    const pending = {
+      pendingMs: 3_000,
+      limitMs: 300_000,
+      persistent: false,
+      paused: false,
+      upload: null,
+    };
+    act(() => harness.getCallbacks().onBufferChange?.(pending));
+
+    await act(() => harness.result.current.stop());
+    expect(leave()).toBe(true);
+
+    act(() =>
+      harness.getCallbacks().onBufferChange?.({ ...pending, pendingMs: 0 })
+    );
+    expect(leave()).toBe(false);
+  });
+
+  const leftover: StoredRecording = {
+    noteId: session.noteId,
+    sessionId: "0HZX2K7M9Q4AZ",
+    chunks: [
+      {
+        noteId: session.noteId,
+        sessionId: "0HZX2K7M9Q4AZ",
+        chunkSeq: 4,
+        captureSamples: 6_400,
+        bytes: 32_000,
+      },
+    ],
+  };
+
+  it("지난 탭이 남긴 소리를 열자마자 그 세션에 올린다", async () => {
+    const harness = setup({ stored: [leftover] });
+
+    await waitFor(() =>
+      expect(harness.controller.resume).toHaveBeenCalledWith(
+        leftover.sessionId,
+        leftover.chunks
+      )
+    );
+    expect(harness.runtime.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({ noteId: leftover.noteId })
+    );
+  });
+
+  it("서버가 받지 않으면 남겨 둔 채 그렇다고 알린다", async () => {
+    const harness = setup({ stored: [leftover] });
+    harness.controller.resume.mockImplementationOnce(async () => {
+      harness.getCallbacks().onFailure("이미 닫힌 세션입니다.");
+      throw new Error("이미 닫힌 세션입니다.");
+    });
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        "지난 녹음의 소리 1초를 올리지 못해 이 기기에 남겨 두었습니다. (이미 닫힌 세션입니다.)"
+      )
+    );
+    expect(harness.result.current.phase).toBe("idle");
+  });
+
+  // 종료 응답 시간 초과는 onFailure 만 부르고 resume 은 정상으로 끝난다
+  it("이어 올리기가 던지지 않고 실패로만 끝나도 알린다", async () => {
+    const harness = setup({ stored: [leftover] });
+    harness.controller.resume.mockImplementationOnce(async () => {
+      harness
+        .getCallbacks()
+        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+    });
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        "지난 녹음의 소리 1초를 올리지 못해 이 기기에 남겨 두었습니다. (스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.)"
+      )
+    );
+  });
+
+  it("남은 소리를 올리는 동안 시작하면 다 올린 뒤에 새 세션을 연다", async () => {
+    let finish!: () => void;
+    const harness = setup({ stored: [leftover] });
+    harness.controller.resume.mockImplementationOnce(
+      () => new Promise<void>((done) => (finish = done))
+    );
+    await waitFor(() => expect(harness.controller.resume).toHaveBeenCalled());
+
+    const starting = act(() =>
+      harness.result.current.start(session.noteId, WORKSPACE_ID)
+    );
+    await new Promise((done) => setTimeout(done, 0));
+    expect(harness.api.startSession).not.toHaveBeenCalled();
+
+    finish();
+    await starting;
+    expect(harness.api.startSession).toHaveBeenCalledOnce();
+  });
+
+  it("다른 탭이나 기기가 이어받으면 그렇다고 말하고 이 탭의 녹음을 놓는다", async () => {
+    const harness = setup({ enablePolling: true });
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    act(() =>
+      harness
+        .getCallbacks()
+        .onEvent({ type: "superseded", sessionId: session.sessionId })
+    );
+
+    expect(harness.result.current.error).toBe(
+      "다른 탭이나 기기에서 이 녹음을 이어받았습니다."
+    );
+    expect(harness.result.current.phase).toBe("failed");
+    expect(harness.result.current.session).toBeNull();
   });
 });

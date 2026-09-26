@@ -1,6 +1,9 @@
 import { Client, type StompSubscription } from "@stomp/stompjs";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
-import { CAPTURE_CONTRACT, CAPTURE_TUNING } from "@/lib/transcription/capture-config";
+import {
+  CAPTURE_CONTRACT,
+  CAPTURE_TUNING,
+} from "@/lib/transcription/capture-config";
 import {
   parseServerEvent,
   type ServerEvent,
@@ -9,8 +12,14 @@ import {
 export type TranscriptionSocketOptions = {
   url: string;
   sessionId: string;
+  /** 이 탭. 서버가 다른 탭·기기의 부착과 가른다. 다시 붙을 때도 같은 값이다. */
+  clientInstanceId: string;
+  /** 아직 들고 있는 가장 앞 조각 번호. 그 앞은 이미 지웠으니 서버가 기다리지 않는다. */
+  resendFromSeq?: number;
   onEvent: (event: ServerEvent) => void;
   onClose: (code: number, reason: string) => void;
+  /** heartbeat 를 포함해 무엇이든 들어왔다. 이벤트만으로는 조용한 회의의 무수신을 못 가른다. */
+  onActivity?: () => void;
 };
 
 /**
@@ -57,6 +66,10 @@ export class TranscriptionSocket {
         connectionTimeout: 10_000,
         heartbeatIncoming: 10_000,
         heartbeatOutgoing: 10_000,
+        // 기본값이면 하트비트를 놓쳐도 close() 만 부르고, 죽은 망에서는 close 이벤트가 오지 않는다.
+        discardWebsocketOnCommFailure: true,
+        connectHeaders: { clientInstanceId: this.options.clientInstanceId },
+        onHeartbeatReceived: () => this.options.onActivity?.(),
         debug: () => undefined,
         onConnect: () => {
           const replyId = crypto.randomUUID();
@@ -89,7 +102,13 @@ export class TranscriptionSocket {
           // before the following application connect message is handled.
           client.publish({
             destination: this.destination("connect"),
-            headers: { "reply-id": replyId },
+            headers: {
+              "reply-id": replyId,
+              clientInstanceId: this.options.clientInstanceId,
+              ...(this.options.resendFromSeq === undefined
+                ? {}
+                : { resendFromSeq: String(this.options.resendFromSeq) }),
+            },
           });
         },
         onStompError: (frame) => {

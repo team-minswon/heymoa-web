@@ -22,8 +22,10 @@ export const CAPTURE_TUNING = {
   workletFrameMs: 20,
   /** 수확 체감 지점. 200ms로 늘려도 5 kbps만 아끼는데 조각 하나를 잃으면 단어 여러 개가 빈다. */
   batchMs: 100,
-  /** 약 5분. 예전 백프레셔 임계(96 KB)는 PCM에서 2.9초라 재전송 버퍼로는 못 쓴다. */
-  resendBufferMaxBytes: 10_485_760,
+  /** 서버가 확정 안 한 소리를 메모리에 두는 한도(≈9.6MB). 모바일 사파리는 메모리 압박 때 탭을 죽인다. */
+  memoryBufferMs: 5 * 60_000,
+  /** IndexedDB 까지 쳐서 버티는 한도(≈115MB). 넘으면 버리지 않고 캡처를 멈춘다. */
+  diskBufferMs: 60 * 60_000,
   /** 전송 정체가 이만큼 연속되면 회복 불가로 본다. */
   congestionMs: 10_000,
   /** WebSocket bufferedAmount 임계. 재전송 버퍼와 다른 것이다 — 소켓이 밀렸는지만 본다. */
@@ -36,6 +38,8 @@ export const CAPTURE_TUNING = {
  * 배치가 워크릿 프레임의 정수배여야 **배치의 captureSamples를 그 배치를 연 첫 워크릿
  * 프레임의 값으로 쓸 수 있다.** 안 나눠떨어지면 배치가 두 프레임에 걸쳐 시작 위치가 모호해진다.
  */
-export function samplesPerBatch(sampleRate: number = CAPTURE_CONTRACT.sampleRate) {
+export function samplesPerBatch(
+  sampleRate: number = CAPTURE_CONTRACT.sampleRate
+) {
   return Math.round((sampleRate * CAPTURE_TUNING.batchMs) / 1000);
 }

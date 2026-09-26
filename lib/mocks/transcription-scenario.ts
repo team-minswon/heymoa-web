@@ -100,6 +100,9 @@ export class MockTranscriptionScenario {
     this.options.send({
       type: "connected",
       sessionId: this.options.sessionId,
+      epoch: 1,
+      // 목은 정본을 안 들고 있다. 붙을 때마다 브라우저 버퍼 전부를 다시 받는다.
+      durableThroughSeq: -1,
     });
   }
 

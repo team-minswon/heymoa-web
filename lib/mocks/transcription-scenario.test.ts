@@ -25,6 +25,8 @@ describe("MockTranscriptionScenario", () => {
     expect(send).toHaveBeenCalledWith({
       type: "connected",
       sessionId: session.sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
     });
 
     const voiced = new Int16Array(960).fill(12_000).buffer;

@@ -31,6 +31,7 @@ import { NoteParticipantAvatars } from "@/components/notes/note-participants";
 import { ReviewTab } from "@/components/notes/review/review-tab";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
+import { RecordingConnectionNotice } from "@/components/transcription/recording-connection-notice";
 import { RecordingDegradedNotice } from "@/components/transcription/recording-degraded-notice";
 import {
   isNoteRecordingActive,
@@ -280,8 +281,8 @@ export function NotePanel({
       (recording.phase === "failed" &&
         recording.session.status === "INTERRUPTED"));
   // 이 노트를 녹음 중일 때만 뜬다. 다른 노트의 상태를 여기에 그리면 거짓말이 된다.
-  const recordingDegraded =
-    recording.activeNoteId === noteId && recording.transcriptionDegraded;
+  const recordingHere = recording.activeNoteId === noteId;
+  const recordingDegraded = recordingHere && recording.transcriptionDegraded;
 
   const showDock = Boolean(
     note &&
@@ -765,6 +766,14 @@ export function NotePanel({
           /* 좁은 화면에서는 스크롤을 덮지 않는 footer 레인이고, lg부터 기존처럼 떠 있다. */
           <div className="pointer-events-none z-30 flex shrink-0 justify-center pb-6 pl-5 pr-[84px] sm:px-9 lg:absolute lg:inset-x-0 lg:bottom-6 lg:pb-0">
             <div className="pointer-events-auto flex min-w-0 flex-col items-center gap-2">
+              {recordingHere ? (
+                <RecordingConnectionNotice
+                  reconnecting={recording.reconnecting}
+                  buffer={recording.buffer}
+                  microphone={recording.microphone}
+                  finishing={recording.phase === "stopping"}
+                />
+              ) : null}
               {/* 자막이 멈춘 이유를 말해 준다. 안 말하면 멀쩡한 녹음을 중단한다. */}
               {recordingDegraded ? <RecordingDegradedNotice /> : null}
               {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —

@@ -110,9 +110,16 @@ export class PcmChunkBatcher {
   }
 }
 
+/**
+ * 마이크가 소리를 내고 있는가. `live` 가 아니면 워크릿이 조각을 안 내고, 브라우저 안에서는
+ * 아무 오류도 안 난다. 사용자는 녹음되는 줄 안다.
+ */
+export type MicrophoneState = "live" | "muted" | "ended" | "suspended";
+
 export type PcmAudioCaptureOptions = {
   onChunk: PcmBatchListener;
   onLevel?: (level: number) => void;
+  onState?: (state: MicrophoneState) => void;
   batchMs?: number;
 };
 
@@ -126,6 +133,7 @@ export class PcmAudioCapture {
   private levelFrame: number | null = null;
   private lastLevelAt = 0;
   private batcher: PcmChunkBatcher | null = null;
+  private onDeviceChange: (() => void) | null = null;
   /** 실제로 열린 값. 임의 레이트를 못 여는 기기가 있어 요청값과 다를 수 있다. */
   private openedSampleRate: number = CAPTURE_CONTRACT.sampleRate;
 
@@ -185,6 +193,7 @@ export class PcmAudioCapture {
         event.data.captureSamples
       );
     };
+    this.watchMicrophone(this.audioContext, this.stream!);
     this.source.connect(this.worklet);
     this.source.connect(this.analyser);
     this.worklet.connect(this.silentGain);
@@ -192,7 +201,40 @@ export class PcmAudioCapture {
     this.publishLevel();
   }
 
+  private watchMicrophone(context: AudioContext, stream: MediaStream) {
+    const emit = (state: MicrophoneState) => this.options.onState?.(state);
+    const [track] = stream.getAudioTracks();
+    context.onstatechange = () => {
+      // Safari 는 전화·다른 앱이 오디오를 가져가면 "interrupted" 로 간다(타입엔 없다)
+      const state = context.state as string;
+      if (state === "running") emit("live");
+      else if (state === "suspended" || state === "interrupted") {
+        emit("suspended");
+        void context.resume().catch(() => undefined);
+      }
+    };
+    if (!track) return;
+    track.onended = () => emit("ended");
+    track.onmute = () => emit("muted");
+    track.onunmute = () => emit("live");
+    this.onDeviceChange = () => {
+      if (track.readyState === "ended") emit("ended");
+    };
+    navigator.mediaDevices.addEventListener(
+      "devicechange",
+      this.onDeviceChange
+    );
+  }
+
   async stop() {
+    if (this.onDeviceChange) {
+      navigator.mediaDevices.removeEventListener(
+        "devicechange",
+        this.onDeviceChange
+      );
+      this.onDeviceChange = null;
+    }
+    if (this.audioContext) this.audioContext.onstatechange = null;
     if (this.levelFrame !== null) cancelAnimationFrame(this.levelFrame);
     this.levelFrame = null;
     this.options.onLevel?.(0);
