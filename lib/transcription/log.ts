@@ -10,7 +10,8 @@ export type TranscriptionLogEvent =
   | "ack"
   | "stop"
   | "offline"
-  | "online";
+  | "online"
+  | "takeover";
 
 export function logTranscription(
   event: TranscriptionLogEvent,

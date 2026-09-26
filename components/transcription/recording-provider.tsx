@@ -34,8 +34,13 @@ import type { MicrophoneState } from "@/lib/transcription/audio";
 import { logTranscription } from "@/lib/transcription/log";
 import {
   BrowserRealtimeSession,
+  adoptDeadRecorder,
+  beatRecording,
   clientInstanceId,
-  rememberRecordingNote,
+  expireRecording,
+  forgetRecording,
+  RECORDING_BEAT_MS,
+  touchRecording,
   type BufferState,
   type ConnectionNotice,
   type RealtimeSessionController,
@@ -473,14 +478,25 @@ export function RecordingProvider({
     setTranscriptionDegraded(false);
   }, []);
 
-  // idle 은 건드리지 않는다 — 새로고침한 탭의 첫 상태가 idle 이고, 그때 지우면 독이 제 녹음에 잠긴다.
+  const liveNoteId =
+    activeNoteId && isRecordingLive({ phase, session }) ? activeNoteId : null;
+  // 새로고침한 탭의 첫 상태가 idle 이다. 그때 지우면 독이 제 녹음에 잠기고, 식게 두면 다른 탭이
+  // 산 탭의 ID 를 이어받는다. 그래서 idle 은 제 기록의 박동만 이어 간다.
   useEffect(() => {
-    if (activeNoteId && isRecordingLive({ phase, session })) {
-      rememberRecordingNote(activeNoteId);
-    } else if (phase !== "idle") {
-      rememberRecordingNote(null);
+    if (!liveNoteId && phase !== "idle") {
+      forgetRecording();
+      return;
     }
-  }, [activeNoteId, phase, session]);
+    const beat = () =>
+      liveNoteId ? beatRecording(liveNoteId) : touchRecording();
+    beat();
+    const timer = window.setInterval(beat, RECORDING_BEAT_MS);
+    window.addEventListener("pagehide", expireRecording);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("pagehide", expireRecording);
+    };
+  }, [liveNoteId, phase]);
 
   const setCurrentSession = useCallback(
     (next: LocalRecordingSession | null) => {
@@ -786,6 +802,8 @@ export function RecordingProvider({
           return;
         }
         setPhase("connecting");
+        const adopted = reusableSession ? null : adoptDeadRecorder(noteId);
+        if (adopted) logTranscription("takeover", { noteId, ...adopted });
         const connectionSession =
           reusableSession ?? (await api.startSession(noteId));
         if (!reusableSession) {
@@ -895,6 +913,7 @@ export function RecordingProvider({
 
     clearLevel();
     setPhase("idle");
+    forgetRecording();
     setCurrentSession(null);
     setActiveNoteId(null);
     setActiveWorkspaceId(null);

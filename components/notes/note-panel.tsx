@@ -54,8 +54,9 @@ import { deriveMeetingPhase } from "@/lib/notes/meeting-state";
 import { buildNoteHeaderMeta } from "@/lib/notes/note-header-meta";
 import { toNoteMeta } from "@/lib/notes/copy-markdown";
 import {
-  isRecordingNoteOfThisTab,
-  rememberRecordingNote,
+  forgetNoteRecordings,
+  RECORDING_BEAT_MS,
+  recordingClaimOf,
 } from "@/lib/transcription/realtime-session";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +79,15 @@ const TAB_ITEM =
   // 같은 variant 셀렉터로 써야 한다 — 평범한 `after:bottom-0`은 조용히 무시된다.
   "h-14 flex-none px-0 text-xs group-data-horizontal/tabs:after:bottom-0";
 
-const noopSubscribe = () => () => {};
+/** 박동은 다른 탭이 쓰고, 식는 것은 시간이 한다. 둘 다 다시 읽는다. */
+function subscribeRecordingClaims(notify: () => void) {
+  const timer = window.setInterval(notify, RECORDING_BEAT_MS);
+  window.addEventListener("storage", notify);
+  return () => {
+    window.clearInterval(timer);
+    window.removeEventListener("storage", notify);
+  };
+}
 
 export function NotePanel({
   workspaceId,
@@ -319,32 +328,29 @@ export function NotePanel({
   const confirmedWorkspaceId = noteNotInThisWorkspace
     ? undefined
     : note?.workspaceId;
-  // 새로고침한 탭은 제 녹음을 모른다. 서버가 같은 탭의 새 시작을 받으므로(D-16) 잠그지 않는다.
-  // sessionStorage 라 서버 렌더는 false 로 맞춘다.
-  const recordingHereBeforeReload = useSyncExternalStore(
-    noopSubscribe,
-    () => isRecordingNoteOfThisTab(noteId),
-    () => false
+  // 새로고침한 탭(mine)과 닫힌 탭을 새 탭으로 연 경우(dead)는 서버가 그 ID 의 새 시작으로 옛 세션을
+  // 닫으므로(D-16) 잠그지 않는다. 다른 기기의 녹음은 여기서 알 수 없어 잠근다.
+  const recordingClaim = useSyncExternalStore(
+    subscribeRecordingClaims,
+    () => recordingClaimOf(noteId),
+    () => null
   );
-  // 회의가 녹음 중을 벗어났으면 그 녹음은 끝났다. 남겨 두면 다른 기기가 재개한 녹음까지 제 것으로 읽는다.
+  // 회의가 녹음 중을 벗어났으면 그 녹음은 끝났다. 남겨 두면 다른 기기가 재개한 녹음까지 이어받으려 한다.
   const meetingNotRecording =
     note !== undefined && note.meetingStatus !== "IN_PROGRESS";
   const recordingNoteLive = isNoteRecordingActive(recording, noteId);
   useEffect(() => {
-    if (
-      meetingNotRecording &&
-      !recordingNoteLive &&
-      recordingHereBeforeReload
-    ) {
-      rememberRecordingNote(null);
+    if (meetingNotRecording && !recordingNoteLive && recordingClaim) {
+      forgetNoteRecordings(noteId);
     }
-  }, [meetingNotRecording, recordingNoteLive, recordingHereBeforeReload]);
+  }, [meetingNotRecording, recordingNoteLive, recordingClaim, noteId]);
   const startBlockedReason = noteNotInThisWorkspace
     ? "이 노트는 이 워크스페이스에 없습니다."
     : note?.meetingStatus === "IN_PROGRESS" &&
         !localProviderCanControlNote &&
         !finishedHere &&
-        !recordingHereBeforeReload
+        recordingClaim !== "mine" &&
+        recordingClaim !== "dead"
       ? "다른 탭·기기에서 기록 중입니다."
       : null;
   const startLabel = note?.meetingStatus === "PAUSED" ? "재개" : "회의 시작";

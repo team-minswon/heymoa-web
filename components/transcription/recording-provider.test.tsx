@@ -7,8 +7,9 @@ import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 import {
+  beatRecording,
   clientInstanceId,
-  isRecordingNoteOfThisTab,
+  recordingClaimOf,
 } from "@/lib/transcription/realtime-session";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -1254,7 +1255,7 @@ describe("같은 세션에 다시 붙는 동안", () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     // 새로고침해도 이 탭이 녹음하던 노트를 안다 — 독이 제 녹음에 잠기지 않는다(D-16)
-    expect(isRecordingNoteOfThisTab(session.noteId)).toBe(true);
+    expect(recordingClaimOf(session.noteId)).toBe("mine");
 
     act(() =>
       harness
@@ -1263,13 +1264,121 @@ describe("같은 세션에 다시 붙는 동안", () => {
     );
 
     // 남의 것이 된 녹음을 제 것으로 기억하면 새로고침 뒤 독이 409 로 가는 시작을 연다
-    expect(isRecordingNoteOfThisTab(session.noteId)).toBe(false);
+    expect(recordingClaimOf(session.noteId)).toBeNull();
 
     expect(harness.result.current.error).toBe(
       "다른 탭이나 기기에서 이 녹음을 이어받았습니다."
     );
     expect(harness.result.current.phase).toBe("failed");
     expect(harness.result.current.session).toBeNull();
+  });
+});
+
+/** 다른 탭이 localStorage 에 남긴 녹음 기록 */
+function writeOtherTab(id: string, noteId: string, beatAt: number) {
+  localStorage.setItem(
+    `heymoa.transcription.recording:${id}`,
+    JSON.stringify({ noteId, clientInstanceId: id, beatAt })
+  );
+}
+
+// 운영 20260926T174318: 녹음 중 탭을 닫고 새 탭으로 열면 워치독까지 55초를 시작할 수 없었다
+describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  function captureStartId(harness: ReturnType<typeof setup>) {
+    const seen: string[] = [];
+    vi.mocked(harness.api.startSession).mockImplementationOnce(async () => {
+      seen.push(clientInstanceId());
+      return session;
+    });
+    return seen;
+  }
+
+  it("박동이 식은 탭의 clientInstanceId 로 시작해 서버가 옛 세션을 곧바로 닫게 한다(D-16)", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    writeOtherTab("dead-tab", session.noteId, Date.now() - 10_000);
+    const harness = setup();
+    const seen = captureStartId(harness);
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(seen).toEqual(["dead-tab"]);
+    expect(recordingClaimOf(session.noteId)).toBe("mine");
+    const takeover = info.mock.calls.find(
+      (call) => call[0] === "[transcription]" && call[1] === "takeover"
+    );
+    expect(takeover?.[2]).toMatchObject({ noteId: session.noteId });
+  });
+
+  it("박동이 살아 있는 탭의 ID 는 절대 쓰지 않는다", async () => {
+    writeOtherTab("live-tab", session.noteId, Date.now() - 1_000);
+    const harness = setup();
+    const seen = captureStartId(harness);
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).not.toBe("live-tab");
+  });
+
+  it("다른 노트의 식은 기록은 이어받지 않는다", async () => {
+    writeOtherTab("dead-tab-2", "01KOTHERNOTE", Date.now() - 10_000);
+    const harness = setup();
+    const seen = captureStartId(harness);
+
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    expect(seen[0]).not.toBe("dead-tab-2");
+  });
+
+  it("녹음을 마치면 기록을 지운다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    expect(recordingClaimOf(session.noteId)).toBe("mine");
+
+    await act(() => harness.result.current.stop());
+
+    expect(recordingClaimOf(session.noteId)).toBeNull();
+  });
+
+  it("정리(disconnect)하면 기록을 지운다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    await act(() => harness.result.current.disconnect());
+
+    expect(recordingClaimOf(session.noteId)).toBeNull();
+  });
+
+  // 식게 두면 다른 탭이 산 탭의 ID 를 이어받아 두 탭이 같은 ID 가 되고, 한쪽 시작이 다른 쪽 녹음을 닫는다
+  it("새로고침 뒤 아직 시작 안 한 탭도 제 기록의 박동을 이어 간다", () => {
+    beatRecording(session.noteId, Date.now() - 10_000);
+
+    setup();
+
+    const raw = localStorage.getItem(
+      `heymoa.transcription.recording:${clientInstanceId()}`
+    );
+    expect(JSON.parse(raw!).beatAt).toBeGreaterThan(Date.now() - 1_000);
+  });
+
+  // 새로고침은 같은 ID 라 상관없고, 닫힌 탭이면 새 탭이 6초를 기다리지 않는다
+  it("탭이 닫히면(pagehide) 박동을 곧바로 식힌다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+
+    const raw = localStorage.getItem(
+      `heymoa.transcription.recording:${clientInstanceId()}`
+    );
+    expect(JSON.parse(raw!).beatAt).toBeLessThan(Date.now() - 6_000);
   });
 });
 

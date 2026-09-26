@@ -17,8 +17,8 @@ import {
   type RecordingRuntime,
 } from "@/components/transcription/recording-provider";
 import {
-  isRecordingNoteOfThisTab,
-  rememberRecordingNote,
+  beatRecording,
+  recordingClaimOf,
 } from "@/lib/transcription/realtime-session";
 
 // 이 파일이 보는 것은 패널이지 소켓이 아니다. 연결은 세우지 않는다.
@@ -228,6 +228,14 @@ function renderNotePanel(ui: ReactNode) {
   };
 }
 
+/** 다른 탭이 localStorage 에 남긴 녹음 기록 */
+function writeOtherTab(noteId: string, beatAt: number) {
+  localStorage.setItem(
+    "heymoa.transcription.recording:dead-tab",
+    JSON.stringify({ noteId, clientInstanceId: "dead-tab", beatAt })
+  );
+}
+
 describe("NotePanel", () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -238,7 +246,7 @@ describe("NotePanel", () => {
   });
   afterEach(() => {
     cleanup();
-    rememberRecordingNote(null);
+    localStorage.clear();
     noteRefetch.mockReset();
     authState.userId = "u1";
     recordingState.activeNoteId = null;
@@ -1366,7 +1374,7 @@ describe("NotePanel", () => {
     // lab 20260926T162918Z: 새로고침한 탭이 제 녹음에 잠겨 워치독까지 87초를 못 눌렀다.
     // 서버는 같은 탭의 새 시작을 받아 옛 세션을 닫는다(D-16).
     it("IN_PROGRESS라도 새로고침한 같은 탭이 녹음하던 노트면 잠그지 않는다", () => {
-      rememberRecordingNote("01K0000000002");
+      beatRecording("01K0000000002");
 
       renderDock(view);
 
@@ -1374,18 +1382,41 @@ describe("NotePanel", () => {
       expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
     });
 
+    // 운영 20260926T174318: 탭을 닫고 새 탭으로 열면 워치독까지 55초를 못 눌렀다
+    it("닫힌 탭의 박동이 식었으면 새 탭에서도 잠그지 않는다", () => {
+      writeOtherTab("01K0000000002", Date.now() - 10_000);
+
+      renderDock(view);
+
+      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+      expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
+    });
+
+    // 산 탭의 ID 로 시작하면 서버가 그 탭의 녹음을 닫는다(D-16)
+    it("다른 탭의 박동이 살아 있으면 잠근다", () => {
+      writeOtherTab("01K0000000002", Date.now() - 1_000);
+
+      renderDock(view);
+
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+      ).toBeInTheDocument();
+    });
+
     // 워치독이 닫은 뒤 다른 기기가 재개하면 그 녹음을 제 것으로 읽어 409 로 가는 시작을 연다
-    it("회의가 녹음 중을 벗어나면 새로고침 전 녹음의 기억을 지운다", () => {
-      rememberRecordingNote("01K0000000002");
+    it("회의가 녹음 중을 벗어나면 그 노트의 녹음 기록을 지운다", () => {
+      beatRecording("01K0000000002");
+      writeOtherTab("01K0000000002", Date.now() - 10_000);
       noteState.value.meetingStatus = "PAUSED";
 
       renderDock(view);
 
-      expect(isRecordingNoteOfThisTab("01K0000000002")).toBe(false);
+      expect(recordingClaimOf("01K0000000002")).toBeNull();
     });
 
-    it("다른 노트를 녹음하던 탭이면 여전히 잠근다", () => {
-      rememberRecordingNote("01K0000000009");
+    it("다른 노트를 녹음하던 기록이면 여전히 잠근다", () => {
+      beatRecording("01K0000000009");
+      writeOtherTab("01K0000000009", Date.now() - 10_000);
 
       renderDock(view);
 
