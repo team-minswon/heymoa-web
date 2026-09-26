@@ -225,7 +225,7 @@ function getStartErrorMessage(cause: unknown) {
   }
 
   if (errorCodeOf(cause) === "ACTIVE_TRANSCRIPTION_SESSION") {
-    return "다른 기기에서 이 회의를 녹음하고 있어요.";
+    return "다른 탭이나 기기에서 이 회의를 녹음하고 있어요.";
   }
 
   // 녹음자 기기의 리스가 식어 server 가 세션을 정리(60초)하기를 기다리는 중이다. 기다리면 된다는 것을 말한다(D-10)
@@ -753,6 +753,9 @@ export function RecordingProvider({
         Date.parse(current.readyExpiresAt) > Date.now()
           ? current
           : null;
+      // 진행 phase 의 박동이 이 탭 ID 로 기록을 적기 전에 판정한다. 뒤에서 하면 제 기록이 보여 이어받지 않는다
+      const adopted = reusableSession ? null : adoptDeadRecorder(noteId);
+      if (adopted) logTranscription("takeover", { noteId, ...adopted });
 
       dispatchTranscript({ type: "reset" });
       setActiveNoteId(noteId);
@@ -802,8 +805,6 @@ export function RecordingProvider({
           return;
         }
         setPhase("connecting");
-        const adopted = reusableSession ? null : adoptDeadRecorder(noteId);
-        if (adopted) logTranscription("takeover", { noteId, ...adopted });
         const connectionSession =
           reusableSession ?? (await api.startSession(noteId));
         if (!reusableSession) {

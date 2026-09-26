@@ -2078,10 +2078,17 @@ function expireReadySessions(noteId: string) {
 /** 목 DB 밖에 상태를 두는 목 모듈이 같은 시점에 비우도록 거는 자리. */
 const resetListeners = new Set<() => void>();
 
+/** 세션을 연 탭. 응답 모양에 없는 값이라 세션 밖에 둔다 */
+const sessionOpeners = new Map<string, string>();
+/** 0002 의 진행 중 시드를 연 탭. 닫힌 탭 이어받기를 목에서 굴릴 때 이 ID 로 식은 기록을 심는다 */
+const MOCK_RECORDER_CLIENT_ID = "mock-recorder-tab";
+
 function reset() {
   idCounter = 100;
   mockClock = 0;
   state = createSeedState();
+  sessionOpeners.clear();
+  sessionOpeners.set("01K0000000402", MOCK_RECORDER_CLIENT_ID);
   for (const listener of resetListeners) listener();
 }
 
@@ -3160,7 +3167,10 @@ export const mockDb = {
     // 메시지의 `scope`에 남은 죽은 id는 조회할 때 서버가 재검증해 「삭제됨」으로 접는다.
   },
 
-  createSession(noteId: string): StartTranscriptionSessionResponseData {
+  createSession(
+    noteId: string,
+    clientInstanceId?: string
+  ): StartTranscriptionSessionResponseData {
     const note = findNote(noteId);
     // 조회와 같은 규칙 — 권한 승인과 이 POST 사이에 추방됐을 수 있다. 서버는 여기서도
     // 멤버십을 보고 404 `WORKSPACE_NOT_FOUND`를 준다(`NoteAccessHandler.requireProjectMember`).
@@ -3170,6 +3180,19 @@ export const mockDb = {
     // 그 사실을 몰랐다. 즉 위험은 "구멍이 뚫렸다"가 아니라 "막혀 있는데 로컬만 초록"이었다.
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
     expireReadySessions(noteId);
+    // 서버 D-16: 그 세션을 연 탭이 다시 누른 것이면 그 탭은 이미 떠났다. 리스가 살아 있어도 닫는다
+    for (const session of state.sessions) {
+      if (
+        session.noteId === noteId &&
+        ACTIVE_STATUSES.has(session.status) &&
+        clientInstanceId !== undefined &&
+        sessionOpeners.get(session.sessionId) === clientInstanceId
+      ) {
+        session.status = "INTERRUPTED";
+        session.endedAt = new Date().toISOString();
+        session.endReason = "HEARTBEAT_TIMEOUT";
+      }
+    }
     // **시작자 제한이 없다** (APP-685). 서버가 시작·재개를 시작자로 묶지 않는다 — 둘이
     // 동시에 눌러도 아래 열린 세션 검사가 둘째를 「이미 녹음 중」으로 막고, 그것이 사용자에게
     // 사실인 말이다.
@@ -3203,6 +3226,8 @@ export const mockDb = {
     };
     note.meetingStatus = "IN_PROGRESS";
     state.sessions.push(session);
+    if (clientInstanceId)
+      sessionOpeners.set(session.sessionId, clientInstanceId);
     return copy(session) as unknown as StartTranscriptionSessionResponseData;
   },
 

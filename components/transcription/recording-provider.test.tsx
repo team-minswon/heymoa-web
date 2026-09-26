@@ -1008,7 +1008,8 @@ describe("시작하는 사이에 쫓겨나면", () => {
     expect(harness.result.current.error).toBe("이미 종료된 회의입니다.");
   });
 
-  it("다른 기기가 녹음 중이라 막히면 그렇게 말한다", async () => {
+  // 같은 브라우저의 다른 탭도 409 를 받는다(서버: 같은 사용자라도 다른 탭이 리스를 쥐고 있으면). 「다른 기기」라고만 하면 사실과 다르다(D-26 G4)
+  it("다른 탭이나 기기가 녹음 중이라 막히면 그렇게 말한다", async () => {
     const harness = setup();
     vi.mocked(harness.api.startSession).mockRejectedValueOnce({
       success: false,
@@ -1022,7 +1023,7 @@ describe("시작하는 사이에 쫓겨나면", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
     expect(harness.result.current.error).toBe(
-      "다른 기기에서 이 회의를 녹음하고 있어요."
+      "다른 탭이나 기기에서 이 회의를 녹음하고 있어요."
     );
   });
 
@@ -1312,6 +1313,39 @@ describe("닫힌 탭의 녹음 이어받기 (APP-705)", () => {
       (call) => call[0] === "[transcription]" && call[1] === "takeover"
     );
     expect(takeover?.[2]).toMatchObject({ noteId: session.noteId });
+  });
+
+  // 운영 20260926T180752-tab_5: 브라우저의 권한 요청은 렌더가 끝난 뒤에 풀린다. 그 사이 진행 phase 의
+  // 박동이 새 ID 로 기록을 적어, 권한 뒤에 판정하면 제 기록(mine)이 보여 이어받지 않고 409 로 갔다
+  it("권한 요청이 늦게 풀려도 식은 탭의 ID 로 시작한다", async () => {
+    writeOtherTab("dead-tab-slow", session.noteId, Date.now() - 11_700);
+    const harness = setup();
+    const seen = captureStartId(harness);
+    let resolvePermission!: () => void;
+    harness.controller.requestPermission.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePermission = resolve;
+        })
+    );
+    let starting!: Promise<void>;
+    act(() => {
+      starting = harness.result.current.start(session.noteId, WORKSPACE_ID);
+    });
+    await waitFor(() =>
+      expect(harness.result.current.phase).toBe("requesting-permission")
+    );
+
+    await act(async () => {
+      resolvePermission();
+      await starting;
+    });
+
+    expect(seen).toEqual(["dead-tab-slow"]);
+    expect(
+      localStorage.length,
+      "버린 새 ID 의 기록이 남으면 다른 탭이 그것을 이어받는다"
+    ).toBe(1);
   });
 
   it("박동이 살아 있는 탭의 ID 는 절대 쓰지 않는다", async () => {

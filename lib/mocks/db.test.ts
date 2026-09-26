@@ -94,6 +94,25 @@ describe("mockDb", () => {
     );
   });
 
+  // 서버 D-16: 그 세션을 연 탭이 다시 시작하면 리스가 살아 있어도 곧바로 닫는다. 다른 탭이면 409
+  it("closes the open session when the same clientInstanceId starts again", () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    const first = mockDb.createSession(note.noteId, "tab-a");
+    mockDb.updateSessionStatus(first.sessionId, "ACTIVE");
+
+    expect(() => mockDb.createSession(note.noteId, "tab-b")).toThrow(
+      "ACTIVE_TRANSCRIPTION_SESSION"
+    );
+    const second = mockDb.createSession(note.noteId, "tab-a");
+
+    expect(second.sessionId).not.toBe(first.sessionId);
+    expect(mockDb.getSession(first.sessionId)).toMatchObject({
+      status: "INTERRUPTED",
+      endReason: "HEARTBEAT_TIMEOUT",
+    });
+  });
+
   it("transitions a new note through recording, pause, and cumulative sessions", () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});
