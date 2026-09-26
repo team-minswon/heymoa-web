@@ -274,6 +274,16 @@ describe("PcmAudioCapture 마이크 상태", () => {
     expect(onState).toHaveBeenLastCalledWith("live");
   });
 
+  it("감시를 걸기 전에 이미 음소거된 트랙이면 시작하자마자 muted 를 올린다", async () => {
+    const browser = stubBrowser();
+    browser.track.muted = true;
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+
+    expect(onState).toHaveBeenLastCalledWith("muted");
+  });
+
   it("기기가 빠져 트랙이 끝났으면 devicechange 에서도 ended 를 올린다", async () => {
     const browser = stubBrowser();
     const onState = vi.fn();

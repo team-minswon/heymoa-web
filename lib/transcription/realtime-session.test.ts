@@ -1285,7 +1285,8 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     await vi.advanceTimersByTimeAsync(300);
 
     expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다."
+      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
+      { droppedMs: 0 }
     );
   });
 
@@ -1325,7 +1326,8 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
 
     expect(harness.onFailure).toHaveBeenCalledTimes(1);
     expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다."
+      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
+      { droppedMs: 0 }
     );
     expect(info).toHaveBeenCalledWith(
       "[transcription]",
@@ -1339,6 +1341,27 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     );
     await vi.advanceTimersByTimeAsync(60_000);
     expect(harness.onFailure).toHaveBeenCalledTimes(1);
+  });
+
+  // D-26: 상한에 닿으면 못 보낸 소리를 버리고 그 양을 알린다. 안 버리면 탭 닫기 붙잡기가 영영 안 풀린다
+  it("stop 60초 상한에 닿으면 저장 확인 전 소리 양을 알리고 버린다", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.incompleteStops = Number.MAX_SAFE_INTEGER;
+    harness.server.stopReplyMs = 10_000;
+    harness.emitChunk(new ArrayBuffer(32_000));
+
+    void harness.controller.stop();
+    await vi.advanceTimersByTimeAsync(60_100);
+
+    expect(harness.onFailure).toHaveBeenCalledWith(
+      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
+      { droppedMs: 1_000 }
+    );
+    expect(harness.buffer()).toMatchObject({ pendingMs: 0 });
   });
 
   // 조금씩 나가면 정체 감시(10초)는 매번 시계를 다시 잡는다. 올리기 대기도 60초 안이어야 한다
@@ -1366,7 +1389,8 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     expect(settled).toBe(true);
     expect(harness.onFailure).toHaveBeenCalledTimes(1);
     expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다."
+      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
+      { droppedMs: 3_000 }
     );
     expect(harness.socket.close).toHaveBeenCalled();
   });

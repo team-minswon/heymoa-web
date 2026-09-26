@@ -320,7 +320,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       }
       if (state === "reattach" || state === "timeout") {
         if (Date.now() >= deadline) break;
-        this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+        this.failStop();
       }
       await this.close();
       return;
@@ -333,9 +333,20 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       unsentMs: Math.round(
         (this.resendBuffer?.unsentBytes ?? 0) / BYTES_PER_MS
       ),
+      droppedMs: Math.round(this.resendBuffer.bytes / BYTES_PER_MS),
     });
-    this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+    this.failStop();
     await this.close();
+  }
+
+  /** 닫으면 들고 있던 소리는 보낼 곳이 없다. 양을 알리고 버려야 탭 닫기 붙잡기도 풀린다(D-26). */
+  private failStop() {
+    const droppedMs = Math.round(this.resendBuffer.bytes / BYTES_PER_MS);
+    this.resendBuffer.ackThrough(Number.MAX_SAFE_INTEGER);
+    this.reportBuffer();
+    this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.", {
+      droppedMs,
+    });
   }
 
   /** 막힌 소켓은 정체 감시가 다시 붙이고, 끊긴 채 30초면 창이 닫는다. 조금씩 나가는 소켓은 deadline 이 끊는다. */

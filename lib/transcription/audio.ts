@@ -220,17 +220,20 @@ export class PcmAudioCapture {
       }
       report();
     };
-    if (!track) return;
-    track.onended = report;
-    track.onmute = report;
-    track.onunmute = report;
-    this.onDeviceChange = () => {
-      if (track.readyState === "ended") report();
-    };
-    navigator.mediaDevices.addEventListener(
-      "devicechange",
-      this.onDeviceChange
-    );
+    if (track) {
+      track.onended = report;
+      track.onmute = report;
+      track.onunmute = report;
+      this.onDeviceChange = () => {
+        if (track.readyState === "ended") report();
+      };
+      navigator.mediaDevices.addEventListener(
+        "devicechange",
+        this.onDeviceChange
+      );
+    }
+    // 권한을 받고 addModule 을 기다리는 사이 바뀐 상태는 이벤트로 오지 않는다
+    report();
   }
 
   async stop() {

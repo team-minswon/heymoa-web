@@ -436,6 +436,26 @@ describe("RecordingProvider", () => {
     expect(harness.result.current.phase).toBe("failed");
   });
 
+  it("stop 상한에 닿아 버린 소리가 있으면 그 양을 말한다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    harness.controller.stop.mockImplementationOnce(async () => {
+      harness
+        .getCallbacks()
+        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.", {
+          droppedMs: 12_300,
+        });
+    });
+
+    await act(async () => {
+      await harness.result.current.stop();
+    });
+
+    expect(harness.result.current.error).toBe(
+      "마지막 기록을 정리하지 못해 이 기기에 남은 소리 12초를 올리지 못했어요."
+    );
+  });
+
   it("clears a settled false stop promise so a later attempt is not deduplicated to it", async () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
@@ -1291,6 +1311,23 @@ describe("끊김 창과 끝 (APP-705)", () => {
     expect(harness.result.current.phase).toBe("recording");
   });
 
+  it("창이 끝나 버린 소리가 있으면 멈출 때 그 양을 말한다", async () => {
+    const harness = setup({ enablePolling: true });
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+
+    act(() =>
+      harness
+        .getCallbacks()
+        .onFailure("30초 동안 다시 잇지 못했습니다 (WebSocket closed (1006))", {
+          droppedMs: 12_300,
+        })
+    );
+
+    expect(harness.result.current.error).toBe(
+      "연결이 끊겨 녹음을 멈췄어요. 이 기기에 남은 소리 12초를 올리지 못했어요."
+    );
+  });
+
   describe("창이 끝나 멈춘 뒤 남이 회의를 끝내면 (lab 20260926T094944Z)", () => {
     const noteWith = (meetingStatus: "IN_PROGRESS" | "ENDED") => ({
       status: 200,
@@ -1319,7 +1356,9 @@ describe("끊김 창과 끝 (APP-705)", () => {
             { droppedMs }
           )
       );
-      expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄어요.");
+      expect(harness.result.current.error).toMatch(
+        /^연결이 끊겨 녹음을 멈췄어요\./
+      );
       return harness;
     }
 
@@ -1334,7 +1373,9 @@ describe("끊김 창과 끝 (APP-705)", () => {
       apiFetchMock.mockResolvedValue(noteWith("IN_PROGRESS"));
       const harness = await dropAfterWindow(12_300);
       await act(() => vi.advanceTimersByTimeAsync(3_000));
-      expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄어요.");
+      expect(harness.result.current.error).toMatch(
+        /^연결이 끊겨 녹음을 멈췄어요\./
+      );
 
       apiFetchMock.mockResolvedValue(noteWith("ENDED"));
       await act(() => vi.advanceTimersByTimeAsync(3_100));

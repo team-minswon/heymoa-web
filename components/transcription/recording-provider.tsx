@@ -255,10 +255,19 @@ const DROPPED_MESSAGE = "연결이 끊겨 녹음을 멈췄어요.";
 const isWindowExhausted = (message: string) =>
   message.includes("다시 잇지 못했");
 
-function getRuntimeFailureMessage(message: string) {
-  if (isWindowExhausted(message)) return DROPPED_MESSAGE;
+const lostAudio = (droppedMs: number) =>
+  `이 기기에 남은 소리 ${Math.max(1, Math.round(droppedMs / 1_000))}초를 올리지 못했어요.`;
+
+function getRuntimeFailureMessage(message: string, droppedMs: number) {
+  if (isWindowExhausted(message)) {
+    return droppedMs > 0
+      ? `${DROPPED_MESSAGE} ${lostAudio(droppedMs)}`
+      : DROPPED_MESSAGE;
+  }
   if (message.includes("완료 응답") || message.includes("종료 요청")) {
-    return "마지막 기록을 정리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    return droppedMs > 0
+      ? `마지막 기록을 정리하지 못해 ${lostAudio(droppedMs)}`
+      : "마지막 기록을 정리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
   return "실시간 스크립트 연결이 중단되었습니다. 잠시 후 다시 시도해 주세요.";
 }
@@ -298,7 +307,7 @@ function getInterruptedMessage(
 /** 끊긴 사이 회의가 끝나면 이 기기에 남은 소리는 올릴 세션이 없다(D-10). */
 function meetingEndedMessage(pendingMs: number) {
   return pendingMs > 0
-    ? `회의가 끝나 이 기기에 남은 소리 ${Math.max(1, Math.round(pendingMs / 1_000))}초를 올리지 못했어요.`
+    ? `회의가 끝나 ${lostAudio(pendingMs)}`
     : getInterruptedMessage("MEETING_ENDED");
 }
 
@@ -420,7 +429,7 @@ export function RecordingProvider({
   const watchMeetingEnd =
     enablePolling &&
     phase === "failed" &&
-    error === DROPPED_MESSAGE &&
+    Boolean(error?.startsWith(DROPPED_MESSAGE)) &&
     activeNoteId !== null;
   const droppedNoteQuery = useGetNote(activeNoteId ?? "", {
     query: {
@@ -740,7 +749,9 @@ export function RecordingProvider({
           // 같은 사건을 이벤트로 이미 받아 서버 문구로 끝냈다
           if (controllerRef.current !== controller) return;
           droppedMsRef.current = detail?.droppedMs ?? 0;
-          failRecording(getRuntimeFailureMessage(message));
+          failRecording(
+            getRuntimeFailureMessage(message, droppedMsRef.current)
+          );
           // 이 탭이 버린 세션이다. 열린 세션으로 들고 있으면 독이 남의 기록으로 읽어 [다시 녹음]을 막는다
           const dropped = sessionRef.current;
           if (isWindowExhausted(message) && dropped) {
