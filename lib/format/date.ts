@@ -51,17 +51,31 @@ export function viewerDateKey(value: string | Date, timeZone?: string) {
   }).format(date);
 }
 
+/**
+ * ICU 78(Node 22·24)은 ko 의 오전·오후를 「AM」「PM」으로 내고 브라우저는 「오전」「오후」를
+ * 낸다. 그대로 두면 서버 HTML 과 첫 클라이언트 렌더가 갈린다(React #418).
+ */
+const KO_DAY_PERIOD: Record<string, string> = { AM: "오전", PM: "오후" };
+
 export function formatAppDate(
   value: string | Date,
   options: Intl.DateTimeFormatOptions,
   locale = "ko-KR"
 ) {
   const date = typeof value === "string" ? new Date(value) : value;
-
-  return new Intl.DateTimeFormat(locale, {
+  const parts = new Intl.DateTimeFormat(locale, {
     ...options,
     timeZone: APP_TIME_ZONE,
-  }).format(date);
+  }).formatToParts(date);
+  const korean = locale.startsWith("ko");
+
+  return parts
+    .map((part) =>
+      korean && part.type === "dayPeriod"
+        ? (KO_DAY_PERIOD[part.value] ?? part.value)
+        : part.value
+    )
+    .join("");
 }
 
 /** `2026-09-19` → 「9월 19일 (토)」. 날짜만 있는 값이라 서울 자정으로 읽는다. */

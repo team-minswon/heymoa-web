@@ -33,9 +33,8 @@ describe("buildNoteHeaderMeta", () => {
     const meta = buildNoteHeaderMeta(note(), { isStarter: true });
 
     expect(meta.participantLabel).toBe("참석자 2명");
-    // 시각은 Asia/Seoul 기준이다 — 00:00Z는 같은 날 9시다. 오전/AM 표기는 런타임의 ICU
-    // 데이터에 달려 있어(vitest는 축약 데이터로 돈다) 문자열째로 못 박지 않는다.
-    expect(meta.whenLabel).toMatch(/^2026년 7월 30일 .*9:00$/);
+    // 시각은 Asia/Seoul 기준이다 — 00:00Z는 같은 날 9시다.
+    expect(meta.whenLabel).toBe("2026년 7월 30일 오전 9:00");
     // `<time datetime>`이 그대로 쓰는 값이라 원본 ISO여야 한다.
     expect(meta.whenIso).toBe("2026-07-30T00:00:00Z");
   });
