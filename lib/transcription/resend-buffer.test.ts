@@ -10,15 +10,8 @@ function chunk(chunkSeq: number, bytes = 3_200) {
   };
 }
 
-function buffer({ memory = 10_485_760, disk = 115_200_000 } = {}) {
-  const created = new ResendBuffer({
-    memoryLimitBytes: memory,
-    diskLimitBytes: disk,
-    store: null,
-    noteId: "note",
-    sessionId: "session",
-    onChange: () => undefined,
-  });
+function buffer({ memory = 10_485_760 } = {}) {
+  const created = new ResendBuffer({ limitBytes: memory });
   created.rewind();
   return created;
 }
@@ -112,7 +105,7 @@ describe("ResendBuffer", () => {
   });
 
   it("한도에서는 버리지 않고 거절하며, 90% 아래로 빠져야 다시 받는다", () => {
-    const target = buffer({ memory: 32_000, disk: 32_000 });
+    const target = buffer({ memory: 32_000 });
     for (let n = 0; n < 10; n += 1) expect(target.push(chunk(n))).toBe(true);
 
     expect(target.push(chunk(10))).toBe(false);
@@ -125,12 +118,5 @@ describe("ResendBuffer", () => {
 
     target.rewind();
     expect(drain(target)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
-  });
-
-  it("디스크가 없으면 메모리 한도를 쓴다", () => {
-    const target = buffer({ memory: 6_400, disk: 115_200_000 });
-
-    expect(target.persistent).toBe(false);
-    expect(target.limitBytes).toBe(6_400);
   });
 });

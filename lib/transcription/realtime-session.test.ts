@@ -5,10 +5,10 @@ import {
 } from "@/lib/transcription/realtime-session";
 import type { ServerEvent } from "@/lib/transcription/protocol";
 import type { MicrophoneState } from "@/lib/transcription/audio";
-import type { AudioStore } from "@/lib/transcription/audio-store";
-import { FakeAudioStore } from "@/lib/transcription/fake-audio-store";
 
 const SESSION_ID = "0HZX2K7M9Q4AG";
+/** 창 이벤트(offline·online)를 듣는 컨트롤러가 다음 테스트로 새지 않게 닫는다. */
+const opened: BrowserRealtimeSession[] = [];
 
 type SocketOptions = Parameters<
   NonNullable<RealtimeSessionDependencies["createSocket"]>
@@ -20,7 +20,9 @@ type SocketOptions = Parameters<
  * - 열다 실패하면 reject 하고 **그 뒤에** `onClose` 도 부른다(WEBSOCKET_CONNECTION_FAILED 경로).
  * - 서버의 `error`·`completed` 를 받으면 스스로 닫고 `onClose` 는 안 부른다.
  */
-function setup({ store = null }: { store?: AudioStore | null } = {}) {
+function setup({
+  Session = BrowserRealtimeSession,
+}: { Session?: typeof BrowserRealtimeSession } = {}) {
   const order: string[] = [];
   let emitChunk!: (chunk: ArrayBuffer, captureSamples: number) => void;
   let emitMicrophone!: (state: MicrophoneState) => void;
@@ -121,7 +123,7 @@ function setup({ store = null }: { store?: AudioStore | null } = {}) {
 
   const onFailure = vi.fn();
   const onEvent = vi.fn<(event: ServerEvent) => void>();
-  const onReconnectChange = vi.fn();
+  const onNoticeChange = vi.fn();
   const onBufferChange = vi.fn();
   const onMicrophoneChange = vi.fn();
   const createSocket = vi.fn((options: SocketOptions) => {
@@ -129,13 +131,13 @@ function setup({ store = null }: { store?: AudioStore | null } = {}) {
     sockets.push(socket);
     return socket;
   });
-  const controller = new BrowserRealtimeSession(
+  const controller = new Session(
     {
       url: "ws://localhost/ws/transcriptions",
       onEvent,
       onLevel: vi.fn(),
       onFailure,
-      onReconnectChange,
+      onNoticeChange,
       onBufferChange,
       onMicrophoneChange,
     },
@@ -146,9 +148,9 @@ function setup({ store = null }: { store?: AudioStore | null } = {}) {
         return audio;
       },
       createSocket,
-      createStore: () => store,
     }
   );
+  opened.push(controller);
   const current = () => sockets[sockets.length - 1];
   return {
     controller,
@@ -163,7 +165,8 @@ function setup({ store = null }: { store?: AudioStore | null } = {}) {
     order,
     onEvent,
     onFailure,
-    onReconnectChange,
+    onNoticeChange,
+    notice: () => onNoticeChange.mock.lastCall?.[0] ?? null,
     onBufferChange,
     buffer: () => onBufferChange.mock.lastCall?.[0],
     onMicrophoneChange,
@@ -195,6 +198,7 @@ function deferred() {
 }
 
 afterEach(() => {
+  for (const controller of opened.splice(0)) void controller.close();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -603,22 +607,6 @@ describe("같은 세션에 다시 붙는다", () => {
     expect(harness.sentSeqs(harness.socket)).toEqual([0, 1]);
   });
 
-  it("300초 창을 다 쓰면 그때 실패한다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    harness.server.refuse = true;
-
-    harness.closeTransport(1006, "gone");
-    await vi.advanceTimersByTimeAsync(295_000);
-    expect(harness.onFailure).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(10_000);
-    expect(harness.onFailure).toHaveBeenCalledOnce();
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(harness.onFailure).toHaveBeenCalledOnce();
-  });
-
   it("창 안에서는 지터를 두고 두드리되 간격은 5초를 넘지 않는다", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0.999);
@@ -627,28 +615,12 @@ describe("같은 세션에 다시 붙는다", () => {
     harness.server.refuse = true;
 
     harness.closeTransport(1006);
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(25_000);
 
-    // 0.5 + 1 + 2 + 4 + 5·n ≈ 60s → 첫 시도 포함 약 15번
+    // 0.5 + 1 + 2 + 4 + 5·n ≈ 25s → 첫 시도 포함 약 7번
     const attempts = harness.sockets.length - 1;
-    expect(attempts).toBeGreaterThanOrEqual(14);
-    expect(attempts).toBeLessThanOrEqual(16);
-  });
-
-  it("다시 잇는 동안과 이은 뒤를 알린다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    harness.emitChunk(new ArrayBuffer(32_000));
-
-    harness.closeTransport(1006);
-    expect(harness.onReconnectChange).toHaveBeenLastCalledWith({
-      sinceMs: Date.now(),
-      pendingMs: 1_000,
-    });
-    await vi.advanceTimersByTimeAsync(500);
-
-    expect(harness.onReconnectChange).toHaveBeenLastCalledWith(null);
+    expect(attempts).toBeGreaterThanOrEqual(6);
+    expect(attempts).toBeLessThanOrEqual(8);
   });
 
   it("마이크가 끊겼다 돌아오면 그동안 못 잡은 시간(벽시계 − 캡처 샘플)을 함께 알린다", async () => {
@@ -747,47 +719,9 @@ describe("녹음이 끝나는 길", () => {
     expect(harness.audio.stop).toHaveBeenCalled();
   });
 
-  // 서버가 틀려 저장 전에 completed 를 보내도 마지막 사본은 남아야 한다
-  it("completed 를 받아도 ACK 못 받은 조각은 디스크에서 지우지 않는다", async () => {
-    vi.useFakeTimers();
-    const store = new FakeAudioStore();
-    const harness = setup({ store });
-    await harness.controller.connect(SESSION_ID);
-    harness.emitChunk();
-    harness.emitChunk();
-    await vi.advanceTimersByTimeAsync(0);
-    harness.emitEvent({ type: "ack", throughChunkSeq: 0 });
-
-    harness.emitEvent({ type: "completed", sessionId: SESSION_ID });
-    await vi.advanceTimersByTimeAsync(0);
-    const left = store.list();
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect((await left).map((chunk) => chunk.chunkSeq)).toEqual([1]);
-  });
-
-  it("completed 때 전부 ACK 받았으면 디스크를 비운다", async () => {
-    vi.useFakeTimers();
-    const store = new FakeAudioStore();
-    const harness = setup({ store });
-    await harness.controller.connect(SESSION_ID);
-    harness.emitChunk();
-    harness.emitChunk();
-    await vi.advanceTimersByTimeAsync(0);
-    harness.emitEvent({ type: "ack", throughChunkSeq: 1 });
-
-    harness.emitEvent({ type: "completed", sessionId: SESSION_ID });
-    await vi.advanceTimersByTimeAsync(0);
-    const left = store.list();
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect(await left).toEqual([]);
-  });
-
   it("저장이 덜 끝났다며 다시 붙으라고 하면 다시 붙어 이어 보낸 뒤 stop 을 다시 보낸다", async () => {
     vi.useFakeTimers();
-    const store = new FakeAudioStore();
-    const harness = setup({ store });
+    const harness = setup();
     await harness.controller.connect(SESSION_ID);
     harness.emitChunk();
     harness.emitChunk();
@@ -796,14 +730,11 @@ describe("녹음이 끝나는 길", () => {
 
     void harness.controller.stop();
     await vi.advanceTimersByTimeAsync(2_000);
-    const left = store.list();
-    await vi.advanceTimersByTimeAsync(0);
 
     expect(harness.sockets).toHaveLength(2);
     expect(harness.sentSeqs(harness.sockets[1])).toEqual([1]);
     expect(harness.sockets[1].stop).toHaveBeenCalledWith(1);
     expect(harness.onFailure).not.toHaveBeenCalled();
-    expect(await left).toEqual([]);
   });
 
   it("stop 을 보낸 뒤 끊기면 다시 붙어 stop 을 다시 보낸다", async () => {
@@ -888,94 +819,6 @@ const range = (from: number, to: number) =>
   Array.from({ length: to - from }, (_, i) => from + i);
 
 describe("버퍼 한도", () => {
-  it("5분을 넘으면 IndexedDB 로 흘려 담고, 다시 붙으면 거기서 읽어 원래 본문으로 보낸다", async () => {
-    vi.useFakeTimers();
-    const store = new FakeAudioStore();
-    const harness = setup({ store });
-    await harness.controller.connect(SESSION_ID);
-    harness.server.refuse = true;
-    harness.closeTransport(1006);
-
-    for (let i = 0; i < 360; i += 1) harness.emitChunk(second(i), i * 16_000);
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect(harness.buffer()).toMatchObject({
-      pendingMs: 360_000,
-      limitMs: 3_600_000,
-      persistent: true,
-      paused: false,
-    });
-    expect(store.size).toBe(360);
-
-    harness.server.refuse = false;
-    await vi.advanceTimersByTimeAsync(10_000);
-    const calls = harness.socket.sendAudio.mock.calls;
-
-    expect(calls.map((call) => call[1])).toEqual(range(0, 360));
-    expect(calls.map((call) => new Uint8Array(call[0])[0])).toEqual(
-      range(0, 360).map((n) => n % 256)
-    );
-    expect(calls.map((call) => call[2])).toEqual(
-      range(0, 360).map((n) => n * 16_000)
-    );
-    // 5분 넘는 앞부분은 메모리에 없어서 디스크에서 읽어 왔다
-    expect(store.reads).toBeGreaterThan(0);
-  });
-
-  it("60분에 닿으면 버리지 않고 캡처를 멈추고, 밀린 것이 빠지면 저절로 다시 받는다", async () => {
-    vi.useFakeTimers();
-    const store = new FakeAudioStore();
-    const harness = setup({ store });
-    await harness.controller.connect(SESSION_ID);
-    harness.server.refuse = true;
-    harness.closeTransport(1006);
-
-    for (let i = 0; i < 3_600; i += 1) harness.emitChunk(second(i), i * 16_000);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(harness.buffer()).toMatchObject({
-      pendingMs: 3_600_000,
-      paused: false,
-    });
-
-    harness.emitChunk(second(3_600), 3_600 * 16_000);
-    expect(harness.buffer()).toMatchObject({
-      pendingMs: 3_600_000,
-      paused: true,
-    });
-
-    harness.server.refuse = false;
-    await vi.advanceTimersByTimeAsync(10_000);
-    harness.emitEvent({ type: "ack", throughChunkSeq: 599 });
-    harness.emitChunk(second(3_601), 3_601 * 16_000);
-
-    expect(harness.buffer()).toMatchObject({ paused: false });
-    const calls = harness.socket.sendAudio.mock.calls;
-    // 번호는 멈춘 동안 비지 않고, 멈춘 구간은 캡처 위치의 건너뜀으로만 남는다
-    expect(calls.map((call) => call[1])).toEqual(range(0, 3_601));
-    expect(calls[3_600][2]).toBe(3_601 * 16_000);
-    expect(harness.onFailure).not.toHaveBeenCalled();
-    // 실제 한도(115MB)를 가짜 디스크가 복사까지 해 가며 채운다. 혼자 돌면 2초, 전체 스위트 부하에선 5초를 넘는다
-  }, 20_000);
-
-  it("다시 붙으면 실시간 조각을 먼저 보내고, 밀린 것은 남는 자리로 보낸다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    harness.closeTransport(1006);
-    for (let i = 0; i < 20; i += 1) harness.emitChunk(); // 0..19 밀림
-    harness.server.capacity = 3;
-
-    await vi.advanceTimersByTimeAsync(500); // 붙자마자 0,1,2 로 소켓이 찬다
-    harness.emitChunk(); // 20
-    await vi.advanceTimersByTimeAsync(100);
-    harness.emitChunk(); // 21
-    await vi.advanceTimersByTimeAsync(100);
-
-    expect(harness.acceptedSeqs(harness.socket).slice(0, 9)).toEqual([
-      0, 1, 2, 20, 3, 4, 21, 5, 6,
-    ]);
-  });
-
   it("다시 붙은 뒤 밀린 소리를 얼마나 올렸는지 알리고, 다 올리면 걷는다", async () => {
     vi.useFakeTimers();
     const harness = setup();
@@ -1017,46 +860,13 @@ describe("버퍼 한도", () => {
     expect(harness.onFailure).not.toHaveBeenCalled();
   });
 
-  it("IndexedDB 가 쿼터로 거절하면 메모리 5분으로 물러나 알리고, 그 한도에서 멈춘다", async () => {
+  it("붙어 있는데 서버 저장이 밀려 메모리 5분에 닿으면 버리지 않고 캡처를 멈춘다", async () => {
     vi.useFakeTimers();
-    const store = new FakeAudioStore({ quotaBytes: 60 * 32_000 });
-    const harness = setup({ store });
+    const harness = setup();
     await harness.controller.connect(SESSION_ID);
-    harness.server.refuse = true;
-    harness.closeTransport(1006);
-
-    for (let i = 0; i < 100; i += 1) harness.emitChunk(second(i), i * 16_000);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(harness.buffer()).toMatchObject({
-      persistent: false,
-      limitMs: 300_000,
-      paused: false,
-    });
-
-    for (let i = 100; i < 300; i += 1) harness.emitChunk(second(i), i * 16_000);
-    expect(harness.buffer()).toMatchObject({ paused: false });
-    harness.emitChunk(second(300), 300 * 16_000);
-    expect(harness.buffer()).toMatchObject({ paused: true });
-
-    harness.server.refuse = false;
-    await vi.advanceTimersByTimeAsync(10_000);
-    const calls = harness.socket.sendAudio.mock.calls;
-    expect(calls.map((call) => call[1])).toEqual(range(0, 300));
-    expect(calls.map((call) => new Uint8Array(call[0])[0])).toEqual(
-      range(0, 300).map((n) => n % 256)
-    );
-  });
-
-  it("IndexedDB 가 없으면(Node 실험 틀) 조용히 메모리 5분으로 돈다", async () => {
-    vi.useFakeTimers();
-    const harness = setup({ store: null });
-    await harness.controller.connect(SESSION_ID);
-    harness.server.refuse = true;
-    harness.closeTransport(1006);
 
     for (let i = 0; i < 300; i += 1) harness.emitChunk(second(i), i * 16_000);
     expect(harness.buffer()).toMatchObject({
-      persistent: false,
       limitMs: 300_000,
       paused: false,
     });
@@ -1080,7 +890,7 @@ describe("버퍼 한도", () => {
 
   it("다시 이을 때 알리는 저장 대기는 ACK 못 받은 소리 전부다", async () => {
     vi.useFakeTimers();
-    const harness = setup({ store: new FakeAudioStore() });
+    const harness = setup();
     await harness.controller.connect(SESSION_ID);
     harness.emitChunk(second(0));
     harness.emitChunk(second(1));
@@ -1090,93 +900,357 @@ describe("버퍼 한도", () => {
   });
 });
 
-describe("지난 탭이 남긴 소리", () => {
-  async function leftover(store: FakeAudioStore) {
-    for (let seq = 5; seq < 10; seq += 1) {
-      await store.put(
-        {
-          noteId: "0HZX2K7M9Q4AF",
-          sessionId: SESSION_ID,
-          chunkSeq: seq,
-          captureSamples: seq * 16_000,
-          bytes: 32_000,
-        },
-        second(seq)
-      );
+describe("30초 재개 창과 알림 (APP-705)", () => {
+  const goOffline = () => window.dispatchEvent(new Event("offline"));
+  const goOnline = () => window.dispatchEvent(new Event("online"));
+  /** 무수신으로 끊지 않게 heartbeat 를 흘리며 시간을 보낸다. */
+  async function passWithHeartbeat(
+    harness: ReturnType<typeof setup>,
+    ms: number
+  ) {
+    for (let left = ms; left > 0; left -= 1_000) {
+      await vi.advanceTimersByTimeAsync(Math.min(1_000, left));
+      harness.activity();
     }
-    return store.list();
   }
 
-  it("같은 세션에 붙어 원래 번호·위치로 올리고, 마이크 없이 stop 한다", async () => {
-    const store = new FakeAudioStore();
-    const chunks = await leftover(store);
-    const harness = setup({ store });
-
-    await harness.controller.resume(SESSION_ID, chunks);
-
-    const calls = harness.socket.sendAudio.mock.calls;
-    expect(harness.socket.options.sessionId).toBe(SESSION_ID);
-    expect(harness.socket.options.resendFromSeq).toBe(5);
-    expect(calls.map((call) => call[1])).toEqual([5, 6, 7, 8, 9]);
-    expect(calls.map((call) => call[2])).toEqual(
-      [5, 6, 7, 8, 9].map((n) => n * 16_000)
-    );
-    expect(harness.socket.stop).toHaveBeenCalledWith(9);
-    expect(harness.audio.start).not.toHaveBeenCalled();
-    await new Promise((done) => setTimeout(done, 0));
-    expect(store.size).toBe(0);
-  });
-
-  it("디스크에서 읽지 못하면 끝없이 기다리지 않고 남겨 둔 채 실패로 알린다", async () => {
-    const store = new FakeAudioStore();
-    const chunks = await leftover(store);
+  it("부착이 끊긴 지 5초에 노랑을 켜고, 다시 붙으면 걷는다", async () => {
     vi.useFakeTimers();
-    store.bodies = () =>
-      Promise.reject(new DOMException("읽기 실패", "UnknownError"));
-    const harness = setup({ store });
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.refuse = true;
+    const since = Date.now();
 
-    let settled = false;
-    void harness.controller.resume(SESSION_ID, chunks).finally(() => {
-      settled = true;
-    });
-    await vi.advanceTimersByTimeAsync(120_000);
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(4_800);
+    expect(harness.notice()).toBeNull();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(harness.notice()).toEqual({ cause: "disconnected", sinceMs: since });
 
-    expect(settled).toBe(true);
-    expect(harness.onFailure).toHaveBeenCalled();
-    expect(harness.socket.stop).not.toHaveBeenCalled();
-    expect(store.size).toBe(5);
+    harness.server.refuse = false;
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(harness.notice()).toBeNull();
+    expect(harness.onFailure).not.toHaveBeenCalled();
   });
 
-  it("서버가 받지 않으면 지우지 않고 남겨 둔 채 실패로 알린다", async () => {
-    const store = new FakeAudioStore();
-    const chunks = await leftover(store);
-    const harness = setup({ store });
-    harness.createSocket.mockImplementationOnce((options) => {
-      const socket = {
-        options,
-        connect: vi.fn(async () => {
-          options.onEvent({
-            type: "error",
-            code: "SESSION_NOT_CONNECTABLE",
-            message: "이미 닫힌 세션입니다.",
-          });
-          throw new Error("이미 닫힌 세션입니다.");
-        }),
-        sendAudio: vi.fn(() => true),
-        stop: vi.fn(),
-        reconcileConnected: vi.fn(),
-        close: vi.fn(async () => undefined),
-      };
-      harness.sockets.push(socket as never);
-      return socket;
+  // 조용한 먹통은 영수증 10초 노랑이 먼저 뜨고 무수신 20초에 끊김을 안다. 그 사이 노랑이 꺼지면 안 된다
+  it("영수증 노랑이 떠 있으면 끊김을 알아챈 순간 곧바로 끊김 노랑으로 이어진다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.emitChunk();
+    harness.server.refuse = true;
+
+    await vi.advanceTimersByTimeAsync(20_100);
+
+    expect(harness.notice()).toMatchObject({ cause: "disconnected" });
+    expect(harness.onNoticeChange).not.toHaveBeenCalledWith(null);
+  });
+
+  it("1~3초 재부착은 노랑을 띄우지 않는다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(harness.onNoticeChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ cause: "disconnected" })
+    );
+  });
+
+  it("붙은 채 영수증이 10초 없으면 같은 노랑, ACK 가 오면 걷는다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.emitChunk();
+    const attachedAt = Date.now();
+
+    await passWithHeartbeat(harness, 9_800);
+    expect(harness.notice()).toBeNull();
+    await passWithHeartbeat(harness, 400);
+    expect(harness.notice()).toEqual({
+      cause: "no_receipt",
+      sinceMs: attachedAt,
     });
 
-    await expect(
-      harness.controller.resume(SESSION_ID, chunks)
-    ).rejects.toThrow();
+    harness.emitEvent({ type: "ack", throughChunkSeq: 0 });
+    harness.emitChunk();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(harness.notice()).toBeNull();
+  });
 
-    expect(harness.onFailure).toHaveBeenCalledWith("이미 닫힌 세션입니다.");
-    await new Promise((done) => setTimeout(done, 0));
-    expect(store.size).toBe(5);
+  it("connected 도 영수증이다 — 다시 붙은 뒤로 10초를 센다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.emitChunk();
+    await passWithHeartbeat(harness, 8_000);
+
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(500);
+    harness.emitChunk();
+    await passWithHeartbeat(harness, 5_000);
+
+    expect(harness.onNoticeChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ cause: "no_receipt" })
+    );
+  });
+
+  it("알아챈 뒤 30초에 캡처를 끄고 메모리 소리를 버리고 한 번만 알린다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.emitChunk(new ArrayBuffer(32_000));
+    harness.server.refuse = true;
+
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(29_800);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(harness.onFailure).toHaveBeenCalledOnce();
+    expect(harness.onFailure.mock.calls[0][0]).toContain("다시 잇지 못했");
+    expect(harness.audio.stop).toHaveBeenCalled();
+    expect(harness.buffer()).toMatchObject({ pendingMs: 0 });
+  });
+
+  it("멈춘 뒤 연결이 돌아와도 다시 붙거나 녹음을 켜지 않는다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.refuse = true;
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(30_200);
+    const attempts = harness.sockets.length;
+
+    harness.server.refuse = false;
+    goOnline();
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(harness.sockets).toHaveLength(attempts);
+    expect(harness.audio.start).toHaveBeenCalledOnce();
+    expect(harness.onFailure).toHaveBeenCalledOnce();
+  });
+
+  it("조용한 먹통은 무수신 20초에 알아채고, 그때부터 30초를 센다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.refuse = true;
+
+    await vi.advanceTimersByTimeAsync(49_700);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(harness.onFailure).toHaveBeenCalledOnce();
+  });
+
+  it("offline 이면 소켓은 두고 곧바로 노랑을 켠다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    const since = Date.now();
+
+    goOffline();
+
+    expect(harness.notice()).toEqual({ cause: "disconnected", sinceMs: since });
+    expect(harness.sockets).toHaveLength(1);
+    expect(harness.socket.close).not.toHaveBeenCalled();
+    goOnline();
+  });
+
+  it("offline 에서 시작한 시계로 30초를 센다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.refuse = true;
+
+    goOffline();
+    await vi.advanceTimersByTimeAsync(29_800);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(harness.onFailure).toHaveBeenCalledOnce();
+    goOnline();
+  });
+
+  it("offline 뒤 소켓이 살아 있는 채 online 이 오면 시계와 노랑을 걷는다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+
+    goOffline();
+    harness.activity();
+    goOnline();
+    await passWithHeartbeat(harness, 40_000);
+
+    expect(harness.notice()).toBeNull();
+    expect(harness.sockets).toHaveLength(1);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+  });
+
+  it("online 이면 기다리던 재부착을 곧바로 시도한다", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0.999);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.refuse = true;
+    harness.closeTransport(1006);
+    // 0.5·1.5·3.5초에 시도하고 7.5초까지 기다리는 중이다
+    await vi.advanceTimersByTimeAsync(4_000);
+    const before = harness.sockets.length;
+
+    harness.server.refuse = false;
+    goOnline();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(harness.sockets).toHaveLength(before + 1);
+    expect(harness.socket.options.reconnectReason).toBe("online");
+  });
+
+  it("connect 헤더에 부착 이유를 싣는다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(500);
+    // 무수신
+    await vi.advanceTimersByTimeAsync(20_100 + 500);
+    harness.activity();
+    // 정체
+    harness.socket.sendAudio.mockReturnValue(false);
+    harness.emitChunk();
+    vi.advanceTimersByTime(10_000);
+    harness.activity();
+    harness.emitChunk();
+    await vi.advanceTimersByTimeAsync(500);
+    // 붙자마자 다시 밀리면 간격이 늘어난다
+    for (const reason of ["draining", "BUFFER_FULL", "STORE_INCOMPLETE"]) {
+      harness.emitEvent({ type: "reattach", delayMs: 0, reason });
+      await vi.advanceTimersByTimeAsync(3_000);
+    }
+
+    expect(harness.sockets.map((s) => s.options.reconnectReason)).toEqual([
+      "initial",
+      "socket_closed",
+      "no_receive",
+      "send_stalled",
+      "server_reattach",
+      "buffer_full",
+      "store_incomplete",
+    ]);
+  });
+
+  it("disconnectedMs 는 알아챈 때부터, pendingChunks 는 ACK 못 받은 조각 수다", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    for (let i = 0; i < 3; i += 1) harness.emitChunk();
+    harness.emitEvent({ type: "ack", throughChunkSeq: 0 });
+    harness.server.refuse = true;
+
+    harness.closeTransport(1006);
+    harness.emitChunk();
+    await vi.advanceTimersByTimeAsync(500);
+    harness.server.refuse = false;
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(harness.sockets[0].options).toMatchObject({
+      reconnectReason: "initial",
+      disconnectedMs: 0,
+      pendingChunks: 0,
+    });
+    expect(harness.socket.options).toMatchObject({
+      reconnectReason: "socket_closed",
+      disconnectedMs: 1_000,
+      pendingChunks: 3,
+    });
+  });
+
+  it("stop 응답을 25초까지 기다린다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.silentStop = true;
+
+    void harness.controller.stop();
+    await vi.advanceTimersByTimeAsync(24_800);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(harness.onFailure).toHaveBeenCalledWith(
+      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다."
+    );
+  });
+
+  it("기기 디스크(IndexedDB)를 열지 않는다", async () => {
+    vi.useFakeTimers();
+    const open = vi.fn(() => ({}));
+    vi.stubGlobal("indexedDB", { open });
+    vi.resetModules();
+    try {
+      const fresh = await import("@/lib/transcription/realtime-session");
+      const harness = setup({ Session: fresh.BrowserRealtimeSession });
+      await harness.controller.connect(SESSION_ID);
+      harness.emitChunk();
+      harness.closeTransport(1006);
+      harness.emitChunk();
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(open).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("흐름을 [transcription] 콘솔 줄로 남기고, 조각마다 남기지 않는다", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.refuse = true;
+
+    harness.closeTransport(1006);
+    goOffline();
+    await vi.advanceTimersByTimeAsync(5_200);
+    harness.server.refuse = false;
+    goOnline();
+    await vi.advanceTimersByTimeAsync(600);
+    const lines = () =>
+      info.mock.calls
+        .filter((call) => call[0] === "[transcription]")
+        .map((call) => [call[1], call[2]] as [string, Record<string, unknown>]);
+    const index = (event: string, match: Record<string, unknown> = {}) =>
+      lines().findIndex(
+        ([name, fields]) =>
+          name === event &&
+          Object.entries(match).every(([key, value]) => fields[key] === value)
+      );
+
+    expect(index("reconnect", { step: "result", ok: true })).toBe(
+      lines().findIndex(([name]) => name === "reconnect") + 1
+    );
+    const order = [
+      index("reconnect", { step: "wait", reason: "socket_closed" }),
+      index("offline"),
+      index("notice", { state: "shown", cause: "disconnected" }),
+      index("online"),
+      index("reconnect", { step: "attempt", reason: "online" }),
+      lines().findLastIndex(
+        ([name, fields]) =>
+          name === "reconnect" && fields.step === "result" && fields.ok
+      ),
+      index("notice", { state: "cleared" }),
+    ];
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+
+    const count = lines().length;
+    for (let i = 0; i < 50; i += 1) harness.emitChunk();
+    expect(lines()).toHaveLength(count);
   });
 });

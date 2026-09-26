@@ -9,6 +9,17 @@ import {
   type ServerEvent,
 } from "@/lib/transcription/protocol";
 
+/** 왜 붙나. server 가 부착 줄에 남긴다(observability.md). */
+export type ReconnectReason =
+  | "initial"
+  | "socket_closed"
+  | "no_receive"
+  | "send_stalled"
+  | "server_reattach"
+  | "buffer_full"
+  | "store_incomplete"
+  | "online";
+
 export type TranscriptionSocketOptions = {
   url: string;
   sessionId: string;
@@ -16,6 +27,11 @@ export type TranscriptionSocketOptions = {
   clientInstanceId: string;
   /** 아직 들고 있는 가장 앞 조각 번호. 그 앞은 이미 지웠으니 서버가 기다리지 않는다. */
   resendFromSeq?: number;
+  reconnectReason?: ReconnectReason;
+  /** 끊김을 알아챈 뒤 이 부착 시도까지. 처음 붙을 때는 0. */
+  disconnectedMs?: number;
+  /** ACK 못 받아 들고 있는 조각 수. */
+  pendingChunks?: number;
   onEvent: (event: ServerEvent) => void;
   onClose: (code: number, reason: string) => void;
   /** heartbeat 를 포함해 무엇이든 들어왔다. 이벤트만으로는 조용한 회의의 무수신을 못 가른다. */
@@ -27,6 +43,14 @@ export type TranscriptionSocketOptions = {
  * 소켓을 떠난 조각도 서버가 S3에 쓰기 전에 죽으면 사라지므로 둘은 다른 질문이다.
  */
 const MAX_BUFFERED_BYTES = CAPTURE_TUNING.backpressureBytes;
+
+function stringHeaders(values: Record<string, string | number | undefined>) {
+  return Object.fromEntries(
+    Object.entries(values)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, String(value)])
+  );
+}
 
 export class TranscriptionSocket {
   private client: Client | null = null;
@@ -105,9 +129,12 @@ export class TranscriptionSocket {
             headers: {
               "reply-id": replyId,
               clientInstanceId: this.options.clientInstanceId,
-              ...(this.options.resendFromSeq === undefined
-                ? {}
-                : { resendFromSeq: String(this.options.resendFromSeq) }),
+              ...stringHeaders({
+                resendFromSeq: this.options.resendFromSeq,
+                reconnectReason: this.options.reconnectReason,
+                disconnectedMs: this.options.disconnectedMs,
+                pendingChunks: this.options.pendingChunks,
+              }),
             },
           });
         },

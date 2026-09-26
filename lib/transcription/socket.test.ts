@@ -131,6 +131,9 @@ function createSocket(onClose = vi.fn(), onActivity = vi.fn()) {
     sessionId,
     clientInstanceId: "tab-7f3a",
     resendFromSeq: 42,
+    reconnectReason: "no_receive",
+    disconnectedMs: 21_340,
+    pendingChunks: 213,
     onEvent: vi.fn(),
     onClose,
     onActivity,
@@ -363,6 +366,22 @@ describe("TranscriptionSocket", () => {
     expect(header(connect, "clientInstanceId")).toBe("tab-7f3a");
     expect(header(attach, "clientInstanceId")).toBe("tab-7f3a");
     expect(header(attach, "resendFromSeq")).toBe("42");
+  });
+
+  // server 가 부착 줄에 남긴다. 운영에서 끊김 분포를 다시 볼 수 있는 유일한 길이다(D-17).
+  it("carries why and how long it was detached on the attach message", async () => {
+    const socket = createSocket();
+    const connection = await establish(socket);
+
+    const attach = connection.transport.sent.find(
+      (frame) =>
+        frameText(frame).startsWith("SEND") &&
+        header(frame, "destination") ===
+          `/app/transcription-sessions/${sessionId}/connect`
+    );
+    expect(header(attach, "reconnectReason")).toBe("no_receive");
+    expect(header(attach, "disconnectedMs")).toBe("21340");
+    expect(header(attach, "pendingChunks")).toBe("213");
   });
 
   // 무수신 감시는 heartbeat 까지 세야 한다. 조용한 회의에서는 이벤트가 안 온다.

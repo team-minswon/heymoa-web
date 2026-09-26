@@ -42,7 +42,9 @@ const recordingState = vi.hoisted(() => ({
     | null,
   /** 노트가 들고 있는 활성 세션이 이 세션인지 가르는 값. */
   sessionStartedAt: null as string | null,
-  reconnecting: null as { sinceMs: number; pendingMs: number } | null,
+  connectionNotice: null as
+    | import("@/lib/transcription/realtime-session").ConnectionNotice
+    | null,
   buffer: null as
     | import("@/lib/transcription/realtime-session").BufferState
     | null,
@@ -60,7 +62,7 @@ vi.mock("@/components/transcription/recording-provider", async () => {
         ? {
             activeNoteId: recordingState.activeNoteId,
             phase: recordingState.phase,
-            reconnecting: recordingState.reconnecting,
+            connectionNotice: recordingState.connectionNotice,
             buffer: recordingState.buffer,
             ...(recordingState.sessionStatus
               ? {
@@ -241,7 +243,7 @@ describe("NotePanel", () => {
     personalChat.isTurnActive = false;
     setRailSlot.mockReset();
     recordingState.sessionStartedAt = null;
-    recordingState.reconnecting = null;
+    recordingState.connectionNotice = null;
     recordingState.buffer = null;
     noteState.value = {
       noteId: "01K0000000002",
@@ -1290,17 +1292,16 @@ describe("NotePanel", () => {
     });
 
     // 같은 세션에 다시 붙는 동안 소리는 이 기기에 쌓인다. 타이머만 돌면 무엇이 남는지 모른다.
-    it("5초 넘게 끊기면 이 기기에 저장 중이라고 말하고, 이으면 걷는다", () => {
+    it("끊기면 받아쓰기가 멈췄다고 말하고, 이으면 걷는다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "recording";
-      recordingState.reconnecting = {
+      recordingState.connectionNotice = {
+        cause: "disconnected",
         sinceMs: Date.now() - 10_000,
-        pendingMs: 3_000,
       };
       recordingState.buffer = {
         pendingMs: 13_000,
-        limitMs: 3_600_000,
-        persistent: true,
+        limitMs: 300_000,
         paused: false,
         upload: null,
       };
@@ -1308,13 +1309,13 @@ describe("NotePanel", () => {
       const { rerender } = renderDock(view);
 
       expect(screen.getByRole("status")).toHaveTextContent(
-        "연결이 불안정해요 · 소리는 이 기기에 저장 중 (0:13)"
+        "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 기기에 저장 중"
       );
 
-      recordingState.reconnecting = null;
+      recordingState.connectionNotice = null;
       rerender(dockElement(view));
 
-      expect(screen.queryByText(/연결이 불안정해요/)).toBeNull();
+      expect(screen.queryByText(/연결이 끊겼어요/)).toBeNull();
     });
 
     it("멈추는 중에 밀린 것을 올리면 저장 마무리 진행률을 보인다", () => {
@@ -1322,8 +1323,7 @@ describe("NotePanel", () => {
       recordingState.phase = "stopping";
       recordingState.buffer = {
         pendingMs: 40_000,
-        limitMs: 3_600_000,
-        persistent: true,
+        limitMs: 300_000,
         paused: false,
         upload: { percent: 40, remainingMs: 24_000 },
       };
@@ -1367,7 +1367,7 @@ describe("NotePanel", () => {
       expect(
         screen.getByText("다른 탭·기기에서 기록 중입니다.")
       ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "다시 녹음" })).toBeNull();
     });
 
     it("IN_PROGRESS의 실패한 ACTIVE 세션은 원격 기록으로 취급한다", () => {
@@ -1380,7 +1380,7 @@ describe("NotePanel", () => {
       expect(
         screen.getByText("다른 탭·기기에서 기록 중입니다.")
       ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "다시 녹음" })).toBeNull();
     });
 
     it("IN_PROGRESS라도 죽음이 확인된 실패는 차단 대신 다시 시도를 연다", () => {
@@ -1395,7 +1395,7 @@ describe("NotePanel", () => {
 
       expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
       expect(
-        screen.getByRole("button", { name: "다시 시도" })
+        screen.getByRole("button", { name: "다시 녹음" })
       ).toBeInTheDocument();
     });
 
@@ -1483,7 +1483,7 @@ describe("NotePanel", () => {
 
         renderDock(view);
 
-        expect(screen.getByRole("button", { name: "다시 시도" })).toBeEnabled();
+        expect(screen.getByRole("button", { name: "다시 녹음" })).toBeEnabled();
         expect(
           screen.queryByText("다른 탭·기기에서 기록 중입니다.")
         ).toBeNull();

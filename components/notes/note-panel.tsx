@@ -768,7 +768,7 @@ export function NotePanel({
             <div className="pointer-events-auto flex min-w-0 flex-col items-center gap-2">
               {recordingHere ? (
                 <RecordingConnectionNotice
-                  reconnecting={recording.reconnecting}
+                  notice={recording.connectionNotice}
                   buffer={recording.buffer}
                   microphone={recording.microphone}
                   finishing={recording.phase === "stopping"}

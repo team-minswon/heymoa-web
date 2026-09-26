@@ -6,11 +6,7 @@ import {
   CAPTURE_CONTRACT,
   CAPTURE_TUNING,
 } from "@/lib/transcription/capture-config";
-import {
-  openAudioStore,
-  type AudioStore,
-  type StoredChunk,
-} from "@/lib/transcription/audio-store";
+import { logTranscription } from "@/lib/transcription/log";
 import {
   isTerminalError,
   type ServerEvent,
@@ -18,6 +14,7 @@ import {
 import { ResendBuffer } from "@/lib/transcription/resend-buffer";
 import {
   TranscriptionSocket,
+  type ReconnectReason,
   type TranscriptionSocketOptions,
 } from "@/lib/transcription/socket";
 
@@ -35,23 +32,26 @@ export type RealtimeSessionController = {
   stop: () => Promise<void>;
   reconcile: (status: RealtimeSessionStatus) => void;
   close: () => Promise<void>;
-  /** 지난 탭이 디스크에 남긴 조각을 그 세션에 올리고 멈춘다. 마이크는 켜지 않는다. */
-  resume?: (sessionId: string, chunks: StoredChunk[]) => Promise<void>;
 };
 
-/** 다시 잇는 중. `pendingMs` 는 끊긴 순간 서버가 아직 확정 안 한 소리의 길이다. */
-export type ReconnectState = { sinceMs: number; pendingMs: number };
+/**
+ * 노랑 알림(D-03). 받아쓰기와 실시간 분석이 멈췄다는 뜻이다.
+ * - `disconnected`: 끊김을 알아챈 지 5초(offline 이면 곧바로). `sinceMs` 는 알아챈 시각이다.
+ * - `no_receipt`: 붙어 있는데 영수증(`connected`·ack)이 10초 없다. `sinceMs` 는 마지막 영수증 시각이다.
+ */
+export type ConnectionNotice = {
+  cause: "disconnected" | "no_receipt";
+  sinceMs: number;
+};
 
 /**
- * 서버가 확정 안 한 소리가 이 기기에 얼마나 있나.
- * - `persistent`: 디스크(IndexedDB)에 담기고 있다. 아니면 `limitMs` 가 메모리 한도(5분)로 줄어든다.
+ * 서버가 확정 안 한 소리가 이 기기(메모리)에 얼마나 있나.
  * - `paused`: 한도에 닿아 캡처한 소리를 받지 않는 중이다. 밀린 것이 빠지면 저절로 풀린다.
  * - `upload`: 다시 붙은 뒤나 멈춘 뒤 밀린 소리를 올리는 중. 다 보내면 null.
  */
 export type BufferState = {
   pendingMs: number;
   limitMs: number;
-  persistent: boolean;
   paused: boolean;
   upload: { percent: number; remainingMs: number } | null;
 };
@@ -61,10 +61,8 @@ export type RealtimeSessionOptions = {
   onEvent: (event: ServerEvent) => void;
   onLevel: (level: number) => void;
   onFailure: (message: string) => void;
-  onReconnectChange?: (state: ReconnectState | null) => void;
+  onNoticeChange?: (notice: ConnectionNotice | null) => void;
   onBufferChange?: (state: BufferState) => void;
-  /** 디스크에 담을 때 붙이는 이름표. 다음 방문 때 어느 노트의 소리인지 안다. */
-  noteId?: string;
   /** `captureGapMs`: 첫 조각 이후 벽시계에서 실제로 잡은 소리를 뺀 것. 마이크가 쉰 시간이다. */
   onMicrophoneChange?: (state: MicrophoneState, captureGapMs: number) => void;
 };
@@ -76,8 +74,6 @@ export type RealtimeSessionDependencies = {
     onState: (state: MicrophoneState) => void
   ) => AudioPort;
   createSocket?: (options: TranscriptionSocketOptions) => SocketPort;
-  /** 없으면 IndexedDB. null 이면 메모리만 쓴다. */
-  createStore?: () => AudioStore | null;
 };
 
 /** `reattach`: stop 을 보낸 부착이 끊겼거나 서버가 저장을 못 끝냈다. 다시 붙어 stop 을 다시 보낸다. */
@@ -92,20 +88,30 @@ const PUMP_MS = 100;
 const REATTACH_FIRST_DELAY_MS = 500;
 const REATTACH_MIN_DELAY_MS = 500;
 const REATTACH_MAX_DELAY_MS = 5_000;
-/** 서버가 부착 없이 세션을 버티는 재개 창과 같다. */
-const REATTACH_WINDOW_MS = 300_000;
+/** 끊김을 알아챈 뒤 이만큼 다시 잇지 못하면 녹음을 멈춘다(D-02). */
+const RESUME_WINDOW_MS = 30_000;
+const NOTICE_AFTER_MS = 5_000;
+/** S3 flush 주기(5초)의 두 배. */
+const RECEIPT_LIMIT_MS = 10_000;
+/** server stop 최악(S3 10초 + 업체 10초)보다 길게(D-22). */
+const STOP_TIMEOUT_MS = 25_000;
+/** 저장이 덜 끝났다며 다시 붙으라는 답이 이어질 때 멈추기를 되풀이하는 한도. */
+const STOP_RETRY_MS = 300_000;
 /** 이보다 짧게 살고 끊긴 부착이 이어지면 연결은 되는데 못 버티는 것이다. 다시 붙는 간격을 늘려 간다. */
 const STABLE_ATTACH_MS = 10_000;
-/** 멈춘 뒤 붙어 있는데도 밀린 소리가 이만큼 한 조각도 안 나가면(디스크를 못 읽음) 기다리지 않는다. */
-const STOP_STALL_MS = 30_000;
 const BYTES_PER_MS =
   (CAPTURE_CONTRACT.sampleRate * CAPTURE_CONTRACT.bytesPerSample) / 1000;
 const MEMORY_LIMIT_BYTES = CAPTURE_TUNING.memoryBufferMs * BYTES_PER_MS;
-const DISK_LIMIT_BYTES = CAPTURE_TUNING.diskBufferMs * BYTES_PER_MS;
 const SAMPLES_PER_MS = CAPTURE_CONTRACT.sampleRate / 1000;
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function reattachCause(serverReason: string): ReconnectReason {
+  if (serverReason === "STORE_INCOMPLETE") return "store_incomplete";
+  if (serverReason === "BUFFER_FULL") return "buffer_full";
+  return "server_reattach";
+}
 
 /** n 번째 재시도(1부터) 전 대기. 한 태스크에 붙어 있던 녹음들이 같은 박자로 두드리지 않게 흩는다. */
 function reattachDelayMs(attempt: number) {
@@ -122,10 +128,10 @@ let tabInstanceId: string | null = null;
 const TAB_INSTANCE_KEY = "heymoa.transcription.clientInstanceId";
 /**
  * 탭 수명 동안 하나. 같은 탭의 재부착과 다른 탭·기기의 부착을 서버가 가른다.
- * sessionStorage 는 새로고침을 넘어 남는다. 새로고침한 탭이 남긴 소리를 올리러 붙을 때
- * 옛 리스(15s)가 살아 있어도 같은 탭으로 보여야 거절당하지 않는다.
+ * sessionStorage 는 새로고침을 넘어 남는다. 새로고침한 탭의 시작 요청도 같은 값이라 서버가
+ * 옛 세션을 리스가 살아 있어도 곧바로 닫는다(D-16).
  */
-function clientInstanceId() {
+export function clientInstanceId() {
   if (tabInstanceId) return tabInstanceId;
   try {
     tabInstanceId = sessionStorage.getItem(TAB_INSTANCE_KEY);
@@ -145,8 +151,9 @@ function clientInstanceId() {
  * 녹음 한 번 = 세션 하나. 소켓은 그 세션에 붙는 부착이라 끊기면 **같은 세션에** 다시 붙고,
  * 서버가 확정한 조각 다음부터 버퍼에서 다시 보낸다. `chunkSeq` 는 녹음 내내 이어진다.
  *
- * 녹음이 실패로 끝나는 길: 재시도해도 같은 in-band 오류, 재개 창(300s) 소진, 종료 응답 시간 초과.
- * 버퍼 한도(디스크 60분, 못 쓰면 메모리 5분)는 실패가 아니다. 캡처를 멈췄다가 빠지면 다시 받는다.
+ * 녹음이 실패로 끝나는 길: 재시도해도 같은 in-band 오류, 끊김을 알아챈 뒤 30초 창 소진,
+ * 종료 응답 시간 초과. 창이 끝나면 캡처를 끄고 메모리 소리를 버리며 연결이 돌아와도 다시 켜지 않는다.
+ * 메모리 한도(5분)는 실패가 아니다. 캡처를 멈췄다가 빠지면 다시 받는다.
  */
 export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
@@ -178,6 +185,32 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   /** 올리기 진행률의 분모. 다시 붙거나 멈출 때 남은 양으로 잡는다. */
   private uploadBaselineBytes: number | null = null;
   private lastBufferKey = "";
+  /** 끊김을 알아챈 시각. 소켓 닫힘·무수신·정체·reattach·offline 중 가장 이른 것이고 `connected` 에서 지운다. */
+  private disconnectedSince: number | null = null;
+  private disconnectDetail = "";
+  private reconnectReason: ReconnectReason = "initial";
+  private offline = false;
+  private lastAckAt = 0;
+  private notice: ConnectionNotice | null = null;
+  /** 재시도 대기를 곧바로 끝낸다. online 이 쓴다. */
+  private wakeRetry: (() => void) | null = null;
+  private readonly handleOffline = () => {
+    logTranscription("offline");
+    this.offline = true;
+    this.disconnectedSince ??= Date.now();
+    this.updateNotice();
+  };
+  private readonly handleOnline = () => {
+    logTranscription("online");
+    this.offline = false;
+    if (this.wakeRetry) {
+      this.reconnectReason = "online";
+      this.wakeRetry();
+    } else if (this.attached && !this.reattaching) {
+      this.disconnectedSince = null;
+      this.updateNotice();
+    }
+  };
 
   constructor(
     private readonly options: RealtimeSessionOptions,
@@ -205,7 +238,10 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       throw new Error("REALTIME_SESSION_CLOSED");
     }
     if (this.sessionId) throw new Error("REALTIME_SESSION_ALREADY_CONNECTED");
-    this.open(sessionId);
+    this.sessionId = sessionId;
+    this.resendBuffer = new ResendBuffer({ limitBytes: MEMORY_LIMIT_BYTES });
+    window.addEventListener("offline", this.handleOffline);
+    window.addEventListener("online", this.handleOnline);
     await this.attach();
     await this.rejectIfStopped();
     await this.audio.start();
@@ -213,41 +249,12 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     this.startPump();
   }
 
-  async resume(sessionId: string, chunks: StoredChunk[]) {
-    if (this.sessionId) throw new Error("REALTIME_SESSION_ALREADY_CONNECTED");
-    this.open(sessionId);
-    this.audioStopped = true;
-    this.resendBuffer.restore(chunks);
-    this.nextChunkSeq = chunks[chunks.length - 1].chunkSeq + 1;
-    try {
-      await this.attach();
-    } catch (error) {
-      await this.close();
-      throw error;
-    }
-    this.startPump();
-    await this.stop();
-  }
-
-  private open(sessionId: string) {
-    this.sessionId = sessionId;
-    this.resendBuffer = new ResendBuffer({
-      memoryLimitBytes: MEMORY_LIMIT_BYTES,
-      diskLimitBytes: DISK_LIMIT_BYTES,
-      store: (this.dependencies.createStore ?? openAudioStore)(),
-      noteId: this.options.noteId ?? "",
-      sessionId,
-      onChange: () => {
-        this.flushPending();
-        this.reportBuffer();
-      },
-    });
-  }
-
   private startPump() {
     this.pumpTimer = setInterval(() => {
       this.flushPending();
       this.checkSilence();
+      if (this.checkWindow()) return;
+      this.updateNotice();
     }, PUMP_MS);
   }
 
@@ -259,7 +266,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
 
   /**
    * 서버는 `finalChunkSeq` 까지 저장한 뒤에만 completed 를 보낸다. 못 끝냈거나 stop 을 보낸 부착이 끊기면 다시 붙어
-   * 이어 보내고 stop 을 다시 보낸다. 그렇게 5분을 넘기면 멈추고 알린다 — 남은 소리는 이 기기에 둔다.
+   * 이어 보내고 stop 을 다시 보낸다. 끊긴 채면 30초 창 안에서만 기다린다.
    */
   private async stopOnce() {
     if (this.closing) return this.closePromise ?? Promise.resolve();
@@ -276,12 +283,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
         return;
       }
       // 회의 끝이 올리기 끝이 아니다. 밀린 것을 다 건넨 뒤에 stop 을 보낸다
-      if (!(await this.sendAllForStop())) {
-        this.fail(
-          "이 기기에 담아 둔 소리를 읽지 못해 다 올리지 못했습니다. 이 기기에 남겨 둡니다."
-        );
-        return;
-      }
+      await this.sendAllForStop();
       const socket = this.socket;
       if (this.closing || !socket || !this.attached) {
         await this.close();
@@ -289,10 +291,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       }
       const state = await this.sendStop(socket);
       if (state === "reattach") {
-        if (Date.now() - since < REATTACH_WINDOW_MS) continue;
-        this.fail(
-          "5분 동안 저장을 마치지 못했습니다. 남은 소리는 이 기기에 남겨 둡니다."
-        );
+        if (Date.now() - since < STOP_RETRY_MS) continue;
+        this.fail("5분 동안 저장을 마치지 못했습니다.");
         return;
       }
       if (state === "timeout") {
@@ -303,29 +303,17 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
   }
 
-  /** 다 건넸으면 true. 붙어 있는데도 [STOP_STALL_MS] 동안 하나도 못 건넸으면 false. */
+  /** 막힌 소켓은 정체 감시가 다시 붙이고, 끊긴 채 30초면 창이 닫는다. */
   private async sendAllForStop() {
-    let unsent = this.resendBuffer.unsentBytes;
+    const unsent = this.resendBuffer.unsentBytes;
     if (unsent > 0) {
       this.uploadBaselineBytes ??= unsent;
       this.reportBuffer();
     }
-    let movedAt = Date.now();
     while (this.resendBuffer.unsentBytes > 0) {
-      if (this.closing || this.failed) return true;
+      if (this.closing || this.failed) return;
       await sleep(PUMP_MS);
-      if (
-        this.resendBuffer.unsentBytes !== unsent ||
-        !this.attached ||
-        this.reattaching
-      ) {
-        unsent = this.resendBuffer.unsentBytes;
-        movedAt = Date.now();
-      } else if (Date.now() - movedAt >= STOP_STALL_MS) {
-        return false;
-      }
     }
-    return true;
   }
 
   private async sendStop(socket: SocketPort): Promise<TerminalState> {
@@ -334,21 +322,36 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
         this.terminalResolve = resolve;
       }
     );
+    const finalChunkSeq = this.nextChunkSeq - 1;
     try {
       this.flushPending();
-      socket.stop(this.nextChunkSeq - 1);
+      socket.stop(finalChunkSeq);
     } catch {
       this.terminalResolve = null;
       this.fail("스크립트 종료 요청을 서버에 보내지 못했습니다.");
       return "failed";
     }
+    const sentAt = Date.now();
+    logTranscription("stop", {
+      step: "wait",
+      finalChunkSeq,
+      timeoutMs: STOP_TIMEOUT_MS,
+    });
     let timeoutId: ReturnType<typeof globalThis.setTimeout>;
     const timeout = new Promise<"timeout">((resolve) => {
-      timeoutId = globalThis.setTimeout(() => resolve("timeout"), 11_000);
+      timeoutId = globalThis.setTimeout(
+        () => resolve("timeout"),
+        STOP_TIMEOUT_MS
+      );
     });
     const state = await Promise.race<TerminalState>([terminal, timeout]);
     globalThis.clearTimeout(timeoutId!);
     this.terminalResolve = null;
+    logTranscription("stop", {
+      step: "result",
+      result: state,
+      waitMs: Date.now() - sentAt,
+    });
     return state;
   }
 
@@ -365,6 +368,11 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     if (this.closing) return this.closePromise ?? Promise.resolve();
     this.closing = true;
     if (this.pumpTimer) clearInterval(this.pumpTimer);
+    window.removeEventListener("offline", this.handleOffline);
+    window.removeEventListener("online", this.handleOnline);
+    this.wakeRetry?.();
+    this.disconnectedSince = null;
+    this.updateNotice();
     this.terminalResolve?.("failed");
     this.terminalResolve = null;
     const socket = this.socket;
@@ -381,11 +389,24 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     const createSocket =
       this.dependencies.createSocket ??
       ((socketOptions) => new TranscriptionSocket(socketOptions));
+    const reconnectReason = this.reconnectReason;
+    const disconnectedMs =
+      this.disconnectedSince === null ? 0 : Date.now() - this.disconnectedSince;
+    const pendingChunks = this.resendBuffer.count;
+    logTranscription("reconnect", {
+      step: "attempt",
+      reason: reconnectReason,
+      disconnectedMs,
+      pendingChunks,
+    });
     const socket: SocketPort = createSocket({
       url: this.options.url,
       sessionId: this.sessionId!,
       clientInstanceId: clientInstanceId(),
       resendFromSeq: this.resendBuffer.firstSeq ?? this.nextChunkSeq,
+      reconnectReason,
+      disconnectedMs,
+      pendingChunks,
       onEvent: (event) => this.handleEvent(socket, event),
       onActivity: () => {
         if (socket === this.socket) this.lastInboundAt = Date.now();
@@ -399,6 +420,12 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     try {
       await socket.connect();
     } catch (error) {
+      logTranscription("reconnect", {
+        step: "result",
+        ok: false,
+        reason: reconnectReason,
+        error: error instanceof Error ? error.message : String(error),
+      });
       this.dropSocket(socket);
       throw error;
     }
@@ -428,7 +455,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       });
       return;
     }
-    void this.reattach(reason || `WebSocket closed (${code})`);
+    void this.reattach("socket_closed", reason || `WebSocket closed (${code})`);
   }
 
   private handleEvent(socket: SocketPort, event: ServerEvent) {
@@ -437,8 +464,16 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     const terminalError =
       event.type === "error" && (isTerminalError(event) || this.stopping);
     if (event.type === "connected") {
+      logTranscription("reconnect", {
+        step: "result",
+        ok: true,
+        reason: this.reconnectReason,
+        epoch: event.epoch,
+        durableThroughSeq: event.durableThroughSeq,
+      });
       this.attached = true;
       this.attachedAt = Date.now();
+      this.disconnectedSince = null;
       this.resendBuffer.ackThrough(event.durableThroughSeq);
       this.resendBuffer.rewind();
       this.uploadBaselineBytes =
@@ -447,12 +482,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
           : null;
     }
     if (event.type === "ack") {
+      this.lastAckAt = Date.now();
       this.resendBuffer.ackThrough(event.throughChunkSeq);
       this.reportBuffer();
-    }
-    // 서버가 틀려도 마지막 사본은 남긴다. ACK 못 받은 것은 다음 방문 때 이어 올리기 대상이다
-    if (event.type === "completed" && this.resendBuffer.bytes === 0) {
-      this.resendBuffer.forget();
     }
     if (event.type === "completed" || terminalError) {
       this.terminalEventReceived = true;
@@ -464,6 +496,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
 
     switch (event.type) {
       case "connected":
+        this.updateNotice();
         this.flushPending();
         return;
       case "completed":
@@ -473,26 +506,34 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
         void this.close();
         return;
       case "reattach":
-        void this.reattach(`server reattach: ${event.reason}`, event.delayMs);
+        void this.reattach(
+          reattachCause(event.reason),
+          `server reattach: ${event.reason}`,
+          event.delayMs
+        );
         return;
       case "error":
         if (terminalError) {
           if (this.stopping) void this.close();
           else this.fail(event.message);
         } else if (this.attached && !this.reattaching) {
-          void this.reattach(event.message);
+          void this.reattach("server_reattach", event.message);
         }
         return;
     }
   }
 
-  private reattach(reason: string, firstDelayMs = REATTACH_FIRST_DELAY_MS) {
+  private reattach(
+    cause: ReconnectReason,
+    detail: string,
+    firstDelayMs = REATTACH_FIRST_DELAY_MS
+  ) {
     if (this.closing || this.failed || this.reattaching)
       return this.reattaching;
     // stop 을 기다리던 중이면 다시 붙은 뒤 stop 을 다시 보낸다
     this.terminalResolve?.("reattach");
     this.terminalResolve = null;
-    // 붙자마자 끊기기를 되풀이하면 한 번 붙을 때마다 창과 횟수가 새로 시작돼 0.5초마다 두드린다
+    // 붙자마자 끊기기를 되풀이하면 한 번 붙을 때마다 0.5초마다 두드린다
     const churned =
       this.attached && Date.now() - this.attachedAt < STABLE_ATTACH_MS;
     this.churn = churned ? this.churn + 1 : 0;
@@ -500,30 +541,24 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       firstDelayMs = Math.max(firstDelayMs, reattachDelayMs(this.churn - 1));
     }
     this.dropSocket(this.socket);
-    const sinceMs = Date.now();
-    this.options.onReconnectChange?.({
-      sinceMs,
-      pendingMs: Math.round(this.resendBuffer.bytes / BYTES_PER_MS),
-    });
-    this.reattaching = this.reattachWithinWindow(reason, sinceMs, firstDelayMs);
+    this.disconnectedSince ??= Date.now();
+    this.disconnectDetail = detail;
+    this.reconnectReason = cause;
+    this.reattaching = this.reattachLoop(firstDelayMs);
     return this.reattaching;
   }
 
-  private async reattachWithinWindow(
-    reason: string,
-    sinceMs: number,
-    firstDelayMs: number
-  ) {
-    const deadline = sinceMs + REATTACH_WINDOW_MS;
+  /** 창은 펌프가 잰다. 여기서는 창이 닫히거나(close) 붙을 때까지 두드린다. */
+  private async reattachLoop(firstDelayMs: number) {
     for (let attempt = 0; ; attempt += 1) {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) {
-        this.reattaching = null;
-        this.fail(`5분 동안 다시 잇지 못했습니다 (${reason})`);
-        return;
-      }
-      const delay = attempt === 0 ? firstDelayMs : reattachDelayMs(attempt);
-      await sleep(Math.min(delay, remaining));
+      const delayMs = attempt === 0 ? firstDelayMs : reattachDelayMs(attempt);
+      logTranscription("reconnect", {
+        step: "wait",
+        reason: this.reconnectReason,
+        attempt: attempt + 1,
+        delayMs: Math.round(delayMs),
+      });
+      await this.waitForRetry(delayMs);
       if (this.closing || this.failed) break;
       try {
         await this.attach();
@@ -534,13 +569,93 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       }
     }
     this.reattaching = null;
-    if (!this.closing && !this.failed) this.options.onReconnectChange?.(null);
+  }
+
+  private waitForRetry(ms: number) {
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      this.wakeRetry = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+    }).finally(() => {
+      this.wakeRetry = null;
+    });
+  }
+
+  /** 알아챈 뒤 30초가 지났으면 녹음을 멈춘다. 멈췄으면 true. */
+  private checkWindow() {
+    if (this.disconnectedSince === null || this.closing || this.failed)
+      return false;
+    const disconnectedMs = Date.now() - this.disconnectedSince;
+    if (disconnectedMs < RESUME_WINDOW_MS) return false;
+    logTranscription("reconnect", {
+      step: "give_up",
+      reason: this.reconnectReason,
+      disconnectedMs,
+      droppedMs: Math.round(this.resendBuffer.bytes / BYTES_PER_MS),
+    });
+    logTranscription("notice", { state: "shown", cause: "stopped" });
+    // 창 밖의 소리는 보낼 세션이 없다. 버려야 탭 닫기 붙잡기도 풀린다
+    this.resendBuffer.ackThrough(Number.MAX_SAFE_INTEGER);
+    this.reportBuffer();
+    this.fail(`30초 동안 다시 잇지 못했습니다 (${this.disconnectDetail})`);
+    return true;
+  }
+
+  private updateNotice() {
+    const now = Date.now();
+    let next: ConnectionNotice | null = null;
+    if (!this.closing && this.disconnectedSince !== null) {
+      // 영수증 노랑이 이미 떠 있으면 끊지 않고 이어 간다
+      if (
+        this.offline ||
+        this.notice !== null ||
+        now - this.disconnectedSince >= NOTICE_AFTER_MS
+      ) {
+        next = { cause: "disconnected", sinceMs: this.disconnectedSince };
+      }
+    } else if (
+      !this.closing &&
+      !this.stopping &&
+      this.attached &&
+      this.resendBuffer.bytes > 0
+    ) {
+      const receiptAt = Math.max(this.lastAckAt, this.attachedAt);
+      if (now - receiptAt >= RECEIPT_LIMIT_MS) {
+        next = { cause: "no_receipt", sinceMs: receiptAt };
+      }
+    }
+    const previous = this.notice;
+    if (
+      previous?.cause === next?.cause &&
+      previous?.sinceMs === next?.sinceMs
+    ) {
+      return;
+    }
+    if (previous?.cause === "no_receipt") {
+      logTranscription("ack", {
+        state: "resumed",
+        lateMs: now - previous.sinceMs,
+      });
+    }
+    if (next?.cause === "no_receipt") {
+      logTranscription("ack", { state: "late", sinceMs: next.sinceMs });
+    }
+    logTranscription(
+      "notice",
+      next
+        ? { state: "shown", cause: next.cause, sinceMs: next.sinceMs }
+        : { state: "cleared", cause: previous?.cause }
+    );
+    this.notice = next;
+    this.options.onNoticeChange?.(next);
   }
 
   private checkSilence() {
     if (!this.attached || this.reattaching || this.stopping) return;
     if (Date.now() - this.lastInboundAt >= SILENCE_LIMIT_MS) {
-      void this.reattach("no inbound frame for 20s");
+      void this.reattach("no_receive", "no inbound frame for 20s");
     }
   }
 
@@ -569,7 +684,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     const state: BufferState = {
       pendingMs: Math.round(buffer.bytes / BYTES_PER_MS),
       limitMs: Math.round(buffer.limitBytes / BYTES_PER_MS),
-      persistent: buffer.persistent,
       paused: buffer.paused,
       upload:
         baseline === null
@@ -587,7 +701,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       state.pendingMs > 0,
       Math.floor(state.pendingMs / 1000),
       state.limitMs,
-      state.persistent,
       state.paused,
       state.upload?.percent,
       state.upload && Math.floor(state.upload.remainingMs / 1000),
@@ -629,7 +742,6 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
     if (sentAny) this.reportBuffer();
 
-    // 디스크에서 읽는 중인 것은 회선 탓이 아니다
     if (!refused) {
       this.congestedSinceMs = null;
       return;
@@ -641,7 +753,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       return;
     }
     if (now - this.congestedSinceMs >= MAX_CONGESTION_MS) {
-      void this.reattach("send congestion");
+      void this.reattach("send_stalled", "send congestion");
     }
   }
 
