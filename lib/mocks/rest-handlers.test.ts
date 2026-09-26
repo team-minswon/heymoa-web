@@ -460,6 +460,23 @@ describe("meeting and integration handlers", () => {
     expect((await response.json()).error.code).toBe("MEETING_ALREADY_ENDED");
   });
 
+  it("returns 409 MEETING_RECORDING when ending a meeting still recording", async () => {
+    const project = mockDb.listProjects("01K0000000000")[0];
+    const note = mockDb.createNote(project.projectId, {});
+    mockDb.createSession(note.noteId);
+
+    const response = await fetch(
+      `http://localhost/v1/notes/${note.noteId}/meeting-end`,
+      { method: "POST" }
+    );
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatchObject({
+      code: "MEETING_RECORDING",
+      message: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
+    });
+  });
+
   it("returns 409 MEETING_NOT_STARTED for a meeting that never began", async () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});

@@ -226,43 +226,14 @@ describe("MeetingEndDialog", () => {
   });
 
   /**
-   * **`ACTIVE_TRANSCRIPTION_SESSION` 차단이 사라졌다** (APP-685). 서버가 열린 세션을 거절
-   * 대신 닫으므로 그 409 가 더 이상 오지 않는다. 그 거절이 강제하던 「STOMP stop →
-   * completed 대기 → REST」 순서도 같이 사라졌다.
-   */
-  it("IN_PROGRESS 확인 한 번으로 stop 성공을 기다린 뒤 회의를 종료한다", async () => {
-    state.activeNoteId = "01K0000000002";
-    state.phase = "recording";
-    let finishStop!: (result: boolean) => void;
-    state.stopMock.mockReturnValue(
-      new Promise<boolean>((resolve) => {
-        finishStop = resolve;
-      })
-    );
-    renderDialog(undefined, "IN_PROGRESS");
-
-    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
-
-    expect(state.stopMock).toHaveBeenCalledOnce();
-    expect(state.endMock).not.toHaveBeenCalled();
-
-    finishStop(true);
-
-    await waitFor(() => expect(state.endMock).toHaveBeenCalledOnce());
-  });
-
-  /**
    * **지어내지 않고 서버가 준 것을 그대로 넣는다.** 전에는 `Date.now()` 로 마지막 구간을
    * 계산해 캐시에 썼다 — 시계가 서로 다른 두 사람이 같은 회의를 다른 길이로 봤다.
    */
   it("종료 응답의 노트를 그대로 캐시에 넣는다", async () => {
-    state.activeNoteId = "01K0000000002";
-    state.phase = "recording";
-    state.stopMock.mockResolvedValue(true);
     state.endMock.mockImplementation((_vars, options) =>
       options?.onSuccess?.(ENDED_NOTE)
     );
-    const { client } = renderDialog(undefined, "IN_PROGRESS");
+    const { client } = renderDialog();
     const queryKey = ["note", "01K0000000002"];
     client.setQueryData(queryKey, {
       status: 200,
@@ -270,9 +241,9 @@ describe("MeetingEndDialog", () => {
         success: true,
         data: {
           noteId: "01K0000000002",
-          meetingStatus: "IN_PROGRESS",
+          meetingStatus: "PAUSED",
           recordedDurationMs: 10_000,
-          activeSessionStartedAt: "2026-07-29T00:00:00.000Z",
+          activeSessionStartedAt: null,
         },
       },
     });
@@ -315,30 +286,53 @@ describe("MeetingEndDialog", () => {
     }
   );
 
-  it("IN_PROGRESS stop이 false면 회의를 종료하지 않고 이유를 남긴다", async () => {
+  /**
+   * **기록 중인 회의는 끝낼 수 없다** (APP-694). 예전에는 여기서 로컬 녹음을 먼저 끄고
+   * 종료했다. 이제 서버가 409 로 거절하므로 대신 끄지 않고 판정을 서버에 맡긴다.
+   */
+  it("기록 중이어도 이 창의 녹음을 대신 끄지 않는다", () => {
     state.activeNoteId = "01K0000000002";
     state.phase = "recording";
-    state.stopMock.mockResolvedValue(false);
-    renderDialog(undefined, "IN_PROGRESS");
-
-    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
-
-    await screen.findByRole("alert");
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "현재 기록을 안전하게 저장하지 못했습니다."
-    );
-    expect(state.endMock).not.toHaveBeenCalled();
-  });
-
-  it("failed ACTIVE는 죽은 로컬 controller 대신 서버 종료 판정으로 넘긴다", () => {
-    state.activeNoteId = "01K0000000002";
-    state.phase = "failed";
     renderDialog(undefined, "IN_PROGRESS");
 
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
 
     expect(state.stopMock).not.toHaveBeenCalled();
     expect(state.endMock).toHaveBeenCalledOnce();
+  });
+
+  it("기록 중이라 거절되면 이유를 알리고 노트를 다시 묻는다", async () => {
+    state.toastError.mockReset();
+    state.endMock.mockImplementation((_vars, options) =>
+      options?.onError?.({
+        success: false,
+        data: null,
+        error: {
+          code: "MEETING_RECORDING",
+          message: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
+        },
+      })
+    );
+    const onEnded = vi.fn();
+    const { client } = renderDialog(onEnded);
+    client.setQueryData(["note", "01K0000000002"], {
+      status: 200,
+      data: {
+        success: true,
+        data: { noteId: "01K0000000002", meetingStatus: "PAUSED" },
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "기록 중인 회의는 중지한 뒤 종료할 수 있습니다."
+    );
+    expect(client.getQueryState(["note", "01K0000000002"])?.isInvalidated).toBe(
+      true
+    );
+    expect(onEnded).not.toHaveBeenCalled();
+    expect(state.toastError).not.toHaveBeenCalled();
   });
 
   it("PAUSED는 로컬 상태가 남아도 stop 없이 바로 종료한다", () => {

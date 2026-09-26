@@ -878,6 +878,9 @@ describe("NotePanel", () => {
   });
 
   it("회의 종료 확인창이 노트 전환을 따라가지 않는다", async () => {
+    // 기록 중에는 회의 종료가 잠긴다(APP-694) — 중지된 회의로 연다.
+    noteState.value.meetingStatus = "PAUSED";
+    noteState.value.activeSessionStartedAt = null;
     // 삭제 확인창과 같은 함정인데 결과가 더 나쁘다 — 대상만 B로 바뀌어 **다른 회의가
     // 종료된다.** 예전에는 상단바의 노트 액션 슬롯이 `key={activeNoteId}`로 막았다.
     const panel = (noteId: string) => (
@@ -976,7 +979,7 @@ describe("NotePanel", () => {
     expect(screen.queryByRole("tab", { name: "챗봇" })).toBeNull();
   });
 
-  it("정보 탭 머리글이 회의 맥락을 보이고 종료 성공 뒤 요약 탭으로 이동한다", () => {
+  it("정보 탭 머리글이 회의 맥락을 보이고 회의 제어를 둔다", () => {
     const onTabChange = vi.fn();
     renderNotePanel(
       <NotePanel
@@ -1001,6 +1004,26 @@ describe("NotePanel", () => {
       screen.getByRole("group", { name: "회의 상태 및 제어" })
     ).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "창 제어" })).toBeInTheDocument();
+    // 기록 중에는 회의 종료가 잠긴다(APP-694).
+    expect(screen.getByRole("button", { name: "회의 종료" })).toBeDisabled();
+    expect(onTabChange).not.toHaveBeenCalled();
+  });
+
+  it("중지된 회의를 종료하면 요약 탭으로 이동한다", () => {
+    noteState.value.meetingStatus = "PAUSED";
+    noteState.value.activeSessionStartedAt = null;
+    const onTabChange = vi.fn();
+    renderNotePanel(
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="side"
+        tab="details"
+        onTabChange={onTabChange}
+        onClose={vi.fn()}
+      />
+    );
+
     fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
     fireEvent.click(screen.getByRole("button", { name: "종료 확인" }));
 

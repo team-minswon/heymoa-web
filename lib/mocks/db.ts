@@ -185,14 +185,6 @@ type StoreState = {
   diarizations: Map<string, TranscriptResponseDataDiarization>;
   /** 세션 사이가 아닌 공백(CAPTURE·UPLOAD). 서버가 오브젝트에서 유도하는 것을 목이 심는다. */
   extraGaps: Map<string, TranscriptResponseDataGapsItem[]>;
-  /**
-   * 봉인 도장이 **TRUNCATED 인 노트만** 담는다 (APP-685).
-   *
-   * 서버는 `notes.recording_seal` 을 두고 종료가 ACTIVE 세션을 닫을 때 TRUNCATED 를 찍는다.
-   * 목에는 그 상태가 아예 없어서 회의가 끝나면 무조건 COMPLETE 였고, 그래서 **화면의 잘림
-   * 분기 둘이 목에서 한 번도 안 지나갔다** — 아카이브 배지와 회의록 복사의 잘림 표시다.
-   */
-  truncatedNotes: Set<string>;
   members: MockMember[];
   /** 워크스페이스가 소유하는 계정 없는 참여자 (APP-490). */
   workspaceGuests: MockWorkspaceGuest[];
@@ -1594,7 +1586,6 @@ function createSeedState(): StoreState {
       [MENTORING_NOTE_ID, mentoringDiarization],
     ]),
     // 사고 공백. 끝난 것과 진행 중인 것, 이유가 있는 것과 없는 것을 함께 심는다.
-    truncatedNotes: new Set<string>(),
     extraGaps: new Map<string, TranscriptResponseDataGapsItem[]>([
       [
         "01K0000000020",
@@ -2223,30 +2214,19 @@ export const mockDb = {
     }
   },
 
-  /** 회의 뒤 분석은 `meeting-flow` 목이 이어받는다. 여기서는 회의 상태만 닫는다. */
   /**
-   * **세 가지가 바뀌었다** (APP-685).
+   * 회의 뒤 분석은 `meeting-flow` 목이 이어받는다. 여기서는 회의 상태만 닫는다.
+   * 응답은 갱신된 노트이고, 워크스페이스 멤버 누구나 끝낼 수 있다 (APP-685).
    *
-   * 1. 응답이 **갱신된 노트**다. 204 였을 때 화면이 종료 뒤 상태를 지어냈다
-   * 2. 시작자만이 아니라 **워크스페이스 멤버 누구나** 끝낼 수 있다
-   * 3. 열려 있던 전사 세션을 409 로 거절하지 않고 **서버가 닫는다**
+   * **기록 중(IN_PROGRESS)이면 거절한다** (APP-694). 열린 세션이 있으면 IN_PROGRESS 이므로
+   * 종료가 세션을 닫을 일도, 소리 흐르던 세션을 잘라 TRUNCATED 를 찍을 일도 없다.
    */
   endMeeting(noteId: string): NoteResponseData {
     const note = findNote(noteId);
     if (note.meetingStatus === "NOT_STARTED") fail("MEETING_NOT_STARTED");
     if (note.meetingStatus === "ENDED") fail("MEETING_ALREADY_ENDED");
+    if (note.meetingStatus === "IN_PROGRESS") fail("MEETING_RECORDING");
     const endedAt = nextTimestamp();
-    for (const session of state.sessions) {
-      if (session.noteId !== noteId || !ACTIVE_STATUSES.has(session.status)) {
-        continue;
-      }
-      // **소리가 흐르던 세션만 봉인한다.** READY 는 한 조각도 안 받았으므로 자를 것이 없다 —
-      // 서버가 `wasActive` 로 가르는 그 자리다.
-      if (session.status === "ACTIVE") state.truncatedNotes.add(noteId);
-      session.status = "INTERRUPTED";
-      session.endedAt = endedAt;
-      session.endReason = "MEETING_ENDED";
-    }
     note.meetingStatus = "ENDED";
     note.meetingEndedAt = endedAt;
     note.updatedAt = endedAt;
@@ -3396,12 +3376,8 @@ export const mockDb = {
         startedAt:
           sessions[0]?.startedAt ?? note.meetingStartedAt ?? note.createdAt,
         // 봉인은 회의가 끝나야 찍힌다. 진행 중이면 OPEN 이고 그건 오류가 아니다.
-        // **자른 채 끝난 회의는 TRUNCATED 다** — 종료가 소리 흐르던 세션을 닫은 경우다.
-        seal: state.truncatedNotes.has(noteId)
-          ? "TRUNCATED"
-          : note.meetingStatus === "ENDED"
-            ? "COMPLETE"
-            : "OPEN",
+        // 종료가 기록 중을 거절하므로(APP-694) 목은 TRUNCATED 를 찍지 않는다.
+        seal: note.meetingStatus === "ENDED" ? "COMPLETE" : "OPEN",
         durationMs,
         // **소리가 실제로 흐른 세션이 있어야 한다** (APP-685). 세션이 있기만 하면 참으로
         // 두면, 한 조각도 못 받고 만료된 READY 뿐인 노트가 「조립할 소리가 있다」고 말한다.

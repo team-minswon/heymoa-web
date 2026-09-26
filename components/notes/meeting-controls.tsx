@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { CalendarDays, CircleStop, Pause } from "lucide-react";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
+import {
+  isNoteRecordingActive,
+  useRecording,
+} from "@/components/transcription/recording-provider";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models";
 import { MEETING_STATUS_LABEL } from "@/lib/notes/meeting-state";
@@ -68,11 +77,40 @@ export function MeetingControls({
   onMeetingEnded?: () => void;
 }) {
   const [endOpen, setEndOpen] = useState(false);
+  const recording = useRecording();
+  const reasonId = useId();
 
   const canEnd =
     note.meetingStatus === "IN_PROGRESS" || note.meetingStatus === "PAUSED";
 
   if (!canEnd) return null;
+
+  // 기록 중인 회의는 서버가 409 MEETING_RECORDING 으로 거절한다(APP-694).
+  const recordingBlocked = note.meetingStatus === "IN_PROGRESS";
+  const recorder =
+    isNoteRecordingActive(recording, note.noteId) || !note.meetingStartedBy
+      ? null
+      : note.meetingStartedBy.name;
+  const blockedReason = recorder
+    ? `${recorder} 님이 기록 중 — 중지한 뒤 종료할 수 있습니다`
+    : "중지한 뒤 종료할 수 있습니다";
+
+  const endButton = (
+    <Button
+      type="button"
+      variant="outline"
+      // design.pen `Dpy5O`: h32 · r8 · destructive 테두리와 글자 · 12px. 예전에 붉은
+      // 테두리를 뺀 것은 이 버튼이 h-10이던 때의 이야기다 — 32px에 12px 글자면 정본대로
+      // 둘러도 헤더에서 튀지 않고, 종료는 다이얼로그가 한 번 더 확인한다.
+      className="h-8 gap-1.5 rounded-control border-destructive px-2.5 text-xs text-destructive hover:text-destructive"
+      disabled={recordingBlocked}
+      aria-describedby={recordingBlocked ? reasonId : undefined}
+      onClick={() => setEndOpen(true)}
+    >
+      <CircleStop className="size-4" />
+      회의 종료
+    </Button>
+  );
 
   return (
     <div
@@ -80,18 +118,23 @@ export function MeetingControls({
       aria-label="회의 상태 및 제어"
       className="flex shrink-0 items-center gap-3"
     >
-      <Button
-        type="button"
-        variant="outline"
-        // design.pen `Dpy5O`: h32 · r8 · destructive 테두리와 글자 · 12px. 예전에 붉은
-        // 테두리를 뺀 것은 이 버튼이 h-10이던 때의 이야기다 — 32px에 12px 글자면 정본대로
-        // 둘러도 헤더에서 튀지 않고, 종료는 다이얼로그가 한 번 더 확인한다.
-        className="h-8 gap-1.5 rounded-control border-destructive px-2.5 text-xs text-destructive hover:text-destructive"
-        onClick={() => setEndOpen(true)}
-      >
-        <CircleStop className="size-4" />
-        회의 종료
-      </Button>
+      {recordingBlocked ? (
+        <Tooltip>
+          {/* disabled 버튼은 포인터 이벤트를 안 내서 감싼 span 이 툴팁을 연다. */}
+          <TooltipTrigger
+            delay={0}
+            render={<span tabIndex={0} className="inline-flex" />}
+          >
+            {endButton}
+          </TooltipTrigger>
+          <TooltipContent>{blockedReason}</TooltipContent>
+          <span id={reasonId} hidden>
+            {blockedReason}
+          </span>
+        </Tooltip>
+      ) : (
+        endButton
+      )}
       <MeetingEndDialog
         noteId={note.noteId}
         meetingStatus={note.meetingStatus}

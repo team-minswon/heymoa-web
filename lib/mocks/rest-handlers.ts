@@ -74,6 +74,7 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   CONCURRENT_GUEST_LINK: "연동 중에 회의가 바뀌었습니다. 다시 시도해 주세요.",
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
+  MEETING_RECORDING: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
 };
 
 /**

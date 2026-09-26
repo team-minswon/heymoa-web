@@ -1276,7 +1276,9 @@ test("creates a NOT_STARTED note without requesting the microphone", async ({
   ).toBe(0);
 });
 
-test("starts and ends a meeting through one confirmation", async ({ page }) => {
+test("starts, stops, and ends a meeting through one confirmation", async ({
+  page,
+}) => {
   // 목이 조각마다 chunkSeq·captureSamples 헤더를 검사하고 어긋나면 경고를 남긴다.
   // 여기서 잡히는 것이 서버를 짜기 전에 잡히는 것이다.
   const frameWarnings: string[] = [];
@@ -1292,6 +1294,11 @@ test("starts and ends a meeting through one confirmation", async ({ page }) => {
     recordedSeconds(await (await cumulativeTimer(page)).textContent())
   ).toBeLessThan(60);
 
+  // 기록 중에는 끝낼 수 없다(APP-694) — 중지해야 풀린다.
+  await expect(
+    meetingControls(page).getByRole("button", { name: "회의 종료" })
+  ).toBeDisabled();
+  await stopRecording(page);
   await endMeeting(page);
 
   expect(frameWarnings).toEqual([]);
@@ -1400,7 +1407,8 @@ test("shows the NOT_STARTED recorder dock in the side panel", async ({
   ).toBeVisible();
 });
 
-test("ends a meeting from the side panel and opens the ended summary", async ({
+// 기록 중인 회의는 끝낼 수 없다(APP-694). 남이 기록 중이면 누가 기록 중인지 알린다.
+test("locks ending a remotely recorded meeting in the side panel", async ({
   page,
 }) => {
   await page.goto(
@@ -1418,16 +1426,37 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
     })
   ).toBeVisible();
   await page.getByRole("tab", { name: "스크립트" }).click();
-  // 회의 종료는 상단바에 있으니 어느 탭에서든 닿는다.
-  await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
   await expect(
     page.getByText("다른 탭·기기에서 기록 중입니다.", { exact: true })
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "회의 종료" }).click();
+  // 회의 종료는 상단바에 있으니 어느 탭에서든 닿는다. 다만 기록 중에는 잠겨 있다.
+  const end = meetingControls(page).getByRole("button", { name: "회의 종료" });
+  await expect(end).toBeDisabled();
+  // disabled 버튼은 포인터 이벤트를 안 내므로 감싼 요소에 올린다.
+  await end.locator("..").hover();
+  await expect(page.locator('[data-slot="tooltip-content"]')).toHaveText(
+    /님이 기록 중 — 중지한 뒤 종료할 수 있습니다/
+  );
+});
+
+test("ends a stopped meeting from the side panel and opens the ended summary", async ({
+  page,
+}) => {
+  await createMeetingNote(page);
+  await startRecording(page, "회의 시작");
+  await stopRecording(page);
+  await page.getByRole("button", { name: "사이드 뷰로 보기" }).click();
+  await expect(page).toHaveURL(/view=side/);
+
+  await meetingControls(page)
+    .getByRole("button", { name: "회의 종료" })
+    .click();
   const dialog = page.getByRole("alertdialog");
+  await expect(dialog.getByText("녹음 상태 · 중지됨")).toBeVisible();
   await dialog.getByRole("button", { name: "회의 종료" }).click();
 
+  // 종료 → 분석 PENDING → 요약 탭이 분석 진행으로.
   await expect(page.getByText("회의를 분석하는 중입니다")).toBeVisible({
     timeout: 20_000,
   });
@@ -1443,24 +1472,6 @@ test("ends a meeting from the side panel and opens the ended summary", async ({
   ]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);
   await expect(page).toHaveURL(/view=side&tab=summary/);
-});
-
-test("ends a meeting and shows the analysis in progress", async ({ page }) => {
-  // 기본 전사 탭에서 종료해도 요약 탭으로 넘어가 분석 진행을 보여야 한다.
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/01K0000000002?view=full`);
-
-  await page.getByRole("button", { name: "회의 종료" }).click();
-  const dialog = page.getByRole("alertdialog");
-  await expect(dialog.getByText(/녹음 상태/)).toBeVisible();
-  await dialog.getByRole("button", { name: "회의 종료" }).click();
-
-  // 종료 → 분석 PENDING → 요약 탭이 분석 진행으로.
-  await expect(page.getByText("회의를 분석하는 중입니다")).toBeVisible({
-    timeout: 20_000,
-  });
-  await expect(
-    noteTopBar(page).getByText("종료됨", { exact: true })
-  ).toBeVisible();
 });
 
 /**

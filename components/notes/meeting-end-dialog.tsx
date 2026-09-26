@@ -6,7 +6,6 @@ import { AlertTriangle, Mic } from "lucide-react";
 import { toast } from "@/lib/ui/toast";
 
 import {
-  isNoteRecordingActive,
   isRecordingStarting,
   useRecording,
 } from "@/components/transcription/recording-provider";
@@ -33,7 +32,7 @@ import {
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 
-/** 기록 중이면 로컬 stop 성공을 확인한 뒤 같은 확인 흐름에서 회의를 종료한다. */
+/** 중지된 회의를 확인 한 번으로 종료한다. 기록 중이면 서버가 409 MEETING_RECORDING 을 준다. */
 export function MeetingEndDialog({
   noteId,
   meetingStatus,
@@ -54,18 +53,16 @@ export function MeetingEndDialog({
   const endMeeting = useEndMeeting({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  const [stopFailed, setStopFailed] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null);
 
   // 다이얼로그가 닫히거나(재오픈) noteId가 바뀌면 지난 차단 상태를 접는다 — 그 사이 원격
   // 녹음이 끝났을 수 있다. 렌더 중 상태 조정(React 공식 패턴).
   const [context, setContext] = useState(`${noteId}:${open}`);
   if (context !== `${noteId}:${open}`) {
     setContext(`${noteId}:${open}`);
-    if (stopFailed) setStopFailed(false);
+    if (blocked) setBlocked(null);
   }
 
-  const localRecording = isNoteRecordingActive(recording, noteId);
   const starting = isRecordingStarting(recording, noteId);
   /**
    * **서버가 준 노트를 그대로 캐시에 넣는다** (APP-685).
@@ -97,50 +94,36 @@ export function MeetingEndDialog({
     onEnded?.();
   };
 
-  /**
-   * **`ACTIVE_TRANSCRIPTION_SESSION` 분기가 사라졌다** (APP-685). 서버가 열린 세션을 거절
-   * 대신 닫으므로 그 409 가 더 이상 오지 않는다. 그 거절이 강제하던 「STOMP stop → completed
-   * 대기 → REST」 순서도 같이 사라졌다 — 아래에서 로컬 스트림을 먼저 끊는 것은 마이크를
-   * 놓기 위해서지 서버가 요구해서가 아니다.
-   */
-  const requestEnd = () =>
+  const requestEnd = () => {
+    if (starting) return;
+    setBlocked(null);
     endMeeting.mutate(
       { noteId },
       {
         onSuccess: (response) => void convergeEnded(response),
         onError: (error) => {
-          if (errorCodeOf(error) === "MEETING_ALREADY_ENDED") {
+          const code = errorCodeOf(error);
+          if (code === "MEETING_ALREADY_ENDED") {
             void convergeEnded();
+            return;
+          }
+          // 그 사이 누군가 기록을 시작했다(APP-694). 화면이 따라잡도록 노트를 다시 묻는다.
+          if (code === "MEETING_RECORDING") {
+            setBlocked(
+              errorMessageOf(
+                error,
+                "기록 중인 회의는 중지한 뒤 종료할 수 있습니다."
+              )
+            );
+            void queryClient.invalidateQueries({
+              queryKey: getGetNoteQueryKey(noteId),
+            });
             return;
           }
           toast.error(errorMessageOf(error, "회의를 종료하지 못했습니다."));
         },
       }
     );
-
-  const confirmEnd = async () => {
-    if (starting) return;
-    setStopFailed(false);
-    if (
-      meetingStatus === "IN_PROGRESS" &&
-      localRecording &&
-      recording.phase !== "failed"
-    ) {
-      setIsStopping(true);
-      let stopped = false;
-      try {
-        stopped = await recording.stop();
-      } catch {
-        stopped = false;
-      } finally {
-        setIsStopping(false);
-      }
-      if (!stopped) {
-        setStopFailed(true);
-        return;
-      }
-    }
-    requestEnd();
   };
 
   return (
@@ -149,9 +132,8 @@ export function MeetingEndDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>회의를 종료할까요?</AlertDialogTitle>
           <AlertDialogDescription>
-            {meetingStatus === "IN_PROGRESS"
-              ? "현재 기록을 먼저 안전하게 저장한 뒤 회의를 종료하고 요약을 시작합니다."
-              : "회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할 수 없습니다."}
+            회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할
+            수 없습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -160,16 +142,14 @@ export function MeetingEndDialog({
           녹음 상태 · {meetingStatus === "IN_PROGRESS" ? "기록 중" : "중지됨"}
         </div>
 
-        {stopFailed ? (
+        {blocked ? (
           <div
             role="alert"
             className="flex items-start gap-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-3"
           >
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
             <p className="text-xs leading-relaxed text-[var(--el-body)]">
-              {stopFailed
-                ? "현재 기록을 안전하게 저장하지 못했습니다. 기록 상태를 확인한 뒤 다시 시도해 주세요."
-                : "다른 탭·기기에서 기록 중입니다. 해당 기록이 중지된 뒤 다시 시도해 주세요."}
+              {blocked}
             </p>
           </div>
         ) : null}
@@ -177,17 +157,12 @@ export function MeetingEndDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>닫기</AlertDialogCancel>
           {/* 높이를 손으로 주지 않는다 — `h-11`(44)이 `닫기`의 기본 높이와 달라 같은 줄에서
-              두 버튼 크기가 어긋났다. 진행 표시도 문구 교체가 아니라 `loading`으로 준다:
-              문구를 갈아 끼우면 버튼 폭이 「회의 종료」→「기록 저장 중…」으로 튄다. */}
+              두 버튼 크기가 어긋났다. 진행 표시는 문구 교체가 아니라 `loading`으로 준다. */}
           <Button
-            loading={endMeeting.isPending || isStopping || starting}
-            disabled={endMeeting.isPending || isStopping || starting}
-            onClick={() => void confirmEnd()}
+            loading={endMeeting.isPending || starting}
+            disabled={endMeeting.isPending || starting}
+            onClick={requestEnd}
           >
-            {/* 진행 중에도 **라벨을 갈지 않는다.** 공용 `Button`은 로딩 중에도 투명한
-                children으로 폭을 잡으므로, 문구를 바꾸면 스피너가 도는 동안 버튼이
-                「회의 종료」→「기록 저장 중…」으로 늘어난다. 무엇이 진행 중인지는 위
-                본문이 말한다. */}
             회의 종료
           </Button>
         </AlertDialogFooter>

@@ -265,35 +265,34 @@ describe("mockDb", () => {
     expect(mockDb.listSegments(foreignNote!.noteId)).toHaveLength(3);
   });
 
-  it("★ 종료가 소리 흐르던 세션을 닫으면 봉인이 TRUNCATED 다", () => {
-    // 목에 봉인 상태가 아예 없어서 회의가 끝나면 무조건 COMPLETE 였다. 그래서 화면의 잘림
-    // 분기 둘(아카이브 배지·회의록 복사 표시)이 목에서 한 번도 안 지나갔다.
+  // APP-694: 종료가 열린 세션을 닫던 길이 사라졌다. 그래서 목이 TRUNCATED 를 찍을 일도 없다.
+  it.each(["READY", "ACTIVE"])(
+    "★ %s 세션이 열린 기록 중 회의는 MEETING_RECORDING 으로 거절한다",
+    (status) => {
+      const [project] = mockDb.listProjects("01K0000000000");
+      const note = mockDb.createNote(project.projectId, { title: "기록 중" });
+      const session = mockDb.createSession(note.noteId);
+      if (status === "ACTIVE") {
+        mockDb.updateSessionStatus(session.sessionId, "ACTIVE");
+      }
+
+      expect(() => mockDb.endMeeting(note.noteId)).toThrow("MEETING_RECORDING");
+      expect(mockDb.getNote(note.noteId).meetingStatus).toBe("IN_PROGRESS");
+    }
+  );
+
+  it("★ 중지한 뒤 끝낸 회의의 봉인은 COMPLETE 다", () => {
     const [project] = mockDb.listProjects("01K0000000000");
-    const note = mockDb.createNote(project.projectId, { title: "잘린 회의" });
-    mockDb.updateSessionStatus(
-      mockDb.createSession(note.noteId).sessionId,
-      "ACTIVE"
-    );
-
-    mockDb.endMeeting(note.noteId);
-
-    const { recording } = mockDb.getTranscript(note.noteId);
-    expect(recording.seal).toBe("TRUNCATED");
-    expect(recording.audioRetained).toBe(true);
-  });
-
-  it("★ 한 조각도 안 받은 READY 만 있으면 자를 것이 없다", () => {
-    const [project] = mockDb.listProjects("01K0000000000");
-    const note = mockDb.createNote(project.projectId, {
-      title: "소리 없는 회의",
-    });
-    mockDb.createSession(note.noteId);
+    const note = mockDb.createNote(project.projectId, { title: "끝낸 회의" });
+    const session = mockDb.createSession(note.noteId);
+    mockDb.updateSessionStatus(session.sessionId, "ACTIVE");
+    mockDb.updateSessionStatus(session.sessionId, "COMPLETED");
 
     mockDb.endMeeting(note.noteId);
 
     const { recording } = mockDb.getTranscript(note.noteId);
     expect(recording.seal).toBe("COMPLETE");
-    expect(recording.audioRetained).toBe(false);
+    expect(recording.audioRetained).toBe(true);
   });
 
   it("★ 방금 만든 노트가 시드보다 위에 선다", () => {
@@ -662,7 +661,7 @@ describe("meeting and analysis", () => {
   });
 
   it("근거는 그 노트에 실제로 있는 세그먼트만 가리킨다", () => {
-    const noteId = "01K0000000002";
+    const noteId = startedNoteId();
     const segmentIds = new Set(
       mockDb.listSegments(noteId).map((segment) => segment.segmentId)
     );
