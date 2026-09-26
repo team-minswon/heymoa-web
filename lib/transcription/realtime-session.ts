@@ -60,7 +60,8 @@ export type RealtimeSessionOptions = {
   url: string;
   onEvent: (event: ServerEvent) => void;
   onLevel: (level: number) => void;
-  onFailure: (message: string) => void;
+  /** `droppedMs`: 재개 창이 끝나 버린 소리. 그 뒤 회의가 끝나면 「N초를 올리지 못했어요」가 쓴다. */
+  onFailure: (message: string, detail?: { droppedMs: number }) => void;
   onNoticeChange?: (notice: ConnectionNotice | null) => void;
   onBufferChange?: (state: BufferState) => void;
   /** `captureGapMs`: 첫 조각 이후 벽시계에서 실제로 잡은 소리를 뺀 것. 마이크가 쉰 시간이다. */
@@ -599,17 +600,20 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       return false;
     const disconnectedMs = Date.now() - this.disconnectedSince;
     if (disconnectedMs < RESUME_WINDOW_MS) return false;
+    const droppedMs = Math.round(this.resendBuffer.bytes / BYTES_PER_MS);
     logTranscription("reconnect", {
       step: "give_up",
       reason: this.reconnectReason,
       disconnectedMs,
-      droppedMs: Math.round(this.resendBuffer.bytes / BYTES_PER_MS),
+      droppedMs,
     });
     logTranscription("notice", { state: "shown", cause: "stopped" });
     // 창 밖의 소리는 보낼 세션이 없다. 버려야 탭 닫기 붙잡기도 풀린다
     this.resendBuffer.ackThrough(Number.MAX_SAFE_INTEGER);
     this.reportBuffer();
-    this.fail(`30초 동안 다시 잇지 못했습니다 (${this.disconnectDetail})`);
+    this.fail(`30초 동안 다시 잇지 못했습니다 (${this.disconnectDetail})`, {
+      droppedMs,
+    });
     return true;
   }
 
@@ -782,11 +786,12 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
   }
 
-  private fail(message: string) {
+  private fail(message: string, detail?: { droppedMs: number }) {
     if (this.failed || this.closing) return;
     this.failed = true;
     this.terminalResolve?.("failed");
-    this.options.onFailure(message);
+    if (detail) this.options.onFailure(message, detail);
+    else this.options.onFailure(message);
     void this.close();
   }
 

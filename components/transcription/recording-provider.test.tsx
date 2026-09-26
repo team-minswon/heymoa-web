@@ -150,6 +150,7 @@ function setup({
     controller,
     order,
     invalidate,
+    queryClient,
     getCallbacks: () => callbacks,
   };
 }
@@ -1225,6 +1226,102 @@ describe("끊김 창과 끝 (APP-705)", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     expect(harness.api.startSession).toHaveBeenCalledTimes(2);
     expect(harness.result.current.phase).toBe("recording");
+  });
+
+  describe("창이 끝나 멈춘 뒤 남이 회의를 끝내면 (lab 20260926T094944Z)", () => {
+    const noteWith = (meetingStatus: "IN_PROGRESS" | "ENDED") => ({
+      status: 200,
+      data: {
+        success: true,
+        data: { id: session.noteId, meetingStatus },
+        error: null,
+      },
+    });
+    const noteFetches = () =>
+      apiFetchMock.mock.calls.filter(
+        ([url]) => url === `/v1/notes/${session.noteId}`
+      ).length;
+
+    async function dropAfterWindow(droppedMs: number) {
+      vi.useFakeTimers();
+      const harness = setup({ enablePolling: true });
+      await act(() =>
+        harness.result.current.start(session.noteId, WORKSPACE_ID)
+      );
+      act(() =>
+        harness
+          .getCallbacks()
+          .onFailure(
+            "30초 동안 다시 잇지 못했습니다 (WebSocket closed (1006))",
+            { droppedMs }
+          )
+      );
+      expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄어요.");
+      return harness;
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("노트 폴링으로 종료를 알면 버린 초를 한 번 말하고 멈춤 문구를 걷는다", async () => {
+      const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+      apiFetchMock.mockResolvedValue(noteWith("IN_PROGRESS"));
+      const harness = await dropAfterWindow(12_300);
+      await act(() => vi.advanceTimersByTimeAsync(3_000));
+      expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄어요.");
+
+      apiFetchMock.mockResolvedValue(noteWith("ENDED"));
+      await act(() => vi.advanceTimersByTimeAsync(3_100));
+
+      expect(harness.result.current.error).toBe(
+        "회의가 끝나 이 기기에 남은 소리 12초를 올리지 못했어요."
+      );
+      // 종료 화면 규칙: 노트가 ENDED 면 note-panel 이 독을 걷어 [다시 녹음]이 없다. 같은 캐시를 채운다
+      expect(
+        harness.queryClient.getQueryData<ReturnType<typeof noteWith>>(
+          getGetNoteQueryKey(session.noteId)
+        )?.data.data.meetingStatus
+      ).toBe("ENDED");
+      const fetchesAtEnd = noteFetches();
+      await act(() => vi.advanceTimersByTimeAsync(9_000));
+      expect(noteFetches()).toBe(fetchesAtEnd);
+      const lines = info.mock.calls.filter(
+        (call) =>
+          call[0] === "[transcription]" &&
+          call[1] === "notice" &&
+          (call[2] as { cause?: string }).cause === "meeting_ended_after_drop"
+      );
+      expect(lines).toEqual([
+        [
+          "[transcription]",
+          "notice",
+          { state: "shown", cause: "meeting_ended_after_drop", droppedMs: 12_300 },
+        ],
+      ]);
+    });
+
+    it("회의가 안 끝나면 세션 폴링과 같은 3초 주기로만 묻는다", async () => {
+      apiFetchMock.mockResolvedValue(noteWith("IN_PROGRESS"));
+      await dropAfterWindow(5_000);
+      const before = noteFetches();
+
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
+
+      expect(noteFetches() - before).toBeLessThanOrEqual(11);
+      expect(noteFetches() - before).toBeGreaterThanOrEqual(9);
+    });
+
+    it("버린 소리가 없으면 회의 종료 문구를 쓴다", async () => {
+      apiFetchMock.mockResolvedValue(noteWith("ENDED"));
+      const harness = await dropAfterWindow(0);
+
+      await act(() => vi.advanceTimersByTimeAsync(3_000));
+
+      expect(harness.result.current.error).toBe(
+        "회의가 종료되어 기록을 마쳤습니다."
+      );
+    });
   });
 
   it("끊긴 채 회의가 끝나면 이 기기에 남은 소리를 못 올렸다고 말한다", async () => {

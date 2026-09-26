@@ -1012,6 +1012,8 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
 
     expect(harness.onFailure).toHaveBeenCalledOnce();
     expect(harness.onFailure.mock.calls[0][0]).toContain("다시 잇지 못했");
+    // 버리기 전 몫이다. 뒤에 회의가 끝나면 「N초를 올리지 못했어요」가 이 값을 쓴다
+    expect(harness.onFailure.mock.calls[0][1]).toEqual({ droppedMs: 1_000 });
     expect(harness.audio.stop).toHaveBeenCalled();
     expect(harness.buffer()).toMatchObject({ pendingMs: 0 });
   });

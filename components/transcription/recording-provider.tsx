@@ -22,7 +22,10 @@ import {
   useGetTranscriptionSession,
   useStartTranscriptionSession,
 } from "@/lib/api/generated/transcription/transcription";
-import { getGetNoteQueryKey } from "@/lib/api/generated/notes/notes";
+import {
+  getGetNoteQueryKey,
+  useGetNote,
+} from "@/lib/api/generated/notes/notes";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 import { forgetWorkspace } from "@/lib/workspace/cache";
@@ -369,6 +372,8 @@ export function RecordingProvider({
   /** 회의가 끝났다는 폴링을 받았을 때 이 기기에 남은 소리와 끊김 여부를 본다. */
   const bufferRef = useRef<BufferState | null>(null);
   const noticeRef = useRef<ConnectionNotice | null>(null);
+  /** 재개 창이 끝나 버린 소리. 버리는 순간 버퍼가 0 이 되므로 따로 든다. */
+  const droppedMsRef = useRef(0);
   const sessionRef = useRef<LocalRecordingSession | null>(null);
   const controllerRef = useRef<RealtimeSessionController | null>(null);
   const cancelledControllerRef = useRef<RealtimeSessionController | null>(null);
@@ -407,6 +412,42 @@ export function RecordingProvider({
       refetchOnWindowFocus: true,
     },
   });
+  /**
+   * 창이 끝나 멈추면 세션이 INTERRUPTED 라 위 폴링이 멎는다. 그 뒤 남이 회의를 끝내도 녹음자는
+   * 몰라서 버린 소리를 말할 수 없다(D-10). 노트 화면과 같은 캐시를 같은 주기로 물어, 종료를 알면
+   * 노트 화면도 독을 걷는다. 끝을 알거나 [다시 녹음]·닫기로 문구가 바뀌면 멎는다.
+   */
+  const watchMeetingEnd =
+    enablePolling &&
+    phase === "failed" &&
+    error === DROPPED_MESSAGE &&
+    activeNoteId !== null;
+  const droppedNoteQuery = useGetNote(activeNoteId ?? "", {
+    query: {
+      enabled: watchMeetingEnd,
+      refetchInterval: watchMeetingEnd ? 3_000 : false,
+      refetchIntervalInBackground: true,
+    },
+  });
+  const droppedNoteResponse = droppedNoteQuery.data;
+  const meetingEndedAfterDrop =
+    watchMeetingEnd &&
+    droppedNoteResponse?.status === 200 &&
+    droppedNoteResponse.data.data?.meetingStatus === "ENDED";
+
+  useEffect(() => {
+    if (!meetingEndedAfterDrop) return;
+    const timer = window.setTimeout(() => {
+      const droppedMs = droppedMsRef.current;
+      logTranscription("notice", {
+        state: "shown",
+        cause: "meeting_ended_after_drop",
+        droppedMs,
+      });
+      setError(meetingEndedMessage(droppedMs));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [meetingEndedAfterDrop]);
 
   useEffect(() => {
     bufferRef.current = buffer;
@@ -687,9 +728,10 @@ export function RecordingProvider({
         url: getWebSocketUrl(),
         onEvent: handleEvent,
         onLevel: publishLevel,
-        onFailure: (message) => {
+        onFailure: (message, detail) => {
           // 같은 사건을 이벤트로 이미 받아 서버 문구로 끝냈다
           if (controllerRef.current !== controller) return;
+          droppedMsRef.current = detail?.droppedMs ?? 0;
           failRecording(getRuntimeFailureMessage(message));
           // 이 탭이 버린 세션이다. 열린 세션으로 들고 있으면 독이 남의 기록으로 읽어 [다시 녹음]을 막는다
           const dropped = sessionRef.current;
