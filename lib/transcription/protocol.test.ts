@@ -196,8 +196,8 @@ describe("배포 창을 견딘다 — 서버가 먼저 필드를 실어도", () 
 
   it("서버가 곧 내려간다는 reattach 와 다른 부착이 이겼다는 superseded 를 받는다", () => {
     expect(
-      parseServerEvent('{"type":"reattach","delayMs":1500,"reason":"draining"}')
-    ).toEqual({ type: "reattach", delayMs: 1500, reason: "draining" });
+      parseServerEvent('{"type":"reattach","delayMs":1500,"reason":"SERVER_DRAINING"}')
+    ).toEqual({ type: "reattach", delayMs: 1500, reason: "SERVER_DRAINING" });
     expect(
       parseServerEvent('{"type":"superseded","sessionId":"0HZX2K7M9Q4AB"}')
     ).toEqual({ type: "superseded", sessionId: "0HZX2K7M9Q4AB" });

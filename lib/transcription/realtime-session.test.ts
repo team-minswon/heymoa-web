@@ -51,6 +51,8 @@ function setup({
     incompleteStops: 0,
     /** stop 에 아무 답도 안 한다. 끊긴 연결에 보낸 stop 이다. */
     silentStop: false,
+    /** stop 에 이만큼 뒤에 답한다. 느린 S3 에서 server 가 저장을 기다리는 시간이다. */
+    stopReplyMs: 0,
     /** 붙자마자 끊긴다. */
     dropAfterConnect: false,
   };
@@ -120,18 +122,13 @@ function setup({
       stop: vi.fn<(finalChunkSeq: number) => void>((finalChunkSeq) => {
         order.push("socket-stop");
         if (server.silentStop) return;
-        if (server.incompleteStops > 0) {
-          server.incompleteStops -= 1;
-          options.onEvent({
-            type: "reattach",
-            delayMs: 0,
-            reason: "STORE_INCOMPLETE",
-          });
+        if (server.stopReplyMs > 0) {
+          setTimeout(() => {
+            if (!closed) reply(finalChunkSeq);
+          }, server.stopReplyMs);
           return;
         }
-        if (finalChunkSeq >= 0)
-          options.onEvent({ type: "ack", throughChunkSeq: finalChunkSeq });
-        options.onEvent({ type: "completed", sessionId: options.sessionId });
+        reply(finalChunkSeq);
       }),
       reconcileConnected: vi.fn(() => reconcile?.()),
       close: vi.fn(async () => {
@@ -139,6 +136,20 @@ function setup({
         order.push("socket-close");
       }),
     };
+    function reply(finalChunkSeq: number) {
+      if (server.incompleteStops > 0) {
+        server.incompleteStops -= 1;
+        options.onEvent({
+          type: "reattach",
+          delayMs: 0,
+          reason: "STORE_INCOMPLETE",
+        });
+        return;
+      }
+      if (finalChunkSeq >= 0)
+        options.onEvent({ type: "ack", throughChunkSeq: finalChunkSeq });
+      options.onEvent({ type: "completed", sessionId: options.sessionId });
+    }
     return socket;
   }
 
@@ -540,7 +551,7 @@ describe("같은 세션에 다시 붙는다", () => {
     await harness.controller.connect(SESSION_ID);
     const first = harness.socket;
 
-    harness.emitEvent({ type: "reattach", delayMs: 2_000, reason: "draining" });
+    harness.emitEvent({ type: "reattach", delayMs: 2_000, reason: "SERVER_DRAINING" });
     expect(first.close).toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1_999);
     expect(harness.sockets).toHaveLength(1);
@@ -556,7 +567,7 @@ describe("같은 세션에 다시 붙는다", () => {
     await harness.controller.connect(SESSION_ID);
     const first = harness.socket;
 
-    harness.emitEvent({ type: "reattach", delayMs: 0, reason: "draining" });
+    harness.emitEvent({ type: "reattach", delayMs: 0, reason: "SERVER_DRAINING" });
     first.options.onClose(1006, "");
     await vi.advanceTimersByTimeAsync(10_000);
 
@@ -1191,7 +1202,7 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     harness.emitChunk();
     await vi.advanceTimersByTimeAsync(500);
     // 붙자마자 다시 밀리면 간격이 늘어난다
-    for (const reason of ["draining", "BUFFER_FULL", "STORE_INCOMPLETE"]) {
+    for (const reason of ["SERVER_DRAINING", "BUFFER_FULL", "STORE_INCOMPLETE"]) {
       harness.emitEvent({ type: "reattach", delayMs: 0, reason });
       await vi.advanceTimersByTimeAsync(3_000);
     }
@@ -1247,6 +1258,77 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
 
     expect(harness.onFailure).toHaveBeenCalledWith(
       "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다."
+    );
+  });
+
+  it("저장이 덜 끝났다는 답이 셋 이어져도 stop 을 누른 지 60초 안에 completed 가 오면 성공한다", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.incompleteStops = 3;
+    harness.server.stopReplyMs = 10_000;
+
+    const stopping = harness.controller.stop();
+    await vi.advanceTimersByTimeAsync(45_000);
+    await stopping;
+
+    expect(harness.sockets).toHaveLength(4);
+    expect(harness.onEvent).toHaveBeenLastCalledWith({
+      type: "completed",
+      sessionId: SESSION_ID,
+    });
+    expect(harness.onFailure).not.toHaveBeenCalled();
+  });
+
+  it("다시 붙으라는 답이 끝없이 이어지면 stop 을 누른 지 60초에 한 번 실패한다", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.incompleteStops = Number.MAX_SAFE_INTEGER;
+    harness.server.stopReplyMs = 10_000;
+
+    void harness.controller.stop();
+    await vi.advanceTimersByTimeAsync(59_900);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(harness.onFailure).toHaveBeenCalledTimes(1);
+    expect(harness.onFailure).toHaveBeenCalledWith(
+      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다."
+    );
+    expect(info).toHaveBeenCalledWith(
+      "[transcription]",
+      "stop",
+      expect.objectContaining({
+        step: "timeout",
+        scope: "total",
+        elapsedMs: 60_000,
+        reattaches: 5,
+      })
+    );
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(harness.onFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it("소켓이 붙지 않은 채 멈추면 닫고 끝났다는 줄을 남긴다", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    const connection = deferred();
+    harness.server.gate = connection.promise;
+
+    const connecting = harness.controller.connect(SESSION_ID);
+    const stopping = harness.controller.stop();
+    connection.resolve();
+    await expect(connecting).rejects.toThrow("REALTIME_SESSION_CLOSED");
+    await stopping;
+
+    expect(info).toHaveBeenCalledWith(
+      "[transcription]",
+      "stop",
+      expect.objectContaining({ step: "closed_unattached" })
     );
   });
 

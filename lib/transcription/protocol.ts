@@ -172,7 +172,7 @@ export const protocolExamples = {
       epoch: 1,
       durableThroughSeq: -1,
     },
-    reattach: { type: "reattach", delayMs: 1_500, reason: "draining" },
+    reattach: { type: "reattach", delayMs: 1_500, reason: "SERVER_DRAINING" },
     superseded: { type: "superseded", sessionId: "0HZX2K7M9Q4AB" },
     partial: {
       type: "partial",

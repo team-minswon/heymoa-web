@@ -96,8 +96,8 @@ const NOTICE_AFTER_MS = 5_000;
 const RECEIPT_LIMIT_MS = 10_000;
 /** server stop 최악(S3 10초 + 업체 10초)보다 길게(D-22). */
 const STOP_TIMEOUT_MS = 25_000;
-/** 저장이 덜 끝났다며 다시 붙으라는 답이 이어질 때 멈추기를 되풀이하는 한도. */
-const STOP_RETRY_MS = 300_000;
+/** stop 을 누른 때부터의 상한. 느린 S3 에서 다시 붙으라는 답이 이어져도 여기서 끝낸다. */
+const STOP_TOTAL_MS = 60_000;
 /** 이보다 짧게 살고 끊긴 부착이 이어지면 연결은 되는데 못 버티는 것이다. 다시 붙는 간격을 늘려 간다. */
 const STABLE_ATTACH_MS = 10_000;
 const BYTES_PER_MS =
@@ -278,27 +278,42 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     // still be sent so an ACTIVE session is not left behind.
     await this.stopAudio().catch(() => undefined);
     const since = Date.now();
+    const deadline = since + STOP_TOTAL_MS;
+    let reattaches = 0;
+    const closeUnattached = () => {
+      logTranscription("stop", {
+        step: "closed_unattached",
+        elapsedMs: Date.now() - since,
+        reattaches,
+      });
+      return this.close();
+    };
     for (;;) {
       // 다시 잇는 중이면 이은 뒤에 남은 소리를 보내고 멈춘다
       if (this.reattaching) await this.reattaching;
-      if (!this.socket || !this.attached) {
-        await this.close();
-        return;
-      }
+      if (!this.socket || !this.attached) return closeUnattached();
       // 회의 끝이 올리기 끝이 아니다. 밀린 것을 다 건넨 뒤에 stop 을 보낸다
       await this.sendAllForStop();
       const socket = this.socket;
-      if (this.closing || !socket || !this.attached) {
-        await this.close();
-        return;
+      if (this.closing || !socket || !this.attached) return closeUnattached();
+      const remainingMs = deadline - Date.now();
+      const state =
+        remainingMs > 0
+          ? await this.sendStop(socket, Math.min(STOP_TIMEOUT_MS, remainingMs))
+          : "timeout";
+      if (state === "reattach" && Date.now() < deadline) {
+        reattaches += 1;
+        continue;
       }
-      const state = await this.sendStop(socket);
-      if (state === "reattach") {
-        if (Date.now() - since < STOP_RETRY_MS) continue;
-        this.fail("5분 동안 저장을 마치지 못했습니다.");
-        return;
-      }
-      if (state === "timeout") {
+      if (state === "reattach" || state === "timeout") {
+        if (Date.now() >= deadline) {
+          logTranscription("stop", {
+            step: "timeout",
+            scope: "total",
+            elapsedMs: Date.now() - since,
+            reattaches,
+          });
+        }
         this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
       }
       await this.close();
@@ -319,7 +334,10 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
   }
 
-  private async sendStop(socket: SocketPort): Promise<TerminalState> {
+  private async sendStop(
+    socket: SocketPort,
+    timeoutMs: number
+  ): Promise<TerminalState> {
     const terminal = new Promise<Exclude<TerminalState, "timeout">>(
       (resolve) => {
         this.terminalResolve = resolve;
@@ -338,14 +356,11 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     logTranscription("stop", {
       step: "wait",
       finalChunkSeq,
-      timeoutMs: STOP_TIMEOUT_MS,
+      timeoutMs,
     });
     let timeoutId: ReturnType<typeof globalThis.setTimeout>;
     const timeout = new Promise<"timeout">((resolve) => {
-      timeoutId = globalThis.setTimeout(
-        () => resolve("timeout"),
-        STOP_TIMEOUT_MS
-      );
+      timeoutId = globalThis.setTimeout(() => resolve("timeout"), timeoutMs);
     });
     const state = await Promise.race<TerminalState>([terminal, timeout]);
     globalThis.clearTimeout(timeoutId!);
