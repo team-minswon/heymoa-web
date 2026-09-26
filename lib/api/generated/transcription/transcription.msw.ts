@@ -5,6 +5,8 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import { faker } from "@faker-js/faker";
+
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
@@ -95,24 +97,48 @@ export const getGetNoteTranscriptResponseMock = (): TranscriptResponse => ({
         endedAt: "2026-08-18T10:19:41Z",
       },
     ],
+    transcriptGaps: [
+      {
+        gapId: "tu-0HZX2K7M9Q4AG-2-640000",
+        kind: "UNANSWERED",
+        startedAtMs: 640000,
+        endedAtMs: 652000,
+      },
+    ],
   },
   error: null,
 });
 
 export const getStartTranscriptionSessionResponseMock =
-  (): StartTranscriptionSessionResponse => ({
-    success: true,
-    data: {
-      sessionId: "0HZX2K7M9Q4AG",
-      noteId: "0HZX2K7M9Q4AF",
-      status: "READY",
-      readyExpiresAt: "2026-07-14T01:02:03Z",
-      startedAt: null,
-      endedAt: null,
-      endReason: null,
-    },
-    error: null,
-  });
+  (): StartTranscriptionSessionResponse =>
+    faker.helpers.arrayElement([
+      {
+        success: true,
+        data: {
+          sessionId: "0HZX2K7M9Q4AG",
+          noteId: "0HZX2K7M9Q4AF",
+          status: "READY",
+          readyExpiresAt: "2026-07-14T01:02:03Z",
+          startedAt: null,
+          endedAt: null,
+          endReason: null,
+        },
+        error: null,
+      },
+      {
+        success: true,
+        data: {
+          sessionId: "0HZX2K7M9Q4AG",
+          noteId: "0HZX2K7M9Q4AF",
+          status: "READY",
+          readyExpiresAt: "2026-07-14T01:02:03Z",
+          startedAt: null,
+          endedAt: null,
+          endReason: null,
+        },
+        error: null,
+      },
+    ]);
 
 export const getAssignNoteSpeakerResponseMock = (): SpeakerListResponse => ({
   success: true,
@@ -267,7 +293,7 @@ export const getStartTranscriptionSessionMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getStartTranscriptionSessionResponseMock(),
-        { status: 201 }
+        { status: 200 }
       );
     },
     options

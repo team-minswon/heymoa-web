@@ -118,12 +118,12 @@ describe("RecordingDock", () => {
     expect(screen.getByRole("button", { name: "중지" })).toHaveClass("size-9");
   });
 
-  it("실패 후 다시 시도도 44px 터치 영역을 둔다", () => {
+  it("실패 후 다시 녹음도 44px 터치 영역을 둔다", () => {
     recording.phase = "failed";
 
     render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
-    expect(screen.getByRole("button", { name: "다시 시도" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "다시 녹음" })).toHaveClass(
       "h-9"
     );
   });
@@ -156,7 +156,7 @@ describe("RecordingDock", () => {
 
       expect(screen.queryByText(reason)).toBeNull();
       expect(
-        screen.getByRole("button", { name: "다시 시도" })
+        screen.getByRole("button", { name: "다시 녹음" })
       ).toBeInTheDocument();
     });
 
@@ -191,7 +191,7 @@ describe("RecordingDock", () => {
 
       expect(screen.queryByRole("alert")).toBeNull();
       expect(
-        screen.getByRole("button", { name: "다시 시도" })
+        screen.getByRole("button", { name: "다시 녹음" })
       ).toBeInTheDocument();
     });
   });

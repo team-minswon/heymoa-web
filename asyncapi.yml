@@ -2,13 +2,15 @@
 #
 # - 전사 STOMP·노트 토픽 구간: heymoa-server/asyncapi.yml 미러. 수정은 원본에서 하고 여기로 복사한다
 #   (원본은 `*WebSocketDocsTest`가 실제 DTO 직렬화로 검증한다).
+#   지금 미러: server asyncapi.yml info.version 3.3.1 (PRO-51 · APP-696·697·699, server 902fa3a2).
+#   전사 구간: docs 합본(contracts/specs/asyncapi-web-server.yml) 5.0.0 미러. 채팅 SSE 구간은 이 파일 것을 둔다.
 # - agent 채팅 SSE 구간: 이 파일이 원본. server는 이벤트를 변환 없이 통과시켜 자기 DTO를 갖지
 #   않으므로 server 쪽 DocsTest로 검증할 수 없다. SSE 이벤트 스키마의 단일 출처가 여기이며
 #   asyncapi-server-ai.yml이 $ref로 참조한다.
 asyncapi: 3.0.0
 info:
   title: Heymoa web ↔ server 비동기 계약 (전사 STOMP·노트 토픽 + agent 채팅 SSE)
-  version: 4.0.0
+  version: 5.0.0
   description: |
     브라우저와 heymoa-server 사이의 비동기 구간은 둘이다. 프로토콜도 수명도 다르다.
 
@@ -31,25 +33,47 @@ info:
     SUBSCRIBE를 먼저 등록한 뒤 connect destination으로 전사 stream을 시작한다.
     같은 STOMP session의 inbound와 outbound message 순서는 서버에서 보존한다.
     provider VAD가 발화 뒤 침묵을 감지하면 segment를 확정하고, stop 수신 시 남은
-    오디오를 강제로 commit한 뒤 final을 최대 10초간 drain한다.
+    오디오를 S3 에 올리고 final을 최대 10초간 drain한다.
 
-    ## 세션 수명
+    ## 세션과 부착
 
-    전사 session 하나는 STOMP session 하나에 바인딩된다. terminal event(completed·error)를
-    받으면 그 바인딩은 해제되며 **같은 전사 session으로 다시 connect할 수 없다** — client는
-    연결을 deactivate하고 필요하면 새 전사 session을 발급받는다.
+    **세션은 녹음 하나이고 부착(attachment)은 연결 하나다.** 한 세션에 부착이 여러 번 생긴다.
+    connect 가 부착을 만들고 connected 가 그 부착의 `epoch` 와 `durableThroughSeq` 를 알린다.
 
-    stop 없이 WebSocket이 끊기면 서버는 세션을 CLIENT_DISCONNECTED로 중단 처리한다.
-    이때 이미 확정·저장된 segment는 남지만 **terminal event는 가지 않는다** (보낼 연결이 없다).
+    - **끊겨도 세션은 안 끝난다.** 브라우저는 같은 세션으로 다시 connect 하고,
+      `durableThroughSeq` 다음 조각부터 버퍼를 다시 보낸다.
+    - **조각은 순서와 무관하게 받는다.** 다시 붙은 브라우저는 실시간 조각을 먼저, 밀린 조각을 남는 대역으로
+      보낸다. 받은 최대보다 앞 번호로 늦게 온 조각(밀린 조각)은 S3 에만 쓰고 실시간 전사에는 넣지 않는다.
+      그 구간은 전사가 빌 수 있다.
+    - 회의를 새로 시작하면(REST 시작) 늘 새 세션이다. 같은 사용자의 ACTIVE 세션은 그 세션을 연 탭이 다시 시작했거나
+      (`clientInstanceId` 가 같다) 리스가 식었으면 봉인해 닫고, 다른 탭이 리스를 쥐고 있으면 409 다. 끊긴 녹음을 잇는
+      길은 부착뿐이다.
+    - **새 부착이 즉시 이긴다.** 같은 세션에 다시 connect 하면 epoch 가 1 오르고, 옛 소켓은
+      superseded 를 받은 뒤 서버가 닫는다.
+    - 세션을 시작한 사용자만 부착할 수 있다. 다른 기기(`clientInstanceId` 가 다른)가 15초 안에
+      리스를 갱신했으면 error(SESSION_NOT_CONNECTABLE)다.
+    - 세션이 끝나는 길은 둘이다 — stop, 그리고 **리스가 식은 뒤 60초 동안 아무 부착도 없는 경우**
+      (INTERRUPTED · HEARTBEAT_TIMEOUT). 프로토콜 위반(INVALID_*)도 세션을 끝낸다.
+      녹음 중인 동안 회의 종료(REST)는 409 `MEETING_RECORDING` 으로 거절된다. 녹음 중은 READY(만료 전)이거나
+      ACTIVE 이면서 어느 부착이 15초 안에 리스를 민 경우다 — stop 이 도는 동안에도 리스를 민다. **끊겨 리스가 식으면
+      누구나 회의를 끝낼 수 있고**, 그 뒤 녹음자의 connect 는 error(SESSION_NOT_CONNECTABLE, reason MEETING_ENDED)다.
+    - 서버가 내려가면 reattach 가 온다. `delayMs` 뒤 같은 세션으로 다시 connect 한다.
+    - **completed 는 저장이 확인된 뒤에만 온다.** stop 의 `finalChunkSeq` 까지 빈칸 없이 S3 에 있지 않으면
+      세션을 끝내지 않고 reattach(STORE_INCOMPLETE)를 보낸다. 브라우저는 다시 붙어 이어 보내고 stop 을 다시 보낸다.
+    - 그래도 브라우저는 completed 를 받았을 때 **ACK 받은 조각만** 지운다. 남은 것은 이어 올리기 대상으로 둔다.
+
+    completed·error 를 받으면 그 세션으로 다시 connect 할 수 없다.
 
     ## 이 계약이 보장하지 않는 것
 
-    - **commit이 final을 보장하지 않는다.** 확정 구간의 전사가 비면 그 commit에 대응하는
-      final 없이 다음 발화로 넘어간다. client는 commit과 final을 1:1로 세지 않는다.
+    - **발화 확정마다 final 이 오지 않는다.** 확정 구간의 전사가 비면 final 없이 다음 발화로 넘어간다.
     - **partial 없이 final만 오는 발화가 있다.** partial은 provider가 중간 텍스트를 줄 때만,
       그리고 비어 있지 않을 때만 발행된다.
-    - **바인딩 전에 보낸 audio·commit·stop은 조용히 버려진다** (오류 event도 없다).
+    - **바인딩 전에 보낸 audio·stop은 조용히 버려진다** (오류 event도 없다).
       client는 connected event를 받은 뒤에 오디오를 보낸다.
+    - **`durableThroughSeq` 이하이거나 이 부착이 이미 받은 번호인 조각은 조용히 버려진다.**
+      재전송은 멱등이다.
+    - **`commit` destination 은 없다.** 옛 client 가 보내면 조용히 버려진다.
 
     ---
 
@@ -164,9 +188,24 @@ channels:
       destination을 정하므로, client는 같은 UUID로 만든 transcriptionEvents를 **먼저 SUBSCRIBE한 뒤**
       이 SEND를 보낸다. 순서가 뒤집히면 connected event를 놓친다.
 
-      **연결 실패는 모두 error(STT_CONNECTION_FAILED)로 돌아온다** — 없는 session,
-      남의 session, 이미 연결된 session, provider 장애가 한 code로 합쳐진다. 현재 구현의 한계이며
-      client는 이 code로 원인을 가르지 않는다.
+      선택 header `clientInstanceId`(최대 64자)는 브라우저 인스턴스를 가른다. 없으면 같은 인스턴스로 본다.
+      지금 부착의 `clientInstanceId` 가 다르고 그 리스가 15초 안에 갱신됐으면
+      error(SESSION_NOT_CONNECTABLE, "다른 기기에서 녹음 중입니다.")다. 같거나 리스가 낡았으면 넘겨받는다.
+
+      선택 header `resendFromSeq`(0 이상 정수)는 브라우저가 아직 들고 있는 가장 앞 조각 번호다(없으면 다음에
+      매길 번호). 그 앞은 브라우저가 이미 지웠으므로 서버는 기다리지 않는다 — connected 의 `durableThroughSeq`
+      는 `resendFromSeq − 1` 이상이다. 없으면 서버가 아는 durable 만 쓴다.
+
+      선택 header 셋은 **서버가 로그에만 싣는다** — 판정에 쓰지 않는다. 틀린 값은 오류 없이 버린다.
+      - `reconnectReason`: 이번 connect 의 까닭. `initial` · `socket_closed` · `no_receive` · `send_stalled` ·
+        `server_reattach` · `buffer_full` · `store_incomplete` · `online`. 없으면 `initial`, 모르는 값이면 `unknown` 으로 남는다.
+      - `disconnectedMs`: 끊김을 알아챈 뒤 이 connect 까지 걸린 ms(0 ~ 86,400,000 정수).
+      - `pendingChunks`: 아직 서버 확인(ack)을 못 받아 들고 있는 조각 수(0 ~ 100,000 정수).
+
+      없는·닫힌 session은 error(SESSION_NOT_CONNECTABLE), 남의 session은 error(NOT_SESSION_OWNER)다.
+      회의가 끝나 거절되면 reason `MEETING_ENDED`, 세션이 이미 닫혀 거절되면 reason `SESSION_CLOSED` 가 붙는다.
+      둘 다 재시도해도 같다. **provider 장애는 connect 를 막지 않는다** — connected 가 먼저 오고,
+      전사가 끊긴 동안 capture_state(DEGRADED)가 온다.
 
       같은 STOMP session에서 connect를 두 번 보내면 **먼저 바인딩된 stream이**
       error(INVALID_CLIENT_MESSAGE)로 중단된다.
@@ -199,11 +238,13 @@ channels:
     address: /app/transcription-sessions/{sessionId}/stop
     title: 전사 세션 종료
     description: |
-      남은 오디오를 강제로 commit하고 대기 중인 final을 **최대 10초**(`transcription.elevenlabs.
-      final-drain-timeout`) drain한 뒤 completed를 보낸다. 그 안에 다 받지 못하면
-      error(STT_TRANSCRIPTION_FAILED)로 끝난다 — 이미 저장된 segment는 남는다.
+      남은 오디오를 S3 에 올리고(최대 10초) provider 의 마지막 final 을 **최대 10초**(`transcription.soniox.
+      final-drain-timeout`) 기다린 뒤 completed를 보낸다. provider 가 끝내 답하지 않아도 completed 다 —
+      그 뒤 발화만 못 받는다. 소리는 이미 S3 에 있다.
 
-      확정할 오디오가 없으면 drain 없이 곧바로 completed가 온다.
+      **`finalChunkSeq` 까지 빈칸 없이 S3 에 올라가지 않았으면 completed 대신 reattach(STORE_INCOMPLETE)** 가 온다
+      (S3 실패, 받은 번호에 빈칸). 세션은 열려 있다. 다시 connect 해 `durableThroughSeq` 다음부터 보내고 stop 을
+      다시 보낸다. 다른 부착이 이미 주인이면(epoch 가 바뀜) 이 소켓의 stop 은 세션을 끝내지 않고 superseded 가 온다.
     parameters:
       sessionId:
         $ref: "#/components/parameters/sessionId"
@@ -221,13 +262,17 @@ channels:
       이 SUBSCRIBE가 connect보다 **먼저** 등록돼야 한다.
 
       completed와 error는 terminal이다 — 받으면 더 이상 event가 오지 않으며 client는 연결을
-      deactivate한다. 두 event 중 정확히 하나만, 최대 한 번 온다.
+      deactivate한다. superseded·reattach 는 **부착만** 끝낸다 — 세션은 열려 있다.
     parameters:
       replyId:
         $ref: "#/components/parameters/replyId"
     messages:
       ConnectedEvent:
         $ref: "#/components/messages/ConnectedEvent"
+      ReattachEvent:
+        $ref: "#/components/messages/ReattachEvent"
+      SupersededEvent:
+        $ref: "#/components/messages/SupersededEvent"
       PartialEvent:
         $ref: "#/components/messages/PartialEvent"
       FinalEvent:
@@ -240,6 +285,20 @@ channels:
         $ref: "#/components/messages/CompletedEvent"
       ErrorEvent:
         $ref: "#/components/messages/ErrorEvent"
+  noteSubscriptionFeedback:
+    address: /user/queue/note-subscriptions
+    title: 노트 토픽 구독 거절 통지
+    description: |
+      노트 토픽 SUBSCRIBE 가 거절되면 여기로 알린다. **거절이 무음이었다** — 서버가 프레임을
+      버리기만 해서 클라이언트는 성공한 줄 알았고, 그 침묵을 메우려고 화면에 안전 폴링이 깔렸다.
+
+      **ERROR 프레임을 쓰지 않는다.** Spring 이 ERROR 를 쓴 뒤 세션을 닫아서, 노트 구독 하나가
+      거절되면 그 탭의 녹음까지 끊긴다. 거절당한 구독은 서버에 등록되지 않으므로 그 destination
+      으로는 아무것도 못 보내고, 그래서 사용자 전용 queue 로 따로 보낸다. 통지는 거절된
+      SUBSCRIBE의 STOMP 세션으로만 보내며, 멤버십 재검사로 기존 구독을 해제할 때도 알린다.
+    messages:
+      NoteSubscriptionRejected:
+        $ref: '#/components/messages/NoteSubscriptionRejected'
   noteTopic:
     servers:
       - $ref: "#/servers/production"
@@ -247,8 +306,10 @@ channels:
     title: 노트 멤버용 실시간 event
     description: |
       노트 멤버만 구독할 수 있다. 서버는 SUBSCRIBE 시점과 30초마다 멤버십을 재검증한다.
-      권한 상실, 형식 오류, 노트별 100개 구독 상한 초과는 ERROR 없이 조용히 구독을 해제하거나
-      거절한다. 이벤트는 원본 transaction commit 뒤 발행되며, stream 기반 partial처럼
+      권한 상실, 중복 구독, 노트별 100개 구독 상한 초과는 거절하고 그 사실을
+      `/user/queue/note-subscriptions` 로 알린다 — ERROR 프레임은 세션을 닫으므로 쓰지 않는다.
+      형식이 안 맞는 프레임만 조용히 버린다(어디로 답할지 모른다). 재검증으로 권한을 잃으면
+      구독을 해제한다. 이벤트는 원본 transaction commit 뒤 발행되며, stream 기반 partial처럼
       transaction 밖에서 생긴 이벤트는 즉시 발행된다.
 
       **챗 이벤트는 이 토픽에 없다.** 공유 챗봇을 없애면서 관전자 개념이 함께 사라졌다 —
@@ -353,6 +414,8 @@ operations:
       $ref: "#/channels/transcriptionEvents"
     messages:
       - $ref: "#/channels/transcriptionEvents/messages/ConnectedEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/ReattachEvent"
+      - $ref: "#/channels/transcriptionEvents/messages/SupersededEvent"
       - $ref: "#/channels/transcriptionEvents/messages/PartialEvent"
       - $ref: "#/channels/transcriptionEvents/messages/FinalEvent"
       - $ref: "#/channels/transcriptionEvents/messages/AckEvent"
@@ -413,6 +476,16 @@ operations:
       - $ref: "#/channels/agentChatStream/messages/ToolCallResult"
       - $ref: "#/channels/agentChatStream/messages/MessageEnd"
       - $ref: "#/channels/agentChatStream/messages/Error"
+  receiveNoteSubscriptionFeedback:
+    action: receive
+    title: 노트 토픽 구독 거절 수신
+    description: |
+      거절은 재시도로 풀리지 않는 것이 둘(NOT_MEMBER·ALREADY_SUBSCRIBED)이고 하나는 시간이
+      지나면 풀린다(TOO_MANY_SUBSCRIBERS). 화면은 셋을 다르게 다뤄야 한다.
+    channel:
+      $ref: '#/channels/noteSubscriptionFeedback'
+    messages:
+      - $ref: '#/channels/noteSubscriptionFeedback/messages/NoteSubscriptionRejected'
 components:
   securitySchemes:
     accessCookie:
@@ -453,8 +526,9 @@ components:
       title: 전사 stream 연결 command
       summary: payload 없이 전사 session을 현재 STOMP session에 바인딩한다.
       description: |
-        body는 비어 있고 계약은 header에 있다 — `reply-id`(UUID)가 필수다.
-        서버는 이 SEND를 받고 나서야 provider에 연결하므로, connected event까지 지연이 있다.
+        body는 비어 있고 계약은 header에 있다 — `reply-id`(UUID)가 필수, `clientInstanceId`·`resendFromSeq`·
+        `reconnectReason`·`disconnectedMs`·`pendingChunks` 는 선택이다.
+        connected 는 provider 연결을 기다리지 않는다.
     PcmAudio:
       name: PcmAudio
       title: PCM 오디오 STOMP binary body
@@ -473,6 +547,7 @@ components:
             example: 12
           captureSamples:
             type: integer
+            format: int64
             minimum: 0
             description: |
               이 조각의 첫 샘플이 세션에서 몇 번째인가. **언제인가.**
@@ -518,7 +593,82 @@ components:
             finalChunkSeq: 421
     ConnectedEvent:
       name: ConnectedEvent
-      title: 전사 연결 준비 완료
+      title: 부착 완료
+      description: |
+        부착마다 온다. 다시 붙어도 온다.
+
+        `durableThroughSeq` 는 이 세션에서 S3 에 남은 조각이 **0 번부터 빈칸 없이** 이어진 끝이다(없으면 `-1`).
+        빈칸 뒤에 남은 오브젝트는 치지 않는다. connect 의 `resendFromSeq` 가 더 크면 `resendFromSeq − 1` 이다.
+        브라우저는 이 번호 이하를 버퍼에서 버리고 그다음부터 보낸다. 서버가 행을 늦게 남기는 동안은 실제보다
+        작을 수 있다 — 그만큼 더 보내고, 서버가 겹친 것을 걸러 낸다.
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, sessionId, epoch, durableThroughSeq]
+        properties:
+          type:
+            type: string
+            enum: [connected]
+          sessionId:
+            $ref: "#/components/schemas/Tsid"
+          epoch:
+            type: integer
+            minimum: 1
+            description: 이 부착의 번호. 부착마다 1씩 오른다.
+            example: 2
+          durableThroughSeq:
+            type: integer
+            minimum: -1
+            example: 299
+      examples:
+        - name: connected
+          payload:
+            type: connected
+            sessionId: 0HZX2K7M9Q4AB
+            epoch: 2
+            durableThroughSeq: 299
+    ReattachEvent:
+      name: ReattachEvent
+      title: 이 서버가 내려간다
+      description: |
+        `delayMs`(0~3000, 부착마다 다르다) 뒤 같은 세션으로 다시 connect 한다. 세션은 열려 있다.
+
+        - `SERVER_DRAINING`: 이 서버가 내려간다. 남은 소리를 올리고 행을 남긴 **뒤에** 이 event 가 오고
+          소켓이 닫힌다. 그 사이 보낸 조각은 받아쓰기에만 쓰이고 ACK 되지 않는다 — 다시 붙어 이어 보내면 저장된다.
+        - `BUFFER_FULL`: 이 부착이 S3 에 못 올린 소리가 상한을 넘어 일부를 버렸다. ACK 는 버린 구간을
+          건너지 않으므로 다시 붙어 `durableThroughSeq` 다음부터 다시 보내면 채워진다.
+        - `STORE_INCOMPLETE`: stop 을 받았는데 `finalChunkSeq` 까지 빈칸 없이 저장하지 못했다. 세션을 끝내지 않았다.
+          다시 붙어 이어 보낸 뒤 **stop 을 다시 보낸다.**
+
+        그 사이에 보낸 조각은 버려질 수 있고, 다시 붙으면 `durableThroughSeq` 다음부터 보내면 된다.
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, delayMs, reason]
+        properties:
+          type:
+            type: string
+            enum: [reattach]
+          delayMs:
+            type: integer
+            minimum: 0
+            maximum: 3000
+            example: 1840
+          reason:
+            type: string
+            enum: [SERVER_DRAINING, BUFFER_FULL, STORE_INCOMPLETE]
+      examples:
+        - name: reattach
+          payload:
+            type: reattach
+            delayMs: 1840
+            reason: SERVER_DRAINING
+    SupersededEvent:
+      name: SupersededEvent
+      title: 새 부착에 밀려났다
+      description: |
+        같은 세션에 새 부착이 생겼다. 서버가 이 소켓을 닫는다. **다시 connect 하지 않는다** —
+        하면 이번엔 저쪽이 밀린다.
       payload:
         type: object
         additionalProperties: false
@@ -526,13 +676,13 @@ components:
         properties:
           type:
             type: string
-            enum: [connected]
+            enum: [superseded]
           sessionId:
             $ref: "#/components/schemas/Tsid"
       examples:
-        - name: connected
+        - name: superseded
           payload:
-            type: connected
+            type: superseded
             sessionId: 0HZX2K7M9Q4AB
     PartialEvent:
       name: PartialEvent
@@ -540,7 +690,7 @@ components:
       summary: 같은 utteranceId의 이전 partial 표시를 이 snapshot으로 교체한다.
       description: |
         비어 있는 중간 텍스트는 발행하지 않으므로 **partial이 한 번도 오지 않는 발화가 있다.**
-        `utteranceId`는 commit(수동·VAD 모두)마다 새로 발급된다 — 확정된 발화의 partial 표시를
+        `utteranceId`는 발화가 확정될 때마다(provider endpoint·stop) 새로 발급된다 — 확정된 발화의 partial 표시를
         지우고 새 발화를 시작할 기준이다.
 
         본문이 **두 토막**이다. 업체는 토큰마다 `is_final`을 주는데 예전에는 그것을 이어 붙여
@@ -634,6 +784,7 @@ components:
             example: 8230
           speakerLabel:
             type: [string, "null"]
+            minLength: 1
             description: PRO-32 가 회의 뒤에 채운다. 실시간에는 항상 null 이다.
             example: null
       examples:
@@ -649,12 +800,15 @@ components:
             speakerLabel: null
     AckEvent:
       name: AckEvent
-      title: 조각이 내구 저장됐다
-      summary: throughChunkSeq 까지 S3 적재가 끝났다.
+      title: 내구 저장 확인
+      summary: throughChunkSeq 까지 S3 에 남았다.
       description: |
-        **누적값이다** — 조각마다 보내지 않는다. client 는 이 번호 이하를 재전송 버퍼에서 버린다.
+        **누적값이라 조각마다 안 보낸다.** 5초(또는 1 MiB) 적재마다 한 번이고, 캡처 점프가 있으면 더 자주다.
+        S3 PUT 이 성공한 뒤에 나간다 — DB 를 기다리지 않는다. 부착의 `durableThroughSeq` 뒤로 **빈칸 없이
+        이어진 만큼만** 올라간다. 번호가 거꾸로 와서 뒤 조각이 먼저 올라가도 빈칸이 메워질 때 한꺼번에 오른다.
 
-        **소리의 내구성만 증명한다.** 그 구간의 전사가 저장됐다는 뜻이 아니다.
+        소리의 내구성만 증명한다 — **그 구간의 전사가 저장됐다는 뜻이 아니다.** 브라우저는 이
+        번호 이하의 조각을 재전송 버퍼에서 버린다.
       payload:
         type: object
         additionalProperties: false
@@ -679,8 +833,9 @@ components:
       description: |
         회복하면 사라지고 **조회 응답에 안 남는다** — 소리가 남는 공백은 기록하지 않기로 했다.
 
-        `DEGRADED` 는 소리는 쌓이는데 전사만 끊긴 상태다. 업체 소켓이 끊겨 재연결하는 동안 나가고,
-        붙으면 `LIVE` 로 돌아온다. **상태가 바뀔 때만** 나간다.
+        `DEGRADED` 는 소리는 쌓이는데 전사만 끊긴 상태다. 업체 소켓이 끊기거나 답이 없어 재연결하는 동안 나가고,
+        새 업체 연결이 **처음 답했을 때** `LIVE` 로 돌아온다 — 연결만 열리고 답이 없는 동안은 `DEGRADED` 그대로다.
+        **상태가 바뀔 때만** 나간다. 그동안 받아쓰지 못한 구간은 노트 전사 조회의 `transcriptGaps` 에 남는다.
 
         `LOST`(조각이 안 온다)를 뺐다 — 조각을 안 보내는 당사자가 그 브라우저라 이미 알고 있고,
         정말 네트워크가 끊긴 경우엔 이 말이 닿지도 않는다.
@@ -703,6 +858,11 @@ components:
     CompletedEvent:
       name: CompletedEvent
       title: 전사 세션 정상 완료
+      description: |
+        stop 이면 `finalChunkSeq` 까지, 세션이 다른 곳에서(워치독·새 시작·회의 종료) 닫혔으면 이 부착이 받은 조각
+        전부가 빈칸 없이 S3 에 있다. 받은 것을 다 저장하지 못한 채 닫혔으면 completed 대신 error(SESSION_NOT_CONNECTABLE)다
+        — 회의 종료로 닫혔으면 reason `MEETING_ENDED`, 그 밖이면 `SESSION_CLOSED`.
+        브라우저는 이 event 에도 **ACK 받은 조각만** 지운다 — 서버가 틀려도 마지막 사본이 남게 한다.
       payload:
         type: object
         additionalProperties: false
@@ -726,9 +886,20 @@ components:
         code별 원인:
         - `INVALID_CLIENT_MESSAGE` — 같은 STOMP session의 중복 connect, 바인딩과 다른 sessionId로 온 command
         - `INVALID_AUDIO_FRAME` — 빈 body·홀수 byte·크기 초과
-        - `STT_CONNECTION_FAILED` — connect 실패 전반 (없는 session·권한 없음·중복 연결·provider 연결 실패)
-        - `STT_TRANSCRIPTION_FAILED` — provider 오류, stop drain timeout
+        - `STT_CONNECTION_FAILED` — provider 연결 실패. **다시 시도할 수 있다**
+        - `STT_TRANSCRIPTION_FAILED` — 지금은 안 나간다. provider 오류는 capture_state(DEGRADED)로 알리고 세션을 안 끝낸다
         - `INTERNAL_ERROR` — segment 저장 실패, event 전송 실패, 완료 상태 저장 실패
+        - `NOT_SESSION_OWNER` — 이 스트림의 주인이 아니다. **재시도해도 같다**
+        - `SESSION_NOT_CONNECTABLE` — 없는 세션·이미 닫힘·회의 종료·다른 기기가 녹음 중. **재시도해도 같다**.
+          세션이 다른 곳에서 닫혔는데 이 부착이 받은 소리를 다 저장하지 못했을 때도 이것이다 — 브라우저는 남은 것을
+          지우지 않는다
+
+        앞의 셋과 뒤의 둘이 갈리는 이유는 **화면이 다르게 행동해야 하기 때문**이다. 전에는
+        거절까지 `STT_CONNECTION_FAILED` 로 나가서, 원리적으로 안 되는 상황에 재연결을 돌았다.
+
+        `reason` 은 같은 code 안에서 화면이 할 말을 가를 때만 온다(없으면 키가 없다). 지금은 `SESSION_NOT_CONNECTABLE` 에만 붙는다.
+        - `MEETING_ENDED` — 끊긴 사이 회의가 끝났다. 이 기기에 남은 소리는 올릴 곳이 없다
+        - `SESSION_CLOSED` — 세션이 다른 곳(워치독·새 시작·만료)에서 닫혔다
       payload:
         type: object
         additionalProperties: false
@@ -745,17 +916,29 @@ components:
               - STT_CONNECTION_FAILED
               - STT_TRANSCRIPTION_FAILED
               - INTERNAL_ERROR
+              - NOT_SESSION_OWNER
+              - SESSION_NOT_CONNECTABLE
             example: STT_TRANSCRIPTION_FAILED
           message:
             type: string
             minLength: 1
             example: 실시간 전사 처리에 실패했습니다.
+          reason:
+            type: string
+            enum: [MEETING_ENDED, SESSION_CLOSED]
+            example: MEETING_ENDED
       examples:
         - name: upstreamFailure
           payload:
             type: error
             code: STT_TRANSCRIPTION_FAILED
             message: 실시간 전사 처리에 실패했습니다.
+        - name: meetingEnded
+          payload:
+            type: error
+            code: SESSION_NOT_CONNECTABLE
+            message: 회의가 끝나 이 녹음을 더 받을 수 없습니다.
+            reason: MEETING_ENDED
     NoteTranscriptPartialEvent:
       name: NoteTranscriptPartialEvent
       title: 노트의 진행 중인 누적 전사
@@ -846,78 +1029,184 @@ components:
             text: 오늘 회의에서는 출시 일정을 논의했습니다.
             startedAtMs: 0
             endedAtMs: 8230
+    NoteSubscriptionRejected:
+      name: NoteSubscriptionRejected
+      title: 노트 토픽 구독 거절
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, noteId, reason]
+        properties:
+          type:
+            type: string
+            enum: [subscription.rejected]
+          noteId:
+            $ref: '#/components/schemas/Tsid'
+          reason:
+            type: string
+            enum: [NOT_MEMBER, ALREADY_SUBSCRIBED, TOO_MANY_SUBSCRIBERS]
+            description: |
+              NOT_MEMBER — 이 노트를 볼 권한이 없다. 목록으로 돌려보낸다
+              ALREADY_SUBSCRIBED — 이 연결에서 이미 구독 중이다. 화면의 버그다
+              TOO_MANY_SUBSCRIBERS — 동시 구독자 상한. 잠시 뒤 다시 시도할 수 있다
+      examples:
+        - name: notMember
+          payload:
+            type: subscription.rejected
+            noteId: 0HZX2K7M9Q4AB
+            reason: NOT_MEMBER
     NoteMeetingStartedEvent:
       name: NoteMeetingStartedEvent
       title: 회의 시작
       payload:
         type: object
         additionalProperties: false
-        required: [type]
+        required: [type, meetingStatus, meetingStartedAt, recordedDurationMs, activeSessionStartedAt]
         properties:
           type:
             type: string
             enum: [meeting.started]
+          meetingStatus:
+            $ref: '#/components/schemas/MeetingStatus'
+          meetingStartedAt:
+            description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
+            type: string
+            format: date-time
+            nullable: true
+          recordedDurationMs:
+            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            type: integer
+            format: int64
+            minimum: 0
+          activeSessionStartedAt:
+            description: 지금 ACTIVE 인 세션의 시작 시각. 없으면 null — 화면은 그때 시계를 멈춘다
+            type: string
+            format: date-time
+            nullable: true
       examples:
         - name: started
           payload:
             type: meeting.started
+            meetingStatus: IN_PROGRESS
+            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            recordedDurationMs: 90000
+            activeSessionStartedAt: '2026-08-18T10:20:00.000Z'
     NoteMeetingEndedEvent:
       name: NoteMeetingEndedEvent
       title: 회의 종료
       payload:
         type: object
         additionalProperties: false
-        required: [type]
+        required: [type, meetingStatus, meetingStartedAt, recordedDurationMs, activeSessionStartedAt]
         properties:
           type:
             type: string
             enum: [meeting.ended]
+          meetingStatus:
+            $ref: '#/components/schemas/MeetingStatus'
+          meetingStartedAt:
+            description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
+            type: string
+            format: date-time
+            nullable: true
+          recordedDurationMs:
+            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            type: integer
+            format: int64
+            minimum: 0
+          activeSessionStartedAt:
+            description: 지금 ACTIVE 인 세션의 시작 시각. 없으면 null — 화면은 그때 시계를 멈춘다
+            type: string
+            format: date-time
+            nullable: true
       examples:
         - name: ended
           payload:
             type: meeting.ended
+            meetingStatus: ENDED
+            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            recordedDurationMs: 1820000
+            activeSessionStartedAt: null
     NoteRecordingStartedEvent:
       name: NoteRecordingStartedEvent
       title: 녹음 시작
       payload:
         type: object
         additionalProperties: false
-        required: [type, transcriptionSessionId]
+        required:
+          [type, transcriptionSessionId, meetingStatus, meetingStartedAt, recordedDurationMs, activeSessionStartedAt]
         properties:
           type:
             type: string
             enum: [recording.started]
           transcriptionSessionId:
-            $ref: "#/components/schemas/Tsid"
+            $ref: '#/components/schemas/Tsid'
+          meetingStatus:
+            $ref: '#/components/schemas/MeetingStatus'
+          meetingStartedAt:
+            description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
+            type: string
+            format: date-time
+            nullable: true
+          recordedDurationMs:
+            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            type: integer
+            format: int64
+            minimum: 0
+          activeSessionStartedAt:
+            description: 지금 ACTIVE 인 세션의 시작 시각. 없으면 null — 화면은 그때 시계를 멈춘다
+            type: string
+            format: date-time
+            nullable: true
       examples:
         - name: started
           payload:
             type: recording.started
             transcriptionSessionId: 0HZX2K7M9Q4AB
+            meetingStatus: IN_PROGRESS
+            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            recordedDurationMs: 90000
+            activeSessionStartedAt: '2026-08-18T10:20:00.000Z'
     NoteRecordingStoppedEvent:
       name: NoteRecordingStoppedEvent
       title: 녹음 종료
       payload:
         type: object
         additionalProperties: false
-        required: [type, transcriptionSessionId]
+        required:
+          [type, transcriptionSessionId, meetingStatus, meetingStartedAt, recordedDurationMs, activeSessionStartedAt]
         properties:
           type:
             type: string
             enum: [recording.stopped]
           transcriptionSessionId:
-            $ref: "#/components/schemas/Tsid"
+            $ref: '#/components/schemas/Tsid'
+          meetingStatus:
+            $ref: '#/components/schemas/MeetingStatus'
+          meetingStartedAt:
+            description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
+            type: string
+            format: date-time
+            nullable: true
+          recordedDurationMs:
+            description: 끝난 세션들의 길이 합 + 지금 열린 세션의 길이. 화면의 녹음 시계가 이 값 위에 선다
+            type: integer
+            format: int64
+            minimum: 0
+          activeSessionStartedAt:
+            description: 지금 ACTIVE 인 세션의 시작 시각. 없으면 null — 화면은 그때 시계를 멈춘다
+            type: string
+            format: date-time
+            nullable: true
       examples:
         - name: stopped
           payload:
             type: recording.stopped
             transcriptionSessionId: 0HZX2K7M9Q4AB
-    # --- agent 채팅 SSE 이벤트 (server↔ai 구간과 공유하는 단일 출처) ---
-    #
-    # payload를 additionalProperties로 닫지 않는다: server는 이벤트를 파싱하지 않고 통과시키므로
-    # heymoa-ai가 필드를 더해도 web까지 그대로 도착한다. web은 모르는 필드를 무시한다.
-    # 아래 둘은 **server가 만든다.** ai는 이 이벤트들을 모른다 — 턴 행·취소
-    # 엔드포인트가 server 것이고, 「지금 어느 턴이 도나」를 아는 곳이 거기뿐이다.
+            meetingStatus: PAUSED
+            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            recordedDurationMs: 1820000
+            activeSessionStartedAt: null
     TurnFailed:
       name: turn_failed
       title: 턴 실패 확정
@@ -1353,6 +1642,11 @@ components:
       minLength: 13
       maxLength: 13
       description: heymoa-ai 가 만드는 멱등 키다. URL path 에 나가는 외부 식별자라 TSID 13자다.
+    MeetingStatus:
+      title: MeetingStatus
+      description: 회의 상태. REST 의 같은 이름 enum 과 값 집합이 같다
+      type: string
+      enum: [NOT_STARTED, IN_PROGRESS, PAUSED, ENDED]
     UtcMillisTimestamp:
       type: string
       format: date-time

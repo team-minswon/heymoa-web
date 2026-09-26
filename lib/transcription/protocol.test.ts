@@ -99,6 +99,24 @@ describe("AsyncAPI transcription protocol", () => {
     expect(parsed).not.toHaveProperty("transcriptionSessionId");
   });
 
+  it("모르는 error reason 은 없는 것으로 읽고 녹음을 끊지 않는다", () => {
+    expect(
+      parseServerEvent(
+        JSON.stringify({
+          type: "error",
+          code: "SESSION_NOT_CONNECTABLE",
+          message: "연결할 수 없는 전사 세션입니다.",
+          reason: "SOMETHING_NEW",
+        })
+      )
+    ).toEqual({
+      type: "error",
+      code: "SESSION_NOT_CONNECTABLE",
+      message: "연결할 수 없는 전사 세션입니다.",
+      reason: undefined,
+    });
+  });
+
   it("accepts the cumulative durability ack", () => {
     expect(
       parseServerEvent('{"type":"ack","throughChunkSeq":300}')
@@ -155,5 +173,33 @@ describe("배포 창을 견딘다 — 서버가 먼저 필드를 실어도", () 
     expect(() =>
       parseClientCommand('{"type":"stop","finalChunkSeq":1,"extra":true}')
     ).toThrow();
+  });
+
+  // 붙는 것은 세션에 「부착」하는 것이다. 브라우저는 durableThroughSeq 다음부터 다시 보낸다.
+  it("connected 는 에포크와 서버가 확정한 마지막 조각 번호를 싣는다", () => {
+    expect(
+      parseServerEvent(
+        '{"type":"connected","sessionId":"0HZX2K7M9Q4AB","epoch":3,"durableThroughSeq":-1,"leaseUntil":"x"}'
+      )
+    ).toEqual({
+      type: "connected",
+      sessionId: "0HZX2K7M9Q4AB",
+      epoch: 3,
+      durableThroughSeq: -1,
+    });
+    expect(() =>
+      parseServerEvent(
+        '{"type":"connected","sessionId":"0HZX2K7M9Q4AB","epoch":3,"durableThroughSeq":-2}'
+      )
+    ).toThrow();
+  });
+
+  it("서버가 곧 내려간다는 reattach 와 다른 부착이 이겼다는 superseded 를 받는다", () => {
+    expect(
+      parseServerEvent('{"type":"reattach","delayMs":1500,"reason":"SERVER_DRAINING"}')
+    ).toEqual({ type: "reattach", delayMs: 1500, reason: "SERVER_DRAINING" });
+    expect(
+      parseServerEvent('{"type":"superseded","sessionId":"0HZX2K7M9Q4AB"}')
+    ).toEqual({ type: "superseded", sessionId: "0HZX2K7M9Q4AB" });
   });
 });

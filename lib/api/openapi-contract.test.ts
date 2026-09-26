@@ -78,11 +78,16 @@ describe("OpenAPI contract", () => {
     expect(source).not.toMatch(/^\s+language:/m);
   });
 
-  it("starts transcription without a request body", () => {
-    expect(
-      api().paths["/v1/notes/{noteId}/transcription-sessions"]?.post
-        ?.requestBody
-    ).toBeUndefined();
+  // 본문은 선택이다. 같은 탭이 다시 시작하면 server 가 옛 세션을 곧바로 닫는다(D-16)
+  it("starts transcription with an optional clientInstanceId body", () => {
+    const requestBody = api().paths["/v1/notes/{noteId}/transcription-sessions"]
+      ?.post?.requestBody as
+      | { required?: boolean; content: Record<string, { schema: unknown }> }
+      | undefined;
+    expect(requestBody?.required).toBeUndefined();
+    expect(requestBody?.content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/StartTranscriptionSessionRequest",
+    });
   });
 
   it("models the four meeting states and required timing snapshots", () => {
@@ -157,15 +162,29 @@ describe("OpenAPI contract", () => {
   });
 
   it("APP-685의 네 경로와 필수 초대 필드를 이름으로 확인한다", () => {
-    expect(api().paths["/v1/workspaces/{workspaceId}/notes"]?.get?.operationId).toBe("getWorkspaceNotes");
-    expect(api().paths["/v1/workspaces/{workspaceId}/tasks"]?.get?.operationId).toBe("getWorkspaceTasks");
-    expect(api().paths["/v1/notes/{noteId}/transcript/segments"]?.get?.operationId).toBe("getTranscriptSegmentsAfter");
-    expect(api().paths["/v1/notes/{noteId}/speakers"]?.put?.operationId).toBe("assignNoteSpeakers");
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/notes"]?.get?.operationId
+    ).toBe("getWorkspaceNotes");
+    expect(
+      api().paths["/v1/workspaces/{workspaceId}/tasks"]?.get?.operationId
+    ).toBe("getWorkspaceTasks");
+    expect(
+      api().paths["/v1/notes/{noteId}/transcript/segments"]?.get?.operationId
+    ).toBe("getTranscriptSegmentsAfter");
+    expect(api().paths["/v1/notes/{noteId}/speakers"]?.put?.operationId).toBe(
+      "assignNoteSpeakers"
+    );
 
     const notifications = api().components.schemas.NotificationListResponse as {
-      properties: { data: { properties: { notifications: { items: { required: string[] } } } } };
+      properties: {
+        data: {
+          properties: { notifications: { items: { required: string[] } } };
+        };
+      };
     };
-    expect(notifications.properties.data.properties.notifications.items.required).toContain("invitation");
+    expect(
+      notifications.properties.data.properties.notifications.items.required
+    ).toContain("invitation");
   });
 
   it("omits the internal-only security scheme", () => {
@@ -385,7 +404,8 @@ describe("contract sync 2026-07-29", () => {
         ?.operationId
     ).toBe("removeWorkspaceMember");
     expect(
-      api().paths["/v1/workspaces/{workspaceId}/members/me"]?.delete?.operationId
+      api().paths["/v1/workspaces/{workspaceId}/members/me"]?.delete
+        ?.operationId
     ).toBe("leaveWorkspace");
   });
 

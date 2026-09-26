@@ -110,9 +110,16 @@ export class PcmChunkBatcher {
   }
 }
 
+/**
+ * 마이크가 소리를 내고 있는가. `live` 가 아니면 워크릿이 조각을 안 내고, 브라우저 안에서는
+ * 아무 오류도 안 난다. 사용자는 녹음되는 줄 안다.
+ */
+export type MicrophoneState = "live" | "muted" | "ended" | "suspended";
+
 export type PcmAudioCaptureOptions = {
   onChunk: PcmBatchListener;
   onLevel?: (level: number) => void;
+  onState?: (state: MicrophoneState) => void;
   batchMs?: number;
 };
 
@@ -126,6 +133,7 @@ export class PcmAudioCapture {
   private levelFrame: number | null = null;
   private lastLevelAt = 0;
   private batcher: PcmChunkBatcher | null = null;
+  private onDeviceChange: (() => void) | null = null;
   /** 실제로 열린 값. 임의 레이트를 못 여는 기기가 있어 요청값과 다를 수 있다. */
   private openedSampleRate: number = CAPTURE_CONTRACT.sampleRate;
 
@@ -185,6 +193,7 @@ export class PcmAudioCapture {
         event.data.captureSamples
       );
     };
+    this.watchMicrophone(this.audioContext, this.stream!);
     this.source.connect(this.worklet);
     this.source.connect(this.analyser);
     this.worklet.connect(this.silentGain);
@@ -192,7 +201,50 @@ export class PcmAudioCapture {
     this.publishLevel();
   }
 
+  private watchMicrophone(context: AudioContext, stream: MediaStream) {
+    const [track] = stream.getAudioTracks();
+    // 이벤트 하나가 다른 쪽 상태를 덮으면 소리가 안 오는데 경고가 걷힌다. 매번 둘의 지금 값으로 판정한다
+    const report = () => {
+      // Safari 는 전화·다른 앱이 오디오를 가져가면 "interrupted" 로 간다(타입엔 없다)
+      const contextState = context.state as string;
+      let state: MicrophoneState = "live";
+      if (track?.readyState === "ended") state = "ended";
+      else if (track?.muted) state = "muted";
+      else if (contextState !== "running") state = "suspended";
+      this.options.onState?.(state);
+    };
+    context.onstatechange = () => {
+      const state = context.state as string;
+      if (state === "suspended" || state === "interrupted") {
+        void context.resume().catch(() => undefined);
+      }
+      report();
+    };
+    if (track) {
+      track.onended = report;
+      track.onmute = report;
+      track.onunmute = report;
+      this.onDeviceChange = () => {
+        if (track.readyState === "ended") report();
+      };
+      navigator.mediaDevices.addEventListener(
+        "devicechange",
+        this.onDeviceChange
+      );
+    }
+    // 권한을 받고 addModule 을 기다리는 사이 바뀐 상태는 이벤트로 오지 않는다
+    report();
+  }
+
   async stop() {
+    if (this.onDeviceChange) {
+      navigator.mediaDevices.removeEventListener(
+        "devicechange",
+        this.onDeviceChange
+      );
+      this.onDeviceChange = null;
+    }
+    if (this.audioContext) this.audioContext.onstatechange = null;
     if (this.levelFrame !== null) cancelAnimationFrame(this.levelFrame);
     this.levelFrame = null;
     this.options.onLevel?.(0);

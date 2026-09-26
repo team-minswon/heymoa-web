@@ -2,12 +2,16 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+const route = vi.hoisted(() => ({ pathname: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
 const recording = vi.hoisted(() => ({
   stop: vi.fn(),
   session: { noteId: "01K0000000002", status: "ACTIVE" },
   phase: "recording",
   elapsedMs: 1200,
+  buffer: null as { paused: boolean; limitMs: number } | null,
+  connectionNotice: null as { cause: string; sinceMs: number } | null,
+  microphone: "live",
 }));
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspaces: () => ({
@@ -34,11 +38,69 @@ describe("GlobalRecordingIndicator", () => {
   beforeEach(() => {
     recording.phase = "recording";
     recording.elapsedMs = 1200;
+    recording.buffer = null;
+    recording.connectionNotice = null;
+    recording.microphone = "live";
+    route.pathname = "/";
   });
 
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  // 한도에서는 마이크를 끄지 않고 조각만 안 받는다. 노트 패널을 떠나 있으면 그 안내가 안 보인다
+  it("기기 저장 한도로 녹음을 멈췄으면 노트 밖에서도 알린다", () => {
+    recording.buffer = { paused: true, limitMs: 3_600_000 };
+
+    render(<GlobalRecordingIndicator />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("녹음을 잠시 멈췄어요");
+  });
+
+  it("워크스페이스 안이라도 녹음 중인 노트를 보고 있지 않으면 멈춤을 알린다", () => {
+    recording.buffer = { paused: true, limitMs: 3_600_000 };
+    route.pathname = "/w/01K0000000000/notes";
+
+    render(<GlobalRecordingIndicator />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("녹음을 잠시 멈췄어요");
+  });
+
+  it("녹음 중인 노트를 보고 있으면 그 노트의 안내에 맡긴다", () => {
+    recording.buffer = { paused: true, limitMs: 3_600_000 };
+    route.pathname = "/w/01K0000000000/notes/01K0000000002";
+
+    render(<GlobalRecordingIndicator />);
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("노트 밖 워크스페이스 화면에서도 연결 끊김 안내를 보인다", () => {
+    recording.connectionNotice = { cause: "disconnected", sinceMs: 5_000 };
+    route.pathname = "/w/01K0000000000/notes";
+
+    render(<GlobalRecordingIndicator />);
+
+    expect(screen.getByText(/연결이 끊겼어요/)).toBeInTheDocument();
+  });
+
+  it("노트 밖에서 마이크가 끊겨도 알린다", () => {
+    recording.microphone = "muted";
+    route.pathname = "/w/01K0000000000";
+
+    render(<GlobalRecordingIndicator />);
+
+    expect(screen.getByText(/마이크가 끊겼습니다/)).toBeInTheDocument();
+  });
+
+  it("녹음 중인 노트를 보고 있으면 연결 안내를 두 번 띄우지 않는다", () => {
+    recording.connectionNotice = { cause: "disconnected", sinceMs: 5_000 };
+    route.pathname = "/w/01K0000000000/notes/01K0000000002";
+
+    render(<GlobalRecordingIndicator />);
+
+    expect(screen.queryByText(/연결이 끊겼어요/)).toBeNull();
   });
 
   it("renders input level as an accessible meter", () => {

@@ -25,6 +25,8 @@ describe("MockTranscriptionScenario", () => {
     expect(send).toHaveBeenCalledWith({
       type: "connected",
       sessionId: session.sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
     });
 
     const voiced = new Int16Array(960).fill(12_000).buffer;
@@ -164,5 +166,102 @@ describe("MockTranscriptionScenario", () => {
       message: "upstream failed",
     });
     expect(requestClose).toHaveBeenCalledWith(1011, "upstream failed");
+  });
+});
+
+/**
+ * 재부착 계약(asyncapi): 부착마다 epoch 가 오르고, connected 의 durableThroughSeq 와 ack 는 0 번부터
+ * 빈칸 없이 받은 끝이다. 가장 새 3초를 먼저 보내면 앞 번호가 비는데, 그 빈칸을 ack 가 건너면 안 된다.
+ */
+describe("MockTranscriptionScenario 재부착 내구성", () => {
+  beforeEach(() => mockDb.reset());
+
+  const quiet = () => new Int16Array(1_600).buffer;
+  function attach(sessionId: string, resendFromSeq?: number) {
+    const send = vi.fn();
+    const scenario = createMockTranscriptionScenario({ sessionId, send });
+    scenario.open(resendFromSeq);
+    const events = () => send.mock.calls.map(([event]) => event);
+    const sendSeqs = async (seqs: number[]) => {
+      for (const chunkSeq of seqs) {
+        await scenario.receiveFrame(quiet(), {
+          chunkSeq,
+          captureSamples: chunkSeq * 1_600,
+        });
+      }
+    };
+    return { scenario, send, events, sendSeqs };
+  }
+  const range = (from: number, to: number) =>
+    Array.from({ length: to - from }, (_, i) => from + i);
+
+  it("다시 붙으면 epoch 가 오르고 받은 끝을 durableThroughSeq 로 알린다", async () => {
+    const { session } = createSession();
+    const first = attach(session.sessionId);
+    await first.sendSeqs([0, 1, 2]);
+    first.scenario.dispose();
+
+    const second = attach(session.sessionId, 0);
+
+    expect(first.events()[0]).toMatchObject({
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
+    expect(second.events()[0]).toMatchObject({
+      type: "connected",
+      epoch: 2,
+      durableThroughSeq: 2,
+    });
+  });
+
+  it("빈칸이 있으면 ack 는 빈칸 앞에서 멈추고, 채워지면 넘어간다", async () => {
+    const { session } = createSession();
+    const { events, sendSeqs } = attach(session.sessionId);
+
+    await sendSeqs([0, 1, ...range(5, 33)]);
+    expect(events().filter((e) => e.type === "ack")).toEqual([
+      { type: "ack", throughChunkSeq: 1 },
+    ]);
+
+    await sendSeqs([2, 3, 4, ...range(33, 60)]);
+    expect(
+      events()
+        .filter((e) => e.type === "ack")
+        .at(-1)
+    ).toEqual({
+      type: "ack",
+      throughChunkSeq: 59,
+    });
+  });
+
+  it("빈칸이 남은 채 stop 하면 끝내지 않고 다시 붙으라고 한다", async () => {
+    const { session } = createSession();
+    const first = attach(session.sessionId);
+    await first.sendSeqs([0, 2]);
+
+    await first.scenario.receiveFrame('{"type":"stop","finalChunkSeq":2}');
+
+    expect(first.events().at(-1)).toEqual({
+      type: "reattach",
+      delayMs: 0,
+      reason: "STORE_INCOMPLETE",
+    });
+    expect(first.events().some((e) => e.type === "completed")).toBe(false);
+    expect(mockDb.getSession(session.sessionId).status).not.toBe("COMPLETED");
+
+    first.scenario.dispose();
+    const second = attach(session.sessionId, 1);
+    expect(second.events()[0]).toMatchObject({ durableThroughSeq: 0 });
+    await second.sendSeqs([1]);
+    await second.scenario.receiveFrame('{"type":"stop","finalChunkSeq":2}');
+    expect(second.events().at(-1)).toMatchObject({ type: "completed" });
+  });
+
+  it("브라우저가 이미 지운 앞 번호(resendFromSeq 앞)는 기다리지 않는다", () => {
+    const { session } = createSession();
+
+    const { events } = attach(session.sessionId, 10);
+
+    expect(events()[0]).toMatchObject({ durableThroughSeq: 9 });
   });
 });

@@ -1,3 +1,5 @@
+import type { TranscriptResponseDataTranscriptGapsItem } from "@/lib/api/generated/models";
+
 export type TranscriptGap = {
   gapId: string;
   kind: string;
@@ -8,18 +10,24 @@ export type TranscriptGap = {
   reason?: string | null;
 };
 
+/** 소리는 저장됐는데 받아쓰지 못한 구간. 종류(TRIM·NOT_SENT·UNANSWERED)는 화면에서 하나다(D-07). */
+export type UntranscribedGap = TranscriptResponseDataTranscriptGapsItem;
+
 /**
  * 화면에 그리는 공백. **세 종류를 두 부류로 접는다** — `PAUSE`/`CAPTURE`/`UPLOAD` 는
  * 내부 구현이고, 사용자가 알아야 하는 것은 「내가 멈췄나」 하나다. 사고끼리는 할 일이
  * 같아서(자리를 옮기거나 화면을 켜 둔다) 나눌 이유가 없다.
+ *
+ * `UNTRANSCRIBED` 는 소리 공백과 따로 온다. 소리는 있으니 사용자가 할 일이 다르다.
  */
 export type GapRow = {
   gapId: string;
-  kind: "PAUSE" | "LOST";
+  kind: "PAUSE" | "LOST" | "UNTRANSCRIBED";
   /** 회의 축. `PAUSE` 는 점이라 둘이 같다. */
   startedAtMs: number;
   endedAtMs: number;
-  startedAt: string;
+  /** 벽시계. `UNTRANSCRIBED` 는 회의 축으로만 와서 둘 다 null 이다. */
+  startedAt: string | null;
   endedAt: string | null;
   /** 화면에 쓸 길이. `PAUSE` 는 벽시계에서, 나머지는 회의 축에서 온다. */
   durationMs: number;
@@ -30,9 +38,14 @@ function wallClockMs(startedAt: string, endedAt: string | null) {
   return Math.max(0, Date.parse(endedAt) - Date.parse(startedAt));
 }
 
+/** 아직 안 끝난 구간. 끝 좌표는 지금까지 확인된 끝이다. */
+export function isGapOpen(row: GapRow) {
+  return row.kind !== "UNTRANSCRIBED" && row.endedAt === null;
+}
+
 /** 두 끝이 같은 분으로 반올림되면 절대 시각 줄을 숨긴다. */
 export function spansVisibleClockMinutes(row: GapRow) {
-  if (!row.endedAt) return false;
+  if (!row.startedAt || !row.endedAt) return false;
   return (
     Math.floor(Date.parse(row.startedAt) / 60_000) !==
     Math.floor(Date.parse(row.endedAt) / 60_000)
@@ -45,7 +58,10 @@ export function spansVisibleClockMinutes(row: GapRow) {
  * `gaps` 는 겹친다 — 캡처가 끊기면 업로드도 끊긴다. 겹친 것마다 행을 만들면 같은 20분에
  * 세 줄이 쌓여 **회의록이 장애 로그처럼 보인다.** `PAUSE` 는 점이라 절대 안 합쳐진다.
  */
-export function toGapRows(gaps: TranscriptGap[]): GapRow[] {
+export function toGapRows(
+  gaps: TranscriptGap[],
+  untranscribed: UntranscribedGap[] = []
+): GapRow[] {
   const rows: GapRow[] = [];
 
   const ordered = [...gaps].sort((a, b) => a.startedAtMs - b.startedAtMs);
@@ -89,7 +105,58 @@ export function toGapRows(gaps: TranscriptGap[]): GapRow[] {
     });
   }
 
-  return rows;
+  const lost = rows.filter((row) => row.kind === "LOST");
+  for (const span of mergeSpans(untranscribed)) {
+    subtractSpans(span, lost).forEach(([startedAtMs, endedAtMs], index) => {
+      if (endedAtMs - startedAtMs < MIN_UNTRANSCRIBED_MS) return;
+      rows.push({
+        gapId: index === 0 ? span.gapId : `${span.gapId}-${startedAtMs}`,
+        kind: "UNTRANSCRIBED",
+        startedAtMs,
+        endedAtMs,
+        startedAt: null,
+        endedAt: null,
+        durationMs: endedAtMs - startedAtMs,
+      });
+    });
+  }
+
+  return rows.sort((a, b) => a.startedAtMs - b.startedAtMs);
+}
+
+/** server 가 1초 미만을 이미 뺀다. 소리 공백에 가려 남은 조각에도 같은 선을 긋는다. */
+const MIN_UNTRANSCRIBED_MS = 1_000;
+
+type Span = { gapId: string; startedAtMs: number; endedAtMs: number };
+
+/** 종류끼리 겹칠 수 있다(D-15). 겹치거나 맞닿으면 하나로 합친다. */
+function mergeSpans(gaps: UntranscribedGap[]): Span[] {
+  const spans: Span[] = [];
+  const ordered = [...gaps].sort((a, b) => a.startedAtMs - b.startedAtMs);
+  for (const { gapId, startedAtMs, endedAtMs } of ordered) {
+    const previous = spans.at(-1);
+    if (previous && startedAtMs <= previous.endedAtMs) {
+      previous.endedAtMs = Math.max(previous.endedAtMs, endedAtMs);
+      continue;
+    }
+    spans.push({ gapId, startedAtMs, endedAtMs });
+  }
+  return spans;
+}
+
+/** 소리가 없던 구간은 받아쓸 것도 없었다. 소리 공백 줄이 그 자리를 말한다. */
+function subtractSpans(span: Span, lost: GapRow[]): [number, number][] {
+  let pieces: [number, number][] = [[span.startedAtMs, span.endedAtMs]];
+  for (const { startedAtMs, endedAtMs } of lost) {
+    pieces = pieces.flatMap(([start, end]): [number, number][] => {
+      if (endedAtMs <= start || startedAtMs >= end) return [[start, end]];
+      return [
+        [start, Math.min(end, startedAtMs)],
+        [Math.max(start, endedAtMs), end],
+      ].filter(([from, to]) => to > from) as [number, number][];
+    });
+  }
+  return pieces;
 }
 
 /**
@@ -119,7 +186,7 @@ export function formatGapDuration(milliseconds: number) {
 
 /** 두 끝이 다른 날이면 시:분만으로는 거꾸로 읽힌다. */
 export function spansCalendarDays(row: GapRow) {
-  if (!row.endedAt) return false;
+  if (!row.startedAt || !row.endedAt) return false;
   const started = new Date(row.startedAt);
   const ended = new Date(row.endedAt);
   return started.toDateString() !== ended.toDateString();
@@ -133,10 +200,12 @@ export function spansCalendarDays(row: GapRow) {
  * 곧 거짓이 된다.
  */
 export function gapHeadline(row: GapRow) {
-  const duration =
-    row.endedAt === null ? null : formatGapDuration(row.durationMs);
+  const duration = isGapOpen(row) ? null : formatGapDuration(row.durationMs);
   if (row.kind === "PAUSE") {
     return duration ? `${duration} 중지했습니다` : "중지했습니다";
+  }
+  if (row.kind === "UNTRANSCRIBED") {
+    return `${duration} 받아쓰지 못했어요 · 소리는 저장됨`;
   }
   return duration ? `${duration} 소리가 없습니다` : "소리가 없습니다";
 }

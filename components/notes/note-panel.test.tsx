@@ -16,6 +16,10 @@ import {
   useRecording,
   type RecordingRuntime,
 } from "@/components/transcription/recording-provider";
+import {
+  isRecordingNoteOfThisTab,
+  rememberRecordingNote,
+} from "@/lib/transcription/realtime-session";
 
 // 이 파일이 보는 것은 패널이지 소켓이 아니다. 연결은 세우지 않는다.
 vi.mock("@/lib/notes/note-topic-client", () => ({
@@ -42,6 +46,12 @@ const recordingState = vi.hoisted(() => ({
     | null,
   /** 노트가 들고 있는 활성 세션이 이 세션인지 가르는 값. */
   sessionStartedAt: null as string | null,
+  connectionNotice: null as
+    | import("@/lib/transcription/realtime-session").ConnectionNotice
+    | null,
+  buffer: null as
+    | import("@/lib/transcription/realtime-session").BufferState
+    | null,
 }));
 
 vi.mock("@/components/transcription/recording-provider", async () => {
@@ -56,6 +66,8 @@ vi.mock("@/components/transcription/recording-provider", async () => {
         ? {
             activeNoteId: recordingState.activeNoteId,
             phase: recordingState.phase,
+            connectionNotice: recordingState.connectionNotice,
+            buffer: recordingState.buffer,
             ...(recordingState.sessionStatus
               ? {
                   session: {
@@ -160,7 +172,12 @@ const runtime: RecordingRuntime = {
   createSession: (options) => ({
     requestPermission: vi.fn().mockResolvedValue(undefined),
     connect: vi.fn(async (sessionId: string) =>
-      options.onEvent({ type: "connected", sessionId })
+      options.onEvent({
+        type: "connected",
+        sessionId,
+        epoch: 1,
+        durableThroughSeq: -1,
+      })
     ),
     commit: vi.fn(),
     stop: vi.fn(async () =>
@@ -221,6 +238,7 @@ describe("NotePanel", () => {
   });
   afterEach(() => {
     cleanup();
+    rememberRecordingNote(null);
     noteRefetch.mockReset();
     authState.userId = "u1";
     recordingState.activeNoteId = null;
@@ -230,6 +248,8 @@ describe("NotePanel", () => {
     personalChat.isTurnActive = false;
     setRailSlot.mockReset();
     recordingState.sessionStartedAt = null;
+    recordingState.connectionNotice = null;
+    recordingState.buffer = null;
     noteState.value = {
       noteId: "01K0000000002",
       title: "주간 제품 회의",
@@ -1245,8 +1265,8 @@ describe("NotePanel", () => {
     ).toBeInTheDocument();
   });
 
-  function renderDock(view: "side" | "full") {
-    renderNotePanel(
+  function dockElement(view: "side" | "full") {
+    return (
       <NotePanel
         workspaceId="01K0000000000"
         noteId="01K0000000002"
@@ -1256,6 +1276,11 @@ describe("NotePanel", () => {
         onClose={vi.fn()}
       />
     );
+  }
+
+  function renderDock(view: "side" | "full") {
+    const rendered = renderNotePanel(dockElement(view));
+    return { rerender: rendered.rerenderNote };
   }
 
   describe.each(["full", "side"] as const)("%s 회의 제어 행렬", (view) => {
@@ -1269,6 +1294,49 @@ describe("NotePanel", () => {
       expect(
         screen.getByRole("button", { name: "회의 시작" })
       ).toBeInTheDocument();
+    });
+
+    // 같은 세션에 다시 붙는 동안 소리는 이 기기에 쌓인다. 타이머만 돌면 무엇이 남는지 모른다.
+    it("끊기면 받아쓰기가 멈췄다고 말하고, 이으면 걷는다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "recording";
+      recordingState.connectionNotice = {
+        cause: "disconnected",
+        sinceMs: Date.now() - 10_000,
+      };
+      recordingState.buffer = {
+        pendingMs: 13_000,
+        limitMs: 300_000,
+        paused: false,
+        upload: null,
+      };
+
+      const { rerender } = renderDock(view);
+
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "연결이 끊겼어요 · 받아쓰기·실시간 분석 멈춤 · 녹음은 이 기기에 저장 중"
+      );
+
+      recordingState.connectionNotice = null;
+      rerender(dockElement(view));
+
+      expect(screen.queryByText(/연결이 끊겼어요/)).toBeNull();
+    });
+
+    it("멈추는 중에 밀린 것을 올리면 저장 마무리 진행률을 보인다", () => {
+      recordingState.activeNoteId = "01K0000000002";
+      recordingState.phase = "stopping";
+      recordingState.buffer = {
+        pendingMs: 40_000,
+        limitMs: 300_000,
+        paused: false,
+        upload: { percent: 40, remainingMs: 24_000 },
+      };
+
+      renderDock(view);
+
+      // 독도 멈추는 중 spinner 로 status 를 하나 더 든다
+      expect(screen.getByText("저장 마무리 중… 40%")).toBeInTheDocument();
     });
 
     it("IN_PROGRESS 로컬 시작자는 중지 독을 본다", () => {
@@ -1295,6 +1363,37 @@ describe("NotePanel", () => {
       expect(screen.queryByRole("button", { name: "재개" })).toBeNull();
     });
 
+    // lab 20260926T162918Z: 새로고침한 탭이 제 녹음에 잠겨 워치독까지 87초를 못 눌렀다.
+    // 서버는 같은 탭의 새 시작을 받아 옛 세션을 닫는다(D-16).
+    it("IN_PROGRESS라도 새로고침한 같은 탭이 녹음하던 노트면 잠그지 않는다", () => {
+      rememberRecordingNote("01K0000000002");
+
+      renderDock(view);
+
+      expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
+      expect(screen.getByRole("button", { name: "회의 시작" })).toBeEnabled();
+    });
+
+    // 워치독이 닫은 뒤 다른 기기가 재개하면 그 녹음을 제 것으로 읽어 409 로 가는 시작을 연다
+    it("회의가 녹음 중을 벗어나면 새로고침 전 녹음의 기억을 지운다", () => {
+      rememberRecordingNote("01K0000000002");
+      noteState.value.meetingStatus = "PAUSED";
+
+      renderDock(view);
+
+      expect(isRecordingNoteOfThisTab("01K0000000002")).toBe(false);
+    });
+
+    it("다른 노트를 녹음하던 탭이면 여전히 잠근다", () => {
+      rememberRecordingNote("01K0000000009");
+
+      renderDock(view);
+
+      expect(
+        screen.getByText("다른 탭·기기에서 기록 중입니다.")
+      ).toBeInTheDocument();
+    });
+
     it("IN_PROGRESS의 세션 없는 로컬 실패도 원격 기록으로 취급한다", () => {
       recordingState.activeNoteId = "01K0000000002";
       recordingState.phase = "failed";
@@ -1304,7 +1403,7 @@ describe("NotePanel", () => {
       expect(
         screen.getByText("다른 탭·기기에서 기록 중입니다.")
       ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "다시 녹음" })).toBeNull();
     });
 
     it("IN_PROGRESS의 실패한 ACTIVE 세션은 원격 기록으로 취급한다", () => {
@@ -1317,7 +1416,7 @@ describe("NotePanel", () => {
       expect(
         screen.getByText("다른 탭·기기에서 기록 중입니다.")
       ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "다시 녹음" })).toBeNull();
     });
 
     it("IN_PROGRESS라도 죽음이 확인된 실패는 차단 대신 다시 시도를 연다", () => {
@@ -1332,7 +1431,7 @@ describe("NotePanel", () => {
 
       expect(screen.queryByText("다른 탭·기기에서 기록 중입니다.")).toBeNull();
       expect(
-        screen.getByRole("button", { name: "다시 시도" })
+        screen.getByRole("button", { name: "다시 녹음" })
       ).toBeInTheDocument();
     });
 
@@ -1420,7 +1519,7 @@ describe("NotePanel", () => {
 
         renderDock(view);
 
-        expect(screen.getByRole("button", { name: "다시 시도" })).toBeEnabled();
+        expect(screen.getByRole("button", { name: "다시 녹음" })).toBeEnabled();
         expect(
           screen.queryByText("다른 탭·기기에서 기록 중입니다.")
         ).toBeNull();

@@ -125,12 +125,18 @@ async function establish(socket: TranscriptionSocket) {
   };
 }
 
-function createSocket(onClose = vi.fn()) {
+function createSocket(onClose = vi.fn(), onActivity = vi.fn()) {
   return new TranscriptionSocket({
     url: "ws://localhost/ws/transcriptions",
     sessionId,
+    clientInstanceId: "tab-7f3a",
+    resendFromSeq: 42,
+    reconnectReason: "no_receive",
+    disconnectedMs: 21_340,
+    pendingChunks: 213,
     onEvent: vi.fn(),
     onClose,
+    onActivity,
   });
 }
 
@@ -148,12 +154,71 @@ describe("TranscriptionSocket", () => {
     vi.unstubAllEnvs();
   });
 
+  // 망이 먹통이면 close() 를 불러도 상대가 답하지 않아 close 이벤트가 안 온다. 하트비트를 놓친
+  // 순간 끊김을 알려야 재부착이 시작된다(docker 망 먹통 실험에서 소켓이 끝까지 안 닫혔다).
+  // 가짜 전송도 그 성질을 흉내 낸다: close() 가 onclose 를 부르지 않는다.
+  it("reports a drop when server heartbeats stop even if the dead link never finishes closing", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const onClose = vi.fn();
+      const socket = createSocket(onClose);
+      const connected = socket.connect();
+      await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+      const transport = FakeWebSocket.instances[0];
+      transport.open();
+      await vi.waitFor(() =>
+        expect(
+          transport.sent.some((f) => frameText(f).startsWith("CONNECT"))
+        ).toBe(true)
+      );
+      transport.message(
+        "CONNECTED\nversion:1.2\nheart-beat:10000,10000\nsession:s\n\n\0"
+      );
+      await vi.waitFor(() =>
+        expect(
+          transport.sent.some((f) => frameText(f).startsWith("SUBSCRIBE"))
+        ).toBe(true)
+      );
+      const subscription = header(
+        transport.sent.find((f) => frameText(f).startsWith("SUBSCRIBE")),
+        "id"
+      )!;
+      transport.message(
+        messageFrame(
+          subscription,
+          JSON.stringify({
+            type: "connected",
+            sessionId,
+            epoch: 1,
+            durableThroughSeq: -1,
+          })
+        )
+      );
+      await connected;
+      transport.close = (code = 1000, reason = "") => {
+        transport.closes.push({ code, reason });
+        transport.readyState = FakeWebSocket.CLOSING;
+      };
+
+      await vi.advanceTimersByTimeAsync(35_000);
+
+      expect(onClose).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("subscribes before starting and sends valid PCM as a binary STOMP body", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
 
     expect(socket.sendAudio(new ArrayBuffer(2), 0, 0)).toBe(false);
-    connection.event({ type: "connected", sessionId });
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
     await connection.connected;
 
     expect(socket.sendAudio(new ArrayBuffer(1), 0, 0)).toBe(false);
@@ -182,7 +247,12 @@ describe("TranscriptionSocket", () => {
   it("carries chunkSeq and captureSamples on every audio frame", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
-    connection.event({ type: "connected", sessionId });
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
     await connection.connected;
 
     expect(socket.sendAudio(new ArrayBuffer(3_200), 12, 19_200)).toBe(true);
@@ -197,7 +267,12 @@ describe("TranscriptionSocket", () => {
   it("sends the last chunk number with stop", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
-    connection.event({ type: "connected", sessionId });
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
     await connection.connected;
 
     socket.stop(421);
@@ -211,7 +286,12 @@ describe("TranscriptionSocket", () => {
   it("rejects audio when the WebSocket send buffer is backlogged", async () => {
     const socket = createSocket();
     const connection = await establish(socket);
-    connection.event({ type: "connected", sessionId });
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
     await connection.connected;
     connection.transport.bufferedAmount = 96_001;
 
@@ -222,7 +302,12 @@ describe("TranscriptionSocket", () => {
     vi.stubEnv("NEXT_PUBLIC_API_MOCKING", "enabled");
     const socket = createSocket();
     const connection = await establish(socket);
-    connection.event({ type: "connected", sessionId });
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
     await connection.connected;
     connection.transport.bufferedAmount = 96_001;
 
@@ -233,7 +318,12 @@ describe("TranscriptionSocket", () => {
     const onClose = vi.fn();
     const socket = createSocket(onClose);
     const connection = await establish(socket);
-    connection.event({ type: "connected", sessionId });
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
     await connection.connected;
 
     connection.malformed('{"type":"unknown"}');
@@ -257,5 +347,52 @@ describe("TranscriptionSocket", () => {
     await expect(connection.connected).rejects.toThrow(
       "실시간 스크립트 서버 연결에 실패했습니다."
     );
+  });
+
+  // 다른 탭·기기와 이 탭을 서버가 가른다. 다시 붙을 때마다 같은 값이어야 한다.
+  it("carries the tab's clientInstanceId on the STOMP CONNECT and the attach message", async () => {
+    const socket = createSocket();
+    const connection = await establish(socket);
+
+    const connect = connection.transport.sent.find((frame) =>
+      frameText(frame).startsWith("CONNECT")
+    );
+    const attach = connection.transport.sent.find(
+      (frame) =>
+        frameText(frame).startsWith("SEND") &&
+        header(frame, "destination") ===
+          `/app/transcription-sessions/${sessionId}/connect`
+    );
+    expect(header(connect, "clientInstanceId")).toBe("tab-7f3a");
+    expect(header(attach, "clientInstanceId")).toBe("tab-7f3a");
+    expect(header(attach, "resendFromSeq")).toBe("42");
+  });
+
+  // server 가 부착 줄에 남긴다. 운영에서 끊김 분포를 다시 볼 수 있는 유일한 길이다(D-17).
+  it("carries why and how long it was detached on the attach message", async () => {
+    const socket = createSocket();
+    const connection = await establish(socket);
+
+    const attach = connection.transport.sent.find(
+      (frame) =>
+        frameText(frame).startsWith("SEND") &&
+        header(frame, "destination") ===
+          `/app/transcription-sessions/${sessionId}/connect`
+    );
+    expect(header(attach, "reconnectReason")).toBe("no_receive");
+    expect(header(attach, "disconnectedMs")).toBe("21340");
+    expect(header(attach, "pendingChunks")).toBe("213");
+  });
+
+  // 무수신 감시는 heartbeat 까지 세야 한다. 조용한 회의에서는 이벤트가 안 온다.
+  it("reports inbound heartbeats as activity", async () => {
+    const onActivity = vi.fn();
+    const socket = createSocket(vi.fn(), onActivity);
+    const connection = await establish(socket);
+    onActivity.mockClear();
+
+    connection.transport.message("\n");
+
+    expect(onActivity).toHaveBeenCalled();
   });
 });

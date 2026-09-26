@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   backlogMs,
   float32ToPcm16,
   normalizePcm16Level,
   normalizeMicrophoneLevel,
+  PcmAudioCapture,
   PcmChunkBatcher,
 } from "@/lib/transcription/audio";
 import { CAPTURE_CONTRACT } from "@/lib/transcription/capture-config";
@@ -48,7 +49,9 @@ describe("PcmChunkBatcher", () => {
     const chunk = emit.mock.calls[0][0] as ArrayBuffer;
     expect(chunk.byteLength).toBe(3_200);
     expect(chunk.byteLength % 2).toBe(0);
-    expect(chunk.byteLength).toBeLessThanOrEqual(CAPTURE_CONTRACT.maxFrameBytes);
+    expect(chunk.byteLength).toBeLessThanOrEqual(
+      CAPTURE_CONTRACT.maxFrameBytes
+    );
   });
 
   it("waits until a full batch is available", () => {
@@ -124,5 +127,172 @@ describe("PcmChunkBatcher", () => {
   it("rejects a 48 kHz context at the contract frame limit", () => {
     // 16 kHz 를 못 여는 기기가 48 kHz 로 열리면 100ms 가 9,600 byte 라 계약 안이다.
     expect(() => new PcmChunkBatcher(48_000, 100, vi.fn())).not.toThrow();
+  });
+});
+
+/**
+ * 마이크가 조용히 사라지면 워크릿은 그냥 조각을 안 낸다. 브라우저 안에서 아무 오류도 안 나서
+ * 사용자는 녹음되는 줄 안다. 그 순간을 이벤트로 올린다.
+ */
+describe("PcmAudioCapture 마이크 상태", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function stubBrowser() {
+    const track = new EventTarget() as EventTarget & {
+      readyState: string;
+      muted: boolean;
+      stop: () => void;
+      onended: (() => void) | null;
+      onmute: (() => void) | null;
+      onunmute: (() => void) | null;
+    };
+    Object.assign(track, {
+      readyState: "live",
+      muted: false,
+      stop: vi.fn(),
+      onended: null,
+      onmute: null,
+      onunmute: null,
+    });
+    const devices = new EventTarget();
+    Object.assign(devices, {
+      getUserMedia: vi.fn(async () => ({
+        getTracks: () => [track],
+        getAudioTracks: () => [track],
+      })),
+    });
+    vi.stubGlobal("navigator", { mediaDevices: devices });
+    const contexts: Array<{
+      state: string;
+      onstatechange: (() => void) | null;
+      resume: ReturnType<typeof vi.fn>;
+    }> = [];
+    const node = () => ({ connect: vi.fn(), disconnect: vi.fn() });
+    class FakeAudioContext {
+      state = "running";
+      sampleRate = 16_000;
+      onstatechange: (() => void) | null = null;
+      destination = {};
+      audioWorklet = { addModule: vi.fn(async () => undefined) };
+      resume = vi.fn(async () => undefined);
+      close = vi.fn(async () => undefined);
+      constructor() {
+        contexts.push(this);
+      }
+      createMediaStreamSource = node;
+      createGain = () => ({ ...node(), gain: { value: 1 } });
+      createAnalyser = () => ({
+        ...node(),
+        fftSize: 0,
+        getFloatTimeDomainData: vi.fn(),
+      });
+    }
+    class FakeWorklet {
+      port = { onmessage: null };
+      connect = vi.fn();
+      disconnect = vi.fn();
+    }
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    vi.stubGlobal("AudioWorkletNode", FakeWorklet);
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn(() => 1)
+    );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    return { track, devices, contexts };
+  }
+
+  it("오디오 컨텍스트가 멈추면 suspended 를 올리고, 다시 돌면 live 로 되돌린다", async () => {
+    const browser = stubBrowser();
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+    const context = browser.contexts[0];
+
+    context.state = "suspended";
+    context.onstatechange?.();
+    expect(onState).toHaveBeenLastCalledWith("suspended");
+
+    context.state = "running";
+    context.onstatechange?.();
+    expect(onState).toHaveBeenLastCalledWith("live");
+  });
+
+  it("마이크 트랙이 끝나면 ended 를, 음소거되면 muted 를 올린다", async () => {
+    const browser = stubBrowser();
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+
+    browser.track.muted = true;
+    browser.track.onmute?.();
+    expect(onState).toHaveBeenLastCalledWith("muted");
+    browser.track.muted = false;
+    browser.track.onunmute?.();
+    expect(onState).toHaveBeenLastCalledWith("live");
+
+    browser.track.readyState = "ended";
+    browser.track.onended?.();
+    expect(onState).toHaveBeenLastCalledWith("ended");
+  });
+
+  // 브라우저는 이벤트 전에 track.muted·context.state 를 먼저 바꾼다. 마지막 이벤트가 아니라 둘의 지금 값이 답이다
+  it("트랙이 음소거된 채면 컨텍스트가 다시 돌아도 live 로 되돌리지 않는다", async () => {
+    const browser = stubBrowser();
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+    const context = browser.contexts[0];
+
+    browser.track.muted = true;
+    browser.track.onmute?.();
+    context.state = "suspended";
+    context.onstatechange?.();
+    context.state = "running";
+    context.onstatechange?.();
+
+    expect(onState).toHaveBeenLastCalledWith("muted");
+  });
+
+  it("컨텍스트가 멈춘 채면 트랙 음소거가 풀려도 live 로 되돌리지 않는다", async () => {
+    const browser = stubBrowser();
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+    const context = browser.contexts[0];
+
+    context.state = "suspended";
+    context.onstatechange?.();
+    browser.track.muted = true;
+    browser.track.onmute?.();
+    browser.track.muted = false;
+    browser.track.onunmute?.();
+    expect(onState).toHaveBeenLastCalledWith("suspended");
+
+    context.state = "running";
+    context.onstatechange?.();
+    expect(onState).toHaveBeenLastCalledWith("live");
+  });
+
+  it("감시를 걸기 전에 이미 음소거된 트랙이면 시작하자마자 muted 를 올린다", async () => {
+    const browser = stubBrowser();
+    browser.track.muted = true;
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+
+    expect(onState).toHaveBeenLastCalledWith("muted");
+  });
+
+  it("기기가 빠져 트랙이 끝났으면 devicechange 에서도 ended 를 올린다", async () => {
+    const browser = stubBrowser();
+    const onState = vi.fn();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+    await capture.start();
+
+    browser.track.readyState = "ended";
+    browser.devices.dispatchEvent(new Event("devicechange"));
+
+    expect(onState).toHaveBeenLastCalledWith("ended");
   });
 });

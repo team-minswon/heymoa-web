@@ -172,7 +172,7 @@ export function RecordingDock({
           // 사유 문구는 여기 두지 않는다. `RecordingErrorToast`(app/providers.tsx)가 같은
           // `recording.error`를 이미 토스트로 띄우고 있어서 **같은 문장이 두 곳에 났고**,
           // 마이크 권한 안내처럼 긴 문장이 들어오면 독이 화면 폭만큼 늘어났다.
-          // 여기 남기는 것은 되돌릴 수단(다시 시도·닫기)뿐이다.
+          // 여기 남기는 것은 되돌릴 수단(다시 녹음·닫기)뿐이다.
           <motion.div
             layout
             key="failed"
@@ -195,7 +195,7 @@ export function RecordingDock({
               }
             >
               <RotateCcw className="size-3.5" />
-              다시 시도
+              다시 녹음
             </Button>
             {/* 서버 세션이 열려 있으면(READY/ACTIVE) 닫기를 숨긴다 — disconnect()는 로컬만
                 지우므로 서버에 열린 세션이 남아 회의 종료·재시작이 계속 거절된다. */}

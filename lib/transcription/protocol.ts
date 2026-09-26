@@ -67,7 +67,22 @@ const partialEventSchema = z.object({
  * 드리프트는 server 의 `AsyncApiContractTest`·`AsyncApiMessageCoverageTest` 가 잡는다.
  */
 export const serverEventSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("connected"), sessionId: tsidSchema }),
+  // 세션에 붙었다(부착). 브라우저는 durableThroughSeq 다음 조각부터 버퍼에서 다시 보낸다.
+  z.object({
+    type: z.literal("connected"),
+    sessionId: tsidSchema,
+    epoch: z.number().int().min(0),
+    /** 서버가 S3 와 행까지 확정한 마지막 조각. 없으면 -1. */
+    durableThroughSeq: z.number().int().min(-1),
+  }),
+  // 이 서버가 곧 내려간다. delayMs 뒤 같은 세션에 다시 붙는다(다른 태스크로 간다).
+  z.object({
+    type: z.literal("reattach"),
+    delayMs: z.number().int().min(0),
+    reason: z.string(),
+  }),
+  // 같은 세션에 다른 부착(다른 탭·기기)이 이겼다. 다시 붙지 않는다.
+  z.object({ type: z.literal("superseded"), sessionId: tsidSchema }),
   partialEventSchema,
   finalEventSchema,
   // throughChunkSeq 까지 내구 쓰기가 끝났다. 누적값이라 조각마다 안 보내도 된다.
@@ -108,6 +123,14 @@ export const serverEventSchema = z.discriminatedUnion("type", [
       "SESSION_NOT_CONNECTABLE",
     ]),
     message: z.string().min(1),
+    /**
+     * 같은 code 안에서 화면이 할 말을 가를 때만 온다. 지금은 `SESSION_NOT_CONNECTABLE` 에만 붙는다.
+     * 모르는 값은 없는 것으로 읽는다 — code 와 달리 이 값 하나로 녹음을 끊을 까닭이 없다.
+     */
+    reason: z
+      .enum(["MEETING_ENDED", "SESSION_CLOSED"])
+      .optional()
+      .catch(undefined),
   }),
 ]);
 
@@ -119,6 +142,16 @@ export type CaptureState = Extract<
   ServerEvent,
   { type: "capture_state" }
 >["state"];
+
+/** 같은 세션에 다시 붙어도 답이 같은 오류. 녹음을 끝내는 in-band 오류는 이 둘뿐이다. */
+export function isTerminalError(
+  event: Extract<ServerEvent, { type: "error" }>
+) {
+  return (
+    event.code === "NOT_SESSION_OWNER" ||
+    event.code === "SESSION_NOT_CONNECTABLE"
+  );
+}
 
 export function parseClientCommand(raw: string): ClientCommand {
   return clientCommandSchema.parse(JSON.parse(raw));
@@ -133,7 +166,14 @@ export const protocolExamples = {
     stop: { type: "stop", finalChunkSeq: 421 },
   },
   events: {
-    connected: { type: "connected", sessionId: "0HZX2K7M9Q4AB" },
+    connected: {
+      type: "connected",
+      sessionId: "0HZX2K7M9Q4AB",
+      epoch: 1,
+      durableThroughSeq: -1,
+    },
+    reattach: { type: "reattach", delayMs: 1_500, reason: "SERVER_DRAINING" },
+    superseded: { type: "superseded", sessionId: "0HZX2K7M9Q4AB" },
     partial: {
       type: "partial",
       utteranceId: "0HZX2K7M9Q4AC",
@@ -160,6 +200,12 @@ export const protocolExamples = {
       type: "error",
       code: "STT_TRANSCRIPTION_FAILED",
       message: "스크립트 처리에 실패했습니다.",
+    },
+    meetingEnded: {
+      type: "error",
+      code: "SESSION_NOT_CONNECTABLE",
+      message: "회의가 끝나 이 녹음을 더 받을 수 없습니다.",
+      reason: "MEETING_ENDED",
     },
   },
 } as const satisfies {

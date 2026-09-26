@@ -2463,6 +2463,11 @@ paths:
                         endedAtMs: 612000
                         startedAt: '2026-08-18T10:10:12Z'
                         endedAt: '2026-08-18T10:19:41Z'
+                      transcriptGaps:
+                      - gapId: tu-0HZX2K7M9Q4AG-2-640000
+                        kind: UNANSWERED
+                        startedAtMs: 640000
+                        endedAtMs: 652000
                     error: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -2504,7 +2509,7 @@ paths:
       tags:
       - Transcription
       summary: 전사 세션 시작
-      description: 노트에 실시간 전사 세션을 READY로 생성한다. READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다.
+      description: 노트에 실시간 전사 세션을 READY로 생성한다(201). READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다. 본문은 선택이다. `clientInstanceId` 는 시작을 누른 탭의 표시(STOMP connect 헤더와 같은 값, 최대 64자)다. 같은 사용자의 READY 세션이 이미 열려 있으면 새로 만들지 않고 그 세션을 200으로 돌려준다. 같은 사용자의 ACTIVE 세션은 그 탭(`clientInstanceId`)이 연 것이거나 리스가 식었으면 봉인해 닫고 새로 만들고(201), 다른 탭이 리스를 쥐고 있으면 409 ACTIVE_TRANSCRIPTION_SESSION 이다. 다른 사용자의 세션이 열려 있으면 409 ACTIVE_TRANSCRIPTION_SESSION, 그 기기의 리스가 식어 워치독을 기다리는 중이면 409 RECORDER_DISCONNECTED 다. 끊긴 녹음을 잇는 길은 STOMP 부착이다.
       operationId: startTranscriptionSession
       parameters:
       - name: noteId
@@ -2517,7 +2522,35 @@ paths:
           nullable: false
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
         example: 0HZX2K7M9Q4AF
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartTranscriptionSessionRequest'
+            examples:
+              startTranscriptionSession_Success:
+                value:
+                  clientInstanceId: c1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f
       responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartTranscriptionSessionResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      sessionId: 0HZX2K7M9Q4AG
+                      noteId: 0HZX2K7M9Q4AF
+                      status: READY
+                      readyExpiresAt: '2026-07-14T01:02:03Z'
+                      startedAt: null
+                      endedAt: null
+                      endReason: null
+                    error: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -2571,6 +2604,14 @@ paths:
                     error:
                       code: ACTIVE_TRANSCRIPTION_SESSION
                       message: 이미 진행 가능한 전사 세션이 있습니다.
+                      details: null
+                RECORDER_DISCONNECTED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: RECORDER_DISCONNECTED
+                      message: 녹음하던 기기와 연결이 끊겨 있습니다. 잠시 뒤 다시 시작해 주세요.
                       details: null
         '201':
           description: 생성 성공
@@ -10965,6 +11006,14 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    StartTranscriptionSessionRequest:
+      title: StartTranscriptionSessionRequest
+      type: object
+      properties:
+        clientInstanceId:
+          type: string
+          description: 시작을 누른 브라우저 탭의 표시. 최대 64자. 없으면 탭을 가리지 않는다
+          nullable: true
     StartTranscriptionSessionResponse:
       title: StartTranscriptionSessionResponse
       required:
@@ -11168,6 +11217,7 @@ components:
           - gaps
           - recording
           - segments
+          - transcriptGaps
           type: object
           properties:
             recording:
@@ -11269,6 +11319,46 @@ components:
                   nullable: false
                   example: NOT_REQUESTED
               description: 화자 분리 진행 상태와 화자 목록
+              nullable: false
+            transcriptGaps:
+              type: array
+              description: 소리는 저장됐는데 받아쓰지 못한 구간. 저장된 발화가 덮는 부분은 뺐고 종류가 달라 겹칠 수 있다. gaps 와 따로 온다 — gaps 의 공백은 소리 자체가 빈 구간이다
+              items:
+                required:
+                - endedAtMs
+                - gapId
+                - kind
+                - startedAtMs
+                type: object
+                properties:
+                  kind:
+                    type: string
+                    description: TRIM 은 업체 재연결 때 버린 앞부분, NOT_SENT 는 다시 붙은 뒤 밀려 와 소리로만 저장된 조각, UNANSWERED 는 버린 업체 연결이 답하지 않은 꼬리다. 화면에서는 모두 「받아쓰지 못했어요」다
+                    nullable: false
+                    example: UNANSWERED
+                    enum:
+                    - TRIM
+                    - NOT_SENT
+                    - UNANSWERED
+                  gapId:
+                    type: string
+                    description: 기록에서 결정적으로 만든다. TSID 가 아니다
+                    nullable: false
+                    example: tu-0HZX2K7M9Q4AB-2-640000
+                  endedAtMs:
+                    type: integer
+                    description: 회의 축 끝. 시작보다 1초 이상 뒤다
+                    nullable: false
+                    example: 652000
+                    format: int64
+                    minimum: 0
+                  startedAtMs:
+                    type: integer
+                    description: 회의 축 시작
+                    nullable: false
+                    example: 640000
+                    format: int64
+                    minimum: 0
               nullable: false
             gaps:
               type: array

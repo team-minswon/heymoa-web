@@ -32,6 +32,7 @@ import type {
   GetTranscriptSegmentsAfterParams,
   SegmentSpeakerResponse,
   SpeakerListResponse,
+  StartTranscriptionSessionRequest,
   StartTranscriptionSessionResponse,
   TranscriptResponse,
   TranscriptSegmentListResponse,
@@ -946,6 +947,11 @@ export function useGetNoteTranscriptSuspense<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type startTranscriptionSessionResponse200 = {
+  data: StartTranscriptionSessionResponse;
+  status: 200;
+};
+
 export type startTranscriptionSessionResponse201 = {
   data: StartTranscriptionSessionResponse;
   status: 201;
@@ -966,10 +972,12 @@ export type startTranscriptionSessionResponse409 = {
   status: 409;
 };
 
-export type startTranscriptionSessionResponseSuccess =
-  startTranscriptionSessionResponse201 & {
-    headers: Headers;
-  };
+export type startTranscriptionSessionResponseSuccess = (
+  | startTranscriptionSessionResponse200
+  | startTranscriptionSessionResponse201
+) & {
+  headers: Headers;
+};
 export type startTranscriptionSessionResponseError = (
   | startTranscriptionSessionResponse401
   | startTranscriptionSessionResponse404
@@ -987,18 +995,45 @@ export const getStartTranscriptionSessionUrl = (noteId: string) => {
 };
 
 /**
- * 노트에 실시간 전사 세션을 READY로 생성한다. READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다.
+ * 노트에 실시간 전사 세션을 READY로 생성한다(201). READY는 아직 연결 전이므로 startedAt·endedAt·endReason이 모두 null이다. 본문은 선택이다. `clientInstanceId` 는 시작을 누른 탭의 표시(STOMP connect 헤더와 같은 값, 최대 64자)다. 같은 사용자의 READY 세션이 이미 열려 있으면 새로 만들지 않고 그 세션을 200으로 돌려준다. 같은 사용자의 ACTIVE 세션은 그 탭(`clientInstanceId`)이 연 것이거나 리스가 식었으면 봉인해 닫고 새로 만들고(201), 다른 탭이 리스를 쥐고 있으면 409 ACTIVE_TRANSCRIPTION_SESSION 이다. 다른 사용자의 세션이 열려 있으면 409 ACTIVE_TRANSCRIPTION_SESSION, 그 기기의 리스가 식어 워치독을 기다리는 중이면 409 RECORDER_DISCONNECTED 다. 끊긴 녹음을 잇는 길은 STOMP 부착이다.
  * @summary 전사 세션 시작
  */
 export const startTranscriptionSession = async (
   noteId: string,
+  startTranscriptionSessionRequest?: StartTranscriptionSessionRequest,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<startTranscriptionSessionResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
   return apiFetch<startTranscriptionSessionResponse>(
     getStartTranscriptionSessionUrl(noteId),
     {
       ...options,
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(startTranscriptionSessionRequest),
     }
   );
 };
@@ -1036,9 +1071,9 @@ export const getStartTranscriptionSessionMutationOptions = <
     Awaited<ReturnType<typeof startTranscriptionSession>>,
     StartTranscriptionSessionMutationVariables
   > = (props) => {
-    const { noteId } = props ?? {};
+    const { noteId, data } = props ?? {};
 
-    return startTranscriptionSession(noteId, requestOptions);
+    return startTranscriptionSession(noteId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1047,11 +1082,16 @@ export const getStartTranscriptionSessionMutationOptions = <
 export type StartTranscriptionSessionMutationResult = NonNullable<
   Awaited<ReturnType<typeof startTranscriptionSession>>
 >;
-
+export type StartTranscriptionSessionMutationBody =
+  | StartTranscriptionSessionRequest
+  | undefined;
 export type StartTranscriptionSessionMutationError =
   | UnauthorizedResponse
   | AppErrorResponse;
-export type StartTranscriptionSessionMutationVariables = { noteId: string };
+export type StartTranscriptionSessionMutationVariables = {
+  noteId: string;
+  data?: StartTranscriptionSessionRequest;
+};
 
 /**
  * @summary 전사 세션 시작

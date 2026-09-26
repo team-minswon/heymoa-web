@@ -51,3 +51,30 @@ describe("TranscriptGapRow", () => {
     ).toBeTruthy();
   });
 });
+
+describe("TranscriptGapRow — 전사 공백 (APP-706)", () => {
+  afterEach(cleanup);
+
+  it("회의 축 두 끝과 문구를 그리고, 진행 중으로 읽지 않는다", () => {
+    const [row] = toGapRows(
+      [],
+      [
+        {
+          gapId: "t1",
+          kind: "UNANSWERED",
+          startedAtMs: 640_000,
+          endedAtMs: 652_000,
+        },
+      ]
+    );
+    render(<TranscriptGapRow row={row} />);
+
+    expect(screen.getByText("10:40 – 10:52")).toBeTruthy();
+    expect(
+      screen.getByText("잠깐 받아쓰지 못했어요 · 소리는 저장됨")
+    ).toBeTruthy();
+    expect(screen.getByTestId("transcript-gap").dataset.gapKind).toBe(
+      "UNTRANSCRIBED"
+    );
+  });
+});

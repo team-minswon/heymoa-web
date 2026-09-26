@@ -97,7 +97,11 @@ export function TranscriptView({
     persisted,
   ]);
   const rows = useMemo(
-    () => interleaveTranscript(segments, toGapRows(transcript?.gaps ?? [])),
+    () =>
+      interleaveTranscript(
+        segments,
+        toGapRows(transcript?.gaps ?? [], transcript?.transcriptGaps)
+      ),
     [segments, transcript]
   );
   const diarized = transcript?.diarization?.status === "MAPPED";
