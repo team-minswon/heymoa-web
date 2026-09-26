@@ -60,22 +60,42 @@ function setup({
   function makeSocket(options: SocketOptions) {
     let window = -1;
     let inflight = 0;
+    let closed = false;
+    let reconcile: (() => void) | null = null;
+    const emitConnected = () =>
+      options.onEvent({
+        type: "connected",
+        sessionId: options.sessionId,
+        epoch: server.epoch++,
+        durableThroughSeq: server.durableThroughSeq,
+      });
     const socket = {
       options,
       connect: vi.fn(async () => {
         order.push("socket-connect");
-        if (server.gate) await server.gate;
+        if (server.gate) {
+          // 실제 소켓처럼 DB 대조(reconcileConnected)가 connect() 를 먼저 풀어도 connected 는 나중에 온다
+          const gate = server.gate;
+          const early = await Promise.race([
+            gate.then(() => false),
+            new Promise<boolean>((resolve) => {
+              reconcile = () => resolve(true);
+            }),
+          ]);
+          reconcile = null;
+          if (early) {
+            void gate.then(() => {
+              if (!closed) emitConnected();
+            });
+            return;
+          }
+        }
         if (server.refuse) {
           const error = new Error("WEBSOCKET_CONNECTION_FAILED");
           queueMicrotask(() => options.onClose(1006, ""));
           throw error;
         }
-        options.onEvent({
-          type: "connected",
-          sessionId: options.sessionId,
-          epoch: server.epoch++,
-          durableThroughSeq: server.durableThroughSeq,
-        });
+        emitConnected();
         if (server.dropAfterConnect)
           setTimeout(() => options.onClose(1006, ""), 0);
       }),
@@ -113,8 +133,9 @@ function setup({
           options.onEvent({ type: "ack", throughChunkSeq: finalChunkSeq });
         options.onEvent({ type: "completed", sessionId: options.sessionId });
       }),
-      reconcileConnected: vi.fn(),
+      reconcileConnected: vi.fn(() => reconcile?.()),
       close: vi.fn(async () => {
+        closed = true;
         order.push("socket-close");
       }),
     };
@@ -735,6 +756,47 @@ describe("녹음이 끝나는 길", () => {
     expect(harness.sentSeqs(harness.sockets[1])).toEqual([1]);
     expect(harness.sockets[1].stop).toHaveBeenCalledWith(1);
     expect(harness.onFailure).not.toHaveBeenCalled();
+  });
+
+  it("stop 중 다시 붙는 사이 폴링이 ACTIVE 를 봐도 connected 를 기다려 stop 을 이어 간다", async () => {
+    vi.useFakeTimers();
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.emitChunk();
+    harness.emitChunk();
+    harness.server.incompleteStops = 1;
+    harness.server.durableThroughSeq = 0;
+    const connectedLate = deferred();
+    harness.server.gate = connectedLate.promise;
+
+    const stopping = harness.controller.stop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(harness.sockets).toHaveLength(2);
+    // 세션은 끊긴 동안에도 ACTIVE 다. 이 부착이 붙었다는 뜻이 아니다
+    harness.controller.reconcile("ACTIVE");
+    await vi.advanceTimersByTimeAsync(0);
+    connectedLate.resolve();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await stopping;
+
+    expect(harness.sockets).toHaveLength(2);
+    expect(harness.sentSeqs(harness.sockets[1])).toEqual([1]);
+    expect(harness.sockets[1].stop).toHaveBeenCalledWith(1);
+    expect(harness.onEvent).toHaveBeenLastCalledWith({
+      type: "completed",
+      sessionId: SESSION_ID,
+    });
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    expect(info).toHaveBeenCalledWith(
+      "[transcription]",
+      "reconnect",
+      expect.objectContaining({
+        step: "result",
+        ok: true,
+        reason: "store_incomplete",
+      })
+    );
   });
 
   it("stop 을 보낸 뒤 끊기면 다시 붙어 stop 을 다시 보낸다", async () => {

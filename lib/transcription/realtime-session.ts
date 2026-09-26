@@ -360,7 +360,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
 
   reconcile(status: RealtimeSessionStatus) {
     if (status === "ACTIVE") {
-      this.socket?.reconcileConnected();
+      // 세션은 끊긴 동안에도 ACTIVE 다. 다시 붙는 부착을 connected 보다 먼저 풀면 stop 이 소켓을 닫는다
+      if (!this.reattaching) this.socket?.reconcileConnected();
       return;
     }
     this.terminalResolve?.(status === "COMPLETED" ? "completed" : "failed");
