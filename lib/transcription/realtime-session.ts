@@ -86,6 +86,7 @@ const MAX_CONGESTION_MS = CAPTURE_TUNING.congestionMs;
 const SILENCE_LIMIT_MS = 20_000;
 /** 소켓이 비는 대로 밀린 것을 채우고 무수신을 잰다. 조각 하나(100ms)와 같은 박자다. */
 const PUMP_MS = 100;
+/** 첫 재시도 대기의 가운데. 급사한 태스크의 녹음들이 같은 순간 몰리지 않게 ±절반을 흩는다. */
 const REATTACH_FIRST_DELAY_MS = 500;
 const REATTACH_MIN_DELAY_MS = 500;
 const REATTACH_MAX_DELAY_MS = 5_000;
@@ -112,6 +113,10 @@ function reattachCause(serverReason: string): ReconnectReason {
   if (serverReason === "STORE_INCOMPLETE") return "store_incomplete";
   if (serverReason === "BUFFER_FULL") return "buffer_full";
   return "server_reattach";
+}
+
+function firstReattachDelayMs() {
+  return REATTACH_FIRST_DELAY_MS * (0.5 + Math.random());
 }
 
 /** n 번째 재시도(1부터) 전 대기. 한 태스크에 붙어 있던 녹음들이 같은 박자로 두드리지 않게 흩는다. */
@@ -378,7 +383,13 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     this.resendBuffer = new ResendBuffer({ limitBytes: MEMORY_LIMIT_BYTES });
     window.addEventListener("offline", this.handleOffline);
     window.addEventListener("online", this.handleOnline);
-    await this.attach();
+    try {
+      await this.attach();
+    } catch (error) {
+      // 내려가는 서버가 connected 전에 다른 서버로 가라고 했다. 녹음은 시작하고 다시 붙기는 창 안에서 한다.
+      // 옛 소켓의 거절이 새 소켓이 붙은 뒤에 올 수도 있다
+      if (!this.reattaching && !this.attached) throw error;
+    }
     await this.rejectIfStopped();
     // 폴링(ACTIVE)이 connect() 를 먼저 풀었다. connected 없이는 어디까지 저장됐는지 몰라 보낼 수 없다
     if (!this.attached) void this.reattach("no_receive", "connected missing");
@@ -708,7 +719,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private reattach(
     cause: ReconnectReason,
     detail: string,
-    firstDelayMs = REATTACH_FIRST_DELAY_MS
+    firstDelayMs = firstReattachDelayMs()
   ) {
     if (this.closing || this.failed || this.reattaching)
       return this.reattaching;

@@ -57,7 +57,8 @@ info:
       녹음 중인 동안 회의 종료(REST)는 409 `MEETING_RECORDING` 으로 거절된다. 녹음 중은 READY(만료 전)이거나
       ACTIVE 이면서 어느 부착이 15초 안에 리스를 민 경우다 — stop 이 도는 동안에도 리스를 민다. **끊겨 리스가 식으면
       누구나 회의를 끝낼 수 있고**, 그 뒤 녹음자의 connect 는 error(SESSION_NOT_CONNECTABLE, reason MEETING_ENDED)다.
-    - 서버가 내려가면 reattach 가 온다. `delayMs` 뒤 같은 세션으로 다시 connect 한다.
+    - 서버가 내려가면 reattach 가 온다. `delayMs` 뒤 같은 세션으로 다시 connect 한다. connected 전에 와도 같다 — 처음 connect 라도
+      실패로 끝내지 말고 다시 붙는다.
     - **completed 는 저장이 확인된 뒤에만 온다.** stop 의 `finalChunkSeq` 까지 빈칸 없이 S3 에 있지 않으면
       세션을 끝내지 않고 reattach(STORE_INCOMPLETE)를 보낸다. 브라우저는 다시 붙어 이어 보내고 stop 을 다시 보낸다.
     - 그래도 브라우저는 completed 를 받았을 때 **ACK 받은 조각만** 지운다. 남은 것은 이어 올리기 대상으로 둔다.
@@ -631,7 +632,9 @@ components:
       name: ReattachEvent
       title: 이 서버가 내려간다
       description: |
-        `delayMs`(0~3000, 부착마다 다르다) 뒤 같은 세션으로 다시 connect 한다. 세션은 열려 있다.
+        `delayMs` 뒤 같은 세션으로 다시 connect 한다. 세션은 열려 있다. `SERVER_DRAINING` 은 0 이다 — 서버가 소켓을
+        살린 채 부착들의 차례를 나눈 뒤 보낸다. 드레인 중인 서버가 새 connect 를 돌려보낼 때는 0~500,
+        `BUFFER_FULL`·`STORE_INCOMPLETE` 는 0~3000(부착마다 다르다).
 
         - `SERVER_DRAINING`: 이 서버가 내려간다. 남은 소리를 올리고 행을 남긴 **뒤에** 이 event 가 오고
           소켓이 닫힌다. 그 사이 보낸 조각은 받아쓰기에만 쓰이고 ACK 되지 않는다 — 다시 붙어 이어 보내면 저장된다.

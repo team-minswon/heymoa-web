@@ -23,6 +23,8 @@ type SocketOptions = Parameters<
 function setup({
   Session = BrowserRealtimeSession,
 }: { Session?: typeof BrowserRealtimeSession } = {}) {
+  // 첫 재시도 대기(0.25~0.75초)를 가운데 0.5초로 둔다. 흩는 값을 보는 테스트만 따로 바꾼다
+  vi.spyOn(Math, "random").mockReturnValue(0.5);
   const order: string[] = [];
   let emitChunk!: (chunk: ArrayBuffer, captureSamples: number) => void;
   let emitMicrophone!: (state: MicrophoneState) => void;
@@ -55,6 +57,10 @@ function setup({
     stopReplyMs: 0,
     /** 붙자마자 끊긴다. */
     dropAfterConnect: false,
+    /** 이만큼의 부착에 내려가는 서버처럼 connected 전에 reattach 를 보내고 닫는다. */
+    drainingAttaches: 0,
+    /** 그 닫힘이 이만큼 늦게 connect() 거절로 온다. 그사이 새 소켓이 먼저 붙을 수 있다. */
+    drainingCloseMs: 0,
   };
   type MockSocket = ReturnType<typeof makeSocket>;
   const sockets: MockSocket[] = [];
@@ -91,6 +97,19 @@ function setup({
             });
             return;
           }
+        }
+        if (server.drainingAttaches > 0) {
+          server.drainingAttaches -= 1;
+          options.onEvent({
+            type: "reattach",
+            delayMs: 0,
+            reason: "SERVER_DRAINING",
+          });
+          if (server.drainingCloseMs > 0)
+            await new Promise((resolve) =>
+              setTimeout(resolve, server.drainingCloseMs)
+            );
+          throw new Error("WEBSOCKET_CLOSED");
         }
         if (server.refuse) {
           const error = new Error("WEBSOCKET_CONNECTION_FAILED");
@@ -581,6 +600,54 @@ describe("같은 세션에 다시 붙는다", () => {
     expect(harness.onFailure).not.toHaveBeenCalled();
   });
 
+  it("끊긴 뒤 첫 재시도는 0.25~0.75초 사이로 흩는다 — 한 태스크의 녹음들이 같은 순간 몰리지 않게", async () => {
+    vi.useFakeTimers();
+    for (const [random, delayMs] of [
+      [0, 250],
+      [0.999, 749],
+    ] as const) {
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      vi.spyOn(Math, "random").mockReturnValue(random);
+
+      harness.closeTransport(1006, "");
+      await vi.advanceTimersByTimeAsync(delayMs - 1);
+      expect(harness.sockets).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(2);
+      expect(harness.sockets).toHaveLength(2);
+      await harness.controller.close();
+    }
+  });
+
+  it("처음 붙을 때 내려가는 서버가 다른 서버로 가라고 해도 녹음을 시작하고 다시 붙는다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    harness.server.drainingAttaches = 1;
+
+    await harness.controller.connect(SESSION_ID);
+    expect(harness.audio.start).toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(harness.sockets).toHaveLength(2);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+  });
+
+  // codex astra 드레인 2차 P2. 옛 소켓의 거절이 새 소켓이 붙은 뒤에 오면 붙은 녹음을 실패로 끝냈다
+  it("처음 붙을 때 돌려보낸 소켓의 거절이 다시 붙은 뒤에 와도 녹음을 시작한다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    harness.server.drainingAttaches = 1;
+    harness.server.drainingCloseMs = 1_000;
+
+    const connecting = harness.controller.connect(SESSION_ID);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await connecting;
+
+    expect(harness.sockets).toHaveLength(2);
+    expect(harness.audio.start).toHaveBeenCalled();
+    expect(harness.onFailure).not.toHaveBeenCalled();
+  });
+
   it("버린 옛 소켓이 늦게 닫혀도 두 번 다시 붙지 않는다", async () => {
     vi.useFakeTimers();
     const harness = setup();
@@ -665,8 +732,8 @@ describe("같은 세션에 다시 붙는다", () => {
 
   it("창 안에서는 지터를 두고 두드리되 간격은 5초를 넘지 않는다", async () => {
     vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0.999);
     const harness = setup();
+    vi.spyOn(Math, "random").mockReturnValue(0.999);
     await harness.controller.connect(SESSION_ID);
     harness.server.refuse = true;
 
@@ -1248,8 +1315,8 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
 
   it("disconnectedMs 는 알아챈 때부터, pendingChunks 는 ACK 못 받은 조각 수다", async () => {
     vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0);
     const harness = setup();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     await harness.controller.connect(SESSION_ID);
     for (let i = 0; i < 3; i += 1) harness.emitChunk();
     harness.emitEvent({ type: "ack", throughChunkSeq: 0 });
@@ -1257,7 +1324,8 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
 
     harness.closeTransport(1006);
     harness.emitChunk();
-    await vi.advanceTimersByTimeAsync(500);
+    // 첫 시도 0.25초(거절), 둘째 0.25 + 0.5초
+    await vi.advanceTimersByTimeAsync(250);
     harness.server.refuse = false;
     await vi.advanceTimersByTimeAsync(500);
 
@@ -1268,7 +1336,7 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     });
     expect(harness.socket.options).toMatchObject({
       reconnectReason: "socket_closed",
-      disconnectedMs: 1_000,
+      disconnectedMs: 750,
       pendingChunks: 3,
     });
   });
