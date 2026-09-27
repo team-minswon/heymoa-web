@@ -215,9 +215,7 @@ export function recordingClaimOf(
   noteId: string,
   now = Date.now()
 ): "mine" | "live" | "dead" | null {
-  const records = readRecords(now).filter(
-    (record) => record.noteId === noteId
-  );
+  const records = readRecords(now).filter((record) => record.noteId === noteId);
   const others = records.filter(
     (record) => record.clientInstanceId !== clientInstanceId()
   );
@@ -301,6 +299,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   /** 지금 소켓이 `connected` 를 받았다. 그 전에는 보내지 않는다. */
   private attached = false;
   private reattaching: Promise<void> | null = null;
+  /** 다시 붙는 시도 중에만 있다. 그 소켓이 돌려보내지면 서버가 준 delayMs 로 시도를 끝낸다. */
+  private bounce: ((delayMs: number) => void) | null = null;
   private stopPromise: Promise<void> | null = null;
   private closePromise: Promise<void> | null = null;
   private stopping = false;
@@ -699,6 +699,10 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
         void this.close();
         return;
       case "reattach":
+        if (this.bounce && !this.attached) {
+          this.bounce(event.delayMs);
+          return;
+        }
         void this.reattach(
           reattachCause(event.reason),
           `server reattach: ${event.reason}`,
@@ -743,8 +747,17 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
 
   /** 창은 펌프가 잰다. 여기서는 창이 닫히거나(close) 붙을 때까지 두드린다. */
   private async reattachLoop(firstDelayMs: number) {
+    let bouncedDelayMs: number | null = null;
+    let bounces = 0;
     for (let attempt = 0; ; attempt += 1) {
-      const delayMs = attempt === 0 ? firstDelayMs : reattachDelayMs(attempt);
+      // 첫 돌려보냄만 서버가 준 대로 곧바로. 거듭되면 재시도 간격으로 늦춘다 — delayMs 0 이 이어지면 쉬지 않고 두드린다
+      const delayMs =
+        attempt === 0
+          ? firstDelayMs
+          : bouncedDelayMs !== null && bounces === 1
+            ? bouncedDelayMs
+            : Math.max(bouncedDelayMs ?? 0, reattachDelayMs(attempt));
+      bouncedDelayMs = null;
       logTranscription("reconnect", {
         step: "wait",
         reason: this.reconnectReason,
@@ -754,14 +767,37 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       await this.waitForRetry(delayMs);
       if (this.closing || this.failed) break;
       try {
-        await this.attach();
-        break;
+        bouncedDelayMs = await this.attachUnlessBounced();
+        if (bouncedDelayMs === null) break;
+        bounces += 1;
       } catch {
         // 재시도해도 같은 오류였다면 handleEvent 가 이미 실패로 끝냈다
         if (this.closing || this.failed) break;
       }
     }
     this.reattaching = null;
+  }
+
+  /**
+   * 붙었으면 null, connected 전에 돌려보내졌으면 서버가 준 delayMs. 돌려보낸 소켓은 닫히기를 기다리지 않고 버린다 —
+   * ALB 가 아직 내려가는 태스크로 보낸 것이라 닫힘까지 1~2초가 걸리고, 그만큼 밀린 소리가 실시간 창을 넘는다.
+   */
+  private attachUnlessBounced() {
+    const bounced = new Promise<number>((resolve) => {
+      this.bounce = resolve;
+    });
+    const attaching = this.attach();
+    return Promise.race([attaching.then(() => null), bounced])
+      .then((delayMs) => {
+        if (delayMs !== null) {
+          attaching.catch(() => undefined);
+          this.dropSocket(this.socket);
+        }
+        return delayMs;
+      })
+      .finally(() => {
+        this.bounce = null;
+      });
   }
 
   private waitForRetry(ms: number) {

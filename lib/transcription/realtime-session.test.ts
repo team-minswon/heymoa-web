@@ -61,6 +61,8 @@ function setup({
     drainingAttaches: 0,
     /** 그 닫힘이 이만큼 늦게 connect() 거절로 온다. 그사이 새 소켓이 먼저 붙을 수 있다. */
     drainingCloseMs: 0,
+    /** 그 reattach 의 delayMs. 서버는 드레인 중에 새로 붙는 것을 0~500ms 로 흩어 돌려보낸다. */
+    drainingDelayMs: 0,
   };
   type MockSocket = ReturnType<typeof makeSocket>;
   const sockets: MockSocket[] = [];
@@ -102,7 +104,7 @@ function setup({
           server.drainingAttaches -= 1;
           options.onEvent({
             type: "reattach",
-            delayMs: 0,
+            delayMs: server.drainingDelayMs,
             reason: "SERVER_DRAINING",
           });
           if (server.drainingCloseMs > 0)
@@ -580,89 +582,144 @@ describe("같은 세션에 다시 붙는다", () => {
     expect(harness.socket.stop).toHaveBeenCalledWith(2);
   });
 
-  it("reattach 를 받으면 서버가 준 delayMs 만큼 기다렸다 다시 붙는다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    const first = harness.socket;
-
-    harness.emitEvent({
-      type: "reattach",
-      delayMs: 2_000,
-      reason: "SERVER_DRAINING",
-    });
-    expect(first.close).toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1_999);
-    expect(harness.sockets).toHaveLength(1);
-    await vi.advanceTimersByTimeAsync(1);
-
-    expect(harness.sockets).toHaveLength(2);
-    expect(harness.onFailure).not.toHaveBeenCalled();
-  });
-
-  it("끊긴 뒤 첫 재시도는 0.25~0.75초 사이로 흩는다 — 한 태스크의 녹음들이 같은 순간 몰리지 않게", async () => {
-    vi.useFakeTimers();
-    for (const [random, delayMs] of [
-      [0, 250],
-      [0.999, 749],
-    ] as const) {
+  describe("내려가는 서버에서 옮겨 붙기 (드레인)", () => {
+    it("reattach 를 받으면 서버가 준 delayMs 만큼 기다렸다 다시 붙는다", async () => {
+      vi.useFakeTimers();
       const harness = setup();
       await harness.controller.connect(SESSION_ID);
-      vi.spyOn(Math, "random").mockReturnValue(random);
+      const first = harness.socket;
 
-      harness.closeTransport(1006, "");
-      await vi.advanceTimersByTimeAsync(delayMs - 1);
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 2_000,
+        reason: "SERVER_DRAINING",
+      });
+      expect(first.close).toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1_999);
       expect(harness.sockets).toHaveLength(1);
-      await vi.advanceTimersByTimeAsync(2);
+      await vi.advanceTimersByTimeAsync(1);
+
       expect(harness.sockets).toHaveLength(2);
-      await harness.controller.close();
-    }
-  });
-
-  it("처음 붙을 때 내려가는 서버가 다른 서버로 가라고 해도 녹음을 시작하고 다시 붙는다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    harness.server.drainingAttaches = 1;
-
-    await harness.controller.connect(SESSION_ID);
-    expect(harness.audio.start).toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1_000);
-
-    expect(harness.sockets).toHaveLength(2);
-    expect(harness.onFailure).not.toHaveBeenCalled();
-  });
-
-  // codex astra 드레인 2차 P2. 옛 소켓의 거절이 새 소켓이 붙은 뒤에 오면 붙은 녹음을 실패로 끝냈다
-  it("처음 붙을 때 돌려보낸 소켓의 거절이 다시 붙은 뒤에 와도 녹음을 시작한다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    harness.server.drainingAttaches = 1;
-    harness.server.drainingCloseMs = 1_000;
-
-    const connecting = harness.controller.connect(SESSION_ID);
-    await vi.advanceTimersByTimeAsync(1_000);
-    await connecting;
-
-    expect(harness.sockets).toHaveLength(2);
-    expect(harness.audio.start).toHaveBeenCalled();
-    expect(harness.onFailure).not.toHaveBeenCalled();
-  });
-
-  it("버린 옛 소켓이 늦게 닫혀도 두 번 다시 붙지 않는다", async () => {
-    vi.useFakeTimers();
-    const harness = setup();
-    await harness.controller.connect(SESSION_ID);
-    const first = harness.socket;
-
-    harness.emitEvent({
-      type: "reattach",
-      delayMs: 0,
-      reason: "SERVER_DRAINING",
+      expect(harness.onFailure).not.toHaveBeenCalled();
     });
-    first.options.onClose(1006, "");
-    await vi.advanceTimersByTimeAsync(10_000);
 
-    expect(harness.sockets).toHaveLength(2);
+    it("끊긴 뒤 첫 재시도는 0.25~0.75초 사이로 흩는다 — 한 태스크의 녹음들이 같은 순간 몰리지 않게", async () => {
+      vi.useFakeTimers();
+      for (const [random, delayMs] of [
+        [0, 250],
+        [0.999, 749],
+      ] as const) {
+        const harness = setup();
+        await harness.controller.connect(SESSION_ID);
+        vi.spyOn(Math, "random").mockReturnValue(random);
+
+        harness.closeTransport(1006, "");
+        await vi.advanceTimersByTimeAsync(delayMs - 1);
+        expect(harness.sockets).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(2);
+        expect(harness.sockets).toHaveLength(2);
+        await harness.controller.close();
+      }
+    });
+
+    it("처음 붙을 때 내려가는 서버가 다른 서버로 가라고 해도 녹음을 시작하고 다시 붙는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      harness.server.drainingAttaches = 1;
+
+      await harness.controller.connect(SESSION_ID);
+      expect(harness.audio.start).toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(harness.sockets).toHaveLength(2);
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    });
+
+    // codex astra 드레인 2차 P2. 옛 소켓의 거절이 새 소켓이 붙은 뒤에 오면 붙은 녹음을 실패로 끝냈다
+    it("처음 붙을 때 돌려보낸 소켓의 거절이 다시 붙은 뒤에 와도 녹음을 시작한다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      harness.server.drainingAttaches = 1;
+      harness.server.drainingCloseMs = 1_000;
+
+      const connecting = harness.controller.connect(SESSION_ID);
+      await vi.advanceTimersByTimeAsync(1_000);
+      await connecting;
+
+      expect(harness.sockets).toHaveLength(2);
+      expect(harness.audio.start).toHaveBeenCalled();
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    });
+
+    // 운영 D-27 재검증: ALB 가 아직 대상에서 안 뺀 내려가는 태스크로 다시 붙어 돌려보내졌는데, 그 소켓이 닫히기를
+    // 1.5초 기다려 밀린 소리가 실시간 3초를 넘었다
+    it("다시 붙는 중에 돌려보내지면 소켓이 닫히기를 기다리지 않고 서버가 준 delayMs 뒤에 다른 곳으로 붙는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      harness.server.drainingAttaches = 1;
+      harness.server.drainingCloseMs = 1_500;
+      harness.server.drainingDelayMs = 100;
+
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(harness.sockets).toHaveLength(2);
+      const bounced = harness.sockets[1];
+      expect(bounced.close).toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(99);
+      expect(harness.sockets).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(harness.sockets).toHaveLength(3);
+
+      harness.emitChunk();
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(harness.sentSeqs(harness.sockets[2])).toContain(0);
+      expect(harness.sockets).toHaveLength(3);
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    });
+
+    // codex astra APP-705 P2. delayMs 0 으로 거듭 돌려보내지면 100ms 마다 두드렸다
+    it("거듭 돌려보내지면 두 번째부터는 재시도 간격만큼은 기다린다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      harness.server.drainingAttaches = 20;
+      harness.server.drainingCloseMs = 1_500;
+
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+      });
+      await vi.advanceTimersByTimeAsync(50);
+      expect(harness.sockets).toHaveLength(3);
+      await vi.advanceTimersByTimeAsync(400);
+      expect(harness.sockets).toHaveLength(3);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(harness.sockets.length).toBeLessThan(12);
+    });
+
+    it("버린 옛 소켓이 늦게 닫혀도 두 번 다시 붙지 않는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      const first = harness.socket;
+
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+      });
+      first.options.onClose(1006, "");
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(harness.sockets).toHaveLength(2);
+    });
   });
 
   it("superseded 면 조용히 멈춘다 — 다시 붙지도, 실패로 알리지도 않는다", async () => {
