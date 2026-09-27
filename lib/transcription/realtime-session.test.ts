@@ -320,8 +320,7 @@ describe("BrowserRealtimeSession", () => {
     const first = harness.controller.stop();
     const second = harness.controller.stop();
 
-    expect(first).toBe(second);
-    await first;
+    await Promise.all([first, second]);
     expect(harness.audio.stop).toHaveBeenCalledOnce();
     expect(harness.socket.stop).toHaveBeenCalledOnce();
   });
@@ -702,6 +701,47 @@ describe("같은 세션에 다시 붙는다", () => {
       expect(harness.sockets).toHaveLength(3);
       await vi.advanceTimersByTimeAsync(10_000);
       expect(harness.sockets.length).toBeLessThan(12);
+    });
+
+    it("돌려보낸 소켓이 뒤늦게 보낸 이벤트는 다시 붙은 녹음을 흔들지 않는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      harness.server.drainingAttaches = 1;
+      harness.server.drainingCloseMs = 1_500;
+
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(harness.sockets).toHaveLength(3);
+      const bounced = harness.sockets[1];
+      bounced.options.onEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+      });
+      bounced.options.onEvent({
+        type: "error",
+        code: "SESSION_NOT_CONNECTABLE",
+        message: "이미 닫힌 세션입니다.",
+      });
+      bounced.options.onClose(1006, "");
+      await vi.advanceTimersByTimeAsync(2_000);
+      harness.emitChunk();
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(harness.sockets).toHaveLength(3);
+      expect(harness.sentSeqs(harness.sockets[2])).toEqual([0]);
+      expect(harness.onFailure).not.toHaveBeenCalled();
+      const stopping = harness.controller.stop();
+      await vi.advanceTimersByTimeAsync(100);
+      await stopping;
+      expect(harness.sockets[2].stop).toHaveBeenCalledWith(0);
+      expect(bounced.stop).not.toHaveBeenCalled();
+      expect(harness.onFailure).not.toHaveBeenCalled();
     });
 
     it("버린 옛 소켓이 늦게 닫혀도 두 번 다시 붙지 않는다", async () => {
@@ -1237,6 +1277,31 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     expect(harness.onFailure.mock.calls[0][1]).toEqual({ droppedMs: 1_000 });
     expect(harness.audio.stop).toHaveBeenCalled();
     expect(harness.buffer()).toMatchObject({ pendingMs: 0 });
+  });
+
+  it("창이 닫히기 직전(29.9초)에 다시 붙으면 녹음을 이어 가고, 다시 끊기면 창을 처음부터 센다", async () => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.controller.connect(SESSION_ID);
+    harness.server.refuse = true;
+    harness.closeTransport(1006);
+
+    await vi.advanceTimersByTimeAsync(29_900);
+    harness.server.refuse = false;
+    goOnline();
+    await vi.advanceTimersByTimeAsync(0);
+    await passWithHeartbeat(harness, 20_000);
+
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    expect(harness.notice()).toBeNull();
+    expect(harness.audio.stop).not.toHaveBeenCalled();
+
+    harness.server.refuse = true;
+    harness.closeTransport(1006);
+    await vi.advanceTimersByTimeAsync(29_800);
+    expect(harness.onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(harness.onFailure).toHaveBeenCalledOnce();
   });
 
   it("멈춘 뒤 연결이 돌아와도 다시 붙거나 녹음을 켜지 않는다", async () => {

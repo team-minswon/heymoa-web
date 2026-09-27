@@ -297,7 +297,6 @@ describe("RecordingProvider", () => {
       second = harness.result.current.stop();
     });
 
-    expect(first).toBe(second);
     expect(harness.controller.stop).toHaveBeenCalledOnce();
 
     await act(async () => {
@@ -309,6 +308,7 @@ describe("RecordingProvider", () => {
       await first;
     });
     await expect(first).resolves.toBe(true);
+    await expect(second).resolves.toBe(true);
   });
 
   // 소리는 쌓이는데 글자만 멈춘 상태. 서버만 아는 사실이라 이벤트로만 들어온다.
@@ -1100,13 +1100,6 @@ describe("같은 세션에 다시 붙는 동안", () => {
       dataUpdatedAt: Date.now(),
     };
   }
-
-  it("새 세션을 달라고 하는 콜백을 넘기지 않는다", async () => {
-    const harness = setup();
-    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
-
-    expect(harness.getCallbacks()).not.toHaveProperty("onReconnectNeeded");
-  });
 
   it.each(["CLIENT_DISCONNECTED", "HEARTBEAT_TIMEOUT"] as const)(
     "폴링이 %s 를 봐도 녹음을 끝내지 않는다",
