@@ -391,3 +391,22 @@ describe("단계 사이의 「생각하는 중」", () => {
     expect(screen.queryByText("생각하는 중")).toBeNull();
   });
 });
+
+describe("★ N3 끝난 턴의 도구 줄", () => {
+  it("「중단됨」·「확인 필요」 줄은 돌지 않는다", () => {
+    const { container } = render(
+      <ChainOfThought
+        blocks={[
+          { ...tool("c1"), status: "stopped" },
+          { ...tool("c2"), status: "unknown" },
+        ]}
+        live={false}
+      />
+    );
+    open();
+    expect(screen.getByText("중단됨")).toBeTruthy();
+    expect(screen.getByText("확인 필요")).toBeTruthy();
+    expect(container.querySelector(".animate-spin")).toBeNull();
+    expect(screen.queryByText("실행하지 못했습니다")).toBeNull();
+  });
+});

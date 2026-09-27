@@ -45,8 +45,11 @@ export type Block =
        * 뒤따르는 `tool_approval_request`에는 없고, 같은 `toolCallId`로 이 블록을 찾는다.
        */
       args: ToolArgs;
-      /** 실행 중에는 null. tool_call_result가 채운다. */
-      status: "success" | "error" | null;
+      /**
+       * 실행 중에는 null. tool_call_result가 채운다. `stopped`·`unknown` 은 화면만의 값이다 —
+       * 결과 없이 끝난 턴을 `settleEndedTurn` 이 닫는다.
+       */
+      status: "success" | "error" | "stopped" | "unknown" | null;
       url: string | null;
     }
   | {
@@ -133,6 +136,64 @@ export function settleTool(
     status: patch.status,
     url: patch.url,
   });
+}
+
+/**
+ * 끝난 턴의 결과 없는 도구를 닫는다(N3). 승인받은 쓰기는 나갔는지 모르므로 `unknown`, 나머지는
+ * `stopped`. 짝 도구 블록 없이 승인만 있으면(히스토리·`tool_call_start` 없는 재개) 그 뒤에
+ * `unknown` 줄을 세운다 — 실시간과 히스토리가 이 함수 하나를 지난다.
+ */
+export function settleEndedTurn(
+  blocks: Block[],
+  /** 끝을 server 가 말하지 않았다(재연결 포기). 멈췄는지도 모르므로 전부 `unknown` 이다. */
+  outcomeKnown = true
+): Block[] {
+  const tools = new Set<string>();
+  const approved = new Set<string>();
+  for (const block of blocks) {
+    if (block.kind === "tool") tools.add(block.toolCallId);
+    if (block.kind === "approval" && block.decision === "APPROVED")
+      approved.add(block.toolCallId);
+  }
+  let changed = false;
+  const settled = blocks.flatMap((block): Block[] => {
+    if (block.kind === "tool" && block.status === null) {
+      changed = true;
+      return [
+        {
+          ...block,
+          status:
+            outcomeKnown && !approved.has(block.toolCallId)
+              ? "stopped"
+              : "unknown",
+        },
+      ];
+    }
+    if (
+      block.kind === "approval" &&
+      block.decision === "APPROVED" &&
+      !tools.has(block.toolCallId)
+    ) {
+      changed = true;
+      return [
+        block,
+        {
+          kind: "tool",
+          toolCallId: block.toolCallId,
+          // 이름은 바로 위 승인 줄이 말한다. 히스토리 승인은 요약이 없어 도구 id 로 흘러내리면
+          // 같은 일을 두 이름으로 부르게 된다.
+          tool: "",
+          summary: block.summary,
+          target: null,
+          args: null,
+          status: "unknown",
+          url: null,
+        },
+      ];
+    }
+    return [block];
+  });
+  return changed ? settled : blocks;
 }
 
 /**

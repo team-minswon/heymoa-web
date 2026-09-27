@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -117,6 +118,10 @@ const state = vi.hoisted(() => ({
   /** 이어받기 스트림을 열어 둔다 — 중지 버튼이 떠 있어야 누를 수 있다. */
   holdResume: false,
   approvalStream: false,
+  /** 승인 202 뒤 재접속이 확정 프레임 없이 `turn_failed` 로 끝난다. */
+  approvalThenFails: false,
+  /** 승인 요청 뒤 첫 스트림이 안 닫힌 채 있다가, 풀리면 `turn_failed` 로 끝난다. */
+  holdAfterApprovalRequest: null as (() => void) | null | false,
   approvalError: null as unknown,
   releaseStream: null as (() => void) | null,
   /**
@@ -315,6 +320,10 @@ vi.mock("@/lib/api/sse", () => ({
         state.releaseStream = resolve;
       });
       seq = 3;
+      if (state.approvalThenFails) {
+        yield framed("turn_failed", { code: "UPSTREAM_ERROR", retryable: true });
+        return;
+      }
       yield framed("tool_approval_resolved", {
         approvalId: "0K9GVJT2C4Q7F",
         decision: "APPROVED",
@@ -335,6 +344,24 @@ vi.mock("@/lib/api/sse", () => ({
     }
     yield framed("message_start", { chatId: CHAT_ID, messageId: "m1" });
     yield framed("token", { delta: "정리했" });
+    if (state.approvalStream && state.holdAfterApprovalRequest !== false) {
+      yield framed("tool_call_start", {
+        toolCallId: "call_02",
+        tool: "linear.create_issue",
+        summary: "Linear 이슈 생성",
+      });
+      yield framed("tool_approval_request", {
+        approvalId: "0K9GVJT2C4Q7F",
+        toolCallId: "call_02",
+        tool: "linear.create_issue",
+        summary: "Linear 이슈 생성",
+      });
+      await new Promise<void>((resolve) => {
+        state.holdAfterApprovalRequest = resolve;
+      });
+      yield framed("turn_failed", { code: "UPSTREAM_ERROR", retryable: true });
+      return;
+    }
     if (state.approvalStream) {
       // `id:` 가 `APPROVAL_ENTRY_ID` 다 — 승인 뒤 재접속이 이 값을 `after` 에 넣는다.
       yield framed("tool_approval_request", {
@@ -500,6 +527,8 @@ describe("PersonalChatProvider", () => {
     state.resumeFailure = null;
     state.holdResume = false;
     state.approvalStream = false;
+    state.approvalThenFails = false;
+    state.holdAfterApprovalRequest = false;
     state.approvalError = null;
     state.releaseStream = null;
     state.onRefetch = null;
@@ -1306,6 +1335,61 @@ describe("PersonalChatProvider", () => {
     expect(screen.getByText("이슈 만들어줘")).toBe(question);
     // 확정됐으니 카드도 사라진다.
     expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
+  });
+
+  // ★ N3 — 202 는 server 가 결정을 굳힌 뒤다. 그 뒤 끝났으면 쓰기가 나갔을 수 있다
+  it("★ 승인 202 뒤 확정 프레임 없이 턴이 실패하면 카드와 줄이 「확인 필요」다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.approvalStream = true;
+    state.approvalThenFails = true;
+    renderChat();
+    openPanel();
+    await sendMessage("이슈 만들어줘");
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "승인" })).toBeTruthy()
+    );
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
+    await waitFor(() => expect(state.releaseStream).not.toBeNull());
+    state.releaseStream?.();
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "승인" })).toBeNull()
+    );
+    expect(screen.getByText(/^확인 필요 — /)).toBeTruthy();
+    expect(screen.queryByText(/중단됨/)).toBeNull();
+    const steps = document.querySelector('[data-cot="group"] button');
+    if (steps) fireEvent.click(steps);
+    expect(
+      [...document.querySelectorAll('[data-step="tool"]')].map((row) => row.textContent)
+    ).toEqual(["Linear 이슈 생성확인 필요"]);
+  });
+
+  it("★ 승인 202 가 앞 스트림이 닫히기 전에 와도 결정이 남는다 — 쓰기 줄이 「중단됨」이 안 된다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.approvalStream = true;
+    state.holdAfterApprovalRequest = null;
+    renderChat();
+    openPanel();
+    await sendMessage("이슈 만들어줘");
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "승인" })).toBeTruthy()
+    );
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
+    await waitFor(() => expect(state.approveMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(state.holdAfterApprovalRequest).toBeTypeOf("function"));
+    await act(async () => (state.holdAfterApprovalRequest as () => void)());
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "승인" })).toBeNull()
+    );
+    const steps = document.querySelector('[data-cot="group"] button');
+    if (steps) fireEvent.click(steps);
+    const rows = [...document.querySelectorAll('[data-step="tool"]')].map(
+      (row) => row.textContent
+    );
+    expect(rows).toEqual(["Linear 이슈 생성확인 필요"]);
   });
 
   it("승인이 재시도 가능한 오류로 실패하면 잠금을 푼다", async () => {

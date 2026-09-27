@@ -37,7 +37,11 @@ import type { AgentChatMessagesResponseData } from "@/lib/api/generated/models";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { isAuthError } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
-import { answerText, type ApprovalDecision } from "@/lib/chat/blocks";
+import {
+  answerText,
+  type ApprovalDecision,
+  resolveApproval as recordDecision,
+} from "@/lib/chat/blocks";
 import { runningLabel } from "@/lib/chat/chat-list";
 import { dropScopeMarkers } from "@/lib/chat/scope-marker";
 import { useScopeCatalog } from "@/lib/chat/use-scope-catalog";
@@ -988,11 +992,21 @@ function PersonalChatPanel({
             ),
           };
         }
-        const final = await stream.open(sessionId, turnId, {
+        // 202 는 server 가 결정을 굳힌 뒤다. 적어 둬야 재접속이 끊겨 끝나도 승인받은 쓰기가 「중단됨」이
+        // 아니라 「확인 필요」로 닫힌다(`settleEndedTurn`). `open` 은 앞 스트림이 아직 안 닫혔으면
+        // 시드를 버리므로 `seed` 로 먼저 적는다.
+        const decided = {
           ...stream.state,
+          blocks: recordDecision(stream.state.blocks, approvalId, decision),
+        };
+        stream.seed(decided);
+        const final = await stream.open(sessionId, turnId, {
+          ...decided,
           phase: "streaming",
         });
-        if (final?.phase !== "done") return final?.error ?? null;
+        // 202 뒤다 — 승인 자체는 받아졌다. 스트림의 끝은 스트림이 그린다. 여기서 그 오류를 돌려주면
+        // 훅이 「승인 실패」로 읽어 보낸 기록을 지우고, 끝난 카드가 「중단됨」으로 굳는다.
+        if (final?.phase !== "done") return null;
         if (!(await reconcile(sessionId))) return null;
         // 이 탭의 질문이면 서버 행으로 교체하지 않고 완료된 말풍선을 유지한다.
         // 다른 탭에서 시작한 턴을 이어받았다면 로컬 질문이 없으므로 캐시로 넘긴다.
@@ -1690,6 +1704,7 @@ function PersonalChatPanel({
                   onApprove={approval.approve}
                   approvalCard={approval.card}
                   onOpenNote={openNote}
+                  activeTurnId={activeTurn?.turnId ?? null}
                   emptyState={
                     <div className="space-y-3">
                       <p className="text-sm text-[var(--el-body)]">

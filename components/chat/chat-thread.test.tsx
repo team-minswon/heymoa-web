@@ -257,8 +257,12 @@ describe("ChatThread", () => {
         }),
       ],
     });
+    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
     expect(container.querySelector('[data-step="approval"]')).toBeTruthy();
-    expect(container.querySelector('[data-step="tool"]')).toBeNull();
+    // 결과 행이 없는 끝난 턴이라 「확인 필요」 줄이 하나 붙는다(N3). 이름은 승인 줄이 말한다.
+    expect(container.querySelector('[data-step="tool"]')?.textContent).toBe(
+      "확인 필요"
+    );
     // ★ 카드는 사람 말(`summary`)로 물었다. 계약이 그 말을 저장하지 않는다고 여기서
     // 도구 id를 대면, 같은 한 번의 일을 두 화면이 다른 이름으로 부르게 된다.
     expect(screen.queryByText(/linear\.create_issue/)).toBeNull();
@@ -1218,5 +1222,97 @@ describe("message_end 뒤의 근거 줄", () => {
       }),
     });
     expect(screen.queryByText(/참고한 회의록/)).toBeNull();
+  });
+});
+
+/**
+ * ★★ N3 — 끝난 턴에 도는 줄이 없고, 승인받은 쓰기는 「확인 필요」로 선다. 실시간과
+ * 히스토리가 같은 규칙을 지난다.
+ */
+describe("★★ N3 끝난 턴의 도구 줄", () => {
+  function frame(event: string, payload: unknown) {
+    return { event, data: JSON.stringify(payload) };
+  }
+  function openSteps() {
+    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
+  }
+
+  it("실시간 — 결과 없이 실패하면 조회는 「중단됨」, 승인받은 쓰기는 「확인 필요」다", () => {
+    const failed = [
+      frame("message_start", { messageId: "01K0000000009" }),
+      frame("tool_call_start", { toolCallId: "c1", tool: "transcripts.search", summary: "전사 검색" }),
+      frame("tool_call_start", { toolCallId: "c2", tool: "linear.create_issue", summary: "이슈 생성" }),
+      frame("tool_approval_request", { approvalId: "a2", toolCallId: "c2", tool: "linear.create_issue", summary: "이슈 생성" }),
+      frame("tool_approval_resolved", { approvalId: "a2", decision: "APPROVED" }),
+      frame("turn_failed", { code: "TURN_TIMEOUT", retryable: true }),
+    ].reduce((state, event) => reduceStreamEvent(state, event), initialStreamState);
+
+    const { container } = renderThread({ stream: failed });
+    openSteps();
+
+    expect(screen.getByText("중단됨")).toBeTruthy();
+    expect(screen.getByText("확인 필요")).toBeTruthy();
+    expect(container.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("실시간 — 재연결을 포기한 것은 턴이 끝난 것이 아니다 — 「중단됨」이 아니라 「확인 필요」다", () => {
+    const flowing = [
+      frame("message_start", { messageId: "01K0000000009" }),
+      frame("tool_call_start", { toolCallId: "c1", tool: "transcripts.search", summary: "전사 검색" }),
+    ].reduce((state, event) => reduceStreamEvent(state, event), initialStreamState);
+
+    const { container } = renderThread({ stream: endStream(flowing, "gaveUp") });
+    expect(screen.queryByText("중단됨")).toBeNull();
+    expect(screen.getByText("확인 필요")).toBeTruthy();
+    expect(container.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("실시간 — 흐르는 중에는 결과 없는 도구를 닫지 않는다", () => {
+    const running = [
+      frame("message_start", { messageId: "01K0000000009" }),
+      frame("tool_call_start", { toolCallId: "c1", tool: "transcripts.search", summary: "전사 검색" }),
+    ].reduce((state, event) => reduceStreamEvent(state, event), initialStreamState);
+
+    renderThread({ stream: running });
+    expect(screen.queryByText("중단됨")).toBeNull();
+  });
+
+  const APPROVED_ONLY = [
+    message({ role: "USER", content: "이슈 만들어줘", turnId: "01KTURN000001" }),
+    message({
+      role: "TOOL",
+      content: "테스트 유저님이 승인",
+      turnId: "01KTURN000001",
+      toolEvent: { tool: "linear.create_issue", decision: "APPROVED", status: null, url: null },
+    }),
+  ];
+
+  it("히스토리 — 끝난 턴의 결과 없는 승인 쓰기는 「확인 필요」다", () => {
+    renderThread({ messages: APPROVED_ONLY, activeTurnId: null });
+    openSteps();
+    expect(screen.getByText("확인 필요")).toBeTruthy();
+  });
+
+  it("히스토리 — 도는 턴의 행은 닫지 않는다", () => {
+    renderThread({ messages: APPROVED_ONLY, activeTurnId: "01KTURN000001" });
+    expect(screen.queryByText("확인 필요")).toBeNull();
+  });
+
+  it("히스토리 — 승인 뒤 결과가 있으면 그 결과가 짝이다", () => {
+    renderThread({
+      messages: [
+        ...APPROVED_ONLY,
+        message({
+          role: "TOOL",
+          content: "APP-12 생성됨",
+          turnId: "01KTURN000001",
+          toolEvent: { tool: "linear.create_issue", decision: null, status: "success", url: null },
+        }),
+      ],
+      activeTurnId: null,
+    });
+    openSteps();
+    expect(screen.queryByText("확인 필요")).toBeNull();
+    expect(screen.getByText("APP-12 생성됨")).toBeTruthy();
   });
 });

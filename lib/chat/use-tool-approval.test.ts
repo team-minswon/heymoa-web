@@ -171,8 +171,28 @@ describe("useToolApproval", () => {
     const state = result.current.card?.state;
     expect(state).toMatchObject({ kind: "invalidated" });
     expect(state && "reason" in state ? state.reason : "").toBe(
-      "승인을 처리하지 못한 채 대화가 끝났습니다."
+      "중단됨 — 승인을 처리하지 못한 채 대화가 끝났습니다."
     );
+  });
+
+  // ★ N3 — server 는 202 전에 결정을 굳히고 재개를 넘긴다. 그 뒤 끝났으면 쓰기가 나갔을 수 있다
+  it("★ 승인을 보낸 뒤 비정상 종료로 끝나면 「중단됨」이 아니라 「확인 필요」다", async () => {
+    const { result, rerender } = render(pending("a1"), "awaiting_approval");
+    await act(async () => result.current.approve("APPROVED"));
+    rerender({ p: null, ph: "failed" });
+    const state = result.current.card?.state;
+    expect(state).toMatchObject({ kind: "invalidated" });
+    const reason = state && "reason" in state ? state.reason : "";
+    expect(reason).toContain("확인 필요");
+    expect(reason).not.toContain("중단됨");
+  });
+
+  it("거절을 보낸 뒤 끝나면 쓰기가 나가지 않았으므로 「중단됨」이다", async () => {
+    const { result, rerender } = render(pending("a1"), "awaiting_approval");
+    await act(async () => result.current.approve("REJECTED"));
+    rerender({ p: null, ph: "cancelled" });
+    const state = result.current.card?.state;
+    expect(state && "reason" in state ? state.reason : "").toContain("중단됨");
   });
 
   it("답이 정상적으로 끝난 것은 비정상 종료가 아니다", () => {

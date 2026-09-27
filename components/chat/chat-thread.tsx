@@ -23,7 +23,7 @@ import { TimeRule } from "@/components/chat/time-rule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AgentChatMessagesResponseDataMessagesItem } from "@/lib/api/generated/models";
-import { groupBlocks } from "@/lib/chat/blocks";
+import { groupBlocks, settleEndedTurn } from "@/lib/chat/blocks";
 import { relativeUpdatedAt } from "@/lib/chat/chat-list";
 import { dividerLabel, threadDividers } from "@/lib/chat/time-divider";
 import { scopeChipClass } from "@/lib/chat/scope-chip";
@@ -86,6 +86,7 @@ export function ChatThread({
   approvalCard,
   emptyState,
   onOpenNote,
+  activeTurnId = null,
 }: {
   messages: ThreadMessage[];
   stream: ChatStreamState;
@@ -128,6 +129,8 @@ export function ChatThread({
   /** 범위 밖 안내의 제안 버튼. 같은 질문을 새 범위로 다시 보낸다. */
   /** 도구 칩·근거 칩을 눌러 그 회의록으로 간다. */
   onOpenNote?: (noteId: string) => void;
+  /** 지금 도는 턴(`activeTurn.turnId`). 이 턴의 히스토리 행만 끝난 턴으로 닫지 않는다. */
+  activeTurnId?: string | null;
 }) {
   /**
    * ★ **구분선은 순수 함수가 정하고 `useMemo` 가 붙든다.** 스트리밍 중에는 토큰마다 이
@@ -138,7 +141,10 @@ export function ChatThread({
    * 묶음(`groupHistory`)을 먼저 만들고 **묶음의 첫 시각들**로 구분선을 잰다. 메시지 배열로
    * 재면 화면에 안 그려지는 행(형태가 계약 밖인 `TOOL`)이 구분선을 삼킬 수 있다.
    */
-  const rows = useMemo(() => groupHistory(messages), [messages]);
+  const rows = useMemo(
+    () => groupHistory(messages, activeTurnId),
+    [activeTurnId, messages]
+  );
   const dividers = useMemo(
     () =>
       threadDividers([
@@ -412,7 +418,7 @@ function MessageActions({ content, at }: { content: string; at: string }) {
  * 도구 뼈대만 남았다.
  */
 type HistoryRow = { at: string } & (
-  | { kind: "steps"; blocks: StepBlock[] }
+  | { kind: "steps"; turnId: string | null; blocks: StepBlock[] }
   | { kind: "message"; message: ThreadMessage }
 );
 
@@ -491,15 +497,28 @@ function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
  * ★ **`TOOL`·`THINKING`만 여기로 온다.** 새 role 이 생겼는데 이 갈래에 안 적히면
  * `HistoryMessage` 가 `null` 을 돌려주고 그 행이 **오류 하나 없이 화면에서 사라진다.**
  */
-function groupHistory(messages: ThreadMessage[]): HistoryRow[] {
+function groupHistory(
+  messages: ThreadMessage[],
+  activeTurnId: string | null
+): HistoryRow[] {
   const rows: HistoryRow[] = [];
+  // 히스토리 행에는 `toolCallId` 가 없다. server 는 승인 뒤 재개에서 그 도구를 먼저 실행해 결과를
+  // 쓰므로, APPROVED 뒤 첫 결과 행이 그 승인의 짝이다.
+  let approvedCallId: string | null = null;
   messages.forEach((message, index) => {
     if (message.role === "TOOL" || message.role === "THINKING") {
-      const step =
+      let step: StepBlock | null =
         message.role === "THINKING"
           ? ({ kind: "thinking", text: message.content } as const)
           : toStepBlock(message, index);
       if (!step) return;
+      if (step.kind === "approval") {
+        approvedCallId =
+          step.decision === "APPROVED" ? step.toolCallId : null;
+      } else if (step.kind === "tool" && approvedCallId) {
+        step = { ...step, toolCallId: approvedCallId };
+        approvedCallId = null;
+      }
       const last = rows.at(-1);
       if (last?.kind === "steps") {
         /**
@@ -522,13 +541,23 @@ function groupHistory(messages: ThreadMessage[]): HistoryRow[] {
         }
         last.blocks.push(step);
       } else {
-        rows.push({ kind: "steps", at: message.createdAt, blocks: [step] });
+        rows.push({
+          kind: "steps",
+          at: message.createdAt,
+          turnId: message.turnId ?? null,
+          blocks: [step],
+        });
       }
       return;
     }
+    approvedCallId = null;
     rows.push({ kind: "message", at: message.createdAt, message });
   });
-  return rows;
+  return rows.map((row) =>
+    row.kind === "steps" && (!activeTurnId || row.turnId !== activeTurnId)
+      ? { ...row, blocks: settleEndedTurn(row.blocks) as StepBlock[] }
+      : row
+  );
 }
 
 /**
@@ -782,7 +811,18 @@ function StreamBlocks({
   stream: ChatStreamState;
   onOpenNote?: (noteId: string) => void;
 }) {
-  const groups = groupBlocks(stream.blocks);
+  const ended =
+    stream.phase === "done" ||
+    stream.phase === "failed" ||
+    stream.phase === "cancelled";
+  const groups = groupBlocks(
+    ended
+      ? settleEndedTurn(
+          stream.blocks,
+          stream.error?.code !== "STREAM_INTERRUPTED"
+        )
+      : stream.blocks
+  );
   if (groups.length === 0) return null;
 
   /**

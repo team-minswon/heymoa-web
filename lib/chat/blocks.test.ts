@@ -11,6 +11,7 @@ import {
   pushApproval,
   pushTool,
   resolveApproval,
+  settleEndedTurn,
   settleTool,
 } from "@/lib/chat/blocks";
 
@@ -219,5 +220,67 @@ describe("묶기", () => {
 
   it("빈 배열은 빈 묶음이다", () => {
     expect(groupBlocks([])).toEqual([]);
+  });
+});
+
+/**
+ * ★ N3 — 끝난 턴에 도는 표시도, 나갔을 수 있는 쓰기를 「안 함」으로 그리는 표시도 없다.
+ * 실시간 스트림과 히스토리가 이 함수 하나를 지난다.
+ */
+describe("끝난 턴 닫기", () => {
+  const approved = (
+    toolCallId: string,
+    summary: string | null = null
+  ): Extract<Block, { kind: "approval" }> => ({
+    kind: "approval",
+    approvalId: `a-${toolCallId}`,
+    toolCallId,
+    tool: "linear.create_issue",
+    summary,
+    decision: "APPROVED",
+  });
+
+  it("결과 없이 끝난 조회 도구는 「중단됨」이다", () => {
+    expect(settleEndedTurn(pushTool([], tool("c1")))).toMatchObject([
+      { kind: "tool", toolCallId: "c1", status: "stopped" },
+    ]);
+  });
+
+  it("승인받은 쓰기가 결과 없이 끝나면 「확인 필요」다 — 나갔는지 모른다", () => {
+    const blocks = [...pushTool([], tool("c2")), approved("c2")];
+    expect(settleEndedTurn(blocks)[0]).toMatchObject({ status: "unknown" });
+  });
+
+  it("짝 도구 블록 없는 승인(히스토리·재개)은 그 뒤에 「확인 필요」 줄이 선다", () => {
+    const settled = settleEndedTurn([approved("c3", "Linear 이슈 생성")]);
+    expect(settled).toMatchObject([
+      { kind: "approval", decision: "APPROVED" },
+      {
+        kind: "tool",
+        toolCallId: "c3",
+        summary: "Linear 이슈 생성",
+        status: "unknown",
+      },
+    ]);
+  });
+
+  it("거절한 쓰기와 결과가 온 도구는 그대로다", () => {
+    const blocks: Block[] = [
+      ...pushTool([], tool("c4")),
+      { ...approved("c4"), decision: "REJECTED" },
+      ...pushTool([], tool("c5", { status: "success" })),
+      approved("c5"),
+    ];
+    expect(settleEndedTurn(blocks).map((b) => b.kind === "tool" && b.status)).toEqual([
+      "stopped",
+      false,
+      "success",
+      false,
+    ]);
+  });
+
+  it("바꿀 것이 없으면 같은 배열이다", () => {
+    const blocks = pushTool([], tool("c6", { status: "error" }));
+    expect(settleEndedTurn(blocks)).toBe(blocks);
   });
 });

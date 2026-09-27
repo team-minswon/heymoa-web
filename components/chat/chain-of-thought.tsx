@@ -361,30 +361,42 @@ function StepRow({
         state={
           block.status === "error"
             ? "error"
-            : block.status
-              ? "complete"
-              : "active"
+            : block.status === "stopped" || block.status === "unknown"
+              ? "pending"
+              : block.status
+                ? "complete"
+                : "active"
         }
       />
       <div className="min-w-0 flex-1">
         {/* ★ **도는 줄은 글자 자신이 빛난다.** 왼쪽 점이 이미 도는데 그것만으로는 어느
             줄이 지금인지 눈에 안 걸린다 — Claude 가 도구 이름에 빛을 지나가게 하는 것과
             같은 자리다. 끝나면 빛이 멈추고 점이 체크로 바뀐다. */}
-        <p
-          className={cn(
-            "text-xs leading-relaxed",
-            block.status === null && live
-              ? "chat-shimmer"
-              : "text-[var(--el-muted)]"
-          )}
-        >
-          {block.summary ?? block.tool}
-        </p>
+        {block.summary || block.tool ? (
+          <p
+            className={cn(
+              "text-xs leading-relaxed",
+              block.status === null && live
+                ? "chat-shimmer"
+                : "text-[var(--el-muted)]"
+            )}
+          >
+            {block.summary ?? block.tool}
+          </p>
+        ) : null}
         <TargetChip target={block.target} onOpenNote={onOpenNote} />
         {/* **배지를 안 쓴다.** 성공이 「완료」 배지를 달면 기록에 늘 같은 값이 붙어
             아무것도 말하지 않는다. 성공은 왼쪽 체크가, 실패는 이 한 줄이 말한다. */}
         {block.status === "error" ? (
           <p className="text-xs text-[var(--el-error)]">실행하지 못했습니다</p>
+        ) : null}
+        {block.status === "stopped" ? (
+          <p className="text-xs text-[var(--el-muted)]">중단됨</p>
+        ) : null}
+        {block.status === "unknown" ? (
+          <p className="text-xs font-medium text-[var(--el-body-strong)]">
+            확인 필요
+          </p>
         ) : null}
         {block.url ? (
           <a

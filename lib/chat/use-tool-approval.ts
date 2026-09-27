@@ -42,7 +42,14 @@ const TERMINAL_REASON: Record<string, string> = {
 };
 
 /** 승인을 안 누른 채 대화가 끝난 자리. **만료가 아니다** — 「중지」가 유일한 탈출구다. */
-const ENDED_REASON = "승인을 처리하지 못한 채 대화가 끝났습니다.";
+const ENDED_REASON = "중단됨 — 승인을 처리하지 못한 채 대화가 끝났습니다.";
+
+/**
+ * 승인을 보낸 뒤 끝난 자리. server 는 202 전에 결정을 굳히고 재개를 넘기므로 쓰기가 나갔을 수
+ * 있다 — 「중단됨」으로 그리면 나간 쓰기를 안 됨으로 보이는 거짓 표시다(N3).
+ */
+const UNKNOWN_REASON =
+  "확인 필요 — 승인은 전달됐지만 실행 결과를 받지 못한 채 대화가 끝났습니다.";
 
 type Pending = {
   approvalId: string;
@@ -91,7 +98,11 @@ export function useToolApproval({
   approve: (decision: ApprovalDecision) => void;
   card: ApprovalCard | null;
 } {
-  const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<{
+    approvalId: string;
+    decision: ApprovalDecision;
+  } | null>(null);
+  const submittedId = submitted?.approvalId ?? null;
   const [invalidation, setInvalidation] = useState<Invalidation | null>(null);
   // 직전에 본 pending. 리듀서가 pending을 지우며 확정(정상)하거나 비정상 종료로 날리는데,
   // 후자면 pending이 이미 null이라 직전 값을 붙잡아 무효화 카드로 남긴다.
@@ -114,7 +125,11 @@ export function useToolApproval({
     setInvalidation({
       approvalId: trackedPending.approvalId,
       approval: trackedPending,
-      reason: ENDED_REASON,
+      reason:
+        submitted?.approvalId === trackedPending.approvalId &&
+        submitted.decision === "APPROVED"
+          ? UNKNOWN_REASON
+          : ENDED_REASON,
     });
   } else if (streamPhase === "streaming") {
     // 새 턴이 시작됐다 — 지난 무효화·추적을 접는다.
@@ -128,7 +143,7 @@ export function useToolApproval({
       if (!target) return;
       // 보낸 것일 뿐 — 확정은 재접속한 스트림이 한다. 그 사이 버튼을 잠그지 않으면 중복 결정이
       // 나가므로 **보내기 전에** 잠근다(카드가 `submitted`면 버튼이 disabled다).
-      setSubmittedId(target.approvalId);
+      setSubmitted({ approvalId: target.approvalId, decision });
       void resolve(target.approvalId, decision).then((error) => {
         if (!error) return;
         // 스트림이 먼저 확정했으면(늦게 온 오류) pending이 이미 지워졌다 — 죽은 카드를
@@ -144,7 +159,7 @@ export function useToolApproval({
           return;
         }
         // 재시도할 수 있는 실패다 — 잠금을 풀고, 인라인이 없으니 여기서만 토스트한다.
-        setSubmittedId(null);
+        setSubmitted(null);
         toast.error(error.message || "승인을 처리하지 못했습니다.");
       });
     },
