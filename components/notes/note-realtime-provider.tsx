@@ -70,11 +70,11 @@ type NoteRealtimeState = {
 type NoteRealtimeAction =
   | { type: "reset"; noteId: string }
   /**
-   * 재연결 catch-up 용. **전사만 비운다** — 원장까지 비우면 그 직후의 snapshot 재조회가
-   * 실패했을 때(캐시가 남아 `isLoadingError`도 거짓) 다시 채울 경로가 없어, 실제로 있던
-   * 원장이 「정리된 사건이 없습니다」로 영구히 사라진다. 원장은 snapshot 병합이 수렴시킨다.
+   * 재연결 catch-up 용. **partial 과 저장본이 이미 가진 확정 발화만 비운다** — 원장까지 비우면
+   * 그 직후의 snapshot 재조회가 실패했을 때(캐시가 남아 `isLoadingError`도 거짓) 다시 채울
+   * 경로가 없어, 실제로 있던 원장이 「정리된 사건이 없습니다」로 영구히 사라진다.
    */
-  | { type: "transcript-reset" }
+  | { type: "transcript-reset"; persistedThrough: number | null }
   | { type: "event"; event: NoteTopicEvent }
   | {
       type: "snapshot";
@@ -98,7 +98,17 @@ function reducer(
     return { ...initialState, noteId: action.noteId };
   }
   if (action.type === "transcript-reset") {
-    return { ...state, partial: null, finalSegments: [] };
+    // 저장본에 아직 없는 확정 발화는 남긴다. 비우면 다시 받는 동안 최근 발화가 사라졌다
+    // 나타난다. 저장본에 있는 것은 덜어 내 긴 회의에서도 쌓이지 않게 한다(APP-746).
+    const through = action.persistedThrough;
+    return {
+      ...state,
+      partial: null,
+      finalSegments:
+        through === null
+          ? state.finalSegments
+          : state.finalSegments.filter((segment) => segment.sequence > through),
+    };
   }
   if (action.type === "snapshot") {
     // REST가 정본이다. 임시로 접어 둔 것을 버리고 이걸로 다시 선다.
@@ -291,7 +301,10 @@ export function NoteRealtimeProvider({
     const catchUp = () => {
       clearTranscriptCatchUp();
       lastSequence = null;
-      dispatch({ type: "transcript-reset" });
+      dispatch({
+        type: "transcript-reset",
+        persistedThrough: persistedLastSequence(),
+      });
       invalidateLifecycle();
       invalidateTranscript();
       invalidateContext();
@@ -352,7 +365,11 @@ export function NoteRealtimeProvider({
             const seen = lastSequence ?? persistedLastSequence();
             const skipped = seen !== null && event.sequence > seen + 1;
             lastSequence = Math.max(seen ?? 0, event.sequence);
-            if (skipped) scheduleTranscriptCatchUp();
+            // 조회가 실패해 있으면 예전처럼 다음 final 이 다시 받을 계기다.
+            const failed =
+              queryClient.getQueryState(getGetNoteTranscriptQueryKey(noteId))
+                ?.status === "error";
+            if (skipped || failed) scheduleTranscriptCatchUp();
             break;
           }
           /**

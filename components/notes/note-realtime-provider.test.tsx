@@ -779,6 +779,94 @@ describe("NoteRealtimeProvider", () => {
     );
   });
 
+  // REST 가 최대 60초 묵어 있으니, 이벤트 발화를 비우면 다시 받는 동안 최근 발화가 사라졌다
+  // 나타난다(APP-746). 화면은 같은 발화를 저장본으로 그리므로 남겨 둬도 겹치지 않는다.
+  it("catch-up 은 이벤트로 받은 확정 발화를 비우지 않는다", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    emit({
+      type: "transcript.final",
+      transcriptionSessionId: SESSION_ID,
+      segmentId: SEGMENT_ID,
+      utteranceId: UTTERANCE_ID,
+      sequence: 1,
+      text: "남아야 할 문장",
+      startedAtMs: 0,
+      endedAtMs: 900,
+    });
+    await act(() => topicClients[0].options.onCatchUp());
+
+    expect(
+      JSON.parse(screen.getByTestId("finals").textContent ?? "[]")
+    ).toEqual([expect.objectContaining({ segmentId: SEGMENT_ID })]);
+  });
+
+  // 비우지 않으면 긴 회의에서 끝없이 쌓인다. 저장본이 이미 가진 발화만 덜어 낸다.
+  it("catch-up 은 저장본이 이미 가진 확정 발화만 덜어 낸다", async () => {
+    const { queryClient } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    for (const sequence of [5, 6]) {
+      emit({
+        type: "transcript.final",
+        transcriptionSessionId: SESSION_ID,
+        segmentId: `01K000000020${sequence}`,
+        utteranceId: `01K000000010${sequence}`,
+        sequence,
+        text: `문장 ${sequence}`,
+        startedAtMs: sequence * 1_000,
+        endedAtMs: sequence * 1_000 + 900,
+      });
+    }
+    queryClient.setQueryData(getGetNoteTranscriptQueryKey(NOTE_ID), {
+      status: 200,
+      headers: new Headers(),
+      data: {
+        success: true,
+        error: null,
+        data: {
+          segments: [
+            { segmentId: "01K0000000205", sequence: 5, text: "문장 5" },
+          ],
+        },
+      },
+    } as never);
+
+    await act(() => topicClients[0].options.onCatchUp());
+
+    expect(
+      JSON.parse(screen.getByTestId("finals").textContent ?? "[]")
+    ).toEqual([expect.objectContaining({ sequence: 6 })]);
+  });
+
+  it("전사 조회가 실패해 있으면 다음 final 에 다시 받는다", async () => {
+    const { invalidateQueries, queryClient } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    const key = getGetNoteTranscriptQueryKey(NOTE_ID);
+    await queryClient
+      .fetchQuery({
+        queryKey: key,
+        queryFn: () => Promise.reject(new Error("503")),
+        retry: false,
+      })
+      .catch(() => undefined);
+    vi.useFakeTimers();
+    invalidateQueries.mockClear();
+
+    emit({
+      type: "transcript.final",
+      transcriptionSessionId: SESSION_ID,
+      segmentId: SEGMENT_ID,
+      utteranceId: UTTERANCE_ID,
+      sequence: 1,
+      text: "회복 계기",
+      startedAtMs: 0,
+      endedAtMs: 900,
+    });
+    act(() => vi.advanceTimersByTime(500));
+    expectInvalidated(invalidateQueries, key);
+  });
+
   it("재연결 catch-up은 원장을 비우지 않고 조회만 다시 받는다", async () => {
     // 비우면 그 직후의 snapshot 재조회가 실패했을 때(캐시가 남아 isLoadingError도 거짓)
     // 다시 채울 경로가 없어 「정리된 사건이 없습니다」가 영구히 남는다. 원장은 낡은 것을

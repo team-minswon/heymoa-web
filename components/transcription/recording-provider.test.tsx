@@ -311,6 +311,33 @@ describe("RecordingProvider", () => {
     await expect(second).resolves.toBe(true);
   });
 
+  // final 은 발화를 다 싣고 화면이 곧바로 붙인다. 받을 때마다 전사 전체를 다시 받으면
+  // 녹음 중 DB 조회가 발화 수만큼 는다(APP-746). 빠진 번호는 노트 토픽 쪽이 메운다.
+  it("final 을 받아도 전사 전체를 다시 받지 않는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    harness.invalidate.mockClear();
+
+    act(() => {
+      for (const sequence of [1, 2]) {
+        harness.getCallbacks().onEvent({
+          type: "final",
+          segmentId: `01K00000003${sequence}0`,
+          utteranceId: `01K00000004${sequence}0`,
+          sequence,
+          text: `문장 ${sequence}`,
+          startedAtMs: sequence * 1_000,
+          endedAtMs: sequence * 1_000 + 900,
+          speakerLabel: null,
+        } as never);
+      }
+    });
+
+    expect(harness.invalidate).not.toHaveBeenCalledWith({
+      queryKey: getGetNoteTranscriptQueryKey(session.noteId),
+    });
+  });
+
   // 소리는 쌓이는데 글자만 멈춘 상태. 서버만 아는 사실이라 이벤트로만 들어온다.
   // 운영 503 은 1초에 풀렸다 — 5초 이어질 때만 알린다(D-23)
   it("업체 멈춤이 5초 이어질 때만 알리고, 회복하면 곧바로 걷는다", async () => {

@@ -382,6 +382,32 @@ describe("TranscriptView", () => {
     });
   });
 
+  // 따라가기는 합친 목록의 마지막 행을 본다. 저장본이 있어도 이벤트로 온 새 발화가 마지막이어야 한다.
+  it("저장본 뒤에 이벤트로 온 새 발화도 따라간다", () => {
+    const flushAnimationFrames = deferAnimationFrames();
+    useRecording.mockReturnValue(idleState());
+    useGetNoteTranscript
+      .mockReturnValueOnce(transcriptResult([POLLED_SEGMENT]))
+      .mockReturnValueOnce(transcriptResult([POLLED_SEGMENT]));
+
+    const { container, rerenderTranscript } = renderTranscript("active");
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    setScrollMetrics(viewport!, { scrollTop: 450 });
+    flushAnimationFrames();
+    fireEvent.scroll(viewport!);
+    scrollTo.mockClear();
+    noteRealtime.transcript.finalSegments = [
+      { type: "transcript.final", utteranceId: "01K0000000401", ...NEW_POLLED_SEGMENT },
+    ];
+
+    rerenderTranscript();
+    flushAnimationFrames();
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1_000, behavior: "auto" });
+  });
+
   it("does not follow persisted segments added by polling after the active viewer scrolls up", () => {
     const flushAnimationFrames = deferAnimationFrames();
     useRecording.mockReturnValue(idleState());
@@ -551,6 +577,27 @@ describe("TranscriptView", () => {
     expect(document.querySelector('[data-state="partial"]')).toBeNull();
     // partial 행 자체가 사라지고 확정 텍스트만 자기 행에 남는다
     expect(screen.getByText(/확정됐습니다\./)).toBeInTheDocument();
+  });
+
+  // 이벤트로 받은 발화는 저장본이 오기 전까지만 빈자리를 메운다. 같은 발화면 저장본이 정본이다 —
+  // 그래야 따라잡기가 이벤트 발화를 비우지 않아도 되고, 뒤에 붙는 화자 같은 값이 가려지지 않는다.
+  it("같은 발화는 이벤트 사본보다 저장본을 그린다", () => {
+    noteRealtime.transcript.finalSegments = [
+      {
+        type: "transcript.final",
+        segmentId: "01K0000000012",
+        utteranceId: "01K0000000301",
+        sequence: 1,
+        text: "이벤트로 온 옛 문장",
+        startedAtMs: 0,
+        endedAtMs: 1_200,
+      },
+    ];
+
+    renderTranscript();
+
+    expect(screen.getByText(/첫 번째 결정사항입니다\./)).toBeInTheDocument();
+    expect(screen.queryByText(/이벤트로 온 옛 문장/)).toBeNull();
   });
 
   it("내가 녹음자면 토픽이 아니라 내 소켓의 발화를 그린다", () => {

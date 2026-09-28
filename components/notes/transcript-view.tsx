@@ -77,15 +77,14 @@ export function TranscriptView({
   const segments = useMemo(() => {
     const rows = new Map<string, TranscriptPresentationSegment>();
 
+    // 저장본이 정본이다. 이벤트 사본은 저장본이 아직 없는 발화만 뒤에 메운다(APP-746).
+    // 뒤에 붙여야 follow 스크롤이 보는 마지막 줄이 새 발화가 된다.
     persisted.forEach((segment) => rows.set(segment.segmentId, segment));
-    noteRealtime.transcript.finalSegments.forEach((segment) => {
-      rows.set(segment.segmentId, segment);
-    });
-    if (liveForNote) {
-      liveTranscript.finalSegments.forEach((segment) => {
-        rows.set(segment.segmentId, segment);
-      });
-    }
+    const addMissing = (segment: TranscriptPresentationSegment) => {
+      if (!rows.has(segment.segmentId)) rows.set(segment.segmentId, segment);
+    };
+    if (liveForNote) liveTranscript.finalSegments.forEach(addMissing);
+    noteRealtime.transcript.finalSegments.forEach(addMissing);
 
     // 묶지 않는다 — 세그먼트 하나가 행 하나다(`presentation.ts` 주석 참조).
     // 순서는 `interleaveTranscript`가 회의 축으로 세운다.

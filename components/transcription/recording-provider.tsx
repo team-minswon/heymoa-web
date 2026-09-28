@@ -593,10 +593,6 @@ export function RecordingProvider({
       }
       dispatchTranscript(event);
 
-      if (event.type === "final" && sessionRef.current) {
-        invalidateTranscriptQueries(sessionRef.current.noteId);
-      }
-
       if (event.type === "capture_state") {
         // LIVE 는 새 업체 연결이 처음 답할 때 온다. 무응답 동안은 DEGRADED 가 이어진다
         window.clearTimeout(degradedTimerRef.current);
@@ -659,7 +655,6 @@ export function RecordingProvider({
       clearLevel,
       failRecording,
       invalidateLifecycleQueries,
-      invalidateTranscriptQueries,
       setCurrentSession,
     ]
   );
