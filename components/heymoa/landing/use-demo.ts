@@ -5,6 +5,7 @@ import {
   SquareCheck,
   type LucideIcon,
 } from "lucide-react";
+import { prefersReducedMotion } from "@/lib/utils";
 
 /**
  * 제품 화면이 **혼자 한 바퀴 돈다**. 회의가 도는 중에 말이 전사로 들어오고, 사건 흐름에
@@ -400,11 +401,6 @@ export function useInView() {
   return [visible, seen, attach] as const;
 }
 
-const reduced = () =>
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 /**
  * `seen`은 제품 샷이 화면에 들어왔는가다. 들어오기 전에는 대본이 안 돈다 — 히어로를 읽는
  * 동안 혼자 끝나 있으면 아무도 못 본다.
@@ -430,7 +426,7 @@ export function useDemo({
    * 모션을 줄였으면 대본을 안 돌리고 끝 상태로 둔다. **`seen`이 참일 때만 본다** — 그
    * 렌더는 하이드레이션 뒤에만 일어나므로 서버와 첫 클라이언트 렌더가 어긋나지 않는다.
    */
-  const skip = seen && reduced();
+  const skip = seen && prefersReducedMotion();
   const cursor = skip ? LAST : raw;
   const done = cursor >= LAST;
   /**
@@ -566,7 +562,7 @@ export function useDemo({
       pinRail();
       if (manualTyping !== null) return;
       setExtra((list) => [...list, item]);
-      setManualTyping(reduced() ? null : THINKING);
+      setManualTyping(prefersReducedMotion() ? null : THINKING);
     },
     [manualTyping, pinRail]
   );

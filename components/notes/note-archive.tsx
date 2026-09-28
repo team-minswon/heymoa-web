@@ -40,8 +40,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { transcriptToMarkdown, type NoteMeta } from "@/lib/notes/copy-markdown";
+import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import {
-  isNoteListQueryKey,
   isSpeakerAssigneeQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
@@ -418,7 +418,7 @@ export function NoteArchive({
       Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) }),
         queryClient.invalidateQueries({ predicate: (query) => isWorkspaceGuestsQueryKey(query.queryKey) }),
-        queryClient.invalidateQueries({ predicate: (query) => isNoteListQueryKey(query.queryKey) }),
+        invalidateNoteLists(queryClient),
       ]),
     [queryClient, noteId]
   );

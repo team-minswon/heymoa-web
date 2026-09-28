@@ -390,9 +390,9 @@ describe("BrowserRealtimeSession", () => {
 
     await expect(harness.controller.stop()).resolves.toBeUndefined();
 
-    expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 종료 요청을 서버에 보내지 못했습니다."
-    );
+    expect(harness.onFailure).toHaveBeenCalledWith("stop_send_failed", {
+      droppedMs: 0,
+    });
   });
 
   // connected 가 끝내 안 오고 폴링(ACTIVE)만 connect() 를 푼 경우. 어디까지 저장됐는지 모르는 부착에는 보내지 않는다
@@ -1074,7 +1074,10 @@ describe("녹음이 끝나는 길", () => {
     });
     await vi.advanceTimersByTimeAsync(10_000);
 
-    expect(harness.onFailure).toHaveBeenCalledWith("이미 닫힌 세션입니다.");
+    expect(harness.onFailure).toHaveBeenCalledWith("server_error", {
+      droppedMs: 0,
+      reason: "이미 닫힌 세션입니다.",
+    });
     expect(harness.sockets).toHaveLength(1);
   });
 
@@ -1126,7 +1129,10 @@ describe("녹음이 끝나는 길", () => {
     await vi.advanceTimersByTimeAsync(60_000);
 
     expect(harness.onFailure).toHaveBeenCalledOnce();
-    expect(harness.onFailure).toHaveBeenCalledWith("세션이 끝났습니다.");
+    expect(harness.onFailure).toHaveBeenCalledWith("server_error", {
+      droppedMs: 0,
+      reason: "세션이 끝났습니다.",
+    });
     expect(harness.sockets).toHaveLength(2);
   });
 
@@ -1475,9 +1481,11 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     await vi.advanceTimersByTimeAsync(300);
 
     expect(harness.onFailure).toHaveBeenCalledOnce();
-    expect(harness.onFailure.mock.calls[0][0]).toContain("다시 잇지 못했");
+    expect(harness.onFailure.mock.calls[0][0]).toBe("resume_window_exhausted");
     // 버리기 전 몫이다. 뒤에 회의가 끝나면 「N초를 올리지 못했어요」가 이 값을 쓴다
-    expect(harness.onFailure.mock.calls[0][1]).toEqual({ droppedMs: 1_000 });
+    expect(harness.onFailure.mock.calls[0][1]).toMatchObject({
+      droppedMs: 1_000,
+    });
     expect(harness.audio.stop).toHaveBeenCalled();
     expect(harness.buffer()).toMatchObject({ pendingMs: 0 });
   });
@@ -1677,10 +1685,9 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     expect(harness.onFailure).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(300);
 
-    expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
-      { droppedMs: 0 }
-    );
+    expect(harness.onFailure).toHaveBeenCalledWith("stop_timeout", {
+      droppedMs: 0,
+    });
   });
 
   it("저장이 덜 끝났다는 답이 셋 이어져도 stop 을 누른 지 60초 안에 completed 가 오면 성공한다", async () => {
@@ -1718,10 +1725,9 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     await vi.advanceTimersByTimeAsync(200);
 
     expect(harness.onFailure).toHaveBeenCalledTimes(1);
-    expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
-      { droppedMs: 0 }
-    );
+    expect(harness.onFailure).toHaveBeenCalledWith("stop_timeout", {
+      droppedMs: 0,
+    });
     expect(info).toHaveBeenCalledWith(
       "[transcription]",
       "stop",
@@ -1750,10 +1756,9 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     void harness.controller.stop();
     await vi.advanceTimersByTimeAsync(60_100);
 
-    expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
-      { droppedMs: 1_000 }
-    );
+    expect(harness.onFailure).toHaveBeenCalledWith("stop_timeout", {
+      droppedMs: 1_000,
+    });
     expect(harness.buffer()).toMatchObject({ pendingMs: 0 });
   });
 
@@ -1781,10 +1786,9 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
 
     expect(settled).toBe(true);
     expect(harness.onFailure).toHaveBeenCalledTimes(1);
-    expect(harness.onFailure).toHaveBeenCalledWith(
-      "스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.",
-      { droppedMs: 3_000 }
-    );
+    expect(harness.onFailure).toHaveBeenCalledWith("stop_timeout", {
+      droppedMs: 3_000,
+    });
     expect(harness.socket.close).toHaveBeenCalled();
   });
 
@@ -1893,41 +1897,6 @@ describe("30초 재개 창과 알림 (APP-705)", () => {
     const count = lines().length;
     for (let i = 0; i < 50; i += 1) harness.emitChunk();
     expect(lines()).toHaveLength(count);
-  });
-});
-
-/**
- * 새 창에 sessionStorage 가 복사되는 두 길(opener 를 가진 window.open, 탭 복제)과 새로고침을 가른다.
- * 모듈을 다시 불러오는 것이 문서 하나가 새로 뜨는 것이다.
- */
-describe("탭 식별 clientInstanceId (D-16)", () => {
-  const KEY = "heymoa.transcription.clientInstanceId";
-  const load = async () => {
-    vi.resetModules();
-    return (await import("@/lib/transcription/realtime-session"))
-      .clientInstanceId;
-  };
-  afterEach(() => {
-    sessionStorage.clear();
-    window.name = "";
-  });
-
-  it("새로고침한 같은 탭은 같은 값을 보낸다", async () => {
-    const first = (await load())();
-
-    expect((await load())()).toBe(first);
-  });
-
-  it("sessionStorage 를 물려받은 새 창은 다른 값을 만든다", async () => {
-    const opener = (await load())();
-    // 새 창: 저장소는 복사되지만 창 이름은 비어 있다
-    window.name = "";
-    expect(sessionStorage.getItem(KEY)).toBe(opener);
-
-    const child = (await load())();
-
-    expect(child).not.toBe(opener);
-    expect((await load())()).toBe(child);
   });
 });
 

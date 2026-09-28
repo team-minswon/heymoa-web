@@ -30,7 +30,7 @@ import {
   type getNoteResponse,
 } from "@/lib/api/generated/notes/notes";
 import type { NoteResponseData } from "@/lib/api/generated/models";
-import { isNoteListQueryKey } from "@/lib/notes/query-keys";
+import { invalidateNoteLists } from "@/lib/notes/invalidate";
 
 /** 중지된 회의를 확인 한 번으로 종료한다. 기록 중이면 서버가 409 MEETING_RECORDING 을 준다. */
 export function MeetingEndDialog({
@@ -85,9 +85,7 @@ export function MeetingEndDialog({
     }
     onOpenChange(false);
     // 목록 항목이 상태와 시간을 보여주므로 같이 비운다. 응답 하나로는 못 대신한다.
-    void queryClient.invalidateQueries({
-      predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
-    });
+    void invalidateNoteLists(queryClient);
     void queryClient.invalidateQueries({
       queryKey: getGetLatestAnalysisQueryKey(noteId),
     });

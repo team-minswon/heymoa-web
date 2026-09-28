@@ -57,7 +57,7 @@ import {
   forgetNoteRecordings,
   RECORDING_BEAT_MS,
   recordingClaimOf,
-} from "@/lib/transcription/realtime-session";
+} from "@/lib/transcription/recorder-lease";
 import { cn } from "@/lib/utils";
 
 /**
@@ -663,9 +663,11 @@ export function NotePanel({
               <span>
                 {noteRealtime.subscriptionIssue === "ALREADY_SUBSCRIBED"
                   ? "실시간 연결이 중복되어 새 소식을 받지 못하고 있습니다. 화면을 새로고침해 주세요."
-                  : "실시간 연결 인원이 가득 찼습니다. 잠시 뒤 다시 연결합니다."}
+                  : noteRealtime.subscriptionIssue === "UNAVAILABLE"
+                    ? "실시간 연결을 잠시 확인하지 못했습니다. 잠시 뒤 다시 연결합니다."
+                    : "실시간 연결 인원이 가득 찼습니다. 잠시 뒤 다시 연결합니다."}
               </span>
-              {noteRealtime.subscriptionIssue === "TOO_MANY_SUBSCRIBERS" ? (
+              {noteRealtime.subscriptionIssue !== "ALREADY_SUBSCRIBED" ? (
                 <Button
                   variant="outline"
                   size="sm"

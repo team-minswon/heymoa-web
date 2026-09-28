@@ -44,6 +44,18 @@ export type TranscriptionSocketOptions = {
  */
 const MAX_BUFFERED_BYTES = CAPTURE_TUNING.backpressureBytes;
 
+/** 녹음 소켓과 노트 토픽이 같은 STOMP 엔드포인트에 붙는다. 목 환경은 MSW 가 같은 origin 에서 받는다. */
+export function transcriptionWebSocketUrl() {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+  const baseUrl = shouldEnableMocking()
+    ? `${protocol}//${window.location.host}`
+    : apiBaseUrl
+      ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
+      : `${protocol}//${window.location.host}`;
+  return `${baseUrl}/ws/transcriptions`;
+}
+
 function stringHeaders(values: Record<string, string | number | undefined>) {
   return Object.fromEntries(
     Object.entries(values)

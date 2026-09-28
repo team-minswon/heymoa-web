@@ -7,6 +7,7 @@ import {
   CAPTURE_TUNING,
 } from "@/lib/transcription/capture-config";
 import { logTranscription } from "@/lib/transcription/log";
+import { clientInstanceId } from "@/lib/transcription/recorder-lease";
 import {
   isTerminalError,
   type ServerEvent,
@@ -35,7 +36,7 @@ export type RealtimeSessionController = {
 };
 
 /**
- * 노랑 알림(D-03). 받아쓰기와 실시간 분석이 멈췄다는 뜻이다.
+ * 노랑 알림. 받아쓰기와 실시간 분석이 멈췄다는 뜻이다.
  * - `disconnected`: 끊김을 알아챈 지 5초(offline 이면 곧바로). `sinceMs` 는 알아챈 시각이다.
  * - `no_receipt`: 붙어 있는데 영수증(`connected`·ack)이 10초 없다. `sinceMs` 는 마지막 영수증 시각이다.
  */
@@ -56,12 +57,30 @@ export type BufferState = {
   upload: { percent: number; remainingMs: number } | null;
 };
 
+/**
+ * 컨트롤러가 녹음을 끝낸 이유. 사용자 문구는 받는 쪽이 만든다.
+ * - `resume_window_exhausted`: 끊김을 알아챈 뒤 재개 창 안에 다시 잇지 못했다
+ * - `stop_timeout`: stop 을 보냈지만 기한 안에 completed 를 못 받았다
+ * - `stop_send_failed`: stop 프레임을 보내지 못했다
+ * - `server_error`: 다시 붙어도 풀리지 않는 in-band 오류다. 서버 문구는 `reason` 에 있다
+ */
+export type RealtimeFailureKind =
+  | "resume_window_exhausted"
+  | "stop_timeout"
+  | "stop_send_failed"
+  | "server_error";
+
+export type RealtimeFailureDetail = {
+  /** 올리지 못하고 버린 소리. */
+  droppedMs: number;
+  reason?: string;
+};
+
 export type RealtimeSessionOptions = {
   url: string;
   onEvent: (event: ServerEvent) => void;
   onLevel: (level: number) => void;
-  /** `droppedMs`: 재개 창이 끝나 버린 소리. 그 뒤 회의가 끝나면 「N초를 올리지 못했어요」가 쓴다. */
-  onFailure: (message: string, detail?: { droppedMs: number }) => void;
+  onFailure: (kind: RealtimeFailureKind, detail: RealtimeFailureDetail) => void;
   onNoticeChange?: (notice: ConnectionNotice | null) => void;
   onBufferChange?: (state: BufferState) => void;
   /** `captureGapMs`: 첫 조각 이후 벽시계에서 실제로 잡은 소리를 뺀 것. 마이크가 쉰 시간이다. */
@@ -90,18 +109,18 @@ const PUMP_MS = 100;
 const REATTACH_FIRST_DELAY_MS = 500;
 const REATTACH_MIN_DELAY_MS = 500;
 const REATTACH_MAX_DELAY_MS = 5_000;
-/** 끊김을 알아챈 뒤 이만큼 다시 잇지 못하면 녹음을 멈춘다(D-02). */
+/** 끊김을 알아챈 뒤 이만큼 다시 잇지 못하면 녹음을 멈춘다. */
 const RESUME_WINDOW_MS = 30_000;
 const NOTICE_AFTER_MS = 5_000;
 /** S3 flush 주기(5초)의 두 배. */
 const RECEIPT_LIMIT_MS = 10_000;
-/** server stop 최악(S3 10초 + 업체 10초)보다 길게(D-22). */
+/** server stop 최악(S3 10초 + 업체 10초)보다 길게. */
 const STOP_TIMEOUT_MS = 25_000;
 /** stop 을 누른 때부터의 상한. 느린 S3 에서 다시 붙으라는 답이 이어져도 여기서 끝낸다. */
 const STOP_TOTAL_MS = 60_000;
 /** 이보다 짧게 살고 끊긴 부착이 이어지면 연결은 되는데 못 버티는 것이다. 다시 붙는 간격을 늘려 간다. */
 const STABLE_ATTACH_MS = 10_000;
-/** 겹친 옛 소켓의 상한. server 는 새 부착을 5초, 자르기를 16초, 마무리를 3초까지 기다린다(APP-728). */
+/** 겹친 옛 소켓의 상한. server 는 새 부착을 5초, 자르기를 16초, 마무리를 3초까지 기다린다. */
 const TRAILING_LIMIT_MS = 30_000;
 const BYTES_PER_MS =
   (CAPTURE_CONTRACT.sampleRate * CAPTURE_CONTRACT.bytesPerSample) / 1000;
@@ -132,162 +151,8 @@ function reattachDelayMs(attempt: number) {
   );
 }
 
-let tabInstanceId: string | null = null;
-const TAB_INSTANCE_KEY = "heymoa.transcription.clientInstanceId";
 /**
- * 탭 수명 동안 하나. 같은 탭의 재부착과 다른 탭·기기의 부착을 서버가 가른다.
- * 새로고침한 탭의 시작 요청도 같은 값이라 서버가 옛 세션을 리스가 살아 있어도 곧바로 닫는다(D-16).
- *
- * sessionStorage 는 opener 를 가진 새 창에도 복사된다. 같은 값이면 서버가 그 창의 시작을 이 탭의
- * 재시작으로 읽어 이 탭의 녹음을 닫는다. 창 이름은 새로고침에는 남고 새 창에는 안 넘어가서, 둘이
- * 맞을 때만 이어 쓴다.
- */
-export function clientInstanceId() {
-  if (tabInstanceId) return tabInstanceId;
-  try {
-    const stored = sessionStorage.getItem(TAB_INSTANCE_KEY);
-    if (stored && window.name === stored) tabInstanceId = stored;
-  } catch {
-    // Node 실험 틀·저장소가 막힌 창
-  }
-  if (tabInstanceId) return tabInstanceId;
-  tabInstanceId = crypto.randomUUID();
-  try {
-    sessionStorage.setItem(TAB_INSTANCE_KEY, tabInstanceId);
-    window.name = tabInstanceId;
-  } catch {
-    // 위와 같다
-  }
-  return tabInstanceId;
-}
-
-const RECORDING_KEY_PREFIX = "heymoa.transcription.recording:";
-export const RECORDING_BEAT_MS = 2_000;
-/** 숨은 탭도 타이머는 1초 단위로 돈다. 이보다 오래 박동이 없으면 그 탭은 죽었다. */
-const RECORDING_BEAT_STALE_MS = 6_000;
-/** 워치독이 이미 닫았을 기록. 남기면 다른 기기가 재개한 녹음을 이어받으려다 409 로 간다. */
-const RECORDING_RECORD_MAX_MS = 5 * 60_000;
-
-type RecordingRecord = {
-  noteId: string;
-  clientInstanceId: string;
-  beatAt: number;
-};
-
-/**
- * 녹음 중인 탭의 박동. 새로고침한 탭(같은 ID)과 닫힌 탭을 새 탭으로 다시 연 경우(식은 박동) 모두
- * 서버가 그 ID 의 새 시작을 받아 옛 세션을 곧바로 닫으므로(D-16) 독을 잠그면 안 된다.
- * 탭마다 키가 따로라 두 탭이 다른 노트를 녹음해도 서로 덮지 않는다.
- */
-export function beatRecording(noteId: string, beatAt = Date.now()) {
-  const id = clientInstanceId();
-  const record: RecordingRecord = { noteId, clientInstanceId: id, beatAt };
-  try {
-    localStorage.setItem(RECORDING_KEY_PREFIX + id, JSON.stringify(record));
-  } catch {
-    // 저장소가 막힌 창은 예전처럼 워치독을 기다린다
-  }
-}
-
-/** 이 탭의 기록이 있으면 박동만 새로 적는다. */
-export function touchRecording(beatAt = Date.now()) {
-  const own = readRecords().find(
-    (record) => record.clientInstanceId === clientInstanceId()
-  );
-  if (own) beatRecording(own.noteId, beatAt);
-}
-
-/** 탭이 닫힐 때. 지우면 새 탭이 이어받을 ID 를 잃는다. */
-export function expireRecording() {
-  touchRecording(Date.now() - RECORDING_BEAT_STALE_MS - 1);
-}
-
-export function forgetRecording() {
-  removeRecord(clientInstanceId());
-}
-
-export function forgetNoteRecordings(noteId: string) {
-  for (const record of readRecords()) {
-    if (record.noteId === noteId) removeRecord(record.clientInstanceId);
-  }
-}
-
-/** 이 노트의 녹음 기록. mine: 이 탭(새로고침 전), live: 살아 있는 다른 탭, dead: 박동이 식은 탭. */
-export function recordingClaimOf(
-  noteId: string,
-  now = Date.now()
-): "mine" | "live" | "dead" | null {
-  const records = readRecords(now).filter((record) => record.noteId === noteId);
-  const others = records.filter(
-    (record) => record.clientInstanceId !== clientInstanceId()
-  );
-  if (others.some((record) => now - record.beatAt <= RECORDING_BEAT_STALE_MS))
-    return "live";
-  if (records.length > others.length) return "mine";
-  return others.length > 0 ? "dead" : null;
-}
-
-/**
- * 박동이 식은 탭의 ID 를 이 탭의 것으로 삼는다. 시작과 이후 재부착이 모두 그 ID 로 나가야 서버가
- * 같은 탭으로 본다. 창 이름도 같이 바꿔 새로고침에는 이어지고 새 창에는 안 넘어간다.
- */
-export function adoptDeadRecorder(noteId: string, now = Date.now()) {
-  if (recordingClaimOf(noteId, now) !== "dead") return null;
-  const dead = readRecords(now)
-    .filter((record) => record.noteId === noteId)
-    .sort((left, right) => right.beatAt - left.beatAt)[0];
-  tabInstanceId = dead.clientInstanceId;
-  try {
-    sessionStorage.setItem(TAB_INSTANCE_KEY, tabInstanceId);
-    window.name = tabInstanceId;
-  } catch {
-    // 이 탭 수명 동안은 메모리 값으로 이어 간다
-  }
-  return { clientInstanceId: tabInstanceId, beatAgeMs: now - dead.beatAt };
-}
-
-function readRecords(now = Date.now()): RecordingRecord[] {
-  const records: RecordingRecord[] = [];
-  try {
-    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-      const key = localStorage.key(index);
-      if (!key?.startsWith(RECORDING_KEY_PREFIX)) continue;
-      const record = parseRecord(localStorage.getItem(key));
-      if (!record || now - record.beatAt > RECORDING_RECORD_MAX_MS) {
-        localStorage.removeItem(key);
-        continue;
-      }
-      records.push(record);
-    }
-  } catch {
-    return [];
-  }
-  return records;
-}
-
-function parseRecord(raw: string | null): RecordingRecord | null {
-  try {
-    const value = JSON.parse(raw ?? "") as Partial<RecordingRecord>;
-    return typeof value.noteId === "string" &&
-      typeof value.clientInstanceId === "string" &&
-      typeof value.beatAt === "number"
-      ? (value as RecordingRecord)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function removeRecord(id: string) {
-  try {
-    localStorage.removeItem(RECORDING_KEY_PREFIX + id);
-  } catch {
-    // 위와 같다
-  }
-}
-
-/**
- * 녹음 한 번 = 세션 하나. 소켓은 그 세션에 붙는 부착이라 끊기면 **같은 세션에** 다시 붙고,
+ * 녹음 한 번 = 세션 하나. 소켓은 그 세션에 붙는 부착이라 끊기면 같은 세션에 다시 붙고,
  * 서버가 확정한 조각 다음부터 버퍼에서 다시 보낸다. `chunkSeq` 는 녹음 내내 이어진다.
  *
  * 녹음이 실패로 끝나는 길: 재시도해도 같은 in-band 오류, 끊김을 알아챈 뒤 30초 창 소진,
@@ -299,7 +164,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private sessionId: string | null = null;
   private socket: SocketPort | null = null;
   /**
-   * 두 스트림 겹치기(APP-728). 옛 서버가 옛 스트림을 자르고 닫을 때까지 새 조각을 여기에도 보낸다. 받은 말(final·partial)은
+   * 두 스트림 겹치기. 옛 서버가 옛 스트림을 자르고 닫을 때까지 새 조각을 여기에도 보낸다. 받은 말(final·partial)은
    * 화면으로 넘기고, 녹음 상태는 새 소켓이 말한다.
    */
   private trailing: SocketPort | null = null;
@@ -487,14 +352,12 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     await this.close();
   }
 
-  /** 닫으면 들고 있던 소리는 보낼 곳이 없다. 양을 알리고 버려야 탭 닫기 붙잡기도 풀린다(D-26). */
+  /** 닫으면 들고 있던 소리는 보낼 곳이 없다. 양을 알리고 버려야 탭 닫기 붙잡기도 풀린다. */
   private failStop() {
     const droppedMs = Math.round(this.resendBuffer.bytes / BYTES_PER_MS);
     this.resendBuffer.ackThrough(Number.MAX_SAFE_INTEGER);
     this.reportBuffer();
-    this.fail("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.", {
-      droppedMs,
-    });
+    this.fail("stop_timeout", { droppedMs });
   }
 
   /** 막힌 소켓은 정체 감시가 다시 붙이고, 끊긴 채 30초면 창이 닫는다. 조금씩 나가는 소켓은 deadline 이 끊는다. */
@@ -525,7 +388,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       socket.stop(finalChunkSeq);
     } catch {
       this.terminalResolve = null;
-      this.fail("스크립트 종료 요청을 서버에 보내지 못했습니다.");
+      this.fail("stop_send_failed", { droppedMs: 0 });
       return "failed";
     }
     const sentAt = Date.now();
@@ -740,7 +603,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       case "error":
         if (terminalError) {
           if (this.stopping) void this.close();
-          else this.fail(event.message);
+          else
+            this.fail("server_error", { droppedMs: 0, reason: event.message });
         } else if (this.attached && !this.reattaching) {
           void this.reattach("server_reattach", event.message);
         }
@@ -875,8 +739,9 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     // 창 밖의 소리는 보낼 세션이 없다. 버려야 탭 닫기 붙잡기도 풀린다
     this.resendBuffer.ackThrough(Number.MAX_SAFE_INTEGER);
     this.reportBuffer();
-    this.fail(`30초 동안 다시 잇지 못했습니다 (${this.disconnectDetail})`, {
+    this.fail("resume_window_exhausted", {
       droppedMs,
+      reason: this.disconnectDetail,
     });
     return true;
   }
@@ -1059,12 +924,11 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     }
   }
 
-  private fail(message: string, detail?: { droppedMs: number }) {
+  private fail(kind: RealtimeFailureKind, detail: RealtimeFailureDetail) {
     if (this.failed || this.closing) return;
     this.failed = true;
     this.terminalResolve?.("failed");
-    if (detail) this.options.onFailure(message, detail);
-    else this.options.onFailure(message);
+    this.options.onFailure(kind, detail);
     void this.close();
   }
 

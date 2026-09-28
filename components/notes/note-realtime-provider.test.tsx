@@ -22,7 +22,11 @@ type TopicClientOptions = {
   onSubscriptionRejected: (rejection: {
     type: "subscription.rejected";
     noteId: string;
-    reason: "NOT_MEMBER" | "ALREADY_SUBSCRIBED" | "TOO_MANY_SUBSCRIBERS";
+    reason:
+      | "NOT_MEMBER"
+      | "ALREADY_SUBSCRIBED"
+      | "TOO_MANY_SUBSCRIBERS"
+      | "UNAVAILABLE";
   }) => void;
 };
 
@@ -37,7 +41,6 @@ const topicClients = vi.hoisted(
 );
 
 vi.mock("@/lib/notes/note-topic-client", () => ({
-  getNoteTopicWebSocketUrl: () => "ws://localhost/ws/transcriptions",
   NoteTopicClient: class {
     readonly connect = vi.fn();
     readonly close = vi.fn().mockResolvedValue(undefined);
@@ -257,6 +260,27 @@ describe("NoteRealtimeProvider", () => {
       })
     );
     expect(onNotMember).toHaveBeenCalledOnce();
+  });
+
+  it("UNAVAILABLE 은 목록으로 돌려보내지 않고 백오프로 다시 구독한다", async () => {
+    const onNotMember = vi.fn();
+    renderProvider({ onNotMember });
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+
+    vi.useFakeTimers();
+    act(() =>
+      topicClients[0].options.onSubscriptionRejected({
+        type: "subscription.rejected",
+        noteId: NOTE_ID,
+        reason: "UNAVAILABLE",
+      })
+    );
+    expect(screen.getByTestId("subscription-issue")).toHaveTextContent(
+      "UNAVAILABLE"
+    );
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(topicClients[0].retrySubscription).toHaveBeenCalledOnce();
+    expect(onNotMember).not.toHaveBeenCalled();
   });
 
   it("partial은 utteranceId로 교체하고 final은 segmentId로 중복 제거한다", async () => {

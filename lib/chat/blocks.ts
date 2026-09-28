@@ -1,18 +1,12 @@
 /**
- * 블록 목록을 접고 이어붙이는 순수 함수들. 리듀서에서 갈라 둔 것은 **여기가 계약의 함정
- * 하나를 통째로 지고 있어서**다 — `message_end.content`가 토큰 합을 이긴다는 규칙.
- *
- * 예전 상태는 `{ text, records }`로 본문과 도구 기록이 **따로** 있었다. 그래서 도구가
- * 언제 끼어들었는지가 소실됐고 카드가 항상 본문 위에 몰렸다. 지금은 한 배열의 순서가
- * 곧 시간이다.
+ * 블록 목록을 접고 이어붙이는 순수 함수들. 한 배열의 순서가 곧 시간이다. 계약의 함정
+ * 하나(`message_end.content` 가 토큰 합을 이긴다)를 여기서 진다.
  */
 
 /**
- * 도구가 향하는 곳. **`kind`가 열려 있다** — 도구가 늘어도 화면이 안 깨지게, 모르는
- * `kind`는 칩을 안 그리고 `summary`로 떨어진다.
- *
- * 여기서 정의하고 `stream-protocol`이 다시 내보낸다. 반대로 두면 순수 블록 층이
- * 리듀서를 참조해 의존이 거꾸로 선다.
+ * 도구가 향하는 곳. `kind` 는 열어 둔다 — 모르는 `kind` 는 칩 없이 `summary` 로 떨어진다.
+ * 여기서 정의하고 `stream-protocol` 이 다시 내보낸다. 반대면 순수 블록 층이 리듀서를
+ * 참조한다.
  */
 export type ToolTarget = {
   kind: string;
@@ -22,10 +16,7 @@ export type ToolTarget = {
 
 export type ApprovalDecision = "APPROVED" | "REJECTED";
 
-/**
- * 모델이 도구를 부른 인자. **모양을 닫지 않는다** — 도구마다 다르고 server 도 해석하지
- * 않는다. 화면은 이름-값 쌍으로만 읽고, 값이 무엇이든 글자로 그린다.
- */
+/** 모델이 도구를 부른 인자. 도구마다 모양이 달라 닫지 않는다. 화면은 이름-값 쌍으로 읽는다. */
 export type ToolArgs = Record<string, unknown> | null;
 
 export type Block =
@@ -39,15 +30,13 @@ export type Block =
       /** 이 도구가 향하는 곳. 눌러서 그 회의록으로 간다. 모르는 kind면 null로 접는다. */
       target: ToolTarget | null;
       /**
-       * 모델이 이 도구를 부른 인자. **승인 카드가 「무엇을 승인하나」를 말하는 근거다.**
-       *
-       * 계약상 인자를 나르는 것은 `tool_call_start` 하나뿐이라 여기가 유일한 출처다 —
-       * 뒤따르는 `tool_approval_request`에는 없고, 같은 `toolCallId`로 이 블록을 찾는다.
+       * 모델이 이 도구를 부른 인자. 계약상 인자를 나르는 것은 `tool_call_start` 뿐이라 여기가
+       * 유일한 출처다. `tool_approval_request` 는 같은 `toolCallId` 로 이 블록을 찾는다.
        */
       args: ToolArgs;
       /**
-       * 실행 중에는 null. tool_call_result가 채운다. `stopped`·`unknown` 은 화면만의 값이다 —
-       * 결과 없이 끝난 턴을 `settleEndedTurn` 이 닫는다.
+       * 실행 중에는 null. `stopped`·`unknown` 은 화면만의 값으로, 결과 없이 끝난 턴을
+       * `settleEndedTurn` 이 닫을 때 쓴다.
        */
       status: "success" | "error" | "stopped" | "unknown" | null;
       url: string | null;
@@ -94,9 +83,9 @@ export function pushTool(
 }
 
 /**
- * 결과를 시작 블록에 겹친다. 짝을 못 찾으면 새로 연다 — **승인을 거친 쓰기 도구는
- * `tool_call_start` 없이 곧장 결과가 오고**, 그 payload에는 `tool`이 없다.
- * 이름은 같은 `toolCallId`의 승인 블록에서 이어 쓴다.
+ * 결과를 시작 블록에 겹친다. 승인을 거친 쓰기 도구는 `tool_call_start` 없이 결과가 오고
+ * payload 에 `tool` 도 없어서, 짝이 없으면 새로 열고 이름은 같은 `toolCallId` 의 승인 블록에서
+ * 가져온다.
  */
 export function settleTool(
   blocks: Block[],
@@ -131,7 +120,7 @@ export function settleTool(
     tool: patch.tool ?? (named?.kind === "approval" ? named.tool : ""),
     summary: patch.summary,
     target: null,
-    // 인자는 `tool_call_start`만 나르는데 이 갈래는 그 이벤트를 못 본 경우다.
+    // 인자는 `tool_call_start` 만 나르는데 이 갈래는 그 이벤트를 못 본 경우다.
     args: null,
     status: patch.status,
     url: patch.url,
@@ -139,9 +128,9 @@ export function settleTool(
 }
 
 /**
- * 끝난 턴의 결과 없는 도구를 닫는다(N3). 승인받은 쓰기는 나갔는지 모르므로 `unknown`, 나머지는
- * `stopped`. 짝 도구 블록 없이 승인만 있으면(히스토리·`tool_call_start` 없는 재개) 그 뒤에
- * `unknown` 줄을 세운다 — 실시간과 히스토리가 이 함수 하나를 지난다.
+ * 끝난 턴의 결과 없는 도구를 닫는다. 승인받은 쓰기는 나갔는지 모르므로 `unknown`, 나머지는
+ * `stopped`. 짝 도구 블록 없이 승인만 있으면 그 뒤에 `unknown` 줄을 세운다. 실시간과
+ * 히스토리가 이 함수 하나를 지난다.
  */
 export function settleEndedTurn(
   blocks: Block[],
@@ -180,8 +169,7 @@ export function settleEndedTurn(
         {
           kind: "tool",
           toolCallId: block.toolCallId,
-          // 이름은 바로 위 승인 줄이 말한다. 히스토리 승인은 요약이 없어 도구 id 로 흘러내리면
-          // 같은 일을 두 이름으로 부르게 된다.
+          // 이름은 바로 위 승인 줄이 말한다. 도구 id 로 채우면 같은 일을 두 이름으로 부른다.
           tool: "",
           summary: block.summary,
           target: null,
@@ -196,12 +184,7 @@ export function settleEndedTurn(
   return changed ? settled : blocks;
 }
 
-/**
- * 시작 요약과 결과 요약을 **둘 다 남긴다.**
- *
- * 결과로 덮어쓰면 「3건 찾음」만 남아 **무엇을 하다 3건을 찾았는지**가 사라진다. 도구
- * 한 줄이 말해야 하는 것은 「전사에서 관련 발화 검색 · 3건 찾음」 한 문장이다.
- */
+/** 시작 요약과 결과 요약을 둘 다 남긴다(「전사에서 관련 발화 검색 · 3건 찾음」). */
 export function joinSummary(started: string | null, settled: string | null) {
   if (!settled) return started;
   if (!started || started === settled) return settled;
@@ -228,21 +211,13 @@ export function resolveApproval(
 }
 
 /**
- * 확정된 답변으로 본문을 갈아끼운다.
- *
- * **`text` 블록을 전부 버리고 하나로 다시 세운다.** 마지막 것만 바꾸면 도구 사이에 끼어
- * 있던 앞쪽 본문이 남아 `content`와 겹쳐 두 번 보인다. 통째로 갈면 화면에 그려진 답이
- * `content`와 글자 단위로 같아지고, **새로고침 뒤 히스토리와도 같아진다** — 히스토리의
- * ASSISTANT 행은 `content` 하나뿐이라 어차피 저 모양이다.
- *
- * 생각·도구·승인 블록은 자리를 지킨다. 그것들은 `content`에 안 들어 있다.
+ * 확정된 답변으로 본문을 갈아끼운다. `text` 블록을 전부 버리고 하나로 다시 세운다 — 마지막
+ * 것만 바꾸면 도구 사이의 앞쪽 본문이 `content` 와 겹쳐 두 번 보인다. 히스토리의 ASSISTANT
+ * 행도 `content` 하나라 새로고침 뒤와 같아진다. 생각·도구·승인 블록은 자리를 지킨다.
  */
 export function finalizeText(blocks: Block[], content: string): Block[] {
-  // ★ **어긋났을 때만 손을 댄다.** 갈아끼우기는 안전망이지 매 턴의 의식이 아니다.
-  //
-  // 같은데도 새 배열을 만들면 두 가지가 같이 움직인다: 흩어져 있던 본문이 **도구 카드
-  // 아래 한 덩어리로 옮겨 앉고**, 낱말 span 이 전부 새로 마운트돼 `chat-rise` 가 답
-  // 전체에 한 번에 걸린다. 마지막 프레임에서 답이 통째로 다시 떠오르던 것이 이것이다.
+  // 같으면 손대지 않는다. 새 배열이면 본문이 도구 아래 한 덩어리로 옮겨 앉고 답 전체가
+  // 다시 마운트되며 한 번 더 떠오른다.
   if (answerText(blocks) === content) return blocks;
   const kept = blocks.filter((block) => block.kind !== "text");
   return content ? [...kept, { kind: "text", text: content }] : kept;
@@ -257,9 +232,8 @@ export function answerText(blocks: Block[]): string {
 }
 
 /**
- * 연속된 `thinking`·`tool`·`approval`을 한 묶음으로 접는다. Chain of Thought가 이걸
- * 그리고, **본문(`text`)이 끼면 묶음이 끊긴다** — 답을 쓰기 시작한 뒤의 도구 호출은
- * 앞 묶음의 일부가 아니다.
+ * 연속된 `thinking`·`tool`·`approval` 을 한 묶음으로 접는다. 본문이 끼면 묶음이 끊긴다 —
+ * 답을 쓰기 시작한 뒤의 도구 호출은 앞 묶음의 일부가 아니다.
  */
 export type Group =
   | { kind: "steps"; blocks: Exclude<Block, { kind: "text" }>[] }

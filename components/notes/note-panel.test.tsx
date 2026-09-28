@@ -19,11 +19,10 @@ import {
 import {
   beatRecording,
   recordingClaimOf,
-} from "@/lib/transcription/realtime-session";
+} from "@/lib/transcription/recorder-lease";
 
 // 이 파일이 보는 것은 패널이지 소켓이 아니다. 연결은 세우지 않는다.
 vi.mock("@/lib/notes/note-topic-client", () => ({
-  getNoteTopicWebSocketUrl: () => "ws://localhost/ws/transcriptions",
   NoteTopicClient: class {
     readonly connect = vi.fn();
     readonly close = vi.fn().mockResolvedValue(undefined);

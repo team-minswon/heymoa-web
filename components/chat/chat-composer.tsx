@@ -6,10 +6,7 @@ import { ArrowUp, Square } from "lucide-react";
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import { toast } from "@/lib/ui/toast";
 
-/**
- * 한 턴에 붙일 수 있는 범위 수. **server 계약이 정한 값이다** — 넘으면 400이다.
- * 여기서 같은 값을 세는 것은 거절을 막기 위해서지 규칙을 새로 만드는 것이 아니다.
- */
+// server 계약의 상한이다. 넘으면 400 이라 붙이기 전에 막는다.
 const MAX_SCOPE_ITEMS = 20;
 import { MentionInput, type MentionHandle } from "@/components/chat/mention-input";
 import { ScopePicker } from "@/components/chat/scope-picker";
@@ -17,16 +14,11 @@ import { Button } from "@/components/ui/button";
 import { matchScope, type ScopeCandidate } from "@/lib/chat/use-scope-catalog";
 
 /**
- * 개인 챗봇 입력부.
+ * 개인 챗봇 입력부. 칩은 `@` 를 친 자리에 문장 안으로 박힌다. 편집기는 `MentionInput` 이고
+ * 여기는 그 둘레(피커·보내기·안내)다.
  *
- * **칩은 문장 안에 삽니다** — `@`를 친 자리에 그대로 박힙니다. 편집기 자체는
- * `MentionInput`이 갖고 여기는 그 둘레(피커·보내기·안내)를 답니다.
- *
- * ### 답변이 흐르는 동안
- *
- * **입력을 막지 않습니다.** 답을 읽으면서 다음 질문을 적어 두는 것이 자연스럽고, 막으면
- * 그 사이 떠오른 문장을 다른 데 적어야 합니다. 막는 것은 **전송뿐**입니다 — 앞 턴이
- * 끝나기 전에 보내면 그 스트림이 끊기고 흐르던 답을 화면에서 잃습니다.
+ * 답이 흐르는 동안에도 입력은 열어 두고 전송만 막는다. 앞 턴이 끝나기 전에 보내면 그
+ * 스트림이 끊겨 흐르던 답을 잃는다.
  */
 export function ChatComposer({
   inputRef,
@@ -44,7 +36,7 @@ export function ChatComposer({
   /** 편집기에서 읽은 문장과 칩. 비었으면 부르지 않는다. */
   onSubmit: (draft: { text: string; chips: ScopeChip[] }) => void;
   onStop: () => void;
-  /** 보낼 수 없는 상태. **입력은 그대로 열려 있다.** */
+  /** 보낼 수 없는 상태. 입력은 그대로 열려 있다. */
   isBusy: boolean;
   isStreaming: boolean;
   placeholder: string;
@@ -55,12 +47,11 @@ export function ChatComposer({
     taken: Set<string>;
   };
   onChipsChange: (chips: ScopeChip[]) => void;
-  /** `@` 를 치기 시작했다. 부모가 이때 목록을 받아 온다 — 채팅을 열기만 해도 도는 것은 낭비다. */
+  /** `@` 를 치기 시작했다. 부모가 이때 목록을 받아 온다. */
   onMentioningChange?: (mentioning: boolean) => void;
 }) {
   const [query, setQuery] = useState<string | null>(null);
-  // 사용자가 Escape 로 닫은 뒤에는 같은 `@` 로 다시 열지 않는다. 렌더가 이 값을 읽으므로
-  // ref 가 아니라 상태다 — ref 로 두면 닫힌 것이 다음 렌더에서야 반영된다.
+  // Escape 로 닫은 뒤에는 같은 `@` 로 다시 열지 않는다. 렌더가 읽는 값이라 ref 가 아니라 상태다.
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [taken, setTaken] = useState<Set<string>>(new Set());
 
@@ -71,15 +62,9 @@ export function ChatComposer({
   );
 
   /**
-   * **고를 것이 있을 때만 연다.**
-   *
-   * 이 값이 곧 「Enter 는 누구 것인가」다. 열려 있으면 Enter 가 목록에서 고르고, 닫혀
-   * 있으면 문장을 보낸다. 그래서 *맞는 것이 없는데 열려 있는* 상태를 두지 않는다 —
-   * 그건 Enter 를 삼키기만 하고 아무것도 안 하는 구간이다.
-   *
-   * 반대쪽도 같은 이유로 막는다. 목록이 아직 안 왔으면(`isPending`) 곧 채워질 자리라
-   * 열어 두고 Enter 를 잡는다. 안 그러면 조회가 늦은 그 몇백 ms 동안 고르려던 Enter 가
-   * 반쯤 쓴 문장을 보낸다.
+   * 이 값이 곧 「Enter 는 누구 것인가」다. 맞는 것이 없는데 열려 있으면 Enter 를 삼키기만
+   * 하므로 닫는다. 목록이 아직 안 왔으면(`isPending`) 열어 둔다 — 안 그러면 고르려던 Enter
+   * 가 반쯤 쓴 문장을 보낸다.
    */
   const isPickerOpen =
     scope !== undefined &&
@@ -109,9 +94,7 @@ export function ChatComposer({
             sections={sections}
             isPending={scope.isPending}
             onPick={(candidate) => {
-              // **상한에 닿으면 안 박고 이유를 말한다.** 서버가 20을 넘으면 400으로
-              // 막는데, 여기서 안 세면 사용자는 스무 개를 다 붙인 뒤에야 그것을 알고
-              // 무엇을 빼야 할지도 모른 채 거절당한다.
+              // 스무 개를 다 붙인 뒤 서버에서 거절당하지 않게 상한에서 막고 이유를 말한다.
               if (taken.size >= MAX_SCOPE_ITEMS) {
                 toast.error(`범위는 ${MAX_SCOPE_ITEMS}개까지 붙일 수 있습니다.`);
                 setQuery(null);
@@ -129,11 +112,8 @@ export function ChatComposer({
         </div>
       ) : null}
 
-      {/* 상자 하나가 곧 이번 요청이다 — 칩도 본문도 이 안에 있다.
-
-          **모서리를 덜 굴린다.** 16px 은 50px 짜리 상자에서 위아래 곡선이 높이의 3분의 1을
-          먹어 곧은 변이 거의 안 남는다 — 알약이 되다 만 것처럼 찌그러져 보인다.
-          상자가 여섯 줄까지 자라므로 완전한 알약(`rounded-full`)도 답이 아니다. */}
+      {/* 모서리를 덜 굴린다. 50px 상자에 16px 이면 곧은 변이 거의 안 남고, 여섯 줄까지
+          자라므로 `rounded-full` 도 아니다. */}
       <div
         className="flex items-end gap-2.5 rounded-block border border-[var(--el-hairline-strong)] bg-white px-3.5 py-3 transition-colors focus-within:border-[var(--el-ink)]"
         onClick={() => inputRef.current?.focus()}
@@ -149,8 +129,7 @@ export function ChatComposer({
           }}
           onChipsChange={(chips) => {
             const keys = chips.map((chip) => `${chip.kind}:${chip.id}`);
-            // 같은 집합이면 새 Set 을 세우지 않는다 — 매번 새 참조를 주면 이 컴포넌트가
-            // 스스로를 다시 그리고 그 렌더가 또 이 콜백을 부른다.
+            // 같은 집합이면 참조를 유지한다. 매번 새 Set 이면 다시 그려지며 이 콜백이 또 불린다.
             setTaken((current) =>
               keys.length === current.size && keys.every((k) => current.has(k))
                 ? current

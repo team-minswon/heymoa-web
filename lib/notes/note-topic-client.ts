@@ -4,7 +4,6 @@ import {
   type StompSubscription,
 } from "@stomp/stompjs";
 
-import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import {
   NOTE_SUBSCRIPTION_FEEDBACK_DESTINATION,
   parseNoteSubscriptionRejected,
@@ -22,17 +21,6 @@ export type NoteTopicClientOptions = {
 };
 
 const SAFETY_CATCH_UP_INTERVAL_MS = 60_000;
-
-export function getNoteTopicWebSocketUrl() {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-  const baseUrl = shouldEnableMocking()
-    ? `${protocol}//${window.location.host}`
-    : apiBaseUrl
-      ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
-      : `${protocol}//${window.location.host}`;
-  return `${baseUrl}/ws/transcriptions`;
-}
 
 export class NoteTopicClient {
   private client: Client | null = null;

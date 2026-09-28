@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDeleteNote } from "@/lib/api/generated/notes/notes";
+import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import { isNoteListQueryKey } from "@/lib/notes/query-keys";
 
 /** 목록 캐시에서 그 노트 행만 뺀다. 모양이 예상과 다르면 손대지 않는다. */
@@ -116,9 +117,7 @@ export function NoteDeleteDialog({
                 { predicate: ({ queryKey }) => isNoteListQueryKey(queryKey) },
                 (current: unknown) => dropNoteFromList(current, noteId)
               );
-              await queryClient.invalidateQueries({
-                predicate: ({ queryKey }) => isNoteListQueryKey(queryKey),
-              });
+              await invalidateNoteLists(queryClient);
               toast.success("회의를 삭제했습니다.");
               onOpenChange(false);
               onDeleted?.();

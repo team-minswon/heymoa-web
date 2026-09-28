@@ -4,6 +4,8 @@ import type { GapRow } from "@/lib/transcription/gaps";
 import {
   formatOffset,
   interleaveTranscript,
+  mergeLiveSegments,
+  selectLivePartial,
   type TranscriptPresentationSegment,
 } from "@/lib/transcription/presentation";
 
@@ -116,5 +118,95 @@ describe("interleaveTranscript", () => {
     );
 
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe("mergeLiveSegments", () => {
+  it("저장본이 정본이고 실시간 사본은 저장본에 없는 발화만 뒤에 메운다", () => {
+    const persisted = [segment("a", 1, "저장본", 0, 1_000)];
+    const merged = mergeLiveSegments(
+      persisted,
+      [segment("a", 1, "실시간 사본", 0, 1_000)],
+      [segment("b", 2, "새 발화", 1_000, 2_000)]
+    );
+
+    expect(merged.map((row) => row.text)).toEqual(["저장본", "새 발화"]);
+  });
+});
+
+describe("selectLivePartial", () => {
+  const live = (utteranceId: string, confirmedText = "안녕하세요") => ({
+    utteranceId,
+    confirmedText,
+    pendingText: " 반갑",
+  });
+  const source = (
+    partial: ReturnType<typeof live> | null,
+    finals: string[] = []
+  ) => ({
+    partial,
+    finalSegments: finals.map((utteranceId) => ({ utteranceId })),
+  });
+
+  it("이 탭이 녹음 중이거나 멈추는 중이면 녹음 소켓의 partial 을 쓴다", () => {
+    for (const phase of ["recording", "stopping"] as const) {
+      expect(
+        selectLivePartial({
+          recordingHere: true,
+          phase,
+          own: source(live("own", "내 소켓")),
+          topic: source(live("topic", "토픽")),
+        })?.confirmedText
+      ).toBe("내 소켓");
+    }
+  });
+
+  it("녹음이 끝난 탭은 activeNoteId 가 남아 있어도 토픽의 partial 을 쓴다", () => {
+    expect(
+      selectLivePartial({
+        recordingHere: true,
+        phase: "completed",
+        own: source(null),
+        topic: source(live("topic", "토픽")),
+      })?.confirmedText
+    ).toBe("토픽");
+  });
+
+  it("같은 발화가 이미 확정됐으면 그리지 않는다", () => {
+    expect(
+      selectLivePartial({
+        recordingHere: false,
+        phase: "idle",
+        own: source(null),
+        topic: source(live("u1"), ["u1"]),
+      })
+    ).toBeNull();
+  });
+
+  it("앞 공백만 털고 두 토막 사이 공백은 남긴다", () => {
+    expect(
+      selectLivePartial({
+        recordingHere: false,
+        phase: "idle",
+        own: source(null),
+        topic: source({
+          utteranceId: "u",
+          confirmedText: "",
+          pendingText: "  말",
+        }),
+      })
+    ).toEqual({ confirmedText: "", pendingText: "말" });
+    expect(
+      selectLivePartial({
+        recordingHere: false,
+        phase: "idle",
+        own: source(null),
+        topic: source({
+          utteranceId: "u",
+          confirmedText: " 앞",
+          pendingText: " 뒤",
+        }),
+      })
+    ).toEqual({ confirmedText: "앞", pendingText: " 뒤" });
   });
 });

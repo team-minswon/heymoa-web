@@ -97,11 +97,16 @@ export const noteSubscriptionRejectedSchema = z.object({
   type: z.literal("subscription.rejected"),
   noteId: tsidSchema,
   /**
-   * 셋을 가르는 이유는 **화면이 다르게 행동해야 하기 때문**이다.
+   * 사유를 가르는 이유는 **화면이 다르게 행동해야 하기 때문**이다.
    * `NOT_MEMBER` 는 목록으로 돌려보내고, `ALREADY_SUBSCRIBED` 는 우리 쪽 버그이며,
-   * `TOO_MANY_SUBSCRIBERS` 만 잠시 뒤 다시 된다.
+   * `TOO_MANY_SUBSCRIBERS`·`UNAVAILABLE`(서버가 멤버십을 잠시 확인하지 못함)은 잠시 뒤 다시 된다.
    */
-  reason: z.enum(["NOT_MEMBER", "ALREADY_SUBSCRIBED", "TOO_MANY_SUBSCRIBERS"]),
+  reason: z.enum([
+    "NOT_MEMBER",
+    "ALREADY_SUBSCRIBED",
+    "TOO_MANY_SUBSCRIBERS",
+    "UNAVAILABLE",
+  ]),
 });
 
 export type NoteSubscriptionRejected = z.infer<

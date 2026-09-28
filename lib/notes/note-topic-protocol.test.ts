@@ -49,11 +49,12 @@ describe("노트 토픽 이벤트", () => {
 
 describe("구독 거절 통지", () => {
   // 노트 토픽이 아니라 사용자 queue 로 온다 — 거절당한 구독은 서버에 등록되지 않았다.
-  it("사유 셋을 읽는다", () => {
+  it("사유 넷을 읽는다", () => {
     for (const reason of [
       "NOT_MEMBER",
       "ALREADY_SUBSCRIBED",
       "TOO_MANY_SUBSCRIBERS",
+      "UNAVAILABLE",
     ]) {
       expect(
         parseNoteSubscriptionRejected(

@@ -10,7 +10,7 @@ import {
   beatRecording,
   clientInstanceId,
   recordingClaimOf,
-} from "@/lib/transcription/realtime-session";
+} from "@/lib/transcription/recorder-lease";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isWorkspaceRecordingActive,
@@ -453,9 +453,7 @@ describe("RecordingProvider", () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     harness.controller.stop.mockImplementationOnce(async () => {
-      harness
-        .getCallbacks()
-        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+      harness.getCallbacks().onFailure("stop_timeout", { droppedMs: 0 });
     });
 
     let stopped = true;
@@ -471,11 +469,7 @@ describe("RecordingProvider", () => {
     const harness = setup();
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     harness.controller.stop.mockImplementationOnce(async () => {
-      harness
-        .getCallbacks()
-        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.", {
-          droppedMs: 12_300,
-        });
+      harness.getCallbacks().onFailure("stop_timeout", { droppedMs: 12_300 });
     });
 
     await act(async () => {
@@ -510,9 +504,7 @@ describe("RecordingProvider", () => {
     const harness = setup({ enablePolling: true });
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
     harness.controller.stop.mockImplementationOnce(async () => {
-      harness
-        .getCallbacks()
-        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+      harness.getCallbacks().onFailure("stop_timeout", { droppedMs: 0 });
     });
     await act(() => harness.result.current.stop());
     expect(harness.result.current.phase).toBe("failed");
@@ -536,9 +528,7 @@ describe("RecordingProvider", () => {
     let stopping!: Promise<boolean>;
     act(() => {
       stopping = harness.result.current.stop();
-      harness
-        .getCallbacks()
-        .onFailure("스크립트 완료 응답을 기다리는 중 시간이 초과되었습니다.");
+      harness.getCallbacks().onFailure("stop_timeout", { droppedMs: 0 });
     });
     sessionQuery.current = {
       data: {
@@ -633,7 +623,9 @@ describe("RecordingProvider", () => {
     await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
 
     await act(async () => {
-      harness.getCallbacks().onFailure("upstream failed");
+      harness
+        .getCallbacks()
+        .onFailure("server_error", { droppedMs: 0, reason: "upstream failed" });
       await Promise.resolve();
     });
 
@@ -659,7 +651,10 @@ describe("RecordingProvider", () => {
     );
     // 컨트롤러도 같은 사건으로 onFailure 를 부른다. 서버 문구를 덮으면 안 된다.
     act(() =>
-      harness.getCallbacks().onFailure("다른 기기에서 이 녹음을 진행 중입니다.")
+      harness.getCallbacks().onFailure("server_error", {
+        droppedMs: 0,
+        reason: "다른 기기에서 이 녹음을 진행 중입니다.",
+      })
     );
 
     expect(harness.result.current.error).toBe(
@@ -1469,7 +1464,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
     act(() =>
       harness
         .getCallbacks()
-        .onFailure("30초 동안 다시 잇지 못했습니다 (WebSocket closed (1006))")
+        .onFailure("resume_window_exhausted", { droppedMs: 0 })
     );
 
     expect(harness.result.current.error).toBe("연결이 끊겨 녹음을 멈췄어요.");
@@ -1489,9 +1484,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
     act(() =>
       harness
         .getCallbacks()
-        .onFailure("30초 동안 다시 잇지 못했습니다 (WebSocket closed (1006))", {
-          droppedMs: 12_300,
-        })
+        .onFailure("resume_window_exhausted", { droppedMs: 12_300 })
     );
 
     expect(harness.result.current.error).toBe(
@@ -1522,10 +1515,7 @@ describe("끊김 창과 끝 (APP-705)", () => {
       act(() =>
         harness
           .getCallbacks()
-          .onFailure(
-            "30초 동안 다시 잇지 못했습니다 (WebSocket closed (1006))",
-            { droppedMs }
-          )
+          .onFailure("resume_window_exhausted", { droppedMs })
       );
       expect(harness.result.current.error).toMatch(
         /^연결이 끊겨 녹음을 멈췄어요\./
