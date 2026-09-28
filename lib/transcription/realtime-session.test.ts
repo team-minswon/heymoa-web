@@ -744,6 +744,209 @@ describe("같은 세션에 다시 붙는다", () => {
       expect(harness.onFailure).not.toHaveBeenCalled();
     });
 
+    // APP-728 두 스트림 겹치기. 옛 서버는 새 스트림이 붙은 뒤 발화 끝에서 옛 스트림을 자르고 소켓을 닫는다
+    it("겹친다는 reattach 면 옛 소켓을 두고, reattach 직후부터 옛 소켓이 닫힐 때까지 조각을 두 소켓 모두에 보낸다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      const first = harness.socket;
+      harness.emitChunk(undefined, 0);
+
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+        overlap: true,
+      });
+      harness.emitChunk(undefined, 1_600);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(harness.sockets).toHaveLength(2);
+      const second = harness.sockets[1];
+      harness.emitChunk(undefined, 3_200);
+
+      expect(first.close).not.toHaveBeenCalled();
+      expect(harness.sentSeqs(first)).toEqual([0, 1, 2]);
+      expect(harness.sentSeqs(second)).toEqual(
+        expect.arrayContaining([0, 1, 2])
+      );
+
+      first.options.onClose(1000, "");
+      harness.emitChunk(undefined, 4_800);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(harness.sentSeqs(first)).toEqual([0, 1, 2]);
+      expect(harness.sentSeqs(second)).toContain(3);
+      expect(harness.sockets).toHaveLength(2);
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    });
+
+    it("겹치는 동안 옛 소켓의 final·partial 은 화면으로 넘기고, 나머지 이벤트는 녹음을 흔들지 않는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      const first = harness.socket;
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+        overlap: true,
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      const final: ServerEvent = {
+        type: "final",
+        segmentId: "0HZX2K7M9Q4A1",
+        utteranceId: "0HZX2K7M9Q4A2",
+        sequence: 3,
+        text: "옛 스트림이 맺은 말",
+        startedAtMs: 1_000,
+        endedAtMs: 2_000,
+        speakerLabel: null,
+      };
+      const partial: ServerEvent = {
+        type: "partial",
+        utteranceId: "0HZX2K7M9Q4A3",
+        confirmedText: "다음",
+        pendingText: " 말",
+      };
+
+      first.options.onEvent(partial);
+      first.options.onEvent(final);
+      first.options.onEvent({ type: "ack", throughChunkSeq: 99 });
+      first.options.onEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+      });
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(harness.onEvent).toHaveBeenCalledWith(partial);
+      expect(harness.onEvent).toHaveBeenCalledWith(final);
+      expect(harness.onEvent).not.toHaveBeenCalledWith({
+        type: "ack",
+        throughChunkSeq: 99,
+      });
+      expect(harness.sockets).toHaveLength(2);
+    });
+
+    // 옛 서버는 옛 소켓이 닫혀야 옛 스트림을 마무리하고 자른다. 새 서버는 stop 을 받으면 그 자른 자리를 기다린다
+    it("겹치는 동안 멈추면 남은 조각을 보낸 뒤 옛 소켓을 먼저 닫고 새 소켓에 stop 을 보낸다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      const first = harness.socket;
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+        overlap: true,
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      const second = harness.sockets[1];
+      harness.emitChunk(undefined, 0);
+
+      const stopping = harness.controller.stop();
+      await vi.advanceTimersByTimeAsync(100);
+      await stopping;
+
+      expect(harness.sentSeqs(first)).toEqual([0]);
+      expect(second.stop).toHaveBeenCalledWith(0);
+      expect(first.close.mock.invocationCallOrder[0]).toBeLessThan(
+        second.stop.mock.invocationCallOrder[0]
+      );
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    });
+
+    it("옛 서버가 겹친 소켓을 30초 안에 안 닫으면 브라우저가 닫는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      const first = harness.socket;
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+        overlap: true,
+      });
+      await vi.advanceTimersByTimeAsync(29_000);
+      expect(first.close).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(first.close).toHaveBeenCalled();
+      harness.emitChunk();
+      expect(harness.sentSeqs(first)).toEqual([]);
+    });
+
+    // 옛 서버는 옛 소켓이 닫히면 옛 스트림이 받은 끝에서 자르고, 뒤는 새 스트림이 적는다. 구멍 난 채 뒤를 더 보내면 구멍 자리 말을 둘 다 안 적는다
+    it("겹친 옛 소켓이 조각을 거절하면 곧바로 닫고 더 보내지 않는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      const first = harness.socket;
+      harness.server.capacity = 1;
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+        overlap: true,
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      harness.emitChunk(undefined, 0);
+      harness.emitChunk(undefined, 1_600);
+      expect(first.close).toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(100);
+      harness.emitChunk(undefined, 3_200);
+
+      expect(harness.sentSeqs(first)).toEqual([0, 1]);
+      expect(harness.acceptedSeqs(first)).toEqual([0]);
+    });
+
+    it("겹치기를 시작할 때 옛 소켓에 못 보낸 조각이 밀려 있으면 겹치지 않고 옛 소켓을 닫는다", async () => {
+      vi.useFakeTimers();
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+      const first = harness.socket;
+      harness.server.capacity = 1;
+      harness.emitChunk(undefined, 0);
+      harness.emitChunk(undefined, 1_600);
+      expect(harness.acceptedSeqs(first)).toEqual([0]);
+
+      harness.emitEvent({
+        type: "reattach",
+        delayMs: 0,
+        reason: "SERVER_DRAINING",
+        overlap: true,
+      });
+      expect(first.close).toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(100);
+      harness.emitChunk(undefined, 3_200);
+
+      expect(harness.acceptedSeqs(first)).toEqual([0]);
+      expect(harness.sentSeqs(first)).not.toContain(2);
+    });
+
+    it("붙자마자 겹친다는 reattach 가 되풀이되면 다시 붙는 간격이 누적해서 늘어난다", async () => {
+      vi.useFakeTimers();
+      vi.spyOn(Math, "random").mockReturnValue(0.999);
+      const harness = setup();
+      await harness.controller.connect(SESSION_ID);
+
+      for (let i = 0; i < 100; i += 1) {
+        harness.emitEvent({
+          type: "reattach",
+          delayMs: 0,
+          reason: "SERVER_DRAINING",
+          overlap: true,
+        });
+        await vi.advanceTimersByTimeAsync(100);
+      }
+
+      // 누적 없이면 0.1초마다 백 번이다
+      expect(harness.sockets.length).toBeLessThanOrEqual(8);
+      expect(harness.onFailure).not.toHaveBeenCalled();
+    });
+
     it("버린 옛 소켓이 늦게 닫혀도 두 번 다시 붙지 않는다", async () => {
       vi.useFakeTimers();
       const harness = setup();

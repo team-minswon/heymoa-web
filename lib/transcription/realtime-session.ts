@@ -101,6 +101,8 @@ const STOP_TIMEOUT_MS = 25_000;
 const STOP_TOTAL_MS = 60_000;
 /** 이보다 짧게 살고 끊긴 부착이 이어지면 연결은 되는데 못 버티는 것이다. 다시 붙는 간격을 늘려 간다. */
 const STABLE_ATTACH_MS = 10_000;
+/** 겹친 옛 소켓의 상한. server 는 새 부착을 5초, 자르기를 16초, 마무리를 3초까지 기다린다(APP-728). */
+const TRAILING_LIMIT_MS = 30_000;
 const BYTES_PER_MS =
   (CAPTURE_CONTRACT.sampleRate * CAPTURE_CONTRACT.bytesPerSample) / 1000;
 const MEMORY_LIMIT_BYTES = CAPTURE_TUNING.memoryBufferMs * BYTES_PER_MS;
@@ -296,6 +298,12 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   private readonly audio: AudioPort;
   private sessionId: string | null = null;
   private socket: SocketPort | null = null;
+  /**
+   * 두 스트림 겹치기(APP-728). 옛 서버가 옛 스트림을 자르고 닫을 때까지 새 조각을 여기에도 보낸다. 받은 말(final·partial)은
+   * 화면으로 넘기고, 녹음 상태는 새 소켓이 말한다.
+   */
+  private trailing: SocketPort | null = null;
+  private trailingTimer: ReturnType<typeof setTimeout> | null = null;
   /** 지금 소켓이 `connected` 를 받았다. 그 전에는 보내지 않는다. */
   private attached = false;
   private reattaching: Promise<void> | null = null;
@@ -447,6 +455,8 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       if (Date.now() >= deadline) break;
       const socket = this.socket;
       if (this.closing || !socket || !this.attached) return closeUnattached();
+      // 겹친 옛 소켓은 남은 소리를 다 받았다. 닫아야 옛 서버가 옛 스트림을 마무리해 자르고, 새 서버의 stop 이 그 자리를 기다린다
+      this.dropTrailing();
       const remainingMs = deadline - Date.now();
       const state =
         remainingMs > 0
@@ -560,6 +570,7 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     this.updateNotice();
     this.terminalResolve?.("failed");
     this.terminalResolve = null;
+    this.dropTrailing();
     const socket = this.socket;
     this.socket = null;
     this.attached = false;
@@ -623,10 +634,14 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
       this.socket = null;
       this.attached = false;
     }
-    void socket.close().catch(() => undefined);
+    if (socket !== this.trailing) void socket.close().catch(() => undefined);
   }
 
   private handleClose(socket: SocketPort, code: number, reason: string) {
+    if (socket === this.trailing) {
+      this.dropTrailing();
+      return;
+    }
     // 버린 소켓이 늦게 닫혔거나, 붙기 전에 닫혔다. 붙기 전 실패는 connect() 의 reject 가 맡는다.
     if (socket !== this.socket || this.reattaching || !this.attached) return;
     if (this.terminalEventReceived) {
@@ -644,6 +659,11 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
   }
 
   private handleEvent(socket: SocketPort, event: ServerEvent) {
+    if (socket === this.trailing) {
+      if (event.type === "final" || event.type === "partial")
+        this.options.onEvent(event);
+      return;
+    }
     if (socket !== this.socket) return;
     this.lastInboundAt = Date.now();
     const terminalError =
@@ -703,6 +723,14 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
           this.bounce(event.delayMs);
           return;
         }
+        // 밀린 조각이 있으면 옛 소켓에 구멍이 난다. 옛 서버는 받은 끝에서 자르므로 겹치지 않는다
+        if (
+          event.overlap &&
+          this.attached &&
+          !this.reattaching &&
+          this.resendBuffer.unsentBytes === 0
+        )
+          this.keepTrailing(socket);
         void this.reattach(
           reattachCause(event.reason),
           `server reattach: ${event.reason}`,
@@ -718,6 +746,24 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
         }
         return;
     }
+  }
+
+  /** 옛 소켓을 버리지 않고 겹쳐 둔다. 옛 서버가 안 닫으면 상한에서 닫는다. 지금 소켓에서 떼는 것은 reattach 가 한다. */
+  private keepTrailing(socket: SocketPort) {
+    this.dropTrailing();
+    this.trailing = socket;
+    this.trailingTimer = setTimeout(
+      () => this.dropTrailing(),
+      TRAILING_LIMIT_MS
+    );
+  }
+
+  private dropTrailing() {
+    if (this.trailingTimer) clearTimeout(this.trailingTimer);
+    this.trailingTimer = null;
+    const trailing = this.trailing;
+    this.trailing = null;
+    void trailing?.close().catch(() => undefined);
   }
 
   private reattach(
@@ -898,12 +944,21 @@ export class BrowserRealtimeSession implements RealtimeSessionController {
     this.captureStartedAt ??= now - endMs;
     this.capturedMs = endMs;
     // 한도에서는 번호를 쓰지 않고 흘려보낸다. 멈춘 구간은 다음 조각의 captureSamples 건너뜀으로 남는다
+    const chunkSeq = this.nextChunkSeq;
     const accepted = this.resendBuffer.push({
-      chunkSeq: this.nextChunkSeq,
+      chunkSeq,
       captureSamples,
       body: chunk,
     });
-    if (accepted) this.nextChunkSeq += 1;
+    if (accepted) {
+      this.nextChunkSeq += 1;
+      // 옛 서버는 옛 소켓이 닫히면 받은 끝에서 자르고 뒤는 새 스트림이 적는다. 구멍 난 채 더 보내면 구멍 자리를 둘 다 안 적는다
+      if (
+        this.trailing &&
+        !this.trailing.sendAudio(chunk, chunkSeq, captureSamples)
+      )
+        this.dropTrailing();
+    }
     this.flushPending();
     this.reportBuffer();
   }

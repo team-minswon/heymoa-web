@@ -80,6 +80,8 @@ export const serverEventSchema = z.discriminatedUnion("type", [
     type: z.literal("reattach"),
     delayMs: z.number().int().min(0),
     reason: z.string(),
+    /** 두 스트림 겹치기(APP-728). 이 소켓을 닫지 말고 reattach 직후부터 서버가 닫을 때까지 두 소켓 모두에 보낸다. */
+    overlap: z.boolean().optional(),
   }),
   // 같은 세션에 다른 부착(다른 탭·기기)이 이겼다. 다시 붙지 않는다.
   z.object({ type: z.literal("superseded"), sessionId: tsidSchema }),
