@@ -38,6 +38,11 @@ class FakeWebSocket {
     this.sent.push(data);
   }
 
+  /** 서버가 닫는 인사를 보냈다. 브라우저는 여기서 CLOSING 이고, close 이벤트는 인사가 끝나야 온다. */
+  closeFromServer() {
+    this.readyState = FakeWebSocket.CLOSING;
+  }
+
   close(code = 1000, reason = "") {
     this.closes.push({ code, reason });
     this.readyState = FakeWebSocket.CLOSED;
@@ -296,6 +301,25 @@ describe("TranscriptionSocket", () => {
     connection.transport.bufferedAmount = 96_001;
 
     expect(socket.sendAudio(new ArrayBuffer(4_800), 0, 0)).toBe(false);
+  });
+
+  // 브라우저는 CLOSING·CLOSED 소켓의 send 를 버리고 콘솔에 경고만 남긴다. stompjs 의 connected 는 close 이벤트까지 true 다
+  it("does not send audio once the server has started closing the WebSocket", async () => {
+    const socket = createSocket();
+    const connection = await establish(socket);
+    connection.event({
+      type: "connected",
+      sessionId,
+      epoch: 1,
+      durableThroughSeq: -1,
+    });
+    await connection.connected;
+    const sentBefore = connection.transport.sent.length;
+
+    connection.transport.closeFromServer();
+
+    expect(socket.sendAudio(new ArrayBuffer(3_200), 7, 0)).toBe(false);
+    expect(connection.transport.sent).toHaveLength(sentBefore);
   });
 
   it("ignores the MSW WebSocket shim's non-draining send buffer", async () => {

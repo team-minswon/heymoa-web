@@ -198,6 +198,7 @@ export class TranscriptionSocket {
     if (
       !client?.connected ||
       !transport ||
+      transport.readyState !== WebSocket.OPEN ||
       (!shouldEnableMocking() && transport.bufferedAmount > MAX_BUFFERED_BYTES)
     )
       return false;
