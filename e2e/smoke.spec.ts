@@ -1342,10 +1342,12 @@ test("continues cumulative time across stop, resume, and stop", async ({
   await startRecording(page, "재개");
   await stopRecording(page);
 
-  const secondStop = recordedSeconds(await timer.textContent());
+  // 재개하면 스크립트 탭으로 넘어간다 — 누적 시간은 정보 탭에서 다시 읽는다.
+  const resumedTimer = await cumulativeTimer(page);
+  const secondStop = recordedSeconds(await resumedTimer.textContent());
   expect(secondStop).toBeGreaterThan(firstStop);
   await page.waitForTimeout(1_100);
-  expect(recordedSeconds(await timer.textContent())).toBe(secondStop);
+  expect(recordedSeconds(await resumedTimer.textContent())).toBe(secondStop);
 });
 
 /**
