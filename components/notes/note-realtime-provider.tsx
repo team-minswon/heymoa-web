@@ -16,7 +16,10 @@ import {
   getGetNoteQueryKey,
   useGetNote,
 } from "@/lib/api/generated/notes/notes";
-import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
+import {
+  getGetNoteTranscriptQueryKey,
+  type getNoteTranscript,
+} from "@/lib/api/generated/transcription/transcription";
 import type { RunRange, ProposalHead } from "@/lib/notes/proposals/contract";
 import {
   initialContextState,
@@ -272,8 +275,22 @@ export function NoteRealtimeProvider({
       void queryClient.invalidateQueries({
         queryKey: getGetProposalsQueryKey(noteId),
       });
+    // catch-up 뒤에는 REST 가 가진 마지막 번호가 기준이다. 첫 final 로 기준을 세우면 그 앞의
+    // 유실을 못 본다. REST 가 아직 없으면 모르므로 첫 final 이 기준이 된다.
+    let lastSequence: number | null = null;
+    const persistedLastSequence = () => {
+      const response = queryClient.getQueryData<
+        Awaited<ReturnType<typeof getNoteTranscript>>
+      >(getGetNoteTranscriptQueryKey(noteId));
+      if (response?.status !== 200 || !response.data.success) return null;
+      return response.data.data.segments.reduce(
+        (max, segment) => Math.max(max, segment.sequence),
+        0
+      );
+    };
     const catchUp = () => {
       clearTranscriptCatchUp();
+      lastSequence = null;
       dispatch({ type: "transcript-reset" });
       invalidateLifecycle();
       invalidateTranscript();
@@ -328,9 +345,16 @@ export function NoteRealtimeProvider({
               invalidateLifecycle();
             invalidateTranscript();
             break;
-          case "transcript.final":
-            scheduleTranscriptCatchUp();
+          case "transcript.final": {
+            // 발화는 이벤트가 다 싣는다 — 받을 때마다 전사 전체를 다시 받으면 보는 사람 수만큼
+            // DB 조회가 곱해진다(APP-746). 번호는 노트 안에서 빈틈없이 이어지므로, 건너뛴
+            // 번호가 곧 Pub/Sub 이 흘린 final 이다. 그때만 REST 로 메운다.
+            const seen = lastSequence ?? persistedLastSequence();
+            const skipped = seen !== null && event.sequence > seen + 1;
+            lastSequence = Math.max(seen ?? 0, event.sequence);
+            if (skipped) scheduleTranscriptCatchUp();
             break;
+          }
           /**
            * **재조회가 실패한 채 갇히지 않게 한다.** `needsRefetch` 는 sticky 이고 그것을
            * 보는 effect 의 deps 가 안 바뀌어서, 한 번 실패하면 스스로는 다시 안 돈다.

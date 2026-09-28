@@ -313,7 +313,7 @@ describe("NoteRealtimeProvider", () => {
     ]);
   });
 
-  it("상태 이벤트는 exact note와 cached project lists를 즉시, 연속 final은 한 번 묶어 REST를 갱신한다", async () => {
+  it("상태 이벤트는 exact note와 cached project lists를 즉시 갱신하고, final은 번호가 건너뛸 때만 전사를 다시 받는다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
     vi.useFakeTimers();
@@ -351,6 +351,19 @@ describe("NoteRealtimeProvider", () => {
       startedAtMs: 1_000,
       endedAtMs: 1_900,
     });
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(invalidateQueries).not.toHaveBeenCalled();
+
+    emit({
+      type: "transcript.final",
+      transcriptionSessionId: SESSION_ID,
+      segmentId: "01K0000000203",
+      utteranceId: "01K0000000103",
+      sequence: 4,
+      text: "3번을 건너뛴 문장",
+      startedAtMs: 3_000,
+      endedAtMs: 3_900,
+    });
     act(() => vi.advanceTimersByTime(499));
     expect(invalidateQueries).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(1));
@@ -368,6 +381,39 @@ describe("NoteRealtimeProvider", () => {
         queryKey: getGetNotesQueryKey(PROJECT_ID),
       } as never)
     ).toBe(true);
+  });
+
+  it("구독 뒤 첫 final 도 REST 가 가진 마지막 번호와 비교해, 그 사이가 빠졌으면 전사를 다시 받는다", async () => {
+    const { invalidateQueries, queryClient } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    queryClient.setQueryData(getGetNoteTranscriptQueryKey(NOTE_ID), {
+      status: 200,
+      headers: new Headers(),
+      data: {
+        success: true,
+        error: null,
+        data: {
+          segments: [
+            { segmentId: "01K0000000205", sequence: 5, text: "저장된 문장" },
+          ],
+        },
+      },
+    } as never);
+    vi.useFakeTimers();
+    invalidateQueries.mockClear();
+
+    emit({
+      type: "transcript.final",
+      transcriptionSessionId: SESSION_ID,
+      segmentId: "01K0000000207",
+      utteranceId: "01K0000000107",
+      sequence: 7,
+      text: "6번을 건너뛴 문장",
+      startedAtMs: 7_000,
+      endedAtMs: 7_900,
+    });
+    act(() => vi.advanceTimersByTime(500));
+    expectInvalidated(invalidateQueries, getGetNoteTranscriptQueryKey(NOTE_ID));
   });
 
   it("late and order-reversed lifecycle events only invalidate and never overwrite authoritative cache state", async () => {
