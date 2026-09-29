@@ -50,6 +50,8 @@ type NoteRealtimeValue = {
   /** 이 컨텍스트가 지금 어느 노트의 것인가. 노트 전환에 지역 상태를 리셋할 주어다. */
   noteId: string;
   subscriptionIssue: SubscriptionIssue | null;
+  /** 30초 넘게 토픽에 못 붙었다. 멈춘 화면을 표시 없이 두지 않는다(T2). */
+  reconnecting: boolean;
   retrySubscription: () => void;
   transcript: Pick<NoteRealtimeState, "partial" | "finalSegments">;
   context: {
@@ -64,6 +66,8 @@ type NoteRealtimeValue = {
 };
 
 const TRANSCRIPT_CATCH_UP_DELAY_MS = 500;
+/** 재연결 뒤 따라잡기를 흩는 창. 배포 때 한 태스크의 구독이 한꺼번에 다시 붙는다. */
+const RECONNECT_CATCH_UP_JITTER_MS = 3_000;
 
 const NoteRealtimeContext = createContext<NoteRealtimeValue | null>(null);
 
@@ -95,6 +99,8 @@ export function NoteRealtimeProvider({
     subscriptionIssueState?.noteId === noteId
       ? subscriptionIssueState.reason
       : null;
+  const [reconnectingFor, setReconnectingFor] = useState<string | null>(null);
+  const reconnecting = reconnectingFor === noteId;
   const retrySubscription = useCallback(() => {
     retrySubscriptionRef.current?.();
   }, []);
@@ -148,13 +154,25 @@ export function NoteRealtimeProvider({
       void invalidateNoteLifecycle(queryClient, noteId);
     const invalidateTranscript = () =>
       void invalidateNoteTranscript(queryClient, noteId);
+    // 틈 감지 재조회와 재연결 따라잡기가 이 타이머 하나를 나눠 쓴다. 따라잡기가 기다리는 동안의
+    // 틈은 따라잡기가 전사까지 다시 받으므로 따로 안 낸다.
+    let fullCatchUpPending = false;
     const clearTranscriptCatchUp = () => {
+      fullCatchUpPending = false;
       if (transcriptTimerRef.current !== null) {
         window.clearTimeout(transcriptTimerRef.current);
         transcriptTimerRef.current = null;
       }
     };
+    // 전사를 스스로 다시 받는 이벤트가 부른다. 기다리는 따라잡기가 있으면 그것이 노트·전사·제안을
+    // 모두 다시 받으므로 이벤트는 받지 않는다(참). 없으면 틈 재조회만 거둔다.
+    const catchUpPendingCovers = () => {
+      if (fullCatchUpPending) return true;
+      clearTranscriptCatchUp();
+      return false;
+    };
     const scheduleTranscriptCatchUp = () => {
+      if (fullCatchUpPending) return;
       clearTranscriptCatchUp();
       transcriptTimerRef.current = window.setTimeout(() => {
         transcriptTimerRef.current = null;
@@ -178,7 +196,7 @@ export function NoteRealtimeProvider({
         0
       );
     };
-    const catchUp = () => {
+    const runCatchUp = () => {
       clearTranscriptCatchUp();
       lastSequence = null;
       dispatch({
@@ -188,6 +206,23 @@ export function NoteRealtimeProvider({
       invalidateLifecycle();
       invalidateTranscript();
       invalidateContext();
+    };
+    // 첫 따라잡기는 곧바로다. 그 뒤(재연결·안전 주기·구독 재시도)는 0~3초 난수 뒤 한 번으로 묶는다.
+    // 구독은 클라이언트가 이미 곧바로 걸었다 — 기다리는 사이 오는 이벤트는 그대로 받는다.
+    let caughtUpOnce = false;
+    const catchUp = () => {
+      if (!caughtUpOnce) {
+        caughtUpOnce = true;
+        runCatchUp();
+        return;
+      }
+      if (fullCatchUpPending) return;
+      clearTranscriptCatchUp();
+      fullCatchUpPending = true;
+      transcriptTimerRef.current = window.setTimeout(() => {
+        transcriptTimerRef.current = null;
+        runCatchUp();
+      }, Math.random() * RECONNECT_CATCH_UP_JITTER_MS);
     };
     const client = new NoteTopicClient({
       url: transcriptionWebSocketUrl(),
@@ -208,6 +243,7 @@ export function NoteRealtimeProvider({
         }
       },
       onCatchUp: catchUp,
+      onReconnectingChange: (next) => setReconnectingFor(next ? noteId : null),
       onEvent: (event) => {
         clearRetry();
         retryDelayMs = 5_000;
@@ -221,9 +257,9 @@ export function NoteRealtimeProvider({
             invalidateLifecycle();
             break;
           case "meeting.ended":
-            clearTranscriptCatchUp();
             applyNoteLifecycleEvent(queryClient, noteId, event);
             // 종료 시각과 updatedAt도 이벤트에 없으므로 상세·목록을 다시 읽는다.
+            if (catchUpPendingCovers()) break;
             invalidateLifecycle();
             invalidateTranscript();
             invalidateContext();
@@ -232,12 +268,16 @@ export function NoteRealtimeProvider({
             if (!applyNoteLifecycleEvent(queryClient, noteId, event))
               invalidateLifecycle();
             break;
-          case "recording.stopped":
-            clearTranscriptCatchUp();
-            if (!applyNoteLifecycleEvent(queryClient, noteId, event))
+          case "recording.stopped": {
+            const covered = catchUpPendingCovers();
+            if (
+              !applyNoteLifecycleEvent(queryClient, noteId, event) &&
+              !covered
+            )
               invalidateLifecycle();
-            invalidateTranscript();
+            if (!covered) invalidateTranscript();
             break;
+          }
           case "transcript.final": {
             // 발화는 이벤트가 다 싣는다 — 받을 때마다 전사 전체를 다시 받으면 보는 사람 수만큼
             // DB 조회가 곱해진다. 번호는 노트 안에서 빈틈없이 이어지므로, 건너뛴
@@ -283,6 +323,7 @@ export function NoteRealtimeProvider({
       clearTranscriptCatchUp();
       clearRetry();
       retrySubscriptionRef.current = null;
+      setReconnectingFor(null);
       void client.close();
     };
   }, [noteId, onNotMember, queryClient, socketOpen]);
@@ -346,6 +387,7 @@ export function NoteRealtimeProvider({
     () => ({
       noteId,
       subscriptionIssue,
+      reconnecting,
       retrySubscription,
       transcript: {
         partial: state.partial,
@@ -366,6 +408,7 @@ export function NoteRealtimeProvider({
       contextFailed,
       contextLoading,
       noteId,
+      reconnecting,
       retryContext,
       retrySubscription,
       state,

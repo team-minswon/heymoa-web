@@ -1900,6 +1900,126 @@ describe("PersonalChatProvider", () => {
       }
     });
 
+    /**
+     * ★★ N3. **포기는 연결의 사정이지 턴의 사정이 아니다.** 히스토리가 「아직 돈다」고 하면
+     * 「끊겼습니다」로 굳히지 않고 지금 커서부터 다시 붙는다. 전에는 재조회가 턴마다 한 번이라
+     * 도는 턴이 배너 밑에 멈춰 있었다.
+     */
+    it("★ 포기한 뒤 히스토리가 「아직 돈다」고 하면 다시 붙는다", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        state.chats = [chatRow(CHAT_ID)];
+        state.cursor = "1735689600000-4";
+        state.activeTurn = {
+          turnId: "0K9GVJT2C4Q3B",
+          status: "IN_PROGRESS",
+          pendingApproval: null,
+        };
+        state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
+        state.resumeFrames = [];
+        renderChat();
+        openPanel();
+
+        await waitFor(() => expect(state.resumeUrls.length).toBeGreaterThan(0));
+        let opensAtRefetch = -1;
+        state.onRefetch = () => {
+          opensAtRefetch = state.resumeUrls.length;
+        };
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        await waitFor(() => expect(opensAtRefetch).toBeGreaterThan(0));
+        await waitFor(() =>
+          expect(state.resumeUrls.length).toBeGreaterThan(opensAtRefetch)
+        );
+        expect(state.resumeUrls.at(-1)).toBe(
+          `${eventsUrl(CHAT_ID, "0K9GVJT2C4Q3B")}?after=1735689600000-4`
+        );
+        expect(screen.queryByText("응답이 중간에 끊겼습니다.")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("★ 포기한 뒤 히스토리가 같은 턴의 승인 대기를 주면 승인 카드를 세운다", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        state.chats = [chatRow(CHAT_ID)];
+        state.cursor = "1735689600000-4";
+        state.activeTurn = {
+          turnId: "0K9GVJT2C4Q3B",
+          status: "IN_PROGRESS",
+          pendingApproval: null,
+        };
+        state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
+        state.resumeFrames = [];
+        renderChat();
+        openPanel();
+
+        await waitFor(() => expect(state.resumeUrls.length).toBeGreaterThan(0));
+        state.onRefetch = () => {
+          state.activeTurn = {
+            turnId: "0K9GVJT2C4Q3B",
+            status: "WAITING_APPROVAL",
+            pendingApproval: {
+              approvalId: "0K9GVJT2C4Q7F",
+              tool: "linear.create_issue",
+              summary: "Linear 이슈 생성",
+            },
+          };
+        };
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        expect(await screen.findByRole("button", { name: "승인" })).toBeTruthy();
+        expect(screen.queryByText("응답이 중간에 끊겼습니다.")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("★ 포기 뒤 재조회가 실패하면 탭이 돌아올 때 다시 묻는다", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        state.chats = [chatRow(CHAT_ID)];
+        state.cursor = "1735689600000-4";
+        state.activeTurn = {
+          turnId: "0K9GVJT2C4Q3B",
+          status: "IN_PROGRESS",
+          pendingApproval: null,
+        };
+        state.messages = [historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B")];
+        state.resumeFrames = [];
+        renderChat();
+        openPanel();
+
+        await waitFor(() => expect(state.resumeUrls.length).toBeGreaterThan(0));
+        state.refreshFails = true;
+        await vi.advanceTimersByTimeAsync(60_000);
+        await waitFor(() => expect(state.refetchedChatIds).toContain(CHAT_ID));
+
+        state.refreshFails = false;
+        state.onRefetch = () => {
+          state.messages = [
+            historyRow("USER", "정리해줘", "0K9GVJT2C4Q3B"),
+            historyRow("ASSISTANT", "서버가 굳힌 답", "0K9GVJT2C4Q3B"),
+          ];
+          state.activeTurn = null;
+          state.lastTurn = {
+            turnId: "0K9GVJT2C4Q3B",
+            status: "COMPLETED",
+            failureCode: null,
+            retryable: null,
+          };
+        };
+        await act(async () => {
+          document.dispatchEvent(new Event("visibilitychange"));
+        });
+
+        expect(await screen.findByText("서버가 굳힌 답")).toBeTruthy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("★ cursor가 null 이어도 잇는다 — after 없이 처음부터 연다", async () => {
       state.chats = [chatRow(CHAT_ID)];
       state.cursor = null;

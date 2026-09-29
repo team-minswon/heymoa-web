@@ -37,27 +37,54 @@ vi.mock("@stomp/stompjs", () => {
   };
 });
 
+const auth = vi.hoisted(() => ({
+  refreshAuthOnce: vi.fn(),
+  openSessionGate: vi.fn(),
+}));
+
+vi.mock("@/lib/api/fetcher", () => ({
+  refreshAuthOnce: auth.refreshAuthOnce,
+  AuthRefreshError: class AuthRefreshError extends Error {
+    constructor(readonly expired: boolean) {
+      super("AUTH_REFRESH_FAILED");
+    }
+  },
+}));
+vi.mock("@/lib/auth/session-gate", () => ({
+  openSessionGate: auth.openSessionGate,
+}));
+
 const NOTE_ID = "01K0000000002";
 
 function createClient() {
   const onEvent = vi.fn();
   const onCatchUp = vi.fn();
   const onSubscriptionRejected = vi.fn();
+  const onReconnectingChange = vi.fn();
   const client = new NoteTopicClient({
     url: "ws://localhost/ws/transcriptions",
     noteId: NOTE_ID,
     onEvent,
     onCatchUp,
     onSubscriptionRejected,
+    onReconnectingChange,
   });
 
-  return { client, onEvent, onCatchUp, onSubscriptionRejected };
+  return {
+    client,
+    onEvent,
+    onCatchUp,
+    onSubscriptionRejected,
+    onReconnectingChange,
+  };
 }
 
 describe("NoteTopicClient", () => {
   beforeEach(() => {
     stomp.configs.length = 0;
     stomp.instances.length = 0;
+    auth.refreshAuthOnce.mockReset().mockResolvedValue(undefined);
+    auth.openSessionGate.mockReset();
     vi.useFakeTimers();
   });
   afterEach(() => {
@@ -229,5 +256,130 @@ describe("NoteTopicClient", () => {
 
     expect(stomp.instances[0].unsubscribe).toHaveBeenCalledTimes(2);
     expect(stomp.instances[0].deactivate).toHaveBeenCalledOnce();
+  });
+
+  it("통신 실패한 소켓은 닫힘을 기다리지 않고 버린다", () => {
+    createClient().client.connect();
+    expect(stomp.configs[0].discardWebsocketOnCommFailure).toBe(true);
+  });
+
+  /**
+   * ★ 만료 토큰(30분)이면 핸드셰이크가 매번 거절되는데 stompjs 는 조용히 무한 재시도한다.
+   * 붙어 있다가 끊긴 것(배포 드레인)은 토큰 탓이 아니라 갱신하지 않는다.
+   */
+  describe("다음 시도 전 토큰 갱신", () => {
+    type Hooks = {
+      beforeConnect: () => Promise<void>;
+      onConnect: () => void;
+      onWebSocketClose: () => void;
+    };
+    const hooks = () => stomp.configs[0] as unknown as Hooks;
+
+    it("★ 직전 시도가 못 붙었을 때만 갱신한다", async () => {
+      createClient().client.connect();
+      const { beforeConnect, onConnect, onWebSocketClose } = hooks();
+
+      await beforeConnect();
+      expect(auth.refreshAuthOnce).not.toHaveBeenCalled();
+
+      onWebSocketClose();
+      await beforeConnect();
+      expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
+
+      onConnect();
+      onWebSocketClose();
+      await beforeConnect();
+      expect(auth.refreshAuthOnce).toHaveBeenCalledOnce();
+    });
+
+    it("★ 갱신이 던져도 삼키고 재연결을 계속한다", async () => {
+      auth.refreshAuthOnce.mockRejectedValue(new Error("NETWORK"));
+      createClient().client.connect();
+      const { beforeConnect, onWebSocketClose } = hooks();
+
+      await beforeConnect();
+      onWebSocketClose();
+      await expect(beforeConnect()).resolves.toBeUndefined();
+      expect(auth.openSessionGate).not.toHaveBeenCalled();
+    });
+
+    it("★ 갱신이 끝나지 않아도 10초 뒤에는 연결을 이어 간다", async () => {
+      auth.refreshAuthOnce.mockReturnValue(new Promise(() => undefined));
+      createClient().client.connect();
+      const { beforeConnect, onWebSocketClose } = hooks();
+
+      await beforeConnect();
+      onWebSocketClose();
+      let settled = false;
+      void beforeConnect().then(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+    });
+
+    it("갱신 토큰까지 죽었으면 세션 게이트를 연다", async () => {
+      const { AuthRefreshError } = await import("@/lib/api/fetcher");
+      auth.refreshAuthOnce.mockRejectedValue(new AuthRefreshError(true));
+      createClient().client.connect();
+      const { beforeConnect, onWebSocketClose } = hooks();
+
+      await beforeConnect();
+      onWebSocketClose();
+      await expect(beforeConnect()).resolves.toBeUndefined();
+      expect(auth.openSessionGate).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("30초 넘게 못 붙으면 알린다", () => {
+    it("★ 첫 연결이 30초 안에 안 붙으면 「다시 연결하는 중」이다", () => {
+      const { client, onReconnectingChange } = createClient();
+      client.connect();
+
+      vi.advanceTimersByTime(29_999);
+      expect(onReconnectingChange).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(onReconnectingChange).toHaveBeenLastCalledWith(true);
+
+      (stomp.configs[0].onConnect as () => void)();
+      expect(onReconnectingChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it("★ 붙어 있다 끊기면 끊긴 순간부터 30초를 센다 — 시도마다 다시 세지 않는다", () => {
+      const { client, onReconnectingChange } = createClient();
+      client.connect();
+      const config = stomp.configs[0];
+      (config.onConnect as () => void)();
+
+      (config.onWebSocketClose as () => void)();
+      vi.advanceTimersByTime(20_000);
+      (config.onWebSocketClose as () => void)();
+      vi.advanceTimersByTime(9_999);
+      expect(onReconnectingChange).not.toHaveBeenCalledWith(true);
+      vi.advanceTimersByTime(1);
+      expect(onReconnectingChange).toHaveBeenLastCalledWith(true);
+    });
+
+    it("30초 안에 다시 붙으면 알리지 않는다", () => {
+      const { client, onReconnectingChange } = createClient();
+      client.connect();
+      const config = stomp.configs[0];
+      (config.onConnect as () => void)();
+      (config.onWebSocketClose as () => void)();
+      vi.advanceTimersByTime(10_000);
+      (config.onConnect as () => void)();
+      vi.advanceTimersByTime(60_000);
+      expect(onReconnectingChange).not.toHaveBeenCalledWith(true);
+    });
+
+    it("닫으면 세던 것을 버린다", async () => {
+      const { client, onReconnectingChange } = createClient();
+      client.connect();
+      await client.close();
+      vi.advanceTimersByTime(60_000);
+      expect(onReconnectingChange).not.toHaveBeenCalled();
+    });
   });
 });

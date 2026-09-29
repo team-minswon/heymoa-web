@@ -19,6 +19,7 @@ type TopicClientOptions = {
   noteId: string;
   onEvent: (event: Record<string, unknown>) => void;
   onCatchUp: () => void | Promise<void>;
+  onReconnectingChange?: (reconnecting: boolean) => void;
   onSubscriptionRejected: (rejection: {
     type: "subscription.rejected";
     noteId: string;
@@ -131,6 +132,7 @@ function Probe() {
       <div data-testid="subscription-issue">
         {realtime.subscriptionIssue ?? "connected"}
       </div>
+      <div data-testid="reconnecting">{String(realtime.reconnecting)}</div>
     </>
   );
 }
@@ -218,6 +220,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("NoteRealtimeProvider", () => {
@@ -681,6 +684,8 @@ describe("NoteRealtimeProvider", () => {
   it("재연결 catch-up에서 임시 payload를 버리고 note·transcript를 갱신한다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
 
     await act(() => topicClients[0].options.onCatchUp());
     invalidateQueries.mockClear();
@@ -692,6 +697,7 @@ describe("NoteRealtimeProvider", () => {
       pendingText: " 초안",
     });
     await act(() => topicClients[0].options.onCatchUp());
+    act(() => vi.advanceTimersByTime(0));
 
     expect(screen.getByTestId("partials").textContent).toBe("null");
     expectInvalidated(invalidateQueries, getGetNoteQueryKey(NOTE_ID));
@@ -969,6 +975,121 @@ describe("NoteRealtimeProvider", () => {
     });
 
     expect(invalidateQueries).not.toHaveBeenCalled();
+  });
+
+  /**
+   * ★ 배포 때 한 태스크의 구독이 한꺼번에 다시 붙는다. 붙을 때마다 GET 셋(노트·전사 전체·제안)을
+   * 곧바로 내면 새 태스크에 몰린다. 구독은 곧바로, 따라잡기만 0~3초 난수 뒤 한 번 낸다.
+   */
+  describe("재연결 뒤 따라잡기는 흩어 한 번", () => {
+    const transcriptKey = getGetNoteTranscriptQueryKey(NOTE_ID);
+    const calls = (
+      invalidateQueries: ReturnType<typeof vi.fn>,
+      queryKey: readonly unknown[]
+    ) =>
+      invalidateQueries.mock.calls.filter(
+        ([filters]) =>
+          JSON.stringify(filters?.queryKey) === JSON.stringify(queryKey)
+      ).length;
+
+    async function reconnected(random: number) {
+      const rendered = renderProvider();
+      await waitFor(() => expect(topicClients).toHaveLength(1));
+      vi.useFakeTimers();
+      vi.spyOn(Math, "random").mockReturnValue(random);
+      // 첫 연결의 따라잡기는 곧바로다. 흩을 무리가 없다.
+      await act(() => topicClients[0].options.onCatchUp());
+      rendered.invalidateQueries.mockClear();
+      await act(() => topicClients[0].options.onCatchUp());
+      return rendered;
+    }
+
+    it("★ 재연결 catch-up 은 난수 지연(0~3초) 뒤에 GET 셋을 한 번씩 낸다", async () => {
+      const { invalidateQueries } = await reconnected(0.5);
+
+      act(() => vi.advanceTimersByTime(1_499));
+      expect(invalidateQueries).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1));
+      expect(calls(invalidateQueries, getGetNoteQueryKey(NOTE_ID))).toBe(1);
+      expect(calls(invalidateQueries, transcriptKey)).toBe(1);
+      expect(calls(invalidateQueries, getGetProposalsQueryKey(NOTE_ID))).toBe(
+        1
+      );
+    });
+
+    it("★ 기다리는 사이 번호가 건너뛴 final 이 와도 전사는 한 번만 받는다", async () => {
+      const { invalidateQueries, queryClient } = await reconnected(0.999);
+      queryClient.setQueryData(transcriptKey, {
+        status: 200,
+        headers: new Headers(),
+        data: {
+          success: true,
+          error: null,
+          data: {
+            segments: [
+              { segmentId: "01K0000000205", sequence: 5, text: "저장된 문장" },
+            ],
+          },
+        },
+      } as never);
+
+      emit({
+        type: "transcript.final",
+        transcriptionSessionId: SESSION_ID,
+        segmentId: "01K0000000209",
+        utteranceId: "01K0000000109",
+        sequence: 9,
+        text: "틈 뒤의 문장",
+        startedAtMs: 9_000,
+        endedAtMs: 9_900,
+      });
+      act(() => vi.advanceTimersByTime(3_000));
+      expect(calls(invalidateQueries, transcriptKey)).toBe(1);
+      expect(calls(invalidateQueries, getGetNoteQueryKey(NOTE_ID))).toBe(1);
+      expect(calls(invalidateQueries, getGetProposalsQueryKey(NOTE_ID))).toBe(
+        1
+      );
+    });
+
+    it("★ 기다리는 사이 녹음이 멈춰도 전사는 한 번, 제안도 받는다", async () => {
+      const { invalidateQueries } = await reconnected(0.5);
+
+      emit({ type: "recording.stopped", transcriptionSessionId: SESSION_ID });
+      act(() => vi.advanceTimersByTime(3_000));
+      expect(calls(invalidateQueries, transcriptKey)).toBe(1);
+      expect(calls(invalidateQueries, getGetProposalsQueryKey(NOTE_ID))).toBe(
+        1
+      );
+    });
+
+    it("★ 기다리는 사이 회의가 끝나도 전사·제안은 한 번씩이다", async () => {
+      const { invalidateQueries } = await reconnected(0.5);
+
+      emit({ type: "meeting.ended", meetingStatus: "ENDED" });
+      act(() => vi.advanceTimersByTime(3_000));
+      expect(calls(invalidateQueries, transcriptKey)).toBe(1);
+      expect(calls(invalidateQueries, getGetProposalsQueryKey(NOTE_ID))).toBe(
+        1
+      );
+    });
+
+    it("짧게 두 번 다시 붙어도 따라잡기는 한 번이다", async () => {
+      const { invalidateQueries } = await reconnected(0.5);
+      await act(() => topicClients[0].options.onCatchUp());
+      act(() => vi.advanceTimersByTime(3_000));
+      expect(calls(invalidateQueries, transcriptKey)).toBe(1);
+    });
+  });
+
+  it("★ 30초 넘게 못 붙었다는 신호를 화면 상태로 올리고, 붙으면 내린다", async () => {
+    renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    expect(screen.getByTestId("reconnecting").textContent).toBe("false");
+
+    act(() => topicClients[0].options.onReconnectingChange?.(true));
+    expect(screen.getByTestId("reconnecting").textContent).toBe("true");
+    act(() => topicClients[0].options.onReconnectingChange?.(false));
+    expect(screen.getByTestId("reconnecting").textContent).toBe("false");
   });
 
   it("StrictMode의 setup-cleanup-setup에서도 활성 연결을 하나만 남긴다", async () => {

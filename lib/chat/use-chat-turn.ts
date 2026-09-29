@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -444,6 +451,25 @@ export function useChatTurn({
    * `messagesQuery` 는 흐르는 동안 꺼져 있어 `reconcile()` 로 직접 읽는다. 한 턴에 한 번만 당긴다.
    */
   const resyncedTurnRef = useRef<string | null>(null);
+  /** 재조회가 실패한 열쇠. 곧바로 다시 물으면 렌더마다 도므로 탭 복귀·온라인 복귀까지 기다린다. */
+  const failedResyncRef = useRef<string | null>(null);
+  const [resyncRetry, retryResync] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    const retry = () => {
+      if (document.visibilityState !== "visible") return;
+      const failed = failedResyncRef.current;
+      if (failed === null || resyncedTurnRef.current !== failed) return;
+      failedResyncRef.current = null;
+      resyncedTurnRef.current = null;
+      retryResync();
+    };
+    document.addEventListener("visibilitychange", retry);
+    window.addEventListener("online", retry);
+    return () => {
+      document.removeEventListener("visibilitychange", retry);
+      window.removeEventListener("online", retry);
+    };
+  }, []);
   useEffect(() => {
     if (!sessionId) return;
     const gaveUp =
@@ -458,13 +484,36 @@ export function useChatTurn({
     const key = `${sessionId}:${stream.state.turnId ?? ""}:${reason}`;
     if (resyncedTurnRef.current === key) return;
     resyncedTurnRef.current = key;
+    const turnId = stream.state.turnId;
     void reconcile(sessionId).then((refreshed) => {
-      if (!refreshed) return;
+      if (!refreshed) {
+        failedResyncRef.current = key;
+        return;
+      }
       // 포기한 쪽도 히스토리가 끝났다고 답하면 로컬 사본을 버린다. 안 버리면 굳은 행과 받아 둔
       // 프레임이 같은 생각·도구 줄을 두 벌 그린다. 실패 배너는 `lastTurn` 으로 다시 선다.
-      if (reason === "resync" || !refreshed.activeTurn) stream.reset();
+      if (reason === "resync" || !refreshed.activeTurn) {
+        stream.reset();
+        return;
+      }
+      // 아직 돈다. 「끊겼습니다」로 굳히지 않고 다시 붙거나 승인 대기로 옮긴다(N3). 다음 포기도
+      // 다시 물어야 하므로 기억을 푼다 — 포기 한 번이 최소 45초라 되묻기가 몰리지 않는다.
+      const active = refreshed.activeTurn;
+      if (turnId === null || active.turnId !== turnId) return;
+      resyncedTurnRef.current = null;
+      const pending = active.pendingApproval
+        ? {
+            approvalId: active.pendingApproval.approvalId,
+            tool: active.pendingApproval.tool,
+            summary: active.pendingApproval.summary,
+            args: toolArgs(active.pendingApproval.args),
+          }
+        : null;
+      void stream.revive(sessionId, turnId, pending).then(async (final) => {
+        if (final?.phase === "done") await reconcile(sessionId);
+      });
     });
-  }, [reconcile, sessionId, stream]);
+  }, [reconcile, resyncRetry, sessionId, stream]);
 
   /**
    * 중지. 이 탭의 구독을 끊고 서버의 턴도 취소한다 — 끊기만 하면 답이 계속 쌓이고 다음 전송이 409 를

@@ -20,10 +20,15 @@ import {
  */
 export const IDLE_TIMEOUT_MS = 40_000;
 
-/** 재연결 간격. 근거 있는 값이 아니라 실측 뒤 고칠 자리다. 여섯 번(합 45초) 뒤 포기한다. */
+/** 재연결 간격. 근거 있는 값이 아니라 실측 뒤 고칠 자리다. 커서가 안 움직인 연결이 여섯 번(합 45초) 이어지면 포기한다. */
 export const RECONNECT_BACKOFF_MS = [
   1_000, 2_000, 4_000, 8_000, 15_000, 15_000,
 ];
+
+/** 시간표 칸에 더하는 지터 상한. 배포 드레인이 끊은 연결들이 같은 순간 다시 붙지 않게 흩는다. */
+export const RECONNECT_JITTER_MS = 500;
+/** 진행한 연결이 끝 프레임 없이 깨끗하게 닫혔을 때(배포 드레인)의 지터 상한. 시간표를 안 탄다. */
+export const DRAIN_JITTER_MS = 250;
 
 /**
  * 더 볼 것이 없는 상태. 여기 닿으면 재연결하지 않는다. `awaiting_approval` 도 여기다 — 승인
@@ -40,7 +45,9 @@ function isSettled(phase: ChatStreamState["phase"]) {
  * 마지막 `id:` 를 `after` 에 넣어 이어받을 수 있으므로, EOF 는 성공도 실패도 아니고 재연결
  * 신호다. 예외는 `410` 하나 — 스트림이 사라져 히스토리를 다시 읽는다.
  */
-export function useChatStream() {
+export function useChatStream({
+  random = Math.random,
+}: { random?: () => number } = {}) {
   const [state, setState] = useState<ChatStreamState>(initialStreamState);
   const stateRef = useRef(initialStreamState);
   const controllerRef = useRef<AbortController | null>(null);
@@ -154,7 +161,7 @@ export function useChatStream() {
 
       apply(seed);
 
-      // 연결 횟수가 아니라 시간표의 자리다. 탭이 돌아오면 0으로 되감는다.
+      // 연결 횟수가 아니라 시간표의 자리다. 커서가 움직인 연결·탭 복귀가 0으로 되감는다.
       let backoff = 0;
 
       try {
@@ -162,10 +169,10 @@ export function useChatStream() {
           const controller = new AbortController();
           controllerRef.current = controller;
           let failure: unknown = null;
+          const after = stateRef.current.cursor;
           armIdle();
 
           try {
-            const after = stateRef.current.cursor;
             const source = getEventStream(
               getSubscribeAgentChatTurnEventsUrl(
                 chatId,
@@ -224,22 +231,36 @@ export function useChatStream() {
             return stateRef.current;
           }
 
+          // 커서가 움직였으면 턴이 살아 있다는 증거라 시간표를 되감는다. 하트비트는 id 가 없어 못
+          // 되감는다 — 하트비트 뒤 끊기는 장애에서 1초 재시도가 끝없이 돌지 않게.
+          const progressed = stateRef.current.cursor !== after;
+          if (progressed) backoff = 0;
+          // 진행하다 끝 프레임 없이 깨끗하게 닫혔다 = server 의 배포 드레인. 곧바로 새 태스크로
+          // 붙는다. 받자마자 닫는 경우(Redis 실패·끝난 턴)는 커서가 안 움직여 시간표로 간다.
+          const drained =
+            progressed && failure === null && !controller.signal.aborted;
+
           // 턴은 서버에서 살아 있을 수 있으므로 다시 붙는다.
-          const delay = RECONNECT_BACKOFF_MS[backoff];
-          if (delay === undefined) {
-            // 시간표를 다 썼다. 기존 오류 배너에 접는다.
+          const step = RECONNECT_BACKOFF_MS[backoff];
+          if (step === undefined) {
+            // 진행 없이 시간표를 다 썼다. 기존 오류 배너에 접는다.
             apply(endStream(stateRef.current, "gaveUp"));
             return stateRef.current;
           }
 
-          const woke = await sleep(delay);
+          const woke = await sleep(
+            drained
+              ? random() * DRAIN_JITTER_MS
+              : step + random() * RECONNECT_JITTER_MS
+          );
           if (!isCurrent()) return null;
           if (userAbortRef.current) {
             apply(endStream(stateRef.current, "cancelled"));
             return stateRef.current;
           }
           // 탭이 돌아왔거나 네트워크가 붙었으면 시간표를 처음부터 센다.
-          backoff = woke === "woken" ? 0 : backoff + 1;
+          if (woke === "woken") backoff = 0;
+          else if (!drained) backoff += 1;
         }
       } finally {
         // 버려진 루프는 공용 손잡이를 안 건드린다. 늦게 풀린 옛 루프가 새 턴의 컨트롤러·
@@ -251,7 +272,7 @@ export function useChatStream() {
         }
       }
     },
-    [apply, armIdle, clearIdle, sleep]
+    [apply, armIdle, clearIdle, random, sleep]
   );
 
   /** 돌아왔더니 턴이 아직 돈다. `resumedState` 에서 이어받는다. */
@@ -261,6 +282,45 @@ export function useChatStream() {
         ? Promise.resolve<ChatStreamState | null>(null)
         : open(chatId, seed.turnId, seed),
     [open]
+  );
+
+  /**
+   * 포기한 턴을 server 가 아직 돈다고 하면 지금 커서부터 다시 붙는다(N3). 승인을 기다리고 있으면
+   * 스트림이 닫혀 있으므로 연결 없이 승인 대기로 옮긴다. 재조회를 기다리는 사이 대화를 갈아
+   * 끼웠거나 다른 턴이 섰으면 아무것도 안 한다.
+   */
+  const revive = useCallback(
+    (
+      chatId: string,
+      turnId: string,
+      pendingApproval: ChatStreamState["pendingApproval"] = null
+    ) => {
+      const current = stateRef.current;
+      if (
+        current.turnId !== turnId ||
+        current.phase !== "failed" ||
+        current.error?.code !== "STREAM_INTERRUPTED"
+      ) {
+        return Promise.resolve<ChatStreamState | null>(null);
+      }
+      if (pendingApproval) {
+        apply({
+          ...current,
+          phase: "awaiting_approval",
+          pendingApproval,
+          retryable: null,
+          error: null,
+        });
+        return Promise.resolve(stateRef.current);
+      }
+      return open(chatId, turnId, {
+        ...current,
+        phase: "streaming",
+        retryable: null,
+        error: null,
+      });
+    },
+    [apply, open]
   );
 
   /** 연결 없이 상태만 세운다. 마지막 턴이 실패로 끝나 있던 재진입이 쓴다. */
@@ -287,5 +347,5 @@ export function useChatStream() {
   // 언마운트하면 루프를 버린다.
   useEffect(() => discard, [discard]);
 
-  return { state, open, resume, seed, stop, reset };
+  return { state, open, resume, revive, seed, stop, reset };
 }

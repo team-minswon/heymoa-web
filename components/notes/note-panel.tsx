@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   Shrink,
   Trash2,
+  WifiOff,
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -653,6 +654,18 @@ export function NotePanel({
                 label="회의 상태를 확인하지 못했습니다."
                 onRetry={() => void noteQuery.refetch()}
               />
+            </div>
+          ) : null}
+          {noteRealtime.reconnecting ? (
+            <div
+              role="status"
+              className="mx-[var(--note-gutter)] mt-3 flex shrink-0 items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-4 py-3 text-sm text-[var(--el-body)]"
+            >
+              <WifiOff className="size-4 shrink-0 text-amber-600" />
+              <span>
+                실시간 연결이 끊겨 다시 연결하는 중입니다. 그동안 새 발화가 늦게
+                보일 수 있습니다.
+              </span>
             </div>
           ) : null}
           {noteRealtime.subscriptionIssue ? (
