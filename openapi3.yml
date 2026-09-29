@@ -513,6 +513,14 @@ paths:
                       code: NOTE_APPROVED
                       message: 승인이 끝난 회의는 삭제할 수 없습니다.
                       details: null
+                NOTE_ANALYZED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_ANALYZED
+                      message: 분석이 끝난 회의는 삭제할 수 없습니다.
+                      details: null
         '204':
           description: 처리 성공
         '404':
