@@ -145,17 +145,77 @@ export async function refreshAuthOnce() {
   return refreshPromise;
 }
 
+/**
+ * 실패한 응답. **서버 오류 봉투와 같은 모양**(`success`·`data`·`error`)을 갖고 HTTP 상태와 `Retry-After` 를
+ * 더 싣는다 — `errorCodeOf`·`errorMessageOf` 가 봉투 모양으로 판정하므로 호출부는 그대로 읽는다 (APP-783).
+ */
+export class ApiError extends Error {
+  readonly success = false as const;
+  readonly data = null;
+  readonly error: { code: string; message: string; details?: unknown };
+  readonly status: number;
+  /** `Retry-After`(초)를 ms 로. 없거나 못 읽으면 null 이다 — 언제 다시 될지 모른다는 뜻이다. */
+  readonly retryAfterMs: number | null;
+
+  constructor(
+    status: number,
+    error: { code: string; message: string; details?: unknown },
+    retryAfterMs: number | null
+  ) {
+    super(error.message);
+    this.name = "ApiError";
+    this.status = status;
+    this.error = error;
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * 봉투가 없을 때의 문구. ALB 가 돌려주는 HTML 502·503·504 나 본문 없는 429 가 여기 온다 — 예전엔
+ * `response.json()` 이 터져 「Unexpected token '<'」 가 사용자 토스트까지 갔다.
+ */
+function fallbackMessage(status: number) {
+  if (status === 429) return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (status >= 500) return "서버에 잠시 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+  return "요청을 처리하지 못했습니다.";
+}
+
+// ponytail: 초 단위만 읽는다. 서버(`RetryLater`)가 초로 싣는다 — HTTP-date 를 보내는 상대가 생기면 그때 더한다
+function retryAfterMsOf(headers: Headers) {
+  const seconds = Number(headers.get("Retry-After"));
+  return headers.has("Retry-After") && Number.isFinite(seconds) && seconds >= 0
+    ? seconds * 1000
+    : null;
+}
+
+async function toApiError(response: Response) {
+  const text = await response.text().catch(() => "");
+  let body: unknown = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    // HTML·평문 본문 — 아래 기본 문구로 간다
+  }
+  const error = (body as { error?: { code?: unknown; message?: unknown } } | null)
+    ?.error;
+  const envelope =
+    typeof error?.code === "string" && typeof error.message === "string"
+      ? (error as ApiError["error"])
+      : { code: `HTTP_${response.status}`, message: fallbackMessage(response.status) };
+  return new ApiError(response.status, envelope, retryAfterMsOf(response.headers));
+}
+
 async function parseResponse<T>(response: Response, responseType?: string) {
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
   const responseData =
     response.status === 204
       ? undefined
       : responseType === "blob"
         ? await response.blob()
         : await response.json();
-
-  if (!response.ok) {
-    throw responseData;
-  }
 
   return {
     data: responseData as T,

@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiFetch, AuthRefreshError, isAuthError } from "@/lib/api/fetcher";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
+import {
+  ApiError,
+  apiFetch,
+  AuthRefreshError,
+  isAuthError,
+} from "@/lib/api/fetcher";
 import { resetSessionGate, SessionExpiredError } from "@/lib/auth/session-gate";
 
 function jsonResponse(status: number, body: unknown) {
@@ -148,3 +154,82 @@ describe("prerender 문서", () => {
   });
 });
 
+// 실패 응답은 상태를 잃지 않고, 봉투가 아니어도 사용자에게 내부 문구를 흘리지 않는다 (APP-783).
+describe("apiFetch 실패 응답", () => {
+  beforeEach(() => {
+    resetSessionGate();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function rejectionOf(response: Response) {
+    vi.mocked(fetch).mockResolvedValueOnce(response);
+    return apiFetch("/v1/notes").then(
+      () => {
+        throw new Error("거절돼야 한다");
+      },
+      (error: unknown) => error
+    );
+  }
+
+  it("봉투가 있는 409는 상태와 서버 문구를 그대로 싣는다", async () => {
+    const error = await rejectionOf(
+      jsonResponse(409, {
+        success: false,
+        data: null,
+        error: { code: "LAST_WORKSPACE_ADMIN", message: "관리자가 한 명은 있어야 합니다." },
+      })
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(409);
+    // 호출부 61곳이 쓰는 판정이 그대로 통한다
+    expect(errorCodeOf(error)).toBe("LAST_WORKSPACE_ADMIN");
+    expect(errorMessageOf(error, "기본")).toBe("관리자가 한 명은 있어야 합니다.");
+  });
+
+  it("HTML 502 는 파싱 오류 대신 한국어 문구로 올린다", async () => {
+    const error = await rejectionOf(
+      new Response("<html><body>502 Bad Gateway</body></html>", {
+        status: 502,
+        headers: { "Content-Type": "text/html" },
+      })
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(502);
+    const message = errorMessageOf(error, "기본");
+    expect(message).not.toMatch(/Unexpected token|JSON/);
+    expect(message).toMatch(/서버/);
+  });
+
+  it("본문 없는 429 는 Retry-After 를 ms 로 싣는다", async () => {
+    const error = await rejectionOf(
+      new Response(null, { status: 429, headers: { "Retry-After": "7" } })
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(429);
+    expect((error as ApiError).retryAfterMs).toBe(7_000);
+    expect(errorMessageOf(error, "기본")).toMatch(/잠시 후/);
+  });
+
+  it("봉투 있는 429 는 서버 문구를 쓰고, Retry-After 가 없으면 기다릴 시간을 모른다고 둔다", async () => {
+    const error = await rejectionOf(
+      jsonResponse(429, {
+        success: false,
+        data: null,
+        error: {
+          code: "INVITATION_RATE_LIMITED",
+          message: "지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.",
+        },
+      })
+    );
+
+    expect(errorCodeOf(error)).toBe("INVITATION_RATE_LIMITED");
+    expect((error as ApiError).retryAfterMs).toBeNull();
+  });
+});

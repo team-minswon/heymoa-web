@@ -2,8 +2,11 @@ import { MutationCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
 import { errorMessageOf } from "@/lib/api/error-message";
-import { isAuthError } from "@/lib/api/fetcher";
+import { ApiError, isAuthError } from "@/lib/api/fetcher";
 import { isSessionExpired } from "@/lib/auth/session-gate";
+
+/** 재시도로 기다려 줄 최대 시간. v5 기본 백오프의 상한과 같다. */
+const MAX_RETRY_AFTER_MS = 30_000;
 
 /**
  * mutation이 실패하면 기본으로 토스트를 띄운다.
@@ -28,8 +31,26 @@ export function makeQueryClient() {
         refetchOnWindowFocus: false,
         // 호출부 31곳 중 retry를 지정한 곳이 2곳뿐이라 나머지는 v5 기본값 3회를 쓴다.
         // 인증 오류는 몇 번을 더 보내도 결과가 같으므로 여기서 끊는다.
-        retry: (failureCount, error) =>
-          isAuthError(error) ? false : failureCount < 2,
+        retry: (failureCount, error) => {
+          if (isAuthError(error)) return false;
+          if (error instanceof ApiError && error.status === 429) {
+            // 언제 풀릴지 아는 짧은 제한만 한 번 기다린다. 모르거나 길면 화면을 붙잡아 두지 않는다
+            return (
+              failureCount < 1 &&
+              error.retryAfterMs != null &&
+              error.retryAfterMs <= MAX_RETRY_AFTER_MS
+            );
+          }
+          // 4xx 는 다시 보내도 답이 같다 — 오류만 늦게 보인다 (APP-783)
+          if (error instanceof ApiError && error.status < 500) return false;
+          return failureCount < 2;
+        },
+        retryDelay: (failureCount, error) =>
+          error instanceof ApiError &&
+          error.status === 429 &&
+          error.retryAfterMs != null
+            ? error.retryAfterMs
+            : Math.min(1000 * 2 ** failureCount, MAX_RETRY_AFTER_MS),
       },
     },
     mutationCache: new MutationCache({

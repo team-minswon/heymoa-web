@@ -1,8 +1,8 @@
 /**
  * 계약 오류 봉투에서 사용자에게 보일 문구를 뽑는다.
  *
- * `apiFetch`는 비-2xx일 때 응답 본문을 그대로 throw한다 — 형태는
- * `{ success: false, data: null, error: { code, message, details } }`다.
+ * `apiFetch`는 비-2xx일 때 `ApiError`를 throw한다 — 봉투와 같은 모양
+ * `{ success: false, data: null, error: { code, message, details } }`에 상태 코드를 더 싣는다.
  * SSE 클라이언트(`lib/api/sse.ts`)도 같은 봉투를 던진다.
  */
 

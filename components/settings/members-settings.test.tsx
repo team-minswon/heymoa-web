@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MembersSettings } from "@/components/settings/members-settings";
+import { ApiError } from "@/lib/api/fetcher";
 
 const state = vi.hoisted(() => ({
   myRole: "ADMIN" as "ADMIN" | "MEMBER",
@@ -326,6 +327,29 @@ describe("MembersSettings", () => {
     await waitFor(() =>
       expect(screen.getByText("이미 워크스페이스 멤버입니다.")).toBeTruthy()
     );
+  });
+
+  // 초대 상한(APP-776)은 하루 창이고 Retry-After 를 싣지 않는다. 걸리기 쉬운 「같은 주소 하루 3통」은
+  // 그 주소만 막으므로 폼을 잠그지 않고 서버 문구만 보인다 (APP-783)
+  it("초대가 429 로 거절되면 서버 문구를 보이고 폼은 잠그지 않는다", async () => {
+    state.createError = new ApiError(
+      429,
+      {
+        code: "INVITATION_RATE_LIMITED",
+        message: "지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      },
+      null
+    );
+    renderSettings();
+    await invite("junho@heymoa.app");
+    await waitFor(() =>
+      expect(
+        screen.getByText("지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.")
+      ).toBeTruthy()
+    );
+    expect(
+      (screen.getByRole("button", { name: "초대" }) as HTMLButtonElement).disabled
+    ).toBe(false);
   });
 
   it("이메일을 고치면 지난 초대 오류가 사라진다", async () => {
