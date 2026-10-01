@@ -1393,6 +1393,85 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/agent-delegations/{delegationId}/usages:
+    get:
+      tags:
+      - AgentDelegation
+      summary: 외부 에이전트 연결의 사용 내역
+      description: 내 연결로 에이전트가 부른 도구를 최근 것부터 돌려준다. 도구 인자·결과 본문은 남기지 않아 나가지 않는다. 회수·만료된 연결도 볼 수 있다. 남의 연결은 같은 워크스페이스의 관리자에게도 없는 것과 같다. 커서는 (occurredAt, usageId) 복합이고 둘을 함께 보낸다.
+      operationId: getAgentDelegationUsages
+      parameters:
+      - name: delegationId
+        in: path
+        description: 내역을 볼 연결의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 내역을 볼 연결의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4BD
+      - name: afterOccurredAt
+        in: query
+        description: 이 시각보다 **오래된** 것부터. 직전 응답의 `nextOccurredAt` 을 그대로 싣는다
+        required: false
+        schema:
+          type: string
+          description: 이 시각보다 **오래된** 것부터. 직전 응답의 `nextOccurredAt` 을 그대로 싣는다
+          nullable: false
+          format: date-time
+        example: '2026-10-01T12:00:00Z'
+      - name: afterUsageId
+        in: query
+        description: 커서의 짝. 직전 응답의 `nextUsageId`. 같은 시각 안에서 이 id 보다 작은 것부터
+        required: false
+        schema:
+          type: string
+          description: 커서의 짝. 직전 응답의 `nextUsageId`. 같은 시각 안에서 이 id 보다 작은 것부터
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4BF
+      responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_DELEGATION_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_DELEGATION_NOT_FOUND
+                      message: 연결을 찾을 수 없습니다.
+                      details: null
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDelegationUsagesResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      usages:
+                      - usageId: 0HZX2K7M9Q4BE
+                        toolName: list_project_items
+                        outcome: SUCCEEDED
+                        resultCount: 12
+                        occurredAt: '2026-10-01T11:59:30Z'
+                      hasMore: true
+                      nextOccurredAt: '2026-10-01T11:59:30Z'
+                      nextUsageId: 0HZX2K7M9Q4BE
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
   /v1/integrations/{provider}/callback:
     get:
       tags:
@@ -7588,6 +7667,95 @@ components:
                     nullable: false
                     example: '2026-07-14T01:02:03Z'
                     format: date-time
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    AgentDelegationUsagesResponse:
+      title: AgentDelegationUsagesResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - hasMore
+          - nextOccurredAt
+          - nextUsageId
+          - usages
+          type: object
+          properties:
+            nextUsageId:
+              type: string
+              description: 커서의 짝. 시각만으로는 같은 시각의 내역이 빠진다. 더 없으면 null
+              nullable: true
+              example: 0HZX2K7M9Q4BE
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            hasMore:
+              type: boolean
+              description: 커서 뒤에 더 있나. 총 개수를 세지 않고 한 건 더 읽어 정한다
+              nullable: false
+              example: true
+            nextOccurredAt:
+              type: string
+              description: 다음 요청에 그대로 실을 커서. 더 없으면 null
+              nullable: true
+              example: '2026-10-01T11:59:30Z'
+              format: date-time
+            usages:
+              type: array
+              description: 도구 호출 내역. 최근 것부터 한 쪽 최대 20개
+              items:
+                required:
+                - occurredAt
+                - outcome
+                - resultCount
+                - toolName
+                - usageId
+                type: object
+                properties:
+                  usageId:
+                    type: string
+                    description: 내역 한 줄의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4BE
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  occurredAt:
+                    type: string
+                    description: 요청 시각
+                    nullable: false
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  resultCount:
+                    type: integer
+                    description: 돌려준 결과 건수. 건수로 셀 수 없는 도구나 실패면 null
+                    nullable: true
+                    example: 12
+                    format: int32
+                  outcome:
+                    type: string
+                    description: SUCCEEDED 는 결과를 돌려줌, FAILED 는 도구가 오류로 끝남
+                    nullable: false
+                    example: SUCCEEDED
+                    enum:
+                    - SUCCEEDED
+                    - FAILED
+                  toolName:
+                    type: string
+                    description: 에이전트가 부른 MCP 도구 이름
+                    nullable: false
+                    example: list_project_items
               nullable: false
           description: 성공 응답 데이터
           nullable: false

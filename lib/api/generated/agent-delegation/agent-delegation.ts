@@ -24,10 +24,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AgentDelegationUsagesResponse,
   AgentDelegationsResponse,
   AppErrorResponse,
   CreateAgentDelegationRequest,
   CreatedAgentDelegationResponse,
+  GetAgentDelegationUsagesParams,
   UnauthorizedResponse,
 } from "../models";
 
@@ -673,3 +675,420 @@ export const useRevokeAgentDelegation = <
     queryClient
   );
 };
+export type getAgentDelegationUsagesResponse200 = {
+  data: AgentDelegationUsagesResponse;
+  status: 200;
+};
+
+export type getAgentDelegationUsagesResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getAgentDelegationUsagesResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getAgentDelegationUsagesResponseSuccess =
+  getAgentDelegationUsagesResponse200 & {
+    headers: Headers;
+  };
+export type getAgentDelegationUsagesResponseError = (
+  | getAgentDelegationUsagesResponse401
+  | getAgentDelegationUsagesResponse404
+) & {
+  headers: Headers;
+};
+
+export type getAgentDelegationUsagesResponse =
+  | getAgentDelegationUsagesResponseSuccess
+  | getAgentDelegationUsagesResponseError;
+
+export const getGetAgentDelegationUsagesUrl = (
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/agent-delegations/${delegationId}/usages?${stringifiedParams}`
+    : `/v1/agent-delegations/${delegationId}/usages`;
+};
+
+/**
+ * 내 연결로 에이전트가 부른 도구를 최근 것부터 돌려준다. 도구 인자·결과 본문은 남기지 않아 나가지 않는다. 회수·만료된 연결도 볼 수 있다. 남의 연결은 같은 워크스페이스의 관리자에게도 없는 것과 같다. 커서는 (occurredAt, usageId) 복합이고 둘을 함께 보낸다.
+ * @summary 외부 에이전트 연결의 사용 내역
+ */
+export const getAgentDelegationUsages = async (
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getAgentDelegationUsagesResponse> => {
+  return apiFetch<getAgentDelegationUsagesResponse>(
+    getGetAgentDelegationUsagesUrl(delegationId, params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetAgentDelegationUsagesQueryKey = (
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams
+) => {
+  return [
+    `/v1/agent-delegations/${delegationId}/usages`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetAgentDelegationUsagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetAgentDelegationUsagesQueryKey(delegationId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAgentDelegationUsages>>
+  > = ({ signal }) =>
+    getAgentDelegationUsages(delegationId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: delegationId !== null && delegationId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAgentDelegationUsagesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAgentDelegationUsages>>
+>;
+export type GetAgentDelegationUsagesQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetAgentDelegationUsages<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params: undefined | GetAgentDelegationUsagesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+          TError,
+          Awaited<ReturnType<typeof getAgentDelegationUsages>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentDelegationUsages<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+          TError,
+          Awaited<ReturnType<typeof getAgentDelegationUsages>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentDelegationUsages<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 외부 에이전트 연결의 사용 내역
+ */
+
+export function useGetAgentDelegationUsages<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAgentDelegationUsagesQueryOptions(
+    delegationId,
+    params,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 외부 에이전트 연결의 사용 내역
+ */
+export const prefetchGetAgentDelegationUsagesQuery = async <
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetAgentDelegationUsagesQueryOptions(
+    delegationId,
+    params,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetAgentDelegationUsagesSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetAgentDelegationUsagesQueryKey(delegationId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAgentDelegationUsages>>
+  > = ({ signal }) =>
+    getAgentDelegationUsages(delegationId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAgentDelegationUsagesSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAgentDelegationUsages>>
+>;
+export type GetAgentDelegationUsagesSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetAgentDelegationUsagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params: undefined | GetAgentDelegationUsagesParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentDelegationUsagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAgentDelegationUsagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 외부 에이전트 연결의 사용 내역
+ */
+
+export function useGetAgentDelegationUsagesSuspense<
+  TData = Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  delegationId: string,
+  params?: GetAgentDelegationUsagesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAgentDelegationUsages>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAgentDelegationUsagesSuspenseQueryOptions(
+    delegationId,
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

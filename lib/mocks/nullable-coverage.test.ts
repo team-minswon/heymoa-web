@@ -329,6 +329,10 @@ function contractSamples() {
         // 검토 항목의 원본 명제는 판이 여럿인 것부터 앞에 선다. 앞의 몇 개로 이력 모양이 다 나온다.
         proposalId: [...proposalIds, ...meetingFlow.proposalIds().slice(0, 12)],
         taskId: projectTasks.ids(),
+        // 사용 내역(APP-826) — 한 쪽을 넘는 연결과 몇 줄뿐인 연결이 커서의 양쪽을 낸다
+        delegationId: mockDb
+          .listAgentDelegations()
+          .map((delegation) => delegation.delegationId),
       };
       if (params.some((param) => !values[param]?.length)) continue;
       // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).

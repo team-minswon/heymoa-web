@@ -285,7 +285,9 @@ describe("contract sync 2026-07-29", () => {
     // 회의 요약 조회가 늘었다 (55 → 56) — `meeting-review/summary`.
     // APP-804(server APP-801)에서 외부 에이전트 연결 둘이 늘었다 (60 → 62) —
     // `agent-delegations`(목록 GET · 만들기 POST)와 `agent-delegations/{delegationId}`(회수 DELETE).
-    expect(paths).toHaveLength(62);
+    // APP-826(server APP-825)에서 연결의 사용 내역이 늘었다 (62 → 63) —
+    // `agent-delegations/{delegationId}/usages`.
+    expect(paths).toHaveLength(63);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

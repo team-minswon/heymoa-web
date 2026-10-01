@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker";
 import type {
   AgentDelegationsResponseDataDelegationsItem,
+  AgentDelegationUsagesResponseData,
+  AgentDelegationUsagesResponseDataUsagesItem,
   CreateWorkspaceRequest,
   CurrentTranscriptionSessionNullableResponseData,
   CurrentUserResponseData,
@@ -200,7 +202,16 @@ type StoreState = {
   agentChatMessages: MockAgentChatMessage[];
   /** 외부 에이전트 연결(APP-804). 목 유저 하나의 것이라 소유자 열을 두지 않는다. */
   agentDelegations: AgentDelegationsResponseDataDelegationsItem[];
+  /** 연결별 도구 호출 내역(APP-826). 본문은 서버 표에도 없어 여기에도 없다. */
+  agentDelegationUsages: MockAgentDelegationUsage[];
 };
+
+type MockAgentDelegationUsage = AgentDelegationUsagesResponseDataUsagesItem & {
+  delegationId: string;
+};
+
+/** 서버(APP-825)의 한 쪽 크기와 같다. */
+const AGENT_USAGE_PAGE_SIZE = 20;
 
 let state: StoreState;
 let idCounter = 100;
@@ -1771,7 +1782,51 @@ function createSeedState(): StoreState {
     agentChats: seededChats.chats,
     agentChatMessages: seededChats.messages,
     agentDelegations: seedAgentDelegations(workspaces),
+    agentDelegationUsages: seedAgentDelegationUsages(),
   };
+}
+
+/**
+ * 연결 사용 내역 시드(APP-826). 쓰고 있는 연결에는 **한 쪽(20)을 넘게** 심어 이어 읽기 커서의
+ * 양쪽 값이 다 나오게 하고, 회수한 연결 하나는 내역이 몇 줄뿐이다. 쓴 적 없는 연결은 빈 상태다.
+ * 실패한 호출과 건수 없는 호출(화면 열기)이 섞여 `resultCount` 도 양쪽이 나온다.
+ */
+function seedAgentDelegationUsages(): MockAgentDelegationUsage[] {
+  const tools = [
+    "list_projects",
+    "list_project_items",
+    "get_project_item",
+    "expand_relations",
+    "list_open_tasks",
+    "open_screen",
+  ];
+  const active = Array.from({ length: 24 }, (_, index) => {
+    const toolName = tools[index % tools.length];
+    const failed = index % 7 === 3;
+    return {
+      delegationId: "01K00000000Q1",
+      usageId: `01K0000000U${String(index).padStart(2, "0")}`,
+      toolName,
+      outcome: failed ? ("FAILED" as const) : ("SUCCEEDED" as const),
+      resultCount:
+        failed || toolName === "open_screen" ? null : (index % 5) + 1,
+      // 30분 간격으로 거슬러 간다 — 마지막 사용 시각(13:00)이 가장 최근 줄이다
+      occurredAt: new Date(
+        Date.parse("2026-09-30T13:00:00Z") - index * 30 * 60 * 1000
+      ).toISOString(),
+    };
+  });
+  const left = [
+    {
+      delegationId: "01K00000000Q3",
+      usageId: "01K0000000V01",
+      toolName: "list_projects",
+      outcome: "SUCCEEDED" as const,
+      resultCount: 2,
+      occurredAt: "2026-08-25T09:00:00Z",
+    },
+  ];
+  return [...active, ...left];
 }
 
 /**
@@ -2557,6 +2612,50 @@ export const mockDb = {
     };
     state.agentDelegations.push(delegation);
     return { delegation: copy(delegation), token };
+  },
+
+  /**
+   * 서버(APP-825)처럼 최근 것부터 한 쪽씩, 커서는 `(occurredAt, usageId)` 둘을 함께 받는다 — 하나만 오면
+   * 처음부터다. 회수·만료된 연결의 내역도 보인다.
+   */
+  listAgentDelegationUsages(
+    delegationId: string,
+    afterOccurredAt?: string | null,
+    afterUsageId?: string | null
+  ): AgentDelegationUsagesResponseData {
+    if (
+      !state.agentDelegations.some(
+        (candidate) => candidate.delegationId === delegationId
+      )
+    )
+      fail("AGENT_DELEGATION_NOT_FOUND");
+    const cursor =
+      afterOccurredAt && afterUsageId
+        ? { at: Date.parse(afterOccurredAt), id: afterUsageId }
+        : null;
+    const rows = state.agentDelegationUsages
+      .filter((usage) => usage.delegationId === delegationId)
+      .sort(
+        (a, b) =>
+          Date.parse(b.occurredAt) - Date.parse(a.occurredAt) ||
+          b.usageId.localeCompare(a.usageId)
+      )
+      .filter((usage) => {
+        if (!cursor) return true;
+        const at = Date.parse(usage.occurredAt);
+        return (
+          at < cursor.at || (at === cursor.at && usage.usageId < cursor.id)
+        );
+      });
+    const page = rows.slice(0, AGENT_USAGE_PAGE_SIZE);
+    const hasMore = rows.length > AGENT_USAGE_PAGE_SIZE;
+    const last = page.at(-1);
+    return copy({
+      usages: page.map((usage) => omit(usage, ["delegationId"])),
+      hasMore,
+      nextOccurredAt: hasMore && last ? last.occurredAt : null,
+      nextUsageId: hasMore && last ? last.usageId : null,
+    });
   },
 
   /** 본인 회수. 이미 회수된 연결을 다시 회수해도 그대로 둔다(서버와 같다). */

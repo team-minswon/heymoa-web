@@ -9,6 +9,7 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  AgentDelegationUsagesResponse,
   AgentDelegationsResponse,
   CreatedAgentDelegationResponse,
 } from "../models";
@@ -54,6 +55,26 @@ export const getCreateAgentDelegationResponseMock =
         revokeReason: null,
       },
       token: "hm_4f9Qz8LmT2vXc7Rb1NkYp0Hs6JdWe3UaGi5OtCyB2",
+    },
+    error: null,
+  });
+
+export const getGetAgentDelegationUsagesResponseMock =
+  (): AgentDelegationUsagesResponse => ({
+    success: true,
+    data: {
+      usages: [
+        {
+          usageId: "0HZX2K7M9Q4BE",
+          toolName: "list_project_items",
+          outcome: "SUCCEEDED",
+          resultCount: 12,
+          occurredAt: "2026-10-01T11:59:30Z",
+        },
+      ],
+      hasMore: true,
+      nextOccurredAt: "2026-10-01T11:59:30Z",
+      nextUsageId: "0HZX2K7M9Q4BE",
     },
     error: null,
   });
@@ -128,8 +149,35 @@ export const getRevokeAgentDelegationMockHandler = (
     options
   );
 };
+
+export const getGetAgentDelegationUsagesMockHandler = (
+  overrideResponse?:
+    | AgentDelegationUsagesResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) =>
+        | Promise<AgentDelegationUsagesResponse>
+        | AgentDelegationUsagesResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/agent-delegations/:delegationId/usages",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetAgentDelegationUsagesResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getAgentDelegationMock = () => [
   getGetAgentDelegationsMockHandler(),
   getCreateAgentDelegationMockHandler(),
   getRevokeAgentDelegationMockHandler(),
+  getGetAgentDelegationUsagesMockHandler(),
 ];

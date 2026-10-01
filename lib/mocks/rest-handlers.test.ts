@@ -81,6 +81,37 @@ describe("REST mock handlers", () => {
     expect((await ok.json()).data.delegation.name).toBe("노트북");
   });
 
+  // 서버(APP-825)처럼 한 쪽 20개, 다음 쪽은 직전 응답의 커서 둘로. 없는 연결은 404 다
+  it("외부 에이전트 연결의 사용 내역을 커서로 이어 읽고 없는 연결은 404 다", async () => {
+    const read = (query = "") =>
+      fetch(
+        `http://localhost/v1/agent-delegations/01K00000000Q1/usages${query}`
+      ).then((response) => response.json());
+
+    const first = (await read()).data;
+    const second = (
+      await read(
+        `?afterOccurredAt=${first.nextOccurredAt}&afterUsageId=${first.nextUsageId}`
+      )
+    ).data;
+    const missing = await fetch(
+      "http://localhost/v1/agent-delegations/01KNOPE000000/usages"
+    );
+
+    expect(first.usages).toHaveLength(20);
+    expect(first.hasMore).toBe(true);
+    expect(second.hasMore).toBe(false);
+    expect(second.nextUsageId).toBeNull();
+    const ids = [...first.usages, ...second.usages].map(
+      (usage: { usageId: string }) => usage.usageId
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(missing.status).toBe(404);
+    expect((await missing.json()).error.code).toBe(
+      "AGENT_DELEGATION_NOT_FOUND"
+    );
+  });
+
   it("생성은 201로 답한다", async () => {
     // 화면이 `status === 201`로 성공을 가른다. 생성 mock 래퍼는 200만 줄 수 있어
     // 목에서 워크스페이스가 만들어지지 않았다.

@@ -932,7 +932,7 @@ export const restHandlers = [
     invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))
   ),
 
-  // 외부 에이전트 연결 (APP-804). 계약: 목록 200 · 만들기 201 · 회수 bodyless 204.
+  // 외부 에이전트 연결 (APP-804·826). 계약: 목록 200 · 만들기 201 · 회수 bodyless 204 · 사용 내역 200.
   http.get("*/v1/agent-delegations", () =>
     commandResult(() => ({ delegations: mockDb.listAgentDelegations() }))
   ),
@@ -963,6 +963,19 @@ export const restHandlers = [
       201
     );
   }),
+  http.get(
+    "*/v1/agent-delegations/:delegationId/usages",
+    ({ params, request }) => {
+      const query = new URL(request.url).searchParams;
+      return commandResult(() =>
+        mockDb.listAgentDelegationUsages(
+          id(params.delegationId),
+          query.get("afterOccurredAt"),
+          query.get("afterUsageId")
+        )
+      );
+    }
+  ),
   http.delete("*/v1/agent-delegations/:delegationId", ({ params }) => {
     try {
       mockDb.revokeAgentDelegation(id(params.delegationId));

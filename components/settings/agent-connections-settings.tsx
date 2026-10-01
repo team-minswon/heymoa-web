@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Bot, Copy, Info } from "lucide-react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { Bot, ChevronDown, Copy, Info } from "lucide-react";
 
 import {
   AlertDialog,
@@ -28,12 +28,17 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildUrl } from "@/lib/api/fetcher";
 import {
+  getAgentDelegationUsages,
+  getGetAgentDelegationUsagesQueryKey,
   getGetAgentDelegationsQueryKey,
   useCreateAgentDelegation,
   useGetAgentDelegations,
   useRevokeAgentDelegation,
 } from "@/lib/api/generated/agent-delegation/agent-delegation";
-import type { AgentDelegationsResponseDataDelegationsItem } from "@/lib/api/generated/models";
+import type {
+  AgentDelegationsResponseDataDelegationsItem,
+  GetAgentDelegationUsagesParams,
+} from "@/lib/api/generated/models";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
 import { toast } from "@/lib/ui/toast";
@@ -50,7 +55,26 @@ const STATUS_LABEL: Record<Delegation["status"], string> = {
 };
 
 const DATE = { year: "numeric", month: "long", day: "numeric" } as const;
+const DATE_TIME = {
+  month: "long",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+} as const;
 
+/**
+ * MCP 도구 이름(server `agentdelegation/presentation/mcp/`)을 사람이 읽는 말로. 모르는 이름은 그대로
+ * 보인다 — server 가 도구를 더해도 화면이 빈칸이 되지 않는다.
+ */
+const TOOL_LABEL: Record<string, string> = {
+  get_connection: "연결 확인",
+  list_projects: "프로젝트 목록",
+  list_project_items: "프로젝트 항목 목록",
+  get_project_item: "항목 상세",
+  expand_relations: "관계 따라가기",
+  list_open_tasks: "미완료 할 일",
+  open_screen: "화면 열기",
+};
 /**
  * 외부 에이전트 연결(APP-804). 팀원 본인이 워크스페이스를 맡기고 본인이 회수한다 — 그래서 계정 쪽
  * 설정이고, 목록은 워크스페이스와 상관없이 **내** 연결이다.
@@ -414,98 +438,236 @@ function DelegationRow({
   onRevoked: () => Promise<unknown>;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const revoke = useRevokeAgentDelegation();
   const active = delegation.status === "ACTIVE";
+  const historyId = `agent-usage-${delegation.delegationId}`;
 
   return (
-    <li className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
-          <Bot className="size-4 text-[var(--el-muted)]" />
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-medium text-[var(--el-ink)]">
-              {delegation.name}
+    <li className="rounded-panel border border-[var(--el-hairline)] bg-white p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-[var(--el-canvas-soft)]">
+            <Bot className="size-4 text-[var(--el-muted)]" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-medium text-[var(--el-ink)]">
+                {delegation.name}
+              </p>
+              <Badge variant={active ? "success" : "outline"}>
+                {STATUS_LABEL[delegation.status]}
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-[var(--el-muted)]">
+              {delegation.workspaceName}
+              {delegation.tokenHint ? (
+                <>
+                  {" · "}
+                  <span className="font-mono">{delegation.tokenHint}…</span>
+                </>
+              ) : null}
             </p>
-            <Badge variant={active ? "success" : "outline"}>
-              {STATUS_LABEL[delegation.status]}
-            </Badge>
+            <p className="mt-0.5 text-xs text-[var(--el-muted)]">
+              {formatAppDate(delegation.createdAt, DATE)} 연결 · 최근 사용{" "}
+              {delegation.lastUsedAt
+                ? formatAppDate(delegation.lastUsedAt, DATE)
+                : "없음"}
+              {active
+                ? ` · ${formatAppDate(delegation.expiresAt, DATE)}까지 쓰지 않으면 만료`
+                : null}
+            </p>
           </div>
-          <p className="mt-1 text-xs text-[var(--el-muted)]">
-            {delegation.workspaceName}
-            {delegation.tokenHint ? (
-              <>
-                {" · "}
-                <span className="font-mono">{delegation.tokenHint}…</span>
-              </>
-            ) : null}
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--el-muted)]">
-            {formatAppDate(delegation.createdAt, DATE)} 연결 · 최근 사용{" "}
-            {delegation.lastUsedAt
-              ? formatAppDate(delegation.lastUsedAt, DATE)
-              : "없음"}
-            {active
-              ? ` · ${formatAppDate(delegation.expiresAt, DATE)}까지 쓰지 않으면 만료`
-              : null}
-          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs"
+            aria-expanded={historyOpen}
+            aria-controls={historyId}
+            onClick={() => setHistoryOpen((open) => !open)}
+          >
+            사용 내역
+            <ChevronDown
+              className={`size-3.5 transition-transform ${historyOpen ? "rotate-180" : ""}`}
+            />
+          </Button>
+          {active ? (
+            <>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 shrink-0"
+                onClick={() => setConfirmOpen(true)}
+              >
+                회수
+              </Button>
+              <AlertDialog
+                open={confirmOpen}
+                onOpenChange={(open) => {
+                  if (revoke.isPending) return;
+                  setConfirmOpen(open);
+                }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      「{delegation.name}」 연결을 회수할까요?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      이 토큰을 쓰는 에이전트는 다음 요청부터 막힙니다. 되돌릴
+                      수 없고, 다시 쓰려면 새로 연결해야 합니다.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={revoke.isPending}>
+                      취소
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      variant="destructive"
+                      loading={revoke.isPending}
+                      disabled={revoke.isPending}
+                      onClick={async () => {
+                        // 다이얼로그를 연 채 기다린다(`members-settings` 와 같은 패턴). 거절은
+                        // 여기서 소비하고 토스트는 전역 `MutationCache.onError` 가 띄운다.
+                        const response = await revoke
+                          .mutateAsync({
+                            delegationId: delegation.delegationId,
+                          })
+                          .catch(() => null);
+                        if (response?.status !== 204) return;
+                        await onRevoked();
+                        setConfirmOpen(false);
+                      }}
+                    >
+                      회수
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          ) : null}
         </div>
       </div>
-
-      {active ? (
-        <>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-8 shrink-0"
-            onClick={() => setConfirmOpen(true)}
-          >
-            회수
-          </Button>
-          <AlertDialog
-            open={confirmOpen}
-            onOpenChange={(open) => {
-              if (revoke.isPending) return;
-              setConfirmOpen(open);
-            }}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  「{delegation.name}」 연결을 회수할까요?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  이 토큰을 쓰는 에이전트는 다음 요청부터 막힙니다. 되돌릴 수
-                  없고, 다시 쓰려면 새로 연결해야 합니다.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={revoke.isPending}>
-                  취소
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  loading={revoke.isPending}
-                  disabled={revoke.isPending}
-                  onClick={async () => {
-                    // 다이얼로그를 연 채 기다린다(`members-settings` 와 같은 패턴). 거절은
-                    // 여기서 소비하고 토스트는 전역 `MutationCache.onError` 가 띄운다.
-                    const response = await revoke
-                      .mutateAsync({ delegationId: delegation.delegationId })
-                      .catch(() => null);
-                    if (response?.status !== 204) return;
-                    await onRevoked();
-                    setConfirmOpen(false);
-                  }}
-                >
-                  회수
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </>
+      {historyOpen ? (
+        <UsageHistory id={historyId} delegationId={delegation.delegationId} />
       ) : null}
     </li>
+  );
+}
+
+/**
+ * 이 연결로 에이전트가 부른 도구(APP-826). 질문·답 본문은 server 가 남기지 않아 여기에도 없다 —
+ * 언제 어느 도구로 몇 건을 받았는지만 보인다. 펼칠 때 읽고, 「더 보기」로 다음 쪽을 잇는다.
+ */
+function UsageHistory({
+  id,
+  delegationId,
+}: {
+  id: string;
+  delegationId: string;
+}) {
+  const query = useInfiniteQuery({
+    // 생성 훅의 단건 키와 모양이 달라 꼬리를 붙여 나눈다 — 같은 키를 두 모양이 쓰면 캐시가 섞인다.
+    queryKey: [...getGetAgentDelegationUsagesQueryKey(delegationId), "pages"],
+    queryFn: ({ pageParam, signal }) =>
+      getAgentDelegationUsages(delegationId, pageParam, { signal }),
+    initialPageParam: undefined as GetAgentDelegationUsagesParams | undefined,
+    getNextPageParam: (last) => {
+      const page = last.status === 200 ? last.data.data : null;
+      return page?.hasMore && page.nextOccurredAt && page.nextUsageId
+        ? {
+            afterOccurredAt: page.nextOccurredAt,
+            afterUsageId: page.nextUsageId,
+          }
+        : undefined;
+    },
+  });
+  const usages =
+    query.data?.pages.flatMap((page) =>
+      page.status === 200 ? page.data.data.usages : []
+    ) ?? [];
+
+  return (
+    <section
+      id={id}
+      aria-label="사용 내역"
+      className="mt-4 border-t border-[var(--el-hairline)] pt-3"
+    >
+      {query.isLoading ? (
+        <ul className="space-y-2" aria-label="사용 내역 불러오는 중">
+          {Array.from({ length: 3 }, (_, index) => (
+            <li key={index} className="flex items-center gap-3 py-1">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-24" />
+            </li>
+          ))}
+        </ul>
+      ) : // 읽어 둔 쪽이 있으면 그 뒤의 실패(다음 쪽·다시 읽기)가 목록을 가리지 않는다
+      query.isError && !query.data ? (
+        <div role="alert" className="flex items-center gap-3">
+          <p className="text-xs text-[var(--el-ink)]">
+            사용 내역을 불러오지 못했습니다.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-[26px] text-xs"
+            onClick={() => void query.refetch()}
+          >
+            다시 시도
+          </Button>
+        </div>
+      ) : usages.length === 0 ? (
+        // 아직 쓰지 않은 것뿐이다 — 실패처럼 보이지 않게 경고 색을 쓰지 않는다.
+        <p className="text-xs text-[var(--el-muted)]">
+          아직 이 연결로 에이전트가 부른 도구가 없습니다.
+        </p>
+      ) : (
+        <>
+          <ul className="space-y-1">
+            {usages.map((usage) => (
+              <li
+                key={usage.usageId}
+                className="flex items-center gap-3 py-1 text-xs"
+              >
+                <span className="w-28 shrink-0 text-[var(--el-muted)] tabular-nums">
+                  {formatAppDate(usage.occurredAt, DATE_TIME)}
+                </span>
+                <span className="min-w-0 truncate text-[var(--el-ink)]">
+                  {TOOL_LABEL[usage.toolName] ?? usage.toolName}
+                </span>
+                {usage.outcome === "FAILED" ? (
+                  <Badge variant="outline">실패</Badge>
+                ) : usage.resultCount !== null ? (
+                  <span className="text-[var(--el-muted)] tabular-nums">
+                    {usage.resultCount}건
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          {query.isFetchNextPageError ? (
+            <p role="alert" className="mt-2 text-xs text-[var(--el-ink)]">
+              다음 내역을 불러오지 못했습니다. 「더 보기」로 다시 시도해 주세요.
+            </p>
+          ) : null}
+          {query.hasNextPage ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 h-7 px-2 text-xs"
+              loading={query.isFetchingNextPage}
+              disabled={query.isFetchingNextPage}
+              onClick={() => void query.fetchNextPage()}
+            >
+              더 보기
+            </Button>
+          ) : null}
+        </>
+      )}
+    </section>
   );
 }

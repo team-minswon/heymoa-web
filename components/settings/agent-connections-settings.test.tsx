@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
@@ -18,8 +24,17 @@ const state = vi.hoisted(() => ({
   workspacesLoading: false,
 }));
 
+const usages = vi.hoisted(() => ({
+  fetch: vi.fn(),
+}));
+
 vi.mock("@/lib/api/generated/agent-delegation/agent-delegation", () => ({
   getGetAgentDelegationsQueryKey: () => ["agent-delegations"],
+  getGetAgentDelegationUsagesQueryKey: (delegationId: string) => [
+    "usages",
+    delegationId,
+  ],
+  getAgentDelegationUsages: usages.fetch,
   useGetAgentDelegations: () => ({
     isLoading: false,
     isError: state.error,
@@ -80,6 +95,7 @@ describe("AgentConnectionsSettings", () => {
     state.workspacesError = false;
     state.workspacesLoading = false;
     created.pending = false;
+    usages.fetch.mockReset();
   });
 
   // 아직 아무것도 안 한 상태는 실패가 아니다 — 경고(role=alert)도 재시도도 없어야 한다
@@ -161,5 +177,206 @@ describe("AgentConnectionsSettings", () => {
       "연결 목록을 불러오지 못했습니다."
     );
     expect(screen.queryByText("아직 연결한 에이전트가 없습니다.")).toBeNull();
+  });
+
+  describe("사용 내역", () => {
+    const delegation = {
+      delegationId: "01K00000000Q1",
+      name: "노트북 Claude Code",
+      workspaceId: "01K0000000000",
+      workspaceName: "제품팀",
+      tokenHint: "hm_Q7xKp2a",
+      status: "ACTIVE",
+      createdAt: "2026-09-20T09:00:00Z",
+      lastUsedAt: "2026-09-30T13:00:00Z",
+      expiresAt: "2026-12-29T13:00:00Z",
+      revokedAt: null,
+      revokeReason: null,
+    };
+    const page = (
+      rows: Array<Record<string, unknown>>,
+      next: { at: string; id: string } | null
+    ) => ({
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          usages: rows,
+          hasMore: next !== null,
+          nextOccurredAt: next?.at ?? null,
+          nextUsageId: next?.id ?? null,
+        },
+      },
+    });
+    const open = () =>
+      fireEvent.click(screen.getByRole("button", { name: "사용 내역" }));
+
+    // 도구 이름은 사람이 읽는 말로, 건수와 실패는 줄마다. 다음 쪽은 직전 응답의 커서 둘을 함께 싣는다
+    it("펼치면 도구 이름·건수·실패가 보이고 더 보기가 직전 커서로 다음 쪽을 읽는다", async () => {
+      state.delegations = [delegation];
+      usages.fetch
+        .mockResolvedValueOnce(
+          page(
+            [
+              {
+                usageId: "01K0000000U00",
+                toolName: "list_project_items",
+                outcome: "SUCCEEDED",
+                resultCount: 12,
+                occurredAt: "2026-09-30T13:00:00Z",
+              },
+              {
+                usageId: "01K0000000U01",
+                toolName: "get_project_item",
+                outcome: "FAILED",
+                resultCount: null,
+                occurredAt: "2026-09-30T12:30:00Z",
+              },
+            ],
+            { at: "2026-09-30T12:30:00Z", id: "01K0000000U01" }
+          )
+        )
+        .mockResolvedValueOnce(
+          page(
+            [
+              {
+                usageId: "01K0000000U02",
+                toolName: "new_tool_from_server",
+                outcome: "SUCCEEDED",
+                resultCount: null,
+                occurredAt: "2026-09-30T12:00:00Z",
+              },
+            ],
+            null
+          )
+        );
+      renderSettings();
+
+      open();
+      const history = await screen.findByRole("region", { name: "사용 내역" });
+      expect(
+        await within(history).findByText("프로젝트 항목 목록")
+      ).toBeTruthy();
+      expect(within(history).getByText("12건")).toBeTruthy();
+      expect(within(history).getByText("항목 상세")).toBeTruthy();
+      expect(within(history).getByText("실패")).toBeTruthy();
+      expect(usages.fetch).toHaveBeenCalledWith(
+        "01K00000000Q1",
+        undefined,
+        expect.anything()
+      );
+
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+
+      // 모르는 도구 이름은 빈칸이 아니라 그대로 보인다
+      expect(
+        await within(history).findByText("new_tool_from_server")
+      ).toBeTruthy();
+      expect(usages.fetch).toHaveBeenLastCalledWith(
+        "01K00000000Q1",
+        {
+          afterOccurredAt: "2026-09-30T12:30:00Z",
+          afterUsageId: "01K0000000U01",
+        },
+        expect.anything()
+      );
+      expect(
+        within(history).queryByRole("button", { name: "더 보기" })
+      ).toBeNull();
+    });
+
+    // 아직 쓰지 않은 연결이다 — 실패가 아니므로 경고도 재시도도 없다
+    it("내역이 없으면 실패처럼 보이지 않는 빈 상태를 그린다", async () => {
+      state.delegations = [delegation];
+      usages.fetch.mockResolvedValueOnce(page([], null));
+      renderSettings();
+
+      open();
+
+      expect(
+        await screen.findByText(
+          "아직 이 연결로 에이전트가 부른 도구가 없습니다."
+        )
+      ).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    // 다음 쪽 실패가 읽어 둔 내역을 가리면 안 된다. 다시 시도는 실패한 그 쪽을 다시 부른다
+    it("더 보기가 실패해도 읽어 둔 내역은 남고 더 보기로 그 쪽을 다시 읽는다", async () => {
+      state.delegations = [delegation];
+      const next = { at: "2026-09-30T13:00:00Z", id: "01K0000000U00" };
+      usages.fetch
+        .mockResolvedValueOnce(
+          page(
+            [
+              {
+                usageId: "01K0000000U00",
+                toolName: "list_projects",
+                outcome: "SUCCEEDED",
+                resultCount: 3,
+                occurredAt: "2026-09-30T13:00:00Z",
+              },
+            ],
+            next
+          )
+        )
+        .mockRejectedValueOnce(new Error("boom"))
+        .mockResolvedValueOnce(page([], null));
+      render(
+        <QueryClientProvider
+          client={
+            new QueryClient({ defaultOptions: { queries: { retry: false } } })
+          }
+        >
+          <AgentConnectionsSettings workspaceId="01K0000000000" />
+        </QueryClientProvider>
+      );
+
+      open();
+      const history = await screen.findByRole("region", { name: "사용 내역" });
+      await within(history).findByText("프로젝트 목록");
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+
+      expect((await within(history).findByRole("alert")).textContent).toContain(
+        "다음 내역을 불러오지 못했습니다."
+      );
+      expect(within(history).getByText("프로젝트 목록")).toBeTruthy();
+
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+
+      await vi.waitFor(() => expect(usages.fetch).toHaveBeenCalledTimes(3));
+      expect(usages.fetch).toHaveBeenLastCalledWith(
+        "01K00000000Q1",
+        { afterOccurredAt: next.at, afterUsageId: next.id },
+        expect.anything()
+      );
+      await vi.waitFor(() =>
+        expect(within(history).queryByRole("alert")).toBeNull()
+      );
+      expect(within(history).getByText("프로젝트 목록")).toBeTruthy();
+    });
+
+    it("내역을 못 읽으면 빈 상태가 아니라 실패와 재시도를 그린다", async () => {
+      state.delegations = [delegation];
+      usages.fetch.mockRejectedValue(new Error("boom"));
+      render(
+        <QueryClientProvider
+          client={
+            new QueryClient({ defaultOptions: { queries: { retry: false } } })
+          }
+        >
+          <AgentConnectionsSettings workspaceId="01K0000000000" />
+        </QueryClientProvider>
+      );
+
+      open();
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "사용 내역을 불러오지 못했습니다."
+      );
+      expect(
+        screen.queryByText("아직 이 연결로 에이전트가 부른 도구가 없습니다.")
+      ).toBeNull();
+    });
   });
 });
