@@ -7,6 +7,128 @@ servers:
 - url: /
 tags: []
 paths:
+  /v1/agent-delegations:
+    get:
+      tags:
+      - AgentDelegation
+      summary: 내 외부 에이전트 연결 목록
+      description: 내가 맡긴 연결을 워크스페이스와 상관없이 최근 것부터 돌려준다. 회수·만료된 연결도 남는다. 토큰 원문은 나가지 않고 앞자리만 나간다.
+      operationId: getAgentDelegations
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDelegationsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      delegations:
+                      - delegationId: 0HZX2K7M9Q4BD
+                        name: 노트북 Claude Code
+                        workspaceId: 0HZX2K7M9Q4AD
+                        workspaceName: 제품 팀
+                        tokenHint: hm_4f9Qz8L
+                        status: REVOKED
+                        createdAt: '2026-10-01T09:00:00Z'
+                        lastUsedAt: '2026-10-01T12:00:00Z'
+                        expiresAt: '2026-12-30T12:00:00Z'
+                        revokedAt: '2026-10-02T09:00:00Z'
+                        revokeReason: USER
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+    post:
+      tags:
+      - AgentDelegation
+      summary: 외부 에이전트 연결 만들기
+      description: 워크스페이스 하나를 외부 에이전트에 맡기고 개인 토큰을 발급한다. 맡긴 사람이 그 워크스페이스의 멤버여야 한다. 토큰 원문은 이 응답에서만 나간다. 마지막 사용 뒤 90일 동안 쓰지 않으면 만료된다.
+      operationId: createAgentDelegation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentDelegationRequest'
+            examples:
+              createAgentDelegation_Success:
+                value:
+                  workspaceId: 0HZX2K7M9Q4AD
+                  name: 노트북 Claude Code
+              createAgentDelegation_WorkspaceNotFoundException:
+                value:
+                  workspaceId: 0HZX2K7M9Q4AD
+                  name: 노트북 Claude Code
+              createAgentDelegation_BadRequest:
+                value:
+                  workspaceId: 0HZX2K7M9Q4AD
+                  name: ' '
+      responses:
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedAgentDelegationResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      delegation:
+                        delegationId: 0HZX2K7M9Q4BD
+                        name: 노트북 Claude Code
+                        workspaceId: 0HZX2K7M9Q4AD
+                        workspaceName: 제품 팀
+                        tokenHint: hm_4f9Qz8L
+                        status: ACTIVE
+                        createdAt: '2026-10-01T09:00:00Z'
+                        lastUsedAt: null
+                        expiresAt: '2026-12-30T09:00:00Z'
+                        revokedAt: null
+                        revokeReason: null
+                      token: hm_4f9Qz8LmT2vXc7Rb1NkYp0Hs6JdWe3UaGi5OtCyB2
+                    error: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: name
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
   /v1/notifications:
     get:
       tags:
@@ -146,6 +268,46 @@ paths:
                       description: 제품을 만드는 팀의 워크스페이스
                       role: ADMIN
                     error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/agent-delegations/{delegationId}:
+    delete:
+      tags:
+      - AgentDelegation
+      summary: 외부 에이전트 연결 회수
+      description: 내 연결을 끊는다. 이미 회수한 연결을 다시 회수해도 성공한다. 남의 연결은 없는 것과 같다.
+      operationId: revokeAgentDelegation
+      parameters:
+      - name: delegationId
+        in: path
+        description: 회수할 연결의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 회수할 연결의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4BD
+      responses:
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_DELEGATION_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_DELEGATION_NOT_FOUND
+                      message: 연결을 찾을 수 없습니다.
+                      details: null
+        '204':
+          description: 처리 성공
         '401':
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -1073,7 +1235,7 @@ paths:
       tags:
       - AgentChat
       summary: 메시지 전송 (턴 접수)
-      description: '질문을 접수하고 **202 로 턴 id 를 돌려준다.** 프레임은 이 응답으로 오지 않는다 — GET /v1/agent-chats/{chatId}/turns/{turnId}/events 로 붙어 받는다 (이벤트 계약은 asyncapi-web-server.yml). heymoa-ai 호출이 실패해도 202 다: 턴은 FAILED 로 굳고 스트림의 첫 프레임이 turn_failed 다. 검증은 접수 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받는다.'
+      description: '질문을 접수하고 **202 로 턴 id 를 돌려준다.** 프레임은 이 응답으로 오지 않는다 — GET /v1/agent-chats/{chatId}/turns/{turnId}/events 로 붙어 받는다 (이벤트 계약은 asyncapi-web-server.yml). heymoa-ai 호출이 실패해도 202 다: 턴은 FAILED 로 굳고 스트림의 첫 프레임이 turn_failed 다. 검증은 접수 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받는다. **몰리면 접수 전에 거절한다** — heymoa-ai 에 자리가 없거나 내려가는 중이면 503 AGENT_CHAT_AI_BUSY. 턴 행을 남기지 않고 Retry-After(초) 뒤 같은 질문을 다시 보내면 된다.'
       operationId: sendAgentChatMessage
       parameters:
       - name: chatId
@@ -1125,6 +1287,9 @@ paths:
                   - 0HZX2K7M9Q4AF
                   - 0HZX2K7M9Q4AF
                   - 0HZX2K7M9Q4AF
+              sendAgentChatMessage_AgentChatBusyException:
+                value:
+                  message: 안녕
               sendAgentChatMessage_ScopeOutOfWorkspaceException:
                 value:
                   message: 안녕
@@ -1188,6 +1353,26 @@ paths:
                     error:
                       code: SCOPE_OUT_OF_WORKSPACE
                       message: 이 워크스페이스에서 찾을 수 없는 범위가 있습니다.
+                      details: null
+        '503':
+          description: '503'
+          headers:
+            Retry-After:
+              description: 다시 보내도 되는 때까지 초
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_CHAT_AI_BUSY:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_AI_BUSY
+                      message: 지금 요청이 많아 답을 시작하지 못했습니다. 잠시 뒤 다시 보내 주세요.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -1757,6 +1942,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppErrorResponse'
               examples:
+                MEETING_RECORDING:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_RECORDING
+                      message: 기록 중인 회의는 중지한 뒤 종료할 수 있습니다.
+                      details: null
                 MEETING_NOT_STARTED:
                   value:
                     success: false
@@ -1772,14 +1965,6 @@ paths:
                     error:
                       code: MEETING_ALREADY_ENDED
                       message: 이미 종료된 회의입니다.
-                      details: null
-                MEETING_RECORDING:
-                  value:
-                    success: false
-                    data: null
-                    error:
-                      code: MEETING_RECORDING
-                      message: 기록 중인 회의는 중지한 뒤 종료할 수 있습니다.
                       details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -3282,6 +3467,10 @@ paths:
                 value:
                   email: kim@example.com
                   role: MEMBER
+              createWorkspaceInvitation_InvitationRateLimitedException:
+                value:
+                  email: kim@example.com
+                  role: MEMBER
               createWorkspaceInvitation_WorkspaceNotFoundException:
                 value:
                   email: kim@example.com
@@ -3347,6 +3536,21 @@ paths:
                       role: MEMBER
                       status: PENDING
                     error: null
+        '429':
+          description: '429'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                INVITATION_RATE_LIMITED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVITATION_RATE_LIMITED
+                      message: 지금은 초대를 보낼 수 없습니다. 잠시 후 다시 시도해 주세요.
+                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -5466,7 +5670,7 @@ paths:
       tags:
       - AgentChat
       summary: 도구 승인/거절
-      description: 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor 를 after 로 넣어 다시 붙는다 — 승인 대기 중이면 그 값이 카드의 entryId 다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다.
+      description: 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor 를 after 로 넣어 다시 붙는다 — 승인 대기 중이면 그 값이 카드의 entryId 다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다. 몰리면 전송과 같이 접수 전에 거절하고 승인은 다시 누를 수 있게 되돌린다 — 503 AGENT_CHAT_AI_BUSY, Retry-After(초).
       operationId: resolveToolApproval
       parameters:
       - name: chatId
@@ -5498,6 +5702,9 @@ paths:
               resolveToolApproval_Success:
                 value:
                   decision: APPROVED
+              resolveToolApproval_AgentChatBusyException:
+                value:
+                  decision: APPROVED
               resolveToolApproval_BadRequest:
                 value:
                   decision: MAYBE
@@ -5521,6 +5728,26 @@ paths:
                     data:
                       turnId: 0K9GVJT2C4Q3B
                     error: null
+        '503':
+          description: '503'
+          headers:
+            Retry-After:
+              description: 다시 눌러도 되는 때까지 초
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_CHAT_AI_BUSY:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_CHAT_AI_BUSY
+                      message: 지금 요청이 많아 답을 시작하지 못했습니다. 잠시 뒤 다시 보내 주세요.
+                      details: null
         '400':
           description: 잘못된 요청
           content:
@@ -7374,6 +7601,118 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    AgentDelegationsResponse:
+      title: AgentDelegationsResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - delegations
+          type: object
+          properties:
+            delegations:
+              type: array
+              description: 내 연결 목록
+              items:
+                required:
+                - createdAt
+                - delegationId
+                - expiresAt
+                - lastUsedAt
+                - name
+                - revokeReason
+                - revokedAt
+                - status
+                - tokenHint
+                - workspaceId
+                - workspaceName
+                type: object
+                properties:
+                  revokeReason:
+                    type: string
+                    description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남. 회수되지 않았으면 null
+                    nullable: true
+                    example: USER
+                    enum:
+                    - USER
+                    - MEMBERSHIP_ENDED
+                  createdAt:
+                    type: string
+                    description: 연결을 만든 시각
+                    nullable: false
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  lastUsedAt:
+                    type: string
+                    description: 마지막으로 쓴 시각. 한 시간 단위로만 갱신된다. 쓴 적이 없으면 null
+                    nullable: true
+                    example: '2026-10-01T12:00:00Z'
+                    format: date-time
+                  name:
+                    type: string
+                    description: 연결 이름
+                    nullable: false
+                    example: 노트북 Claude Code
+                  tokenHint:
+                    type: string
+                    description: 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다
+                    nullable: true
+                    example: hm_4f9Qz8L
+                  workspaceName:
+                    type: string
+                    description: 맡긴 워크스페이스 이름
+                    nullable: false
+                    example: 제품 팀
+                  revokedAt:
+                    type: string
+                    description: 회수된 시각. 회수되지 않았으면 null
+                    nullable: true
+                    example: '2026-10-02T09:00:00Z'
+                    format: date-time
+                  delegationId:
+                    type: string
+                    description: 연결의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4BD
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  expiresAt:
+                    type: string
+                    description: 이 시각부터 만료다. 쓸 때마다 90일 뒤로 밀린다
+                    nullable: false
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  status:
+                    type: string
+                    description: 조회 시각 기준 상태. 회수가 만료보다 앞선다
+                    nullable: false
+                    example: ACTIVE
+                    enum:
+                    - ACTIVE
+                    - EXPIRED
+                    - REVOKED
+                  workspaceId:
+                    type: string
+                    description: 맡긴 워크스페이스의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AD
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
     AnalysisResultResponse:
       title: AnalysisResultResponse
       required:
@@ -7714,6 +8053,26 @@ components:
           nullable: false
           example: 질문
           maxLength: 200
+    CreateAgentDelegationRequest:
+      title: CreateAgentDelegationRequest
+      required:
+      - name
+      - workspaceId
+      type: object
+      properties:
+        name:
+          type: string
+          description: 연결을 알아볼 이름. 화면의 「연결한 에이전트」로 보인다
+          nullable: false
+          example: 노트북 Claude Code
+          minLength: 1
+          maxLength: 50
+        workspaceId:
+          type: string
+          description: 맡길 워크스페이스의 13자리 TSID
+          nullable: false
+          example: 0HZX2K7M9Q4AD
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
     CreateProjectTaskRequest:
       title: CreateProjectTaskRequest
       required:
@@ -7835,6 +8194,122 @@ components:
               nullable: false
               example: 0HZX2K7M9Q4AD
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    CreatedAgentDelegationResponse:
+      title: CreatedAgentDelegationResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - delegation
+          - token
+          type: object
+          properties:
+            delegation:
+              required:
+              - createdAt
+              - delegationId
+              - expiresAt
+              - lastUsedAt
+              - name
+              - revokeReason
+              - revokedAt
+              - status
+              - tokenHint
+              - workspaceId
+              - workspaceName
+              type: object
+              properties:
+                createdAt:
+                  type: string
+                  description: 연결을 만든 시각
+                  nullable: false
+                  example: '2026-07-14T01:02:03Z'
+                  format: date-time
+                name:
+                  type: string
+                  description: 연결 이름
+                  nullable: false
+                  example: 노트북 Claude Code
+                tokenHint:
+                  type: string
+                  description: 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다
+                  nullable: true
+                  example: hm_4f9Qz8L
+                workspaceName:
+                  type: string
+                  description: 맡긴 워크스페이스 이름
+                  nullable: false
+                  example: 제품 팀
+                delegationId:
+                  type: string
+                  description: 연결의 13자리 TSID
+                  nullable: false
+                  example: 0HZX2K7M9Q4BD
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                expiresAt:
+                  type: string
+                  description: 이 시각부터 만료다. 쓸 때마다 90일 뒤로 밀린다
+                  nullable: false
+                  example: '2026-07-14T01:02:03Z'
+                  format: date-time
+                status:
+                  type: string
+                  description: 조회 시각 기준 상태. 회수가 만료보다 앞선다
+                  nullable: false
+                  example: ACTIVE
+                  enum:
+                  - ACTIVE
+                  - EXPIRED
+                  - REVOKED
+                workspaceId:
+                  type: string
+                  description: 맡긴 워크스페이스의 13자리 TSID
+                  nullable: false
+                  example: 0HZX2K7M9Q4AD
+                  pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                lastUsedAt:
+                  type: string
+                  description: 마지막으로 쓴 시각. 한 시간 단위로만 갱신된다. 쓴 적이 없으면 null
+                  nullable: true
+                  example: '2026-10-01T12:00:00Z'
+                  format: date-time
+                revokedAt:
+                  type: string
+                  description: 회수된 시각. 회수되지 않았으면 null
+                  nullable: true
+                  example: '2026-10-02T09:00:00Z'
+                  format: date-time
+                revokeReason:
+                  type: string
+                  description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남. 회수되지 않았으면 null
+                  nullable: true
+                  example: USER
+                  enum:
+                  - USER
+                  - MEMBERSHIP_ENDED
+              description: 만든 연결
+              nullable: false
+            token:
+              type: string
+              description: 외부 에이전트에 넣을 개인 토큰. **이 응답에서만 나간다** — 다시 볼 수 없다
+              nullable: false
+              example: hm_4f9Qz8LmT2vXc7Rb1NkYp0Hs6JdWe3UaGi5OtCyB2
           description: 성공 응답 데이터
           nullable: false
         success:

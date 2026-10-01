@@ -451,6 +451,11 @@ export type sendAgentChatMessageResponse409 = {
   status: 409;
 };
 
+export type sendAgentChatMessageResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
 export type sendAgentChatMessageResponseSuccess =
   sendAgentChatMessageResponse202 & {
     headers: Headers;
@@ -460,6 +465,7 @@ export type sendAgentChatMessageResponseError = (
   | sendAgentChatMessageResponse401
   | sendAgentChatMessageResponse404
   | sendAgentChatMessageResponse409
+  | sendAgentChatMessageResponse503
 ) & {
   headers: Headers;
 };
@@ -473,7 +479,7 @@ export const getSendAgentChatMessageUrl = (chatId: string) => {
 };
 
 /**
- * 질문을 접수하고 **202 로 턴 id 를 돌려준다.** 프레임은 이 응답으로 오지 않는다 — GET /v1/agent-chats/{chatId}/turns/{turnId}/events 로 붙어 받는다 (이벤트 계약은 asyncapi-web-server.yml). heymoa-ai 호출이 실패해도 202 다: 턴은 FAILED 로 굳고 스트림의 첫 프레임이 turn_failed 다. 검증은 접수 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받는다.
+ * 질문을 접수하고 **202 로 턴 id 를 돌려준다.** 프레임은 이 응답으로 오지 않는다 — GET /v1/agent-chats/{chatId}/turns/{turnId}/events 로 붙어 받는다 (이벤트 계약은 asyncapi-web-server.yml). heymoa-ai 호출이 실패해도 202 다: 턴은 FAILED 로 굳고 스트림의 첫 프레임이 turn_failed 다. 검증은 접수 전에 끝난다 — 없거나 소유하지 않은 채팅은 404, 범위 상한(20) 초과·잘못된 TSID·워크스페이스 밖 id는 400. 409는 실패가 아니라 재진입 신호다: 이미 도는 턴이 있으면 details[0] 의 activeTurnId 로 그 턴을 이어받는다. **몰리면 접수 전에 거절한다** — heymoa-ai 에 자리가 없거나 내려가는 중이면 503 AGENT_CHAT_AI_BUSY. 턴 행을 남기지 않고 Retry-After(초) 뒤 같은 질문을 다시 보내면 된다.
  * @summary 메시지 전송 (턴 접수)
  */
 export const sendAgentChatMessage = async (
@@ -1111,6 +1117,11 @@ export type resolveToolApprovalResponse404 = {
   status: 404;
 };
 
+export type resolveToolApprovalResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
 export type resolveToolApprovalResponseSuccess =
   resolveToolApprovalResponse202 & {
     headers: Headers;
@@ -1120,6 +1131,7 @@ export type resolveToolApprovalResponseError = (
   | resolveToolApprovalResponse401
   | resolveToolApprovalResponse403
   | resolveToolApprovalResponse404
+  | resolveToolApprovalResponse503
 ) & {
   headers: Headers;
 };
@@ -1136,7 +1148,7 @@ export const getResolveToolApprovalUrl = (
 };
 
 /**
- * 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor 를 after 로 넣어 다시 붙는다 — 승인 대기 중이면 그 값이 카드의 entryId 다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다.
+ * 승인 카드에 대한 응답. **202 로 턴 id 를 돌려준다** — 답의 나머지 절반은 같은 턴의 스트림으로 온다. GET /messages 의 cursor 를 after 로 넣어 다시 붙는다 — 승인 대기 중이면 그 값이 카드의 entryId 다. 본문은 decision 한 필드뿐이고 질문과 범위는 그 턴의 USER 행에서 다시 읽는다. 그 승인을 부른 본인만 호출할 수 있다 — 아니면 403. 승인 요청이 없거나 이미 처리됐거나 heymoa-ai 가 멈춰 선 자리가 그 승인이 아니면 404, decision 이 APPROVED/REJECTED 가 아니면 400이다. 몰리면 전송과 같이 접수 전에 거절하고 승인은 다시 누를 수 있게 되돌린다 — 503 AGENT_CHAT_AI_BUSY, Retry-After(초).
  * @summary 도구 승인/거절
  */
 export const resolveToolApproval = async (

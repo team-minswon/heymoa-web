@@ -927,6 +927,11 @@ export type createWorkspaceInvitationResponse409 = {
   status: 409;
 };
 
+export type createWorkspaceInvitationResponse429 = {
+  data: AppErrorResponse;
+  status: 429;
+};
+
 export type createWorkspaceInvitationResponseSuccess =
   createWorkspaceInvitationResponse201 & {
     headers: Headers;
@@ -937,6 +942,7 @@ export type createWorkspaceInvitationResponseError = (
   | createWorkspaceInvitationResponse403
   | createWorkspaceInvitationResponse404
   | createWorkspaceInvitationResponse409
+  | createWorkspaceInvitationResponse429
 ) & {
   headers: Headers;
 };

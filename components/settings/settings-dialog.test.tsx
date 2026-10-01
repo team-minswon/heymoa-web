@@ -16,8 +16,43 @@ vi.mock("@/components/settings/members-settings", () => ({
 vi.mock("@/components/settings/workspace-integrations-settings", () => ({
   WorkspaceIntegrationsSettings: () => <p>연동 내용</p>,
 }));
+vi.mock("@/components/settings/agent-connections-settings", () => ({
+  AgentConnectionsSettings: ({
+    onBusyChange,
+  }: {
+    onBusyChange?: (busy: boolean) => void;
+  }) => (
+    <button type="button" onClick={() => onBusyChange?.(true)}>
+      토큰 요청 시작
+    </button>
+  ),
+}));
 
 describe("SettingsDialog", () => {
+  // 외부 에이전트 토큰은 만든 응답에서만 한 번 나온다 — 그 사이 닫히면 아무도 못 본다
+  it("섹션이 잠근 동안에는 닫히지도 다른 섹션으로 옮기지도 않는다", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <SettingsDialog
+        open
+        onOpenChange={onOpenChange}
+        initialSection="agents"
+        workspaceId="01K0000000000"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "토큰 요청 시작" }));
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(
+      (screen.getByRole("button", { name: "내 계정" }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+  });
+
   it("switches between the supported sections without navigation", () => {
     render(
       <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />

@@ -62,6 +62,25 @@ describe("REST mock handlers", () => {
     });
   });
 
+  it("외부 에이전트 연결 이름이 비거나 50자를 넘으면 계약대로 400 이다", async () => {
+    const create = (name: string) =>
+      fetch("http://localhost/v1/agent-delegations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: "01K0000000000", name }),
+      });
+
+    const blank = await create("   ");
+    const tooLong = await create("가".repeat(51));
+    const ok = await create("  노트북  ");
+
+    expect(blank.status).toBe(400);
+    expect((await blank.json()).error.code).toBe("BAD_REQUEST");
+    expect(tooLong.status).toBe(400);
+    expect(ok.status).toBe(201);
+    expect((await ok.json()).data.delegation.name).toBe("노트북");
+  });
+
   it("생성은 201로 답한다", async () => {
     // 화면이 `status === 201`로 성공을 가른다. 생성 mock 래퍼는 200만 줄 수 있어
     // 목에서 워크스페이스가 만들어지지 않았다.

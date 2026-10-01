@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Building2, Plug, UserRound, UsersRound } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Bot, Building2, Plug, UserRound, UsersRound } from "lucide-react";
 import {
   AccountSettingsForm,
   AccountSettingsFormSkeleton,
 } from "@/components/settings/account-settings-form";
+import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
 import {
@@ -25,11 +26,15 @@ export type SettingsSection =
   | "account"
   | "workspace"
   | "members"
-  | "integrations";
+  | "integrations"
+  | "agents";
 
 /**
  * 워크스페이스에 영향을 주는 설정과 내 계정 설정을 갈라 둔다. 프레임 `WKSCp`의 두 그룹이고,
- * 계약에 없는 항목(알림 설정 등)은 만들지 않는다 — 있는 네 개를 나누는 데서 멈춘다.
+ * 계약에 없는 항목(알림 설정 등)은 만들지 않는다 — 있는 것을 나누는 데서 멈춘다.
+ *
+ * 외부 에이전트 연결(APP-804)은 **계정** 쪽이다. 위임은 팀원 본인이 만들고 본인만 보며,
+ * 워크스페이스 설정을 바꾸지 않는다(제품 정의 「표면과 위임」).
  */
 const SETTINGS_GROUPS: {
   label: string;
@@ -49,16 +54,24 @@ const SETTINGS_GROUPS: {
   },
   {
     label: "계정",
-    items: [{ key: "account", label: "내 계정", Icon: UserRound }],
+    items: [
+      { key: "account", label: "내 계정", Icon: UserRound },
+      { key: "agents", label: "외부 에이전트", Icon: Bot },
+    ],
   },
 ];
 
 function SettingsSections({
   initialSection,
   workspaceId,
+  locked,
+  onLockChange,
 }: {
   initialSection: SettingsSection;
   workspaceId: string;
+  /** 섹션이 되돌릴 수 없는 일을 하는 중이다 — 다른 섹션으로 못 옮긴다. */
+  locked: boolean;
+  onLockChange: (locked: boolean) => void;
 }) {
   const [section, setSection] = useState(initialSection);
   return (
@@ -93,6 +106,7 @@ function SettingsSections({
                   key={key}
                   type="button"
                   variant={section === key ? "secondary" : "ghost"}
+                  disabled={locked && section !== key}
                   onClick={() => setSection(key)}
                   className="h-10 justify-start gap-2.5 rounded-block px-3"
                 >
@@ -117,6 +131,11 @@ function SettingsSections({
           <MembersSettings workspaceId={workspaceId} />
         ) : section === "integrations" ? (
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
+        ) : section === "agents" ? (
+          <AgentConnectionsSettings
+            workspaceId={workspaceId}
+            onBusyChange={onLockChange}
+          />
         ) : (
           <DataBoundary
             fallback={<WorkspaceSettingsFormSkeleton />}
@@ -142,8 +161,19 @@ export function SettingsDialog({
   initialSection?: SettingsSection;
   workspaceId: string;
 }) {
+  // **응답을 받아야 끝나는 일이 도는 동안은 닫지 않는다.** 외부 에이전트 토큰은 만든 응답에서만
+  // 한 번 나오므로, 그 사이 창이 닫히면 발급된 토큰을 아무도 못 본다. 닫기(X·Esc·바깥 클릭)는
+  // 전부 여기로 오고, 섹션 이동은 nav 가 같은 값으로 막는다.
+  const [locked, setLocked] = useState(false);
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next && locked) return;
+      onOpenChange(next);
+    },
+    [locked, onOpenChange]
+  );
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {/* 오버레이는 e3 2연타 + panel 16이다. rounded-[28px]는 스케일 밖 값이라 폐기했다. (ELEVATION SPEC) */}
       <DialogContent className="h-dvh max-h-none w-screen max-w-none gap-0 overflow-hidden rounded-none border border-black/5 bg-[var(--el-canvas)] p-0 shadow-e3 sm:h-[min(780px,calc(100dvh-3rem))] sm:max-w-5xl sm:rounded-panel">
         <DialogTitle className="sr-only">설정</DialogTitle>
@@ -154,6 +184,8 @@ export function SettingsDialog({
           key={`${initialSection}-${open}`}
           initialSection={initialSection}
           workspaceId={workspaceId}
+          locked={locked}
+          onLockChange={setLocked}
         />
       </DialogContent>
     </Dialog>

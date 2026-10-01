@@ -76,6 +76,7 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
     "참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.",
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
+  AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
   MEETING_RECORDING: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
 };
 
@@ -96,6 +97,7 @@ const FORBIDDEN_CODES = new Set([
 ]);
 
 const NOT_FOUND_CODES = new Set([
+  "AGENT_DELEGATION_NOT_FOUND",
   "NOTE_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
   "PROJECT_NOT_FOUND",
@@ -929,6 +931,58 @@ export const restHandlers = [
   http.post("*/v1/invitations/:invitationId/decline", ({ params }) =>
     invitationResult(() => mockDb.declineInvitation(id(params.invitationId)))
   ),
+
+  // 외부 에이전트 연결 (APP-804). 계약: 목록 200 · 만들기 201 · 회수 bodyless 204.
+  http.get("*/v1/agent-delegations", () =>
+    commandResult(() => ({ delegations: mockDb.listAgentDelegations() }))
+  ),
+  http.post("*/v1/agent-delegations", async ({ request }) => {
+    const body = (await request.json()) as {
+      workspaceId: string;
+      name: string;
+    };
+    // 계약의 이름은 앞뒤 공백을 걷고 1~50자다. 넘으면 실서버처럼 400 이다 — 목에서만 통과하면
+    // 실서버에서 처음 깨진다.
+    const name = (body.name ?? "").trim();
+    if (name.length < 1 || name.length > 50) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: BAD_REQUEST.code,
+            message: BAD_REQUEST.message,
+            details: null,
+          },
+        },
+        { status: BAD_REQUEST.status }
+      );
+    }
+    return commandResult(
+      () => mockDb.createAgentDelegation(body.workspaceId, name),
+      201
+    );
+  }),
+  http.delete("*/v1/agent-delegations/:delegationId", ({ params }) => {
+    try {
+      mockDb.revokeAgentDelegation(id(params.delegationId));
+    } catch (error) {
+      const code = (error as Error).message;
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code,
+            message: CONTRACT_ERROR_MESSAGES[code] ?? code,
+            details: null,
+          },
+        },
+        { status: 404 }
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
 
   // Meeting / analysis / integrations
   http.get("*/v1/notes/:noteId/analyses/latest", ({ params }) =>

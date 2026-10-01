@@ -1,4 +1,5 @@
 export { getAgentChatMock } from "./agent-chat/agent-chat.msw";
+export { getAgentDelegationMock } from "./agent-delegation/agent-delegation.msw";
 export { getAnalysisMock } from "./analysis/analysis.msw";
 export { getAuthMock } from "./auth/auth.msw";
 export { getMeetingApprovalMock } from "./meeting-approval/meeting-approval.msw";

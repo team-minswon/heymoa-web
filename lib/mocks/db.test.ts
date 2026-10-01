@@ -593,6 +593,42 @@ describe("workspace member management", () => {
     );
   });
 
+  it("나가면 그 워크스페이스에 맡긴 외부 에이전트 연결이 탈퇴로 회수된다", () => {
+    addSecondAdmin();
+    const { delegation } = mockDb.createAgentDelegation(WORKSPACE_ID, "노트북");
+
+    mockDb.leaveWorkspace(WORKSPACE_ID);
+
+    const after = mockDb
+      .listAgentDelegations()
+      .find((item) => item.delegationId === delegation.delegationId);
+    expect(after?.status).toBe("REVOKED");
+    expect(after?.revokeReason).toBe("MEMBERSHIP_ENDED");
+  });
+
+  it("외부 에이전트 연결은 만료 시각이 지나면 조회할 때 만료됨이다", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-01T00:00:00Z"));
+      const { delegation } = mockDb.createAgentDelegation(
+        WORKSPACE_ID,
+        "노트북"
+      );
+      const status = () =>
+        mockDb
+          .listAgentDelegations()
+          .find((item) => item.delegationId === delegation.delegationId)
+          ?.status;
+      expect(status()).toBe("ACTIVE");
+
+      vi.setSystemTime(new Date("2027-01-01T00:00:00Z"));
+
+      expect(status()).toBe("EXPIRED");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("나가면 워크스페이스가 목록과 조회에서도 사라진다", () => {
     addSecondAdmin();
     expect(

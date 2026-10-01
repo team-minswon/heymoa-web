@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type {
+  AgentDelegationsResponseDataDelegationsItem,
   CreateWorkspaceRequest,
   CurrentTranscriptionSessionNullableResponseData,
   CurrentUserResponseData,
@@ -197,6 +198,8 @@ type StoreState = {
   integrations: MockIntegration[];
   agentChats: MockAgentChat[];
   agentChatMessages: MockAgentChatMessage[];
+  /** 외부 에이전트 연결(APP-804). 목 유저 하나의 것이라 소유자 열을 두지 않는다. */
+  agentDelegations: AgentDelegationsResponseDataDelegationsItem[];
 };
 
 let state: StoreState;
@@ -1767,7 +1770,61 @@ function createSeedState(): StoreState {
     integrations,
     agentChats: seededChats.chats,
     agentChatMessages: seededChats.messages,
+    agentDelegations: seedAgentDelegations(workspaces),
   };
+}
+
+/**
+ * 외부 에이전트 연결 시드(APP-804). 계약의 nullable 필드가 양쪽 값을 다 보이도록 셋을 둔다 —
+ * 쓰고 있는 연결, 본인이 회수한 연결, 워크스페이스를 떠나 회수된 힌트 없는 연결(2단계 OAuth 처럼
+ * 개인 토큰 자격이 없는 연결은 앞자리가 없다). 빈 상태는 컴포넌트 시험이 본다.
+ */
+function seedAgentDelegations(
+  workspaces: WorkspaceResponseData[]
+): AgentDelegationsResponseDataDelegationsItem[] {
+  const [first] = workspaces;
+  const base = {
+    workspaceId: first.workspaceId,
+    workspaceName: first.name,
+  };
+  return [
+    {
+      ...base,
+      delegationId: "01K00000000Q1",
+      name: "노트북 Claude Code",
+      tokenHint: "hm_Q7xKp2a",
+      status: "ACTIVE",
+      createdAt: "2026-09-20T09:00:00Z",
+      lastUsedAt: "2026-09-30T13:00:00Z",
+      expiresAt: "2026-12-29T13:00:00Z",
+      revokedAt: null,
+      revokeReason: null,
+    },
+    {
+      ...base,
+      delegationId: "01K00000000Q2",
+      name: "예전 Codex CLI",
+      tokenHint: "hm_m3Zr8Td",
+      status: "REVOKED",
+      createdAt: "2026-09-02T09:00:00Z",
+      lastUsedAt: null,
+      expiresAt: "2026-12-01T09:00:00Z",
+      revokedAt: "2026-09-10T09:00:00Z",
+      revokeReason: "USER",
+    },
+    {
+      ...base,
+      delegationId: "01K00000000Q3",
+      name: "떠난 팀의 연결",
+      tokenHint: null,
+      status: "REVOKED",
+      createdAt: "2026-08-20T09:00:00Z",
+      lastUsedAt: "2026-08-25T09:00:00Z",
+      expiresAt: "2026-11-23T09:00:00Z",
+      revokedAt: "2026-08-28T09:00:00Z",
+      revokeReason: "MEMBERSHIP_ENDED",
+    },
+  ];
 }
 
 function findInvitation(invitationId: string): MockInvitation {
@@ -2440,6 +2497,80 @@ export const mockDb = {
     return copy(omit(integration, ["workspaceId"]));
   },
 
+  /**
+   * 서버처럼 **조회 시점에** 만료를 판정한다 — 만료 시각이 지난 살아 있는 연결은 `EXPIRED` 다.
+   * 저장된 행은 바꾸지 않는다(서버도 만료를 행에 쓰지 않는다).
+   */
+  listAgentDelegations(): AgentDelegationsResponseDataDelegationsItem[] {
+    const now = Date.now();
+    return copy(
+      [...state.agentDelegations]
+        .map((delegation) =>
+          delegation.status === "ACTIVE" &&
+          Date.parse(delegation.expiresAt) <= now
+            ? { ...delegation, status: "EXPIRED" as const }
+            : delegation
+        )
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    );
+  },
+
+  /**
+   * 서버(APP-801)처럼 토큰은 `hm_` 접두어 + 무작위이고 앞 10자만 힌트로 남긴다. 원문은 이 응답에서만
+   * 나가고 목록에는 다시 안 나간다. 만료는 마지막 사용 뒤 90일이라 쓴 적 없으면 만든 때부터다.
+   */
+  createAgentDelegation(
+    workspaceId: string,
+    name: string
+  ): {
+    delegation: AgentDelegationsResponseDataDelegationsItem;
+    token: string;
+  } {
+    assertWorkspace(workspaceId);
+    const workspace = state.workspaces.find(
+      (candidate) => candidate.workspaceId === workspaceId
+    );
+    const createdAt = nextTimestamp();
+    // 시드를 고정한 의사 난수(LCG) — 매번 같은 값이지만 반복 무늬로 보이지 않게
+    let seed = idCounter * 2654435761;
+    const random = Array.from({ length: 43 }, () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return "ABCDEFGHJKMNPQRSTVWXYZabcdefghjkmnpqrstvwxyz0123456789-_".charAt(
+        seed % 56
+      );
+    }).join("");
+    const token = `hm_${random}`;
+    const delegation: AgentDelegationsResponseDataDelegationsItem = {
+      delegationId: nextId(),
+      name,
+      workspaceId,
+      workspaceName: workspace?.name ?? "",
+      tokenHint: token.slice(0, 10),
+      status: "ACTIVE",
+      createdAt,
+      lastUsedAt: null,
+      expiresAt: new Date(
+        Date.parse(createdAt) + 90 * 24 * 60 * 60 * 1000
+      ).toISOString(),
+      revokedAt: null,
+      revokeReason: null,
+    };
+    state.agentDelegations.push(delegation);
+    return { delegation: copy(delegation), token };
+  },
+
+  /** 본인 회수. 이미 회수된 연결을 다시 회수해도 그대로 둔다(서버와 같다). */
+  revokeAgentDelegation(delegationId: string): void {
+    const delegation = state.agentDelegations.find(
+      (candidate) => candidate.delegationId === delegationId
+    );
+    if (!delegation) fail("AGENT_DELEGATION_NOT_FOUND");
+    if (delegation.status === "REVOKED") return;
+    delegation.status = "REVOKED";
+    delegation.revokedAt = nextTimestamp();
+    delegation.revokeReason = "USER";
+  },
+
   /** 연결만 끊고 행은 남긴다 — 계약이 미연동 provider도 목록에 담기 때문이다. */
   disconnectIntegration(
     workspaceId: string,
@@ -2518,6 +2649,20 @@ export const mockDb = {
       fail("LAST_WORKSPACE_ADMIN");
     }
     state.members.splice(index, 1);
+
+    // 떠나면 그 워크스페이스에 맡긴 내 연결이 회수된다 — 서버의 멤버십 종료 리스너(APP-801)와 같다.
+    const revokedAt = nextTimestamp();
+    for (const delegation of state.agentDelegations) {
+      if (
+        delegation.workspaceId !== workspaceId ||
+        delegation.status !== "ACTIVE"
+      ) {
+        continue;
+      }
+      delegation.status = "REVOKED";
+      delegation.revokedAt = revokedAt;
+      delegation.revokeReason = "MEMBERSHIP_ENDED";
+    }
 
     // 멤버십이 사라지면 그 워크스페이스는 목록에서도 빠진다 — 초대 수락(합류)의 역이다.
     const workspaceIndex = state.workspaces.findIndex(
