@@ -106,6 +106,13 @@ export function AgentConnectionsSettings({
     response?.status === 200 && response.data.success
       ? (response.data.data?.delegations ?? [])
       : [];
+  // 끊긴 연결도 사용 내역을 보려고 남는다(APP-825). 지우지 않으므로 살아 있는 것만 위에 두고 접는다.
+  const active = delegations.filter(
+    (delegation) => delegation.status === "ACTIVE"
+  );
+  const past = delegations.filter(
+    (delegation) => delegation.status !== "ACTIVE"
+  );
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
@@ -169,28 +176,81 @@ export function AgentConnectionsSettings({
               다시 시도
             </Button>
           </div>
-        ) : delegations.length === 0 ? (
-          // 아직 아무것도 안 한 상태다 — 실패처럼 보이지 않게 경고 색·아이콘을 쓰지 않는다.
-          <div className="rounded-panel border border-dashed border-[var(--el-hairline)] p-6 text-center">
-            <p className="text-sm text-[var(--el-ink)]">
-              아직 연결한 에이전트가 없습니다.
-            </p>
-            <p className="mt-1 text-xs text-[var(--el-muted)]">
-              「새 연결」로 토큰을 받아 에이전트에 넣으면 여기에 보입니다.
-            </p>
-          </div>
         ) : (
-          <ul className="space-y-3">
-            {delegations.map((delegation) => (
-              <DelegationRow
-                key={delegation.delegationId}
-                delegation={delegation}
-                onRevoked={invalidate}
-              />
-            ))}
-          </ul>
+          <>
+            {active.length === 0 ? (
+              // 실패가 아니다 — 경고 색·아이콘을 쓰지 않는다.
+              <div className="rounded-panel border border-dashed border-[var(--el-hairline)] p-6 text-center">
+                <p className="text-sm text-[var(--el-ink)]">
+                  {past.length === 0
+                    ? "아직 연결한 에이전트가 없습니다."
+                    : "지금 연결된 에이전트가 없습니다."}
+                </p>
+                <p className="mt-1 text-xs text-[var(--el-muted)]">
+                  「새 연결」로 토큰을 받아 에이전트에 넣으면 여기에 보입니다.
+                </p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {active.map((delegation) => (
+                  <DelegationRow
+                    key={delegation.delegationId}
+                    delegation={delegation}
+                    onRevoked={invalidate}
+                  />
+                ))}
+              </ul>
+            )}
+            {past.length > 0 ? (
+              <PastConnections delegations={past} onRevoked={invalidate} />
+            ) : null}
+          </>
         )}
       </section>
+    </div>
+  );
+}
+
+/** 회수·만료된 연결. 기본은 접고, 펼치면 같은 행(사용 내역 포함)을 그린다. */
+function PastConnections({
+  delegations,
+  onRevoked,
+}: {
+  delegations: Delegation[];
+  onRevoked: () => Promise<unknown>;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-6">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1 px-2 text-xs text-[var(--el-muted)]"
+        aria-expanded={open}
+        aria-controls="agent-past-connections"
+        onClick={() => setOpen((value) => !value)}
+      >
+        지난 연결 {delegations.length}개
+        <ChevronDown
+          className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </Button>
+      {open ? (
+        <ul
+          id="agent-past-connections"
+          aria-label="지난 연결"
+          className="mt-3 space-y-3"
+        >
+          {delegations.map((delegation) => (
+            <DelegationRow
+              key={delegation.delegationId}
+              delegation={delegation}
+              onRevoked={onRevoked}
+            />
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

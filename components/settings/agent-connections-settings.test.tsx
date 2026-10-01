@@ -179,6 +179,54 @@ describe("AgentConnectionsSettings", () => {
     expect(screen.queryByText("아직 연결한 에이전트가 없습니다.")).toBeNull();
   });
 
+  describe("지난 연결", () => {
+    const row = (delegationId: string, name: string, status: string) => ({
+      delegationId,
+      name,
+      workspaceId: "01K0000000000",
+      workspaceName: "제품팀",
+      tokenHint: "hm_Q7xKp2a",
+      status,
+      createdAt: "2026-09-20T09:00:00Z",
+      lastUsedAt: null,
+      expiresAt: "2026-12-29T13:00:00Z",
+      revokedAt: status === "REVOKED" ? "2026-09-25T09:00:00Z" : null,
+      revokeReason: status === "REVOKED" ? "USER" : null,
+    });
+
+    // 끊긴 연결은 지우지 않아 쌓인다 — 살아 있는 연결이 그 사이에 묻히지 않게 접어 둔다
+    it("회수·만료된 연결은 지난 연결로 접히고 펼치면 보인다", () => {
+      state.delegations = [
+        row("01K00000000Q1", "쓰는 연결", "ACTIVE"),
+        row("01K00000000Q2", "회수한 연결", "REVOKED"),
+        row("01K00000000Q3", "만료된 연결", "EXPIRED"),
+      ];
+      renderSettings();
+
+      expect(screen.getByText("쓰는 연결")).toBeTruthy();
+      expect(screen.queryByText("회수한 연결")).toBeNull();
+      expect(screen.queryByText("만료된 연결")).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "지난 연결 2개" }));
+
+      const past = screen.getByRole("list", { name: "지난 연결" });
+      expect(within(past).getByText("회수한 연결")).toBeTruthy();
+      expect(within(past).getByText("만료된 연결")).toBeTruthy();
+      expect(within(past).queryByText("쓰는 연결")).toBeNull();
+    });
+
+    it("지난 연결만 있으면 실패처럼 보이지 않는 빈 상태와 지난 연결을 함께 보인다", () => {
+      state.delegations = [row("01K00000000Q2", "회수한 연결", "REVOKED")];
+      renderSettings();
+
+      expect(screen.getByText("지금 연결된 에이전트가 없습니다.")).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "지난 연결 1개" })
+      ).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+  });
+
   describe("사용 내역", () => {
     const delegation = {
       delegationId: "01K00000000Q1",

@@ -59,8 +59,15 @@ test("회수하면 그 연결이 회수됨으로 바뀐다", async ({ page }) =>
     .getByRole("button", { name: "회수" })
     .click();
 
-  await expect(row).toContainText("회수됨");
-  await expect(row.getByRole("button", { name: "회수" })).toHaveCount(0);
+  // 회수한 연결은 위 목록에서 빠져 「지난 연결」로 접힌다(APP-828). 시드에 회수된 연결이 둘 있다
+  await expect(row).toHaveCount(0);
+  await page.getByRole("button", { name: "지난 연결 3개" }).click();
+  const past = page
+    .getByRole("list", { name: "지난 연결" })
+    .getByRole("listitem")
+    .filter({ hasText: "회수할 연결" });
+  await expect(past).toContainText("회수됨");
+  await expect(past.getByRole("button", { name: "회수" })).toHaveCount(0);
 });
 
 // APP-826. 시드의 「노트북 Claude Code」는 내역이 한 쪽(20)을 넘는다. 응답에는 시각·도구·건수·성공
