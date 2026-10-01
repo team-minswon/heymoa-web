@@ -162,6 +162,36 @@ export function WorkspaceAppShell({
     setCreateProject("then-meeting");
   }, [hasProject]);
 
+  // 외부 에이전트의 「회의를 시작하자」가 돌려준 주소(`/w/{ws}/notes/new?projectId=`)가
+  // `?newMeeting=` 으로 넘어온다(APP-802). 그 프로젝트를 고르고 새 회의 창만 연다 — 노트는
+  // 사람이 제목을 넣고 만들어야 생기고, 창을 닫으면 아무것도 남지 않는다. 목록에 없는
+  // 프로젝트는 없든 권한 밖이든 같은 안내 하나다. 다시 열리지 않게 쿼리를 걷는다 — 같은
+  // 화면의 상태라 라우터가 아니라 `history.replaceState` 다(rule `architecture`).
+  const newMeetingProjectId = searchParams.get("newMeeting");
+  // **첫 커밋 뒤에만 다룬다.** 링크로 바로 들어오면 셸이 첫 hydration과 함께 마운트되는데,
+  // 그때 자식 effect는 App Router가 `history.replaceState`를 패치하기 전에 돈다 — 네이티브
+  // 호출이 되어 현재 엔트리의 라우터 상태를 지우고 `useSearchParams`도 안 바뀐다
+  // (`note-view` 의 `isOpen` 게이트와 같은 이유). 마운트 effect가 켠 값을 보고 다음 커밋에서 한다.
+  const [committed, setCommitted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 첫 커밋을 표시하는 것 자체가 목적이다
+  useEffect(() => setCommitted(true), []);
+  useEffect(() => {
+    if (!committed || !newMeetingProjectId) return;
+    // URL 쿼리(외부 상태)에 반응해 창을 여는 동기화 — 위 `?provider=` 와 같은 자리다.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (projects.some((project) => project.projectId === newMeetingProjectId)) {
+      setSelectedProjectId(newMeetingProjectId);
+      setNewMeetingOpen(true);
+    } else {
+      toast.error("회의를 시작할 프로젝트를 찾을 수 없습니다.");
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    const next = new URLSearchParams(searchParams);
+    next.delete("newMeeting");
+    const query = next.toString();
+    window.history.replaceState(null, "", `${pathname}${query ? `?${query}` : ""}`);
+  }, [committed, newMeetingProjectId, projects, searchParams, pathname]);
+
   const value = useMemo(
     () => ({
       selectedProjectId,

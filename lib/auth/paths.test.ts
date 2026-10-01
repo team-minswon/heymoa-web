@@ -7,6 +7,26 @@ describe("normalizeReturnTo", () => {
     expect(normalizeReturnTo("/invite?token=abc")).toBe("/invite?token=abc");
   });
 
+  it("외부 에이전트가 준 새 회의·발화 주소는 쿼리를 보존한 채 돌아온다", () => {
+    expect(
+      normalizeReturnTo("/w/01K0000000000/notes/new?projectId=01K0000000001")
+    ).toBe("/w/01K0000000000/notes/new?projectId=01K0000000001");
+    expect(normalizeReturnTo("/w/01K0000000000?newMeeting=01K0000000001")).toBe(
+      "/w/01K0000000000?newMeeting=01K0000000001"
+    );
+    expect(
+      normalizeReturnTo(
+        "/w/01K0000000000/notes/01K0000000020?tab=transcript&segment=01K0000000099"
+      )
+    ).toBe(
+      "/w/01K0000000000/notes/01K0000000020?tab=transcript&segment=01K0000000099"
+    );
+  });
+
+  it("노트 자리에 new 가 아닌 아무 글자나 오면 홈으로 떨어진다", () => {
+    expect(normalizeReturnTo("/w/01K0000000000/notes/newer")).toBe("/");
+  });
+
   it("허용 목록 밖 경로는 홈으로 떨어진다", () => {
     expect(normalizeReturnTo("/evil")).toBe("/");
   });

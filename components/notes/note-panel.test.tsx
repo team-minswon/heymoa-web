@@ -7,7 +7,15 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { NotePanel } from "@/components/notes/note-panel";
 import { NoteRealtimeProvider } from "@/components/notes/note-realtime-provider";
@@ -131,8 +139,25 @@ vi.mock("@/components/chat/personal-chat", () => ({
   usePersonalChat: () => ({ setRailSlot, ...personalChat }),
 }));
 vi.mock("@/components/notes/note-archive", () => ({
-  NoteArchive: ({ workspaceId }: { workspaceId?: string }) => (
-    <div data-testid="note-archive" data-workspace={workspaceId ?? ""} />
+  NoteArchive: ({
+    workspaceId,
+    focusSegmentId,
+    onFocusHandled,
+  }: {
+    workspaceId?: string;
+    focusSegmentId?: string | null;
+    onFocusHandled?: () => void;
+  }) => (
+    <div
+      data-testid="note-archive"
+      data-workspace={workspaceId ?? ""}
+      data-focus={focusSegmentId ?? ""}
+    >
+      {/* 실제 아카이브는 하이라이트가 끝나면 부른다 */}
+      <button type="button" onClick={onFocusHandled}>
+        점프 끝
+      </button>
+    </div>
   ),
 }));
 vi.mock("@/components/notes/review/review-tab", () => ({
@@ -902,6 +927,60 @@ describe("NotePanel", () => {
     noteState.value = { ...noteState.value, noteId: "01K0000000002" };
     rerenderNote(panel("01K0000000002"));
     expect(screen.queryByText(/을 삭제할까요/)).toBeNull();
+  });
+
+  describe("발화 링크(?segment=)", () => {
+    const focusOf = () =>
+      screen.getByTestId("note-archive").getAttribute("data-focus");
+    const panel = (segment: string | null, noteId = "01K0000000002") => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId={noteId}
+        view="full"
+        tab="transcript"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+        linkedSegmentId={segment}
+      />
+    );
+
+    beforeEach(() => {
+      noteState.value.meetingStatus = "ENDED";
+    });
+
+    it("노트가 열린 채 다른 발화 링크로 오면 그 발화로 다시 점프한다", async () => {
+      const { rerenderNote } = renderNotePanel(panel("01K00000000A1"));
+      expect(
+        (await screen.findByTestId("note-archive")).getAttribute("data-focus")
+      ).toBe("01K00000000A1");
+
+      rerenderNote(panel("01K00000000B2"));
+
+      await waitFor(() => expect(focusOf()).toBe("01K00000000B2"));
+    });
+
+    it("점프가 끝난 뒤 같은 링크로 다시 들어와도 다시 점프한다", async () => {
+      const { rerenderNote } = renderNotePanel(panel("01K00000000A1"));
+      await screen.findByTestId("note-archive");
+      fireEvent.click(screen.getByRole("button", { name: "점프 끝" }));
+      // 노트 화면이 링크를 읽고 주소에서 걷었다
+      rerenderNote(panel(null));
+      await waitFor(() => expect(focusOf()).toBe(""));
+
+      rerenderNote(panel("01K00000000A1"));
+
+      await waitFor(() => expect(focusOf()).toBe("01K00000000A1"));
+    });
+
+    it("노트가 바뀌면 이전 노트의 점프를 버린다", async () => {
+      const { rerenderNote } = renderNotePanel(panel("01K00000000A1"));
+      await screen.findByTestId("note-archive");
+
+      noteState.value = { ...noteState.value, noteId: "01K0000000009" };
+      rerenderNote(panel(null, "01K0000000009"));
+
+      await waitFor(() => expect(focusOf()).toBe(""));
+    });
   });
 
   it("회의 종료 확인창이 노트 전환을 따라가지 않는다", async () => {

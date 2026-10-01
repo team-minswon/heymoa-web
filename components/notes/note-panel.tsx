@@ -100,6 +100,7 @@ export function NotePanel({
   onExpand,
   onCollapse,
   onDeleted,
+  linkedSegmentId = null,
 }: {
   workspaceId: string;
   noteId: string;
@@ -115,6 +116,13 @@ export function NotePanel({
    * 뒤로가기를 누르면 방금 지운 노트 URL로 돌아가 404를 만난다. 여기는 `replace`다.
    */
   onDeleted?: () => void;
+  /**
+   * 지금 주소의 근거 발화(`?segment=`). 외부 에이전트가 「그 근거 보여줘」에 돌려준 링크가
+   * 여기로 온다(APP-802). 노트 화면이 읽은 뒤 주소에서 걷으므로 **링크로 들어올 때만 값이
+   * 있다.** 근거 인용을 누른 것과 같은 점프를 요청할 뿐이고, 이 노트의 전사에 없는 ID 면
+   * 찾지 못해 아무 일도 없다.
+   */
+  linkedSegmentId?: string | null;
 }) {
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
@@ -248,7 +256,23 @@ export function NotePanel({
    * 끝나면 **비운다** — 안 비우면 스크립트 탭을 다시 열 때마다 같은 자리로 끌려간다.
    * 탭을 옮기는 것도 같은 이유로 비운다(점프는 그 직후 다시 세운다).
    */
-  const [focusSegmentId, setFocusSegmentId] = useState<string | null>(null);
+  const [focusSegmentId, setFocusSegmentId] = useState<string | null>(
+    linkedSegmentId
+  );
+  // **링크가 새로 들어오거나 노트가 바뀌면 점프를 다시 세운다.** 이 패널은 노트가 바뀌어도
+  // 재마운트되지 않아(`rail`·`deleteTargetId` 와 같은 함정) 렌더 중에 접는다.
+  // - 같은 노트에 링크가 들어오면(없음→B, A→B, 걷힌 뒤 같은 B 다시) 그 발화로 점프한다
+  // - 노트가 바뀌면 이전 노트의 점프를 버리고 새 노트의 링크 값으로 세운다 — 안 버리면 그
+  //   발화가 없는 노트에서는 끝나지 않고 남았다가, 돌아왔을 때 옛 줄로 끌려간다
+  const [linkSeen, setLinkSeen] = useState({ noteId, linkedSegmentId });
+  if (
+    linkSeen.noteId !== noteId ||
+    linkSeen.linkedSegmentId !== linkedSegmentId
+  ) {
+    setLinkSeen({ noteId, linkedSegmentId });
+    if (linkSeen.noteId !== noteId) setFocusSegmentId(linkedSegmentId);
+    else if (linkedSegmentId) setFocusSegmentId(linkedSegmentId);
+  }
   const handleTabChange = useCallback(
     (next: NoteTab) => {
       setFocusSegmentId(null);

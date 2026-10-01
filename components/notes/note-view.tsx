@@ -134,7 +134,11 @@ export function NoteView({
         pendingSearchRef.current = null;
       }
     }
+    // 발화 주소(`segment`)는 첫 화면의 점프 대상일 뿐이다. 읽었으면 주소에서 걷는다 — 남기면
+    // 새로고침·탭 재방문마다 같은 줄로 끌려가고, 공유한 주소가 지금 보는 자리와 어긋난다.
+    const hasSegment = new URLSearchParams(search).has("segment");
     if (
+      !hasSegment &&
       (requested.view ?? "full") === current.view &&
       (requested.tab ?? "details") === current.tab
     ) {
@@ -143,6 +147,7 @@ export function NoteView({
     const next = new URLSearchParams(search);
     next.set("view", current.view);
     next.set("tab", current.tab);
+    next.delete("segment");
     replaceNoteSearch(pathname, next.toString());
   }, [
     current.tab,
@@ -218,6 +223,9 @@ export function NoteView({
         }
         // **replace다.** push하면 목록에서 뒤로가기가 방금 지운 노트 URL로 돌아가 404가 된다.
         onDeleted={() => router.replace(`/w/${workspaceId}`)}
+        // **지금 주소의 값이다.** 서버가 처음 넘긴 값을 쓰면 같은 링크로 다시 들어왔을 때
+        // 「읽고 걷힘 → 다시 들어옴」이 값 변화로 안 보여 점프하지 않는다.
+        linkedSegmentId={searchParams.get("segment")}
       />
     </NoteRouteSurface>
   );
