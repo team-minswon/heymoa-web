@@ -5,9 +5,12 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { NoteParticipantsRequestExpectedUserIdsItem } from "./noteParticipantsRequestExpectedUserIdsItem";
 import type { NoteParticipantsRequestUserIdsItem } from "./noteParticipantsRequestUserIdsItem";
 
 export interface NoteParticipantsRequest {
+  /** 이 목록을 만들 때 화면이 본 계정 참여자의 13자리 TSID 목록(최대 200개). 지금과 다르면 409 로 거절한다. 생략하면 비교하지 않는다 */
+  expectedUserIds?: NoteParticipantsRequestExpectedUserIdsItem[];
   /** 참여자로 남길 유저의 13자리 TSID 목록(최대 200개). 이 목록이 곧 최종 상태이며 여기 없는 참여자는 지워진다 */
   userIds: NoteParticipantsRequestUserIdsItem[];
 }

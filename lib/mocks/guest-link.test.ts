@@ -212,6 +212,40 @@ describe("mockDb.replaceNoteParticipants — 워크스페이스를 떠난 참여
   });
 });
 
+/** 서버(APP-777)와 같은 규칙으로 거절해야 화면의 재시도가 목에서도 돈다. */
+describe("mockDb 참여자 저장 — 병합 기준이 바뀌었을 때", () => {
+  beforeEach(() => mockDb.reset());
+
+  function userIdsOf() {
+    return mockDb
+      .getNote(NOTE_ID)
+      .participants.flatMap((row) => (row.userId ? [row.userId] : []));
+  }
+
+  it("기준이 지금과 다르면 거절하고 아무것도 안 바꾼다", () => {
+    const before = userIdsOf();
+
+    expect(() =>
+      mockDb.replaceNoteParticipants(NOTE_ID, [], [...before, "01K9999999999"])
+    ).toThrow("NOTE_PARTICIPANTS_CONFLICT");
+    expect(userIdsOf()).toEqual(before);
+  });
+
+  it("기준이 맞거나, 같은 저장을 다시 보내거나, 기준이 없으면 통과한다", () => {
+    const before = userIdsOf();
+
+    expect(() => mockDb.replaceNoteParticipants(NOTE_ID, before, ["01K9999999999"])).not.toThrow();
+    expect(() => mockDb.replaceNoteParticipants(NOTE_ID, [], before)).not.toThrow();
+    expect(() => mockDb.replaceNoteParticipants(NOTE_ID, before)).not.toThrow();
+  });
+
+  it("임시 참여자는 없는 사람(404)보다 그 사이 바뀐 것을 먼저 알린다", () => {
+    expect(() =>
+      mockDb.replaceNoteGuestParticipants(NOTE_ID, ["01K9999999999"], [GUEST_ID])
+    ).toThrow("NOTE_PARTICIPANTS_CONFLICT");
+  });
+});
+
 describe("연동 미리보기의 회의 목록", () => {
   /**
    * 계약이 **최근순 100건**이다. 시드 배열 순서로 자르면 오래된 것부터 나가 서버와 반대가

@@ -72,6 +72,8 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_GUEST_NOT_FOUND: "임시 참여자를 찾을 수 없습니다.",
   WORKSPACE_MEMBER_NOT_FOUND: "워크스페이스 멤버를 찾을 수 없습니다.",
   CONCURRENT_GUEST_LINK: "연동 중에 회의가 바뀌었습니다. 다시 시도해 주세요.",
+  NOTE_PARTICIPANTS_CONFLICT:
+    "참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.",
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
   MEETING_RECORDING: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
@@ -133,6 +135,8 @@ const KNOWN_CODES = new Set([
   "SEGMENT_NOT_DIARIZED",
   // 409 — 연동이 회의를 잠그는 사이 그 사람이 다른 회의에 추가됐다. **재시도로 푸는 자리다**
   "CONCURRENT_GUEST_LINK",
+  // 409 — 참여자 저장의 병합 기준이 그 사이 바뀌었다. 화면이 다시 읽고 한 번 더 보낸다
+  "NOTE_PARTICIPANTS_CONFLICT",
 ]);
 
 function statusOf(code: string) {
@@ -527,10 +531,17 @@ export const restHandlers = [
   http.put("*/v1/notes/:noteId/participants", async ({ request, params }) =>
     resultOf(
       async () =>
-        mockDb.replaceNoteParticipants(
+      {
+        const body = (await request.json()) as {
+          userIds?: string[];
+          expectedUserIds?: string[];
+        };
+        return mockDb.replaceNoteParticipants(
           id(params.noteId),
-          ((await request.json()) as { userIds?: string[] }).userIds ?? []
-        ),
+          body.userIds ?? [],
+          body.expectedUserIds
+        );
+      },
       // 기본 BAD_REQUEST를 쓰면 error.message에 원시 코드가 그대로 들어간다.
       // 계약의 400 문구를 그대로 돌려줘야 자동 토스트가 실제 서버와 같아진다.
       NOT_WORKSPACE_MEMBER
@@ -557,10 +568,17 @@ export const restHandlers = [
     async ({ request, params }) =>
       resultOf(
         async () =>
-          mockDb.replaceNoteGuestParticipants(
+        {
+          const body = (await request.json()) as {
+            guestIds?: string[];
+            expectedGuestIds?: string[];
+          };
+          return mockDb.replaceNoteGuestParticipants(
             id(params.noteId),
-            ((await request.json()) as { guestIds?: string[] }).guestIds ?? []
-          ),
+            body.guestIds ?? [],
+            body.expectedGuestIds
+          );
+        },
         notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
       )
   ),

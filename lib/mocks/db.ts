@@ -483,6 +483,23 @@ function fail(code: string): never {
   throw new Error(code);
 }
 
+/**
+ * **참여자 저장의 병합 기준이 지금과 다르면 거절한다** (APP-777). 서버와 같은 규칙이다 —
+ * 기준이 없으면 옛 화면이라 비교하지 않고, 요청한 목록이 이미 지금과 같으면 다시 보낸
+ * 같은 저장이라 통과시킨다.
+ */
+function rejectIfChanged(
+  expected: string[] | undefined,
+  current: string[],
+  requested: string[]
+) {
+  const same = (a: string[], b: string[]) =>
+    new Set(a).size === new Set(b).size && a.every((value) => b.includes(value));
+  if (expected && !same(expected, current) && !same(requested, current)) {
+    fail("NOTE_PARTICIPANTS_CONFLICT");
+  }
+}
+
 function nextId() {
   const id = `01K${String(idCounter).padStart(10, "0")}`;
   idCounter += 1;
@@ -2833,7 +2850,11 @@ export const mockDb = {
    * 참여자를 통째로 교체한다(PUT). 부분 추가·삭제가 아니라 요청한 목록이 곧 최종 상태다.
    * 워크스페이스 멤버가 아닌 유저가 섞이면 아무것도 바꾸지 않고 400을 낸다.
    */
-  replaceNoteParticipants(noteId: string, userIds: string[]) {
+  replaceNoteParticipants(
+    noteId: string,
+    userIds: string[],
+    expectedUserIds?: string[]
+  ) {
     const note = findNote(noteId);
     const project = state.projects.find(
       (row) => row.projectId === note.projectId
@@ -2848,6 +2869,7 @@ export const mockDb = {
     const currentUserIds = note.participants
       .map((row) => row.userId)
       .filter((userId): userId is string => Boolean(userId));
+    rejectIfChanged(expectedUserIds, currentUserIds, unique);
     if (
       unique.some(
         (userId) =>
@@ -2951,12 +2973,24 @@ export const mockDb = {
   },
 
   /** 이 회의의 **임시 참여자만** 전체 교체한다. 계정 참여자는 안 건드린다. */
-  replaceNoteGuestParticipants(noteId: string, guestIds: string[]) {
+  replaceNoteGuestParticipants(
+    noteId: string,
+    guestIds: string[],
+    expectedGuestIds?: string[]
+  ) {
     const note = findNote(noteId);
     const workspaceId = state.projects.find(
       (row) => row.projectId === note.projectId
     )?.workspaceId;
     const unique = [...new Set(guestIds)];
+    // 없는 임시 참여자(404)보다 먼저 본다 — 그 사이 남이 지운 사람일 수 있다. 서버와 같은 순서다.
+    rejectIfChanged(
+      expectedGuestIds,
+      note.participants
+        .map((row) => row.guestId)
+        .filter((guestId): guestId is string => Boolean(guestId)),
+      unique
+    );
     const guests = unique.map((guestId) => {
       const guest = state.workspaceGuests.find(
         (row) => row.guestId === guestId && row.workspaceId === workspaceId

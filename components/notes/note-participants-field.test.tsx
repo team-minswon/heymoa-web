@@ -14,16 +14,20 @@ import type { Participant } from "@/components/notes/note-participants";
 const replaceParticipants = vi.hoisted(() => vi.fn());
 const replaceGuestParticipants = vi.hoisted(() => vi.fn());
 const createGuestParticipant = vi.hoisted(() => vi.fn());
+const getNote = vi.hoisted(() => vi.fn());
+/** 저장 훅이 받은 옵션. 전역 토스트를 껐는지 본다. */
+const replaceOptions = vi.hoisted(() => [] as unknown[]);
 vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useReplaceNoteParticipants: () => ({
-    mutateAsync: replaceParticipants,
-    isPending: false,
-  }),
-  useReplaceNoteGuestParticipants: () => ({
-    mutateAsync: replaceGuestParticipants,
-    isPending: false,
-  }),
+  getNote,
+  useReplaceNoteParticipants: (options: unknown) => {
+    replaceOptions.push(options);
+    return { mutateAsync: replaceParticipants, isPending: false };
+  },
+  useReplaceNoteGuestParticipants: (options: unknown) => {
+    replaceOptions.push(options);
+    return { mutateAsync: replaceGuestParticipants, isPending: false };
+  },
   useCreateNoteGuestParticipant: () => ({
     mutateAsync: createGuestParticipant,
     isPending: false,
@@ -168,6 +172,7 @@ describe("NoteParticipantsField", () => {
     replaceGuestParticipants.mockResolvedValue({ status: 200 });
     createGuestParticipant.mockReset();
     createGuestParticipant.mockResolvedValue({ status: 201 });
+    getNote.mockReset();
     toastError.mockReset();
     membersState.failed = false;
     membersState.refetch.mockReset();
@@ -387,7 +392,10 @@ describe("NoteParticipantsField", () => {
     await waitFor(() =>
       expect(replaceParticipants).toHaveBeenCalledWith({
         noteId: "01K0000000009",
-        data: { userIds: [PARTICIPANT.userId] },
+        data: {
+          userIds: [PARTICIPANT.userId],
+          expectedUserIds: [PARTICIPANT.userId, DEPARTED.userId],
+        },
       })
     );
   });
@@ -448,7 +456,10 @@ describe("NoteParticipantsField", () => {
     await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(1));
     expect(replaceParticipants).toHaveBeenCalledWith({
       noteId: "01K0000000009",
-      data: { userIds: ["01K0000000001", "01K0000000002"] },
+      data: {
+        userIds: ["01K0000000001", "01K0000000002"],
+        expectedUserIds: ["01K0000000001"],
+      },
     });
   });
 
@@ -504,32 +515,6 @@ describe("NoteParticipantsField", () => {
     expect(replaceParticipants).not.toHaveBeenCalled();
   });
 
-  // `apiFetch`가 비-2xx 봉투를 throw하고, 문구는 전역 `MutationCache.onError`가 띄운다.
-  // 여기서 또 띄우면 두 개가 겹치므로, 이 컴포넌트는 실패를 삼키기만 해야 한다.
-  it("저장이 실패해도 자기 토스트를 띄우지 않는다", async () => {
-    replaceParticipants.mockRejectedValue({
-      success: false,
-      data: null,
-      error: {
-        code: "NOT_WORKSPACE_MEMBER",
-        message: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.",
-      },
-    });
-    renderField();
-    openMenu();
-
-    const items = await screen.findAllByRole("option");
-    fireEvent.click(items.find((item) => item.textContent?.includes("한지원"))!);
-    fireEvent.keyDown(document.activeElement ?? document.body, {
-      key: "Escape",
-    });
-
-    await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(1));
-    expect(toastError).not.toHaveBeenCalled();
-    // 실패했으니 화면은 서버가 준 기존 참여자 그대로 남는다.
-    expect(screen.getByLabelText("참여자 1명")).toBeInTheDocument();
-  });
-
   it("멤버를 못 불러오면 다시 시도를 준다", async () => {
     membersState.failed = true;
     renderField();
@@ -578,7 +563,7 @@ describe("NoteParticipantsField", () => {
     await waitFor(() =>
       expect(replaceGuestParticipants).toHaveBeenCalledWith({
         noteId: "01K0000000009",
-        data: { guestIds: ["01K0000000301"] },
+        data: { guestIds: ["01K0000000301"], expectedGuestIds: [] },
       })
     );
     // 계정 참여자는 안 바뀌었으니 그쪽 요청은 아예 안 나간다.
@@ -720,7 +705,7 @@ describe("NoteParticipantsField", () => {
     await waitFor(() =>
       expect(replaceGuestParticipants).toHaveBeenCalledWith({
         noteId: "01K0000000009",
-        data: { guestIds: ["01K0000000302"] },
+        data: { guestIds: ["01K0000000302"], expectedGuestIds: ["01K0000000301"] },
       })
     );
   });
@@ -741,5 +726,131 @@ describe("NoteParticipantsField", () => {
         data: { displayName: "이도현" },
       })
     );
+  });
+
+  // ── 그 사이 남이 바꿨을 때 (APP-778) ─────────────────────────────────────────
+  //
+  // 서버는 요청에 실린 「병합 기준 목록」(`expected*`)이 지금과 다르면 409 로 거절한다(APP-777).
+  // 화면은 최신을 다시 읽어 **내가 켜고 끈 것만** 새 기준에 얹고 한 번만 다시 보낸다.
+
+  const CONFLICT = {
+    success: false,
+    data: null,
+    error: {
+      code: "NOTE_PARTICIPANTS_CONFLICT",
+      message: "참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.",
+      details: null,
+    },
+  };
+
+  const MEMBER_TWO: Participant = {
+    participantId: "01K0000000102",
+    userId: "01K0000000002",
+    guestId: null,
+    name: "한지원",
+    email: "jiwon@heymoa.com",
+    image: null,
+  };
+
+  /** 메뉴를 연 뒤 남이 넣은 사람. 후보 목록(멤버 조회)에는 아직 없다. */
+  const ADDED_BY_OTHER: Participant = {
+    participantId: "01K0000000103",
+    userId: "01K0000000003",
+    guestId: null,
+    name: "이영희",
+    email: "younghee@heymoa.com",
+    image: null,
+  };
+
+  function latestNote(participants: Participant[]) {
+    return { status: 200, data: { success: true, data: { participants } } };
+  }
+
+  /** 한지원을 끄고 닫는다. 후보는 이름순이라 마지막이 한지원이다. */
+  async function turnOffMemberTwo() {
+    openMenu();
+    const items = await screen.findAllByRole("option");
+    fireEvent.click(items[items.length - 1]);
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+  }
+
+  it("저장에 병합 기준 목록을 싣는다", async () => {
+    renderField([PARTICIPANT, MEMBER_TWO]);
+    await turnOffMemberTwo();
+
+    await waitFor(() =>
+      expect(replaceParticipants).toHaveBeenCalledWith({
+        noteId: "01K0000000009",
+        data: {
+          userIds: ["01K0000000001"],
+          expectedUserIds: ["01K0000000001", "01K0000000002"],
+        },
+      })
+    );
+  });
+
+  it("거절되면 최신을 다시 읽어 남이 넣은 사람은 살리고 내가 끈 사람만 빼서 한 번 더 보낸다", async () => {
+    replaceParticipants
+      .mockRejectedValueOnce(CONFLICT)
+      .mockResolvedValueOnce({ status: 200 });
+    getNote.mockResolvedValue(latestNote([PARTICIPANT, MEMBER_TWO, ADDED_BY_OTHER]));
+    renderField([PARTICIPANT, MEMBER_TWO]);
+    await turnOffMemberTwo();
+
+    await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(2));
+    const retry = replaceParticipants.mock.calls[1][0];
+    expect([...retry.data.userIds].sort()).toEqual(["01K0000000001", "01K0000000003"]);
+    expect([...retry.data.expectedUserIds].sort()).toEqual([
+      "01K0000000001",
+      "01K0000000002",
+      "01K0000000003",
+    ]);
+    // 다시 맞춰 성공했으면 알릴 것이 없다
+    expect(toastError).not.toHaveBeenCalled();
+    // 안 바뀐 임시 참여자 쪽은 두 번 다 안 보낸다
+    expect(replaceGuestParticipants).not.toHaveBeenCalled();
+  });
+
+  it("다시 보낸 것도 거절되면 더 보내지 않고 알린다", async () => {
+    replaceParticipants.mockRejectedValue(CONFLICT);
+    getNote.mockResolvedValue(latestNote([PARTICIPANT, MEMBER_TWO, ADDED_BY_OTHER]));
+    renderField([PARTICIPANT, MEMBER_TWO]);
+    await turnOffMemberTwo();
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
+    expect(toastError).toHaveBeenCalledWith(CONFLICT.error.message);
+    expect(replaceParticipants).toHaveBeenCalledTimes(2);
+  });
+
+  it("최신을 다시 읽지 못하면 다시 보내지 않고 알린다", async () => {
+    replaceParticipants.mockRejectedValue(CONFLICT);
+    getNote.mockRejectedValue(new TypeError("Failed to fetch"));
+    renderField([PARTICIPANT, MEMBER_TWO]);
+    await turnOffMemberTwo();
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(CONFLICT.error.message));
+    expect(replaceParticipants).toHaveBeenCalledTimes(1);
+  });
+
+  // 전역 `MutationCache.onError` 는 끄고 이 컴포넌트가 알린다. 둘 다 띄우면 겹치고, 전역만
+  // 두면 다시 보내 성공한 저장 앞에 409 문구가 먼저 뜬다.
+  it("충돌이 아닌 실패는 다시 보내지 않고 서버 문구로 한 번 알린다", async () => {
+    replaceParticipants.mockRejectedValue({
+      success: false,
+      data: null,
+      error: { code: "NOT_WORKSPACE_MEMBER", message: "워크스페이스 멤버만 참여자로 등록할 수 있습니다.", details: null },
+    });
+    renderField([PARTICIPANT, MEMBER_TWO]);
+    await turnOffMemberTwo();
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("워크스페이스 멤버만 참여자로 등록할 수 있습니다.")
+    );
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(replaceOptions).toContainEqual({ mutation: { meta: { suppressErrorToast: true } } });
+    expect(replaceParticipants).toHaveBeenCalledTimes(1);
+    expect(getNote).not.toHaveBeenCalled();
+    // 실패했으니 화면은 서버가 준 기존 참여자 그대로 남는다.
+    expect(screen.getByLabelText("참여자 2명")).toBeInTheDocument();
   });
 });

@@ -5,9 +5,12 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { NoteGuestParticipantsRequestExpectedGuestIdsItem } from "./noteGuestParticipantsRequestExpectedGuestIdsItem";
 import type { NoteGuestParticipantsRequestGuestIdsItem } from "./noteGuestParticipantsRequestGuestIdsItem";
 
 export interface NoteGuestParticipantsRequest {
+  /** 이 목록을 만들 때 화면이 본 임시 참여자 식별자 목록(13자리 TSID, 최대 200개). 지금과 다르면 409 로 거절한다. 생략하면 비교하지 않는다 */
+  expectedGuestIds?: NoteGuestParticipantsRequestExpectedGuestIdsItem[];
   /** 이 회의의 임시 참여자로 둘 임시 참여자 식별자 목록(13자리 TSID). 빈 배열이면 전원 뺀다. 최대 200개 */
   guestIds: NoteGuestParticipantsRequestGuestIdsItem[];
 }

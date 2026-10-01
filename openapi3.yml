@@ -1,4 +1,3 @@
----
 openapi: 3.0.1
 info:
   title: Heymoa API
@@ -1960,7 +1959,7 @@ paths:
       tags:
       - Notes
       summary: 노트 참여자 교체
-      description: 노트의 **계정 참여자**를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 계정 참여자를 전원 지운다. 워크스페이스 멤버 또는 이미 이 회의의 참여자만 이 목록에 들어갈 수 있다 - 멤버를 내보내도 참여 기록은 남으므로, 전체 교체에서 그 사람을 함께 실어 유지할 수 있다. 참여자가 아니었던 사람은 넣을 수 없다. 회의 상태와 무관하게 언제나 호출할 수 있다. 계정 없는 임시 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants/guests 가 맡는다.
+      description: 노트의 **계정 참여자**를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 계정 참여자를 전원 지운다. 워크스페이스 멤버 또는 이미 이 회의의 참여자만 이 목록에 들어갈 수 있다 - 멤버를 내보내도 참여 기록은 남으므로, 전체 교체에서 그 사람을 함께 실어 유지할 수 있다. 참여자가 아니었던 사람은 넣을 수 없다. 회의 상태와 무관하게 언제나 호출할 수 있다. 계정 없는 임시 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants/guests 가 맡는다. expectedUserIds 를 보내면 그 목록이 지금의 계정 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT 로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다. 거절을 받으면 다시 읽어 내 변경만 얹어 보낸다.
       operationId: replaceNoteParticipants
       parameters:
       - name: noteId
@@ -1983,9 +1982,19 @@ paths:
                 value:
                   userIds:
                   - 0HZX2K7M9Q4AC
+                  expectedUserIds:
+                  - 0HZX2K7M9Q4AC
               replaceNoteParticipants_NotWorkspaceMemberException:
                 value:
                   userIds:
+                  - 0HZX2K7M9Q4AC
+                  expectedUserIds:
+                  - 0HZX2K7M9Q4AC
+              replaceNoteParticipants_NoteParticipantsConflictException:
+                value:
+                  userIds:
+                  - 0HZX2K7M9Q4AC
+                  expectedUserIds:
                   - 0HZX2K7M9Q4AC
               replaceNoteParticipants_BadRequest:
                 value:
@@ -2195,9 +2204,13 @@ paths:
                 value:
                   userIds:
                   - 0HZX2K7M9Q4AC
+                  expectedUserIds:
+                  - 0HZX2K7M9Q4AC
               replaceNoteParticipants_WorkspaceNotFoundException:
                 value:
                   userIds:
+                  - 0HZX2K7M9Q4AC
+                  expectedUserIds:
                   - 0HZX2K7M9Q4AC
       responses:
         '200':
@@ -2250,6 +2263,21 @@ paths:
                       details:
                       - field: userIds
                         message: 길이는 0~200 여야 합니다.
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTE_PARTICIPANTS_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_PARTICIPANTS_CONFLICT
+                      message: 참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.
+                      details: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
           content:
@@ -4181,7 +4209,7 @@ paths:
       tags:
       - Notes
       summary: 회의 임시 참여자 교체
-      description: 이 회의의 **임시 참여자만** 요청한 목록으로 통째로 교체한다. 빈 배열이면 임시 참여자를 전원 뺀다. 계정 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants 가 맡는다. 다른 워크스페이스의 임시 참여자를 넣으려 하면 거절한다.
+      description: 이 회의의 **임시 참여자만** 요청한 목록으로 통째로 교체한다. 빈 배열이면 임시 참여자를 전원 뺀다. 계정 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants 가 맡는다. 다른 워크스페이스의 임시 참여자를 넣으려 하면 거절한다. expectedGuestIds 를 보내면 그 목록이 지금의 임시 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT 로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다.
       operationId: replaceNoteGuestParticipants
       parameters:
       - name: noteId
@@ -4204,9 +4232,19 @@ paths:
                 value:
                   guestIds:
                   - 0HZX2K7M9Q4AR
+                  expectedGuestIds:
+                  - 0HZX2K7M9Q4AR
+              replaceNoteGuestParticipants_NoteParticipantsConflictException:
+                value:
+                  guestIds:
+                  - 0HZX2K7M9Q4AR
+                  expectedGuestIds:
+                  - 0HZX2K7M9Q4AR
               replaceNoteGuestParticipants_Success:
                 value:
                   guestIds:
+                  - 0HZX2K7M9Q4AR
+                  expectedGuestIds:
                   - 0HZX2K7M9Q4AR
       responses:
         '404':
@@ -4223,6 +4261,21 @@ paths:
                     error:
                       code: WORKSPACE_GUEST_NOT_FOUND
                       message: 임시 참여자를 찾을 수 없습니다.
+                      details: null
+        '409':
+          description: 요청 상태 충돌
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                NOTE_PARTICIPANTS_CONFLICT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_PARTICIPANTS_CONFLICT
+                      message: 참여자 목록이 그 사이 바뀌었습니다. 다시 읽은 뒤 저장해 주세요.
                       details: null
         '200':
           description: 요청 성공
@@ -9385,6 +9438,18 @@ components:
       - guestIds
       type: object
       properties:
+        expectedGuestIds:
+          type: array
+          description: 이 목록을 만들 때 화면이 본 임시 참여자 식별자 목록(13자리 TSID, 최대 200개). 지금과 다르면 409 로 거절한다. 생략하면 비교하지 않는다
+          nullable: false
+          items:
+            oneOf:
+            - type: object
+            - type: boolean
+            - type: string
+            - type: number
+          example:
+          - 0HZX2K7M9Q4AR
         guestIds:
           type: array
           description: 이 회의의 임시 참여자로 둘 임시 참여자 식별자 목록(13자리 TSID). 빈 배열이면 전원 뺀다. 최대 200개
@@ -9671,6 +9736,16 @@ components:
       - userIds
       type: object
       properties:
+        expectedUserIds:
+          type: array
+          description: 이 목록을 만들 때 화면이 본 계정 참여자의 13자리 TSID 목록(최대 200개). 지금과 다르면 409 로 거절한다. 생략하면 비교하지 않는다
+          nullable: false
+          items:
+            oneOf:
+            - type: object
+            - type: boolean
+            - type: string
+            - type: number
         userIds:
           type: array
           description: 참여자로 남길 유저의 13자리 TSID 목록(최대 200개). 이 목록이 곧 최종 상태이며 여기 없는 참여자는 지워진다

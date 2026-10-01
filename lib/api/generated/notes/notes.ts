@@ -1162,6 +1162,11 @@ export type replaceNoteParticipantsResponse404 = {
   status: 404;
 };
 
+export type replaceNoteParticipantsResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
 export type replaceNoteParticipantsResponseSuccess =
   replaceNoteParticipantsResponse200 & {
     headers: Headers;
@@ -1170,6 +1175,7 @@ export type replaceNoteParticipantsResponseError = (
   | replaceNoteParticipantsResponse400
   | replaceNoteParticipantsResponse401
   | replaceNoteParticipantsResponse404
+  | replaceNoteParticipantsResponse409
 ) & {
   headers: Headers;
 };
@@ -1183,7 +1189,7 @@ export const getReplaceNoteParticipantsUrl = (noteId: string) => {
 };
 
 /**
- * 노트의 **계정 참여자**를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 계정 참여자를 전원 지운다. 워크스페이스 멤버 또는 이미 이 회의의 참여자만 이 목록에 들어갈 수 있다 - 멤버를 내보내도 참여 기록은 남으므로, 전체 교체에서 그 사람을 함께 실어 유지할 수 있다. 참여자가 아니었던 사람은 넣을 수 없다. 회의 상태와 무관하게 언제나 호출할 수 있다. 계정 없는 임시 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants/guests 가 맡는다.
+ * 노트의 **계정 참여자**를 요청한 목록으로 통째로 교체한다. 부분 추가·삭제가 아니며, 빈 배열이면 계정 참여자를 전원 지운다. 워크스페이스 멤버 또는 이미 이 회의의 참여자만 이 목록에 들어갈 수 있다 - 멤버를 내보내도 참여 기록은 남으므로, 전체 교체에서 그 사람을 함께 실어 유지할 수 있다. 참여자가 아니었던 사람은 넣을 수 없다. 회의 상태와 무관하게 언제나 호출할 수 있다. 계정 없는 임시 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants/guests 가 맡는다. expectedUserIds 를 보내면 그 목록이 지금의 계정 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT 로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다. 거절을 받으면 다시 읽어 내 변경만 얹어 보낸다.
  * @summary 노트 참여자 교체
  */
 export const replaceNoteParticipants = async (
@@ -2437,6 +2443,11 @@ export type replaceNoteGuestParticipantsResponse404 = {
   status: 404;
 };
 
+export type replaceNoteGuestParticipantsResponse409 = {
+  data: AppErrorResponse;
+  status: 409;
+};
+
 export type replaceNoteGuestParticipantsResponseSuccess =
   replaceNoteGuestParticipantsResponse200 & {
     headers: Headers;
@@ -2444,6 +2455,7 @@ export type replaceNoteGuestParticipantsResponseSuccess =
 export type replaceNoteGuestParticipantsResponseError = (
   | replaceNoteGuestParticipantsResponse401
   | replaceNoteGuestParticipantsResponse404
+  | replaceNoteGuestParticipantsResponse409
 ) & {
   headers: Headers;
 };
@@ -2457,7 +2469,7 @@ export const getReplaceNoteGuestParticipantsUrl = (noteId: string) => {
 };
 
 /**
- * 이 회의의 **임시 참여자만** 요청한 목록으로 통째로 교체한다. 빈 배열이면 임시 참여자를 전원 뺀다. 계정 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants 가 맡는다. 다른 워크스페이스의 임시 참여자를 넣으려 하면 거절한다.
+ * 이 회의의 **임시 참여자만** 요청한 목록으로 통째로 교체한다. 빈 배열이면 임시 참여자를 전원 뺀다. 계정 참여자는 이 요청이 건드리지 않으므로 응답에 그대로 남는다 - 그쪽은 /v1/notes/{noteId}/participants 가 맡는다. 다른 워크스페이스의 임시 참여자를 넣으려 하면 거절한다. expectedGuestIds 를 보내면 그 목록이 지금의 임시 참여자와 같을 때만 바꾸고, 다르면 409 NOTE_PARTICIPANTS_CONFLICT 로 거절한다 - 다른 사람이 그 사이 바꾼 것을 덮지 않기 위해서다.
  * @summary 회의 임시 참여자 교체
  */
 export const replaceNoteGuestParticipants = async (

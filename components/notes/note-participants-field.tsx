@@ -21,9 +21,11 @@ import {
   ComboboxTrigger,
   filterByTyped,
 } from "@/components/ui/combobox";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
   getGetNoteQueryKey,
   getGetNotesQueryKey,
+  getNote,
   useCreateNoteGuestParticipant,
   useReplaceNoteGuestParticipants,
   useReplaceNoteParticipants,
@@ -36,6 +38,8 @@ import {
   getGetWorkspaceMembersQueryKey,
   useGetWorkspaceMembers,
 } from "@/lib/api/generated/workspace-members/workspace-members";
+import { okData } from "@/lib/api/ok-data";
+import { toast } from "@/lib/ui/toast";
 
 /**
  * 후보 하나. 계정 멤버와 임시 참여자가 같은 목록에 선다.
@@ -72,6 +76,11 @@ type Candidate = {
  * 화면에서 할 수 있는 일이 같고, 가르려면 멤버십 이력이 있어야 한다.
  */
 const DEPARTED_LABEL = "워크스페이스에 없음";
+
+/** 참여자 저장이 그 사이 바뀐 목록 위에서 거절됐다는 서버 코드(APP-777). */
+const PARTICIPANTS_CONFLICT = "NOTE_PARTICIPANTS_CONFLICT";
+
+const meta = { suppressErrorToast: true };
 
 function sameSet(a: string[], b: string[]) {
   return a.length === b.length && a.every((value) => b.includes(value));
@@ -113,8 +122,9 @@ export function NoteParticipantsField({
   const guestsResponse = useGetWorkspaceGuests(workspaceId ?? "", workspaceQueryOptions);
   // 실패 토스트는 전역(`MutationCache.onError`)이 서버 문구 그대로 띄운다. 여기서 또 띄우면
   // 두 개가 겹친다 — opt-out은 화면이 인라인으로 그리거나 코드별 문구가 갈릴 때만 쓴다.
-  const replaceParticipants = useReplaceNoteParticipants();
-  const replaceGuestParticipants = useReplaceNoteGuestParticipants();
+  // 실패는 `save` 가 알린다 — 409 는 다시 보내 볼 것이라 전역 토스트가 먼저 뜨면 안 된다.
+  const replaceParticipants = useReplaceNoteParticipants({ mutation: { meta } });
+  const replaceGuestParticipants = useReplaceNoteGuestParticipants({ mutation: { meta } });
   const createGuestParticipant = useCreateNoteGuestParticipant();
 
   const membersData = membersResponse.data;
@@ -370,47 +380,73 @@ export function NoteParticipantsField({
   async function save(next: string[]) {
     if (sameSet(next, saved)) return;
 
-    // **key에서 바로 뽑는다.** 후보 목록에서 되찾으면 방금 만든 임시 참여자가 아직 조회에
-    // 안 들어와 조용히 빠진 채로 전체 교체가 나간다.
-    const userIds = next
-      .filter((key) => key.startsWith("user:"))
-      .map((key) => key.slice("user:".length));
-    const guestIds = next
-      .filter((key) => key.startsWith("guest:"))
-      .map((key) => key.slice("guest:".length));
-
-    const savedUserIds = saved
-      .filter((key) => key.startsWith("user:"))
-      .map((key) => key.slice("user:".length));
-    const savedGuestIds = saved
-      .filter((key) => key.startsWith("guest:"))
-      .map((key) => key.slice("guest:".length));
-
-    // `apiFetch`는 비-2xx 봉투를 그대로 throw한다(`parseResponse`). 실패는 전역 토스트가
-    // 서버 문구로 알린다.
+    // `apiFetch`는 비-2xx 봉투를 그대로 throw한다(`parseResponse`). 전역 토스트는 끄고
+    // 여기서 알린다 — 409 는 다시 맞춰 보내면 대개 성공하는데, 전역 토스트가 먼저 떠 버리면
+    // 성공한 저장 앞에 실패 문구가 남는다.
     //
     // **성공 여부와 무관하게 다시 읽는다.** 요청이 둘이라 앞이 성공하고 뒤가 실패하는
     // 부분 성공이 있다 — 그때 갱신을 건너뛰면 서버에는 앞 변경이 적용됐는데 화면은 둘 다
     // 실패한 것처럼 옛 목록을 들고 있어, 사람이 본 것과 저장된 것이 갈린다.
-    //
-    // **둘을 이어 붙이지 않는다.** `try { A; B }` 로 두면 A 가 실패했을 때 B 를 **아예 안
-    // 보낸다** — 사람은 한 번의 저장으로 둘을 다 바꿨는데 임시 참여자 변경은 시도조차 안 된
-    // 채 토스트만 하나 뜬다. 두 경로는 서로 독립이라 각자 보내고, 결과는 아래 갱신이 맞춘다.
-    const requests: Array<Promise<unknown>> = [];
-    if (!sameSet(userIds, savedUserIds)) {
-      requests.push(replaceParticipants.mutateAsync({ noteId, data: { userIds } }));
-    }
-    if (!sameSet(guestIds, savedGuestIds)) {
-      requests.push(
-        replaceGuestParticipants.mutateAsync({ noteId, data: { guestIds } })
-      );
-    }
     try {
-      // 실패는 전역 토스트가 서버 문구로 알린다. 여기서는 삼키되 **갱신은 건너뛰지 않는다.**
-      await Promise.allSettled(requests);
+      let target = next;
+      let base = saved;
+      for (let attempt = 0; ; attempt++) {
+        const failures = await send(target, base);
+        // **그 사이 남이 바꿨다(APP-777).** 최신을 다시 읽어 내가 켜고 끈 것만 그 위에 얹고
+        // 한 번만 더 보낸다. 또 거절되면 계속 다투는 중이라 멈추고 알린다.
+        if (attempt === 0 && failures.some((e) => errorCodeOf(e) === PARTICIPANTS_CONFLICT)) {
+          // 다시 읽기마저 실패하면 아래로 떨어져 409 문구를 알린다 — 삼키면 저장이 조용히 끝난다.
+          const latest = okData(await getNote(noteId).catch(() => undefined))?.participants.map(
+            keyOf
+          );
+          if (latest) {
+            target = mergeDraft(next, saved, latest);
+            base = latest;
+            continue;
+          }
+        }
+        for (const error of failures) {
+          toast.error(errorMessageOf(error, "참여자를 저장하지 못했습니다."));
+        }
+        return;
+      }
     } finally {
       await invalidateNote();
     }
+  }
+
+  /**
+   * `base` 와 다른 쪽만 보내고 실패한 것을 돌려준다. `base` 는 병합 기준으로 함께 실려
+   * 서버가 그 사이 바뀌었는지 가린다.
+   *
+   * **둘을 이어 붙이지 않는다.** `try { A; B }` 로 두면 A 가 실패했을 때 B 를 **아예 안
+   * 보낸다** — 사람은 한 번의 저장으로 둘을 다 바꿨는데 임시 참여자 변경은 시도조차 안 된
+   * 채 토스트만 하나 뜬다. 두 경로는 서로 독립이라 각자 보낸다.
+   *
+   * **key에서 바로 뽑는다.** 후보 목록에서 되찾으면 방금 만든 임시 참여자가 아직 조회에
+   * 안 들어와 조용히 빠진 채로 전체 교체가 나간다.
+   */
+  async function send(target: string[], base: string[]) {
+    const idsOf = (keys: string[], prefix: string) =>
+      keys.filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length));
+    const userIds = idsOf(target, "user:");
+    const guestIds = idsOf(target, "guest:");
+    const expectedUserIds = idsOf(base, "user:");
+    const expectedGuestIds = idsOf(base, "guest:");
+
+    const requests: Array<Promise<unknown>> = [];
+    if (!sameSet(userIds, expectedUserIds)) {
+      requests.push(
+        replaceParticipants.mutateAsync({ noteId, data: { userIds, expectedUserIds } })
+      );
+    }
+    if (!sameSet(guestIds, expectedGuestIds)) {
+      requests.push(
+        replaceGuestParticipants.mutateAsync({ noteId, data: { guestIds, expectedGuestIds } })
+      );
+    }
+    const results = await Promise.allSettled(requests);
+    return results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
   }
 
   async function createGuest(displayName: string) {
