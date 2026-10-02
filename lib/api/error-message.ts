@@ -39,3 +39,6 @@ export function errorMessageOf(error: unknown, fallback: string): string {
  * 검토 줄 · 할 일 제안 · 할 일 목록 · 항목 추가가 같은 일을 같은 말로 알린다.
  */
 export const CONFLICT_MESSAGE = "다른 사람이 먼저 수정해 최신 내용을 불러왔습니다.";
+
+/** 확정된 검토본을 고치려다 거절(409 `MEETING_REVIEW_CONFIRMED`)됐을 때. 판 충돌과 달리 다시 읽어도 고칠 수 없다. */
+export const CONFIRMED_MESSAGE = "이미 확정된 검토라 고칠 수 없습니다.";

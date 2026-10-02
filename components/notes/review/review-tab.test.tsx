@@ -183,6 +183,223 @@ describe("검토 가능한 회의", () => {
     );
   });
 
+  it("항목을 제외하면 주제 칩과 주제 머리 개수가 하나 줄고 제외 취소하면 늘어난다", async () => {
+    renderTab();
+    const chip = await screen.findByRole("button", { name: /차별점과 요금/ });
+    const num = (text: string | null) => Number(/항목 (\d+)/.exec(text ?? "")?.[1]);
+    const chipCount = () => num(chip.textContent);
+    const headCount = () => num(screen.getByRole("status").textContent);
+    fireEvent.click(chip);
+    fireEvent.click(await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다"));
+    await screen.findByRole("button", { name: "제외" });
+    const before = chipCount();
+    expect(headCount()).toBe(before);
+
+    fireEvent.click(screen.getByRole("button", { name: "제외" }));
+    await waitFor(() => expect(chipCount()).toBe(before - 1));
+    expect(headCount()).toBe(before - 1);
+
+    fireEvent.click(screen.getByRole("button", { name: "제외 취소" }));
+    await waitFor(() => expect(chipCount()).toBe(before));
+    expect(headCount()).toBe(before);
+  });
+
+  it("확정 때문에 거절되면 확정 안내를 띄우고 판 충돌 문구 없이 흐름 상태를 다시 읽는다", async () => {
+    let flowReads = 0;
+    server.use(
+      http.get("*/v1/notes/:noteId/analyses/flow", () => {
+        flowReads += 1;
+        return HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, status: "REVIEWABLE" }, error: null });
+      }),
+      http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
+        HttpResponse.json(
+          { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정된 검토본은 고칠 수 없습니다." } },
+          { status: 409 }
+        )
+      )
+    );
+    renderTab();
+    fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+    await screen.findByRole("button", { name: "제외" });
+    await waitFor(() => expect(flowReads).toBeGreaterThan(0));
+    const before = flowReads;
+
+    fireEvent.click(screen.getByRole("button", { name: "제외" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("확정된 검토본은 고칠 수 없습니다."));
+    await waitFor(() => expect(flowReads).toBeGreaterThan(before));
+    expect(screen.queryByText(/다른 사람이 먼저 수정해/)).not.toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalledWith(CONFLICT_MESSAGE);
+  });
+
+  describe("확정 거절 뒤", () => {
+    const confirmedPatch = () =>
+      http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
+        HttpResponse.json(
+          { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정된 검토본은 고칠 수 없습니다." } },
+          { status: 409 }
+        )
+      );
+    const flowOf = (status: string) =>
+      HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, status }, error: null });
+
+    it("흐름 재조회가 실패해도 확정으로 남아 편집 컨트롤이 다시 켜지지 않는다", async () => {
+      let rejected = false;
+      server.use(
+        http.get("*/v1/notes/:noteId/analyses/flow", () =>
+          rejected ? HttpResponse.json({ success: false }, { status: 500 }) : flowOf("REVIEWABLE")
+        ),
+        confirmedPatch()
+      );
+      renderTab();
+      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      await screen.findByRole("button", { name: "제외" });
+      rejected = true;
+
+      fireEvent.click(screen.getByRole("button", { name: "제외" }));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("확정된 검토본은 고칠 수 없습니다."));
+      await waitFor(() => expect(screen.queryByRole("button", { name: "제외" })).not.toBeInTheDocument());
+      expect(screen.getByText("확정됨")).toBeInTheDocument();
+    });
+
+    it("검토본도 다시 읽어 읽기 전용 화면이 최종 항목을 보인다", async () => {
+      let reviewReads = 0;
+      server.use(
+        http.get("*/v1/notes/:noteId/meeting-review", () => {
+          reviewReads += 1;
+          return undefined;
+        }),
+        confirmedPatch()
+      );
+      renderTab();
+      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      await screen.findByRole("button", { name: "제외" });
+      const before = reviewReads;
+
+      fireEvent.click(screen.getByRole("button", { name: "제외" }));
+
+      await waitFor(() => expect(reviewReads).toBeGreaterThan(before));
+    });
+
+    it("확정으로 바뀌어도 쓰던 수정 초안은 남는다", async () => {
+      let rejected = false;
+      server.use(
+        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        confirmedPatch()
+      );
+      renderTab();
+      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), { target: { value: "고치던 문장" } });
+      rejected = true;
+
+      fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
+      expect(screen.getByRole("textbox", { name: "항목 내용" })).toHaveValue("고치던 문장");
+    });
+
+    it("요약과 프로젝트 할 일도 다시 읽는다", async () => {
+      let summaryReads = 0;
+      let taskReads = 0;
+      server.events.on("request:start", ({ request }) => {
+        if (request.method !== "GET") return;
+        if (request.url.endsWith("/meeting-review/summary")) summaryReads += 1;
+        if (/\/projects\/[^/]+\/tasks(\?|$)/.test(request.url)) taskReads += 1;
+      });
+      server.use(confirmedPatch());
+      renderTab();
+      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      await screen.findByRole("button", { name: "제외" });
+      await waitFor(() => expect(taskReads).toBeGreaterThan(0));
+      const [summaryBefore, taskBefore] = [summaryReads, taskReads];
+
+      fireEvent.click(screen.getByRole("button", { name: "제외" }));
+
+      await waitFor(() => expect(summaryReads).toBeGreaterThan(summaryBefore));
+      await waitFor(() => expect(taskReads).toBeGreaterThan(taskBefore));
+      server.events.removeAllListeners();
+    });
+
+    it("확정으로 바뀐 뒤 남은 초안의 저장 버튼은 꺼진다", async () => {
+      let rejected = false;
+      server.use(
+        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        confirmedPatch()
+      );
+      renderTab();
+      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "항목 내용" }), { target: { value: "고치던 문장" } });
+      rejected = true;
+      fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
+      expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+    });
+
+    it("확정으로 바뀐 뒤 남은 새 항목 초안의 추가 버튼은 꺼진다", async () => {
+      let rejected = false;
+      server.use(
+        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        http.post("*/v1/notes/:noteId/meeting-review/items", () =>
+          HttpResponse.json(
+            { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정" } },
+            { status: 409 }
+          )
+        )
+      );
+      renderTab();
+      await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
+      fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), { target: { value: "쓰던 새 항목" } });
+      rejected = true;
+      fireEvent.click(screen.getByRole("button", { name: "추가" }));
+
+      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
+      expect(screen.getByRole("button", { name: "추가" })).toBeDisabled();
+    });
+
+    it("토스트는 서버 문구를 쓴다", async () => {
+      server.use(
+        http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", () =>
+          HttpResponse.json(
+            { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "서버가 준 확정 문구" } },
+            { status: 409 }
+          )
+        )
+      );
+      renderTab();
+      fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
+      fireEvent.click(await screen.findByRole("button", { name: "제외" }));
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버가 준 확정 문구"));
+    });
+
+    it("확정으로 바뀌어도 쓰던 새 항목 초안은 남는다", async () => {
+      let rejected = false;
+      server.use(
+        http.get("*/v1/notes/:noteId/analyses/flow", () => flowOf(rejected ? "CONFIRMED" : "REVIEWABLE")),
+        http.post("*/v1/notes/:noteId/meeting-review/items", () =>
+          HttpResponse.json(
+            { success: false, data: null, error: { code: "MEETING_REVIEW_CONFIRMED", message: "확정" } },
+            { status: 409 }
+          )
+        )
+      );
+      renderTab();
+      await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
+      fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), { target: { value: "쓰던 새 항목" } });
+      rejected = true;
+
+      fireEvent.click(screen.getByRole("button", { name: "추가" }));
+
+      await waitFor(() => expect(screen.getByText("확정됨")).toBeInTheDocument());
+      expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue("쓰던 새 항목");
+    });
+  });
+
   it("섹션에 항목을 추가하면 그 섹션에 선다", async () => {
     renderTab();
     await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");

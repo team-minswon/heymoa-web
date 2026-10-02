@@ -184,11 +184,12 @@ export function ReviewRow({
       <Collapse open={open} lazy>
         <div className="space-y-2.5 pt-2 pb-3.5 sm:pl-3">
           <ItemState item={item} />
-          {canEdit ? (
+          {canEdit || editing ? (
             editing ? (
               <ContentEditor
                 initial={item.content}
                 busy={busy}
+                disabled={!canEdit}
                 onCancel={() => setEditing(false)}
                 onSubmit={async (content) => {
                   const saved = content === item.content || (await onSave({ content }));
@@ -233,11 +234,13 @@ function ItemState({ item }: { item: ReviewItem }) {
 function ContentEditor({
   initial,
   busy,
+  disabled,
   onSubmit,
   onCancel,
 }: {
   initial: string;
   busy: boolean;
+  disabled: boolean;
   onSubmit: (content: string) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -248,7 +251,7 @@ function ContentEditor({
       className="rounded-control border border-[var(--el-ink)] bg-[var(--el-surface-card)] p-2.5 animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
       onSubmit={(event) => {
         event.preventDefault();
-        if (trimmed) void onSubmit(trimmed);
+        if (trimmed && !disabled) void onSubmit(trimmed);
       }}
     >
       <textarea
@@ -261,7 +264,7 @@ function ContentEditor({
           if (event.key === "Escape") onCancel();
           if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
-            if (trimmed) void onSubmit(trimmed);
+            if (trimmed && !disabled) void onSubmit(trimmed);
           }
         }}
         className="block w-full resize-none bg-transparent text-sm leading-6 text-[var(--el-ink)] outline-none [field-sizing:content]"
@@ -270,7 +273,7 @@ function ContentEditor({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           취소
         </Button>
-        <Button type="submit" size="sm" loading={busy} disabled={!trimmed}>
+        <Button type="submit" size="sm" loading={busy} disabled={!trimmed || disabled}>
           저장
         </Button>
       </div>

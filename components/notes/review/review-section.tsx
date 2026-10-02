@@ -190,11 +190,12 @@ export function ReviewSection({
         />
       ) : null}
 
-      {canEdit ? (
+      {canEdit || composing ? (
         composing ? (
           <AddItemForm
             kinds={kinds}
             busy={adding || busyItemId !== null}
+            disabled={!canEdit}
             onCancel={() => setComposing(false)}
             onSubmit={async (kind, content) => {
               const added = await onAddItem(kind, content);

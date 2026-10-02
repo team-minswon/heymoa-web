@@ -12,7 +12,7 @@ import {
 } from "@/lib/notes/review/confirm";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
-import { resolvedItemIds } from "@/lib/notes/review/topics";
+import { resolvedItemIds, topicChips } from "@/lib/notes/review/topics";
 import { trailOf } from "@/lib/notes/review/trail";
 
 const replacement = (itemId: string, decision: "END" | "KEEP" | null = null): ReviewItem["replacements"][number] => ({
@@ -212,5 +212,22 @@ describe("trailOf", () => {
       edited: true,
     });
     expect(steps[0]).toMatchObject({ label: "검토에서 수정", content: "처음 → 사람이 고침", lines: [] });
+  });
+});
+
+describe("topicChips 개수", () => {
+  const summary = {
+    topics: [
+      { ordinal: 1, title: "가", sentences: [], members: [{ itemId: "a" }, { itemId: "b" }, { itemId: "gone" }] },
+    ],
+  } as unknown as MeetingReviewSummary;
+
+  it("검토본에서 제외된 항목은 세지 않고, 검토본에 없는 member 는 센다", () => {
+    const items = [
+      item({ itemId: "a", kind: "DECISION" }),
+      item({ itemId: "b", kind: "DECISION", included: false }),
+    ];
+    expect(topicChips(summary, items)[0].count).toBe(2);
+    expect(topicChips(summary, [])[0].count).toBe(3);
   });
 });

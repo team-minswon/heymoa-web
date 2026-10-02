@@ -136,7 +136,7 @@ export function ReviewBoard({
   );
   const topics = useMemo(() => topicIndex(summary), [summary]);
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
-  const topicEntries = useMemo(() => topicChips(summary), [summary]);
+  const topicEntries = useMemo(() => topicChips(summary, items), [summary, items]);
   const resolved = useMemo(() => resolvedItemIds(summary), [summary]);
   const topicTitleOf = (ordinal: number) =>
     topicEntries.find((entry) => entry.ordinal === ordinal)?.title ?? "";

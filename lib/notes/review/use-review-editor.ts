@@ -3,8 +3,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
-import { CONFLICT_MESSAGE, errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
+import { CONFIRMED_MESSAGE, CONFLICT_MESSAGE, errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
+import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import {
   getGetMeetingReviewQueryKey,
   getGetMeetingReviewSummaryQueryKey,
@@ -17,12 +18,15 @@ import type {
   MeetingReviewResponse,
   UpdateMeetingReviewItemRequest,
 } from "@/lib/api/generated/models";
+import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
+import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 import { toast } from "@/lib/ui/toast";
 
 type ItemPatch = Omit<UpdateMeetingReviewItemRequest, "expectedReviewVersion" | "expectedItemRevision">;
 type NewItem = Omit<AddMeetingReviewItemRequest, "expectedReviewVersion">;
 
 const CONFLICT = "MEETING_REVIEW_CONFLICT";
+const CONFIRMED = "MEETING_REVIEW_CONFIRMED";
 const NEW_ITEM = "new";
 
 /**
@@ -67,7 +71,17 @@ export function useReviewEditor(noteId: string) {
       setConflictItemId(null);
       return true;
     } catch (error) {
-      if (errorCodeOf(error) === CONFLICT) {
+      if (errorCodeOf(error) === CONFIRMED) {
+        // 다시 읽어도 고칠 수 없다. 흐름 상태를 읽어 화면이 확정(읽기 전용)으로 바뀌게 한다. 입력은 남긴다.
+        toast.error(errorMessageOf(error, CONFIRMED_MESSAGE));
+        // 재조회가 늦거나 실패해도 편집이 다시 켜지지 않게 캐시를 먼저 확정으로 옮긴다. 검토본도 같이 읽는다.
+        moveFlowStatus(queryClient, noteId, "CONFIRMED");
+        void queryClient.refetchQueries({ queryKey: getGetAnalysisFlowQueryKey(noteId) });
+        void queryClient.refetchQueries({ queryKey });
+        // 확정된 판으로 주제 목록 · 칩 개수 · 할 일이 달라졌다. 같이 낡음 처리한다.
+        void queryClient.invalidateQueries({ queryKey: getGetMeetingReviewSummaryQueryKey(noteId) });
+        void queryClient.invalidateQueries({ predicate: (query) => isProjectTaskQueryKey(query.queryKey) });
+      } else if (errorCodeOf(error) === CONFLICT) {
         // 새 항목에는 안내를 그릴 줄이 없다. 쓴 내용은 폼에 남으니 토스트로 알린다.
         if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
         else setConflictItemId(target);

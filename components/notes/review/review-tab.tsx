@@ -105,7 +105,8 @@ export function ReviewTab({
   return (
     <ReviewBoard
       // 노트나 흐름 상태가 바뀌면 보기 · 주제 · 펼친 줄 · 편집 잠금을 새로 시작한다.
-      key={`${noteId}:${flow.status}`}
+      // 검토 가능 → 확정은 같은 판으로 둔다. 확정 거절로 넘어갈 때 쓰던 초안이 사라지지 않게 한다.
+      key={`${noteId}:${flow.status === "CONFIRMED" ? "REVIEWABLE" : flow.status}`}
       noteId={noteId}
       workspaceId={workspaceId}
       projectId={projectId}

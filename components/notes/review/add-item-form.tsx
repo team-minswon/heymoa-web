@@ -14,11 +14,13 @@ import { KIND_LABEL, type ReviewKind } from "@/lib/notes/review/sections";
 export function AddItemForm({
   kinds,
   busy,
+  disabled = false,
   onSubmit,
   onCancel,
 }: {
   kinds: readonly ReviewKind[];
   busy: boolean;
+  disabled?: boolean;
   onSubmit: (kind: ReviewKind, content: string) => Promise<boolean>;
   onCancel: () => void;
 }) {
@@ -27,7 +29,7 @@ export function AddItemForm({
   const trimmed = content.trim();
 
   const submit = async () => {
-    if (!trimmed || busy) return;
+    if (!trimmed || busy || disabled) return;
     if (await onSubmit(kind, trimmed)) setContent("");
   };
 
@@ -68,7 +70,7 @@ export function AddItemForm({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           취소
         </Button>
-        <Button type="submit" size="sm" loading={busy} disabled={!trimmed}>
+        <Button type="submit" size="sm" loading={busy} disabled={!trimmed || disabled}>
           추가
         </Button>
       </div>

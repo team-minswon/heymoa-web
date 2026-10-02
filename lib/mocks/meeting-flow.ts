@@ -108,6 +108,7 @@ const CONFLICT = [
   409,
   "검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요.",
 ] as const;
+const CONFIRMED = ["MEETING_REVIEW_CONFIRMED", 409, "확정된 검토본은 고칠 수 없습니다."] as const;
 const BAD_REQUEST = ["BAD_REQUEST", 400, "잘못된 요청입니다."] as const;
 const ASSIGNABLE_KINDS: ReadonlySet<Kind> = new Set<Kind>(["ACTION_ITEM", "ISSUE", "QUESTION"]);
 
@@ -569,6 +570,7 @@ function view(review: StoredReview): MeetingReviewResponseData {
 
 function editableReview(noteId: string, expectedReviewVersion: number) {
   const review = reviewOf(noteId);
+  if (flowOf(noteId) === "CONFIRMED") failWith(...CONFIRMED);
   if (flowOf(noteId) !== "REVIEWABLE" || expectedReviewVersion !== review.reviewVersion) {
     failWith(...CONFLICT);
   }

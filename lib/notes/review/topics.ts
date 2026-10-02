@@ -19,11 +19,16 @@ export function topicIndex(summary: MeetingReviewSummary | null | undefined) {
   return index;
 }
 
-export function topicChips(summary: MeetingReviewSummary | null | undefined): TopicChip[] {
+/** `count` 는 검토본에서 제외된 항목을 뺀다. 검토본에서 찾지 못한 member 는 센다. */
+export function topicChips(
+  summary: MeetingReviewSummary | null | undefined,
+  items: readonly { itemId: string; included: boolean }[]
+): TopicChip[] {
+  const excluded = new Set(items.filter((item) => !item.included).map((item) => item.itemId));
   return (summary?.topics ?? []).map((topic) => ({
     ordinal: topic.ordinal,
     title: topic.title,
-    count: topic.members.length,
+    count: topic.members.filter((member) => !excluded.has(member.itemId)).length,
     gist: topic.sentences[0]?.text ?? null,
   }));
 }
