@@ -408,7 +408,8 @@ export function ReviewBoard({
                   <>
                     {sections.map((section) => (
                       <ReviewSection
-                        key={section.key}
+                        // 주제를 바꾸면 쓰던 추가 폼도 닫는다. 제출 시점의 주제로 저장되므로 글이 다른 주제에 새면 안 된다.
+                        key={`${section.key}:${selectedTopic?.ordinal ?? "all"}`}
                         section={section}
                         topicOf={topicOf}
                         topicTitleOf={topicTitleOf}
@@ -446,7 +447,13 @@ export function ReviewBoard({
                         onToggleItem={toggleItem}
                         onSaveItem={editor.updateItem}
                         onAddItem={(kind, content) =>
-                          editor.addItem({ kind, content, citations: [] })
+                          editor.addItem({
+                            kind,
+                            content,
+                            citations: [],
+                            // 전체 보기에서는 키 자체를 싣지 않는다.
+                            ...(selectedTopic && { topicOrdinal: selectedTopic.ordinal }),
+                          })
                         }
                         onDismissConflict={editor.dismissConflict}
                         renderDetail={detailOf}

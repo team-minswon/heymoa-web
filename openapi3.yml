@@ -7169,6 +7169,11 @@ components:
             - segmentId
             - role
           nullable: false
+        topicOrdinal:
+          type: integer
+          description: 주제 안에서 추가하는 항목의 요약 주제 번호. 주면 그 주제의 요약 members 에 합쳐지고, 최신 요약에 없는 번호이거나 요약이 성공하지 않았으면 400 입니다. 생략하면 주제에 속하지 않습니다
+          nullable: false
+          format: int32
         expectedReviewVersion:
           type: integer
           description: 읽은 검토본 버전
@@ -9754,7 +9759,7 @@ components:
                                 pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
                   members:
                     type: array
-                    description: 이 주제에 소속된 검토 항목
+                    description: 이 주제에 소속된 검토 항목. 분석이 묶은 항목 뒤에 사람이 이 주제에서 추가한 항목이 붙습니다
                     items:
                       required:
                       - itemId

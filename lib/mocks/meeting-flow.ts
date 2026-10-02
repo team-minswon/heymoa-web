@@ -673,8 +673,18 @@ export const meetingFlowHandlers = [
       const review = editableReview(noteId, body.expectedReviewVersion);
       if (!body.content?.trim()) failWith(...BAD_REQUEST);
       checkAssignable(body.kind, body.assignee, body.due);
+      // 서버처럼: 요약에 없는 주제 번호는 거절하고, 있으면 그 주제 members 에 합친다.
+      const topic =
+        body.topicOrdinal == null
+          ? null
+          : (store().summaries.get(noteId)?.topics.find((row) => row.ordinal === body.topicOrdinal) ??
+            failWith("TOPIC_UNKNOWN", 400, "요약에 없는 주제입니다."));
+      const itemId = nextId("01KI");
+      // 실패할 수 있는 변환을 모두 끝낸 뒤에 상태를 바꾼다. 400 뒤에 요약만 바뀌어 남으면 안 된다.
+      const assignee = assigneeFromRequest(body.assignee, noteId);
+      topic?.members.push({ itemId, kind: body.kind, uncertain: false });
       review.items.push({
-        itemId: nextId("01KI"),
+        itemId,
         revision: 1,
         kind: body.kind,
         content: body.content,
@@ -683,7 +693,7 @@ export const meetingFlowHandlers = [
         authoredByUserId: mockDb.getCurrentUser().userId,
         originalProposalRef: null,
         citations: body.citations ?? [],
-        assignee: assigneeFromRequest(body.assignee, noteId),
+        assignee,
         due: body.due ?? null,
         replacements: [],
         taskChanges: [],

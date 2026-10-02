@@ -200,6 +200,162 @@ describe("검토 가능한 회의", () => {
     ).toBeInTheDocument();
   });
 
+  it("주제로 좁혀 본 채 추가하면 그 주제 결정에 서고 주제 칩 개수가 늘며, 요청에 topicOrdinal 이 실린다", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    server.events.on("request:start", async ({ request }) => {
+      if (request.method === "POST" && request.url.endsWith("/meeting-review/items")) {
+        bodies.push(await request.clone().json());
+      }
+    });
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
+    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
+    const count = () =>
+      Number(/항목 (\d+)/.exec(screen.getByRole("status").textContent ?? "")?.[1]);
+    const before = count();
+
+    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+      target: { value: "요금표는 다음 회의에서 확정한다" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+
+    expect(
+      await within(section("결정")).findByRole("button", {
+        name: "요금표는 다음 회의에서 확정한다",
+      })
+    ).toBeInTheDocument();
+    expect(count()).toBe(before + 1);
+    expect(bodies[0]).toMatchObject({ topicOrdinal: 2 });
+    server.events.removeAllListeners();
+  });
+
+  it("전체 보기에서 추가하면 요청 본문에 topicOrdinal 키가 없다", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    server.events.on("request:start", async ({ request }) => {
+      if (request.method === "POST" && request.url.endsWith("/meeting-review/items")) {
+        bodies.push(await request.clone().json());
+      }
+    });
+    renderTab();
+    await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
+    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+      target: { value: "전체 보기에서 더한 결정" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+    await within(section("결정")).findByRole("button", {
+      name: "전체 보기에서 더한 결정",
+    });
+    expect(bodies).toHaveLength(1);
+    expect("topicOrdinal" in bodies[0]).toBe(false);
+    server.events.removeAllListeners();
+  });
+
+  it("요약에 없는 주제라고 서버가 400 을 주면 입력을 남기고 서버 메시지를 토스트로 보인다", async () => {
+    server.use(
+      http.post("*/v1/notes/:noteId/meeting-review/items", () =>
+        HttpResponse.json(
+          { success: false, error: { code: "TOPIC_UNKNOWN", message: "요약에 없는 주제입니다." } },
+          { status: 400 }
+        )
+      )
+    );
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
+    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
+    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+      target: { value: "거절될 결정" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue("거절될 결정");
+  });
+
+  it("저장은 됐는데 요약을 다시 읽지 못하면 폼은 닫히되 새로고침을 알리는 토스트를 띄운다", async () => {
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
+    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
+    server.use(
+      http.get("*/v1/notes/:noteId/meeting-review/summary", () =>
+        HttpResponse.json(
+          { success: false, error: { code: "INTERNAL_ERROR", message: "서버 오류" } },
+          { status: 500 }
+        )
+      )
+    );
+    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+      target: { value: "요약 재조회가 실패하는 결정" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("새로고침"))
+    );
+  });
+
+  it("전체 보기에서 추가하면 요약을 다시 읽지 않는다", async () => {
+    let summaryReads = 0;
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "GET" && request.url.endsWith("/meeting-review/summary")) summaryReads += 1;
+    });
+    renderTab();
+    await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
+    const before = summaryReads;
+    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+      target: { value: "요약 재조회가 필요 없는 결정" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+    await within(section("결정")).findByRole("button", { name: "요약 재조회가 필요 없는 결정" });
+    expect(summaryReads).toBe(before);
+    server.events.removeAllListeners();
+  });
+
+  it("추가가 판 충돌로 거절되면 검토본과 함께 요약도 다시 읽는다", async () => {
+    let summaryReads = 0;
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "GET" && request.url.endsWith("/meeting-review/summary")) summaryReads += 1;
+    });
+    server.use(
+      http.post("*/v1/notes/:noteId/meeting-review/items", () =>
+        HttpResponse.json(
+          { success: false, error: { code: "MEETING_REVIEW_CONFLICT", message: "다른 사람이 먼저 수정했습니다." } },
+          { status: 409 }
+        )
+      )
+    );
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
+    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
+    const before = summaryReads;
+    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+      target: { value: "충돌로 거절될 결정" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+    await waitFor(() => expect(summaryReads).toBeGreaterThan(before));
+    server.events.removeAllListeners();
+  });
+
+  it("주제를 바꾸면 작성 중이던 추가 폼은 닫혀 다른 주제에 저장되지 않는다", async () => {
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
+    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
+    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
+      target: { value: "다른 주제로 새어 나가면 안 되는 결정" },
+    });
+    // 주제 A 에서 쓰던 중에 주제 B 를 누른다. 제출 시점의 주제로 저장되면 A 의 글이 B 에 들어간다.
+    fireEvent.click(screen.getByRole("button", { name: /01\s*회의가 끝난 뒤 할 일이 흐려지는 문제/ }));
+    await waitFor(() =>
+      expect(screen.queryByRole("textbox", { name: "새 항목 내용" })).not.toBeInTheDocument()
+    );
+  });
+
   it("고를 제안을 다 고르기 전에는 확정을 막고, 이전 결정을 끝내기로 고르면 확정 줄이 바뀐 뒤 확정한다", async () => {
     renderTab();
     // 목의 멘토링 회의에는 아직 안 고른 제안이 셋이다(대체 하나 · 기존 할 일 변경 둘).

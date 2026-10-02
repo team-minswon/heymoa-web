@@ -29,7 +29,7 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
   signals: MeetingReviewSummaryResponseDataTopicsItemSignals;
   /** 주제 서술 문장 */
   sentences: MeetingReviewSummaryResponseDataTopicsItemSentencesItem[];
-  /** 이 주제에 소속된 검토 항목 */
+  /** 이 주제에 소속된 검토 항목. 분석이 묶은 항목 뒤에 사람이 이 주제에서 추가한 항목이 붙습니다 */
   members: MeetingReviewSummaryResponseDataTopicsItemMembersItem[];
   /**
    * 결론 없이 남은 질문·이슈 항목

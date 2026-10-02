@@ -119,6 +119,50 @@ describe("검토 항목 추가 · 수정", () => {
     ).toBe(400);
   });
 
+  it("topicOrdinal 이 있으면 그 주제 members 에 합치고, 요약에 없는 번호는 400 으로 저장하지 않는다", async () => {
+    const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items`;
+    const summaryPath = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/summary`;
+    const before = (await api(summaryPath)).body.data.topics[1].members.length;
+    const current = await review(MENTORING_NOTE_ID);
+
+    const bad = await api(path, "POST", {
+      expectedReviewVersion: current.reviewVersion,
+      kind: "DECISION",
+      content: "없는 주제",
+      topicOrdinal: 999,
+    });
+    expect(bad.status).toBe(400);
+    expect((await review(MENTORING_NOTE_ID)).items).toHaveLength(current.items.length);
+
+    const ok = await api(path, "POST", {
+      expectedReviewVersion: current.reviewVersion,
+      kind: "DECISION",
+      content: "둘째 주제 결정",
+      topicOrdinal: 2,
+    });
+    expect(ok.status).toBe(201);
+    const topic = (await api(summaryPath)).body.data.topics[1];
+    expect(topic.members).toHaveLength(before + 1);
+    expect(topic.members.at(-1)).toMatchObject({ kind: "DECISION", uncertain: false });
+  });
+
+  it("주제 번호가 맞아도 담당 검증이 400 이면 요약 members 를 바꾸지 않는다", async () => {
+    const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items`;
+    const summaryPath = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/summary`;
+    const before = (await api(summaryPath)).body.data.topics[1].members.length;
+    const current = await review(MENTORING_NOTE_ID);
+
+    const bad = await api(path, "POST", {
+      expectedReviewVersion: current.reviewVersion,
+      kind: "ACTION_ITEM",
+      content: "담당 id 가 빠진 할 일",
+      topicOrdinal: 2,
+      assignee: { type: "USER" },
+    });
+    expect(bad.status).toBe(400);
+    expect((await api(summaryPath)).body.data.topics[1].members).toHaveLength(before);
+  });
+
   it("읽은 판이 낡으면 409, 없는 항목은 404, 같은 값은 판을 올리지 않는다", async () => {
     const current = await review(MENTORING_NOTE_ID);
     const item = current.items[0];

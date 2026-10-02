@@ -12,6 +12,8 @@ import type { AddMeetingReviewItemRequestKind } from "./addMeetingReviewItemRequ
 export interface AddMeetingReviewItemRequest {
   /** 선택한 같은 회의 전사. 생략 시 빈 목록 */
   citations?: AddMeetingReviewItemRequestCitationsItem[];
+  /** 주제 안에서 추가하는 항목의 요약 주제 번호. 주면 그 주제의 요약 members 에 합쳐지고, 최신 요약에 없는 번호이거나 요약이 성공하지 않았으면 400 입니다. 생략하면 주제에 속하지 않습니다 */
+  topicOrdinal?: number;
   /**
    * 읽은 검토본 버전
    * @minimum 1
