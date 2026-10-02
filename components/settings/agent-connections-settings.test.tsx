@@ -169,6 +169,17 @@ describe("AgentConnectionsSettings", () => {
     expect(screen.queryByRole("combobox")).toBeNull();
   });
 
+  // 다른 참석자의 말이 위임한 사람이 고른 외부 AI 로 간다 — 맡기기 전에 알려야 한다(APP-844)
+  it("새 연결을 만들 때 회의 전사도 에이전트가 읽는다고 알린다", () => {
+    renderSettings();
+
+    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+
+    expect(
+      screen.getByText("회의 전사(참석자의 발화와 이름)도 에이전트가 읽습니다.")
+    ).toBeTruthy();
+  });
+
   it("목록을 못 읽으면 빈 상태가 아니라 실패와 재시도를 그린다", () => {
     state.error = true;
     renderSettings();
