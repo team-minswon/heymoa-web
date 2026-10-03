@@ -1,3 +1,4 @@
+import { fetchWithRefreshTimeout } from "@/lib/api/refresh-timeout";
 import { isRefreshTokenDead } from "@/lib/auth/refresh-failure";
 import {
   isSessionExpired,
@@ -122,7 +123,8 @@ export async function refreshAuthOnce() {
   if (!refreshPromise) {
     refreshPromise = whenActivated()
       .then(() =>
-        fetch(buildUrl("/v1/auth/refresh"), {
+        // 시한은 fetch 를 시작할 때 잰다. prerender 활성화를 기다린 시간은 넣지 않는다.
+        fetchWithRefreshTimeout(buildUrl("/v1/auth/refresh"), {
           method: "POST",
           credentials: "include",
         })

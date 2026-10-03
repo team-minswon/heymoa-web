@@ -6,7 +6,9 @@ import {
   apiFetch,
   AuthRefreshError,
   isAuthError,
+  refreshAuthOnce,
 } from "@/lib/api/fetcher";
+import { REFRESH_TIMEOUT_MS } from "@/lib/api/refresh-timeout";
 import { resetSessionGate, SessionExpiredError } from "@/lib/auth/session-gate";
 
 function jsonResponse(status: number, body: unknown) {
@@ -231,5 +233,133 @@ describe("apiFetch 실패 응답", () => {
 
     expect(errorCodeOf(error)).toBe("INVITATION_RATE_LIMITED");
     expect((error as ApiError).retryAfterMs).toBeNull();
+  });
+});
+
+
+/** 응답이 안 오는 fetch 입니다. signal 이 abort 되면 그 사유로 reject 합니다. */
+function hangingFetch(_input: RequestInfo | URL, init?: RequestInit) {
+  return new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+      once: true,
+    });
+  });
+}
+
+describe("토큰 갱신 시한", () => {
+  beforeEach(() => {
+    resetSessionGate();
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(document, "prerendering");
+  });
+
+  /** 시한이 지난 뒤 갱신이 일시 실패로 끝났는지 봅니다. 게이트가 열렸으면 다음 요청이 네트워크를 안 탑니다. */
+  async function expectTransientFailure(pending: Promise<void>) {
+    const failure = expect(pending).rejects.toMatchObject({
+      name: "AuthRefreshError",
+      expired: false,
+    });
+    await vi.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS);
+    await failure;
+  }
+
+  it("시한 안에 응답이 없으면 일시 실패로 끊는다", async () => {
+    vi.mocked(fetch).mockImplementationOnce(hangingFetch);
+
+    await expectTransientFailure(refreshAuthOnce());
+  });
+
+  it("시한으로 끊겨도 게이트는 열리지 않아 다음 요청이 네트워크를 탄다", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(401, { success: false }))
+      .mockImplementationOnce(hangingFetch);
+    const request = apiFetch("/v1/notes");
+    const failure = expect(request).rejects.toBeInstanceOf(AuthRefreshError);
+    await vi.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS);
+    await failure;
+
+    vi.mocked(fetch).mockClear();
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(200, { success: true, data: [] })
+    );
+    await apiFetch("/v1/notes");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("직접 abort 되어도(AbortError) 일시 실패다", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(
+      new DOMException("aborted", "AbortError")
+    );
+
+    await expect(refreshAuthOnce()).rejects.toMatchObject({ expired: false });
+  });
+
+  it("동시에 부른 둘은 fetch 하나를 나눠 쓰고 시한 뒤 둘 다 실패하며, 다음 호출은 새로 시작한다", async () => {
+    vi.mocked(fetch)
+      .mockImplementationOnce(hangingFetch)
+      .mockImplementationOnce(hangingFetch);
+
+    const first = refreshAuthOnce();
+    const second = refreshAuthOnce();
+    const failures = Promise.all([
+      expect(first).rejects.toMatchObject({ expired: false }),
+      expect(second).rejects.toMatchObject({ expired: false }),
+    ]);
+    await vi.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS);
+    await failures;
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    const third = refreshAuthOnce();
+    const thirdFailure = expect(third).rejects.toMatchObject({ expired: false });
+    await vi.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS);
+    await thirdFailure;
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("응답이 시한 안에 오면 끊지 않는다", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(200, { success: true }));
+
+    await expect(refreshAuthOnce()).resolves.toBeUndefined();
+    await vi.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS * 2);
+  });
+
+  it("prerender 가 끝나기를 기다린 시간은 시한에 넣지 않는다", async () => {
+    Object.defineProperty(document, "prerendering", {
+      value: true,
+      configurable: true,
+    });
+    vi.mocked(fetch).mockImplementationOnce(hangingFetch);
+    let settled = false;
+    const pending = refreshAuthOnce().catch(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS * 2);
+    expect(fetch).not.toHaveBeenCalled();
+
+    document.dispatchEvent(new Event("prerenderingchange"));
+    await vi.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS - 1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await pending;
+    expect(settled).toBe(true);
+  });
+
+  it("비정상 응답의 본문을 읽다 끊겨도 일시 실패다", async () => {
+    const response = new Response(null, { status: 401 });
+    vi.spyOn(response, "json").mockRejectedValue(
+      new DOMException("aborted", "AbortError")
+    );
+    vi.mocked(fetch).mockResolvedValueOnce(response);
+
+    await expect(refreshAuthOnce()).rejects.toMatchObject({ expired: false });
   });
 });

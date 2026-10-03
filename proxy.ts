@@ -7,6 +7,7 @@ import {
   isAuthCookieName,
   REFRESH_TOKEN_COOKIE_NAME,
 } from "@/lib/auth/cookies";
+import { fetchWithRefreshTimeout } from "@/lib/api/refresh-timeout";
 import { isRefreshTokenDead } from "@/lib/auth/refresh-failure";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -96,15 +97,18 @@ export async function proxy(request: NextRequest) {
   let refreshResponse: Response;
 
   try {
-    refreshResponse = await fetch(new URL("/v1/auth/refresh", apiBaseUrl), {
-      method: "POST",
-      headers: {
-        Cookie: cookieHeader,
-      },
-      cache: "no-store",
-    });
+    refreshResponse = await fetchWithRefreshTimeout(
+      new URL("/v1/auth/refresh", apiBaseUrl),
+      {
+        method: "POST",
+        headers: {
+          Cookie: cookieHeader,
+        },
+        cache: "no-store",
+      }
+    );
   } catch {
-    // 네트워크 실패는 일시적이다. 쿠키를 건드리지 않고 다음 요청에 맡긴다.
+    // 네트워크 실패와 시한 초과는 일시적이다. 쿠키를 건드리지 않고 다음 요청에 맡긴다.
     return NextResponse.next();
   }
 

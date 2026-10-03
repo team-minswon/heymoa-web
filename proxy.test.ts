@@ -83,6 +83,27 @@ describe("proxy token refresh", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 
+  it("keeps refresh cookies when the refresh call is aborted", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(
+      new DOMException("aborted", "AbortError")
+    );
+    const proxy = await loadProxy();
+
+    const response = await proxy(requestWithRefreshToken());
+
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("passes an abort signal to the refresh call so a hung API cannot hold the navigation", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 503 }));
+    const proxy = await loadProxy();
+
+    await proxy(requestWithRefreshToken());
+
+    const init = vi.mocked(fetch).mock.calls[0]?.[1];
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("keeps refresh cookies when the API returns a server error", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 503 }));
     const proxy = await loadProxy();
