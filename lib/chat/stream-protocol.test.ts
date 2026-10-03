@@ -438,6 +438,28 @@ describe("복원", () => {
     });
   });
 
+  it("SERVICE_RESTARTING 은 업데이트 문구로 접히고 retryable 은 server 값을 따른다", () => {
+    const msg = "서버가 업데이트되어 응답이 멈췄습니다. 다시 보내 주세요.";
+    expect(failedTurnState("SERVICE_RESTARTING", true)).toMatchObject({
+      phase: "failed",
+      retryable: true,
+      error: { code: "SERVICE_RESTARTING", message: msg },
+    });
+    const live = fold(
+      START,
+      frame("3-0", "turn_failed", { turnId: "t1", code: "SERVICE_RESTARTING", retryable: true })
+    );
+    expect(live).toMatchObject({ phase: "failed", retryable: true });
+    expect(live.error?.message).toBe(msg);
+  });
+
+  it("모르는 코드는 기본 문구로 접힌다", () => {
+    expect(failedTurnState("SOMETHING_NEW", false).error).toEqual({
+      code: "SOMETHING_NEW",
+      message: "응답을 받지 못했습니다.",
+    });
+  });
+
   it("복원한 상태는 needsResync 가 꺼져 있다 — 세우는 것은 410 뿐이다", () => {
     expect(
       resumedState({ cursor: null, turnId: "t1", pendingApproval: null }).needsResync

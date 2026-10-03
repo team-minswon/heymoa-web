@@ -7278,6 +7278,7 @@ components:
                   - APPROVAL_EXPIRED
                   - STREAM_INTERRUPTED
                   - CAPACITY_EXCEEDED
+                  - SERVICE_RESTARTING
                   - INTERNAL_ERROR
                 pendingApproval:
                   required:
@@ -7355,6 +7356,7 @@ components:
                   - APPROVAL_EXPIRED
                   - STREAM_INTERRUPTED
                   - CAPACITY_EXCEEDED
+                  - SERVICE_RESTARTING
                   - INTERNAL_ERROR
                 pendingApproval:
                   required:

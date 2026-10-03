@@ -232,6 +232,7 @@ const TURN_FAILURE_MESSAGES: Record<string, string> = {
   APPROVAL_EXPIRED: "승인을 기다리다 시간이 지나 중단됐습니다.",
   STREAM_INTERRUPTED: "응답이 중간에 끊겼습니다.",
   CAPACITY_EXCEEDED: "지금은 처리량이 많습니다. 잠시 후 다시 시도해 주세요.",
+  SERVICE_RESTARTING: "서버가 업데이트되어 응답이 멈췄습니다. 다시 보내 주세요.",
   INTERNAL_ERROR: "응답을 만들지 못했습니다.",
 };
 
