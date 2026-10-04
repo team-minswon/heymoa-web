@@ -85,86 +85,88 @@ const rowBox = async (content: string) =>
   (await row(content)).closest("[data-item-id]") as HTMLElement;
 
 describe("검토 가능한 회의", () => {
-  it("요약 · 주제 · 결정 · 할 일만 그리고, 주제 칩으로 그 주제의 항목만 남긴다", async () => {
-    renderTab();
+  it("머리 · 언제 정해졌나 · 요약 · 주제 · 결정 · 할 일 차례로 서고, 주제를 누르면 그 자리에서 펼쳐진다", async () => {
+    renderTab(MENTORING_NOTE_ID, { noteMeta: { title: "9/11 팀 멘토링", whenIso: "2026-09-11T01:45:00Z", participantCount: 4, projectName: "주간" } });
 
     expect(
       await screen.findByText(
         /문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/
       )
     ).toBeInTheDocument();
-    for (const title of ["요약", "주제", "결정", "할 일"]) {
-      expect(section(title)).toBeInTheDocument();
-    }
-    // 이슈 · 질문과 참고는 요약 보기에 서지 않는다(APP-864).
-    expect(screen.queryByRole("region", { name: "이슈 · 질문" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "참고" })).toBeNull();
+    expect(screen.getByRole("heading", { level: 1, name: "9/11 팀 멘토링" })).toBeInTheDocument();
+    expect(screen.getByText("주간")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "언제 정해졌나" })).toBeInTheDocument();
+    const order = [...document.querySelectorAll("section[aria-label]")].map((node) => node.getAttribute("aria-label"));
+    expect(order).toEqual(["언제 정해졌나", "요약", "주제", "결정", "할 일"]);
+    // 이슈 · 질문과 참고는 요약 보기의 섹션에 서지 않는다(APP-864).
     expect(
       screen.queryByText("설문의 54%가 우리 사용자층에도 맞는 수치인지 알 수 없다")
     ).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /차별점과 요금/ }));
-
+    const topic = screen.getByRole("button", { name: /차별점과 요금/ });
+    expect(topic).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(topic);
+    expect(topic).toHaveAttribute("aria-expanded", "true");
+    // 펼친 주제 안에 그 주제의 결정이 선다. 다른 섹션은 거르지 않는다.
+    const index = screen.getByRole("list", { name: "주제 목차" });
     expect(
-      await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다")
+      await within(index).findByText("요금은 좌석이 아니라 회의 시간 기준으로 계산한다")
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", {
-        name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다",
-      })
-    ).not.toBeInTheDocument();
-    // 목차의 수는 그 주제로 좁혔을 때 화면에 서는 항목의 수다 — 이슈 · 질문 · 참고는 세지 않는다.
-    const scoped = screen.getByRole("status").textContent ?? "";
-    const rows = document.querySelectorAll("section[aria-label] [data-item-id]").length;
-    expect(Number(/항목 (\d+)/.exec(scoped)?.[1])).toBe(rows);
-    expect(
-      screen.getByRole("heading", { name: "차별점과 요금" })
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "전체 보기" }));
-    expect(
-      await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
+      screen.getByRole("button", { name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다" })
     ).toBeInTheDocument();
   });
 
-  it("주제 목차는 번호 · 제목 · 한 줄 서술 · 항목 수를 세우고, 줄에는 주제 이름이 붙는다", async () => {
+  it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 여섯 개까지만 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {
     renderTab();
 
     const index = await screen.findByRole("list", { name: "주제 목차" });
-    expect(
-      within(index).getByRole("button", {
-        name: /01\s*회의가 끝난 뒤 할 일이 흐려지는 문제/,
-      })
-    ).toHaveTextContent("회의 뒤 할 일이 흐려지는 문제를 한 문장으로 좁히고");
-    expect(within(index).getAllByRole("button")).toHaveLength(3);
+    const first = within(index).getByRole("button", {
+      name: /회의가 끝난 뒤 할 일이 흐려지는 문제/,
+    });
+    expect(first).toHaveTextContent("회의 뒤 할 일이 흐려지는 문제를 한 문장으로 좁히고");
+    expect(first.textContent).toMatch(/^\d{2}:\d{2}/);
+    expect(first.textContent).toMatch(/결정 \d+/);
+    expect(within(index).getAllByRole("button")).toHaveLength(6);
 
-    fireEvent.click(screen.getByRole("button", { name: "주제 5개 더" }));
+    fireEvent.click(screen.getByRole("button", { name: "나머지 주제 2개" }));
     expect(
-      await screen.findByRole("button", { name: /08\s*다음 멘토링과 활동비/ })
+      await within(index).findByRole("button", { name: /다음 멘토링과 활동비/ })
     ).toBeInTheDocument();
     expect(
       screen.getAllByTitle("주제 01 · 회의가 끝난 뒤 할 일이 흐려지는 문제")
         .length
     ).toBeGreaterThan(0);
+    const decision = await rowBox("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
+    expect(decision.textContent).toMatch(/\d{2}:\d{2}/);
   });
 
-  it("항목을 펼치면 수정 기록과 인용된 스크립트가 서고, 줄을 누르면 스크립트로 간다", async () => {
+  it("결정을 펼치면 근거 발언이 화자 · 때와 함께 서고, 발언을 누르면 스크립트로 간다", async () => {
     const { onEvidenceSelect } = renderTab();
 
-    // 결정은 앞의 몇 줄만 선다. 그 주제로 걸러 줄을 앞으로 부른다.
     fireEvent.click(
-      await screen.findByRole("button", { name: /차별점과 요금/ })
-    );
-    fireEvent.click(
-      await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다")
+      await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다")
     );
 
-    expect(await screen.findByText("고쳐 말함")).toBeInTheDocument();
-    expect(screen.getByText("처음 나옴")).toBeInTheDocument();
-    expect(screen.getByText("반대 의견")).toBeInTheDocument();
+    const quotes = await screen.findByRole("list", { name: "근거 발언" });
+    const lines = within(quotes).getAllByRole("button");
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines[0].textContent).toMatch(/\d{2}:\d{2}/);
+    // 수정 기록은 요약 보기의 줄에 서지 않는다 — 그래프의 상세 패널에 있다.
+    expect(screen.queryByText("처음 나옴")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "스크립트에서 열기" }));
+    fireEvent.click(lines[0]);
     expect(onEvidenceSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("언제 정해졌나의 표시를 누르면 그 줄이 펼쳐진다", async () => {
+    renderTab();
+    const map = await screen.findByRole("region", { name: "언제 정해졌나" });
+    const mark = within(map).getAllByRole("button", { name: /^결정 · / })[0];
+    const content = mark.getAttribute("aria-label")!.split(" · ").slice(2).join(" · ");
+
+    fireEvent.click(mark);
+    expect(await row(content)).toHaveAttribute("aria-expanded", "true");
   });
 
   it("수정하고, 제외했다가 제외를 취소한다", async () => {
@@ -192,25 +194,23 @@ describe("검토 가능한 회의", () => {
     );
   });
 
-  it("항목을 제외하면 주제 칩과 주제 머리 개수가 하나 줄고 제외 취소하면 늘어난다", async () => {
+  it("결정을 제외하면 그 주제와 결정 섹션의 개수가 하나 줄고 제외 취소하면 늘어난다", async () => {
     renderTab();
-    const chip = await screen.findByRole("button", { name: /차별점과 요금/ });
-    const num = (text: string | null) => Number(/항목 (\d+)/.exec(text ?? "")?.[1]);
-    const chipCount = () => num(chip.textContent);
-    const headCount = () => num(screen.getByRole("status").textContent);
-    fireEvent.click(chip);
-    fireEvent.click(await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다"));
+    const topic = await screen.findByRole("button", { name: /회의가 끝난 뒤 할 일이 흐려지는 문제/ });
+    const topicCount = () => Number(/결정 (\d+)/.exec(topic.textContent ?? "")?.[1]);
+    const sectionCount = () =>
+      Number(/(\d+)/.exec(within(section("결정")).getByRole("heading").textContent ?? "")?.[1]);
+    fireEvent.click(await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다"));
     await screen.findByRole("button", { name: "제외" });
-    const before = chipCount();
-    expect(headCount()).toBe(before);
+    const [topicBefore, sectionBefore] = [topicCount(), sectionCount()];
 
     fireEvent.click(screen.getByRole("button", { name: "제외" }));
-    await waitFor(() => expect(chipCount()).toBe(before - 1));
-    expect(headCount()).toBe(before - 1);
+    await waitFor(() => expect(topicCount()).toBe(topicBefore - 1));
+    expect(sectionCount()).toBe(sectionBefore - 1);
 
     fireEvent.click(screen.getByRole("button", { name: "제외 취소" }));
-    await waitFor(() => expect(chipCount()).toBe(before));
-    expect(headCount()).toBe(before);
+    await waitFor(() => expect(topicCount()).toBe(topicBefore));
+    expect(sectionCount()).toBe(sectionBefore);
   });
 
   it("확정 때문에 거절되면 확정 안내를 띄우고 판 충돌 문구 없이 흐름 상태를 다시 읽는다", async () => {
@@ -426,37 +426,7 @@ describe("검토 가능한 회의", () => {
     ).toBeInTheDocument();
   });
 
-  it("주제로 좁혀 본 채 추가하면 그 주제 결정에 서고 주제 칩 개수가 늘며, 요청에 topicOrdinal 이 실린다", async () => {
-    const bodies: Record<string, unknown>[] = [];
-    server.events.on("request:start", async ({ request }) => {
-      if (request.method === "POST" && request.url.endsWith("/meeting-review/items")) {
-        bodies.push(await request.clone().json());
-      }
-    });
-    renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
-    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
-    const count = () =>
-      Number(/항목 (\d+)/.exec(screen.getByRole("status").textContent ?? "")?.[1]);
-    const before = count();
-
-    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
-      target: { value: "요금표는 다음 회의에서 확정한다" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "추가" }));
-
-    expect(
-      await within(section("결정")).findByRole("button", {
-        name: "요금표는 다음 회의에서 확정한다",
-      })
-    ).toBeInTheDocument();
-    expect(count()).toBe(before + 1);
-    expect(bodies[0]).toMatchObject({ topicOrdinal: 2 });
-    server.events.removeAllListeners();
-  });
-
-  it("전체 보기에서 추가하면 요청 본문에 topicOrdinal 키가 없다", async () => {
+  it("추가하면 요청 본문에 topicOrdinal 키가 없다 — 요약 보기는 주제로 거르지 않는다", async () => {
     const bodies: Record<string, unknown>[] = [];
     server.events.on("request:start", async ({ request }) => {
       if (request.method === "POST" && request.url.endsWith("/meeting-review/items")) {
@@ -467,29 +437,28 @@ describe("검토 가능한 회의", () => {
     await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
     fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
     fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
-      target: { value: "전체 보기에서 더한 결정" },
+      target: { value: "요약 보기에서 더한 결정" },
     });
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
     await within(section("결정")).findByRole("button", {
-      name: "전체 보기에서 더한 결정",
+      name: "요약 보기에서 더한 결정",
     });
     expect(bodies).toHaveLength(1);
     expect("topicOrdinal" in bodies[0]).toBe(false);
     server.events.removeAllListeners();
   });
 
-  it("요약에 없는 주제라고 서버가 400 을 주면 입력을 남기고 서버 메시지를 토스트로 보인다", async () => {
+  it("추가가 거절되면 입력을 남기고 서버 메시지를 토스트로 보인다", async () => {
     server.use(
       http.post("*/v1/notes/:noteId/meeting-review/items", () =>
         HttpResponse.json(
-          { success: false, error: { code: "TOPIC_UNKNOWN", message: "요약에 없는 주제입니다." } },
+          { success: false, error: { code: "INVALID_INPUT", message: "추가할 수 없는 항목입니다." } },
           { status: 400 }
         )
       )
     );
     renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
-    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
+    await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
     fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
     fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
       target: { value: "거절될 결정" },
@@ -500,30 +469,7 @@ describe("검토 가능한 회의", () => {
     expect(screen.getByRole("textbox", { name: "새 항목 내용" })).toHaveValue("거절될 결정");
   });
 
-  it("저장은 됐는데 요약을 다시 읽지 못하면 폼은 닫히되 새로고침을 알리는 토스트를 띄운다", async () => {
-    renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
-    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
-    server.use(
-      http.get("*/v1/notes/:noteId/meeting-review/summary", () =>
-        HttpResponse.json(
-          { success: false, error: { code: "INTERNAL_ERROR", message: "서버 오류" } },
-          { status: 500 }
-        )
-      )
-    );
-    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
-      target: { value: "요약 재조회가 실패하는 결정" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "추가" }));
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("새로고침"))
-    );
-  });
-
-  it("전체 보기에서 추가하면 요약을 다시 읽지 않는다", async () => {
+  it("추가하면 요약을 다시 읽지 않는다", async () => {
     let summaryReads = 0;
     server.events.on("request:start", ({ request }) => {
       if (request.method === "GET" && request.url.endsWith("/meeting-review/summary")) summaryReads += 1;
@@ -555,8 +501,7 @@ describe("검토 가능한 회의", () => {
       )
     );
     renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
-    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
+    await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
     const before = summaryReads;
     fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
     fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
@@ -567,27 +512,40 @@ describe("검토 가능한 회의", () => {
     server.events.removeAllListeners();
   });
 
-  it("주제를 바꾸면 작성 중이던 추가 폼은 닫혀 다른 주제에 저장되지 않는다", async () => {
-    renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: /차별점과 요금/ }));
-    await row("요금은 좌석이 아니라 회의 시간 기준으로 계산한다");
-    fireEvent.click(screen.getByRole("button", { name: "결정 추가" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "새 항목 내용" }), {
-      target: { value: "다른 주제로 새어 나가면 안 되는 결정" },
-    });
-    // 주제 A 에서 쓰던 중에 주제 B 를 누른다. 제출 시점의 주제로 저장되면 A 의 글이 B 에 들어간다.
-    fireEvent.click(screen.getByRole("button", { name: /01\s*회의가 끝난 뒤 할 일이 흐려지는 문제/ }));
-    await waitFor(() =>
-      expect(screen.queryByRole("textbox", { name: "새 항목 내용" })).not.toBeInTheDocument()
+  it("제안으로 가기는 접힌 줄에 남은 제안도 펼쳐서 데려간다", async () => {
+    let lastDecision = "";
+    server.use(
+      // 결정 여섯에 대체 제안을 붙이고 앞의 다섯은 골라 둔다 — 남은 하나는 「결정 N개 더」 안에 접힌다.
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+        const original = await getResponse(meetingFlowHandlers, request);
+        const body = await original!.json();
+        type Row = { kind: string; content: string; included: boolean; replacements: Array<Record<string, unknown>>; taskChanges: unknown[] };
+        const items: Row[] = body.data.items;
+        const replacement = items.flatMap((item) => item.replacements)[0];
+        for (const item of items) {
+          item.replacements = [];
+          item.taskChanges = [];
+        }
+        const decisions = items.filter((item) => item.kind === "DECISION" && item.included).slice(0, 6);
+        decisions.forEach((item, at) => {
+          item.replacements = [{ ...replacement, decision: at < 5 ? "KEEP" : null }];
+        });
+        lastDecision = decisions[5].content;
+        return HttpResponse.json(body);
+      })
     );
+    renderTab();
+    expect(await screen.findByText(/확인할 제안/)).toHaveTextContent("확인할 제안 1개");
+    expect(screen.queryByRole("button", { name: lastDecision })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "제안으로 가기" }));
+    expect(await row(lastDecision)).toBeInTheDocument();
   });
 
   it("고를 제안을 다 고르기 전에는 확정을 막고, 이전 결정을 끝내기로 고르면 확정 줄이 바뀐 뒤 확정한다", async () => {
     renderTab();
     // 목의 멘토링 회의에는 아직 안 고른 제안이 셋이다(대체 하나 · 기존 할 일 변경 둘).
-    expect(
-      await screen.findByText("고르지 않은 제안이 3개 남았습니다")
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/확인할 제안/)).toHaveTextContent("확인할 제안 3개");
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
 
     // 제안은 줄을 펼치지 않아도 줄 아래에 서 있다.
@@ -595,11 +553,9 @@ describe("검토 가능한 회의", () => {
       "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다"
     );
     fireEvent.click(within(box).getByRole("radio", { name: /끝내기/ }));
-    // 선택은 검토본에 저장된 뒤에 선다.
+    // 선택은 검토본에 저장된 뒤에 선다. 남은 제안 수가 하나 준다.
     await waitFor(() =>
-      expect(screen.getByText(/개 끝남/)).toHaveTextContent(
-        "이전 결정 1개 끝남"
-      )
+      expect(screen.getByText(/확인할 제안/)).toHaveTextContent("확인할 제안 2개")
     );
     expect(within(box).getByRole("radio", { name: /끝내기/ })).toHaveAttribute(
       "aria-checked",
@@ -628,6 +584,8 @@ describe("검토 가능한 회의", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
+    // 다 고르면 막대가 무엇이 올라가고 무엇이 끝나는지 말한다.
+    expect(screen.getByText(/를 프로젝트에 올립니다/)).toHaveTextContent("이전 결정 1개 끝남");
 
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
     const dialog = await screen.findByRole("alertdialog");
@@ -855,16 +813,6 @@ describe("검토 가능한 회의", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
     );
-  });
-
-  it("요약 보기의 관련 항목은 요약에 서는 항목만 잇는다", async () => {
-    renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: /^문제 정의를/ }));
-    await screen.findAllByText(/수정 기록/);
-    // 인사이트라 요약 보기에 없다 — 이으면 눌러도 열 자리가 없다.
-    expect(
-      screen.queryByRole("button", { name: /기록이 없어서가 아니라 누가 할지 안 정해서 놓친다/ })
-    ).toBeNull();
   });
 
   it("기존 할 일 변경을 반영하면 그 할 일에 바로 저장된다", async () => {

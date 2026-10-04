@@ -25,10 +25,10 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
   await page.goto(reviewUrl(MENTORING_NOTE));
   await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
 
-  // 줄 이름은 exact 로 찾는다 — 펼친 줄의 수정 기록 단계 버튼도 같은 문장을 이름에 품는다.
+  // 줄 이름은 exact 로 찾는다 — 「언제 정해졌나」의 표시도 같은 문장을 이름에 품는다.
   const decision = page.getByRole("button", { name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다", exact: true });
   await decision.click();
-  await expect(page.getByText("처음 나옴")).toBeVisible();
+  await expect(page.getByRole("list", { name: "근거 발언" })).toBeVisible();
 
   await page.getByRole("button", { name: "수정", exact: true }).click();
   await page.getByRole("textbox", { name: "항목 내용" }).fill("설문 근거는 출처 · 표본 수 · 조사 연도를 함께 적는다");
@@ -43,7 +43,7 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
     .getByRole("radiogroup", { name: "이전 결정을 끝낼지" })
     .getByRole("radio", { name: /끝내기/ })
     .click();
-  await expect(page.getByText(/개 끝남/)).toContainText("이전 결정 1개 끝남");
+  await expect(page.getByText(/확인할 제안/)).toContainText("확인할 제안 2개");
 
   // 고를 제안을 다 골라야 확정이 풀린다. 남은 기존 할 일 변경 둘은 유지한다.
   for (const content of ["경쟁 서비스 요금제를 한 표로 정리한다", "구현 결과를 기대 효과 순서로 다시 배치한다"]) {
@@ -53,6 +53,7 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
     await keep.click();
     await expect(keep).toHaveAttribute("aria-checked", "true");
   }
+  await expect(page.getByText(/를 프로젝트에 올립니다/)).toContainText("이전 결정 1개 끝남");
 
   await page.getByRole("radio", { name: "그래프" }).click();
   await expect(page.getByRole("button", { name: "확대" })).toBeVisible();
@@ -127,7 +128,7 @@ test.describe("좁은 화면", () => {
     await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
     await expectNoHorizontalOverflow(page);
 
-    await page.getByRole("button", { name: /경쟁 서비스 요금제를 한 표로 정리한다/ }).click();
+    await page.getByRole("button", { name: "경쟁 서비스 요금제를 한 표로 정리한다", exact: true }).click();
     await expect(
       rowOf(page, "경쟁 서비스 요금제를 한 표로 정리한다").getByRole("radiogroup", { name: "기존 할 일에 반영할지" })
     ).toBeVisible();

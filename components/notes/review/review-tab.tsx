@@ -27,8 +27,11 @@ export function ReviewTab({
   isEnded,
   noteMeta,
   participants,
+  currentUserId,
+  dockRaised = false,
   onEvidenceSelect,
   onOpenTranscript,
+  onOpenTimeline,
 }: {
   noteId: string;
   workspaceId: string | undefined;
@@ -36,8 +39,12 @@ export function ReviewTab({
   isEnded: boolean;
   noteMeta?: NoteMeta | null;
   participants: SpeakerFace[];
+  currentUserId?: string | null;
+  /** 「이 회의에 대해 물어보기」 알약이 아래 가운데에 떠 있다 */
+  dockRaised?: boolean;
   onEvidenceSelect: (segmentId: string) => void;
   onOpenTranscript: () => void;
+  onOpenTimeline?: () => void;
 }) {
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
@@ -112,9 +119,13 @@ export function ReviewTab({
       projectId={projectId}
       confirmed={flow.status === "CONFIRMED"}
       canEdit={flow.status === "REVIEWABLE"}
+      noteMeta={noteMeta}
       participants={participants}
+      currentUserId={currentUserId}
+      dockRaised={dockRaised}
       onOpenScript={onEvidenceSelect}
       onOpenTranscript={onOpenTranscript}
+      onOpenTimeline={onOpenTimeline}
     />
   );
 }

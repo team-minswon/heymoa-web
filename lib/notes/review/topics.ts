@@ -1,3 +1,4 @@
+import type { ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 
 export type TopicChip = {
@@ -19,22 +20,61 @@ export function topicIndex(summary: MeetingReviewSummary | null | undefined) {
   return index;
 }
 
+export type TopicDigest = TopicChip & {
+  /** 주제 서술 전체 */
+  text: string;
+  /** 이 주제 항목이 처음 · 마지막으로 나온 때(ms). 인용으로 계산하고, 하나도 없으면 null */
+  startMs: number | null;
+  endMs: number | null;
+  decisions: ReviewItem[];
+  tasks: ReviewItem[];
+  /** 결론 없이 남은 이슈 · 질문. 요약 보기의 섹션에는 없지만 주제를 펼치면 선다 */
+  open: ReviewItem[];
+};
+
 /**
- * `count` 는 검토본에서 제외된 항목을 뺀다. 검토본에서 찾지 못한 member 는 센다.
- * [shown] 을 주면 화면에 서지 않는 항목도 뺀다 — 목차의 수와 그 주제로 좁혔을 때 보이는 수가 같아야 한다.
+ * 주제를 펼쳐 읽는 단위로 묶는다(APP-865). 뺀 항목과 검토본에 없는 항목은 싣지 않는다 — 펼친 목록과
+ * 개수가 같아야 한다. `count` 는 결정과 할 일 수다. 회의에서 처음 나온 때 차례로 서고, 때를 모르는
+ * 주제는 끝에 번호 차례로 선다.
  */
-export function topicChips(
+export function topicDigests(
   summary: MeetingReviewSummary | null | undefined,
-  items: readonly { itemId: string; included: boolean }[],
-  shown: (itemId: string) => boolean = () => true
-): TopicChip[] {
-  const excluded = new Set(items.filter((item) => !item.included).map((item) => item.itemId));
-  return (summary?.topics ?? []).map((topic) => ({
-    ordinal: topic.ordinal,
-    title: topic.title,
-    count: topic.members.filter((member) => !excluded.has(member.itemId) && shown(member.itemId)).length,
-    gist: topic.sentences[0]?.text ?? null,
-  }));
+  itemsById: ReadonlyMap<string, ReviewItem>,
+  citedAt: (item: ReviewItem) => number | null
+): TopicDigest[] {
+  const pick = (ids: readonly string[]) =>
+    ids.flatMap((id) => {
+      const item = itemsById.get(id);
+      return item?.included ? [item] : [];
+    });
+  return (summary?.topics ?? [])
+    .map((topic) => {
+      const members = pick(topic.members.map((member) => member.itemId));
+      const open = pick(topic.openItemIds);
+      const times = [...members, ...open].flatMap((item) => {
+        const at = citedAt(item);
+        return at === null ? [] : [at];
+      });
+      const decisions = members.filter((item) => item.kind === "DECISION");
+      const tasks = members.filter((item) => item.kind === "ACTION_ITEM");
+      return {
+        ordinal: topic.ordinal,
+        title: topic.title,
+        gist: topic.sentences[0]?.text ?? null,
+        text: topic.sentences.map((sentence) => sentence.text).join(" "),
+        count: decisions.length + tasks.length,
+        startMs: times.length > 0 ? Math.min(...times) : null,
+        endMs: times.length > 0 ? Math.max(...times) : null,
+        decisions,
+        tasks,
+        open,
+      };
+    })
+    .sort(
+      (a, b) =>
+        (a.startMs ?? Number.POSITIVE_INFINITY) - (b.startMs ?? Number.POSITIVE_INFINITY) ||
+        a.ordinal - b.ordinal
+    );
 }
 
 export type LinkedItem = { itemId: string; label: string };

@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays } from "lucide-react";
 import { useRef } from "react";
 
 import { formatDueDate } from "@/lib/format/date";
@@ -15,6 +16,7 @@ export function DueCell({
   editable = false,
   overdue = false,
   label = "기한",
+  chip = false,
   onChange,
   className,
 }: {
@@ -23,6 +25,11 @@ export function DueCell({
   editable?: boolean;
   overdue?: boolean;
   label?: string;
+  /**
+   * 달력 아이콘이 붙은 칩 모양(검토 화면 · APP-865). 기한이 없으면 점선 테두리의 「기한 정하기」라
+   * 정해야 할 것이 남았다는 것이 눈에 띈다.
+   */
+  chip?: boolean;
   onChange?: (next: string | null) => void;
   className?: string;
 }) {
@@ -33,8 +40,26 @@ export function DueCell({
       ? "text-[var(--el-error-strong)]"
       : "text-[var(--el-ink)]"
     : "text-[var(--el-muted-soft)]";
+  const chipClass = value
+    ? "bg-[var(--el-canvas-soft)] text-[var(--el-body)]"
+    : "border border-dashed border-[#efc2a8] text-[#b4501f]";
+  const content = chip ? (
+    <>
+      <CalendarDays aria-hidden className="size-[13px] shrink-0" />
+      {text}
+    </>
+  ) : (
+    text
+  );
 
   if (!editable) {
+    if (chip) {
+      return value ? (
+        <span className={cn("inline-flex h-[26px] items-center gap-1.5 rounded-[7px] px-[9px] text-[13px] whitespace-nowrap tabular-nums", chipClass, className)}>
+          {content}
+        </span>
+      ) : null;
+    }
     return (
       <span className={cn("inline-flex h-7 items-center text-[13px] tabular-nums", tone, className)}>
         {value ? text : ""}
@@ -48,8 +73,15 @@ export function DueCell({
         type="button"
         aria-label={value ? `${label} ${text} 바꾸기` : placeholder}
         className={cn(
-          "inline-flex h-9 items-center rounded-control px-1.5 -mx-1.5 text-[13px] tabular-nums hover:bg-[var(--el-surface-strong)] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)] sm:h-7",
-          tone
+          chip
+            ? cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-[7px] px-[9px] text-[13px] whitespace-nowrap tabular-nums hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)] sm:h-[26px]",
+                chipClass
+              )
+            : cn(
+                "inline-flex h-9 items-center rounded-control px-1.5 -mx-1.5 text-[13px] tabular-nums hover:bg-[var(--el-surface-strong)] focus-visible:outline-2 focus-visible:outline-[var(--el-ink)] sm:h-7",
+                tone
+              )
         )}
         onClick={() => {
           const node = input.current;
@@ -58,7 +90,7 @@ export function DueCell({
           else node.focus();
         }}
       >
-        {text}
+        {content}
       </button>
       {/* 날짜 고르기는 브라우저의 것을 쓴다. 칸의 모양만 우리가 그린다. */}
       <input

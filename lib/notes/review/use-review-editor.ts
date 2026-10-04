@@ -132,19 +132,6 @@ export function useReviewEditor(noteId: string) {
             data: { expectedReviewVersion: review.reviewVersion, ...item },
           })
         );
-        // 서버가 새 항목을 주제 members 에 합쳤을 수 있다. 다시 읽은 뒤에 폼이 닫혀야 소속이 맞다.
-        // 주제 번호를 보낸 추가만 요약 members 가 바뀐다. 전체 보기 추가는 요약을 기다리지 않는다.
-        if (saved && item.topicOrdinal != null) {
-          try {
-            await queryClient.refetchQueries(
-              { queryKey: getGetMeetingReviewSummaryQueryKey(noteId) },
-              { throwOnError: true }
-            );
-          } catch {
-            // 항목은 저장됐다. 요약만 못 읽었으니 폼은 닫고, 주제 목록이 낡을 수 있음을 알린다.
-            toast.error("저장했지만 주제 목록을 새로 읽지 못했습니다. 새로고침하면 보입니다.");
-          }
-        }
         return saved;
       } finally {
         setAdding(false);

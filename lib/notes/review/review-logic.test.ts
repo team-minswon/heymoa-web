@@ -12,7 +12,7 @@ import {
 } from "@/lib/notes/review/confirm";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
-import { topicChips } from "@/lib/notes/review/topics";
+import { topicDigests } from "@/lib/notes/review/topics";
 import { trailOf } from "@/lib/notes/review/trail";
 
 const replacement = (itemId: string, decision: "END" | "KEEP" | null = null): ReviewItem["replacements"][number] => ({
@@ -196,25 +196,40 @@ describe("trailOf", () => {
   });
 });
 
-describe("topicChips 개수", () => {
+describe("topicDigests", () => {
   const summary = {
     topics: [
-      { ordinal: 1, title: "가", sentences: [], members: [{ itemId: "a" }, { itemId: "b" }, { itemId: "gone" }] },
+      {
+        ordinal: 1,
+        title: "가",
+        sentences: [{ text: "첫 문장." }, { text: "둘째 문장." }],
+        members: [{ itemId: "d" }, { itemId: "t" }, { itemId: "out" }, { itemId: "gone" }],
+        openItemIds: ["q"],
+      },
+      { ordinal: 2, title: "나", sentences: [], members: [{ itemId: "early" }], openItemIds: [] },
+      { ordinal: 3, title: "다", sentences: [], members: [], openItemIds: [] },
     ],
   } as unknown as MeetingReviewSummary;
+  const items = [
+    item({ itemId: "d", kind: "DECISION" }),
+    item({ itemId: "t", kind: "ACTION_ITEM" }),
+    item({ itemId: "out", kind: "DECISION", included: false }),
+    item({ itemId: "q", kind: "QUESTION" }),
+    item({ itemId: "early", kind: "DECISION" }),
+  ];
+  const at: Record<string, number> = { d: 5_000, t: 9_000, q: 7_000, early: 1_000 };
+  const digests = topicDigests(summary, new Map(items.map((row) => [row.itemId, row])), (row) => at[row.itemId] ?? null);
 
-  it("검토본에서 제외된 항목은 세지 않고, 검토본에 없는 member 는 센다", () => {
-    const items = [
-      item({ itemId: "a", kind: "DECISION" }),
-      item({ itemId: "b", kind: "DECISION", included: false }),
-    ];
-    expect(topicChips(summary, items)[0].count).toBe(2);
-    expect(topicChips(summary, [])[0].count).toBe(3);
+  it("뺀 항목 · 없는 항목은 싣지 않고, 결정 · 할 일 · 열린 질문으로 나눈다", () => {
+    const first = digests.find((row) => row.ordinal === 1)!;
+    expect(first.decisions.map((row) => row.itemId)).toEqual(["d"]);
+    expect(first.tasks.map((row) => row.itemId)).toEqual(["t"]);
+    expect(first.open.map((row) => row.itemId)).toEqual(["q"]);
+    expect(first.count).toBe(2);
+    expect(first).toMatchObject({ gist: "첫 문장.", text: "첫 문장. 둘째 문장.", startMs: 5_000, endMs: 9_000 });
   });
 
-  it("화면에 서지 않는 항목은 세지 않는다", () => {
-    const items = [item({ itemId: "a", kind: "DECISION" }), item({ itemId: "b", kind: "QUESTION" })];
-    // b 는 요약 보기에 서지 않는다. gone 은 검토본에 없어 센다.
-    expect(topicChips(summary, items, (itemId) => itemId !== "b")[0].count).toBe(2);
+  it("처음 나온 때 차례이고 때를 모르는 주제는 끝에 선다", () => {
+    expect(digests.map((row) => row.ordinal)).toEqual([2, 1, 3]);
   });
 });

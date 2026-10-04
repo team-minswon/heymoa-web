@@ -2,16 +2,19 @@
 
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { SegmentedControl } from "@/components/heymoa/segmented-control";
 import { ConfirmBar } from "@/components/notes/review/confirm-bar";
+import { EvidenceQuotes } from "@/components/notes/review/evidence-quotes";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
+import { MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
+import { ReviewHead } from "@/components/notes/review/review-head";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewSection } from "@/components/notes/review/review-section";
-import { TopicIndex, TopicScope } from "@/components/notes/review/topic-index";
+import { TopicIndex } from "@/components/notes/review/topic-index";
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import {
@@ -34,6 +37,7 @@ import { useGetProjectTasks } from "@/lib/api/generated/projects/projects";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import { useAssigneeChoices } from "@/lib/assignees/use-assignee-choices";
+import type { NoteMeta } from "@/lib/notes/copy-markdown";
 import {
   choiceOf,
   confirmBlockReason,
@@ -41,6 +45,12 @@ import {
   unchosenSuggestionCount,
 } from "@/lib/notes/review/confirm";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
+import {
+  citedAtOf,
+  meetingLengthOf,
+  quotesOf,
+  segmentStarts,
+} from "@/lib/notes/review/moments";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 import {
   KIND_LABEL,
@@ -49,10 +59,9 @@ import {
   isSummarySection,
   sectionsOf,
   type ReviewItem,
-  type ReviewSection as ReviewSectionData,
 } from "@/lib/notes/review/sections";
 import {
-  topicChips,
+  topicDigests,
   topicIndex,
   topicNumber,
 } from "@/lib/notes/review/topics";
@@ -62,7 +71,6 @@ import {
   type SpeakerFace,
 } from "@/lib/transcription/speaker-identity";
 import { toast } from "@/lib/ui/toast";
-import { cn } from "@/lib/utils";
 
 type View = "summary" | "graph";
 
@@ -72,6 +80,9 @@ const VIEWS = [
 ] as const;
 
 const TSID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+/** `Collapse` 의 높이 전환(200ms)이 끝나는 때. 그 뒤에 재야 줄의 자리가 맞다 */
+const COLLAPSE_SETTLE_MS = 240;
 
 /**
  * 확정 요청 식별자. 같은 본문을 다시 보낼 때만 같은 값을 쓴다 — 서버가 재전송을 한 결과로 모은다.
@@ -91,18 +102,29 @@ export function ReviewBoard({
   projectId,
   confirmed,
   canEdit,
+  noteMeta,
   participants,
+  currentUserId,
+  dockRaised = false,
   onOpenScript,
   onOpenTranscript,
+  onOpenTimeline,
 }: {
   noteId: string;
   workspaceId: string | undefined;
   projectId: string | undefined;
   confirmed: boolean;
   canEdit: boolean;
+  /** 머리에 세울 회의 제목 · 시각 · 프로젝트. 셸이 한 번 읽어 내린다 */
+  noteMeta?: NoteMeta | null;
   participants: SpeakerFace[];
+  /** 「나」 표시. 담당이 이 사람이면 붙는다 */
+  currentUserId?: string | null;
+  /** 「이 회의에 대해 물어보기」 알약이 아래 가운데에 떠 있다. 검토 막대를 그 위로 올린다 */
+  dockRaised?: boolean;
   onOpenScript: (segmentId: string) => void;
   onOpenTranscript: () => void;
+  onOpenTimeline?: () => void;
 }) {
   const queryClient = useQueryClient();
   const reviewQuery = useGetMeetingReview(noteId);
@@ -122,7 +144,6 @@ export function ReviewBoard({
   const [approveError, setApproveError] = useState<string | null>(null);
 
   const [view, setView] = useState<View>("summary");
-  const [topic, setTopic] = useState<number | null>(null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   /**
    * 할 일에는 반영했는데 선택 저장이 실패한 변경(`항목 id:할 일 id`). 반영은 할 일을 먼저 바꾸고 선택을 나중에 저장한다.
@@ -144,21 +165,10 @@ export function ReviewBoard({
   );
   const topics = useMemo(() => topicIndex(summary), [summary]);
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
-  // 요약 보기는 결정 · 할 일만 세운다(APP-864). 이슈 · 질문 · 참고는 그래프 보기에만 선다.
-  // 목차의 수도 그 항목만 센다 — 그 주제로 좁혔을 때 보이는 수와 같아야 한다.
-  const topicEntries = useMemo(
-    () =>
-      topicChips(summary, items, (itemId) => {
-        const item = itemsById.get(itemId);
-        return !item || isSummaryKind(item.kind);
-      }),
-    [summary, items, itemsById]
-  );
   const topicTitleOf = (ordinal: number) =>
-    topicEntries.find((entry) => entry.ordinal === ordinal)?.title ?? "";
-  const selectedTopic =
-    topicEntries.find((entry) => entry.ordinal === topic) ?? null;
-  const sections = sectionsOf(items, topicOf, topic).filter((section) =>
+    summary?.topics.find((row) => row.ordinal === ordinal)?.title ?? "";
+  // 요약 보기는 결정 · 할 일만 세운다(APP-864). 이슈 · 질문 · 참고는 그래프 보기에만 선다.
+  const sections = sectionsOf(items, topicOf).filter((section) =>
     isSummarySection(section.key)
   );
   const tasksById = useMemo(
@@ -167,6 +177,13 @@ export function ReviewBoard({
   );
   const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
   const speakers = transcript?.diarization.speakers;
+  // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
+  const starts = useMemo(() => segmentStarts(segments), [segments]);
+  const citedAt = useCallback((item: ReviewItem) => citedAtOf(item, starts), [starts]);
+  const digests = useMemo(
+    () => topicDigests(summary, itemsById, citedAt),
+    [summary, itemsById, citedAt]
+  );
 
   const unnamedSpeakers = useMemo<AssigneeChoice[]>(
     () =>
@@ -204,8 +221,6 @@ export function ReviewBoard({
   }
 
   const confirmSummary = confirmSummaryOf(items);
-  const summaryItems = items.filter((item) => isSummaryKind(item.kind));
-  const includedCount = summaryItems.filter((item) => item.included).length;
   const gateItems = items.map((item) =>
     isSummaryKind(item.kind)
       ? item
@@ -232,33 +247,57 @@ export function ReviewBoard({
     decision: "END" | "APPLIED" | "KEEP"
   ) => editor.updateItem(item.itemId, { decisions: [{ targetId, decision }] });
   const saving = editor.busyItemId !== null;
-  // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
-  const confirmBlocked = confirmBlockReason({
+  const hasTask = (taskId: string) => tasksById.has(taskId);
+  // **화면에 서는 항목의 제안만 본다.** 요약 보기에 없는 이슈 · 질문 · 참고의 제안은 고를 곳이 없어,
+  // 세면 검토 완료가 영영 막힌다. 고르지 않은 제안은 확정이 건너뛴다 — 이전 결정을 끝내지 않고 할 일도
+  // 바꾸지 않는다(그래프 보기에서 고르면 그 선택대로 된다).
+  // 다만 할 일에 이미 반영한 변경은 감춘 항목이라도 선택이 저장될 때까지 센다 — 안 세면 할 일은 바뀌었는데
+  // 제안은 고르지 않은 채 확정돼, 확정 뒤에는 선택을 다시 저장할 길도 없다.
+  const unchosen = unchosenSuggestionCount(gateItems, hasTask);
+  const blockInput = {
     saving,
     applyingTasks,
-    // **화면에 서는 항목의 제안만 본다.** 요약 보기에 없는 이슈 · 질문 · 참고의 제안은 고를 곳이 없어,
-    // 세면 검토 완료가 영영 막힌다. 고르지 않은 제안은 확정이 건너뛴다 — 이전 결정을 끝내지 않고 할 일도
-    // 바꾸지 않는다(그래프 보기에서 고르면 그 선택대로 된다).
-    // 다만 할 일에 이미 반영한 변경은 감춘 항목이라도 선택이 저장될 때까지 센다 — 안 세면 할 일은 바뀌었는데
-    // 제안은 고르지 않은 채 확정돼, 확정 뒤에는 선택을 다시 저장할 길도 없다.
     hasTaskChanges: gateItems.some(
       (item) => item.included && item.taskChanges.length > 0
     ),
-    unchosen: unchosenSuggestionCount(gateItems, (taskId) => tasksById.has(taskId)),
     tasks:
       !workspaceId || !projectId || tasksQuery.isPending
-        ? "pending"
+        ? ("pending" as const)
         : tasks && !tasksQuery.isError
-          ? "ready"
-          : "failed",
-  });
+          ? ("ready" as const)
+          : ("failed" as const),
+  };
+  // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
+  // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
+  const earlierBlock = confirmBlockReason({ ...blockInput, unchosen: 0 });
+  const confirmBlocked = confirmBlockReason({ ...blockInput, unchosen });
+  // 막대의 「제안으로 가기」가 데려갈 줄. 요약 보기에 선 줄만이다.
+  const firstUnchosen = sections
+    .flatMap((section) => section.items)
+    .find((item) => unchosenSuggestionCount([item], hasTask) > 0);
 
   const toggleItem = (itemId: string) =>
     setOpenItemId((current) => (current === itemId ? null : itemId));
 
-  const selectLinked = (itemId: string) => {
-    setTopic(null);
+  const selectLinked = (itemId: string) => setOpenItemId(itemId);
+
+  /**
+   * 그 줄로 간다. 접힌 「N개 더」가 펼쳐지고 앞서 펼쳐 둔 줄이 접히는 높이 전환(`Collapse` 200ms)이
+   * 끝난 뒤에 재야 자리가 맞다 — 전환 중에 재면 뒤쪽 줄은 펼침이 끝난 뒤 화면 밖에 남는다.
+   */
+  const scrollToItem = (itemId: string) => {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    window.setTimeout(
+      () =>
+        document
+          .querySelector(`[data-item-id="${CSS.escape(itemId)}"]`)
+          ?.scrollIntoView?.({ block: "center", behavior: reduce ? "auto" : "smooth" }),
+      reduce ? 0 : COLLAPSE_SETTLE_MS
+    );
+  };
+  const showItem = (itemId: string) => {
     setOpenItemId(itemId);
+    scrollToItem(itemId);
   };
 
   const suggestionsOf = (item: ReviewItem) =>
@@ -325,29 +364,35 @@ export function ReviewBoard({
       </div>
     ) : null;
 
-  const summaryItemsById = new Map(summaryItems.map((item) => [item.itemId, item]));
-  // 요약 보기의 줄은 제안을 줄 아래에 늘 세우므로 펼친 속에는 수정 기록만 둔다. 그래프의 상세 패널은 제안까지 품는다.
-  const detailOf = (item: ReviewItem, inPanel = false) => (
+  const scriptState = transcriptQuery.isPending
+    ? ("pending" as const)
+    : transcript
+      ? ("ready" as const)
+      : ("failed" as const);
+  // 요약 보기의 줄을 펼치면 근거 발언이 선다(APP-865). 수정 기록 · 관련 항목은 그래프의 상세 패널에 남는다.
+  const quotesFor = (item: ReviewItem) => (
+    <EvidenceQuotes
+      quotes={quotesOf(item, segments)}
+      authored={item.originalProposalRef === null}
+      scriptState={scriptState}
+      onRetryScript={() => void transcriptQuery.refetch()}
+      resolveSpeaker={resolveSpeaker}
+      onOpenScript={onOpenScript}
+    />
+  );
+  const panelDetailOf = (item: ReviewItem) => (
     <ItemDetail
       item={item}
       summary={summary}
-      // 요약 보기의 줄은 거기 서는 항목으로만 잇는다 — 없는 항목으로 이으면 눌러도 열 자리가 없다.
-      itemsById={inPanel ? itemsById : summaryItemsById}
+      itemsById={itemsById}
       onSelectItem={selectLinked}
-      suggestions={inPanel ? suggestionsOf(item) : null}
-      elevated={!inPanel}
+      suggestions={suggestionsOf(item)}
       trail={
         <ItemTrail
           noteId={noteId}
           item={item}
           segments={segments}
-          scriptState={
-            transcriptQuery.isPending
-              ? "pending"
-              : transcript
-                ? "ready"
-                : "failed"
-          }
+          scriptState={scriptState}
           onRetryScript={() => void transcriptQuery.refetch()}
           resolveSpeaker={resolveSpeaker}
           onOpenScript={onOpenScript}
@@ -397,34 +442,41 @@ export function ReviewBoard({
 
   const selected = openItemId ? itemsById.get(openItemId) : undefined;
 
+  const lengthMs = transcript
+    ? meetingLengthOf(transcript.recording.durationMs, segments)
+    : null;
+  const included = items.filter((item) => item.included);
+  const marks = included.flatMap((item) => {
+    if (item.kind !== "DECISION" && item.kind !== "ACTION_ITEM") return [];
+    const atMs = citedAt(item);
+    return atMs === null ? [] : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
+  });
+  const isMine = (item: ReviewItem) =>
+    Boolean(currentUserId) &&
+    item.assignee?.type === "USER" &&
+    item.assignee.id === currentUserId;
+
   return (
     <div className="flex min-h-full flex-col">
       <BoardShell>
-        <div className="flex flex-wrap items-center gap-3 pb-5">
-          <span
-            className={cn(
-              "inline-flex h-5 items-center rounded-chip px-2 text-[11px] font-semibold transition-colors duration-200 ease-out",
-              confirmed
-                ? "bg-[var(--el-success)]/10 text-[var(--el-success-strong)]"
-                : "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
-            )}
-          >
-            {confirmed ? "확정됨" : "검토 중"}
-          </span>
-          <span className="text-xs text-[var(--el-muted)]">
-            항목 {includedCount}개
-            {summary?.topics.length ? ` · 주제 ${summary.topics.length}개` : ""}
-          </span>
-          <SegmentedControl
-            label="보기"
-            className="ml-auto"
-            value={view}
-            options={VIEWS}
-            onChange={setView}
-          />
-        </div>
+        <ReviewHead
+          meta={noteMeta}
+          participants={participants}
+          lengthMs={lengthMs}
+          confirmed={confirmed}
+          aside={
+            <SegmentedControl
+              label="보기"
+              value={view}
+              options={VIEWS}
+              onChange={setView}
+            />
+          }
+        />
 
-        <SpeakerNudgeBanner noteId={noteId} />
+        <div className="pt-4">
+          <SpeakerNudgeBanner noteId={noteId} />
+        </div>
         {assigneeFailed ? (
           <InlineRetry
             variant="line"
@@ -440,46 +492,44 @@ export function ReviewBoard({
         >
           {view === "summary" ? (
             <>
-              <ReviewOverview
-                summary={summary}
-                pending={summaryQuery.isPending}
-                failed={summaryQuery.isError}
-                onRetry={() => void summaryQuery.refetch()}
-              />
-              <TopicIndex
-                topics={topicEntries}
-                topic={topic}
-                onTopicChange={setTopic}
-              />
-              {(() => {
-                const sectionOf = (section: ReviewSectionData) => (
+              {lengthMs !== null ? (
+                <MeetingMap
+                  lengthMs={lengthMs}
+                  chapters={digests.flatMap((topic) =>
+                    topic.startMs === null
+                      ? []
+                      : [{ ordinal: topic.ordinal, title: topic.title, startMs: topic.startMs }]
+                  )}
+                  marks={marks}
+                  onSelect={showItem}
+                />
+              ) : null}
+              <div className="pt-10">
+                <ReviewOverview
+                  summary={summary}
+                  pending={summaryQuery.isPending}
+                  failed={summaryQuery.isError}
+                  onRetry={() => void summaryQuery.refetch()}
+                />
+                <TopicIndex topics={digests} onOpenTimeline={onOpenTimeline} />
+                {sections.map((section) => (
                   <ReviewSection
-                    // 주제를 바꾸면 쓰던 추가 폼도 닫는다. 제출 시점의 주제로 저장되므로 글이 다른 주제에 새면 안 된다.
-                    key={`${section.key}:${selectedTopic?.ordinal ?? "all"}`}
+                    key={section.key}
                     section={section}
                     topicOf={topicOf}
                     topicTitleOf={topicTitleOf}
-                    topicTitle={selectedTopic?.title ?? null}
+                    whenOf={citedAt}
+                    isMine={isMine}
                     canEdit={editable}
                     choices={assigneeChoices}
                     openItemId={openItemId}
                     busyItemId={editor.busyItemId}
                     conflictItemId={editor.conflictItemId}
                     adding={editor.adding}
-                    hint={
-                      editable &&
-                      section.key === "ACTION_ITEM" &&
-                      section.items.length > 0
-                        ? "담당과 기한은 칸을 눌러 바로 고칩니다"
-                        : undefined
-                    }
                     aside={
-                      section.key === "ACTION_ITEM" &&
-                      unnamedAssigned > 0 ? (
+                      section.key === "ACTION_ITEM" && unnamedAssigned > 0 ? (
                         <>
-                          <span>
-                            이름 없는 화자에게 걸린 할 일 {unnamedAssigned}
-                          </span>
+                          <span>이름 없는 화자에게 걸린 할 일 {unnamedAssigned}</span>
                           <button
                             type="button"
                             onClick={onOpenTranscript}
@@ -493,35 +543,14 @@ export function ReviewBoard({
                     onToggleItem={toggleItem}
                     onSaveItem={editor.updateItem}
                     onAddItem={(kind, content) =>
-                      editor.addItem({
-                        kind,
-                        content,
-                        citations: [],
-                        // 전체 보기에서는 키 자체를 싣지 않는다.
-                        ...(selectedTopic && { topicOrdinal: selectedTopic.ordinal }),
-                      })
+                      editor.addItem({ kind, content, citations: [] })
                     }
                     onDismissConflict={editor.dismissConflict}
-                    renderDetail={detailOf}
+                    renderDetail={quotesFor}
                     suggestionsOf={suggestionsOf}
                   />
-                );
-                const list = (
-                  <>
-                    {sections.map(sectionOf)}
-                  </>
-                );
-                return selectedTopic ? (
-                  <TopicScope
-                    entry={selectedTopic}
-                    onClear={() => setTopic(null)}
-                  >
-                    {list}
-                  </TopicScope>
-                ) : (
-                  list
-                );
-              })()}
+                ))}
+              </div>
             </>
           ) : (
             <div>
@@ -593,7 +622,7 @@ export function ReviewBoard({
                       <X className="size-3.5" />
                     </button>
                   </div>
-                  <div className="p-3">{detailOf(selected, true)}</div>
+                  <div className="p-3">{panelDetailOf(selected)}</div>
                 </div>
               ) : null}
             </div>
@@ -604,9 +633,18 @@ export function ReviewBoard({
       {editable ? (
         <ConfirmBar
           summary={confirmSummary}
+          decisions={included.filter((item) => item.kind === "DECISION").length}
           pending={approve.isPending}
           blocked={confirmBlocked}
+          unchosen={earlierBlock ? 0 : unchosen}
+          onShowUnchosen={
+            firstUnchosen && view === "summary"
+              ? // 접힌 「N개 더」 안의 줄은 펼쳐야 DOM 에 선다 — 펼치고 간다.
+                () => showItem(firstUnchosen.itemId)
+              : undefined
+          }
           error={approveError}
+          raised={dockRaised}
           onConfirm={confirm}
         />
       ) : null}
@@ -614,37 +652,47 @@ export function ReviewBoard({
   );
 }
 
+/** 회의록 문서 한 단(APP-865). 시안의 760 칸에서 좌우 여백을 뺀 680 이 글 폭이다. */
 function BoardShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] flex-1 px-[var(--note-gutter)] pt-6 pb-10">
+    <div className="mx-auto w-full max-w-[calc(680px+2*var(--note-gutter))] flex-1 px-[var(--note-gutter)] pt-8 pb-10 sm:pt-10">
       {children}
     </div>
   );
 }
 
-/** 검토본 조회 skeleton. 섹션 제목은 고정이라 가리지 않고 줄만 막대로 둔다. */
+/** 검토본 조회 skeleton. 머리 · 섹션 제목은 고정 문구라 가리지 않고 값 자리만 막대로 둔다. */
 export function ReviewBoardSkeleton() {
   return (
     <BoardShell>
       <div aria-label="검토본 불러오는 중">
-        <div className="flex items-center gap-3 pb-5">
+        <div className="flex min-h-8 items-center gap-3">
           <Skeleton className="h-5 w-12 rounded-chip" />
-          <Skeleton className="h-4 w-28 rounded-chip" />
           <Skeleton className="ml-auto h-8 w-[120px] rounded-full" />
         </div>
-        <ReviewOverview summary={null} pending />
-        {REVIEW_SECTIONS.slice(0, 2).map((section) => (
-          <SectionBlock key={section.key} title={section.label}>
-            {["78%", "64%", "71%"].map((width) => (
-              <div
-                key={width}
-                className="flex h-10 items-center border-b border-[var(--el-hairline-soft)]"
-              >
-                <Skeleton className="h-4 rounded-chip" style={{ width }} />
+        <Skeleton className="mt-2.5 h-[38px] w-[60%] rounded-chip" />
+        <div className="mt-3 flex gap-1.5 pb-1">
+          {[132, 72, 112].map((width) => (
+            <Skeleton key={width} className="h-[26px] rounded-control" style={{ width }} />
+          ))}
+        </div>
+        <div className="pt-[62px]">
+          <ReviewOverview summary={null} pending />
+          {REVIEW_SECTIONS.slice(0, 2).map((section) => (
+            <SectionBlock key={section.key} title={section.label}>
+              <div className="border-t border-[var(--el-hairline-soft)]">
+                {["78%", "64%", "71%"].map((width) => (
+                  <div
+                    key={width}
+                    className="flex h-[47px] items-center border-b border-[var(--el-hairline-soft)]"
+                  >
+                    <Skeleton className="h-4 rounded-chip" style={{ width }} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </SectionBlock>
-        ))}
+            </SectionBlock>
+          ))}
+        </div>
       </div>
     </BoardShell>
   );

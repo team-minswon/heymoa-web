@@ -25,6 +25,7 @@ export function CopyMarkdownButton({
   label,
   build,
   disabled,
+  iconOnly = false,
   className,
 }: {
   /** 토스트에 그대로 들어간다 — `전사`·`요약`. */
@@ -32,6 +33,8 @@ export function CopyMarkdownButton({
   build: () => string;
   /** 아직 복사할 것이 확정되지 않았다. 숨기지 않는 이유는 자리가 흔들리기 때문이다. */
   disabled?: boolean;
+  /** 섹션 머리처럼 이름이 바로 옆에 있는 자리. 아이콘만 서고 이름은 `○○ 복사` 로 읽힌다 */
+  iconOnly?: boolean;
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -65,10 +68,11 @@ export function CopyMarkdownButton({
             size="sm"
             className={className}
             disabled={disabled}
+            aria-label={iconOnly ? `${label} 복사` : undefined}
             onClick={() => void copy()}
           >
             {copied ? <Check /> : <Copy />}
-            복사
+            {iconOnly ? null : "복사"}
           </Button>
         }
       />

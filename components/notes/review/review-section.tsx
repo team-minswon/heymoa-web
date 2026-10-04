@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { Collapse } from "@/components/heymoa/collapse";
 import { ShowMoreButton } from "@/components/heymoa/show-more-button";
 import { AddItemForm } from "@/components/notes/review/add-item-form";
-import { ReviewRow, ROW_GRID, type ItemPatch } from "@/components/notes/review/review-row";
+import { ReviewRow, type ItemPatch } from "@/components/notes/review/review-row";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import { reviewSectionToMarkdown } from "@/lib/notes/review/markdown";
@@ -17,7 +17,6 @@ import {
   type ReviewKind,
   type ReviewSection as Section,
 } from "@/lib/notes/review/sections";
-import { cn } from "@/lib/utils";
 
 const EMPTY_TEXT: Record<Section["key"], string> = {
   DECISION: "정한 것이 없습니다.",
@@ -34,7 +33,8 @@ export function ReviewSection({
   section,
   topicOf,
   topicTitleOf,
-  topicTitle,
+  whenOf,
+  isMine,
   canEdit,
   choices,
   openItemId,
@@ -54,8 +54,10 @@ export function ReviewSection({
   section: Section;
   topicOf: (itemId: string) => number | null;
   topicTitleOf: (ordinal: number) => string;
-  /** 주제로 걸러 보는 중이면 그 제목. 복사본이 걸러진 목록이라고 밝힌다 */
-  topicTitle: string | null;
+  /** 항목이 회의에서 나온 때(ms) */
+  whenOf: (item: ReviewItem) => number | null;
+  /** 담당이 보는 사람 자신인가 */
+  isMine: (item: ReviewItem) => boolean;
   canEdit: boolean;
   choices: AssigneeChoice[];
   openItemId: string | null;
@@ -91,12 +93,12 @@ export function ReviewSection({
         key={item.itemId}
         item={item}
         topic={(() => {
-          // 한 주제로 거르는 동안은 모든 줄이 같은 주제다. 줄마다 적으면 소음이다
-          if (topicTitle !== null) return null;
           const ordinal = topicOf(item.itemId);
           return ordinal === null ? null : { ordinal, title: topicTitleOf(ordinal) };
         })()}
         assignable={assignable}
+        whenMs={whenOf(item)}
+        mine={isMine(item)}
         open={openItemId === item.itemId}
         canEdit={canEdit}
         busy={busyItemId === item.itemId}
@@ -119,7 +121,7 @@ export function ReviewSection({
       title={section.label}
       count={section.includedCount}
       copy={{
-        build: () => reviewSectionToMarkdown(section, topicTitle),
+        build: () => reviewSectionToMarkdown(section),
         disabled: section.includedCount === 0,
       }}
     >
@@ -130,25 +132,11 @@ export function ReviewSection({
         </div>
       ) : null}
 
-      {assignable && section.items.length > 0 ? (
-        <div
-          className={cn(
-            "hidden h-[30px] items-center gap-x-3 border-b border-[var(--el-hairline)] text-[11px] font-medium text-[var(--el-muted-soft)] sm:grid",
-            ROW_GRID.assignable
-          )}
-        >
-          <span>내용</span>
-          <span>담당</span>
-          <span>기한</span>
-          <span />
-        </div>
-      ) : null}
-
       {section.items.length === 0 ? (
-        <p className="py-1.5 text-[13px] text-[var(--el-muted-soft)]">{topicTitle !== null ? "이 주제에는 없습니다." : EMPTY_TEXT[section.key]}</p>
+        <p className="border-t border-[var(--el-hairline-soft)] py-2.5 text-[13px] text-[var(--el-muted-soft)]">{EMPTY_TEXT[section.key]}</p>
       ) : null}
 
-      {head.map(row)}
+      {section.items.length > 0 ? <div className="border-t border-[var(--el-hairline-soft)]">{head.map(row)}</div> : null}
 
       <Collapse open={showRest} lazy>
         {rest.map(row)}

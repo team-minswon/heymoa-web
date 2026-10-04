@@ -5,6 +5,7 @@ import { DueCell } from "@/components/heymoa/due-cell";
 import { AddItemForm } from "@/components/notes/review/add-item-form";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
+import { groupMarks, MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewRow } from "@/components/notes/review/review-row";
 import { roleOfItem } from "@/components/notes/review/role-dot";
@@ -100,10 +101,17 @@ describe("ReviewRow", () => {
     expect(screen.getByRole("button", { name: "제외" })).toBeDisabled();
   });
 
-  it("고칠 수 없으면 조작을 두지 않고 주제 번호는 두 자리다", () => {
-    renderRow({ canEdit: false });
+  it("고칠 수 없으면 조작을 두지 않고, 결정 줄에는 주제 이름과 나온 때가 선다", () => {
+    renderRow({ canEdit: false, whenMs: 75_000 });
     expect(screen.queryByRole("button", { name: "제외" })).not.toBeInTheDocument();
-    expect(screen.getByText("02")).toBeInTheDocument();
+    expect(screen.getByTitle("주제 02 · 차별점과 요금")).toHaveTextContent("차별점과 요금");
+    expect(screen.getByText("01:15")).toBeInTheDocument();
+  });
+
+  it("할 일 줄은 담당이 보는 사람 자신이면 「나」가 붙고, 기한이 없으면 기한 정하기가 선다", () => {
+    renderRow({ item: item({ kind: "ACTION_ITEM" }), assignable: true, mine: true });
+    expect(screen.getByText("나")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "기한 정하기" })).toBeInTheDocument();
   });
 });
 
@@ -254,7 +262,7 @@ describe("SectionBlock", () => {
       </SectionBlock>
     );
     expect(build).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "복사" }));
+    fireEvent.click(screen.getByRole("button", { name: "결정 복사" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("## 결정\n\n- 요금은 회의 시간 기준\n"));
 
     rerender(
@@ -262,7 +270,47 @@ describe("SectionBlock", () => {
         <p>내용</p>
       </SectionBlock>
     );
-    expect(screen.getByRole("button", { name: "복사" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "결정 복사" })).toBeDisabled();
+  });
+});
+
+describe("MeetingMap", () => {
+  it("같은 때에 포개지는 표시는 한 묶음이고, 누를 때마다 묶음 안의 다음 항목으로 간다", () => {
+    const onSelect = vi.fn();
+    render(
+      <MeetingMap
+        lengthMs={3_600_000}
+        chapters={[]}
+        marks={[
+          { itemId: "a", kind: "DECISION", atMs: 60_000, content: "가" },
+          { itemId: "b", kind: "ACTION_ITEM", atMs: 60_000, content: "나" },
+          { itemId: "c", kind: "DECISION", atMs: 1_800_000, content: "다" },
+        ]}
+        onSelect={onSelect}
+      />
+    );
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toHaveAccessibleName("01:00 · 2개 · 결정 가 / 할 일 나");
+
+    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[0]);
+    expect(onSelect.mock.calls.map(([id]) => id)).toEqual(["a", "b", "a"]);
+  });
+
+  it("고정 칸 경계 양쪽에 걸친 가까운 표시도 한 묶음이다", () => {
+    // 60분 회의의 8.99초와 9.01초는 같은 자리(0.25%)에 그려진다. 22초 간격도 640px 막대에서 4px 안쪽이다.
+    const groups = groupMarks(
+      [
+        { itemId: "a", kind: "DECISION", atMs: 8_990, content: "가" },
+        { itemId: "b", kind: "DECISION", atMs: 9_010, content: "나" },
+        { itemId: "c", kind: "DECISION", atMs: 31_010, content: "다" },
+        { itemId: "d", kind: "DECISION", atMs: 600_000, content: "라" },
+      ],
+      3_600_000
+    );
+    expect(groups.map((group) => group.map((mark) => mark.itemId))).toEqual([["a", "b", "c"], ["d"]]);
   });
 });
 
@@ -270,19 +318,40 @@ describe("ConfirmBar", () => {
   it("확정하면 안 되는 까닭이 있으면 버튼을 막고 그 까닭을 적는다", () => {
     const summary = { newTasks: 1, endedDecisions: 0, changedTasks: 0 };
     const { rerender } = render(
-      <ConfirmBar summary={summary} pending={false} blocked="기존 할 일에 반영하는 중입니다" onConfirm={vi.fn()} />
+      <ConfirmBar summary={summary} decisions={2} pending={false} blocked="기존 할 일에 반영하는 중입니다" onConfirm={vi.fn()} />
     );
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
     expect(screen.getByText("기존 할 일에 반영하는 중입니다")).toBeInTheDocument();
 
-    rerender(<ConfirmBar summary={summary} pending={false} onConfirm={vi.fn()} />);
+    rerender(<ConfirmBar summary={summary} decisions={2} pending={false} onConfirm={vi.fn()} />);
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled();
+    expect(screen.getByText(/를 프로젝트에 올립니다/)).toHaveTextContent("결정 2개와 할 일 1개를 프로젝트에 올립니다");
+  });
+
+  it("고를 제안이 남았으면 그 수와 그 줄로 가는 링크를 세운다", () => {
+    const onShowUnchosen = vi.fn();
+    render(
+      <ConfirmBar
+        summary={{ newTasks: 1, endedDecisions: 0, changedTasks: 0 }}
+        decisions={2}
+        pending={false}
+        blocked="고르지 않은 제안이 2개 남았습니다"
+        unchosen={2}
+        onShowUnchosen={onShowUnchosen}
+        onConfirm={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/확인할 제안/)).toHaveTextContent("확인할 제안 2개");
+    fireEvent.click(screen.getByRole("button", { name: "제안으로 가기" }));
+    expect(onShowUnchosen).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
   });
 
   it("확정이 거절된 까닭은 사라지지 않고 확정 줄에 남는다", () => {
     render(
       <ConfirmBar
         summary={{ newTasks: 1, endedDecisions: 0, changedTasks: 0 }}
+        decisions={0}
         pending={false}
         error="프로젝트 승인 기준이 변경되었습니다."
         onConfirm={vi.fn()}

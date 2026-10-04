@@ -65,14 +65,14 @@ describe("reviewSectionToMarkdown", () => {
 });
 
 describe("overview · topics", () => {
-  it("개요는 한 문단, 주제는 번호 목록이다", () => {
+  it("요약은 한 문단, 주제는 번호 목록이다", () => {
     const summary = {
       lead: [
         { text: "문제를 좁혔다.", topics: [] },
         { text: "요금은\n다시 본다.", topics: [] },
       ],
     } as unknown as MeetingReviewSummary;
-    expect(overviewToMarkdown(summary)).toBe("## 개요\n\n문제를 좁혔다. 요금은 다시 본다.\n");
+    expect(overviewToMarkdown(summary)).toBe("## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n");
     expect(
       topicsToMarkdown([
         { ordinal: 1, title: "문제 정의", count: 2, gist: "한 문장으로 좁혔다." },

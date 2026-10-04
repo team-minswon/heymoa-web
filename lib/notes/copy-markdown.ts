@@ -26,6 +26,8 @@ export type NoteMeta = {
   participantCount: number;
   /** 전사 응답의 `recording.durationMs`. 요약에는 없으므로 선택이다. */
   durationMs?: number;
+  /** 검토 화면 머리의 프로젝트 칩(APP-865). 복사본 머리말에는 싣지 않는다 */
+  projectName?: string;
 };
 
 /**
@@ -38,6 +40,7 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
     // 헤더 메타와 같은 기준이다 — 시작 전 노트는 만든 시각이 그 노트의 시각이다.
     whenIso: note.meetingStartedAt ?? note.createdAt,
     participantCount: note.participants?.length ?? 0,
+    projectName: note.projectName,
   };
 }
 

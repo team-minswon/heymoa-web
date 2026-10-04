@@ -815,8 +815,12 @@ export function NotePanel({
                   isEnded={phase === "ended"}
                   noteMeta={noteMeta}
                   participants={note?.participants ?? []}
+                  currentUserId={user?.userId}
+                  // 레일을 접으면 「이 회의에 대해 물어보기」 알약이 검토 막대와 같은 자리에 뜬다.
+                  dockRaised={showAgentRail && agentRail === false}
                   onEvidenceSelect={jumpToSegment}
                   onOpenTranscript={() => handleTabChange("transcript")}
+                  onOpenTimeline={showContextTab ? () => handleTabChange("context") : undefined}
                 />
               </ScrollArea>
             </TabsContent>

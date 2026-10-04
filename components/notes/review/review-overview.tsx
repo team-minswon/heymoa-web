@@ -55,7 +55,7 @@ export function ReviewOverview({
   return (
     <SectionBlock title="요약" copy={{ build: () => overviewToMarkdown(summary) }}>
       {summary.headline ? <p className="sr-only">{summary.headline.text}</p> : null}
-      <p className="max-w-[60ch] text-base leading-7 break-keep text-[var(--el-ink)]">
+      <p className="text-[15.5px] leading-7 break-keep text-[var(--el-body)]">
         {summary.lead.map((line) => line.text).join(" ")}
       </p>
     </SectionBlock>

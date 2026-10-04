@@ -7,12 +7,14 @@ import { AssigneeCell } from "@/components/heymoa/assignee-cell";
 import { Collapse } from "@/components/heymoa/collapse";
 import { DueCell } from "@/components/heymoa/due-cell";
 import { ARRIVE_CLASS } from "@/components/heymoa/motion";
+import { TimelineToneIcon } from "@/components/notes/note-timeline";
 import { Button } from "@/components/ui/button";
 import { assigneeRequestOf, type AssigneeChoice } from "@/lib/assignees/describe";
 import { CONFLICT_MESSAGE } from "@/lib/api/error-message";
 import type { UpdateMeetingReviewItemRequest } from "@/lib/api/generated/models";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import { topicNumber } from "@/lib/notes/review/topics";
+import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
 export type ItemPatch = Omit<
@@ -20,26 +22,20 @@ export type ItemPatch = Omit<
   "expectedReviewVersion" | "expectedItemRevision"
 >;
 
-/**
- * 담당 · 기한 칸이 있는 줄과 없는 줄. 표 머리와 줄이 같은 값을 써야 칸이 맞는다.
- * 좁은 화면에서는 두 칸이 내용 아래 줄로 내려간다 — 고정 폭 칸이 옆에 서면 내용이 한 글자 폭으로 준다.
- */
-export const ROW_GRID = {
-  // 할 일에는 주제 칸을 두지 않는다 — 담당 · 기한 칸과 함께 서면 내용이 가려진다.
-  assignable: "grid-cols-[minmax(0,1fr)_14px] sm:grid-cols-[minmax(0,1fr)_128px_108px_14px]",
-  plain: "grid-cols-[minmax(0,1fr)_auto_14px] sm:grid-cols-[minmax(0,1fr)_132px_14px]",
-} as const;
-
 export type RowTopic = { ordinal: number; title: string };
 
 /**
- * 검토 항목 한 줄. 누르면 아래로 펼쳐져 제안과 수정 기록이 서고, 담당 · 기한은 펼치지 않고도
- * 칸에서 바로 고친다. 뺀 항목은 자리를 지킨 채 흐려진다 — 되살릴 수 있어야 한다.
+ * 검토 항목 한 줄(APP-865). 결정은 `체크 · 내용 · 주제 · 나온 때`, 할 일은 `상자 · 내용 · 담당 · 기한` 이다.
+ * 줄 어디를 눌러도 펼쳐진다(내용 버튼이 줄을 덮는다) — 담당 · 기한 칸만 그 위에 떠서 바로 고친다.
+ * 펼치면 근거 발언과 수정 · 제외가 서고, 제안은 펼치지 않아도 줄 아래에 선다. 뺀 항목은 자리를 지킨 채
+ * 흐려진다 — 되살릴 수 있어야 한다.
  */
 export function ReviewRow({
   item,
   topic,
   assignable,
+  whenMs = null,
+  mine = false,
   open,
   canEdit,
   busy,
@@ -55,7 +51,12 @@ export function ReviewRow({
 }: {
   item: ReviewItem;
   topic: RowTopic | null;
+  /** 담당 · 기한을 받는 줄(할 일) */
   assignable: boolean;
+  /** 회의에서 나온 때(ms). 인용으로 계산하고 모르면 null */
+  whenMs?: number | null;
+  /** 담당이 보는 사람 자신이다 */
+  mine?: boolean;
   open: boolean;
   canEdit: boolean;
   busy: boolean;
@@ -79,26 +80,36 @@ export function ReviewRow({
     <div
       data-item-id={item.itemId}
       className={cn(
-        "border-b border-[var(--el-hairline-soft)] last:border-b-0",
+        "scroll-mt-24 border-b border-[var(--el-hairline-soft)]",
         fresh && ARRIVE_CLASS
       )}
     >
       <div
         className={cn(
-          "-mx-2 grid min-h-10 items-center gap-x-3 rounded-control px-2 transition-colors duration-200 ease-out",
-          assignable ? ROW_GRID.assignable : ROW_GRID.plain,
+          "relative -mx-2 grid items-center gap-x-3 rounded-control px-2 py-[11px] transition-colors duration-200 ease-out",
+          assignable
+            ? "grid-cols-[16px_minmax(0,1fr)_16px] sm:grid-cols-[16px_minmax(0,1fr)_132px_150px_16px]"
+            : "grid-cols-[16px_minmax(0,1fr)_auto_16px]",
           open ? "bg-[var(--el-surface-strong)]" : "hover:bg-[var(--el-canvas-soft)]"
         )}
       >
+        {assignable ? (
+          <span aria-hidden className="size-4 rounded-[4px] border-[1.5px] border-[var(--el-hairline-strong)]" />
+        ) : (
+          <span aria-hidden className="flex">
+            <TimelineToneIcon tone="decision" />
+          </span>
+        )}
         <button
           type="button"
           aria-expanded={open}
           onClick={onToggle}
-          className="min-w-0 rounded-chip py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
+          // 버튼이 줄 전체를 덮는다(::after) — 주제 · 때 자리를 눌러도 펼쳐진다. 이름은 내용 그대로다.
+          className="min-w-0 rounded-chip text-left after:absolute after:inset-0 after:rounded-control after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--el-ink)]"
         >
           <span
             className={cn(
-              "block text-sm text-[var(--el-ink)] transition-colors duration-200 ease-out",
+              "block text-[15px] leading-6 text-[var(--el-ink)] transition-colors duration-200 ease-out",
               open ? "font-semibold break-keep" : "truncate",
               !item.included && "text-[var(--el-muted-soft)] line-through"
             )}
@@ -107,46 +118,63 @@ export function ReviewRow({
           </span>
         </button>
         {assignable ? (
-          // 넓은 화면에서는 상자가 사라져(`contents`) 두 칸이 표의 열에 선다. 좁은 화면에서는 둘째 줄이다.
-          <div className="col-span-full row-start-2 flex min-w-0 flex-wrap items-center gap-x-4 pb-2 sm:contents">
-            <AssigneeCell
-              value={item.assignee}
-              choices={choices}
-              editable={cellsEditable}
-              placeholder={cellsEditable ? "담당 정하기" : ""}
-              onChange={(choice) => void onSave({ assignee: assigneeRequestOf(choice) })}
-            />
-            <DueCell
-              value={item.due}
-              editable={cellsEditable}
-              onChange={(due) => void onSave({ due })}
-            />
-          </div>
-        ) : null}
-        {/* 번호만으로는 어느 주제인지 모른다. 넓은 화면에서는 짧은 제목을 함께, 좁은 화면에서는 번호만 둔다. */}
-        {assignable ? null : (
-          <span
-            title={topic ? `주제 ${topicNumber(topic.ordinal)} · ${topic.title}` : undefined}
-            className="flex min-w-0 items-baseline justify-end gap-1.5 text-[11.5px] text-[var(--el-muted)]"
-          >
-            {topic ? (
-              <>
-                <span className="font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-                  {topicNumber(topic.ordinal)}
+          // 넓은 화면에서는 상자가 사라져(`contents`) 두 칸이 열에 선다. 좁은 화면에서는 둘째 줄이다.
+          // 줄을 덮는 버튼 위에 떠야 눌린다.
+          <div className="relative z-10 col-[2/-1] row-start-2 flex min-w-0 flex-wrap items-center gap-x-3 pt-1.5 sm:contents">
+            <span className="flex min-w-0 items-center gap-1.5 sm:relative sm:z-10">
+              <AssigneeCell
+                value={item.assignee}
+                choices={choices}
+                editable={cellsEditable}
+                placeholder={cellsEditable ? "담당 정하기" : ""}
+                onChange={(choice) => void onSave({ assignee: assigneeRequestOf(choice) })}
+              />
+              {mine ? (
+                <span className="inline-flex h-[18px] shrink-0 items-center rounded-[5px] bg-[var(--el-surface-strong)] px-[5px] text-[11px] text-[var(--el-muted)]">
+                  나
                 </span>
-                <span className="hidden truncate sm:inline">{topic.title}</span>
-              </>
+              ) : null}
+            </span>
+            <span className="flex sm:relative sm:z-10">
+              <DueCell
+                value={item.due}
+                chip
+                editable={cellsEditable}
+                onChange={(due) => void onSave({ due })}
+              />
+            </span>
+          </div>
+        ) : (
+          <span className="flex min-w-0 items-center justify-end gap-3">
+            {topic ? (
+              <span
+                title={`주제 ${topicNumber(topic.ordinal)} · ${topic.title}`}
+                className="hidden max-w-[180px] truncate text-[12.5px] text-[var(--el-muted-soft)] sm:block"
+              >
+                {topic.title}
+              </span>
+            ) : null}
+            {whenMs !== null ? (
+              <span className="inline-flex h-[22px] items-center rounded-[6px] bg-[var(--el-canvas-soft)] px-[7px] text-xs tabular-nums text-[var(--el-body)]">
+                {formatOffset(whenMs)}
+              </span>
             ) : null}
           </span>
         )}
-        <span aria-hidden className="flex justify-end text-[var(--el-muted-soft)]">
+        <span
+          aria-hidden
+          className={cn(
+            "flex justify-end text-[var(--el-muted-soft)]",
+            assignable && "col-start-3 row-start-1 sm:col-start-5"
+          )}
+        >
           {busy ? (
             <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
           ) : (
             <ChevronDown
               className={cn(
-                "size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none",
-                open ? "text-[var(--el-ink)]" : "-rotate-90"
+                "size-4 transition-transform duration-200 ease-out motion-reduce:transition-none",
+                open && "rotate-180 text-[var(--el-ink)]"
               )}
             />
           )}
@@ -172,10 +200,11 @@ export function ReviewRow({
         </div>
       </Collapse>
 
-      {suggestions ? <div className="space-y-1.5 pb-2.5 sm:pl-3">{suggestions}</div> : null}
+      {suggestions ? <div className="space-y-1.5 pb-2.5 sm:pl-7">{suggestions}</div> : null}
 
       <Collapse open={open} lazy>
-        <div className="space-y-2.5 pt-2 pb-3.5 sm:pl-3">
+        <div className="space-y-2.5 pt-1 pb-3.5 sm:pl-7">
+          {children}
           <ItemState item={item} />
           {canEdit || editing ? (
             editing ? (
@@ -207,7 +236,6 @@ export function ReviewRow({
               </div>
             )
           ) : null}
-          {children}
         </div>
       </Collapse>
     </div>
