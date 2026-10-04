@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DueCell } from "@/components/heymoa/due-cell";
 import { AddItemForm } from "@/components/notes/review/add-item-form";
+import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewRow } from "@/components/notes/review/review-row";
@@ -91,19 +92,6 @@ describe("ReviewRow", () => {
     expect(screen.getByText("제외됨 · 직접 추가")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "제외 취소" }));
     expect(onSave).toHaveBeenCalledWith({ included: true });
-  });
-
-  it("풀린 이슈는 담당 · 기한 대신 해결됨이 서고, 제안은 펼치지 않아도 선다", () => {
-    renderRow({
-      item: item({ kind: "ISSUE" }),
-      assignable: true,
-      resolved: true,
-      open: false,
-      suggestions: <p>이전 결정 대체 제안</p>,
-    });
-    expect(screen.getByText("해결됨")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "기한 정하기" })).not.toBeInTheDocument();
-    expect(screen.getByText("이전 결정 대체 제안")).toBeInTheDocument();
   });
 
   it("다른 항목이 저장 중이면 이 줄의 조작도 잠근다", () => {
@@ -249,7 +237,7 @@ describe("AddItemForm", () => {
 describe("ReviewOverview", () => {
   it("요약이 오는 동안에는 없다고 먼저 말하지 않고 자리만 잡는다", () => {
     render(<ReviewOverview summary={null} pending />);
-    expect(screen.getByLabelText("개요 불러오는 중")).toBeInTheDocument();
+    expect(screen.getByLabelText("요약 불러오는 중")).toBeInTheDocument();
     expect(screen.queryByText(/주제 요약이 없습니다/)).not.toBeInTheDocument();
   });
 });
@@ -301,6 +289,33 @@ describe("ConfirmBar", () => {
       />
     );
     expect(screen.getByRole("alert")).toHaveTextContent("프로젝트 승인 기준이 변경되었습니다.");
+  });
+});
+
+describe("ItemDetail", () => {
+  it("관련 항목은 열 수 있는 것으로 거른 뒤 넷까지 세운다", () => {
+    // 앞의 넷은 화면에 없는 항목이다. 먼저 자르면 뒤의 결정까지 사라진다.
+    const others = ["h1", "h2", "h3", "h4", "d2"];
+    const summary = {
+      topics: [
+        {
+          agendaItemId: "agenda",
+          openItemIds: [],
+          relations: others.map((targetItemId) => ({ sourceItemId: "i1", targetItemId, label: "이어짐" })),
+        },
+      ],
+    } as unknown as MeetingReviewSummary;
+    const visible = item({ itemId: "d2", content: "발표 자료에 출처를 함께 적는다" });
+    render(
+      <ItemDetail
+        item={item()}
+        summary={summary}
+        itemsById={new Map([["d2", visible]])}
+        trail={null}
+        onSelectItem={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("button", { name: /발표 자료에 출처를 함께 적는다/ })).toBeInTheDocument();
   });
 });
 

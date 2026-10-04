@@ -28,10 +28,13 @@ export function ItemDetail({
   elevated?: boolean;
   onSelectItem: (itemId: string) => void;
 }) {
-  const linked = linkedItemsOf(summary, item.itemId).flatMap((row) => {
-    const other = itemsById.get(row.itemId);
-    return other ? [{ ...row, other }] : [];
-  });
+  // 열 수 있는 항목으로 거른 뒤 넷까지 — 먼저 자르면 앞 넷이 없는 항목일 때 뒤의 것까지 사라진다.
+  const linked = linkedItemsOf(summary, item.itemId)
+    .flatMap((row) => {
+      const other = itemsById.get(row.itemId);
+      return other ? [{ ...row, other }] : [];
+    })
+    .slice(0, 4);
 
   return (
     <div className="space-y-2">

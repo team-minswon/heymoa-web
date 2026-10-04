@@ -136,7 +136,24 @@ export function TaskChangeSuggestion({
   onChoose: (next: Choice) => Promise<boolean>;
 }) {
   const queryClient = useQueryClient();
-  const update = useUpdateProjectTask({ mutation: { meta: { suppressErrorToast: true } } });
+  const update = useUpdateProjectTask({
+    mutation: {
+      meta: { suppressErrorToast: true },
+      // 목록과 함께 그 할 일의 이력도 다시 읽는다. 이력 시트를 다시 열었을 때 바뀌기 전 판이 서면 안 된다.
+      // **목록은 둘이다** (APP-685) — 프로젝트 키만 비우면 「모든 할 일」이 낡은 값을 들고 남는다.
+      // onSuccess 에서 기다려야 그동안 반영이 진행 중으로 남는다 — 검토 화면은 이것으로 확정을 막고,
+      // 끝나면 곧바로 선택 저장이 이어받는다. 밖에서 기다리면 그 틈에 확정이 열린다.
+      onSuccess: (_, { workspaceId, projectId, taskId }) =>
+        Promise.all([
+          queryClient.invalidateQueries({
+            predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: getGetProjectTaskRevisionsQueryKey(workspaceId, projectId, taskId),
+          }),
+        ]),
+    },
+  });
   const [assignee, setAssignee] = useState<AssigneeValue | null | undefined>(
     change.assignee ? change.assignee.value : undefined
   );
@@ -168,16 +185,6 @@ export function TaskChangeSuggestion({
         },
       });
       setConflict(false);
-      // 목록과 함께 그 할 일의 이력도 다시 읽는다. 이력 시트를 다시 열었을 때 바뀌기 전 판이 서면 안 된다.
-      // **목록은 둘이다** (APP-685) — 프로젝트 키만 비우면 「모든 할 일」이 낡은 값을 들고 남는다.
-      await Promise.all([
-        queryClient.invalidateQueries({
-          predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: getGetProjectTaskRevisionsQueryKey(workspaceId, projectId, task.taskId),
-        }),
-      ]);
       await saveChoice();
     } catch (error) {
       if (errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT") {

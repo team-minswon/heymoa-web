@@ -67,7 +67,7 @@ export const SCENARIOS: Scenario[] = [
     group: "읽기",
     title: "다른 사람이 시작한 회의 · 요약 없음",
     path: summaryOf("01K0000000021"),
-    tryThis: ["고치는 조작 없이 섹션만 읽고, 개요 자리에 요약이 없다고 말합니다"],
+    tryThis: ["고치는 조작 없이 섹션만 읽고, 요약 자리에 요약이 없다고 말합니다"],
   },
   {
     key: "confirmed",

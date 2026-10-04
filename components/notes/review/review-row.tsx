@@ -52,7 +52,6 @@ export function ReviewRow({
   onDismissConflict,
   children,
   suggestions,
-  resolved = false,
 }: {
   item: ReviewItem;
   topic: RowTopic | null;
@@ -72,11 +71,9 @@ export function ReviewRow({
   children?: ReactNode;
   /** 줄을 펼치지 않아도 서는 제안. 사람이 골라야 하는 것이라 접어 두지 않는다 */
   suggestions?: ReactNode;
-  /** 요약이 이 회의에서 풀렸다고 짚은 이슈 · 질문. 담당 · 기한 칸 자리에 「해결됨」이 선다 */
-  resolved?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const cellsEditable = canEdit && item.included && !busy && !locked && !resolved;
+  const cellsEditable = canEdit && item.included && !busy && !locked;
 
   return (
     <div
@@ -103,17 +100,13 @@ export function ReviewRow({
             className={cn(
               "block text-sm text-[var(--el-ink)] transition-colors duration-200 ease-out",
               open ? "font-semibold break-keep" : "truncate",
-              (!item.included || resolved) && "text-[var(--el-muted-soft)] line-through"
+              !item.included && "text-[var(--el-muted-soft)] line-through"
             )}
           >
             {item.content}
           </span>
         </button>
-        {assignable && resolved ? (
-          <span className="col-span-full row-start-2 pb-2 text-[13px] text-[var(--el-muted-soft)] sm:col-span-2 sm:row-start-auto sm:pb-0">
-            해결됨
-          </span>
-        ) : assignable ? (
+        {assignable ? (
           // 넓은 화면에서는 상자가 사라져(`contents`) 두 칸이 표의 열에 선다. 좁은 화면에서는 둘째 줄이다.
           <div className="col-span-full row-start-2 flex min-w-0 flex-wrap items-center gap-x-4 pb-2 sm:contents">
             <AssigneeCell

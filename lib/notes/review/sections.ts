@@ -24,6 +24,18 @@ export const REVIEW_SECTIONS: ReadonlyArray<{
   { key: "REFERENCE", label: "참고", kinds: ["STATUS_REPORT", "INSIGHT", "AGENDA"] },
 ];
 
+/**
+ * 요약 보기에 서는 섹션(APP-864). 회의 뒤 사람이 묻는 「무엇을 정했고 누가 무엇을 하나」만 남긴다.
+ * 이슈 · 질문 · 참고는 요약 보기에 서지 않고(그래프 보기에는 선다), 확정에는 그대로 들어간다.
+ */
+const SUMMARY_SECTION_KEYS: ReadonlySet<SectionKey> = new Set<SectionKey>(["DECISION", "ACTION_ITEM"]);
+
+export const isSummarySection = (key: SectionKey) => SUMMARY_SECTION_KEYS.has(key);
+
+/** 이 종류의 항목이 요약 보기에 서는가. */
+export const isSummaryKind = (kind: ReviewKind) =>
+  REVIEW_SECTIONS.some((row) => SUMMARY_SECTION_KEYS.has(row.key) && row.kinds.includes(kind));
+
 /** 담당 · 기한을 받는 종류. 할 일과 이슈 · 질문은 누가 언제까지 할지를 검토에서 정한다. */
 export const ASSIGNABLE_KINDS: ReadonlySet<ReviewKind> = new Set<ReviewKind>(["ACTION_ITEM", "ISSUE", "QUESTION"]);
 
@@ -36,7 +48,6 @@ export type ReviewSection = {
   items: ReviewItem[];
   /** 포함된 항목 수. 확정되는 것만 센다 */
   includedCount: number;
-  kindCounts: Array<{ kind: ReviewKind; label: string; count: number }>;
 };
 
 const hasSuggestion = (item: ReviewItem) =>
@@ -69,13 +80,6 @@ export function sectionsOf(
       label,
       items: own,
       includedCount: own.filter((item) => item.included).length,
-      kindCounts: kinds
-        .map((kind) => ({
-          kind,
-          label: KIND_LABEL[kind],
-          count: own.filter((item) => item.kind === kind && item.included).length,
-        }))
-        .filter((row) => row.count > 0),
     };
   });
 }

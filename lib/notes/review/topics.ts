@@ -19,27 +19,22 @@ export function topicIndex(summary: MeetingReviewSummary | null | undefined) {
   return index;
 }
 
-/** `count` 는 검토본에서 제외된 항목을 뺀다. 검토본에서 찾지 못한 member 는 센다. */
+/**
+ * `count` 는 검토본에서 제외된 항목을 뺀다. 검토본에서 찾지 못한 member 는 센다.
+ * [shown] 을 주면 화면에 서지 않는 항목도 뺀다 — 목차의 수와 그 주제로 좁혔을 때 보이는 수가 같아야 한다.
+ */
 export function topicChips(
   summary: MeetingReviewSummary | null | undefined,
-  items: readonly { itemId: string; included: boolean }[]
+  items: readonly { itemId: string; included: boolean }[],
+  shown: (itemId: string) => boolean = () => true
 ): TopicChip[] {
   const excluded = new Set(items.filter((item) => !item.included).map((item) => item.itemId));
   return (summary?.topics ?? []).map((topic) => ({
     ordinal: topic.ordinal,
     title: topic.title,
-    count: topic.members.filter((member) => !excluded.has(member.itemId)).length,
+    count: topic.members.filter((member) => !excluded.has(member.itemId) && shown(member.itemId)).length,
     gist: topic.sentences[0]?.text ?? null,
   }));
-}
-
-/** 요약이 「이 회의에서 풀렸다」고 짚은 이슈 · 질문. 풀어 준 항목(`resolvedByItemIds`)이 있는 것만이다. */
-export function resolvedItemIds(summary: MeetingReviewSummary | null | undefined) {
-  return new Set(
-    (summary?.topics ?? []).flatMap((topic) =>
-      topic.outline.issues.filter((issue) => issue.resolvedByItemIds.length > 0).map((issue) => issue.itemId)
-    )
-  );
 }
 
 export type LinkedItem = { itemId: string; label: string };
@@ -50,8 +45,7 @@ export type LinkedItem = { itemId: string; label: string };
  */
 export function linkedItemsOf(
   summary: MeetingReviewSummary | null | undefined,
-  itemId: string,
-  limit = 4
+  itemId: string
 ): LinkedItem[] {
   const seen = new Set<string>();
   const linked: LinkedItem[] = [];
@@ -65,7 +59,7 @@ export function linkedItemsOf(
       linked.push({ itemId: other, label: relation.label });
     }
   }
-  return linked.slice(0, limit);
+  return linked;
 }
 
 /** 주제 번호 표기. 두 자리로 맞춰 줄마다 같은 폭을 차지한다. */

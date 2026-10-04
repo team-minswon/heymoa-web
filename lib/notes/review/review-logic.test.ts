@@ -12,7 +12,7 @@ import {
 } from "@/lib/notes/review/confirm";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
-import { resolvedItemIds, topicChips } from "@/lib/notes/review/topics";
+import { topicChips } from "@/lib/notes/review/topics";
 import { trailOf } from "@/lib/notes/review/trail";
 
 const replacement = (itemId: string, decision: "END" | "KEEP" | null = null): ReviewItem["replacements"][number] => ({
@@ -72,7 +72,7 @@ describe("sectionsOf", () => {
     expect(actions.items).toHaveLength(1);
     expect(actions.includedCount).toBe(0);
     expect(open.label).toBe("이슈 · 질문");
-    expect(reference.kindCounts).toEqual([{ kind: "INSIGHT", label: "인사이트", count: 1 }]);
+    expect(reference.items.map((row) => row.itemId)).toEqual(["r1"]);
   });
 
   it("주제를 고르면 그 주제의 항목만 남는다", () => {
@@ -145,25 +145,6 @@ describe("confirmSummaryOf", () => {
   });
 });
 
-describe("resolvedItemIds", () => {
-  it("풀어 준 항목이 있는 이슈만 해결로 본다", () => {
-    const summary = {
-      topics: [
-        {
-          outline: {
-            issues: [
-              { itemId: "still-open", backgroundItemIds: [], resolvedByItemIds: [] },
-              { itemId: "answered", backgroundItemIds: [], resolvedByItemIds: ["d1"] },
-            ],
-          },
-        },
-      ],
-    } as unknown as MeetingReviewSummary;
-    expect([...resolvedItemIds(summary)]).toEqual(["answered"]);
-    expect(resolvedItemIds(null).size).toBe(0);
-  });
-});
-
 describe("trailOf", () => {
   const segment = (n: number): TranscriptResponseDataSegmentsItem => ({
     segmentId: `s${n}`,
@@ -229,5 +210,11 @@ describe("topicChips 개수", () => {
     ];
     expect(topicChips(summary, items)[0].count).toBe(2);
     expect(topicChips(summary, [])[0].count).toBe(3);
+  });
+
+  it("화면에 서지 않는 항목은 세지 않는다", () => {
+    const items = [item({ itemId: "a", kind: "DECISION" }), item({ itemId: "b", kind: "QUESTION" })];
+    // b 는 요약 보기에 서지 않는다. gone 은 검토본에 없어 센다.
+    expect(topicChips(summary, items, (itemId) => itemId !== "b")[0].count).toBe(2);
   });
 });

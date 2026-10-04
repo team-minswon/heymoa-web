@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { delay, http, HttpResponse } from "msw";
+import { delay, getResponse, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import {
   afterAll,
@@ -85,7 +85,7 @@ const rowBox = async (content: string) =>
   (await row(content)).closest("[data-item-id]") as HTMLElement;
 
 describe("검토 가능한 회의", () => {
-  it("개요와 네 섹션을 그리고, 주제 칩으로 그 주제의 항목만 남긴다", async () => {
+  it("요약 · 주제 · 결정 · 할 일만 그리고, 주제 칩으로 그 주제의 항목만 남긴다", async () => {
     renderTab();
 
     expect(
@@ -93,9 +93,15 @@ describe("검토 가능한 회의", () => {
         /문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/
       )
     ).toBeInTheDocument();
-    for (const title of ["결정", "할 일", "이슈 · 질문", "참고"]) {
+    for (const title of ["요약", "주제", "결정", "할 일"]) {
       expect(section(title)).toBeInTheDocument();
     }
+    // 이슈 · 질문과 참고는 요약 보기에 서지 않는다(APP-864).
+    expect(screen.queryByRole("region", { name: "이슈 · 질문" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "참고" })).toBeNull();
+    expect(
+      screen.queryByText("설문의 54%가 우리 사용자층에도 맞는 수치인지 알 수 없다")
+    ).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /차별점과 요금/ }));
 
@@ -107,7 +113,10 @@ describe("검토 가능한 회의", () => {
         name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다",
       })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("주제 02 · 항목 1");
+    // 목차의 수는 그 주제로 좁혔을 때 화면에 서는 항목의 수다 — 이슈 · 질문 · 참고는 세지 않는다.
+    const scoped = screen.getByRole("status").textContent ?? "";
+    const rows = document.querySelectorAll("section[aria-label] [data-item-id]").length;
+    expect(Number(/항목 (\d+)/.exec(scoped)?.[1])).toBe(rows);
     expect(
       screen.getByRole("heading", { name: "차별점과 요금" })
     ).toBeInTheDocument();
@@ -655,20 +664,207 @@ describe("검토 가능한 회의", () => {
     ).toHaveAttribute("aria-checked", "true");
   });
 
-  it("이슈 · 질문에도 담당 · 기한 칸이 서고, 회의 중에 풀린 것은 해결됨으로 선다", async () => {
+  it("요약 보기에 없는 이슈 · 질문 · 참고에 붙은 제안은 검토 완료를 막지 않는다", async () => {
+    server.use(
+      // 제안을 모두 걷고 이슈 하나에만 고르지 않은 대체를 붙인다 — 제안은 종류를 가리지 않고 붙는다.
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+        const original = await getResponse(meetingFlowHandlers, request);
+        const body = await original!.json();
+        type Row = { kind: string; included: boolean; replacements: Array<Record<string, unknown>>; taskChanges: unknown[] };
+        const items: Row[] = body.data.items;
+        const replacement = items.flatMap((item) => item.replacements)[0];
+        for (const item of items) {
+          item.replacements = [];
+          item.taskChanges = [];
+        }
+        items.find((item) => item.kind === "ISSUE" && item.included)!.replacements = [
+          { ...replacement, decision: null },
+        ];
+        return HttpResponse.json(body);
+      })
+    );
     renderTab();
-    await row("설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다");
-    const open = section("이슈 · 질문");
-    expect(
-      within(open).getAllByRole("button", { name: "기한 정하기" }).length
-    ).toBeGreaterThan(0);
 
+    await screen.findByRole("region", { name: "결정" });
+    // 고를 곳이 없는 제안을 세면 검토 완료가 영영 막힌다.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
+    expect(screen.queryByText(/고르지 않은 제안이/)).toBeNull();
+  });
+
+  it("그래프에서 감춘 항목의 할 일 변경을 반영하고 선택 저장만 실패하면 검토 완료를 막는다", async () => {
+    let issueContent = "";
+    server.use(
+      // 할 일 변경 하나를 이슈로 옮기고 나머지 제안은 걷는다.
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+        const original = await getResponse(meetingFlowHandlers, request);
+        const body = await original!.json();
+        type Row = { kind: string; content: string; included: boolean; replacements: unknown[]; taskChanges: Array<Record<string, unknown>> };
+        const items: Row[] = body.data.items;
+        const change = items.flatMap((item) => item.taskChanges)[0];
+        for (const item of items) {
+          item.replacements = [];
+          item.taskChanges = [];
+        }
+        const issue = items.find((item) => item.kind === "ISSUE" && item.included)!;
+        issue.taskChanges = [{ ...change, decision: null }];
+        issueContent = issue.content;
+        return HttpResponse.json(body);
+      })
+    );
+    renderTab();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
+    const node = (
+      await screen.findAllByRole("button", { name: (name) => name.includes(issueContent) })
+    )[0];
+    fireEvent.click(node);
+    const toggle = await screen.findByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    await waitFor(() =>
+      expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
+    );
+
+    server.use(
+      http.patch(
+        "*/v1/notes/:noteId/meeting-review/items/:itemId",
+        () =>
+          HttpResponse.json(
+            { success: false, data: null, error: { code: "INTERNAL", message: "오류" } },
+            { status: 500 }
+          ),
+        { once: true }
+      )
+    );
+    fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
+    await screen.findByText(/할 일에는 반영했지만 선택을 저장하지 못했습니다/);
+    // 할 일은 이미 바뀌었다. 선택이 저장되기 전에 확정하면 기록과 실제가 갈린다.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled()
+    );
+  });
+
+  it("할 일을 바꾼 뒤 목록을 다시 읽는 동안에도 반영이 진행 중이라 검토 완료를 막는다", async () => {
+    let issueContent = "";
+    let taskSaved = false;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let arrived!: () => void;
+    const refetching = new Promise<void>((resolve) => (arrived = resolve));
+    server.use(
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
+        const original = await getResponse(meetingFlowHandlers, request);
+        const body = await original!.json();
+        type Row = { kind: string; content: string; included: boolean; replacements: unknown[]; taskChanges: Array<Record<string, unknown>> };
+        const items: Row[] = body.data.items;
+        const change = items.flatMap((item) => item.taskChanges)[0];
+        for (const item of items) {
+          item.replacements = [];
+          item.taskChanges = [];
+        }
+        const issue = items.find((item) => item.kind === "ISSUE" && item.included)!;
+        issue.taskChanges = [{ ...change, decision: null }];
+        issueContent = issue.content;
+        return HttpResponse.json(body);
+      }),
+      // 할 일 저장 뒤의 목록 재조회를 붙잡는다. 아무것도 돌려주지 않으면 원래 목이 답한다.
+      http.put("*/v1/workspaces/:workspaceId/projects/:projectId/tasks/:taskId", () => {
+        taskSaved = true;
+      }),
+      http.get("*/v1/workspaces/:workspaceId/projects/:projectId/tasks", async () => {
+        if (!taskSaved) return;
+        arrived();
+        await held;
+      })
+    );
+    renderTab();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
     fireEvent.click(
-      within(open).getByRole("button", { name: /이슈 · 질문 \d+개 더/ })
+      (await screen.findAllByRole("button", { name: (name) => name.includes(issueContent) }))[0]
     );
-    expect((await within(open).findAllByText("해결됨")).length).toBeGreaterThan(
-      0
+    const toggle = await screen.findByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    await waitFor(() =>
+      expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
     );
+    fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
+
+    await refetching;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    // 할 일은 이미 바뀌었고 선택은 아직 저장 전이다. 이 틈에 확정하면 기록과 실제가 갈린다.
+    expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
+    release();
+  });
+
+  it("그래프에서 감춘 항목의 할 일 변경을 반영해 저장되면 같은 할 일을 겨냥한 다른 감춘 제안은 막지 않는다", async () => {
+    let firstContent = "";
+    let applied = false;
+    // 같은 할 일 변경을 감춘 항목 둘에 붙이고 나머지 제안은 걷는다. 첫 항목의 선택만 기억한다.
+    const reviewBody = async (url: string) => {
+      const original = await getResponse(meetingFlowHandlers, new Request(url));
+      const body = await original!.json();
+      type Row = { kind: string; content: string; included: boolean; replacements: unknown[]; taskChanges: Array<Record<string, unknown>> };
+      const items: Row[] = body.data.items;
+      const change = items.flatMap((item) => item.taskChanges)[0];
+      for (const item of items) {
+        item.replacements = [];
+        item.taskChanges = [];
+      }
+      const hidden = items.filter(
+        (item) => (item.kind === "ISSUE" || item.kind === "QUESTION") && item.included
+      );
+      hidden[0].taskChanges = [{ ...change, decision: applied ? "APPLIED" : null }];
+      hidden[1].taskChanges = [{ ...change, decision: null }];
+      firstContent = hidden[0].content;
+      return body;
+    };
+    server.use(
+      http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) =>
+        HttpResponse.json(await reviewBody(request.url))
+      ),
+      http.patch("*/v1/notes/:noteId/meeting-review/items/:itemId", async ({ request }) => {
+        const patch = (await request.json()) as { decisions?: Array<{ decision: string }> };
+        applied ||= patch.decisions?.some((row) => row.decision === "APPLIED") ?? false;
+        return HttpResponse.json(await reviewBody(request.url.replace(/\/items\/[^/]+$/, "")));
+      })
+    );
+    renderTab();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: (name) => name.includes(firstContent) }))[0]
+    );
+    const toggle = await screen.findByRole("radiogroup", { name: "기존 할 일에 반영할지" });
+    await waitFor(() =>
+      expect(within(toggle).getByRole("radio", { name: "반영" })).toBeEnabled()
+    );
+    fireEvent.click(within(toggle).getByRole("radio", { name: "반영" }));
+    expect(
+      await within(toggle).findByRole("radio", { name: /반영됨/ })
+    ).toHaveAttribute("aria-checked", "true");
+    // 저장된 반영은 더 막을 것이 없다. 다른 감춘 제안은 고르지 않아도 확정이 건너뛴다.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled()
+    );
+  });
+
+  it("요약 보기의 관련 항목은 요약에 서는 항목만 잇는다", async () => {
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: /^문제 정의를/ }));
+    await screen.findAllByText(/수정 기록/);
+    // 인사이트라 요약 보기에 없다 — 이으면 눌러도 열 자리가 없다.
+    expect(
+      screen.queryByRole("button", { name: /기록이 없어서가 아니라 누가 할지 안 정해서 놓친다/ })
+    ).toBeNull();
   });
 
   it("기존 할 일 변경을 반영하면 그 할 일에 바로 저장된다", async () => {
@@ -737,7 +933,7 @@ describe("검토 가능한 회의", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/주제 요약이 없습니다/)).not.toBeInTheDocument();
     expect(
-      within(section("개요")).getByRole("button", { name: "다시 시도" })
+      within(section("요약")).getByRole("button", { name: "다시 시도" })
     ).toBeInTheDocument();
   });
 

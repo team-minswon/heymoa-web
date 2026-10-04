@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Collapse } from "@/components/heymoa/collapse";
@@ -28,7 +28,7 @@ const EMPTY_TEXT: Record<Section["key"], string> = {
 
 /**
  * 한 섹션. 앞의 몇 줄만 서고 나머지는 「N개 더」로 접힌다 — 항목이 백 개 가까운 회의에서
- * 네 섹션을 다 펼치면 검토할 것이 스크롤 너머로 사라진다. 「참고」는 개수만 보이고 통째로 접힌다.
+ * 섹션을 다 펼치면 검토할 것이 스크롤 너머로 사라진다.
  */
 export function ReviewSection({
   section,
@@ -50,7 +50,6 @@ export function ReviewSection({
   onDismissConflict,
   renderDetail,
   suggestionsOf,
-  isResolved,
 }: {
   section: Section;
   topicOf: (itemId: string) => number | null;
@@ -73,19 +72,16 @@ export function ReviewSection({
   renderDetail: (item: ReviewItem) => ReactNode;
   /** 줄 아래에 늘 서는 제안 */
   suggestionsOf?: (item: ReviewItem) => ReactNode;
-  /** 요약이 풀렸다고 짚은 이슈 · 질문인가 */
-  isResolved?: (itemId: string) => boolean;
 }) {
   const kinds = REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds ?? [];
   const assignable = kinds.every((kind) => ASSIGNABLE_KINDS.has(kind));
-  const folded = section.key === "REFERENCE";
   const [expanded, setExpanded] = useState(false);
   const [composing, setComposing] = useState(false);
   // 처음 그릴 때 있던 항목. 그 뒤에 생긴 줄만 스며들며 선다.
   const [initialIds] = useState(() => new Set(section.items.map((item) => item.itemId)));
 
-  const head = folded ? [] : section.items.slice(0, initialVisible);
-  const rest = folded ? section.items : section.items.slice(initialVisible);
+  const head = section.items.slice(0, initialVisible);
+  const rest = section.items.slice(initialVisible);
   const showRest = expanded || rest.some((item) => item.itemId === openItemId);
 
   const row = (item: ReviewItem) => {
@@ -112,7 +108,6 @@ export function ReviewSection({
         onSave={(patch) => onSaveItem(item.itemId, patch)}
         onDismissConflict={onDismissConflict}
         suggestions={suggestionsOf?.(item)}
-        resolved={isResolved?.(item.itemId) ?? false}
       >
         {openItemId === item.itemId ? renderDetail(item) : null}
       </ReviewRow>
@@ -155,33 +150,11 @@ export function ReviewSection({
 
       {head.map(row)}
 
-      {folded && section.items.length > 0 ? (
-        <button
-          type="button"
-          aria-expanded={showRest}
-          onClick={() => setExpanded((value) => !value)}
-          className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-control py-1.5 text-left text-[12.5px] text-[var(--el-body)] hover:text-[var(--el-ink)]"
-        >
-          {section.kindCounts.map((row) => (
-            <span key={row.kind}>
-              {row.label} <span className="tabular-nums">{row.count}</span>
-            </span>
-          ))}
-          <span className="ml-auto inline-flex items-center gap-1 text-[var(--el-muted)]">
-            {showRest ? "접기" : "펼치기"}
-            <ChevronDown
-              aria-hidden
-              className={cn("size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none", showRest && "rotate-180")}
-            />
-          </span>
-        </button>
-      ) : null}
-
       <Collapse open={showRest} lazy>
         {rest.map(row)}
       </Collapse>
 
-      {!folded && rest.length > 0 ? (
+      {rest.length > 0 ? (
         <ShowMoreButton
           open={showRest}
           moreLabel={`${section.label} ${rest.length}개 더`}

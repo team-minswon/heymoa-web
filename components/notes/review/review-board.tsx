@@ -45,11 +45,13 @@ import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 import {
   KIND_LABEL,
   REVIEW_SECTIONS,
+  isSummaryKind,
+  isSummarySection,
   sectionsOf,
   type ReviewItem,
+  type ReviewSection as ReviewSectionData,
 } from "@/lib/notes/review/sections";
 import {
-  resolvedItemIds,
   topicChips,
   topicIndex,
   topicNumber,
@@ -122,6 +124,12 @@ export function ReviewBoard({
   const [view, setView] = useState<View>("summary");
   const [topic, setTopic] = useState<number | null>(null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  /**
+   * 할 일에는 반영했는데 선택 저장이 실패한 변경(`항목 id:할 일 id`). 반영은 할 일을 먼저 바꾸고 선택을 나중에 저장한다.
+   * ponytail: 이 화면이 떠 있는 동안만 기억한다. 새로고침하면 잊어, 감춘 항목의 그 제안은 다시 고르지 않은 채
+   * 확정될 수 있다(할 일 이력에는 남는다). 막으려면 반영과 선택을 server 가 한 번에 저장해야 한다.
+   */
+  const [unsavedApplies, setUnsavedApplies] = useState<ReadonlySet<string>>(() => new Set());
   const lastRequest = useRef<{ body: string; id: string } | null>(null);
 
   const review = okData(reviewQuery.data);
@@ -136,13 +144,23 @@ export function ReviewBoard({
   );
   const topics = useMemo(() => topicIndex(summary), [summary]);
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
-  const topicEntries = useMemo(() => topicChips(summary, items), [summary, items]);
-  const resolved = useMemo(() => resolvedItemIds(summary), [summary]);
+  // 요약 보기는 결정 · 할 일만 세운다(APP-864). 이슈 · 질문 · 참고는 그래프 보기에만 선다.
+  // 목차의 수도 그 항목만 센다 — 그 주제로 좁혔을 때 보이는 수와 같아야 한다.
+  const topicEntries = useMemo(
+    () =>
+      topicChips(summary, items, (itemId) => {
+        const item = itemsById.get(itemId);
+        return !item || isSummaryKind(item.kind);
+      }),
+    [summary, items, itemsById]
+  );
   const topicTitleOf = (ordinal: number) =>
     topicEntries.find((entry) => entry.ordinal === ordinal)?.title ?? "";
   const selectedTopic =
     topicEntries.find((entry) => entry.ordinal === topic) ?? null;
-  const sections = sectionsOf(items, topicOf, topic);
+  const sections = sectionsOf(items, topicOf, topic).filter((section) =>
+    isSummarySection(section.key)
+  );
   const tasksById = useMemo(
     () => new Map((tasks ?? []).map((task) => [task.taskId, task])),
     [tasks]
@@ -186,7 +204,19 @@ export function ReviewBoard({
   }
 
   const confirmSummary = confirmSummaryOf(items);
-  const includedCount = items.filter((item) => item.included).length;
+  const summaryItems = items.filter((item) => isSummaryKind(item.kind));
+  const includedCount = summaryItems.filter((item) => item.included).length;
+  const gateItems = items.map((item) =>
+    isSummaryKind(item.kind)
+      ? item
+      : {
+          ...item,
+          replacements: [],
+          taskChanges: item.taskChanges.filter((row) =>
+            unsavedApplies.has(`${item.itemId}:${row.target.itemId}`)
+          ),
+        }
+  );
   const unnamedAssigned = items.filter(
     (item) =>
       item.included &&
@@ -206,10 +236,15 @@ export function ReviewBoard({
   const confirmBlocked = confirmBlockReason({
     saving,
     applyingTasks,
-    hasTaskChanges: items.some(
+    // **화면에 서는 항목의 제안만 본다.** 요약 보기에 없는 이슈 · 질문 · 참고의 제안은 고를 곳이 없어,
+    // 세면 검토 완료가 영영 막힌다. 고르지 않은 제안은 확정이 건너뛴다 — 이전 결정을 끝내지 않고 할 일도
+    // 바꾸지 않는다(그래프 보기에서 고르면 그 선택대로 된다).
+    // 다만 할 일에 이미 반영한 변경은 감춘 항목이라도 선택이 저장될 때까지 센다 — 안 세면 할 일은 바뀌었는데
+    // 제안은 고르지 않은 채 확정돼, 확정 뒤에는 선택을 다시 저장할 길도 없다.
+    hasTaskChanges: gateItems.some(
       (item) => item.included && item.taskChanges.length > 0
     ),
-    unchosen: unchosenSuggestionCount(items, (taskId) => tasksById.has(taskId)),
+    unchosen: unchosenSuggestionCount(gateItems, (taskId) => tasksById.has(taskId)),
     tasks:
       !workspaceId || !projectId || tasksQuery.isPending
         ? "pending"
@@ -259,13 +294,24 @@ export function ReviewBoard({
               }
               onRetryTask={() => void tasksQuery.refetch()}
               disabled={!editable || saving || !item.included}
-              onChoose={(next) =>
-                choose(
+              onChoose={async (next) => {
+                const saved = await choose(
                   item,
                   change.target.itemId,
                   next === "change" ? "APPLIED" : "KEEP"
-                )
-              }
+                );
+                // 「반영」의 선택 저장은 할 일을 바꾼 뒤에만 온다. 실패한 것만 남겨 두고 저장되면 지운다.
+                if (next === "change") {
+                  const key = `${item.itemId}:${change.target.itemId}`;
+                  setUnsavedApplies((keys) => {
+                    const nextKeys = new Set(keys);
+                    if (saved) nextKeys.delete(key);
+                    else nextKeys.add(key);
+                    return nextKeys;
+                  });
+                }
+                return saved;
+              }}
             />
           ) : (
             <p
@@ -279,12 +325,14 @@ export function ReviewBoard({
       </div>
     ) : null;
 
+  const summaryItemsById = new Map(summaryItems.map((item) => [item.itemId, item]));
   // 요약 보기의 줄은 제안을 줄 아래에 늘 세우므로 펼친 속에는 수정 기록만 둔다. 그래프의 상세 패널은 제안까지 품는다.
   const detailOf = (item: ReviewItem, inPanel = false) => (
     <ItemDetail
       item={item}
       summary={summary}
-      itemsById={itemsById}
+      // 요약 보기의 줄은 거기 서는 항목으로만 잇는다 — 없는 항목으로 이으면 눌러도 열 자리가 없다.
+      itemsById={inPanel ? itemsById : summaryItemsById}
       onSelectItem={selectLinked}
       suggestions={inPanel ? suggestionsOf(item) : null}
       elevated={!inPanel}
@@ -404,63 +452,63 @@ export function ReviewBoard({
                 onTopicChange={setTopic}
               />
               {(() => {
+                const sectionOf = (section: ReviewSectionData) => (
+                  <ReviewSection
+                    // 주제를 바꾸면 쓰던 추가 폼도 닫는다. 제출 시점의 주제로 저장되므로 글이 다른 주제에 새면 안 된다.
+                    key={`${section.key}:${selectedTopic?.ordinal ?? "all"}`}
+                    section={section}
+                    topicOf={topicOf}
+                    topicTitleOf={topicTitleOf}
+                    topicTitle={selectedTopic?.title ?? null}
+                    canEdit={editable}
+                    choices={assigneeChoices}
+                    openItemId={openItemId}
+                    busyItemId={editor.busyItemId}
+                    conflictItemId={editor.conflictItemId}
+                    adding={editor.adding}
+                    hint={
+                      editable &&
+                      section.key === "ACTION_ITEM" &&
+                      section.items.length > 0
+                        ? "담당과 기한은 칸을 눌러 바로 고칩니다"
+                        : undefined
+                    }
+                    aside={
+                      section.key === "ACTION_ITEM" &&
+                      unnamedAssigned > 0 ? (
+                        <>
+                          <span>
+                            이름 없는 화자에게 걸린 할 일 {unnamedAssigned}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={onOpenTranscript}
+                            className="inline-flex h-[26px] items-center rounded-full border border-[var(--el-hairline-strong)] px-2.5 text-xs font-medium text-[var(--el-ink)] hover:bg-[var(--el-canvas-soft)]"
+                          >
+                            화자 이름 붙이기
+                          </button>
+                        </>
+                      ) : undefined
+                    }
+                    onToggleItem={toggleItem}
+                    onSaveItem={editor.updateItem}
+                    onAddItem={(kind, content) =>
+                      editor.addItem({
+                        kind,
+                        content,
+                        citations: [],
+                        // 전체 보기에서는 키 자체를 싣지 않는다.
+                        ...(selectedTopic && { topicOrdinal: selectedTopic.ordinal }),
+                      })
+                    }
+                    onDismissConflict={editor.dismissConflict}
+                    renderDetail={detailOf}
+                    suggestionsOf={suggestionsOf}
+                  />
+                );
                 const list = (
                   <>
-                    {sections.map((section) => (
-                      <ReviewSection
-                        // 주제를 바꾸면 쓰던 추가 폼도 닫는다. 제출 시점의 주제로 저장되므로 글이 다른 주제에 새면 안 된다.
-                        key={`${section.key}:${selectedTopic?.ordinal ?? "all"}`}
-                        section={section}
-                        topicOf={topicOf}
-                        topicTitleOf={topicTitleOf}
-                        topicTitle={selectedTopic?.title ?? null}
-                        canEdit={editable}
-                        choices={assigneeChoices}
-                        openItemId={openItemId}
-                        busyItemId={editor.busyItemId}
-                        conflictItemId={editor.conflictItemId}
-                        adding={editor.adding}
-                        hint={
-                          editable &&
-                          section.key === "ACTION_ITEM" &&
-                          section.items.length > 0
-                            ? "담당과 기한은 칸을 눌러 바로 고칩니다"
-                            : undefined
-                        }
-                        aside={
-                          section.key === "ACTION_ITEM" &&
-                          unnamedAssigned > 0 ? (
-                            <>
-                              <span>
-                                이름 없는 화자에게 걸린 할 일 {unnamedAssigned}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={onOpenTranscript}
-                                className="inline-flex h-[26px] items-center rounded-full border border-[var(--el-hairline-strong)] px-2.5 text-xs font-medium text-[var(--el-ink)] hover:bg-[var(--el-canvas-soft)]"
-                              >
-                                화자 이름 붙이기
-                              </button>
-                            </>
-                          ) : undefined
-                        }
-                        onToggleItem={toggleItem}
-                        onSaveItem={editor.updateItem}
-                        onAddItem={(kind, content) =>
-                          editor.addItem({
-                            kind,
-                            content,
-                            citations: [],
-                            // 전체 보기에서는 키 자체를 싣지 않는다.
-                            ...(selectedTopic && { topicOrdinal: selectedTopic.ordinal }),
-                          })
-                        }
-                        onDismissConflict={editor.dismissConflict}
-                        renderDetail={detailOf}
-                        suggestionsOf={suggestionsOf}
-                        isResolved={(itemId) => resolved.has(itemId)}
-                      />
-                    ))}
+                    {sections.map(sectionOf)}
                   </>
                 );
                 return selectedTopic ? (
@@ -585,7 +633,7 @@ export function ReviewBoardSkeleton() {
           <Skeleton className="ml-auto h-8 w-[120px] rounded-full" />
         </div>
         <ReviewOverview summary={null} pending />
-        {REVIEW_SECTIONS.slice(0, 3).map((section) => (
+        {REVIEW_SECTIONS.slice(0, 2).map((section) => (
           <SectionBlock key={section.key} title={section.label}>
             {["78%", "64%", "71%"].map((width) => (
               <div
