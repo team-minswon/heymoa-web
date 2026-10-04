@@ -89,8 +89,7 @@ type _h1 = Assert<Extends<ProposalRevision, z.infer<typeof proposalHeadSchema>>>
 contract.ts ──┬── reducer.ts        (순수 함수. 타입만 봄)
               ├── timeline.ts       (순수 함수. 타입만 봄)
               ├── note-topic-protocol.ts   (WS union에 스키마를 얹음)
-              ├── proposal-rail.tsx
-              ├── proposal-card.tsx
+              ├── note-timeline.tsx
               ├── proposal-coverage-row.tsx
               ├── note-realtime-provider.tsx
               └── lib/mocks/proposals.ts

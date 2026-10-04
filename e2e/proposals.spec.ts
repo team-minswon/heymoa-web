@@ -19,60 +19,58 @@ const NOTE_ID = "01K0000000005";
 /** `CONTEXT_FAILING_NOTE_ID`. 후보 조회가 500 을 내는 노트다. */
 const FAILING_NOTE_ID = "01K0000000006";
 
-const railUrl = `/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full`;
+const timelineUrl = `/w/${WORKSPACE_ID}/notes/${NOTE_ID}?view=full&tab=context`;
 
-async function openRail(page: import("@playwright/test").Page) {
-  await page.goto(railUrl);
-  // 이 목 노트는 「시작 전」이라 레일 기본이 「이 회의」다.
-  await page.getByRole("tab", { name: "실시간 정리" }).click();
+/** 「전체」 칩의 접근성 이름에 센 개수가 든다. 첫 snapshot 이 서기 전에는 개수가 없다. */
+const allChip = (page: import("@playwright/test").Page) =>
+  page.getByRole("button", { name: /^전체 \d+$/ });
+
+async function openTimeline(page: import("@playwright/test").Page) {
+  await page.goto(timelineUrl);
+  await expect(allChip(page)).toBeVisible({ timeout: 20_000 });
 }
 
-test.describe("맥락 후보 레일", () => {
-  test("REST 스냅샷만으로 후보가 그려진다", async ({ page }) => {
+test.describe("실시간 정리 타임라인", () => {
+  test("REST 스냅샷만으로 후보가 안건 아래 시간순으로 그려진다", async ({ page }) => {
     test.setTimeout(60_000);
-    await openRail(page);
+    await openTimeline(page);
 
     // 스냅샷이 정본이다 — WS 이벤트가 하나도 안 와도 화면이 선다.
-    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({ timeout: 20_000 });
     await expect(
       page.getByText("경로 데이터 저장소는 MongoDB를 사용한다")
     ).toBeVisible();
-
-    // 결정만 강조되고 유형은 회색 단어로 말한다.
-    await expect(page.getByText("결정").first()).toBeVisible();
-    // 근거 시각이 제목 줄 오른끝에 회의 축으로 찍힌다 — 신판(pen `owfEJ`)은 「전사」 접두 없이 시각만 적는다.
+    // 안건이 머리로 선다.
     await expect(
-      page.getByTestId("note-agent-rail").getByText(/\d+:\d\d/).first()
+      page.getByRole("button", { name: /다음 스프린트 범위/ })
+    ).toBeVisible();
+    // 근거 시각이 왼쪽 열에 회의 축으로 찍히고, 누르면 스크립트로 간다.
+    await expect(
+      page.getByRole("button", { name: /^스크립트 \d+:\d\d로 가기$/ }).first()
     ).toBeVisible();
   });
 
-  test("철회와 답변됨이 서로 다르게 보인다", async ({ page }) => {
+  test("철회와 답한 질문이 서로 다르게 보인다", async ({ page }) => {
     test.setTimeout(60_000);
-    await openRail(page);
-    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({ timeout: 20_000 });
+    await openTimeline(page);
 
     // 철회는 취소이고 해결은 성취다. 같은 흐림으로 그리면 안 된다.
-    await expect(page.getByText("철회됨")).toBeVisible();
-    await expect(page.getByText("답변됨")).toBeVisible();
+    await expect(page.getByText("철회됨").first()).toBeVisible();
+    await expect(page.getByText(/에 답함$/).first()).toBeVisible();
   });
 
   test("새로고침해도 원장이 남는다 — 이벤트가 아니라 스냅샷이 정본이다", async ({
     page,
   }) => {
     test.setTimeout(90_000);
-    await openRail(page);
-    const before = await page
-      .getByText(/지금까지 \d+건/)
-      .textContent({ timeout: 20_000 });
+    await openTimeline(page);
+    const before = await allChip(page).getAttribute("aria-label");
 
     await page.reload();
-    await page.getByRole("tab", { name: "실시간 정리" }).click();
 
-    const after = await page
-      .getByText(/지금까지 \d+건/)
-      .textContent({ timeout: 20_000 });
+    await expect(allChip(page)).toBeVisible({ timeout: 20_000 });
+    const after = await allChip(page).getAttribute("aria-label");
     expect(after).toBe(before);
-    expect(after).not.toBe("지금까지 0건");
+    expect(after).not.toBe("전체 0");
   });
 
   test("분석이 실패해도 스크립트와 회의 종료가 계속된다", async ({ page }) => {
@@ -83,8 +81,8 @@ test.describe("맥락 후보 레일", () => {
       `/w/${WORKSPACE_ID}/notes/${FAILING_NOTE_ID}?view=full&tab=transcript`
     );
 
-    await page.getByRole("tab", { name: "실시간 정리" }).click();
-    // 실패는 실패로 그린다. 「사건 없음」으로 접으면 사용자가 0건을 사실로 믿는다.
+    await page.getByRole("tab", { name: /^타임라인/ }).click();
+    // 실패는 실패로 그린다. 「항목 없음」으로 접으면 사용자가 0건을 사실로 믿는다.
     await expect(page.getByText(/불러오지 못했습니다/)).toBeVisible({
       timeout: 30_000,
     });
@@ -104,18 +102,13 @@ test.describe("맥락 후보 레일", () => {
 
   test("근거를 눌러 스크립트의 그 발화로 간다", async ({ page }) => {
     test.setTimeout(60_000);
-    await openRail(page);
-    await expect(page.getByText(/지금까지 \d+건/)).toBeVisible({ timeout: 20_000 });
+    await openTimeline(page);
 
+    // 항목을 눌러 근거를 펼치고, 근거 행(시각 + 발화)을 눌러 점프한다.
     await page
       .getByRole("button", { name: /경로 데이터 저장소는 MongoDB를 사용한다/ })
       .click();
-    // 신판 카드는 제목을 눌러 근거를 펼치고, 근거 행(발화 인용 + 시각)을 눌러 점프한다.
-    const quote = page
-      .getByTestId("note-agent-rail")
-      .locator("li li button")
-      .first();
-    await quote.click();
+    await page.locator('[id^="timeline-item-"][id$="-details"] button').first().click();
 
     // 근거 점프는 히스토리에 자리를 남긴다 — 각주를 따라간 것이지 탭을 고른 것이 아니다.
     await expect(page).toHaveURL(/tab=transcript/);

@@ -61,9 +61,8 @@ export function normalizeNoteViewQuery(
         ? "summary"
         : rawTab === "transcript"
           ? "transcript"
-          : // 「실시간 정리」는 사이드 뷰 전용 탭이다 — 전체 뷰에서는 오른쪽 레일이 그
-            // 자리를 맡으므로 full로 넘어온 딥링크는 기본 탭으로 접는다.
-            rawTab === "context" && view === "side"
+          : // 「타임라인」. 예전에는 사이드 뷰 전용이라 full 딥링크를 기본 탭으로 접었다.
+            rawTab === "context"
             ? "context"
             : // 기본은 정보다 — 회의를 열면 제목·참여자·시각이 먼저 보인다.
               "details";

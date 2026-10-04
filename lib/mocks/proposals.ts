@@ -23,7 +23,7 @@ import type {
  * 실서버 산출물(`__fixtures__/synthetic-ledger-snapshot.json`)은 8건 전부 1~2개이고
  * `lastEvidenceSequence` 도 `min(1)` 이다 — 근거가 있다는 전제의 계약이다. 목이 그 상태를
  * 담으면 **전사 시각이 없는 카드**가 화면에 서서, 일어나지 않을 경우를 보고 레이아웃을
- * 정하게 된다. 화면이 그래도 안 깨지는지는 `proposal-rail.test.tsx` 가 지킨다.
+ * 정하게 된다. 근거 없는 후보를 화면이 견디는지는 `timeline.test.ts` 가 지킨다.
  * - `runs`의 **구멍 하나**와 **포화 구간 하나**
  *
  * **세 필터가 각각 볼 만큼 있어야 한다.** 한 묶음이 한둘이면 그 화면의 리듬을 눈으로 못

@@ -203,7 +203,7 @@ export const CONTEXT: Item[] = [
 ];
 
 /**
- * 아이콘은 `lib/notes/proposals/presentation.ts`의 `CONTEXT_KIND_ICON` 그대로다.
+ * 아이콘은 앱의 옛 실시간 정리 레일(APP-863 에서 본문 타임라인으로 옮기기 전)과 같다.
  * 묶음 머리와 카드가 **같은 아이콘**을 쓴다(앱이 그렇다).
  */
 export const CONTEXT_ICON: Record<ContextKind, LucideIcon> = {

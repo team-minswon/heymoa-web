@@ -5,7 +5,9 @@ import {
   ArrowLeft,
   Expand,
   MoreHorizontal,
+  PanelRight,
   Shrink,
+  Sparkles,
   Trash2,
   WifiOff,
 } from "lucide-react";
@@ -22,12 +24,9 @@ import {
   NoteDetails,
   NoteDetailsSkeleton,
 } from "@/components/notes/note-details";
-import { ProposalRail } from "@/components/notes/proposal-rail";
 import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
-import {
-  NoteAgentRail,
-  type RailTab,
-} from "@/components/notes/note-agent-rail";
+import { NoteAgentRail } from "@/components/notes/note-agent-rail";
+import { NoteTimeline } from "@/components/notes/note-timeline";
 import { NoteParticipantAvatars } from "@/components/notes/note-participants";
 import { ReviewTab } from "@/components/notes/review/review-tab";
 import { TranscriptView } from "@/components/notes/transcript-view";
@@ -63,7 +62,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * 공유 챗봇이 사라지면서 `chat`이 빠졌습니다 — 대화는 이제 탭이 아니라 레일입니다.
- * `context`는 사이드 뷰 전용입니다 — 전체 뷰에서는 레일이 그 자리를 맡습니다.
+ * `context`는 「타임라인」 탭입니다. 값 이름은 딥링크(`?tab=context`)를 지키려고 그대로 둡니다.
  */
 export type NoteTab = "context" | "details" | "transcript" | "summary";
 
@@ -165,63 +164,40 @@ export function NotePanel({
     setDeleteTargetId(null);
   }
   const noteLoadFailed = noteQuery.isError && !note;
-  // 전체 화면의 레일은 **상주다** — 회의 상태로 여닫지 않고, 닫기 버튼도 없다
-  // (design.pen `XtEMZ`/`L4PpR`: 오른쪽 440 고정). 예전에는 회의가 살아 있을 때만 떠서
-  // 종료된 노트를 열면 오른쪽이 통째로 사라졌고, 그만큼 본문 폭이 튀었다.
-  //
-  // **노트를 못 읽었으면 상주도 없다.** 왼쪽은 `InlineRetry`인데 오른쪽 레일이 「회의 상태를
-  // 확인하는 중」을 그리면 같은 실패가 두 가지 뜻으로 보인다. side 경로는 이미 같은 조건으로
-  // 챗 탭을 뺀다. 캐시가 있으면 `note`가 살아 있어 여기 걸리지 않으므로, 흐르던 스트림이
-  // 일시적 조회 실패로 끊기지는 않는다.
+  // **노트를 못 읽었으면 레일도 없다.** 왼쪽은 `InlineRetry`인데 오른쪽 레일이 서면 같은
+  // 실패가 두 가지 뜻으로 보인다. 캐시가 있으면 `note`가 살아 있어 여기 걸리지 않으므로, 흐르던
+  // 스트림이 일시적 조회 실패로 끊기지는 않는다.
   const showAgentRail = view === "full" && !noteLoadFailed;
-  // **상주는 넓은 화면 규칙이다.** 정본은 1440 캔버스이고, 좁은 화면에서 레일은 옆이 아니라
-  // 본문 아래 14rem 레인으로 눕는다 — 회의가 죽어 있을 때까지 그 레인을 세우면 전사 높이가
-  // 0이 된다(모바일 landscape에서 실측). 그래서 좁은 화면에서는 살아 있을 때만 세운다.
-  const meetingLive = phase === "active" || phase === "not-started";
-  // **레일은 「실시간 정리」가 기본이다** — 회의 상태와 무관하게. 사용자가 고른 탭은 지킨다.
-  //
-  // 상태에 **주어(noteId)를 함께 담는다** — 이 패널은 노트가 바뀌어도 재마운트되지
-  // 않아서(`deleteTargetId`와 같은 함정), 값만 담으면 A의 선택이 B에 남는다.
-  const [rail, setRail] = useState<{
-    noteId: string;
-    tab: RailTab;
-    /** 좁은 화면에서 접힌 레일을 펼쳤다. 탭 값으로 가르면 항상 참이라 접힘이 죽는다. */
-    touched: boolean;
-  }>(() => ({ noteId, tab: "context", touched: false }));
-  // 렌더 중 보정 — effect로 미루면 이전 노트의 탭이 한 프레임 그려진다.
-  if (rail.noteId !== noteId) {
-    setRail({ noteId, tab: "context", touched: false });
-  }
-  const railTab = rail.tab;
-  const railTouched = rail.touched;
-  const setRailTab = useCallback((tab: RailTab) => {
-    setRail((current) => ({ ...current, tab, touched: true }));
-  }, []);
+  /**
+   * **내 에이전트 레일을 접었는가.** `null`은 기본값이다 — 넓은 화면에서는 펴고, 좁은 화면에서는
+   * 접는다(좁은 화면의 레일은 본문 아래 14rem 레인이라 전사 높이를 깎는다). 사용자가 한 번
+   * 고르면 화면 폭과 상관없이 그 값을 따른다.
+   *
+   * 노트에 묶지 않는다 — 노트를 넘겨도 접어 둔 레일은 접혀 있어야 한다.
+   */
+  const [agentRail, setAgentRail] = useState<boolean | null>(null);
   // 개인 챗봇이 한 턴을 굴리는 중이면 레일을 접으면 안 된다 — 중지도 도구 승인도 그 안에만
-  // 있는데, 레일이 슬롯을 쥐고 있어 떠 있는 FAB로 되돌아가지도 않는다. 다른 멤버가 회의를
-  // 끝내는 순간 좁은 화면에서 답변이 통째로 화면 밖으로 나가던 자리다.
+  // 있는데, 노트 안에서는 떠 있는 카드와 FAB 도 감춰져 있어 닿을 길이 끊긴다.
   const { isTurnActive: personalTurnActive } = usePersonalChat();
-  // 좁은 화면에서 **대화를 펼칠지**. 접혀도 탭 줄은 남는다 — 통째로 감추면 「내 에이전트」를
-  // 고를 버튼까지 감춰져서 종료된 회의에는 들어갈 길이 없어진다(닭이 먼저냐 달걀이 먼저냐).
-  const railLiveNow =
-    meetingLive || phase === "paused" || railTouched || personalTurnActive;
   /** 어느 쪽이든 한 턴이 도는 중. 뷰를 바꾸면 그 답변에 닿을 길이 끊긴다. */
   const turnActive = personalTurnActive;
   /**
-   * **사이드 뷰에는 레일이 없다.** 전체 뷰는 448 레일에 「실시간 정리」를 얹지만 860 시트에는
-   * 그 자리가 없어서 노트 탭으로 내린다 — 공유 챗이 이미 같은 문제를 그렇게 푼다.
-   * 컴포넌트는 하나이고 서는 자리만 둘이다.
+   * 기본값이라 좁은 화면에서 접혀 있다. **답이 흐르는 동안에는 기본값도 접지 않는다** — 넓은
+   * 화면에서 묻고 창을 좁히면 반응형 규칙이 레일을 감춰 중지·도구 승인에 닿을 길이 끊긴다.
    */
-  const showSideContextTab =
-    view === "side" &&
+  const railFoldedOnNarrow = agentRail === null && !personalTurnActive;
+  /**
+   * **타임라인 탭.** 전체 뷰에서는 늘 선다 — 탭 줄이 회의 상태에 따라 늘었다 줄면 같은 자리를
+   * 누를 때 다른 탭이 눌린다.
+   *
+   * 사이드 뷰는 회의가 끝나도 남긴다(회의 중에 본 것을 되짚는 것이 이 화면의 절반이다).
+   * **`not-started` 는 예외인데, `unknown` 에서 고른 뒤 확정되는 경로가 있다.** 그때 trigger 와
+   * content 만 사라지고 controlled `tab="context"` 는 남아 빈 면이 된다 — 지금 그 탭을 보고
+   * 있으면 유지한다.
+   */
+  const showContextTab =
     !noteLoadFailed &&
-    // **회의가 끝나도 남긴다.** 원장은 종료로 지워지지 않고, 회의 중에 본 것을 나중에
-    // 되짚는 것이 이 화면의 절반이다. 여기서 탭을 걷으면 사이드 뷰에는 되짚을 길이 없다.
-    //
-    // **`not-started` 는 예외인데, `unknown` 에서 고른 뒤 확정되는 경로가 있다.** 그때
-    // trigger 와 content 만 사라지고 controlled `tab="context"` 는 남아 빈 면이 된다.
-    // 지금 그 탭을 보고 있으면 유지한다 — `showSideChatTab` 이 같은 이유로 같은 모양이다.
-    (phase !== "not-started" || tab === "context");
+    (view === "full" || phase !== "not-started" || tab === "context");
   const showSummaryTab =
     view === "full" ||
     (view === "side" &&
@@ -557,9 +533,9 @@ export function NotePanel({
               <TabsTrigger value="transcript" className={TAB_ITEM}>
                 스크립트
               </TabsTrigger>
-              {showSideContextTab ? (
+              {showContextTab ? (
                 <TabsTrigger value="context" className={TAB_ITEM}>
-                  실시간 정리
+                  타임라인
                 </TabsTrigger>
               ) : null}
               {/* 요약은 종료 시 생성되지만 full은 항상 보인다 — 종료 전엔 탭이 안내를 보인다. */}
@@ -620,6 +596,24 @@ export function NotePanel({
                   onDeleted={onDeleted ?? onClose}
                 />
               </div>
+            ) : null}
+            {/* **접힌 레일을 다시 여는 손잡이.** 레일이 통째로 빠지므로 남는 줄이 없다 — 여기가
+                그 자리다. 기본값(`null`)에서는 좁은 화면에서만 레일이 접혀 있으므로 그때만 선다. */}
+            {showAgentRail && (agentRail === false || railFoldedOnNarrow) ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "shrink-0 rounded-control text-[var(--el-muted)]",
+                  railFoldedOnNarrow && "lg:hidden"
+                )}
+                aria-label="내 에이전트 열기"
+                aria-expanded={false}
+                onClick={() => setAgentRail(true)}
+              >
+                <PanelRight />
+              </Button>
             ) : null}
           </div>
 
@@ -791,14 +785,23 @@ export function NotePanel({
               이게 없으면 레일 루트의 `flex-1` 이 걸릴 데가 없어 높이가 내용만큼 자란다 —
               안쪽 `ScrollArea` 가 넘칠 일이 없어져 스크롤바가 아예 안 생기고 목록이 패널
               밖으로 흘러 나간다. 스크립트 탭이 같은 클래스를 쓰는 이유도 같다. */}
-          {showSideContextTab ? (
-            <TabsContent
-              value="context"
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <ProposalRail
+          {showContextTab ? (
+            <TabsContent value="context" className="min-h-0 flex-1">
+              <NoteTimeline
+                header={
+                  note && meta
+                    ? {
+                        title: note.title,
+                        whenIso: meta.whenIso,
+                        whenLabel: meta.whenLabel,
+                        participantCount: note.participants?.length ?? 0,
+                        projectName: note.projectName ?? null,
+                      }
+                    : null
+                }
                 onEvidenceSelect={jumpToSegment}
                 meetingEnded={phase === "ended"}
+                recording={phase === "active"}
               />
             </TabsContent>
           ) : null}
@@ -834,9 +837,16 @@ export function NotePanel({
           </TabsContent>
         </Tabs>
 
-        {showDock ? (
+        {showDock || (showAgentRail && agentRail === false) ? (
           /* 좁은 화면에서는 스크롤을 덮지 않는 footer 레인이고, lg부터 기존처럼 떠 있다. */
-          <div className="pointer-events-none z-30 flex shrink-0 justify-center pb-6 pl-5 pr-[84px] sm:px-9 lg:absolute lg:inset-x-0 lg:bottom-6 lg:pb-0">
+          <div
+            className={cn(
+              "pointer-events-none z-30 flex shrink-0 items-end justify-center gap-2 pb-6 pl-5 pr-[84px] sm:px-9 lg:absolute lg:inset-x-0 lg:bottom-6 lg:pb-0",
+              // 묻기 알약만 설 때는 넓은 화면 전용이다 — 좁은 화면에 빈 레인을 세우지 않는다.
+              !showDock && "max-lg:hidden"
+            )}
+          >
+            {showDock ? (
             <div className="pointer-events-auto flex min-w-0 flex-col items-center gap-2">
               {recordingHere ? (
                 <RecordingConnectionNotice
@@ -860,13 +870,30 @@ export function NotePanel({
                 onStart={() => onTabChange("transcript")}
               />
             </div>
+            ) : null}
+            {/* 레일을 접어 두었을 때 묻는 자리. 누르면 레일이 다시 열린다 — 대화는 레일에만 산다. */}
+            {showAgentRail && agentRail === false ? (
+              <button
+                type="button"
+                onClick={() => setAgentRail(true)}
+                className="pointer-events-auto flex h-11 w-[300px] shrink-0 items-center gap-2.5 rounded-full border border-[var(--el-hairline)] bg-white/95 pr-4 pl-4 text-left shadow-e2 backdrop-blur max-lg:hidden"
+              >
+                <Sparkles aria-hidden className="size-[15px] shrink-0 text-[var(--el-muted)]" />
+                <span className="truncate text-[13.5px] text-[var(--el-muted-soft)]">
+                  이 회의에 대해 물어보기
+                </span>
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
 
       {showAgentRail ? (
-        // 넓은 화면은 우측 레일(440 — design.pen `L4PpR`), 좁은 세로 화면은 본문 아래
-        // 스택이다. 짧은 가로 화면은 14rem 높이 floor가 전사를 밀어내므로 옆 열로 둔다.
+        // **접어도 언마운트하지 않고 감춘다.** 언마운트하면 개인 챗 패널이 포털 자리를 잃고
+        // 다시 마운트되어, 쓰던 질문과 회의록 참조 칩이 사라진다. 화면에서는 통째로 빠진다.
+        //
+        // 넓은 화면은 우측 레일(440), 좁은 세로 화면은 본문 아래 스택이다. 짧은 가로 화면은
+        // 14rem 높이 floor가 전사를 밀어내므로 옆 열로 둔다.
         //
         // 전체 화면에서는 캔버스 10px이 두 패널을 가르므로 **맞닿는 테두리를 두지 않는다** —
         // 두면 틈 양쪽에 선이 하나씩 서서 두 줄로 보인다. 좁은 화면은 틈 없이 붙으므로
@@ -877,16 +904,13 @@ export function NotePanel({
             "flex h-[clamp(14rem,36dvh,18rem)] w-full shrink-0 flex-col overflow-hidden bg-white max-lg:landscape:h-full max-lg:landscape:w-[min(22rem,42vw)] lg:h-full lg:w-[440px]",
             paneChrome,
             "max-lg:rounded-none max-lg:border-t max-lg:border-[var(--el-hairline)] max-lg:landscape:border-l max-lg:landscape:border-t-0",
-            // 접히면 탭 줄 높이만 남는다. 예전에는 `max-lg:hidden`으로 통째로 감췄다.
-            !railLiveNow && "max-lg:h-auto max-lg:landscape:h-auto"
+            railFoldedOnNarrow && "max-lg:hidden",
+            agentRail === false && "hidden"
           )}
         >
           <NoteAgentRail
-            tab={railTab}
-            onTabChange={setRailTab}
-            onEvidenceSelect={jumpToSegment}
-            foldedOnNarrow={!railLiveNow}
-            meetingEnded={phase === "ended"}
+            onCollapse={() => setAgentRail(false)}
+            collapseDisabled={personalTurnActive}
           />
         </div>
       ) : null}

@@ -305,8 +305,8 @@ test("keeps the mobile recorder dock outside the transcript above a bounded chat
 
   await expect(page.getByTestId("transcript-block").first()).toBeVisible();
   await expect(dock).toBeVisible();
-  // 기록 중 레일은 「실시간 정리」로 열린다 — 개인 대화는 탭을 골라야 슬롯을 받는다.
-  await tray.getByRole("tab", { name: "내 에이전트" }).click();
+  // 좁은 화면에서 내 에이전트 레일은 접힌 채로 시작한다 — 위 막대 버튼으로 연다.
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await expect(tray.getByLabel("메시지")).toBeVisible();
 
   const [transcriptBox, dockBox, trayBox] = await Promise.all([
@@ -352,8 +352,8 @@ test("keeps the recorder dock and transcript visible in mobile landscape", async
 
   await expect.soft(transcriptViewport).toBeVisible();
   await expect(dock).toBeVisible();
-  // 기록 중 레일은 「실시간 정리」로 열린다 — 개인 대화는 탭을 골라야 슬롯을 받는다.
-  await tray.getByRole("tab", { name: "내 에이전트" }).click();
+  // 좁은 화면에서 내 에이전트 레일은 접힌 채로 시작한다 — 위 막대 버튼으로 연다.
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await expect(tray.getByLabel("메시지")).toBeVisible();
 
   const [surfaceBox, mainBox, transcriptBox, dockBox, trayBox] =
@@ -1469,7 +1469,7 @@ test("ends a stopped meeting from the side panel and opens the ended summary", a
   await expect(page.getByRole("tab")).toHaveText([
     "정보",
     "스크립트",
-    "실시간 정리",
+    /^타임라인/,
     "요약",
   ]);
   await expect(page.getByRole("tab", { name: "챗봇" })).toHaveCount(0);

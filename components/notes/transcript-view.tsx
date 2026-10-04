@@ -24,10 +24,10 @@ import {
   formatOffset,
   interleaveTranscript,
   mergeLiveSegments,
-  selectLivePartial,
 } from "@/lib/transcription/presentation";
 import type { MeetingPhase } from "@/lib/notes/meeting-state";
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
+import { useLivePartial } from "@/components/notes/use-live-partial";
 import {
   useTranscriptFocus,
   type TranscriptFocus,
@@ -108,26 +108,7 @@ export function TranscriptView({
     [diarized, transcript, participants]
   );
 
-  const { partial: ownPartial, finalSegments: ownFinals } = liveTranscript;
-  const { partial: topicPartial, finalSegments: topicFinals } =
-    noteRealtime.transcript;
-  const partial = useMemo(
-    () =>
-      selectLivePartial({
-        recordingHere: liveForNote,
-        phase: recording.phase,
-        own: { partial: ownPartial, finalSegments: ownFinals },
-        topic: { partial: topicPartial, finalSegments: topicFinals },
-      }),
-    [
-      liveForNote,
-      ownFinals,
-      ownPartial,
-      recording.phase,
-      topicFinals,
-      topicPartial,
-    ]
-  );
+  const partial = useLivePartial(noteId);
   const isTranscriptError = transcriptQuery.isError;
   const refetchTranscript = transcriptQuery.refetch;
 

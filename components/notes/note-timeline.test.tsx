@@ -1,0 +1,264 @@
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { NoteTimeline } from "@/components/notes/note-timeline";
+import {
+  initialContextState,
+  type ContextState,
+  type ProposalHead,
+} from "@/lib/notes/proposals/reducer";
+
+const realtime = vi.hoisted(() => ({
+  noteId: "01K0000000005",
+  context: {
+    cards: [],
+    state: null as unknown,
+    loading: false,
+    failed: false,
+    retry: () => {},
+  },
+}));
+vi.mock("@/components/notes/note-realtime-provider", () => ({
+  useNoteRealtime: () => realtime,
+}));
+const live = vi.hoisted(() => ({
+  partial: null as { confirmedText: string; pendingText: string } | null,
+}));
+vi.mock("@/components/notes/use-live-partial", () => ({
+  useLivePartial: () => live.partial,
+}));
+
+let seq = 0;
+function head(over: Partial<ProposalHead> & { atMs?: number }): ProposalHead {
+  seq += 1;
+  const { atMs = seq * 60_000, ...rest } = over;
+  return {
+    proposalId: `0HZX2K7M9Q${String(seq).padStart(3, "0")}`,
+    revision: 1,
+    operation: "CREATE",
+    kind: "DECISION",
+    status: "OPEN",
+    closeReason: null,
+    revisionSource: "LIVE",
+    content: `후보 ${seq}`,
+    createdSequence: seq * 10,
+    lastEvidenceSequence: seq * 10,
+    aiSemanticRevisionCount: 0,
+    resolvesProposalId: null,
+    citations: [
+      {
+        segmentId: `0HZX2K7M9S${String(seq).padStart(3, "0")}`,
+        sequence: seq * 10,
+        startedAtMs: atMs,
+        endedAtMs: atMs + 3_000,
+        text: `발화 ${seq}`,
+        role: "SUPPORTS",
+      },
+    ],
+    ...rest,
+  };
+}
+
+function withLedger(...proposals: ProposalHead[]) {
+  const state: ContextState = {
+    ...initialContextState,
+    proposals: Object.fromEntries(proposals.map((p) => [p.proposalId, p])),
+  };
+  realtime.context = { ...realtime.context, state, loading: false, failed: false };
+}
+
+afterEach(() => {
+  cleanup();
+  live.partial = null;
+  realtime.context = { ...realtime.context, loading: false, failed: false };
+});
+
+describe("NoteTimeline", () => {
+  it("안건 머리 아래 항목이 시각·유형과 함께 서고, 시각을 누르면 그 발화로 간다", () => {
+    const agenda = head({ kind: "AGENDA", content: "MongoDB 도입 검토", atMs: 242_000 });
+    const decision = head({
+      kind: "DECISION",
+      content: "경로 데이터 저장소는 MongoDB를 사용한다",
+      atMs: 1_872_000,
+    });
+    withLedger(agenda, decision);
+    const onEvidenceSelect = vi.fn();
+    render(
+      <NoteTimeline header={null} onEvidenceSelect={onEvidenceSelect} recording />
+    );
+
+    // 안건 머리의 시간 구간이 안건의 첫 발화로 가는 길이다.
+    const range = screen.getByRole("button", { name: "스크립트 04:02로 가기" });
+    expect(range).toHaveTextContent("04:02 – 지금");
+    fireEvent.click(range);
+    expect(onEvidenceSelect).toHaveBeenCalledWith(agenda.citations[0].segmentId);
+    expect(screen.getByText("논의 중")).toBeVisible();
+    expect(screen.getByText("경로 데이터 저장소는 MongoDB를 사용한다")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "스크립트 31:12로 가기" }));
+    expect(onEvidenceSelect).toHaveBeenCalledWith(decision.citations[0].segmentId);
+  });
+
+  it("기록 중이 아니면 마지막 안건을 「논의 중」이라 하지 않는다", () => {
+    withLedger(head({ kind: "AGENDA", content: "다음 스프린트 범위" }), head({}));
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    expect(screen.queryByText("논의 중")).toBeNull();
+  });
+
+  it("항목을 펼치면 근거와 답 관계가 보이고, 관계를 누르면 그 항목이 펼쳐진다", () => {
+    const question = head({
+      kind: "QUESTION",
+      status: "CLOSED",
+      closeReason: "RESOLVED",
+      content: "인덱스를 줄이면 조회 손해가 얼마나 되나",
+      atMs: 620_000,
+    });
+    const answer = head({
+      kind: "DECISION",
+      operation: "RESOLVE",
+      resolvesProposalId: question.proposalId,
+      content: "읽기 전용 복제본은 세 대로 시작한다",
+      atMs: 2_400_000,
+    });
+    withLedger(question, answer);
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+
+    // 답한 질문은 언제 답했는지를 말한다.
+    expect(screen.getByText("40:00에 답함")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: /인덱스를 줄이면/ }));
+    const details = document.getElementById(
+      `timeline-item-${question.proposalId}-details`
+    )!;
+    expect(within(details).getByText(question.citations[0].text)).toBeVisible();
+
+    fireEvent.click(within(details).getByRole("button", { name: /^답/ }));
+    expect(
+      document.getElementById(`timeline-item-${answer.proposalId}-details`)
+    ).not.toBeNull();
+  });
+
+  it("골라 본 상태에서 관계를 눌러도 목록이 선 뒤 그 항목으로 간다", async () => {
+    const question = head({
+      kind: "QUESTION",
+      status: "CLOSED",
+      closeReason: "RESOLVED",
+      content: "인덱스를 줄이면 조회 손해가 얼마나 되나",
+    });
+    const answer = head({
+      kind: "DECISION",
+      operation: "RESOLVE",
+      resolvesProposalId: question.proposalId,
+      content: "읽기 전용 복제본은 세 대로 시작한다",
+    });
+    withLedger(question, answer);
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this.id);
+    };
+    try {
+      render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+      fireEvent.click(screen.getByRole("button", { name: "결정 1" }));
+      fireEvent.click(screen.getByRole("button", { name: /읽기 전용 복제본은/ }));
+      const details = document.getElementById(
+        `timeline-item-${answer.proposalId}-details`
+      )!;
+      fireEvent.click(within(details).getByRole("button", { name: /답한 질문/ }));
+
+      await waitFor(() =>
+        expect(scrolled).toContain(`timeline-item-${question.proposalId}`)
+      );
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it("골라 보기는 그 유형만 남기고 칩에 전체에서 센 개수를 단다", () => {
+    withLedger(head({ kind: "DECISION", content: "결정 하나" }), head({ kind: "ISSUE", content: "이슈 하나" }));
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "열린 질문 1" }));
+    expect(screen.queryByText("결정 하나")).toBeNull();
+    expect(screen.getByText("이슈 하나")).toBeVisible();
+    expect(screen.getByRole("button", { name: "결정 1" })).toBeVisible();
+  });
+
+  it("조회 중 · 실패 · 없음을 서로 다르게 그린다", () => {
+    realtime.context = { ...realtime.context, state: initialContextState, loading: true };
+    const { unmount } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    expect(screen.getByRole("list", { name: "타임라인을 불러오는 중" })).toBeVisible();
+    // 첫 snapshot 전에는 개수를 말하지 않는다.
+    expect(screen.getByRole("button", { name: "전체" })).toBeVisible();
+    unmount();
+
+    realtime.context = { ...realtime.context, loading: false, failed: true };
+    const failed = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    expect(screen.getByText("타임라인을 불러오지 못했습니다.")).toBeVisible();
+    failed.unmount();
+
+    withLedger();
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    expect(screen.getByText("이 회의에서 정리된 항목이 없습니다.")).toBeVisible();
+  });
+
+  it("놓친 변경이 있으면 목록을 두고 다시 맞출 길을 보인다", () => {
+    withLedger(head({ content: "남은 결정" }));
+    const retry = vi.fn();
+    realtime.context = {
+      ...realtime.context,
+      state: { ...(realtime.context.state as ContextState), needsRefetch: true },
+      retry,
+    };
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+
+    expect(screen.getByText("남은 결정")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("놓친 변경이 있어");
+    fireEvent.click(screen.getByRole("button", { name: "다시 맞추기" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("철회된 질문은 열린 질문에 세지 않고 답을 기다린다고 하지 않는다", () => {
+    withLedger(
+      head({ kind: "QUESTION", status: "CLOSED", closeReason: "RETRACTED", content: "취소된 질문" })
+    );
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "열린 질문 0" })).toBeVisible();
+    expect(screen.getByText("철회됨")).toBeVisible();
+    expect(screen.queryByText("답을 기다리는 중")).toBeNull();
+  });
+
+  it("받아 적는 중인 발화를 끝에 보이고 화자 칸을 두지 않는다", () => {
+    withLedger(head({}));
+    live.partial = { confirmedText: "그러면 다음 주에", pendingText: " runbook 초안 보고" };
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    expect(screen.getByText("받아 적는 중")).toBeVisible();
+    expect(screen.getByText("그러면 다음 주에")).toBeVisible();
+  });
+
+  it("문서 머리에 제목과 시각·인원·프로젝트 칩을 단다", () => {
+    withLedger();
+    render(
+      <NoteTimeline
+        header={{
+          title: "주간 개발 회의",
+          whenIso: "2026-10-03T05:00:00Z",
+          whenLabel: "10월 3일 오후 2:00",
+          participantCount: 4,
+          projectName: "경로 서비스 리뉴얼",
+        }}
+        onEvidenceSelect={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("heading", { name: "주간 개발 회의" })).toBeVisible();
+    expect(screen.getByText("4명")).toBeVisible();
+    expect(screen.getByText("경로 서비스 리뉴얼")).toBeVisible();
+  });
+});
