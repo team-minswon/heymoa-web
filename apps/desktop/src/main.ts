@@ -246,14 +246,21 @@ app
       if (!emptyRequest(payload) || !event.senderFrame)
         throw new Error("INVALID_CAPTURE_REQUEST");
       if (media) throw new Error("CAPTURE_ALREADY_REQUESTED");
+      recording?.lifecycle.captureRequested();
       const host = new CaptureHost(event.sender, event.senderFrame, () => {
-        if (media === host) media = null;
+        if (media === host) {
+          media = null;
+          recording?.lifecycle.captureDisposed();
+        }
       });
       media = host;
       try {
         return await host.acquire();
       } catch (error) {
-        if (media === host) media = null;
+        if (media === host) {
+          media = null;
+          recording?.lifecycle.captureDisposed();
+        }
         throw error;
       }
     });

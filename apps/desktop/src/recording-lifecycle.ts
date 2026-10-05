@@ -42,6 +42,10 @@ type Dependencies = {
 /** Native state follows validated web summaries; it never marks a stop request as completion. */
 export class RecordingLifecycle {
   private summary: RecordingSummary | null = null;
+  // Remote media permissions are denied: before the first native request or
+  // unsafe web report, an unavailable document cannot own captured audio.
+  private activityObserved = false;
+  private captureActive = false;
   private waiting = false;
   private disposed = false;
   private confirming = false;
@@ -51,6 +55,8 @@ export class RecordingLifecycle {
   update(summary: RecordingSummary): void {
     if (this.disposed) return;
     this.summary = { ...summary };
+    if (ACTIVE.has(summary.phase) || summary.pendingMs > 0)
+      this.activityObserved = true;
     this.deps.changed();
     if (this.waiting && this.safe()) this.exit();
   }
@@ -59,15 +65,30 @@ export class RecordingLifecycle {
     this.summary = null;
     this.deps.changed();
   }
+  captureRequested(): void {
+    if (this.disposed) return;
+    this.activityObserved = true;
+    this.captureActive = true;
+    this.summary = null;
+    this.deps.changed();
+  }
+  captureDisposed(): void {
+    if (this.disposed) return;
+    this.captureActive = false;
+    this.deps.changed();
+    if (this.waiting && this.safe()) this.exit();
+  }
   safe(): boolean {
     return (
-      this.summary !== null &&
-      !ACTIVE.has(this.summary.phase) &&
-      this.summary.pendingMs === 0
+      !this.captureActive &&
+      (this.summary === null
+        ? !this.activityObserved
+        : !ACTIVE.has(this.summary.phase) && this.summary.pendingMs === 0)
     );
   }
   view(): RecordingView {
     const s = this.summary;
+    const neverStarted = !s && !this.activityObserved && !this.captureActive;
     const seconds =
       s?.startedAt === null || !s || !ACTIVE.has(s.phase)
         ? null
@@ -84,14 +105,14 @@ export class RecordingLifecycle {
           )
       : [];
     return {
-      label: s ? LABELS[s.phase] : "녹음 상태 확인 불가",
+      label: s ? LABELS[s.phase] : neverStarted ? LABELS.idle : "녹음 상태 확인 불가",
       elapsed:
         seconds === null
           ? null
           : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
       pending: Boolean(s?.pendingMs),
       inputWarning: warnings.join(" · ") || null,
-      unknown: !s,
+      unknown: !s && !neverStarted,
       waiting: this.waiting,
     };
   }

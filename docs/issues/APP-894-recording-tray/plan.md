@@ -56,3 +56,14 @@
 ## 안 하는 것
 
 APP-893 auth worktree 변경, 새로운 녹음 controller, 서버 API, 자동 녹음, 디스크 복구, 설치 파일 배포는 하지 않는다.
+
+## 시작 전 종료 보호 후속 — 2026-10-05
+
+- 로컬 branch `fix/app-894/startup-quit`은 PRO `7bc6cd6`에서 시작하며 기존 tray branch를 보존한다. 웹 원격 작업 브랜치·PR을 만들지 않고 통합·push는 부모가 결정한다.
+- 최초 summary 부재는 캡처 또는 unsafe/pending 이력이 없는 경우에만 native가 녹음 대기로 판단한다. `RecordingLifecycle.captureRequested()`는 host 생성과 첫 await 전에 이력을 고정하고 `captureDisposed()`는 host/acquisition만 해제한다. 이력은 navigation/crash/dispose 결과로 지우지 않는다.
+- 현재 host/acquisition이 있으면 idle summary도 종료를 허용하지 않는다. unsafe/pending 이력 또는 capture 이력이 있는 unknown은 보호하며 fresh drained summary가 있어야 종료한다. media=null이나 PCM IPC ACK는 서버 저장 ACK를 뜻하지 않는다.
+- 안전 전제: `createRecordingSession`은 bridge가 있는 desktop에서 native capture만 사용하고 미지원 앱은 명시 실패한다. bridge가 없는 구 웹도 `secureContents`의 permission check/request deny-all로 웹 마이크를 획득하지 못한다. capture host는 별도 partition과 exact local frame에서만 권한을 받는다. 공개 계약은 바꾸지 않는다.
+- 회귀: no-summary landing 종료, 이전 safe report 후 acquisition, 실패 acquisition 후 unknown, unsafe/pending 이력 후 문서 교체, active host와 stale idle, 완료 보고 후 종료 및 기존 OAuth 취소/보존을 확인한다. 실제 설치 앱/PID/오디오 fixture는 조작하지 않는다.
+- spec 결정 checkpoint: docs `docs/app-894/startup-quit @ d068f0e`, `projects/PRO-55-데스크톱-회의-사운드-캡처/spec/APP-894/spec.md`. 이후 같은 docs branch에서 실제 CI 패키지·설치 복사 검증 기록을 함께 갱신한다. 계약 미러는 수정하지 않는다.
+- 검증: `NODE_OPTIONS=--no-experimental-webstorage VITEST_MAX_WORKERS=2`로 `pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e`를 순서대로 한 번 수행하여 웹 155 files·2071 tests, lint/typecheck/build, E2E 84개가 통과했다. Native 75개·desktop typecheck 및 관련 웹 capture runtime/controls 5개도 통과했다. 실제 GUI 수용은 미완료다.
+- 독립 적대적 검토는 실제 web started/stopping 전이와 native capture·dispose·navigation 순서를 확인하여 재현 가능한 새 결함을 발견하지 않았다. 사전 `codex exec review --uncommitted`와 최종 `codex exec review --base dev` 모두 exit 0·수정 필요 결함 없음으로 완료했다. cache 로그는 `/Users/kms/.cache/heymoa-harness/app894-startup-quit-full-gates.log`, `app894-startup-quit-review.log`, `app894-startup-quit-final-review.log`다.

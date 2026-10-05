@@ -76,6 +76,8 @@ async function fixture(t, overriddenProfiles = true) {
     }
   };
   const jar = {
+    webRequest: { onBeforeRequest() {} },
+    setDisplayMediaRequestHandler() {},
     setPermissionCheckHandler() {},
     setPermissionRequestHandler() {},
     async fetch(url, options) {
@@ -99,6 +101,7 @@ async function fixture(t, overriddenProfiles = true) {
     },
   };
   const sessionProfiles = [];
+  let rejectCaptureLoad;
   class BrowserWindow extends EventEmitter {
     constructor() {
       super();
@@ -123,7 +126,14 @@ async function fixture(t, overriddenProfiles = true) {
     focus() {}
     hide() {}
     restore() {}
-    async loadURL() {}
+    async loadURL(url) {
+      if (url.startsWith("file:"))
+        await new Promise((_resolve, reject) => { rejectCaptureLoad = reject; });
+    }
+    destroy() {
+      this.destroyed = true;
+      this.webContents.emit("destroyed");
+    }
   }
   class Tray extends EventEmitter {
     setToolTip() {}
@@ -227,6 +237,7 @@ async function fixture(t, overriddenProfiles = true) {
     opened,
     profileAtLock,
     sessionProfiles,
+    failCaptureLoad: () => rejectCaptureLoad(new Error("capture load failed")),
     get quits() {
       return quits;
     },
@@ -235,6 +246,36 @@ async function fixture(t, overriddenProfiles = true) {
     },
   };
 }
+
+test("main quits a never-started landing without a web summary or loss confirmation", async (t) => {
+  const f = await fixture(t);
+  f.app.quit();
+  await tick();
+  assert.equal(f.quits, 1);
+  assert.equal(f.dialogs.length, 0);
+});
+
+test("main protects capture acquisition and failed acquisition until a fresh drained report", async (t) => {
+  const f = await fixture(t);
+  f.invoke("heymoa:recording-summary", idle);
+  const acquisition = f.invoke("heymoa:capture-begin", undefined);
+  const rejected = assert.rejects(acquisition, /AUDIO_CAPTURE_FAILED/);
+  f.app.quit();
+  await tick();
+  assert.equal(f.quits, 0);
+  assert.equal(f.dialogs.length, 1);
+  f.failCaptureLoad();
+  await rejected;
+  f.app.quit();
+  await tick();
+  assert.equal(f.quits, 0);
+  assert.equal(f.dialogs.length, 2);
+  f.invoke("heymoa:recording-summary", idle);
+  f.app.quit();
+  await tick();
+  assert.equal(f.quits, 1);
+  assert.equal(f.dialogs.length, 2);
+});
 
 test("main uses the product display name while retaining the existing lock and cookie profiles", async (t) => {
   const f = await fixture(t);

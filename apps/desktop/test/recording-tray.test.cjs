@@ -198,6 +198,7 @@ test("cancelled external navigation does not erase summary; replacement and rend
   assert.equal(f.adapter.lifecycle.safe(), true);
   f.contents.emit("did-start-navigation", {}, origin + "/w#tab", true, true);
   assert.equal(f.adapter.lifecycle.safe(), true);
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" });
   f.contents.emit("did-start-navigation", {}, origin + "/w", false, true);
   assert.equal(f.adapter.lifecycle.safe(), false);
   f.adapter.lifecycle.update(idle);
@@ -231,6 +232,7 @@ test("renderer beforeunload is overridden only after native loss confirmation", 
   });
   assert.equal(prevented, false);
   // The first dialog chooses discard, the second independently confirms it.
+  f.adapter.lifecycle.captureRequested();
   f.answer(2, 1);
   await f.adapter.lifecycle.requestQuit();
   assert.equal(f.dialogs.length, 2);

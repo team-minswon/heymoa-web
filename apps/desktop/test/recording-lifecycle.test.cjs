@@ -69,6 +69,43 @@ test("active and failed/stopped pending summaries are protected while inactive d
     assert.equal(f.quits, 1);
   }
 });
+test("a never-started landing can quit before hydration and after document loss without discard", async () => {
+  for (const reportIdle of [false, true]) {
+    const f = fixture(() => assert.fail("no audio has ever been acquired"));
+    if (reportIdle) f.model.update(idle);
+    f.model.unavailable();
+    assert.equal(f.model.view().label, "녹음 대기");
+    assert.equal(f.model.view().unknown, false);
+    await f.model.requestQuit();
+    assert.equal(f.quits, 1);
+    assert.deepEqual(f.actions, []);
+  }
+});
+test("capture acquisition blocks quit despite stale idle until disposal and a drained report", async () => {
+  const f = fixture();
+  f.model.update(idle);
+  f.model.captureRequested();
+  f.model.update(idle);
+  await f.model.requestQuit();
+  assert.equal(f.quits, 0);
+  f.model.unavailable();
+  f.model.captureDisposed();
+  await f.model.requestQuit();
+  assert.equal(f.quits, 0);
+  f.model.update({ ...idle, phase: "failed" });
+  await f.model.requestQuit();
+  assert.equal(f.quits, 1);
+});
+test("unsafe or pending history remains protected across idle reports and renderer loss", async () => {
+  for (const summary of [{ ...idle, phase: "connecting" }, { ...idle, pendingMs: 20 }]) {
+    const f = fixture();
+    f.model.update(summary);
+    f.model.update(idle);
+    f.model.unavailable();
+    await f.model.requestQuit();
+    assert.equal(f.quits, 0);
+  }
+});
 test("stop then quit awaits both actual controller stop and durable pending clearance", async () => {
   const f = fixture(async () => "wait");
   f.model.update({ ...idle, phase: "recording", startedAt: 0, pendingMs: 20 });
@@ -101,6 +138,7 @@ test("discard requires a second explicit confirmation and cannot be authorized b
     prompts.push(prompt);
     return answers.shift();
   });
+  f.model.captureRequested();
   await f.model.requestQuit();
   assert.equal(f.quits, 0);
   await f.model.requestQuit();
@@ -126,6 +164,7 @@ test("overlapping quit prompts are single flight and disposed late answers do no
       answer = resolve;
     });
   });
+  f.model.captureRequested();
   const pending = f.model.requestQuit();
   await f.model.requestQuit();
   assert.equal(calls, 1);
@@ -143,6 +182,7 @@ test("a new recording arriving while dialog is open is not mistaken for the old 
         answer = resolve;
       })
   );
+  f.model.captureRequested();
   const pending = f.model.requestQuit();
   f.model.update(idle);
   f.model.update({ ...idle, phase: "recording" });
