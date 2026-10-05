@@ -58,6 +58,8 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for desktop renderer tests
+        run: pnpm exec playwright install chromium
       - run: pnpm --filter @heymoa/desktop typecheck
       - run: pnpm --filter @heymoa/desktop test
       - run: pnpm --filter @heymoa/desktop package:${{ matrix.target }}
