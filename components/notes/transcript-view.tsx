@@ -35,6 +35,7 @@ import {
 import { prefersReducedMotion } from "@/lib/utils";
 
 const FOLLOW_THRESHOLD_PX = 180;
+const EMPTY_PARTICIPANTS: SpeakerFace[] = [];
 
 /** 발화 길이는 고르지 않다 — 전부 같은 폭이면 표처럼 보여서 대화로 안 읽힌다. */
 const TRANSCRIPT_SKELETON_WIDTHS = ["58%", "86%", "41%"];
@@ -46,7 +47,7 @@ function getDistanceFromBottom(viewport: HTMLElement) {
 export function TranscriptView({
   noteId,
   phase,
-  participants = [],
+  participants = EMPTY_PARTICIPANTS,
   noteMeta,
   focusSegmentId,
   onFocusHandled,
@@ -222,6 +223,46 @@ export function TranscriptView({
     }
   );
 
+  const confirmedRows = useMemo(
+    () =>
+      rows.map((row) =>
+        row.type === "gap" ? (
+          <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
+        ) : (
+          <article
+            key={row.segment.segmentId}
+            ref={segmentRef(row.segment.segmentId)}
+            /* 짚힌 줄로 포커스를 옮길 수 있게 늘 단다. 짚힌 줄에만 달면 형광이 꺼질 때
+           속성이 사라지며 포커스를 빼앗는다. `-1` 은 Tab 순서에 안 든다. */
+            tabIndex={-1}
+            data-testid="transcript-block"
+            data-timeline-start-ms={row.segment.startedAtMs}
+            data-state="final"
+            data-focused={isHighlighted(row.segment.segmentId) || undefined}
+            className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
+          >
+            <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
+              {formatOffset(row.segment.startedAtMs)}
+            </time>
+            <div className="min-w-0">
+              {speakerOf(row.segment.speakerLabel) ? (
+                <SpeakerChip
+                  identity={speakerOf(row.segment.speakerLabel)!}
+                  className="mb-1"
+                />
+              ) : null}
+              <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
+                <span {...markProps(row.segment.segmentId)}>
+                  {row.segment.text}
+                </span>
+              </p>
+            </div>
+          </article>
+        )
+      ),
+    [rows, speakerOf, segmentRef, isHighlighted, markProps]
+  );
+
   // 여기 스크롤 엔진은 챗봇과 다르다(프로그램 스크롤 가드·라이브 판정). 생김새만 공유한다.
   //
   // 버튼은 회의 상태가 아니라 스크롤 위치로 띄운다. 종료된 회의의 전사를 올려 읽어도
@@ -290,43 +331,7 @@ export function TranscriptView({
             </div>
           ) : (
             <div>
-              {rows.map((row) =>
-                row.type === "gap" ? (
-                  <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
-                ) : (
-                  <article
-                    key={row.segment.segmentId}
-                    ref={segmentRef(row.segment.segmentId)}
-                    /* 짚힌 줄로 포커스를 옮길 수 있게 늘 단다. 짚힌 줄에만 달면 형광이 꺼질 때
-                       속성이 사라지며 포커스를 빼앗는다. `-1` 은 Tab 순서에 안 든다. */
-                    tabIndex={-1}
-                    data-testid="transcript-block"
-                    data-timeline-start-ms={row.segment.startedAtMs}
-                    data-state="final"
-                    data-focused={
-                      isHighlighted(row.segment.segmentId) || undefined
-                    }
-                    className="group grid grid-cols-1 gap-2 border-b border-[var(--el-hairline)] py-4 sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-5"
-                  >
-                    <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)] transition-colors group-hover:text-[var(--el-ink)] sm:w-32">
-                      {formatOffset(row.segment.startedAtMs)}
-                    </time>
-                    <div className="min-w-0">
-                      {speakerOf(row.segment.speakerLabel) ? (
-                        <SpeakerChip
-                          identity={speakerOf(row.segment.speakerLabel)!}
-                          className="mb-1"
-                        />
-                      ) : null}
-                      <p className="whitespace-normal break-keep text-read leading-7 tracking-[0.005em] text-[var(--el-ink)]">
-                        <span {...markProps(row.segment.segmentId)}>
-                          {row.segment.text}
-                        </span>
-                      </p>
-                    </div>
-                  </article>
-                )
-              )}
+              {confirmedRows}
 
               {partial ? (
                 <article

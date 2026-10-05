@@ -102,6 +102,24 @@ export function useTranscriptFocus(
       segmentId === focusedSegmentId ? nodeRef : undefined,
     [focusedSegmentId]
   );
+  const markProps = useCallback(
+    (segmentId: string) =>
+      segmentId === focusedSegmentId
+        ? {
+            className: "evidence-mark",
+            style: {
+              "--evidence-span": `${pen.spanEm}em`,
+              "--evidence-stroke": `${pen.strokeMs}ms`,
+              "--evidence-hold": `${HOLD_MS}ms`,
+            } as CSSProperties,
+          }
+        : {},
+    [focusedSegmentId, pen.spanEm, pen.strokeMs]
+  );
+  const isHighlighted = useCallback(
+    (segmentId: string) => segmentId === focusedSegmentId,
+    [focusedSegmentId]
+  );
 
   return {
     /** 점프 대상 발화의 `<article>`에만 붙는다. */
@@ -117,22 +135,12 @@ export function useTranscriptFocus(
      * 짚히지 않은 줄에는 **아무것도 얹지 않는다** — 빈 `style`이라도 내주면 전사의 모든
      * 행이 인라인 스타일을 하나씩 들고 있게 된다.
      */
-    markProps: (segmentId: string) =>
-      segmentId === focusedSegmentId
-        ? {
-            className: "evidence-mark",
-            style: {
-              "--evidence-span": `${pen.spanEm}em`,
-              "--evidence-stroke": `${pen.strokeMs}ms`,
-              "--evidence-hold": `${HOLD_MS}ms`,
-            } as CSSProperties,
-          }
-        : {},
+    markProps,
     /**
      * 하이라이트는 **파생값이다.** 지역 상태로 따로 들고 있으면 소유자의 `focusSegmentId`와
      * 두 개의 진실이 되고, 끄는 타이밍을 양쪽에서 맞춰야 한다. 위 타이머가 소유자에게
      * 비우라고 알리면 여기도 함께 꺼진다.
      */
-    isHighlighted: (segmentId: string) => segmentId === focusedSegmentId,
+    isHighlighted,
   };
 }
