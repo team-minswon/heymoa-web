@@ -56,6 +56,8 @@ export function CallbackProcessor({
       try {
         const user = await getMe();
 
+        if (!user) throw new Error("AUTHENTICATED_SESSION_REQUIRED");
+
         if (!ignore) {
           setUser(user);
 

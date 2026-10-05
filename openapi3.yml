@@ -7350,6 +7350,33 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/auth/session:
+    get:
+      tags:
+      - Auth
+      summary: 로그인 세션 상태 조회
+      description: access 쿠키를 검증합니다. refresh_required는 refresh 쿠키 존재 후보이며 인증 권한이 아닙니다. 읽기 요청은 토큰을 갱신하지 않습니다.
+      operationId: getAuthSession
+      responses:
+        '200':
+          description: 요청 성공
+          headers:
+            Cache-Control:
+              description: 개인정보 응답 캐시 금지
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      state: refresh_required
+                    error: null
+      security: []
 components:
   schemas:
     AcceptInvitationByTokenRequest:
@@ -13315,6 +13342,69 @@ components:
           nullable: false
           minLength: 32
           maxLength: 128
+    AuthSessionResponse:
+      title: AuthSessionResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - state
+          type: object
+          properties:
+            state:
+              type: string
+              description: 세션 상태
+              nullable: false
+              example: refresh_required
+              enum:
+              - authenticated
+              - anonymous
+              - refresh_required
+            user:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: 프로필 이미지
+                  nullable: true
+                name:
+                  type: string
+                  description: 이름
+                  nullable: false
+                  example: 문서 사용자
+                userId:
+                  type: string
+                  description: 사용자 ID
+                  nullable: false
+                  example: 0HZX2K7M9Q4AC
+                email:
+                  type: string
+                  description: 이메일
+                  nullable: false
+                  example: user@example.com
+              description: authenticated일 때만 현재 사용자
+              nullable: false
+              required:
+              - userId
+              - name
+              - email
+              - image
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
   securitySchemes:
     accessCookie:
       type: apiKey

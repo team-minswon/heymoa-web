@@ -9,6 +9,7 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  AuthSessionResponse,
   DesktopAuthorizeResponse,
   LogoutResponse,
   RefreshTokensResponse,
@@ -42,6 +43,12 @@ export const getStartDesktopLoginResponseMock =
     },
     error: null,
   });
+
+export const getGetAuthSessionResponseMock = (): AuthSessionResponse => ({
+  success: true,
+  data: { state: "refresh_required" },
+  error: null,
+});
 
 export const getLogoutMockHandler = (
   overrideResponse?:
@@ -159,10 +166,35 @@ export const getStartDesktopLoginMockHandler = (
     options
   );
 };
+
+export const getGetAuthSessionMockHandler = (
+  overrideResponse?:
+    | AuthSessionResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<AuthSessionResponse> | AuthSessionResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/auth/session",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetAuthSessionResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getAuthMock = () => [
   getLogoutMockHandler(),
   getRefreshTokensMockHandler(),
   getAuthorizeDesktopLoginMockHandler(),
   getExchangeDesktopLoginMockHandler(),
   getStartDesktopLoginMockHandler(),
+  getGetAuthSessionMockHandler(),
 ];

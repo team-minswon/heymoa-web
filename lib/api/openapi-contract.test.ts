@@ -288,7 +288,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-826(server APP-825)에서 연결의 사용 내역이 늘었다 (62 → 63) —
     // `agent-delegations/{delegationId}/usages`.
     // APP-891 adds the four desktop broker endpoints to the public mirror.
-    expect(paths).toHaveLength(67);
+    // APP-901 adds the read-only session probe (67 → 68).
+    expect(paths).toHaveLength(68);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

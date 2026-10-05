@@ -4,6 +4,7 @@ import { cache } from "react";
 import type { AppResponse, AuthUser } from "@/lib/auth/types";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { MOCK_USER } from "@/lib/mocks/mock-user";
+import { parseAuthSession } from "@/lib/auth/session-probe";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -28,7 +29,7 @@ export const getCurrentUserForSsr = cache(
       return MOCK_USER;
     }
 
-    const url = buildServerApiUrl("/v1/users/me");
+    const url = buildServerApiUrl("/v1/auth/session");
 
     if (!url) {
       return null;
@@ -54,13 +55,14 @@ export const getCurrentUserForSsr = cache(
         return null;
       }
 
-      const body = (await response.json()) as AppResponse<AuthUser>;
+      const body = (await response.json()) as AppResponse<unknown>;
 
       if (!body.success || !body.data) {
         return null;
       }
 
-      return body.data;
+      const session = parseAuthSession(body.data);
+      return session.state === "authenticated" ? session.user : null;
     } catch {
       return null;
     }

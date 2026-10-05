@@ -62,14 +62,9 @@ export function AuthProvider({
   );
 
   const refreshUser = useCallback(async () => {
-    try {
-      const nextUser = await getMe();
-      setUser(nextUser);
-      return nextUser;
-    } catch {
-      setUser(null);
-      return null;
-    }
+    const nextUser = await getMe();
+    setUser(nextUser);
+    return nextUser;
   }, [setUser]);
 
   /**

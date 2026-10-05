@@ -18,6 +18,7 @@ import SYNTHETIC_LEDGER_SNAPSHOT from "@/lib/notes/proposals/__fixtures__/synthe
 
 // 생성 mock 래퍼는 **실패 경로가 없는 조회**에만 쓴다 — 래퍼가 항상 200을 주기 때문이다.
 // 나머지는 아래 `resultOf`와 함께 직접 `http.*`로 쓴다.
+import { getGetAuthSessionMockHandler } from "@/lib/api/generated/auth/auth.msw";
 import { getGetCurrentUserMockHandler } from "@/lib/api/generated/users/users.msw";
 import { getGetWorkspacesMockHandler } from "@/lib/api/generated/workspaces/workspaces.msw";
 import { getGetNotificationsMockHandler } from "@/lib/api/generated/notifications/notifications.msw";
@@ -310,6 +311,11 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
 
 export const restHandlers = [
   // Users
+  getGetAuthSessionMockHandler(() => ({
+    success: true,
+    data: { state: "authenticated", user: mockDb.getCurrentUser() },
+    error: null,
+  })),
   getGetCurrentUserMockHandler(() => ({
     success: true,
     data: mockDb.getCurrentUser(),
@@ -469,7 +475,11 @@ export const restHandlers = [
     // `_mock/foreign-lock` 과 같은 방식이다.
     if (id(params.noteId) === CONTEXT_FAILING_NOTE_ID) {
       return HttpResponse.json(
-        { success: false, data: null, error: { code: "INTERNAL", message: "…" } },
+        {
+          success: false,
+          data: null,
+          error: { code: "INTERNAL", message: "…" },
+        },
         { status: 500 }
       );
     }
@@ -496,17 +506,19 @@ export const restHandlers = [
     }
     // **없는 노트는 실서버처럼 404다.** 그리고 데모 원장은 전용 노트에만 준다 — 아무
     // 노트에나 같은 스냅샷을 돌려주면 근거 클릭이 그 노트에 없는 전사를 가리킨다.
-    return resultOf(() => {
-      mockDb.getNote(id(params.noteId));
-      return id(params.noteId) === CONTEXT_DEMO_NOTE_ID
-        ? CONTEXT_SNAPSHOT
-        : { proposals: [], runs: [] };
-    }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."));
+    return resultOf(
+      () => {
+        mockDb.getNote(id(params.noteId));
+        return id(params.noteId) === CONTEXT_DEMO_NOTE_ID
+          ? CONTEXT_SNAPSHOT
+          : { proposals: [], runs: [] };
+      },
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    );
   }),
-  http.get(
-    "*/v1/notes/:noteId/proposals/:proposalId/revisions",
-    ({ params }) =>
-      resultOf(() => {
+  http.get("*/v1/notes/:noteId/proposals/:proposalId/revisions", ({ params }) =>
+    resultOf(
+      () => {
         mockDb.getNote(id(params.noteId));
         const proposalId = id(params.proposalId);
         /**
@@ -528,12 +540,13 @@ export const restHandlers = [
           (a, b) => a.revision - b.revision
         );
         return { proposalId, revisions };
-      }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."))
+      },
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    )
   ),
   http.put("*/v1/notes/:noteId/participants", async ({ request, params }) =>
     resultOf(
-      async () =>
-      {
+      async () => {
         const body = (await request.json()) as {
           userIds?: string[];
           expectedUserIds?: string[];
@@ -569,8 +582,7 @@ export const restHandlers = [
     "*/v1/notes/:noteId/participants/guests",
     async ({ request, params }) =>
       resultOf(
-        async () =>
-        {
+        async () => {
           const body = (await request.json()) as {
             guestIds?: string[];
             expectedGuestIds?: string[];
@@ -704,17 +716,21 @@ export const restHandlers = [
         guestId?: string | null;
       }>;
     };
-    return resultOf(() => {
-      let speakers = mockDb.getTranscript(id(params.noteId)).diarization.speakers;
-      for (const assignment of body.assignments ?? []) {
-        speakers = mockDb.assignSpeaker(id(params.noteId), assignment.label, {
-          participantId: assignment.participantId ?? null,
-          userId: assignment.userId ?? null,
-          guestId: assignment.guestId ?? null,
-        });
-      }
-      return { speakers };
-    }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."));
+    return resultOf(
+      () => {
+        let speakers = mockDb.getTranscript(id(params.noteId)).diarization
+          .speakers;
+        for (const assignment of body.assignments ?? []) {
+          speakers = mockDb.assignSpeaker(id(params.noteId), assignment.label, {
+            participantId: assignment.participantId ?? null,
+            userId: assignment.userId ?? null,
+            guestId: assignment.guestId ?? null,
+          });
+        }
+        return { speakers };
+      },
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    );
   }),
   http.put(
     "*/v1/notes/:noteId/speakers/:label",
@@ -726,11 +742,15 @@ export const restHandlers = [
       };
       return resultOf(
         () => ({
-          speakers: mockDb.assignSpeaker(id(params.noteId), String(params.label), {
-            participantId: body.participantId ?? null,
-            userId: body.userId ?? null,
-            guestId: body.guestId ?? null,
-          }),
+          speakers: mockDb.assignSpeaker(
+            id(params.noteId),
+            String(params.label),
+            {
+              participantId: body.participantId ?? null,
+              userId: body.userId ?? null,
+              guestId: body.guestId ?? null,
+            }
+          ),
         }),
         notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
       );
@@ -773,84 +793,95 @@ export const restHandlers = [
    * 조용히 빠진다 — 서버가 그렇게 비교하므로 목도 같아야 그 버그가 목에서 재현된다.
    */
   http.get("*/v1/notes/:noteId/transcript/segments", ({ params, request }) =>
-    resultOf(() => {
-      const url = new URL(request.url);
-      const afterStartedAtMs = Number(url.searchParams.get("afterStartedAtMs") ?? 0);
-      const afterSequence = Number(url.searchParams.get("afterSequence") ?? 0);
-      const { segments } = mockDb.getTranscript(id(params.noteId));
-      return {
-        segments: segments.filter(
-          (segment) =>
-            segment.startedAtMs > afterStartedAtMs ||
-            (segment.startedAtMs === afterStartedAtMs && segment.sequence > afterSequence)
-        ),
-      };
-    }, notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다."))
+    resultOf(
+      () => {
+        const url = new URL(request.url);
+        const afterStartedAtMs = Number(
+          url.searchParams.get("afterStartedAtMs") ?? 0
+        );
+        const afterSequence = Number(
+          url.searchParams.get("afterSequence") ?? 0
+        );
+        const { segments } = mockDb.getTranscript(id(params.noteId));
+        return {
+          segments: segments.filter(
+            (segment) =>
+              segment.startedAtMs > afterStartedAtMs ||
+              (segment.startedAtMs === afterStartedAtMs &&
+                segment.sequence > afterSequence)
+          ),
+        };
+      },
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    )
   ),
   // Hand-written (not the Orval getStartTranscriptionSessionMockHandler): needs
   // 201/409 status codes the generated wrapper can't express.
-  http.post("*/v1/notes/:noteId/transcription-sessions", async ({ params, request }) => {
-    const body = (await request.json().catch(() => ({}))) as {
-      clientInstanceId?: string;
-    };
-    try {
-      const data = mockDb.createSession(
-        id(params.noteId),
-        body.clientInstanceId
-      );
-      return HttpResponse.json(
-        { success: true, data, error: null },
-        { status: 201 }
-      );
-    } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
-      if (FORBIDDEN_CODES.has(msg)) {
+  http.post(
+    "*/v1/notes/:noteId/transcription-sessions",
+    async ({ params, request }) => {
+      const body = (await request.json().catch(() => ({}))) as {
+        clientInstanceId?: string;
+      };
+      try {
+        const data = mockDb.createSession(
+          id(params.noteId),
+          body.clientInstanceId
+        );
+        return HttpResponse.json(
+          { success: true, data, error: null },
+          { status: 201 }
+        );
+      } catch (error) {
+        const msg =
+          error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
+        if (FORBIDDEN_CODES.has(msg)) {
+          return HttpResponse.json(
+            {
+              success: false,
+              data: null,
+              error: {
+                code: msg,
+                message: "회의 시작자만 조작할 수 있습니다.",
+                details: null,
+              },
+            },
+            { status: 403 }
+          );
+        }
+        // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 web이
+        // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 예시를 그대로 쓴다 —
+        // web이 코드별 문구를 다시 만들면 서버가 바뀔 때마다 갈라진다.
+        const conflict = SESSION_CONFLICTS[msg];
+        if (conflict) {
+          return HttpResponse.json(
+            {
+              success: false,
+              data: null,
+              error: { code: msg, message: conflict, details: null },
+            },
+            { status: 409 }
+          );
+        }
+        // 노트가 지워졌거나(NOTE_NOT_FOUND) 권한 승인과 이 POST 사이에 추방된 경우다
+        // (WORKSPACE_NOT_FOUND). 문구도 계약의 것을 준다 — 시작 실패는 전역 토스트를 끄고
+        // 프로바이더가 이 문구를 그대로 그리므로, 코드를 문구 자리에 흘리면 화면에
+        // `NOTE_NOT_FOUND`가 그대로 뜬다.
         return HttpResponse.json(
           {
             success: false,
             data: null,
             error: {
               code: msg,
-              message: "회의 시작자만 조작할 수 있습니다.",
+              message: CONTRACT_ERROR_MESSAGES[msg] ?? msg,
               details: null,
             },
           },
-          { status: 403 }
+          { status: 404 }
         );
       }
-      // 세션을 못 만드는 이유는 "노트가 없다"가 아니라 충돌이다. 404로 흘리면 web이
-      // 노트 404 경로(빈 상태 + 재시도)로 갈라진다. 문구는 계약의 예시를 그대로 쓴다 —
-      // web이 코드별 문구를 다시 만들면 서버가 바뀔 때마다 갈라진다.
-      const conflict = SESSION_CONFLICTS[msg];
-      if (conflict) {
-        return HttpResponse.json(
-          {
-            success: false,
-            data: null,
-            error: { code: msg, message: conflict, details: null },
-          },
-          { status: 409 }
-        );
-      }
-      // 노트가 지워졌거나(NOTE_NOT_FOUND) 권한 승인과 이 POST 사이에 추방된 경우다
-      // (WORKSPACE_NOT_FOUND). 문구도 계약의 것을 준다 — 시작 실패는 전역 토스트를 끄고
-      // 프로바이더가 이 문구를 그대로 그리므로, 코드를 문구 자리에 흘리면 화면에
-      // `NOTE_NOT_FOUND`가 그대로 뜬다.
-      return HttpResponse.json(
-        {
-          success: false,
-          data: null,
-          error: {
-            code: msg,
-            message: CONTRACT_ERROR_MESSAGES[msg] ?? msg,
-            details: null,
-          },
-        },
-        { status: 404 }
-      );
     }
-  }),
+  ),
 
   // Workspace members / invitations / notifications
   http.get("*/v1/workspaces/:workspaceId/members", ({ params }) =>
@@ -1108,5 +1139,4 @@ export const restHandlers = [
       ...agentChatTurnState(id(params.chatId)),
     }))
   ),
-
 ];
