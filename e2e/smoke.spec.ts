@@ -159,7 +159,9 @@ async function expectForeignViewerTranscript(
       "파트너 요구사항을 먼저 확인하겠습니다."
     );
     await expect(page.getByLabel("녹음 제어")).toBeVisible();
-    await expect(page.getByText("다른 탭·기기에서 기록 중입니다.")).toBeVisible();
+    await expect(
+      page.getByText("다른 탭·기기에서 기록 중입니다.")
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "회의 종료" })).toBeVisible();
     if (viewportSize.width === 375) {
       // 상태는 상단바가, 시작자는 **정보 탭 머리글의 메타 둘째 줄**이 말한다 — 전사는 읽는
@@ -340,7 +342,9 @@ test("keeps the recorder dock and transcript visible in mobile landscape", async
   );
 
   const surface = page.locator('[data-surface="full"]');
-  const panel = surface.locator(":scope > div").first();
+  const panel = surface
+    .locator(":scope > div:not([data-slot=sheet-header])")
+    .first();
   const main = panel.locator(":scope > div").first();
   const transcriptLog = page.getByRole("log", { name: "회의 스크립트" });
   const transcriptViewport = page
@@ -2312,4 +2316,81 @@ test("warns before a label-wide assign wipes per-utterance fixes", async ({
   await expect(plain.getByTestId("speaker-chip")).toContainText("한지원");
   await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
   await expect(page.getByLabel("테스트 유저 화자 지정")).toHaveCount(0);
+});
+
+test("changes note display mode without remounting or refetching the transcript", async ({
+  page,
+}) => {
+  let transcriptRequests = 0;
+  let rscRequests = 0;
+  page.on("request", (request) => {
+    if (request.url().includes(`/v1/notes/${STARTER_NOTE_ID}/transcript`))
+      transcriptRequests += 1;
+    if (request.url().includes("_rsc=")) rscRequests += 1;
+  });
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=transcript`
+  );
+  await expect(page.getByTestId("transcript-block").first()).toBeVisible();
+  const original = await page
+    .getByRole("log", { name: "회의 스크립트" })
+    .elementHandle();
+  const requestsBefore = transcriptRequests;
+  const rscBefore = rscRequests;
+  await page.getByRole("button", { name: "전체 화면으로 보기" }).click();
+  await expect(page.locator('[data-surface="full"]')).toBeVisible();
+  expect(await original!.evaluate((node) => node.isConnected)).toBe(true);
+  await page.getByRole("button", { name: "사이드 뷰로 보기" }).click();
+  await expect(page.locator('[data-surface="sheet"]')).toBeVisible();
+  expect(await original!.evaluate((node) => node.isConnected)).toBe(true);
+  expect(transcriptRequests).toBe(requestsBefore);
+  expect(rscRequests).toBe(rscBefore);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(new RegExp(`/w/${MOCK_WORKSPACE_ID}$`));
+});
+
+test("keeps confirmation shading and cancellation in both note display modes", async ({
+  page,
+}) => {
+  await createMeetingNote(page);
+  await startRecording(page, "회의 시작");
+  await stopRecording(page);
+  for (const view of ["full", "side"] as const) {
+    if (view === "side")
+      await page.getByRole("button", { name: "사이드 뷰로 보기" }).click();
+    await meetingControls(page)
+      .getByRole("button", { name: "회의 종료" })
+      .click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible();
+    await expect(
+      page.locator('[data-slot="alert-dialog-overlay"]')
+    ).toBeVisible();
+    await expect(page.locator('[data-slot="alert-dialog-overlay"]')).toHaveCSS(
+      "opacity",
+      "1"
+    );
+    await dialog.getByRole("button", { name: "닫기" }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(
+      page.locator(`[data-surface="${view === "side" ? "sheet" : "full"}"]`)
+    ).toBeVisible();
+  }
+});
+
+
+test("keeps the speaker sheet shaded in both note display modes", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=full&tab=transcript`);
+  for (const view of ["full", "side"] as const) {
+    if (view === "side") await page.getByRole("button", { name: "사이드 뷰로 보기" }).click();
+    await page.getByRole("button", { name: "화자", exact: true }).click();
+    const panel = page.getByRole("dialog", { name: "화자", exact: true });
+    await expect(panel).toBeVisible();
+    const backdrop = page.locator('[data-slot="sheet-overlay"]').last();
+    await expect(backdrop).toBeVisible();
+    await expect(backdrop).toHaveCSS("opacity", "1");
+    await panel.getByRole("button", { name: "닫기", exact: true }).click();
+    await expect(panel).not.toBeVisible();
+    await expect(page.locator(`[data-surface="${view === "full" ? "full" : "sheet"}"]`)).toBeVisible();
+  }
 });

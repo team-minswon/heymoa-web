@@ -2863,40 +2863,47 @@ describe("PersonalChatProvider", () => {
     });
 
     it("★ 기록 목록이 날짜로 묶이고 줄마다 마지막으로 쓴 시각을 적는다", () => {
-      const now = Date.now();
-      state.chats = [
-        chatRow(CHAT_ID, null, new Date(now - 60_000).toISOString()),
-        chatRow(
+      // 자정 직후에도 1분 전을 오늘로 가정하지 않도록 이 테스트의 날짜만 고정한다.
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(2026, 9, 5, 12));
+      try {
+        const now = Date.now();
+        state.chats = [
+          chatRow(CHAT_ID, null, new Date(now - 60_000).toISOString()),
+          chatRow(
+            OTHER_CHAT_ID,
+            null,
+            new Date(now - 3 * 86_400_000).toISOString()
+          ),
+        ];
+        renderChat();
+        openPanel();
+        fireEvent.click(historyButton());
+
+        const history = screen.getByTestId("chat-history-view");
+        expect(
+          [...history.querySelectorAll('[data-testid="chat-group"]')].map(
+            (each) => each.textContent
+          )
+        ).toEqual(["오늘", "최근"]);
+
+        const rows = [...history.querySelectorAll("button")].filter((row) =>
+          row.textContent?.startsWith("대화 ")
+        );
+        // **묶어도 순서가 안 뒤집힌다.** 묶는 값과 정렬 기준이 같은 `updatedAt` 이라
+        // 순서대로 훑기만 하면 된다 — 다르면 「1분 전인데 왜 세 번째 줄」이 된다.
+        expect(rows.map((row) => row.textContent?.slice(3, 16))).toEqual([
+          CHAT_ID,
           OTHER_CHAT_ID,
-          null,
-          new Date(now - 3 * 86_400_000).toISOString()
-        ),
-      ];
-      renderChat();
-      openPanel();
-      fireEvent.click(historyButton());
-
-      const history = screen.getByTestId("chat-history-view");
-      expect(
-        [...history.querySelectorAll('[data-testid="chat-group"]')].map(
-          (each) => each.textContent
-        )
-      ).toEqual(["오늘", "최근"]);
-
-      const rows = [...history.querySelectorAll("button")].filter((row) =>
-        row.textContent?.startsWith("대화 ")
-      );
-      // **묶어도 순서가 안 뒤집힌다.** 묶는 값과 정렬 기준이 같은 `updatedAt` 이라
-      // 순서대로 훑기만 하면 된다 — 다르면 「1분 전인데 왜 세 번째 줄」이 된다.
-      expect(rows.map((row) => row.textContent?.slice(3, 16))).toEqual([
-        CHAT_ID,
-        OTHER_CHAT_ID,
-      ]);
-      // 시각은 줄 끝에 선다. 로케일은 플랫폼이 정하므로(검사 환경은 en-US) 여기서는
-      // 「`updatedAt` 마다 다르다」만 본다 — 로케일별 문구는 `lib/chat/chat-list.test.ts` 가 잰다.
-      expect(rows[0].lastElementChild?.textContent).not.toBe(
-        rows[1].lastElementChild?.textContent
-      );
+        ]);
+        // 시각은 줄 끝에 선다. 로케일은 플랫폼이 정하므로(검사 환경은 en-US) 여기서는
+        // 「`updatedAt` 마다 다르다」만 본다 — 로케일별 문구는 `lib/chat/chat-list.test.ts` 가 잰다.
+        expect(rows[0].lastElementChild?.textContent).not.toBe(
+          rows[1].lastElementChild?.textContent
+        );
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("헤더 첫 줄이 지금 보고 있는 대화의 제목이다", () => {
