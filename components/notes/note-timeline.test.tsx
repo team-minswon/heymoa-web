@@ -297,3 +297,84 @@ describe("NoteTimeline", () => {
     expect(screen.getByText("경로 서비스 리뉴얼")).toBeVisible();
   });
 });
+
+describe("타임라인의 맨 아래로 버튼", () => {
+  function metrics(viewport: HTMLElement, top: number, height = 2000) {
+    Object.defineProperties(viewport, {
+      scrollTop: { configurable: true, writable: true, value: top },
+      scrollHeight: { configurable: true, value: height },
+      clientHeight: { configurable: true, value: 500 },
+    });
+    fireEvent.scroll(viewport);
+  }
+
+  it("완료된 긴 목록도 위에서 읽으면 화살표만 보이고 누르면 아래로 이동합니다", () => {
+    withLedger(head({ content: "끝난 회의 항목" }));
+    const { container } = render(
+      <NoteTimeline header={null} onEvidenceSelect={() => {}} meetingEnded />
+    );
+    const viewport = container.querySelector<HTMLElement>(
+      "[data-slot=scroll-area-viewport]"
+    )!;
+    metrics(viewport, 1500);
+    expect(
+      screen.queryByRole("button", { name: "맨 아래로" })
+    ).not.toBeInTheDocument();
+    metrics(viewport, 200);
+    const arrow = screen.getByRole("button", { name: "맨 아래로" });
+    expect(arrow.textContent).toBe("");
+    expect(arrow.parentElement).toHaveClass("lg:bottom-20");
+    fireEvent.click(arrow);
+    expect(viewport.scrollTop).toBe(1500);
+    expect(
+      screen.queryByRole("button", { name: "맨 아래로" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("위를 읽을 때 새 전사는 위치를 유지하고 화살표로 돌아온 뒤에는 새 내용을 추종합니다", () => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let id = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frames.set(++id, callback);
+      return id;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (key: number) => frames.delete(key));
+    const flush = () => {
+      const callbacks = [...frames.values()];
+      frames.clear();
+      callbacks.forEach((callback) => callback(0));
+    };
+    try {
+      withLedger(head({ content: "진행 중 항목" }));
+      const view = () => (
+        <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+      );
+      const { container, rerender } = render(view());
+      const viewport = container.querySelector<HTMLElement>(
+        "[data-slot=scroll-area-viewport]"
+      )!;
+      metrics(viewport, 1500);
+      flush();
+      metrics(viewport, 200);
+      live.partial = { confirmedText: "", pendingText: "새로운 발화" };
+      rerender(view());
+      flush();
+      expect(viewport.scrollTop).toBe(200);
+      fireEvent.click(screen.getByRole("button", { name: "맨 아래로" }));
+      expect(viewport.scrollTop).toBe(1500);
+      Object.defineProperty(viewport, "scrollHeight", {
+        configurable: true,
+        value: 2400,
+      });
+      live.partial = { confirmedText: "", pendingText: "계속되는 발화" };
+      rerender(view());
+      flush();
+      expect(viewport.scrollTop).toBe(2400);
+      expect(
+        screen.queryByRole("button", { name: "맨 아래로" })
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

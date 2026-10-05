@@ -1,6 +1,13 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   ArrowUpRight,
@@ -14,6 +21,7 @@ import {
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import { useLivePartial } from "@/components/notes/use-live-partial";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
+import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -217,18 +225,50 @@ export function NoteTimeline({
    */
   const viewportRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
+  const [isFollowing, setIsFollowing] = useState(true);
+  const updateFollowing = useCallback((following: boolean) => {
+    followingRef.current = following;
+    setIsFollowing(following);
+  }, []);
+  const syncFollowing = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    updateFollowing(
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <=
+        FOLLOW_THRESHOLD_PX
+    );
+  }, [updateFollowing]);
+  const scrollToLatest = () => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    // 즉시 이동해 중간 scroll 이벤트가 추종을 끄거나 버튼을 깜빡이지 않게 한다.
+    viewport.scrollTop = Math.max(
+      0,
+      viewport.scrollHeight - viewport.clientHeight
+    );
+    syncFollowing();
+  };
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const handleScroll = () => {
-      followingRef.current =
-        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <=
-        FOLLOW_THRESHOLD_PX;
+    viewport.addEventListener("scroll", syncFollowing, { passive: true });
+    syncFollowing();
+    // 완료된 목록의 조회·접기·폰트 변화도 버튼 위치를 다시 잰다. 라이브 추종 의도는
+    // 새 항목이 붙은 뒤 거리로 덮지 않는다.
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => {
+            if (!recording || !followingRef.current) syncFollowing();
+          });
+    observer?.observe(viewport);
+    if (viewport.firstElementChild)
+      observer?.observe(viewport.firstElementChild);
+    return () => {
+      viewport.removeEventListener("scroll", syncFollowing);
+      observer?.disconnect();
     };
-    viewport.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => viewport.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [recording, syncFollowing]);
   useEffect(() => {
     if (!recording || !followingRef.current) return;
     const frame = window.requestAnimationFrame(() => {
@@ -254,6 +294,15 @@ export function NoteTimeline({
       className="h-full"
       viewportRef={viewportRef}
       viewportClassName="overflow-x-hidden!"
+      overlay={
+        !isFollowing ? (
+          <ScrollToBottomButton
+            label="맨 아래로"
+            onClick={scrollToLatest}
+            className="lg:bottom-20"
+          />
+        ) : null
+      }
     >
       <div className="mx-auto w-full max-w-[calc(760px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-36">
         {header ? (
