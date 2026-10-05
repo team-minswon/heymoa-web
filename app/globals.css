@@ -275,6 +275,18 @@
   --lp-rec: #b0472a;
   --lp-rec-soft: #f7e6e0;
   --lp-rec-ink: #8a3f26;
+  /* 앱의 역할 색(`components/notes/review/role-dot.tsx` 의 `ROLE_COLOR`)과 글자용 한 단 진한 값.
+     목업 안쪽(앱 화면을 그린 삽화)에서만 쓴다 — 결정 · 할 일 · 열린 질문 · 참고. */
+  --lp-role-decision: #2a78d6;
+  --lp-role-task: #1baf7a;
+  --lp-role-open: #eb6834;
+  --lp-role-ref: #a8a29e;
+  --lp-role-decision-ink: #1d5fa8;
+  --lp-role-task-ink: #13805a;
+  --lp-role-open-ink: #b4501f;
+  /* 「논의 중」 · 「확정됨」 배지(앱 `--el-success` · `--el-success-strong`) */
+  --lp-success: #16a34a;
+  --lp-success-ink: #166534;
 
   letter-spacing: normal;
   line-height: normal;
@@ -373,39 +385,19 @@
   scale: 0.985;
 }
 
-/* 방금 올라온 사건 카드. **뜨는 것만으로는 「새로 들어왔다」가 안 읽힌다** — 목록이 길면
-   어디가 늘었는지 눈이 못 찾는다. 크림이 한 번 들었다 빠지면서 그 자리를 가리킨다. */
-.landing-surface [data-fresh] {
-  animation:
-    lp-rise 0.42s cubic-bezier(0.16, 1, 0.3, 1) both,
-    lp-fresh 1.6s ease-out both;
-}
-
-@keyframes lp-fresh {
-  0%,
-  12% {
-    background: var(--lp-cream);
-    box-shadow: 0 0 0 1px var(--lp-rule-strong);
-  }
-  100% {
-    background: var(--lp-card);
-    box-shadow: 0 1px 2px #33231a10;
-  }
-}
-
 /* 대화의 한 왕복이 들어오는 결. 앱의 `.chat-rise`와 같은 길이다 — 답은 글자가 흐르므로
    블록에만 짧게 건다. */
 .landing-surface [data-turn] {
   animation: lp-rise 0.24s cubic-bezier(0.22, 0.68, 0.32, 1) both;
 }
 
-/* 「회의 종료」가 눌리는 순간. **이 대목만 느리다** — 회의를 끝내는 장면이라 다른 대목과
-   같은 속도로 지나가면 「버튼이 잠깐 반짝했다」로만 남는다. 손이 닿고(색이 든다) → 눌러
-   들어가고 → 머물고 → 떼는 네 동작을 1.4초에 나눠 준다.
+/* 독의 ■와 「회의 종료」가 눌리는 순간. **이 둘만 느리다** — 회의를 멈추고 끝내는 장면이라
+   다른 대목과 같은 속도로 지나가면 「버튼이 잠깐 반짝했다」로만 남는다. 손이 닿고(색이 든다)
+   → 눌러 들어가고 → 머물고 → 떼는 네 동작을 1.4초에 나눠 준다.
 
    파문은 눈이 딴 데(오른쪽 레일의 답)에 가 있을 때를 위한 것이다. 크기 변화만으로는
    시야 가장자리에서 안 잡힌다. */
-.landing-surface .lp-end[data-pressing] {
+.landing-surface [data-pressing] {
   animation: lp-press 1.4s cubic-bezier(0.22, 0.68, 0.32, 1) both;
 }
 
@@ -462,6 +454,34 @@
   opacity: 0;
 }
 
+/* 녹음 독. 회의가 끝나면 앱은 독을 거둔다 — 같은 이유로 언마운트하지 않고 가라앉히며 지운다. */
+.landing-surface .lp-dock {
+  transition:
+    opacity 0.22s ease-out,
+    translate 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-surface .lp-dock[data-gone] {
+  opacity: 0;
+  translate: 0 8px;
+}
+
+/* 독의 파형 막대 다섯. 앱은 마이크 레벨을 그리지만 여기는 소리가 없으니, 막대마다 박자를
+   어긋나게 해 「듣고 있다」만 보인다. */
+.landing-surface .lp-level {
+  animation: lp-level 0.9s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i, 0) * -0.23s);
+}
+
+@keyframes lp-level {
+  from {
+    scale: 1 0.25;
+  }
+  to {
+    scale: 1 1;
+  }
+}
+
 /* 받아 적는 중인 줄은 **말풍선으로 섰다가 확정되면 색만 빠진다**. 안쪽 여백을 음수 여백이
    정확히 상쇄해 두어서, 말풍선이 붙어 있든 없든 글자 자리가 한 픽셀도 안 움직인다. */
 .landing-surface .lp-said {
@@ -511,6 +531,18 @@
   animation: chat-shimmer 2.1s linear infinite;
 }
 
+/* 제품 샷의 일시정지(WCAG 2.2.2)는 대본만이 아니라 **혼자 도는 그림까지** 세운다 — 독의 파형
+   막대, 깜박이는 커서, 「생각하는 중」의 빛, 받아 적는 점, 분석 스피너가 계속 움직이면 멈춘
+   것이 아니다. 들어오는 애니메이션(`data-enter` · `data-panel`)은 건드리지 않는다 — 첫
+   프레임에서 세우면 멈춘 채 눌러 연 탭이 투명하게 남는다. */
+.landing-surface [data-paused] .lp-level,
+.landing-surface [data-paused] .lp-caret,
+.landing-surface [data-paused] .lp-shimmer,
+.landing-surface [data-paused] .animate-pulse,
+.landing-surface [data-paused] .animate-spin {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-surface [data-reveal],
   .landing-surface [data-reveal] [data-stagger],
@@ -552,13 +584,14 @@
     transition: none;
   }
 
-  .landing-surface .lp-end[data-pressing] {
+  .landing-surface [data-pressing],
+  .landing-surface [data-turn],
+  .landing-surface .lp-level {
     animation: none;
   }
 
-  .landing-surface [data-fresh],
-  .landing-surface [data-turn] {
-    animation: none;
+  .landing-surface .lp-dock {
+    transition: none;
   }
 }
 

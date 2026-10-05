@@ -1,4 +1,4 @@
-import { unnamedSpeakerAvatarKey } from "@/components/heymoa/person-avatar";
+import { unnamedSpeakerAvatarKey } from "@/lib/people/avatar-key";
 
 /**
  * 담당을 사람 말로 푸는 규칙 하나. 검토 화면과 할 일 화면이 같은 사람을 같은 이름·얼굴로 세운다.

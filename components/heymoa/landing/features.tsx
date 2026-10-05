@@ -3,11 +3,11 @@ import { Check } from "lucide-react";
 
 import {
   ApprovalThread,
-  InviteList,
-  RailFlow,
-  SummaryList,
-  TranscriptPane,
   ChatAsk,
+  InviteList,
+  ReviewDoc,
+  TimelineMock,
+  TranscriptPane,
 } from "@/components/heymoa/landing/feature-mocks";
 import {
   CONTAINER,
@@ -24,8 +24,12 @@ import { Reveal } from "@/components/heymoa/landing/reveal";
  * 어떻게 되나」다. 예전에는 둘이 같은 말을 두 번 했다 — 「회의가 끝나면 개요·액션 아이템·
  * 결정으로 갈립니다」가 설명에도 불릿에도 있었다.
  *
- * 순서는 회의 중에 일어나는 셋(전사 · 실시간 정리 · 질의)을 앞에, 회의 뒤(자동 정리 ·
+ * 순서는 회의 중에 일어나는 셋(스크립트 · 타임라인 · 질의)을 앞에, 회의 뒤(검토 ·
  * 내보내기)를 가운데, 팀 단위인 초대를 끝에 둔다.
+ *
+ * **이름은 앱의 말을 쓴다.** 「타임라인」 · 「내 에이전트」 · 「검토 완료」 · 「할 일」처럼 앱
+ * 화면에서 그대로 찾을 수 있는 말이다 — 「실시간 정리」 · 「사건 흐름」 · 「개요 · 액션 아이템」은
+ * 앱에서 사라진 말이라 쓰지 않는다.
  */
 
 type Card = { title: string; lead: string; bullets: string[]; mock: ReactNode };
@@ -42,34 +46,34 @@ const CARDS: Card[] = [
     mock: <TranscriptPane />,
   },
   {
-    title: "실시간 정리",
+    title: "타임라인",
     lead: "회의가 끝나기를 기다리지 않아도 됩니다.",
     bullets: [
-      "결정 · 할 일 · 질문으로 나뉘어 회의 중에 쌓입니다",
-      "전체 · 결론 · 논의 중 · 참고로 걸러 봅니다",
+      "결정 · 할 일 · 질문이 회의 중에 안건별로 묶여 쌓입니다",
+      "전체 · 결정 · 할 일 · 열린 질문 · 참고로 걸러 봅니다",
       "뒤집힌 항목은 지우지 않고 「철회됨」으로 남습니다",
     ],
-    mock: <RailFlow />,
+    mock: <TimelineMock />,
   },
   {
     title: "회의 중 질의",
     lead: "모르는 게 나와도 회의를 세우지 않아도 됩니다.",
     bullets: [
-      "오른쪽 레일에서 회의가 도는 중에 묻습니다",
-      "지금까지의 스크립트와 지난 회의를 함께 보고 답합니다",
+      "오른쪽 「내 에이전트」에서 회의가 도는 중에 묻습니다",
+      "이 회의부터 찾고, 모자라면 지난 회의까지 넓혀 답합니다",
       "답변 아래에 참고한 회의록이 붙습니다",
     ],
     mock: <ChatAsk />,
   },
   {
-    title: "자동 정리",
-    lead: "끝나고 나서 다시 읽고 정리할 일이 없습니다.",
+    title: "회의 뒤 검토",
+    lead: "끝나고 나서 처음부터 다시 정리하지 않아도 됩니다.",
     bullets: [
-      "회의를 종료하면 개요 · 액션 아이템 · 결정으로 갈립니다",
-      "항목마다 그 말이 나온 스크립트 줄이 근거로 붙습니다",
-      "회의 중에는 남길 만한 변화가 사건 흐름에 쌓입니다",
+      "회의를 종료하면 요약 · 주제 · 결정 · 할 일로 정리됩니다",
+      "결정을 펼치면 그 말이 나온 근거 발언이 붙어 있습니다",
+      "「검토 완료」를 누르면 결정과 할 일이 프로젝트에 올라가고, 할 일은 「할 일」 화면에 모입니다",
     ],
-    mock: <SummaryList />,
+    mock: <ReviewDoc />,
   },
   {
     title: "도구로 내보내기",
@@ -93,6 +97,9 @@ const CARDS: Card[] = [
   },
 ];
 
+/** 카드 제목 여섯. JSON-LD `featureList`가 이것을 그대로 쓴다(`landing-client.tsx`). */
+export const FEATURE_TITLES = CARDS.map((c) => c.title);
+
 export function Features() {
   return (
     <section id="features" className={`${SECTION_X} ${SECTION_TOP} scroll-mt-24`}>
@@ -111,11 +118,12 @@ export function Features() {
           {CARDS.map((c) => (
             // 밴드가 아니라 카드마다 뜬다 — 목업 안의 줄은 카드가 뜬 뒤에 하나씩 들어온다.
             // `Reveal`이 카드 그 자체다. 래퍼를 하나 더 끼우면 격자 칸이 갈려 카드 높이가
-            // 서로 안 맞는다.
+            // 서로 안 맞는다. `min-w-0`은 한 열(md 미만)일 때 목업 안의 말줄임 줄이 제 글자 폭만큼
+            // 카드를 밀어 320에서 가로로 넘치지 않게 한다 — 그 칸은 `auto`라 내용 최소 폭을 따른다.
             <Reveal
               key={c.title}
               data-lift
-              className="box-border flex h-full flex-col rounded-[18px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-3 lg:p-3.5"
+              className="box-border flex h-full min-w-0 flex-col rounded-[18px] border border-[var(--lp-rule)] bg-[var(--lp-card)] p-3 lg:p-3.5"
             >
               {/* 크림 패널이 앱 화면을 받친다 — 창을 바로 흰 카드 위에 두면 경계가 사라진다. */}
               <div className="box-border overflow-hidden rounded-xl bg-[var(--lp-cream)] p-3 lg:p-4">

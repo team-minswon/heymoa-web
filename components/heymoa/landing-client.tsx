@@ -1,6 +1,6 @@
 import { ClosingCta } from "@/components/heymoa/landing/closing-cta";
 import { Faq } from "@/components/heymoa/landing/faq";
-import { Features } from "@/components/heymoa/landing/features";
+import { FEATURE_TITLES, Features } from "@/components/heymoa/landing/features";
 import { Flow } from "@/components/heymoa/landing/flow";
 import { Hero } from "@/components/heymoa/landing/hero";
 import { Reveal } from "@/components/heymoa/landing/reveal";
@@ -19,16 +19,10 @@ const jsonLd = {
   operatingSystem: "Web",
   url: siteConfig.url,
   description: siteConfig.description,
-  // 「기능 소개」가 세는 여섯과 같게 둔다 — 페이지가 여섯을 말하는데 구조화 데이터가 셋만
-  // 말하면 검색 결과에 뜨는 목록이 화면과 갈린다.
-  featureList: [
-    "실시간 스크립트",
-    "실시간 정리",
-    "회의 중 질의",
-    "자동 정리",
-    "Linear · GitHub 로 내보내기",
-    "멤버 초대",
-  ],
+  // 「기능 소개」 카드 제목을 그대로 쓴다 — 페이지가 여섯을 말하는데 구조화 데이터가 셋만
+  // 말하면 검색 결과에 뜨는 목록이 화면과 갈린다. 손으로 옮겨 적으면 카드 이름이 바뀔 때
+  // 여기만 옛 이름(「실시간 정리」)으로 남는다 — 실제로 그랬다.
+  featureList: FEATURE_TITLES,
   inLanguage: "ko-KR",
 };
 
@@ -39,8 +33,9 @@ const jsonLd = {
  * 체계라 여기서 쓰면 크림이 안 나온다. 반대로 크림을 전역에 두면 워크스페이스까지 물든다 —
  * 그래서 클래스 하나로 범위를 자르고 그 안에서 `--lp-*`를 쓴다(globals.css).
  *
- * 서버 컴포넌트로 둔다. 움직이는 것은 `LandingCta`(로그인 상태) 하나뿐이고 그것만 클라이언트다.
- * 예전 판은 파일 전체가 `"use client"`였는데 스크롤 리빌 때문이었고, 이 판에는 그 연출이 없다.
+ * 서버 컴포넌트로 둔다. 클라이언트는 움직이는 조각만이다 — 로그인 상태를 읽는 `LandingCta`,
+ * 혼자 도는 제품 시연(`ProductShot`), 스크롤 리빌(`Reveal`), 펼치는 FAQ. 페이지 전체를
+ * `"use client"`로 두면 정적인 섹션까지 클라이언트 번들에 실린다.
  */
 export function LandingClient() {
   return (

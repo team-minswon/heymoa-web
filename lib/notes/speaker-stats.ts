@@ -1,6 +1,6 @@
 import { compareLabels } from "@/lib/transcription/speaker-identity";
 import type { TranscriptPresentationSegment } from "@/lib/transcription/presentation";
-import { personAvatarKey } from "@/components/heymoa/person-avatar";
+import { personAvatarKey } from "@/lib/people/avatar-key";
 import { speakerAvatarName } from "@/lib/transcription/speaker-identity";
 
 /** 화자 하나가 말한 분량. 저장하지 않고 화면이 그릴 때 센다. */

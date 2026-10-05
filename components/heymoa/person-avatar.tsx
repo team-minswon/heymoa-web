@@ -28,37 +28,10 @@ import { cn } from "@/lib/utils";
 const PALETTE = ["#7ed0c0", "#f2b7a0", "#a8c8f0", "#c9b6ee", "#f3aebd"];
 
 /**
- * 그 사람의 얼굴 열쇠. **워크스페이스에서 변하지 않는 식별자가 먼저다** — 계정과 임시
- * 참여자 식별자는 회의를 옮겨도 같아서, 같은 사람이 전사·참석자·설정에서 한 얼굴로 선다.
- * `participantId` 는 한 회의 안에서만 뜻이 있어 회의마다 얼굴이 튀므로 마지막 수단이다.
- *
- * **이름을 먼저 쓰면 안 된다** — 한 워크스페이스에 박도현·박순영이 같이 있고, 개명하면
- * 얼굴이 튄다.
+ * 얼굴 열쇠는 `lib/people/avatar-key.ts` 에 산다 — 이 파일은 `"use client"` 라서, 여기 두면 서버
+ * 컴포넌트(랜딩 목업)와 `lib` 의 순수 함수가 열쇠를 못 부른다. 기존 import 를 위해 다시 내보낸다.
  */
-export function personAvatarKey(person: {
-  participantId?: string | null;
-  userId?: string | null;
-  guestId?: string | null;
-  email?: string | null;
-  name?: string | null;
-}) {
-  return (
-    person.guestId ||
-    person.userId ||
-    person.participantId ||
-    person.email ||
-    person.name ||
-    "?"
-  );
-}
-
-/**
- * 아직 아무도 안 붙은 화자의 얼굴 열쇠. 전사의 칩과 요약·할 일의 담당 칸이 **둘 다 이것을 쓴다** —
- * 담당 칸만 노트 id 를 섞어서 같은 「화자 B」가 두 얼굴로 섰다.
- */
-export function unnamedSpeakerAvatarKey(label: string) {
-  return `label:${label}`;
-}
+export { personAvatarKey, unnamedSpeakerAvatarKey } from "@/lib/people/avatar-key";
 
 export function PersonAvatar({
   name,

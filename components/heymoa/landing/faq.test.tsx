@@ -16,9 +16,11 @@ describe("Faq", () => {
   it("첫 항목만 펼친 채로 시작한다", () => {
     render(<Faq />);
     const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(5);
+    expect(buttons).toHaveLength(7);
     expect(buttons.map((b) => b.getAttribute("aria-expanded"))).toEqual([
       "true",
+      "false",
+      "false",
       "false",
       "false",
       "false",

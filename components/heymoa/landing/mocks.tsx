@@ -1,125 +1,206 @@
-import { FileText, Link as LinkIcon, PencilLine, SquareCheckBig } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { CalendarDays } from "lucide-react";
+
+import { PersonAvatar } from "@/components/heymoa/person-avatar";
+import { unnamedSpeakerAvatarKey } from "@/lib/people/avatar-key";
+import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
 
 /**
  * 「작동 방식」 카드 셋 안에 들어가는 작은 앱 화면 조각. 넓은 화면에서는 창 높이가 184px로
  * 고정이라 `feature-mocks.tsx`(내용만큼 자람)보다 한 단 작게 그린다.
  *
- * **좁은 화면은 시안이 다시 그렸다.** 전사는 구분선 대신 8px 간격, 요약은 항목마다 가는
- * 선 하나, 승인 카드는 바닥 붙이기를 안 한다(창이 자라므로 붙일 바닥이 없다). 글자도
- * 한 단 크다 — 350px 카드에서 10px는 안 읽힌다.
+ * **좁은 화면은 시안이 다시 그렸다.** 전사는 구분선 대신 8px 간격, 검토 막대는 바닥 붙이기를
+ * 안 한다(창이 자라므로 붙일 바닥이 없다). 글자도 한 단 크다 — 350px 카드에서 10px는 안 읽힌다.
  *
  * **여기 글자는 전부 삽화다.** 8~11px에 `--lp-faint` 같은 흐린 색을 쓰는 것은 앱 화면의
  * 실제 크기와 색을 따라 그리기 때문이고, 페이지가 직접 하는 말이 아니다. 페이지 문장에
  * 이 색·크기를 쓰면 대비를 잃는다 — 두 쓰임을 섞지 않는다.
  *
- * 이 크기에서는 화자 색을 나누지 않는다. 17px 원에 네 가지 색을 칠하면 색만 튀고 누가
- * 누구인지는 어차피 안 읽힌다 — 시안도 여기서는 한 색으로 통일했다.
+ * 세 판은 히어로 시연(`use-demo.ts`)과 **같은 회의**다 — 「3차 스프린트 킥오프」(9월 1일 화요일)의
+ * 같은 발화 · 결정 · 할 일을 쓴다. 한 판만 숫자나 날짜가 다르면 세 판이 서로를 반박한다.
  */
 
-function Row({ at, who, text }: { at: string; who: string; text: string }) {
+/** 회의 중 스크립트의 확정된 한 줄 — 시각과 본문 두 칸(`transcript-view.tsx`). */
+function Row({ at, text }: { at: string; text: string }) {
   return (
-    <div className="flex gap-2 lg:border-b lg:border-[var(--lp-rule-soft)] lg:py-2">
-      <span className="w-7 shrink-0 font-mono text-[9.5px] leading-[1.7] tabular-nums text-[var(--lp-faint)]">
+    <div className="col-span-2 grid grid-cols-subgrid px-1.5 lg:border-b lg:border-[var(--lp-rule-soft)] lg:py-2">
+      <span className="font-mono text-[9.5px] leading-[1.7] tabular-nums text-[var(--lp-faint)]">
         {at}
       </span>
-      <span
-        aria-hidden
-        className="flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--lp-rule-soft)] text-[8px] font-semibold text-[var(--lp-body)] lg:size-[17px] lg:bg-[var(--lp-green)] lg:text-[8.5px] lg:text-[var(--lp-on-dark)]"
-      >
-        {who.slice(0, 1)}
+      <span className="break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[10.5px] lg:leading-[1.5] lg:text-[var(--lp-body)]">
+        {text}
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-px">
-        <span className="text-[9px] font-semibold text-[#8a7a6d] lg:text-[9.5px]">{who}</span>
-        <span className="break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[10.5px] lg:leading-[1.5] lg:text-[var(--lp-body)]">
-          {text}
-        </span>
-      </div>
     </div>
   );
 }
 
-/** 회의 중 — 발화 세 줄. */
+/**
+ * 듣는 동안 — 확정된 발화 셋과 받아 적는 중인 한 줄.
+ *
+ * **회의 중에는 화자가 없다.** 실시간 발화는 화자 없이 오고(서버가 `speakerLabel = null`로 쓴다),
+ * 화자는 회의가 끝난 뒤 화자 분리가 채운다. 그래서 얼굴도 이름도 그리지 않는다.
+ *
+ * 줄마다 칸 폭이 같아야 본문이 한 세로선에 선다. 시각 칸은 「받아 적는 중」이 들어갈 만큼
+ * 넓어야 해서 고정 폭 대신 **바깥 격자 하나를 줄들이 나눠 쓴다**(`subgrid`) — 글꼴이 바뀌어도
+ * 칸이 글자에 맞춰 늘고 넘치지 않는다.
+ */
 export function MiniTranscript() {
   return (
-    <div className="flex flex-col gap-2 lg:gap-0">
-      <Row at="00:31" who="이서연" text="저는 이번에 합류해서 그 맥락을 모릅니다." />
-      <Row at="00:44" who="김민서" text="에이전트가 근거를 붙여 뒀어요." />
-      <Row at="01:02" who="정우재" text="로그 수집은 제가 맡겠습니다." />
-    </div>
-  );
-}
-
-/**
- * 회의 직후 — 요약이 셋으로 갈린 모습.
- * 라벨은 `lib/notes/analysis-sections.ts`가 정한 것 그대로다(개요 · 액션 아이템 · 결정).
- */
-export function SummarySplit() {
-  const rows: Array<[LucideIcon, string, string]> = [
-    [FileText, "개요", "온보딩 이탈 지표부터 확인하기로 함"],
-    [SquareCheckBig, "액션 아이템", "로그 수집 초안 — 정우재 · 목요일"],
-    [LinkIcon, "결정", "결제 화면 개편은 다음 스프린트로"],
-  ];
-  return (
-    <div className="flex flex-col gap-[9px] lg:gap-0">
-      {rows.map(([Icon, label, text], i) => (
-        <div key={label} className="contents">
-          {i > 0 ? (
-            <span aria-hidden className="block h-px bg-[var(--lp-rule-soft)] lg:hidden" />
-          ) : null}
-          <div className="flex flex-col gap-[3px] lg:gap-[5px] lg:pt-[7px] lg:pb-[9px]">
-            <div className="flex items-center gap-1.5">
-              <Icon aria-hidden className="hidden size-3 shrink-0 text-[var(--lp-accent)] lg:block" />
-              <span className="font-serif text-[10px] font-semibold text-[#8a7a6d] lg:text-[var(--lp-ink)]">
-                {label}
-              </span>
-            </div>
-            <p className="m-0 break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[10.5px] lg:leading-[1.45] lg:text-[var(--lp-body)]">
-              {text}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * 그 다음 — 승인 카드.
- *
- * **일괄 대기열이 아니다.** 스레드 안에서 호출 하나마다 뜨는 카드이고 버튼은 「승인」과
- * 「거절」 둘뿐이다(`chat-thread.tsx`의 `ApprovalPrompt`). 「보류」나 체크박스로 여러 건을
- * 골라 내보내는 화면은 코드에 없다.
- */
-export function ApprovalCard() {
-  return (
-    <div className="flex flex-col lg:h-full">
-      <span className="inline-flex items-center gap-[5px] self-start rounded-full bg-[var(--lp-rule-soft)] px-2 py-[3px] lg:gap-1">
-        <PencilLine aria-hidden className="size-2.5 shrink-0 text-[var(--lp-body)]" />
-        <span className="text-[9.5px] font-semibold text-[var(--lp-body)] lg:text-[9px]">
-          쓰기 도구
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2 lg:gap-y-0">
+      <Row at="00:14" text="결제 화면 개편은 다음으로 미뤘습니다." />
+      <Row at="00:31" text="저는 이번에 합류해서 그 맥락을 모릅니다." />
+      {/* 미룬 이유는 이 회의 발화가 아니라 2차 회의록에 있다 — 그래서 타임라인이 아니라 에이전트를 가리킨다(히어로 대본 00:44와 같은 말). */}
+      <Row at="00:44" text="에이전트한테 물어보면 돼요." />
+      {/* 받아 적는 줄은 시각 자리에 상태를 적는다 — 아직 확정 안 된 발화라 시각도 확정이
+          아니다. 바탕만 옅게 깔고 x좌표는 확정 줄과 같다. 앞부분은 업체가 확정한 글자,
+          흐린 뒷부분은 다음 조각이 갈아치울 글자다. 커서는 붉지 않다.
+          **깜박이지 않는다** — 이 그림은 제품 시연 밖이라 시연의 「일시정지」가 닿지 않는다. 끝없이
+          깜박이는데 멈출 길이 없으면 WCAG 2.2.2 에 걸린다. 점과 커서를 멈춘 채로 그린다. */}
+      <div className="col-span-2 grid grid-cols-subgrid rounded-md bg-[var(--lp-canvas)] px-1.5 py-1 lg:py-2">
+        <span className="flex items-center gap-1 self-start whitespace-nowrap text-[9px] leading-[1.8] text-[var(--lp-muted)]">
+          <span
+            aria-hidden
+            className="size-[5px] shrink-0 rounded-full bg-[var(--lp-rec)]"
+          />
+          받아 적는 중
         </span>
-      </span>
-      <p className="m-0 mt-[9px] break-keep text-[12px] font-bold leading-[1.45] text-[var(--lp-ink)] lg:text-[11.5px] lg:font-semibold">
-        Linear 에 이슈를 만들까요?
-      </p>
-      <div className="mt-2 box-border flex flex-col gap-1 rounded-lg border border-[var(--lp-rule)] bg-[var(--lp-canvas)] px-2.5 py-2 lg:gap-[3px] lg:px-[9px] lg:py-[7px]">
-        <span className="font-mono text-[9.5px] text-[var(--lp-muted)] lg:text-[9px]">
-          linear.create_issue
-        </span>
-        <span className="break-keep text-[10.5px] leading-[1.45] text-[var(--lp-body)] lg:text-[10px] lg:leading-[1.4]">
-          온보딩 이탈 로그 수집 초안 올리기
+        <span className="break-keep text-[11px] leading-[1.55] text-[var(--lp-ink)] lg:text-[10.5px] lg:leading-[1.5] lg:text-[var(--lp-body)]">
+          그럼 로그 수집은 <span className="text-[var(--lp-muted)]">제가 맡겠습</span>
+          <span aria-hidden className="ml-[3px] inline-block h-[0.95em] w-px bg-[var(--lp-muted)] align-[-0.12em]" />
         </span>
       </div>
-      {/* 넓은 화면에서만 버튼을 창 바닥에 붙인다 — 거기서는 세 창의 높이가 184px로 같아서
-          바닥선이 맞아야 줄이 선다. 좁은 화면의 창은 내용만큼 자라므로 붙일 바닥이 없다. */}
-      <div className="mt-[11px] flex items-center gap-[7px] lg:mt-auto lg:gap-1.5 lg:pt-3">
-        <span className="rounded-lg bg-[var(--lp-dark)] px-3.5 py-[7px] text-[11px] font-semibold text-[var(--lp-on-dark)] lg:rounded-[7px] lg:bg-[var(--lp-accent)] lg:px-3 lg:py-1.5 lg:text-[10px]">
-          승인
+    </div>
+  );
+}
+
+/** 검토 화면의 섹션 머리 — 이름과 포함한 항목 수(`section-block.tsx`). */
+function SectionHead({ title, count }: { title: string; count: number }) {
+  return (
+    <p className="m-0 mt-2.5 flex items-baseline gap-1 text-[10px] font-semibold text-[var(--lp-ink)] lg:text-[9.5px]">
+      {title}
+      <span className="font-normal tabular-nums text-[var(--lp-faint)]">{count}</span>
+    </p>
+  );
+}
+
+/** 결정은 채운 체크 — 타임라인 · 검토 화면과 같은 모양이다. */
+function DecisionMark() {
+  return (
+    <span aria-hidden className="flex shrink-0 [&_svg]:size-3">
+      <TimelineToneIcon tone="decision" />
+    </span>
+  );
+}
+
+/** 결정 · 할 일 한 줄(`review-row.tsx`). 내용은 한 줄로 자르고 오른쪽에 시각이나 담당 · 기한이 선다. */
+function ItemRow({ mark, text, children }: { mark: ReactNode; text: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 border-b border-[var(--lp-rule-soft)] py-[5px]">
+      {mark}
+      <span className="min-w-0 flex-1 truncate text-[11px] text-[var(--lp-ink)] lg:text-[10.5px]">
+        {text}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function TimeChip({ at }: { at: string }) {
+  return (
+    <span className="inline-flex h-[15px] shrink-0 items-center rounded-[4px] bg-[var(--lp-canvas)] px-1 text-[9px] tabular-nums text-[var(--lp-body)] lg:text-[8.5px]">
+      {at}
+    </span>
+  );
+}
+
+/**
+ * 끝나고 나면 — 요약 탭의 검토 문서 첫머리(`components/notes/review/*`).
+ *
+ * 머리(「검토 중」 배지, 요약/그래프 전환, 세리프 제목) 뒤에 결정과 할 일을 한 줄씩 잘라 보인다.
+ * 섹션 이름은 `lib/notes/review/sections.ts`가 정한 것 그대로다. 「언제 정해졌나」 · 요약 · 주제는
+ * 184px에 안 들어가 뺐고, 개수(2 · 2)는 대본의 결정 둘 · 할 일 둘이라 03 카드의 막대 숫자와 같다.
+ * 결정은 채운 체크 + 시각, 할 일은 빈 상자 + 담당 얼굴 + 기한 칩이다 — 앱의 줄 모양 그대로.
+ */
+export function MiniReview() {
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between">
+        <span className="inline-flex h-[15px] items-center rounded-[4px] bg-[var(--lp-rule-soft)] px-[5px] text-[9px] font-semibold text-[var(--lp-body)] lg:text-[8.5px]">
+          검토 중
         </span>
-        <span className="rounded-lg border border-[var(--lp-rule-strong)] bg-[var(--lp-card)] px-3.5 py-[7px] text-[11px] font-medium text-[var(--lp-body)] lg:rounded-[7px] lg:px-3 lg:py-1.5 lg:text-[10px]">
-          거절
+        <span className="inline-flex rounded-full bg-[var(--lp-rule-soft)] p-px text-[8.5px] font-medium leading-[14px] lg:text-[8px]">
+          <span className="rounded-full bg-[var(--lp-card)] px-1.5 text-[var(--lp-ink)] shadow-[0_1px_2px_#33231a10]">
+            요약
+          </span>
+          <span className="px-1.5 text-[var(--lp-muted)]">그래프</span>
         </span>
+      </div>
+      <p className="m-0 mt-1.5 font-serif text-[14px] font-medium leading-[1.35] tracking-[-0.2px] text-[var(--lp-ink)] lg:text-[13px]">
+        3차 스프린트 킥오프
+      </p>
+
+      <SectionHead title="결정" count={2} />
+      <ItemRow mark={<DecisionMark />} text="결제 화면 개편은 다음 스프린트로 미룬다">
+        <TimeChip at="00:14" />
+      </ItemRow>
+
+      <SectionHead title="할 일" count={2} />
+      <ItemRow
+        mark={
+          <span
+            aria-hidden
+            className="size-3 shrink-0 rounded-[3px] border-[1.5px] border-[var(--lp-rule-strong)]"
+          />
+        }
+        text="로그 수집 초안 올리기"
+      >
+        {/* 검토를 기다리는 때라 화자에 아직 이름이 없다 — 앱도 담당을 「화자 D」로 둔다(히어로 시연과 같다). */}
+        <span className="flex shrink-0 items-center gap-1 text-[9.5px] text-[var(--lp-body)] lg:text-[9px]">
+          <PersonAvatar name={unnamedSpeakerAvatarKey("D")} size={12} />
+          화자 D
+        </span>
+        {/* 회의가 9월 1일(화)이라 「이번 주 목요일」은 9월 3일이다. 앱은 기한을 요일까지 쓴다. */}
+        <span className="inline-flex h-4 shrink-0 items-center gap-[3px] rounded-[5px] bg-[var(--lp-canvas)] px-[5px] text-[9px] tabular-nums text-[var(--lp-body)] lg:text-[8.5px]">
+          <CalendarDays aria-hidden className="size-2.5 shrink-0" />
+          9월 3일 (목)
+        </span>
+      </ItemRow>
+    </div>
+  );
+}
+
+/**
+ * 그 다음 — 검토 막대(`components/notes/review/confirm-bar.tsx`).
+ *
+ * 막대는 문서 위에 떠서 「무엇이 프로젝트에 올라가는지」를 세고, 「검토 완료」를 눌러야 올라간다.
+ * 위의 줄과 막대의 수는 히어로 시연과 같은 회의다(결정 둘 · 할 일 둘). 이 회의는 지난 결정을 그대로
+ * 잇기만 해서 갈아 끼울 이전 결정이 없다 — 그래서 대체 제안과 「이전 결정 N개 끝남」을 그리지 않는다.
+ *
+ * 넓은 화면에서는 막대를 창 바닥에 붙이고 위로 흰 그라데이션을 깐다 — 앱처럼 글이 막대 뒤로
+ * 스며 사라지고, 창이 184px로 같아서 세 카드의 바닥선이 맞는다. 좁은 화면의 창은 내용만큼
+ * 자라므로 붙일 바닥이 없어 차례로 쌓는다.
+ */
+export function MiniConfirmBar() {
+  return (
+    <div className="relative flex flex-col lg:h-full">
+      <ItemRow mark={<DecisionMark />} text="온보딩 이탈을 이번 스프린트의 첫 기준선으로 삼는다">
+        <TimeChip at="00:00" />
+      </ItemRow>
+      <ItemRow mark={<DecisionMark />} text="결제 화면 개편은 다음 스프린트로 미룬다">
+        <TimeChip at="00:14" />
+      </ItemRow>
+
+      <div className="mt-3 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:bg-gradient-to-b lg:from-transparent lg:to-[var(--lp-card)] lg:to-40% lg:pt-5">
+        <div className="flex items-center gap-2 rounded-[10px] border border-[var(--lp-rule)] bg-[var(--lp-card)] py-1 pr-1 pl-2.5 shadow-[0_2px_8px_#33231a12]">
+          <span className="min-w-0 flex-1 break-keep text-[10px] leading-[1.45] text-[var(--lp-body)] lg:text-[9.5px]">
+            결정 <b className="font-semibold text-[var(--lp-ink)]">2</b>개와 할 일{" "}
+            <b className="font-semibold text-[var(--lp-ink)]">2</b>개를 프로젝트에 올립니다
+          </span>
+          <span aria-hidden className="h-4 w-px shrink-0 bg-[var(--lp-rule)]" />
+          <span className="shrink-0 rounded-[7px] bg-[var(--lp-dark)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--lp-on-dark)] lg:text-[9.5px]">
+            검토 완료
+          </span>
+        </div>
       </div>
     </div>
   );

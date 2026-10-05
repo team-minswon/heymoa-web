@@ -7,7 +7,7 @@ import { AssigneeCell } from "@/components/heymoa/assignee-cell";
 import { Collapse } from "@/components/heymoa/collapse";
 import { DueCell } from "@/components/heymoa/due-cell";
 import { ARRIVE_CLASS } from "@/components/heymoa/motion";
-import { TimelineToneIcon } from "@/components/notes/note-timeline";
+import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
 import { Button } from "@/components/ui/button";
 import { assigneeRequestOf, type AssigneeChoice } from "@/lib/assignees/describe";
 import { CONFLICT_MESSAGE } from "@/lib/api/error-message";

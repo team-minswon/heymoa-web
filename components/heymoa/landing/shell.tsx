@@ -14,30 +14,19 @@ export const CONTAINER = "mx-auto w-full max-w-[1120px]";
 export const SECTION_TOP = "pt-16 lg:pt-[104px]";
 
 /**
- * 화자마다 다른 원 색. 제품 샷의 22px 원과 「기능 소개」 카드의 18px 원이 같은 값을 쓴다 —
- * 두 곳이 갈리면 같은 사람이 화면마다 다른 색이 된다.
+ * 지어낸 참석자의 얼굴 열쇠. **이름이 아니라 변하지 않는 식별자다** — 앱도 계정 · 임시 참여자
+ * 식별자로 얼굴을 그린다(`personAvatarKey`). 같은 열쇠가 화면마다 같은 얼굴을 내므로, 히어로 ·
+ * 작동 방식 · 기능 소개가 모두 이 지도를 쓴다. 판마다 열쇠를 따로 지으면 같은 사람이 띠마다 다른
+ * 얼굴로 선다.
  *
- * 더 작은 목업(`mocks.tsx`의 17px)은 이 지도를 안 쓴다. 그 크기에서는 색만 튀고 누가
- * 누구인지는 안 읽혀서 시안도 한 색으로 통일했다.
+ * 이름이 안 붙은 화자는 이것과 **다르다** — `unnamedSpeakerAvatarKey`로 그려서, 앱에서도 화자 A와
+ * 김민서는 이름을 이어 주기 전까지 다른 얼굴이다.
  */
-export const SPEAKER_TINT: Record<string, string> = {
-  김민서: "#366c4f",
-  박지훈: "#8a5a3c",
-  이서연: "#3d5a80",
-  정우재: "#7a4a63",
-};
-
-/**
- * 화자 칩의 파스텔. **라벨 순번이 색을 정한다** — 앱의 `speakerTintOfLabel`이 그렇고,
- * 이름을 붙여도 색이 안 바뀌게 하려는 규칙이다(`speaker-identity.ts`).
- *
- * 이 파스텔은 **바탕으로만** 쓴다(`DESIGN.md` — never as text colors). 글자는 잉크색이다.
- */
-export const SPEAKER_LABEL_TINT: Record<string, string> = {
-  A: "var(--el-gradient-sky)",
-  B: "var(--el-gradient-peach)",
-  C: "var(--el-gradient-mint)",
-  D: "var(--el-gradient-lavender)",
+export const FACE_KEY: Record<string, string> = {
+  김민서: "landing:kim-minseo",
+  박지훈: "landing:park-jihoon",
+  이서연: "landing:lee-seoyeon",
+  정우재: "landing:jeong-woojae",
 };
 
 /**

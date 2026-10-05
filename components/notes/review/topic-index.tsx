@@ -4,7 +4,7 @@ import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 import { Collapse } from "@/components/heymoa/collapse";
-import { TimelineToneIcon } from "@/components/notes/note-timeline";
+import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import { topicsToMarkdown } from "@/lib/notes/review/markdown";
 import type { ReviewItem } from "@/lib/notes/review/sections";

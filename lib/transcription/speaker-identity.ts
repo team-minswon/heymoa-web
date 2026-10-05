@@ -1,7 +1,7 @@
 import {
   personAvatarKey,
   unnamedSpeakerAvatarKey,
-} from "@/components/heymoa/person-avatar";
+} from "@/lib/people/avatar-key";
 import type { DiarizationSpeaker } from "@/lib/transcription/presentation";
 
 /**
