@@ -21,7 +21,7 @@ type NoteViewMode = "side" | "full";
  *
  * `router.replace`로 쓰면 Next가 이걸 진짜 내비게이션으로 취급한다 — `page.tsx`가
  * `searchParams`를 읽는 async Server Component라 탭 하나 누를 때마다 `_rsc=` 왕복이 돌고,
- * `prefetchNoteRoute`와 노트·전사·챗 쿼리가 다시 나간다. 탭 UI는 URL을 단일 출처로 쓰므로
+ * 서버 페이지가 다시 실행된다. 탭 UI는 URL을 단일 출처로 쓰므로
  * 그 왕복이 끝나야 움직인다(prod·localhost 실측 100~140ms, 실서버는 RTT만큼 더).
  *
  * `window.history.replaceState`는 Next 16이 라우터와 통합해 두어 `useSearchParams`가 그대로

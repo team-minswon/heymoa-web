@@ -127,8 +127,18 @@ vi.mock("@/components/notes/note-details", () => ({
   NoteDetailsSkeleton: () => <p>정보 로딩</p>,
 }));
 vi.mock("@/components/notes/transcript-view", () => ({
-  TranscriptView: ({ phase }: { phase?: string }) => (
-    <p data-testid="transcript-view" data-phase={phase}>
+  TranscriptView: ({
+    phase,
+    focusSegmentId,
+  }: {
+    phase?: string;
+    focusSegmentId?: string | null;
+  }) => (
+    <p
+      data-testid="transcript-view"
+      data-phase={phase}
+      data-focus={focusSegmentId ?? ""}
+    >
       전사 내용
     </p>
   ),
@@ -618,7 +628,9 @@ describe("NotePanel", () => {
     // 감출 뿐 자리를 놓지 않는다 — 놓으면 패널이 다시 마운트되어 쓰던 질문이 사라진다.
     expect(setRailSlot).toHaveBeenLastCalledWith(expect.any(HTMLElement));
 
-    fireEvent.click(screen.getByRole("button", { name: "이 회의에 대해 물어보기" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "이 회의에 대해 물어보기" })
+    );
     expect(screen.getByTestId("note-agent-rail")).not.toHaveClass("hidden");
 
     fireEvent.click(screen.getByRole("button", { name: "내 에이전트 접기" }));
@@ -640,9 +652,9 @@ describe("NotePanel", () => {
 
     // 좁은 화면의 레일은 본문 아래 14rem 레인이라 전사 높이를 깎는다.
     expect(screen.getByTestId("note-agent-rail")).toHaveClass("max-lg:hidden");
-    expect(screen.getByRole("button", { name: "내 에이전트 열기" })).toHaveClass(
-      "lg:hidden"
-    );
+    expect(
+      screen.getByRole("button", { name: "내 에이전트 열기" })
+    ).toHaveClass("lg:hidden");
   });
 
   it("full 본문 탭은 정보 · 스크립트 · 타임라인 · 요약이다 — 시작 전에도", () => {
@@ -703,8 +715,12 @@ describe("NotePanel", () => {
       screen.getByRole("button", { name: "답변이 끝나면 접을 수 있습니다" })
     ).toBeDisabled();
     // 창을 좁혀도 반응형 규칙이 레일을 감추지 않는다 — 중지·도구 승인이 그 안에만 있다.
-    expect(screen.getByTestId("note-agent-rail")).not.toHaveClass("max-lg:hidden");
-    expect(screen.queryByRole("button", { name: "내 에이전트 열기" })).toBeNull();
+    expect(screen.getByTestId("note-agent-rail")).not.toHaveClass(
+      "max-lg:hidden"
+    );
+    expect(
+      screen.queryByRole("button", { name: "내 에이전트 열기" })
+    ).toBeNull();
   });
 
   it("타임라인 탭은 본문에 서고, 사이드 뷰에서도 같은 면이다", () => {
@@ -813,6 +829,33 @@ describe("NotePanel", () => {
     expect(screen.queryByTestId("note-agent-rail")).toBeNull();
   });
 
+  it("노트 상태 확정 뒤 아카이브에 근거 점프 대상을 넘긴다", () => {
+    noteState.query = { data: undefined, isError: false };
+    const panel = () => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId="01K0000000002"
+        view="full"
+        tab="transcript"
+        linkedSegmentId="evidence"
+        onTabChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerenderNote } = renderNotePanel(panel());
+    expect(screen.getByTestId("transcript-view")).toHaveAttribute(
+      "data-focus",
+      ""
+    );
+    noteState.query = null;
+    noteState.value.meetingStatus = "ENDED";
+    rerenderNote(panel());
+    expect(screen.getByTestId("note-archive")).toHaveAttribute(
+      "data-focus",
+      "evidence"
+    );
+  });
+
   it.each(["summary"] as const)(
     "side + unknown 직링크 %s는 대응 탭 패널을 유지한다",
     (tab) => {
@@ -831,6 +874,8 @@ describe("NotePanel", () => {
 
       expect(screen.getByRole("tab", { name: "요약" })).toBeInTheDocument();
       expect(screen.getByRole("tabpanel")).toBeInTheDocument();
+      expect(screen.getByLabelText("검토본 불러오는 중")).toBeInTheDocument();
+      expect(screen.queryByTestId("review-tab")).toBeNull();
     }
   );
 

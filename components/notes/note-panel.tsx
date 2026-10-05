@@ -28,6 +28,7 @@ import { NoteDeleteDialog } from "@/components/notes/note-delete-dialog";
 import { NoteAgentRail } from "@/components/notes/note-agent-rail";
 import { NoteTimeline } from "@/components/notes/note-timeline";
 import { NoteParticipantAvatars } from "@/components/notes/note-participants";
+import { ReviewBoardSkeleton } from "@/components/notes/review/review-board";
 import { ReviewTab } from "@/components/notes/review/review-tab";
 import { TranscriptView } from "@/components/notes/transcript-view";
 import { RecordingDock } from "@/components/transcription/recording-dock";
@@ -640,7 +641,14 @@ export function NotePanel({
                     </span>
                   ) : null}
                   <h1 className="truncate font-serif text-2xl font-light leading-[1.2] tracking-[-0.024em] text-[var(--el-ink)] lg:text-screen-title">
-                    {note?.title ?? "회의 노트"}
+                    {note ? (
+                      note.title
+                    ) : (
+                      <Skeleton
+                        aria-label="노트 제목 불러오는 중"
+                        className="h-9 w-64 max-w-full rounded-chip"
+                      />
+                    )}
                   </h1>
                   {meta ? (
                     // 아바타 스택은 목록 행과 같은 컴포넌트다 — 같은 사람인지 알아야 한다.
@@ -778,7 +786,9 @@ export function NotePanel({
                   phase={phase}
                   participants={note?.participants ?? []}
                   noteMeta={noteMeta}
-                  focusSegmentId={focusSegmentId}
+                  // 종료 노트는 상태 확인 뒤 아카이브로 바뀐다. 임시 전사 화면에서
+                  // 점프를 소진하면 교체된 화면이 근거 위치를 잃는다.
+                  focusSegmentId={phase === "unknown" ? null : focusSegmentId}
                   onFocusHandled={clearFocusSegment}
                 />
               )}
@@ -811,20 +821,30 @@ export function NotePanel({
           {showSummaryTab ? (
             <TabsContent value="summary" className="min-h-0 flex-1">
               <ScrollArea className="h-full">
-                <ReviewTab
-                  noteId={noteId}
-                  workspaceId={confirmedWorkspaceId}
-                  projectId={note?.projectId}
-                  isEnded={phase === "ended"}
-                  noteMeta={noteMeta}
-                  participants={note?.participants ?? []}
-                  currentUserId={user?.userId}
-                  // 레일을 접으면 「이 회의에 대해 물어보기」 알약이 검토 막대와 같은 자리에 뜬다.
-                  dockRaised={showAgentRail && agentRail === false}
-                  onEvidenceSelect={jumpToSegment}
-                  onOpenTranscript={() => handleTabChange("transcript")}
-                  onOpenTimeline={showContextTab ? () => handleTabChange("context") : undefined}
-                />
+                {phase === "unknown" ? (
+                  noteLoadFailed ? null : (
+                    <ReviewBoardSkeleton />
+                  )
+                ) : (
+                  <ReviewTab
+                    noteId={noteId}
+                    workspaceId={confirmedWorkspaceId}
+                    projectId={note?.projectId}
+                    isEnded={phase === "ended"}
+                    noteMeta={noteMeta}
+                    participants={note?.participants ?? []}
+                    currentUserId={user?.userId}
+                    // 레일을 접으면 「이 회의에 대해 물어보기」 알약이 검토 막대와 같은 자리에 뜬다.
+                    dockRaised={showAgentRail && agentRail === false}
+                    onEvidenceSelect={jumpToSegment}
+                    onOpenTranscript={() => handleTabChange("transcript")}
+                    onOpenTimeline={
+                      showContextTab
+                        ? () => handleTabChange("context")
+                        : undefined
+                    }
+                  />
+                )}
               </ScrollArea>
             </TabsContent>
           ) : null}
@@ -854,29 +874,29 @@ export function NotePanel({
             )}
           >
             {showDock ? (
-            <div className="pointer-events-auto flex min-w-0 flex-col items-center gap-2">
-              {recordingHere ? (
-                <RecordingConnectionNotice
-                  notice={recording.connectionNotice}
-                  buffer={recording.buffer}
-                  microphone={recording.microphone}
-                  finishing={recording.phase === "stopping"}
-                />
-              ) : null}
-              {/* 자막이 멈춘 이유를 말해 준다. 안 말하면 멀쩡한 녹음을 중단한다. */}
-              {recordingDegraded ? <RecordingDegradedNotice /> : null}
-              {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
+              <div className="pointer-events-auto flex min-w-0 flex-col items-center gap-2">
+                {recordingHere ? (
+                  <RecordingConnectionNotice
+                    notice={recording.connectionNotice}
+                    buffer={recording.buffer}
+                    microphone={recording.microphone}
+                    finishing={recording.phase === "stopping"}
+                  />
+                ) : null}
+                {/* 자막이 멈춘 이유를 말해 준다. 안 말하면 멀쩡한 녹음을 중단한다. */}
+                {recordingDegraded ? <RecordingDegradedNotice /> : null}
+                {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
                 시작 버튼 자리에 이 문구가 선다. */}
-              <RecordingDock
-                noteId={noteId}
-                // **URL이 아니라 확인된 소속을 넘긴다.** 조회가 끝나기 전에는 비어 있고,
-                // 독은 그동안 시작을 안 연다 — 확인 전에 누르면 잘못된 워크스페이스로 기록된다.
-                workspaceId={confirmedWorkspaceId}
-                disabledReason={startBlockedReason}
-                startLabel={startLabel}
-                onStart={() => onTabChange("transcript")}
-              />
-            </div>
+                <RecordingDock
+                  noteId={noteId}
+                  // **URL이 아니라 확인된 소속을 넘긴다.** 조회가 끝나기 전에는 비어 있고,
+                  // 독은 그동안 시작을 안 연다 — 확인 전에 누르면 잘못된 워크스페이스로 기록된다.
+                  workspaceId={confirmedWorkspaceId}
+                  disabledReason={startBlockedReason}
+                  startLabel={startLabel}
+                  onStart={() => onTabChange("transcript")}
+                />
+              </div>
             ) : null}
             {/* 레일을 접어 두었을 때 묻는 자리. 누르면 레일이 다시 열린다 — 대화는 레일에만 산다. */}
             {showAgentRail && agentRail === false ? (
@@ -885,7 +905,10 @@ export function NotePanel({
                 onClick={() => setAgentRail(true)}
                 className="pointer-events-auto flex h-11 w-[300px] shrink-0 items-center gap-2.5 rounded-full border border-[var(--el-hairline)] bg-white/95 pr-4 pl-4 text-left shadow-e2 backdrop-blur max-lg:hidden"
               >
-                <Sparkles aria-hidden className="size-[15px] shrink-0 text-[var(--el-muted)]" />
+                <Sparkles
+                  aria-hidden
+                  className="size-[15px] shrink-0 text-[var(--el-muted)]"
+                />
                 <span className="truncate text-[13.5px] text-[var(--el-muted-soft)]">
                   이 회의에 대해 물어보기
                 </span>

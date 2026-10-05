@@ -3,9 +3,7 @@ import "server-only";
 import { dehydrate, type DehydratedState } from "@tanstack/react-query";
 
 import { getServerApiRequestOptions } from "@/lib/api/server-request";
-import { getGetNoteQueryOptions } from "@/lib/api/generated/notes/notes";
 import {
-  getGetProjectQueryOptions,
   getGetProjectsQueryOptions,
   getGetProjectTasksQueryOptions,
 } from "@/lib/api/generated/projects/projects";
@@ -74,54 +72,11 @@ export async function prefetchTasksRoute({
   await Promise.allSettled(
     projects.map((project) =>
       queryClient.prefetchQuery(
-        getGetProjectTasksQueryOptions(workspaceId, project.projectId, { request: request })
+        getGetProjectTasksQueryOptions(workspaceId, project.projectId, {
+          request: request,
+        })
       )
     )
   );
-  return dehydrate(queryClient);
-}
-
-export async function prefetchNoteRoute({
-  workspaceId,
-  noteId,
-}: {
-  workspaceId: string;
-  noteId: string;
-}): Promise<DehydratedState> {
-  const queryClient = makeQueryClient();
-
-  if (shouldEnableMocking()) {
-    return dehydrate(queryClient);
-  }
-
-  const request = await getServerApiRequestOptions();
-
-  /**
-   * **전사를 안 기다린다.** 이 라우트에는 `loading.tsx` 가 없어서, 여기서 await 하는 것이
-   * 곧 첫 페인트다 — 브라우저는 이 함수가 끝날 때까지 **이전 화면 그대로** 있는다. 전사가
-   * 제일 느린데 그것이 노트를 여는 시간을 통째로 잡고 있었다 (APP-679).
-   *
-   * 클라이언트가 읽으면 `TranscriptView`·`NoteArchive` 의 스켈레톤이 그 자리를 채운다 —
-   * 행 격자까지 실제와 맞춰 둔 것이 이미 있다.
-   *
-   * `getNote` 는 남긴다. 껍데기(제목·상태·탭 구성)가 그 값에 달려 있어 클라이언트로 미루면
-   * 껍데기까지 흔들린다.
-   */
-  const noteResult = await queryClient
-    .fetchQuery(getGetNoteQueryOptions(noteId, { request: request }))
-    .catch(() => null);
-
-  if (
-    noteResult?.status === 200 &&
-    noteResult.data.success &&
-    noteResult.data.data.projectId
-  ) {
-    await queryClient.prefetchQuery(
-      getGetProjectQueryOptions(workspaceId, noteResult.data.data.projectId, {
-        request: request,
-      })
-    );
-  }
-
   return dehydrate(queryClient);
 }
