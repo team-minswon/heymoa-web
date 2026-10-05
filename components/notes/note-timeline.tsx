@@ -252,7 +252,7 @@ export function NoteTimeline({
     const viewport = viewportRef.current;
     if (!viewport) return;
     viewport.addEventListener("scroll", syncFollowing, { passive: true });
-    syncFollowing();
+    if (!recording) syncFollowing();
     // 완료된 목록의 조회·접기·폰트 변화도 버튼 위치를 다시 잰다. 라이브 추종 의도는
     // 새 항목이 붙은 뒤 거리로 덮지 않는다.
     const observer =
@@ -269,14 +269,39 @@ export function NoteTimeline({
       observer?.disconnect();
     };
   }, [recording, syncFollowing]);
+  // 탭 재진입마다 최초 유효 목록만 최신으로 간다. 조회 중 잠정 전사의 기존
+  // 추종은 유지하고, 목록이 선 뒤 사용자가 위를 읽으면 그 위치를 지킨다.
+  const positionedNoteRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!recording || !followingRef.current) return;
+    const initial =
+      positionedNoteRef.current !== noteId &&
+      !context.loading &&
+      !context.failed &&
+      timeline.groups.length > 0;
+    if (!initial && (!recording || !followingRef.current)) return;
     const frame = window.requestAnimationFrame(() => {
       const viewport = viewportRef.current;
-      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+      if (!viewport || (!initial && !followingRef.current)) return;
+      viewport.scrollTop = Math.max(
+        0,
+        viewport.scrollHeight - viewport.clientHeight
+      );
+      if (initial) {
+        positionedNoteRef.current = noteId;
+        updateFollowing(true);
+      }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [recording, context.state, partial?.confirmedText, partial?.pendingText]);
+  }, [
+    noteId,
+    recording,
+    context.loading,
+    context.failed,
+    timeline.groups,
+    partial?.confirmedText,
+    partial?.pendingText,
+    updateFollowing,
+  ]);
 
   // **첫 snapshot 이 서기 전에는 개수를 말하지 않는다.** 조회 중·실패의 0은 잰 값이 아니다.
   const settled = !context.loading && !context.failed;

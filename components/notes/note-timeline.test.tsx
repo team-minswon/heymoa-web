@@ -369,7 +369,7 @@ describe("타임라인의 맨 아래로 버튼", () => {
       live.partial = { confirmedText: "", pendingText: "계속되는 발화" };
       rerender(view());
       flush();
-      expect(viewport.scrollTop).toBe(2400);
+      expect(viewport.scrollTop).toBe(1900);
       expect(
         screen.queryByRole("button", { name: "맨 아래로" })
       ).not.toBeInTheDocument();
@@ -377,4 +377,103 @@ describe("타임라인의 맨 아래로 버튼", () => {
       vi.unstubAllGlobals();
     }
   });
+});
+
+it("조회와 reducer 적용을 기다린 첫 목록만 최신으로 가고 뒤의 갱신은 읽기 위치를 지킵니다", () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+  const flush = () => {
+    const callbacks = [...frames.values()];
+    frames.clear();
+    callbacks.forEach((callback) => callback(0));
+  };
+  try {
+    withLedger();
+    realtime.context.loading = true;
+    const view = () => (
+      <NoteTimeline header={null} onEvidenceSelect={() => {}} meetingEnded />
+    );
+    const { container, rerender } = render(view());
+    const viewport = container.querySelector<HTMLElement>(
+      "[data-slot=scroll-area-viewport]"
+    )!;
+    Object.defineProperties(viewport, {
+      scrollTop: { configurable: true, writable: true, value: 0 },
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 500 },
+    });
+    realtime.context.loading = false;
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(0);
+    const initial = head({ content: "첫 유효 항목" });
+    withLedger(initial);
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(1500);
+    viewport.scrollTop = 200;
+    fireEvent.scroll(viewport);
+    withLedger(initial, head({ content: "뒤에 추가된 항목" }));
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(200);
+    fireEvent.click(screen.getByText("첫 유효 항목").closest("button")!);
+    flush();
+    expect(viewport.scrollTop).toBe(200);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it("snapshot 전에 잠정 전사만 길어져도 기록 중 추종을 유지합니다", () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+  const flush = () => {
+    const callbacks = [...frames.values()];
+    frames.clear();
+    callbacks.forEach((callback) => callback(0));
+  };
+  try {
+    withLedger();
+    realtime.context.loading = true;
+    live.partial = {
+      confirmedText: "",
+      pendingText: "조회 중에도 기록하는 글자",
+    };
+    const view = () => (
+      <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+    );
+    const { container, rerender } = render(view());
+    const viewport = container.querySelector<HTMLElement>(
+      "[data-slot=scroll-area-viewport]"
+    )!;
+    Object.defineProperties(viewport, {
+      scrollTop: { configurable: true, writable: true, value: 0 },
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 500 },
+    });
+    flush();
+    expect(viewport.scrollTop).toBe(1500);
+    viewport.scrollTop = 200;
+    fireEvent.scroll(viewport);
+    live.partial = {
+      confirmedText: "",
+      pendingText: "위를 읽는 동안 바뀐 글자",
+    };
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(200);
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
