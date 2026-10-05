@@ -17,6 +17,8 @@ function fixture() {
     window = new EventEmitter(),
     contents = new EventEmitter();
   let quits = 0,
+    windowDestroyed = false,
+    trayDestructions = 0,
     hides = 0,
     shows = 0,
     tray,
@@ -39,12 +41,17 @@ function fixture() {
     app.emit("before-quit", event);
     if (!event.prevented) quits++;
   };
-  window.isDestroyed = () => false;
+  window.isDestroyed = () => windowDestroyed;
   window.hide = () => hides++;
   window.show = () => shows++;
   window.focus = () => {};
-  window.webContents = contents;
-  contents.isDestroyed = () => false;
+  Object.defineProperty(window, "webContents", {
+    get() {
+      if (windowDestroyed) throw new TypeError("Object has been destroyed");
+      return contents;
+    },
+  });
+  contents.isDestroyed = () => windowDestroyed;
   contents.getURL = () => origin;
   contents.send = (...args) => {
     sent.push(args);
@@ -63,6 +70,8 @@ function fixture() {
       this.menu = value;
     }
     destroy() {
+      if (this.destroyed) throw new TypeError("Object has been destroyed");
+      trayDestructions++;
       this.destroyed = true;
     }
   }
@@ -120,6 +129,13 @@ function fixture() {
     nextAction,
     dialogs,
     answer: (...values) => answers.push(...values),
+    destroyWindow() {
+      windowDestroyed = true;
+      window.emit("closed");
+    },
+    get trayDestructions() {
+      return trayDestructions;
+    },
     set response(value) {
       response = value;
     },
@@ -206,10 +222,13 @@ test("cancelled external navigation does not erase summary; replacement and rend
   assert.equal(f.adapter.lifecycle.view().unknown, true);
   f.adapter.dispose();
 });
-test("dispose removes native listeners and interval and destroys the tray exactly once", () => {
+test("closed window cleanup removes listeners and timers without querying its destroyed native getter", () => {
   const f = fixture();
   assert.equal(f.app.listenerCount("before-quit"), 1);
-  f.adapter.dispose();
+  // main.ts owns this callback; Electron has destroyed the window before closed.
+  f.window.once("closed", () => f.adapter.dispose());
+  assert.doesNotThrow(() => f.destroyWindow());
+  assert.throws(() => f.window.webContents, /Object has been destroyed/);
   f.adapter.dispose();
   assert.equal(f.app.listenerCount("before-quit"), 0);
   assert.equal(f.window.listenerCount("close"), 0);
@@ -219,6 +238,7 @@ test("dispose removes native listeners and interval and destroys the tray exactl
   assert.equal(f.contents.listenerCount("will-prevent-unload"), 0);
   assert.equal(f.interval, null);
   assert.equal(f.tray.destroyed, true);
+  assert.equal(f.trayDestructions, 1);
 });
 
 test("renderer beforeunload is overridden only after native loss confirmation", async (t) => {

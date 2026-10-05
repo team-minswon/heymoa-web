@@ -8,6 +8,8 @@ import {
 } from "./recording-lifecycle";
 
 export function createRecordingTray(window: BrowserWindow, origin: string) {
+  // BrowserWindow.webContents throws after closed; keep the live reference for cleanup.
+  const contents = window.webContents;
   let allowQuit = false;
   let disposed = false;
   const image = nativeImage.createFromPath(
@@ -120,13 +122,13 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     action: (action) => {
       if (
         window.isDestroyed() ||
-        window.webContents.isDestroyed() ||
-        !isTrustedUrl(window.webContents.getURL(), origin)
+        contents.isDestroyed() ||
+        !isTrustedUrl(contents.getURL(), origin)
       ) {
         lifecycle.unavailable();
         throw new Error("RECORDING_RENDERER_UNAVAILABLE");
       }
-      window.webContents.send(CHANNELS.recordingAction, action);
+      contents.send(CHANNELS.recordingAction, action);
     },
     quit: () => {
       allowQuit = true;
@@ -186,10 +188,10 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   const timer = setInterval(refresh, 1000);
   window.on("close", close);
   app.on("before-quit", beforeQuit);
-  window.webContents.on("render-process-gone", unavailable);
-  window.webContents.on("did-start-navigation", navigation);
-  window.webContents.on("did-navigate", unavailable);
-  window.webContents.on("will-prevent-unload", preventUnload);
+  contents.on("render-process-gone", unavailable);
+  contents.on("did-start-navigation", navigation);
+  contents.on("did-navigate", unavailable);
+  contents.on("will-prevent-unload", preventUnload);
   tray.on("double-click", show);
   refresh();
   return {
@@ -201,10 +203,10 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       clearInterval(timer);
       window.removeListener("close", close);
       app.removeListener("before-quit", beforeQuit);
-      window.webContents.removeListener("render-process-gone", unavailable);
-      window.webContents.removeListener("did-start-navigation", navigation);
-      window.webContents.removeListener("did-navigate", unavailable);
-      window.webContents.removeListener("will-prevent-unload", preventUnload);
+      contents.removeListener("render-process-gone", unavailable);
+      contents.removeListener("did-start-navigation", navigation);
+      contents.removeListener("did-navigate", unavailable);
+      contents.removeListener("will-prevent-unload", preventUnload);
       tray.destroy();
     },
   };
