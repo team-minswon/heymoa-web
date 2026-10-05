@@ -17,8 +17,7 @@ try {
   run("sips", ["-z", "1024", "1024", join(icons, "source-mac.png"), "--out", join(icons, "icon-mac.png")]);
   for (const scale of [1, 2]) {
     const output = join(assets, `trayTemplate${scale === 2 ? "@2x" : ""}.png`);
-    run("sips", ["-z", String(18 * scale), String(18 * scale), join(icons, "tray-source.png"), "--out", output]);
-    run("sips", ["-p", String(20 * scale), String(20 * scale), output, "--out", output]);
+    run("sips", ["-z", String(20 * scale), String(20 * scale), join(icons, "tray-source.png"), "--out", output]);
   }
   const iconset = join(scratch, "icon.iconset");
   run("mkdir", [iconset]);

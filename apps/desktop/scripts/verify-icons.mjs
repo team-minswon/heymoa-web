@@ -11,7 +11,7 @@ const macPng = read("icon-mac.png");
 assert.ok(macPng.subarray(0, 8).equals(pngSignature));
 assert.equal(macPng.readUInt32BE(16), 1024);
 assert.equal(macPng.readUInt32BE(20), 1024);
-assert.equal(macPng[25], 6, "Mac rounded corners preserve alpha");
+assert.ok([2, 6].includes(macPng[25]), "Mac full-bleed source uses RGB or RGBA");
 const icns = read("icon.icns");
 assert.equal(icns.toString("ascii", 0, 4), "icns");
 assert.equal(icns.readUInt32BE(4), icns.length);
