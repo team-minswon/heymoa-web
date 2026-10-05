@@ -73,8 +73,13 @@ const TOOL_LABEL: Record<string, string> = {
   get_project_item: "항목 상세",
   expand_relations: "관계 따라가기",
   list_open_tasks: "미완료 할 일",
+  list_meetings: "회의 목록",
+  get_meeting_transcript: "회의 전사",
   open_screen: "화면 열기",
 };
+
+/** 사용 내역을 한 번에 보이는 수. server 는 한 쪽에 20개를 주지만 화면은 8개씩 늘린다(APP-867). */
+const USAGE_STEP = 8;
 /**
  * 외부 에이전트 연결(APP-804). 팀원 본인이 워크스페이스를 맡기고 본인이 회수한다 — 그래서 계정 쪽
  * 설정이고, 목록은 워크스페이스와 상관없이 **내** 연결이다.
@@ -651,6 +656,14 @@ function UsageHistory({
     query.data?.pages.flatMap((page) =>
       page.status === 200 ? page.data.data.usages : []
     ) ?? [];
+  const [visible, setVisible] = useState(USAGE_STEP);
+  // 읽어 둔 것을 먼저 더 보이고, 모자라면 다음 쪽을 읽는다. 목표가 이미 읽어 둔 수를 넘었다면(다음 쪽을
+  // 못 읽었거나 첫 쪽이 짧았다) 목표는 그대로 두고 읽기만 다시 한다 — 재시도가 8개를 더 펼치지 않게
+  const showMore = () => {
+    const next = visible > usages.length ? visible : visible + USAGE_STEP;
+    setVisible(next);
+    if (next > usages.length && query.hasNextPage) void query.fetchNextPage();
+  };
 
   return (
     <section
@@ -690,7 +703,7 @@ function UsageHistory({
       ) : (
         <>
           <ul className="space-y-1">
-            {usages.map((usage) => (
+            {usages.slice(0, visible).map((usage) => (
               <li
                 key={usage.usageId}
                 className="flex items-center gap-3 py-1 text-xs"
@@ -716,14 +729,14 @@ function UsageHistory({
               다음 내역을 불러오지 못했습니다. 「더 보기」로 다시 시도해 주세요.
             </p>
           ) : null}
-          {query.hasNextPage ? (
+          {usages.length > visible || query.hasNextPage ? (
             <Button
               variant="ghost"
               size="sm"
               className="mt-2 h-7 px-2 text-xs"
               loading={query.isFetchingNextPage}
               disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
+              onClick={showMore}
             >
               더 보기
             </Button>

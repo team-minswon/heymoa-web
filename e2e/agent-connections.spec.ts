@@ -70,8 +70,9 @@ test("회수하면 그 연결이 회수됨으로 바뀐다", async ({ page }) =>
   await expect(past.getByRole("button", { name: "회수" })).toHaveCount(0);
 });
 
-// APP-826. 시드의 「노트북 Claude Code」는 내역이 한 쪽(20)을 넘는다. 응답에는 시각·도구·건수·성공
-// 여부만 있고 질문·답·인자·결과 본문은 어디에도 없다.
+// APP-826. 시드의 「노트북 Claude Code」는 내역이 한 쪽(20)을 넘는다(24). 응답에는 시각·도구·건수·성공
+// 여부만 있고 질문·답·인자·결과 본문은 어디에도 없다. 화면은 8개씩 보인다(APP-867) — 16 까지는 읽어
+// 둔 쪽에서, 24 는 다음 쪽을 읽어서.
 test("연결의 사용 내역을 펼치면 시각·도구·건수가 보이고 본문은 오지 않는다", async ({
   page,
 }) => {
@@ -90,7 +91,7 @@ test("연결의 사용 내역을 펼치면 시각·도구·건수가 보이고 �
   const history = row.getByRole("region", { name: "사용 내역" });
   await expect(history.getByText("프로젝트 목록").first()).toBeVisible();
   await expect(history.getByText(/^\d+건$/).first()).toBeVisible();
-  await expect(history.getByRole("listitem")).toHaveCount(20);
+  await expect(history.getByRole("listitem")).toHaveCount(8);
   for (const usage of body.data.usages) {
     expect(Object.keys(usage).sort()).toEqual([
       "occurredAt",
@@ -102,6 +103,8 @@ test("연결의 사용 내역을 펼치면 시각·도구·건수가 보이고 �
   }
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/agent-usages.png` });
 
+  await history.getByRole("button", { name: "더 보기" }).click();
+  await expect(history.getByRole("listitem")).toHaveCount(16);
   await history.getByRole("button", { name: "더 보기" }).click();
   await expect(history.getByRole("listitem")).toHaveCount(24);
   await expect(history.getByRole("button", { name: "더 보기" })).toHaveCount(0);

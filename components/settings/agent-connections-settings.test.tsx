@@ -344,6 +344,93 @@ describe("AgentConnectionsSettings", () => {
       ).toBeNull();
     });
 
+    // 한 쪽에 20개가 와도 처음엔 8개만, 더 보기마다 8개씩 — 읽어 둔 것이 모자랄 때만 다음 쪽을 읽는다(APP-867)
+    it("처음엔 최근 8개만 보이고 더 보기로 8개씩 늘리며 회의 도구도 한국어 이름으로 보인다", async () => {
+      state.delegations = [delegation];
+      const rows = (from: number, count: number, tools: string[] = []) =>
+        Array.from({ length: count }, (_, index) => ({
+          usageId: `01K0000000V${String(from + index).padStart(2, "0")}`,
+          toolName: tools[index] ?? "list_projects",
+          outcome: "SUCCEEDED",
+          resultCount: 1,
+          occurredAt: "2026-10-03T06:15:00Z",
+        }));
+      usages.fetch
+        .mockResolvedValueOnce(
+          page(rows(0, 10, ["get_meeting_transcript", "list_meetings"]), {
+            at: "2026-10-03T06:15:00Z",
+            id: "01K0000000V09",
+          })
+        )
+        .mockResolvedValueOnce(page(rows(10, 10), null));
+      renderSettings();
+
+      open();
+      const history = await screen.findByRole("region", { name: "사용 내역" });
+      expect(await within(history).findByText("회의 전사")).toBeTruthy();
+      expect(within(history).getByText("회의 목록")).toBeTruthy();
+      expect(within(history).getAllByRole("listitem")).toHaveLength(8);
+
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+
+      await vi.waitFor(() =>
+        expect(within(history).getAllByRole("listitem")).toHaveLength(16)
+      );
+      expect(usages.fetch).toHaveBeenCalledTimes(2);
+
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+
+      expect(within(history).getAllByRole("listitem")).toHaveLength(20);
+      expect(usages.fetch).toHaveBeenCalledTimes(2);
+      expect(
+        within(history).queryByRole("button", { name: "더 보기" })
+      ).toBeNull();
+    });
+
+    // 다음 쪽을 못 읽고 다시 누르면 읽기만 다시 한다 — 재시도가 8개를 더 펼치지 않는다
+    it("다음 쪽을 다시 읽어도 보이는 수는 한 번 더 보기만큼만 는다", async () => {
+      state.delegations = [delegation];
+      const rows = (from: number, count: number) =>
+        Array.from({ length: count }, (_, index) => ({
+          usageId: `01K0000000W${String(from + index).padStart(2, "0")}`,
+          toolName: "list_projects",
+          outcome: "SUCCEEDED",
+          resultCount: 1,
+          occurredAt: "2026-10-03T06:15:00Z",
+        }));
+      usages.fetch
+        .mockResolvedValueOnce(
+          page(rows(0, 20), { at: "2026-10-03T06:15:00Z", id: "01K0000000W19" })
+        )
+        .mockRejectedValueOnce(new Error("boom"))
+        .mockResolvedValueOnce(page(rows(20, 10), null));
+      render(
+        <QueryClientProvider
+          client={
+            new QueryClient({ defaultOptions: { queries: { retry: false } } })
+          }
+        >
+          <AgentConnectionsSettings workspaceId="01K0000000000" />
+        </QueryClientProvider>
+      );
+
+      open();
+      const history = await screen.findByRole("region", { name: "사용 내역" });
+      await vi.waitFor(() =>
+        expect(within(history).getAllByRole("listitem")).toHaveLength(8)
+      );
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+      expect(within(history).getAllByRole("listitem")).toHaveLength(16);
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+      await within(history).findByRole("alert");
+
+      fireEvent.click(within(history).getByRole("button", { name: "더 보기" }));
+
+      await vi.waitFor(() =>
+        expect(within(history).getAllByRole("listitem")).toHaveLength(24)
+      );
+    });
+
     // 아직 쓰지 않은 연결이다 — 실패가 아니므로 경고도 재시도도 없다
     it("내역이 없으면 실패처럼 보이지 않는 빈 상태를 그린다", async () => {
       state.delegations = [delegation];
