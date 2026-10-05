@@ -225,11 +225,25 @@ export function NoteTimeline({
    */
   const viewportRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
-  const [isFollowing, setIsFollowing] = useState(true);
-  const updateFollowing = useCallback((following: boolean) => {
-    followingRef.current = following;
-    setIsFollowing(following);
-  }, []);
+  const readAwayNoteRef = useRef<string | null>(null);
+  const positionedNoteRef = useRef<string | null>(null);
+  const [followingState, setFollowingState] = useState({
+    noteId,
+    following: true,
+  });
+  const isFollowing =
+    followingState.noteId === noteId ? followingState.following : true;
+  const updateFollowing = useCallback(
+    (following: boolean) => {
+      followingRef.current = following;
+      setFollowingState((current) =>
+        current.noteId === noteId && current.following === following
+          ? current
+          : { noteId, following }
+      );
+    },
+    [noteId]
+  );
   const syncFollowing = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -249,9 +263,18 @@ export function NoteTimeline({
     syncFollowing();
   };
   useEffect(() => {
+    readAwayNoteRef.current = null;
+    positionedNoteRef.current = null;
+    followingRef.current = true;
+  }, [noteId]);
+  useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    viewport.addEventListener("scroll", syncFollowing, { passive: true });
+    const handleScroll = () => {
+      syncFollowing();
+      if (!followingRef.current) readAwayNoteRef.current = noteId;
+    };
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
     if (!recording) syncFollowing();
     // 완료된 목록의 조회·접기·폰트 변화도 버튼 위치를 다시 잰다. 라이브 추종 의도는
     // 새 항목이 붙은 뒤 거리로 덮지 않는다.
@@ -265,13 +288,12 @@ export function NoteTimeline({
     if (viewport.firstElementChild)
       observer?.observe(viewport.firstElementChild);
     return () => {
-      viewport.removeEventListener("scroll", syncFollowing);
+      viewport.removeEventListener("scroll", handleScroll);
       observer?.disconnect();
     };
-  }, [recording, syncFollowing]);
+  }, [noteId, recording, syncFollowing]);
   // 탭 재진입마다 최초 유효 목록만 최신으로 간다. 조회 중 잠정 전사의 기존
   // 추종은 유지하고, 목록이 선 뒤 사용자가 위를 읽으면 그 위치를 지킨다.
-  const positionedNoteRef = useRef<string | null>(null);
   useEffect(() => {
     const initial =
       positionedNoteRef.current !== noteId &&
@@ -282,14 +304,16 @@ export function NoteTimeline({
     const frame = window.requestAnimationFrame(() => {
       const viewport = viewportRef.current;
       if (!viewport || (!initial && !followingRef.current)) return;
+      if (initial) {
+        positionedNoteRef.current = noteId;
+        // 빈 snapshot 뒤 첫 live 항목이 와도 이미 위를 읽는 사용자의 조작이 먼저다.
+        if (readAwayNoteRef.current === noteId && !followingRef.current) return;
+      }
       viewport.scrollTop = Math.max(
         0,
         viewport.scrollHeight - viewport.clientHeight
       );
-      if (initial) {
-        positionedNoteRef.current = noteId;
-        updateFollowing(true);
-      }
+      if (initial) updateFollowing(true);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [

@@ -77,6 +77,7 @@ function withLedger(...proposals: ProposalHead[]) {
 afterEach(() => {
   cleanup();
   live.partial = null;
+  realtime.noteId = "01K0000000005";
   realtime.context = { ...realtime.context, loading: false, failed: false };
 });
 
@@ -430,7 +431,7 @@ it("조회와 reducer 적용을 기다린 첫 목록만 최신으로 가고 뒤�
   }
 });
 
-it("snapshot 전에 잠정 전사만 길어져도 기록 중 추종을 유지합니다", () => {
+it.each([true, false])("빈 snapshot 또는 조회 중(%s) 잠정 전사를 위에서 읽으면 첫 항목도 위치를 지킵니다", (loading) => {
   const frames = new Map<number, FrameRequestCallback>();
   let frameId = 0;
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
@@ -445,7 +446,7 @@ it("snapshot 전에 잠정 전사만 길어져도 기록 중 추종을 유지합
   };
   try {
     withLedger();
-    realtime.context.loading = true;
+    realtime.context.loading = loading;
     live.partial = {
       confirmedText: "",
       pendingText: "조회 중에도 기록하는 글자",
@@ -473,6 +474,26 @@ it("snapshot 전에 잠정 전사만 길어져도 기록 중 추종을 유지합
     rerender(view());
     flush();
     expect(viewport.scrollTop).toBe(200);
+    // query 성공과 reducer 적용이 따로 커밋되어도 읽는 의도가 먼저다.
+    realtime.context.loading = false;
+    rerender(view());
+    flush();
+    withLedger(head({ content: "처음 도착한 타임라인 항목" }));
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(200);
+    expect(screen.getByRole("button", { name: "맨 아래로" })).toBeVisible();
+    // 같은 컴포넌트로 A→B→A를 방문해도 이전 방문의 읽기 의도는 남지 않는다.
+    realtime.noteId = "01K0000000006";
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(1500);
+    viewport.scrollTop = 200;
+    fireEvent.scroll(viewport);
+    realtime.noteId = "01K0000000005";
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(1500);
   } finally {
     vi.unstubAllGlobals();
   }
