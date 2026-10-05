@@ -143,4 +143,24 @@ describe("RecordingConnectionNotice", () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("마이크와 컴퓨터 경고를 각각 읽을 수 있는 별도 줄로 표시한다", () => {
+    render(
+      notice({
+        microphone: "ended",
+        systemAudio: "ended",
+        notice: DISCONNECTED,
+      })
+    );
+    const microphone = screen.getByText(
+      "마이크가 끊겼습니다. 이 동안의 소리는 녹음되지 않습니다."
+    );
+    const computer = screen.getByText(
+      "컴퓨터 소리가 끊겼습니다. 이 동안 상대방의 소리는 녹음되지 않습니다."
+    );
+    expect(microphone).not.toBe(computer);
+    expect(microphone).toHaveClass("block");
+    expect(computer).toHaveClass("block");
+    expect(screen.getByRole("status")).toHaveTextContent(WARNING);
+  });
 });

@@ -69,7 +69,11 @@ export function RecordingConnectionNotice({
     microphone !== "live" ? MicOff : buffer?.upload ? CloudUpload : WifiOff;
   return (
     <Pill role="status" tone="warning" Icon={Icon}>
-      {lines.join(" · ")}
+      {lines.map((line) => (
+        <span key={line} className="block">
+          {line}
+        </span>
+      ))}
     </Pill>
   );
 }
@@ -89,12 +93,14 @@ function Pill({
   return (
     <div
       role={role}
-      className="pointer-events-auto flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] px-3 py-1.5 text-[13px] text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
+      className="pointer-events-auto flex w-max max-w-[min(36rem,calc(100vw-2rem))] items-start gap-2 rounded-2xl border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] px-3 py-1.5 text-[13px] text-[var(--el-ink)] shadow-e2 backdrop-blur-xl"
     >
       <Icon
-        className={`size-4 shrink-0 ${tone === "danger" ? "text-destructive" : "text-amber-600"}`}
+        className={`mt-0.5 size-4 shrink-0 ${tone === "danger" ? "text-destructive" : "text-amber-600"}`}
       />
-      <span className="tabular-nums">{children}</span>
+      <span className="min-w-0 whitespace-normal break-words tabular-nums">
+        {children}
+      </span>
     </div>
   );
 }
