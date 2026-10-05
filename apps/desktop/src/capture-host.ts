@@ -25,6 +25,11 @@ export class CaptureHost {
   private host: BrowserWindow | null = null;
   private grant: MediaGrant | null = null;
   private disposed = false;
+  private disposalCode = "AUDIO_CAPTURE_CANCELLED";
+  private signalDisposed!: () => void;
+  private readonly disposedSignal = new Promise<void>((resolve) => {
+    this.signalDisposed = resolve;
+  });
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pending: number | null = null;
   private nextSequence = 0;
@@ -63,7 +68,19 @@ export class CaptureHost {
   }
   private fail(code = "AUDIO_CAPTURE_FAILED") {
     if (this.id) this.forward({ kind: "error", id: this.id, code });
-    this.dispose();
+    this.dispose(code);
+  }
+  // Chromium may leave executeJavaScript pending when its frame is destroyed.
+  // Settlement belongs to this lifetime, rather than that native Promise.
+  private async untilDisposed<T>(work: Promise<T>): Promise<T> {
+    const result = await Promise.race([
+      work,
+      this.disposedSignal.then(() => {
+        throw new Error(this.disposalCode);
+      }),
+    ]);
+    if (this.disposed) throw new Error(this.disposalCode);
+    return result;
   }
   private packet = (event: IpcMainEvent, payload: unknown) => {
     const host = this.host;
@@ -135,6 +152,7 @@ export class CaptureHost {
   private readonly url = pathToFileURL(path.join(__dirname, "capture.html"))
     .href;
   async acquire(): Promise<string> {
+    if (this.disposed) throw new Error(this.disposalCode);
     const host = new BrowserWindow({
       show: false,
       width: 1,
@@ -240,20 +258,22 @@ export class CaptureHost {
           })
           .catch(() => {
             deny();
-            this.dispose();
+            this.dispose("AUDIO_CAPTURE_FAILED");
           });
       },
       { useSystemPicker: false }
     );
     ipcMain.on(CAPTURE_PACKET, this.packet);
     try {
-      await host.loadURL(this.url);
+      await this.untilDisposed(host.loadURL(this.url));
       if (this.disposed || !this.sameDestination())
         throw new Error("AUDIO_CAPTURE_CANCELLED");
       this.id = grant.begin(contents.mainFrame);
-      await contents.executeJavaScript(
-        `window.captureLocalAcquire(${JSON.stringify(this.id)})`,
-        true
+      await this.untilDisposed(
+        contents.executeJavaScript(
+          `window.captureLocalAcquire(${JSON.stringify(this.id)})`,
+          true
+        )
       );
       if (this.disposed || !this.sameDestination())
         throw new Error("AUDIO_CAPTURE_CANCELLED");
@@ -276,9 +296,8 @@ export class CaptureHost {
   async start(id: string) {
     if (id !== this.id || this.disposed || this.acquiring || !this.host)
       throw new Error("CAPTURE_NOT_READY");
-    await this.host.webContents.executeJavaScript(
-      "window.captureLocalStart()",
-      false
+    await this.untilDisposed(
+      this.host.webContents.executeJavaScript("window.captureLocalStart()", false)
     );
   }
   ack(id: string, sequence: number) {
@@ -297,17 +316,18 @@ export class CaptureHost {
   async stop(id: string) {
     if (id !== this.id || !this.host || this.disposed) return;
     try {
-      await this.host.webContents.executeJavaScript(
-        "window.captureLocalStop()",
-        false
+      await this.untilDisposed(
+        this.host.webContents.executeJavaScript("window.captureLocalStop()", false)
       );
     } finally {
       this.dispose();
     }
   }
-  dispose() {
+  dispose(code = "AUDIO_CAPTURE_CANCELLED") {
     if (this.disposed) return;
     this.disposed = true;
+    this.disposalCode = code;
+    this.signalDisposed();
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.pending = null;

@@ -4,7 +4,7 @@ const { EventEmitter } = require("node:events");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-function fixture(t) {
+function fixture(t, settings = {}) {
   t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
   const ipcMain = new EventEmitter(),
     windows = [],
@@ -59,6 +59,7 @@ function fixture(t) {
             }
           )
         );
+        if (settings.neverSettleAcquire) await new Promise(() => {});
       };
       windows.push(this);
     }
@@ -89,7 +90,9 @@ function fixture(t) {
             BrowserWindow: Window,
             ipcMain,
             desktopCapturer: {
-              getSources: async () => [{ id: "screen:1", name: "Screen" }],
+              getSources:
+                settings.getSources ??
+                (async () => [{ id: "screen:1", name: "Screen" }]),
             },
           }
         : require(
@@ -114,6 +117,53 @@ function fixture(t) {
       payload
     );
   return { host, windows, packets, ipcMain, emit, destination };
+}
+test("source enumeration failure settles acquire even when destroyed Chromium evaluation never settles", async (t) => {
+  const f = fixture(t, {
+    neverSettleAcquire: true,
+    getSources: async () => {
+      // Electron may reject with a value that has no Error name/message.
+      throw Object.create(null);
+    },
+  });
+  await assert.rejects(f.host.acquire(), /AUDIO_CAPTURE_FAILED/);
+  assert.equal(Object.keys(f.windows[0].selection).length, 0);
+  assert.equal(f.windows[0].destroyed, true);
+  assert.equal(f.ipcMain.listenerCount("heymoa:local-capture-packet"), 0);
+});
+test("explicit disposal settles a pending acquire without a native rejection or timer", async (t) => {
+  const f = fixture(t, { neverSettleAcquire: true });
+  const acquiring = f.host.acquire();
+  // Let native grant/selection finish, but keep the evaluated acquire Promise pending.
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(f.windows[0].selection.audio, "loopback");
+  f.host.dispose();
+  await assert.rejects(acquiring, /AUDIO_CAPTURE_CANCELLED/);
+  f.host.dispose();
+  assert.equal(f.windows[0].destroyed, true);
+  assert.equal(f.ipcMain.listenerCount("heymoa:local-capture-packet"), 0);
+  await assert.rejects(f.host.acquire(), /AUDIO_CAPTURE_CANCELLED/);
+  assert.equal(f.windows.length, 1);
+});
+test("grant expiration settles an unresponsive acquisition and releases native resources", async (t) => {
+  const f = fixture(t, { neverSettleAcquire: true });
+  const acquiring = f.host.acquire();
+  await new Promise((resolve) => setImmediate(resolve));
+  t.mock.timers.tick(120000);
+  await assert.rejects(acquiring, /AUDIO_CAPTURE_CANCELLED/);
+  assert.equal(f.windows[0].destroyed, true);
+  assert.equal(f.ipcMain.listenerCount("heymoa:local-capture-packet"), 0);
+});
+for (const operation of ["start", "stop"]) {
+  test(`renderer destruction settles an in-progress ${operation} evaluation`, async (t) => {
+    const f = fixture(t);
+    const id = await f.host.acquire();
+    f.windows[0].webContents.executeJavaScript = () => new Promise(() => {});
+    const pending = f.host[operation](id);
+    f.windows[0].destroy();
+    await assert.rejects(pending, /AUDIO_CAPTURE_CANCELLED/);
+    assert.equal(f.ipcMain.listenerCount("heymoa:local-capture-packet"), 0);
+  });
 }
 test("only packaged local exact frame receives native media and external local requests fail closed", async (t) => {
   const f = fixture(t);
