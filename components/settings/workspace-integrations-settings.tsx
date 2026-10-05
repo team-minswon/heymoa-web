@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Info, Link2 } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -20,6 +21,7 @@ import type { ToolConnectionsResponseDataIntegrationsItem } from "@/lib/api/gene
 import { formatAppDate } from "@/lib/format/date";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { cn } from "@/lib/utils";
+import { desktopAuthBridge } from "@/lib/desktop/auth";
 
 type Provider = "LINEAR" | "GITHUB";
 
@@ -39,6 +41,7 @@ export function WorkspaceIntegrationsSettings({
   workspaceId: string;
 }) {
   const queryClient = useQueryClient();
+  const [connecting, setConnecting] = useState(false);
   const { user } = useAuth();
   const integrationsQuery = useGetWorkspaceIntegrations(workspaceId);
   const membersQuery = useGetWorkspaceMembers(workspaceId);
@@ -78,11 +81,40 @@ export function WorkspaceIntegrationsSettings({
   const roleKnown = Boolean(myRole) && !roleError;
 
   const connect = async (provider: Provider) => {
+    if (connecting || disconnect.isPending) return;
     // MSW는 최상위 내비게이션을 못 가로채므로 목에서는 목 승인 화면으로 바로 보낸다(인증 불필요).
     if (shouldEnableMocking()) {
       window.location.assign(
         `/mock-oauth?workspaceId=${workspaceId}&provider=${provider}`
       );
+      return;
+    }
+    const desktop = desktopAuthBridge();
+    if (desktop) {
+      if (!desktop.beginConnection) {
+        toast.error("앱을 업데이트한 뒤 다시 연결해 주세요.");
+        return;
+      }
+      setConnecting(true);
+      try {
+        // Admission happens during this click. Native requests share the app's
+        // cookies and refresh a stale access cookie before retrying the ticket.
+        const outcome = await desktop.beginConnection({
+          workspaceId,
+          provider,
+        });
+        if (outcome.status === "success") {
+          await queryClient.invalidateQueries({
+            queryKey: getGetWorkspaceIntegrationsQueryKey(workspaceId),
+          });
+        } else if (outcome.status !== "cancelled") {
+          toast.error("연결하지 못했습니다. 다시 시도해 주세요.");
+        }
+      } catch {
+        toast.error("연결을 시작하지 못했습니다. 다시 시도해 주세요.");
+      } finally {
+        setConnecting(false);
+      }
       return;
     }
     // authorize는 302라 fetch로 부르면 안 되고 최상위 이동이다 — 그런데 그 이동은 proxy·
@@ -147,7 +179,7 @@ export function WorkspaceIntegrationsSettings({
               isAdmin={roleKnown && isAdmin}
               // 해제가 도는 동안에는 **모든** 카드의 조작을 잠근다 — 두 번째 조작이 겹치면
               // 무효화가 어긋나 성공한 해제가 연결됨으로 남을 수 있다.
-              isBusy={disconnect.isPending}
+              isBusy={disconnect.isPending || connecting}
               onConnect={() => void connect(integration.provider as Provider)}
               onDisconnect={() =>
                 disconnect.mutate({

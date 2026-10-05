@@ -159,6 +159,34 @@ function setup({
   };
 }
 
+describe("데스크톱 입력 상태와 캡처 실패 안내", () => {
+  beforeEach(() => toastError.mockReset());
+  afterEach(() => toastError.mockReset());
+  it("컴퓨터 소리 상태를 유지하고 캡처 손실 안내를 서버 종료 뒤에도 지우지 않는다", async () => {
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    await act(async () => {
+      harness.getCallbacks().onSystemAudioChange?.("ended");
+      harness.getCallbacks().onCaptureError?.("AUDIO_CAPTURE_FAILED");
+    });
+    expect(harness.result.current.systemAudio).toBe("ended");
+    expect(harness.result.current.error).toContain(
+      "저장되지 않았을 수 있습니다"
+    );
+    expect(toastError).toHaveBeenCalledWith(
+      expect.stringContaining("소리 캡처가 중단"),
+      expect.any(Object)
+    );
+    expect(harness.controller.stop).toHaveBeenCalledTimes(1);
+    expect(harness.result.current.phase).toBe("completed");
+    expect(harness.result.current.error).toContain(
+      "저장되지 않았을 수 있습니다"
+    );
+    await act(() => harness.result.current.disconnect());
+    expect(harness.result.current.systemAudio).toBeNull();
+  });
+});
+
 function getProjectNotesPredicate(
   invalidate: ReturnType<typeof setup>["invalidate"]
 ) {

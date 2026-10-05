@@ -126,6 +126,17 @@ describe("RecordingConnectionNotice", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("마이크가 끊겼습니다");
   });
+  it("마이크가 살아 있어도 컴퓨터 소리가 끊기면 상대방 소리 누락을 알린다", () => {
+    const { rerender } = render(notice({ systemAudio: "ended" }));
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "컴퓨터 소리가 끊겼습니다"
+    );
+    expect(screen.getByRole("status")).not.toHaveTextContent(
+      "마이크가 끊겼습니다"
+    );
+    rerender(notice({ systemAudio: "live" }));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
 
   it("아무 일도 없으면 그리지 않는다", () => {
     const { container } = render(notice({ buffer: null }));

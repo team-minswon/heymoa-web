@@ -85,6 +85,8 @@ export type RealtimeSessionOptions = {
   onBufferChange?: (state: BufferState) => void;
   /** `captureGapMs`: 첫 조각 이후 벽시계에서 실제로 잡은 소리를 뺀 것. 마이크가 쉰 시간이다. */
   onMicrophoneChange?: (state: MicrophoneState, captureGapMs: number) => void;
+  onSystemAudioChange?: (state: MicrophoneState | null) => void;
+  onCaptureError?: (code: string) => void;
 };
 
 export type RealtimeSessionDependencies = {

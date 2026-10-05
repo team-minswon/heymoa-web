@@ -13,6 +13,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { NavbarGate } from "@/components/NavbarGate";
 import { GlobalRecordingIndicator } from "@/components/transcription/global-recording-indicator";
+import { DesktopRecordingControls } from "@/components/transcription/desktop-recording-controls";
 import { Toaster } from "@/components/ui/toast";
 import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { robotsDirective, siteConfig } from "@/lib/site";
@@ -141,6 +142,7 @@ export default async function RootLayout({
               <Navbar />
             </NavbarGate>
             <GlobalRecordingIndicator />
+            <DesktopRecordingControls />
 
             {/* `tabIndex={-1}`이 있어야 건너뛰기 링크가 포커스를 여기로 옮긴다 — 없으면 해시만
                 바뀌고 포커스는 body에 남아 다음 Tab이 다시 nav로 돌아간다. */}

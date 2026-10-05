@@ -1,0 +1,63 @@
+name: Desktop unsigned beta artifacts
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require trusted dev or main source
+        env:
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          if [[ "$SOURCE_REPOSITORY" != "team-minswon/heymoa-web" ]]; then
+            echo "Build only in the trusted HeyMoa repository" >&2
+            exit 1
+          fi
+          if [[ "$SOURCE_REF" != "refs/heads/dev" && "$SOURCE_REF" != "refs/heads/main" ]]; then
+            echo "Manual builds require dev or main, not feature or arbitrary refs" >&2
+            exit 1
+          fi
+  package:
+    needs: source-policy
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: mac:arm64
+            artifact: mac-arm64
+          - runner: macos-15-intel
+            target: mac:x64
+            artifact: mac-x64
+          - runner: windows-2022
+            target: win:x64
+            artifact: win-x64
+    runs-on: ${{ matrix.runner }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      NODE_OPTIONS: --no-experimental-webstorage
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @heymoa/desktop typecheck
+      - run: pnpm --filter @heymoa/desktop test
+      - run: pnpm --filter @heymoa/desktop package:${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heymoa-unsigned-${{ matrix.artifact }}
+          if-no-files-found: error
+          path: |
+            apps/desktop/release/HeyMoa-*.dmg
+            apps/desktop/release/HeyMoa-*.zip
+            apps/desktop/release/HeyMoa-*.exe
+            apps/desktop/release/SHA256SUMS

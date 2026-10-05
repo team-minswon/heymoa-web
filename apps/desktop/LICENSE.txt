@@ -1,0 +1,2 @@
+HeyMoa desktop application. Copyright HeyMoa. All rights reserved.
+Electron and Chromium third-party license notices are included in the packaged runtime.

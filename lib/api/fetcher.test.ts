@@ -141,8 +141,9 @@ describe("prerender 문서", () => {
     const pending = apiFetch("/v1/notes");
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
-    // 401은 이미 돌아왔지만 갱신은 아직 나가지 않았다.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Flush the settled 401 without a wall-clock sleep; prerender must still block refresh.
+    await Promise.resolve();
+    await Promise.resolve();
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     Object.defineProperty(document, "prerendering", {

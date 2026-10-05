@@ -34,6 +34,7 @@ export type RecordingState = {
   connectionNotice: ConnectionNotice | null;
   buffer: BufferState | null;
   microphone: MicrophoneState;
+  systemAudio: MicrophoneState | null;
   error: string | null;
   /** 재개 창이 끝나 멈췄다는 문구가 서 있다. 그동안만 회의 종료를 따로 감시한다. */
   windowExhausted: boolean;
@@ -51,6 +52,7 @@ export const initialRecordingState: RecordingState = {
   connectionNotice: null,
   buffer: null,
   microphone: "live",
+  systemAudio: null,
   error: null,
   windowExhausted: false,
   droppedMs: 0,
@@ -80,6 +82,7 @@ export type RecordingAction =
   | { type: "notice"; notice: ConnectionNotice | null }
   | { type: "buffer"; buffer: BufferState }
   | { type: "microphone"; microphone: MicrophoneState }
+  | { type: "system-audio"; systemAudio: MicrophoneState | null }
   | { type: "tick"; ms: number };
 
 export type RecordingFailure = Extract<
@@ -163,6 +166,8 @@ export function recordingReducer(
       return patch(state, { buffer: action.buffer });
     case "microphone":
       return patch(state, { microphone: action.microphone });
+    case "system-audio":
+      return patch(state, { systemAudio: action.systemAudio });
     case "tick":
       return patch(state, { elapsedMs: state.elapsedMs + action.ms });
   }

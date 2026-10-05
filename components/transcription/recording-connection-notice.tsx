@@ -21,11 +21,13 @@ export function RecordingConnectionNotice({
   notice,
   buffer,
   microphone,
+  systemAudio = null,
   finishing,
 }: {
   notice: ConnectionNotice | null;
   buffer: BufferState | null;
   microphone: MicrophoneState;
+  systemAudio?: MicrophoneState | null;
   finishing: boolean;
 }) {
   // 한도에 닿아 새 소리를 받지 않는다. 노랑(영수증 10초)이 먼저 떠 있어도 「저장 중」이라 하면 거짓이다
@@ -40,6 +42,11 @@ export function RecordingConnectionNotice({
   const lines: string[] = [];
   if (microphone !== "live") {
     lines.push("마이크가 끊겼습니다. 이 동안의 소리는 녹음되지 않습니다.");
+  }
+  if (systemAudio !== null && systemAudio !== "live") {
+    lines.push(
+      "컴퓨터 소리가 끊겼습니다. 이 동안 상대방의 소리는 녹음되지 않습니다."
+    );
   }
   if (buffer?.upload) {
     lines.push(

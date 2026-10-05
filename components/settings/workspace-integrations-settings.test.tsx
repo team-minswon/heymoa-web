@@ -1,8 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
+
+const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const refresh = vi.hoisted(() => ({ run: vi.fn() }));
+vi.mock("@/lib/ui/toast", () => ({ toast }));
+vi.mock("@/lib/mocks/enable-mocking", () => ({ shouldEnableMocking: () => false }));
+vi.mock("@/lib/api/fetcher", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/api/fetcher")>(),
+  refreshAuthOnce: refresh.run,
+}));
 
 const WORKSPACE_ID = "01K0000000000";
 
@@ -86,9 +95,9 @@ function github(connected: boolean) {
   };
 }
 
-function renderPanel() {
+function renderPanel(client = new QueryClient()) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <WorkspaceIntegrationsSettings workspaceId={WORKSPACE_ID} />
     </QueryClientProvider>
   );
@@ -103,8 +112,17 @@ describe("WorkspaceIntegrationsSettings", () => {
     state.integrationsLoading = false;
     state.integrationsError = false;
     state.disconnectMock.mockReset();
+    toast.error.mockReset();
+    refresh.run.mockReset();
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    Reflect.deleteProperty(window, "heymoaDesktop");
+  });
+
+  function desktop(bridge: object) {
+    Object.defineProperty(window, "heymoaDesktop", { value: bridge, configurable: true });
+  }
 
   it("두 provider가 항상 렌더되고 연결 상태를 보인다", () => {
     renderPanel();
@@ -191,4 +209,62 @@ describe("WorkspaceIntegrationsSettings", () => {
     renderPanel();
     expect(screen.queryByText("Linear")).toBeNull();
   });
+  it("keeps all cards locked until successful native connection refetch completes", async () => {
+    let finish!: (value: { status: "success" }) => void;
+    let finishRefetch!: () => void;
+    const beginConnection = vi.fn(() => new Promise<{ status: "success" }>((resolve) => { finish = resolve; }));
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries").mockImplementation(() => new Promise<void>((resolve) => { finishRefetch = resolve; }));
+    desktop({ beginConnection });
+    renderPanel(client);
+    const connect = screen.getByRole("button", { name: "연결" });
+    const disconnect = screen.getByRole("button", { name: "연결 해제" });
+    fireEvent.click(connect);
+    expect(beginConnection).toHaveBeenCalledWith({ workspaceId: WORKSPACE_ID, provider: "GITHUB" });
+    expect(connect).toBeDisabled();
+    expect(disconnect).toBeDisabled();
+    fireEvent.click(connect);
+    expect(beginConnection).toHaveBeenCalledTimes(1);
+    await act(async () => finish({ status: "success" }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["integrations", WORKSPACE_ID] });
+    expect(connect).toBeDisabled();
+    await act(async () => finishRefetch());
+    expect(connect).not.toBeDisabled();
+    expect(disconnect).not.toBeDisabled();
+    expect(refresh.run).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("native cancellation and rejection both allow retry without web refresh or stale invalidation", async () => {
+    const beginConnection = vi.fn()
+      .mockResolvedValueOnce({ status: "cancelled" })
+      .mockRejectedValueOnce(new Error("IPC unavailable"))
+      .mockResolvedValueOnce({ status: "cancelled" });
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    desktop({ beginConnection });
+    renderPanel(client);
+    const connect = screen.getByRole("button", { name: "연결" });
+    fireEvent.click(connect);
+    await waitFor(() => expect(connect).not.toBeDisabled());
+    expect(toast.error).not.toHaveBeenCalled();
+    fireEvent.click(connect);
+    await waitFor(() => expect(connect).not.toBeDisabled());
+    expect(toast.error).toHaveBeenCalledTimes(1);
+    fireEvent.click(connect);
+    await waitFor(() => expect(connect).not.toBeDisabled());
+    expect(beginConnection).toHaveBeenCalledTimes(3);
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(refresh.run).not.toHaveBeenCalled();
+  });
+
+  it("an old desktop app cannot fall through to web connection OAuth", () => {
+    desktop({});
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "연결" }));
+    expect(toast.error).toHaveBeenCalledWith("앱을 업데이트한 뒤 다시 연결해 주세요.");
+    expect(refresh.run).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "연결" })).not.toBeDisabled();
+  });
+
 });

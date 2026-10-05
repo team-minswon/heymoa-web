@@ -287,7 +287,8 @@ describe("contract sync 2026-07-29", () => {
     // `agent-delegations`(목록 GET · 만들기 POST)와 `agent-delegations/{delegationId}`(회수 DELETE).
     // APP-826(server APP-825)에서 연결의 사용 내역이 늘었다 (62 → 63) —
     // `agent-delegations/{delegationId}/usages`.
-    expect(paths).toHaveLength(63);
+    // APP-891 adds the four desktop broker endpoints to the public mirror.
+    expect(paths).toHaveLength(67);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 
@@ -447,6 +448,41 @@ describe("contract sync 2026-07-29", () => {
     expect(
       api().paths["/v1/notes/{noteId}/analyses/latest"]?.get?.operationId
     ).toBe("getLatestAnalysis");
+  });
+});
+
+describe("desktop auth contract", () => {
+  it("keeps login anonymous but binds integration tickets to the app session", () => {
+    const paths = api().paths as unknown as Record<string, Record<string, {
+      operationId: string;
+      security: unknown[];
+      requestBody?: { content: Record<string, { schema: { $ref: string } }> };
+    }>>;
+    const commands = [
+      ["/v1/auth/desktop/start", "startDesktopLogin", "DesktopLoginStartRequest"],
+      ["/v1/auth/desktop/exchange", "exchangeDesktopLogin", "DesktopLoginExchangeRequest"],
+      ["/v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket", "createDesktopIntegrationTicket", "DesktopConnectionTicketRequest"],
+    ] as const;
+    for (const [path, operationId, schema] of commands) {
+      expect(paths[path].post.operationId).toBe(operationId);
+      expect(paths[path].post.requestBody?.content["application/json"].schema.$ref).toBe(`#/components/schemas/${schema}`);
+    }
+    expect(paths["/v1/auth/desktop/start"].post.security).toEqual([]);
+    expect(paths["/v1/auth/desktop/exchange"].post.security).toEqual([]);
+    expect(paths["/v1/auth/desktop/authorize"].get.operationId).toBe("authorizeDesktopLogin");
+    expect(paths["/v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket"].post.security).toEqual([{ accessCookie: [] }]);
+  });
+
+  it("requires the PKCE/state binding and never puts session tokens in an exchange body", () => {
+    const schemas = api().components.schemas as Record<string, {
+      required: string[];
+      properties: Record<string, { properties?: Record<string, unknown> }>;
+    }>;
+    expect(schemas.DesktopLoginStartRequest.required).toEqual(expect.arrayContaining(["state", "codeChallenge"]));
+    expect(schemas.DesktopLoginExchangeRequest.required).toEqual(expect.arrayContaining(["state", "code", "codeVerifier"]));
+    expect(schemas.DesktopConnectionTicketRequest.required).toContain("state");
+    expect(Object.keys(schemas.DesktopLoginStartRequest.properties)).not.toContain("redirectUri");
+    expect(Object.keys(schemas.RefreshTokensResponse.properties.data.properties ?? {})).toEqual(["message"]);
   });
 });
 
