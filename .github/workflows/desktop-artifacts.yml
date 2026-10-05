@@ -20,6 +20,15 @@ jobs:
             echo "Manual builds require dev or main, not feature or arbitrary refs" >&2
             exit 1
           fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require desktop package on selected source
+        run: |
+          if [[ ! -f apps/desktop/package.json ]]; then
+            echo "Selected source has no desktop package; choose dev until desktop code is integrated into main" >&2
+            exit 1
+          fi
   package:
     needs: source-policy
     strategy:
