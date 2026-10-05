@@ -25,6 +25,26 @@ export type DesktopCapabilities = {
   captureContractVersion?: number;
   login?: boolean;
   connectionOAuth?: boolean;
+  meetingTimeline?: boolean;
+};
+
+/** Display-only, bounded snapshot. No cookies, URLs, HTML, PCM or API credentials. */
+export type MeetingTimelineItem = {
+  id: string;
+  tone: "decision" | "task" | "open" | "answered" | "reference";
+  label: string;
+  content: string;
+  atMs: number | null;
+  citations: Array<{ atMs: number; text: string }>;
+};
+export type MeetingTimelineSnapshot = {
+  noteId: string;
+  title: string;
+  loading: boolean;
+  failed: boolean;
+  reconnecting: boolean;
+  total: number;
+  items: MeetingTimelineItem[];
 };
 
 export type DesktopAuthOutcome = {
@@ -57,6 +77,9 @@ export type DesktopCapturePacket =
 export type DesktopFoundationBridge = {
   getCapabilities(): Promise<DesktopCapabilities>;
   reportRecording(summary: RecordingSummary): Promise<void>;
+  reportMeetingTimeline?: (
+    snapshot: MeetingTimelineSnapshot | null
+  ) => Promise<void>;
   subscribeRecordingActions?: (
     listener: (action: DesktopRecordingAction) => void
   ) => () => void;

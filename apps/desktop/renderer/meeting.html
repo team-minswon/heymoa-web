@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>HeyMoa · 현재 회의</title>
+    <link rel="stylesheet" href="meeting.css" />
+  </head>
+  <body>
+    <header>
+      <div class="status">
+        <i></i><span id="phase">녹음 대기</span><time id="elapsed"></time>
+      </div>
+      <button id="close" aria-label="팝오버 닫기" title="닫기">×</button>
+    </header>
+    <h1 id="title">진행 중인 회의</h1>
+    <nav aria-label="타임라인 유형" id="filters"></nav>
+    <p id="notice" role="status"></p>
+    <main id="scroll" tabindex="0" aria-label="회의 타임라인">
+      <div id="items"></div>
+      <p id="empty">녹음 중인 회의가 없습니다.</p>
+      <p id="limited"></p>
+    </main>
+    <button
+      id="latest"
+      aria-label="최신 항목으로 이동"
+      title="최신 항목으로 이동"
+      hidden
+    >
+      ↓
+    </button>
+    <footer>
+      <button id="open">현재 회의 열기 ↗</button
+      ><button id="stop" disabled><span>■</span> 녹음 중지</button>
+    </footer>
+    <script src="meeting-renderer.js"></script>
+  </body>
+</html>

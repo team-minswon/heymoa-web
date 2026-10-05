@@ -52,6 +52,8 @@ function fixture() {
     },
   });
   contents.isDestroyed = () => windowDestroyed;
+  contents.throttling = [];
+  contents.setBackgroundThrottling = (value) => contents.throttling.push(value);
   contents.getURL = () => origin;
   contents.send = (...args) => {
     sent.push(args);
@@ -66,7 +68,7 @@ function fixture() {
       this.tooltip = value;
     }
     setTitle() {}
-    setContextMenu(value) {
+    popUpContextMenu(value) {
       this.menu = value;
     }
     destroy() {
@@ -105,6 +107,8 @@ function fixture() {
     require: (name) =>
       name === "electron"
         ? electron
+        : name === "./meeting-popover"
+          ? { createMeetingPopover: () => ({ refresh() {}, dispose() {}, toggle() {} }) }
         : name.startsWith(".")
           ? require(path.resolve(path.dirname(filename), name))
           : require(name),
@@ -165,8 +169,9 @@ test("window close hides rather than stops; current meeting and stop are separat
   assert.equal(f.hides, 1);
   assert.deepEqual(f.sent, []);
   f.adapter.lifecycle.update({ ...idle, phase: "recording" });
+  f.tray.emit("right-click");
   f.tray.menu.find((item) => item.label === "현재 회의 열기").click();
-  f.tray.menu.find((item) => item.label === "녹음 종료").click();
+  f.tray.menu.find((item) => item.label === "녹음 중지").click();
   assert.deepEqual(f.sent, [
     ["heymoa:recording-action", "show-current"],
     ["heymoa:recording-action", "stop"],
@@ -263,4 +268,16 @@ test("renderer beforeunload is overridden only after native loss confirmation", 
     },
   });
   assert.equal(prevented, true);
+});
+
+test("hidden recording keeps timers active and idle restores background throttling", () => {
+  const f = fixture();
+  assert.deepEqual(f.contents.throttling, [true]);
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" });
+  f.window.emit("close", { preventDefault() {} });
+  f.interval();
+  assert.deepEqual(f.contents.throttling, [true, false]);
+  f.adapter.lifecycle.update(idle);
+  assert.deepEqual(f.contents.throttling, [true, false, true]);
+  f.adapter.dispose();
 });

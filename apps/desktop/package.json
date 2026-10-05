@@ -46,6 +46,8 @@
     "files": [
       "dist/*.js",
       "dist/capture.html",
+      "dist/meeting.html",
+      "dist/meeting.css",
       "assets/*.png",
       "package.json",
       "LICENSE.txt",

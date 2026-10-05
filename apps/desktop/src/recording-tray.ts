@@ -1,5 +1,8 @@
 import { app, BrowserWindow, dialog, Menu, nativeImage, Tray } from "electron";
 import path from "node:path";
+import type { MeetingTimelineSnapshot } from "@heymoa/desktop-contracts";
+import { createMeetingPopover } from "./meeting-popover";
+import { TIMELINE_STALE_MS } from "./meeting-timeline";
 import { isTrustedUrl, CHANNELS } from "./policy";
 import {
   RecordingLifecycle,
@@ -12,6 +15,10 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   const contents = window.webContents;
   let allowQuit = false;
   let disposed = false;
+  let timeline: MeetingTimelineSnapshot | null = null;
+  let timelineAt = 0;
+  let contextMenu: Menu | null = null;
+  let throttled: boolean | undefined;
   const image = nativeImage.createFromPath(
     path.join(
       __dirname,
@@ -70,6 +77,12 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   }
   function refresh() {
     if (disposed) return;
+    const backgroundThrottling = !lifecycle.isRecording();
+    if (!contents.isDestroyed() && throttled !== backgroundThrottling) {
+      // Keep the hidden recording window's timeline heartbeat and realtime events active.
+      contents.setBackgroundThrottling(backgroundThrottling);
+      throttled = backgroundThrottling;
+    }
     const view = lifecycle.view();
     const status = [
       view.label,
@@ -85,29 +98,28 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       tray.setTitle(view.elapsed && !lifecycle.safe() ? view.elapsed : "", {
         fontType: "monospacedDigit",
       });
-    tray.setContextMenu(
-      Menu.buildFromTemplate([
-        { label: status, enabled: false },
-        { type: "separator" },
-        {
-          label: "현재 회의 열기",
-          click: () => {
-            show();
-            sendAction("show-current");
-          },
+    contextMenu = Menu.buildFromTemplate([
+      { label: status, enabled: false },
+      { type: "separator" },
+      {
+        label: "현재 회의 열기",
+        click: () => {
+          show();
+          sendAction("show-current");
         },
-        {
-          label: "녹음 종료",
-          enabled: !view.unknown && !lifecycle.safe(),
-          click: () => {
-            show();
-            sendAction("stop");
-          },
+      },
+      {
+        label: "녹음 중지",
+        enabled: !view.unknown && !lifecycle.safe(),
+        click: () => {
+          show();
+          sendAction("stop");
         },
-        { type: "separator" },
-        { label: "앱 종료", click: () => void lifecycle.requestQuit() },
-      ])
-    );
+      },
+      { type: "separator" },
+      { label: "앱 종료", click: () => void lifecycle.requestQuit() },
+    ]);
+    popover?.refresh();
   }
   function sendAction(action: "show-current" | "stop") {
     try {
@@ -158,6 +170,26 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         .catch(() => {});
     },
   });
+  const popover = createMeetingPopover(
+    tray,
+    () => {
+      const view = lifecycle.view();
+      return {
+        timeline,
+        label: view.label,
+        elapsed: view.elapsed,
+        warning:
+          view.inputWarning ||
+          (view.pending ? "전송 대기 중인 소리가 있습니다." : null),
+        canStop: lifecycle.isRecording(),
+        stale: timeline !== null && Date.now() - timelineAt > TIMELINE_STALE_MS,
+      };
+    },
+    (action) => {
+      show();
+      sendAction(action);
+    }
+  );
   const close = (event: Electron.Event) => {
     if (!allowQuit) {
       event.preventDefault();
@@ -170,7 +202,15 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       void lifecycle.requestQuit();
     }
   };
-  const unavailable = () => lifecycle.unavailable();
+  const clearTimeline = () => {
+    timeline = null;
+    timelineAt = 0;
+    popover.refresh();
+  };
+  const unavailable = () => {
+    clearTimeline();
+    lifecycle.unavailable();
+  };
   // Electron uses preventDefault here to override a renderer's beforeunload veto.
   // Only a safe exit or separately confirmed discard has authorized that override.
   const preventUnload = (event: Electron.Event) => {
@@ -182,8 +222,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     inPlace: boolean,
     mainFrame: boolean
   ) => {
-    if (mainFrame && !inPlace && isTrustedUrl(_url, origin))
-      lifecycle.unavailable();
+    if (mainFrame && !inPlace && isTrustedUrl(_url, origin)) unavailable();
   };
   const timer = setInterval(refresh, 1000);
   window.on("close", close);
@@ -193,13 +232,28 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   contents.on("did-navigate", unavailable);
   contents.on("will-prevent-unload", preventUnload);
   tray.on("double-click", show);
+  const togglePopover = () => popover.toggle();
+  const showMenu = () => {
+    if (contextMenu) tray.popUpContextMenu(contextMenu);
+  };
+  tray.on("click", togglePopover);
+  tray.on("right-click", showMenu);
   refresh();
   return {
     lifecycle,
+    reportTimeline(value: MeetingTimelineSnapshot | null) {
+      // Stop/idle summaries are authoritative; a late queued snapshot cannot restore content.
+      timeline = lifecycle.isRecording() ? value : null;
+      timelineAt = Date.now();
+      popover.refresh();
+    },
+    clearTimeline,
     dispose() {
       if (disposed) return;
       disposed = true;
       lifecycle.dispose();
+      clearTimeline();
+      popover.dispose();
       clearInterval(timer);
       window.removeListener("close", close);
       app.removeListener("before-quit", beforeQuit);
@@ -207,6 +261,9 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       contents.removeListener("did-start-navigation", navigation);
       contents.removeListener("did-navigate", unavailable);
       contents.removeListener("will-prevent-unload", preventUnload);
+      tray.removeListener("click", togglePopover);
+      tray.removeListener("right-click", showMenu);
+      tray.removeListener("double-click", show);
       tray.destroy();
     },
   };

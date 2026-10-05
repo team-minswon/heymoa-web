@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, session, shell } from "electron";
 import path from "node:path";
 import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
 import { createRecordingTray } from "./recording-tray";
+import { MEETING_CHANNELS, meetingTimeline } from "./meeting-timeline";
 import { captureId } from "./media-grant";
 import { CaptureHost } from "./capture-host";
 import { CAPTURE_ACK } from "./capture-protocol";
@@ -221,6 +222,7 @@ app
         captureContractVersion: 1,
         login: true,
         connectionOAuth: true,
+        meetingTimeline: true,
       } satisfies DesktopCapabilities;
     });
     ipcMain.handle("heymoa:auth-login", (event, payload: unknown) => {
@@ -239,7 +241,13 @@ app
     });
     ipcMain.handle(CHANNELS.summary, (event, payload: unknown) => {
       authorize(event);
-      recording?.lifecycle.update(recordingSummary(payload));
+      const summary = recordingSummary(payload);
+      if (summary.phase !== "recording") recording?.clearTimeline();
+      recording?.lifecycle.update(summary);
+    });
+    ipcMain.handle(MEETING_CHANNELS.report, (event, payload: unknown) => {
+      authorize(event);
+      recording?.reportTimeline(meetingTimeline(payload));
     });
     ipcMain.handle(CHANNELS.captureBegin, async (event, payload: unknown) => {
       authorize(event);

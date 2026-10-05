@@ -15,7 +15,7 @@ const LABELS: Record<RecordingSummary["phase"], string> = {
   "requesting-permission": "권한 확인 중",
   connecting: "연결 중",
   recording: "녹음 중",
-  stopping: "녹음 종료 중",
+  stopping: "녹음 중지 중",
   completed: "녹음 완료",
   failed: "녹음 중단",
 };
@@ -86,6 +86,9 @@ export class RecordingLifecycle {
         : !ACTIVE.has(this.summary.phase) && this.summary.pendingMs === 0)
     );
   }
+  isRecording(): boolean {
+    return this.summary?.phase === "recording";
+  }
   view(): RecordingView {
     const s = this.summary;
     const neverStarted = !s && !this.activityObserved && !this.captureActive;
@@ -105,7 +108,11 @@ export class RecordingLifecycle {
           )
       : [];
     return {
-      label: s ? LABELS[s.phase] : neverStarted ? LABELS.idle : "녹음 상태 확인 불가",
+      label: s
+        ? LABELS[s.phase]
+        : neverStarted
+          ? LABELS.idle
+          : "녹음 상태 확인 불가",
       elapsed:
         seconds === null
           ? null

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { NoteView } from "@/components/notes/note-view";
 import { NoteRealtimeProvider } from "@/components/notes/note-realtime-provider";
+import { DesktopMeetingTimelineReporter } from "@/components/transcription/desktop-meeting-timeline";
 
 export function NoteRouteClient({
   workspaceId,
@@ -22,6 +23,7 @@ export function NoteRouteClient({
   );
   return (
     <NoteRealtimeProvider noteId={noteId} onNotMember={onNotMember}>
+      <DesktopMeetingTimelineReporter />
       <NoteView
         workspaceId={workspaceId}
         noteId={noteId}

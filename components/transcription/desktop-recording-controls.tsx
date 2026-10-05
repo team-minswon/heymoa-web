@@ -7,6 +7,7 @@ import type {
   RecordingSummary,
 } from "@heymoa/desktop-contracts";
 import { useRecording } from "./recording-provider";
+import { DesktopMeetingTimeline } from "./desktop-meeting-timeline";
 
 /** Native receives only recording metadata; navigation and session ownership stay in the web. */
 export function DesktopRecordingControls() {
@@ -54,5 +55,5 @@ export function DesktopRecordingControls() {
         );
     });
   }, [bridge, activeWorkspaceId, activeNoteId, router, stop]);
-  return null;
+  return <DesktopMeetingTimeline />;
 }

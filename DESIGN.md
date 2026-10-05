@@ -1077,3 +1077,12 @@ FAB도 같은 이유로 상주한다. 조건부 렌더면 패널이 들어오는
 - Animation timings (orb drift, waveform pulse, hero entrance) out of scope.
 - In-product surfaces (voice library editor, agent playground) only partially captured via marketing mockups.
 - Form validation states beyond focus not visible on captured surfaces.
+
+
+### 데스크톱 메뉴바 회의 팝오버 (APP-907)
+
+메뉴바 왼쪽 클릭은 420×580 팝오버, 오른쪽 클릭은 기존 녹음 제어 메뉴를 엽니다. 화면 작업 영역이 작으면 창 크기를 줄이고 가장자리 안으로 배치합니다. 진행 중인 회의의 최근 120개 항목과 근거를 표시하며 전체·결정·할 일·열린 질문·참고로 필터링합니다. 녹음 상태와 경과 시간, 주황색 「녹음 중지」는 웹의 기존 녹음 제어를 사용합니다.
+
+시스템 글꼴을 사용하고 결정은 파란색, 할 일은 녹색, 열린 질문은 주황색으로 구분합니다. 근거는 공간을 200ms 동안 펼친 뒤 텍스트를 120ms 동안 표시합니다. 닫을 때 내용은 바로 숨기고, 동작 줄이기 설정에서는 즉시 전환합니다. 아래 방향 화살표만으로 최신 위치에 돌아갑니다. 위로 스크롤한 사용자는 새 항목이 와도 위치를 유지합니다.
+
+팝오버는 별도 인증이나 네트워크 요청을 만들지 않고 웹이 보내는 표시 데이터만 받습니다. 녹음 중이지만 데이터가 아직 도착하지 않았으면 대기 상태를 보여 주며, 녹음 중지·로그아웃·웹 문서 이동 시 이전 회의 내용을 비웁니다.

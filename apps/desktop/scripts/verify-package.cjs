@@ -14,7 +14,7 @@ for (const folder of releases) {
   );
   const files = listPackage(archive).map((file) => file.replaceAll("\\", "/"));
   const allowed =
-    /^\/(?:dist(?:\/(?:(?:main|preload|policy|security|recording-lifecycle|recording-tray|auth|auth-policy|auth-session|media-grant|capture-host|capture-protocol|capture-preload|capture-renderer|pcm-capture-worklet)\.js|capture\.html))?|assets(?:\/(?:trayTemplate(?:@2x)?|tray)\.png)?|package\.json|LICENSE\.txt)$/;
+    /^\/(?:dist(?:\/(?:(?:main|preload|policy|security|recording-lifecycle|recording-tray|auth|auth-policy|auth-session|media-grant|capture-host|capture-protocol|capture-preload|capture-renderer|pcm-capture-worklet|meeting-timeline|meeting-popover|meeting-preload|meeting-renderer)\.js|(?:capture|meeting)\.html|meeting\.css))?|assets(?:\/(?:trayTemplate(?:@2x)?|tray)\.png)?|package\.json|LICENSE\.txt)$/;
   for (const file of files)
     if (!allowed.test(file))
       throw new Error(`Unexpected packaged file: ${file}`);
@@ -34,6 +34,12 @@ for (const folder of releases) {
     "/dist/capture-preload.js",
     "/dist/capture-renderer.js",
     "/dist/capture.html",
+    "/dist/meeting-timeline.js",
+    "/dist/meeting-popover.js",
+    "/dist/meeting-preload.js",
+    "/dist/meeting-renderer.js",
+    "/dist/meeting.html",
+    "/dist/meeting.css",
     "/dist/pcm-capture-worklet.js",
     "/package.json",
     "/assets/trayTemplate.png",

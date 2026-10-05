@@ -107,6 +107,7 @@ async function fixture(t, overriddenProfiles = true) {
       super();
       this.webContents = new EventEmitter();
       Object.assign(this.webContents, {
+        setBackgroundThrottling() {},
         session: jar,
         mainFrame: { url: "https://heymoa.app" },
         isDestroyed: () => this.destroyed ?? false,
@@ -149,6 +150,7 @@ async function fixture(t, overriddenProfiles = true) {
     },
   };
   ipcMain.handle = (channel, callback) => handlers.set(channel, callback);
+  ipcMain.removeHandler = (channel) => handlers.delete(channel);
   const electron = {
     app,
     ipcMain,

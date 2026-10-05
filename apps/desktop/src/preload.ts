@@ -6,6 +6,7 @@ import type {
   DesktopCapturePacket,
   DesktopRecordingAction,
   RecordingSummary,
+  MeetingTimelineSnapshot,
 } from "@heymoa/desktop-contracts";
 // Sandboxed preload cannot require local modules. Keep runtime imports Electron-only.
 if (process.isMainFrame) {
@@ -57,6 +58,8 @@ if (process.isMainFrame) {
       cancelAuth: () => ipcRenderer.invoke("heymoa:auth-cancel"),
       reportRecording: (summary: RecordingSummary) =>
         ipcRenderer.invoke("heymoa:recording-summary", summary),
+      reportMeetingTimeline: (snapshot: MeetingTimelineSnapshot | null) =>
+        ipcRenderer.invoke("heymoa:meeting-timeline", snapshot),
       subscribeRecordingActions: (
         listener: (action: DesktopRecordingAction) => void
       ) => {
@@ -70,6 +73,8 @@ if (process.isMainFrame) {
         return () =>
           ipcRenderer.removeListener("heymoa:recording-action", receive);
       },
-    } satisfies DesktopFoundationBridge & DesktopAuthBridge & DesktopCaptureBridge)
+    } satisfies DesktopFoundationBridge &
+      DesktopAuthBridge &
+      DesktopCaptureBridge)
   );
 }
