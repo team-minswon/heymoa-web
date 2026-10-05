@@ -159,7 +159,7 @@ describe("WorkspaceAppShell", () => {
     );
   });
 
-  it("할 일 화면에서는 상단바가 할 일을 말하고, 모든 노트를 누르면 목록으로 옮긴다", () => {
+  it("할 일 화면에서는 상단바가 할 일을 말하고, 모든 노트는 목록으로 가는 링크다", () => {
     navState.pathname = "/w/01K0000000000/tasks";
     render(
       <QueryClientProvider client={new QueryClient()}>
@@ -172,8 +172,10 @@ describe("WorkspaceAppShell", () => {
     expect(
       within(screen.getByRole("main")).getAllByText("할 일").length
     ).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "모든 노트" }));
-    expect(navState.push).toHaveBeenCalledWith("/w/01K0000000000");
+    expect(screen.getByRole("link", { name: "모든 노트" })).toHaveAttribute(
+      "href", "/w/01K0000000000"
+    );
+    expect(navState.push).not.toHaveBeenCalled();
   });
 
   it("OAuth 복귀 쿼리로 연동 결과 토스트를 띄우고 쿼리를 지운다", async () => {
