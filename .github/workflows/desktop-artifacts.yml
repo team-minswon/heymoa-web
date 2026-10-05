@@ -1,4 +1,4 @@
-name: Desktop unsigned beta artifacts
+name: Build HeyMoa Desktop
 on:
   workflow_dispatch:
 permissions:
@@ -20,7 +20,7 @@ jobs:
             echo "Manual builds require dev or main, not feature or arbitrary refs" >&2
             exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - name: Require desktop package on selected source
@@ -49,11 +49,11 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       NODE_OPTIONS: --no-experimental-webstorage
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: pnpm
@@ -61,7 +61,7 @@ jobs:
       - run: pnpm --filter @heymoa/desktop typecheck
       - run: pnpm --filter @heymoa/desktop test
       - run: pnpm --filter @heymoa/desktop package:${{ matrix.target }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: heymoa-unsigned-${{ matrix.artifact }}
           if-no-files-found: error
