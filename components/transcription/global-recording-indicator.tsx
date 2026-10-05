@@ -117,11 +117,13 @@ export function GlobalRecordingIndicator() {
     buffer,
     connectionNotice,
     microphone,
+    systemAudio,
     stop,
   } = useRecording();
   const alerting =
     Boolean(buffer?.paused || buffer?.upload || connectionNotice) ||
-    microphone !== "live";
+    microphone !== "live" ||
+    (systemAudio != null && systemAudio !== "live");
   // 연결·마이크·한도 안내는 녹음 중인 노트 패널에만 있다. 그 노트를 안 보고 있으면 워크스페이스 안에서도 여기서 알린다
   const away = !pathname.includes(`/notes/${session?.noteId ?? ""}`);
   const isVisible =
@@ -154,6 +156,7 @@ export function GlobalRecordingIndicator() {
                 notice={connectionNotice}
                 buffer={buffer}
                 microphone={microphone}
+                systemAudio={systemAudio}
                 finishing={phase === "stopping"}
               />
             ) : null

@@ -9,6 +9,7 @@ import {
 } from "vitest";
 import { setupServer } from "msw/node";
 
+import { parseAuthSession } from "@/lib/auth/session-probe";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { restHandlers } from "@/lib/mocks/rest-handlers";
@@ -23,6 +24,18 @@ describe("REST mock handlers", () => {
     mockDb.reset();
   });
   afterAll(() => server.close());
+
+  it("로그인 탐침은 갱신 없이 현재 목 사용자를 인증 응답으로 제공한다", async () => {
+    const response = await fetch("http://localhost/v1/auth/session");
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(parseAuthSession(body.data)).toEqual({
+      state: "authenticated",
+      user: mockDb.getCurrentUser(),
+    });
+  });
 
   /**
    * 시작 실패는 전역 토스트를 끄고 프로바이더가 이 문구를 그대로 그린다 — 코드가 문구

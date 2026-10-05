@@ -5,16 +5,31 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
   QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
   UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
+  UseSuspenseQueryOptions,
+  UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
   AppErrorResponse,
+  AuthSessionResponse,
+  AuthorizeDesktopLoginParams,
+  DesktopAuthorizeResponse,
+  DesktopLoginExchangeRequest,
+  DesktopLoginStartRequest,
   LogoutResponse,
   RefreshTokensResponse,
 } from "../models";
@@ -22,6 +37,24 @@ import type {
 import { apiFetch } from "../../fetcher";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+const withQueryKey = <T extends object, K>(
+  query: T,
+  queryKey: K
+): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === "queryKey") continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
+};
 
 export type logoutResponse200 = {
   data: LogoutResponse;
@@ -220,3 +253,936 @@ export const useRefreshTokens = <TError = AppErrorResponse, TContext = unknown>(
 > => {
   return useMutation(getRefreshTokensMutationOptions(options), queryClient);
 };
+export type authorizeDesktopLoginResponse302 = {
+  data: void;
+  status: 302;
+};
+export type authorizeDesktopLoginResponseError =
+  authorizeDesktopLoginResponse302 & {
+    headers: Headers;
+  };
+
+export type authorizeDesktopLoginResponse = authorizeDesktopLoginResponseError;
+
+export const getAuthorizeDesktopLoginUrl = (
+  params: AuthorizeDesktopLoginParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/auth/desktop/authorize?${stringifiedParams}`
+    : `/v1/auth/desktop/authorize`;
+};
+
+/**
+ * 시작 ticket을 한 번만 소비하고 기존 등록 Google 인증으로 이동한다.
+ * @summary 데스크톱 브라우저 인증 진입
+ */
+export const authorizeDesktopLogin = async (
+  params: AuthorizeDesktopLoginParams,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<authorizeDesktopLoginResponse> => {
+  return apiFetch<authorizeDesktopLoginResponse>(
+    getAuthorizeDesktopLoginUrl(params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getAuthorizeDesktopLoginQueryKey = (
+  params?: AuthorizeDesktopLoginParams
+) => {
+  return [`/v1/auth/desktop/authorize`, ...(params ? [params] : [])] as const;
+};
+
+export const getAuthorizeDesktopLoginQueryOptions = <
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAuthorizeDesktopLoginQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof authorizeDesktopLogin>>
+  > = ({ signal }) =>
+    authorizeDesktopLogin(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AuthorizeDesktopLoginQueryResult = NonNullable<
+  Awaited<ReturnType<typeof authorizeDesktopLogin>>
+>;
+export type AuthorizeDesktopLoginQueryError = void;
+
+export function useAuthorizeDesktopLogin<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+          TError,
+          Awaited<ReturnType<typeof authorizeDesktopLogin>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useAuthorizeDesktopLogin<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+          TError,
+          Awaited<ReturnType<typeof authorizeDesktopLogin>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useAuthorizeDesktopLogin<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 데스크톱 브라우저 인증 진입
+ */
+
+export function useAuthorizeDesktopLogin<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getAuthorizeDesktopLoginQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 데스크톱 브라우저 인증 진입
+ */
+export const prefetchAuthorizeDesktopLoginQuery = async <
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  queryClient: QueryClient,
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getAuthorizeDesktopLoginQueryOptions(params, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getAuthorizeDesktopLoginSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAuthorizeDesktopLoginQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof authorizeDesktopLogin>>
+  > = ({ signal }) =>
+    authorizeDesktopLogin(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AuthorizeDesktopLoginSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof authorizeDesktopLogin>>
+>;
+export type AuthorizeDesktopLoginSuspenseQueryError = void;
+
+export function useAuthorizeDesktopLoginSuspense<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useAuthorizeDesktopLoginSuspense<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useAuthorizeDesktopLoginSuspense<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 데스크톱 브라우저 인증 진입
+ */
+
+export function useAuthorizeDesktopLoginSuspense<
+  TData = Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+  TError = void,
+>(
+  params: AuthorizeDesktopLoginParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof authorizeDesktopLogin>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getAuthorizeDesktopLoginSuspenseQueryOptions(
+    params,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type exchangeDesktopLoginResponse200 = {
+  data: RefreshTokensResponse;
+  status: 200;
+};
+
+export type exchangeDesktopLoginResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type exchangeDesktopLoginResponseSuccess =
+  exchangeDesktopLoginResponse200 & {
+    headers: Headers;
+  };
+export type exchangeDesktopLoginResponseError =
+  exchangeDesktopLoginResponse400 & {
+    headers: Headers;
+  };
+
+export type exchangeDesktopLoginResponse =
+  | exchangeDesktopLoginResponseSuccess
+  | exchangeDesktopLoginResponseError;
+
+export const getExchangeDesktopLoginUrl = () => {
+  return `/v1/auth/desktop/exchange`;
+};
+
+/**
+ * state·PKCE 검증 후 일회용 code를 소비하고 Electron session에 HttpOnly 쿠키를 설정한다.
+ * @summary 데스크톱 로그인 교환
+ */
+export const exchangeDesktopLogin = async (
+  desktopLoginExchangeRequest?: DesktopLoginExchangeRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<exchangeDesktopLoginResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<exchangeDesktopLoginResponse>(getExchangeDesktopLoginUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(desktopLoginExchangeRequest),
+  });
+};
+
+export const getExchangeDesktopLoginMutationKey = () =>
+  ["exchangeDesktopLogin"] as const;
+
+export const getExchangeDesktopLoginMutationOptions = <
+  TError = AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof exchangeDesktopLogin>>,
+    TError,
+    ExchangeDesktopLoginMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof exchangeDesktopLogin>>,
+  TError,
+  ExchangeDesktopLoginMutationVariables,
+  TContext
+> => {
+  const mutationKey = getExchangeDesktopLoginMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof exchangeDesktopLogin>>,
+    ExchangeDesktopLoginMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return exchangeDesktopLogin(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExchangeDesktopLoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof exchangeDesktopLogin>>
+>;
+export type ExchangeDesktopLoginMutationBody =
+  | DesktopLoginExchangeRequest
+  | undefined;
+export type ExchangeDesktopLoginMutationError = AppErrorResponse;
+export type ExchangeDesktopLoginMutationVariables = {
+  data?: DesktopLoginExchangeRequest;
+};
+
+/**
+ * @summary 데스크톱 로그인 교환
+ */
+export const useExchangeDesktopLogin = <
+  TError = AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof exchangeDesktopLogin>>,
+      TError,
+      ExchangeDesktopLoginMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof exchangeDesktopLogin>>,
+  TError,
+  ExchangeDesktopLoginMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getExchangeDesktopLoginMutationOptions(options),
+    queryClient
+  );
+};
+export type startDesktopLoginResponse200 = {
+  data: DesktopAuthorizeResponse;
+  status: 200;
+};
+
+export type startDesktopLoginResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type startDesktopLoginResponseSuccess = startDesktopLoginResponse200 & {
+  headers: Headers;
+};
+export type startDesktopLoginResponseError = startDesktopLoginResponse400 & {
+  headers: Headers;
+};
+
+export type startDesktopLoginResponse =
+  | startDesktopLoginResponseSuccess
+  | startDesktopLoginResponseError;
+
+export const getStartDesktopLoginUrl = () => {
+  return `/v1/auth/desktop/start`;
+};
+
+/**
+ * PKCE challenge와 앱 state에 결합한 브라우저 로그인 URL을 발급한다. 임의 redirect는 받지 않는다.
+ * @summary 데스크톱 로그인 시작
+ */
+export const startDesktopLogin = async (
+  desktopLoginStartRequest?: DesktopLoginStartRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<startDesktopLoginResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<startDesktopLoginResponse>(getStartDesktopLoginUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(desktopLoginStartRequest),
+  });
+};
+
+export const getStartDesktopLoginMutationKey = () =>
+  ["startDesktopLogin"] as const;
+
+export const getStartDesktopLoginMutationOptions = <
+  TError = AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startDesktopLogin>>,
+    TError,
+    StartDesktopLoginMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startDesktopLogin>>,
+  TError,
+  StartDesktopLoginMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStartDesktopLoginMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startDesktopLogin>>,
+    StartDesktopLoginMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startDesktopLogin(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartDesktopLoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startDesktopLogin>>
+>;
+export type StartDesktopLoginMutationBody =
+  | DesktopLoginStartRequest
+  | undefined;
+export type StartDesktopLoginMutationError = AppErrorResponse;
+export type StartDesktopLoginMutationVariables = {
+  data?: DesktopLoginStartRequest;
+};
+
+/**
+ * @summary 데스크톱 로그인 시작
+ */
+export const useStartDesktopLogin = <
+  TError = AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startDesktopLogin>>,
+      TError,
+      StartDesktopLoginMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof startDesktopLogin>>,
+  TError,
+  StartDesktopLoginMutationVariables,
+  TContext
+> => {
+  return useMutation(getStartDesktopLoginMutationOptions(options), queryClient);
+};
+export type getAuthSessionResponse200 = {
+  data: AuthSessionResponse;
+  status: 200;
+};
+
+export type getAuthSessionResponseSuccess = getAuthSessionResponse200 & {
+  headers: Headers;
+};
+export type getAuthSessionResponse = getAuthSessionResponseSuccess;
+
+export const getGetAuthSessionUrl = () => {
+  return `/v1/auth/session`;
+};
+
+/**
+ * access 쿠키를 검증합니다. refresh_required는 refresh 쿠키 존재 후보이며 인증 권한이 아닙니다. 읽기 요청은 토큰을 갱신하지 않습니다.
+ * @summary 로그인 세션 상태 조회
+ */
+export const getAuthSession = async (
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getAuthSessionResponse> => {
+  return apiFetch<getAuthSessionResponse>(getGetAuthSessionUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAuthSessionQueryKey = () => {
+  return [`/v1/auth/session`] as const;
+};
+
+export const getGetAuthSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAuthSessionQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthSession>>> = ({
+    signal,
+  }) => getAuthSession({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAuthSession>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAuthSessionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuthSession>>
+>;
+export type GetAuthSessionQueryError = unknown;
+
+export function useGetAuthSession<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAuthSession>>,
+          TError,
+          Awaited<ReturnType<typeof getAuthSession>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuthSession<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAuthSession>>,
+          TError,
+          Awaited<ReturnType<typeof getAuthSession>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuthSession<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 로그인 세션 상태 조회
+ */
+
+export function useGetAuthSession<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAuthSessionQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 로그인 세션 상태 조회
+ */
+export const prefetchGetAuthSessionQuery = async <
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  queryClient: QueryClient,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetAuthSessionQueryOptions(options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetAuthSessionSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseSuspenseQueryOptions<
+      Awaited<ReturnType<typeof getAuthSession>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAuthSessionQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthSession>>> = ({
+    signal,
+  }) => getAuthSession({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getAuthSession>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAuthSessionSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuthSession>>
+>;
+export type GetAuthSessionSuspenseQueryError = unknown;
+
+export function useGetAuthSessionSuspense<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAuthSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuthSessionSuspense<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAuthSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuthSessionSuspense<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAuthSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 로그인 세션 상태 조회
+ */
+
+export function useGetAuthSessionSuspense<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getAuthSession>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAuthSessionSuspenseQueryOptions(options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

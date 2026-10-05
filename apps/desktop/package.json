@@ -1,0 +1,79 @@
+{
+  "name": "@heymoa/desktop",
+  "version": "0.1.0-beta.1",
+  "private": true,
+  "description": "HeyMoa desktop remote web shell",
+  "author": "HeyMoa",
+  "license": "UNLICENSED",
+  "main": "dist/main.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.renderer.json",
+    "build": "tsc && tsc -p tsconfig.renderer.json && node scripts/build-renderer.mjs",
+    "test": "pnpm build && node --test test/*.test.cjs",
+    "dev": "pnpm build && electron .",
+    "package:dir": "pnpm build && electron-builder --mac --dir --publish never && node scripts/verify-package.cjs",
+    "icons:verify": "node scripts/verify-icons.mjs",
+    "package:mac:arm64": "pnpm build && pnpm icons:verify && electron-builder --mac dmg zip --arm64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs",
+    "package:mac:x64": "pnpm build && pnpm icons:verify && electron-builder --mac dmg zip --x64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs",
+    "package:win:x64": "pnpm build && pnpm icons:verify && electron-builder --win nsis --x64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs"
+  },
+  "devDependencies": {
+    "@heymoa/desktop-contracts": "workspace:*",
+    "@electron/asar": "4.3.1",
+    "@types/node": "^20",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.1",
+    "typescript": "^5"
+  },
+  "build": {
+    "appId": "app.heymoa.desktop",
+    "productName": "HeyMoa",
+    "asar": true,
+    "protocols": [
+      {
+        "name": "HeyMoa authentication",
+        "schemes": [
+          "app.heymoa"
+        ]
+      }
+    ],
+    "artifactName": "HeyMoa-${version}-${os}-${arch}.${ext}",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/*.js",
+      "dist/capture.html",
+      "assets/*.png",
+      "package.json",
+      "LICENSE.txt",
+      "!node_modules/**/*",
+      "!node_modules"
+    ],
+    "mac": {
+      "icon": "build/icons/icon.icns",
+      "category": "public.app-category.productivity",
+      "minimumSystemVersion": "14.2",
+      "identity": null,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "회의에서 내 발언을 기록하기 위해 마이크를 사용합니다.",
+        "NSAudioCaptureUsageDescription": "회의 상대방의 소리를 기록하기 위해 시스템 오디오를 사용합니다."
+      }
+    },
+    "win": {
+      "icon": "build/icons/icon.ico",
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

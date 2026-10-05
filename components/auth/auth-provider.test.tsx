@@ -211,6 +211,62 @@ describe("AuthProvider", () => {
     });
   }
 
+  it("일시 로그인 조회 실패를 전파하고 기존 사용자와 캐시를 보존한다", async () => {
+    const failure = new Error("temporary network failure");
+    authApi.getMe.mockRejectedValueOnce(failure);
+    const { result } = renderWithProvider();
+
+    await act(async () => {
+      await expect(result.current.refreshUser()).rejects.toBe(failure);
+    });
+
+    expect(result.current.user).toEqual(user);
+    expect(result.current.status).toBe("authenticated");
+    expect(hardNavigate).not.toHaveBeenCalled();
+    expect(authApi.logout).not.toHaveBeenCalled();
+  });
+
+  it("캐시 재조회가 실패해도 로그인된 사용자와 제품 캐시를 보존한다", async () => {
+    const failure = new Error("temporary API failure");
+    authApi.getMe.mockRejectedValueOnce(failure);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(["workspace", "workspace-1"], { name: "회의" });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider initialUser={user}>{children}</AuthProvider>
+      </QueryClientProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await act(() => queryClient.invalidateQueries({ queryKey: ["user"] }));
+
+    expect(queryClient.getQueryState(["user"])?.error).toBe(failure);
+    expect(result.current.user).toEqual(user);
+    expect(result.current.status).toBe("authenticated");
+    expect(queryClient.getQueryData(["workspace", "workspace-1"])).toEqual({
+      name: "회의",
+    });
+    expect(hardNavigate).not.toHaveBeenCalled();
+    expect(authApi.logout).not.toHaveBeenCalled();
+  });
+
+  it("확정된 익명 응답은 사용자 캐시를 비운다", async () => {
+    authApi.getMe.mockResolvedValueOnce(null);
+    const { result } = renderWithProvider();
+
+    await act(async () => {
+      expect(await result.current.refreshUser()).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(result.current.user).toBeNull();
+      expect(result.current.status).toBe("anonymous");
+    });
+    expect(hardNavigate).not.toHaveBeenCalled();
+  });
+
   // 세션 게이트는 모듈 수준 상태이고 새 문서로만 풀린다. 소프트 이동으로 보내면 홈에
   // 도착해도 게이트가 열린 채라 이후 모든 요청이 거절된다 — 앱이 죽은 채 남았다(APP-223).
   it("만료 이벤트를 받으면 로그아웃하고 홈으로 하드 이동한다", async () => {

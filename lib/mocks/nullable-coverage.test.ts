@@ -378,6 +378,8 @@ const KNOWN_ONE_SIDED = new Set([
   // `lastTurn.failureCode` 와 `turn_failed` 프레임이고 그쪽은 양쪽 다 관측된다.
   "AgentChatMessagesResponse.data.activeTurn.failureCode",
   "CurrentUserResponse.data.image",
+  // 같은 고정 목 유저를 쓰는 세션 조회도 프로필 이미지 표본이 한 쪽이다.
+  "AuthSessionResponse.data.user.image",
   // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
   // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
   "CurrentTranscriptionSessionNullableResponse.data.startedAt",

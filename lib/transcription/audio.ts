@@ -1,3 +1,4 @@
+import type { AudioInputState } from "@heymoa/desktop-contracts";
 import {
   CAPTURE_CONTRACT,
   CAPTURE_TUNING,
@@ -114,167 +115,281 @@ export class PcmChunkBatcher {
  * 마이크가 소리를 내고 있는가. `live` 가 아니면 워크릿이 조각을 안 내고, 브라우저 안에서는
  * 아무 오류도 안 난다. 사용자는 녹음되는 줄 안다.
  */
-export type MicrophoneState = "live" | "muted" | "ended" | "suspended";
+export type MicrophoneState = AudioInputState;
 
+export type AudioInputs = {
+  microphone: MediaStream;
+  systemAudio?: MediaStream;
+  release?: () => Promise<void> | void;
+};
+export type AudioInputStates = {
+  microphone: MicrophoneState;
+  systemAudio: MicrophoneState | null;
+};
+export type AudioInputLevels = {
+  microphone: number;
+  systemAudio: number | null;
+};
+export const AUDIO_METER_INTERVAL_MS = 50;
+export const DUAL_INPUT_GAIN = 0.5;
 export type PcmAudioCaptureOptions = {
+  workletUrl?: string;
   onChunk: PcmBatchListener;
   onLevel?: (level: number) => void;
   onState?: (state: MicrophoneState) => void;
   batchMs?: number;
+  acquireInputs?: (signal: AbortSignal) => Promise<AudioInputs>;
+  onInputStates?: (states: AudioInputStates) => void;
+  onInputLevels?: (levels: AudioInputLevels) => void;
 };
 
 export class PcmAudioCapture {
   private audioContext: AudioContext | null = null;
-  private stream: MediaStream | null = null;
-  private source: MediaStreamAudioSourceNode | null = null;
+  private inputs: AudioInputs | null = null;
+  private permissionPromise: Promise<void> | null = null;
+  private startingPromise: Promise<void> | null = null;
+  private generation = 0;
+  private acquisitionAbort: AbortController | null = null;
+  private nodes: AudioNode[] = [];
   private worklet: AudioWorkletNode | null = null;
-  private silentGain: GainNode | null = null;
-  private analyser: AnalyserNode | null = null;
+  private analysers: Array<{
+    name: "microphone" | "systemAudio";
+    node: AnalyserNode;
+    samples: Float32Array<ArrayBuffer>;
+  }> = [];
   private levelFrame: number | null = null;
   private lastLevelAt = 0;
   private batcher: PcmChunkBatcher | null = null;
-  private onDeviceChange: (() => void) | null = null;
-  /** 실제로 열린 값. 임의 레이트를 못 여는 기기가 있어 요청값과 다를 수 있다. */
+  private cleanupListeners: (() => void) | null = null;
   private openedSampleRate: number = CAPTURE_CONTRACT.sampleRate;
-
   constructor(private readonly options: PcmAudioCaptureOptions) {}
-
   get sampleRate() {
     return this.openedSampleRate;
   }
 
-  async requestPermission() {
-    this.stream ??= await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: CAPTURE_CONTRACT.channelCount,
-        // 회의실 원거리 오디오라 끄면 전사가 확실히 나빠진다. 화자 임베딩에 어떤 영향인지는
-        // 아직 모른다 — PRO-32 의 화자 정확도 측정에서 함께 본다.
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    });
+  requestPermission(): Promise<void> {
+    if (this.inputs) return Promise.resolve();
+    if (this.permissionPromise) return this.permissionPromise;
+    const generation = this.generation;
+    const abort = new AbortController();
+    this.acquisitionAbort = abort;
+    const request: Promise<AudioInputs> =
+      this.options.acquireInputs?.(abort.signal) ??
+      navigator.mediaDevices
+        .getUserMedia({
+          audio: {
+            channelCount: CAPTURE_CONTRACT.channelCount,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        })
+        .then((microphone) => ({ microphone }));
+    const pending = request
+      .then(async (inputs) => {
+        if (generation !== this.generation) {
+          await this.release(inputs);
+          throw new Error("AUDIO_CAPTURE_CANCELLED");
+        }
+        if (
+          !inputs.microphone.getAudioTracks().length ||
+          (inputs.systemAudio && !inputs.systemAudio.getAudioTracks().length)
+        ) {
+          await this.release(inputs);
+          throw new Error("AUDIO_INPUT_MISSING");
+        }
+        this.inputs = inputs;
+      })
+      .finally(() => {
+        if (this.permissionPromise === pending) this.permissionPromise = null;
+      });
+    this.permissionPromise = pending;
+    return pending;
   }
 
-  async start() {
-    if (this.audioContext) return;
-
-    await this.requestPermission();
-    // 브라우저 리샘플러가 처리한다. 직접 선형 보간하면 안티에일리어싱이 없어
-    // 나이퀴스트 위 성분이 접혀 들어온다.
-    this.audioContext = new AudioContext({
-      sampleRate: CAPTURE_CONTRACT.sampleRate,
+  start(): Promise<void> {
+    if (this.startingPromise) return this.startingPromise;
+    if (this.audioContext) return Promise.resolve();
+    const generation = this.generation;
+    const pending = this.initialize(generation).finally(() => {
+      if (this.startingPromise === pending) this.startingPromise = null;
     });
-    this.openedSampleRate = this.audioContext.sampleRate;
-    this.batcher = new PcmChunkBatcher(
-      this.openedSampleRate,
-      this.options.batchMs ?? CAPTURE_TUNING.batchMs,
-      this.options.onChunk
-    );
-    if (this.audioContext.state === "suspended") {
-      await this.audioContext.resume();
-    }
-    await this.audioContext.audioWorklet.addModule("/pcm-capture-worklet.js");
-    this.source = this.audioContext.createMediaStreamSource(this.stream!);
-    this.worklet = new AudioWorkletNode(
-      this.audioContext,
-      "pcm-capture-processor",
-      { processorOptions: { frameMs: CAPTURE_TUNING.workletFrameMs } }
-    );
-    this.silentGain = this.audioContext.createGain();
-    this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 1024;
-    this.silentGain.gain.value = 0;
-    this.worklet.port.onmessage = (
-      event: MessageEvent<{ samples: ArrayBuffer; captureSamples: number }>
-    ) => {
-      this.batcher?.push(
-        new Int16Array(float32ToPcm16(new Float32Array(event.data.samples))),
-        event.data.captureSamples
+    this.startingPromise = pending;
+    return pending;
+  }
+  private assertCurrent(generation: number) {
+    if (generation !== this.generation)
+      throw new Error("AUDIO_CAPTURE_CANCELLED");
+  }
+  private async initialize(generation: number) {
+    try {
+      await this.requestPermission();
+      this.assertCurrent(generation);
+      const inputs = this.inputs!;
+      const context = new AudioContext({
+        sampleRate: CAPTURE_CONTRACT.sampleRate,
+      });
+      this.audioContext = context;
+      this.openedSampleRate = context.sampleRate;
+      if (context.sampleRate !== CAPTURE_CONTRACT.sampleRate)
+        throw new Error("UNSUPPORTED_CAPTURE_SAMPLE_RATE");
+      this.batcher = new PcmChunkBatcher(
+        context.sampleRate,
+        this.options.batchMs ?? CAPTURE_TUNING.batchMs,
+        this.options.onChunk
       );
-    };
-    this.watchMicrophone(this.audioContext, this.stream!);
-    this.source.connect(this.worklet);
-    this.source.connect(this.analyser);
-    this.worklet.connect(this.silentGain);
-    this.silentGain.connect(this.audioContext.destination);
-    this.publishLevel();
+      if (context.state === "suspended") await context.resume();
+      this.assertCurrent(generation);
+      await context.audioWorklet.addModule(
+        this.options.workletUrl ?? "/pcm-capture-worklet.js"
+      );
+      this.assertCurrent(generation);
+      const worklet = new AudioWorkletNode(context, "pcm-capture-processor", {
+        channelCount: 1,
+        channelCountMode: "explicit",
+        outputChannelCount: [1],
+        processorOptions: { frameMs: CAPTURE_TUNING.workletFrameMs },
+      });
+      this.worklet = worklet;
+      const mixer = context.createGain();
+      mixer.channelCount = 1;
+      mixer.channelCountMode = "explicit";
+      const silent = context.createGain();
+      silent.gain.value = 0;
+      this.nodes.push(mixer, worklet, silent);
+      for (const [name, stream] of [
+        ["microphone", inputs.microphone],
+        ["systemAudio", inputs.systemAudio],
+      ] as const) {
+        if (!stream) continue;
+        const source = context.createMediaStreamSource(stream);
+        const gain = context.createGain();
+        gain.gain.value = inputs.systemAudio ? DUAL_INPUT_GAIN : 1;
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(gain);
+        gain.connect(mixer);
+        source.connect(analyser);
+        this.nodes.push(source, gain, analyser);
+        this.analysers.push({
+          name,
+          node: analyser,
+          samples: new Float32Array(analyser.fftSize),
+        });
+      }
+      worklet.port.onmessage = (
+        event: MessageEvent<{ samples: ArrayBuffer; captureSamples: number }>
+      ) => {
+        if (generation !== this.generation) return;
+        this.batcher?.push(
+          new Int16Array(float32ToPcm16(new Float32Array(event.data.samples))),
+          event.data.captureSamples
+        );
+      };
+      mixer.connect(worklet);
+      worklet.connect(silent);
+      silent.connect(context.destination);
+      this.watchInputs(context, inputs);
+      this.lastLevelAt = 0;
+      this.publishLevel();
+    } catch (error) {
+      if (generation === this.generation) await this.stop();
+      throw error;
+    }
   }
-
-  private watchMicrophone(context: AudioContext, stream: MediaStream) {
-    const [track] = stream.getAudioTracks();
-    // 이벤트 하나가 다른 쪽 상태를 덮으면 소리가 안 오는데 경고가 걷힌다. 매번 둘의 지금 값으로 판정한다
+  private watchInputs(context: AudioContext, inputs: AudioInputs) {
+    const tracks = [inputs.microphone, inputs.systemAudio].map(
+      (stream) => stream?.getAudioTracks()[0]
+    );
     const report = () => {
-      // Safari 는 전화·다른 앱이 오디오를 가져가면 "interrupted" 로 간다(타입엔 없다)
-      const contextState = context.state as string;
-      let state: MicrophoneState = "live";
-      if (track?.readyState === "ended") state = "ended";
-      else if (track?.muted) state = "muted";
-      else if (contextState !== "running") state = "suspended";
-      this.options.onState?.(state);
+      const state = (track?: MediaStreamTrack): MicrophoneState => {
+        if (!track || track.readyState === "ended") return "ended";
+        if (track.muted) return "muted";
+        return context.state === "running" ? "live" : "suspended";
+      };
+      const states = {
+        microphone: state(tracks[0]),
+        systemAudio: inputs.systemAudio ? state(tracks[1]) : null,
+      };
+      this.options.onState?.(states.microphone);
+      this.options.onInputStates?.(states);
     };
     context.onstatechange = () => {
       const state = context.state as string;
-      if (state === "suspended" || state === "interrupted") {
+      if (state === "suspended" || state === "interrupted")
         void context.resume().catch(() => undefined);
-      }
       report();
     };
-    if (track) {
-      track.onended = report;
-      track.onmute = report;
-      track.onunmute = report;
-      this.onDeviceChange = () => {
-        if (track.readyState === "ended") report();
-      };
-      navigator.mediaDevices.addEventListener(
-        "devicechange",
-        this.onDeviceChange
-      );
-    }
-    // 권한을 받고 addModule 을 기다리는 사이 바뀐 상태는 이벤트로 오지 않는다
+    for (const track of tracks)
+      if (track) {
+        track.onended = report;
+        track.onmute = report;
+        track.onunmute = report;
+      }
+    navigator.mediaDevices.addEventListener("devicechange", report);
+    this.cleanupListeners = () => {
+      context.onstatechange = null;
+      navigator.mediaDevices.removeEventListener("devicechange", report);
+      for (const track of tracks)
+        if (track) {
+          track.onended = null;
+          track.onmute = null;
+          track.onunmute = null;
+        }
+    };
     report();
   }
-
   async stop() {
-    if (this.onDeviceChange) {
-      navigator.mediaDevices.removeEventListener(
-        "devicechange",
-        this.onDeviceChange
-      );
-      this.onDeviceChange = null;
-    }
-    if (this.audioContext) this.audioContext.onstatechange = null;
+    this.generation++;
+    this.acquisitionAbort?.abort();
+    this.acquisitionAbort = null;
+    this.permissionPromise = null;
+    this.startingPromise = null;
+    this.cleanupListeners?.();
+    this.cleanupListeners = null;
     if (this.levelFrame !== null) cancelAnimationFrame(this.levelFrame);
     this.levelFrame = null;
     this.options.onLevel?.(0);
+    this.options.onInputLevels?.({
+      microphone: 0,
+      systemAudio: this.inputs?.systemAudio ? 0 : null,
+    });
     if (this.worklet) this.worklet.port.onmessage = null;
-    this.worklet?.disconnect();
-    this.source?.disconnect();
-    this.analyser?.disconnect();
-    this.silentGain?.disconnect();
-    this.batcher?.flush();
-    this.stream?.getTracks().forEach((track) => track.stop());
-    await this.audioContext?.close();
-    this.audioContext = null;
-    this.stream = null;
-    this.source = null;
+    for (const node of this.nodes) node.disconnect();
+    this.nodes = [];
+    this.analysers = [];
     this.worklet = null;
-    this.silentGain = null;
-    this.analyser = null;
+    this.batcher?.flush();
     this.batcher?.reset();
     this.batcher = null;
+    const inputs = this.inputs,
+      context = this.audioContext;
+    this.inputs = null;
+    this.audioContext = null;
+    await Promise.all([
+      inputs ? this.release(inputs) : Promise.resolve(),
+      context?.close(),
+    ]);
   }
-
+  private async release(inputs: AudioInputs) {
+    inputs.microphone.getTracks().forEach((track) => track.stop());
+    inputs.systemAudio?.getTracks().forEach((track) => track.stop());
+    await inputs.release?.();
+  }
   private publishLevel = (now = performance.now()) => {
-    if (!this.analyser) return;
-    if (now - this.lastLevelAt >= 50) {
-      const samples = new Float32Array(this.analyser.fftSize);
-      this.analyser.getFloatTimeDomainData(samples);
-      const pcm = new Int16Array(float32ToPcm16(samples));
-      this.options.onLevel?.(
-        normalizeMicrophoneLevel(normalizePcm16Level(pcm))
-      );
+    if (!this.analysers.length) return;
+    if (now - this.lastLevelAt >= AUDIO_METER_INTERVAL_MS) {
+      const levels: AudioInputLevels = { microphone: 0, systemAudio: null };
+      for (const { name, node, samples } of this.analysers) {
+        node.getFloatTimeDomainData(samples);
+        let energy = 0;
+        for (const sample of samples) energy += sample * sample;
+        levels[name] = normalizeMicrophoneLevel(
+          Math.min(1, Math.sqrt(energy / samples.length))
+        );
+      }
+      this.options.onLevel?.(levels.microphone);
+      this.options.onInputLevels?.(levels);
       this.lastLevelAt = now;
     }
     this.levelFrame = requestAnimationFrame(this.publishLevel);

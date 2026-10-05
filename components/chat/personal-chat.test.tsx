@@ -929,6 +929,7 @@ describe("PersonalChatProvider", () => {
     await waitFor(() =>
       expect(screen.getByText("주간 제품 회의")).toBeTruthy()
     );
+    expect(screen.queryByText("헤이모아 전체")).toBeNull();
     // 회의록이 붙어도 조회 params 는 워크스페이스 하나뿐이다 — 대화가 안 갈린다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
   });
@@ -942,6 +943,7 @@ describe("PersonalChatProvider", () => {
 
     removeChipFromInput("주간 제품 회의");
     await waitFor(() => expect(chipsInInput()).toEqual([]));
+    expect(screen.getByText("헤이모아 전체")).toBeTruthy();
 
     // 회의록을 나갔다 온다.
     rerender(

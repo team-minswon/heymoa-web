@@ -880,6 +880,7 @@ export function NotePanel({
                     notice={recording.connectionNotice}
                     buffer={recording.buffer}
                     microphone={recording.microphone}
+                    systemAudio={recording.systemAudio}
                     finishing={recording.phase === "stopping"}
                   />
                 ) : null}

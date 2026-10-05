@@ -49,3 +49,8 @@ next-env.d.ts
 
 # superpowers sdd 작업 보고서 (세션 산출물, 저장소에 남길 것 아님)
 .superpowers/
+
+# desktop workspace
+apps/desktop/node_modules/
+apps/desktop/dist/
+apps/desktop/release/

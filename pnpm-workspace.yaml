@@ -1,8 +1,13 @@
+packages:
+  - apps/desktop
+  - packages/*
 # **빌드 스크립트를 명시적으로 거절한다.** pnpm 11 은 승인도 거절도 안 된 스크립트가
 # 있으면 설치를 실패시킨다(`ERR_PNPM_IGNORED_BUILDS`). `ignoredBuiltDependencies` 만으로는
-# 안 꺼지고 이 맵이 판정 자리다. 전부 `false` 인 이유는 이 레포가 그 스크립트의 산출물을
-# 쓰지 않기 때문이다 — 네이티브 바이너리는 optional dependency 로 들어온다.
+# 안 꺼지고 이 맵이 판정 자리다. Electron만 desktop 런타임 바이너리가 필요해 허용한다.
+# 웹 전용 install은 ELECTRON_SKIP_BINARY_DOWNLOAD로 다운로드를 건너뛴다.
 allowBuilds:
+  electron: true
+  electron-winstaller: false
   'esbuild': false
   'msw': false
   'sharp': false

@@ -8,7 +8,12 @@
 import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { LogoutResponse, RefreshTokensResponse } from "../models";
+import type {
+  AuthSessionResponse,
+  DesktopAuthorizeResponse,
+  LogoutResponse,
+  RefreshTokensResponse,
+} from "../models";
 
 export const getLogoutResponseMock = (): LogoutResponse => ({
   success: true,
@@ -19,6 +24,29 @@ export const getLogoutResponseMock = (): LogoutResponse => ({
 export const getRefreshTokensResponseMock = (): RefreshTokensResponse => ({
   success: true,
   data: { message: "토큰이 갱신되었습니다." },
+  error: null,
+});
+
+export const getExchangeDesktopLoginResponseMock =
+  (): RefreshTokensResponse => ({
+    success: true,
+    data: { message: "데스크톱 로그인이 완료되었습니다." },
+    error: null,
+  });
+
+export const getStartDesktopLoginResponseMock =
+  (): DesktopAuthorizeResponse => ({
+    success: true,
+    data: {
+      authorizeUrl:
+        "http://localhost:8080/v1/auth/desktop/authorize?ticket=vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+    },
+    error: null,
+  });
+
+export const getGetAuthSessionResponseMock = (): AuthSessionResponse => ({
+  success: true,
+  data: { state: "refresh_required" },
   error: null,
 });
 
@@ -69,7 +97,104 @@ export const getRefreshTokensMockHandler = (
     options
   );
 };
+
+export const getAuthorizeDesktopLoginMockHandler = (
+  overrideResponse?:
+    | unknown
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<unknown> | unknown),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/auth/desktop/authorize",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 200 });
+    },
+    options
+  );
+};
+
+export const getExchangeDesktopLoginMockHandler = (
+  overrideResponse?:
+    | RefreshTokensResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<RefreshTokensResponse> | RefreshTokensResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/auth/desktop/exchange",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getExchangeDesktopLoginResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getStartDesktopLoginMockHandler = (
+  overrideResponse?:
+    | DesktopAuthorizeResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<DesktopAuthorizeResponse> | DesktopAuthorizeResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/auth/desktop/start",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getStartDesktopLoginResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getGetAuthSessionMockHandler = (
+  overrideResponse?:
+    | AuthSessionResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<AuthSessionResponse> | AuthSessionResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/auth/session",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetAuthSessionResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getAuthMock = () => [
   getLogoutMockHandler(),
   getRefreshTokensMockHandler(),
+  getAuthorizeDesktopLoginMockHandler(),
+  getExchangeDesktopLoginMockHandler(),
+  getStartDesktopLoginMockHandler(),
+  getGetAuthSessionMockHandler(),
 ];

@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.30.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,7 +20,13 @@
     "asyncapi:validate": "pnpm dlx @asyncapi/cli@^6.0.2 validate asyncapi.yml",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "desktop:typecheck": "pnpm --filter @heymoa/desktop typecheck",
+    "desktop:build": "pnpm --filter @heymoa/desktop build",
+    "desktop:test": "pnpm --filter @heymoa/desktop test",
+    "desktop:dev": "pnpm --filter @heymoa/desktop dev",
+    "desktop:package": "pnpm --filter @heymoa/desktop package:dir",
+    "install:vercel": "node scripts/install-vercel.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -47,6 +54,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@heymoa/desktop-contracts": "workspace:*",
     "@faker-js/faker": "^10.5.0",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",

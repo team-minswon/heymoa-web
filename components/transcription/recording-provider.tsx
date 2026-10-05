@@ -13,6 +13,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 import { errorCodeOf } from "@/lib/api/error-message";
+import { toast } from "@/lib/ui/toast";
 import {
   useGetTranscriptionSession,
   useStartTranscriptionSession,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/notes/invalidate";
 import { forgetWorkspace } from "@/lib/workspace/cache";
 import { notifyWorkspaceGone } from "@/lib/workspace/gone-notice";
+import { createRecordingSession } from "@/lib/desktop/recording-runtime";
 import type { MicrophoneState } from "@/lib/transcription/audio";
 import { logTranscription } from "@/lib/transcription/log";
 import {
@@ -55,7 +57,6 @@ import {
   touchRecording,
 } from "@/lib/transcription/recorder-lease";
 import {
-  BrowserRealtimeSession,
   type BufferState,
   type ConnectionNotice,
   type RealtimeSessionController,
@@ -104,6 +105,7 @@ export type RecordingContextValue = {
   /** 서버가 확정 안 한 소리가 이 기기에 얼마나 있고, 한도에 닿아 멈췄는지. 녹음 전이면 null. */
   buffer: BufferState | null;
   microphone: MicrophoneState;
+  systemAudio?: MicrophoneState | null;
   error: string | null;
   start: (noteId: string, workspaceId: string) => Promise<void>;
   stop: () => Promise<boolean>;
@@ -193,7 +195,7 @@ export function isRecordingStarting(
 }
 
 const browserRuntime: RecordingRuntime = {
-  createSession: (options) => new BrowserRealtimeSession(options),
+  createSession: createRecordingSession,
 };
 
 /** 받아쓰기가 이만큼 이어서 멈춰 있을 때만 알린다. 업체 503 은 대개 1초 안에 풀린다. */
@@ -543,6 +545,42 @@ export function RecordingProvider({
     sessionQuery.data,
   ]);
 
+  const stop = useCallback((): Promise<boolean> => {
+    if (stopPromiseRef.current) return stopPromiseRef.current;
+    const controller = controllerRef.current;
+    if (!controller) return Promise.resolve(false);
+    cancelledControllerRef.current = controller;
+    const attempt = (async () => {
+      dispatch({ type: "phase", phase: "stopping" });
+      clearLevel();
+      try {
+        await controller.stop();
+      } catch {
+        failRecording({ type: "failed", message: STOP_FAILED_MESSAGE });
+        return false;
+      }
+      const reconciled =
+        controllerRef.current === controller &&
+        latest.current.session?.status === "COMPLETED";
+      if (!reconciled) {
+        if (controllerRef.current === controller) {
+          failRecording({ type: "failed", message: STOP_UNCONFIRMED_MESSAGE });
+        }
+        return false;
+      }
+      if (controllerRef.current === controller) controllerRef.current = null;
+      return true;
+    })();
+    const stopPromise = attempt.then((result) => {
+      if (!result && stopPromiseRef.current === stopPromise) {
+        stopPromiseRef.current = null;
+      }
+      return result;
+    });
+    stopPromiseRef.current = stopPromise;
+    return stopPromise;
+  }, [clearLevel, dispatch, failRecording, latest]);
+
   const start = useCallback(
     async (noteId: string, workspaceId: string) => {
       if (controllerRef.current || ACTIVE_PHASES.has(phase)) return;
@@ -587,6 +625,21 @@ export function RecordingProvider({
         onBufferChange: (buffer) => dispatch({ type: "buffer", buffer }),
         onMicrophoneChange: (microphone) =>
           dispatch({ type: "microphone", microphone }),
+        onSystemAudioChange: (systemAudio) =>
+          dispatch({ type: "system-audio", systemAudio }),
+        onCaptureError: () => {
+          if (controllerRef.current !== controller) return;
+          // Drain queued audio and end the server session after a fatal native failure.
+          dispatch({
+            type: "error",
+            message:
+              "소리 캡처가 중단됐습니다. 마지막 소리 일부가 저장되지 않았을 수 있습니다.",
+          });
+          toast.error("소리 캡처가 중단됐습니다. 녹음 상태를 확인해 주세요.", {
+            id: "desktop-capture-failed",
+          });
+          void stop();
+        },
       });
       controllerRef.current = controller;
       const cancelled = () =>
@@ -657,44 +710,9 @@ export function RecordingProvider({
       publishLevel,
       queryClient,
       runtime,
+      stop,
     ]
   );
-
-  const stop = useCallback((): Promise<boolean> => {
-    if (stopPromiseRef.current) return stopPromiseRef.current;
-    const controller = controllerRef.current;
-    if (!controller) return Promise.resolve(false);
-    cancelledControllerRef.current = controller;
-    const attempt = (async () => {
-      dispatch({ type: "phase", phase: "stopping" });
-      clearLevel();
-      try {
-        await controller.stop();
-      } catch {
-        failRecording({ type: "failed", message: STOP_FAILED_MESSAGE });
-        return false;
-      }
-      const reconciled =
-        controllerRef.current === controller &&
-        latest.current.session?.status === "COMPLETED";
-      if (!reconciled) {
-        if (controllerRef.current === controller) {
-          failRecording({ type: "failed", message: STOP_UNCONFIRMED_MESSAGE });
-        }
-        return false;
-      }
-      if (controllerRef.current === controller) controllerRef.current = null;
-      return true;
-    })();
-    const stopPromise = attempt.then((result) => {
-      if (!result && stopPromiseRef.current === stopPromise) {
-        stopPromiseRef.current = null;
-      }
-      return result;
-    });
-    stopPromiseRef.current = stopPromise;
-    return stopPromise;
-  }, [clearLevel, dispatch, failRecording, latest]);
 
   const disconnect = useCallback(async () => {
     // 진행 중인 `start()` 에게 결과를 되돌려 놓지 말라고 알린다. 컨트롤러를 비우기 전에 올려야
@@ -784,6 +802,7 @@ export function RecordingProvider({
       connectionNotice: state.connectionNotice,
       buffer: state.buffer,
       microphone: state.microphone,
+      systemAudio: state.systemAudio,
       error: state.error,
       start,
       stop,

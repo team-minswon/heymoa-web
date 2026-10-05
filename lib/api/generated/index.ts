@@ -2,6 +2,7 @@ export * from "./agent-chat/agent-chat";
 export * from "./agent-delegation/agent-delegation";
 export * from "./analysis/analysis";
 export * from "./auth/auth";
+export * from "./integration/integration";
 export * from "./meeting-approval/meeting-approval";
 export * from "./meeting-review/meeting-review";
 export * from "./notes/notes";

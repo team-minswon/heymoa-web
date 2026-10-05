@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Check,
@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ListTodo,
   Loader2,
+  type LucideIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
@@ -107,8 +108,11 @@ export function WorkspaceSidebar({
   covered?: boolean;
 }) {
   const router = useRouter();
+  const notesHref = `/w/${workspaceId}`;
   const tasksHref = `/w/${workspaceId}/tasks`;
-  const onTasks = usePathname() === tasksHref;
+  const pathname = usePathname();
+  const onTasks = pathname === tasksHref;
+  const onNotes = pathname === notesHref;
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
   const workspacesQuery = useGetWorkspaces();
@@ -274,11 +278,12 @@ export function WorkspaceSidebar({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
+                    render={onNotes ? undefined : <Link href={notesHref} onNavigate={() => onSelectProject(null)} />}
                     isActive={selectedProjectId === null && !onTasks}
-                    onClick={() => onSelectProject(null)}
+                    onClick={onNotes ? () => onSelectProject(null) : undefined}
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
-                    <NotebookText className="size-4 text-[var(--el-muted)]" />
+                    <NavigationIcon icon={NotebookText} />
                     <span>모든 노트</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -288,7 +293,7 @@ export function WorkspaceSidebar({
                     isActive={onTasks}
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
-                    <ListTodo className="size-4 text-[var(--el-muted)]" />
+                    <NavigationIcon icon={ListTodo} />
                     <span>할 일</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -347,11 +352,12 @@ export function WorkspaceSidebar({
                   {projects.map((project) => (
                     <SidebarMenuItem key={project.projectId}>
                       <SidebarMenuButton
+                        render={onNotes ? undefined : <Link href={notesHref} onNavigate={() => onSelectProject(project.projectId)} />}
                         isActive={selectedProjectId === project.projectId}
-                        onClick={() => onSelectProject(project.projectId)}
+                        onClick={onNotes ? () => onSelectProject(project.projectId) : undefined}
                         className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                       >
-                        <Folder className="size-4 text-[var(--el-muted)]" />
+                        <NavigationIcon icon={Folder} />
                         <span className="truncate">{project.name}</span>
                       </SidebarMenuButton>
                       <DropdownMenu>
@@ -536,6 +542,7 @@ export function WorkspaceSidebar({
                   if (response.status === 204) {
                     if (selectedProjectId === deleteTarget.projectId) {
                       onSelectProject(null);
+                      if (!onNotes) router.push(notesHref);
                     }
                     await refreshProjects();
                     toast.success("프로젝트가 삭제되었습니다.");
@@ -554,5 +561,17 @@ export function WorkspaceSidebar({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+/** Link 이동만 진행을 표시한다. 현재 목록의 필터 버튼은 대기 없이 바뀐다. */
+function NavigationIcon({ icon: Icon }: { icon: LucideIcon }) {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <span role="status" aria-label="화면 이동 중">
+      <Loader2 className="size-4 animate-spin text-[var(--el-muted)]" aria-hidden />
+    </span>
+  ) : (
+    <Icon className="size-4 text-[var(--el-muted)]" aria-hidden />
   );
 }

@@ -4241,6 +4241,7 @@ paths:
                   citations:
                   - segmentId: 0HZX2K7M9Q4AH
                     role: SUPPORTS
+                  topicOrdinal: 1
               createMeetingReviewItem_BadRequest:
                 value:
                   expectedReviewVersion: 0
@@ -4253,6 +4254,7 @@ paths:
                   citations:
                   - segmentId: 0HZX2K7M9Q4AH
                     role: SUPPORTS
+                  topicOrdinal: 1
               createMeetingReviewItem_MeetingReviewConflictException:
                 value:
                   expectedReviewVersion: 1
@@ -4265,6 +4267,20 @@ paths:
                   citations:
                   - segmentId: 0HZX2K7M9Q4AH
                     role: SUPPORTS
+                  topicOrdinal: 1
+              createMeetingReviewItem_MeetingReviewConfirmedException:
+                value:
+                  expectedReviewVersion: 1
+                  kind: ACTION_ITEM
+                  content: 검토한 업무
+                  assignee:
+                    type: USER
+                    id: 0HZX2K7M9Q4AC
+                  due: '2026-09-18'
+                  citations:
+                  - segmentId: 0HZX2K7M9Q4AH
+                    role: SUPPORTS
+                  topicOrdinal: 1
       responses:
         '201':
           description: 생성 성공
@@ -4361,6 +4377,14 @@ paths:
                     error:
                       code: MEETING_REVIEW_CONFLICT
                       message: 검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요.
+                      details: null
+                MEETING_REVIEW_CONFIRMED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_REVIEW_CONFIRMED
+                      message: 확정된 검토본은 고칠 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -6028,21 +6052,15 @@ paths:
                 description: SSE 이벤트 스트림. 이벤트별 payload는 AsyncAPI 계약을 따른다.
               examples:
                 subscribeAgentChatTurnEvents_Success:
-                  value: 'id:1735689600001-0
-
+                  value: |+
+                    id:1735689600001-0
                     event:token
-
                     data:{"delta":"안"}
 
-
                     id:1735689600002-0
-
                     event:message_end
-
                     data:{"messageId":"m1","content":"안녕하세요"}
 
-
-                    '
         '503':
           description: '503'
           content:
@@ -6108,6 +6126,17 @@ paths:
                   - targetId: 0K9GVJT2C4Q21
                     decision: KEEP
               updateMeetingReviewItem_MeetingReviewConflictException:
+                value:
+                  expectedReviewVersion: 1
+                  expectedItemRevision: 1
+                  content: 검토한 업무
+                  included: true
+                  assignee: null
+                  due: '2026-09-18'
+                  decisions:
+                  - targetId: 0K9GVJT2C4Q21
+                    decision: KEEP
+              updateMeetingReviewItem_MeetingReviewConfirmedException:
                 value:
                   expectedReviewVersion: 1
                   expectedItemRevision: 1
@@ -6197,6 +6226,14 @@ paths:
                     error:
                       code: MEETING_REVIEW_CONFLICT
                       message: 검토본이 변경되었습니다. 다시 읽은 뒤 저장해 주세요.
+                      details: null
+                MEETING_REVIEW_CONFIRMED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: MEETING_REVIEW_CONFIRMED
+                      message: 확정된 검토본은 고칠 수 없습니다.
                       details: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -7121,6 +7158,225 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+  /v1/auth/desktop/authorize:
+    get:
+      tags:
+      - Auth
+      summary: 데스크톱 브라우저 인증 진입
+      description: 시작 ticket을 한 번만 소비하고 기존 등록 Google 인증으로 이동한다.
+      operationId: authorizeDesktopLogin
+      parameters:
+      - name: ticket
+        in: query
+        description: 일회용 시작 ticket
+        required: true
+        schema:
+          type: string
+          description: 일회용 시작 ticket
+      responses:
+        '302':
+          description: '302'
+          headers:
+            Location:
+              description: 기존 서버 Google authorize URL
+              schema:
+                type: string
+      security: []
+  /v1/auth/desktop/exchange:
+    post:
+      tags:
+      - Auth
+      summary: 데스크톱 로그인 교환
+      description: state·PKCE 검증 후 일회용 code를 소비하고 Electron session에 HttpOnly 쿠키를 설정한다.
+      operationId: exchangeDesktopLogin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesktopLoginExchangeRequest'
+            examples:
+              exchangeDesktopLogin_InvalidDesktopAuthException:
+                value:
+                  code: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                  state: sssssssssssssssssssssssssssssssssssssssssss
+                  codeVerifier: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+              exchangeDesktopLogin_Success:
+                value:
+                  code: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                  state: sssssssssssssssssssssssssssssssssssssssssss
+                  codeVerifier: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+      responses:
+        '200':
+          description: 요청 성공
+          headers:
+            Set-Cookie:
+              description: access_token·refresh_token HttpOnly 쿠키
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokensResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      message: 데스크톱 로그인이 완료되었습니다.
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details: null
+      security: []
+  /v1/auth/desktop/start:
+    post:
+      tags:
+      - Auth
+      summary: 데스크톱 로그인 시작
+      description: PKCE challenge와 앱 state에 결합한 브라우저 로그인 URL을 발급한다. 임의 redirect는 받지 않는다.
+      operationId: startDesktopLogin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesktopLoginStartRequest'
+            examples:
+              startDesktopLogin_Success:
+                value:
+                  state: sssssssssssssssssssssssssssssssssssssssssss
+                  codeChallenge: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+              startDesktopLogin_BadRequest:
+                value:
+                  state: https://evil.test
+                  codeChallenge: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesktopAuthorizeResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      authorizeUrl: http://localhost:8080/v1/auth/desktop/authorize?ticket=vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: state
+                        message: 형식이 올바르지 않습니다.
+      security: []
+  /v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket:
+    post:
+      tags:
+      - Integration
+      summary: 데스크톱 도구 연결 ticket
+      description: 앱 ADMIN 계정과 workspace·provider에 결합한 일회용 ticket을 발급한다. 브라우저 Google 계정이 일치해야 연결된다.
+      operationId: createDesktopIntegrationTicket
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스 식별자
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스 식별자
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      - name: provider
+        in: path
+        description: 연동 provider (LINEAR, GITHUB)
+        required: true
+        schema:
+          type: string
+          description: 연동 provider (LINEAR, GITHUB)
+          nullable: false
+          enum:
+          - LINEAR
+          - GITHUB
+        example: LINEAR
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesktopConnectionTicketRequest'
+            examples:
+              createDesktopIntegrationTicket_Success:
+                value:
+                  state: sssssssssssssssssssssssssssssssssssssssssss
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesktopAuthorizeResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      authorizeUrl: http://localhost:8080/v1/auth/desktop/authorize?ticket=ttttttttttttttttttttttttttttttttttttttttttt
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/auth/session:
+    get:
+      tags:
+      - Auth
+      summary: 로그인 세션 상태 조회
+      description: access 쿠키를 검증합니다. refresh_required는 refresh 쿠키 존재 후보이며 인증 권한이 아닙니다. 읽기 요청은 토큰을 갱신하지 않습니다.
+      operationId: getAuthSession
+      responses:
+        '200':
+          description: 요청 성공
+          headers:
+            Cache-Control:
+              description: 개인정보 응답 캐시 금지
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      state: refresh_required
+                    error: null
+      security: []
 components:
   schemas:
     AcceptInvitationByTokenRequest:
@@ -12988,6 +13244,155 @@ components:
               nullable: false
               example: 0HZX2K7M9Q4AD
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    DesktopAuthorizeResponse:
+      title: DesktopAuthorizeResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - authorizeUrl
+          type: object
+          properties:
+            authorizeUrl:
+              type: string
+              description: 시스템 브라우저에서 열 URL
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    DesktopConnectionTicketRequest:
+      title: DesktopConnectionTicketRequest
+      required:
+      - state
+      type: object
+      properties:
+        state:
+          type: string
+          description: 앱이 생성한 callback state
+          nullable: false
+          minLength: 32
+          maxLength: 128
+    DesktopLoginExchangeRequest:
+      title: DesktopLoginExchangeRequest
+      required:
+      - code
+      - codeVerifier
+      - state
+      type: object
+      properties:
+        code:
+          type: string
+          description: 브라우저 callback의 일회용 교환 code
+          nullable: false
+          minLength: 43
+          maxLength: 43
+        codeVerifier:
+          type: string
+          description: 앱 main에 보관한 PKCE verifier
+          nullable: false
+          minLength: 43
+          maxLength: 128
+        state:
+          type: string
+          description: 시작 요청과 같은 앱 state
+          nullable: false
+          minLength: 32
+          maxLength: 128
+    DesktopLoginStartRequest:
+      title: DesktopLoginStartRequest
+      required:
+      - codeChallenge
+      - state
+      type: object
+      properties:
+        codeChallenge:
+          type: string
+          description: S256 PKCE challenge
+          nullable: false
+          minLength: 43
+          maxLength: 43
+        state:
+          type: string
+          description: 앱이 생성한 랜덤 state
+          nullable: false
+          minLength: 32
+          maxLength: 128
+    AuthSessionResponse:
+      title: AuthSessionResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - state
+          type: object
+          properties:
+            state:
+              type: string
+              description: 세션 상태
+              nullable: false
+              example: refresh_required
+              enum:
+              - authenticated
+              - anonymous
+              - refresh_required
+            user:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: 프로필 이미지
+                  nullable: true
+                name:
+                  type: string
+                  description: 이름
+                  nullable: false
+                  example: 문서 사용자
+                userId:
+                  type: string
+                  description: 사용자 ID
+                  nullable: false
+                  example: 0HZX2K7M9Q4AC
+                email:
+                  type: string
+                  description: 이메일
+                  nullable: false
+                  example: user@example.com
+              description: authenticated일 때만 현재 사용자
+              nullable: false
+              required:
+              - userId
+              - name
+              - email
+              - image
           description: 성공 응답 데이터
           nullable: false
         success:

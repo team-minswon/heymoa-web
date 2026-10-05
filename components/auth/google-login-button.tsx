@@ -10,6 +10,7 @@ import {
   isAuthApiConfigured,
 } from "@/lib/auth/paths";
 import { cn } from "@/lib/utils";
+import { desktopAuthBridge } from "@/lib/desktop/auth";
 
 type GoogleLoginButtonProps = {
   compact?: boolean;
@@ -22,7 +23,8 @@ export function GoogleLoginButton({
 }: GoogleLoginButtonProps) {
   const [pending, setPending] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (pending) return;
     if (!isAuthApiConfigured) {
       toast.error("현재 로그인을 사용할 수 없습니다.", {
         id: "google-login-unavailable",
@@ -33,6 +35,35 @@ export function GoogleLoginButton({
     setPending(true);
 
     try {
+      const desktop = desktopAuthBridge();
+      if (desktop) {
+        if (!desktop.beginLogin) {
+          toast.error("앱을 업데이트한 뒤 다시 로그인해 주세요.", {
+            id: "google-login-update",
+          });
+          setPending(false);
+          return;
+        }
+        const returnTo = getCurrentReturnTo();
+        // Call immediately while the click's activation is still live.
+        const outcome = await desktop.beginLogin();
+        if (outcome.status === "success") {
+          window.location.href = `/auth/callback?returnTo=${encodeURIComponent(returnTo)}`;
+          return;
+        }
+        if (outcome.status !== "cancelled") {
+          toast.error(
+            outcome.reason === "timeout"
+              ? "로그인 시간이 지났습니다. 다시 시도해 주세요."
+              : "로그인하지 못했습니다. 다시 시도해 주세요.",
+            {
+              id: "google-login-desktop",
+            }
+          );
+        }
+        setPending(false);
+        return;
+      }
       window.location.href = buildGoogleOAuthUrl(getCurrentReturnTo());
     } catch {
       toast.error("로그인 페이지로 이동하지 못했습니다. 다시 시도해 주세요.", {
