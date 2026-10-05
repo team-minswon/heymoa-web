@@ -492,7 +492,12 @@ function PersonalChatPanel({
             )
       )}
     >
-      <header className="flex items-center gap-1 border-b border-[var(--el-hairline)] py-4 pr-3 pl-6">
+      <header
+        className={cn(
+          "flex items-center gap-1 border-b border-[var(--el-hairline)] pr-3 pl-6",
+          railSlot ? "py-2" : "py-4"
+        )}
+      >
         <div className="min-w-0 flex-1">
           {/* 제목이 정해지면 `key` 가 바뀌어 다시 마운트되고, 마운트 애니메이션이 건너오기를 그린다.
               빛(정해지는 중)과 건너오기(정해졌다)는 둘 다 `animation` 이라 같이 못 선다. */}
@@ -507,10 +512,12 @@ function PersonalChatPanel({
           >
             {headerTitle}
           </p>
-          {/* 칩이 없을 때만 범위를 적는다. 높이는 남겨 칩을 붙이고 뗄 때 헤더가 오르내리지 않게 한다. */}
-          <p className="min-h-4 truncate text-[11px] text-[var(--el-muted)]">
-            {chips.length ? "" : `${workspaceName ?? "워크스페이스"} 전체`}
-          </p>
+          {/* 참조 칩이 없으면 전체 범위를 알린다. 빈 부제 줄은 남기지 않는다. */}
+          {chips.length ? null : (
+            <p className="truncate text-[11px] text-[var(--el-muted)]">
+              {`${workspaceName ?? "워크스페이스"} 전체`}
+            </p>
+          )}
         </div>
         {/* 대화 전환은 `isSwitchBlocked` 로 잠근다. `isBusy` 로 잠그면 답이 흐르는 동안 다른 대화를
             못 연다. */}
