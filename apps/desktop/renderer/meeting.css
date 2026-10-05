@@ -69,7 +69,10 @@ time {
   color: var(--muted);
 }
 #close {
-  font-size: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 1;
   width: 26px;
   height: 26px;
   color: var(--muted);

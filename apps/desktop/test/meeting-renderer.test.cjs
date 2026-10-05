@@ -55,6 +55,16 @@ test("Chromium reveals after same-frame close/open and preserves scroll intent",
     };
   });
   await page.goto(require("node:url").pathToFileURL(path.join(__dirname, "../dist/meeting.html")).href);
+  const alignment = await page.locator("#close").evaluate((button) => {
+    const icon = button.querySelector("svg").getBoundingClientRect();
+    const bounds = button.getBoundingClientRect();
+    return {
+      x: (icon.left + icon.right - bounds.left - bounds.right) / 2,
+      y: (icon.top + icon.bottom - bounds.top - bounds.bottom) / 2,
+    };
+  });
+  assert.equal(alignment.x, 0);
+  assert.equal(alignment.y, 0);
   const value = snapshot();
   const publish = (timeline) => page.evaluate((timeline) => window.testReceive({ timeline, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), timeline);
   await publish(value);
