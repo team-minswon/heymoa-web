@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>HeyMoa 시작하기</title>
+    <link rel="stylesheet" href="onboarding.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="onboarding-logo.png" width="48" height="48" alt="" /><span
+          >HeyMoa <small>DESKTOP</small></span
+        >
+      </header>
+      <div class="intro">
+        <span class="eyebrow">회의에 집중할 준비</span>
+        <h1>말은 지나가도,<br />기록은 남도록.</h1>
+        <p>
+          내 목소리와 회의 상대방의 소리를 함께 기록해요.<br />시작 전에 소리
+          설정을 확인해 주세요.
+        </p>
+      </div>
+      <section aria-label="소리 설정">
+        <article>
+          <span class="number" aria-hidden="true">01</span>
+          <div class="details">
+            <h2>
+              내 목소리
+              <span id="microphone-status" class="badge">확인 중</span>
+            </h2>
+            <p>
+              마이크는 녹음을 시작할 때만 사용해요. 허용을 거부했다면 시스템
+              설정에서 변경할 수 있어요.
+            </p>
+          </div>
+          <button id="microphone-action" class="secondary">마이크 허용</button>
+        </article>
+        <article>
+          <span class="number" aria-hidden="true">02</span>
+          <div class="details">
+            <h2>컴퓨터 소리 <span class="badge">첫 녹음 때 확인</span></h2>
+            <p id="audio-description">
+              컴퓨터에서 들리는 회의 소리를 함께 기록해요. 실제 연결은 녹음을
+              시작할 때 확인합니다.
+            </p>
+          </div>
+          <button id="audio-action" class="secondary">설정 열기</button>
+        </article>
+      </section>
+      <div class="recheck">
+        <p>여기에서는 녹음을 시작하지 않아요.</p>
+        <button id="recheck">다시 확인 ↻</button>
+      </div>
+      <p id="error" role="status" aria-live="polite"></p>
+      <footer>
+        <button id="complete" class="primary">HeyMoa 시작하기</button>
+        <p>권한은 나중에도 변경할 수 있어요.</p>
+      </footer>
+    </main>
+    <script src="onboarding-renderer.js"></script>
+  </body>
+</html>

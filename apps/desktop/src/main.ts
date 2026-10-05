@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from "electron";
 import path from "node:path";
 import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
+import { createOnboarding, onboardingCompleted } from "./onboarding";
 import { createRecordingTray } from "./recording-tray";
 import { MEETING_CHANNELS, meetingTimeline } from "./meeting-timeline";
 import { captureId } from "./media-grant";
@@ -35,6 +36,8 @@ app.setPath("userData", userDataPath);
 app.setPath("sessionData", sessionDataPath);
 
 let window: BrowserWindow | null = null;
+let onboarding: ReturnType<typeof createOnboarding> | null = null;
+let starting = true;
 let origin: string;
 let media: CaptureHost | null = null;
 let recording: ReturnType<typeof createRecordingTray> | null = null;
@@ -60,7 +63,8 @@ app.on("open-url", (event, value) => {
 });
 app.on("second-instance", (_event, argv) => {
   for (const value of argv) receiveCallback(value);
-  if (window) {
+  if (onboarding) onboarding.show();
+  else if (window) {
     if (window.isMinimized()) window.restore();
     window.show();
     window.focus();
@@ -305,15 +309,24 @@ app
         /* Untrusted or stale acknowledgment. */
       }
     });
+    app.on("activate", () => {
+      if (onboarding) onboarding.show();
+      else if (starting) return;
+      else if (!window) createWindow(url);
+      else window.show();
+    });
+    if (!(await onboardingCompleted(userDataPath))) {
+      onboarding = createOnboarding(userDataPath);
+      await onboarding.finished;
+    }
     createWindow(url);
+    starting = false;
+    onboarding?.dispose();
+    onboarding = null;
     if (startupCallback) {
       receiveCallback(startupCallback);
       startupCallback = null;
     }
-    app.on("activate", () => {
-      if (!window) createWindow(url);
-      else window.show();
-    });
   })
   .catch(() => {
     dialog.showErrorBox("시작 실패", "HeyMoa를 시작하지 못했습니다.");
@@ -322,4 +335,4 @@ app
 app.on("window-all-closed", () => app.quit());
 // before-quit can be vetoed by recording protection; keep pending auth alive
 // until Electron has committed to exiting.
-app.on("will-quit", () => auth?.cancel());
+app.on("will-quit", () => { auth?.cancel(); onboarding?.dispose(); });

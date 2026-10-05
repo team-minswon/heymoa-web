@@ -15,7 +15,7 @@ const idle = {
 
 // Execute the shipped main entry and its modules together. Only Electron's OS
 // boundary is replaced; broker, session adapter, IPC admission and tray are real.
-async function fixture(t, overriddenProfiles = true) {
+async function fixture(t, overriddenProfiles = true, introCompleted = true) {
   const app = new EventEmitter();
   const ipcMain = new EventEmitter();
   const handlers = new Map(),
@@ -127,7 +127,13 @@ async function fixture(t, overriddenProfiles = true) {
     focus() {}
     hide() {}
     restore() {}
+    async loadFile(file) {
+      this.loadedFile = file;
+      this.webContents.mainFrame.url = require("node:url").pathToFileURL(file).href;
+    }
+    close() { this.destroyed = true; this.emit("closed"); }
     async loadURL(url) {
+      this.loadedURL = url;
       if (url.startsWith("file:"))
         await new Promise((_resolve, reject) => { rejectCaptureLoad = reject; });
     }
@@ -165,6 +171,7 @@ async function fixture(t, overriddenProfiles = true) {
       },
     },
     shell: { openExternal: async (url) => opened.push(url) },
+    systemPreferences: { getMediaAccessStatus: () => "not-determined", askForMediaAccess: async () => false },
     dialog: {
       showErrorBox() {
         assert.fail("unexpected startup failure");
@@ -202,7 +209,9 @@ async function fixture(t, overriddenProfiles = true) {
         setInterval,
         clearInterval,
         require: (name) =>
-          name === "electron"
+          name === "node:fs/promises"
+            ? { ...require(name), readFile: async () => JSON.stringify({ version: 1, completed: introCompleted }), mkdir: async () => {}, writeFile: async () => {}, rename: async () => {} }
+          : name === "electron"
             ? electron
             : name.startsWith(".")
               ? load(
@@ -225,14 +234,14 @@ async function fixture(t, overriddenProfiles = true) {
   };
   const invoke = (channel, payload) => handlers.get(channel)(sender, payload);
   t.after(() => {
-    if (!window.isDestroyed()) {
-      invoke("heymoa:auth-cancel", undefined);
-      window.emit("closed");
+    for (const current of windows) {
+      if (!current.isDestroyed()) current.emit("closed");
     }
     app.removeAllListeners();
   });
   return {
     app,
+    windows,
     invoke,
     requests,
     dialogs,
@@ -339,4 +348,22 @@ test("main cancels pending OAuth only when a safe quit actually proceeds", async
   assert.equal((await outcome).status, "cancelled");
   assert.equal(f.requests[0].signal.aborted, true);
   assert.equal(f.dialogs.length, 0);
+});
+
+
+test("first run gates hosted web until intro completion and activation cannot bypass it", async (t) => {
+  const f = await fixture(t, true, false);
+  assert.equal(f.windows.length, 1);
+  assert.match(f.windows[0].loadedFile, /onboarding.html$/);
+  assert.equal(f.windows[0].loadedURL, undefined);
+  f.app.emit("activate");
+  f.app.emit("second-instance", {}, []);
+  assert.equal(f.windows.length, 1);
+  await f.invoke("heymoa:onboarding", "complete");
+  await tick();
+  assert.equal(f.windows.length, 2);
+  assert.equal(f.windows[1].loadedURL, "https://heymoa.app");
+  assert.equal(f.windows[0].isDestroyed(), true);
+  assert.equal(f.quits, 0);
+  assert.deepEqual(f.requests, []);
 });
