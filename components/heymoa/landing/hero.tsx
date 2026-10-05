@@ -66,10 +66,6 @@ export function Hero() {
             작동 방식 보기
           </a>
         </div>
-
-        <p data-enter style={{ "--i": 4 } as React.CSSProperties} className="m-0 mt-[15px] text-[13.5px] text-[var(--lp-muted)] lg:mt-[18px] lg:text-[13px]">
-          설치할 것 없음 · 신용카드 없음
-        </p>
       </div>
     </section>
   );
