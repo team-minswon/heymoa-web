@@ -112,6 +112,32 @@ describe("NoteTimeline", () => {
     expect(screen.queryByText("논의 중")).toBeNull();
   });
 
+  it("접힌 근거는 접근할 수 없고 다시 펼쳐도 전사 이동이 유지된다", () => {
+    const proposal = head({ content: "비교 실험을 진행한다" });
+    withLedger(proposal);
+    const onEvidenceSelect = vi.fn();
+    render(<NoteTimeline header={null} onEvidenceSelect={onEvidenceSelect} />);
+    const toggle = screen.getByRole("button", { name: /비교 실험을 진행한다/ });
+    const details = document.getElementById(
+      toggle.getAttribute("aria-controls")!
+    )!;
+    // 첫 펼침 전에는 전사 DOM을 만들지 않는다.
+    expect(within(details).queryByText(proposal.citations[0].text)).toBeNull();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(details).not.toHaveAttribute("inert");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(details).toHaveAttribute("inert");
+    expect(details).toHaveAttribute("aria-hidden", "true");
+    expect(within(details).queryByRole("button")).toBeNull();
+    fireEvent.click(toggle);
+    fireEvent.click(within(details).getByRole("button"));
+    expect(onEvidenceSelect).toHaveBeenCalledWith(
+      proposal.citations[0].segmentId
+    );
+  });
+
   it("항목을 펼치면 근거와 답 관계가 보이고, 관계를 누르면 그 항목이 펼쳐진다", () => {
     const question = head({
       kind: "QUESTION",

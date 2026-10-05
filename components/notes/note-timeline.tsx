@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   ArrowUpRight,
   Calendar,
@@ -31,6 +32,8 @@ import {
 } from "@/lib/notes/proposals/timeline";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
+
+const MotionChevronDown = motion.create(ChevronDown);
 
 /**
  * 본문 「타임라인」 탭 — 실시간 정리 원장을 회의가 흘러간 순서로 읽는 면이다.
@@ -110,7 +113,10 @@ function metaOf(item: TimelineItem): Array<{ text: string; tone?: "error" }> {
   const parts: Array<{ text: string; tone?: "error" }> = [];
   if (proposal.closeReason === "RETRACTED") {
     parts.push({ text: "철회됨", tone: "error" });
-  } else if (proposal.operation === "AMEND" || proposal.operation === "CORRECT") {
+  } else if (
+    proposal.operation === "AMEND" ||
+    proposal.operation === "CORRECT"
+  ) {
     parts.push({ text: CONTEXT_OPERATION_LABEL[proposal.operation] });
   }
   if (item.tone === "open" && proposal.kind === "QUESTION") {
@@ -118,7 +124,9 @@ function metaOf(item: TimelineItem): Array<{ text: string; tone?: "error" }> {
   }
   if (item.tone === "answered") {
     const at = item.answers[0]?.citations[0]?.startedAtMs;
-    parts.push({ text: at === undefined ? "답함" : `${formatOffset(at)}에 답함` });
+    parts.push({
+      text: at === undefined ? "답함" : `${formatOffset(at)}에 답함`,
+    });
   }
   return parts;
 }
@@ -258,7 +266,9 @@ export function NoteTimeline({
                 <time dateTime={header.whenIso}>{header.whenLabel}</time>
               </HeaderChip>
               {header.participantCount > 0 ? (
-                <HeaderChip icon={Users}>{`${header.participantCount}명`}</HeaderChip>
+                <HeaderChip
+                  icon={Users}
+                >{`${header.participantCount}명`}</HeaderChip>
               ) : null}
               {header.projectName ? (
                 <HeaderChip icon={Folder}>{header.projectName}</HeaderChip>
@@ -273,7 +283,11 @@ export function NoteTimeline({
             header ? "mt-8" : null
           )}
         >
-          <div role="group" aria-label="유형으로 골라 보기" className="flex flex-wrap items-center gap-0.5">
+          <div
+            role="group"
+            aria-label="유형으로 골라 보기"
+            className="flex flex-wrap items-center gap-0.5"
+          >
             {TIMELINE_FILTERS.map((option) => {
               const active = option.value === filter;
               const count = timeline.counts[option.value];
@@ -282,7 +296,9 @@ export function NoteTimeline({
                   key={option.value}
                   type="button"
                   aria-pressed={active}
-                  aria-label={settled ? `${option.label} ${count}` : option.label}
+                  aria-label={
+                    settled ? `${option.label} ${count}` : option.label
+                  }
                   onClick={() =>
                     setView((current) => ({ ...current, filter: option.value }))
                   }
@@ -324,7 +340,10 @@ export function NoteTimeline({
         ) : null}
 
         {context.loading ? (
-          <ul aria-label="타임라인을 불러오는 중" className="mt-7 flex flex-col">
+          <ul
+            aria-label="타임라인을 불러오는 중"
+            className="mt-7 flex flex-col"
+          >
             {[0, 1, 2].map((row) => (
               <li
                 key={row}
@@ -432,7 +451,9 @@ export function NoteTimeline({
                         key={item.proposal.proposalId}
                         item={item}
                         open={view.open.has(item.proposal.proposalId)}
-                        onToggle={() => toggle("open", item.proposal.proposalId)}
+                        onToggle={() =>
+                          toggle("open", item.proposal.proposalId)
+                        }
                         onEvidenceSelect={onEvidenceSelect}
                         onJump={jumpTo}
                       />
@@ -459,7 +480,9 @@ export function NoteTimeline({
             <span className="flex min-w-0 flex-col">
               <span className="break-keep text-[15px] leading-6 text-[var(--el-muted-soft)]">
                 {partial.confirmedText ? (
-                  <span className="text-[var(--el-muted)]">{partial.confirmedText}</span>
+                  <span className="text-[var(--el-muted)]">
+                    {partial.confirmedText}
+                  </span>
                 ) : null}
                 {partial.pendingText}
               </span>
@@ -503,11 +526,18 @@ function TimelineRow({
   onJump: (proposal: ProposalHead) => void;
 }) {
   const { proposal, tone } = item;
+  const reduced = useReducedMotion();
+  const [opened, setOpened] = useState(open);
+  // 근거는 처음 펼칠 때 만들고 이후에는 유지해 빠른 재토글도 같은 영역을 전환한다.
+  if (open && !opened) setOpened(true);
+  const transition = { duration: reduced ? 0 : 0.2, ease: "easeOut" as const };
   const retracted = proposal.closeReason === "RETRACTED";
   const first = proposal.citations[0];
   const relations = [
     ...item.answers.map((answer) => ({ lead: "답", proposal: answer })),
-    ...(item.answersTo ? [{ lead: "답한 질문", proposal: item.answersTo }] : []),
+    ...(item.answersTo
+      ? [{ lead: "답한 질문", proposal: item.answersTo }]
+      : []),
   ];
   const expandable = proposal.citations.length > 0 || relations.length > 0;
   const detailsId = `${itemId(proposal.proposalId)}-details`;
@@ -564,7 +594,10 @@ function TimelineRow({
                 </span>
                 {meta.map((part) => (
                   <span key={part.text}>
-                    <span aria-hidden className="mx-1.5 text-[var(--el-hairline-strong)]">
+                    <span
+                      aria-hidden
+                      className="mx-1.5 text-[var(--el-hairline-strong)]"
+                    >
                       ·
                     </span>
                     <span
@@ -581,69 +614,85 @@ function TimelineRow({
               </span>
             </span>
             {expandable ? (
-              <ChevronDown
+              <MotionChevronDown
                 aria-hidden
-                className={cn(
-                  "mt-1 size-4 text-[var(--el-hairline-strong)] group-hover/row:text-[var(--el-muted)]",
-                  open && "rotate-180"
-                )}
+                initial={false}
+                animate={{ rotate: open ? 180 : 0 }}
+                transition={transition}
+                className="mt-1 size-4 text-[var(--el-hairline-strong)] group-hover/row:text-[var(--el-muted)]"
               />
             ) : null}
           </button>
 
-          {open && expandable ? (
-            <div
+          {expandable ? (
+            <motion.div
               id={detailsId}
-              className="mt-2.5 overflow-hidden rounded-[10px] border border-[var(--el-hairline)]"
+              initial={false}
+              animate={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+              transition={transition}
+              aria-hidden={!open}
+              inert={!open}
+              className="grid"
             >
-              {proposal.citations.length > 0 ? (
-                <ul className="flex flex-col gap-0.5 px-2 py-2">
-                  {proposal.citations.map((citation) => (
-                    <li key={`${citation.segmentId}-${citation.role}`}>
-                      <button
-                        type="button"
-                        onClick={() => onEvidenceSelect(citation.segmentId)}
-                        className="grid w-full grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 rounded-[7px] px-1.5 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
-                      >
-                        <time className="text-[12px] leading-[22px] tabular-nums text-[var(--el-muted-soft)]">
-                          {formatOffset(citation.startedAtMs)}
-                        </time>
-                        <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
-                          {citation.text}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {relations.map((relation) => {
-                const at = relation.proposal.citations[0]?.startedAtMs;
-                return (
-                  <button
-                    key={`${relation.lead}-${relation.proposal.proposalId}`}
-                    type="button"
-                    onClick={() => onJump(relation.proposal)}
-                    className={cn(
-                      "flex w-full items-center gap-2 bg-[var(--el-canvas-soft)] px-3.5 py-[9px] text-left text-[13px] leading-5 text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]",
-                      proposal.citations.length > 0 &&
-                        "border-t border-[var(--el-hairline-soft)]"
-                    )}
-                  >
-                    <ArrowUpRight aria-hidden className="size-[13px] shrink-0" />
-                    <span className="shrink-0">{relation.lead}</span>
-                    <span className="min-w-0 truncate text-[var(--el-ink)]">
-                      {relation.proposal.content}
-                    </span>
-                    <span className="flex-1" />
-                    {at !== undefined ? (
-                      <span className="shrink-0 tabular-nums text-[var(--el-muted-soft)]">
-                        {formatOffset(at)}
-                      </span>
+              <div className="min-h-0 overflow-hidden">
+                {opened ? (
+                  <div className="mt-2.5 overflow-hidden rounded-[10px] border border-[var(--el-hairline)]">
+                    {proposal.citations.length > 0 ? (
+                      <ul className="flex flex-col gap-0.5 px-2 py-2">
+                        {proposal.citations.map((citation) => (
+                          <li key={`${citation.segmentId}-${citation.role}`}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onEvidenceSelect(citation.segmentId)
+                              }
+                              className="grid w-full grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 rounded-[7px] px-1.5 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+                            >
+                              <time className="text-[12px] leading-[22px] tabular-nums text-[var(--el-muted-soft)]">
+                                {formatOffset(citation.startedAtMs)}
+                              </time>
+                              <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
+                                {citation.text}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     ) : null}
-                  </button>
-                );
-              })}
-            </div>
+                    {relations.map((relation) => {
+                      const at = relation.proposal.citations[0]?.startedAtMs;
+                      return (
+                        <button
+                          key={`${relation.lead}-${relation.proposal.proposalId}`}
+                          type="button"
+                          onClick={() => onJump(relation.proposal)}
+                          className={cn(
+                            "flex w-full items-center gap-2 bg-[var(--el-canvas-soft)] px-3.5 py-[9px] text-left text-[13px] leading-5 text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]",
+                            proposal.citations.length > 0 &&
+                              "border-t border-[var(--el-hairline-soft)]"
+                          )}
+                        >
+                          <ArrowUpRight
+                            aria-hidden
+                            className="size-[13px] shrink-0"
+                          />
+                          <span className="shrink-0">{relation.lead}</span>
+                          <span className="min-w-0 truncate text-[var(--el-ink)]">
+                            {relation.proposal.content}
+                          </span>
+                          <span className="flex-1" />
+                          {at !== undefined ? (
+                            <span className="shrink-0 tabular-nums text-[var(--el-muted-soft)]">
+                              {formatOffset(at)}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </motion.div>
           ) : null}
         </div>
       </article>
