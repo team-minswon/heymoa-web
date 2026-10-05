@@ -112,7 +112,7 @@ describe("NoteTimeline", () => {
     expect(screen.queryByText("논의 중")).toBeNull();
   });
 
-  it("접힌 근거는 접근할 수 없고 다시 펼쳐도 전사 이동이 유지된다", () => {
+  it("공간이 열린 뒤 근거에 접근할 수 있고 다시 펼쳐도 전사 이동이 유지된다", async () => {
     const proposal = head({ content: "비교 실험을 진행한다" });
     withLedger(proposal);
     const onEvidenceSelect = vi.fn();
@@ -126,19 +126,26 @@ describe("NoteTimeline", () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(details).not.toHaveAttribute("inert");
+    expect(within(details).queryByRole("button")).toBeNull();
+    // 펼침이 끝나기 전에 접었다 다시 열어도 이전 완료 신호가 내용을 남기지 않는다.
+    fireEvent.click(toggle);
+    expect(details).toHaveAttribute("inert");
+    fireEvent.click(toggle);
+    await within(details).findByRole("button");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(details).toHaveAttribute("inert");
     expect(details).toHaveAttribute("aria-hidden", "true");
     expect(within(details).queryByRole("button")).toBeNull();
     fireEvent.click(toggle);
-    fireEvent.click(within(details).getByRole("button"));
+    expect(within(details).queryByRole("button")).toBeNull();
+    fireEvent.click(await within(details).findByRole("button"));
     expect(onEvidenceSelect).toHaveBeenCalledWith(
       proposal.citations[0].segmentId
     );
   });
 
-  it("항목을 펼치면 근거와 답 관계가 보이고, 관계를 누르면 그 항목이 펼쳐진다", () => {
+  it("항목을 펼치면 근거와 답 관계가 보이고, 관계를 누르면 그 항목이 펼쳐진다", async () => {
     const question = head({
       kind: "QUESTION",
       status: "CLOSED",
@@ -163,7 +170,9 @@ describe("NoteTimeline", () => {
     const details = document.getElementById(
       `timeline-item-${question.proposalId}-details`
     )!;
-    expect(within(details).getByText(question.citations[0].text)).toBeVisible();
+    await waitFor(() =>
+      expect(within(details).getByText(question.citations[0].text)).toBeVisible()
+    );
 
     fireEvent.click(within(details).getByRole("button", { name: /^답/ }));
     expect(
@@ -197,7 +206,7 @@ describe("NoteTimeline", () => {
       const details = document.getElementById(
         `timeline-item-${answer.proposalId}-details`
       )!;
-      fireEvent.click(within(details).getByRole("button", { name: /답한 질문/ }));
+      fireEvent.click(await within(details).findByRole("button", { name: /답한 질문/ }));
 
       await waitFor(() =>
         expect(scrolled).toContain(`timeline-item-${question.proposalId}`)

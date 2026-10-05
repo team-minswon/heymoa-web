@@ -46,8 +46,8 @@ const MotionChevronDown = motion.create(ChevronDown);
  * 질문은 점선 원, 답한 질문은 회색 체크, 참고는 작은 점이다. 색만으로 말하지 않는다 — 옆에
  * 늘 유형 이름이 선다(`role-dot.tsx` 와 같은 약속).
  *
- * **움직임이 없다.** 항목이 붙고 펼쳐지는 것을 애니메이션하지 않는다 — 회의 중에 계속 붙는
- * 목록이라 움직이면 읽던 줄이 흔들린다.
+ * 새 항목에는 입장 애니메이션을 넣지 않는다. 사용자가 펼친 근거는 공간이 열린 뒤 내용을
+ * 표시해, 펼쳐지는 중에 전사 글자가 잘려 보이지 않게 한다.
  */
 
 export type TimelineHeader = {
@@ -528,8 +528,11 @@ function TimelineRow({
   const { proposal, tone } = item;
   const reduced = useReducedMotion();
   const [opened, setOpened] = useState(open);
+  const [expanded, setExpanded] = useState(open);
   // 근거는 처음 펼칠 때 만들고 이후에는 유지해 빠른 재토글도 같은 영역을 전환한다.
   if (open && !opened) setOpened(true);
+  if (!open && expanded) setExpanded(false);
+  const visible = open && (reduced || expanded);
   const transition = { duration: reduced ? 0 : 0.2, ease: "easeOut" as const };
   const retracted = proposal.closeReason === "RETRACTED";
   const first = proposal.citations[0];
@@ -629,6 +632,15 @@ function TimelineRow({
               id={detailsId}
               initial={false}
               animate={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+              onAnimationComplete={(target) => {
+                if (
+                  open &&
+                  typeof target === "object" &&
+                  "gridTemplateRows" in target &&
+                  target.gridTemplateRows === "1fr"
+                )
+                  setExpanded(true);
+              }}
               transition={transition}
               aria-hidden={!open}
               inert={!open}
@@ -637,58 +649,66 @@ function TimelineRow({
               <div className="min-h-0 overflow-hidden">
                 {opened ? (
                   <div className="mt-2.5 overflow-hidden rounded-[10px] border border-[var(--el-hairline)]">
-                    {proposal.citations.length > 0 ? (
-                      <ul className="flex flex-col gap-0.5 px-2 py-2">
-                        {proposal.citations.map((citation) => (
-                          <li key={`${citation.segmentId}-${citation.role}`}>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onEvidenceSelect(citation.segmentId)
-                              }
-                              className="grid w-full grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 rounded-[7px] px-1.5 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
-                            >
-                              <time className="text-[12px] leading-[22px] tabular-nums text-[var(--el-muted-soft)]">
-                                {formatOffset(citation.startedAtMs)}
-                              </time>
-                              <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
-                                {citation.text}
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    {relations.map((relation) => {
-                      const at = relation.proposal.citations[0]?.startedAtMs;
-                      return (
-                        <button
-                          key={`${relation.lead}-${relation.proposal.proposalId}`}
-                          type="button"
-                          onClick={() => onJump(relation.proposal)}
-                          className={cn(
-                            "flex w-full items-center gap-2 bg-[var(--el-canvas-soft)] px-3.5 py-[9px] text-left text-[13px] leading-5 text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]",
-                            proposal.citations.length > 0 &&
-                              "border-t border-[var(--el-hairline-soft)]"
-                          )}
-                        >
-                          <ArrowUpRight
-                            aria-hidden
-                            className="size-[13px] shrink-0"
-                          />
-                          <span className="shrink-0">{relation.lead}</span>
-                          <span className="min-w-0 truncate text-[var(--el-ink)]">
-                            {relation.proposal.content}
-                          </span>
-                          <span className="flex-1" />
-                          {at !== undefined ? (
-                            <span className="shrink-0 tabular-nums text-[var(--el-muted-soft)]">
-                              {formatOffset(at)}
+                    <motion.div
+                      initial={false}
+                      animate={{ opacity: visible ? 1 : 0 }}
+                      transition={{ duration: reduced || !visible ? 0 : 0.12 }}
+                      aria-hidden={!visible}
+                      inert={!visible}
+                    >
+                      {proposal.citations.length > 0 ? (
+                        <ul className="flex flex-col gap-0.5 px-2 py-2">
+                          {proposal.citations.map((citation) => (
+                            <li key={`${citation.segmentId}-${citation.role}`}>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onEvidenceSelect(citation.segmentId)
+                                }
+                                className="grid w-full grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 rounded-[7px] px-1.5 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
+                              >
+                                <time className="text-[12px] leading-[22px] tabular-nums text-[var(--el-muted-soft)]">
+                                  {formatOffset(citation.startedAtMs)}
+                                </time>
+                                <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
+                                  {citation.text}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {relations.map((relation) => {
+                        const at = relation.proposal.citations[0]?.startedAtMs;
+                        return (
+                          <button
+                            key={`${relation.lead}-${relation.proposal.proposalId}`}
+                            type="button"
+                            onClick={() => onJump(relation.proposal)}
+                            className={cn(
+                              "flex w-full items-center gap-2 bg-[var(--el-canvas-soft)] px-3.5 py-[9px] text-left text-[13px] leading-5 text-[var(--el-muted)] transition-colors hover:text-[var(--el-ink)]",
+                              proposal.citations.length > 0 &&
+                                "border-t border-[var(--el-hairline-soft)]"
+                            )}
+                          >
+                            <ArrowUpRight
+                              aria-hidden
+                              className="size-[13px] shrink-0"
+                            />
+                            <span className="shrink-0">{relation.lead}</span>
+                            <span className="min-w-0 truncate text-[var(--el-ink)]">
+                              {relation.proposal.content}
                             </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
+                            <span className="flex-1" />
+                            {at !== undefined ? (
+                              <span className="shrink-0 tabular-nums text-[var(--el-muted-soft)]">
+                                {formatOffset(at)}
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
                   </div>
                 ) : null}
               </div>
