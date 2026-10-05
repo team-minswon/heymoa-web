@@ -1,6 +1,6 @@
 # 설치와 배포 준비
 
-현재 설치 파일은 Developer ID 서명·공증을 하지 않은 **unsigned beta**입니다. 로컬 패키지와 CI artifact 생성은 공개 출시가 아닙니다. 운영 웹에 APP893 desktop runtime·인증과 APP894 종료 보호가 배포되고 실제 앱의 로그인·두 입력 전사·중지·종료를 확인한 뒤 제공해야 합니다. 앱이 운영 웹을 그대로 읽으므로 바이너리만 준비해 먼저 출시하면 핵심 기능이 연결되지 않습니다.
+현재 설치 파일은 Developer ID 서명·공증을 하지 않은 **unsigned beta**입니다. 운영 웹·서버의 desktop 인증·runtime 호환 배포와 CI 설치 파일 생성·검증은 완료했습니다. 실제 설치 앱의 GUI·Google 로그인 복귀·두 입력 전사·중지·종료 수용은 아직 완료하지 않았으며 GitHub Release와 Homebrew cask도 게시하지 않았습니다. 공개 제공은 아래 수용·게시 관문을 통과한 뒤 진행합니다.
 
 ## 빌드
 
@@ -10,7 +10,7 @@ root에서 `pnpm --filter @heymoa/desktop package:mac:arm64`, `package:mac:x64`,
 
 수동 빌드는 trusted `team-minswon/heymoa-web`의 dev/main ref만 허용하고 feature branch·임의 SHA·fork는 source-policy job에서 실패합니다. checkout은 dispatch ref의 commit을 그대로 사용하고 자격 증명을 저장하지 않습니다. commit·publication·secret 입력은 없으며 서명 비밀을 받아들이지 않습니다. dev 빌드와 main 빌드는 모두 unsigned beta artifact일 뿐 production release를 의미하지 않습니다. 대상 commit은 Actions run의 head SHA로 확인합니다. 공개 게시와 운영 웹·서버 배포 수용은 아래 별도 관문을 거칩니다.
 
-GitHub workflow 파일이 기본 브랜치에 올라오기 전에는 workflow_dispatch를 실행할 수 없습니다. 지금은 로컬 준비 상태이며 원격 작업 브랜치·PR을 만들지 않습니다. 승인된 로컬 통합을 마친 후 main에 workflow 파일을 등록하고 dev/main에 실제 코드를 반영한 뒤 GitHub Actions에서 수동 실행합니다. 로컬에 없는 workflow를 이미 운영 가능한 것처럼 안내하지 않습니다.
+workflow는 기본 브랜치에 등록되어 수동 실행할 수 있습니다. 2026-10-05 [Desktop Actions #3](https://github.com/team-minswon/heymoa-web/actions/runs/37296653557)은 `minswon-official`이 dev source `9c0d1ac808f6abf2123ef1d0cd166ee40d3f13b2`로 실행했고 source-policy 및 Mac arm64·Intel·Windows x64 패키징이 모두 성공했습니다. 다운로드한 Mac DMG·ZIP 네 파일과 Windows NSIS 한 파일의 실제 checksum, ASAR allowlist·compiled 코드 및 플랫폼별 ICNS·ICO 일치를 검증했습니다. 이 결과는 실제 GUI·Google 로그인·캡처 수용이나 공개 Release·cask 게시를 뜻하지 않습니다. 이후 desktop runtime이 바뀌면 검증·통합한 dev/main ref에서 새 수동 빌드를 실행하고 해당 run의 source SHA와 산출물을 다시 검증합니다.
 
 Windows NSIS는 실제 Windows runner가 기본입니다. macOS에서 교차 빌드는 Wine 도구가 추가로 필요하며 생성 성공만으로 Windows 설치·권한·녹음 지원을 증명하지 않습니다. Intel Mac·Windows 실물 설치는 APP896에서 확인합니다. 현재 앱의 런타임 지원 기준은 `src/policy.ts`의 `platformSupport`가 소유합니다.
 
@@ -19,7 +19,7 @@ Windows NSIS는 실제 Windows runner가 기본입니다. macOS에서 교차 빌
 1. 웹·서버 desktop 인증 및 runtime 배포, 실제 앱 로그인·외부 연동·기록 시작과 종료를 확인합니다.
 2. 지원 OS별 설치 파일을 새 설치 환경에서 검증합니다. 앱·도움말·릴리즈 안내의 unsigned/signed 상태를 일치시킵니다. 패키지 allowlist·icon·권한 설명·checksum을 확인합니다.
 3. 공개 다운로드와 자체 tap은 실제 public `team-minswon/homebrew-tap`을 사용합니다. private 소스 저장소의 인증이 필요한 asset을 일반 다운로드 링크로 제공하지 않습니다. public tap의 GitHub Releases에는 검증된 바이너리와 checksum·설치 안내만 올립니다.
-4. 실제 최종 파일·checksum·QA 및 릴리즈 내용을 사용자에게 알리고 먼저 알립니다. 사용자가 승인한 브라우저에서 실제 login `minswon-official`을 게시 직전 확인합니다. CLI `alstn113`로는 draft 생성·게시를 하지 않으며 기능 QA 완료 전에도 게시하지 않습니다. 계정 자동 전환·fallback은 하지 않습니다. 릴리즈 본문에 실제 검증 범위, 서명 없음, 설치 절차, OS별 알려진 제한을 기록합니다. 필수 파일을 모두 붙여 공개한 뒤 실제 바이트를 다시 확인합니다. 이 workflow가 릴리즈를 생성하지 않습니다.
+4. 게시 전에 실제 최종 파일·checksum·QA 결과와 릴리즈 내용을 사용자에게 알립니다. 사용자가 승인한 브라우저에서 실제 login `minswon-official`을 게시 직전 확인합니다. CLI `alstn113`로는 draft 생성·게시를 하지 않으며 기능 QA 완료 전에도 게시하지 않습니다. 계정 자동 전환·fallback은 하지 않습니다. 릴리즈 본문에 실제 검증 범위, 서명 없음, 설치 절차, OS별 알려진 제한을 기록합니다. 필수 파일을 모두 붙여 공개한 뒤 실제 바이트를 다시 확인합니다. 이 workflow가 릴리즈를 생성하지 않습니다.
 5. `node apps/desktop/scripts/release-manifest.mjs OWNER/REPO VERSION OUTPUT_DIR`로 이미 공개된 `desktop-vVERSION`의 실제 Mac 파일을 확인합니다. Windows는 별도 수용 후 `--include-windows`로 명시적으로 포함합니다. 필수 asset·SHA256SUMS가 없거나 draft·download hash/size 불일치면 출력하지 않습니다. 다운로드는 streaming hash를 사용해 설치 파일 전체를 메모리에 저장하지 않습니다.
 6. 검증된 downloads.json을 웹 다운로드·수동 새 버전 안내의 입력으로 연결합니다. tap 저장소의 `scripts/update-cask.mjs VERSION`이 공개된 두 Mac ZIP을 다시 검증해 Casks/heymoa.rb를 만듭니다. 단일 heymoa token에 beta 버전을 사용해 중복 앱 ID·protocol 충돌을 피합니다. brew audit·실제 설치를 확인한 뒤 안내합니다. 실제 repo는 확인했지만 Release와 cask는 아직 없으며 가짜 다운로드를 만들지 않습니다.
 
