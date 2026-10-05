@@ -62,8 +62,8 @@ function createRow(item: MeetingTimelineItem) {
   chevron.className = "chevron";
   chevron.textContent = "⌄";
   chevron.setAttribute("aria-hidden", "true");
-  summary.append(content, chevron);
-  const label = document.createElement("div");
+  const label = document.createElement("span");
+  summary.append(content, chevron, label);
   const detail = document.createElement("div");
   detail.className = "detail";
   detail.inert = true;
@@ -79,7 +79,7 @@ function createRow(item: MeetingTimelineItem) {
   quote.append(text);
   clip.append(quote);
   detail.append(clip);
-  body.append(summary, label, detail);
+  body.append(summary, detail);
   node.append(time, dot, body);
   const reveal = () => {
     if (summary.getAttribute("aria-expanded") !== "true") return;

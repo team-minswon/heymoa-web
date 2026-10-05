@@ -78,6 +78,12 @@ test("Chromium reveals after same-frame close/open and preserves scroll intent",
   await page.evaluate(() => { const scroll = document.querySelector("#scroll"); scroll.scrollTop = 0; scroll.dispatchEvent(new Event("scroll")); });
   await publish({ ...many, total: 61, items: [...many.items, { ...value.items[0], id: "last" }] });
   assert.equal(await page.locator("#latest").isVisible(), true);
+  const floating = await page.locator("#latest").evaluate((node) => {
+    const bounds = node.getBoundingClientRect();
+    return { center: (bounds.left + bounds.right) / 2, viewportCenter: innerWidth / 2, bottom: bounds.bottom, footerTop: document.querySelector("footer").getBoundingClientRect().top };
+  });
+  assert.equal(floating.center, floating.viewportCenter);
+  assert.ok(floating.bottom < floating.footerTop);
   assert.equal(await page.locator("#scroll").evaluate((node) => node.scrollTop), 0);
   await page.locator("#latest").click();
   assert.equal(await page.locator("#latest").isVisible(), false);
@@ -95,4 +101,35 @@ test("popover title follows inactive recording status and only active sessions u
   assert.equal(f.document.querySelector("#title").textContent, "진행 중인 회의");
   f.update(snapshot(), true);
   assert.equal(f.document.querySelector("#title").textContent, "회의 A");
+});
+
+
+test("Chromium multiline title and classification share a padded hit area and aligned evidence", async (t) => {
+  const { chromium } = require("@playwright/test");
+  const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 460, height: 620 }, reducedMotion: "reduce" });
+  await page.addInitScript(() => {
+    window.heymoaMeeting = { read: () => new Promise(() => {}), action: async () => {}, subscribe: (receive) => { window.testReceive = receive; return () => {}; } };
+  });
+  await page.goto(require("node:url").pathToFileURL(path.join(__dirname, "../dist/meeting.html")).href);
+  const value = snapshot(); value.items[0].content = "클룸은 첫 번째 협박 이후 하루 동안 아무 말도 하지 않았다. 회의에서 나온 긴 내용도 같은 클릭 영역에 들어간다.";
+  await page.evaluate((timeline) => window.testReceive({ timeline, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), value);
+  const geometry = await page.locator("article").evaluate((row) => {
+    const button = row.querySelector(".summary"), content = row.querySelector(".content"), label = row.querySelector(".label"), time = row.querySelector(".offset"), dot = row.querySelector(".dot");
+    const b = button.getBoundingClientRect(), c = content.getBoundingClientRect(), l = label.getBoundingClientRect(), tm = time.getBoundingClientRect(), d = dot.getBoundingClientRect();
+    return { labelInside: button.contains(label), leftInset: c.left - b.left, bottomInset: b.bottom - l.bottom, multiline: c.height > parseFloat(getComputedStyle(button).lineHeight), labelLeft: l.left - c.left, timeCenter: tm.top + parseFloat(getComputedStyle(time).paddingTop) + parseFloat(getComputedStyle(time).lineHeight) / 2, firstLineCenter: c.top + parseFloat(getComputedStyle(button).lineHeight) / 2, dotCenter: (d.top + d.bottom) / 2 };
+  });
+  assert.equal(geometry.labelInside, true); assert.equal(geometry.leftInset, 8); assert.equal(geometry.bottomInset, 6);
+  assert.equal(geometry.multiline, true); assert.equal(geometry.labelLeft, 0);
+  assert.ok(Math.abs(geometry.timeCenter - geometry.firstLineCenter) < 1);
+  assert.ok(Math.abs(geometry.dotCenter - geometry.firstLineCenter) < 1);
+  await page.locator(".label").hover();
+  assert.notEqual(await page.locator(".summary").evaluate((node) => getComputedStyle(node).backgroundColor), "rgba(0, 0, 0, 0)");
+  await page.locator(".summary").focus();
+  assert.equal(await page.locator(".summary").evaluate((node) => getComputedStyle(node).outlineStyle), "solid");
+  await page.locator(".label").click();
+  assert.equal(await page.locator(".summary").getAttribute("aria-expanded"), "true");
+  assert.equal(await page.locator(".detail").evaluate((node) => node.inert), false);
+  const indent = await page.locator("article").evaluate((row) => row.querySelector(".quote").getBoundingClientRect().left - row.querySelector(".content").getBoundingClientRect().left);
+  assert.equal(indent, 0);
 });

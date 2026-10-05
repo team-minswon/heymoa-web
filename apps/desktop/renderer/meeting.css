@@ -128,14 +128,15 @@ article {
 article > .offset {
   font-size: 11px;
   color: var(--muted);
-  padding-top: 3px;
+  padding-top: 6px;
+  line-height: 21.45px;
 }
 .dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: #aaa5a0;
-  margin-top: 6px;
+  margin-top: 12px;
 }
 .dot.task {
   border: 1.5px solid #1baf7a;
@@ -152,16 +153,17 @@ article > .offset {
   background: #9a9690;
 }
 .summary {
-  padding: 0;
+  padding: 6px 8px;
   width: 100%;
   text-align: left;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 8px;
   line-height: 1.65;
 }
 .summary .content {
-  flex: 1;
+  min-width: 0;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
@@ -173,7 +175,8 @@ article > .offset {
 .summary[aria-expanded="true"] .chevron {
   transform: rotate(180deg);
 }
-.label {
+.summary .label {
+  grid-column: 1;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.6;
@@ -189,6 +192,7 @@ article > .offset {
   color: light-dark(#b4501f, #f6a87f);
 }
 .detail {
+  margin-inline: 8px;
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.2s ease-out;
@@ -239,7 +243,8 @@ article > .offset {
 }
 #latest {
   position: absolute;
-  right: 26px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 68px;
   width: 34px;
   height: 34px;
