@@ -6,17 +6,25 @@ import { fileURLToPath } from "node:url";
 
 if (process.platform !== "darwin") throw new Error("Regenerate committed icons on macOS (sips/iconutil)");
 const icons = fileURLToPath(new URL("../build/icons/", import.meta.url));
+const assets = fileURLToPath(new URL("../assets/", import.meta.url));
 const scratch = mkdtempSync(join(tmpdir(), "heymoa-icons-"));
 function run(command, args) {
   const result = spawnSync(command, args, { encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stderr || `${command} failed`);
 }
 try {
+  run("sips", ["-z", "1024", "1024", join(icons, "source.png"), "--out", join(icons, "icon.png")]);
+  run("sips", ["-z", "1024", "1024", join(icons, "source-mac.png"), "--out", join(icons, "icon-mac.png")]);
+  for (const scale of [1, 2]) {
+    const output = join(assets, `trayTemplate${scale === 2 ? "@2x" : ""}.png`);
+    run("sips", ["-z", String(18 * scale), String(18 * scale), join(icons, "tray-source.png"), "--out", output]);
+    run("sips", ["-p", String(20 * scale), String(20 * scale), output, "--out", output]);
+  }
   const iconset = join(scratch, "icon.iconset");
   run("mkdir", [iconset]);
   for (const size of [16, 32, 128, 256, 512]) {
     for (const scale of [1, 2]) {
-      run("sips", ["-z", String(size * scale), String(size * scale), join(icons, "icon.png"), "--out", join(iconset, `icon_${size}x${size}${scale === 2 ? "@2x" : ""}.png`)]);
+      run("sips", ["-z", String(size * scale), String(size * scale), join(icons, "icon-mac.png"), "--out", join(iconset, `icon_${size}x${size}${scale === 2 ? "@2x" : ""}.png`)]);
     }
   }
   run("iconutil", ["-c", "icns", iconset, "-o", join(icons, "icon.icns")]);
