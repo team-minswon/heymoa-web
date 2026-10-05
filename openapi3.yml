@@ -7261,6 +7261,14 @@ paths:
                 value:
                   state: https://evil.test
                   codeChallenge: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+              startDesktopLogin_DesktopLoginAdmissionUnavailableException:
+                value:
+                  state: sssssssssssssssssssssssssssssssssssssssssss
+                  codeChallenge: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+              startDesktopLogin_DesktopLoginRateLimitedException:
+                value:
+                  state: sssssssssssssssssssssssssssssssssssssssssss
+                  codeChallenge: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
       responses:
         '200':
           description: 요청 성공
@@ -7292,6 +7300,41 @@ paths:
                       details:
                       - field: state
                         message: 형식이 올바르지 않습니다.
+        '429':
+          description: '429'
+          headers:
+            Retry-After:
+              description: 다시 시도하기 전 기다릴 초
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                DESKTOP_LOGIN_RATE_LIMITED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: DESKTOP_LOGIN_RATE_LIMITED
+                      message: 로그인 요청이 많습니다. 잠시 후 다시 시도해 주세요.
+                      details: null
+        '503':
+          description: '503'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                SERVICE_UNAVAILABLE:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SERVICE_UNAVAILABLE
+                      message: 잠시 후 다시 시도해 주세요.
+                      details: null
       security: []
   /v1/workspaces/{workspaceId}/integrations/{provider}/desktop-ticket:
     post:

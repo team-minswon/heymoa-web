@@ -766,10 +766,24 @@ export type startDesktopLoginResponse400 = {
   status: 400;
 };
 
+export type startDesktopLoginResponse429 = {
+  data: AppErrorResponse;
+  status: 429;
+};
+
+export type startDesktopLoginResponse503 = {
+  data: AppErrorResponse;
+  status: 503;
+};
+
 export type startDesktopLoginResponseSuccess = startDesktopLoginResponse200 & {
   headers: Headers;
 };
-export type startDesktopLoginResponseError = startDesktopLoginResponse400 & {
+export type startDesktopLoginResponseError = (
+  | startDesktopLoginResponse400
+  | startDesktopLoginResponse429
+  | startDesktopLoginResponse503
+) & {
   headers: Headers;
 };
 
