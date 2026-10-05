@@ -25,6 +25,14 @@ import {
   isTrustedUrl,
 } from "./policy";
 
+// Menu labels use Electron's internal name. Preserve existing profiles before
+// changing it so the instance lock and persistent cookies keep their addresses.
+const userDataPath = app.getPath("userData");
+const sessionDataPath = app.getPath("sessionData");
+app.setName("HeyMoa");
+app.setPath("userData", userDataPath);
+app.setPath("sessionData", sessionDataPath);
+
 let window: BrowserWindow | null = null;
 let origin: string;
 let media: CaptureHost | null = null;

@@ -15,7 +15,7 @@ const idle = {
 
 // Execute the shipped main entry and its modules together. Only Electron's OS
 // boundary is replaced; broker, session adapter, IPC admission and tray are real.
-async function fixture(t) {
+async function fixture(t, overriddenProfiles = true) {
   const app = new EventEmitter();
   const ipcMain = new EventEmitter();
   const handlers = new Map(),
@@ -28,7 +28,24 @@ async function fixture(t) {
     ready = resolve;
   });
   app.whenReady = () => readiness;
-  app.requestSingleInstanceLock = () => true;
+  // Model Electron's name-derived defaults and explicit path overrides. The
+  // profiles intentionally differ, as a caller may override session storage.
+  let name = "@heymoa/desktop";
+  const paths = new Map(overriddenProfiles ? [
+    ["userData", "/isolated-qa/existing-user-profile"],
+    ["sessionData", "/isolated-qa/existing-cookie-profile"],
+  ] : []);
+  const profileAtLock = [];
+  app.getName = () => name;
+  app.setName = (value) => {
+    name = value;
+  };
+  app.getPath = (key) => paths.get(key) ?? `/default-profile/${name}`;
+  app.setPath = (key, value) => paths.set(key, value);
+  app.requestSingleInstanceLock = () => {
+    profileAtLock.push(app.getPath("userData"));
+    return true;
+  };
   app.isPackaged = true;
   app.setAsDefaultProtocolClient = () => true;
   let quits = 0,
@@ -81,6 +98,7 @@ async function fixture(t) {
       };
     },
   };
+  const sessionProfiles = [];
   class BrowserWindow extends EventEmitter {
     constructor() {
       super();
@@ -128,7 +146,12 @@ async function fixture(t) {
     Tray,
     nativeImage: { createFromPath: () => image },
     Menu: { buildFromTemplate: (value) => value },
-    session: { fromPartition: () => jar },
+    session: {
+      fromPartition(partition) {
+        sessionProfiles.push({ partition, storage: app.getPath("sessionData") });
+        return jar;
+      },
+    },
     shell: { openExternal: async (url) => opened.push(url) },
     dialog: {
       showErrorBox() {
@@ -202,6 +225,8 @@ async function fixture(t) {
     requests,
     dialogs,
     opened,
+    profileAtLock,
+    sessionProfiles,
     get quits() {
       return quits;
     },
@@ -210,6 +235,28 @@ async function fixture(t) {
     },
   };
 }
+
+test("main uses the product display name while retaining the existing lock and cookie profiles", async (t) => {
+  const f = await fixture(t);
+  assert.equal(f.app.getName(), "HeyMoa");
+  assert.equal(f.app.getPath("userData"), "/isolated-qa/existing-user-profile");
+  assert.equal(f.app.getPath("sessionData"), "/isolated-qa/existing-cookie-profile");
+  assert.deepEqual(f.profileAtLock, ["/isolated-qa/existing-user-profile"]);
+  assert.deepEqual(f.sessionProfiles, [
+    { partition: "persist:heymoa", storage: "/isolated-qa/existing-cookie-profile" },
+  ]);
+});
+
+test("main retains the legacy name-derived profile for an existing default installation", async (t) => {
+  const f = await fixture(t, false);
+  assert.equal(f.app.getName(), "HeyMoa");
+  assert.equal(f.app.getPath("userData"), "/default-profile/@heymoa/desktop");
+  assert.equal(f.app.getPath("sessionData"), "/default-profile/@heymoa/desktop");
+  assert.deepEqual(f.profileAtLock, ["/default-profile/@heymoa/desktop"]);
+  assert.deepEqual(f.sessionProfiles, [
+    { partition: "persist:heymoa", storage: "/default-profile/@heymoa/desktop" },
+  ]);
+});
 
 test("main preserves an OAuth request when the recording quit dialog is cancelled", async (t) => {
   const f = await fixture(t);
