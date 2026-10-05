@@ -16,7 +16,7 @@ function fixture(t, reduced = false) {
   dom.window.eval(fs.readFileSync(path.join(__dirname, "../dist/meeting-renderer.js"), "utf8"));
   return { window: dom.window, document: dom.window.document, actions,
     finish: async () => { animations.splice(0).forEach((resolve) => resolve()); await new Promise(setImmediate); },
-    update: (timeline, canStop = timeline !== null) => receive({ timeline, label: "녹음 중", elapsed: "1:00", warning: null, canStop, stale: false }) };
+    update: (timeline, canStop = timeline !== null, label = "녹음 중") => receive({ timeline, label, elapsed: "1:00", warning: null, canStop, stale: false }) };
 }
 test("real renderer keeps an expanded row across updates, reveals text after space, and renders untrusted content only as text", async (t) => {
   const f = fixture(t); const value = snapshot(); f.update(value);
@@ -71,4 +71,18 @@ test("Chromium reveals after same-frame close/open and preserves scroll intent",
   assert.equal(await page.locator("#scroll").evaluate((node) => node.scrollTop), 0);
   await page.locator("#latest").click();
   assert.equal(await page.locator("#latest").isVisible(), false);
+});
+
+
+test("popover title follows inactive recording status and only active sessions use a meeting heading", (t) => {
+  const f = fixture(t);
+  assert.equal(f.document.querySelector("#title").textContent, "녹음 대기");
+  f.update(null, false, "녹음 대기");
+  assert.equal(f.document.querySelector("#title").textContent, "녹음 대기");
+  f.update(null, false, "전송 중");
+  assert.equal(f.document.querySelector("#title").textContent, "전송 중");
+  f.update(null, true);
+  assert.equal(f.document.querySelector("#title").textContent, "진행 중인 회의");
+  f.update(snapshot(), true);
+  assert.equal(f.document.querySelector("#title").textContent, "회의 A");
 });

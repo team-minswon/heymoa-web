@@ -104,7 +104,6 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       {
         label: "현재 회의 열기",
         click: () => {
-          show();
           sendAction("show-current");
         },
       },
@@ -112,7 +111,6 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         label: "녹음 중지",
         enabled: !view.unknown && !lifecycle.safe(),
         click: () => {
-          show();
           sendAction("stop");
         },
       },
@@ -123,6 +121,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   }
   function sendAction(action: "show-current" | "stop") {
     try {
+      if (action === "show-current") show();
       lifecycle.action(action);
     } catch {
       show();
@@ -185,10 +184,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         stale: timeline !== null && Date.now() - timelineAt > TIMELINE_STALE_MS,
       };
     },
-    (action) => {
-      show();
-      sendAction(action);
-    }
+    sendAction
   );
   const close = (event: Electron.Event) => {
     if (!allowQuit) {

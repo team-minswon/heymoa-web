@@ -24,6 +24,7 @@ function fixture() {
     tray,
     interval,
     response = 0;
+  let popoverAction;
   let resolveAction;
   const nextAction = new Promise((resolve) => {
     resolveAction = resolve;
@@ -108,7 +109,7 @@ function fixture() {
       name === "electron"
         ? electron
         : name === "./meeting-popover"
-          ? { createMeetingPopover: () => ({ refresh() {}, dispose() {}, toggle() {} }) }
+          ? { createMeetingPopover: (_tray, _read, action) => { popoverAction = action; return { refresh() {}, dispose() {}, toggle() {} }; } }
         : name.startsWith(".")
           ? require(path.resolve(path.dirname(filename), name))
           : require(name),
@@ -127,6 +128,7 @@ function fixture() {
     app,
     window,
     contents,
+    popoverAction,
     adapter,
     tray,
     sent,
@@ -177,7 +179,7 @@ test("window close hides rather than stops; current meeting and stop are separat
     ["heymoa:recording-action", "stop"],
   ]);
   assert.equal(f.quits, 0);
-  assert.equal(f.shows, 2);
+  assert.equal(f.shows, 1);
   f.adapter.dispose();
 });
 test(
@@ -280,4 +282,20 @@ test("hidden recording keeps timers active and idle restores background throttli
   f.adapter.lifecycle.update(idle);
   assert.deepEqual(f.contents.throttling, [true, false, true]);
   f.adapter.dispose();
+});
+
+
+test("popover and context stop stay in the background while open and failure reveal the main window", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" });
+  f.tray.emit("right-click");
+  f.tray.menu.find((item) => item.label === "녹음 중지").click();
+  f.popoverAction("stop");
+  assert.equal(f.shows, 0);
+  assert.deepEqual(f.sent, [["heymoa:recording-action", "stop"], ["heymoa:recording-action", "stop"]]);
+  f.popoverAction("show-current");
+  assert.equal(f.shows, 1);
+  f.contents.send = () => { throw new Error("renderer send failed"); };
+  f.popoverAction("stop");
+  assert.equal(f.shows, 2);
 });

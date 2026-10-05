@@ -193,7 +193,7 @@ function receive(view: MeetingPopoverView) {
   }
   timeline = view.timeline;
   recording = view.canStop;
-  element("title").textContent = timeline?.title || "진행 중인 회의";
+  element("title").textContent = timeline?.title || (recording ? "진행 중인 회의" : view.label);
   element("phase").textContent = view.label;
   element("elapsed").textContent = view.elapsed || "";
   element("notice").textContent =
