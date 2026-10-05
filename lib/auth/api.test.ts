@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getMe } from "@/lib/auth/api";
+import { getMe, logout, LOGOUT_TIMEOUT_MS } from "@/lib/auth/api";
 import { isSessionExpired, resetSessionGate } from "@/lib/auth/session-gate";
 
 function jsonResponse(status: number, body: unknown) {
@@ -155,4 +155,59 @@ describe("getMe", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     }
   );
+});
+
+describe("logout", () => {
+  beforeEach(() => {
+    resetSessionGate();
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it.each(["headers", "body"])(
+    "%s 대기가 끝나지 않으면 요청을 중단하고 성공으로 처리하지 않는다",
+    async (stage) => {
+      vi.mocked(fetch).mockImplementationOnce(async (_input, init) => {
+        const waiting = () =>
+          new Promise<never>((_resolve, reject) => {
+            init!.signal!.addEventListener(
+              "abort",
+              () => reject(init!.signal!.reason),
+              { once: true }
+            );
+          });
+        if (stage === "headers") return waiting();
+        const response = jsonResponse(200, { success: true, data: null });
+        vi.spyOn(response, "json").mockImplementationOnce(waiting);
+        return response;
+      });
+      const assertion = expect(logout()).rejects.toMatchObject({
+        name: "TimeoutError",
+      });
+      await vi.advanceTimersByTimeAsync(LOGOUT_TIMEOUT_MS);
+      await assertion;
+      expect(isSessionExpired()).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(fetch).toHaveBeenCalledOnce();
+    }
+  );
+
+  it("쿠키 삭제 응답이 성공하면 게이트를 막고 요청 시한을 해제한다", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await logout();
+    expect(isSessionExpired()).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/v1/auth/logout"),
+      expect.objectContaining({
+        credentials: "include",
+        method: "POST",
+        signal: expect.any(AbortSignal),
+      })
+    );
+  });
 });

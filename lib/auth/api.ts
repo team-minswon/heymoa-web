@@ -46,10 +46,15 @@ async function parseAppResponse<T>(
   return body.data;
 }
 
-async function postAuth<T>(path: string, allowEmptyData = false) {
+async function postAuth<T>(
+  path: string,
+  allowEmptyData = false,
+  signal?: AbortSignal
+) {
   const response = await fetch(buildApiUrl(path), {
     method: "POST",
     credentials: "include",
+    signal,
   });
 
   return parseAppResponse<T>(response, allowEmptyData);
@@ -93,8 +98,19 @@ export async function getMe(): Promise<AuthUser | null> {
   return fetchMe();
 }
 
+export const LOGOUT_TIMEOUT_MS = 15_000;
+
 export async function logout() {
-  await postAuth<void>("/v1/auth/logout", true);
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort(new DOMException("Logout timed out", "TimeoutError"));
+  }, LOGOUT_TIMEOUT_MS);
+  try {
+    // The deadline covers the response body as well as response headers.
+    await postAuth<void>("/v1/auth/logout", true, controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
 
   // **알리기 전에 막는다.** 쿠키는 이 줄 위에서 이미 사라졌고, 새 문서가 뜨기까지 폴링
   // 타이머와 이미 예약된 조회는 계속 깨어난다. 막지 않으면 그 401들이 갱신을 시도하고

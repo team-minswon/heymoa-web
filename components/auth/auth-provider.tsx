@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +45,7 @@ export function AuthProvider({
 }) {
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const logoutStarted = useRef(false);
 
   const { data: user, status: queryStatus } = useQuery<AuthUser | null>({
     queryKey: ["user"],
@@ -99,19 +101,23 @@ export function AuthProvider({
   }, [beforeLogout]);
 
   const logout = useCallback(async () => {
-    if (isLoggingOut) return;
+    // React state updates after this handler returns; lock before the first await.
+    if (logoutStarted.current) return;
 
+    logoutStarted.current = true;
     setIsLoggingOut(true);
     try {
       if (beforeLogout) await beforeLogout();
       await requestLogout();
       leaveAuthenticatedApp("/");
     } catch {
-      toast.error("로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.");
-    } finally {
+      logoutStarted.current = false;
       setIsLoggingOut(false);
+      toast.error("로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     }
-  }, [beforeLogout, isLoggingOut, leaveAuthenticatedApp]);
+    // location.replace starts navigation asynchronously. Keep controls locked
+    // until the new document replaces this one instead of flashing active again.
+  }, [beforeLogout, leaveAuthenticatedApp]);
 
   useEffect(() => {
     const handleAuthStateChanged = (event: Event) => {

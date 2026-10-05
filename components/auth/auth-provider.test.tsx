@@ -101,7 +101,7 @@ describe("AuthProvider", () => {
       await logoutPromise;
     });
 
-    await waitFor(() => expect(result.current.isLoggingOut).toBe(false));
+    expect(result.current.isLoggingOut).toBe(true);
     // 세션 게이트가 열린 채 소프트 이동하면 홈에서도 모든 요청이 거절된다 — 만료 처리와
     // 같은 이유로 하드 내비게이션이다.
     expect(hardNavigate).toHaveBeenCalledWith("/");
@@ -110,6 +110,38 @@ describe("AuthProvider", () => {
     expect(queryClient.getQueryData(["workspace", "workspace-1"])).toEqual({
       name: "회의 워크스페이스",
     });
+    await act(() => result.current.logout());
+    expect(authApi.logout).toHaveBeenCalledOnce();
+  });
+
+  it("한 렌더에서 연속 클릭해도 리소스 정리와 로그아웃은 한 번만 시작한다", async () => {
+    const resources = deferred<void>();
+    const beforeLogout = vi.fn(() => resources.promise);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider initialUser={user} beforeLogout={beforeLogout}>
+          {children}
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    let first!: Promise<void>;
+    act(() => {
+      const logout = result.current.logout;
+      first = logout();
+      void logout();
+    });
+    expect(beforeLogout).toHaveBeenCalledOnce();
+    expect(authApi.logout).not.toHaveBeenCalled();
+    await act(async () => {
+      resources.resolve();
+      await first;
+    });
+    expect(authApi.logout).toHaveBeenCalledOnce();
+    expect(hardNavigate).toHaveBeenCalledOnce();
   });
 
   it("stops active browser resources before requesting logout", async () => {
@@ -186,6 +218,10 @@ describe("AuthProvider", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요."
     );
+    await act(() => result.current.logout());
+    expect(authApi.logout).toHaveBeenCalledTimes(2);
+    expect(hardNavigate).toHaveBeenCalledWith("/");
+    expect(result.current.isLoggingOut).toBe(true);
   });
 
   function renderWithProvider() {

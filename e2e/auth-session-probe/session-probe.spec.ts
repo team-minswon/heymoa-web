@@ -7,6 +7,48 @@ const user = {
   image: null,
 };
 
+test("느린 로그아웃 요청 중 대기를 표시하고 성공하면 익명 홈으로 이동한다", async ({
+  page,
+}) => {
+  let authenticated = true;
+  let logoutRequests = 0;
+  let completeLogout!: () => void;
+  const logoutResponse = new Promise<void>((resolve) => {
+    completeLogout = resolve;
+  });
+  await page.route("**/v1/auth/session", (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: authenticated
+          ? { state: "authenticated", user }
+          : { state: "anonymous" },
+        error: null,
+      },
+    })
+  );
+  await page.route("**/v1/auth/logout", async (route) => {
+    logoutRequests += 1;
+    await logoutResponse;
+    authenticated = false;
+    await route.fulfill({ status: 204 });
+  });
+  await page.goto("/terms");
+  const logout = page.getByRole("button", { name: "로그아웃", exact: true });
+  await logout.click();
+  try {
+    await expect(logout).toBeDisabled();
+    await expect(logout).toHaveAttribute("aria-busy", "true");
+    expect(logoutRequests).toBe(1);
+  } finally {
+    completeLogout();
+  }
+  await expect(page).toHaveURL("/");
+  await expect(
+    page.getByRole("button", { name: "로그인", exact: true })
+  ).toBeVisible();
+});
+
 test("SSR 사용자가 없는 첫 익명 방문은 세션만 읽고 refresh를 보내지 않는다", async ({
   page,
 }) => {
