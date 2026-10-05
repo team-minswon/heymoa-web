@@ -288,6 +288,35 @@ test("main protects capture acquisition and failed acquisition until a fresh dra
   assert.equal(f.dialogs.length, 2);
 });
 
+test("main's quit wait needs both native capture disposal and a drained web report in either arrival order", async (t) => {
+  for (const reportFirst of [true, false]) {
+    await t.test(reportFirst ? "drained report before disposal" : "disposal before drained report", async (t) => {
+      const f = await fixture(t);
+      const acquisition = f.invoke("heymoa:capture-begin", undefined);
+      const rejected = assert.rejects(acquisition, /AUDIO_CAPTURE_CANCELLED/);
+      f.invoke("heymoa:recording-summary", { ...idle, phase: "connecting", pendingMs: 20 });
+      f.answer = 1;
+      f.app.quit();
+      await tick();
+      assert.equal(f.quits, 0);
+      assert.equal(f.dialogs.length, 1);
+      const report = () => f.invoke("heymoa:recording-summary", { ...idle, phase: "completed" });
+      const dispose = async () => {
+        await f.invoke("heymoa:capture-end", undefined);
+        await rejected;
+      };
+      if (reportFirst) report();
+      else await dispose();
+      assert.equal(f.quits, 0, "one completion signal must not authorize audio loss");
+      if (reportFirst) await dispose();
+      else report();
+      await tick();
+      assert.equal(f.quits, 1);
+      assert.equal(f.dialogs.length, 1, "safe completion must not ask for discard");
+    });
+  }
+});
+
 test("main uses the product display name while retaining the existing lock and cookie profiles", async (t) => {
   const f = await fixture(t);
   assert.equal(f.app.getName(), "HeyMoa");
