@@ -174,9 +174,18 @@ describe("AgentConnectionsSettings", () => {
     expect(blocks[1]).toMatch(
       /^claude mcp add --transport http heymoa \S*\/mcp --header "Authorization: Bearer hm_secret-token"$/
     );
+    // 다시 붙여 넣어도 heymoa 가 둘이 되지 않게 기존 표를 먼저 걷어 낸다(APP-870)
+    expect(blocks[2].split("\n")[0]).toBe(
+      'd="${CODEX_HOME:-$HOME/.codex}" && mkdir -p "$d" && f="$d/config.toml" && (umask 077; touch "$f") && \\'
+    );
+    // 평소엔 TOML 을 제대로 읽는 codex 로 지우고, 설정이 이미 깨져 못 읽을 때만 줄 단위로 걷어 낸다
+    expect(blocks[2]).toContain("{ codex mcp remove heymoa >/dev/null 2>&1 || {");
+    expect(blocks[2]).toContain("mcp_servers\\.heymoa[ \\t]*[].]/{s=1;next}");
+    // 임시 파일로 바꿔치면 config.toml 권한이 풀린다 — 같은 파일에 다시 쓴다
+    expect(blocks[2]).not.toContain("mv ");
     // 기존 설정이 줄바꿈 없이 끝나도 표 머리가 붙지 않게 빈 줄로 시작한다
     expect(blocks[2]).toContain(
-      "cat >> ~/.codex/config.toml <<'EOF'\n\n[mcp_servers.heymoa]"
+      "cat >> \"$f\" <<'EOF'\n\n[mcp_servers.heymoa]"
     );
     expect(blocks[2]).toContain(
       'http_headers = { "Authorization" = "Bearer hm_secret-token" }'
