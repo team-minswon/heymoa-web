@@ -383,7 +383,10 @@ export function NotePanel({
     >
       <div
         className={cn(
-          "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white",
+          // **`hidden` 이 아니라 `clip` 이다.** `hidden` 은 스크롤 컨테이너라서 `scrollIntoView` 가
+          // 본문 끝 항목을 가운데로 못 옮기면 남는 만큼 이 면을 굴린다 — 상단바가 위로 잘려 나가고,
+          // 본문을 다시 올려도 이 면은 돌아오지 않는다(「언제 정해졌나」에서 끝쪽 표시를 누를 때).
+          "relative flex min-h-0 flex-1 flex-col overflow-clip bg-white",
           // 본문 좌우 여백은 **면이 정하고 내용이 읽는다.** design.pen은 side 시트(860)에
           // 좌우 100을, 전체 뷰 본문(970)에 좌우 64를 준다 — 같은 노트인데 두 값이 다르므로
           // 헤더·전사·요약·정보가 각자 하드코딩하면 뷰를 바꿀 때마다 네 군데가 어긋난다.

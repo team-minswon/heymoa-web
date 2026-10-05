@@ -161,10 +161,12 @@ export function ReviewRow({
             ) : null}
           </span>
         )}
+        {/* 클릭은 줄을 덮는 버튼이 받는다. 펼치면 화살표가 회전(transform)해 그 버튼 위에 그려지므로
+            흘려보내지 않으면 화살표 자리만 눌리지 않는다. */}
         <span
           aria-hidden
           className={cn(
-            "flex justify-end text-[var(--el-muted-soft)]",
+            "pointer-events-none flex justify-end text-[var(--el-muted-soft)]",
             assignable && "col-start-3 row-start-1 sm:col-start-5"
           )}
         >
