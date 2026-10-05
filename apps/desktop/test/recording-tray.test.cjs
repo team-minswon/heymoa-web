@@ -12,6 +12,29 @@ const idle = {
   microphone: null,
   systemAudio: null,
 };
+test("starting, stopping and failed sessions reject stale menu and popup stop commands", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" });
+  f.tray.emit("right-click");
+  const staleStop = f.tray.menu.find((item) => item.label === "녹음 중지");
+  for (const phase of ["requesting-permission", "connecting", "stopping", "failed", "completed", "idle"]) {
+    f.adapter.lifecycle.update({ ...idle, phase, pendingMs: 1000 });
+    f.tray.emit("right-click");
+    assert.equal(f.tray.menu.find((item) => item.label === "녹음 중지").enabled, false);
+    staleStop.click(); f.popoverAction("stop");
+  }
+  assert.deepEqual(f.sent, []);
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" });
+  staleStop.click();
+  assert.deepEqual(f.sent, [["heymoa:recording-action", "stop"]]);
+});
+test("idle opens HeyMoa without inventing a current meeting", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.tray.emit("right-click");
+  f.tray.menu.find((item) => item.label === "HeyMoa 열기").click();
+  assert.equal(f.shows, 1);
+  assert.deepEqual(f.sent, [["heymoa:recording-action", "show-current"]]);
+});
 function fixture() {
   const app = new EventEmitter(),
     window = new EventEmitter(),

@@ -48,12 +48,12 @@ export function DesktopRecordingControls() {
   useEffect(() => {
     if (!bridge?.subscribeRecordingActions) return;
     return bridge.subscribeRecordingActions((action) => {
-      if (action === "stop") void stop();
+      if (action === "stop" && phase === "recording") void stop();
       else if (action === "show-current" && activeWorkspaceId && activeNoteId)
         router.push(
           `/w/${encodeURIComponent(activeWorkspaceId)}/notes/${encodeURIComponent(activeNoteId)}?view=full&tab=transcript`
         );
     });
-  }, [bridge, activeWorkspaceId, activeNoteId, router, stop]);
+  }, [bridge, activeWorkspaceId, activeNoteId, phase, router, stop]);
   return <DesktopMeetingTimeline />;
 }

@@ -5,6 +5,20 @@ const path = require("node:path");
 const { JSDOM } = require("jsdom");
 const snapshot = () => ({ noteId: "note-a", title: "회의 A", loading: false, failed: false, reconnecting: false, total: 1,
   items: [{ id: "item-a", tone: "task", label: "할 일", content: "배포 확인", atMs: 1000, citations: [{ atMs: 1000, text: "<img src=x onerror=alert(1)>" }] }] });
+test("lost recording state is not rendered as no recording, and idle has an honest app action", (t) => {
+  const f = fixture(t);
+  f.update(null, false, "녹음 상태 확인 불가", { phase: null, unknown: true });
+  assert.match(f.document.querySelector("#empty").textContent, /상태를 확인하지 못/);
+  assert.equal(f.document.querySelector("#open").textContent, "HeyMoa 열기 ↗");
+  f.update(null, false, "연결 중", { phase: "connecting" });
+  assert.match(f.document.querySelector("#empty").textContent, /녹음 시작을 기다리/);
+  assert.equal(f.document.querySelector("#open").textContent, "현재 회의 열기 ↗");
+  f.update(null, false, "녹음 중지 중", { phase: "stopping" });
+  assert.match(f.document.querySelector("#empty").textContent, /전송 완료를 기다리/);
+  f.update(null, false, "녹음 대기");
+  assert.match(f.document.querySelector("#empty").textContent, /녹음 중인 회의가 없습니다/);
+  assert.equal(f.document.querySelector("#open").textContent, "HeyMoa 열기 ↗");
+});
 function fixture(t, reduced = false) {
   const dom = new JSDOM(fs.readFileSync(path.join(__dirname, "../dist/meeting.html"), "utf8"), { runScripts: "outside-only" });
   t.after(() => dom.window.close());
@@ -16,7 +30,7 @@ function fixture(t, reduced = false) {
   dom.window.eval(fs.readFileSync(path.join(__dirname, "../dist/meeting-renderer.js"), "utf8"));
   return { window: dom.window, document: dom.window.document, actions,
     finish: async () => { animations.splice(0).forEach((resolve) => resolve()); await new Promise(setImmediate); },
-    update: (timeline, canStop = timeline !== null, label = "녹음 중") => receive({ timeline, label, elapsed: "1:00", warning: null, canStop, stale: false }) };
+    update: (timeline, canStop = timeline !== null, label = "녹음 중", status = {}) => receive({ timeline, label, elapsed: "1:00", warning: null, canStop, stale: false, phase: canStop ? "recording" : "idle", unknown: false, ...status }) };
 }
 test("real renderer keeps an expanded row across updates, reveals text after space, and renders untrusted content only as text", async (t) => {
   const f = fixture(t); const value = snapshot(); f.update(value);
@@ -66,7 +80,7 @@ test("Chromium reveals after same-frame close/open and preserves scroll intent",
   assert.equal(alignment.x, 0);
   assert.equal(alignment.y, 0);
   const value = snapshot();
-  const publish = (timeline) => page.evaluate((timeline) => window.testReceive({ timeline, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), timeline);
+  const publish = (timeline) => page.evaluate((timeline) => window.testReceive({ timeline, phase: "recording", unknown: false, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), timeline);
   await publish(value);
   await page.locator(".summary").click();
   await page.waitForFunction(() => !document.querySelector(".detail").inert);
@@ -113,7 +127,7 @@ test("Chromium multiline title and classification share a padded hit area and al
   });
   await page.goto(require("node:url").pathToFileURL(path.join(__dirname, "../dist/meeting.html")).href);
   const value = snapshot(); value.items[0].content = "클룸은 첫 번째 협박 이후 하루 동안 아무 말도 하지 않았다. 회의에서 나온 긴 내용도 같은 클릭 영역에 들어간다.";
-  await page.evaluate((timeline) => window.testReceive({ timeline, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), value);
+  await page.evaluate((timeline) => window.testReceive({ timeline, phase: "recording", unknown: false, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), value);
   const geometry = await page.locator("article").evaluate((row) => {
     const button = row.querySelector(".summary"), content = row.querySelector(".content"), label = row.querySelector(".label"), time = row.querySelector(".offset"), dot = row.querySelector(".dot");
     const b = button.getBoundingClientRect(), c = content.getBoundingClientRect(), l = label.getBoundingClientRect(), tm = time.getBoundingClientRect(), d = dot.getBoundingClientRect();

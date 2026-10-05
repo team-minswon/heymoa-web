@@ -20,6 +20,7 @@ const stop = element<HTMLButtonElement>("stop");
 let timeline: MeetingTimelineSnapshot | null = null;
 let filter = "ALL";
 let recording = false;
+let emptyMessage = "녹음 중인 회의가 없습니다.";
 let following = true;
 const filters = [
   ["ALL", "전체"],
@@ -167,9 +168,7 @@ function renderItems() {
     button.setAttribute("aria-pressed", String(key === filter));
   element("empty").hidden = displayed.length > 0;
   element("empty").textContent = !timeline
-    ? recording
-      ? "회의 타임라인을 기다리고 있습니다. 현재 회의를 열어 확인해 주세요."
-      : "녹음 중인 회의가 없습니다."
+    ? emptyMessage
     : timeline.loading
       ? "회의 내용을 불러오는 중입니다."
       : timeline.failed
@@ -193,7 +192,21 @@ function receive(view: MeetingPopoverView) {
   }
   timeline = view.timeline;
   recording = view.canStop;
-  element("title").textContent = timeline?.title || (recording ? "진행 중인 회의" : view.label);
+  emptyMessage = view.unknown
+    ? "녹음 상태를 확인하지 못했습니다. HeyMoa를 열어 상태를 확인해 주세요."
+    : recording
+      ? "회의 타임라인을 기다리고 있습니다. 현재 회의를 열어 확인해 주세요."
+      : view.phase === "requesting-permission" || view.phase === "connecting"
+        ? "녹음 시작을 기다리고 있습니다. 현재 회의에서 상태를 확인해 주세요."
+        : view.phase === "stopping"
+          ? "녹음 중지와 전송 완료를 기다리고 있습니다."
+          : view.warning || "녹음 중인 회의가 없습니다.";
+  element("open").textContent =
+    view.phase !== null && view.phase !== "idle"
+      ? "현재 회의 열기 ↗"
+      : "HeyMoa 열기 ↗";
+  element("title").textContent =
+    timeline?.title || (recording ? "진행 중인 회의" : view.label);
   element("phase").textContent = view.label;
   element("elapsed").textContent = view.elapsed || "";
   element("notice").textContent =

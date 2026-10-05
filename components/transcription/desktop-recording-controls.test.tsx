@@ -54,6 +54,20 @@ afterEach(() => {
 });
 
 describe("desktop recording controls", () => {
+  it("ignores delayed stop commands after recording moved into another phase", () => {
+    const bridge = native();
+    const view = render(<DesktopRecordingControls />);
+    for (const phase of ["requesting-permission", "connecting", "stopping", "failed", "completed", "idle"]) {
+      recording.phase = phase;
+      view.rerender(<DesktopRecordingControls />);
+      act(() => bridge.action("stop"));
+    }
+    expect(recording.stop).not.toHaveBeenCalled();
+    recording.phase = "recording";
+    view.rerender(<DesktopRecordingControls />);
+    act(() => bridge.action("stop"));
+    expect(recording.stop).toHaveBeenCalledOnce();
+  });
   it("reports pending audio after failure and exposes no note, workspace, or session identifiers", () => {
     const bridge = native();
     const view = render(<DesktopRecordingControls />);

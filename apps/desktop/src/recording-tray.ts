@@ -102,14 +102,17 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       { label: status, enabled: false },
       { type: "separator" },
       {
-        label: "현재 회의 열기",
+        label:
+          view.phase !== null && view.phase !== "idle"
+            ? "현재 회의 열기"
+            : "HeyMoa 열기",
         click: () => {
           sendAction("show-current");
         },
       },
       {
         label: "녹음 중지",
-        enabled: !view.unknown && !lifecycle.safe(),
+        enabled: lifecycle.isRecording(),
         click: () => {
           sendAction("stop");
         },
@@ -120,6 +123,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     popover?.refresh();
   }
   function sendAction(action: "show-current" | "stop") {
+    // A menu may have been built before the latest phase update.
+    if (action === "stop" && !lifecycle.isRecording()) return;
     try {
       if (action === "show-current") show();
       lifecycle.action(action);
@@ -174,6 +179,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     () => {
       const view = lifecycle.view();
       return {
+        phase: view.phase,
+        unknown: view.unknown,
         timeline,
         label: view.label,
         elapsed: view.elapsed,

@@ -1,4 +1,7 @@
-import type { MeetingTimelineSnapshot } from "@heymoa/desktop-contracts";
+import type {
+  MeetingTimelineSnapshot,
+  RecordingSummary,
+} from "@heymoa/desktop-contracts";
 
 export const MEETING_CHANNELS = {
   report: "heymoa:meeting-timeline",
@@ -94,6 +97,8 @@ export function meetingTimeline(
 }
 
 export type MeetingPopoverView = {
+  phase: RecordingSummary["phase"] | null;
+  unknown: boolean;
   timeline: MeetingTimelineSnapshot | null;
   label: string;
   elapsed: string | null;

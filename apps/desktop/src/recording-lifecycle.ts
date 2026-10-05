@@ -22,6 +22,7 @@ const LABELS: Record<RecordingSummary["phase"], string> = {
 export type QuitChoice = "cancel" | "wait" | "discard";
 export type QuitPrompt = "protect" | "waiting" | "discard";
 export type RecordingView = {
+  phase: RecordingSummary["phase"] | null;
   label: string;
   elapsed: string | null;
   pending: boolean;
@@ -54,11 +55,14 @@ export class RecordingLifecycle {
 
   update(summary: RecordingSummary): void {
     if (this.disposed) return;
+    const wasRecording = this.isRecording();
     this.summary = { ...summary };
     if (ACTIVE.has(summary.phase) || summary.pendingMs > 0)
       this.activityObserved = true;
     this.deps.changed();
     if (this.waiting && this.safe()) this.exit();
+    else if (this.waiting && this.isRecording() && !wasRecording)
+      this.deps.action("stop");
   }
   unavailable(): void {
     if (this.disposed) return;
@@ -108,6 +112,7 @@ export class RecordingLifecycle {
           )
       : [];
     return {
+      phase: s?.phase ?? null,
       label: s
         ? LABELS[s.phase]
         : neverStarted
@@ -159,7 +164,9 @@ export class RecordingLifecycle {
           if (!this.disposed && this.waiting) this.deps.notifyWaiting();
         }, STOP_WAIT_NOTICE_MS);
         this.deps.changed();
-        this.deps.action("stop");
+        // Starting has no safely stoppable server attachment yet. Its first
+        // recording summary will deliver stop without cancelling acquisition.
+        if (this.isRecording()) this.deps.action("stop");
       }
     } catch {
       // Dialog or action delivery failure cannot authorize audio loss.

@@ -120,6 +120,34 @@ test("stop then quit awaits both actual controller stop and durable pending clea
   assert.equal(f.quits, 1);
   assert.equal(f.scheduled, null);
 });
+test("quit during startup waits for recording before stopping and still waits for durable drain", async () => {
+  const f = fixture(async () => "wait");
+  f.model.captureRequested();
+  f.model.update({ ...idle, phase: "requesting-permission" });
+  await f.model.requestQuit();
+  f.model.update({ ...idle, phase: "connecting" });
+  assert.deepEqual(f.actions, []);
+  assert.equal(f.quits, 0);
+  f.model.update({ ...idle, phase: "recording" });
+  f.model.update({ ...idle, phase: "recording" });
+  assert.deepEqual(f.actions, ["stop"]);
+  f.model.update({ ...idle, phase: "stopping", pendingMs: 20 });
+  f.model.captureDisposed();
+  f.model.update({ ...idle, phase: "completed", pendingMs: 20 });
+  assert.equal(f.quits, 0);
+  f.model.update({ ...idle, phase: "completed" });
+  assert.equal(f.quits, 1);
+});
+test("cancelled startup quit intent does not stop a later recording", async () => {
+  const answers = ["wait", "cancel"];
+  const f = fixture(async () => answers.shift());
+  f.model.update({ ...idle, phase: "connecting" });
+  await f.model.requestQuit();
+  await f.model.requestQuit();
+  f.model.update({ ...idle, phase: "recording" });
+  assert.deepEqual(f.actions, []);
+  assert.equal(f.quits, 0);
+});
 test("a long wait informs the user and renderer loss never becomes successful completion", async () => {
   const f = fixture(async () => "wait");
   f.model.update({ ...idle, phase: "recording" });
@@ -204,6 +232,7 @@ test("elapsed time and input failures reflect state without copying private meet
   f.model.update(summary);
   summary.phase = "completed";
   assert.deepEqual(f.model.view(), {
+    phase: "recording",
     label: "녹음 중",
     elapsed: "1:05",
     pending: true,
