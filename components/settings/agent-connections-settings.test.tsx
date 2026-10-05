@@ -149,6 +149,41 @@ describe("AgentConnectionsSettings", () => {
     expect(created.options).toEqual({ mutation: { gcTime: 0 } });
   });
 
+  // 붙여 넣기 한 번으로 끝나야 한다 — Codex 도 환경 변수 없이(APP-869)
+  it("새 토큰 화면은 에이전트마다 붙여 넣을 것 하나씩만 보인다", async () => {
+    created.mutateAsync.mockResolvedValue({
+      status: 201,
+      data: {
+        success: true,
+        data: { token: "hm_secret-token", delegation: {} },
+      },
+    });
+    renderSettings();
+
+    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+    fireEvent.change(screen.getByLabelText("연결 이름"), {
+      target: { value: "노트북" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "토큰 만들기" }));
+
+    const issued = await screen.findByRole("region", { name: "새 토큰" });
+    const blocks = Array.from(issued.querySelectorAll("pre")).map(
+      (pre) => pre.textContent ?? ""
+    );
+    expect(blocks).toHaveLength(3);
+    expect(blocks[1]).toMatch(
+      /^claude mcp add --transport http heymoa \S*\/mcp --header "Authorization: Bearer hm_secret-token"$/
+    );
+    // 기존 설정이 줄바꿈 없이 끝나도 표 머리가 붙지 않게 빈 줄로 시작한다
+    expect(blocks[2]).toContain(
+      "cat >> ~/.codex/config.toml <<'EOF'\n\n[mcp_servers.heymoa]"
+    );
+    expect(blocks[2]).toContain(
+      'http_headers = { "Authorization" = "Bearer hm_secret-token" }'
+    );
+    expect(issued.textContent).not.toContain("HEYMOA_TOKEN");
+  });
+
   it("토큰을 만드는 요청이 도는 동안 설정 창을 잠그게 한다", () => {
     created.pending = true;
     const onBusyChange = vi.fn();

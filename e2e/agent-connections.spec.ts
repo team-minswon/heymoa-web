@@ -33,7 +33,7 @@ test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 �
   const token = (await issued.locator("pre").first().innerText()).trim();
   expect(token).toMatch(/^hm_/);
   await expect(issued.getByText("claude mcp add", { exact: false })).toBeVisible();
-  await expect(issued.getByText("bearer_token_env_var", { exact: false })).toBeVisible();
+  await expect(issued.getByText("http_headers", { exact: false })).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/agent-issued.png` });
 
   await page.getByRole("button", { name: "복사했습니다, 닫기" }).click();

@@ -434,9 +434,18 @@ function IssuedToken({
   onClose: () => void;
 }) {
   const mcpUrl = buildUrl("/mcp");
+  // 기본(local)은 명령을 실행한 폴더에서만 등록된다 — 폴더마다 따로 쓰는 사람이 있어 그대로 두고, 전역은 안내만 한다(APP-869)
   const claudeCode = `claude mcp add --transport http heymoa ${mcpUrl} --header "Authorization: Bearer ${token}"`;
-  const codexEnv = `export HEYMOA_TOKEN=${token}`;
-  const codexConfig = `[mcp_servers.heymoa]\nurl = "${mcpUrl}"\nbearer_token_env_var = "HEYMOA_TOKEN"`;
+  // Codex 는 config.toml 의 http_headers 로 토큰을 직접 싣는다 — 환경 변수를 거치면 두 단계가 된다(APP-869)
+  const codex = [
+    "cat >> ~/.codex/config.toml <<'EOF'",
+    // 기존 파일이 줄바꿈 없이 끝나면 표 머리가 마지막 값에 붙어 TOML 이 깨진다 — 빈 줄로 띄운다
+    "",
+    "[mcp_servers.heymoa]",
+    `url = "${mcpUrl}"`,
+    `http_headers = { "Authorization" = "Bearer ${token}" }`,
+    "EOF",
+  ].join("\n");
 
   return (
     <section
@@ -453,10 +462,17 @@ function IssuedToken({
         </p>
       </div>
       <CopyBlock label="토큰" value={token} />
-      <CopyBlock label="Claude Code" value={claudeCode} />
-      {/* 셸 명령과 설정 파일을 나눈다 — 한 덩어리로 복사하면 어디에 붙여도 깨진다. */}
-      <CopyBlock label="Codex CLI — 터미널" value={codexEnv} />
-      <CopyBlock label="Codex CLI — ~/.codex/config.toml" value={codexConfig} />
+      <CopyBlock label="Claude Code — 터미널에 붙여 넣기" value={claudeCode} />
+      <CopyBlock label="Codex CLI — 터미널에 붙여 넣기" value={codex} />
+      <p className="text-xs text-[var(--el-muted)]">
+        Claude Code 는 명령을 실행한 폴더에서만 연결됩니다. 어느 폴더에서나
+        쓰려면 <code>--scope user</code> 를 붙이세요. Codex 는 모든 폴더에서
+        연결됩니다. 이미 heymoa 를 등록해
+        두었다면 먼저 지우세요 — Claude Code 는{" "}
+        <code>claude mcp remove heymoa</code>, Codex 는{" "}
+        <code>~/.codex/config.toml</code> 의 <code>[mcp_servers.heymoa]</code>{" "}
+        블록.
+      </p>
       <div className="flex justify-end">
         <Button size="sm" className="h-8" onClick={onClose}>
           복사했습니다, 닫기
