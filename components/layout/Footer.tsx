@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { siteConfig } from "@/lib/site";
 
 /** 랜딩·약관이 같이 쓰는 마케팅 면 푸터. 제품 흐름은 아래 범용 푸터를 쓴다. */
-const MARKETING_PATHS = new Set(["/", "/terms", "/privacy"]);
+const MARKETING_PATHS = new Set(["/", "/terms", "/privacy", "/download"]);
 
 export function Footer() {
   const pathname = usePathname();
@@ -85,6 +85,14 @@ export function Footer() {
                   >
                     작동 방식
                   </button>
+                </li>
+                <li>
+                  <Link
+                    href="/download"
+                    className="text-[15px] font-medium text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+                  >
+                    데스크톱 다운로드
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -190,6 +198,14 @@ export function Footer() {
                       </button>
                     </li>
                   ))}
+                  <li>
+                    <Link
+                      href="/download"
+                      className="inline-block py-1 text-[13px] text-[var(--lp-on-dark-soft)] underline-offset-4 hover:underline lg:text-[13.5px]"
+                    >
+                      데스크톱 다운로드
+                    </Link>
+                  </li>
                 </ul>
               </div>
 

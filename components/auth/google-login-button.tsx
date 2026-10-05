@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "@/lib/ui/toast";
+import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +41,15 @@ export function GoogleLoginButton({
         if (!desktop.beginLogin) {
           toast.error("앱을 업데이트한 뒤 다시 로그인해 주세요.", {
             id: "google-login-update",
+            action: {
+              label: "새 버전 보기",
+              onClick: () =>
+                window.open(
+                  DESKTOP_RELEASES_URL,
+                  "_blank",
+                  "noopener,noreferrer"
+                ),
+            },
           });
           setPending(false);
           return;

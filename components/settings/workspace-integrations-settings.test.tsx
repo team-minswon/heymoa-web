@@ -259,12 +259,23 @@ describe("WorkspaceIntegrationsSettings", () => {
   });
 
   it("an old desktop app cannot fall through to web connection OAuth", () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
     desktop({});
     renderPanel();
     fireEvent.click(screen.getByRole("button", { name: "연결" }));
-    expect(toast.error).toHaveBeenCalledWith("앱을 업데이트한 뒤 다시 연결해 주세요.");
+    expect(toast.error).toHaveBeenCalledWith(
+      "앱을 업데이트한 뒤 다시 연결해 주세요.",
+      { action: { label: "새 버전 보기", onClick: expect.any(Function) } }
+    );
     expect(refresh.run).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "연결" })).not.toBeDisabled();
+    toast.error.mock.calls.at(-1)?.[1].action.onClick();
+    expect(open).toHaveBeenCalledWith(
+      "https://github.com/team-minswon/homebrew-tap/releases",
+      "_blank",
+      "noopener,noreferrer"
+    );
+    open.mockRestore();
   });
 
 });

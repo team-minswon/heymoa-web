@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/lib/ui/toast";
+import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 
 import { AuthRefreshError, buildUrl, refreshAuthOnce } from "@/lib/api/fetcher";
 import {
@@ -92,7 +93,17 @@ export function WorkspaceIntegrationsSettings({
     const desktop = desktopAuthBridge();
     if (desktop) {
       if (!desktop.beginConnection) {
-        toast.error("앱을 업데이트한 뒤 다시 연결해 주세요.");
+        toast.error("앱을 업데이트한 뒤 다시 연결해 주세요.", {
+          action: {
+            label: "새 버전 보기",
+            onClick: () =>
+              window.open(
+                DESKTOP_RELEASES_URL,
+                "_blank",
+                "noopener,noreferrer"
+              ),
+          },
+        });
         return;
       }
       setConnecting(true);

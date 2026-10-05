@@ -70,14 +70,25 @@ describe("GoogleLoginButton", () => {
     expect(toast.error).not.toHaveBeenCalled();
   });
   it("blocks an old app from navigating to embedded Google login", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
     desktop({});
     render(<GoogleLoginButton />);
     fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
     expect(toast.error).toHaveBeenCalledWith(
       "앱을 업데이트한 뒤 다시 로그인해 주세요.",
-      { id: "google-login-update" }
+      {
+        id: "google-login-update",
+        action: { label: "새 버전 보기", onClick: expect.any(Function) },
+      }
     );
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
+    toast.error.mock.calls.at(-1)?.[1].action.onClick();
+    expect(open).toHaveBeenCalledWith(
+      "https://github.com/team-minswon/homebrew-tap/releases",
+      "_blank",
+      "noopener,noreferrer"
+    );
+    open.mockRestore();
   });
   it("keeps a pending native request single and shows timeout without web fallback", async () => {
     let finish!: (value: { status: string; reason: string }) => void;
@@ -112,12 +123,15 @@ describe("GoogleLoginButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
     expect(paths.buildGoogleOAuthUrl).toHaveBeenCalledWith("/settings");
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Google로 로그인" })).not.toBeDisabled()
+      expect(
+        screen.getByRole("button", { name: "Google로 로그인" })
+      ).not.toBeDisabled()
     );
   });
 
   it("allows retry after native rejection without starting web OAuth", async () => {
-    const beginLogin = vi.fn()
+    const beginLogin = vi
+      .fn()
       .mockRejectedValueOnce(new Error("IPC unavailable"))
       .mockResolvedValueOnce({ status: "cancelled" });
     desktop({ beginLogin });
@@ -132,5 +146,4 @@ describe("GoogleLoginButton", () => {
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
-
 });
