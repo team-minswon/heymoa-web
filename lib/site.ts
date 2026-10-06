@@ -17,13 +17,17 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || PRODUCT
 
 export const siteConfig = {
   name: "HeyMoa",
-  title: "HeyMoa | 참여형 AI 회의 운영 에이전트",
+  // 랜딩 히어로 · 기능 구간이 하는 말까지만 한다. 「참여형 AI 회의 운영 에이전트」는 지금 제품(받아 적고 정리하고
+  // 묻는)과 맞지 않아 내렸다(APP-934). `app/opengraph-image.tsx` 의 한 줄도 이 설명의 앞 문장이다.
+  title: "HeyMoa | 회의를 받아 적고 결정과 할 일을 정리하는 AI 에이전트",
   description:
-    "HeyMoa는 회의 대화를 기록하고 맥락과 결정사항을 요약하며, 담당자별 액션 아이템을 정리해 후속 업무로 연결하는 AI 회의 운영 서비스입니다.",
+    "HeyMoa는 회의를 받아 적고 결정과 할 일을 근거와 함께 정리합니다. 사람이 검토한 것만 프로젝트에 쌓이고, 지난 회의는 내 에이전트에게 물어보면 찾아 줍니다.",
   // 랩(`env-001.realillust.com` 등)에서 열면 canonical·OG·sitemap 이 전부 운영 주소를
   // 가리켜서, 크롤러에게 랩이 운영의 거울이라고 말하게 됩니다. 기본값은 운영 그대로입니다.
   url: siteUrl,
   contactEmail: "team.minswon@gmail.com",
+  // 사람이 치는 검색어라 「AI Agent」 「업무 자동화」는 둔다. 「참여형 AI」 「회의 운영」은 우리만 쓰던
+  // 옛 소개 문구라 뺐다(APP-934).
   keywords: [
     "HeyMoa",
     "heymoa",
@@ -34,9 +38,7 @@ export const siteConfig = {
     "AI 회의",
     "AI Agent",
     "회의 기록",
-    "참여형 AI",
     "액션 아이템",
-    "회의 운영",
     "회의 에이전트",
     "업무 자동화",
   ],

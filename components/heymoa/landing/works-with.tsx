@@ -2,6 +2,7 @@
 
 import { DoorOpen, Pause, Play, Plus } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import type { ComponentType } from "react";
 
@@ -18,7 +19,9 @@ import { BODY, FOCUS, H2, MARKER_REVEAL, vars } from "./tokens";
  *
  * **연동이 아니다.** HeyMoa 는 회의 앱에 들어가지 않고 브라우저 탭에서 마이크(`getUserMedia`)로 듣는다
  * (`lib/transcription/audio.ts`). 카드 문구는 「봇이 안 낀다 · 연동을 안 건다 · 들리면 받아 적는다」처럼
- * 그 사실 안에서만 말한다. 로고는 원색 그대로다(`public/landing/logos/`) — 처음엔 simple-icons 의 한 색 마크를 브랜드
+ * 그 사실 안에서만 말한다. 리드 끝에는 데스크톱 앱(베타) 한 줄과 `/download` 링크를 둔다 — 「옆 탭 ·
+ * 노트북 마이크」만 말하면 처음 보는 사람은 앱이 있는 줄 모른다. 강도는 다운로드 페이지 · FAQ 01 과 같다
+ * (「컴퓨터에서 나는 소리까지 녹음」. 화상회의 상대 목소리 전사 주장은 설치 앱 수용 뒤에). 로고는 원색 그대로다(`public/landing/logos/`) — 처음엔 simple-icons 의 한 색 마크를 브랜드
  * 색으로 칠했는데, Meet · Slack 처럼 여러 색인 로고가 한 색이 되어 진짜 로고로 안 읽혔다. Zoom 은 익숙한
  * 파란 원 · 흰 카메라(selfh.st icons, CC BY 4.0), Webex 는 파랑 · 초록 그러데이션 원색판(homarr-labs
  * dashboard-icons, Apache-2.0), 나머지는 theSVG(MIT)의 현행 원색판이다. Microsoft Teams · Slack 은 공개 전에
@@ -262,7 +265,17 @@ export function WorksWith() {
           >
             쓰던 회의 앱은 그대로 두세요. HeyMoa는 회의에 들어가지 않고, 옆
             탭에서 노트북 마이크로 듣습니다. 봇을 초대할 일도, 연동을 걸 일도
-            없어요.
+            없어요. 컴퓨터에서 나는 소리까지 녹음하려면{" "}
+            <Link
+              href="/download"
+              className={cn(
+                "rounded-[4px] font-bold text-[var(--tv-ink)] underline decoration-[var(--tv-pop)] decoration-[3px] underline-offset-[5px] transition-colors hover:decoration-[var(--tv-brand)]",
+                FOCUS
+              )}
+            >
+              데스크톱 앱(베타)
+            </Link>
+            을 받으세요.
           </p>
         </div>
 

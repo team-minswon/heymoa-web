@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
+import Link from "next/link";
 
 import { Reveal } from "@/components/heymoa/landing/reveal";
 import { cn } from "@/lib/utils";
@@ -22,19 +23,20 @@ import { APP, BODY, CONTAINER, FOCUS, H2, HAND, MARKER, SECTION_Y, SHADOW, vars 
  *
  * - 번호는 30/38px 굵은 고딕에 버터색 형광펜 띠를 깐다. 펼치거나 올리면 띠가 노랑(`--tv-pop`)으로
  *   바뀌고(오른쪽 원 화살표와 같은 규칙), 구간이 화면에 들어오면 띠가 위에서부터 차례로 칠해진다.
- * - 01 과 03 을 펼쳐 둔다 — 정지 화면에서도 글 답 하나와 앱 조각 하나가 바로 보인다. 그래서
- *   `name` 으로 하나만 열리게 묶지 않았다(묶으면 브라우저가 둘째 `open` 을 닫는다).
+ * - 모두 닫힌 채 시작한다 — 01 · 03 을 펼쳐 두었더니 긴 답과 앱 조각이 목록을 덮어 질문들이 한눈에 안 보였다.
+ *   `name` 으로 하나만 열리게 묶지 않았다(여럿을 같이 펼쳐 볼 수 있게).
  * - 앱 조각은 둘이고 화면이 다르다: 03 = 회의 중 타임라인(「철회됨」), 04 = 요약 탭의 검토 줄(제외 →
  *   그어진 채 남고 「제외 취소」). 둘 다 회의실 예약 이야기라 「예시」 도장을 붙였다.
  * - 왼쪽 기둥(넓은 화면, sticky)은 노란 「?」 쪽지 + 목록 쪽 화살표 + 두 사람의 농담(「저 이번 주
  *   당번인데요…」 → 「06번 보세요」)으로 채운다. 말풍선은 06 질문을 되풀이하지 않고 상황만 던진다.
- *   좁은 화면은 제목 옆 작은 「?」와 같은 농담만. 농담은 당번 이야기다 — 설치 이야기는 01 답에만
- *   둔다(`top-bar.tsx`). 390 에서는 이 농담이 질문 목록보다 먼저 보여서 여기에 설치 말이 있으면 01 밖으로
- *   새어 나간 것처럼 읽혔다.
+ *   좁은 화면은 제목 옆 작은 「?」와 같은 농담만. 농담은 당번 이야기다 — 어디서 쓰는지(웹 · 데스크톱)는
+ *   01 답에만 둔다(`top-bar.tsx`). 390 에서는 이 농담이 질문 목록보다 먼저 보여서 여기에 그 말이 있으면
+ *   01 밖으로 새어 나간 것처럼 읽혔다.
  * - 접고 펴는 것은 네이티브 `<details>` 라 클라이언트 코드가 없다(부드럽게 열리는 것은 지원하는
  *   브라우저에서만 — `motion.tsx` 의 `.tv-faq`). 움직임은 `Reveal` 이 켜는 `tv-r*` 뿐이다.
  *
- * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 종료와 검토 완료 · 「철회됨」(`note-timeline.tsx`
+ * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 데스크톱 베타(`app/(static)/download/page.tsx`) ·
+ * 종료와 검토 완료 · 「철회됨」(`note-timeline.tsx`
  * `metaOf`) · 줄마다 수정 · 제외와 「제외 취소」(`review-row.tsx`, 「결정 N」은 남은 줄만 센다 —
  * `review-section.tsx` `includedCount`) · 이전 결정 대체). 가격 · 지원 언어 · 모바일 앱 같은 항목은
  * 우리에게 없어서 묻지 않는다.
@@ -46,12 +48,13 @@ const LINK = `${HAND} mt-1 inline-flex min-h-11 items-center gap-1 rounded-sm un
 const NUM =
   "tv-rmark -mx-1 inline-block bg-[linear-gradient(var(--tv-butter),var(--tv-butter))] bg-no-repeat px-1 text-[30px] leading-none font-extrabold tracking-[-0.04em] text-[var(--tv-ink)] tabular-nums [background-position:0_92%] [background-size:100%_0.42em] group-open:bg-[linear-gradient(var(--tv-pop),var(--tv-pop))] group-hover/sum:bg-[linear-gradient(var(--tv-pop),var(--tv-pop))] lg:text-[38px]";
 
+/** `Link` 다 — 다른 경로(`/download`)로 가는 링크가 일반 `<a>` 면 문서를 다시 받아 녹음 중이던 회의가 끊긴다. */
 function SeeLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <a href={href} className={LINK}>
+    <Link href={href} className={LINK}>
       {children}
       <ArrowRight aria-hidden className="size-4 shrink-0" />
-    </a>
+    </Link>
   );
 }
 
@@ -141,13 +144,28 @@ function ExcludedSample() {
   );
 }
 
-const QA: Array<{ q: string; a: ReactNode; more?: ReactNode; open?: true }> = [
+const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
   {
-    // 페이지에서 설치 이야기는 여기 하나뿐이다(히어로 · 상단바 · 왼쪽 농담에는 없다). 「없다」고 못 박지
-    // 않고 어떻게 시작하는지로 답한다 — 랜딩에서 「설치할 것 없음」 류 문구는 뺐다(`hero.tsx`).
-    q: "설치해야 하나요?",
-    a: "브라우저에서 바로 씁니다. Google 계정으로 로그인하면 워크스페이스가 하나 생기고, 프로젝트를 하나 만들어 회의를 시작하면 됩니다. 필요한 권한은 마이크뿐입니다.",
-    open: true,
+    // 웹 · 데스크톱을 나란히 말하는 곳은 여기다(회의 앱 띠 리드는 데스크톱 앱 한 줄과 링크만). 전의 「설치해야
+    // 하나요?」 → 「브라우저에서 바로」는 데스크톱 베타가 있는데 설치가 없는 것처럼 읽혔다. 웹과 데스크톱을
+    // 사실대로 나란히 말하고 「설치할 것 없음」 류로 못 박지 않는다(`hero.tsx`). 질문을 「어디서 쓰나요?」로
+    // 두면 바로 다음 구간 제목(「어디서 회의하든」 — 회의 앱 · 오프라인)과 부딪혀 회의 장소를 묻는 말로 읽혔다.
+    // 데스크톱 문구는 `app/(static)/download/page.tsx` 결이다(컴퓨터에서 나는 소리 녹음 · 메뉴바 타임라인을 「더했다」,
+    // Windows 는 설치 · 녹음 실제 검증 진행 중).
+    q: "브라우저로 쓰나요, 앱도 있나요?",
+    // 첫마디가 「둘 다」여야 한다 — 「브라우저에서 씁니다」로 시작했을 때는 앱이 있다는 말이 넷째 문장에야 나와
+    // 처음 보는 사람은 데스크톱 앱이 있는 줄 몰랐다. 앱이 더하는 것은 다운로드 페이지와 같은 강도로만 쉬운 말로
+    // 옮긴다(「컴퓨터 오디오 녹음」 → 「컴퓨터에서 나는 소리까지 녹음」). 「화상회의 상대 목소리를 받아 적는다」는
+    // 설치 앱의 두 입력 전사 수용(`apps/desktop/docs/release.md`)이 끝난 뒤에야 쓴다.
+    a: (
+      <>
+        <span className={MARKER}>둘 다 됩니다.</span> 브라우저에서 바로 쓸 수 있고, Mac · Windows용
+        데스크톱 앱(베타)도 있습니다. 데스크톱 앱은 마이크에 더해 컴퓨터에서 나는 소리까지 녹음하고,
+        메뉴바에서 타임라인을 볼 수 있습니다. 어느 쪽이든 같은 Google 계정으로 로그인하고 같은 회의
+        기록을 봅니다. Windows판은 설치와 녹음을 아직 검증하고 있습니다.
+      </>
+    ),
+    more: <SeeLink href="/download">데스크톱 다운로드</SeeLink>,
   },
   {
     // 주어는 결정과 할 일이다. 회의 자체는 만들 때부터 프로젝트 목록에 한 줄로 있다(팀 구간 리드).
@@ -165,7 +183,6 @@ const QA: Array<{ q: string; a: ReactNode; more?: ReactNode; open?: true }> = [
     q: "회의 중에 말을 바꾸면요?",
     a: "타임라인은 뒤집힌 항목을 지우지 않습니다. 줄을 긋고 「철회됨」을 붙여 둡니다.",
     more: <RetractedSample />,
-    open: true,
   },
   {
     q: "잘못 정리된 줄은 어떻게 하나요?",
@@ -256,10 +273,9 @@ export function Faq() {
         </div>
 
         <div className="border-t border-[var(--tv-rule-strong)]">
-          {QA.map(({ q, a, more, open }, i) => (
+          {QA.map(({ q, a, more }, i) => (
             <details
               key={q}
-              open={open}
               className="tv-faq group border-b border-[var(--tv-rule-strong)]"
             >
               <summary

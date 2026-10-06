@@ -16,7 +16,7 @@ CTAs are subtle: a near-black ink pill (`{component.button-primary}`) is the pri
 - Soft pill geometry (`{rounded.pill}` for CTAs, `{rounded.xl}` for cards).
 - 96px section rhythm.
 
-> **이 문서는 두 면을 기술한다.** 아래 Colors~Responsive는 **마케팅 면**(랜딩·약관 — off-white 캔버스, pill CTA, 그라데이션 오브, 단일 티어 그림자)의 규칙이다. **제품 면**(워크스페이스 이후 — 캔버스 위에 뜬 둥근 패널 셸, 2연타 고도, 형태 스케일 5단계)은 별도 규칙을 따른다 — [`## Product Surface (제품 면 · v5)`](#product-surface-제품-면--v5)를 본다. 색 토큰(`--el-*`)과 폰트(Inter/EB Garamond)는 두 면이 공유한다.
+> **이 문서는 두 면을 기술한다.** 아래 Colors~Responsive는 **마케팅 면**(옛 랜딩 판에서 온 규칙 — off-white 캔버스, pill CTA, 그라데이션 오브, 단일 티어 그림자. 지금은 랜딩 크롬 밖 경로(`/invite` · `/mock-oauth` · `/settings/integrations`)에 서는 범용 `Navbar` · `Footer` 만 그 결이다)의 규칙이다. 랜딩 · 약관 · 개인정보 · 데스크톱 다운로드는 [「랜딩 (회의 종류별 카드판)」](#랜딩-회의-종류별-카드판--2026-10-06) 절을 따른다. **제품 면**(워크스페이스 이후 — 캔버스 위에 뜬 둥근 패널 셸, 2연타 고도, 형태 스케일 5단계)은 별도 규칙을 따른다 — [`## Product Surface (제품 면 · v5)`](#product-surface-제품-면--v5)를 본다. 색 토큰(`--el-*`)과 폰트(Inter/EB Garamond)는 두 면이 공유한다.
 
 ## Colors
 
@@ -199,11 +199,12 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 | 회의 카드 | `meeting-cards.tsx` · `weekly-card.tsx` | 기울인 카드 셋(킥오프 · 멘토링 · 주간 회의). 머리는 색 면, 몸통은 요약 탭 |
 | 근거 | `evidence.tsx` | 스크립트 창과 요약 창을 「증거 1~4」 번호표와 형광펜으로 짝짓는다 |
 | 팀 | `team.tsx` | 프로젝트 목록 창과 멤버 창 |
-| 물어보기 | `ask.tsx` · `ask-chat.tsx` | 질문 쪽지 벽과 내 에이전트 대화 |
-| 다른 도구로 | `safety.tsx` | 쓰는 길(승인 카드 만화 두 컷) · 읽는 길(외부 에이전트 연결 + 출입증) |
+| 내 에이전트 | `ask.tsx` · `ask-chat.tsx` | 질문 쪽지 벽과 내 에이전트 대화 |
+| 도구 연결 | `safety.tsx` | 내 에이전트(승인 카드 만화 두 컷) · 외부 에이전트 연결(연결 한 줄 + 출입증). 두 타일은 어디서 부르는 에이전트인가로 가른다 — 쓰기 · 읽기로 가르지 않는다(APP-934) |
 | FAQ | `faq.tsx` | `<details>` 여섯. 큰 번호 + 작은 앱 조각 |
 | 회의 앱 띠 | `works-with.tsx` | 「어디서 회의하든 켜 두기만」. 카드 두 줄이 반대로 흐르고 가운데 「HeyMoa · 기록 중」 알약 |
-| 마무리 | `closing.tsx` | 보라 면 + 당번표 종이. 그 아래 예시 고지 한 줄 |
+| 마무리 | `closing.tsx` | 보라 면 + 당번표 종이 |
+| 푸터 | `footer.tsx` | 위만 둥근 연보라 면. 서비스 · 정책 링크, 문의, 「예시」 도장과 지어낸 예시 고지(고지는 `/` 에서만) |
 
 **두 목소리를 색으로 가른다.**
 - 페이지(창 밖 · 창 위 주석) = `--tv-*`(`tokens.ts` `TV_VARS`, 루트 `.tv-root` 에만 건다). 흰 바탕 하나에 라벤더 ·
@@ -219,9 +220,10 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 여기와 `tokens.ts` · `app.tsx` 에 없는 색 · 그림자 · 반경을 새로 만들지 않는다.
 
 **사실.** 예시 회의는 하나다 — `use-demo.ts` 의 「3차 스프린트 킥오프」(9월 1일 (화) 오후 2:00, 2분, 결정 둘 · 할
-일 둘). 멘토링 · 주간 회의와 그 인물은 지어내서 「예시」 도장이 붙고, 맨 끝 문단이 「회의, 인물, 날짜는 모두 지어낸
+일 둘). 멘토링 · 주간 회의와 그 인물은 지어내서 「예시」 도장이 붙고, 푸터의 고지가 「회의, 인물, 날짜는 모두 지어낸
 예시」라고 말한다. 후기 · 사용자 수 · 인증 배지 · 가격은 없다. 회의 앱 띠는 **연동이 아니다** — HeyMoa 는 회의
-앱에 들어가지 않고 브라우저 마이크로 듣는다. 로고(`public/landing/logos/`)의 출처는 `works-with.tsx` 머리 주석에
+앱에 들어가지 않고 브라우저 마이크로 듣는다. 띠 리드 끝의 데스크톱 앱(베타) 한 줄과 FAQ 01 은 다운로드 페이지와 같은
+강도(「컴퓨터에서 나는 소리까지 녹음」)로만 말한다. 로고(`public/landing/logos/`)의 출처는 `works-with.tsx` 머리 주석에
 있다.
 
 **움직임은 `motion.tsx` 한 곳이다.** 모든 등장 · 그리기 · 반복은 `prefers-reduced-motion: no-preference` 안에만
@@ -229,12 +231,22 @@ The system uses **hairline + soft drop**. Cards float above the off-white canvas
 일시정지 버튼이 있고(WCAG 2.2.2), `[data-paused]` 아래에서는 클래스를 가리지 않고 모든 애니메이션이 선다.
 히어로는 `useDemo` 를 그대로 쓰고 화면 밖이면 쉬며, 모션을 줄이면 끝 화면 한 장으로 선다(`hero-stage.test.tsx`).
 
-**크롬.** `/` 는 이 상단 바를 쓰고 마케팅 `Navbar` 를 세우지 않는다(`NavbarGate`). 히어로의 첫 화면 셈(1440×900 ·
-1366×650 · 390×664 에서 창이 스크롤 없이 들어온다)은 이 64px 바를 전제로 한다 — 값은 `hero.tsx` 주석. 푸터는
-마케팅 `Footer` 그대로이고 「기능 소개 · 작동 방식」은 `#meetings` · `#evidence` 로 간다.
+**크롬.** `/` · `/terms` · `/privacy` · `/download` 는 이 상단 바와 `landing/footer.tsx` 를 쓰고 마케팅 `Navbar` · `Footer` 를
+세우지 않는다. 어느 경로가 랜딩 크롬인지는 `lib/routes/app-route.ts` 의 `isLandingChromeRoute` 한 곳이 정하고
+`NavbarGate` · `FooterGate` 가 같이 본다(따로 들면 한쪽만 고쳐진다). 히어로의 첫 화면 셈(1440×900 · 1366×650 ·
+390×664 에서 창이 스크롤 없이 들어온다)은 이 64px 바를 전제로 한다 — 값은 `hero.tsx` 주석. 상단 바 메뉴와 푸터
+「둘러보기」는 같은 `NAV` 이고 href 가 `/#meetings` 꼴이라 약관 · 다운로드에서도 랜딩 구간으로 간다.
 
-**`--lp-*` · `.landing-surface` 는 이제 약관 · 개인정보(`legal-document.tsx`)와 푸터(`.landing-footer`)만 쓴다.**
-원본은 `app/globals.css` 다.
+**약관 · 개인정보(`legal-document.tsx`)도 이 면이다** — `TV_VARS` 를 루트에 걸고, 흰 바탕 위 라벤더 머리 판(목차 ·
+본문과 같은 `CONTAINER` 기둥, 라벨 알약 · H2 급 제목 · 설명 · 시행일), 760 까지의 흰 본문 판, 연보라 목차(lg 미만은
+닫힌 `<details>`, lg 부터 펼친 sticky 카드)로 짠다. 읽는 문서라 스크롤 리빌 · 쪽지 · 테이프 · 말풍선은 없고, 조항마다 `scroll-mt-20` 으로 sticky 바 아래에 닿는다.
+
+**데스크톱 다운로드(`app/(static)/download/page.tsx`)도 같은 결이다** — 같은 라벤더 머리 판(라벨 알약 · H2 급 제목 · 리드 ·
+보라 「설치 파일과 새 버전 보기」 + 흰 「웹에서 바로 시작」), 그 아래 Mac · Windows 흰 카드 둘(md 부터 2열, 주의는 버터 상자),
+연보라 「설정과 업데이트」 판. 장식 · 리빌은 없다.
+
+옛 크림 · 갈색 면(`--lp-*` · `.landing-surface` · `.landing-footer`)과 마케팅 `Footer` 의 파도 갈래는 APP-934 에서
+걷었다. 랜딩 크롬 밖 경로는 범용 `Footer` 를 쓴다.
 
 확인 기준: 320 · 390 · 768 · 1024 · 1440 에서 가로 넘침 0(기울인 카드 · 쪽지는 `.tv-root` 의 `overflow-x-clip` 이
 막는다), 창 밖 글자 대비 4.5:1 이상.

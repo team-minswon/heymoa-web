@@ -11,7 +11,7 @@ const FEATURE_LIST = [
   "프로젝트별 팀 회의 기록",
   "지난 회의에 묻는 내 에이전트",
   "승인한 것만 Linear · GitHub 로 내보내기",
-  "외부 에이전트 읽기 전용 연결",
+  "Claude Code · Codex 같은 외부 에이전트 연결",
 ];
 
 const jsonLd = {
@@ -20,7 +20,8 @@ const jsonLd = {
   name: siteConfig.name,
   alternateName: ["heymoa", "Hey Moa", "hey moa", "헤이모아", "헤이 모아"],
   applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
+  // 데스크톱 베타(`app/(static)/download/page.tsx` — macOS DMG · Windows EXE)도 받을 수 있다(FAQ 01).
+  operatingSystem: "Web, macOS, Windows",
   url: siteConfig.url,
   description: siteConfig.description,
   featureList: FEATURE_LIST,

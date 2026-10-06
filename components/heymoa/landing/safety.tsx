@@ -4,8 +4,9 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Eye,
   PencilLine,
+  Plug,
+  Sparkles,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 
@@ -29,12 +30,16 @@ import {
 } from "./tokens";
 
 /**
- * 「나가는 길」 구간. tl;dv 는 여기에 SOC2 · GDPR 배지를 격자로 놓는다. HeyMoa 에는 인증이 없으므로
- * 배지 자리에 **지금 앱에서 그렇게 동작하는 화면**을 놓았다. 제목이 말한 길 두 개를 그림 두 장으로:
- * 버터 면 「쓰는 길」은 만화 두 컷(① 승인 카드가 뜬 대화 → ② 승인한 뒤 생각 과정에 남은 「열어 보기」)과
- * 그 컷에 짝지은 왼쪽 열의 번호 단계 둘(넓은 화면에서는 단계가 제 컷 높이에 선다 — 2행 격자, 두 컷은
- * 겹치지 않고 칸 사이를 띄운다),
- * 민트 면 「읽는 길」은 가장자리가 뜯기는 출입증(앞면 = 설정의 외부 에이전트 연결 한 줄, 꼬리 = 도장 셋).
+ * 「도구 연결」 구간. tl;dv 는 여기에 SOC2 · GDPR 배지를 격자로 놓는다. HeyMoa 에는 인증이 없으므로
+ * 배지 자리에 **지금 앱에서 그렇게 동작하는 화면**을 놓았다. 에이전트가 회의를 쓰던 도구로 잇는 두 자리를
+ * 그림 두 장으로:
+ * 버터 면 「내 에이전트」(HeyMoa 안)는 만화 두 컷(① 승인 카드가 뜬 대화 → ② 승인한 뒤 생각 과정에 남은
+ * 「열어 보기」)과 그 컷에 짝지은 왼쪽 열의 번호 단계 둘(넓은 화면에서는 단계가 제 컷 높이에 선다 — 2행
+ * 격자, 두 컷은 겹치지 않고 칸 사이를 띄운다),
+ * 민트 면 「외부 에이전트 연결」(Claude Code · Codex)은 가장자리가 뜯기는 출입증(앞면 = 설정의 외부 에이전트
+ * 연결 한 줄, 꼬리 = 도장 셋).
+ * 두 타일은 **어디서 부르는 에이전트인가**로 가른다. 전에는 「쓰는 길 · 읽는 길」로 갈랐는데, 내 에이전트도
+ * 회의를 묻고 답하고 외부 에이전트도 가져간 회의로 제 일을 하니 사용자에게 틀린 구분으로 읽혔다(APP-934).
  * 예전의 다섯 칸 같은 틀(템플릿 느낌)과 복숭아 · 하늘 면은 뺐다.
  *
  * 화면 규칙 5(창 하나에 테두리 하나): 창 안에서 앱의 테두리 상자는 상자를 걷고 hairline 구분선으로 줄인다.
@@ -47,21 +52,14 @@ import {
  * 좁은 화면(sm 미만)에서는 버터 · 민트 면을 화면 끝까지 깐다 — 면 가장자리가 창 양옆 20px 에 평행하게
  * 남으면 색 띠가 창의 두 번째 테두리로 읽혔다. sm 부터는 면 안쪽 여백을 32px 이상으로 둔다.
  *
- * 제목은 「내가 연결한 도구」라고 하지 않는다 — Linear·GitHub 연동은 워크스페이스 연동이라 관리자만
- * 연결·해제한다(`workspace-integrations-settings.tsx`). 일반 멤버가 여는 것은 쓸 때마다의 승인과 내가
- * 만든 외부 에이전트 연결이다(리드의 「내가 열어 줘야 열립니다」).
- * 그렇다고 그냥 「다른 도구」라고 하면 「길은 두 개 · 내가 열어 줘야 열림」이 회의 내용이 그 밖으로는
- * 아무 데도 안 간다는 말로 읽힌다 — 실제로는 요약 · 답을 만들 때 스크립트 · 노트 · 질문이 언어 모델
- * 제공자에게 간다(`app/(static)/privacy/page.tsx`). 그래서 제목은 「내가 쓰는 다른 도구」로 범위를 좁히고,
- * 리드가 그 도구를 Linear · GitHub · 외부 에이전트로 이름 댄다.
- * 주어는 「에이전트가」다. 「회의 내용이 … 넘어가는 길은 두 개」라고 하면 개수가 틀린다 — 앱에는 요약 ·
- * 스크립트를 마크다운으로 복사하는 버튼이 있고(`copy-markdown-button.tsx`, `lib/notes/copy-markdown.ts`
- * 는 Notion · Slack · 이슈 본문에 붙여 넣으라고 만든 기능이다), 이 페이지의 히어로 · 회의 카드 · 근거 창에도
- * 그 복사 아이콘이 보인다. 복사는 내 손이 옮기는 길이고, 에이전트가 가져가는 길은 이 둘뿐이다
- * (연동 제공자는 `workspace-integrations-settings.tsx` 의 LINEAR · GITHUB 둘).
- *
- * 읽는 길 제목은 「~만, ~는 못」 대구를 쓰지 않고 앱 머리 문구(「읽고 HeyMoa 화면을 열 수 있게 합니다」)
- * 그대로 두 가지를 다 말한 뒤 「까지만」으로 한계를 한 번만 말한다.
+ * 제목은 「쓰던 도구까지 이어진다」만 말하고 「~로만」 · 「길은 N개」처럼 닫지 않는다 — 요약 · 답을 만들 때
+ * 스크립트 · 노트 · 질문이 언어 모델 제공자에게 가고(`app/(static)/privacy/page.tsx`), 요약 · 스크립트를
+ * 마크다운으로 복사하는 버튼(`copy-markdown-button.tsx`)도 있어서 닫으면 틀린 말이 된다.
+ * 「내가 연결한 도구」라고도 하지 않는다 — Linear·GitHub 연동은 워크스페이스 연동이라 관리자만 연결·해제한다
+ * (`workspace-integrations-settings.tsx`). 일반 멤버가 여는 것은 만들 때마다의 승인과 내가 만든 외부 에이전트
+ * 연결이다. 그 한 가지(내가 연다)는 각 타일이 말한다 — 내 에이전트는 제목(「승인한 것만 나갑니다」), 외부
+ * 에이전트는 본문 끝(「연결은 직접 만들고, 언제든 끊을 수 있습니다」). 리드에서 「어느 쪽이든 내가 열어 줘야
+ * 열립니다」로 한 번 더 묶었었는데 겹쳐서 뺐다.
  *
  * 창 안은 앱 그대로다. 근거 파일:
  * - `components/chat/chat-thread.tsx` ApprovalPrompt 802-888(카드 · 「쓰기 도구」 배지 · 승인/거절 ·
@@ -106,7 +104,7 @@ const PEN =
 const CURSOR_AT = "top-[55%] left-[-5px]";
 
 /** 타일 머리 — 흰 알약 라벨 · 굵은 제목 · 본문. */
-function RoadHead({
+function TileHead({
   icon: Icon,
   label,
   title,
@@ -125,7 +123,7 @@ function RoadHead({
         <Icon aria-hidden className="size-3.5" />
         {label}
       </span>
-      {/* text-balance — 1024 에서 읽는 길 제목이 한 낱말만 다음 줄로 떨어졌다. */}
+      {/* text-balance — 1024 에서 둘째 타일 제목이 한 낱말만 다음 줄로 떨어졌다. */}
       <h3 className={`${CARD_TITLE} mt-4 text-balance lg:text-[28px]`}>{title}</h3>
       <p className={cn(BODY, "mt-2", bodyClassName)}>{children}</p>
     </div>
@@ -224,7 +222,7 @@ function Pointer({
   );
 }
 
-/* ── 쓰는 길 ──────────────────────────────────────────────────────────── */
+/* ── 내 에이전트 ──────────────────────────────────────────────────────── */
 
 const ISSUE = "온보딩 이탈 로그 수집 초안";
 /** 승인 카드 요약 = 도구가 만든 한 줄(heymoa-ai `summarize_create_issue`). */
@@ -331,15 +329,15 @@ const DOCKED = "rounded-none border-0 border-t border-[var(--el-hairline)] px-0 
  * 색 면. 좁은 화면(sm 미만)에서는 기둥 여백(-mx-5)을 상쇄해 화면 끝까지 깔고 모서리를 편다 — 면 가장자리가
  * 창 양옆 20px 에 평행하게 남으면 색 띠가 창의 두 번째 테두리로 읽혔다. 출입증의 홈은 화면 끝에 반쯤
  * 걸친다(`landing.tsx` 의 overflow-x-clip). sm 부터는 면 안쪽 여백 32 · 40 으로 창과 넉넉히 띄운다.
- * 화면 끝까지 깔아도 면의 **아래** 끝은 남는다 — 쓰는 길 컷 ② 바닥 20px 아래에서 곧은 선으로 끝나 창이 버터
- * 쟁반에 끼운 액자로 읽혔다. 그래서 쓰는 길은 좁은 화면 바닥 여백을 48 로 둔다(`WriteRoad`).
+ * 화면 끝까지 깔아도 면의 **아래** 끝은 남는다 — 내 에이전트 컷 ② 바닥 20px 아래에서 곧은 선으로 끝나 창이
+ * 버터 쟁반에 끼운 액자로 읽혔다. 그래서 내 에이전트 타일은 좁은 화면 바닥 여백을 48 로 둔다(`AgentTile`).
  */
 const FACE = cn(RADIUS.face, "max-sm:-mx-5 max-sm:rounded-none");
 
 /** 좁을 때 단계와 컷이 같은 560 기둥에 선다. 넓을 때는 격자 칸이 정한다. */
 const COL = "mx-auto w-full max-w-[560px] lg:mx-0 lg:max-w-none";
 
-function WriteRoad() {
+function AgentTile() {
   return (
     <Reveal className={cn("relative bg-[var(--tv-butter)] p-5 pb-12 sm:p-8 lg:p-10", FACE)}>
       {/*
@@ -351,13 +349,15 @@ function WriteRoad() {
       <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-x-12 lg:gap-y-9">
         <div className="flex flex-col">
           {/*
-            본문은 섹션 리드(「내 에이전트가 Linear나 GitHub에 쓸 때」)를 되풀이하지 않고 리드에 없는 것만
-            말한다 — 연동은 워크스페이스 것이라도 쓰는 건 매번 묻는다는 것, 할 일이 저절로 넘어가지 않는다는 것.
+            섹션 리드는 두 타일이 무엇을 하는지 가르지 않는다(가르면 「만들어 줌 ↔ 가져감」이 쓰기 · 읽기
+            대비로 읽힌다). 이슈 이야기는 이 본문에만 둔다 — 회의를 묻던 대화에서 그대로 부탁한다는 것,
+            연동은 워크스페이스 것이라도 만들 때마다 묻는다는 것, 할 일이 저절로 넘어가지 않는다는 것.
           */}
-          <RoadHead icon={PencilLine} label="쓰는 길" title="승인한 것만 나갑니다">
-            워크스페이스에 연동돼 있어도 쓸 때마다 나에게 먼저 묻습니다. 회의에서 정리된 할&nbsp;일도
-            저절로 넘어가지 않습니다.
-          </RoadHead>
+          <TileHead icon={Sparkles} label="내 에이전트" title="승인한 것만 나갑니다">
+            회의 내용을 묻던 대화에서 그대로 Linear나 GitHub 이슈도 부탁할 수 있습니다. 워크스페이스에
+            연동돼 있어도 만들 때마다 나에게 먼저 묻고, 회의에서 정리된 할&nbsp;일도 저절로 넘어가지
+            않습니다.
+          </TileHead>
           {/*
             넓을 때 왼쪽 열은 컷 1 바닥에 맞춰 아래에서부터 선다(컷 1 은 `self-end`). 승인 카드 아래(입력창 ·
             안내 한 줄)는 폭과 상관없이 높이가 일정해서 바닥 기준이 흔들리지 않는다.
@@ -380,7 +380,7 @@ function WriteRoad() {
               </Pointer>
             }
           >
-            어디에 무엇을 쓸지 제목과 설명까지 보여 주고, 내가 고를 때까지 기다립니다.
+            어디에 무엇을 만들지 제목과 설명까지 보여 주고, 내가 고를 때까지 기다립니다.
           </Step>
         </div>
 
@@ -502,7 +502,7 @@ function WriteRoad() {
   );
 }
 
-/* ── 읽는 길 ──────────────────────────────────────────────────────────── */
+/* ── 외부 에이전트 연결 ───────────────────────────────────────────────── */
 
 /** 사용 내역(최근 것부터). `wide` 는 모바일에서 추리는 줄. */
 const USAGE = [
@@ -514,13 +514,15 @@ const USAGE = [
 ] as const;
 
 /**
- * 출입증 꼬리의 도장. 실제 글자다. 첫 도장은 예전에 「읽기와 화면 열기만」이었는데 제목 · 창 머리 문구와
- * 같은 말을 세 번 했고, 바로 위 「읽기 전용 출입증」과도 살짝 어긋났다 — 사실 정책의 「아무것도 바꾸지
- * 않는다」로 바꿨다(화면 열기는 제목이 말한다).
+ * 출입증 꼬리의 도장. 실제 글자다. 연결이 닿는 범위(맡긴 워크스페이스 하나 · 내가 볼 수 있는 것)와 끝(90일)만
+ * 말한다 — 회수는 앞면 쪽지가 말한다. 전의 「아무것도 안 바꿈」은 타일을 쓰기 · 읽기로 가르던 말이라 뺐다.
+ * 88px 원 안에서 「워크스페이스」(12px 약 62px)가 한 줄에 든다.
  */
 const STAMPS = [
-  { text: "아무것도 안 바꿈", tilt: -8, place: "lg:self-start" },
-  { text: "내가 보는 만큼만", tilt: 6, place: "lg:-mt-2 lg:self-end" },
+  { text: "워크스페이스 하나만", tilt: -8, place: "lg:self-start" },
+  // 「내가 보는 만큼만」은 줄인 말이라 뜻이 안 읽혔다 — 연결한 사람이 볼 수 없는 프로젝트 · 회의는 도구도 못 본다.
+  // 줄은 「내가 볼 수 / 있는 것만」에서만 갈리게 묶는다(1440 에서 「…있는 / 것만」으로 한 낱말이 떨어졌다).
+  { text: "내가\u00a0볼\u00a0수 있는\u00a0것만", tilt: 6, place: "lg:-mt-2 lg:self-end" },
   { text: "90일 안 쓰면 만료", tilt: -4, place: "lg:-mt-2 lg:self-start" },
 ] as const;
 
@@ -610,31 +612,34 @@ function Notch({ className }: { className: string }) {
   return <span aria-hidden className={cn("absolute size-7 rounded-full bg-white", className)} />;
 }
 
-function ReadRoad() {
+function ExternalTile() {
   return (
     <Reveal className={cn("relative flex flex-col bg-[var(--tv-mint)] lg:flex-row", FACE)}>
       {/* 앞면 */}
       <div className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10">
-        <RoadHead
-          icon={Eye}
-          label="읽는 길"
-          title="Claude Code 같은 다른 AI 도구는 읽기만 합니다"
+        <TileHead
+          icon={Plug}
+          label="외부 에이전트 연결"
+          title="AI 도구에 연결하면 지난 회의를 찾아봐 줍니다"
           bodyClassName="lg:max-w-[560px]"
         >
           {/*
-            「외부 에이전트 · 맡긴 워크스페이스 · 발화 · HeyMoa 화면을 연다」는 앱 안 낱말이라 처음 보는 사람이
-            못 읽었다 — 하는 일(읽기만)과 못 하는 일(고치기 · 지우기)로 풀어 쓴다. 「결정·할 일」은 한 덩어리로
-            묶는다 — 1024 에서 「결정· / 할 일」로 가운뎃점 뒤에서 갈렸다.
+            처음 보는 사람이 읽는 말로 쓴다 — 「워크스페이스 · 스크립트 · 주소를 건넨다 · 회수」 같은 앱 안 낱말을
+            쓰지 않는다(전에 「내가 만들고, 언제든 회수할 수 있습니다」 · 「만들 때 고른 워크스페이스의 … 회의
+            스크립트를 가져다 쓰고, HeyMoa 화면으로 가는 주소를 건네줍니다」가 어렵다는 말을 들었다). 사실은 MCP
+            도구 그대로다: 프로젝트 항목 · 열린 할 일 · 회의 목록 · 회의 스크립트를 찾아보고, 화면 열기
+            (`ScreenTools.open_screen`)는 주소만 돌려준다 — 그래서 「화면을 열어 준다」가 아니라 「링크를 알려 준다」.
+            「끊는다」는 설정 화면의 「회수」다(창 안 버튼 · 아래 쪽지가 그 낱말을 그대로 쓴다).
           */}
-          연결할 때 고른 워크스페이스의{" "}
-          <span className="whitespace-nowrap">결정·할&nbsp;일</span>과 회의 대화&nbsp;기록을 읽어 갑니다.
-          고치거나 지우지는 못합니다. 대화&nbsp;기록에는 누가 무슨 말을 했는지도 들어 있습니다.
-        </RoadHead>
+          Claude&nbsp;Code나 Codex 같은 AI 도구에 HeyMoa를 연결해 두면, 일하다가 회의에서 정한 것 ·
+          할&nbsp;일 · 회의 기록을 그 자리에서 찾아보고 필요한 HeyMoa 화면 링크도 알려 줍니다. 연결은 직접 만들고,
+          언제든 끊을 수 있습니다.
+        </TileHead>
 
         <figure className="relative m-0 mt-8 lg:mt-9">
           <figcaption className="sr-only">
             그림: 설정의 외부 에이전트 화면에 있는 연결 한 줄(예시). 노트북 Claude Code가 연결됨
-            상태이고, 펼친 사용 내역에는 언제 어떤 도구로 몇 건을 읽었는지가 남습니다. 회수를 누르면
+            상태이고, 펼친 사용 내역에는 언제 무엇을 몇 건 가져갔는지가 남습니다. 회수를 누르면
             다음 요청부터 막히고 되돌릴 수 없습니다.
           </figcaption>
           <div className="tv-rslide relative" style={vars({ "--d": "100ms" })}>
@@ -678,7 +683,7 @@ function ReadRoad() {
           </div>
           <div aria-hidden className="mt-7 hidden items-end gap-1 pl-14 lg:flex">
             <Scribble kind="arrow" draw="reveal" delay={1200} rotate={-68} className="h-[32px] w-[50px]" />
-            <Hand>언제 무엇을 몇 건 읽었는지 남아요</Hand>
+            <Hand>언제 무엇을 몇 건 가져갔는지 남아요</Hand>
           </div>
           {/* 쪽지가 창 아래로 삐져나온 만큼 자리를 둔다(모바일 · 태블릿). */}
           <div aria-hidden className="h-14 lg:hidden" />
@@ -691,7 +696,7 @@ function ReadRoad() {
         <Notch className="-top-[15px] -right-3.5 lg:top-auto lg:right-auto lg:-bottom-3.5 lg:-left-[15px]" />
         <p aria-hidden className="m-0 text-center">
           <span className="block text-[12px] font-extrabold tracking-[0.14em] text-[var(--tv-ink)]">
-            읽기 전용 출입증
+            외부 에이전트 출입증
           </span>
           <span className="mt-0.5 block font-mono text-[11px] text-[var(--tv-muted)]">
             No. hm_k4Tz9Wq…
@@ -728,19 +733,19 @@ export function Safety() {
       <div className={CONTAINER}>
         <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-16">
           <h2 id="safety-title" className={H2}>
-            에이전트가 회의 내용을 내가 쓰는 다른 도구로 가져가는 길은{" "}
-            <span className={MARKER_REVEAL}>두 개</span>입니다
+            회의 내용이{" "}
+            <span className={cn(MARKER_REVEAL, "whitespace-nowrap")}>쓰던 도구까지</span> 이어집니다
           </h2>
           <p className={`${LEAD} lg:pt-3`}>
-            내 에이전트가 Linear나 GitHub에 쓸 때, 그리고 Claude&nbsp;Code 같은 다른 AI 도구가 읽어 갈
-            때입니다. 어느 쪽이든 내가 열어 줘야 열립니다.
+            {/* 두 타일이 무엇을 하는지 가르지 않는다 — 어디서 부르는지만. 승인 · 회수 같은 규칙은 각 타일이 말한다. */}
+            HeyMoa 안의 내 에이전트도, 연결해 둔 Claude&nbsp;Code · Codex도 회의를 보고 일합니다.
           </p>
         </Reveal>
 
         {/* 트랙을 0 까지 줄 수 있게 둔다 — auto 트랙이면 창의 최소 폭이 타일을 320 화면 밖으로 민다. */}
         <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-6 lg:mt-14">
-          <WriteRoad />
-          <ReadRoad />
+          <AgentTile />
+          <ExternalTile />
         </div>
       </div>
     </section>

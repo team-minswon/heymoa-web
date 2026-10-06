@@ -31,8 +31,10 @@ describe("HeyMoa legal pages", () => {
       screen.getByRole("heading", { name: "이용약관", level: 1 })
     ).toBeInTheDocument();
     expect(screen.getByText(/참석자 고지와 동의/)).toBeVisible();
+    // 좁은 화면의 접는 목차(`<details>`)와 넓은 화면의 sticky 목차가 같은 목록을 따로 그린다. 브라우저에서는
+    // 늘 한쪽이 display:none 이지만 jsdom 은 Tailwind CSS 를 모르니 둘 다 보인다.
     expect(
-      screen.getByRole("navigation", { name: "이용약관 목차" })
-    ).toBeInTheDocument();
+      screen.getAllByRole("navigation", { name: "이용약관 목차" })
+    ).toHaveLength(2);
   });
 });

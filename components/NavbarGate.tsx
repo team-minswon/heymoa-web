@@ -3,7 +3,10 @@
 import { usePathname } from "next/navigation";
 
 import { TopBar } from "@/components/heymoa/landing/top-bar";
-import { isChromelessRoute } from "@/lib/routes/app-route";
+import {
+  isChromelessRoute,
+  isLandingChromeRoute,
+} from "@/lib/routes/app-route";
 
 export function NavbarGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,9 +15,9 @@ export function NavbarGate({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // 랜딩(`/`)은 마케팅 Navbar 대신 자기 상단 바를 세운다. 이 자리(`<main>` 밖, 건너뛰기 링크 뒤)여야
-  // 「본문으로 건너뛰기」가 이 바도 건너뛴다. 푸터는 그대로 쓴다.
-  if (pathname === "/") {
+  // 랜딩 · 약관 · 개인정보 · 데스크톱 다운로드는 마케팅 Navbar 대신 랜딩 상단 바를 세운다(경로는 `isLandingChromeRoute` 한 곳).
+  // 이 자리(`<main>` 밖, 건너뛰기 링크 뒤)여야 「본문으로 건너뛰기」가 이 바도 건너뛴다.
+  if (isLandingChromeRoute(pathname)) {
     return <TopBar />;
   }
 

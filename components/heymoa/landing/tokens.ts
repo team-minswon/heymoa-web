@@ -34,8 +34,6 @@ export const TV_VARS = {
   "--tv-mint-deep": "#9fd9bf",
   "--tv-peach": "#ffe3d6",
   "--tv-pop": "#ffd23f",
-  /** 맨 끝 예시 고지 띠. 바로 아래 마케팅 푸터의 파도 위 면(`.landing-footer` 배경)과 같은 값이라 띠가 파도로 이어진다. */
-  "--tv-paper": "#faf8f5",
 } as CSSProperties;
 
 /** 사용자 정의 속성(`--i` 순번 · `--d` 지연 · `--n` 반복)을 style 로 넘길 때. */

@@ -56,15 +56,9 @@ export function Navbar() {
     });
   }, [isWorkspacesError, refetchWorkspaces]);
 
+  // `/` 는 `NavbarGate` 가 랜딩 상단 바를 세워 여기 오지 않는다 — 구간 링크는 늘 랜딩으로 이동한다.
   const handleScroll = (id: string) => {
-    if (pathname === "/") {
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth" });
-      }
-    } else {
-      router.push(`/#${id}`);
-    }
+    router.push(`/#${id}`);
   };
 
   return (
@@ -98,13 +92,13 @@ export function Navbar() {
             onClick={() => handleScroll("meetings")}
             className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
-            기능 소개
+            회의 정리
           </button>
           <button
             onClick={() => handleScroll("evidence")}
             className="min-h-6 cursor-pointer transition hover:text-[var(--el-ink)]"
           >
-            작동 방식
+            근거 확인
           </button>
         </nav>
 

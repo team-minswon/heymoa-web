@@ -169,19 +169,6 @@ function DocSection({
 
 const BODY_X = "px-4 sm:px-5";
 
-/**
- * 담당 칸 이름 위의 형광펜 — 창 위 강조(규칙상 창 안에 노랑이 서는 몇 안 되는 예외). 이름 글자는
- * `app.tsx` 의 `Assignee` 가 그리므로, 감싼 줄 안의 이름 칸(`span.truncate`, 할 일 줄 안에서 그것
- * 하나)에 `MARKER` 와 같은 칠을 얹는다. 카드가 화면에 들어오면 왼쪽에서 오른쪽으로 칠하고, 모션을
- * 줄이거나 JS 가 없으면 처음부터 칠해져 있다(`tv-rmark` 와 같은 규칙). 줄 높이 · 줄바꿈과 상관없이
- * 글자 자체에 붙는다 — 좌표로 얹으면 320 에서 기한 칩이 다음 줄로 내려갈 때 어긋난다.
- */
-const NAME_MARKER = [
-  "[&_span.truncate]:-mx-1 [&_span.truncate]:px-1 [&_span.truncate]:bg-[linear-gradient(var(--tv-pop),var(--tv-pop))] [&_span.truncate]:bg-no-repeat [&_span.truncate]:[background-size:100%_0.42em] [&_span.truncate]:[background-position:0_88%]",
-  "motion-safe:[&_span.truncate]:transition-[background-size] motion-safe:[&_span.truncate]:duration-[600ms] motion-safe:[&_span.truncate]:delay-[900ms]",
-  "motion-safe:[[data-reveal]:not([data-shown])_&_span.truncate]:[background-size:0_0.42em]",
-].join(" ");
-
 function KickoffCard() {
   return (
     <MeetingCard
@@ -228,14 +215,12 @@ function KickoffCard() {
           <DecisionRow text="결제 화면 개편은 다음 스프린트로 미룬다" at="00:14" />
         </DocSection>
         <DocSection title="할 일" count={2} className="mt-7">
-          <div className={NAME_MARKER}>
-            <TaskRow
-              text="온보딩 이탈 로그 수집 초안을 올린다"
-              who={{ name: "정우재" }}
-              due="9월 3일 (목)"
-              editable={false}
-            />
-          </div>
+          <TaskRow
+            text="온보딩 이탈 로그 수집 초안을 올린다"
+            who={{ name: "정우재" }}
+            due="9월 3일 (목)"
+            editable={false}
+          />
           {/* 확정 뒤라 기한 칸이 비면 아무것도 서지 않는다(`due-cell.tsx` 비편집). */}
           <TaskRow
             text="로그 수집 작업을 Linear 이슈로 내보낸다"
@@ -244,28 +229,7 @@ function KickoffCard() {
             editable={false}
           />
         </DocSection>
-
-        <p className="sr-only">담당 칸의 정우재는 화자 D에 붙인 이름입니다.</p>
       </div>
-      {/*
-        창 밖 손글씨 — 카드 아래 모서리에 매단다(창 몸통 안에 두면 검토 문서의 마지막 줄로 읽힌다).
-        이 카드는 창 위에 쪽지(「검토 완료 누른 뒤」)가 이미 있어 아래는 쪽지 대신 손글씨다(나머지 두
-        카드는 아래 모서리가 쪽지라 세 장이 같은 모양으로 늘어서지도 않는다). 화살표 대신 같은
-        노란 칠로 이어 준다 — 위 할 일 줄의 「정우재」에도 같은 칠이 있다. 아래로 걸친 높이는 좁은 화면
-        넘김 상자의 아래 여백(pb-14) 안에 든다.
-        「화자 D → 정우재」 짝만 둔다. 지난 판의 둘째 줄 「이름은 회의 뒤에 직접 붙여요」는 바로 다음 근거
-        구간 캡션(「그림 속 이름은 화자에 직접 이름을 붙인 뒤의 모습입니다…」)과 같은 고지라 그 캡션에 맡겼다.
-        「담당 칸도 같이 바뀌어요」 같은 다른 말은 앱이 화자 이름을 붙이면 담당이 곧장 바뀌는지(요약을 다시
-        만들어야 하는지) 확인하지 못해 쓰지 않는다. sr-only 도 고지 없이 이 짝만 풀어 읽는다.
-      */}
-      <span aria-hidden className="pointer-events-none absolute top-full left-5 z-10 mt-2">
-        <Hand>
-          화자 D →{" "}
-          <span className={MARKER_REVEAL} style={vars({ "--d": "1200ms" })}>
-            정우재
-          </span>
-        </Hand>
-      </span>
     </MeetingCard>
   );
 }
