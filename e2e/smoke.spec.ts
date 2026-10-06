@@ -2314,6 +2314,17 @@ test("reassigns a single utterance without touching the rest of the speaker", as
 }) => {
   await page.goto(TRANSCRIPT_URL);
 
+  await expect(
+    page.getByTestId("archive-transcript-block").first()
+  ).toBeVisible();
+  // Long transcripts mount only visible rows; these assertions compare distant rows.
+  const fullText = page.getByRole("button", { name: "전체 텍스트 보기" });
+  if (await fullText.isVisible()) {
+    // Full DOM fallback intentionally retains the large-transcript render cost.
+    test.setTimeout(60_000);
+    await fullText.click();
+  }
+
   const plain = transcriptLine(page, PLAIN_LINE);
   const overridden = transcriptLine(page, OVERRIDDEN_LINE);
 
@@ -2344,6 +2355,17 @@ test("warns before a label-wide assign wipes per-utterance fixes", async ({
   page,
 }) => {
   await page.goto(TRANSCRIPT_URL);
+
+  await expect(
+    page.getByTestId("archive-transcript-block").first()
+  ).toBeVisible();
+  // Long transcripts mount only visible rows; these assertions compare distant rows.
+  const fullText = page.getByRole("button", { name: "전체 텍스트 보기" });
+  if (await fullText.isVisible()) {
+    // Full DOM fallback intentionally retains the large-transcript render cost.
+    test.setTimeout(60_000);
+    await fullText.click();
+  }
 
   const plain = transcriptLine(page, PLAIN_LINE);
   const overridden = transcriptLine(page, OVERRIDDEN_LINE);
@@ -2449,4 +2471,45 @@ test("keeps the speaker sheet shaded in both note display modes", async ({
       page.locator(`[data-surface="${view === "full" ? "full" : "sheet"}"]`)
     ).toBeVisible();
   }
+});
+
+test("searches the full transcript locally without stealing input focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(TRANSCRIPT_URL);
+  await expect(
+    page.getByTestId("archive-transcript-block").first()
+  ).toBeVisible();
+  let requests = 0;
+  page.on("request", (request) => {
+    if (request.url().includes(`/v1/notes/${DIARIZED_NOTE_ID}/transcript`))
+      requests++;
+  });
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  const input = page.getByRole("textbox", { name: "전사 검색어" });
+  await input.fill(OVERRIDDEN_LINE);
+  await input.press("Enter");
+  await expect(transcriptLine(page, OVERRIDDEN_LINE)).toBeInViewport();
+  await expect(input).toBeFocused();
+  await expect(page.getByRole("search", { name: "전사 검색" })).toContainText(
+    "1/1"
+  );
+  await input.press("Shift+Enter");
+  await expect(input).toBeFocused();
+  expect(
+    await page
+      .getByRole("search")
+      .evaluate((e) => e.scrollWidth <= e.clientWidth)
+  ).toBe(true);
+  await input.fill("없는 발화 검색어 987654321");
+  await expect(
+    page.getByRole("button", { name: "다음 검색 결과" })
+  ).toBeDisabled();
+  await input.press("Escape");
+  await expect(input).toBeHidden();
+  await expect(
+    page.getByRole("tab", { name: "스크립트", exact: true })
+  ).toBeVisible();
+  expect(requests).toBe(0);
 });

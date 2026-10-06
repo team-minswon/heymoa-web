@@ -43,6 +43,8 @@ export type TranscriptFocus = {
   focusSegmentId: string | null;
   /** 하이라이트가 끝났다. 소유자가 `focusSegmentId`를 비운다. */
   onFocusHandled: () => void;
+  /** 검색 결과 이동은 입력창의 키보드 포커스를 유지한다. */
+  focusDestination?: boolean;
 };
 
 /**
@@ -58,13 +60,19 @@ export type TranscriptFocus = {
  */
 export function useTranscriptFocus(
   segments: TranscriptPresentationSegment[],
-  { focusSegmentId, onFocusHandled }: TranscriptFocus
+  { focusSegmentId, onFocusHandled, focusDestination = true }: TranscriptFocus,
+  scrollToSegment?: (segmentId: string) => void,
+  requestKey = 0
 ) {
   const focusedSegment =
     segments.find((segment) => segment.segmentId === focusSegmentId) ?? null;
   const focusedSegmentId = focusedSegment?.segmentId ?? null;
   const pen = penOf(focusedSegment?.text ?? "");
   const nodeRef = useRef<HTMLElement | null>(null);
+  const scrollToSegmentRef = useRef(scrollToSegment);
+  useEffect(() => {
+    scrollToSegmentRef.current = scrollToSegment;
+  }, [scrollToSegment]);
 
   useEffect(() => {
     // 아직 그 세그먼트가 없다 — 전사가 로딩 중이면 도착한 뒤 다시 돈다.
@@ -75,7 +83,9 @@ export function useTranscriptFocus(
     const frame = requestAnimationFrame(() => {
       const node = nodeRef.current;
       if (!node) return;
-      node.scrollIntoView?.({ block: "center" });
+      if (scrollToSegmentRef.current)
+        scrollToSegmentRef.current(focusedSegmentId);
+      else node.scrollIntoView?.({ block: "center" });
       /**
        * **눈으로 하는 일을 키보드·스크린리더에도 해 준다.** 형광은 칠일 뿐이라, 각주를 눌러
        * 준 인용 버튼이 탭과 함께 사라지면 포커스는 `<body>`로 떨어졌다 — 보지 않는 사람에게
@@ -85,7 +95,7 @@ export function useTranscriptFocus(
        * 테두리는 브라우저의 `:focus-visible` 판정에 맡긴다 — 마우스로 눌러 온 사람에게는
        * 안 뜨고 키보드로 온 사람에게만 뜬다. 스크롤은 위에서 이미 맞췄으므로 막는다.
        */
-      node.focus?.({ preventScroll: true });
+      if (focusDestination) node.focus?.({ preventScroll: true });
     });
     // **획이 다 지워지는 순간에 비운다.** 안 비우면 전사 탭을 다시 열 때마다 같은 자리로
     // 끌려간다. 긋기·머물기·지우기의 합이 곧 이 표시의 수명이고, 그 값을 `.evidence-mark`
@@ -95,7 +105,13 @@ export function useTranscriptFocus(
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [focusedSegmentId, pen.strokeMs, onFocusHandled]);
+  }, [
+    focusedSegmentId,
+    pen.strokeMs,
+    onFocusHandled,
+    requestKey,
+    focusDestination,
+  ]);
 
   const segmentRef = useCallback(
     (segmentId: string) =>

@@ -1,6 +1,7 @@
 "use client";
 
- 
+import { useEffect, useRef } from "react";
+
 import { motion, useReducedMotion } from "motion/react";
 import { CornerDownRight, RotateCcw, SkipForward, Users } from "lucide-react";
 
@@ -18,7 +19,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatSpeakingTime, type SpeakerStat } from "@/lib/notes/speaker-stats";
+import {
+  formatSpeakingTime,
+  type SpeakerStat,
+} from "@/lib/notes/speaker-stats";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { cn } from "@/lib/utils";
@@ -40,10 +44,7 @@ function Sparkline({ timeline, dim }: { timeline: number[]; dim: boolean }) {
   return (
     <div
       aria-hidden
-      className={cn(
-        "flex h-6 items-end gap-px",
-        dim && "opacity-45"
-      )}
+      className={cn("flex h-6 items-end gap-px", dim && "opacity-45")}
     >
       {timeline.map((value, bin) => (
         <span
@@ -161,16 +162,36 @@ export function SpeakerPanel({
   const unassigned = stats.filter((stat) => stat.unassigned);
   const assigned = stats.filter((stat) => !stat.unassigned);
 
+  const pendingJump = useRef<string | null>(null);
+  const skipReturnFocus = useRef(false);
+  useEffect(() => {
+    if (open) {
+      pendingJump.current = null;
+      skipReturnFocus.current = false;
+    }
+  }, [open]);
   const jump = (segmentId: string) => {
+    pendingJump.current = segmentId;
+    skipReturnFocus.current = true;
     onOpenChange(false);
-    onJump(segmentId);
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      onOpenChangeComplete={(next) => {
+        if (!next && pendingJump.current) {
+          const segmentId = pendingJump.current;
+          pendingJump.current = null;
+          onJump(segmentId);
+        }
+      }}
+    >
       {/* 오른쪽 모서리만 둥글다 — 제품 면의 「캔버스 위에 뜬 둥근 패널」과 같은 말이고,
           화면 가장자리에 닿는 왼쪽은 각진 채로 둬야 붙어 있는 것으로 읽힌다. */}
       <SheetContent
+        finalFocus={() => !skipReturnFocus.current}
         side="left"
         className="w-[min(21rem,88vw)] gap-0 rounded-r-panel sm:max-w-none"
       >
@@ -262,9 +283,7 @@ export function SpeakerTools({
           <Users data-icon="inline-start" />
           화자
         </TooltipTrigger>
-        <TooltipContent side="bottom">
-          누가 얼마나 말했는지 보기
-        </TooltipContent>
+        <TooltipContent side="bottom">누가 얼마나 말했는지 보기</TooltipContent>
       </Tooltip>
 
       {/* **미지정이 있을 때만 선다.** 다 붙인 회의에서 「다음 미지정」은 누를 곳이 없는

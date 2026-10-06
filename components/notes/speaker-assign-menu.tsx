@@ -84,7 +84,8 @@ export type SpeakerTarget =
  * 둘 다 없는 후보는 만들 수 없지만(타입이 못 막는다) 그때는 `null` 을 돌려 아무것도 안 한다.
  */
 export function targetOf(candidate: SpeakerCandidate): SpeakerTarget | null {
-  if (candidate.participantId) return { participantId: candidate.participantId };
+  if (candidate.participantId)
+    return { participantId: candidate.participantId };
   if (candidate.userId) return { userId: candidate.userId };
   if (candidate.guestId) return { guestId: candidate.guestId };
   return null;
@@ -96,7 +97,10 @@ const searchTextOf = (candidate: SpeakerCandidate) =>
 
 /** 참여 기록이 없는 후보도 있어 목록 키를 따로 만든다. */
 export const candidateKey = (candidate: SpeakerCandidate) =>
-  candidate.participantId ?? candidate.userId ?? candidate.guestId ?? candidate.name;
+  candidate.participantId ??
+  candidate.userId ??
+  candidate.guestId ??
+  candidate.name;
 
 /** 지정 범위. 기본은 라벨 전체다 — 대개 그 화자의 말 전부가 같은 사람이다. */
 export type AssignScope = "label" | "segment";
@@ -129,6 +133,7 @@ export function SpeakerAssignMenu({
   candidatesPending = false,
   onRetryCandidates,
   onOpen,
+  onMenuOpenChange,
   overridden = false,
   onAssign,
   onCreateGuest,
@@ -152,6 +157,7 @@ export function SpeakerAssignMenu({
    * **하나 더 만들어진다.**
    */
   onOpen?: () => void;
+  onMenuOpenChange?: (open: boolean) => void;
   /**
    * 이 발화에 **개별 지정이 걸려 있나.** 걸려 있을 때만 「개별 지정 해제」를 누를 수 있다 —
    * 없는 것을 해제하는 버튼이 서 있으면 무엇이 되돌려지는지가 거짓말이 된다.
@@ -191,6 +197,7 @@ export function SpeakerAssignMenu({
    */
   const close = () => {
     setOpen(false);
+    onMenuOpenChange?.(false);
     setSearch("");
     setTyped("");
     setScope("label");
@@ -249,6 +256,7 @@ export function SpeakerAssignMenu({
       onOpenChange={(next) => {
         if (next) {
           setOpen(true);
+          onMenuOpenChange?.(true);
           onOpen?.();
           return;
         }
@@ -272,6 +280,13 @@ export function SpeakerAssignMenu({
           <button
             type="button"
             data-testid="speaker-assign-trigger"
+            onKeyDown={(event) => {
+              if (open && event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                close();
+              }
+            }}
             aria-label={`${identity.displayName} 화자 지정`}
             className="mb-1 -mx-1 flex items-center rounded-chip px-1 transition-colors hover:bg-[var(--el-canvas-soft)]"
           >
@@ -279,7 +294,17 @@ export function SpeakerAssignMenu({
           </button>
         }
       />
-      <ComboboxContent align="start" className="w-64">
+      <ComboboxContent
+        align="start"
+        className="w-64"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            close();
+          }
+        }}
+      >
         <ComboboxInput
           aria-label="이름으로 참석자 검색"
           placeholder="이름으로 검색"
@@ -287,7 +312,10 @@ export function SpeakerAssignMenu({
           onTypedValueChange={setTyped}
         />
         {candidatesFailed ? (
-          <div role="alert" className="px-2 py-1.5 text-[13px] text-[var(--el-danger)]">
+          <div
+            role="alert"
+            className="px-2 py-1.5 text-[13px] text-[var(--el-danger)]"
+          >
             후보를 불러오지 못했습니다.{" "}
             <button
               type="button"
@@ -299,7 +327,9 @@ export function SpeakerAssignMenu({
           </div>
         ) : null}
         <ComboboxEmpty>
-          {candidatesPending ? "후보를 불러오는 중입니다…" : "일치하는 참석자가 없습니다."}
+          {candidatesPending
+            ? "후보를 불러오는 중입니다…"
+            : "일치하는 참석자가 없습니다."}
         </ComboboxEmpty>
         <ComboboxList>
           {(candidate: SpeakerCandidate) => (
@@ -309,13 +339,13 @@ export function SpeakerAssignMenu({
               className="gap-2"
             >
               {/**
-                * 전사의 칩과 **같은 규칙**이다 (`speakerAvatarName`). 이미 화자로 붙어
-                * 있으면 거기 얼굴이라, 화면에서 그 얼굴로 보던 사람을 알아본다.
-                *
-                * **아직 아무 데도 아닌 사람에게 이 화자의 얼굴을 미리 보여주면 안 된다.**
-                * 그러면 아무도 안 붙은 회의에서 후보 전원이 같은 얼굴로 서서, 얼굴이
-                * 아무것도 안 가리키는 장식이 된다. 그 사람 것으로 고른다.
-                */}
+               * 전사의 칩과 **같은 규칙**이다 (`speakerAvatarName`). 이미 화자로 붙어
+               * 있으면 거기 얼굴이라, 화면에서 그 얼굴로 보던 사람을 알아본다.
+               *
+               * **아직 아무 데도 아닌 사람에게 이 화자의 얼굴을 미리 보여주면 안 된다.**
+               * 그러면 아무도 안 붙은 회의에서 후보 전원이 같은 얼굴로 서서, 얼굴이
+               * 아무것도 안 가리키는 장식이 된다. 그 사람 것으로 고른다.
+               */}
               <PersonAvatar
                 name={speakerAvatarName(candidate.assignedLabels ?? [], {
                   hashKey: personAvatarKey(candidate),

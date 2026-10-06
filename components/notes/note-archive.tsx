@@ -1,8 +1,11 @@
 "use client";
 
+import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TextCursorInput } from "lucide-react";
 
+import { TranscriptSearch } from "@/components/notes/transcript-search";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -276,8 +279,14 @@ export const NoteArchive = memo(function NoteArchive({
   const candidateQueryOptions = {
     query: { enabled: Boolean(workspaceId), refetchOnMount: "always" as const },
   };
-  const membersQuery = useGetWorkspaceMembers(workspaceId ?? "", candidateQueryOptions);
-  const guestsQuery = useGetWorkspaceGuests(workspaceId ?? "", candidateQueryOptions);
+  const membersQuery = useGetWorkspaceMembers(
+    workspaceId ?? "",
+    candidateQueryOptions
+  );
+  const guestsQuery = useGetWorkspaceGuests(
+    workspaceId ?? "",
+    candidateQueryOptions
+  );
   const membersData = membersQuery.data;
   const guestsData = guestsQuery.data;
   /**
@@ -418,7 +427,9 @@ export const NoteArchive = memo(function NoteArchive({
     () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetNoteQueryKey(noteId) }),
-        queryClient.invalidateQueries({ predicate: (query) => isWorkspaceGuestsQueryKey(query.queryKey) }),
+        queryClient.invalidateQueries({
+          predicate: (query) => isWorkspaceGuestsQueryKey(query.queryKey),
+        }),
         invalidateNoteLists(queryClient),
       ]),
     [queryClient, noteId]
@@ -448,7 +459,8 @@ export const NoteArchive = memo(function NoteArchive({
         refreshTranscript(),
         refreshGuestSources(),
         queryClient.invalidateQueries({
-          predicate: (query) => isSpeakerAssigneeQueryKey(noteId, query.queryKey),
+          predicate: (query) =>
+            isSpeakerAssigneeQueryKey(noteId, query.queryKey),
         }),
       ]),
     [refreshTranscript, refreshGuestSources, queryClient, noteId]
@@ -603,17 +615,26 @@ export const NoteArchive = memo(function NoteArchive({
    * 취소해도 **임시 참여자와 참여 기록이 이미 영구히 생긴 뒤**다.
    */
   const requestNewGuest = useCallback(
-    async (label: string, segmentId: string, displayName: string, scope: AssignScope) => {
+    async (
+      label: string,
+      segmentId: string,
+      displayName: string,
+      scope: AssignScope
+    ) => {
       const overrides = scope === "label" ? await overrideCountOf(label) : 0;
       if (overrides === 0) {
         void assignNewGuest(label, segmentId, displayName, scope);
         return;
       }
-      setPendingLabelAssign({ label, target: null, createName: displayName, overrides });
+      setPendingLabelAssign({
+        label,
+        target: null,
+        createName: displayName,
+        overrides,
+      });
     },
     [overrideCountOf, assignNewGuest]
   );
-
 
   const { viewportRef, away, scrollToBottom } = useAwayFromBottom();
   /**
@@ -630,27 +651,209 @@ export const NoteArchive = memo(function NoteArchive({
   );
   // 「prop 이 바뀌면 상태를 맞춘다」 — effect 가 아니라 렌더 중에 한다. effect 로 하면 한 번
   // 옛 값으로 그린 뒤 두 번째 렌더에서 고쳐, 지나간 인용의 형광이 한 프레임 스친다.
-  const [lastCitation, setLastCitation] = useState<string | null>(focusSegmentId);
+  const [preserveSearchFocus, setPreserveSearchFocus] = useState(false);
+  const [lastCitation, setLastCitation] = useState<string | null>(
+    focusSegmentId
+  );
   if (focusSegmentId !== lastCitation) {
     setLastCitation(focusSegmentId);
-    if (focusSegmentId) setFocusedSegmentId(focusSegmentId);
+    if (focusSegmentId) {
+      setFocusedSegmentId(focusSegmentId);
+      setPreserveSearchFocus(false);
+    }
   }
   const clearFocus = useCallback(() => {
     setFocusedSegmentId(null);
     onFocusHandled();
   }, [onFocusHandled]);
+  const [focusRequest, setFocusRequest] = useState(0);
   const jumpToSegment = useCallback(
-    (segmentId: string) => {
+    (segmentId: string, fromSearch = false) => {
+      setPreserveSearchFocus(fromSearch);
       // 소유자가 든 옛 인용을 함께 비운다. 안 비우면 그 값이 남아 위 effect 가 다시 돌 때
       // 되살아난다.
       onFocusHandled();
       setFocusedSegmentId(segmentId);
+      setFocusRequest((value) => value + 1);
     },
     [onFocusHandled]
   );
+  const searchJump = useCallback(
+    (id: string) => jumpToSegment(id, true),
+    [jumpToSegment]
+  );
+  const [fullText, setFullText] = useState(false);
+  const viewAnchor = useRef<{ id: string; offset: number } | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [listOffset, setListOffset] = useState(0);
+  const [anchorRevision, setAnchorRevision] = useState(0);
+  const [openMenuSegment, setOpenMenuSegment] = useState<string | null>(null);
+  const [keyboardSegment, setKeyboardSegment] = useState<string | null>(null);
+  const virtualized =
+    rows.length > 200 &&
+    !fullText &&
+    process.env.NEXT_PUBLIC_TRANSCRIPT_VIRTUALIZATION !== "disabled";
+  const rowIndexes = useMemo(
+    () =>
+      new Map(
+        rows.map((row, index) => [
+          row.type === "segment" ? row.segment.segmentId : row.gap.gapId,
+          index,
+        ])
+      ),
+    [rows]
+  );
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    enabled: virtualized,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: () => 100,
+    overscan: 8,
+    scrollMargin: listOffset,
+    getItemKey: (index) =>
+      rows[index].type === "segment"
+        ? rows[index].segment.segmentId
+        : rows[index].gap.gapId,
+    rangeExtractor: (range) =>
+      [
+        ...new Set([
+          ...defaultRangeExtractor(range),
+          ...[focusedSegmentId, openMenuSegment, keyboardSegment].flatMap(
+            (id) => {
+              const index = id ? rowIndexes.get(id) : undefined;
+              return index === undefined ? [] : [index];
+            }
+          ),
+        ]),
+      ].sort((a, b) => a - b),
+  });
+  useEffect(() => {
+    // ResizeObserver can precede the scroll event after a jump. Compensating
+    // from a stale offset would undo the user's new destination.
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (
+      item,
+      _delta,
+      instance
+    ) => {
+      const actual = viewportRef.current?.scrollTop ?? 0;
+      return (
+        Math.abs(actual - (instance.scrollOffset ?? 0)) < 1 &&
+        item.end <= actual &&
+        instance.scrollDirection !== "backward"
+      );
+    };
+    return () => {
+      virtualizer.shouldAdjustScrollPositionOnItemSizeChange = undefined;
+    };
+  }, [virtualizer, viewportRef]);
+  const captureAnchor = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const bounds = viewport.getBoundingClientRect();
+    const toolsBottom =
+      viewport
+        .querySelector('[data-testid="transcript-tools"]')
+        ?.getBoundingClientRect().bottom ?? bounds.top;
+    const visible = Array.from(
+      viewport.querySelectorAll<HTMLElement>("[data-segment-id]")
+    ).find((node) => {
+      const box = node.getBoundingClientRect();
+      return box.bottom > toolsBottom && box.top < bounds.bottom;
+    });
+    viewAnchor.current = visible?.dataset.segmentId
+      ? {
+          id: visible.dataset.segmentId,
+          offset: visible.getBoundingClientRect().top - toolsBottom,
+        }
+      : null;
+  }, [viewportRef]);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const list = listRef.current;
+    if (!virtualized || !viewport || !list) return;
+    let width = viewport.clientWidth;
+    const update = () => {
+      setListOffset(
+        Math.round(
+          list.getBoundingClientRect().top -
+            viewport.getBoundingClientRect().top +
+            viewport.scrollTop
+        )
+      );
+      if (width === viewport.clientWidth) return;
+      captureAnchor();
+      width = viewport.clientWidth;
+      virtualizer.measure();
+      setAnchorRevision((value) => value + 1);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(viewport);
+    const tools = viewport.querySelector('[data-testid="transcript-tools"]');
+    if (tools) observer.observe(tools);
+    return () => observer.disconnect();
+  }, [virtualized, virtualizer, viewportRef, captureAnchor]);
+  const toggleFullText = useCallback(() => {
+    captureAnchor();
+    setFullText((value) => !value);
+  }, [captureAnchor]);
+  useEffect(() => {
+    const anchor = viewAnchor.current;
+    const viewport = viewportRef.current;
+    if (!anchor || !viewport) return;
+    viewAnchor.current = null;
+    const index = rowIndexes.get(anchor.id);
+    if (virtualized && index !== undefined)
+      virtualizer.scrollToIndex(index, { align: "start" });
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const node = viewport.querySelector<HTMLElement>(
+          `[data-segment-id="${CSS.escape(anchor.id)}"]`
+        );
+        if (!node) return;
+        const offset =
+          viewport.scrollTop +
+          node.getBoundingClientRect().top -
+          (viewport
+            .querySelector('[data-testid="transcript-tools"]')
+            ?.getBoundingClientRect().bottom ??
+            viewport.getBoundingClientRect().top) -
+          anchor.offset;
+        if (virtualized) virtualizer.scrollToOffset(offset);
+        else viewport.scrollTop = offset;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [
+    fullText,
+    virtualized,
+    virtualizer,
+    rowIndexes,
+    viewportRef,
+    anchorRevision,
+  ]);
+  const displayedRows = virtualized
+    ? virtualizer
+        .getVirtualItems()
+        .map((item) => ({ row: rows[item.index], item }))
+    : rows.map((row) => ({ row, item: null }));
+  const scrollToSegment = useCallback(
+    (segmentId: string) => {
+      const index = rowIndexes.get(segmentId);
+      if (index !== undefined)
+        virtualizer.scrollToIndex(index, { align: "center" });
+    },
+    [virtualizer, rowIndexes]
+  );
   const { segmentRef, isHighlighted, markProps } = useTranscriptFocus(
     segments,
-    { focusSegmentId: focusedSegmentId, onFocusHandled: clearFocus }
+    {
+      focusSegmentId: focusedSegmentId,
+      onFocusHandled: clearFocus,
+      focusDestination: !preserveSearchFocus,
+    },
+    virtualized ? scrollToSegment : undefined,
+    focusRequest
   );
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -732,7 +935,9 @@ export const NoteArchive = memo(function NoteArchive({
     try {
       const fresh = await transcriptQuery.refetch();
       const payload =
-        !fresh?.isError && fresh?.data?.status === 200 && fresh.data.data.success
+        !fresh?.isError &&
+        fresh?.data?.status === 200 &&
+        fresh.data.data.success
           ? fresh.data.data.data
           : null;
       if (!payload) {
@@ -749,39 +954,42 @@ export const NoteArchive = memo(function NoteArchive({
     }
   }, [transcriptQuery]);
 
-  const resetSpeakers = useCallback(async (labels: string[]) => {
-    setResetting(true);
-    try {
-      /**
-       * **한 번에 하나씩 보낸다.** 서버가 지정마다 그 노트 행을 `FOR UPDATE` 로 잠그므로
-       * (`AssignNoteSpeakerService` → `requireNoteProjectForUpdate`) 동시에 보내도 어차피
-       * 줄을 서고, 기다리는 동안 라벨 수만큼 커넥션과 트랜잭션을 쥔 채로 있게 된다.
-       * 병렬이 벌어 주는 것이 없고 비용만 있다.
-       *
-       * 하나가 실패해도 멈추지 않는다 — 되돌릴 수 있는 만큼은 되돌리는 편이 낫다.
-       */
-      let failed = 0;
-      for (const label of labels) {
-        try {
-          await resetSpeaker.mutateAsync({
-            noteId,
-            label,
-            data: { participantId: null },
-          });
-        } catch {
-          failed += 1;
+  const resetSpeakers = useCallback(
+    async (labels: string[]) => {
+      setResetting(true);
+      try {
+        /**
+         * **한 번에 하나씩 보낸다.** 서버가 지정마다 그 노트 행을 `FOR UPDATE` 로 잠그므로
+         * (`AssignNoteSpeakerService` → `requireNoteProjectForUpdate`) 동시에 보내도 어차피
+         * 줄을 서고, 기다리는 동안 라벨 수만큼 커넥션과 트랜잭션을 쥔 채로 있게 된다.
+         * 병렬이 벌어 주는 것이 없고 비용만 있다.
+         *
+         * 하나가 실패해도 멈추지 않는다 — 되돌릴 수 있는 만큼은 되돌리는 편이 낫다.
+         */
+        let failed = 0;
+        for (const label of labels) {
+          try {
+            await resetSpeaker.mutateAsync({
+              noteId,
+              label,
+              data: { participantId: null },
+            });
+          } catch {
+            failed += 1;
+          }
         }
+        // **부분 실패를 성공으로 보이지 않는다.** 몇은 되돌아가고 몇은 남은 화면을 말없이
+        // 내주면, 사람은 남은 이름을 「초기화가 안 지우는 것」으로 읽는다.
+        if (failed) toast.error(`화자 ${failed}개를 되돌리지 못했습니다.`);
+      } finally {
+        // **다시 읽을 때까지 잠근 채로 둔다.** PUT 이 끝난 순간에 풀면 화면은 아직 옛 이름을
+        // 들고 있고, 그 사이 누른 지정이 곧 도착할 초기화 결과에 덮인다.
+        await refreshAfterAssign();
+        setResetting(false);
       }
-      // **부분 실패를 성공으로 보이지 않는다.** 몇은 되돌아가고 몇은 남은 화면을 말없이
-      // 내주면, 사람은 남은 이름을 「초기화가 안 지우는 것」으로 읽는다.
-      if (failed) toast.error(`화자 ${failed}개를 되돌리지 못했습니다.`);
-    } finally {
-      // **다시 읽을 때까지 잠근 채로 둔다.** PUT 이 끝난 순간에 풀면 화면은 아직 옛 이름을
-      // 들고 있고, 그 사이 누른 지정이 곧 도착할 초기화 결과에 덮인다.
-      await refreshAfterAssign();
-      setResetting(false);
-    }
-  }, [resetSpeaker, noteId, refreshAfterAssign]);
+    },
+    [resetSpeaker, noteId, refreshAfterAssign]
+  );
 
   /**
    * 화자를 건드리는 요청이 하나라도 도는 중인가. **초기화와 지정이 같은 잠금을 쓴다** —
@@ -803,7 +1011,11 @@ export const NoteArchive = memo(function NoteArchive({
         away ? (
           <ScrollToBottomButton
             label="맨 아래로"
-            onClick={scrollToBottom}
+            onClick={() =>
+              virtualized
+                ? virtualizer.scrollToIndex(rows.length - 1, { align: "end" })
+                : scrollToBottom()
+            }
             // desktop에서는 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
             className="lg:bottom-20"
           />
@@ -824,7 +1036,25 @@ export const NoteArchive = memo(function NoteArchive({
           위에 붙인다. `-mt-5 pt-5`로 콘텐츠의 위 여백을 이 바가 들고 올라간다. 안 그러면
           지나가는 글이 바 위쪽 20px 틈으로 비친다.
         */}
-        <div className="sticky top-0 z-10 -mt-5 flex items-center justify-end gap-1 bg-white pt-5">
+        <TranscriptSearch
+          segments={transcriptQuery.isError ? [] : segments}
+          onJump={searchJump}
+        >
+          {rows.length > 200 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleFullText}
+              aria-label={fullText ? "빠르게 보기" : "전체 텍스트 보기"}
+              title={fullText ? "빠르게 보기" : "전체 텍스트 보기"}
+              className="max-sm:size-8 max-sm:px-0"
+            >
+              <TextCursorInput data-icon="inline-start" />
+              <span className="hidden sm:inline">
+                {fullText ? "빠르게 보기" : "전체 텍스트 보기"}
+              </span>
+            </Button>
+          ) : null}
           {/* 화자가 나뉘기 전에는 열어도 빈 목록이라 안 내보낸다.
 
               **다시 읽기가 실패했으면 같이 내린다.** TanStack 은 실패해도 옛 `data` 를 들고
@@ -867,161 +1097,199 @@ export const NoteArchive = memo(function NoteArchive({
               }
             />
           ) : null}
-        </div>
+        </TranscriptSearch>
 
         <div aria-label="회의 스크립트">
-            {transcriptQuery.isPending ? (
-              /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `mt-6`에 `h-24`/`h-28` 막대
+          {transcriptQuery.isPending ? (
+            /* **실제 행과 같은 격자·같은 여백이다.** 예전에는 `mt-6`에 `h-24`/`h-28` 막대
                  둘이라 248이었고 실제는 288이었다 — 첫 줄이 12px 아래에서 시작했고 행
                  경계도 없어 도착하는 순간 모양이 통째로 바뀌었다. */
-              <div className="mt-3" aria-label="대화 기록 불러오는 중">
-                {[0, 1, 2].map((row) => (
-                  <div
-                    key={row}
-                    className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
-                  >
-                    <Skeleton className="mt-1 h-3 w-10 rounded-chip" />
-                    {/* 실제 발화는 15px·leading-7이라 한 줄이 28이다 — 막대는 그 줄 안에 놓는다.
-                        막대 높이만 맞추면(16) 행이 12px 낮아진다. */}
-                    <div className="flex h-7 items-center">
-                      <Skeleton
-                        className="h-4 rounded-chip"
-                        style={{ width: TRANSCRIPT_SKELETON_WIDTHS[row] }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : transcriptQuery.isError ? (
-              // 실패를 "없음"으로 위장하지 않는다 — 아카이브가 TranscriptView의 재시도 경로를
-              // 대체하므로 그 실패 피드백을 여기서 되살린다.
-              <div role="alert" className="mt-6 space-y-2">
-                <p className="text-sm text-[var(--el-ink)]">
-                  스크립트를 불러오지 못했습니다.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-[30px]"
-                  onClick={() => void transcriptQuery.refetch()}
+            <div className="mt-3" aria-label="대화 기록 불러오는 중">
+              {[0, 1, 2].map((row) => (
+                <div
+                  key={row}
+                  className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
                 >
-                  다시 시도
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-3">
-                {rows.map((row) =>
-                  row.type === "gap" ? (
-                    <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
-                  ) : (
-                    <article
-                      key={row.segment.segmentId}
-                      ref={segmentRef(row.segment.segmentId)}
-                      /* 도착한 줄로 포커스를 옮긴다(`use-transcript-focus` 참조). */
-                      tabIndex={-1}
-                      data-testid="archive-transcript-block"
-                      data-focused={
-                        isHighlighted(row.segment.segmentId) || undefined
-                      }
-                      className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
-                    >
-                      <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
-                        {formatOffset(row.segment.startedAtMs)}
-                      </time>
-                      <div className="max-w-3xl">
-                        {speakerOf(
-                          row.segment.speakerLabel,
-                          row.segment.assignedParticipantId
-                        ) ? (
-                          <SpeakerAssignMenu
-                            identity={
-                              speakerOf(
-                                row.segment.speakerLabel,
+                  <Skeleton className="mt-1 h-3 w-10 rounded-chip" />
+                  {/* 실제 발화는 15px·leading-7이라 한 줄이 28이다 — 막대는 그 줄 안에 놓는다.
+                        막대 높이만 맞추면(16) 행이 12px 낮아진다. */}
+                  <div className="flex h-7 items-center">
+                    <Skeleton
+                      className="h-4 rounded-chip"
+                      style={{ width: TRANSCRIPT_SKELETON_WIDTHS[row] }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : transcriptQuery.isError ? (
+            // 실패를 "없음"으로 위장하지 않는다 — 아카이브가 TranscriptView의 재시도 경로를
+            // 대체하므로 그 실패 피드백을 여기서 되살린다.
+            <div role="alert" className="mt-6 space-y-2">
+              <p className="text-sm text-[var(--el-ink)]">
+                스크립트를 불러오지 못했습니다.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-[30px]"
+                onClick={() => void transcriptQuery.refetch()}
+              >
+                다시 시도
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div
+                ref={listRef}
+                className="mt-3 relative"
+                style={
+                  virtualized
+                    ? { height: virtualizer.getTotalSize() }
+                    : undefined
+                }
+              >
+                {displayedRows.map(({ row, item }) => (
+                  <div
+                    key={
+                      row.type === "gap" ? row.gap.gapId : row.segment.segmentId
+                    }
+                    data-index={item?.index}
+                    ref={item ? virtualizer.measureElement : undefined}
+                    style={
+                      item
+                        ? {
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            transform: `translateY(${item.start - listOffset}px)`,
+                          }
+                        : undefined
+                    }
+                  >
+                    {row.type === "gap" ? (
+                      <TranscriptGapRow key={row.gap.gapId} row={row.gap} />
+                    ) : (
+                      <article
+                        key={row.segment.segmentId}
+                        data-segment-id={row.segment.segmentId}
+                        onFocus={() =>
+                          setKeyboardSegment(row.segment.segmentId)
+                        }
+                        ref={segmentRef(row.segment.segmentId)}
+                        /* 도착한 줄로 포커스를 옮긴다(`use-transcript-focus` 참조). */
+                        tabIndex={-1}
+                        data-testid="archive-transcript-block"
+                        data-focused={
+                          isHighlighted(row.segment.segmentId) || undefined
+                        }
+                        className="grid grid-cols-[58px_1fr] gap-4 border-b border-[var(--el-hairline)] py-5 sm:grid-cols-[66px_1fr] sm:gap-6"
+                      >
+                        <time className="pt-1 font-mono text-[11px] tabular-nums text-[var(--el-muted-soft)]">
+                          {formatOffset(row.segment.startedAtMs)}
+                        </time>
+                        <div className="max-w-3xl">
+                          {speakerOf(
+                            row.segment.speakerLabel,
+                            row.segment.assignedParticipantId
+                          ) ? (
+                            <SpeakerAssignMenu
+                              identity={
+                                speakerOf(
+                                  row.segment.speakerLabel,
+                                  row.segment.assignedParticipantId
+                                )!
+                              }
+                              candidates={withAssignedLabels}
+                              creating={createGuest.isPending}
+                              // **지정이 도는 동안 다른 메뉴도 잠근다.**
+                              //
+                              // 만들기는 두 왕복(POST 뒤 PUT)이고, 그 사이 다른 발화에서 고른
+                              // 최신 선택이 먼저 저장되면 **늦게 도착한 PUT 이 그것을 되돌린다.**
+                              // `createGuest` 만 보면 POST 가 끝난 시점에 풀려 **첫 PUT 이 아직
+                              // 도는 동안** 다음 지정이 나가고, 둘의 도착 순서가 뒤집히면 화면이
+                              // 앞 선택으로 되돌아간다. 지정끼리도 같은 경쟁이라 함께 잠근다.
+                              disabled={speakerMutating}
+                              candidatesFailed={candidatesFailed}
+                              candidatesPending={candidatesPending}
+                              onRetryCandidates={retryCandidates}
+                              // 열 때 다시 읽는다. 그동안 `candidatesPending` 이 서서
+                              // 「＋ 추가」가 닫히므로, 낡은 캐시로 동명이인을 만들 창이 없다.
+                              onOpen={retryCandidates}
+                              onMenuOpenChange={(open) =>
+                                setOpenMenuSegment(
+                                  open ? row.segment.segmentId : null
+                                )
+                              }
+                              overridden={Boolean(
                                 row.segment.assignedParticipantId
-                              )!
-                            }
-                            candidates={withAssignedLabels}
-                            creating={createGuest.isPending}
-                            // **지정이 도는 동안 다른 메뉴도 잠근다.**
-                            //
-                            // 만들기는 두 왕복(POST 뒤 PUT)이고, 그 사이 다른 발화에서 고른
-                            // 최신 선택이 먼저 저장되면 **늦게 도착한 PUT 이 그것을 되돌린다.**
-                            // `createGuest` 만 보면 POST 가 끝난 시점에 풀려 **첫 PUT 이 아직
-                            // 도는 동안** 다음 지정이 나가고, 둘의 도착 순서가 뒤집히면 화면이
-                            // 앞 선택으로 되돌아간다. 지정끼리도 같은 경쟁이라 함께 잠근다.
-                            disabled={speakerMutating}
-                            candidatesFailed={candidatesFailed}
-                            candidatesPending={candidatesPending}
-                            onRetryCandidates={retryCandidates}
-                            // 열 때 다시 읽는다. 그동안 `candidatesPending` 이 서서
-                            // 「＋ 추가」가 닫히므로, 낡은 캐시로 동명이인을 만들 창이 없다.
-                            onOpen={retryCandidates}
-                            overridden={Boolean(
-                              row.segment.assignedParticipantId
-                            )}
-                            onAssign={(target, scope) => {
-                              if (scope === "segment") {
-                                // 해제가 아니라 지정이다 — 「이름 안 붙임」은 라벨 범위에만 있다
-                                if (!target) return;
+                              )}
+                              onAssign={(target, scope) => {
+                                if (scope === "segment") {
+                                  // 해제가 아니라 지정이다 — 「이름 안 붙임」은 라벨 범위에만 있다
+                                  if (!target) return;
+                                  assignSegment.mutate({
+                                    noteId,
+                                    segmentId: row.segment.segmentId,
+                                    data: target,
+                                  });
+                                  return;
+                                }
+                                void requestLabelAssign(
+                                  row.segment.speakerLabel!,
+                                  target
+                                );
+                              }}
+                              // **후보를 다 못 읽었으면 만들기를 아예 안 내보낸다.** 메뉴가
+                              // `onCreateGuest` 가 없으면 「＋ 추가」를 숨긴다.
+                              onCreateGuest={
+                                candidatesReady
+                                  ? (displayName, scope) =>
+                                      void requestNewGuest(
+                                        row.segment.speakerLabel!,
+                                        row.segment.segmentId,
+                                        displayName,
+                                        scope
+                                      )
+                                  : undefined
+                              }
+                              onClearOverride={() =>
                                 assignSegment.mutate({
                                   noteId,
                                   segmentId: row.segment.segmentId,
-                                  data: target,
-                                });
-                                return;
+                                  // 행을 비우는 게 아니라 지운다 — 다시 라벨을 따른다
+                                  data: { participantId: null },
+                                })
                               }
-                              void requestLabelAssign(
-                                row.segment.speakerLabel!,
-                                target
-                              );
-                            }}
-                            // **후보를 다 못 읽었으면 만들기를 아예 안 내보낸다.** 메뉴가
-                            // `onCreateGuest` 가 없으면 「＋ 추가」를 숨긴다.
-                            onCreateGuest={
-                              candidatesReady
-                                ? (displayName, scope) =>
-                                    void requestNewGuest(
-                                      row.segment.speakerLabel!,
-                                      row.segment.segmentId,
-                                      displayName,
-                                      scope
-                                    )
-                                : undefined
-                            }
-                            onClearOverride={() =>
-                              assignSegment.mutate({
-                                noteId,
-                                segmentId: row.segment.segmentId,
-                                // 행을 비우는 게 아니라 지운다 — 다시 라벨을 따른다
-                                data: { participantId: null },
-                              })
-                            }
-                          />
-                        ) : null}
-                        <p className="text-[15px] leading-7 text-[var(--el-ink)]">
-                          <span {...markProps(row.segment.segmentId)}>
-                            {row.segment.text}
-                          </span>
-                        </p>
-                      </div>
-                    </article>
-                  )
-                )}
-                {truncated ? (
-                  <p
-                    data-testid="recording-truncated"
-                    className="py-4 text-sm text-[var(--el-muted)]"
-                  >
-                    기록이 끝까지 저장되지 못했습니다.
-                  </p>
-                ) : null}
-                {!rows.length ? (
-                  <p className="py-8 text-sm text-[var(--el-muted)]">
-                    스크립트가 없습니다.
-                  </p>
-                ) : null}
+                            />
+                          ) : null}
+                          <p className="text-[15px] leading-7 text-[var(--el-ink)]">
+                            <span {...markProps(row.segment.segmentId)}>
+                              {row.segment.text}
+                            </span>
+                          </p>
+                        </div>
+                      </article>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
+              {truncated ? (
+                <p
+                  data-testid="recording-truncated"
+                  className="py-4 text-sm text-[var(--el-muted)]"
+                >
+                  기록이 끝까지 저장되지 못했습니다.
+                </p>
+              ) : null}
+              {!rows.length ? (
+                <p className="py-8 text-sm text-[var(--el-muted)]">
+                  스크립트가 없습니다.
+                </p>
+              ) : null}
+            </>
+          )}
         </div>
         <SpeakerPanel
           // 도구와 같은 이유로 닫는다 — 열어 둔 채로 실패하면 짚을 자리가 사라진다.

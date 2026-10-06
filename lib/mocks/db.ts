@@ -508,7 +508,8 @@ function rejectIfChanged(
   requested: string[]
 ) {
   const same = (a: string[], b: string[]) =>
-    new Set(a).size === new Set(b).size && a.every((value) => b.includes(value));
+    new Set(a).size === new Set(b).size &&
+    a.every((value) => b.includes(value));
   if (expected && !same(expected, current) && !same(requested, current)) {
     fail("NOTE_PARTICIPANTS_CONFLICT");
   }
@@ -1507,6 +1508,63 @@ function createSeedState(): StoreState {
      */
     ...mentoringSegments.map((segment) => ({ ...segment })),
   ];
+  // 실험 전용 합성 데이터: 운영 전사 내용이나 개인 식별자는 복제하지 않는다.
+  if (process.env.NEXT_PUBLIC_TRANSCRIPT_EXPERIMENT === "enabled") {
+    const sessionId = "01K0000000060";
+    const experimentSession = sessions.find((s) => s.sessionId === sessionId)!;
+    const starts = [0, 2705, 5409];
+    const ends = [2705 * 1160, 5409 * 1160, 9410350];
+    const sessionIds = [
+      sessionId,
+      "experiment-session-2",
+      "experiment-session-3",
+    ];
+    const began = Date.parse(experimentSession.startedAt!);
+    const copies = starts.map((start, i) => ({
+      ...experimentSession,
+      sessionId: sessionIds[i],
+      startedAt: new Date(began + start * 1160 + i * 600000).toISOString(),
+      endedAt: new Date(began + ends[i] + i * 600000).toISOString(),
+    }));
+    Object.assign(experimentSession, copies[0]);
+    sessions.push(...copies.slice(1));
+    const originals = segments.filter(
+      (s) => s.transcriptionSessionId === sessionId
+    );
+    const indexes = [0, 1400, 6000, 8113, 3000, 4500];
+    const generated: typeof segments = Array.from({ length: 8114 }, (_, i) => ({
+      segmentId: `experiment-${i}`,
+      transcriptionSessionId:
+        sessionIds[i < starts[1] ? 0 : i < starts[2] ? 1 : 2],
+      sequence: i - starts[i < starts[1] ? 0 : i < starts[2] ? 1 : 2] + 1,
+      text:
+        i % 90 === 0
+          ? `실험 발화 ${i}: ${"이 내용은 여러 줄 발화의 높이 변경을 확인하기 위한 합성 문장입니다. ".repeat(6)}`
+          : `실험 발화 ${i}: ${i % 2 ? "다음 내용을 확인합니다." : "네."}`,
+      speakerLabel: i < 1390 ? "B" : i < 7727 ? "A" : null,
+      assignedParticipantId: null,
+      startedAtMs:
+        (i - starts[i < starts[1] ? 0 : i < starts[2] ? 1 : 2]) * 1160,
+      endedAtMs:
+        (i - starts[i < starts[1] ? 0 : i < starts[2] ? 1 : 2]) * 1160 + 570,
+    }));
+    originals.forEach((original, i) => {
+      generated[indexes[i]] = {
+        ...generated[indexes[i]],
+        ...original,
+        transcriptionSessionId: generated[indexes[i]].transcriptionSessionId,
+        sequence: generated[indexes[i]].sequence,
+        startedAtMs: generated[indexes[i]].startedAtMs,
+        endedAtMs: generated[indexes[i]].endedAtMs,
+      };
+    });
+    segments.splice(
+      0,
+      segments.length,
+      ...segments.filter((s) => s.transcriptionSessionId !== sessionId),
+      ...generated
+    );
+  }
   // 아직 멤버가 아닌 워크스페이스에서 온 초대여야 수락이 실제 합류를 흉내낸다.
   // 이미 들어가 있는 워크스페이스를 가리키면 수락이 멤버를 중복으로 만든다.
   // 받은 초대 하나를 대기 상태로 시드한다 — 알림 벨의 수락/거절을 데모에서 바로 밟을 수 있어야 한다.
