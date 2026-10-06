@@ -2284,6 +2284,15 @@ function transcriptLine(page: Page, text: string) {
   });
 }
 
+async function revealTranscriptLine(page: Page, text: string) {
+  const input = page.getByRole("textbox", { name: "전사 검색어" });
+  if (!(await input.count()))
+    await page.getByRole("button", { name: "검색", exact: true }).click();
+  await input.fill(text);
+  await input.press("Enter");
+  await expect(transcriptLine(page, text)).toBeInViewport();
+}
+
 /**
  * **이 기능이 존재하는 이유** — pyannote 가 3명 회의를 4명으로 쪼개면 「화자 1과 2는 같은
  * 사람」이 사람이 할 수 있는 유일한 정정인데, 예전에는 두 번째를 붙이는 순간 첫 번째가
@@ -2317,33 +2326,32 @@ test("reassigns a single utterance without touching the rest of the speaker", as
   await expect(
     page.getByTestId("archive-transcript-block").first()
   ).toBeVisible();
-  // Long transcripts mount only visible rows; these assertions compare distant rows.
-  const fullText = page.getByRole("button", { name: "전체 텍스트 보기" });
-  if (await fullText.isVisible()) {
-    // Full DOM fallback intentionally retains the large-transcript render cost.
-    test.setTimeout(60_000);
-    await fullText.click();
-  }
-
   const plain = transcriptLine(page, PLAIN_LINE);
   const overridden = transcriptLine(page, OVERRIDDEN_LINE);
 
   // 같은 화자 A 인데 이름이 다르다 — 뒤 줄에만 개별 지정이 걸려 있다.
+  await revealTranscriptLine(page, PLAIN_LINE);
   await expect(plain.getByTestId("speaker-chip")).toContainText("테스트 유저");
+  await revealTranscriptLine(page, OVERRIDDEN_LINE);
   await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
 
   // 앞 줄만 한지원으로 옮긴다.
+  await revealTranscriptLine(page, PLAIN_LINE);
   await plain.getByTestId("speaker-assign-trigger").click();
   await page.getByRole("radio", { name: "현재 발화에만 적용" }).check();
   await page.getByRole("option", { name: /한지원/ }).click();
+  await revealTranscriptLine(page, PLAIN_LINE);
   await expect(plain.getByTestId("speaker-chip")).toContainText("한지원");
 
   // 되돌린다 — **그 줄만** 다시 라벨을 따르고 뒤 줄은 그대로다.
+  await revealTranscriptLine(page, PLAIN_LINE);
   await plain.getByTestId("speaker-assign-trigger").click();
   await page.getByRole("radio", { name: "현재 발화에만 적용" }).check();
   await page.getByRole("button", { name: "개별 지정 해제" }).click();
 
+  await revealTranscriptLine(page, PLAIN_LINE);
   await expect(plain.getByTestId("speaker-chip")).toContainText("테스트 유저");
+  await revealTranscriptLine(page, OVERRIDDEN_LINE);
   await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
 });
 
@@ -2359,16 +2367,9 @@ test("warns before a label-wide assign wipes per-utterance fixes", async ({
   await expect(
     page.getByTestId("archive-transcript-block").first()
   ).toBeVisible();
-  // Long transcripts mount only visible rows; these assertions compare distant rows.
-  const fullText = page.getByRole("button", { name: "전체 텍스트 보기" });
-  if (await fullText.isVisible()) {
-    // Full DOM fallback intentionally retains the large-transcript render cost.
-    test.setTimeout(60_000);
-    await fullText.click();
-  }
-
   const plain = transcriptLine(page, PLAIN_LINE);
   const overridden = transcriptLine(page, OVERRIDDEN_LINE);
+  await revealTranscriptLine(page, OVERRIDDEN_LINE);
   await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
 
   // 화자 A 전체를 한지원으로 옮긴다 — 그 화자에 개별 지정이 하나 남아 있다.
@@ -2378,6 +2379,7 @@ test("warns before a label-wide assign wipes per-utterance fixes", async ({
 
   // 취소하면 아무것도 안 바뀐다.
   await page.getByRole("button", { name: "취소" }).click();
+  await revealTranscriptLine(page, PLAIN_LINE);
   await expect(plain.getByTestId("speaker-chip")).toContainText("테스트 유저");
 
   // 확인하면 그 화자의 모든 줄이 같은 사람이 된다.
@@ -2385,7 +2387,9 @@ test("warns before a label-wide assign wipes per-utterance fixes", async ({
   await page.getByRole("option", { name: /한지원/ }).click();
   await page.getByRole("button", { name: "모든 발화에 적용" }).click();
 
+  await revealTranscriptLine(page, PLAIN_LINE);
   await expect(plain.getByTestId("speaker-chip")).toContainText("한지원");
+  await revealTranscriptLine(page, OVERRIDDEN_LINE);
   await expect(overridden.getByTestId("speaker-chip")).toContainText("한지원");
   await expect(page.getByLabel("테스트 유저 화자 지정")).toHaveCount(0);
 });

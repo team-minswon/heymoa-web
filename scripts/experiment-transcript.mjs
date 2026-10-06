@@ -329,64 +329,14 @@ fs.mkdirSync(output, { recursive: true });
       "whole-label overwrite confirmation: cancel preserves override, confirm removes it"
     );
 
-    assert.equal(
-      await page.evaluate(() =>
-        window.find("실험 발화 8000:", false, false, true)
-      ),
-      false
-    );
-    await page
-      .getByRole("button", { name: "전체 텍스트 보기", exact: true })
-      .click();
-    await expect(page.getByTestId("archive-transcript-block")).toHaveCount(
-      8114
-    );
-    assert.equal(
-      await page.evaluate(() =>
-        window.find("실험 발화 8000:", false, false, true)
-      ),
-      true
-    );
-    const selected = await page.evaluate(() => {
-      const rows = document.querySelectorAll(
-        '[data-testid="archive-transcript-block"]'
-      );
-      const range = document.createRange();
-      range.setStartBefore(rows[0]);
-      range.setEndAfter(rows[rows.length - 1]);
-      const selection = getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return selection.toString();
-    });
-    assert(selected.includes("실험 발화 8000:"));
-    assert(selected.includes("재방문 사용자는"));
-    checked("full text mode enables native find and full range selection");
-    await page.evaluate(() => {
-      getSelection().removeAllRanges();
-      // Chromium window.find selects text but does not scroll overflow areas,
-      // even in a plain HTML control. Explicitly visit the found row.
-      const found = window.find("실험 발화 8000:", false, false, true);
-      if (!found) throw new Error("Full text search missed row 8000");
-      getSelection()
-        .anchorNode.parentElement.closest("article")
-        .scrollIntoView({ block: "center" });
-    });
     await expect(
-      page.locator('[data-segment-id="experiment-8000"]')
-    ).toBeInViewport();
-    await page
-      .getByRole("button", { name: "빠르게 보기", exact: true })
-      .click();
+      page.getByRole("button", { name: "전체 텍스트 보기", exact: true })
+    ).toHaveCount(0);
     await expect(
-      page.locator('[data-segment-id="experiment-8000"]')
-    ).toBeInViewport();
-    checked(
-      "visited full text search destination survives return to virtual mode"
-    );
-    await expect
-      .poll(() => page.getByTestId("archive-transcript-block").count())
-      .toBeLessThan(100);
+      page.getByRole("button", { name: "빠르게 보기", exact: true })
+    ).toHaveCount(0);
+    assert((await page.getByTestId("archive-transcript-block").count()) < 100);
+    checked("single virtualized view exposes no full-DOM toggle");
     await page.getByRole("tab", { name: "정보", exact: true }).click();
     await expect(
       page.getByRole("tab", { name: "정보", exact: true })
@@ -577,7 +527,7 @@ fs.mkdirSync(output, { recursive: true });
       return e.getBoundingClientRect().top - vp.getBoundingClientRect().top;
     });
     assert(middle < -600);
-    for (const name of ["전체 텍스트 보기", "빠르게 보기"]) {
+    for (const name of ["전체 화면으로 보기", "사이드 뷰로 보기"]) {
       await page.getByRole("button", { name, exact: true }).click();
       await expect
         .poll(() =>
@@ -593,7 +543,7 @@ fs.mkdirSync(output, { recursive: true });
         .toBeLessThan(3);
     }
     checked(
-      "view mode switches preserve the middle of a transcript taller than the viewport"
+      "side/full preserves the middle of a transcript taller than the viewport"
     );
     assert.deepEqual(pageErrors, [], "Browser runtime errors");
     await page.screenshot({ path: `${output}/virtual.png` });

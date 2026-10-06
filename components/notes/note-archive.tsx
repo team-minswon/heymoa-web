@@ -3,7 +3,6 @@
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TextCursorInput } from "lucide-react";
 
 import { TranscriptSearch } from "@/components/notes/transcript-search";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
@@ -682,7 +681,6 @@ export const NoteArchive = memo(function NoteArchive({
     (id: string) => jumpToSegment(id, true),
     [jumpToSegment]
   );
-  const [fullText, setFullText] = useState(false);
   const viewAnchor = useRef<{ id: string; offset: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [listOffset, setListOffset] = useState(0);
@@ -691,7 +689,6 @@ export const NoteArchive = memo(function NoteArchive({
   const [keyboardSegment, setKeyboardSegment] = useState<string | null>(null);
   const virtualized =
     rows.length > 200 &&
-    !fullText &&
     process.env.NEXT_PUBLIC_TRANSCRIPT_VIRTUALIZATION !== "disabled";
   const rowIndexes = useMemo(
     () =>
@@ -793,10 +790,6 @@ export const NoteArchive = memo(function NoteArchive({
     if (tools) observer.observe(tools);
     return () => observer.disconnect();
   }, [virtualized, virtualizer, viewportRef, captureAnchor]);
-  const toggleFullText = useCallback(() => {
-    captureAnchor();
-    setFullText((value) => !value);
-  }, [captureAnchor]);
   useEffect(() => {
     const anchor = viewAnchor.current;
     const viewport = viewportRef.current;
@@ -824,14 +817,7 @@ export const NoteArchive = memo(function NoteArchive({
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [
-    fullText,
-    virtualized,
-    virtualizer,
-    rowIndexes,
-    viewportRef,
-    anchorRevision,
-  ]);
+  }, [virtualized, virtualizer, rowIndexes, viewportRef, anchorRevision]);
   const displayedRows = virtualized
     ? virtualizer
         .getVirtualItems()
@@ -1040,21 +1026,6 @@ export const NoteArchive = memo(function NoteArchive({
           segments={transcriptQuery.isError ? [] : segments}
           onJump={searchJump}
         >
-          {rows.length > 200 ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleFullText}
-              aria-label={fullText ? "빠르게 보기" : "전체 텍스트 보기"}
-              title={fullText ? "빠르게 보기" : "전체 텍스트 보기"}
-              className="max-sm:size-8 max-sm:px-0"
-            >
-              <TextCursorInput data-icon="inline-start" />
-              <span className="hidden sm:inline">
-                {fullText ? "빠르게 보기" : "전체 텍스트 보기"}
-              </span>
-            </Button>
-          ) : null}
           {/* 화자가 나뉘기 전에는 열어도 빈 목록이라 안 내보낸다.
 
               **다시 읽기가 실패했으면 같이 내린다.** TanStack 은 실패해도 옛 `data` 를 들고
