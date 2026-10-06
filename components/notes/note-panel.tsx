@@ -807,6 +807,7 @@ export function NotePanel({
           {showContextTab ? (
             <TabsContent value="context" className="min-h-0 flex-1">
               <NoteTimeline
+                participants={note?.participants ?? []}
                 header={
                   note && meta
                     ? {

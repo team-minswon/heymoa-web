@@ -1,4 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { getGetNoteTranscriptQueryKey } from "@/lib/api/generated/transcription/transcription";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -17,6 +20,7 @@ import {
 
 const realtime = vi.hoisted(() => ({
   noteId: "01K0000000005",
+  transcript: { finalSegments: [] as Array<{ segmentId: string; sequence: number; startedAtMs: number; endedAtMs: number; text: string; speakerLabel: string | null; assignedParticipantId?: string | null }> },
   context: {
     cards: [],
     state: null as unknown,
@@ -28,12 +32,35 @@ const realtime = vi.hoisted(() => ({
 vi.mock("@/components/notes/note-realtime-provider", () => ({
   useNoteRealtime: () => realtime,
 }));
+const own = vi.hoisted(() => ({ activeNoteId: null as string | null, session: null, finalSegments: [] }));
+vi.mock("@/components/transcription/recording-provider", () => ({
+  useRecording: () => own,
+  useRecordingTranscript: () => own,
+}));
+vi.mock("@/lib/api/generated/analysis/analysis", () => ({
+  useGetAnalysisFlow: () => ({ data: undefined }),
+}));
 const live = vi.hoisted(() => ({
   partial: null as { confirmedText: string; pendingText: string } | null,
 }));
 vi.mock("@/components/notes/use-live-partial", () => ({
   useLivePartial: () => live.partial,
 }));
+
+const transcript = vi.hoisted(() => ({
+  real: false,
+  data: undefined as unknown,
+  isError: false,
+  refetch: vi.fn(),
+}));
+vi.mock("@/lib/api/generated/transcription/transcription", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/generated/transcription/transcription")>();
+  return {
+    ...actual,
+    useGetNoteTranscript: (noteId: string, options?: Parameters<typeof actual.useGetNoteTranscript>[1]) =>
+      transcript.real ? actual.useGetNoteTranscript(noteId, options) : transcript,
+  };
+});
 
 let seq = 0;
 function head(over: Partial<ProposalHead> & { atMs?: number }): ProposalHead {
@@ -76,6 +103,12 @@ function withLedger(...proposals: ProposalHead[]) {
 
 afterEach(() => {
   cleanup();
+  realtime.transcript.finalSegments = [];
+  transcript.real = false;
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+  transcript.data = undefined;
+  transcript.isError = false;
   live.partial = null;
   realtime.noteId = "01K0000000005";
   realtime.context = { ...realtime.context, loading: false, failed: false };
@@ -500,4 +533,104 @@ it.each([true, false])("빈 snapshot 또는 조회 중(%s) 잠정 전사를 위�
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는 구간도 이동합니다", async () => {
+  const proposal = head({ content: "근거의 화자 확인" });
+  const missing = {
+    ...proposal.citations[0],
+    segmentId: "0HZX2K7M9S999",
+    text: "없는 전사 근거",
+  };
+  proposal.citations.push(missing);
+  withLedger(proposal);
+  const data = {
+    diarization: {
+      status: "MAPPED",
+      speakers: [
+        { label: "A", assignedParticipantId: "person1", confirmed: true },
+      ],
+    },
+    segments: [
+      {
+        segmentId: proposal.citations[0].segmentId,
+        speakerLabel: "A",
+        assignedParticipantId: null as string | null,
+      },
+    ],
+  };
+  transcript.real = true;
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const key = getGetNoteTranscriptQueryKey(realtime.noteId);
+  const payload = () => ({ success: true, data });
+  client.setQueryData(key, { status: 200, data: structuredClone(payload()) });
+  const fetch = vi.fn(async () => new Response(JSON.stringify(payload()), {
+    status: 200, headers: { "Content-Type": "application/json" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const refresh = () => act(async () => { await client.invalidateQueries({ queryKey: key }); });
+  const onEvidenceSelect = vi.fn();
+  const view = () => (
+    <NoteTimeline
+      header={null}
+      participants={[
+        { participantId: "person1", name: "민수" },
+        { participantId: "person2", name: "지원" },
+      ]}
+      onEvidenceSelect={onEvidenceSelect}
+    />
+  );
+  const { rerender } = render(<QueryClientProvider client={client}>{view()}</QueryClientProvider>);
+  fireEvent.click(screen.getByRole("button", { name: /근거의 화자 확인/ }));
+  const details = document.getElementById(
+    `timeline-item-${proposal.proposalId}-details`
+  )!;
+  const evidence = await within(details).findByRole("button", {
+    name: new RegExp(proposal.citations[0].text),
+  });
+  expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent(
+    "민수"
+  );
+  expect(fetch).not.toHaveBeenCalled();
+  data.segments[0].assignedParticipantId = "person2";
+  await refresh();
+  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("지원"));
+  data.segments[0].assignedParticipantId = null;
+  data.diarization.speakers[0].assignedParticipantId = "person2";
+  await refresh();
+  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("지원"));
+  data.diarization.speakers = [];
+  await refresh();
+  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("화자 A"));
+  fireEvent.click(
+    within(details).getByRole("button", { name: /없는 전사 근거/ })
+  );
+  expect(onEvidenceSelect).toHaveBeenCalledWith(missing.segmentId);
+  expect(within(details).getAllByTestId("speaker-chip")).toHaveLength(1);
+  expect(fetch).toHaveBeenCalledTimes(3);
+  realtime.transcript.finalSegments = [{
+    segmentId: missing.segmentId, sequence: 99, startedAtMs: 10, endedAtMs: 20,
+    text: missing.text, speakerLabel: "B",
+  }];
+  rerender(<QueryClientProvider client={client}>{view()}</QueryClientProvider>);
+  expect(within(details).getByText("화자 B")).toBeVisible();
+  // 저장본 지정이 실시간 사본의 라벨보다 우선한다.
+  realtime.transcript.finalSegments.push({
+    ...realtime.transcript.finalSegments[0], segmentId: proposal.citations[0].segmentId, speakerLabel: "C",
+  });
+  rerender(<QueryClientProvider client={client}>{view()}</QueryClientProvider>);
+  expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("화자 A");
+  // 분리 중에는 다시 읽고, 완료 뒤에는 폴링을 멈춘다. 실제 대기 대신 Query 타이머만 진행한다.
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+  data.diarization.status = "SUBMITTED";
+  await refresh();
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
+  data.diarization.status = "MAPPED";
+  data.diarization.speakers = [{ label: "A", assignedParticipantId: "person1", confirmed: true }];
+  await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+  await waitFor(() => expect(within(evidence).getByTestId("speaker-chip")).toHaveTextContent("민수"));
+  expect(fetch).toHaveBeenCalledTimes(5);
+  await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+  expect(fetch).toHaveBeenCalledTimes(5);
+  client.clear();
 });

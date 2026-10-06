@@ -20,6 +20,19 @@ import {
 
 import { useNoteRealtime } from "@/components/notes/note-realtime-provider";
 import { useLivePartial } from "@/components/notes/use-live-partial";
+import {
+  useRecording,
+  useRecordingTranscript,
+} from "@/components/transcription/recording-provider";
+import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
+import { SpeakerChip } from "@/components/notes/speaker-chip";
+import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
+import { okData } from "@/lib/api/ok-data";
+import {
+  createSpeakerIdentityResolver,
+  type SpeakerFace,
+  type SpeakerIdentity,
+} from "@/lib/transcription/speaker-identity";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { InlineRetry } from "@/components/ui/inline-retry";
@@ -38,7 +51,10 @@ import {
   type TimelineItem,
   type TimelineTone,
 } from "@/lib/notes/proposals/timeline";
-import { formatOffset } from "@/lib/transcription/presentation";
+import {
+  formatOffset,
+  mergeLiveSegments,
+} from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
 const MotionChevronDown = motion.create(ChevronDown);
@@ -152,9 +168,11 @@ export function NoteTimeline({
   onEvidenceSelect,
   meetingEnded = false,
   recording = false,
+  participants = [],
 }: {
   /** 문서 머리(제목·시각·참여 인원·프로젝트). 노트를 아직 못 읽었으면 비운다. */
   header: TimelineHeader | null;
+  participants?: SpeakerFace[];
   /** 근거를 누르면 스크립트의 그 발화로 간다. 소유자는 `NotePanel` 이다. */
   onEvidenceSelect: (segmentId: string) => void;
   /** 종료된 회의는 더 안 쌓인다 — 진행형 문구가 미래를 약속하면 거짓이 된다. */
@@ -165,7 +183,11 @@ export function NoteTimeline({
    */
   recording?: boolean;
 }) {
-  const { context, noteId } = useNoteRealtime();
+  const { context, noteId, transcript: topicTranscript } = useNoteRealtime();
+  const ownRecording = useRecording();
+  const ownTranscript = useRecordingTranscript();
+  const liveForNote =
+    (ownRecording.activeNoteId ?? ownRecording.session?.noteId) === noteId;
   const partial = useLivePartial(noteId);
 
   // **화면 상태에 주어(noteId)를 담는다.** 이 면은 노트가 바뀌어도 재마운트되지 않아서, 값만
@@ -179,6 +201,54 @@ export function NoteTimeline({
   if (view.noteId !== noteId) {
     setView({ noteId, filter: "ALL", open: NONE, folded: NONE });
   }
+  // 근거를 펼칠 때만 전사를 읽는다. 스크립트와 같은 query key라 지정 후 invalidate도 따른다.
+  const evidenceOpen = view.noteId === noteId && view.open.size > 0;
+  // 종료 후에는 노트 소켓이 없는 경우도 있다. 봉인·화자 분리 완료까지 Query가 재조회한다.
+  const flowQuery = useGetAnalysisFlow(noteId, {
+    query: {
+      enabled: meetingEnded && evidenceOpen,
+      refetchInterval: (query) =>
+        okData(query.state.data)?.status === "DIARIZING" ? 5_000 : false,
+    },
+  });
+  const diarizing =
+    meetingEnded && okData(flowQuery.data)?.status === "DIARIZING";
+  const transcriptQuery = useGetNoteTranscript(noteId, {
+    query: {
+      enabled: evidenceOpen,
+      refetchInterval: (query) => {
+        const status = okData(query.state.data)?.diarization.status;
+        return diarizing || status === "ASSEMBLING" || status === "SUBMITTED"
+          ? 5_000
+          : false;
+      },
+    },
+  });
+  const transcript = okData(transcriptQuery.data);
+  const citationSpeakers = useMemo(() => {
+    const speakerOf = createSpeakerIdentityResolver(
+      transcript?.diarization.status === "MAPPED"
+        ? transcript.diarization.speakers
+        : [],
+      participants
+    );
+    return new Map(
+      mergeLiveSegments(
+        transcript?.segments ?? [],
+        liveForNote ? ownTranscript.finalSegments : [],
+        topicTranscript.finalSegments
+      ).map((segment) => [
+        segment.segmentId,
+        speakerOf(segment.speakerLabel, segment.assignedParticipantId),
+      ])
+    );
+  }, [
+    transcript,
+    participants,
+    liveForNote,
+    ownTranscript.finalSegments,
+    topicTranscript.finalSegments,
+  ]);
   const filter = view.filter;
   // 칩은 바로 바뀌고 목록은 뒤따른다 — 수백 줄을 다시 그리는 동안 누른 칩이 멈춰 보이지 않게.
   const listFilter = useDeferredValue(filter);
@@ -451,6 +521,15 @@ export function NoteTimeline({
           </div>
         ) : null}
 
+        {view.open.size > 0 && transcriptQuery.isError ? (
+          <InlineRetry
+            className="mt-4"
+            variant="line"
+            label="근거의 화자 정보를 불러오지 못했습니다."
+            onRetry={() => void transcriptQuery.refetch()}
+          />
+        ) : null}
+
         {context.loading ? (
           <ul
             aria-label="타임라인을 불러오는 중"
@@ -573,6 +652,7 @@ export function NoteTimeline({
                       <TimelineRow
                         key={item.proposal.proposalId}
                         item={item}
+                        citationSpeakers={citationSpeakers}
                         open={view.open.has(item.proposal.proposalId)}
                         onToggle={() =>
                           toggle("open", item.proposal.proposalId)
@@ -637,12 +717,14 @@ function HeaderChip({
 
 function TimelineRow({
   item,
+  citationSpeakers,
   open,
   onToggle,
   onEvidenceSelect,
   onJump,
 }: {
   item: TimelineItem;
+  citationSpeakers: ReadonlyMap<string, SpeakerIdentity | null>;
   open: boolean;
   onToggle: () => void;
   onEvidenceSelect: (segmentId: string) => void;
@@ -793,8 +875,19 @@ function TimelineRow({
                                 <time className="text-[12px] leading-[22px] tabular-nums text-[var(--el-muted-soft)]">
                                   {formatOffset(citation.startedAtMs)}
                                 </time>
-                                <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
-                                  {citation.text}
+                                <span className="flex min-w-0 flex-col gap-1">
+                                  {citationSpeakers.get(citation.segmentId) ? (
+                                    <SpeakerChip
+                                      identity={
+                                        citationSpeakers.get(
+                                          citation.segmentId
+                                        )!
+                                      }
+                                    />
+                                  ) : null}
+                                  <span className="break-keep text-[14px] leading-[22px] text-[var(--el-body-strong)]">
+                                    {citation.text}
+                                  </span>
                                 </span>
                               </button>
                             </li>
