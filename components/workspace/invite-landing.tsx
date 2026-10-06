@@ -10,6 +10,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { useAcceptInvitationByToken } from "@/lib/api/generated/workspace-invitations/workspace-invitations";
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
+import { CenteredCard } from "@/components/layout/centered-card";
 import { buildGoogleOAuthUrl } from "@/lib/auth/paths";
 
 const ERROR_COPY: Record<string, { title: string; description: string }> = {
@@ -97,7 +98,7 @@ function InviteCard({
 
   if (status === "anonymous") {
     return (
-      <Card icon={<MailCheck className="size-5" aria-hidden />}>
+      <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
         <h1 className="font-serif text-xl font-light tracking-[-0.01em]">
           워크스페이스 초대가 도착했어요
         </h1>
@@ -111,7 +112,7 @@ function InviteCard({
           <LogIn className="size-4" aria-hidden />
           Google로 계속하기
         </a>
-      </Card>
+      </CenteredCard>
     );
   }
 
@@ -119,7 +120,7 @@ function InviteCard({
     const code = errorCodeOf(error);
     if (code === "ALREADY_WORKSPACE_MEMBER") {
       return (
-        <Card icon={<MailCheck className="size-5" aria-hidden />}>
+        <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
           <h1 className="font-serif text-xl font-light tracking-[-0.01em]">
             이미 이 워크스페이스의 멤버예요
           </h1>
@@ -133,7 +134,7 @@ function InviteCard({
             <Home className="size-4" aria-hidden />
             홈으로
           </Link>
-        </Card>
+        </CenteredCard>
       );
     }
     const copy = code ? ERROR_COPY[code] : undefined;
@@ -149,37 +150,20 @@ function InviteCard({
 
   // checking(인증 확인) 또는 수락 진행 중 — 페이지 전체 스피너 대신 카드 안에서 알린다
   return (
-    <Card icon={<MailCheck className="size-5" aria-hidden />}>
+    <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
       <h1 className="font-serif text-xl font-light tracking-[-0.01em]">
         초대를 확인하고 있어요
       </h1>
       <p className="mt-2 text-sm text-[var(--el-muted)]">
         잠시만요 — 수락이 끝나면 워크스페이스로 이동합니다.
       </p>
-    </Card>
-  );
-}
-
-function Card({
-  icon,
-  children,
-}: {
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="w-full max-w-[420px] rounded-2xl border border-[var(--el-hairline)] bg-white p-8 text-center shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-      <div className="mx-auto flex size-10 items-center justify-center rounded-full border border-[var(--el-hairline)]">
-        {icon}
-      </div>
-      <div className="mt-4">{children}</div>
-    </section>
+    </CenteredCard>
   );
 }
 
 function ErrorCard({ title, description }: { title: string; description: string }) {
   return (
-    <Card icon={<AlertTriangle className="size-5" aria-hidden />}>
+    <CenteredCard icon={<AlertTriangle className="size-5" aria-hidden />}>
       <h1 className="font-serif text-xl font-light tracking-[-0.01em]">{title}</h1>
       <p className="mt-2 text-sm text-[var(--el-muted)]">{description}</p>
       <Link
@@ -189,6 +173,6 @@ function ErrorCard({ title, description }: { title: string; description: string 
         <Home className="size-4" aria-hidden />
         홈으로
       </Link>
-    </Card>
+    </CenteredCard>
   );
 }

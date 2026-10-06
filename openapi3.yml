@@ -38,6 +38,7 @@ paths:
                         expiresAt: '2026-12-30T12:00:00Z'
                         revokedAt: '2026-10-02T09:00:00Z'
                         revokeReason: USER
+                        credentialKind: PERSONAL_TOKEN
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -91,6 +92,7 @@ paths:
                         expiresAt: '2026-12-30T09:00:00Z'
                         revokedAt: null
                         revokeReason: null
+                        credentialKind: PERSONAL_TOKEN
                       token: hm_4f9Qz8LmT2vXc7Rb1NkYp0Hs6JdWe3UaGi5OtCyB2
                     error: null
         '404':
@@ -7420,6 +7422,198 @@ paths:
                       state: refresh_required
                     error: null
       security: []
+  /v1/agent-oauth/consent:
+    get:
+      tags:
+      - AgentOAuthConsent
+      summary: 외부 에이전트 연결 동의 요청 조회
+      description: 동의 화면 주소에 실려 온 state 로, 나를 기다리는 외부 에이전트 인가 요청을 조회한다. 없는 요청·이미 끝난 요청·다른 사람의 요청은 모두 같은 404 다. OAuth 가 켜진 환경에만 있다.
+      operationId: getAgentOAuthConsent
+      parameters:
+      - name: state
+        in: query
+        description: 동의 화면 주소(`/oauth/consent?state=…`)에 실려 온 값 그대로
+        required: true
+        schema:
+          type: string
+          description: 동의 화면 주소(`/oauth/consent?state=…`)에 실려 온 값 그대로
+          nullable: false
+        example: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentOAuthConsentResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      clientName: Claude Code (heymoa)
+                      redirectHost: localhost
+                      scopes:
+                      - mcp:read
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_OAUTH_REQUEST_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_OAUTH_REQUEST_NOT_FOUND
+                      message: 연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/agent-oauth/consent/approve:
+    post:
+      tags:
+      - AgentOAuthConsent
+      summary: 외부 에이전트 연결 허락
+      description: 고른 워크스페이스로 위임을 새로 만들고 인가 코드를 발급한다. 허락할 때마다 연결이 하나씩 생긴다. 맡긴 사람이 그 워크스페이스의 멤버여야 한다. 응답의 주소로 브라우저를 보내면 에이전트가 연결을 마친다.
+      operationId: approveAgentOAuthConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveAgentOAuthConsentRequest'
+            examples:
+              approveAgentOAuthConsent_BadRequest:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+                  workspaceId: ' '
+              approveAgentOAuthConsent_AgentOAuthRequestNotFoundException:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+                  workspaceId: 0HZX2K7M9Q4AD
+              approveAgentOAuthConsent_WorkspaceNotFoundException:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+                  workspaceId: 0HZX2K7M9Q4AD
+              approveAgentOAuthConsent_Success:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+                  workspaceId: 0HZX2K7M9Q4AD
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentOAuthConsentRedirectResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      redirectUri: http://localhost:63573/callback?code=Xq3vN8sL&state=agent-state
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: workspaceId
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_OAUTH_REQUEST_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_OAUTH_REQUEST_NOT_FOUND
+                      message: 연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/agent-oauth/consent/deny:
+    post:
+      tags:
+      - AgentOAuthConsent
+      summary: 외부 에이전트 연결 거절
+      description: 인가 요청을 거절한다. 아무것도 만들지 않는다. 응답의 주소로 브라우저를 보내면 에이전트가 거절을 받는다.
+      operationId: denyAgentOAuthConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DenyAgentOAuthConsentRequest'
+            examples:
+              denyAgentOAuthConsent_AgentOAuthRequestNotFoundException:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+              denyAgentOAuthConsent_Success:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentOAuthConsentRedirectResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      redirectUri: http://localhost:63573/callback?error=access_denied&state=agent-state
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_OAUTH_REQUEST_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_OAUTH_REQUEST_NOT_FOUND
+                      message: 연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
 components:
   schemas:
     AcceptInvitationByTokenRequest:
@@ -8094,6 +8288,7 @@ components:
               items:
                 required:
                 - createdAt
+                - credentialKind
                 - delegationId
                 - expiresAt
                 - lastUsedAt
@@ -8108,12 +8303,13 @@ components:
                 properties:
                   revokeReason:
                     type: string
-                    description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남. 회수되지 않았으면 null
+                    description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임. 회수되지 않았으면 null
                     nullable: true
                     example: USER
                     enum:
                     - USER
                     - MEMBERSHIP_ENDED
+                    - REFRESH_TOKEN_REUSED
                   createdAt:
                     type: string
                     description: 연결을 만든 시각
@@ -8133,7 +8329,7 @@ components:
                     example: 노트북 Claude Code
                   tokenHint:
                     type: string
-                    description: 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다
+                    description: 개인 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다. OAuth 연결은 null
                     nullable: true
                     example: hm_4f9Qz8L
                   workspaceName:
@@ -8174,6 +8370,14 @@ components:
                     nullable: false
                     example: 0HZX2K7M9Q4AD
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  credentialKind:
+                    type: string
+                    description: 연결 자격 종류. 개인 토큰으로 만든 연결과 OAuth 동의로 만든 연결이 있다
+                    nullable: false
+                    example: PERSONAL_TOKEN
+                    enum:
+                    - PERSONAL_TOKEN
+                    - OAUTH
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -8697,6 +8901,7 @@ components:
             delegation:
               required:
               - createdAt
+              - credentialKind
               - delegationId
               - expiresAt
               - lastUsedAt
@@ -8722,7 +8927,7 @@ components:
                   example: 노트북 Claude Code
                 tokenHint:
                   type: string
-                  description: 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다
+                  description: 개인 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다. OAuth 연결은 null
                   nullable: true
                   example: hm_4f9Qz8L
                 workspaceName:
@@ -8771,12 +8976,21 @@ components:
                   format: date-time
                 revokeReason:
                   type: string
-                  description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남. 회수되지 않았으면 null
+                  description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임. 회수되지 않았으면 null
                   nullable: true
                   example: USER
                   enum:
                   - USER
                   - MEMBERSHIP_ENDED
+                  - REFRESH_TOKEN_REUSED
+                credentialKind:
+                  type: string
+                  description: 연결 자격 종류. 개인 토큰으로 만든 연결과 OAuth 동의로 만든 연결이 있다
+                  nullable: false
+                  example: PERSONAL_TOKEN
+                  enum:
+                  - PERSONAL_TOKEN
+                  - OAUTH
               description: 만든 연결
               nullable: false
             token:
@@ -13448,6 +13662,116 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    AgentOAuthConsentRedirectResponse:
+      title: AgentOAuthConsentRedirectResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - redirectUri
+          type: object
+          properties:
+            redirectUri:
+              type: string
+              description: '`error=access_denied` 와 에이전트의 state 를 실은 에이전트의 돌아갈 주소. 브라우저를 이 주소로 보낸다'
+              nullable: false
+              example: http://localhost:63573/callback?error=access_denied&state=agent-state
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    AgentOAuthConsentResponse:
+      title: AgentOAuthConsentResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - clientName
+          - redirectHost
+          - scopes
+          type: object
+          properties:
+            clientName:
+              type: string
+              description: 에이전트가 스스로 등록한 이름. HeyMoa 가 확인한 값이 아니라 사칭될 수 있어 돌아갈 호스트와 함께 보인다
+              nullable: false
+              example: Claude Code (heymoa)
+            scopes:
+              type: array
+              description: 요청한 범위. 지금은 읽기 하나다
+              items:
+                oneOf:
+                - type: object
+                - type: boolean
+                - type: string
+                - type: number
+              nullable: false
+              example:
+              - mcp:read
+            redirectHost:
+              type: string
+              description: 허락하면 브라우저가 돌아갈 곳의 호스트(에이전트의 콜백)
+              nullable: false
+              example: localhost
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    ApproveAgentOAuthConsentRequest:
+      title: ApproveAgentOAuthConsentRequest
+      required:
+      - state
+      - workspaceId
+      type: object
+      properties:
+        state:
+          type: string
+          description: 동의 화면 주소(`/oauth/consent?state=…`)에 실려 온 값 그대로
+          nullable: false
+          example: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+          minLength: 1
+        workspaceId:
+          type: string
+          description: 맡길 워크스페이스의 13자리 TSID
+          nullable: false
+          example: 0HZX2K7M9Q4AD
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+    DenyAgentOAuthConsentRequest:
+      title: DenyAgentOAuthConsentRequest
+      required:
+      - state
+      type: object
+      properties:
+        state:
+          type: string
+          description: 동의 화면 주소(`/oauth/consent?state=…`)에 실려 온 값 그대로
+          nullable: false
+          example: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+          minLength: 1
   securitySchemes:
     accessCookie:
       type: apiKey

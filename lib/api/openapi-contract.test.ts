@@ -289,7 +289,9 @@ describe("contract sync 2026-07-29", () => {
     // `agent-delegations/{delegationId}/usages`.
     // APP-891 adds the four desktop broker endpoints to the public mirror.
     // APP-901 adds the read-only session probe (67 → 68).
-    expect(paths).toHaveLength(68);
+    // APP-888(server APP-886)에서 외부 에이전트 OAuth 동의 셋이 늘었다 (68 → 71) —
+    // `agent-oauth/consent`(조회)·`.../approve`·`.../deny`.
+    expect(paths).toHaveLength(71);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

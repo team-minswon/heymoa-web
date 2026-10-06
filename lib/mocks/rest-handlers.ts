@@ -78,6 +78,8 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
   AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
+  AGENT_OAUTH_REQUEST_NOT_FOUND:
+    "연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.",
   MEETING_RECORDING: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
 };
 
@@ -99,6 +101,7 @@ const FORBIDDEN_CODES = new Set([
 
 const NOT_FOUND_CODES = new Set([
   "AGENT_DELEGATION_NOT_FOUND",
+  "AGENT_OAUTH_REQUEST_NOT_FOUND",
   "NOTE_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
   "PROJECT_NOT_FOUND",
@@ -1007,6 +1010,24 @@ export const restHandlers = [
       );
     }
   ),
+  // 외부 에이전트 OAuth 동의 (APP-888). 계약: 조회·허락·거절 모두 200, 없는·끝난 요청은 404.
+  http.get("*/v1/agent-oauth/consent", ({ request }) => {
+    const consentState = new URL(request.url).searchParams.get("state") ?? "";
+    return commandResult(() => mockDb.getAgentOAuthConsent(consentState));
+  }),
+  http.post("*/v1/agent-oauth/consent/approve", async ({ request }) => {
+    const body = (await request.json()) as {
+      state: string;
+      workspaceId: string;
+    };
+    return commandResult(() =>
+      mockDb.approveAgentOAuthConsent(body.state, body.workspaceId)
+    );
+  }),
+  http.post("*/v1/agent-oauth/consent/deny", async ({ request }) => {
+    const body = (await request.json()) as { state: string };
+    return commandResult(() => mockDb.denyAgentOAuthConsent(body.state));
+  }),
   http.delete("*/v1/agent-delegations/:delegationId", ({ params }) => {
     try {
       mockDb.revokeAgentDelegation(id(params.delegationId));

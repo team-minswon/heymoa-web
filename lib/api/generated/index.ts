@@ -1,5 +1,6 @@
 export * from "./agent-chat/agent-chat";
 export * from "./agent-delegation/agent-delegation";
+export * from "./agent-o-auth-consent/agent-o-auth-consent";
 export * from "./analysis/analysis";
 export * from "./auth/auth";
 export * from "./integration/integration";

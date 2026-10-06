@@ -204,6 +204,13 @@ type StoreState = {
   agentDelegations: AgentDelegationsResponseDataDelegationsItem[];
   /** 연결별 도구 호출 내역(APP-826). 본문은 서버 표에도 없어 여기에도 없다. */
   agentDelegationUsages: MockAgentDelegationUsage[];
+  /** 나를 기다리는 OAuth 동의 요청(APP-888). 키는 server 가 동의 화면 주소에 붙이는 `state` 다. */
+  agentOAuthConsents: Record<string, MockAgentOAuthConsent>;
+};
+
+type MockAgentOAuthConsent = {
+  clientName: string;
+  redirectUri: string;
 };
 
 type MockAgentDelegationUsage = AgentDelegationUsagesResponseDataUsagesItem & {
@@ -495,6 +502,14 @@ function copy<T>(value: T): T {
 
 function fail(code: string): never {
   throw new Error(code);
+}
+
+function withQuery(uri: string, params: Record<string, string>) {
+  const url = new URL(uri);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString();
 }
 
 /**
@@ -1841,6 +1856,14 @@ function createSeedState(): StoreState {
     agentChatMessages: seededChats.messages,
     agentDelegations: seedAgentDelegations(workspaces),
     agentDelegationUsages: seedAgentDelegationUsages(),
+    // 목 개발에서 `/oauth/consent?state=mock-consent` 로 동의 화면을 연다(APP-888).
+    // 허락·거절은 이 요청을 지우므로, 다시 열면 실서버처럼 「다시 연결」 안내가 나온다.
+    agentOAuthConsents: {
+      "mock-consent": {
+        clientName: "Codex",
+        redirectUri: "http://127.0.0.1:1455/callback",
+      },
+    },
   };
 }
 
@@ -1906,6 +1929,7 @@ function seedAgentDelegations(
       delegationId: "01K00000000Q1",
       name: "노트북 Claude Code",
       tokenHint: "hm_Q7xKp2a",
+      credentialKind: "PERSONAL_TOKEN",
       status: "ACTIVE",
       createdAt: "2026-09-20T09:00:00Z",
       lastUsedAt: "2026-09-30T13:00:00Z",
@@ -1918,6 +1942,7 @@ function seedAgentDelegations(
       delegationId: "01K00000000Q2",
       name: "예전 Codex CLI",
       tokenHint: "hm_m3Zr8Td",
+      credentialKind: "PERSONAL_TOKEN",
       status: "REVOKED",
       createdAt: "2026-09-02T09:00:00Z",
       lastUsedAt: null,
@@ -1929,7 +1954,9 @@ function seedAgentDelegations(
       ...base,
       delegationId: "01K00000000Q3",
       name: "떠난 팀의 연결",
+      // 계약상 hint 가 없는 것은 OAuth 연결이다(APP-886)
       tokenHint: null,
+      credentialKind: "OAUTH",
       status: "REVOKED",
       createdAt: "2026-08-20T09:00:00Z",
       lastUsedAt: "2026-08-25T09:00:00Z",
@@ -2659,6 +2686,7 @@ export const mockDb = {
       workspaceId,
       workspaceName: workspace?.name ?? "",
       tokenHint: token.slice(0, 10),
+      credentialKind: "PERSONAL_TOKEN",
       status: "ACTIVE",
       createdAt,
       lastUsedAt: null,
@@ -2714,6 +2742,68 @@ export const mockDb = {
       nextOccurredAt: hasMore && last ? last.occurredAt : null,
       nextUsageId: hasMore && last ? last.usageId : null,
     });
+  },
+
+  /**
+   * 동의 화면이 읽는 요청(APP-888). 없거나 이미 처리했으면 서버처럼 `AGENT_OAUTH_REQUEST_NOT_FOUND` 다.
+   * 권한은 이 계약이 정하는 `mcp:read` 하나다.
+   */
+  getAgentOAuthConsent(consentState: string) {
+    const consent = state.agentOAuthConsents[consentState];
+    if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
+    return {
+      clientName: consent.clientName,
+      redirectHost: new URL(consent.redirectUri).host,
+      scopes: ["mcp:read"],
+    };
+  },
+
+  /** 허락하면 그 워크스페이스로 OAuth 연결이 하나 생기고, 돌아갈 주소에 `code`·`state` 가 붙는다. */
+  approveAgentOAuthConsent(consentState: string, workspaceId: string) {
+    const consent = state.agentOAuthConsents[consentState];
+    if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
+    const workspace = state.workspaces.find(
+      (candidate) => candidate.workspaceId === workspaceId
+    );
+    if (!workspace) fail("WORKSPACE_NOT_FOUND");
+    delete state.agentOAuthConsents[consentState];
+    const createdAt = nextTimestamp();
+    const delegationId = nextId();
+    state.agentDelegations.push({
+      delegationId,
+      name: consent.clientName.slice(0, 50),
+      workspaceId,
+      workspaceName: workspace.name,
+      tokenHint: null,
+      credentialKind: "OAUTH",
+      status: "ACTIVE",
+      createdAt,
+      lastUsedAt: null,
+      expiresAt: new Date(
+        Date.parse(createdAt) + 90 * 24 * 60 * 60 * 1000
+      ).toISOString(),
+      revokedAt: null,
+      revokeReason: null,
+    });
+    return {
+      redirectUri: withQuery(consent.redirectUri, {
+        code: `mock-code-${delegationId}`,
+        state: consentState,
+      }),
+    };
+  },
+
+  /** 거절은 아무것도 만들지 않고 돌아갈 주소에 `error=access_denied` 를 붙인다. */
+  denyAgentOAuthConsent(consentState: string) {
+    const consent = state.agentOAuthConsents[consentState];
+    if (!consent) fail("AGENT_OAUTH_REQUEST_NOT_FOUND");
+    delete state.agentOAuthConsents[consentState];
+    return {
+      redirectUri: withQuery(consent.redirectUri, {
+        error: "access_denied",
+        state: consentState,
+      }),
+    };
   },
 
   /** 본인 회수. 이미 회수된 연결을 다시 회수해도 그대로 둔다(서버와 같다). */

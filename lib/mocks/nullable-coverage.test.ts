@@ -300,6 +300,8 @@ function contractSamples() {
     "/v1/notes/{noteId}/transcript/segments": [
       "?afterStartedAtMs=0&afterSequence=0",
     ],
+    // 동의 화면이 읽는 요청 (APP-888). 목 시드의 대기 요청 하나다.
+    "/v1/agent-oauth/consent": ["?state=mock-consent"],
   };
 
   const samples: Array<[string, string]> = [];

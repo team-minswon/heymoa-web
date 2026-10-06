@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { CreatedAgentDelegationResponseDataDelegationCredentialKind } from "./createdAgentDelegationResponseDataDelegationCredentialKind";
 import type { CreatedAgentDelegationResponseDataDelegationRevokeReason } from "./createdAgentDelegationResponseDataDelegationRevokeReason";
 import type { CreatedAgentDelegationResponseDataDelegationStatus } from "./createdAgentDelegationResponseDataDelegationStatus";
 
@@ -17,7 +18,7 @@ export type CreatedAgentDelegationResponseDataDelegation = {
   /** 연결 이름 */
   name: string;
   /**
-   * 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다
+   * 개인 토큰 앞자리. 어느 토큰인지 알아보는 용도이고 원문을 다시 만들 수 없다. OAuth 연결은 null
    * @nullable
    */
   tokenHint: string | null;
@@ -48,8 +49,10 @@ export type CreatedAgentDelegationResponseDataDelegation = {
    */
   revokedAt: string | null;
   /**
-   * 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남. 회수되지 않았으면 null
+   * 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임. 회수되지 않았으면 null
    * @nullable
    */
   revokeReason: CreatedAgentDelegationResponseDataDelegationRevokeReason;
+  /** 연결 자격 종류. 개인 토큰으로 만든 연결과 OAuth 동의로 만든 연결이 있다 */
+  credentialKind: CreatedAgentDelegationResponseDataDelegationCredentialKind;
 };
