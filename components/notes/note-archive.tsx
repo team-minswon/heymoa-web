@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { Button } from "@/components/ui/button";
@@ -191,7 +191,8 @@ const labelsToReset = (
 /** 이 회의의 참여자. 아직 참여자가 아닌 후보와 달리 참여 기록을 반드시 갖는다. */
 type NoteParticipantFace = SpeakerCandidate & { participantId: string };
 
-export function NoteArchive({
+// 폭만 바꾸는 뷰 전환에서 긴 전사·화자 메뉴 전체를 다시 그리지 않는다.
+export const NoteArchive = memo(function NoteArchive({
   noteId,
   workspaceId,
   participants = [],
@@ -1110,4 +1111,4 @@ export function NoteArchive({
       </div>
     </ScrollArea>
   );
-}
+});

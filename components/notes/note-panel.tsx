@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   ArrowLeft,
   Expand,
@@ -142,7 +148,7 @@ export function NotePanel({
   const phase = deriveMeetingPhase(note);
   // 전사·요약 복사본의 머리말. **여기서 한 번 만든다** — 탭마다 노트를 다시 구독하지
   // 않는다(rule `architecture`).
-  const noteMeta = note ? toNoteMeta(note) : null;
+  const noteMeta = useMemo(() => (note ? toNoteMeta(note) : null), [note]);
   const { user } = useAuth();
   const isStarter = Boolean(
     user && note?.meetingStartedBy?.userId === user.userId

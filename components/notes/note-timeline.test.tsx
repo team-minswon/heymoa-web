@@ -231,6 +231,8 @@ describe("NoteTimeline", () => {
     realtime.context = { ...realtime.context, state: initialContextState, loading: true };
     const { unmount } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
     expect(screen.getByRole("list", { name: "타임라인을 불러오는 중" })).toBeVisible();
+    expect(screen.getByLabelText("타임라인 제목 불러오는 중")).toBeVisible();
+    expect(screen.getByRole("list", { name: "타임라인을 불러오는 중" }).closest('[aria-busy]')).toHaveAttribute("aria-busy", "true");
     // 첫 snapshot 전에는 개수를 말하지 않는다.
     expect(screen.getByRole("button", { name: "전체" })).toBeVisible();
     unmount();
@@ -238,6 +240,7 @@ describe("NoteTimeline", () => {
     realtime.context = { ...realtime.context, loading: false, failed: true };
     const failed = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
     expect(screen.getByText("타임라인을 불러오지 못했습니다.")).toBeVisible();
+    expect(screen.queryByLabelText("타임라인 제목 불러오는 중")).not.toBeInTheDocument();
     failed.unmount();
 
     withLedger();

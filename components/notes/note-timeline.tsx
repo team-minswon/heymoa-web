@@ -353,7 +353,10 @@ export function NoteTimeline({
         ) : null
       }
     >
-      <div className="mx-auto w-full max-w-[calc(760px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-36">
+      <div
+        aria-busy={context.loading}
+        className="mx-auto w-full max-w-[calc(760px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-36"
+      >
         {header ? (
           <header>
             <h2 className="font-serif text-[28px] font-medium leading-[38px] tracking-[-0.4px] text-[var(--el-ink)]">
@@ -373,12 +376,23 @@ export function NoteTimeline({
               ) : null}
             </div>
           </header>
+        ) : context.loading ? (
+          <header aria-label="타임라인 제목 불러오는 중">
+            <div aria-hidden="true">
+              <Skeleton className="h-[38px] w-2/3 max-w-80 motion-reduce:animate-none" />
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <Skeleton className="h-7 w-40 motion-reduce:animate-none" />
+                <Skeleton className="h-7 w-14 motion-reduce:animate-none" />
+                <Skeleton className="h-7 w-20 motion-reduce:animate-none" />
+              </div>
+            </div>
+          </header>
         ) : null}
 
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--el-hairline-soft)] pb-2.5",
-            header ? "mt-8" : null
+            header || context.loading ? "mt-8" : null
           )}
         >
           <div
@@ -442,16 +456,27 @@ export function NoteTimeline({
             aria-label="타임라인을 불러오는 중"
             className="mt-7 flex flex-col"
           >
-            {[0, 1, 2].map((row) => (
+            {[0, 1, 2, 3, 4].map((row) => (
               <li
                 key={row}
-                className="grid grid-cols-[44px_40px_minmax(0,1fr)] py-[7px]"
+                aria-hidden="true"
+                className="grid grid-cols-[44px_40px_minmax(0,1fr)] py-3"
               >
-                <Skeleton className="mt-1.5 ml-auto h-3 w-9" />
-                <span />
+                <Skeleton className="mt-1.5 ml-auto h-3 w-9 motion-reduce:animate-none" />
+                <span className="flex justify-center">
+                  <Skeleton className="mt-1.5 size-2.5 rounded-full motion-reduce:animate-none" />
+                </span>
                 <span className="flex flex-col gap-1.5">
-                  <Skeleton className="h-[18px] w-[70%]" />
-                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton
+                    className={cn(
+                      "h-[18px] motion-reduce:animate-none",
+                      row % 2 ? "w-[70%]" : "w-[90%]"
+                    )}
+                  />
+                  {row % 2 === 0 ? (
+                    <Skeleton className="h-[18px] w-1/2 motion-reduce:animate-none" />
+                  ) : null}
+                  <Skeleton className="h-3.5 w-24 motion-reduce:animate-none" />
                 </span>
               </li>
             ))}

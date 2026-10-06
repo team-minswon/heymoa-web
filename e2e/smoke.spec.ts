@@ -1893,6 +1893,56 @@ test("clears the note row spinner after the full-view note is closed", async ({
  *
  * 왕복이 있는지 없는지는 실제 라우터에서만 드러난다 — jsdom에는 RSC 요청 자체가 없다.
  */
+test("switches side and full without reloading note data or remounting the transcript", async ({
+  page,
+}) => {
+  const reads: string[] = [];
+  const notePath = `/v1/notes/${DIARIZED_NOTE_ID}`;
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (
+      request.url().includes("_rsc=") ||
+      [notePath, `${notePath}/transcript`, `${notePath}/proposals`].includes(
+        path
+      )
+    ) {
+      reads.push(request.url());
+    }
+  });
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=side&tab=transcript`
+  );
+  const block = page.getByTestId("archive-transcript-block").first();
+  await expect(block).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "복사", exact: true }).first()
+  ).toBeEnabled();
+  for (const suffix of ["", "/transcript", "/proposals"]) {
+    await expect
+      .poll(() =>
+        reads.some((url) => new URL(url).pathname === `${notePath}${suffix}`)
+      )
+      .toBe(true);
+  }
+  const original = await block.elementHandle();
+  reads.length = 0;
+  await page
+    .getByRole("button", { name: "전체 화면으로 보기", exact: true })
+    .click();
+  await expect(page.locator('[data-surface="full"]')).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "사이드 뷰로 보기", exact: true })
+  ).toBeVisible();
+  expect(await original!.evaluate((element) => element.isConnected)).toBe(true);
+  await page
+    .getByRole("button", { name: "사이드 뷰로 보기", exact: true })
+    .click();
+  await expect(page.locator('[data-surface="sheet"]')).toBeVisible();
+  await expect(block).toBeVisible();
+  expect(await original!.evaluate((element) => element.isConnected)).toBe(true);
+  expect(reads).toEqual([]);
+});
+
 test("switches note tabs without an RSC round trip", async ({ page }) => {
   const rscRequests: string[] = [];
   page.on("request", (request) => {
@@ -2378,11 +2428,15 @@ test("keeps confirmation shading and cancellation in both note display modes", a
   }
 });
 
-
-test("keeps the speaker sheet shaded in both note display modes", async ({ page }) => {
-  await page.goto(`/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=full&tab=transcript`);
+test("keeps the speaker sheet shaded in both note display modes", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${DIARIZED_NOTE_ID}?view=full&tab=transcript`
+  );
   for (const view of ["full", "side"] as const) {
-    if (view === "side") await page.getByRole("button", { name: "사이드 뷰로 보기" }).click();
+    if (view === "side")
+      await page.getByRole("button", { name: "사이드 뷰로 보기" }).click();
     await page.getByRole("button", { name: "화자", exact: true }).click();
     const panel = page.getByRole("dialog", { name: "화자", exact: true });
     await expect(panel).toBeVisible();
@@ -2391,6 +2445,8 @@ test("keeps the speaker sheet shaded in both note display modes", async ({ page 
     await expect(backdrop).toHaveCSS("opacity", "1");
     await panel.getByRole("button", { name: "닫기", exact: true }).click();
     await expect(panel).not.toBeVisible();
-    await expect(page.locator(`[data-surface="${view === "full" ? "full" : "sheet"}"]`)).toBeVisible();
+    await expect(
+      page.locator(`[data-surface="${view === "full" ? "full" : "sheet"}"]`)
+    ).toBeVisible();
   }
 });
