@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, ChevronDown, Copy } from "lucide-react";
+import { Bot, ChevronDown } from "lucide-react";
 
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
+import { AgentOAuthGuide } from "@/components/agent-connections/agent-oauth-guide";
+import { CopyBlock } from "@/components/agent-connections/copy-block";
 
 import {
   AlertDialog,
@@ -43,7 +45,6 @@ import type {
 } from "@/lib/api/generated/models";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
-import { toast } from "@/lib/ui/toast";
 
 type Delegation = AgentDelegationsResponseDataDelegationsItem;
 
@@ -54,6 +55,26 @@ const STATUS_LABEL: Record<Delegation["status"], string> = {
   ACTIVE: "연결됨",
   EXPIRED: "만료됨",
   REVOKED: "회수됨",
+};
+
+/** 연결이 무엇으로 붙었나(APP-889). OAuth 연결은 토큰 앞자리가 없어 이것으로만 구분된다. */
+const CREDENTIAL_LABEL: Record<Delegation["credentialKind"], string> = {
+  PERSONAL_TOKEN: "개인 토큰",
+  OAUTH: "OAuth",
+};
+
+/**
+ * 왜 끊겼나(APP-889). 재사용 감지(APP-887)는 토큰이 새어 나갔을 수 있다는 뜻이라 다시 연결할 이유까지 알린다.
+ * 값이 늘면 이 표가 타입 검사에 걸려 문구를 빠뜨리지 않는다.
+ */
+const REVOKE_REASON_LABEL: Record<
+  NonNullable<Delegation["revokeReason"]>,
+  string
+> = {
+  USER: "직접 회수했습니다.",
+  MEMBERSHIP_ENDED: "워크스페이스를 떠나 끊겼습니다.",
+  REFRESH_TOKEN_REUSED:
+    "토큰 재사용이 감지돼 끊겼습니다. 토큰이 새어 나갔을 수 있으니 에이전트에서 다시 연결하세요.",
 };
 
 const DATE = { year: "numeric", month: "long", day: "numeric" } as const;
@@ -99,7 +120,19 @@ export function AgentConnectionsSettings({
 }) {
   const queryClient = useQueryClient();
   const delegationsQuery = useGetAgentDelegations();
-  const [creating, setCreating] = useState(false);
+  // OAuth 연결은 에이전트가 연 다른 브라우저 창에서 허락하므로, 이 창으로 돌아오면 목록을 다시 읽는다(APP-889).
+  // TanStack 의 창 포커스 재조회는 visibilitychange 만 보고 staleTime(60초)도 따라, 두 창을 나란히 둔 채
+  // 돌아오거나 곧바로 돌아온 사람에게 새 연결이 안 보인다 — 창 focus 에서 캐시와 상관없이 읽는다
+  const { refetch: refetchDelegations } = delegationsQuery;
+  useEffect(() => {
+    const refresh = () => void refetchDelegations();
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [refetchDelegations]);
+  // OAuth 안내는 운영에서 server OAuth 를 켠 뒤에 켠다(APP-889 spec 「운영 순서」, APP-933). 꺼져 있으면
+  // 「새 연결」이 개인 토큰 폼 그대로다. 빌드 때 박히는 값이라 바꾸려면 다시 배포해야 한다
+  const oauthGuide = process.env.NEXT_PUBLIC_AGENT_OAUTH_GUIDE === "enabled";
+  const [mode, setMode] = useState<"guide" | "token" | null>(null);
   const [issued, setIssued] = useState<{ name: string; token: string } | null>(
     null
   );
@@ -133,11 +166,11 @@ export function AgentConnectionsSettings({
             기억을 읽고 HeyMoa 화면을 열 수 있게 합니다.
           </p>
         </div>
-        {!creating && !issued ? (
+        {!mode && !issued ? (
           <Button
             size="sm"
             className="h-8 shrink-0"
-            onClick={() => setCreating(true)}
+            onClick={() => setMode(oauthGuide ? "guide" : "token")}
           >
             새 연결
           </Button>
@@ -150,13 +183,21 @@ export function AgentConnectionsSettings({
           token={issued.token}
           onClose={() => setIssued(null)}
         />
-      ) : creating ? (
+      ) : mode === "guide" ? (
+        <AgentOAuthGuide
+          onPersonalToken={() => setMode("token")}
+          onClose={() => {
+            setMode(null);
+            void invalidate();
+          }}
+        />
+      ) : mode === "token" ? (
         <NewConnectionForm
           defaultWorkspaceId={workspaceId}
           onBusyChange={onBusyChange}
-          onCancel={() => setCreating(false)}
+          onCancel={() => setMode(null)}
           onCreated={async (name, token) => {
-            setCreating(false);
+            setMode(null);
             setIssued({ name, token });
             await invalidate();
           }}
@@ -194,7 +235,9 @@ export function AgentConnectionsSettings({
                     : "지금 연결된 에이전트가 없습니다."}
                 </p>
                 <p className="mt-1 text-xs text-[var(--el-muted)]">
-                  「새 연결」로 토큰을 받아 에이전트에 넣으면 여기에 보입니다.
+                  {oauthGuide
+                    ? "「새 연결」의 주소를 에이전트에 등록하고 브라우저에서 허락하면 여기에 보입니다."
+                    : "「새 연결」로 토큰을 받아 에이전트에 넣으면 여기에 보입니다."}
                 </p>
               </div>
             ) : (
@@ -473,37 +516,6 @@ function IssuedToken({
   );
 }
 
-function CopyBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-1.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-[var(--el-muted)]">{label}</p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2 text-xs"
-          aria-label={`${label} 복사`}
-          onClick={() => {
-            void navigator.clipboard
-              ?.writeText(value)
-              .then(() => toast.success(`${label}을(를) 복사했습니다.`))
-              .catch(() =>
-                toast.error("복사하지 못했습니다. 직접 선택해 복사해 주세요.")
-              );
-          }}
-        >
-          <Copy className="size-3.5" />
-          복사
-        </Button>
-      </div>
-      <pre className="overflow-x-auto rounded-block bg-[var(--el-canvas-soft)] p-3 font-mono text-xs whitespace-pre-wrap break-all text-[var(--el-ink)]">
-        {value}
-      </pre>
-    </div>
-  );
-}
-
 function DelegationRow({
   delegation,
   onRevoked,
@@ -532,6 +544,9 @@ function DelegationRow({
               <Badge variant={active ? "success" : "outline"}>
                 {STATUS_LABEL[delegation.status]}
               </Badge>
+              <Badge variant="outline">
+                {CREDENTIAL_LABEL[delegation.credentialKind]}
+              </Badge>
             </div>
             <p className="mt-1 text-xs text-[var(--el-muted)]">
               {delegation.workspaceName}
@@ -551,6 +566,17 @@ function DelegationRow({
                 ? ` · ${formatAppDate(delegation.expiresAt, DATE)}까지 쓰지 않으면 만료`
                 : null}
             </p>
+            {!active && delegation.revokeReason ? (
+              <p
+                className={`mt-0.5 text-xs ${
+                  delegation.revokeReason === "REFRESH_TOKEN_REUSED"
+                    ? "text-[var(--el-error-strong)]"
+                    : "text-[var(--el-muted)]"
+                }`}
+              >
+                {REVOKE_REASON_LABEL[delegation.revokeReason]}
+              </p>
+            ) : null}
           </div>
         </div>
 

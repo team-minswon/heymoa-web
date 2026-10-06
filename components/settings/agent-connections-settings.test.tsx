@@ -4,11 +4,13 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
+import { buildUrl } from "@/lib/api/fetcher";
 
 const created = vi.hoisted(() => ({
   pending: false,
@@ -22,11 +24,14 @@ const state = vi.hoisted(() => ({
   error: false,
   workspacesError: false,
   workspacesLoading: false,
+  refetch: vi.fn(),
 }));
 
 const usages = vi.hoisted(() => ({
   fetch: vi.fn(),
 }));
+
+const revoked = vi.hoisted(() => ({ mutateAsync: vi.fn() }));
 
 vi.mock("@/lib/api/generated/agent-delegation/agent-delegation", () => ({
   getGetAgentDelegationsQueryKey: () => ["agent-delegations"],
@@ -35,17 +40,19 @@ vi.mock("@/lib/api/generated/agent-delegation/agent-delegation", () => ({
     delegationId,
   ],
   getAgentDelegationUsages: usages.fetch,
-  useGetAgentDelegations: () => ({
-    isLoading: false,
-    isError: state.error,
-    refetch: vi.fn(),
-    data: state.error
-      ? undefined
-      : {
-          status: 200,
-          data: { success: true, data: { delegations: state.delegations } },
-        },
-  }),
+  useGetAgentDelegations: () => {
+    return {
+      isLoading: false,
+      isError: state.error,
+      refetch: state.refetch,
+      data: state.error
+        ? undefined
+        : {
+            status: 200,
+            data: { success: true, data: { delegations: state.delegations } },
+          },
+    };
+  },
   useCreateAgentDelegation: (options: unknown) => {
     created.options = options;
     return {
@@ -54,7 +61,10 @@ vi.mock("@/lib/api/generated/agent-delegation/agent-delegation", () => ({
       isPending: created.pending,
     };
   },
-  useRevokeAgentDelegation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRevokeAgentDelegation: () => ({
+    mutateAsync: revoked.mutateAsync,
+    isPending: false,
+  }),
 }));
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspaces: () => ({
@@ -96,6 +106,8 @@ describe("AgentConnectionsSettings", () => {
     state.workspacesLoading = false;
     created.pending = false;
     usages.fetch.mockReset();
+    revoked.mutateAsync.mockReset();
+    vi.unstubAllEnvs();
   });
 
   // 아직 아무것도 안 한 상태는 실패가 아니다 — 경고(role=alert)도 재시도도 없어야 한다
@@ -179,7 +191,9 @@ describe("AgentConnectionsSettings", () => {
       'd="${CODEX_HOME:-$HOME/.codex}" && mkdir -p "$d" && f="$d/config.toml" && (umask 077; touch "$f") && \\'
     );
     // 평소엔 TOML 을 제대로 읽는 codex 로 지우고, 설정이 이미 깨져 못 읽을 때만 줄 단위로 걷어 낸다
-    expect(blocks[2]).toContain("{ codex mcp remove heymoa >/dev/null 2>&1 || {");
+    expect(blocks[2]).toContain(
+      "{ codex mcp remove heymoa >/dev/null 2>&1 || {"
+    );
     expect(blocks[2]).toContain("mcp_servers\\.heymoa[ \\t]*[].]/{s=1;next}");
     // 임시 파일로 바꿔치면 config.toml 권한이 풀린다 — 같은 파일에 다시 쓴다
     expect(blocks[2]).not.toContain("mv ");
@@ -241,6 +255,7 @@ describe("AgentConnectionsSettings", () => {
       workspaceId: "01K0000000000",
       workspaceName: "제품팀",
       tokenHint: "hm_Q7xKp2a",
+      credentialKind: "PERSONAL_TOKEN",
       status,
       createdAt: "2026-09-20T09:00:00Z",
       lastUsedAt: null,
@@ -282,6 +297,236 @@ describe("AgentConnectionsSettings", () => {
     });
   });
 
+  // 운영은 server OAuth 를 켠 뒤에 켠다(APP-889 spec 「운영 순서」) — 꺼진 동안은 지금 안내 그대로다
+  describe("OAuth 안내", () => {
+    it("설정값이 꺼져 있으면 새 연결이 지금처럼 개인 토큰 폼이다", () => {
+      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "disabled");
+      renderSettings();
+
+      fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+
+      expect(screen.getByLabelText("연결 이름")).toBeTruthy();
+      expect(
+        screen.queryByRole("region", { name: "OAuth 연결 안내" })
+      ).toBeNull();
+    });
+
+    it("켜져 있으면 새 연결이 주소만 등록하는 안내를 열고 에이전트마다 토큰 없는 명령을 보인다", () => {
+      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
+      renderSettings();
+
+      fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+
+      const guide = screen.getByRole("region", { name: "OAuth 연결 안내" });
+      const mcpUrl = buildUrl("/mcp");
+      const blocks = Array.from(guide.querySelectorAll("pre")).map(
+        (pre) => pre.textContent ?? ""
+      );
+      expect(blocks).toEqual([
+        mcpUrl,
+        `claude mcp add --transport http heymoa ${mcpUrl}`,
+        // 등록하면 Codex 가 로그인을 시작한다 — login 을 같이 붙이면 허락을 두 번 한다
+        `codex mcp add heymoa --url ${mcpUrl}`,
+      ]);
+      expect(blocks.join("\n")).not.toMatch(/Bearer|hm_/);
+      expect(within(guide).getByText("claude.ai · Claude 앱")).toBeTruthy();
+      expect(
+        within(guide)
+          .getByRole("link", { name: "쓸 수 있는 조건 보기" })
+          .getAttribute("href")
+      ).toBe(
+        "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt"
+      );
+      // 워크스페이스는 동의 화면에서 고른다 — 안내에는 고르는 칸이 없다
+      expect(within(guide).queryByLabelText("맡길 워크스페이스")).toBeNull();
+    });
+
+    it("켜져 있어도 브라우저 없는 환경이면 개인 토큰 폼으로 가서 토큰을 만든다", async () => {
+      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
+      created.mutateAsync.mockResolvedValue({
+        status: 201,
+        data: {
+          success: true,
+          data: { token: "hm_secret-token", delegation: {} },
+        },
+      });
+      renderSettings();
+
+      fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+      fireEvent.click(screen.getByRole("button", { name: "개인 토큰 만들기" }));
+      fireEvent.change(screen.getByLabelText("연결 이름"), {
+        target: { value: "CI 에이전트" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "토큰 만들기" }));
+
+      expect(await screen.findByText("hm_secret-token")).toBeTruthy();
+      expect(created.mutateAsync).toHaveBeenCalledWith({
+        data: { workspaceId: "01K0000000000", name: "CI 에이전트" },
+      });
+    });
+
+    // OAuth 는 에이전트가 연 다른 브라우저 창에서 허락한다 — 이 창으로 돌아오거나 안내를 닫으면 새 연결이 보여야 한다
+    it("연결 목록은 창으로 돌아오면 방금 읽었어도 다시 읽는다", () => {
+      renderSettings();
+      state.refetch.mockClear();
+
+      window.dispatchEvent(new Event("focus"));
+
+      expect(state.refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("OAuth 안내를 닫으면 연결 목록을 다시 읽는다", () => {
+      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
+      const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+      renderSettings();
+
+      fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+      fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["agent-delegations"],
+      });
+      expect(
+        screen.queryByRole("region", { name: "OAuth 연결 안내" })
+      ).toBeNull();
+      invalidate.mockRestore();
+    });
+
+    it("켜져 있으면 빈 목록도 주소를 등록하라고 안내한다", () => {
+      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
+      renderSettings();
+
+      expect(
+        screen.getByText(
+          "「새 연결」의 주소를 에이전트에 등록하고 브라우저에서 허락하면 여기에 보입니다."
+        )
+      ).toBeTruthy();
+    });
+  });
+
+  describe("자격 종류와 회수 사유", () => {
+    const delegation = (
+      over: Partial<{
+        delegationId: string;
+        name: string;
+        tokenHint: string | null;
+        credentialKind: "PERSONAL_TOKEN" | "OAUTH";
+        status: "ACTIVE" | "EXPIRED" | "REVOKED";
+        revokeReason:
+          | "USER"
+          | "MEMBERSHIP_ENDED"
+          | "REFRESH_TOKEN_REUSED"
+          | null;
+      }>
+    ) => ({
+      delegationId: "01K00000000Q1",
+      name: "노트북 Claude Code",
+      workspaceId: "01K0000000000",
+      workspaceName: "제품팀",
+      tokenHint: "hm_Q7xKp2a",
+      credentialKind: "PERSONAL_TOKEN",
+      status: "ACTIVE",
+      createdAt: "2026-09-20T09:00:00Z",
+      lastUsedAt: null,
+      expiresAt: "2026-12-29T13:00:00Z",
+      revokedAt: null,
+      revokeReason: null,
+      ...over,
+    });
+
+    // OAuth 연결은 토큰 앞자리가 없어 종류 뱃지로만 개인 토큰 연결과 갈린다
+    it("개인 토큰 연결과 OAuth 연결이 한 목록에 종류와 함께 보이고 둘 다 회수된다", async () => {
+      revoked.mutateAsync.mockResolvedValue({ status: 204 });
+      state.delegations = [
+        delegation({}),
+        delegation({
+          delegationId: "01K00000000Q2",
+          name: "Codex",
+          tokenHint: null,
+          credentialKind: "OAUTH",
+        }),
+      ];
+      renderSettings();
+
+      const [token, oauth] = screen.getAllByRole("listitem");
+      expect(within(token).getByText("개인 토큰")).toBeTruthy();
+      expect(within(token).getByText("hm_Q7xKp2a…")).toBeTruthy();
+      expect(within(oauth).getByText("OAuth")).toBeTruthy();
+      expect(within(oauth).queryByText(/hm_/)).toBeNull();
+
+      for (const [row, delegationId] of [
+        [token, "01K00000000Q1"],
+        [oauth, "01K00000000Q2"],
+      ] as const) {
+        fireEvent.click(within(row).getByRole("button", { name: "회수" }));
+        const dialog = await screen.findByRole("alertdialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "회수" }));
+        await waitFor(() =>
+          expect(revoked.mutateAsync).toHaveBeenLastCalledWith({
+            delegationId,
+          })
+        );
+        await waitFor(() =>
+          expect(screen.queryByRole("alertdialog")).toBeNull()
+        );
+      }
+      expect(revoked.mutateAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it("지난 연결에 왜 끊겼는지 사유마다 다른 문구로 보이고 만료는 사유가 없다", () => {
+      state.delegations = [
+        delegation({
+          delegationId: "01K00000000Q2",
+          name: "직접 끊은 연결",
+          status: "REVOKED",
+          revokeReason: "USER",
+        }),
+        delegation({
+          delegationId: "01K00000000Q3",
+          name: "떠난 팀의 연결",
+          status: "REVOKED",
+          revokeReason: "MEMBERSHIP_ENDED",
+        }),
+        delegation({
+          delegationId: "01K00000000Q4",
+          name: "새어 나간 연결",
+          tokenHint: null,
+          credentialKind: "OAUTH",
+          status: "REVOKED",
+          revokeReason: "REFRESH_TOKEN_REUSED",
+        }),
+        delegation({
+          delegationId: "01K00000000Q5",
+          name: "만료된 연결",
+          status: "EXPIRED",
+        }),
+      ];
+      renderSettings();
+
+      fireEvent.click(screen.getByRole("button", { name: "지난 연결 4개" }));
+
+      const past = screen.getByRole("list", { name: "지난 연결" });
+      const rowOf = (name: string) =>
+        within(past).getByText(name).closest("li") as HTMLElement;
+      expect(
+        within(rowOf("직접 끊은 연결")).getByText("직접 회수했습니다.")
+      ).toBeTruthy();
+      expect(
+        within(rowOf("떠난 팀의 연결")).getByText(
+          "워크스페이스를 떠나 끊겼습니다."
+        )
+      ).toBeTruthy();
+      expect(
+        within(rowOf("새어 나간 연결")).getByText(
+          "토큰 재사용이 감지돼 끊겼습니다. 토큰이 새어 나갔을 수 있으니 에이전트에서 다시 연결하세요."
+        )
+      ).toBeTruthy();
+      expect(
+        within(rowOf("만료된 연결")).queryByText(/했습니다|끊겼습니다/)
+      ).toBeNull();
+    });
+  });
+
   describe("사용 내역", () => {
     const delegation = {
       delegationId: "01K00000000Q1",
@@ -289,6 +534,7 @@ describe("AgentConnectionsSettings", () => {
       workspaceId: "01K0000000000",
       workspaceName: "제품팀",
       tokenHint: "hm_Q7xKp2a",
+      credentialKind: "PERSONAL_TOKEN",
       status: "ACTIVE",
       createdAt: "2026-09-20T09:00:00Z",
       lastUsedAt: "2026-09-30T13:00:00Z",

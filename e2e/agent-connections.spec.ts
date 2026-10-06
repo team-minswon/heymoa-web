@@ -67,7 +67,16 @@ test("회수하면 그 연결이 회수됨으로 바뀐다", async ({ page }) =>
     .getByRole("listitem")
     .filter({ hasText: "회수할 연결" });
   await expect(past).toContainText("회수됨");
+  await expect(past).toContainText("직접 회수했습니다.");
   await expect(past.getByRole("button", { name: "회수" })).toHaveCount(0);
+
+  // 시드의 「떠난 팀의 연결」은 OAuth 연결이다 — 토큰 앞자리 대신 종류와 끊긴 까닭이 보인다(APP-889)
+  const oauth = page
+    .getByRole("list", { name: "지난 연결" })
+    .getByRole("listitem")
+    .filter({ hasText: "떠난 팀의 연결" });
+  await expect(oauth).toContainText("OAuth");
+  await expect(oauth).toContainText("워크스페이스를 떠나 끊겼습니다.");
 });
 
 // APP-826. 시드의 「노트북 Claude Code」는 내역이 한 쪽(20)을 넘는다(24). 응답에는 시각·도구·건수·성공
