@@ -1,175 +1,293 @@
-"use client";
+import type { ReactNode } from "react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Reveal } from "@/components/heymoa/landing/reveal";
+import { cn } from "@/lib/utils";
 
 import {
-  CONTAINER,
-  Eyebrow,
-  SECTION_TOP,
-  SECTION_X,
-} from "@/components/heymoa/landing/shell";
+  AgendaHead,
+  AppWindow,
+  DecisionRow,
+  MiniBar,
+  RowActions,
+  SectionHead,
+  TimelineList,
+  TimelineRow,
+} from "./app";
+import { ExampleStamp, Scribble, Speech } from "./marks";
+import { APP, BODY, CONTAINER, FOCUS, H2, HAND, MARKER, SECTION_Y, SHADOW, vars } from "./tokens";
 
 /**
- * 자주 묻는 질문. 실제로 열리고 닫힌다 — 시안은 첫 항목만 펼친 그림이었지만 그림을 그대로
- * 옮기면 나머지는 눌러도 아무 일도 안 나는 가짜가 된다.
+ * 자주 묻는 것. tl;dv 의 접이식 FAQ 를 가져왔고, 이 구간의 장치는 **큰 번호 + 작은 앱 조각**이다.
  *
- * **여는 것은 `<button>`이다.** 접기는 이동이 아니라 동작이라 링크로 두면 안 되고,
- * 제목 위계를 지키려고 `<h3>` 안에 버튼을 넣는다(제목이 버튼을 감싸는 쪽이 표준 형태다).
- * 한 번에 하나만 열리게 두지 않은 것은, 답을 나란히 놓고 비교하는 사람을 막을 이유가 없어서다.
+ * - 번호는 30/38px 굵은 고딕에 버터색 형광펜 띠를 깐다. 펼치거나 올리면 띠가 노랑(`--tv-pop`)으로
+ *   바뀌고(오른쪽 원 화살표와 같은 규칙), 구간이 화면에 들어오면 띠가 위에서부터 차례로 칠해진다.
+ * - 01 과 03 을 펼쳐 둔다 — 정지 화면에서도 글 답 하나와 앱 조각 하나가 바로 보인다. 그래서
+ *   `name` 으로 하나만 열리게 묶지 않았다(묶으면 브라우저가 둘째 `open` 을 닫는다).
+ * - 앱 조각은 둘이고 화면이 다르다: 03 = 회의 중 타임라인(「철회됨」), 04 = 요약 탭의 검토 줄(제외 →
+ *   그어진 채 남고 「제외 취소」). 둘 다 회의실 예약 이야기라 「예시」 도장을 붙였다.
+ * - 왼쪽 기둥(넓은 화면, sticky)은 노란 「?」 쪽지 + 목록 쪽 화살표 + 두 사람의 농담(「저 이번 주
+ *   당번인데요…」 → 「06번 보세요」)으로 채운다. 말풍선은 06 질문을 되풀이하지 않고 상황만 던진다.
+ *   좁은 화면은 제목 옆 작은 「?」와 같은 농담만. 농담은 당번 이야기다 — 설치 이야기는 01 답에만
+ *   둔다(`top-bar.tsx`). 390 에서는 이 농담이 질문 목록보다 먼저 보여서 여기에 설치 말이 있으면 01 밖으로
+ *   새어 나간 것처럼 읽혔다.
+ * - 접고 펴는 것은 네이티브 `<details>` 라 클라이언트 코드가 없다(부드럽게 열리는 것은 지원하는
+ *   브라우저에서만 — `motion.tsx` 의 `.tv-faq`). 움직임은 `Reveal` 이 켜는 `tv-r*` 뿐이다.
+ *
+ * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 종료와 검토 완료 · 「철회됨」(`note-timeline.tsx`
+ * `metaOf`) · 줄마다 수정 · 제외와 「제외 취소」(`review-row.tsx`, 「결정 N」은 남은 줄만 센다 —
+ * `review-section.tsx` `includedCount`) · 이전 결정 대체). 가격 · 지원 언어 · 모바일 앱 같은 항목은
+ * 우리에게 없어서 묻지 않는다.
  */
 
-const QA: Array<{ q: string; a: string }> = [
-  {
-    q: "회의 기록만 남기는 도구와 무엇이 다른가요?",
-    a: "스크립트와 요약에서 멈추지 않습니다. 결정과 할 일에는 그 말이 나온 스크립트 줄이 근거로 붙어 눌러서 되짚을 수 있고, 회의는 프로젝트 단위로 묶여 쌓입니다. 지난 회의를 되짚는 것은 에이전트에게 물어보는 방식입니다.",
-  },
-  {
-    q: "회의 중에 흐름을 끊지 않고 물어볼 수 있나요?",
-    a: "네. 회의가 도는 동안에도 오른쪽 「내 에이전트」에게 바로 물어볼 수 있고, 지금까지의 스크립트와 지난 회의를 함께 보고 답합니다.",
-  },
-  {
-    q: "회의가 끝나면 무엇을 하면 되나요?",
-    a: "회의를 종료하고 분석이 끝나면 「요약」 탭에서 검토합니다. 요약 · 주제 · 결정 · 할 일이 정리되어 있고, 항목을 펼치면 그 말이 나온 근거 발언이 보입니다. 할 일의 담당과 기한을 고치고 뺄 항목은 제외한 뒤 「검토 완료」를 누르면 결정과 할 일이 프로젝트에 확정됩니다. 완료한 뒤에는 검토를 고칠 수 없습니다.",
-  },
-  {
-    q: "정리된 업무가 저절로 외부 도구로 나가나요?",
-    a: "아니요. 에이전트가 도구에 쓰기 전에 승인 카드가 뜨고, 승인한 호출만 Linear 와 GitHub 로 나갑니다. 나간 결과의 링크는 대화 기록에 남습니다.",
-  },
-  {
-    // 바깥으로 나가는 다른 길이라 바로 위 문항과 나란히 둔다. 문구는 설정 「외부 에이전트」의 안내와 맞춘다.
-    q: "Claude Code 같은 다른 에이전트에서 회의 내용을 쓸 수 있나요?",
-    a: "네. 설정의 「외부 에이전트」에서 연결을 만들면 Claude Code·Codex CLI 같은 에이전트가 맡긴 워크스페이스의 결정과 할 일, 회의 스크립트(참석자의 발화와 이름 포함)를 읽고 HeyMoa 화면을 열 수 있습니다. 읽기만 하고 아무것도 바꾸지 않으며, 내가 볼 수 없는 것은 에이전트도 볼 수 없습니다. 90일 동안 쓰지 않으면 저절로 만료되고, 연결마다 사용 내역을 보고 언제든 회수할 수 있습니다.",
-  },
-  {
-    q: "지난 회의에서 정한 것을 다시 찾아볼 수 있나요?",
-    a: "네. 에이전트에게 물어보면 지난 회의록에서 찾아 답하고, 답변 아래 「참고한 회의록」에 실제로 본 회의록이 붙어 그 자리로 갈 수 있습니다. 프로젝트나 회의록을 지목하면 그 안부터 찾고, 모자라면 워크스페이스 안에서 넓혀 봅니다. 넓혀서 찾은 회의록도 거기에 그대로 드러납니다.",
-  },
-  {
-    q: "설치할 것이 있나요?",
-    a: "설치할 것은 없습니다. Google 계정으로 로그인하면 워크스페이스가 하나 만들어지고, 그 안에 회의를 담을 프로젝트를 하나 만든 뒤 회의를 시작하면 됩니다. 마이크 권한만 필요합니다.",
-  },
-];
+const LINK = `${HAND} mt-1 inline-flex min-h-11 items-center gap-1 rounded-sm underline decoration-[var(--tv-pop)] decoration-[3px] underline-offset-4 ${FOCUS}`;
 
-export function Faq() {
-  // 첫 항목만 열어 둔다 — 무엇이 들어 있는 자리인지 하나는 보여야 나머지를 누른다.
-  const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set([0]));
-  const baseId = useId();
-  // 찾기가 펼치는 길. `Answer` 의 효과가 이것을 의존하므로 고정해야 한다.
-  const reveal = useCallback(
-    (i: number) => setOpen((current) => new Set(current).add(i)),
-    []
-  );
+/** 큰 번호. 띠는 닫힘 = 버터, 펼침 · 올림 = 노랑. `tv-rmark` 가 구간이 보일 때 띠를 칠한다. */
+const NUM =
+  "tv-rmark -mx-1 inline-block bg-[linear-gradient(var(--tv-butter),var(--tv-butter))] bg-no-repeat px-1 text-[30px] leading-none font-extrabold tracking-[-0.04em] text-[var(--tv-ink)] tabular-nums [background-position:0_92%] [background-size:100%_0.42em] group-open:bg-[linear-gradient(var(--tv-pop),var(--tv-pop))] group-hover/sum:bg-[linear-gradient(var(--tv-pop),var(--tv-pop))] lg:text-[38px]";
 
+function SeeLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <section id="faq" className={`${SECTION_X} ${SECTION_TOP} scroll-mt-24`}>
-      <div
-        className={`${CONTAINER} flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-20`}
-      >
-        <div className="flex shrink-0 flex-col gap-3 lg:w-[340px] lg:gap-3.5">
-          <Eyebrow>자주 묻는 질문</Eyebrow>
-          <h2 className="m-0 text-balance break-keep text-[25px] font-extrabold leading-[1.3] tracking-[-0.8px] text-[var(--lp-ink)] lg:text-[40px] lg:leading-[1.25] lg:tracking-[-1.4px]">
-            먼저 확인하실 것
-          </h2>
-        </div>
-
-        <ul className="m-0 flex min-w-0 flex-1 list-none flex-col p-0">
-          {QA.map((item, i) => {
-            const isOpen = open.has(i);
-            const panelId = `${baseId}-faq-${i}`;
-            return (
-              <li
-                key={item.q}
-                className={`flex flex-col border-t border-[var(--lp-rule)] py-5 lg:py-6 ${i === QA.length - 1 ? "border-b" : ""}`}
-              >
-                <h3 className="m-0">
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    aria-controls={panelId}
-                    onClick={() =>
-                      setOpen((current) => {
-                        const next = new Set(current);
-                        if (!next.delete(i)) next.add(i);
-                        return next;
-                      })
-                    }
-                    className="flex min-h-[26px] w-full cursor-pointer items-start gap-4 border-0 bg-transparent p-0 text-left lg:gap-5"
-                  >
-                    <span className="min-w-0 flex-1 break-keep text-[17px] font-bold leading-[1.5] tracking-[-0.3px] text-[var(--lp-ink)] lg:text-[18px] lg:tracking-[-0.4px]">
-                      {item.q}
-                    </span>
-                    {isOpen ? (
-                      <Minus
-                        aria-hidden
-                        className="size-[18px] shrink-0 text-[#8a7a6d]"
-                      />
-                    ) : (
-                      <Plus
-                        aria-hidden
-                        className="size-[18px] shrink-0 text-[#8a7a6d]"
-                      />
-                    )}
-                  </button>
-                </h3>
-                <Answer id={panelId} index={i} open={isOpen} onFound={reveal}>
-                  {item.a}
-                </Answer>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </section>
+    <a href={href} className={LINK}>
+      {children}
+      <ArrowRight aria-hidden className="size-4 shrink-0" />
+    </a>
   );
 }
 
 /**
- * 접힌 답. **DOM에 남기는 것만으로는 페이지 내 찾기(Ctrl+F)가 못 찾는다** — 그냥 `hidden`은
- * `display:none`이라 브라우저의 찾기 대상에서 통째로 빠진다. 찾히게 하려면 값이
- * `until-found`여야 하는데, react가 `hidden`을 **불리언 속성으로 못박아** 뒀다
- * (`react-dom` 19: 참이면 `setAttribute(key, "")`). JSX로는 문자열을 못 넣는다.
- *
- * 그래서 붙은 뒤에 직접 올려 쓴다. 서버 HTML과 첫 렌더는 평범한 `hidden`이라 하이드레이션
- * 불일치가 없고, 붙고 나면 `until-found`로 바뀌어 찾기가 스스로 펼친다. react가 렌더마다
- * `hidden=""`로 되돌리므로 매 렌더 뒤에 다시 올린다.
- *
- * `beforematch`는 react의 합성 이벤트에 없어서 같은 효과에서 직접 듣는다. `onFound`는
- * 부모가 `useCallback`으로 고정해 넘긴다 — 인라인이면 이 효과가 렌더마다 다시 걸린다.
+ * 넓은 화면 아래의 창 그림자. 펼침 애니메이션 때문에 `::details-content` 가 `overflow:hidden` 이라
+ * (`motion.tsx`) 창 그림자가 답 칸 밖으로 번지면 잘린다 — 390 에서 `SHADOW.panel` 의 옆 번짐(24px)이
+ * 칸 가장자리에서 끊겨 좌우가 각진 회색 판이 남았다. 같은 색 그림자를 줄여 옆 10px · 아래 20px 안에
+ * 둔다. 넓은 화면은 `SHADOW.panel` 그대로이고, 아래 번짐(48px)은 `lg:mb-5` 가 답 칸 아래 여백과
+ * 합쳐 받는다.
  */
-function Answer({
-  id,
-  index,
-  open,
-  onFound,
-  children,
-}: {
-  id: string;
-  index: number;
-  open: boolean;
-  onFound: (index: number) => void;
-  children: React.ReactNode;
-}) {
-  const el = useRef<HTMLParagraphElement>(null);
+const SHADOW_NARROW =
+  "max-lg:shadow-[0_10px_20px_-10px_rgba(40,24,120,0.3),0_1px_3px_rgba(12,10,9,0.05)]";
 
-  useEffect(() => {
-    const node = el.current;
-    if (!node || open) return;
-    node.setAttribute("hidden", "until-found");
-    const found = () => onFound(index);
-    node.addEventListener("beforematch", found);
-    return () => node.removeEventListener("beforematch", found);
-  }, [open, index, onFound]);
-
+/**
+ * 답 안의 앱 조각 자리. 좁은 화면에서는 답의 들여쓰기(번호 칸 60px)를 대부분 상쇄해 기둥 폭을 거의
+ * 다 쓰고, 양옆 12px 만 남겨 그림자 자리로 둔다 — 들여쓰기를 그대로 두면 320 에서 창이 228px 로
+ * 좁아져 안건 제목이 「회.」만 남았다. 도장은 상단바 위 빈 여백에만 걸친다(탭 글자를 가리지 않는다).
+ */
+function Sample({ children }: { children: ReactNode }) {
   return (
-    <p
-      ref={el}
-      id={id}
-      hidden={!open}
-      data-faq-answer={open ? "" : undefined}
-      className="m-0 mt-3 max-w-[640px] break-keep text-[14.5px] leading-[1.8] text-[var(--lp-body)] lg:text-[15px]"
+    <div className="relative mt-6 -ml-[48px] max-w-[520px] sm:mx-0 lg:mb-5">
+      <ExampleStamp className="absolute -top-[18px] right-4 z-10" />
+      <AppWindow className={SHADOW_NARROW}>{children}</AppWindow>
+    </div>
+  );
+}
+
+/**
+ * 03 — 회의 중 타임라인 그대로(상단바 · 안건 머리 · 줄 둘). 철회된 줄은 `retracted` 만 넘긴다 — 앱처럼
+ * 붉은 「철회됨」이 메타에 저절로 붙어서, `meta` 로 또 넘기면 두 번 선다. 안건 제목은 앱의 말줄임 대신
+ * 줄바꿈한다(과장 허용 범위). 360 미만에서는 시간 구간 「10:02 – 지금」을 잘라 보인다 — 줄바꿈만으로는
+ * 320 에서 구간 · 개수 · 「논의 중」이 한 줄을 다 먹어 제목 칸이 34px 이 남았고, 「회의실」(39px)이
+ * 끊기지 않는 한 낱말이라 「회…」로 잘렸다. 구간을 빼면 제목 칸이 약 117px 이 되어 「회의실 예약」이
+ * 한 줄에 다 선다. 「논의 중」 · 「기록 중」은 남으니 기록 중이라는 말은 그대로다.
+ * 시각 · 구간 · 개수 · 그어진 제목은 `app.tsx` 가 이미 `APP.muted`(흰 바탕 4.8:1)로 그린다 — 여기서
+ * 색을 덮지 않는다. 연한 `--el-muted-soft` 는 점 · 셰브런 · 구분점 같은 장식에만 남는다.
+ */
+function RetractedSample() {
+  return (
+    <Sample>
+      <MiniBar status="기록 중" tab="타임라인" size="sm" />
+      <div className="px-3 pt-2.5 pb-2">
+        <AgendaHead
+          range="10:02 – 지금"
+          title="회의실 예약"
+          total={2}
+          live
+          className="h-auto min-h-[30px] [&_.truncate]:leading-5 [&_.truncate]:break-keep [&_.truncate]:whitespace-normal max-[360px]:[&>span:first-child]:hidden max-[360px]:[&>span:last-child]:pl-2"
+        />
+        <TimelineList className="mt-1.5">
+          <TimelineRow
+            at="10:05"
+            tone="decision"
+            kind="결정"
+            retracted
+            title="회의실 예약은 목요일로 잡는다"
+          />
+          <TimelineRow at="10:41" tone="decision" kind="결정" title="회의실 예약은 금요일로 옮긴다" />
+        </TimelineList>
+      </div>
+    </Sample>
+  );
+}
+
+/**
+ * 04 — 요약 탭의 검토 줄. 뺀 줄을 펼친 모습이다: 그어진 채 흐리게 남고, 앱처럼 「제외됨」 한 줄과
+ * 「제외 취소」 하나만 선다(「수정」은 뺀 줄에 없다). 머리의 「결정 1」은 남은 줄만 센 앱의 숫자다.
+ * 그어진 제목은 펼친 줄의 회색 면(#f0efed) 위라 `APP.muted` 면 4.2:1 — 한 단 진한 `--el-body`(7:1 대)로
+ * 올린다(`DecisionRow` 의 주제가 펼친 줄에서 하는 것과 같은 손보기). 뺀 줄은 이 그림에만 있어 여기서 고친다.
+ */
+function ExcludedSample() {
+  return (
+    <Sample>
+      <MiniBar status="종료됨" tab="요약" size="sm" />
+      <div className="px-4 pt-3 pb-3">
+        <SectionHead title="결정" count={1} />
+        <DecisionRow text="회의실 예약은 금요일로 옮긴다" at="10:41" className="mt-1" />
+        <DecisionRow text="점심은 김밥으로 한다" at="10:58" open
+          excluded
+          className="border-b-0 [&_.line-through]:text-[var(--el-body)]"
+        >
+          <p className={cn("m-0 text-[12px]", APP.muted)}>제외됨</p>
+          <RowActions excluded />
+        </DecisionRow>
+      </div>
+    </Sample>
+  );
+}
+
+const QA: Array<{ q: string; a: ReactNode; more?: ReactNode; open?: true }> = [
+  {
+    // 페이지에서 설치 이야기는 여기 하나뿐이다(히어로 · 상단바 · 왼쪽 농담에는 없다). 「없다」고 못 박지
+    // 않고 어떻게 시작하는지로 답한다 — 랜딩에서 「설치할 것 없음」 류 문구는 뺐다(`hero.tsx`).
+    q: "설치해야 하나요?",
+    a: "브라우저에서 바로 씁니다. Google 계정으로 로그인하면 워크스페이스가 하나 생기고, 프로젝트를 하나 만들어 회의를 시작하면 됩니다. 필요한 권한은 마이크뿐입니다.",
+    open: true,
+  },
+  {
+    // 주어는 결정과 할 일이다. 회의 자체는 만들 때부터 프로젝트 목록에 한 줄로 있다(팀 구간 리드).
+    q: "결정과 할 일은 회의가 끝나면 바로 확정되나요?",
+    a: (
+      <>
+        아니요. 회의를 종료하면 분석을 거쳐 요약 탭에 정리되고,{" "}
+        <span className={MARKER}>사람이 검토 완료를 눌러야 프로젝트에 확정됩니다.</span> 기록
+        중이면 먼저 「중지」를 눌러야 종료할 수 있습니다.
+      </>
+    ),
+    more: <SeeLink href="#evidence">그림으로 보기</SeeLink>,
+  },
+  {
+    q: "회의 중에 말을 바꾸면요?",
+    a: "타임라인은 뒤집힌 항목을 지우지 않습니다. 줄을 긋고 「철회됨」을 붙여 둡니다.",
+    more: <RetractedSample />,
+    open: true,
+  },
+  {
+    q: "잘못 정리된 줄은 어떻게 하나요?",
+    // 「할 일은 … 고칩니다」는 할 일이 고치는 것처럼 읽혀서 「할 일의 … 고칠 수 있습니다」로.
+    a: "줄마다 고치거나 뺄 수 있고, 할 일의 담당과 기한도 고칠 수 있습니다. 뺀 줄은 지워지지 않고 그어진 채 남습니다. 「제외 취소」를 누르면 돌아옵니다.",
+    more: <ExcludedSample />,
+  },
+  {
+    q: "새 결정이 이전 결정을 뒤집으면요?",
+    a: "요약 탭에 「이전 결정 대체」 제안이 붙고, 이전 결정을 끝낼지 유지할지 골라야 합니다. 고르기 전에는 검토 완료가 눌리지 않습니다.",
+    more: <SeeLink href="#meetings">주간 회의 카드에서 보기</SeeLink>,
+  },
+  {
+    // 「훑어보고 검토 완료」는 히어로 · 마무리가 말한다. 여기서는 당번이 실제로 손대는 것을 적는다 —
+    // 빈 담당 · 기한(`assignee-cell.tsx` · `due-cell.tsx` 「담당/기한 정하기」), 화자 이름(회의 중에는
+    // 화자가 없고, 끝난 뒤 스크립트 상단바의 화자 도구 — `speaker-panel.tsx` · `speaker-nudge-banner.tsx`).
+    q: "회의록 당번은 이제 뭐 하나요?",
+    a: (
+      <>
+        요약 탭에서 비어 있는 담당과 기한을 채우고, 잘못 잡힌 줄만 고친 다음{" "}
+        <span className={MARKER}>검토 완료를 누르면 됩니다.</span> 회의 중에는 화자가 나뉘지
+        않아서, 누가 누구인지는 끝난 뒤 스크립트 탭에서 붙여 둡니다.
+      </>
+    ),
+  },
+];
+
+/** 노란 「?」 쪽지(말풍선 꼴 — 왼쪽 아래 모서리만 뾰족). 구간이 보일 때 튀어나온다. */
+function QMark({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "tv-rpop grid shrink-0 place-items-center bg-[var(--tv-pop)] font-extrabold text-[var(--tv-ink)]",
+        SHADOW.sticky,
+        className
+      )}
+      style={{ rotate: "-6deg" }}
     >
-      {children}
-    </p>
+      ?
+    </span>
+  );
+}
+
+export function Faq() {
+  return (
+    <section
+      id="faq"
+      className={`scroll-mt-20 bg-[var(--tv-lav-soft)] [interpolate-size:allow-keywords] ${SECTION_Y.color}`}
+    >
+      <Reveal className={`${CONTAINER} grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16`}>
+        <div className="self-start lg:sticky lg:top-24">
+          <div className="flex items-center gap-4">
+            <h2 className={H2}>자주 묻는 것</h2>
+            <QMark className="size-11 rounded-[14px] rounded-bl-[4px] text-[24px] lg:hidden" />
+          </div>
+          {/* 넓은 화면의 왼쪽 기둥 — 노란 「?」 쪽지가 목록 쪽으로 화살표를 그린다. */}
+          <div aria-hidden className="relative mt-10 hidden lg:block">
+            <QMark className="ml-2 size-24 rounded-[26px] rounded-bl-[6px] text-[46px]" />
+            <Scribble
+              kind="arrow-long"
+              rotate={-6}
+              draw="reveal"
+              delay={250}
+              className="absolute top-1 left-[128px]"
+            />
+          </div>
+          {/* 농담 — 히어로의 「이번 주 회의록 당번 누구예요?」에 대한 늦은 대답이고(이서연은 마무리
+              당번표의 3주 차), 정우재가 06 을 번호로 가리킨다. 질문은 06 이 맡고 말풍선은 상황만
+              던진다 — 전에는 「그럼 당번은 이제 뭐 해요?」라 06 질문을 한 구간에서 두 번 읽게 했다. */}
+          <div aria-hidden className="mt-5 flex flex-col items-start gap-2 lg:mt-12">
+            <Speech who="이서연" tone="butter" tilt={-2} anim="reveal" delay={500}>
+              저 이번 주 당번인데요…
+            </Speech>
+            <Speech
+              who="정우재"
+              side="right"
+              tone="white"
+              size="sm"
+              tilt={3}
+              anim="reveal"
+              delay={1000}
+              className="ml-12"
+            >
+              06번 보세요
+            </Speech>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--tv-rule-strong)]">
+          {QA.map(({ q, a, more, open }, i) => (
+            <details
+              key={q}
+              open={open}
+              className="tv-faq group border-b border-[var(--tv-rule-strong)]"
+            >
+              <summary
+                className={`group/sum grid cursor-pointer list-none grid-cols-[48px_minmax(0,1fr)_32px] items-center gap-3 rounded-lg py-5 marker:hidden lg:grid-cols-[64px_minmax(0,1fr)_36px] lg:gap-4 lg:py-6 [&::-webkit-details-marker]:hidden ${FOCUS}`}
+              >
+                <span aria-hidden className="justify-self-start">
+                  <span className={NUM} style={vars({ "--d": `${200 + i * 90}ms` })}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                </span>
+                <span className="break-keep text-[17px] leading-[1.4] font-bold text-[var(--tv-ink)] lg:text-[20px]">
+                  {q}
+                </span>
+                <span
+                  aria-hidden
+                  className="grid size-8 place-items-center rounded-full bg-[var(--tv-butter)] transition-colors group-open:bg-[var(--tv-pop)] group-hover/sum:bg-[var(--tv-pop)] motion-reduce:transition-none lg:size-9"
+                >
+                  <ChevronDown className="size-4 text-[var(--tv-ink)] transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+                </span>
+              </summary>
+              <div className="pr-3 pb-7 pl-[60px] lg:pr-12 lg:pl-[80px]">
+                <p className={BODY}>{a}</p>
+                {more}
+              </div>
+            </details>
+          ))}
+        </div>
+      </Reveal>
+    </section>
   );
 }

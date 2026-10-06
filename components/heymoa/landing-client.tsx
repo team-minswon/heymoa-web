@@ -1,14 +1,18 @@
-import { ClosingCta } from "@/components/heymoa/landing/closing-cta";
-import { Faq } from "@/components/heymoa/landing/faq";
-import { FEATURE_TITLES, Features } from "@/components/heymoa/landing/features";
-import { Flow } from "@/components/heymoa/landing/flow";
-import { Hero } from "@/components/heymoa/landing/hero";
-import { Reveal } from "@/components/heymoa/landing/reveal";
-import { Principle } from "@/components/heymoa/landing/principle";
-import { Problem } from "@/components/heymoa/landing/problem";
-import { ProductShot } from "@/components/heymoa/landing/product-shot";
-import { Steps } from "@/components/heymoa/landing/steps";
+import { Landing } from "@/components/heymoa/landing/landing";
 import { siteConfig } from "@/lib/site";
+
+/**
+ * 검색 결과에 뜨는 기능 목록. 화면의 구간 순서 그대로다(`landing/landing.tsx`) — 구간을 더하거나 빼면
+ * 여기도 같이 고친다. 페이지가 말하지 않는 기능을 구조화 데이터만 말하면 검색 결과가 화면과 갈린다.
+ */
+const FEATURE_LIST = [
+  "회의 기록과 결정 · 할 일 정리",
+  "결정 · 할 일의 근거 발언 확인",
+  "프로젝트별 팀 회의 기록",
+  "지난 회의에 묻는 내 에이전트",
+  "승인한 것만 Linear · GitHub 로 내보내기",
+  "외부 에이전트 읽기 전용 연결",
+];
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -19,57 +23,21 @@ const jsonLd = {
   operatingSystem: "Web",
   url: siteConfig.url,
   description: siteConfig.description,
-  // 「기능 소개」 카드 제목을 그대로 쓴다 — 페이지가 여섯을 말하는데 구조화 데이터가 셋만
-  // 말하면 검색 결과에 뜨는 목록이 화면과 갈린다. 손으로 옮겨 적으면 카드 이름이 바뀔 때
-  // 여기만 옛 이름(「실시간 정리」)으로 남는다 — 실제로 그랬다.
-  featureList: FEATURE_TITLES,
+  featureList: FEATURE_LIST,
   inLanguage: "ko-KR",
 };
 
 /**
- * 랜딩. Claude Design 아트보드「HeyMoa 랜딩 · 사실 대조판」을 옮긴 판이다.
- *
- * **`landing-surface`가 이 면의 색을 판다.** 앱 전역 토큰(`--el-*`)은 제품 면의 off-white
- * 체계라 여기서 쓰면 크림이 안 나온다. 반대로 크림을 전역에 두면 워크스페이스까지 물든다 —
- * 그래서 클래스 하나로 범위를 자르고 그 안에서 `--lp-*`를 쓴다(globals.css).
- *
- * 서버 컴포넌트로 둔다. 클라이언트는 움직이는 조각만이다 — 로그인 상태를 읽는 `LandingCta`,
- * 혼자 도는 제품 시연(`ProductShot`), 스크롤 리빌(`Reveal`), 펼치는 FAQ. 페이지 전체를
- * `"use client"`로 두면 정적인 섹션까지 클라이언트 번들에 실린다.
+ * 랜딩. 서버 컴포넌트로 두고, 움직이는 조각(히어로 시연 · 리빌 · 흐르는 띠 · 시작 버튼)만 클라이언트다.
  */
 export function LandingClient() {
   return (
-    <div className="landing-surface">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {/* 히어로는 감싸지 않는다 — 첫 화면이라 올라올 자리가 없다. 「기능 소개」도 밴드가
-          아니라 **카드마다** 뜬다(`features.tsx`) — 1780px짜리 밴드를 통째로 켜면 아래
-          카드들은 보이기도 전에 애니메이션이 끝나 있다. */}
-      <Hero />
-      <Reveal>
-        <ProductShot />
-      </Reveal>
-      <Reveal>
-        <Steps />
-      </Reveal>
-      <Reveal>
-        <Flow />
-      </Reveal>
-      <Reveal>
-        <Problem />
-      </Reveal>
-      <Features />
-      <Reveal>
-        <Principle />
-      </Reveal>
-      <Reveal>
-        <Faq />
-      </Reveal>
-      <Reveal>
-        <ClosingCta />
-      </Reveal>
-    </div>
+      <Landing />
+    </>
   );
 }

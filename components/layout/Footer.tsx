@@ -72,7 +72,7 @@ export function Footer() {
               <ul className="mt-4 space-y-3">
                 <li>
                   <button
-                    onClick={() => handleScroll("features")}
+                    onClick={() => handleScroll("meetings")}
                     className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)] cursor-pointer"
                   >
                     기능 소개
@@ -80,7 +80,7 @@ export function Footer() {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleScroll("how-it-works")}
+                    onClick={() => handleScroll("evidence")}
                     className="text-[15px] font-medium text-[var(--el-muted)] transition hover:text-[var(--el-ink)] cursor-pointer"
                   >
                     작동 방식
@@ -185,8 +185,8 @@ export function Footer() {
                 <ul className="m-0 flex list-none flex-col gap-3 p-0 lg:gap-3.5">
                   {(
                     [
-                      ["features", "기능 소개"],
-                      ["how-it-works", "작동 방식"],
+                      ["meetings", "기능 소개"],
+                      ["evidence", "작동 방식"],
                     ] as const
                   ).map(([id, label]) => (
                     <li key={id}>
