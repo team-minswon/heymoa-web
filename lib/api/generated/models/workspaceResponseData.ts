@@ -29,4 +29,6 @@ export type WorkspaceResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   workspaceId: string;
+  /** 외부 에이전트 연결 허용 여부. false 면 ADMIN 이 꺼서 이 워크스페이스로 개인 토큰 발급·OAuth 허락이 403 AGENT_ACCESS_DISABLED 로 거절된다 */
+  agentAccessAllowed: boolean;
 };

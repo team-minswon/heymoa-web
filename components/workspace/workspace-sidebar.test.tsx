@@ -77,6 +77,7 @@ const props = {
     name: "김민수의 워크스페이스",
     description: null,
     role: "ADMIN" as const,
+    agentAccessAllowed: true,
   },
   projects: [
     {

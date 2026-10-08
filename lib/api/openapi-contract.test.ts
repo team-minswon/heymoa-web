@@ -292,7 +292,9 @@ describe("contract sync 2026-07-29", () => {
     // APP-888(server APP-886)에서 외부 에이전트 OAuth 동의 셋이 늘었다 (68 → 71) —
     // `agent-oauth/consent`(조회)·`.../approve`·`.../deny`.
     // APP-1007에서 현재 전사 세션 조회가 빠졌다 (71 → 70) — `transcription-sessions/current`.
-    expect(paths).toHaveLength(70);
+    // APP-941(server APP-939·940)에서 워크스페이스 외부 에이전트 관리 셋이 늘었다 (70 → 73) —
+    // `workspaces/{workspaceId}/agent-access`·`.../agent-delegations`·`.../agent-delegations/{delegationId}`.
+    expect(paths).toHaveLength(73);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

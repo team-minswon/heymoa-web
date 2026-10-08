@@ -27,10 +27,12 @@ import type {
   AgentDelegationUsagesResponse,
   AgentDelegationsResponse,
   AppErrorResponse,
+  ChangeWorkspaceAgentAccessRequest,
   CreateAgentDelegationRequest,
   CreatedAgentDelegationResponse,
   GetAgentDelegationUsagesParams,
   UnauthorizedResponse,
+  WorkspaceAgentDelegationsResponse,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -396,6 +398,11 @@ export type createAgentDelegationResponse401 = {
   status: 401;
 };
 
+export type createAgentDelegationResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
 export type createAgentDelegationResponse404 = {
   data: AppErrorResponse;
   status: 404;
@@ -408,6 +415,7 @@ export type createAgentDelegationResponseSuccess =
 export type createAgentDelegationResponseError = (
   | createAgentDelegationResponse400
   | createAgentDelegationResponse401
+  | createAgentDelegationResponse403
   | createAgentDelegationResponse404
 ) & {
   headers: Headers;
@@ -1092,3 +1100,707 @@ export function useGetAgentDelegationUsagesSuspense<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type changeWorkspaceAgentAccessResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type changeWorkspaceAgentAccessResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type changeWorkspaceAgentAccessResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type changeWorkspaceAgentAccessResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type changeWorkspaceAgentAccessResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type changeWorkspaceAgentAccessResponseSuccess =
+  changeWorkspaceAgentAccessResponse204 & {
+    headers: Headers;
+  };
+export type changeWorkspaceAgentAccessResponseError = (
+  | changeWorkspaceAgentAccessResponse400
+  | changeWorkspaceAgentAccessResponse401
+  | changeWorkspaceAgentAccessResponse403
+  | changeWorkspaceAgentAccessResponse404
+) & {
+  headers: Headers;
+};
+
+export type changeWorkspaceAgentAccessResponse =
+  | changeWorkspaceAgentAccessResponseSuccess
+  | changeWorkspaceAgentAccessResponseError;
+
+export const getChangeWorkspaceAgentAccessUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/agent-access`;
+};
+
+/**
+ * 워크스페이스 ADMIN 이 외부 에이전트 연결을 켜고 끈다. 끄면 그 워크스페이스에 맡긴 연결을 누가 맡겼든 개인 토큰·OAuth 모두 회수하고(회수 사유 AGENT_ACCESS_DISABLED), 꺼진 동안 연결 만들기와 OAuth 허락은 403 AGENT_ACCESS_DISABLED 다. 다시 켜도 회수된 연결은 되살아나지 않는다. 같은 값을 다시 보내도 성공한다.
+ * @summary 워크스페이스 외부 에이전트 연결 켜기·끄기
+ */
+export const changeWorkspaceAgentAccess = async (
+  workspaceId: string,
+  changeWorkspaceAgentAccessRequest?: ChangeWorkspaceAgentAccessRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<changeWorkspaceAgentAccessResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<changeWorkspaceAgentAccessResponse>(
+    getChangeWorkspaceAgentAccessUrl(workspaceId),
+    {
+      ...options,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(changeWorkspaceAgentAccessRequest),
+    }
+  );
+};
+
+export const getChangeWorkspaceAgentAccessMutationKey = () =>
+  ["changeWorkspaceAgentAccess"] as const;
+
+export const getChangeWorkspaceAgentAccessMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeWorkspaceAgentAccess>>,
+    TError,
+    ChangeWorkspaceAgentAccessMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeWorkspaceAgentAccess>>,
+  TError,
+  ChangeWorkspaceAgentAccessMutationVariables,
+  TContext
+> => {
+  const mutationKey = getChangeWorkspaceAgentAccessMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeWorkspaceAgentAccess>>,
+    ChangeWorkspaceAgentAccessMutationVariables
+  > = (props) => {
+    const { workspaceId, data } = props ?? {};
+
+    return changeWorkspaceAgentAccess(workspaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChangeWorkspaceAgentAccessMutationResult = NonNullable<
+  Awaited<ReturnType<typeof changeWorkspaceAgentAccess>>
+>;
+export type ChangeWorkspaceAgentAccessMutationBody =
+  | ChangeWorkspaceAgentAccessRequest
+  | undefined;
+export type ChangeWorkspaceAgentAccessMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type ChangeWorkspaceAgentAccessMutationVariables = {
+  workspaceId: string;
+  data?: ChangeWorkspaceAgentAccessRequest;
+};
+
+/**
+ * @summary 워크스페이스 외부 에이전트 연결 켜기·끄기
+ */
+export const useChangeWorkspaceAgentAccess = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeWorkspaceAgentAccess>>,
+      TError,
+      ChangeWorkspaceAgentAccessMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeWorkspaceAgentAccess>>,
+  TError,
+  ChangeWorkspaceAgentAccessMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getChangeWorkspaceAgentAccessMutationOptions(options),
+    queryClient
+  );
+};
+export type getWorkspaceAgentDelegationsResponse200 = {
+  data: WorkspaceAgentDelegationsResponse;
+  status: 200;
+};
+
+export type getWorkspaceAgentDelegationsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getWorkspaceAgentDelegationsResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type getWorkspaceAgentDelegationsResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getWorkspaceAgentDelegationsResponseSuccess =
+  getWorkspaceAgentDelegationsResponse200 & {
+    headers: Headers;
+  };
+export type getWorkspaceAgentDelegationsResponseError = (
+  | getWorkspaceAgentDelegationsResponse401
+  | getWorkspaceAgentDelegationsResponse403
+  | getWorkspaceAgentDelegationsResponse404
+) & {
+  headers: Headers;
+};
+
+export type getWorkspaceAgentDelegationsResponse =
+  | getWorkspaceAgentDelegationsResponseSuccess
+  | getWorkspaceAgentDelegationsResponseError;
+
+export const getGetWorkspaceAgentDelegationsUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/agent-delegations`;
+};
+
+/**
+ * 워크스페이스 ADMIN 이 그 워크스페이스에 살아 있는(회수·만료되지 않은) 연결을 누가 맡겼든 본다. 토큰 앞자리·사용 내역·만료 시각은 나가지 않는다.
+ * @summary 워크스페이스 외부 에이전트 연결 목록
+ */
+export const getWorkspaceAgentDelegations = async (
+  workspaceId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getWorkspaceAgentDelegationsResponse> => {
+  return apiFetch<getWorkspaceAgentDelegationsResponse>(
+    getGetWorkspaceAgentDelegationsUrl(workspaceId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetWorkspaceAgentDelegationsQueryKey = (
+  workspaceId: string
+) => {
+  return [`/v1/workspaces/${workspaceId}/agent-delegations`] as const;
+};
+
+export const getGetWorkspaceAgentDelegationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetWorkspaceAgentDelegationsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>
+  > = ({ signal }) =>
+    getWorkspaceAgentDelegations(workspaceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: workspaceId !== null && workspaceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceAgentDelegationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>
+>;
+export type GetWorkspaceAgentDelegationsQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetWorkspaceAgentDelegations<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceAgentDelegations<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceAgentDelegations<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 외부 에이전트 연결 목록
+ */
+
+export function useGetWorkspaceAgentDelegations<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceAgentDelegationsQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 워크스페이스 외부 에이전트 연결 목록
+ */
+export const prefetchGetWorkspaceAgentDelegationsQuery = async <
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetWorkspaceAgentDelegationsQueryOptions(
+    workspaceId,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetWorkspaceAgentDelegationsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetWorkspaceAgentDelegationsQueryKey(workspaceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>
+  > = ({ signal }) =>
+    getWorkspaceAgentDelegations(workspaceId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWorkspaceAgentDelegationsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>
+>;
+export type GetWorkspaceAgentDelegationsSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetWorkspaceAgentDelegationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceAgentDelegationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetWorkspaceAgentDelegationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 워크스페이스 외부 에이전트 연결 목록
+ */
+
+export function useGetWorkspaceAgentDelegationsSuspense<
+  TData = Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  workspaceId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getWorkspaceAgentDelegations>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetWorkspaceAgentDelegationsSuspenseQueryOptions(
+    workspaceId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type revokeWorkspaceAgentDelegationResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type revokeWorkspaceAgentDelegationResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type revokeWorkspaceAgentDelegationResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type revokeWorkspaceAgentDelegationResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type revokeWorkspaceAgentDelegationResponseSuccess =
+  revokeWorkspaceAgentDelegationResponse204 & {
+    headers: Headers;
+  };
+export type revokeWorkspaceAgentDelegationResponseError = (
+  | revokeWorkspaceAgentDelegationResponse401
+  | revokeWorkspaceAgentDelegationResponse403
+  | revokeWorkspaceAgentDelegationResponse404
+) & {
+  headers: Headers;
+};
+
+export type revokeWorkspaceAgentDelegationResponse =
+  | revokeWorkspaceAgentDelegationResponseSuccess
+  | revokeWorkspaceAgentDelegationResponseError;
+
+export const getRevokeWorkspaceAgentDelegationUrl = (
+  workspaceId: string,
+  delegationId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/agent-delegations/${delegationId}`;
+};
+
+/**
+ * 워크스페이스 ADMIN 이 연결 하나를 끊는다(회수 사유 ADMIN). 살아 있는 연결만 끊고, 이미 회수됐거나 만료된 연결은 바꾸지 않고 성공한다. 다른 워크스페이스의 연결은 없는 연결과 같다.
+ * @summary 워크스페이스 외부 에이전트 연결 끊기
+ */
+export const revokeWorkspaceAgentDelegation = async (
+  workspaceId: string,
+  delegationId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<revokeWorkspaceAgentDelegationResponse> => {
+  return apiFetch<revokeWorkspaceAgentDelegationResponse>(
+    getRevokeWorkspaceAgentDelegationUrl(workspaceId, delegationId),
+    {
+      ...options,
+      method: "DELETE",
+    }
+  );
+};
+
+export const getRevokeWorkspaceAgentDelegationMutationKey = () =>
+  ["revokeWorkspaceAgentDelegation"] as const;
+
+export const getRevokeWorkspaceAgentDelegationMutationOptions = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeWorkspaceAgentDelegation>>,
+    TError,
+    RevokeWorkspaceAgentDelegationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeWorkspaceAgentDelegation>>,
+  TError,
+  RevokeWorkspaceAgentDelegationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeWorkspaceAgentDelegationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeWorkspaceAgentDelegation>>,
+    RevokeWorkspaceAgentDelegationMutationVariables
+  > = (props) => {
+    const { workspaceId, delegationId } = props ?? {};
+
+    return revokeWorkspaceAgentDelegation(
+      workspaceId,
+      delegationId,
+      requestOptions
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeWorkspaceAgentDelegationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeWorkspaceAgentDelegation>>
+>;
+
+export type RevokeWorkspaceAgentDelegationMutationError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+export type RevokeWorkspaceAgentDelegationMutationVariables = {
+  workspaceId: string;
+  delegationId: string;
+};
+
+/**
+ * @summary 워크스페이스 외부 에이전트 연결 끊기
+ */
+export const useRevokeWorkspaceAgentDelegation = <
+  TError = UnauthorizedResponse | AppErrorResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeWorkspaceAgentDelegation>>,
+      TError,
+      RevokeWorkspaceAgentDelegationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeWorkspaceAgentDelegation>>,
+  TError,
+  RevokeWorkspaceAgentDelegationMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRevokeWorkspaceAgentDelegationMutationOptions(options),
+    queryClient
+  );
+};

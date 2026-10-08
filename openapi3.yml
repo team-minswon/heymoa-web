@@ -68,6 +68,10 @@ paths:
                 value:
                   workspaceId: 0HZX2K7M9Q4AD
                   name: ' '
+              createAgentDelegation_AgentAccessDisabledException:
+                value:
+                  workspaceId: 0HZX2K7M9Q4AD
+                  name: 노트북 Claude Code
       responses:
         '201':
           description: 생성 성공
@@ -129,6 +133,21 @@ paths:
                         message: 비울 수 없습니다.
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_ACCESS_DISABLED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_ACCESS_DISABLED
+                      message: 이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다.
+                      details: null
       security:
       - accessCookie: []
   /v1/notifications:
@@ -211,6 +230,7 @@ paths:
                         name: 제품 팀
                         description: 제품을 만드는 팀의 워크스페이스
                         role: ADMIN
+                        agentAccessAllowed: true
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -1012,6 +1032,7 @@ paths:
                       name: 제품 팀
                       description: 제품을 만드는 팀의 워크스페이스
                       role: ADMIN
+                      agentAccessAllowed: true
                     error: null
         '404':
           description: 요청한 리소스를 찾을 수 없음
@@ -7433,6 +7454,10 @@ paths:
                 value:
                   state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
                   workspaceId: 0HZX2K7M9Q4AD
+              approveAgentOAuthConsent_AgentAccessDisabledException:
+                value:
+                  state: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
+                  workspaceId: 0HZX2K7M9Q4AD
       responses:
         '200':
           description: 요청 성공
@@ -7489,6 +7514,21 @@ paths:
                       code: WORKSPACE_NOT_FOUND
                       message: 워크스페이스를 찾을 수 없습니다.
                       details: null
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_ACCESS_DISABLED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_ACCESS_DISABLED
+                      message: 이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다.
+                      details: null
       security:
       - accessCookie: []
   /v1/agent-oauth/consent/deny:
@@ -7540,6 +7580,241 @@ paths:
                     error:
                       code: AGENT_OAUTH_REQUEST_NOT_FOUND
                       message: 연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/agent-access:
+    put:
+      tags:
+      - AgentDelegation
+      summary: 워크스페이스 외부 에이전트 연결 켜기·끄기
+      description: 워크스페이스 ADMIN 이 외부 에이전트 연결을 켜고 끈다. 끄면 그 워크스페이스에 맡긴 연결을 누가 맡겼든 개인 토큰·OAuth 모두 회수하고(회수 사유 AGENT_ACCESS_DISABLED), 꺼진 동안 연결 만들기와 OAuth 허락은 403 AGENT_ACCESS_DISABLED 다. 다시 켜도 회수된 연결은 되살아나지 않는다. 같은 값을 다시 보내도 성공한다.
+      operationId: changeWorkspaceAgentAccess
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeWorkspaceAgentAccessRequest'
+            examples:
+              changeWorkspaceAgentAccess_Success:
+                value:
+                  allowed: false
+              changeWorkspaceAgentAccess_WorkspaceNotFoundException:
+                value:
+                  allowed: false
+              changeWorkspaceAgentAccess_WorkspaceAccessDeniedException:
+                value:
+                  allowed: false
+              changeWorkspaceAgentAccess_BadRequest:
+                value: {}
+      responses:
+        '204':
+          description: 처리 성공
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: allowed
+                        message: 값이 필요합니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/agent-delegations:
+    get:
+      tags:
+      - AgentDelegation
+      summary: 워크스페이스 외부 에이전트 연결 목록
+      description: 워크스페이스 ADMIN 이 그 워크스페이스에 살아 있는(회수·만료되지 않은) 연결을 누가 맡겼든 본다. 토큰 앞자리·사용 내역·만료 시각은 나가지 않는다.
+      operationId: getWorkspaceAgentDelegations
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceAgentDelegationsResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      delegations:
+                      - delegationId: 0HZX2K7M9Q4BD
+                        name: Claude Code
+                        credentialKind: OAUTH
+                        userId: 0HZX2K7M9Q4AM
+                        userName: 김팀원
+                        createdAt: '2026-10-01T09:00:00Z'
+                        lastUsedAt: '2026-10-07T09:00:00Z'
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
+  /v1/workspaces/{workspaceId}/agent-delegations/{delegationId}:
+    delete:
+      tags:
+      - AgentDelegation
+      summary: 워크스페이스 외부 에이전트 연결 끊기
+      description: 워크스페이스 ADMIN 이 연결 하나를 끊는다(회수 사유 ADMIN). 살아 있는 연결만 끊고, 이미 회수됐거나 만료된 연결은 바꾸지 않고 성공한다. 다른 워크스페이스의 연결은 없는 연결과 같다.
+      operationId: revokeWorkspaceAgentDelegation
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      - name: delegationId
+        in: path
+        description: 끊을 연결의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 끊을 연결의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4BD
+      responses:
+        '204':
+          description: 처리 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                AGENT_DELEGATION_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: AGENT_DELEGATION_NOT_FOUND
+                      message: 연결을 찾을 수 없습니다.
+                      details: null
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
                       details: null
       security:
       - accessCookie: []
@@ -8232,13 +8507,15 @@ components:
                 properties:
                   revokeReason:
                     type: string
-                    description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임. 회수되지 않았으면 null
+                    description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임, AGENT_ACCESS_DISABLED 는 워크스페이스 ADMIN 이 외부 에이전트 연결을 끔, ADMIN 은 워크스페이스 ADMIN 이 이 연결을 끊음. 회수되지 않았으면 null
                     nullable: true
                     example: USER
                     enum:
                     - USER
                     - MEMBERSHIP_ENDED
                     - REFRESH_TOKEN_REUSED
+                    - AGENT_ACCESS_DISABLED
+                    - ADMIN
                   createdAt:
                     type: string
                     description: 연결을 만든 시각
@@ -8905,13 +9182,15 @@ components:
                   format: date-time
                 revokeReason:
                   type: string
-                  description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임. 회수되지 않았으면 null
+                  description: 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임, AGENT_ACCESS_DISABLED 는 워크스페이스 ADMIN 이 외부 에이전트 연결을 끔, ADMIN 은 워크스페이스 ADMIN 이 이 연결을 끊음. 회수되지 않았으면 null
                   nullable: true
                   example: USER
                   enum:
                   - USER
                   - MEMBERSHIP_ENDED
                   - REFRESH_TOKEN_REUSED
+                  - AGENT_ACCESS_DISABLED
+                  - ADMIN
                 credentialKind:
                   type: string
                   description: 연결 자격 종류. 개인 토큰으로 만든 연결과 OAuth 동의로 만든 연결이 있다
@@ -13206,6 +13485,7 @@ components:
               description: 워크스페이스 목록
               items:
                 required:
+                - agentAccessAllowed
                 - description
                 - name
                 - role
@@ -13238,6 +13518,11 @@ components:
                     nullable: false
                     example: 0HZX2K7M9Q4AD
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  agentAccessAllowed:
+                    type: boolean
+                    description: 외부 에이전트 연결 허용 여부. false 면 ADMIN 이 꺼서 이 워크스페이스로 개인 토큰 발급·OAuth 허락이 403 AGENT_ACCESS_DISABLED 로 거절된다
+                    nullable: false
+                    example: true
               nullable: false
           description: 성공 응답 데이터
           nullable: false
@@ -13337,6 +13622,7 @@ components:
       properties:
         data:
           required:
+          - agentAccessAllowed
           - description
           - name
           - role
@@ -13369,6 +13655,11 @@ components:
               nullable: false
               example: 0HZX2K7M9Q4AD
               pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            agentAccessAllowed:
+              type: boolean
+              description: 외부 에이전트 연결 허용 여부. false 면 ADMIN 이 꺼서 이 워크스페이스로 개인 토큰 발급·OAuth 허락이 403 AGENT_ACCESS_DISABLED 로 거절된다
+              nullable: false
+              example: true
           description: 성공 응답 데이터
           nullable: false
         success:
@@ -13640,6 +13931,99 @@ components:
           nullable: false
           example: hT3k9QxV2bLmZ8rN1cYwP5sD7fG0jA4eUoK6iEqR-tw=
           minLength: 1
+    ChangeWorkspaceAgentAccessRequest:
+      title: ChangeWorkspaceAgentAccessRequest
+      required:
+      - allowed
+      type: object
+      properties:
+        allowed:
+          type: boolean
+          description: 외부 에이전트 연결을 허용할지. false 면 지금 연결을 모두 끊는다
+          nullable: false
+          example: false
+    WorkspaceAgentDelegationsResponse:
+      title: WorkspaceAgentDelegationsResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - delegations
+          type: object
+          properties:
+            delegations:
+              type: array
+              description: 살아 있는 연결 목록. 연결 시각 최근 것부터
+              items:
+                required:
+                - createdAt
+                - credentialKind
+                - delegationId
+                - lastUsedAt
+                - name
+                - userId
+                - userName
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                    description: 연결을 만든 시각
+                    nullable: false
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  lastUsedAt:
+                    type: string
+                    description: 마지막으로 쓴 시각. 한 시간 단위로만 갱신된다. 쓴 적이 없으면 null
+                    nullable: true
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
+                  credentialKind:
+                    type: string
+                    description: 연결 자격 종류. 개인 토큰으로 만든 연결과 OAuth 동의로 만든 연결이 있다
+                    nullable: false
+                    example: OAUTH
+                    enum:
+                    - PERSONAL_TOKEN
+                    - OAUTH
+                  name:
+                    type: string
+                    description: 연결 이름. 개인 토큰은 맡긴 사람이 지은 이름, OAuth 는 에이전트가 스스로 등록한 이름이다
+                    nullable: false
+                    example: Claude Code
+                  userName:
+                    type: string
+                    description: 맡긴 사람 이름
+                    nullable: false
+                    example: 김팀원
+                  userId:
+                    type: string
+                    description: 맡긴 사람의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4AM
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  delegationId:
+                    type: string
+                    description: 연결의 13자리 TSID
+                    nullable: false
+                    example: 0HZX2K7M9Q4BD
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
   securitySchemes:
     accessCookie:
       type: apiKey

@@ -449,6 +449,11 @@ export type approveAgentOAuthConsentResponse401 = {
   status: 401;
 };
 
+export type approveAgentOAuthConsentResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
 export type approveAgentOAuthConsentResponse404 = {
   data: AppErrorResponse;
   status: 404;
@@ -461,6 +466,7 @@ export type approveAgentOAuthConsentResponseSuccess =
 export type approveAgentOAuthConsentResponseError = (
   | approveAgentOAuthConsentResponse400
   | approveAgentOAuthConsentResponse401
+  | approveAgentOAuthConsentResponse403
   | approveAgentOAuthConsentResponse404
 ) & {
   headers: Headers;

@@ -8,6 +8,7 @@ import {
 } from "@/components/settings/account-settings-form";
 import { AgentConnectionsSettings } from "@/components/settings/agent-connections-settings";
 import { MembersSettings } from "@/components/settings/members-settings";
+import { WorkspaceAgentAccessSettings } from "@/components/settings/workspace-agent-access-settings";
 import { WorkspaceIntegrationsSettings } from "@/components/settings/workspace-integrations-settings";
 import {
   WorkspaceSettingsForm,
@@ -27,6 +28,7 @@ export type SettingsSection =
   | "workspace"
   | "members"
   | "integrations"
+  | "workspaceAgents"
   | "agents";
 
 /**
@@ -34,7 +36,9 @@ export type SettingsSection =
  * 계약에 없는 항목(알림 설정 등)은 만들지 않는다 — 있는 것을 나누는 데서 멈춘다.
  *
  * 외부 에이전트 연결(APP-804)은 **계정** 쪽이다. 위임은 팀원 본인이 만들고 본인만 보며,
- * 워크스페이스 설정을 바꾸지 않는다(제품 정의 「표면과 위임」).
+ * 워크스페이스 설정을 바꾸지 않는다(제품 정의 「표면과 위임」). 팀이 그 연결을 받을지와 열린 연결을
+ * 끊는 관리(APP-941)는 **워크스페이스** 쪽 같은 이름의 항목이다. 「연동」은 HeyMoa 가 나가는 연결이라
+ * 들어오는 연결과 섞지 않는다.
  */
 const SETTINGS_GROUPS: {
   label: string;
@@ -50,6 +54,7 @@ const SETTINGS_GROUPS: {
       { key: "workspace", label: "일반", Icon: Building2 },
       { key: "members", label: "멤버", Icon: UsersRound },
       { key: "integrations", label: "연동", Icon: Plug },
+      { key: "workspaceAgents", label: "외부 에이전트", Icon: Bot },
     ],
   },
   {
@@ -131,6 +136,8 @@ function SettingsSections({
           <MembersSettings workspaceId={workspaceId} />
         ) : section === "integrations" ? (
           <WorkspaceIntegrationsSettings workspaceId={workspaceId} />
+        ) : section === "workspaceAgents" ? (
+          <WorkspaceAgentAccessSettings workspaceId={workspaceId} />
         ) : section === "agents" ? (
           <AgentConnectionsSettings
             workspaceId={workspaceId}

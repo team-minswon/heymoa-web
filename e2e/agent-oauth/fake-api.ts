@@ -36,6 +36,7 @@ const WORKSPACE: WorkspaceListResponseDataWorkspacesItem = {
   name: "제품팀",
   description: null,
   role: "ADMIN",
+  agentAccessAllowed: true,
 };
 const CLIENT_NAME = "E2E 에이전트";
 

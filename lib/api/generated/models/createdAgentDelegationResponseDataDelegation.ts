@@ -49,7 +49,7 @@ export type CreatedAgentDelegationResponseDataDelegation = {
    */
   revokedAt: string | null;
   /**
-   * 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임. 회수되지 않았으면 null
+   * 회수 사유 — USER 는 본인 회수, MEMBERSHIP_ENDED 는 워크스페이스를 떠남, REFRESH_TOKEN_REUSED 는 OAuth 연결의 바뀐 refresh 토큰이 다시 쓰임, AGENT_ACCESS_DISABLED 는 워크스페이스 ADMIN 이 외부 에이전트 연결을 끔, ADMIN 은 워크스페이스 ADMIN 이 이 연결을 끊음. 회수되지 않았으면 null
    * @nullable
    */
   revokeReason: CreatedAgentDelegationResponseDataDelegationRevokeReason;

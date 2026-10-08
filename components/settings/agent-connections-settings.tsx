@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, ChevronDown } from "lucide-react";
 
+import {
+  AGENT_ACCESS_DISABLED,
+  AgentAccessBlockedNotice,
+  BLOCKED_SUFFIX,
+} from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
 import { AgentOAuthGuide } from "@/components/agent-connections/agent-oauth-guide";
 import { CopyBlock } from "@/components/agent-connections/copy-block";
@@ -30,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorCodeOf } from "@/lib/api/error-message";
 import { buildUrl } from "@/lib/api/fetcher";
 import {
   getAgentDelegationUsages,
@@ -58,7 +64,7 @@ const STATUS_LABEL: Record<Delegation["status"], string> = {
 };
 
 /** 연결이 무엇으로 붙었나(APP-889). OAuth 연결은 토큰 앞자리가 없어 이것으로만 구분된다. */
-const CREDENTIAL_LABEL: Record<Delegation["credentialKind"], string> = {
+export const CREDENTIAL_LABEL: Record<Delegation["credentialKind"], string> = {
   PERSONAL_TOKEN: "개인 토큰",
   OAUTH: "OAuth",
 };
@@ -75,6 +81,8 @@ const REVOKE_REASON_LABEL: Record<
   MEMBERSHIP_ENDED: "워크스페이스를 떠나 끊겼습니다.",
   REFRESH_TOKEN_REUSED:
     "토큰 재사용이 감지돼 끊겼습니다. 토큰이 새어 나갔을 수 있으니 에이전트에서 다시 연결하세요.",
+  AGENT_ACCESS_DISABLED: "워크스페이스에서 외부 에이전트를 막아 끊겼습니다.",
+  ADMIN: "관리자가 끊었습니다.",
 };
 
 const DATE = { year: "numeric", month: "long", day: "numeric" } as const;
@@ -331,27 +339,53 @@ function NewConnectionForm({
   // 응답에 토큰 원문이 실린다. **mutation 캐시에도 남기지 않는다** — 읽자마자 `reset()` 하고,
   // 관찰자가 떠나는 즉시 지워지게 `gcTime: 0` 이다. 안 그러면 창을 닫아도 기본 보존 기간 동안
   // MutationCache 가 원문을 들고 있다.
-  const create = useCreateAgentDelegation({ mutation: { gcTime: 0 } });
+  // 꺼진 워크스페이스(403)는 아래 안내가 그리므로 그 코드만 전역 토스트에서 뺀다(APP-941)
+  const create = useCreateAgentDelegation({
+    mutation: {
+      gcTime: 0,
+      meta: { suppressErrorToast: [AGENT_ACCESS_DISABLED] },
+    },
+  });
   // 응답 전에 창이 닫히면 발급된 토큰을 아무도 못 본다 — 요청이 도는 동안 설정 창을 잠근다
   useEffect(() => {
     onBusyChange?.(create.isPending);
   }, [create.isPending, onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
   const trimmed = name.trim();
+  // 외부 에이전트를 끈 워크스페이스(APP-941)는 남기되 고를 수 없다
   const items = Object.fromEntries(
-    workspaces.map((workspace) => [workspace.workspaceId, workspace.name])
+    workspaces.map((workspace) => [
+      workspace.workspaceId,
+      workspace.agentAccessAllowed === false
+        ? workspace.name + BLOCKED_SUFFIX
+        : workspace.name,
+    ])
+  );
+  const selected = workspaces.find(
+    (workspace) => workspace.workspaceId === workspaceId
+  );
+  const blocked = selected?.agentAccessAllowed === false;
+  const recheck = {
+    onRecheck: () => void workspacesQuery.refetch(),
+    rechecking: workspacesQuery.isFetching,
+  };
+  const allBlocked = workspaces.every(
+    (workspace) => workspace.agentAccessAllowed === false
   );
 
-  const canSubmit =
-    Boolean(trimmed) &&
-    workspaces.some((workspace) => workspace.workspaceId === workspaceId);
+  const canSubmit = Boolean(trimmed) && selected !== undefined && !blocked;
 
   const submit = async () => {
     if (!canSubmit) return;
-    // 거절은 여기서 소비한다 — 토스트는 전역 `MutationCache.onError` 가 띄운다.
+    // 거절은 여기서 소비한다 — 토스트는 전역 `MutationCache.onError` 가 띄운다. 고르는 사이 꺼졌으면
+    // 토스트 대신 워크스페이스를 다시 읽는다 — 그 워크스페이스가 꺼짐으로 바뀌어 안내가 남는다(APP-941)
     const response = await create
       .mutateAsync({ data: { workspaceId, name: trimmed } })
-      .catch(() => null);
+      .catch(async (error) => {
+        if (errorCodeOf(error) === AGENT_ACCESS_DISABLED)
+          await workspacesQuery.refetch();
+        return null;
+      });
     if (response?.status !== 201 || !response.data.success) return;
     const token = response.data.data.token;
     create.reset();
@@ -388,29 +422,35 @@ function NewConnectionForm({
               다시 시도
             </Button>
           </div>
+        ) : allBlocked ? (
+          <AgentAccessBlockedNotice {...recheck} />
         ) : (
-          <Select
-            items={items}
-            value={workspaceId}
-            onValueChange={(value) => value && setWorkspaceId(value)}
-          >
-            <SelectTrigger
-              id="agent-connection-workspace"
-              aria-label="맡길 워크스페이스"
+          <>
+            <Select
+              items={items}
+              value={workspaceId}
+              onValueChange={(value) => value && setWorkspaceId(value)}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {workspaces.map((workspace) => (
-                <SelectItem
-                  key={workspace.workspaceId}
-                  value={workspace.workspaceId}
-                >
-                  {workspace.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                id="agent-connection-workspace"
+                aria-label="맡길 워크스페이스"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {workspaces.map((workspace) => (
+                  <SelectItem
+                    key={workspace.workspaceId}
+                    value={workspace.workspaceId}
+                    disabled={workspace.agentAccessAllowed === false}
+                  >
+                    {items[workspace.workspaceId]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {blocked ? <AgentAccessBlockedNotice {...recheck} /> : null}
+          </>
         )}
       </div>
       <div className="grid gap-2">

@@ -110,6 +110,10 @@ describe("REST mock handlers", () => {
     const missing = await fetch(
       "http://localhost/v1/agent-delegations/01KNOPE000000/usages"
     );
+    // 시드의 다른 멤버 연결(APP-941) — 관리자라도 남의 내역은 없는 연결과 같다
+    const others = await fetch(
+      "http://localhost/v1/agent-delegations/01K00000000Q4/usages"
+    );
 
     expect(first.usages).toHaveLength(20);
     expect(first.hasMore).toBe(true);
@@ -123,6 +127,7 @@ describe("REST mock handlers", () => {
     expect((await missing.json()).error.code).toBe(
       "AGENT_DELEGATION_NOT_FOUND"
     );
+    expect(others.status).toBe(404);
   });
 
   it("생성은 201로 답한다", async () => {

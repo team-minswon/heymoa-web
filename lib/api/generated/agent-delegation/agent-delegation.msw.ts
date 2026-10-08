@@ -12,6 +12,7 @@ import type {
   AgentDelegationUsagesResponse,
   AgentDelegationsResponse,
   CreatedAgentDelegationResponse,
+  WorkspaceAgentDelegationsResponse,
 } from "../models";
 
 export const getGetAgentDelegationsResponseMock =
@@ -77,6 +78,25 @@ export const getGetAgentDelegationUsagesResponseMock =
       hasMore: true,
       nextOccurredAt: "2026-10-01T11:59:30Z",
       nextUsageId: "0HZX2K7M9Q4BE",
+    },
+    error: null,
+  });
+
+export const getGetWorkspaceAgentDelegationsResponseMock =
+  (): WorkspaceAgentDelegationsResponse => ({
+    success: true,
+    data: {
+      delegations: [
+        {
+          delegationId: "0HZX2K7M9Q4BD",
+          name: "Claude Code",
+          credentialKind: "OAUTH",
+          userId: "0HZX2K7M9Q4AM",
+          userName: "김팀원",
+          createdAt: "2026-10-01T09:00:00Z",
+          lastUsedAt: "2026-10-07T09:00:00Z",
+        },
+      ],
     },
     error: null,
   });
@@ -177,9 +197,80 @@ export const getGetAgentDelegationUsagesMockHandler = (
     options
   );
 };
+
+export const getChangeWorkspaceAgentAccessMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.put(
+    "*/v1/workspaces/:workspaceId/agent-access",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
+
+export const getGetWorkspaceAgentDelegationsMockHandler = (
+  overrideResponse?:
+    | WorkspaceAgentDelegationsResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) =>
+        | Promise<WorkspaceAgentDelegationsResponse>
+        | WorkspaceAgentDelegationsResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/workspaces/:workspaceId/agent-delegations",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetWorkspaceAgentDelegationsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
+export const getRevokeWorkspaceAgentDelegationMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0]
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions
+) => {
+  return http.delete(
+    "*/v1/workspaces/:workspaceId/agent-delegations/:delegationId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options
+  );
+};
 export const getAgentDelegationMock = () => [
   getGetAgentDelegationsMockHandler(),
   getCreateAgentDelegationMockHandler(),
   getRevokeAgentDelegationMockHandler(),
   getGetAgentDelegationUsagesMockHandler(),
+  getChangeWorkspaceAgentAccessMockHandler(),
+  getGetWorkspaceAgentDelegationsMockHandler(),
+  getRevokeWorkspaceAgentDelegationMockHandler(),
 ];

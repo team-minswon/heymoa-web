@@ -66,6 +66,29 @@ describe("mutation error toasts", () => {
 
     expect(toastError).not.toHaveBeenCalled();
   });
+
+  // 개인 토큰 폼은 꺼진 워크스페이스(403)만 인라인으로 그린다 — 다른 실패는 여전히 토스트다
+  it("skips only the listed codes when the screen draws some failures itself", async () => {
+    const client = makeQueryClient();
+    const meta = { suppressErrorToast: ["AGENT_ACCESS_DISABLED"] };
+
+    await runFailingMutation(
+      client,
+      envelope(
+        "AGENT_ACCESS_DISABLED",
+        "이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다."
+      ),
+      meta
+    );
+    expect(toastError).not.toHaveBeenCalled();
+
+    await runFailingMutation(
+      client,
+      envelope("BAD_REQUEST", "잘못된 요청입니다."),
+      meta
+    );
+    expect(toastError).toHaveBeenCalledWith("잘못된 요청입니다.");
+  });
 });
 
 describe("callers that already toast are not doubled up", () => {

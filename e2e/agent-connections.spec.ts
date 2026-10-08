@@ -13,7 +13,11 @@ async function openAgentSettings(page: Page) {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "워크스페이스 전환" }).click();
   await page.getByRole("menuitem", { name: "워크스페이스 설정" }).click();
-  await page.getByRole("button", { name: "외부 에이전트" }).click();
+  // 워크스페이스 쪽에도 같은 이름의 관리 항목이 있다(APP-941) — 계정 그룹으로 좁힌다
+  await page
+    .getByRole("group", { name: "계정" })
+    .getByRole("button", { name: "외부 에이전트" })
+    .click();
 }
 
 test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 원문은 다시 나오지 않는다", async ({

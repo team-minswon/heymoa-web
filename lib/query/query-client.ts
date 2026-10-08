@@ -1,7 +1,7 @@
 import { MutationCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
-import { errorMessageOf } from "@/lib/api/error-message";
+import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { ApiError, isAuthError } from "@/lib/api/fetcher";
 import { isSessionExpired } from "@/lib/auth/session-gate";
 
@@ -22,6 +22,9 @@ const MAX_RETRY_AFTER_MS = 30_000;
  *    `.claude/rules/error-loading.md`에 있다
  * 2. **호출부가 이미 자기 토스트를 띄운다** — 실패 코드에 따라 문구가 갈리는 곳
  *    (프로젝트 삭제의 "노트가 있어 삭제할 수 없습니다" 등). 여기서 또 띄우면 두 개가 겹친다
+ *
+ * 화면이 **일부 코드만** 인라인으로 그리면 `true` 대신 그 코드 목록을 준다. 목록의 코드만 건너뛰고
+ * 나머지 실패는 그대로 토스트로 띄운다(개인 토큰 발급의 `AGENT_ACCESS_DISABLED`, APP-941).
  */
 export function makeQueryClient() {
   return new QueryClient({
@@ -55,7 +58,10 @@ export function makeQueryClient() {
     },
     mutationCache: new MutationCache({
       onError: (error, _variables, _context, mutation) => {
-        if (mutation.meta?.suppressErrorToast) return;
+        const suppress = mutation.meta?.suppressErrorToast;
+        if (suppress === true) return;
+        if (Array.isArray(suppress) && suppress.includes(errorCodeOf(error)))
+          return;
         // 세션이 끝난 뒤의 실패는 만료 토스트 하나로 충분하다. 여기서 또 띄우면
         // "세션이 만료되었습니다"와 "요청을 처리하지 못했습니다"가 겹친다.
         if (isSessionExpired() || isAuthError(error)) return;

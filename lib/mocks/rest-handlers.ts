@@ -80,6 +80,8 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
   AGENT_OAUTH_REQUEST_NOT_FOUND:
     "연결 요청을 찾을 수 없습니다. 에이전트에서 다시 연결해 주세요.",
+  AGENT_ACCESS_DISABLED:
+    "이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다.",
   MEETING_RECORDING: "기록 중인 회의는 중지한 뒤 종료할 수 있습니다.",
 };
 
@@ -97,6 +99,8 @@ const FORBIDDEN_CODES = new Set([
   // ADMIN 만 임시 참여자를 연동·삭제한다. 여기 없으면 `statusOf` 가 409 로 떨어뜨려
   // 계약(403)과 갈리고, `KNOWN_CODES` 밖이라 `resultOf` 는 아예 guest 404 로 덮는다.
   "WORKSPACE_ACCESS_DENIED",
+  // 외부 에이전트를 끈 워크스페이스로 발급·허락(APP-939)
+  "AGENT_ACCESS_DISABLED",
 ]);
 
 const NOT_FOUND_CODES = new Set([
@@ -245,11 +249,14 @@ const MEMBER_ERROR_MESSAGES: Record<string, string> = {
   LAST_WORKSPACE_ADMIN: "워크스페이스에는 관리자가 최소 한 명 있어야 합니다.",
   WORKSPACE_ACCESS_DENIED: "워크스페이스를 변경할 권한이 없습니다.",
   BAD_REQUEST: "잘못된 요청입니다.",
+  AGENT_DELEGATION_NOT_FOUND: "연결을 찾을 수 없습니다.",
 };
 
+// 외부 에이전트 관리(APP-939·940)도 ADMIN 전용 204 조작이라 같은 묶음을 쓴다
 const MEMBER_NOT_FOUND_CODES = new Set([
   "WORKSPACE_MEMBER_NOT_FOUND",
   "WORKSPACE_NOT_FOUND",
+  "AGENT_DELEGATION_NOT_FOUND",
 ]);
 const MEMBER_FORBIDDEN_CODES = new Set(["WORKSPACE_ACCESS_DENIED"]);
 const MEMBER_BAD_REQUEST_CODES = new Set(["BAD_REQUEST"]);
@@ -1042,6 +1049,31 @@ export const restHandlers = [
     }
     return new HttpResponse(null, { status: 204 });
   }),
+  // 워크스페이스 외부 에이전트 관리 (APP-939·940). 계약: 허용 변경·회수 204, 목록 200, 모두 ADMIN 전용.
+  http.put("*/v1/workspaces/:workspaceId/agent-access", ({ params, request }) =>
+    memberResult(async () => {
+      const body = (await request.json().catch(() => null)) as {
+        allowed?: unknown;
+      } | null;
+      if (typeof body?.allowed !== "boolean") throw new Error("BAD_REQUEST");
+      mockDb.changeWorkspaceAgentAccess(id(params.workspaceId), body.allowed);
+    })
+  ),
+  http.get("*/v1/workspaces/:workspaceId/agent-delegations", ({ params }) =>
+    commandResult(() => ({
+      delegations: mockDb.listWorkspaceAgentDelegations(id(params.workspaceId)),
+    }))
+  ),
+  http.delete(
+    "*/v1/workspaces/:workspaceId/agent-delegations/:delegationId",
+    ({ params }) =>
+      memberResult(() =>
+        mockDb.revokeWorkspaceAgentDelegation(
+          id(params.workspaceId),
+          id(params.delegationId)
+        )
+      )
+  ),
 
   // Meeting / analysis / integrations
   http.get("*/v1/notes/:noteId/analyses/latest", ({ params }) =>

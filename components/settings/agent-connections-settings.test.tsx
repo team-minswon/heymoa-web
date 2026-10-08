@@ -24,8 +24,19 @@ const state = vi.hoisted(() => ({
   error: false,
   workspacesError: false,
   workspacesLoading: false,
+  workspaces: [] as unknown[],
+  workspacesRefetch: vi.fn(),
   refetch: vi.fn(),
 }));
+
+const PRODUCT_TEAM = {
+  workspaceId: "01K0000000000",
+  name: "제품팀",
+  description: null,
+  role: "ADMIN",
+  agentAccessAllowed: true,
+};
+state.workspaces = [PRODUCT_TEAM];
 
 const usages = vi.hoisted(() => ({
   fetch: vi.fn(),
@@ -70,18 +81,13 @@ vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   useGetWorkspaces: () => ({
     isLoading: state.workspacesLoading,
     isError: state.workspacesError,
-    refetch: vi.fn(),
+    refetch: state.workspacesRefetch,
     data:
       state.workspacesError || state.workspacesLoading
         ? undefined
         : {
             status: 200,
-            data: {
-              success: true,
-              data: {
-                workspaces: [{ workspaceId: "01K0000000000", name: "제품팀" }],
-              },
-            },
+            data: { success: true, data: { workspaces: state.workspaces } },
           },
   }),
 }));
@@ -104,7 +110,10 @@ describe("AgentConnectionsSettings", () => {
     state.error = false;
     state.workspacesError = false;
     state.workspacesLoading = false;
+    state.workspaces = [PRODUCT_TEAM];
+    state.workspacesRefetch.mockReset();
     created.pending = false;
+    created.mutateAsync.mockReset();
     usages.fetch.mockReset();
     revoked.mutateAsync.mockReset();
     vi.unstubAllEnvs();
@@ -158,7 +167,12 @@ describe("AgentConnectionsSettings", () => {
 
     expect(await screen.findByText("hm_secret-token")).toBeTruthy();
     expect(created.reset).toHaveBeenCalledTimes(1);
-    expect(created.options).toEqual({ mutation: { gcTime: 0 } });
+    expect(created.options).toEqual({
+      mutation: {
+        gcTime: 0,
+        meta: { suppressErrorToast: ["AGENT_ACCESS_DISABLED"] },
+      },
+    });
   });
 
   // 붙여 넣기 한 번으로 끝나야 한다 — Codex 도 환경 변수 없이(APP-869)
@@ -416,6 +430,8 @@ describe("AgentConnectionsSettings", () => {
           | "USER"
           | "MEMBERSHIP_ENDED"
           | "REFRESH_TOKEN_REUSED"
+          | "AGENT_ACCESS_DISABLED"
+          | "ADMIN"
           | null;
       }>
     ) => ({
@@ -500,10 +516,23 @@ describe("AgentConnectionsSettings", () => {
           name: "만료된 연결",
           status: "EXPIRED",
         }),
+        // 관리자 통제(APP-941)
+        delegation({
+          delegationId: "01K00000000Q6",
+          name: "팀이 막은 연결",
+          status: "REVOKED",
+          revokeReason: "AGENT_ACCESS_DISABLED",
+        }),
+        delegation({
+          delegationId: "01K00000000Q7",
+          name: "관리자가 끊은 연결",
+          status: "REVOKED",
+          revokeReason: "ADMIN",
+        }),
       ];
       renderSettings();
 
-      fireEvent.click(screen.getByRole("button", { name: "지난 연결 4개" }));
+      fireEvent.click(screen.getByRole("button", { name: "지난 연결 6개" }));
 
       const past = screen.getByRole("list", { name: "지난 연결" });
       const rowOf = (name: string) =>
@@ -522,8 +551,122 @@ describe("AgentConnectionsSettings", () => {
         )
       ).toBeTruthy();
       expect(
+        within(rowOf("팀이 막은 연결")).getByText(
+          "워크스페이스에서 외부 에이전트를 막아 끊겼습니다."
+        )
+      ).toBeTruthy();
+      expect(
+        within(rowOf("관리자가 끊은 연결")).getByText("관리자가 끊었습니다.")
+      ).toBeTruthy();
+      expect(
         within(rowOf("만료된 연결")).queryByText(/했습니다|끊겼습니다/)
       ).toBeNull();
+    });
+  });
+
+  // 관리자가 외부 에이전트를 끈 워크스페이스(APP-941)
+  describe("막힌 워크스페이스", () => {
+    const BLOCKED =
+      "관리자가 이 워크스페이스의 외부 에이전트 연결을 꺼 두었습니다.";
+    const openForm = () => {
+      renderSettings();
+      fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+      fireEvent.change(screen.getByLabelText("연결 이름"), {
+        target: { value: "노트북" },
+      });
+    };
+    const submitDisabled = () =>
+      (screen.getByRole("button", { name: "토큰 만들기" }) as HTMLButtonElement)
+        .disabled;
+
+    it("기본 워크스페이스가 막혀 있으면 꺼짐으로 표시하고 안내를 띄워 만들지 못하게 하며, 막힌 것은 고를 수 없다", async () => {
+      state.workspaces = [
+        { ...PRODUCT_TEAM, agentAccessAllowed: false },
+        {
+          ...PRODUCT_TEAM,
+          workspaceId: "01K0000000006",
+          name: "영업팀",
+          agentAccessAllowed: true,
+        },
+      ];
+      openForm();
+
+      const trigger = screen.getByLabelText("맡길 워크스페이스");
+      expect(trigger.textContent).toContain("제품팀 (외부 에이전트 꺼짐)");
+      expect(screen.getByRole("alert").textContent).toContain(BLOCKED);
+      expect(submitDisabled()).toBe(true);
+
+      fireEvent.click(trigger);
+      const blockedOption = await screen.findByRole("option", {
+        name: "제품팀 (외부 에이전트 꺼짐)",
+      });
+      expect(blockedOption.getAttribute("aria-disabled")).toBe("true");
+      // base-ui `Select` 는 포인터로 고른다 — `click` 만으로는 값이 안 바뀐다(members-settings.test 와 같다)
+      const sales = screen.getByRole("option", { name: "영업팀" });
+      fireEvent.pointerDown(sales, { pointerType: "mouse", button: 0 });
+      fireEvent.pointerUp(sales, { pointerType: "mouse", button: 0 });
+      fireEvent.click(sales);
+
+      await waitFor(() => expect(submitDisabled()).toBe(false));
+      expect(screen.queryByText(BLOCKED)).toBeNull();
+    });
+
+    // 앱은 창 포커스에 다시 읽지 않는다 — 열어 둔 채 관리자가 켜면 이것으로만 풀린다
+    it("막힘 안내의 「다시 확인」은 워크스페이스를 다시 읽는다", () => {
+      state.workspaces = [{ ...PRODUCT_TEAM, agentAccessAllowed: false }];
+      openForm();
+
+      fireEvent.click(screen.getByRole("button", { name: "다시 확인" }));
+
+      expect(state.workspacesRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("모든 워크스페이스가 막혀 있으면 선택 상자 없이 안내만 남는다", () => {
+      state.workspaces = [{ ...PRODUCT_TEAM, agentAccessAllowed: false }];
+      openForm();
+
+      expect(screen.queryByLabelText("맡길 워크스페이스")).toBeNull();
+      expect(screen.getByRole("alert").textContent).toContain(BLOCKED);
+      expect(submitDisabled()).toBe(true);
+    });
+
+    // 고르는 사이 꺼졌다 — 다시 읽은 목록이 그 워크스페이스를 꺼짐으로 바꿔 안내가 남는다
+    it("만들기가 403 AGENT_ACCESS_DISABLED 로 거절되면 워크스페이스를 다시 읽는다", async () => {
+      created.mutateAsync.mockRejectedValue({
+        success: false,
+        data: null,
+        error: {
+          code: "AGENT_ACCESS_DISABLED",
+          message: "이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다.",
+          details: null,
+        },
+      });
+      openForm();
+
+      fireEvent.click(screen.getByRole("button", { name: "토큰 만들기" }));
+
+      await waitFor(() =>
+        expect(state.workspacesRefetch).toHaveBeenCalledTimes(1)
+      );
+      expect(screen.queryByText("hm_", { exact: false })).toBeNull();
+    });
+
+    it("다른 이유로 거절되면 워크스페이스를 다시 읽지 않는다", async () => {
+      created.mutateAsync.mockRejectedValue({
+        success: false,
+        data: null,
+        error: {
+          code: "BAD_REQUEST",
+          message: "잘못된 요청입니다.",
+          details: null,
+        },
+      });
+      openForm();
+
+      fireEvent.click(screen.getByRole("button", { name: "토큰 만들기" }));
+
+      await waitFor(() => expect(created.mutateAsync).toHaveBeenCalled());
+      expect(state.workspacesRefetch).not.toHaveBeenCalled();
     });
   });
 

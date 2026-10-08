@@ -4,6 +4,7 @@ import type {
   AgentDelegationUsagesResponseData,
   AgentDelegationUsagesResponseDataUsagesItem,
   CreateWorkspaceRequest,
+  WorkspaceAgentDelegationsResponseDataDelegationsItem,
   CurrentUserResponseData,
   NoteListResponseDataNotesItem,
   NoteRequest,
@@ -199,12 +200,16 @@ type StoreState = {
   integrations: MockIntegration[];
   agentChats: MockAgentChat[];
   agentChatMessages: MockAgentChatMessage[];
-  /** 외부 에이전트 연결(APP-804). 목 유저 하나의 것이라 소유자 열을 두지 않는다. */
-  agentDelegations: AgentDelegationsResponseDataDelegationsItem[];
+  /** 외부 에이전트 연결(APP-804). 관리자 목록(APP-941)이 맡긴 사람을 보여 소유자 열을 둔다. */
+  agentDelegations: MockAgentDelegation[];
   /** 연결별 도구 호출 내역(APP-826). 본문은 서버 표에도 없어 여기에도 없다. */
   agentDelegationUsages: MockAgentDelegationUsage[];
   /** 나를 기다리는 OAuth 동의 요청(APP-888). 키는 server 가 동의 화면 주소에 붙이는 `state` 다. */
   agentOAuthConsents: Record<string, MockAgentOAuthConsent>;
+};
+
+type MockAgentDelegation = AgentDelegationsResponseDataDelegationsItem & {
+  userId: string;
 };
 
 type MockAgentOAuthConsent = {
@@ -814,6 +819,7 @@ function createSeedState(): StoreState {
       name: "테스트 유저의 워크스페이스",
       description: "회의 기록을 모으는 기본 공간입니다.",
       role: "ADMIN",
+      agentAccessAllowed: true,
     },
     // description은 계약상 nullable이다 — 설명 없는 워크스페이스를 화면이 어떻게 그리는지
     // 목이 한 번도 안 보여주면 그 레이아웃은 검증되지 않는다.
@@ -822,6 +828,7 @@ function createSeedState(): StoreState {
       name: "제품 팀",
       description: null,
       role: "ADMIN",
+      agentAccessAllowed: true,
     },
     // **프로젝트가 하나도 없는 워크스페이스.** 새로 만든 워크스페이스는 항상 이 상태로
     // 시작하는데 목에 표본이 없어서 온보딩 화면을 아무도 못 봤다. 노트도 프로젝트도
@@ -831,6 +838,7 @@ function createSeedState(): StoreState {
       name: "새 워크스페이스",
       description: null,
       role: "ADMIN",
+      agentAccessAllowed: true,
     },
   ];
   const projects: ProjectResponseData[] = [
@@ -1853,7 +1861,7 @@ function createSeedState(): StoreState {
     integrations,
     agentChats: seededChats.chats,
     agentChatMessages: seededChats.messages,
-    agentDelegations: seedAgentDelegations(workspaces),
+    agentDelegations: seedAgentDelegations(workspaces, user.userId),
     agentDelegationUsages: seedAgentDelegationUsages(),
     // 목 개발에서 `/oauth/consent?state=mock-consent` 로 동의 화면을 연다(APP-888).
     // 허락·거절은 이 요청을 지우므로, 다시 열면 실서버처럼 「다시 연결」 안내가 나온다.
@@ -1915,12 +1923,14 @@ function seedAgentDelegationUsages(): MockAgentDelegationUsage[] {
  * 개인 토큰 자격이 없는 연결은 앞자리가 없다). 빈 상태는 컴포넌트 시험이 본다.
  */
 function seedAgentDelegations(
-  workspaces: WorkspaceResponseData[]
-): AgentDelegationsResponseDataDelegationsItem[] {
+  workspaces: WorkspaceResponseData[],
+  userId: string
+): MockAgentDelegation[] {
   const [first] = workspaces;
   const base = {
     workspaceId: first.workspaceId,
     workspaceName: first.name,
+    userId,
   };
   return [
     {
@@ -1962,6 +1972,21 @@ function seedAgentDelegations(
       expiresAt: "2026-11-23T09:00:00Z",
       revokedAt: "2026-08-28T09:00:00Z",
       revokeReason: "MEMBERSHIP_ENDED",
+    },
+    // 다른 멤버의 연결(APP-941). 내 목록에는 안 보이고 ADMIN 의 관리자 목록에만 보인다
+    {
+      ...base,
+      userId: "01K0000000020",
+      delegationId: "01K00000000Q4",
+      name: "지원의 Codex",
+      tokenHint: null,
+      credentialKind: "OAUTH",
+      status: "ACTIVE",
+      createdAt: "2026-09-25T09:00:00Z",
+      lastUsedAt: null,
+      expiresAt: "2026-12-24T09:00:00Z",
+      revokedAt: null,
+      revokeReason: null,
     },
   ];
 }
@@ -2643,7 +2668,9 @@ export const mockDb = {
   listAgentDelegations(): AgentDelegationsResponseDataDelegationsItem[] {
     const now = Date.now();
     return copy(
-      [...state.agentDelegations]
+      state.agentDelegations
+        .filter((delegation) => delegation.userId === state.user.userId)
+        .map((delegation) => omit(delegation, ["userId"]))
         .map((delegation) =>
           delegation.status === "ACTIVE" &&
           Date.parse(delegation.expiresAt) <= now
@@ -2665,10 +2692,8 @@ export const mockDb = {
     delegation: AgentDelegationsResponseDataDelegationsItem;
     token: string;
   } {
-    assertWorkspace(workspaceId);
-    const workspace = state.workspaces.find(
-      (candidate) => candidate.workspaceId === workspaceId
-    );
+    const workspace = assertWorkspace(workspaceId);
+    if (!workspace.agentAccessAllowed) fail("AGENT_ACCESS_DISABLED");
     const createdAt = nextTimestamp();
     // 시드를 고정한 의사 난수(LCG) — 매번 같은 값이지만 반복 무늬로 보이지 않게
     let seed = idCounter * 2654435761;
@@ -2679,11 +2704,12 @@ export const mockDb = {
       );
     }).join("");
     const token = `hm_${random}`;
-    const delegation: AgentDelegationsResponseDataDelegationsItem = {
+    const delegation: MockAgentDelegation = {
       delegationId: nextId(),
       name,
       workspaceId,
-      workspaceName: workspace?.name ?? "",
+      workspaceName: workspace.name,
+      userId: state.user.userId,
       tokenHint: token.slice(0, 10),
       credentialKind: "PERSONAL_TOKEN",
       status: "ACTIVE",
@@ -2696,7 +2722,7 @@ export const mockDb = {
       revokeReason: null,
     };
     state.agentDelegations.push(delegation);
-    return { delegation: copy(delegation), token };
+    return { delegation: copy(omit(delegation, ["userId"])), token };
   },
 
   /**
@@ -2708,9 +2734,12 @@ export const mockDb = {
     afterOccurredAt?: string | null,
     afterUsageId?: string | null
   ): AgentDelegationUsagesResponseData {
+    // 남의 연결은 없는 연결과 같다 — 같은 워크스페이스의 ADMIN 에게도 내역은 열리지 않는다(APP-940)
     if (
       !state.agentDelegations.some(
-        (candidate) => candidate.delegationId === delegationId
+        (candidate) =>
+          candidate.delegationId === delegationId &&
+          candidate.userId === state.user.userId
       )
     )
       fail("AGENT_DELEGATION_NOT_FOUND");
@@ -2765,6 +2794,8 @@ export const mockDb = {
       (candidate) => candidate.workspaceId === workspaceId
     );
     if (!workspace) fail("WORKSPACE_NOT_FOUND");
+    // 막혀도 요청은 남는다 — 다른 워크스페이스로 허락하거나 거절할 수 있다(server 와 같다)
+    if (!workspace.agentAccessAllowed) fail("AGENT_ACCESS_DISABLED");
     delete state.agentOAuthConsents[consentState];
     const createdAt = nextTimestamp();
     const delegationId = nextId();
@@ -2773,6 +2804,7 @@ export const mockDb = {
       name: consent.clientName.slice(0, 50),
       workspaceId,
       workspaceName: workspace.name,
+      userId: state.user.userId,
       tokenHint: null,
       credentialKind: "OAUTH",
       status: "ACTIVE",
@@ -2808,13 +2840,92 @@ export const mockDb = {
   /** 본인 회수. 이미 회수된 연결을 다시 회수해도 그대로 둔다(서버와 같다). */
   revokeAgentDelegation(delegationId: string): void {
     const delegation = state.agentDelegations.find(
-      (candidate) => candidate.delegationId === delegationId
+      (candidate) =>
+        candidate.delegationId === delegationId &&
+        candidate.userId === state.user.userId
     );
     if (!delegation) fail("AGENT_DELEGATION_NOT_FOUND");
     if (delegation.status === "REVOKED") return;
     delegation.status = "REVOKED";
     delegation.revokedAt = nextTimestamp();
     delegation.revokeReason = "USER";
+  },
+
+  /** 외부 에이전트 허용(APP-939). 끄면 그 워크스페이스의 연결을 모두 끊고, 다시 켜도 되살리지 않는다. */
+  changeWorkspaceAgentAccess(workspaceId: string, allowed: boolean): void {
+    requireWorkspaceAdmin(workspaceId);
+    const workspace = assertWorkspace(workspaceId);
+    workspace.agentAccessAllowed = allowed;
+    if (allowed) return;
+    const revokedAt = nextTimestamp();
+    for (const delegation of state.agentDelegations) {
+      if (
+        delegation.workspaceId !== workspaceId ||
+        delegation.status === "REVOKED"
+      )
+        continue;
+      delegation.status = "REVOKED";
+      delegation.revokedAt = revokedAt;
+      delegation.revokeReason = "AGENT_ACCESS_DISABLED";
+    }
+  },
+
+  /** 관리자 목록(APP-940). 누가 맡겼든 살아 있는(회수·만료되지 않은) 연결만, 최근 것부터. */
+  listWorkspaceAgentDelegations(
+    workspaceId: string
+  ): WorkspaceAgentDelegationsResponseDataDelegationsItem[] {
+    requireWorkspaceAdmin(workspaceId);
+    const now = Date.now();
+    return copy(
+      state.agentDelegations
+        .filter(
+          (delegation) =>
+            delegation.workspaceId === workspaceId &&
+            delegation.status === "ACTIVE" &&
+            Date.parse(delegation.expiresAt) > now
+        )
+        .sort(
+          (a, b) =>
+            b.createdAt.localeCompare(a.createdAt) ||
+            b.delegationId.localeCompare(a.delegationId)
+        )
+        .map((delegation) => ({
+          delegationId: delegation.delegationId,
+          name: delegation.name,
+          credentialKind: delegation.credentialKind,
+          userId: delegation.userId,
+          userName:
+            state.members.find(
+              (member) =>
+                member.workspaceId === workspaceId &&
+                member.userId === delegation.userId
+            )?.name ?? "",
+          createdAt: delegation.createdAt,
+          lastUsedAt: delegation.lastUsedAt,
+        }))
+    );
+  },
+
+  /** 관리자 회수(APP-940). 다른 워크스페이스 연결은 없는 것과 같고, 이미 끊긴 것은 그대로 둔다. */
+  revokeWorkspaceAgentDelegation(
+    workspaceId: string,
+    delegationId: string
+  ): void {
+    requireWorkspaceAdmin(workspaceId);
+    const delegation = state.agentDelegations.find(
+      (candidate) =>
+        candidate.delegationId === delegationId &&
+        candidate.workspaceId === workspaceId
+    );
+    if (!delegation) fail("AGENT_DELEGATION_NOT_FOUND");
+    if (
+      delegation.status !== "ACTIVE" ||
+      Date.parse(delegation.expiresAt) <= Date.now()
+    )
+      return;
+    delegation.status = "REVOKED";
+    delegation.revokedAt = nextTimestamp();
+    delegation.revokeReason = "ADMIN";
   },
 
   /** 연결만 끊고 행은 남긴다 — 계약이 미연동 provider도 목록에 담기 때문이다. */
@@ -3023,6 +3134,7 @@ export const mockDb = {
         name: INVITED_WORKSPACE.name,
         description: null,
         role: invitation.role,
+        agentAccessAllowed: true,
       });
       attachWorkspaceState(invitation.workspaceId, invitation.role);
     }
@@ -3103,6 +3215,7 @@ export const mockDb = {
       name,
       description: input.description ?? null,
       role: "ADMIN",
+      agentAccessAllowed: true,
     };
     state.workspaces.push(workspace);
     attachWorkspaceState(workspace.workspaceId, workspace.role);

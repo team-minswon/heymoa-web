@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { Bot, ShieldAlert } from "lucide-react";
 
+import {
+  AGENT_ACCESS_DISABLED,
+  AgentAccessBlockedNotice,
+  BLOCKED_SUFFIX,
+} from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
 import { AgentOAuthEndCard } from "@/components/agent-connections/agent-oauth-cards";
 import { CenteredCard } from "@/components/layout/centered-card";
@@ -51,6 +56,8 @@ export function isNavigableRedirect(uri: string) {
  * - 워크스페이스가 하나면 미리 고르고, 둘 이상이면 고르기 전에는 허락할 수 없다 — 맡길 범위는 사람이 고른다
  * - 요청이 없거나 이미 처리됐으면(`AGENT_OAUTH_REQUEST_NOT_FOUND`) server 문구로 끝낸다. 실패는 전역 토스트
  *   대신 이 화면이 그린다
+ * - 외부 에이전트를 끈 워크스페이스는 고를 수 없다(APP-941). 고르는 사이 꺼져 허락이 403 이면 목록을 다시
+ *   읽고 같은 안내를 띄운다 — 요청은 server 에 남아 있어 화면을 닫지 않는다
  */
 export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   const consent = useGetAgentOAuthConsent({ state: consentState });
@@ -76,6 +83,17 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
     (workspaces.length === 1 ? workspaces[0].workspaceId : null);
   const busy = approve.isPending || deny.isPending || leaving;
   const failure = consent.error ?? approve.error ?? deny.error;
+  const selected = workspaces.find(
+    (workspace) => workspace.workspaceId === workspaceId
+  );
+  const blocked = selected?.agentAccessAllowed === false;
+  const recheck = {
+    onRecheck: () => void workspacesQuery.refetch(),
+    rechecking: workspacesQuery.isFetching,
+  };
+  const allBlocked =
+    workspaces.length > 0 &&
+    workspaces.every((workspace) => workspace.agentAccessAllowed === false);
 
   if (errorCodeOf(failure) === REQUEST_NOT_FOUND) {
     return (
@@ -116,7 +134,13 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
     setInvalidRedirect(false);
     const response = await approve
       .mutateAsync({ data: { state: consentState, workspaceId } })
-      .catch(() => null);
+      .catch(async (error) => {
+        // 다시 읽은 목록이 그 워크스페이스를 꺼짐으로 바꿔 안내가 뜬다. 잠금은 목록만 보고 가르고 이 오류
+        // 문구는 아래에서 거른다 — 여기서 reset 하면 그사이 시작한 새 허락의 관찰까지 끊는다
+        if (errorCodeOf(error) === AGENT_ACCESS_DISABLED)
+          await workspacesQuery.refetch();
+        return null;
+      });
     if (response?.status === 200 && response.data.success) {
       leave(response.data.data.redirectUri);
     }
@@ -134,7 +158,12 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   };
 
   const items = Object.fromEntries(
-    workspaces.map((workspace) => [workspace.workspaceId, workspace.name])
+    workspaces.map((workspace) => [
+      workspace.workspaceId,
+      workspace.agentAccessAllowed === false
+        ? workspace.name + BLOCKED_SUFFIX
+        : workspace.name,
+    ])
   );
 
   return (
@@ -194,11 +223,20 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
           <p className="text-sm text-[var(--el-muted)]">
             연결할 워크스페이스가 없습니다.
           </p>
+        ) : allBlocked ? (
+          <AgentAccessBlockedNotice {...recheck} />
         ) : (
           <Select
             items={items}
             value={workspaceId}
-            onValueChange={(value) => value && setChosenWorkspaceId(value)}
+            // 허락·거절이 도는 동안 바꾸면 아래 reset 이 진행 중인 요청의 관찰을 끊어 버튼이 다시 열린다
+            disabled={busy}
+            onValueChange={(value) => {
+              if (!value) return;
+              setChosenWorkspaceId(value);
+              // 앞 워크스페이스의 403 이 새로 고른 것의 안내로 남지 않게
+              approve.reset();
+            }}
           >
             <SelectTrigger
               id="agent-oauth-workspace"
@@ -212,20 +250,25 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
                 <SelectItem
                   key={workspace.workspaceId}
                   value={workspace.workspaceId}
+                  disabled={workspace.agentAccessAllowed === false}
                 >
-                  {workspace.name}
+                  {items[workspace.workspaceId]}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         )}
+        {blocked && !allBlocked ? (
+          <AgentAccessBlockedNotice {...recheck} />
+        ) : null}
       </div>
 
       <div className="mt-4">
         <AgentAccessNotice />
       </div>
 
-      {(failure || invalidRedirect) && (
+      {((failure && errorCodeOf(failure) !== AGENT_ACCESS_DISABLED) ||
+        invalidRedirect) && (
         <p role="alert" className="mt-4 text-sm text-[var(--el-error-strong)]">
           {invalidRedirect
             ? "에이전트로 돌아갈 주소가 올바르지 않습니다. 에이전트에서 다시 연결해 주세요."
@@ -251,7 +294,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
             size="sm"
             className="h-8"
             loading={approve.isPending}
-            disabled={busy || !request || !workspaceId}
+            disabled={busy || !request || !workspaceId || blocked}
             onClick={() => void onApprove()}
           >
             허락

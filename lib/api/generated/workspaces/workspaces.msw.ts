@@ -27,6 +27,7 @@ export const getGetWorkspacesResponseMock = (): WorkspaceListResponse => ({
         name: "제품 팀",
         description: "제품을 만드는 팀의 워크스페이스",
         role: "ADMIN",
+        agentAccessAllowed: true,
       },
     ],
   },
@@ -51,6 +52,7 @@ export const getGetWorkspaceResponseMock = (): WorkspaceResponse => ({
     name: "제품 팀",
     description: "제품을 만드는 팀의 워크스페이스",
     role: "ADMIN",
+    agentAccessAllowed: true,
   },
   error: null,
 });

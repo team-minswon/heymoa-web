@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import {
   afterAll,
@@ -63,7 +63,11 @@ afterEach(() => {
 afterAll(() => server.close());
 
 function withWorkspaces(
-  workspaces: Array<{ workspaceId: string; name: string }>
+  workspaces: Array<{
+    workspaceId: string;
+    name: string;
+    agentAccessAllowed?: boolean;
+  }>
 ) {
   const all = mockDb.listWorkspaces();
   server.use(
@@ -91,6 +95,7 @@ function renderConsent(consentState = "mock-consent") {
       <AgentOAuthConsent consentState={consentState} />
     </QueryClientProvider>
   );
+  return client;
 }
 
 describe("외부 에이전트 연결 동의 화면", () => {
@@ -220,6 +225,242 @@ describe("외부 에이전트 연결 동의 화면", () => {
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "허락" })).toBeNull();
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  describe("외부 에이전트를 끈 워크스페이스(APP-941)", () => {
+    const BLOCKED =
+      "관리자가 이 워크스페이스의 외부 에이전트 연결을 꺼 두었습니다.";
+
+    it("하나뿐인 워크스페이스가 막혀 있으면 안내만 남기고 허락은 잠그며 거절은 된다", async () => {
+      const [only] = mockDb.listWorkspaces();
+      withWorkspaces([
+        {
+          workspaceId: only.workspaceId,
+          name: "제품팀",
+          agentAccessAllowed: false,
+        },
+      ]);
+      renderConsent();
+
+      expect(await screen.findByText(BLOCKED)).toBeTruthy();
+      expect(
+        screen.queryByRole("combobox", { name: "맡길 워크스페이스" })
+      ).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "허락" }).hasAttribute("disabled")
+      ).toBe(true);
+      const reject = screen.getByRole("button", { name: "거절" });
+      await waitFor(() => expect(reject.hasAttribute("disabled")).toBe(false));
+    });
+
+    // 고르는 사이 꺼졌다 — 요청은 server 에 남아 있어 다른 워크스페이스로 허락하거나 거절할 수 있다
+    it("허락이 403 AGENT_ACCESS_DISABLED 면 목록을 다시 읽어 안내로 바꾸고 화면을 닫지 않는다", async () => {
+      const [only] = mockDb.listWorkspaces();
+      withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);
+      // 화면이 목록을 읽은 뒤 ADMIN 이 끈다 — 목이 실서버처럼 그 워크스페이스를 막고 꺼짐으로 내린다
+      renderConsent();
+      const allow = await screen.findByRole("button", { name: "허락" });
+      await waitFor(() => expect(allow.hasAttribute("disabled")).toBe(false));
+      mockDb.changeWorkspaceAgentAccess(only.workspaceId, false);
+      withWorkspaces([
+        {
+          workspaceId: only.workspaceId,
+          name: "제품팀",
+          agentAccessAllowed: false,
+        },
+      ]);
+
+      fireEvent.click(allow);
+
+      expect(await screen.findByText(BLOCKED)).toBeTruthy();
+      expect(approved).toEqual([
+        { state: "mock-consent", workspaceId: only.workspaceId },
+      ]);
+      expect(assign).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText(
+          "이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다."
+        )
+      ).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "허락" }).hasAttribute("disabled")
+      ).toBe(true);
+      expect(
+        screen.getByRole("button", { name: "거절" }).hasAttribute("disabled")
+      ).toBe(false);
+    });
+
+    it("열어 둔 채 관리자가 다시 켜면 「다시 확인」으로 잠금이 풀려 허락할 수 있다", async () => {
+      const [only] = mockDb.listWorkspaces();
+      mockDb.changeWorkspaceAgentAccess(only.workspaceId, false);
+      withWorkspaces([
+        {
+          workspaceId: only.workspaceId,
+          name: "제품팀",
+          agentAccessAllowed: false,
+        },
+      ]);
+      renderConsent();
+      expect(await screen.findByText(BLOCKED)).toBeTruthy();
+
+      mockDb.changeWorkspaceAgentAccess(only.workspaceId, true);
+      withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);
+      fireEvent.click(screen.getByRole("button", { name: "다시 확인" }));
+
+      await waitFor(() => expect(screen.queryByText(BLOCKED)).toBeNull());
+      const allow = screen.getByRole("button", { name: "허락" });
+      await waitFor(() => expect(allow.hasAttribute("disabled")).toBe(false));
+      fireEvent.click(allow);
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    });
+
+    // 바꾸면 진행 중인 허락의 관찰이 끊겨 버튼이 다시 열리고 같은 요청이 두 번 나갈 수 있다
+    it("허락이 도는 동안에는 워크스페이스를 바꿀 수 없다", async () => {
+      const [first, second] = mockDb.listWorkspaces();
+      withWorkspaces([
+        { workspaceId: first.workspaceId, name: "제품팀" },
+        { workspaceId: second.workspaceId, name: "영업팀" },
+      ]);
+      server.use(
+        http.post("*/v1/agent-oauth/consent/approve", async () => {
+          await delay("infinite");
+          return HttpResponse.json({});
+        })
+      );
+      renderConsent();
+      const select = await screen.findByRole("combobox", {
+        name: "맡길 워크스페이스",
+      });
+      fireEvent.click(select);
+      const option = await screen.findByRole("option", { name: "영업팀" });
+      fireEvent.pointerDown(option, { pointerType: "mouse", button: 0 });
+      fireEvent.pointerUp(option, { pointerType: "mouse", button: 0 });
+      fireEvent.click(option);
+      const allow = screen.getByRole("button", { name: "허락" });
+      await waitFor(() => expect(allow.hasAttribute("disabled")).toBe(false));
+
+      fireEvent.click(allow);
+
+      await waitFor(() =>
+        expect(
+          screen
+            .getByRole("combobox", { name: "맡길 워크스페이스" })
+            .hasAttribute("data-disabled")
+        ).toBe(true)
+      );
+      expect(
+        screen.getByRole("button", { name: "허락" }).hasAttribute("disabled")
+      ).toBe(true);
+    });
+
+    // 403 뒤 다시 읽는 사이 다른 워크스페이스로 허락하면, 앞선 복구가 새 허락의 관찰을 끊으면 안 된다
+    it("403 뒤 목록을 다시 읽는 사이 시작한 허락은 끝날 때까지 잠겨 있다", async () => {
+      const [first, second] = mockDb.listWorkspaces();
+      const both = [
+        { ...first, name: "제품팀" },
+        { ...second, name: "영업팀" },
+      ];
+      let releaseRefetch = () => {};
+      let releaseApprove = () => {};
+      let listCalls = 0;
+      let approveCalls = 0;
+      server.use(
+        http.get("*/v1/workspaces", async () => {
+          listCalls += 1;
+          if (listCalls > 1)
+            await new Promise<void>((resolve) => (releaseRefetch = resolve));
+          return HttpResponse.json({
+            success: true,
+            data: { workspaces: both },
+            error: null,
+          });
+        }),
+        http.post("*/v1/agent-oauth/consent/approve", async () => {
+          approveCalls += 1;
+          if (approveCalls === 1)
+            return HttpResponse.json(
+              {
+                success: false,
+                data: null,
+                error: {
+                  code: "AGENT_ACCESS_DISABLED",
+                  message:
+                    "이 워크스페이스는 외부 에이전트 연결이 꺼져 있습니다.",
+                  details: null,
+                },
+              },
+              { status: 403 }
+            );
+          await new Promise<void>((resolve) => (releaseApprove = resolve));
+          return HttpResponse.json({
+            success: true,
+            data: {
+              redirectUri: "http://127.0.0.1:1455/callback?code=c&state=s",
+            },
+            error: null,
+          });
+        })
+      );
+      renderConsent();
+      const pick = async (name: string) => {
+        fireEvent.click(
+          await screen.findByRole("combobox", { name: "맡길 워크스페이스" })
+        );
+        const option = await screen.findByRole("option", { name });
+        fireEvent.pointerDown(option, { pointerType: "mouse", button: 0 });
+        fireEvent.pointerUp(option, { pointerType: "mouse", button: 0 });
+        fireEvent.click(option);
+      };
+      const allow = () => screen.getByRole("button", { name: "허락" });
+
+      await pick("제품팀");
+      await waitFor(() => expect(allow().hasAttribute("disabled")).toBe(false));
+      fireEvent.click(allow());
+      await waitFor(() => expect(listCalls).toBe(2));
+
+      await pick("영업팀");
+      await waitFor(() => expect(allow().hasAttribute("disabled")).toBe(false));
+      fireEvent.click(allow());
+      await waitFor(() => expect(approveCalls).toBe(2));
+      releaseRefetch();
+      await waitFor(() => expect(listCalls).toBe(2));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(allow().hasAttribute("disabled")).toBe(true);
+      releaseApprove();
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    });
+
+    // 403 의 흔적이 잠금으로 남으면 관리자가 다시 켜도 같은 화면에서 허락할 수 없다
+    it("관리자가 다시 켠 뒤 목록을 다시 읽으면 같은 화면에서 허락할 수 있다", async () => {
+      const [only] = mockDb.listWorkspaces();
+      withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);
+      const client = renderConsent();
+      const allow = await screen.findByRole("button", { name: "허락" });
+      await waitFor(() => expect(allow.hasAttribute("disabled")).toBe(false));
+      mockDb.changeWorkspaceAgentAccess(only.workspaceId, false);
+      withWorkspaces([
+        {
+          workspaceId: only.workspaceId,
+          name: "제품팀",
+          agentAccessAllowed: false,
+        },
+      ]);
+      fireEvent.click(allow);
+      expect(await screen.findByText(BLOCKED)).toBeTruthy();
+
+      mockDb.changeWorkspaceAgentAccess(only.workspaceId, true);
+      withWorkspaces([{ workspaceId: only.workspaceId, name: "제품팀" }]);
+      await client.invalidateQueries();
+
+      await waitFor(() => expect(screen.queryByText(BLOCKED)).toBeNull());
+      const again = screen.getByRole("button", { name: "허락" });
+      await waitFor(() => expect(again.hasAttribute("disabled")).toBe(false));
+      fireEvent.click(again);
+
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(approved).toHaveLength(2);
+    });
   });
 
   it("없거나 이미 처리된 요청이면 server 문구로 다시 연결하라고 안내한다", async () => {

@@ -16,6 +16,9 @@ vi.mock("@/components/settings/members-settings", () => ({
 vi.mock("@/components/settings/workspace-integrations-settings", () => ({
   WorkspaceIntegrationsSettings: () => <p>연동 내용</p>,
 }));
+vi.mock("@/components/settings/workspace-agent-access-settings", () => ({
+  WorkspaceAgentAccessSettings: () => <p>외부 에이전트 관리 내용</p>,
+}));
 vi.mock("@/components/settings/agent-connections-settings", () => ({
   AgentConnectionsSettings: ({
     onBusyChange,
@@ -68,5 +71,29 @@ describe("SettingsDialog", () => {
     expect(screen.getByText("멤버 내용")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "연동" }));
     expect(screen.getByText("연동 내용")).toBeInTheDocument();
+  });
+
+  // 같은 이름이 두 그룹에 있다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)
+  it("「외부 에이전트」는 워크스페이스 쪽이 관리, 계정 쪽이 내 연결을 연다", () => {
+    render(
+      <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
+    );
+
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "워크스페이스" })).getByRole(
+        "button",
+        { name: "외부 에이전트" }
+      )
+    );
+    expect(screen.getByText("외부 에이전트 관리 내용")).toBeInTheDocument();
+
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "계정" })).getByRole("button", {
+        name: "외부 에이전트",
+      })
+    );
+    expect(
+      screen.getByRole("button", { name: "토큰 요청 시작" })
+    ).toBeInTheDocument();
   });
 });
