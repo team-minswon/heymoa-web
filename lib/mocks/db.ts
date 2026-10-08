@@ -4,7 +4,6 @@ import type {
   AgentDelegationUsagesResponseData,
   AgentDelegationUsagesResponseDataUsagesItem,
   CreateWorkspaceRequest,
-  CurrentTranscriptionSessionNullableResponseData,
   CurrentUserResponseData,
   NoteListResponseDataNotesItem,
   NoteRequest,
@@ -3672,9 +3671,13 @@ export const mockDb = {
     return copy(session) as unknown as TranscriptionSessionResponseData;
   },
 
+  /** 열린 세션(ACTIVE 또는 만료 전 READY). REST 경로는 없고 시험이 상태를 확인하는 데 쓴다. */
   getCurrentSession(
     noteId: string
-  ): CurrentTranscriptionSessionNullableResponseData {
+  ): Pick<
+    TranscriptionSessionResponseData,
+    "sessionId" | "noteId" | "status" | "readyExpiresAt" | "startedAt"
+  > | null {
     expireReadySessions(noteId);
     const session = state.sessions.find(
       (candidate) =>
@@ -3687,7 +3690,7 @@ export const mockDb = {
       ? {
           sessionId: session.sessionId,
           noteId: session.noteId,
-          status: session.status as "READY" | "ACTIVE",
+          status: session.status as TranscriptionSessionResponseData["status"],
           readyExpiresAt: session.readyExpiresAt,
           startedAt: session.startedAt,
         }

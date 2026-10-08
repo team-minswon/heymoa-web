@@ -11,7 +11,6 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
-  CurrentTranscriptionSessionNullableResponse,
   SegmentSpeakerResponse,
   SpeakerListResponse,
   StartTranscriptionSessionResponse,
@@ -177,19 +176,6 @@ export const getGetTranscriptSegmentsAfterResponseMock =
     error: null,
   });
 
-export const getGetCurrentTranscriptionSessionResponseMock =
-  (): CurrentTranscriptionSessionNullableResponse => ({
-    success: true,
-    data: {
-      sessionId: "0HZX2K7M9Q4AG",
-      noteId: "0HZX2K7M9Q4AF",
-      status: "READY",
-      readyExpiresAt: "2026-07-14T01:02:03Z",
-      startedAt: null,
-    },
-    error: null,
-  });
-
 export const getAssignSegmentSpeakerResponseMock =
   (): SegmentSpeakerResponse => ({
     success: true,
@@ -350,32 +336,6 @@ export const getGetTranscriptSegmentsAfterMockHandler = (
   );
 };
 
-export const getGetCurrentTranscriptionSessionMockHandler = (
-  overrideResponse?:
-    | CurrentTranscriptionSessionNullableResponse
-    | ((
-        info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) =>
-        | Promise<CurrentTranscriptionSessionNullableResponse>
-        | CurrentTranscriptionSessionNullableResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.get(
-    "*/v1/notes/:noteId/transcription-sessions/current",
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getGetCurrentTranscriptionSessionResponseMock(),
-        { status: 200 }
-      );
-    },
-    options
-  );
-};
-
 export const getAssignSegmentSpeakerMockHandler = (
   overrideResponse?:
     | SegmentSpeakerResponse
@@ -406,6 +366,5 @@ export const getTranscriptionMock = () => [
   getStartTranscriptionSessionMockHandler(),
   getAssignNoteSpeakerMockHandler(),
   getGetTranscriptSegmentsAfterMockHandler(),
-  getGetCurrentTranscriptionSessionMockHandler(),
   getAssignSegmentSpeakerMockHandler(),
 ];

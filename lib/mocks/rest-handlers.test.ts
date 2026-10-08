@@ -189,21 +189,6 @@ describe("REST mock handlers", () => {
     });
   });
 
-  it("returns null for an expired READY current session", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-07-11T09:00:00Z"));
-    const project = mockDb.listProjects("01K0000000000")[0];
-    const note = mockDb.createNote(project.projectId, {});
-    mockDb.createSession(note.noteId);
-    vi.setSystemTime(new Date("2026-07-11T09:10:00Z"));
-
-    const response = await fetch(
-      `http://localhost/v1/notes/${note.noteId}/transcription-sessions/current`
-    );
-
-    expect((await response.json()).data).toBeNull();
-  });
-
   it("returns a derived timing snapshot from the note PATCH response", async () => {
     const project = mockDb.listProjects("01K0000000000")[0];
     const note = mockDb.createNote(project.projectId, {});

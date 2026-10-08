@@ -382,9 +382,6 @@ const KNOWN_ONE_SIDED = new Set([
   "CurrentUserResponse.data.image",
   // 같은 고정 목 유저를 쓰는 세션 조회도 프로필 이미지 표본이 한 쪽이다.
   "AuthSessionResponse.data.user.image",
-  // 목은 현재 유저의 열린 세션을 하나만 허용한다. 같은 스냅샷에서 READY(null)와
-  // ACTIVE(값 있음)를 동시에 만들 수 없어 REST Docs가 nullable 양쪽 계약을 맡는다.
-  "CurrentTranscriptionSessionNullableResponse.data.startedAt",
   // 재요약의 오류 두 필드는 **실패한 재요약** 표본이 있어야 비-null이 나오는데, 회의를
   // 끝낼 수 있는 목 노트가 넷뿐이고 둘은 세션이 쓴다. 남은 둘에는 「실패한 분석」과
   // 「진행 중인 재요약」을 담았다 — 셋째 조합을 놓을 노트가 없다 (APP-421).

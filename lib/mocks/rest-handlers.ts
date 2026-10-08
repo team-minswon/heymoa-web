@@ -698,12 +698,6 @@ export const restHandlers = [
       )
     )
   ),
-  http.get("*/v1/notes/:noteId/transcription-sessions/current", ({ params }) =>
-    resultOf(
-      () => mockDb.getCurrentSession(id(params.noteId)),
-      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
-    )
-  ),
   /**
    * 화자 벌크 (APP-685). **본문에 실린 라벨만 바꾼다** — 여기 없는 라벨의 확정은 그대로다.
    * 전체 교체로 읽으면 「참석자 중에 없다」 확정을 지우는 길이 열리는데 되돌릴 API 가 없다.

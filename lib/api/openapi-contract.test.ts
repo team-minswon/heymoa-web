@@ -291,7 +291,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-901 adds the read-only session probe (67 → 68).
     // APP-888(server APP-886)에서 외부 에이전트 OAuth 동의 셋이 늘었다 (68 → 71) —
     // `agent-oauth/consent`(조회)·`.../approve`·`.../deny`.
-    expect(paths).toHaveLength(71);
+    // APP-1007에서 현재 전사 세션 조회가 빠졌다 (71 → 70) — `transcription-sessions/current`.
+    expect(paths).toHaveLength(70);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 
