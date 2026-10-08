@@ -115,7 +115,12 @@ export function createDesktopAudioCapture(
         try {
           if (old || wasPending) await bridge.endCapture(old ?? undefined);
         } catch (error) {
-          options.onCaptureError?.("AUDIO_CAPTURE_FAILED");
+          // Electron prefixes the main-process rejection: "...: Error: CODE".
+          const code =
+            error instanceof Error
+              ? /([A-Z][A-Z_]+)$/.exec(error.message)?.[1]
+              : undefined;
+          options.onCaptureError?.(code ?? "AUDIO_CAPTURE_FAILED");
           throw error;
         } finally {
           if (id === old) id = null;

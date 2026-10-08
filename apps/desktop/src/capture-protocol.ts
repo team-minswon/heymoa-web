@@ -10,10 +10,13 @@ export const LOCAL_ACK = "heymoa:local-capture-ack";
 // 16 kHz mono PCM16, at most 100 ms per packet.
 export const PCM_SAMPLES_PER_MS = 16;
 export const PCM_MAX_BYTES = 3200;
-// One in flight and one local queued packet permit at most 200 ms of delivery burst.
-export const PCM_DELIVERY_BURST_SAMPLES = PCM_MAX_BYTES;
+// How long the remote window may stall before capture gives up. Long tasks and GC
+// pauses run in the hundreds of ms; a window silent for 3 s is hung, not busy.
+// 30 queued 100 ms chunks are about 96 KB.
+export const CAPTURE_BACKLOG_MS = 3000;
+export const CAPTURE_BACKLOG_SAMPLES = CAPTURE_BACKLOG_MS * PCM_SAMPLES_PER_MS;
 export const INPUT_STATUS_INTERVAL_MS = 50;
-export const CAPTURE_ACK_TIMEOUT_MS = 2000;
+export const CAPTURE_ACK_TIMEOUT_MS = CAPTURE_BACKLOG_MS;
 const states = new Set(["live", "muted", "ended", "suspended"]);
 export const CAPTURE_ERRORS = new Set([
   "AUDIO_CAPTURE_FAILED",
@@ -69,4 +72,76 @@ export function capturePacket(value: unknown, id: string): CapturePacket {
   )
     return value as CapturePacket;
   throw new Error("INVALID_CAPTURE_PACKET");
+}
+
+type PcmPacket = Extract<CapturePacket, { kind: "pcm" }>;
+// One packet in flight to the remote window; the rest wait here up to the backlog bound.
+export class PcmSender {
+  private sequence = 0;
+  private pending: number | null = null;
+  private readonly queue: { samples: ArrayBuffer; captureSamples: number }[] =
+    [];
+  private queuedSamples = 0;
+  private drained: (() => void) | null = null;
+  private progressed: (() => void) | null = null;
+  constructor(
+    private readonly id: string,
+    private readonly emit: (packet: PcmPacket) => void
+  ) {}
+  /** false when the backlog bound would be exceeded. */
+  push(samples: ArrayBuffer, captureSamples: number): boolean {
+    if (this.pending === null) {
+      this.send(samples, captureSamples);
+      return true;
+    }
+    if (this.queuedSamples + samples.byteLength / 2 > CAPTURE_BACKLOG_SAMPLES)
+      return false;
+    this.queue.push({ samples, captureSamples });
+    this.queuedSamples += samples.byteLength / 2;
+    return true;
+  }
+  ack(sequence: number) {
+    if (this.pending !== sequence) return;
+    this.pending = null;
+    this.progressed?.();
+    const next = this.queue.shift();
+    if (next) {
+      this.queuedSamples -= next.samples.byteLength / 2;
+      this.send(next.samples, next.captureSamples);
+    } else {
+      this.drained?.();
+      this.drained = null;
+    }
+  }
+  /** Fails only when no ACK arrives for the backlog bound, like the host's per-packet deadline. */
+  drain(): Promise<void> {
+    if (this.pending === null) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      let timeout: ReturnType<typeof setTimeout>;
+      const arm = () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          this.drained = this.progressed = null;
+          reject(new Error("DESKTOP_AUDIO_BACKPRESSURE"));
+        }, CAPTURE_BACKLOG_MS);
+      };
+      arm();
+      this.progressed = arm;
+      this.drained = () => {
+        clearTimeout(timeout);
+        this.progressed = null;
+        resolve();
+      };
+    });
+  }
+  private send(samples: ArrayBuffer, captureSamples: number) {
+    this.pending = this.sequence;
+    this.emit({
+      kind: "pcm",
+      id: this.id,
+      sequence: this.sequence++,
+      samples,
+      captureSamples,
+    });
+  }
 }

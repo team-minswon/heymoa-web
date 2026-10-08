@@ -133,11 +133,14 @@ describe("로컬 캡처의 원격 PCM AudioPort", () => {
       f.bridge
     );
     await port.start();
+    // Electron wraps a rejected ipcMain.handle error in its own message.
     f.bridge.endCapture = vi.fn(async () => {
-      throw new Error("DESKTOP_AUDIO_BACKPRESSURE");
+      throw new Error(
+        "Error invoking remote method 'heymoa:capture-end': Error: DESKTOP_AUDIO_BACKPRESSURE"
+      );
     });
     await expect(port.stop()).rejects.toThrow("DESKTOP_AUDIO_BACKPRESSURE");
-    expect(onCaptureError).toHaveBeenCalledWith("AUDIO_CAPTURE_FAILED");
+    expect(onCaptureError).toHaveBeenCalledWith("DESKTOP_AUDIO_BACKPRESSURE");
     expect(f.unsubscribe).toHaveBeenCalledOnce();
     f.emit({
       kind: "pcm",

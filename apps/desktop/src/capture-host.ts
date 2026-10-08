@@ -13,9 +13,9 @@ import {
   CAPTURE_ERRORS,
   CAPTURE_EVENT,
   CAPTURE_PACKET,
+  CAPTURE_BACKLOG_SAMPLES,
   INPUT_STATUS_INTERVAL_MS,
   LOCAL_ACK,
-  PCM_DELIVERY_BURST_SAMPLES,
   PCM_SAMPLES_PER_MS,
   capturePacket,
   type CapturePacket,
@@ -34,8 +34,7 @@ export class CaptureHost {
   private pending: number | null = null;
   private nextSequence = 0;
   private nextSample: number | null = null;
-  private pcmStartedAt = 0;
-  private pcmSamples = 0;
+  private startedAt = 0;
   private lastLevelsAt = 0;
   private lastStatesAt = 0;
   private statesTimer: ReturnType<typeof setTimeout> | null = null;
@@ -97,23 +96,25 @@ export class CaptureHost {
       const packet = capturePacket(payload, this.id);
       const now = Date.now();
       if (packet.kind === "pcm") {
+        const end = packet.captureSamples + packet.samples.byteLength / 2;
         if (
           this.acquiring ||
+          !this.startedAt ||
           this.pending !== null ||
           packet.sequence !== this.nextSequence ||
           (this.nextSample !== null && packet.captureSamples < this.nextSample)
         )
           throw new Error("INVALID_CAPTURE_TIMING");
-        if (!this.pcmStartedAt) this.pcmStartedAt = now;
-        this.pcmSamples += packet.samples.byteLength / 2;
+        // captureSamples is the AudioContext frame clock, created after start().
+        // Monotonic coordinates bound delivered samples by it; this bounds it by wall time.
+        // ponytail: the slack also absorbs audio/system clock drift; 3 s lasts ~8 h at 100 ppm.
         if (
-          this.pcmSamples >
-          (now - this.pcmStartedAt) * PCM_SAMPLES_PER_MS +
-            PCM_DELIVERY_BURST_SAMPLES
+          end >
+          (now - this.startedAt) * PCM_SAMPLES_PER_MS + CAPTURE_BACKLOG_SAMPLES
         )
           throw new Error("INVALID_CAPTURE_RATE");
         this.nextSequence++;
-        this.nextSample = packet.captureSamples + packet.samples.byteLength / 2;
+        this.nextSample = end;
         this.pending = packet.sequence;
         this.timer = setTimeout(
           () => this.fail("DESKTOP_AUDIO_BACKPRESSURE"),
@@ -296,8 +297,12 @@ export class CaptureHost {
   async start(id: string) {
     if (id !== this.id || this.disposed || this.acquiring || !this.host)
       throw new Error("CAPTURE_NOT_READY");
+    this.startedAt ||= Date.now();
     await this.untilDisposed(
-      this.host.webContents.executeJavaScript("window.captureLocalStart()", false)
+      this.host.webContents.executeJavaScript(
+        "window.captureLocalStart()",
+        false
+      )
     );
   }
   ack(id: string, sequence: number) {
@@ -317,7 +322,10 @@ export class CaptureHost {
     if (id !== this.id || !this.host || this.disposed) return;
     try {
       await this.untilDisposed(
-        this.host.webContents.executeJavaScript("window.captureLocalStop()", false)
+        this.host.webContents.executeJavaScript(
+          "window.captureLocalStop()",
+          false
+        )
       );
     } finally {
       this.dispose();

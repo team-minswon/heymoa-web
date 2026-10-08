@@ -11,7 +11,8 @@ export type TranscriptionLogEvent =
   | "stop"
   | "offline"
   | "online"
-  | "takeover";
+  | "takeover"
+  | "capture_error";
 
 export function logTranscription(
   event: TranscriptionLogEvent,

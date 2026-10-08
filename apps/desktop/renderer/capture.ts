@@ -1,6 +1,10 @@
 import { acquireLocalInputs } from "../../../lib/desktop/local-inputs";
 import { PcmAudioCapture } from "../../../lib/transcription/audio";
-import { CAPTURE_ERRORS, type CapturePacket } from "../src/capture-protocol";
+import {
+  CAPTURE_ERRORS,
+  PcmSender,
+  type CapturePacket,
+} from "../src/capture-protocol";
 declare global {
   interface Window {
     heymoaCaptureLocal: {
@@ -13,56 +17,22 @@ declare global {
   }
 }
 let capture: PcmAudioCapture | null = null;
-let currentId = "",
-  sequence = 0,
-  pending: number | null = null;
-let queued: { samples: ArrayBuffer; captureSamples: number } | null = null;
-let drain: (() => void) | null = null;
-function sendPcm(samples: ArrayBuffer, captureSamples: number) {
-  pending = sequence;
-  window.heymoaCaptureLocal.emit({
-    kind: "pcm",
-    id: currentId,
-    sequence: sequence++,
-    samples,
-    captureSamples,
-  });
-}
-window.heymoaCaptureLocal.onAck((value) => {
-  if (pending !== value) return;
-  pending = null;
-  if (queued) {
-    const frame = queued;
-    queued = null;
-    sendPcm(frame.samples, frame.captureSamples);
-  } else {
-    drain?.();
-    drain = null;
-  }
-});
+let currentId = "";
+let sender: PcmSender | null = null;
+window.heymoaCaptureLocal.onAck((value) => sender?.ack(value));
 window.captureLocalAcquire = async (id) => {
   if (capture) throw new Error("CAPTURE_ALREADY_REQUESTED");
   currentId = id;
   const emit = (packet: CapturePacket) =>
     window.heymoaCaptureLocal.emit(packet);
+  const pcm = (sender = new PcmSender(id, emit));
   capture = new PcmAudioCapture({
     workletUrl: "./pcm-capture-worklet.js",
     acquireInputs: acquireLocalInputs,
     onChunk: (samples, captureSamples) => {
-      if (pending !== null) {
-        if (!queued) {
-          queued = { samples, captureSamples };
-          return;
-        }
-        emit({
-          kind: "error",
-          id: currentId,
-          code: "DESKTOP_AUDIO_BACKPRESSURE",
-        });
-        void capture?.stop();
-        return;
-      }
-      sendPcm(samples, captureSamples);
+      if (pcm.push(samples, captureSamples)) return;
+      emit({ kind: "error", id, code: "DESKTOP_AUDIO_BACKPRESSURE" });
+      void capture?.stop();
     },
     onInputLevels: ({ microphone, systemAudio }) =>
       emit({
@@ -107,16 +77,6 @@ window.captureLocalStart = async () => {
 };
 window.captureLocalStop = async () => {
   await capture?.stop();
-  if (pending !== null)
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        drain = null;
-        reject(new Error("DESKTOP_AUDIO_BACKPRESSURE"));
-      }, 2000);
-      drain = () => {
-        clearTimeout(timeout);
-        resolve();
-      };
-    });
+  await sender?.drain();
   capture = null;
 };

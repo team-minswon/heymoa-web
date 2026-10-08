@@ -185,6 +185,26 @@ describe("데스크톱 입력 상태와 캡처 실패 안내", () => {
     await act(() => harness.result.current.disconnect());
     expect(harness.result.current.systemAudio).toBeNull();
   });
+
+  it("캡처 오류 코드를 버리지 않고 안내와 콘솔에 남겨 사용자 중지와 구별한다", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const harness = setup();
+    await act(() => harness.result.current.start(session.noteId, WORKSPACE_ID));
+    await act(async () => {
+      harness.getCallbacks().onCaptureError?.("DESKTOP_AUDIO_BACKPRESSURE");
+    });
+    expect(info).toHaveBeenCalledWith("[transcription]", "capture_error", {
+      noteId: session.noteId,
+      code: "DESKTOP_AUDIO_BACKPRESSURE",
+    });
+    expect(toastError).toHaveBeenCalledWith(
+      expect.stringContaining("소리 캡처가 중단"),
+      expect.objectContaining({
+        description: expect.stringContaining("DESKTOP_AUDIO_BACKPRESSURE"),
+      })
+    );
+    info.mockRestore();
+  });
 });
 
 function getProjectNotesPredicate(

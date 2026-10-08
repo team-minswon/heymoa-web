@@ -627,8 +627,9 @@ export function RecordingProvider({
           dispatch({ type: "microphone", microphone }),
         onSystemAudioChange: (systemAudio) =>
           dispatch({ type: "system-audio", systemAudio }),
-        onCaptureError: () => {
+        onCaptureError: (code) => {
           if (controllerRef.current !== controller) return;
+          logTranscription("capture_error", { noteId, code });
           // Drain queued audio and end the server session after a fatal native failure.
           dispatch({
             type: "error",
@@ -637,6 +638,7 @@ export function RecordingProvider({
           });
           toast.error("소리 캡처가 중단됐습니다. 녹음 상태를 확인해 주세요.", {
             id: "desktop-capture-failed",
+            description: `오류 코드: ${code}`,
           });
           void stop();
         },

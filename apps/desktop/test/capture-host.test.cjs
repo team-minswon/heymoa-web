@@ -200,6 +200,7 @@ test("PCM requires exact local frame, bounded schema, one ACK in flight and matc
   const f = fixture(t);
   t.after(() => f.host.dispose());
   const id = await f.host.acquire();
+  await f.host.start(id);
   const packet = {
     kind: "pcm",
     id,
@@ -224,6 +225,7 @@ test("remote navigation stops local capture before forwarding another PCM packet
   const f = fixture(t);
   t.after(() => f.host.dispose());
   const id = await f.host.acquire();
+  await f.host.start(id);
   f.destination.mainFrame = { url: "https://heymoa.app/new" };
   f.emit({
     kind: "pcm",
@@ -239,6 +241,7 @@ test("missing remote ACK times out and disposes local capture without a polling 
   const f = fixture(t);
   t.after(() => f.host.dispose());
   const id = await f.host.acquire();
+  await f.host.start(id);
   f.emit({
     kind: "pcm",
     id,
@@ -246,7 +249,7 @@ test("missing remote ACK times out and disposes local capture without a polling 
     captureSamples: 0,
     samples: new ArrayBuffer(3200),
   });
-  t.mock.timers.tick(1999);
+  t.mock.timers.tick(2999);
   assert.equal(f.windows[0].destroyed, false);
   t.mock.timers.tick(1);
   assert.equal(f.windows[0].destroyed, true);
@@ -256,6 +259,7 @@ test("correct ACK releases the next PCM packet and cancels the former deadline",
   const f = fixture(t);
   t.after(() => f.host.dispose());
   const id = await f.host.acquire();
+  await f.host.start(id);
   f.emit({
     kind: "pcm",
     id,
@@ -296,6 +300,7 @@ test("capture discontinuity keeps its sample coordinate without an arbitrary two
   const f = fixture(t);
   t.after(() => f.host.dispose());
   const id = await f.host.acquire();
+  await f.host.start(id);
   f.emit({
     kind: "pcm",
     id,
@@ -304,7 +309,7 @@ test("capture discontinuity keeps its sample coordinate without an arbitrary two
     samples: new ArrayBuffer(3200),
   });
   f.host.ack(id, 0);
-  t.mock.timers.tick(100);
+  t.mock.timers.tick(10000);
   f.emit({
     kind: "pcm",
     id,
@@ -334,4 +339,70 @@ test("failed local tail drain still destroys the capture host and preserves the 
   await assert.rejects(f.host.stop(id), /DESKTOP_AUDIO_BACKPRESSURE/);
   assert.equal(f.windows[0].destroyed, true);
   assert.equal(f.ipcMain.listenerCount("heymoa:local-capture-packet"), 0);
+});
+
+const pcm = (id, sequence, captureSamples = sequence * 1600) => ({
+  kind: "pcm",
+  id,
+  sequence,
+  captureSamples,
+  samples: new ArrayBuffer(3200),
+});
+const forwarded = (f) =>
+  f.packets.filter((packet) => packet[1]?.kind === "pcm").length;
+test("PCM before capture start is rejected", async (t) => {
+  const f = fixture(t);
+  t.after(() => f.host.dispose());
+  const id = await f.host.acquire();
+  f.emit(pcm(id, 0));
+  assert.equal(f.windows[0].destroyed, true);
+  assert.equal(f.packets.at(-1)[1].code, "AUDIO_CAPTURE_FAILED");
+});
+test("a late first chunk followed by catch-up is measured against capture time, not first arrival", async (t) => {
+  const f = fixture(t);
+  t.after(() => f.host.dispose());
+  const id = await f.host.acquire();
+  await f.host.start(id);
+  // Audio started on time but the first chunk crossed IPC 500 ms late; the rest follow at once.
+  t.mock.timers.tick(500);
+  for (let sequence = 0; sequence < 5; sequence++) {
+    f.emit(pcm(id, sequence));
+    f.host.ack(id, sequence);
+  }
+  assert.equal(f.windows[0].destroyed, false);
+  assert.equal(forwarded(f), 5);
+});
+test("a 300 ms main-window stall delays ACKs without stopping capture", async (t) => {
+  const f = fixture(t);
+  t.after(() => f.host.dispose());
+  const id = await f.host.acquire();
+  await f.host.start(id);
+  let sequence = 0;
+  for (; sequence < 5; sequence++) {
+    t.mock.timers.tick(100);
+    f.emit(pcm(id, sequence));
+    f.host.ack(id, sequence);
+  }
+  t.mock.timers.tick(100);
+  f.emit(pcm(id, sequence));
+  // Main window blocked: the in-flight ACK is 300 ms late while the local queue holds 3 chunks.
+  t.mock.timers.tick(300);
+  f.host.ack(id, sequence++);
+  for (const end = sequence + 3; sequence < end; sequence++) {
+    f.emit(pcm(id, sequence));
+    f.host.ack(id, sequence);
+  }
+  assert.equal(f.windows[0].destroyed, false);
+  assert.equal(forwarded(f), 9);
+});
+test("capture time running ahead of the wall clock beyond the backlog bound fails", async (t) => {
+  const f = fixture(t);
+  t.after(() => f.host.dispose());
+  const id = await f.host.acquire();
+  await f.host.start(id);
+  t.mock.timers.tick(1000);
+  // 1 s elapsed + 3 s bound = 64000 samples; this chunk ends at 65600.
+  f.emit(pcm(id, 0, 64000));
+  assert.equal(f.windows[0].destroyed, true);
+  assert.equal(f.packets.at(-1)[1].code, "AUDIO_CAPTURE_FAILED");
 });
