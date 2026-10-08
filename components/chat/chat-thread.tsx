@@ -136,20 +136,38 @@ export function ChatThread({
     );
   }
 
-  const row = (item: HistoryRow, index: number) => (
-    <Fragment key={`${item.at}-${index}`}>
-      {dividers[index] ? <TimeDivider at={item.at} /> : null}
-      {item.kind === "steps" ? (
-        <ChainOfThought
-          blocks={item.blocks}
-          live={false}
-          onOpenNote={onOpenNote}
-        />
-      ) : (
-        <HistoryMessage message={item.message} onOpenNote={onOpenNote} />
-      )}
-    </Fragment>
-  );
+  // 커서로 이어받은 턴은 커서 앞 단계가 히스토리 행으로, 뒤가 스트림으로 온다. 따로 그리면 처음부터
+  // 흘렀을 때와 달리 묶음이 둘로 갈리므로 그 행을 스트림 앞에 붙여 한 묶음으로 그린다.
+  const lastRow = rows.at(-1);
+  const carried =
+    lastRow?.kind === "steps" &&
+    activeTurnId !== null &&
+    lastRow.turnId === activeTurnId &&
+    stream.turnId === activeTurnId &&
+    stream.phase !== "idle" &&
+    // 돌아와서 본 승인 대기는 스트림을 안 열어 블록이 없다. 그 단계는 히스토리가 그대로 그린다.
+    // 이어받아 흐르다 물은 승인은 블록이 있으니 한 묶음을 지킨다.
+    (stream.phase !== "awaiting_approval" || stream.blocks.length > 0)
+      ? lastRow
+      : null;
+
+  const row = (item: HistoryRow, index: number) =>
+    item === carried ? null : (
+      <Fragment key={`${item.at}-${index}`}>
+        {dividers[index] ? <TimeDivider at={item.at} /> : null}
+        {item.kind === "steps" ? (
+          <ChainOfThought
+            blocks={item.blocks}
+            live={false}
+            startedAt={item.at}
+            endedAt={item.endedAt}
+            onOpenNote={onOpenNote}
+          />
+        ) : (
+          <HistoryMessage message={item.message} onOpenNote={onOpenNote} />
+        )}
+      </Fragment>
+    );
 
   return (
     // 위에서부터 쌓는다. 아래 정렬이면 짧은 대화 위에 빈 띠가 크게 남는다. 하단 추적은
@@ -191,7 +209,11 @@ export function ChatThread({
           </>
         ) : null}
 
-        <StreamBlocks stream={stream} onOpenNote={onOpenNote} />
+        <StreamBlocks
+          stream={stream}
+          carried={carried}
+          onOpenNote={onOpenNote}
+        />
         <ThinkingLine stream={stream} pending={pendingUserMessage !== null} />
 
         {approvalCard ? (
@@ -315,7 +337,13 @@ function MessageActions({ content, at }: { content: string; at: string }) {
 
 // 히스토리 행을 스트림과 같은 블록으로 되돌린다. 흐를 때와 끝난 뒤의 모양이 같아야 한다.
 type HistoryRow = { at: string } & (
-  | { kind: "steps"; turnId: string | null; blocks: StepBlock[] }
+  | {
+      kind: "steps";
+      turnId: string | null;
+      blocks: StepBlock[];
+      /** 마지막 단계 행의 시각. `at` 부터 여기까지가 생각한 시간이다. */
+      endedAt: string;
+    }
   | { kind: "message"; message: ThreadMessage }
 );
 
@@ -393,6 +421,7 @@ function groupHistory(
       }
       const last = rows.at(-1);
       if (last?.kind === "steps") {
+        last.endedAt = message.createdAt;
         // 스트림은 이어지는 `thinking_delta` 를 앞 블록에 붙이는데 server 는 델타마다 한 행으로
         // 굳힌다. 여기서도 구분자 없이 이어 붙여야 턴이 끝날 때 줄 수가 안 바뀐다.
         const previous = last.blocks.at(-1);
@@ -410,6 +439,7 @@ function groupHistory(
           at: message.createdAt,
           turnId: message.turnId ?? null,
           blocks: [step],
+          endedAt: message.createdAt,
         });
       }
       return;
@@ -620,22 +650,25 @@ function ThinkingLine({
  */
 function StreamBlocks({
   stream,
+  carried,
   onOpenNote,
 }: {
   stream: ChatStreamState;
+  /** 커서 앞 히스토리 단계. 스트림 앞에 붙여 한 묶음으로 그린다. */
+  carried: { at: string; blocks: StepBlock[] } | null;
   onOpenNote?: (noteId: string) => void;
 }) {
   const ended =
     stream.phase === "done" ||
     stream.phase === "failed" ||
     stream.phase === "cancelled";
+  const blocks = carried
+    ? [...carried.blocks, ...stream.blocks]
+    : stream.blocks;
   const groups = groupBlocks(
     ended
-      ? settleEndedTurn(
-          stream.blocks,
-          stream.error?.code !== "STREAM_INTERRUPTED"
-        )
-      : stream.blocks
+      ? settleEndedTurn(blocks, stream.error?.code !== "STREAM_INTERRUPTED")
+      : blocks
   );
   if (groups.length === 0) return null;
 
@@ -654,6 +687,7 @@ function StreamBlocks({
           <ChainOfThought
             key={`steps-${index}`}
             blocks={group.blocks}
+            startedAt={index === 0 ? carried?.at : undefined}
             live={
               (stream.phase === "streaming" ||
                 stream.phase === "awaiting_approval") &&

@@ -184,10 +184,13 @@ export function settleEndedTurn(
   return changed ? settled : blocks;
 }
 
-/** 시작 요약과 결과 요약을 둘 다 남긴다(「전사에서 관련 발화 검색 · 3건 찾음」). */
+/**
+ * 시작 요약과 결과 요약을 둘 다 남긴다(「전사에서 관련 발화 검색 · 3건 찾음」). 결과가 시작을
+ * 이미 품고 오면(「스크립트 검색 · "q" · 20건」) 붙이지 않는다 — 라벨이 두 번 찍힌다.
+ */
 export function joinSummary(started: string | null, settled: string | null) {
   if (!settled) return started;
-  if (!started || started === settled) return settled;
+  if (!started || settled.startsWith(started)) return settled;
   return `${started} · ${settled}`;
 }
 
@@ -251,4 +254,70 @@ export function groupBlocks(blocks: Block[]): Group[] {
     else groups.push({ kind: "steps", blocks: [block] });
   }
   return groups;
+}
+
+type StepBlock = Exclude<Block, { kind: "text" }>;
+type ToolBlock = Extract<Block, { kind: "tool" }>;
+
+/** 펼친 타임라인의 한 줄. `run` 은 이어진 같은 조회 도구 호출 여럿이다. */
+export type StepLine =
+  | { kind: "single"; key: string; block: StepBlock }
+  | { kind: "run"; key: string; tool: string; blocks: ToolBlock[] };
+
+/**
+ * 이어진 같은 조회 도구를 한 줄로 묶고, 이어진 생각 조각을 한 문단으로 잇는다. 블록 배열은
+ * 그대로 두는 렌더 단계 함수다 — 실시간·재연결 재개·히스토리가 같은 블록이면 같은 줄이 나온다.
+ * 쓰기는 승인 게이트를 지나므로 같은 `toolCallId` 의 승인 블록이 있는 도구가 쓰기다. 실패·중단은
+ * 그 줄의 사유가 보여야 해서 안 묶는다.
+ */
+export function groupSteps(blocks: StepBlock[]): StepLine[] {
+  const gated = new Set(
+    blocks.flatMap((block) =>
+      block.kind === "approval" ? [block.toolCallId] : []
+    )
+  );
+  const groupable = (block: StepBlock): block is ToolBlock =>
+    block.kind === "tool" &&
+    block.tool !== "" &&
+    !gated.has(block.toolCallId) &&
+    (block.status === null || block.status === "success");
+
+  // 키는 줄의 첫 블록 자리로 정한다. 줄 순번이면 앞 묶음이 갈릴 때 뒤 줄이 다시 마운트된다.
+  const runs: { at: number; blocks: StepBlock[] }[] = [];
+  blocks.forEach((block, at) => {
+    const run = runs.at(-1);
+    const head = run?.blocks[0];
+    if (run && head?.kind === "thinking" && block.kind === "thinking") {
+      run.blocks[0] = { kind: "thinking", text: head.text + block.text };
+    } else if (
+      run &&
+      head &&
+      groupable(head) &&
+      groupable(block) &&
+      head.tool === block.tool
+    ) {
+      run.blocks.push(block);
+    } else {
+      runs.push({ at, blocks: [block] });
+    }
+  });
+  return runs.map(({ at, blocks: run }) => {
+    const head = run[0];
+    if (run.length > 1 && head.kind === "tool") {
+      return {
+        kind: "run",
+        // 첫 호출이 단독 줄일 때와 같은 키다. 두 번째 호출이 와도 그 자리가 다시 마운트되지 않는다.
+        key: stepKey(head, at),
+        tool: head.tool,
+        blocks: run as ToolBlock[],
+      };
+    }
+    return { kind: "single", key: stepKey(head, at), block: head };
+  });
+}
+
+function stepKey(block: StepBlock, at: number) {
+  if (block.kind === "approval") return `approval-${block.approvalId}`;
+  if (block.kind === "tool") return `tool-${block.toolCallId}`;
+  return `thinking-${at}`;
 }

@@ -7,6 +7,7 @@ import {
   type Block,
   finalizeText,
   groupBlocks,
+  groupSteps,
   joinSummary,
   pushApproval,
   pushTool,
@@ -97,6 +98,13 @@ describe("도구", () => {
     expect(joinSummary(null, "3건 찾음")).toBe("3건 찾음");
     expect(joinSummary("전사 검색", null)).toBe("전사 검색");
     expect(joinSummary("같다", "같다")).toBe("같다");
+  });
+
+  // 결과 문구가 시작 문구를 이미 품는다(ai 가 「라벨 · 인자 · 결과」로 낸다). 붙이면 라벨이 두 번 찍힌다.
+  it("결과 요약이 시작 요약으로 시작하면 결과 요약만 쓴다", () => {
+    expect(
+      joinSummary('스크립트 검색 · "배포"', '스크립트 검색 · "배포" · 20건')
+    ).toBe('스크립트 검색 · "배포" · 20건');
   });
 });
 
@@ -223,6 +231,115 @@ describe("묶기", () => {
   });
 });
 
+describe("타임라인 줄 묶기", () => {
+  const read = (id: string, name = "transcripts.read") =>
+    ({ kind: "tool", ...tool(id, { tool: name, status: "success" }) }) as const;
+
+  it("이어지는 같은 조회 도구는 한 줄로 묶는다", () => {
+    const rows = groupSteps([
+      { kind: "thinking", text: "찾습니다" },
+      read("t1"),
+      read("t2"),
+      read("t3"),
+      read("t4", "transcripts.search"),
+    ]);
+    expect(rows.map((row) => row.kind)).toEqual(["single", "run", "single"]);
+    expect(rows[1]).toMatchObject({ key: "tool-t1", tool: "transcripts.read" });
+    expect(rows[1].kind === "run" && rows[1].blocks.length).toBe(3);
+  });
+
+  it("사이에 생각이 끼면 끊긴다", () => {
+    const rows = groupSteps([
+      read("t1"),
+      { kind: "thinking", text: "음" },
+      read("t2"),
+    ]);
+    expect(rows.map((row) => row.kind)).toEqual(["single", "single", "single"]);
+  });
+
+  // 승인을 거친 도구가 쓰기다. 무엇을 바꿨는지는 한 건씩 보여야 한다.
+  it("승인·쓰기 도구는 묶지 않는다", () => {
+    const write = (id: string) =>
+      ({
+        kind: "tool",
+        ...tool(id, { tool: "linear.create_issue", status: "success" }),
+      }) as const;
+    const approve = (id: string) =>
+      ({
+        kind: "approval",
+        approvalId: `a-${id}`,
+        toolCallId: id,
+        tool: "linear.create_issue",
+        summary: null,
+        decision: "APPROVED",
+      }) as const;
+    const rows = groupSteps([
+      write("w1"),
+      approve("w1"),
+      write("w2"),
+      approve("w2"),
+      approve("w3"),
+      approve("w4"),
+    ]);
+    expect(rows.every((row) => row.kind === "single")).toBe(true);
+  });
+
+  it("실패·중단한 호출은 묶지 않는다 — 그 줄의 사유가 보여야 한다", () => {
+    const rows = groupSteps([
+      read("t1"),
+      { ...read("t2"), status: "error" },
+      read("t3"),
+    ]);
+    expect(rows.map((row) => row.kind)).toEqual(["single", "single", "single"]);
+  });
+
+  // 두 번째 호출이 와서 줄이 묶음이 돼도 키가 같아야 그 자리의 상태가 안 날아간다.
+  it("묶음의 키는 첫 호출의 단독 줄 키와 같다", () => {
+    expect(groupSteps([read("t1")])[0].key).toBe(
+      groupSteps([read("t1"), read("t2")])[0].key
+    );
+  });
+
+  // 생각은 델타마다 조각으로 온다(히스토리는 델타마다 한 행, 재개는 커서 앞뒤로 갈린다). 도구 사이의
+  // 생각은 한 문단이다.
+  it("이어진 생각 조각은 한 줄로 잇는다", () => {
+    const rows = groupSteps([
+      { kind: "thinking", text: "회의를 찾습니다." },
+      { kind: "thinking", text: " 배포 날짜를 봅니다." },
+      read("t1"),
+      { kind: "thinking", text: "정리합니다." },
+    ]);
+    expect(rows.map((row) => row.kind)).toEqual(["single", "single", "single"]);
+    expect(rows[0]).toMatchObject({
+      key: "thinking-0",
+      block: { kind: "thinking", text: "회의를 찾습니다. 배포 날짜를 봅니다." },
+    });
+  });
+
+  // 앞 묶음이 갈려도 뒤 줄의 키가 안 바뀐다 — 바뀌면 그 줄이 다시 마운트되며 한 번 더 떠오른다.
+  it("생각 줄의 키는 묶음 수가 아니라 블록 자리로 정한다", () => {
+    const before = groupSteps([
+      read("t1"),
+      read("t2"),
+      { kind: "thinking", text: "음" },
+    ]);
+    const after = groupSteps([
+      read("t1"),
+      { ...read("t2"), status: "error" },
+      { kind: "thinking", text: "음" },
+    ]);
+    expect(before.at(-1)?.key).toBe(after.at(-1)?.key);
+  });
+
+  // 실시간·재연결 재개·히스토리가 같은 블록이면 같은 줄이 나와야 한다. 블록을 안 바꾸는 순수 함수다.
+  it("입력 배열을 바꾸지 않는다", () => {
+    const steps = [read("t1"), read("t2")];
+    const copy = structuredClone(steps);
+    groupSteps(steps);
+    expect(steps).toEqual(copy);
+  });
+});
+
 /**
  * ★ N3 — 끝난 턴에 도는 표시도, 나갔을 수 있는 쓰기를 「안 함」으로 그리는 표시도 없다.
  * 실시간 스트림과 히스토리가 이 함수 하나를 지난다.
@@ -271,12 +388,9 @@ describe("끝난 턴 닫기", () => {
       ...pushTool([], tool("c5", { status: "success" })),
       approved("c5"),
     ];
-    expect(settleEndedTurn(blocks).map((b) => b.kind === "tool" && b.status)).toEqual([
-      "stopped",
-      false,
-      "success",
-      false,
-    ]);
+    expect(
+      settleEndedTurn(blocks).map((b) => b.kind === "tool" && b.status)
+    ).toEqual(["stopped", false, "success", false]);
   });
 
   it("바꿀 것이 없으면 같은 배열이다", () => {

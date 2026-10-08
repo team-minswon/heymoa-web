@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AnswerRefs, ChainOfThought } from "@/components/chat/chain-of-thought";
@@ -90,38 +91,108 @@ describe("ChainOfThought", () => {
     ).toBe("false");
   });
 
-  it("스트리밍 중에는 펼쳐진다", () => {
+  /**
+   * ★ **도는 동안은 지금 하는 일 한 줄만 산다.** (APP-1013)
+   *
+   * 예전에는 펴 둔 채로 도구 호출마다 한 줄씩 쌓여 질문 하나에 20줄이 넘었다. 지금 무엇을
+   * 하는지와 답이 그 아래 묻혔다. 끝난 단계는 「n단계 완료」 하나로 접힌다.
+   */
+  it("★ 스트리밍 중에는 접혀서 지금 단계 한 줄과 완료 개수만 보인다", () => {
     const { container } = render(
-      <ChainOfThought blocks={[tool("c1"), tool("c2")]} live />
+      <ChainOfThought
+        blocks={[
+          tool("c1"),
+          tool("c2"),
+          {
+            ...tool("c3"),
+            summary: "연관 스크립트 읽기 · 10:02",
+            status: null,
+          },
+        ]}
+        live
+      />
     );
-    expect(
-      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
-    ).toBe("true");
+    const group = container.querySelector('[data-cot="group"]');
+    expect(group?.getAttribute("data-open")).toBe("false");
+    expect(container.querySelectorAll("[data-step]")).toHaveLength(0);
+    expect(screen.getByText(/2단계 완료/)).toBeTruthy();
+    const current = container.querySelector("[data-current] .chat-shimmer");
+    expect(current?.textContent).toBe("연관 스크립트 읽기 · 10:02");
+  });
+
+  it("지금 단계가 생각이면 마지막 문장을 보여 준다", () => {
+    render(
+      <ChainOfThought
+        blocks={[
+          tool("c1"),
+          {
+            kind: "thinking",
+            text: "회의를 찾습니다.\n배포 날짜를 확인합니다.",
+          },
+        ]}
+        live
+      />
+    );
+    expect(screen.getByText("배포 날짜를 확인합니다.")).toBeTruthy();
+    expect(screen.getByText(/1단계 완료/)).toBeTruthy();
   });
 
   it("사용자가 손으로 펼치면 자동 접힘이 그걸 덮지 않는다", () => {
     const { container, rerender } = render(
       <ChainOfThought blocks={[tool("c1"), tool("c2")]} live />
     );
-    fireEvent.click(screen.getByRole("button", { expanded: true }));
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
     rerender(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live={false} />);
-    // 손으로 접었으니 live가 꺼져도 그대로 접힌 채다 — 되펼치지 않는다.
+    // 손으로 폈으니 끝나도 그대로 펴진 채다 — 다시 접지 않는다.
     expect(
       container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
-    ).toBe("false");
+    ).toBe("true");
   });
 
-  it("★ 헤더는 개수를 안 세고 무엇을 봤는지를 말한다", () => {
-    // 「3단계」는 사람이 쓰는 말이 아니고, 몇 번 돌았는지는 접힌 줄이 답할 일이 아니다 —
-    // 펴면 줄마다 무엇을 했는지가 이미 적혀 있다.
-    render(
+  it("★ 끝나면 「생각 과정 · n단계」 한 줄로 접힌다", () => {
+    const { container } = render(
       <ChainOfThought
-        blocks={[tool("c1", NOTE), tool("c2", NOTE), tool("c3")]}
+        blocks={[
+          tool("c1", NOTE),
+          { kind: "thinking", text: "더 봅니다" },
+          tool("c2", NOTE),
+          tool("c3"),
+        ]}
         live={false}
       />
     );
-    expect(screen.getByText("생각 과정 · 회의록 1건")).toBeTruthy();
-    expect(screen.queryByText(/단계/)).toBeNull();
+    expect(
+      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
+    ).toBe("false");
+    expect(screen.getByText("생각 과정 · 4단계 · 회의록 1건")).toBeTruthy();
+    expect(container.querySelectorAll("[data-step]")).toHaveLength(0);
+  });
+
+  it("★ 펴면 이어진 같은 조회 도구가 「×N」 한 줄로 묶이고, 누르면 펼쳐진다", () => {
+    const read = (id: string) => ({
+      ...tool(id),
+      tool: "transcripts.read",
+      summary: `연관 스크립트 읽기 · ${id}`,
+    });
+    const { container } = render(
+      <ChainOfThought
+        blocks={[
+          { kind: "thinking", text: "찾습니다" },
+          read("r1"),
+          read("r2"),
+          read("r3"),
+        ]}
+        live={false}
+      />
+    );
+    open();
+    const run = container.querySelector('[data-step="run"]');
+    expect(run?.textContent).toContain("연관 스크립트 읽기");
+    expect(run?.textContent).toContain("×3");
+    expect(screen.queryByText("연관 스크립트 읽기 · r2")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /×3/ }));
+    expect(screen.getByText("연관 스크립트 읽기 · r2")).toBeTruthy();
   });
 
   it("target이 note면 눌러서 그 회의록으로 간다", () => {
@@ -165,6 +236,10 @@ describe("ChainOfThought", () => {
       />
     );
     expect(container.querySelector(".animate-spin")).toBeNull();
+    expect(container.querySelector(".chat-shimmer")).toBeNull();
+    expect(
+      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
+    ).toBe("true");
 
     // 도구가 아직 안 끝난 진짜 「도는 중」은 그대로 돈다.
     rerender(
@@ -176,7 +251,7 @@ describe("ChainOfThought", () => {
         live
       />
     );
-    expect(container.querySelector(".animate-spin")).toBeTruthy();
+    expect(container.querySelector(".chat-shimmer")).toBeTruthy();
   });
 
   it("★ 확정 전 승인은 그리지도, 헤더에도 안 들어간다", () => {
@@ -187,8 +262,8 @@ describe("ChainOfThought", () => {
         live={false}
       />
     );
-    // 접힌 채로 선다(`live={false}`) — 헤더가 곧 요약이다.
-    expect(screen.getByText("생각 과정")).toBeTruthy();
+    // 접힌 채로 선다(`live={false}`) — 헤더가 곧 요약이고, 확정 전 승인은 단계로 안 센다.
+    expect(screen.getByText("생각 과정 · 2단계")).toBeTruthy();
     expect(
       container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
     ).toBe("false");
@@ -334,14 +409,26 @@ describe("등장 애니메이션", () => {
  */
 describe("단계 사이의 「생각하는 중」", () => {
   it("도구가 끝났는데 다음 단계가 아직이면 「생각하는 중」이 선다", () => {
-    render(<ChainOfThought blocks={[tool("c1")]} live />);
-    expect(screen.getByText("생각하는 중")).toBeTruthy();
+    const { container } = render(<ChainOfThought blocks={[tool("c1")]} live />);
+    expect(container.querySelector("[data-current]")?.textContent).toBe(
+      "생각하는 중"
+    );
   });
 
   it("접혀 있으면 머리글이 그 말을 한다", () => {
     render(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live />);
-    fireEvent.click(screen.getByRole("button", { expanded: true }));
     expect(screen.getByRole("button", { expanded: false }).textContent).toBe(
+      "생각 중 · 2단계 완료"
+    );
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      "생각하는 중"
+    );
+  });
+
+  it("펴면 줄 끝에 「생각하는 중」이 선다", () => {
+    render(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live />);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+    expect(document.querySelector('[data-step="pending"]')?.textContent).toBe(
       "생각하는 중"
     );
   });
@@ -352,13 +439,15 @@ describe("단계 사이의 「생각하는 중」", () => {
   });
 
   it("생각이 흐르는 중이면 그 줄이 이미 빛난다 — 겹치지 않는다", () => {
-    render(
+    const { container } = render(
       <ChainOfThought
         blocks={[tool("c1"), { kind: "thinking", text: "다음을 찾습니다." }]}
         live
       />
     );
-    expect(screen.queryByText("생각하는 중")).toBeNull();
+    expect(container.querySelector("[data-current]")?.textContent).toBe(
+      "다음을 찾습니다."
+    );
   });
 
   it("끝난 묶음에는 없다", () => {
@@ -379,6 +468,7 @@ describe("단계 사이의 「생각하는 중」", () => {
 
   it("흐르는 묶음의 줄은 떠오르며 선다", () => {
     const { container } = render(<ChainOfThought blocks={[tool("c1")]} live />);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
     expect(
       container
         .querySelector('[data-step="tool"]')
@@ -409,4 +499,170 @@ describe("★ N3 끝난 턴의 도구 줄", () => {
     expect(container.querySelector(".animate-spin")).toBeNull();
     expect(screen.queryByText("실행하지 못했습니다")).toBeNull();
   });
+});
+
+/**
+ * ★ **얼마나 생각했는지 말한다.** (APP-1013)
+ *
+ * 기다린 이유가 접힌 줄에 있어야 한다. 시각이 없는 경로는 짐작하지 않고 초를 뺀다.
+ */
+describe("생각한 시간", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("도는 동안 「생각 중 · n초」가 흐른다", () => {
+    vi.useFakeTimers();
+    render(
+      <ChainOfThought
+        blocks={[tool("c1"), { ...tool("c2"), status: null }]}
+        live
+      />
+    );
+    act(() => vi.advanceTimersByTime(3_000));
+    expect(screen.getByRole("button", { expanded: false }).textContent).toBe(
+      "생각 중 · 3초 · 1단계 완료"
+    );
+  });
+
+  it("흐르다 끝나면 걸린 시간이 접힌 줄에 남는다", () => {
+    vi.useFakeTimers();
+    const blocks = [tool("c1"), tool("c2")];
+    const { rerender } = render(<ChainOfThought blocks={blocks} live />);
+    act(() => vi.advanceTimersByTime(5_000));
+    rerender(<ChainOfThought blocks={blocks} live={false} />);
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(screen.getByText("생각 과정 · 5초 · 2단계")).toBeTruthy();
+  });
+
+  it("히스토리는 행 시각으로 잰다", () => {
+    render(
+      <ChainOfThought
+        blocks={[tool("c1"), tool("c2")]}
+        live={false}
+        startedAt="2026-07-24T00:00:02Z"
+        endedAt="2026-07-24T00:00:14Z"
+      />
+    );
+    expect(screen.getByText("생각 과정 · 12초 · 2단계")).toBeTruthy();
+  });
+
+  it("1분이 넘으면 분으로 말한다", () => {
+    render(
+      <ChainOfThought
+        blocks={[tool("c1"), tool("c2")]}
+        live={false}
+        startedAt="2026-07-24T00:00:00Z"
+        endedAt="2026-07-24T00:02:05Z"
+      />
+    );
+    expect(screen.getByText("생각 과정 · 2분 5초 · 2단계")).toBeTruthy();
+  });
+
+  it("시각이 없거나 1초가 안 되면 초를 안 붙인다", () => {
+    render(<ChainOfThought blocks={[tool("c1"), tool("c2")]} live={false} />);
+    expect(screen.getByText("생각 과정 · 2단계")).toBeTruthy();
+    cleanup();
+    render(
+      <ChainOfThought
+        blocks={[tool("c1"), tool("c2")]}
+        live={false}
+        startedAt="2026-07-24T00:00:02Z"
+        endedAt="2026-07-24T00:00:02Z"
+      />
+    );
+    expect(screen.getByText("생각 과정 · 2단계")).toBeTruthy();
+  });
+});
+
+describe("도는 동안의 지금 단계 줄", () => {
+  it("결과를 기다리는 도구가 여럿이면 그만큼 완료에서 뺀다", () => {
+    render(
+      <ChainOfThought
+        blocks={[
+          { ...tool("c1"), status: null },
+          { ...tool("c2"), status: null },
+        ]}
+        live
+      />
+    );
+    expect(screen.queryByText(/단계 완료/)).toBeNull();
+  });
+
+  it("지금 단계는 보조 기술에 조용히 알린다", () => {
+    const { container } = render(
+      <ChainOfThought blocks={[{ ...tool("c1"), status: null }]} live />
+    );
+    const live = container.querySelector('[aria-live="polite"]');
+    expect(live?.textContent).toBe("c1 검색 중");
+    // 보이는 줄은 화면 읽기에서 숨긴다 — 두 번 읽히지 않게.
+    expect(
+      container.querySelector("[data-current]")?.getAttribute("aria-hidden")
+    ).toBe("true");
+  });
+
+  // 문구를 키로 쓰면 생각 델타마다 줄이 다시 마운트되어 등장 애니메이션이 끝없이 다시 돈다.
+  it("같은 생각에 글자가 붙어도 줄을 다시 세우지 않는다", () => {
+    const { container, rerender } = render(
+      <ChainOfThought blocks={[{ kind: "thinking", text: "회의를" }]} live />
+    );
+    const before = container.querySelector("[data-current]");
+    rerender(
+      <ChainOfThought
+        blocks={[{ kind: "thinking", text: "회의를 찾습니다." }]}
+        live
+      />
+    );
+    const after = container.querySelector("[data-current]");
+    expect(after?.textContent).toBe("회의를 찾습니다.");
+    expect(after).toBe(before);
+  });
+});
+
+/** 커서 경계에서 생각이 두 블록으로 갈려 와도 처음부터 흐른 한 블록과 같아야 한다. */
+describe("갈려 온 생각", () => {
+  const split = [
+    tool("c1"),
+    { kind: "thinking" as const, text: "배포 일정을" },
+    { kind: "thinking" as const, text: " 확인합니다." },
+  ];
+
+  it("흐르는 중이면 합친 문장 전체가 지금 단계다", () => {
+    const { container } = render(<ChainOfThought blocks={split} live />);
+    expect(container.querySelector("[data-current]")?.textContent).toBe(
+      "배포 일정을 확인합니다."
+    );
+    expect(screen.getByRole("button").textContent).toBe("생각 중 · 1단계 완료");
+  });
+
+  it("펴면 흐르는 생각 줄이 빛나고 체크가 아니다", () => {
+    const { container } = render(<ChainOfThought blocks={split} live />);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+    const row = container.querySelector('[data-step="thinking"]');
+    expect(row?.querySelector(".chat-shimmer")).toBeTruthy();
+  });
+
+  it("합쳐서 한 줄이면 끝나도 편 채로 둔다", () => {
+    const { container } = render(
+      <ChainOfThought blocks={split.slice(1)} live={false} />
+    );
+    expect(
+      container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
+    ).toBe("true");
+  });
+});
+
+it("도는 동안 흐르는 초는 버튼 이름에서 뺀다 — 매초 다시 읽히지 않게", () => {
+  vi.useFakeTimers();
+  render(
+    <ChainOfThought
+      blocks={[tool("c1"), { ...tool("c2"), status: null }]}
+      live
+    />
+  );
+  act(() => vi.advanceTimersByTime(3_000));
+  const button = screen.getByRole("button", { expanded: false });
+  expect(button.textContent).toBe("생각 중 · 3초 · 1단계 완료");
+  expect(
+    button.querySelector('span[aria-hidden="true"]')?.textContent
+  ).toContain("3초");
+  vi.useRealTimers();
 });

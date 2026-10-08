@@ -1316,3 +1316,97 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
     expect(screen.getByText("APP-12 생성됨")).toBeTruthy();
   });
 });
+
+/**
+ * ★★ APP-1013 **세 경로가 같은 묶음이다.**
+ *
+ * 커서로 이어받으면 커서 앞 단계는 히스토리 행으로, 뒤는 스트림으로 온다. 따로 그리면 처음부터
+ * 흘렀을 때(한 묶음)와 달리 「생각 과정」이 둘로 갈리고 같은 조회 묶음도 둘로 쪼개진다.
+ */
+describe("★★ APP-1013 생각 과정 묶음", () => {
+  const TURN = "01KTURN000009";
+  const read = (at: string, content: string) =>
+    message({
+      role: "TOOL",
+      turnId: TURN,
+      content,
+      createdAt: at,
+      toolEvent: {
+        tool: "transcripts.read",
+        decision: null,
+        status: "success",
+        url: null,
+      },
+    });
+  const HISTORY = [
+    message({ role: "USER", content: "결제 실패?", turnId: TURN }),
+    read("2026-07-24T00:00:02Z", "연관 스크립트 읽기 · 10:00"),
+    read("2026-07-24T00:00:05Z", "연관 스크립트 읽기 · 10:01"),
+  ];
+
+  it("히스토리는 행 시각으로 걸린 시간을 말한다", () => {
+    renderThread({ messages: HISTORY });
+    expect(screen.getByText("생각 과정 · 3초 · 2단계")).toBeTruthy();
+  });
+
+  it("커서로 이어받은 턴은 히스토리 단계와 스트림 단계가 한 묶음이다", () => {
+    const { container } = renderThread({
+      messages: HISTORY,
+      activeTurnId: TURN,
+      stream: streaming({
+        turnId: TURN,
+        blocks: [
+          {
+            kind: "tool",
+            toolCallId: "c3",
+            tool: "transcripts.read",
+            summary: "연관 스크립트 읽기 · 10:02",
+            target: null,
+            args: null,
+            status: "success",
+            url: null,
+          },
+        ],
+      }),
+    });
+    expect(container.querySelectorAll('[data-cot="group"]')).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /생각 중/ }));
+    expect(container.querySelector('[data-step="run"]')?.textContent).toContain(
+      "×3"
+    );
+  });
+
+  // 이어받은 뒤 흐르다가 승인을 물으면 그 묶음이 다시 갈리면 안 된다.
+  it("이어받은 뒤 승인을 물어도 한 묶음이다", () => {
+    const { container } = renderThread({
+      messages: HISTORY,
+      activeTurnId: TURN,
+      stream: {
+        ...initialStreamState,
+        phase: "awaiting_approval",
+        turnId: TURN,
+        blocks: [
+          {
+            kind: "tool",
+            toolCallId: "c3",
+            tool: "transcripts.read",
+            summary: "연관 스크립트 읽기 · 10:02",
+            target: null,
+            args: null,
+            status: "success",
+            url: null,
+          },
+          {
+            kind: "approval",
+            approvalId: "a1",
+            toolCallId: "w1",
+            tool: "linear.create_issue",
+            summary: "이슈 생성",
+            decision: null,
+          },
+        ],
+      },
+    });
+    expect(container.querySelectorAll('[data-cot="group"]')).toHaveLength(1);
+  });
+});
