@@ -52,6 +52,7 @@ test("ADMIN 이 외부 에이전트를 끄면 열린 연결이 비고, 내 지�
   ).toContainText("워크스페이스에서 외부 에이전트를 막아 끊겼습니다.");
 
   await page.getByRole("button", { name: "새 연결" }).click();
+  await page.getByRole("button", { name: "개인 토큰 만들기" }).click();
   await page.getByLabel("연결 이름").fill("막힌 워크스페이스로");
   await expect(
     page.getByText(

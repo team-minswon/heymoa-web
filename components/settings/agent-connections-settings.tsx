@@ -137,9 +137,6 @@ export function AgentConnectionsSettings({
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
   }, [refetchDelegations]);
-  // OAuth 안내는 운영에서 server OAuth 를 켠 뒤에 켠다(APP-889 spec 「운영 순서」, APP-933). 꺼져 있으면
-  // 「새 연결」이 개인 토큰 폼 그대로다. 빌드 때 박히는 값이라 바꾸려면 다시 배포해야 한다
-  const oauthGuide = process.env.NEXT_PUBLIC_AGENT_OAUTH_GUIDE === "enabled";
   const [mode, setMode] = useState<"guide" | "token" | null>(null);
   const [issued, setIssued] = useState<{ name: string; token: string } | null>(
     null
@@ -178,7 +175,8 @@ export function AgentConnectionsSettings({
           <Button
             size="sm"
             className="h-8 shrink-0"
-            onClick={() => setMode(oauthGuide ? "guide" : "token")}
+            // 기본은 OAuth 안내다. 개인 토큰은 안내의 「브라우저 없는 환경이면」으로만 연다(PRD 「정한 것」 6, APP-933)
+            onClick={() => setMode("guide")}
           >
             새 연결
           </Button>
@@ -243,9 +241,8 @@ export function AgentConnectionsSettings({
                     : "지금 연결된 에이전트가 없습니다."}
                 </p>
                 <p className="mt-1 text-xs text-[var(--el-muted)]">
-                  {oauthGuide
-                    ? "「새 연결」의 주소를 에이전트에 등록하고 브라우저에서 허락하면 여기에 보입니다."
-                    : "「새 연결」로 토큰을 받아 에이전트에 넣으면 여기에 보입니다."}
+                  「새 연결」의 주소를 에이전트에 등록하고 브라우저에서 허락하면
+                  여기에 보입니다.
                 </p>
               </div>
             ) : (

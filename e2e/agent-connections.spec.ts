@@ -25,7 +25,13 @@ test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 �
 }) => {
   await openAgentSettings(page);
 
+  // 「새 연결」의 기본은 OAuth 안내다 — 개인 토큰은 안내의 링크로만 연다(APP-933)
   await page.getByRole("button", { name: "새 연결" }).click();
+  await expect(
+    page.getByRole("region", { name: "OAuth 연결 안내" })
+  ).toBeVisible();
+  await expect(page.getByLabel("연결 이름")).toHaveCount(0);
+  await page.getByRole("button", { name: "개인 토큰 만들기" }).click();
   await page.getByLabel("연결 이름").fill("방금 만든 연결");
   await expect(
     page.getByText("아무것도 바꾸지 않습니다", { exact: false })
@@ -52,6 +58,7 @@ test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 �
 test("회수하면 그 연결이 회수됨으로 바뀐다", async ({ page }) => {
   await openAgentSettings(page);
   await page.getByRole("button", { name: "새 연결" }).click();
+  await page.getByRole("button", { name: "개인 토큰 만들기" }).click();
   await page.getByLabel("연결 이름").fill("회수할 연결");
   await page.getByRole("button", { name: "토큰 만들기" }).click();
   await page.getByRole("button", { name: "복사했습니다, 닫기" }).click();

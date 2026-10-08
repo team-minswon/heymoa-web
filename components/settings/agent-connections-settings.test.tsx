@@ -103,6 +103,12 @@ function renderSettings(onBusyChange?: (busy: boolean) => void) {
   );
 }
 
+/** 개인 토큰 폼은 OAuth 안내의 「개인 토큰 만들기」로만 열린다(APP-933). */
+function openTokenForm() {
+  fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+  fireEvent.click(screen.getByRole("button", { name: "개인 토큰 만들기" }));
+}
+
 describe("AgentConnectionsSettings", () => {
   afterEach(() => {
     cleanup();
@@ -116,7 +122,6 @@ describe("AgentConnectionsSettings", () => {
     created.mutateAsync.mockReset();
     usages.fetch.mockReset();
     revoked.mutateAsync.mockReset();
-    vi.unstubAllEnvs();
   });
 
   // 아직 아무것도 안 한 상태는 실패가 아니다 — 경고(role=alert)도 재시도도 없어야 한다
@@ -134,7 +139,7 @@ describe("AgentConnectionsSettings", () => {
     state.workspacesError = true;
     renderSettings();
 
-    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+    openTokenForm();
     fireEvent.change(screen.getByLabelText("연결 이름"), {
       target: { value: "노트북" },
     });
@@ -159,7 +164,7 @@ describe("AgentConnectionsSettings", () => {
     });
     renderSettings();
 
-    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+    openTokenForm();
     fireEvent.change(screen.getByLabelText("연결 이름"), {
       target: { value: "노트북" },
     });
@@ -186,7 +191,7 @@ describe("AgentConnectionsSettings", () => {
     });
     renderSettings();
 
-    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+    openTokenForm();
     fireEvent.change(screen.getByLabelText("연결 이름"), {
       target: { value: "노트북" },
     });
@@ -226,7 +231,7 @@ describe("AgentConnectionsSettings", () => {
     const onBusyChange = vi.fn();
     renderSettings(onBusyChange);
 
-    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+    openTokenForm();
 
     expect(onBusyChange).toHaveBeenLastCalledWith(true);
   });
@@ -235,7 +240,7 @@ describe("AgentConnectionsSettings", () => {
     state.workspacesLoading = true;
     renderSettings();
 
-    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+    openTokenForm();
 
     expect(screen.getByLabelText("워크스페이스 목록 불러오는 중")).toBeTruthy();
     expect(screen.queryByRole("combobox")).toBeNull();
@@ -245,7 +250,7 @@ describe("AgentConnectionsSettings", () => {
   it("새 연결을 만들 때 회의 전사도 에이전트가 읽는다고 알린다", () => {
     renderSettings();
 
-    fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+    openTokenForm();
 
     expect(
       screen.getByText("회의 전사(참석자의 발화와 이름)도 에이전트가 읽습니다.")
@@ -311,27 +316,16 @@ describe("AgentConnectionsSettings", () => {
     });
   });
 
-  // 운영은 server OAuth 를 켠 뒤에 켠다(APP-889 spec 「운영 순서」) — 꺼진 동안은 지금 안내 그대로다
+  // 「새 연결」의 기본은 OAuth 안내다. 개인 토큰은 안내의 링크로만 연다(APP-933)
   describe("OAuth 안내", () => {
-    it("설정값이 꺼져 있으면 새 연결이 지금처럼 개인 토큰 폼이다", () => {
-      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "disabled");
-      renderSettings();
-
-      fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
-
-      expect(screen.getByLabelText("연결 이름")).toBeTruthy();
-      expect(
-        screen.queryByRole("region", { name: "OAuth 연결 안내" })
-      ).toBeNull();
-    });
-
-    it("켜져 있으면 새 연결이 주소만 등록하는 안내를 열고 에이전트마다 토큰 없는 명령을 보인다", () => {
-      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
+    it("새 연결이 주소만 등록하는 안내를 열고 에이전트마다 토큰 없는 명령을 보인다", () => {
       renderSettings();
 
       fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
 
       const guide = screen.getByRole("region", { name: "OAuth 연결 안내" });
+      // 개인 토큰 폼은 안내 아래 링크로만 연다 — 「새 연결」이 바로 열지 않는다
+      expect(screen.queryByLabelText("연결 이름")).toBeNull();
       const mcpUrl = buildUrl("/mcp");
       const blocks = Array.from(guide.querySelectorAll("pre")).map(
         (pre) => pre.textContent ?? ""
@@ -355,8 +349,7 @@ describe("AgentConnectionsSettings", () => {
       expect(within(guide).queryByLabelText("맡길 워크스페이스")).toBeNull();
     });
 
-    it("켜져 있어도 브라우저 없는 환경이면 개인 토큰 폼으로 가서 토큰을 만든다", async () => {
-      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
+    it("브라우저 없는 환경이면 안내에서 개인 토큰 폼으로 가서 토큰을 만든다", async () => {
       created.mutateAsync.mockResolvedValue({
         status: 201,
         data: {
@@ -390,7 +383,6 @@ describe("AgentConnectionsSettings", () => {
     });
 
     it("OAuth 안내를 닫으면 연결 목록을 다시 읽는다", () => {
-      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
       const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
       renderSettings();
 
@@ -406,8 +398,7 @@ describe("AgentConnectionsSettings", () => {
       invalidate.mockRestore();
     });
 
-    it("켜져 있으면 빈 목록도 주소를 등록하라고 안내한다", () => {
-      vi.stubEnv("NEXT_PUBLIC_AGENT_OAUTH_GUIDE", "enabled");
+    it("빈 목록은 주소를 등록하라고 안내한다", () => {
       renderSettings();
 
       expect(
@@ -570,7 +561,7 @@ describe("AgentConnectionsSettings", () => {
       "관리자가 이 워크스페이스의 외부 에이전트 연결을 꺼 두었습니다.";
     const openForm = () => {
       renderSettings();
-      fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
+      openTokenForm();
       fireEvent.change(screen.getByLabelText("연결 이름"), {
         target: { value: "노트북" },
       });
