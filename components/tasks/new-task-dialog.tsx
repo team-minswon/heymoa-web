@@ -1,6 +1,6 @@
 "use client";
 
-import { insertTaskIntoLists, taskListKeys } from "@/lib/tasks/task-list-cache";
+import { insertTaskIntoLists } from "@/lib/tasks/task-list-cache";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -82,11 +82,7 @@ export function NewTaskDialog({
           // **목록이 둘이다** (APP-685) — 한쪽만 끼우면 다른 화면에 안 나타난다. 끼운 뒤에도 한 번 다시 읽는다:
           // 서버가 정하는 값(정렬·이름)을 맞추는 일이라 화면은 이미 맞고, 실패해도 끼운 줄은 남는다.
           if (response.status === 201 && response.data.success) {
-            insertTaskIntoLists(
-              queryClient,
-              taskListKeys(workspaceId, target),
-              response.data.data
-            );
+            insertTaskIntoLists(queryClient, workspaceId, response.data.data);
           }
           void queryClient.invalidateQueries({
             predicate: ({ queryKey }) => isProjectTaskQueryKey(queryKey),

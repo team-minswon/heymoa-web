@@ -14,6 +14,7 @@ import type {
   ProjectTaskListResponse,
   ProjectTaskResponse,
   ProjectTaskRevisionListResponse,
+  WorkspaceTaskListResponse,
 } from "../models";
 
 export const getGetProjectsResponseMock = (): ProjectListResponse => ({
@@ -47,7 +48,7 @@ export const getCreateProjectResponseMock = (): ProjectResponse => ({
 });
 
 export const getGetWorkspaceTasksResponseMock =
-  (): ProjectTaskListResponse => ({
+  (): WorkspaceTaskListResponse => ({
     success: true,
     data: {
       tasks: [
@@ -67,6 +68,11 @@ export const getGetWorkspaceTasksResponseMock =
           due: "2026-09-18",
         },
       ],
+      totalCount: 57,
+      counts: { open: 57, completed: 12, cancelled: 3 },
+      hasMore: true,
+      nextDue: "2026-09-18",
+      nextTaskId: "0K9GVJT2C4Q21",
     },
     error: null,
   });
@@ -236,10 +242,10 @@ export const getCreateProjectMockHandler = (
 
 export const getGetWorkspaceTasksMockHandler = (
   overrideResponse?:
-    | ProjectTaskListResponse
+    | WorkspaceTaskListResponse
     | ((
         info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) => Promise<ProjectTaskListResponse> | ProjectTaskListResponse),
+      ) => Promise<WorkspaceTaskListResponse> | WorkspaceTaskListResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.get(

@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Loader2Icon, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -17,17 +17,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
-import { useGetWorkspaceTasks } from "@/lib/api/generated/projects/projects";
-import { okData } from "@/lib/api/ok-data";
 import { useAssigneeChoices } from "@/lib/assignees/use-assignee-choices";
 import { getAppDateKey } from "@/lib/format/date";
 import {
-  filterTasks,
   groupTasks,
   tasksWithStatus,
   type TaskEntry,
   type TaskStatus,
 } from "@/lib/tasks/task-groups";
+import { useTaskListPages } from "@/lib/tasks/use-task-list-pages";
+import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 const ALL_PROJECTS = "all";
@@ -38,6 +37,8 @@ const VIEWS: ReadonlyArray<{ value: TaskStatus; label: string; empty: string }> 
   { value: "CANCELLED", label: "취소", empty: "취소한 할 일이 없습니다." },
 ];
 
+const COUNT_KEY = { OPEN: "open", COMPLETED: "completed", CANCELLED: "cancelled" } as const;
+
 /** 할 일 id → 상태. 직전 목록과 견줘 새로 생기거나 상태를 옮긴 줄만 등장을 그린다. */
 type StatusSnapshot = Map<string, TaskStatus>;
 
@@ -47,26 +48,23 @@ type StatusSnapshot = Map<string, TaskStatus>;
  * **팬아웃이 사라졌다** (APP-685). 전에는 프로젝트마다 요청을 보내고 결과를 합치면서
  * `useQueries` 결과 배열의 **인덱스로** 프로젝트를 대조해 이름을 붙였다 — 요청 하나가 실패해
  * 배열이 밀리면 남의 프로젝트 이름이 붙는다. 지금은 할 일이 자기 프로젝트를 들고 온다.
+ *
+ * **전건을 받지 않는다** (APP-1043). 상태 탭 하나의 목록을 서버가 거르고 정렬해 한 쪽(30개)씩 준다. 탭의 개수와
+ * 머리글의 「진행 중 N개」는 서버가 센 전체 수(`counts`)다 — 읽어 온 줄 수가 아니다.
  */
 export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const { projects, isWorkspacePending } = useWorkspaceShell();
   const { user } = useAuth();
   const { choices, failed: choicesFailed, retry: retryChoices } = useAssigneeChoices(workspaceId);
-  const result = useGetWorkspaceTasks(workspaceId);
   const today = getAppDateKey(new Date());
-
-  const data = okData(result.data);
-  const entries: TaskEntry[] = data?.tasks ?? [];
-  // 읽어 둔 목록이 있어도 다시 읽기가 실패했으면 알린다 — 낡은 목록만 보이면 실패를 모른다.
-  const failed =
-    result.isError || (!data && !result.isPending) ? () => void result.refetch() : null;
-  const isPending = isWorkspacePending || result.isPending;
 
   const [view, setView] = useState<TaskStatus>("OPEN");
   /** 사람이 보기를 바꿨는가. 첫 목록은 그대로 서고, 바꿀 때만 목록이 들어온다. */
   const [switched, setSwitched] = useState(false);
   const [mine, setMine] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
+  /** 이어 읽은 쪽 수. 탭·거르기가 바뀌면 처음 쪽으로 돌아간다. */
+  const [pages, setPages] = useState(1);
   // 고른 프로젝트가 그사이 지워졌으면 전체로 돌아간다. 남겨 두면 없는 프로젝트로 할 일을 만들려다 거절된다.
   const activeProjectId =
     projectId !== null && projects.some((project) => project.projectId === projectId) ? projectId : null;
@@ -74,7 +72,31 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const [historyTaskId, setHistoryTaskId] = useState<string | null>(null);
   /** 시트를 줄의 「수정」으로 열었나. 그러면 내용 고치기부터 선다 */
   const [historyEditing, setHistoryEditing] = useState(false);
-  const { save, pendingOf, conflictTaskId } = useTaskUpdate(workspaceId);
+  /** 시트 안에서 저장한 줄. 상태·담당이 바뀌어 보던 목록을 떠나도 시트가 그 줄을 계속 든다 */
+  const [savedRow, setSavedRow] = useState<TaskEntry | null>(null);
+  const { save, pendingOf, conflictTaskId } = useTaskUpdate(workspaceId, setSavedRow);
+
+  const result = useTaskListPages({
+    workspaceId,
+    status: view,
+    assigneeUserId: mine ? (user?.userId ?? undefined) : undefined,
+    projectId: activeProjectId ?? undefined,
+    pages,
+  });
+  const response = result.data;
+  const data = response?.status === 200 && response.data.success ? response.data.data : null;
+  // 탭만 바뀌어 이전 탭의 응답이 자리를 채우는 동안(개수만 쓴다) 그 줄을 이 탭의 줄로 그리지 않는다.
+  const entries: TaskEntry[] = (data?.tasks ?? []).filter((task) => task.taskStatus === view);
+  const counts = data?.counts;
+  const countOf = (status: TaskStatus) => counts?.[COUNT_KEY[status]] ?? 0;
+  // 읽어 둔 목록이 있어도 다시 읽기가 실패했으면 알린다 — 낡은 목록만 보이면 실패를 모른다.
+  const failed =
+    result.isError || (!data && !result.isPending) ? () => void result.refetch() : null;
+  const isPending = isWorkspacePending || result.isPending;
+  const loadingRows = isPending || (result.isPlaceholderData && entries.length === 0);
+  const isLoadingMore = result.isFetching && result.isPlaceholderData && entries.length > 0;
+  const hasMore = !loadingRows && data?.hasMore === true;
+  const resetPages = () => setPages(1);
 
   // 줄에 그리는 것이 바뀌면 목록도 새로 묶는다 — 판뿐 아니라 프로젝트 이름도 줄에 선다.
   // **그리는 값을 다 넣는다.** 담당·기한·내용은 응답 전에 캐시에 먼저 걸리는데(`use-task-update`) 그때는 판이
@@ -85,36 +107,36 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
         `${e.taskId}:${e.revision}:${e.projectName}:${e.taskStatus}:${e.due ?? ""}:${assigneeKey(e.assignee)}:${e.content}`
     )
     .join("|");
-  const filterKey = `${mine}:${activeProjectId}`;
-  const visible = filterTasks(entries, {
-    assigneeUserId: mine ? (user?.userId ?? null) : null,
-    projectId: activeProjectId,
-  });
-  const countOf = (status: TaskStatus) =>
-    visible.filter((task) => task.taskStatus === status).length;
+  const scopeKey = `${view}:${mine}:${activeProjectId}`;
   const groups = useMemo(
     () =>
       view === "OPEN"
-        ? groupTasks(visible, today)
-        : [{ key: view, label: "", entries: tasksWithStatus(visible, view) }],
+        ? groupTasks(entries, today)
+        : [{ key: view, label: "", entries: tasksWithStatus(entries, view) }],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 판 · 거르기 · 보기가 같으면 목록도 같다
-    [signature, filterKey, view, today]
+    [signature, scopeKey, view, today]
   ).filter((group) => group.entries.length > 0);
 
   // 첫 목록은 그대로 서고, 그 뒤로 달라진 줄만 들어온다.
-  const [snapshot, setSnapshot] = useState<{ signature: string; statuses: StatusSnapshot } | null>(
-    null
-  );
+  // 탭이나 거르기가 바뀌면 줄이 통째로 바뀌므로 등장을 그리지 않는다(목록 전체가 이미 들어온다).
+  const [snapshot, setSnapshot] = useState<{
+    signature: string;
+    scopeKey: string;
+    statuses: StatusSnapshot;
+  } | null>(null);
   const [previous, setPrevious] = useState<StatusSnapshot | null>(null);
-  if (!isPending && snapshot?.signature !== signature) {
-    setPrevious(snapshot?.statuses ?? null);
+  if (!loadingRows && snapshot?.signature !== signature) {
+    setPrevious(snapshot && snapshot.scopeKey === scopeKey ? snapshot.statuses : null);
     setSnapshot({
       signature,
+      scopeKey,
       statuses: new Map(entries.map((e) => [e.taskId, e.taskStatus])),
     });
   }
 
-  const historyEntry = entries.find((e) => e.taskId === historyTaskId) ?? null;
+  const historyEntry =
+    entries.find((e) => e.taskId === historyTaskId) ??
+    (savedRow?.taskId === historyTaskId ? savedRow : null);
   const filtering = mine || activeProjectId !== null;
 
   const renderRows = (list: TaskEntry[]) => (
@@ -156,7 +178,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               할 일
             </h2>
             <p className="mt-3 min-h-6 text-sm leading-6 text-[var(--el-muted)]">
-              {isPending ? null : `프로젝트 ${projects.length}개 · 진행 중 ${countOf("OPEN")}개`}
+              {isPending || !counts ? null : `프로젝트 ${projects.length}개 · 진행 중 ${countOf("OPEN")}개`}
             </p>
           </header>
 
@@ -166,10 +188,11 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               value={view}
               options={VIEWS.map((option) => ({
                 value: option.value,
-                label: isPending ? option.label : `${option.label} ${countOf(option.value)}`,
+                label: !counts ? option.label : `${option.label} ${countOf(option.value)}`,
               }))}
               onChange={(next) => {
                 setView(next);
+                resetPages();
                 setSwitched(true);
               }}
             />
@@ -177,7 +200,10 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               type="button"
               aria-pressed={mine}
               disabled={!user}
-              onClick={() => setMine(!mine)}
+              onClick={() => {
+                setMine(!mine);
+                resetPages();
+              }}
               className={cn(
                 "inline-flex h-9 items-center gap-1.5 rounded-control border px-2.5 text-xs font-medium transition-colors duration-200 ease-out focus-visible:outline-2 focus-visible:outline-[var(--el-ink)] motion-reduce:transition-none sm:h-[30px]",
                 mine
@@ -194,9 +220,10 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                 ...Object.fromEntries(projects.map((p) => [p.projectId, p.name])),
               }}
               value={activeProjectId ?? ALL_PROJECTS}
-              onValueChange={(value) =>
-                setProjectId(!value || value === ALL_PROJECTS ? null : (value as string))
-              }
+              onValueChange={(value) => {
+                setProjectId(!value || value === ALL_PROJECTS ? null : (value as string));
+                resetPages();
+              }}
             >
               <SelectTrigger aria-label="프로젝트" className="h-9 text-xs sm:h-[30px]">
                 <SelectValue />
@@ -254,7 +281,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
               />
             ) : null}
 
-            {isPending && groups.length === 0 ? (
+            {loadingRows ? (
               <ul aria-label="할 일 불러오는 중">
                 {["62%", "48%", "71%", "55%", "66%", "40%"].map((width) => (
                   <li key={width} className={cn(TASK_ROW_GRID, "min-h-11")}>
@@ -298,7 +325,9 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                               "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
                           )}
                         >
+                          {/* 쪽이 남았으면 마지막 묶음만 아직 덜 읽었다 — 기한 순이라 앞 묶음은 다 읽은 것이다. */}
                           {group.entries.length}
+                          {hasMore && group === groups.at(-1) ? "+" : ""}
                         </span>
                       </h3>
                       {renderRows(group.entries)}
@@ -307,6 +336,25 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                 ) : (
                   <div className="mt-1">{renderRows(groups[0].entries)}</div>
                 )}
+                {hasMore ? (
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={isLoadingMore}
+                      onClick={() => setPages((current) => current + 1)}
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2Icon className="animate-spin" /> 불러오는 중
+                        </>
+                      ) : (
+                        "할 일 더 보기"
+                      )}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -320,7 +368,17 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
         choices={choices}
         pending={historyEntry !== null && pendingOf(historyEntry.taskId) !== null}
         conflict={historyEntry !== null && conflictTaskId === historyEntry.taskId}
-        onSave={(patch) => (historyEntry ? save(historyEntry, patch) : Promise.resolve(false))}
+        onSave={async (patch) => {
+          if (!historyEntry) return false;
+          const ok = await save(historyEntry, patch);
+          // 목록을 떠난 줄(저장 응답에서 받은 사본)은 재조회로 새 판을 얻을 길이 없다 — 실패하면 같은 낡은 판으로 계속 거절되므로
+          // 시트를 닫아 목록에서 다시 열게 한다.
+          if (!ok && !entries.some((e) => e.taskId === historyEntry.taskId)) {
+            setHistoryTaskId(null);
+            toast.error("저장하지 못해 시트를 닫았습니다. 목록에서 다시 열어 주세요.");
+          }
+          return ok;
+        }}
         onOpenChange={(open) => !open && setHistoryTaskId(null)}
       />
       <NewTaskDialog

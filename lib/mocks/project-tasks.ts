@@ -7,6 +7,7 @@ import type {
   UpdateProjectTaskRequest,
 } from "@/lib/api/generated/models";
 import { getAppDateKey } from "@/lib/format/date";
+import { compareTasks } from "@/lib/tasks/task-groups";
 import {
   assigneeFromRequest,
   resolveAssignee,
@@ -263,6 +264,60 @@ function workspaceTasksOf(workspaceId: string) {
   return all().filter((task) => projectIds.has(task.projectId));
 }
 
+/**
+ * 워크스페이스 할 일 한 쪽 (APP-1043). 서버와 같은 규칙이다 — `limit` 이 없으면 거르기 안의 전건, 있으면 `(기한 오름차순·
+ * 기한 없음 뒤, taskId 오름차순)` 에서 커서 뒤부터 limit 개. 「내 할 일」은 푼 담당이 그 계정인 것이고, 개수는 상태를 뺀
+ * 거르기 안의 전체 수다.
+ */
+function workspaceTaskPage(workspaceId: string, url: URL) {
+  const query = url.searchParams;
+  const status = query.get("status");
+  const assigneeUserId = query.get("assigneeUserId");
+  const projectId = query.get("projectId");
+  const limit = Number(query.get("limit")) || null;
+  const afterTaskId = query.get("afterTaskId");
+  const afterDue = afterTaskId ? query.get("afterDue") : null;
+
+  const scoped = workspaceTasksOf(workspaceId)
+    .map(view)
+    .filter(
+      (row) =>
+        (!projectId || row.projectId === projectId) &&
+        (!assigneeUserId || (row.assignee?.type === "USER" && row.assignee.id === assigneeUserId))
+    )
+    .sort(compareTasks);
+  const counts = {
+    open: scoped.filter((row) => row.taskStatus === "OPEN").length,
+    completed: scoped.filter((row) => row.taskStatus === "COMPLETED").length,
+    cancelled: scoped.filter((row) => row.taskStatus === "CANCELLED").length,
+  };
+  const matching = scoped.filter((row) => !status || row.taskStatus === status);
+  const cursor = afterTaskId ? { due: afterDue, taskId: afterTaskId } : null;
+  const rest = cursor
+    ? matching.filter(
+        (row) =>
+          compareTasks(row, {
+            ...row,
+            due: cursor.due,
+            taskId: cursor.taskId,
+          }) > 0
+      )
+    : matching;
+  const tasks = limit ? rest.slice(0, limit) : rest;
+  const last = tasks.at(-1);
+  const hasMore = limit !== null && tasks.length < rest.length && !!last;
+  return {
+    tasks,
+    totalCount: status
+      ? counts[status.toLowerCase() as keyof typeof counts]
+      : counts.open + counts.completed + counts.cancelled,
+    counts,
+    hasMore,
+    nextDue: hasMore ? (last.due ?? null) : null,
+    nextTaskId: hasMore ? last.taskId : null,
+  };
+}
+
 function taskOf(workspaceId: string, projectId: string, taskId: string) {
   return (
     tasksOf(workspaceId, projectId).find((task) => task.taskId === taskId) ??
@@ -319,8 +374,8 @@ export const projectTasks = {
 export const projectTaskHandlers = [
   // 워크스페이스 단위 목록 (APP-685). 프로젝트 단위 경로도 남는다 — 프로젝트 하나만 보는
   // 화면이 따로 있다.
-  http.get("*/v1/workspaces/:workspaceId/tasks", ({ params }) =>
-    respond(() => ({ tasks: workspaceTasksOf(paramId(params.workspaceId)).map(view) }))
+  http.get("*/v1/workspaces/:workspaceId/tasks", ({ params, request }) =>
+    respond(() => workspaceTaskPage(paramId(params.workspaceId), new URL(request.url)))
   ),
 
   http.get("*/v1/workspaces/:workspaceId/projects/:projectId/tasks", ({ params }) =>

@@ -14,6 +14,7 @@ import {
   type AssigneeValue,
 } from "@/lib/assignees/describe";
 import {
+  applySavedTask,
   assigneeRowOf,
   patchTaskLists,
   taskListKeys,
@@ -34,7 +35,11 @@ type TaskStatus = ProjectTask["taskStatus"];
  * 할 일 수정의 한 길. 목록의 칸과 이력 시트의 버튼이 같은 판 대조와 같은 거절 처리를 쓴다.
  * 판이 낡아 거절되면 그 할 일을 다시 읽고 그 자리에 알린다 — 나머지 실패만 토스트다.
  */
-export function useTaskUpdate(workspaceId: string) {
+export function useTaskUpdate(
+  workspaceId: string,
+  /** 저장이 받아들여진 행. 목록이 걸러 주는 화면에서는 저장한 줄이 목록을 떠날 수 있어 부르는 쪽이 따로 붙들 때 쓴다 */
+  onSaved?: (saved: TaskEntry) => void
+) {
   const queryClient = useQueryClient();
   const [conflictTaskId, setConflictTaskId] = useState<string | null>(null);
   /**
@@ -122,10 +127,9 @@ export function useTaskUpdate(workspaceId: string) {
           ? response.data.data
           : null;
       if (saved) {
-        patchTaskLists(queryClient, listKeys, task.taskId, (row) => ({
-          ...row,
-          ...saved,
-        }));
+        // 목록이 상태 탭 × 거르기마다 서버가 걸러 준 것이라, 줄이 항목마다 다르게 서거나 떠나고 개수가 옮겨 간다.
+        applySavedTask(queryClient, workspaceId, task, saved);
+        onSaved?.(saved);
         needsReconcile.current = true;
         void queryClient.invalidateQueries({ queryKey: revisionsKey });
       } else {

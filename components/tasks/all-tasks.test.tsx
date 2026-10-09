@@ -51,16 +51,6 @@ vi.mock("@/lib/ui/toast", () => ({ toast: { error: vi.fn() } }));
 vi.mock("@/lib/api/generated/projects/projects", () => ({
   getGetProjectTasksQueryKey: (_: string, projectId: string) => [`tasks/${projectId}`],
   getGetWorkspaceTasksQueryKey: () => ["workspace-tasks"],
-  // 팬아웃이 사라졌다 — 워크스페이스 단위 조회 하나가 두 프로젝트의 할 일을 다 낸다.
-  useGetWorkspaceTasks: () => ({
-    data: {
-      status: 200,
-      data: { success: true, data: { tasks: [...TASKS.p1, ...TASKS.p2] }, error: null },
-    },
-    isPending: false,
-    isError: false,
-    refetch: vi.fn(),
-  }),
   getGetProjectTaskRevisionsQueryKey: () => ["revisions"],
   useGetProjectTaskRevisions: () => ({
     data: { status: 200, data: { success: true, data: { revisions: [] } } },
@@ -70,6 +60,60 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
   useUpdateProjectTask: () => ({ mutateAsync: mutate, isPending: false, variables: undefined }),
   useCreateProjectTask: () => ({ mutate: createTask, isPending: false }),
 }));
+
+type ListArgs = {
+  status: string;
+  assigneeUserId?: string;
+  projectId?: string;
+  pages: number;
+};
+/** 서버처럼 상태·내 할 일·프로젝트로 거르고 `(기한, id)` 로 정렬해 준다. 개수는 상태만 뺀 거르기 안의 전체 수다. */
+const listCalls = vi.hoisted(() => [] as unknown[]);
+const MORE = vi.hoisted(() => ({ hasMore: false, limit: 100 }));
+vi.mock("@/lib/tasks/use-task-list-pages", async () => {
+  const { compareTasks } = await import("@/lib/tasks/task-groups");
+  return {
+    useTaskListPages: (args: ListArgs) => {
+      listCalls.push(args);
+      const scoped = [...TASKS.p1, ...TASKS.p2].filter(
+        (task) =>
+          (!args.projectId || task.projectId === args.projectId) &&
+          (!args.assigneeUserId ||
+            (task.assignee?.type === "USER" && task.assignee.id === args.assigneeUserId))
+      );
+      const counts = {
+        open: scoped.filter((task) => task.taskStatus === "OPEN").length,
+        completed: scoped.filter((task) => task.taskStatus === "COMPLETED").length,
+        cancelled: scoped.filter((task) => task.taskStatus === "CANCELLED").length,
+      };
+      const rows = scoped
+        .filter((task) => task.taskStatus === args.status)
+        .sort((a, b) => compareTasks(a as never, b as never))
+        .slice(0, MORE.limit);
+      return {
+        data: {
+          status: 200,
+          data: {
+            success: true,
+            data: {
+              tasks: rows,
+              counts,
+              totalCount: counts[args.status.toLowerCase() as keyof typeof counts],
+              hasMore: MORE.hasMore,
+              nextDue: null,
+              nextTaskId: null,
+            },
+          },
+        },
+        isPending: false,
+        isError: false,
+        isPlaceholderData: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      };
+    },
+  };
+});
 
 function renderScreen() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -91,6 +135,9 @@ describe("AllTasks", () => {
     vi.useRealTimers();
     mutate.mockReset();
     createTask.mockReset();
+    listCalls.length = 0;
+    MORE.hasMore = false;
+    MORE.limit = 100;
     cleanup();
   });
 
@@ -224,5 +271,42 @@ describe("AllTasks", () => {
       { workspaceId: "w1", projectId: "p1", data: { content: "새 할 일", assignee: null, due: null } },
       expect.anything()
     );
+  });
+
+  /** 서버가 읽은 쪽 밖에 더 있다고 하면 마지막 묶음만 덜 읽은 것이다 — 개수에 +를 붙이고 더 보기를 세운다. */
+  it("쪽이 남았으면 마지막 묶음 개수에 +를 붙이고 더 보기가 쪽 수를 올린다", async () => {
+    MORE.hasMore = true;
+    MORE.limit = 3;
+    renderScreen();
+    await screen.findByText("지난 할 일");
+
+    const regions = screen.getAllByRole("region");
+    expect(regions.map((region) => region.getAttribute("aria-label"))).toEqual([
+      "기한 지남",
+      "이번 주",
+      "다음 주 이후",
+    ]);
+    expect(within(regions[0]).getByText("1")).toBeTruthy();
+    expect(within(regions[2]).getByText("1+")).toBeTruthy();
+    // 머리글과 탭의 개수는 읽은 줄 수가 아니라 서버가 센 전체 수다.
+    expect(screen.getByText("프로젝트 2개 · 진행 중 4개")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "할 일 더 보기" }));
+    expect((listCalls.at(-1) as ListArgs).pages).toBe(2);
+  });
+
+  it("탭이나 거르기를 바꾸면 처음 쪽으로 돌아가 그 거르기로 요청한다", async () => {
+    MORE.hasMore = true;
+    renderScreen();
+    await screen.findByText("지난 할 일");
+    fireEvent.click(screen.getByRole("button", { name: "할 일 더 보기" }));
+    expect((listCalls.at(-1) as ListArgs).pages).toBe(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "내 할 일" }));
+    expect(listCalls.at(-1)).toMatchObject({ status: "OPEN", assigneeUserId: "me", pages: 1 });
+
+    fireEvent.click(screen.getByRole("button", { name: "할 일 더 보기" }));
+    fireEvent.click(screen.getByRole("radio", { name: /^완료/ }));
+    expect(listCalls.at(-1)).toMatchObject({ status: "COMPLETED", assigneeUserId: "me", pages: 1 });
   });
 });

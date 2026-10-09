@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  compareTasks,
   endOfWeek,
-  filterTasks,
   groupTasks,
   tasksWithStatus,
   type TaskEntry,
@@ -21,37 +21,6 @@ const entry = (
   assignee: null,
   due,
   revision: 1,
-});
-
-describe("filterTasks", () => {
-  const mine: TaskEntry = {
-    taskId: "a",
-    projectId: "p1",
-    projectName: "제품",
-    content: "내 것",
-    taskStatus: "OPEN",
-    assignee: { type: "USER", id: "me", name: "나" },
-    due: null,
-    revision: 1,
-  };
-  const speaker: TaskEntry = {
-    taskId: "b",
-    projectId: "p2",
-    projectName: "리서치",
-    content: "화자 것",
-    taskStatus: "OPEN",
-    assignee: { type: "SPEAKER_LABEL", noteId: "n", label: "C" },
-    due: null,
-    revision: 1,
-  };
-
-  it("내 할 일은 계정으로 풀린 담당만, 프로젝트는 그 프로젝트만 남긴다", () => {
-    const all = [mine, speaker];
-    expect(filterTasks(all, { assigneeUserId: "me", projectId: null })).toEqual([mine]);
-    expect(filterTasks(all, { assigneeUserId: null, projectId: "p2" })).toEqual([speaker]);
-    expect(filterTasks(all, { assigneeUserId: "me", projectId: "p2" })).toEqual([]);
-    expect(filterTasks(all, { assigneeUserId: null, projectId: null })).toEqual(all);
-  });
 });
 
 describe("groupTasks", () => {
@@ -100,5 +69,33 @@ describe("tasksWithStatus", () => {
       "늦게 끝남",
     ]);
     expect(tasksWithStatus(all, "CANCELLED").map((e) => e.content)).toEqual(["취소"]);
+  });
+});
+
+describe("compareTasks", () => {
+  const row = (taskId: string, due: string | null) => ({ ...entry(taskId, due), taskId });
+
+  /** 서버 정렬 `(기한 오름차순·기한 없음 뒤, taskId 오름차순)` 과 같은 순서여야 쪽을 이어 붙인 목록이 어긋나지 않는다. */
+  it("기한 순이고 기한 없음이 뒤이며 같은 기한 안에서는 id 순이다", () => {
+    const sorted = [
+      row("01B", null),
+      row("01C", "2026-10-05"),
+      row("01A", "2026-10-05"),
+      row("0Z9", "2026-10-03"),
+      row("01A0", null),
+    ].sort(compareTasks);
+
+    expect(sorted.map((task) => task.taskId)).toEqual(["0Z9", "01A", "01C", "01A0", "01B"]);
+  });
+
+  it("기한 없음은 가장 늦은 실제 날짜보다도 뒤다", () => {
+    const sorted = [row("01A", null), row("01B", "9999-12-31")].sort(compareTasks);
+    expect(sorted.map((task) => task.taskId)).toEqual(["01B", "01A"]);
+  });
+
+  it("글 내용은 순서에 영향을 주지 않는다", () => {
+    const first = { ...row("01A", "2026-10-05"), content: "하" };
+    const second = { ...row("01B", "2026-10-05"), content: "가" };
+    expect([second, first].sort(compareTasks)).toEqual([first, second]);
   });
 });

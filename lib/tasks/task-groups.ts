@@ -22,21 +22,6 @@ const GROUPS: ReadonlyArray<{ key: TaskGroupKey; label: string }> = [
   { key: "NO_DUE", label: "기한 없음" },
 ];
 
-export type TaskFilter = { assigneeUserId: string | null; projectId: string | null };
-
-/**
- * 「내 할 일」은 계정으로 풀린 담당만 본다. 이름 없는 화자에게 걸린 할 일은 아직 누구의 것인지
- * 모르므로 거기 들지 않는다.
- */
-export function filterTasks(entries: readonly TaskEntry[], filter: TaskFilter) {
-  return entries.filter(
-    (task) =>
-      (!filter.projectId || task.projectId === filter.projectId) &&
-      (!filter.assigneeUserId ||
-        (task.assignee?.type === "USER" && task.assignee.id === filter.assigneeUserId))
-  );
-}
-
 /** `today`(YYYY-MM-DD)가 속한 주의 일요일. 주는 월요일에 시작한다. */
 export function endOfWeek(today: string) {
   const [year, month, day] = today.split("-").map(Number);
@@ -46,10 +31,19 @@ export function endOfWeek(today: string) {
   return date.toISOString().slice(0, 10);
 }
 
-/** 기한은 날짜만 있는 값이라 문자열 비교가 곧 날짜 비교다. 기한 없는 것은 뒤로 간다. */
-const byDueThenContent = (a: TaskEntry, b: TaskEntry) =>
-  (a.due ?? "9999-12-31").localeCompare(b.due ?? "9999-12-31") ||
-  a.content.localeCompare(b.content, "ko");
+/**
+ * 기한은 날짜만 있는 값이라 문자열 비교가 곧 날짜 비교다. 기한 없는 것은 뒤로 가고, 같은 기한 안에서는 id 순이다.
+ *
+ * **서버의 정렬 키 `(기한 오름차순·기한 없음 뒤, taskId 오름차순)` 과 같아야 한다** (APP-1043). 쪽을 이어 붙인 목록이 서버가
+ * 준 순서 그대로 읽히고, 제자리에서 기한을 고친 줄이 서버가 놓을 자리에 놓인다. 글 내용으로 가르지 않는 것도 그래서다 —
+ * DB 콜레이션과 브라우저의 한국어 정렬이 같지 않아 쪽 경계가 어긋난다. id 는 대문자·숫자뿐이라 코드 유닛 비교가 DB 와 같다.
+ */
+export const compareTasks = (a: TaskEntry, b: TaskEntry) => {
+  // 기한 없음이 실제 날짜보다 뒤다(`NULLS LAST`). 가장 늦은 날짜를 대신 쓰면 그 날짜의 줄과 id 로 섞인다.
+  if ((a.due === null) !== (b.due === null)) return a.due === null ? 1 : -1;
+  if (a.due !== null && b.due !== null && a.due !== b.due) return a.due < b.due ? -1 : 1;
+  return a.taskId < b.taskId ? -1 : a.taskId > b.taskId ? 1 : 0;
+};
 
 function groupOf(task: ProjectTask, today: string, weekEnd: string): TaskGroupKey {
   if (!task.due) return "NO_DUE";
@@ -63,7 +57,7 @@ export function groupTasks(
   today: string = getAppDateKey(new Date())
 ): TaskGroup[] {
   const weekEnd = endOfWeek(today);
-  const open = entries.filter((task) => task.taskStatus === "OPEN").sort(byDueThenContent);
+  const open = entries.filter((task) => task.taskStatus === "OPEN").sort(compareTasks);
   return GROUPS.map(({ key, label }) => ({
     key,
     label,
@@ -76,7 +70,7 @@ export function tasksWithStatus(
   entries: readonly TaskEntry[],
   status: Exclude<TaskStatus, "OPEN">
 ) {
-  return entries.filter((task) => task.taskStatus === status).sort(byDueThenContent);
+  return entries.filter((task) => task.taskStatus === status).sort(compareTasks);
 }
 
 /** 할 일 상태의 이름. 목록 · 이력 · 검토 제안이 같은 상태를 같은 이름으로 부른다. */

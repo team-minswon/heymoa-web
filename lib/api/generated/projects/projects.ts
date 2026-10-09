@@ -26,6 +26,7 @@ import type {
 import type {
   AppErrorResponse,
   CreateProjectTaskRequest,
+  GetWorkspaceTasksParams,
   ProjectListResponse,
   ProjectRequest,
   ProjectResponse,
@@ -34,6 +35,7 @@ import type {
   ProjectTaskRevisionListResponse,
   UnauthorizedResponse,
   UpdateProjectTaskRequest,
+  WorkspaceTaskListResponse,
 } from "../models";
 
 import { apiFetch } from "../../fetcher";
@@ -549,7 +551,7 @@ export const useCreateProject = <
   return useMutation(getCreateProjectMutationOptions(options), queryClient);
 };
 export type getWorkspaceTasksResponse200 = {
-  data: ProjectTaskListResponse;
+  data: WorkspaceTaskListResponse;
   status: 200;
 };
 
@@ -569,20 +571,36 @@ export type getWorkspaceTasksResponse =
   | getWorkspaceTasksResponseSuccess
   | getWorkspaceTasksResponseError;
 
-export const getGetWorkspaceTasksUrl = (workspaceId: string) => {
-  return `/v1/workspaces/${workspaceId}/tasks`;
+export const getGetWorkspaceTasksUrl = (
+  workspaceId: string,
+  params?: GetWorkspaceTasksParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/workspaces/${workspaceId}/tasks?${stringifiedParams}`
+    : `/v1/workspaces/${workspaceId}/tasks`;
 };
 
 /**
- * 워크스페이스의 모든 프로젝트를 가로지르는 할 일 목록. 정렬 규칙은 프로젝트 단위 조회와 같다.
+ * 워크스페이스의 모든 프로젝트를 가로지르는 할 일 목록. 기한 오름차순(기한 없음이 뒤), 같은 기한은 taskId 오름차순. limit 을 보내지 않으면 거르기 안의 전건이다.
  * @summary 워크스페이스 할 일 목록 조회
  */
 export const getWorkspaceTasks = async (
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<getWorkspaceTasksResponse> => {
   return apiFetch<getWorkspaceTasksResponse>(
-    getGetWorkspaceTasksUrl(workspaceId),
+    getGetWorkspaceTasksUrl(workspaceId, params),
     {
       ...options,
       method: "GET",
@@ -590,8 +608,14 @@ export const getWorkspaceTasks = async (
   );
 };
 
-export const getGetWorkspaceTasksQueryKey = (workspaceId: string) => {
-  return [`/v1/workspaces/${workspaceId}/tasks`] as const;
+export const getGetWorkspaceTasksQueryKey = (
+  workspaceId: string,
+  params?: GetWorkspaceTasksParams
+) => {
+  return [
+    `/v1/workspaces/${workspaceId}/tasks`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetWorkspaceTasksQueryOptions = <
@@ -599,6 +623,7 @@ export const getGetWorkspaceTasksQueryOptions = <
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -613,12 +638,12 @@ export const getGetWorkspaceTasksQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetWorkspaceTasksQueryKey(workspaceId);
+    queryOptions?.queryKey ?? getGetWorkspaceTasksQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWorkspaceTasks>>
   > = ({ signal }) =>
-    getWorkspaceTasks(workspaceId, { signal, ...requestOptions });
+    getWorkspaceTasks(workspaceId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -642,6 +667,7 @@ export function useGetWorkspaceTasks<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params: undefined | GetWorkspaceTasksParams,
   options: {
     query: Partial<
       UseQueryOptions<
@@ -669,6 +695,7 @@ export function useGetWorkspaceTasks<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -696,6 +723,7 @@ export function useGetWorkspaceTasks<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -719,6 +747,7 @@ export function useGetWorkspaceTasks<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -733,7 +762,11 @@ export function useGetWorkspaceTasks<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetWorkspaceTasksQueryOptions(workspaceId, options);
+  const queryOptions = getGetWorkspaceTasksQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -752,6 +785,7 @@ export const prefetchGetWorkspaceTasksQuery = async <
 >(
   queryClient: QueryClient,
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -763,7 +797,11 @@ export const prefetchGetWorkspaceTasksQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetWorkspaceTasksQueryOptions(workspaceId, options);
+  const queryOptions = getGetWorkspaceTasksQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   await queryClient.prefetchQuery(queryOptions);
 
@@ -775,6 +813,7 @@ export const getGetWorkspaceTasksSuspenseQueryOptions = <
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -789,12 +828,12 @@ export const getGetWorkspaceTasksSuspenseQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetWorkspaceTasksQueryKey(workspaceId);
+    queryOptions?.queryKey ?? getGetWorkspaceTasksQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWorkspaceTasks>>
   > = ({ signal }) =>
-    getWorkspaceTasks(workspaceId, { signal, ...requestOptions });
+    getWorkspaceTasks(workspaceId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
     Awaited<ReturnType<typeof getWorkspaceTasks>>,
@@ -813,6 +852,7 @@ export function useGetWorkspaceTasksSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params: undefined | GetWorkspaceTasksParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
@@ -832,6 +872,7 @@ export function useGetWorkspaceTasksSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -851,6 +892,7 @@ export function useGetWorkspaceTasksSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -874,6 +916,7 @@ export function useGetWorkspaceTasksSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceTasksParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -890,6 +933,7 @@ export function useGetWorkspaceTasksSuspense<
 } {
   const queryOptions = getGetWorkspaceTasksSuspenseQueryOptions(
     workspaceId,
+    params,
     options
   );
 

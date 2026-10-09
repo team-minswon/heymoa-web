@@ -376,6 +376,10 @@ const KNOWN_ONE_SIDED = new Set([
   // 가 `limit` 을 보내 본다.
   "NoteListResponse.data.nextNoteId",
   "NoteListResponse.data.nextSortedAt",
+  // 워크스페이스 할 일 목록도 같다 (APP-1043). 커서는 `limit` 을 보낸 요청에서 `hasMore` 가 참일 때만 서고, 이 표본은 인자 없이
+  // 훑는다. 쪽 끊기는 `rest-handlers.test.ts` 와 `all-tasks.test.tsx` 가 본다.
+  "WorkspaceTaskListResponse.data.nextDue",
+  "WorkspaceTaskListResponse.data.nextTaskId",
   // 대화 목록도 같다. 목 대화가 50개를 넘지 않는 한 커서는 `null` 이다.
   "AgentChatsResponse.data.nextUpdatedAt",
   "AgentChatsResponse.data.nextChatId",

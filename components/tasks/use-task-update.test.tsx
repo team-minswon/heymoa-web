@@ -115,10 +115,14 @@ describe("useTaskUpdate — 낙관적 적용", () => {
         void (await result.current.save(task(), { due: "2026-09-30" }))
     );
 
-    expect(rowsOf(client, ["/workspaces/w1/tasks"])[0]).toMatchObject({
-      due: "2026-09-30",
-      revision: 4,
-    });
+    // 워크스페이스 목록은 기한 순이라 기한이 늦어진 줄은 정렬 자리(t2 뒤)로 옮겨 선다.
+    expect(rowsOf(client, ["/workspaces/w1/tasks"]).map((row) => row.taskId)).toEqual([
+      "t2",
+      "t1",
+    ]);
+    expect(
+      rowsOf(client, ["/workspaces/w1/tasks"]).find((row) => row.taskId === "t1")
+    ).toMatchObject({ due: "2026-09-30", revision: 4 });
     expect(rowsOf(client, ["/projects/p1/tasks"])[0]).toMatchObject({
       revision: 4,
     });
@@ -340,5 +344,160 @@ describe("useTaskUpdate — 낙관적 적용", () => {
       taskStatus: "COMPLETED",
       revision: 4,
     });
+  });
+});
+
+/**
+ * 워크스페이스 목록은 상태 탭 × 거르기마다 따로 캐시이고 서버가 줄을 걸러 준다 (APP-1043). 저장된 줄은 항목마다 다르게 서거나
+ * 떠나고, 개수는 줄이 읽은 쪽에 있는지와 무관하게 옮겨 간다.
+ */
+describe("useTaskUpdate — 거른 목록과 개수", () => {
+  beforeEach(() => {
+    mutate.impl = async () => undefined;
+    mutate.calls = [];
+  });
+
+  const counts = { open: 5, completed: 2, cancelled: 1 };
+  const keyOf = (scope: Record<string, unknown>) => [
+    "/workspaces/w1/tasks",
+    { limit: 30, pages: 1, ...scope },
+  ];
+  const paged = (tasks: TaskEntry[], over: Record<string, unknown> = {}) => ({
+    status: 200,
+    data: {
+      success: true,
+      data: { tasks, counts, totalCount: 0, hasMore: false, ...over },
+    },
+  });
+  const dataOf = (client: QueryClient, key: unknown[]) =>
+    (
+      client.getQueryData(key) as {
+        data: { data: { tasks: TaskEntry[]; counts: typeof counts; totalCount: number } };
+      }
+    ).data.data;
+
+  function setupPaged() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const mine = task({ assignee: { type: "USER", id: "me", name: "나" } });
+    // 진행 중 탭(내 할 일 아님·내 할 일), 완료 탭, 다른 프로젝트 필터.
+    client.setQueryData(keyOf({ status: "OPEN" }), paged([mine, task({ taskId: "t2" })], { totalCount: 5 }));
+    client.setQueryData(keyOf({ status: "OPEN", assigneeUserId: "me" }), paged([mine], { totalCount: 5 }));
+    client.setQueryData(keyOf({ status: "COMPLETED" }), paged([], { totalCount: 2 }));
+    client.setQueryData(keyOf({ status: "OPEN", projectId: "p9" }), paged([], { totalCount: 5 }));
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    return { client, mine, ...renderHook(() => useTaskUpdate("w1"), { wrapper }) };
+  }
+
+  it("끝내면 진행 중 탭에서 빠지고 개수가 옮겨 가며, 읽지 않은 다른 탭의 개수도 같이 옮겨 간다", async () => {
+    const { client, mine, result } = setupPaged();
+    mutate.impl = async () => ({
+      status: 200,
+      data: { success: true, data: { ...mine, taskStatus: "COMPLETED", revision: 4 } },
+    });
+
+    await act(async () => void (await result.current.save(mine, { taskStatus: "COMPLETED" })));
+
+    const open = dataOf(client, keyOf({ status: "OPEN" }));
+    expect(open.tasks.map((row) => row.taskId)).toEqual(["t2"]);
+    expect(open.counts).toEqual({ open: 4, completed: 3, cancelled: 1 });
+    expect(open.totalCount).toBe(4);
+    // 완료 탭은 줄이 읽은 범위 안이라 정렬 자리에 서고 그 탭의 전체 수는 완료 개수다.
+    const completed = dataOf(client, keyOf({ status: "COMPLETED" }));
+    expect(completed.tasks.map((row) => row.taskId)).toEqual(["t1"]);
+    expect(completed.totalCount).toBe(3);
+    // 내 할 일 탭: 내 줄이라 같이 옮겨 간다. 다른 프로젝트 필터: 그 프로젝트 줄이 아니라 개수가 그대로다.
+    expect(dataOf(client, keyOf({ status: "OPEN", assigneeUserId: "me" })).counts).toEqual({
+      open: 4,
+      completed: 3,
+      cancelled: 1,
+    });
+    expect(dataOf(client, keyOf({ status: "OPEN", projectId: "p9" })).counts).toEqual(counts);
+  });
+
+  it("담당을 다른 사람으로 바꾸면 내 할 일 탭에서 빠지고, 응답이 오기 전에는 건드리지 않는다", async () => {
+    const { client, mine, result } = setupPaged();
+    let finish!: (value: unknown) => void;
+    mutate.impl = () => new Promise((resolve) => (finish = resolve));
+
+    let saved!: Promise<boolean>;
+    act(() => {
+      saved = result.current.save(mine, { assignee: { type: "USER", id: "you", name: "너" } });
+    });
+    // 낙관 단계는 줄 필드만 제자리에서 고친다. 목록 소속과 개수는 그대로다.
+    await waitFor(() =>
+      expect(dataOf(client, keyOf({ status: "OPEN", assigneeUserId: "me" })).tasks[0].assignee).toMatchObject({
+        id: "you",
+      })
+    );
+    expect(dataOf(client, keyOf({ status: "OPEN", assigneeUserId: "me" })).counts).toEqual(counts);
+
+    finish({
+      status: 200,
+      data: {
+        success: true,
+        data: { ...mine, assignee: { type: "USER", id: "you", name: "너" }, revision: 4 },
+      },
+    });
+    await act(async () => void (await saved));
+
+    const mineTab = dataOf(client, keyOf({ status: "OPEN", assigneeUserId: "me" }));
+    expect(mineTab.tasks).toEqual([]);
+    expect(mineTab.counts.open).toBe(4);
+    expect(dataOf(client, keyOf({ status: "OPEN" })).counts.open).toBe(5);
+  });
+
+  it("쪽이 남았고 정렬 자리가 읽은 범위 뒤인 줄은 끼우지 않고 개수만 옮긴다", async () => {
+    const { client, mine, result } = setupPaged();
+    client.setQueryData(
+      keyOf({ status: "COMPLETED" }),
+      paged([task({ taskId: "t7", taskStatus: "COMPLETED", due: "2026-09-01" })], {
+        hasMore: true,
+        totalCount: 40,
+        counts: { open: 5, completed: 40, cancelled: 1 },
+      })
+    );
+    mutate.impl = async () => ({
+      status: 200,
+      data: { success: true, data: { ...mine, taskStatus: "COMPLETED", revision: 4 } },
+    });
+
+    await act(async () => void (await result.current.save(mine, { taskStatus: "COMPLETED" })));
+
+    const completed = dataOf(client, keyOf({ status: "COMPLETED" }));
+    expect(completed.tasks.map((row) => row.taskId)).toEqual(["t7"]);
+    expect(completed.totalCount).toBe(41);
+  });
+
+  /** 재조회가 저장 반영 뒤의 서버 값을 먼저 가져왔다면 같은 변화를 또 세지 않는다. */
+  it("이미 그 판의 줄을 든 항목은 개수를 다시 옮기지 않는다", async () => {
+    const { client, mine, result } = setupPaged();
+    const done = { ...mine, taskStatus: "COMPLETED" as const, revision: 4 };
+    client.setQueryData(keyOf({ status: "COMPLETED" }), paged([done], { totalCount: 3, counts: { open: 4, completed: 3, cancelled: 1 } }));
+    mutate.impl = async () => ({ status: 200, data: { success: true, data: done } });
+
+    await act(async () => void (await result.current.save(mine, { taskStatus: "COMPLETED" })));
+
+    const completed = dataOf(client, keyOf({ status: "COMPLETED" }));
+    expect(completed.counts).toEqual({ open: 4, completed: 3, cancelled: 1 });
+    expect(completed.totalCount).toBe(3);
+  });
+
+  /** 읽은 범위의 마지막 줄의 기한이 뒤로 밀리면(여기서는 기한 없음) 아직 읽지 않은 줄 너머일 수 있어 목록에서 뺀다. */
+  it("읽은 범위의 마지막 줄을 뒤로 밀면 빼고, 내용만 고치면 그 자리에 남긴다", async () => {
+    const { client, result } = setupPaged();
+    const t1 = task({ taskId: "t1", due: "2026-09-10" });
+    const t2 = task({ taskId: "t2", due: "2026-09-11" });
+    client.setQueryData(keyOf({ status: "OPEN" }), paged([t1, t2], { hasMore: true, totalCount: 5 }));
+
+    mutate.impl = async () => ({ status: 200, data: { success: true, data: { ...t2, due: null, revision: 4 } } });
+    await act(async () => void (await result.current.save(t2, { due: null })));
+    expect(dataOf(client, keyOf({ status: "OPEN" })).tasks.map((row) => row.taskId)).toEqual(["t1"]);
+
+    client.setQueryData(keyOf({ status: "OPEN" }), paged([t1, t2], { hasMore: true, totalCount: 5 }));
+    mutate.impl = async () => ({ status: 200, data: { success: true, data: { ...t2, content: "고침", revision: 4 } } });
+    await act(async () => void (await result.current.save(t2, { content: "고침" })));
+    expect(dataOf(client, keyOf({ status: "OPEN" })).tasks.map((row) => row.taskId)).toEqual(["t1", "t2"]);
   });
 });
