@@ -17,6 +17,7 @@ import {
   SESSION_EXPIRED_PARAM,
   type AuthStateChangedDetail,
 } from "@/lib/auth/events";
+import { resetAnalytics } from "@/lib/analytics/track";
 import { getMe, logout as requestLogout } from "@/lib/auth/api";
 import { isSessionExpired } from "@/lib/auth/session-gate";
 import type { AuthUser } from "@/lib/auth/types";
@@ -85,6 +86,7 @@ export function AuthProvider({
   const leaveAuthenticatedApp = useCallback(
     (destination: string) => {
       void queryClient.cancelQueries();
+      resetAnalytics();
       window.location.replace(destination);
     },
     [queryClient]

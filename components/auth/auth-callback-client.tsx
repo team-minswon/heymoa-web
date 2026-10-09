@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Home, Loader2, LogIn } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { track } from "@/lib/analytics/track";
 import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { getMe } from "@/lib/auth/api";
 import { normalizeReturnTo } from "@/lib/auth/paths";
@@ -60,6 +61,7 @@ export function CallbackProcessor({
 
         if (!ignore) {
           setUser(user);
+          track("login_completed");
 
           const destination = normalizeReturnTo(returnTo);
           if (destination !== "/") {

@@ -65,6 +65,7 @@ import {
   RECORDING_BEAT_MS,
   recordingClaimOf,
 } from "@/lib/transcription/recorder-lease";
+import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 
 /**
@@ -132,6 +133,10 @@ export function NotePanel({
 }) {
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
+  // 깔때기의 「요약을 봤다」. 탭을 누른 것만이 아니라 종료 직후 넘어온 것·링크로 연 것도 센다.
+  useEffect(() => {
+    if (tab === "summary") track("summary_viewed", { workspace_id: workspaceId });
+  }, [tab, noteId, workspaceId]);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data

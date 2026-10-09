@@ -155,8 +155,9 @@ export default async function RootLayout({
             </FooterGate>
           </div>
           <Toaster />
+          {/* Providers 안이어야 PostHog가 로그인한 사람(`useAuth`)을 안다. */}
+          <SiteAnalytics />
         </Providers>
-        <SiteAnalytics />
       </body>
     </html>
   );

@@ -80,6 +80,7 @@ import {
   useGetWorkspaces,
 } from "@/lib/api/generated/workspaces/workspaces";
 import { sortByLastVisited } from "@/lib/workspaces/last-workspace";
+import { track } from "@/lib/analytics/track";
 
 /** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
 type ProjectDialogState = { project: ProjectResponseData } | null;
@@ -453,7 +454,10 @@ export function WorkspaceSidebar({
             {/* 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱에서는 시스템 브라우저로 열린다
                 (`apps/desktop/src/security.ts`의 `setWindowOpenHandler`). */}
             <DropdownMenuItem
-              onClick={() => window.open("/help", "_blank", "noopener,noreferrer")}
+              onClick={() => {
+                track("help_opened", { from: "sidebar" });
+                window.open("/help", "_blank", "noopener,noreferrer");
+              }}
               className="gap-2 rounded-control py-2 text-sm"
             >
               <CircleHelp className="size-4 text-[var(--el-muted)]" />

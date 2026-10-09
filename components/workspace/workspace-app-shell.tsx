@@ -10,6 +10,7 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "@/lib/ui/toast";
+import { track } from "@/lib/analytics/track";
 import {
   Sidebar,
   SidebarInset,
@@ -98,6 +99,7 @@ export function WorkspaceAppShell({
     setSettingsOpen(true);
     /* eslint-enable react-hooks/set-state-in-effect */
     if (status === "connected") {
+      track("integration_connected", { provider });
       toast.success(
         `${INTEGRATION_LABEL[provider] ?? provider} 연동을 연결했습니다.`
       );

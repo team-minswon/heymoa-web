@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
+import { TrackedLink } from "@/components/analytics/tracked-link";
 import { LandingCta } from "@/components/heymoa/landing-cta";
 import {
   BODY,
@@ -69,7 +70,8 @@ export default function DownloadPage() {
             앱에서도 같은 웹 서비스를 사용합니다.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a
+            <TrackedLink
+              event="desktop_download_clicked"
               href={DESKTOP_RELEASES_URL}
               target="_blank"
               rel="noopener noreferrer"
@@ -81,7 +83,7 @@ export default function DownloadPage() {
               설치 파일과 새 버전 보기
               <ArrowUpRight aria-hidden className="size-4" />
               <span className="sr-only">(새 창)</span>
-            </a>
+            </TrackedLink>
             {/* 설치 없이 지금 쓰려는 사람의 길. 로그인 상태면 대시보드로 간다(`LandingCta`). */}
             <LandingCta
               label="웹에서 바로 시작"
