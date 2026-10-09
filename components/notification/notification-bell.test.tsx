@@ -13,6 +13,8 @@ import { NotificationBell } from "@/components/notification/notification-bell";
 const state = vi.hoisted(() => ({
   notifications: [] as unknown[],
   unreadCount: 0,
+  hasMore: false,
+  pagesSeen: [] as number[],
   isLoading: false,
   isError: false,
   markMock: vi.fn(),
@@ -27,24 +29,32 @@ vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
 vi.mock("@/lib/api/generated/notifications/notifications", () => ({
   getGetNotificationsQueryKey: () => ["notifications"],
-  useGetNotifications: () => ({
-    isLoading: state.isLoading,
-    isError: state.isError,
-    refetch: refetchMock,
-    data: state.isError
-      ? undefined
-      : {
-          status: 200,
-          data: {
-            success: true,
+  useMarkNotificationRead: () => ({ mutate: state.markMock, isPending: false }),
+}));
+vi.mock("@/lib/notification/use-notification-list-pages", () => ({
+  useNotificationListPages: ({ pages }: { pages: number }) => {
+    state.pagesSeen.push(pages);
+    return {
+      isLoading: state.isLoading,
+      isError: state.isError,
+      isFetching: false,
+      isPlaceholderData: false,
+      refetch: refetchMock,
+      data: state.isError
+        ? undefined
+        : {
+            status: 200,
             data: {
-              unreadCount: state.unreadCount,
-              notifications: state.notifications,
+              success: true,
+              data: {
+                unreadCount: state.unreadCount,
+                hasMore: state.hasMore,
+                notifications: state.notifications,
+              },
             },
           },
-        },
-  }),
-  useMarkNotificationRead: () => ({ mutate: state.markMock, isPending: false }),
+    };
+  },
 }));
 vi.mock(
   "@/lib/api/generated/workspace-invitations/workspace-invitations",
@@ -105,6 +115,8 @@ describe("NotificationBell", () => {
   beforeEach(() => {
     state.notifications = [];
     state.unreadCount = 0;
+    state.hasMore = false;
+    state.pagesSeen = [];
     state.isLoading = false;
     state.isError = false;
     state.acceptError = null;
@@ -115,6 +127,20 @@ describe("NotificationBell", () => {
     refetchMock.mockReset();
   });
   afterEach(cleanup);
+
+  it("더 있으면 더 보기로 쪽 수를 올리고, 없으면 버튼을 숨긴다", async () => {
+    state.notifications = [invitation("PENDING")];
+    renderBell();
+    await openBell();
+    expect(screen.queryByRole("button", { name: "알림 더 보기" })).toBeNull();
+    cleanup();
+
+    state.hasMore = true;
+    renderBell();
+    await openBell();
+    fireEvent.click(screen.getByRole("button", { name: "알림 더 보기" }));
+    expect(state.pagesSeen.at(-1)).toBe(2);
+  });
 
   it("unreadCount 배지를 보이고, 0이면 숨긴다", () => {
     state.unreadCount = 2;
@@ -154,9 +180,7 @@ describe("NotificationBell", () => {
   });
 
   it("만료 지난 PENDING 초대는 버튼 대신 만료됨 라벨을 보인다", async () => {
-    state.notifications = [
-      invitation("PENDING", null, "2026-07-01T00:00:00Z"),
-    ];
+    state.notifications = [invitation("PENDING", null, "2026-07-01T00:00:00Z")];
     renderBell();
     await openBell();
     expect(screen.getByText("만료됨")).toBeTruthy();

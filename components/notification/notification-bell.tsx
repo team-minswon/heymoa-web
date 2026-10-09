@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Bell } from "lucide-react";
+import { AlertTriangle, Bell, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
   getGetNotificationsQueryKey,
-  useGetNotifications,
   useMarkNotificationRead,
 } from "@/lib/api/generated/notifications/notifications";
 import {
@@ -25,6 +24,7 @@ import {
 import { getGetWorkspacesQueryKey } from "@/lib/api/generated/workspaces/workspaces";
 import type { NotificationListResponseDataNotificationsItem } from "@/lib/api/generated/models";
 import { formatAppDate } from "@/lib/format/date";
+import { useNotificationListPages } from "@/lib/notification/use-notification-list-pages";
 import { toast } from "@/lib/ui/toast";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -41,7 +41,8 @@ const STATUS_LABEL: Record<string, string> = {
  */
 export function NotificationBell() {
   const queryClient = useQueryClient();
-  const notificationsQuery = useGetNotifications();
+  const [pages, setPages] = useState(1);
+  const notificationsQuery = useNotificationListPages({ pages });
   const markRead = useMarkNotificationRead();
   // 409는 인라인 Alert로 그린다 — 전역 토스트를 끄고 그 밖 실패만 아래서 직접 토스트한다.
   const acceptInvitation = useAcceptWorkspaceInvitation({
@@ -59,6 +60,8 @@ export function NotificationBell() {
       ? response.data.data
       : null;
   const notifications = data?.notifications ?? [];
+  const isLoadingMore =
+    notificationsQuery.isFetching && notificationsQuery.isPlaceholderData;
   const unreadCount = data?.unreadCount ?? 0;
 
   const invalidateNotifications = () =>
@@ -130,7 +133,11 @@ export function NotificationBell() {
   return (
     <DropdownMenu
       onOpenChange={(open) => {
-        if (!open) return;
+        // 닫으면 첫 쪽으로 돌린다 — 열 때마다 읽는 쪽 수만큼 다시 부르지 않는다.
+        if (!open) {
+          setPages(1);
+          return;
+        }
         setStaleInvitation(false);
         // 폴링은 없다 — 워크스페이스 레이아웃이 계속 마운트돼 있으니 열 때마다 최신 초대를 가져온다.
         void notificationsQuery.refetch();
@@ -223,6 +230,25 @@ export function NotificationBell() {
               />
             ))
           )}
+          {data?.hasMore ? (
+            <div className="flex justify-center border-t border-[var(--el-hairline)] p-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-[30px] rounded-full"
+                disabled={isLoadingMore}
+                onClick={() => setPages((current) => current + 1)}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="animate-spin" /> 불러오는 중
+                  </>
+                ) : (
+                  "알림 더 보기"
+                )}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
