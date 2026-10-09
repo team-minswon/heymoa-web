@@ -56,6 +56,12 @@ import {
   mergeLiveSegments,
 } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
+import {
+  distanceFromBottom,
+  FOLLOW_STICK_PX,
+  nextFollowing,
+  watchUpwardInput,
+} from "@/lib/notes/follow-scroll";
 
 const MotionChevronDown = motion.create(ChevronDown);
 
@@ -126,9 +132,6 @@ function useNow(intervalMs: number) {
 }
 
 const NONE: ReadonlySet<string> = new Set();
-
-/** 끝에서 이만큼 안이면 끝을 읽고 있는 것으로 본다. 스크립트 탭과 같은 값이다. */
-const FOLLOW_THRESHOLD_PX = 180;
 
 const itemId = (proposalId: string) => `timeline-item-${proposalId}`;
 
@@ -314,13 +317,11 @@ export function NoteTimeline({
     },
     [noteId]
   );
+  /** 방향 없이 거리만으로 잰다. 기록이 끝난 목록의 버튼 위치용이다. */
   const syncFollowing = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    updateFollowing(
-      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <=
-        FOLLOW_THRESHOLD_PX
-    );
+    updateFollowing(distanceFromBottom(viewport) <= FOLLOW_STICK_PX);
   }, [updateFollowing]);
   const scrollToLatest = () => {
     const viewport = viewportRef.current;
@@ -340,10 +341,27 @@ export function NoteTimeline({
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    let previousTop: number | null = null;
     const handleScroll = () => {
-      syncFollowing();
+      const top = viewport.scrollTop;
+      const previous = previousTop;
+      previousTop = top;
+      updateFollowing(
+        nextFollowing({
+          following: followingRef.current,
+          top,
+          previousTop: previous,
+          distance: distanceFromBottom(viewport),
+        })
+      );
       if (!followingRef.current) readAwayNoteRef.current = noteId;
     };
+    // scroll 은 비동기라 다음 항목의 rAF 스크롤이 먼저 바닥으로 되돌린다. 손이 닿는 순간 끈다.
+    const stopWatching = watchUpwardInput(viewport, () => {
+      if (!followingRef.current) return;
+      updateFollowing(false);
+      readAwayNoteRef.current = noteId;
+    });
     viewport.addEventListener("scroll", handleScroll, { passive: true });
     if (!recording) syncFollowing();
     // 완료된 목록의 조회·접기·폰트 변화도 버튼 위치를 다시 잰다. 라이브 추종 의도는
@@ -352,16 +370,17 @@ export function NoteTimeline({
       typeof ResizeObserver === "undefined"
         ? null
         : new ResizeObserver(() => {
-            if (!recording || !followingRef.current) syncFollowing();
+            if (!recording) syncFollowing();
           });
     observer?.observe(viewport);
     if (viewport.firstElementChild)
       observer?.observe(viewport.firstElementChild);
     return () => {
+      stopWatching();
       viewport.removeEventListener("scroll", handleScroll);
       observer?.disconnect();
     };
-  }, [noteId, recording, syncFollowing]);
+  }, [noteId, recording, syncFollowing, updateFollowing]);
   // 탭 재진입마다 최초 유효 목록만 최신으로 간다. 조회 중 잠정 전사의 기존
   // 추종은 유지하고, 목록이 선 뒤 사용자가 위를 읽으면 그 위치를 지킨다.
   useEffect(() => {

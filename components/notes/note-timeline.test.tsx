@@ -467,6 +467,58 @@ it("조회와 reducer 적용을 기다린 첫 목록만 최신으로 가고 뒤�
   }
 });
 
+it("기록 중 바닥에서 조금만 올려도 새 내용이 위치를 빼앗지 않고, 바닥 근처로 내려오면 다시 따라갑니다", () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+  const flush = () => {
+    const callbacks = [...frames.values()];
+    frames.clear();
+    callbacks.forEach((callback) => callback(0));
+  };
+  try {
+    withLedger();
+    realtime.context.loading = false;
+    live.partial = { confirmedText: "", pendingText: "처음 글자" };
+    const view = () => (
+      <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />
+    );
+    const { container, rerender } = render(view());
+    const viewport = container.querySelector<HTMLElement>(
+      "[data-slot=scroll-area-viewport]"
+    )!;
+    Object.defineProperties(viewport, {
+      scrollTop: { configurable: true, writable: true, value: 0 },
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 500 },
+    });
+    flush();
+    expect(viewport.scrollTop).toBe(1500);
+    fireEvent.scroll(viewport);
+    // 바닥에서 100px 올렸다. 예전 180px 폭 안이라 도로 끌려 내려갔다.
+    fireEvent.wheel(viewport, { deltaY: -100 });
+    viewport.scrollTop = 1400;
+    fireEvent.scroll(viewport);
+    live.partial = { confirmedText: "", pendingText: "올린 동안 바뀐 글자" };
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(1400);
+    // 스스로 바닥 24px 안까지 내려오면 다시 따라간다.
+    viewport.scrollTop = 1490;
+    fireEvent.scroll(viewport);
+    live.partial = { confirmedText: "", pendingText: "다시 따라가는 글자" };
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(1500);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 it.each([true, false])("빈 snapshot 또는 조회 중(%s) 잠정 전사를 위에서 읽으면 첫 항목도 위치를 지킵니다", (loading) => {
   const frames = new Map<number, FrameRequestCallback>();
   let frameId = 0;

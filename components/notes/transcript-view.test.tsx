@@ -26,6 +26,13 @@ const NEW_POLLED_SEGMENT = {
   startedAtMs: 1_000,
   endedAtMs: 1_900,
 };
+const THIRD_SEGMENT = {
+  segmentId: "01K0000000102",
+  sequence: 3,
+  text: "세 번째로 도착한 발화입니다.",
+  startedAtMs: 2_000,
+  endedAtMs: 2_900,
+};
 /**
  * 살아 있는 partial 하나를 두 토막으로 만든다. **마지막 어절만 미확정으로 둔다** —
  * 화면이 한 줄 안에서 농도를 가르는 것을 픽스처가 그대로 재현해야, 이어 붙인 결과만
@@ -406,6 +413,71 @@ describe("TranscriptView", () => {
     flushAnimationFrames();
 
     expect(scrollTo).toHaveBeenCalledWith({ top: 1_000, behavior: "auto" });
+  });
+
+  it("바닥에서 조금만 휠로 올려도 새 발화가 와도 따라가지 않고, 바닥 근처로 내려오면 다시 따라간다", () => {
+    const flushAnimationFrames = deferAnimationFrames();
+    useRecording.mockReturnValue(idleState());
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT])
+    );
+
+    const { container, rerenderTranscript } = renderTranscript("active");
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )!;
+    setScrollMetrics(viewport, { scrollTop: 600 });
+    flushAnimationFrames();
+    fireEvent.scroll(viewport);
+
+    // 바닥에서 100px 올렸다. 예전 180px 폭 안이라 따라가기가 켜진 채였다.
+    fireEvent.wheel(viewport, { deltaY: -100 });
+    setScrollMetrics(viewport, { scrollTop: 500 });
+    fireEvent.scroll(viewport);
+    scrollTo.mockClear();
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT, NEW_POLLED_SEGMENT])
+    );
+    rerenderTranscript();
+    flushAnimationFrames();
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    // 스스로 바닥 24px 안까지 내려오면 다시 따라간다.
+    setScrollMetrics(viewport, { scrollTop: 580 });
+    fireEvent.scroll(viewport);
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT, NEW_POLLED_SEGMENT, THIRD_SEGMENT])
+    );
+    rerenderTranscript();
+    flushAnimationFrames();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1_000, behavior: "auto" });
+  });
+
+  it("새 발화로 예약된 자동 스크롤이 뜨기 전에 위로 올리면 그 예약은 위치를 빼앗지 않는다", () => {
+    const flushAnimationFrames = deferAnimationFrames();
+    useRecording.mockReturnValue(idleState());
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT])
+    );
+
+    const { container, rerenderTranscript } = renderTranscript("active");
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )!;
+    setScrollMetrics(viewport, { scrollTop: 600 });
+    flushAnimationFrames();
+    fireEvent.scroll(viewport);
+    scrollTo.mockClear();
+
+    useGetNoteTranscript.mockReturnValueOnce(
+      transcriptResult([POLLED_SEGMENT, NEW_POLLED_SEGMENT])
+    );
+    rerenderTranscript();
+    // 프레임이 돌기 전에 손이 먼저 닿았다.
+    fireEvent.wheel(viewport, { deltaY: -40 });
+    flushAnimationFrames();
+
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
   it("does not follow persisted segments added by polling after the active viewer scrolls up", () => {

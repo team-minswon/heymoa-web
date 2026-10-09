@@ -33,16 +33,16 @@ import {
   type TranscriptFocus,
 } from "@/components/notes/use-transcript-focus";
 import { prefersReducedMotion } from "@/lib/utils";
+import {
+  distanceFromBottom,
+  nextFollowing,
+  watchUpwardInput,
+} from "@/lib/notes/follow-scroll";
 
-const FOLLOW_THRESHOLD_PX = 180;
 const EMPTY_PARTICIPANTS: SpeakerFace[] = [];
 
 /** 발화 길이는 고르지 않다 — 전부 같은 폭이면 표처럼 보여서 대화로 안 읽힌다. */
 const TRANSCRIPT_SKELETON_WIDTHS = ["58%", "86%", "41%"];
-
-function getDistanceFromBottom(viewport: HTMLElement) {
-  return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-}
 
 export function TranscriptView({
   noteId,
@@ -177,15 +177,36 @@ export function TranscriptView({
     const viewport = viewportRef.current;
     if (!viewport) return;
 
+    let previousTop: number | null = null;
     const handleScroll = () => {
+      const top = viewport.scrollTop;
+      const previous = previousTop;
+      previousTop = top;
       if (programmaticScrollRef.current) return;
-      updateFollowing(getDistanceFromBottom(viewport) <= FOLLOW_THRESHOLD_PX);
+      updateFollowing(
+        nextFollowing({
+          following: followingRef.current,
+          top,
+          previousTop: previous,
+          distance: distanceFromBottom(viewport),
+        })
+      );
     };
+    // scroll 은 비동기라 다음 발화의 rAF 스크롤이 먼저 바닥으로 되돌린다. 손이 닿는 순간 끈다.
+    const stopWatching = watchUpwardInput(viewport, () => {
+      if (!followingRef.current) return;
+      // 부드럽게 내려가던 중이어도 손이 이긴다.
+      programmaticScrollRef.current = false;
+      updateFollowing(false);
+    });
 
     viewport.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
-    return () => viewport.removeEventListener("scroll", handleScroll);
+    return () => {
+      stopWatching();
+      viewport.removeEventListener("scroll", handleScroll);
+    };
   }, [updateFollowing]);
 
   useEffect(() => {
@@ -197,7 +218,10 @@ export function TranscriptView({
   useEffect(() => {
     if (transcriptQuery.isPending || !viewerLive || !followingRef.current)
       return;
-    const frame = window.requestAnimationFrame(() => scrollToLatest("auto"));
+    const frame = window.requestAnimationFrame(() => {
+      // 예약한 뒤에 사용자가 위로 올렸으면 그 손이 이긴다.
+      if (followingRef.current) scrollToLatest("auto");
+    });
     return () => window.cancelAnimationFrame(frame);
   }, [liveContentKey, scrollToLatest, transcriptQuery.isPending, viewerLive]);
 
