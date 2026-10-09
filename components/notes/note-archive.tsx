@@ -284,6 +284,8 @@ export const NoteArchive = memo(function NoteArchive({
   );
   const guestsQuery = useGetWorkspaceGuests(
     workspaceId ?? "",
+    // `limit` 을 안 보낸다 — 후보를 전건에서 세우므로 쪽으로 자르면 후보가 빠진다(APP-1032).
+    undefined,
     candidateQueryOptions
   );
   const membersData = membersQuery.data;

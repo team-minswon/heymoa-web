@@ -119,7 +119,12 @@ export function NoteParticipantsField({
   // **소속이 확인되기 전에는 안 읽는다.** 확인 전 값으로 읽으면 남의 워크스페이스 후보가 선다.
   const workspaceQueryOptions = { query: { enabled: Boolean(workspaceId) } };
   const membersResponse = useGetWorkspaceMembers(workspaceId ?? "", workspaceQueryOptions);
-  const guestsResponse = useGetWorkspaceGuests(workspaceId ?? "", workspaceQueryOptions);
+  const guestsResponse = useGetWorkspaceGuests(
+    workspaceId ?? "",
+    // `limit` 을 안 보낸다 — 후보를 전건에서 세우므로 쪽으로 자르면 후보가 빠진다(APP-1032).
+    undefined,
+    workspaceQueryOptions
+  );
   // 실패 토스트는 전역(`MutationCache.onError`)이 서버 문구 그대로 띄운다. 여기서 또 띄우면
   // 두 개가 겹친다 — opt-out은 화면이 인라인으로 그리거나 코드별 문구가 갈릴 때만 쓴다.
   // 실패는 `save` 가 알린다 — 409 는 다시 보내 볼 것이라 전역 토스트가 먼저 뜨면 안 된다.

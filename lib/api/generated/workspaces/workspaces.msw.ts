@@ -79,6 +79,10 @@ export const getGetWorkspaceGuestsResponseMock =
           createdAt: "2026-07-14T01:02:03Z",
         },
       ],
+      totalCount: 57,
+      hasMore: true,
+      nextDisplayName: "박서준",
+      nextGuestId: "0HZX2K7M9Q4AR",
     },
     error: null,
   });

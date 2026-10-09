@@ -22,6 +22,10 @@ const state = vi.hoisted(() => ({
   }>,
   isLoading: false,
   isError: false,
+  hasMore: false,
+  loadingMore: false,
+  totalCount: null as number | null,
+  pagesAsked: [] as number[],
   /** **캐시를 든 채 리패치만 실패한 상태.** `data` 는 살아 있고 `isError` 만 참이다. */
   staleFailed: false,
   isFetching: false,
@@ -30,53 +34,70 @@ const state = vi.hoisted(() => ({
   remove: vi.fn(),
 }));
 
+vi.mock("@/lib/workspace/use-guest-list-pages", () => ({
+  /** 쪽 이어 붙이기는 훅 자신의 시험 몫이다. 여기서는 훅이 준 응답을 화면이 어떻게 그리는지만 본다. */
+  useGuestListPages: (args: { pages: number }) => {
+    state.pagesAsked.push(args.pages);
+    return {
+      isLoading: state.isLoading,
+      isError: state.isError || state.staleFailed,
+      isFetching: state.isFetching || state.loadingMore,
+      isPlaceholderData: state.loadingMore,
+      refetch: vi.fn(),
+      data: state.isError
+        ? undefined
+        : {
+            status: 200,
+            data: {
+              success: true,
+              data: {
+                guests: state.guests,
+                totalCount: state.totalCount ?? state.guests.length,
+                hasMore: state.hasMore,
+                nextDisplayName: null,
+                nextGuestId: null,
+              },
+            },
+          },
+    };
+  },
+}));
+
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
   getGetWorkspaceGuestsQueryKey: (id: string) => ["guests", id],
-  useGetWorkspaceGuests: () => ({
-    isLoading: state.isLoading,
-    isError: state.isError || state.staleFailed,
-    isFetching: state.isFetching,
-    refetch: vi.fn(),
-    data: state.isError
-      ? undefined
-      : {
-          status: 200,
-          data: { success: true, data: { guests: state.guests } },
-        },
-  }),
   usePreviewWorkspaceGuestLink: () => ({
     mutateAsync: state.preview,
     isPending: false,
   }),
   useLinkWorkspaceGuest: () => ({ mutateAsync: state.link, isPending: false }),
-  useDeleteWorkspaceGuest: () => ({ mutateAsync: state.remove, isPending: false }),
+  useDeleteWorkspaceGuest: () => ({
+    mutateAsync: state.remove,
+    isPending: false,
+  }),
 }));
 
-vi.mock(
-  "@/lib/api/generated/workspace-members/workspace-members",
-  () => ({
-    useGetWorkspaceMembers: () => ({
+vi.mock("@/lib/api/generated/workspace-members/workspace-members", () => ({
+  useGetWorkspaceMembers: () => ({
+    data: {
+      status: 200,
       data: {
-        status: 200,
+        success: true,
         data: {
-          success: true,
-          data: {
-            members: [
-              {
-                userId: "01K0000000001",
-                name: "한지원",
-                email: "jiwon@heymoa.com",
-                image: null,
-                role: "ADMIN",
-                joinedAt: "2026-07-01T00:00:00Z",
-              },
-            ],
-          },
+          members: [
+            {
+              userId: "01K0000000001",
+              name: "한지원",
+              email: "jiwon@heymoa.com",
+              image: null,
+              role: "ADMIN",
+              joinedAt: "2026-07-01T00:00:00Z",
+            },
+          ],
         },
       },
-    }),
-  })
-);
+    },
+  }),
+}));
 
 const GUEST = {
   guestId: "01K0000000301",
@@ -91,7 +112,10 @@ function envelope(data: unknown) {
 
 function renderSection(canManage = true) {
   return render(
-    <WorkspaceGuestsSettings workspaceId="01K0000000000" canManage={canManage} />
+    <WorkspaceGuestsSettings
+      workspaceId="01K0000000000"
+      canManage={canManage}
+    />
   );
 }
 
@@ -100,12 +124,52 @@ describe("WorkspaceGuestsSettings", () => {
     state.guests = [GUEST];
     state.isLoading = false;
     state.isError = false;
+    state.hasMore = false;
+    state.loadingMore = false;
+    state.totalCount = null;
+    state.pagesAsked = [];
     state.preview.mockReset();
     state.link.mockReset();
     state.remove.mockReset();
     state.remove.mockResolvedValue(envelope({ affectedNoteCount: 3 }));
   });
   afterEach(cleanup);
+
+  /** 전체 수는 읽어 온 쪽 수가 아니라 서버가 센 값이다 — 쪽을 다 안 읽었어도 「N명」이 맞아야 한다. */
+  it("읽은 수가 아니라 서버가 센 전체 수를 말한다", () => {
+    state.totalCount = 57;
+    renderSection();
+
+    expect(screen.getByText("57명")).toBeInTheDocument();
+  });
+
+  it("뒤에 더 있으면 버튼으로 다음 쪽을 요청한다", () => {
+    state.hasMore = true;
+    renderSection();
+    expect(state.pagesAsked.at(-1)).toBe(1);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "임시 참여자 더 보기" })
+    );
+
+    expect(state.pagesAsked.at(-1)).toBe(2);
+  });
+
+  it("더 없으면 버튼이 없다", () => {
+    renderSection();
+
+    expect(
+      screen.queryByRole("button", { name: "임시 참여자 더 보기" })
+    ).toBeNull();
+  });
+
+  it("다음 쪽을 읽는 동안 버튼을 잠근다", () => {
+    state.hasMore = true;
+    state.loadingMore = true;
+    renderSection();
+
+    expect(screen.getByRole("button", { name: /불러오는 중/ })).toBeDisabled();
+  });
 
   it("임시 참여자를 쓰이고 있는 회의록 수와 함께 그린다", () => {
     renderSection();
@@ -173,7 +237,9 @@ describe("WorkspaceGuestsSettings", () => {
     try {
       renderSection();
 
-      expect(screen.getByText("아직 임시 참여자가 없습니다.")).toBeInTheDocument();
+      expect(
+        screen.getByText("아직 임시 참여자가 없습니다.")
+      ).toBeInTheDocument();
       expect(screen.queryByRole("alert")).toBeNull();
     } finally {
       state.staleFailed = false;
@@ -293,13 +359,13 @@ describe("WorkspaceGuestsSettings", () => {
     const { rerender } = renderSection();
 
     fireEvent.click(screen.getByRole("button", { name: "삭제" }));
-    expect(screen.getByText(/회의록 3개에서 이 사람이 사라지고/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/회의록 3개에서 이 사람이 사라지고/)
+    ).toBeInTheDocument();
 
     // 그 사이 남이 먼저 지웠다 — 목록에서 사라진다
     state.guests = [];
-    rerender(
-      <WorkspaceGuestsSettings workspaceId="01K0000000000" canManage />
-    );
+    rerender(<WorkspaceGuestsSettings workspaceId="01K0000000000" canManage />);
 
     expect(screen.getByText(/이미 지워졌습니다/)).toBeInTheDocument();
     const confirm = screen.getAllByRole("button", { name: "삭제" }).at(-1)!;

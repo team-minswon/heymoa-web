@@ -11,6 +11,24 @@ import type { WorkspaceGuestListResponseDataGuestsItem } from "./workspaceGuestL
  * 성공 응답 데이터
  */
 export type WorkspaceGuestListResponseData = {
+  /**
+   * 다음 요청의 afterGuestId. hasMore 가 false 면 null
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  nextGuestId: string | null;
   /** 임시 참여자 목록. 이름 오름차순이다. 없으면 빈 배열 */
   guests: WorkspaceGuestListResponseDataGuestsItem[];
+  /** 뒤에 더 있는지. limit 을 보내지 않았으면 항상 false */
+  hasMore: boolean;
+  /**
+   * 쪽·커서와 무관한 이 워크스페이스의 임시 참여자 전체 수
+   * @minimum 0
+   */
+  totalCount: number;
+  /**
+   * 다음 요청의 afterDisplayName. hasMore 가 false 면 null
+   * @nullable
+   */
+  nextDisplayName: string | null;
 };

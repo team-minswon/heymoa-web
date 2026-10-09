@@ -3426,56 +3426,94 @@ paths:
   /v1/workspaces/{workspaceId}/guests:
     get:
       tags:
-      - Workspaces
-      summary: 워크스페이스 임시 참여자 목록 조회
-      description: 워크스페이스가 소유한 계정 없는 참여자 목록을 이름 오름차순으로 조회한다. 참석자 후보와 화자 지정 후보를 세우는 데 쓰이므로 멤버 누구나 부를 수 있다. noteCount는 그 임시 참여자가 참여자로 들어가 있는 회의 수이고, 삭제 전에 무엇을 잃는지 보여주는 값이다. 이름이 같은 임시 참여자가 여럿 있을 수 있다.
-      operationId: getWorkspaceGuests
+      - "Workspaces"
+      summary: "워크스페이스 임시 참여자 목록 조회"
+      description: "워크스페이스가 소유한 계정 없는 참여자 목록을 이름 오름차순으로 조회한다. 참석자 후보와 화자 지정 후보를 세우\
+        는 데 쓰이므로 멤버 누구나 부를 수 있다. noteCount는 그 임시 참여자가 참여자로 들어가 있는 회의 수이고, 삭제 전에 무엇\
+        을 잃는지 보여주는 값이다. 이름이 같은 임시 참여자가 여럿 있을 수 있다."
+      operationId: "getWorkspaceGuests"
       parameters:
-      - name: workspaceId
-        in: path
-        description: 워크스페이스의 13자리 TSID
+      - name: "workspaceId"
+        in: "path"
+        description: "워크스페이스의 13자리 TSID"
         required: true
         schema:
-          type: string
-          description: 워크스페이스의 13자리 TSID
+          type: "string"
+          description: "워크스페이스의 13자리 TSID"
           nullable: false
-          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
-        example: 0HZX2K7M9Q4AD
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        example: "0HZX2K7M9Q4AD"
+      - name: "limit"
+        in: "query"
+        description: "한 쪽 크기. 보내지 않으면 쪽으로 끊지 않고 커서 뒤(커서도 없으면 처음부터)의 전건을 돌려준다"
+        required: false
+        schema:
+          type: "string"
+          description: "한 쪽 크기. 보내지 않으면 쪽으로 끊지 않고 커서 뒤(커서도 없으면 처음부터)의 전건을 돌려준다"
+          nullable: false
+          minimum: 1
+          maximum: 100
+        example: 20
+      - name: "afterDisplayName"
+        in: "query"
+        description: "이어 읽기 커서의 이름. 응답의 nextDisplayName 을 그대로 보낸다. afterGuestId 와\
+          \ 함께 보낸다"
+        required: false
+        schema:
+          type: "string"
+          description: "이어 읽기 커서의 이름. 응답의 nextDisplayName 을 그대로 보낸다. afterGuestId\
+            \ 와 함께 보낸다"
+          nullable: false
+        example: "박서준"
+      - name: "afterGuestId"
+        in: "query"
+        description: "커서의 짝. 같은 이름 안에서 이 id 보다 큰 것부터. 응답의 nextGuestId 를 그대로 보낸다"
+        required: false
+        schema:
+          type: "string"
+          description: "커서의 짝. 같은 이름 안에서 이 id 보다 큰 것부터. 응답의 nextGuestId 를 그대로 보낸다"
+          nullable: false
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+        example: "0HZX2K7M9Q4AR"
       responses:
-        '404':
-          description: 요청한 리소스를 찾을 수 없음
+        "404":
+          description: "요청한 리소스를 찾을 수 없음"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppErrorResponse'
+                $ref: "#/components/schemas/AppErrorResponse"
               examples:
                 WORKSPACE_NOT_FOUND:
                   value:
                     success: false
                     data: null
                     error:
-                      code: WORKSPACE_NOT_FOUND
-                      message: 워크스페이스를 찾을 수 없습니다.
+                      code: "WORKSPACE_NOT_FOUND"
+                      message: "워크스페이스를 찾을 수 없습니다."
                       details: null
-        '200':
-          description: 요청 성공
+        "200":
+          description: "요청 성공"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceGuestListResponse'
+                $ref: "#/components/schemas/WorkspaceGuestListResponse"
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
                       guests:
-                      - guestId: 0HZX2K7M9Q4AR
-                        displayName: 박서준
+                      - guestId: "0HZX2K7M9Q4AR"
+                        displayName: "박서준"
                         noteCount: 3
-                        createdAt: '2026-07-14T01:02:03Z'
+                        createdAt: "2026-07-14T01:02:03Z"
+                      totalCount: 57
+                      hasMore: true
+                      nextDisplayName: "박서준"
+                      nextGuestId: "0HZX2K7M9Q4AR"
                     error: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
       security:
       - accessCookie: []
   /v1/workspaces/{workspaceId}/integrations:
@@ -13423,66 +13461,94 @@ components:
           - null
           description: 성공 시 null인 오류 정보
     WorkspaceGuestListResponse:
-      title: WorkspaceGuestListResponse
+      title: "WorkspaceGuestListResponse"
       required:
-      - data
-      - error
-      - success
-      type: object
+      - "data"
+      - "error"
+      - "success"
+      type: "object"
       properties:
         data:
           required:
-          - guests
-          type: object
+          - "guests"
+          - "hasMore"
+          - "totalCount"
+          - "nextDisplayName"
+          - "nextGuestId"
+          type: "object"
           properties:
+            nextGuestId:
+              type: "string"
+              description: "다음 요청의 afterGuestId. hasMore 가 false 면 null"
+              nullable: true
+              example: "0HZX2K7M9Q4AR"
+              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
             guests:
-              type: array
-              description: 임시 참여자 목록. 이름 오름차순이다. 없으면 빈 배열
+              type: "array"
+              description: "임시 참여자 목록. 이름 오름차순이다. 없으면 빈 배열"
               items:
                 required:
-                - createdAt
-                - displayName
-                - guestId
-                - noteCount
-                type: object
+                - "createdAt"
+                - "displayName"
+                - "guestId"
+                - "noteCount"
+                type: "object"
                 properties:
                   createdAt:
-                    type: string
-                    description: 임시 참여자가 만들어진 시각
+                    type: "string"
+                    description: "임시 참여자가 만들어진 시각"
                     nullable: false
-                    example: '2026-07-14T01:02:03Z'
-                    format: date-time
+                    example: "2026-07-14T01:02:03Z"
+                    format: "date-time"
                   displayName:
-                    type: string
-                    description: 임시 참여자 이름. 같은 이름이 여럿일 수 있다
+                    type: "string"
+                    description: "임시 참여자 이름. 같은 이름이 여럿일 수 있다"
                     nullable: false
-                    example: 박서준
+                    example: "박서준"
                   noteCount:
-                    type: integer
-                    description: 이 임시 참여자가 참여자로 들어가 있는 회의 수. 삭제하면 그만큼의 참여 기록과 화자 연결이 사라진다
+                    type: "integer"
+                    description: "이 임시 참여자가 참여자로 들어가 있는 회의 수. 삭제하면 그만큼의 참여 기록과 화자\
+                      \ 연결이 사라진다"
                     nullable: false
                     example: 3
-                    format: int64
+                    format: "int64"
                     minimum: 0
                   guestId:
-                    type: string
-                    description: 임시 참여자의 13자리 TSID
+                    type: "string"
+                    description: "임시 참여자의 13자리 TSID"
                     nullable: false
-                    example: 0HZX2K7M9Q4AR
-                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                    example: "0HZX2K7M9Q4AR"
+                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
               nullable: false
-          description: 성공 응답 데이터
+            hasMore:
+              type: "boolean"
+              description: "뒤에 더 있는지. limit 을 보내지 않았으면 항상 false"
+              nullable: false
+              example: false
+            totalCount:
+              type: "integer"
+              description: "쪽·커서와 무관한 이 워크스페이스의 임시 참여자 전체 수"
+              nullable: false
+              example: 57
+              format: "int64"
+              minimum: 0
+            nextDisplayName:
+              type: "string"
+              description: "다음 요청의 afterDisplayName. hasMore 가 false 면 null"
+              nullable: true
+              example: "박서준"
+          description: "성공 응답 데이터"
           nullable: false
         success:
-          type: boolean
-          description: 요청 성공 여부
+          type: "boolean"
+          description: "요청 성공 여부"
           nullable: false
           example: true
         error:
           nullable: true
           enum:
           - null
-          description: 성공 시 null인 오류 정보
+          description: "성공 시 null인 오류 정보"
     WorkspaceInvitationActionResponse:
       title: WorkspaceInvitationActionResponse
       required:

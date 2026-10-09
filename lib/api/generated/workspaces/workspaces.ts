@@ -28,6 +28,7 @@ import type {
   CreateWorkspaceRequest,
   CreateWorkspaceResponse,
   DeleteWorkspaceGuestResponse,
+  GetWorkspaceGuestsParams,
   GuestLinkResponse,
   LinkWorkspaceGuestRequest,
   UnauthorizedResponse,
@@ -1038,8 +1039,23 @@ export type getWorkspaceGuestsResponse =
   | getWorkspaceGuestsResponseSuccess
   | getWorkspaceGuestsResponseError;
 
-export const getGetWorkspaceGuestsUrl = (workspaceId: string) => {
-  return `/v1/workspaces/${workspaceId}/guests`;
+export const getGetWorkspaceGuestsUrl = (
+  workspaceId: string,
+  params?: GetWorkspaceGuestsParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/workspaces/${workspaceId}/guests?${stringifiedParams}`
+    : `/v1/workspaces/${workspaceId}/guests`;
 };
 
 /**
@@ -1048,10 +1064,11 @@ export const getGetWorkspaceGuestsUrl = (workspaceId: string) => {
  */
 export const getWorkspaceGuests = async (
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<getWorkspaceGuestsResponse> => {
   return apiFetch<getWorkspaceGuestsResponse>(
-    getGetWorkspaceGuestsUrl(workspaceId),
+    getGetWorkspaceGuestsUrl(workspaceId, params),
     {
       ...options,
       method: "GET",
@@ -1059,8 +1076,14 @@ export const getWorkspaceGuests = async (
   );
 };
 
-export const getGetWorkspaceGuestsQueryKey = (workspaceId: string) => {
-  return [`/v1/workspaces/${workspaceId}/guests`] as const;
+export const getGetWorkspaceGuestsQueryKey = (
+  workspaceId: string,
+  params?: GetWorkspaceGuestsParams
+) => {
+  return [
+    `/v1/workspaces/${workspaceId}/guests`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetWorkspaceGuestsQueryOptions = <
@@ -1068,6 +1091,7 @@ export const getGetWorkspaceGuestsQueryOptions = <
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1082,12 +1106,13 @@ export const getGetWorkspaceGuestsQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetWorkspaceGuestsQueryKey(workspaceId);
+    queryOptions?.queryKey ??
+    getGetWorkspaceGuestsQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWorkspaceGuests>>
   > = ({ signal }) =>
-    getWorkspaceGuests(workspaceId, { signal, ...requestOptions });
+    getWorkspaceGuests(workspaceId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -1113,6 +1138,7 @@ export function useGetWorkspaceGuests<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params: undefined | GetWorkspaceGuestsParams,
   options: {
     query: Partial<
       UseQueryOptions<
@@ -1140,6 +1166,7 @@ export function useGetWorkspaceGuests<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1167,6 +1194,7 @@ export function useGetWorkspaceGuests<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1190,6 +1218,7 @@ export function useGetWorkspaceGuests<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1204,7 +1233,11 @@ export function useGetWorkspaceGuests<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetWorkspaceGuestsQueryOptions(workspaceId, options);
+  const queryOptions = getGetWorkspaceGuestsQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -1223,6 +1256,7 @@ export const prefetchGetWorkspaceGuestsQuery = async <
 >(
   queryClient: QueryClient,
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1234,7 +1268,11 @@ export const prefetchGetWorkspaceGuestsQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetWorkspaceGuestsQueryOptions(workspaceId, options);
+  const queryOptions = getGetWorkspaceGuestsQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   await queryClient.prefetchQuery(queryOptions);
 
@@ -1246,6 +1284,7 @@ export const getGetWorkspaceGuestsSuspenseQueryOptions = <
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1260,12 +1299,13 @@ export const getGetWorkspaceGuestsSuspenseQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetWorkspaceGuestsQueryKey(workspaceId);
+    queryOptions?.queryKey ??
+    getGetWorkspaceGuestsQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWorkspaceGuests>>
   > = ({ signal }) =>
-    getWorkspaceGuests(workspaceId, { signal, ...requestOptions });
+    getWorkspaceGuests(workspaceId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
     Awaited<ReturnType<typeof getWorkspaceGuests>>,
@@ -1286,6 +1326,7 @@ export function useGetWorkspaceGuestsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params: undefined | GetWorkspaceGuestsParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
@@ -1305,6 +1346,7 @@ export function useGetWorkspaceGuestsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1324,6 +1366,7 @@ export function useGetWorkspaceGuestsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1347,6 +1390,7 @@ export function useGetWorkspaceGuestsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceGuestsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1363,6 +1407,7 @@ export function useGetWorkspaceGuestsSuspense<
 } {
   const queryOptions = getGetWorkspaceGuestsSuspenseQueryOptions(
     workspaceId,
+    params,
     options
   );
 

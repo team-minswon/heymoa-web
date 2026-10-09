@@ -137,6 +137,7 @@ export * from "./getAgentOAuthConsentParams";
 export * from "./getNotesParams";
 export * from "./getNotificationsParams";
 export * from "./getTranscriptSegmentsAfterParams";
+export * from "./getWorkspaceGuestsParams";
 export * from "./getWorkspaceNotesParams";
 export * from "./guestLinkResponse";
 export * from "./guestLinkResponseData";

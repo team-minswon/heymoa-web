@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2Icon } from "lucide-react";
 
 import {
   AlertDialog,
@@ -19,7 +19,6 @@ import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
   getGetWorkspaceGuestsQueryKey,
   useDeleteWorkspaceGuest,
-  useGetWorkspaceGuests,
   useLinkWorkspaceGuest,
   usePreviewWorkspaceGuestLink,
 } from "@/lib/api/generated/workspaces/workspaces";
@@ -30,6 +29,7 @@ import {
 import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import { useGetWorkspaceMembers } from "@/lib/api/generated/workspace-members/workspace-members";
 import { useQueryClient } from "@tanstack/react-query";
+import { useGuestListPages } from "@/lib/workspace/use-guest-list-pages";
 import type {
   GuestLinkResponseData,
   WorkspaceGuestListResponseDataGuestsItem,
@@ -63,9 +63,8 @@ export function WorkspaceGuestsSettings({
    * 낡고, 사람은 **틀린 영향 범위를 보고 되돌릴 수 없는 삭제**를 누른다.
    * 전사 화면(`note-archive`)이 같은 쿼리를 같은 이유로 이렇게 부른다.
    */
-  const guestsQuery = useGetWorkspaceGuests(workspaceId, {
-    query: { refetchOnMount: "always" },
-  });
+  const [pages, setPages] = useState(1);
+  const guestsQuery = useGuestListPages({ workspaceId, pages });
   /**
    * **대화상자를 목록 밖에서 연다.** 행 안에 두면, 확인창이 여는 재조회가 마침 그 행을
    * 목록에서 지우는 순간(남이 먼저 지웠다) **대화상자까지 함께 언마운트된다** — 「이미
@@ -80,15 +79,23 @@ export function WorkspaceGuestsSettings({
   } | null>(null);
 
   const response = guestsQuery.data;
-  const guests =
+  const page =
     response?.status === 200 && response.data.success
-      ? (response.data.data?.guests ?? [])
-      : [];
+      ? response.data.data
+      : undefined;
+  const guests = page?.guests ?? [];
+  // 다음 쪽을 읽는 중 = 키가 바뀌어 이전 목록을 붙들고 있는 동안
+  const isLoadingMore = guestsQuery.isFetching && guestsQuery.isPlaceholderData;
 
   return (
     <section className="mt-8 border-t border-[var(--el-hairline)] pt-8">
       <h3 className="text-[15px] font-semibold text-[var(--el-ink)]">
         임시 참여자
+        {page ? (
+          <span className="ml-1.5 font-normal text-[var(--el-muted)]">
+            {page.totalCount}명
+          </span>
+        ) : null}
       </h3>
       <p className="mt-1.5 text-sm text-[var(--el-muted)]">
         계정 없이 회의에 참여한 사람입니다. 나중에 계정이 생기면 이어 붙일 수
@@ -138,9 +145,7 @@ export function WorkspaceGuestsSettings({
               role="alert"
               className="mt-4 flex items-center gap-2 text-sm text-[var(--el-muted)]"
             >
-              <span>
-                최신 목록을 확인하지 못해 연동·삭제를 잠갔습니다.
-              </span>
+              <span>최신 목록을 확인하지 못해 연동·삭제를 잠갔습니다.</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -151,27 +156,46 @@ export function WorkspaceGuestsSettings({
               </Button>
             </div>
           ) : null}
-        <ul className="mt-4 divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
-          {guests.map((guest) => (
-            <GuestRow
-              key={guest.guestId}
-              guest={guest}
-              // **낡은 값으로는 지우지 못하게 한다.** 캐시를 살려 목록은 그대로 그리지만,
-              // 그 사이 남이 이 사람을 다른 회의에 넣었으면 확인창의 「회의록 N개」가 거짓이
-              // 된다 — 삭제는 되돌릴 수 없고 화자 연결까지 CASCADE 로 가져간다.
-              // 연동은 실행 전 미리보기가 다시 판정하지만 삭제에는 그 관문이 없다.
-              canManage={
-                canManage && !guestsQuery.isError && !guestsQuery.isFetching
-              }
-              // **열 때 다시 읽는다.** 목록의 숫자는 화면에 들어올 때 값이고, 설정을 열어
-              // 둔 채 시간이 흐르면(`staleTime` 60초) 다시 안 읽는다.
-              onOpen={(kind) => {
-                setDialog({ kind, guest });
-                void guestsQuery.refetch();
-              }}
-            />
-          ))}
+          <ul className="mt-4 divide-y divide-[var(--el-hairline)] overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-white">
+            {guests.map((guest) => (
+              <GuestRow
+                key={guest.guestId}
+                guest={guest}
+                // **낡은 값으로는 지우지 못하게 한다.** 캐시를 살려 목록은 그대로 그리지만,
+                // 그 사이 남이 이 사람을 다른 회의에 넣었으면 확인창의 「회의록 N개」가 거짓이
+                // 된다 — 삭제는 되돌릴 수 없고 화자 연결까지 CASCADE 로 가져간다.
+                // 연동은 실행 전 미리보기가 다시 판정하지만 삭제에는 그 관문이 없다.
+                canManage={
+                  canManage && !guestsQuery.isError && !guestsQuery.isFetching
+                }
+                // **열 때 다시 읽는다.** 목록의 숫자는 화면에 들어올 때 값이고, 설정을 열어
+                // 둔 채 시간이 흐르면(`staleTime` 60초) 다시 안 읽는다.
+                onOpen={(kind) => {
+                  setDialog({ kind, guest });
+                  void guestsQuery.refetch();
+                }}
+              />
+            ))}
           </ul>
+          {page?.hasMore ? (
+            <div className="mt-3 flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={isLoadingMore}
+                onClick={() => setPages((current) => current + 1)}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2Icon className="animate-spin" /> 불러오는 중
+                  </>
+                ) : (
+                  "임시 참여자 더 보기"
+                )}
+              </Button>
+            </div>
+          ) : null}
         </>
       )}
 
@@ -187,9 +211,7 @@ export function WorkspaceGuestsSettings({
           guest={dialog.guest}
           workspaceId={workspaceId}
           // 목록에서 사라졌으면 `undefined` — 남이 먼저 지웠다는 뜻이다.
-          fresh={guests.find(
-            (item) => item.guestId === dialog.guest.guestId
-          )}
+          fresh={guests.find((item) => item.guestId === dialog.guest.guestId)}
           settled={!guestsQuery.isFetching && !guestsQuery.isError}
           lookupFailed={guestsQuery.isError}
           onRetry={() => void guestsQuery.refetch()}

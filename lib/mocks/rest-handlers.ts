@@ -649,9 +649,37 @@ export const restHandlers = [
         notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
       )
   ),
-  http.get("*/v1/workspaces/:workspaceId/guests", ({ params }) =>
-    commandResult(() => mockDb.listWorkspaceGuests(id(params.workspaceId)))
-  ),
+  http.get("*/v1/workspaces/:workspaceId/guests", ({ params, request }) => {
+    const url = new URL(request.url);
+    // 서버와 같다 — `limit` 이 없으면 전건, 있으면 `(displayName, guestId)` 오름차순에서 커서 뒤부터.
+    // `totalCount` 는 쪽과 무관한 전체 수다.
+    const limit = Number(url.searchParams.get("limit")) || null;
+    const afterName = url.searchParams.get("afterDisplayName");
+    const afterId = url.searchParams.get("afterGuestId");
+    return commandResult(() => {
+      const { guests: all } = mockDb.listWorkspaceGuests(
+        id(params.workspaceId)
+      );
+      const rest =
+        afterName !== null && afterId
+          ? all.filter(
+              (guest) =>
+                guest.displayName.localeCompare(afterName) > 0 ||
+                (guest.displayName === afterName && guest.guestId > afterId)
+            )
+          : all;
+      const guests = limit ? rest.slice(0, limit) : rest;
+      const last = guests.at(-1);
+      const hasMore = limit !== null && guests.length < rest.length && !!last;
+      return {
+        guests,
+        totalCount: all.length,
+        hasMore,
+        nextDisplayName: hasMore ? last.displayName : null,
+        nextGuestId: hasMore ? last.guestId : null,
+      };
+    });
+  }),
   http.delete("*/v1/workspaces/:workspaceId/guests/:guestId", ({ params }) =>
     commandResult(() =>
       mockDb.deleteWorkspaceGuest(id(params.workspaceId), id(params.guestId))

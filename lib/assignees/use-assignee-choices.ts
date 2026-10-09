@@ -19,7 +19,9 @@ export function useAssigneeChoices(
 ) {
   const enabled = Boolean(workspaceId);
   const members = useGetWorkspaceMembers(workspaceId ?? "", { query: { enabled } });
-  const guests = useGetWorkspaceGuests(workspaceId ?? "", { query: { enabled } });
+  const guests = useGetWorkspaceGuests(workspaceId ?? "", undefined, {
+    query: { enabled },
+  });
 
   const memberRows = okData(members.data)?.members ?? null;
   const guestRows = okData(guests.data)?.guests ?? null;
