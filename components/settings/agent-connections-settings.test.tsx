@@ -318,7 +318,8 @@ describe("AgentConnectionsSettings", () => {
 
   // 「새 연결」의 기본은 OAuth 안내다. 개인 토큰은 안내의 링크로만 연다(APP-933)
   describe("OAuth 안내", () => {
-    it("새 연결이 주소만 등록하는 안내를 열고 에이전트마다 토큰 없는 명령을 보인다", () => {
+    // 앱 하나를 고르면 그 앱의 번호 단계만 보인다(APP-1031). 기본은 터미널이 필요 없는 Claude 앱이다
+    it("새 연결이 앱 고르기 탭을 열고, 탭마다 그 앱의 단계와 토큰 없는 명령만 보인다", () => {
       renderSettings();
 
       fireEvent.click(screen.getByRole("button", { name: "새 연결" }));
@@ -327,24 +328,48 @@ describe("AgentConnectionsSettings", () => {
       // 개인 토큰 폼은 안내 아래 링크로만 연다 — 「새 연결」이 바로 열지 않는다
       expect(screen.queryByLabelText("연결 이름")).toBeNull();
       const mcpUrl = buildUrl("/mcp");
-      const blocks = Array.from(guide.querySelectorAll("pre")).map(
-        (pre) => pre.textContent ?? ""
-      );
-      expect(blocks).toEqual([
-        mcpUrl,
-        `claude mcp add --transport http heymoa ${mcpUrl}`,
-        // 등록하면 Codex 가 로그인을 시작한다 — login 을 같이 붙이면 허락을 두 번 한다
-        `codex mcp add heymoa --url ${mcpUrl}`,
-      ]);
-      expect(blocks.join("\n")).not.toMatch(/Bearer|hm_/);
-      expect(within(guide).getByText("claude.ai · Claude 앱")).toBeTruthy();
+      const blocks = () =>
+        Array.from(guide.querySelectorAll("pre")).map(
+          (pre) => pre.textContent ?? ""
+        );
+      const pick = (name: string) => {
+        const tab = within(guide).getByRole("tab", { name });
+        fireEvent.pointerDown(tab, { pointerType: "mouse", button: 0 });
+        fireEvent.pointerUp(tab, { pointerType: "mouse", button: 0 });
+        fireEvent.click(tab);
+      };
+
       expect(
         within(guide)
-          .getByRole("link", { name: "쓸 수 있는 조건 보기" })
+          .getByRole("tab", { name: "Claude 앱" })
+          .getAttribute("aria-selected")
+      ).toBe("true");
+      expect(within(guide).getByText(/설정 › 커넥터를 엽니다/)).toBeTruthy();
+      expect(blocks()).toEqual([mcpUrl]);
+
+      // 어느 폴더에서 열어도 보이게 user 범위로 등록한다
+      pick("Claude Code");
+      expect(blocks()).toEqual([
+        `claude mcp add --transport http --scope user heymoa ${mcpUrl}`,
+      ]);
+      expect(within(guide).queryByText(/설정 › 커넥터를 엽니다/)).toBeNull();
+
+      // 등록하면 Codex 가 로그인을 시작한다 — login 을 같이 붙이면 허락을 두 번 한다
+      pick("Codex");
+      expect(blocks()).toEqual([`codex mcp add heymoa --url ${mcpUrl}`]);
+
+      pick("ChatGPT");
+      expect(blocks()).toEqual([mcpUrl]);
+      expect(
+        within(guide)
+          .getByRole("link", { name: "쓸 수 있는 요금제 보기" })
           .getAttribute("href")
       ).toBe(
         "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt"
       );
+
+      // 어느 탭에도 토큰이 없고, 카드 안에서 「에이전트」·「MCP」라는 말을 쓰지 않는다
+      expect(guide.textContent).not.toMatch(/Bearer|hm_|에이전트|MCP/);
       // 워크스페이스는 동의 화면에서 고른다 — 안내에는 고르는 칸이 없다
       expect(within(guide).queryByLabelText("맡길 워크스페이스")).toBeNull();
     });

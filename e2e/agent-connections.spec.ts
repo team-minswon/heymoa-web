@@ -27,10 +27,20 @@ test("연결을 만들고 토큰을 닫으면 목록에는 앞자리만 남고 �
 
   // 「새 연결」의 기본은 OAuth 안내다 — 개인 토큰은 안내의 링크로만 연다(APP-933)
   await page.getByRole("button", { name: "새 연결" }).click();
-  await expect(
-    page.getByRole("region", { name: "OAuth 연결 안내" })
-  ).toBeVisible();
+  const guide = page.getByRole("region", { name: "OAuth 연결 안내" });
+  await expect(guide).toBeVisible();
   await expect(page.getByLabel("연결 이름")).toHaveCount(0);
+  // 앱 하나를 고르면 그 앱의 단계만 보인다 — 기본은 Claude 앱, Claude Code 는 어느 폴더에서나(APP-1031)
+  await expect(
+    guide.getByText("설정 › 커넥터를 엽니다", { exact: false })
+  ).toBeVisible();
+  await guide.getByRole("tab", { name: "Claude Code" }).click();
+  await expect(
+    guide.getByText("--scope user heymoa", { exact: false })
+  ).toBeVisible();
+  await expect(
+    guide.getByText("설정 › 커넥터를 엽니다", { exact: false })
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "개인 토큰 만들기" }).click();
   await page.getByLabel("연결 이름").fill("방금 만든 연결");
   await expect(
