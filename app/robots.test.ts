@@ -53,3 +53,19 @@ describe("색인 지시", () => {
     });
   });
 });
+
+// 공개 정적 페이지가 사이트맵에 빠지면 Search Console 이 늦게 찾는다(APP-1036)
+describe("사이트맵", () => {
+  it("공개 페이지를 운영 주소로 싣는다", async () => {
+    vi.resetModules();
+    const sitemap = (await import("@/app/sitemap")).default;
+
+    expect(sitemap().map((entry) => entry.url)).toEqual([
+      "https://heymoa.app",
+      "https://heymoa.app/download",
+      "https://heymoa.app/help",
+      "https://heymoa.app/terms",
+      "https://heymoa.app/privacy",
+    ]);
+  });
+});
