@@ -30,8 +30,9 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
       data-slot="toast-viewport"
       className={cn(
         // 우측 상단이다. 하단 우측에는 개인 챗봇 FAB(`fixed right-6 bottom-6`), 하단 중앙에는
-        // 레코더 독이 상주해 하단에 두면 토스트가 그 위를 덮는다. z-50은 챗봇 패널(z-30)·FAB(z-40) 위다.
-        "pointer-events-none fixed inset-x-4 top-4 z-50 mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
+        // 레코더 독이 상주해 하단에 두면 토스트가 그 위를 덮는다. z 는 최상단이다 — 모달(Dialog·Sheet·AlertDialog 는 z-50)이
+        // 열려 있어도 토스트가 가려지면 안 된다. 같은 z-50 이면 포털 순서로 갈려 모달이 위에 온다.
+        "pointer-events-none fixed inset-x-4 top-4 z-[2147483647] mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
         className
       )}
       {...props}
