@@ -107,6 +107,7 @@ const state = vi.hoisted(() => ({
   chatsParams: [] as unknown[],
   /** 첫 쪽 뒤에 더 있다(APP-1020). `olderChats` 가 「더 보기」가 가져오는 쪽이다. */
   chatsHasMore: false,
+  chatsNextId: "01KNEXTCHATID0",
   olderChats: [] as ReturnType<typeof chatRow>[],
   olderCalls: [] as unknown[][],
   olderFails: false,
@@ -243,7 +244,7 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
                     nextUpdatedAt: state.chatsHasMore
                       ? "2026-07-01T00:00:00Z"
                       : null,
-                    nextChatId: state.chatsHasMore ? "01KNEXTCHATID0" : null,
+                    nextChatId: state.chatsHasMore ? state.chatsNextId : null,
                   },
                 },
               },
@@ -549,6 +550,7 @@ describe("PersonalChatProvider", () => {
   beforeEach(() => {
     state.chats = [];
     state.chatsHasMore = false;
+    state.chatsNextId = "01KNEXTCHATID0";
     state.olderChats = [];
     state.olderCalls = [];
     state.olderFails = false;
@@ -866,6 +868,32 @@ describe("PersonalChatProvider", () => {
     expect(
       screen.queryByRole("button", { name: "이전 대화 더 보기" })
     ).toBeNull();
+  });
+
+  /** 첫 쪽의 끝이 움직이면(새 대화·옛 대화가 위로 올라옴) 붙여 둔 쪽과 첫 쪽 사이에 빈틈이 생긴다 — 이어 읽기를 처음부터 다시 한다. */
+  it("첫 쪽의 끝이 움직이면 붙여 둔 옛 쪽을 버리고 다시 이어 읽게 한다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.chatsHasMore = true;
+    state.olderChats = [
+      chatRow("01KOLDERCHAT01", null, "2026-06-30T00:00:00Z"),
+    ];
+    renderChat();
+    openPanel();
+    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "이전 대화 더 보기" })
+    );
+    await screen.findByRole("button", { name: /01KOLDERCHAT01/ });
+
+    // 폴링이 새 첫 쪽을 가져왔다: 끝 대화가 달라졌다. 기록을 닫았다 열어 다시 그린다.
+    state.chatsNextId = "01KOTHERNEXT00";
+    fireEvent.click(screen.getByRole("button", { name: "뒤로가기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+
+    expect(screen.queryByRole("button", { name: /01KOLDERCHAT01/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "이전 대화 더 보기" })
+    ).toBeTruthy();
   });
 
   it("더 읽다 실패하면 이미 보던 기록은 그대로 두고 버튼이 남는다", async () => {

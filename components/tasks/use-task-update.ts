@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
@@ -44,6 +44,9 @@ export function useTaskUpdate(workspaceId: string) {
   const [inFlight, setInFlight] = useState<ReadonlyMap<string, TaskStatus>>(
     new Map()
   );
+  /** 저장 중인 할 일 수. 목록을 다시 읽는 일은 **마지막 저장이 끝난 뒤** 한 번만 한다 — 다른 줄이 저장 중일 때 읽으면 그 줄의 먼저 건 값을 옛 값으로 덮는다. */
+  const active = useRef(0);
+  const needsReconcile = useRef(false);
   // 거절 코드마다 그리는 자리가 달라 전역 토스트를 끄고 아래에서 직접 가른다.
   const update = useUpdateProjectTask({
     mutation: { meta: { suppressErrorToast: true } },
@@ -74,22 +77,26 @@ export function useTaskUpdate(workspaceId: string) {
     // **담당·기한·내용은 응답 전에 줄에 먼저 건다** (APP-1033). 끝내기·취소는 여기서 건드리지 않는다 — 줄은 그 자리에
     // 두고 먼저 긋기만 하는 연출(`completing`)이 있고, 상태를 바꾸면 줄이 곧바로 다른 보기로 떠나 그 연출이 사라진다.
     // 이미 도는 목록 조회가 낡은 값으로 덮지 못하게 먼저 멈춘다.
+    active.current += 1;
     await Promise.all(
       listKeys.map((queryKey) => queryClient.cancelQueries({ queryKey }))
     );
+    const touches = {
+      content: "content" in patch && patch.content !== undefined,
+      assignee: "assignee" in patch,
+      due: "due" in patch,
+    };
     const keepsRowInPlace = "taskStatus" in patch;
-    const snapshot = keepsRowInPlace
-      ? []
-      : patchTaskLists(queryClient, listKeys, task.taskId, (row) => ({
-          ...row,
-          ...("content" in patch && patch.content !== undefined
-            ? { content: patch.content }
-            : {}),
-          ...("assignee" in patch
-            ? { assignee: assigneeRowOf(patch.assignee ?? null) }
-            : {}),
-          ...("due" in patch ? { due: patch.due ?? null } : {}),
-        }));
+    if (!keepsRowInPlace) {
+      patchTaskLists(queryClient, listKeys, task.taskId, (row) => ({
+        ...row,
+        ...(touches.content ? { content: patch.content } : {}),
+        ...(touches.assignee
+          ? { assignee: assigneeRowOf(patch.assignee ?? null) }
+          : {}),
+        ...(touches.due ? { due: patch.due ?? null } : {}),
+      }));
+    }
     try {
       const response = await update.mutateAsync({
         workspaceId,
@@ -107,8 +114,9 @@ export function useTaskUpdate(workspaceId: string) {
           revision: task.revision,
         },
       });
-      // **응답이 곧 갱신된 행이다.** 목록을 다시 읽지 않고 그대로 갈아 끼운다 — 재조회가 실패하면 저장은 됐는데
-      // 옛 값이 남고, 재조회가 끝날 때까지 칸이 잠겨 연속 수정이 느리다. 이력만 낡으므로 그것만 다시 읽힌다.
+      // **응답이 곧 갱신된 행이다.** 그대로 갈아 끼워 칸을 곧바로 풀고, 목록은 마지막 저장이 끝난 뒤 조용히 한 번 맞춘다
+      // (아래 `finally`). 그래야 다른 줄이 저장 중일 때 옛 조회 응답이 새 판을 덮는 일이 없다 — 나중에 시작한 재조회가
+      // 먼저 시작한 조회를 대신한다. 이력은 곧바로 다시 읽힌다.
       const saved =
         response.status === 200 && response.data.success
           ? response.data.data
@@ -118,15 +126,23 @@ export function useTaskUpdate(workspaceId: string) {
           ...row,
           ...saved,
         }));
+        needsReconcile.current = true;
         void queryClient.invalidateQueries({ queryKey: revisionsKey });
       } else {
         await refresh();
       }
       return true;
     } catch (error) {
-      // 먼저 건 값을 되돌린다. 거절이면 서버 값으로 다시 맞춘다.
-      for (const [queryKey, cached] of snapshot)
-        queryClient.setQueryData(queryKey, cached);
+      // **이 줄이 먼저 건 칸만** 이전 값으로 되돌린다. 목록 전체 사본을 복원하면 그사이 저장에 성공한 다른 줄의 새 판까지
+      // 옛 값으로 돌아가고, 다음 저장이 판 충돌로 거절된다.
+      if (!keepsRowInPlace) {
+        patchTaskLists(queryClient, listKeys, task.taskId, (row) => ({
+          ...row,
+          ...(touches.content ? { content: task.content } : {}),
+          ...(touches.assignee ? { assignee: task.assignee ?? null } : {}),
+          ...(touches.due ? { due: task.due } : {}),
+        }));
+      }
       if (errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT") {
         setConflictTaskId(task.taskId);
         await refresh();
@@ -140,6 +156,13 @@ export function useTaskUpdate(workspaceId: string) {
         next.delete(task.taskId);
         return next;
       });
+      active.current -= 1;
+      if (active.current === 0 && needsReconcile.current) {
+        needsReconcile.current = false;
+        for (const queryKey of listKeys) {
+          void queryClient.invalidateQueries({ queryKey });
+        }
+      }
     }
   };
 

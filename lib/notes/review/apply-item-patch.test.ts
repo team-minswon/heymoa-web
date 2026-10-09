@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { MeetingReviewResponseData } from "@/lib/api/generated/models";
-import { applyItemPatch } from "@/lib/notes/review/apply-item-patch";
+import {
+  applyItemPatch,
+  restoreItemFields,
+} from "@/lib/notes/review/apply-item-patch";
 
 const item = (itemId: string, over: Record<string, unknown> = {}) => ({
   itemId,
@@ -53,8 +56,7 @@ describe("applyItemPatch", () => {
     });
     expect(next.reviewVersion).toBe(5);
     // 다른 항목은 그대로(같은 객체).
-    expect(next.items[1]).toBe(review().items[1] && next.items[1]);
-    expect(next.items[1].included).toBe(true);
+    expect(next.items[1]).toEqual(review().items[1]);
   });
 
   it("제안 선택을 대상 id 로 찾아 건다 — 대체는 END·KEEP, 할 일 변경은 KEEP", () => {
@@ -96,5 +98,36 @@ describe("applyItemPatch", () => {
     const next = applyItemPatch(review(), "A", { content: "다른 내용" });
 
     expect(next.items[0].content).toBe("배포 일정을 정한다");
+  });
+
+  it("되돌릴 때는 그 항목의 먼저 건 칸만 이전 값으로 돌리고 다른 항목·판은 지금 값 그대로 둔다", () => {
+    const before = review().items[0];
+    const patched = applyItemPatch(review(), "A", {
+      included: false,
+      decisions: [{ targetId: "N1", decision: "END" }],
+    });
+    // 그사이 다른 조회가 판을 올리고 B 의 내용을 바꿨다.
+    const newer = {
+      ...patched,
+      reviewVersion: 6,
+      items: patched.items.map((row) =>
+        row.itemId === "B"
+          ? { ...row, content: "더 새 내용", revision: 9 }
+          : row
+      ),
+    };
+
+    const restored = restoreItemFields(newer, before, {
+      included: false,
+      decisions: [{ targetId: "N1", decision: "END" }],
+    });
+
+    expect(restored.items[0]).toMatchObject({ included: true });
+    expect(restored.items[0].replacements[0].decision).toBeNull();
+    expect(restored.reviewVersion).toBe(6);
+    expect(restored.items[1]).toMatchObject({
+      content: "더 새 내용",
+      revision: 9,
+    });
   });
 });

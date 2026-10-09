@@ -30,8 +30,11 @@ export function useGuestListPages({
       ...getGetWorkspaceGuestsQueryKey(workspaceId),
       { limit: GUEST_LIST_PAGE_SIZE, pages },
     ],
-    queryFn: async ({ signal }): Promise<getWorkspaceGuestsResponse> => {
+    queryFn: async ({
+      signal,
+    }): Promise<getWorkspaceGuestsResponse & { partial?: boolean }> => {
       const merged: WorkspaceGuestListResponseDataGuestsItem[] = [];
+      let partial = false;
       let last: getWorkspaceGuestsResponse | undefined;
       for (let page = 0; page < pages; page += 1) {
         const params = {
@@ -48,11 +51,17 @@ export function useGuestListPages({
           response = await getWorkspaceGuests(workspaceId, params, { signal });
         } catch (error) {
           // 첫 쪽이 아니면 이미 읽은 것까지만 돌려준다 — 던지면 보던 목록이 통째로 사라진다.
-          if (page > 0 && !signal.aborted) break;
+          if (page > 0 && !signal.aborted) {
+            partial = true;
+            break;
+          }
           throw error;
         }
         if (response.status !== 200 || !response.data.success) {
-          if (page > 0) break;
+          if (page > 0) {
+            partial = true;
+            break;
+          }
           return response;
         }
         for (const guest of response.data.data.guests) {
@@ -65,6 +74,9 @@ export function useGuestListPages({
       }
       const tail = last?.status === 200 ? last.data.data : undefined;
       return {
+        // **뒷쪽을 못 읽었음을 알린다.** 계약 밖의 표시라 `data` 에 넣지 않는다 — 읽은 곳까지만 든 응답을 완전한 목록으로
+        // 읽으면 못 읽은 쪽의 사람이 「이미 지워졌다」로 보인다(삭제 확인창).
+        partial,
         status: 200,
         headers: last?.headers ?? new Headers(),
         data: {

@@ -84,6 +84,11 @@ export function WorkspaceGuestsSettings({
       ? response.data.data
       : undefined;
   const guests = page?.guests ?? [];
+  const freshOf = (guestId: string) =>
+    guests.find((item) => item.guestId === guestId);
+  // 뒷쪽을 못 읽었다(훅이 읽은 곳까지만 돌려줬다). 이 목록으로는 「그 사람이 없다」를 말할 수 없다.
+  const partial =
+    (response as { partial?: boolean } | undefined)?.partial === true;
   // 다음 쪽을 읽는 중 = 키가 바뀌어 이전 목록을 붙들고 있는 동안
   const isLoadingMore = guestsQuery.isFetching && guestsQuery.isPlaceholderData;
 
@@ -166,7 +171,10 @@ export function WorkspaceGuestsSettings({
                 // 된다 — 삭제는 되돌릴 수 없고 화자 연결까지 CASCADE 로 가져간다.
                 // 연동은 실행 전 미리보기가 다시 판정하지만 삭제에는 그 관문이 없다.
                 canManage={
-                  canManage && !guestsQuery.isError && !guestsQuery.isFetching
+                  canManage &&
+                  !guestsQuery.isError &&
+                  !guestsQuery.isFetching &&
+                  !partial
                 }
                 // **열 때 다시 읽는다.** 목록의 숫자는 화면에 들어올 때 값이고, 설정을 열어
                 // 둔 채 시간이 흐르면(`staleTime` 60초) 다시 안 읽는다.
@@ -211,9 +219,15 @@ export function WorkspaceGuestsSettings({
           guest={dialog.guest}
           workspaceId={workspaceId}
           // 목록에서 사라졌으면 `undefined` — 남이 먼저 지웠다는 뜻이다.
-          fresh={guests.find((item) => item.guestId === dialog.guest.guestId)}
-          settled={!guestsQuery.isFetching && !guestsQuery.isError}
-          lookupFailed={guestsQuery.isError}
+          fresh={freshOf(dialog.guest.guestId)}
+          settled={!guestsQuery.isFetching && !guestsQuery.isError && !partial}
+          // **다 읽지 못한 목록에서 안 보이는 것은 지워졌다는 뜻이 아니다.** 뒷쪽을 못 읽었거나(`partial`), 읽은 쪽 뒤에 더
+          // 있는데(`hasMore`) 그 사람이 없으면(그사이 새 참여자가 끼어 쪽 밖으로 밀렸다) 확인할 수 없는 것으로 다룬다.
+          lookupFailed={
+            guestsQuery.isError ||
+            partial ||
+            (page?.hasMore === true && !freshOf(dialog.guest.guestId))
+          }
           onRetry={() => void guestsQuery.refetch()}
           onClose={() => setDialog(null)}
         />

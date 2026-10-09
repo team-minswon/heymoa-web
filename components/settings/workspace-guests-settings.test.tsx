@@ -372,6 +372,27 @@ describe("WorkspaceGuestsSettings", () => {
     expect(confirm).toBeDisabled();
   });
 
+  /**
+   * 다 읽지 못한 목록에서 안 보이는 것은 지워졌다는 뜻이 아니다 — 읽은 쪽 뒤에 더 있는데 그 사람이 없으면(그사이 새 참여자가
+   * 끼어 쪽 밖으로 밀렸다) 「이미 지워졌습니다」가 아니라 확인하지 못했다고 말하고 다시 시도하게 한다(APP-1032).
+   */
+  it("더 읽을 쪽이 있는데 그 사람이 안 보이면 지워졌다고 하지 않고 확인하지 못했다고 말한다", () => {
+    state.hasMore = true;
+    const { rerender } = renderSection();
+    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+
+    state.guests = [];
+    rerender(<WorkspaceGuestsSettings workspaceId="01K0000000000" canManage />);
+
+    expect(screen.queryByText(/이미 지워졌습니다/)).toBeNull();
+    expect(
+      screen.getByText(/영향 범위를 확인하지 못했습니다/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: "다시 시도" }).length
+    ).toBeGreaterThan(0);
+  });
+
   it("삭제를 확인하면 mutation 을 부른다", async () => {
     renderSection();
 

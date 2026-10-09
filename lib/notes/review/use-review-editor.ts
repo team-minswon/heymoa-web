@@ -23,7 +23,10 @@ import type {
   MeetingReviewResponse,
   UpdateMeetingReviewItemRequest,
 } from "@/lib/api/generated/models";
-import { applyItemPatch } from "@/lib/notes/review/apply-item-patch";
+import {
+  applyItemPatch,
+  restoreItemFields,
+} from "@/lib/notes/review/apply-item-patch";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 import { toast } from "@/lib/ui/toast";
@@ -68,18 +71,26 @@ export function useReviewEditor(noteId: string) {
   async function run(
     target: string,
     save: () => Promise<{ status: number; data: unknown }>,
-    /** 응답 전에 화면에 먼저 거는 값. 실패하면 되돌린다(APP-1033). 서버가 정하는 값이 걸린 저장에는 안 준다. */
-    optimistic?: (
-      review: NonNullable<ReturnType<typeof cached>>
-    ) => NonNullable<ReturnType<typeof cached>>
+    /**
+     * 응답 전에 화면에 먼저 거는 값과 그것을 되돌리는 법(APP-1033). 서버가 정하는 값이 걸린 저장에는 안 준다.
+     * 되돌림은 **지금 캐시에서 그 항목의 칸만** 이전 값으로 돌린다 — 전체 사본을 복원하면 그사이 다른 조회가 가져온
+     * 더 새 검토본을 옛 판으로 덮는다.
+     */
+    optimistic?: {
+      apply: (
+        review: NonNullable<ReturnType<typeof cached>>
+      ) => NonNullable<ReturnType<typeof cached>>;
+      restore: (
+        current: NonNullable<ReturnType<typeof cached>>,
+        before: NonNullable<ReturnType<typeof cached>>
+      ) => NonNullable<ReturnType<typeof cached>>;
+    }
   ) {
     if (lock.current) return false;
     lock.current = true;
     setBusyItemId(target);
     await queryClient.cancelQueries({ queryKey });
-    // 거절·실패를 되돌릴 사본. 먼저 건 값은 응답이 오면 서버 값으로 갈린다.
-    const snapshot =
-      queryClient.getQueryData<getMeetingReviewResponse>(queryKey);
+    // 먼저 건 값은 응답이 오면 서버 값으로 갈린다. 실패하면 이 읽은 값으로 그 칸만 되돌린다.
     const before = cached();
     if (optimistic && before) {
       queryClient.setQueryData<getMeetingReviewResponse>(
@@ -88,7 +99,7 @@ export function useReviewEditor(noteId: string) {
           previous?.status === 200 && previous.data.success
             ? {
                 ...previous,
-                data: { ...previous.data, data: optimistic(before) },
+                data: { ...previous.data, data: optimistic.apply(before) },
               }
             : previous
       );
@@ -101,7 +112,21 @@ export function useReviewEditor(noteId: string) {
       setConflictItemId(null);
       return true;
     } catch (error) {
-      if (optimistic && snapshot) queryClient.setQueryData(queryKey, snapshot);
+      if (optimistic && before) {
+        queryClient.setQueryData<getMeetingReviewResponse>(
+          queryKey,
+          (previous) =>
+            previous?.status === 200 && previous.data.success
+              ? {
+                  ...previous,
+                  data: {
+                    ...previous.data,
+                    data: optimistic.restore(previous.data.data, before),
+                  },
+                }
+              : previous
+        );
+      }
       if (errorCodeOf(error) === CONFIRMED) {
         // 다시 읽어도 고칠 수 없다. 흐름 상태를 읽어 화면이 확정(읽기 전용)으로 바뀌게 한다. 입력은 남긴다.
         toast.error(errorMessageOf(error, CONFIRMED_MESSAGE));
@@ -161,7 +186,10 @@ export function useReviewEditor(noteId: string) {
           }),
         // 응답 전에 먼저 걸 수 있는 칸이 있으면 건다(포함 여부·기한·제안 선택). 내용·담당은 서버가 정하므로 안 건다.
         "included" in patch || "due" in patch || patch.decisions
-          ? (current) => applyItemPatch(current, itemId, patch)
+          ? {
+              apply: (current) => applyItemPatch(current, itemId, patch),
+              restore: (current) => restoreItemFields(current, item, patch),
+            }
           : undefined
       );
     },

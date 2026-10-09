@@ -114,19 +114,29 @@ export function useChatTurn({
    * **첫 쪽(최근 50개)만 폴링하고, 그 뒤 대화는 「더 보기」로 한 번씩 읽어 붙인다** (APP-1020). 옛 대화의
    * 제목·진행 배지는 5초마다 다시 읽을 값이 아니다 — 옛 대화에 이어 쓰면 그 대화가 첫 쪽으로 올라와
    * 첫 쪽이 알려 준다. 워크스페이스를 바꾸면 붙여 둔 것을 버린다.
+   *
+   * **첫 쪽의 끝이 움직이면 붙여 둔 것도 버린다.** 새 대화가 생기거나 옛 대화가 위로 올라오면 첫 쪽 끝의 대화가 밀려나
+   * 붙여 둔 쪽과 첫 쪽 사이에 빈틈이 생긴다 — 이어 읽는 커서는 붙여 둔 쪽의 끝이라 그 대화를 건너뛴다. 붙여 둔 쪽이
+   * 기대는 자리(`anchor`, 읽을 때의 첫 쪽 끝 대화)가 달라졌으면 처음부터 다시 이어 읽게 한다.
    */
   const [older, setOlder] = useState<{
     workspaceId: string;
+    anchor: string | null;
     chats: AgentChatsResponseDataChatsItem[];
     /** `undefined` 면 아직 안 읽었다(첫 쪽의 커서를 쓴다). `null` 이면 끝까지 읽었다. */
     cursor: { afterUpdatedAt: string; afterChatId: string } | null | undefined;
-  }>({ workspaceId, chats: [], cursor: undefined });
+  }>({ workspaceId, anchor: null, chats: [], cursor: undefined });
   const [isLoadingMoreChats, setIsLoadingMoreChats] = useState(false);
-  const olderHere =
-    older.workspaceId === workspaceId
-      ? older
-      : { workspaceId, chats: [], cursor: undefined };
   const firstPage = chatsOk ? chatsResponse.data.data : null;
+  const firstTail = firstPage?.nextChatId ?? null;
+  const firstTailRef = useRef(firstTail);
+  useEffect(() => {
+    firstTailRef.current = firstTail;
+  }, [firstTail]);
+  const olderHere =
+    older.workspaceId === workspaceId && older.anchor === firstTail
+      ? older
+      : { workspaceId, anchor: firstTail, chats: [], cursor: undefined };
   const nextCursor = useMemo(() => {
     if (olderHere.cursor !== undefined) return olderHere.cursor;
     return firstPage?.hasMore && firstPage.nextUpdatedAt && firstPage.nextChatId
@@ -140,6 +150,7 @@ export function useChatTurn({
   const loadMoreChats = useCallback(async () => {
     if (!nextCursor || isLoadingMoreChats) return;
     setIsLoadingMoreChats(true);
+    const anchor = firstTail;
     try {
       const response = await getAgentChats(workspaceId, {
         limit: String(CHAT_PAGE_SIZE),
@@ -150,8 +161,11 @@ export function useChatTurn({
         return;
       }
       const page = response.data.data;
+      // 읽는 사이 첫 쪽의 끝이 움직였으면 이 쪽은 빈틈을 만든다 — 버리고 다시 읽게 한다.
+      if (firstTailRef.current !== anchor) return;
       setOlder({
         workspaceId,
+        anchor,
         chats: [...olderHere.chats, ...page.chats],
         cursor:
           page.hasMore && page.nextUpdatedAt && page.nextChatId
@@ -166,7 +180,7 @@ export function useChatTurn({
     } finally {
       setIsLoadingMoreChats(false);
     }
-  }, [isLoadingMoreChats, nextCursor, olderHere.chats, workspaceId]);
+  }, [firstTail, isLoadingMoreChats, nextCursor, olderHere.chats, workspaceId]);
   /** 빈 목록과 조회 실패는 다르다. 실패를 빈 목록으로 접으면 이미 있는 대화 옆에 하나를 더 만든다. */
   const isChatsUnavailable =
     chatsQuery.isError || (chatsResponse !== undefined && !chatsOk);

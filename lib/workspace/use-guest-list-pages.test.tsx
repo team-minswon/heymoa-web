@@ -88,5 +88,7 @@ describe("useGuestListPages", () => {
     const data = result.current.data;
     expect(data?.status === 200 && data.data.data.guests).toHaveLength(1);
     expect(data?.status === 200 && data.data.data.hasMore).toBe(true);
+    // 뒷쪽을 못 읽었음을 알린다 — 읽은 곳까지만 든 목록으로 「그 사람이 없다」를 말하면 안 된다.
+    expect((data as { partial?: boolean }).partial).toBe(true);
   });
 });

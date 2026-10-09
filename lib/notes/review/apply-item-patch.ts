@@ -60,3 +60,53 @@ export function applyItemPatch(
     ),
   };
 }
+
+/**
+ * `applyItemPatch` 로 먼저 건 칸을 **그 항목의 이전 값으로만** 되돌린다 (APP-1033). 저장이 실패했을 때 쓴다.
+ * 검토본 전체 사본을 복원하면 그사이 다른 조회가 가져온 더 새 판(다른 사람이 더한 항목·바뀐 판)을 옛 값으로 덮는다.
+ */
+export function restoreItemFields(
+  current: MeetingReviewResponseData,
+  before: MeetingReviewResponseDataItemsItem,
+  patch: ItemPatch
+): MeetingReviewResponseData {
+  const touched = new Set(
+    (patch.decisions ?? []).map((choice) => choice.targetId)
+  );
+  return {
+    ...current,
+    items: current.items.map((item) =>
+      item.itemId !== before.itemId
+        ? item
+        : {
+            ...item,
+            ...(patch.included !== undefined
+              ? { included: before.included }
+              : {}),
+            ...("due" in patch ? { due: before.due } : {}),
+            ...(touched.size > 0
+              ? {
+                  replacements: item.replacements.map((row) => {
+                    const old = before.replacements.find(
+                      (candidate) =>
+                        candidate.target.itemId === row.target.itemId
+                    );
+                    return touched.has(row.target.itemId) && old
+                      ? { ...row, decision: old.decision }
+                      : row;
+                  }),
+                  taskChanges: item.taskChanges.map((row) => {
+                    const old = before.taskChanges.find(
+                      (candidate) =>
+                        candidate.target.itemId === row.target.itemId
+                    );
+                    return touched.has(row.target.itemId) && old
+                      ? { ...row, decision: old.decision }
+                      : row;
+                  }),
+                }
+              : {}),
+          }
+    ),
+  };
+}
