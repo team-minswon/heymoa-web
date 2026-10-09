@@ -1,17 +1,14 @@
 "use client";
 
+import { useState } from "react";
+
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
-import {
-  type getNotesResponse,
-  type getWorkspaceNotesResponse,
-  useGetNotes,
-  useGetWorkspaceNotes,
-} from "@/lib/api/generated/notes/notes";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
+import { useNoteListPages } from "@/lib/workspace/use-note-list-pages";
 
 export const ACTIVE_NOTE_LIST_POLL_MS = 10_000;
 export const INACTIVE_NOTE_LIST_POLL_MS = 30_000;
@@ -22,22 +19,6 @@ export function noteListRefetchInterval(
   return notes?.some(isMeetingActive)
     ? ACTIVE_NOTE_LIST_POLL_MS
     : INACTIVE_NOTE_LIST_POLL_MS;
-}
-
-function notesFromResponse(
-  response: getNotesResponse | undefined
-): NoteListResponseDataNotesItem[] | undefined {
-  return response?.status === 200 && response.data.success
-    ? response.data.data.notes
-    : undefined;
-}
-
-function workspaceNotesFromResponse(
-  response: getWorkspaceNotesResponse | undefined
-): NoteListResponseDataNotesItem[] | undefined {
-  return response?.status === 200 && response.data.success
-    ? response.data.data.notes
-    : undefined;
 }
 
 export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
@@ -52,37 +33,44 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
   const selectedProject = projects.find(
     (project) => project.projectId === selectedProjectId
   );
-  const singleNotesQuery = useGetNotes(selectedProjectId ?? "", {
-    query: {
-      enabled: selectedProjectId !== null,
-      refetchInterval: (query) =>
-        noteListRefetchInterval(notesFromResponse(query.state.data)),
-    },
-  });
   /**
-   * **팬아웃이 사라졌다** (APP-685). 전에는 프로젝트마다 요청을 보내고 `flatMap` 한 뒤
-   * **서버와 같은 규칙으로 다시 정렬**했다 — 같은 순서를 두 곳이 정하면 한쪽만 고쳐도 화면이
-   * 안 바뀐다. 이제 서버가 워크스페이스 단위로 한 번에 세워 준다.
+   * **쪽 수는 범위(프로젝트·모든 노트)마다 따로 센다.** 한 곳에서 더 본 만큼이 다른 곳에 따라가면
+   * 처음 보는 목록이 몇 쪽씩 한꺼번에 읽힌다. 키에 두면 범위를 바꿨다 돌아와도 펼친 만큼이 남는다.
+   * 서버가 워크스페이스 단위로 한 번에 세워 주므로(APP-685) 클라이언트 정렬은 없다.
    */
-  const allNotesQuery = useGetWorkspaceNotes(workspaceId, {
-    query: {
-      enabled: selectedProjectId === null,
-      refetchInterval: (query) =>
-        noteListRefetchInterval(workspaceNotesFromResponse(query.state.data)),
-    },
+  const scopeKey = selectedProjectId ?? `all:${workspaceId}`;
+  const [pagesByScope, setPagesByScope] = useState<Record<string, number>>({});
+  const pages = pagesByScope[scopeKey] ?? 1;
+  const notesQuery = useNoteListPages({
+    scope: selectedProjectId
+      ? { kind: "project", projectId: selectedProjectId }
+      : { kind: "workspace", workspaceId },
+    pages,
+    enabled: true,
+    refetchInterval: noteListRefetchInterval,
   });
-  const notes: NoteListResponseDataNotesItem[] = selectedProjectId
-    ? (notesFromResponse(singleNotesQuery.data) ?? [])
-    : (workspaceNotesFromResponse(allNotesQuery.data) ?? []);
+  const page =
+    notesQuery.data?.status === 200 && notesQuery.data.data.success
+      ? notesQuery.data.data.data
+      : undefined;
+  const notes: NoteListResponseDataNotesItem[] = page?.notes ?? [];
   const isPending = selectedProjectId
-    ? singleNotesQuery.isPending
-    : isWorkspacePending || allNotesQuery.isPending;
+    ? notesQuery.isPending
+    : isWorkspacePending || notesQuery.isPending;
   const isError = selectedProjectId
-    ? singleNotesQuery.isError
-    : isWorkspaceError || allNotesQuery.isError;
+    ? notesQuery.isError
+    : isWorkspaceError || notesQuery.isError;
+  // 다음 쪽을 읽는 중 = 키가 바뀌어 이전 목록을 붙들고 있는 동안
+  const isLoadingMore = notesQuery.isFetching && notesQuery.isPlaceholderData;
+
+  const loadMore = () =>
+    setPagesByScope((current) => ({
+      ...current,
+      [scopeKey]: (current[scopeKey] ?? 1) + 1,
+    }));
 
   const retry = () => {
-    void (selectedProjectId ? singleNotesQuery : allNotesQuery).refetch();
+    void notesQuery.refetch();
   };
 
   /**
@@ -151,8 +139,8 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
                 {selectedProject?.name ?? "모든 노트"}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
-                {notes.length}개의 회의 기록 · 발화와 결정이 시간순으로
-                보관됩니다.
+                {notes.length}개{page?.hasMore ? " 이상" : ""}의 회의 기록 ·
+                발화와 결정이 시간순으로 보관됩니다.
               </p>
             </header>
             <WorkspaceNoteList
@@ -162,6 +150,9 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
               isError={isError}
               onRetry={retry}
               onNewMeeting={requestNewMeeting}
+              hasMore={page?.hasMore ?? false}
+              isLoadingMore={isLoadingMore}
+              onLoadMore={loadMore}
             />
           </>
         )}

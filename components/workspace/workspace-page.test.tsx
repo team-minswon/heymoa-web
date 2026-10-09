@@ -1,7 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { WorkspacePage } from "@/components/workspace/workspace-page";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  WorkspacePage,
+  noteListRefetchInterval,
+} from "@/components/workspace/workspace-page";
 
 const auth = vi.hoisted(() => ({
   user: { userId: "user-me", name: "나" } as {
@@ -9,8 +18,8 @@ const auth = vi.hoisted(() => ({
     name: string;
   } | null,
 }));
-const useGetNotes = vi.hoisted(() => vi.fn());
-const useGetWorkspaceNotes = vi.hoisted(() => vi.fn());
+const getNotes = vi.hoisted(() => vi.fn());
+const getWorkspaceNotes = vi.hoisted(() => vi.fn());
 
 // 목록 행이 이동 진행 표시를 위해 경로·쿼리를 읽는다(APP-215).
 vi.mock("next/navigation", () => ({
@@ -81,6 +90,9 @@ const NOTE_LIST = vi.hoisted(() => ({
           participants: [],
         },
       ],
+      hasMore: false,
+      nextSortedAt: null,
+      nextNoteId: null,
     },
   },
 }));
@@ -90,43 +102,37 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryKey: (projectId: string) => [
     `/v1/projects/${projectId}/notes`,
   ],
+  getGetWorkspaceNotesQueryKey: (workspaceId: string) => [
+    `/v1/workspaces/${workspaceId}/notes`,
+  ],
   useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useGetNotes: (...args: unknown[]) => {
-    useGetNotes(...args);
-    return {
-      data: NOTE_LIST,
-      isPending: false,
-      isError: false,
-      refetch: vi.fn(),
-    };
-  },
-  /**
-   * **팬아웃이 사라진 자리** (APP-685). 전에는 프로젝트마다 `getGetNotesQueryOptions` 를
-   * `useQueries` 로 돌리고 결과를 합쳤다. 이제 워크스페이스 단위 조회 하나다.
-   */
-  useGetWorkspaceNotes: (...args: unknown[]) => {
-    useGetWorkspaceNotes(...args);
-    return {
-      data: NOTE_LIST,
-      isPending: false,
-      isError: false,
-      refetch: vi.fn(),
-    };
-  },
+  getNotes: (...args: unknown[]) => getNotes(...args),
+  /** **팬아웃이 사라진 자리** (APP-685). 워크스페이스 단위 조회 하나다. */
+  getWorkspaceNotes: (...args: unknown[]) => getWorkspaceNotes(...args),
 }));
 
 function renderPage() {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
       <WorkspacePage workspaceId="01K0000000000" />
     </QueryClientProvider>
   );
 }
 
 describe("WorkspacePage", () => {
+  beforeEach(() => {
+    getNotes.mockResolvedValue(NOTE_LIST);
+    getWorkspaceNotes.mockResolvedValue(NOTE_LIST);
+  });
+
   afterEach(() => {
     cleanup();
-    useGetNotes.mockReset();
+    getNotes.mockReset();
+    getWorkspaceNotes.mockReset();
     auth.user = { userId: "user-me", name: "나" };
     shell.selectedProjectId = "01K0000000001";
     shell.projects = [{ projectId: "01K0000000001", name: "모바일 앱" }];
@@ -142,7 +148,7 @@ describe("WorkspacePage", () => {
    *
    * jsdom은 px를 못 재니 **어느 컨테이너로 스크롤하는지**로 검사한다.
    */
-  it("네이티브 스크롤 컨테이너가 아니라 ScrollArea로 스크롤한다", () => {
+  it("네이티브 스크롤 컨테이너가 아니라 ScrollArea로 스크롤한다", async () => {
     const { container } = renderPage();
 
     const viewport = container.querySelector(
@@ -177,8 +183,9 @@ describe("WorkspacePage", () => {
     expect(shell.requestNewMeeting).not.toHaveBeenCalled();
   });
 
-  it("renders the screen title, count, and flat list without the marketing kicker", () => {
+  it("renders the screen title, count, and flat list without the marketing kicker", async () => {
     renderPage();
+    await screen.findByText("주간 제품 회의");
 
     expect(
       screen.getByRole("heading", { name: "모바일 앱" })
@@ -198,8 +205,9 @@ describe("WorkspacePage", () => {
    * 없었고, 「내가 시작」을 걷으면 남는 칩이 「전체」 하나라 고르는 것이 아니게 된다 —
    * 줄을 통째로 없앴다. 시작자는 각 행의 아바타가 이미 말한다.
    */
-  it("시작자 필터 없이 모든 노트를 그린다", () => {
+  it("시작자 필터 없이 모든 노트를 그린다", async () => {
     renderPage();
+    await screen.findByText("주간 제품 회의");
 
     expect(screen.queryByRole("group", { name: "노트 필터" })).toBeNull();
     expect(screen.queryByRole("button", { name: "내가 시작" })).toBeNull();
@@ -209,39 +217,126 @@ describe("WorkspacePage", () => {
   });
 
   it("polls active lists every 10 seconds and inactive lists every 30 seconds", () => {
-    renderPage();
-    const options = useGetNotes.mock.calls.at(-1)?.[1] as {
-      query: {
-        refetchInterval: (query: { state: { data: unknown } }) => number;
-      };
-    };
-    const response = (meetingStatus: "IN_PROGRESS" | "ENDED") => ({
+    const notes = (meetingStatus: "IN_PROGRESS" | "ENDED") =>
+      [
+        {
+          meetingStatus,
+          meetingStartedAt:
+            meetingStatus === "IN_PROGRESS" ? "2026-07-11T00:00:00Z" : null,
+          meetingStartedBy:
+            meetingStatus === "IN_PROGRESS"
+              ? { userId: "user-other", name: "남" }
+              : null,
+        },
+      ] as Parameters<typeof noteListRefetchInterval>[0];
+
+    expect(noteListRefetchInterval(notes("IN_PROGRESS"))).toBe(10_000);
+    expect(noteListRefetchInterval(notes("ENDED"))).toBe(30_000);
+  });
+
+  /**
+   * **목록은 한 쪽(30개)씩 읽는다** (APP-1019). 서버가 「뒤에 더 있다」고 하면 목록 끝에 버튼이 서고,
+   * 누르면 **커서를 달고 이어 읽어** 앞쪽에 붙인다. 개수는 「이상」으로 말한다 — 아직 다 안 읽었다.
+   */
+  describe("더 보기", () => {
+    const row = (noteId: string, title: string, startedAt: string) => ({
+      ...NOTE_LIST.data.data.notes[1],
+      noteId,
+      title,
+      meetingStartedAt: startedAt,
+      createdAt: startedAt,
+    });
+    const firstPage = {
       status: 200,
+      headers: new Headers(),
       data: {
         success: true,
+        error: null,
         data: {
-          notes: [
-            {
-              meetingStatus,
-              meetingStartedAt:
-                meetingStatus === "IN_PROGRESS" ? "2026-07-11T00:00:00Z" : null,
-              meetingStartedBy:
-                meetingStatus === "IN_PROGRESS"
-                  ? { userId: "user-other", name: "남" }
-                  : null,
-            },
-          ],
+          notes: [row("01K0000000010", "최근 회의", "2026-07-12T00:00:00Z")],
+          hasMore: true,
+          nextSortedAt: "2026-07-12T00:00:00Z",
+          nextNoteId: "01K0000000010",
         },
       },
+    };
+    const secondPage = {
+      status: 200,
+      headers: new Headers(),
+      data: {
+        success: true,
+        error: null,
+        data: {
+          notes: [row("01K0000000009", "옛 회의", "2026-07-01T00:00:00Z")],
+          hasMore: false,
+          nextSortedAt: null,
+          nextNoteId: null,
+        },
+      },
+    };
+
+    it("뒤에 더 있으면 개수를 이상으로 말하고 버튼을 둔다", async () => {
+      getNotes.mockResolvedValue(firstPage);
+      renderPage();
+
+      await screen.findByText("최근 회의");
+      expect(screen.getByText(/1개 이상의 회의 기록/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "이전 기록 더 보기" })
+      ).toBeInTheDocument();
+      // 첫 쪽은 limit 만 보낸다. 커서는 없다.
+      expect(getNotes.mock.calls[0]?.[1]).toEqual({ limit: "30" });
     });
 
-    expect(
-      options.query.refetchInterval({
-        state: { data: response("IN_PROGRESS") },
-      })
-    ).toBe(10_000);
-    expect(
-      options.query.refetchInterval({ state: { data: response("ENDED") } })
-    ).toBe(30_000);
+    it("누르면 커서를 달아 이어 읽고 앞쪽에 붙이며, 다 읽으면 버튼이 사라진다", async () => {
+      getNotes.mockImplementation(
+        async (_projectId: string, params: { afterNoteId?: string }) =>
+          params.afterNoteId ? secondPage : firstPage
+      );
+      renderPage();
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "이전 기록 더 보기" })
+      );
+
+      await screen.findByText("옛 회의");
+      expect(screen.getByText("최근 회의")).toBeInTheDocument();
+      expect(screen.getByText(/2개의 회의 기록/)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "이전 기록 더 보기" })
+      ).toBeNull();
+      // 이어 읽는 요청은 응답의 다음 커서를 그대로 보낸다.
+      expect(getNotes).toHaveBeenCalledWith(
+        "01K0000000001",
+        {
+          limit: "30",
+          afterSortedAt: "2026-07-12T00:00:00Z",
+          afterNoteId: "01K0000000010",
+        },
+        expect.anything()
+      );
+    });
+
+    it("더 읽다 실패하면 이미 보던 목록은 그대로 두고 다시 누를 수 있다", async () => {
+      getNotes.mockImplementation(
+        async (_projectId: string, params: { afterNoteId?: string }) => {
+          if (params.afterNoteId) throw new Error("network");
+          return firstPage;
+        }
+      );
+      renderPage();
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "이전 기록 더 보기" })
+      );
+
+      // 읽은 곳까지만 보이고 남은 커서가 그대로라 버튼이 되살아난다.
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "이전 기록 더 보기" })
+        ).toBeEnabled()
+      );
+      expect(screen.getByText("최근 회의")).toBeInTheDocument();
+    });
   });
 });

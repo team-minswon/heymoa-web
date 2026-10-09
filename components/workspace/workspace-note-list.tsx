@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { RefreshCcw } from "lucide-react";
+import { Loader2Icon, RefreshCcw } from "lucide-react";
 import { toast } from "@/lib/ui/toast";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
@@ -20,6 +20,9 @@ export function WorkspaceNoteList({
   isError,
   onRetry,
   onNewMeeting,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: {
   workspaceId: string;
   notes: NoteListResponseDataNotesItem[];
@@ -28,6 +31,10 @@ export function WorkspaceNoteList({
   onRetry: () => void;
   /** 빈 상태 CTA. 프로젝트가 없으면 셸이 프로젝트를 먼저 묻는다. */
   onNewMeeting: () => void;
+  /** 서버에 이 뒤로 더 있다. 목록 끝에 「이전 기록 더 보기」를 둔다. */
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
   const retryRef = useRef(onRetry);
   const activeMeetingStarts = notes
@@ -121,6 +128,25 @@ export function WorkspaceNoteList({
           </div>
         </section>
       ))}
+      {hasMore && onLoadMore ? (
+        <div className="flex justify-center pt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            disabled={isLoadingMore}
+            onClick={onLoadMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2Icon className="animate-spin" /> 불러오는 중
+              </>
+            ) : (
+              "이전 기록 더 보기"
+            )}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

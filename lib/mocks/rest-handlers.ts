@@ -25,6 +25,8 @@ import { getGetNotificationsMockHandler } from "@/lib/api/generated/notification
 
 import type {
   CreateWorkspaceRequest,
+  NoteListResponseData,
+  NoteListResponseDataNotesItem,
   ProjectRequest,
   NoteRequest,
   UpdateWorkspaceRequest,
@@ -319,6 +321,39 @@ function invitationResult<T>(run: () => T, okStatus = 200) {
   }
 }
 
+/**
+ * 노트 목록의 키셋 쪽 끊기 (APP-1019). 서버와 같은 규칙이다 — `limit` 이 없으면 커서 뒤의 전건을
+ * 주고, 있으면 `(정렬 시각, id)` 내림차순에서 커서 다음부터 limit 개를 준다. 정렬 시각은
+ * `meetingStartedAt ?? createdAt` 이다(목 노트에는 세션 시작 시각 보정이 없다).
+ */
+function pageOfNotes(
+  notes: NoteListResponseDataNotesItem[],
+  url: URL
+): NoteListResponseData {
+  const limit = Number(url.searchParams.get("limit")) || null;
+  const afterSortedAt = url.searchParams.get("afterSortedAt");
+  const afterNoteId = url.searchParams.get("afterNoteId");
+  const sortedAt = (note: NoteListResponseDataNotesItem) =>
+    note.meetingStartedAt ?? note.createdAt;
+  const rest =
+    afterSortedAt && afterNoteId
+      ? notes.filter(
+          (note) =>
+            sortedAt(note) < afterSortedAt ||
+            (sortedAt(note) === afterSortedAt && note.noteId < afterNoteId)
+        )
+      : notes;
+  const page = limit ? rest.slice(0, limit) : rest;
+  const last = page.at(-1);
+  const hasMore = page.length < rest.length && last !== undefined;
+  return {
+    notes: page,
+    hasMore,
+    nextSortedAt: hasMore ? sortedAt(last) : null,
+    nextNoteId: hasMore ? last.noteId : null,
+  };
+}
+
 export const restHandlers = [
   // Users
   getGetAuthSessionMockHandler(() => ({
@@ -448,15 +483,23 @@ export const restHandlers = [
   // Notes
   // 워크스페이스 단위 목록 (APP-685). 전에는 web 이 프로젝트마다 요청을 보내고 결과를
   // `flatMap` 한 뒤 서버와 같은 규칙으로 다시 정렬했다.
-  http.get("*/v1/workspaces/:workspaceId/notes", ({ params }) =>
+  http.get("*/v1/workspaces/:workspaceId/notes", ({ params, request }) =>
     resultOf(
-      () => ({ notes: mockDb.listWorkspaceNotes(id(params.workspaceId)) }),
+      () =>
+        pageOfNotes(
+          mockDb.listWorkspaceNotes(id(params.workspaceId)),
+          new URL(request.url)
+        ),
       notFound("WORKSPACE_NOT_FOUND", "워크스페이스를 찾을 수 없습니다.")
     )
   ),
-  http.get("*/v1/projects/:projectId/notes", ({ params }) =>
+  http.get("*/v1/projects/:projectId/notes", ({ params, request }) =>
     resultOf(
-      () => ({ notes: mockDb.listNotes(id(params.projectId)) }),
+      () =>
+        pageOfNotes(
+          mockDb.listNotes(id(params.projectId)),
+          new URL(request.url)
+        ),
       notFound("PROJECT_NOT_FOUND", "프로젝트를 찾을 수 없습니다.")
     )
   ),

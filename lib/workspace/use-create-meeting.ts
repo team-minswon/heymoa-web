@@ -40,33 +40,55 @@ export function useCreateMeeting(workspaceId: string) {
     }
     const createdNote = response.data.data;
     const noteId = createdNote.noteId;
-    const notesQueryKey = getGetNotesQueryKey(targetProjectId);
+    // 같은 프로젝트의 목록 캐시를 **전부** 고친다 — 쪽 수가 키에 들어가므로(`useNoteListPages`) 키 하나를
+    // 짚으면 쪽 수가 다른 사본이 낡은 채 남는다. 캐시에 없는 키는 그냥 지나간다.
+    queryClient.setQueriesData<getNotesResponse>(
+      { queryKey: getGetNotesQueryKey(targetProjectId) },
+      (current) => {
+        if (current?.status !== 200 || !current.data.success) return current;
+        return {
+          ...current,
+          data: {
+            ...current.data,
+            data: {
+              ...current.data.data,
+              notes: [
+                {
+                  ...createdNote,
+                  lastRecordedAt: null,
+                  recordedDurationMs: 0,
+                },
+                ...current.data.data.notes.filter(
+                  (note) => note.noteId !== noteId
+                ),
+              ],
+            },
+          },
+        };
+      }
+    );
 
-    queryClient.setQueryData<getNotesResponse>(notesQueryKey, (current) => {
-      const existingNotes =
-        current?.status === 200 && current.data.success
-          ? current.data.data.notes
-          : [];
-
-      return {
+    // 안 읽어 둔 목록이면 이 노트 하나로 채워 둔다 — 목록 화면이 처음 열릴 때 빈 화면이 안 비치게.
+    // 서버 응답이 오면 덮인다.
+    const baseKey = getGetNotesQueryKey(targetProjectId);
+    if (queryClient.getQueryData(baseKey) === undefined) {
+      queryClient.setQueryData<getNotesResponse>(baseKey, {
         status: 200,
-        headers: current?.headers ?? response.headers,
+        headers: response.headers,
         data: {
           success: true,
           error: null,
           data: {
             notes: [
-              {
-                ...createdNote,
-                lastRecordedAt: null,
-                recordedDurationMs: 0,
-              },
-              ...existingNotes.filter((note) => note.noteId !== noteId),
+              { ...createdNote, lastRecordedAt: null, recordedDurationMs: 0 },
             ],
+            hasMore: false,
+            nextNoteId: null,
+            nextSortedAt: null,
           },
         },
-      };
-    });
+      });
+    }
 
     // `tab`을 안 붙인다 — 어차피 전사가 기본 탭이고, 붙여 두면 "기록하러 왔다"는 뜻으로
     // 읽힌다. 새 노트는 NOT_STARTED라 「회의 시작」을 눌러야 기록이 시작된다.

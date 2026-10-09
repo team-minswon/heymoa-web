@@ -197,6 +197,9 @@ export const getGetNotesResponseMock = (): NoteListResponse => ({
         ],
       },
     ],
+    hasMore: false,
+    nextSortedAt: null,
+    nextNoteId: null,
   },
   error: null,
 });
@@ -281,6 +284,9 @@ export const getGetWorkspaceNotesResponseMock = (): NoteListResponse => ({
         ],
       },
     ],
+    hasMore: true,
+    nextSortedAt: "2026-07-14T01:02:03Z",
+    nextNoteId: "0HZX2K7M9Q4AF",
   },
   error: null,
 });

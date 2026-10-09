@@ -26,6 +26,8 @@ import type {
 import type {
   AppErrorResponse,
   CreatedNoteGuestParticipantResponse,
+  GetNotesParams,
+  GetWorkspaceNotesParams,
   NoteAgendaListResponse,
   NoteAgendaRequest,
   NoteAgendaResponse,
@@ -1342,26 +1344,45 @@ export type getNotesResponseError = (
 
 export type getNotesResponse = getNotesResponseSuccess | getNotesResponseError;
 
-export const getGetNotesUrl = (projectId: string) => {
-  return `/v1/projects/${projectId}/notes`;
+export const getGetNotesUrl = (projectId: string, params?: GetNotesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/projects/${projectId}/notes?${stringifiedParams}`
+    : `/v1/projects/${projectId}/notes`;
 };
 
 /**
- * 프로젝트의 노트 목록을 조회한다. 회의를 기록하기 시작한 시각 내림차순이고, 한 번도 기록하지 않은 노트는 만든 시각으로 선다.
+ * 프로젝트의 노트 목록을 조회한다. 회의를 기록하기 시작한 시각 내림차순이고, 한 번도 기록하지 않은 노트는 만든 시각으로 선다. limit 과 (afterSortedAt, afterNoteId) 커서로 쪽을 끊을 수 있다. 커서는 둘을 함께 보내며, 유효한 커서 값 중 하나만 오면 처음부터 읽는다(범위 밖 시각은 먼저 400). limit 이 없으면 커서 뒤의 전건을 돌려준다.
  * @summary 노트 목록 조회
  */
 export const getNotes = async (
   projectId: string,
+  params?: GetNotesParams,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<getNotesResponse> => {
-  return apiFetch<getNotesResponse>(getGetNotesUrl(projectId), {
+  return apiFetch<getNotesResponse>(getGetNotesUrl(projectId, params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetNotesQueryKey = (projectId: string) => {
-  return [`/v1/projects/${projectId}/notes`] as const;
+export const getGetNotesQueryKey = (
+  projectId: string,
+  params?: GetNotesParams
+) => {
+  return [
+    `/v1/projects/${projectId}/notes`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetNotesQueryOptions = <
@@ -1369,6 +1390,7 @@ export const getGetNotesQueryOptions = <
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -1378,11 +1400,12 @@ export const getGetNotesQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetNotesQueryKey(projectId);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNotesQueryKey(projectId, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotes>>> = ({
     signal,
-  }) => getNotes(projectId, { signal, ...requestOptions });
+  }) => getNotes(projectId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -1404,6 +1427,7 @@ export function useGetNotes<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params: undefined | GetNotesParams,
   options: {
     query: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -1427,6 +1451,7 @@ export function useGetNotes<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -1450,6 +1475,7 @@ export function useGetNotes<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -1469,6 +1495,7 @@ export function useGetNotes<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -1479,7 +1506,7 @@ export function useGetNotes<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetNotesQueryOptions(projectId, options);
+  const queryOptions = getGetNotesQueryOptions(projectId, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -1498,6 +1525,7 @@ export const prefetchGetNotesQuery = async <
 >(
   queryClient: QueryClient,
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getNotes>>, TError, TData>
@@ -1505,7 +1533,7 @@ export const prefetchGetNotesQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetNotesQueryOptions(projectId, options);
+  const queryOptions = getGetNotesQueryOptions(projectId, params, options);
 
   await queryClient.prefetchQuery(queryOptions);
 
@@ -1517,6 +1545,7 @@ export const getGetNotesSuspenseQueryOptions = <
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1530,11 +1559,12 @@ export const getGetNotesSuspenseQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetNotesQueryKey(projectId);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNotesQueryKey(projectId, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotes>>> = ({
     signal,
-  }) => getNotes(projectId, { signal, ...requestOptions });
+  }) => getNotes(projectId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
     Awaited<ReturnType<typeof getNotes>>,
@@ -1555,6 +1585,7 @@ export function useGetNotesSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params: undefined | GetNotesParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
@@ -1574,6 +1605,7 @@ export function useGetNotesSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1593,6 +1625,7 @@ export function useGetNotesSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1616,6 +1649,7 @@ export function useGetNotesSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   projectId: string,
+  params?: GetNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -1630,7 +1664,11 @@ export function useGetNotesSuspense<
 ): UseSuspenseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetNotesSuspenseQueryOptions(projectId, options);
+  const queryOptions = getGetNotesSuspenseQueryOptions(
+    projectId,
+    params,
+    options
+  );
 
   const query = useSuspenseQuery(
     queryOptions,
@@ -1818,20 +1856,36 @@ export type getWorkspaceNotesResponse =
   | getWorkspaceNotesResponseSuccess
   | getWorkspaceNotesResponseError;
 
-export const getGetWorkspaceNotesUrl = (workspaceId: string) => {
-  return `/v1/workspaces/${workspaceId}/notes`;
+export const getGetWorkspaceNotesUrl = (
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/workspaces/${workspaceId}/notes?${stringifiedParams}`
+    : `/v1/workspaces/${workspaceId}/notes`;
 };
 
 /**
- * 워크스페이스의 모든 프로젝트를 가로지르는 노트 목록. 정렬 규칙은 프로젝트 단위 조회와 같다.
+ * 워크스페이스의 모든 프로젝트를 가로지르는 노트 목록. 정렬 규칙은 프로젝트 단위 조회와 같다. limit 과 (afterSortedAt, afterNoteId) 커서로 쪽을 끊을 수 있다. 커서는 둘을 함께 보내며, 유효한 커서 값 중 하나만 오면 처음부터 읽는다(범위 밖 시각은 먼저 400). limit 이 없으면 커서 뒤의 전건을 돌려준다.
  * @summary 워크스페이스 노트 목록 조회
  */
 export const getWorkspaceNotes = async (
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<getWorkspaceNotesResponse> => {
   return apiFetch<getWorkspaceNotesResponse>(
-    getGetWorkspaceNotesUrl(workspaceId),
+    getGetWorkspaceNotesUrl(workspaceId, params),
     {
       ...options,
       method: "GET",
@@ -1839,8 +1893,14 @@ export const getWorkspaceNotes = async (
   );
 };
 
-export const getGetWorkspaceNotesQueryKey = (workspaceId: string) => {
-  return [`/v1/workspaces/${workspaceId}/notes`] as const;
+export const getGetWorkspaceNotesQueryKey = (
+  workspaceId: string,
+  params?: GetWorkspaceNotesParams
+) => {
+  return [
+    `/v1/workspaces/${workspaceId}/notes`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetWorkspaceNotesQueryOptions = <
@@ -1848,6 +1908,7 @@ export const getGetWorkspaceNotesQueryOptions = <
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1862,12 +1923,12 @@ export const getGetWorkspaceNotesQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId);
+    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWorkspaceNotes>>
   > = ({ signal }) =>
-    getWorkspaceNotes(workspaceId, { signal, ...requestOptions });
+    getWorkspaceNotes(workspaceId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -1891,6 +1952,7 @@ export function useGetWorkspaceNotes<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params: undefined | GetWorkspaceNotesParams,
   options: {
     query: Partial<
       UseQueryOptions<
@@ -1918,6 +1980,7 @@ export function useGetWorkspaceNotes<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1945,6 +2008,7 @@ export function useGetWorkspaceNotes<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1968,6 +2032,7 @@ export function useGetWorkspaceNotes<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -1982,7 +2047,11 @@ export function useGetWorkspaceNotes<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetWorkspaceNotesQueryOptions(workspaceId, options);
+  const queryOptions = getGetWorkspaceNotesQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -2001,6 +2070,7 @@ export const prefetchGetWorkspaceNotesQuery = async <
 >(
   queryClient: QueryClient,
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
@@ -2012,7 +2082,11 @@ export const prefetchGetWorkspaceNotesQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetWorkspaceNotesQueryOptions(workspaceId, options);
+  const queryOptions = getGetWorkspaceNotesQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   await queryClient.prefetchQuery(queryOptions);
 
@@ -2024,6 +2098,7 @@ export const getGetWorkspaceNotesSuspenseQueryOptions = <
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -2038,12 +2113,12 @@ export const getGetWorkspaceNotesSuspenseQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId);
+    queryOptions?.queryKey ?? getGetWorkspaceNotesQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWorkspaceNotes>>
   > = ({ signal }) =>
-    getWorkspaceNotes(workspaceId, { signal, ...requestOptions });
+    getWorkspaceNotes(workspaceId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
     Awaited<ReturnType<typeof getWorkspaceNotes>>,
@@ -2062,6 +2137,7 @@ export function useGetWorkspaceNotesSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params: undefined | GetWorkspaceNotesParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
@@ -2081,6 +2157,7 @@ export function useGetWorkspaceNotesSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -2100,6 +2177,7 @@ export function useGetWorkspaceNotesSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -2123,6 +2201,7 @@ export function useGetWorkspaceNotesSuspense<
   TError = UnauthorizedResponse,
 >(
   workspaceId: string,
+  params?: GetWorkspaceNotesParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -2139,6 +2218,7 @@ export function useGetWorkspaceNotesSuspense<
 } {
   const queryOptions = getGetWorkspaceNotesSuspenseQueryOptions(
     workspaceId,
+    params,
     options
   );
 

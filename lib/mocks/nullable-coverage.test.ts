@@ -371,6 +371,11 @@ const KNOWN_ONE_SIDED = new Set([
   // 치르지 않는다. 서버 쪽은 `GetNotificationsService` 가 한 건 더 읽어 정하고 IT 가 본다.
   "NotificationListResponse.data.nextCreatedAt",
   "NotificationListResponse.data.nextNotificationId",
+  // **노트 목록도 목은 쪽 인자 없이 부르면 전건을 준다** (APP-1019). 커서는 `limit` 을 보낸 요청에서
+  // `hasMore` 가 참일 때만 서는데, 이 표본은 인자 없이 훑는다. 쪽 끊기는 `workspace-page.test.tsx`
+  // 가 `limit` 을 보내 본다.
+  "NoteListResponse.data.nextNoteId",
+  "NoteListResponse.data.nextSortedAt",
   // **server 가 늘 `null` 을 보낸다.** 계약이 선언만 하고 채우는 경로가 없다
   // (`변경사항/계약-어긋남.md` 6번 「스키마만 넓다」). 고칠 자리는 server 의
   // `turnFields()` 헬퍼이고, 그때 이 줄을 지운다.

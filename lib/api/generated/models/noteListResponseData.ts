@@ -13,4 +13,17 @@ import type { NoteListResponseDataNotesItem } from "./noteListResponseDataNotesI
 export type NoteListResponseData = {
   /** 노트 목록 */
   notes: NoteListResponseDataNotesItem[];
+  /** 뒤에 더 있는지. limit 을 보내지 않았으면 항상 false */
+  hasMore: boolean;
+  /**
+   * 다음 요청의 afterNoteId. hasMore 가 false 면 null
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  nextNoteId: string | null;
+  /**
+   * 다음 요청의 afterSortedAt. hasMore 가 false 면 null
+   * @nullable
+   */
+  nextSortedAt: string | null;
 };
