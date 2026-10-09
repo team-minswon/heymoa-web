@@ -1,0 +1,208 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useTaskUpdate } from "@/components/tasks/use-task-update";
+import type { TaskEntry } from "@/lib/tasks/task-groups";
+
+/**
+ * `vi.fn()` 이 거절하는 프라미스를 따로 추적하다 **처리된 거절도 미처리 오류로 보고**해서, 거절 시험이 본문과 무관하게
+ * 실패한다. 손으로 쓴 대역으로 바꿔 호출 기록만 남긴다.
+ */
+const mutate = vi.hoisted(() => ({
+  impl: (async () => undefined) as (...args: unknown[]) => Promise<unknown>,
+  calls: [] as unknown[][],
+}));
+
+vi.mock("@/lib/ui/toast", () => ({ toast: { error: vi.fn() } }));
+vi.mock("@/lib/api/generated/projects/projects", () => ({
+  getGetProjectTasksQueryKey: (_w: string, projectId: string) => [
+    `/projects/${projectId}/tasks`,
+  ],
+  getGetWorkspaceTasksQueryKey: (w: string) => [`/workspaces/${w}/tasks`],
+  getGetProjectTaskRevisionsQueryKey: (_w: string, p: string, t: string) => [
+    `/projects/${p}/tasks/${t}/revisions`,
+  ],
+  useUpdateProjectTask: () => ({
+    mutateAsync: (...args: unknown[]) => {
+      mutate.calls.push(args);
+      return mutate.impl(...args);
+    },
+  }),
+}));
+
+const task = (over: Partial<TaskEntry> = {}): TaskEntry => ({
+  projectId: "p1",
+  projectName: "제품",
+  taskId: "t1",
+  content: "지난 할 일",
+  taskStatus: "OPEN",
+  assignee: null,
+  due: "2026-09-15",
+  revision: 3,
+  ...over,
+});
+const list = (tasks: TaskEntry[]) => ({
+  status: 200,
+  data: { success: true, data: { tasks } },
+});
+const rowsOf = (client: QueryClient, key: string[]) =>
+  (client.getQueryData(key) as ReturnType<typeof list>).data.data.tasks;
+
+function setup() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(
+    ["/workspaces/w1/tasks"],
+    list([task(), task({ taskId: "t2", revision: 1 })])
+  );
+  client.setQueryData(
+    ["/projects/p1/tasks"],
+    list([task(), task({ taskId: "t2", revision: 1 })])
+  );
+  const invalidate = vi.spyOn(client, "invalidateQueries");
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  return {
+    client,
+    invalidate,
+    ...renderHook(() => useTaskUpdate("w1"), { wrapper }),
+  };
+}
+
+describe("useTaskUpdate — 낙관적 적용", () => {
+  beforeEach(() => {
+    mutate.impl = async () => undefined;
+    mutate.calls = [];
+  });
+
+  /** **응답을 기다리지 않고 줄에 걸린다.** 두 목록(워크스페이스·프로젝트)이 같이 바뀐다. */
+  it("기한을 고치면 응답 전에 두 목록의 그 줄에 먼저 걸고, 다른 줄은 건드리지 않는다", async () => {
+    let finish!: (value: unknown) => void;
+    mutate.impl = () => new Promise((resolve) => (finish = resolve));
+    const { client, result } = setup();
+
+    let saved!: Promise<boolean>;
+    act(() => {
+      saved = result.current.save(task(), { due: "2026-09-30" });
+    });
+
+    await waitFor(() =>
+      expect(rowsOf(client, ["/workspaces/w1/tasks"])[0].due).toBe("2026-09-30")
+    );
+    expect(rowsOf(client, ["/projects/p1/tasks"])[0].due).toBe("2026-09-30");
+    expect(rowsOf(client, ["/workspaces/w1/tasks"])[1].due).toBe("2026-09-15");
+
+    finish({
+      status: 200,
+      data: { success: true, data: task({ due: "2026-09-30", revision: 4 }) },
+    });
+    await act(async () => void (await saved));
+  });
+
+  it("성공하면 응답 행으로 갈아 끼우고 목록은 다시 읽지 않는다", async () => {
+    mutate.impl = async () => ({
+      status: 200,
+      data: { success: true, data: task({ due: "2026-09-30", revision: 4 }) },
+    });
+    const { client, invalidate, result } = setup();
+
+    await act(
+      async () =>
+        void (await result.current.save(task(), { due: "2026-09-30" }))
+    );
+
+    expect(rowsOf(client, ["/workspaces/w1/tasks"])[0]).toMatchObject({
+      due: "2026-09-30",
+      revision: 4,
+    });
+    expect(rowsOf(client, ["/projects/p1/tasks"])[0]).toMatchObject({
+      revision: 4,
+    });
+    // 목록 키는 다시 읽지 않는다 — 이력(revisions)만 낡았다.
+    const keys = invalidate.mock.calls.map(
+      ([filters]) => (filters as { queryKey: string[] }).queryKey[0]
+    );
+    expect(keys).toEqual(["/projects/p1/tasks/t1/revisions"]);
+  });
+
+  it("실패하면 먼저 건 값을 되돌린다", async () => {
+    mutate.impl = async () => {
+      throw {
+        success: false,
+        data: null,
+        error: { code: "SOMETHING_ELSE", message: "x" },
+      };
+    };
+    const { client, result } = setup();
+
+    let ok = true;
+    await act(
+      async () =>
+        void (ok = await result.current.save(task(), { due: "2026-09-30" }))
+    );
+
+    expect(ok).toBe(false);
+    expect(rowsOf(client, ["/workspaces/w1/tasks"])[0].due).toBe("2026-09-15");
+    expect(rowsOf(client, ["/projects/p1/tasks"])[0].due).toBe("2026-09-15");
+  });
+
+  it("판이 낡아 거절되면 되돌리고 목록을 서버 값으로 다시 읽는다", async () => {
+    mutate.impl = async () => {
+      throw {
+        success: false,
+        data: null,
+        error: { code: "PROJECT_KNOWLEDGE_CONFLICT", message: "x" },
+      };
+    };
+    const { client, invalidate, result } = setup();
+
+    await act(
+      async () =>
+        void (await result.current.save(task(), { due: "2026-09-30" }))
+    );
+
+    expect(rowsOf(client, ["/workspaces/w1/tasks"])[0].due).toBe("2026-09-15");
+    expect(result.current.conflictTaskId).toBe("t1");
+    const keys = invalidate.mock.calls.map(
+      ([filters]) => (filters as { queryKey: string[] }).queryKey[0]
+    );
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "/workspaces/w1/tasks",
+        "/projects/p1/tasks",
+        "/projects/p1/tasks/t1/revisions",
+      ])
+    );
+  });
+
+  /** 끝내기·취소는 줄을 그 자리에 두고 먼저 긋는 연출이 있어, 응답 전에는 상태를 안 바꾼다. */
+  it("끝내기는 응답 전에 상태를 바꾸지 않고 응답이 오면 바꾼다", async () => {
+    let finish!: (value: unknown) => void;
+    mutate.impl = () => new Promise((resolve) => (finish = resolve));
+    const { client, result } = setup();
+
+    let saved!: Promise<boolean>;
+    act(() => {
+      saved = result.current.save(task(), { taskStatus: "COMPLETED" });
+    });
+    await waitFor(() => expect(mutate.calls.length).toBeGreaterThan(0));
+    expect(rowsOf(client, ["/workspaces/w1/tasks"])[0].taskStatus).toBe("OPEN");
+
+    finish({
+      status: 200,
+      data: {
+        success: true,
+        data: task({ taskStatus: "COMPLETED", revision: 4 }),
+      },
+    });
+    await act(async () => void (await saved));
+    expect(rowsOf(client, ["/workspaces/w1/tasks"])[0]).toMatchObject({
+      taskStatus: "COMPLETED",
+      revision: 4,
+    });
+  });
+});

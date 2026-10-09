@@ -10,6 +10,7 @@ import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { TaskHistorySheet } from "@/components/tasks/task-history-sheet";
 import { TASK_ROW_GRID, TASK_ROW_TRAIL, TaskRow } from "@/components/tasks/task-row";
 import { useTaskUpdate } from "@/components/tasks/use-task-update";
+import { assigneeKey } from "@/lib/assignees/describe";
 import { Button } from "@/components/ui/button";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,7 +77,14 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
   const { save, pendingOf, conflictTaskId } = useTaskUpdate(workspaceId);
 
   // 줄에 그리는 것이 바뀌면 목록도 새로 묶는다 — 판뿐 아니라 프로젝트 이름도 줄에 선다.
-  const signature = entries.map((e) => `${e.taskId}:${e.revision}:${e.projectName}`).join("|");
+  // **그리는 값을 다 넣는다.** 담당·기한·내용은 응답 전에 캐시에 먼저 걸리는데(`use-task-update`) 그때는 판이
+  // 아직 그대로다 — 판만 보면 묶음이 옛 줄을 그대로 들고 있어 화면이 안 바뀐다.
+  const signature = entries
+    .map(
+      (e) =>
+        `${e.taskId}:${e.revision}:${e.projectName}:${e.taskStatus}:${e.due ?? ""}:${assigneeKey(e.assignee)}:${e.content}`
+    )
+    .join("|");
   const filterKey = `${mine}:${activeProjectId}`;
   const visible = filterTasks(entries, {
     assigneeUserId: mine ? (user?.userId ?? null) : null,

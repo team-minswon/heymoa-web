@@ -263,7 +263,9 @@ export function ReviewBoard({
     tasks:
       !workspaceId || !projectId || tasksQuery.isPending
         ? ("pending" as const)
-        : tasks && !tasksQuery.isError
+        : // 이미 읽은 할 일이 있으면 재조회가 실패해도 쓴다(APP-1033). 낡았어도 반영은 판 대조가 거절로 걸러내고,
+          // 막으면 확정 막대가 재시도가 성공할 때까지 「불러오지 못했다」로 막힌다.
+          tasks
           ? ("ready" as const)
           : ("failed" as const),
   };
@@ -508,7 +510,9 @@ export function ReviewBoard({
                 <ReviewOverview
                   summary={summary}
                   pending={summaryQuery.isPending}
-                  failed={summaryQuery.isError}
+                  // **이미 든 요약이 있으면 재조회 실패로 덮지 않는다** (APP-1033). 캐시를 든 채 리패치만 실패해도
+                  // `isError` 가 되는데, 그때 보이던 요약을 에러 줄로 바꾸면 재시도가 성공할 때까지 통째로 사라진다.
+                  failed={summaryQuery.isError && !summary}
                   onRetry={() => void summaryQuery.refetch()}
                 />
                 <TopicIndex topics={digests} onOpenTimeline={onOpenTimeline} />
@@ -560,7 +564,7 @@ export function ReviewBoard({
                 </p>
               ) : null}
               {/* 조회가 실패했는데 「주제 묶음이 없다」고 말하면 없는 것처럼 읽힌다 */}
-              {summaryQuery.isError ? (
+              {summaryQuery.isError && !summary ? (
                 <InlineRetry
                   variant="line"
                   label="요약을 불러오지 못해 그래프를 그릴 수 없습니다."

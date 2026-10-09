@@ -129,7 +129,7 @@ describe("TaskHistorySheet", () => {
     await waitFor(() => expect(revisionsQuery.fetch).toHaveBeenCalledTimes(2));
   });
 
-  it("수정은 내용 · 담당 · 기한을 한 번에 저장하고, 빈 내용은 저장할 수 없다", async () => {
+  it("수정은 사람이 바꾼 칸만 저장하고, 빈 내용은 저장할 수 없다", async () => {
     revisionsQuery.fetch.mockResolvedValue(answer([]));
     const { onSave } = renderSheet();
 
@@ -140,7 +140,19 @@ describe("TaskHistorySheet", () => {
 
     fireEvent.change(input, { target: { value: " 운영에 올린다 " } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    expect(onSave).toHaveBeenCalledWith({ content: "운영에 올린다", assignee: null, due: "2026-09-19" });
+    // **바꾸지 않은 담당·기한은 싣지 않는다** — 편집하는 사이 남이 바꾼 값을 낡은 값으로 덮지 않게(APP-1033).
+    expect(onSave).toHaveBeenCalledWith({ content: "운영에 올린다" });
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: "내용" })).not.toBeInTheDocument());
+  });
+
+  it("바꾼 것이 없으면 저장하지 않고 편집만 닫는다", async () => {
+    revisionsQuery.fetch.mockResolvedValue(answer([]));
+    const { onSave } = renderSheet();
+
+    fireEvent.click(await screen.findByRole("button", { name: "수정" }));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(onSave).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole("textbox", { name: "내용" })).not.toBeInTheDocument());
   });
 

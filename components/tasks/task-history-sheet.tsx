@@ -1,5 +1,6 @@
 "use client";
 
+import { assigneeKey } from "@/lib/assignees/describe";
 import { Circle, CircleCheck, CircleSlash } from "lucide-react";
 import { useState } from "react";
 
@@ -44,7 +45,10 @@ function fieldsOf(revision: Revision) {
 }
 
 /** 앞 판과 달라진 칸. 첫 판은 무엇으로 시작했는지 담당·기한만 보인다. */
-export function revisionChanges(previous: Revision | undefined, current: Revision) {
+export function revisionChanges(
+  previous: Revision | undefined,
+  current: Revision
+) {
   const after = fieldsOf(current);
   if (!previous) {
     return (["담당", "기한"] as const).map((label) => ({
@@ -66,7 +70,11 @@ function subject(name: string) {
   return `${name}${code % 28 === 0 ? "가" : "이"}`;
 }
 
-const STATUS_ICON = { OPEN: Circle, COMPLETED: CircleCheck, CANCELLED: CircleSlash } as const;
+const STATUS_ICON = {
+  OPEN: Circle,
+  COMPLETED: CircleCheck,
+  CANCELLED: CircleSlash,
+} as const;
 
 /** 누가 바꿨나. 사람은 얼굴과 굵은 이름으로, 회의 확정은 문장으로만 선다. */
 function Author({
@@ -74,19 +82,32 @@ function Author({
   personOf,
 }: {
   revision: Revision;
-  personOf: (userId: string) => { name: string; image?: string | null } | undefined;
+  personOf: (
+    userId: string
+  ) => { name: string; image?: string | null } | undefined;
 }) {
   if (revision.approvalId) {
-    return <>{revision.revision === 1 ? "회의 확정으로 생겼습니다" : "회의 확정으로 바뀌었습니다"}</>;
+    return (
+      <>
+        {revision.revision === 1
+          ? "회의 확정으로 생겼습니다"
+          : "회의 확정으로 바뀌었습니다"}
+      </>
+    );
   }
   const person = revision.changedBy ? personOf(revision.changedBy) : undefined;
   const name = person?.name || "알 수 없는 사람";
   return (
     <span className="inline-flex items-center gap-1.5">
-      <PersonAvatar name={revision.changedBy ?? name} image={person?.image} size={18} />
+      <PersonAvatar
+        name={revision.changedBy ?? name}
+        image={person?.image}
+        size={18}
+      />
       <span>
         <b className="font-semibold">{name}</b>
-        {subject(name).slice(name.length)} {revision.revision === 1 ? "만들었습니다" : "바꿨습니다"}
+        {subject(name).slice(name.length)}{" "}
+        {revision.revision === 1 ? "만들었습니다" : "바꿨습니다"}
       </span>
     </span>
   );
@@ -162,14 +183,32 @@ function HistoryBody({
   const task = entry;
   const done = task.taskStatus !== "OPEN";
   const StatusIcon = STATUS_ICON[task.taskStatus];
+  const draftOf = (from: TaskEntry) => ({
+    content: from.content,
+    assignee: (from.assignee ?? null) as TaskPatch["assignee"],
+    due: from.due,
+    base: {
+      content: from.content,
+      assignee: (from.assignee ?? null) as TaskPatch["assignee"],
+      due: from.due,
+    },
+  });
   const [draft, setDraft] = useState<{
     content: string;
     assignee: TaskPatch["assignee"];
     due: string | null;
-  } | null>(() =>
-    startEditing && !done ? { content: task.content, assignee: task.assignee ?? null, due: task.due } : null
+    /** 편집을 연 순간의 값. 저장은 **사람이 바꾼 칸만** 보낸다 — 아래 `finishEdit`. */
+    base: {
+      content: string;
+      assignee: TaskPatch["assignee"];
+      due: string | null;
+    };
+  } | null>(() => (startEditing && !done ? draftOf(task) : null));
+  const query = useGetProjectTaskRevisions(
+    workspaceId,
+    entry.projectId,
+    task.taskId
   );
-  const query = useGetProjectTaskRevisions(workspaceId, entry.projectId, task.taskId);
   const revisions = okData(query.data)?.revisions ?? null;
   const personOf = (userId: string) => {
     for (const choice of choices) {
@@ -179,9 +218,24 @@ function HistoryBody({
   };
 
   // 저장이 끝나 받아들여졌을 때만 편집을 닫는다. 실패하면 고친 내용이 그대로 남아야 다시 보낼 수 있다.
+  //
+  // **사람이 바꾼 칸만 보낸다** (APP-1033). 세 칸을 통째로 보내면, 편집하는 사이 남이 담당을 바꿔 저장이 거절된
+  // 뒤(그때 목록은 서버 값으로 갱신된다) 다시 눌렀을 때 새 판에 **낡은 담당이 실려 남의 변경을 조용히 덮는다.**
+  // 안 바꾼 칸은 부르는 쪽이 지금 줄(새 판)의 값으로 채운다.
   const finishEdit = async () => {
     if (!draft?.content.trim()) return;
-    const saved = await onSave({ content: draft.content.trim(), assignee: draft.assignee, due: draft.due });
+    const content = draft.content.trim();
+    const patch: TaskPatch = {};
+    if (content !== draft.base.content) patch.content = content;
+    if (assigneeKey(draft.assignee) !== assigneeKey(draft.base.assignee))
+      patch.assignee = draft.assignee;
+    if (draft.due !== draft.base.due) patch.due = draft.due;
+    // 바꾼 것이 없으면 보낼 것도 없다.
+    if (Object.keys(patch).length === 0) {
+      setDraft(null);
+      return;
+    }
+    const saved = await onSave(patch);
     if (saved) setDraft(null);
   };
 
@@ -200,14 +254,18 @@ function HistoryBody({
             aria-label="내용"
             autoFocus
             value={draft.content}
-            onChange={(event) => setDraft({ ...draft, content: event.target.value })}
+            onChange={(event) =>
+              setDraft({ ...draft, content: event.target.value })
+            }
           />
         ) : (
           <SheetTitle className="text-panel-title font-medium leading-[26px] text-[var(--el-ink)] [word-break:keep-all]">
             {task.content}
           </SheetTitle>
         )}
-        <SheetDescription className="sr-only">할 일의 담당 · 기한과 바뀐 이력</SheetDescription>
+        <SheetDescription className="sr-only">
+          할 일의 담당 · 기한과 바뀐 이력
+        </SheetDescription>
         <dl className="mt-2 grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3 text-[13px]">
           <dt className="text-[var(--el-muted)]">담당</dt>
           <dd>
@@ -229,7 +287,11 @@ function HistoryBody({
           <dt className="text-[var(--el-muted)]">기한</dt>
           <dd className="text-[var(--el-ink)]">
             {draft ? (
-              <DueCell value={draft.due} editable onChange={(due) => setDraft({ ...draft, due })} />
+              <DueCell
+                value={draft.due}
+                editable
+                onChange={(due) => setDraft({ ...draft, due })}
+              />
             ) : task.due ? (
               formatDueDate(task.due)
             ) : (
@@ -243,10 +305,18 @@ function HistoryBody({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {draft ? (
             <>
-              <Button className="h-10 rounded-full sm:h-8" disabled={pending || !draft.content.trim()} onClick={finishEdit}>
+              <Button
+                className="h-10 rounded-full sm:h-8"
+                disabled={pending || !draft.content.trim()}
+                onClick={finishEdit}
+              >
                 저장
               </Button>
-              <Button variant="ghost" className="h-10 text-[var(--el-muted)] sm:h-8" onClick={() => setDraft(null)}>
+              <Button
+                variant="ghost"
+                className="h-10 text-[var(--el-muted)] sm:h-8"
+                onClick={() => setDraft(null)}
+              >
                 그대로 두기
               </Button>
             </>
@@ -256,16 +326,16 @@ function HistoryBody({
                 variant="outline"
                 className="h-10 rounded-full sm:h-8"
                 disabled={pending || done}
-                onClick={() =>
-                  setDraft({ content: task.content, assignee: task.assignee ?? null, due: task.due })
-                }
+                onClick={() => setDraft(draftOf(task))}
               >
                 수정
               </Button>
               <Button
                 className="h-10 rounded-full sm:h-8"
                 disabled={pending}
-                onClick={() => onSave({ taskStatus: done ? "OPEN" : "COMPLETED" })}
+                onClick={() =>
+                  onSave({ taskStatus: done ? "OPEN" : "COMPLETED" })
+                }
               >
                 {done ? "다시 열기" : "완료로 표시"}
               </Button>
@@ -283,7 +353,10 @@ function HistoryBody({
           )}
         </div>
         {conflict ? (
-          <p role="alert" className={`text-xs text-[var(--el-error-strong)] ${ARRIVE_CLASS}`}>
+          <p
+            role="alert"
+            className={`text-xs text-[var(--el-error-strong)] ${ARRIVE_CLASS}`}
+          >
             {CONFLICT_MESSAGE}
           </p>
         ) : null}
@@ -291,8 +364,12 @@ function HistoryBody({
 
       <section aria-label="이력" className="px-6 py-5">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-[13px] font-semibold text-[var(--el-ink)]">이력</h3>
-          <span className="text-xs text-[var(--el-muted-soft)]">최근 것부터</span>
+          <h3 className="text-[13px] font-semibold text-[var(--el-ink)]">
+            이력
+          </h3>
+          <span className="text-xs text-[var(--el-muted-soft)]">
+            최근 것부터
+          </span>
         </div>
 
         {query.isPending ? (
@@ -314,9 +391,14 @@ function HistoryBody({
         ) : (
           <ol className="mt-4 space-y-5 border-l border-[var(--el-hairline)] pl-4">
             {[...revisions].reverse().map((revision, index) => {
-              const previous = revisions.find((row) => row.revision === revision.revision - 1);
+              const previous = revisions.find(
+                (row) => row.revision === revision.revision - 1
+              );
               return (
-                <li key={revision.revision} className={`relative ${ARRIVE_CLASS}`}>
+                <li
+                  key={revision.revision}
+                  className={`relative ${ARRIVE_CLASS}`}
+                >
                   {/* 지금 값을 만든 가장 최근 판만 점을 칠한다 */}
                   <span
                     aria-hidden
@@ -340,20 +422,31 @@ function HistoryBody({
                   <dl className="mt-1.5 grid grid-cols-[32px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[13px]">
                     {revisionChanges(previous, revision).map((change) => (
                       <div key={change.label} className="contents">
-                        <dt className="text-[var(--el-muted)]">{change.label}</dt>
+                        <dt className="text-[var(--el-muted)]">
+                          {change.label}
+                        </dt>
                         <dd className="min-w-0 text-[var(--el-body)]">
                           {change.before !== null ? (
                             <>
                               <span className="text-[var(--el-muted-soft)] line-through">
                                 {change.before}
                               </span>
-                              <span aria-hidden className="px-1.5 text-[var(--el-muted-soft)]">
+                              <span
+                                aria-hidden
+                                className="px-1.5 text-[var(--el-muted-soft)]"
+                              >
                                 →
                               </span>
                               <span className="sr-only">에서 </span>
                             </>
                           ) : null}
-                          <span className={change.before !== null ? "font-semibold text-[var(--el-ink)]" : "text-[var(--el-ink)]"}>
+                          <span
+                            className={
+                              change.before !== null
+                                ? "font-semibold text-[var(--el-ink)]"
+                                : "text-[var(--el-ink)]"
+                            }
+                          >
                             {change.after}
                           </span>
                         </dd>

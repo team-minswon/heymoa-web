@@ -149,31 +149,36 @@ describe("AllTasks", () => {
       target: { value: "2026-09-30" },
     });
 
-    expect(mutate).toHaveBeenCalledWith({
-      workspaceId: "w1",
-      projectId: "p1",
-      taskId: "t1",
-      data: {
-        content: "지난 할 일",
-        taskStatus: "OPEN",
-        assignee: null,
-        due: "2026-09-30",
-        revision: 3,
-      },
-    });
+    // 목록 캐시를 먼저 걸고(취소 → 패치) 요청을 보내므로 한 틱 뒤에 나간다.
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith({
+        workspaceId: "w1",
+        projectId: "p1",
+        taskId: "t1",
+        data: {
+          content: "지난 할 일",
+          taskStatus: "OPEN",
+          assignee: null,
+          due: "2026-09-30",
+          revision: 3,
+        },
+      })
+    );
   });
 
   it("줄의 동그라미는 완료로, 이력 시트의 취소는 취소로 같은 판을 보낸다", async () => {
     renderScreen();
     fireEvent.click(await screen.findByRole("button", { name: "지난 할 일 완료로 표시" }));
-    expect(savedData()).toMatchObject({ taskStatus: "COMPLETED", revision: 3 });
+    await waitFor(() => expect(savedData()).toMatchObject({ taskStatus: "COMPLETED", revision: 3 }));
 
     fireEvent.click(screen.getByRole("button", { name: "다음 주 할 일" }));
     fireEvent.click(await screen.findByRole("button", { name: "취소" }));
-    expect(mutate.mock.calls.at(-1)?.[0]).toMatchObject({
-      taskId: "t3",
-      data: { taskStatus: "CANCELLED", revision: 1 },
-    });
+    await waitFor(() =>
+      expect(mutate.mock.calls.at(-1)?.[0]).toMatchObject({
+        taskId: "t3",
+        data: { taskStatus: "CANCELLED", revision: 1 },
+      })
+    );
   });
 
   it("여러 줄을 잇달아 저장하면 각 줄이 제 저장이 끝날 때까지 잠긴다", async () => {

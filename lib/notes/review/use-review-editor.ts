@@ -3,7 +3,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
-import { CONFIRMED_MESSAGE, CONFLICT_MESSAGE, errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
+import {
+  CONFIRMED_MESSAGE,
+  CONFLICT_MESSAGE,
+  errorCodeOf,
+  errorMessageOf,
+} from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import {
@@ -18,11 +23,15 @@ import type {
   MeetingReviewResponse,
   UpdateMeetingReviewItemRequest,
 } from "@/lib/api/generated/models";
+import { applyItemPatch } from "@/lib/notes/review/apply-item-patch";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
 import { isProjectTaskQueryKey } from "@/lib/tasks/task-groups";
 import { toast } from "@/lib/ui/toast";
 
-type ItemPatch = Omit<UpdateMeetingReviewItemRequest, "expectedReviewVersion" | "expectedItemRevision">;
+type ItemPatch = Omit<
+  UpdateMeetingReviewItemRequest,
+  "expectedReviewVersion" | "expectedItemRevision"
+>;
 type NewItem = Omit<AddMeetingReviewItemRequest, "expectedReviewVersion">;
 
 const CONFLICT = "MEETING_REVIEW_CONFLICT";
@@ -48,7 +57,8 @@ export function useReviewEditor(noteId: string) {
   const [adding, setAdding] = useState(false);
   const [conflictItemId, setConflictItemId] = useState<string | null>(null);
 
-  const cached = () => okData(queryClient.getQueryData<getMeetingReviewResponse>(queryKey));
+  const cached = () =>
+    okData(queryClient.getQueryData<getMeetingReviewResponse>(queryKey));
 
   const store = (review: MeetingReviewResponse) =>
     queryClient.setQueryData<getMeetingReviewResponse>(queryKey, (previous) =>
@@ -57,12 +67,32 @@ export function useReviewEditor(noteId: string) {
 
   async function run(
     target: string,
-    save: () => Promise<{ status: number; data: unknown }>
+    save: () => Promise<{ status: number; data: unknown }>,
+    /** 응답 전에 화면에 먼저 거는 값. 실패하면 되돌린다(APP-1033). 서버가 정하는 값이 걸린 저장에는 안 준다. */
+    optimistic?: (
+      review: NonNullable<ReturnType<typeof cached>>
+    ) => NonNullable<ReturnType<typeof cached>>
   ) {
     if (lock.current) return false;
     lock.current = true;
     setBusyItemId(target);
     await queryClient.cancelQueries({ queryKey });
+    // 거절·실패를 되돌릴 사본. 먼저 건 값은 응답이 오면 서버 값으로 갈린다.
+    const snapshot =
+      queryClient.getQueryData<getMeetingReviewResponse>(queryKey);
+    const before = cached();
+    if (optimistic && before) {
+      queryClient.setQueryData<getMeetingReviewResponse>(
+        queryKey,
+        (previous) =>
+          previous?.status === 200 && previous.data.success
+            ? {
+                ...previous,
+                data: { ...previous.data, data: optimistic(before) },
+              }
+            : previous
+      );
+    }
     try {
       const response = await save();
       if (response.status === 200 || response.status === 201) {
@@ -71,23 +101,32 @@ export function useReviewEditor(noteId: string) {
       setConflictItemId(null);
       return true;
     } catch (error) {
+      if (optimistic && snapshot) queryClient.setQueryData(queryKey, snapshot);
       if (errorCodeOf(error) === CONFIRMED) {
         // 다시 읽어도 고칠 수 없다. 흐름 상태를 읽어 화면이 확정(읽기 전용)으로 바뀌게 한다. 입력은 남긴다.
         toast.error(errorMessageOf(error, CONFIRMED_MESSAGE));
         // 재조회가 늦거나 실패해도 편집이 다시 켜지지 않게 캐시를 먼저 확정으로 옮긴다. 검토본도 같이 읽는다.
         moveFlowStatus(queryClient, noteId, "CONFIRMED");
-        void queryClient.refetchQueries({ queryKey: getGetAnalysisFlowQueryKey(noteId) });
+        void queryClient.refetchQueries({
+          queryKey: getGetAnalysisFlowQueryKey(noteId),
+        });
         void queryClient.refetchQueries({ queryKey });
         // 확정된 판으로 주제 목록 · 칩 개수 · 할 일이 달라졌다. 같이 낡음 처리한다.
-        void queryClient.invalidateQueries({ queryKey: getGetMeetingReviewSummaryQueryKey(noteId) });
-        void queryClient.invalidateQueries({ predicate: (query) => isProjectTaskQueryKey(query.queryKey) });
+        void queryClient.invalidateQueries({
+          queryKey: getGetMeetingReviewSummaryQueryKey(noteId),
+        });
+        void queryClient.invalidateQueries({
+          predicate: (query) => isProjectTaskQueryKey(query.queryKey),
+        });
       } else if (errorCodeOf(error) === CONFLICT) {
         // 새 항목에는 안내를 그릴 줄이 없다. 쓴 내용은 폼에 남으니 토스트로 알린다.
         if (target === NEW_ITEM) toast.error(CONFLICT_MESSAGE);
         else setConflictItemId(target);
         await queryClient.refetchQueries({ queryKey });
         // 그 사이 다른 사람이 주제 안에 항목을 더했으면 요약 members 도 달라졌다. 기다리지 않고 같이 읽는다.
-        void queryClient.refetchQueries({ queryKey: getGetMeetingReviewSummaryQueryKey(noteId) });
+        void queryClient.refetchQueries({
+          queryKey: getGetMeetingReviewSummaryQueryKey(noteId),
+        });
       } else {
         toast.error(errorMessageOf(error, "저장하지 못했습니다."));
       }
@@ -108,16 +147,22 @@ export function useReviewEditor(noteId: string) {
       const review = cached();
       const item = review?.items.find((row) => row.itemId === itemId);
       if (!review || !item) return Promise.resolve(false);
-      return run(itemId, () =>
-        update.mutateAsync({
-          noteId,
-          itemId,
-          data: {
-            expectedReviewVersion: review.reviewVersion,
-            expectedItemRevision: item.revision,
-            ...patch,
-          },
-        })
+      return run(
+        itemId,
+        () =>
+          update.mutateAsync({
+            noteId,
+            itemId,
+            data: {
+              expectedReviewVersion: review.reviewVersion,
+              expectedItemRevision: item.revision,
+              ...patch,
+            },
+          }),
+        // 응답 전에 먼저 걸 수 있는 칸이 있으면 건다(포함 여부·기한·제안 선택). 내용·담당은 서버가 정하므로 안 건다.
+        "included" in patch || "due" in patch || patch.decisions
+          ? (current) => applyItemPatch(current, itemId, patch)
+          : undefined
       );
     },
 
