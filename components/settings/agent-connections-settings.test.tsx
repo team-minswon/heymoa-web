@@ -253,7 +253,7 @@ describe("AgentConnectionsSettings", () => {
     openTokenForm();
 
     expect(
-      screen.getByText("회의 전사(참석자의 발화와 이름)도 에이전트가 읽습니다.")
+      screen.getByText("회의 전사(참석자의 발화와 이름)도 이 앱이 읽습니다.")
     ).toBeTruthy();
   });
 
@@ -568,7 +568,7 @@ describe("AgentConnectionsSettings", () => {
       ).toBeTruthy();
       expect(
         within(rowOf("팀이 막은 연결")).getByText(
-          "워크스페이스에서 외부 에이전트를 막아 끊겼습니다."
+          "워크스페이스에서 MCP 연결을 막아 끊겼습니다."
         )
       ).toBeTruthy();
       expect(
@@ -583,7 +583,7 @@ describe("AgentConnectionsSettings", () => {
   // 관리자가 외부 에이전트를 끈 워크스페이스(APP-941)
   describe("막힌 워크스페이스", () => {
     const BLOCKED =
-      "관리자가 이 워크스페이스의 외부 에이전트 연결을 꺼 두었습니다.";
+      "관리자가 이 워크스페이스의 MCP 연결을 꺼 두었습니다.";
     const openForm = () => {
       renderSettings();
       openTokenForm();
@@ -608,13 +608,13 @@ describe("AgentConnectionsSettings", () => {
       openForm();
 
       const trigger = screen.getByLabelText("맡길 워크스페이스");
-      expect(trigger.textContent).toContain("제품팀 (외부 에이전트 꺼짐)");
+      expect(trigger.textContent).toContain("제품팀 (MCP 꺼짐)");
       expect(screen.getByRole("alert").textContent).toContain(BLOCKED);
       expect(submitDisabled()).toBe(true);
 
       fireEvent.click(trigger);
       const blockedOption = await screen.findByRole("option", {
-        name: "제품팀 (외부 에이전트 꺼짐)",
+        name: "제품팀 (MCP 꺼짐)",
       });
       expect(blockedOption.getAttribute("aria-disabled")).toBe("true");
       // base-ui `Select` 는 포인터로 고른다 — `click` 만으로는 값이 안 바뀐다(members-settings.test 와 같다)

@@ -13,10 +13,9 @@ async function openAgentSettings(page: Page) {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
   await page.getByRole("button", { name: "워크스페이스 전환" }).click();
   await page.getByRole("menuitem", { name: "워크스페이스 설정" }).click();
-  // 워크스페이스 쪽에도 같은 이름의 관리 항목이 있다(APP-941) — 계정 그룹으로 좁힌다
   await page
     .getByRole("group", { name: "계정" })
-    .getByRole("button", { name: "외부 에이전트" })
+    .getByRole("button", { name: "내 MCP 연결" })
     .click();
 }
 

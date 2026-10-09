@@ -22,6 +22,14 @@ export function isLandingChromeRoute(pathname: string) {
   );
 }
 
+/**
+ * 카드 하나만 세우는 흐름(외부 에이전트 동의 · 초대). 마케팅 크롬 대신 로고 · 로그아웃만 둔 머리글과 약관 링크만 둔 발
+ * (`components/layout/focus-chrome.tsx`)을 세운다. 위와 같은 이유로 두 게이트가 이것 하나를 같이 본다.
+ */
+export function isFocusChromeRoute(pathname: string) {
+  return pathname === "/invite" || pathname.startsWith("/oauth/");
+}
+
 export function isChromelessRoute(pathname: string) {
   return (
     pathname === "/auth/callback" ||

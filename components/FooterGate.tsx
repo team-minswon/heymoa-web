@@ -4,8 +4,10 @@ import { usePathname } from "next/navigation";
 import React from "react";
 
 import { LandingFooter } from "@/components/heymoa/landing/footer";
+import { FocusFooter } from "@/components/layout/focus-chrome";
 import {
   isChromelessRoute,
+  isFocusChromeRoute,
   isLandingChromeRoute,
 } from "@/lib/routes/app-route";
 
@@ -25,6 +27,10 @@ export function FooterGate({ children }: { children: React.ReactNode }) {
   if (isLandingChromeRoute(pathname)) {
     // 「지어낸 예시」 고지는 데모가 있는 랜딩에서만.
     return <LandingFooter example={pathname === "/"} />;
+  }
+
+  if (isFocusChromeRoute(pathname)) {
+    return <FocusFooter />;
   }
 
   return <>{children}</>;

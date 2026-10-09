@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 
 import {
   AGENT_ACCESS_DISABLED,
@@ -9,7 +9,10 @@ import {
   BLOCKED_SUFFIX,
 } from "@/components/agent-connections/agent-access-blocked";
 import { AgentAccessNotice } from "@/components/agent-connections/agent-access-notice";
-import { AgentOAuthEndCard } from "@/components/agent-connections/agent-oauth-cards";
+import {
+  AgentOAuthEndCard,
+  HEYMOA_MARK,
+} from "@/components/agent-connections/agent-oauth-cards";
 import { CenteredCard } from "@/components/layout/centered-card";
 import { Button } from "@/components/ui/button";
 import { InlineRetry } from "@/components/ui/inline-retry";
@@ -104,7 +107,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   }
   if (consent.isError) {
     return (
-      <CenteredCard icon={<Bot className="size-5" aria-hidden />}>
+      <CenteredCard icon={HEYMOA_MARK}>
         <InlineRetry
           label="연결 요청을 불러오지 못했습니다"
           onRetry={() => void consent.refetch()}
@@ -167,32 +170,32 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   );
 
   return (
-    <CenteredCard icon={<Bot className="size-5" aria-hidden />}>
+    <CenteredCard icon={HEYMOA_MARK}>
       {request ? (
-        <h1 className="font-serif text-xl font-light tracking-[-0.01em] break-words">
+        <h1 className="font-serif text-2xl font-light tracking-[-0.01em] break-words">
           {request.clientName}
         </h1>
       ) : (
         <Skeleton
-          className="mx-auto h-7 w-40 rounded-control"
+          className="mx-auto h-8 w-44 rounded-control"
           aria-label="연결 요청을 불러오는 중"
         />
       )}
-      <p className="mt-2 text-sm text-[var(--el-muted)]">
-        이 에이전트가 HeyMoa 워크스페이스를 맡겨 달라고 요청합니다.
+      <p className="mt-2 text-base break-keep text-[var(--el-muted)]">
+        이 앱이 HeyMoa 워크스페이스를 맡겨 달라고 요청합니다.
       </p>
-      <p className="mt-3 inline-flex items-center gap-1.5 rounded-chip bg-[var(--el-canvas-soft)] px-2.5 py-1 text-xs text-[var(--el-muted)]">
-        <ShieldAlert className="size-3.5" aria-hidden />
+      <p className="mt-3 inline-flex items-center gap-1.5 rounded-chip bg-[var(--el-canvas-soft)] px-3 py-1 text-sm text-[var(--el-muted)]">
+        <ShieldAlert className="size-4" aria-hidden />
         HeyMoa 가 확인한 앱이 아닙니다
       </p>
 
-      <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-left text-sm">
+      <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-left text-base">
         <dt className="text-[var(--el-muted)]">돌아갈 곳</dt>
-        <dd className="min-w-0 break-all">
+        <dd className="min-w-0 break-keep wrap-anywhere">
           {request ? (
             <>허락하면 {request.redirectHost} 로 돌아갑니다</>
           ) : (
-            <Skeleton className="h-5 w-48 rounded-control" />
+            <Skeleton className="h-6 w-48 rounded-control" />
           )}
         </dd>
         <dt className="text-[var(--el-muted)]">권한</dt>
@@ -202,16 +205,16 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
               .map((scope) => SCOPE_LABELS[String(scope)] ?? String(scope))
               .join(", ")
           ) : (
-            <Skeleton className="h-5 w-12 rounded-control" />
+            <Skeleton className="h-6 w-12 rounded-control" />
           )}
         </dd>
       </dl>
 
-      <div className="mt-5 grid gap-2 text-left">
-        <Label htmlFor="agent-oauth-workspace">맡길 워크스페이스</Label>
+      <div className="mt-6 grid gap-2 text-left">
+        <Label htmlFor="agent-oauth-workspace" className="text-base">맡길 워크스페이스</Label>
         {workspacesQuery.isLoading ? (
           <Skeleton
-            className="h-9 rounded-control"
+            className="h-11 rounded-control"
             aria-label="워크스페이스를 불러오는 중"
           />
         ) : workspacesQuery.isError ? (
@@ -220,11 +223,11 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
             onRetry={() => void workspacesQuery.refetch()}
           />
         ) : workspaces.length === 0 ? (
-          <p className="text-sm text-[var(--el-muted)]">
+          <p className="text-base text-[var(--el-muted)]">
             연결할 워크스페이스가 없습니다.
           </p>
         ) : allBlocked ? (
-          <AgentAccessBlockedNotice {...recheck} />
+          <AgentAccessBlockedNotice {...recheck} className="text-sm" />
         ) : (
           <Select
             items={items}
@@ -241,7 +244,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
             <SelectTrigger
               id="agent-oauth-workspace"
               aria-label="맡길 워크스페이스"
-              className="w-full"
+              className="h-11 w-full text-base"
             >
               <SelectValue placeholder="워크스페이스를 고르세요" />
             </SelectTrigger>
@@ -259,17 +262,17 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
           </Select>
         )}
         {blocked && !allBlocked ? (
-          <AgentAccessBlockedNotice {...recheck} />
+          <AgentAccessBlockedNotice {...recheck} className="text-sm" />
         ) : null}
       </div>
 
       <div className="mt-4">
-        <AgentAccessNotice />
+        <AgentAccessNotice className="text-sm" />
       </div>
 
       {((failure && errorCodeOf(failure) !== AGENT_ACCESS_DISABLED) ||
         invalidRedirect) && (
-        <p role="alert" className="mt-4 text-sm text-[var(--el-error-strong)]">
+        <p role="alert" className="mt-4 text-base text-[var(--el-error-strong)]">
           {invalidRedirect
             ? "에이전트로 돌아갈 주소가 올바르지 않습니다. 에이전트에서 다시 연결해 주세요."
             : errorMessageOf(failure, "요청을 처리하지 못했습니다.")}
@@ -280,8 +283,8 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-8"
+          size="xl"
+          className="px-5 text-base"
           loading={deny.isPending}
           disabled={busy || !request}
           onClick={() => void onDeny()}
@@ -291,8 +294,8 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
         {workspaces.length > 0 && (
           <Button
             type="button"
-            size="sm"
-            className="h-8"
+            size="xl"
+            className="px-5 text-base"
             loading={approve.isPending}
             disabled={busy || !request || !workspaceId || blocked}
             onClick={() => void onApprove()}

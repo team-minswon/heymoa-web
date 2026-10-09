@@ -37,8 +37,11 @@ export type SettingsSection =
  *
  * 외부 에이전트 연결(APP-804)은 **계정** 쪽이다. 위임은 팀원 본인이 만들고 본인만 보며,
  * 워크스페이스 설정을 바꾸지 않는다(제품 정의 「표면과 위임」). 팀이 그 연결을 받을지와 열린 연결을
- * 끊는 관리(APP-941)는 **워크스페이스** 쪽 같은 이름의 항목이다. 「연동」은 HeyMoa 가 나가는 연결이라
- * 들어오는 연결과 섞지 않는다.
+ * 끊는 관리(APP-941)는 **워크스페이스** 쪽 「MCP 관리」다. 두 항목은 같은 말에 누구 것인지를 붙여 가른다
+ * (Notion 「연결 / 내 연결」 식) — 둘 다 「외부 에이전트」였을 때는 메뉴만 보고 어느 쪽인지 갈리지 않았다.
+ * 그 말을 「MCP」로 한 것은 사용자가 연결하며 상대편에서 보는 말(claude.ai 커넥터의 원격 MCP 서버 URL,
+ * ChatGPT 개발자 모드, `mcp add`)과 맞추려는 것이다. 뜻은 각 화면의 설명 문장이 쉬운 말로 푼다.
+ * 「연동」은 HeyMoa 가 나가는 연결이라 들어오는 연결과 섞지 않는다.
  */
 const SETTINGS_GROUPS: {
   label: string;
@@ -54,14 +57,14 @@ const SETTINGS_GROUPS: {
       { key: "workspace", label: "일반", Icon: Building2 },
       { key: "members", label: "멤버", Icon: UsersRound },
       { key: "integrations", label: "연동", Icon: Plug },
-      { key: "workspaceAgents", label: "외부 에이전트", Icon: Bot },
+      { key: "workspaceAgents", label: "MCP 관리", Icon: Bot },
     ],
   },
   {
     label: "계정",
     items: [
       { key: "account", label: "내 계정", Icon: UserRound },
-      { key: "agents", label: "외부 에이전트", Icon: Bot },
+      { key: "agents", label: "내 MCP 연결", Icon: Bot },
     ],
   },
 ];

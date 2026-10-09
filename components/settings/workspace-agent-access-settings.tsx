@@ -111,23 +111,24 @@ export function WorkspaceAgentAccessSettings({
     <div className="mx-auto w-full max-w-[720px]">
       <header className="mb-8">
         <h2 className="font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-          외부 에이전트
+          MCP 관리
         </h2>
         <p className="mt-2 text-sm text-[var(--el-muted)]">
-          팀이 외부 에이전트 연결을 허용할지 정하고 열린 연결을 관리합니다.
+          팀원이 Claude·ChatGPT 같은 AI 앱에 이 워크스페이스를 연결해도 되는지
+          정합니다. 관리자는 연결된 앱을 보고 끊을 수 있습니다.
         </p>
       </header>
 
       {workspaceQuery.isLoading ? (
         <Skeleton
           className="h-[76px] rounded-panel"
-          aria-label="외부 에이전트 설정 불러오는 중"
+          aria-label="MCP 설정 불러오는 중"
         />
       ) : // 다시 읽다 실패하면 캐시가 남아도 옛 값 대신 실패를 보인다 — 옛 「켜짐」을 보고 끄기를 누르게 된다
       workspaceQuery.isError || !workspace ? (
         <div role="alert" className="space-y-2">
           <p className="text-sm text-[var(--el-ink)]">
-            외부 에이전트 설정을 불러오지 못했습니다.
+            MCP 설정을 불러오지 못했습니다.
           </p>
           <Button
             variant="outline"
@@ -140,22 +141,22 @@ export function WorkspaceAgentAccessSettings({
         </div>
       ) : (
         <section
-          aria-label="외부 에이전트 연결 허용"
+          aria-label="MCP 연결 허용"
           className="flex items-center justify-between gap-4 rounded-panel border border-[var(--el-hairline)] bg-white p-4"
         >
           <div className="min-w-0">
             <p className="text-sm font-medium text-[var(--el-ink)]">
-              외부 에이전트 연결 허용
+              MCP 연결 허용
             </p>
             <p className="mt-1 text-xs text-[var(--el-muted)]">
               {workspace.agentAccessAllowed
-                ? "팀원이 이 워크스페이스를 Claude Code·Codex 같은 에이전트에 맡길 수 있습니다."
+                ? "팀원이 이 워크스페이스를 Claude·ChatGPT 같은 AI 앱에 맡길 수 있습니다."
                 : "꺼짐 — 새 연결을 만들 수 없습니다."}
             </p>
           </div>
           {isAdmin ? (
             <Switch
-              aria-label="외부 에이전트 연결 허용"
+              aria-label="MCP 연결 허용"
               checked={workspace.agentAccessAllowed}
               disabled={change.isPending}
               onCheckedChange={(checked) =>
@@ -180,7 +181,7 @@ export function WorkspaceAgentAccessSettings({
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <div className="min-w-0 flex-1">
             <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-              권한을 확인하지 못해 외부 에이전트 설정을 바꿀 수 없습니다.
+              권한을 확인하지 못해 MCP 설정을 바꿀 수 없습니다.
             </p>
             <Button
               variant="outline"
@@ -199,7 +200,7 @@ export function WorkspaceAgentAccessSettings({
         >
           <Info className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
           <p className="text-xs leading-relaxed text-[var(--el-muted)]">
-            외부 에이전트 연결은 관리자만 바꿀 수 있습니다.
+            MCP 연결은 관리자만 바꿀 수 있습니다.
           </p>
         </div>
       ) : null}
@@ -263,7 +264,7 @@ export function WorkspaceAgentAccessSettings({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>외부 에이전트 연결을 끌까요?</AlertDialogTitle>
+            <AlertDialogTitle>MCP 연결을 끌까요?</AlertDialogTitle>
             <AlertDialogDescription>
               {delegations && !delegationsQuery.isError
                 ? `지금 연결된 ${delegations.length}개가`

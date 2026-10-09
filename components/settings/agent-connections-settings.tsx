@@ -81,7 +81,7 @@ const REVOKE_REASON_LABEL: Record<
   MEMBERSHIP_ENDED: "워크스페이스를 떠나 끊겼습니다.",
   REFRESH_TOKEN_REUSED:
     "토큰 재사용이 감지돼 끊겼습니다. 토큰이 새어 나갔을 수 있으니 에이전트에서 다시 연결하세요.",
-  AGENT_ACCESS_DISABLED: "워크스페이스에서 외부 에이전트를 막아 끊겼습니다.",
+  AGENT_ACCESS_DISABLED: "워크스페이스에서 MCP 연결을 막아 끊겼습니다.",
   ADMIN: "관리자가 끊었습니다.",
 };
 
@@ -164,11 +164,11 @@ export function AgentConnectionsSettings({
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h2 className="font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
-            외부 에이전트
+            내 MCP 연결
           </h2>
           <p className="mt-2 text-sm text-[var(--el-muted)]">
-            Claude Code·Codex CLI 같은 에이전트가 맡긴 워크스페이스의 프로젝트
-            기억을 읽고 HeyMoa 화면을 열 수 있게 합니다.
+            Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와
+            프로젝트를 읽을 수 있게 연결합니다.
           </p>
         </div>
         {!mode && !issued ? (

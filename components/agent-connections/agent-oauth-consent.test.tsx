@@ -109,7 +109,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
     ).toBeTruthy();
     expect(screen.getByText("읽기")).toBeTruthy();
     expect(
-      screen.getByText("회의 전사(참석자의 발화와 이름)도 에이전트가 읽습니다.")
+      screen.getByText("회의 전사(참석자의 발화와 이름)도 이 앱이 읽습니다.")
     ).toBeTruthy();
   });
 
@@ -229,7 +229,7 @@ describe("외부 에이전트 연결 동의 화면", () => {
 
   describe("외부 에이전트를 끈 워크스페이스(APP-941)", () => {
     const BLOCKED =
-      "관리자가 이 워크스페이스의 외부 에이전트 연결을 꺼 두었습니다.";
+      "관리자가 이 워크스페이스의 MCP 연결을 꺼 두었습니다.";
 
     it("하나뿐인 워크스페이스가 막혀 있으면 안내만 남기고 허락은 잠그며 거절은 된다", async () => {
       const [only] = mockDb.listWorkspaces();

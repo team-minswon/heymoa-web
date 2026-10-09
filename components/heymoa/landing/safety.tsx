@@ -638,7 +638,7 @@ function ExternalTile() {
 
         <figure className="relative m-0 mt-8 lg:mt-9">
           <figcaption className="sr-only">
-            그림: 설정의 외부 에이전트 화면에 있는 연결 한 줄(예시). 노트북 Claude Code가 연결됨
+            그림: 설정의 내 MCP 연결 화면에 있는 연결 한 줄(예시). 노트북 Claude Code가 연결됨
             상태이고, 펼친 사용 내역에는 언제 무엇을 몇 건 가져갔는지가 남습니다. 회수를 누르면
             다음 요청부터 막히고 되돌릴 수 없습니다.
           </figcaption>
@@ -648,11 +648,11 @@ function ExternalTile() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="m-0 font-serif text-[24px] leading-tight font-light tracking-[-0.03em] @md:text-3xl">
-                    외부 에이전트
+                    내 MCP 연결
                   </p>
                   <p className={cn("m-0 mt-2 hidden text-sm break-keep @md:block", APP.muted)}>
-                    Claude Code·Codex CLI 같은 에이전트가 맡긴 워크스페이스의 프로젝트 기억을 읽고
-                    HeyMoa 화면을 열 수 있게 합니다.
+                    Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와 프로젝트를 읽을 수
+                    있게 연결합니다.
                   </p>
                 </div>
                 <span

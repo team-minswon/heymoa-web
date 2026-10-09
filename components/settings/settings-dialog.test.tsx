@@ -73,8 +73,8 @@ describe("SettingsDialog", () => {
     expect(screen.getByText("연동 내용")).toBeInTheDocument();
   });
 
-  // 같은 이름이 두 그룹에 있다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)
-  it("「외부 에이전트」는 워크스페이스 쪽이 관리, 계정 쪽이 내 연결을 연다", () => {
+  // 같은 말에 누구 것인지를 붙여 가른다 — 팀의 허용·관리(APP-941)와 내 연결(APP-804)
+  it("워크스페이스 쪽 「MCP 관리」는 관리, 계정 쪽 「내 MCP 연결」은 내 연결을 연다", () => {
     render(
       <SettingsDialog open onOpenChange={vi.fn()} workspaceId="01K0000000000" />
     );
@@ -82,14 +82,14 @@ describe("SettingsDialog", () => {
     fireEvent.click(
       within(screen.getByRole("group", { name: "워크스페이스" })).getByRole(
         "button",
-        { name: "외부 에이전트" }
+        { name: "MCP 관리" }
       )
     );
     expect(screen.getByText("외부 에이전트 관리 내용")).toBeInTheDocument();
 
     fireEvent.click(
       within(screen.getByRole("group", { name: "계정" })).getByRole("button", {
-        name: "외부 에이전트",
+        name: "내 MCP 연결",
       })
     );
     expect(

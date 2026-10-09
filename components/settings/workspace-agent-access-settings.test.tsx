@@ -85,7 +85,7 @@ function asRole(role: "ADMIN" | "MEMBER") {
 }
 
 const toggle = () =>
-  screen.findByRole("switch", { name: "외부 에이전트 연결 허용" });
+  screen.findByRole("switch", { name: "MCP 연결 허용" });
 const list = () => screen.findByRole("region", { name: "열린 연결" });
 
 describe("워크스페이스 외부 에이전트 관리", () => {
@@ -247,7 +247,7 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     renderSettings();
 
     expect(
-      await screen.findByText("외부 에이전트 연결은 관리자만 바꿀 수 있습니다.")
+      await screen.findByText("MCP 연결은 관리자만 바꿀 수 있습니다.")
     ).toBeTruthy();
     expect(screen.getByText("켜짐")).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
@@ -269,7 +269,7 @@ describe("워크스페이스 외부 에이전트 관리", () => {
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("region", { name: "열린 연결" })).toBeNull();
     expect(
-      screen.queryByText("외부 에이전트 연결은 관리자만 바꿀 수 있습니다.")
+      screen.queryByText("MCP 연결은 관리자만 바꿀 수 있습니다.")
     ).toBeNull();
     expect(requests).not.toContain(ADMIN_LIST);
   });

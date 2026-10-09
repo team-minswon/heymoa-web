@@ -72,7 +72,7 @@ export function InviteLanding({ token }: { token: string | null }) {
   }, [token, status, acceptByToken, queryClient, router]);
 
   return (
-    <main className="flex min-h-[100dvh] items-center justify-center bg-[var(--el-canvas)] p-4 text-[var(--el-ink)]">
+    <main className="flex flex-1 items-center justify-center bg-[var(--el-canvas)] p-4 text-[var(--el-ink)]">
       <InviteCard token={token} status={status} error={acceptError} />
     </main>
   );
@@ -99,15 +99,15 @@ function InviteCard({
   if (status === "anonymous") {
     return (
       <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
-        <h1 className="font-serif text-xl font-light tracking-[-0.01em]">
+        <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
           워크스페이스 초대가 도착했어요
         </h1>
-        <p className="mt-2 text-sm text-[var(--el-muted)]">
+        <p className="mt-2 text-base text-[var(--el-muted)]">
           로그인하면 초대를 수락하고 바로 워크스페이스에 합류합니다.
         </p>
         <a
           href={buildGoogleOAuthUrl(`/invite?token=${encodeURIComponent(token)}`)}
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-6 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
         >
           <LogIn className="size-4" aria-hidden />
           Google로 계속하기
@@ -121,15 +121,15 @@ function InviteCard({
     if (code === "ALREADY_WORKSPACE_MEMBER") {
       return (
         <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
-          <h1 className="font-serif text-xl font-light tracking-[-0.01em]">
+          <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
             이미 이 워크스페이스의 멤버예요
           </h1>
-          <p className="mt-2 text-sm text-[var(--el-muted)]">
+          <p className="mt-2 text-base text-[var(--el-muted)]">
             초대를 다시 수락할 필요가 없습니다. 워크스페이스에서 계속하세요.
           </p>
           <Link
             href="/"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-6 py-3 text-sm font-medium text-white"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--el-ink)] px-7 py-3.5 text-base font-medium text-white"
           >
             <Home className="size-4" aria-hidden />
             홈으로
@@ -151,10 +151,10 @@ function InviteCard({
   // checking(인증 확인) 또는 수락 진행 중 — 페이지 전체 스피너 대신 카드 안에서 알린다
   return (
     <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
-      <h1 className="font-serif text-xl font-light tracking-[-0.01em]">
+      <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
         초대를 확인하고 있어요
       </h1>
-      <p className="mt-2 text-sm text-[var(--el-muted)]">
+      <p className="mt-2 text-base text-[var(--el-muted)]">
         잠시만요 — 수락이 끝나면 워크스페이스로 이동합니다.
       </p>
     </CenteredCard>
@@ -164,11 +164,11 @@ function InviteCard({
 function ErrorCard({ title, description }: { title: string; description: string }) {
   return (
     <CenteredCard icon={<AlertTriangle className="size-5" aria-hidden />}>
-      <h1 className="font-serif text-xl font-light tracking-[-0.01em]">{title}</h1>
-      <p className="mt-2 text-sm text-[var(--el-muted)]">{description}</p>
+      <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">{title}</h1>
+      <p className="mt-2 text-base text-[var(--el-muted)]">{description}</p>
       <Link
         href="/"
-        className="mt-6 inline-flex items-center gap-2 rounded-full border border-[var(--el-hairline)] px-6 py-3 text-sm font-medium"
+        className="mt-6 inline-flex items-center gap-2 rounded-full border border-[var(--el-hairline)] px-7 py-3.5 text-base font-medium"
       >
         <Home className="size-4" aria-hidden />
         홈으로

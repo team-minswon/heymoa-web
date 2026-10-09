@@ -3,8 +3,10 @@
 import { usePathname } from "next/navigation";
 
 import { TopBar } from "@/components/heymoa/landing/top-bar";
+import { FocusTopBar } from "@/components/layout/focus-chrome";
 import {
   isChromelessRoute,
+  isFocusChromeRoute,
   isLandingChromeRoute,
 } from "@/lib/routes/app-route";
 
@@ -19,6 +21,10 @@ export function NavbarGate({ children }: { children: React.ReactNode }) {
   // 이 자리(`<main>` 밖, 건너뛰기 링크 뒤)여야 「본문으로 건너뛰기」가 이 바도 건너뛴다.
   if (isLandingChromeRoute(pathname)) {
     return <TopBar />;
+  }
+
+  if (isFocusChromeRoute(pathname)) {
+    return <FocusTopBar />;
   }
 
   return <>{children}</>;
