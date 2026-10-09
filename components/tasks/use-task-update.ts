@@ -145,7 +145,14 @@ export function useTaskUpdate(workspaceId: string) {
       }
       if (errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT") {
         setConflictTaskId(task.taskId);
-        await refresh();
+        // 다른 줄이 저장 중이면 지금 목록을 읽지 않는다 — 먼저 시작한 조회가 늦게 도착해 그 줄의 새 판을 옛 값으로
+        // 덮는다. 마지막 저장이 끝난 뒤 한 번 맞춘다(아래 `finally`). 이력은 지금 읽는다.
+        if (active.current > 1) {
+          needsReconcile.current = true;
+          void queryClient.invalidateQueries({ queryKey: revisionsKey });
+        } else {
+          await refresh();
+        }
       } else {
         toast.error(errorMessageOf(error, "할 일을 저장하지 못했습니다."));
       }

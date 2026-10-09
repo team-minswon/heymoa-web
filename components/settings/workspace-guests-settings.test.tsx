@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
   isError: false,
   hasMore: false,
   loadingMore: false,
+  partial: false,
   totalCount: null as number | null,
   pagesAsked: [] as number[],
   /** **캐시를 든 채 리패치만 실패한 상태.** `data` 는 살아 있고 `isError` 만 참이다. */
@@ -47,6 +48,8 @@ vi.mock("@/lib/workspace/use-guest-list-pages", () => ({
       data: state.isError
         ? undefined
         : {
+            // 훅이 뒷쪽을 못 읽었을 때 응답에 싣는 표시(계약 밖).
+            partial: state.partial,
             status: 200,
             data: {
               success: true,
@@ -126,6 +129,7 @@ describe("WorkspaceGuestsSettings", () => {
     state.isError = false;
     state.hasMore = false;
     state.loadingMore = false;
+    state.partial = false;
     state.totalCount = null;
     state.pagesAsked = [];
     state.preview.mockReset();
@@ -391,6 +395,16 @@ describe("WorkspaceGuestsSettings", () => {
     expect(
       screen.getAllByRole("button", { name: "다시 시도" }).length
     ).toBeGreaterThan(0);
+  });
+
+  it("뒷쪽을 못 읽었으면 목록 위에 그렇다고 알리고 연동·삭제를 잠근다", () => {
+    state.partial = true;
+    renderSection();
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /끝까지 불러오지 못해 연동·삭제를 잠갔습니다/
+    );
+    expect(screen.queryByRole("button", { name: "삭제" })).toBeNull();
   });
 
   it("삭제를 확인하면 mutation 을 부른다", async () => {

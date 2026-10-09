@@ -201,4 +201,34 @@ describe("NewMeetingDialog", () => {
     expect(screen.queryByRole("combobox", { name: "프로젝트" })).toBeNull();
     expect(screen.getByText("제품")).toBeInTheDocument();
   });
+
+  /** 부모가 창을 닫아도(뒤로가기·화면 이동) 지난 선택이 다음 열림에 남지 않는다. */
+  it("부모가 창을 닫았다 다시 열면 이름과 고른 프로젝트를 비운다", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    const props = {
+      onOpenChange: () => {},
+      onSubmit,
+      isPending: false,
+      workspaceId: "W1",
+      projects: PROJECTS,
+      defaultProjectId: "P1" as string | null,
+    };
+    const { rerender } = render(<NewMeetingDialog open {...props} />);
+    fireEvent.change(screen.getByLabelText("회의 이름"), {
+      target: { value: "지난 이름" },
+    });
+
+    rerender(<NewMeetingDialog open={false} {...props} />);
+    rerender(<NewMeetingDialog open {...props} defaultProjectId="P2" />);
+
+    expect((screen.getByLabelText("회의 이름") as HTMLInputElement).value).toBe(
+      ""
+    );
+    fireEvent.change(screen.getByLabelText("회의 이름"), {
+      target: { value: "새 이름" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "만들기" }));
+    // 새 기본 프로젝트(P2)로 만든다 — 지난 선택이 남아 앞서지 않는다.
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("새 이름", "P2"));
+  });
 });

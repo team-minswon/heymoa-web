@@ -183,6 +183,48 @@ describe("useTaskUpdate — 낙관적 적용", () => {
     expect(listKeysAfter.length).toBeGreaterThan(0);
   });
 
+  /** 충돌 뒤 목록 재조회도 다른 줄이 저장 중이면 미룬다 — 먼저 시작한 조회가 늦게 도착해 그 줄의 새 판을 덮는다. */
+  it("충돌이어도 다른 줄이 저장 중이면 목록 재조회를 지금 하지 않는다", async () => {
+    let finishA!: (value: unknown) => void;
+    mutate.impl = (...args: unknown[]) => {
+      const { taskId } = args[0] as { taskId: string };
+      if (taskId === "t1") return new Promise((resolve) => (finishA = resolve));
+      return Promise.reject({
+        success: false,
+        data: null,
+        error: { code: "PROJECT_KNOWLEDGE_CONFLICT", message: "x" },
+      });
+    };
+    const { invalidate, result } = setup();
+
+    let savedA!: Promise<boolean>;
+    act(() => {
+      savedA = result.current.save(task(), { due: "2026-09-30" });
+    });
+    await waitFor(() => expect(mutate.calls.length).toBe(1));
+    await act(
+      async () =>
+        void (await result.current.save(task({ taskId: "t2", revision: 1 }), {
+          due: "2026-10-01",
+        }))
+    );
+
+    const lists = () =>
+      invalidate.mock.calls.filter(([filters]) =>
+        ["/workspaces/w1/tasks", "/projects/p1/tasks"].includes(
+          (filters as { queryKey: string[] }).queryKey[0]
+        )
+      );
+    expect(lists()).toHaveLength(0);
+
+    finishA({
+      status: 200,
+      data: { success: true, data: task({ due: "2026-09-30", revision: 4 }) },
+    });
+    await act(async () => void (await savedA));
+    expect(lists().length).toBeGreaterThan(0);
+  });
+
   /** 한 줄의 실패가 다른 줄의 성공을 되돌리지 않는다 — 되돌리면 그 줄의 판이 옛 값이 되어 다음 저장이 거절된다. */
   it("실패한 줄만 되돌리고 그사이 성공한 다른 줄은 그대로 둔다", async () => {
     let rejectA!: (reason: unknown) => void;

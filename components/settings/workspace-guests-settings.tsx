@@ -145,12 +145,16 @@ export function WorkspaceGuestsSettings({
           {/* **왜 관리가 사라졌는지 말한다.** 캐시를 든 채 리패치가 실패하면 목록은 그대로
               두되 연동·삭제를 잠그는데(확인창의 숫자가 낡을 수 있어서), 이유가 안 보이면
               ADMIN 은 **권한이 사라진 것으로 읽고** 되돌릴 길도 없다. */}
-          {guestsQuery.isError && guestsQuery.data !== undefined ? (
+          {(guestsQuery.isError && guestsQuery.data !== undefined) || partial ? (
             <div
               role="alert"
               className="mt-4 flex items-center gap-2 text-sm text-[var(--el-muted)]"
             >
-              <span>최신 목록을 확인하지 못해 연동·삭제를 잠갔습니다.</span>
+              <span>
+                {partial
+                  ? "목록을 끝까지 불러오지 못해 연동·삭제를 잠갔습니다."
+                  : "최신 목록을 확인하지 못해 연동·삭제를 잠갔습니다."}
+              </span>
               <Button
                 variant="outline"
                 size="sm"

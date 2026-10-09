@@ -122,6 +122,7 @@ describe("applyItemPatch", () => {
       decisions: [{ targetId: "N1", decision: "END" }],
     });
 
+    // 같은 판이면(이 항목의 revision 이 그대로) 먼저 건 칸만 이전 값으로 돌린다.
     expect(restored.items[0]).toMatchObject({ included: true });
     expect(restored.items[0].replacements[0].decision).toBeNull();
     expect(restored.reviewVersion).toBe(6);
@@ -129,5 +130,48 @@ describe("applyItemPatch", () => {
       content: "더 새 내용",
       revision: 9,
     });
+  });
+
+  it("그사이 이 항목의 더 새 판이 들어왔으면 되돌리지 않는다", () => {
+    const before = review().items[0];
+    const patch = { included: false };
+    const patched = applyItemPatch(review(), "A", patch);
+    const newer = {
+      ...patched,
+      items: patched.items.map((row) =>
+        row.itemId === "A" ? { ...row, revision: 3, included: false } : row
+      ),
+    };
+
+    expect(restoreItemFields(newer, before, patch).items[0]).toMatchObject({
+      included: false,
+      revision: 3,
+    });
+  });
+
+  it("먼저 걸지 않은 APPLIED 선택은 되돌리지도 않는다", () => {
+    const before = review().items[0];
+    const patch = {
+      decisions: [{ targetId: "T1", decision: "APPLIED" as const }],
+    };
+    // 다른 길이 이미 APPLIED 를 저장했다(이 항목의 판은 그대로).
+    const current = {
+      ...review(),
+      items: review().items.map((row) =>
+        row.itemId === "A"
+          ? {
+              ...row,
+              taskChanges: row.taskChanges.map((task) => ({
+                ...task,
+                decision: "APPLIED" as const,
+              })),
+            }
+          : row
+      ),
+    } as unknown as MeetingReviewResponseData;
+
+    const restored = restoreItemFields(current, before, patch);
+
+    expect(restored.items[0].taskChanges[0].decision).toBe("APPLIED");
   });
 });

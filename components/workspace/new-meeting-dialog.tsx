@@ -55,6 +55,17 @@ export function NewMeetingDialog({
   const [title, setTitle] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const trimmed = title.trim();
+  // **부모가 창을 닫아도(뒤로가기·화면 이동) 쓰던 이름과 고른 프로젝트를 비운다.** 이 컴포넌트는 그대로 남아 있어
+  // 자체 `close()` 를 안 거치면 다음에 열 때 지난 선택이 새 기본 프로젝트보다 앞선다(렌더 중에 맞춘다 — effect 로 미루면
+  // 낡은 값으로 한 번 그린다).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) {
+      setTitle("");
+      setPicked(null);
+    }
+  }
   /**
    * **회의가 어느 프로젝트에 속하는지는 만들 때 정해지고 그 뒤로 못 바꾼다** (APP-1033) — 분석이 그 프로젝트의 지식으로
    * 대조하고 확정이 그 프로젝트에 쌓이므로, 나중에 옮기면 두 프로젝트의 지식이 섞인다. 그래서 여기서 보여 주고 고르게 한다.

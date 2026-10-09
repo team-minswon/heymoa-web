@@ -119,7 +119,7 @@ describe("useReviewEditor — 낙관적 적용", () => {
   });
 
   /** 저장 중에 다른 조회가 더 새 검토본(v6)을 가져왔으면, 실패해도 그 새 값은 지키고 이 항목의 칸만 되돌린다. */
-  it("실패해도 그사이 들어온 더 새 검토본은 옛 판으로 덮지 않는다", async () => {
+  it("실패해도 그사이 들어온 더 새 검토본은 옛 값으로 되돌리지 않는다", async () => {
     let rejectSave!: (reason: unknown) => void;
     update.impl = () => new Promise((_, reject) => (rejectSave = reject));
     const { client, result } = setup();
@@ -141,8 +141,9 @@ describe("useReviewEditor — 낙관적 적용", () => {
 
     const data = (client.getQueryData(KEY) as ReturnType<typeof review>).data
       .data;
+    // 더 새 판(v6·항목 revision 3)은 서버의 값이다 — 옛 값으로 되돌려 「새 판 번호 + 옛 값」 조합을 만들지 않는다.
     expect(data.reviewVersion).toBe(6);
-    expect(data.items[0]).toMatchObject({ included: true, revision: 3 });
+    expect(data.items[0]).toMatchObject({ included: false, revision: 3 });
   });
 
   it("내용 수정은 응답 전에 걸지 않는다", async () => {

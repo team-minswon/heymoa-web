@@ -70,43 +70,57 @@ export function restoreItemFields(
   before: MeetingReviewResponseDataItemsItem,
   patch: ItemPatch
 ): MeetingReviewResponseData {
+  // `applyItemPatch` 가 안 건 값(대체의 APPLIED, 할 일 변경의 END·APPLIED)은 되돌리지도 않는다 — 그 칸은 다른 길이 쓴 값이다.
   const touched = new Set(
-    (patch.decisions ?? []).map((choice) => choice.targetId)
+    (patch.decisions ?? [])
+      .filter((choice) => choice.decision !== "APPLIED")
+      .map((choice) => choice.targetId)
+  );
+  const touchedTasks = new Set(
+    (patch.decisions ?? [])
+      .filter(
+        (choice) => choice.decision !== "APPLIED" && choice.decision !== "END"
+      )
+      .map((choice) => choice.targetId)
   );
   return {
     ...current,
     items: current.items.map((item) =>
       item.itemId !== before.itemId
         ? item
-        : {
-            ...item,
-            ...(patch.included !== undefined
-              ? { included: before.included }
-              : {}),
-            ...("due" in patch ? { due: before.due } : {}),
-            ...(touched.size > 0
-              ? {
-                  replacements: item.replacements.map((row) => {
-                    const old = before.replacements.find(
-                      (candidate) =>
-                        candidate.target.itemId === row.target.itemId
-                    );
-                    return touched.has(row.target.itemId) && old
-                      ? { ...row, decision: old.decision }
-                      : row;
-                  }),
-                  taskChanges: item.taskChanges.map((row) => {
-                    const old = before.taskChanges.find(
-                      (candidate) =>
-                        candidate.target.itemId === row.target.itemId
-                    );
-                    return touched.has(row.target.itemId) && old
-                      ? { ...row, decision: old.decision }
-                      : row;
-                  }),
-                }
-              : {}),
-          }
+        : // **그사이 더 새 판이 들어왔으면(다른 조회가 서버 값을 가져왔다) 되돌리지 않는다.** 새 판의 값은 서버의 값이라
+          // 옛 값으로 되돌리면 존재하지 않는 조합(새 판 번호 + 옛 값)이 캐시에 남는다.
+          item.revision !== before.revision
+          ? item
+          : {
+              ...item,
+              ...(patch.included !== undefined
+                ? { included: before.included }
+                : {}),
+              ...("due" in patch ? { due: before.due } : {}),
+              ...(touched.size > 0
+                ? {
+                    replacements: item.replacements.map((row) => {
+                      const old = before.replacements.find(
+                        (candidate) =>
+                          candidate.target.itemId === row.target.itemId
+                      );
+                      return touched.has(row.target.itemId) && old
+                        ? { ...row, decision: old.decision }
+                        : row;
+                    }),
+                    taskChanges: item.taskChanges.map((row) => {
+                      const old = before.taskChanges.find(
+                        (candidate) =>
+                          candidate.target.itemId === row.target.itemId
+                      );
+                      return touchedTasks.has(row.target.itemId) && old
+                        ? { ...row, decision: old.decision }
+                        : row;
+                    }),
+                  }
+                : {}),
+            }
     ),
   };
 }
