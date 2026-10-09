@@ -67,6 +67,42 @@ describe("useCreateMeeting", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
+  /** 만들 때 고른 프로젝트가 보고 있던 프로젝트보다 우선이다. 회의의 프로젝트는 만든 뒤 못 바꾼다(APP-1033). */
+  it("고른 프로젝트로 만든다", async () => {
+    shell.selectedProjectId = null;
+    createNote.mockResolvedValue({
+      status: 201,
+      headers: new Headers(),
+      data: {
+        success: true,
+        data: {
+          noteId: "01K0000000100",
+          projectId: "01K0000000009",
+          title: "주간 제품 회의",
+          createdAt: "2026-07-19T10:00:00Z",
+          updatedAt: "2026-07-19T10:00:00Z",
+          meetingStatus: "NOT_STARTED",
+          meetingStartedBy: null,
+          meetingStartedAt: null,
+          activeSessionStartedAt: null,
+          recordedDurationMs: 0,
+        },
+      },
+    });
+    const { result } = renderHook(() => useCreateMeeting("01K0000000000"), {
+      wrapper: wrapper(new QueryClient()),
+    });
+
+    await act(async () => {
+      await result.current.createMeeting("주간 제품 회의", "01K0000000009");
+    });
+
+    expect(createNote).toHaveBeenCalledWith({
+      projectId: "01K0000000009",
+      data: { title: "주간 제품 회의" },
+    });
+  });
+
   it("creates a NOT_STARTED note and opens the full view without requesting the microphone", async () => {
     recording.phase = "recording";
     recording.activeNoteId = "01K0000000002";

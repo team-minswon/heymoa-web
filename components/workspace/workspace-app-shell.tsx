@@ -305,6 +305,7 @@ function WorkspaceCreateDialogs({
   onNewMeetingChange: (open: boolean) => void;
 }) {
   const createMeeting = useCreateMeeting(workspaceId);
+  const { selectedProjectId, projects } = useWorkspaceShell();
   const chain = createProject === "then-meeting";
 
   return (
@@ -322,10 +323,13 @@ function WorkspaceCreateDialogs({
         open={newMeetingOpen}
         onOpenChange={onNewMeetingChange}
         isPending={createMeeting.isPending}
-        onSubmit={async (title) => {
+        workspaceId={workspaceId}
+        projects={projects}
+        defaultProjectId={selectedProjectId}
+        onSubmit={async (title, projectId) => {
           // 만들어졌을 때만 닫는다. 대상 프로젝트가 사라졌거나 응답 guard에 걸리면
           // 노트도 라우팅도 없는데 창만 닫혀 사용자가 만들어진 줄 안다.
-          const created = await createMeeting.createMeeting(title);
+          const created = await createMeeting.createMeeting(title, projectId);
           if (created) onNewMeetingChange(false);
           return created;
         }}

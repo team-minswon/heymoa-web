@@ -21,11 +21,16 @@ export function useCreateMeeting(workspaceId: string) {
   const createNote = useCreateNote();
   const { selectedProjectId, projects } = useWorkspaceShell();
 
-  const targetProjectId = selectedProjectId ?? projects[0]?.projectId;
-  const disabled = createNote.isPending || !targetProjectId;
+  const defaultProjectId = selectedProjectId ?? projects[0]?.projectId;
+  const disabled = createNote.isPending || !defaultProjectId;
 
   /** 실제로 만들어졌으면 true. 호출부는 이 값으로만 다이얼로그를 닫는다. */
-  const createMeeting = async (title: string): Promise<boolean> => {
+  const createMeeting = async (
+    title: string,
+    projectId?: string
+  ): Promise<boolean> => {
+    // 만들 때 고른 프로젝트가 우선이다. 회의의 프로젝트는 만든 뒤 못 바꾼다(APP-1033).
+    const targetProjectId = projectId ?? defaultProjectId;
     if (!targetProjectId) return false;
     const response = await createNote.mutateAsync({
       projectId: targetProjectId,

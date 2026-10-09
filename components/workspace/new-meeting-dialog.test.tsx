@@ -9,20 +9,38 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NewMeetingDialog } from "@/components/workspace/new-meeting-dialog";
 
-function renderDialog(onSubmit = vi.fn().mockResolvedValue(true), isPending = false) {
+const PROJECTS = [
+  { projectId: "P1", name: "제품" },
+  { projectId: "P2", name: "리서치" },
+];
+
+function renderDialog(
+  onSubmit = vi.fn().mockResolvedValue(true),
+  isPending = false,
+  options: {
+    projects?: typeof PROJECTS;
+    defaultProjectId?: string | null;
+  } = {}
+) {
   render(
     <NewMeetingDialog
       open
       onOpenChange={() => {}}
       onSubmit={onSubmit}
       isPending={isPending}
+      workspaceId="W1"
+      projects={options.projects ?? PROJECTS}
+      defaultProjectId={options.defaultProjectId ?? null}
     />
   );
   return onSubmit;
 }
 
 describe("NewMeetingDialog", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    window.localStorage.clear();
+  });
 
   it("입력한 이름으로 만든다", async () => {
     const onSubmit = renderDialog();
@@ -33,7 +51,9 @@ describe("NewMeetingDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "만들기" }));
 
     // 앞뒤 공백은 서버에 보내기 전에 턴다.
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("주간 제품 회의"));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith("주간 제품 회의", "P1")
+    );
   });
 
   it("생성이 끝날 때까지 입력을 비우지 않는다", async () => {
@@ -73,7 +93,7 @@ describe("NewMeetingDialog", () => {
 
     // 부모는 닫기만 하므로 여기서 안 비우면 지난 이름이 남는다.
     await waitFor(() => expect(input.value).toBe(""));
-    expect(onSubmit).toHaveBeenCalledWith("주간 제품 회의");
+    expect(onSubmit).toHaveBeenCalledWith("주간 제품 회의", "P1");
   });
 
   it("만들어지지 않았으면 입력을 지우지 않는다", async () => {
@@ -110,5 +130,75 @@ describe("NewMeetingDialog", () => {
     expect(
       screen.getByText(/기록은 만든 뒤에\s*시작합니다/)
     ).toBeInTheDocument();
+  });
+
+  /** 회의의 프로젝트는 만든 뒤 못 바꾼다 — 그래서 만들 때 보여 주고, 못 바꾼다고 말한다(APP-1033). */
+  it("프로젝트를 보여 주고 만든 뒤에는 바꿀 수 없다고 말한다", () => {
+    renderDialog();
+
+    expect(
+      screen.getByRole("combobox", { name: "프로젝트" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/만든 뒤에는 프로젝트를 바꿀 수 없습니다/)
+    ).toBeInTheDocument();
+  });
+
+  const submitTitle = async () => {
+    fireEvent.change(screen.getByLabelText("회의 이름"), {
+      target: { value: "주간 회의" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "만들기" }));
+  };
+
+  it("보고 있던 프로젝트가 있으면 그 프로젝트로 만든다", async () => {
+    const onSubmit = renderDialog(undefined, false, { defaultProjectId: "P2" });
+
+    await submitTitle();
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith("주간 회의", "P2")
+    );
+  });
+
+  it("「모든 노트」에서 열면 마지막으로 쓴 프로젝트가 기본이다", async () => {
+    window.localStorage.setItem("heymoa:last-meeting-project:W1", "P2");
+    const onSubmit = renderDialog();
+
+    await submitTitle();
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith("주간 회의", "P2")
+    );
+  });
+
+  it("마지막으로 쓴 프로젝트가 지워졌으면 첫 프로젝트로 돌아간다", async () => {
+    window.localStorage.setItem("heymoa:last-meeting-project:W1", "GONE");
+    const onSubmit = renderDialog();
+
+    await submitTitle();
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith("주간 회의", "P1")
+    );
+  });
+
+  it("만들어지면 그 프로젝트를 다음 기본으로 기억한다", async () => {
+    renderDialog(undefined, false, { defaultProjectId: "P2" });
+
+    await submitTitle();
+
+    await waitFor(() =>
+      expect(
+        window.localStorage.getItem("heymoa:last-meeting-project:W1")
+      ).toBe("P2")
+    );
+  });
+
+  it("프로젝트가 하나면 고르는 칸 없이 이름만 보여 준다", () => {
+    renderDialog(undefined, false, { projects: [PROJECTS[0]] });
+
+    expect(screen.queryByRole("combobox", { name: "프로젝트" })).toBeNull();
+    expect(screen.getByText("제품")).toBeInTheDocument();
   });
 });

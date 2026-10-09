@@ -13,6 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /**
  * 「새 회의」의 생성 단계.
@@ -31,18 +38,41 @@ export function NewMeetingDialog({
   onOpenChange,
   onSubmit,
   isPending,
+  workspaceId,
+  projects,
+  defaultProjectId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 실제로 만들어졌으면 true. 그때만 입력을 비운다. */
-  onSubmit: (title: string) => Promise<boolean>;
+  onSubmit: (title: string, projectId: string) => Promise<boolean>;
   isPending: boolean;
+  workspaceId: string;
+  projects: { projectId: string; name: string }[];
+  /** 지금 보고 있는 프로젝트. 「모든 노트」에서 열었으면 null 이다. */
+  defaultProjectId: string | null;
 }) {
   const [title, setTitle] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
   const trimmed = title.trim();
+  /**
+   * **회의가 어느 프로젝트에 속하는지는 만들 때 정해지고 그 뒤로 못 바꾼다** (APP-1033) — 분석이 그 프로젝트의 지식으로
+   * 대조하고 확정이 그 프로젝트에 쌓이므로, 나중에 옮기면 두 프로젝트의 지식이 섞인다. 그래서 여기서 보여 주고 고르게 한다.
+   * 기본값은 보고 있던 프로젝트, 「모든 노트」에서는 마지막으로 쓴 프로젝트다(없으면 첫 프로젝트).
+   */
+  const fallback =
+    (defaultProjectId && projects.some((p) => p.projectId === defaultProjectId)
+      ? defaultProjectId
+      : null) ??
+    lastMeetingProject(workspaceId, projects) ??
+    projects[0]?.projectId ??
+    null;
+  const target =
+    picked && projects.some((p) => p.projectId === picked) ? picked : fallback;
 
   const close = () => {
     setTitle("");
+    setPicked(null);
     onOpenChange(false);
   };
 
@@ -63,8 +93,15 @@ export function NewMeetingDialog({
               //
               // 실패는 전역 `MutationCache`가 토스트로 알린다. 여기서 안 삼키면 React가
               // 거절을 오류 경계로 올려 워크스페이스 전체가 오류 화면이 된다.
-              const created = await onSubmit(trimmed).catch(() => false);
-              if (created) setTitle("");
+              if (!target) return;
+              const created = await onSubmit(trimmed, target).catch(
+                () => false
+              );
+              if (created) {
+                rememberMeetingProject(workspaceId, target);
+                setTitle("");
+                setPicked(null);
+              }
             }}
           >
             <DialogHeader>
@@ -88,6 +125,46 @@ export function NewMeetingDialog({
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />
+              <div className="mt-4">
+                <Label htmlFor="meeting-project">프로젝트</Label>
+                {projects.length > 1 ? (
+                  <Select
+                    items={Object.fromEntries(
+                      projects.map((p) => [p.projectId, p.name])
+                    )}
+                    value={target}
+                    onValueChange={(value) => setPicked(value as string)}
+                  >
+                    <SelectTrigger
+                      id="meeting-project"
+                      aria-label="프로젝트"
+                      className="mt-2 w-full"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem
+                          key={project.projectId}
+                          value={project.projectId}
+                        >
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p
+                    id="meeting-project"
+                    className="mt-2 text-sm text-[var(--el-ink)]"
+                  >
+                    {projects[0]?.name}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-[var(--el-muted)]">
+                  회의를 만든 뒤에는 프로젝트를 바꿀 수 없습니다.
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -98,7 +175,11 @@ export function NewMeetingDialog({
               >
                 취소
               </Button>
-              <Button type="submit" loading={isPending} disabled={!trimmed}>
+              <Button
+                type="submit"
+                loading={isPending}
+                disabled={!trimmed || !target}
+              >
                 만들기
               </Button>
             </DialogFooter>
@@ -107,4 +188,28 @@ export function NewMeetingDialog({
       )}
     </Dialog>
   );
+}
+
+const LAST_PROJECT_KEY = (workspaceId: string) =>
+  `heymoa:last-meeting-project:${workspaceId}`;
+
+/** 이 워크스페이스에서 마지막으로 회의를 만든 프로젝트. 지금 목록에 없으면(지워졌다) 없는 것이다. 브라우저 저장소가 막혀도 화면은 그대로다. */
+function lastMeetingProject(
+  workspaceId: string,
+  projects: { projectId: string }[]
+): string | null {
+  try {
+    const id = window.localStorage.getItem(LAST_PROJECT_KEY(workspaceId));
+    return id && projects.some((p) => p.projectId === id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberMeetingProject(workspaceId: string, projectId: string) {
+  try {
+    window.localStorage.setItem(LAST_PROJECT_KEY(workspaceId), projectId);
+  } catch {
+    // 저장은 편의일 뿐이다.
+  }
 }
