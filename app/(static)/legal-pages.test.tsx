@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import HelpPage from "@/app/(static)/help/page";
 import PrivacyPage from "@/app/(static)/privacy/page";
 import TermsPage from "@/app/(static)/terms/page";
 
@@ -36,5 +37,34 @@ describe("HeyMoa legal pages", () => {
     expect(
       screen.getAllByRole("navigation", { name: "이용약관 목차" })
     ).toHaveLength(2);
+    // 도움말이 같은 틀을 쓰면서 문구를 바꿀 수 있게 됐다 — 약관은 기본값 그대로다
+    expect(screen.getByText("시행일", { exact: false })).toBeVisible();
+  });
+
+  // 제품 화면이 `/help#id`로 그 항목에 바로 온다(APP-1024). id를 바꾸면 그 링크가 소리 없이 깨진다.
+  it("keeps the help anchors that product screens link to", () => {
+    const { container } = render(<HelpPage />);
+
+    expect(
+      screen.getByRole("heading", { name: "HeyMoa 사용법", level: 1 })
+    ).toBeInTheDocument();
+    for (const id of [
+      "start",
+      "recording",
+      "desktop",
+      "speakers",
+      "summary",
+      "tasks",
+      "integrations",
+      "agents",
+      "trouble",
+    ]) {
+      expect(container.querySelector(`section#${id}`), id).not.toBeNull();
+      expect(
+        container.querySelector(`nav a[href="#${id}"]`),
+        `목차 #${id}`
+      ).not.toBeNull();
+    }
+    expect(screen.getByText("고친 날", { exact: false })).toBeVisible();
   });
 });

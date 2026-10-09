@@ -15,6 +15,7 @@ import {
   Trash2,
   ChevronsUpDown,
   ChevronDown,
+  CircleHelp,
   ChevronRight,
   ListTodo,
   Loader2,
@@ -448,6 +449,15 @@ export function WorkspaceSidebar({
             >
               <Settings className="size-4 text-[var(--el-muted)]" />
               <span>내 계정 설정</span>
+            </DropdownMenuItem>
+            {/* 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱에서는 시스템 브라우저로 열린다
+                (`apps/desktop/src/security.ts`의 `setWindowOpenHandler`). */}
+            <DropdownMenuItem
+              onClick={() => window.open("/help", "_blank", "noopener,noreferrer")}
+              className="gap-2 rounded-control py-2 text-sm"
+            >
+              <CircleHelp className="size-4 text-[var(--el-muted)]" />
+              <span>도움말</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
             <DropdownMenuItem

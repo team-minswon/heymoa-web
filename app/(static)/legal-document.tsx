@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight, ChevronDown, FileText } from "lucide-react";
 
@@ -15,12 +16,17 @@ import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export type LegalSection = {
+  /** 바깥에서 링크로 가리킬 조항만 준다(도움말의 `#recording` 등). 없으면 `section-N`. */
+  id?: string;
   title: string;
-  body: readonly string[];
+  body: readonly ReactNode[];
 };
 
+const anchorOf = (section: LegalSection, index: number) =>
+  section.id ?? `section-${index + 1}`;
+
 /** 문서 안 링크는 보라 진한 색이다(흰 면 8.8:1 · 연보라 면 7.9:1). */
-const LINK = cn(
+export const LINK = cn(
   "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
   FOCUS
 );
@@ -52,6 +58,9 @@ export function LegalDocument({
   sections,
   relatedHref,
   relatedLabel,
+  dateLabel = "시행일",
+  unit = "조항",
+  contactLead = "정책 관련 문의는",
 }: {
   label: string;
   title: string;
@@ -60,6 +69,10 @@ export function LegalDocument({
   sections: readonly LegalSection[];
   relatedHref: string;
   relatedLabel: string;
+  /** 도움말이 같은 틀을 쓴다 — 거기서는 「고친 날」·「항목」·「막히는 곳이 있으면」이다. */
+  dateLabel?: string;
+  unit?: string;
+  contactLead?: string;
 }) {
   // 좁은 화면의 접는 목차와 넓은 화면의 sticky 카드가 같은 목록을 쓴다(한쪽은 늘 display:none).
   const toc = (
@@ -68,7 +81,7 @@ export function LegalDocument({
         {sections.map((section, index) => (
           <li key={section.title}>
             <a
-              href={`#section-${index + 1}`}
+              href={`#${anchorOf(section, index)}`}
               className={cn(
                 "flex min-h-6 items-center rounded-[8px] px-2 py-1.5 text-[14px] leading-[1.5] break-keep text-[var(--tv-body)] underline-offset-4 transition-colors hover:bg-white hover:text-[var(--tv-brand-deep)] hover:underline",
                 FOCUS
@@ -94,10 +107,12 @@ export function LegalDocument({
           <p className={cn(LEAD, "mt-4 max-w-[640px]")}>{description}</p>
           <p className="m-0 mt-6 flex flex-wrap gap-x-5 gap-y-1 text-[14px] leading-[1.6] text-[var(--tv-muted)]">
             <span>
-              시행일{" "}
+              {dateLabel}{" "}
               <b className="font-bold text-[var(--tv-ink)]">{effectiveDate}</b>
             </span>
-            <span>{sections.length}개 조항</span>
+            <span>
+              {sections.length}개 {unit}
+            </span>
           </p>
         </header>
       </div>
@@ -118,7 +133,9 @@ export function LegalDocument({
           >
             <FileText aria-hidden className="size-4 text-[var(--tv-muted)]" />
             문서 목차
-            <span className="font-medium text-[var(--tv-muted)]">· {sections.length}개 조항</span>
+            <span className="font-medium text-[var(--tv-muted)]">
+              · {sections.length}개 {unit}
+            </span>
             <ChevronDown
               aria-hidden
               className="ml-auto size-4 text-[var(--tv-muted)] transition-transform group-open:rotate-180"
@@ -139,7 +156,7 @@ export function LegalDocument({
           <article className="box-border rounded-[24px] border border-[var(--tv-rule)] bg-white p-6 sm:p-9 lg:p-12">
             {sections.map((section, index) => (
               <section
-                id={`section-${index + 1}`}
+                id={anchorOf(section, index)}
                 key={section.title}
                 className={cn(
                   "scroll-mt-20",
@@ -149,8 +166,8 @@ export function LegalDocument({
               >
                 <h2 className={CARD_TITLE}>{section.title}</h2>
                 <div className="mt-3 flex flex-col gap-3 lg:mt-4">
-                  {section.body.map((paragraph) => (
-                    <p key={paragraph} className={cn(BODY, "[overflow-wrap:anywhere]")}>
+                  {section.body.map((paragraph, paragraphIndex) => (
+                    <p key={paragraphIndex} className={cn(BODY, "[overflow-wrap:anywhere]")}>
                       {paragraph}
                     </p>
                   ))}
@@ -161,7 +178,7 @@ export function LegalDocument({
 
           <div className="mt-4 flex flex-col gap-3 rounded-[20px] bg-[var(--tv-lav-soft)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between lg:mt-6">
             <p className="m-0 break-words break-keep text-[15px] leading-[1.6] text-[var(--tv-body)]">
-              정책 관련 문의는{" "}
+              {contactLead}{" "}
               <a href={`mailto:${siteConfig.contactEmail}`} className={LINK}>
                 {siteConfig.contactEmail}
               </a>

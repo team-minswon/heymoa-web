@@ -11,14 +11,15 @@ export function isWorkspaceRoute(pathname: string) {
  */
 /**
  * 마케팅 `Navbar` · `Footer` 대신 랜딩 상단 바 · 랜딩 푸터(`components/heymoa/landing/`)를 세우는 경로.
- * 위와 같은 이유로 두 게이트가 이것 하나를 같이 본다. 약관 · 개인정보 · 데스크톱 다운로드는 랜딩과 같은 면이라 여기 든다.
+ * 위와 같은 이유로 두 게이트가 이것 하나를 같이 본다. 약관 · 개인정보 · 데스크톱 다운로드 · 도움말은 랜딩과 같은 면이라 여기 든다.
  */
 export function isLandingChromeRoute(pathname: string) {
   return (
     pathname === "/" ||
     pathname === "/terms" ||
     pathname === "/privacy" ||
-    pathname === "/download"
+    pathname === "/download" ||
+    pathname === "/help"
   );
 }
 
