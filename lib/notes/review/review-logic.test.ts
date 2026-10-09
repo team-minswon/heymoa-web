@@ -44,6 +44,7 @@ const item = (over: Partial<ReviewItem> & Pick<ReviewItem, "itemId" | "kind">): 
   due: null,
   replacements: [],
   taskChanges: [],
+  suggestedAssignment: null,
   ...over,
 });
 

@@ -5,7 +5,6 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { MeetingReviewSummaryResponseDataTopicsItemSentencesItemRelationsItem } from "./meetingReviewSummaryResponseDataTopicsItemSentencesItemRelationsItem";
 
 export type MeetingReviewSummaryResponseDataTopicsItemSentencesItem = {
   /**
@@ -18,6 +17,4 @@ export type MeetingReviewSummaryResponseDataTopicsItemSentencesItem = {
    * @minLength 1
    */
   text: string;
-  /** 이 문장이 말하는 관계. 원소는 같은 주제 relations 의 키입니다 */
-  relations: MeetingReviewSummaryResponseDataTopicsItemSentencesItemRelationsItem[];
 };

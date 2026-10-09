@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { MeetingAnalysisFlowResponseDataRegionsItem } from "./meetingAnalysisFlowResponseDataRegionsItem";
 import type { MeetingAnalysisFlowResponseDataStatus } from "./meetingAnalysisFlowResponseDataStatus";
 
 /**
@@ -16,6 +17,8 @@ export type MeetingAnalysisFlowResponseData = {
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   noteId: string;
-  /** 흐름 상태. 분석 실패·요청 전이면 회의 시작자가 다시 요청할 수 있다 */
+  /** 흐름 상태. 분석 실패·요청 전이면 회의 시작자가 다시 요청할 수 있다. DIARIZING 은 이름만 옛 것이고 회의 종료 전이거나 녹음 봉인 전(분석 전)을 뜻한다 */
   status: MeetingAnalysisFlowResponseDataStatus;
+  /** 분석 영역별 진행. 분석 요청 전이면 빈 배열 */
+  regions: MeetingAnalysisFlowResponseDataRegionsItem[];
 };

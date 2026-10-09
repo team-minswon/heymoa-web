@@ -5,21 +5,8 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { MeetingReviewSummaryResponseDataTopicsItemRelationsItemJudgment } from "./meetingReviewSummaryResponseDataTopicsItemRelationsItemJudgment";
 
 export type MeetingReviewSummaryResponseDataTopicsItemRelationsItem = {
-  /**
-   * 관계 이유
-   * @minLength 1
-   */
-  reason: string;
-  /**
-   * 이 관계의 근거 발화 ID
-   * @items.pattern ^[0-9A-HJKMNP-TV-Z]{13}$
-   */
-  evidence: string[];
-  /** AI 판정 */
-  judgment: MeetingReviewSummaryResponseDataTopicsItemRelationsItemJudgment;
   /**
    * 관계 종류. 서버는 해석하지 않습니다
    * @minLength 1

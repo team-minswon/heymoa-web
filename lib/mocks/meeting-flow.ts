@@ -160,6 +160,16 @@ function seedMentoringReview(target: State) {
   const segment = (at: number) => segments[Math.min(at, segments.length - 1)];
   const review: StoredReview = { reviewId: nextId("01KR"), noteId, reviewVersion: 1, items: [] };
 
+  // 담당이 없는 할 일에는 담당만 있는 제안과 기한만 있는 제안을 번갈아 둔다. nullable 양쪽 표본이다.
+  let suggestions = 0;
+  const suggest = (seed: SeedItem): StoredItem["suggestedAssignment"] => {
+    if (seed.kind !== "ACTION_ITEM" || seed.who !== undefined) return null;
+    suggestions += 1;
+    if (suggestions % 2 === 1) return { due: dueAfterMeeting(5), assignee: null };
+    const me = mockDb.getCurrentUser();
+    return { due: null, assignee: { type: "USER", id: me.userId, name: me.name } };
+  };
+
   const build = (seed: SeedItem): StoredItem => {
     const proposalId = nextId("01KP");
     const steps = [
@@ -245,6 +255,7 @@ function seedMentoringReview(target: State) {
             })(),
           ]
         : [],
+      suggestedAssignment: suggest(seed),
     };
   };
 
@@ -272,10 +283,11 @@ function seedMentoringReview(target: State) {
     due: null,
     replacements: [],
     taskChanges: [],
+    suggestedAssignment: null,
   });
 
   target.reviews.set(noteId, review);
-  target.summaries.set(noteId, buildSummary(noteId, topicItems, segment));
+  target.summaries.set(noteId, buildSummary(noteId, topicItems));
 }
 
 function citationOf(
@@ -294,8 +306,7 @@ function citationOf(
 
 function buildSummary(
   noteId: string,
-  topicItems: StoredItem[][],
-  segment: (at: number) => TranscriptResponseDataSegmentsItem
+  topicItems: StoredItem[][]
 ): MeetingReviewSummary {
   const topics = REVIEW_SEED_TOPICS.map((seed, index): SummaryTopic => {
     const items = topicItems[index];
@@ -312,7 +323,6 @@ function buildSummary(
     const open = items.filter((item, at) => isQuestion(item) && !wasResolved(at));
     const resolved = items.filter((item, at) => isQuestion(item) && wasResolved(at));
     const centerItemId = seed.centerless ? null : (agendaItemId ?? decisions[0]?.itemId ?? ids[0]);
-    const evidenceOf = (item: StoredItem) => item.citations.slice(0, 1).map((row) => row.segmentId);
     const relation = (
       source: StoredItem,
       targetItem: StoredItem,
@@ -323,9 +333,6 @@ function buildSummary(
       targetItemId: targetItem.itemId,
       kind,
       label,
-      reason: `${label}: ${targetItem.content}`,
-      judgment: "PROPOSED",
-      evidence: evidenceOf(targetItem),
     });
     const center = items.find((item) => item.itemId === centerItemId);
     // 중심이 없는 주제는 「주제」 관계를 두지 않는다. 양 끝이 없거나 같은 관계도 뺀다.
@@ -349,11 +356,7 @@ function buildSummary(
       title: seed.title,
       agendaItemId,
       centerItemId,
-      members: items.map((item, at) => ({
-        itemId: item.itemId,
-        kind: item.kind,
-        uncertain: index === 5 && at === items.length - 1,
-      })),
+      members: items.map((item) => ({ itemId: item.itemId, kind: item.kind })),
       alsoItemIds: index === 5 ? [topicItems[0][3].itemId] : [],
       relations,
       sentences: seed.sentences.map((sentence) => ({
@@ -364,30 +367,7 @@ function buildSummary(
           .slice(0, 2)
           .map(({ sourceItemId, targetItemId, kind }) => ({ sourceItemId, targetItemId, kind })),
       })),
-      outline: {
-        decisions: decisions.map((row) => ({
-          itemId: row.itemId,
-          insightItemIds: row === decisions[0] ? insights.map((i) => i.itemId) : [],
-        })),
-        actionItems: actions.map((row, at) => ({
-          itemId: row.itemId,
-          progressItemIds: reports.filter((_, r) => r % Math.max(actions.length, 1) === at).map((r) => r.itemId),
-        })),
-        // 열린 이슈는 풀어 준 항목이 없고, 회의 중에 풀린 이슈는 그 주제의 결정이 풀었다.
-        issues: [...open, ...resolved].map((row) => ({
-          itemId: row.itemId,
-          backgroundItemIds: [],
-          resolvedByItemIds: resolved.includes(row) ? decisions.slice(0, 1).map((d) => d.itemId) : [],
-        })),
-        observationItemIds: actions.length === 0 ? reports.map((r) => r.itemId) : [],
-      },
       openItemIds: open.map((row) => row.itemId),
-      signals: {
-        itemCount: items.length,
-        conclusionCount: decisions.length + actions.length,
-        openCount: open.length,
-        agendaSequence: seed.hasAgenda ? segment(seed.items[0].at[0]).sequence : null,
-      },
     };
   });
   return {
@@ -425,6 +405,7 @@ function seedLargeReview(target: State, noteId: string) {
     due: null,
     replacements: [],
     taskChanges: [],
+    suggestedAssignment: null,
   });
   const groups = sizes.map((size, index) => {
     const title = `${words[index % words.length]} ${index + 1}차 논의`;
@@ -440,9 +421,6 @@ function seedLargeReview(target: State, noteId: string) {
     targetItemId: to.itemId,
     kind,
     label,
-    reason: label,
-    judgment: "PROPOSED",
-    evidence: [],
   });
   const topics = groups.map((items, index): SummaryTopic => {
     const center = items[0];
@@ -457,13 +435,11 @@ function seedLargeReview(target: State, noteId: string) {
       title: center.kind === "AGENDA" ? center.content : `${words[index % words.length]} ${index + 1}차 논의`,
       agendaItemId: center.kind === "AGENDA" ? center.itemId : null,
       centerItemId: center.itemId,
-      members: items.map((row) => ({ itemId: row.itemId, kind: row.kind, uncertain: false })),
+      members: items.map((row) => ({ itemId: row.itemId, kind: row.kind })),
       alsoItemIds: random() < 0.4 ? [pick(pick(groups)).itemId] : [],
       relations,
       sentences: [],
-      outline: { decisions: [], actionItems: [], issues: [], observationItemIds: [] },
       openItemIds: open.map((row) => row.itemId),
-      signals: { itemCount: items.length, conclusionCount: 0, openCount: open.length, agendaSequence: null },
     };
   });
   target.summaries.set(noteId, {
@@ -492,6 +468,7 @@ function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
     due: null,
     replacements: [],
     taskChanges: [],
+    suggestedAssignment: null,
     ...over,
   });
   target.reviews.set(noteId, {
@@ -605,6 +582,7 @@ function completeAnalysis(noteId: string) {
       due: seed.kind === "ACTION_ITEM" && seed.dueIn !== undefined ? dueAfterMeeting(seed.dueIn) : null,
       replacements: [],
       taskChanges: [],
+      suggestedAssignment: null,
     })),
   });
   target.summaries.set(noteId, {
@@ -644,7 +622,20 @@ export const meetingFlow = {
 
 export const meetingFlowHandlers = [
   http.get("*/v1/notes/:noteId/analyses/flow", ({ params }) =>
-    respond(() => ({ noteId: paramId(params.noteId), status: flowOf(paramId(params.noteId)) }))
+    respond(() => {
+      const noteId = paramId(params.noteId);
+      const status = flowOf(noteId);
+      // 요청 전이면 빈 배열이다. 요청 뒤에는 네 영역이 흐름 상태를 따라간다.
+      const regionStatus = status === "ANALYZING" ? "PENDING" : status === "ANALYSIS_FAILED" ? "FAILED" : "SUCCEEDED";
+      const regions =
+        status === "NOT_REQUESTED" || status === "DIARIZING"
+          ? []
+          : (["RELATIONS", "EVALUATION", "SUMMARY", "ITEM_ENRICHMENT"] as const).map((region) => ({
+              region,
+              status: regionStatus,
+            }));
+      return { noteId, status, regions };
+    })
   ),
 
   http.post("*/v1/notes/:noteId/analyses", ({ params }) =>
@@ -684,7 +675,7 @@ export const meetingFlowHandlers = [
       const itemId = nextId("01KI");
       // 실패할 수 있는 변환을 모두 끝낸 뒤에 상태를 바꾼다. 400 뒤에 요약만 바뀌어 남으면 안 된다.
       const assignee = assigneeFromRequest(body.assignee, noteId);
-      topic?.members.push({ itemId, kind: body.kind, uncertain: false });
+      topic?.members.push({ itemId, kind: body.kind });
       review.items.push({
         itemId,
         revision: 1,
@@ -699,6 +690,7 @@ export const meetingFlowHandlers = [
         due: body.due ?? null,
         replacements: [],
         taskChanges: [],
+        suggestedAssignment: null,
       });
       review.reviewVersion += 1;
       return view(review);

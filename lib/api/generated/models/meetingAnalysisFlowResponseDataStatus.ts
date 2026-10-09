@@ -7,7 +7,7 @@
  */
 
 /**
- * 흐름 상태. 분석 실패·요청 전이면 회의 시작자가 다시 요청할 수 있다
+ * 흐름 상태. 분석 실패·요청 전이면 회의 시작자가 다시 요청할 수 있다. DIARIZING 은 이름만 옛 것이고 회의 종료 전이거나 녹음 봉인 전(분석 전)을 뜻한다
  */
 export type MeetingAnalysisFlowResponseDataStatus =
   (typeof MeetingAnalysisFlowResponseDataStatus)[keyof typeof MeetingAnalysisFlowResponseDataStatus];

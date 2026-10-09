@@ -294,7 +294,8 @@ describe("contract sync 2026-07-29", () => {
     // APP-1007에서 현재 전사 세션 조회가 빠졌다 (71 → 70) — `transcription-sessions/current`.
     // APP-941(server APP-939·940)에서 워크스페이스 외부 에이전트 관리 셋이 늘었다 (70 → 73) —
     // `workspaces/{workspaceId}/agent-access`·`.../agent-delegations`·`.../agent-delegations/{delegationId}`.
-    expect(paths).toHaveLength(73);
+    // APP-1030에서 `notes/{noteId}/relations`(회의 안 관계 조회)가 늘었다 (73 → 74).
+    expect(paths).toHaveLength(74);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

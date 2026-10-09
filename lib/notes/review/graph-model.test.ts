@@ -30,6 +30,7 @@ function reviewItem(
     due: null,
     replacements: [],
     taskChanges: [],
+    suggestedAssignment: null,
     ...over,
   };
 }
@@ -44,9 +45,7 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     alsoItemIds: [],
     relations: [],
     sentences: [],
-    outline: { decisions: [], actionItems: [], issues: [], observationItemIds: [] },
     openItemIds: [],
-    signals: { itemCount: 0, conclusionCount: 0, openCount: 0, agendaSequence: null },
     ...over,
   };
 }
@@ -56,9 +55,6 @@ const relation = (sourceItemId: string, targetItemId: string) => ({
   targetItemId,
   kind: "ABOUT",
   label: "주제",
-  reason: "",
-  judgment: "PROPOSED" as const,
-  evidence: [],
 });
 
 describe("buildReviewGraph 다른 주제 연결", () => {
@@ -75,8 +71,8 @@ describe("buildReviewGraph 다른 주제 연결", () => {
           centerItemId: "a1",
           alsoItemIds: ["d1"],
           members: [
-            { itemId: "g1", kind: "AGENDA", uncertain: false },
-            { itemId: "a1", kind: "ACTION_ITEM", uncertain: false },
+            { itemId: "g1", kind: "AGENDA" },
+            { itemId: "a1", kind: "ACTION_ITEM" },
           ],
         }),
       ],
@@ -103,15 +99,15 @@ describe("buildReviewGraph", () => {
         topic(1, {
           centerItemId: "d1",
           members: [
-            { itemId: "d1", kind: "DECISION", uncertain: false },
-            { itemId: "q1", kind: "QUESTION", uncertain: false },
-            { itemId: "q2", kind: "QUESTION", uncertain: false },
-            { itemId: "x", kind: "ACTION_ITEM", uncertain: false },
+            { itemId: "d1", kind: "DECISION" },
+            { itemId: "q1", kind: "QUESTION" },
+            { itemId: "q2", kind: "QUESTION" },
+            { itemId: "x", kind: "ACTION_ITEM" },
           ],
           openItemIds: ["q1"],
           relations: [relation("d1", "q1"), relation("q1", "d1"), relation("d1", "x")],
         }),
-        topic(2, { centerItemId: "a1", alsoItemIds: ["d1"], members: [{ itemId: "a1", kind: "ACTION_ITEM", uncertain: false }] }),
+        topic(2, { centerItemId: "a1", alsoItemIds: ["d1"], members: [{ itemId: "a1", kind: "ACTION_ITEM" }] }),
       ],
     };
     const graph = buildReviewGraph(summary, [
@@ -151,9 +147,9 @@ describe("toForceGraph", () => {
         title: "요금",
         centerItemId: "d1",
         members: [
-          { itemId: "d1", kind: "DECISION", uncertain: false },
-          { itemId: "a1", kind: "ACTION_ITEM", uncertain: false },
-          { itemId: "a2", kind: "ACTION_ITEM", uncertain: false },
+          { itemId: "d1", kind: "DECISION" },
+          { itemId: "a1", kind: "ACTION_ITEM" },
+          { itemId: "a2", kind: "ACTION_ITEM" },
         ],
         relations: [relation("d1", "a1"), relation("d1", "a2")],
       }),
@@ -161,10 +157,10 @@ describe("toForceGraph", () => {
         title: "온보딩",
         agendaItemId: "g2",
         alsoItemIds: ["a1"],
-        members: [{ itemId: "g2", kind: "AGENDA", uncertain: false }],
+        members: [{ itemId: "g2", kind: "AGENDA" }],
       }),
       // 항목이 전부 제외된 주제는 허브도 없다
-      topic(3, { members: [{ itemId: "x", kind: "DECISION", uncertain: false }] }),
+      topic(3, { members: [{ itemId: "x", kind: "DECISION" }] }),
     ],
   };
   const items = [

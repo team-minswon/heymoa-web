@@ -67,6 +67,7 @@ function reviewItem(
     due: null,
     replacements: [],
     taskChanges: [],
+    suggestedAssignment: null,
     ...over,
   };
 }
@@ -81,9 +82,7 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     alsoItemIds: [],
     relations: [],
     sentences: [],
-    outline: { decisions: [], actionItems: [], issues: [], observationItemIds: [] },
     openItemIds: [],
-    signals: { itemCount: 0, conclusionCount: 0, openCount: 0, agendaSequence: null },
     ...over,
   };
 }
@@ -99,11 +98,11 @@ const summary: MeetingReviewSummary = {
       title: "요금",
       centerItemId: "d1",
       members: [
-        { itemId: "d1", kind: "DECISION", uncertain: false },
-        { itemId: "a1", kind: "ACTION_ITEM", uncertain: false },
+        { itemId: "d1", kind: "DECISION" },
+        { itemId: "a1", kind: "ACTION_ITEM" },
       ],
       relations: [
-        { sourceItemId: "d1", targetItemId: "a1", kind: "LEADS_TO", label: "후속 할 일", reason: "", judgment: "PROPOSED" as const, evidence: [] },
+        { sourceItemId: "d1", targetItemId: "a1", kind: "LEADS_TO", label: "후속 할 일" },
       ],
     }),
   ],

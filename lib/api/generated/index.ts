@@ -10,6 +10,7 @@ export * from "./notes/notes";
 export * from "./notifications/notifications";
 export * from "./projects/projects";
 export * from "./proposals/proposals";
+export * from "./relations/relations";
 export * from "./transcription/transcription";
 export * from "./users/users";
 export * from "./workspace-integration/workspace-integration";

@@ -6,27 +6,21 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { MeetingReviewSummaryResponseDataTopicsItemMembersItem } from "./meetingReviewSummaryResponseDataTopicsItemMembersItem";
-import type { MeetingReviewSummaryResponseDataTopicsItemOutline } from "./meetingReviewSummaryResponseDataTopicsItemOutline";
 import type { MeetingReviewSummaryResponseDataTopicsItemRelationsItem } from "./meetingReviewSummaryResponseDataTopicsItemRelationsItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemSentencesItem } from "./meetingReviewSummaryResponseDataTopicsItemSentencesItem";
-import type { MeetingReviewSummaryResponseDataTopicsItemSignals } from "./meetingReviewSummaryResponseDataTopicsItemSignals";
 
 export type MeetingReviewSummaryResponseDataTopicsItem = {
   /**
-   * 이 주제의 안건에도 붙었지만 앞선 다른 주제에 소속된 항목
+   * 이 주제에도 걸치지만 다른 주제에 소속된 항목. 안건 요약에서는 빈 배열
    * @items.pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   alsoItemIds: string[];
   /**
-   * 뿌리 안건 항목. 어느 안건에도 닿지 않는 묶음이면 null
+   * 이 주제의 안건 항목. 안건 없이 묶인 주제면 null
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   agendaItemId: string | null;
-  /** 주제의 골격. 관계로 채운 자리이고 서술이 아닙니다 */
-  outline: MeetingReviewSummaryResponseDataTopicsItemOutline;
-  /** 리드가 주제를 고르는 데 쓴 개수 */
-  signals: MeetingReviewSummaryResponseDataTopicsItemSignals;
   /** 주제 서술 문장 */
   sentences: MeetingReviewSummaryResponseDataTopicsItemSentencesItem[];
   /** 이 주제에 소속된 검토 항목. 분석이 묶은 항목 뒤에 사람이 이 주제에서 추가한 항목이 붙습니다 */
@@ -36,16 +30,16 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
    * @items.pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   openItemIds: string[];
-  /** 이 주제 안의 관계. 관계 없는 묶음이면 빈 배열 */
+  /** 양 끝이 이 주제의 항목인 회의 안 관계. 없으면 빈 배열 */
   relations: MeetingReviewSummaryResponseDataTopicsItemRelationsItem[];
   /**
-   * 그래프에서 가운데 둘 항목. 관계 없는 묶음이면 null
+   * 그래프에서 가운데 둘 항목. 안건 요약이면 안건 항목과 같고, 없으면 null
    * @nullable
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   centerItemId: string | null;
   /**
-   * 뿌리 안건이 있으면 그 안건 본문, 없으면 AI 가 쓴 한 줄
+   * AI 가 쓴 주제 제목
    * @minLength 1
    */
   title: string;

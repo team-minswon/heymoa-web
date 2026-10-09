@@ -143,7 +143,7 @@ describe("검토 항목 추가 · 수정", () => {
     expect(ok.status).toBe(201);
     const topic = (await api(summaryPath)).body.data.topics[1];
     expect(topic.members).toHaveLength(before + 1);
-    expect(topic.members.at(-1)).toMatchObject({ kind: "DECISION", uncertain: false });
+    expect(topic.members.at(-1)).toMatchObject({ kind: "DECISION" });
   });
 
   it("주제 번호가 맞아도 담당 검증이 400 이면 요약 members 를 바꾸지 않는다", async () => {

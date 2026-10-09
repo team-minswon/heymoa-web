@@ -10,6 +10,7 @@ import type { MeetingReviewResponseDataItemsItemCitationsItem } from "./meetingR
 import type { MeetingReviewResponseDataItemsItemKind } from "./meetingReviewResponseDataItemsItemKind";
 import type { MeetingReviewResponseDataItemsItemOriginalProposalRef } from "./meetingReviewResponseDataItemsItemOriginalProposalRef";
 import type { MeetingReviewResponseDataItemsItemReplacementsItem } from "./meetingReviewResponseDataItemsItemReplacementsItem";
+import type { MeetingReviewResponseDataItemsItemSuggestedAssignment } from "./meetingReviewResponseDataItemsItemSuggestedAssignment";
 import type { MeetingReviewResponseDataItemsItemTaskChangesItem } from "./meetingReviewResponseDataItemsItemTaskChangesItem";
 
 export type MeetingReviewResponseDataItemsItem = {
@@ -61,4 +62,9 @@ export type MeetingReviewResponseDataItemsItem = {
   originalProposalRef: MeetingReviewResponseDataItemsItemOriginalProposalRef;
   /** 검토 대상 포함 여부 */
   included: boolean;
+  /**
+   * 화자 분리 뒤 판정한 이 할 일의 담당 · 기한 제안. 받으려면 항목 수정으로 반영합니다. 제안이 없으면 null
+   * @nullable
+   */
+  suggestedAssignment: MeetingReviewResponseDataItemsItemSuggestedAssignment;
 };

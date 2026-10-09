@@ -569,6 +569,16 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     );
   }),
+  // 회의 안 관계. 화면이 아직 읽지 않아 목은 빈 목록만 준다. 없는 노트는 실서버처럼 404다.
+  http.get("*/v1/notes/:noteId/relations", ({ params }) =>
+    resultOf(
+      () => {
+        mockDb.getNote(id(params.noteId));
+        return { relations: [] };
+      },
+      notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
+    )
+  ),
   http.get("*/v1/notes/:noteId/proposals/:proposalId/revisions", ({ params }) =>
     resultOf(
       () => {

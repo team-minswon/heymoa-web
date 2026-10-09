@@ -15,6 +15,4 @@ export type MeetingReviewSummaryResponseDataTopicsItemMembersItem = {
   itemId: string;
   /** 항목 종류 */
   kind: MeetingReviewSummaryResponseDataTopicsItemMembersItemKind;
-  /** UNCERTAIN 판정 관계로만 이 주제에 들어온 항목이면 true */
-  uncertain: boolean;
 };

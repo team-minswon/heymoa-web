@@ -72,6 +72,15 @@ export const getGetMeetingReviewResponseMock = (): MeetingReviewResponse => ({
             decision: "KEEP",
           },
         ],
+        suggestedAssignment: {
+          assignee: {
+            type: "USER",
+            id: "0HZX2K7M9Q4AC",
+            name: "민수",
+            image: "https://cdn.example.com/avatars/hong.png",
+          },
+          due: "2026-09-18",
+        },
       },
     ],
   },
@@ -138,6 +147,15 @@ export const getCreateMeetingReviewItemResponseMock =
               decision: "KEEP",
             },
           ],
+          suggestedAssignment: {
+            assignee: {
+              type: "USER",
+              id: "0HZX2K7M9Q4AC",
+              name: "민수",
+              image: "https://cdn.example.com/avatars/hong.png",
+            },
+            due: "2026-09-18",
+          },
         },
       ],
     },
@@ -159,9 +177,7 @@ export const getGetMeetingReviewSummaryResponseMock =
           title: "배포 일정",
           agendaItemId: "0HZX2K7M9Q4AN",
           centerItemId: "0HZX2K7M9Q4AN",
-          members: [
-            { itemId: "0HZX2K7M9Q4AN", kind: "DECISION", uncertain: false },
-          ],
+          members: [{ itemId: "0HZX2K7M9Q4AN", kind: "DECISION" }],
           alsoItemIds: ["0HZX2K7M9Q4AN"],
           relations: [
             {
@@ -169,47 +185,15 @@ export const getGetMeetingReviewSummaryResponseMock =
               targetItemId: "0HZX2K7M9Q4AN",
               kind: "RESOLVES",
               label: "해결",
-              reason: "결정이 이슈를 풀었습니다",
-              judgment: "PROPOSED",
-              evidence: ["0HZX2K7M9Q4AH"],
             },
           ],
           sentences: [
             {
               text: "목요일에 배포하기로 했습니다",
               itemIds: ["0HZX2K7M9Q4AN"],
-              relations: [
-                {
-                  sourceItemId: "0HZX2K7M9Q4AN",
-                  targetItemId: "0HZX2K7M9Q4AN",
-                  kind: "RESOLVES",
-                },
-              ],
             },
           ],
-          outline: {
-            decisions: [
-              { itemId: "0HZX2K7M9Q4AN", insightItemIds: ["0HZX2K7M9Q4AN"] },
-            ],
-            actionItems: [
-              { itemId: "0HZX2K7M9Q4AN", progressItemIds: ["0HZX2K7M9Q4AN"] },
-            ],
-            issues: [
-              {
-                itemId: "0HZX2K7M9Q4AN",
-                backgroundItemIds: ["0HZX2K7M9Q4AN"],
-                resolvedByItemIds: ["0HZX2K7M9Q4AN"],
-              },
-            ],
-            observationItemIds: ["0HZX2K7M9Q4AN"],
-          },
           openItemIds: ["0HZX2K7M9Q4AN"],
-          signals: {
-            itemCount: 3,
-            conclusionCount: 2,
-            openCount: 1,
-            agendaSequence: 4,
-          },
         },
       ],
     },
@@ -276,6 +260,15 @@ export const getUpdateMeetingReviewItemResponseMock =
               decision: "KEEP",
             },
           ],
+          suggestedAssignment: {
+            assignee: {
+              type: "USER",
+              id: "0HZX2K7M9Q4AC",
+              name: "민수",
+              image: "https://cdn.example.com/avatars/hong.png",
+            },
+            due: "2026-09-18",
+          },
         },
       ],
     },

@@ -64,7 +64,15 @@ export const getEndMeetingResponseMock = (): NoteResponse => ({
 export const getGetAnalysisFlowResponseMock =
   (): MeetingAnalysisFlowResponse => ({
     success: true,
-    data: { noteId: "0HZX2K7M9Q4AF", status: "REVIEWABLE" },
+    data: {
+      noteId: "0HZX2K7M9Q4AF",
+      status: "REVIEWABLE",
+      regions: [
+        { region: "SUMMARY", status: "SUCCEEDED" },
+        { region: "RELATIONS", status: "SUCCEEDED" },
+        { region: "ITEM_ENRICHMENT", status: "PENDING" },
+      ],
+    },
     error: null,
   });
 
