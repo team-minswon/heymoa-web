@@ -1212,15 +1212,41 @@ export const restHandlers = [
    * 대화 목록. **정렬·상한은 목 DB가, 도는 턴은 스트림이 안다** — 두 출처를 여기서 합친다.
    * 멤버가 아닌 워크스페이스는 `assertWorkspace`가 404로 은닉한다(계약).
    */
-  http.get("*/v1/workspaces/:workspaceId/agent-chats", ({ params }) => {
-    const workspaceId = id(params.workspaceId);
-    return commandResult(() => ({
-      chats: mockDb.listAgentChats({ workspaceId }).map((chat) => ({
-        ...chat,
-        runningTurn: runningTurnOf(chat.chatId),
-      })),
-    }));
-  }),
+  http.get(
+    "*/v1/workspaces/:workspaceId/agent-chats",
+    ({ params, request }) => {
+      const workspaceId = id(params.workspaceId);
+      const url = new URL(request.url);
+      // 서버와 같다 — `limit` 이 없으면 50개, 커서는 `(updatedAt, chatId)` 내림차순에서 그 뒤부터.
+      const limit = Number(url.searchParams.get("limit")) || 50;
+      const afterUpdatedAt = url.searchParams.get("afterUpdatedAt");
+      const afterChatId = url.searchParams.get("afterChatId");
+      return commandResult(() => {
+        const all = mockDb.listAllAgentChats(workspaceId);
+        const rest =
+          afterUpdatedAt && afterChatId
+            ? all.filter(
+                (chat) =>
+                  chat.updatedAt < afterUpdatedAt ||
+                  (chat.updatedAt === afterUpdatedAt &&
+                    chat.chatId < afterChatId)
+              )
+            : all;
+        const page = rest.slice(0, limit);
+        const last = page.at(-1);
+        const hasMore = page.length < rest.length && last !== undefined;
+        return {
+          chats: page.map((chat) => ({
+            ...chat,
+            runningTurn: runningTurnOf(chat.chatId),
+          })),
+          hasMore,
+          nextUpdatedAt: hasMore ? last.updatedAt : null,
+          nextChatId: hasMore ? last.chatId : null,
+        };
+      });
+    }
+  ),
   // 히스토리와 **이어받기 상태**를 함께 준다. 커서·도는 턴·마지막 턴이 없으면 돌아온
   // 브라우저는 무엇을 어디서부터 이어야 하는지 알 방법이 없다.
   http.get("*/v1/agent-chats/:chatId/messages", ({ params }) =>

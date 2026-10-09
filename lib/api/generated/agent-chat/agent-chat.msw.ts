@@ -109,6 +109,9 @@ export const getGetAgentChatsResponseMock = (): AgentChatsResponse => ({
         runningTurn: null,
       },
     ],
+    hasMore: true,
+    nextUpdatedAt: "2026-07-21T00:00:00Z",
+    nextChatId: "0K9GVJT2C4Q9Z",
   },
   error: null,
 });

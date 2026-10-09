@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   getGetAgentChatMessagesQueryOptions,
+  getAgentChats,
   getGetAgentChatsQueryKey,
   useCancelAgentChatTurn,
   useCreateAgentChat,
@@ -20,6 +21,7 @@ import {
   useResolveToolApproval,
   useSendAgentChatMessage,
 } from "@/lib/api/generated/agent-chat/agent-chat";
+import type { AgentChatsResponseDataChatsItem } from "@/lib/api/generated/models";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { isAuthError } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
@@ -50,6 +52,9 @@ import { useToolApproval } from "@/lib/chat/use-tool-approval";
  * 열린 대화는 SSE 가 즉시 말하고, 어긋나면 `runningLabel` 이 `turnId` 로 맞춘다.
  */
 const CHAT_LIST_POLL_MS = 5_000;
+
+/** 「이전 대화 더 보기」 한 번에 읽는 수. */
+const CHAT_PAGE_SIZE = 30;
 
 const uniqueIds = (scope: ScopeChip[], kind: ScopeChip["kind"]) => [
   ...new Set(scope.filter((chip) => chip.kind === kind).map((chip) => chip.id)),
@@ -95,7 +100,7 @@ export function useChatTurn({
   /** 이 턴을 시작할 때의 히스토리 길이. 뒤에 붙은 것만 이 턴으로 본다. */
   const [turnBaseline, setTurnBaseline] = useState(0);
 
-  const chatsQuery = useGetAgentChats(workspaceId, {
+  const chatsQuery = useGetAgentChats(workspaceId, undefined, {
     query: { refetchInterval: CHAT_LIST_POLL_MS },
   });
   const chatsResponse = chatsQuery.data;
@@ -104,6 +109,64 @@ export function useChatTurn({
     () => (chatsOk ? chatsResponse.data.data.chats : []),
     [chatsOk, chatsResponse]
   );
+
+  /**
+   * **첫 쪽(최근 50개)만 폴링하고, 그 뒤 대화는 「더 보기」로 한 번씩 읽어 붙인다** (APP-1020). 옛 대화의
+   * 제목·진행 배지는 5초마다 다시 읽을 값이 아니다 — 옛 대화에 이어 쓰면 그 대화가 첫 쪽으로 올라와
+   * 첫 쪽이 알려 준다. 워크스페이스를 바꾸면 붙여 둔 것을 버린다.
+   */
+  const [older, setOlder] = useState<{
+    workspaceId: string;
+    chats: AgentChatsResponseDataChatsItem[];
+    /** `undefined` 면 아직 안 읽었다(첫 쪽의 커서를 쓴다). `null` 이면 끝까지 읽었다. */
+    cursor: { afterUpdatedAt: string; afterChatId: string } | null | undefined;
+  }>({ workspaceId, chats: [], cursor: undefined });
+  const [isLoadingMoreChats, setIsLoadingMoreChats] = useState(false);
+  const olderHere =
+    older.workspaceId === workspaceId
+      ? older
+      : { workspaceId, chats: [], cursor: undefined };
+  const firstPage = chatsOk ? chatsResponse.data.data : null;
+  const nextCursor = useMemo(() => {
+    if (olderHere.cursor !== undefined) return olderHere.cursor;
+    return firstPage?.hasMore && firstPage.nextUpdatedAt && firstPage.nextChatId
+      ? {
+          afterUpdatedAt: firstPage.nextUpdatedAt,
+          afterChatId: firstPage.nextChatId,
+        }
+      : null;
+  }, [firstPage, olderHere.cursor]);
+  const hasMoreChats = nextCursor !== null;
+  const loadMoreChats = useCallback(async () => {
+    if (!nextCursor || isLoadingMoreChats) return;
+    setIsLoadingMoreChats(true);
+    try {
+      const response = await getAgentChats(workspaceId, {
+        limit: String(CHAT_PAGE_SIZE),
+        ...nextCursor,
+      });
+      if (response.status !== 200 || !response.data.success) {
+        toast.error("이전 대화를 더 불러오지 못했습니다.");
+        return;
+      }
+      const page = response.data.data;
+      setOlder({
+        workspaceId,
+        chats: [...olderHere.chats, ...page.chats],
+        cursor:
+          page.hasMore && page.nextUpdatedAt && page.nextChatId
+            ? {
+                afterUpdatedAt: page.nextUpdatedAt,
+                afterChatId: page.nextChatId,
+              }
+            : null,
+      });
+    } catch {
+      toast.error("이전 대화를 더 불러오지 못했습니다.");
+    } finally {
+      setIsLoadingMoreChats(false);
+    }
+  }, [isLoadingMoreChats, nextCursor, olderHere.chats, workspaceId]);
   /** 빈 목록과 조회 실패는 다르다. 실패를 빈 목록으로 접으면 이미 있는 대화 옆에 하나를 더 만든다. */
   const isChatsUnavailable =
     chatsQuery.isError || (chatsResponse !== undefined && !chatsOk);
@@ -615,9 +678,17 @@ export function useChatTurn({
     setFinishedTurn(settledTurnId);
   }
 
+  // 첫 쪽에 올라온 대화는 옛 쪽에서 뺀다 — 옛 대화에 이어 쓰면 두 쪽에 다 있다.
+  const listedChats = useMemo(() => {
+    const top = new Set(chats.map((chat) => chat.chatId));
+    return [
+      ...chats,
+      ...olderHere.chats.filter((chat) => !top.has(chat.chatId)),
+    ];
+  }, [chats, olderHere.chats]);
   const chatRows = useMemo(
     () =>
-      chats.map((chat) => ({
+      listedChats.map((chat) => ({
         chatId: chat.chatId,
         title: chat.title,
         // 목록 정렬 기준과 같은 값을 적어야 「1분 전인데 세 번째 줄」이 안 생긴다
@@ -629,7 +700,13 @@ export function useChatTurn({
           finishedTurnId: finishedTurn,
         }),
       })),
-    [chats, finishedTurn, sessionId, stream.state.phase, stream.state.turnId]
+    [
+      listedChats,
+      finishedTurn,
+      sessionId,
+      stream.state.phase,
+      stream.state.turnId,
+    ]
   );
 
   const retry = useCallback(
@@ -643,6 +720,9 @@ export function useChatTurn({
   return {
     sessionId,
     chatRows,
+    hasMoreChats,
+    isLoadingMoreChats,
+    loadMoreChats,
     stream: stream.state,
     isStreaming,
     isBusy,

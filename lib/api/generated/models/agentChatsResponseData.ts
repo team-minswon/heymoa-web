@@ -11,6 +11,19 @@ import type { AgentChatsResponseDataChatsItem } from "./agentChatsResponseDataCh
  * 성공 응답 데이터
  */
 export type AgentChatsResponseData = {
-  /** 최근 50개. updatedAt 내림차순 */
+  /** 대화 목록. updatedAt 내림차순 */
   chats: AgentChatsResponseDataChatsItem[];
+  /** 뒤에 더 있는지 */
+  hasMore: boolean;
+  /**
+   * 다음 요청의 afterUpdatedAt. hasMore 가 false 면 null
+   * @nullable
+   */
+  nextUpdatedAt: string | null;
+  /**
+   * 다음 요청의 afterChatId. hasMore 가 false 면 null
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  nextChatId: string | null;
 };

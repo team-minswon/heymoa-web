@@ -704,6 +704,9 @@ function PersonalChatPanel({
             onSelect={switchChat}
             onBack={() => setView("thread")}
             backRef={backButtonRef}
+            hasMore={turn.hasMoreChats}
+            isLoadingMore={turn.isLoadingMoreChats}
+            onLoadMore={() => void turn.loadMoreChats()}
           />
         </div>
       </div>

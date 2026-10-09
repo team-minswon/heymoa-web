@@ -376,6 +376,9 @@ const KNOWN_ONE_SIDED = new Set([
   // 가 `limit` 을 보내 본다.
   "NoteListResponse.data.nextNoteId",
   "NoteListResponse.data.nextSortedAt",
+  // 대화 목록도 같다. 목 대화가 50개를 넘지 않는 한 커서는 `null` 이다.
+  "AgentChatsResponse.data.nextUpdatedAt",
+  "AgentChatsResponse.data.nextChatId",
   // **server 가 늘 `null` 을 보낸다.** 계약이 선언만 하고 채우는 경로가 없다
   // (`변경사항/계약-어긋남.md` 6번 「스키마만 넓다」). 고칠 자리는 server 의
   // `turnFields()` 헬퍼이고, 그때 이 줄을 지운다.

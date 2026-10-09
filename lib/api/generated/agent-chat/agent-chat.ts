@@ -30,6 +30,7 @@ import type {
   AgentChatsResponse,
   AppErrorResponse,
   CreateAgentChatRequest,
+  GetAgentChatsParams,
   ResolveToolApprovalRequest,
   SendAgentChatMessageRequest,
   SubscribeAgentChatTurnEventsParams,
@@ -634,8 +635,23 @@ export type getAgentChatsResponse =
   | getAgentChatsResponseSuccess
   | getAgentChatsResponseError;
 
-export const getGetAgentChatsUrl = (workspaceId: string) => {
-  return `/v1/workspaces/${workspaceId}/agent-chats`;
+export const getGetAgentChatsUrl = (
+  workspaceId: string,
+  params?: GetAgentChatsParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/workspaces/${workspaceId}/agent-chats?${stringifiedParams}`
+    : `/v1/workspaces/${workspaceId}/agent-chats`;
 };
 
 /**
@@ -644,16 +660,26 @@ export const getGetAgentChatsUrl = (workspaceId: string) => {
  */
 export const getAgentChats = async (
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: Parameters<typeof apiFetch>[1]
 ): Promise<getAgentChatsResponse> => {
-  return apiFetch<getAgentChatsResponse>(getGetAgentChatsUrl(workspaceId), {
-    ...options,
-    method: "GET",
-  });
+  return apiFetch<getAgentChatsResponse>(
+    getGetAgentChatsUrl(workspaceId, params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
 };
 
-export const getGetAgentChatsQueryKey = (workspaceId: string) => {
-  return [`/v1/workspaces/${workspaceId}/agent-chats`] as const;
+export const getGetAgentChatsQueryKey = (
+  workspaceId: string,
+  params?: GetAgentChatsParams
+) => {
+  return [
+    `/v1/workspaces/${workspaceId}/agent-chats`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetAgentChatsQueryOptions = <
@@ -661,6 +687,7 @@ export const getGetAgentChatsQueryOptions = <
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
@@ -671,11 +698,11 @@ export const getGetAgentChatsQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetAgentChatsQueryKey(workspaceId);
+    queryOptions?.queryKey ?? getGetAgentChatsQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentChats>>> = ({
     signal,
-  }) => getAgentChats(workspaceId, { signal, ...requestOptions });
+  }) => getAgentChats(workspaceId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -699,6 +726,7 @@ export function useGetAgentChats<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params: undefined | GetAgentChatsParams,
   options: {
     query: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
@@ -722,6 +750,7 @@ export function useGetAgentChats<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
@@ -745,6 +774,7 @@ export function useGetAgentChats<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
@@ -764,6 +794,7 @@ export function useGetAgentChats<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
@@ -774,7 +805,11 @@ export function useGetAgentChats<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetAgentChatsQueryOptions(workspaceId, options);
+  const queryOptions = getGetAgentChatsQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -793,6 +828,7 @@ export const prefetchGetAgentChatsQuery = async <
 >(
   queryClient: QueryClient,
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAgentChats>>, TError, TData>
@@ -800,7 +836,11 @@ export const prefetchGetAgentChatsQuery = async <
     request?: SecondParameter<typeof apiFetch>;
   }
 ): Promise<QueryClient> => {
-  const queryOptions = getGetAgentChatsQueryOptions(workspaceId, options);
+  const queryOptions = getGetAgentChatsQueryOptions(
+    workspaceId,
+    params,
+    options
+  );
 
   await queryClient.prefetchQuery(queryOptions);
 
@@ -812,6 +852,7 @@ export const getGetAgentChatsSuspenseQueryOptions = <
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -826,11 +867,11 @@ export const getGetAgentChatsSuspenseQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetAgentChatsQueryKey(workspaceId);
+    queryOptions?.queryKey ?? getGetAgentChatsQueryKey(workspaceId, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentChats>>> = ({
     signal,
-  }) => getAgentChats(workspaceId, { signal, ...requestOptions });
+  }) => getAgentChats(workspaceId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
     Awaited<ReturnType<typeof getAgentChats>>,
@@ -851,6 +892,7 @@ export function useGetAgentChatsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params: undefined | GetAgentChatsParams,
   options: {
     query: Partial<
       UseSuspenseQueryOptions<
@@ -870,6 +912,7 @@ export function useGetAgentChatsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -889,6 +932,7 @@ export function useGetAgentChatsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -912,6 +956,7 @@ export function useGetAgentChatsSuspense<
   TError = UnauthorizedResponse | AppErrorResponse,
 >(
   workspaceId: string,
+  params?: GetAgentChatsParams,
   options?: {
     query?: Partial<
       UseSuspenseQueryOptions<
@@ -928,6 +973,7 @@ export function useGetAgentChatsSuspense<
 } {
   const queryOptions = getGetAgentChatsSuspenseQueryOptions(
     workspaceId,
+    params,
     options
   );
 

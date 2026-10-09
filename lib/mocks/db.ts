@@ -2407,11 +2407,22 @@ export const mockDb = {
    * 없다 — 핸들러가 `runningTurnOf`로 붙인다.
    */
   listAgentChats(query: { workspaceId: string }) {
-    assertWorkspace(query.workspaceId);
+    return this.listAllAgentChats(query.workspaceId).slice(
+      0,
+      AGENT_CHAT_LIST_LIMIT
+    );
+  },
+
+  /** 상한 없는 전건(정렬은 같다). 쪽 끊기가 필요한 핸들러가 쓴다 — 쪽 규칙은 서버와 같은 `limit`·커서다. */
+  listAllAgentChats(workspaceId: string) {
+    assertWorkspace(workspaceId);
     return state.agentChats
-      .filter((chat) => chat.workspaceId === query.workspaceId)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(0, AGENT_CHAT_LIST_LIMIT)
+      .filter((chat) => chat.workspaceId === workspaceId)
+      .sort(
+        (a, b) =>
+          b.updatedAt.localeCompare(a.updatedAt) ||
+          b.chatId.localeCompare(a.chatId)
+      )
       .map(({ chatId, title, updatedAt }) => ({ chatId, title, updatedAt }));
   },
 

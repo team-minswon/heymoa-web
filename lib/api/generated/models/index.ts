@@ -131,6 +131,7 @@ export * from "./errorResponse";
 export * from "./errorResponseData";
 export * from "./errorResponseError";
 export * from "./errorResponseErrorDetailsItem";
+export * from "./getAgentChatsParams";
 export * from "./getAgentDelegationUsagesParams";
 export * from "./getAgentOAuthConsentParams";
 export * from "./getNotesParams";

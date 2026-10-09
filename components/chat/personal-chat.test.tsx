@@ -105,6 +105,11 @@ const state = vi.hoisted(() => ({
   chatsLoading: false,
   createPending: false,
   chatsParams: [] as unknown[],
+  /** 첫 쪽 뒤에 더 있다(APP-1020). `olderChats` 가 「더 보기」가 가져오는 쪽이다. */
+  chatsHasMore: false,
+  olderChats: [] as ReturnType<typeof chatRow>[],
+  olderCalls: [] as unknown[][],
+  olderFails: false,
   messagesArgs: [] as unknown[],
   streamCalls: [] as { chatId: string; body: unknown }[],
   aborted: false,
@@ -230,8 +235,35 @@ vi.mock("@/lib/api/generated/agent-chat/agent-chat", async () => {
             ? { status: 500, data: { success: false, data: null } }
             : {
                 status: 200,
-                data: { success: true, data: { chats: state.chats } },
+                data: {
+                  success: true,
+                  data: {
+                    chats: state.chats,
+                    hasMore: state.chatsHasMore,
+                    nextUpdatedAt: state.chatsHasMore
+                      ? "2026-07-01T00:00:00Z"
+                      : null,
+                    nextChatId: state.chatsHasMore ? "01KNEXTCHATID0" : null,
+                  },
+                },
               },
+      };
+    },
+    /** 「이전 대화 더 보기」 — 커서를 달아 한 쪽 더. */
+    getAgentChats: async (...args: unknown[]) => {
+      state.olderCalls.push(args);
+      if (state.olderFails) throw new Error("network");
+      return {
+        status: 200,
+        data: {
+          success: true,
+          data: {
+            chats: state.olderChats,
+            hasMore: false,
+            nextUpdatedAt: null,
+            nextChatId: null,
+          },
+        },
       };
     },
     useGetAgentChatMessages: (chatId: string, options: unknown) => {
@@ -321,7 +353,10 @@ vi.mock("@/lib/api/sse", () => ({
       });
       seq = 3;
       if (state.approvalThenFails) {
-        yield framed("turn_failed", { code: "UPSTREAM_ERROR", retryable: true });
+        yield framed("turn_failed", {
+          code: "UPSTREAM_ERROR",
+          retryable: true,
+        });
         return;
       }
       yield framed("tool_approval_resolved", {
@@ -513,6 +548,10 @@ async function sendMessage(text: string) {
 describe("PersonalChatProvider", () => {
   beforeEach(() => {
     state.chats = [];
+    state.chatsHasMore = false;
+    state.olderChats = [];
+    state.olderCalls = [];
+    state.olderFails = false;
     state.messages = [];
     state.chatsParams = [];
     state.messagesArgs = [];
@@ -800,6 +839,56 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(state.streamCalls.length).toBeGreaterThan(0));
     expect(state.createMock).toHaveBeenCalledTimes(1);
     expect(state.streamCalls).toHaveLength(1);
+  });
+
+  it("뒤에 대화가 더 있으면 기록 끝의 버튼으로 이어 읽어 붙인다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.chatsHasMore = true;
+    state.olderChats = [
+      chatRow("01KOLDERCHAT01", null, "2026-06-30T00:00:00Z"),
+    ];
+    renderChat();
+    openPanel();
+    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "이전 대화 더 보기" })
+    );
+
+    await screen.findByRole("button", { name: /01KOLDERCHAT01/ });
+    // 첫 쪽의 다음 커서를 그대로 달고 읽는다.
+    expect(state.olderCalls[0]?.[1]).toEqual({
+      limit: "30",
+      afterUpdatedAt: "2026-07-01T00:00:00Z",
+      afterChatId: "01KNEXTCHATID0",
+    });
+    // 끝까지 읽었으니 버튼은 사라진다.
+    expect(
+      screen.queryByRole("button", { name: "이전 대화 더 보기" })
+    ).toBeNull();
+  });
+
+  it("더 읽다 실패하면 이미 보던 기록은 그대로 두고 버튼이 남는다", async () => {
+    state.chats = [chatRow(CHAT_ID)];
+    state.chatsHasMore = true;
+    state.olderFails = true;
+    renderChat();
+    openPanel();
+    fireEvent.click(await screen.findByRole("button", { name: "기록" }));
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "이전 대화 더 보기" })
+    );
+
+    await waitFor(() => expect(state.olderCalls).toHaveLength(1));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "이전 대화 더 보기" })
+      ).toBeEnabled()
+    );
+    expect(
+      screen.getByRole("button", { name: new RegExp(CHAT_ID) })
+    ).toBeTruthy();
   });
 
   it("★ ＋ 는 서버를 안 부르고 화면만 빈 새 대화로 바꾼다", async () => {
@@ -1363,7 +1452,9 @@ describe("PersonalChatProvider", () => {
     const steps = document.querySelector('[data-cot="group"] button');
     if (steps) fireEvent.click(steps);
     expect(
-      [...document.querySelectorAll('[data-step="tool"]')].map((row) => row.textContent)
+      [...document.querySelectorAll('[data-step="tool"]')].map(
+        (row) => row.textContent
+      )
     ).toEqual(["Linear 이슈 생성확인 필요"]);
   });
 
@@ -1380,7 +1471,9 @@ describe("PersonalChatProvider", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "승인" }));
     await waitFor(() => expect(state.approveMock).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(state.holdAfterApprovalRequest).toBeTypeOf("function"));
+    await waitFor(() =>
+      expect(state.holdAfterApprovalRequest).toBeTypeOf("function")
+    );
     await act(async () => (state.holdAfterApprovalRequest as () => void)());
 
     await waitFor(() =>
@@ -1626,7 +1719,9 @@ describe("PersonalChatProvider", () => {
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
 
     await waitFor(() => expect(chipsInInput()).toEqual(["주간 제품 회의"]));
-    await waitFor(() => expect(screen.getByRole("button", { name: "보내기" })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "보내기" })).toBeTruthy()
+    );
     appendAfterChips("그중 가장 급한 건?");
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));
 
@@ -1971,7 +2066,9 @@ describe("PersonalChatProvider", () => {
         };
         await vi.advanceTimersByTimeAsync(60_000);
 
-        expect(await screen.findByRole("button", { name: "승인" })).toBeTruthy();
+        expect(
+          await screen.findByRole("button", { name: "승인" })
+        ).toBeTruthy();
         expect(screen.queryByText("응답이 중간에 끊겼습니다.")).toBeNull();
       } finally {
         vi.useRealTimers();

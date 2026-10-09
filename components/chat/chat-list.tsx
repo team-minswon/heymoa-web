@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2Icon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { TimeRule } from "@/components/chat/time-rule";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -38,12 +39,19 @@ export function ChatList({
   onSelect,
   onBack,
   backRef,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: {
   chats: ChatListRow[];
   currentChatId: string | null;
   onSelect: (chatId: string) => void;
   onBack: () => void;
   backRef?: React.Ref<HTMLButtonElement>;
+  /** 서버에 이 뒤로 더 있다. 목록 끝에 「이전 대화 더 보기」를 둔다. */
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
   // 「지금」은 한 번만 읽는다. 줄마다 읽으면 같은 목록 안에서 기준이 어긋난다.
   const now = new Date();
@@ -110,6 +118,25 @@ export function ChatList({
               ))}
             </section>
           ))}
+          {hasMore && onLoadMore ? (
+            <div className="flex justify-center py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={isLoadingMore}
+                onClick={onLoadMore}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2Icon className="animate-spin" /> 불러오는 중
+                  </>
+                ) : (
+                  "이전 대화 더 보기"
+                )}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </ScrollArea>
     </>
