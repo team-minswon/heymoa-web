@@ -9,7 +9,6 @@ import { ConfirmBar } from "@/components/notes/review/confirm-bar";
 import { EvidenceQuotes } from "@/components/notes/review/evidence-quotes";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
-import { MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewHead } from "@/components/notes/review/review-head";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
@@ -284,7 +283,7 @@ export function ReviewBoard({
   const selectLinked = (itemId: string) => setOpenItemId(itemId);
 
   /**
-   * 그 줄로 간다. 접힌 「N개 더」가 펼쳐지고 앞서 펼쳐 둔 줄이 접히는 높이 전환(`Collapse` 200ms)이
+   * 그 줄로 간다. 접힌 「더 불러오기」가 펼쳐지고 앞서 펼쳐 둔 줄이 접히는 높이 전환(`Collapse` 200ms)이
    * 끝난 뒤에 재야 자리가 맞다 — 전환 중에 재면 뒤쪽 줄은 펼침이 끝난 뒤 화면 밖에 남는다.
    */
   const scrollToItem = (itemId: string) => {
@@ -448,11 +447,6 @@ export function ReviewBoard({
     ? meetingLengthOf(transcript.recording.durationMs, segments)
     : null;
   const included = items.filter((item) => item.included);
-  const marks = included.flatMap((item) => {
-    if (item.kind !== "DECISION" && item.kind !== "ACTION_ITEM") return [];
-    const atMs = citedAt(item);
-    return atMs === null ? [] : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
-  });
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
@@ -494,18 +488,6 @@ export function ReviewBoard({
         >
           {view === "summary" ? (
             <>
-              {lengthMs !== null ? (
-                <MeetingMap
-                  lengthMs={lengthMs}
-                  chapters={digests.flatMap((topic) =>
-                    topic.startMs === null
-                      ? []
-                      : [{ ordinal: topic.ordinal, title: topic.title, startMs: topic.startMs }]
-                  )}
-                  marks={marks}
-                  onSelect={showItem}
-                />
-              ) : null}
               <div className="pt-10">
                 <ReviewOverview
                   summary={summary}
@@ -643,7 +625,7 @@ export function ReviewBoard({
           unchosen={earlierBlock ? 0 : unchosen}
           onShowUnchosen={
             firstUnchosen && view === "summary"
-              ? // 접힌 「N개 더」 안의 줄은 펼쳐야 DOM 에 선다 — 펼치고 간다.
+              ? // 접힌 「더 불러오기」 안의 줄은 펼쳐야 DOM 에 선다 — 펼치고 간다.
                 () => showItem(firstUnchosen.itemId)
               : undefined
           }

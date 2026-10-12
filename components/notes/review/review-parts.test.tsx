@@ -5,7 +5,6 @@ import { DueCell } from "@/components/heymoa/due-cell";
 import { AddItemForm } from "@/components/notes/review/add-item-form";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
-import { groupMarks, MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewRow } from "@/components/notes/review/review-row";
 import { roleOfItem } from "@/components/notes/review/role-dot";
@@ -272,46 +271,6 @@ describe("SectionBlock", () => {
       </SectionBlock>
     );
     expect(screen.getByRole("button", { name: "결정 복사" })).toBeDisabled();
-  });
-});
-
-describe("MeetingMap", () => {
-  it("같은 때에 포개지는 표시는 한 묶음이고, 누를 때마다 묶음 안의 다음 항목으로 간다", () => {
-    const onSelect = vi.fn();
-    render(
-      <MeetingMap
-        lengthMs={3_600_000}
-        chapters={[]}
-        marks={[
-          { itemId: "a", kind: "DECISION", atMs: 60_000, content: "가" },
-          { itemId: "b", kind: "ACTION_ITEM", atMs: 60_000, content: "나" },
-          { itemId: "c", kind: "DECISION", atMs: 1_800_000, content: "다" },
-        ]}
-        onSelect={onSelect}
-      />
-    );
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(2);
-    expect(buttons[0]).toHaveAccessibleName("01:00 · 2개 · 결정 가 / 할 일 나");
-
-    fireEvent.click(buttons[0]);
-    fireEvent.click(buttons[0]);
-    fireEvent.click(buttons[0]);
-    expect(onSelect.mock.calls.map(([id]) => id)).toEqual(["a", "b", "a"]);
-  });
-
-  it("고정 칸 경계 양쪽에 걸친 가까운 표시도 한 묶음이다", () => {
-    // 60분 회의의 8.99초와 9.01초는 같은 자리(0.25%)에 그려진다. 22초 간격도 640px 막대에서 4px 안쪽이다.
-    const groups = groupMarks(
-      [
-        { itemId: "a", kind: "DECISION", atMs: 8_990, content: "가" },
-        { itemId: "b", kind: "DECISION", atMs: 9_010, content: "나" },
-        { itemId: "c", kind: "DECISION", atMs: 31_010, content: "다" },
-        { itemId: "d", kind: "DECISION", atMs: 600_000, content: "라" },
-      ],
-      3_600_000
-    );
-    expect(groups.map((group) => group.map((mark) => mark.itemId))).toEqual([["a", "b", "c"], ["d"]]);
   });
 });
 

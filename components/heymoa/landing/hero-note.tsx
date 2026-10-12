@@ -63,7 +63,7 @@ import {
 } from "./app";
 import { DOC, type Scene } from "./hero-data";
 import { Cursor, Scribble, Sticky } from "./marks";
-import { APP, FOCUS, ROLE_COLOR, vars } from "./tokens";
+import { APP, FOCUS, vars } from "./tokens";
 
 /*
  * 히어로의 노트 창 안쪽. **앱 화면 그대로다** — `note-panel.tsx`(상단바) · `transcript-view.tsx` ·
@@ -1182,77 +1182,7 @@ function Analyzing({ panel }: { panel: PanelProps }) {
   );
 }
 
-const seconds = (at: string) => {
-  const [m, s] = at.split(":").map(Number);
-  return m * 60 + s;
-};
-/** 회의 길이 위의 자리(`meeting-map.tsx` 의 `at`). */
-const onTrack = (at: string) => `${((seconds(at) / seconds(LENGTH)) * 100).toFixed(2)}%`;
 
-/**
- * 「언제 정해졌나」(`meeting-map.tsx`). 앱에서도 상자다(hairline-soft · r12). 회의 길이 위에 주제 구간을
- * 깔고 결정 · 할 일이 나온 때를 색 막대로 찍는다 — 막대는 하나씩 꽂힌다.
- *
- * **lg 미만은 상자 대신 위아래 구분선이다.** 좁은 창은 본문 여백이 16px 라 상자가 창 양옆 16px 안쪽에 나란히
- * 서서 창과 동심 두 겹으로 읽혔다(`EvidenceQuotes` 가 sm 미만에서 상자를 세로선으로 바꾼 것과 같은 까닭).
- * 넓은 창은 본문 여백이 40px 라 앱 상자 그대로다.
- */
-function MeetingMap() {
-  const marks = [
-    ...DOC.decisions.map((d) => ({ at: d.at, color: ROLE_COLOR.decision })),
-    ...DOC.tasks.map((t) => ({ at: t.at, color: ROLE_COLOR.task })),
-  ];
-  return (
-    <div
-      aria-hidden
-      className="mt-6 border-y border-[var(--el-hairline-soft)] pt-3.5 pb-2.5 lg:rounded-[12px] lg:border-x lg:px-4"
-    >
-      <div className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px]", APP.muted)}>
-        <span className={cn("font-medium", APP.body)}>언제 정해졌나</span>
-        <span className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-[5px]">
-            <span className="h-1.5 w-3 rounded-[2px] bg-[var(--el-hairline)]" />
-            주제 구간
-          </span>
-          <span className="inline-flex items-center gap-[5px] tabular-nums">
-            <span className="h-2.5 w-[3px] rounded-[2px]" style={{ background: ROLE_COLOR.decision }} />
-            결정 {DOC.decisions.length}
-          </span>
-          <span className="inline-flex items-center gap-[5px] tabular-nums">
-            <span className="h-2.5 w-[3px] rounded-[2px]" style={{ background: ROLE_COLOR.task }} />
-            할 일 {DOC.tasks.length}
-          </span>
-        </span>
-      </div>
-      <div className="relative mt-2 h-[26px]">
-        {DOC.topics.map((topic, i) => {
-          const end = DOC.topics[i + 1]?.at ?? LENGTH;
-          return (
-            <span
-              key={topic.at}
-              className="absolute top-2.5 h-1.5 rounded-[2px] bg-[var(--el-hairline)]"
-              style={{
-                left: onTrack(topic.at),
-                width: `calc(${(((seconds(end) - seconds(topic.at)) / seconds(LENGTH)) * 100).toFixed(2)}% - 2px)`,
-              }}
-            />
-          );
-        })}
-        {marks.map((mark, i) => (
-          <span
-            key={mark.at}
-            className="tv-pop absolute top-1.5 -ml-[1.5px] h-3.5 w-[3px] rounded-[2px]"
-            style={{ left: onTrack(mark.at), background: mark.color, ...vars({ "--d": `${200 + i * 90}ms` }) }}
-          />
-        ))}
-      </div>
-      <div className={cn("flex h-4 justify-between text-[11px] tabular-nums", APP.muted)}>
-        <span>0:00</span>
-        <span>2분</span>
-      </div>
-    </div>
-  );
-}
 
 /** 요약 / 그래프 전환(`SegmentedControl`). 그림이다. */
 const VIEW_SWITCH = (
@@ -1311,7 +1241,7 @@ const quotesOf = (cites: readonly number[]) =>
     }));
 
 /**
- * 검토 문서(`review-board.tsx`) — 머리 → 「언제 정해졌나」 → 요약 → 주제 → 결정 → 할 일, 아래 가운데에 떠
+ * 검토 문서(`review-board.tsx`) — 머리 → 요약 → 주제 → 결정 → 할 일, 아래 가운데에 떠
  * 있는 검토 막대. 묶음이 하나씩 서고, 장면마다 정해 둔 묶음(`anchorOf`)이 창 맨 위로 온다 — 앞 장면에서
  * 넘어올 때는 사람이 굴리듯 부드럽게 간다(모션을 줄이면 바로). 막대가 서기 전에는 아래에 빈 자리를 둬서 그
  * 위치까지 올릴 수 있다. 할 일은 근거 장면부터 선다 — 그 전에는 창 아래 절반이 2초 넘게 비어 문서가 거기서
@@ -1421,7 +1351,6 @@ function ReviewDoc({ review, panel }: { review: number; panel: PanelProps }) {
               </>
             }
           />
-          <MeetingMap />
           <div className="pt-7">
             <Anchor name="summary" />
             <SectionHead title="요약" />

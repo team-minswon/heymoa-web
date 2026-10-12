@@ -26,7 +26,7 @@ const EMPTY_TEXT: Record<Section["key"], string> = {
 };
 
 /**
- * 한 섹션. 앞의 몇 줄만 서고 나머지는 「N개 더」로 접힌다 — 항목이 백 개 가까운 회의에서
+ * 한 섹션. 앞의 몇 줄만 서고 나머지는 「더 불러오기」로 접힌다 — 항목이 백 개 가까운 회의에서
  * 섹션을 다 펼치면 검토할 것이 스크롤 너머로 사라진다.
  */
 export function ReviewSection({
@@ -145,7 +145,8 @@ export function ReviewSection({
       {rest.length > 0 ? (
         <ShowMoreButton
           open={showRest}
-          moreLabel={`${section.label} ${rest.length}개 더`}
+          moreLabel="더 불러오기"
+          subject={section.label}
           onToggle={() => setExpanded((value) => !value)}
           className="pt-2.5"
         />
