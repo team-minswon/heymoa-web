@@ -166,6 +166,8 @@
      배경은 위 색의 10%를 그대로 쓰고 글자만 이 두 색으로 내린다 (6.40:1 · 5.54:1). */
   --el-success-strong: #166534;
   --el-error-strong: #b91c1c;
+  /* 되돌릴 수 없는 쓰기의 주의 글자(승인 카드). 흰 바탕 위 5.02:1. */
+  --el-warning-strong: #b45309;
 
   /* UI Mapping variables */
   --background: var(--el-canvas);

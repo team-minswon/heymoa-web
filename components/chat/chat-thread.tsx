@@ -1,16 +1,7 @@
 "use client";
 
 import { Fragment, memo, useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  Copy,
-  FileText,
-  Folder,
-  PencilLine,
-  XCircle,
-} from "lucide-react";
+import { AlertTriangle, Check, Copy, FileText, Folder } from "lucide-react";
 
 import {
   AnswerRefs,
@@ -20,25 +11,22 @@ import {
 import { Markdown } from "@/components/chat/markdown";
 import { useSmoothText } from "@/lib/chat/use-smooth-text";
 import { TimeRule } from "@/components/chat/time-rule";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { AgentChatMessagesResponseDataMessagesItem } from "@/lib/api/generated/models";
-import { groupBlocks, settleEndedTurn } from "@/lib/chat/blocks";
+import { ApprovalCard } from "@/components/chat/approval-card";
+import { resolvedStatus } from "@/lib/chat/approval-card";
+import { type Group, groupBlocks, settleEndedTurn } from "@/lib/chat/blocks";
 import { relativeUpdatedAt } from "@/lib/chat/chat-list";
 import { dividerLabel, threadDividers } from "@/lib/chat/time-divider";
 import { scopeChipClass } from "@/lib/chat/scope-chip";
 import { splitScopeMarkers } from "@/lib/chat/scope-marker";
 import { scopeKey } from "@/lib/chat/scope-chip";
 import { cn } from "@/lib/utils";
-import type {
-  ApprovalDecision,
-  ChatStreamState,
-  ToolArgs,
+import {
+  type ApprovalDecision,
+  type ChatStreamState,
+  parseApprovalCard,
 } from "@/lib/chat/stream-protocol";
-import type {
-  ApprovalCard,
-  ApprovalCardState,
-} from "@/lib/chat/use-tool-approval";
+import type { PendingApprovalCard } from "@/lib/chat/use-tool-approval";
 
 export type ThreadMessage = AgentChatMessagesResponseDataMessagesItem;
 
@@ -88,7 +76,7 @@ export function ChatThread({
   pendingUserScope?: HistoryScope;
   onApprove: (decision: ApprovalDecision) => void;
   /** 훅이 소유하는 승인 카드. pending이 사라진 뒤에도 무효화 카드를 남기려고 stream이 아니라 이걸 그린다. */
-  approvalCard?: ApprovalCard | null;
+  approvalCard?: PendingApprovalCard | null;
   emptyState?: React.ReactNode;
   /** 도구 칩·근거 칩을 눌러 그 회의록으로 간다. */
   onOpenNote?: (noteId: string) => void;
@@ -156,13 +144,23 @@ export function ChatThread({
       <Fragment key={`${item.at}-${index}`}>
         {dividers[index] ? <TimeDivider at={item.at} /> : null}
         {item.kind === "steps" ? (
-          <ChainOfThought
-            blocks={item.blocks}
-            live={false}
-            startedAt={item.at}
-            endedAt={item.endedAt}
-            onOpenNote={onOpenNote}
-          />
+          groupBlocks(item.blocks).map((group, at) =>
+            group.kind === "approval" ? (
+              <ResolvedApproval
+                key={`approval-${group.approval.approvalId}`}
+                group={group}
+              />
+            ) : group.kind === "steps" ? (
+              <ChainOfThought
+                key={`steps-${at}`}
+                blocks={group.blocks}
+                live={false}
+                startedAt={item.at}
+                endedAt={item.endedAt}
+                onOpenNote={onOpenNote}
+              />
+            ) : null
+          )
         ) : (
           <HistoryMessage message={item.message} onOpenNote={onOpenNote} />
         )}
@@ -217,11 +215,10 @@ export function ChatThread({
         <ThinkingLine stream={stream} pending={pendingUserMessage !== null} />
 
         {approvalCard ? (
-          <ApprovalPrompt
+          <ApprovalCard
+            card={approvalCard.card}
             summary={approvalCard.summary}
-            tool={approvalCard.tool}
-            args={approvalCard.args}
-            state={approvalCard.state}
+            status={approvalCard.status}
             onApprove={onApprove}
           />
         ) : null}
@@ -373,6 +370,7 @@ function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
       // 히스토리 `toolEvent` 에는 승인 요약이 없다. `content` 는 「…님이 승인」이라 붙이면
       // 같은 말을 두 번 하고, 도구 id 를 넣으면 카드와 이름이 갈린다. 비우면 그 자리를 안 그린다.
       summary: null,
+      card: parseApprovalCard(event.card),
       decision: event.decision,
     };
   }
@@ -384,8 +382,6 @@ function toStepBlock(message: ThreadMessage, index: number): StepBlock | null {
       summary: message.content,
       // server 가 `tool_call_start` 의 `target` 을 TOOL 행의 `scope` 로 굳혀 준다.
       target: historyTarget(message.scope),
-      // 인자는 승인 행만 들고 `pendingApproval` 로만 나온다.
-      args: null,
       status: event.status,
       url: event.url,
     };
@@ -695,6 +691,11 @@ function StreamBlocks({
             }
             onOpenNote={onOpenNote}
           />
+        ) : group.kind === "approval" ? (
+          <ResolvedApproval
+            key={`approval-${group.approval.approvalId}`}
+            group={group}
+          />
         ) : (
           <AssistantText
             key={`text-${index}`}
@@ -705,6 +706,23 @@ function StreamBlocks({
         )
       )}
     </>
+  );
+}
+
+/** 결정이 끝난 승인. 같은 카드가 제자리에 남고 상태만 바뀐다. */
+function ResolvedApproval({
+  group,
+}: {
+  group: Extract<Group, { kind: "approval" }>;
+}) {
+  const { approval, tool } = group;
+  return (
+    <ApprovalCard
+      card={approval.card}
+      // 히스토리의 승인 행에는 요약이 없다. 짝인 결과 행의 요약이 같은 일을 사람 말로 적는다.
+      summary={approval.summary ?? tool?.summary ?? null}
+      status={resolvedStatus(approval.decision, tool)}
+    />
   );
 }
 
@@ -758,165 +776,6 @@ function Notice({
           </p>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** 한 줄로 접지 않고 그대로 보여줄 값의 길이 상한. 넘으면 접는다. */
-const ARG_INLINE_MAX = 80;
-
-/**
- * 승인 카드의 인자 줄. 키는 도구가 쓰는 이름 그대로 둔다 — 번역 사전은 도구가 늘 때마다
- * 낡는다. 빈 값은 줄째 뺀다.
- */
-function argRows(args: ToolArgs): [string, string][] {
-  if (!args) return [];
-  return Object.entries(args).flatMap(([key, value]) => {
-    if (value === null || value === undefined) return [];
-    // 객체·배열은 모르는 모양이라 JSON 으로 보이고, 짧으면 한 줄로 둔다.
-    const text =
-      typeof value === "object" ? compactOrPretty(value) : String(value);
-    return text.trim() ? [[key, text] as [string, string]] : [];
-  });
-}
-
-/** 한 줄에 들어가면 한 줄로, 아니면 들여써서. 판단 기준은 아래 접기와 같은 상한이다. */
-function compactOrPretty(value: object): string {
-  const compact = JSON.stringify(value);
-  return compact.length <= ARG_INLINE_MAX
-    ? compact
-    : JSON.stringify(value, null, 2);
-}
-
-function ApprovalArgs({ args }: { args: ToolArgs }) {
-  const rows = argRows(args);
-  if (rows.length === 0) return null;
-  return (
-    <dl
-      data-testid="approval-args"
-      className="mt-3 flex flex-col gap-1.5 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5"
-    >
-      {rows.map(([key, value]) => (
-        <div key={key} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-          <dt className="shrink-0 text-[11px] leading-5 font-medium text-[var(--el-muted)] sm:w-20">
-            {key}
-          </dt>
-          <dd className="min-w-0 flex-1 text-xs leading-5 break-words text-[var(--el-body)]">
-            {value.length > ARG_INLINE_MAX || value.includes("\n") ? (
-              // 열림을 React state 로 들면 카드가 다시 그려질 때마다 접힌다.
-              <details className="group">
-                <summary className="flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden">
-                  <span className="line-clamp-1 group-open:hidden">
-                    {value}
-                  </span>
-                  <span className="hidden text-[var(--el-muted)] group-open:inline">
-                    접기
-                  </span>
-                  <ChevronDown
-                    aria-hidden
-                    className="size-3 shrink-0 text-[var(--el-muted)] transition-transform group-open:rotate-180"
-                  />
-                </summary>
-                <p className="mt-1 whitespace-pre-wrap">{value}</p>
-              </details>
-            ) : (
-              value
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-/**
- * 승인 카드. `summary` 는 계약상 nullable 이라 비면 도구 id 를 대신 쓴다 — 무엇을
- * 승인하는지 모르고 누르게 두지 않는다.
- */
-function ApprovalPrompt({
-  summary,
-  tool,
-  args,
-  state,
-  onApprove,
-}: {
-  summary: string | null;
-  tool: string;
-  args: ToolArgs;
-  state: ApprovalCardState;
-  onApprove: (decision: ApprovalDecision) => void;
-}) {
-  const invalidated = state.kind === "invalidated";
-  const submitted = state.kind === "submitted";
-  return (
-    // 바로 위 본문이 하려는 일을 묻는 카드라 스레드 간격의 절반으로 당긴다.
-    <div className="-mt-2 rounded-panel border border-[var(--el-hairline)] bg-white p-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <p
-          data-testid="approval-summary"
-          className={
-            invalidated
-              ? "min-w-0 flex-1 text-sm leading-relaxed text-[var(--el-muted)]"
-              : "min-w-0 flex-1 text-sm leading-relaxed text-[var(--el-ink)]"
-          }
-        >
-          {summary ?? `승인이 필요한 도구: ${tool}`}
-        </p>
-        {/* 되돌릴 수 없는 쓰기라는 유일한 신호라 채움과 아이콘을 준다. `destructive` 는
-            삭제 계열의 색이라 안 쓴다. */}
-        <Badge variant="secondary" className="shrink-0 gap-1">
-          <PencilLine aria-hidden />
-          쓰기 도구
-        </Badge>
-      </div>
-
-      {invalidated ? null : <ApprovalArgs args={args} />}
-
-      {invalidated ? (
-        // 카드가 죽었다 — 버튼을 지우고 사유를 남긴다. 스트림은 정상 종료돼 컴포저는 다시 열린다.
-        <div
-          data-approval="invalidated"
-          className="mt-3 flex items-start gap-2 rounded-block border border-[var(--el-error)]/25 bg-[var(--el-error)]/[0.06] p-2.5"
-        >
-          <XCircle className="mt-0.5 size-4 shrink-0 text-[var(--el-error)]" />
-          <p className="text-xs leading-relaxed text-[var(--el-body)]">
-            {state.reason}
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* 누른 것만으로 뒤집지 않는다. 확정은 재개 스트림의 첫 프레임이 정한다. */}
-          <div
-            className={
-              submitted ? "mt-3 flex gap-2 opacity-40" : "mt-3 flex gap-2"
-            }
-          >
-            {/* 승인은 정상 흐름이라 솔리드로 둔다. 위험은 배지가 말한다. */}
-            <Button
-              size="sm"
-              className="h-[30px]"
-              disabled={submitted}
-              onClick={() => onApprove("APPROVED")}
-            >
-              승인
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-[30px]"
-              disabled={submitted}
-              onClick={() => onApprove("REJECTED")}
-            >
-              거절
-            </Button>
-          </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-[var(--el-muted)]">
-            {submitted
-              ? "확정은 응답이 재개되면 반영됩니다."
-              : "답할 때까지 기다립니다. 그만두려면 「중지」를 누르세요."}
-          </p>
-        </>
-      )}
     </div>
   );
 }

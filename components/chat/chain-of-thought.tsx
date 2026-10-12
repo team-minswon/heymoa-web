@@ -499,27 +499,8 @@ function StepRow({
     );
   }
 
-  if (block.kind === "approval") {
-    // 확정 전에는 승인 카드가 따로 서 있다 — 여기 기록은 결정이 온 뒤에만 남는다.
-    if (!block.decision) return null;
-    return (
-      <div className={row} data-step="approval">
-        <Dot state="complete" />
-        <p className="min-w-0 flex-1 text-xs leading-relaxed text-[var(--el-muted)]">
-          <span className="font-medium text-[var(--el-body-strong)]">
-            {block.decision === "APPROVED" ? "승인함" : "거절함"}
-          </span>
-          {/* 도구 id 로 대신하지 않는다. 카드는 `summary` 로 물었는데 여기서 기계 이름으로
-              답하면 같은 일을 두 이름으로 부른다. 계약이 `summary` 를 저장하지 않아
-              새로고침 뒤에는 비어 있다. */}
-          {block.summary ? ` · ${block.summary}` : null}
-          {block.decision === "REJECTED"
-            ? " — 도구는 실행되지 않았습니다"
-            : null}
-        </p>
-      </div>
-    );
-  }
+  // 확정 전 승인은 카드가 따로 서 있고, 결정된 승인은 `groupBlocks` 가 묶음을 끊고 카드로 세운다.
+  if (block.kind === "approval") return null;
 
   return (
     <div className={row} data-step="tool">

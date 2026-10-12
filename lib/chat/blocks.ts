@@ -3,6 +3,8 @@
  * 하나(`message_end.content` 가 토큰 합을 이긴다)를 여기서 진다.
  */
 
+import type { ApprovalCardData } from "@/lib/chat/approval-card";
+
 /**
  * 도구가 향하는 곳. `kind` 는 열어 둔다 — 모르는 `kind` 는 칩 없이 `summary` 로 떨어진다.
  * 여기서 정의하고 `stream-protocol` 이 다시 내보낸다. 반대면 순수 블록 층이 리듀서를
@@ -16,9 +18,6 @@ export type ToolTarget = {
 
 export type ApprovalDecision = "APPROVED" | "REJECTED";
 
-/** 모델이 도구를 부른 인자. 도구마다 모양이 달라 닫지 않는다. 화면은 이름-값 쌍으로 읽는다. */
-export type ToolArgs = Record<string, unknown> | null;
-
 export type Block =
   /** 모델이 답을 쓰기 전에 흘린 계획 문장. 답변 본문이 아니다. */
   | { kind: "thinking"; text: string }
@@ -29,11 +28,6 @@ export type Block =
       summary: string | null;
       /** 이 도구가 향하는 곳. 눌러서 그 회의록으로 간다. 모르는 kind면 null로 접는다. */
       target: ToolTarget | null;
-      /**
-       * 모델이 이 도구를 부른 인자. 계약상 인자를 나르는 것은 `tool_call_start` 뿐이라 여기가
-       * 유일한 출처다. `tool_approval_request` 는 같은 `toolCallId` 로 이 블록을 찾는다.
-       */
-      args: ToolArgs;
       /**
        * 실행 중에는 null. `stopped`·`unknown` 은 화면만의 값으로, 결과 없이 끝난 턴을
        * `settleEndedTurn` 이 닫을 때 쓴다.
@@ -48,6 +42,8 @@ export type Block =
       toolCallId: string;
       tool: string;
       summary: string | null;
+      /** 카드 구조. 없으면 `summary` 한 줄로 묻는다. 결정 뒤에도, 새로고침 뒤에도 같은 카드를 그린다. */
+      card: ApprovalCardData | null;
       /** 확정 전에는 null. tool_approval_resolved가 채운다. */
       decision: ApprovalDecision | null;
     }
@@ -121,7 +117,6 @@ export function settleTool(
     summary: patch.summary,
     target: null,
     // 인자는 `tool_call_start` 만 나르는데 이 갈래는 그 이벤트를 못 본 경우다.
-    args: null,
     status: patch.status,
     url: patch.url,
   });
@@ -173,7 +168,6 @@ export function settleEndedTurn(
           tool: "",
           summary: block.summary,
           target: null,
-          args: null,
           status: "unknown",
           url: null,
         },
@@ -235,20 +229,44 @@ export function answerText(blocks: Block[]): string {
 }
 
 /**
- * 연속된 `thinking`·`tool`·`approval` 을 한 묶음으로 접는다. 본문이 끼면 묶음이 끊긴다 —
- * 답을 쓰기 시작한 뒤의 도구 호출은 앞 묶음의 일부가 아니다.
+ * 연속된 `thinking`·`tool` 을 한 묶음으로 접는다. 본문이 끼면 묶음이 끊긴다 — 답을 쓰기 시작한
+ * 뒤의 도구 호출은 앞 묶음의 일부가 아니다.
+ *
+ * 결정된 승인은 묶음을 끊고 제자리에 카드로 선다. 그 쓰기 도구의 줄은 카드가 상태로 말하므로
+ * 묶음에서 뺀다 — 같은 일을 생각 과정과 카드에 두 번 적지 않는다. 결정 전 승인은 묶음에 남는다.
+ * 따로 선 승인 카드가 그리고, 생각 과정은 그것으로 「사람을 기다린다」를 안다.
  */
 export type Group =
   | { kind: "steps"; blocks: Exclude<Block, { kind: "text" }>[] }
+  | {
+      kind: "approval";
+      approval: Extract<Block, { kind: "approval" }>;
+      /** 승인 뒤 실행된 그 도구. 결과가 오기 전이면 상태가 null 이다. */
+      tool: Extract<Block, { kind: "tool" }> | null;
+    }
   | { kind: "text"; text: string };
 
 export function groupBlocks(blocks: Block[]): Group[] {
+  const gated = new Set(
+    blocks.flatMap((block) =>
+      block.kind === "approval" ? [block.toolCallId] : []
+    )
+  );
   const groups: Group[] = [];
   for (const block of blocks) {
     if (block.kind === "text") {
       groups.push({ kind: "text", text: block.text });
       continue;
     }
+    if (block.kind === "approval" && block.decision) {
+      const tool = blocks.find(
+        (each): each is Extract<Block, { kind: "tool" }> =>
+          each.kind === "tool" && each.toolCallId === block.toolCallId
+      );
+      groups.push({ kind: "approval", approval: block, tool: tool ?? null });
+      continue;
+    }
+    if (block.kind === "tool" && gated.has(block.toolCallId)) continue;
     const last = groups.at(-1);
     if (last?.kind === "steps") last.blocks.push(block);
     else groups.push({ kind: "steps", blocks: [block] });
@@ -267,19 +285,13 @@ export type StepLine =
 /**
  * 이어진 같은 조회 도구를 한 줄로 묶고, 이어진 생각 조각을 한 문단으로 잇는다. 블록 배열은
  * 그대로 두는 렌더 단계 함수다 — 실시간·재연결 재개·히스토리가 같은 블록이면 같은 줄이 나온다.
- * 쓰기는 승인 게이트를 지나므로 같은 `toolCallId` 의 승인 블록이 있는 도구가 쓰기다. 실패·중단은
- * 그 줄의 사유가 보여야 해서 안 묶는다.
+ * 승인을 거치는 쓰기는 `groupBlocks` 가 이미 카드로 뺐다. 실패·중단은 그 줄의 사유가 보여야 해서
+ * 안 묶는다.
  */
 export function groupSteps(blocks: StepBlock[]): StepLine[] {
-  const gated = new Set(
-    blocks.flatMap((block) =>
-      block.kind === "approval" ? [block.toolCallId] : []
-    )
-  );
   const groupable = (block: StepBlock): block is ToolBlock =>
     block.kind === "tool" &&
     block.tool !== "" &&
-    !gated.has(block.toolCallId) &&
     (block.status === null || block.status === "success");
 
   // 키는 줄의 첫 블록 자리로 정한다. 줄 순번이면 앞 묶음이 갈릴 때 뒤 줄이 다시 마운트된다.

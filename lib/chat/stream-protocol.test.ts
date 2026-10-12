@@ -10,7 +10,6 @@ import {
   reduceStreamEvent,
   resumedState,
   startedState,
-  toolArgs,
   type ChatStreamState,
 } from "@/lib/chat/stream-protocol";
 
@@ -205,18 +204,6 @@ describe("본문", () => {
 });
 
 describe("도구", () => {
-  it("인자를 나르는 것은 tool_call_start 하나뿐이다", () => {
-    const state = fold(
-      START,
-      frame("2-0", "tool_call_start", {
-        toolCallId: "c1",
-        tool: "write",
-        args: { title: "회의록" },
-      })
-    );
-    expect(state.blocks[0]).toMatchObject({ kind: "tool", args: { title: "회의록" } });
-  });
-
   // ★ 절대 같은 갈래에 두지 않는다
   it("도구 실패는 턴 실패가 아니다 — 토큰이 이어진다", () => {
     const state = fold(
@@ -255,40 +242,39 @@ describe("도구", () => {
 });
 
 describe("승인", () => {
-  it("스트림을 닫고 승인 대기로 가며 인자를 도구 블록에서 집는다", () => {
+  it("스트림을 닫고 승인 대기로 가며 카드 구조를 읽는다", () => {
     const state = fold(
       START,
-      frame("2-0", "tool_call_start", {
-        toolCallId: "c1",
-        tool: "write",
-        args: { title: "회의록" },
-      }),
       frame("3-0", "tool_approval_request", {
         approvalId: "a1",
         toolCallId: "c1",
         tool: "write",
+        card: { title: "회의록 만들기", fields: [{ label: "제목", value: "회의록" }] },
       })
     );
     expect(state.phase).toBe("awaiting_approval");
-    expect(state.pendingApproval).toMatchObject({
-      approvalId: "a1",
-      args: { title: "회의록" },
+    expect(state.pendingApproval?.card).toMatchObject({
+      title: "회의록 만들기",
+      fields: [{ label: "제목", value: "회의록" }],
     });
+    // 결정된 뒤에도 같은 카드를 그리도록 승인 블록도 같은 카드를 든다.
+    expect(state.blocks.at(-1)).toMatchObject({ kind: "approval", card: { title: "회의록 만들기" } });
     // 카드의 id 가 곧 재개 자리다 — 승인 뒤 `after` 에 이 값이 간다.
     expect(state.cursor).toBe("3-0");
   });
 
-  it("도구 블록을 못 찾아도 카드가 summary 만으로 선다", () => {
+  it("card 가 없거나 모양이 틀리면 summary 만으로 선다", () => {
     const state = fold(
       START,
       frame("2-0", "tool_approval_request", {
         approvalId: "a1",
-        toolCallId: "없음",
+        toolCallId: "c1",
         tool: "write",
         summary: "만들까요?",
+        card: { fields: [] },
       })
     );
-    expect(state.pendingApproval).toMatchObject({ summary: "만들까요?", args: null });
+    expect(state.pendingApproval).toMatchObject({ summary: "만들까요?", card: null });
   });
 
   it("확정되면 카드가 사라지고 기록이 남는다", () => {
@@ -388,34 +374,12 @@ describe("endStream — 닫힘 자체는 상태가 아니다", () => {
   });
 });
 
-describe("도구 인자 — 두 전송이 두 모양으로 준다", () => {
-  it("★ JSON 문자열로 와도 객체로 접는다", () => {
-    expect(toolArgs('{"title":"배포 게이트","teamId":"T1"}')).toEqual({
-      title: "배포 게이트",
-      teamId: "T1",
-    });
-  });
-
-  it("객체로 오면 그대로 쓴다", () => {
-    expect(toolArgs({ title: "배포 게이트" })).toEqual({ title: "배포 게이트" });
-  });
-
-  it("깨진 JSON 은 인자 없음으로 접는다 — 카드는 summary 만으로 선다", () => {
-    expect(toolArgs("{입력이 깨졌다")).toBeNull();
-  });
-
-  it("배열과 null 은 인자가 아니다", () => {
-    expect(toolArgs("[1,2]")).toBeNull();
-    expect(toolArgs(null)).toBeNull();
-  });
-});
-
 describe("복원", () => {
   it("승인이 실려 있으면 승인 대기로 선다 — status 이름을 안 본다", () => {
     const state = resumedState({
       cursor: "1735689600000-4",
       turnId: "t1",
-      pendingApproval: { approvalId: "a1", tool: "w", summary: null, args: null },
+      pendingApproval: { approvalId: "a1", tool: "w", summary: null, card: null },
     });
     expect(state).toMatchObject({
       phase: "awaiting_approval",

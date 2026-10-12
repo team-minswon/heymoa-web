@@ -1381,16 +1381,16 @@ describe("PersonalChatProvider", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
+    // 202 가 오면 결정이 적혀 카드가 「실행 중」으로 서고 버튼은 사라진다. 그 전에는 잠겨 있다.
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "승인" })).toHaveProperty(
-        "disabled",
-        true
-      )
+      expect(
+        document
+          .querySelector('[data-testid="approval-card"]')
+          ?.getAttribute("data-approval")
+      ).toBe("running")
     );
-    expect(screen.getByRole("button", { name: "거절" })).toHaveProperty(
-      "disabled",
-      true
-    );
+    expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "거절" })).toBeNull();
     expect(state.approveMock).toHaveBeenCalledTimes(1);
     // ★ **승인 요청에는 `after` 가 없다.** 202 뒤 같은 턴 스트림에 카드의 id 를 `after`
     // 에 넣어 다시 붙는다 — 카드까지 다시 받으면 화면이 승인 대기로 되돌아간다.
@@ -1475,15 +1475,15 @@ describe("PersonalChatProvider", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "승인" })).toBeNull()
     );
-    expect(screen.getByText(/^확인 필요 — /)).toBeTruthy();
+    expect(screen.getByText("확인 필요")).toBeTruthy();
     expect(screen.queryByText(/중단됨/)).toBeNull();
-    const steps = document.querySelector('[data-cot="group"] button');
-    if (steps) fireEvent.click(steps);
+    // 쓰기는 카드 하나가 말한다. 생각 과정에 같은 쓰기 줄을 또 세우지 않는다.
     expect(
-      [...document.querySelectorAll('[data-step="tool"]')].map(
-        (row) => row.textContent
+      [...document.querySelectorAll('[data-testid="approval-card"]')].map(
+        (card) => card.getAttribute("data-approval")
       )
-    ).toEqual(["Linear 이슈 생성확인 필요"]);
+    ).toEqual(["check"]);
+    expect(document.querySelectorAll('[data-step="tool"]')).toHaveLength(0);
   });
 
   it("★ 승인 202 가 앞 스트림이 닫히기 전에 와도 결정이 남는다 — 쓰기 줄이 「중단됨」이 안 된다", async () => {
@@ -1507,12 +1507,12 @@ describe("PersonalChatProvider", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "승인" })).toBeNull()
     );
-    const steps = document.querySelector('[data-cot="group"] button');
-    if (steps) fireEvent.click(steps);
-    const rows = [...document.querySelectorAll('[data-step="tool"]')].map(
-      (row) => row.textContent
-    );
-    expect(rows).toEqual(["Linear 이슈 생성확인 필요"]);
+    // 결정은 남았고 결과만 모른다 — 「무효」가 아니라 「확인 필요」 카드다.
+    expect(
+      [...document.querySelectorAll('[data-testid="approval-card"]')].map(
+        (card) => card.getAttribute("data-approval")
+      )
+    ).toEqual(["check"]);
   });
 
   it("승인이 재시도 가능한 오류로 실패하면 잠금을 푼다", async () => {

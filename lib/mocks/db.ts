@@ -751,6 +751,7 @@ function seedAgentChats(workspaceId: string) {
       decision: null,
       status: "success",
       url: null,
+      card: null,
     });
     // 아주 긴 생각 — 접히는지, 아니면 화면을 밀어내는지 보는 자리다.
     step(
@@ -766,6 +767,7 @@ function seedAgentChats(workspaceId: string) {
       decision: null,
       status: "success",
       url: "https://linear.app/heymoa/issue/APP-12",
+      card: null,
     });
     messages.push({
       chatId: traced,

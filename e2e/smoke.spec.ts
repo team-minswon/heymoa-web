@@ -1502,39 +1502,28 @@ test("approves a write tool from the chat card", async ({ page }) => {
     timeout: 20_000,
   });
 
-  // ★ **무엇을 승인하는지가 카드에 있다.** 인자는 `tool_call_start`가 나르고 승인 요청은
-  // `toolCallId`로 그것을 이어받는데, 그 이음은 **서비스 워커를 지나는 실제 프레임**에서만
-  // 밟힌다 — jsdom 은 그 경로를 안 지난다. 여기가 유일한 감지기다.
-  const args = page.getByTestId("approval-args");
-  await expect(args).toBeVisible();
-  await expect(args).toContainText("title");
-  await expect(args).toContainText("APP 버그 수정");
+  // ★ **무엇을 승인하는지가 카드에 있다.** `card` 는 서비스 워커를 지나는 실제 프레임에 실려
+  // 온다 — jsdom 은 그 경로를 안 지난다. 사람이 읽는 값만 서고 id·인자 이름은 없다.
+  const card = page.getByTestId("approval-card");
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("Linear 이슈 만들기");
+  await expect(card).toContainText("APP 버그 수정");
+  await expect(card).not.toContainText("projectId");
+  await expect(card).not.toContainText("0HZX2K7M9Q4AE");
 
   await page.getByRole("button", { name: "승인", exact: true }).click();
 
-  // **끝나면 과정은 접힌다** — 답변이 주인공이고 과정은 곁가지라서다. 다만 **줄이 하나뿐인
-  // 묶음은 편 채로 둔다**: 머리글 한 줄로 본문 한 줄을 가리면 아끼는 자리가 없다.
-  //
-  // 그래서 여기서는 **접힌 것만 편다.** 개수로 갈리는 상태를 검사가 미리 알고 있으면, 목의
-  // 프레임이 하나 늘고 주는 것만으로 빨개진다 — 그건 이 검사가 볼 일이 아니다.
-  //
-  // ★ **답이 끝난 뒤에 편다.** 재개가 도는 동안에는 지금 단계 한 줄로 접혀 있다가 승인 대기에서
-  // 펴지고, 턴이 끝나면 다시 접힌다 — 먼저 누르면 그 자동 여닫기와 엇갈린다.
   await expect(page.getByTestId("assistant-message").last()).toContainText(
     "APP-12",
     { timeout: 20_000 }
   );
-  const steps = page.getByRole("button", { name: /생각 과정/ });
-  await expect(steps.first()).toBeVisible({ timeout: 20_000 });
-  for (const each of await steps.all()) {
-    if ((await each.getAttribute("aria-expanded")) === "false")
-      await each.click();
-  }
 
-  // 승인 → 실행 기록(외부 링크 포함)이 남는다. **2차에는 `tool_call_start`가 없어서**
-  // 합칠 시작 요약이 없다(계약) — 무엇을 하려던 것인지는 그 위의 승인 기록이 말한다.
-  await expect(page.getByText("APP-12 생성됨")).toBeVisible();
-  await expect(page.getByRole("link", { name: "열어 보기" })).toBeVisible();
+  // 승인한 카드가 제자리에 남아 「완료」와 결과 링크를 단다. 쓰기 줄은 생각 과정에 따로 서지 않는다.
+  await expect(card).toHaveAttribute("data-approval", "done");
+  await expect(card.getByRole("link", { name: "열기" })).toHaveAttribute(
+    "href",
+    "https://linear.app/heymoa/issue/APP-12"
+  );
 });
 
 /**

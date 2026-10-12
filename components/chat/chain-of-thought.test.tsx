@@ -25,7 +25,6 @@ function tool(
     tool: "transcripts.search",
     summary: `${id} 검색`,
     target: target as Extract<Block, { kind: "tool" }>["target"],
-    args: null,
     status: "success" as const,
     url: null,
   };
@@ -43,6 +42,7 @@ function approval(
     toolCallId: "c9",
     tool: "linear.create_issue",
     summary,
+    card: null,
     decision,
   };
 }
@@ -269,26 +269,6 @@ describe("ChainOfThought", () => {
     ).toBe("false");
   });
 
-  it("★ 승인 기록은 요약이 없으면 도구 id로 흘러내리지 않는다", () => {
-    // 계약이 요약을 저장하지 않아 히스토리에는 없다. 없다고 기계 이름을 대면
-    // 카드(사람 말)와 히스토리(기계 이름)가 같은 일을 다르게 부른다.
-    render(<ChainOfThought blocks={[approval("APPROVED")]} live={false} />);
-    open();
-    expect(screen.getByText("승인함")).toBeTruthy();
-    expect(screen.queryByText(/linear\.create_issue/)).toBeNull();
-  });
-
-  it("승인 기록에 요약이 있으면(스트림) 그 말을 쓴다", () => {
-    render(
-      <ChainOfThought
-        blocks={[approval("APPROVED", "Linear 이슈 'APP 버그 수정' 생성")]}
-        live={false}
-      />
-    );
-    open();
-    expect(screen.getByText(/Linear 이슈 'APP 버그 수정' 생성/)).toBeTruthy();
-  });
-
   it("모르는 kind는 칩 없이 summary만 그린다", () => {
     // 도구가 늘 때마다 web을 고쳐야 하면 배포가 묶인다.
     const { container } = render(
@@ -453,16 +433,6 @@ describe("단계 사이의 「생각하는 중」", () => {
   it("끝난 묶음에는 없다", () => {
     render(<ChainOfThought blocks={[tool("c1")]} live={false} />);
     open();
-    expect(screen.queryByText("생각하는 중")).toBeNull();
-  });
-
-  it("승인된 도구가 도는 동안도 없다 — 승인 블록이 마지막이어도 도구가 아직 살아 있다", () => {
-    render(
-      <ChainOfThought
-        blocks={[{ ...tool("c9"), status: null }, approval("APPROVED")]}
-        live
-      />
-    );
     expect(screen.queryByText("생각하는 중")).toBeNull();
   });
 

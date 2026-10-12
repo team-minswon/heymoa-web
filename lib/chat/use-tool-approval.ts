@@ -7,24 +7,24 @@ import type {
   ApprovalDecision,
   ChatStreamPhase,
   ChatStreamState,
-  ToolArgs,
 } from "@/lib/chat/stream-protocol";
+import {
+  type ApprovalCardData,
+  type ApprovalCardStatus,
+  ENDED_REASON,
+  UNKNOWN_REASON,
+} from "@/lib/chat/approval-card";
 
-/**
- * 승인 카드의 세 상태. 확정은 스트림이 한다 — 리듀서가 `pending` 을 지우고 카드가 사라진다.
- */
-export type ApprovalCardState =
-  | { kind: "open" }
-  | { kind: "submitted" }
-  | { kind: "invalidated"; reason: string };
+/** 결정 전 카드가 지날 수 있는 상태. 확정은 스트림이 한다 — 결정된 블록이 제자리에 카드로 선다. */
+type EndedStatus = Extract<ApprovalCardStatus, { kind: "invalid" | "check" }>;
 
 /** 스레드가 그릴 승인 카드. pending이 사라진 뒤에도 무효화 카드를 남기려고 훅이 소유한다. */
-export type ApprovalCard = {
-  tool: string;
+export type PendingApprovalCard = {
   summary: string | null;
-  /** 이 승인이 실행할 인자. 카드가 「무엇을 승인하나」를 보여주는 자리다. */
-  args: ToolArgs;
-  state: ApprovalCardState;
+  card: ApprovalCardData | null;
+  status:
+    | Extract<ApprovalCardStatus, { kind: "open" | "submitted" }>
+    | EndedStatus;
 };
 
 /**
@@ -38,26 +38,16 @@ const TERMINAL_REASON: Record<string, string> = {
   NOT_APPROVAL_OWNER: "이 승인은 요청한 사람만 처리할 수 있습니다.",
 };
 
-/** 승인을 안 누른 채 대화가 끝난 자리. 만료가 아니다. */
-const ENDED_REASON = "중단됨 — 승인을 처리하지 못한 채 대화가 끝났습니다.";
-
-/**
- * 승인을 보낸 뒤 끝난 자리. server 는 202 전에 결정을 굳히고 재개를 넘기므로 쓰기가 나갔을 수
- * 있다. 「중단됨」으로 그리면 나간 쓰기를 안 된 것으로 보인다.
- */
-const UNKNOWN_REASON =
-  "확인 필요 — 승인은 전달됐지만 실행 결과를 받지 못한 채 대화가 끝났습니다.";
-
 type Pending = {
   approvalId: string;
   tool: string;
   summary: string | null;
-  args: ToolArgs;
+  card: ApprovalCardData | null;
 } | null;
 type Invalidation = {
   approvalId: string;
   approval: NonNullable<Pending>;
-  reason: string;
+  status: EndedStatus;
 };
 
 /**
@@ -90,7 +80,7 @@ export function useToolApproval({
   ) => Promise<ChatStreamState["error"]>;
 }): {
   approve: (decision: ApprovalDecision) => void;
-  card: ApprovalCard | null;
+  card: PendingApprovalCard | null;
 } {
   const [submitted, setSubmitted] = useState<{
     approvalId: string;
@@ -117,15 +107,16 @@ export function useToolApproval({
     setInvalidation({
       approvalId: trackedPending.approvalId,
       approval: trackedPending,
-      reason:
+      status:
         submitted?.approvalId === trackedPending.approvalId &&
         submitted.decision === "APPROVED"
-          ? UNKNOWN_REASON
-          : ENDED_REASON,
+          ? { kind: "check", reason: UNKNOWN_REASON }
+          : { kind: "invalid", reason: ENDED_REASON },
     });
-  } else if (streamPhase === "streaming") {
-    // 새 턴이 시작됐다.
-    if (invalidation) setInvalidation(null);
+  } else if (!isAbnormalEnd(streamPhase)) {
+    // 새 턴이 시작됐거나, 결정이 적혀 대기가 걷혔다(202 뒤). 결정된 블록이 제자리에 카드로 서므로
+    // 붙잡아 둘 것이 없다 — 붙잡아 두면 뒤이은 실패가 같은 승인을 무효 카드로 한 번 더 세운다.
+    if (streamPhase === "streaming" && invalidation) setInvalidation(null);
     if (trackedPending) setTrackedPending(null);
   }
 
@@ -144,7 +135,7 @@ export function useToolApproval({
           setInvalidation({
             approvalId: target.approvalId,
             approval: target,
-            reason: TERMINAL_REASON[error.code],
+            status: { kind: "invalid", reason: TERMINAL_REASON[error.code] },
           });
           return;
         }
@@ -156,23 +147,21 @@ export function useToolApproval({
     [pending, resolve]
   );
 
-  let card: ApprovalCard | null = null;
+  let card: PendingApprovalCard | null = null;
   if (
     invalidation &&
     (!pending || pending.approvalId === invalidation.approvalId)
   ) {
     card = {
-      tool: invalidation.approval.tool,
       summary: invalidation.approval.summary,
-      args: invalidation.approval.args,
-      state: { kind: "invalidated", reason: invalidation.reason },
+      card: invalidation.approval.card,
+      status: invalidation.status,
     };
   } else if (pending) {
     card = {
-      tool: pending.tool,
       summary: pending.summary,
-      args: pending.args,
-      state:
+      card: pending.card,
+      status:
         submittedId === pending.approvalId
           ? { kind: "submitted" }
           : { kind: "open" },

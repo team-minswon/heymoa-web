@@ -10,6 +10,7 @@ import { hasScenario, leadSilenceMs } from "@/lib/mocks/chat-scenarios";
 import { joinSummary } from "@/lib/chat/blocks";
 import type { ScopeRef } from "@/lib/mocks/db";
 import { mockDb } from "@/lib/mocks/db";
+import type { AgentChatMessagesResponseDataActiveTurnPendingApprovalCard as ApprovalCard } from "@/lib/api/generated/models";
 
 /**
  * ★ **턴은 연결이 아니다.**
@@ -155,6 +156,8 @@ type Turn = {
      * 실서버도 같은 자리에서 같은 일을 한다(승인 행의 `args` 컬럼).
      */
     args: Record<string, unknown> | null;
+    /** 승인 카드. 승인 요청 프레임이 실어 온 것을 그대로 굳힌다. */
+    card: ApprovalCard | null;
   } | null;
   /**
    * 마지막 승인 카드의 entry id. `GET /messages.cursor` 가 이 값이다 — 카드까지의
@@ -356,6 +359,56 @@ function publish(stream: MockTurnStream, event: string, payload: unknown) {
   }
 }
 
+/**
+ * SSE `card` → REST 응답의 `card`. SSE 는 없는 칸을 빼고 보내지만 REST(`pendingApproval`·
+ * `toolEvent`)는 모든 칸을 싣고 없는 것은 `null` 이다. 실서버가 저장하며 하는 일을 같은
+ * 자리에서 한다 — 안 하면 목이 실서버와 다른 모양을 준다.
+ */
+function restCard(payload: unknown): ApprovalCard | null {
+  const card = (payload as { card?: SseCard }).card;
+  if (!card) return null;
+  const field = (each: SseField) => ({
+    label: each.label,
+    value: each.value ?? null,
+    before: each.before ?? null,
+    after: each.after ?? null,
+    added: each.added ?? null,
+    removed: each.removed ?? null,
+    kept: each.kept ?? null,
+  });
+  return {
+    title: card.title,
+    target: card.target ?? null,
+    warning: card.warning ?? null,
+    fields: (card.fields ?? []).map(field),
+    items:
+      card.items?.map((item) => ({
+        title: item.title,
+        target: item.target ?? null,
+        fields: (item.fields ?? []).map(field),
+      })) ?? null,
+    body: card.body ?? null,
+  };
+}
+
+type SseField = {
+  label: string;
+  value?: string;
+  before?: string;
+  after?: string;
+  added?: string[];
+  removed?: string[];
+  kept?: string[];
+};
+type SseCard = {
+  title: string;
+  target?: string;
+  warning?: string;
+  fields?: SseField[];
+  items?: { title: string; target?: string; fields?: SseField[] }[];
+  body?: { label: string; text: string };
+};
+
 /** terminal 이벤트 → 턴이 굳는 상태. */
 const TERMINAL_STATUS: Record<string, TurnStatus> = {
   message_end: "COMPLETED",
@@ -417,10 +470,12 @@ function accumulate(stream: MockTurnStream, frame: Frame) {
       tool: String(payload.tool),
       summary: payload.summary ?? null,
       args: turn.startedArgs.get(String(payload.toolCallId)) ?? null,
+      card: restCard(frame.payload),
     };
     return;
   }
   if (frame.event === "tool_approval_resolved") {
+    const card = turn.pendingApproval?.card ?? null;
     turn.pendingApproval = null;
     mockDb.appendAgentChatMessage(chatId, {
       role: "TOOL",
@@ -435,6 +490,8 @@ function accumulate(stream: MockTurnStream, frame: Frame) {
         decision: payload.decision as "APPROVED" | "REJECTED",
         status: null,
         url: null,
+        // 실서버도 승인 행에 그 카드를 굳혀 돌려준다. 새로고침 뒤에도 같은 카드가 선다.
+        card,
       },
     });
     return;
@@ -458,6 +515,7 @@ function accumulate(stream: MockTurnStream, frame: Frame) {
         decision: null,
         status: payload.status as "success" | "error",
         url: payload.url ?? null,
+        card: null,
       },
     });
     return;

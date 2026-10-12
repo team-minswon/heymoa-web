@@ -2,8 +2,8 @@
 #
 # - 전사 STOMP·노트 토픽 구간: heymoa-server/asyncapi.yml 미러. 수정은 원본에서 하고 여기로 복사한다
 #   (원본은 `*WebSocketDocsTest`가 실제 DTO 직렬화로 검증한다).
-#   지금 미러: server asyncapi.yml info.version 3.3.1 (PRO-51 · APP-696·697·699, server 902fa3a2).
-#   전사 구간: docs 합본(contracts/specs/asyncapi-web-server.yml) 5.0.0 미러. 채팅 SSE 구간은 이 파일 것을 둔다.
+#   지금 미러: server asyncapi.yml info.version 3.3.1 (APP-1030 에서 노트 토픽 `MeetingAnalysisChanged`·`RelationChanged`,
+#   `ReattachEvent.overlap`, 설명문을 server 원본과 다시 맞췄다. server dev 917924e2e).
 # - agent 채팅 SSE 구간: 이 파일이 원본. server는 이벤트를 변환 없이 통과시켜 자기 DTO를 갖지
 #   않으므로 server 쪽 DocsTest로 검증할 수 없다. SSE 이벤트 스키마의 단일 출처가 여기이며
 #   asyncapi-server-ai.yml이 $ref로 참조한다.
@@ -92,6 +92,16 @@ info:
     에 쓰고 server 는 그것을 읽어 흘릴 뿐이라, 브라우저가 닫혀도 server 가 죽어도 턴은 계속
     돈다. 돌아온 브라우저는 마지막 `id:` 를 `after` 에 넣어 다시 붙는다. 페이지를 새로 연 브라우저는
     `GET /v1/agent-chats/{chatId}/messages` 의 `activeTurn.turnId` 와 `cursor` 로 붙는다.
+
+    ★ **밀린 것은 히스토리가 한 덩어리로 준다** (APP-632). 도는 턴의 **안 굳은 구간**도 `messages`
+    에 행으로 실려 오고, `cursor` 는 그 구간의 마지막 프레임이라 이 스트림은 **그 뒤 새 것만** 준다.
+    둘은 한 몸이라 따로 못 움직인다 — 커서만 옮기면 생각·도구가 어디에서도 안 오고, 행만 실으면
+    스트림이 같은 것을 또 보낸다.
+
+    그래서 받는 쪽은 **답 조각을 이어 붙여야 한다.** 히스토리의 마지막 `ASSISTANT` 행이 답의
+    앞부분이고 이 스트림의 `token` 이 그 뒤를 잇는다. 둘을 따로 그리면 답이 두 덩어리로 서고,
+    `message_end` 뒤에는 앞부분이 겹쳐 보인다. **이 어긋남은 오류를 안 낸다** — `cursor` 는 타입이
+    안 바뀌어서 계약 생성도 타입 검사도 그냥 지나간다.
 
     **범위는 대화가 아니라 이 요청이 든다.** 본문의 `noteIds`·`projectIds`가 이 턴에 **먼저 볼 곳**이고
     담장이 아니다 — 거기 없으면 워크스페이스 안에서 더 찾는다. 못 넘는 선은 워크스페이스 하나뿐이고
@@ -227,6 +237,11 @@ channels:
 
       바인딩된 STOMP session과 destination의 sessionId가 다르면 error(INVALID_CLIENT_MESSAGE)로
       종료된다 — audio·stop 모두 같다.
+
+      **조각이 자기 자리를 싣는다** (APP-415·416). `chunkSeq` 는 몇 번째인가이고
+      `captureSamples` 는 언제인가다 — 번호만으로는 백그라운드로 못 잡은 20초가 안 보인다.
+      번호는 12, 13 으로 멀쩡히 이어진다. 둘 중 하나라도 없거나 수가 아니면
+      error(INVALID_AUDIO_FRAME)로 종료된다.
     parameters:
       sessionId:
         $ref: "#/components/parameters/sessionId"
@@ -299,7 +314,7 @@ channels:
       SUBSCRIBE의 STOMP 세션으로만 보내며, 멤버십 재검사로 기존 구독을 해제할 때도 알린다.
     messages:
       NoteSubscriptionRejected:
-        $ref: '#/components/messages/NoteSubscriptionRejected'
+        $ref: "#/components/messages/NoteSubscriptionRejected"
   noteTopic:
     servers:
       - $ref: "#/servers/production"
@@ -310,11 +325,8 @@ channels:
       권한 상실, 중복 구독, 노트별 100개 구독 상한 초과는 거절하고 그 사실을
       `/user/queue/note-subscriptions` 로 알린다 — ERROR 프레임은 세션을 닫으므로 쓰지 않는다.
       형식이 안 맞는 프레임만 조용히 버린다(어디로 답할지 모른다). 재검증으로 권한을 잃으면
-      구독을 해제한다. 이벤트는 원본 transaction commit 뒤 발행되며, stream 기반 partial처럼
-      transaction 밖에서 생긴 이벤트는 즉시 발행된다.
-
-      **챗 이벤트는 이 토픽에 없다.** 공유 챗봇을 없애면서 관전자 개념이 함께 사라졌다 —
-      각자 자기 대화를 쓰므로 남의 스트림을 볼 사람이 없다.
+      구독을 해제한다. 이벤트는 원본 transaction commit 뒤 발행되며, stream 기반 partial과 chat
+      이벤트처럼 transaction 밖에서 생긴 이벤트는 즉시 발행된다.
     parameters:
       noteId:
         $ref: "#/components/parameters/noteId"
@@ -335,6 +347,10 @@ channels:
         $ref: "#/components/messages/ProposalChanged"
       TranscriptAnalysisRunApplied:
         $ref: "#/components/messages/TranscriptAnalysisRunApplied"
+      MeetingAnalysisChanged:
+        $ref: "#/components/messages/MeetingAnalysisChanged"
+      RelationChanged:
+        $ref: "#/components/messages/RelationChanged"
   agentChatStream:
     servers:
       - $ref: "#/servers/sseEdge"
@@ -398,7 +414,7 @@ operations:
       - $ref: "#/channels/audioCommand/messages/PcmAudio"
   stopTranscription:
     action: receive
-    summary: 마지막 chunkSeq 를 싣고 남은 final 을 drain 한 뒤 세션을 완료한다.
+    summary: 마지막 조각 번호를 실어 남은 final을 drain하고 세션을 완료한다.
     channel:
       $ref: "#/channels/stopCommand"
     messages:
@@ -407,10 +423,15 @@ operations:
     action: send
     summary: 현재 STOMP 연결의 전사 상태와 결과를 보낸다.
     description: |
-      partial은 provider commit 전에 도착할 수 있다. partial.text는 utteranceId별 누적
+      partial은 provider commit 전에 도착할 수 있다. partial의 두 토막은 utteranceId별 누적
       snapshot이므로 같은 utteranceId의 표시를 교체한다. final은 DB transaction commit
       성공 후에만 sequence 오름차순으로 전달된다. completed 또는 error는 terminal event이며
       수신한 client는 STOMP 연결을 deactivate한다.
+
+      **한 응답이 발화 끝을 담고 있으면 final이 먼저 나가고, 남은 글자가 있으면 다음 발화의
+      partial이 뒤따른다.** 순서가 반대이면 그 partial은 끝나는 발화의 utteranceId를 달게 되고,
+      client가 final에서 살아 있는 partial을 비우므로 다음 발화의 첫 글자가 화면에서 사라진다.
+      이 순서를 안 적어 두어 실제로 그렇게 나갔다 (APP-477).
     channel:
       $ref: "#/channels/transcriptionEvents"
     messages:
@@ -425,11 +446,15 @@ operations:
       - $ref: "#/channels/transcriptionEvents/messages/ErrorEvent"
   sendNoteTopicEvent:
     action: send
-    summary: 노트 멤버에게 회의·녹음·전사 상태를 팬아웃한다.
+    summary: 노트 멤버에게 회의·녹음·전사·공유 챗·명제 상태를 팬아웃한다.
     description: |
       transcript.partial은 같은 utteranceId의 누적 snapshot이고 transcript.final은 저장 transaction
-      commit 뒤에만 발행된다. 챗 이벤트(chat.token·chat.message_end·chat.lock)는 공유 챗봇과 함께
-      이 토픽에서 사라졌다. tool approval 이벤트도 포함하지 않는다.
+      commit 뒤에만 발행된다. chat.lock의 locked=false는 정상 종료뿐 아니라 중단 시에도 편집 잠금이
+      풀렸음을 알리는 신호다. tool approval 이벤트는 이 토픽에 포함하지 않는다.
+
+      **transcript의 두 이벤트는 sendTranscriptionEvent와 같은 순서로 나간다** — 한 응답이 발화
+      끝을 담고 있으면 final이 먼저이고 남은 글자의 partial이 뒤따른다. 같은 스레드에서 이어
+      발행되므로 소켓 순서와 어긋나지 않는다.
 
       proposal WebSocket 전달은 빠른 알림일 뿐 transport replay를 제공하지 않는다.
       guarantee: best-effort
@@ -453,6 +478,8 @@ operations:
       - $ref: "#/channels/noteTopic/messages/NoteRecordingStoppedEvent"
       - $ref: "#/channels/noteTopic/messages/ProposalChanged"
       - $ref: "#/channels/noteTopic/messages/TranscriptAnalysisRunApplied"
+      - $ref: "#/channels/noteTopic/messages/MeetingAnalysisChanged"
+      - $ref: "#/channels/noteTopic/messages/RelationChanged"
   receiveAgentChatEvents:
     action: receive
     summary: heymoa-web이 개인 챗봇 턴의 프레임을 SSE로 수신한다.
@@ -481,12 +508,12 @@ operations:
     action: receive
     title: 노트 토픽 구독 거절 수신
     description: |
-      거절은 재시도로 풀리지 않는 것이 둘(NOT_MEMBER·ALREADY_SUBSCRIBED)이고 하나는 시간이
-      지나면 풀린다(TOO_MANY_SUBSCRIBERS). 화면은 셋을 다르게 다뤄야 한다.
+      거절은 재시도로 풀리지 않는 것이 둘(NOT_MEMBER·ALREADY_SUBSCRIBED)이고 둘은 시간이
+      지나면 풀린다(TOO_MANY_SUBSCRIBERS·UNAVAILABLE). 화면은 넷을 다르게 다뤄야 한다.
     channel:
-      $ref: '#/channels/noteSubscriptionFeedback'
+      $ref: "#/channels/noteSubscriptionFeedback"
     messages:
-      - $ref: '#/channels/noteSubscriptionFeedback/messages/NoteSubscriptionRejected'
+      - $ref: "#/channels/noteSubscriptionFeedback/messages/NoteSubscriptionRejected"
 components:
   securitySchemes:
     accessCookie:
@@ -520,7 +547,7 @@ components:
     noteId:
       description: 구독할 노트의 13자리 TSID
       examples:
-        - 0HZX2K7M9Q4AF
+        - 0HZX2K7M9Q4AB
   messages:
     ConnectCommand:
       name: ConnectCommand
@@ -542,20 +569,13 @@ components:
           chunkSeq:
             type: integer
             minimum: 0
-            description: |
-              세션 안에서 0부터 1씩. **몇 번째 조각인가.**
-              연속성이 유실 판정의 유일한 근거이므로 재전송해도 원래 번호를 그대로 쓴다.
+            description: 세션 안에서 0부터 1씩 증가하는 조각 번호. 유실 판정에 쓴다.
             example: 12
           captureSamples:
             type: integer
             format: int64
             minimum: 0
-            description: |
-              이 조각의 첫 샘플이 세션에서 몇 번째인가. **언제인가.**
-
-              번호만으로는 탭이 백그라운드로 가서 못 잡은 20초를 못 잡아낸다 — 번호는
-              12, 13으로 멀쩡히 이어진다. AudioWorklet 의 `currentFrame` 이 이 값을 준다.
-              RTP 가 시퀀스와 타임스탬프를 둘 다 싣는 것과 같은 이유다.
+            description: 이 조각의 첫 샘플이 세션에서 몇 번째인지 나타내는 위치.
             example: 19200
       payload:
         type: string
@@ -563,18 +583,18 @@ components:
         minLength: 2
         maxLength: 32000
         description: |
-          비어 있지 않은 짝수 byte 크기의 PCM16 body. 16 kHz mono 라 최대 1초가 32,000 byte 이다.
+          비어 있지 않은 짝수 byte 크기의 PCM16 body. 16 kHz mono 라 최대 1초가 32,000 byte 다.
+          상한은 `min(transcription.websocket.max-binary-message-size, 1초분)`이라 설정을 줄이면 함께 줄어든다.
           세 조건 중 하나라도 어기면 세션이 error(INVALID_AUDIO_FRAME)로 종료된다.
     StopCommand:
       name: StopCommand
       title: 전사 세션 정상 종료 command
-      summary: 브라우저가 보낸 마지막 조각 번호를 싣는다.
+      summary: 브라우저가 보낸 마지막 조각 번호를 싣고 세션을 완료한다.
       description: |
-        서버가 받은 것과 대조해 봉인을 `COMPLETE` / `TRUNCATED` 로 가른다. 조각을 하나도
-        못 보냈으면 `-1` 이다.
+        `finalChunkSeq` 는 브라우저가 **보냈다고 말하는** 마지막 번호다. 서버가 받은 것과 대조해
+        봉인을 `COMPLETE`/`TRUNCATED` 로 가른다. 하나도 못 보냈으면 `-1` 이다.
 
-        **총 샘플 수는 안 보낸다** — 서버가 바이트를 세면 되고, 브라우저에게 물으면 추측이
-        계약으로 굳는다.
+        총 샘플 수는 안 싣는다 — 서버가 바이트를 세면 되고, 브라우저에게 물으면 추측이 계약으로 굳는다.
       payload:
         type: object
         additionalProperties: false
@@ -660,6 +680,12 @@ components:
           reason:
             type: string
             enum: [SERVER_DRAINING, BUFFER_FULL, STORE_INCOMPLETE]
+          overlap:
+            type: boolean
+            description: |
+              `true` 면 두 스트림 겹치기다(APP-728, 실험). **이 소켓을 곧바로 닫지 않는다** — reattach 직후부터 조각을 두 소켓
+              모두에 보내고, 서버가 닫을 때까지 이 소켓의 partial·final 도 받는다. 이 소켓이 조각을 거절하거나 겹치기 시작 때
+              못 보낸 조각이 있으면 곧바로 닫는다(서버는 받은 끝에서 자른다). 없거나 `false` 면 지금처럼 이 소켓을 버린다.
       examples:
         - name: reattach
           payload:
@@ -736,28 +762,17 @@ components:
       title: 저장이 완료된 확정 전사 segment
       summary: DB 저장 성공 후 sequence 오름차순으로 전송된다.
       description: |
-        `sequence`는 **노트 안에서** 1부터 증가한다 — 세션 범위가 아니다. `startedAtMs`와
-        `endedAtMs`는 **회의 시작 기준**이고 발화의 첫 토큰과 마지막 토큰의 시각이다.
-        서버가 세션 오프셋을 이미 더해서 주므로 client 는 좌표를 계산하지 않는다.
+        `transcriptionSessionId` 를 뺐다 (APP-414). 있는 동안 web 이 그것을 세션 경계로 삼아
+        타임라인을 이어 붙였는데, **브라우저는 중지한 시간도 끊긴 구간의 길이도 모른다.**
 
-        `transcriptionSessionId`가 없다. 그 필드가 있는 동안 web 이 세션 경계로 타임라인을
-        이어 붙였고, 브라우저는 중지한 시간도 끊긴 구간의 길이도 모른다.
+        `sequence` 의 범위가 세션 안 → **노트 안**으로 바뀌었고, `startedAtMs`·`endedAtMs` 의
+        기준도 세션 시작 → **회의 시작**으로 바뀌었다. 좌표는 서버가 계산해서 준다.
 
-        전사가 빈 발화는 이 event 없이 지나간다.
+        전사가 빈 확정 구간은 이 event 없이 지나간다.
       payload:
         type: object
         additionalProperties: false
-        required:
-          [
-            type,
-            segmentId,
-            utteranceId,
-            sequence,
-            text,
-            startedAtMs,
-            endedAtMs,
-            speakerLabel,
-          ]
+        required: [type, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs, speakerLabel]
         properties:
           type:
             type: string
@@ -786,7 +801,8 @@ components:
             minimum: 0
             example: 8230
           speakerLabel:
-            type: [string, "null"]
+            type: string
+            nullable: true
             minLength: 1
             description: PRO-32 가 회의 뒤에 채운다. 실시간에는 항상 null 이다.
             example: null
@@ -831,10 +847,11 @@ components:
             throughChunkSeq: 300
     CaptureStateEvent:
       name: CaptureStateEvent
-      title: 지금 무엇이 끊겼나
-      summary: 살아 있는 동안만 존재한다.
+      title: 지금 소리가 들어오고 있나
+      summary: LIVE · DEGRADED · LOST
       description: |
-        회복하면 사라지고 **조회 응답에 안 남는다** — 소리가 남는 공백은 기록하지 않기로 했다.
+        **살아 있는 동안만 존재한다.** 회복하면 사라지고 조회 응답에 안 남는다 —
+        그래서 이 값으로 과거를 재구성할 수 없다.
 
         `DEGRADED` 는 소리는 쌓이는데 전사만 끊긴 상태다. 업체 소켓이 끊기거나 답이 없어 재연결하는 동안 나가고,
         새 업체 연결이 **처음 답했을 때** `LIVE` 로 돌아온다 — 연결만 열리고 답이 없는 동안은 `DEGRADED` 그대로다.
@@ -853,8 +870,9 @@ components:
           state:
             type: string
             enum: [LIVE, DEGRADED]
+            example: DEGRADED
       examples:
-        - name: degraded
+        - name: captureState
           payload:
             type: capture_state
             state: DEGRADED
@@ -951,14 +969,7 @@ components:
       payload:
         type: object
         additionalProperties: false
-        required:
-          [
-            type,
-            transcriptionSessionId,
-            utteranceId,
-            confirmedText,
-            pendingText,
-          ]
+        required: [type, transcriptionSessionId, utteranceId, confirmedText, pendingText]
         properties:
           type:
             type: string
@@ -985,17 +996,7 @@ components:
       payload:
         type: object
         additionalProperties: false
-        required:
-          [
-            type,
-            transcriptionSessionId,
-            segmentId,
-            utteranceId,
-            sequence,
-            text,
-            startedAtMs,
-            endedAtMs,
-          ]
+        required: [type, transcriptionSessionId, segmentId, utteranceId, sequence, text, startedAtMs, endedAtMs]
         properties:
           type:
             type: string
@@ -1044,14 +1045,15 @@ components:
             type: string
             enum: [subscription.rejected]
           noteId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           reason:
             type: string
-            enum: [NOT_MEMBER, ALREADY_SUBSCRIBED, TOO_MANY_SUBSCRIBERS]
+            enum: [NOT_MEMBER, ALREADY_SUBSCRIBED, TOO_MANY_SUBSCRIBERS, UNAVAILABLE]
             description: |
               NOT_MEMBER — 이 노트를 볼 권한이 없다. 목록으로 돌려보낸다
               ALREADY_SUBSCRIBED — 이 연결에서 이미 구독 중이다. 화면의 버그다
               TOO_MANY_SUBSCRIBERS — 동시 구독자 상한. 잠시 뒤 다시 시도할 수 있다
+              UNAVAILABLE — 서버가 멤버십을 잠시 확인하지 못했다. 잠시 뒤 다시 시도할 수 있다
       examples:
         - name: notMember
           payload:
@@ -1070,7 +1072,7 @@ components:
             type: string
             enum: [meeting.started]
           meetingStatus:
-            $ref: '#/components/schemas/MeetingStatus'
+            $ref: "#/components/schemas/MeetingStatus"
           meetingStartedAt:
             description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
             type: string
@@ -1091,9 +1093,10 @@ components:
           payload:
             type: meeting.started
             meetingStatus: IN_PROGRESS
-            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            meetingStartedAt: "2026-08-18T10:00:00.000Z"
             recordedDurationMs: 90000
-            activeSessionStartedAt: '2026-08-18T10:20:00.000Z'
+            activeSessionStartedAt: "2026-08-18T10:20:00.000Z"
+
     NoteMeetingEndedEvent:
       name: NoteMeetingEndedEvent
       title: 회의 종료
@@ -1106,7 +1109,7 @@ components:
             type: string
             enum: [meeting.ended]
           meetingStatus:
-            $ref: '#/components/schemas/MeetingStatus'
+            $ref: "#/components/schemas/MeetingStatus"
           meetingStartedAt:
             description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
             type: string
@@ -1127,7 +1130,7 @@ components:
           payload:
             type: meeting.ended
             meetingStatus: ENDED
-            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            meetingStartedAt: "2026-08-18T10:00:00.000Z"
             recordedDurationMs: 1820000
             activeSessionStartedAt: null
     NoteRecordingStartedEvent:
@@ -1143,9 +1146,9 @@ components:
             type: string
             enum: [recording.started]
           transcriptionSessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           meetingStatus:
-            $ref: '#/components/schemas/MeetingStatus'
+            $ref: "#/components/schemas/MeetingStatus"
           meetingStartedAt:
             description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
             type: string
@@ -1167,9 +1170,10 @@ components:
             type: recording.started
             transcriptionSessionId: 0HZX2K7M9Q4AB
             meetingStatus: IN_PROGRESS
-            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            meetingStartedAt: "2026-08-18T10:00:00.000Z"
             recordedDurationMs: 90000
-            activeSessionStartedAt: '2026-08-18T10:20:00.000Z'
+            activeSessionStartedAt: "2026-08-18T10:20:00.000Z"
+
     NoteRecordingStoppedEvent:
       name: NoteRecordingStoppedEvent
       title: 녹음 종료
@@ -1183,9 +1187,9 @@ components:
             type: string
             enum: [recording.stopped]
           transcriptionSessionId:
-            $ref: '#/components/schemas/Tsid'
+            $ref: "#/components/schemas/Tsid"
           meetingStatus:
-            $ref: '#/components/schemas/MeetingStatus'
+            $ref: "#/components/schemas/MeetingStatus"
           meetingStartedAt:
             description: 처음 녹음이 시작된 시각. 한 번도 녹음하지 않았으면 null
             type: string
@@ -1207,7 +1211,7 @@ components:
             type: recording.stopped
             transcriptionSessionId: 0HZX2K7M9Q4AB
             meetingStatus: PAUSED
-            meetingStartedAt: '2026-08-18T10:00:00.000Z'
+            meetingStartedAt: "2026-08-18T10:00:00.000Z"
             recordedDurationMs: 1820000
             activeSessionStartedAt: null
     TurnFailed:
@@ -1402,10 +1406,9 @@ components:
               승인 API 호출에 쓰는 id. **heymoa-ai가 13자 TSID로 발급한다** —
               server의 승인 API path에 그대로 노출되는 공개 식별자이고,
               server는 외부 식별자를 13자 TSID로 통일한다.
-              13자 TSID가 아니면 server가 승인 row 등록을 건너뛰므로 **카드는 뜨지만 눌러도 404**다.
+              **server는 이 모양을 검사하지 않는다**(APP-639). 어긴 값은 그대로 저장되어
+              승인 API path와 히스토리 응답에 실리므로, 계약을 지키는 것은 발급 주체인 ai다.
             pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-            minLength: 13
-            maxLength: 13
             examples: ["0K9GVJT2C4Q7F"]
           toolCallId:
             type: string
@@ -1414,14 +1417,162 @@ components:
             description: 도구 이름 (예 linear.create_issue)
           summary:
             type: string
-            description: 승인 카드 표시용 설명 (예 "Linear 이슈 'APP 버그 수정' 생성")
+            description: |
+              승인 카드의 한 줄 평문 (예 "Linear 이슈 만들기 · APP 버그 수정"). **`card` 가 없을 때의
+              폴백이다** — `card` 가 오면 web 은 카드를 그리고 이 줄은 목록·알림 같은 한 줄 자리에만 쓴다.
+          card:
+            type: object
+            required: [title, fields]
+            description: |
+              승인 카드의 구조다. **모든 값은 사람이 읽는 이름이다. id 를 싣지 않는다** — 담당자·프로젝트·
+              노트는 이름으로 적는다.
+
+              **card 는 표시 전용이고 실행은 인자(args)로 한다.** heymoa-ai 는 card 를 모델이 쓴 글이 아니라
+              실행할 그 요청 본문과 승인 전에 읽은 이름·지금 값에서 만들고, card 의 지문을 인자 지문과 함께
+              묶어 승인 뒤 어느 쪽이든 달라지면 실행하지 않는다. **web 은 모든 값을 평문 텍스트로만 그린다**
+              (마크다운·HTML·링크로 해석하지 않는다). 도구마다의 실제 출력은 `contracts/examples/approval-cards.json`.
+
+              `fields` 의 한 줄은 `value` 하나이거나, 바뀌는 값이면 `before` + `after` 둘이다(변경 줄).
+              `before` 가 비어 있던 값이면 「없음」이다. 명단을 통째로 바꾸는 줄은 `added`·`removed`·`kept`
+              (이름 목록)를 싣는다. 여러 대상을 한 번에 바꾸면 대상마다 `items` 한 칸이다.
+
+              `body` 는 메일·이슈·댓글처럼 긴 본문이다. **마크다운이 아니라 평문이고 줄바꿈을 그대로 그린다.**
+
+              `target` 은 무엇에 하는지(대상) 한 줄이다. 대상이 `title`·`target` 에 나오면 `fields` 에
+              같은 줄을 다시 두지 않는다.
+
+              `warning` 은 되돌릴 수 없는 일(보낸 메일, 삭제)에만 온다.
+            properties:
+              title:
+                type: string
+                description: 카드 제목. 무엇을 하는지 (예 「Linear 이슈 만들기」)
+              target:
+                type: string
+                description: |
+                  사람이 읽는 대상 한 줄 (예 「멘토링 · [시험] PRO-56 운영 확인」, 메일은 회의록 제목).
+                  제목 아래 작은 줄로 그린다. **여기 나온 대상은 `fields` 에서 반복하지 않는다.**
+              warning:
+                type: string
+                description: 되돌릴 수 없을 때 한 줄 경고 (예 「보낸 메일은 거둘 수 없습니다」)
+              fields:
+                type: array
+                description: 표시 순서대로. 비어 있을 수 있다
+                items:
+                  $ref: "#/components/schemas/ApprovalCardField"
+              items:
+                type: array
+                description: |
+                  일괄 쓰기의 대상마다 한 칸이다. 모든 대상에 같은 변경이면 그 변경은 바깥 `fields` 에 두고
+                  여기에는 이름(`title`)만 둔다.
+                items:
+                  type: object
+                  required: [title, fields]
+                  properties:
+                    title:
+                      type: string
+                      description: 대상 이름 (예 할 일 내용)
+                    target:
+                      type: string
+                      description: 대상이 속한 곳 (예 프로젝트 이름)
+                    fields:
+                      type: array
+                      description: 이 대상만의 줄. 모양은 바깥 `fields` 와 같다
+                      items:
+                        $ref: "#/components/schemas/ApprovalCardField"
+              body:
+                type: object
+                required: [label, text]
+                properties:
+                  label:
+                    type: string
+                    description: 본문 이름 (예 「본문」·「설명」·「댓글」)
+                  text:
+                    type: string
+                    description: 평문. 줄바꿈을 보존한다
       examples:
         - name: approvalRequest
           payload:
             approvalId: 0K9GVJT2C4Q7F
             toolCallId: call_02
             tool: linear.create_issue
-            summary: Linear 이슈 'APP 버그 수정' 생성
+            summary: Linear 이슈 만들기 · APP 버그 수정
+            card:
+              title: Linear 이슈 만들기
+              target: APP 버그 수정
+              fields:
+                - label: 팀
+                  value: App
+                - label: 담당자
+                  value: 김민수
+              body:
+                label: 설명
+                text: |-
+                  로그인 후 홈이 비어 보입니다.
+                  재현: 새로고침 없이 탭 전환
+        - name: approvalRequestChange
+          payload:
+            approvalId: 0K9GVJT2C4Q7G
+            toolCallId: call_03
+            tool: heymoa.task_update
+            summary: 할 일 고치기 · 멘토링 · 배포 체크리스트 정리
+            card:
+              title: 할 일 고치기
+              target: 멘토링 · 배포 체크리스트 정리
+              fields:
+                - label: 담당자
+                  before: 없음
+                  after: 이지은
+        - name: approvalRequestMail
+          payload:
+            approvalId: 0K9GVJT2C4Q7H
+            toolCallId: call_04
+            tool: heymoa.note_result_mail_send
+            summary: 회의 결과 메일 보내기 · 주간 배포 회의
+            card:
+              title: 회의 결과 메일 보내기
+              target: 주간 배포 회의
+              warning: 보낸 메일은 거둘 수 없습니다
+              fields:
+                - label: 받는 사람
+                  value: 김민수, 이지은
+              body:
+                label: 본문
+                text: |-
+                  오늘 회의에서 정한 것입니다.
+                  - 금요일 배포
+        - name: approvalRequestBatch
+          payload:
+            approvalId: 0K9GVJT2C4Q7J
+            toolCallId: call_05
+            tool: heymoa_batch_update_tasks
+            summary: 할 일 한 번에 바꾸기 · 2건
+            card:
+              title: 할 일 한 번에 바꾸기
+              fields:
+                - label: 상태
+                  before: 진행 중
+                  after: 완료
+              items:
+                - title: 배포 체크리스트 정리
+                  target: 멘토링
+                  fields: []
+                - title: 릴리스 노트
+                  target: 멘토링
+                  fields: []
+        - name: approvalRequestRoster
+          payload:
+            approvalId: 0K9GVJT2C4Q7K
+            toolCallId: call_06
+            tool: heymoa_replace_note_participants
+            summary: 참석 멤버 바꾸기 · 주간 배포 회의
+            card:
+              title: 참석 멤버 바꾸기
+              target: 주간 배포 회의
+              fields:
+                - label: 참석 멤버
+                  added: [이지은]
+                  removed: [박도윤]
+                  kept: [김민수]
     ToolApprovalResolved:
       name: tool_approval_resolved
       title: 승인 처리 결과
@@ -1546,7 +1697,7 @@ components:
         properties:
           code:
             type: string
-            description: 기계 판독용 코드 (예 LLM_PROVIDER_ERROR, INTERNAL)
+            description: 기계 판독용 코드 (예 LLM_PROVIDER_ERROR, INTERNAL, SERVICE_RESTARTING)
           message:
             type: string
             description: UI 표시 가능한 사유
@@ -1564,7 +1715,7 @@ components:
         - name: resolveResult
           payload:
             type: proposal.changed
-            occurredAt: '2026-08-25T01:02:03.456Z'
+            occurredAt: "2026-08-25T01:02:03.456Z"
             proposal:
               proposalId: 0HZX2K7M9Q4AF
               revision: 1
@@ -1594,7 +1745,7 @@ components:
         - name: partialRecorded
           payload:
             type: transcript-analysis-run.applied
-            occurredAt: '2026-08-25T01:02:03.456Z'
+            occurredAt: "2026-08-25T01:02:03.456Z"
             range:
               runId: 0J00000000RN1
               applyStatus: PARTIAL_RECORDED
@@ -1604,13 +1755,80 @@ components:
               toEndedAtMs: 20000
               rawDeltaSaturated: true
               semanticUnitSaturated: false
-              appliedAt: '2026-08-25T01:02:03.456Z'
+              appliedAt: "2026-08-25T01:02:03.456Z"
+    MeetingAnalysisChanged:
+      name: MeetingAnalysisChanged
+      title: 회의 뒤 분석 흐름 변경
+      summary: 요청 보관 · 콜백 저장 · 거절 커밋 뒤와 만료 기록 때 흐름 상태와 영역 진행을 알린다
+      description: |
+        결과 본문은 싣지 않는다. 화면은 받으면 필요한 조회(흐름 · 요약 · 검토본)를 부른다. 이벤트는 신호이고 정본이 아니라,
+        유실되면 화면은 GET /v1/notes/{noteId}/analyses/flow 로 다시 맞춘다. DIARIZING 은 이름만 옛 것이고 분석 전을 뜻한다.
+      payload:
+        $ref: "#/components/schemas/MeetingAnalysisChangedPayload"
+      examples:
+        - name: summaryReady
+          payload:
+            type: meeting-analysis.changed
+            occurredAt: "2026-08-25T01:02:03.456Z"
+            status: ANALYZING
+            regions:
+              - region: SUMMARY
+                status: SUCCEEDED
+              - region: RELATIONS
+                status: PENDING
+              - region: ITEM_ENRICHMENT
+                status: PENDING
+    RelationChanged:
+      name: RelationChanged
+      title: 회의 안 관계 변경
+      summary: 관계 사건 덧붙이기 커밋 뒤 열림 · 닫힘이 정해진 관계 키를 알린다
+      description: |
+        바퀴 하나에서 열리거나 닫힌 관계 키(양 끝 명제 · 종류)와 지금 열림 여부만 싣는다. 이력으로만 남는 사건(FLAGGED ·
+        DIFF_FOR_REVIEW)은 알리지 않는다. 화면은 받으면 GET /v1/notes/{noteId}/relations 를 다시 읽는다. 이벤트는 신호이고
+        정본이 아니라, 유실되면 입장 · 재연결 때의 조회가 다시 맞춘다.
+      payload:
+        $ref: "#/components/schemas/RelationChangedPayload"
+      examples:
+        - name: opened
+          payload:
+            type: relation.changed
+            occurredAt: "2026-08-25T01:02:03.456Z"
+            relations:
+              - sourceProposalId: 0K9GVJT2C4Q2A
+                targetProposalId: 0K9GVJT2C4Q2B
+                kind: SUPPORTS
+                open: true
   schemas:
+    ApprovalCardField:
+      description: 승인 카드의 한 줄. `value` 하나, 바뀌는 값이면 `before`·`after`, 명단 교체는 `added`·`removed`·`kept`
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+        before:
+          type: string
+          description: 바뀌기 전 값. 없던 값이면 「없음」
+        after:
+          type: string
+          description: 바뀐 뒤 값
+        added:
+          type: array
+          items: { type: string }
+          description: 명단을 바꿀 때 새로 드는 이름
+        removed:
+          type: array
+          items: { type: string }
+          description: 명단을 바꿀 때 빠지는 이름
+        kept:
+          type: array
+          items: { type: string }
+          description: 명단을 바꿀 때 그대로 남는 이름
     Tsid:
       type: string
       pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
-      minLength: 13
-      maxLength: 13
       example: 0HZX2K7M9Q4AB
     ToolTarget:
       type: object
@@ -1642,9 +1860,7 @@ components:
           type: string
     RunId:
       type: string
-      pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
-      minLength: 13
-      maxLength: 13
+      pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
       description: heymoa-ai 가 만드는 멱등 키다. URL path 에 나가는 외부 식별자라 TSID 13자다.
     MeetingStatus:
       title: MeetingStatus
@@ -1670,6 +1886,59 @@ components:
           $ref: "#/components/schemas/UtcMillisTimestamp"
         proposal:
           $ref: "#/components/schemas/ProposalRevision"
+    MeetingAnalysisChangedPayload:
+      type: object
+      additionalProperties: false
+      required: [type, occurredAt, status, regions]
+      properties:
+        type:
+          type: string
+          const: meeting-analysis.changed
+        occurredAt:
+          $ref: "#/components/schemas/UtcMillisTimestamp"
+        status:
+          type: string
+          enum: [NOT_APPLICABLE, DIARIZING, NOT_REQUESTED, ANALYZING, ANALYSIS_FAILED, REVIEWABLE, CONFIRMED]
+        regions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [region, status]
+            properties:
+              region:
+                type: string
+                enum: [RELATIONS, EVALUATION, SUMMARY, ITEM_ENRICHMENT]
+              status:
+                type: string
+                enum: [PENDING, SUCCEEDED, FAILED, SKIPPED]
+    RelationChangedPayload:
+      type: object
+      additionalProperties: false
+      required: [type, occurredAt, relations]
+      properties:
+        type:
+          type: string
+          const: relation.changed
+        occurredAt:
+          $ref: "#/components/schemas/UtcMillisTimestamp"
+        relations:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [sourceProposalId, targetProposalId, kind, open]
+            properties:
+              sourceProposalId:
+                $ref: "#/components/schemas/Tsid"
+              targetProposalId:
+                $ref: "#/components/schemas/Tsid"
+              kind:
+                type: string
+                minLength: 1
+              open:
+                type: boolean
     TranscriptAnalysisRunAppliedPayload:
       type: object
       additionalProperties: false
@@ -1732,9 +2001,7 @@ components:
         resolvesProposalId:
           type: string
           nullable: true
-          pattern: '^[0-9A-HJKMNP-TV-Z]{13}$'
-          minLength: 13
-          maxLength: 13
+          pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
           description: RESOLVE result면 닫힌 Question proposal ID, 아니면 null
         citations:
           type: array

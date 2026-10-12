@@ -1,0 +1,430 @@
+[
+  {
+    "tool": "github.create_issue",
+    "card": {
+      "title": "GitHub 이슈 만들기",
+      "fields": [
+        {
+          "label": "저장소",
+          "value": "team-minswon/heymoa-web"
+        }
+      ],
+      "target": "승인 카드 그리기",
+      "body": {
+        "label": "본문",
+        "text": "카드 구조를 그립니다."
+      }
+    },
+    "summary": "GitHub 이슈 만들기 · 승인 카드 그리기"
+  },
+  {
+    "tool": "heymoa_assign_segment_speaker",
+    "card": {
+      "title": "발언 화자 바꾸기",
+      "target": "주간 회의 · 이름을 확인하지 못한 대상 (…0001)",
+      "fields": [
+        {
+          "label": "멤버",
+          "value": "김멤버"
+        }
+      ]
+    },
+    "summary": "발언 화자 바꾸기 · 주간 회의 · 이름을 확인하지 못한 대상 (…0001)"
+  },
+  {
+    "tool": "heymoa_assign_speaker_label",
+    "card": {
+      "title": "화자 지정",
+      "target": "주간 회의 · C",
+      "fields": [
+        {
+          "label": "손님",
+          "value": "김손님"
+        }
+      ]
+    },
+    "summary": "화자 지정 · 주간 회의 · C"
+  },
+  {
+    "tool": "heymoa_assign_speakers",
+    "card": {
+      "title": "화자 지정",
+      "target": "주간 회의",
+      "fields": [
+        {
+          "label": "화자 A",
+          "value": "김멤버"
+        },
+        {
+          "label": "화자 B",
+          "value": "없음"
+        }
+      ]
+    },
+    "summary": "화자 지정 · 주간 회의"
+  },
+  {
+    "tool": "heymoa_batch_create_tasks",
+    "card": {
+      "title": "할 일 한 번에 만들기",
+      "items": [
+        {
+          "title": "첫째",
+          "target": "출시",
+          "fields": []
+        },
+        {
+          "title": "둘째",
+          "target": "출시",
+          "fields": [
+            {
+              "label": "기한",
+              "value": "2026-11-01"
+            }
+          ]
+        },
+        {
+          "title": "셋째",
+          "target": "출시",
+          "fields": []
+        }
+      ],
+      "fields": []
+    },
+    "summary": "할 일 한 번에 만들기 · 3건"
+  },
+  {
+    "tool": "heymoa_batch_update_review_items",
+    "card": {
+      "title": "검토 항목 한 번에 바꾸기",
+      "target": "주간 회의",
+      "items": [
+        {
+          "title": "배포 결정",
+          "fields": [
+            {
+              "label": "내용",
+              "before": "배포 결정",
+              "after": "배포 결정(수정)"
+            }
+          ]
+        },
+        {
+          "title": "배포 결정",
+          "fields": [
+            {
+              "label": "담당",
+              "before": "없음",
+              "after": "화자 B"
+            }
+          ]
+        }
+      ],
+      "fields": []
+    },
+    "summary": "검토 항목 한 번에 바꾸기 · 2건"
+  },
+  {
+    "tool": "heymoa_batch_update_tasks",
+    "card": {
+      "title": "할 일 한 번에 바꾸기",
+      "items": [
+        {
+          "title": "보고서 초안",
+          "target": "출시",
+          "fields": [
+            {
+              "label": "담당",
+              "before": "없음",
+              "after": "김멤버"
+            }
+          ]
+        },
+        {
+          "title": "다른 할 일",
+          "target": "출시",
+          "fields": [
+            {
+              "label": "기한",
+              "before": "2026-10-17",
+              "after": "없음"
+            }
+          ]
+        }
+      ],
+      "fields": []
+    },
+    "summary": "할 일 한 번에 바꾸기 · 2건"
+  },
+  {
+    "tool": "heymoa_create_agenda",
+    "card": {
+      "title": "안건 더하기",
+      "target": "주간 회의 · 출시 일정",
+      "fields": []
+    },
+    "summary": "안건 더하기 · 주간 회의 · 출시 일정"
+  },
+  {
+    "tool": "heymoa_create_note",
+    "card": {
+      "title": "회의록 만들기",
+      "target": "출시 · 주간 회의",
+      "fields": []
+    },
+    "summary": "회의록 만들기 · 출시 · 주간 회의"
+  },
+  {
+    "tool": "heymoa_create_note_guest_participant",
+    "card": {
+      "title": "손님 참석자 더하기",
+      "target": "주간 회의 · 김손님",
+      "fields": []
+    },
+    "summary": "손님 참석자 더하기 · 주간 회의 · 김손님"
+  },
+  {
+    "tool": "heymoa_create_review_item",
+    "card": {
+      "title": "검토 항목 더하기",
+      "target": "주간 회의 · 릴리스 노트 작성",
+      "fields": [
+        {
+          "label": "종류",
+          "value": "할 일"
+        },
+        {
+          "label": "기한",
+          "value": "2026-10-20"
+        },
+        {
+          "label": "담당",
+          "value": "김멤버"
+        }
+      ]
+    },
+    "summary": "검토 항목 더하기 · 주간 회의 · 릴리스 노트 작성"
+  },
+  {
+    "tool": "heymoa_create_task",
+    "card": {
+      "title": "할 일 만들기",
+      "target": "출시 · QA 체크리스트",
+      "fields": [
+        {
+          "label": "담당",
+          "value": "김손님"
+        }
+      ]
+    },
+    "summary": "할 일 만들기 · 출시 · QA 체크리스트"
+  },
+  {
+    "tool": "heymoa_delete_agenda",
+    "card": {
+      "title": "안건 지우기",
+      "target": "주간 회의 · 출시 일정",
+      "warning": "지운 안건은 되돌릴 수 없습니다",
+      "fields": [
+        {
+          "label": "지울 내용",
+          "value": "지울 안건 본문"
+        }
+      ]
+    },
+    "summary": "안건 지우기 · 주간 회의 · 출시 일정"
+  },
+  {
+    "tool": "heymoa_mark_notification_read",
+    "card": {
+      "title": "알림을 읽음으로 표시",
+      "target": "이름을 확인하지 못한 대상 (…T001)",
+      "fields": []
+    },
+    "summary": "알림을 읽음으로 표시 · 이름을 확인하지 못한 대상 (…T001)"
+  },
+  {
+    "tool": "heymoa_replace_note_guest_participants",
+    "card": {
+      "title": "손님 참석자 바꾸기",
+      "target": "주간 회의",
+      "warning": "목록에 없는 손님은 빠집니다",
+      "fields": [
+        {
+          "label": "손님 참석자",
+          "kept": [
+            "김손님"
+          ]
+        }
+      ]
+    },
+    "summary": "손님 참석자 바꾸기 · 주간 회의"
+  },
+  {
+    "tool": "heymoa_replace_note_participants",
+    "card": {
+      "title": "참석 멤버 바꾸기",
+      "target": "주간 회의",
+      "warning": "목록에 없는 멤버는 빠집니다",
+      "fields": [
+        {
+          "label": "참석 멤버",
+          "added": [
+            "김멤버"
+          ],
+          "removed": [
+            "이멤버"
+          ]
+        }
+      ]
+    },
+    "summary": "참석 멤버 바꾸기 · 주간 회의"
+  },
+  {
+    "tool": "heymoa_send_note_result_mail",
+    "card": {
+      "title": "회의 결과 메일 보내기",
+      "target": "주간 회의",
+      "warning": "보낸 메일은 거둘 수 없습니다",
+      "fields": [
+        {
+          "label": "받는 사람(참석자 전원)",
+          "value": "김멤버, 이멤버"
+        },
+        {
+          "label": "제목",
+          "value": "주간 회의 결과"
+        }
+      ],
+      "body": {
+        "label": "본문",
+        "text": "안녕하세요.\n오늘 회의에서 정한 것을 보냅니다.\n긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 긴 줄 "
+      }
+    },
+    "summary": "회의 결과 메일 보내기 · 주간 회의"
+  },
+  {
+    "tool": "heymoa_update_agenda",
+    "card": {
+      "title": "안건 바꾸기",
+      "target": "주간 회의 · 출시 일정",
+      "fields": [
+        {
+          "label": "내용",
+          "before": "출시 일정",
+          "after": "출시 일정 확정"
+        }
+      ]
+    },
+    "summary": "안건 바꾸기 · 주간 회의 · 출시 일정"
+  },
+  {
+    "tool": "heymoa_update_note",
+    "card": {
+      "title": "회의록 제목 바꾸기",
+      "target": "주간 회의",
+      "fields": [
+        {
+          "label": "제목",
+          "before": "옛 제목",
+          "after": "새 제목"
+        }
+      ]
+    },
+    "summary": "회의록 제목 바꾸기 · 주간 회의"
+  },
+  {
+    "tool": "heymoa_update_review_item",
+    "card": {
+      "title": "검토 항목 바꾸기",
+      "target": "주간 회의 · 배포 결정",
+      "fields": [
+        {
+          "label": "기한",
+          "before": "없음",
+          "after": "없음"
+        },
+        {
+          "label": "검토본 포함",
+          "before": "예",
+          "after": "아니오"
+        }
+      ]
+    },
+    "summary": "검토 항목 바꾸기 · 주간 회의 · 배포 결정"
+  },
+  {
+    "tool": "heymoa_update_task",
+    "card": {
+      "title": "할 일 바꾸기",
+      "target": "출시 · 보고서 초안",
+      "fields": [
+        {
+          "label": "기한",
+          "before": "2026-10-17",
+          "after": "2026-10-21"
+        },
+        {
+          "label": "상태",
+          "before": "진행 중",
+          "after": "완료"
+        }
+      ]
+    },
+    "summary": "할 일 바꾸기 · 출시 · 보고서 초안"
+  },
+  {
+    "tool": "linear.create_issue",
+    "card": {
+      "title": "Linear 이슈 만들기",
+      "fields": [
+        {
+          "label": "팀",
+          "value": "App"
+        },
+        {
+          "label": "담당자",
+          "value": "김민수"
+        },
+        {
+          "label": "우선순위",
+          "value": "높음"
+        },
+        {
+          "label": "라벨",
+          "value": "버그"
+        },
+        {
+          "label": "마감일",
+          "value": "2026-10-20"
+        }
+      ],
+      "target": "로그인 뒤 홈이 빈 화면",
+      "body": {
+        "label": "설명",
+        "text": "재현: 로그인 직후 탭 전환\n기대: 홈 목록이 보입니다"
+      }
+    },
+    "summary": "Linear 이슈 만들기 · 로그인 뒤 홈이 빈 화면"
+  },
+  {
+    "tool": "linear.update_issue",
+    "card": {
+      "title": "Linear 이슈 고치기",
+      "fields": [
+        {
+          "label": "담당자",
+          "before": "김민수",
+          "after": "없음"
+        },
+        {
+          "label": "상태",
+          "before": "Todo",
+          "after": "In Progress"
+        }
+      ],
+      "target": "APP-12 로그인 뒤 홈이 빈 화면"
+    },
+    "summary": "Linear 이슈 고치기 · APP-12 로그인 뒤 홈이 빈 화면"
+  }
+]

@@ -242,7 +242,7 @@ describe("ChatThread", () => {
     expect(screen.getByText("안녕")).toBeTruthy();
   });
 
-  it("decision이 있는 TOOL 메시지는 스트림과 같은 승인 단계로 렌더한다", () => {
+  it("decision이 있는 TOOL 메시지는 스트림과 같은 승인 카드로 렌더한다", () => {
     const { container } = renderThread({
       messages: [
         message({
@@ -253,22 +253,20 @@ describe("ChatThread", () => {
             decision: "APPROVED",
             status: null,
             url: null,
+            card: null,
           },
         }),
       ],
     });
-    fireEvent.click(screen.getByRole("button", { name: /생각 과정/ }));
-    expect(container.querySelector('[data-step="approval"]')).toBeTruthy();
-    // 결과 행이 없는 끝난 턴이라 「확인 필요」 줄이 하나 붙는다(N3). 이름은 승인 줄이 말한다.
-    expect(container.querySelector('[data-step="tool"]')?.textContent).toBe(
-      "확인 필요"
-    );
-    // ★ 카드는 사람 말(`summary`)로 물었다. 계약이 그 말을 저장하지 않는다고 여기서
-    // 도구 id를 대면, 같은 한 번의 일을 두 화면이 다른 이름으로 부르게 된다.
+    // 결과 행이 없는 끝난 턴이라 쓰기가 나갔는지 모른다(N3).
+    const card = container.querySelector('[data-testid="approval-card"]');
+    expect(card?.getAttribute("data-approval")).toBe("check");
+    // 생각 과정에 같은 일을 한 번 더 적지 않는다.
+    expect(container.querySelector('[data-cot="group"]')).toBeNull();
+    // ★ 도구 id 도, 「테스트 유저님이 승인」(content)도 제목으로 쓰지 않는다.
     expect(screen.queryByText(/linear\.create_issue/)).toBeNull();
-    // 「테스트 유저님이 승인」(content)도 안 쓴다 — 「승인함」과 같은 말이다.
     expect(screen.queryByText(/테스트 유저님이 승인/)).toBeNull();
-    expect(screen.getByText("승인함")).toBeTruthy();
+    expect(screen.getByText("쓰기 작업 승인")).toBeTruthy();
   });
 
   it("status가 있는 TOOL 메시지는 스트림과 같은 도구 단계로 렌더한다", () => {
@@ -282,6 +280,7 @@ describe("ChatThread", () => {
             decision: null,
             status: "success",
             url: "https://linear.app/heymoa/issue/APP-12",
+            card: null,
           },
         }),
       ],
@@ -306,6 +305,7 @@ describe("ChatThread", () => {
             decision: null,
             status: "success",
             url: null,
+            card: null,
           },
         }),
       ],
@@ -315,10 +315,74 @@ describe("ChatThread", () => {
     expect(screen.queryByText("완료")).toBeNull();
   });
 
-  it("연이은 TOOL 기록은 한 묶음으로 접힌다", () => {
-    // 흐르는 동안 한 묶음이던 것이 새로고침 뒤 낱개 카드로 흩어지면 안 된다.
+  it("★ 히스토리 승인 행이 card 를 실어 오면 새로고침 뒤에도 같은 카드다", () => {
     const { container } = renderThread({
       messages: [
+        message({
+          role: "TOOL",
+          content: "테스트 유저님이 승인",
+          toolEvent: {
+            tool: "heymoa_update_task",
+            decision: "APPROVED",
+            status: null,
+            url: null,
+            card: {
+              title: "할 일 기한 바꾸기",
+              target: "멘토링 · [시험] PRO-56 운영 확인",
+              warning: null,
+              fields: [
+                {
+                  label: "기한",
+                  value: null,
+                  before: "없음",
+                  after: "2026-10-31",
+                  added: null,
+                  removed: null,
+                  kept: null,
+                },
+              ],
+              items: null,
+              body: null,
+            },
+          },
+        }),
+        message({
+          role: "TOOL",
+          content: "할 일 기한을 바꿨습니다",
+          toolEvent: {
+            tool: "heymoa_update_task",
+            decision: null,
+            status: "success",
+            url: null,
+            card: null,
+          },
+        }),
+      ],
+      activeTurnId: null,
+    });
+    const card = container.querySelector('[data-testid="approval-card"]');
+    expect(card?.getAttribute("data-approval")).toBe("done");
+    expect(screen.getByTestId("approval-summary").textContent).toBe(
+      "할 일 기한 바꾸기"
+    );
+    expect(card?.textContent).toContain("멘토링 · [시험] PRO-56 운영 확인");
+    expect(card?.textContent).toContain("2026-10-31");
+  });
+
+  it("승인 뒤 결과 행은 카드의 상태가 된다 — 생각 과정에 쓰기 줄을 따로 세우지 않는다", () => {
+    const { container } = renderThread({
+      messages: [
+        message({
+          role: "TOOL",
+          content: "스크립트 검색 · 3건",
+          toolEvent: {
+            tool: "transcripts.search",
+            decision: null,
+            status: "success",
+            url: null,
+            card: null,
+          },
+        }),
         message({
           role: "TOOL",
           content: "테스트 유저님이 승인",
@@ -327,6 +391,7 @@ describe("ChatThread", () => {
             decision: "APPROVED",
             status: null,
             url: null,
+            card: null,
           },
         }),
         message({
@@ -336,13 +401,21 @@ describe("ChatThread", () => {
             tool: "linear.create_issue",
             decision: null,
             status: "success",
-            url: null,
+            url: "https://linear.app/heymoa/issue/APP-12",
+            card: null,
           },
         }),
       ],
     });
-    expect(container.querySelectorAll('[data-cot="group"]')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-cot="single"]')).toHaveLength(0);
+    const card = container.querySelector('[data-testid="approval-card"]');
+    expect(card?.getAttribute("data-approval")).toBe("done");
+    // 히스토리 승인 행에는 요약이 없어 짝인 결과 행의 말을 제목으로 쓴다.
+    expect(card?.textContent).toContain("APP-12 생성됨");
+    expect(
+      screen.getByRole("link", { name: /열기/ }).getAttribute("href")
+    ).toBe("https://linear.app/heymoa/issue/APP-12");
+    // 앞의 조회는 생각 과정에 남고, 쓰기 줄은 거기 없다.
+    expect(container.querySelectorAll('[data-step="tool"]')).toHaveLength(1);
   });
 
   it("decision도 status도 없는 TOOL 메시지는 그리지 않는다", () => {
@@ -352,7 +425,7 @@ describe("ChatThread", () => {
         message({
           role: "TOOL",
           content: "정체 불명",
-          toolEvent: { tool: "x", decision: null, status: null, url: null },
+          toolEvent: { tool: "x", decision: null, status: null, url: null , card: null},
         }),
       ],
     });
@@ -482,10 +555,9 @@ describe("ChatThread", () => {
   });
 
   const openCard = {
-    tool: "linear.create_issue",
     summary: "Linear 이슈 'APP 버그 수정' 생성",
-    args: null,
-    state: { kind: "open" as const },
+    card: null,
+    status: { kind: "open" as const },
   };
 
   it("승인 대기 중에는 승인·거절 버튼이 보인다", () => {
@@ -506,23 +578,32 @@ describe("ChatThread", () => {
     expect(screen.getByTestId("approval-summary").textContent).toBe(
       "Linear 이슈 'APP 버그 수정' 생성"
     );
-    // 되돌릴 수 있느냐를 말하는 배지는 남는다.
-    expect(screen.getByText("쓰기 도구")).toBeTruthy();
+    expect(screen.getByText("승인 대기")).toBeTruthy();
   });
 
-  it("★ summary 가 null 이면 그때만 도구 id 를 대신 세운다", () => {
-    // 계약이 nullable 이다. 비면 배지와 버튼만 남아 **무엇을 승인하는지 모르는 채** 누르게 된다.
-    renderThread({ approvalCard: { ...openCard, summary: null } });
+  it("★ card 도 summary 도 없으면 승인을 막고 거절만 남긴다 — 도구 id 로 대신하지 않는다", () => {
+    const { container } = renderThread({
+      approvalCard: { ...openCard, summary: null },
+    });
 
     expect(screen.getByTestId("approval-summary").textContent).toBe(
-      "승인이 필요한 도구: linear.create_issue"
+      "쓰기 작업 승인"
     );
-    expect(screen.getByRole("button", { name: "승인" })).toBeTruthy();
+    expect(screen.getByText(/무엇을 하는지 알 수 없어/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "승인" })).toHaveProperty(
+      "disabled",
+      true
+    );
+    expect(screen.getByRole("button", { name: "거절" })).toHaveProperty(
+      "disabled",
+      false
+    );
+    expect(container.textContent).not.toContain("linear.create_issue");
   });
 
   it("submitted면 버튼을 잠그고 확정 대기 문구를 보인다", () => {
     renderThread({
-      approvalCard: { ...openCard, state: { kind: "submitted" } },
+      approvalCard: { ...openCard, status: { kind: "submitted" } },
     });
     expect(screen.getByRole("button", { name: "승인" })).toHaveProperty(
       "disabled",
@@ -539,15 +620,13 @@ describe("ChatThread", () => {
     const { container } = renderThread({
       approvalCard: {
         ...openCard,
-        state: {
-          kind: "invalidated",
+        status: {
+          kind: "invalid",
           reason: "이미 처리됐거나 지나간 승인입니다.",
         },
       },
     });
-    expect(
-      container.querySelector('[data-approval="invalidated"]')
-    ).toBeTruthy();
+    expect(container.querySelector('[data-approval="invalid"]')).toBeTruthy();
     expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
     expect(screen.queryByRole("button", { name: "거절" })).toBeNull();
     expect(screen.getByText("이미 처리됐거나 지나간 승인입니다.")).toBeTruthy();
@@ -563,7 +642,6 @@ describe("ChatThread", () => {
             tool: "linear.create_issue",
             summary: "이슈 생성 실패",
             target: null,
-            args: null,
             status: "error",
             url: null,
           },
@@ -943,6 +1021,7 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
         decision: null,
         status: "success",
         url: null,
+        card: null,
       },
     }),
     message({
@@ -1002,6 +1081,7 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
             decision: null,
             status: "success",
             url: null,
+            card: null,
           },
         }),
         message({
@@ -1053,6 +1133,7 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
             decision: null,
             status: "success",
             url: null,
+            card: null,
           },
         }),
       ],
@@ -1090,6 +1171,7 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
             decision: null,
             status: "success",
             url: null,
+            card: null,
           },
         }),
       ],
@@ -1134,62 +1216,6 @@ describe("★★ [W-11] 히스토리에서도 생각이 보인다", () => {
       container.querySelector('[data-cot="group"]')?.getAttribute("data-open")
     ).toBe("true");
     expect(container.textContent).toContain("혼자 남은 생각");
-  });
-});
-
-describe("승인 카드가 무엇을 승인하는지 보여준다", () => {
-  const card = {
-    tool: "linear.create_issue",
-    summary: "Linear 이슈 생성",
-    state: { kind: "open" as const },
-  };
-
-  it("인자를 이름-값 쌍으로 세운다 — 날 JSON 을 안 쏟는다", () => {
-    renderThread({
-      approvalCard: {
-        ...card,
-        args: { projectId: "0HZX2K7M9Q4AE", title: "APP 버그 수정" },
-      },
-    });
-
-    const args = screen.getByTestId("approval-args");
-    expect(args.textContent).toContain("projectId");
-    expect(args.textContent).toContain("APP 버그 수정");
-    // 통째로 stringify 하면 이 중괄호가 화면에 뜬다.
-    expect(args.textContent).not.toContain('{"projectId"');
-  });
-
-  it("★ 인자가 없으면 그 자리를 아예 안 그린다", () => {
-    // 빈 상자가 서면 「인자가 없는 것」과 「못 받은 것」이 화면에서 같아진다.
-    renderThread({ approvalCard: { ...card, args: null } });
-    expect(screen.queryByTestId("approval-args")).toBeNull();
-  });
-
-  it("★ 값이 비어 있는 줄은 빼고 나머지만 그린다", () => {
-    renderThread({
-      approvalCard: { ...card, args: { title: "제목", description: null } },
-    });
-
-    const args = screen.getByTestId("approval-args");
-    expect(args.textContent).toContain("title");
-    expect(args.textContent).not.toContain("description");
-  });
-
-  it("★ 긴 값은 접어 둔다 — 카드가 화면을 밀어내지 않는다", () => {
-    const long = "가".repeat(200);
-    const { container } = renderThread({
-      approvalCard: { ...card, args: { description: long } },
-    });
-
-    const details = container.querySelector("details");
-    expect(details).toBeTruthy();
-    expect((details as HTMLDetailsElement).open).toBe(false);
-    // 짧은 값은 접지 않는다 — 한 줄로 다 보이는 것을 굳이 누르게 하지 않는다.
-    cleanup();
-    const short = renderThread({
-      approvalCard: { ...card, args: { title: "APP 버그 수정" } },
-    });
-    expect(short.container.querySelector("details")).toBeNull();
   });
 });
 
@@ -1283,13 +1309,12 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
       role: "TOOL",
       content: "테스트 유저님이 승인",
       turnId: "01KTURN000001",
-      toolEvent: { tool: "linear.create_issue", decision: "APPROVED", status: null, url: null },
+      toolEvent: { tool: "linear.create_issue", decision: "APPROVED", status: null, url: null , card: null},
     }),
   ];
 
   it("히스토리 — 끝난 턴의 결과 없는 승인 쓰기는 「확인 필요」다", () => {
     renderThread({ messages: APPROVED_ONLY, activeTurnId: null });
-    openSteps();
     expect(screen.getByText("확인 필요")).toBeTruthy();
   });
 
@@ -1306,13 +1331,13 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
           role: "TOOL",
           content: "APP-12 생성됨",
           turnId: "01KTURN000001",
-          toolEvent: { tool: "linear.create_issue", decision: null, status: "success", url: null },
+          toolEvent: { tool: "linear.create_issue", decision: null, status: "success", url: null , card: null},
         }),
       ],
       activeTurnId: null,
     });
-    openSteps();
     expect(screen.queryByText("확인 필요")).toBeNull();
+    expect(screen.getByText("완료")).toBeTruthy();
     expect(screen.getByText("APP-12 생성됨")).toBeTruthy();
   });
 });
@@ -1336,6 +1361,7 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
         decision: null,
         status: "success",
         url: null,
+        card: null,
       },
     });
   const HISTORY = [
@@ -1362,7 +1388,6 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
             tool: "transcripts.read",
             summary: "연관 스크립트 읽기 · 10:02",
             target: null,
-            args: null,
             status: "success",
             url: null,
           },
@@ -1392,7 +1417,6 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
             tool: "transcripts.read",
             summary: "연관 스크립트 읽기 · 10:02",
             target: null,
-            args: null,
             status: "success",
             url: null,
           },
@@ -1402,6 +1426,7 @@ describe("★★ APP-1013 생각 과정 묶음", () => {
             toolCallId: "w1",
             tool: "linear.create_issue",
             summary: "이슈 생성",
+            card: null,
             decision: null,
           },
         ],

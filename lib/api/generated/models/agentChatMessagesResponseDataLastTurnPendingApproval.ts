@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AgentChatMessagesResponseDataLastTurnPendingApprovalCard } from "./agentChatMessagesResponseDataLastTurnPendingApprovalCard";
 
 /**
  * 돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다
@@ -28,4 +29,9 @@ export type AgentChatMessagesResponseDataLastTurnPendingApproval = {
   approvalId: string;
   /** 승인을 기다리는 도구 이름 */
   tool: string;
+  /**
+   * 사람이 읽는 카드 내용. ai 가 안 보냈거나 모양이 계약 밖이었거나 옛 행이면 null 이고, 그때 카드는 요약만으로 묻는다
+   * @nullable
+   */
+  card: AgentChatMessagesResponseDataLastTurnPendingApprovalCard;
 } | null;

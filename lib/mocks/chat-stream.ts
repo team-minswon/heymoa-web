@@ -236,6 +236,25 @@ function approvalArgs(message: string): Record<string, unknown> | null {
   return { projectId: "0HZX2K7M9Q4AE", title: "APP 버그 수정" };
 }
 
+/**
+ * ai 가 실제 요청에서 만드는 카드의 목. 값은 사람이 읽는 이름이고 id 는 싣지 않는다 —
+ * `projectId` 는 그 이름(「앱 팀」)으로만 적는다.
+ */
+function approvalCard(args: Record<string, unknown>) {
+  const labels = Array.isArray(args.labels) ? args.labels.join(", ") : null;
+  return {
+    title: "Linear 이슈 만들기",
+    target: "앱 팀",
+    fields: [
+      { label: "제목", value: String(args.title) },
+      ...(labels ? [{ label: "라벨", value: labels }] : []),
+    ],
+    ...(typeof args.description === "string"
+      ? { body: { label: "설명", text: args.description } }
+      : {}),
+  };
+}
+
 export function buildApprovalPlan(input: BuildInput): ApprovalPlan | null {
   if (!APPROVAL_SCENARIOS.some((id) => hasScenario(input.message, id))) {
     return null;
@@ -287,6 +306,8 @@ export function buildApprovalPlan(input: BuildInput): ApprovalPlan | null {
         summary: args?.title
           ? `Linear 이슈 '${args.title}' 생성`
           : "Linear 이슈 생성",
+        // 인자가 없으면 카드도 없다 — 그때 화면은 `summary` 한 줄로 묻는다.
+        ...(args ? { card: approvalCard(args) } : {}),
       }),
     ],
     after: (decision) => {

@@ -1225,7 +1225,54 @@ paths:
                           decision: null
                           status: success
                           url: https://linear.app/heymoa/issue/APP-123
+                          card: null
                         createdAt: '2026-07-22T00:00:02Z'
+                      - turnId: 0K9GVJT2C4Q3B
+                        role: TOOL
+                        content: 테스트님이 승인 → Linear 이슈 생성
+                        scope: []
+                        toolEvent:
+                          tool: linear.create_issue
+                          decision: APPROVED
+                          status: null
+                          url: null
+                          card:
+                            title: Linear 이슈를 만들까요?
+                            target: HeyMoa 팀
+                            warning: null
+                            fields:
+                            - label: 제목
+                              value: null
+                              before: 옛 제목
+                              after: 새 제목
+                              added: null
+                              removed: null
+                              kept: null
+                            - label: 라벨
+                              value: null
+                              before: null
+                              after: null
+                              added:
+                              - 버그
+                              removed:
+                              - 기능
+                              kept:
+                              - server
+                            body:
+                              label: 설명
+                              text: 배포 전 확인 사항
+                            items:
+                            - title: APP-123
+                              target: HeyMoa 팀
+                              fields:
+                              - label: 상태
+                                value: 진행 중
+                                before: null
+                                after: null
+                                added: null
+                                removed: null
+                                kept: null
+                        createdAt: '2026-07-22T00:00:01.500Z'
                       activeTurn: null
                       lastTurn:
                         turnId: 0K9GVJT2C4Q3B
@@ -2609,7 +2656,7 @@ paths:
       parameters:
       - name: noteId
         in: path
-        description: ''
+        description: 노트 식별자
         required: true
         schema:
           type: string
@@ -2976,7 +3023,7 @@ paths:
       parameters:
       - name: notificationId
         in: path
-        description: 읽음 처리할 알림 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -3806,7 +3853,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: ''
+        description: 조회할 워크스페이스 식별자
         required: true
         schema:
           type: string
@@ -4950,7 +4997,7 @@ paths:
       parameters:
       - name: noteId
         in: path
-        description: ''
+        description: 노트의 13자리 TSID
         required: true
         schema:
           type: string
@@ -4960,7 +5007,7 @@ paths:
         example: 0HZX2K7M9Q4AF
       - name: label
         in: path
-        description: ''
+        description: 정규화된 화자 라벨
         required: true
         schema:
           type: string
@@ -5386,7 +5433,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: ''
+        description: 나갈 워크스페이스 식별자
         required: true
         schema:
           type: string
@@ -5528,7 +5575,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: ''
+        description: 워크스페이스 식별자
         required: true
         schema:
           type: string
@@ -5538,7 +5585,7 @@ paths:
         example: 0HZX2K7M9Q4AD
       - name: userId
         in: path
-        description: ''
+        description: 역할을 바꿀 멤버의 사용자 식별자
         required: true
         schema:
           type: string
@@ -8247,6 +8294,7 @@ components:
                   - tool
                   - summary
                   - args
+                  - card
                   type: object
                   properties:
                     args:
@@ -8270,6 +8318,178 @@ components:
                       description: 승인을 기다리는 도구 이름
                       nullable: false
                       example: linear.create_issue
+                    card:
+                      type: object
+                      properties:
+                        warning:
+                          type: string
+                          description: 주의 문구
+                          nullable: true
+                          example: 되돌릴 수 없습니다
+                        body:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                              description: 본문
+                              nullable: false
+                              example: 배포 전 확인 사항
+                            label:
+                              type: string
+                              description: 본문 이름
+                              nullable: false
+                              example: 설명
+                          description: 긴 본문 한 덩어리. 없으면 null
+                          nullable: true
+                          required:
+                          - label
+                          - text
+                        fields:
+                          type: array
+                          description: 항목 줄. 없으면 빈 배열
+                          items:
+                            type: object
+                            properties:
+                              removed:
+                                type: array
+                                description: 목록에서 빠지는 값
+                                nullable: true
+                                items:
+                                  type: string
+                              added:
+                                type: array
+                                description: 목록에 더해지는 값
+                                nullable: true
+                                items:
+                                  type: string
+                              before:
+                                type: string
+                                description: 바뀌는 값의 이전
+                                nullable: true
+                                example: 옛 제목
+                              after:
+                                type: string
+                                description: 바뀌는 값의 이후
+                                nullable: true
+                                example: 새 제목
+                              label:
+                                type: string
+                                description: 항목 이름
+                                nullable: false
+                                example: 라벨
+                              kept:
+                                type: array
+                                description: 목록에 그대로 남는 값
+                                nullable: true
+                                items:
+                                  type: string
+                              value:
+                                type: string
+                                description: 바뀌지 않는 값
+                                nullable: true
+                                example: 배포
+                            required:
+                            - label
+                            - value
+                            - before
+                            - after
+                            - added
+                            - removed
+                            - kept
+                          nullable: false
+                        title:
+                          type: string
+                          description: 카드 제목
+                          nullable: false
+                          example: Linear 이슈를 만들까요?
+                        items:
+                          type: array
+                          description: 여러 대상을 한 번에 승인할 때 대상마다 한 묶음. 없으면 null
+                          items:
+                            type: object
+                            properties:
+                              fields:
+                                type: array
+                                description: 항목 줄. 없으면 빈 배열
+                                items:
+                                  type: object
+                                  properties:
+                                    removed:
+                                      type: array
+                                      description: 목록에서 빠지는 값
+                                      nullable: true
+                                      items:
+                                        type: string
+                                    added:
+                                      type: array
+                                      description: 목록에 더해지는 값
+                                      nullable: true
+                                      items:
+                                        type: string
+                                    before:
+                                      type: string
+                                      description: 바뀌는 값의 이전
+                                      nullable: true
+                                      example: 옛 제목
+                                    after:
+                                      type: string
+                                      description: 바뀌는 값의 이후
+                                      nullable: true
+                                      example: 새 제목
+                                    label:
+                                      type: string
+                                      description: 항목 이름
+                                      nullable: false
+                                      example: 라벨
+                                    kept:
+                                      type: array
+                                      description: 목록에 그대로 남는 값
+                                      nullable: true
+                                      items:
+                                        type: string
+                                    value:
+                                      type: string
+                                      description: 바뀌지 않는 값
+                                      nullable: true
+                                      example: 배포
+                                  required:
+                                  - label
+                                  - value
+                                  - before
+                                  - after
+                                  - added
+                                  - removed
+                                  - kept
+                                nullable: false
+                              title:
+                                type: string
+                                description: 대상 제목
+                                nullable: false
+                                example: APP-123
+                              target:
+                                type: string
+                                description: 대상 한 줄
+                                nullable: true
+                                example: HeyMoa 팀
+                            required:
+                            - title
+                            - target
+                            - fields
+                          nullable: true
+                        target:
+                          type: string
+                          description: 무엇에 하는가를 말하는 한 줄
+                          nullable: true
+                          example: HeyMoa 팀
+                      description: 사람이 읽는 카드 내용. ai 가 안 보냈거나 모양이 계약 밖이었거나 옛 행이면 null 이고, 그때 카드는 요약만으로 묻는다
+                      nullable: true
+                      required:
+                      - title
+                      - target
+                      - warning
+                      - fields
+                      - body
+                      - items
                   description: '돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다'
                   nullable: true
                 status:
@@ -8325,6 +8545,7 @@ components:
                   - tool
                   - summary
                   - args
+                  - card
                   type: object
                   properties:
                     args:
@@ -8348,6 +8569,178 @@ components:
                       description: 승인을 기다리는 도구 이름
                       nullable: false
                       example: linear.create_issue
+                    card:
+                      type: object
+                      properties:
+                        warning:
+                          type: string
+                          description: 주의 문구
+                          nullable: true
+                          example: 되돌릴 수 없습니다
+                        body:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                              description: 본문
+                              nullable: false
+                              example: 배포 전 확인 사항
+                            label:
+                              type: string
+                              description: 본문 이름
+                              nullable: false
+                              example: 설명
+                          description: 긴 본문 한 덩어리. 없으면 null
+                          nullable: true
+                          required:
+                          - label
+                          - text
+                        fields:
+                          type: array
+                          description: 항목 줄. 없으면 빈 배열
+                          items:
+                            type: object
+                            properties:
+                              removed:
+                                type: array
+                                description: 목록에서 빠지는 값
+                                nullable: true
+                                items:
+                                  type: string
+                              added:
+                                type: array
+                                description: 목록에 더해지는 값
+                                nullable: true
+                                items:
+                                  type: string
+                              before:
+                                type: string
+                                description: 바뀌는 값의 이전
+                                nullable: true
+                                example: 옛 제목
+                              after:
+                                type: string
+                                description: 바뀌는 값의 이후
+                                nullable: true
+                                example: 새 제목
+                              label:
+                                type: string
+                                description: 항목 이름
+                                nullable: false
+                                example: 라벨
+                              kept:
+                                type: array
+                                description: 목록에 그대로 남는 값
+                                nullable: true
+                                items:
+                                  type: string
+                              value:
+                                type: string
+                                description: 바뀌지 않는 값
+                                nullable: true
+                                example: 배포
+                            required:
+                            - label
+                            - value
+                            - before
+                            - after
+                            - added
+                            - removed
+                            - kept
+                          nullable: false
+                        title:
+                          type: string
+                          description: 카드 제목
+                          nullable: false
+                          example: Linear 이슈를 만들까요?
+                        items:
+                          type: array
+                          description: 여러 대상을 한 번에 승인할 때 대상마다 한 묶음. 없으면 null
+                          items:
+                            type: object
+                            properties:
+                              fields:
+                                type: array
+                                description: 항목 줄. 없으면 빈 배열
+                                items:
+                                  type: object
+                                  properties:
+                                    removed:
+                                      type: array
+                                      description: 목록에서 빠지는 값
+                                      nullable: true
+                                      items:
+                                        type: string
+                                    added:
+                                      type: array
+                                      description: 목록에 더해지는 값
+                                      nullable: true
+                                      items:
+                                        type: string
+                                    before:
+                                      type: string
+                                      description: 바뀌는 값의 이전
+                                      nullable: true
+                                      example: 옛 제목
+                                    after:
+                                      type: string
+                                      description: 바뀌는 값의 이후
+                                      nullable: true
+                                      example: 새 제목
+                                    label:
+                                      type: string
+                                      description: 항목 이름
+                                      nullable: false
+                                      example: 라벨
+                                    kept:
+                                      type: array
+                                      description: 목록에 그대로 남는 값
+                                      nullable: true
+                                      items:
+                                        type: string
+                                    value:
+                                      type: string
+                                      description: 바뀌지 않는 값
+                                      nullable: true
+                                      example: 배포
+                                  required:
+                                  - label
+                                  - value
+                                  - before
+                                  - after
+                                  - added
+                                  - removed
+                                  - kept
+                                nullable: false
+                              title:
+                                type: string
+                                description: 대상 제목
+                                nullable: false
+                                example: APP-123
+                              target:
+                                type: string
+                                description: 대상 한 줄
+                                nullable: true
+                                example: HeyMoa 팀
+                            required:
+                            - title
+                            - target
+                            - fields
+                          nullable: true
+                        target:
+                          type: string
+                          description: 무엇에 하는가를 말하는 한 줄
+                          nullable: true
+                          example: HeyMoa 팀
+                      description: 사람이 읽는 카드 내용. ai 가 안 보냈거나 모양이 계약 밖이었거나 옛 행이면 null 이고, 그때 카드는 요약만으로 묻는다
+                      nullable: true
+                      required:
+                      - title
+                      - target
+                      - warning
+                      - fields
+                      - body
+                      - items
                   description: '돌아온 화면이 다시 그릴 승인 카드. **status 가 WAITING_APPROVAL 일 때만 있다** — 상태로 안 가르면 중지된 옛 턴의 카드가 새 턴 위에 「눌러도 404」로 뜬다. **expiresAt 이 없다**: 만료를 안 두므로 필드를 남기면 화면이 없는 시계를 그린다'
                   nullable: true
                 status:
@@ -8426,6 +8819,178 @@ components:
                         enum:
                         - success
                         - error
+                      card:
+                        type: object
+                        properties:
+                          warning:
+                            type: string
+                            description: 주의 문구
+                            nullable: true
+                            example: 되돌릴 수 없습니다
+                          body:
+                            type: object
+                            properties:
+                              text:
+                                type: string
+                                description: 본문
+                                nullable: false
+                                example: 배포 전 확인 사항
+                              label:
+                                type: string
+                                description: 본문 이름
+                                nullable: false
+                                example: 설명
+                            description: 긴 본문 한 덩어리. 없으면 null
+                            nullable: true
+                            required:
+                            - label
+                            - text
+                          fields:
+                            type: array
+                            description: 항목 줄. 없으면 빈 배열
+                            items:
+                              type: object
+                              properties:
+                                removed:
+                                  type: array
+                                  description: 목록에서 빠지는 값
+                                  nullable: true
+                                  items:
+                                    type: string
+                                added:
+                                  type: array
+                                  description: 목록에 더해지는 값
+                                  nullable: true
+                                  items:
+                                    type: string
+                                before:
+                                  type: string
+                                  description: 바뀌는 값의 이전
+                                  nullable: true
+                                  example: 옛 제목
+                                after:
+                                  type: string
+                                  description: 바뀌는 값의 이후
+                                  nullable: true
+                                  example: 새 제목
+                                label:
+                                  type: string
+                                  description: 항목 이름
+                                  nullable: false
+                                  example: 라벨
+                                kept:
+                                  type: array
+                                  description: 목록에 그대로 남는 값
+                                  nullable: true
+                                  items:
+                                    type: string
+                                value:
+                                  type: string
+                                  description: 바뀌지 않는 값
+                                  nullable: true
+                                  example: 배포
+                              required:
+                              - label
+                              - value
+                              - before
+                              - after
+                              - added
+                              - removed
+                              - kept
+                            nullable: false
+                          title:
+                            type: string
+                            description: 카드 제목
+                            nullable: false
+                            example: Linear 이슈를 만들까요?
+                          items:
+                            type: array
+                            description: 여러 대상을 한 번에 승인할 때 대상마다 한 묶음. 없으면 null
+                            items:
+                              type: object
+                              properties:
+                                fields:
+                                  type: array
+                                  description: 항목 줄. 없으면 빈 배열
+                                  items:
+                                    type: object
+                                    properties:
+                                      removed:
+                                        type: array
+                                        description: 목록에서 빠지는 값
+                                        nullable: true
+                                        items:
+                                          type: string
+                                      added:
+                                        type: array
+                                        description: 목록에 더해지는 값
+                                        nullable: true
+                                        items:
+                                          type: string
+                                      before:
+                                        type: string
+                                        description: 바뀌는 값의 이전
+                                        nullable: true
+                                        example: 옛 제목
+                                      after:
+                                        type: string
+                                        description: 바뀌는 값의 이후
+                                        nullable: true
+                                        example: 새 제목
+                                      label:
+                                        type: string
+                                        description: 항목 이름
+                                        nullable: false
+                                        example: 라벨
+                                      kept:
+                                        type: array
+                                        description: 목록에 그대로 남는 값
+                                        nullable: true
+                                        items:
+                                          type: string
+                                      value:
+                                        type: string
+                                        description: 바뀌지 않는 값
+                                        nullable: true
+                                        example: 배포
+                                    required:
+                                    - label
+                                    - value
+                                    - before
+                                    - after
+                                    - added
+                                    - removed
+                                    - kept
+                                  nullable: false
+                                title:
+                                  type: string
+                                  description: 대상 제목
+                                  nullable: false
+                                  example: APP-123
+                                target:
+                                  type: string
+                                  description: 대상 한 줄
+                                  nullable: true
+                                  example: HeyMoa 팀
+                              required:
+                              - title
+                              - target
+                              - fields
+                            nullable: true
+                          target:
+                            type: string
+                            description: 무엇에 하는가를 말하는 한 줄
+                            nullable: true
+                            example: HeyMoa 팀
+                        description: 승인 확정 기록이면 그 승인의 카드 내용 — 새로고침 뒤에도 승인·거절된 카드를 다시 그린다. 실행 결과 기록·옛 행·카드 없이 온 승인은 null
+                        nullable: true
+                        required:
+                        - title
+                        - target
+                        - warning
+                        - fields
+                        - body
+                        - items
                     description: role=TOOL일 때만 값이 있는 구조화된 승인/도구 실행 기록 (그 외 null)
                     nullable: true
                     required:
@@ -8433,6 +8998,7 @@ components:
                     - decision
                     - status
                     - url
+                    - card
                   scope:
                     type: array
                     description: USER 행은 그때 **붙인** 것, ASSISTANT 행은 **실제로 본** 것. 없으면 빈 배열
@@ -10863,6 +11429,7 @@ components:
           nullable: false
           example: 배포 일정 확인
           minLength: 1
+          maxLength: 1000
     NoteAgendaResponse:
       title: NoteAgendaResponse
       required:
@@ -10938,12 +11505,6 @@ components:
           type: array
           description: 이 목록을 만들 때 화면이 본 임시 참여자 식별자 목록(13자리 TSID, 최대 200개). 지금과 다르면 409 로 거절한다. 생략하면 비교하지 않는다
           nullable: false
-          items:
-            oneOf:
-            - type: object
-            - type: boolean
-            - type: string
-            - type: number
           example:
           - 0HZX2K7M9Q4AR
         guestIds:
@@ -11256,12 +11817,6 @@ components:
           type: array
           description: 이 목록을 만들 때 화면이 본 계정 참여자의 13자리 TSID 목록(최대 200개). 지금과 다르면 409 로 거절한다. 생략하면 비교하지 않는다
           nullable: false
-          items:
-            oneOf:
-            - type: object
-            - type: boolean
-            - type: string
-            - type: number
         userIds:
           type: array
           description: 참여자로 남길 유저의 13자리 TSID 목록(최대 200개). 이 목록이 곧 최종 상태이며 여기 없는 참여자는 지워진다

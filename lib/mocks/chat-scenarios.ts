@@ -26,12 +26,12 @@ export const CHAT_SCENARIOS = {
   longArgs: {
     keyword: "긴 설명",
     kind: "stream",
-    what: "승인 카드의 인자가 **여러 줄로 길다.** 접히는지, 아니면 카드가 화면을 밀어내는지",
+    what: "승인 카드의 본문이 **여러 줄로 길다.** 접히는지, 아니면 카드가 화면을 밀어내는지",
   },
   noArgs: {
     keyword: "인자 없이",
     kind: "stream",
-    what: "인자가 아예 없는 쓰기 도구. **빈 칸이 흉하게 남지 않는지**",
+    what: "카드 구조 없이 `summary` 만 오는 쓰기 도구. **빈 칸이 흉하게 남지 않는지**",
   },
   multiTool: {
     keyword: "여러 번",

@@ -204,9 +204,10 @@ function contractSamples() {
    *   [2] 도는 턴만       → 그 셋의 null 쪽
    *   [3] 도는 턴 + 요약 없는 승인 → pendingApproval.summary 의 null 쪽
    *   [4] 실패로 끝난 턴  → lastTurn.failureCode·retryable 의 비-null 쪽
+   *   [5] 도는 턴 + 빈 카드 승인 → pendingApproval.card 안쪽 필드의 null 쪽
    */
   const chatIds = Array.from(
-    { length: 5 },
+    { length: 6 },
     () =>
       mockDb.createAgentChat({ workspaceId: workspaces[0].workspaceId }).chatId
   );
@@ -222,12 +223,16 @@ function contractSamples() {
       ...approval,
       summary: "이슈를 만들까요?",
       args: { projectId: "0HZX2K7M9Q4AE", title: "APP 버그 수정" },
+      card: FULL_CARD,
     },
+  });
+  seedAgentChatTurnForTests(chatIds[5], {
+    pendingApproval: { ...approval, summary: "이슈를 만들까요?", args: null, card: SPARSE_CARD },
   });
   seedAgentChatTurnForTests(chatIds[2], {});
   seedAgentChatTurnForTests(chatIds[3], {
-    // 인자도 요약도 없는 승인 — 도구 id 만으로 묻는 쪽.
-    pendingApproval: { ...approval, summary: null, args: null },
+    // 카드도 요약도 없는 승인 — 무엇인지 몰라 승인을 막고 거절만 남기는 쪽.
+    pendingApproval: { ...approval, summary: null, args: null, card: null },
   });
   seedAgentChatTurnForTests(chatIds[4], {
     status: "FAILED",
@@ -265,6 +270,20 @@ function contractSamples() {
       decision: "APPROVED",
       status: null,
       url: null,
+      card: FULL_CARD,
+    },
+  });
+  // 승인 카드의 안쪽 필드는 꽉 찬 카드(위)와 빈 카드(여기)를 함께 넣어야 양쪽이 나온다.
+  mockDb.appendAgentChatMessage(chatIds[0], {
+    role: "TOOL",
+    scope: [],
+    content: "알림 읽음 표시를 승인했습니다.",
+    toolEvent: {
+      tool: "heymoa_mark_notification_read",
+      decision: "APPROVED",
+      status: null,
+      url: null,
+      card: SPARSE_CARD,
     },
   });
   // `turnId`도 nullable이다 — 위 둘은 안 싣고(null 쪽) 이 행만 싣는다(비-null 쪽).
@@ -278,6 +297,7 @@ function contractSamples() {
       decision: null,
       status: "success",
       url: "https://linear.app/minswon/issue/APP-12",
+      card: null,
     },
   });
 
@@ -413,7 +433,57 @@ const KNOWN_UNOBSERVED = new Set<string>([
   // 고칠 자리는 server 의 `turnFields()` 헬퍼이고, 그때 이 둘을 여기서 지운다.
   "AgentChatMessagesResponse.data.lastTurn.pendingApproval.args",
   "AgentChatMessagesResponse.data.lastTurn.pendingApproval.summary",
+  ...[
+    "",
+    ".warning",
+    ".body",
+    ".target",
+    ".items",
+    ".items[].target",
+    ...["", ".items[]"].flatMap((at) =>
+      ["value", "before", "after", "added", "removed", "kept"].map(
+        (key) => `${at}.fields[].${key}`
+      )
+    ),
+  ].map((rest) => `AgentChatMessagesResponse.data.lastTurn.pendingApproval.card${rest}`),
 ]);
+
+/**
+ * 승인 카드 표본. 한 칸에 값·「전 → 후」·명단이 다 설 수는 없어서 줄마다 하나씩 싣고, 나머지는
+ * `null` 이다 — 실서버도 없는 칸을 `null` 로 보낸다. 빈 카드는 카드 바깥 칸의 `null` 쪽이다.
+ */
+const emptyField = {
+  value: null,
+  before: null,
+  after: null,
+  added: null,
+  removed: null,
+  kept: null,
+};
+const fullFields = [
+  { ...emptyField, label: "제목", value: "APP 버그 수정" },
+  { ...emptyField, label: "상태", before: "할 일", after: "진행 중" },
+  { ...emptyField, label: "라벨", added: ["버그"], removed: ["기능"], kept: ["web"] },
+];
+const FULL_CARD = {
+  title: "Linear 이슈 만들기",
+  target: "앱 팀",
+  warning: "되돌릴 수 없습니다",
+  fields: fullFields,
+  items: [
+    { title: "APP-12", target: "앱 팀", fields: fullFields },
+    { title: "APP-13", target: null, fields: [] },
+  ],
+  body: { label: "설명", text: "배포 전 확인 사항" },
+};
+const SPARSE_CARD = {
+  title: "알림을 읽음으로 표시",
+  target: null,
+  warning: null,
+  fields: [],
+  items: null,
+  body: null,
+};
 
 describe("nullable 목 표본", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));

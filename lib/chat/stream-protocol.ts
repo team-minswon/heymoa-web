@@ -27,13 +27,13 @@ import {
   settleTool,
 } from "@/lib/chat/blocks";
 
-export type {
-  ApprovalDecision,
-  Block,
-  ToolArgs,
-  ToolTarget,
-} from "@/lib/chat/blocks";
-import type { ApprovalDecision, ToolArgs, ToolTarget } from "@/lib/chat/blocks";
+export type { ApprovalDecision, Block, ToolTarget } from "@/lib/chat/blocks";
+import type { ApprovalDecision, ToolTarget } from "@/lib/chat/blocks";
+import type {
+  ApprovalCardData,
+  ApprovalCardField,
+  ApprovalCardItem,
+} from "@/lib/chat/approval-card";
 
 /**
  * 화면이 아는 상태 여섯. 늘리지 않는다 — `personal-chat.tsx` 의 `isStreaming` 이 phase 로
@@ -83,12 +83,8 @@ export type ChatStreamState = {
     approvalId: string;
     tool: string;
     summary: string | null;
-    /**
-     * 이 승인이 실행할 인자. `tool_approval_request` 에는 안 실려서 같은 `toolCallId` 의 도구
-     * 블록에서 집는다. 재진입에서는 그 프레임이 버퍼에서 밀려나 히스토리의
-     * `pendingApproval.args` 가 준다.
-     */
-    args: ToolArgs;
+    /** 승인 카드 구조. 없으면 `summary` 로 묻는다. */
+    card: ApprovalCardData | null;
   } | null;
   error: { code: string; message: string } | null;
   /** 다시 눌러도 되는 실패인가. server 의 닫힌 enum 이 정한다. 아직 화면 분기는 없다. */
@@ -130,12 +126,7 @@ export function startedState(input: { turnId: string }): ChatStreamState {
 export function resumedState(input: {
   cursor: string | null;
   turnId: string;
-  pendingApproval: {
-    approvalId: string;
-    tool: string;
-    summary: string | null;
-    args: ToolArgs;
-  } | null;
+  pendingApproval: ChatStreamState["pendingApproval"];
   /**
    * 히스토리가 실어 준 도는 턴의 답 조각. 재생은 커서 뒤 토큰만 주므로 이것을 첫 본문으로
    * 깔아야 답이 한 덩어리가 된다. 승인 대기에는 안 깐다 — 열린 스트림이 없어 히스토리가
@@ -187,18 +178,74 @@ function record(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+function texts(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.flatMap((each) => (text(each) ? [each as string] : []))
+    : [];
+}
+
+function field(value: unknown): ApprovalCardField | null {
+  const raw = record(value);
+  const label = raw && text(raw.label);
+  if (!raw || !label) return null;
+  const parsed = {
+    label,
+    value: text(raw.value),
+    before: text(raw.before),
+    after: text(raw.after),
+    added: texts(raw.added),
+    removed: texts(raw.removed),
+    kept: texts(raw.kept),
+  };
+  const empty =
+    !parsed.value &&
+    !parsed.before &&
+    !parsed.after &&
+    parsed.added.length + parsed.removed.length + parsed.kept.length === 0;
+  return empty ? null : parsed;
+}
+
+function fields(value: unknown): ApprovalCardField[] {
+  return Array.isArray(value)
+    ? value.flatMap((each) => {
+        const parsed = field(each);
+        return parsed ? [parsed] : [];
+      })
+    : [];
+}
+
+function item(value: unknown): ApprovalCardItem | null {
+  const raw = record(value);
+  const title = raw && text(raw.title);
+  if (!raw || !title) return null;
+  return { title, target: text(raw.target), fields: fields(raw.fields) };
+}
+
 /**
- * 도구 인자. 라이브 `tool_call_start` 는 ai 가 내서 객체이고, 재진입의
- * `activeTurn.pendingApproval.args` 는 server 가 `jsonb` 를 문자열로 내보내 JSON 문자열이다.
- * 문자열을 그대로 `Object.entries` 에 넣으면 글자마다 행이 선다. 파싱이 실패하면 null 이다.
+ * `tool_approval_request.card`. 제목이 없으면 카드가 아니라 `summary` 로 대신 묻는다. 칸 하나가
+ * 틀리면 그 칸만 뺀다 — 반쯤 읽은 칸이 무엇을 승인하는지 잘못 읽게 하지 않게.
  */
-export function toolArgs(value: unknown): ToolArgs {
-  if (typeof value !== "string") return record(value);
-  try {
-    return record(JSON.parse(value));
-  } catch {
-    return null;
-  }
+export function parseApprovalCard(value: unknown): ApprovalCardData | null {
+  const raw = record(value);
+  const title = raw && text(raw.title);
+  if (!raw || !title) return null;
+  const body = record(raw.body);
+  const bodyText = body && text(body.text);
+  return {
+    title,
+    target: text(raw.target),
+    warning: text(raw.warning),
+    fields: fields(raw.fields),
+    items: Array.isArray(raw.items)
+      ? raw.items.flatMap((each) => {
+          const parsed = item(each);
+          return parsed ? [parsed] : [];
+        })
+      : [],
+    body: bodyText
+      ? { label: text(body.label) ?? "본문", text: bodyText }
+      : null,
+  };
 }
 
 /** `kind` 가 없으면 그릴 수 없다. 나머지는 없어도 된다. */
@@ -360,8 +407,6 @@ export function reduceStreamEvent(
           tool: String(payload.tool ?? ""),
           summary: text(payload.summary),
           target: toolTarget(payload.target),
-          // 인자를 나르는 유일한 프레임이다.
-          args: toolArgs(payload.args),
           status: null,
           url: null,
         }),
@@ -382,16 +427,11 @@ export function reduceStreamEvent(
 
     case "tool_approval_request": {
       const toolCallId = String(payload.toolCallId ?? "");
-      // 인자는 이 프레임에 없어서 먼저 온 같은 호출의 도구 블록에서 집는다. 못 찾으면 카드는
-      // `summary` 만으로 묻는다.
-      const started = base.blocks.find(
-        (block) => block.kind === "tool" && block.toolCallId === toolCallId
-      );
       const pending = {
         approvalId: String(payload.approvalId ?? ""),
         tool: String(payload.tool ?? ""),
         summary: text(payload.summary),
-        args: started?.kind === "tool" ? started.args : null,
+        card: parseApprovalCard(payload.card),
       };
       return {
         ...base,
@@ -401,6 +441,7 @@ export function reduceStreamEvent(
           approvalId: pending.approvalId,
           tool: pending.tool,
           summary: pending.summary,
+          card: pending.card,
           toolCallId,
           decision: null,
         }),

@@ -10,6 +10,7 @@ export interface NoteAgendaRequest {
   /**
    * 안건 내용. 공백만일 수 없다
    * @minLength 1
+   * @maxLength 1000
    */
   content: string;
 }

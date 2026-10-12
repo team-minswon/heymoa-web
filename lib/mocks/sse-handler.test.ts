@@ -386,6 +386,22 @@ describe("write tool approval actually pauses the stream", () => {
     expect(data.cursor).toBe(request.id);
     expect(data.activeTurn.status).toBe("WAITING_APPROVAL");
     expect(data.activeTurn.pendingApproval.approvalId).toBe(request.data.approvalId);
+    // REST 의 카드는 모든 칸을 싣고 없는 것은 null 이다 — SSE 처럼 칸을 빼지 않는다.
+    expect(data.activeTurn.pendingApproval.card).toMatchObject({
+      title: "Linear 이슈 만들기",
+      warning: null,
+      items: null,
+      body: null,
+    });
+    expect(data.activeTurn.pendingApproval.card.fields[0]).toEqual({
+      label: "제목",
+      value: "APP 버그 수정",
+      before: null,
+      after: null,
+      added: null,
+      removed: null,
+      kept: null,
+    });
     expect(data.lastTurn.turnId).toBe(data.activeTurn.turnId);
     expect(data.messages[0].turnId).toBe(data.activeTurn.turnId);
   });

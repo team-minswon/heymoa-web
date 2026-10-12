@@ -33,9 +33,9 @@ import { runningLabel } from "@/lib/chat/chat-list";
 import type { ScopeChip } from "@/lib/chat/scope-chip";
 import {
   failedTurnState,
+  parseApprovalCard,
   resumedState,
   startedState,
-  toolArgs,
 } from "@/lib/chat/stream-protocol";
 import {
   echoesSent,
@@ -423,9 +423,11 @@ export function useChatTurn({
           };
         }
         // 결정을 먼저 적는다. 재접속이 끊겨 끝나도 승인받은 쓰기가 「중단됨」이 아니라 「확인 필요」로
-        // 닫힌다. `open` 은 앞 스트림이 안 닫혔으면 시드를 버리므로 `seed` 로 먼저 적는다.
+        // 닫힌다. `open` 은 앞 스트림이 안 닫혔으면 시드를 버리므로 `seed` 로 먼저 적는다. 대기도 함께
+        // 걷는다 — 결정된 블록이 제자리에 카드로 서므로, 남기면 같은 승인이 카드 둘로 선다.
         const decided = {
           ...stream.state,
+          pendingApproval: null,
           blocks: recordDecision(stream.state.blocks, approvalId, decision),
         };
         stream.seed(decided);
@@ -494,8 +496,7 @@ export function useChatTurn({
             approvalId: activeTurn.pendingApproval.approvalId,
             tool: activeTurn.pendingApproval.tool,
             summary: activeTurn.pendingApproval.summary,
-            // 돌아온 화면은 `tool_call_start` 를 못 봤다. server 는 이 값을 JSON 문자열로 준다
-            args: toolArgs(activeTurn.pendingApproval.args),
+            card: parseApprovalCard(activeTurn.pendingApproval.card),
           }
         : null,
     });
@@ -583,7 +584,7 @@ export function useChatTurn({
             approvalId: active.pendingApproval.approvalId,
             tool: active.pendingApproval.tool,
             summary: active.pendingApproval.summary,
-            args: toolArgs(active.pendingApproval.args),
+            card: parseApprovalCard(active.pendingApproval.card),
           }
         : null;
       void stream.revive(sessionId, turnId, pending).then(async (final) => {

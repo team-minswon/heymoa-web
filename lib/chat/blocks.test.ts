@@ -25,7 +25,6 @@ const tool = (
     tool: "search",
     summary: null,
     target: null,
-    args: null,
     status: null,
     url: null,
     ...over,
@@ -77,6 +76,7 @@ describe("도구", () => {
       toolCallId: "t9",
       tool: "linear.create_issue",
       summary: null,
+      card: null,
       decision: "APPROVED",
     });
     const settled = settleTool(approved, "t9", {
@@ -88,7 +88,6 @@ describe("도구", () => {
     expect(settled.at(-1)).toMatchObject({
       kind: "tool",
       tool: "linear.create_issue",
-      args: null,
     });
   });
 
@@ -115,6 +114,7 @@ describe("승인", () => {
       toolCallId: "없음",
       tool: "write",
       summary: null,
+      card: null,
       decision: null,
     });
     expect(blocks).toHaveLength(1);
@@ -126,6 +126,7 @@ describe("승인", () => {
       toolCallId: "t1",
       tool: "write",
       summary: null,
+      card: null,
       decision: null,
     });
     expect(resolveApproval(opened, "a1", "REJECTED")).toEqual([
@@ -135,6 +136,7 @@ describe("승인", () => {
         toolCallId: "t1",
         tool: "write",
         summary: null,
+        card: null,
         decision: "REJECTED",
       },
     ]);
@@ -271,6 +273,7 @@ describe("타임라인 줄 묶기", () => {
         toolCallId: id,
         tool: "linear.create_issue",
         summary: null,
+        card: null,
         decision: "APPROVED",
       }) as const;
     const rows = groupSteps([
@@ -354,6 +357,7 @@ describe("끝난 턴 닫기", () => {
     toolCallId,
     tool: "linear.create_issue",
     summary,
+    card: null,
     decision: "APPROVED",
   });
 

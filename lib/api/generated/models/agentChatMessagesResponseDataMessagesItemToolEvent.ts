@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { AgentChatMessagesResponseDataMessagesItemToolEventCard } from "./agentChatMessagesResponseDataMessagesItemToolEventCard";
 import type { AgentChatMessagesResponseDataMessagesItemToolEventDecision } from "./agentChatMessagesResponseDataMessagesItemToolEventDecision";
 import type { AgentChatMessagesResponseDataMessagesItemToolEventStatus } from "./agentChatMessagesResponseDataMessagesItemToolEventStatus";
 
@@ -30,4 +31,9 @@ export type AgentChatMessagesResponseDataMessagesItemToolEvent = {
    * @nullable
    */
   status: AgentChatMessagesResponseDataMessagesItemToolEventStatus;
+  /**
+   * 승인 확정 기록이면 그 승인의 카드 내용 — 새로고침 뒤에도 승인·거절된 카드를 다시 그린다. 실행 결과 기록·옛 행·카드 없이 온 승인은 null
+   * @nullable
+   */
+  card: AgentChatMessagesResponseDataMessagesItemToolEventCard;
 } | null;
