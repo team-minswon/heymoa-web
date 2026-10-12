@@ -228,7 +228,7 @@ export const FILTER_OF: Record<TimelineTone, Filter> = {
 };
 
 /**
- * 요약 탭의 검토 문서(`review-board.tsx`, APP-865). 위에서부터 머리 →
+ * 요약 탭의 검토 문서(`review-board.tsx`, APP-865). 위에서부터 머리 → 「언제 정해졌나」 →
  * 요약 → 주제 → 결정 → 할 일이고, 이슈 · 질문 · 참고는 요약 보기에 서지 않는다.
  *
  * **담당은 화자 라벨이다.** 이 회의는 화자에 이름을 안 붙인 채 끝나므로, 앱도 담당 칸에

@@ -10,6 +10,7 @@ import { ConfirmBar } from "@/components/notes/review/confirm-bar";
 import { EvidenceQuotes } from "@/components/notes/review/evidence-quotes";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
+import { MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewHead } from "@/components/notes/review/review-head";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
@@ -453,6 +454,11 @@ export function ReviewBoard({
     ? meetingLengthOf(transcript.recording.durationMs, segments)
     : null;
   const included = items.filter((item) => item.included);
+  const marks = included.flatMap((item) => {
+    if (item.kind !== "DECISION" && item.kind !== "ACTION_ITEM") return [];
+    const atMs = citedAt(item);
+    return atMs === null ? [] : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
+  });
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
@@ -494,6 +500,18 @@ export function ReviewBoard({
         >
           {view === "summary" ? (
             <>
+              {lengthMs !== null ? (
+                <MeetingMap
+                  lengthMs={lengthMs}
+                  chapters={digests.flatMap((topic) =>
+                    topic.startMs === null
+                      ? []
+                      : [{ ordinal: topic.ordinal, title: topic.title, startMs: topic.startMs }]
+                  )}
+                  marks={marks}
+                  onSelect={showItem}
+                />
+              ) : null}
               <div className="pt-10">
                 <ReviewOverview
                   summary={summary}

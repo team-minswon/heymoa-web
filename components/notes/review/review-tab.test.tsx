@@ -85,7 +85,7 @@ const rowBox = async (content: string) =>
   (await row(content)).closest("[data-item-id]") as HTMLElement;
 
 describe("검토 가능한 회의", () => {
-  it("머리 · 요약 · 주제 · 결정 · 할 일 차례로 서고, 주제를 누르면 그 자리에서 펼쳐진다", async () => {
+  it("머리 · 언제 정해졌나 · 요약 · 주제 · 결정 · 할 일 차례로 서고, 주제를 누르면 그 자리에서 펼쳐진다", async () => {
     renderTab(MENTORING_NOTE_ID, { noteMeta: { title: "9/11 팀 멘토링", whenIso: "2026-09-11T01:45:00Z", participantCount: 4, projectName: "주간" } });
 
     // 요약 맨 위는 회의 한 문장이다. 옛 lead 문단은 한 문장이 없을 때만 선다.
@@ -93,9 +93,9 @@ describe("검토 가능한 회의", () => {
     expect(screen.queryByText(/문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/)).toBeNull();
     expect(screen.getByRole("heading", { level: 1, name: "9/11 팀 멘토링" })).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "언제 정해졌나" })).toBeNull();
+    expect(await screen.findByRole("region", { name: "언제 정해졌나" })).toBeInTheDocument();
     const order = [...document.querySelectorAll("section[aria-label]")].map((node) => node.getAttribute("aria-label"));
-    expect(order).toEqual(["요약", "주제", "결정", "할 일"]);
+    expect(order).toEqual(["언제 정해졌나", "요약", "주제", "결정", "할 일"]);
     // 이슈 · 질문과 참고는 요약 보기의 섹션에 서지 않는다(APP-864).
     expect(
       screen.queryByText("설문의 54%가 우리 사용자층에도 맞는 수치인지 알 수 없다")
@@ -119,7 +119,8 @@ describe("검토 가능한 회의", () => {
     renderTab();
     const past = mockDb.getNote("01K0000000024");
     const index = await screen.findByRole("list", { name: "주제 목차" });
-    // 주제 01 · 06 두 곳에서 이어진다
+    // 주제 01 · 06 두 곳에서 이어진다. 앞의 여섯 밖에 있는 주제도 펼쳐서 본다
+    fireEvent.click(screen.getByRole("button", { name: /^나머지 주제 \d+개$/ }));
     const links = await within(index).findAllByRole("link", { name: past.title });
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute("href", expect.stringContaining(`/notes/01K0000000024?view=full&tab=summary`));
@@ -141,12 +142,13 @@ describe("검토 가능한 회의", () => {
     const retry = await screen.findByText("지난 회의와의 연결을 불러오지 못했습니다.");
     fail = false;
     fireEvent.click(within(retry).getByRole("button", { name: "다시 시도" }));
+    fireEvent.click(screen.getByRole("button", { name: /^나머지 주제 \d+개$/ }));
     const index = screen.getByRole("list", { name: "주제 목차" });
     expect(await within(index).findAllByRole("link")).toHaveLength(2);
     expect(screen.queryByText("지난 회의와의 연결을 불러오지 못했습니다.")).toBeNull();
   });
 
-  it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 개수 제한 없이 모두 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {
+  it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 여섯 개까지만 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {
     renderTab();
 
     const index = await screen.findByRole("list", { name: "주제 목차" });
@@ -156,12 +158,12 @@ describe("검토 가능한 회의", () => {
     expect(first).toHaveTextContent("회의 뒤 할 일이 흐려지는 문제를 한 문장으로 좁히고");
     expect(first.textContent).toMatch(/^\d{2}:\d{2}/);
     expect(first.textContent).toMatch(/결정 \d+/);
-    expect(within(index).getAllByRole("button")).toHaveLength(8);
-    expect(within(index).getByRole("button", { name: /다음 멘토링과 활동비/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /나머지 주제/ })).toBeNull();
-    // 섹션마다 글자는 「더 불러오기」로 같지만 화면 읽기 프로그램에는 어느 섹션인지 붙는다
-    expect(screen.getByRole("button", { name: "결정 더 불러오기" })).toHaveTextContent("더 불러오기");
-    expect(screen.getByRole("button", { name: "할 일 더 불러오기" })).toBeInTheDocument();
+    expect(within(index).getAllByRole("button")).toHaveLength(6);
+
+    fireEvent.click(screen.getByRole("button", { name: "나머지 주제 2개" }));
+    expect(
+      await within(index).findByRole("button", { name: /다음 멘토링과 활동비/ })
+    ).toBeInTheDocument();
     expect(
       screen.getAllByTitle("주제 01 · 회의가 끝난 뒤 할 일이 흐려지는 문제")
         .length
@@ -186,6 +188,16 @@ describe("검토 가능한 회의", () => {
 
     fireEvent.click(lines[0]);
     expect(onEvidenceSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("언제 정해졌나의 표시를 누르면 그 줄이 펼쳐진다", async () => {
+    renderTab();
+    const map = await screen.findByRole("region", { name: "언제 정해졌나" });
+    const mark = within(map).getAllByRole("button", { name: /^결정 · / })[0];
+    const content = mark.getAttribute("aria-label")!.split(" · ").slice(2).join(" · ");
+
+    fireEvent.click(mark);
+    expect(await row(content)).toHaveAttribute("aria-expanded", "true");
   });
 
   it("수정하고, 제외했다가 제외를 취소한다", async () => {
@@ -534,7 +546,7 @@ describe("검토 가능한 회의", () => {
   it("제안으로 가기는 접힌 줄에 남은 제안도 펼쳐서 데려간다", async () => {
     let lastDecision = "";
     server.use(
-      // 결정 여섯에 대체 제안을 붙이고 앞의 다섯은 골라 둔다 — 남은 하나는 「더 불러오기」 안에 접힌다.
+      // 결정 여섯에 대체 제안을 붙이고 앞의 다섯은 골라 둔다 — 남은 하나는 「결정 N개 더」 안에 접힌다.
       http.get("*/v1/notes/:noteId/meeting-review", async ({ request }) => {
         const original = await getResponse(meetingFlowHandlers, request);
         const body = await original!.json();

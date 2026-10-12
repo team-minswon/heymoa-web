@@ -17,12 +17,14 @@ import type { TopicDigest } from "@/lib/notes/review/topics";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
 
+const VISIBLE_TOPICS = 6;
+
 type Tone = "decision" | "task" | "open";
 
 /**
  * 주제 개요(APP-865). 회의에서 나온 차례로 한 줄씩 서고 — 때 · 제목 · 한 줄 서술 · 결정 / 할 일 /
- * 열린 질문 개수 — 누르면 그 자리에서 펼쳐져 서술 전체와 그 주제의 항목이 선다. 주제는 모두 서고
- * 줄마다 접혀 있다 — 앞의 몇 개만 세우면 뒤의 주제가 「나머지」에 묻힌다.
+ * 열린 질문 개수 — 누르면 그 자리에서 펼쳐져 서술 전체와 그 주제의 항목이 선다. 앞의 여섯만 서고
+ * 나머지는 접힌다.
  */
 export function TopicIndex({
   topics,
@@ -40,8 +42,10 @@ export function TopicIndex({
   onRetryLinks?: () => void;
 }) {
   const [openOrdinals, setOpenOrdinals] = useState<ReadonlySet<number>>(() => new Set());
+  const [expanded, setExpanded] = useState(false);
   if (topics.length === 0) return null;
 
+  const shown = expanded ? topics : topics.slice(0, VISIBLE_TOPICS);
   const toggle = (ordinal: number) =>
     setOpenOrdinals((current) => {
       const next = new Set(current);
@@ -53,7 +57,7 @@ export function TopicIndex({
   return (
     <SectionBlock title="주제" count={topics.length} copy={{ build: () => topicsToMarkdown(topics) }}>
       <ul aria-label="주제 목차" className="border-t border-[var(--el-hairline-soft)]">
-        {topics.map((topic) => (
+        {shown.map((topic) => (
           <TopicRow
             key={topic.ordinal}
             topic={topic}
@@ -65,6 +69,20 @@ export function TopicIndex({
           />
         ))}
       </ul>
+      {topics.length > VISIBLE_TOPICS ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+          className="-ml-2 mt-2 inline-flex h-[30px] items-center gap-1.5 rounded-control px-2 text-[13px] text-[var(--el-body)] hover:bg-[var(--el-canvas-soft)]"
+        >
+          <ChevronDown
+            aria-hidden
+            className={cn("size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none", expanded && "rotate-180")}
+          />
+          {expanded ? `처음 ${VISIBLE_TOPICS}개만` : `나머지 주제 ${topics.length - VISIBLE_TOPICS}개`}
+        </button>
+      ) : null}
       {onRetryLinks ? (
         <InlineRetry variant="line" label="지난 회의와의 연결을 불러오지 못했습니다." onRetry={onRetryLinks} className="pt-3" />
       ) : null}
