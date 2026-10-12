@@ -17,6 +17,36 @@ afterEach(() => {
 });
 
 describe("trackMutation", () => {
+  const heardFrom = (calls: Array<[string, unknown]>) => {
+    const heard: Array<[string, unknown]> = [];
+    const stop = onTrack((event, properties) => heard.push([event, properties]));
+    for (const [key, variables] of calls) trackMutation(key, variables);
+    stop();
+    return heard;
+  };
+
+  // 요청 내용으로 거르는 것 (APP-1072): 화자 연결을 지우거나 완료가 아닌 할 일 수정은 세지 않는다
+  it("요청 내용을 보고 보낼지와 속성을 정한다", () => {
+    expect(
+      heardFrom([
+        ["assignSegmentSpeaker", { noteId: "N1", segmentId: "S1", data: { userId: "U1" } }],
+        ["assignNoteSpeaker", { noteId: "N1", label: "A", data: { participantId: null } }],
+        ["updateProjectTask", { workspaceId: "W1", projectId: "P1", taskId: "T1", data: { taskStatus: "OPEN" } }],
+        ["updateProjectTask", { workspaceId: "W1", projectId: "P1", taskId: "T1", data: { taskStatus: "COMPLETED" } }],
+        ["resolveToolApproval", { chatId: "C1", approvalId: "A1", data: { decision: "REJECTED" } }],
+        ["disconnectWorkspaceIntegration", { workspaceId: "W1", provider: "LINEAR" }],
+        ["requestAnalysis", { noteId: "N1" }],
+      ])
+    ).toEqual([
+      ["speaker_assigned", undefined],
+      ["task_completed", { workspace_id: "W1" }],
+      ["tool_call_resolved", { decision: "REJECTED" }],
+      ["integration_disconnected", { workspace_id: "W1", provider: "LINEAR" }],
+      ["analysis_requested", undefined],
+    ]);
+  });
+
+
   it("표에 있는 operationId만 이벤트로 바꾼다", () => {
     const heard: string[] = [];
     const stop = onTrack((event) => heard.push(event));

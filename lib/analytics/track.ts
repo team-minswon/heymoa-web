@@ -31,15 +31,45 @@ export type AnalyticsEvent =
   | "help_opened"
   | "onboarding_dismissed"
   | "onboarding_reopened"
-  | "onboarding_completed";
+  | "onboarding_completed"
+  | "speaker_assigned"
+  | "review_item_edited"
+  | "tool_call_resolved"
+  | "task_completed"
+  | "analysis_requested"
+  | "agent_disconnected"
+  | "integration_disconnected";
 
 type Properties = Record<string, string | number | boolean | null | undefined>;
 
+/** orval mutation 변수 — 경로 값(`workspaceId` 등)과 요청 본문(`data`). */
+type MutationVariables = Record<string, unknown>;
+
 /**
- * 성공한 mutation(orval operationId) → 이벤트. 호출부 열두 곳에 `track()`을 흩지 않고
+ * 이벤트 이름 하나, 또는 요청 내용을 보고 이벤트와 속성을 고르는 함수. 함수가 null 이면 보내지 않는다.
+ * 속성은 enum 만 싣는다 — 처리방침 7조가 적은 범위(회원 · 워크스페이스 식별자, 사용한 기능)를 넘지 않게
+ * note_id · chat_id 같은 새 식별자는 보내지 않는다(APP-1072).
+ */
+type MutationEvent =
+  | AnalyticsEvent
+  | ((variables: MutationVariables) => readonly [AnalyticsEvent, Properties?] | null);
+
+const bodyOf = (variables: MutationVariables) =>
+  (typeof variables.data === "object" && variables.data !== null
+    ? variables.data
+    : {}) as Record<string, unknown>;
+
+/** 누군가에게 잇는 요청인가. 셋 다 비우면 연결을 지우거나 「참석자 중에 없다」로 둔 것이라 세지 않는다. */
+const assignsSomeone = (variables: MutationVariables) => {
+  const body = bodyOf(variables);
+  return Boolean(body.participantId || body.guestId || body.userId);
+};
+
+/**
+ * 성공한 mutation(orval operationId) → 이벤트. 호출부마다 `track()`을 흩지 않고
  * `MutationCache.onSuccess` 한 곳에서 본다(`lib/query/query-client.ts`).
  */
-const MUTATION_EVENTS: Record<string, AnalyticsEvent> = {
+const MUTATION_EVENTS: Record<string, MutationEvent> = {
   createWorkspace: "workspace_created",
   createProject: "project_created",
   createNote: "meeting_created",
@@ -52,6 +82,23 @@ const MUTATION_EVENTS: Record<string, AnalyticsEvent> = {
   sendAgentChatMessage: "chat_message_sent",
   approveAgentOAuthConsent: "agent_connected",
   createAgentDelegation: "agent_connected",
+  assignNoteSpeaker: (v) => (assignsSomeone(v) ? ["speaker_assigned"] : null),
+  assignSegmentSpeaker: (v) => (assignsSomeone(v) ? ["speaker_assigned"] : null),
+  createMeetingReviewItem: () => ["review_item_edited", { action: "created" }],
+  updateMeetingReviewItem: () => ["review_item_edited", { action: "updated" }],
+  resolveToolApproval: (v) => [
+    "tool_call_resolved",
+    { decision: String(bodyOf(v).decision) },
+  ],
+  // ponytail: 이미 완료된 할 일의 내용만 고쳐도 다시 센다 — 바뀌기 전 상태가 변수에 없다.
+  updateProjectTask: (v) =>
+    bodyOf(v).taskStatus === "COMPLETED" ? ["task_completed"] : null,
+  requestAnalysis: "analysis_requested",
+  revokeAgentDelegation: "agent_disconnected",
+  disconnectWorkspaceIntegration: (v) => [
+    "integration_disconnected",
+    { provider: String(v.provider) },
+  ],
 };
 
 /**
@@ -70,7 +117,7 @@ const GA_EVENTS = new Set<AnalyticsEvent>([
 ]);
 
 /** 이벤트를 듣는 쪽. 온보딩 체크리스트가 「해 봤다」를 기록할 때 쓴다. */
-type Listener = (event: AnalyticsEvent) => void;
+type Listener = (event: AnalyticsEvent, properties?: Properties) => void;
 const listeners = new Set<Listener>();
 
 export function onTrack(listener: Listener) {
@@ -98,7 +145,7 @@ const beforeInit: Array<[AnalyticsEvent, Properties | undefined]> = [];
 
 export function track(event: AnalyticsEvent, properties?: Properties) {
   // 듣는 쪽(체크리스트)은 이 기기 안의 일이라 거부해도 알린다. 바깥으로 보내는 것만 막는다.
-  for (const listener of listeners) listener(event);
+  for (const listener of listeners) listener(event, properties);
   if (isAnalyticsOptedOut()) return;
   if (posthog.__loaded) posthog.capture(event, properties);
   else if (beforeInit.length < BEFORE_INIT_LIMIT) beforeInit.push([event, properties]);
@@ -112,13 +159,19 @@ export function track(event: AnalyticsEvent, properties?: Properties) {
 }
 
 export function trackMutation(mutationKey: unknown, variables: unknown) {
-  const event = MUTATION_EVENTS[String(mutationKey)];
-  if (!event) return;
-  const workspaceId =
-    typeof variables === "object" && variables !== null && "workspaceId" in variables
-      ? String(variables.workspaceId)
-      : undefined;
-  track(event, workspaceId ? { workspace_id: workspaceId } : undefined);
+  const entry = MUTATION_EVENTS[String(mutationKey)];
+  if (!entry) return;
+  const vars = (
+    typeof variables === "object" && variables !== null ? variables : {}
+  ) as MutationVariables;
+  const resolved = typeof entry === "function" ? entry(vars) : ([entry] as const);
+  if (!resolved) return;
+  const [event, extra] = resolved;
+  const properties: Properties = {
+    ...("workspaceId" in vars && { workspace_id: String(vars.workspaceId) }),
+    ...extra,
+  };
+  track(event, Object.keys(properties).length > 0 ? properties : undefined);
 }
 
 export function initAnalytics(apiKey: string) {
