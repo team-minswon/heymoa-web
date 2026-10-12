@@ -94,7 +94,8 @@ export function GoogleLoginButton({
         onClick={handleLogin}
         loading={pending}
         className={cn(
-          "rounded-full border-[var(--el-hairline)] bg-[var(--el-canvas)] font-medium text-[var(--el-ink)] hover:bg-[var(--el-surface-strong)]",
+          // Google branding: light theme = #FFF fill, 1px #747775 stroke, #1F1F1F text
+          "rounded-full border-[#747775] bg-white font-medium text-[#1F1F1F] hover:bg-[#F8F9FA] hover:text-[#1F1F1F]",
           compact ? "p-0" : "pl-3.5 pr-4"
         )}
         aria-label="Google로 로그인"
