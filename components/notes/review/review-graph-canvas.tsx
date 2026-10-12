@@ -151,7 +151,7 @@ export default function ReviewGraphCanvas({
         // 안건은 속이 빈 원이다 — 결론이 아니라 이야기의 뿌리라 역할 색으로 칠하지 않는다.
         ctx.fillStyle = item.kind === "AGENDA" ? tokens.card : ROLE_COLOR[item.role];
         ctx.fill();
-        if (item.kind === "AGENDA" || item.center) {
+        if (item.kind === "AGENDA") {
           ctx.strokeStyle = tokens.ink;
           ctx.lineWidth = 1.5 / scale;
           ctx.stroke();

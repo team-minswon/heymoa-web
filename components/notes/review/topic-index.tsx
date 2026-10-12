@@ -12,7 +12,6 @@ import type { ReviewItem } from "@/lib/notes/review/sections";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
 import type { MeetingLinkIndex, PastNote } from "@/lib/notes/review/meeting-links";
-import type { SummarySentence } from "@/lib/notes/review/summary";
 import type { TopicDigest } from "@/lib/notes/review/topics";
 import { formatOffset } from "@/lib/transcription/presentation";
 import { cn } from "@/lib/utils";
@@ -120,46 +119,6 @@ function ContinuedFrom({ notes, workspaceId, children }: { notes: readonly PastN
   );
 }
 
-function SentenceList({
-  title,
-  rows,
-  links,
-  workspaceId,
-}: {
-  title: string;
-  rows: readonly SummarySentence[];
-  links?: MeetingLinkIndex;
-  workspaceId?: string;
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <div>
-      <h4 className="text-xs font-medium text-[var(--el-muted)]">{title}</h4>
-      <ul className="mt-1 flex list-disc flex-col gap-1.5 pl-4 text-sm leading-[22px] break-keep text-[var(--el-ink)]">
-        {rows.map((row, at) => {
-          const past = row.itemIds.flatMap((id) => links?.byItemId.get(id) ?? []);
-          return (
-            <li key={`${at}-${row.text}`}>
-              {row.text}
-              {past.length > 0 ? (
-                <span className="mt-0.5 flex flex-col">
-                  {past.map((item) => (
-                    <ContinuedFrom key={`${item.noteId}-${item.content}`} notes={[item]} workspaceId={workspaceId}>
-                      <span className="text-[var(--el-muted-soft)]">
-                        {CONTEXT_KIND_LABEL[item.kind]} 「{item.content}」
-                      </span>
-                    </ContinuedFrom>
-                  ))}
-                </span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
 function TopicRow({
   topic,
   open,
@@ -176,8 +135,7 @@ function TopicRow({
   workspaceId?: string;
 }) {
   const continued = topic.agendaId ? (links?.byAgendaId.get(topic.agendaId) ?? []) : [];
-  // 새 요약은 설명 · 결론 · 남은 일을 나눠 준다. 셋 다 없는 옛 요약은 서술과 항목 목록으로 그린다.
-  const structured = topic.description.length + topic.conclusions.length + topic.openItems.length > 0;
+
   const counts = (
     [
       ["decision", topic.decisions.length],
@@ -239,20 +197,10 @@ function TopicRow({
       ) : null}
       <Collapse open={open} lazy>
         <div className="flex flex-col gap-3 pb-[18px] pl-0 sm:pr-7 sm:pl-[68px]">
-          {structured ? (
-            <>
-              {topic.description.length > 0 ? (
-                <p className="text-[14.5px] leading-[26px] break-keep text-[var(--el-body)]">
-                  {topic.description.map((row) => row.text).join(" ")}
-                </p>
-              ) : null}
-              <SentenceList title="결론" rows={topic.conclusions} links={links} workspaceId={workspaceId} />
-              <SentenceList title="남은 일" rows={topic.openItems} links={links} workspaceId={workspaceId} />
-            </>
-          ) : topic.text ? (
+          {topic.text ? (
             <p className="text-[14.5px] leading-[26px] break-keep text-[var(--el-body)]">{topic.text}</p>
           ) : null}
-          {!structured && lines.length > 0 ? (
+          {lines.length > 0 ? (
             <ul className="flex flex-col gap-1.5">
               {lines.map(([tone, item]) => (
                 <li
@@ -268,6 +216,16 @@ function TopicRow({
                   <span>
                     <span className="sr-only">{COUNT_NAME[tone]} · </span>
                     {item.content}
+                    {/* 이 항목이 지난 회의의 항목과 이어지면 바로 아래에 한 줄 */}
+                    {(links?.byItemId.get(item.itemId) ?? []).map((past) => (
+                      <span key={`${past.noteId}-${past.content}`} className="mt-0.5 flex">
+                        <ContinuedFrom notes={[past]} workspaceId={workspaceId}>
+                          <span className="text-[var(--el-muted-soft)]">
+                            {CONTEXT_KIND_LABEL[past.kind]} 「{past.content}」
+                          </span>
+                        </ContinuedFrom>
+                      </span>
+                    ))}
                   </span>
                 </li>
               ))}

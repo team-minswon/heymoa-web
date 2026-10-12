@@ -369,7 +369,7 @@ describe("ItemDetail", () => {
     const summary = {
       agendas: [
         {
-          agendaItemId: "agenda",
+          members: [{ itemId: "agenda", kind: "AGENDA" }],
           openItemIds: [],
           relations: others.map((targetItemId) => ({ sourceItemId: "i1", targetItemId, label: "이어짐" })),
         },

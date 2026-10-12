@@ -26,15 +26,13 @@ export type GraphNode = {
   role: GraphRole;
   kind: ReviewItem["kind"];
   content: string;
-  /** 주제의 가운데 항목 */
-  center: boolean;
+  /** 첫 주제 말고도 속한 주제들. 그 주제의 허브와 약하게 잇는다 */
+  alsoGroups: number[];
 };
 
 export type GraphEdge = {
   source: string;
   target: string;
-  /** 다른 주제의 안건에도 붙은 약한 연결 */
-  also: boolean;
 };
 
 export type ReviewGraph = {
@@ -53,20 +51,26 @@ export function buildReviewGraph(
 ): ReviewGraph {
   const shown = items.filter((item) => item.included);
   const present = new Set(shown.map((item) => item.itemId));
-  const groupOf = new Map<string, number>();
+  // 주제 묶음은 소속 항목(members)만으로 정한다. 둘 이상에 속하면 첫 주제가 집이고 나머지는 약한 연결이다.
+  const groupsOf = new Map<string, number[]>();
   const open = new Set<string>();
-  const centers = new Set<string>();
+  const join = (itemId: string, ordinal: number) => {
+    const groups = groupsOf.get(itemId) ?? [];
+    if (!groups.includes(ordinal)) groupsOf.set(itemId, [...groups, ordinal]);
+  };
+  // 집(첫 주제)은 members 로만 정한다. 옛 요약이 alsoItemIds 에만 실은 다른 주제 소속은 그 뒤에 보조로 더한다
+  // — 한 번에 돌면 앞 주제의 보조 소속이 뒤 주제의 집을 빼앗는다. server ② 가 그 칸을 지우면 members 만 남는다.
   for (const topic of summaryTopics(summary)) {
-    for (const member of topic.members) {
-      if (!groupOf.has(member.itemId)) groupOf.set(member.itemId, topic.ordinal);
-    }
+    for (const member of topic.members) join(member.itemId, topic.ordinal);
     for (const itemId of topic.openItemIds) open.add(itemId);
-    if (topic.centerItemId) centers.add(topic.centerItemId);
+  }
+  for (const topic of summaryTopics(summary)) {
+    for (const itemId of topic.alsoItemIds ?? []) join(itemId, topic.ordinal);
   }
 
   const nodes = shown.map((item): GraphNode => ({
     id: item.itemId,
-    group: groupOf.get(item.itemId) ?? null,
+    group: groupsOf.get(item.itemId)?.[0] ?? null,
     role:
       item.kind === "DECISION"
         ? "DECISION"
@@ -77,24 +81,17 @@ export function buildReviewGraph(
             : "REFERENCE",
     kind: item.kind,
     content: item.content,
-    center: centers.has(item.itemId),
+    alsoGroups: groupsOf.get(item.itemId)?.slice(1) ?? [],
   }));
 
   const edges = new Map<string, GraphEdge>();
-  const connect = (source: string, target: string, also: boolean) => {
+  const connect = (source: string, target: string) => {
     if (source === target || !present.has(source) || !present.has(target)) return;
     const key = [source, target].sort().join("→");
-    if (!edges.has(key)) edges.set(key, { source, target, also });
+    if (!edges.has(key)) edges.set(key, { source, target });
   };
   for (const topic of summaryTopics(summary)) {
-    for (const relation of topic.relations) {
-      connect(relation.sourceItemId, relation.targetItemId, false);
-    }
-    // 「다른 주제에도 속함」은 이 주제의 안건에도 붙었다는 뜻이라 안건에서 잇는다. 안건이 없을 때만 중심에서 잇는다.
-    const alsoAnchor = topic.agendaItemId ?? topic.centerItemId;
-    if (alsoAnchor) {
-      for (const itemId of topic.alsoItemIds) connect(alsoAnchor, itemId, true);
-    }
+    for (const relation of topic.relations) connect(relation.sourceItemId, relation.targetItemId);
   }
 
   return {
@@ -156,7 +153,10 @@ function hashPair(id: string): [number, number] {
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: ForceLink[] } {
-  const ordinals = [...graph.topics.keys()].filter((ordinal) => graph.nodes.some((node) => node.group === ordinal));
+  // 항목이 남은 주제마다 허브를 둔다. 다른 주제에도 속한 항목만 남은 주제도 그 점선이 닿을 허브가 있어야 한다.
+  const ordinals = [...graph.topics.keys()].filter((ordinal) =>
+    graph.nodes.some((node) => node.group === ordinal || node.alsoGroups.includes(ordinal))
+  );
   // 허브는 해바라기 씨 배열로 흩어 두고, 항목은 제 허브 곁에서 ID 로 정한 자리에서 출발한다.
   const hubAt = new Map(
     ordinals.map((ordinal, index) => {
@@ -170,11 +170,13 @@ export function toForceGraph(graph: ReviewGraph): { nodes: ForceNode[]; links: F
     ...graph.nodes.flatMap((node): ForceLink[] =>
       node.group !== null && hubAt.has(node.group) ? [{ source: hubId(node.group), target: node.id, kind: "hub" }] : []
     ),
-    ...graph.edges.map((edge): ForceLink => ({
-      source: edge.source,
-      target: edge.target,
-      kind: edge.also ? "also" : "relation",
-    })),
+    ...graph.edges.map((edge): ForceLink => ({ source: edge.source, target: edge.target, kind: "relation" })),
+    // 다른 주제에도 속한 항목은 그 주제의 허브와 약하게 잇는다
+    ...graph.nodes.flatMap((node): ForceLink[] =>
+      node.alsoGroups.flatMap((group): ForceLink[] =>
+        hubAt.has(group) ? [{ source: hubId(group), target: node.id, kind: "also" }] : []
+      )
+    ),
   ];
   const degree = new Map<string, number>();
   for (const { source, target } of links) {

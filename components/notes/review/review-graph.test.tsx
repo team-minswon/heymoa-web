@@ -84,6 +84,7 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     sentences: [],
     openItemIds: [],
     agendaId: null,
+    summary: null,
     completed: true,
     description: [],
     conclusions: [],

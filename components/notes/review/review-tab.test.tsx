@@ -115,7 +115,7 @@ describe("검토 가능한 회의", () => {
     ).toBeInTheDocument();
   });
 
-  it("지난 회의에서 이어진 주제와 결론에는 「〈회의 이름〉에서 이어짐」이 서고, 회의 이름은 그 회의 요약으로 간다", async () => {
+  it("지난 회의에서 이어진 주제와 항목에는 「〈회의 이름〉에서 이어짐」이 서고, 회의 이름은 그 회의 요약으로 간다", async () => {
     renderTab();
     const past = mockDb.getNote("01K0000000024");
     const index = await screen.findByRole("list", { name: "주제 목차" });
@@ -127,8 +127,9 @@ describe("검토 가능한 회의", () => {
     expect(links[0].parentElement).toHaveTextContent(`${past.title}에서 이어짐`);
 
     fireEvent.click(within(index).getByRole("button", { name: /차별점과 요금/ }));
-    expect(await within(index).findByText("결론")).toBeInTheDocument();
-    expect(within(index).getByText(/경쟁 도구 요금표를 모은다/)).toHaveTextContent("할 일 「경쟁 도구 요금표를 모은다」");
+    // 펼친 주제는 예전처럼 서술 + 항목 줄이고, 이어진 항목 바로 아래에 연결 한 줄이 선다
+    expect(within(index).queryByText("결론")).toBeNull();
+    expect(await within(index).findByText(/경쟁 도구 요금표를 모은다/)).toHaveTextContent("할 일 「경쟁 도구 요금표를 모은다」");
   });
 
   it("지난 회의 연결을 못 불러오면 없는 것처럼 접지 않고 다시 불러올 길을 둔다", async () => {

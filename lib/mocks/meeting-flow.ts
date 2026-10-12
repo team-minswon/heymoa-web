@@ -379,13 +379,15 @@ function buildSummary(
       ),
       ...resolved.flatMap((item) => link(decisions[0] ?? center, item, "RESOLVES", "해결")),
     ];
+    // 다른 주제에도 속한 항목은 그 주제의 members 에도 든다(새 계약). 옛 칸 alsoItemIds 도 server ② 전까지 같이 낸다.
+    const also = index === 5 ? [topicItems[0][3]] : [];
     return {
       ordinal: index + 1,
       title: seed.title,
       agendaItemId,
       centerItemId,
-      members: items.map((item) => ({ itemId: item.itemId, kind: item.kind })),
-      alsoItemIds: index === 5 ? [topicItems[0][3].itemId] : [],
+      members: [...items, ...also].map((item) => ({ itemId: item.itemId, kind: item.kind })),
+      alsoItemIds: also.map((item) => item.itemId),
       relations,
       sentences: seed.sentences.map((sentence) => ({
         text: sentence.text,
@@ -397,6 +399,7 @@ function buildSummary(
       })),
       openItemIds: open.map((row) => row.itemId),
       agendaId: MENTORING_AGENDA_IDS[index] ?? nextId("01KG"),
+      summary: seed.sentences[0]?.text ?? null,
       completed: true,
       description: seed.sentences.slice(0, 1).map((sentence) => ({
         text: sentence.text,
@@ -467,18 +470,23 @@ function seedLargeReview(target: State, noteId: string) {
       ...(random() < 0.5 ? [relation(pick(items), pick(pick(groups)), "SUPPORTS", "근거")] : []),
     ];
     const open = items.filter((row) => (row.kind === "ISSUE" || row.kind === "QUESTION") && random() < 0.5);
+    const title = center.kind === "AGENDA" ? center.content : `${words[index % words.length]} ${index + 1}차 논의`;
+    // 다른 주제에도 속한 항목은 이 주제의 members 에도 든다(새 계약). 같은 항목이 이미 있으면 겹쳐 넣지 않는다.
+    const also = (random() < 0.4 ? [pick(pick(groups))] : []).filter((row) => !items.includes(row));
     return {
       ordinal: index + 1,
-      title: center.kind === "AGENDA" ? center.content : `${words[index % words.length]} ${index + 1}차 논의`,
+      title,
       agendaItemId: center.kind === "AGENDA" ? center.itemId : null,
       centerItemId: center.itemId,
-      members: items.map((row) => ({ itemId: row.itemId, kind: row.kind })),
-      alsoItemIds: random() < 0.4 ? [pick(pick(groups)).itemId] : [],
+      members: [...items, ...also].map((row) => ({ itemId: row.itemId, kind: row.kind })),
+      alsoItemIds: also.map((row) => row.itemId),
       relations,
       sentences: [],
       openItemIds: open.map((row) => row.itemId),
       // 옛 노트처럼 안건 행이 없는 주제도 섞는다 — 화면 key 는 순서 번호로 대신한다
       agendaId: index % 5 === 4 ? null : nextId("01KG"),
+      // 옛 노트는 한 줄 요약도 없다
+      summary: index % 5 === 4 ? null : `${title}에서 나온 항목을 정리했다`,
       completed: true,
       description: [],
       conclusions: [],

@@ -4604,6 +4604,7 @@ paths:
                         description: []
                         conclusions: []
                         openItems: []
+                        summary: null
                       agendas:
                       - ordinal: 1
                         title: 배포 일정
@@ -4630,6 +4631,7 @@ paths:
                         description: []
                         conclusions: []
                         openItems: []
+                        summary: null
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -11148,6 +11150,7 @@ components:
                 - sentences
                 - title
                 - agendaId
+                - summary
                 type: object
                 properties:
                   alsoItemIds:
@@ -11348,6 +11351,10 @@ components:
                     nullable: true
                     example: 0K9GVJT2C4Q21
                     pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                  summary:
+                    type: string
+                    description: 안건 한 줄 요약. 회의 뒤 분석이 보냈을 때만 있고, 옛 노트·회의 중에는 null
+                    nullable: true
             resultVersion:
               type: string
               description: AI 가 낸 SUMMARY 결과 판. SUCCEEDED 일 때만 있습니다
@@ -11428,6 +11435,7 @@ components:
                 - sentences
                 - title
                 - agendaId
+                - summary
                 type: object
                 properties:
                   alsoItemIds:
@@ -11628,6 +11636,10 @@ components:
                     nullable: false
                     format: int32
                     minimum: 1
+                  summary:
+                    type: string
+                    description: 안건 한 줄 요약. 회의 뒤 분석이 보냈을 때만 있고, 옛 노트·회의 중에는 null
+                    nullable: true
           description: 성공 응답 데이터
           nullable: false
         success:

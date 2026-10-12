@@ -12,7 +12,7 @@ import {
 } from "@/lib/notes/review/confirm";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
-import { topicDigests } from "@/lib/notes/review/topics";
+import { linkedItemsOf, topicDigests } from "@/lib/notes/review/topics";
 import { trailOf } from "@/lib/notes/review/trail";
 
 const replacement = (itemId: string, decision: "END" | "KEEP" | null = null): ReviewItem["replacements"][number] => ({
@@ -204,12 +204,15 @@ describe("topicDigests", () => {
       {
         ordinal: 1,
         title: "가",
-        sentences: [{ text: "첫 문장." }, { text: "둘째 문장." }],
+        agendaId: "01KG000000001",
+        summary: "한 줄 요약",
+        conclusions: [],
+        description: [{ text: "첫 문장." }, { text: "둘째 문장." }],
         members: [{ itemId: "d" }, { itemId: "t" }, { itemId: "out" }, { itemId: "gone" }],
         openItemIds: ["q"],
       },
-      { ordinal: 2, title: "나", sentences: [], members: [{ itemId: "early" }], openItemIds: [] },
-      { ordinal: 3, title: "다", sentences: [], members: [], openItemIds: [] },
+      { ordinal: 2, title: "나", summary: null, conclusions: [], description: [], members: [{ itemId: "early" }], openItemIds: [] },
+      { ordinal: 3, title: "다", summary: null, conclusions: [], description: [], members: [], openItemIds: [] },
     ],
   } as unknown as MeetingReviewSummary;
   const items = [
@@ -228,10 +231,59 @@ describe("topicDigests", () => {
     expect(first.tasks.map((row) => row.itemId)).toEqual(["t"]);
     expect(first.open.map((row) => row.itemId)).toEqual(["q"]);
     expect(first.count).toBe(2);
-    expect(first).toMatchObject({ gist: "첫 문장.", text: "첫 문장. 둘째 문장.", startMs: 5_000, endMs: 9_000 });
+    // 한 줄은 서버의 summary, 펼친 서술은 description 이다
+    expect(first).toMatchObject({ gist: "한 줄 요약", text: "첫 문장. 둘째 문장.", startMs: 5_000, endMs: 9_000 });
+    expect(digests.find((row) => row.ordinal === 2)?.gist).toBeNull();
+  });
+
+  it("한 줄 요약이 없으면 서술(설명)의 첫 문장을 쓴다", () => {
+    const rows = topicDigests(
+      {
+        agendas: [
+          { ordinal: 1, title: "가", agendaId: "01KG000000001", summary: null, conclusions: [{ text: "결론." }], description: [{ text: "설명." }], members: [], openItemIds: [] },
+          { ordinal: 2, title: "나", agendaId: "01KG000000002", summary: null, conclusions: [], description: [{ text: "설명만." }], members: [], openItemIds: [] },
+        ],
+      } as unknown as MeetingReviewSummary,
+      new Map(),
+      () => null
+    );
+    expect(rows.map((row) => row.gist)).toEqual(["설명.", "설명만."]);
   });
 
   it("처음 나온 때 차례이고 때를 모르는 주제는 끝에 선다", () => {
     expect(digests.map((row) => row.ordinal)).toEqual([2, 1, 3]);
+  });
+
+  it("안건 행이 없는 옛 요약만 합친 문장을 서술로 쓰고, 새 안건은 설명만 쓴다", () => {
+    const summary = {
+      agendas: [
+        { ordinal: 1, title: "옛", agendaId: null, summary: null, conclusions: [], description: [], sentences: [{ text: "옛 서술." }], members: [], openItemIds: [] },
+        { ordinal: 2, title: "지운 뒤", agendaId: null, summary: null, conclusions: [], description: [], members: [], openItemIds: [] },
+        // 새 안건의 합친 문장에는 결론이 섞여 있다 — 설명이 비어도 그것을 서술로 쓰지 않는다
+        { ordinal: 3, title: "새", agendaId: "01KG000000003", summary: null, conclusions: [{ text: "결론." }], description: [], sentences: [{ text: "결론." }], members: [], openItemIds: [] },
+      ],
+    } as unknown as MeetingReviewSummary;
+    const rows = topicDigests(summary, new Map(), () => null);
+    expect(rows.map((row) => [row.text, row.gist])).toEqual([
+      ["옛 서술.", "옛 서술."],
+      ["", null],
+      ["", null],
+    ]);
+  });
+});
+
+describe("linkedItemsOf", () => {
+  it("주제의 안건 항목에서 나가는 소속 관계는 관련 항목이 아니다", () => {
+    const relation = (sourceItemId: string, targetItemId: string, label: string) => ({ sourceItemId, targetItemId, kind: "X", label });
+    const summary = {
+      agendas: [
+        {
+          ordinal: 1,
+          members: [{ itemId: "g", kind: "AGENDA" }, { itemId: "d", kind: "DECISION" }, { itemId: "t", kind: "ACTION_ITEM" }],
+          relations: [relation("g", "d", "주제"), relation("d", "t", "후속")],
+        },
+      ],
+    } as unknown as MeetingReviewSummary;
+    expect(linkedItemsOf(summary, "d")).toEqual([{ itemId: "t", label: "후속" }]);
   });
 });

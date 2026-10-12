@@ -65,4 +65,9 @@ export type MeetingReviewSummaryResponseDataAgendasItem = {
    * @minimum 1
    */
   ordinal: number;
+  /**
+   * 안건 한 줄 요약. 회의 뒤 분석이 보냈을 때만 있고, 옛 노트·회의 중에는 null
+   * @nullable
+   */
+  summary: string | null;
 };

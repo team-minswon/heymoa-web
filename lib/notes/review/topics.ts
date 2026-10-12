@@ -5,7 +5,7 @@ export type TopicChip = {
   ordinal: number;
   title: string;
   count: number;
-  /** 주제 서술의 첫 문장. 제목만으로는 무엇을 정했는지 모른다 */
+  /** 주제 한 줄. 제목만으로는 무엇을 정했는지 모른다 */
   gist: string | null;
 };
 
@@ -62,6 +62,9 @@ export function topicDigests(
         const at = citedAt(item);
         return at === null ? [] : [at];
       });
+      // 서술은 description. 안건 행이 없는 옛 요약(agendaId 없음)만 합친 문장을 쓴다 — 새 안건의 합친 문장에는
+      // 결론 · 남은 일이 섞여 있어 쓰면 겹친다. 서버가 그 칸을 지우면 빈 값이다.
+      const narrative = topic.agendaId === null ? (topic.sentences ?? []) : topic.description;
       const decisions = members.filter((item) => item.kind === "DECISION");
       const tasks = members.filter((item) => item.kind === "ACTION_ITEM");
       return {
@@ -72,8 +75,9 @@ export function topicDigests(
         description: topic.description,
         conclusions: topic.conclusions,
         openItems: topic.openItems,
-        gist: topic.sentences[0]?.text ?? null,
-        text: topic.sentences.map((sentence) => sentence.text).join(" "),
+        // 주제 한 줄은 서버의 summary. 없으면 예전처럼 서술의 첫 문장이다
+        gist: topic.summary ?? narrative[0]?.text ?? null,
+        text: narrative.map((row) => row.text).join(" "),
         count: decisions.length + tasks.length,
         startMs: times.length > 0 ? Math.min(...times) : null,
         endMs: times.length > 0 ? Math.max(...times) : null,
@@ -102,9 +106,11 @@ export function linkedItemsOf(
   const seen = new Set<string>();
   const linked: LinkedItem[] = [];
   for (const topic of summaryTopics(summary)) {
+    // 주제의 안건 항목에서 나가는 관계는 「이 주제에 속한다」는 뜻이라 관련 항목이 아니다
+    const agendaItems = new Set(topic.members.filter((member) => member.kind === "AGENDA").map((member) => member.itemId));
     for (const relation of topic.relations) {
       if (relation.sourceItemId !== itemId && relation.targetItemId !== itemId) continue;
-      if (relation.sourceItemId === topic.agendaItemId || relation.targetItemId === topic.agendaItemId) continue;
+      if (agendaItems.has(relation.sourceItemId) || agendaItems.has(relation.targetItemId)) continue;
       const other = relation.sourceItemId === itemId ? relation.targetItemId : relation.sourceItemId;
       if (other === itemId || seen.has(other)) continue;
       seen.add(other);

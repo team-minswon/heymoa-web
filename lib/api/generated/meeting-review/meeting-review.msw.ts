@@ -215,6 +215,7 @@ export const getGetMeetingReviewSummaryResponseMock =
           description: [],
           conclusions: [],
           openItems: [],
+          summary: null,
         },
       ],
       agendas: [
@@ -245,6 +246,7 @@ export const getGetMeetingReviewSummaryResponseMock =
           description: [],
           conclusions: [],
           openItems: [],
+          summary: null,
         },
       ],
     },
