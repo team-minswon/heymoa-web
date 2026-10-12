@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "@/lib/ui/toast";
 import { track } from "@/lib/analytics/track";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
@@ -24,6 +24,13 @@ export function GoogleLoginButton({
   className,
 }: GoogleLoginButtonProps) {
   const [pending, setPending] = useState(false);
+
+  // The app holds one native login at a time and the browser never calls back
+  // when the user abandons Google, so closing the modal must release it.
+  useEffect(() => {
+    if (!pending) return;
+    return () => void desktopAuthBridge()?.cancelAuth?.();
+  }, [pending]);
 
   const handleLogin = async () => {
     if (pending) return;

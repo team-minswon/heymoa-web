@@ -126,6 +126,28 @@ test("cancelled start cannot open a browser when its HTTP response arrives late"
   await tick();
   assert.deepEqual(opened, []);
 });
+test("a login abandoned in the browser can be cancelled and retried, ignoring its late callback", async () => {
+  const { broker, requests, opened } = fixture();
+  const first = broker.begin();
+  await tick();
+  broker.cancel();
+  assert.deepEqual(await first, { status: "cancelled" });
+  const second = broker.begin();
+  await tick();
+  assert.equal(opened.length, 2);
+  const stale = requests[0].body.state;
+  assert.equal(
+    await broker.receive(`app.heymoa:/auth/callback?state=${stale}&code=${code}`),
+    false
+  );
+  assert.equal(
+    await broker.receive(
+      `app.heymoa:/auth/callback?state=${requests[1].body.state}&code=${code}`
+    ),
+    true
+  );
+  assert.deepEqual(await second, { status: "success" });
+});
 test("overlapping requests do not replace the current verifier", async () => {
   const { broker, requests } = fixture();
   const first = broker.begin();

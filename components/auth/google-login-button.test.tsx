@@ -113,6 +113,23 @@ describe("GoogleLoginButton", () => {
     );
     expect(paths.buildGoogleOAuthUrl).not.toHaveBeenCalled();
   });
+  it("releases the native login when the modal closes before the browser returns", () => {
+    const beginLogin = vi.fn(() => new Promise(() => {}));
+    const cancelAuth = vi.fn().mockResolvedValue(undefined);
+    desktop({ beginLogin, cancelAuth });
+    const { unmount } = render(<GoogleLoginButton />);
+    fireEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
+    expect(cancelAuth).not.toHaveBeenCalled();
+    unmount();
+    expect(cancelAuth).toHaveBeenCalledTimes(1);
+  });
+  it("does not cancel when the button closes without a pending login", () => {
+    const cancelAuth = vi.fn().mockResolvedValue(undefined);
+    desktop({ beginLogin: vi.fn(), cancelAuth });
+    const { unmount } = render(<GoogleLoginButton />);
+    unmount();
+    expect(cancelAuth).not.toHaveBeenCalled();
+  });
   it("keeps ordinary web login on the OAuth URL builder with returnTo", async () => {
     paths.configured = true;
     // Stop at the navigation boundary; jsdom cannot perform document navigation.
