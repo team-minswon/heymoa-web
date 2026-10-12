@@ -42,6 +42,7 @@ import {
   type NoteTab,
 } from "@/components/heymoa/landing/use-demo";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
+import { LiveChip, TIMELINE_ROW_GRID } from "@/components/notes/timeline-visual";
 import type { TimelineTone } from "@/lib/notes/proposals/timeline";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,6 @@ import {
   FacePile,
   FacesChip,
   HeadChip,
-  LiveChip,
   ReviewHead,
   SectionHead,
   SpeakerFace,
@@ -860,7 +860,7 @@ function AgendaButton({
             className={cn("-ml-1.5 size-3.5 shrink-0", APP.faint, open && "rotate-90")}
           />
           <span className="flex-1" />
-          {live ? <LiveChip blink /> : null}
+          {live ? <LiveChip dotClassName="tv-blink" /> : null}
         </span>
       </button>
     </div>
@@ -1057,7 +1057,8 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
         <div
           aria-hidden
           className={cn(
-            "mt-4 grid grid-cols-[44px_40px_minmax(0,1fr)] border-t border-dashed border-[var(--el-hairline)] pt-4",
+            TIMELINE_ROW_GRID,
+            "mt-4 border-t border-dashed border-[var(--el-hairline)] pt-4",
             !live.text && "invisible"
           )}
         >

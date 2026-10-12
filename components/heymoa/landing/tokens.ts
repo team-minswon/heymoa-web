@@ -1,7 +1,5 @@
 import type { CSSProperties } from "react";
 
-import type { TimelineTone } from "@/lib/notes/proposals/timeline";
-
 /*
  * tl;dv 판의 값. **두 목소리를 색으로 가른다.**
  *   - 창 안(앱 화면 하나) = 앱의 `--el-*` 와 아래 `APP` · `ROLE_*`. 보라 · 라벤더 · 노랑은 한 픽셀도 없다.
@@ -138,24 +136,6 @@ export const APP = {
   recStrong: "text-[var(--el-error-strong)]",
   success: "bg-[var(--el-success)]/10 text-[var(--el-success-strong)]",
 } as const;
-
-/** 유형 이름의 글자색 — `note-timeline.tsx` 의 `TONE_TEXT` 그대로. */
-export const ROLE_TEXT: Record<TimelineTone, string> = {
-  decision: "text-[#1d5fa8]",
-  task: "text-[#13805a]",
-  open: "text-[#b4501f]",
-  answered: "text-[var(--el-muted)]",
-  reference: "text-[var(--el-muted)]",
-};
-
-/** 타임라인 줄 제목의 무게 · 색 — `note-timeline.tsx` 의 `TONE_TITLE` 그대로. */
-export const TONE_TITLE: Record<TimelineTone, string> = {
-  decision: "font-medium text-[var(--el-ink)]",
-  task: "font-medium text-[var(--el-ink)]",
-  open: "text-[var(--el-ink)]",
-  answered: "text-[var(--el-muted)]",
-  reference: "text-[var(--el-body)]",
-};
 
 /** 앱 역할 색(`role-dot.tsx` 의 `ROLE_COLOR`). 「언제 정해졌나」 막대처럼 면 · 선에 쓴다. */
 export const ROLE_COLOR = {

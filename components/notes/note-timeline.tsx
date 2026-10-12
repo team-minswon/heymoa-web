@@ -34,6 +34,12 @@ import {
   type SpeakerIdentity,
 } from "@/lib/transcription/speaker-identity";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
+import {
+  LiveChip,
+  TIMELINE_ROW_GRID,
+  TONE_TEXT,
+  TONE_TITLE,
+} from "@/components/notes/timeline-visual";
 import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-button";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -49,7 +55,6 @@ import {
   type TimelineFilter,
   type TimelineGroup,
   type TimelineItem,
-  type TimelineTone,
 } from "@/lib/notes/proposals/timeline";
 import {
   formatOffset,
@@ -86,23 +91,6 @@ export type TimelineHeader = {
   whenLabel: string;
   participantCount: number;
   projectName: string | null;
-};
-
-/** 유형 이름의 색. 역할 색을 글자로 쓰면 흰 바탕에서 옅어서 한 단 진하게 둔다. */
-const TONE_TEXT: Record<TimelineTone, string> = {
-  decision: "text-[#1d5fa8]",
-  task: "text-[#13805a]",
-  open: "text-[#b4501f]",
-  answered: "text-[var(--el-muted)]",
-  reference: "text-[var(--el-muted)]",
-};
-
-const TONE_TITLE: Record<TimelineTone, string> = {
-  decision: "font-medium text-[var(--el-ink)]",
-  task: "font-medium text-[var(--el-ink)]",
-  open: "text-[var(--el-ink)]",
-  answered: "text-[var(--el-muted)]",
-  reference: "text-[var(--el-body)]",
 };
 
 /** 마지막 갱신을 사람 말로. 서버 시각과 지금의 차이다. */
@@ -558,7 +546,7 @@ export function NoteTimeline({
               <li
                 key={row}
                 aria-hidden="true"
-                className="grid grid-cols-[44px_40px_minmax(0,1fr)] py-3"
+                className={cn(TIMELINE_ROW_GRID, "py-3")}
               >
                 <Skeleton className="mt-1.5 ml-auto h-3 w-9 motion-reduce:animate-none" />
                 <span className="flex justify-center">
@@ -652,12 +640,7 @@ export function NoteTimeline({
                         )}
                       />
                       <span className="flex-1" />
-                      {group.last && recording ? (
-                        <span className="inline-flex h-[22px] shrink-0 items-center gap-[5px] rounded-[6px] bg-[var(--el-success)]/10 px-2 text-[12px] text-[var(--el-success-strong)]">
-                          <span className="size-1.5 rounded-full bg-[var(--el-success)]" />
-                          논의 중
-                        </span>
-                      ) : null}
+                      {group.last && recording ? <LiveChip /> : null}
                     </button>
                   </h3>
                 ) : null}
@@ -693,7 +676,10 @@ export function NoteTimeline({
           <div
             aria-live="polite"
             aria-atomic="true"
-            className="mt-[18px] grid grid-cols-[44px_40px_minmax(0,1fr)] border-t border-dashed border-[var(--el-hairline)] pt-4"
+            className={cn(
+              TIMELINE_ROW_GRID,
+              "mt-[18px] border-t border-dashed border-[var(--el-hairline)] pt-4"
+            )}
           >
             <span />
             <span className="flex justify-center pt-[9px]">
@@ -772,7 +758,7 @@ function TimelineRow({
 
   return (
     <li id={itemId(proposal.proposalId)} className="relative">
-      <article className="grid grid-cols-[44px_40px_minmax(0,1fr)] py-[7px]">
+      <article className={cn(TIMELINE_ROW_GRID, "py-[7px]")}>
         {/* **`segmentId` 로만 찾는다** — `startedAtMs` 는 세션별 오프셋이라 세션이 둘 이상이면
             화면의 시각과 어긋난다(APP-398 선례). */}
         {first ? (

@@ -23,12 +23,18 @@ import { FACE_KEY } from "@/components/heymoa/landing/shell";
 import type { NoteTab, Status } from "@/components/heymoa/landing/use-demo";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
+import {
+  LiveChip,
+  TIMELINE_ROW_GRID,
+  TONE_TEXT,
+  TONE_TITLE,
+} from "@/components/notes/timeline-visual";
 import { scopeChipClass } from "@/lib/chat/scope-chip";
 import type { TimelineTone } from "@/lib/notes/proposals/timeline";
 import { unnamedSpeakerAvatarKey } from "@/lib/people/avatar-key";
 import { cn } from "@/lib/utils";
 
-import { APP, RADIUS, ROLE_TEXT, SHADOW, TONE_TITLE } from "./tokens";
+import { APP, RADIUS, SHADOW } from "./tokens";
 
 /*
  * 앱 화면 조각. **창 안 = `--el-*` · `APP` · `ROLE_*` 만, 창 밖 · 창 위 주석 = `--tv-*`(`marks.tsx`).**
@@ -893,21 +899,6 @@ export function ReplacementRow({
 
 /* ── 타임라인(회의 중) ────────────────────────────────────────────────── */
 
-/** 「논의 중」 칩(`note-timeline.tsx`). 기록 중인 회의의 마지막 안건에만 선다. 점 깜빡임은 `blink`. */
-export function LiveChip({ blink = false }: { blink?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-[22px] shrink-0 items-center gap-[5px] rounded-[6px] px-2 text-[12px]",
-        APP.success
-      )}
-    >
-      <span className={cn("size-1.5 rounded-full bg-[var(--el-success)]", blink && "tv-blink")} />
-      논의 중
-    </span>
-  );
-}
-
 /**
  * 안건 머리(`note-timeline.tsx` 안건 h3). `시간 구간 · 제목 · 개수 · ›` 와 기록 중이면 오른쪽 「논의 중」.
  * 기본은 그림(`div`). 히어로처럼 진짜로 접는 자리는 `as="button"` + `aria-expanded` · `onClick` 을
@@ -959,7 +950,7 @@ export function AgendaHead({
           className={cn("-ml-1.5 size-3.5 shrink-0", APP.faint, open && "rotate-90")}
         />
         <span className="flex-1" />
-        {live ? <LiveChip blink={blink} /> : null}
+        {live ? <LiveChip dotClassName={blink ? "tv-blink" : undefined} /> : null}
       </span>
     </Tag>
   );
@@ -1025,7 +1016,8 @@ export function TimelineRow({
   return (
     <li
       className={cn(
-        "tv-dim relative grid grid-cols-[44px_40px_minmax(0,1fr)] py-[7px]",
+        TIMELINE_ROW_GRID,
+        "tv-dim relative py-[7px]",
         flash && "tv-flash rounded-[8px]",
         dim ? "opacity-40" : "opacity-100",
         className
@@ -1053,7 +1045,7 @@ export function TimelineRow({
               {title}
             </span>
             <span className={cn("text-[12.5px] leading-[19px]", APP.muted)}>
-              <span className={ROLE_TEXT[tone]}>{kind}</span>
+              <span className={TONE_TEXT[tone]}>{kind}</span>
               {parts.map((part) => (
                 <span key={part.text}>
                   <Dots />
