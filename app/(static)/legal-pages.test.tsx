@@ -24,6 +24,9 @@ describe("HeyMoa legal pages", () => {
     expect(screen.getByText(/국외에서 처리합니다/)).toBeVisible();
     expect(screen.queryByText(/ElevenLabs/)).not.toBeInTheDocument();
     expect(screen.queryByText(/이미지 검사|진짜그림/)).not.toBeInTheDocument();
+    // PostHog 키와 함께 들어간 문안이다(APP-1068). 채우지 않은 자리표시가 운영에 나가면 안 된다.
+    expect(screen.getByText(/이전받는 자는 PostHog Inc\./)).toBeVisible();
+    expect(document.body.textContent).not.toMatch(/【/);
   });
 
   it("sets responsible recording expectations in the terms", () => {

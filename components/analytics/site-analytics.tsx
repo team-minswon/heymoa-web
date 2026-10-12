@@ -9,15 +9,13 @@ import { shouldCollectAnalytics } from "@/lib/analytics/should-collect";
 const GA_MEASUREMENT_ID = "G-YL06KCCE4N";
 
 /**
- * PostHog 프로젝트 키(`phc_…`). GA 측정 ID처럼 공개값이라 소스에 둔다.
- * **비어 있으면 PostHog는 꺼진다** — 프로젝트를 만들고 채운다. 그 전에도 유입 이벤트(`GA_EVENTS`)는 GA로 간다.
+ * PostHog 프로젝트 키(`phc_…`). GA 측정 ID처럼 공개값이라 소스에 둔다. 비우면 PostHog만 꺼진다.
  *
- * 🔴 **키는 개인정보 처리방침 5·7절의 PostHog 문안과 한 커밋으로 넣는다**(수집 항목 · 국외 이전 ·
- * 거부 방법 · PostHog 연락처 · 보관 기간 · 시행일). 지금 방침은 GA·Vercel만 적고 있어서 키부터 넣으면
- * 적지 않은 사업자로 보내게 된다. 같은 때 PostHog 프로젝트 설정의 「Discard client IP data」를 켠다(APP-1034).
- * 지금은 US Cloud로 보낸다(`lib/analytics/track.ts`). EU로 바꾸면 7절의 이전 국가도 독일로 고친다.
+ * 🔴 **개인정보 처리방침 5·7절이 이 프로젝트를 전제로 적혀 있다**(APP-1068): US Cloud · 무료 요금제(보관 1년) ·
+ * 「Discard client IP data」 켬. 리전·요금제·IP 설정을 바꾸면 7절과 시행일을 같은 커밋에서 고친다.
+ * EU로 옮기면 `lib/analytics/track.ts`의 `api_host`와 7절의 이전 국가도 바뀐다.
  */
-const POSTHOG_PROJECT_KEY: string = "";
+const POSTHOG_PROJECT_KEY: string = "phc_qDMePviF8ySaSsxZvXCPqdnEMBdtNgZZqRaCpRqiDYfj";
 
 /**
  * 분석 넷을 한자리에 모은다 — GA·PostHog·Vercel Analytics·Speed Insights.
