@@ -20,6 +20,7 @@ import {
 } from "@/lib/mocks/assignees";
 import { mockDb } from "@/lib/mocks/db";
 import { MENTORING_NOTE_ID } from "@/lib/mocks/fixtures/mentoring-note";
+import { LIVE_AGENDA_NOTE_ID, liveAgendaList } from "@/lib/mocks/live-agendas";
 import {
   REVIEW_SEED_HEADLINE,
   REVIEW_SEED_LEAD,
@@ -960,6 +961,7 @@ export const meetingFlowHandlers = [
           ),
         };
       }
+      if (noteId === LIVE_AGENDA_NOTE_ID) return liveAgendaList(Date.now());
       return { asOfSequence: null, agendas: store().agendas.get(noteId) ?? [] };
     })
   ),

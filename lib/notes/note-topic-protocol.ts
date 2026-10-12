@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   contextBatchAppliedSchema,
   proposalChangedSchema,
+  wireInstantSchema,
 } from "@/lib/notes/proposals/contract";
 
 const tsidSchema = z
@@ -64,6 +65,8 @@ export const noteTopicEventSchema = z.discriminatedUnion("type", [
   // 않는다 — REST 목·화면·이 union이 같은 것을 본다.
   proposalChangedSchema,
   contextBatchAppliedSchema,
+  // 안건 정본이 바뀌었다. 무엇이 바뀌었는지는 싣지 않는다 — 받으면 GET /agendas 를 다시 읽는다.
+  z.object({ type: z.literal("agendas.changed"), occurredAt: wireInstantSchema }),
 ]);
 
 export type NoteTopicEvent = z.infer<typeof noteTopicEventSchema>;

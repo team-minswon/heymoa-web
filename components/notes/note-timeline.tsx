@@ -26,6 +26,7 @@ import {
 } from "@/components/transcription/recording-provider";
 import { useGetAnalysisFlow } from "@/lib/api/generated/analysis/analysis";
 import { SpeakerChip } from "@/components/notes/speaker-chip";
+import { useGetNoteAgendas } from "@/lib/api/generated/notes/notes";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import { okData } from "@/lib/api/ok-data";
 import {
@@ -50,8 +51,11 @@ import {
   CONTEXT_OPERATION_LABEL,
 } from "@/lib/notes/proposals/presentation";
 import {
+  placeAgendas,
+  samePlacement,
   selectTimeline,
   TIMELINE_FILTERS,
+  type AgendaPlacement,
   type TimelineFilter,
   type TimelineGroup,
   type TimelineItem,
@@ -146,6 +150,8 @@ function metaOf(item: TimelineItem): Array<{ text: string; tone?: "error" }> {
   return parts;
 }
 
+const NO_PLACEMENT: AgendaPlacement = new Map();
+
 function groupRange(group: TimelineGroup, recording: boolean) {
   if (group.startMs === null) return null;
   const start = formatOffset(group.startMs);
@@ -195,13 +201,19 @@ export function NoteTimeline({
   // 근거를 펼칠 때만 전사를 읽는다. 스크립트와 같은 query key라 지정 후 invalidate도 따른다.
   const evidenceOpen = view.noteId === noteId && view.open.size > 0;
   // 종료 후에는 노트 소켓이 없는 경우도 있다. 봉인·화자 분리 완료까지 Query가 재조회한다.
+  // 끝난 회의는 분석이 끝날 때까지 흐름을 본다 — 화자 분리와 회의 뒤 안건 정리가 그동안 바뀐다.
+  // 소켓 없이 연 끝난 노트에서는 agendas.changed 가 안 오므로 이 흐름이 주제 제목을 다시 읽게 한다.
   const flowQuery = useGetAnalysisFlow(noteId, {
     query: {
-      enabled: meetingEnded && evidenceOpen,
-      refetchInterval: (query) =>
-        okData(query.state.data)?.status === "DIARIZING" ? 5_000 : false,
+      enabled: meetingEnded,
+      refetchInterval: (query) => {
+        const status = okData(query.state.data)?.status;
+        return status === "DIARIZING" || status === "ANALYZING" ? 5_000 : false;
+      },
     },
   });
+  const analyzing =
+    meetingEnded && ["DIARIZING", "ANALYZING"].includes(okData(flowQuery.data)?.status ?? "");
   const diarizing =
     meetingEnded && okData(flowQuery.data)?.status === "DIARIZING";
   const transcriptQuery = useGetNoteTranscript(noteId, {
@@ -250,9 +262,47 @@ export function NoteTimeline({
       return { ...current, [key]: next };
     });
 
+  // 주제 제목은 안건 정본이 준다. 노트 소켓의 agendas.changed 가 오면 provider 가 다시 읽게 한다.
+  const agendasQuery = useGetNoteAgendas(noteId, {
+    query: { refetchInterval: analyzing ? 10_000 : false },
+  });
+  // 분석이 끝나는 순간 한 번 더 읽는다 — 마지막 주기 사이에 확정된 정본을 놓치지 않게
+  const refetchAgendas = agendasQuery.refetch;
+  const wasAnalyzing = useRef(analyzing);
+  useEffect(() => {
+    if (wasAnalyzing.current && !analyzing) void refetchAgendas();
+    wasAnalyzing.current = analyzing;
+  }, [analyzing, refetchAgendas]);
+  const agendaList = okData(agendasQuery.data);
+  // 주제 정본이 오기 전에 옛 방식으로 먼저 그리면 도착할 때 줄과 제목이 한꺼번에 자리를 바꾼다 — 함께 기다린다.
+  const listLoading = context.loading || agendasQuery.isPending;
+  // 정본을 못 받았으면 주제 없이 그리고, 다시 읽기가 실패했으면 지난 제목을 둔 채 — 둘 다 다시 불러올 길을 둔다
+  const agendasFailed = agendasQuery.isError;
+  // 회의 중에 한 번 자리를 정한 줄은 옮기지 않는다 — 지난 배치를 기억해 다음 배치의 바탕으로 쓴다.
+  const [placed, setPlaced] = useState<{ noteId: string; placement: AgendaPlacement }>({
+    noteId,
+    placement: NO_PLACEMENT,
+  });
+  const previousPlacement = placed.noteId === noteId ? placed.placement : NO_PLACEMENT;
+  const placement = useMemo(
+    () =>
+      agendaList
+        ? placeAgendas(previousPlacement, Object.values(context.state.proposals), agendaList, !meetingEnded)
+        : null,
+    [agendaList, previousPlacement, context.state.proposals, meetingEnded]
+  );
+  if (placement && (placed.noteId !== noteId || !samePlacement(placement, previousPlacement))) {
+    setPlaced({ noteId, placement });
+  }
+
   const timeline = useMemo(
-    () => selectTimeline(context.state, listFilter),
-    [context.state, listFilter]
+    () =>
+      selectTimeline(
+        context.state,
+        listFilter,
+        agendaList && placement ? { list: agendaList, placement } : null
+      ),
+    [context.state, listFilter, agendaList, placement]
   );
 
   /** 관계(질문 ↔ 답)를 누르면 그 항목을 펼치고 화면 가운데로 데려온다. */
@@ -374,7 +424,7 @@ export function NoteTimeline({
   useEffect(() => {
     const initial =
       positionedNoteRef.current !== noteId &&
-      !context.loading &&
+      !listLoading &&
       !context.failed &&
       timeline.groups.length > 0;
     if (!initial && (!recording || !followingRef.current)) return;
@@ -396,7 +446,7 @@ export function NoteTimeline({
   }, [
     noteId,
     recording,
-    context.loading,
+    listLoading,
     context.failed,
     timeline.groups,
     partial?.confirmedText,
@@ -405,7 +455,7 @@ export function NoteTimeline({
   ]);
 
   // **첫 snapshot 이 서기 전에는 개수를 말하지 않는다.** 조회 중·실패의 0은 잰 값이 아니다.
-  const settled = !context.loading && !context.failed;
+  const settled = !listLoading && !context.failed;
   const now = useNow(20_000);
   const freshness =
     now === null ? null : formatFreshness(context.state.lastBatchAt, now);
@@ -431,7 +481,7 @@ export function NoteTimeline({
       }
     >
       <div
-        aria-busy={context.loading}
+        aria-busy={listLoading}
         className="mx-auto w-full max-w-[calc(760px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-36"
       >
         {header ? (
@@ -453,7 +503,7 @@ export function NoteTimeline({
               ) : null}
             </div>
           </header>
-        ) : context.loading ? (
+        ) : listLoading ? (
           <header aria-label="타임라인 제목 불러오는 중">
             <div aria-hidden="true">
               <Skeleton className="h-[38px] w-2/3 max-w-80 motion-reduce:animate-none" />
@@ -469,7 +519,7 @@ export function NoteTimeline({
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--el-hairline-soft)] pb-2.5",
-            header || context.loading ? "mt-8" : null
+            header || listLoading ? "mt-8" : null
           )}
         >
           <div
@@ -537,7 +587,7 @@ export function NoteTimeline({
           />
         ) : null}
 
-        {context.loading ? (
+        {listLoading ? (
           <ul
             aria-label="타임라인을 불러오는 중"
             className="mt-7 flex flex-col"
@@ -573,7 +623,16 @@ export function NoteTimeline({
             label="타임라인을 불러오지 못했습니다."
             onRetry={context.retry}
           />
-        ) : timeline.groups.length === 0 ? (
+        ) : null}
+        {!listLoading && !context.failed && agendasFailed ? (
+          <InlineRetry
+            variant="line"
+            className="mt-7"
+            label={agendaList ? "주제 제목을 새로 불러오지 못했습니다." : "주제 제목을 불러오지 못했습니다."}
+            onRetry={() => void agendasQuery.refetch()}
+          />
+        ) : null}
+        {listLoading || context.failed ? null : timeline.groups.length === 0 ? (
           // **오류가 아니다.** 정리할 끝난 발화가 없다는 사실은 정상 경로다.
           <p className="mt-7 text-[14px] leading-relaxed text-[var(--el-muted)]">
             {timeline.counts.ALL === 0
@@ -584,7 +643,7 @@ export function NoteTimeline({
           </p>
         ) : (
           timeline.groups.map((group) => {
-            const key = group.agenda?.proposalId ?? "lead";
+            const key = group.key;
             const folded = view.folded.has(key);
             const listId = `timeline-group-${key}`;
             return (
@@ -593,12 +652,12 @@ export function NoteTimeline({
                   <h3 className="-mx-2 flex h-[30px] w-[calc(100%+16px)] items-center gap-0.5">
                     {/* **안건도 근거로 갈 수 있어야 한다.** 머리는 접는 손잡이라, 안건의 첫 발화로
                         가는 길은 시간 구간이 진다 — 항목의 시각 열과 같은 약속이다. */}
-                    {group.agenda.citations[0] ? (
+                    {group.agenda.citation ? (
                       <button
                         type="button"
-                        aria-label={`스크립트 ${formatOffset(group.agenda.citations[0].startedAtMs)}로 가기`}
+                        aria-label={`스크립트 ${formatOffset(group.agenda.citation.startedAtMs)}로 가기`}
                         onClick={() =>
-                          onEvidenceSelect(group.agenda!.citations[0].segmentId)
+                          onEvidenceSelect(group.agenda!.citation!.segmentId)
                         }
                         className="h-full shrink-0 rounded-[7px] px-2 text-[12px] tabular-nums text-[var(--el-muted-soft)] transition-colors hover:bg-[var(--el-canvas-soft)] hover:text-[var(--el-ink)]"
                       >
@@ -612,19 +671,19 @@ export function NoteTimeline({
                       onClick={() => toggle("folded", key)}
                       className={cn(
                         "flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-[7px] pr-2 text-left transition-colors hover:bg-[var(--el-canvas-soft)]",
-                        group.agenda.citations[0] ? "pl-1" : "pl-2"
+                        group.agenda.citation ? "pl-1" : "pl-2"
                       )}
                     >
                       <span
                         className={cn(
                           "min-w-0 truncate text-[15px] font-semibold text-[var(--el-ink)]",
-                          group.agenda.closeReason === "RETRACTED" &&
+                          group.agenda.retracted &&
                             "text-[var(--el-muted-soft)] line-through"
                         )}
                       >
-                        {group.agenda.content}
+                        {group.agenda.title}
                       </span>
-                      {group.agenda.closeReason === "RETRACTED" ? (
+                      {group.agenda.retracted ? (
                         <span className="shrink-0 text-[12px] font-medium text-[var(--el-error-strong)]">
                           철회됨
                         </span>

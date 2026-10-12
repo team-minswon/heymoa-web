@@ -62,7 +62,7 @@ describe("selectTimeline", () => {
     // 도착 순서와 상관없이 createdSequence 로 선다.
     const { groups } = selectTimeline(stateOf(t1, a2, d1, early, a1), "ALL");
 
-    expect(groups.map((g) => g.agenda?.content ?? null)).toEqual([
+    expect(groups.map((g) => g.agenda?.title ?? null)).toEqual([
       null,
       "MongoDB 도입 검토",
       "다음 스프린트 범위",

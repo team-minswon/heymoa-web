@@ -197,6 +197,8 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
   ],
   // 삭제 메뉴가 노트 헤더로 옮겨오면서 패널이 이 훅을 지나간다.
   useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  // 타임라인 탭이 주제 제목을 안건 정본에서 읽는다. 이 테스트는 정본이 없는 회의다.
+  useGetNoteAgendas: () => ({ data: undefined, isPending: false, isError: false }),
   useGetNote: () =>
     noteState.query ?? {
       data: { status: 200, data: { success: true, data: noteState.value } },

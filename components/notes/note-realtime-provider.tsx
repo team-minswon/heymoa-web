@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { useGetNote } from "@/lib/api/generated/notes/notes";
+import { getGetNoteAgendasQueryKey, useGetNote } from "@/lib/api/generated/notes/notes";
 import {
   getGetNoteTranscriptQueryKey,
   type getNoteTranscript,
@@ -183,6 +183,10 @@ export function NoteRealtimeProvider({
       void queryClient.invalidateQueries({
         queryKey: getGetProposalsQueryKey(noteId),
       });
+    const invalidateAgendas = () =>
+      void queryClient.invalidateQueries({
+        queryKey: getGetNoteAgendasQueryKey(noteId),
+      });
     // catch-up 뒤에는 REST 가 가진 마지막 번호가 기준이다. 첫 final 로 기준을 세우면 그 앞의
     // 유실을 못 본다. REST 가 아직 없으면 모르므로 첫 final 이 기준이 된다.
     let lastSequence: number | null = null;
@@ -206,6 +210,7 @@ export function NoteRealtimeProvider({
       invalidateLifecycle();
       invalidateTranscript();
       invalidateContext();
+      invalidateAgendas();
     };
     // 첫 따라잡기는 곧바로다. 그 뒤(재연결·안전 주기·구독 재시도)는 0~3초 난수 뒤 한 번으로 묶는다.
     // 구독은 클라이언트가 이미 곧바로 걸었다 — 기다리는 사이 오는 이벤트는 그대로 받는다.
@@ -263,6 +268,7 @@ export function NoteRealtimeProvider({
             invalidateLifecycle();
             invalidateTranscript();
             invalidateContext();
+            invalidateAgendas();
             break;
           case "recording.started":
             if (!applyNoteLifecycleEvent(queryClient, noteId, event))
@@ -308,6 +314,10 @@ export function NoteRealtimeProvider({
           // snapshot 을 다시 받아야 그 변화가 화면에 온다.
           case "transcript-analysis-run.applied":
             invalidateContext();
+            break;
+          // 안건 정리가 끝났다. 정본은 GET /agendas 이고 이벤트는 다시 읽으라는 신호뿐이다.
+          case "agendas.changed":
+            invalidateAgendas();
             break;
           default:
             break;

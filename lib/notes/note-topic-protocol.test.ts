@@ -31,6 +31,13 @@ describe("노트 토픽 이벤트", () => {
     expect(parsed).not.toHaveProperty("unknown");
   });
 
+  it("안건 정본이 바뀌었다는 신호는 시각만 싣는다", () => {
+    expect(parseNoteTopicEvent('{"type":"agendas.changed","occurredAt":"2026-10-12T05:00:00.000Z"}')).toEqual({
+      type: "agendas.changed",
+      occurredAt: "2026-10-12T05:00:00.000Z",
+    });
+  });
+
   it("payload 가 없던 이벤트에 payload 가 생겨도 견딘다", () => {
     expect(parseNoteTopicEvent('{"type":"meeting.ended"}')).toEqual({
       type: "meeting.ended",

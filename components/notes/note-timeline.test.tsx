@@ -37,8 +37,9 @@ vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => own,
   useRecordingTranscript: () => own,
 }));
+const flow = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock("@/lib/api/generated/analysis/analysis", () => ({
-  useGetAnalysisFlow: () => ({ data: undefined }),
+  useGetAnalysisFlow: () => flow,
 }));
 const live = vi.hoisted(() => ({
   partial: null as { confirmedText: string; pendingText: string } | null,
@@ -60,6 +61,36 @@ vi.mock("@/lib/api/generated/transcription/transcription", async (importOriginal
     useGetNoteTranscript: (noteId: string, options?: Parameters<typeof actual.useGetNoteTranscript>[1]) =>
       transcript.real ? actual.useGetNoteTranscript(noteId, options) : transcript,
   };
+});
+
+const agendas = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isPending: false,
+  isError: false,
+  refetch: vi.fn(),
+  refetchInterval: undefined as unknown,
+}));
+vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/generated/notes/notes")>()),
+  useGetNoteAgendas: (_noteId: string, options?: { query?: { refetchInterval?: unknown } }) => {
+    agendas.refetchInterval = options?.query?.refetchInterval;
+    return agendas;
+  },
+}));
+/** GET /agendas 응답 봉투 */
+const agendaResponse = (
+  asOfSequence: number | null,
+  rows: Array<{ agendaId: string; title: string; completed?: boolean; proposalIds: string[] }>
+) => ({
+  status: 200,
+  data: {
+    success: true,
+    data: {
+      asOfSequence,
+      agendas: rows.map((row) => ({ completed: false, description: [], conclusions: [], openItems: [], ...row })),
+    },
+    error: null,
+  },
 });
 
 let seq = 0;
@@ -103,6 +134,10 @@ function withLedger(...proposals: ProposalHead[]) {
 
 afterEach(() => {
   cleanup();
+  agendas.data = undefined;
+  agendas.isPending = false;
+  agendas.isError = false;
+  flow.data = undefined;
   realtime.transcript.finalSegments = [];
   transcript.real = false;
   vi.unstubAllGlobals();
@@ -138,6 +173,99 @@ describe("NoteTimeline", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "스크립트 31:12로 가기" }));
     expect(onEvidenceSelect).toHaveBeenCalledWith(decision.citations[0].segmentId);
+  });
+
+  it("안건 정본이 있으면 주제 제목은 정본이 주고, 같은 주제로 돌아오면 제목이 한 번 더 선다", () => {
+    const old = head({ kind: "AGENDA", content: "옛 안건 명제" });
+    const a = head({ content: "온보딩을 2단계로 줄인다" });
+    const b = head({ content: "PG 타임아웃을 30초로 늘린다" });
+    const c = head({ content: "튜토리얼에 건너뛰기 버튼을 둔다" });
+    withLedger(old, a, b, c);
+    agendas.data = agendaResponse(c.createdSequence, [
+      { agendaId: "01KA000000001", title: "온보딩 개편", proposalIds: [a.proposalId, c.proposalId] },
+      { agendaId: "01KA000000002", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+    ]);
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+
+    const titles = screen.getAllByRole("heading", { level: 3 }).map((node) => node.textContent);
+    expect(titles.map((text) => text?.match(/온보딩 개편|결제 실패 대응/)?.[0])).toEqual([
+      "온보딩 개편",
+      "결제 실패 대응",
+      "온보딩 개편",
+    ]);
+    // 옛 안건 명제는 정본이 있으면 머리가 되지 않는다
+    expect(screen.queryByText("옛 안건 명제")).toBeNull();
+    expect(screen.getByText("논의 중")).toBeVisible();
+  });
+
+  it("주제 정본을 기다리는 동안은 목록을 함께 기다리고, 못 받으면 주제 없이 그리며 다시 불러올 길을 둔다", () => {
+    withLedger(head({ content: "온보딩을 2단계로 줄인다" }));
+    agendas.isPending = true;
+    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    expect(screen.getByRole("list", { name: "타임라인을 불러오는 중" })).toBeInTheDocument();
+    expect(screen.queryByText("온보딩을 2단계로 줄인다")).toBeNull();
+
+    agendas.isPending = false;
+    agendas.isError = true;
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    expect(screen.getByText("온보딩을 2단계로 줄인다")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(agendas.refetch).toHaveBeenCalled();
+  });
+
+  it("끝난 회의는 회의 뒤 분석이 도는 동안 주제 정본을 주기적으로 다시 읽는다", () => {
+    withLedger(head({}));
+    flow.data = { status: 200, data: { success: true, data: { status: "ANALYZING" }, error: null } };
+    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    expect(agendas.refetchInterval).toBe(10_000);
+
+    agendas.refetch.mockClear();
+    flow.data = { status: 200, data: { success: true, data: { status: "REVIEWABLE" }, error: null } };
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    expect(agendas.refetchInterval).toBe(false);
+    // 분석이 끝나는 순간 한 번 더 읽어 최종 정본에 맞춘다
+    expect(agendas.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("다시 읽기가 실패하면 지난 주제 제목을 두고 새로 불러올 길을 둔다", () => {
+    const a = head({ content: "온보딩을 2단계로 줄인다" });
+    withLedger(a);
+    agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "01KA000000001", title: "온보딩 개편", proposalIds: [a.proposalId] }]);
+    agendas.isError = true;
+    render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toBeVisible();
+    expect(screen.getByText("주제 제목을 새로 불러오지 못했습니다.")).toBeVisible();
+  });
+
+  it("회의 중에는 자리를 정한 줄을 옮기지 않고, 정리가 못 본 줄은 앞 줄 묶음에 붙으며, 회의가 끝나면 서버 판정대로 맞춘다", () => {
+    const a = head({ content: "이탈률 38%" });
+    const b = head({ content: "3DS 응답이 늦다" });
+    const c = head({ content: "건너뛰기 버튼을 둔다" });
+    withLedger(a, b, c);
+    const onboarding = "01KA000000001";
+    const payment = "01KA000000002";
+    agendas.data = agendaResponse(b.createdSequence, [
+      { agendaId: onboarding, title: "온보딩 개편", proposalIds: [a.proposalId] },
+      { agendaId: payment, title: "결제 실패 대응", proposalIds: [b.proposalId] },
+    ]);
+    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    const groupOf = (text: string) =>
+      screen.getByText(text).closest("section")?.querySelector("h3")?.textContent ?? "";
+    // c 는 정리가 아직 못 봤다 — 바로 앞 줄(b)의 묶음에 붙는다
+    expect(groupOf("건너뛰기 버튼을 둔다")).toMatch("결제 실패 대응");
+
+    // 다음 정리가 a 를 결제로 옮기고 c 를 온보딩에 넣는다. 회의 중이라 a 는 그대로, c 만 자리를 얻는다.
+    agendas.data = agendaResponse(c.createdSequence, [
+      { agendaId: onboarding, title: "온보딩 개편", proposalIds: [c.proposalId] },
+      { agendaId: payment, title: "결제 실패 대응", proposalIds: [a.proposalId, b.proposalId] },
+    ]);
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    expect(groupOf("이탈률 38%")).toMatch("온보딩 개편");
+    expect(groupOf("건너뛰기 버튼을 둔다")).toMatch("온보딩 개편");
+
+    // 회의가 끝나면 서버 판정대로 한 번 맞춘다
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    expect(groupOf("이탈률 38%")).toMatch("결제 실패 대응");
   });
 
   it("기록 중이 아니면 마지막 안건을 「논의 중」이라 하지 않는다", () => {

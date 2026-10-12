@@ -3,6 +3,7 @@ import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow } from "@/lib/mocks/meeting-flow";
 // 턴은 스트림의 사실이라 `mockDb`가 모른다 — 저장된 행만 안다.
 import { agentChatTurnState, runningTurnOf } from "@/lib/mocks/sse-handler";
+import { LIVE_AGENDA_NOTE_ID, liveAgendaProposals } from "@/lib/mocks/live-agendas";
 import {
   CONTEXT_DEMO_NOTE_ID,
   CONTEXT_FAILING_NOTE_ID,
@@ -542,6 +543,14 @@ export const restHandlers = [
     // **서버 상태가 전진하는 것을 재현해야 한다.** batch 는 `invalidateContext()` 를
     // 부르고 그 재조회가 옛 스냅샷을 돌려주면 화면이 구멍으로 되돌아간다. 첫 조회 뒤에는
     // 채워진 범위를 준다 — 실제 서버도 batch 를 적용한 뒤에는 그렇게 답한다.
+    // 안건이 실시간으로 정해지는 노트. 구독 뒤 지난 시간만큼 온 명제를 준다.
+    if (id(params.noteId) === LIVE_AGENDA_NOTE_ID) {
+      return HttpResponse.json({
+        success: true,
+        data: { proposals: liveAgendaProposals(Date.now()), runs: [] },
+        error: null,
+      });
+    }
     if (id(params.noteId) === CONTEXT_SWAP_NOTE_ID) {
       const data = isSwapFilled()
         ? { ...CONTEXT_SWAP_SNAPSHOT, runs: CONTEXT_SWAP_FILLED }

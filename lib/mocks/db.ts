@@ -1110,6 +1110,21 @@ function createSeedState(): StoreState {
       meetingStartedBy: starterOf(MOCK_USER.userId),
       participants: participantsOf(projects[0].projectId, MOCK_USER.userId),
     },
+    // 안건이 실시간으로 정해지는 회의 (`LIVE_AGENDA_NOTE_ID`). 노트 토픽을 구독하면 명제와
+    // agendas.changed 가 차례로 온다.
+    {
+      noteId: "01K0000000016",
+      projectId: projects[0].projectId,
+      title: "실시간 안건 확인 회의",
+      createdAt: "2026-07-04T00:00:00Z",
+      updatedAt: "2026-07-04T00:00:00Z",
+      meetingStatus: "IN_PROGRESS",
+      meetingStartedAt: "2026-07-04T00:00:00Z",
+      recordedDurationMs: 0,
+      activeSessionStartedAt: null,
+      meetingStartedBy: starterOf(MOCK_USER.userId),
+      participants: participantsOf(projects[0].projectId, MOCK_USER.userId),
+    },
     {
       noteId: "01K0000000028",
       projectId: projects[0].projectId,
@@ -1314,6 +1329,16 @@ function createSeedState(): StoreState {
     {
       sessionId: "01K0000000428",
       noteId: "01K0000000028",
+      status: "ACTIVE",
+      readyExpiresAt: liveSessionReadyExpiresAt,
+      startedAt: liveSessionStartedAt,
+      endedAt: null,
+      endReason: null,
+    },
+    // 실시간 안건 회의(0016)도 다른 탭에서 녹음 중이다.
+    {
+      sessionId: "01K0000000416",
+      noteId: "01K0000000016",
       status: "ACTIVE",
       readyExpiresAt: liveSessionReadyExpiresAt,
       startedAt: liveSessionStartedAt,

@@ -12,6 +12,11 @@ import {
   LIVE_UTTERANCE_TEXT,
 } from "@/lib/mocks/proposals";
 import {
+  LIVE_AGENDA_NOTE_ID,
+  liveAgendaFrame,
+  startLiveAgendaFeed as startLiveAgendas,
+} from "@/lib/mocks/live-agendas";
+import {
   createMockTranscriptionScenario,
   type MockTranscriptionScenario,
 } from "@/lib/mocks/transcription-scenario";
@@ -148,9 +153,38 @@ export const transcriptionWebSocketHandler = transcriptionLink.addEventListener(
       );
     };
 
+    /** 안건이 실시간으로 정해지는 노트. 명제와 agendas.changed 를 차례로 흘린다 */
+    const startLiveAgendaFeed = (noteId: string) => {
+      for (const { atMs, delayMs } of startLiveAgendas(Date.now())) {
+        noteTopicTimers.push(
+          window.setTimeout(() => {
+            const topic = noteTopics.get(noteId);
+            const frame = liveAgendaFrame(atMs);
+            if (!topic || !frame) return;
+            client.send(
+              stompFrame(
+                "MESSAGE",
+                {
+                  subscription: topic.id,
+                  "message-id": `mock-${messageSequence++}`,
+                  destination: topic.destination,
+                  "content-type": "application/json",
+                },
+                JSON.stringify(frame)
+              )
+            );
+          }, delayMs)
+        );
+      }
+    };
+
     const startNoteTopicFeed = (noteId: string) => {
       // **전용 노트에서만 흘린다.** 모든 노트에 흘리면 다른 화면의 폴링과 섞인다 —
       // 실제로 공유 챗의 30초 안전 폴링이 굶어 e2e 하나가 깨졌다(아래 주석).
+      if (noteId === LIVE_AGENDA_NOTE_ID) {
+        startLiveAgendaFeed(noteId);
+        return;
+      }
       if (noteId !== CONTEXT_DEMO_NOTE_ID && noteId !== CONTEXT_SWAP_NOTE_ID) {
         return;
       }

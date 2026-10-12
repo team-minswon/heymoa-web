@@ -8,6 +8,7 @@ import {
   useNoteRealtime,
 } from "@/components/notes/note-realtime-provider";
 import {
+  getGetNoteAgendasQueryKey,
   getGetNoteQueryKey,
   getGetNotesQueryKey,
   getGetWorkspaceNotesQueryKey,
@@ -340,6 +341,17 @@ describe("NoteRealtimeProvider", () => {
     ]);
   });
 
+  it("안건 정본이 바뀌었다는 신호를 받으면 안건만 다시 읽는다", async () => {
+    const { invalidateQueries } = renderProvider();
+    await waitFor(() => expect(topicClients).toHaveLength(1));
+    invalidateQueries.mockClear();
+
+    emit({ type: "agendas.changed", occurredAt: "2026-10-12T05:00:00.000Z" });
+
+    expect(invalidateQueries).toHaveBeenCalledTimes(1);
+    expectInvalidated(invalidateQueries, getGetNoteAgendasQueryKey(NOTE_ID));
+  });
+
   it("상태 이벤트는 exact note와 cached project lists를 즉시 갱신하고, final은 번호가 건너뛸 때만 전사를 다시 받는다", async () => {
     const { invalidateQueries } = renderProvider();
     await waitFor(() => expect(topicClients).toHaveLength(1));
@@ -475,10 +487,11 @@ describe("NoteRealtimeProvider", () => {
     // 구조 공유로 참조는 바뀔 수 있다. 덮어쓰지 않았다는 것은 아래 spy 가 지킨다.
     expect(queryClient.getQueryData(noteKey)).toEqual(endedNote);
     expect(setQueryData).not.toHaveBeenCalled();
-    // meeting.ended 가 note·목록·transcript·후보를, recording.started 가 note·목록을 갱신한다.
-    expect(invalidateQueries).toHaveBeenCalledTimes(6);
+    // meeting.ended 가 note·목록·transcript·후보·안건을, recording.started 가 note·목록을 갱신한다.
+    expect(invalidateQueries).toHaveBeenCalledTimes(7);
     expectInvalidated(invalidateQueries, noteKey);
     expectInvalidated(invalidateQueries, getGetProposalsQueryKey(NOTE_ID));
+    expectInvalidated(invalidateQueries, getGetNoteAgendasQueryKey(NOTE_ID));
     expect(
       getProjectNotesPredicate(invalidateQueries)({
         queryKey: getGetNotesQueryKey(PROJECT_ID),

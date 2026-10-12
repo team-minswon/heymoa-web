@@ -3,7 +3,8 @@
 # - 전사 STOMP·노트 토픽 구간: heymoa-server/asyncapi.yml 미러. 수정은 원본에서 하고 여기로 복사한다
 #   (원본은 `*WebSocketDocsTest`가 실제 DTO 직렬화로 검증한다).
 #   지금 미러: server asyncapi.yml info.version 3.3.1 (APP-1030 에서 노트 토픽 `MeetingAnalysisChanged`·`RelationChanged`,
-#   `ReattachEvent.overlap`, 설명문을 server 원본과 다시 맞췄다. server dev 917924e2e).
+#   `ReattachEvent.overlap`, 설명문을 server 원본과 다시 맞췄다. server dev 917924e2e. APP-925 에서 노트 토픽
+#   `AgendasChanged`(`agendas.changed`)를 더했다. server feat/app-925 95db528f).
 # - agent 채팅 SSE 구간: 이 파일이 원본. server는 이벤트를 변환 없이 통과시켜 자기 DTO를 갖지
 #   않으므로 server 쪽 DocsTest로 검증할 수 없다. SSE 이벤트 스키마의 단일 출처가 여기이며
 #   asyncapi-server-ai.yml이 $ref로 참조한다.
@@ -351,6 +352,8 @@ channels:
         $ref: "#/components/messages/MeetingAnalysisChanged"
       RelationChanged:
         $ref: "#/components/messages/RelationChanged"
+      AgendasChanged:
+        $ref: "#/components/messages/AgendasChanged"
   agentChatStream:
     servers:
       - $ref: "#/servers/sseEdge"
@@ -480,6 +483,7 @@ operations:
       - $ref: "#/channels/noteTopic/messages/TranscriptAnalysisRunApplied"
       - $ref: "#/channels/noteTopic/messages/MeetingAnalysisChanged"
       - $ref: "#/channels/noteTopic/messages/RelationChanged"
+      - $ref: "#/channels/noteTopic/messages/AgendasChanged"
   receiveAgentChatEvents:
     action: receive
     summary: heymoa-web이 개인 챗봇 턴의 프레임을 SSE로 수신한다.
@@ -1798,6 +1802,20 @@ components:
                 targetProposalId: 0K9GVJT2C4Q2B
                 kind: SUPPORTS
                 open: true
+    AgendasChanged:
+      name: AgendasChanged
+      title: 노트 안건 변경
+      summary: 회의 중 확정이나 회의 뒤 분석이 노트의 안건 목록을 바꿨다
+      description: |
+        안건 목록은 통째로 바뀌므로 무엇이 바뀌었는지는 싣지 않는다. 화면은 받으면 GET /v1/notes/{noteId}/agendas 를 다시
+        읽는다. 이벤트는 신호이고 정본이 아니라, 유실되면 입장 · 재연결 때의 조회가 다시 맞춘다.
+      payload:
+        $ref: "#/components/schemas/AgendasChangedPayload"
+      examples:
+        - name: settled
+          payload:
+            type: agendas.changed
+            occurredAt: "2026-10-07T01:02:03.456Z"
   schemas:
     ApprovalCardField:
       description: 승인 카드의 한 줄. `value` 하나, 바뀌는 값이면 `before`·`after`, 명단 교체는 `added`·`removed`·`kept`
@@ -1939,6 +1957,16 @@ components:
                 minLength: 1
               open:
                 type: boolean
+    AgendasChangedPayload:
+      type: object
+      additionalProperties: false
+      required: [type, occurredAt]
+      properties:
+        type:
+          type: string
+          const: agendas.changed
+        occurredAt:
+          $ref: "#/components/schemas/UtcMillisTimestamp"
     TranscriptAnalysisRunAppliedPayload:
       type: object
       additionalProperties: false

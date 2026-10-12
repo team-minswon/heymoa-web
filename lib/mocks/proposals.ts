@@ -98,7 +98,7 @@ const MOCK_MEETING_STARTED_AT = Date.now() - 2_600_000;
 
 const SEGMENT = (n: number) => `0HZX2K7M9Q${String(n).padStart(3, "0")}`;
 const PROPOSAL = (n: number) => `0HZX2K7M9QA${String(n).padStart(2, "0")}`;
-function head(
+export function head(
   over: Partial<ProposalHead> & {
     proposalId: string;
     kind: ProposalHead["kind"];
