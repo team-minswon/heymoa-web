@@ -51,6 +51,7 @@ import type {
 } from "@/lib/api/generated/models";
 import { useGetWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { formatAppDate } from "@/lib/format/date";
+import { HelpLink } from "@/components/heymoa/help-link";
 
 type Delegation = AgentDelegationsResponseDataDelegationsItem;
 
@@ -168,7 +169,8 @@ export function AgentConnectionsSettings({
           </h2>
           <p className="mt-2 text-sm text-[var(--el-muted)]">
             Claude·ChatGPT 같은 AI 앱이 내가 맡긴 워크스페이스의 회의와
-            프로젝트를 읽을 수 있게 연결합니다.
+            프로젝트를 읽을 수 있게 연결합니다.{" "}
+            <HelpLink topic="agents" />
           </p>
         </div>
         {!mode && !issued ? (

@@ -96,8 +96,6 @@ export default function TermsPage() {
       description="회의 음성을 안전하게 다루고 자동 스크립트를 책임 있게 활용하기 위해 서비스 이용자가 알아야 할 기본 원칙입니다."
       effectiveDate="2026년 9월 4일"
       sections={sections}
-      relatedHref="/privacy"
-      relatedLabel="개인정보 처리방침 보기"
     />
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
+import { TrackedLink } from "@/components/analytics/tracked-link";
 import { LandingCta } from "@/components/heymoa/landing-cta";
 import {
   BODY,
@@ -36,7 +37,7 @@ const PLATFORMS = [
   },
   {
     name: "Windows",
-    need: "x64\u00a0EXE 설치 파일을 사용합니다.",
+    need: "Windows\u00a011 x64에서 EXE 설치 파일을 사용합니다.",
     caution:
       "베타 설치·녹음의 실제 Windows 검증은 진행 중입니다. 서명되지 않은 설치 파일에는 SmartScreen 경고가 표시될 수 있습니다.",
   },
@@ -69,7 +70,8 @@ export default function DownloadPage() {
             앱에서도 같은 웹 서비스를 사용합니다.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a
+            <TrackedLink
+              event="desktop_download_clicked"
               href={DESKTOP_RELEASES_URL}
               target="_blank"
               rel="noopener noreferrer"
@@ -81,7 +83,7 @@ export default function DownloadPage() {
               설치 파일과 새 버전 보기
               <ArrowUpRight aria-hidden className="size-4" />
               <span className="sr-only">(새 창)</span>
-            </a>
+            </TrackedLink>
             {/* 설치 없이 지금 쓰려는 사람의 길. 로그인 상태면 대시보드로 간다(`LandingCta`). */}
             <LandingCta
               label="웹에서 바로 시작"
@@ -124,20 +126,19 @@ export default function DownloadPage() {
             </p>
           </div>
           <p className="m-0 mt-4 break-keep text-[14px] leading-[1.65] text-[var(--tv-muted)] [overflow-wrap:anywhere] lg:mt-6">
-            Homebrew 설치 명령과 각 파일의 SHA256은 공식 배포 페이지와 tap README에서 확인할 수
-            있습니다.
+            Homebrew 설치, 권한 설정, 녹음 중 앱 종료, 막힐 때는{" "}
+            <Link
+              href="/help/desktop"
+              className={cn(
+                "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
+                FOCUS
+              )}
+            >
+              데스크톱 앱 사용법
+            </Link>
+            에 있습니다.
           </p>
         </section>
-
-        <Link
-          href="/"
-          className={cn(
-            "mt-6 inline-flex min-h-6 items-center rounded-[4px] text-[15px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)] lg:mt-8",
-            FOCUS
-          )}
-        >
-          웹으로 돌아가기
-        </Link>
       </div>
     </div>
   );

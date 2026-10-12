@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "@/lib/ui/toast";
+import { track } from "@/lib/analytics/track";
 import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function GoogleLoginButton({
     }
 
     setPending(true);
+    track("login_started");
 
     try {
       const desktop = desktopAuthBridge();

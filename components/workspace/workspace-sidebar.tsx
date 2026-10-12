@@ -15,6 +15,9 @@ import {
   Trash2,
   ChevronsUpDown,
   ChevronDown,
+  CircleHelp,
+  Download,
+  ListChecks,
   ChevronRight,
   ListTodo,
   Loader2,
@@ -79,6 +82,10 @@ import {
   useGetWorkspaces,
 } from "@/lib/api/generated/workspaces/workspaces";
 import { sortByLastVisited } from "@/lib/workspaces/last-workspace";
+import { track } from "@/lib/analytics/track";
+import { openSitePage } from "@/lib/desktop/open-site-page";
+import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
+import { updateChecklist } from "@/lib/onboarding/checklist";
 
 /** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
 type ProjectDialogState = { project: ProjectResponseData } | null;
@@ -92,6 +99,7 @@ export function WorkspaceSidebar({
   onOpenSettings,
   onCreateProject,
   covered = false,
+  onboarding,
 }: {
   workspaceId: string;
   workspace?: WorkspaceResponseData;
@@ -106,6 +114,8 @@ export function WorkspaceSidebar({
   onCreateProject: () => void;
   /** 노트 전체 화면이 이 사이드바를 덮고 있는가. 열려 있던 창을 닫는 데 쓴다. */
   covered?: boolean;
+  /** 계정 메뉴 바로 위에 앉는 「시작하기」. 셸 상태를 읽어서 셸이 만들어 넘긴다. */
+  onboarding?: React.ReactNode;
 }) {
   const router = useRouter();
   const notesHref = `/w/${workspaceId}`;
@@ -115,6 +125,7 @@ export function WorkspaceSidebar({
   const onNotes = pathname === notesHref;
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
+  const isDesktopApp = useDesktopApp();
   const workspacesQuery = useGetWorkspaces();
   const updateProject = useUpdateProject({
     mutation: { meta: { suppressErrorToast: true } },
@@ -406,6 +417,8 @@ export function WorkspaceSidebar({
       </SidebarContent>
 
       {/* ── User profile (footer) ── */}
+      {onboarding}
+
       <SidebarFooter className="p-0 border-t border-[var(--el-hairline)]">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -449,6 +462,43 @@ export function WorkspaceSidebar({
               <Settings className="size-4 text-[var(--el-muted)]" />
               <span>내 계정 설정</span>
             </DropdownMenuItem>
+            {/* 브라우저에서는 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱은 같은 사이트 주소의 새 창을
+                막고 외부 브라우저로도 넘기지 않아서 앱 안에서 이동한다(`openSitePage`). */}
+            <DropdownMenuItem
+              onClick={() => {
+                track("help_opened", { from: "sidebar" });
+                openSitePage("/help", router.push);
+              }}
+              className="gap-2 rounded-control py-2 text-sm"
+            >
+              <CircleHelp className="size-4 text-[var(--el-muted)]" />
+              <span>도움말</span>
+            </DropdownMenuItem>
+            {user && (
+              <DropdownMenuItem
+                onClick={() => {
+                  track("onboarding_reopened");
+                  updateChecklist(user.userId, (current) => ({
+                    status: "open",
+                    done: current?.done ?? [],
+                  }));
+                }}
+                className="gap-2 rounded-control py-2 text-sm"
+              >
+                <ListChecks className="size-4 text-[var(--el-muted)]" />
+                <span>시작 안내 다시 보기</span>
+              </DropdownMenuItem>
+            )}
+            {/* 앱 안에서는 이미 받은 것이다. 서버는 앱 안인지 모르므로 브라우저로 확인된 뒤에만 보인다. */}
+            {isDesktopApp === false && (
+              <DropdownMenuItem
+                onClick={() => window.open("/download", "_blank", "noopener,noreferrer")}
+                className="gap-2 rounded-control py-2 text-sm"
+              >
+                <Download className="size-4 text-[var(--el-muted)]" />
+                <span>데스크톱 앱 받기</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
             <DropdownMenuItem
               disabled={isLoggingOut}

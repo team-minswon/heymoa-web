@@ -10,6 +10,7 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "@/lib/ui/toast";
+import { track } from "@/lib/analytics/track";
 import {
   Sidebar,
   SidebarInset,
@@ -24,6 +25,10 @@ import {
 } from "@/components/settings/settings-dialog";
 import { CreateProjectDialog } from "@/components/workspace/create-project-dialog";
 import { NewMeetingDialog } from "@/components/workspace/new-meeting-dialog";
+import {
+  OnboardingChecklist,
+  useOnboardingChecklist,
+} from "@/components/workspace/onboarding-checklist";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import { useCreateMeeting } from "@/lib/workspace/use-create-meeting";
@@ -98,6 +103,7 @@ export function WorkspaceAppShell({
     setSettingsOpen(true);
     /* eslint-enable react-hooks/set-state-in-effect */
     if (status === "connected") {
+      track("integration_connected", { provider });
       toast.success(
         `${INTEGRATION_LABEL[provider] ?? provider} 연동을 연결했습니다.`
       );
@@ -129,6 +135,12 @@ export function WorkspaceAppShell({
         : [],
     [projectsQuery.data]
   );
+  // 「시작하기」의 판단·조회·기록은 늘 떠 있는 셸이 한다 — 사이드바는 모바일에서 닫히면 사라지는 시트다.
+  const onboarding = useOnboardingChecklist({
+    workspaceId,
+    projectCount: projects.length,
+    isWorkspacePending: workspaceQuery.isPending || projectsQuery.isPending,
+  });
   /**
    * 프로젝트 만들기 창의 상태. **왜 열렸는지를 함께 담는다** — 「새 노트」에서 온 것이면
    * 만든 뒤 회의 창으로 이어 가고, 사이드바 `+`에서 온 것이면 거기서 끝난다.
@@ -252,6 +264,11 @@ export function WorkspaceAppShell({
                 onOpenSettings={value.openSettings}
                 onCreateProject={openCreateProject}
                 covered={isFullNote}
+                onboarding={
+                  onboarding && (
+                    <OnboardingChecklist workspaceId={workspaceId} model={onboarding} />
+                  )
+                }
               />
             </Sidebar>
             <ShellMain

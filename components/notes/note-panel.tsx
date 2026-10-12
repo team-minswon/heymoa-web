@@ -65,6 +65,8 @@ import {
   RECORDING_BEAT_MS,
   recordingClaimOf,
 } from "@/lib/transcription/recorder-lease";
+import { track } from "@/lib/analytics/track";
+import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { cn } from "@/lib/utils";
 
 /**
@@ -132,6 +134,11 @@ export function NotePanel({
 }) {
   const noteRealtime = useNoteRealtime();
   const noteQuery = useGetNote(noteId);
+  const isDesktopApp = useDesktopApp();
+  // 깔때기의 「요약을 봤다」. 탭을 누른 것만이 아니라 종료 직후 넘어온 것·링크로 연 것도 센다.
+  useEffect(() => {
+    if (tab === "summary") track("summary_viewed", { workspace_id: workspaceId });
+  }, [tab, noteId, workspaceId]);
   const note =
     noteQuery.data?.status === 200 && noteQuery.data.data.success
       ? noteQuery.data.data.data
@@ -893,6 +900,23 @@ export function NotePanel({
                 ) : null}
                 {/* 자막이 멈춘 이유를 말해 준다. 안 말하면 멀쩡한 녹음을 중단한다. */}
                 {recordingDegraded ? <RecordingDegradedNotice /> : null}
+                {/* 브라우저는 마이크만 받는다. 화상회의 상대방 소리가 빠진다는 것을 **시작 전에** 한 번
+                    말한다 — 끝나고 알면 그 회의는 되돌릴 수 없다. 시작한 회의·앱 안에서는 안 띄운다. */}
+                {isDesktopApp === false &&
+                note?.meetingStatus === "NOT_STARTED" &&
+                !recordingHere ? (
+                  <p className="rounded-full border border-[var(--el-hairline)] bg-[color-mix(in_srgb,white_96%,transparent)] px-3 py-1.5 text-[12px] text-[var(--el-muted)] shadow-e2 backdrop-blur-xl">
+                    상대방 소리까지 기록하려면{" "}
+                    <a
+                      href="/download"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-[var(--el-ink)] underline underline-offset-2"
+                    >
+                      데스크톱 앱
+                    </a>
+                  </p>
+                ) : null}
                 {/* 독을 숨기지 않는 이유는 왜 못 하는지가 화면에 남아야 하기 때문이다 —
                 시작 버튼 자리에 이 문구가 선다. */}
                 <RecordingDock

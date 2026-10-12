@@ -10,6 +10,11 @@ import {
 } from "@/components/transcription/recording-provider";
 import { RecordingPendingSpinner } from "@/components/transcription/recording-pending-spinner";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const LAYOUT_TRANSITION = {
   type: "spring" as const,
@@ -224,21 +229,30 @@ export function RecordingDock({
             exit={{ opacity: 0, transition: { duration: 0.08 } }}
             className="flex shrink-0 items-center px-1"
           >
-            <button
-              type="button"
-              className="relative flex size-9 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45 after:absolute after:-inset-1 after:content-['']"
-              aria-label={isOtherNote ? "다른 노트에서 녹음 중" : startLabel}
-              // 소속이 확인되기 전에는 못 누른다 — 확인 없이 시작하면 잘못된 워크스페이스로
-              // 기록된다. 조회는 곧 끝나고, 어긋난 URL이면 위 `disabledReason`이 이유를 세운다.
-              disabled={isOtherNote || !workspaceId}
-              onClick={() => {
-                if (!workspaceId) return;
-                void recording.start(noteId, workspaceId);
-                onStart?.();
-              }}
-            >
-              <span className="size-2.5 rounded-full bg-white" aria-hidden />
-            </button>
+            {/* 글자 없는 빨간 점이라 처음 보는 사람은 무엇을 하는 버튼인지 모른다 — 라벨을 툴팁으로도 보인다. */}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    className="relative flex size-9 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45 after:absolute after:-inset-1 after:content-['']"
+                    aria-label={isOtherNote ? "다른 노트에서 녹음 중" : startLabel}
+                    // 소속이 확인되기 전에는 못 누른다 — 확인 없이 시작하면 잘못된 워크스페이스로
+                    // 기록된다. 조회는 곧 끝나고, 어긋난 URL이면 위 `disabledReason`이 이유를 세운다.
+                    disabled={isOtherNote || !workspaceId}
+                    onClick={() => {
+                      if (!workspaceId) return;
+                      void recording.start(noteId, workspaceId);
+                      onStart?.();
+                    }}
+                  />
+                }
+              >
+                <span className="size-2.5 rounded-full bg-white" aria-hidden />
+              </TooltipTrigger>
+              {/* 위는 데스크톱 앱 안내·연결 알림이 서는 자리라 옆으로 띄운다. */}
+              <TooltipContent side="right">{startLabel}</TooltipContent>
+            </Tooltip>
           </motion.div>
         )}
       </AnimatePresence>

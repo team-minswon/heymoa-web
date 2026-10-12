@@ -88,6 +88,11 @@ vi.mock("@/lib/api/generated/projects/projects", () => ({
   useDeleteProject: () => ({ mutateAsync: vi.fn() }),
 }));
 
+// 체크리스트는 따로 시험한다(`lib/onboarding/checklist.test.ts`). 여기서는 셸만 본다.
+vi.mock("@/components/workspace/onboarding-checklist", () => ({
+  OnboardingChecklist: () => null,
+  useOnboardingChecklist: () => null,
+}));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
   getGetNotesQueryKey: () => ["notes"],
   useCreateNote: () => ({ mutateAsync: vi.fn(), isPending: false }),

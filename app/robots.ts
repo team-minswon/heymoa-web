@@ -10,6 +10,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
+      // `/w/**` · `/oauth/**` · `/invite` 는 여기서 막지 않는다 — 막으면 그 라우트의 noindex 를
+      // 못 읽는다(위 🔴). 색인 제외는 `lib/site.ts`의 `privateRouteMetadata`가 맡는다.
       disallow: ["/auth/callback", "/settings"],
     },
     sitemap: `${siteConfig.url}/sitemap.xml`,

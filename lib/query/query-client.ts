@@ -1,6 +1,7 @@
 import { MutationCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/ui/toast";
 
+import { trackMutation } from "@/lib/analytics/track";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import { ApiError, isAuthError } from "@/lib/api/fetcher";
 import { isSessionExpired } from "@/lib/auth/session-gate";
@@ -57,6 +58,9 @@ export function makeQueryClient() {
       },
     },
     mutationCache: new MutationCache({
+      // 분석 이벤트도 여기 한 곳에서 낸다. operationId → 이벤트 표는 `lib/analytics/track.ts`.
+      onSuccess: (_data, variables, _context, mutation) =>
+        trackMutation(mutation.options.mutationKey?.[0], variables),
       onError: (error, _variables, _context, mutation) => {
         const suppress = mutation.meta?.suppressErrorToast;
         if (suppress === true) return;

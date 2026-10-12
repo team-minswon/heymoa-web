@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { track } from "@/lib/analytics/track";
 import { errorCodeOf } from "@/lib/api/error-message";
 import { toast } from "@/lib/ui/toast";
 import {
@@ -683,6 +684,7 @@ export function RecordingProvider({
           },
         });
         dispatch({ type: "phase", phase: "recording" });
+        track("recording_started", { workspace_id: workspaceId });
       } catch (cause) {
         await controller.close();
         if (controllerRef.current !== controller) return;
@@ -696,6 +698,17 @@ export function RecordingProvider({
           clearLevel();
           return;
         }
+        track("recording_failed", {
+          workspace_id: workspaceId,
+          // 권한 거부(NotAllowedError)가 첫 회의에서 가장 많이 막히는 자리라 이유를 남긴다
+          reason:
+            errorCodeOf(cause) ??
+            (cause instanceof Error
+              ? cause.name === "Error"
+                ? cause.message
+                : cause.name
+              : "unknown"),
+        });
         dispatch({ type: "start-failed", message: startErrorMessage(cause) });
         clearLevel();
       }

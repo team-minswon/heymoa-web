@@ -55,6 +55,19 @@ export const isProductionSite = siteUrl === PRODUCTION_URL;
  * URL 은 색인에 그대로 남고, 오히려 크롤러가 이 `noindex` 를 못 읽습니다. 그래서
  * `app/robots.ts` 는 비운영에서도 크롤링을 열어 둡니다 (APP-642).
  */
+export const noindexDirective: Metadata["robots"] = {
+  index: false,
+  follow: false,
+  googleBot: { index: false, follow: false },
+};
+
+/**
+ * 로그인해야 보이는 면(`/w/**`)과 토큰이 쿼리에 실리는 입구(`/oauth/**` · `/invite`)는 운영에서도 색인하지
+ * 않는다. 위와 같은 이유로 robots.txt 가 아니라 이 메타데이터로 막는다 — 각 라우트가 `metadata.robots`로 건다.
+ * 개인 회의 내용이라 `e2e/noindex.spec.ts`가 지킨다(APP-1036).
+ */
+export const privateRouteMetadata: Metadata = { robots: noindexDirective };
+
 export const robotsDirective: Metadata["robots"] = isProductionSite
   ? {
       index: true,
@@ -67,4 +80,4 @@ export const robotsDirective: Metadata["robots"] = isProductionSite
         "max-video-preview": -1,
       },
     }
-  : { index: false, follow: false, googleBot: { index: false, follow: false } };
+  : noindexDirective;

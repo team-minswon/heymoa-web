@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
+
 import { InviteLanding } from "@/components/workspace/invite-landing";
+import { privateRouteMetadata } from "@/lib/site";
+
+export const metadata: Metadata = privateRouteMetadata;
 
 export default async function InvitePage({
   searchParams,

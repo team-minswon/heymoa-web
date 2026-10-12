@@ -116,6 +116,7 @@ export function Hero() {
                 `ring-3` 을 끈다(`top-bar.tsx` · `closing.tsx` 와 같은 처리). 안 끄면 회색 링이 한 겹 더 붙는다. */}
             <LandingCta
               label="Google 계정으로 시작"
+              openOnWelcome
               className={cn(
                 "h-[52px] w-full justify-center gap-2 max-lg:[@media(max-height:600px)]:h-11 border-transparent bg-[var(--tv-brand)] px-6 text-[15px] font-bold text-white hover:bg-[var(--tv-brand-deep)] focus-visible:border-transparent focus-visible:ring-0 lg:w-auto lg:px-5",
                 FOCUS
