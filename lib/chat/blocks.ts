@@ -108,15 +108,27 @@ export function settleTool(
         : block
     );
   }
-  const named = blocks.find(
+  // 재진입해 세운 승인은 `toolCallId` 를 모른다(`decideApproval`). 승인 뒤 첫 결과가 그 짝이다 —
+  // 히스토리가 짝을 짓는 규칙과 같다.
+  const orphan = blocks.find(
+    (block) =>
+      block.kind === "approval" &&
+      block.toolCallId === "" &&
+      block.decision === "APPROVED"
+  );
+  const adopted = orphan
+    ? blocks.map((block) =>
+        block === orphan ? { ...block, toolCallId } : block
+      )
+    : blocks;
+  const named = adopted.find(
     (block) => block.kind === "approval" && block.toolCallId === toolCallId
   );
-  return pushTool(blocks, {
+  return pushTool(adopted, {
     toolCallId,
     tool: patch.tool ?? (named?.kind === "approval" ? named.tool : ""),
     summary: patch.summary,
     target: null,
-    // 인자는 `tool_call_start` 만 나르는데 이 갈래는 그 이벤트를 못 본 경우다.
     status: patch.status,
     url: patch.url,
   });
@@ -193,6 +205,39 @@ export function pushApproval(
   approval: Omit<Extract<Block, { kind: "approval" }>, "kind">
 ): Block[] {
   return [...blocks, { kind: "approval", ...approval }];
+}
+
+/**
+ * 사람이 고른 결정을 적는다. 재진입한 화면에는 승인 블록이 없다 — 대기는 히스토리의
+ * `pendingApproval` 이 줬고 스트림은 그 프레임을 다시 안 보낸다. 그때는 대기로 블록을 세운다.
+ * 안 세우면 대기를 걷는 순간 카드가 사라진다. `toolCallId` 는 히스토리가 안 주므로 비워 두고
+ * 뒤따르는 결과가 채운다(`settleTool`).
+ */
+export function decideApproval(
+  blocks: Block[],
+  pending: {
+    approvalId: string;
+    tool: string;
+    summary: string | null;
+    card: ApprovalCardData | null;
+  } | null,
+  approvalId: string,
+  decision: ApprovalDecision
+): Block[] {
+  const known = blocks.some(
+    (block) => block.kind === "approval" && block.approvalId === approvalId
+  );
+  if (known || pending?.approvalId !== approvalId) {
+    return resolveApproval(blocks, approvalId, decision);
+  }
+  return pushApproval(blocks, {
+    approvalId,
+    toolCallId: "",
+    tool: pending.tool,
+    summary: pending.summary,
+    card: pending.card,
+    decision,
+  });
 }
 
 export function resolveApproval(

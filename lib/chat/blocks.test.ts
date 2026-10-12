@@ -11,6 +11,7 @@ import {
   joinSummary,
   pushApproval,
   pushTool,
+  decideApproval,
   resolveApproval,
   settleEndedTurn,
   settleTool,
@@ -402,3 +403,50 @@ describe("끝난 턴 닫기", () => {
     expect(settleEndedTurn(blocks)).toBe(blocks);
   });
 });
+
+describe("재진입한 화면의 승인 결정", () => {
+  const pending = {
+    approvalId: "a1",
+    tool: "heymoa_update_task",
+    summary: "할 일 기한 바꾸기",
+    card: null,
+  };
+
+  it("★ 승인 블록이 없으면 대기로 세운다 — 대기를 걷어도 카드가 사라지지 않는다", () => {
+    const blocks = decideApproval([], pending, "a1", "APPROVED");
+    expect(blocks).toEqual([
+      {
+        kind: "approval",
+        approvalId: "a1",
+        toolCallId: "",
+        tool: "heymoa_update_task",
+        summary: "할 일 기한 바꾸기",
+        card: null,
+        decision: "APPROVED",
+      },
+    ]);
+  });
+
+  it("승인 블록이 있으면 결정만 적는다", () => {
+    const started = decideApproval([], pending, "a1", "APPROVED");
+    expect(decideApproval(started, pending, "a1", "REJECTED")).toHaveLength(1);
+  });
+
+  it("★ 뒤따르는 첫 결과가 그 승인의 짝이 된다 — 카드가 「실행 중」에 머물지 않는다", () => {
+    const decided = decideApproval([], pending, "a1", "APPROVED");
+    const settled = settleTool(decided, "call_09", {
+      tool: null,
+      summary: "기한을 바꿨습니다",
+      status: "success",
+      url: null,
+    });
+    expect(settled[0]).toMatchObject({ kind: "approval", toolCallId: "call_09" });
+    expect(settled[1]).toMatchObject({
+      kind: "tool",
+      toolCallId: "call_09",
+      tool: "heymoa_update_task",
+      status: "success",
+    });
+  });
+});
+

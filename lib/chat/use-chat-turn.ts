@@ -27,7 +27,7 @@ import { isAuthError } from "@/lib/api/fetcher";
 import { toast } from "@/lib/ui/toast";
 import {
   type ApprovalDecision,
-  resolveApproval as recordDecision,
+  decideApproval,
 } from "@/lib/chat/blocks";
 import { runningLabel } from "@/lib/chat/chat-list";
 import type { ScopeChip } from "@/lib/chat/scope-chip";
@@ -428,7 +428,12 @@ export function useChatTurn({
         const decided = {
           ...stream.state,
           pendingApproval: null,
-          blocks: recordDecision(stream.state.blocks, approvalId, decision),
+          blocks: decideApproval(
+            stream.state.blocks,
+            stream.state.pendingApproval,
+            approvalId,
+            decision
+          ),
         };
         stream.seed(decided);
         const final = await stream.open(sessionId, turnId, {
