@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { MeetingReviewResponseDataItemsItemTaskChangesItemTargetOriginalProposalRef } from "./meetingReviewResponseDataItemsItemTaskChangesItemTargetOriginalProposalRef";
 
 /**
  * 바꾸자고 제안한 이 프로젝트의 할 일
@@ -20,4 +21,9 @@ export type MeetingReviewResponseDataItemsItemTaskChangesItemTarget = {
    * @minimum 1
    */
   revision: number;
+  /**
+   * 이 할 일을 만든 검토 항목의 원래 명제. 사람이 더한 항목이나 공개 경로로 만든 할 일이면 null
+   * @nullable
+   */
+  originalProposalRef: MeetingReviewResponseDataItemsItemTaskChangesItemTargetOriginalProposalRef;
 };

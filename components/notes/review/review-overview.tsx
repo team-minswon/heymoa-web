@@ -5,7 +5,7 @@ import { overviewToMarkdown } from "@/lib/notes/review/markdown";
 import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
 
 /**
- * 요약. 회의 전체를 말하는 한두 문장이다. 주제는 바로 아래 주제 목차가 맡는다.
+ * 요약. 회의 전체를 말하는 한 문장이다. 주제는 바로 아래 주제 목차가 맡는다.
  * 요약이 없어도 섹션 검토는 되므로, 왜 없는지만 한 줄로 말한다.
  */
 export function ReviewOverview({
@@ -54,9 +54,10 @@ export function ReviewOverview({
 
   return (
     <SectionBlock title="요약" copy={{ build: () => overviewToMarkdown(summary) }}>
-      {summary.headline ? <p className="sr-only">{summary.headline.text}</p> : null}
-      <p className="text-[15.5px] leading-7 break-keep text-[var(--el-body)]">
-        {summary.lead.map((line) => line.text).join(" ")}
+      {/* 맨 위는 회의 한 문장이다. 주제마다의 한 줄은 아래 주제 목차가 맡아, 옛 lead 문단은 한 문장이
+          없는 옛 요약에서만 보인다. */}
+      <p className="text-[16px] leading-7 break-keep text-[var(--el-ink)]">
+        {summary.headline?.text ?? summary.lead.map((line) => line.text).join(" ")}
       </p>
     </SectionBlock>
   );

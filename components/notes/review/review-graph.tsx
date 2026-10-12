@@ -22,7 +22,7 @@ import {
   topicNumber,
   type ForceNode,
 } from "@/lib/notes/review/graph-model";
-import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
+import { summaryTopics, type MeetingReviewSummary } from "@/lib/notes/review/summary";
 import { cn } from "@/lib/utils";
 
 // 캔버스와 d3 힘 배치는 브라우저에서만 돈다. 서버에서 그릴 판이 없어 이 경계만 SSR 을 끈다.
@@ -54,7 +54,7 @@ export function ReviewGraph({
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
 }) {
-  const ready = summary.status === "SUCCEEDED" && summary.topics.length > 0;
+  const ready = summary.status === "SUCCEEDED" && summaryTopics(summary).length > 0;
   const graph = useMemo(() => buildReviewGraph(summary, items), [summary, items]);
   // 힘 배치는 점 객체에 좌표를 써 넣는다. 같은 그래프면 같은 객체를 넘겨야 배치가 처음부터 다시 돌지 않는다.
   const data = useMemo(() => toForceGraph(graph), [graph]);

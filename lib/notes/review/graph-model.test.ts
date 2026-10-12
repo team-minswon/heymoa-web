@@ -46,6 +46,11 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     relations: [],
     sentences: [],
     openItemIds: [],
+    agendaId: null,
+    completed: true,
+    description: [],
+    conclusions: [],
+    openItems: [],
     ...over,
   };
 }
@@ -65,7 +70,8 @@ describe("buildReviewGraph 다른 주제 연결", () => {
       resultVersion: "v",
       headline: null,
       lead: [],
-      topics: [
+      topics: [],
+      agendas: [
         topic(1, {
           agendaItemId: "g1",
           centerItemId: "a1",
@@ -95,7 +101,8 @@ describe("buildReviewGraph", () => {
       resultVersion: "v",
       headline: null,
       lead: [],
-      topics: [
+      topics: [],
+      agendas: [
         topic(1, {
           centerItemId: "d1",
           members: [
@@ -142,7 +149,8 @@ describe("toForceGraph", () => {
     resultVersion: "v",
     headline: null,
     lead: [],
-    topics: [
+    topics: [],
+    agendas: [
       topic(1, {
         title: "요금",
         centerItemId: "d1",

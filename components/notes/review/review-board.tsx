@@ -1,5 +1,6 @@
 "use client";
 
+import { summaryTopics } from "@/lib/notes/review/summary";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -25,6 +26,7 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
+import { indexMeetingLinks } from "@/lib/notes/review/meeting-links";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import { useApproveMeetingReview } from "@/lib/api/generated/meeting-approval/meeting-approval";
 import {
@@ -32,7 +34,7 @@ import {
   useGetMeetingReview,
   useGetMeetingReviewSummary,
 } from "@/lib/api/generated/meeting-review/meeting-review";
-import { useGetProjectTasks } from "@/lib/api/generated/projects/projects";
+import { useGetProjectMeetingLinks, useGetProjectTasks } from "@/lib/api/generated/projects/projects";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
 import { useAssigneeChoices } from "@/lib/assignees/use-assignee-choices";
@@ -129,6 +131,9 @@ export function ReviewBoard({
   const reviewQuery = useGetMeetingReview(noteId);
   const summaryQuery = useGetMeetingReviewSummary(noteId);
   const transcriptQuery = useGetNoteTranscript(noteId);
+  // 회의 간 연결은 이 회의가 양 끝인 것만 받는다. 프로젝트 없는 회의는 연결이 없다.
+  const linksQuery = useGetProjectMeetingLinks(projectId ?? "", { noteId }, { query: { enabled: Boolean(projectId) } });
+  const linksData = okData(linksQuery.data);
   const tasksQuery = useGetProjectTasks(workspaceId ?? "", projectId ?? "", {
     query: { enabled: Boolean(workspaceId && projectId) },
   });
@@ -162,10 +167,11 @@ export function ReviewBoard({
     () => new Map(items.map((item) => [item.itemId, item])),
     [items]
   );
+  const meetingLinks = useMemo(() => indexMeetingLinks(linksData, noteId, items), [linksData, noteId, items]);
   const topics = useMemo(() => topicIndex(summary), [summary]);
   const topicOf = (itemId: string) => topics.get(itemId) ?? null;
   const topicTitleOf = (ordinal: number) =>
-    summary?.topics.find((row) => row.ordinal === ordinal)?.title ?? "";
+    summaryTopics(summary).find((row) => row.ordinal === ordinal)?.title ?? "";
   // 요약 보기는 결정 · 할 일만 세운다(APP-864). 이슈 · 질문 · 참고는 그래프 보기에만 선다.
   const sections = sectionsOf(items, topicOf).filter((section) =>
     isSummarySection(section.key)
@@ -497,7 +503,10 @@ export function ReviewBoard({
                   failed={summaryQuery.isError && !summary}
                   onRetry={() => void summaryQuery.refetch()}
                 />
-                <TopicIndex topics={digests} onOpenTimeline={onOpenTimeline} />
+                <TopicIndex topics={digests} onOpenTimeline={onOpenTimeline} links={meetingLinks}
+                  workspaceId={workspaceId}
+                  onRetryLinks={linksQuery.isError ? () => void linksQuery.refetch() : undefined}
+                />
                 {sections.map((section) => (
                   <ReviewSection
                     key={section.key}
@@ -569,6 +578,7 @@ export function ReviewBoard({
                       headline: null,
                       lead: [],
                       topics: [],
+                      agendas: [],
                     }
                   }
                   items={items}
@@ -593,7 +603,7 @@ export function ReviewBoard({
                       <span className="text-xs whitespace-nowrap text-[var(--el-muted)] max-sm:hidden">
                         {topicNumber(topicOf(selected.itemId)!)}{" "}
                         {
-                          summary?.topics.find(
+                          summaryTopics(summary).find(
                             (row) => row.ordinal === topicOf(selected.itemId)
                           )?.title
                         }

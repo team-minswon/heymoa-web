@@ -1,5 +1,5 @@
 import type { ReviewItem } from "@/lib/notes/review/sections";
-import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
+import { summaryTopics, topicKey, type MeetingReviewSummary, type SummarySentence } from "@/lib/notes/review/summary";
 
 export type TopicChip = {
   ordinal: number;
@@ -12,7 +12,7 @@ export type TopicChip = {
 /** 항목 → 주제 번호. 주제 밖 항목(사람이 더한 항목 포함)은 없다. */
 export function topicIndex(summary: MeetingReviewSummary | null | undefined) {
   const index = new Map<string, number>();
-  for (const topic of summary?.topics ?? []) {
+  for (const topic of summaryTopics(summary)) {
     for (const member of topic.members) {
       if (!index.has(member.itemId)) index.set(member.itemId, topic.ordinal);
     }
@@ -21,6 +21,13 @@ export function topicIndex(summary: MeetingReviewSummary | null | undefined) {
 }
 
 export type TopicDigest = TopicChip & {
+  /** 화면 key. 옛 노트(안건 행 없음)는 agendaId 가 null 이라 순서 번호로 대신한다 */
+  key: string;
+  agendaId: string | null;
+  /** 설명 · 결론 · 남은 일. 회의 중이거나 분석이 못 만들었으면 빈 배열이다 */
+  description: SummarySentence[];
+  conclusions: SummarySentence[];
+  openItems: SummarySentence[];
   /** 주제 서술 전체 */
   text: string;
   /** 이 주제 항목이 처음 · 마지막으로 나온 때(ms). 인용으로 계산하고, 하나도 없으면 null */
@@ -47,7 +54,7 @@ export function topicDigests(
       const item = itemsById.get(id);
       return item?.included ? [item] : [];
     });
-  return (summary?.topics ?? [])
+  return summaryTopics(summary)
     .map((topic) => {
       const members = pick(topic.members.map((member) => member.itemId));
       const open = pick(topic.openItemIds);
@@ -58,8 +65,13 @@ export function topicDigests(
       const decisions = members.filter((item) => item.kind === "DECISION");
       const tasks = members.filter((item) => item.kind === "ACTION_ITEM");
       return {
+        key: topicKey(topic),
+        agendaId: topic.agendaId,
         ordinal: topic.ordinal,
         title: topic.title,
+        description: topic.description,
+        conclusions: topic.conclusions,
+        openItems: topic.openItems,
         gist: topic.sentences[0]?.text ?? null,
         text: topic.sentences.map((sentence) => sentence.text).join(" "),
         count: decisions.length + tasks.length,
@@ -89,7 +101,7 @@ export function linkedItemsOf(
 ): LinkedItem[] {
   const seen = new Set<string>();
   const linked: LinkedItem[] = [];
-  for (const topic of summary?.topics ?? []) {
+  for (const topic of summaryTopics(summary)) {
     for (const relation of topic.relations) {
       if (relation.sourceItemId !== itemId && relation.targetItemId !== itemId) continue;
       if (relation.sourceItemId === topic.agendaItemId || relation.targetItemId === topic.agendaItemId) continue;

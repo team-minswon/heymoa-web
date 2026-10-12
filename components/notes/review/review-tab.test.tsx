@@ -88,11 +88,9 @@ describe("검토 가능한 회의", () => {
   it("머리 · 요약 · 주제 · 결정 · 할 일 차례로 서고, 주제를 누르면 그 자리에서 펼쳐진다", async () => {
     renderTab(MENTORING_NOTE_ID, { noteMeta: { title: "9/11 팀 멘토링", whenIso: "2026-09-11T01:45:00Z", participantCount: 4, projectName: "주간" } });
 
-    expect(
-      await screen.findByText(
-        /문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/
-      )
-    ).toBeInTheDocument();
+    // 요약 맨 위는 회의 한 문장이다. 옛 lead 문단은 한 문장이 없을 때만 선다.
+    expect(await screen.findByText("회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다")).toBeInTheDocument();
+    expect(screen.queryByText(/문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/)).toBeNull();
     expect(screen.getByRole("heading", { level: 1, name: "9/11 팀 멘토링" })).toBeInTheDocument();
     expect(screen.getByText("주간")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "언제 정해졌나" })).toBeNull();
@@ -115,6 +113,37 @@ describe("검토 가능한 회의", () => {
     expect(
       screen.getByRole("button", { name: "설문 근거는 출처와 표본 수를 발표 자료에 함께 적는다" })
     ).toBeInTheDocument();
+  });
+
+  it("지난 회의에서 이어진 주제와 결론에는 「〈회의 이름〉에서 이어짐」이 서고, 회의 이름은 그 회의 요약으로 간다", async () => {
+    renderTab();
+    const past = mockDb.getNote("01K0000000024");
+    const index = await screen.findByRole("list", { name: "주제 목차" });
+    // 주제 01 · 06 두 곳에서 이어진다
+    const links = await within(index).findAllByRole("link", { name: past.title });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", expect.stringContaining(`/notes/01K0000000024?view=full&tab=summary`));
+    expect(links[0].parentElement).toHaveTextContent(`${past.title}에서 이어짐`);
+
+    fireEvent.click(within(index).getByRole("button", { name: /차별점과 요금/ }));
+    expect(await within(index).findByText("결론")).toBeInTheDocument();
+    expect(within(index).getByText(/경쟁 도구 요금표를 모은다/)).toHaveTextContent("할 일 「경쟁 도구 요금표를 모은다」");
+  });
+
+  it("지난 회의 연결을 못 불러오면 없는 것처럼 접지 않고 다시 불러올 길을 둔다", async () => {
+    let fail = true;
+    server.use(
+      http.get("*/v1/projects/:projectId/meeting-links", () =>
+        fail ? HttpResponse.json({ success: false }, { status: 500 }) : undefined
+      )
+    );
+    renderTab();
+    const retry = await screen.findByText("지난 회의와의 연결을 불러오지 못했습니다.");
+    fail = false;
+    fireEvent.click(within(retry).getByRole("button", { name: "다시 시도" }));
+    const index = screen.getByRole("list", { name: "주제 목차" });
+    expect(await within(index).findAllByRole("link")).toHaveLength(2);
+    expect(screen.queryByText("지난 회의와의 연결을 불러오지 못했습니다.")).toBeNull();
   });
 
   it("주제 개요는 나온 때 · 제목 · 한 줄 서술 · 개수를 세우고 개수 제한 없이 모두 서며, 결정 줄에는 주제 이름과 나온 때가 붙는다", async () => {

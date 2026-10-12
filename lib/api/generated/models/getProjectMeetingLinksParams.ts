@@ -6,11 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface NoteAgendaRequest {
+export type GetProjectMeetingLinksParams = {
   /**
-   * 안건 내용. 공백만일 수 없다
-   * @minLength 1
-   * @maxLength 1000
+   * 이 노트 둘레만 볼 때 주는 노트 id
    */
-  content: string;
-}
+  noteId?: string;
+};

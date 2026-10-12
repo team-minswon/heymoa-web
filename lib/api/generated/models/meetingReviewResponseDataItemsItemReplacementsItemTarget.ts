@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { MeetingReviewResponseDataItemsItemReplacementsItemTargetKind } from "./meetingReviewResponseDataItemsItemReplacementsItemTargetKind";
+import type { MeetingReviewResponseDataItemsItemReplacementsItemTargetOriginalProposalRef } from "./meetingReviewResponseDataItemsItemReplacementsItemTargetOriginalProposalRef";
 
 /**
  * 끝내자고 제안한 이 프로젝트의 지식 노드와 그 출처
@@ -45,4 +46,9 @@ export type MeetingReviewResponseDataItemsItemReplacementsItemTarget = {
    * @minimum 1
    */
   revision: number;
+  /**
+   * 이 노드가 된 검토 항목의 원래 명제. 사람이 더한 항목이면 null
+   * @nullable
+   */
+  originalProposalRef: MeetingReviewResponseDataItemsItemReplacementsItemTargetOriginalProposalRef;
 };

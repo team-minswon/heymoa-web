@@ -48,6 +48,7 @@ export const getGetMeetingReviewResponseMock = (): MeetingReviewResponse => ({
               noteTitle: "지난 주간 회의",
               approvedAt: "2026-09-10T01:00:00Z",
               endedAt: null,
+              originalProposalRef: { proposalId: "0HZX2K7M9Q4AG", revision: 1 },
             },
             kind: "REPLACES",
             label: "대체",
@@ -57,7 +58,11 @@ export const getGetMeetingReviewResponseMock = (): MeetingReviewResponse => ({
         ],
         taskChanges: [
           {
-            target: { itemId: "0K9GVJT2C4Q21", revision: 2 },
+            target: {
+              itemId: "0K9GVJT2C4Q21",
+              revision: 2,
+              originalProposalRef: { proposalId: "0HZX2K7M9Q4AG", revision: 2 },
+            },
             status: "COMPLETED",
             assignee: {
               value: {
@@ -123,6 +128,10 @@ export const getCreateMeetingReviewItemResponseMock =
                 noteTitle: "지난 주간 회의",
                 approvedAt: "2026-09-10T01:00:00Z",
                 endedAt: null,
+                originalProposalRef: {
+                  proposalId: "0HZX2K7M9Q4AG",
+                  revision: 1,
+                },
               },
               kind: "REPLACES",
               label: "대체",
@@ -132,7 +141,14 @@ export const getCreateMeetingReviewItemResponseMock =
           ],
           taskChanges: [
             {
-              target: { itemId: "0K9GVJT2C4Q21", revision: 2 },
+              target: {
+                itemId: "0K9GVJT2C4Q21",
+                revision: 2,
+                originalProposalRef: {
+                  proposalId: "0HZX2K7M9Q4AG",
+                  revision: 2,
+                },
+              },
               status: "COMPLETED",
               assignee: {
                 value: {
@@ -194,6 +210,41 @@ export const getGetMeetingReviewSummaryResponseMock =
             },
           ],
           openItemIds: ["0HZX2K7M9Q4AN"],
+          agendaId: null,
+          completed: false,
+          description: [],
+          conclusions: [],
+          openItems: [],
+        },
+      ],
+      agendas: [
+        {
+          ordinal: 1,
+          title: "배포 일정",
+          agendaItemId: "0HZX2K7M9Q4AN",
+          centerItemId: "0HZX2K7M9Q4AN",
+          members: [{ itemId: "0HZX2K7M9Q4AN", kind: "DECISION" }],
+          alsoItemIds: ["0HZX2K7M9Q4AN"],
+          relations: [
+            {
+              sourceItemId: "0HZX2K7M9Q4AN",
+              targetItemId: "0HZX2K7M9Q4AN",
+              kind: "RESOLVES",
+              label: "해결",
+            },
+          ],
+          sentences: [
+            {
+              text: "목요일에 배포하기로 했습니다",
+              itemIds: ["0HZX2K7M9Q4AN"],
+            },
+          ],
+          openItemIds: ["0HZX2K7M9Q4AN"],
+          agendaId: null,
+          completed: false,
+          description: [],
+          conclusions: [],
+          openItems: [],
         },
       ],
     },
@@ -236,6 +287,10 @@ export const getUpdateMeetingReviewItemResponseMock =
                 noteTitle: "지난 주간 회의",
                 approvedAt: "2026-09-10T01:00:00Z",
                 endedAt: null,
+                originalProposalRef: {
+                  proposalId: "0HZX2K7M9Q4AG",
+                  revision: 1,
+                },
               },
               kind: "REPLACES",
               label: "대체",
@@ -245,7 +300,14 @@ export const getUpdateMeetingReviewItemResponseMock =
           ],
           taskChanges: [
             {
-              target: { itemId: "0K9GVJT2C4Q21", revision: 2 },
+              target: {
+                itemId: "0K9GVJT2C4Q21",
+                revision: 2,
+                originalProposalRef: {
+                  proposalId: "0HZX2K7M9Q4AG",
+                  revision: 2,
+                },
+              },
               status: "COMPLETED",
               assignee: {
                 value: {

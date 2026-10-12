@@ -9,8 +9,8 @@
 /**
  * 성공 시 null인 오류 정보
  */
-export type NoteAgendaResponseError =
-  | (typeof NoteAgendaResponseError)[keyof typeof NoteAgendaResponseError]
+export type NoteAgendasResponseError =
+  | (typeof NoteAgendasResponseError)[keyof typeof NoteAgendasResponseError]
   | null;
 
-export const NoteAgendaResponseError = {} as const;
+export const NoteAgendasResponseError = {} as const;

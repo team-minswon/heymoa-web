@@ -1,5 +1,5 @@
 import type { MeetingReviewResponseDataItemsItem } from "@/lib/api/generated/models";
-import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
+import { summaryTopics, type MeetingReviewSummary } from "@/lib/notes/review/summary";
 
 type ReviewItem = MeetingReviewResponseDataItemsItem;
 
@@ -56,7 +56,7 @@ export function buildReviewGraph(
   const groupOf = new Map<string, number>();
   const open = new Set<string>();
   const centers = new Set<string>();
-  for (const topic of summary.topics) {
+  for (const topic of summaryTopics(summary)) {
     for (const member of topic.members) {
       if (!groupOf.has(member.itemId)) groupOf.set(member.itemId, topic.ordinal);
     }
@@ -86,7 +86,7 @@ export function buildReviewGraph(
     const key = [source, target].sort().join("→");
     if (!edges.has(key)) edges.set(key, { source, target, also });
   };
-  for (const topic of summary.topics) {
+  for (const topic of summaryTopics(summary)) {
     for (const relation of topic.relations) {
       connect(relation.sourceItemId, relation.targetItemId, false);
     }
@@ -100,7 +100,7 @@ export function buildReviewGraph(
   return {
     nodes,
     edges: [...edges.values()],
-    topics: new Map(summary.topics.map((topic) => [topic.ordinal, topic.title])),
+    topics: new Map(summaryTopics(summary).map((topic) => [topic.ordinal, topic.title])),
   };
 }
 

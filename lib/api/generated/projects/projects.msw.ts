@@ -10,6 +10,7 @@ import type { RequestHandlerOptions } from "msw";
 
 import type {
   ProjectListResponse,
+  ProjectMeetingLinksResponse,
   ProjectResponse,
   ProjectTaskListResponse,
   ProjectTaskResponse,
@@ -186,6 +187,62 @@ export const getGetProjectTaskRevisionsResponseMock =
           approvalId: null,
           changedBy: "0HZX2K7M9Q4AC",
           changedAt: "2026-07-14T01:02:03Z",
+        },
+      ],
+    },
+    error: null,
+  });
+
+export const getGetProjectMeetingLinksResponseMock =
+  (): ProjectMeetingLinksResponse => ({
+    success: true,
+    data: {
+      notes: [
+        {
+          noteId: "0HZX2K7M9Q4AF",
+          title: "주간 회의",
+          startedAt: "2026-10-08T01:00:00Z",
+          agendas: [],
+        },
+        {
+          noteId: "0K9GVJT2C4N01",
+          title: "배포 회의",
+          startedAt: "2026-10-01T01:00:00Z",
+          agendas: [
+            {
+              agendaId: "0K9GVJT2C4A01",
+              title: "배포 일정",
+              completed: true,
+              proposalIds: ["0K9GVJT2C4P01"],
+            },
+          ],
+        },
+      ],
+      meetingLinks: [
+        {
+          kind: "SUPERSEDES",
+          reason: "배포 요일이 바뀌었다",
+          evidenceSequences: [12],
+          source: {
+            noteId: "0HZX2K7M9Q4AF",
+            proposalId: "0K9GVJT2C4P02",
+            revision: 1,
+            proposalKind: "DECISION",
+            content: "목요일로 바꾼다",
+          },
+          target: {
+            noteId: "0K9GVJT2C4N01",
+            proposalId: "0K9GVJT2C4P01",
+            revision: 2,
+            proposalKind: "DECISION",
+            content: "화요일에 배포한다",
+          },
+        },
+      ],
+      agendaLinks: [
+        {
+          source: { noteId: "0HZX2K7M9Q4AF", agendaId: "0K9GVJT2C4A02" },
+          target: { noteId: "0K9GVJT2C4N01", agendaId: "0K9GVJT2C4A01" },
         },
       ],
     },
@@ -430,6 +487,30 @@ export const getGetProjectTaskRevisionsMockHandler = (
     options
   );
 };
+
+export const getGetProjectMeetingLinksMockHandler = (
+  overrideResponse?:
+    | ProjectMeetingLinksResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<ProjectMeetingLinksResponse> | ProjectMeetingLinksResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/projects/:projectId/meeting-links",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetProjectMeetingLinksResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getProjectsMock = () => [
   getGetProjectsMockHandler(),
   getCreateProjectMockHandler(),
@@ -441,4 +522,5 @@ export const getProjectsMock = () => [
   getCreateProjectTaskMockHandler(),
   getUpdateProjectTaskMockHandler(),
   getGetProjectTaskRevisionsMockHandler(),
+  getGetProjectMeetingLinksMockHandler(),
 ];

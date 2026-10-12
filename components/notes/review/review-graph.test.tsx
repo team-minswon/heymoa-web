@@ -83,6 +83,11 @@ function topic(ordinal: number, over: Partial<SummaryTopic>): SummaryTopic {
     relations: [],
     sentences: [],
     openItemIds: [],
+    agendaId: null,
+    completed: true,
+    description: [],
+    conclusions: [],
+    openItems: [],
     ...over,
   };
 }
@@ -93,7 +98,8 @@ const summary: MeetingReviewSummary = {
   resultVersion: "v",
   headline: null,
   lead: [],
-  topics: [
+  topics: [],
+  agendas: [
     topic(1, {
       title: "요금",
       centerItemId: "d1",
@@ -251,7 +257,7 @@ describe("ReviewGraph", () => {
   it("주제 묶음이 없으면 빈 그래프 대신 한 줄로 말한다", () => {
     render(
       <ReviewGraph
-        summary={{ ...summary, status: "FAILED", topics: [] }}
+        summary={{ ...summary, status: "FAILED", topics: [], agendas: [] }}
         items={items}
         selectedItemId={null}
         onSelect={() => {}}

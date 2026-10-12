@@ -74,6 +74,10 @@ describe("overview · topics", () => {
       ],
     } as unknown as MeetingReviewSummary;
     expect(overviewToMarkdown(summary)).toBe("## 요약\n\n문제를 좁혔다. 요금은 다시 본다.\n");
+    // 회의 한 문장이 있으면 화면처럼 그것만 복사한다
+    expect(overviewToMarkdown({ ...summary, headline: { text: "할 일을 주제별로 확정한다", topics: [] } })).toBe(
+      "## 요약\n\n할 일을 주제별로 확정한다\n"
+    );
     expect(
       topicsToMarkdown([
         { ordinal: 1, title: "문제 정의", count: 2, gist: "한 문장으로 좁혔다." },

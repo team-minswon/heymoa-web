@@ -326,7 +326,7 @@ describe("ItemDetail", () => {
     // 앞의 넷은 화면에 없는 항목이다. 먼저 자르면 뒤의 결정까지 사라진다.
     const others = ["h1", "h2", "h3", "h4", "d2"];
     const summary = {
-      topics: [
+      agendas: [
         {
           agendaItemId: "agenda",
           openItemIds: [],
@@ -350,7 +350,7 @@ describe("ItemDetail", () => {
 
 describe("roleOfItem", () => {
   const summary = {
-    topics: [{ openItemIds: ["open"] }],
+    agendas: [{ openItemIds: ["open"] }],
   } as unknown as MeetingReviewSummary;
 
   it("미해결은 주제가 열린 채 남긴 이슈 · 질문뿐이다", () => {

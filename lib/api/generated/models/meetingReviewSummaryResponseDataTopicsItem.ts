@@ -5,7 +5,10 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { MeetingReviewSummaryResponseDataTopicsItemConclusionsItem } from "./meetingReviewSummaryResponseDataTopicsItemConclusionsItem";
+import type { MeetingReviewSummaryResponseDataTopicsItemDescriptionItem } from "./meetingReviewSummaryResponseDataTopicsItemDescriptionItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemMembersItem } from "./meetingReviewSummaryResponseDataTopicsItemMembersItem";
+import type { MeetingReviewSummaryResponseDataTopicsItemOpenItemsItem } from "./meetingReviewSummaryResponseDataTopicsItemOpenItemsItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemRelationsItem } from "./meetingReviewSummaryResponseDataTopicsItemRelationsItem";
 import type { MeetingReviewSummaryResponseDataTopicsItemSentencesItem } from "./meetingReviewSummaryResponseDataTopicsItemSentencesItem";
 
@@ -48,4 +51,18 @@ export type MeetingReviewSummaryResponseDataTopicsItem = {
    * @minimum 1
    */
   ordinal: number;
+  /** 결론 없이 남은 일 문장 */
+  openItems: MeetingReviewSummaryResponseDataTopicsItemOpenItemsItem[];
+  /** 안건 결론 문장 */
+  conclusions: MeetingReviewSummaryResponseDataTopicsItemConclusionsItem[];
+  /** 안건 설명 문장. sentences 를 나눈 것이고 옛 원문 요약은 빈 배열 */
+  description: MeetingReviewSummaryResponseDataTopicsItemDescriptionItem[];
+  /** 안건 완료 여부. 옛 노트는 false */
+  completed: boolean;
+  /**
+   * 노트 안건의 id. 회의 뒤 안건 확정이 쓴 노트만 있고, 옛 노트는 null
+   * @nullable
+   * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
+   */
+  agendaId: string | null;
 };

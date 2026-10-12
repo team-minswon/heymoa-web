@@ -23,6 +23,7 @@ const replacement = (itemId: string, decision: "END" | "KEEP" | null = null): Re
     content: "이전 결정",
     noteId: "01K0000000024",
     noteTitle: "지난 회의",
+    originalProposalRef: null,
     approvedAt: "2026-09-04T00:00:00Z",
     endedAt: null,
   },
@@ -101,7 +102,7 @@ describe("confirmSummaryOf", () => {
         itemId: "t",
         kind: "ACTION_ITEM",
         taskChanges: [
-          { target: { itemId: "task", revision: 2 }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLIED" },
+          { target: { itemId: "task", revision: 2, originalProposalRef: null }, status: "COMPLETED", assignee: null, due: null, reason: "", decision: "APPLIED" },
         ],
       }),
     ];
@@ -123,7 +124,7 @@ describe("confirmSummaryOf", () => {
   it("고를 수 있는데 안 고른 제안만 센다", () => {
     const ended = { ...replacement("n9"), target: { ...replacement("n9").target, endedAt: "2026-09-10T00:00:00Z" } };
     const change = (taskId: string, decision: "APPLIED" | "KEEP" | null) => ({
-      target: { itemId: taskId, revision: 1 },
+      target: { itemId: taskId, revision: 1, originalProposalRef: null },
       status: "COMPLETED" as const,
       assignee: null,
       due: null,
@@ -199,7 +200,7 @@ describe("trailOf", () => {
 
 describe("topicDigests", () => {
   const summary = {
-    topics: [
+    agendas: [
       {
         ordinal: 1,
         title: "가",

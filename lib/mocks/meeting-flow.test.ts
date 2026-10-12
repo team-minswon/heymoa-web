@@ -280,19 +280,26 @@ describe("확정", () => {
   });
 });
 
-describe("사전 안건", () => {
-  it("목록 · 추가 · 고치기 · 지우기를 계약대로 답한다", async () => {
-    expect((await api("/v1/notes/01K0000000002/agendas")).body.data.agendas).toHaveLength(1);
-    const created = await api("/v1/notes/01K0000000002/agendas", "POST", { content: "배포 일정 확인" });
-    expect(created.status).toBe(201);
-    const agendaId = created.body.data.agendaId;
+describe("노트 안건", () => {
+  it("안건 정본은 조회만 있고, 끝난 회의는 검토 요약의 주제를 안건으로 돌려준다", async () => {
+    const empty = (await api("/v1/notes/01K0000000002/agendas")).body.data;
+    expect(empty).toEqual({ asOfSequence: null, agendas: [] });
 
-    expect((await api(`/v1/notes/01K0000000002/agendas/${agendaId}`, "PUT", { content: "배포 일정 다시 확인" })).body.data.content).toBe(
-      "배포 일정 다시 확인"
+    const mentoring = (await api(`/v1/notes/${MENTORING_NOTE_ID}/agendas`)).body.data;
+    expect(mentoring.asOfSequence).toEqual(expect.any(Number));
+    expect(mentoring.agendas[0]).toEqual(
+      expect.objectContaining({ agendaId: expect.any(String), title: expect.any(String), completed: true, proposalIds: expect.any(Array) })
     );
-    expect((await api("/v1/notes/01K0000000002/agendas/01KNOPE000000", "PUT", { content: "x" })).status).toBe(404);
-    expect((await api(`/v1/notes/01K0000000002/agendas/${agendaId}`, "DELETE")).status).toBe(204);
-    expect((await api(`/v1/notes/${MENTORING_NOTE_ID}/agendas`, "POST", { content: "끝난 회의" })).status).toBe(409);
+  });
+});
+
+describe("회의 간 연결", () => {
+  it("멘토링 노트만 지난 회의와 이어지고, 다른 노트는 비어 있다", async () => {
+    const links = (await api(`/v1/projects/p/meeting-links?noteId=${MENTORING_NOTE_ID}`)).body.data;
+    expect(links.notes).toHaveLength(2);
+    expect(links.meetingLinks.map((row: { kind: string }) => row.kind)).toEqual(expect.arrayContaining(["SUPERSEDES", "COMPLETES"]));
+    expect(links.agendaLinks).toHaveLength(2);
+    expect((await api("/v1/projects/p/meeting-links?noteId=01K0000000002")).body.data).toEqual({ notes: [], meetingLinks: [], agendaLinks: [] });
   });
 });
 

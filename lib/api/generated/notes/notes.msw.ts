@@ -10,8 +10,7 @@ import type { RequestHandlerOptions } from "msw";
 
 import type {
   CreatedNoteGuestParticipantResponse,
-  NoteAgendaListResponse,
-  NoteAgendaResponse,
+  NoteAgendasResponse,
   NoteListResponse,
   NoteParticipantListResponse,
   NoteResponse,
@@ -103,28 +102,23 @@ export const getUpdateNoteResponseMock = (): NoteResponse => ({
   error: null,
 });
 
-export const getGetNoteAgendasResponseMock = (): NoteAgendaListResponse => ({
+export const getGetNoteAgendasResponseMock = (): NoteAgendasResponse => ({
   success: true,
   data: {
     agendas: [
       {
         agendaId: "0K9GVJT2C4Q21",
-        content: "배포 일정 확인",
-        createdBy: "0HZX2K7M9Q4AC",
-        createdAt: "2026-07-14T01:02:03Z",
+        title: "배포 일정",
+        completed: false,
+        proposalIds: ["0K9GVJT2C4Q2A"],
+        description: [],
+        conclusions: [
+          { text: "다음 주 화요일에 배포한다", proposalIds: ["0K9GVJT2C4Q2A"] },
+        ],
+        openItems: [],
       },
     ],
-  },
-  error: null,
-});
-
-export const getCreateNoteAgendaResponseMock = (): NoteAgendaResponse => ({
-  success: true,
-  data: {
-    agendaId: "0K9GVJT2C4Q21",
-    content: "배포 일정 확인",
-    createdBy: "0HZX2K7M9Q4AC",
-    createdAt: "2026-07-14T01:02:03Z",
+    asOfSequence: 42,
   },
   error: null,
 });
@@ -291,17 +285,6 @@ export const getGetWorkspaceNotesResponseMock = (): NoteListResponse => ({
   error: null,
 });
 
-export const getUpdateNoteAgendaResponseMock = (): NoteAgendaResponse => ({
-  success: true,
-  data: {
-    agendaId: "0K9GVJT2C4Q21",
-    content: "배포 일정 확인",
-    createdBy: "0HZX2K7M9Q4AC",
-    createdAt: "2026-07-14T01:02:03Z",
-  },
-  error: null,
-});
-
 export const getReplaceNoteGuestParticipantsResponseMock =
   (): NoteParticipantListResponse => ({
     success: true,
@@ -426,10 +409,10 @@ export const getUpdateNoteMockHandler = (
 
 export const getGetNoteAgendasMockHandler = (
   overrideResponse?:
-    | NoteAgendaListResponse
+    | NoteAgendasResponse
     | ((
         info: Parameters<Parameters<typeof http.get>[1]>[0]
-      ) => Promise<NoteAgendaListResponse> | NoteAgendaListResponse),
+      ) => Promise<NoteAgendasResponse> | NoteAgendasResponse),
   options?: RequestHandlerOptions
 ) => {
   return http.get(
@@ -442,30 +425,6 @@ export const getGetNoteAgendasMockHandler = (
             : overrideResponse
           : getGetNoteAgendasResponseMock(),
         { status: 200 }
-      );
-    },
-    options
-  );
-};
-
-export const getCreateNoteAgendaMockHandler = (
-  overrideResponse?:
-    | NoteAgendaResponse
-    | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0]
-      ) => Promise<NoteAgendaResponse> | NoteAgendaResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.post(
-    "*/v1/notes/:noteId/agendas",
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getCreateNoteAgendaResponseMock(),
-        { status: 201 }
       );
     },
     options
@@ -568,51 +527,6 @@ export const getGetWorkspaceNotesMockHandler = (
   );
 };
 
-export const getUpdateNoteAgendaMockHandler = (
-  overrideResponse?:
-    | NoteAgendaResponse
-    | ((
-        info: Parameters<Parameters<typeof http.put>[1]>[0]
-      ) => Promise<NoteAgendaResponse> | NoteAgendaResponse),
-  options?: RequestHandlerOptions
-) => {
-  return http.put(
-    "*/v1/notes/:noteId/agendas/:agendaId",
-    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getUpdateNoteAgendaResponseMock(),
-        { status: 200 }
-      );
-    },
-    options
-  );
-};
-
-export const getDeleteNoteAgendaMockHandler = (
-  overrideResponse?:
-    | void
-    | ((
-        info: Parameters<Parameters<typeof http.delete>[1]>[0]
-      ) => Promise<void> | void),
-  options?: RequestHandlerOptions
-) => {
-  return http.delete(
-    "*/v1/notes/:noteId/agendas/:agendaId",
-    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
-      if (typeof overrideResponse === "function") {
-        await overrideResponse(info);
-      }
-
-      return new HttpResponse(null, { status: 204 });
-    },
-    options
-  );
-};
-
 export const getReplaceNoteGuestParticipantsMockHandler = (
   overrideResponse?:
     | NoteParticipantListResponse
@@ -667,13 +581,10 @@ export const getNotesMock = () => [
   getDeleteNoteMockHandler(),
   getUpdateNoteMockHandler(),
   getGetNoteAgendasMockHandler(),
-  getCreateNoteAgendaMockHandler(),
   getReplaceNoteParticipantsMockHandler(),
   getGetNotesMockHandler(),
   getCreateNoteMockHandler(),
   getGetWorkspaceNotesMockHandler(),
-  getUpdateNoteAgendaMockHandler(),
-  getDeleteNoteAgendaMockHandler(),
   getReplaceNoteGuestParticipantsMockHandler(),
   getCreateNoteGuestParticipantMockHandler(),
 ];

@@ -26,8 +26,10 @@ import type {
 import type {
   AppErrorResponse,
   CreateProjectTaskRequest,
+  GetProjectMeetingLinksParams,
   GetWorkspaceTasksParams,
   ProjectListResponse,
+  ProjectMeetingLinksResponse,
   ProjectRequest,
   ProjectResponse,
   ProjectTaskListResponse,
@@ -2762,6 +2764,407 @@ export function useGetProjectTaskRevisionsSuspense<
     workspaceId,
     projectId,
     taskId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getProjectMeetingLinksResponse200 = {
+  data: ProjectMeetingLinksResponse;
+  status: 200;
+};
+
+export type getProjectMeetingLinksResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getProjectMeetingLinksResponseSuccess =
+  getProjectMeetingLinksResponse200 & {
+    headers: Headers;
+  };
+export type getProjectMeetingLinksResponseError =
+  getProjectMeetingLinksResponse401 & {
+    headers: Headers;
+  };
+
+export type getProjectMeetingLinksResponse =
+  | getProjectMeetingLinksResponseSuccess
+  | getProjectMeetingLinksResponseError;
+
+export const getGetProjectMeetingLinksUrl = (
+  projectId: string,
+  params?: GetProjectMeetingLinksParams
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/v1/projects/${projectId}/meeting-links?${stringifiedParams}`
+    : `/v1/projects/${projectId}/meeting-links`;
+};
+
+/**
+ * 프로젝트의 끝난 노트 최근 N 개(서버 설정)와 그 사이의 회의 간 연결이다. 연결은 각 노트의 가장 최근 회의 뒤 분석이 냈고, 양 끝이 이 노트들 안에 있는 것만 나간다. noteId 를 주면 그 노트가 출발이나 도착인 연결과 양 끝 노트만 낸다. 연결은 화면 표시용이고 지난 항목의 상태를 바꾸지 않는다.
+ * @summary 회의 간 연결 조회
+ */
+export const getProjectMeetingLinks = async (
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getProjectMeetingLinksResponse> => {
+  return apiFetch<getProjectMeetingLinksResponse>(
+    getGetProjectMeetingLinksUrl(projectId, params),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetProjectMeetingLinksQueryKey = (
+  projectId: string,
+  params?: GetProjectMeetingLinksParams
+) => {
+  return [
+    `/v1/projects/${projectId}/meeting-links`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetProjectMeetingLinksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetProjectMeetingLinksQueryKey(projectId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProjectMeetingLinks>>
+  > = ({ signal }) =>
+    getProjectMeetingLinks(projectId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: projectId !== null && projectId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProjectMeetingLinksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProjectMeetingLinks>>
+>;
+export type GetProjectMeetingLinksQueryError = UnauthorizedResponse;
+
+export function useGetProjectMeetingLinks<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params: undefined | GetProjectMeetingLinksParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectMeetingLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectMeetingLinks<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectMeetingLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectMeetingLinks<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 회의 간 연결 조회
+ */
+
+export function useGetProjectMeetingLinks<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetProjectMeetingLinksQueryOptions(
+    projectId,
+    params,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 회의 간 연결 조회
+ */
+export const prefetchGetProjectMeetingLinksQuery = async <
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  queryClient: QueryClient,
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetProjectMeetingLinksQueryOptions(
+    projectId,
+    params,
+    options
+  );
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetProjectMeetingLinksSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetProjectMeetingLinksQueryKey(projectId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProjectMeetingLinks>>
+  > = ({ signal }) =>
+    getProjectMeetingLinks(projectId, params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProjectMeetingLinksSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProjectMeetingLinks>>
+>;
+export type GetProjectMeetingLinksSuspenseQueryError = UnauthorizedResponse;
+
+export function useGetProjectMeetingLinksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params: undefined | GetProjectMeetingLinksParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectMeetingLinksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetProjectMeetingLinksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 회의 간 연결 조회
+ */
+
+export function useGetProjectMeetingLinksSuspense<
+  TData = Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+  TError = UnauthorizedResponse,
+>(
+  projectId: string,
+  params?: GetProjectMeetingLinksParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getProjectMeetingLinks>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetProjectMeetingLinksSuspenseQueryOptions(
+    projectId,
+    params,
     options
   );
 

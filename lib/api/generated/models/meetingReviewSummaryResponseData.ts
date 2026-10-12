@@ -5,6 +5,7 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
+import type { MeetingReviewSummaryResponseDataAgendasItem } from "./meetingReviewSummaryResponseDataAgendasItem";
 import type { MeetingReviewSummaryResponseDataHeadline } from "./meetingReviewSummaryResponseDataHeadline";
 import type { MeetingReviewSummaryResponseDataLeadItem } from "./meetingReviewSummaryResponseDataLeadItem";
 import type { MeetingReviewSummaryResponseDataStatus } from "./meetingReviewSummaryResponseDataStatus";
@@ -36,4 +37,6 @@ export type MeetingReviewSummaryResponseData = {
   lead: MeetingReviewSummaryResponseDataLeadItem[];
   /** SUCCEEDED 는 SUMMARY 영역 성공, FAILED 는 SUMMARY 영역 실패입니다. NOT_AVAILABLE 은 분석 요청이 없거나 콜백 전이거나 요청에 SUMMARY 영역이 없는 경우입니다. FAILED 의 오류 코드는 싣지 않습니다 */
   status: MeetingReviewSummaryResponseDataStatus;
+  /** topics 의 새 이름. 같은 목록이고, 웹이 옮겨 간 뒤 topics 를 지웁니다 */
+  agendas: MeetingReviewSummaryResponseDataAgendasItem[];
 };

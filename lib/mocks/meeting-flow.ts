@@ -7,8 +7,7 @@ import type {
   MeetingApprovalResponseData,
   MeetingReviewResponseData,
   MeetingReviewResponseDataItemsItem,
-  NoteAgendaRequest,
-  NoteAgendaResponseData,
+  NoteAgendasResponseDataAgendasItem,
   ProposalRevision,
   TranscriptResponseDataSegmentsItem,
   UpdateMeetingReviewItemRequest,
@@ -63,7 +62,10 @@ type State = {
   summaries: Map<string, MeetingReviewSummary>;
   revisions: Map<string, ProposalRevision[]>;
   approvals: Map<string, { body: string; response: MeetingApprovalResponseData }>;
-  agendas: Map<string, NoteAgendaResponseData[]>;
+  /** 노트 안건 정본(GET /agendas). 확정 일꾼이 없는 목이라 비어 있고, 검토 요약의 주제로 채워진다 */
+  agendas: Map<string, NoteAgendasResponseDataAgendasItem[]>;
+  /** 이 회의 → 지난 회의 연결 중 제안 카드와 같은 지난 명제를 가리키는 것. 화면에서는 카드에 가려진다 */
+  pastLinks: PastLink[];
   /** 목에는 콜백을 밀어 줄 주체가 없어, 도는 단계는 시간이 지나면 스스로 다음으로 넘어간다. */
   runningSince: Map<string, number>;
 };
@@ -90,6 +92,33 @@ const SEEDED_FLOWS: Record<string, FlowStatus> = {
 const MEETING_DATE = Date.UTC(2026, 8, 11);
 /** 대체 제안이 끝내자는 이전 결정을 확정한 회의 */
 const PREVIOUS_NOTE_ID = "01K0000000024";
+/** 멘토링 검토본 주제의 안건 ID. 회의 간 연결 목(주제 이어짐)이 같은 ID를 가리켜야 해서 고정한다 */
+const MENTORING_AGENDA_IDS = Array.from({ length: 8 }, (_, at) => `01KG${String(at + 1).padStart(9, "0")}`);
+/** 지난 회의(PREVIOUS_NOTE_ID)의 안건. 멘토링 01 · 06 주제가 여기서 이어진다 */
+const PREVIOUS_AGENDAS = [
+  { agendaId: "01KG100000001", title: "첫 화면 메시지" },
+  { agendaId: "01KG100000002", title: "분석 범위" },
+];
+
+type PastLink = {
+  kind: string;
+  sourceProposalId: string;
+  target: { proposalId: string; content: string; proposalKind: "DECISION" | "ACTION_ITEM" };
+};
+
+/** 제안 카드가 끝내자는 지난 명제를 만들고, 같은 명제를 가리키는 회의 간 연결을 남긴다 */
+function pastProposal(
+  target: State,
+  sourceProposalId: string,
+  kind: string,
+  content: string,
+  proposalKind: PastLink["target"]["proposalKind"]
+) {
+  const ref = { proposalId: nextId("01KP"), revision: 1 };
+  target.pastLinks.push({ kind, sourceProposalId, target: { proposalId: ref.proposalId, content, proposalKind } });
+  return ref;
+}
+
 const dueAfterMeeting = (days: number) =>
   new Date(MEETING_DATE + days * 86_400_000).toISOString().slice(0, 10);
 
@@ -125,21 +154,8 @@ function store(): State {
         .filter(([, status]) => status === "DIARIZING" || status === "ANALYZING")
         .map(([noteId]) => [noteId, Date.now()])
     ),
-    agendas: new Map([
-      [
-        "01K0000000002",
-        [
-          {
-            agendaId: nextId("01KG"),
-            noteId: "01K0000000002",
-            content: "지난주 배포 뒤 남은 문제 확인",
-            createdBy: mockDb.getCurrentUser().userId,
-            createdAt: "2026-07-10T23:50:00Z",
-            updatedAt: "2026-07-10T23:50:00Z",
-          } as NoteAgendaResponseData,
-        ],
-      ],
-    ]),
+    agendas: new Map(),
+    pastLinks: [],
   };
   seedMentoringReview(state);
   seedSmallReview(state, "01K0000000021", false);
@@ -225,6 +241,10 @@ function seedMentoringReview(target: State) {
                 content: seed.replaces.content,
                 noteId: PREVIOUS_NOTE_ID,
                 noteTitle: mockDb.getNote(PREVIOUS_NOTE_ID).title,
+                // 다른 회의가 먼저 끝낸 결정은 사람이 만든 항목이라 원래 명제가 없는 경우로 둔다
+                originalProposalRef: seed.replaces.endedElsewhere
+                  ? null
+                  : pastProposal(target, proposalId, "SUPERSEDES", seed.replaces.content, "DECISION"),
                 approvedAt: new Date(MEETING_DATE - 7 * 86_400_000).toISOString(),
                 // 이 회의를 검토하는 사이 다른 회의의 확정이 먼저 끝낸 결정
                 endedAt: seed.replaces.endedElsewhere ? new Date(MEETING_DATE - 86_400_000).toISOString() : null,
@@ -242,7 +262,14 @@ function seedMentoringReview(target: State) {
               const change = seed.changesTask;
               const taskId = projectTasks.idOf(change.task);
               return {
-                target: { itemId: taskId, revision: projectTasks.revisionOf(taskId) },
+                // 프로젝트 할 일은 공개 경로로도 생겨 원래 명제가 없을 수 있다 — 목에서는 없음으로 둔다
+                target: {
+                  itemId: taskId,
+                  revision: projectTasks.revisionOf(taskId),
+                  // 완료로 바꾸자는 할 일만 회의에서 나온 할 일이다 — 같은 할 일을 가리키는 「마침」 연결이 카드에 가려진다
+                  originalProposalRef:
+                    change.status === "COMPLETED" ? pastProposal(target, proposalId, "COMPLETES", change.task, "ACTION_ITEM") : null,
+                },
                 status: change.status ?? null,
                 assignee: change.who === undefined ? null : { value: who(noteId, change.who) },
                 due:
@@ -368,6 +395,14 @@ function buildSummary(
           .map(({ sourceItemId, targetItemId, kind }) => ({ sourceItemId, targetItemId, kind })),
       })),
       openItemIds: open.map((row) => row.itemId),
+      agendaId: MENTORING_AGENDA_IDS[index] ?? nextId("01KG"),
+      completed: true,
+      description: seed.sentences.slice(0, 1).map((sentence) => ({
+        text: sentence.text,
+        itemIds: sentence.items.map((at) => ids[at]),
+      })),
+      conclusions: decisions.slice(0, 3).map((row) => ({ text: row.content, itemIds: [row.itemId] })),
+      openItems: open.map((row) => ({ text: row.content, itemIds: [row.itemId] })),
     };
   });
   return {
@@ -377,6 +412,7 @@ function buildSummary(
     headline: { text: REVIEW_SEED_HEADLINE, topics: [1, 6] },
     lead: REVIEW_SEED_LEAD,
     topics,
+    agendas: topics,
   };
 }
 
@@ -440,6 +476,12 @@ function seedLargeReview(target: State, noteId: string) {
       relations,
       sentences: [],
       openItemIds: open.map((row) => row.itemId),
+      // 옛 노트처럼 안건 행이 없는 주제도 섞는다 — 화면 key 는 순서 번호로 대신한다
+      agendaId: index % 5 === 4 ? null : nextId("01KG"),
+      completed: true,
+      description: [],
+      conclusions: [],
+      openItems: open.map((row) => ({ text: row.content, itemIds: [row.itemId] })),
     };
   });
   target.summaries.set(noteId, {
@@ -449,6 +491,7 @@ function seedLargeReview(target: State, noteId: string) {
     headline: null,
     lead: [],
     topics,
+    agendas: topics,
   });
 }
 
@@ -492,6 +535,7 @@ function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
     headline: null,
     lead: [],
     topics: [],
+    agendas: [],
   });
 }
 
@@ -592,6 +636,7 @@ function completeAnalysis(noteId: string) {
     headline: null,
     lead: [],
     topics: [],
+    agendas: [],
   });
   target.flows.set(noteId, "REVIEWABLE");
 }
@@ -611,6 +656,7 @@ export const meetingFlow = {
         headline: null,
         lead: [],
         topics: [],
+        agendas: [],
       }
     );
   },
@@ -805,59 +851,117 @@ export const meetingFlowHandlers = [
     return respond(() => ({ proposalId: paramId(params.proposalId), revisions }));
   }),
 
+  // 회의 간 연결. 멘토링 노트만 지난 회의(PREVIOUS_NOTE_ID)와 이어져 있다 — 카드에 가려지는 대체 연결,
+  // 카드 없이 서는 「마침」 연결 하나, 주제 이어짐 둘.
+  http.get("*/v1/projects/:projectId/meeting-links", ({ request }) =>
+    respond(() => {
+      const noteId = new URL(request.url).searchParams.get("noteId");
+      const empty = { notes: [], meetingLinks: [], agendaLinks: [] };
+      if (noteId !== MENTORING_NOTE_ID) return empty;
+      const summary = store().summaries.get(MENTORING_NOTE_ID);
+      const review = store().reviews.get(MENTORING_NOTE_ID);
+      if (!summary || !review) return empty;
+      const byId = new Map(review.items.map((row) => [row.itemId, row]));
+      const now = mockDb.getNote(MENTORING_NOTE_ID);
+      const past = mockDb.getNote(PREVIOUS_NOTE_ID);
+      const startedAt = new Date(MEETING_DATE).toISOString();
+      const pastStartedAt = new Date(MEETING_DATE - 7 * 86_400_000).toISOString();
+      const side = (noteId: string, proposalId: string, content: string, proposalKind: PastLink["target"]["proposalKind"]) => ({
+        noteId,
+        proposalId,
+        revision: 1,
+        content,
+        proposalKind,
+      });
+      const sourceOf = (proposalId: string) => review.items.find((row) => row.originalProposalRef?.proposalId === proposalId);
+      const carded = store().pastLinks.flatMap((link) => {
+        const source = sourceOf(link.sourceProposalId);
+        if (!source) return [];
+        return [
+          {
+            kind: link.kind,
+            reason: "새 결정이 지난 결정을 대신한다",
+            evidenceSequences: [],
+            source: side(MENTORING_NOTE_ID, link.sourceProposalId, source.content, "DECISION"),
+            target: side(PREVIOUS_NOTE_ID, link.target.proposalId, link.target.content, link.target.proposalKind),
+          },
+        ];
+      });
+      // 「차별점과 요금」의 첫 결정이 지난 회의의 할 일을 마친다 — 카드가 없어 결론 옆 한 줄로 선다
+      const pricing = summary.agendas[1];
+      const finishing = pricing?.members
+        .map((member) => byId.get(member.itemId))
+        .find((row) => row?.kind === "DECISION" && row.originalProposalRef);
+      const free = finishing?.originalProposalRef
+        ? [
+            {
+              kind: "COMPLETES",
+              reason: "지난 회의에서 맡은 조사를 이번에 마쳤다",
+              evidenceSequences: [],
+              source: side(MENTORING_NOTE_ID, finishing.originalProposalRef.proposalId, finishing.content, "DECISION"),
+              target: side(PREVIOUS_NOTE_ID, "01KP900000001", "경쟁 도구 요금표를 모은다", "ACTION_ITEM"),
+            },
+          ]
+        : [];
+      return {
+        notes: [
+          {
+            noteId: MENTORING_NOTE_ID,
+            title: now.title,
+            startedAt,
+            agendas: summary.agendas.flatMap((row) =>
+              row.agendaId ? [{ agendaId: row.agendaId, title: row.title, completed: row.completed, proposalIds: [] }] : []
+            ),
+          },
+          {
+            noteId: PREVIOUS_NOTE_ID,
+            title: past.title,
+            startedAt: pastStartedAt,
+            agendas: PREVIOUS_AGENDAS.map((row) => ({ ...row, completed: true, proposalIds: [] })),
+          },
+        ],
+        meetingLinks: [...carded, ...free],
+        agendaLinks: [
+          { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[0] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[0].agendaId } },
+          { source: { noteId: MENTORING_NOTE_ID, agendaId: MENTORING_AGENDA_IDS[5] }, target: { noteId: PREVIOUS_NOTE_ID, agendaId: PREVIOUS_AGENDAS[1].agendaId } },
+        ],
+      };
+    })
+  ),
+
   http.get("*/v1/notes/:noteId/agendas", ({ params }) =>
     respond(() => {
       const noteId = paramId(params.noteId);
       mockDb.getNote(noteId);
-      return { agendas: store().agendas.get(noteId) ?? [] };
-    })
-  ),
-
-  http.post("*/v1/notes/:noteId/agendas", async ({ params, request }) =>
-    respond(async () => {
-      const noteId = paramId(params.noteId);
-      if (mockDb.getNote(noteId).meetingStatus === "ENDED") {
-        failWith("MEETING_ALREADY_ENDED", 409, "이미 종료된 회의입니다.");
+      // 끝난 멘토링 회의는 검토 요약의 주제가 곧 안건 정본이다(분석이 목록을 바꾼 뒤의 모양)
+      const summary = noteId === MENTORING_NOTE_ID ? store().summaries.get(noteId) : undefined;
+      const review = store().reviews.get(noteId);
+      if (summary && review) {
+        const proposalOf = new Map(review.items.map((row) => [row.itemId, row.originalProposalRef?.proposalId ?? null]));
+        const proposals = (itemIds: string[]) => itemIds.flatMap((id) => (proposalOf.get(id) ? [proposalOf.get(id)!] : []));
+        const sentences = (rows: { text: string; itemIds: string[] }[]) =>
+          rows.map((row) => ({ text: row.text, proposalIds: proposals(row.itemIds) }));
+        return {
+          asOfSequence: 420,
+          agendas: summary.agendas.flatMap((row) =>
+            row.agendaId
+              ? [
+                  {
+                    agendaId: row.agendaId,
+                    title: row.title,
+                    completed: row.completed,
+                    proposalIds: proposals(row.members.map((member) => member.itemId)),
+                    description: sentences(row.description),
+                    conclusions: sentences(row.conclusions),
+                    openItems: sentences(row.openItems),
+                  },
+                ]
+              : []
+          ),
+        };
       }
-      const body = (await request.json()) as NoteAgendaRequest;
-      if (!body.content?.trim()) failWith(...BAD_REQUEST);
-      const now = new Date().toISOString();
-      const agenda = {
-        agendaId: nextId("01KG"),
-        noteId,
-        content: body.content,
-        createdBy: mockDb.getCurrentUser().userId,
-        createdAt: now,
-        updatedAt: now,
-      } as NoteAgendaResponseData;
-      const list = store().agendas.get(noteId) ?? [];
-      store().agendas.set(noteId, [...list, agenda]);
-      return agenda;
-    }, 201)
-  ),
-
-  http.put("*/v1/notes/:noteId/agendas/:agendaId", async ({ params, request }) =>
-    respond(async () => {
-      const list = store().agendas.get(paramId(params.noteId)) ?? [];
-      const agenda =
-        list.find((row) => row.agendaId === paramId(params.agendaId)) ??
-        failWith("NOT_FOUND", 404, "존재하지 않는 리소스입니다.");
-      const body = (await request.json()) as NoteAgendaRequest;
-      if (!body.content?.trim()) failWith(...BAD_REQUEST);
-      agenda.content = body.content;
-      return agenda;
+      return { asOfSequence: null, agendas: store().agendas.get(noteId) ?? [] };
     })
-  ),
-
-  http.delete("*/v1/notes/:noteId/agendas/:agendaId", ({ params }) =>
-    respond(() => {
-      const noteId = paramId(params.noteId);
-      const list = store().agendas.get(noteId) ?? [];
-      store().agendas.set(
-        noteId,
-        list.filter((row) => row.agendaId !== paramId(params.agendaId))
-      );
-    }, 204)
   ),
 
   http.post("*/v1/notes/:noteId/_mock/advance-analysis", ({ params }) =>

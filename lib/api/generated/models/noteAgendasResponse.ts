@@ -5,14 +5,14 @@
  * Heymoa 서버 REST API
  * OpenAPI spec version: 1.0.0
  */
-import type { NoteAgendaResponseData } from "./noteAgendaResponseData";
-import type { NoteAgendaResponseError } from "./noteAgendaResponseError";
+import type { NoteAgendasResponseData } from "./noteAgendasResponseData";
+import type { NoteAgendasResponseError } from "./noteAgendasResponseError";
 
-export interface NoteAgendaResponse {
+export interface NoteAgendasResponse {
   /** 성공 응답 데이터 */
-  data: NoteAgendaResponseData;
+  data: NoteAgendasResponseData;
   /** 요청 성공 여부 */
   success: boolean;
   /** 성공 시 null인 오류 정보 */
-  error: NoteAgendaResponseError;
+  error: NoteAgendasResponseError;
 }
