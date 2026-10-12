@@ -26,6 +26,8 @@ describe("HeyMoa legal pages", () => {
     expect(screen.queryByText(/이미지 검사|진짜그림/)).not.toBeInTheDocument();
     // PostHog 키와 함께 들어간 문안이다(APP-1068). 채우지 않은 자리표시가 운영에 나가면 안 된다.
     expect(screen.getByText(/이전받는 자는 PostHog Inc\./)).toBeVisible();
+    // 서버 사건은 브라우저의 「이용 통계 보내기」와 별개라는 것을 적어 둔다(APP-1071)
+    expect(screen.getByText(/서버에서 처리된 기록은/)).toBeVisible();
     expect(document.body.textContent).not.toMatch(/【/);
   });
 
