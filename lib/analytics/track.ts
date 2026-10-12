@@ -30,7 +30,8 @@ export type AnalyticsEvent =
   | "desktop_download_clicked"
   | "help_opened"
   | "onboarding_dismissed"
-  | "onboarding_reopened";
+  | "onboarding_reopened"
+  | "onboarding_completed";
 
 type Properties = Record<string, string | number | boolean | null | undefined>;
 

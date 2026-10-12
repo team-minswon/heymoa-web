@@ -11,6 +11,8 @@ vi.mock("@/components/transcription/recording-provider", () => ({
 }));
 
 vi.mock("@/lib/ui/toast", () => ({ toast }));
+// 「해결 방법」이 데스크톱 앱에서는 앱 안에서 이동한다(openSitePage) — 라우터만 있으면 된다
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 describe("RecordingErrorToast", () => {
   beforeEach(() => {
@@ -30,7 +32,12 @@ describe("RecordingErrorToast", () => {
     // 무엇을 고쳐야 하는지 알 길이 사라지므로 사용자가 닫을 때까지 띄워 둔다.
     expect(toast.error).toHaveBeenCalledWith(
       "실시간 스크립트 연결이 중단되었습니다.",
-      { id: "recording-error", duration: Infinity }
+      {
+        id: "recording-error",
+        duration: Infinity,
+        // 권한 거부처럼 사용자가 고칠 수 있는 사유는 도움말의 막힐 때 항목으로 보낸다
+        action: expect.objectContaining({ label: "해결 방법" }),
+      }
     );
     expect(view.container).toBeEmptyDOMElement();
   });

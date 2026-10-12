@@ -9,6 +9,7 @@ const workspaces = vi.hoisted(() => ({
   isPending: false,
   isFetching: false,
   isError: false,
+  isSuccess: false,
   refetch: vi.fn(),
 }));
 
@@ -50,7 +51,9 @@ describe("LandingCta", () => {
     workspaces.isPending = false;
     workspaces.isFetching = false;
     workspaces.isError = false;
+    workspaces.isSuccess = false;
     workspaces.refetch.mockReset();
+    window.history.replaceState(null, "", "/");
   });
 
   it("비로그인이면 정본 라벨로 로그인 모달을 연다", () => {
@@ -103,6 +106,28 @@ describe("LandingCta", () => {
     expect(screen.queryByRole("button", { name: "대시보드 다시 시도" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /워크스페이스 만들기/ }));
     expect(screen.getByTestId("create-workspace-dialog")).toBeTruthy();
+  });
+
+  // 막 가입한 사람은 콜백이 `/?welcome`으로 보낸다. 버튼을 찾게 하지 않고 폼을 바로 연다 (APP-1023).
+  it("첫 로그인 직후에는 만들기 폼을 바로 열고 쿼리를 지운다", () => {
+    auth.status = "authenticated";
+    workspaces.isSuccess = true;
+    workspaces.data = {
+      status: 200,
+      data: { success: true, data: { workspaces: [] } },
+    };
+    window.history.replaceState(null, "", "/?welcome");
+
+    // 랜딩에는 CTA가 여럿이다 — 켠 하나만 연다.
+    render(
+      <>
+        <LandingCta label="Google 계정으로 시작" openOnWelcome />
+        <LandingCta label="Google 계정으로 시작" />
+      </>
+    );
+
+    expect(screen.getAllByTestId("create-workspace-dialog")).toHaveLength(1);
+    expect(window.location.search).toBe("");
   });
 
   it("조회 중에는 라벨이 튀지 않게 대시보드 버튼을 로딩으로 둔다", () => {

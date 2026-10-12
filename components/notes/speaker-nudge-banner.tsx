@@ -1,5 +1,6 @@
 "use client";
 
+import { HelpLink } from "@/components/heymoa/help-link";
 import { useGetNoteTranscript } from "@/lib/api/generated/transcription/transcription";
 
 /**
@@ -31,7 +32,8 @@ export function SpeakerNudgeBanner({ noteId }: { noteId: string }) {
   if (status === "ASSEMBLING" || status === "SUBMITTED") {
     return (
       <Note testId="speaker-nudge-pending">
-        화자를 나누는 중입니다. 끝나면 누가 누구인지 알려주실 수 있습니다.
+        화자를 나누는 중입니다. 끝나면 누가 누구인지 알려주실 수 있습니다.{" "}
+        <HelpLink topic="speakers">지정하는 법</HelpLink>
       </Note>
     );
   }

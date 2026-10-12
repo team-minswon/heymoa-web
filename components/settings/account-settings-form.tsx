@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
+import { SitePageLink } from "@/components/heymoa/site-page-link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,14 +71,12 @@ function AnalyticsConsentCard() {
         <p className="mt-1 text-xs leading-5 text-[var(--el-muted)]">
           어떤 기능을 썼는지만 보내고, 회의 내용은 보내지 않습니다. 이 브라우저에만
           적용됩니다.{" "}
-          <a
+          <SitePageLink
             href="/privacy#section-5"
-            target="_blank"
-            rel="noopener noreferrer"
             className="font-medium text-[var(--el-ink)] underline underline-offset-2"
           >
             처리방침
-          </a>
+          </SitePageLink>
         </p>
       </div>
       <Switch

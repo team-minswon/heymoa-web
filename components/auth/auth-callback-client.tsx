@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Home, Loader2, LogIn } from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { WELCOME_PARAM } from "@/components/heymoa/landing-cta";
 import { track } from "@/lib/analytics/track";
 import { getWorkspaces } from "@/lib/api/generated/workspaces/workspaces";
 import { getMe } from "@/lib/auth/api";
@@ -76,9 +77,10 @@ export function CallbackProcessor({
           const selected = pickWorkspaceId(items);
           // **워크스페이스가 없으면 홈으로 보낸다.** 예전에는 여기서 「새 워크스페이스를 만든 뒤
           // 시작해 주세요」를 그렸는데 이 화면에 만드는 버튼이 없어서, 존재하지 않는 행동을
-          // 지시하는 안내였다(APP-402). 홈의 CTA가 그 상태를 받아 생성 폼을 연다.
+          // 지시하는 안내였다(APP-402). 홈의 CTA가 그 상태를 받아 생성 폼을 연다 — 막 가입한
+          // 사람은 그 버튼을 찾지 않아도 되게 `?welcome`으로 보내 폼을 바로 연다(APP-1023).
           if (!selected) {
-            router.replace("/");
+            router.replace(`/?${WELCOME_PARAM}`);
             return;
           }
           router.replace(`/w/${selected}`);

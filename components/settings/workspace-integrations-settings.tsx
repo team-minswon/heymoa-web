@@ -23,6 +23,7 @@ import { formatAppDate } from "@/lib/format/date";
 import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { cn } from "@/lib/utils";
 import { desktopAuthBridge } from "@/lib/desktop/auth";
+import { HelpLink } from "@/components/heymoa/help-link";
 
 type Provider = "LINEAR" | "GITHUB";
 
@@ -158,7 +159,7 @@ export function WorkspaceIntegrationsSettings({
         </h2>
         <p className="mt-2 text-sm text-[var(--el-muted)]">
           챗봇이 회의에서 이슈를 만들거나 조회할 때 이 워크스페이스의 연동을
-          씁니다.
+          씁니다. <HelpLink topic="integrations" />
         </p>
       </header>
 
