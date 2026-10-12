@@ -33,7 +33,7 @@ import { APP, FOCUS, vars } from "./tokens";
  * 카드 바닥에 매달린 쪽지를 한꺼번에 그린다(쪽지 문구가 고른 값을 따라가서).
  *
  * 앱의 흐름 그대로다: 새 결정이 지난주에 확정한 결정을 뒤집어 보이면 「이전 결정 대체」 제안이 줄 아래
- * 서고(`suggestion-row.tsx` `ReplacementSuggestion`), 「끝내기 / 유지」를 고르기 전에는 확정 막대가
+ * 서고(`suggestion-row.tsx` `ReplacementSuggestion`), 「끝내기 / 이어가기」를 고르기 전에는 확정 막대가
  * 주황 「확인할 제안 1개」에 「검토 완료」가 흐리다(`confirm-bar.tsx`, 랜딩에서는 읽히게 덜 흐리게 — 아래 막대). 고르면 막대가 「결정 1개와 할 일
  * 1개를 프로젝트에 올립니다」로, 끝내기면 「· 이전 결정 1개 끝남」까지 붙는다.
  *
@@ -56,7 +56,7 @@ type Choice = "change" | "keep";
 
 const OPTIONS: ReadonlyArray<readonly [Choice, string]> = [
   ["change", "끝내기"],
-  ["keep", "유지"],
+  ["keep", "이어가기"],
 ];
 
 /**

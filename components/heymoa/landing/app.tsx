@@ -849,7 +849,7 @@ export function ConfirmBar({
 
 /* ── 제안(이전 결정 대체) ─────────────────────────────────────────────── */
 
-/** 「끝내기 / 유지」 두 칸의 클래스(`choice-toggle.tsx`). 진짜 `role="radio"` 버튼은 구간이 이걸로 만든다. */
+/** 「끝내기 / 이어가기」 두 칸의 클래스(`choice-toggle.tsx`). 진짜 `role="radio"` 버튼은 구간이 이걸로 만든다. */
 export const CHOICE = {
   group: "inline-flex shrink-0 rounded-full bg-[var(--el-surface-strong)] p-0.5",
   option:

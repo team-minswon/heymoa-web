@@ -88,6 +88,7 @@ export function ReplacementSuggestion({
         <ChoiceToggle
           label="이전 결정을 끝낼지"
           changeLabel="끝내기"
+          keepLabel="이어가기"
           value={choice}
           disabled={disabled || ended}
           onChange={onChoose}
@@ -205,8 +206,9 @@ export function TaskChangeSuggestion({
         <ChoiceToggle
           label="기존 할 일에 반영할지"
           changeLabel={update.isPending ? "반영 중" : applied ? "반영됨" : "반영"}
+          keepLabel="넘기기"
           value={choice}
-          // 반영한 뒤에는 잠근다 — 「유지」로 바꿔도 이미 바뀐 할 일은 되돌아가지 않아 기록과 실제가 갈린다.
+          // 반영한 뒤에는 잠근다 — 「넘기기」로 바꿔도 이미 바뀐 할 일은 되돌아가지 않아 기록과 실제가 갈린다.
           disabled={disabled || applied || update.isPending || !task}
           keepDisabled={choiceUnsaved}
           onChange={(next) => (next === "change" ? void apply() : onChoose("keep"))}

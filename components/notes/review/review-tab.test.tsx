@@ -571,13 +571,13 @@ describe("검토 가능한 회의", () => {
       });
       await waitFor(() =>
         expect(
-          within(toggle).getByRole("radio", { name: "유지" })
+          within(toggle).getByRole("radio", { name: "넘기기" })
         ).toBeEnabled()
       );
-      fireEvent.click(within(toggle).getByRole("radio", { name: "유지" }));
+      fireEvent.click(within(toggle).getByRole("radio", { name: "넘기기" }));
       await waitFor(() =>
         expect(
-          within(toggle).getByRole("radio", { name: "유지" })
+          within(toggle).getByRole("radio", { name: "넘기기" })
         ).toHaveAttribute("aria-checked", "true")
       );
     }

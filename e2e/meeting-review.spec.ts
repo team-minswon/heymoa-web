@@ -45,11 +45,11 @@ test("검토 화면에서 항목을 고치고 제안을 고른 뒤 확정한다"
     .click();
   await expect(page.getByText(/확인할 제안/)).toContainText("확인할 제안 2개");
 
-  // 고를 제안을 다 골라야 확정이 풀린다. 남은 기존 할 일 변경 둘은 유지한다.
+  // 고를 제안을 다 골라야 확정이 풀린다. 남은 기존 할 일 변경 둘은 넘긴다.
   for (const content of ["경쟁 서비스 요금제를 한 표로 정리한다", "구현 결과를 기대 효과 순서로 다시 배치한다"]) {
     const keep = rowOf(page, content)
       .getByRole("radiogroup", { name: "기존 할 일에 반영할지" })
-      .getByRole("radio", { name: "유지" });
+      .getByRole("radio", { name: "넘기기" });
     await keep.click();
     await expect(keep).toHaveAttribute("aria-checked", "true");
   }

@@ -14,9 +14,9 @@ afterEach(cleanup);
 describe("ChoiceToggle", () => {
   it("고른 쪽만 체크되고, 누르면 그 선택을 알린다", () => {
     const onChange = vi.fn();
-    render(<ChoiceToggle label="이전 결정을 끝낼지" changeLabel="끝내기" value="keep" onChange={onChange} />);
+    render(<ChoiceToggle label="이전 결정을 끝낼지" changeLabel="끝내기" keepLabel="이어가기" value="keep" onChange={onChange} />);
 
-    expect(screen.getByRole("radio", { name: "유지" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "이어가기" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("radio", { name: "끝내기" })).toHaveAttribute("aria-checked", "false");
 
     fireEvent.click(screen.getByRole("radio", { name: "끝내기" }));
@@ -24,12 +24,12 @@ describe("ChoiceToggle", () => {
   });
 });
 
-describe("ChoiceToggle 유지 막기", () => {
-  it("keepDisabled 면 유지만 막고 바꾸는 쪽은 그대로 둔다", () => {
+describe("ChoiceToggle 그대로 두는 쪽 막기", () => {
+  it("keepDisabled 면 넘기기만 막고 바꾸는 쪽은 그대로 둔다", () => {
     const onChange = vi.fn();
-    render(<ChoiceToggle label="기존 할 일에 반영할지" changeLabel="반영" value={null} keepDisabled onChange={onChange} />);
+    render(<ChoiceToggle label="기존 할 일에 반영할지" changeLabel="반영" keepLabel="넘기기" value={null} keepDisabled onChange={onChange} />);
 
-    expect(screen.getByRole("radio", { name: "유지" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "넘기기" })).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: "반영" }));
     expect(onChange).toHaveBeenCalledWith("change");
   });

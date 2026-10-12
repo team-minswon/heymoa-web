@@ -13,7 +13,7 @@ import type { Choice } from "@/lib/notes/review/confirm";
 export function ChoiceToggle({
   value,
   changeLabel,
-  keepLabel = "유지",
+  keepLabel,
   label,
   disabled = false,
   keepDisabled = false,
@@ -21,11 +21,12 @@ export function ChoiceToggle({
 }: {
   value: Choice | null;
   changeLabel: string;
-  keepLabel?: string;
+  /** 그대로 두는 쪽. 무엇을 그대로 두는지가 카드마다 달라서 기본값을 두지 않는다 */
+  keepLabel: string;
   /** 무엇을 고르는지. 스크린 리더가 두 칸을 한 질문으로 읽는다 */
   label: string;
   disabled?: boolean;
-  /** 「유지」만 막는다. 이미 바꾼 것을 되돌릴 수 없는데 유지라고 적히면 기록과 실제가 갈린다 */
+  /** 그대로 두는 쪽만 막는다. 이미 바꾼 것을 되돌릴 수 없는데 그대로 둔다고 적히면 기록과 실제가 갈린다 */
   keepDisabled?: boolean;
   onChange: (next: Choice) => void;
 }) {
