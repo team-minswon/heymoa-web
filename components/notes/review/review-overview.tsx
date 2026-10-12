@@ -2,7 +2,7 @@ import { SectionBlock } from "@/components/notes/review/section-block";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { overviewToMarkdown } from "@/lib/notes/review/markdown";
-import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
+import { overviewText, type MeetingReviewSummary } from "@/lib/notes/review/summary";
 
 /**
  * 요약. 회의 전체를 말하는 한 문장이다. 주제는 바로 아래 주제 목차가 맡는다.
@@ -54,11 +54,8 @@ export function ReviewOverview({
 
   return (
     <SectionBlock title="요약" copy={{ build: () => overviewToMarkdown(summary) }}>
-      {/* 맨 위는 회의 한 문장이다. 주제마다의 한 줄은 아래 주제 목차가 맡아, 옛 lead 문단은 한 문장이
-          없는 옛 요약에서만 보인다. */}
-      <p className="text-[16px] leading-7 break-keep text-[var(--el-ink)]">
-        {summary.headline?.text ?? summary.lead.map((line) => line.text).join(" ")}
-      </p>
+      {/* 주제마다의 한 줄은 아래 주제 목차가 맡는다 */}
+      <p className="text-[16px] leading-7 break-keep text-[var(--el-ink)]">{overviewText(summary)}</p>
     </SectionBlock>
   );
 }

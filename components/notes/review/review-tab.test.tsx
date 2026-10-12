@@ -861,6 +861,15 @@ describe("검토 가능한 회의", () => {
     expect(task.taskStatus).toBe("COMPLETED");
   });
 
+  it("그래프 보기 위쪽 문단도 요약 보기처럼 회의 한 문장이다", async () => {
+    renderTab();
+    const headline = "회의 뒤 할 일이 흐려지는 문제를 주제별 확정으로 풀기로 했다";
+    expect(await screen.findByText(headline)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "그래프" }));
+    expect(await screen.findByText(headline)).toBeInTheDocument();
+    expect(screen.queryByText(/문제 정의를 「회의 뒤 할 일이 확정되지 않는다」로 좁히고/)).toBeNull();
+  });
+
   it("요약이 오는 동안 그래프 보기는 없다고 하지 않고 자리만 잡는다", async () => {
     server.use(
       http.get("*/v1/notes/:noteId/meeting-review/summary", async () => {

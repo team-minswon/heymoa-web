@@ -17,6 +17,10 @@ export type SummaryRelation = MeetingReviewSummaryResponseDataAgendasItemRelatio
 /** 설명 · 결론 · 남은 일의 한 문장. `itemIds` 는 그 문장이 근거로 삼은 검토 항목이다 */
 export type SummarySentence = MeetingReviewSummaryResponseDataAgendasItemConclusionsItem;
 
+/** 회의를 말하는 첫 문장. 한 문장(headline)이 있으면 그것, 없는 옛 요약은 lead 문단이다 */
+export const overviewText = (summary: MeetingReviewSummary) =>
+  summary.headline?.text ?? summary.lead.map((line) => line.text).join(" ");
+
 export const summaryTopics = (summary: MeetingReviewSummary | null | undefined): SummaryTopic[] =>
   summary?.agendas ?? [];
 

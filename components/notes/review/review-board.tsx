@@ -1,6 +1,6 @@
 "use client";
 
-import { summaryTopics } from "@/lib/notes/review/summary";
+import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -549,9 +549,9 @@ export function ReviewBoard({
             </>
           ) : (
             <div>
-              {summary?.status === "SUCCEEDED" && summary.lead.length > 0 ? (
+              {summary?.status === "SUCCEEDED" && overviewText(summary) ? (
                 <p className="mb-5 max-w-[60ch] text-base leading-7 break-keep text-[var(--el-ink)]">
-                  {summary.lead.map((line) => line.text).join(" ")}
+                  {overviewText(summary)}
                 </p>
               ) : null}
               {/* 조회가 실패했는데 「주제 묶음이 없다」고 말하면 없는 것처럼 읽힌다 */}

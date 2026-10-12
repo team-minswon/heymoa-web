@@ -1,7 +1,7 @@
 import { describeAssignee } from "@/lib/assignees/describe";
 import { formatDueDate } from "@/lib/format/date";
 import { KIND_LABEL, REVIEW_SECTIONS, type ReviewSection } from "@/lib/notes/review/sections";
-import type { MeetingReviewSummary } from "@/lib/notes/review/summary";
+import { overviewText, type MeetingReviewSummary } from "@/lib/notes/review/summary";
 import type { TopicChip } from "@/lib/notes/review/topics";
 
 /**
@@ -14,8 +14,7 @@ const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
 const joined = (lines: string[]) => `${lines.join("\n")}\n`;
 
 export function overviewToMarkdown(summary: MeetingReviewSummary) {
-  // 화면과 같다 — 회의 한 문장, 없으면 옛 lead 문단
-  return joined(["## 요약", "", oneLine(summary.headline?.text ?? summary.lead.map((line) => line.text).join(" "))]);
+  return joined(["## 요약", "", oneLine(overviewText(summary))]);
 }
 
 export function topicsToMarkdown(topics: readonly TopicChip[]) {
