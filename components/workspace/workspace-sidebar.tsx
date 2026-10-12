@@ -16,7 +16,6 @@ import {
   ChevronsUpDown,
   ChevronDown,
   CircleHelp,
-  Download,
   ListChecks,
   ChevronRight,
   ListTodo,
@@ -84,7 +83,6 @@ import {
 import { sortByLastVisited } from "@/lib/workspaces/last-workspace";
 import { track } from "@/lib/analytics/track";
 import { openSitePage } from "@/lib/desktop/open-site-page";
-import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { updateChecklist } from "@/lib/onboarding/checklist";
 
 /** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
@@ -125,7 +123,6 @@ export function WorkspaceSidebar({
   const onNotes = pathname === notesHref;
   const queryClient = useQueryClient();
   const { user, isLoggingOut, logout } = useAuth();
-  const isDesktopApp = useDesktopApp();
   const workspacesQuery = useGetWorkspaces();
   const updateProject = useUpdateProject({
     mutation: { meta: { suppressErrorToast: true } },
@@ -487,16 +484,6 @@ export function WorkspaceSidebar({
               >
                 <ListChecks className="size-4 text-[var(--el-muted)]" />
                 <span>시작 안내 다시 보기</span>
-              </DropdownMenuItem>
-            )}
-            {/* 앱 안에서는 이미 받은 것이다. 서버는 앱 안인지 모르므로 브라우저로 확인된 뒤에만 보인다. */}
-            {isDesktopApp === false && (
-              <DropdownMenuItem
-                onClick={() => window.open("/download", "_blank", "noopener,noreferrer")}
-                className="gap-2 rounded-control py-2 text-sm"
-              >
-                <Download className="size-4 text-[var(--el-muted)]" />
-                <span>데스크톱 앱 받기</span>
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator className="bg-[var(--el-hairline)]" />
