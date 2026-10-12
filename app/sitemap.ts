@@ -25,6 +25,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
     {
+      url: `${siteConfig.url}/help/desktop`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
       url: `${siteConfig.url}/terms`,
       lastModified,
       changeFrequency: "yearly",

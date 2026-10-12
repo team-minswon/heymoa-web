@@ -64,6 +64,7 @@ describe("사이트맵", () => {
       "https://heymoa.app",
       "https://heymoa.app/download",
       "https://heymoa.app/help",
+      "https://heymoa.app/help/desktop",
       "https://heymoa.app/terms",
       "https://heymoa.app/privacy",
     ]);

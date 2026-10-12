@@ -20,8 +20,8 @@ export const metadata: Metadata = {
  * 사용자가 읽는 사용법 (APP-1024). 제품 안의 링크가 `#id`로 바로 온다 — **id를 바꾸면 그 링크가
  * 깨진다**(`grep -r '/help#'`).
  *
- * 화면 이름은 지금 UI 문구 그대로 쓴다. 문구를 바꾸는 PR은 여기도 같이 고친다. 데스크톱 앱은
- * 다운로드 페이지에 적은 것까지만 약속한다 — 실기기 검증이 끝나지 않은 동작은 쓰지 않는다(APP-1026).
+ * 화면 이름은 지금 UI 문구 그대로 쓴다. 문구를 바꾸는 PR은 여기도 같이 고친다. 데스크톱 앱의
+ * 자세한 사용법은 따로 `/help/desktop` 에 둔다(APP-1026).
  */
 const sections = [
   {
@@ -56,11 +56,13 @@ const sections = [
     title: "데스크톱 앱",
     body: [
       "데스크톱 앱은 내 목소리와 컴퓨터에서 나는 회의 소리를 함께 기록합니다. 앱 안에서도 같은 웹 서비스를 씁니다.",
-      "Mac은 macOS 14.2 이상에서 씁니다(Apple Silicon은 arm64, Intel은 x64). Windows는 x64 설치 파일을 씁니다.",
-      "아직 서명·공증이 없어 macOS가 실행을 막을 수 있습니다. 「시스템 설정 → 개인정보 보호 및 보안」에서 열기를 허용합니다. Windows에서는 SmartScreen 경고가 뜰 수 있습니다.",
-      "첫 실행에서 마이크 권한을 안내하고, 컴퓨터 소리 권한은 첫 녹음 때 확인합니다. 자동 업데이트는 없어서 녹음을 중지하고 앱을 종료한 뒤 새 설치 파일로 바꿉니다.",
+      "Mac은 macOS 14.2 이상(Apple Silicon·Intel), Windows는 Windows 11 x64에서 씁니다. 베타라 서명·공증이 없어 처음 열 때 OS가 막을 수 있습니다.",
       <>
-        설치 파일은{" "}
+        설치, 권한, 녹음 중 앱 종료, 막힐 때는{" "}
+        <Link href="/help/desktop" className={LINK}>
+          데스크톱 앱 사용법
+        </Link>
+        에 있습니다. 설치 파일은{" "}
         <Link href="/download" className={LINK}>
           다운로드 페이지
         </Link>
@@ -133,10 +135,7 @@ export default function HelpPage() {
       effectiveDate="2026년 10월 9일"
       dateLabel="고친 날"
       unit="항목"
-      contactLead="막히는 곳이 있으면"
       sections={sections}
-      relatedHref="/download"
-      relatedLabel="데스크톱 앱 받기"
     />
   );
 }

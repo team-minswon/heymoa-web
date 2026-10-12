@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { ArrowUpRight, ChevronDown, FileText } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
 
 import {
   BODY,
@@ -12,7 +11,6 @@ import {
   RADIUS,
   TV_VARS,
 } from "@/components/heymoa/landing/tokens";
-import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export type LegalSection = {
@@ -56,23 +54,17 @@ export function LegalDocument({
   description,
   effectiveDate,
   sections,
-  relatedHref,
-  relatedLabel,
   dateLabel = "시행일",
   unit = "조항",
-  contactLead = "정책 관련 문의는",
 }: {
   label: string;
   title: string;
   description: string;
   effectiveDate: string;
   sections: readonly LegalSection[];
-  relatedHref: string;
-  relatedLabel: string;
-  /** 도움말이 같은 틀을 쓴다 — 거기서는 「고친 날」·「항목」·「막히는 곳이 있으면」이다. */
+  /** 도움말이 같은 틀을 쓴다 — 거기서는 「고친 날」·「항목」이다. */
   dateLabel?: string;
   unit?: string;
-  contactLead?: string;
 }) {
   // 좁은 화면의 접는 목차와 넓은 화면의 sticky 카드가 같은 목록을 쓴다(한쪽은 늘 display:none).
   const toc = (
@@ -175,23 +167,6 @@ export function LegalDocument({
               </section>
             ))}
           </article>
-
-          <div className="mt-4 flex flex-col gap-3 rounded-[20px] bg-[var(--tv-lav-soft)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between lg:mt-6">
-            <p className="m-0 break-words break-keep text-[15px] leading-[1.6] text-[var(--tv-body)]">
-              {contactLead}{" "}
-              <a href={`mailto:${siteConfig.contactEmail}`} className={LINK}>
-                {siteConfig.contactEmail}
-              </a>
-              로 보내 주세요.
-            </p>
-            <Link
-              href={relatedHref}
-              className={cn(LINK, "inline-flex min-h-6 shrink-0 items-center gap-1.5 text-[15px]")}
-            >
-              {relatedLabel}
-              <ArrowUpRight aria-hidden className="size-3.5" />
-            </Link>
-          </div>
         </div>
       </div>
     </div>

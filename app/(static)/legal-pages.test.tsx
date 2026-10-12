@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import DesktopHelpPage from "@/app/(static)/help/desktop/page";
 import HelpPage from "@/app/(static)/help/page";
 import PrivacyPage from "@/app/(static)/privacy/page";
 import TermsPage from "@/app/(static)/terms/page";
@@ -66,5 +67,20 @@ describe("HeyMoa legal pages", () => {
       ).not.toBeNull();
     }
     expect(screen.getByText("고친 날", { exact: false })).toBeVisible();
+  });
+
+  // 데스크톱 가이드는 도움말 「데스크톱 앱」 항목과 다운로드 페이지에서 온다(APP-1026)
+  it("links the desktop guide from the help page", () => {
+    const { container } = render(<HelpPage />);
+
+    expect(
+      container.querySelector('section#desktop a[href="/help/desktop"]')
+    ).not.toBeNull();
+    cleanup();
+
+    render(<DesktopHelpPage />);
+    expect(
+      screen.getByRole("heading", { name: "데스크톱 앱 사용법", level: 1 })
+    ).toBeInTheDocument();
   });
 });

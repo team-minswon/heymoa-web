@@ -25,7 +25,7 @@ test("로그인 뒤 화면과 초대·인가 입구는 noindex 다", async ({ re
 });
 
 test("공개 페이지는 색인을 막지 않는다", async ({ request }) => {
-  for (const path of ["/", "/help", "/download"]) {
+  for (const path of ["/", "/help", "/help/desktop", "/download"]) {
     expect(await robotsOf(request, path), path).toBe("index, follow");
   }
 });
