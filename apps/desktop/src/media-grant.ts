@@ -67,7 +67,10 @@ export class MediaGrant {
     if (
       mediaTypes.length === 1 &&
       mediaTypes[0] === "audio" &&
-      !grant.microphonePermission
+      // 캡처가 시작된 뒤에는 같은 로컬 프레임의 마이크 재요청을 받는다 — 기기가 바뀌어 끊긴
+      // 마이크를 다시 잡는 경로다(APP-1091). 화면은 한 번뿐이고, 원격 웹과 다른 프레임은
+      // 위 alive 검사에서 이미 거부된다.
+      (!grant.microphonePermission || grant.active)
     ) {
       grant.microphonePermission = true;
       return true;

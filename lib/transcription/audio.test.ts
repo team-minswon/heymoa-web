@@ -295,4 +295,113 @@ describe("PcmAudioCapture 마이크 상태", () => {
 
     expect(onState).toHaveBeenLastCalledWith("ended");
   });
+
+  describe("끊긴 마이크 다시 잡기 (APP-1091)", () => {
+    afterEach(() => vi.useRealTimers());
+
+    function freshTrack() {
+      const track = new EventTarget() as EventTarget & Record<string, unknown>;
+      Object.assign(track, {
+        readyState: "live",
+        muted: false,
+        stop: vi.fn(),
+        onended: null,
+        onmute: null,
+        onunmute: null,
+      });
+      return track;
+    }
+    const streamOf = (track: unknown) =>
+      ({ getTracks: () => [track], getAudioTracks: () => [track] }) as unknown as MediaStream;
+    const getUserMedia = (browser: ReturnType<typeof stubBrowser>) =>
+      (browser.devices as unknown as { getUserMedia: ReturnType<typeof vi.fn> })
+        .getUserMedia;
+
+    it("마이크 트랙이 끝나면 같은 녹음 안에서 다시 받아 live 로 되돌린다", async () => {
+      vi.useFakeTimers();
+      const browser = stubBrowser();
+      const onState = vi.fn();
+      const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+      await capture.start();
+      const next = freshTrack();
+      getUserMedia(browser).mockResolvedValueOnce(streamOf(next));
+
+      browser.track.readyState = "ended";
+      browser.track.onended?.();
+      expect(onState).toHaveBeenLastCalledWith("ended");
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(getUserMedia(browser)).toHaveBeenCalledTimes(2);
+      expect(browser.track.stop).toHaveBeenCalled();
+      expect(onState).toHaveBeenLastCalledWith("live");
+      // 새 트랙이 또 끊기면 그 트랙을 따라 다시 잡는다.
+      next.readyState = "ended";
+      (next.onended as () => void)();
+      expect(onState).toHaveBeenLastCalledWith("ended");
+      await capture.stop();
+    });
+
+    it("계속 못 받으면 세 번 시도하고 포기한 채 ended 로 남는다", async () => {
+      vi.useFakeTimers();
+      const browser = stubBrowser();
+      const onState = vi.fn();
+      const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+      await capture.start();
+      getUserMedia(browser).mockRejectedValue(new Error("NotFoundError"));
+
+      browser.track.readyState = "ended";
+      browser.track.onended?.();
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(getUserMedia(browser)).toHaveBeenCalledTimes(1 + 3);
+      expect(onState).toHaveBeenLastCalledWith("ended");
+
+      // 기기가 다시 꽂히면(devicechange) 처음부터 다시 시도한다.
+      const next = freshTrack();
+      getUserMedia(browser).mockResolvedValueOnce(streamOf(next));
+      browser.devices.dispatchEvent(new Event("devicechange"));
+      await vi.advanceTimersByTimeAsync(500);
+      expect(onState).toHaveBeenLastCalledWith("live");
+      await capture.stop();
+    });
+
+    it("재획득 요청이 진행 중일 때 멈추면 늦게 와도 상태를 올리지 않고 새 트랙을 닫는다", async () => {
+      vi.useFakeTimers();
+      const browser = stubBrowser();
+      const onState = vi.fn();
+      const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState });
+      await capture.start();
+      let resolve!: (stream: MediaStream) => void;
+      getUserMedia(browser).mockReturnValueOnce(
+        new Promise<MediaStream>((r) => (resolve = r))
+      );
+
+      browser.track.readyState = "ended";
+      browser.track.onended?.();
+      await vi.advanceTimersByTimeAsync(500);
+      await capture.stop();
+      const calls = onState.mock.calls.length;
+      const late = freshTrack();
+      resolve(streamOf(late));
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(onState.mock.calls.length).toBe(calls);
+      expect(late.stop).toHaveBeenCalled();
+      expect(getUserMedia(browser)).toHaveBeenCalledTimes(2);
+    });
+
+    it("녹음을 멈추면 대기 중인 재시도도 멈춘다", async () => {
+      vi.useFakeTimers();
+      const browser = stubBrowser();
+      const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState: vi.fn() });
+      await capture.start();
+
+      browser.track.readyState = "ended";
+      browser.track.onended?.();
+      await capture.stop();
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(getUserMedia(browser)).toHaveBeenCalledTimes(1);
+    });
+  });
 });

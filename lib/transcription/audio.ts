@@ -141,7 +141,19 @@ export type PcmAudioCaptureOptions = {
   acquireInputs?: (signal: AbortSignal) => Promise<AudioInputs>;
   onInputStates?: (states: AudioInputStates) => void;
   onInputLevels?: (levels: AudioInputLevels) => void;
+  /** 마이크 트랙이 끊겼을 때 다시 받는 방법. 없으면 기본 마이크를 같은 조건으로 받는다. */
+  acquireMicrophone?: () => Promise<MediaStream>;
 };
+
+/** 끊긴 마이크를 다시 잡는 간격. 다 쓰면 포기하고 「종료」로 남는다(기기가 다시 꽂히면 처음부터). */
+const MIC_RETRY_MS = [500, 2_000, 5_000];
+
+const MICROPHONE_CONSTRAINTS = {
+  channelCount: CAPTURE_CONTRACT.channelCount,
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+} as const;
 
 export class PcmAudioCapture {
   private audioContext: AudioContext | null = null;
@@ -152,6 +164,8 @@ export class PcmAudioCapture {
   private acquisitionAbort: AbortController | null = null;
   private nodes: AudioNode[] = [];
   private worklet: AudioWorkletNode | null = null;
+  private mixer: GainNode | null = null;
+  private micNodes: AudioNode[] = [];
   private analysers: Array<{
     name: "microphone" | "systemAudio";
     node: AnalyserNode;
@@ -176,14 +190,7 @@ export class PcmAudioCapture {
     const request: Promise<AudioInputs> =
       this.options.acquireInputs?.(abort.signal) ??
       navigator.mediaDevices
-        .getUserMedia({
-          audio: {
-            channelCount: CAPTURE_CONTRACT.channelCount,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        })
+        .getUserMedia({ audio: MICROPHONE_CONSTRAINTS })
         .then((microphone) => ({ microphone }));
     const pending = request
       .then(async (inputs) => {
@@ -257,25 +264,14 @@ export class PcmAudioCapture {
       const silent = context.createGain();
       silent.gain.value = 0;
       this.nodes.push(mixer, worklet, silent);
+      this.mixer = mixer;
       for (const [name, stream] of [
         ["microphone", inputs.microphone],
         ["systemAudio", inputs.systemAudio],
       ] as const) {
         if (!stream) continue;
-        const source = context.createMediaStreamSource(stream);
-        const gain = context.createGain();
-        gain.gain.value = inputs.systemAudio ? DUAL_INPUT_GAIN : 1;
-        const analyser = context.createAnalyser();
-        analyser.fftSize = 1024;
-        source.connect(gain);
-        gain.connect(mixer);
-        source.connect(analyser);
-        this.nodes.push(source, gain, analyser);
-        this.analysers.push({
-          name,
-          node: analyser,
-          samples: new Float32Array(analyser.fftSize),
-        });
+        const nodes = this.connectInput(name, stream);
+        if (name === "microphone") this.micNodes = nodes;
       }
       worklet.port.onmessage = (
         event: MessageEvent<{ samples: ArrayBuffer; captureSamples: number }>
@@ -289,7 +285,7 @@ export class PcmAudioCapture {
       mixer.connect(worklet);
       worklet.connect(silent);
       silent.connect(context.destination);
-      this.watchInputs(context, inputs);
+      this.watchInputs(context, inputs, generation);
       this.lastLevelAt = 0;
       this.publishLevel();
     } catch (error) {
@@ -297,7 +293,31 @@ export class PcmAudioCapture {
       throw error;
     }
   }
-  private watchInputs(context: AudioContext, inputs: AudioInputs) {
+  /** 입력 하나를 믹서와 레벨 미터에 잇는다. 이은 노드를 돌려줘 나중에 갈아 끼울 수 있게 한다. */
+  private connectInput(name: "microphone" | "systemAudio", stream: MediaStream) {
+    const context = this.audioContext!;
+    const source = context.createMediaStreamSource(stream);
+    const gain = context.createGain();
+    gain.gain.value = this.inputs?.systemAudio ? DUAL_INPUT_GAIN : 1;
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(gain);
+    gain.connect(this.mixer!);
+    source.connect(analyser);
+    const nodes = [source, gain, analyser];
+    this.nodes.push(...nodes);
+    this.analysers.push({
+      name,
+      node: analyser,
+      samples: new Float32Array(analyser.fftSize),
+    });
+    return nodes;
+  }
+  private watchInputs(
+    context: AudioContext,
+    inputs: AudioInputs,
+    generation: number
+  ) {
     const tracks = [inputs.microphone, inputs.systemAudio].map(
       (stream) => stream?.getAudioTracks()[0]
     );
@@ -313,6 +333,65 @@ export class PcmAudioCapture {
       };
       this.options.onState?.(states.microphone);
       this.options.onInputStates?.(states);
+      scheduleReacquire();
+    };
+
+    // 이어폰 전환·기기 분리·기본 입력 변경으로 마이크 트랙이 끝나면 같은 녹음 안에서 다시 잡는다.
+    // 시스템 소리는 화면 공유 권한을 다시 물어야 해서 다시 잡지 않는다.
+    let attempts = 0;
+    let busy = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const micEnded = () => !tracks[0] || tracks[0].readyState === "ended";
+    const scheduleReacquire = () => {
+      if (busy || timer || !micEnded() || attempts >= MIC_RETRY_MS.length)
+        return;
+      timer = setTimeout(() => {
+        timer = null;
+        void reacquire();
+      }, MIC_RETRY_MS[attempts++]);
+    };
+    const reacquire = async () => {
+      if (busy || generation !== this.generation || !this.inputs) return;
+      busy = true;
+      try {
+        const stream = await (this.options.acquireMicrophone?.() ??
+          navigator.mediaDevices.getUserMedia({ audio: MICROPHONE_CONSTRAINTS }));
+        if (generation !== this.generation || !stream.getAudioTracks().length) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        for (const node of this.micNodes) node.disconnect();
+        this.nodes = this.nodes.filter((node) => !this.micNodes.includes(node));
+        this.analysers = this.analysers.filter(
+          (entry) => entry.name !== "microphone"
+        );
+        const old = tracks[0];
+        if (old) {
+          old.onended = old.onmute = old.onunmute = null;
+          old.stop();
+        }
+        this.inputs = { ...this.inputs, microphone: stream };
+        this.micNodes = this.connectInput("microphone", stream);
+        tracks[0] = stream.getAudioTracks()[0];
+        watch(tracks[0]);
+        attempts = 0;
+      } catch {
+        // 다음 재시도에서 다시 본다.
+      } finally {
+        busy = false;
+        // 그 사이 멈췄거나 새 녹음이 시작됐으면 옛 캡처의 상태를 올리지 않는다.
+        if (generation === this.generation) report();
+      }
+    };
+    const watch = (track: MediaStreamTrack) => {
+      track.onended = report;
+      track.onmute = report;
+      track.onunmute = report;
+    };
+    const onDeviceChange = () => {
+      // 새 기기가 꽂혔을 수 있다. 포기했던 재시도를 처음부터 다시 한다.
+      if (micEnded()) attempts = 0;
+      report();
     };
     context.onstatechange = () => {
       const state = context.state as string;
@@ -320,16 +399,13 @@ export class PcmAudioCapture {
         void context.resume().catch(() => undefined);
       report();
     };
-    for (const track of tracks)
-      if (track) {
-        track.onended = report;
-        track.onmute = report;
-        track.onunmute = report;
-      }
-    navigator.mediaDevices.addEventListener("devicechange", report);
+    for (const track of tracks) if (track) watch(track);
+    navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
     this.cleanupListeners = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
       context.onstatechange = null;
-      navigator.mediaDevices.removeEventListener("devicechange", report);
+      navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange);
       for (const track of tracks)
         if (track) {
           track.onended = null;

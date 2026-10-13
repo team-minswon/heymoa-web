@@ -1,5 +1,17 @@
 import type { AudioInputs } from "@/lib/transcription/audio";
 
+const MICROPHONE_CONSTRAINTS = {
+  channelCount: 1,
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+} as const;
+
+/** 끊긴 마이크를 같은 조건으로 다시 받는다(APP-1091). 시스템 소리는 다시 받지 않는다. */
+export function acquireLocalMicrophone(): Promise<MediaStream> {
+  return navigator.mediaDevices.getUserMedia({ audio: MICROPHONE_CONSTRAINTS });
+}
+
 export async function acquireLocalInputs(
   signal: AbortSignal
 ): Promise<AudioInputs> {
@@ -44,14 +56,7 @@ export async function acquireLocalInputs(
         return stream;
       });
     const microphone = navigator.mediaDevices
-      .getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      })
+      .getUserMedia({ audio: MICROPHONE_CONSTRAINTS })
       .then(retain);
     const [systemAudio, mic] = await Promise.race([
       Promise.all([display, microphone]),

@@ -1,4 +1,7 @@
-import { acquireLocalInputs } from "../../../lib/desktop/local-inputs";
+import {
+  acquireLocalInputs,
+  acquireLocalMicrophone,
+} from "../../../lib/desktop/local-inputs";
 import { PcmAudioCapture } from "../../../lib/transcription/audio";
 import {
   CAPTURE_ERRORS,
@@ -29,6 +32,7 @@ window.captureLocalAcquire = async (id) => {
   capture = new PcmAudioCapture({
     workletUrl: "./pcm-capture-worklet.js",
     acquireInputs: acquireLocalInputs,
+    acquireMicrophone: acquireLocalMicrophone,
     onChunk: (samples, captureSamples) => {
       if (pcm.push(samples, captureSamples)) return;
       emit({ kind: "error", id, code: "DESKTOP_AUDIO_BACKPRESSURE" });
