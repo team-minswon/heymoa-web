@@ -10,6 +10,7 @@ type MeetingBridge = {
   action(
     action:
       | "stop"
+      | "stop-viewing"
       | "show-current"
       | "hide"
       | { action: "open-note"; noteId: string }
@@ -29,6 +30,7 @@ let filter = "ALL";
 let recording = false;
 let emptyMessage = "녹음 중인 회의가 없습니다.";
 let following = true;
+let viewing = false;
 const filters = [
   ["ALL", "전체"],
   ["decision", "결정"],
@@ -238,6 +240,7 @@ function receive(view: MeetingPopoverView) {
   }
   timeline = view.timeline;
   recording = view.canStop;
+  viewing = Boolean(view.viewing);
   emptyMessage = view.unknown
     ? "녹음 상태를 확인하지 못했습니다. HeyMoa를 열어 상태를 확인해 주세요."
     : recording
@@ -264,7 +267,10 @@ function receive(view: MeetingPopoverView) {
         : timeline?.failed
           ? "회의 내용을 갱신하지 못했습니다."
           : "");
-  stop.disabled = !view.canStop;
+  // 뷰어로 보는 중에는 「녹음 중지」 대신 「보기 종료」로 목록에 돌아간다.
+  const label = viewing ? " 보기 종료" : " 녹음 중지";
+  if (stop.lastChild?.textContent !== label) stop.lastChild!.textContent = label;
+  stop.disabled = !(view.canStop || viewing);
   renderItems();
   const listing = !timeline && !recording && view.meetings.length > 0;
   if (listing) element("title").textContent = "진행 중인 회의";
@@ -282,17 +288,18 @@ latest.addEventListener("click", () => {
 function act(
   value:
     | "stop"
+    | "stop-viewing"
     | "show-current"
     | "hide"
     | { action: "open-note"; noteId: string }
 ) {
-  if (value === "stop") stop.disabled = true;
+  if (value === "stop" || value === "stop-viewing") stop.disabled = true;
   void bridge.action(value).catch(() => {
     element("notice").textContent =
       "처리하지 못했습니다. 현재 회의에서 확인해 주세요.";
   });
 }
-stop.addEventListener("click", () => act("stop"));
+stop.addEventListener("click", () => act(viewing ? "stop-viewing" : "stop"));
 element("open").addEventListener("click", () => act("show-current"));
 element("close").addEventListener("click", () => act("hide"));
 document.addEventListener("keydown", (event) => {

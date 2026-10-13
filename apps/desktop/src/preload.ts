@@ -86,7 +86,12 @@ if (process.isMainFrame) {
           _event: Electron.IpcRendererEvent,
           action: unknown
         ) => {
-          if (action === "show-current" || action === "stop") listener(action);
+          if (
+            action === "show-current" ||
+            action === "stop" ||
+            action === "stop-viewing"
+          )
+            listener(action);
         };
         ipcRenderer.on("heymoa:recording-action", receive);
         return () =>

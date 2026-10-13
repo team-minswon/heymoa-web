@@ -96,7 +96,7 @@ export type DesktopFoundationBridge = {
     listener: (action: DesktopRecordingAction) => void
   ) => () => void;
 };
-export type DesktopRecordingAction = "show-current" | "stop";
+export type DesktopRecordingAction = "show-current" | "stop" | "stop-viewing";
 /** Optional methods let deployed web code inspect older installed applications. */
 export type DesktopAuthBridge = {
   beginLogin?: () => Promise<DesktopAuthOutcome>;

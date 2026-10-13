@@ -95,6 +95,21 @@ test("opening the main window pulls it to the current desktop on macOS and resto
   assert.equal(f.shows, 1);
   assert.equal(JSON.stringify(f.window.spaces), process.platform === "darwin" ? "[true,false]" : "[]");
 });
+test("stop-viewing ends a viewed meeting only: clears the popover timeline and tells the web, but never during my recording", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.popoverAction("stop-viewing");
+  assert.equal(f.sent.length, 0);
+  f.adapter.reportTimeline(snapshot);
+  assert.equal(f.read().viewing, true);
+  f.popoverAction("stop-viewing");
+  assert.equal(f.read().timeline, null);
+  assert.equal(f.read().viewing, false);
+  assert.equal(JSON.stringify(f.sent), JSON.stringify([["heymoa:recording-action", "stop-viewing"]]));
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" });
+  f.adapter.reportTimeline(snapshot);
+  f.popoverAction("stop-viewing");
+  assert.equal(f.sent.length, 1);
+});
 function fixture() {
   const app = new EventEmitter(),
     window = new EventEmitter(),

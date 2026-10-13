@@ -106,6 +106,11 @@ test("only the live local popup main frame can read or invoke fixed actions", as
   f.view.canStop = true;
   action(event, "stop"); action(event, "show-current"); action(event, "hide");
   assert.deepEqual(f.actions, ["stop", "show-current"]);
+  f.view.viewing = true;
+  const hidesBefore = window.hides;
+  action(event, "stop-viewing");
+  assert.deepEqual(f.actions, ["stop", "show-current", "stop-viewing"]);
+  assert.equal(window.hides, hidesBefore); // 보기 종료는 팝오버를 닫지 않는다
   window.destroy();
   assert.throws(() => read(event), /UNTRUSTED_MEETING_REQUEST/);
 });

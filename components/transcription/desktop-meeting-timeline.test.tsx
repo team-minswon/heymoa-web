@@ -60,3 +60,33 @@ describe("DesktopMeetingTimelineReporter 뷰어", () => {
     expect(report).not.toHaveBeenCalled();
   });
 });
+
+describe("DesktopMeetingTimelineReporter 보기 종료", () => {
+  it("팝오버에서 보기를 끝내면 그 노트는 지우고 더 보고하지 않는다", async () => {
+    let action: ((value: string) => void) | null = null;
+    let open: ((target: { workspaceId: string; noteId: string }) => void) | null = null;
+    (window as unknown as { heymoaDesktop: unknown }).heymoaDesktop = {
+      reportMeetingTimeline: report,
+      subscribeOpenNote: (listener: typeof open) => {
+        open = listener;
+        return () => undefined;
+      },
+      subscribeRecordingActions: (listener: (value: string) => void) => {
+        action = listener;
+        return () => undefined;
+      },
+    };
+    const { act } = await import("@testing-library/react");
+    render(<DesktopMeetingTimelineReporter />);
+    expect(report).toHaveBeenCalledWith({ noteId: "n1", title: "뷰어 회의" });
+    report.mockClear();
+    act(() => action?.("stop-viewing"));
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenLastCalledWith(null);
+
+    // 목록에서 같은 회의를 다시 고르면 다시 보고한다.
+    report.mockClear();
+    act(() => open?.({ workspaceId: "w1", noteId: "n1" }));
+    expect(report).toHaveBeenCalledWith({ noteId: "n1", title: "뷰어 회의" });
+  });
+});
