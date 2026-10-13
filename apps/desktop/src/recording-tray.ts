@@ -87,6 +87,14 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         ? "discard"
         : "cancel";
   }
+  /** 뷰어로 보는 회의의 경과. 시작 시각은 진행 중 회의 목록에서 찾는다(APP-1094). */
+  function viewElapsed(): string | null {
+    if (!timeline || lifecycle.isRecording()) return null;
+    const start = meetings.find((m) => m.noteId === timeline!.noteId)?.startedAt;
+    if (start === null || start === undefined) return null;
+    const seconds = Math.max(0, Math.floor((Date.now() - start) / 1000));
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  }
   function refresh() {
     if (disposed) return;
     const recording = lifecycle.isRecording();
@@ -107,9 +115,10 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       throttled = backgroundThrottling;
     }
     const view = lifecycle.view();
+    const elapsed = viewing ? viewElapsed() : view.elapsed;
     const status = [
       viewing ? VIEWING_LABEL : view.label,
-      view.elapsed && `시작 후 ${view.elapsed}`,
+      elapsed && `시작 후 ${elapsed}`,
       view.pending && "전송 대기",
       view.inputWarning,
       view.waiting && "앱 종료 대기",
@@ -118,7 +127,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       .join(" · ");
     tray.setToolTip(status);
     if (process.platform === "darwin")
-      tray.setTitle(view.elapsed && !lifecycle.safe() ? view.elapsed : "", {
+      tray.setTitle(elapsed && (viewing || !lifecycle.safe()) ? elapsed : "", {
         fontType: "monospacedDigit",
       });
     contextMenu = Menu.buildFromTemplate([
@@ -210,7 +219,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         timeline,
         meetings,
         label: !lifecycle.isRecording() && timeline ? VIEWING_LABEL : view.label,
-        elapsed: view.elapsed,
+        elapsed: viewElapsed() ?? view.elapsed,
         warning:
           view.inputWarning ||
           (view.pending ? "전송 대기 중인 소리가 있습니다." : null),
