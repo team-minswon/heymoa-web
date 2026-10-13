@@ -30,7 +30,7 @@ function fixture(t, reduced = false) {
   dom.window.eval(fs.readFileSync(path.join(__dirname, "../dist/meeting-renderer.js"), "utf8"));
   return { window: dom.window, document: dom.window.document, actions,
     finish: async () => { animations.splice(0).forEach((resolve) => resolve()); await new Promise(setImmediate); },
-    update: (timeline, canStop = timeline !== null, label = "녹음 중", status = {}) => receive({ timeline, label, elapsed: "1:00", warning: null, canStop, stale: false, phase: canStop ? "recording" : "idle", unknown: false, ...status }) };
+    update: (timeline, canStop = timeline !== null, label = "녹음 중", status = {}) => receive({ meetings: [], timeline, label, elapsed: "1:00", warning: null, canStop, stale: false, phase: canStop ? "recording" : "idle", unknown: false, ...status }) };
 }
 test("real renderer keeps an expanded row across updates, reveals text after space, and renders untrusted content only as text", async (t) => {
   const f = fixture(t); const value = snapshot(); f.update(value);
@@ -80,7 +80,7 @@ test("Chromium reveals after same-frame close/open and preserves scroll intent",
   assert.equal(alignment.x, 0);
   assert.equal(alignment.y, 0);
   const value = snapshot();
-  const publish = (timeline) => page.evaluate((timeline) => window.testReceive({ timeline, phase: "recording", unknown: false, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), timeline);
+  const publish = (timeline) => page.evaluate((timeline) => window.testReceive({ meetings: [], timeline, phase: "recording", unknown: false, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), timeline);
   await publish(value);
   await page.locator(".summary").click();
   await page.waitForFunction(() => !document.querySelector(".detail").inert);
@@ -127,7 +127,7 @@ test("Chromium multiline title and classification share a padded hit area and al
   });
   await page.goto(require("node:url").pathToFileURL(path.join(__dirname, "../dist/meeting.html")).href);
   const value = snapshot(); value.items[0].content = "클룸은 첫 번째 협박 이후 하루 동안 아무 말도 하지 않았다. 회의에서 나온 긴 내용도 같은 클릭 영역에 들어간다.";
-  await page.evaluate((timeline) => window.testReceive({ timeline, phase: "recording", unknown: false, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), value);
+  await page.evaluate((timeline) => window.testReceive({ meetings: [], timeline, phase: "recording", unknown: false, label: "녹음 중", elapsed: "1:00", warning: null, canStop: true, stale: false }), value);
   const geometry = await page.locator("article").evaluate((row) => {
     const button = row.querySelector(".summary"), content = row.querySelector(".content"), label = row.querySelector(".label"), time = row.querySelector(".offset"), dot = row.querySelector(".dot");
     const b = button.getBoundingClientRect(), c = content.getBoundingClientRect(), l = label.getBoundingClientRect(), tm = time.getBoundingClientRect(), d = dot.getBoundingClientRect();

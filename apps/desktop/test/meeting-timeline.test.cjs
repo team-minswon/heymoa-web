@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { meetingTimeline, popoverBounds } = require("../dist/meeting-timeline");
+const { meetingTimeline, popoverBounds, activeMeetings } = require("../dist/meeting-timeline");
 const snapshot = () => ({ noteId: "note-a", title: "회의", loading: false, failed: false, reconnecting: false, total: 1,
   items: [{ id: "item-a", tone: "task", label: "할 일", content: "확인합니다.", atMs: 1000, citations: [{ atMs: 1000, text: "<script>실행하지 않습니다.</script>" }] }] });
 test("snapshot admits only bounded display data and rejects executable fields, malformed items and duplicate ids", () => {
@@ -22,4 +22,11 @@ test("popup fits top, bottom, negative-origin and small displays", () => {
     assert.ok(bounds.x + bounds.width <= area.x + area.width);
     assert.ok(bounds.y + bounds.height <= area.y + area.height);
   }
+});
+test("active meeting list is bounded, id-only and rejects extra fields and duplicates", () => {
+  const one = { workspaceId: "w1", noteId: "n1", title: "회의", startedAt: 1000 };
+  assert.deepEqual(activeMeetings([one, { ...one, noteId: "n2", startedAt: null }]), [one, { ...one, noteId: "n2", startedAt: null }]);
+  assert.deepEqual(activeMeetings([]), []);
+  for (const invalid of [null, "x", Array(21).fill(one), [one, one], [{ ...one, url: "https://x" }], [{ ...one, title: "x".repeat(301) }], [{ ...one, noteId: "" }], [{ ...one, startedAt: -1 }]])
+    assert.throws(() => activeMeetings(invalid), /INVALID_ACTIVE_MEETINGS/);
 });

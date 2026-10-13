@@ -58,6 +58,21 @@ test("a viewed meeting shows in the popover without a recording, keeps the windo
   f.adapter.lifecycle.update({ ...idle, phase: "idle" });
   assert.equal(f.read().timeline, null);
 });
+const meeting = { workspaceId: "w1", noteId: "n9", title: "진행 중", startedAt: 1000 };
+test("active meetings reach the popover, open only listed notes in the trusted window, and expire without a heartbeat", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  assert.equal(f.read().meetings.length, 0);
+  f.adapter.reportActiveMeetings([meeting]);
+  assert.equal(JSON.stringify(f.read().meetings), JSON.stringify([meeting]));
+  f.open("unknown");
+  assert.equal(f.shows, 0);
+  f.open("n9");
+  assert.equal(f.shows, 1);
+  assert.equal(JSON.stringify(f.sent), JSON.stringify([["heymoa:open-note", { workspaceId: "w1", noteId: "n9" }]]));
+  f.advance(151_000);
+  f.interval();
+  assert.equal(f.read().meetings.length, 0);
+});
 function fixture() {
   const app = new EventEmitter(),
     window = new EventEmitter(),
@@ -70,7 +85,8 @@ function fixture() {
     tray,
     interval,
     response = 0;
-  let popoverAction, popoverRead;
+  let popoverAction, popoverRead, popoverOpen;
+  let clockSkew = 0;
   let resolveAction;
   const nextAction = new Promise((resolve) => {
     resolveAction = resolve;
@@ -155,10 +171,11 @@ function fixture() {
       name === "electron"
         ? electron
         : name === "./meeting-popover"
-          ? { createMeetingPopover: (_tray, read, action) => { popoverAction = action; popoverRead = read; return { refresh() {}, dispose() {}, toggle() {} }; } }
+          ? { createMeetingPopover: (_tray, read, action, openNote) => { popoverAction = action; popoverRead = read; popoverOpen = openNote; return { refresh() {}, dispose() {}, toggle() {} }; } }
         : name.startsWith(".")
           ? require(path.resolve(path.dirname(filename), name))
           : require(name),
+    Date: { now: () => Date.now() + clockSkew },
     setTimeout,
     clearTimeout,
     setInterval: (fn) => {
@@ -176,6 +193,8 @@ function fixture() {
     contents,
     popoverAction,
     read: () => popoverRead(),
+    open: (id) => popoverOpen(id),
+    advance: (ms) => { clockSkew += ms; },
     adapter,
     tray,
     sent,

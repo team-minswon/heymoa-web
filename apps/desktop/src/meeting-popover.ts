@@ -10,7 +10,8 @@ import {
 export function createMeetingPopover(
   tray: Tray,
   read: () => MeetingPopoverView,
-  action: (value: "stop" | "show-current") => void
+  action: (value: "stop" | "show-current") => void,
+  openNote: (noteId: string) => void = () => {}
 ) {
   let popup: BrowserWindow | null = null;
   let disposed = false;
@@ -37,6 +38,14 @@ export function createMeetingPopover(
     authorized(event);
     if (payload === "hide") hide();
     else if (
+      payload !== null &&
+      typeof payload === "object" &&
+      (payload as { action?: unknown }).action === "open-note" &&
+      typeof (payload as { noteId?: unknown }).noteId === "string"
+    ) {
+      hide();
+      openNote((payload as { noteId: string }).noteId);
+    } else if (
       payload === "show-current" ||
       (payload === "stop" && read().canStop)
     ) {

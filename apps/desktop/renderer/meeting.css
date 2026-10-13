@@ -237,6 +237,37 @@ article > .offset {
   font-size: 12px;
   line-height: 1.8;
 }
+#meetings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+}
+.meeting {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  cursor: pointer;
+}
+.meeting:hover {
+  background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+}
+.meeting-title {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.meeting-time {
+  color: var(--muted);
+  font-size: 12px;
+}
 #latest {
   position: absolute;
   left: 50%;

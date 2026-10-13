@@ -35,11 +35,14 @@ export function useNoteListPages({
   pages,
   enabled,
   refetchInterval,
+  refetchIntervalInBackground,
 }: {
   scope: NoteListScope;
   /** 이어 붙일 쪽 수. 1 이면 첫 쪽만. */
   pages: number;
   enabled: boolean;
+  /** 창이 숨어도 폴링을 이어 간다. 메뉴 막대 목록처럼 화면 밖 소비자만 켠다. */
+  refetchIntervalInBackground?: boolean;
   refetchInterval: (
     notes: NoteListResponseDataNotesItem[] | undefined
   ) => number;
@@ -104,6 +107,7 @@ export function useNoteListPages({
       };
     },
     enabled,
+    refetchIntervalInBackground,
     // 쪽 수가 바뀌면 키가 바뀐다. 이전 목록을 붙들어 두지 않으면 「더 보기」마다 목록이 비었다 찬다.
     placeholderData: keepPreviousData,
     refetchInterval: (query) =>

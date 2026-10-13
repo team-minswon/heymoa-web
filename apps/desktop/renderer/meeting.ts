@@ -1,4 +1,5 @@
 import type {
+  ActiveMeeting,
   MeetingTimelineItem,
   MeetingTimelineSnapshot,
 } from "@heymoa/desktop-contracts";
@@ -6,7 +7,13 @@ import type { MeetingPopoverView } from "../src/meeting-timeline";
 
 type MeetingBridge = {
   read(): Promise<MeetingPopoverView>;
-  action(action: "stop" | "show-current" | "hide"): Promise<void>;
+  action(
+    action:
+      | "stop"
+      | "show-current"
+      | "hide"
+      | { action: "open-note"; noteId: string }
+  ): Promise<void>;
   subscribe(listener: (view: MeetingPopoverView) => void): () => void;
 };
 const bridge = (window as unknown as { heymoaMeeting: MeetingBridge })
@@ -177,6 +184,49 @@ function renderItems() {
   if (following) scroll.scrollTop = scroll.scrollHeight;
   latest.hidden = following || displayed.length === 0;
 }
+const startTime = (ms: number) =>
+  new Date(ms).toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+/** 타임라인이 없고 녹음 중도 아닐 때, 지금 진행 중인 회의를 골라 연다. */
+let meetingsSignature = "";
+function renderMeetings(list: ActiveMeeting[], show: boolean) {
+  const container = element("meetings");
+  container.hidden = !show;
+  element("filters").hidden = show;
+  if (!show) {
+    meetingsSignature = "";
+    return;
+  }
+  element("empty").hidden = true;
+  latest.hidden = true;
+  // 트레이가 매초 같은 값을 보낸다. 같으면 버튼을 다시 만들지 않아 키보드 초점이 남는다.
+  const signature = JSON.stringify(list);
+  if (signature === meetingsSignature) return;
+  meetingsSignature = signature;
+  container.replaceChildren(
+    ...list.map((meeting) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "meeting";
+      const title = document.createElement("span");
+      title.className = "meeting-title";
+      title.textContent = meeting.title || "제목 없는 회의";
+      button.append(title);
+      if (meeting.startedAt !== null) {
+        const time = document.createElement("span");
+        time.className = "meeting-time";
+        time.textContent = `${startTime(meeting.startedAt)} 시작`;
+        button.append(time);
+      }
+      button.addEventListener("click", () =>
+        act({ action: "open-note", noteId: meeting.noteId })
+      );
+      return button;
+    })
+  );
+}
 function receive(view: MeetingPopoverView) {
   // Read follow intent before mutating the DOM, not after new rows push the bottom away.
   following = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
@@ -216,6 +266,9 @@ function receive(view: MeetingPopoverView) {
           : "");
   stop.disabled = !view.canStop;
   renderItems();
+  const listing = !timeline && !recording && view.meetings.length > 0;
+  if (listing) element("title").textContent = "진행 중인 회의";
+  renderMeetings(view.meetings, listing);
 }
 scroll.addEventListener("scroll", () => {
   following = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
@@ -226,7 +279,13 @@ latest.addEventListener("click", () => {
   scroll.scrollTop = scroll.scrollHeight;
   latest.hidden = true;
 });
-function act(value: "stop" | "show-current" | "hide") {
+function act(
+  value:
+    | "stop"
+    | "show-current"
+    | "hide"
+    | { action: "open-note"; noteId: string }
+) {
   if (value === "stop") stop.disabled = true;
   void bridge.action(value).catch(() => {
     element("notice").textContent =

@@ -1,4 +1,5 @@
 import type {
+  ActiveMeeting,
   MeetingTimelineSnapshot,
   RecordingSummary,
 } from "@heymoa/desktop-contracts";
@@ -8,8 +9,13 @@ export const MEETING_CHANNELS = {
   read: "heymoa:meeting-read",
   changed: "heymoa:meeting-changed",
   action: "heymoa:meeting-action",
+  activeMeetings: "heymoa:active-meetings",
+  openNote: "heymoa:open-note",
 } as const;
 export const TIMELINE_STALE_MS = 30_000;
+/** 웹이 30초마다 다시 보낸다. 숨은 창은 1분으로 느려질 수 있어 그 두 배 넘게 둔다. */
+export const ACTIVE_MEETINGS_STALE_MS = 150_000;
+export const ACTIVE_MEETINGS_MAX = 20;
 
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -96,7 +102,33 @@ export function meetingTimeline(
   };
 }
 
+/** Rebuild the bounded active-meeting list at the remote renderer -> main trust boundary. */
+export function activeMeetings(value: unknown): ActiveMeeting[] {
+  try {
+    if (!Array.isArray(value) || value.length > ACTIVE_MEETINGS_MAX)
+      throw new Error();
+    const ids = new Set<string>();
+    return value.map((raw) => {
+      const item = record(raw);
+      exact(item, ["workspaceId", "noteId", "title", "startedAt"]);
+      const noteId = text(item.noteId, 64);
+      const workspaceId = text(item.workspaceId, 64);
+      if (!noteId || !workspaceId || ids.has(noteId)) throw new Error();
+      ids.add(noteId);
+      return {
+        workspaceId,
+        noteId,
+        title: text(item.title, 300),
+        startedAt: item.startedAt === null ? null : offset(item.startedAt),
+      };
+    });
+  } catch {
+    throw new Error("INVALID_ACTIVE_MEETINGS");
+  }
+}
+
 export type MeetingPopoverView = {
+  meetings: ActiveMeeting[];
   phase: RecordingSummary["phase"] | null;
   unknown: boolean;
   timeline: MeetingTimelineSnapshot | null;
