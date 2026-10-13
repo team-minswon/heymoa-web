@@ -73,6 +73,21 @@ test("active meetings reach the popover, open only listed notes in the trusted w
   f.interval();
   assert.equal(f.read().meetings.length, 0);
 });
+test("a viewed meeting shows how long it has run when the active list knows its start", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  const start = Date.now() - 125_000;
+  f.adapter.reportActiveMeetings([{ ...meeting, noteId: "n1", startedAt: start }]);
+  f.adapter.reportTimeline({ ...snapshot, noteId: "n1" });
+  assert.match(f.read().elapsed, /^2:0\d$/);
+  f.interval();
+  // 메뉴 막대 제목은 macOS 에만 있다.
+  if (process.platform === "darwin") assert.match(f.tray.title, /^2:0\d$/);
+  assert.match(f.tray.tooltip, /회의 보는 중 · 시작 후 2:0\d/);
+  f.adapter.reportTimeline({ ...snapshot, noteId: "elsewhere" });
+  assert.ok(!f.read().elapsed);
+  f.interval();
+  if (process.platform === "darwin") assert.equal(f.tray.title, "");
+});
 function fixture() {
   const app = new EventEmitter(),
     window = new EventEmitter(),
@@ -130,7 +145,9 @@ function fixture() {
     setToolTip(value) {
       this.tooltip = value;
     }
-    setTitle() {}
+    setTitle(value) {
+      this.title = value;
+    }
     popUpContextMenu(value) {
       this.menu = value;
     }
