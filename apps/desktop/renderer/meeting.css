@@ -232,14 +232,10 @@ article > .offset {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-#empty,
-#limited {
+#empty {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.8;
-}
-#limited {
-  text-align: center;
 }
 #latest {
   position: absolute;
