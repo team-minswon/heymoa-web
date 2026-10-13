@@ -154,10 +154,14 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     ]);
     popover?.refresh();
   }
-  function sendAction(action: "show-current" | "stop") {
+  function sendAction(action: "show-current" | "stop" | "stop-viewing") {
     // A menu may have been built before the latest phase update.
     if (action === "stop" && !lifecycle.isRecording()) return;
+    // 뷰어로 보던 회의를 끝낸다. 내 녹음 중이거나 보던 회의가 없으면 받지 않는다.
+    if (action === "stop-viewing" && (lifecycle.isRecording() || !timeline))
+      return;
     try {
+      if (action === "stop-viewing") clearTimeline();
       if (action === "show-current") show();
       // 뷰어로 보는 회의는 창이 이미 그 노트에 있다. 이전 녹음 노트로 보내지 않는다.
       if (action === "show-current" && timeline && !lifecycle.isRecording())
@@ -218,6 +222,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         unknown: view.unknown,
         timeline,
         meetings,
+        viewing: timeline !== null && !lifecycle.isRecording(),
         label: !lifecycle.isRecording() && timeline ? VIEWING_LABEL : view.label,
         elapsed: viewElapsed() ?? view.elapsed,
         warning:

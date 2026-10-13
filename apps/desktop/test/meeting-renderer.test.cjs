@@ -30,7 +30,7 @@ function fixture(t, reduced = false) {
   dom.window.eval(fs.readFileSync(path.join(__dirname, "../dist/meeting-renderer.js"), "utf8"));
   return { window: dom.window, document: dom.window.document, actions,
     finish: async () => { animations.splice(0).forEach((resolve) => resolve()); await new Promise(setImmediate); },
-    update: (timeline, canStop = timeline !== null, label = "녹음 중", status = {}) => receive({ meetings: [], timeline, label, elapsed: "1:00", warning: null, canStop, stale: false, phase: canStop ? "recording" : "idle", unknown: false, ...status }) };
+    update: (timeline, canStop = timeline !== null, label = "녹음 중", status = {}) => receive({ meetings: [], timeline, label, elapsed: "1:00", warning: null, canStop, stale: false, viewing: false, phase: canStop ? "recording" : "idle", unknown: false, ...status }) };
 }
 test("real renderer keeps an expanded row across updates, reveals text after space, and renders untrusted content only as text", async (t) => {
   const f = fixture(t); const value = snapshot(); f.update(value);

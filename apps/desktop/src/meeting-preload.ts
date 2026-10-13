@@ -11,6 +11,7 @@ if (process.isMainFrame)
       action: (
         action:
           | "stop"
+          | "stop-viewing"
           | "show-current"
           | "hide"
           | { action: "open-note"; noteId: string }

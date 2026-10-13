@@ -36,7 +36,10 @@ function MeetingTimelineReporter() {
       : undefined;
   // 내가 녹음하지 않아도 열어 둔 노트의 회의가 진행 중이면 뷰어로 보는 것이다(APP-1092).
   // 내 녹음이 있으면 그쪽이 메뉴 막대를 쓴다.
-  const viewing = phase !== "recording" && isMeetingActive(noteData);
+  // 팝오버에서 「보기 종료」를 누르면 이 노트는 노트를 닫았다 다시 열 때까지 보고하지 않는다(APP-1096).
+  const [dismissed, setDismissed] = useState(false);
+  const viewing =
+    phase !== "recording" && isMeetingActive(noteData) && !dismissed;
   const enabled = Boolean(
     bridge?.reportMeetingTimeline &&
     ((phase === "recording" && noteId === activeNoteId) || viewing) &&
@@ -60,7 +63,21 @@ function MeetingTimelineReporter() {
       reconnecting,
     ]
   );
-  // 노트를 닫거나 회의가 끝나면 메뉴 막대에서 지운다.
+  useEffect(() => {
+    if (!bridge?.subscribeRecordingActions) return;
+    return bridge.subscribeRecordingActions((action) => {
+      if (action === "stop-viewing") setDismissed(true);
+    });
+  }, [bridge]);
+  // 목록에서 같은 회의를 다시 고르면 다시 본다. 같은 노트 주소로 가는 이동은 이 화면을 다시
+  // 만들지 않아 끝낸 상태가 남는다.
+  useEffect(() => {
+    if (!bridge?.subscribeOpenNote) return;
+    return bridge.subscribeOpenNote((target) => {
+      if (target.noteId === noteId) setDismissed(false);
+    });
+  }, [bridge, noteId]);
+  // 노트를 닫거나 회의가 끝나거나 보기를 끝내면 메뉴 막대에서 지운다.
   useEffect(() => {
     if (!viewing || !bridge?.reportMeetingTimeline) return;
     return () => void bridge.reportMeetingTimeline!(null).catch(() => {});

@@ -10,7 +10,7 @@ import {
 export function createMeetingPopover(
   tray: Tray,
   read: () => MeetingPopoverView,
-  action: (value: "stop" | "show-current") => void,
+  action: (value: "stop" | "show-current" | "stop-viewing") => void,
   openNote: (noteId: string) => void = () => {}
 ) {
   let popup: BrowserWindow | null = null;
@@ -47,9 +47,11 @@ export function createMeetingPopover(
       openNote((payload as { noteId: string }).noteId);
     } else if (
       payload === "show-current" ||
-      (payload === "stop" && read().canStop)
+      (payload === "stop" && read().canStop) ||
+      (payload === "stop-viewing" && read().viewing)
     ) {
-      hide();
+      // 보기 종료는 팝오버를 닫지 않는다 — 곧바로 진행 중 회의 목록이 보인다.
+      if (payload !== "stop-viewing") hide();
       action(payload);
     } else throw new Error("INVALID_MEETING_ACTION");
   });
