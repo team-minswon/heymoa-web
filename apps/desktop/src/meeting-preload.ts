@@ -8,7 +8,13 @@ if (process.isMainFrame)
     Object.freeze({
       read: (): Promise<MeetingPopoverView> =>
         ipcRenderer.invoke("heymoa:meeting-read"),
-      action: (action: "stop" | "show-current" | "hide") =>
+      action: (
+        action:
+          | "stop"
+          | "show-current"
+          | "hide"
+          | { action: "open-note"; noteId: string }
+      ) =>
         ipcRenderer.invoke("heymoa:meeting-action", action),
       subscribe: (listener: (view: MeetingPopoverView) => void) => {
         const receive = (

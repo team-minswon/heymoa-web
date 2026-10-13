@@ -1,8 +1,15 @@
 import { app, BrowserWindow, dialog, Menu, nativeImage, Tray } from "electron";
 import path from "node:path";
-import type { MeetingTimelineSnapshot } from "@heymoa/desktop-contracts";
+import type {
+  ActiveMeeting,
+  MeetingTimelineSnapshot,
+} from "@heymoa/desktop-contracts";
 import { createMeetingPopover } from "./meeting-popover";
-import { TIMELINE_STALE_MS } from "./meeting-timeline";
+import {
+  ACTIVE_MEETINGS_STALE_MS,
+  MEETING_CHANNELS,
+  TIMELINE_STALE_MS,
+} from "./meeting-timeline";
 import { isTrustedUrl, CHANNELS } from "./policy";
 import {
   RecordingLifecycle,
@@ -19,6 +26,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   let disposed = false;
   let timeline: MeetingTimelineSnapshot | null = null;
   let timelineAt = 0;
+  let meetings: ActiveMeeting[] = [];
+  let meetingsAt = 0;
   let contextMenu: Menu | null = null;
   let throttled: boolean | undefined;
   let wasRecording = false;
@@ -87,6 +96,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     // 뷰어 타임라인은 웹이 10초마다 다시 보낸다. 그 두 배가 지나도 안 오면 그만 본다.
     if (!recording && timeline && Date.now() - timelineAt > TIMELINE_STALE_MS * 2)
       clearTimeline();
+    if (meetings.length && Date.now() - meetingsAt > ACTIVE_MEETINGS_STALE_MS)
+      meetings = [];
     const viewing = !recording && timeline !== null;
     // 숨은 창이 느려지면 타임라인 하트비트와 실시간 이벤트가 늦는다. 보는 동안도 켜 둔다.
     const backgroundThrottling = !recording && !viewing;
@@ -197,6 +208,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         phase: view.phase,
         unknown: view.unknown,
         timeline,
+        meetings,
         label: !lifecycle.isRecording() && timeline ? VIEWING_LABEL : view.label,
         elapsed: view.elapsed,
         warning:
@@ -206,8 +218,29 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         stale: timeline !== null && Date.now() - timelineAt > TIMELINE_STALE_MS,
       };
     },
-    sendAction
+    sendAction,
+    openNote
   );
+  /** 팝오버가 목록에 있던 회의를 눌렀다. 목록에 없는 id 는 받지 않는다. */
+  function openNote(noteId: string) {
+    const target = meetings.find((meeting) => meeting.noteId === noteId);
+    if (!target || disposed) return;
+    try {
+      show();
+      if (
+        window.isDestroyed() ||
+        contents.isDestroyed() ||
+        !isTrustedUrl(contents.getURL(), origin)
+      )
+        throw new Error("RECORDING_RENDERER_UNAVAILABLE");
+      contents.send(MEETING_CHANNELS.openNote, {
+        workspaceId: target.workspaceId,
+        noteId: target.noteId,
+      });
+    } catch {
+      show();
+    }
+  }
   const close = (event: Electron.Event) => {
     if (!allowQuit) {
       event.preventDefault();
@@ -227,6 +260,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   };
   const unavailable = () => {
     clearTimeline();
+    meetings = [];
+    popover.refresh();
     lifecycle.unavailable();
   };
   // Electron uses preventDefault here to override a renderer's beforeunload veto.
@@ -263,6 +298,11 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       // 녹음 중이 아니어도 받는다 — 내가 뷰어로 보는 진행 중 회의다(APP-1092).
       timeline = value;
       timelineAt = Date.now();
+      popover.refresh();
+    },
+    reportActiveMeetings(value: ActiveMeeting[]) {
+      meetings = value;
+      meetingsAt = Date.now();
       popover.refresh();
     },
     clearTimeline,

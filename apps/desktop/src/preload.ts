@@ -7,6 +7,7 @@ import type {
   DesktopRecordingAction,
   RecordingSummary,
   MeetingTimelineSnapshot,
+  ActiveMeeting,
 } from "@heymoa/desktop-contracts";
 // Sandboxed preload cannot require local modules. Keep runtime imports Electron-only.
 if (process.isMainFrame) {
@@ -60,6 +61,24 @@ if (process.isMainFrame) {
         ipcRenderer.invoke("heymoa:recording-summary", summary),
       reportMeetingTimeline: (snapshot: MeetingTimelineSnapshot | null) =>
         ipcRenderer.invoke("heymoa:meeting-timeline", snapshot),
+      reportActiveMeetings: (meetings: ActiveMeeting[]) =>
+        ipcRenderer.invoke("heymoa:active-meetings", meetings),
+      subscribeOpenNote: (
+        listener: (target: { workspaceId: string; noteId: string }) => void
+      ) => {
+        const receive = (
+          _event: Electron.IpcRendererEvent,
+          target: { workspaceId?: unknown; noteId?: unknown }
+        ) => {
+          if (
+            typeof target?.workspaceId === "string" &&
+            typeof target?.noteId === "string"
+          )
+            listener({ workspaceId: target.workspaceId, noteId: target.noteId });
+        };
+        ipcRenderer.on("heymoa:open-note", receive);
+        return () => ipcRenderer.removeListener("heymoa:open-note", receive);
+      },
       subscribeRecordingActions: (
         listener: (action: DesktopRecordingAction) => void
       ) => {

@@ -47,6 +47,14 @@ export type MeetingTimelineSnapshot = {
   items: MeetingTimelineItem[];
 };
 
+/** Display-only list entry for a meeting in progress. Navigation uses ids only. */
+export type ActiveMeeting = {
+  workspaceId: string;
+  noteId: string;
+  title: string;
+  startedAt: number | null;
+};
+
 export type DesktopAuthOutcome = {
   status: "success" | "cancelled" | "error";
   reason?: "timeout" | "unavailable" | "authentication_failed" | "busy";
@@ -80,6 +88,10 @@ export type DesktopFoundationBridge = {
   reportMeetingTimeline?: (
     snapshot: MeetingTimelineSnapshot | null
   ) => Promise<void>;
+  reportActiveMeetings?: (meetings: ActiveMeeting[]) => Promise<void>;
+  subscribeOpenNote?: (
+    listener: (target: { workspaceId: string; noteId: string }) => void
+  ) => () => void;
   subscribeRecordingActions?: (
     listener: (action: DesktopRecordingAction) => void
   ) => () => void;

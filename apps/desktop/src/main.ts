@@ -3,7 +3,11 @@ import path from "node:path";
 import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
 import { createOnboarding, onboardingCompleted } from "./onboarding";
 import { createRecordingTray } from "./recording-tray";
-import { MEETING_CHANNELS, meetingTimeline } from "./meeting-timeline";
+import {
+  MEETING_CHANNELS,
+  activeMeetings,
+  meetingTimeline,
+} from "./meeting-timeline";
 import { captureId } from "./media-grant";
 import { CaptureHost } from "./capture-host";
 import { CAPTURE_ACK } from "./capture-protocol";
@@ -252,6 +256,10 @@ app
     ipcMain.handle(MEETING_CHANNELS.report, (event, payload: unknown) => {
       authorize(event);
       recording?.reportTimeline(meetingTimeline(payload));
+    });
+    ipcMain.handle(MEETING_CHANNELS.activeMeetings, (event, payload: unknown) => {
+      authorize(event);
+      recording?.reportActiveMeetings(activeMeetings(payload));
     });
     ipcMain.handle(CHANNELS.captureBegin, async (event, payload: unknown) => {
       authorize(event);
