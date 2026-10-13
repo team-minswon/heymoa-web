@@ -3,6 +3,7 @@ import path from "node:path";
 import type { DesktopCapabilities } from "@heymoa/desktop-contracts";
 import { createOnboarding, onboardingCompleted } from "./onboarding";
 import { createRecordingTray } from "./recording-tray";
+import { showOnCurrentSpace } from "./show-window";
 import {
   MEETING_CHANNELS,
   activeMeetings,
@@ -54,8 +55,7 @@ function receiveCallback(value: string) {
     void auth.receive(value).then((accepted) => {
       if (accepted && window) {
         if (window.isMinimized()) window.restore();
-        window.show();
-        window.focus();
+        showOnCurrentSpace(window);
       }
     });
 }
@@ -70,8 +70,7 @@ app.on("second-instance", (_event, argv) => {
   if (onboarding) onboarding.show();
   else if (window) {
     if (window.isMinimized()) window.restore();
-    window.show();
-    window.focus();
+    showOnCurrentSpace(window);
   }
 });
 for (const value of process.argv) receiveCallback(value);
@@ -321,7 +320,7 @@ app
       if (onboarding) onboarding.show();
       else if (starting) return;
       else if (!window) createWindow(url);
-      else window.show();
+      else showOnCurrentSpace(window);
     });
     if (!(await onboardingCompleted(userDataPath))) {
       onboarding = createOnboarding(userDataPath);

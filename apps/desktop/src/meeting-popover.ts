@@ -103,6 +103,17 @@ export function createMeetingPopover(
         },
       });
       popup = current;
+      // 메뉴 막대를 누른 데스크탑(Space)에 뜨게 한다. 풀스크린 앱 위에서도 보이도록 pop-up-menu 레벨이다.
+      if (
+        process.platform === "darwin" &&
+        typeof current.setVisibleOnAllWorkspaces === "function"
+      ) {
+        current.setVisibleOnAllWorkspaces(true, {
+          visibleOnFullScreen: true,
+          skipTransformProcessType: true,
+        });
+        current.setAlwaysOnTop(true, "pop-up-menu");
+      }
       const contents = current.webContents;
       contents.session.setPermissionRequestHandler(
         (_wc, _permission, callback) => callback(false)

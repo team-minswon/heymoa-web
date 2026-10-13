@@ -88,6 +88,13 @@ test("a viewed meeting shows how long it has run when the active list knows its 
   f.interval();
   if (process.platform === "darwin") assert.equal(f.tray.title, "");
 });
+test("opening the main window pulls it to the current desktop on macOS and restores its Space pinning", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.tray.emit("right-click");
+  f.tray.menu.find((item) => item.label === "HeyMoa 열기").click();
+  assert.equal(f.shows, 1);
+  assert.equal(JSON.stringify(f.window.spaces), process.platform === "darwin" ? "[true,false]" : "[]");
+});
 function fixture() {
   const app = new EventEmitter(),
     window = new EventEmitter(),
@@ -121,6 +128,8 @@ function fixture() {
   };
   window.isDestroyed = () => windowDestroyed;
   window.hide = () => hides++;
+  window.spaces = [];
+  window.setVisibleOnAllWorkspaces = (value) => window.spaces.push(value);
   window.show = () => shows++;
   window.focus = () => {};
   Object.defineProperty(window, "webContents", {

@@ -36,12 +36,14 @@ function fixture(t) {
     hide() { this.hides++; }
     focus() { this.focuses++; }
     setBounds(bounds) { this.bounds = bounds; }
+    setVisibleOnAllWorkspaces(...args) { this.spaces = args; }
+    setAlwaysOnTop(...args) { this.onTop = args; }
     destroy() { this.destroyed = true; this.emit("closed"); }
   }
   const filename = path.resolve(__dirname, "../dist/meeting-popover.js");
   const module = { exports: {} };
   vm.runInNewContext(fs.readFileSync(filename, "utf8"), {
-    module, exports: module.exports, __dirname: path.dirname(filename),
+    module, exports: module.exports, __dirname: path.dirname(filename), process,
     require: (name) => name === "electron" ? {
       BrowserWindow,
       ipcMain: { handle: (channel, handler) => handlers.set(channel, handler), removeHandler: (channel) => handlers.delete(channel) },
@@ -71,6 +73,17 @@ test("loading never shows a blank popup and preserves the latest toggle or hide 
   f.popover.toggle(); f.popover.hide();
   f.windows[1].finishLoad(); await settle();
   assert.equal(f.windows[1].shows, 0);
+});
+
+test("on macOS the popup follows the desktop (Space) whose menu bar icon was clicked", (t) => {
+  const f = fixture(t); f.popover.toggle();
+  const window = f.windows[0];
+  if (process.platform === "darwin") {
+    assert.equal(window.spaces[0], true);
+    assert.equal(window.spaces[1].visibleOnFullScreen, true);
+    assert.equal(window.spaces[1].skipTransformProcessType, true);
+    assert.equal(window.onTop[1], "pop-up-menu");
+  } else assert.equal(window.spaces, undefined);
 });
 
 test("only the live local popup main frame can read or invoke fixed actions", async (t) => {

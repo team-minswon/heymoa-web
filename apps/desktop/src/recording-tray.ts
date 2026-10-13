@@ -5,6 +5,7 @@ import type {
   MeetingTimelineSnapshot,
 } from "@heymoa/desktop-contracts";
 import { createMeetingPopover } from "./meeting-popover";
+import { showOnCurrentSpace } from "./show-window";
 import {
   ACTIVE_MEETINGS_STALE_MS,
   MEETING_CHANNELS,
@@ -47,8 +48,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   );
   function show() {
     if (!disposed && !window.isDestroyed()) {
-      window.show();
-      window.focus();
+      showOnCurrentSpace(window);
     }
   }
   async function confirm(prompt: QuitPrompt): Promise<QuitChoice> {
