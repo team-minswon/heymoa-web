@@ -174,10 +174,6 @@ function renderItems() {
       : timeline.failed
         ? "회의 내용을 확인하지 못했습니다. 현재 회의를 열어 확인해 주세요."
         : "아직 이 유형의 항목이 없습니다.";
-  element("limited").textContent =
-    timeline && timeline.total > timeline.items.length
-      ? `최근 ${timeline.items.length}개 항목을 표시합니다. 전체 ${timeline.total}개는 현재 회의에서 확인할 수 있습니다.`
-      : "";
   if (following) scroll.scrollTop = scroll.scrollHeight;
   latest.hidden = following || displayed.length === 0;
 }
