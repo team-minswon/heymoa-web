@@ -246,7 +246,7 @@ app
     ipcMain.handle(CHANNELS.summary, (event, payload: unknown) => {
       authorize(event);
       const summary = recordingSummary(payload);
-      if (summary.phase !== "recording") recording?.clearTimeline();
+      // 녹음이 끝나며 지우는 일은 트레이가 상태 전이에서 한다. 뷰어 타임라인은 여기서 지우지 않는다.
       recording?.lifecycle.update(summary);
     });
     ipcMain.handle(MEETING_CHANNELS.report, (event, payload: unknown) => {

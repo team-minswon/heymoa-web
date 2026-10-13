@@ -10,6 +10,8 @@ import {
   type QuitPrompt,
 } from "./recording-lifecycle";
 
+const VIEWING_LABEL = "회의 보는 중";
+
 export function createRecordingTray(window: BrowserWindow, origin: string) {
   // BrowserWindow.webContents throws after closed; keep the live reference for cleanup.
   const contents = window.webContents;
@@ -19,6 +21,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   let timelineAt = 0;
   let contextMenu: Menu | null = null;
   let throttled: boolean | undefined;
+  let wasRecording = false;
   const image = nativeImage.createFromPath(
     path.join(
       __dirname,
@@ -77,7 +80,16 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   }
   function refresh() {
     if (disposed) return;
-    const backgroundThrottling = !lifecycle.isRecording();
+    const recording = lifecycle.isRecording();
+    // 녹음이 끝나면 그때까지 받은 타임라인은 내 녹음의 것이다. 뷰어로 계속 보면 웹이 다시 보낸다.
+    if (wasRecording && !recording) clearTimeline();
+    wasRecording = recording;
+    // 뷰어 타임라인은 웹이 10초마다 다시 보낸다. 그 두 배가 지나도 안 오면 그만 본다.
+    if (!recording && timeline && Date.now() - timelineAt > TIMELINE_STALE_MS * 2)
+      clearTimeline();
+    const viewing = !recording && timeline !== null;
+    // 숨은 창이 느려지면 타임라인 하트비트와 실시간 이벤트가 늦는다. 보는 동안도 켜 둔다.
+    const backgroundThrottling = !recording && !viewing;
     if (!contents.isDestroyed() && throttled !== backgroundThrottling) {
       // Keep the hidden recording window's timeline heartbeat and realtime events active.
       contents.setBackgroundThrottling(backgroundThrottling);
@@ -85,7 +97,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     }
     const view = lifecycle.view();
     const status = [
-      view.label,
+      viewing ? VIEWING_LABEL : view.label,
       view.elapsed && `시작 후 ${view.elapsed}`,
       view.pending && "전송 대기",
       view.inputWarning,
@@ -127,6 +139,9 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
     if (action === "stop" && !lifecycle.isRecording()) return;
     try {
       if (action === "show-current") show();
+      // 뷰어로 보는 회의는 창이 이미 그 노트에 있다. 이전 녹음 노트로 보내지 않는다.
+      if (action === "show-current" && timeline && !lifecycle.isRecording())
+        return;
       lifecycle.action(action);
     } catch {
       show();
@@ -182,7 +197,7 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
         phase: view.phase,
         unknown: view.unknown,
         timeline,
-        label: view.label,
+        label: !lifecycle.isRecording() && timeline ? VIEWING_LABEL : view.label,
         elapsed: view.elapsed,
         warning:
           view.inputWarning ||
@@ -245,8 +260,8 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   return {
     lifecycle,
     reportTimeline(value: MeetingTimelineSnapshot | null) {
-      // Stop/idle summaries are authoritative; a late queued snapshot cannot restore content.
-      timeline = lifecycle.isRecording() ? value : null;
+      // 녹음 중이 아니어도 받는다 — 내가 뷰어로 보는 진행 중 회의다(APP-1092).
+      timeline = value;
       timelineAt = Date.now();
       popover.refresh();
     },

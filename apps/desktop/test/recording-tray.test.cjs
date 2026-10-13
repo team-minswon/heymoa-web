@@ -35,6 +35,29 @@ test("idle opens HeyMoa without inventing a current meeting", (t) => {
   assert.equal(f.shows, 1);
   assert.deepEqual(f.sent, [["heymoa:recording-action", "show-current"]]);
 });
+const snapshot = { noteId: "n1", title: "뷰어 회의", loading: false, failed: false, reconnecting: false, total: 0, items: [] };
+test("a viewed meeting shows in the popover without a recording, keeps the window awake, and stops when the recording it replaced ends", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.adapter.reportTimeline(snapshot);
+  const view = f.read();
+  assert.equal(view.timeline, snapshot);
+  assert.equal(view.label, "회의 보는 중");
+  assert.equal(view.canStop, false);
+  f.interval();
+  assert.equal(f.contents.throttling.at(-1), false);
+  f.popoverAction("show-current");
+  assert.equal(f.shows, 1);
+  assert.deepEqual(f.sent, []);
+  f.adapter.reportTimeline(null);
+  assert.equal(f.read().timeline, null);
+  f.interval();
+  assert.equal(f.contents.throttling.at(-1), true);
+  f.adapter.lifecycle.update({ ...idle, phase: "recording" });
+  f.adapter.reportTimeline(snapshot);
+  assert.equal(f.read().label, "녹음 중");
+  f.adapter.lifecycle.update({ ...idle, phase: "idle" });
+  assert.equal(f.read().timeline, null);
+});
 function fixture() {
   const app = new EventEmitter(),
     window = new EventEmitter(),
@@ -47,7 +70,7 @@ function fixture() {
     tray,
     interval,
     response = 0;
-  let popoverAction;
+  let popoverAction, popoverRead;
   let resolveAction;
   const nextAction = new Promise((resolve) => {
     resolveAction = resolve;
@@ -132,7 +155,7 @@ function fixture() {
       name === "electron"
         ? electron
         : name === "./meeting-popover"
-          ? { createMeetingPopover: (_tray, _read, action) => { popoverAction = action; return { refresh() {}, dispose() {}, toggle() {} }; } }
+          ? { createMeetingPopover: (_tray, read, action) => { popoverAction = action; popoverRead = read; return { refresh() {}, dispose() {}, toggle() {} }; } }
         : name.startsWith(".")
           ? require(path.resolve(path.dirname(filename), name))
           : require(name),
@@ -152,6 +175,7 @@ function fixture() {
     window,
     contents,
     popoverAction,
+    read: () => popoverRead(),
     adapter,
     tray,
     sent,
