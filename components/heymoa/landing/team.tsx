@@ -423,7 +423,7 @@ export function Team() {
     <section
       id="team"
       aria-labelledby="team-title"
-      className={`scroll-mt-20 bg-white ${SECTION_Y.white}`}
+      className={`bg-white ${SECTION_Y.white}`}
     >
       <div
         className={`${CONTAINER} grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16`}

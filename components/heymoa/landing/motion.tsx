@@ -38,11 +38,15 @@
  * 구간들이 줄을 한 칸씩 감싸서(히어로 `data-row`, 근거 구간 번호표 칸) `:last-child` 로는 가를 수 없다.
  * Tailwind 임의 변형 대신 여기 두는 까닭은 `:has()` 안의 쉼표 · `~` · `>` 를 클래스 이름으로 옮기지 않으려는 것.
  * 층(@layer) 밖 규칙이라 구간의 `border-b` 유틸리티로는 되살리지 못한다(되살릴 자리가 지금 없다).
+ *
+ * `scroll-padding-top` 은 상단 바 높이(`top-bar.tsx` `h-16`)다 — 메뉴로 구간에 가면 구간 윗변이 바 바로 아래에
+ * 선다. 구간마다 `scroll-mt-*` 를 또 걸지 않는다: 둘은 더해져서, 전에 5rem + 5rem 이 바 아래로 96px 를 비워
+ * 앞 구간 끝이 비쳐 보였다.
  */
 const CSS = `
 .tv-row:not(:has(~.tv-row,~*>.tv-row)):not(:has(~.tv-row,~*>.tv-row)>*){border-bottom-width:0}
 .tv-swing{rotate:var(--tilt,0deg)}
-html{scroll-padding-top:5rem}
+html{scroll-padding-top:4rem}
 [data-paused],[data-paused] *,[data-paused] *::before,[data-paused] *::after{animation-play-state:paused!important}
 [data-paused] .tv-ring{box-shadow:none!important}
 [data-paused] :is(.chat-rise,.tv-rise,.tv-pop,.tv-glide,.tv-flash,.tv-bump,.tv-mark,.tv-draw){animation:none}

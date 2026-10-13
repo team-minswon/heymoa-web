@@ -493,7 +493,7 @@ export function Evidence() {
     <section
       id="evidence"
       aria-labelledby="evidence-title"
-      className={`scroll-mt-20 bg-[var(--tv-butter)] ${SECTION_Y.color}`}
+      className={`bg-[var(--tv-butter)] ${SECTION_Y.color}`}
     >
       <div
         className={cn(

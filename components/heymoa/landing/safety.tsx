@@ -728,7 +728,7 @@ export function Safety() {
     <section
       id="safety"
       aria-labelledby="safety-title"
-      className={`scroll-mt-20 bg-white ${SECTION_Y.white}`}
+      className={`bg-white ${SECTION_Y.white}`}
     >
       <div className={CONTAINER}>
         <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-16">

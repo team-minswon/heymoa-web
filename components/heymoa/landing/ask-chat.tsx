@@ -392,7 +392,7 @@ export function AskChat({ heading }: { heading: ReactNode }) {
 
       <div
         ref={bind}
-        className="relative mx-auto w-full max-w-[540px] min-w-0 scroll-mt-20 lg:sticky lg:top-24 lg:mx-0"
+        className="relative mx-auto w-full max-w-[540px] min-w-0 lg:sticky lg:top-24 lg:mx-0"
       >
         {/* 띠는 입력창 밑 여백(16)까지만 걸친다 — 기울어도 입력창 면에 닿지 않는 깊이다. 한 번
             커질 때도 위 가장자리가 축이라 아래로만 커져 그 면을 넘지 않는다. 창 높이가 대화 길이를

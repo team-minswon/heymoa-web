@@ -1,7 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 
 import { LandingCta } from "@/components/heymoa/landing-cta";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLinkItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { siteConfig } from "@/lib/site";
 
 import { CONTAINER, FOCUS, TV_VARS } from "./tokens";
@@ -24,10 +31,9 @@ export const NAV: Array<[string, string]> = [
  * 상단 바. `<main>` 밖(`NavbarGate`)에 서서 `.tv-root` 의 변수를 못 받으니 `TV_VARS` 를 직접 건다.
  * tl;dv 의 흰 가로 바를 따랐고, 앱 Navbar 의 떠 있는 알약은 쓰지 않았다.
  * 로고는 Navbar 와 같은 자산(`/apple-touch-icon.png`)이다. md 미만은 로고 + 시작하기만 남는다.
- * 768 에서 메뉴 다섯이 한 줄에 든다 — 셈은 넓은 쪽 버튼(로그인한 사람의 「대시보드로 이동」 약 144)으로 한다:
- * 로고 108 + 메뉴 약 384(글자 288 · Apple SD Gothic Neo 15px 실측 + 좌우 여백 80(md 는 px-2) + 간격 16) +
- * 버튼 144 + 틈 44 ≈ 680 / 728. 남는 48 은 한글 폭이 1em 인 Noto Sans CJK · 맑은 고딕(+20~40)을 받는 몫이다.
- * lg 부터는 폭이 넉넉해 여백을 px-3 으로 되돌린다.
+ * 메뉴는 셋이다 — 구간 다섯은 「기능」 하나로 접고(펼치면 `NAV`), 다른 페이지로 가는 다운로드 · 도움말을 옆에
+ * 둔다. 다섯을 펼쳐 두면 페이지 링크가 붙을 때마다 한 줄이 넘쳤다(768 에서 도움말 하나로 CTA 가 12px 밀렸다).
+ * 셋이면 768 에도 넉넉해 md 부터 다 보인다.
  * 「설치 없음」 말풍선은 두지 않는다 — 랜딩에서 「설치할 것 없음 · 신용카드 없음」 류 문구는 뺐고(72f4c27),
  * 어디서 쓰는지(웹 · 데스크톱 베타)는 FAQ 01 하나에만 둔다.
  *
@@ -59,23 +65,31 @@ export function TopBar() {
         </Link>
 
         <nav aria-label="페이지 안내" className="ml-3 hidden items-center gap-1 md:flex">
-          {/* `Link` 다 — 약관 · 개인정보에서 누르면 `/` 로 넘어가는데, 일반 `<a>` 면 문서를 통째로 다시 받아
-              녹음 중이던 회의가 끊긴다(녹음은 route 를 넘어 살아야 한다 — 옛 Navbar 의 `router.push` 와 같은 이유). */}
-          {NAV.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className={`inline-flex h-11 items-center whitespace-nowrap rounded-full px-2 text-[15px] lg:px-3 font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}
-            >
-              {label}
-            </Link>
-          ))}
-          {/* 구간 메뉴가 아니라 별도 페이지(`/help`)라 구분선으로 나눈다. 768 에서는 메뉴 다섯 + 이 둘이 CTA 를 12px 밀어 가로 스크롤이 생겨서(실측) lg 부터만 둔다. 푸터 「둘러보기」(`NAV`)에는 넣지 않는다. */}
-          <span aria-hidden className="mx-1 hidden h-4 w-px bg-[var(--tv-rule)] lg:block" />
-          <Link
-            href="/help"
-            className={`hidden h-11 lg:inline-flex items-center whitespace-nowrap rounded-full px-2 text-[15px] lg:px-3 font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}
-          >
+          <DropdownMenu>
+            {/* 펼친 목록은 포털로 `<body>` 에 붙어 이 바의 `TV_VARS` 를 못 받으니 다시 건다. */}
+            <DropdownMenuTrigger className={`group inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[15px] font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] data-popup-open:text-[var(--tv-brand-deep)] ${FOCUS}`}>
+              기능
+              <ChevronDown aria-hidden className="size-4 transition-transform group-data-popup-open:rotate-180" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent style={TV_VARS} sideOffset={6} className="w-auto min-w-44 p-1.5">
+              {/* `Link` 다 — 약관 · 개인정보에서 누르면 `/` 로 넘어가는데, 일반 `<a>` 면 문서를 통째로 다시 받아
+                  녹음 중이던 회의가 끊긴다(녹음은 route 를 넘어 살아야 한다 — 옛 Navbar 의 `router.push` 와 같은 이유). */}
+              {NAV.map(([label, href]) => (
+                <DropdownMenuLinkItem
+                  key={href}
+                  href={href}
+                  className="h-10 px-3 text-[15px] font-semibold text-[var(--tv-body)] focus:bg-[var(--tv-lav)] focus:text-[var(--tv-brand-deep)]"
+                >
+                  {label}
+                </DropdownMenuLinkItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* 푸터 「둘러보기」(`NAV`)에는 넣지 않는다 — 다운로드는 푸터 「그 밖에」에 따로 있다. */}
+          <Link href="/download" className={`inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[15px] font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}>
+            다운로드
+          </Link>
+          <Link href="/help" className={`inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[15px] font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}>
             도움말
           </Link>
         </nav>

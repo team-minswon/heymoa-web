@@ -231,7 +231,7 @@ export function Faq() {
   return (
     <section
       id="faq"
-      className={`scroll-mt-20 bg-[var(--tv-lav-soft)] [interpolate-size:allow-keywords] ${SECTION_Y.color}`}
+      className={`bg-[var(--tv-lav-soft)] [interpolate-size:allow-keywords] ${SECTION_Y.color}`}
     >
       <Reveal className={`${CONTAINER} grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16`}>
         <div className="self-start lg:sticky lg:top-24">

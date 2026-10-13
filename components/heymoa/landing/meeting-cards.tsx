@@ -359,7 +359,7 @@ export function MeetingCards() {
     <section
       id="meetings"
       aria-labelledby="meetings-title"
-      className={cn("scroll-mt-20 bg-white", SECTION_Y.white, "pb-2 lg:pb-24")}
+      className={cn("bg-white", SECTION_Y.white, "pb-2 lg:pb-24")}
     >
       <div className={CONTAINER}>
         <Reveal className="relative">

@@ -66,7 +66,7 @@ export function Ask() {
     <section
       id="ask"
       aria-labelledby="ask-title"
-      className={`scroll-mt-20 bg-[var(--tv-lav)] ${SECTION_Y.color}`}
+      className={`bg-[var(--tv-lav)] ${SECTION_Y.color}`}
     >
       {/* 제목보다 앞에 서는 장식 줄이라 통째로 숨긴다(머리 주석). */}
       <Reveal aria-hidden className={CONTAINER}>
