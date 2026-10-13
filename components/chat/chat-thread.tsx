@@ -9,6 +9,7 @@ import {
   type StepBlock,
 } from "@/components/chat/chain-of-thought";
 import { Markdown } from "@/components/chat/markdown";
+import { copyText } from "@/lib/ui/copy-text";
 import { useSmoothText } from "@/lib/chat/use-smooth-text";
 import { TimeRule } from "@/components/chat/time-rule";
 import type { AgentChatMessagesResponseDataMessagesItem } from "@/lib/api/generated/models";
@@ -297,9 +298,8 @@ function MessageActions({ content, at }: { content: string; at: string }) {
   }, [copied]);
 
   const copy = () => {
-    // 안전하지 않은 출처(http)에는 `clipboard` 가 없다. 여기서 던지면 스레드가 통째로 안 그려진다.
-    void navigator.clipboard
-      ?.writeText(content)
+    // `copyText` 는 reject 로 알리니 여기서 삼킨다 — 던지면 스레드가 통째로 안 그려진다.
+    void copyText(content)
       .then(() => setCopied(true))
       .catch(() => undefined);
   };

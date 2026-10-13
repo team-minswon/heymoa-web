@@ -5,6 +5,8 @@ import { Check, Copy } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { copyText } from "@/lib/ui/copy-text";
+
 /*
  * 답변 본문 렌더. 스트리밍 중에는 닫히지 않은 코드펜스·링크·표가 정상 입력이다.
  *
@@ -63,9 +65,7 @@ function CodeBlock({
           className="inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 py-0.5 text-[11px] text-[var(--el-muted)] hover:text-[var(--el-ink)]"
           onClick={async () => {
             try {
-              await navigator.clipboard.writeText(
-                ref.current?.textContent ?? ""
-              );
+              await copyText(ref.current?.textContent ?? "");
             } catch {
               // 클립보드가 없거나 권한이 없다. 「복사됨」이라고 거짓말하지 않는다.
               return;

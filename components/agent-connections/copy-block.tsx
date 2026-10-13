@@ -1,6 +1,7 @@
 import { Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { copyText } from "@/lib/ui/copy-text";
 import { toast } from "@/lib/ui/toast";
 
 /**
@@ -18,8 +19,7 @@ export function CopyBlock({
   inline?: boolean;
 }) {
   const copy = () => {
-    void navigator.clipboard
-      ?.writeText(value)
+    void copyText(value)
       .then(() => toast.success(`${label}을(를) 복사했습니다.`))
       .catch(() =>
         toast.error("복사하지 못했습니다. 직접 선택해 복사해 주세요.")

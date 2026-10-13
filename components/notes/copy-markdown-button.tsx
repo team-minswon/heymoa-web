@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { copyText } from "@/lib/ui/copy-text";
 import { toast } from "@/lib/ui/toast";
 
 /** 체크 표시가 남는 시간. 토스트가 사라진 뒤에도 버튼이 "방금 눌렸다"를 잠깐 들고 있는다. */
@@ -43,7 +44,7 @@ export function CopyMarkdownButton({
     try {
       // 보안 컨텍스트가 아니거나 권한이 막히면 여기서 throw한다. 삼키면 사용자는 복사된
       // 줄 알고 빈 클립보드를 붙여넣는다.
-      await navigator.clipboard.writeText(build());
+      await copyText(build());
       setCopied(true);
       setTimeout(() => setCopied(false), COPIED_MS);
       toast.success(`${label} 내용이 클립보드에 복사되었습니다.`, {
