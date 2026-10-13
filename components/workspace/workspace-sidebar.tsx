@@ -305,6 +305,20 @@ export function WorkspaceSidebar({
                     <span>할 일</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  {/* 브라우저에서는 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱은 같은 사이트 주소의 새 창을
+                      막고 외부 브라우저로도 넘기지 않아서 앱 안에서 이동한다(`openSitePage`). */}
+                  <SidebarMenuButton
+                    onClick={() => {
+                      track("help_opened", { from: "sidebar" });
+                      openSitePage("/help", router.push);
+                    }}
+                    className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
+                  >
+                    <NavigationIcon icon={CircleHelp} />
+                    <span>도움말</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -458,18 +472,6 @@ export function WorkspaceSidebar({
             >
               <Settings className="size-4 text-[var(--el-muted)]" />
               <span>내 계정 설정</span>
-            </DropdownMenuItem>
-            {/* 브라우저에서는 새 창으로 연다 — 보던 회의를 잃지 않게. 데스크톱 앱은 같은 사이트 주소의 새 창을
-                막고 외부 브라우저로도 넘기지 않아서 앱 안에서 이동한다(`openSitePage`). */}
-            <DropdownMenuItem
-              onClick={() => {
-                track("help_opened", { from: "sidebar" });
-                openSitePage("/help", router.push);
-              }}
-              className="gap-2 rounded-control py-2 text-sm"
-            >
-              <CircleHelp className="size-4 text-[var(--el-muted)]" />
-              <span>도움말</span>
             </DropdownMenuItem>
             {user && (
               <DropdownMenuItem

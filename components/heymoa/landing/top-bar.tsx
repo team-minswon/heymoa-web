@@ -70,6 +70,14 @@ export function TopBar() {
               {label}
             </Link>
           ))}
+          {/* 구간 메뉴가 아니라 별도 페이지(`/help`)라 구분선으로 나눈다. 768 에서는 메뉴 다섯 + 이 둘이 CTA 를 12px 밀어 가로 스크롤이 생겨서(실측) lg 부터만 둔다. 푸터 「둘러보기」(`NAV`)에는 넣지 않는다. */}
+          <span aria-hidden className="mx-1 hidden h-4 w-px bg-[var(--tv-rule)] lg:block" />
+          <Link
+            href="/help"
+            className={`hidden h-11 lg:inline-flex items-center whitespace-nowrap rounded-full px-2 text-[15px] lg:px-3 font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}
+          >
+            사용 가이드
+          </Link>
         </nav>
 
         <div className="ml-auto flex items-center">
