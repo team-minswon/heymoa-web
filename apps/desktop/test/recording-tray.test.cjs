@@ -110,10 +110,53 @@ test("stop-viewing ends a viewed meeting only: clears the popover timeline and t
   f.popoverAction("stop-viewing");
   assert.equal(f.sent.length, 1);
 });
-function fixture() {
+test("the context menu lists active meetings, the title counts them while idle, and the login item toggles only when packaged", (t) => {
+  const f = fixture(); t.after(() => f.adapter.dispose());
+  f.adapter.reportActiveMeetings([meeting, { ...meeting, noteId: "n10", title: "둘째" }]);
+  f.interval();
+  if (process.platform === "darwin") assert.equal(f.tray.title, "●2");
+  f.tray.emit("right-click");
+  const labels = f.tray.menu.map((item) => item.label);
+  assert.ok(labels.includes("진행 중인 회의") && labels.includes("진행 중") && labels.includes("둘째"));
+  f.tray.menu.find((item) => item.label === "둘째").click();
+  assert.equal(JSON.stringify(f.sent.at(-1)), JSON.stringify(["heymoa:open-note", { workspaceId: "w1", noteId: "n10" }]));
+  assert.ok(!labels.includes("로그인 시 자동 실행"));
+  // 내 녹음 중이면 개수를 보이지 않는다.
+  f.adapter.lifecycle.update({ ...idle, phase: "recording", startedAt: Date.now() });
+  f.interval();
+  if (process.platform === "darwin") assert.doesNotMatch(f.tray.title, /●/);
+});
+test("login item shows the current setting and writes the toggled one", (t) => {
+  const f = fixture({ packaged: true }); t.after(() => f.adapter.dispose());
+  f.tray.emit("right-click");
+  const item = f.tray.menu.find((entry) => entry.label === "로그인 시 자동 실행");
+  assert.equal(item.checked, false);
+  item.click({ checked: true });
+  assert.equal(JSON.stringify(f.app.loginWrites), JSON.stringify([{ openAtLogin: true }]));
+  f.tray.emit("right-click");
+  assert.equal(f.tray.menu.find((entry) => entry.label === "로그인 시 자동 실행").checked, true);
+  // 시스템 설정에서 꺼도 다음에 메뉴를 열 때 반영된다.
+  f.app.loginOpen = false;
+  f.tray.emit("right-click");
+  assert.equal(f.tray.menu.find((entry) => entry.label === "로그인 시 자동 실행").checked, false);
+});
+test("login item reflects whether the executable will really launch (Windows startup apps can be disabled)", (t) => {
+  const f = fixture({ packaged: true }); t.after(() => f.adapter.dispose());
+  f.app.getLoginItemSettings = () => ({ openAtLogin: true, executableWillLaunchAtLogin: false });
+  f.tray.emit("right-click");
+  assert.equal(f.tray.menu.find((entry) => entry.label === "로그인 시 자동 실행").checked, false);
+});
+function fixture(options = {}) {
   const app = new EventEmitter(),
     window = new EventEmitter(),
     contents = new EventEmitter();
+  if (options.packaged) {
+    app.isPackaged = true;
+    app.loginWrites = [];
+    app.loginOpen = false;
+    app.getLoginItemSettings = () => ({ openAtLogin: app.loginOpen });
+    app.setLoginItemSettings = (value) => { app.loginWrites.push(value); app.loginOpen = value.openAtLogin; };
+  }
   let quits = 0,
     windowDestroyed = false,
     trayDestructions = 0,

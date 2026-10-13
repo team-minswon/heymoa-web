@@ -32,6 +32,17 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   let contextMenu: Menu | null = null;
   let throttled: boolean | undefined;
   let wasRecording = false;
+  /** 로그인 시 자동 실행. 설치된 앱에서만 다룬다(개발 중 electron 바이너리를 등록하지 않는다). */
+  const loginItemSupported =
+    app.isPackaged === true &&
+    typeof app.getLoginItemSettings === "function" &&
+    typeof app.setLoginItemSettings === "function";
+  /** Windows 는 작업 관리자에서 시작 프로그램을 꺼도 등록은 남는다. 실제로 실행될지를 본다. */
+  const readOpenAtLogin = () => {
+    const settings = app.getLoginItemSettings();
+    return settings.executableWillLaunchAtLogin ?? settings.openAtLogin;
+  };
+  let openAtLogin = loginItemSupported ? readOpenAtLogin() : false;
   const image = nativeImage.createFromPath(
     path.join(
       __dirname,
@@ -126,10 +137,18 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
       .filter(Boolean)
       .join(" · ");
     tray.setToolTip(status);
-    if (process.platform === "darwin")
-      tray.setTitle(elapsed && (viewing || !lifecycle.safe()) ? elapsed : "", {
-        fontType: "monospacedDigit",
-      });
+    if (process.platform === "darwin") {
+      // 내 녹음도 뷰어도 아니면 진행 중인 회의 개수를 보여 팝오버를 열기 전에 알 수 있게 한다.
+      const waiting = !recording && !viewing && meetings.length > 0;
+      tray.setTitle(
+        elapsed && (viewing || !lifecycle.safe())
+          ? elapsed
+          : waiting
+            ? `●${meetings.length}`
+            : "",
+        { fontType: "monospacedDigit" }
+      );
+    }
     contextMenu = Menu.buildFromTemplate([
       { label: status, enabled: false },
       { type: "separator" },
@@ -149,7 +168,32 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
           sendAction("stop");
         },
       },
+      ...(meetings.length
+        ? [
+            { type: "separator" as const },
+            { label: "진행 중인 회의", enabled: false },
+            ...meetings.slice(0, 5).map((meeting) => ({
+              label: meeting.title || "제목 없는 회의",
+              click: () => openNote(meeting.noteId),
+            })),
+          ]
+        : []),
       { type: "separator" },
+      ...(loginItemSupported
+        ? [
+            {
+              label: "로그인 시 자동 실행",
+              type: "checkbox" as const,
+              checked: openAtLogin,
+              click: (item: { checked: boolean }) => {
+                app.setLoginItemSettings({ openAtLogin: item.checked });
+                // 실제로 적용된 값을 다시 읽는다. 시스템 설정에서 막혀 있으면 체크가 되돌아간다.
+                openAtLogin = readOpenAtLogin();
+                refresh();
+              },
+            },
+          ]
+        : []),
       { label: "앱 종료", click: () => void lifecycle.requestQuit() },
     ]);
     popover?.refresh();
@@ -301,6 +345,14 @@ export function createRecordingTray(window: BrowserWindow, origin: string) {
   tray.on("double-click", show);
   const togglePopover = () => popover.toggle();
   const showMenu = () => {
+    // 시스템 설정에서 로그인 항목을 바꿨을 수 있다. 메뉴를 열 때 다시 읽는다.
+    if (loginItemSupported) {
+      const current = readOpenAtLogin();
+      if (current !== openAtLogin) {
+        openAtLogin = current;
+        refresh();
+      }
+    }
     if (contextMenu) tray.popUpContextMenu(contextMenu);
   };
   tray.on("click", togglePopover);
