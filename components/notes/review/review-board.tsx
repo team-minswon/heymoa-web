@@ -584,9 +584,10 @@ export function ReviewBoard({
                 // 요약이 오기 전에 「주제 묶음이 없다」고 말하지 않는다. 그래프 판 크기로 자리만 잡는다.
                 <Skeleton
                   aria-label="그래프 불러오는 중"
-                  className="aspect-[840/520] w-full rounded-block"
+                  className={`aspect-[840/520] ${GRAPH_WIDE} rounded-block`}
                 />
               ) : (
+                <div className={GRAPH_WIDE}>
                 <ReviewGraph
                   summary={
                     summary ?? {
@@ -603,6 +604,7 @@ export function ReviewBoard({
                   selectedItemId={openItemId}
                   onSelect={setOpenItemId}
                 />
+                </div>
               )}
               {selected ? (
                 <div
@@ -666,11 +668,18 @@ export function ReviewBoard({
   );
 }
 
+/** 그래프만 글 칸(680)에서 벗어나 가용 폭의 90%(최대 1100)로 펼친다. 칸보다 좁아지면 칸 폭 그대로다. */
+const GRAPH_WIDE =
+  "relative left-1/2 w-[max(100%,min(90cqw,1100px))] -translate-x-1/2";
+
 /** 회의록 문서 한 단(APP-865). 시안의 760 칸에서 좌우 여백을 뺀 680 이 글 폭이다. */
 function BoardShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[calc(680px+2*var(--note-gutter))] flex-1 px-[var(--note-gutter)] pt-8 pb-10 sm:pt-10">
-      {children}
+    // 바깥 `@container` 는 그래프가 글 칸 밖으로 얼마나 넓어질 수 있는지(`cqw`) 재는 기준이다.
+    <div className="@container/note flex flex-1 flex-col">
+      <div className="mx-auto w-full max-w-[calc(680px+2*var(--note-gutter))] flex-1 px-[var(--note-gutter)] pt-8 pb-10 sm:pt-10">
+        {children}
+      </div>
     </div>
   );
 }
