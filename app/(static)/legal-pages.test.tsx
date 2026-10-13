@@ -71,7 +71,7 @@ describe("HeyMoa legal pages", () => {
         `목차 #${id}`
       ).not.toBeNull();
     }
-    expect(screen.getByText("고친 날", { exact: false })).toBeVisible();
+    expect(screen.getByText("최종 수정일", { exact: false })).toBeVisible();
   });
 
   // 데스크톱 가이드는 도움말 「데스크톱 앱」 항목과 다운로드 페이지에서 온다(APP-1026)

@@ -55,7 +55,6 @@ export function LegalDocument({
   effectiveDate,
   sections,
   dateLabel = "시행일",
-  unit = "조항",
   notice,
 }: {
   label: string;
@@ -63,9 +62,8 @@ export function LegalDocument({
   description: string;
   effectiveDate: string;
   sections: readonly LegalSection[];
-  /** 도움말이 같은 틀을 쓴다 — 거기서는 「고친 날」·「항목」이다. */
+  /** 도움말이 같은 틀을 쓴다 — 거기서는 「최종 수정일」이다. */
   dateLabel?: string;
-  unit?: string;
   /** 개정 안내. 처리방침 10절이 「변경 사항과 시행일을 서비스 화면에 알린다」고 약속한 자리다. */
   notice?: string;
 }) {
@@ -111,9 +109,6 @@ export function LegalDocument({
               {dateLabel}{" "}
               <b className="font-bold text-[var(--tv-ink)]">{effectiveDate}</b>
             </span>
-            <span>
-              {sections.length}개 {unit}
-            </span>
           </p>
         </header>
       </div>
@@ -134,9 +129,6 @@ export function LegalDocument({
           >
             <FileText aria-hidden className="size-4 text-[var(--tv-muted)]" />
             문서 목차
-            <span className="font-medium text-[var(--tv-muted)]">
-              · {sections.length}개 {unit}
-            </span>
             <ChevronDown
               aria-hidden
               className="ml-auto size-4 text-[var(--tv-muted)] transition-transform group-open:rotate-180"

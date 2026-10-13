@@ -76,7 +76,7 @@ export function TopBar() {
             href="/help"
             className={`hidden h-11 lg:inline-flex items-center whitespace-nowrap rounded-full px-2 text-[15px] lg:px-3 font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}
           >
-            사용 가이드
+            도움말
           </Link>
         </nav>
 
