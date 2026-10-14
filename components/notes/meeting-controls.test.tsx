@@ -50,6 +50,7 @@ function note(overrides: Partial<NoteResponseData>): NoteResponseData {
     meetingStartedAt: "2026-07-24T00:00:00Z",
     recordedDurationMs: 65_000,
     activeSessionStartedAt: "2026-07-24T00:01:00Z",
+    participants: [],
     ...overrides,
   } as NoteResponseData;
 }

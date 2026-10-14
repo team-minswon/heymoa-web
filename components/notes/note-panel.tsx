@@ -576,6 +576,7 @@ export function NotePanel({
                 key={noteId}
                 note={note}
                 onMeetingEnded={() => onTabChange("summary")}
+                onEditParticipants={() => handleTabChange("details")}
               />
             ) : null}
             {note && note.meetingStatus !== "IN_PROGRESS" ? (

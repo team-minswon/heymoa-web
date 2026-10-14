@@ -37,6 +37,7 @@ const state = vi.hoisted(() => ({
   stopMock: vi.fn(),
   disconnectMock: vi.fn(),
   toastError: vi.fn(),
+  pending: false,
 }));
 
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: state.toastError } }));
@@ -66,7 +67,7 @@ vi.mock("@/components/transcription/recording-provider", async () => {
   };
 });
 vi.mock("@/lib/api/generated/analysis/analysis", () => ({
-  useEndMeeting: () => ({ mutate: state.endMock, isPending: false }),
+  useEndMeeting: () => ({ mutate: state.endMock, isPending: state.pending }),
   getGetLatestAnalysisQueryKey: (noteId: string) => ["analysis", noteId],
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
@@ -75,7 +76,9 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
 
 function renderDialog(
   onEnded?: () => void,
-  meetingStatus: "IN_PROGRESS" | "PAUSED" = "PAUSED"
+  meetingStatus: "IN_PROGRESS" | "PAUSED" = "PAUSED",
+  onEditParticipants?: () => void,
+  onOpenChange: (open: boolean) => void = vi.fn()
 ) {
   const client = new QueryClient();
   const ui = (open: boolean) => (
@@ -83,9 +86,11 @@ function renderDialog(
       <MeetingEndDialog
         noteId="01K0000000002"
         meetingStatus={meetingStatus}
+        participantCount={2}
         open={open}
-        onOpenChange={vi.fn()}
+        onOpenChange={onOpenChange}
         onEnded={onEnded}
+        onEditParticipants={onEditParticipants}
       />
     </QueryClientProvider>
   );
@@ -104,12 +109,50 @@ describe("MeetingEndDialog", () => {
     state.phase = "idle";
     state.sessionStartedAt = null;
     state.endMock.mockReset();
+    state.pending = false;
     state.stopMock.mockReset();
     state.disconnectMock.mockReset();
   });
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+  });
+
+  it("종료 전에 참여자 수와 참여자 지정 안내를 보인다", () => {
+    renderDialog();
+    // 창의 접근성 설명(aria-describedby)에 들어가야 열 때 읽힌다.
+    expect(
+      screen.getByRole("alertdialog").getAttribute("aria-describedby")
+    ).toBeTruthy();
+    const description = document.getElementById(
+      screen.getByRole("alertdialog").getAttribute("aria-describedby")!
+    );
+    expect(description?.textContent).toMatch(/참여자를 지정하셨나요\? \(현재 2명\)/);
+    expect(screen.getByRole("button", { name: "닫기" })).toBeTruthy();
+  });
+
+  it("참여자 지정하러 가기는 창을 닫고 정보 탭으로 보낸다", () => {
+    const onEdit = vi.fn();
+    const onOpenChange = vi.fn();
+    renderDialog(undefined, "PAUSED", onEdit, onOpenChange);
+    fireEvent.click(
+      screen.getByRole("button", { name: "참여자 지정하러 가기" })
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onEdit).toHaveBeenCalled();
+    expect(state.endMock).not.toHaveBeenCalled();
+  });
+
+  it("종료 요청 중에는 참여자 지정하러 가기를 막는다", () => {
+    state.pending = true;
+    renderDialog(undefined, "PAUSED", vi.fn());
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "참여자 지정하러 가기",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
   });
 
   it("녹음 중이 아니면 회의 종료를 호출한다", () => {

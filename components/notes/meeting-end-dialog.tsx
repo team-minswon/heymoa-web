@@ -36,16 +36,25 @@ import { invalidateNoteLists } from "@/lib/notes/invalidate";
 export function MeetingEndDialog({
   noteId,
   meetingStatus,
+  participantCount,
   open,
   onOpenChange,
   onEnded,
+  onEditParticipants,
 }: {
   noteId: string;
   meetingStatus: NoteResponseData["meetingStatus"];
+  /**
+   * 서버는 **종료 순간**의 참여자 수를 화자 분리의 최대 화자 수로 쓴다(APP-1098). 종료 뒤에
+   * 넣은 참여자는 반영되지 않고, 말한 사람보다 적게 넣으면 화자가 합쳐진다.
+   */
+  participantCount: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 종료가 접수된(202) 뒤 호출 — 호출부가 요약 탭으로 넘겨 분석 진행을 보인다. */
   onEnded?: () => void;
+  /** 창을 닫고 참여자를 고칠 수 있는 정보 탭으로 보낸다. 뷰(side·full)는 호출부가 유지한다. */
+  onEditParticipants?: () => void;
 }) {
   const queryClient = useQueryClient();
   const recording = useRecording();
@@ -129,9 +138,16 @@ export function MeetingEndDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>회의를 종료할까요?</AlertDialogTitle>
+          {/* 참여자 안내도 설명 안에 둔다 — 창의 `aria-describedby`가 이 요소 하나만 가리켜서
+              밖에 두면 스크린리더가 창을 열 때 읽지 않는다(codex 리뷰 1회차). */}
           <AlertDialogDescription>
             회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할
             수 없습니다.
+            <span className="mt-2 block text-[var(--el-body)]">
+              참여자를 지정하셨나요? (현재 {participantCount}명) 실제로 말한
+              사람보다 참여자가 적으면 화자가 합쳐질 수 있습니다. 종료 뒤에
+              추가한 참여자는 이번 화자 분리에 반영되지 않습니다.
+            </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -154,6 +170,20 @@ export function MeetingEndDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel>닫기</AlertDialogCancel>
+          {onEditParticipants ? (
+            // 종료 요청이 떠 있는 동안은 막는다 — 응답이 오면 `onEnded`가 요약 탭으로 다시
+            // 데려가고, 종료 순간의 참여자 수는 이미 정해진 뒤다(codex 리뷰 1회차).
+            <Button
+              variant="outline"
+              disabled={endMeeting.isPending || starting}
+              onClick={() => {
+                onOpenChange(false);
+                onEditParticipants();
+              }}
+            >
+              참여자 지정하러 가기
+            </Button>
+          ) : null}
           {/* 높이를 손으로 주지 않는다 — `h-11`(44)이 `닫기`의 기본 높이와 달라 같은 줄에서
               두 버튼 크기가 어긋났다. 진행 표시는 문구 교체가 아니라 `loading`으로 준다. */}
           <Button
