@@ -71,8 +71,11 @@ export function MeetingStatusChip({
 export function MeetingControls({
   note,
   onMeetingEnded,
+  onEditParticipants,
 }: {
   note: NoteResponseData;
+  /** 종료 확인창의 「참여자 지정하러 가기」 — note-panel이 정보 탭으로 넘긴다. */
+  onEditParticipants?: () => void;
   /** 종료 접수 후 호출 — note-panel이 요약 탭으로 넘긴다. */
   onMeetingEnded?: () => void;
 }) {
@@ -142,9 +145,11 @@ export function MeetingControls({
       <MeetingEndDialog
         noteId={note.noteId}
         meetingStatus={note.meetingStatus}
+        participantCount={note.participants.length}
         open={endOpen}
         onOpenChange={setEndOpen}
         onEnded={onMeetingEnded}
+        onEditParticipants={onEditParticipants}
       />
     </div>
   );
