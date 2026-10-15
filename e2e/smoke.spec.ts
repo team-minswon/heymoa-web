@@ -124,7 +124,7 @@ async function endMeeting(page: Page) {
     .getByRole("button", { name: "회의 종료" })
     .click();
   await page
-    .getByRole("alertdialog")
+    .getByRole("dialog", { name: "회의를 종료할까요?" })
     .getByRole("button", { name: "회의 종료" })
     .click();
   await expect(
@@ -1458,7 +1458,7 @@ test("ends a stopped meeting from the side panel and opens the ended summary", a
   await meetingControls(page)
     .getByRole("button", { name: "회의 종료" })
     .click();
-  const dialog = page.getByRole("alertdialog");
+  const dialog = page.getByRole("dialog", { name: "회의를 종료할까요?" });
   await expect(dialog.getByText("녹음 상태 · 중지됨")).toBeVisible();
   await dialog.getByRole("button", { name: "회의 종료" }).click();
 
@@ -2426,16 +2426,16 @@ test("keeps confirmation shading and cancellation in both note display modes", a
     await meetingControls(page)
       .getByRole("button", { name: "회의 종료" })
       .click();
-    const dialog = page.getByRole("alertdialog");
+    const dialog = page.getByRole("dialog", { name: "회의를 종료할까요?" });
     await expect(dialog).toBeVisible();
     await expect(
-      page.locator('[data-slot="alert-dialog-overlay"]')
+      page.locator('[data-slot="dialog-overlay"]')
     ).toBeVisible();
-    await expect(page.locator('[data-slot="alert-dialog-overlay"]')).toHaveCSS(
+    await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCSS(
       "opacity",
       "1"
     );
-    await dialog.getByRole("button", { name: "닫기" }).click();
+    await dialog.getByRole("button", { name: "취소" }).click();
     await expect(dialog).not.toBeVisible();
     await expect(
       page.locator(`[data-surface="${view === "side" ? "sheet" : "full"}"]`)

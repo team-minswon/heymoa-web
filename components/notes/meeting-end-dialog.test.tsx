@@ -130,9 +130,36 @@ describe("MeetingEndDialog", () => {
     vi.restoreAllMocks();
   });
 
+  it("우측 상단 닫기(X) 버튼으로 닫힌다", () => {
+    const onOpenChange = vi.fn();
+    renderDialog(undefined, "PAUSED", undefined, onOpenChange);
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("Esc 로 닫힌다", () => {
+    const onOpenChange = vi.fn();
+    renderDialog(undefined, "PAUSED", undefined, onOpenChange);
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("종료 요청 중에는 X 를 그리지 않고 취소를 잠가 Esc 로도 안 닫힌다", () => {
+    state.pending = true;
+    const onOpenChange = vi.fn();
+    renderDialog(undefined, "PAUSED", undefined, onOpenChange);
+    expect(screen.queryByRole("button", { name: "닫기" })).toBeNull();
+    expect(
+      (screen.getByRole("button", { name: "취소" }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
   it("종료 전에 참여자 수와 이름을 접근성 설명 안에 보인다", () => {
     renderDialog();
-    const dialog = screen.getByRole("alertdialog");
+    const dialog = screen.getByRole("dialog");
     // 창의 접근성 설명(aria-describedby)에 들어가야 열 때 읽힌다.
     const description = document.getElementById(
       dialog.getAttribute("aria-describedby")!
@@ -141,7 +168,7 @@ describe("MeetingEndDialog", () => {
     expect(description?.textContent).toContain("김민수");
     expect(description?.textContent).toContain("한지원");
     expect(description?.textContent).toContain("말한 사람이 모두 들어 있나요?");
-    expect(screen.getByRole("button", { name: "닫기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "취소" })).toBeTruthy();
   });
 
   it("참여자가 1명 이하이면 화자 수를 못 알려 준다고 경고한다", () => {
@@ -150,7 +177,8 @@ describe("MeetingEndDialog", () => {
     ]);
     const section = screen.getByRole("region", { name: "회의 참여자" });
     expect(section.textContent).toContain("참여자 1명");
-    expect(section.textContent).toContain("화자 수를 미리 알려 주지 못합니다");
+    expect(section.textContent).toContain("말한 사람이 1명으로 처리됩니다");
+    expect(section.textContent).toContain("먼저 참여자를 지정해 주세요");
     expect(section.textContent).not.toContain("말한 사람이 모두 들어 있나요?");
   });
 
@@ -158,6 +186,7 @@ describe("MeetingEndDialog", () => {
     renderDialog(undefined, "PAUSED", undefined, undefined, []);
     const section = screen.getByRole("region", { name: "회의 참여자" });
     expect(section.textContent).toContain("참여자 0명");
+    expect(section.textContent).toContain("화자 수를 정하지 않고 나눕니다");
     expect(section.querySelector("ul")).toBeNull();
   });
 
