@@ -2042,6 +2042,20 @@ test("creates a guest participant from the attendee field and keeps members unto
   await expect(page.getByLabel("이도현 (외부)").first()).toBeVisible();
 });
 
+/** 참여자 추가 팝업 맨 위의 「멤버·외부인 관리」가 팝업을 닫고 설정의 멤버 섹션을 연다(APP-1110). */
+test("opens member settings from the participants popup", async ({ page }) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=details`
+  );
+
+  await page.getByRole("combobox", { name: "참여자 추가" }).click();
+  await page.getByRole("button", { name: "멤버·외부인 관리" }).click();
+
+  await expect(page.getByRole("option").first()).toBeHidden();
+  await expect(page.getByRole("dialog", { name: /설정/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "멤버", level: 2 })).toBeVisible();
+});
+
 /**
  * **멤버를 빼도 임시 참여자가 남는다.** 이 이슈의 핵심 완료 기준이고, 저장 요청을 계정과
  * 임시 둘로 가른 이유다 — 한 요청에 섞어 보내면 멤버 하나를 바꿀 때마다 임시 참여자가

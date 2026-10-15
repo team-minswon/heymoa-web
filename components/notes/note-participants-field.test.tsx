@@ -117,6 +117,12 @@ vi.mock(
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ui/toast", () => ({ toast: { error: toastError } }));
 
+/** 워크스페이스 셸 안이면 설정을 여는 함수, 밖이면 `null`. 가볍게 쓰려고 모듈째 대신한다. */
+const shell = vi.hoisted(() => ({ openSettings: null as null | ((section: string) => void) }));
+vi.mock("@/components/workspace/workspace-app-shell", () => ({
+  useOpenSettings: () => shell.openSettings,
+}));
+
 const PARTICIPANT: Participant = {
   participantId: "01K0000000101",
   userId: "01K0000000001",
@@ -539,6 +545,34 @@ describe("NoteParticipantsField", () => {
     for (const [call] of replaceParticipants.mock.calls.slice(1)) {
       expect(call.data.userIds).toContain("01K0000000003");
     }
+  });
+
+  it("셸 안이면 팝업 맨 위에서 멤버 설정을 열고 팝업을 닫는다", async () => {
+    const openSettings = vi.fn();
+    shell.openSettings = openSettings;
+    try {
+      renderField();
+      openMenu();
+
+      const manage = await screen.findByRole("button", { name: "멤버·외부인 관리" });
+      // 검색창보다 위에 있다
+      const search = screen.getByRole("combobox", { name: /참여자 검색/ });
+      expect(manage.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      fireEvent.click(manage);
+      expect(openSettings).toHaveBeenCalledWith("members");
+      await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
+    } finally {
+      shell.openSettings = null;
+    }
+  });
+
+  it("셸 밖이면 관리 줄을 그리지 않는다", async () => {
+    renderField();
+    openMenu();
+
+    await screen.findByRole("combobox", { name: /참여자 검색/ });
+    expect(screen.queryByRole("button", { name: "멤버·외부인 관리" })).toBeNull();
   });
 
   it("열 때 골라져 있던 사람이 위에 선다", async () => {
