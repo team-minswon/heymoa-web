@@ -1,7 +1,8 @@
 import { headingLines, type NoteMeta } from "@/lib/notes/copy-markdown";
 import { describeAssignee } from "@/lib/assignees/describe";
 import { formatDueDate } from "@/lib/format/date";
-import { KIND_LABEL, REVIEW_SECTIONS, type ReviewSection } from "@/lib/notes/review/sections";
+import { formatOffset } from "@/lib/transcription/presentation";
+import { KIND_LABEL, REVIEW_SECTIONS, type ReviewItem, type ReviewSection } from "@/lib/notes/review/sections";
 import { overviewText, type MeetingReviewSummary } from "@/lib/notes/review/summary";
 import type { TopicChip } from "@/lib/notes/review/topics";
 
@@ -18,18 +19,34 @@ export function overviewToMarkdown(summary: MeetingReviewSummary) {
   return joined(["## 요약", "", oneLine(overviewText(summary))]);
 }
 
-export function topicsToMarkdown(topics: readonly TopicChip[]) {
+/**
+ * 주제를 회의에서 나온 차례로 적는다. **번호는 목록 안의 차례다** — 요약이 주는 번호(`ordinal`)는 분석이 붙인 이름표라
+ * 시간순으로 세우면 1·2·5·4·3 처럼 뛰어, 복사본에서는 잘못 센 것으로 읽힌다. 때를 알면 `[00:07]` 을 앞에 붙인다.
+ */
+export function topicsToMarkdown(topics: readonly (TopicChip & { startMs?: number | null })[]) {
   return joined([
     "## 주제",
     "",
-    ...topics.map(
-      (topic) => `${topic.ordinal}. **${oneLine(topic.title)}**${topic.gist ? ` — ${oneLine(topic.gist)}` : ""}`
-    ),
+    ...topics.map((topic, index) => {
+      const at = topic.startMs == null ? "" : `[${formatOffset(topic.startMs)}] `;
+      return `${index + 1}. ${at}**${oneLine(topic.title)}**${topic.gist ? ` — ${oneLine(topic.gist)}` : ""}`;
+    }),
   ]);
 }
 
 /** [topicTitle] 은 주제로 걸러 본 섹션이다. 걸러진 목록이 전부인 것처럼 읽히지 않게 제목에 붙인다. */
-export function reviewSectionToMarkdown(section: ReviewSection, topicTitle: string | null = null) {
+export type ItemContext = {
+  /** 항목이 회의에서 나온 때(ms). 모르면 null */
+  whenOf?: (item: ReviewItem) => number | null;
+  /** 항목이 속한 주제 제목. 주제 밖이면 null */
+  topicTitleOf?: (item: ReviewItem) => string | null;
+};
+
+export function reviewSectionToMarkdown(
+  section: ReviewSection,
+  topicTitle: string | null = null,
+  context: ItemContext = {}
+) {
   const mixed = (REVIEW_SECTIONS.find((row) => row.key === section.key)?.kinds.length ?? 0) > 1;
   const lines = [topicTitle ? `## ${section.label} — ${oneLine(topicTitle)}` : `## ${section.label}`, ""];
   const items = section.items.filter((item) => item.included);
@@ -39,7 +56,12 @@ export function reviewSectionToMarkdown(section: ReviewSection, topicTitle: stri
     const assignee = describeAssignee(item.assignee)?.name;
     const facts = [assignee && `담당 ${assignee}`, item.due && `기한 ${formatDueDate(item.due)}`].filter(Boolean);
     const kind = mixed ? `**${KIND_LABEL[item.kind]}** ` : "";
-    lines.push(`- ${kind}${oneLine(item.content)}${facts.length ? ` — ${facts.join(" · ")}` : ""}`);
+    const when = context.whenOf?.(item) ?? null;
+    const topic = topicTitle ? null : context.topicTitleOf?.(item);
+    const where = [when === null ? null : `[${formatOffset(when)}]`, topic ? `주제: ${oneLine(topic)}` : null].filter(Boolean);
+    lines.push(
+      `- ${kind}${oneLine(item.content)}${facts.length ? ` — ${facts.join(" · ")}` : ""}${where.length ? ` (${where.join(" · ")})` : ""}`
+    );
   }
   return joined(lines);
 }
@@ -56,17 +78,31 @@ export function reviewToMarkdown({
   summary,
   topics,
   sections,
+  confirmed,
+  context,
 }: {
   note: NoteMeta;
   summary: MeetingReviewSummary | null | undefined;
-  topics: readonly TopicChip[];
+  topics: readonly (TopicChip & { startMs?: number | null })[];
   sections: readonly ReviewSection[];
+  /** 확정된 요약인가. 검토 중인 줄이 확정본처럼 남에게 가면 안 된다 */
+  confirmed?: boolean;
+  context?: ItemContext;
 }) {
-  const blocks = [joined(headingLines(note))];
+  // 머리말 사실 줄(날짜 · 참석자 · 기록 시간)에 프로젝트와 확정 여부를 잇는다. 화면 머리에 있는 사실이다.
+  const head = headingLines(note);
+  head[2] = [
+    head[2],
+    note.projectName ? `프로젝트 ${note.projectName}` : null,
+    confirmed === undefined ? null : confirmed ? "확정됨" : "검토 중",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const blocks = [joined(head)];
   if (summary?.status === "SUCCEEDED" && overviewText(summary)) blocks.push(overviewToMarkdown(summary));
   if (topics.length > 0) blocks.push(topicsToMarkdown(topics));
   for (const section of sections) {
-    if (section.items.some((item) => item.included)) blocks.push(reviewSectionToMarkdown(section));
+    if (section.items.some((item) => item.included)) blocks.push(reviewSectionToMarkdown(section, null, context));
   }
   return blocks.join("\n");
 }

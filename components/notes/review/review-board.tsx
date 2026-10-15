@@ -481,10 +481,18 @@ export function ReviewBoard({
                 disabled={!noteMeta || summaryQuery.isPending || (summaryQuery.isError && !summary)}
                 build={() =>
                   reviewToMarkdown({
-                    note: noteMeta!,
+                    note: { ...noteMeta!, durationMs: lengthMs ?? undefined },
                     summary,
                     topics: digests,
                     sections,
+                    confirmed,
+                    context: {
+                      whenOf: citedAt,
+                      topicTitleOf: (item) => {
+                        const ordinal = topicOf(item.itemId);
+                        return ordinal === null ? null : topicTitleOf(ordinal) || null;
+                      },
+                    },
                   })
                 }
               />

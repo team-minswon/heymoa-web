@@ -82,7 +82,8 @@ export function ReviewActions({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7"
+              // 옆 전환 컨트롤(보기)이 32px 알약이라 높이와 모서리를 맞춘다 — 낮은 네모 버튼이 같은 줄에서 따로 놀았다.
+              className="h-8 rounded-full px-3"
               disabled={disabled}
               aria-label="요약 복사"
             />
@@ -112,7 +113,8 @@ export function ReviewActions({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7"
+              // 옆 전환 컨트롤(보기)이 32px 알약이라 높이와 모서리를 맞춘다 — 낮은 네모 버튼이 같은 줄에서 따로 놀았다.
+              className="h-8 rounded-full px-3"
               aria-label="내보내기·공유"
             />
           }
