@@ -15,6 +15,8 @@ const replaceParticipants = vi.hoisted(() => vi.fn());
 const replaceGuestParticipants = vi.hoisted(() => vi.fn());
 const createGuestParticipant = vi.hoisted(() => vi.fn());
 const getNote = vi.hoisted(() => vi.fn());
+/** 저장 중인가. 참여자 선택 트리거가 잠기는 상태를 흉내 낸다. */
+const savingState = vi.hoisted(() => ({ pending: false }));
 /** 저장 훅이 받은 옵션. 전역 토스트를 껐는지 본다. */
 const replaceOptions = vi.hoisted(() => [] as unknown[]);
 vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
@@ -22,7 +24,7 @@ vi.mock("@/lib/api/generated/notes/notes", async (importOriginal) => ({
   getNote,
   useReplaceNoteParticipants: (options: unknown) => {
     replaceOptions.push(options);
-    return { mutateAsync: replaceParticipants, isPending: false };
+    return { mutateAsync: replaceParticipants, isPending: savingState.pending };
   },
   useReplaceNoteGuestParticipants: (options: unknown) => {
     replaceOptions.push(options);
@@ -160,6 +162,20 @@ function renderField(participants = [PARTICIPANT]) {
   );
 }
 
+function autoOpenField(props: { autoOpen: boolean; onAutoOpened: () => void }) {
+  return (
+    <QueryClientProvider client={new QueryClient()}>
+      <NoteParticipantsField
+        noteId="01K0000000009"
+        projectId="01K0000000008"
+        workspaceId="01K0000000007"
+        participants={[PARTICIPANT]}
+        {...props}
+      />
+    </QueryClientProvider>
+  );
+}
+
 function openMenu() {
   fireEvent.click(screen.getByRole("combobox", { name: /참여자 선택/ }));
 }
@@ -174,6 +190,7 @@ describe("NoteParticipantsField", () => {
     createGuestParticipant.mockResolvedValue({ status: 201 });
     getNote.mockReset();
     toastError.mockReset();
+    savingState.pending = false;
     membersState.failed = false;
     membersState.refetch.mockReset();
     guestsState.failed = false;
@@ -196,6 +213,50 @@ describe("NoteParticipantsField", () => {
    * 골라 돌려주므로, 그 값으로 draft 를 통째로 다시 만들면 임시 참여자가 사라진 채 전체 교체가
    * 나간다 — 참여자와 **거기 붙은 화자 연결까지** 함께 지워진다.
    */
+  it("열어 달라는 요청이 있으면 선택창을 열고 요청을 거둔다", async () => {
+    const onAutoOpened = vi.fn();
+    render(autoOpenField({ autoOpen: true, onAutoOpened }));
+
+    // 사용자가 트리거를 누른 것과 같은 길이라 후보 목록이 서 있다
+    expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
+    expect(onAutoOpened).toHaveBeenCalledTimes(1);
+  });
+
+  it("저장 중이라 못 열면 요청을 거두지 않고 저장이 끝나면 연다", async () => {
+    savingState.pending = true;
+    const onAutoOpened = vi.fn();
+    const view = render(autoOpenField({ autoOpen: true, onAutoOpened }));
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(onAutoOpened).not.toHaveBeenCalled();
+
+    savingState.pending = false;
+    view.rerender(autoOpenField({ autoOpen: true, onAutoOpened }));
+    expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
+    expect(onAutoOpened).toHaveBeenCalledTimes(1);
+  });
+
+  it("요청이 없으면 선택창을 열지 않는다", () => {
+    const onAutoOpened = vi.fn();
+    render(autoOpenField({ autoOpen: false, onAutoOpened }));
+
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(onAutoOpened).not.toHaveBeenCalled();
+  });
+
+  it("요청이 거둬진 뒤 다시 그려도 또 열지 않는다", async () => {
+    const onAutoOpened = vi.fn();
+    const view = render(autoOpenField({ autoOpen: true, onAutoOpened }));
+    await screen.findAllByRole("option");
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    await waitFor(() => expect(screen.queryAllByRole("option")).toHaveLength(0));
+
+    view.rerender(autoOpenField({ autoOpen: false, onAutoOpened }));
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(onAutoOpened).toHaveBeenCalledTimes(1);
+  });
+
   it("임시 참여자 조회가 실패해도 저장된 임시 참여자를 안 지운다", async () => {
     guestsState.failed = true;
     renderField([PARTICIPANT, GUEST_PARTICIPANT]);

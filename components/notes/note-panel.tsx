@@ -263,13 +263,46 @@ export function NotePanel({
     if (linkSeen.noteId !== noteId) setFocusSegmentId(linkedSegmentId);
     else if (linkedSegmentId) setFocusSegmentId(linkedSegmentId);
   }
+  /**
+   * 정보 탭의 참여자 선택창을 열어 달라는 요청(APP-1102). 종료 확인창의 「참여자 지정하러
+   * 가기」가 걸고, 선택창이 열리면 거둔다.
+   *
+   * **노트와 도착 여부를 같이 든다**(codex 리뷰 1회차). 걸어 둔 채 다른 노트로 넘어가거나,
+   * 정보 탭에 닿은 뒤 뒤로 가기 같은 바깥 경로로 탭을 떠나면 요청이 남아 한참 뒤 그 탭에
+   * 들어갈 때 선택창이 갑자기 열린다. 탭 이동이 URL 을 거쳐 늦게 반영되므로 「아직 안 닿음」과
+   * 「떠남」을 `arrived` 로 가른다. 사용자가 탭을 직접 고르면 `handleTabChange` 가 바로 거둔다.
+   */
+  const [participantsRequest, setParticipantsRequest] = useState<{
+    noteId: string;
+    arrived: boolean;
+  } | null>(null);
+  // 렌더 중 상태 조정(React 공식 패턴) — 각 가지가 다음 상태에서는 맞지 않아 되돌지 않는다.
+  if (participantsRequest) {
+    if (participantsRequest.noteId !== noteId) {
+      setParticipantsRequest(null);
+    } else if (tab === "details" && !participantsRequest.arrived) {
+      setParticipantsRequest({ ...participantsRequest, arrived: true });
+    } else if (tab !== "details" && participantsRequest.arrived) {
+      setParticipantsRequest(null);
+    }
+  }
+  const closeParticipantsRequest = useCallback(
+    () => setParticipantsRequest(null),
+    []
+  );
   const handleTabChange = useCallback(
     (next: NoteTab) => {
       setFocusSegmentId(null);
+      setParticipantsRequest(null);
       onTabChange(next);
     },
     [onTabChange]
   );
+  const editParticipants = useCallback(() => {
+    setFocusSegmentId(null);
+    onTabChange("details");
+    setParticipantsRequest({ noteId, arrived: false });
+  }, [noteId, onTabChange]);
   /**
    * 근거를 눌러 전사로 건너뛴다. **뒤로가기로 읽던 요약에 돌아올 수 있어야 한다** —
    * 각주를 따라간 것이지 탭을 고른 것이 아니라서, 이 이동만 히스토리에 자리를 남긴다.
@@ -576,7 +609,7 @@ export function NotePanel({
                 key={noteId}
                 note={note}
                 onMeetingEnded={() => onTabChange("summary")}
-                onEditParticipants={() => handleTabChange("details")}
+                onEditParticipants={editParticipants}
               />
             ) : null}
             {note && note.meetingStatus !== "IN_PROGRESS" ? (
@@ -873,6 +906,8 @@ export function NotePanel({
                 <NoteDetails
                   noteId={noteId}
                   workspaceId={confirmedWorkspaceId}
+                  autoOpenParticipants={participantsRequest?.noteId === noteId}
+                  onParticipantsAutoOpened={closeParticipantsRequest}
                 />
               </DataBoundary>
             </ScrollArea>
