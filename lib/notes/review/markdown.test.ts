@@ -114,6 +114,32 @@ describe("reviewToMarkdown", () => {
     expect(out).not.toContain("## 요약");
   });
 
+  it("결정에 나온 때와 속한 주제를 붙이고, 주제는 때와 함께 시간순 번호로 적는다", () => {
+    const withTime = [
+      { ordinal: 5, title: "에이전트", gist: null, startMs: 7_000 },
+      { ordinal: 3, title: "홍보", gist: null, startMs: 248_000 },
+    ] as never;
+    const out = reviewToMarkdown({
+      note: { ...note, durationMs: 540_000, projectName: "멘토링" },
+      summary: null,
+      topics: withTime,
+      sections: [section(true)],
+      confirmed: true,
+      context: { whenOf: () => 290_000, topicTitleOf: () => "홍보" },
+    });
+    // ordinal(5, 3)이 아니라 목록 차례(1, 2)로 센다
+    expect(out).toContain("1. [00:07] **에이전트**");
+    expect(out).toContain("2. [04:08] **홍보**");
+    expect(out).toContain("- 다운로드를 아래에 둔다 ([04:50] · 주제: 홍보)");
+    // 머리말 사실 줄에 기록 시간 · 프로젝트 · 확정 여부
+    expect(out).toContain("기록 9분 · 프로젝트 멘토링 · 확정됨");
+  });
+
+  it("검토 중이면 그렇게 적는다", () => {
+    const out = reviewToMarkdown({ note, summary: null, topics, sections: [], confirmed: false });
+    expect(out).toContain("검토 중");
+  });
+
   it("텍스트 형식은 헤딩·굵게·불릿 기호를 걷어 낸다", () => {
     expect(markdownToText("## 주제\n\n1. **표시** — 설명\n- 항목\n_없음_\n")).toBe("주제\n\n1. 표시 — 설명\n• 항목\n없음\n");
   });

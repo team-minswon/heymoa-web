@@ -24,6 +24,8 @@ export type NoteMeta = {
   /** 회의 시작(없으면 생성) 시각 ISO. */
   whenIso: string;
   participantCount: number;
+  /** 참석자 이름. 없으면 인원수만 적는다. 복사본은 화면 밖으로 나가 누가 있었는지가 문서에 남아야 한다(APP-1109) */
+  participantNames?: string[];
   /** 전사 응답의 `recording.durationMs`. 요약에는 없으므로 선택이다. */
   durationMs?: number;
   /** 검토 화면 머리의 프로젝트 칩(APP-865). 복사본 머리말에는 싣지 않는다 */
@@ -40,8 +42,22 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
     // 헤더 메타와 같은 기준이다 — 시작 전 노트는 만든 시각이 그 노트의 시각이다.
     whenIso: note.meetingStartedAt ?? note.createdAt,
     participantCount: note.participants?.length ?? 0,
+    participantNames: note.participants?.map((participant) => participant.name),
     projectName: note.projectName,
   };
+}
+
+/** 머리말에 이름으로 적는 참석자 수의 상한. 넘으면 「외 N명」으로 접는다 */
+const MAX_NAMED_PARTICIPANTS = 8;
+
+function participantsFact(meta: NoteMeta) {
+  const names = (meta.participantNames ?? []).map((name) => name.trim()).filter(Boolean);
+  if (names.length === 0) {
+    return meta.participantCount > 0 ? `참석자 ${meta.participantCount}명` : null;
+  }
+  const shown = names.slice(0, MAX_NAMED_PARTICIPANTS).join(", ");
+  const rest = names.length - MAX_NAMED_PARTICIPANTS;
+  return `참석자 ${shown}${rest > 0 ? ` 외 ${rest}명` : ""}`;
 }
 
 export function headingLines(meta: NoteMeta, suffix = "") {
@@ -53,7 +69,7 @@ export function headingLines(meta: NoteMeta, suffix = "") {
       hour: "numeric",
       minute: "2-digit",
     }),
-    meta.participantCount > 0 ? `참석자 ${meta.participantCount}명` : null,
+    participantsFact(meta),
     // 1분 미만은 「기록 0분」이 된다 — 수가 뜻을 안 보태면 적지 않는다.
     meta.durationMs && meta.durationMs >= 60_000
       ? `기록 ${Math.floor(meta.durationMs / 60_000)}분`
