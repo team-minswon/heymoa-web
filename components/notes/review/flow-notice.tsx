@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, LoaderCircle, X } from "lucide-react";
 
@@ -50,23 +49,6 @@ const COPY: Record<WaitingStatus, { title: string; body: string }> = {
   },
 };
 
-/**
- * `NOT_REQUESTED` 를 처음 보고 「분석 요청」을 내놓기까지 기다리는 시간 (APP-1099).
- *
- * server 는 종료 커밋 **뒤** 별도 executor 에서 자동 요청을 만든다. 종료 직후 요약 탭이 그 사이를
- * 조회하면 `NOT_REQUESTED` 를 받고, 다음 폴링(3초)까지 버튼이 눌리는 상태로 보였다. 자동 요청이
- * 거절돼 그대로 머무는 회의를 위해 버튼은 남기되, 그 사이에는 숨긴다. 브라우저 시계와 서버의
- * `meetingEndedAt` 을 비교하지 않으려고 처음 본 시각부터 잰다.
- */
-export const REQUEST_GRACE_MS = 10_000;
-
-/**
- * 회의마다 `NOT_REQUESTED` 를 처음 본 시각. 컴포넌트 상태에 두면 탭을 오가 재마운트될 때마다,
- * 회의를 바꿔도 같은 인스턴스면 이전 회의의 시간을 이어받아 기다림이 어긋났다(codex 리뷰 1회차).
- * ponytail: 이 탭이 본 회의 수만큼 자란다. 숫자 하나씩이라 문서 수명 동안 둔다.
- */
-const notRequestedSince = new Map<string, number>();
-
 export function isWaitingStatus(status: FlowStatus): status is WaitingStatus {
   return status in CURRENT;
 }
@@ -88,20 +70,7 @@ export function FlowNotice({
   const request = useRequestAnalysis();
   const { index, state } = CURRENT[status];
   const copy = COPY[status];
-  const [graceOverFor, setGraceOverFor] = useState<string | null>(null);
-  useEffect(() => {
-    if (status !== "NOT_REQUESTED") return;
-    const since = notRequestedSince.get(noteId) ?? Date.now();
-    notRequestedSince.set(noteId, since);
-    const timer = setTimeout(
-      () => setGraceOverFor(noteId),
-      Math.max(0, since + REQUEST_GRACE_MS - Date.now())
-    );
-    return () => clearTimeout(timer);
-  }, [noteId, status]);
-  const canRequest =
-    status === "ANALYSIS_FAILED" ||
-    (status === "NOT_REQUESTED" && graceOverFor === noteId);
+  const canRequest = status === "ANALYSIS_FAILED" || status === "NOT_REQUESTED";
 
   return (
     <div className="mx-auto w-full max-w-[calc(820px+2*var(--note-gutter))] px-[var(--note-gutter)] pt-10 pb-16">
