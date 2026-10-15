@@ -30,6 +30,9 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
+      // 다른 대화상자(노트 시트) 위에 겹쳐 열릴 때도 배경을 어둡게 그린다. 안 그러면 Base UI 가
+      // 중첩 대화상자의 배경을 안 그려 사이드 뷰에서 확인창 뒤가 그대로 보인다(알림 대화상자도 같다).
+      forceRender
       className={cn(
         "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className

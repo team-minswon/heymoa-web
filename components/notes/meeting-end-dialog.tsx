@@ -14,14 +14,14 @@ import {
   useRecording,
 } from "@/components/transcription/recording-provider";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { errorCodeOf, errorMessageOf } from "@/lib/api/error-message";
 import {
@@ -80,7 +80,8 @@ export function MeetingEndDialog({
   }
 
   const starting = isRecordingStarting(recording, noteId);
-  // 서버는 참여자가 2명 미만이면 화자 수 힌트를 보내지 않는다(`DiarizationProperties.forMeeting`)
+  // 한 명 이하면 말한 사람이 적게 처리될 수 있어 경고 톤으로 그린다. 서버는 한 명이어도 그 수를
+  // 화자 상한으로 보낸다(APP-1104, `DiarizationProperties.forMeeting`)
   const few = participants.length < 2;
   /**
    * **서버가 준 노트를 그대로 캐시에 넣는다** (APP-685).
@@ -142,15 +143,27 @@ export function MeetingEndDialog({
     );
   };
 
+  // **종료 요청이 떠 있는 동안은 닫지 못하게 한다.** 이 창이 진행 표시(버튼 spinner)를 들고 있고,
+  // 응답이 오면 `onEnded` 가 요약 탭으로 넘긴다. 배경·X·Esc 도 같은 길로 막힌다(APP-1105).
+  const busy = endMeeting.isPending || starting;
+  const handleOpenChange = (next: boolean) => {
+    if (!next && busy) return;
+    onOpenChange(next);
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>회의를 종료할까요?</AlertDialogTitle>
+    // **일반 `Dialog` 다** — 배경 클릭·Esc·우측 상단 X 로 닫힌다. 예전 `AlertDialog` 는 배경을 눌러도
+    // 안 닫히고 X 도 없어 빠져나갈 길이 하단 버튼 하나뿐이었다(APP-1105). 종료는 이 창 안의
+    // `회의 종료` 를 눌러야만 일어나므로 가볍게 닫혀도 잃는 것이 없다.
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {/* 진행 중에는 X 를 그리지 않고 취소를 잠근다 — 눌러도 안 닫히는 활성 버튼을 두지 않는다 */}
+      <DialogContent showCloseButton={!busy}>
+        <DialogHeader>
+          <DialogTitle>회의를 종료할까요?</DialogTitle>
           {/* 참여자 안내도 설명 안에 둔다 — 창의 `aria-describedby`가 이 요소 하나만 가리켜서
               밖에 두면 스크린리더가 창을 열 때 읽지 않는다(codex 리뷰 1회차). 칩 목록(`ul`)이
               들어가므로 기본 `<p>` 가 아니라 `<div>` 로 그린다. */}
-          <AlertDialogDescription render={<div />}>
+          <DialogDescription render={<div />}>
             <p>
               회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할
               수 없습니다.
@@ -189,13 +202,15 @@ export function MeetingEndDialog({
                 </ul>
               ) : null}
               <p className="mt-2 text-xs leading-relaxed text-[var(--el-body)]">
-                {few
-                  ? `참여자가 ${participants.length}명이라 화자 수를 미리 알려 주지 못합니다. 여러 명이 말했다면 참여자를 지정하면 화자 분리가 더 정확해집니다.`
-                  : "말한 사람이 모두 들어 있나요? 실제로 말한 사람보다 참여자가 적으면 화자가 합쳐질 수 있고, 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다."}
+                {participants.length === 0
+                  ? "참여자가 없어 화자 수를 정하지 않고 나눕니다. 말한 사람을 참여자로 지정하면 화자 분리가 더 정확해집니다."
+                  : few
+                    ? "참여자가 1명이라 말한 사람이 1명으로 처리됩니다. 여러 명이 말했다면 먼저 참여자를 지정해 주세요. 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다."
+                    : "말한 사람이 모두 들어 있나요? 실제로 말한 사람보다 참여자가 적으면 화자가 합쳐질 수 있고, 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다."}
               </p>
             </section>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="flex items-center gap-2 rounded-block border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] px-3 py-2.5 text-xs text-[var(--el-muted)]">
           <Mic className="size-3.5" />
@@ -214,14 +229,17 @@ export function MeetingEndDialog({
           </div>
         ) : null}
 
-        <AlertDialogFooter>
-          <AlertDialogCancel>닫기</AlertDialogCancel>
+        <DialogFooter>
+          {/* 우측 상단 X 의 이름이 「닫기」라 같은 이름을 또 두지 않는다 */}
+          <DialogClose render={<Button variant="outline" disabled={busy} />}>
+            취소
+          </DialogClose>
           {onEditParticipants ? (
             // 종료 요청이 떠 있는 동안은 막는다 — 응답이 오면 `onEnded`가 요약 탭으로 다시
             // 데려가고, 종료 순간의 참여자 수는 이미 정해진 뒤다(codex 리뷰 1회차).
             <Button
               variant="outline"
-              disabled={endMeeting.isPending || starting}
+              disabled={busy}
               onClick={() => {
                 onOpenChange(false);
                 onEditParticipants();
@@ -233,14 +251,14 @@ export function MeetingEndDialog({
           {/* 높이를 손으로 주지 않는다 — `h-11`(44)이 `닫기`의 기본 높이와 달라 같은 줄에서
               두 버튼 크기가 어긋났다. 진행 표시는 문구 교체가 아니라 `loading`으로 준다. */}
           <Button
-            loading={endMeeting.isPending || starting}
-            disabled={endMeeting.isPending || starting}
+            loading={busy}
+            disabled={busy}
             onClick={requestEnd}
           >
             회의 종료
           </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
