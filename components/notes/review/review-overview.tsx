@@ -1,7 +1,6 @@
 import { SectionBlock } from "@/components/notes/review/section-block";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
-import { overviewToMarkdown } from "@/lib/notes/review/markdown";
 import { overviewText, type MeetingReviewSummary } from "@/lib/notes/review/summary";
 
 /**
@@ -53,7 +52,7 @@ export function ReviewOverview({
   }
 
   return (
-    <SectionBlock title="요약" copy={{ build: () => overviewToMarkdown(summary) }}>
+    <SectionBlock title="요약">
       {/* 주제마다의 한 줄은 아래 주제 목차가 맡는다 */}
       <p className="text-[16px] leading-7 break-keep text-[var(--el-ink)]">{overviewText(summary)}</p>
     </SectionBlock>

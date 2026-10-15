@@ -38,7 +38,9 @@ export type AnalyticsEvent =
   | "task_completed"
   | "analysis_requested"
   | "agent_disconnected"
-  | "integration_disconnected";
+  | "integration_disconnected"
+  | "summary_copied"
+  | "export_requested";
 
 type Properties = Record<string, string | number | boolean | null | undefined>;
 

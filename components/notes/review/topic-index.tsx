@@ -7,7 +7,6 @@ import { useState } from "react";
 import { Collapse } from "@/components/heymoa/collapse";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
 import { SectionBlock } from "@/components/notes/review/section-block";
-import { topicsToMarkdown } from "@/lib/notes/review/markdown";
 import type { ReviewItem } from "@/lib/notes/review/sections";
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { CONTEXT_KIND_LABEL } from "@/lib/notes/proposals/presentation";
@@ -54,7 +53,7 @@ export function TopicIndex({
     });
 
   return (
-    <SectionBlock title="주제" count={topics.length} copy={{ build: () => topicsToMarkdown(topics) }}>
+    <SectionBlock title="주제" count={topics.length}>
       <ul aria-label="주제 목차" className="border-t border-[var(--el-hairline-soft)]">
         {shown.map((topic) => (
           <TopicRow

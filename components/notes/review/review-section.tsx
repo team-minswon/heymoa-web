@@ -9,7 +9,6 @@ import { AddItemForm } from "@/components/notes/review/add-item-form";
 import { ReviewRow, type ItemPatch } from "@/components/notes/review/review-row";
 import { SectionBlock } from "@/components/notes/review/section-block";
 import type { AssigneeChoice } from "@/lib/assignees/describe";
-import { reviewSectionToMarkdown } from "@/lib/notes/review/markdown";
 import {
   ASSIGNABLE_KINDS,
   REVIEW_SECTIONS,
@@ -120,10 +119,6 @@ export function ReviewSection({
     <SectionBlock
       title={section.label}
       count={section.includedCount}
-      copy={{
-        build: () => reviewSectionToMarkdown(section),
-        disabled: section.includedCount === 0,
-      }}
     >
       {hint || aside ? (
         <div className="flex min-h-[30px] flex-wrap items-center gap-x-2.5 text-xs text-[var(--el-muted)]">

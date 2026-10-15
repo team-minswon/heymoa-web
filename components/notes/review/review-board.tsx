@@ -1,5 +1,6 @@
 "use client";
 
+import { reviewToMarkdown } from "@/lib/notes/review/markdown";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -12,6 +13,7 @@ import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
 import { MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
+import { ReviewActions } from "@/components/notes/review/review-actions";
 import { ReviewHead } from "@/components/notes/review/review-head";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewSection } from "@/components/notes/review/review-section";
@@ -473,12 +475,26 @@ export function ReviewBoard({
           lengthMs={lengthMs}
           confirmed={confirmed}
           aside={
-            <SegmentedControl
-              label="보기"
-              value={view}
-              options={VIEWS}
-              onChange={setView}
-            />
+            <div className="flex items-center gap-2">
+              <ReviewActions
+                // **요약을 못 받았으면 복사를 막는다.** 요약·주제가 빠진 문서가 성공 토스트와 함께 복사된다.
+                disabled={!noteMeta || summaryQuery.isPending || (summaryQuery.isError && !summary)}
+                build={() =>
+                  reviewToMarkdown({
+                    note: noteMeta!,
+                    summary,
+                    topics: digests,
+                    sections,
+                  })
+                }
+              />
+              <SegmentedControl
+                label="보기"
+                value={view}
+                options={VIEWS}
+                onChange={setView}
+              />
+            </div>
           }
         />
 

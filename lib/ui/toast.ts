@@ -18,7 +18,7 @@ function timeoutOf(duration: number | undefined) {
 }
 
 function show(
-  type: "success" | "error",
+  type: "success" | "error" | "info",
   message: string,
   options?: ToastOptions
 ) {
@@ -49,6 +49,8 @@ export const toast = {
     show("success", message, options),
   error: (message: string, options?: ToastOptions) =>
     show("error", message, options),
+  info: (message: string, options?: ToastOptions) =>
+    show("info", message, options),
   /** id를 주면 그 토스트만, 없으면 전부 닫는다. */
   dismiss: (id?: string) => manager.close(id),
 };
