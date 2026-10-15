@@ -123,7 +123,20 @@ vi.mock("@/components/auth/auth-provider", () => ({
   }),
 }));
 vi.mock("@/components/notes/note-details", () => ({
-  NoteDetails: () => <p>정보 내용</p>,
+  NoteDetails: ({
+    autoOpenParticipants,
+    onParticipantsAutoOpened,
+  }: {
+    autoOpenParticipants?: boolean;
+    onParticipantsAutoOpened?: () => void;
+  }) => (
+    <div data-testid="note-details" data-auto-open={String(!!autoOpenParticipants)}>
+      <p>정보 내용</p>
+      <button type="button" onClick={onParticipantsAutoOpened}>
+        선택창 열림
+      </button>
+    </div>
+  ),
   NoteDetailsSkeleton: () => <p>정보 로딩</p>,
 }));
 vi.mock("@/components/notes/transcript-view", () => ({
@@ -180,14 +193,21 @@ vi.mock("@/components/notes/meeting-end-dialog", () => ({
   MeetingEndDialog: ({
     open,
     onEnded,
+    onEditParticipants,
   }: {
     open: boolean;
     onEnded?: () => void;
+    onEditParticipants?: () => void;
   }) =>
     open ? (
-      <button type="button" onClick={onEnded}>
-        종료 확인
-      </button>
+      <>
+        <button type="button" onClick={onEnded}>
+          종료 확인
+        </button>
+        <button type="button" onClick={onEditParticipants}>
+          참여자 지정하러 가기
+        </button>
+      </>
     ) : null,
 }));
 vi.mock("@/lib/api/generated/notes/notes", () => ({
@@ -1018,6 +1038,76 @@ describe("NotePanel", () => {
       rerenderNote(panel(null, "01K0000000009"));
 
       await waitFor(() => expect(focusOf()).toBe(""));
+    });
+  });
+
+  describe("참여자 지정하러 가기 (APP-1102)", () => {
+    const panel = (
+      tab: "transcript" | "details",
+      noteId = "01K0000000002",
+      onTabChange = vi.fn()
+    ) => (
+      <NotePanel
+        workspaceId="01K0000000000"
+        noteId={noteId}
+        view="full"
+        tab={tab}
+        onTabChange={onTabChange}
+        onClose={vi.fn()}
+      />
+    );
+    const autoOpen = () =>
+      screen.getByTestId("note-details").getAttribute("data-auto-open");
+
+    beforeEach(() => {
+      // 기록 중에는 회의 종료가 잠긴다(APP-694) — 중지된 회의로 연다.
+      noteState.value.meetingStatus = "PAUSED";
+      noteState.value.activeSessionStartedAt = null;
+    });
+
+    it("정보 탭으로 보내며 선택창 열기를 요청하고, 열리면 거둔다", () => {
+      const onTabChange = vi.fn();
+      const { rerenderNote } = renderNotePanel(
+        panel("transcript", undefined, onTabChange)
+      );
+      fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+      fireEvent.click(screen.getByRole("button", { name: "참여자 지정하러 가기" }));
+      expect(onTabChange).toHaveBeenCalledWith("details");
+
+      rerenderNote(panel("details", undefined, onTabChange));
+      expect(autoOpen()).toBe("true");
+
+      fireEvent.click(screen.getByRole("button", { name: "선택창 열림" }));
+      expect(autoOpen()).toBe("false");
+    });
+
+    it("도착한 뒤 바깥 경로로 탭을 떠나면 요청을 버린다", () => {
+      const onTabChange = vi.fn();
+      const { rerenderNote } = renderNotePanel(
+        panel("transcript", undefined, onTabChange)
+      );
+      fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+      fireEvent.click(screen.getByRole("button", { name: "참여자 지정하러 가기" }));
+      rerenderNote(panel("details", undefined, onTabChange));
+      expect(autoOpen()).toBe("true");
+
+      // 뒤로 가기처럼 패널 밖에서 탭이 바뀌고, 나중에 정보 탭으로 다시 들어온다
+      rerenderNote(panel("transcript", undefined, onTabChange));
+      rerenderNote(panel("details", undefined, onTabChange));
+      expect(autoOpen()).toBe("false");
+    });
+
+    it("정보 탭에 닿기 전에 다른 노트로 넘어가면 요청을 버린다", () => {
+      const onTabChange = vi.fn();
+      const { rerenderNote } = renderNotePanel(
+        panel("transcript", undefined, onTabChange)
+      );
+      fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
+      fireEvent.click(screen.getByRole("button", { name: "참여자 지정하러 가기" }));
+
+      noteState.value = { ...noteState.value, noteId: "01K0000000009" };
+      rerenderNote(panel("details", "01K0000000009", onTabChange));
+      expect(autoOpen()).toBe("false");
     });
   });
 

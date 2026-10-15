@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UserPlus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -107,15 +107,24 @@ export function NoteParticipantsField({
   projectId,
   workspaceId,
   participants,
+  autoOpen = false,
+  onAutoOpened,
 }: {
   noteId: string;
   projectId: string;
   /** 확인된 소속. 확인 전에는 `undefined` 라 조회를 안 걸고 만들기를 안 연다. */
   workspaceId?: string;
   participants: Participant[];
+  /**
+   * 참여자 선택창을 열어 달라는 요청(회의 종료 확인창의 「참여자 지정하러 가기」, APP-1102).
+   * 한 번 열고 `onAutoOpened` 로 요청을 거둔다 — 안 거두면 탭을 오갈 때마다 다시 열린다.
+   */
+  autoOpen?: boolean;
+  onAutoOpened?: () => void;
 }) {
   const queryClient = useQueryClient();
   const anchorRef = useRef<HTMLSpanElement | null>(null);
+  // 이 효과는 `saving` 을 아래에서 읽는다 — 선언 순서 때문에 아래에 둔다.
   // **소속이 확인되기 전에는 안 읽는다.** 확인 전 값으로 읽으면 남의 워크스페이스 후보가 선다.
   const workspaceQueryOptions = { query: { enabled: Boolean(workspaceId) } };
   const membersResponse = useGetWorkspaceMembers(workspaceId ?? "", workspaceQueryOptions);
@@ -522,6 +531,20 @@ export function NoteParticipantsField({
     replaceParticipants.isPending ||
     replaceGuestParticipants.isPending ||
     createGuestParticipant.isPending;
+
+  useEffect(() => {
+    if (!autoOpen) return;
+    const trigger = anchorRef.current?.querySelector<HTMLButtonElement>(
+      'button[aria-label="참여자 선택"]'
+    );
+    // **저장 중에는 트리거가 잠겨 클릭이 무시된다.** 그때 요청을 거두면 저장이 끝나도 안 열린다
+    // — 열지 못했으면 거두지 않고 `saving` 이 풀릴 때 다시 시도한다(codex 리뷰 1회차).
+    if (!trigger || trigger.disabled) return;
+    // **사용자가 트리거를 누른 것과 같은 길로 연다.** 열 때 후보를 다시 읽고 닫을 때 저장하는
+    // 처리가 전부 `onOpenChange` 에 있어, 상태를 따로 올리면 그 처리를 건너뛴다.
+    trigger.click();
+    if (openRef.current) onAutoOpened?.();
+  }, [autoOpen, onAutoOpened, saving]);
 
   return (
     <div className="flex flex-wrap items-center gap-3">

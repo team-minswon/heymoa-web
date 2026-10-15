@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Mic } from "lucide-react";
+import { AlertTriangle, Mic, Users } from "lucide-react";
 import { toast } from "@/lib/ui/toast";
 
+import {
+  type Participant,
+  ParticipantAvatar,
+} from "@/components/notes/note-participants";
 import {
   isRecordingStarting,
   useRecording,
@@ -31,12 +35,13 @@ import {
 } from "@/lib/api/generated/notes/notes";
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import { invalidateNoteLists } from "@/lib/notes/invalidate";
+import { cn } from "@/lib/utils";
 
 /** 중지된 회의를 확인 한 번으로 종료한다. 기록 중이면 서버가 409 MEETING_RECORDING 을 준다. */
 export function MeetingEndDialog({
   noteId,
   meetingStatus,
-  participantCount,
+  participants,
   open,
   onOpenChange,
   onEnded,
@@ -46,9 +51,11 @@ export function MeetingEndDialog({
   meetingStatus: NoteResponseData["meetingStatus"];
   /**
    * 서버는 **종료 순간**의 참여자 수를 화자 분리의 최대 화자 수로 쓴다(APP-1098). 종료 뒤에
-   * 넣은 참여자는 반영되지 않고, 말한 사람보다 적게 넣으면 화자가 합쳐진다.
+   * 넣은 참여자는 반영되지 않고, 말한 사람보다 적게 넣으면 화자가 합쳐진다. 서버는 2명
+   * 미만이면 화자 수를 알려 주지 않는다 — 그래서 수만이 아니라 **누가 들어 있는지**를 보인다
+   * (APP-1102).
    */
-  participantCount: number;
+  participants: Participant[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 종료가 접수된(202) 뒤 호출 — 호출부가 요약 탭으로 넘겨 분석 진행을 보인다. */
@@ -73,6 +80,8 @@ export function MeetingEndDialog({
   }
 
   const starting = isRecordingStarting(recording, noteId);
+  // 서버는 참여자가 2명 미만이면 화자 수 힌트를 보내지 않는다(`DiarizationProperties.forMeeting`)
+  const few = participants.length < 2;
   /**
    * **서버가 준 노트를 그대로 캐시에 넣는다** (APP-685).
    *
@@ -139,15 +148,52 @@ export function MeetingEndDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>회의를 종료할까요?</AlertDialogTitle>
           {/* 참여자 안내도 설명 안에 둔다 — 창의 `aria-describedby`가 이 요소 하나만 가리켜서
-              밖에 두면 스크린리더가 창을 열 때 읽지 않는다(codex 리뷰 1회차). */}
-          <AlertDialogDescription>
-            회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할
-            수 없습니다.
-            <span className="mt-2 block text-[var(--el-body)]">
-              참여자를 지정하셨나요? (현재 {participantCount}명) 실제로 말한
-              사람보다 참여자가 적으면 화자가 합쳐질 수 있습니다. 종료 뒤에
-              추가한 참여자는 이번 화자 분리에 반영되지 않습니다.
-            </span>
+              밖에 두면 스크린리더가 창을 열 때 읽지 않는다(codex 리뷰 1회차). 칩 목록(`ul`)이
+              들어가므로 기본 `<p>` 가 아니라 `<div>` 로 그린다. */}
+          <AlertDialogDescription render={<div />}>
+            <p>
+              회의를 종료하고 요약을 시작합니다. 이후에는 스크립트를 다시 시작할
+              수 없습니다.
+            </p>
+            <section
+              aria-label="회의 참여자"
+              className={cn(
+                "mt-3 rounded-block border p-3",
+                few
+                  ? "border-[var(--el-warning-strong)]/30 bg-[var(--el-warning-strong)]/[0.06]"
+                  : "border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
+              )}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--el-ink)]">
+                {few ? (
+                  <AlertTriangle className="size-3.5 text-[var(--el-warning-strong)]" />
+                ) : (
+                  <Users className="size-3.5 text-[var(--el-muted)]" />
+                )}
+                참여자 {participants.length}명
+              </div>
+              {participants.length > 0 ? (
+                <ul className="mt-2 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                  {participants.map((participant) => (
+                    <li
+                      key={participant.participantId}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--el-hairline)] bg-[var(--el-canvas)] py-0.5 pr-2.5 pl-0.5 text-xs text-[var(--el-ink)]"
+                    >
+                      <ParticipantAvatar
+                        participant={participant}
+                        interactive={false}
+                      />
+                      {participant.name}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="mt-2 text-xs leading-relaxed text-[var(--el-body)]">
+                {few
+                  ? `참여자가 ${participants.length}명이라 화자 수를 미리 알려 주지 못합니다. 여러 명이 말했다면 참여자를 지정하면 화자 분리가 더 정확해집니다.`
+                  : "말한 사람이 모두 들어 있나요? 실제로 말한 사람보다 참여자가 적으면 화자가 합쳐질 수 있고, 종료 뒤에 추가한 참여자는 이번 화자 분리에 반영되지 않습니다."}
+              </p>
+            </section>
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -96,8 +96,13 @@ function FactDivider() {
 export function NoteDetails({
   noteId,
   workspaceId,
+  autoOpenParticipants,
+  onParticipantsAutoOpened,
 }: {
   noteId: string;
+  /** 참여자 선택창을 열어 보이라는 요청. 열면 `onParticipantsAutoOpened` 로 거둔다. */
+  autoOpenParticipants?: boolean;
+  onParticipantsAutoOpened?: () => void;
   /**
    * **URL 이 아니라 확인된 소속이다.** `/w/B/notes/<A의 노트>` 로 들어오면 URL 은 B 인데
    * 이 노트는 A 것이다. 그대로 쓰면 B 의 후보가 서고, A 에만 있는 이름을 쳐도 못 찾아
@@ -189,6 +194,8 @@ export function NoteDetails({
             projectId={note.projectId}
             workspaceId={workspaceId}
             participants={note.participants}
+            autoOpen={autoOpenParticipants}
+            onAutoOpened={onParticipantsAutoOpened}
           />
         </Field>
 

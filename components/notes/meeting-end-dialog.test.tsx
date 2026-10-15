@@ -10,6 +10,17 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MeetingEndDialog } from "@/components/notes/meeting-end-dialog";
+import type { Participant } from "@/components/notes/note-participants";
+
+const participant = (id: string, name: string): Participant => ({
+  participantId: id,
+  userId: id,
+  guestId: null,
+  name,
+  email: `${id}@heymoa.com`,
+  image: null,
+});
+const TWO_PARTICIPANTS = [participant("p1", "김민수"), participant("p2", "한지원")];
 
 /**
  * **종료 응답이 갱신된 노트다** (APP-685). 전에는 204 라 화면이 종료 뒤 상태를 스스로
@@ -78,7 +89,8 @@ function renderDialog(
   onEnded?: () => void,
   meetingStatus: "IN_PROGRESS" | "PAUSED" = "PAUSED",
   onEditParticipants?: () => void,
-  onOpenChange: (open: boolean) => void = vi.fn()
+  onOpenChange: (open: boolean) => void = vi.fn(),
+  participants: Participant[] = TWO_PARTICIPANTS
 ) {
   const client = new QueryClient();
   const ui = (open: boolean) => (
@@ -86,7 +98,7 @@ function renderDialog(
       <MeetingEndDialog
         noteId="01K0000000002"
         meetingStatus={meetingStatus}
-        participantCount={2}
+        participants={participants}
         open={open}
         onOpenChange={onOpenChange}
         onEnded={onEnded}
@@ -118,17 +130,35 @@ describe("MeetingEndDialog", () => {
     vi.restoreAllMocks();
   });
 
-  it("종료 전에 참여자 수와 참여자 지정 안내를 보인다", () => {
+  it("종료 전에 참여자 수와 이름을 접근성 설명 안에 보인다", () => {
     renderDialog();
+    const dialog = screen.getByRole("alertdialog");
     // 창의 접근성 설명(aria-describedby)에 들어가야 열 때 읽힌다.
-    expect(
-      screen.getByRole("alertdialog").getAttribute("aria-describedby")
-    ).toBeTruthy();
     const description = document.getElementById(
-      screen.getByRole("alertdialog").getAttribute("aria-describedby")!
+      dialog.getAttribute("aria-describedby")!
     );
-    expect(description?.textContent).toMatch(/참여자를 지정하셨나요\? \(현재 2명\)/);
+    expect(description?.textContent).toContain("참여자 2명");
+    expect(description?.textContent).toContain("김민수");
+    expect(description?.textContent).toContain("한지원");
+    expect(description?.textContent).toContain("말한 사람이 모두 들어 있나요?");
     expect(screen.getByRole("button", { name: "닫기" })).toBeTruthy();
+  });
+
+  it("참여자가 1명 이하이면 화자 수를 못 알려 준다고 경고한다", () => {
+    renderDialog(undefined, "PAUSED", undefined, undefined, [
+      participant("p1", "김민수"),
+    ]);
+    const section = screen.getByRole("region", { name: "회의 참여자" });
+    expect(section.textContent).toContain("참여자 1명");
+    expect(section.textContent).toContain("화자 수를 미리 알려 주지 못합니다");
+    expect(section.textContent).not.toContain("말한 사람이 모두 들어 있나요?");
+  });
+
+  it("참여자가 없으면 이름 목록 없이 경고만 보인다", () => {
+    renderDialog(undefined, "PAUSED", undefined, undefined, []);
+    const section = screen.getByRole("region", { name: "회의 참여자" });
+    expect(section.textContent).toContain("참여자 0명");
+    expect(section.querySelector("ul")).toBeNull();
   });
 
   it("참여자 지정하러 가기는 창을 닫고 정보 탭으로 보낸다", () => {

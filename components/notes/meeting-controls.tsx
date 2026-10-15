@@ -145,7 +145,7 @@ export function MeetingControls({
       <MeetingEndDialog
         noteId={note.noteId}
         meetingStatus={note.meetingStatus}
-        participantCount={note.participants.length}
+        participants={note.participants}
         open={endOpen}
         onOpenChange={setEndOpen}
         onEnded={onMeetingEnded}
