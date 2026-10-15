@@ -2026,7 +2026,7 @@ test("creates a guest participant from the attendee field and keeps members unto
   const existingGuest = page.getByLabel("박서준 (외부)");
   await expect(existingGuest.first()).toBeVisible();
 
-  await page.getByRole("combobox", { name: "참여자 선택" }).click();
+  await page.getByRole("combobox", { name: "참여자 추가" }).click();
   const search = page.getByRole("combobox", { name: /참여자 검색/ });
 
   // 정확히 같은 이름이면 추가가 안 뜬다 — 실수로 동명이인을 만드는 것을 막는다.
@@ -2055,7 +2055,7 @@ test("keeps guest participants when an account member is removed", async ({
   );
   await expect(page.getByLabel("박서준 (외부)").first()).toBeVisible();
 
-  await page.getByRole("combobox", { name: "참여자 선택" }).click();
+  await page.getByRole("combobox", { name: "참여자 추가" }).click();
   const options = page.getByRole("option");
   // 계정 참여자 하나를 뺀다. 이름이 아니라 선택 상태로 고른다 — 시드 순서에 안 묶인다.
   const selectedAccount = options
@@ -2085,7 +2085,7 @@ test("assigns a workspace member who is not yet a participant and checks them in
   );
 
   // 시드는 멤버 전원이 이미 참여자다. 한 명을 빼서 「멤버인데 참여자는 아닌」 상태를 만든다.
-  const field = page.getByRole("combobox", { name: "참여자 선택" });
+  const field = page.getByRole("combobox", { name: "참여자 추가" });
   const memberOption = () =>
     page.getByRole("option", { name: new RegExp(MEMBER_EMAIL) });
 

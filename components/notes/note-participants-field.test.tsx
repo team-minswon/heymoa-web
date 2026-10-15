@@ -15,7 +15,7 @@ const replaceParticipants = vi.hoisted(() => vi.fn());
 const replaceGuestParticipants = vi.hoisted(() => vi.fn());
 const createGuestParticipant = vi.hoisted(() => vi.fn());
 const getNote = vi.hoisted(() => vi.fn());
-/** 저장 중인가. 참여자 선택 트리거가 잠기는 상태를 흉내 낸다. */
+/** 저장 중인가. 참여자 추가 트리거가 잠기는 상태를 흉내 낸다. */
 const savingState = vi.hoisted(() => ({ pending: false }));
 /** 저장 훅이 받은 옵션. 전역 토스트를 껐는지 본다. */
 const replaceOptions = vi.hoisted(() => [] as unknown[]);
@@ -177,7 +177,7 @@ function autoOpenField(props: { autoOpen: boolean; onAutoOpened: () => void }) {
 }
 
 function openMenu() {
-  fireEvent.click(screen.getByRole("combobox", { name: /참여자 선택/ }));
+  fireEvent.click(screen.getByRole("combobox", { name: /참여자 추가/ }));
 }
 
 describe("NoteParticipantsField", () => {
@@ -218,19 +218,6 @@ describe("NoteParticipantsField", () => {
     render(autoOpenField({ autoOpen: true, onAutoOpened }));
 
     // 사용자가 트리거를 누른 것과 같은 길이라 후보 목록이 서 있다
-    expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
-    expect(onAutoOpened).toHaveBeenCalledTimes(1);
-  });
-
-  it("저장 중이라 못 열면 요청을 거두지 않고 저장이 끝나면 연다", async () => {
-    savingState.pending = true;
-    const onAutoOpened = vi.fn();
-    const view = render(autoOpenField({ autoOpen: true, onAutoOpened }));
-    expect(screen.queryAllByRole("option")).toHaveLength(0);
-    expect(onAutoOpened).not.toHaveBeenCalled();
-
-    savingState.pending = false;
-    view.rerender(autoOpenField({ autoOpen: true, onAutoOpened }));
     expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
     expect(onAutoOpened).toHaveBeenCalledTimes(1);
   });
@@ -373,7 +360,7 @@ describe("NoteParticipantsField", () => {
         target: { value: "새로운사람" },
       });
 
-      expect(screen.queryByText(/추가/)).toBeNull();
+      expect(screen.queryByRole("button", { name: /새로운사람/ })).toBeNull();
     } finally {
       membersState.staleFailed = false;
     }
@@ -409,28 +396,6 @@ describe("NoteParticipantsField", () => {
     expect(replaceGuestParticipants).not.toHaveBeenCalled();
   });
 
-  /**
-   * **반대 방향이다.** 남이 **뺀** 사람을 되살리지 않는다. 스냅샷에서 출발해 병합하면
-   * `next` 안에 아직 그가 있어 다시 들어가는데, 그의 화자 연결은 이미 지워졌으므로
-   * **이름만 돌아오고 연결은 안 돌아온다.** 사람이 한 것은 켠 것과 끈 것뿐이다.
-   */
-  it("고르는 사이에 남이 뺀 참여자를 되살리지 않는다", async () => {
-    const { rerender } = renderField([PARTICIPANT]);
-    openMenu();
-    await screen.findAllByRole("option");
-
-    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
-    // 그 사이 남이 김민수를 뺐다
-    rerender(fieldOf([]));
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-
-    await waitFor(() => expect(replaceParticipants).toHaveBeenCalled());
-    const sent = replaceParticipants.mock.calls[0][0].data.userIds as string[];
-    expect(sent).toContain("01K0000000002");
-    expect(sent).not.toContain("01K0000000001");
-  });
-
-  /** 멤버 목록에 없는 사람이 왜 있는지 안 보이면 잘못 남은 것으로 읽고 지운다. */
   it("떠난 참여자임을 표시한다", async () => {
     renderField([PARTICIPANT, DEPARTED]);
     openMenu();
@@ -493,15 +458,96 @@ describe("NoteParticipantsField", () => {
     expect(items[items.length - 1]).toHaveAttribute("aria-selected", "false");
   });
 
-  // 체크마다 보내면 요청이 줄줄이 나가고 응답 순서도 보장되지 않는다.
-  it("고르는 동안에는 저장하지 않는다", async () => {
+  // 닫아야 반영되면 체크가 되다 만 것처럼 보인다(APP-1106).
+  it("고를 때마다 닫지 않아도 바로 저장한다", async () => {
     renderField();
     openMenu();
 
     const items = await screen.findAllByRole("option");
     fireEvent.click(items.find((item) => item.textContent?.includes("한지원"))!);
 
-    expect(replaceParticipants).not.toHaveBeenCalled();
+    await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(1));
+  });
+
+  it("저장이 도는 동안 더 고르면 끝난 뒤 마지막 상태를 이어서 보낸다", async () => {
+    let settle: (value: unknown) => void = () => {};
+    replaceParticipants.mockReturnValueOnce(
+      new Promise((resolve) => {
+        settle = resolve;
+      })
+    );
+    renderField([PARTICIPANT]);
+    openMenu();
+    await screen.findAllByRole("option");
+
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+    // 첫 요청이 끝나기 전에는 둘째를 안 보낸다 — 응답 순서가 뒤집히면 앞이 뒤를 덮는다
+    expect(replaceParticipants).toHaveBeenCalledTimes(1);
+
+    settle({ status: 200 });
+    await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(2));
+    expect(replaceParticipants.mock.calls[1][0].data).toEqual({
+      userIds: ["01K0000000001"],
+      expectedUserIds: ["01K0000000001", "01K0000000002"],
+    });
+  });
+
+  it("충돌로 병합된 남의 참여자를 대기 중인 다음 저장이 지우지 않는다", async () => {
+    let settle: (value: unknown) => void = () => {};
+    let settleQueued: (value: unknown) => void = () => {};
+    replaceParticipants.mockReset();
+    replaceParticipants
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          settle = reject;
+        })
+      )
+      .mockResolvedValueOnce({ status: 200 })
+      // 대기 중이던 저장은 도는 채로 둔다 — 그 사이 다시 누른다
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          settleQueued = resolve;
+        })
+      )
+      .mockResolvedValue({ status: 200 });
+    getNote.mockResolvedValue(
+      { status: 200, data: { success: true, data: { participants: [PARTICIPANT, ADDED_BY_OTHER] } } }
+    );
+    renderField([PARTICIPANT]);
+    openMenu();
+    await screen.findAllByRole("option");
+
+    // 한지원을 켰다 끈다 — 첫 요청이 도는 사이 대기 선택은 [김민수]다
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+    // 첫 요청은 409 — 그 사이 남이 이영희를 넣었다
+    settle({
+      success: false,
+      data: null,
+      error: { code: "NOTE_PARTICIPANTS_CONFLICT", message: "충돌", details: null },
+    });
+
+    await waitFor(() => expect(replaceParticipants.mock.calls.length).toBeGreaterThanOrEqual(2));
+    // 후보에 없는 이영희는 화면에 안 서지만 선택에는 들어 있어야 한다 — 그 뒤 다른 항목을 누른다
+    // 거절 → 병합 재시도 → 대기 중이던 저장 순이다
+    await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(3));
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
+    settleQueued({ status: 200 });
+    await waitFor(() => expect(replaceParticipants).toHaveBeenCalledTimes(4));
+    // 어느 저장도 이영희를 「껐다」로 보내면 안 된다
+    for (const [call] of replaceParticipants.mock.calls.slice(1)) {
+      expect(call.data.userIds).toContain("01K0000000003");
+    }
+  });
+
+  it("열 때 골라져 있던 사람이 위에 선다", async () => {
+    renderField([MEMBER_TWO]);
+    openMenu();
+
+    const items = await screen.findAllByRole("option");
+    // 이름순이면 김민수가 먼저인데, 골라진 한지원이 위로 온다
+    expect(items[0]).toHaveTextContent("한지원");
   });
 
   it("닫을 때 선택한 전체 목록을 한 번에 보낸다", async () => {
@@ -690,11 +736,27 @@ describe("NoteParticipantsField", () => {
     expect(screen.queryByRole("button", { name: /추가/ })).toBeNull();
   });
 
-  /**
-   * **조합 중인 마지막 글자가 빠지면 안 된다.** 「이민형」을 치면 「형」이 아직 조합 중이라
-   * base-ui 의 값은 「이민」에 머문다 — 그대로 쓰면 「이민」이라는 사람이 만들어진다.
-   * 화자 지정 메뉴(`speaker-assign-menu`)와 같은 자리이고 같은 방식으로 고쳤다.
-   */
+  it("검색창이 외부인을 더할 수 있다고 말한다", async () => {
+    renderField();
+    openMenu();
+
+    const input = await screen.findByRole("combobox", { name: /참여자 검색/ });
+    expect(input).toHaveAttribute("placeholder", "이름으로 검색 또는 외부인 추가");
+  });
+
+  it("이름을 치면 추가 버튼 아래에 외부인 설명을 둔다", async () => {
+    renderField();
+    openMenu();
+
+    fireEvent.change(await screen.findByRole("combobox", { name: /참여자 검색/ }), {
+      target: { value: "새사람" },
+    });
+
+    expect(
+      screen.getByText("계정 없이 이 회의의 외부인으로 추가됩니다.")
+    ).toBeInTheDocument();
+  });
+
   it("조합 중인 마지막 글자까지 이름에 넣는다", async () => {
     renderField();
     openMenu();
@@ -711,62 +773,6 @@ describe("NoteParticipantsField", () => {
       expect(createGuestParticipant).toHaveBeenCalledWith({
         noteId: "01K0000000009",
         data: { displayName: "이민형" },
-      })
-    );
-  });
-
-  /**
-   * **만드는 사이 닫으면 그 draft 는 새 사람을 모른다.** 그대로 저장하면 POST 뒤에 도착한
-   * PUT 이 방금 만든 사람을 회의에서 다시 뺀다 — 「추가」를 눌렀는데 사라진다.
-   */
-  it("만드는 중에 닫아도 방금 만든 사람이 저장에 들어간다", async () => {
-    let settle: (value: unknown) => void = () => {};
-    createGuestParticipant.mockReturnValue(
-      new Promise((resolve) => {
-        settle = resolve;
-      })
-    );
-    renderField([PARTICIPANT, GUEST_PARTICIPANT]);
-    openMenu();
-
-    // **선택을 먼저 바꾼다.** 그래야 닫을 때 저장이 돌고, 그 draft 는 아직 만드는 사람을
-    // 모른다 — 여기가 방금 만든 사람을 다시 빼던 자리다.
-    const items = await screen.findAllByRole("option");
-    fireEvent.click(items[1]); // 박서준(외부) 해제
-
-    fireEvent.change(screen.getByRole("combobox", { name: /참여자 검색/ }), {
-      target: { value: "이도현" },
-    });
-    fireEvent.click(await screen.findByRole("button", { name: /이도현/ }));
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-
-    // 아직 만들기가 안 끝났다 — 저장을 미룬다.
-    expect(replaceGuestParticipants).not.toHaveBeenCalled();
-
-    settle({
-      status: 201,
-      data: {
-        success: true,
-        data: {
-          participantId: "01K0000000202",
-          participants: [
-            {
-              participantId: "01K0000000202",
-              userId: null,
-              guestId: "01K0000000302",
-              name: "이도현",
-              email: null,
-              image: null,
-            },
-          ],
-        },
-      },
-    });
-
-    await waitFor(() =>
-      expect(replaceGuestParticipants).toHaveBeenCalledWith({
-        noteId: "01K0000000009",
-        data: { guestIds: ["01K0000000302"], expectedGuestIds: ["01K0000000301"] },
       })
     );
   });
@@ -830,8 +836,8 @@ describe("NoteParticipantsField", () => {
   /** 한지원을 끄고 닫는다. 후보는 이름순이라 마지막이 한지원이다. */
   async function turnOffMemberTwo() {
     openMenu();
-    const items = await screen.findAllByRole("option");
-    fireEvent.click(items[items.length - 1]);
+    await screen.findAllByRole("option");
+    fireEvent.click(screen.getByRole("option", { name: /한지원/ }));
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
   }
 

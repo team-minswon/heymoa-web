@@ -96,8 +96,9 @@ function keyOf(participant: Participant) {
  * 참석자를 combobox에서 고른다. 후보는 **워크스페이스 멤버와 임시 참여자**다 — 계정 없는
  * 사람도 회의 참여자가 될 수 있어서다(APP-490).
  *
- * **닫힐 때 한 번만 저장한다.** 고를 때마다 보내면 요청이 줄줄이 나가고 응답이 보낸 순서대로
- * 돌아온다는 보장도 없다. 서버가 전체 교체라 마지막 상태 한 번이면 충분하다.
+ * **고를 때마다 저장한다(APP-1106).** 닫아야 반영되면 체크가 되다 만 것처럼 보인다. 대신 요청은
+ * **한 번에 하나만** 나간다 — 도는 동안 더 고르면 마지막 상태만 이어서 보낸다. 서버가 전체
+ * 교체라 응답 순서가 뒤집히면 앞 선택이 뒤를 덮기 때문이다.
  *
  * **저장은 두 요청으로 갈라 보낸다.** 계정 참여자와 임시 참여자의 경로가 서버에서 다르고,
  * 한 요청에 섞으면 멤버 하나를 바꿀 때마다 임시 참여자가 함께 지워진다.
@@ -285,31 +286,15 @@ export function NoteParticipantsField({
    * 열던 시점의 낡은 목록으로 그 변경을 되돌리게 된다. null이면 보낼 것이 없다는 뜻이다.
    */
   const [draft, setDraft] = useState<string[] | null>(null);
-  /**
-   * **draft 를 시작한 순간의 저장된 목록.** 3자 병합의 기준점이다.
-   *
-   * 이것 없이 draft 를 그대로 전체 교체로 보내면, 메뉴를 연 뒤 도착한 참여자가 **draft 에
-   * 없다는 이유로 지워진다** — 열 때 최신을 당기는 것이 오히려 남의 참여자를 지우는 길이 된다.
-   * 사람이 실제로 한 것은 「무엇을 켰고 무엇을 껐나」지 「목록이 이것이다」가 아니다.
-   */
-  const draftBaseRef = useRef<string[] | null>(null);
-  /**
-   * 메뉴가 지금 열려 있나. **ref 다** — 임시 참여자 만들기가 비동기라, 그 사이 닫혔는지를
-   * 완료 시점에 봐야 하는데 state 는 그 클로저에 갇힌 옛 값을 준다.
-   */
+  /** 저장이 도는 동안 서버에 들어 있다고 아는 목록. 처음 고른 순간의 저장 목록에서 출발한다. */
+  const baseRef = useRef<string[] | null>(null);
+  /** 사람이 마지막으로 고른 목록. 도는 저장이 끝나면 이것을 이어서 보낸다. */
+  const desiredRef = useRef<string[] | null>(null);
+  const flushingRef = useRef(false);
+  /** 메뉴가 지금 열려 있나. 자동 열기가 열렸는지 확인하는 데 쓴다. */
   const openRef = useRef(false);
-  /**
-   * **만드는 동안 닫히면 저장을 여기 맡긴다.**
-   *
-   * 그때의 draft 는 방금 만드는 사람을 아직 모른다. 그대로 저장하면 POST 뒤에 도착한 PUT 이
-   * **방금 만든 사람을 회의에서 다시 뺀다.** 만들기가 끝난 뒤 그 사람을 합쳐서 저장한다.
-   */
-  const deferredSave = useRef<string[] | null>(null);
-  /**
-   * 만들기가 도는 중인가. **훅의 `isPending` 을 안 쓴다** — 저 값은 렌더 사이에 갱신되는
-   * 상태라 같은 틱에 닫히는 경로가 옛 값을 읽는다. 여기서 직접 들고 있으면 순서가 확실하다.
-   */
-  const creatingRef = useRef(false);
+  /** 열 때 이미 골라져 있던 사람들. 그들을 위에 세운다 — 고르는 중에는 순서를 안 바꾼다. */
+  const [pinned, setPinned] = useState<string[]>([]);
   /** base-ui 가 후보를 거를 때 쓰는 값. 조합 중에는 안 올라온다 — 그게 맞는 동작이다. */
   const [search, setSearch] = useState("");
   /**
@@ -391,8 +376,10 @@ export function NoteParticipantsField({
     return [...merged];
   }
 
-  async function save(next: string[]) {
-    if (sameSet(next, saved)) return;
+  /** 서버에 들어간 목록을 돌려준다. 실패하면 `null`. `base` 는 이 저장이 출발하는 서버 목록이다. */
+  async function save(next: string[], from: string[]): Promise<string[] | null> {
+    if (sameSet(next, from)) return from;
+    let base = from;
 
     // `apiFetch`는 비-2xx 봉투를 그대로 throw한다(`parseResponse`). 전역 토스트는 끄고
     // 여기서 알린다 — 409 는 다시 맞춰 보내면 대개 성공하는데, 전역 토스트가 먼저 떠 버리면
@@ -403,9 +390,9 @@ export function NoteParticipantsField({
     // 실패한 것처럼 옛 목록을 들고 있어, 사람이 본 것과 저장된 것이 갈린다.
     try {
       let target = next;
-      let base = saved;
       for (let attempt = 0; ; attempt++) {
         const failures = await send(target, base);
+        if (failures.length === 0) return target;
         // **그 사이 남이 바꿨다(APP-777).** 최신을 다시 읽어 내가 켜고 끈 것만 그 위에 얹고
         // 한 번만 더 보낸다. 또 거절되면 계속 다투는 중이라 멈추고 알린다.
         if (attempt === 0 && failures.some((e) => errorCodeOf(e) === PARTICIPANTS_CONFLICT)) {
@@ -414,7 +401,7 @@ export function NoteParticipantsField({
             keyOf
           );
           if (latest) {
-            target = mergeDraft(next, saved, latest);
+            target = mergeDraft(next, base, latest);
             base = latest;
             continue;
           }
@@ -422,7 +409,7 @@ export function NoteParticipantsField({
         for (const error of failures) {
           toast.error(errorMessageOf(error, "참여자를 저장하지 못했습니다."));
         }
-        return;
+        return null;
       }
     } finally {
       await invalidateNote();
@@ -465,7 +452,6 @@ export function NoteParticipantsField({
 
   async function createGuest(displayName: string) {
     let createdKey: string | undefined;
-    creatingRef.current = true;
     try {
       const response = await createGuestParticipant.mutateAsync({
         noteId,
@@ -481,40 +467,18 @@ export function NoteParticipantsField({
         createdKey = created?.guestId ? `guest:${created.guestId}` : undefined;
       }
     } catch {
-      // **만들기가 실패해도 보류해 둔 변경은 저장한다.** 사람이 생성 전에 토글한 다른
-      // 참석자까지 같이 버리면, 토스트는 「만들기 실패」 하나인데 **고른 것도 통째로**
-      // 사라진다. 새 사람만 빠지고 나머지는 사람이 고른 그대로여야 한다.
-      creatingRef.current = false;
-      const pending = deferredSave.current;
-      deferredSave.current = null;
-      if (pending) void save(pending);
       return;
-    } finally {
-      creatingRef.current = false;
     }
-    // **만든 사람을 지금 draft 에 넣는다.** 만들기 API 는 그 사람을 회의에 곧바로 넣지만,
-    // 메뉴를 닫을 때 도는 `save(draft)` 가 그를 모르면 `guestIds` 에서 빠뜨려 **방금 만든
-    // 사람을 다시 지운다.**
-    //
-    // **닫힌 뒤에는 안 세운다.** 만드는 동안 Escape 로 닫으면 `onOpenChange` 가 draft 를
-    // 비우고 이미 저장까지 마친다. 거기서 draft 를 되살리면 **아무도 안 연 채로 낡은
-    // 선택이 남아**, 다음에 열었다 닫을 때 그것이 최신 참여자를 통째로 되돌린다.
-    if (createdKey && openRef.current) {
-      setDraft((current) => {
-        // **여기서도 기준점을 박는다.** 만들기로만 draft 가 생기면 `base` 가 없어서, 닫을 때
-        // 현재값을 기준으로 삼는다 — 그 사이 남이 넣은 사람을 「사람이 껐다」로 오인해
-        // **전체 교체가 지운다.** 토글로 생긴 draft 만 기준점을 잡던 것이 이 구멍이었다.
-        if (current === null) draftBaseRef.current = saved;
-        const next = current ?? saved;
-        return next.includes(createdKey) ? next : [...next, createdKey];
-      });
-    } else if (createdKey && deferredSave.current) {
-      // 만드는 사이 닫혔다 — 미뤄 둔 저장에 이 사람을 합쳐 지금 보낸다.
-      const pending = deferredSave.current;
-      deferredSave.current = null;
-      void save(pending.includes(createdKey) ? pending : [...pending, createdKey]);
-    } else {
-      deferredSave.current = null;
+    // **만들기 API 는 그 사람을 회의에 곧바로 넣는다.** 그러니 서버 목록에도, 고르는 중인 목록에도
+    // 더한다 — 안 더하면 도는 저장이 그를 모르는 채 전체 교체로 보내 **방금 만든 사람을 다시 뺀다.**
+    if (createdKey) {
+      const withCreated = (keys: string[]) =>
+        keys.includes(createdKey) ? keys : [...keys, createdKey];
+      if (baseRef.current) baseRef.current = withCreated(baseRef.current);
+      if (desiredRef.current) {
+        desiredRef.current = withCreated(desiredRef.current);
+        setDraft(desiredRef.current);
+      }
     }
     setSearch("");
     setTyped("");
@@ -527,6 +491,39 @@ export function NoteParticipantsField({
     ]);
   }
 
+  /**
+   * 고른 것을 **한 번에 하나씩** 서버에 보낸다. 도는 동안 더 고르면 `desiredRef` 만 바뀌고,
+   * 끝난 뒤 마지막 상태로 한 번 더 간다. 실패하면 남은 선택을 버리고 서버 목록으로 돌아간다.
+   */
+  async function flush() {
+    if (flushingRef.current) return;
+    flushingRef.current = true;
+    try {
+      while (desiredRef.current && baseRef.current) {
+        const target = desiredRef.current;
+        const achieved = await save(target, baseRef.current);
+        if (achieved === null) {
+          desiredRef.current = null;
+          break;
+        }
+        baseRef.current = achieved;
+        if (desiredRef.current === target) desiredRef.current = null;
+        // **409 로 병합된 결과를 대기 중인 선택에도 얹는다.** 안 얹으면 그 사이 남이 넣은 사람이
+        // 다음 저장의 전체 교체에서 「끈 것」으로 지워진다 — expected 가 맞아 서버도 못 막는다.
+        else if (desiredRef.current) {
+          desiredRef.current = mergeDraft(desiredRef.current, target, achieved);
+          // 화면의 선택도 같이 — 다음 클릭이 낡은 draft 로 선택을 다시 짜면 남의 사람이 빠진다.
+          setDraft(desiredRef.current);
+        }
+      }
+    } finally {
+      flushingRef.current = false;
+      baseRef.current = null;
+      desiredRef.current = null;
+      setDraft(null);
+    }
+  }
+
   const saving =
     replaceParticipants.isPending ||
     replaceGuestParticipants.isPending ||
@@ -535,7 +532,7 @@ export function NoteParticipantsField({
   useEffect(() => {
     if (!autoOpen) return;
     const trigger = anchorRef.current?.querySelector<HTMLButtonElement>(
-      'button[aria-label="참여자 선택"]'
+      'button[aria-label="참여자 추가"]'
     );
     // **저장 중에는 트리거가 잠겨 클릭이 무시된다.** 그때 요청을 거두면 저장이 끝나도 안 열린다
     // — 열지 못했으면 거두지 않고 `saving` 이 풀릴 때 다시 시도한다(codex 리뷰 1회차).
@@ -566,21 +563,29 @@ export function NoteParticipantsField({
         <Combobox
           // **조합 중인 글자로도 거른다.** base-ui 는 조합이 끝나기 전까지 controlled 값을
           // 안 올려, 한글 한 글자를 쳐도 목록이 안 좁혀진다 — 이유는 `filterByTyped` 에.
-          items={filterByTyped(candidates, typed, searchTextOf)}
+          items={filterByTyped(
+            // 열 때 골라져 있던 사람을 위로. 고르는 중에는 순서를 안 바꾼다 — 누른 줄이 튄다.
+            [...candidates].sort(
+              (a, b) =>
+                Number(pinned.includes(b.key)) - Number(pinned.includes(a.key))
+            ),
+            typed,
+            searchTextOf
+          )}
           multiple
           value={selectedCandidates}
           // 이름과 이메일을 한 문자열로 합쳐 어느 쪽으로 쳐도 걸리게 한다.
           itemToStringLabel={searchTextOf}
           isItemEqualToValue={(a: Candidate, b: Candidate) => a.key === b.key}
-          onValueChange={(next: Candidate[]) =>
+          onValueChange={(next: Candidate[]) => {
             // 후보에 없어 화면에 못 선 선택을 **그대로 들고 간다.** 안 그러면 조회가
             // 실패한 쪽의 저장된 참여자가 이 토글 한 번에 전체 교체로 지워진다.
-            setDraft((current) => {
-              // 첫 토글에서 기준점을 박는다. 그 뒤 도착하는 것은 병합으로 살린다.
-              if (current === null) draftBaseRef.current = saved;
-              return [...next.map((candidate) => candidate.key), ...unlistedKeys];
-            })
-          }
+            const keys = [...next.map((candidate) => candidate.key), ...unlistedKeys];
+            if (baseRef.current === null) baseRef.current = saved;
+            desiredRef.current = keys;
+            setDraft(keys);
+            void flush();
+          }}
           inputValue={search}
           onInputValueChange={(value: string) => {
             setSearch(value);
@@ -590,6 +595,7 @@ export function NoteParticipantsField({
           onOpenChange={(open) => {
             openRef.current = open;
             if (open) {
+              setPinned(selectedKeys);
               // 종료된 노트는 폴링이 멈춰 있어 다른 사람이 바꾼 참여자가 안 들어온다.
               // 고르기 직전에 한 번 당겨 선택 상태를 최신으로 맞춘다.
               //
@@ -614,21 +620,6 @@ export function NoteParticipantsField({
             }
             setSearch("");
             setTyped("");
-            const base = draftBaseRef.current;
-            // **기준점이 없으면 아무것도 안 껐다는 뜻이다.** `saved` 를 기준으로 삼으면 그
-            // 사이 도착한 사람이 「껐다」로 읽혀 지워진다 — 폴백이 곧 구멍이었다. draft 는
-            // 토글이든 만들기든 늘 기준점과 함께 생기므로, 없으면 병합할 것도 없다.
-            const next =
-              draft === null ? null : base === null ? draft : mergeDraft(draft, base, saved);
-            setDraft(null);
-            draftBaseRef.current = null;
-            if (!next) return;
-            // 만드는 중이면 저장을 `createGuest` 에 맡긴다. 지금 보내면 그 사람이 빠진다.
-            if (creatingRef.current) {
-              deferredSave.current = next;
-              return;
-            }
-            void save(next);
           }}
         >
           <ComboboxTrigger
@@ -638,11 +629,10 @@ export function NoteParticipantsField({
                 variant="outline"
                 size="sm"
                 // combobox 롤은 내용에서 이름을 안 가져온다 — 라벨을 명시해야 읽힌다.
-                aria-label="참여자 선택"
+                aria-label="참여자 추가"
                 className="rounded-full"
-                loading={saving}
               >
-                <UserPlus /> 참여자 선택
+                <UserPlus /> 참여자 추가
               </Button>
             }
           />
@@ -650,7 +640,9 @@ export function NoteParticipantsField({
             <ComboboxInput
               // 이 입력도 role="combobox"라 placeholder로는 이름이 안 붙는다.
               aria-label="이름이나 이메일로 참여자 검색"
-              placeholder="이름이나 이메일로 검색"
+              // 이름을 쳐서 새 외부인을 만들 수 있다는 것도 말한다. 입력창이 「검색」만 말하면 목록에 없는
+              // 사람을 더할 수 있다는 것을 알 길이 없다(APP-1106). 팝업이 좁아 긴 문장은 안 들어간다
+              placeholder="이름으로 검색 또는 외부인 추가"
               // 바깥에 이미 트리거가 있다 — 켜 두면 같은 id의 이름 없는 트리거가 하나 더 생긴다.
               showTrigger={false}
               onTypedValueChange={setTyped}
@@ -702,6 +694,10 @@ export function NoteParticipantsField({
                 >
                   ＋ &quot;{trimmedSearch}&quot; 추가
                 </Button>
+                {/* 버튼 이름은 그대로 둔다(테스트·e2e 가 이름으로 집는다). 무엇이 만들어지는지만 말한다 */}
+                <p className="px-2 pt-0.5 pb-1 text-xs text-[var(--el-muted)]">
+                  계정 없이 이 회의의 외부인으로 추가됩니다.
+                </p>
               </div>
             ) : null}
             {membersFailed || guestsFailed ? (
