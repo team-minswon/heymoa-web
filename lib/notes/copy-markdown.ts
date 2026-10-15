@@ -44,7 +44,7 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
   };
 }
 
-function headingLines(meta: NoteMeta, suffix = "") {
+export function headingLines(meta: NoteMeta, suffix = "") {
   const facts = [
     formatAppDate(meta.whenIso, {
       year: "numeric",

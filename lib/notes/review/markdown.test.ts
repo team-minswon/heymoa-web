@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  markdownToText,
   overviewToMarkdown,
   reviewSectionToMarkdown,
+  reviewToMarkdown,
   topicsToMarkdown,
 } from "@/lib/notes/review/markdown";
 import { sectionsOf, type ReviewItem } from "@/lib/notes/review/sections";
@@ -84,5 +86,35 @@ describe("overview · topics", () => {
         { ordinal: 2, title: "요금", count: 1, gist: null },
       ])
     ).toBe("## 주제\n\n1. **문제 정의** — 한 문장으로 좁혔다.\n2. **요금**\n");
+  });
+});
+
+describe("reviewToMarkdown", () => {
+  const note = {
+    title: "주간 회의",
+    whenIso: "2026-10-12T04:51:00.000Z",
+    participantCount: 2,
+  };
+  const topics = [{ ordinal: 1, title: "표시 기능", gist: "15초마다 갱신" }] as never;
+  const section = (included: boolean) =>
+    ({
+      key: "DECISION",
+      label: "결정",
+      includedCount: included ? 1 : 0,
+      items: [{ included, kind: "DECISION", content: "다운로드를 아래에 둔다", assignee: null, due: null }],
+    }) as never;
+
+  it("머리말·주제·결정을 한 문서로 잇고 뺀 항목만 있는 섹션은 싣지 않는다", () => {
+    const out = reviewToMarkdown({ note, summary: null, topics, sections: [section(true), section(false)] });
+    expect(out).toContain("# 주간 회의");
+    expect(out).toContain("## 주제");
+    expect(out).toContain("- 다운로드를 아래에 둔다");
+    expect(out.match(/## 결정/g)).toHaveLength(1);
+    // 요약이 아직 안 왔으면 요약 머리도 없다
+    expect(out).not.toContain("## 요약");
+  });
+
+  it("텍스트 형식은 헤딩·굵게·불릿 기호를 걷어 낸다", () => {
+    expect(markdownToText("## 주제\n\n1. **표시** — 설명\n- 항목\n_없음_\n")).toBe("주제\n\n1. 표시 — 설명\n• 항목\n없음\n");
   });
 });

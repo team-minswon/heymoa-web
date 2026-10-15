@@ -252,26 +252,13 @@ describe("ReviewOverview", () => {
 });
 
 describe("SectionBlock", () => {
-  it("복사를 누르면 그 순간 만든 마크다운을 클립보드에 넣고, 막혀 있으면 누를 수 없다", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    const build = vi.fn(() => "## 결정\n\n- 요금은 회의 시간 기준\n");
-
-    const { rerender } = render(
-      <SectionBlock title="결정" count={1} copy={{ build }}>
+  it("섹션마다 복사 버튼을 두지 않는다 — 복사는 화면 머리가 한 번에 한다", () => {
+    render(
+      <SectionBlock title="결정" count={1}>
         <p>내용</p>
       </SectionBlock>
     );
-    expect(build).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "결정 복사" }));
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith("## 결정\n\n- 요금은 회의 시간 기준\n"));
-
-    rerender(
-      <SectionBlock title="결정" count={0} copy={{ build, disabled: true }}>
-        <p>내용</p>
-      </SectionBlock>
-    );
-    expect(screen.getByRole("button", { name: "결정 복사" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /복사/ })).toBeNull();
   });
 });
 
