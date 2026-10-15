@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { Settings2, UserPlus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -11,6 +11,7 @@ import {
   type Participant,
 } from "@/components/notes/note-participants";
 import { Button } from "@/components/ui/button";
+import { useOpenSettings } from "@/components/workspace/workspace-app-shell";
 import {
   Combobox,
   ComboboxContent,
@@ -124,6 +125,9 @@ export function NoteParticipantsField({
   onAutoOpened?: () => void;
 }) {
   const queryClient = useQueryClient();
+  // 셸 밖(설정을 열 수 없는 곳)에서는 없다 — 그때는 관리 줄을 안 그린다.
+  const openSettings = useOpenSettings();
+  const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLSpanElement | null>(null);
   // 이 효과는 `saving` 을 아래에서 읽는다 — 선언 순서 때문에 아래에 둔다.
   // **소속이 확인되기 전에는 안 읽는다.** 확인 전 값으로 읽으면 남의 워크스페이스 후보가 선다.
@@ -592,9 +596,11 @@ export function NoteParticipantsField({
             // 지우기 버튼처럼 입력 이벤트 없이 값이 바뀌는 길도 있다
             setTyped(value);
           }}
-          onOpenChange={(open) => {
-            openRef.current = open;
-            if (open) {
+          open={open}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen);
+            openRef.current = nextOpen;
+            if (nextOpen) {
               setPinned(selectedKeys);
               // 종료된 노트는 폴링이 멈춰 있어 다른 사람이 바꾼 참여자가 안 들어온다.
               // 고르기 직전에 한 번 당겨 선택 상태를 최신으로 맞춘다.
@@ -637,6 +643,22 @@ export function NoteParticipantsField({
             }
           />
           <ComboboxContent anchor={anchorRef} align="start" className="w-72">
+            {openSettings ? (
+              // **가장 위에 둔다.** 후보에 없는 사람이나 외부인을 정리하려면 설정 → 멤버로 가야 하는데,
+              // 팝업을 닫고 설정을 직접 찾아야 했다(APP-1110). 누르면 팝업을 닫고 그 섹션을 연다.
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-left text-xs text-[var(--el-muted)] hover:text-[var(--el-ink)]"
+                onClick={() => {
+                  setOpen(false);
+                  openRef.current = false;
+                  openSettings("members");
+                }}
+              >
+                <Settings2 aria-hidden className="size-3.5 shrink-0" />
+                멤버·외부인 관리
+              </button>
+            ) : null}
             <ComboboxInput
               // 이 입력도 role="combobox"라 placeholder로는 이름이 안 붙는다.
               aria-label="이름이나 이메일로 참여자 검색"

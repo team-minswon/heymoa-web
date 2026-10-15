@@ -64,6 +64,14 @@ const INTEGRATION_LABEL: Record<string, string> = {
 
 const WorkspaceShellContext = createContext<WorkspaceShellState | null>(null);
 
+/**
+ * 설정을 열 수 있으면 여는 함수를, 워크스페이스 셸 밖이면 `null` 을 돌려준다. 셸 밖에서도 그려지는
+ * 컴포넌트가 「설정으로 가기」를 선택으로 얹을 때 쓴다 — `useWorkspaceShell` 은 셸 밖에서 던진다.
+ */
+export function useOpenSettings() {
+  return useContext(WorkspaceShellContext)?.openSettings ?? null;
+}
+
 export function useWorkspaceShell() {
   const context = useContext(WorkspaceShellContext);
   if (!context) {
