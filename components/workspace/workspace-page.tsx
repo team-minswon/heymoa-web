@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { useWorkspaceShell } from "@/components/workspace/workspace-app-shell";
+import { DesktopAppPromo } from "@/components/workspace/desktop-app-promo";
 import { WorkspaceNoteList } from "@/components/workspace/workspace-note-list";
 import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -143,6 +144,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
                 발화와 결정이 시간순으로 보관됩니다.
               </p>
             </header>
+            <DesktopAppPromo />
             <WorkspaceNoteList
               workspaceId={workspaceId}
               notes={notes}
