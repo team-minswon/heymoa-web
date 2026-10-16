@@ -364,3 +364,84 @@ describe("토큰 갱신 시한", () => {
     await expect(refreshAuthOnce()).rejects.toMatchObject({ expired: false });
   });
 });
+
+describe("apiFetch timeoutMs", () => {
+  beforeEach(() => {
+    resetSessionGate();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  /** abort 되면 signal 의 사유로 reject 한다 — 실제 fetch 와 같다. */
+  function hangUntilAborted() {
+    vi.mocked(fetch).mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason)
+          );
+        })
+    );
+  }
+
+  it("시한 안에 응답이 없으면 REQUEST_TIMEOUT 오류로 끝낸다 (APP-1139)", async () => {
+    vi.useFakeTimers();
+    hangUntilAborted();
+
+    const pending = expect(
+      apiFetch("/v1/notes", { method: "POST", timeoutMs: 1000 })
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 408,
+      error: { code: "REQUEST_TIMEOUT" },
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    await pending;
+  });
+
+  it("헤더만 오고 본문이 멈춰도 시한이 지나면 끊는다", async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetch).mockImplementation(async (_url, init) => {
+      const body = new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener("abort", () =>
+            controller.error(init.signal?.reason)
+          );
+        },
+      });
+      return new Response(body, { status: 200 });
+    });
+
+    const pending = expect(
+      apiFetch("/v1/notes", { method: "POST", timeoutMs: 1000 })
+    ).rejects.toMatchObject({ status: 408, error: { code: "REQUEST_TIMEOUT" } });
+    await vi.advanceTimersByTimeAsync(1000);
+    await pending;
+  });
+
+  it("시한 안에 응답이 오면 그대로 돌려주고 타이머를 남기지 않는다", async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(200, { success: true }));
+
+    await expect(apiFetch("/v1/notes", { timeoutMs: 1000 })).resolves.toMatchObject({
+      status: 200,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("호출부가 직접 취소한 것은 시한 오류로 바꾸지 않는다", async () => {
+    vi.useFakeTimers();
+    hangUntilAborted();
+    const caller = new AbortController();
+
+    const pending = expect(
+      apiFetch("/v1/notes", { timeoutMs: 1000, signal: caller.signal })
+    ).rejects.toMatchObject({ name: "AbortError" });
+    caller.abort();
+    await pending;
+  });
+});
