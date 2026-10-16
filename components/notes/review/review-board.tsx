@@ -1,6 +1,7 @@
 "use client";
 
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
+import { renderMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { widerExports } from "@/lib/notes/minutes/exports";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { ItemTrail } from "@/components/notes/review/item-trail";
 import { MeetingMap } from "@/components/notes/review/meeting-map";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewActions } from "@/components/notes/review/review-actions";
+import { ShareMailDialog } from "@/components/notes/review/share-mail-dialog";
 import { ReviewHead } from "@/components/notes/review/review-head";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewSection } from "@/components/notes/review/review-section";
@@ -30,6 +32,7 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
+import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { indexMeetingLinks } from "@/lib/notes/review/meeting-links";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import { useApproveMeetingReview } from "@/lib/api/generated/meeting-approval/meeting-approval";
@@ -79,6 +82,9 @@ import { toast } from "@/lib/ui/toast";
 
 type View = "summary" | "graph";
 
+/** 「회의록 보내기」. 발송 API 가 운영에 배포되기 전까지는 목 환경에서만 연다 */
+const SHARE_MAIL_ENABLED = shouldEnableMocking();
+
 const VIEWS = [
   { value: "summary", label: "요약" },
   { value: "graph", label: "그래프" },
@@ -127,7 +133,8 @@ export function ReviewBoard({
   canEdit: boolean;
   /** 머리에 세울 회의 제목 · 시각 · 프로젝트. 셸이 한 번 읽어 내린다 */
   noteMeta?: NoteMeta | null;
-  participants: SpeakerFace[];
+  /** 주소는 「회의록 보내기」의 받는 사람 후보가 쓴다 */
+  participants: (SpeakerFace & { email?: string | null })[];
   /** 「나」 표시. 담당이 이 사람이면 붙는다 */
   currentUserId?: string | null;
   /** 회의록 PDF 의 「공유」 칸. 받는 쪽이 누구에게 물어야 할지 안다 */
@@ -159,6 +166,7 @@ export function ReviewBoard({
   const [approveError, setApproveError] = useState<string | null>(null);
 
   const [view, setView] = useState<View>("summary");
+  const [mailOpen, setMailOpen] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   /**
    * 할 일에는 반영했는데 선택 저장이 실패한 변경(`항목 id:할 일 id`). 반영은 할 일을 먼저 바꾸고 선택을 나중에 저장한다.
@@ -484,6 +492,26 @@ export function ReviewBoard({
         },
       },
     });
+  // 복사 · PDF · 메일이 같은 회의록 재료를 쓴다 — 셋이 따로 조립하면 받은 PDF 와 내려받은 PDF 가 갈라진다.
+  // 녹취록이 온 뒤에 연다 — 항목 시각 · 안건 시작 · 회의 길이를 녹취록에서 잰다. **받은 녹취록이 있는지로 가린다**:
+  // isSuccess 로 가리면 다시 받기가 실패할 때 열린 PDF · 메일 창이 사라지고 쓰던 받는 사람 · 메시지도 날아갔다
+  const wider = noteMeta && transcript
+    ? widerExports({
+        queryClient,
+        noteId,
+        note: { ...noteMeta, durationMs: lengthMs ?? undefined },
+        participants,
+        sharedBy: currentUserName ?? null,
+        confirmed,
+        headline: summary?.status === "SUCCEEDED" ? (summary.headline?.text ?? null) : null,
+        lead: summary?.status === "SUCCEEDED" ? summary.lead.map((line) => line.text) : [],
+        topics: digests,
+        sections,
+        citedAt,
+        unfiledOpen: unfiledOpen(items, topicOf),
+        unnamedSpeakers: unnamedSpeakers.length,
+      })
+    : undefined;
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
@@ -505,28 +533,9 @@ export function ReviewBoard({
                 build={summaryMarkdown}
                 material={noteMeta && !transcript ? (transcriptQuery.isError ? "failed" : "loading") : undefined}
                 onRetryMaterial={() => void transcriptQuery.refetch()}
-                // 회의록 · 넓은 복사는 녹취록이 온 뒤에 연다 — 항목 시각 · 안건 시작 · 회의 길이를 녹취록에서 잰다. 먼저 열면
-                // 그 값이 빠진 회의록이 만들어진다. **받은 녹취록이 있는지로 가린다(`isSuccess` 가 아니다)** — 내보내다
-                // 다시 받기가 실패하면 isSuccess 가 꺼져 열린 창이 통째로 사라졌다. 받은 것은 그대로 남아 있다
-                wider={
-                  noteMeta && transcript
-                    ? widerExports({
-                        queryClient,
-                        noteId,
-                        note: { ...noteMeta, durationMs: lengthMs ?? undefined },
-                        participants,
-                        sharedBy: currentUserName ?? null,
-                        confirmed,
-                        headline: summary?.status === "SUCCEEDED" ? (summary.headline?.text ?? null) : null,
-                        lead: summary?.status === "SUCCEEDED" ? summary.lead.map((line) => line.text) : [],
-                        topics: digests,
-                        sections,
-                        citedAt,
-                        unfiledOpen: unfiledOpen(items, topicOf),
-                        unnamedSpeakers: unnamedSpeakers.length,
-                      })
-                    : undefined
-                }
+                wider={wider}
+                // 발송 API 가 운영에 배포되기 전에는 목 환경에서만 연다 — 운영에서는 메일 항목을 세우지 않는다
+                onSendEmail={SHARE_MAIL_ENABLED ? () => setMailOpen(true) : undefined}
               />
               <SegmentedControl
                 label="보기"
@@ -718,6 +727,24 @@ export function ReviewBoard({
           error={approveError}
           raised={dockRaised}
           onConfirm={confirm}
+        />
+      ) : null}
+
+      {SHARE_MAIL_ENABLED && noteMeta && wider ? (
+        <ShareMailDialog
+          open={mailOpen}
+          onOpenChange={setMailOpen}
+          noteId={noteId}
+          workspaceId={workspaceId}
+          meeting={noteMeta}
+          attendees={participants.flatMap((person) =>
+            person.email ? [{ name: person.name ?? person.email, email: person.email }] : []
+          )}
+          unnamedSpeakers={unnamedSpeakers.flatMap((speaker) =>
+            speaker.type === "SPEAKER_LABEL" ? [`화자 ${speaker.label}`] : []
+          )}
+          // 「PDF로 내보내기」와 같은 생성기다 — 받는 사람이 받는 파일과 내려받은 파일이 같다
+          buildPdf={async (include) => renderMinutesPdf(await wider.minutes(include))}
         />
       ) : null}
     </div>

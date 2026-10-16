@@ -152,4 +152,25 @@ describe("ReviewActions", () => {
     expect(pdf.download).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "PDF 받기" })).toBeInTheDocument();
   });
+
+  it("메일 보내기가 연결되면 「준비 중」 대신 창을 연다", async () => {
+    const onSendEmail = vi.fn();
+    render(<ReviewActions build={() => MARKDOWN} wider={wider()} onSendEmail={onSendEmail} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "내보내기·공유" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "이메일로 보내기" }));
+
+    expect(onSendEmail).toHaveBeenCalled();
+    expect(toastInfo).not.toHaveBeenCalled();
+  });
+
+  it("메일도 PDF 와 같은 회의록을 붙여 녹취록이 와야 연다 — 받는 중이면 막는다", async () => {
+    const onSendEmail = vi.fn();
+    render(<ReviewActions build={() => MARKDOWN} material="loading" onSendEmail={onSendEmail} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "내보내기·공유" }));
+    const item = await screen.findByRole("menuitem", { name: /이메일로 보내기/ });
+    expect(item.textContent).toContain("불러오는 중");
+    expect(item).toHaveAttribute("data-disabled");
+  });
 });

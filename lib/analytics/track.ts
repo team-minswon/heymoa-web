@@ -41,7 +41,8 @@ export type AnalyticsEvent =
   | "integration_disconnected"
   | "summary_copied"
   | "summary_exported"
-  | "export_requested";
+  | "export_requested"
+  | "minutes_emailed";
 
 type Properties = Record<string, string | number | boolean | null | undefined>;
 
@@ -98,6 +99,19 @@ const MUTATION_EVENTS: Record<string, MutationEvent> = {
     bodyOf(v).taskStatus === "COMPLETED" ? ["task_completed"] : null,
   requestAnalysis: "analysis_requested",
   revokeAgentDelegation: "agent_disconnected",
+  // 받는 사람 주소는 싣지 않는다 — 수와 붙임 종류만 센다
+  sendNoteShareMail: (v) => {
+    const body = bodyOf(v);
+    const include = Array.isArray(body.include) ? body.include : [];
+    return [
+      "minutes_emailed",
+      {
+        recipient_count: Array.isArray(body.recipients) ? body.recipients.length : 0,
+        agenda_log: include.includes("AGENDA_LOG"),
+        transcript: include.includes("TRANSCRIPT"),
+      },
+    ];
+  },
   disconnectWorkspaceIntegration: (v) => [
     "integration_disconnected",
     { provider: String(v.provider) },

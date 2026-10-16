@@ -2585,7 +2585,7 @@ paths:
       parameters:
       - name: noteId
         in: path
-        description: 노트 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -2952,7 +2952,7 @@ paths:
       parameters:
       - name: notificationId
         in: path
-        description: ''
+        description: 읽음 처리할 알림 식별자
         required: true
         schema:
           type: string
@@ -3782,7 +3782,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: 조회할 워크스페이스 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -4855,7 +4855,7 @@ paths:
       parameters:
       - name: noteId
         in: path
-        description: 노트의 13자리 TSID
+        description: ''
         required: true
         schema:
           type: string
@@ -4865,7 +4865,7 @@ paths:
         example: 0HZX2K7M9Q4AF
       - name: label
         in: path
-        description: 정규화된 화자 라벨
+        description: ''
         required: true
         schema:
           type: string
@@ -5291,7 +5291,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: 나갈 워크스페이스 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -5433,7 +5433,7 @@ paths:
       parameters:
       - name: workspaceId
         in: path
-        description: 워크스페이스 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -5443,7 +5443,7 @@ paths:
         example: 0HZX2K7M9Q4AD
       - name: userId
         in: path
-        description: 역할을 바꿀 멤버의 사용자 식별자
+        description: ''
         required: true
         schema:
           type: string
@@ -8071,6 +8071,206 @@ paths:
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+      security:
+      - accessCookie: []
+  /v1/notes/{noteId}/share-mails:
+    post:
+      tags:
+      - Notes
+      summary: 회의록 메일 공유
+      description: web 이 만든 회의록 PDF 를 받아 검증한 뒤 받는 사람마다 첨부 메일을 보낸다. `multipart/form-data` 이고 부분은 `file`(PDF), `recipients`(주소, 여러 번 반복), `message`(선택), `include`(선택, 여러 번 반복)다. 워크스페이스 밖 주소도 되고 같은 주소는 대소문자를 가리지 않고 합친다. 파일은 앞부분이 `%PDF-` 여야 하고, 첨부 파일 이름과 형식은 서버가 정한다(클라이언트 파일 이름은 쓰지 않는다). 발송은 큐를 거치므로 202 는 접수일 뿐 수신 성공을 보장하지 않는다. 받는 사람별 결과는 `GET /v1/notes/{noteId}/share-mails/{mailId}` 로 본다. 그 노트를 열람할 수 있는 워크스페이스 멤버만 부를 수 있다. 파일이 multipart 상한을 넘으면 서비스에 닿기 전에 413 `PAYLOAD_TOO_LARGE` 다.
+      operationId: sendNoteShareMail
+      parameters:
+      - name: noteId
+        in: path
+        description: 노트의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 노트의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AF
+      responses:
+        '202':
+          description: '202'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteShareMailResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      mailId: 0K9GVJT2C4Q22
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                SHARE_MAIL_NOT_PDF:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SHARE_MAIL_NOT_PDF
+                      message: PDF 파일만 보낼 수 있습니다.
+                      details: null
+                SHARE_MAIL_INVALID_RECIPIENT:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SHARE_MAIL_INVALID_RECIPIENT
+                      message: 받는 사람 이메일 주소를 확인해 주세요.
+                      details: null
+                SHARE_MAIL_FILE_TOO_LARGE:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SHARE_MAIL_FILE_TOO_LARGE
+                      message: 첨부 파일은 10MB 이하여야 합니다.
+                      details: null
+                SHARE_MAIL_TOO_MANY_RECIPIENTS:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SHARE_MAIL_TOO_MANY_RECIPIENTS
+                      message: 받는 사람은 한 번에 10명까지 지정할 수 있습니다.
+                      details: null
+                SHARE_MAIL_MESSAGE_TOO_LONG:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SHARE_MAIL_MESSAGE_TOO_LONG
+                      message: 메시지는 1000자까지 쓸 수 있습니다.
+                      details: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_NOT_FOUND
+                      message: 워크스페이스를 찾을 수 없습니다.
+                      details: null
+                NOTE_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: NOTE_NOT_FOUND
+                      message: 노트를 찾을 수 없습니다.
+                      details: null
+        '429':
+          description: '429'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                SHARE_MAIL_RATE_LIMITED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SHARE_MAIL_RATE_LIMITED
+                      message: 메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.
+                      details: null
+      security:
+      - accessCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendNoteShareMailRequest'
+            encoding:
+              file:
+                contentType: application/pdf
+  /v1/notes/{noteId}/share-mails/{mailId}:
+    get:
+      tags:
+      - Notes
+      summary: 회의록 공유 메일 발송 상태 조회
+      description: 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `SHARE_MAIL_NOT_FOUND` 다. 상태는 SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
+      operationId: getNoteShareMail
+      parameters:
+      - name: noteId
+        in: path
+        description: 노트의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 노트의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AF
+      - name: mailId
+        in: path
+        description: 공유 메일의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 공유 메일의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0K9GVJT2C4Q22
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteShareMailStatusResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      mailId: 0K9GVJT2C4Q22
+                      requestedAt: '2026-07-14T01:02:03Z'
+                      completed: false
+                      recipients:
+                      - email: partner@example.com
+                        status: SENT
+                      - email: guest@example.org
+                        status: FAILED
+                      - email: third@example.net
+                        status: PENDING
+                    error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                SHARE_MAIL_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SHARE_MAIL_NOT_FOUND
+                      message: 공유 메일을 찾을 수 없습니다.
+                      details: null
       security:
       - accessCookie: []
 components:
@@ -15664,6 +15864,135 @@ components:
           enum:
           - null
           description: 성공 시 null인 오류 정보
+    NoteShareMailResponse:
+      title: NoteShareMailResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - mailId
+          type: object
+          properties:
+            mailId:
+              type: string
+              description: 접수한 공유 메일의 13자리 TSID
+              nullable: false
+              example: 0K9GVJT2C4Q22
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    NoteShareMailStatusResponse:
+      title: NoteShareMailStatusResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - completed
+          - mailId
+          - recipients
+          - requestedAt
+          type: object
+          properties:
+            requestedAt:
+              type: string
+              description: 접수 시각
+              nullable: false
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+            recipients:
+              type: array
+              description: 받는 사람마다 하나. 입력 순서(같은 주소를 합친 뒤)
+              items:
+                required:
+                - email
+                - status
+                type: object
+                properties:
+                  email:
+                    type: string
+                    description: 받는 사람 주소
+                    nullable: false
+                    example: partner@example.com
+                  status:
+                    type: string
+                    description: 발송 상태. PENDING 아직 SES 에 넘기지 못함(다시 시도 중) · SENT SES 가 받음(받는 서버의 반송 여부는 모름) · FAILED 보낼 수 없어 끝냄(SES 가 주소·내용을 거절했거나 첨부 PDF 가 만료됨). 다시 보내지 않는다
+                    nullable: false
+                    example: SENT
+                    enum:
+                    - PENDING
+                    - SENT
+                    - FAILED
+              nullable: false
+            mailId:
+              type: string
+              description: 공유 메일의 13자리 TSID
+              nullable: false
+              example: 0K9GVJT2C4Q22
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+            completed:
+              type: boolean
+              description: PENDING 인 받는 사람이 없어 더 바뀔 것이 없으면 true. 화면은 이 값을 보고 다시 묻기를 멈춘다
+              nullable: false
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
+    SendNoteShareMailRequest:
+      type: object
+      required:
+      - file
+      - recipients
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 회의록 PDF. 앞부분이 %PDF- 여야 한다. 10485760바이트 이하. 파일 이름과 Content-Type 은 읽지 않는다
+        recipients:
+          type: array
+          minItems: 1
+          description: 받는 사람 주소. 값마다 같은 이름으로 반복한다. 워크스페이스 밖 주소도 된다. 대소문자를 가리지 않고 합친 뒤 10명까지
+          items:
+            type: string
+            format: email
+            maxLength: 254
+        message:
+          type: string
+          maxLength: 1000
+          description: 보낸 사람이 남기는 말. 본문 틀에 이스케이프돼 들어간다. 앞뒤 공백을 걷고 비면 없는 것으로 본다
+        include:
+          type: array
+          description: PDF 에 넣은 붙임. 발송 기록용이며 서버는 PDF 내용을 해석하지 않는다. 값마다 반복한다
+          items:
+            type: string
+            enum:
+            - AGENDA_LOG
+            - TRANSCRIPT
   securitySchemes:
     accessCookie:
       type: apiKey

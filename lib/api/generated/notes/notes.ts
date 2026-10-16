@@ -36,6 +36,9 @@ import type {
   NoteParticipantsRequest,
   NoteRequest,
   NoteResponse,
+  NoteShareMailResponse,
+  NoteShareMailStatusResponse,
+  SendNoteShareMailRequest,
   UnauthorizedResponse,
 } from "../models";
 
@@ -2406,3 +2409,539 @@ export const useCreateNoteGuestParticipant = <
     queryClient
   );
 };
+export type sendNoteShareMailResponse202 = {
+  data: NoteShareMailResponse;
+  status: 202;
+};
+
+export type sendNoteShareMailResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type sendNoteShareMailResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type sendNoteShareMailResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type sendNoteShareMailResponse429 = {
+  data: AppErrorResponse;
+  status: 429;
+};
+
+export type sendNoteShareMailResponseSuccess = sendNoteShareMailResponse202 & {
+  headers: Headers;
+};
+export type sendNoteShareMailResponseError = (
+  | sendNoteShareMailResponse400
+  | sendNoteShareMailResponse401
+  | sendNoteShareMailResponse404
+  | sendNoteShareMailResponse429
+) & {
+  headers: Headers;
+};
+
+export type sendNoteShareMailResponse =
+  | sendNoteShareMailResponseSuccess
+  | sendNoteShareMailResponseError;
+
+export const getSendNoteShareMailUrl = (noteId: string) => {
+  return `/v1/notes/${noteId}/share-mails`;
+};
+
+/**
+ * web 이 만든 회의록 PDF 를 받아 검증한 뒤 받는 사람마다 첨부 메일을 보낸다. `multipart/form-data` 이고 부분은 `file`(PDF), `recipients`(주소, 여러 번 반복), `message`(선택), `include`(선택, 여러 번 반복)다. 워크스페이스 밖 주소도 되고 같은 주소는 대소문자를 가리지 않고 합친다. 파일은 앞부분이 `%PDF-` 여야 하고, 첨부 파일 이름과 형식은 서버가 정한다(클라이언트 파일 이름은 쓰지 않는다). 발송은 큐를 거치므로 202 는 접수일 뿐 수신 성공을 보장하지 않는다. 받는 사람별 결과는 `GET /v1/notes/{noteId}/share-mails/{mailId}` 로 본다. 그 노트를 열람할 수 있는 워크스페이스 멤버만 부를 수 있다. 파일이 multipart 상한을 넘으면 서비스에 닿기 전에 413 `PAYLOAD_TOO_LARGE` 다.
+ * @summary 회의록 메일 공유
+ */
+export const sendNoteShareMail = async (
+  noteId: string,
+  sendNoteShareMailRequest: SendNoteShareMailRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<sendNoteShareMailResponse> => {
+  const formData = new FormData();
+  formData.append(`file`, sendNoteShareMailRequest.file);
+  sendNoteShareMailRequest.recipients.forEach((value) =>
+    formData.append(`recipients`, value)
+  );
+  if (sendNoteShareMailRequest.message !== undefined) {
+    formData.append(`message`, sendNoteShareMailRequest.message);
+  }
+  if (sendNoteShareMailRequest.include !== undefined) {
+    sendNoteShareMailRequest.include.forEach((value) =>
+      formData.append(`include`, value)
+    );
+  }
+
+  return apiFetch<sendNoteShareMailResponse>(getSendNoteShareMailUrl(noteId), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getSendNoteShareMailMutationKey = () =>
+  ["sendNoteShareMail"] as const;
+
+export const getSendNoteShareMailMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendNoteShareMail>>,
+    TError,
+    SendNoteShareMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendNoteShareMail>>,
+  TError,
+  SendNoteShareMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSendNoteShareMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendNoteShareMail>>,
+    SendNoteShareMailMutationVariables
+  > = (props) => {
+    const { noteId, data } = props ?? {};
+
+    return sendNoteShareMail(noteId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendNoteShareMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendNoteShareMail>>
+>;
+export type SendNoteShareMailMutationBody = SendNoteShareMailRequest;
+export type SendNoteShareMailMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type SendNoteShareMailMutationVariables = {
+  noteId: string;
+  data: SendNoteShareMailRequest;
+};
+
+/**
+ * @summary 회의록 메일 공유
+ */
+export const useSendNoteShareMail = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendNoteShareMail>>,
+      TError,
+      SendNoteShareMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof sendNoteShareMail>>,
+  TError,
+  SendNoteShareMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getSendNoteShareMailMutationOptions(options), queryClient);
+};
+export type getNoteShareMailResponse200 = {
+  data: NoteShareMailStatusResponse;
+  status: 200;
+};
+
+export type getNoteShareMailResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type getNoteShareMailResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type getNoteShareMailResponseSuccess = getNoteShareMailResponse200 & {
+  headers: Headers;
+};
+export type getNoteShareMailResponseError = (
+  | getNoteShareMailResponse401
+  | getNoteShareMailResponse404
+) & {
+  headers: Headers;
+};
+
+export type getNoteShareMailResponse =
+  | getNoteShareMailResponseSuccess
+  | getNoteShareMailResponseError;
+
+export const getGetNoteShareMailUrl = (noteId: string, mailId: string) => {
+  return `/v1/notes/${noteId}/share-mails/${mailId}`;
+};
+
+/**
+ * 보낸 공유 메일의 받는 사람별 발송 상태를 돌려준다. 보낸 사람 본인만 볼 수 있고, 다른 사람이 보낸 메일은 없는 메일과 같게 404 `SHARE_MAIL_NOT_FOUND` 다. 상태는 SES 발송 응답으로 정하므로(보통 몇 초) 화면은 `completed` 가 true 가 될 때까지 다시 불러 본다. SENT 는 SES 가 받았다는 뜻이고 반송 여부는 알 수 없다.
+ * @summary 회의록 공유 메일 발송 상태 조회
+ */
+export const getNoteShareMail = async (
+  noteId: string,
+  mailId: string,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<getNoteShareMailResponse> => {
+  return apiFetch<getNoteShareMailResponse>(
+    getGetNoteShareMailUrl(noteId, mailId),
+    {
+      ...options,
+      method: "GET",
+    }
+  );
+};
+
+export const getGetNoteShareMailQueryKey = (noteId: string, mailId: string) => {
+  return [`/v1/notes/${noteId}/share-mails/${mailId}`] as const;
+};
+
+export const getGetNoteShareMailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNoteShareMailQueryKey(noteId, mailId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getNoteShareMail>>
+  > = ({ signal }) =>
+    getNoteShareMail(noteId, mailId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      noteId !== null &&
+      noteId !== undefined &&
+      mailId !== null &&
+      mailId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getNoteShareMail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNoteShareMailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNoteShareMail>>
+>;
+export type GetNoteShareMailQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetNoteShareMail<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNoteShareMail>>,
+          TError,
+          Awaited<ReturnType<typeof getNoteShareMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteShareMail<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNoteShareMail>>,
+          TError,
+          Awaited<ReturnType<typeof getNoteShareMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteShareMail<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 회의록 공유 메일 발송 상태 조회
+ */
+
+export function useGetNoteShareMail<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetNoteShareMailQueryOptions(noteId, mailId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary 회의록 공유 메일 발송 상태 조회
+ */
+export const prefetchGetNoteShareMailQuery = async <
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  queryClient: QueryClient,
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+): Promise<QueryClient> => {
+  const queryOptions = getGetNoteShareMailQueryOptions(noteId, mailId, options);
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+};
+
+export const getGetNoteShareMailSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNoteShareMailQueryKey(noteId, mailId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getNoteShareMail>>
+  > = ({ signal }) =>
+    getNoteShareMail(noteId, mailId, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getNoteShareMail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNoteShareMailSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNoteShareMail>>
+>;
+export type GetNoteShareMailSuspenseQueryError =
+  | UnauthorizedResponse
+  | AppErrorResponse;
+
+export function useGetNoteShareMailSuspense<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteShareMailSuspense<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetNoteShareMailSuspense<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary 회의록 공유 메일 발송 상태 조회
+ */
+
+export function useGetNoteShareMailSuspense<
+  TData = Awaited<ReturnType<typeof getNoteShareMail>>,
+  TError = UnauthorizedResponse | AppErrorResponse,
+>(
+  noteId: string,
+  mailId: string,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getNoteShareMail>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetNoteShareMailSuspenseQueryOptions(
+    noteId,
+    mailId,
+    options
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
