@@ -65,9 +65,11 @@ export function RecordingDock({
 
   return (
     <motion.div
-      layout
+      layout="size"
+      layoutDependency={state}
       aria-label="녹음 제어"
       role="group"
+      // 상태가 바뀔 때만 너비를 보간하고, 전체·사이드 보기의 위치 변경은 즉시 반영한다.
       // 높이를 44px로 **고정**한다. 예전에는 `min-h-11`(44px)로 의도해 놓고 안쪽 컨트롤이
       // `size-11`(44px)이라 padding까지 더해 54px로 밀려 있었고, 준비 중(h-8 스피너)만 44px로
       // 눌려 **누르는 순간 독이 줄었다 늘어났다.** 내용을 전부 `size-9`(36px)로 맞추고
@@ -77,9 +79,10 @@ export function RecordingDock({
       transition={LAYOUT_TRANSITION}
     >
       <motion.div
-        layout
+        layout="position"
+        layoutDependency={state}
         aria-hidden
-        className="flex items-center"
+        className="flex shrink-0 items-center"
         transition={LAYOUT_TRANSITION}
       >
         <span className="flex size-9 items-center justify-center rounded-full text-[var(--el-muted)]">
@@ -91,7 +94,8 @@ export function RecordingDock({
       <AnimatePresence mode="popLayout" initial={false}>
         {state === "recording" ? (
           <motion.div
-            layout
+            layout="position"
+            layoutDependency={state}
             key="recording"
             initial={{ opacity: 0 }}
             animate={{
@@ -139,7 +143,8 @@ export function RecordingDock({
           state === "connecting" ||
           state === "stopping" ? (
           <motion.div
-            layout
+            layout="position"
+            layoutDependency={state}
             key="pending"
             initial={{ opacity: 0 }}
             animate={{
@@ -147,14 +152,17 @@ export function RecordingDock({
               transition: { duration: 0.15, delay: 0.1 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            className="flex h-9 shrink-0 items-center px-1"
+            className="flex h-9 min-w-0 items-center px-1"
           >
             <RecordingPendingSpinner />
-            <span role="status" className="ml-2 text-sm text-[var(--el-muted)]">
+            <span
+              role="status"
+              className="ml-2 min-w-0 truncate text-sm text-[var(--el-muted)]"
+            >
               {state === "requesting-permission"
-                ? "마이크·컴퓨터 소리 권한 확인 중"
+                ? "권한 확인 중"
                 : state === "connecting"
-                  ? "녹음 연결 중"
+                  ? "녹음 시작 중"
                   : "녹음 마무리 중"}
             </span>
           </motion.div>
@@ -165,7 +173,8 @@ export function RecordingDock({
           // failed보다도 먼저 선다 — 세션이 열린 실패는 note-panel이 원격 기록으로 취급한다
           // (APP-288). 그래서 회의 중 실패의 사유는 세션이 닫힌 뒤에야 이 아래 분기로 보인다.
           <motion.div
-            layout
+            layout="position"
+            layoutDependency={state}
             key="blocked"
             initial={{ opacity: 0 }}
             animate={{
@@ -186,7 +195,8 @@ export function RecordingDock({
           // 마이크 권한 안내처럼 긴 문장이 들어오면 독이 화면 폭만큼 늘어났다.
           // 여기 남기는 것은 되돌릴 수단(다시 녹음·닫기)뿐이다.
           <motion.div
-            layout
+            layout="position"
+            layoutDependency={state}
             key="failed"
             initial={{ opacity: 0 }}
             animate={{
@@ -226,7 +236,8 @@ export function RecordingDock({
           </motion.div>
         ) : (
           <motion.div
-            layout
+            layout="position"
+            layoutDependency={state}
             key="idle"
             initial={{ opacity: 0 }}
             animate={{
@@ -243,7 +254,9 @@ export function RecordingDock({
                   <button
                     type="button"
                     className="relative flex size-9 items-center justify-center rounded-full bg-destructive shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-45 after:absolute after:-inset-1 after:content-['']"
-                    aria-label={isOtherNote ? "다른 노트에서 녹음 중" : startLabel}
+                    aria-label={
+                      isOtherNote ? "다른 노트에서 녹음 중" : startLabel
+                    }
                     // 소속이 확인되기 전에는 못 누른다 — 확인 없이 시작하면 잘못된 워크스페이스로
                     // 기록된다. 조회는 곧 끝나고, 어긋난 URL이면 위 `disabledReason`이 이유를 세운다.
                     disabled={isOtherNote || !workspaceId}

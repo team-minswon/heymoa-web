@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecordingDock } from "@/components/transcription/recording-dock";
@@ -34,21 +40,39 @@ vi.mock("@/components/transcription/recording-provider", async () => {
 describe("RecordingDock", () => {
   afterEach(cleanup);
 
-  it.each(["requesting-permission", "connecting", "stopping"])(
-    "uses one spinner-only pending state for %s",
-    (phase) => {
-      recording.phase = phase;
+  it.each([
+    ["requesting-permission", "권한 확인 중"],
+    ["connecting", "녹음 시작 중"],
+    ["stopping", "녹음 마무리 중"],
+  ])("%s 단계에는 짧은 상태 문구를 표시합니다", (phase, label) => {
+    recording.phase = phase;
 
-      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+    render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
 
-      expect(
-        screen.getByRole("status", { name: "녹음 처리 중" })
-      ).toBeInTheDocument();
-      expect(screen.queryByText("마이크 확인 중")).toBeNull();
-      expect(screen.queryByText("연결 중")).toBeNull();
-      expect(screen.queryByText("마무리 중")).toBeNull();
-    }
-  );
+    expect(
+      screen.getByRole("status", { name: "녹음 처리 중" })
+    ).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByText("마이크·컴퓨터 소리 권한 확인 중")).toBeNull();
+    expect(screen.queryByText("연결 중")).toBeNull();
+    expect(screen.queryByText("마무리 중")).toBeNull();
+  });
+
+  it("상태가 바뀌면 이전 문구와 컨트롤을 치웁니다", async () => {
+    recording.phase = "requesting-permission";
+    const { rerender } = render(
+      <RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />
+    );
+    expect(screen.getByText("권한 확인 중")).toBeInTheDocument();
+    recording.phase = "connecting";
+    rerender(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+    expect(screen.queryByText("권한 확인 중")).toBeNull();
+    expect(screen.getByText("녹음 시작 중")).toBeInTheDocument();
+    recording.phase = "recording";
+    rerender(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+    await waitFor(() => expect(screen.queryByText("녹음 시작 중")).toBeNull());
+    expect(screen.getByRole("button", { name: "중지" })).toBeInTheDocument();
+  });
 
   describe("disabledReason", () => {
     const reason = "종료된 회의입니다.";
