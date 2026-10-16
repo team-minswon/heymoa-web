@@ -6,11 +6,12 @@ import { pathToFileURL } from "node:url";
 export function releaseAssets(release, repository, version, includeWindows = false) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version)) throw new Error("Invalid repository/version");
   if (release.draft || !release.published_at || release.tag_name !== `desktop-v${version}`) throw new Error("A published matching desktop release is required");
-  const suffixes = ["mac-arm64.dmg", "mac-arm64.zip", "mac-x64.dmg", "mac-x64.zip"];
+  const suffixes = ["mac-arm64.dmg", "mac-arm64.zip"];
   if (includeWindows) suffixes.push("win-x64.exe");
   const names = suffixes.map((suffix) => `HeyMoa-${version}-${suffix}`);
+  const aliases = suffixes.filter((suffix) => !suffix.endsWith(".zip")).map((suffix) => `HeyMoa-${suffix}`);
   const prefix = `https://github.com/${repository}/releases/download/desktop-v${version}/`;
-  return [...names, "SHA256SUMS"].map((name) => {
+  return [...names, ...aliases, "SHA256SUMS"].map((name) => {
     const matches = release.assets.filter((asset) => asset.name === name);
     if (matches.length !== 1 || matches[0].size <= 0 || matches[0].browser_download_url !== prefix + name) throw new Error(`Missing or invalid published asset: ${name}`);
     return matches[0];
@@ -48,11 +49,17 @@ async function prepare() {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version)) throw new Error("Invalid repository/version");
   const release = await (await response(`https://api.github.com/repos/${repository}/releases/tags/desktop-v${version}`)).json();
   if (platform !== undefined && platform !== "--include-windows") throw new Error("Unknown platform option");
-  const assets = releaseAssets(release, repository, version, platform === "--include-windows");
+  // 웹의 최신 다운로드는 Apple Silicon Mac과 Windows를 함께 제공합니다.
+  const assets = releaseAssets(release, repository, version, true);
   const checksums = checksumMap(await (await response(assets.at(-1).browser_download_url)).text());
   const verified = [];
   for (const asset of assets.slice(0, -1)) {
-    verified.push(await verifyDownload(asset, (await response(asset.browser_download_url)).body, checksums.get(asset.name)));
+    const versionedName = /^HeyMoa-(?:mac|win)-/.test(asset.name)
+      ? asset.name.replace("HeyMoa-", `HeyMoa-${version}-`)
+      : asset.name;
+    const expected = checksums.get(versionedName);
+    if (!expected || checksums.get(asset.name) !== expected) throw new Error(`Alias checksum mismatch: ${asset.name}`);
+    verified.push(await verifyDownload(asset, (await response(asset.browser_download_url)).body, expected));
   }
   const manifest = { version, tag: release.tag_name, releaseUrl: release.html_url, signing: "unsigned-beta", assets: verified };
   const output = resolve(destination);

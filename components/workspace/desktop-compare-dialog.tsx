@@ -180,7 +180,7 @@ export function DesktopCompareDialog({
                 <div className="flex justify-between gap-4 py-3">
                   <dt className="font-medium">Mac</dt>
                   <dd className="text-[var(--el-muted)]">
-                    macOS 14.2 이상 · Apple Silicon, Intel
+                    macOS 14.2 이상 · Apple Silicon
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4 py-3">

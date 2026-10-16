@@ -21,12 +21,12 @@ test("streamed download rejects changed bytes, truncation and excess without pro
 test("release assets reject drafts, missing artifacts and foreign URLs", async () => {
   const { releaseAssets, checksumMap } = await import("../scripts/release-manifest.mjs");
   const repo = "test/fixture";
-  const names = ["mac-arm64.dmg", "mac-arm64.zip", "mac-x64.dmg", "mac-x64.zip", "win-x64.exe"].map((suffix) => `HeyMoa-1.2.3-${suffix}`);
-  const release = { draft: false, published_at: "fixture", tag_name: "desktop-v1.2.3", assets: [...names, "SHA256SUMS"].map((name) => ({ name, size: 10, browser_download_url: `https://github.com/${repo}/releases/download/desktop-v1.2.3/${name}` })) };
-  assert.equal(releaseAssets(release, repo, "1.2.3").length, 5);
+  const names = ["mac-arm64.dmg", "mac-arm64.zip", "win-x64.exe"].map((suffix) => `HeyMoa-1.2.3-${suffix}`);
+  const release = { draft: false, published_at: "fixture", tag_name: "desktop-v1.2.3", assets: [...names, "HeyMoa-mac-arm64.dmg", "HeyMoa-win-x64.exe", "SHA256SUMS"].map((name) => ({ name, size: 10, browser_download_url: `https://github.com/${repo}/releases/download/desktop-v1.2.3/${name}` })) };
+  assert.equal(releaseAssets(release, repo, "1.2.3").length, 4);
   assert.equal(releaseAssets(release, repo, "1.2.3", true).length, 6);
   const macOnly = { ...release, assets: release.assets.filter((asset) => !asset.name.endsWith("win-x64.exe")) };
-  assert.equal(releaseAssets(macOnly, repo, "1.2.3").length, 5);
+  assert.equal(releaseAssets(macOnly, repo, "1.2.3").length, 4);
   assert.throws(() => releaseAssets(macOnly, repo, "1.2.3", true), /Missing/);
   assert.throws(() => releaseAssets({ ...release, draft: true }, repo, "1.2.3"), /published/);
   assert.throws(() => releaseAssets({ ...release, assets: release.assets.slice(1) }, repo, "1.2.3"), /Missing/);

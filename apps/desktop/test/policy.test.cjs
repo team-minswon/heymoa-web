@@ -96,7 +96,6 @@ test("IPC authorization requires the exact webContents, current mainFrame and or
 test("supported OS matrix uses real Windows kernel build and macOS versions", () => {
   for (const [platform, arch, version] of [
     ["darwin", "arm64", "14.2"],
-    ["darwin", "x64", "14.2.0"],
     ["darwin", "arm64", "26.0.1"],
     ["win32", "x64", "10.0.22000"],
     ["win32", "x64", "10.0.26100"],
@@ -105,6 +104,7 @@ test("supported OS matrix uses real Windows kernel build and macOS versions", ()
   for (const [platform, arch, version] of [
     ["darwin", "arm64", "14.1.9"],
     ["darwin", "x64", "13.6"],
+    ["darwin", "x64", "14.2.0"],
     ["darwin", "ia32", "14.2"],
     ["win32", "x64", "10.0.19045"],
     ["win32", "arm64", "10.0.26100"],

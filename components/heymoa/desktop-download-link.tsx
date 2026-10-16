@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { LoaderCircle } from "lucide-react";
 
 import { PlatformIcon } from "@/components/heymoa/desktop-platform-icon";
@@ -22,7 +21,7 @@ export function DesktopDownloadLink({ className }: { className?: string }) {
   }, []);
 
   return (
-    <Link
+    <a
       href="/download?start=1"
       target="_blank"
       rel="noopener noreferrer"
@@ -51,6 +50,6 @@ export function DesktopDownloadLink({ className }: { className?: string }) {
               : "앱 다운로드"}
         </>
       )}
-    </Link>
+    </a>
   );
 }

@@ -33,13 +33,13 @@ it("다운로드 페이지를 직접 열면 자동으로 파일을 받지 않습
   expect(desktopDownload).not.toHaveBeenCalled();
 });
 
-it.each([
-  { os: "other" as const, href: "/download" },
-  { os: "mac" as const, href: null },
-])("자동 선택할 수 없으면 설치 파일 목록을 유지합니다: $os", async (target) => {
-  vi.mocked(desktopDownload).mockResolvedValue(target);
-  await act(async () => {
-    render(<DesktopAutoDownload />);
-  });
-  expect(screen.queryByTitle("HeyMoa 설치 파일 다운로드")).toBeNull();
-});
+it.each([{ os: "other" as const, href: "/download" }])(
+  "자동 선택할 수 없으면 설치 파일 목록을 유지합니다: $os",
+  async (target) => {
+    vi.mocked(desktopDownload).mockResolvedValue(target);
+    await act(async () => {
+      render(<DesktopAutoDownload />);
+    });
+    expect(screen.queryByTitle("HeyMoa 설치 파일 다운로드")).toBeNull();
+  }
+);

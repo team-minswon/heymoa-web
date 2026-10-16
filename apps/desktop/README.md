@@ -2,7 +2,7 @@
 
 운영 `https://heymoa.app`을 그대로 열고 네이티브 인증·두 입력 캡처·메뉴바 기능을 제공합니다. 웹 화면은 운영 웹 배포를 따르고, 네이티브 기능 변경에는 앱 업데이트가 필요합니다.
 
-- 지원: macOS 14.2 이상 Apple Silicon/Intel, Windows 11 x64. 실제 Windows 설치 검증은 별도입니다.
+- 지원: macOS 14.2 이상 Apple Silicon, Windows 11 x64. 실제 Windows 설치 검증은 별도입니다.
 - 개발: 루트에서 `pnpm desktop:dev`. 로컬 웹을 사용할 때 `HEYMOA_DESKTOP_DEV_URL=http://localhost:3000`을 설정합니다. packaged 앱은 이 변수를 무시합니다.
 - 검증: `pnpm desktop:typecheck`, `pnpm desktop:test`, `pnpm desktop:build`.
 - 로컬 macOS 앱: `pnpm desktop:package`. `release/mac*/HeyMoa.app`과 app.asar allowlist 검증을 생성합니다. unsigned preview이며 Developer ID 서명·공증 완료가 아닙니다.

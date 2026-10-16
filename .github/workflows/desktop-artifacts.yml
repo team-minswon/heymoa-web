@@ -38,9 +38,6 @@ jobs:
           - runner: macos-15
             target: mac:arm64
             artifact: mac-arm64
-          - runner: macos-15-intel
-            target: mac:x64
-            artifact: mac-x64
           - runner: windows-2022
             target: win:x64
             artifact: win-x64
@@ -87,7 +84,7 @@ jobs:
           echo "APPLE_API_KEY=$key" >> "$GITHUB_ENV"
       - name: Package
         shell: bash
-        # Mac 은 electron-builder 의 staple 이 Apple 서버(CloudKit)에 닿지 못해 가끔 실패한다(Intel 러너에서 두 번 겪음).
+        # Mac 은 electron-builder 의 staple 이 Apple 서버(CloudKit)에 닿지 못해 가끔 실패한다.
         # 공증은 몇 분이라 전체를 다시 한다 — Windows 는 한 번만 돈다.
         run: |
           attempts=1
@@ -119,6 +116,11 @@ jobs:
             retry xcrun stapler validate "$app"
             retry spctl --assess --type execute --verbose=2 "$app"
           done
+      - name: Prepare stable download filenames and checksums
+        shell: bash
+        run: |
+          node apps/desktop/scripts/prepare-download-aliases.mjs
+          node apps/desktop/scripts/checksums.mjs
       - uses: actions/upload-artifact@v6
         with:
           name: heymoa-${{ matrix.artifact }}

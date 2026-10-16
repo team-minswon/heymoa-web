@@ -6,12 +6,14 @@ for (const platform of [
     architecture: "arm",
     label: "macOS 다운로드",
     suffix: "mac-arm64.dmg",
+    query: "os=mac&arch=arm64",
   },
   {
     ua: "Windows NT 10.0; Win64; x64",
     architecture: "x86",
     label: "Windows 다운로드",
     suffix: "win-x64.exe",
+    query: "os=windows&arch=x64",
   },
 ]) {
   test(`landing shows a stable ${platform.label} button`, async ({
@@ -33,7 +35,7 @@ for (const platform of [
     await expect(button).toBeVisible();
     await expect(button).toHaveAttribute(
       "href",
-      new RegExp(`${platform.suffix}$`)
+      `/download/app?${platform.query}`
     );
     await expect(button).toHaveCSS("width", "180px");
     await expect(
@@ -45,7 +47,7 @@ for (const platform of [
         .getByRole("link", { name: "앱 다운로드", exact: true })
     ).toBeVisible();
 
-    const filename = `HeyMoa-0.1.2-${platform.suffix}`;
+    const filename = `HeyMoa-${platform.suffix}`;
     const downloads: string[] = [];
     page.on("download", (download) =>
       downloads.push(download.suggestedFilename())
@@ -164,14 +166,14 @@ test("anonymous visitors can reach desktop downloads without starting OAuth", as
   await expect(
     page.getByRole("link", { name: "버전 기록 보기 (GitHub)" })
   ).toHaveCount(0);
-  for (const [name, suffix] of [
-    ["Apple Silicon용 다운로드", "mac-arm64.dmg"],
-    ["Intel용 다운로드", "mac-x64.dmg"],
-    ["Windows용 다운로드", "win-x64.exe"],
+  for (const [name, query] of [
+    ["Apple Silicon용 다운로드", "os=mac&arch=arm64"],
+
+    ["Windows용 다운로드", "os=windows&arch=x64"],
   ]) {
     await expect(page.getByRole("link", { name, exact: true })).toHaveAttribute(
       "href",
-      `https://github.com/team-minswon/homebrew-tap/releases/download/desktop-v0.1.2/HeyMoa-0.1.2-${suffix}`
+      `/download/app?${query}`
     );
   }
   await expect(
@@ -191,4 +193,30 @@ test("anonymous visitors can reach desktop downloads without starting OAuth", as
     page.getByText("서명되지 않은 설치 파일에는", { exact: false })
   ).toHaveCount(0);
   expect(oauthRequests).toEqual([]);
+});
+
+test("고정 주소는 최신 파일로 연결하고 잘못된 입력은 안내로 돌아갑니다", async ({
+  request,
+}) => {
+  for (const [query, file] of [
+    ["os=mac&arch=arm64", "HeyMoa-mac-arm64.dmg"],
+
+    ["os=windows&arch=x64", "HeyMoa-win-x64.exe"],
+  ]) {
+    const response = await request.get(`/download/app?${query}`, {
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(307);
+    expect(response.headers().location).toBe(
+      `https://github.com/team-minswon/homebrew-tap/releases/latest/download/${file}`
+    );
+  }
+  for (const query of ["os=windows&arch=arm64", "os=mac&arch=x64"]) {
+    const invalid = await request.get(`/download/app?${query}`, {
+      maxRedirects: 0,
+    });
+    expect(invalid.headers().location).toBe("http://localhost:3100/download");
+  }
+  const page = await request.get("/download");
+  expect(await page.text()).not.toContain("Intel용 다운로드");
 });

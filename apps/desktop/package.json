@@ -14,7 +14,6 @@
     "package:dir": "pnpm build && electron-builder --mac --dir --publish never && node scripts/verify-package.cjs",
     "icons:verify": "node scripts/verify-icons.mjs",
     "package:mac:arm64": "pnpm build && pnpm icons:verify && electron-builder --mac dmg zip --arm64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs",
-    "package:mac:x64": "pnpm build && pnpm icons:verify && electron-builder --mac dmg zip --x64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs",
     "package:win:x64": "pnpm build && pnpm icons:verify && electron-builder --win nsis --x64 --publish never && node scripts/verify-package.cjs && node scripts/checksums.mjs"
   },
   "devDependencies": {

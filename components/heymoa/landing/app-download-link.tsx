@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useState, type MouseEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLinkItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { track } from "@/lib/analytics/track";
-import { desktopDownload, DESKTOP_INSTALLERS } from "@/lib/desktop/downloads";
+import { desktopDownload } from "@/lib/desktop/downloads";
 import { cn } from "@/lib/utils";
 import { FOCUS } from "./tokens";
 import { PlatformIcon } from "@/components/heymoa/desktop-platform-icon";
@@ -82,34 +75,8 @@ export function AppDownloadLink({
         : target.os === "windows"
           ? "Windows 다운로드"
           : "앱 다운로드";
-  if (target.href === null) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger className={className}>
-          {variant === "hero" ? <PlatformIcon os={target.os} /> : null}
-          {label}
-          {variant === "hero" ? (
-            <ChevronDown aria-hidden className="size-3" />
-          ) : null}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-auto min-w-56">
-          {DESKTOP_INSTALLERS.mac.map((installer) => (
-            <DropdownMenuLinkItem
-              key={installer.href}
-              href={installer.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={startDownload}
-            >
-              {installer.label}
-            </DropdownMenuLinkItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
   return (
-    <Link
+    <a
       href={target.href}
       target={target.os === "other" ? undefined : "_blank"}
       rel={target.os === "other" ? undefined : "noopener noreferrer"}
@@ -118,6 +85,6 @@ export function AppDownloadLink({
     >
       {variant === "hero" ? <PlatformIcon os={target.os} /> : null}
       {label}
-    </Link>
+    </a>
   );
 }

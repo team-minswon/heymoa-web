@@ -29,7 +29,7 @@ const PLATFORMS = [
   {
     name: "Mac",
     installers: DESKTOP_INSTALLERS.mac,
-    need: "macOS 14.2 이상",
+    need: "macOS 14.2 이상 · Apple Silicon",
     steps: [
       "다운로드한 DMG 파일을 여세요.",
       "HeyMoa를 응용 프로그램 폴더로 옮긴 뒤 실행하세요.",
