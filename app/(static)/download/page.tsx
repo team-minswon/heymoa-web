@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 
 import { TrackedLink } from "@/components/analytics/tracked-link";
 import { LandingCta } from "@/components/heymoa/landing-cta";
@@ -14,7 +14,11 @@ import {
   RADIUS,
   TV_VARS,
 } from "@/components/heymoa/landing/tokens";
-import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
+import {
+  DESKTOP_DOWNLOAD_VERSION,
+  DESKTOP_INSTALLERS,
+  DESKTOP_RELEASES_URL,
+} from "@/lib/desktop/downloads";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
@@ -31,6 +35,7 @@ const CAUTION =
 const PLATFORMS = [
   {
     name: "Mac",
+    installers: DESKTOP_INSTALLERS.mac,
     need: "macOS 14.2 이상에서 사용합니다. Apple Silicon은 arm64, Intel Mac은 x64\u00a0DMG를 선택하고 HeyMoa를 응용 프로그램 폴더로 옮겨 주세요.",
     label: "안내",
     caution:
@@ -38,6 +43,7 @@ const PLATFORMS = [
   },
   {
     name: "Windows",
+    installers: DESKTOP_INSTALLERS.windows,
     need: "Windows\u00a011 x64에서 EXE 설치 파일을 사용합니다. Windows판은 베타입니다.",
     label: "주의",
     caution:
@@ -58,34 +64,40 @@ const PLATFORMS = [
  */
 export default function DownloadPage() {
   return (
-    <div style={TV_VARS} className="w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8">
+    <div
+      style={TV_VARS}
+      className="w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8"
+    >
       <div className={cn(CONTAINER, "pt-3 lg:pt-6")}>
-        <header className={cn(RADIUS.face, "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-16")}>
+        <header
+          className={cn(
+            RADIUS.face,
+            "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-16"
+          )}
+        >
           <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
             HeyMoa 데스크톱
           </p>
           {/* 약관 제목과 같은 H2 급 — 히어로 급을 쓰면 안내 한 장이 첫 화면처럼 군다. */}
-          <h1 className={cn(H2, "mt-4 max-w-[820px]")}>회의는 그대로, 기록은 더 가까이</h1>
+          <h1 className={cn(H2, "mt-4 max-w-[820px]")}>
+            회의는 그대로, 기록은 더 가까이
+          </h1>
           <p className={cn(LEAD, "mt-4 max-w-[640px] lg:max-w-[860px]")}>
-            웹에서 쓰던 HeyMoa에 컴퓨터에서 나는 소리까지 녹음하는 기능과 메뉴바 타임라인을
-            더했습니다. <br className="hidden lg:inline" />
+            웹에서 쓰던 HeyMoa에 컴퓨터에서 나는 소리까지 녹음하는 기능과 메뉴바
+            타임라인을 더했습니다. <br className="hidden lg:inline" />
             앱에서도 같은 웹 서비스를 사용합니다.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <TrackedLink
-              event="desktop_download_clicked"
-              href={DESKTOP_RELEASES_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <a
+              href="#installers"
               className={cn(
                 "inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-[var(--tv-brand)] px-6 text-[15px] font-bold text-white transition-colors hover:bg-[var(--tv-brand-deep)]",
                 FOCUS
               )}
             >
-              설치 파일과 새 버전 보기
-              <ArrowUpRight aria-hidden className="size-4" />
-              <span className="sr-only">(새 창)</span>
-            </TrackedLink>
+              앱 다운로드
+              <ArrowDown aria-hidden className="size-4" />
+            </a>
             {/* 설치 없이 지금 쓰려는 사람의 길. 로그인 상태면 대시보드로 간다(`LandingCta`). */}
             <LandingCta
               label="웹에서 바로 시작"
@@ -98,16 +110,50 @@ export default function DownloadPage() {
         </header>
       </div>
 
-      <div className={cn(CONTAINER, "mt-8 grid gap-4 md:grid-cols-2 lg:mt-12 lg:gap-6")}>
+      <div
+        id="installers"
+        className={cn(
+          CONTAINER,
+          "mt-8 grid scroll-mt-24 gap-4 md:grid-cols-2 lg:mt-12 lg:gap-6"
+        )}
+      >
         {PLATFORMS.map((platform) => (
           <section
             key={platform.name}
-            className={cn(RADIUS.card, "border border-[var(--tv-rule)] bg-white p-6 lg:p-8")}
+            className={cn(
+              RADIUS.card,
+              "border border-[var(--tv-rule)] bg-white p-6 lg:p-8"
+            )}
           >
             <h2 className={CARD_TITLE}>{platform.name}</h2>
             <p className={cn(BODY, "mt-3")}>{platform.need}</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {platform.installers.map((installer) => (
+                <TrackedLink
+                  key={installer.href}
+                  event="desktop_download_clicked"
+                  href={installer.href}
+                  className={cn(
+                    "inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--tv-brand)] px-5 py-3 text-[15px] font-bold text-white hover:bg-[var(--tv-brand-deep)]",
+                    FOCUS
+                  )}
+                >
+                  {installer.label}
+                </TrackedLink>
+              ))}
+            </div>
+            {platform.name === "Mac" && (
+              <div className="mt-5">
+                <p className={BODY}>Homebrew로 설치</p>
+                <code className="mt-2 block break-all rounded-[10px] bg-[var(--tv-lav-soft)] px-4 py-3 text-[14px] text-[var(--tv-ink)]">
+                  brew install --cask team-minswon/tap/heymoa
+                </code>
+              </div>
+            )}
             <p className={CAUTION}>
-              <b className="font-extrabold text-[var(--tv-ink)]">{platform.label} </b>
+              <b className="font-extrabold text-[var(--tv-ink)]">
+                {platform.label}{" "}
+              </b>
               {platform.caution}
             </p>
           </section>
@@ -115,18 +161,33 @@ export default function DownloadPage() {
       </div>
 
       <div className={cn(CONTAINER, "mt-4 lg:mt-6")}>
-        <section className={cn(RADIUS.card, "bg-[var(--tv-lav-soft)] p-6 lg:p-8")}>
+        <section
+          className={cn(RADIUS.card, "bg-[var(--tv-lav-soft)] p-6 lg:p-8")}
+        >
           <h2 className={CARD_TITLE}>설정과 업데이트</h2>
           <div className="mt-3 grid gap-3 lg:mt-4 lg:grid-cols-2 lg:gap-8">
             <p className={BODY}>
-              첫 실행에서 마이크 설정을 안내합니다. 컴퓨터 오디오 권한은 녹음을 시작할 때
-              확인합니다. 권한 설정은 나중에도 할 수 있습니다.
+              첫 실행에서 마이크 설정을 안내합니다. 컴퓨터 오디오 권한은 녹음을
+              시작할 때 확인합니다. 권한 설정은 나중에도 할 수 있습니다.
             </p>
             <p className={BODY}>
-              새 버전은 위 공식 배포 페이지에서 확인해 주세요. 자동 업데이트는 제공하지
-              않으므로 녹음을 중지하고 앱을 종료한 뒤 새 설치 파일로 업데이트합니다.
+              자동 업데이트는 제공하지 않으므로 녹음을 중지하고 앱을 종료한 뒤
+              새 설치 파일로 업데이트합니다. Homebrew로 설치했다면{" "}
+              <code className="break-all">brew upgrade --cask heymoa</code>를
+              실행합니다.
             </p>
           </div>
+          <p className={cn(BODY, "mt-4")}>
+            현재 배포 버전 {DESKTOP_DOWNLOAD_VERSION} ·{" "}
+            <a
+              href={DESKTOP_RELEASES_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn("underline underline-offset-4", FOCUS)}
+            >
+              버전 기록 보기 (GitHub)
+            </a>
+          </p>
           <p className="m-0 mt-4 break-keep text-[14px] leading-[1.65] text-[var(--tv-muted)] [overflow-wrap:anywhere] lg:mt-6">
             Homebrew 설치, 권한 설정, 녹음 중 앱 종료, 막힐 때는{" "}
             <Link
