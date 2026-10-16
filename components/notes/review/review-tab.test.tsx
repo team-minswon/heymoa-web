@@ -33,6 +33,11 @@ vi.mock("@/lib/ui/toast", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+// 판 아래 메일 다이얼로그가 보내는 사람 이름을 읽는다. 제품에서는 app/providers.tsx 가 감싼다
+vi.mock("@/components/auth/auth-provider", () => ({
+  useAuth: () => ({ user: { name: "김민수" } }),
+}));
+
 /**
  * 요약 탭을 목 서버와 끝까지 굴린다. 훅을 가짜로 바꾸지 않고 목 핸들러를 그대로 지나야
  * 판(CAS) · 흐름 상태 · 할 일 반영이 실제 계약대로 도는지 볼 수 있다.
