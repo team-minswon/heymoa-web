@@ -45,6 +45,8 @@ jobs:
             target: win:x64
             artifact: win-x64
     runs-on: ${{ matrix.runner }}
+    # Apple 공증이 끝나지 않아도 macOS 러너 분(일반의 10배)을 무한정 쓰지 않게 상한을 둔다.
+    timeout-minutes: 40
     env:
       # Mac job 만 Developer ID 로 서명·공증하고 Windows 는 서명하지 않습니다.
       CSC_IDENTITY_AUTO_DISCOVERY: ${{ startsWith(matrix.target, 'mac') && 'true' || 'false' }}
@@ -53,6 +55,8 @@ jobs:
       APPLE_API_KEY_ID: ${{ startsWith(matrix.target, 'mac') && secrets.APPLE_API_KEY_ID || '' }}
       APPLE_API_ISSUER: ${{ startsWith(matrix.target, 'mac') && secrets.APPLE_API_ISSUER || '' }}
       APPLE_API_KEY_P8_BASE64: ${{ startsWith(matrix.target, 'mac') && secrets.APPLE_API_KEY_P8_BASE64 || '' }}
+      # 서명·공증이 어디서 오래 걸리는지 로그에 남긴다. 비밀 값은 GitHub 이 가린다.
+      DEBUG: ${{ startsWith(matrix.target, 'mac') && 'electron-builder,electron-osx-sign*,@electron/notarize*' || '' }}
       NODE_OPTIONS: --no-experimental-webstorage
     steps:
       - uses: actions/checkout@v5
