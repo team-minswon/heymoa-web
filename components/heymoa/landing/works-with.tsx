@@ -19,7 +19,7 @@ import { BODY, FOCUS, H2, MARKER_REVEAL, vars } from "./tokens";
  *
  * **연동이 아니다.** HeyMoa 는 회의 앱에 들어가지 않고 브라우저 탭에서 마이크(`getUserMedia`)로 듣는다
  * (`lib/transcription/audio.ts`). 카드 문구는 「봇이 안 낀다 · 연동을 안 건다 · 들리면 받아 적는다」처럼
- * 그 사실 안에서만 말한다. 리드 끝에는 데스크톱 앱(베타) 한 줄과 `/download` 링크를 둔다 — 「옆 탭 ·
+ * 그 사실 안에서만 말한다. 리드 끝에는 데스크톱 앱 한 줄과 `/download` 링크를 둔다 — 「옆 탭 ·
  * 노트북 마이크」만 말하면 처음 보는 사람은 앱이 있는 줄 모른다. 강도는 다운로드 페이지 · FAQ 01 과 같다
  * (「컴퓨터에서 나는 소리까지 녹음」. 화상회의 상대 목소리 전사 주장은 설치 앱 수용 뒤에). 로고는 원색 그대로다(`public/landing/logos/`) — 처음엔 simple-icons 의 한 색 마크를 브랜드
  * 색으로 칠했는데, Meet · Slack 처럼 여러 색인 로고가 한 색이 되어 진짜 로고로 안 읽혔다. Zoom 은 익숙한
@@ -273,7 +273,7 @@ export function WorksWith() {
                 FOCUS
               )}
             >
-              데스크톱 앱(베타)
+              데스크톱 앱
             </Link>
             을 받으세요.
           </p>
