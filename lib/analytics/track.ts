@@ -40,6 +40,7 @@ export type AnalyticsEvent =
   | "agent_disconnected"
   | "integration_disconnected"
   | "summary_copied"
+  | "summary_exported"
   | "export_requested";
 
 type Properties = Record<string, string | number | boolean | null | undefined>;

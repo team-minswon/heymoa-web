@@ -1,6 +1,7 @@
 "use client";
 
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
+import { widerExports } from "@/lib/notes/minutes/exports";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -100,6 +101,10 @@ function newRequestId() {
   ).join("");
 }
 
+/** 어느 주제에도 들지 않은 질문 · 이슈. 회의록의 「기타」 미결이다 */
+const unfiledOpen = (items: readonly ReviewItem[], topicOf: (itemId: string) => number | null) =>
+  items.filter((item) => item.included && (item.kind === "QUESTION" || item.kind === "ISSUE") && topicOf(item.itemId) === null);
+
 export function ReviewBoard({
   noteId,
   workspaceId,
@@ -109,6 +114,7 @@ export function ReviewBoard({
   noteMeta,
   participants,
   currentUserId,
+  currentUserName,
   dockRaised = false,
   onOpenScript,
   onOpenTranscript,
@@ -124,6 +130,8 @@ export function ReviewBoard({
   participants: SpeakerFace[];
   /** 「나」 표시. 담당이 이 사람이면 붙는다 */
   currentUserId?: string | null;
+  /** 회의록 PDF 의 「공유」 칸. 받는 쪽이 누구에게 물어야 할지 안다 */
+  currentUserName?: string | null;
   /** 「이 회의에 대해 물어보기」 알약이 아래 가운데에 떠 있다. 검토 막대를 그 위로 올린다 */
   dockRaised?: boolean;
   onOpenScript: (segmentId: string) => void;
@@ -461,6 +469,21 @@ export function ReviewBoard({
     const atMs = citedAt(item);
     return atMs === null ? [] : [{ itemId: item.itemId, kind: item.kind, atMs, content: item.content }];
   });
+  const summaryMarkdown = () =>
+    reviewToMarkdown({
+      note: { ...noteMeta!, durationMs: lengthMs ?? undefined },
+      summary,
+      topics: digests,
+      sections,
+      confirmed,
+      context: {
+        whenOf: citedAt,
+        topicTitleOf: (item) => {
+          const ordinal = topicOf(item.itemId);
+          return ordinal === null ? null : topicTitleOf(ordinal) || null;
+        },
+      },
+    });
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
@@ -479,21 +502,30 @@ export function ReviewBoard({
               <ReviewActions
                 // **요약을 못 받았으면 복사를 막는다.** 요약·주제가 빠진 문서가 성공 토스트와 함께 복사된다.
                 disabled={!noteMeta || summaryQuery.isPending || (summaryQuery.isError && !summary)}
-                build={() =>
-                  reviewToMarkdown({
-                    note: { ...noteMeta!, durationMs: lengthMs ?? undefined },
-                    summary,
-                    topics: digests,
-                    sections,
-                    confirmed,
-                    context: {
-                      whenOf: citedAt,
-                      topicTitleOf: (item) => {
-                        const ordinal = topicOf(item.itemId);
-                        return ordinal === null ? null : topicTitleOf(ordinal) || null;
-                      },
-                    },
-                  })
+                build={summaryMarkdown}
+                material={noteMeta && !transcript ? (transcriptQuery.isError ? "failed" : "loading") : undefined}
+                onRetryMaterial={() => void transcriptQuery.refetch()}
+                // 회의록 · 넓은 복사는 녹취록이 온 뒤에 연다 — 항목 시각 · 안건 시작 · 회의 길이를 녹취록에서 잰다. 먼저 열면
+                // 그 값이 빠진 회의록이 만들어진다. **받은 녹취록이 있는지로 가린다(`isSuccess` 가 아니다)** — 내보내다
+                // 다시 받기가 실패하면 isSuccess 가 꺼져 열린 창이 통째로 사라졌다. 받은 것은 그대로 남아 있다
+                wider={
+                  noteMeta && transcript
+                    ? widerExports({
+                        queryClient,
+                        noteId,
+                        note: { ...noteMeta, durationMs: lengthMs ?? undefined },
+                        participants,
+                        sharedBy: currentUserName ?? null,
+                        confirmed,
+                        headline: summary?.status === "SUCCEEDED" ? (summary.headline?.text ?? null) : null,
+                        lead: summary?.status === "SUCCEEDED" ? summary.lead.map((line) => line.text) : [],
+                        topics: digests,
+                        sections,
+                        citedAt,
+                        unfiledOpen: unfiledOpen(items, topicOf),
+                        unnamedSpeakers: unnamedSpeakers.length,
+                      })
+                    : undefined
                 }
               />
               <SegmentedControl

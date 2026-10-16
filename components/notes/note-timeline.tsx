@@ -34,6 +34,7 @@ import {
   type SpeakerFace,
   type SpeakerIdentity,
 } from "@/lib/transcription/speaker-identity";
+import { CopyMarkdownButton } from "@/components/notes/copy-markdown-button";
 import { TimelineToneIcon } from "@/components/notes/timeline-tone-icon";
 import {
   LiveChip,
@@ -45,6 +46,8 @@ import { ScrollToBottomButton } from "@/components/heymoa/scroll-to-bottom-butto
 import { InlineRetry } from "@/components/ui/inline-retry";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { timelineToMarkdown } from "@/lib/notes/minutes/markdown";
+import { minutesTimeline } from "@/lib/notes/minutes/model";
 import type { ProposalHead } from "@/lib/notes/proposals/contract";
 import {
   CONTEXT_KIND_LABEL,
@@ -556,7 +559,31 @@ export function NoteTimeline({
               );
             })}
           </div>
-          <p className="text-[12px] text-[var(--el-muted-soft)]">{hint}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-[12px] text-[var(--el-muted-soft)]">{hint}</p>
+            {/* 타임라인 복사는 이 탭이 맡는다 — 요약은 요약 탭, 녹취록은 스크립트 탭이 복사한다. 거르기와 상관없이 전부
+                복사한다. 원장을 다 받기 전이나 못 받았으면 막는다 — 빠진 타임라인이 완전한 것처럼 붙여넣어진다 */}
+            {header ? (
+              <CopyMarkdownButton
+                label="타임라인"
+                iconOnly
+                disabled={!settled || context.failed}
+                build={() =>
+                  timelineToMarkdown(
+                    {
+                      title: header.title,
+                      whenIso: header.whenIso,
+                      participantCount: header.participantCount,
+                      participantNames: participants.map((person) => person.name).filter((name): name is string => Boolean(name)),
+                    },
+                    minutesTimeline(
+                      selectTimeline(context.state, "ALL", agendaList && placement ? { list: agendaList, placement } : null).groups
+                    )
+                  )
+                }
+              />
+            ) : null}
+          </div>
         </div>
 
         {/* **놓친 변경이 있다.** 순서가 빈 revision 을 받으면 provider 가 원장을 다시 받는다 —

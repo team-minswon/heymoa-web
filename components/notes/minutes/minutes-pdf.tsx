@@ -1,0 +1,602 @@
+import { Document, Font, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
+
+import type { MinutesDocument, MinutesLine } from "@/lib/notes/minutes/model";
+
+/**
+ * 회의록 PDF 의 모양. **노트 화면 번들에 들지 않는다** — `render-minutes-pdf` 가 누를 때 워커를 띄워 그 안에서만
+ * 이 모듈과 react-pdf · 한글 글꼴(약 6.5MB)을 읽는다. 모양의 원본은 회의록 양식 시안(A4, 공문서식 회의록)이다.
+ *
+ * 글꼴은 Noto Sans KR 전체 한글(KR) 판이다 — 이름에는 드문 음절이 나와서, 자주 쓰는 글자만 남긴 판으로는
+ * 빈 네모가 찍힌다. 제목 「회의록」만 Noto Serif KR 이고, 그 세 글자만 남긴 판을 쓴다. 라이선스는 OFL 1.1
+ * (`public/fonts/minutes/OFL.txt`).
+ */
+
+const SANS = "MinutesSans";
+const TITLE = "MinutesTitle";
+
+let registeredBase: string | null = null;
+
+function registerFonts(base: string) {
+  if (registeredBase === base) return;
+  Font.register({
+    family: SANS,
+    fonts: [
+      { src: `${base}/NotoSansKR-Regular.woff2`, fontWeight: 400 },
+      { src: `${base}/NotoSansKR-Bold.woff2`, fontWeight: 700 },
+    ],
+  });
+  Font.register({ family: TITLE, src: `${base}/NotoSerifKR-SemiBold-title.ttf` });
+  Font.registerHyphenationCallback(breakableWord);
+  registeredBase = base;
+}
+
+/**
+ * 줄을 바꿀 수 있는 자리. react-pdf 는 빈칸에서만 줄을 바꿔, 빈칸 없이 긴 글(URL · 붙여 쓴 한글)은 칸 밖으로 넘쳐
+ * 잘렸다(「가」 100자가 56자만 남았다). 긴 낱말은 글자마다 끊을 수 있게 하고 — 사이의 빈 조각이 하이픈 없이 끊으라는
+ * 표시다 — 짧은 낱말은 그대로 둔다(한국어는 빈칸으로 띄어 쓰므로 보통 글은 대개 낱말 사이에서 바뀐다).
+ */
+/**
+ * 좁은 칸(담당 · 기한 · 녹취록 화자)의 줄바꿈. 이 칸은 22mm 남짓이라 `ChristopherSmith` 같은 영문 이름 한 낱말도 넘쳐 옆 칸을
+ * 덮었다. 이 칸의 글만 네 자 넘는 낱말을 글자마다 끊는다 — 본문까지 이렇게 끊으면 영문 낱말이 아무 데서나 갈린다
+ */
+const narrowBreak = (word: string) => (word.length <= 4 ? [word] : Array.from(word).flatMap((char) => [char, ""]));
+
+export function breakableWord(word: string): string[] {
+  // 한글이 든 낱말은 다섯 자부터 끊는다 — 담당 칸(22mm)에는 「크리스토퍼스미스」 같은 이름도 넘쳐 기한 칸을 덮었다.
+  // 한국어 조판은 음절 사이에서 줄을 바꾸는 것이 보통이다. 나머지(영문 · URL)는 열일곱 자부터
+  if (word.length <= (/[\uac00-\ud7a3]/.test(word) ? 4 : 16)) return [word];
+  return Array.from(word).flatMap((char) => [char, ""]);
+}
+
+const mm = (value: number) => value * 2.835;
+
+const color = {
+  ink: "#0c0a09",
+  body: "#3f3b38",
+  muted: "#777169",
+  rule: "#d6d3d1",
+  ruleSoft: "#ebe9e7",
+  label: "#f5f4f2",
+  // 앱의 결정 · 할 일 · 열린 질문 색. 흑백으로 뽑아도 글자(구분 칸)로 갈린다
+  decision: "#1d5fa8",
+  task: "#13805a",
+  open: "#b4501f",
+};
+
+/**
+ * 줄 간격. **단위를 붙인다** — react-pdf 는 단위 없는 배수를 그 글자에 직접 준 크기로만 곱해서, 크기를 물려받는
+ * 글자에서는 기본 18pt 로 곱해 줄 사이가 세 배로 벌어졌다. 본문 10pt × 1.65 다.
+ */
+const LINE = "16.5pt";
+
+const s = StyleSheet.create({
+  // 줄 간격은 쪽(`page`)이나 감싼 View 가 아니라 글자(Text)마다 준다(`LINE`). react-pdf 4.9 의 쪽 틀(`layout`)은
+  // 쪽에 건 줄 간격으로 꼬리말 자리를 잘못 재 꼬리말이 쪽의 3/4 지점에 떴다.
+  page: {
+    fontFamily: SANS,
+    fontSize: 10,
+    color: color.body,
+    paddingTop: mm(18),
+    paddingHorizontal: mm(18),
+    paddingBottom: mm(10),
+  },
+  title: {
+    fontFamily: TITLE,
+    fontSize: 20,
+    letterSpacing: 12,
+    textAlign: "center",
+    color: color.ink,
+    // 자간이 마지막 글자 뒤에도 붙어 왼쪽으로 쏠린다. 같은 만큼 밀어 가운데를 맞춘다
+    paddingLeft: 12,
+    marginBottom: mm(3.5),
+  },
+  meta: { borderTopWidth: 1.5, borderTopColor: color.ink, borderBottomWidth: 1, borderBottomColor: color.rule },
+  metaRow: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: color.ruleSoft },
+  metaRowLast: { flexDirection: "row" },
+  metaLabel: {
+    width: mm(24),
+    backgroundColor: color.label,
+    paddingVertical: mm(2),
+    paddingHorizontal: mm(3.5),
+  },
+  // 공문서 양식처럼 칸 제목 글자를 같은 폭에 고르게 편다
+  metaLabelText: { width: mm(13), flexDirection: "row", justifyContent: "space-between", color: color.ink },
+  metaValue: { flex: 1, lineHeight: LINE, paddingVertical: mm(2), paddingHorizontal: mm(3.5), color: color.ink },
+  sub: { color: color.muted },
+  section: { marginTop: mm(6.5) },
+  heading: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: color.ink,
+    paddingBottom: mm(1.8),
+    marginBottom: mm(3),
+    borderBottomWidth: 1,
+    borderBottomColor: color.ink,
+  },
+  bold: { fontWeight: 700, color: color.ink },
+  none: { lineHeight: LINE, color: color.muted },
+  grid: { borderTopWidth: 1, borderTopColor: color.ink },
+  head: {
+    flexDirection: "row",
+    backgroundColor: color.label,
+    borderBottomWidth: 0.75,
+    borderBottomColor: color.rule,
+    color: color.muted,
+    fontSize: 9,
+  },
+  row: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: color.ruleSoft },
+  cell: { paddingVertical: mm(2), paddingHorizontal: mm(3) },
+  // 본문 칸의 줄 간격. 되풀이되는 칸 머리(`fixed`)에는 걸지 않는다 — 걸면 4.9 의 새 쪽 나누기가 그 표의 줄을 통째로 잃었다
+  body: { lineHeight: LINE },
+  compact: { paddingVertical: mm(1), paddingHorizontal: mm(3), fontSize: 9, lineHeight: 1.5 },
+  no: { width: mm(10), textAlign: "center", color: color.muted },
+  who: { width: mm(22), color: color.ink },
+  due: { width: mm(30) },
+  chk: { width: mm(12), alignItems: "center" },
+  box: { width: mm(3.4), height: mm(3.4), marginTop: mm(1), borderWidth: 0.75, borderColor: color.muted, borderRadius: mm(0.6) },
+  tbd: { color: color.muted, fontSize: 9 },
+  pending: { color: color.open, fontWeight: 700 },
+  joined: { borderBottomWidth: 0 },
+  time: { width: mm(19), color: color.muted },
+  speaker: { width: mm(28), color: color.ink, fontWeight: 700 },
+  unnamed: { color: color.muted, fontWeight: 400 },
+  gap: {
+    flex: 1,
+    textAlign: "center",
+    color: color.muted,
+    backgroundColor: color.label,
+  },
+  // 1쪽 「핵심」
+  pageLabel: { fontSize: 8, letterSpacing: 2, color: color.muted, marginBottom: mm(1.5) },
+  verdict: { marginTop: mm(4), paddingVertical: mm(3), paddingHorizontal: mm(4), backgroundColor: color.label },
+  headline: { fontSize: 12, fontWeight: 700, lineHeight: "18pt", color: color.ink },
+  leadRow: { flexDirection: "row", marginTop: mm(1.5) },
+  leadMark: { lineHeight: LINE, width: mm(4), color: color.muted },
+  leadText: { lineHeight: LINE, flex: 1, color: color.ink },
+  agendaTitleCell: { flex: 1, color: color.ink },
+  gist: { fontSize: 9, fontWeight: 400, color: color.muted },
+  // 1쪽 안건 표는 한 쪽에 들어야 해 칸 위아래를 줄인다
+  tight: { paddingVertical: mm(1.4), paddingHorizontal: mm(2.5) },
+  num: { width: mm(13), textAlign: "center" },
+  start: { width: mm(15), color: color.muted },
+  zero: { color: color.ruleSoft },
+  owners: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: mm(2.5),
+    paddingTop: mm(2),
+    borderTopWidth: 0.75,
+    borderTopColor: color.rule,
+  },
+  ownersLabel: { lineHeight: LINE, width: mm(17), fontSize: 9, color: color.muted },
+  owner: { lineHeight: LINE, marginRight: mm(4) },
+  ownerCount: { fontWeight: 700, color: color.ink },
+  // 상세
+  agendaRef: { width: mm(13), color: color.muted, textAlign: "center" },
+  at: { width: mm(15), color: color.muted, textAlign: "right" },
+  // 부록
+  agendaMark: {
+    flexDirection: "row",
+    backgroundColor: color.label,
+    borderBottomWidth: 0.75,
+    borderBottomColor: color.rule,
+  },
+  markerText: { flex: 1, fontWeight: 700, color: color.ink },
+  refs: { width: mm(18), fontSize: 8, color: color.decision, textAlign: "right" },
+  annexHead: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: color.ink,
+    paddingBottom: mm(1.8),
+    borderBottomWidth: 1,
+    borderBottomColor: color.ink,
+  },
+  annexNote: { lineHeight: "14.85pt", marginTop: mm(2), marginBottom: mm(4), color: color.muted, fontSize: 9 },
+  footer: {
+    // 내용이 짧은 쪽에서도 꼬리말은 쪽 아래에 선다
+    marginTop: "auto",
+    paddingTop: mm(2.5),
+    borderTopWidth: 0.75,
+    borderTopColor: color.rule,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 8,
+    color: color.muted,
+  },
+});
+
+function MetaRow({ label, last, children }: { label: string; last?: boolean; children: React.ReactNode }) {
+  return (
+    <View style={last ? s.metaRowLast : s.metaRow} wrap={false}>
+      <View style={s.metaLabel}>
+        <View style={s.metaLabelText}>
+          {[...label].map((char, index) => (
+            <Text key={index} style={{ lineHeight: LINE }}>
+              {char}
+            </Text>
+          ))}
+        </View>
+      </View>
+      <Text style={s.metaValue}>{children}</Text>
+    </View>
+  );
+}
+
+/**
+ * A4 한 장의 틀. 꼬리말은 쪽마다 서야 하고 쪽 번호에는 전체 쪽 수가 든다 — react-pdf 의 `layout` 이 쪽마다 이 틀을
+ * 다시 그린다. `layout` 은 새 쪽 나누기 엔진을 쓰는데, 내용을 한 번만 재고 쪽에 채워 넣어 3시간 녹취록(약 80쪽)도
+ * 수 초에 끝난다. 옛 엔진은 쪽마다 남은 내용 전체를 다시 재서 같은 문서에 40초 가까이 걸렸다.
+ */
+function Sheet({ footer, children }: { footer: string; children: React.ReactNode }) {
+  return (
+    <Page
+      size="A4"
+      style={s.page}
+      layout={({ children: content, pageNumber, totalPages }) => (
+        <>
+          {content}
+          <View style={s.footer}>
+            <Text>{footer}</Text>
+            <Text>
+              {pageNumber} / {totalPages}
+            </Text>
+          </View>
+        </>
+      )}
+    >
+      {children}
+    </Page>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={s.section}>
+      {/* 머리가 쪽 끝에 홀로 남지 않게 아래 내용이 조금이라도 따라올 자리를 본다 */}
+      <Text style={s.heading} minPresenceAhead={mm(12)}>
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+/**
+ * 표 한 칸의 글을 여러 행으로 나눈다. react-pdf 는 가로로 늘어선 표 행 안의 글을 쪽 사이에서 가르지 못해, 한 쪽보다
+ * 긴 행(항목 수정에는 길이 · 줄바꿈 제한이 없다)은 뒤가 쪽 밖으로 잘렸다. 행 하나를 [maxLines] 줄 · [maxChars] 자로
+ * 묶고, 그보다 긴 한 줄은 낱말 사이에서 끊는다. 첫 행에만 번호 · 담당 같은 칸을 적는다.
+ */
+export function pieces(text: string, maxLines = 8, maxChars = 320): string[] {
+  const lines = text.split("\n").flatMap((line) => {
+    const parts: string[] = [];
+    let rest = line;
+    while (rest.length > maxChars) {
+      const space = rest.lastIndexOf(" ", maxChars);
+      const cut = space > maxChars / 2 ? space : maxChars;
+      parts.push(rest.slice(0, cut));
+      rest = rest.slice(cut).trimStart();
+    }
+    parts.push(rest);
+    return parts;
+  });
+  const out: string[] = [];
+  let current: string[] = [];
+  let length = 0;
+  for (const line of lines) {
+    if (current.length > 0 && (current.length >= maxLines || length + line.length > maxChars)) {
+      out.push(current.join("\n"));
+      current = [];
+      length = 0;
+    }
+    current.push(line);
+    length += line.length;
+  }
+  out.push(current.join("\n"));
+  return out;
+}
+
+/** 항목 하나를 [pieces] 대로 여러 행에 그린다. 이어지는 행 사이에는 줄을 긋지 않아 한 항목으로 읽힌다 */
+function ItemRows({ text, cells }: { text: string; cells: (piece: string, first: boolean) => React.ReactNode }) {
+  const parts = pieces(text);
+  return (
+    <>
+      {parts.map((piece, index) => (
+        <View key={index} style={[s.row, index < parts.length - 1 ? s.joined : {}]} wrap={false}>
+          {cells(piece, index === 0)}
+        </View>
+      ))}
+    </>
+  );
+}
+
+const agendaLabel = (no: number | null) => (no === null ? "기타" : String(no));
+const countText = (count: number) => (count > 0 ? String(count) : "–");
+
+/** 1쪽 표의 수 칸. 0 은 흐리게 — 숫자 사이에서 「없음」이 먼저 읽히지 않게 한다 */
+function Count({ value }: { value: number }) {
+  return <Text style={[s.tight, s.body, s.num, value === 0 ? s.zero : { color: color.ink }]}>{countText(value)}</Text>;
+}
+
+/** 할 일 담당별 수. 누가 몇 개를 들고 나갔는지가 1쪽에서 읽혀야 한다 — 항목은 상세의 할 일 표에 있다 */
+function Owners({ owners }: { owners: MinutesDocument["owners"] }) {
+  return (
+    <View style={s.owners}>
+      <Text style={s.ownersLabel}>할 일 담당</Text>
+      {owners.map((owner) => (
+        <Text key={owner.name ?? ""} style={[s.owner, owner.name ? {} : s.tbd]}>
+          {owner.name ?? "확인 필요"} <Text style={s.ownerCount}>{owner.count}</Text>
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function Transcript({ lines, truncated }: { lines: MinutesLine[]; truncated: boolean }) {
+  return (
+    <View style={s.grid}>
+      {/* `fixed` 라 쪽이 넘어가도 칸 머리가 다시 선다 */}
+      <View style={s.head} fixed>
+        <Text style={[s.cell, s.time]}>시각</Text>
+        <Text style={[s.cell, s.speaker, { color: color.muted, fontWeight: 400 }]}>화자</Text>
+        <Text style={[s.cell, { flex: 1 }]}>발언</Text>
+        <Text style={[s.cell, s.refs, { color: color.muted }]}>본문</Text>
+      </View>
+      {lines.length === 0 ? <Text style={[s.cell, s.none]}>기록된 발언이 없습니다.</Text> : null}
+      {lines.map((line, index) => {
+        if (line.type === "agenda") {
+          return (
+            <View key={index} style={s.agendaMark} wrap={false} minPresenceAhead={mm(8)}>
+              <Text style={[s.compact, s.time]}>{line.at}</Text>
+              <Text style={[s.compact, s.markerText]}>
+                안건 {line.no} · {line.title}
+              </Text>
+            </View>
+          );
+        }
+        if (line.type === "gap") {
+          return (
+            <View key={index} style={s.row} wrap={false}>
+              <Text style={[s.compact, s.gap]}>
+                {line.at} · {line.text}
+              </Text>
+            </View>
+          );
+        }
+        return (
+          <View key={index} style={s.row} wrap={false}>
+            <Text style={[s.compact, s.time]}>{line.at}</Text>
+            {/* 누가 말했는지 모르는 발언. 빈칸이면 빠뜨린 것처럼 읽힌다 */}
+            <Text
+              style={[s.compact, s.speaker, line.unnamed || line.speaker === null ? s.unnamed : {}]}
+              hyphenationCallback={narrowBreak}
+            >
+              {line.speaker ?? "—"}
+            </Text>
+            <Text style={[s.compact, { flex: 1 }]}>{line.text}</Text>
+            {/* 「할 일 1」이 낱말 사이에서 꺾이지 않게 번호 안의 빈칸은 붙여 쓴다 */}
+            <Text style={[s.compact, s.refs]}>{line.refs.map((ref) => ref.replaceAll(" ", "\u00a0")).join(", ")}</Text>
+          </View>
+        );
+      })}
+      {truncated ? (
+        <View style={s.row} wrap={false}>
+          <Text style={[s.compact, s.gap]}>기록이 끝까지 저장되지 못했습니다</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+export function MinutesPdf({ doc }: { doc: MinutesDocument }) {
+  const openHasOwner = doc.open.some((item) => item.assignee !== null);
+  return (
+    <Document title={`${doc.title} 회의록`} author="HeyMoa" creator="HeyMoa" language="ko">
+      <Sheet footer={doc.footer}>
+        {/* ── 1쪽 핵심: 이 쪽만 읽어도 회의를 안다 ── */}
+        <Text style={s.title}>회의록</Text>
+        <View style={s.meta}>
+          <MetaRow label="회의명">{doc.title}</MetaRow>
+          <MetaRow label="일시">
+            {doc.dateLabel}
+            {doc.durationLabel ? <Text style={s.sub}>{`   ${doc.durationLabel}`}</Text> : null}
+          </MetaRow>
+          <MetaRow label="참석자">
+            {doc.attendees.length > 0 ? doc.attendees.join(", ") : null}
+            {doc.attendeeCount > 0 ? (
+              <Text style={s.sub}>{`${doc.attendees.length > 0 ? "   " : ""}${doc.attendeeCount}명`}</Text>
+            ) : (
+              <Text style={s.tbd}>확인 필요</Text>
+            )}
+            {/* 녹취록의 「화자 N」이 참석자 밖의 사람처럼 읽히지 않게 함께 센다 */}
+            {doc.unnamedSpeakers > 0 ? (
+              <Text style={s.sub}>{` · 이름 미확인 화자 ${doc.unnamedSpeakers}`}</Text>
+            ) : null}
+          </MetaRow>
+          <MetaRow label="작성" last>
+            HeyMoa 자동 작성
+            {/* 검토 중인 회의록이 확정본처럼 읽히지 않게 상태를 적는다 — 복사본 머리말과 같은 말이다 */}
+            <Text style={doc.confirmed ? s.sub : s.pending}>{doc.confirmed ? " · 확정됨" : " · 검토 중(확정 전)"}</Text>
+            {doc.sharedBy ? <Text style={s.sub}>{`   공유 ${doc.sharedBy}`}</Text> : null}
+            {doc.transcript ? <Text style={s.sub}>{"   부록 A 녹취록"}</Text> : null}
+          </MetaRow>
+        </View>
+
+        {doc.headline || doc.lead.length > 0 ? (
+          <View style={s.verdict} wrap={false}>
+            <Text style={s.pageLabel}>결론</Text>
+            {doc.headline ? <Text style={s.headline}>{doc.headline}</Text> : null}
+            {doc.lead.map((line, index) => (
+              <View key={index} style={s.leadRow}>
+                <Text style={s.leadMark}>·</Text>
+                <Text style={s.leadText}>{line}</Text>
+              </View>
+            ))}
+            {doc.owners.length > 0 ? <Owners owners={doc.owners} /> : null}
+          </View>
+        ) : doc.owners.length > 0 ? (
+          <View style={s.verdict} wrap={false}>
+            <Owners owners={doc.owners} />
+          </View>
+        ) : null}
+
+        <Section title="안건">
+          {doc.agendas.length === 0 ? (
+            <Text style={s.none}>정리된 안건이 없습니다.</Text>
+          ) : (
+            <View style={s.grid}>
+              {/* 안건이 많아 다음 쪽으로 이어지면 칸 머리도 다시 선다 */}
+              <View style={s.head} fixed>
+                <Text style={[s.tight, s.no]}>No</Text>
+                <Text style={[s.tight, { flex: 1 }]}>안건 · 요지</Text>
+                <Text style={[s.tight, s.start]}>시작</Text>
+                <Text style={[s.tight, s.num]}>결정</Text>
+                <Text style={[s.tight, s.num]}>할 일</Text>
+                <Text style={[s.tight, s.num]}>미결</Text>
+              </View>
+              {doc.agendas.map((agenda, index) => (
+                <View key={index} style={s.row} wrap={false}>
+                  <Text style={[s.tight, s.body, s.no]}>{agendaLabel(agenda.no)}</Text>
+                  {/* 제목과 요지를 한 줄에 잇는다 — 요지를 아랫줄로 내리면 안건 여덟 개가 1쪽을 넘긴다 */}
+                  <Text style={[s.tight, s.body, s.agendaTitleCell]}>
+                    <Text style={s.bold}>{agenda.title}</Text>
+                    {agenda.gist ? <Text style={s.gist}>{`   ${agenda.gist}`}</Text> : null}
+                  </Text>
+                  <Text style={[s.tight, s.body, s.start]}>{agenda.start ?? ""}</Text>
+                  <Count value={agenda.decisions} />
+                  <Count value={agenda.actions} />
+                  <Count value={agenda.open} />
+                </View>
+              ))}
+            </View>
+          )}
+        </Section>
+
+        {/* ── 2쪽부터 상세: 항목마다 한 번씩, 안건 번호와 녹취록 시각을 단다 ── */}
+        <View break>
+          <Section title="1. 결정 사항">
+            {doc.decisions.length === 0 ? (
+              <Text style={s.none}>없음</Text>
+            ) : (
+              <View style={s.grid}>
+                <View style={s.head} fixed>
+                  <Text style={[s.cell, s.no]}>No</Text>
+                  <Text style={[s.cell, { flex: 1 }]}>결정</Text>
+                  <Text style={[s.cell, s.agendaRef]}>안건</Text>
+                  <Text style={[s.cell, s.at]}>시각</Text>
+                </View>
+                {doc.decisions.map((decision) => (
+                  <ItemRows
+                    key={decision.no}
+                    text={decision.text}
+                    cells={(piece, first) => (
+                      <>
+                        <Text style={[s.cell, s.body, s.no]}>{first ? decision.no : ""}</Text>
+                        <Text style={[s.cell, s.body, { flex: 1, color: color.ink }]}>{piece}</Text>
+                        <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(decision.agendaNo) : ""}</Text>
+                        <Text style={[s.cell, s.body, s.at]}>{first ? (decision.at ?? "") : ""}</Text>
+                      </>
+                    )}
+                  />
+                ))}
+              </View>
+            )}
+          </Section>
+        </View>
+
+        <Section title="2. 할 일">
+          {doc.actions.length === 0 ? (
+            <Text style={s.none}>없음</Text>
+          ) : (
+            <View style={s.grid}>
+              <View style={s.head} fixed>
+                <Text style={[s.cell, s.no]}>No</Text>
+                <Text style={[s.cell, { flex: 1 }]}>할 일</Text>
+                <Text style={[s.cell, s.who, { color: color.muted }]}>담당</Text>
+                <Text style={[s.cell, s.due]}>기한</Text>
+                <Text style={[s.cell, s.agendaRef]}>안건</Text>
+                <Text style={[s.cell, s.chk]}>확인</Text>
+              </View>
+              {doc.actions.map((action) => (
+                <ItemRows
+                  key={action.no}
+                  text={action.content}
+                  cells={(piece, first) => (
+                    <>
+                      <Text style={[s.cell, s.body, s.no]}>{first ? action.no : ""}</Text>
+                      <Text style={[s.cell, s.body, { flex: 1, color: color.ink }]}>{piece}</Text>
+                      {/* 근거 없는 담당 · 기한은 지어내지 않는다. 비우면 「안 적었다」로 읽혀 확인할 것으로 남긴다 */}
+                      <Text style={[s.cell, s.body, s.who, action.assignee ? {} : s.tbd]} hyphenationCallback={narrowBreak}>
+                        {first ? (action.assignee ?? "확인 필요") : ""}
+                      </Text>
+                      <Text style={[s.cell, s.body, s.due, action.due ? {} : s.tbd]} hyphenationCallback={narrowBreak}>
+                        {first ? (action.due ?? "확인 필요") : ""}
+                      </Text>
+                      <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(action.agendaNo) : ""}</Text>
+                      <View style={[s.cell, s.chk]}>{first ? <View style={s.box} /> : null}</View>
+                    </>
+                  )}
+                />
+              ))}
+            </View>
+          )}
+        </Section>
+
+        {doc.open.length > 0 ? (
+          <Section title="3. 미결 사항">
+            <View style={s.grid}>
+              <View style={s.head} fixed>
+                <Text style={[s.cell, s.no]}>No</Text>
+                <Text style={[s.cell, { flex: 1 }]}>남은 질문 · 이슈</Text>
+                {/* 아무도 답할 사람이 정해지지 않았으면 칸을 그리지 않는다 — 「확인 필요」만 늘어선 칸은 읽을 것이 없다 */}
+                {openHasOwner ? <Text style={[s.cell, s.who, { color: color.muted }]}>답할 사람</Text> : null}
+                <Text style={[s.cell, s.agendaRef]}>안건</Text>
+                <Text style={[s.cell, s.at]}>시각</Text>
+              </View>
+              {doc.open.map((item) => (
+                <ItemRows
+                  key={item.no}
+                  text={item.content}
+                  cells={(piece, first) => (
+                    <>
+                      <Text style={[s.cell, s.body, s.no]}>{first ? item.no : ""}</Text>
+                      <Text style={[s.cell, s.body, { flex: 1, color: color.ink }]}>{piece}</Text>
+                      {openHasOwner ? (
+                        <Text style={[s.cell, s.body, s.who, item.assignee ? {} : s.tbd]} hyphenationCallback={narrowBreak}>
+                          {first ? (item.assignee ?? "확인 필요") : ""}
+                        </Text>
+                      ) : null}
+                      <Text style={[s.cell, s.body, s.agendaRef]}>{first ? agendaLabel(item.agendaNo) : ""}</Text>
+                      <Text style={[s.cell, s.body, s.at]}>{first ? (item.at ?? "") : ""}</Text>
+                    </>
+                  )}
+                />
+              ))}
+            </View>
+          </Section>
+        ) : null}
+      </Sheet>
+
+      {/* 부록은 새 쪽에서 시작한다 */}
+      {doc.transcript ? (
+        <Sheet footer={doc.footer}>
+          <Text style={s.annexHead}>부록 A. 녹취록</Text>
+          <Text style={s.annexNote}>
+            회의에서 한 말을 고치지 않고 옮긴 기록입니다. 같은 사람이 이어서 한 말은 한 줄로 이었습니다. 안건이 처음 나온
+            자리에 안건 줄을 두었고, 본문 항목이 근거로 든 발언에는 오른쪽에 그 번호를 적었습니다. 이름이 정해지지 않은
+            화자는 흐린 글씨입니다.
+          </Text>
+          <Transcript lines={doc.transcript} truncated={doc.transcriptTruncated} />
+        </Sheet>
+      ) : null}
+    </Document>
+  );
+}
+
+/**
+ * 이 스레드에서 바로 만든다. 화면에서는 `render-minutes-pdf` 의 `renderMinutesPdf` 를 쓴다 — 3시간 회의는 수 초가
+ * 걸려 화면이 멈춘다. [fontBase] 는 글꼴을 읽을 자리다: 브라우저는 절대 URL, node(검사)는 파일 경로를 준다.
+ */
+export async function renderMinutesPdfInline(doc: MinutesDocument, fontBase: string): Promise<Blob> {
+  registerFonts(fontBase);
+  return pdf(<MinutesPdf doc={doc} />).toBlob();
+}

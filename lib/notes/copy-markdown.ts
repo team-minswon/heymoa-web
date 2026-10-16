@@ -28,6 +28,8 @@ export type NoteMeta = {
   participantNames?: string[];
   /** 전사 응답의 `recording.durationMs`. 요약에는 없으므로 선택이다. */
   durationMs?: number;
+  /** 회의가 실제로 끝난 시각 ISO. 중지한 시간이 있으면 시작 + 기록 길이보다 늦다 */
+  endedIso?: string;
   /** 검토 화면 머리의 프로젝트 칩(APP-865). 복사본 머리말에는 싣지 않는다 */
   projectName?: string;
 };
@@ -41,6 +43,7 @@ export function toNoteMeta(note: NoteResponseData): NoteMeta {
     title: note.title,
     // 헤더 메타와 같은 기준이다 — 시작 전 노트는 만든 시각이 그 노트의 시각이다.
     whenIso: note.meetingStartedAt ?? note.createdAt,
+    endedIso: note.meetingEndedAt ?? undefined,
     participantCount: note.participants?.length ?? 0,
     participantNames: note.participants?.map((participant) => participant.name),
     projectName: note.projectName,
@@ -78,6 +81,10 @@ export function headingLines(meta: NoteMeta, suffix = "") {
 
   return [`# ${meta.title}${suffix}`, "", facts.join(" · ")];
 }
+
+/** 발화 한 줄. 회의록 전체 복사도 같은 모양으로 적는다 */
+export const utteranceMarkdown = (speaker: string | null, at: string, text: string) =>
+  speaker ? `**${speaker}** [${at}] ${text}` : `[${at}] ${text}`;
 
 /**
  * 전사를 회의록으로 옮긴다. `rows`는 화면이 그리는 것과 **같은 배열**이다 — 실시간으로
@@ -122,11 +129,9 @@ export function transcriptToMarkdown({
       row.segment.speakerLabel,
       row.segment.assignedParticipantId
     );
-    const at = `[${formatOffset(row.segment.startedAtMs)}]`;
-
     // **줄 사이를 비운다.** 마크다운에서 줄바꿈만으로는 문단이 안 갈려서, 붙여 두면
     // 렌더러가 발화 전부를 한 문단으로 이어 붙인다.
-    lines.push("", speaker ? `**${speaker}** ${at} ${text}` : `${at} ${text}`);
+    lines.push("", utteranceMarkdown(speaker, formatOffset(row.segment.startedAtMs), text));
   }
 
   // **완전한 회의록처럼 붙여넣어지면 안 된다.** 화면은 이 줄을 이미 말하고 있다.

@@ -57,7 +57,12 @@ export function topicDigests(
   return summaryTopics(summary)
     .map((topic) => {
       const members = pick(topic.members.map((member) => member.itemId));
-      const open = pick(topic.openItemIds);
+      // 남은 질문 · 이슈는 서버 요약의 openItemIds 다. **사람이 이 주제에 직접 더한 질문 · 이슈는 거기 들지 않는다** —
+      // 요약은 분석이 만든 것이라 members 에만 합쳐진다. 그대로 두면 펼친 주제와 회의록에서 통째로 빠졌다
+      const added = members
+        .filter((item) => (item.kind === "QUESTION" || item.kind === "ISSUE") && Boolean(item.authoredByUserId))
+        .map((item) => item.itemId);
+      const open = pick([...new Set([...topic.openItemIds, ...added])]);
       const times = [...members, ...open].flatMap((item) => {
         const at = citedAt(item);
         return at === null ? [] : [at];

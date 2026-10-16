@@ -28,6 +28,7 @@ export function ReviewTab({
   noteMeta,
   participants,
   currentUserId,
+  currentUserName,
   dockRaised = false,
   onEvidenceSelect,
   onOpenTranscript,
@@ -40,6 +41,7 @@ export function ReviewTab({
   noteMeta?: NoteMeta | null;
   participants: SpeakerFace[];
   currentUserId?: string | null;
+  currentUserName?: string | null;
   /** 「이 회의에 대해 물어보기」 알약이 아래 가운데에 떠 있다 */
   dockRaised?: boolean;
   onEvidenceSelect: (segmentId: string) => void;
@@ -122,6 +124,7 @@ export function ReviewTab({
       noteMeta={noteMeta}
       participants={participants}
       currentUserId={currentUserId}
+      currentUserName={currentUserName}
       dockRaised={dockRaised}
       onOpenScript={onEvidenceSelect}
       onOpenTranscript={onOpenTranscript}

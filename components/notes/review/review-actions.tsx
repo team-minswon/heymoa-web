@@ -1,19 +1,19 @@
 "use client";
 
-import { Copy, FileText, Mail, Share2, FileType2 } from "lucide-react";
+import { useState } from "react";
+import { Copy, FileText, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MinutesExportDialog } from "@/components/notes/minutes/minutes-export-dialog";
 import { track } from "@/lib/analytics/track";
 import { renderExport, type ExportFormat } from "@/lib/notes/review/markdown";
+import type { MinutesDocument, MinutesInclude } from "@/lib/notes/minutes/model";
 import { copyText } from "@/lib/ui/copy-text";
 import { toast } from "@/lib/ui/toast";
 
@@ -31,21 +31,11 @@ const COPY_FORMATS: ReadonlyArray<{
 ];
 
 /**
- * 아직 연결되지 않은 내보내기·공유 대상. **틀만 있다**(APP-1108) — 누르면 「준비 중」을 알리고 수요만 센다.
- * 대상을 더할 때는 [target] 을 이벤트 속성으로 그대로 쓰므로 영문 소문자 식별자로 둔다.
+ * 내보내기·공유 대상. **연결된 것만 메뉴에 세운다** — 아직 없는 대상(Word · Slack · Teams · Notion)을 「준비 중」으로
+ * 늘어놓으면 쓸 수 있는 것이 그 사이에 묻혔다(APP-1108 이 틀로 두었던 것을 걷었다). 대상을 더할 때는 [target] 을
+ * 이벤트 속성으로 그대로 쓰므로 영문 소문자 식별자로 둔다.
  */
-const EXPORT_TARGETS = [
-  { group: "파일로 내보내기", items: [
-    { target: "pdf", label: "PDF로 내보내기", icon: FileText },
-    { target: "word", label: "Word로 내보내기", icon: FileType2 },
-    { target: "email", label: "이메일로 보내기", icon: Mail },
-  ] },
-  { group: "공유하기", items: [
-    { target: "slack", label: "Slack으로 공유하기", icon: Share2 },
-    { target: "teams", label: "Microsoft Teams에 공유하기", icon: Share2 },
-    { target: "notion", label: "Notion에 저장하기", icon: Share2 },
-  ] },
-] as const;
+const EXPORT_TARGETS = [{ target: "pdf", label: "PDF로 내보내기", icon: FileText }] as const;
 
 /**
  * 요약 탭 머리의 복사 · 내보내기 · 공유. **문서는 누를 때 만든다** — 확정 전 요약은 계속 바뀌고, 렌더마다 미리
@@ -54,15 +44,34 @@ const EXPORT_TARGETS = [
 export function ReviewActions({
   build,
   disabled,
+  wider,
+  material,
+  onRetryMaterial,
 }: {
   build: () => string;
   /** 복사할 문서가 아직 없다. 숨기지 않는 이유는 자리가 흔들리기 때문이다. */
   disabled?: boolean;
+  /**
+   * 회의록 PDF. 요약 밖의 재료(녹취록 · 원장)까지 누를 때 읽어 오므로 비동기다. 없으면 PDF 를 열지 않는다 —
+   * 왜 없는지는 [material] 이 말한다.
+   */
+  wider?: {
+    minutes: (include: MinutesInclude) => Promise<MinutesDocument>;
+  };
+  /**
+   * [wider] 가 아직 없는 까닭 — 녹취록을 받는 중이거나 받지 못했다. 둘 다 「준비 중」(기능이 없다)과 다르다:
+   * 받는 중이면 PDF 를 막고, 못 받았으면 메뉴에서 다시 받는다. 없으면 기능이 없는 것이다
+   */
+  material?: "loading" | "failed";
+  onRetryMaterial?: () => void;
 }) {
+  const [minutesOpen, setMinutesOpen] = useState(false);
+
+  // 요약 탭은 요약만 복사한다 — 타임라인은 타임라인 탭, 녹취록은 스크립트 탭이 저마다 복사한다
   const copy = async (format: ExportFormat) => {
     try {
       await copyText(renderExport(format, build()));
-      track("summary_copied", { format });
+      track("summary_copied", { format, scope: "summary" });
       toast.success("요약이 클립보드에 복사되었습니다.", { id: "copy-summary" });
     } catch {
       toast.error("복사하지 못했습니다.", {
@@ -123,29 +132,39 @@ export function ReviewActions({
           <span className="hidden sm:inline">공유하기</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72">
-          {EXPORT_TARGETS.map(({ group, items }, index) => (
-            <div key={group}>
-              {index > 0 ? <DropdownMenuSeparator /> : null}
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>{group}</DropdownMenuLabel>
-                {items.map(({ target, label, icon: Icon }) => (
-                  <DropdownMenuItem
-                    key={target}
-                    onClick={() => {
-                      track("export_requested", { target });
-                      toast.info(`${label}는 준비 중입니다.`, { id: "export-soon" });
-                    }}
-                  >
-                    <Icon aria-hidden />
-                    <span className="flex-1 whitespace-nowrap">{label}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">준비 중</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </div>
-          ))}
+          {EXPORT_TARGETS.map(({ target, label, icon: Icon }) => {
+            const ready = wider !== undefined;
+            // 재료(녹취록)가 오기 전이다. 노트 머리조차 안 왔으면 받는 중과 같다
+            const waiting = ready ? undefined : (material ?? "loading");
+            return (
+              <DropdownMenuItem
+                key={target}
+                // 요약이 아직 없으면 회의록 본문이 빈다 — 복사와 같이 막는다. 녹취록을 받는 중이어도 막는다
+                disabled={(ready && disabled) || waiting === "loading"}
+                onClick={() => {
+                  track("export_requested", { target });
+                  if (ready) setMinutesOpen(true);
+                  else if (waiting === "failed") {
+                    onRetryMaterial?.();
+                    toast.info("녹취록을 다시 불러옵니다. 잠시 후 다시 눌러 주세요.", { id: "export-material" });
+                  }
+                }}
+              >
+                <Icon aria-hidden />
+                <span className="flex-1 whitespace-nowrap">{label}</span>
+                {waiting ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {waiting === "loading" ? "불러오는 중" : "다시 불러오기"}
+                  </span>
+                ) : null}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
+      {wider ? (
+        <MinutesExportDialog open={minutesOpen} onOpenChange={setMinutesOpen} build={wider.minutes} />
+      ) : null}
     </div>
   );
 }
