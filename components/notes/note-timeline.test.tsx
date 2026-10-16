@@ -9,7 +9,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NoteTimeline } from "@/components/notes/note-timeline";
 import {
@@ -265,6 +265,8 @@ describe("NoteTimeline", () => {
 
     // 회의가 끝나면 서버 판정대로 한 번 맞춘다
     rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} meetingEnded />);
+    // 끝난 회의는 그룹이 접힌 채 시작한다 — 결제 그룹을 펼쳐 본다
+    fireEvent.click(screen.getByRole("button", { name: /^결제 실패 대응/ }));
     expect(groupOf("이탈률 38%")).toMatch("결제 실패 대응");
   });
 
@@ -578,9 +580,11 @@ it("조회와 reducer 적용을 기다린 첫 목록만 최신으로 가고 뒤�
     expect(viewport.scrollTop).toBe(0);
     const initial = head({ content: "첫 유효 항목" });
     withLedger(initial);
+    viewport.scrollTop = 900;
     rerender(view());
     flush();
-    expect(viewport.scrollTop).toBe(1500);
+    // 끝난 회의의 첫 유효 목록은 최신이 아니라 맨 위에서 시작한다
+    expect(viewport.scrollTop).toBe(0);
     viewport.scrollTop = 200;
     fireEvent.scroll(viewport);
     withLedger(initial, head({ content: "뒤에 추가된 항목" }));
@@ -593,6 +597,79 @@ it("조회와 reducer 적용을 기다린 첫 목록만 최신으로 가고 뒤�
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+describe("끝난 회의의 타임라인", () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  const flush = () => {
+    const callbacks = [...frames.values()];
+    frames.clear();
+    callbacks.forEach((callback) => callback(0));
+  };
+  beforeEach(() => {
+    frames.clear();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frames.set(++frameId, callback);
+      return frameId;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  function withAgendas() {
+    const a = head({ content: "이탈률 38%" });
+    const b = head({ content: "3DS 응답이 늦다" });
+    withLedger(a, b);
+    agendas.data = agendaResponse(b.createdSequence, [
+      { agendaId: "01KA000000001", title: "온보딩 개편", proposalIds: [a.proposalId] },
+      { agendaId: "01KA000000002", title: "결제 실패 대응", proposalIds: [b.proposalId] },
+    ]);
+  }
+  function metrics(viewport: HTMLElement, top: number) {
+    Object.defineProperties(viewport, {
+      scrollTop: { configurable: true, writable: true, value: top },
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 500 },
+    });
+  }
+
+  it("안건 그룹을 접은 채 맨 위에서 시작하고, 누르면 그 그룹만 펼쳐진다", () => {
+    withAgendas();
+    const view = () => <NoteTimeline header={null} onEvidenceSelect={() => {}} meetingEnded />;
+    const { container, rerender } = render(view());
+    const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
+    metrics(viewport, 900);
+    rerender(view());
+    flush();
+    expect(viewport.scrollTop).toBe(0);
+    const onboarding = screen.getByRole("button", { name: /^온보딩 개편/ });
+    expect(onboarding).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("이탈률 38%")).toBeNull();
+    fireEvent.click(onboarding);
+    expect(screen.getByText("이탈률 38%")).toBeVisible();
+    expect(screen.queryByText("3DS 응답이 늦다")).toBeNull();
+  });
+
+  it("기록 중에는 펼쳐 두고 최신을 따라가다, 회의가 끝나면 접고 맨 위로 간다", () => {
+    withAgendas();
+    const view = (ended: boolean) => (
+      <NoteTimeline header={null} onEvidenceSelect={() => {}} recording={!ended} meetingEnded={ended} />
+    );
+    const { container, rerender } = render(view(false));
+    const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
+    metrics(viewport, 0);
+    rerender(view(false));
+    flush();
+    expect(viewport.scrollTop).toBe(1500);
+    expect(screen.getByText("이탈률 38%")).toBeVisible();
+
+    rerender(view(true));
+    flush();
+    expect(viewport.scrollTop).toBe(0);
+    expect(screen.queryByText("이탈률 38%")).toBeNull();
+    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
+  });
 });
 
 it("기록 중 바닥에서 조금만 올려도 새 내용이 위치를 빼앗지 않고, 바닥 근처로 내려오면 다시 따라갑니다", () => {

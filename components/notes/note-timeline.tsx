@@ -192,14 +192,41 @@ export function NoteTimeline({
 
   // **화면 상태에 주어(noteId)를 담는다.** 이 면은 노트가 바뀌어도 재마운트되지 않아서, 값만
   // 담으면 A에서 고른 유형·펼친 항목이 B에 남는다.
+  //
+  // **안건 그룹은 끝난 회의에서 접힌 채 시작한다.** 기록 중에는 새 항목을 따라 읽으니 펼쳐 두고,
+  // 끝난 회의는 위에서부터 훑는 문서라 접어 둔다. `flipped` 는 그 기본값을 뒤집은 그룹만 담는다.
   const [view, setView] = useState<{
     noteId: string;
+    endedSeen: boolean;
+    foldByDefault: boolean;
     filter: TimelineFilter;
     open: ReadonlySet<string>;
-    folded: ReadonlySet<string>;
-  }>({ noteId, filter: "ALL", open: NONE, folded: NONE });
+    flipped: ReadonlySet<string>;
+  }>({
+    noteId,
+    endedSeen: meetingEnded,
+    foldByDefault: meetingEnded,
+    filter: "ALL",
+    open: NONE,
+    flipped: NONE,
+  });
   if (view.noteId !== noteId) {
-    setView({ noteId, filter: "ALL", open: NONE, folded: NONE });
+    setView({
+      noteId,
+      endedSeen: meetingEnded,
+      foldByDefault: meetingEnded,
+      filter: "ALL",
+      open: NONE,
+      flipped: NONE,
+    });
+  } else if (view.endedSeen !== meetingEnded) {
+    // 보던 회의가 끝나거나 다시 열리면 기본값이 바뀐다 — 지난 기본값 기준의 뒤집기는 버린다.
+    setView({
+      ...view,
+      endedSeen: meetingEnded,
+      foldByDefault: meetingEnded,
+      flipped: NONE,
+    });
   }
   // 근거를 펼칠 때만 전사를 읽는다. 스크립트와 같은 query key라 지정 후 invalidate도 따른다.
   const evidenceOpen = view.noteId === noteId && view.open.size > 0;
@@ -258,7 +285,7 @@ export function NoteTimeline({
   const filter = view.filter;
   // 칩은 바로 바뀌고 목록은 뒤따른다 — 수백 줄을 다시 그리는 동안 누른 칩이 멈춰 보이지 않게.
   const listFilter = useDeferredValue(filter);
-  const toggle = (key: "open" | "folded", id: string) =>
+  const toggle = (key: "open" | "flipped", id: string) =>
     setView((current) => {
       const next = new Set(current[key]);
       if (!next.delete(id)) next.add(id);
@@ -316,7 +343,9 @@ export function NoteTimeline({
       ...current,
       filter: "ALL",
       open: new Set(current.open).add(proposal.proposalId),
-      folded: NONE,
+      // 대상이 접힌 그룹 안일 수 있다 — 전부 펼쳐 둔다.
+      foldByDefault: false,
+      flipped: NONE,
     }));
   };
   useEffect(() => {
@@ -379,6 +408,15 @@ export function NoteTimeline({
     positionedNoteRef.current = null;
     followingRef.current = true;
   }, [noteId]);
+  // 보던 회의가 끝나면 끝난 노트를 처음 연 것과 같다 — 접힌 목록을 맨 위부터 읽게 한다.
+  const endedRef = useRef(meetingEnded);
+  useEffect(() => {
+    if (endedRef.current === meetingEnded) return;
+    endedRef.current = meetingEnded;
+    if (!meetingEnded) return;
+    readAwayNoteRef.current = null;
+    positionedNoteRef.current = null;
+  }, [meetingEnded]);
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -439,16 +477,18 @@ export function NoteTimeline({
         // 빈 snapshot 뒤 첫 live 항목이 와도 이미 위를 읽는 사용자의 조작이 먼저다.
         if (readAwayNoteRef.current === noteId && !followingRef.current) return;
       }
-      viewport.scrollTop = Math.max(
-        0,
-        viewport.scrollHeight - viewport.clientHeight
-      );
-      if (initial) updateFollowing(true);
+      // 끝난 회의는 접힌 목록을 위에서부터 읽고, 진행 중이거나 멈춘 회의는 최신을 본다.
+      const toTop = initial && meetingEnded;
+      viewport.scrollTop = toTop
+        ? 0
+        : Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+      if (initial) updateFollowing(!toTop);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [
     noteId,
     recording,
+    meetingEnded,
     listLoading,
     context.failed,
     timeline.groups,
@@ -671,7 +711,9 @@ export function NoteTimeline({
         ) : (
           timeline.groups.map((group) => {
             const key = group.key;
-            const folded = view.folded.has(key);
+            // 머리(손잡이)가 없는 묶음은 접을 길이 없으니 접지 않는다.
+            const folded =
+              !!group.agenda && view.foldByDefault !== view.flipped.has(key);
             const listId = `timeline-group-${key}`;
             return (
               <section key={key} className="mt-7">
@@ -695,7 +737,7 @@ export function NoteTimeline({
                       type="button"
                       aria-expanded={!folded}
                       aria-controls={listId}
-                      onClick={() => toggle("folded", key)}
+                      onClick={() => toggle("flipped", key)}
                       className={cn(
                         "flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-[7px] pr-2 text-left transition-colors hover:bg-[var(--el-canvas-soft)]",
                         group.agenda.citation ? "pl-1" : "pl-2"
