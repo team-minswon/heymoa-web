@@ -12,6 +12,13 @@ type ApiFetchOptions = RequestInit & {
   params?: Record<string, unknown>;
   responseType?: string;
   skipAuthRefresh?: boolean;
+  /**
+   * 응답 헤더가 오기까지 기다릴 한도(ms). 없으면 기다리는 한도가 없다.
+   *
+   * 연결이 반쯤 끊기면 fetch 는 몇 분이 지나도 실패하지 않는다. 만들기 창은 그동안 닫기·취소를 잠가서
+   * 사용자가 앱을 껐다 켜야 빠져나온다(APP-1139). 만들기처럼 사람이 결과를 기다리는 호출에만 준다.
+   */
+  timeoutMs?: number;
 };
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -226,6 +233,28 @@ async function parseResponse<T>(response: Response, responseType?: string) {
   } as T;
 }
 
+/** 호출부 signal 과 시한을 한 signal 로 묶는다. 시한은 타이머를 직접 둔다(`refresh-timeout.ts` 와 같은 까닭). */
+function withTimeout(caller: AbortSignal | null | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new DOMException("request timed out", "TimeoutError"));
+  }, timeoutMs);
+  if (caller) {
+    if (caller.aborted) controller.abort(caller.reason);
+    else
+      caller.addEventListener("abort", () => controller.abort(caller.reason), {
+        once: true,
+      });
+  }
+  return {
+    signal: controller.signal,
+    timedOut: () => timedOut,
+    clear: () => clearTimeout(timer),
+  };
+}
+
 async function request<T>(
   url: string,
   options: ApiFetchOptions,
@@ -246,27 +275,51 @@ async function request<T>(
     signal,
     responseType,
     skipAuthRefresh,
+    timeoutMs,
     ...requestOptions
   } = options;
   const isJsonBody = isJsonData(data) || typeof body === "string";
   const builtUrl = buildUrl(url, params);
 
-  const response = await fetch(builtUrl, {
-    ...requestOptions,
-    credentials: "include",
-    headers: {
-      ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
-      ...headers,
-    },
-    body: buildBody(data, body),
-    signal,
-  });
+  const timeout = timeoutMs ? withTimeout(signal, timeoutMs) : null;
+  // 시한이 지나 끊긴 것만 시한 오류로 바꾼다. 호출부가 직접 취소한 것은 그대로 올린다.
+  const timedOutError = (error: unknown) => {
+    if (!timeout?.timedOut()) return error;
+    return new ApiError(
+      408,
+      {
+        code: "REQUEST_TIMEOUT",
+        message:
+          "응답이 오지 않습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.",
+      },
+      null
+    );
+  };
+
+  let response: Response;
+  try {
+    response = await fetch(builtUrl, {
+      ...requestOptions,
+      credentials: "include",
+      headers: {
+        ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
+        ...headers,
+      },
+      body: buildBody(data, body),
+      signal: timeout ? timeout.signal : signal,
+    });
+  } catch (error) {
+    timeout?.clear();
+    throw timedOutError(error);
+  }
 
   if (
     response.status === 401 &&
     !hasRetried &&
     !shouldSkipRefresh(url, { ...options, skipAuthRefresh })
   ) {
+    // 갱신은 자기 시한이 있고, 재시도는 새 시한으로 시작한다.
+    timeout?.clear();
     try {
       await refreshAuthOnce();
       return request<T>(url, options, true);
@@ -281,7 +334,14 @@ async function request<T>(
     }
   }
 
-  return parseResponse<T>(response, responseType);
+  // 헤더만 오고 본문이 멈추는 경우도 같은 시한으로 끊는다 — 본문을 다 읽은 뒤에야 타이머를 푼다.
+  try {
+    return await parseResponse<T>(response, responseType);
+  } catch (error) {
+    throw timedOutError(error);
+  } finally {
+    timeout?.clear();
+  }
 }
 
 export async function apiFetch<T>(
