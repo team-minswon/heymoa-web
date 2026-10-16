@@ -89,7 +89,7 @@ export function TopBar() {
           {/* 푸터 「둘러보기」(`NAV`)에는 넣지 않는다 — 다운로드는 푸터 「그 밖에」에 따로 있다. */}
           <AppDownloadLink variant="nav" />
           <Link href="/help" className={`inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[15px] font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}>
-            도움말
+            사용 가이드
           </Link>
         </nav>
 
