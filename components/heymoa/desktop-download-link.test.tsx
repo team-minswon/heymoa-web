@@ -19,7 +19,7 @@ it.each([
 ] as const)(
   "%s에서는 OS 이름과 아이콘으로 새 설치 안내 탭을 엽니다",
   async (os, label) => {
-    vi.mocked(desktopDownload).mockResolvedValue({ os, href: null });
+    vi.mocked(desktopDownload).mockResolvedValue({ os, href: "/download" });
     render(<DesktopDownloadLink />);
     const link = await screen.findByRole("link", { name: label });
     expect(link).toHaveAttribute("href", "/download?start=1");
@@ -45,7 +45,7 @@ it("OS 확인 중에는 글자 없이 스피너를 표시합니다", async () =>
   expect(loading).toHaveAttribute("aria-busy", "true");
   expect(loading).toHaveTextContent(/^$/);
   expect(loading).toHaveClass("min-w-11");
-  resolve({ os: "mac", href: null });
+  resolve({ os: "mac", href: "/download" });
   expect(
     await screen.findByRole("link", { name: "macOS 다운로드" })
   ).toHaveClass("w-fit");

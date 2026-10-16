@@ -6,8 +6,8 @@ import {
   LegalDocument,
   type LegalSection,
 } from "@/app/(static)/legal-document";
-import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 import { siteConfig } from "@/lib/site";
+import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 
 export const dynamic = "force-static";
 
@@ -44,10 +44,10 @@ const sections = [
     id: "install",
     title: "설치",
     body: [
-      "Mac은 macOS 14.2 이상(Apple Silicon·Intel), Windows는 Windows 11 x64에서 씁니다. 그 밖의 환경에서는 「지원하지 않는 환경」이 표시되고 앱이 종료됩니다. 컴퓨터 소리를 받는 방식이 OS마다 달라 확인한 환경에서만 실행됩니다. 이 경우에는 브라우저에서 웹 서비스를 사용합니다. 마이크 소리만 기록합니다.",
+      "Mac은 macOS 14.2 이상(Apple Silicon), Windows는 Windows 11 x64에서 씁니다. 그 밖의 환경에서는 「지원하지 않는 환경」이 표시되고 앱이 종료됩니다. 컴퓨터 소리를 받는 방식이 OS마다 달라 확인한 환경에서만 실행됩니다. 이 경우에는 브라우저에서 웹 서비스를 사용합니다. 마이크 소리만 기록합니다.",
       <>
         설치 파일은 {RELEASES}에 있습니다. Apple Silicon Mac은 파일 이름이 mac-arm64.dmg로 끝나는
-        파일을, Intel Mac은 mac-x64.dmg, Windows는 win-x64.exe로 끝나는 파일을 받습니다.
+        파일을, Windows는 win-x64.exe로 끝나는 파일을 받습니다.
       </>,
       "Mac은 DMG를 열고 HeyMoa를 응용 프로그램 폴더로 옮깁니다. Windows는 받은 설치 파일을 실행합니다.",
       <>

@@ -69,7 +69,7 @@ export function platformSupport(
   const [major, minor, patch] = match.slice(1).map(Number);
   if (
     platform === "darwin" &&
-    ["arm64", "x64"].includes(arch) &&
+    arch === "arm64" &&
     (major > 14 || (major === 14 && minor >= 2))
   )
     return { supported: true, reason: null };
@@ -84,7 +84,7 @@ export function platformSupport(
   return {
     supported: false,
     reason:
-      "HeyMoa 데스크톱은 macOS 14.2 이상(Apple Silicon·Intel), Windows 11 x64를 지원합니다.",
+      "HeyMoa 데스크톱은 macOS 14.2 이상(Apple Silicon), Windows 11 x64를 지원합니다.",
   };
 }
 const PHASES = [

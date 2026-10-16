@@ -64,7 +64,7 @@ it("상단 메뉴는 파일 다운로드를 먼저 시작하고 다운로드 페
   render(<AppDownloadLink variant="nav" />);
   fireEvent.click(await screen.findByRole("link", { name: "앱 다운로드" }));
   expect(open).toHaveBeenCalledWith(
-    DESKTOP_INSTALLERS.windows[0].href,
+    new URL(DESKTOP_INSTALLERS.windows[0].href, window.location.href).href,
     "_blank",
     "noopener,noreferrer"
   );
@@ -72,15 +72,14 @@ it("상단 메뉴는 파일 다운로드를 먼저 시작하고 다운로드 페
   expect(order).toEqual(["download", "page"]);
 });
 
-it("칩을 모르는 Mac에서는 설치 파일 선택 메뉴를 엽니다", async () => {
-  vi.mocked(desktopDownload).mockResolvedValue({ os: "mac", href: null });
+it("Mac은 CPU 선택 메뉴 없이 Apple Silicon 파일로 연결합니다", async () => {
+  vi.mocked(desktopDownload).mockResolvedValue({
+    os: "mac",
+    href: DESKTOP_INSTALLERS.mac[0].href,
+  });
   render(<AppDownloadLink />);
-  fireEvent.click(
-    await screen.findByRole("button", { name: "macOS 다운로드" })
-  );
-  for (const installer of DESKTOP_INSTALLERS.mac) {
-    expect(
-      await screen.findByRole("menuitem", { name: installer.label })
-    ).toHaveAttribute("href", installer.href);
-  }
+  expect(
+    await screen.findByRole("link", { name: "macOS 다운로드" })
+  ).toHaveAttribute("href", DESKTOP_INSTALLERS.mac[0].href);
+  expect(screen.queryByRole("menu")).toBeNull();
 });

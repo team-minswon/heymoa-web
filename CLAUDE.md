@@ -63,6 +63,7 @@ pnpm test:run && pnpm lint && pnpm typecheck && pnpm build && pnpm test:e2e
 
 | 무엇을 바꾸나 | 먼저 읽을 것 |
 |---|---|
+| 데스크톱 다운로드·릴리스 | [고정 다운로드 규칙](.claude/rules/desktop-downloads.md) · [배포 절차](apps/desktop/docs/release.md) |
 | 화면의 생김새 | [`DESIGN.md`](DESIGN.md) |
 | 코드 리뷰 | [`AGENTS.md`](AGENTS.md) + skill [`code-review`](.claude/skills/code-review/SKILL.md) |
 
