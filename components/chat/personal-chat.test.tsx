@@ -602,7 +602,7 @@ describe("PersonalChatProvider", () => {
   it("대화가 하나도 없으면 빈 상태를 보인다", () => {
     renderChat();
     openPanel();
-    expect(screen.getByText("아직 시작된 대화가 없습니다.")).toBeTruthy();
+    expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy();
     expect(state.messagesArgs.at(-1)).toMatchObject({
       chatId: "",
       options: { query: { enabled: false } },
@@ -657,6 +657,40 @@ describe("PersonalChatProvider", () => {
     // 히스토리도 **방금 만든** chatId로 다시 읽어야 한다. 훅의 refetch를 쓰면 아직
     // 빈 id에 묶여 있어 `/v1/agent-chats//messages`를 부른다.
     await waitFor(() => expect(state.refetchedChatIds).toEqual([NEW_CHAT_ID]));
+  });
+
+  it("시작 카드를 누르면 입력 없이 바로 보낸다", async () => {
+    renderChat();
+    openPanel();
+    fireEvent.click(screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ }));
+
+    await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+    expect((state.streamCalls[0].body as { message: string }).message).toBe("지난 회의에서 정한 것만 정리해줘");
+  });
+
+  it("회의록 칩만 붙은 빈 대화에서도 시작 카드가 그 범위로 바로 보낸다", async () => {
+    renderChat(<NoteScope hidden={false} />);
+    openPanel();
+    await waitFor(() => expect(screen.getByText("주간 제품 회의")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ }));
+
+    await waitFor(() => expect(state.streamCalls).toHaveLength(1));
+    expect(state.streamCalls[0].body).toMatchObject({
+      message: "지난 회의에서 정한 것만 정리해줘",
+      noteIds: [expect.any(String)],
+    });
+  });
+
+  it("쓰던 글이 있으면 시작 카드가 보내지 않고 문장만 덧붙인다", async () => {
+    renderChat();
+    openPanel();
+    write("회의 하나만");
+    fireEvent.click(screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ }));
+
+    expect(state.createMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox").textContent).toContain("회의 하나만");
+    expect(screen.getByRole("textbox").textContent).toContain("지난 회의에서 정한 것만 정리해줘");
   });
 
   it("목록에 대화가 있으면 새로 만들지 않는다", async () => {
@@ -823,7 +857,7 @@ describe("PersonalChatProvider", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "대화를 불러오지 못했습니다."
     );
-    expect(screen.queryByText("아직 시작된 대화가 없습니다.")).toBeNull();
+    expect(screen.queryByText("무엇을 도와드릴까요?")).toBeNull();
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
       "disabled",
       true
@@ -941,7 +975,7 @@ describe("PersonalChatProvider", () => {
 
     expect(state.createMock).not.toHaveBeenCalled();
     expect(screen.queryByText("이전 대화입니다.")).toBeNull();
-    expect(screen.getByText("아직 시작된 대화가 없습니다.")).toBeTruthy();
+    expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy();
   });
 
   it("★ ＋ 를 누른 뒤에 목록 첫 줄이 대신 열리지 않는다", async () => {
@@ -1116,7 +1150,7 @@ describe("PersonalChatProvider", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "대화를 불러오지 못했습니다."
     );
-    expect(screen.queryByText("아직 시작된 대화가 없습니다.")).toBeNull();
+    expect(screen.queryByText("무엇을 도와드릴까요?")).toBeNull();
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
       "disabled",
       true
@@ -1624,7 +1658,7 @@ describe("PersonalChatProvider", () => {
     renderChat();
     openPanel();
 
-    expect(screen.getByText("아직 시작된 대화가 없습니다.")).toBeTruthy();
+    expect(screen.getByText("무엇을 도와드릴까요?")).toBeTruthy();
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty(
       "disabled",
       false

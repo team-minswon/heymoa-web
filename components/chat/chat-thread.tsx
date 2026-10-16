@@ -120,9 +120,7 @@ export function ChatThread({
 
   const isLive = stream.phase !== "idle" || stream.content !== null;
   if (messages.length === 0 && !isLive && !pendingUserMessage && emptyState) {
-    return (
-      <div className="flex flex-1 flex-col justify-end gap-3">{emptyState}</div>
-    );
+    return <div className="flex flex-1 flex-col gap-3">{emptyState}</div>;
   }
 
   // 커서로 이어받은 턴은 커서 앞 단계가 히스토리 행으로, 뒤가 스트림으로 온다. 따로 그리면 처음부터
