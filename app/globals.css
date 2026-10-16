@@ -73,6 +73,14 @@
 }
 
 :root {
+  /* **글꼴 변수의 원본** (APP-1115). next/font가 <html> 클래스에 심던 것을 @fontsource로
+     옮기며 여기로 왔다. family 이름은 각 패키지 CSS의 @font-face가 정본이다 —
+     variable 패키지는 이름 끝에 "Variable"이 붙는다. */
+  --font-inter: "Inter Variable", -apple-system, "Segoe UI", sans-serif;
+  --font-geist-mono: "Geist Mono Variable", ui-monospace, "SF Mono", monospace;
+  --font-eb-garamond: "EB Garamond";
+  --font-noto-serif-kr: "Noto Serif KR";
+
   /* ElevenLabs Theme Color Tokens */
   --el-primary: #292524;
   --el-primary-active: #0c0a09;

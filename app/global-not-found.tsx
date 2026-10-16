@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { EB_Garamond, Inter } from "next/font/google";
+import "@fontsource-variable/inter";
+import "@fontsource/eb-garamond/400.css";
 
 import "./globals.css";
 
@@ -17,13 +18,6 @@ import "./globals.css";
  * 폰트는 둘만 싣는다(본문 Inter · 제목 EB Garamond). 404는 가장 많이 열리는 페이지라
  * 나머지를 여기까지 끌고 오지 않는다.
  */
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const ebGaramond = EB_Garamond({
-  variable: "--font-eb-garamond",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
 export const metadata: Metadata = {
   title: "페이지를 찾을 수 없습니다",
   description: "주소가 바뀌었거나 더 이상 제공하지 않는 페이지입니다.",
@@ -32,10 +26,7 @@ export const metadata: Metadata = {
 
 export default function GlobalNotFound() {
   return (
-    <html
-      lang="ko"
-      className={`${inter.variable} ${ebGaramond.variable} h-full antialiased`}
-    >
+    <html lang="ko" className="h-full antialiased">
       <body className="min-h-full">
         <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--el-canvas)] p-4 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--el-muted)]">
