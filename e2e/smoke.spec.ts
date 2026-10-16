@@ -600,7 +600,7 @@ test("picks up a turn that started outside the panel", async ({ page }) => {
     });
   }, MOCK_WORKSPACE_ID);
 
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   const approve = page.getByRole("button", { name: "승인", exact: true });
   await expect(approve).toBeVisible({ timeout: 20_000 });
@@ -622,7 +622,7 @@ test("stops a running turn and lets the next message through", async ({
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByLabel("메시지").fill("요약해줘");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
 
@@ -653,7 +653,7 @@ test("keeps a second chat alive while the first waits for approval", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   const compose = async (text: string) => {
     await page.getByLabel("메시지").fill(text);
@@ -760,7 +760,7 @@ test("pins the question to the top and does not jump when the answer lands", asy
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   // 시드된 대화를 그대로 쓴다 — 위에 옛 대화가 쌓여 있어야 「맨 위로 간다」가 뜻이 있다.
   const viewport = page
@@ -827,7 +827,7 @@ test("draws the markdown answer inside the narrow chat column", async ({
 }) => {
   await page.setViewportSize({ width: 380, height: 900 });
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   await page.getByTestId("chat-list-new").click();
   await page.getByLabel("메시지").fill("마크다운으로 보여줘");
@@ -899,7 +899,7 @@ test("keeps the question near the top when a divider joins a multi-line send", a
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await expect(page.getByTestId("assistant-message").first()).toBeVisible({
     timeout: 20_000,
   });
@@ -979,7 +979,7 @@ test("does not add a thread divider when the answer lands", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   const dividers = page.getByTestId("thread-divider");
 
@@ -1011,7 +1011,7 @@ test("does not create a chat row until the first message is sent", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   // 하나는 실제로 쓴다 — 비교 대상이 있어야 「빈 줄이 안 생겼다」가 말이 된다.
   await page.getByTestId("chat-list-new").click();
@@ -1042,7 +1042,7 @@ test("swaps the chat history in and back out inside the panel", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   // A — 제목이 첫 질문으로 저절로 붙는다. 목록에서 고를 이름이 생긴다.
   await page.getByTestId("chat-list-new").click();
@@ -1084,7 +1084,7 @@ test("swaps the chat history in and back out inside the panel", async ({
 test("streams a personal chat turn from the panel", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   // 목에 나이 든 대화가 시드돼 있다(날짜 묶음·구분선을 목에서 보려고). 빈 대화에서
   // 시작하는 검사는 ＋ 로 새 대화를 연다 — ＋ 는 서버를 안 부르므로 줄이 안 생긴다.
   await page.getByTestId("chat-list-new").click();
@@ -1141,7 +1141,7 @@ test("unlocks the composer after a stop so the next question goes out", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   await page.getByLabel("메시지").fill("Linear 이슈 만들어줘");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
@@ -1185,7 +1185,7 @@ test("opens the note from a scope chip inside the sent bubble", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByTestId("chat-list-new").click();
 
   const editor = page.getByLabel("메시지");
@@ -1215,7 +1215,7 @@ test("shows the out-of-scope note in the answer refs after widening", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   await page.getByTestId("chat-list-new").click();
   await page.getByLabel("메시지").fill("범위 밖 얘기 있어?");
@@ -1484,7 +1484,7 @@ test("ends a stopped meeting from the side panel and opens the ended summary", a
 test("sends a starter question straight from the empty chat", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByTestId("chat-list-new").click();
   await page.getByRole("button", { name: /회의록에서 찾기/ }).click();
 
@@ -1497,7 +1497,7 @@ test("sends a starter question straight from the empty chat", async ({ page }) =
 test("opens integration settings from the starter when Linear is not connected", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByTestId("chat-list-new").click();
   await page.getByRole("button", { name: /외부 도구로 잇기/ }).click();
 
@@ -1511,7 +1511,7 @@ test("opens integration settings from the starter when Linear is not connected",
 test("approves a write tool from the chat card", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   // 시드된 대화가 열리므로 ＋ 로 빈 대화를 연다. 목의 Linear 는 연동 전이라 시작 카드가 연동하기로
   // 바뀌어 있다 — 직접 쓴 문장으로 쓰기 도구 승인 흐름을 굴린다.
   await page.getByTestId("chat-list-new").click();
@@ -1596,7 +1596,7 @@ test("keeps the personal chat scrollable when the thread grows", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   const panel = page.getByTestId("personal-chat-panel");
   await expect(panel).toBeVisible();
@@ -2007,7 +2007,7 @@ test("switches note tabs without an RSC round trip", async ({ page }) => {
  */
 test("draws the thinking rail from history alone", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await page.getByRole("button", { name: "기록" }).click();
 
   const history = page.getByTestId("chat-history-view");

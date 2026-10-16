@@ -10,10 +10,11 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { History, MessageCircle, Plus, X } from "lucide-react";
+import { History, Plus, X } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 
+import { AgentFab } from "@/components/chat/agent-fab";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatList } from "@/components/chat/chat-list";
 import { ChatStarter } from "@/components/chat/chat-starter";
@@ -180,23 +181,16 @@ export function PersonalChatProvider({
     <PersonalChatContext.Provider value={value}>
       {children}
       {/* FAB 는 패널과 자리를 주고받는 한 쌍이라 언마운트하지 않고 같은 길이로 물러난다. */}
-      <Button
-        size="icon"
-        aria-label="개인 챗봇 열기"
-        aria-hidden={fabHidden || undefined}
-        inert={fabHidden}
-        tabIndex={fabHidden ? -1 : undefined}
-        onClick={value.open}
+      <AgentFab
+        hidden={fabHidden}
+        onOpen={value.open}
         className={cn(
-          "fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-e2",
           CHAT_MOTION,
           fabHidden
             ? "invisible scale-90 opacity-0"
             : "visible scale-100 opacity-100"
         )}
-      >
-        <MessageCircle className="size-5" />
-      </Button>
+      />
       {hasOpened || railed ? (
         <PersonalChatPanel
           // 워크스페이스로만 키잉한다. 대화 id 를 넣으면 첫 전송이 대화를 만드는 순간 언마운트되어

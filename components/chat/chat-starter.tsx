@@ -19,7 +19,7 @@ type Starter = {
  * 에이전트가 실제로 하는 일 넷. 예시 질문은 그 일을 한 번에 시켜 볼 수 있는 한 문장이다.
  * 목록은 ai 의 도구에서 왔다 — 회의록 읽기, 할 일 쓰기(승인 카드), 연동 도구(Linear), 웹 검색.
  */
-const STARTERS: readonly Starter[] = [
+export const STARTERS: readonly Starter[] = [
   {
     key: "notes",
     Icon: FileText,
