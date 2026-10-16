@@ -32,7 +32,6 @@ import { InlineRetry } from "@/components/ui/inline-retry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessageOf } from "@/lib/api/error-message";
 import { okData } from "@/lib/api/ok-data";
-import { shouldEnableMocking } from "@/lib/mocks/enable-mocking";
 import { indexMeetingLinks } from "@/lib/notes/review/meeting-links";
 import { getGetAnalysisFlowQueryKey } from "@/lib/api/generated/analysis/analysis";
 import { useApproveMeetingReview } from "@/lib/api/generated/meeting-approval/meeting-approval";
@@ -81,9 +80,6 @@ import {
 import { toast } from "@/lib/ui/toast";
 
 type View = "summary" | "graph";
-
-/** 「회의록 보내기」. 발송 API 가 운영에 배포되기 전까지는 목 환경에서만 연다 */
-const SHARE_MAIL_ENABLED = shouldEnableMocking();
 
 const VIEWS = [
   { value: "summary", label: "요약" },
@@ -535,7 +531,7 @@ export function ReviewBoard({
                 onRetryMaterial={() => void transcriptQuery.refetch()}
                 wider={wider}
                 // 발송 API 가 운영에 배포되기 전에는 목 환경에서만 연다 — 운영에서는 메일 항목을 세우지 않는다
-                onSendEmail={SHARE_MAIL_ENABLED ? () => setMailOpen(true) : undefined}
+                onSendEmail={() => setMailOpen(true)}
               />
               <SegmentedControl
                 label="보기"
@@ -730,7 +726,7 @@ export function ReviewBoard({
         />
       ) : null}
 
-      {SHARE_MAIL_ENABLED && noteMeta && wider ? (
+      {noteMeta && wider ? (
         <ShareMailDialog
           open={mailOpen}
           onOpenChange={setMailOpen}

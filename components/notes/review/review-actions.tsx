@@ -37,7 +37,7 @@ const COPY_FORMATS: ReadonlyArray<{
  */
 const EXPORT_TARGETS = [
   { target: "pdf", label: "PDF로 내보내기", icon: FileText },
-  // 발송 API 가 켜진 곳(onSendEmail 이 있을 때)에만 선다
+  // onSendEmail 이 있을 때만 선다
   { target: "email", label: "이메일로 보내기", icon: Mail },
 ] as const;
 
@@ -69,7 +69,7 @@ export function ReviewActions({
    */
   material?: "loading" | "failed";
   onRetryMaterial?: () => void;
-  /** 「이메일로 보내기」를 연다. 없으면 그 항목은 다른 대상처럼 「준비 중」이다 */
+  /** 「이메일로 보내기」를 연다. 없으면 그 항목을 그리지 않는다 */
   onSendEmail?: () => void;
 }) {
   const [minutesOpen, setMinutesOpen] = useState(false);
