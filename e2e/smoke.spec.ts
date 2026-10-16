@@ -2541,3 +2541,26 @@ test("searches the full transcript locally without stealing input focus", async 
   ).toBeVisible();
   expect(requests).toBe(0);
 });
+
+
+test("녹음 컨트롤은 전체·사이드 보기와 좁은 화면에서 영역 안에 머뭅니다", async ({ page }) => {
+  await createMeetingNote(page);
+  await startRecording(page, "회의 시작");
+  const dock = page.getByRole("group", { name: "녹음 제어" });
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const label of ["사이드 뷰로 보기", "전체 화면으로 보기"]) {
+      await page.getByRole("button", { name: label, exact: true }).click();
+      await expect(dock.getByRole("button", { name: "중지", exact: true })).toBeVisible();
+      await expect.poll(() => dock.evaluate((node) => {
+        const rect = node.getBoundingClientRect();
+        const button = node.querySelector('button[aria-label="중지"]')!.getBoundingClientRect();
+        return rect.left >= 0 && rect.right <= window.innerWidth &&
+          button.left >= rect.left && button.right <= rect.right &&
+          node.scrollWidth <= node.clientWidth;
+      })).toBe(true);
+      await expect(dock).toHaveCSS("transform", "none");
+    }
+  }
+  await stopRecording(page);
+});

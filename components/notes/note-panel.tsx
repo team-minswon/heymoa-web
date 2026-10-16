@@ -925,7 +925,7 @@ export function NotePanel({
             )}
           >
             {showDock ? (
-              <div className="pointer-events-auto flex min-w-0 flex-col items-center gap-2">
+              <div className="pointer-events-auto flex min-w-0 max-w-full flex-col items-center gap-2">
                 {recordingHere ? (
                   <RecordingConnectionNotice
                     notice={recording.connectionNotice}
