@@ -61,7 +61,11 @@
       "icon": "build/icons/icon.icns",
       "category": "public.app-category.productivity",
       "minimumSystemVersion": "14.2",
-      "identity": null,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
       "extendInfo": {
         "NSMicrophoneUsageDescription": "회의에서 내 발언을 기록하기 위해 마이크를 사용합니다.",
         "NSAudioCaptureUsageDescription": "회의 상대방의 소리를 기록하기 위해 시스템 오디오를 사용합니다."
