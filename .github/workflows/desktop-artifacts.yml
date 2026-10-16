@@ -90,13 +90,22 @@ jobs:
         if: startsWith(matrix.target, 'mac')
         run: |
           shopt -s nullglob
+          # stapler·spctl 은 Apple 서버(CloudKit)에 묻는다 — 일시적인 연결 끊김은 다시 시도한다.
+          retry() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              echo "attempt $attempt failed: $*" >&2
+              sleep 15
+            done
+            return 1
+          }
           apps=(apps/desktop/release/mac*/HeyMoa.app)
           [[ ${#apps[@]} -gt 0 ]] || { echo "No HeyMoa.app found" >&2; exit 1; }
           for app in "${apps[@]}"; do
             codesign --verify --deep --strict --verbose=2 "$app"
             codesign -dv --verbose=2 "$app" 2>&1 | grep -E "Authority=Developer ID Application|flags=.*runtime"
-            xcrun stapler validate "$app"
-            spctl --assess --type execute --verbose=2 "$app"
+            retry xcrun stapler validate "$app"
+            retry spctl --assess --type execute --verbose=2 "$app"
           done
       - uses: actions/upload-artifact@v6
         with:
