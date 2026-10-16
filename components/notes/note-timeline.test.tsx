@@ -634,7 +634,7 @@ describe("끝난 회의의 타임라인", () => {
     });
   }
 
-  it("안건 그룹을 접은 채 맨 위에서 시작하고, 누르면 그 그룹만 펼쳐진다", () => {
+  it("안건 그룹을 접은 채 맨 위에서 시작하고, 누르면 그 그룹만 펼쳐진다", async () => {
     withAgendas();
     const view = () => <NoteTimeline header={null} onEvidenceSelect={() => {}} meetingEnded />;
     const { container, rerender } = render(view());
@@ -647,11 +647,12 @@ describe("끝난 회의의 타임라인", () => {
     expect(onboarding).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("이탈률 38%")).toBeNull();
     fireEvent.click(onboarding);
-    expect(screen.getByText("이탈률 38%")).toBeVisible();
+    // 펼칠 때 높이·투명도가 0에서 올라온다 — 다 열린 뒤 보인다
+    await waitFor(() => expect(screen.getByText("이탈률 38%")).toBeVisible());
     expect(screen.queryByText("3DS 응답이 늦다")).toBeNull();
   });
 
-  it("기록 중에는 펼쳐 두고 최신을 따라가다, 회의가 끝나면 접고 맨 위로 간다", () => {
+  it("기록 중에는 펼쳐 두고 최신을 따라가다, 회의가 끝나면 접고 맨 위로 간다", async () => {
     withAgendas();
     const view = (ended: boolean) => (
       <NoteTimeline header={null} onEvidenceSelect={() => {}} recording={!ended} meetingEnded={ended} />
@@ -667,7 +668,8 @@ describe("끝난 회의의 타임라인", () => {
     rerender(view(true));
     flush();
     expect(viewport.scrollTop).toBe(0);
-    expect(screen.queryByText("이탈률 38%")).toBeNull();
+    // 접히는 동안은 남았다가 끝나면 내려간다
+    await waitFor(() => expect(screen.queryByText("이탈률 38%")).toBeNull());
     expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "false");
   });
 });

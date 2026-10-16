@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ArrowUpRight,
   Calendar,
@@ -199,6 +199,8 @@ export function NoteTimeline({
     noteId: string;
     endedSeen: boolean;
     foldByDefault: boolean;
+    /** 관계 링크로 펼친 직후다 — 대상으로 스크롤하는 동안 높이가 변하면 자리가 어긋나니 움직이지 않는다. */
+    instant: boolean;
     filter: TimelineFilter;
     open: ReadonlySet<string>;
     flipped: ReadonlySet<string>;
@@ -206,6 +208,7 @@ export function NoteTimeline({
     noteId,
     endedSeen: meetingEnded,
     foldByDefault: meetingEnded,
+    instant: false,
     filter: "ALL",
     open: NONE,
     flipped: NONE,
@@ -215,6 +218,7 @@ export function NoteTimeline({
       noteId,
       endedSeen: meetingEnded,
       foldByDefault: meetingEnded,
+      instant: false,
       filter: "ALL",
       open: NONE,
       flipped: NONE,
@@ -225,6 +229,7 @@ export function NoteTimeline({
       ...view,
       endedSeen: meetingEnded,
       foldByDefault: meetingEnded,
+      instant: false,
       flipped: NONE,
     });
   }
@@ -285,11 +290,12 @@ export function NoteTimeline({
   const filter = view.filter;
   // 칩은 바로 바뀌고 목록은 뒤따른다 — 수백 줄을 다시 그리는 동안 누른 칩이 멈춰 보이지 않게.
   const listFilter = useDeferredValue(filter);
+  const reducedMotion = useReducedMotion();
   const toggle = (key: "open" | "flipped", id: string) =>
     setView((current) => {
       const next = new Set(current[key]);
       if (!next.delete(id)) next.add(id);
-      return { ...current, [key]: next };
+      return { ...current, [key]: next, instant: false };
     });
 
   // 주제 제목은 안건 정본이 준다. 노트 소켓의 agendas.changed 가 오면 provider 가 다시 읽게 한다.
@@ -345,6 +351,7 @@ export function NoteTimeline({
       open: new Set(current.open).add(proposal.proposalId),
       // 대상이 접힌 그룹 안일 수 있다 — 전부 펼쳐 둔다.
       foldByDefault: false,
+      instant: true,
       flipped: NONE,
     }));
   };
@@ -772,27 +779,45 @@ export function NoteTimeline({
                     </button>
                   </h3>
                 ) : null}
-                {folded ? null : (
-                  <ol id={listId} className="relative mt-1.5">
-                    <span
-                      aria-hidden
-                      className="absolute top-4 bottom-4 left-[63px] w-px bg-[var(--el-hairline)]"
-                    />
-                    {group.items.map((item) => (
-                      <TimelineRow
-                        key={item.proposal.proposalId}
-                        item={item}
-                        citationSpeakers={citationSpeakers}
-                        open={view.open.has(item.proposal.proposalId)}
-                        onToggle={() =>
-                          toggle("open", item.proposal.proposalId)
-                        }
-                        onEvidenceSelect={onEvidenceSelect}
-                        onJump={jumpTo}
-                      />
-                    ))}
-                  </ol>
-                )}
+                {/* 열고 닫을 때 높이와 투명도로 접힌다. `initial={false}` 라 처음 그릴 때는 움직이지 않고,
+                    닫는 동안만 DOM 에 남았다가 내려간다(접힌 그룹의 수백 줄을 들고 있지 않는다). */}
+                <AnimatePresence initial={false}>
+                  {folded ? null : (
+                    <motion.div
+                      key="items"
+                      className="overflow-hidden"
+                      // 관계 링크로 펼칠 때는 처음부터 다 열린 높이로 선다 — 부모가 바로 scrollIntoView 를 부르는데
+                      // 0 에서 시작하면 접힌 배치를 재서 자리가 어긋난다.
+                      initial={view.instant ? false : { height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{
+                        duration: reducedMotion || view.instant ? 0 : 0.2,
+                        ease: [0.2, 0, 0, 1],
+                      }}
+                    >
+                      <ol id={listId} className="relative mt-1.5">
+                        <span
+                          aria-hidden
+                          className="absolute top-4 bottom-4 left-[63px] w-px bg-[var(--el-hairline)]"
+                        />
+                        {group.items.map((item) => (
+                          <TimelineRow
+                            key={item.proposal.proposalId}
+                            item={item}
+                            citationSpeakers={citationSpeakers}
+                            open={view.open.has(item.proposal.proposalId)}
+                            onToggle={() =>
+                              toggle("open", item.proposal.proposalId)
+                            }
+                            onEvidenceSelect={onEvidenceSelect}
+                            onJump={jumpTo}
+                          />
+                        ))}
+                      </ol>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </section>
             );
           })
