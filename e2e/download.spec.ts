@@ -45,7 +45,7 @@ for (const platform of [
         .getByRole("link", { name: "앱 다운로드", exact: true })
     ).toBeVisible();
 
-    const filename = `HeyMoa-0.1.1-${platform.suffix}`;
+    const filename = `HeyMoa-0.1.2-${platform.suffix}`;
     const downloads: string[] = [];
     page.on("download", (download) =>
       downloads.push(download.suggestedFilename())
@@ -171,7 +171,7 @@ test("anonymous visitors can reach desktop downloads without starting OAuth", as
   ]) {
     await expect(page.getByRole("link", { name, exact: true })).toHaveAttribute(
       "href",
-      `https://github.com/team-minswon/homebrew-tap/releases/download/desktop-v0.1.1/HeyMoa-0.1.1-${suffix}`
+      `https://github.com/team-minswon/homebrew-tap/releases/download/desktop-v0.1.2/HeyMoa-0.1.2-${suffix}`
     );
   }
   await expect(
