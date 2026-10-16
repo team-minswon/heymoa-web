@@ -138,7 +138,7 @@ export function ReviewActions({
           <Share2 aria-hidden />
           <span className="hidden sm:inline">공유하기</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuContent align="end" className="w-fit min-w-44">
           {EXPORT_TARGETS.filter(({ target }) => target !== "email" || onSendEmail !== undefined).map(
             ({ target, label, icon: Icon }) => {
               // PDF 와 메일은 같은 회의록 재료를 쓰므로 녹취록이 와야 연다. 노트 머리조차 안 왔으면 받는 중과 같다
