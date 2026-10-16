@@ -5,7 +5,7 @@ import type { RealtimeFailureKind } from "@/lib/transcription/realtime-session";
 const START_FAILED = "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 const DROPPED = "연결이 끊겨 녹음을 멈췄어요.";
 const DESKTOP_AUDIO_HELP =
-  "운영체제 설정에서 HeyMoa의 마이크·오디오 녹음 권한을 확인해 주세요. 방금 권한을 허용했다면 앱을 완전히 종료한 뒤 다시 열어 녹음해 주세요.";
+  "권한을 허용한 뒤 다시 녹음해 주세요.";
 
 export const SUPERSEDED_MESSAGE =
   "다른 탭이나 기기에서 이 녹음을 이어받았습니다.";
@@ -30,12 +30,12 @@ export function startErrorMessage(cause: unknown) {
     return `컴퓨터 소리 입력을 찾지 못했습니다. ${DESKTOP_AUDIO_HELP}`;
   }
   if (captureCode === "AUDIO_CAPTURE_FAILED") {
-    return `마이크와 컴퓨터 소리를 연결하지 못했습니다. ${DESKTOP_AUDIO_HELP}`;
+    return "소리를 연결하지 못했습니다. 권한을 확인한 뒤 다시 시도해 주세요.";
   }
   if (name === "NotAllowedError" || name === "PermissionDeniedError") {
     return "마이크 권한이 필요합니다. 브라우저 설정에서 마이크 사용을 허용해 주세요.";
   }
-  if (name === "NotFoundError") {
+  if (name === "NotFoundError" || captureCode === "MICROPHONE_INPUT_MISSING") {
     return "사용할 수 있는 마이크를 찾지 못했습니다.";
   }
   if (

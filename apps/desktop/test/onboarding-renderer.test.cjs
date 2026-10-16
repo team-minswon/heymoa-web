@@ -16,6 +16,9 @@ test("real first-run screen reads without prompting, supports denial/recheck/ski
   await page.waitForFunction(() => document.querySelector("#microphone-status").textContent === "아직 확인하지 않음");
   assert.ok((await page.evaluate(() => window.requests)).every((value) => value === "read"));
   assert.equal(await page.locator("#microphone-action").textContent(), "마이크 허용");
+  assert.equal(await page.locator("h1").textContent(), "녹음 준비");
+  assert.equal(await page.locator("#audio-action").isVisible(), false);
+  assert.match(await page.locator("#audio-description").textContent(), /첫 녹음 때 macOS가 권한/);
   await page.evaluate(() => { window.permissionView.microphone = "denied"; });
   await page.locator("#microphone-action").click();
   await page.waitForFunction(() => document.querySelector("#microphone-action").textContent === "설정 열기");
@@ -28,6 +31,7 @@ test("real first-run screen reads without prompting, supports denial/recheck/ski
   await page.locator("#recheck").click();
   await page.waitForFunction(() => document.querySelector("#microphone-status").textContent === "설정에서 확인");
   assert.match(await page.locator("#audio-description").textContent(), /Windows 출력 장치/);
+  assert.equal(await page.locator("#audio-action").isVisible(), true);
   await page.locator("#complete").focus(); await page.keyboard.press("Enter");
   await page.waitForFunction(() => document.querySelector("#error").textContent.includes("저장하지 못했습니다"));
   assert.equal(await page.locator("#complete").isEnabled(), true);

@@ -1,9 +1,8 @@
-import { ArrowDown } from "lucide-react";
-
 import { LandingCta } from "@/components/heymoa/landing-cta";
 import { cn } from "@/lib/utils";
 
 import { HeroStage } from "./hero-stage";
+import { AppDownloadLink } from "./app-download-link";
 import { Speech } from "./marks";
 import { CONTAINER, FOCUS, H1, LEAD, MARKER_DRAW, vars } from "./tokens";
 
@@ -32,7 +31,7 @@ import { CONTAINER, FOCUS, H1, LEAD, MARKER_DRAW, vars } from "./tokens";
  *   줄여(lg 와 같은 크기) 머리 ≈ 165, 창 위끝 ≈ 321 ⇒ 1366×650 에서 창 321(바닥 642) — 독 · ① 쪽지의 화살표
  *   · 검토 막대와 그 쪽지까지 첫 화면에 든다.
  *
- * 모바일은 보조 링크 「예시 회의 먼저 보기」를 lg 미만에서 뺐다(회의 카드 구간이 바로 아래다). 390 은 버튼 바닥
+ * 모바일은 데스크톱 앱 다운로드를 lg 미만에서 뺐다. 390 은 버튼 바닥
  * ≈ 392, 무대 mt 24, 창 위끝 ≈ 472. 실제 휴대폰 브라우저는 툴바 때문에 390×664(아이폰 Safari) · 375×553(SE)
  * 처럼 낮아서, **높이 700 이하에서는** 머리 사이 여백(제목 · 리드 위 12 → 8, 버튼 위 20 → 16, 무대 위
  * 24 → 16)을 줄여 창 위끝을 ≈ 452 로 올린다. 대본은 창 위끝에서 64px(상단바 + 탭 글자)이 보이면 돌기
@@ -109,9 +108,12 @@ export function Hero() {
             말하는 동안 HeyMoa가 받아 적고 결정과 할 일을{" "}
             <span className="whitespace-nowrap">골라 둡니다.</span>{" "}
             <span className="hidden sm:inline">회의가 </span>끝나면{" "}
-            <b className="font-bold whitespace-nowrap text-[var(--tv-ink)]">누가 한 말인지</b>도 갈라 둡니다.
+            <b className="font-bold whitespace-nowrap text-[var(--tv-ink)]">
+              누가 한 말인지
+            </b>
+            도 갈라 둡니다.
           </p>
-          <div className="mt-5 flex flex-col gap-2 max-lg:[@media(max-height:600px)]:mt-3 max-lg:[@media(min-height:601px)_and_(max-height:700px)]:mt-4 lg:mt-6 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-5 lg:gap-y-2">
+          <div className="mt-5 flex flex-col gap-2 max-lg:[@media(max-height:600px)]:mt-3 max-lg:[@media(min-height:601px)_and_(max-height:700px)]:mt-4 lg:mt-6 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-3 lg:gap-y-2">
             {/* 포커스 링은 보라 outline(`FOCUS`) 하나다 — `Button` 기본의 `focus-visible:border-ring` ·
                 `ring-3` 을 끈다(`top-bar.tsx` · `closing.tsx` 와 같은 처리). 안 끄면 회색 링이 한 겹 더 붙는다. */}
             <LandingCta
@@ -122,17 +124,7 @@ export function Hero() {
                 FOCUS
               )}
             />
-            {/* 보조 길은 글자 링크다 — 오른쪽 열(400px)에 알약 둘이 한 줄로 서지 않는다. */}
-            <a
-              href="#meetings"
-              className={cn(
-                "hidden h-11 items-center gap-1.5 self-start rounded-[6px] lg:inline-flex text-[15px] font-bold text-[var(--tv-ink)] underline decoration-[var(--tv-pop)] decoration-[3px] underline-offset-[5px] transition-colors hover:decoration-[var(--tv-brand)] lg:self-auto",
-                FOCUS
-              )}
-            >
-              예시 회의 먼저 보기
-              <ArrowDown aria-hidden className="size-4" />
-            </a>
+            <AppDownloadLink />
           </div>
         </div>
       </div>

@@ -14,6 +14,27 @@ describe("nextFollowing", () => {
     ).toBe(false);
   });
 
+  it("긴 새 항목으로 바닥이 180px 넘게 밀려도 위로 움직이지 않았다면 계속 따라간다", () => {
+    expect(
+      nextFollowing({
+        following: true,
+        top: 600,
+        previousTop: 600,
+        distance: 1200,
+        contentGrew: true,
+      })
+    ).toBe(true);
+    expect(
+      nextFollowing({
+        following: true,
+        top: 650,
+        previousTop: 600,
+        distance: 1150,
+        contentGrew: true,
+      })
+    ).toBe(true);
+  });
+
   it("내용이 줄어 브라우저가 위치를 끌어내렸을 뿐이면 바닥에 붙어 있다", () => {
     expect(
       nextFollowing({

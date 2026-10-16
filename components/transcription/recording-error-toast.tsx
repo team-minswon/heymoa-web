@@ -6,12 +6,14 @@ import { toast } from "@/lib/ui/toast";
 
 import { useRecording } from "@/components/transcription/recording-provider";
 import { openSitePage } from "@/lib/desktop/open-site-page";
+import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 
 const RECORDING_ERROR_TOAST_ID = "recording-error";
 
 export function RecordingErrorToast() {
   const { error } = useRecording();
   const router = useRouter();
+  const isDesktopApp = useDesktopApp();
 
   useEffect(() => {
     if (!error) {
@@ -28,10 +30,14 @@ export function RecordingErrorToast() {
       // 권한 거부처럼 브라우저 설정을 바꿔야 풀리는 사유가 많다. 어디를 고치는지는 도움말에 있다.
       action: {
         label: "해결 방법",
-        onClick: () => openSitePage("/help#trouble", router.push),
+        onClick: () =>
+          openSitePage(
+            isDesktopApp ? "/help/desktop#first-run" : "/help#trouble",
+            router.push
+          ),
       },
     });
-  }, [error, router]);
+  }, [error, router, isDesktopApp]);
 
   return null;
 }

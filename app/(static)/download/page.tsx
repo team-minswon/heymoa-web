@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDown } from "lucide-react";
+import { Suspense } from "react";
 
 import { TrackedLink } from "@/components/analytics/tracked-link";
-import { LandingCta } from "@/components/heymoa/landing-cta";
+import { DesktopAutoDownload } from "@/components/heymoa/desktop-auto-download";
+import { HomebrewInstallCommand } from "@/components/heymoa/homebrew-install-command";
 import {
   BODY,
   CARD_TITLE,
@@ -14,11 +15,7 @@ import {
   RADIUS,
   TV_VARS,
 } from "@/components/heymoa/landing/tokens";
-import {
-  DESKTOP_DOWNLOAD_VERSION,
-  DESKTOP_INSTALLERS,
-  DESKTOP_RELEASES_URL,
-} from "@/lib/desktop/downloads";
+import { DESKTOP_INSTALLERS } from "@/lib/desktop/downloads";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
@@ -28,85 +25,49 @@ export const metadata: Metadata = {
   alternates: { canonical: "/download" },
 };
 
-/** 플랫폼 카드 안 「주의」 상자. 버터 면 위 body 글자(9:1 이상). */
-const CAUTION =
-  "mt-5 rounded-[16px] bg-[var(--tv-butter-soft)] px-4 py-3 text-[15px] leading-[1.7] break-keep text-[var(--tv-body)] [overflow-wrap:anywhere]";
-
 const PLATFORMS = [
   {
     name: "Mac",
     installers: DESKTOP_INSTALLERS.mac,
-    need: "macOS 14.2 이상에서 사용합니다. Apple Silicon은 arm64, Intel Mac은 x64\u00a0DMG를 선택하고 HeyMoa를 응용 프로그램 폴더로 옮겨 주세요.",
-    label: "안내",
-    caution:
-      "Apple 서명·공증을 받은 앱입니다. 처음 실행할 때 인터넷에서 받은 앱이라는 확인 창이 뜨면 열기를 눌러 주세요.",
+    need: "macOS 14.2 이상",
+    steps: [
+      "다운로드한 DMG 파일을 여세요.",
+      "HeyMoa를 응용 프로그램 폴더로 옮긴 뒤 실행하세요.",
+    ],
   },
   {
     name: "Windows",
     installers: DESKTOP_INSTALLERS.windows,
-    need: "Windows\u00a011 x64에서 EXE 설치 파일을 사용합니다. Windows판은 베타입니다.",
-    label: "주의",
-    caution:
-      "서명되지 않은 설치 파일에는 SmartScreen 경고가 표시될 수 있습니다.",
+    need: "Windows 11 x64",
+    steps: [
+      "다운로드한 설치 파일을 실행하세요.",
+      "「Windows의 PC 보호」 창이 뜨면 「추가 정보」를 누르세요.",
+      "「실행」을 누르고 설치를 진행하세요.",
+    ],
   },
 ] as const;
 
-/**
- * 데스크톱 다운로드. **약관 · 개인정보(`legal-document.tsx`)와 같은 면이다** — 랜딩 상단 바 · 푸터
- * (`isLandingChromeRoute`)를 쓰고, 루트에 `TV_VARS` 를 걸어 흰 바탕 위 라벤더 머리 판, 흰 플랫폼 카드 둘,
- * 연보라 「설정과 업데이트」 판으로 짠다. 머리 판도 카드와 같은 `CONTAINER` 기둥에 선다(약관과 같은 이유 —
- * 무대 폭이면 바로 아래 카드와 가장자리가 어긋난다). 읽는 안내라 스크롤 리빌 · 쪽지 · 테이프는 없다.
- *
- * 루트는 `div` 다 — 루트 레이아웃이 이미 `<main id="main">` 으로 감싼다. `flex-1` 로 그 세로 칸을 채운다 —
- * 짧은 안내라 화면이 이 페이지보다 높으면 흰 본문과 흰 푸터 사이로 루트의 `--el-canvas` 회색이 비친다.
- *
- * 묶여야 할 낱말(「x64 DMG」, 「설정 →」)은 줄바꿈 없는 공백으로 잇는다 — 좁은 폭에서 화살표가 줄머리에 섰다.
- */
+/** 랜딩과 같은 색·기둥을 쓰고, 루트 레이아웃의 main 안에 설치 방법을 둡니다. */
 export default function DownloadPage() {
   return (
     <div
       style={TV_VARS}
       className="w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8"
     >
+      <Suspense fallback={null}>
+        <DesktopAutoDownload />
+      </Suspense>
       <div className={cn(CONTAINER, "pt-3 lg:pt-6")}>
         <header
           className={cn(
             RADIUS.face,
-            "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-16"
+            "bg-[var(--tv-lav)] px-6 py-8 lg:px-12 lg:py-10"
           )}
         >
-          <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
-            HeyMoa 데스크톱
+          <h1 className={H2}>HeyMoa 앱 설치</h1>
+          <p className={cn(LEAD, "mt-3")}>
+            회의실 대화도, 화상회의·강의·유튜브에서 듣는 말도 기록하세요.
           </p>
-          {/* 약관 제목과 같은 H2 급 — 히어로 급을 쓰면 안내 한 장이 첫 화면처럼 군다. */}
-          <h1 className={cn(H2, "mt-4 max-w-[820px]")}>
-            회의는 그대로, 기록은 더 가까이
-          </h1>
-          <p className={cn(LEAD, "mt-4 max-w-[640px] lg:max-w-[860px]")}>
-            웹에서 쓰던 HeyMoa에 컴퓨터에서 나는 소리까지 녹음하는 기능과 메뉴바
-            타임라인을 더했습니다. <br className="hidden lg:inline" />
-            앱에서도 같은 웹 서비스를 사용합니다.
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a
-              href="#installers"
-              className={cn(
-                "inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-[var(--tv-brand)] px-6 text-[15px] font-bold text-white transition-colors hover:bg-[var(--tv-brand-deep)]",
-                FOCUS
-              )}
-            >
-              앱 다운로드
-              <ArrowDown aria-hidden className="size-4" />
-            </a>
-            {/* 설치 없이 지금 쓰려는 사람의 길. 로그인 상태면 대시보드로 간다(`LandingCta`). */}
-            <LandingCta
-              label="웹에서 바로 시작"
-              className={cn(
-                "justify-center gap-2 border-[var(--tv-rule-strong)] bg-white font-bold text-[var(--tv-ink)] bg-clip-border hover:bg-[var(--tv-lav-soft)] focus-visible:border-[var(--tv-rule-strong)] focus-visible:ring-0",
-                FOCUS
-              )}
-            />
-          </div>
         </header>
       </div>
 
@@ -142,66 +103,45 @@ export default function DownloadPage() {
                 </TrackedLink>
               ))}
             </div>
+            <ol
+              aria-label={`${platform.name} 설치 방법`}
+              className={cn(
+                BODY,
+                "mt-5 list-decimal space-y-2 pl-5 marker:font-semibold"
+              )}
+            >
+              {platform.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
             {platform.name === "Mac" && (
               <div className="mt-5">
                 <p className={BODY}>Homebrew로 설치</p>
-                <code className="mt-2 block break-all rounded-[10px] bg-[var(--tv-lav-soft)] px-4 py-3 text-[14px] text-[var(--tv-ink)]">
-                  brew install --cask team-minswon/tap/heymoa
-                </code>
+                <HomebrewInstallCommand />
               </div>
             )}
-            <p className={CAUTION}>
-              <b className="font-extrabold text-[var(--tv-ink)]">
-                {platform.label}{" "}
-              </b>
-              {platform.caution}
-            </p>
           </section>
         ))}
       </div>
 
-      <div className={cn(CONTAINER, "mt-4 lg:mt-6")}>
-        <section
-          className={cn(RADIUS.card, "bg-[var(--tv-lav-soft)] p-6 lg:p-8")}
-        >
-          <h2 className={CARD_TITLE}>설정과 업데이트</h2>
-          <div className="mt-3 grid gap-3 lg:mt-4 lg:grid-cols-2 lg:gap-8">
-            <p className={BODY}>
-              첫 실행에서 마이크 설정을 안내합니다. 컴퓨터 오디오 권한은 녹음을
-              시작할 때 확인합니다. 권한 설정은 나중에도 할 수 있습니다.
-            </p>
-            <p className={BODY}>
-              자동 업데이트는 제공하지 않으므로 녹음을 중지하고 앱을 종료한 뒤
-              새 설치 파일로 업데이트합니다. Homebrew로 설치했다면{" "}
-              <code className="break-all">brew upgrade --cask heymoa</code>를
-              실행합니다.
-            </p>
-          </div>
-          <p className={cn(BODY, "mt-4")}>
-            현재 배포 버전 {DESKTOP_DOWNLOAD_VERSION} ·{" "}
-            <a
-              href={DESKTOP_RELEASES_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn("underline underline-offset-4", FOCUS)}
-            >
-              버전 기록 보기 (GitHub)
-            </a>
-          </p>
-          <p className="m-0 mt-4 break-keep text-[14px] leading-[1.65] text-[var(--tv-muted)] [overflow-wrap:anywhere] lg:mt-6">
-            Homebrew 설치, 권한 설정, 녹음 중 앱 종료, 막힐 때는{" "}
-            <Link
-              href="/help/desktop"
-              className={cn(
-                "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
-                FOCUS
-              )}
-            >
-              데스크톱 앱 사용법
-            </Link>
-            에 있습니다.
-          </p>
-        </section>
+      <div className={cn(CONTAINER, "mt-6 lg:mt-8")}>
+        <p className={cn(BODY, "mb-2")}>
+          마이크 권한을 허용해 주세요. Mac의 컴퓨터 소리 권한은 첫 녹음 때
+          요청합니다.
+        </p>
+        <p className={BODY}>
+          권한 설정과 업데이트 방법은{" "}
+          <Link
+            href="/help/desktop"
+            className={cn(
+              "rounded-[4px] font-bold text-[var(--tv-brand-deep)] underline underline-offset-4 transition-colors hover:text-[var(--tv-brand)]",
+              FOCUS
+            )}
+          >
+            데스크톱 앱 사용법
+          </Link>
+          에서 확인하세요.
+        </p>
       </div>
     </div>
   );

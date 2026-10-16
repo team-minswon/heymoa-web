@@ -171,7 +171,7 @@ async function fixture(t, overriddenProfiles = true, introCompleted = true) {
       },
     },
     shell: { openExternal: async (url) => opened.push(url) },
-    systemPreferences: { getMediaAccessStatus: () => "not-determined", askForMediaAccess: async () => false },
+    systemPreferences: { getMediaAccessStatus: () => "granted", askForMediaAccess: async () => true },
     dialog: {
       showErrorBox() {
         assert.fail("unexpected startup failure");

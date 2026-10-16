@@ -150,6 +150,13 @@ export function RecordingDock({
             className="flex h-9 shrink-0 items-center px-1"
           >
             <RecordingPendingSpinner />
+            <span role="status" className="ml-2 text-sm text-[var(--el-muted)]">
+              {state === "requesting-permission"
+                ? "마이크·컴퓨터 소리 권한 확인 중"
+                : state === "connecting"
+                  ? "녹음 연결 중"
+                  : "녹음 마무리 중"}
+            </span>
           </motion.div>
         ) : disabledReason ? (
           // 녹음 중·정리 중은 위에서 먼저 걸린다 — 다른 멤버가 회의를 끝내도 내 정지 버튼은

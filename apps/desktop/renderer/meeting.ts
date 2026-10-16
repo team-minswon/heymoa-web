@@ -4,6 +4,11 @@ import type {
   MeetingTimelineSnapshot,
 } from "@heymoa/desktop-contracts";
 import type { MeetingPopoverView } from "../src/meeting-timeline";
+import {
+  distanceFromBottom,
+  nextFollowing,
+  watchUpwardInput,
+} from "../../../lib/notes/follow-scroll";
 
 type MeetingBridge = {
   read(): Promise<MeetingPopoverView>;
@@ -30,6 +35,8 @@ let filter = "ALL";
 let recording = false;
 let emptyMessage = "녹음 중인 회의가 없습니다.";
 let following = true;
+let previousTop = 0;
+let previousHeight = scroll.scrollHeight;
 let viewing = false;
 const filters = [
   ["ALL", "전체"],
@@ -121,7 +128,12 @@ function createRow(item: MeetingTimelineItem) {
       });
     });
   });
+  let sizeAnimation: Animation | undefined;
   function update(value: MeetingTimelineItem) {
+    const previousHeight = node.getBoundingClientRect().height;
+    const changedContent = content.textContent !== value.content;
+    const previousCitations = text.textContent;
+    sizeAnimation?.cancel();
     time.textContent = offset(value.atMs);
     dot.className = `dot ${value.tone}`;
     content.textContent = value.content;
@@ -141,12 +153,36 @@ function createRow(item: MeetingTimelineItem) {
         return line;
       })
     );
+    if (
+      node.isConnected &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const height = node.getBoundingClientRect().height;
+      if (Math.abs(previousHeight - height) > 1) {
+        sizeAnimation = node.animate(
+          [
+            { height: `${previousHeight}px`, overflow: "clip" },
+            { height: `${height}px`, overflow: "clip" },
+          ],
+          { duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+        );
+      }
+      if (changedContent) {
+        content.animate([{ opacity: 0.5 }, { opacity: 1 }], { duration: 180 });
+      }
+      if (
+        text.classList.contains("revealed") &&
+        previousCitations !== text.textContent
+      ) {
+        text.animate([{ opacity: 0.5 }, { opacity: 1 }], { duration: 180 });
+      }
+    }
   }
   update(item);
   return { node, item, update };
 }
 const rowViews = new Map<string, ReturnType<typeof createRow>>();
-function renderItems() {
+function renderItems(animateNew = false) {
   const displayed = (timeline?.items ?? []).filter(
     (item) =>
       filter === "ALL" ||
@@ -165,6 +201,7 @@ function renderItems() {
     let row = rowViews.get(item.id);
     if (!row) {
       row = createRow(item);
+      if (animateNew) row.node.classList.add("arriving");
       rowViews.set(item.id, row);
     } else if (JSON.stringify(row.item) !== JSON.stringify(item)) {
       row.update(item);
@@ -183,8 +220,14 @@ function renderItems() {
       : timeline.failed
         ? "회의 내용을 확인하지 못했습니다. 현재 회의를 열어 확인해 주세요."
         : "아직 이 유형의 항목이 없습니다.";
-  if (following) scroll.scrollTop = scroll.scrollHeight;
+  followBottom();
   latest.hidden = following || displayed.length === 0;
+}
+function followBottom() {
+  if (!following) return;
+  scroll.scrollTop = scroll.scrollHeight;
+  previousTop = scroll.scrollTop;
+  previousHeight = scroll.scrollHeight;
 }
 const startTime = (ms: number) =>
   new Date(ms).toLocaleTimeString("ko-KR", {
@@ -230,8 +273,9 @@ function renderMeetings(list: ActiveMeeting[], show: boolean) {
   );
 }
 function receive(view: MeetingPopoverView) {
-  // Read follow intent before mutating the DOM, not after new rows push the bottom away.
-  following = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
+  const animateNew =
+    timeline?.noteId === view.timeline?.noteId &&
+    Boolean(timeline?.items.length);
   if (timeline?.noteId !== view.timeline?.noteId) {
     filter = "ALL";
     following = true;
@@ -269,20 +313,43 @@ function receive(view: MeetingPopoverView) {
           : "");
   // 뷰어로 보는 중에는 「녹음 중지」 대신 「보기 종료」로 목록에 돌아간다.
   const label = viewing ? " 보기 종료" : " 녹음 중지";
-  if (stop.lastChild?.textContent !== label) stop.lastChild!.textContent = label;
+  if (stop.lastChild?.textContent !== label)
+    stop.lastChild!.textContent = label;
   stop.disabled = !(view.canStop || viewing);
-  renderItems();
+  renderItems(animateNew);
   const listing = !timeline && !recording && view.meetings.length > 0;
   if (listing) element("title").textContent = "진행 중인 회의";
   renderMeetings(view.meetings, listing);
 }
 scroll.addEventListener("scroll", () => {
-  following = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
+  const top = scroll.scrollTop;
+  // Unchanged scroll events after a render must not undo an upward gesture.
+  if (top !== previousTop) {
+    following = nextFollowing({
+      following,
+      top,
+      previousTop,
+      distance: distanceFromBottom(scroll),
+      contentGrew: scroll.scrollHeight > previousHeight,
+    });
+  }
+  previousTop = top;
+  previousHeight = scroll.scrollHeight;
   latest.hidden = following || !timeline?.items.length;
 });
+const stopWatching = watchUpwardInput(scroll, () => {
+  following = false;
+  latest.hidden = !timeline?.items.length;
+});
+const resizeObserver =
+  typeof ResizeObserver === "undefined"
+    ? null
+    : new ResizeObserver(followBottom);
+resizeObserver?.observe(items);
+resizeObserver?.observe(scroll);
 latest.addEventListener("click", () => {
   following = true;
-  scroll.scrollTop = scroll.scrollHeight;
+  followBottom();
   latest.hidden = true;
 });
 function act(
@@ -318,4 +385,12 @@ void bridge
   .catch(() => {
     element("notice").textContent = "현재 회의를 확인하지 못했습니다.";
   });
-window.addEventListener("unload", unsubscribe, { once: true });
+window.addEventListener(
+  "unload",
+  () => {
+    unsubscribe();
+    stopWatching();
+    resizeObserver?.disconnect();
+  },
+  { once: true }
+);

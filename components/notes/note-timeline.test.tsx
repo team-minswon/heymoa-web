@@ -893,3 +893,65 @@ it("근거는 현재 화자 지정·개별 지정·초기화를 따르고 없는
   expect(fetch).toHaveBeenCalledTimes(5);
   client.clear();
 });
+
+
+it("긴 항목과 근거 펼침으로 늦게 높이가 늘어도 하단 추종을 유지하고 위로 올린 뒤에는 멈춥니다", () => {
+  const callbacks: ResizeObserverCallback[] = [];
+  vi.stubGlobal("ResizeObserver", class {
+    constructor(callback: ResizeObserverCallback) { callbacks.push(callback); }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
+  const frames = new Map<number, FrameRequestCallback>();
+  let id = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { frames.set(++id, callback); return id; });
+  vi.stubGlobal("cancelAnimationFrame", (key: number) => frames.delete(key));
+  const flush = () => { const pending = [...frames.values()]; frames.clear(); pending.forEach((callback) => callback(0)); };
+  const resize = () => act(() => callbacks.forEach((callback) => callback([], {} as ResizeObserver)));
+  withLedger(head({ content: "긴 내용을 계속 받는 회의" }));
+  const { container } = render(<NoteTimeline header={null} onEvidenceSelect={() => {}} recording />);
+  const viewport = container.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]")!;
+  Object.defineProperties(viewport, {
+    scrollTop: { configurable: true, writable: true, value: 0 },
+    scrollHeight: { configurable: true, value: 2000 },
+    clientHeight: { configurable: true, value: 500 },
+  });
+  act(flush);
+  expect(viewport.scrollTop).toBe(1500);
+  fireEvent.scroll(viewport);
+  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 3200 });
+  fireEvent.scroll(viewport);
+  resize();
+  expect(viewport.scrollTop).toBe(2700);
+  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 3600 });
+  resize();
+  expect(viewport.scrollTop).toBe(3100);
+  fireEvent.wheel(viewport, { deltaY: -30 });
+  fireEvent.scroll(viewport);
+  expect(screen.getByRole("button", { name: "맨 아래로" })).toBeInTheDocument();
+  viewport.scrollTop = 3070;
+  fireEvent.scroll(viewport);
+  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 4000 });
+  resize();
+  expect(viewport.scrollTop).toBe(3070);
+  fireEvent.click(screen.getByRole("button", { name: "맨 아래로" }));
+  expect(viewport.scrollTop).toBe(3500);
+  Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 4200 });
+  resize();
+  expect(viewport.scrollTop).toBe(3700);
+});
+
+
+it("첫 목록은 즉시 보이고 나중에 붙은 항목만 짧게 나타납니다", () => {
+  const first = head({ content: "먼저 받은 항목" });
+  withLedger(first);
+  const view = () => <NoteTimeline header={null} onEvidenceSelect={() => {}} recording />;
+  const { container, rerender } = render(view());
+  expect(container.querySelector(`#timeline-item-${first.proposalId}`)).toHaveStyle({ opacity: "1" });
+  const second = head({ content: "새로 받은 항목" });
+  withLedger(first, second);
+  rerender(view());
+  const appended = container.querySelector(`#timeline-item-${second.proposalId}`)!;
+  expect(appended).toHaveStyle({ opacity: "0" });
+});
