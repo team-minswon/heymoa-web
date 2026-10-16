@@ -4,6 +4,8 @@ import type { RealtimeFailureKind } from "@/lib/transcription/realtime-session";
 
 const START_FAILED = "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 const DROPPED = "연결이 끊겨 녹음을 멈췄어요.";
+const DESKTOP_AUDIO_HELP =
+  "운영체제 설정에서 HeyMoa의 마이크·오디오 녹음 권한을 확인해 주세요. 방금 권한을 허용했다면 앱을 완전히 종료한 뒤 다시 열어 녹음해 주세요.";
 
 export const SUPERSEDED_MESSAGE =
   "다른 탭이나 기기에서 이 녹음을 이어받았습니다.";
@@ -14,9 +16,22 @@ const lostAudio = (droppedMs: number) =>
   `이 기기에 남은 소리 ${Math.max(1, Math.round(droppedMs / 1_000))}초를 올리지 못했어요.`;
 
 export function startErrorMessage(cause: unknown) {
-  const message = cause instanceof Error ? cause.message : "";
-  const name = cause instanceof Error ? cause.name : "";
+  const error =
+    cause instanceof Error || cause instanceof DOMException ? cause : null;
+  const message = error?.message ?? "";
+  const name = error?.name ?? "";
+  // Electron IPC 오류는 "Error invoking remote method '…': Error: CODE"로 감쌉니다.
+  const captureCode = /(?:^|: )([A-Z][A-Z_]+)$/.exec(message)?.[1];
 
+  if (captureCode === "AUDIO_PERMISSION_DENIED") {
+    return `마이크 또는 컴퓨터 소리 권한이 필요합니다. ${DESKTOP_AUDIO_HELP}`;
+  }
+  if (captureCode === "SYSTEM_AUDIO_INPUT_MISSING") {
+    return `컴퓨터 소리 입력을 찾지 못했습니다. ${DESKTOP_AUDIO_HELP}`;
+  }
+  if (captureCode === "AUDIO_CAPTURE_FAILED") {
+    return `마이크와 컴퓨터 소리를 연결하지 못했습니다. ${DESKTOP_AUDIO_HELP}`;
+  }
   if (name === "NotAllowedError" || name === "PermissionDeniedError") {
     return "마이크 권한이 필요합니다. 브라우저 설정에서 마이크 사용을 허용해 주세요.";
   }
