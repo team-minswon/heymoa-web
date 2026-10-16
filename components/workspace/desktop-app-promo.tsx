@@ -1,10 +1,11 @@
 "use client";
 
-import { MonitorDown, X } from "lucide-react";
+import { CircleHelp, MonitorDown, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { DesktopCompareDialog } from "@/components/workspace/desktop-compare-dialog";
 import { track } from "@/lib/analytics/track";
 import { useDesktopApp } from "@/lib/desktop/use-desktop-app";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ export function DesktopAppPromo() {
   const isDesktopApp = useDesktopApp();
   // 첫 렌더에서는 닫았는지 모른다 — 읽기 전에 그리면 닫은 사람에게 카드가 번쩍인다.
   const [dismissed, setDismissed] = useState<boolean | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
   if (dismissed === null && typeof window !== "undefined") {
     setDismissed(wasDismissed());
   }
@@ -77,12 +79,22 @@ export function DesktopAppPromo() {
       </Link>
       <button
         type="button"
+        aria-label="웹과 데스크톱 앱의 차이 보기"
+        title="웹과 뭐가 다른가요?"
+        onClick={() => setCompareOpen(true)}
+        className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-control text-[var(--el-muted)] transition-colors hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      >
+        <CircleHelp aria-hidden className="size-4" />
+      </button>
+      <button
+        type="button"
         aria-label="데스크톱 앱 안내 닫기"
         onClick={dismiss}
         className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-control text-[var(--el-muted)] transition-colors hover:bg-[var(--el-surface-strong)] hover:text-[var(--el-ink)] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <X aria-hidden className="size-4" />
       </button>
+      <DesktopCompareDialog open={compareOpen} onOpenChange={setCompareOpen} />
     </aside>
   );
 }

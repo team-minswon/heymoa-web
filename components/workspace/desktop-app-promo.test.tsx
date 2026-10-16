@@ -32,6 +32,13 @@ describe("DesktopAppPromo", () => {
     expect(track).toHaveBeenCalledWith("desktop_download_clicked");
   });
 
+  it("? 버튼으로 웹과 앱의 차이 창을 연다", () => {
+    render(<DesktopAppPromo />);
+    fireEvent.click(screen.getByRole("button", { name: "웹과 데스크톱 앱의 차이 보기" }));
+    expect(screen.getByText("웹과 데스크톱 앱, 무엇이 다른가요?")).toBeInTheDocument();
+    expect(screen.getByTestId("slide-sound")).toBeInTheDocument();
+  });
+
   it.each([true, null])("앱 안이거나 아직 모르면(%s) 그리지 않는다", (value) => {
     desktop.value = value;
     render(<DesktopAppPromo />);
