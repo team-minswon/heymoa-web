@@ -160,9 +160,9 @@ const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
     a: (
       <>
         <span className={MARKER}>둘 다 됩니다.</span> 브라우저에서 바로 쓸 수 있고, Mac · Windows용
-        데스크톱 앱도 있습니다. 데스크톱 앱은 마이크에 더해 컴퓨터에서 나는 소리까지 녹음하고,
+        데스크톱 앱도 있습니다. 데스크톱 앱에서는 마이크 소리와 컴퓨터에서 나는 소리를 함께 녹음하고,
         메뉴바에서 타임라인을 볼 수 있습니다. 어느 쪽이든 같은 Google 계정으로 로그인하고 같은 회의
-        기록을 봅니다. Windows판은 베타이고 설치와 녹음을 아직 검증하고 있습니다.
+        기록을 봅니다. Windows판은 베타이며 정상적으로 설치하고 녹음할 수 있는지는 아직 확인 중입니다.
       </>
     ),
     more: <SeeLink href="/download">데스크톱 다운로드</SeeLink>,
