@@ -452,7 +452,7 @@ function renderChat(child?: React.ReactNode) {
 }
 
 function openPanel() {
-  fireEvent.click(screen.getByRole("button", { name: "개인 챗봇 열기" }));
+  fireEvent.click(screen.getByRole("button", { name: "내 에이전트 열기" }));
 }
 
 /** 헤더의 ⟲. 누르면 기록 목록이 스레드 자리로 밀려 들어온다. */
@@ -1210,7 +1210,7 @@ describe("PersonalChatProvider", () => {
     );
     // 감출 뿐 언마운트하지 않는다 — 끊으면 흐르는 화면과 중지·승인에 닿을 길을 잃는다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
-    expect(screen.queryByRole("button", { name: "개인 챗봇 열기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "내 에이전트 열기" })).toBeNull();
     expect(state.aborted).toBe(false);
   });
 

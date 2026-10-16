@@ -53,7 +53,7 @@ test("resumes a mid-stream answer and draws it to message_end", async ({
   }, MOCK_WORKSPACE_ID);
 
   // 돌아온 화면. 방금 만든 대화가 목록 첫 줄이라 그대로 열리고, `activeTurn`으로 잇는다.
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
   await expect(page.getByRole("button", { name: "중지" })).toBeVisible({
     timeout: 20_000,
   });
@@ -72,7 +72,7 @@ test("stop cancels the turn and keeps the partial answer in history", async ({
   page,
 }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
-  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByRole("button", { name: "내 에이전트 열기" }).click();
 
   // 새 대화에서 긴 답을 받다가 중지한다.
   await page.getByTestId("chat-list-new").click();
