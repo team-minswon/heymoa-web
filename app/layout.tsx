@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
-import {
-  EB_Garamond,
-  Geist_Mono,
-  Hahmlet,
-  Inter,
-  Noto_Serif_KR,
-} from "next/font/google";
+
+/**
+ * **글꼴은 패키지(`@fontsource`)로 싣는다** (APP-1115). `next/font/google`은 빌드할 때
+ * `fonts.gstatic.com`에서 받아서, 한글 조각 수백 개 중 하나만 끊겨도 빌드가 실패했다.
+ * 패키지로 두면 `pnpm install`만으로 Vercel · 로컬 · CI가 같은 글꼴로 빌드한다.
+ *
+ * - **한글 세리프(Noto Serif KR)** — EB Garamond에는 한글 글리프가 없어 `font-serif` 제목이
+ *   시스템 고딕으로 떨어졌다. 라틴은 Garamond, 한글은 이 글꼴이 받는다(글리프 단위 폴백).
+ *   굵기마다 CSS가 unicode-range 조각을 그대로 담고 있어 브라우저가 필요한 조각만 받는다 —
+ *   통 woff2를 커밋하지 않는 이유다. 통으로 가면 첫 방문 페이로드가 수 MB 는다.
+ * - 변수(`--font-*`)는 `globals.css`의 `:root`가 선언한다. next/font가 `<html>` 클래스에 심던 자리다.
+ */
+import "@fontsource-variable/inter";
+import "@fontsource-variable/geist-mono";
+import "@fontsource/eb-garamond/400.css";
+import "@fontsource/noto-serif-kr/300.css";
+import "@fontsource/noto-serif-kr/400.css";
 
 import { SiteAnalytics } from "@/components/analytics/site-analytics";
 import { FooterGate } from "@/components/FooterGate";
@@ -19,53 +29,6 @@ import { getCurrentUserForSsr } from "@/lib/auth/server";
 import { robotsDirective, siteConfig } from "@/lib/site";
 import { Providers } from "./providers";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const ebGaramond = EB_Garamond({
-  variable: "--font-eb-garamond",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
-/**
- * **한글 세리프.** EB Garamond에는 한글 글리프가 없어서 `font-serif`를 준 제목이 전부 시스템
- * 산세리프로 떨어졌다 — 에디토리얼 서체를 지정해 놓고 화면에는 평범한 고딕이 나왔다.
- * 라틴은 Garamond, 한글은 이 폰트가 받는다(글리프 단위 폴백).
- *
- * `preload: false`는 CJK라서다. 서브셋이 수백 개로 쪼개져 있어 preload를 켜면 쓰지도 않을
- * 조각까지 끌어온다 — 브라우저가 unicode-range로 필요한 조각만 받게 둔다.
- */
-const notoSerifKr = Noto_Serif_KR({
-  variable: "--font-noto-serif-kr",
-  weight: ["300", "400"],
-  preload: false,
-});
-
-/**
- * **랜딩 히어로 전용 디스플레이 세리프.** Hahmlet은 한글·라틴을 한 벌로 가진 모던 명조라
- * 히어로 한 화면 안에서 폰트가 갈리지 않는다. 300을 쓰는 것은 `font-serif`와 같은 이유다 —
- * 세리프 라이트가 이 제품의 디스플레이 시그니처이고 굵게 가지 않는다(`DESIGN.md`).
- *
- * **전역 `--font-serif`는 건드리지 않았다.** 나머지 제목은 그대로 EB Garamond + Noto Serif KR이고,
- * 이 변수는 히어로 `h1`에서만 참조한다.
- *
- * `preload: false`는 위 Noto Serif KR과 같은 이유다 — 한글 서브셋이 수백 조각이라
- * preload가 쓰지도 않을 조각을 끌어온다.
- */
-const hahmlet = Hahmlet({
-  variable: "--font-hahmlet",
-  weight: ["300"],
-  preload: false,
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -122,10 +85,7 @@ export default async function RootLayout({
   const initialUser = await getCurrentUserForSsr();
 
   return (
-    <html
-      lang="ko"
-      className={`${inter.variable} ${geistMono.variable} ${ebGaramond.variable} ${notoSerifKr.variable} ${hahmlet.variable} h-full antialiased`}
-    >
+    <html lang="ko" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <Providers initialUser={initialUser}>
           <div className="flex min-h-screen flex-col bg-[var(--el-canvas)] text-[var(--el-ink)]">
