@@ -103,14 +103,14 @@ test("그래프를 확대 · 이동하고, 점이나 목록에서 항목을 고�
   expect(found).toBe(true);
   await page.mouse.down();
   await page.mouse.up();
-  await expect(page.getByRole("button", { name: "닫기" })).toBeVisible();
-  await page.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByRole("button", { name: "닫기", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "닫기", exact: true }).click();
 
   // 캔버스를 못 쓰는 사람은 보이지 않는 목록으로 같은 항목을 고른다.
   await graph.getByRole("button", { name: /무료 구간은 월 5시간으로 두고 팀 요금제에서는 뺀다/ }).first().focus();
   await page.keyboard.press("Enter");
   await expect(page.getByText("검토에서 수정")).toBeVisible();
-  await page.getByRole("button", { name: "닫기" }).click();
+  await page.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(page.getByText("검토에서 수정")).toHaveCount(0);
 });
 

@@ -53,6 +53,8 @@ Windows NSIS는 실제 Windows runner가 기본입니다. macOS에서 교차 빌
 
 ## 공개 게시 관문
 
+새 버전 공개와 파일 검증을 마친 뒤 `lib/desktop/downloads.ts`의 공개 다운로드 버전과 `e2e/download.spec.ts`의 링크 기대값을 함께 갱신합니다. 앱 빌드 버전은 공개 전에도 올라가므로 다운로드 링크의 버전과 따로 관리합니다.
+
 1. 웹·서버 desktop 인증 및 runtime 배포, 실제 앱 로그인·외부 연동·기록 시작과 종료를 확인합니다.
 2. 지원 OS별 설치 파일을 새 설치 환경에서 검증합니다. 앱·도움말·릴리즈 안내의 unsigned/signed 상태를 일치시킵니다. 패키지 allowlist·icon·권한 설명·checksum을 확인합니다.
 3. 공개 다운로드와 자체 tap은 실제 public `team-minswon/homebrew-tap`을 사용합니다. private 소스 저장소의 인증이 필요한 asset을 일반 다운로드 링크로 제공하지 않습니다. public tap의 GitHub Releases에는 검증된 바이너리와 checksum·설치 안내만 올립니다.
