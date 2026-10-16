@@ -85,7 +85,19 @@ jobs:
           printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$key"
           chmod 600 "$key"
           echo "APPLE_API_KEY=$key" >> "$GITHUB_ENV"
-      - run: pnpm --filter @heymoa/desktop package:${{ matrix.target }}
+      - name: Package
+        shell: bash
+        # Mac 은 electron-builder 의 staple 이 Apple 서버(CloudKit)에 닿지 못해 가끔 실패한다(Intel 러너에서 두 번 겪음).
+        # 공증은 몇 분이라 전체를 다시 한다 — Windows 는 한 번만 돈다.
+        run: |
+          attempts=1
+          if [[ "${{ matrix.target }}" == mac* ]]; then attempts=3; fi
+          for attempt in $(seq 1 "$attempts"); do
+            pnpm --filter @heymoa/desktop package:${{ matrix.target }} && exit 0
+            echo "package attempt $attempt of $attempts failed" >&2
+            if [[ "$attempt" -lt "$attempts" ]]; then sleep 20; fi
+          done
+          exit 1
       - name: Verify Developer ID signature and notarization
         if: startsWith(matrix.target, 'mac')
         run: |
