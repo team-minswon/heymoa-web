@@ -12,6 +12,7 @@ import {
 import { siteConfig } from "@/lib/site";
 
 import { CONTAINER, FOCUS, TV_VARS } from "./tokens";
+import { AppDownloadLink } from "./app-download-link";
 
 /**
  * 구간 다섯으로 가는 메뉴. 푸터 「둘러보기」도 이것을 쓴다. 이름은 구간이 보여 주는 것(회의 정리 · 근거
@@ -86,9 +87,7 @@ export function TopBar() {
             </DropdownMenuContent>
           </DropdownMenu>
           {/* 푸터 「둘러보기」(`NAV`)에는 넣지 않는다 — 다운로드는 푸터 「그 밖에」에 따로 있다. */}
-          <Link href="/download" className={`inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[15px] font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}>
-            다운로드
-          </Link>
+          <AppDownloadLink variant="nav" />
           <Link href="/help" className={`inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[15px] font-semibold text-[var(--tv-body)] transition-colors hover:text-[var(--tv-brand-deep)] ${FOCUS}`}>
             도움말
           </Link>
@@ -96,7 +95,7 @@ export function TopBar() {
 
         <div className="ml-auto flex items-center">
           <LandingCta
-            label="시작하기"
+            label="무료로 시작하기"
             className={`h-11 border-transparent bg-[var(--tv-brand)] px-5 text-[14px] font-bold text-white bg-clip-border hover:bg-[var(--tv-brand-deep)] focus-visible:border-[var(--tv-brand-deep)] focus-visible:ring-0 lg:h-10 ${FOCUS} focus-visible:outline-offset-0`}
           />
         </div>

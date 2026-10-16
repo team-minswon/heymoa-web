@@ -5,6 +5,12 @@ import { RecordingErrorToast } from "@/components/transcription/recording-error-
 
 const recording = vi.hoisted(() => ({ error: null as string | null }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), dismiss: vi.fn() }));
+const desktop = vi.hoisted(() => ({ enabled: false }));
+const openSitePage = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/desktop/use-desktop-app", () => ({
+  useDesktopApp: () => desktop.enabled,
+}));
+vi.mock("@/lib/desktop/open-site-page", () => ({ openSitePage }));
 
 vi.mock("@/components/transcription/recording-provider", () => ({
   useRecording: () => recording,
@@ -19,6 +25,8 @@ describe("RecordingErrorToast", () => {
     recording.error = null;
     toast.error.mockReset();
     toast.dismiss.mockReset();
+    desktop.enabled = false;
+    openSitePage.mockReset();
   });
 
   it("shows a recording failure once without inserting layout content", () => {
@@ -50,5 +58,16 @@ describe("RecordingErrorToast", () => {
     view.rerender(<RecordingErrorToast />);
 
     expect(toast.dismiss).toHaveBeenCalledWith("recording-error");
+  });
+
+  it("데스크톱 오류의 해결 방법은 앱 권한 안내로 이동합니다", () => {
+    desktop.enabled = true;
+    recording.error = "소리를 연결하지 못했습니다.";
+    render(<RecordingErrorToast />);
+    toast.error.mock.calls.at(-1)![1].action.onClick();
+    expect(openSitePage).toHaveBeenCalledWith(
+      "/help/desktop#first-run",
+      expect.any(Function)
+    );
   });
 });

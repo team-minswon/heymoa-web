@@ -147,3 +147,223 @@ test("Chromium multiline title and classification share a padded hit area and al
   const indent = await page.locator("article").evaluate((row) => row.querySelector(".quote").getBoundingClientRect().left - row.querySelector(".content").getBoundingClientRect().left);
   assert.equal(indent, 0);
 });
+
+
+test("Chromium follows long updates and expanding evidence without losing upward input intent", async (t) => {
+  const { chromium } = require("@playwright/test");
+  const browser = await chromium.launch({ headless: true });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 460, height: 620 } });
+  await page.addInitScript(() => {
+    window.heymoaMeeting = {
+      read: () => new Promise(() => {}),
+      action: async () => {},
+      subscribe: (receive) => {
+        window.testReceive = receive;
+        return () => {};
+      },
+    };
+  });
+  await page.goto(
+    require("node:url").pathToFileURL(
+      path.join(__dirname, "../dist/meeting.html")
+    ).href
+  );
+  const value = snapshot();
+  let timeline = {
+    ...value,
+    total: 20,
+    items: Array.from({ length: 20 }, (_, i) => ({
+      ...value.items[0],
+      id: `item-${i}`,
+    })),
+  };
+  const publish = () =>
+    page.evaluate(
+      (timeline) =>
+        window.testReceive({
+          meetings: [],
+          timeline,
+          phase: "recording",
+          unknown: false,
+          label: "녹음 중",
+          elapsed: "1:00",
+          warning: null,
+          canStop: true,
+          stale: false,
+        }),
+      timeline
+    );
+  const atBottom = () =>
+    page.waitForFunction(() => {
+      const node = document.querySelector("#scroll");
+      return (
+        Math.abs(node.scrollHeight - node.scrollTop - node.clientHeight) < 2 &&
+        document.querySelector("#latest").hidden
+      );
+    });
+  await publish();
+  await atBottom();
+  assert.equal(await page.locator("article.arriving").count(), 0);
+  timeline.items[19] = {
+    ...timeline.items[19],
+    content: "회의에서 함께 확인한 긴 결정과 후속 작업입니다. ".repeat(45),
+    citations: [
+      { atMs: 1000, text: "회의 근거로 남는 긴 발화입니다. ".repeat(60) },
+    ],
+  };
+  await publish();
+  await atBottom();
+  await page.evaluate(() => document.querySelectorAll(".summary")[19].click());
+  await page.waitForFunction(
+    () => !document.querySelectorAll(".detail")[19].inert
+  );
+  await atBottom();
+  // A later snapshot used to mistake the expanded evidence height for a user leaving the bottom.
+  await publish();
+  await atBottom();
+  timeline.items[19] = {
+    ...timeline.items[19],
+    citations: [
+      { atMs: 1000, text: "뒤늦게 보충된 회의 근거입니다. ".repeat(100) },
+    ],
+  };
+  await publish();
+  await atBottom();
+  await page.evaluate(() => {
+    const node = document.querySelector("#scroll");
+    node.style.maxHeight = "220px";
+  });
+  await atBottom();
+  for (const kind of ["wheel", "touch", "key"]) {
+    await page.locator("#latest").evaluate((button) => button.click());
+    await atBottom();
+    const before = await page.locator("#scroll").evaluate((node, kind) => {
+      if (kind === "wheel")
+        node.dispatchEvent(new WheelEvent("wheel", { deltaY: -12 }));
+      if (kind === "key")
+        node.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+      if (kind === "touch") {
+        node.dispatchEvent(
+          new TouchEvent("touchstart", {
+            touches: [new Touch({ identifier: 1, target: node, clientY: 100 })],
+          })
+        );
+        node.dispatchEvent(
+          new TouchEvent("touchmove", {
+            touches: [new Touch({ identifier: 1, target: node, clientY: 112 })],
+          })
+        );
+      }
+      node.scrollTop -= 12;
+      node.dispatchEvent(new Event("scroll"));
+      return node.scrollTop;
+    }, kind);
+    await publish();
+    await publish();
+    assert.equal(
+      await page.locator("#latest").isVisible(),
+      true,
+      `${kind} must stay paused across snapshots`
+    );
+    assert.equal(
+      await page.locator("#scroll").evaluate((node) => node.scrollTop),
+      before
+    );
+  }
+  await page.locator("#latest").click();
+  await atBottom();
+});
+
+test("Chromium animates only new or changed timeline rows and respects reduced motion", async (t) => {
+  const { chromium } = require("@playwright/test");
+  const browser = await chromium.launch({ headless: true });
+  t.after(() => browser.close());
+  for (const reducedMotion of ["no-preference", "reduce"]) {
+    const page = await browser.newPage({
+      viewport: { width: 460, height: 620 },
+      reducedMotion,
+    });
+    await page.addInitScript(() => {
+      window.heymoaMeeting = {
+        read: () => new Promise(() => {}),
+        action: async () => {},
+        subscribe: (receive) => {
+          window.testReceive = receive;
+          return () => {};
+        },
+      };
+    });
+    await page.goto(
+      require("node:url").pathToFileURL(
+        path.join(__dirname, "../dist/meeting.html")
+      ).href
+    );
+    const value = snapshot();
+    const publish = (timeline) =>
+      page.evaluate(
+        (timeline) =>
+          window.testReceive({
+            meetings: [],
+            timeline,
+            phase: "recording",
+            unknown: false,
+            label: "녹음 중",
+            elapsed: "1:00",
+            warning: null,
+            canStop: true,
+            stale: false,
+          }),
+        timeline
+      );
+    await publish(value);
+    assert.equal(await page.locator("article.arriving").count(), 0);
+    await publish({
+      ...value,
+      total: 2,
+      items: [...value.items, { ...value.items[0], id: "new-row" }],
+    });
+    assert.equal(await page.locator("article.arriving").count(), 1);
+    const animationName = await page
+      .locator("article.arriving")
+      .evaluate((node) => getComputedStyle(node).animationName);
+    assert.equal(
+      animationName,
+      reducedMotion === "reduce" ? "none" : "timeline-arrive"
+    );
+    const animationFrames = await page.evaluate((value) => {
+      window.testReceive({
+        meetings: [],
+        timeline: {
+          ...value,
+          items: [
+            {
+              ...value.items[0],
+              content: "새로 보충된 회의 내용입니다. ".repeat(40),
+            },
+          ],
+        },
+        phase: "recording",
+        unknown: false,
+        label: "녹음 중",
+        elapsed: "1:00",
+        warning: null,
+        canStop: true,
+        stale: false,
+      });
+      return {
+        row: document
+          .querySelector("article")
+          .getAnimations()
+          .flatMap((animation) => animation.effect.getKeyframes()),
+        content: document.querySelector(".content").getAnimations().length,
+      };
+    }, value);
+    assert.equal(
+      animationFrames.row.some((frame) => "height" in frame),
+      reducedMotion !== "reduce"
+    );
+    assert.equal(animationFrames.content > 0, reducedMotion !== "reduce");
+    await page.close();
+  }
+});

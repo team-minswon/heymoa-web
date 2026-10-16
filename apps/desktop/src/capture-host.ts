@@ -1,6 +1,7 @@
 import {
   BrowserWindow,
   desktopCapturer,
+  systemPreferences,
   ipcMain,
   type IpcMainEvent,
   type WebContents,
@@ -154,10 +155,24 @@ export class CaptureHost {
     .href;
   async acquire(): Promise<string> {
     if (this.disposed) throw new Error(this.disposalCode);
+    if (process.platform === "darwin") {
+      const status = systemPreferences.getMediaAccessStatus("microphone");
+      const granted =
+        status === "granted" ||
+        (status === "not-determined" &&
+          (await this.untilDisposed(
+            systemPreferences.askForMediaAccess("microphone")
+          )));
+      if (!granted) throw new Error("AUDIO_PERMISSION_DENIED");
+    }
+    if (this.disposed || !this.sameDestination())
+      throw new Error("AUDIO_CAPTURE_CANCELLED");
     const host = new BrowserWindow({
       show: false,
-      width: 1,
-      height: 1,
+      // A framed 1px window has no drawable client area on macOS.
+      frame: false,
+      width: 32,
+      height: 32,
       webPreferences: {
         preload: path.join(__dirname, "capture-preload.js"),
         nodeIntegration: false,
@@ -227,6 +242,15 @@ export class CaptureHost {
         };
         if (!id) {
           deny();
+          return;
+        }
+        if (process.platform === "darwin") {
+          // The video track is discarded; a local frame avoids requesting screen access.
+          try {
+            callback({ video: contents.mainFrame, audio: "loopback" });
+          } catch {
+            this.dispose();
+          }
           return;
         }
         void desktopCapturer

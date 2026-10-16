@@ -344,6 +344,7 @@ export function NoteTimeline({
   /** 관계(질문 ↔ 답)를 누르면 그 항목을 펼치고 화면 가운데로 데려온다. */
   const pendingScroll = useRef<string | null>(null);
   const jumpTo = (proposal: ProposalHead) => {
+    updateFollowing(false);
     pendingScroll.current = proposal.proposalId;
     setView((current) => ({
       ...current,
@@ -428,16 +429,23 @@ export function NoteTimeline({
     const viewport = viewportRef.current;
     if (!viewport) return;
     let previousTop: number | null = null;
+    let previousHeight = viewport.scrollHeight;
     const handleScroll = () => {
       const top = viewport.scrollTop;
       const previous = previousTop;
       previousTop = top;
+      const height = viewport.scrollHeight;
+      const contentGrew = height > previousHeight;
+      previousHeight = height;
+      // 위로 올리는 입력 직후, 위치가 그대로인 지연 scroll 이벤트로 다시 붙이지 않는다.
+      if (previous !== null && top === previous) return;
       updateFollowing(
         nextFollowing({
           following: followingRef.current,
           top,
           previousTop: previous,
           distance: distanceFromBottom(viewport),
+          contentGrew,
         })
       );
       if (!followingRef.current) readAwayNoteRef.current = noteId;
@@ -457,6 +465,15 @@ export function NoteTimeline({
         ? null
         : new ResizeObserver(() => {
             if (!recording) syncFollowing();
+            else if (followingRef.current) {
+              // 근거 펼침·줄바꿈·폰트 로딩은 React 갱신 뒤에도 높이를 바꾼다.
+              viewport.scrollTop = Math.max(
+                0,
+                viewport.scrollHeight - viewport.clientHeight
+              );
+              previousTop = viewport.scrollTop;
+              previousHeight = viewport.scrollHeight;
+            }
           });
     observer?.observe(viewport);
     if (viewport.firstElementChild)
@@ -770,7 +787,7 @@ export function NoteTimeline({
                       <ChevronRight
                         aria-hidden
                         className={cn(
-                          "-ml-1.5 size-3.5 shrink-0 text-[var(--el-muted-soft)]",
+                          "-ml-1.5 size-3.5 shrink-0 text-[var(--el-muted-soft)] transition-transform duration-200 motion-reduce:transition-none",
                           !folded && "rotate-90"
                         )}
                       />
@@ -801,19 +818,21 @@ export function NoteTimeline({
                           aria-hidden
                           className="absolute top-4 bottom-4 left-[63px] w-px bg-[var(--el-hairline)]"
                         />
-                        {group.items.map((item) => (
-                          <TimelineRow
-                            key={item.proposal.proposalId}
-                            item={item}
-                            citationSpeakers={citationSpeakers}
-                            open={view.open.has(item.proposal.proposalId)}
-                            onToggle={() =>
-                              toggle("open", item.proposal.proposalId)
-                            }
-                            onEvidenceSelect={onEvidenceSelect}
-                            onJump={jumpTo}
-                          />
-                        ))}
+                        <AnimatePresence initial={false}>
+                          {group.items.map((item) => (
+                            <TimelineRow
+                              key={item.proposal.proposalId}
+                              item={item}
+                              citationSpeakers={citationSpeakers}
+                              open={view.open.has(item.proposal.proposalId)}
+                              onToggle={() =>
+                                toggle("open", item.proposal.proposalId)
+                              }
+                              onEvidenceSelect={onEvidenceSelect}
+                              onJump={jumpTo}
+                            />
+                          ))}
+                        </AnimatePresence>
                       </ol>
                     </motion.div>
                   )}
@@ -910,7 +929,13 @@ function TimelineRow({
   const meta = metaOf(item);
 
   return (
-    <li id={itemId(proposal.proposalId)} className="relative">
+    <motion.li
+      id={itemId(proposal.proposalId)}
+      className="relative"
+      initial={reduced ? false : { opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
+    >
       <article className={cn(TIMELINE_ROW_GRID, "py-[7px]")}>
         {/* **`segmentId` 로만 찾는다** — `startedAtMs` 는 세션별 오프셋이라 세션이 둘 이상이면
             화면의 시각과 어긋난다(APP-398 선례). */}
@@ -1090,6 +1115,6 @@ function TimelineRow({
           ) : null}
         </div>
       </article>
-    </li>
+    </motion.li>
   );
 }

@@ -84,10 +84,15 @@ function fixture(t, settings = {}) {
     Date,
     setTimeout,
     clearTimeout,
+    process: { platform: settings.platform ?? "win32" },
     require: (name) =>
       name === "electron"
         ? {
             BrowserWindow: Window,
+            systemPreferences: {
+              getMediaAccessStatus: () => settings.microphoneStatus ?? "granted",
+              askForMediaAccess: settings.askMicrophone ?? (async () => true),
+            },
             ipcMain,
             desktopCapturer: {
               getSources:
@@ -118,6 +123,16 @@ function fixture(t, settings = {}) {
     );
   return { host, windows, packets, ipcMain, emit, destination };
 }
+test("Mac uses its isolated frame for video without requesting screen sources", async (t) => {
+  const f = fixture(t, {
+    platform: "darwin",
+    getSources: async () => { throw new Error("must not enumerate screens"); },
+  });
+  t.after(() => f.host.dispose());
+  await f.host.acquire();
+  assert.equal(f.windows[0].selection.video, f.windows[0].webContents.mainFrame);
+  assert.equal(f.windows[0].selection.audio, "loopback");
+});
 test("source enumeration failure settles acquire even when destroyed Chromium evaluation never settles", async (t) => {
   const f = fixture(t, {
     neverSettleAcquire: true,
@@ -405,4 +420,50 @@ test("capture time running ahead of the wall clock beyond the backlog bound fail
   f.emit(pcm(id, 0, 64000));
   assert.equal(f.windows[0].destroyed, true);
   assert.equal(f.packets.at(-1)[1].code, "AUDIO_CAPTURE_FAILED");
+});
+
+test("Mac requests undecided microphone permission before creating capture window", async (t) => {
+  let f;
+  f = fixture(t, {
+    platform: "darwin",
+    microphoneStatus: "not-determined",
+    askMicrophone: async () => {
+      assert.equal(f.windows.length, 0);
+      return true;
+    },
+  });
+  t.after(() => f.host.dispose());
+  await f.host.acquire();
+  assert.equal(f.windows[0].options.frame, false);
+  assert.equal(f.windows[0].options.width, 32);
+});
+for (const microphoneStatus of ["denied", "restricted"]) {
+  test(`Mac rejects ${microphoneStatus} microphone permission without starting capture`, async (t) => {
+    const f = fixture(t, { platform: "darwin", microphoneStatus });
+    await assert.rejects(f.host.acquire(), /AUDIO_PERMISSION_DENIED/);
+    assert.equal(f.windows.length, 0);
+  });
+}
+
+test("declining the first microphone prompt stops before capture setup", async (t) => {
+  const f = fixture(t, {
+    platform: "darwin",
+    microphoneStatus: "not-determined",
+    askMicrophone: async () => false,
+  });
+  await assert.rejects(f.host.acquire(), /AUDIO_PERMISSION_DENIED/);
+  assert.equal(f.windows.length, 0);
+});
+test("cancelling while microphone permission is pending never starts capture later", async (t) => {
+  let allow;
+  const f = fixture(t, {
+    platform: "darwin",
+    microphoneStatus: "not-determined",
+    askMicrophone: () => new Promise(resolve => { allow = resolve; }),
+  });
+  const acquiring = f.host.acquire();
+  f.host.dispose();
+  allow(true);
+  await assert.rejects(acquiring, /AUDIO_CAPTURE_CANCELLED/);
+  assert.equal(f.windows.length, 0);
 });

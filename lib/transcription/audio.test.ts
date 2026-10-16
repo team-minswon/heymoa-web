@@ -202,6 +202,49 @@ describe("PcmAudioCapture 마이크 상태", () => {
     return { track, devices, contexts };
   }
 
+  it("처음부터 종료된 마이크는 입력을 닫고 시작하지 않는다", async () => {
+    const browser = stubBrowser();
+    browser.track.readyState = "ended";
+    const capture = new PcmAudioCapture({ onChunk: vi.fn() });
+    await expect(capture.start()).rejects.toThrow("MICROPHONE_INPUT_MISSING");
+    expect(browser.track.stop).toHaveBeenCalledOnce();
+    expect(browser.contexts).toHaveLength(0);
+  });
+
+  it("입력 확보 뒤 시작 전에 마이크가 종료되면 컨텍스트를 열지 않는다", async () => {
+    const browser = stubBrowser();
+    const capture = new PcmAudioCapture({ onChunk: vi.fn() });
+    await capture.requestPermission();
+    browser.track.readyState = "ended";
+    await expect(capture.start()).rejects.toThrow("MICROPHONE_INPUT_MISSING");
+    expect(browser.track.stop).toHaveBeenCalledOnce();
+    expect(browser.contexts).toHaveLength(0);
+  });
+
+  it("입력 확보 뒤 시작 전에 컴퓨터 소리가 종료되면 두 입력을 해제한다", async () => {
+    const browser = stubBrowser();
+    const systemTrack = { readyState: "live", stop: vi.fn() };
+    const capture = new PcmAudioCapture({
+      onChunk: vi.fn(),
+      acquireInputs: async () => ({
+        microphone: {
+          getTracks: () => [browser.track],
+          getAudioTracks: () => [browser.track],
+        } as unknown as MediaStream,
+        systemAudio: {
+          getTracks: () => [systemTrack],
+          getAudioTracks: () => [systemTrack],
+        } as unknown as MediaStream,
+      }),
+    });
+    await capture.requestPermission();
+    systemTrack.readyState = "ended";
+    await expect(capture.start()).rejects.toThrow("SYSTEM_AUDIO_INPUT_MISSING");
+    expect(browser.track.stop).toHaveBeenCalledOnce();
+    expect(systemTrack.stop).toHaveBeenCalledOnce();
+    expect(browser.contexts).toHaveLength(0);
+  });
+
   it("오디오 컨텍스트가 멈추면 suspended 를 올리고, 다시 돌면 live 로 되돌린다", async () => {
     const browser = stubBrowser();
     const onState = vi.fn();
@@ -312,7 +355,10 @@ describe("PcmAudioCapture 마이크 상태", () => {
       return track;
     }
     const streamOf = (track: unknown) =>
-      ({ getTracks: () => [track], getAudioTracks: () => [track] }) as unknown as MediaStream;
+      ({
+        getTracks: () => [track],
+        getAudioTracks: () => [track],
+      }) as unknown as MediaStream;
     const getUserMedia = (browser: ReturnType<typeof stubBrowser>) =>
       (browser.devices as unknown as { getUserMedia: ReturnType<typeof vi.fn> })
         .getUserMedia;
@@ -393,7 +439,10 @@ describe("PcmAudioCapture 마이크 상태", () => {
     it("녹음을 멈추면 대기 중인 재시도도 멈춘다", async () => {
       vi.useFakeTimers();
       const browser = stubBrowser();
-      const capture = new PcmAudioCapture({ onChunk: vi.fn(), onState: vi.fn() });
+      const capture = new PcmAudioCapture({
+        onChunk: vi.fn(),
+        onState: vi.fn(),
+      });
       await capture.start();
 
       browser.track.readyState = "ended";

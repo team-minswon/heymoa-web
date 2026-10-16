@@ -8,7 +8,11 @@ function stream(audio = true, video = false) {
   const videoStop = new Promise<void>((resolve) => {
     videoStopped = resolve;
   });
-  const a = { stop: vi.fn(() => audioStopped()) },
+  const a = {
+      stop: vi.fn(() => audioStopped()),
+      readyState: "live",
+      muted: false,
+    },
     v = { stop: vi.fn(() => videoStopped()) };
   const tracks = [...(audio ? [a] : []), ...(video ? [v] : [])];
   return {
@@ -26,6 +30,63 @@ function stream(audio = true, video = false) {
 }
 describe("신뢰된 로컬 renderer 입력 확보", () => {
   afterEach(() => vi.unstubAllGlobals());
+  it("오류 없이 종료된 시스템 오디오가 반환되면 시작하지 않고 늦은 마이크도 닫는다", async () => {
+    const display = stream(true, true),
+      mic = stream();
+    display.a.readyState = "ended";
+    let resolve!: (value: MediaStream) => void;
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getDisplayMedia: async () => display.value,
+        getUserMedia: () =>
+          new Promise<MediaStream>((done) => {
+            resolve = done;
+          }),
+      },
+    });
+    await expect(
+      acquireLocalInputs(new AbortController().signal)
+    ).rejects.toThrow("SYSTEM_AUDIO_INPUT_MISSING");
+    resolve(mic.value);
+    await mic.audioStop;
+    expect(display.a.stop).toHaveBeenCalled();
+    expect(display.v.stop).toHaveBeenCalled();
+  });
+  it("마이크 권한을 기다리는 동안 시스템 입력이 종료돼도 시작하지 않는다", async () => {
+    const display = stream(true, true),
+      mic = stream();
+    let resolve!: (value: MediaStream) => void;
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getDisplayMedia: async () => display.value,
+        getUserMedia: () =>
+          new Promise<MediaStream>((done) => {
+            resolve = done;
+          }),
+      },
+    });
+    const pending = acquireLocalInputs(new AbortController().signal);
+    await display.videoStop;
+    display.a.readyState = "ended";
+    resolve(mic.value);
+    await expect(pending).rejects.toThrow("SYSTEM_AUDIO_INPUT_MISSING");
+    expect(mic.a.stop).toHaveBeenCalled();
+  });
+  it("음소거된 live 입력은 거절하지 않는다", async () => {
+    const display = stream(true, true),
+      mic = stream();
+    display.a.muted = true;
+    mic.a.muted = true;
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getDisplayMedia: async () => display.value,
+        getUserMedia: async () => mic.value,
+      },
+    });
+    const inputs = await acquireLocalInputs(new AbortController().signal);
+    expect(inputs.systemAudio).toBe(display.value);
+    await inputs.release?.();
+  });
   it("마이크 권한을 기다리기 전에 display를 요청하고 임시 video는 즉시 닫는다", async () => {
     const display = stream(true, true),
       mic = stream();

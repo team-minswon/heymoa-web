@@ -12,10 +12,7 @@ export const FOLLOW_STICK_PX = 48;
 /** 떠난 뒤 다시 붙는 폭. 붙어 있을 때보다 좁아야 30px 올린 직후 도로 붙지 않는다. */
 export const FOLLOW_REARM_PX = 24;
 
-/**
- * 따라가는 중에 이만큼 멀어지면 방향과 상관없이 떠난 것으로 본다. 검색·인용 이동처럼 코드가
- * 아래쪽 먼 곳으로 옮긴 경우이고, 한 틱에 자라는 높이보다는 크다.
- */
+/** 내용 증가가 아닌 이동으로 바닥에서 멀리 벗어나면 추종을 멈춘다. */
 const LOST_PX = 180;
 
 /** 내용이 줄어 브라우저가 `scrollTop` 을 끌어내린 것과 사람이 올린 것을 가르는 폭. */
@@ -37,18 +34,23 @@ export function nextFollowing({
   top,
   previousTop,
   distance,
+  contentGrew = false,
 }: {
   following: boolean;
   top: number;
   previousTop: number | null;
   distance: number;
+  contentGrew?: boolean;
 }) {
   if (previousTop === null) return distance <= FOLLOW_STICK_PX;
   const movedUp = top < previousTop;
-  // 따라가는 중에는 내용이 자라 멀어진 거리로는 안 끈다(자람은 scroll 이벤트를 안 낸다).
-  // 위로 움직였고 바닥에서 실제로 떨어졌을 때만 끈다.
+  // 내용 증가와 함께 온 scroll 이벤트의 먼 거리는 사용자의 이탈이 아니다.
+  // 위로 움직여 실제로 떨어진 경우는 높이가 늘어도 사용자의 조작을 우선한다.
   if (following) {
-    return distance <= LOST_PX && !(movedUp && distance > MOVED_AWAY_PX);
+    return (
+      (contentGrew || distance <= LOST_PX) &&
+      !(movedUp && distance > MOVED_AWAY_PX)
+    );
   }
   // 떠나 있으면 내려오는 방향으로 바닥 가까이 왔을 때만 다시 켠다.
   return !movedUp && distance <= FOLLOW_REARM_PX;

@@ -580,7 +580,7 @@ const WINDOW_H =
 function Chapters({ chapter }: { chapter: number }) {
   const dot = (i: number) =>
     cn(
-      "size-2 shrink-0 rounded-full transition-colors duration-300",
+      "size-3 shrink-0 rounded-full transition-colors duration-300",
       i < chapter
         ? "bg-[var(--tv-brand)]"
         : i === chapter
@@ -589,13 +589,13 @@ function Chapters({ chapter }: { chapter: number }) {
     );
   return (
     <div aria-hidden className="relative mt-5 flex items-center justify-center lg:mt-8 xl:mt-12">
-      <span className="hidden items-center gap-2 lg:flex">
+      <span className="hidden items-center gap-3.5 lg:flex">
         {CHAPTERS.map((name, i) => (
           <Fragment key={name}>
-            {i > 0 ? <span className="h-px w-5 bg-[var(--tv-rule-strong)]" /> : null}
+            {i > 0 ? <span className="h-px w-7 bg-[var(--tv-rule-strong)]" /> : null}
             <span
               className={cn(
-                "inline-flex items-center gap-2 text-[13px] transition-colors duration-300",
+                "inline-flex items-center gap-2.5 text-[17px] transition-colors duration-300",
                 i === chapter
                   ? "font-extrabold text-[var(--tv-ink)]"
                   : "font-semibold text-[var(--tv-muted)]"
@@ -611,7 +611,7 @@ function Chapters({ chapter }: { chapter: number }) {
         {CHAPTERS.map((name, i) => (
           <span key={name} className={dot(i)} />
         ))}
-        <span className="ml-2 text-[13px] font-extrabold text-[var(--tv-ink)]">
+        <span className="ml-2 text-[16px] font-extrabold text-[var(--tv-ink)]">
           {CHAPTERS[chapter]}
         </span>
       </span>

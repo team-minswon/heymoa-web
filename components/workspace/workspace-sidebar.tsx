@@ -83,7 +83,6 @@ import {
 import { sortByLastVisited } from "@/lib/workspaces/last-workspace";
 import { track } from "@/lib/analytics/track";
 import { openSitePage } from "@/lib/desktop/open-site-page";
-import { DesktopAppEntry } from "@/components/workspace/desktop-app-entry";
 import { updateChecklist } from "@/lib/onboarding/checklist";
 
 /** 이름 변경만 남았다 — 만들기는 셸이 소유한다(`workspace-app-shell`의 `openCreateProject`). */
@@ -317,7 +316,7 @@ export function WorkspaceSidebar({
                     className="gap-2.5 text-[13px] font-medium rounded-control h-8 px-2.5"
                   >
                     <NavigationIcon icon={CircleHelp} />
-                    <span>도움말</span>
+                    <span>사용 가이드</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -430,8 +429,6 @@ export function WorkspaceSidebar({
 
       {/* ── User profile (footer) ── */}
       {onboarding}
-
-      <DesktopAppEntry />
 
       <SidebarFooter className="p-0 border-t border-[var(--el-hairline)]">
         <DropdownMenu>

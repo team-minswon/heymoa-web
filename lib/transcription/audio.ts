@@ -155,6 +155,22 @@ const MICROPHONE_CONSTRAINTS = {
   autoGainControl: true,
 } as const;
 
+function assertLiveInputs(inputs: AudioInputs) {
+  if (
+    !inputs.microphone
+      .getAudioTracks()
+      .some((track) => track.readyState === "live")
+  )
+    throw new Error("MICROPHONE_INPUT_MISSING");
+  if (
+    inputs.systemAudio &&
+    !inputs.systemAudio
+      .getAudioTracks()
+      .some((track) => track.readyState === "live")
+  )
+    throw new Error("SYSTEM_AUDIO_INPUT_MISSING");
+}
+
 export class PcmAudioCapture {
   private audioContext: AudioContext | null = null;
   private inputs: AudioInputs | null = null;
@@ -198,12 +214,11 @@ export class PcmAudioCapture {
           await this.release(inputs);
           throw new Error("AUDIO_CAPTURE_CANCELLED");
         }
-        if (
-          !inputs.microphone.getAudioTracks().length ||
-          (inputs.systemAudio && !inputs.systemAudio.getAudioTracks().length)
-        ) {
+        try {
+          assertLiveInputs(inputs);
+        } catch (error) {
           await this.release(inputs);
-          throw new Error("AUDIO_INPUT_MISSING");
+          throw error;
         }
         this.inputs = inputs;
       })
@@ -233,6 +248,7 @@ export class PcmAudioCapture {
       await this.requestPermission();
       this.assertCurrent(generation);
       const inputs = this.inputs!;
+      assertLiveInputs(inputs);
       const context = new AudioContext({
         sampleRate: CAPTURE_CONTRACT.sampleRate,
       });

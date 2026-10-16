@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Circle,
-  Mic,
-  MonitorDown,
-  Volume2,
-} from "lucide-react";
-import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { Check, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import { useState } from "react";
 
+import { DesktopDownloadLink } from "@/components/heymoa/desktop-download-link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,180 +12,85 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 
-/**
- * 웹과 데스크톱 앱이 무엇이 다른지 세 장으로 보여 준다. **도움말(`/help/desktop`)로 확인된 사실만** 쓴다 —
- * 웹은 마이크 소리만 기록하고, 앱은 컴퓨터에서 나는 소리까지 기록한다. 특정 화상회의 앱 지원은 약속하지 않는다.
- */
-
-function Chip({ children, tone = "plain" }: { children: ReactNode; tone?: "plain" | "on" }) {
+function SoundComparison() {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium",
-        tone === "on"
-          ? "bg-[var(--el-ink)] text-white"
-          : "bg-[var(--el-surface-strong)] text-[var(--el-ink)]"
-      )}
-    >
-      {children}
-    </span>
+    <table className="w-full table-fixed border-collapse text-[15px]">
+      <caption className="sr-only">웹과 데스크톱 앱 녹음 범위 비교</caption>
+      <thead>
+        <tr className="border-b border-[var(--el-hairline)] text-[13px] text-[var(--el-muted)]">
+          <th scope="col" className="w-[56%] pb-3 text-left font-normal">
+            녹음하는 소리
+          </th>
+          <th scope="col" className="pb-3 text-center font-normal">
+            웹
+          </th>
+          <th
+            scope="col"
+            className="pb-3 text-center font-semibold text-[var(--el-ink)]"
+          >
+            앱
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr className="border-b border-[var(--el-hairline)]">
+          <th
+            scope="row"
+            className="py-5 pr-3 text-left align-middle font-medium text-[var(--el-ink)]"
+          >
+            마이크로 들어오는 소리
+            <span className="mt-1 block text-[13px] leading-5 font-normal text-[var(--el-muted)]">
+              내 목소리, 회의실 대화
+            </span>
+          </th>
+          <td className="text-center">
+            <Check aria-hidden className="mx-auto size-5" />
+            <span className="sr-only">기록 가능</span>
+          </td>
+          <td className="text-center">
+            <Check aria-hidden className="mx-auto size-5" />
+            <span className="sr-only">기록 가능</span>
+          </td>
+        </tr>
+        <tr className="border-b border-[var(--el-hairline)]">
+          <th
+            scope="row"
+            className="py-5 pr-3 text-left align-middle font-medium text-[var(--el-ink)]"
+          >
+            컴퓨터에서 재생되는 소리
+            <span className="mt-1 block text-[13px] leading-5 font-normal text-[var(--el-muted)]">
+              화상회의 상대방, 강의, 유튜브 영상
+            </span>
+          </th>
+          <td className="text-center text-[var(--el-muted)]">
+            <Minus aria-hidden className="mx-auto size-5" />
+            <span className="sr-only">기록되지 않음</span>
+          </td>
+          <td className="text-center">
+            <Check aria-hidden className="mx-auto size-5" />
+            <span className="sr-only">기록 가능</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
-function Side({
-  title,
-  badge,
-  sources,
-  result,
-  highlight,
-}: {
-  title: string;
-  badge: string;
-  sources: ReactNode;
-  result: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-1 flex-col gap-3 rounded-panel border p-4",
-        highlight
-          ? "border-[var(--el-ink)] bg-white shadow-sm"
-          : "border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-[var(--el-ink)]">{title}</p>
-        <span className="text-xs text-[var(--el-muted)]">{badge}</span>
-      </div>
-      <div className="flex flex-col items-start gap-2">{sources}</div>
-      <div className="mt-auto flex items-center gap-2 border-t border-[var(--el-hairline)] pt-3 text-[13px] text-[var(--el-muted)]">
-        <ArrowRight aria-hidden className="size-4 shrink-0" />
-        {result}
-      </div>
-    </div>
-  );
-}
-
-function SoundSlide() {
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row" data-testid="slide-sound">
-      <Side
-        title="웹"
-        badge="브라우저"
-        sources={
-          <Chip>
-            <Mic aria-hidden className="size-4" />내 마이크
-          </Chip>
-        }
-        result="내 목소리만 기록합니다"
-      />
-      <Side
-        highlight
-        title="데스크톱 앱"
-        badge="Mac · Windows"
-        sources={
-          <>
-            <Chip tone="on">
-              <Mic aria-hidden className="size-4" />내 마이크
-            </Chip>
-            <Chip tone="on">
-              <Volume2 aria-hidden className="size-4" />
-              컴퓨터에서 나는 소리
-            </Chip>
-          </>
-        }
-        result="화상회의 상대방의 목소리까지 담을 수 있습니다"
-      />
-    </div>
-  );
-}
-
-function MenuBarSlide() {
-  const filters = ["전체", "결정", "할 일", "열린 질문", "참고"];
-  return (
-    <div className="flex flex-col gap-3" data-testid="slide-menubar">
-      <div
-        aria-hidden
-        className="overflow-hidden rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
-      >
-        <div className="flex items-center justify-end gap-3 border-b border-[var(--el-hairline)] bg-white px-4 py-2 text-xs text-[var(--el-muted)]">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--el-ink)] px-2.5 py-1 font-medium text-white">
-            <Circle className="size-2 fill-red-500 text-red-500" />
-            12:34
-          </span>
-          <span>10월 16일 (금)</span>
-        </div>
-        <div className="mx-auto my-4 w-[88%] rounded-block border border-[var(--el-hairline)] bg-white p-3 shadow-sm">
-          <p className="text-[13px] font-semibold text-[var(--el-ink)]">지금 회의의 타임라인</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {filters.map((f, i) => (
-              <span
-                key={f}
-                className={cn(
-                  "rounded-full px-2.5 py-1 text-[11px]",
-                  i === 0
-                    ? "bg-[var(--el-ink)] text-white"
-                    : "bg-[var(--el-surface-strong)] text-[var(--el-muted)]"
-                )}
-              >
-                {f}
-              </span>
-            ))}
-          </div>
-          <div className="mt-3 space-y-1.5">
-            <div className="h-2 w-5/6 rounded bg-[var(--el-surface-strong)]" />
-            <div className="h-2 w-2/3 rounded bg-[var(--el-surface-strong)]" />
-          </div>
-        </div>
-      </div>
-      <ul className="space-y-1.5 text-[13px] leading-6 text-[var(--el-muted)]">
-        <li>창의 닫기 버튼을 눌러도 앱은 종료되지 않고 녹음이 이어집니다.</li>
-        <li>Mac에서는 메뉴 막대 아이콘으로 지금 회의의 타임라인을 바로 봅니다.</li>
-      </ul>
-    </div>
-  );
-}
-
-function InstallSlide() {
-  return (
-    <div className="flex flex-col gap-3" data-testid="slide-install">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4">
-          <p className="text-sm font-semibold text-[var(--el-ink)]">Mac</p>
-          <p className="mt-1 text-[13px] leading-6 text-[var(--el-muted)]">
-            macOS 14.2 이상 · Apple Silicon, Intel. Apple 서명·공증을 받은 앱입니다.
-          </p>
-        </div>
-        <div className="rounded-panel border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)] p-4">
-          <p className="text-sm font-semibold text-[var(--el-ink)]">Windows (베타)</p>
-          <p className="mt-1 text-[13px] leading-6 text-[var(--el-muted)]">
-            Windows 11 x64. 서명이 없어 SmartScreen 경고가 뜰 수 있습니다.
-          </p>
-        </div>
-      </div>
-      <p className="text-[13px] leading-6 text-[var(--el-muted)]">
-        같은 Google 계정으로 로그인하면 웹과 같은 회의 기록을 봅니다. 앱에서도 같은 웹 서비스를 사용합니다.
-      </p>
-      <Link
-        href="/download"
-        onClick={() => track("desktop_download_clicked")}
-        className={cn(buttonVariants({ variant: "default" }), "w-fit gap-2")}
-      >
-        <MonitorDown aria-hidden className="size-4" />
-        다운로드 페이지로
-      </Link>
-    </div>
-  );
-}
-
-const SLIDES = [
-  { title: "녹음하는 소리가 다릅니다", body: <SoundSlide /> },
-  { title: "창을 닫아도 이어서 기록합니다", body: <MenuBarSlide /> },
-  { title: "같은 계정, 같은 기록입니다", body: <InstallSlide /> },
+const STEPS = [
+  {
+    title: "기록할 수 있는 소리",
+    description: "웹은 마이크 소리, 앱은 컴퓨터 소리까지 기록합니다.",
+  },
+  {
+    title: "창을 닫아도 이어지는 녹음",
+    description: "녹음하는 동안 다른 작업을 해도 괜찮습니다.",
+  },
+  {
+    title: "사용하던 기록 그대로",
+    description: "웹과 앱은 같은 노트와 프로젝트를 사용합니다.",
+  },
 ] as const;
 
 export function DesktopCompareDialog({
@@ -204,66 +101,148 @@ export function DesktopCompareDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [index, setIndex] = useState(0);
-  const slide = SLIDES[index];
-  const last = index === SLIDES.length - 1;
-  // 어떻게 닫든(X · Esc · 바깥 · 확인) 다음에 열면 첫 장부터 본다.
+  const step = STEPS[index];
   const change = (next: boolean) => {
     if (!next) setIndex(0);
     onOpenChange(next);
   };
-
   return (
     <Dialog open={open} onOpenChange={change}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>웹과 데스크톱 앱, 무엇이 다른가요?</DialogTitle>
-          <DialogDescription>
-            {index + 1} / {SLIDES.length} · {slide.title}
-          </DialogDescription>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto bg-white p-6 sm:max-w-[600px] sm:p-8">
+        <DialogHeader className="h-[108px] gap-2 pr-6 sm:h-[64px]">
+          <DialogTitle className="font-serif text-[24px] leading-tight font-light tracking-tight">
+            {step.title}
+          </DialogTitle>
+          <DialogDescription>{step.description}</DialogDescription>
         </DialogHeader>
         <div
+          className="mt-6 h-[308px] overflow-y-auto"
           role="group"
-          aria-roledescription="슬라이드"
-          aria-label={`${index + 1} / ${SLIDES.length}`}
-          className="min-h-[248px]"
+          aria-label={`${index + 1} / 3`}
         >
-          {slide.body}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5" role="tablist" aria-label="슬라이드 선택">
-            {SLIDES.map((s, i) => (
-              <button
-                key={s.title}
-                type="button"
-                role="tab"
-                aria-selected={i === index}
-                aria-label={`${i + 1}번째: ${s.title}`}
-                onClick={() => setIndex(i)}
+          {index === 0 ? (
+            <SoundComparison />
+          ) : index === 1 ? (
+            <div>
+              <div
+                role="img"
+                aria-label="Mac 메뉴 막대에서 녹음 상태와 회의 타임라인을 보는 예시"
+                className="overflow-hidden rounded-control border border-[var(--el-hairline)] bg-[var(--el-canvas-soft)]"
+              >
+                <div
+                  aria-hidden
+                  className="flex h-9 items-center justify-between border-b border-[var(--el-hairline)] bg-white px-3 text-xs text-[var(--el-muted)]"
+                >
+                  <span>Mac 메뉴 막대</span>
+                  <span className="inline-flex items-center gap-2 rounded-chip bg-[var(--el-surface-strong)] px-2 py-1 text-[var(--el-ink)]">
+                    <span className="size-1.5 rounded-full bg-red-500" />
+                    녹음 중 · 12:34
+                  </span>
+                </div>
+                <div aria-hidden className="px-6 pt-4 pb-9 sm:px-7">
+                  <div className="ml-auto w-[90%] rounded-control border border-[var(--el-hairline)] bg-white p-3 shadow-sm sm:w-[84%]">
+                    <p className="text-sm font-medium">
+                      주간 회의{" "}
+                      <span className="ml-1 font-normal text-[var(--el-muted)]">
+                        타임라인
+                      </span>
+                    </p>
+                    <div className="mt-2.5 space-y-2.5 border-t border-[var(--el-hairline)] pt-2.5 text-[13px]">
+                      <p className="flex gap-3">
+                        <span className="shrink-0 text-[var(--el-muted)]">
+                          00:32
+                        </span>
+                        <span>다음 회의는 금요일에 진행</span>
+                      </p>
+                      <p className="flex gap-3">
+                        <span className="shrink-0 text-[var(--el-muted)]">
+                          01:10
+                        </span>
+                        <span>회의 자료 공유하기</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-6 break-keep text-[var(--el-muted)]">
+                창을 닫아도 녹음은 계속됩니다.
+                <span className="block">
+                  Mac 메뉴 막대에서 녹음 상태와 타임라인을 확인하세요.
+                </span>
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-[15px] leading-6">
+                앱을 설치한 뒤, 지금 쓰는 Google 계정으로 로그인하세요.
+              </p>
+              <dl className="my-5 divide-y divide-[var(--el-hairline)] text-sm">
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="font-medium">Mac</dt>
+                  <dd className="text-[var(--el-muted)]">
+                    macOS 14.2 이상 · Apple Silicon, Intel
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="font-medium">Windows</dt>
+                  <dd className="text-[var(--el-muted)]">Windows 11 x64</dd>
+                </div>
+              </dl>
+              <DesktopDownloadLink
                 className={cn(
-                  "size-2 cursor-pointer rounded-full transition-colors",
-                  i === index ? "bg-[var(--el-ink)]" : "bg-[var(--el-hairline)] hover:bg-[var(--el-muted-soft)]"
+                  buttonVariants({ variant: "default" }),
+                  "h-10 px-4"
                 )}
               />
+            </div>
+          )}
+        </div>
+        <div className="mt-5 flex items-center justify-between gap-1 border-t border-[var(--el-hairline)] pt-5">
+          <nav
+            aria-label="데스크톱 앱 안내 단계"
+            className="flex shrink-0 items-center gap-1"
+          >
+            {STEPS.map((item, i) => (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                key={item.title}
+                type="button"
+                aria-current={index === i ? "step" : undefined}
+                aria-label={`${i + 1}. ${item.title}`}
+                onClick={() => setIndex(i)}
+                className={cn(
+                  "size-7 shrink-0 rounded-full border p-0 text-[13px] leading-none font-medium tabular-nums",
+                  index === i
+                    ? "border-[var(--el-ink)] bg-[var(--el-ink)] text-white hover:bg-[var(--el-ink)] hover:text-white"
+                    : "border-[var(--el-hairline)] bg-white text-[var(--el-muted)] hover:bg-[var(--el-surface-strong)]"
+                )}
+              >
+                {i + 1}
+              </Button>
             ))}
-          </div>
+          </nav>
           <div className="flex items-center gap-2">
             <Button
-              type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
+              className="w-[68px] text-sm"
               disabled={index === 0}
-              onClick={() => setIndex((i) => Math.max(0, i - 1))}
+              onClick={() => setIndex(index - 1)}
             >
               <ChevronLeft aria-hidden />
               이전
             </Button>
             <Button
-              type="button"
+              variant="outline"
               size="sm"
-              onClick={() => (last ? change(false) : setIndex((i) => i + 1))}
+              className="w-[68px] text-sm"
+              onClick={() =>
+                index === STEPS.length - 1 ? change(false) : setIndex(index + 1)
+              }
             >
-              {last ? "확인" : "다음"}
-              {last ? null : <ChevronRight aria-hidden />}
+              {index === STEPS.length - 1 ? "확인" : "다음"}
+              {index < STEPS.length - 1 ? <ChevronRight aria-hidden /> : null}
             </Button>
           </div>
         </div>

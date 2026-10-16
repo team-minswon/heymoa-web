@@ -110,20 +110,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
       className="min-h-0 flex-1"
       viewportClassName="overflow-x-hidden!"
     >
-      {/* 이 박스는 클리핑하지 않는다. 장식 블롭이 콘텐츠 폭(896) 밖까지 뻗는데 여기서 자르면
-          부드러운 그라데이션이 캔버스 한복판에서 직선으로 끊겨 이음선처럼 보였다(실측: 화면
-          끝보다 144px 앞에서 잘림). 바깥 셸 컨테이너가 이미 overflow-hidden이라 화면
-          가장자리에서 처리된다 — 가로 스크롤도 생기지 않는다. 블롭의 기준은 콘텐츠 폭이라
-          이 안에 남는다. */}
       <div className="relative mx-auto w-full max-w-4xl px-5 pb-16 pt-8 sm:px-8 sm:pt-11">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 top-0 size-72 rounded-full opacity-25 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, var(--el-gradient-mint) 0%, transparent 68%)",
-          }}
-        />
         {hasNoProject ? (
           <WorkspaceOnboarding
             stage="no-project"

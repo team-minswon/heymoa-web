@@ -43,11 +43,13 @@ export async function acquireLocalInputs(
     const display = navigator.mediaDevices
       .getDisplayMedia({
         audio: true,
-        video: { width: 1, height: 1, frameRate: 1 },
+        video: { width: 16, height: 16, frameRate: 1 },
       })
       .then((stream) => {
         retain(stream);
-        if (!stream.getAudioTracks().length)
+        if (
+          !stream.getAudioTracks().some((track) => track.readyState === "live")
+        )
           throw new Error("SYSTEM_AUDIO_INPUT_MISSING");
         for (const track of stream.getVideoTracks()) {
           track.stop();
@@ -62,8 +64,12 @@ export async function acquireLocalInputs(
       Promise.all([display, microphone]),
       aborted,
     ]);
-    if (!mic.getAudioTracks().length)
+    if (!mic.getAudioTracks().some((track) => track.readyState === "live"))
       throw new Error("MICROPHONE_INPUT_MISSING");
+    if (
+      !systemAudio.getAudioTracks().some((track) => track.readyState === "live")
+    )
+      throw new Error("SYSTEM_AUDIO_INPUT_MISSING");
     if (signal.aborted) throw new Error("AUDIO_CAPTURE_CANCELLED");
     return {
       microphone: mic,
