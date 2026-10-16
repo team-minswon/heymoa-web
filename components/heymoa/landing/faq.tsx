@@ -35,7 +35,7 @@ import { APP, BODY, CONTAINER, FOCUS, H2, HAND, MARKER, SECTION_Y, SHADOW, vars 
  * - 접고 펴는 것은 네이티브 `<details>` 라 클라이언트 코드가 없다(부드럽게 열리는 것은 지원하는
  *   브라우저에서만 — `motion.tsx` 의 `.tv-faq`). 움직임은 `Reveal` 이 켜는 `tv-r*` 뿐이다.
  *
- * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 데스크톱 베타(`app/(static)/download/page.tsx`) ·
+ * 답은 전부 브리프의 사실 정책 안에 있다(시작 방법 · 데스크톱 앱(`app/(static)/download/page.tsx`) ·
  * 종료와 검토 완료 · 「철회됨」(`note-timeline.tsx`
  * `metaOf`) · 줄마다 수정 · 제외와 「제외 취소」(`review-row.tsx`, 「결정 N」은 남은 줄만 센다 —
  * `review-section.tsx` `includedCount`) · 이전 결정 대체). 가격 · 지원 언어 · 모바일 앱 같은 항목은
@@ -147,7 +147,7 @@ function ExcludedSample() {
 const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
   {
     // 웹 · 데스크톱을 나란히 말하는 곳은 여기다(회의 앱 띠 리드는 데스크톱 앱 한 줄과 링크만). 전의 「설치해야
-    // 하나요?」 → 「브라우저에서 바로」는 데스크톱 베타가 있는데 설치가 없는 것처럼 읽혔다. 웹과 데스크톱을
+    // 하나요?」 → 「브라우저에서 바로」는 데스크톱 앱이 있는데 설치가 없는 것처럼 읽혔다. 웹과 데스크톱을
     // 사실대로 나란히 말하고 「설치할 것 없음」 류로 못 박지 않는다(`hero.tsx`). 질문을 「어디서 쓰나요?」로
     // 두면 바로 다음 구간 제목(「어디서 회의하든」 — 회의 앱 · 오프라인)과 부딪혀 회의 장소를 묻는 말로 읽혔다.
     // 데스크톱 문구는 `app/(static)/download/page.tsx` 결이다(컴퓨터에서 나는 소리 녹음 · 메뉴바 타임라인을 「더했다」,
@@ -160,9 +160,9 @@ const QA: Array<{ q: string; a: ReactNode; more?: ReactNode }> = [
     a: (
       <>
         <span className={MARKER}>둘 다 됩니다.</span> 브라우저에서 바로 쓸 수 있고, Mac · Windows용
-        데스크톱 앱(베타)도 있습니다. 데스크톱 앱은 마이크에 더해 컴퓨터에서 나는 소리까지 녹음하고,
+        데스크톱 앱도 있습니다. 데스크톱 앱은 마이크에 더해 컴퓨터에서 나는 소리까지 녹음하고,
         메뉴바에서 타임라인을 볼 수 있습니다. 어느 쪽이든 같은 Google 계정으로 로그인하고 같은 회의
-        기록을 봅니다. Windows판은 설치와 녹음을 아직 검증하고 있습니다.
+        기록을 봅니다. Windows판은 베타이고 설치와 녹음을 아직 검증하고 있습니다.
       </>
     ),
     more: <SeeLink href="/download">데스크톱 다운로드</SeeLink>,

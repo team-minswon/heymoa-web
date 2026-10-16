@@ -56,7 +56,7 @@ const sections = [
     title: "데스크톱 앱",
     body: [
       "데스크톱 앱은 내 목소리와 컴퓨터에서 나는 회의 소리를 함께 기록합니다. 앱에서도 같은 웹 서비스를 사용합니다.",
-      "Mac은 macOS 14.2 이상(Apple Silicon·Intel), Windows는 Windows 11 x64에서 씁니다. 베타 버전은 서명·공증이 없어 처음 실행할 때 OS가 막을 수 있습니다.",
+      "Mac은 macOS 14.2 이상(Apple Silicon·Intel), Windows는 Windows 11 x64에서 씁니다. Windows판은 베타이고 설치 파일에 서명이 없어 처음 실행할 때 OS가 막을 수 있습니다.",
       <>
         설치, 권한 설정, 녹음 중 앱 종료, 문제 해결은{" "}
         <Link href="/help/desktop" className={LINK}>

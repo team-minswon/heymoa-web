@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "데스크톱 다운로드",
-  description: "HeyMoa 데스크톱 베타 설치와 업데이트 안내",
+  description: "HeyMoa 데스크톱 설치와 업데이트 안내",
   alternates: { canonical: "/download" },
 };
 
@@ -32,12 +32,14 @@ const PLATFORMS = [
   {
     name: "Mac",
     need: "macOS 14.2 이상에서 사용합니다. Apple Silicon은 arm64, Intel Mac은 x64\u00a0DMG를 선택하고 HeyMoa를 응용 프로그램 폴더로 옮겨 주세요.",
+    label: "안내",
     caution:
-      "현재 베타는 Apple 서명·공증이 없어 macOS가 실행을 차단할 수 있습니다. 공식 설치 파일인지 확인한 뒤 시스템 설정\u00a0→ 개인정보 보호 및 보안에서 열기를 허용해 주세요.",
+      "Apple 서명·공증을 받은 앱입니다. 처음 실행할 때 인터넷에서 받은 앱이라는 확인 창이 뜨면 열기를 눌러 주세요.",
   },
   {
     name: "Windows",
-    need: "Windows\u00a011 x64에서 EXE 설치 파일을 사용합니다.",
+    need: "Windows\u00a011 x64에서 EXE 설치 파일을 사용합니다. Windows판은 베타입니다.",
+    label: "주의",
     caution:
       "베타 설치·녹음의 실제 Windows 검증은 진행 중입니다. 서명되지 않은 설치 파일에는 SmartScreen 경고가 표시될 수 있습니다.",
   },
@@ -60,7 +62,7 @@ export default function DownloadPage() {
       <div className={cn(CONTAINER, "pt-3 lg:pt-6")}>
         <header className={cn(RADIUS.face, "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-16")}>
           <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
-            HeyMoa 데스크톱 · 베타
+            HeyMoa 데스크톱
           </p>
           {/* 약관 제목과 같은 H2 급 — 히어로 급을 쓰면 안내 한 장이 첫 화면처럼 군다. */}
           <h1 className={cn(H2, "mt-4 max-w-[820px]")}>회의는 그대로, 기록은 더 가까이</h1>
@@ -105,7 +107,7 @@ export default function DownloadPage() {
             <h2 className={CARD_TITLE}>{platform.name}</h2>
             <p className={cn(BODY, "mt-3")}>{platform.need}</p>
             <p className={CAUTION}>
-              <b className="font-extrabold text-[var(--tv-ink)]">주의 </b>
+              <b className="font-extrabold text-[var(--tv-ink)]">{platform.label} </b>
               {platform.caution}
             </p>
           </section>
