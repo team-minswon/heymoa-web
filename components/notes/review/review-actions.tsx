@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, FileText, Share2 } from "lucide-react";
+import { Copy, FileText, Mail, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,11 @@ const COPY_FORMATS: ReadonlyArray<{
  * 늘어놓으면 쓸 수 있는 것이 그 사이에 묻혔다(APP-1108 이 틀로 두었던 것을 걷었다). 대상을 더할 때는 [target] 을
  * 이벤트 속성으로 그대로 쓰므로 영문 소문자 식별자로 둔다.
  */
-const EXPORT_TARGETS = [{ target: "pdf", label: "PDF로 내보내기", icon: FileText }] as const;
+const EXPORT_TARGETS = [
+  { target: "pdf", label: "PDF로 내보내기", icon: FileText },
+  // 발송 API 가 켜진 곳(onSendEmail 이 있을 때)에만 선다
+  { target: "email", label: "이메일로 보내기", icon: Mail },
+] as const;
 
 /**
  * 요약 탭 머리의 복사 · 내보내기 · 공유. **문서는 누를 때 만든다** — 확정 전 요약은 계속 바뀌고, 렌더마다 미리
@@ -47,6 +51,7 @@ export function ReviewActions({
   wider,
   material,
   onRetryMaterial,
+  onSendEmail,
 }: {
   build: () => string;
   /** 복사할 문서가 아직 없다. 숨기지 않는 이유는 자리가 흔들리기 때문이다. */
@@ -64,6 +69,8 @@ export function ReviewActions({
    */
   material?: "loading" | "failed";
   onRetryMaterial?: () => void;
+  /** 「이메일로 보내기」를 연다. 없으면 그 항목은 다른 대상처럼 「준비 중」이다 */
+  onSendEmail?: () => void;
 }) {
   const [minutesOpen, setMinutesOpen] = useState(false);
 
@@ -132,34 +139,38 @@ export function ReviewActions({
           <span className="hidden sm:inline">공유하기</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72">
-          {EXPORT_TARGETS.map(({ target, label, icon: Icon }) => {
-            const ready = wider !== undefined;
-            // 재료(녹취록)가 오기 전이다. 노트 머리조차 안 왔으면 받는 중과 같다
-            const waiting = ready ? undefined : (material ?? "loading");
-            return (
-              <DropdownMenuItem
-                key={target}
-                // 요약이 아직 없으면 회의록 본문이 빈다 — 복사와 같이 막는다. 녹취록을 받는 중이어도 막는다
-                disabled={(ready && disabled) || waiting === "loading"}
-                onClick={() => {
-                  track("export_requested", { target });
-                  if (ready) setMinutesOpen(true);
-                  else if (waiting === "failed") {
-                    onRetryMaterial?.();
-                    toast.info("녹취록을 다시 불러옵니다. 잠시 후 다시 눌러 주세요.", { id: "export-material" });
-                  }
-                }}
-              >
-                <Icon aria-hidden />
-                <span className="flex-1 whitespace-nowrap">{label}</span>
-                {waiting ? (
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {waiting === "loading" ? "불러오는 중" : "다시 불러오기"}
-                  </span>
-                ) : null}
-              </DropdownMenuItem>
-            );
-          })}
+          {EXPORT_TARGETS.filter(({ target }) => target !== "email" || onSendEmail !== undefined).map(
+            ({ target, label, icon: Icon }) => {
+              // PDF 와 메일은 같은 회의록 재료를 쓰므로 녹취록이 와야 연다. 노트 머리조차 안 왔으면 받는 중과 같다
+              const ready = wider !== undefined;
+              const waiting = ready ? undefined : (material ?? "loading");
+              return (
+                <DropdownMenuItem
+                  key={target}
+                  // 요약이 아직 없으면 회의록 본문이 빈다 — 복사와 같이 막는다. 녹취록을 받는 중이어도 막는다
+                  disabled={(ready && disabled) || waiting === "loading"}
+                  onClick={() => {
+                    track("export_requested", { target });
+                    if (ready) {
+                      if (target === "pdf") setMinutesOpen(true);
+                      else onSendEmail?.();
+                    } else if (waiting === "failed") {
+                      onRetryMaterial?.();
+                      toast.info("녹취록을 다시 불러옵니다. 잠시 후 다시 눌러 주세요.", { id: "export-material" });
+                    }
+                  }}
+                >
+                  <Icon aria-hidden />
+                  <span className="flex-1 whitespace-nowrap">{label}</span>
+                  {waiting ? (
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {waiting === "loading" ? "불러오는 중" : "다시 불러오기"}
+                    </span>
+                  ) : null}
+                </DropdownMenuItem>
+              );
+            }
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       {wider ? (

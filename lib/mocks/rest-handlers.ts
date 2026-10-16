@@ -32,6 +32,7 @@ import type {
   NoteRequest,
   UpdateWorkspaceRequest,
 } from "@/lib/api/generated/models";
+import { isEmail } from "@/lib/notes/share-mail/recipients";
 
 function id(value: string | readonly string[] | undefined) {
   return Array.isArray(value) ? value[0] : String(value ?? "");
@@ -355,6 +356,27 @@ function pageOfNotes(
   };
 }
 
+/** 회의록 메일 발송 상한(`SHARE_MAIL_RATE_LIMITED`). 서버와 같은 수 · 같은 창이다 */
+const SHARE_MAIL_HOURLY_LIMIT = 30;
+const SHARE_MAIL_WINDOW_MS = 60 * 60 * 1000;
+/** 한 시간 칸(정시 기준) → 그 칸에 받아들인 발송 수 */
+const shareMailSent = new Map<number, number>();
+/** 받아들인 발송. 받는 사람은 서버처럼 대소문자만 다른 주소를 합치고 처음 쓴 표기를 남긴다 */
+const shareMails = new Map<string, { noteId: string; requestedAt: number; recipients: string[] }>();
+mockDb.onReset(() => {
+  shareMailSent.clear();
+  shareMails.clear();
+});
+/** 목의 발송이 끝나는 데 걸리는 시간. 그동안 「보내는 중」이다 */
+const SHARE_MAIL_SETTLE_MS = 1_500;
+
+/** 발송 하나를 접수해 둔다. 목 핸들러 POST 와 계약 표본 테스트(`nullable-coverage`)가 쓴다 */
+export function seedShareMail(noteId: string, recipients: string[], requestedAt = Date.now()) {
+  const mailId = `0K9${String(shareMails.size + 1).padStart(10, "0")}`;
+  shareMails.set(mailId, { noteId, requestedAt, recipients });
+  return mailId;
+}
+
 export const restHandlers = [
   // Users
   getGetAuthSessionMockHandler(() => ({
@@ -521,6 +543,75 @@ export const restHandlers = [
       notFound("NOTE_NOT_FOUND", "노트를 찾을 수 없습니다.")
     )
   ),
+  // 회의록 메일 발송(`sendNoteShareMail`). 코드 · 문구 · 상한이 서버(`NoteShareMail`)와 같아야 화면이 실서버와
+  // 같은 길을 지난다.
+  http.post("*/v1/notes/:noteId/share-mails", async ({ request, params }) => {
+    const form = await request.formData();
+    const file = form.get("file");
+    const fail = (code: string, message: string, status = 400) =>
+      HttpResponse.json(
+        { success: false, data: null, error: { code, message, details: null } },
+        { status }
+      );
+    // 서버(SendNoteShareMailService)와 같은 차례로 거절한다 — 받는 사람 → 메시지 → 파일 → 상한. 한 요청에 틀린 곳이
+    // 여럿이면 어느 문구가 뜨는지가 이 차례로 정해진다
+    const recipients = [
+      ...new Map(
+        form.getAll("recipients").map((value) => [String(value).trim().toLowerCase(), String(value).trim()] as const).reverse()
+      ).values(),
+    ].reverse();
+    // 서버와 같은 주소 규칙(`isEmail`)이다. 서버만 거절하는 주소(도달 불가)를 재현하려고 예약 도메인 `.invalid` 도 막는다
+    if (recipients.length === 0 || recipients.some((value) => !isEmail(value) || value.endsWith(".invalid"))) {
+      return fail("SHARE_MAIL_INVALID_RECIPIENT", "받는 사람 이메일 주소를 확인해 주세요.");
+    }
+    if (recipients.length > 10) {
+      return fail("SHARE_MAIL_TOO_MANY_RECIPIENTS", "받는 사람은 한 번에 10명까지 지정할 수 있습니다.");
+    }
+    if (String(form.get("message") ?? "").trim().length > 1000) {
+      return fail("SHARE_MAIL_MESSAGE_TOO_LONG", "메시지는 1000자까지 쓸 수 있습니다.");
+    }
+    if (file instanceof Blob && file.size > 10 * 1024 * 1024) {
+      return fail("SHARE_MAIL_FILE_TOO_LARGE", "첨부 파일은 10MB 이하여야 합니다.");
+    }
+    const head = file instanceof Blob ? await file.slice(0, 5).text() : "";
+    if (head !== "%PDF-") return fail("SHARE_MAIL_NOT_PDF", "PDF 파일만 보낼 수 있습니다.");
+    // 서버처럼 정시로 자른 한 시간 칸마다 30건이다(고정 창). 직전 60분을 세면 10:59 에 30건을 보낸 뒤 11:00 에
+    // 서버는 받는데 목은 막았다. 검사를 다 통과한 요청만 센다
+    const slot = Math.floor(Date.now() / SHARE_MAIL_WINDOW_MS);
+    const sent = shareMailSent.get(slot) ?? 0;
+    if (sent >= SHARE_MAIL_HOURLY_LIMIT) {
+      return fail("SHARE_MAIL_RATE_LIMITED", "메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.", 429);
+    }
+    shareMailSent.set(slot, sent + 1);
+    const mailId = seedShareMail(String(params.noteId), recipients);
+    return HttpResponse.json({ success: true, data: { mailId }, error: null }, { status: 202 });
+  }),
+  // 받는 사람별 발송 상태(`getNoteShareMail`). 보낸 사람만 본다 — 목의 보낸 사람은 늘 한 명이라 노트만 맞춘다.
+  // 접수 뒤 잠깐 PENDING 이었다가 SENT 가 된다. 실패 길을 화면에서 볼 수 있게 `@reject.test` 주소는 FAILED 다
+  http.get("*/v1/notes/:noteId/share-mails/:mailId", ({ params }) => {
+    const mail = shareMails.get(String(params.mailId));
+    if (!mail || mail.noteId !== String(params.noteId)) {
+      return HttpResponse.json(
+        { success: false, data: null, error: { code: "SHARE_MAIL_NOT_FOUND", message: "공유 메일을 찾을 수 없습니다.", details: null } },
+        { status: 404 }
+      );
+    }
+    const settled = Date.now() - mail.requestedAt >= SHARE_MAIL_SETTLE_MS;
+    const recipients = mail.recipients.map((email) => ({
+      email,
+      status: !settled ? "PENDING" : email.toLowerCase().endsWith("@reject.test") ? "FAILED" : "SENT",
+    }));
+    return HttpResponse.json({
+      success: true,
+      data: {
+        mailId: String(params.mailId),
+        requestedAt: new Date(mail.requestedAt).toISOString(),
+        completed: recipients.every((row) => row.status !== "PENDING"),
+        recipients,
+      },
+      error: null,
+    });
+  }),
   // 맥락 후보. **명시적 override로 준다** — 생성 목은 무작위 success:false 를 낸다.
   // 계약이 `openapi3.yml`에 아직 없어 생성 훅 자체가 없기도 하다.
   http.get("*/v1/notes/:noteId/proposals", ({ params }) => {

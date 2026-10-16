@@ -39,7 +39,7 @@ export function ReviewTab({
   projectId: string | undefined;
   isEnded: boolean;
   noteMeta?: NoteMeta | null;
-  participants: SpeakerFace[];
+  participants: (SpeakerFace & { email?: string | null })[];
   currentUserId?: string | null;
   currentUserName?: string | null;
   /** 「이 회의에 대해 물어보기」 알약이 아래 가운데에 떠 있다 */

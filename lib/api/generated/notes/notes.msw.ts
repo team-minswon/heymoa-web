@@ -14,6 +14,8 @@ import type {
   NoteListResponse,
   NoteParticipantListResponse,
   NoteResponse,
+  NoteShareMailResponse,
+  NoteShareMailStatusResponse,
 } from "../models";
 
 export const getGetNoteResponseMock = (): NoteResponse => ({
@@ -338,6 +340,28 @@ export const getCreateNoteGuestParticipantResponseMock =
     error: null,
   });
 
+export const getSendNoteShareMailResponseMock = (): NoteShareMailResponse => ({
+  success: true,
+  data: { mailId: "0K9GVJT2C4Q22" },
+  error: null,
+});
+
+export const getGetNoteShareMailResponseMock =
+  (): NoteShareMailStatusResponse => ({
+    success: true,
+    data: {
+      mailId: "0K9GVJT2C4Q22",
+      requestedAt: "2026-07-14T01:02:03Z",
+      completed: false,
+      recipients: [
+        { email: "partner@example.com", status: "SENT" },
+        { email: "guest@example.org", status: "FAILED" },
+        { email: "third@example.net", status: "PENDING" },
+      ],
+    },
+    error: null,
+  });
+
 export const getGetNoteMockHandler = (
   overrideResponse?:
     | NoteResponse
@@ -576,6 +600,54 @@ export const getCreateNoteGuestParticipantMockHandler = (
     options
   );
 };
+
+export const getSendNoteShareMailMockHandler = (
+  overrideResponse?:
+    | NoteShareMailResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<NoteShareMailResponse> | NoteShareMailResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/notes/:noteId/share-mails",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendNoteShareMailResponseMock(),
+        { status: 202 }
+      );
+    },
+    options
+  );
+};
+
+export const getGetNoteShareMailMockHandler = (
+  overrideResponse?:
+    | NoteShareMailStatusResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0]
+      ) => Promise<NoteShareMailStatusResponse> | NoteShareMailStatusResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.get(
+    "*/v1/notes/:noteId/share-mails/:mailId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetNoteShareMailResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getNotesMock = () => [
   getGetNoteMockHandler(),
   getDeleteNoteMockHandler(),
@@ -587,4 +659,6 @@ export const getNotesMock = () => [
   getGetWorkspaceNotesMockHandler(),
   getReplaceNoteGuestParticipantsMockHandler(),
   getCreateNoteGuestParticipantMockHandler(),
+  getSendNoteShareMailMockHandler(),
+  getGetNoteShareMailMockHandler(),
 ];

@@ -7,7 +7,7 @@ import { CONTEXT_SNAPSHOT } from "@/lib/mocks/proposals";
 import { mockDb } from "@/lib/mocks/db";
 import { meetingFlow, meetingFlowHandlers } from "@/lib/mocks/meeting-flow";
 import { projectTaskHandlers, projectTasks } from "@/lib/mocks/project-tasks";
-import { restHandlers } from "@/lib/mocks/rest-handlers";
+import { restHandlers, seedShareMail } from "@/lib/mocks/rest-handlers";
 import {
   resetChatStreamsForTests,
   seedAgentChatTurnForTests,
@@ -355,6 +355,8 @@ function contractSamples() {
         delegationId: mockDb
           .listAgentDelegations()
           .map((delegation) => delegation.delegationId),
+        // 회의록 메일(APP-1114) — 그 노트로 보낸 발송 하나를 심어 둔다
+        mailId: "noteId" in tuple ? [seedShareMail(String(tuple.noteId), ["kim@example.com"])] : [],
       };
       if (params.some((param) => !values[param]?.length)) continue;
       // 한 operation의 `{param}` 조합을 전개한다 (sessionId처럼 값이 여럿일 수 있다).
