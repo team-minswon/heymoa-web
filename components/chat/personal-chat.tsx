@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatList } from "@/components/chat/chat-list";
+import { ChatStarter } from "@/components/chat/chat-starter";
 import type { MentionHandle } from "@/components/chat/mention-input";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { Button } from "@/components/ui/button";
@@ -213,12 +214,6 @@ export function PersonalChatProvider({
     </PersonalChatContext.Provider>
   );
 }
-
-const EXAMPLE_QUESTIONS = [
-  "지난 회의에서 정한 것만 정리해줘",
-  "남은 액션 아이템이 뭐야?",
-  "논의된 이슈를 Linear 이슈로 만들어줘",
-];
 
 function PersonalChatPanel({
   hidden,
@@ -619,25 +614,33 @@ function PersonalChatPanel({
                   onOpenNote={openNote}
                   activeTurnId={turn.activeTurnId}
                   emptyState={
-                    <div className="space-y-3">
-                      <p className="text-sm text-[var(--el-body)]">
-                        아직 시작된 대화가 없습니다.
-                      </p>
-                      <div className="flex flex-col items-start gap-1.5">
-                        {EXAMPLE_QUESTIONS.map((question) => (
-                          <button
-                            key={question}
-                            type="button"
-                            disabled={turn.isBusy}
-                            // 바로 안 보낸다. 붙여 둔 칩이 딸려 나가는 것이 뜻밖이라 문장만 넣는다
-                            onClick={() => editorRef.current?.append(question)}
-                            className="rounded-full border border-[var(--el-hairline)] px-3 py-1.5 text-xs text-[var(--el-body)] hover:bg-[var(--el-canvas-soft)]"
-                          >
-                            {question}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <ChatStarter
+                      workspaceId={workspaceId}
+                      scopeTitles={chips.map((chip) => chip.title)}
+                      // 답을 만드는 중 · 승인을 기다리는 중 · 대화를 못 읽은 때는 보낼 수 없다
+                      disabled={
+                        turn.isBusy ||
+                        turn.isUnavailable ||
+                        turn.stream.phase === "awaiting_approval"
+                      }
+                      onAsk={(question) => {
+                        // 쓰던 글이 있으면 보내면서 지우지 말고 문장만 덧붙인다. 비었으면 바로 보낸다
+                        // 칩은 글자로도 읽힌다(`@[제목](noteId:…)`) — 회의록 안에서는 칩이 자동으로 붙어 있어,
+                        // 마커를 걷어 내고 남는 글이 있을 때만 「쓰던 글」로 본다. 칩만 있으면 그 범위로 바로 보낸다.
+                        const draft = editorRef.current?.read();
+                        const written = draft
+                          ? dropScopeMarkers(
+                              draft.text,
+                              new Set(draft.chips.map((chip) => chip.id))
+                            ).trim()
+                          : "";
+                        if (written) {
+                          editorRef.current?.append(question);
+                        } else {
+                          void send(question);
+                        }
+                      }}
+                    />
                   }
                 />
               )}

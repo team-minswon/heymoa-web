@@ -674,7 +674,7 @@ test("keeps a second chat alive while the first waits for approval", async ({
   await expect(newChat).toBeEnabled();
   await newChat.click();
 
-  await expect(page.getByText("아직 시작된 대화가 없습니다.")).toBeVisible();
+  await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
   await compose("요약해줘");
   await expect(page.getByTestId("assistant-message").last()).toContainText(
     "습니다",
@@ -1024,7 +1024,7 @@ test("does not create a chat row until the first message is sent", async ({
 
   // ＋ 를 누르고 아무 말도 안 한 채 기록으로 간다.
   await page.getByTestId("chat-list-new").click();
-  await expect(page.getByText("아직 시작된 대화가 없습니다.")).toBeVisible();
+  await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
   await page.getByRole("button", { name: "기록" }).click();
 
   const history = page.getByTestId("chat-history-view");
@@ -1055,7 +1055,7 @@ test("swaps the chat history in and back out inside the panel", async ({
 
   // B — ＋ 로 하나 더. 헤더 첫 줄이 지금 보는 대화를 말한다.
   await page.getByTestId("chat-list-new").click();
-  await expect(page.getByText("아직 시작된 대화가 없습니다.")).toBeVisible();
+  await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
 
   const thread = page.getByTestId("chat-thread-view");
   const history = page.getByTestId("chat-history-view");
@@ -1088,7 +1088,7 @@ test("streams a personal chat turn from the panel", async ({ page }) => {
   // 목에 나이 든 대화가 시드돼 있다(날짜 묶음·구분선을 목에서 보려고). 빈 대화에서
   // 시작하는 검사는 ＋ 로 새 대화를 연다 — ＋ 는 서버를 안 부르므로 줄이 안 생긴다.
   await page.getByTestId("chat-list-new").click();
-  await expect(page.getByText("아직 시작된 대화가 없습니다.")).toBeVisible();
+  await expect(page.getByText("무엇을 도와드릴까요?")).toBeVisible();
 
   await page.getByLabel("메시지").fill("요약해줘");
   await page.getByRole("button", { name: "보내기" }).click();
@@ -1480,6 +1480,30 @@ test("ends a stopped meeting from the side panel and opens the ended summary", a
   await expect(page).toHaveURL(/view=side&tab=summary/);
 });
 
+/** 시작 카드를 누르면 입력 없이 바로 보내진다(APP-1117). 연동 전인 외부 도구 카드는 설정의 연동 섹션을 연다. */
+test("sends a starter question straight from the empty chat", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+
+  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByTestId("chat-list-new").click();
+  await page.getByRole("button", { name: /회의록에서 찾기/ }).click();
+
+  await expect(page.getByTestId("assistant-message").last()).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText("무엇을 도와드릴까요?")).toBeHidden();
+});
+
+test("opens integration settings from the starter when Linear is not connected", async ({ page }) => {
+  await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
+
+  await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
+  await page.getByTestId("chat-list-new").click();
+  await page.getByRole("button", { name: /외부 도구로 잇기/ }).click();
+
+  await expect(page.getByRole("dialog", { name: /설정/ })).toBeVisible();
+});
+
 /**
  * 쓰기 도구 승인 한 흐름을 화면에서 굴린다 — 목은 "이슈"가 든 메시지에서 실제로 멈춰
  * 승인을 기다린다(sse-handler). 승인 카드 → 승인 → 승인·실행 기록까지 서비스 워커 경로로 확인.
@@ -1488,13 +1512,10 @@ test("approves a write tool from the chat card", async ({ page }) => {
   await page.goto(`/w/${MOCK_WORKSPACE_ID}`);
 
   await page.getByRole("button", { name: "개인 챗봇 열기" }).click();
-  // 예시 질문은 빈 상태에만 있다 — 시드된 대화가 열리므로 ＋ 로 빈 대화를 연다.
+  // 시드된 대화가 열리므로 ＋ 로 빈 대화를 연다. 목의 Linear 는 연동 전이라 시작 카드가 연동하기로
+  // 바뀌어 있다 — 직접 쓴 문장으로 쓰기 도구 승인 흐름을 굴린다.
   await page.getByTestId("chat-list-new").click();
-  await page
-    .getByRole("button", { name: "논의된 이슈를 Linear 이슈로 만들어줘" })
-    .click();
-  // 예시 질문은 **컴포저에 넣기만 한다.** 붙여 둔 칩이 그대로 딸려 나가는 것이 뜻밖이라
-  // 보낼지는 사용자가 정한다(`personal-chat.tsx`). 그래서 여기서 한 번 더 누른다.
+  await page.getByLabel("메시지").fill("논의된 이슈를 Linear 이슈로 만들어줘");
   await page.getByRole("button", { name: "보내기" }).click();
 
   // 승인 카드가 뜨고 만료가 없다는 문구가 있다.
