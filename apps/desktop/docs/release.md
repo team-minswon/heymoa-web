@@ -12,7 +12,7 @@
 | 2 | 산출물 받기 | run 화면 Artifacts에서 `heymoa-mac-arm64`·`heymoa-mac-x64`(Windows는 `heymoa-win-x64`). artifacts ZIP 자체를 게시하지 않고 안의 DMG·ZIP만 씁니다 | run의 head SHA가 의도한 dev 커밋 |
 | 3 | 로컬 재확인 | 받은 파일을 한 폴더에 모아 `node apps/desktop/scripts/checksums.mjs <폴더>`로 SHA256SUMS를 다시 만들고 아래 「서명 확인 명령」을 돌립니다 | checksum 일치, `spctl`이 `Notarized Developer ID` |
 | 4 | 내 Mac 설치 확인 | 기존 HeyMoa 삭제 → **브라우저로 받은** DMG를 설치해 실행(「설치 확인」 참고) | 「확인되지 않은 개발자」 경고 없이 열림, 로그인·녹음 시작 |
-| 5 | GitHub Release 게시 | 공개 저장소 **`team-minswon/homebrew-tap`**의 Releases, 태그 `desktop-v0.1.0`. 사용자가 승인한 브라우저의 `minswon-official` 계정으로 직접 올립니다(CLI 계정으로 게시하지 않음) | Mac DMG·ZIP 4개와 SHA256SUMS가 공개 URL에서 내려받아짐 |
+| 5 | draft 만들고 게시 | 공개 저장소 **`team-minswon/homebrew-tap`**의 Releases, 태그 `desktop-v0.1.0`. **draft는 CLI(`gh release create --draft`)로 파일을 붙여 만들어 둘 수 있고, 공개(Publish release)는 사용자가 브라우저에서 직접 누릅니다.** 그 클릭이 승인입니다 | draft에 DMG·ZIP·SHA256SUMS가 붙어 있고, 공개 뒤 공개 URL에서 내려받아짐 |
 | 6 | 공개 파일 검증 | `node apps/desktop/scripts/release-manifest.mjs team-minswon/homebrew-tap 0.1.0 <출력폴더>` | downloads.json 생성(해시·크기 불일치면 출력 안 함) |
 | 7 | cask 갱신 | tap 저장소에서 `node scripts/update-cask.mjs 0.1.0`, **caveats의 「unsigned beta」 문장과 README의 「서명·공증이 적용되지 않아」 문장을 지웁니다**, `brew audit --cask --online team-minswon/tap/heymoa`, `brew install --cask`로 설치 | audit 통과, 설치 후 실행 |
 | 8 | 웹 배포 | heymoa-web `main`에 `dev`를 fast-forward로 올립니다(`merging` skill 4단계). 문구는 이미 dev에 있습니다(APP-1123·1124·1126) | 운영 `/download`가 Mac 정식·Windows 베타로 보임 |
@@ -56,7 +56,7 @@ Windows NSIS는 실제 Windows runner가 기본입니다. macOS에서 교차 빌
 1. 웹·서버 desktop 인증 및 runtime 배포, 실제 앱 로그인·외부 연동·기록 시작과 종료를 확인합니다.
 2. 지원 OS별 설치 파일을 새 설치 환경에서 검증합니다. 앱·도움말·릴리즈 안내의 unsigned/signed 상태를 일치시킵니다. 패키지 allowlist·icon·권한 설명·checksum을 확인합니다.
 3. 공개 다운로드와 자체 tap은 실제 public `team-minswon/homebrew-tap`을 사용합니다. private 소스 저장소의 인증이 필요한 asset을 일반 다운로드 링크로 제공하지 않습니다. public tap의 GitHub Releases에는 검증된 바이너리와 checksum·설치 안내만 올립니다.
-4. 게시 전에 실제 최종 파일·checksum·QA 결과와 릴리즈 내용을 사용자에게 알립니다. 사용자가 승인한 브라우저에서 실제 login `minswon-official`을 게시 직전 확인합니다. CLI `alstn113`로는 draft 생성·게시를 하지 않으며 기능 QA 완료 전에도 게시하지 않습니다. 계정 자동 전환·fallback은 하지 않습니다. 릴리즈 본문에 실제 검증 범위, OS별 서명 상태(Mac 서명·공증, Windows 서명 없음), 설치 절차, 알려진 제한을 기록합니다. 필수 파일을 모두 붙여 공개한 뒤 실제 바이트를 다시 확인합니다. 이 workflow가 릴리즈를 생성하지 않습니다.
+4. 게시 전에 실제 최종 파일·checksum·QA 결과와 릴리즈 내용을 사용자에게 알립니다. draft는 CLI 계정(`alstn113`)으로 만들어도 되지만 **공개는 하지 않습니다.** 공개는 사용자가 브라우저에서 draft를 열어 직접 Publish하고, 기능 QA 완료 전에는 공개하지 않습니다. 릴리즈 페이지의 작성자(author)는 draft를 만든 계정으로 보이고, 누가 공개했는지는 저장소 Activity와 조직 Audit log에서 확인합니다. 계정 자동 전환·fallback은 하지 않습니다. 릴리즈 본문에 실제 검증 범위, OS별 서명 상태(Mac 서명·공증, Windows 서명 없음), 설치 절차, 알려진 제한을 기록합니다. 필수 파일을 모두 붙여 공개한 뒤 실제 바이트를 다시 확인합니다. 이 workflow가 릴리즈를 생성하지 않습니다.
 5. `node apps/desktop/scripts/release-manifest.mjs OWNER/REPO VERSION OUTPUT_DIR`로 이미 공개된 `desktop-vVERSION`의 실제 Mac 파일을 확인합니다. Windows는 별도 수용 후 `--include-windows`로 명시적으로 포함합니다. 필수 asset·SHA256SUMS가 없거나 draft·download hash/size 불일치면 출력하지 않습니다. 다운로드는 streaming hash를 사용해 설치 파일 전체를 메모리에 저장하지 않습니다.
 6. 검증된 downloads.json을 웹 다운로드·수동 새 버전 안내의 입력으로 연결합니다. tap 저장소의 `scripts/update-cask.mjs VERSION`이 공개된 두 Mac ZIP을 다시 검증해 Casks/heymoa.rb를 만듭니다. 단일 heymoa token을 사용해 중복 앱 ID·protocol 충돌을 피합니다. brew audit·실제 설치를 확인한 뒤 안내합니다. 가짜 다운로드를 만들지 않습니다.
 
