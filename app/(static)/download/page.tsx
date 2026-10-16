@@ -41,7 +41,7 @@ const PLATFORMS = [
     need: "Windows\u00a011 x64에서 EXE 설치 파일을 사용합니다. Windows판은 베타입니다.",
     label: "주의",
     caution:
-      "베타 설치·녹음의 실제 Windows 검증은 진행 중입니다. 서명되지 않은 설치 파일에는 SmartScreen 경고가 표시될 수 있습니다.",
+      "서명되지 않은 설치 파일에는 SmartScreen 경고가 표시될 수 있습니다.",
   },
 ] as const;
 
