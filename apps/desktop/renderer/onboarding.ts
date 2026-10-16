@@ -32,7 +32,7 @@ function render(view: OnboardingView) {
   microphone.disabled = view.microphone === "granted";
   element("audio-description").textContent =
     view.platform === "darwin"
-      ? "Zoom·Webex 등 컴퓨터에서 들리는 소리입니다. 첫 녹음 때 macOS가 필요한 허용을 요청합니다. 설정의 화면 및 시스템 오디오 녹음에서 HeyMoa를 확인할 수 있어요."
+      ? "Zoom·Webex 등 컴퓨터에서 들리는 소리입니다. 첫 녹음을 시작하면 macOS가 허용을 묻고, 허용한 뒤에 설정의 화면 및 시스템 오디오 녹음에 HeyMoa가 나타나요. 지금은 목록에 없는 것이 정상입니다."
       : "Zoom·Webex 등 컴퓨터에서 들리는 소리입니다. Windows 출력 장치의 소리를 첫 녹음 때 연결합니다. 헤드셋이나 스피커 설정을 확인해 주세요.";
   complete.textContent =
     view.microphone === "granted"
