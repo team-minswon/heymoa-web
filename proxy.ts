@@ -177,7 +177,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|webmanifest)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|webmanifest|woff2|ttf)$).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "next-router-segment-prefetch" },

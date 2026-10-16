@@ -236,6 +236,31 @@ describe("topicDigests", () => {
     expect(digests.find((row) => row.ordinal === 2)?.gist).toBeNull();
   });
 
+  it("사람이 주제에 직접 더한 질문 · 이슈도 남은 것으로 싣는다 — 분석이 답한 질문(사람이 쓰지 않은 것)은 아니다", () => {
+    const rows = topicDigests(
+      {
+        agendas: [
+          {
+            ordinal: 1,
+            title: "가",
+            agendaId: "01KG000000001",
+            summary: null,
+            conclusions: [],
+            description: [],
+            members: [{ itemId: "mine" }, { itemId: "answered" }],
+            openItemIds: [],
+          },
+        ],
+      } as unknown as MeetingReviewSummary,
+      new Map([
+        ["mine", item({ itemId: "mine", kind: "ISSUE", authoredByUserId: "01KU000000001" })],
+        ["answered", item({ itemId: "answered", kind: "QUESTION", authoredByUserId: null })],
+      ]),
+      () => null
+    );
+    expect(rows[0].open.map((row) => row.itemId)).toEqual(["mine"]);
+  });
+
   it("한 줄 요약이 없으면 서술(설명)의 첫 문장을 쓴다", () => {
     const rows = topicDigests(
       {
