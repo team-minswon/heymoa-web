@@ -139,6 +139,7 @@ export function SpeakerAssignMenu({
   onCreateGuest,
   onClearOverride,
   triggerTestId = "speaker-assign-trigger",
+  allowSegmentScope = true,
 }: {
   identity: SpeakerIdentity;
   candidates: SpeakerCandidate[];
@@ -176,6 +177,8 @@ export function SpeakerAssignMenu({
   onClearOverride?: () => void;
   /** 같은 화면에 메뉴가 둘 이상 서면(전사 줄·도크) 짚는 이름이 겹치지 않게 가른다. */
   triggerTestId?: string;
+  /** `false` 면 「현재 발화에만 적용」을 감추고 라벨 단위로만 지정한다(도크처럼 현재 발화가 없는 자리). */
+  allowSegmentScope?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   /** base-ui 가 후보를 거를 때 쓰는 값. 조합 중에는 안 올라온다 — 그게 맞는 동작이다. */
@@ -406,24 +409,26 @@ export function SpeakerAssignMenu({
         {/* **범위를 고르는 자리.** pyannote 가 한 사람을 둘로 쪼갠 회의에서는 두 화자를
             각각 같은 사람으로 두면 되지만(그것도 「모든 발화」다), 라벨은 맞는데 한 줄만
             남의 말로 붙은 경우가 따로 있다. 그 둘은 고치는 범위가 다르다. */}
-        <fieldset className="border-t border-border p-1">
-          <legend className="sr-only">화자 지정 범위</legend>
-          {SCOPES.map((option) => (
-            <label
-              key={option.value}
-              className="flex cursor-pointer items-center gap-2 rounded-chip px-2 py-1.5 text-[13px] hover:bg-[var(--el-canvas-soft)]"
-            >
-              <input
-                type="radio"
-                name="speaker-assign-scope"
-                className="accent-[var(--el-ink)]"
-                checked={scope === option.value}
-                onChange={() => setScope(option.value)}
-              />
-              {option.label}
-            </label>
-          ))}
-        </fieldset>
+        {allowSegmentScope ? (
+          <fieldset className="border-t border-border p-1">
+            <legend className="sr-only">화자 지정 범위</legend>
+            {SCOPES.map((option) => (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-center gap-2 rounded-chip px-2 py-1.5 text-[13px] hover:bg-[var(--el-canvas-soft)]"
+              >
+                <input
+                  type="radio"
+                  name="speaker-assign-scope"
+                  className="accent-[var(--el-ink)]"
+                  checked={scope === option.value}
+                  onChange={() => setScope(option.value)}
+                />
+                {option.label}
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
         {/* **아래 버튼이 범위를 따라 바뀐다.**
 
             「모든 발화」일 때는 「이름 안 붙임」이다. 문구만 바뀌고 저장하는 값은 `null`인데,

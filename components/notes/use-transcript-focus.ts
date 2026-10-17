@@ -13,28 +13,37 @@ import type { TranscriptPresentationSegment } from "@/lib/transcription/presenta
  * 라틴 문자는 좁아서 같은 글자 수로도 더 짧게 그어진다 — 눈에 띄면 그때 `getClientRects()`
  * 로 실제 폭을 재서 `--evidence-span`에 실어 준다.
  */
-const PEN_MS_PER_EM = 10;
+const PEN_MS_PER_EM = 6;
 
 /**
- * 펜이 지나갈 길이의 상한. **읽기 폭 한 줄보다 길어야 한다** — 여러 줄로 감긴 발화는
- * 줄마다 제 폭에서 먼저 다 차고 멈추는데(`globals.css`의 `.evidence-mark`), 이 값이 한 줄
- * 폭에 못 미치면 긴 줄의 오른쪽 끝이 영영 안 칠해진다. 전사 본문이 가장 넓은 자리가
- * 아카이브의 약 730px(≈49em)이라 그보다 위에 둔다.
+ * 펜이 지나갈 길이의 상한(em). 여러 줄 발화는 줄들을 이어 붙인 한 줄 띠로 칠해지므로(`globals.css`의
+ * `.evidence-mark`, `box-decoration-break: slice`) **발화 전체 글자 수만큼**이 필요하다. 이 값이
+ * 모자라면 긴 발화의 뒷줄이 안 칠해진다.
  */
-const SPAN_MAX_EM = 56;
+const SPAN_MAX_EM = 320;
 
 /** 아주 짧은 맞장구("네.")도 획으로 보여야 한다. 이보다 빠르면 그냥 켜졌다 꺼진다. */
-const STROKE_MIN_MS = 140;
+const STROKE_MIN_MS = 120;
+
+/**
+ * 한 번 긋는 데 걸리는 시간의 상한. 긴 발화도 한 호흡에 그어져야 한다 — 예전에는 560ms 를 선형으로
+ * 천천히 지나가서, ◀ ▶ 로 발화를 넘길 때마다 펜이 따라오지 못하고 느리게 느껴졌다. 랜딩의 형광펜
+ * (`tv-mark`, 0.6초 ease-out)과 같은 호흡이다.
+ */
+const STROKE_MAX_MS = 700;
 
 /** 다 그은 뒤 머무는 시간. 읽을 시간이라 길이와 무관하게 같다. */
-const HOLD_MS = 1_500;
+const HOLD_MS = 1_000;
 
 /** 펜이 지나갈 길이(em)와 그 시간(ms). 획·지우개·수명이 전부 이 둘에서 나온다. */
 function penOf(text: string) {
   const spanEm = Math.min(SPAN_MAX_EM, text.length);
   return {
     spanEm,
-    strokeMs: Math.max(STROKE_MIN_MS, spanEm * PEN_MS_PER_EM),
+    strokeMs: Math.min(
+      STROKE_MAX_MS,
+      Math.max(STROKE_MIN_MS, spanEm * PEN_MS_PER_EM)
+    ),
   };
 }
 
