@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SpeakerDock } from "@/components/notes/speaker-dock";
+import { SpeakerDock, createCurrentMsStore } from "@/components/notes/speaker-dock";
 import { TIMELINE_BINS, type SpeakerStat } from "@/lib/notes/speaker-stats";
 
 const stat = (overrides: Partial<SpeakerStat> = {}): SpeakerStat => ({
@@ -24,11 +24,13 @@ const stat = (overrides: Partial<SpeakerStat> = {}): SpeakerStat => ({
 });
 
 function renderDock(currentMs: number, onJump = vi.fn(), stats = [stat()]) {
+  const store = createCurrentMsStore();
+  store.set(currentMs);
   render(
     <SpeakerDock
       stats={stats}
       durationMs={600_000}
-      currentMs={currentMs}
+      currentMsStore={store}
       onJump={onJump}
       renderAssign={() => null}
     />

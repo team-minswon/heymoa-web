@@ -47,7 +47,10 @@ import {
   isSpeakerAssigneeQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
-import { SpeakerDock } from "@/components/notes/speaker-dock";
+import {
+  SpeakerDock,
+  createCurrentMsStore,
+} from "@/components/notes/speaker-dock";
 import { SpeakerPanel, SpeakerTools } from "@/components/notes/speaker-panel";
 import { summarizeSpeakers, type SpeakerStat } from "@/lib/notes/speaker-stats";
 import { toast } from "@/lib/ui/toast";
@@ -391,8 +394,9 @@ export const NoteArchive = memo(function NoteArchive({
         email: member.email,
         image: member.image,
         assignedLabels: [],
-        // 참여자가 아니면 이름을 쳐야 보인다 — 기본 목록은 이 회의의 참여자만이다.
-        searchOnly: true,
+        // 참여자가 아니면 이름을 쳐야 보인다 — 기본 목록은 이 회의의 참여자만이다. **참여자가 한 명도
+        // 없으면 예외다**: 그러면 기본 목록이 비어 「없다」로 읽힌다.
+        searchOnly: participants.length > 0,
       }));
 
     // **이 회의 밖의 임시 참여자는 검색해야 보인다.** 늘 보이면 회의와 상관없는 이름으로
@@ -851,9 +855,12 @@ export const NoteArchive = memo(function NoteArchive({
    * 도크의 「지금 위치」. **저장한 번호가 아니라 화면 가운데 발화의 시각**이다 —
    * 직접 스크롤해도 어긋나지 않는다.
    */
-  const [currentMs, setCurrentMs] = useState(0);
+  const [currentMsStore] = useState(createCurrentMsStore);
   const startedAtOf = useMemo(
-    () => new Map(segments.map((segment) => [segment.segmentId, segment.startedAtMs])),
+    () =>
+      new Map(
+        segments.map((segment) => [segment.segmentId, segment.startedAtMs])
+      ),
     [segments]
   );
   useEffect(() => {
@@ -862,20 +869,28 @@ export const NoteArchive = memo(function NoteArchive({
     let frame = 0;
     const measure = () => {
       frame = 0;
+      const box = viewport.getBoundingClientRect();
       const toolsBottom =
         viewport
           .querySelector('[data-testid="transcript-tools"]')
-          ?.getBoundingClientRect().bottom ?? viewport.getBoundingClientRect().top;
+          ?.getBoundingClientRect().bottom ?? box.top;
       // **맨 위가 아니라 가운데 줄이다.** 이동하면 도착한 발화가 화면 가운데로 오므로(`center`),
       // 맨 위 줄로 재면 방금 간 발화보다 앞을 가리켜 ▶ 가 같은 발화를 또 고른다.
-      const middle = (toolsBottom + viewport.getBoundingClientRect().bottom) / 2;
-      const top = Array.from(
-        viewport.querySelectorAll<HTMLElement>("[data-segment-id]")
-      ).find((node) => node.getBoundingClientRect().bottom > middle);
-      const at = top?.dataset.segmentId
-        ? startedAtOf.get(top.dataset.segmentId)
-        : undefined;
-      if (at !== undefined) setCurrentMs(at);
+      // **줄을 돌며 재지 않고 한 점을 짚는다**(`elementFromPoint`) — 프레임마다 전사 줄 수백 개의
+      // 위치를 읽으면 그것이 레이아웃을 강제한다. 가운데가 줄 사이 틈이면 위아래로 조금 더 짚는다.
+      const x = box.left + box.width / 2;
+      const middle = (toolsBottom + box.bottom) / 2;
+      for (const dy of [0, 24, -24, 56, -56]) {
+        // jsdom 에는 `elementFromPoint` 가 없다.
+        const id = document
+          .elementFromPoint?.(x, middle + dy)
+          ?.closest<HTMLElement>("[data-segment-id]")?.dataset.segmentId;
+        const at = id ? startedAtOf.get(id) : undefined;
+        if (at !== undefined) {
+          currentMsStore.set(at);
+          return;
+        }
+      }
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -886,7 +901,7 @@ export const NoteArchive = memo(function NoteArchive({
       viewport.removeEventListener("scroll", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [viewportRef, startedAtOf, rows.length]);
+  }, [viewportRef, startedAtOf, rows.length, currentMsStore]);
 
   const [panelOpen, setPanelOpen] = useState(false);
   /** 회의 길이. 패널의 머리글과 타임라인 축이 **같은 값**을 써야 둘이 같은 회의를 그린다. */
@@ -932,6 +947,8 @@ export const NoteArchive = memo(function NoteArchive({
     return (
       <SpeakerAssignMenu
         triggerTestId="speaker-dock-assign"
+        // 도크에는 「현재 발화」가 없다 — 라벨 단위로만 지정한다.
+        allowSegmentScope={false}
         identity={{
           displayName: stat.name,
           avatarName: stat.avatarName,
@@ -1098,23 +1115,23 @@ export const NoteArchive = memo(function NoteArchive({
             <SpeakerDock
               stats={speakerStats}
               durationMs={meetingDurationMs}
-              currentMs={currentMs}
+              currentMsStore={currentMsStore}
               onJump={jumpToSegment}
               renderAssign={renderDockAssign}
             />
           ) : null}
           {away ? (
-          <ScrollToBottomButton
-            label="맨 아래로"
-            onClick={() =>
-              virtualized
-                ? virtualizer.scrollToIndex(rows.length - 1, { align: "end" })
-                : scrollToBottom()
-            }
-            // desktop에서는 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
-            // 화자 도크가 떠 있으면 그 위로 올린다.
-            className={dockShown ? "bottom-44 lg:bottom-48" : "lg:bottom-20"}
-          />
+            <ScrollToBottomButton
+              label="맨 아래로"
+              onClick={() =>
+                virtualized
+                  ? virtualizer.scrollToIndex(rows.length - 1, { align: "end" })
+                  : scrollToBottom()
+              }
+              // desktop에서는 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
+              // 화자 도크가 떠 있으면 그 위로 올린다.
+              className={dockShown ? "bottom-44 lg:bottom-48" : "lg:bottom-20"}
+            />
           ) : null}
         </>
       }

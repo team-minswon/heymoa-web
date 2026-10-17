@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { memo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
@@ -20,6 +20,30 @@ import { cn } from "@/lib/utils";
  * **지금 위치는 저장하지 않고 [currentMs] 에서 계산한다.** 마지막으로 누른 번호를 기억하면
  * 직접 스크롤했을 때 어긋난다. 세로선이 화면 맨 위 발화의 시각을 따라간다.
  */
+
+/**
+ * 「지금 위치」를 담는 작은 외부 스토어.
+ *
+ * **상태로 최상위에 두면 스크롤 한 프레임마다 노트 아카이브 전체(전사 줄 수백 개)가 다시
+ * 그려진다.** 값은 스크롤 측정이 쓰고 도크만 읽으므로, 도크만 구독하게 한다.
+ */
+export function createCurrentMsStore() {
+  let value = 0;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => value,
+    set(next: number) {
+      if (next === value) return;
+      value = next;
+      listeners.forEach((listener) => listener());
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
+  };
+}
+export type CurrentMsStore = ReturnType<typeof createCurrentMsStore>;
 
 /** 같은 발화에 머물러 있을 때 ◀ ▶ 가 제자리를 가리키지 않게 두는 여유. */
 const EPSILON_MS = 500;
@@ -41,6 +65,48 @@ function ticksOf(stat: SpeakerStat) {
   }));
 }
 
+/**
+ * 파형. **지금 위치가 바뀌어도 다시 그리지 않는다** — 막대가 줄마다 48개라, 스크롤 중에 프레임마다
+ * 그리면 그것만으로 수백 노드가 흔들린다. 바뀌는 것은 [active] 뿐이다.
+ */
+const Wave = memo(function Wave({
+  timeline,
+  tone,
+  active,
+  reduced,
+}: {
+  timeline: number[];
+  tone: string;
+  active: boolean;
+  reduced: boolean;
+}) {
+  return (
+    <div className="flex h-full items-center gap-[2px]">
+      {timeline.map((value, bin) => (
+        // 처음 그릴 때 왼쪽에서 오른쪽으로 차례로 자란다 — 회의가 시간순으로 펼쳐진다는 것을 말한다.
+        <motion.span
+          key={bin}
+          initial={reduced ? false : { scaleY: 0, opacity: 0 }}
+          animate={{
+            scaleY: 1,
+            opacity: value > 0 ? (active ? 1 : 0.55 + value * 0.3) : 0.18,
+          }}
+          transition={{
+            duration: 0.28,
+            ease: "easeOut",
+            delay: reduced ? 0 : Math.min(bin * 0.006, 0.3),
+          }}
+          className="flex-1 rounded-full"
+          style={{
+            height: Math.max(2, Math.round(value * (ROW_H - 6))),
+            backgroundColor: tone,
+          }}
+        />
+      ))}
+    </div>
+  );
+});
+
 function DockRow({
   stat,
   tone,
@@ -59,7 +125,9 @@ function DockRow({
   onJump: (segmentId: string) => void;
 }) {
   const ticks = ticksOf(stat);
-  const prev = [...ticks].reverse().find((t) => t.start < currentMs - EPSILON_MS);
+  const prev = [...ticks]
+    .reverse()
+    .find((t) => t.start < currentMs - EPSILON_MS);
   const next = ticks.find((t) => t.start > currentMs + EPSILON_MS);
   const [hover, setHover] = useState<number | null>(null);
   const now = Math.min(1, Math.max(0, currentMs / durationMs));
@@ -68,7 +136,9 @@ function DockRow({
   const seek = (ratio: number) => {
     if (!ticks.length) return;
     const at = ratio * durationMs;
-    onJump((ticks.find((t) => t.start >= at) ?? ticks[ticks.length - 1]).segmentId);
+    onJump(
+      (ticks.find((t) => t.start >= at) ?? ticks[ticks.length - 1]).segmentId
+    );
   };
   const ratioOf = (event: { clientX: number; currentTarget: HTMLElement }) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -107,29 +177,12 @@ function DockRow({
         onClick={(event) => seek(ratioOf(event))}
       >
         {/* 파형. 말한 양이 높이고, 말 없는 칸은 점으로 남아 회의 축이 이어진다. */}
-        <div className="flex h-full items-center gap-[2px]">
-          {stat.timeline.map((value, bin) => (
-            // 처음 그릴 때 왼쪽에서 오른쪽으로 차례로 자란다 — 회의가 시간순으로 펼쳐진다는 것을 말한다.
-            <motion.span
-              key={bin}
-              initial={reduced ? false : { scaleY: 0, opacity: 0 }}
-              animate={{
-                scaleY: 1,
-                opacity: value > 0 ? (active ? 1 : 0.55 + value * 0.3) : 0.18,
-              }}
-              transition={{
-                duration: 0.28,
-                ease: "easeOut",
-                delay: reduced ? 0 : Math.min(bin * 0.006, 0.3),
-              }}
-              className="flex-1 rounded-full"
-              style={{
-                height: Math.max(2, Math.round(value * (ROW_H - 6))),
-                backgroundColor: tone,
-              }}
-            />
-          ))}
-        </div>
+        <Wave
+          timeline={stat.timeline}
+          tone={tone}
+          active={active}
+          reduced={Boolean(reduced)}
+        />
         {/* 지금 위치. 줄마다 같은 비율에 서서 세로로 이어진다. 말하는 줄에만 점이 얹힌다. */}
         <span
           aria-hidden
@@ -197,20 +250,25 @@ function DockRow({
 export function SpeakerDock({
   stats: allStats,
   durationMs,
-  currentMs,
+  currentMsStore,
   onJump,
   renderAssign,
 }: {
   stats: SpeakerStat[];
   durationMs: number;
-  /** 화면 맨 위에 보이는 발화의 시각. 스크롤을 따라간다. */
-  currentMs: number;
+  /** 화면 가운데 발화의 시각. 스크롤을 따라간다. */
+  currentMsStore: CurrentMsStore;
   onJump: (segmentId: string) => void;
   /** 미지정 화자 줄의 이름 자리. 지정 메뉴를 그대로 넘긴다. 없으면 이름만 그린다. */
   renderAssign: (stat: SpeakerStat) => ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const reduced = useReducedMotion();
+  const currentMs = useSyncExternalStore(
+    currentMsStore.subscribe,
+    currentMsStore.get,
+    () => 0
+  );
   // 말한 기록이 없는 참여자는 줄에 그릴 것이 없다(패널에는 선다).
   const stats = allStats.filter((stat) => stat.jumpTargets.length > 0);
   if (!stats.length || durationMs <= 0) return null;
@@ -249,14 +307,23 @@ export function SpeakerDock({
             aria-expanded={false}
             initial={reduced ? false : { opacity: 0, scale: 0.92, y: 6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 6, transition: { duration: 0.12 } }}
+            exit={{
+              opacity: 0,
+              scale: 0.92,
+              y: 6,
+              transition: { duration: 0.12 },
+            }}
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="pointer-events-auto flex items-center gap-2 rounded-full border border-[var(--el-hairline)] bg-white/80 py-1.5 pl-2 pr-3 shadow-lg backdrop-blur-xl hover:bg-white"
           >
             <span className="flex -space-x-1.5">
               {stats.slice(0, 5).map((stat) => (
                 <span key={stat.key} className="rounded-full ring-2 ring-white">
-                  <PersonAvatar name={stat.avatarName} image={stat.image} size={18} />
+                  <PersonAvatar
+                    name={stat.avatarName}
+                    image={stat.image}
+                    size={18}
+                  />
                 </span>
               ))}
             </span>
@@ -270,7 +337,12 @@ export function SpeakerDock({
             key="panel"
             initial={reduced ? false : { opacity: 0, scale: 0.96, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 8, transition: { duration: 0.12 } }}
+            exit={{
+              opacity: 0,
+              scale: 0.96,
+              y: 8,
+              transition: { duration: 0.12 },
+            }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             style={{ transformOrigin: "bottom center" }}
             className="pointer-events-auto w-[min(32rem,100%)] rounded-2xl border border-[var(--el-hairline)] bg-white/80 px-3 pb-2 pt-1.5 shadow-xl backdrop-blur-xl"

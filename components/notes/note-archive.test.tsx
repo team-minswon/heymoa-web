@@ -464,7 +464,7 @@ describe("NoteArchive", () => {
         const { strokeMs } = penOf(
           screen.getAllByTestId("archive-transcript-block")[2]
         );
-        vi.advanceTimersByTime(strokeMs * 2 + 1_500 - 1);
+        vi.advanceTimersByTime(strokeMs * 2 + 1_000 - 1);
         expect(onFocusHandled).not.toHaveBeenCalled();
         vi.advanceTimersByTime(1);
         // 안 비우면 스크립트 탭을 다시 열 때마다 같은 자리로 끌려간다.
