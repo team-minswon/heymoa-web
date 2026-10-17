@@ -91,4 +91,18 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
       "3 / 3"
     );
   });
+
+  it("띠에 올리면 커서 위치의 시각이 바로 보이고 벗어나면 사라진다", () => {
+    renderPanel([stat()]);
+    const strip = screen.getByTestId("speaker-panel-strip");
+    strip.getBoundingClientRect = () =>
+      ({ left: 0, width: 600, top: 0, height: 24 }) as DOMRect;
+
+    fireEvent.pointerMove(strip, { clientX: 300 });
+    // 600_000ms 의 절반 = 5분.
+    expect(screen.getByTestId("speaker-panel-strip-time")).toHaveTextContent("5:00");
+
+    fireEvent.pointerLeave(strip);
+    expect(screen.queryByTestId("speaker-panel-strip-time")).toBeNull();
+  });
 });

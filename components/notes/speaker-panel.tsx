@@ -59,15 +59,24 @@ function Sparkline({
   onPick: (index: number) => void;
 }) {
   const clickable = startsMs.length > 0 && durationMs > 0;
+  // 커서가 가리키는 위치(0..1). 기본 `title` 은 1초쯤 늦고 커서를 안 따라와 안 보였다.
+  const [hover, setHover] = useState<number | null>(null);
+  const ratioOf = (event: { clientX: number; currentTarget: HTMLElement }) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return box.width > 0
+      ? Math.min(1, Math.max(0, (event.clientX - box.left) / box.width))
+      : 0;
+  };
   return (
     <div
       aria-hidden
       data-testid="speaker-panel-strip"
       className={cn("relative", clickable && "cursor-pointer")}
+      onPointerMove={(event) => setHover(ratioOf(event))}
+      onPointerLeave={() => setHover(null)}
       onClick={(event) => {
         if (!clickable) return;
-        const box = event.currentTarget.getBoundingClientRect();
-        const at = ((event.clientX - box.left) / box.width) * durationMs;
+        const at = ratioOf(event) * durationMs;
         const next = startsMs.findIndex((start) => start >= at);
         onPick(next === -1 ? startsMs.length - 1 : next);
       }}
@@ -76,8 +85,6 @@ function Sparkline({
         {timeline.map((value, bin) => (
           <span
             key={bin}
-            // 올리면 그 칸이 회의의 몇 분쯤인지 말한다 — 띠만으로는 「언제」를 못 읽는다.
-            title={`${formatOffset((bin * durationMs) / timeline.length)} 부근${value > 0 ? "" : " · 말 없음"}`}
             className="min-h-px flex-1 rounded-[1px] bg-current"
             style={{
               // 0인 칸도 실선으로 남긴다 — 빈 자리가 회의 축이라는 것을 띠가 스스로 말한다.
@@ -87,6 +94,23 @@ function Sparkline({
           />
         ))}
       </div>
+      {/* 올린 자리의 회의 시각. 띠만으로는 「언제」를 못 읽는다. 눌렀을 때 이동 기준과 같은 좌표다. */}
+      {hover === null ? null : (
+        <>
+          <span
+            className="pointer-events-none absolute inset-y-0 w-px bg-[var(--el-ink)] opacity-40"
+            style={{ left: `${hover * 100}%` }}
+          />
+          <span
+            data-testid="speaker-panel-strip-time"
+            className="pointer-events-none absolute -top-5 z-20 -translate-x-1/2 rounded-chip bg-[var(--el-ink)] px-1.5 py-0.5 text-[10px] tabular-nums leading-none text-[var(--el-on-primary)]"
+            // 끝에서 라벨이 패널 밖으로 안 나가게 가운데 기준을 가장자리에서 띄운다.
+            style={{ left: `${Math.min(88, Math.max(12, hover * 100))}%` }}
+          >
+            {formatOffset(hover * durationMs)}
+          </span>
+        </>
+      )}
       {/* 이동 지점. 띠 아래 한 줄에 점으로 찍고, 지금 위치만 강조색이다. */}
       {clickable ? (
         <div className="relative mt-0.5 h-1">
