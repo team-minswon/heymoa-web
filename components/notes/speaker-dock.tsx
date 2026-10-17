@@ -352,9 +352,11 @@ export function SpeakerDock({
               onClick={() => setCollapsed(true)}
               aria-label="화자 도크 접기"
               aria-expanded
-              className="group mx-auto mb-1 flex w-full items-center justify-center gap-1.5 text-[10px] text-[var(--el-muted-soft)] hover:text-[var(--el-ink)]"
+              // **누르는 자리는 도크 위쪽 가로 전체(24px)다.** 눈에 보이는 손잡이는 4px 막대라, 막대만
+              // 노려 눌러야 했다. 패널의 안쪽 여백(`px-3 pt-1.5`)까지 덮도록 음수 여백으로 넓힌다.
+              className="group -mx-3 -mt-1.5 mb-0.5 flex h-6 w-[calc(100%+1.5rem)] items-center justify-center gap-1.5 rounded-t-2xl text-[10px] text-[var(--el-muted-soft)] outline-none transition-colors hover:bg-black/[0.04] hover:text-[var(--el-ink)] focus-visible:ring-2 focus-visible:ring-[var(--el-ink)] focus-visible:ring-inset"
             >
-              <span className="h-[3px] w-8 rounded-full bg-[var(--el-hairline-strong)] transition-colors group-hover:bg-[var(--el-muted-soft)]" />
+              <span className="h-1 w-11 rounded-full bg-[var(--el-hairline-strong)] transition-colors group-hover:bg-[var(--el-muted)]" />
               {unassigned ? `이름 없음 ${unassigned}` : null}
             </button>
             <ul className="max-h-40 overflow-y-auto">
