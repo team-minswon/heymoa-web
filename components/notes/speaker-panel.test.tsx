@@ -20,6 +20,7 @@ function stat(overrides: Partial<SpeakerStat> = {}): SpeakerStat {
     firstSegmentId: "s1",
     firstStartedAtMs: 0,
     jumpTargets: ["s1", "s2", "s3"],
+    jumpStartsMs: [0, 100_000, 400_000],
     ...overrides,
   };
 }
@@ -47,11 +48,14 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
   it("누를 때마다 그 사람의 다음 발화로 돌고 몇 번째인지 보인다", () => {
     const { onOpenChange } = renderPanel([stat()]);
 
-    // 아직 안 갔을 때는 지금까지의 문구와 1 / 3.
+    // 아직 안 갔을 때는 전체 개수만.
     const button = screen.getByRole("button", { name: /지정하러 가기/ });
-    expect(button).toHaveTextContent("1 / 3");
+    expect(button).toHaveTextContent("3곳");
 
+    // 지금 있는 위치가 보인다.
     fireEvent.click(button);
+    expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("1 / 3");
+    fireEvent.click(screen.getByRole("button", { name: /다음 발화로/ }));
     expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("2 / 3");
     fireEvent.click(screen.getByRole("button", { name: /다음 발화로/ }));
     expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("3 / 3");
@@ -59,7 +63,7 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
     fireEvent.click(screen.getByRole("button", { name: /다음 발화로/ }));
     expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent("1 / 3");
     // 누를 때마다 패널은 닫혀 도착한 자리를 가리지 않는다.
-    expect(onOpenChange).toHaveBeenCalledTimes(3);
+    expect(onOpenChange).toHaveBeenCalledTimes(4);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -69,7 +73,22 @@ describe("SpeakerPanel 다음 발화로 이동", () => {
   });
 
   it("발화가 하나뿐이면 개수 표시 없이 그 발화로만 간다", () => {
-    renderPanel([stat({ jumpTargets: ["s1"] })]);
+    renderPanel([stat({ jumpTargets: ["s1"], jumpStartsMs: [0] })]);
     expect(screen.getByRole("button", { name: "지정하러 가기" })).not.toHaveTextContent("/");
+  });
+
+  it("띠를 누르면 그 시각 이후 첫 발화로 가고 n / m 이 그 위치로 맞춰진다", () => {
+    renderPanel([stat()]);
+    const strip = screen.getByTestId("speaker-panel-strip");
+    // jsdom 은 레이아웃이 없어 상자를 직접 준다: 폭 600, 회의 600_000ms → 1px = 1000ms.
+    strip.getBoundingClientRect = () =>
+      ({ left: 0, width: 600, top: 0, height: 24 }) as DOMRect;
+
+    // 200_000ms 이후 첫 발화는 3번째(400_000ms).
+    fireEvent.click(strip, { clientX: 200 });
+
+    expect(screen.getByRole("button", { name: /다음 발화로/ })).toHaveTextContent(
+      "3 / 3"
+    );
   });
 });

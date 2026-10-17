@@ -233,6 +233,7 @@ describe("summarizeSpeakers", () => {
       unassigned: false,
       firstSegmentId: null,
       jumpTargets: [],
+      jumpStartsMs: [],
     });
   });
 

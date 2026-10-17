@@ -44,29 +44,66 @@ function Sparkline({
   timeline,
   dim,
   durationMs,
+  startsMs,
+  current,
+  onPick,
 }: {
   timeline: number[];
   dim: boolean;
   durationMs: number;
+  /** 이동 대상 발화들의 회의 축 좌표(시간순). */
+  startsMs: number[];
+  /** 지금 위치(마지막으로 이동한 발화)의 인덱스. 아직 안 갔으면 -1. */
+  current: number;
+  /** 눌린 시각 이후 첫 대상 발화의 인덱스. */
+  onPick: (index: number) => void;
 }) {
+  const clickable = startsMs.length > 0 && durationMs > 0;
   return (
     <div
       aria-hidden
-      className={cn("flex h-6 items-end gap-px", dim && "opacity-45")}
+      data-testid="speaker-panel-strip"
+      className={cn("relative", clickable && "cursor-pointer")}
+      onClick={(event) => {
+        if (!clickable) return;
+        const box = event.currentTarget.getBoundingClientRect();
+        const at = ((event.clientX - box.left) / box.width) * durationMs;
+        const next = startsMs.findIndex((start) => start >= at);
+        onPick(next === -1 ? startsMs.length - 1 : next);
+      }}
     >
-      {timeline.map((value, bin) => (
-        <span
-          key={bin}
-          // 올리면 그 칸이 회의의 몇 분쯤인지 말한다 — 띠만으로는 「언제」를 못 읽는다.
-          title={`${formatOffset((bin * durationMs) / timeline.length)} 부근${value > 0 ? "" : " · 말 없음"}`}
-          className="min-h-px flex-1 rounded-[1px] bg-current"
-          style={{
-            // 0인 칸도 실선으로 남긴다 — 빈 자리가 회의 축이라는 것을 띠가 스스로 말한다.
-            height: `${Math.max(3, value * 100)}%`,
-            opacity: value > 0 ? 0.25 + value * 0.75 : 0.12,
-          }}
-        />
-      ))}
+      <div className={cn("flex h-6 items-end gap-px", dim && "opacity-45")}>
+        {timeline.map((value, bin) => (
+          <span
+            key={bin}
+            // 올리면 그 칸이 회의의 몇 분쯤인지 말한다 — 띠만으로는 「언제」를 못 읽는다.
+            title={`${formatOffset((bin * durationMs) / timeline.length)} 부근${value > 0 ? "" : " · 말 없음"}`}
+            className="min-h-px flex-1 rounded-[1px] bg-current"
+            style={{
+              // 0인 칸도 실선으로 남긴다 — 빈 자리가 회의 축이라는 것을 띠가 스스로 말한다.
+              height: `${Math.max(3, value * 100)}%`,
+              opacity: value > 0 ? 0.25 + value * 0.75 : 0.12,
+            }}
+          />
+        ))}
+      </div>
+      {/* 이동 지점. 띠 아래 한 줄에 점으로 찍고, 지금 위치만 강조색이다. */}
+      {clickable ? (
+        <div className="relative mt-0.5 h-1">
+          {startsMs.map((start, index) => (
+            <span
+              key={index}
+              className={cn(
+                "absolute top-0 size-1 -translate-x-1/2 rounded-full",
+                index === current
+                  ? "z-10 scale-150 bg-[var(--el-scope-project)]"
+                  : "bg-[var(--el-muted-soft)]"
+              )}
+              style={{ left: `${Math.min(100, (start / durationMs) * 100)}%` }}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -129,6 +166,9 @@ function SpeakerRow({
             timeline={stat.timeline}
             dim={stat.unassigned}
             durationMs={durationMs}
+            startsMs={stat.jumpStartsMs}
+            current={visited === 0 ? -1 : (visited - 1) % targets.length}
+            onPick={(index) => onJump(targets[index], index + 1)}
           />
           <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--el-muted-soft)]">
             {/* **세그먼트 개수를 「발화 N개」로 내보내지 않는다.** 그것은 전사가 문장을
@@ -151,9 +191,10 @@ function SpeakerRow({
                   : "다음 발화로"}
                 {targets.length > 1 ? (
                   <span className="tabular-nums text-[var(--el-muted-soft)]">
+                    {/* 지금 있는 위치. 아직 안 갔으면 전체 개수만 — 누르면 첫 번째로 간다. */}
                     {visited === 0
-                      ? `1 / ${targets.length}`
-                      : `${(visited % targets.length) + 1} / ${targets.length}`}
+                      ? `${targets.length}곳`
+                      : `${((visited - 1) % targets.length) + 1} / ${targets.length}`}
                   </span>
                 ) : null}
               </Button>

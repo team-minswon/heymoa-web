@@ -56,6 +56,8 @@ export type SpeakerStat = {
    * 알아보는 데 쓸모가 없다. 짧은 발화뿐인 사람은 전부 대상이다.
    */
   jumpTargets: string[];
+  /** [jumpTargets] 와 같은 순서의 회의 축 좌표(ms). 띠 위에 이동 지점을 찍고 눌러서 고르는 데 쓴다. */
+  jumpStartsMs: number[];
 };
 
 /** 이보다 짧은 발화는 누구인지 알아보는 단서로 안 친다. */
@@ -189,6 +191,7 @@ export function summarizeSpeakers({
         firstSegmentId: null,
         firstStartedAtMs: null,
         jumpTargets: [],
+        jumpStartsMs: [],
       } satisfies SpeakerStat);
 
     if (!row.labels.includes(label)) row.labels.push(label);
@@ -248,6 +251,7 @@ export function summarizeSpeakers({
       firstSegmentId: null,
       firstStartedAtMs: null,
       jumpTargets: [],
+      jumpStartsMs: [],
     });
   }
 
@@ -262,9 +266,9 @@ export function summarizeSpeakers({
     const meaningful = all.filter(
       (item) => item.endedAtMs - item.startedAtMs >= MIN_JUMP_SEGMENT_MS
     );
-    row.jumpTargets = (meaningful.length > 0 ? meaningful : all).map(
-      (item) => item.segmentId
-    );
+    const targets = meaningful.length > 0 ? meaningful : all;
+    row.jumpTargets = targets.map((item) => item.segmentId);
+    row.jumpStartsMs = targets.map((item) => item.startedAtMs);
     row.share = total > 0 ? row.speakingMs / total : 0;
     // **라벨을 정렬한 뒤다.** `speakerAvatarName` 이 「가장 이른 라벨」을 쓰는데,
     // 정렬 전에 부르면 도착 순서가 얼굴을 정해 새로고침마다 색이 튄다.
