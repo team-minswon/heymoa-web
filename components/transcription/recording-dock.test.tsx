@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -44,7 +45,7 @@ describe("RecordingDock", () => {
     ["requesting-permission", "권한 확인 중"],
     ["connecting", "녹음 시작 중"],
     ["stopping", "녹음 마무리 중"],
-  ])("%s 단계에는 짧은 상태 문구를 표시합니다", (phase, label) => {
+  ])("%s 단계에는 스피너만 보이고 문구는 스크린리더에만 읽힙니다", (phase, label) => {
     recording.phase = phase;
 
     render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
@@ -52,10 +53,36 @@ describe("RecordingDock", () => {
     expect(
       screen.getByRole("status", { name: "녹음 처리 중" })
     ).toBeInTheDocument();
-    expect(screen.getByText(label)).toBeInTheDocument();
+    // 평소에는 글자를 펼치지 않는다 — 스크린리더용 한 줄만 있다.
+    expect(screen.getAllByText(label)).toHaveLength(1);
+    expect(screen.getByText(label)).toHaveClass("sr-only");
     expect(screen.queryByText("마이크·컴퓨터 소리 권한 확인 중")).toBeNull();
     expect(screen.queryByText("연결 중")).toBeNull();
     expect(screen.queryByText("마무리 중")).toBeNull();
+  });
+
+  it.each([
+    ["requesting-permission", "권한 확인 중"],
+    ["connecting", "녹음 시작 중"],
+    ["stopping", "녹음 마무리 중"],
+  ])("%s 가 1.5초 넘게 걸리면 같은 문구를 열린 툴팁으로 보여 줍니다", (phase, label) => {
+    vi.useFakeTimers();
+    try {
+      recording.phase = phase;
+      render(<RecordingDock noteId="note-1" workspaceId={WORKSPACE_ID} />);
+      act(() => {
+        vi.advanceTimersByTime(1400);
+      });
+      expect(screen.getAllByText(label)).toHaveLength(1);
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.getAllByText(label)).toHaveLength(2);
+      // 스피너는 그대로 있다.
+      expect(screen.getByRole("status", { name: "녹음 처리 중" })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("상태가 바뀌면 이전 문구와 컨트롤을 치웁니다", async () => {
