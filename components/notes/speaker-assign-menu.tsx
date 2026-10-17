@@ -138,6 +138,7 @@ export function SpeakerAssignMenu({
   onAssign,
   onCreateGuest,
   onClearOverride,
+  triggerTestId = "speaker-assign-trigger",
 }: {
   identity: SpeakerIdentity;
   candidates: SpeakerCandidate[];
@@ -173,6 +174,8 @@ export function SpeakerAssignMenu({
   onCreateGuest?: (displayName: string, scope: AssignScope) => void;
   /** 이 발화의 개별 지정을 뗀다 — 다시 화자 라벨의 지정을 따른다. */
   onClearOverride?: () => void;
+  /** 같은 화면에 메뉴가 둘 이상 서면(전사 줄·도크) 짚는 이름이 겹치지 않게 가른다. */
+  triggerTestId?: string;
 }) {
   const [open, setOpen] = useState(false);
   /** base-ui 가 후보를 거를 때 쓰는 값. 조합 중에는 안 올라온다 — 그게 맞는 동작이다. */
@@ -279,7 +282,7 @@ export function SpeakerAssignMenu({
         render={
           <button
             type="button"
-            data-testid="speaker-assign-trigger"
+            data-testid={triggerTestId}
             onKeyDown={(event) => {
               if (open && event.key === "Escape") {
                 event.preventDefault();

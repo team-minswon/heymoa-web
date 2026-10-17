@@ -1,0 +1,82 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { SpeakerDock } from "@/components/notes/speaker-dock";
+import { TIMELINE_BINS, type SpeakerStat } from "@/lib/notes/speaker-stats";
+
+const stat = (overrides: Partial<SpeakerStat> = {}): SpeakerStat => ({
+  key: "label:A",
+  avatarName: "A",
+  name: "화자 A",
+  image: null,
+  labels: ["A"],
+  ownedLabels: [],
+  speakingMs: 60_000,
+  segmentCount: 3,
+  share: 1,
+  timeline: Array<number>(TIMELINE_BINS).fill(0.5),
+  unassigned: false,
+  firstSegmentId: "a1",
+  firstStartedAtMs: 0,
+  jumpTargets: ["a1", "a2", "a3"],
+  jumpStartsMs: [0, 100_000, 400_000],
+  ...overrides,
+});
+
+function renderDock(currentMs: number, onJump = vi.fn(), stats = [stat()]) {
+  render(
+    <SpeakerDock
+      stats={stats}
+      durationMs={600_000}
+      currentMs={currentMs}
+      onJump={onJump}
+      renderAssign={() => null}
+    />
+  );
+  return onJump;
+}
+
+describe("SpeakerDock", () => {
+  afterEach(cleanup);
+
+  it("◀ ▶ 는 지금 시각 기준 이전·다음 발화로 간다", () => {
+    const onJump = renderDock(100_000);
+    fireEvent.click(screen.getByRole("button", { name: "화자 A 다음 발화" }));
+    expect(onJump).toHaveBeenLastCalledWith("a3");
+    fireEvent.click(screen.getByRole("button", { name: "화자 A 이전 발화" }));
+    expect(onJump).toHaveBeenLastCalledWith("a1");
+  });
+
+  it("처음·끝에서는 그쪽 버튼이 잠긴다", () => {
+    renderDock(0);
+    expect(screen.getByRole("button", { name: "화자 A 이전 발화" })).toBeDisabled();
+  });
+
+  it("띠를 누르면 그 시각 이후 첫 발화로 간다", () => {
+    const onJump = renderDock(0);
+    const strip = screen.getByTestId("speaker-dock-strip");
+    strip.getBoundingClientRect = () =>
+      ({ left: 0, width: 600, top: 0, height: 20 }) as DOMRect;
+    fireEvent.click(strip, { clientX: 200 });
+    expect(onJump).toHaveBeenCalledWith("a3");
+  });
+
+  it("지금 시각이 세로선 위치로 선다", () => {
+    renderDock(300_000);
+    expect(screen.getByTestId("speaker-dock-now").style.left).toBe("50%");
+  });
+
+  it("말한 기록이 없는 사람은 줄이 없다", () => {
+    renderDock(0, vi.fn(), [
+      stat(),
+      stat({ key: "p", name: "조용한 사람", jumpTargets: [], jumpStartsMs: [] }),
+    ]);
+    expect(screen.getAllByTestId("speaker-dock-row")).toHaveLength(1);
+  });
+
+  it("접으면 줄이 사라진다", () => {
+    renderDock(0);
+    fireEvent.click(screen.getByRole("button", { name: /화자 도크/ }));
+    expect(screen.queryByTestId("speaker-dock-row")).toBeNull();
+  });
+});

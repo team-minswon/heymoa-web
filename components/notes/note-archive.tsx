@@ -47,8 +47,9 @@ import {
   isSpeakerAssigneeQueryKey,
   isWorkspaceGuestsQueryKey,
 } from "@/lib/notes/query-keys";
+import { SpeakerDock } from "@/components/notes/speaker-dock";
 import { SpeakerPanel, SpeakerTools } from "@/components/notes/speaker-panel";
-import { summarizeSpeakers } from "@/lib/notes/speaker-stats";
+import { summarizeSpeakers, type SpeakerStat } from "@/lib/notes/speaker-stats";
 import { toast } from "@/lib/ui/toast";
 import { toGapRows } from "@/lib/transcription/gaps";
 import { createSpeakerIdentityResolver } from "@/lib/transcription/speaker-identity";
@@ -846,6 +847,44 @@ export const NoteArchive = memo(function NoteArchive({
     focusRequest
   );
 
+  /**
+   * 도크의 「지금 위치」. **저장한 번호가 아니라 화면 맨 위에 보이는 발화의 시각**이다 —
+   * 직접 스크롤해도 어긋나지 않는다.
+   */
+  const [currentMs, setCurrentMs] = useState(0);
+  const startedAtOf = useMemo(
+    () => new Map(segments.map((segment) => [segment.segmentId, segment.startedAtMs])),
+    [segments]
+  );
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const toolsBottom =
+        viewport
+          .querySelector('[data-testid="transcript-tools"]')
+          ?.getBoundingClientRect().bottom ?? viewport.getBoundingClientRect().top;
+      const top = Array.from(
+        viewport.querySelectorAll<HTMLElement>("[data-segment-id]")
+      ).find((node) => node.getBoundingClientRect().bottom > toolsBottom);
+      const at = top?.dataset.segmentId
+        ? startedAtOf.get(top.dataset.segmentId)
+        : undefined;
+      if (at !== undefined) setCurrentMs(at);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+    measure();
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      viewport.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [viewportRef, startedAtOf, rows.length]);
+
   const [panelOpen, setPanelOpen] = useState(false);
   /** 회의 길이. 패널의 머리글과 타임라인 축이 **같은 값**을 써야 둘이 같은 회의를 그린다. */
   const meetingDurationMs =
@@ -880,6 +919,56 @@ export const NoteArchive = memo(function NoteArchive({
     // 패널의 「지정하러 가기」와 같은 곳으로 간다.
     jumpToSegment(unassignedStats[index].firstSegmentId!);
   }, [unassignedStats, unassignedCursor, jumpToSegment]);
+  /**
+   * 도크의 미지정 줄에 서는 지정 메뉴. 전사 안의 메뉴와 **같은 배선**이다 — 라벨 하나에
+   * 이름을 붙이고, 그 라벨의 첫 발화를 새 임시 참여자의 기준 발화로 삼는다.
+   */
+  const renderDockAssign = (stat: SpeakerStat) => {
+    const label = stat.labels[0];
+    if (!label) return null;
+    return (
+      <SpeakerAssignMenu
+        triggerTestId="speaker-dock-assign"
+        identity={{
+          displayName: stat.name,
+          avatarName: stat.avatarName,
+          imageUrl: stat.image,
+          unassigned: stat.unassigned,
+        }}
+        candidates={withAssignedLabels}
+        creating={createGuest.isPending}
+        disabled={speakerMutating}
+        candidatesFailed={candidatesFailed}
+        candidatesPending={candidatesPending}
+        onRetryCandidates={retryCandidates}
+        onOpen={retryCandidates}
+        onAssign={(target, scope) => {
+          // 도크는 라벨 단위다. 한 발화만 고치는 것은 전사의 메뉴가 맡는다.
+          if (scope === "segment" && !target) return;
+          if (scope === "segment" && stat.firstSegmentId) {
+            assignSegment.mutate({
+              noteId,
+              segmentId: stat.firstSegmentId,
+              data: target!,
+            });
+            return;
+          }
+          void requestLabelAssign(label, target);
+        }}
+        onCreateGuest={
+          candidatesReady
+            ? (displayName, scope) =>
+                void requestNewGuest(
+                  label,
+                  stat.firstSegmentId ?? "",
+                  displayName,
+                  scope
+                )
+            : undefined
+        }
+      />
+    );
+  };
   /**
    * 되돌릴 것이 있는 라벨. **이름이 붙은 것만 센다.**
    *
@@ -993,12 +1082,25 @@ export const NoteArchive = memo(function NoteArchive({
     resolvingOverrides ||
     resetting;
 
+  const dockShown = Boolean(
+    diarized && !transcriptQuery.isError && rows.length && speakerStats.length
+  );
   return (
     <ScrollArea
       className="h-full"
       viewportRef={viewportRef}
       overlay={
-        away ? (
+        <>
+          {dockShown ? (
+            <SpeakerDock
+              stats={speakerStats}
+              durationMs={meetingDurationMs}
+              currentMs={currentMs}
+              onJump={jumpToSegment}
+              renderAssign={renderDockAssign}
+            />
+          ) : null}
+          {away ? (
           <ScrollToBottomButton
             label="맨 아래로"
             onClick={() =>
@@ -1007,9 +1109,11 @@ export const NoteArchive = memo(function NoteArchive({
                 : scrollToBottom()
             }
             // desktop에서는 레코더 독이 하단 중앙에 떠 있어 그 위로 올린다.
-            className="lg:bottom-20"
+            // 화자 도크가 떠 있으면 그 위로 올린다.
+            className={dockShown ? "bottom-44 lg:bottom-48" : "lg:bottom-20"}
           />
-        ) : null
+          ) : null}
+        </>
       }
     >
       <div
