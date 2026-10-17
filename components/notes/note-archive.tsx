@@ -848,7 +848,7 @@ export const NoteArchive = memo(function NoteArchive({
   );
 
   /**
-   * 도크의 「지금 위치」. **저장한 번호가 아니라 화면 맨 위에 보이는 발화의 시각**이다 —
+   * 도크의 「지금 위치」. **저장한 번호가 아니라 화면 가운데 발화의 시각**이다 —
    * 직접 스크롤해도 어긋나지 않는다.
    */
   const [currentMs, setCurrentMs] = useState(0);
@@ -866,9 +866,12 @@ export const NoteArchive = memo(function NoteArchive({
         viewport
           .querySelector('[data-testid="transcript-tools"]')
           ?.getBoundingClientRect().bottom ?? viewport.getBoundingClientRect().top;
+      // **맨 위가 아니라 가운데 줄이다.** 이동하면 도착한 발화가 화면 가운데로 오므로(`center`),
+      // 맨 위 줄로 재면 방금 간 발화보다 앞을 가리켜 ▶ 가 같은 발화를 또 고른다.
+      const middle = (toolsBottom + viewport.getBoundingClientRect().bottom) / 2;
       const top = Array.from(
         viewport.querySelectorAll<HTMLElement>("[data-segment-id]")
-      ).find((node) => node.getBoundingClientRect().bottom > toolsBottom);
+      ).find((node) => node.getBoundingClientRect().bottom > middle);
       const at = top?.dataset.segmentId
         ? startedAtOf.get(top.dataset.segmentId)
         : undefined;
