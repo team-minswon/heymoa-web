@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SpeakerDock } from "@/components/notes/speaker-dock";
@@ -74,9 +74,12 @@ describe("SpeakerDock", () => {
     expect(screen.getAllByTestId("speaker-dock-row")).toHaveLength(1);
   });
 
-  it("접으면 줄이 사라진다", () => {
+  it("접으면 줄이 사라지고 알약이 서며, 다시 누르면 펼쳐진다", async () => {
     renderDock(0);
-    fireEvent.click(screen.getByRole("button", { name: /화자 도크/ }));
-    expect(screen.queryByTestId("speaker-dock-row")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "화자 도크 접기" }));
+    // 퇴장 애니메이션이 끝나야 줄이 빠진다.
+    await waitFor(() => expect(screen.queryByTestId("speaker-dock-row")).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "화자 도크 펼치기" }));
+    expect(await screen.findAllByTestId("speaker-dock-row")).toHaveLength(1);
   });
 });
