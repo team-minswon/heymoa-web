@@ -310,6 +310,19 @@ export function SpeakerAssignMenu({
           placeholder="이름으로 검색"
           showTrigger={false}
           onTypedValueChange={setTyped}
+          // 일치하는 사람이 없을 때 Enter 는 「＋ 추가」의 확인이다. 한글 조합 중 Enter 는 글자를 확정할 뿐이라 거른다.
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              !event.nativeEvent.isComposing &&
+              canCreateGuest &&
+              shown.length === 0
+            ) {
+              event.preventDefault();
+              onCreateGuest?.(trimmedSearch, scope);
+              close();
+            }
+          }}
         />
         {candidatesFailed ? (
           <div

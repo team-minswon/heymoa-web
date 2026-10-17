@@ -51,7 +51,15 @@ export type SpeakerStat = {
   firstSegmentId: string | null;
   /** 그 발화의 회의 축 좌표. 타임라인 칸에서 되짚으면 칸 하나만큼 틀린다. */
   firstStartedAtMs: number | null;
+  /**
+   * 「다음 발화로」가 차례로 도는 발화들(시간순). **맞장구를 건너뛴다** — 「네」 한 마디는 누구인지
+   * 알아보는 데 쓸모가 없다. 짧은 발화뿐인 사람은 전부 대상이다.
+   */
+  jumpTargets: string[];
 };
+
+/** 이보다 짧은 발화는 누구인지 알아보는 단서로 안 친다. */
+export const MIN_JUMP_SEGMENT_MS = 1500;
 
 type SpeakerInput = {
   label: string;
@@ -127,6 +135,10 @@ export function summarizeSpeakers({
   const hashKeyOf = new Map<string, string>();
   const rows = new Map<string, SpeakerStat>();
   const firstStartedAtMs = new Map<string, number>();
+  const spoken = new Map<
+    string,
+    { segmentId: string; startedAtMs: number; endedAtMs: number }[]
+  >();
   /**
    * 칸의 기준은 **회의 전체**다. 사람마다 제 발화 구간을 나누면 누구나 꽉 찬 띠가 된다.
    *
@@ -176,6 +188,7 @@ export function summarizeSpeakers({
         unassigned: !participantId,
         firstSegmentId: null,
         firstStartedAtMs: null,
+        jumpTargets: [],
       } satisfies SpeakerStat);
 
     if (!row.labels.includes(label)) row.labels.push(label);
@@ -199,6 +212,13 @@ export function summarizeSpeakers({
         row.timeline[bin] += Math.max(0, overlap);
       }
     }
+    const list = spoken.get(key) ?? [];
+    list.push({
+      segmentId: segment.segmentId,
+      startedAtMs: segment.startedAtMs,
+      endedAtMs: segment.endedAtMs,
+    });
+    spoken.set(key, list);
     // 첫 발화는 **회의 축에서 가장 이른 것**이다. 세그먼트 배열의 순서를 믿지 않는다 —
     // 실시간 전사와 저장본이 섞여 들어오는 자리라 도착 순서가 시간 순서가 아니다.
     const first = firstStartedAtMs.get(key);
@@ -227,6 +247,7 @@ export function summarizeSpeakers({
       unassigned: false,
       firstSegmentId: null,
       firstStartedAtMs: null,
+      jumpTargets: [],
     });
   }
 
@@ -234,6 +255,16 @@ export function summarizeSpeakers({
   for (const row of rows.values()) {
     row.labels.sort(compareLabels);
     row.ownedLabels.sort(compareLabels);
+    // 시간순. 배열 순서를 믿지 않는다(실시간 전사와 저장본이 섞여 도착 순서가 시간 순서가 아니다).
+    const all = [...(spoken.get(row.key) ?? [])].sort(
+      (a, b) => a.startedAtMs - b.startedAtMs
+    );
+    const meaningful = all.filter(
+      (item) => item.endedAtMs - item.startedAtMs >= MIN_JUMP_SEGMENT_MS
+    );
+    row.jumpTargets = (meaningful.length > 0 ? meaningful : all).map(
+      (item) => item.segmentId
+    );
     row.share = total > 0 ? row.speakingMs / total : 0;
     // **라벨을 정렬한 뒤다.** `speakerAvatarName` 이 「가장 이른 라벨」을 쓰는데,
     // 정렬 전에 부르면 도착 순서가 얼굴을 정해 새로고침마다 색이 튄다.
