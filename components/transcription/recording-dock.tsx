@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { Mic, RotateCcw, Square, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import {
   isNoteRecordingActive,
@@ -21,6 +22,32 @@ const LAYOUT_TRANSITION = {
   bounce: 0,
   duration: 0.2,
 };
+
+/**
+ * 이 시간이 지나도 전환이 안 끝났을 때만 상태 글자를 보인다. 대개 1초 안에 끝나는 시작·마무리에
+ * 글자를 펼치면 읽기도 전에 사라지고 독 너비만 흔들렸다. 오래 걸리는 경우(권한 팝업 응답 대기,
+ * 서버 연결 지연)에만 열린 툴팁으로 이유를 말한다. 스피너는 항상 보이고, 스크린리더는 글자를 처음부터 듣는다.
+ */
+const PENDING_HINT_DELAY_MS = 1500;
+
+function PendingStatus({ label }: { label: string }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), PENDING_HINT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <Tooltip open={slow}>
+      <TooltipTrigger render={<span className="flex h-9 min-w-0 items-center px-1" />}>
+        <RecordingPendingSpinner />
+        <span role="status" className="sr-only">
+          {label}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 function formatElapsed(elapsedMs: number) {
   const totalSeconds = Math.floor(elapsedMs / 1000);
@@ -152,19 +179,19 @@ export function RecordingDock({
               transition: { duration: 0.15, delay: 0.1 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            className="flex h-9 min-w-0 items-center px-1"
+            className="flex h-9 min-w-0 items-center"
           >
-            <RecordingPendingSpinner />
-            <span
-              role="status"
-              className="ml-2 min-w-0 truncate text-sm text-[var(--el-muted)]"
-            >
-              {state === "requesting-permission"
-                ? "권한 확인 중"
-                : state === "connecting"
-                  ? "녹음 시작 중"
-                  : "녹음 마무리 중"}
-            </span>
+            {/* `key` 가 글자라 단계가 바뀌면 지연 시간을 처음부터 센다. */}
+            <PendingStatus
+              key={state}
+              label={
+                state === "requesting-permission"
+                  ? "권한 확인 중"
+                  : state === "connecting"
+                    ? "녹음 시작 중"
+                    : "녹음 마무리 중"
+              }
+            />
           </motion.div>
         ) : disabledReason ? (
           // 녹음 중·정리 중은 위에서 먼저 걸린다 — 다른 멤버가 회의를 끝내도 내 정지 버튼은
