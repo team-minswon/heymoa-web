@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { motion, useReducedMotion } from "motion/react";
 import { CornerDownRight, RotateCcw, SkipForward, Users } from "lucide-react";
@@ -40,7 +40,15 @@ import { cn } from "@/lib/utils";
 /** 한 줄이 들어오는 데 걸리는 시간과 줄 사이 간격. 목록이 위에서 아래로 한 번 훑고 선다. */
 const ROW_STAGGER_S = 0.035;
 
-function Sparkline({ timeline, dim }: { timeline: number[]; dim: boolean }) {
+function Sparkline({
+  timeline,
+  dim,
+  durationMs,
+}: {
+  timeline: number[];
+  dim: boolean;
+  durationMs: number;
+}) {
   return (
     <div
       aria-hidden
@@ -49,6 +57,8 @@ function Sparkline({ timeline, dim }: { timeline: number[]; dim: boolean }) {
       {timeline.map((value, bin) => (
         <span
           key={bin}
+          // 올리면 그 칸이 회의의 몇 분쯤인지 말한다 — 띠만으로는 「언제」를 못 읽는다.
+          title={`${formatOffset((bin * durationMs) / timeline.length)} 부근${value > 0 ? "" : " · 말 없음"}`}
           className="min-h-px flex-1 rounded-[1px] bg-current"
           style={{
             // 0인 칸도 실선으로 남긴다 — 빈 자리가 회의 축이라는 것을 띠가 스스로 말한다.
@@ -64,14 +74,26 @@ function Sparkline({ timeline, dim }: { timeline: number[]; dim: boolean }) {
 function SpeakerRow({
   stat,
   index,
+  visited,
+  durationMs,
   onJump,
 }: {
   stat: SpeakerStat;
   index: number;
-  onJump: (segmentId: string) => void;
+  /** 지금까지 이 화자의 발화로 간 횟수. 패널을 닫으면 행이 언마운트되므로 패널이 들고 있다. */
+  visited: number;
+  durationMs: number;
+  onJump: (segmentId: string, visited: number) => void;
 }) {
   const reduced = useReducedMotion();
   const silent = stat.speakingMs === 0;
+  // **누를 때마다 그 사람의 다음 발화로 간다.** 첫 발화는 「네」 같은 맞장구가 많아 누구인지 알아보기
+  // 어렵다 — 말을 길게 한 대목들을 차례로 듣고(읽고) 지정한다. 끝에서는 처음으로 돌아온다.
+  const targets = stat.jumpTargets;
+  const next = () => {
+    if (targets.length === 0) return;
+    onJump(targets[visited % targets.length], visited + 1);
+  };
 
   return (
     <motion.li
@@ -103,22 +125,37 @@ function SpeakerRow({
 
       {silent ? null : (
         <div className="mt-2 pl-8 text-[var(--el-ink)]">
-          <Sparkline timeline={stat.timeline} dim={stat.unassigned} />
+          <Sparkline
+            timeline={stat.timeline}
+            dim={stat.unassigned}
+            durationMs={durationMs}
+          />
           <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--el-muted-soft)]">
             {/* **세그먼트 개수를 「발화 N개」로 내보내지 않는다.** 그것은 전사가 문장을
                 어디서 끊었느냐는 내부 사정이라, 한 번 말한 것이 세 번으로 보인다. */}
             <span className="tabular-nums">
               {formatSpeakingTime(stat.speakingMs)}
             </span>
-            {stat.firstSegmentId ? (
+            {targets.length > 0 ? (
               <Button
                 variant="ghost"
                 size="xs"
                 className="ml-auto -mr-1 text-[var(--el-muted)]"
-                onClick={() => onJump(stat.firstSegmentId!)}
+                onClick={next}
               >
                 <CornerDownRight data-icon="inline-start" />
-                {stat.unassigned ? "지정하러 가기" : "첫 발화로"}
+                {visited === 0
+                  ? stat.unassigned
+                    ? "지정하러 가기"
+                    : "첫 발화로"
+                  : "다음 발화로"}
+                {targets.length > 1 ? (
+                  <span className="tabular-nums text-[var(--el-muted-soft)]">
+                    {visited === 0
+                      ? `1 / ${targets.length}`
+                      : `${(visited % targets.length) + 1} / ${targets.length}`}
+                  </span>
+                ) : null}
               </Button>
             ) : null}
           </div>
@@ -170,7 +207,9 @@ export function SpeakerPanel({
       skipReturnFocus.current = false;
     }
   }, [open]);
-  const jump = (segmentId: string) => {
+  const [visitedByKey, setVisitedByKey] = useState<Record<string, number>>({});
+  const jump = (key: string) => (segmentId: string, visited: number) => {
+    setVisitedByKey((all) => ({ ...all, [key]: visited }));
     pendingJump.current = segmentId;
     skipReturnFocus.current = true;
     onOpenChange(false);
@@ -223,7 +262,9 @@ export function SpeakerPanel({
                   key={stat.key}
                   stat={stat}
                   index={index}
-                  onJump={jump}
+                  visited={visitedByKey[stat.key] ?? 0}
+                  durationMs={durationMs}
+                  onJump={jump(stat.key)}
                 />
               ))}
             </ul>

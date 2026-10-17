@@ -454,6 +454,15 @@ export function NoteParticipantsField({
     return results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
   }
 
+  // 열 때 골라져 있던 사람을 위로. 고르는 중에는 순서를 안 바꾼다 — 누른 줄이 튄다.
+  const shown = filterByTyped(
+    [...candidates].sort(
+      (a, b) => Number(pinned.includes(b.key)) - Number(pinned.includes(a.key))
+    ),
+    typed,
+    searchTextOf
+  );
+
   async function createGuest(displayName: string) {
     let createdKey: string | undefined;
     try {
@@ -567,15 +576,7 @@ export function NoteParticipantsField({
         <Combobox
           // **조합 중인 글자로도 거른다.** base-ui 는 조합이 끝나기 전까지 controlled 값을
           // 안 올려, 한글 한 글자를 쳐도 목록이 안 좁혀진다 — 이유는 `filterByTyped` 에.
-          items={filterByTyped(
-            // 열 때 골라져 있던 사람을 위로. 고르는 중에는 순서를 안 바꾼다 — 누른 줄이 튄다.
-            [...candidates].sort(
-              (a, b) =>
-                Number(pinned.includes(b.key)) - Number(pinned.includes(a.key))
-            ),
-            typed,
-            searchTextOf
-          )}
+          items={shown}
           multiple
           value={selectedCandidates}
           // 이름과 이메일을 한 문자열로 합쳐 어느 쪽으로 쳐도 걸리게 한다.
@@ -665,6 +666,19 @@ export function NoteParticipantsField({
               // 이름을 쳐서 새 외부인을 만들 수 있다는 것도 말한다. 입력창이 「검색」만 말하면 목록에 없는
               // 사람을 더할 수 있다는 것을 알 길이 없다(APP-1106). 팝업이 좁아 긴 문장은 안 들어간다
               placeholder="이름으로 검색 또는 외부인 추가"
+              // 일치하는 사람이 없을 때 Enter 는 「＋ 추가」의 확인이다. 한글 조합 중 Enter 는 글자를 확정할 뿐이라 거른다.
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  !event.nativeEvent.isComposing &&
+                  canCreateGuest &&
+                  !createGuestParticipant.isPending &&
+                  shown.length === 0
+                ) {
+                  event.preventDefault();
+                  void createGuest(trimmedSearch);
+                }
+              }}
               // 바깥에 이미 트리거가 있다 — 켜 두면 같은 id의 이름 없는 트리거가 하나 더 생긴다.
               showTrigger={false}
               onTypedValueChange={setTyped}

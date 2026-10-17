@@ -463,6 +463,26 @@ describe("SpeakerAssignMenu", () => {
     expect(onCreateGuest).toHaveBeenCalledWith("이도현", "label");
   });
 
+  it("일치하는 사람이 없을 때 Enter 는 「＋ 추가」를 확인한다", () => {
+    const onCreateGuest = vi.fn();
+    render(
+      <SpeakerAssignMenu
+        identity={identity}
+        candidates={candidates}
+        onAssign={vi.fn()}
+        onCreateGuest={onCreateGuest}
+      />
+    );
+
+    open();
+    search("이도현");
+    fireEvent.keyDown(screen.getByPlaceholderText("이름으로 검색"), {
+      key: "Enter",
+    });
+
+    expect(onCreateGuest).toHaveBeenCalledWith("이도현", "label");
+  });
+
   /**
    * **조합 중인 마지막 글자가 빠지면 안 된다.** 「이민형」을 치면 「형」이 아직 조합 중이라
    * base-ui 의 값은 「이민」에 머문다. 그대로 쓰면 버튼이 「"이민" 추가」로 뜨고, 눌러도

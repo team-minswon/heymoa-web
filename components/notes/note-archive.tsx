@@ -390,6 +390,8 @@ export const NoteArchive = memo(function NoteArchive({
         email: member.email,
         image: member.image,
         assignedLabels: [],
+        // 참여자가 아니면 이름을 쳐야 보인다 — 기본 목록은 이 회의의 참여자만이다.
+        searchOnly: true,
       }));
 
     // **이 회의 밖의 임시 참여자는 검색해야 보인다.** 늘 보이면 회의와 상관없는 이름으로

@@ -170,6 +170,31 @@ describe("summarizeSpeakers", () => {
     expect(rows[0].ownedLabels).toEqual(["B", "AA"]);
   });
 
+  it("다음 발화로 도는 목록은 시간순이고 짧은 맞장구는 건너뛴다", () => {
+    const rows = summarizeSpeakers({
+      segments: [
+        segment(5, "A", 4000), // 길다
+        segment(1, "A", 400), // 맞장구
+        segment(3, "A", 3000), // 길다
+      ],
+      speakers: [speaker("A", null, null)],
+    });
+
+    // 도착 순서가 아니라 시간순이고, 1.5초 미만인 s1 은 빠진다.
+    expect(rows[0].jumpTargets).toEqual(["s3", "s5"]);
+    // 첫 발화(맞장구 포함)는 그대로다.
+    expect(rows[0].firstSegmentId).toBe("s1");
+  });
+
+  it("맞장구뿐인 사람은 짧은 발화도 전부 대상이다", () => {
+    const rows = summarizeSpeakers({
+      segments: [segment(2, "A", 500), segment(1, "A", 700)],
+      speakers: [speaker("A", null, null)],
+    });
+
+    expect(rows[0].jumpTargets).toEqual(["s1", "s2"]);
+  });
+
   it("첫 발화를 들고 있다 — 거기로 스크롤해 붙이러 간다", () => {
     const rows = summarizeSpeakers({
       segments: [segment(4, "A", 1000), segment(2, "A", 1000)],
@@ -207,6 +232,7 @@ describe("summarizeSpeakers", () => {
       labels: [],
       unassigned: false,
       firstSegmentId: null,
+      jumpTargets: [],
     });
   });
 
