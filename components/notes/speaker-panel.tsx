@@ -196,9 +196,7 @@ export function SpeakerPanel({
         className="w-[min(21rem,88vw)] gap-0 rounded-r-panel sm:max-w-none"
       >
         <SheetHeader className="border-b border-[var(--el-hairline)]">
-          {/* **세리프를 안 쓴다.** `SheetTitle` 기본값이 `font-heading`(EB Garamond →
-              한글은 Noto Serif KR)인데, 제품 면에서 세리프 300 은 정보 탭의 제목 블록
-              같은 자리의 정체성이고 컴포넌트 제목은 Inter 다(`DESIGN.md` Hierarchy). */}
+          {/* 컴포넌트 제목은 작고 굵은 Inter 다(`DESIGN.md` Hierarchy) — 큰 제목(`font-light`)과 구분한다. */}
           <SheetTitle className="font-sans text-[13px] font-semibold">
             화자
           </SheetTitle>

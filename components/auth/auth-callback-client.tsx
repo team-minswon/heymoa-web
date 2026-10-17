@@ -107,7 +107,7 @@ export function CallbackProcessor({
     return (
       <div className="w-full max-w-md rounded-panel border border-[var(--el-hairline)] bg-white p-8 text-center shadow-[0_16px_48px_rgba(12,10,9,0.08)]">
         <AlertTriangle className="mx-auto mb-5 size-10 text-[var(--el-error)]" />
-        <h1 className="font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+        <h1 className="text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
           {errorDetails.title}
         </h1>
         <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">
@@ -143,7 +143,7 @@ export function CallbackProcessor({
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
       <Loader2 className="mb-5 size-8 animate-spin text-[var(--el-ink)]" />
-      <h1 className="font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+      <h1 className="text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
         로그인 중입니다
       </h1>
       <p className="mt-2 text-sm text-[var(--el-muted)]">

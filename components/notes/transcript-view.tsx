@@ -396,11 +396,11 @@ export function TranscriptView({
                 <div className="flex min-h-72 flex-col justify-center border-b border-[var(--el-hairline)] py-12">
                   <span
                     aria-hidden
-                    className="font-serif text-7xl leading-none text-[var(--el-hairline-strong)]"
+                    className="text-7xl leading-none text-[var(--el-hairline-strong)]"
                   >
                     “
                   </span>
-                  <h2 className="mt-2 max-w-md font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+                  <h2 className="mt-2 max-w-md text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
                     첫 대화가 이곳에 기록됩니다.
                   </h2>
                   <p className="mt-3 max-w-md text-sm leading-6 text-[var(--el-muted)]">

@@ -51,7 +51,7 @@ export function WorkspaceOnboarding({
       className="flex min-h-80 flex-col items-center justify-center rounded-panel border border-dashed border-[var(--el-hairline-strong)] px-6 py-12 text-center"
     >
       <AudioLines className="size-8 text-[var(--el-muted)]" aria-hidden />
-      <h2 className="mt-4 font-serif text-2xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+      <h2 className="mt-4 text-2xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
         {first ? "회의를 담을 프로젝트부터" : "첫 회의를 기록해 보세요"}
       </h2>
       <p className="mt-2 max-w-md text-sm leading-6 text-[var(--el-body)]">

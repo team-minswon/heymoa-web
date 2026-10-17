@@ -110,7 +110,7 @@ export function DesktopCompareDialog({
     <Dialog open={open} onOpenChange={change}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto bg-white p-6 sm:max-w-[600px] sm:p-8">
         <DialogHeader className="h-[108px] gap-2 pr-6 sm:h-[64px]">
-          <DialogTitle className="font-serif text-[24px] leading-tight font-light tracking-tight">
+          <DialogTitle className="text-[24px] leading-tight font-light tracking-tight">
             {step.title}
           </DialogTitle>
           <DialogDescription>{step.description}</DialogDescription>

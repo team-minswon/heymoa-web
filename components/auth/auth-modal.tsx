@@ -48,7 +48,7 @@ export function AuthModal({ children, open, onOpenChange }: AuthModalProps) {
           </div>
 
           <DialogHeader className="mb-8 w-full text-center">
-            <DialogTitle className="font-serif text-2xl font-light tracking-[-0.02em] text-[var(--el-ink)] sm:text-3xl mx-auto">
+            <DialogTitle className="text-2xl font-light tracking-[-0.02em] text-[var(--el-ink)] sm:text-3xl mx-auto">
               Welcome to HeyMoa
             </DialogTitle>
             <DialogDescription className="mt-2 text-[15px] font-normal text-[var(--el-body)] mx-auto">

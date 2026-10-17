@@ -56,7 +56,7 @@ export function ReviewHead({
         {aside ? <span className="ml-auto">{aside}</span> : null}
       </div>
       {meta ? (
-        <h1 className="mt-2.5 font-serif text-[28px] leading-[38px] font-medium tracking-[-0.4px] break-keep text-[var(--el-ink)]">
+        <h1 className="mt-2.5 text-[28px] leading-[38px] font-medium tracking-[-0.4px] break-keep text-[var(--el-ink)]">
           {meta.title}
         </h1>
       ) : null}

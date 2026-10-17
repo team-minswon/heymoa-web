@@ -99,7 +99,7 @@ function InviteCard({
   if (status === "anonymous") {
     return (
       <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
-        <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
+        <h1 className="text-2xl font-light tracking-[-0.01em]">
           워크스페이스 초대가 도착했어요
         </h1>
         <p className="mt-2 text-base text-[var(--el-muted)]">
@@ -121,7 +121,7 @@ function InviteCard({
     if (code === "ALREADY_WORKSPACE_MEMBER") {
       return (
         <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
-          <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
+          <h1 className="text-2xl font-light tracking-[-0.01em]">
             이미 이 워크스페이스의 멤버예요
           </h1>
           <p className="mt-2 text-base text-[var(--el-muted)]">
@@ -151,7 +151,7 @@ function InviteCard({
   // checking(인증 확인) 또는 수락 진행 중 — 페이지 전체 스피너 대신 카드 안에서 알린다
   return (
     <CenteredCard icon={<MailCheck className="size-5" aria-hidden />}>
-      <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
+      <h1 className="text-2xl font-light tracking-[-0.01em]">
         초대를 확인하고 있어요
       </h1>
       <p className="mt-2 text-base text-[var(--el-muted)]">
@@ -164,7 +164,7 @@ function InviteCard({
 function ErrorCard({ title, description }: { title: string; description: string }) {
   return (
     <CenteredCard icon={<AlertTriangle className="size-5" aria-hidden />}>
-      <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">{title}</h1>
+      <h1 className="text-2xl font-light tracking-[-0.01em]">{title}</h1>
       <p className="mt-2 text-base text-[var(--el-muted)]">{description}</p>
       <Link
         href="/"

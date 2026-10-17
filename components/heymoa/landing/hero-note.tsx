@@ -934,7 +934,7 @@ function TimelinePanel({ demo, uid, panel }: { demo: Demo; uid: string; panel: P
       <header data-snap className="hidden lg:block">
         <p
           className={cn(
-            "m-0 font-serif text-[28px] leading-[38px] font-medium tracking-[-0.4px]",
+            "m-0 text-[28px] leading-[38px] font-medium tracking-[-0.4px]",
             APP.ink
           )}
         >

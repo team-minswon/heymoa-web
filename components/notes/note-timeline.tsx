@@ -553,7 +553,7 @@ export function NoteTimeline({
       >
         {header ? (
           <header>
-            <h2 className="font-serif text-[28px] font-medium leading-[38px] tracking-[-0.4px] text-[var(--el-ink)]">
+            <h2 className="text-[28px] font-medium leading-[38px] tracking-[-0.4px] text-[var(--el-ink)]">
               {header.title}
             </h2>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">

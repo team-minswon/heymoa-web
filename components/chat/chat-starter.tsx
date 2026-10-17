@@ -83,7 +83,7 @@ export function ChatStarter({
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 py-6 text-center">
       <div className="space-y-1.5">
-        <h2 className="font-serif text-xl text-[var(--el-ink)]">무엇을 도와드릴까요?</h2>
+        <h2 className="text-xl text-[var(--el-ink)]">무엇을 도와드릴까요?</h2>
         <p className="mx-auto max-w-[19rem] text-xs leading-relaxed text-[var(--el-muted)]">
           {scopeTitles.length > 0
             ? `${scopeTitles.join(", ")}에 대해 물어봐요.`

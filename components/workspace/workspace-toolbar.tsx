@@ -168,7 +168,7 @@ export function WorkspaceToolbar({
             className="flex min-w-0 flex-1 items-baseline gap-2"
           >
             {/* 좁은 화면(full 노트)에서는 앞 세그먼트를 접어 노트 제목·우측 액션을 확보한다. */}
-            <span className="shrink-0 font-serif text-lg font-light tracking-[-0.03em] text-[var(--el-ink)]">
+            <span className="shrink-0 text-lg font-light tracking-[-0.03em] text-[var(--el-ink)]">
               {siteConfig.name}
             </span>
             <span className="text-[var(--el-hairline-strong)]">/</span>

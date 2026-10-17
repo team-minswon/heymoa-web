@@ -121,7 +121,7 @@ export function ReviewShowcase() {
   return (
     <div className="min-h-dvh bg-[var(--el-canvas)] text-[var(--el-ink)]">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--el-hairline)] bg-[var(--el-surface-card)] px-4 py-3 sm:px-6">
-        <h1 className="font-serif text-xl font-light tracking-[-0.02em]">회의 뒤 검토 미리보기</h1>
+        <h1 className="text-xl font-light tracking-[-0.02em]">회의 뒤 검토 미리보기</h1>
         <span className="text-xs text-[var(--el-muted)]">
           목 데이터 · 화면마다 따로 돌고, 다시 불러오면 처음 상태로 돌아갑니다
         </span>

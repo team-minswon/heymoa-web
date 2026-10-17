@@ -376,7 +376,7 @@ export function ReviewHead({
       ) : null}
       <p
         className={cn(
-          "m-0 font-serif font-medium tracking-[-0.4px] break-keep",
+          "m-0 font-medium tracking-[-0.4px] break-keep",
           APP.ink,
           state && "mt-2.5",
           titleSize === "lg" ? "text-[28px] leading-[38px]" : "text-[24px] leading-[32px]"
