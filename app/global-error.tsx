@@ -16,7 +16,7 @@ export default function GlobalError({
         <main className="flex min-h-screen items-center justify-center bg-[var(--el-canvas)] px-4 py-12 text-[var(--el-ink)]">
           <div className="w-full max-w-lg rounded-panel border border-[var(--el-hairline)] bg-white p-8 text-center shadow-[0_16px_48px_rgba(12,10,9,0.08)] sm:p-12">
             <AlertOctagon className="mx-auto mb-5 size-10 text-[var(--el-error)]" />
-            <h1 className="font-serif text-3xl font-light tracking-[-0.025em]">
+            <h1 className="text-3xl font-light tracking-[-0.025em]">
               심각한 오류가 발생했습니다
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">

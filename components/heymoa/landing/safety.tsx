@@ -647,7 +647,7 @@ function ExternalTile() {
             <AppWindow className="@container rotate-[0.6deg] p-4 sm:p-5 lg:rotate-1">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="m-0 font-serif text-[24px] leading-tight font-light tracking-[-0.03em] @md:text-3xl">
+                  <p className="m-0 text-[24px] leading-tight font-light tracking-[-0.03em] @md:text-3xl">
                     내 MCP 연결
                   </p>
                   <p className={cn("m-0 mt-2 hidden text-sm break-keep @md:block", APP.muted)}>

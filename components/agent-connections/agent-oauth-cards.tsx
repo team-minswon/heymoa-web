@@ -25,7 +25,7 @@ export const HEYMOA_MARK = (
 export function AgentOAuthLoginCard({ returnTo }: { returnTo: string }) {
   return (
     <CenteredCard icon={HEYMOA_MARK}>
-      <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
+      <h1 className="text-2xl font-light tracking-[-0.01em]">
         AI 앱을 HeyMoa 에 연결하려면 로그인하세요
       </h1>
       <p className="mt-2 text-base text-[var(--el-muted)]">
@@ -47,7 +47,7 @@ export function AgentOAuthLoginCard({ returnTo }: { returnTo: string }) {
 export function AgentOAuthEndCard({ message }: { message: string }) {
   return (
     <CenteredCard icon={<AlertTriangle className="size-5" aria-hidden />}>
-      <h1 className="font-serif text-2xl font-light tracking-[-0.01em]">
+      <h1 className="text-2xl font-light tracking-[-0.01em]">
         연결을 이어갈 수 없습니다
       </h1>
       <p className="mt-2 text-base text-[var(--el-muted)]">{message}</p>

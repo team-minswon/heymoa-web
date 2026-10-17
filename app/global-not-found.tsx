@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "@fontsource-variable/inter";
-import "@fontsource/eb-garamond/400.css";
 
 import "./globals.css";
 
@@ -15,7 +14,7 @@ import "./globals.css";
  * 세그먼트가 `notFound()`를 부르는 경우는 `app/not-found.tsx`가 맡는다 — 그쪽은 셸 안에
  * 그려야 하므로 역할이 다르다.
  *
- * 폰트는 둘만 싣는다(본문 Inter · 제목 EB Garamond). 404는 가장 많이 열리는 페이지라
+ * 폰트는 Inter 하나만 싣는다(제목도 같은 글꼴). 404는 가장 많이 열리는 페이지라
  * 나머지를 여기까지 끌고 오지 않는다.
  */
 export const metadata: Metadata = {
@@ -32,7 +31,7 @@ export default function GlobalNotFound() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--el-muted)]">
             Error 404
           </p>
-          <h1 className="mt-3 font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+          <h1 className="mt-3 text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
             페이지를 찾을 수 없습니다
           </h1>
           <p className="mt-3 text-sm text-[var(--el-muted)]">

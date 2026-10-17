@@ -174,7 +174,7 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
       <ScrollArea className="min-h-0 flex-1" viewportClassName="overflow-x-hidden!">
         <div className="mx-auto w-full max-w-4xl px-5 pb-16 pt-8 sm:px-8 sm:pt-11">
           <header className="border-b border-[var(--el-hairline)] pb-6">
-            <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
+            <h2 className="text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
               할 일
             </h2>
             <p className="mt-3 min-h-6 text-sm leading-6 text-[var(--el-muted)]">

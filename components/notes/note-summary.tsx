@@ -314,7 +314,7 @@ function SummaryFetchSkeleton() {
         {SECTION_ORDER.map((kind) => (
           <section key={kind}>
             <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
-              <h2 className="font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+              <h2 className="text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
                 {SECTION_LABELS[kind]}
               </h2>
             </div>
@@ -465,7 +465,7 @@ function SummarySections({
               {/* 개수는 장식이 아니라 훑기 위한 것이다 — 액션이 16개인지 2개인지가
                   스크롤하기 전에 보여야 어디를 읽을지 정한다. */}
               <div className="flex items-baseline justify-between gap-4 border-b border-[var(--el-hairline-strong)] pb-2">
-                <h2 className="font-serif text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+                <h2 className="text-xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
                   {SECTION_LABELS[kind]}
                 </h2>
                 {items.length ? (
@@ -629,7 +629,7 @@ function SummaryItem({
                    위 항목과 줄이 안 맞는다. 안쪽으로 넓히고 밖으로 같은 만큼 당긴다. */
                     className="group -mx-2 flex w-full items-baseline gap-2 rounded-block px-2 py-1 text-left transition-colors hover:bg-[var(--el-canvas-soft)]"
                   >
-                    <span className="min-w-0 break-keep font-serif text-[15px] leading-7 text-[var(--el-body)]">
+                    <span className="min-w-0 break-keep text-[15px] leading-7 text-[var(--el-body)]">
                       {evidence.text}
                     </span>
                     <span

@@ -172,7 +172,7 @@ export function AgentOAuthConsent({ consentState }: { consentState: string }) {
   return (
     <CenteredCard icon={HEYMOA_MARK}>
       {request ? (
-        <h1 className="font-serif text-2xl font-light tracking-[-0.01em] break-words">
+        <h1 className="text-2xl font-light tracking-[-0.01em] break-words">
           {request.clientName}
         </h1>
       ) : (

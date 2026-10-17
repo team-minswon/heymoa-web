@@ -8,7 +8,7 @@ export default function NotFound() {
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--el-muted)]">
         Error 404
       </p>
-      <h1 className="mt-3 font-serif text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
+      <h1 className="mt-3 text-3xl font-light tracking-[-0.025em] text-[var(--el-ink)]">
         페이지를 찾을 수 없습니다
       </h1>
       <p className="mt-3 text-sm text-[var(--el-muted)]">

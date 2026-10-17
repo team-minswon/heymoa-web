@@ -89,7 +89,7 @@ function SettingsSections({
         className="border-b border-[var(--el-hairline)] bg-[var(--el-canvas)] p-4 md:border-r md:border-b-0 md:p-6"
       >
         {/* 제품 면에 대문자 키커를 두지 않는다 — 세리프 제목만 남긴다. (FORM SPEC) */}
-        <p className="mb-7 font-serif text-3xl font-light tracking-[-0.03em]">
+        <p className="mb-7 text-3xl font-light tracking-[-0.03em]">
           설정
         </p>
         {/* 워크스페이스 것과 내 계정 것이 섞여 있으면 무엇이 팀에 영향을 주는지 안 읽힌다. */}

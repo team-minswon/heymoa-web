@@ -71,7 +71,7 @@ These appear ONLY as soft radial-gradient atmospheric orbs inside `{component.gr
 
 ### Font Family
 
-**Waldenburg Light** is the licensed display serif at weight 300. **Inter** carries body, navigation, captions, and buttons. Fallback: `'Times New Roman', serif` for Waldenburg, `sans-serif` for Inter.
+**Inter** carries everything — display at weight 300, body, navigation, captions, and buttons. Korean glyphs fall through to the system sans. **The display serif (EB Garamond / Noto Serif KR) is retired (APP-1161)** — headings use the same family as body so the two never mix. Fallback: `sans-serif`.
 
 ### Hierarchy
 
@@ -94,9 +94,9 @@ These appear ONLY as soft radial-gradient atmospheric orbs inside `{component.gr
 
 ### Principles
 
-- **Display weight stays at 300.** Waldenburg Light is the editorial signature. Never bold display copy.
+- **Display weight stays at 300.** The light weight stays the editorial signature even in Inter. Never bold display copy.
 - **Subtle letter-spacing on body.** Inter at +0.15-0.18px tracking — slightly looser than default Inter for a more editorial feel.
-- **Negative letter-spacing on display.** Waldenburg pulls -0.32px to -1.92px tighter on display sizes.
+- **Negative letter-spacing on display.** Display sizes pull -0.32px to -1.92px tighter; ease it toward 0 on Korean headings if the glyphs touch.
 
 ### Note on Font Substitutes
 

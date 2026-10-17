@@ -687,7 +687,7 @@ export function NotePanel({
                       {note.projectName}
                     </span>
                   ) : null}
-                  <h1 className="truncate font-serif text-2xl font-light leading-[1.2] tracking-[-0.024em] text-[var(--el-ink)] lg:text-screen-title">
+                  <h1 className="truncate text-2xl font-light leading-[1.2] tracking-[-0.024em] text-[var(--el-ink)] lg:text-screen-title">
                     {note ? (
                       note.title
                     ) : (

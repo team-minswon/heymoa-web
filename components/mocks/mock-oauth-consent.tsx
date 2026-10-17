@@ -34,7 +34,7 @@ export function MockOAuthConsent({
     <main className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center gap-6 px-6">
       <div className="space-y-2">
         <p className="text-sm text-[var(--el-muted)]">목 환경 전용 화면</p>
-        <h1 className="font-serif text-3xl font-light tracking-tight">
+        <h1 className="text-3xl font-light tracking-tight">
           {provider || "도구"} 연결을 허용할까요?
         </h1>
         <p className="text-sm text-[var(--el-muted)]">

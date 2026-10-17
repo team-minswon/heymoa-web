@@ -24,7 +24,7 @@ export function AccountSettingsForm() {
   return (
     <div className="mx-auto max-w-2xl space-y-8" aria-label="내 계정 설정">
       <div>
-        <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
+        <h2 className="text-3xl font-light tracking-[-0.025em]">
           내 계정
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">
@@ -107,7 +107,7 @@ export function AccountSettingsFormSkeleton() {
       aria-label="내 계정 설정 불러오는 중"
     >
       <div>
-        <h2 className="font-serif text-3xl font-light tracking-[-0.025em]">
+        <h2 className="text-3xl font-light tracking-[-0.025em]">
           내 계정
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--el-muted)]">

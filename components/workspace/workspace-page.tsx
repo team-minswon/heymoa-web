@@ -123,7 +123,7 @@ export function WorkspacePage({ workspaceId }: { workspaceId: string }) {
                 없어지자 남는 칩이 「전체」 하나뿐이라 줄을 통째로 걷었다(고를 것이 하나면 고르는
                 것이 아니다). 선은 목록의 위 끝을 정하므로 함께 없앨 수 없어 헤더로 옮겼다. */}
             <header className="relative mb-4 border-b border-[var(--el-hairline)] pb-6">
-              <h2 className="font-serif text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
+              <h2 className="text-screen-title font-light leading-[1.05] tracking-[-0.035em] text-[var(--el-ink)]">
                 {selectedProject?.name ?? "모든 노트"}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--el-muted)]">

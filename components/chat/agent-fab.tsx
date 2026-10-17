@@ -91,7 +91,7 @@ export function AgentFab({
           aria-label="내 에이전트 안내"
           className="fixed right-8 bottom-[5.25rem] z-40 w-[min(20rem,calc(100vw-4rem))] rounded-panel border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-4 shadow-e2 transition-[opacity,translate] duration-200 ease-out starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none"
         >
-          <h2 className="font-serif text-lg text-[var(--el-ink)]">
+          <h2 className="text-lg text-[var(--el-ink)]">
             내 에이전트
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-balance text-[var(--el-muted)]">

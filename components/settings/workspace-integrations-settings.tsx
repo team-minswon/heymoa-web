@@ -154,7 +154,7 @@ export function WorkspaceIntegrationsSettings({
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <header className="mb-8">
-        <h2 className="font-serif text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
+        <h2 className="text-3xl font-light tracking-[-0.03em] text-[var(--el-ink)]">
           연동
         </h2>
         <p className="mt-2 text-sm text-[var(--el-muted)]">

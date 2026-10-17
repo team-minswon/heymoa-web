@@ -251,7 +251,7 @@ function ProjectStack() {
         <div className="mx-2 border-b border-[var(--el-hairline)] pb-5 sm:mx-0 sm:pb-6">
           <p
             className={cn(
-              "m-0 font-serif text-[34px] leading-[1.05] font-light tracking-[-0.035em] sm:text-[40px]",
+              "m-0 text-[34px] leading-[1.05] font-light tracking-[-0.035em] sm:text-[40px]",
               APP.ink
             )}
           >
@@ -343,7 +343,7 @@ function MembersStack() {
         <AppWindow className="@container p-4 sm:p-5">
           <p
             className={cn(
-              "m-0 font-serif text-[30px] leading-9 font-light tracking-[-0.03em]",
+              "m-0 text-[30px] leading-9 font-light tracking-[-0.03em]",
               APP.ink
             )}
           >

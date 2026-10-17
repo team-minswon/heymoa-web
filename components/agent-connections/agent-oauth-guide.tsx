@@ -68,7 +68,7 @@ export function AgentOAuthGuide({
       aria-label="OAuth 연결 안내"
       className="rounded-panel border border-[var(--el-hairline)] bg-white p-6"
     >
-      <h3 className="font-serif text-xl font-light tracking-[-0.02em] text-[var(--el-ink)]">
+      <h3 className="text-xl font-light tracking-[-0.02em] text-[var(--el-ink)]">
         어떤 앱에서 쓰시나요?
       </h3>
       <p className="mt-1 text-sm text-[var(--el-muted)]">

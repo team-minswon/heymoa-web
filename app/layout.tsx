@@ -5,17 +5,11 @@ import type { Metadata } from "next";
  * `fonts.gstatic.com`에서 받아서, 한글 조각 수백 개 중 하나만 끊겨도 빌드가 실패했다.
  * 패키지로 두면 `pnpm install`만으로 Vercel · 로컬 · CI가 같은 글꼴로 빌드한다.
  *
- * - **한글 세리프(Noto Serif KR)** — EB Garamond에는 한글 글리프가 없어 `font-serif` 제목이
- *   시스템 고딕으로 떨어졌다. 라틴은 Garamond, 한글은 이 글꼴이 받는다(글리프 단위 폴백).
- *   굵기마다 CSS가 unicode-range 조각을 그대로 담고 있어 브라우저가 필요한 조각만 받는다 —
- *   통 woff2를 커밋하지 않는 이유다. 통으로 가면 첫 방문 페이로드가 수 MB 는다.
+ * - 세리프(EB Garamond · Noto Serif KR)는 싣지 않는다(APP-1161) — 제목도 Inter 와 시스템 고딕이다.
  * - 변수(`--font-*`)는 `globals.css`의 `:root`가 선언한다. next/font가 `<html>` 클래스에 심던 자리다.
  */
 import "@fontsource-variable/inter";
 import "@fontsource-variable/geist-mono";
-import "@fontsource/eb-garamond/400.css";
-import "@fontsource/noto-serif-kr/300.css";
-import "@fontsource/noto-serif-kr/400.css";
 
 import { SiteAnalytics } from "@/components/analytics/site-analytics";
 import { FooterGate } from "@/components/FooterGate";
