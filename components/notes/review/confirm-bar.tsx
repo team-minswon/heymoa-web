@@ -74,7 +74,7 @@ export function ConfirmBar({
         className="absolute inset-x-0 -top-10 bottom-0 bg-gradient-to-b from-transparent to-[var(--el-surface-card)] to-60%"
       />
       <div className="pointer-events-auto relative flex min-h-[50px] max-w-full flex-wrap items-center gap-x-3.5 gap-y-1 rounded-[14px] border border-[var(--el-hairline)] bg-[var(--el-surface-card)]/[0.98] py-[7px] pr-[7px] pl-[18px] shadow-e2 animate-in slide-in-from-bottom-2 fade-in-0 duration-200 ease-out motion-reduce:animate-none">
-        {error ? (
+        {error && !blocked ? (
           <span role="alert" className="text-[13px] text-[var(--el-error-strong)]">
             {error}
           </span>

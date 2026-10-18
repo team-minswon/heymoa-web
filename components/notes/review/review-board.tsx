@@ -200,7 +200,7 @@ export function ReviewBoard({
   const approve = useApproveMeetingReview({
     mutation: { meta: { suppressErrorToast: true } },
   });
-  const [approveError, setApproveError] = useState<string | null>(null);
+  const [approveError, setApproveError] = useState<{ version: number; message: string } | null>(null);
   const regionStatus = (region: string) =>
     flow?.regions?.find((row) => row.region === region)?.status;
   const relationsStatus = regionStatus("RELATIONS");
@@ -597,7 +597,7 @@ export function ReviewBoard({
       return true;
     } catch (error) {
       // 서버 문구를 확정 줄에 남긴다. 판이 낡아 거절됐을 수 있으니 검토본도 다시 읽는다.
-      setApproveError(errorMessageOf(error, "검토를 완료하지 못했습니다."));
+      setApproveError({ version: review.reviewVersion, message: errorMessageOf(error, "검토를 완료하지 못했습니다.") });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetMeetingReviewQueryKey(noteId) }),
         errorCodeOf(error) === "PROJECT_KNOWLEDGE_CONFLICT"
@@ -944,7 +944,7 @@ export function ReviewBoard({
                 () => showItem(firstUnchosen.itemId)
               : undefined
           }
-          error={approveError}
+          error={approveError?.version === review.reviewVersion ? approveError.message : null}
           raised={dockRaised}
           onConfirm={confirm}
         />

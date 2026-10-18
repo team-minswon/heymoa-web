@@ -55,6 +55,7 @@ import {
   CONTEXT_OPERATION_LABEL,
 } from "@/lib/notes/proposals/presentation";
 import {
+  inFilter,
   placeAgendas,
   samePlacement,
   selectTimeline,
@@ -328,40 +329,45 @@ export function NoteTimeline({
     setPlaced({ noteId, placement });
   }
 
-  const timeline = useMemo(
+  const allTimeline = useMemo(
     () =>
       selectTimeline(
         context.state,
-        listFilter,
+        "ALL",
         agendaList && placement ? { list: agendaList, placement } : null
       ),
-    [context.state, listFilter, agendaList, placement]
+    [context.state, agendaList, placement]
   );
+  const timeline = useMemo(() => listFilter === "ALL" ? allTimeline : {
+    ...allTimeline,
+    groups: allTimeline.groups.map((group) => ({
+      ...group, items: group.items.filter((item) => inFilter(item.tone, listFilter)),
+    })).filter((group) => group.items.length > 0),
+  }, [allTimeline, listFilter]);
 
-  // 이미 접어 둔 묶음으로 새 명제가 분류되어도 감추지 않습니다. 다른 안건의 접힘 상태는 유지합니다.
-  const groupSizes = useRef<{ noteId: string; sizes: Map<string, number> }>({ noteId, sizes: new Map() });
-  useEffect(() => {
-    const before = groupSizes.current.noteId === noteId ? groupSizes.current.sizes : new Map<string, number>();
-    const grown = timeline.groups.filter((group) => group.agenda && before.has(group.key) && group.total > before.get(group.key)!);
-    groupSizes.current = { noteId, sizes: new Map(timeline.groups.map((group) => [group.key, group.total])) };
-    if (meetingEnded || grown.length === 0) return;
-    setView((current) => {
-      if (current.noteId !== noteId) return current;
-      const flipped = new Set(current.flipped);
+  // 골라 보기로 가린 묶음도 기억합니다. 분류되는 첫 화면부터 새 명제를 펼쳐 둡니다.
+  const [seenGroups, setSeenGroups] = useState({ noteId, groups: allTimeline.groups });
+  if (seenGroups.noteId !== noteId || seenGroups.groups !== allTimeline.groups) {
+    setSeenGroups({ noteId, groups: allTimeline.groups });
+    const before = new Map(seenGroups.noteId === noteId ? seenGroups.groups.map((group) => [group.key, group.total]) : []);
+    const grown = allTimeline.groups.filter((group) => group.agenda && before.has(group.key) && group.total > before.get(group.key)!);
+    if (!meetingEnded && view.noteId === noteId && grown.length > 0) {
+      const flipped = new Set(view.flipped);
       for (const group of grown) {
-        if (current.foldByDefault) flipped.add(group.key);
+        if (view.foldByDefault) flipped.add(group.key);
         else flipped.delete(group.key);
       }
-      if (flipped.size === current.flipped.size && [...flipped].every((key) => current.flipped.has(key))) return current;
-      return { ...current, flipped };
-    });
-  }, [timeline.groups, meetingEnded, noteId]);
+      if (flipped.size !== view.flipped.size || [...flipped].some((key) => !view.flipped.has(key))) {
+        setView({ ...view, flipped, instant: true });
+      }
+    }
+  }
 
   /** 관계(질문 ↔ 답)를 누르면 그 항목을 펼치고 화면 가운데로 데려온다. */
-  const pendingScroll = useRef<string | null>(null);
+  const pendingScroll = useRef<{ id: string; block: ScrollLogicalPosition } | null>(null);
   const jumpTo = (proposal: ProposalHead) => {
     updateFollowing(false);
-    pendingScroll.current = itemId(proposal.proposalId);
+    pendingScroll.current = { id: itemId(proposal.proposalId), block: "center" };
     setView((current) => ({
       ...current,
       filter: "ALL",
@@ -374,7 +380,7 @@ export function NoteTimeline({
   };
   const jumpToGroup = (key: string) => {
     updateFollowing(false);
-    pendingScroll.current = groupId(key);
+    pendingScroll.current = { id: groupId(key), block: "start" };
     setView((current) => {
       const flipped = new Set(current.flipped);
       if (current.foldByDefault) flipped.add(key);
@@ -387,10 +393,10 @@ export function NoteTimeline({
     if (!target) return;
     // 골라 보기를 「전체」로 되돌린 목록은 `useDeferredValue` 로 한 박자 늦게 선다 — 그 사이
     // 커밋에는 대상이 아직 없다. 찾을 때까지 비우지 않고 다음 커밋에서 다시 본다.
-    const element = document.getElementById(target);
+    const element = document.getElementById(target.id);
     if (!element) return;
     pendingScroll.current = null;
-    element.scrollIntoView?.({ block: "center" });
+    element.scrollIntoView?.({ block: target.block });
   });
 
   /**

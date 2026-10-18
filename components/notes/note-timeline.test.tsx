@@ -249,6 +249,23 @@ describe("NoteTimeline", () => {
     expect(agendas.refetch).toHaveBeenCalledTimes(1);
   });
 
+  it("유형 필터로 가린 동안 새 내용이 붙은 안건도 전체로 돌아오면 펼쳐진다", () => {
+    const a = head({ kind: "STATUS_REPORT", content: "온보딩 이탈률 보고" });
+    const b = head({ kind: "QUESTION", content: "온보딩 단계를 더 줄일까요?" });
+    withLedger(a);
+    agendas.data = agendaResponse(a.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId] }]);
+    const { rerender } = render(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    fireEvent.click(screen.getByRole("button", { name: /^온보딩 개편/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^결정 / }));
+    expect(screen.queryByRole("button", { name: /^온보딩 개편/ })).toBeNull();
+    withLedger(a, b);
+    agendas.data = agendaResponse(b.createdSequence, [{ agendaId: "onboarding", title: "온보딩 개편", proposalIds: [a.proposalId, b.proposalId] }]);
+    rerender(<NoteTimeline header={null} onEvidenceSelect={vi.fn()} recording />);
+    fireEvent.click(screen.getByRole("button", { name: /^전체 / }));
+    expect(screen.getByRole("button", { name: /^온보딩 개편/ })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("온보딩 단계를 더 줄일까요?")).toBeVisible();
+  });
+
   it("새 명제는 접힌 이전 안건에 숨지 않고 분류 전후 모두 보인다", async () => {
     const a = head({ content: "온보딩 이탈률을 확인한다" });
     const b = head({ content: "건너뛰기 버튼을 둔다" });

@@ -1297,10 +1297,12 @@ describe("검토 가능한 회의", () => {
     expect(await within(dialog).findByText(/넘기기를 선택/)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "검토 완료" })).toBeDisabled();
     fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    expect(screen.getByText("변경된 기존 할 일의 제안을 확인하고 넘기기를 선택해 주세요")).toBeInTheDocument();
     expect(await within(box).findByText(`${task.content} 최신`)).toBeInTheDocument();
     expect(within(toggle).getByRole("radio", { name: "반영 예정" })).toBeDisabled();
     fireEvent.click(within(toggle).getByRole("radio", { name: "넘기기" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "검토 완료" })).toBeEnabled());
+    expect(screen.queryByText("프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요.")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "검토 완료" }));
     fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "검토 완료" }));
     expect(await screen.findByText("확정됨")).toBeInTheDocument();
