@@ -3,13 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Maximize2, Pause, Play } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
+import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
@@ -155,26 +149,22 @@ export function HelpClip({
           <Maximize2 aria-hidden className="size-4" />
         </button>
       </div>
-      <Dialog open={zoomed} onOpenChange={setZoomed}>
-        <DialogContent
-          overlayClassName={HELP_OVERLAY}
-          style={HELP_VARS}
-          finalFocus={() => zoomButton.current ?? true}
-          className="max-h-[92vh] w-[min(1100px,calc(100vw-2rem))] duration-200 max-w-[min(1100px,calc(100vw-2rem))] gap-3 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] sm:max-w-[min(1100px,calc(100vw-2rem))]"
-        >
-          <DialogTitle className="sr-only">{alt}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {caption ? `${caption} ` : ""}Esc를 누르면 확대 창이 닫혀요.
-          </DialogDescription>
-          <ZoomPlayer
-            name={name}
-            alt={alt}
-            width={width}
-            height={height}
-            reduced={reduced}
-          />
-        </DialogContent>
-      </Dialog>
+      <HelpZoomDialog
+        open={zoomed}
+        onOpenChange={setZoomed}
+        title={alt}
+        caption={caption}
+        naturalWidth={width}
+        finalFocus={() => zoomButton.current ?? true}
+      >
+        <ZoomPlayer
+          name={name}
+          alt={alt}
+          width={width}
+          height={height}
+          reduced={reduced}
+        />
+      </HelpZoomDialog>
       {caption ? (
         <figcaption
           id={captionId}

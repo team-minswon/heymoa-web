@@ -1,18 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Maximize2 } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
-import { HELP_OVERLAY, HELP_VARS } from "@/components/help/help-vars";
+import { HelpZoomDialog } from "@/components/help/help-zoom-dialog";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,6 +31,7 @@ export function HelpFigure({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
   const url = helpAssetUrl(src);
   // 크기는 캡처 스크립트가 쓴 목록(`lib/help/media-manifest.ts`)에서 읽는다 — 자리를 미리 잡는다.
   const { width, height } = HELP_MEDIA[src];
@@ -56,6 +51,7 @@ export function HelpFigure({
   return (
     <figure data-reveal="" className={cn("m-0 flex flex-col gap-2", className)}>
       <button
+        ref={trigger}
         type="button"
         onClick={() => setOpen(true)}
         aria-label={`${alt} — 크게 보기`}
@@ -77,19 +73,16 @@ export function HelpFigure({
           {caption}
         </figcaption>
       ) : null}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          overlayClassName={HELP_OVERLAY}
-          style={HELP_VARS}
-          className="max-h-[92vh] w-auto duration-200 max-w-[min(1240px,calc(100vw-2rem))] gap-3 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] sm:max-w-[min(1240px,calc(100vw-2rem))]"
-        >
-          <DialogTitle className="sr-only">{alt}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Esc를 누르면 확대 창이 닫혀요.
-          </DialogDescription>
-          {image("rounded-[12px]")}
-        </DialogContent>
-      </Dialog>
+      <HelpZoomDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={alt}
+        caption={caption}
+        naturalWidth={width}
+        finalFocus={() => trigger.current ?? true}
+      >
+        {image("rounded-[12px] max-h-[calc(92vh-5rem)] object-contain")}
+      </HelpZoomDialog>
     </figure>
   );
 }

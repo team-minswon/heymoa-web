@@ -280,3 +280,28 @@ test("허브에서 검색해 결과를 눌렀다 뒤로 가면 주소가 바뀌�
   expect(await page.evaluate(() => (window as unknown as { __writes: string[] }).__writes)).toEqual([]);
   await expect(page.getByRole("searchbox", { name: "사용 가이드 전체에서 찾기" })).toHaveValue("녹음 상태");
 });
+
+// 이미지 확대 창이 본문보다 작게(488 < 694) 열리던 문제. 이미지·영상 확대 창은 한 컴포넌트(HelpZoomDialog)의 같은 규칙이다.
+for (const width of [1024, 1440]) {
+  test(`${width}px 에서 이미지 확대는 본문 이미지보다 1.2배 넘게 크고 Esc 로 닫히며 포커스가 돌아온다`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/help/record/recording");
+    await page.waitForLoadState("networkidle");
+    const trigger = page.locator("figure button:has(img)").first();
+    const img = trigger.locator("img");
+    await img.scrollIntoViewIfNeeded();
+    const small = (await img.boundingBox())!;
+    await trigger.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await page.waitForTimeout(400);
+    const big = (await dialog.locator("img").boundingBox())!;
+    expect(big.width).toBeGreaterThan(small.width * 1.2);
+    expect(big.x).toBeGreaterThanOrEqual(0);
+    expect(big.x + big.width).toBeLessThanOrEqual(width);
+    await page.screenshot({ path: `test-results/zoom-image-${width}.png` });
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
+}
