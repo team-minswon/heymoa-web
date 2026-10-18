@@ -23,6 +23,7 @@ import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 vi.mock("@/components/auth/auth-provider", () => ({
+  useAuthUserId: () => "01K0000000003",
   useAuth: () => ({
     user: { id: "01K0000000003", name: "김민수", email: "minsu@example.com" },
     isLoggingOut: auth.isLoggingOut,

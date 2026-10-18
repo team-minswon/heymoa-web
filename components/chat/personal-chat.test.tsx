@@ -662,18 +662,26 @@ describe("PersonalChatProvider", () => {
   it("시작 카드를 누르면 입력 없이 바로 보낸다", async () => {
     renderChat();
     openPanel();
-    fireEvent.click(screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ })
+    );
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
-    expect((state.streamCalls[0].body as { message: string }).message).toBe("지난 회의에서 정한 것만 정리해줘");
+    expect((state.streamCalls[0].body as { message: string }).message).toBe(
+      "지난 회의에서 정한 것만 정리해줘"
+    );
   });
 
   it("회의록 칩만 붙은 빈 대화에서도 시작 카드가 그 범위로 바로 보낸다", async () => {
     renderChat(<NoteScope hidden={false} />);
     openPanel();
-    await waitFor(() => expect(screen.getByText("주간 제품 회의")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("주간 제품 회의")).toBeTruthy()
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ })
+    );
 
     await waitFor(() => expect(state.streamCalls).toHaveLength(1));
     expect(state.streamCalls[0].body).toMatchObject({
@@ -686,11 +694,15 @@ describe("PersonalChatProvider", () => {
     renderChat();
     openPanel();
     write("회의 하나만");
-    fireEvent.click(screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /지난 회의에서 정한 것만 정리해줘/ })
+    );
 
     expect(state.createMock).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox").textContent).toContain("회의 하나만");
-    expect(screen.getByRole("textbox").textContent).toContain("지난 회의에서 정한 것만 정리해줘");
+    expect(screen.getByRole("textbox").textContent).toContain(
+      "지난 회의에서 정한 것만 정리해줘"
+    );
   });
 
   it("목록에 대화가 있으면 새로 만들지 않는다", async () => {
@@ -1210,7 +1222,9 @@ describe("PersonalChatProvider", () => {
     );
     // 감출 뿐 언마운트하지 않는다 — 끊으면 흐르는 화면과 중지·승인에 닿을 길을 잃는다.
     expect(state.chatsParams.at(-1)).toBe(WORKSPACE_ID);
-    expect(screen.queryByRole("button", { name: "내 에이전트 열기" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "내 에이전트 열기" })
+    ).toBeNull();
     expect(state.aborted).toBe(false);
   });
 

@@ -31,7 +31,11 @@ function wordsOf(card: Record<string, unknown>): string[] {
     card.target,
     card.warning,
     ...fields(card.fields),
-    ...items.flatMap((item) => [item.title, item.target, ...fields(item.fields)]),
+    ...items.flatMap((item) => [
+      item.title,
+      item.target,
+      ...fields(item.fields),
+    ]),
     body?.label,
     body?.text,
   ].filter((word): word is string => typeof word === "string" && word !== "");
@@ -51,7 +55,11 @@ describe("공용 승인 카드 예시", () => {
       expect(card).not.toBeNull();
 
       const { container } = render(
-        <ApprovalCard card={card} summary={example.summary} status={{ kind: "open" }} />
+        <ApprovalCard
+          card={card}
+          summary={example.summary}
+          status={{ kind: "open" }}
+        />
       );
       // 접힌 항목·본문도 DOM 에는 있다 — `details` 는 닫혀도 내용을 지우지 않는다.
       const text = (container.textContent ?? "").replace(/\s+/g, " ");

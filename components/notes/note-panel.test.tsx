@@ -121,6 +121,7 @@ vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({
     user: { userId: authState.userId, name: "테스트 유저" },
   }),
+  useAuthUserId: () => authState.userId,
 }));
 vi.mock("@/components/notes/note-details", () => ({
   NoteDetails: ({
@@ -130,7 +131,10 @@ vi.mock("@/components/notes/note-details", () => ({
     autoOpenParticipants?: boolean;
     onParticipantsAutoOpened?: () => void;
   }) => (
-    <div data-testid="note-details" data-auto-open={String(!!autoOpenParticipants)}>
+    <div
+      data-testid="note-details"
+      data-auto-open={String(!!autoOpenParticipants)}
+    >
       <p>정보 내용</p>
       <button type="button" onClick={onParticipantsAutoOpened}>
         선택창 열림
@@ -218,7 +222,11 @@ vi.mock("@/lib/api/generated/notes/notes", () => ({
   // 삭제 메뉴가 노트 헤더로 옮겨오면서 패널이 이 훅을 지나간다.
   useDeleteNote: () => ({ mutateAsync: vi.fn(), isPending: false }),
   // 타임라인 탭이 주제 제목을 안건 정본에서 읽는다. 이 테스트는 정본이 없는 회의다.
-  useGetNoteAgendas: () => ({ data: undefined, isPending: false, isError: false }),
+  useGetNoteAgendas: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+  }),
   useGetNote: () =>
     noteState.query ?? {
       data: { status: 200, data: { success: true, data: noteState.value } },
@@ -1071,7 +1079,9 @@ describe("NotePanel", () => {
         panel("transcript", undefined, onTabChange)
       );
       fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
-      fireEvent.click(screen.getByRole("button", { name: "참여자 지정하러 가기" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "참여자 지정하러 가기" })
+      );
       expect(onTabChange).toHaveBeenCalledWith("details");
 
       rerenderNote(panel("details", undefined, onTabChange));
@@ -1087,7 +1097,9 @@ describe("NotePanel", () => {
         panel("transcript", undefined, onTabChange)
       );
       fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
-      fireEvent.click(screen.getByRole("button", { name: "참여자 지정하러 가기" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "참여자 지정하러 가기" })
+      );
       rerenderNote(panel("details", undefined, onTabChange));
       expect(autoOpen()).toBe("true");
 
@@ -1103,7 +1115,9 @@ describe("NotePanel", () => {
         panel("transcript", undefined, onTabChange)
       );
       fireEvent.click(screen.getByRole("button", { name: "회의 종료" }));
-      fireEvent.click(screen.getByRole("button", { name: "참여자 지정하러 가기" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "참여자 지정하러 가기" })
+      );
 
       noteState.value = { ...noteState.value, noteId: "01K0000000009" };
       rerenderNote(panel("details", "01K0000000009", onTabChange));

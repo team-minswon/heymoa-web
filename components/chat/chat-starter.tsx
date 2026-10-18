@@ -1,6 +1,12 @@
 "use client";
 
-import { FileText, Globe, ListChecks, Plug, type LucideIcon } from "lucide-react";
+import {
+  FileText,
+  Globe,
+  ListChecks,
+  Plug,
+  type LucideIcon,
+} from "lucide-react";
 
 import { useOpenSettings } from "@/components/workspace/workspace-app-shell";
 import { useGetWorkspaceIntegrations } from "@/lib/api/generated/workspace-integration/workspace-integration";
@@ -57,7 +63,9 @@ export const STARTERS: readonly Starter[] = [
 function useLinearConnected(workspaceId: string) {
   const response = useGetWorkspaceIntegrations(workspaceId).data;
   if (response?.status !== 200 || !response.data.success) return null;
-  const linear = response.data.data?.integrations?.find((row) => row.provider === "LINEAR");
+  const linear = response.data.data?.integrations?.find(
+    (row) => row.provider === "LINEAR"
+  );
   return linear ? linear.connected : null;
 }
 
@@ -94,20 +102,32 @@ export function ChatStarter({
       <div className="grid w-full max-w-[22rem] gap-2 text-left">
         {STARTERS.map(({ key, Icon, title, hint, question }) => {
           // 연동이 없다고 **확인된** 때만 연동으로 보낸다. 설정을 못 여는 곳이면 그대로 보낸다.
-          const connect = key === "tools" && linearConnected === false && openSettings !== null;
+          const connect =
+            key === "tools" &&
+            linearConnected === false &&
+            openSettings !== null;
           return (
             <button
               key={key}
               type="button"
               disabled={disabled}
-              onClick={() => (connect ? openSettings("integrations") : onAsk(question))}
+              onClick={() =>
+                connect ? openSettings("integrations") : onAsk(question)
+              }
               className="group flex items-start gap-3 rounded-block text-left border border-[var(--el-hairline)] bg-[var(--el-surface-card)] p-3 transition-colors hover:bg-[var(--el-canvas-soft)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--el-surface-card)]"
             >
-              <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]" />
+              <Icon
+                aria-hidden
+                className="mt-0.5 size-4 shrink-0 text-[var(--el-muted)]"
+              />
               <span className="min-w-0">
-                <span className="block text-sm font-medium text-[var(--el-ink)]">{title}</span>
+                <span className="block text-sm font-medium text-[var(--el-ink)]">
+                  {title}
+                </span>
                 <span className="mt-0.5 block text-xs leading-relaxed text-[var(--el-muted)]">
-                  {connect ? "Linear 연동이 필요해요. 설정에서 연동할 수 있어요." : hint}
+                  {connect
+                    ? "Linear 연동이 필요해요. 설정에서 연동할 수 있어요."
+                    : hint}
                 </span>
                 <span className="mt-1.5 block text-[13px] text-[var(--el-body)]">
                   {connect ? "연동하기" : `“${question}”`}

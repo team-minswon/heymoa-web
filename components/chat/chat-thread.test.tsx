@@ -310,7 +310,9 @@ describe("ChatThread", () => {
         }),
       ],
     });
-    expect(screen.getByText("스크립트에서 관련 발화 검색 · 3건 찾음")).toBeTruthy();
+    expect(
+      screen.getByText("스크립트에서 관련 발화 검색 · 3건 찾음")
+    ).toBeTruthy();
     expect(screen.queryByText("transcripts.search")).toBeNull();
     expect(screen.queryByText("완료")).toBeNull();
   });
@@ -425,7 +427,13 @@ describe("ChatThread", () => {
         message({
           role: "TOOL",
           content: "정체 불명",
-          toolEvent: { tool: "x", decision: null, status: null, url: null , card: null},
+          toolEvent: {
+            tool: "x",
+            decision: null,
+            status: null,
+            url: null,
+            card: null,
+          },
         }),
       ],
     });
@@ -1266,12 +1274,31 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
   it("실시간 — 결과 없이 실패하면 조회는 「중단됨」, 승인받은 쓰기는 「확인 필요」다", () => {
     const failed = [
       frame("message_start", { messageId: "01K0000000009" }),
-      frame("tool_call_start", { toolCallId: "c1", tool: "transcripts.search", summary: "전사 검색" }),
-      frame("tool_call_start", { toolCallId: "c2", tool: "linear.create_issue", summary: "이슈 생성" }),
-      frame("tool_approval_request", { approvalId: "a2", toolCallId: "c2", tool: "linear.create_issue", summary: "이슈 생성" }),
-      frame("tool_approval_resolved", { approvalId: "a2", decision: "APPROVED" }),
+      frame("tool_call_start", {
+        toolCallId: "c1",
+        tool: "transcripts.search",
+        summary: "전사 검색",
+      }),
+      frame("tool_call_start", {
+        toolCallId: "c2",
+        tool: "linear.create_issue",
+        summary: "이슈 생성",
+      }),
+      frame("tool_approval_request", {
+        approvalId: "a2",
+        toolCallId: "c2",
+        tool: "linear.create_issue",
+        summary: "이슈 생성",
+      }),
+      frame("tool_approval_resolved", {
+        approvalId: "a2",
+        decision: "APPROVED",
+      }),
       frame("turn_failed", { code: "TURN_TIMEOUT", retryable: true }),
-    ].reduce((state, event) => reduceStreamEvent(state, event), initialStreamState);
+    ].reduce(
+      (state, event) => reduceStreamEvent(state, event),
+      initialStreamState
+    );
 
     const { container } = renderThread({ stream: failed });
     openSteps();
@@ -1284,10 +1311,19 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
   it("실시간 — 재연결을 포기한 것은 턴이 끝난 것이 아니다 — 「중단됨」이 아니라 「확인 필요」다", () => {
     const flowing = [
       frame("message_start", { messageId: "01K0000000009" }),
-      frame("tool_call_start", { toolCallId: "c1", tool: "transcripts.search", summary: "전사 검색" }),
-    ].reduce((state, event) => reduceStreamEvent(state, event), initialStreamState);
+      frame("tool_call_start", {
+        toolCallId: "c1",
+        tool: "transcripts.search",
+        summary: "전사 검색",
+      }),
+    ].reduce(
+      (state, event) => reduceStreamEvent(state, event),
+      initialStreamState
+    );
 
-    const { container } = renderThread({ stream: endStream(flowing, "gaveUp") });
+    const { container } = renderThread({
+      stream: endStream(flowing, "gaveUp"),
+    });
     expect(screen.queryByText("중단됨")).toBeNull();
     expect(screen.getByText("확인 필요")).toBeTruthy();
     expect(container.querySelector(".animate-spin")).toBeNull();
@@ -1296,20 +1332,37 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
   it("실시간 — 흐르는 중에는 결과 없는 도구를 닫지 않는다", () => {
     const running = [
       frame("message_start", { messageId: "01K0000000009" }),
-      frame("tool_call_start", { toolCallId: "c1", tool: "transcripts.search", summary: "전사 검색" }),
-    ].reduce((state, event) => reduceStreamEvent(state, event), initialStreamState);
+      frame("tool_call_start", {
+        toolCallId: "c1",
+        tool: "transcripts.search",
+        summary: "전사 검색",
+      }),
+    ].reduce(
+      (state, event) => reduceStreamEvent(state, event),
+      initialStreamState
+    );
 
     renderThread({ stream: running });
     expect(screen.queryByText("중단됨")).toBeNull();
   });
 
   const APPROVED_ONLY = [
-    message({ role: "USER", content: "이슈 만들어줘", turnId: "01KTURN000001" }),
+    message({
+      role: "USER",
+      content: "이슈 만들어줘",
+      turnId: "01KTURN000001",
+    }),
     message({
       role: "TOOL",
       content: "테스트 유저님이 승인",
       turnId: "01KTURN000001",
-      toolEvent: { tool: "linear.create_issue", decision: "APPROVED", status: null, url: null , card: null},
+      toolEvent: {
+        tool: "linear.create_issue",
+        decision: "APPROVED",
+        status: null,
+        url: null,
+        card: null,
+      },
     }),
   ];
 
@@ -1331,7 +1384,13 @@ describe("★★ N3 끝난 턴의 도구 줄", () => {
           role: "TOOL",
           content: "APP-12 생성됨",
           turnId: "01KTURN000001",
-          toolEvent: { tool: "linear.create_issue", decision: null, status: "success", url: null , card: null},
+          toolEvent: {
+            tool: "linear.create_issue",
+            decision: null,
+            status: "success",
+            url: null,
+            card: null,
+          },
         }),
       ],
       activeTurnId: null,

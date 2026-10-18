@@ -4,23 +4,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatStarter } from "@/components/chat/chat-starter";
 
 const integrations = vi.hoisted(() => ({ data: undefined as unknown }));
-vi.mock("@/lib/api/generated/workspace-integration/workspace-integration", () => ({
-  useGetWorkspaceIntegrations: () => ({ data: integrations.data }),
-}));
+vi.mock(
+  "@/lib/api/generated/workspace-integration/workspace-integration",
+  () => ({
+    useGetWorkspaceIntegrations: () => ({ data: integrations.data }),
+  })
+);
 
-const shell = vi.hoisted(() => ({ openSettings: null as null | ((section: string) => void) }));
+const shell = vi.hoisted(() => ({
+  openSettings: null as null | ((section: string) => void),
+}));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
   useOpenSettings: () => shell.openSettings,
 }));
 
 const linear = (connected: boolean) => ({
   status: 200,
-  data: { success: true, data: { integrations: [{ provider: "LINEAR", connected }] } },
+  data: {
+    success: true,
+    data: { integrations: [{ provider: "LINEAR", connected }] },
+  },
 });
 
 function renderStarter(over: Partial<Parameters<typeof ChatStarter>[0]> = {}) {
   const onAsk = vi.fn();
-  render(<ChatStarter workspaceId="w" scopeTitles={[]} disabled={false} onAsk={onAsk} {...over} />);
+  render(
+    <ChatStarter
+      workspaceId="w"
+      scopeTitles={[]}
+      disabled={false}
+      onAsk={onAsk}
+      {...over}
+    />
+  );
   return onAsk;
 }
 
@@ -33,11 +49,18 @@ describe("ChatStarter", () => {
 
   it("에이전트가 하는 일 넷을 보여 주고 누르면 그 질문을 보낸다", () => {
     const onAsk = renderStarter();
-    for (const title of ["회의록에서 찾기", "할 일 만들기", "외부 도구로 잇기", "웹에서 찾기"]) {
+    for (const title of [
+      "회의록에서 찾기",
+      "할 일 만들기",
+      "외부 도구로 잇기",
+      "웹에서 찾기",
+    ]) {
       expect(screen.getByText(title)).toBeTruthy();
     }
     fireEvent.click(screen.getByRole("button", { name: /웹에서 찾기/ }));
-    expect(onAsk).toHaveBeenCalledWith("회의에서 언급된 도구의 최신 버전을 웹에서 찾아줘");
+    expect(onAsk).toHaveBeenCalledWith(
+      "회의에서 언급된 도구의 최신 버전을 웹에서 찾아줘"
+    );
   });
 
   it("답을 만드는 중이거나 승인을 기다리는 동안에는 카드를 누를 수 없다", () => {
@@ -78,7 +101,9 @@ describe("ChatStarter", () => {
       integrations.data = data;
       const onAsk = renderStarter();
       fireEvent.click(screen.getByRole("button", { name: /외부 도구로 잇기/ }));
-      expect(onAsk).toHaveBeenCalledWith("논의된 이슈를 Linear 이슈로 만들어줘");
+      expect(onAsk).toHaveBeenCalledWith(
+        "논의된 이슈를 Linear 이슈로 만들어줘"
+      );
     }
   });
 });

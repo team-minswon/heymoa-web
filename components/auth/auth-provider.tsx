@@ -18,6 +18,7 @@ import {
   type AuthStateChangedDetail,
 } from "@/lib/auth/events";
 import { resetAnalytics } from "@/lib/analytics/track";
+import { clearUserFlags } from "@/lib/storage/user-flags";
 import { getMe, logout as requestLogout } from "@/lib/auth/api";
 import { isSessionExpired } from "@/lib/auth/session-gate";
 import type { AuthUser } from "@/lib/auth/types";
@@ -87,6 +88,8 @@ export function AuthProvider({
     (destination: string) => {
       void queryClient.cancelQueries();
       resetAnalytics();
+      // 공용 브라우저에 앞 사람의 표시가 남지 않게(기기 범위 키는 남긴다).
+      clearUserFlags();
       window.location.replace(destination);
     },
     [queryClient]
@@ -205,6 +208,11 @@ export function AuthProvider({
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/** 로그인한 사용자의 id. **공급자가 없어도 던지지 않는다** — 사용자별 표시를 읽고 쓰는 가벼운 화면 조각이 쓴다. */
+export function useAuthUserId(): string | undefined {
+  return useContext(AuthContext)?.user?.userId;
 }
 
 export function useAuth() {

@@ -25,6 +25,8 @@ import {
 import type { NoteResponseData } from "@/lib/api/generated/models";
 import type { NoteResponseDataMeetingStatus } from "@/lib/api/generated/models";
 import { MEETING_STATUS_LABEL } from "@/lib/notes/meeting-state";
+import { useAuthUserId } from "@/components/auth/auth-provider";
+import { readUserFlag, writeUserFlag } from "@/lib/storage/user-flags";
 import { cn } from "@/lib/utils";
 
 /**
@@ -73,14 +75,10 @@ export function MeetingStatusChip({
 
 /** 말풍선이 떠 있는 시간. 읽을 시간이라 길게 잡되, 놓쳐도 요약 탭이 같은 안내를 한다. */
 const NUDGE_MS = 15_000;
-const NUDGE_OFF_KEY = "heymoa:end-nudge-off";
 
-function nudgeSuppressed() {
-  try {
-    return window.localStorage.getItem(NUDGE_OFF_KEY) === "1";
-  } catch {
-    return false;
-  }
+/** 「다시 보지 않기」를 누른 사용자인가. 사용자를 모르면 안내하지 않는다. */
+function nudgeSuppressed(userId: string | undefined) {
+  return !userId || readUserFlag(userId, "endNudgeOff") === "1";
 }
 
 const NUDGE_ITEMS = [
@@ -189,6 +187,7 @@ export function MeetingControls({
 }) {
   const [endOpen, setEndOpen] = useState(false);
   const recording = useRecording();
+  const userId = useAuthUserId();
   const reasonId = useId();
   // **이 화면에서 기록 중 → 중지됨으로 바뀐 순간에만** 안내를 띄운다. 열어 보니 이미 중지된
   // 노트에서 매번 뜨면 잔소리다.
@@ -199,7 +198,7 @@ export function MeetingControls({
     setNudge(
       prevStatus === "IN_PROGRESS" &&
         note.meetingStatus === "PAUSED" &&
-        !nudgeSuppressed()
+        !nudgeSuppressed(userId)
     );
   }
   useEffect(() => {
@@ -287,11 +286,8 @@ export function MeetingControls({
                   setEndOpen(true);
                 }}
                 onNever={() => {
-                  try {
-                    window.localStorage.setItem(NUDGE_OFF_KEY, "1");
-                  } catch {
-                    // 저장 못 해도 이번 안내만 닫는다.
-                  }
+                  // 저장 못 해도 이번 안내만 닫는다.
+                  if (userId) writeUserFlag(userId, "endNudgeOff", "1");
                   setNudge(false);
                 }}
               />

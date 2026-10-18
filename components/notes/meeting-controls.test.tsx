@@ -13,8 +13,11 @@ const state = vi.hoisted(() => ({
   activeNoteId: null as string | null,
 }));
 
+import { readUserFlag } from "@/lib/storage/user-flags";
+
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { userId: state.userId, name: "테스트 유저" } }),
+  useAuthUserId: () => state.userId,
 }));
 vi.mock("@/components/transcription/recording-provider", async () => {
   const actual = await vi.importActual<
@@ -226,7 +229,7 @@ describe("회의 중지 직후 종료 안내", () => {
   beforeEach(() => {
     state.userId = "user-12345";
     state.activeNoteId = null;
-    window.localStorage.removeItem("heymoa:end-nudge-off");
+    window.localStorage.clear();
     vi.useFakeTimers();
   });
   afterEach(() => {
@@ -288,7 +291,7 @@ describe("회의 중지 직후 종료 안내", () => {
     const first = renderControls(note({ meetingStatus: "IN_PROGRESS" }));
     pause(first.rerender);
     fireEvent.click(screen.getByRole("button", { name: "다시 보지 않기" }));
-    expect(window.localStorage.getItem("heymoa:end-nudge-off")).toBe("1");
+    expect(readUserFlag(state.userId, "endNudgeOff")).toBe("1");
     first.unmount();
 
     const second = renderControls(note({ meetingStatus: "IN_PROGRESS" }));

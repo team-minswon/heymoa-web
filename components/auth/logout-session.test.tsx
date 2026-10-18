@@ -168,9 +168,9 @@ describe("로그아웃과 세션 만료", () => {
       .mock.calls.find(([input]) => String(input).includes("/v1/transcript"));
 
     expect(transcript?.[1]?.signal?.aborted).toBe(true);
-    expect(requestedUrls().filter((url) => url.includes("/v1/auth/refresh"))).toEqual(
-      []
-    );
+    expect(
+      requestedUrls().filter((url) => url.includes("/v1/auth/refresh"))
+    ).toEqual([]);
   });
 
   // 하드 내비게이션은 현재 히스토리 엔트리만 교체한다. 앱 안에서 여러 번 이동한 뒤
@@ -202,8 +202,8 @@ describe("로그아웃과 세션 만료", () => {
     await expect(apiFetch("/v1/notes")).rejects.toBeInstanceOf(
       SessionExpiredError
     );
-    expect(requestedUrls().filter((url) => url.includes("/v1/auth/refresh"))).toEqual(
-      []
-    );
+    expect(
+      requestedUrls().filter((url) => url.includes("/v1/auth/refresh"))
+    ).toEqual([]);
   });
 });
