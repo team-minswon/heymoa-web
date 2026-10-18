@@ -44,6 +44,7 @@ const item = (over: Partial<ReviewItem> = {}): ReviewItem => ({
   citations: [],
   assignee: null,
   due: null,
+  decisions: [],
   replacements: [],
   taskChanges: [],
   suggestedAssignment: null,

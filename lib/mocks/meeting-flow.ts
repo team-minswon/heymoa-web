@@ -54,7 +54,8 @@ type StoredTaskChange = Omit<ReviewItem["taskChanges"][number], "assignee" | "dr
   draft: TaskDraft | null;
 };
 
-type StoredItem = Omit<ReviewItem, "assignee" | "taskChanges"> & {
+type StoredItem = Omit<ReviewItem, "assignee" | "taskChanges" | "decisions"> & {
+  decisions: { targetId: string; decision: ReviewItem["decisions"][number]["decision"]; taskChange: TaskDraft | null }[];
   assignee: StoredAssignee | null;
   taskChanges: StoredTaskChange[];
 };
@@ -283,6 +284,7 @@ function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) 
       ),
       assignee: who(noteId, seed.who),
       due: seed.dueIn === undefined ? null : dueAfterMeeting(seed.dueIn, set.meetingDate),
+      decisions: [],
       replacements: seed.replaces
         ? [
             {
@@ -343,6 +345,14 @@ function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) 
   const topicItems = set.topics.map((topic) => topic.items.map(build));
   const looseItems = set.loose.map(build);
   review.items = [...topicItems.flat(), ...looseItems];
+  for (const item of review.items) {
+    item.decisions = [
+      ...item.replacements.flatMap((row) => row.decision
+        ? [{ targetId: row.target.itemId, decision: row.decision, taskChange: null }] : []),
+      ...item.taskChanges.flatMap((row) => row.decision
+        ? [{ targetId: row.target.itemId, decision: row.decision, taskChange: null }] : []),
+    ];
+  }
 
   if (set.decorated) {
     // 사람이 고친 항목과 사람이 더한 항목. 원본과 다른 모양이 목에 하나씩은 있어야 한다.
@@ -363,6 +373,7 @@ function seedMentoringReview(target: State, set: ReviewSeedSet = MENTORING_SET) 
       citations: [],
       assignee: null,
       due: null,
+      decisions: [],
       replacements: [],
       taskChanges: [],
       suggestedAssignment: null,
@@ -496,6 +507,7 @@ function seedLargeReview(target: State, noteId: string) {
     citations: [],
     assignee: null,
     due: null,
+    decisions: [],
     replacements: [],
     taskChanges: [],
     suggestedAssignment: null,
@@ -571,6 +583,7 @@ function seedSmallReview(target: State, noteId: string, confirmed: boolean) {
     citations: [],
     assignee: null,
     due: null,
+    decisions: [],
     replacements: [],
     taskChanges: [],
     suggestedAssignment: null,
@@ -632,6 +645,21 @@ function reviewOf(noteId: string) {
   );
 }
 
+function draftView(draft: TaskDraft | null): ReviewItem["taskChanges"][number]["draft"] {
+  return draft ? {
+    ...draft,
+    status: draft.status ?? null,
+    due: draft.due ?? null,
+    assignee: draft.assignee ? {
+      value: draft.assignee.value ? {
+        type: draft.assignee.value.type,
+        id: draft.assignee.value.id ?? null,
+        label: draft.assignee.value.label ?? null,
+      } : null,
+    } : null,
+  } : null;
+}
+
 function view(review: StoredReview): MeetingReviewResponseData {
   const workspaceId = workspaceOfProject(mockDb.getNote(review.noteId).projectId);
   return structuredClone({
@@ -640,21 +668,14 @@ function view(review: StoredReview): MeetingReviewResponseData {
     reviewVersion: review.reviewVersion,
     items: review.items.map((item) => ({
       ...item,
+      decisions: item.decisions.map((choice) => ({
+        ...choice,
+        taskChange: draftView(choice.taskChange),
+      })),
       assignee: resolveAssignee(workspaceId, item.assignee),
       taskChanges: item.taskChanges.map((change) => ({
         ...change,
-        draft: change.draft ? {
-          ...change.draft,
-          status: change.draft.status ?? null,
-          due: change.draft.due ?? null,
-          assignee: change.draft.assignee ? {
-            value: change.draft.assignee.value ? {
-              type: change.draft.assignee.value.type,
-              id: change.draft.assignee.value.id ?? null,
-              label: change.draft.assignee.value.label ?? null,
-            } : null,
-          } : null,
-        } : null,
+        draft: draftView(change.draft),
         assignee: change.assignee && {
           value: resolveAssignee(workspaceId, change.assignee.value),
         },
@@ -698,6 +719,7 @@ function completeAnalysis(noteId: string) {
       citations: segments.slice(0, 1).map((row) => ({ segmentId: row.segmentId, role: "SUPPORTS" })),
       assignee: seed.kind === "ACTION_ITEM" && seed.who === "me" ? who(noteId, "me") : null,
       due: seed.kind === "ACTION_ITEM" && seed.dueIn !== undefined ? dueAfterMeeting(seed.dueIn) : null,
+      decisions: [],
       replacements: [],
       taskChanges: [],
       suggestedAssignment: null,
@@ -716,6 +738,13 @@ function completeAnalysis(noteId: string) {
 }
 
 export const meetingFlow = {
+  /** 새 분석 주기에 제안이 없는 표본. 저장 선택은 실제 서버처럼 별도로 유지합니다. */
+  clearSuggestions(noteId: string) {
+    for (const item of reviewOf(noteId).items) {
+      item.replacements = [];
+      item.taskChanges = [];
+    }
+  },
   onMeetingEnded(noteId: string) {
     startAnalysis(noteId);
   },
@@ -808,6 +837,7 @@ export const meetingFlowHandlers = [
         citations: body.citations ?? [],
         assignee,
         due: body.due ?? null,
+        decisions: [],
         replacements: [],
         taskChanges: [],
         suggestedAssignment: null,
@@ -854,7 +884,11 @@ export const meetingFlowHandlers = [
       for (const { targetId, decision, taskChange: draft } of decisions) {
         const replacement = item.replacements.find((row) => row.target.itemId === targetId);
         const taskChange = item.taskChanges.find((row) => row.target.itemId === targetId);
-        if (replacement && decision !== "APPLIED" && decision !== "APPLY" && !draft) {
+        const previous = item.decisions.find((row) => row.targetId === targetId);
+        if (previous?.decision === "APPLIED" && decision !== "APPLIED") failWith(...BAD_REQUEST);
+        if (!replacement && !taskChange && decision === null && previous && !draft) {
+          changed = true;
+        } else if (replacement && decision !== "APPLIED" && decision !== "APPLY" && !draft) {
           changed ||= replacement.decision !== decision;
           replacement.decision = decision;
         } else if (taskChange && decision !== "END") {
@@ -873,6 +907,15 @@ export const meetingFlowHandlers = [
         } else {
           failWith("DECISION_TARGET_UNKNOWN", 400, "제안에 없는 대상이거나 고를 수 없는 값입니다.");
         }
+      }
+      for (const { targetId, decision, taskChange } of decisions) {
+        const previous = item.decisions.find((row) => row.targetId === targetId);
+        const next = decision === null ? null : {
+          targetId, decision, taskChange: taskChange ?? previous?.taskChange ?? null,
+        };
+        changed ||= JSON.stringify(previous ?? null) !== JSON.stringify(next);
+        item.decisions = item.decisions.filter((row) => row.targetId !== targetId);
+        if (next) item.decisions.push(next);
       }
       if (changed) {
         item.revision += 1;
@@ -900,6 +943,11 @@ export const meetingFlowHandlers = [
         failWith("PROJECT_KNOWLEDGE_CONFLICT", 409, "프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요.");
       }
       const included = review.items.filter((item) => item.included);
+      // 저장 선택이 현재 제안에서 사라졌으면 업무를 쓰기 전에 전체 거절합니다.
+      if (included.some((item) => item.decisions.some((choice) =>
+        (choice.decision === "END" && !item.replacements.some((row) => row.target.itemId === choice.targetId)) ||
+        (choice.decision === "APPLY" && !item.taskChanges.some((row) => row.target.itemId === choice.targetId))
+      ))) failWith("PROJECT_KNOWLEDGE_CONFLICT", 409, "프로젝트 승인 기준이 변경되었습니다. 다시 조회해 주세요.");
       const approvalId = nextId("01KA");
       const changes = included.flatMap((item) => item.taskChanges)
         .filter((row) => row.decision === "APPLY")

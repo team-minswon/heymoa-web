@@ -17,12 +17,14 @@ import { EvidenceQuotes } from "@/components/notes/review/evidence-quotes";
 import { ItemDetail } from "@/components/notes/review/item-detail";
 import { ItemTrail } from "@/components/notes/review/item-trail";
 import { MeetingMap } from "@/components/notes/review/meeting-map";
+import { PendingAnalysisRetry } from "@/components/notes/review/pending-analysis-retry";
 import { ReviewGraph } from "@/components/notes/review/review-graph";
 import { ReviewActions } from "@/components/notes/review/review-actions";
 import { ShareMailDialog } from "@/components/notes/review/share-mail-dialog";
 import { ReviewHead } from "@/components/notes/review/review-head";
 import { ReviewOverview } from "@/components/notes/review/review-overview";
 import { ReviewSection } from "@/components/notes/review/review-section";
+import { SavedChoices } from "@/components/notes/review/saved-choices";
 import { TopicIndex } from "@/components/notes/review/topic-index";
 import { RoleDot, roleOfItem } from "@/components/notes/review/role-dot";
 import { SectionBlock } from "@/components/notes/review/section-block";
@@ -72,6 +74,7 @@ import {
   taskApplyConflictsOf,
 } from "@/lib/notes/review/confirm";
 import { moveFlowStatus } from "@/lib/notes/review/flow-cache";
+import { hasMissingApply, missingChoicesOf } from "@/lib/notes/review/saved-choices";
 import {
   citedAtOf,
   meetingLengthOf,
@@ -344,6 +347,7 @@ export function ReviewBoard({
   }
 
   const confirmSummary = confirmSummaryOf(items);
+  const firstMissingApply = items.find(hasMissingApply);
   const taskConflicts = taskApplyConflictsOf(items, (id) => tasksById.get(id)?.revision);
   const taskStateOf = (
     change: ReviewItem["taskChanges"][number]
@@ -403,7 +407,9 @@ export function ReviewBoard({
   // 확정은 되돌릴 수 없다. 저장 · 반영이 끝나지 않았거나 고를 제안이 아직 안 섰으면 막고 까닭을 적는다.
   // 고를 제안이 남은 것보다 앞선 까닭이 있으면 그것을 먼저 말한다 — 막대가 그 까닭을 그대로 쓴다.
   const analysisBlock =
-    refreshFailed
+    reviewQuery.isError
+      ? "최신 검토본을 다시 확인해 주세요"
+      : refreshFailed
       ? "최신 분석 결과를 다시 확인해 주세요"
       : refreshingAnalysis
         ? "최신 분석 결과를 확인하고 있습니다"
@@ -412,10 +418,14 @@ export function ReviewBoard({
       : enrichmentStatus === "PENDING"
         ? "담당과 기한 정리가 끝나면 검토를 완료할 수 있습니다"
         : null;
+  const missingChoiceBlock = firstMissingApply
+    ? "이전 분석의 선택을 해제해 주세요"
+    : null;
+  const choiceBlock = saving ? "저장이 끝나면 완료할 수 있습니다" : missingChoiceBlock;
   const earlierBlock =
-    analysisBlock ?? confirmBlockReason({ ...blockInput, unchosen: 0 });
+    analysisBlock ?? choiceBlock ?? confirmBlockReason({ ...blockInput, unchosen: 0 });
   const confirmBlocked =
-    analysisBlock ?? confirmBlockReason({ ...blockInput, unchosen });
+    analysisBlock ?? choiceBlock ?? confirmBlockReason({ ...blockInput, unchosen });
   // 막대의 「제안으로 가기」가 데려갈 줄. 요약 보기에 선 줄만이다.
   const firstUnchosen = sections
     .flatMap((section) => section.items)
@@ -428,25 +438,26 @@ export function ReviewBoard({
    * 그 줄로 간다. 접힌 「더 불러오기」가 펼쳐지고 앞서 펼쳐 둔 줄이 접히는 높이 전환(`Collapse` 200ms)이
    * 끝난 뒤에 재야 자리가 맞다 — 전환 중에 재면 뒤쪽 줄은 펼침이 끝난 뒤 화면 밖에 남는다.
    */
-  const scrollToItem = (itemId: string) => {
+  const scrollToItem = (itemId: string, focusChoice = false) => {
     const reduce =
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     window.setTimeout(
-      () =>
-        document
-          .querySelector(`[data-item-scroll-target][data-item-id="${CSS.escape(itemId)}"]`)
-          ?.scrollIntoView?.({
+      () => {
+        const target = document.querySelector(`[data-item-scroll-target][data-item-id="${CSS.escape(itemId)}"]`);
+        target?.scrollIntoView?.({
             block: "center",
             behavior: reduce ? "auto" : "smooth",
-          }),
+          });
+        if (focusChoice) target?.querySelector<HTMLButtonElement>("[data-clear-saved-choice]")?.focus({ preventScroll: true });
+      },
       reduce ? 0 : COLLAPSE_SETTLE_MS
     );
   };
-  const showItem = (itemId: string) => {
+  const showItem = (itemId: string, focusChoice = false) => {
     const target = itemsById.get(itemId);
     if (target && !isSummaryKind(target.kind)) setView("graph");
     setOpenItemId(itemId);
-    scrollToItem(itemId);
+    scrollToItem(itemId, focusChoice);
   };
 
   const relationsOf = (item: ReviewItem) =>
@@ -490,9 +501,20 @@ export function ReviewBoard({
   const suggestionsOf = (item: ReviewItem) =>
     item.replacements.length +
       item.taskChanges.length +
+      missingChoicesOf(item).length +
       relationsOf(item).length >
     0 ? (
       <div className="space-y-1.5">
+        <SavedChoices
+          item={item}
+          disabled={!editable || saving}
+          onClear={(targetId) => editor.updateItem(item.itemId, {
+            decisions: [{ targetId, decision: null }],
+          })}
+        />
+        {view === "graph" && editor.conflictItemId === item.itemId ? (
+          <p role="alert" className="text-xs text-[var(--el-muted)]">{editor.conflictMessage}</p>
+        ) : null}
         {item.replacements.map((replacement) => (
           <ReplacementSuggestion
             key={replacement.target.itemId}
@@ -791,6 +813,14 @@ export function ReviewBoard({
             className="pt-4"
           />
         ) : null}
+        {reviewQuery.isError && !refreshFailed ? (
+          <InlineRetry
+            variant="line"
+            label="최신 검토본을 불러오지 못했습니다."
+            onRetry={() => void reviewQuery.refetch()}
+            className="pt-4"
+          />
+        ) : null}
         <div className="pt-4">
           <SpeakerNudgeBanner noteId={noteId} />
         </div>
@@ -801,6 +831,17 @@ export function ReviewBoard({
             onRetry={retryAssignees}
             className="pb-4 text-xs text-[var(--el-muted)]"
           />
+        ) : null}
+        {firstMissingApply && canEdit && !confirmed ? (
+          <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm text-[var(--el-muted)]">
+            <span>이전 분석의 선택을 해제해 주세요.</span>
+            <button type="button" onClick={() => showItem(firstMissingApply.itemId, true)} className="underline underline-offset-4">
+              선택으로 가기
+            </button>
+          </div>
+        ) : null}
+        {flow?.status === "REVIEWABLE" && (relationsStatus === "PENDING" || enrichmentStatus === "PENDING") ? (
+          <PendingAnalysisRetry noteId={noteId} disabled={!editable || saving || refreshingAnalysis || refreshFailed} />
         ) : null}
 
         <div

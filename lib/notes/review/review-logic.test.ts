@@ -44,6 +44,7 @@ const item = (over: Partial<ReviewItem> & Pick<ReviewItem, "itemId" | "kind">): 
   citations: [],
   assignee: null,
   due: null,
+  decisions: [],
   replacements: [],
   taskChanges: [],
   suggestedAssignment: null,

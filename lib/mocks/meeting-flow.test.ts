@@ -58,6 +58,50 @@ async function approveCurrent() {
 }
 
 describe("기존 할 일의 검토 초안", () => {
+  it.each(["END", "APPLY"] as const)("사라진 %s 선택은 409로 막고 null 해제 후 승인한다", async (decision) => {
+    let current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const item = current.items.find((row) => decision === "END" ? row.replacements.length : row.taskChanges.length)!;
+    const target = decision === "END" ? item.replacements[0].target : item.taskChanges[0].target;
+    const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`;
+    const chosen = await api(path, "PATCH", {
+      expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+      decisions: [{ targetId: target.itemId, decision, ...(decision === "APPLY" ? { taskChange: { expectedRevision: target.revision, due: { value: "2026-12-05" } } } : {}) }],
+    });
+    expect(chosen.status).toBe(200);
+    meetingFlow.clearSuggestions(MENTORING_NOTE_ID);
+    current = await review(MENTORING_NOTE_ID);
+    const missing = current.items.find((row) => row.itemId === item.itemId)!;
+    expect(missing.replacements).toEqual([]);
+    expect(missing.taskChanges).toEqual([]);
+    expect(missing.decisions).toEqual([expect.objectContaining({ targetId: target.itemId, decision })]);
+    const before = (await api(tasksPath())).body.data;
+    expect((await approveCurrent()).status).toBe(409);
+    expect((await api(tasksPath())).body.data).toEqual(before);
+    const cleared = await api(path, "PATCH", {
+      expectedReviewVersion: current.reviewVersion, expectedItemRevision: missing.revision,
+      decisions: [{ targetId: target.itemId, decision: null }],
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.data.items.find((row: { itemId: string }) => row.itemId === item.itemId).decisions).toEqual([]);
+    expect((await api(tasksPath())).body.data).toEqual(before);
+    expect((await approveCurrent()).status).toBe(200);
+  });
+
+  it("제안이 사라져도 APPLIED 이력은 조회되고 null 해제가 거절된다", async () => {
+    expect((await chooseTask("APPLIED")).status).toBe(200);
+    meetingFlow.clearSuggestions(MENTORING_NOTE_ID);
+    const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
+    const item = current.items.find((row) => row.decisions.some((choice) => choice.decision === "APPLIED"))!;
+    const choice = item.decisions.find((row) => row.decision === "APPLIED")!;
+    const path = `/v1/notes/${MENTORING_NOTE_ID}/meeting-review/items/${item.itemId}`;
+    const result = await api(path, "PATCH", {
+      expectedReviewVersion: current.reviewVersion, expectedItemRevision: item.revision,
+      decisions: [{ targetId: choice.targetId, decision: null }],
+    });
+    expect(result.status).toBe(400);
+    expect(await review(MENTORING_NOTE_ID)).toEqual(current);
+  });
+
   it("APPLY·KEEP를 바꾸고 재조회해도 편집값을 보존하며 실제 업무는 건드리지 않는다", async () => {
     const current: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
     const change = current.items.find((row) => row.taskChanges.length > 0)!.taskChanges[0];
@@ -67,12 +111,14 @@ describe("기존 할 일의 검토 초안", () => {
     expect((await chooseTask("KEEP")).status).toBe(200);
     const kept: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
     expect(kept.items.flatMap((row) => row.taskChanges).find((row) => row.target.itemId === change.target.itemId)).toMatchObject({ decision: "KEEP", draft });
+    expect(kept.items.flatMap((row) => row.decisions).find((row) => row.targetId === change.target.itemId)).toEqual({ targetId: change.target.itemId, decision: "KEEP", taskChange: draft });
     expect((await api(tasksPath())).body.data).toEqual(before);
     expect((await chooseTask("APPLY", draft)).status).toBe(200);
     expect((await api(tasksPath())).body.data).toEqual(before);
     expect((await chooseTask(null)).status).toBe(200);
     const cleared: MeetingReviewResponseData = await review(MENTORING_NOTE_ID);
     expect(cleared.items.flatMap((row) => row.taskChanges).find((row) => row.target.itemId === change.target.itemId)).toMatchObject({ decision: null, draft: null });
+    expect(cleared.items.flatMap((row) => row.decisions).some((row) => row.targetId === change.target.itemId)).toBe(false);
   });
 
   it("초안 없는 APPLY와 다른 기대 판을 거절하고 APPLIED 이력의 선택을 잠근다", async () => {

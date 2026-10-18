@@ -1681,6 +1681,79 @@ describe("최종 요약과 늦은 관계 결과", () => {
     expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
   });
 
+  it("후속 분석을 명시적으로 재요청하고 편집 중인 내용은 유지한다", async () => {
+    let current = flow("PENDING");
+    installFlow(() => current);
+    const requests = vi.fn();
+    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
+      requests();
+      current = { ...flow("SUCCEEDED"), regions: flow("SUCCEEDED").regions.map((row) => ({ ...row, status: "SUCCEEDED" as const })) };
+      return HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, requestId: "0HZX2K7M9Q4AD", flowStatus: "REVIEWABLE" }, error: null }, { status: 202 });
+    }));
+    renderTab();
+    const box = await rowBox("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다");
+    fireEvent.click(within(box).getByRole("button", { name: "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다" }));
+    fireEvent.click(within(box).getByRole("button", { name: "수정" }));
+    const input = within(box).getByRole("textbox", { name: "항목 내용" });
+    fireEvent.change(input, { target: { value: "편집 중인 내용" } });
+    expect(requests).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "분석 재요청" }));
+    await waitFor(() => expect(requests).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "분석 재요청" })).toBeNull());
+    expect(input).toHaveValue("편집 중인 내용");
+  });
+
+  it("후속 분석이 이미 진행 중인 409는 안내하고 자동으로 다시 요청하지 않는다", async () => {
+    installFlow(() => flow("PENDING"));
+    const requests = vi.fn();
+    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
+      requests();
+      return HttpResponse.json({ success: false, data: null, error: { code: "MEETING_ANALYSIS_CONFLICT", message: "저장된 분석 요청 또는 결과와 일치하지 않습니다." } }, { status: 409 });
+    }));
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "분석 재요청" }));
+    expect(await screen.findByText("분석이 진행 중이거나 요청 상태가 바뀌었습니다.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "분석 재요청" })).toBeEnabled());
+    expect(requests).toHaveBeenCalledTimes(1);
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "검토 완료" })).toBeDisabled();
+  });
+
+  it("분석 재요청 후 상태 조회 실패는 POST 없이 상태만 다시 확인한다", async () => {
+    let readFailed = false;
+    server.use(http.get("*/v1/notes/:noteId/analyses/flow", () => readFailed
+      ? HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "조회 실패" } }, { status: 500 })
+      : HttpResponse.json({ success: true, data: flow("PENDING"), error: null })));
+    const requests = vi.fn();
+    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
+      requests(); readFailed = true;
+      return HttpResponse.json({ success: true, data: { noteId: MENTORING_NOTE_ID, requestId: "0HZX2K7M9Q4AD", flowStatus: "REVIEWABLE" }, error: null }, { status: 202 });
+    }));
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "분석 재요청" }));
+    expect(await screen.findByText("분석 상태를 불러오지 못했습니다.")).toBeInTheDocument();
+    readFailed = false;
+    fireEvent.click(screen.getByRole("button", { name: "상태 다시 확인" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "분석 재요청" })).toBeEnabled());
+    expect(requests).toHaveBeenCalledTimes(1);
+  });
+
+  it("분석 재요청 실패를 알리고 기존 내용을 유지한 채 재시도한다", async () => {
+    installFlow(() => flow("PENDING"));
+    const requests = vi.fn();
+    server.use(http.post("*/v1/notes/:noteId/analyses", () => {
+      requests();
+      return HttpResponse.json({ success: false, data: null, error: { code: "INTERNAL", message: "분석 요청 실패" } }, { status: 500 });
+    }));
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "분석 재요청" }));
+    expect(await screen.findByText("분석 요청 실패")).toBeInTheDocument();
+    expect(await row("첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "분석 재요청" }));
+    await waitFor(() => expect(requests).toHaveBeenCalledTimes(2));
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
   it("뒤늦은 관계 완료와 재요청이 펼친 줄·편집 초안을 초기화하지 않는다", async () => {
     let current = flow("PENDING");
     installFlow(() => current);

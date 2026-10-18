@@ -2321,6 +2321,25 @@ paths:
                             name: 민수
                             image: https://cdn.example.com/avatars/hong.png
                           due: 2026-09-18
+                        decisions:
+                        - targetId: 0K9GVJT2C4Q21
+                          decision: KEEP
+                          taskChange:
+                            expectedRevision: 2
+                            status: COMPLETED
+                            assignee:
+                              value:
+                                type: USER
+                                id: 0HZX2K7M9Q4AC
+                                label: null
+                            due:
+                              value: null
+                        - targetId: 0K9GVJT2C4Q22
+                          decision: END
+                          taskChange: null
+                        - targetId: 0K9GVJT2C4Q23
+                          decision: APPLIED
+                          taskChange: null
                     error: null
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -4585,6 +4604,25 @@ paths:
                             name: 민수
                             image: https://cdn.example.com/avatars/hong.png
                           due: 2026-09-18
+                        decisions:
+                        - targetId: 0K9GVJT2C4Q21
+                          decision: KEEP
+                          taskChange:
+                            expectedRevision: 2
+                            status: COMPLETED
+                            assignee:
+                              value:
+                                type: USER
+                                id: 0HZX2K7M9Q4AC
+                                label: null
+                            due:
+                              value: null
+                        - targetId: 0K9GVJT2C4Q22
+                          decision: END
+                          taskChange: null
+                        - targetId: 0K9GVJT2C4Q23
+                          decision: APPLIED
+                          taskChange: null
                     error: null
         '400':
           description: 잘못된 요청
@@ -6555,6 +6593,25 @@ paths:
                             name: 민수
                             image: https://cdn.example.com/avatars/hong.png
                           due: 2026-09-18
+                        decisions:
+                        - targetId: 0K9GVJT2C4Q21
+                          decision: KEEP
+                          taskChange:
+                            expectedRevision: 2
+                            status: COMPLETED
+                            assignee:
+                              value:
+                                type: USER
+                                id: 0HZX2K7M9Q4AC
+                                label: null
+                            due:
+                              value: null
+                        - targetId: 0K9GVJT2C4Q22
+                          decision: END
+                          taskChange: null
+                        - targetId: 0K9GVJT2C4Q23
+                          decision: APPLIED
+                          taskChange: null
                     error: null
         '409':
           description: 요청 상태 충돌
@@ -11901,6 +11958,7 @@ components:
                 required:
                 - citations
                 - content
+                - decisions
                 - edited
                 - included
                 - itemId
@@ -12429,6 +12487,100 @@ components:
                     required:
                     - assignee
                     - due
+                  decisions:
+                    type: array
+                    description: 사람이 저장한 선택. 현재 제안에서 사라진 대상도 포함하므로 재조회 뒤 null PATCH로 해제할 수 있습니다
+                    items:
+                      type: object
+                      properties:
+                        decision:
+                          type: string
+                          description: 저장된 선택. APPLIED는 이미 적용한 이력이며 변경하거나 다시 적용하지 않습니다
+                          nullable: false
+                          enum:
+                          - END
+                          - KEEP
+                          - APPLIED
+                          - APPLY
+                        targetId:
+                          type: string
+                          description: 저장된 선택의 대상 노드 또는 할 일 ID
+                          nullable: false
+                          example: 0K9GVJT2C4Q21
+                          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                        taskChange:
+                          type: object
+                          properties:
+                            due:
+                              type: object
+                              properties:
+                                value:
+                                  type: string
+                                  description: 바꿀 날짜. null이면 해제하며 객체 안 value 키는 필수입니다
+                                  nullable: true
+                                  format: date
+                              description: null 또는 생략은 기한 미변경입니다
+                              nullable: true
+                              required:
+                              - value
+                            assignee:
+                              type: object
+                              properties:
+                                value:
+                                  type: object
+                                  properties:
+                                    label:
+                                      type: string
+                                      description: 회의 라벨. 사람 담당이면 null 또는 생략입니다
+                                      nullable: true
+                                      maxLength: 8
+                                    id:
+                                      type: string
+                                      description: 사람 담당 ID. 회의 라벨이면 null 또는 생략입니다
+                                      nullable: true
+                                      example: 0HZX2K7M9Q4AC
+                                      pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+                                    type:
+                                      type: string
+                                      description: USER·GUEST는 id, SPEAKER_LABEL은 label을 사용합니다
+                                      nullable: false
+                                      enum:
+                                      - USER
+                                      - GUEST
+                                      - SPEAKER_LABEL
+                                  description: 담당 참조 원문. null이면 해제하며 객체 안 value 키는 필수입니다
+                                  nullable: true
+                                  required:
+                                  - type
+                              description: null 또는 생략은 담당 미변경입니다
+                              nullable: true
+                              required:
+                              - value
+                            expectedRevision:
+                              type: integer
+                              description: 제안 target.revision과 같은 기대 업무 판. 승인에서 달라졌으면 전체 409입니다
+                              nullable: false
+                              format: int64
+                              minimum: 1
+                            status:
+                              type: string
+                              description: 바꿀 상태. null 또는 생략은 미변경입니다
+                              nullable: true
+                              enum:
+                              - OPEN
+                              - COMPLETED
+                              - CANCELLED
+                          description: 사람이 저장한 업무 변경 초안. 없으면 null이며 원본 제안과 별도로 보존합니다
+                          nullable: true
+                          required:
+                          - expectedRevision
+                          - status
+                          - assignee
+                          - due
+                      required:
+                      - targetId
+                      - decision
+                      - taskChange
             reviewId:
               type: string
               description: 별도 검토본 식별자

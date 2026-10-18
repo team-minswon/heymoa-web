@@ -178,6 +178,57 @@ test("기존 할 일은 반영·넘기기를 바꿔도 그대로이고 검토 �
   expect(taskWrites).toEqual([]);
 });
 
+test("재진입 GET에서 사라진 제안의 저장 선택을 해제하고 업무는 유지한다", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && /\/tasks\//.test(request.url())) writes.push(request.url());
+  });
+  await page.goto(reviewUrl(MENTORING_NOTE));
+  await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });
+  const decision = rowOf(page, "첫 화면 메시지는 회의 기록보다 회의 뒤 실행 연결로 둔다");
+  const action = rowOf(page, "경쟁 서비스 요금제를 한 표로 정리한다");
+  await decision.getByRole("radio", { name: "끝내기" }).click();
+  await expect(decision.getByRole("radio", { name: "끝내기" })).toHaveAttribute("aria-checked", "true");
+  await action.getByRole("radio", { name: "반영", exact: true }).click();
+  await expect(action.getByRole("radio", { name: "반영 예정" })).toHaveAttribute("aria-checked", "true");
+
+  // 요청은 실제 MSW를 통과합니다. 조회/저장 응답의 현재 제안만 숨겨 새 주기 응답을 재현합니다.
+  // 서버의 실제 주기 전환과 409 원자성은 별도 Mock OFF QA로 검증합니다.
+  await page.evaluate((noteId) => {
+    const original = window.fetch.bind(window);
+    const reviewPath = `/v1/notes/${noteId}/meeting-review`;
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const response = await original(...args);
+      const input = args[0];
+      const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
+      if (response.ok && (url.pathname === reviewPath || url.pathname.startsWith(`${reviewPath}/items/`))) {
+        const body = await response.clone().json();
+        for (const item of body.data.items) { item.replacements = []; item.taskChanges = []; }
+        return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
+      }
+      return response;
+    };
+  }, MENTORING_NOTE);
+  await page.getByRole("tab", { name: "정보", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "정보", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "요약", exact: true }).click();
+  await expect(decision.getByText("이전 분석의 선택 · 끝내기")).toBeVisible();
+  await expect(action.getByText("이전 분석의 선택 · 반영 예정")).toBeVisible();
+  await expect(page.getByRole("button", { name: "검토 완료", exact: true })).toBeDisabled();
+  await expectNoHorizontalOverflow(page);
+  const cleared = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes("/meeting-review/items/"));
+  await decision.getByRole("button", { name: /끝내기 선택 해제/ }).click();
+  const patch = (await cleared).request().postDataJSON();
+  expect(patch.decisions).toEqual([{ targetId: expect.any(String), decision: null }]);
+  await expect(decision.getByRole("button", { name: /선택 해제/ })).toHaveCount(0);
+  await action.getByRole("button", { name: /반영 예정 선택 해제/ }).click();
+  await expect(action.getByRole("button", { name: /선택 해제/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "검토 완료", exact: true })).toBeEnabled();
+  await expectNoHorizontalOverflow(page);
+  expect(writes).toEqual([]);
+});
+
 test("그래프를 확대 · 이동하고, 점이나 목록에서 항목을 고르면 아래에 수정 기록이 서며 닫을 수 있다", async ({ page }) => {
   await page.goto(reviewUrl(MENTORING_NOTE));
   await expect(page.getByText("검토 중", { exact: true })).toBeVisible({ timeout: 20_000 });

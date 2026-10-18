@@ -28,6 +28,7 @@ function reviewItem(
     citations: [],
     assignee: null,
     due: null,
+    decisions: [],
     replacements: [],
     taskChanges: [],
     suggestedAssignment: null,

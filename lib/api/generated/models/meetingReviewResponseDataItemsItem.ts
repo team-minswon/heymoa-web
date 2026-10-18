@@ -7,6 +7,7 @@
  */
 import type { MeetingReviewResponseDataItemsItemAssignee } from "./meetingReviewResponseDataItemsItemAssignee";
 import type { MeetingReviewResponseDataItemsItemCitationsItem } from "./meetingReviewResponseDataItemsItemCitationsItem";
+import type { MeetingReviewResponseDataItemsItemDecisionsItem } from "./meetingReviewResponseDataItemsItemDecisionsItem";
 import type { MeetingReviewResponseDataItemsItemKind } from "./meetingReviewResponseDataItemsItemKind";
 import type { MeetingReviewResponseDataItemsItemOriginalProposalRef } from "./meetingReviewResponseDataItemsItemOriginalProposalRef";
 import type { MeetingReviewResponseDataItemsItemReplacementsItem } from "./meetingReviewResponseDataItemsItemReplacementsItem";
@@ -67,4 +68,6 @@ export type MeetingReviewResponseDataItemsItem = {
    * @nullable
    */
   suggestedAssignment: MeetingReviewResponseDataItemsItemSuggestedAssignment;
+  /** 사람이 저장한 선택. 현재 제안에서 사라진 대상도 포함하므로 재조회 뒤 null PATCH로 해제할 수 있습니다 */
+  decisions: MeetingReviewResponseDataItemsItemDecisionsItem[];
 };
