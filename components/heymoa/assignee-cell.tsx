@@ -21,6 +21,14 @@ import {
 } from "@/lib/assignees/describe";
 import { cn } from "@/lib/utils";
 
+/**
+ * 표의 빈 칸 글(「담당 정하기」 · 「기한 정하기」). 줄마다 같은 회색 글이 서면 실제 값과 같은 무게로 읽혀
+ * 열이 안 갈린다 — 넓은 화면에서는 아이콘만 두고 줄(`group`)을 가리키거나 그 안에 포커스가 들어올 때 선다.
+ * 좁은 화면은 가리킬 수 없으니 늘 보인다. 누를 자리의 이름은 버튼의 `aria-label` 이 따로 든다.
+ */
+export const QUIET_EMPTY =
+  "transition-opacity duration-150 ease-out motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100";
+
 export function choiceName(choice: AssigneeChoice) {
   return choice.type === "SPEAKER_LABEL" ? `화자 ${choice.label}` : choice.name;
 }
@@ -30,9 +38,12 @@ export function AssigneeFace({
   value,
   placeholder,
   image,
+  quiet = false,
 }: {
   value: AssigneeValue | null;
   placeholder?: string;
+  /** 표 안의 빈 칸. [QUIET_EMPTY] 참고 */
+  quiet?: boolean;
   /**
    * 값이 못 들고 온 계정 사진. **서버는 담당을 풀 때 사진을 안 싣는다** — 사람 목록에는
    * 있으므로 부르는 쪽이 같은 열쇠로 찾아 넘긴다 (APP-678).
@@ -41,6 +52,18 @@ export function AssigneeFace({
 }) {
   const view = describeAssignee(value);
   if (!view) {
+    if (quiet && placeholder) {
+      // 빈 얼굴 자리(점선 원)가 「사람이 들어갈 칸」을 말하고, 글은 줄을 가리킬 때만 선다.
+      return (
+        <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] text-[var(--el-muted)]">
+          <span
+            aria-hidden
+            className="size-[18px] shrink-0 rounded-full border border-dashed border-[var(--el-muted)]"
+          />
+          <span className={cn("truncate", QUIET_EMPTY)}>{placeholder}</span>
+        </span>
+      );
+    }
     return (
       <span className="text-[13px] text-[var(--el-muted-soft)]">{placeholder}</span>
     );
@@ -71,6 +94,7 @@ export function AssigneeCell({
   editable = false,
   placeholder = "담당 정하기",
   label = "담당",
+  quiet = false,
   onChange,
   className,
 }: {
@@ -79,6 +103,8 @@ export function AssigneeCell({
   editable?: boolean;
   placeholder?: string;
   label?: string;
+  /** 표 안의 칸이면 빈 값을 점선 원으로만 두고 글은 줄을 가리킬 때 세운다([QUIET_EMPTY]) */
+  quiet?: boolean;
   onChange?: (next: AssigneeChoice | null) => void;
   className?: string;
 }) {
@@ -88,7 +114,7 @@ export function AssigneeCell({
   if (!editable) {
     return (
       <span className={cn("inline-flex h-7 min-w-0 items-center", className)}>
-        <AssigneeFace value={value} image={selectedImage} />
+        <AssigneeFace value={value} image={selectedImage} quiet={quiet} />
       </span>
     );
   }
@@ -118,7 +144,7 @@ export function AssigneeCell({
               className
             )}
           >
-            <AssigneeFace value={value} placeholder={placeholder} image={selectedImage} />
+            <AssigneeFace value={value} placeholder={placeholder} image={selectedImage} quiet={quiet} />
           </button>
         }
       />

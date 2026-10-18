@@ -35,14 +35,13 @@ const TASKS = vi.hoisted(() => ({
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ user: { userId: "me", name: "나", email: "me@heymoa.com", image: null } }),
 }));
+const TWO_PROJECTS = [
+  { projectId: "p1", name: "제품" },
+  { projectId: "p2", name: "리서치" },
+];
+const SHELL = vi.hoisted(() => ({ projects: [] as { projectId: string; name: string }[] }));
 vi.mock("@/components/workspace/workspace-app-shell", () => ({
-  useWorkspaceShell: () => ({
-    projects: [
-      { projectId: "p1", name: "제품" },
-      { projectId: "p2", name: "리서치" },
-    ],
-    isWorkspacePending: false,
-  }),
+  useWorkspaceShell: () => ({ projects: SHELL.projects, isWorkspacePending: false }),
 }));
 vi.mock("@/lib/assignees/use-assignee-choices", () => ({
   useAssigneeChoices: () => ({ choices: [], isPending: false }),
@@ -130,6 +129,7 @@ describe("AllTasks", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-09-16T03:00:00Z"));
+    SHELL.projects = TWO_PROJECTS;
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -156,6 +156,19 @@ describe("AllTasks", () => {
     expect(within(regions[2]).getByText("리서치")).toBeTruthy();
     expect(screen.queryByText("끝낸 할 일")).toBeNull();
     expect(screen.getByText("프로젝트 2개 · 진행 중 4개")).toBeTruthy();
+  });
+
+  it("프로젝트가 하나뿐이면 모든 줄이 같은 이름이라 프로젝트 칸을 세우지 않는다", async () => {
+    renderScreen();
+    await screen.findByText("지난 할 일");
+    expect(screen.getByText("프로젝트", { selector: "span" })).toBeTruthy();
+
+    cleanup();
+    SHELL.projects = [TWO_PROJECTS[1]];
+    renderScreen();
+    await screen.findByText("지난 할 일");
+    expect(screen.queryByText("프로젝트", { selector: "span" })).toBeNull();
+    expect(screen.queryByText("리서치")).toBeNull();
   });
 
   it("상태를 바꾸면 그 상태의 할 일만 한 줄로 늘어놓고, 거르기와 함께 개수가 바뀐다", async () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2Icon, Plus } from "lucide-react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -8,7 +9,7 @@ import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import { SegmentedControl } from "@/components/heymoa/segmented-control";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { TaskHistorySheet } from "@/components/tasks/task-history-sheet";
-import { TASK_ROW_GRID, TASK_ROW_TRAIL, TaskRow } from "@/components/tasks/task-row";
+import { TASK_DUE_ALIGN, TASK_ROW_TRAIL, TaskRow, taskRowGrid } from "@/components/tasks/task-row";
 import { useTaskUpdate } from "@/components/tasks/use-task-update";
 import { assigneeKey } from "@/lib/assignees/describe";
 import { Button } from "@/components/ui/button";
@@ -138,34 +139,44 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
     entries.find((e) => e.taskId === historyTaskId) ??
     (savedRow?.taskId === historyTaskId ? savedRow : null);
   const filtering = mine || activeProjectId !== null;
+  // 한 프로젝트만 보이면 프로젝트 칸은 모든 줄이 같은 글이라 아무것도 가르지 않는다.
+  const showProject = activeProjectId === null && projects.length > 1;
+  const grid = taskRowGrid(showProject);
 
+  const reduceMotion = useReducedMotion() ?? false;
+
+  // 첫 목록은 움직이지 않는다(initial=false). 줄이 빠질 때만 접힌다.
   const renderRows = (list: TaskEntry[]) => (
     <ul>
-      {list.map((entry) => (
-        <TaskRow
-          key={entry.taskId}
-          entry={entry}
-          choices={choices}
-          today={today}
-          pending={pendingOf(entry.taskId) !== null}
-          completing={![null, entry.taskStatus].includes(pendingOf(entry.taskId))}
-          arrived={previous !== null && previous.get(entry.taskId) !== entry.taskStatus}
-          conflict={conflictTaskId === entry.taskId}
-          onToggleDone={() =>
-            save(entry, { taskStatus: entry.taskStatus === "OPEN" ? "COMPLETED" : "OPEN" })
-          }
-          onAssign={(assignee) => save(entry, { assignee })}
-          onDue={(due) => save(entry, { due })}
-          onOpenHistory={() => {
-            setHistoryEditing(false);
-            setHistoryTaskId(entry.taskId);
-          }}
-          onEdit={() => {
-            setHistoryEditing(true);
-            setHistoryTaskId(entry.taskId);
-          }}
-        />
-      ))}
+      <AnimatePresence initial={false}>
+        {list.map((entry) => (
+          <TaskRow
+            key={entry.taskId}
+            entry={entry}
+            showProject={showProject}
+            choices={choices}
+            today={today}
+            pending={pendingOf(entry.taskId) !== null}
+            completing={![null, entry.taskStatus].includes(pendingOf(entry.taskId))}
+            arrived={previous !== null && previous.get(entry.taskId) !== entry.taskStatus}
+            reduceMotion={reduceMotion}
+            conflict={conflictTaskId === entry.taskId}
+            onToggleDone={() =>
+              save(entry, { taskStatus: entry.taskStatus === "OPEN" ? "COMPLETED" : "OPEN" })
+            }
+            onAssign={(assignee) => save(entry, { assignee })}
+            onDue={(due) => save(entry, { due })}
+            onOpenHistory={() => {
+              setHistoryEditing(false);
+              setHistoryTaskId(entry.taskId);
+            }}
+            onEdit={() => {
+              setHistoryEditing(true);
+              setHistoryTaskId(entry.taskId);
+            }}
+          />
+        ))}
+      </AnimatePresence>
     </ul>
   );
 
@@ -252,15 +263,16 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             {/* 좁은 화면에서는 칸이 둘째 줄로 내려가 머리글이 가리킬 칸이 없다. */}
             <div
               className={cn(
-                TASK_ROW_GRID,
-                "hidden h-8 text-xs font-medium text-[var(--el-muted)] sm:grid"
+                grid,
+                // 선은 줄의 hover 면처럼 밖으로 번지지 않고 위 머리의 선과 같은 폭에 선다(mx-2 · px-0).
+                "mx-2 hidden h-8 border-b border-[var(--el-hairline)] px-0 text-xs text-[var(--el-muted)] sm:grid"
               )}
             >
               <span />
               <span>내용</span>
-              <span>프로젝트</span>
+              {showProject ? <span>프로젝트</span> : null}
               <span>담당</span>
-              <span>기한</span>
+              <span className={TASK_DUE_ALIGN}>기한</span>
             </div>
 
             {choicesFailed ? (
@@ -284,13 +296,13 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
             {loadingRows ? (
               <ul aria-label="할 일 불러오는 중">
                 {["62%", "48%", "71%", "55%", "66%", "40%"].map((width) => (
-                  <li key={width} className={cn(TASK_ROW_GRID, "min-h-11")}>
+                  <li key={width} className={cn(grid, "min-h-11")}>
                     <Skeleton className="size-[18px] rounded-full" />
                     <Skeleton className="h-4 rounded-chip" style={{ width }} />
                     <div className={TASK_ROW_TRAIL}>
-                      <Skeleton className="h-4 w-16 rounded-chip" />
+                      {showProject ? <Skeleton className="h-4 w-16 rounded-chip" /> : null}
                       <Skeleton className="h-4 w-20 rounded-chip" />
-                      <Skeleton className="h-4 w-16 rounded-chip" />
+                      <Skeleton className={cn("h-4 w-16 rounded-chip", TASK_DUE_ALIGN)} />
                     </div>
                   </li>
                 ))}
@@ -313,14 +325,20 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                   </p>
                 ) : view === "OPEN" ? (
                   groups.map((group) => (
-                    <section key={group.key} aria-label={group.label} className="mt-4 first:mt-1">
-                      <h3 className="flex h-8 items-center gap-1.5 px-2 text-xs font-medium text-[var(--el-muted)]">
+                    <section key={group.key} aria-label={group.label} className="mt-6 first:mt-3">
+                      {/* 묶음 머리는 열 머리글(옅은 12px)보다 한 단 위다 — 먹색 13px. 기한 지남만 기한 칸과 같은 빨강. */}
+                      <h3
+                        className={cn(
+                          "flex h-8 items-center gap-2 px-2 text-[13px] font-medium",
+                          group.key === "OVERDUE" ? "text-[var(--el-error-strong)]" : "text-[var(--el-ink)]"
+                        )}
+                      >
                         {group.label}
                         <span
                           // 개수가 바뀌면 다시 들어오게 해 무엇이 옮겼는지 눈에 걸리게 한다.
                           key={previous ? group.entries.length : undefined}
                           className={cn(
-                            "font-mono text-[11px] text-[var(--el-muted-soft)]",
+                            "text-xs font-normal tabular-nums text-[var(--el-muted-soft)]",
                             previous &&
                               "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
                           )}
