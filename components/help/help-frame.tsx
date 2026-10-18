@@ -11,6 +11,7 @@ import {
   TV_VARS,
 } from "@/components/heymoa/landing/tokens";
 import { AnchorCopy } from "@/components/help/anchor-copy";
+import { HelpMotion } from "@/components/help/help-motion";
 import { HelpPalette } from "@/components/help/help-palette";
 import { HelpPageToc } from "@/components/help/help-page-toc";
 import { HelpSearch } from "@/components/help/help-search";
@@ -29,6 +30,9 @@ export const HELP_CONTAINER = "mx-auto w-full max-w-[1360px] px-5 lg:px-10";
 
 export const HELP_ROOT =
   "w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8";
+
+/** 가이드 루트에 붙는 표식. 모션 배선(`HelpMotion`)이 이 안의 요소만 만진다. */
+export const HELP_ROOT_PROPS = { "data-help-root": "" } as const;
 
 export function HelpHeader({
   label,
@@ -80,7 +84,8 @@ export function HelpPageFrame({
 }) {
   const outline = topic.sections.map(({ id, title }) => ({ id, title }));
   return (
-    <div style={TV_VARS} className={HELP_ROOT}>
+    <div style={TV_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
+      <HelpMotion />
       <HelpHeader
         label={
           <Link
@@ -116,7 +121,7 @@ export function HelpPageFrame({
           </div>
         </aside>
 
-        <div className="min-w-0 max-w-[800px]">
+        <div data-help-main="" className="min-w-0 max-w-[800px]">
           <HelpPageToc
             sections={outline}
             className="mb-4 rounded-[20px] bg-[var(--tv-lav-soft)] p-4 xl:hidden"
@@ -131,7 +136,10 @@ export function HelpPageFrame({
                 key={section.id}
                 className={cn("scroll-mt-24", index > 0 && "mt-10 lg:mt-12")}
               >
-                <div className="group/heading flex items-center gap-1">
+                <div
+                  data-help-heading=""
+                  className="group/heading -mx-2 flex items-center gap-1 rounded-[8px] px-2"
+                >
                   <h2 className={CARD_TITLE}>{section.title}</h2>
                   <AnchorCopy id={section.id} title={section.title} />
                 </div>
@@ -189,7 +197,7 @@ function StepLink({
     <Link
       href={`/help/${topic.group}/${topic.slug}`}
       className={cn(
-        "group flex flex-col gap-1 rounded-[16px] border border-[var(--tv-rule)] px-5 py-4 transition-colors duration-150 hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",
+        "group flex flex-col gap-1 rounded-[16px] border border-[var(--tv-rule)] px-5 py-4 help-lift hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",
         next && "sm:items-end sm:text-right",
         FOCUS
       )}
@@ -230,7 +238,7 @@ function RelatedSituations({ topic }: { topic: HelpTopic }) {
             <Link
               href={`/help/${situation.group}/${situation.slug}`}
               className={cn(
-                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] transition-colors duration-150 hover:bg-white hover:text-[var(--tv-brand-deep)]",
+                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-white hover:text-[var(--tv-brand-deep)]",
                 FOCUS
               )}
             >

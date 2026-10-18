@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { findMatchRanges, stepIndex } from "@/lib/help/match-ranges";
+import { prefersReducedMotion } from "@/lib/help/scroll";
 import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 100;
@@ -56,9 +57,14 @@ export function HelpSearch({ targetId }: { targetId: string }) {
   const firstRun = useRef(true);
   // 우리가 방금 주소에 쓴 검색어. 이것과 같으면 바깥 이동이 아니라 우리 자신의 기록이다.
   const written = useRef("");
+  // 주소로 처음 들어온 직후의 이동은 모션 없이 바로 간다(공유한 링크가 로드 뒤에 흘러가지 않게). 이후 입력·이동·같은 페이지 결과는 부드럽게.
+  const loaded = useRef(false);
+  const jump = useRef(false);
 
   // 주소의 `?q=` 로 들어오면(허브 검색 결과, 공유한 링크, 같은 페이지의 ⌘K 결과) 그 검색어로 맞춘다.
   const syncFromUrl = useCallback((q: string) => {
+    jump.current = !loaded.current && q !== "";
+    loaded.current = true;
     if (q === written.current) return;
     written.current = q;
     firstRun.current = true; // 새 이동이니 `#섹션` 안 첫 일치부터 다시 찾는다
@@ -130,12 +136,9 @@ export function HelpSearch({ targetId }: { targetId: string }) {
       const rect = current.getBoundingClientRect();
       // 이미 편하게 보이는 자리면 움직이지 않는다 — 입력할 때마다 화면이 흔들리지 않게.
       if (rect.top < 96 || rect.bottom > window.innerHeight - 80) {
-        const reduced = window.matchMedia(
-          "(prefers-reduced-motion: reduce)"
-        ).matches;
         current.startContainer.parentElement?.scrollIntoView({
           block: "center",
-          behavior: reduced ? "auto" : "smooth",
+          behavior: prefersReducedMotion() || jump.current ? "auto" : "smooth",
         });
       }
     }
@@ -173,7 +176,10 @@ export function HelpSearch({ targetId }: { targetId: string }) {
   }, []);
 
   const step = useCallback(
-    (direction: 1 | -1) => setActive((now) => stepIndex(now, total, direction)),
+    (direction: 1 | -1) => {
+      jump.current = false;
+      setActive((now) => stepIndex(now, total, direction));
+    },
     [total]
   );
 
@@ -203,7 +209,10 @@ export function HelpSearch({ targetId }: { targetId: string }) {
           placeholder="찾기"
           autoComplete="off"
           spellCheck={false}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            jump.current = false;
+            setValue(event.target.value);
+          }}
           onKeyDown={(event) => {
             // 한글 조합 중의 Enter 는 글자를 확정할 뿐이다 — 이동으로 읽지 않는다.
             if (event.nativeEvent.isComposing) return;
@@ -217,7 +226,7 @@ export function HelpSearch({ targetId }: { targetId: string }) {
             }
           }}
           className={cn(
-            "h-10 w-full min-w-0 rounded-[10px] border border-[var(--tv-rule-strong)] bg-white pr-9 pl-9 text-[14px] text-[var(--tv-ink)] transition-colors duration-150 placeholder:text-[var(--tv-muted)] hover:border-[var(--tv-brand)] [&::-webkit-search-cancel-button]:hidden",
+            "h-10 w-full min-w-0 rounded-[10px] border border-[var(--tv-rule-strong)] bg-white pr-9 pl-9 text-[14px] text-[var(--tv-ink)] help-fade placeholder:text-[var(--tv-muted)] hover:border-[var(--tv-brand)] [&::-webkit-search-cancel-button]:hidden",
             FOCUS
           )}
         />
@@ -227,7 +236,7 @@ export function HelpSearch({ targetId }: { targetId: string }) {
             aria-label="검색어 지우기"
             onClick={clear}
             className={cn(
-              "absolute top-1/2 right-1.5 grid size-7 -translate-y-1/2 place-items-center rounded-[8px] text-[var(--tv-muted)] transition-colors duration-150 hover:bg-[var(--tv-lav)] hover:text-[var(--tv-ink)]",
+              "absolute top-1/2 right-1.5 grid size-7 -translate-y-1/2 place-items-center rounded-[8px] text-[var(--tv-muted)] help-fade hover:bg-[var(--tv-lav)] hover:text-[var(--tv-ink)]",
               FOCUS
             )}
           >

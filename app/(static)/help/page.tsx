@@ -13,6 +13,7 @@ import { helpTopics } from "@/app/(static)/help/_content/topics";
 import {
   HELP_CONTAINER,
   HELP_ROOT,
+  HELP_ROOT_PROPS,
   HelpHeader,
 } from "@/components/help/help-frame";
 import {
@@ -20,6 +21,7 @@ import {
   HelpHubInput,
   HelpHubProvider,
 } from "@/components/help/help-hub-search";
+import { HelpMotion } from "@/components/help/help-motion";
 import { JsonLd } from "@/components/help/json-ld";
 import { LegacyHashRedirect } from "@/components/help/legacy-hash-redirect";
 import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
@@ -57,7 +59,7 @@ const FEATURED: readonly HelpPageId[] = [
 ];
 
 const card =
-  "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 transition-colors duration-150 hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)] motion-reduce:transition-none";
+  "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 help-lift hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]";
 
 const H2_SMALL =
   "m-0 mb-4 text-[14px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]";
@@ -76,7 +78,8 @@ export default function HelpHubPage() {
     (topic) => helpAxisOf(topic) === "situation"
   );
   return (
-    <div style={TV_VARS} className={HELP_ROOT}>
+    <div style={TV_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
+      <HelpMotion />
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -106,12 +109,12 @@ export default function HelpHubPage() {
         >
           <HelpHubInput />
         </HelpHeader>
-        <div className={cn(HELP_CONTAINER, "mt-8 lg:mt-12")}>
+        <div data-help-main="" className={cn(HELP_CONTAINER, "mt-8 lg:mt-12")}>
           <HelpHubBody>
             <h2 className={H2_SMALL}>자주 찾는 주제</h2>
             <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
               {featured.map((topic) => (
-                <li key={topic.slug}>
+                <li key={topic.slug} data-reveal="">
                   <Link
                     href={helpPathOf(topic)}
                     className={cn(card, "bg-[var(--tv-lav-soft)] p-7", FOCUS)}
@@ -136,7 +139,8 @@ export default function HelpHubPage() {
                   {featureGroups.map((group) => (
                     <div
                       key={group.slug}
-                      className="rounded-[20px] border border-[var(--tv-rule)] bg-white p-6"
+                      data-reveal=""
+                      className="help-lift rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 hover:border-[var(--tv-rule-strong)]"
                     >
                       <h3 className="m-0 text-[18px] font-extrabold leading-[1.35] break-keep text-[var(--tv-ink)]">
                         <Link
@@ -158,7 +162,7 @@ export default function HelpHubPage() {
                             <Link
                               href={helpPathOf(topic)}
                               className={cn(
-                                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] transition-colors duration-150 hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
+                                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
                                 FOCUS
                               )}
                             >
@@ -177,7 +181,7 @@ export default function HelpHubPage() {
                 </h2>
                 <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0">
                   {situations.map((topic) => (
-                    <li key={topic.slug}>
+                    <li key={topic.slug} data-reveal="">
                       <Link
                         href={helpPathOf(topic)}
                         className={cn(card, "gap-1 p-5", FOCUS)}

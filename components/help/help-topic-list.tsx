@@ -15,7 +15,7 @@ const AXES: { axis: HelpAxis; label: string }[] = [
 ];
 
 const ITEM =
-  "relative flex min-h-9 items-center rounded-[8px] px-3 py-1.5 text-[14px] leading-[1.45] break-keep transition-colors duration-150 before:absolute before:top-1/2 before:left-0 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--tv-brand)] before:opacity-0 before:transition-opacity before:duration-150 motion-reduce:transition-none motion-reduce:before:transition-none";
+  "relative flex min-h-9 items-center rounded-[8px] px-3 py-1.5 text-[14px] leading-[1.45] break-keep help-fade before:absolute before:top-1/2 before:left-0 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--tv-brand)] before:opacity-0 before:transition-opacity before:duration-(--help-fast) before:ease-(--help-ease) motion-reduce:before:transition-none";
 
 /**
  * 「가이드 전체」 — 왼쪽 기둥의 두 축 목록. **기능별**(그룹 제목 아래 페이지)과 **상황별**(「이럴 때」 레시피)을 갈라 둔다.
@@ -39,18 +39,18 @@ export function HelpTopicList({
         <details
           key={axis}
           open={axis === currentAxis}
-          className="group/axis [&_summary::-webkit-details-marker]:hidden"
+          className="details-motion group/axis [&_summary::-webkit-details-marker]:hidden"
         >
           <summary
             className={cn(
-              "flex min-h-9 cursor-pointer list-none items-center justify-between rounded-[8px] px-3 text-[13px] font-extrabold tracking-[0.02em] text-[var(--tv-ink)] transition-colors duration-150 hover:bg-white",
+              "flex min-h-9 cursor-pointer list-none items-center justify-between rounded-[8px] px-3 text-[13px] font-extrabold tracking-[0.02em] text-[var(--tv-ink)] help-fade hover:bg-white",
               FOCUS
             )}
           >
             {label}
             <ChevronDown
               aria-hidden
-              className="size-4 text-[var(--tv-muted)] transition-transform duration-200 group-open/axis:rotate-180 motion-reduce:transition-none"
+              className="size-4 text-[var(--tv-muted)] transition-transform duration-(--help-base) ease-(--help-ease) group-open/axis:rotate-180 motion-reduce:transition-none"
             />
           </summary>
           <div className="mt-1 flex flex-col gap-3 pb-2">

@@ -408,6 +408,99 @@
   }
 }
 
+/* ── 사용 가이드 모션 (APP-1237) ─────────────────────────────────────────────
+   값은 이 블록 한 곳이다 — 시간 150ms(색·호버) / 200ms(등장·이동), 이징 ease-out(위 펼침 전환과 같다).
+   움직이는 것은 불투명도와 transform 뿐이라 자리를 밀지 않는다(CLS 0).
+   ★ 서버가 그린 HTML 은 항상 보인다. 숨김(`pending`)은 JS 가 마운트한 뒤 「화면 아래에 있는」 요소에만 건다
+   (`components/help/help-motion.tsx`) — JS 가 없거나 크롤러가 읽어도 본문이 그대로 있다.
+   ★ `@starting-style` 은 쓰지 않는다: 새로고침 때 빈 화면 뒤 뒤늦게 나타나는 문제가 있다(error-loading.md). */
+:root {
+  --help-fast: 150ms;
+  --help-base: 200ms;
+  --help-ease: ease-out;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 색·테두리·그림자 바뀜(링크·행·카드). */
+  .help-fade {
+    transition:
+      color var(--help-fast) var(--help-ease),
+      background-color var(--help-fast) var(--help-ease),
+      border-color var(--help-fast) var(--help-ease),
+      box-shadow var(--help-fast) var(--help-ease),
+      opacity var(--help-fast) var(--help-ease);
+  }
+
+  /* 카드: 살짝 올라가며 테두리·그림자. 마우스가 있는 환경에서만 올라간다. */
+  .help-lift {
+    transition:
+      transform var(--help-fast) var(--help-ease),
+      color var(--help-fast) var(--help-ease),
+      background-color var(--help-fast) var(--help-ease),
+      border-color var(--help-fast) var(--help-ease),
+      box-shadow var(--help-fast) var(--help-ease);
+  }
+  @media (hover: hover) {
+    .help-lift:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px -14px rgba(28, 24, 69, 0.32);
+    }
+  }
+
+  /* 화면에 들어올 때 한 번: 아래에 있던 요소만 옅고 8px 아래에서 올라온다. */
+  [data-reveal="pending"] {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  [data-reveal="done"] {
+    transition:
+      opacity var(--help-base) var(--help-ease),
+      transform var(--help-base) var(--help-ease);
+  }
+
+  /* 다른 가이드 페이지로 넘어온 직후 본문. JS 가 이동 때만 붙인다(첫 로드에는 없다). */
+  [data-help-entering] {
+    animation: help-enter var(--help-base) var(--help-ease) backwards;
+  }
+
+  /* 목차 활성 막대·접힘 화살표가 같은 시간으로 움직인다. */
+  .help-slide {
+    transition:
+      transform var(--help-base) var(--help-ease),
+      height var(--help-base) var(--help-ease),
+      opacity var(--help-fast) var(--help-ease);
+  }
+
+  [data-arrived] {
+    animation: help-arrive 1200ms var(--help-ease);
+  }
+}
+
+@keyframes help-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* 앵커로 도착한 제목 줄: 배경이 나타났다 사라진다. */
+@keyframes help-arrive {
+  0%,
+  25% {
+    background-color: var(--tv-butter);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* 움직임 줄이기: 전환 없이 즉시. 도착 표시는 멈춘 채로 잠깐 보였다 JS 가 걷는다. */
+@media (prefers-reduced-motion: reduce) {
+  [data-arrived] {
+    background-color: var(--tv-butter);
+  }
+}
+
 /* ── 채팅 스트림의 결 ─────────────────────────────────────────────
    ★ **토큰에는 애니메이션을 안 건다.** 한때 낱말마다 `<span>` 으로 쪼개 흐릿하게
    떠오르게 했는데, 그것이 스르륵이 아니라 **번쩍**으로 읽혔다 — 초점을 잡는 동안

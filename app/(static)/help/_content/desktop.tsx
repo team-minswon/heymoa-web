@@ -7,7 +7,7 @@ import { DESKTOP_RELEASES_URL } from "@/lib/desktop/downloads";
 
 /** 터미널에 그대로 옮겨 쓰는 명령. 문단 안에 둔다 — 어두운 코드 상자는 안 쓴다. */
 const CODE =
-  "rounded-[6px] bg-[var(--tv-lav-soft)] px-1.5 py-0.5 font-mono text-[0.92em] text-[var(--tv-ink)]";
+  "rounded-[6px] bg-[var(--tv-lav-soft)] px-1.5 py-0.5 font-mono text-[0.92em] text-[var(--tv-ink)] help-fade hover:bg-[var(--tv-lav)]";
 
 const RELEASES = (
   <a

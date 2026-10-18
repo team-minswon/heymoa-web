@@ -33,7 +33,7 @@ export function AnchorCopy({ id, title }: { id: string; title: string }) {
         }
       }}
       className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-[8px] text-[var(--tv-muted)] transition-[opacity,color,background-color] duration-150 hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)] motion-reduce:transition-none",
+        "grid size-8 shrink-0 place-items-center rounded-[8px] text-[var(--tv-muted)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)] motion-reduce:transition-none",
         copied
           ? "text-[var(--tv-brand-deep)] opacity-100"
           : "opacity-0 group-focus-within/heading:opacity-100 group-hover/heading:opacity-100",

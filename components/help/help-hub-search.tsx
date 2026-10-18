@@ -157,7 +157,7 @@ export function HelpHubInput() {
             }
           }}
           className={cn(
-            "h-14 w-full min-w-0 rounded-[16px] border border-[var(--tv-rule-strong)] bg-white pr-24 pl-12 text-[16px] text-[var(--tv-ink)] transition-colors duration-150 placeholder:text-[var(--tv-muted)] hover:border-[var(--tv-brand)] [&::-webkit-search-cancel-button]:hidden",
+            "h-14 w-full min-w-0 rounded-[16px] border border-[var(--tv-rule-strong)] bg-white pr-24 pl-12 text-[16px] text-[var(--tv-ink)] help-fade placeholder:text-[var(--tv-muted)] hover:border-[var(--tv-brand)] [&::-webkit-search-cancel-button]:hidden",
             FOCUS
           )}
         />
@@ -167,7 +167,7 @@ export function HelpHubInput() {
             aria-label="검색어 지우기"
             onClick={clear}
             className={cn(
-              "absolute top-1/2 right-2.5 grid size-9 -translate-y-1/2 place-items-center rounded-[10px] text-[var(--tv-muted)] transition-colors duration-150 hover:bg-[var(--tv-lav)] hover:text-[var(--tv-ink)]",
+              "absolute top-1/2 right-2.5 grid size-9 -translate-y-1/2 place-items-center rounded-[10px] text-[var(--tv-muted)] help-fade hover:bg-[var(--tv-lav)] hover:text-[var(--tv-ink)]",
               FOCUS
             )}
           >

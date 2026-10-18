@@ -53,20 +53,20 @@ export function HelpFigure({
     />
   );
   return (
-    <figure className={cn("m-0 flex flex-col gap-2", className)}>
+    <figure data-reveal="" className={cn("m-0 flex flex-col gap-2", className)}>
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label={`${alt} — 크게 보기`}
         className={cn(
-          "group/fig relative block cursor-zoom-in overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] p-0 shadow-[0_1px_2px_rgba(28,24,69,0.06),0_8px_24px_-12px_rgba(28,24,69,0.18)] transition-shadow duration-150 hover:shadow-[0_2px_4px_rgba(28,24,69,0.08),0_12px_28px_-12px_rgba(28,24,69,0.28)] motion-reduce:transition-none",
+          "group/fig relative block cursor-zoom-in overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] p-0 shadow-[0_1px_2px_rgba(28,24,69,0.06),0_8px_24px_-12px_rgba(28,24,69,0.18)] help-fade hover:shadow-[0_2px_4px_rgba(28,24,69,0.08),0_12px_28px_-12px_rgba(28,24,69,0.28)] motion-reduce:transition-none",
           FOCUS
         )}
       >
         {image()}
         <span
           aria-hidden
-          className="absolute top-3 right-3 grid size-8 place-items-center rounded-full bg-white/90 text-[var(--tv-ink)] opacity-0 transition-opacity duration-150 group-hover/fig:opacity-100 group-focus-visible/fig:opacity-100 motion-reduce:transition-none"
+          className="absolute top-3 right-3 grid size-8 place-items-center rounded-full bg-white/90 text-[var(--tv-ink)] opacity-0 help-fade group-hover/fig:opacity-100 group-focus-visible/fig:opacity-100 motion-reduce:transition-none"
         >
           <Maximize2 className="size-4" />
         </span>
@@ -79,7 +79,7 @@ export function HelpFigure({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           style={TV_VARS}
-          className="max-h-[92vh] w-auto max-w-[min(1240px,calc(100vw-2rem))] gap-3 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] sm:max-w-[min(1240px,calc(100vw-2rem))]"
+          className="max-h-[92vh] w-auto duration-200 max-w-[min(1240px,calc(100vw-2rem))] gap-3 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] sm:max-w-[min(1240px,calc(100vw-2rem))]"
         >
           <DialogTitle className="sr-only">{alt}</DialogTitle>
           <DialogDescription className="sr-only">

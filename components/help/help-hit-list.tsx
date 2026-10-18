@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { goSamePage } from "@/lib/help/scroll";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import type { HelpHit } from "@/lib/help/search-index";
 import { cn } from "@/lib/utils";
@@ -25,12 +26,23 @@ export function HelpHitRow({
     <Link
       id={id}
       href={hitHref(hit, query)}
-      onClick={onNavigate}
+      onClick={(event) => {
+        // 같은 페이지의 결과는 라우터 없이 부드럽게 그 자리로 간다(다른 페이지는 링크가 이동한다).
+        const plain =
+          event.button === 0 &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.shiftKey &&
+          !event.altKey;
+        if (plain && goSamePage(hitHref(hit, query)) !== false)
+          event.preventDefault();
+        onNavigate?.();
+      }}
       role={active === undefined ? undefined : "option"}
       aria-selected={active}
       tabIndex={active === undefined ? 0 : -1}
       className={cn(
-        "block rounded-[14px] border border-[var(--tv-rule)] bg-white px-4 py-3 transition-colors duration-150 hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",
+        "block rounded-[14px] border border-[var(--tv-rule)] bg-white px-4 py-3 help-fade hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",
         active && "border-[var(--tv-brand)] bg-[var(--tv-lav-soft)]",
         FOCUS
       )}

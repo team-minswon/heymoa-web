@@ -15,6 +15,7 @@ import {
 import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
 import { HelpHitRow, hitHref } from "@/components/help/help-hit-list";
 import { searchHelp } from "@/lib/help/search-index";
+import { goSamePage } from "@/lib/help/scroll";
 import { useHelpIndex } from "@/lib/help/use-help-index";
 import { cn } from "@/lib/utils";
 
@@ -60,9 +61,13 @@ export function HelpPalette() {
     return [...seen];
   }, [entries]);
 
+  // 같은 페이지의 결과면 라우터 없이 그 자리로 부드럽게 가고, 닫히며 포커스가 도착한 제목에 남게 한다.
+  const arrived = useRef<HTMLElement | null>(null);
   const go = (href: string) => {
     setOpen(false);
-    router.push(href);
+    const same = goSamePage(href);
+    arrived.current = same || null;
+    if (same === false) router.push(href);
   };
 
   useEffect(() => {
@@ -80,7 +85,7 @@ export function HelpPalette() {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[14px] font-bold text-[var(--tv-body)] transition-colors duration-150 hover:text-[var(--tv-brand-deep)] motion-reduce:transition-none",
+          "inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[14px] font-bold text-[var(--tv-body)] help-fade hover:text-[var(--tv-brand-deep)] motion-reduce:transition-none",
           FOCUS
         )}
       >
@@ -98,6 +103,7 @@ export function HelpPalette() {
         onOpenChange={(next) => {
           setOpen(next);
           if (next) {
+            arrived.current = null;
             setValue("");
             setSelected(0);
           }
@@ -105,8 +111,9 @@ export function HelpPalette() {
       >
         <DialogContent
           showCloseButton={false}
+          finalFocus={() => arrived.current ?? true}
           style={TV_VARS}
-          className="top-[18vh] max-w-[640px] translate-y-0 gap-0 rounded-[20px] bg-white p-0 text-[var(--tv-ink)] sm:max-w-[640px]"
+          className="top-[18vh] max-w-[640px] duration-200 translate-y-0 gap-0 rounded-[20px] bg-white p-0 text-[var(--tv-ink)] sm:max-w-[640px]"
         >
           <DialogTitle className="sr-only">사용 가이드 검색</DialogTitle>
           <DialogDescription className="sr-only">
@@ -179,7 +186,7 @@ export function HelpPalette() {
                     type="button"
                     onClick={() => go(path)}
                     className={cn(
-                      "rounded-[10px] px-3 py-2 text-left text-[15px] text-[var(--tv-body)] transition-colors duration-150 hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
+                      "rounded-[10px] px-3 py-2 text-left text-[15px] text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-brand-deep)]",
                       FOCUS
                     )}
                   >

@@ -10,6 +10,7 @@ export function HelpSteps({ children }: { children: readonly ReactNode[] }) {
       {children.map((step, index) => (
         <li
           key={index}
+          data-reveal=""
           className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-3"
         >
           <span

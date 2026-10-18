@@ -22,6 +22,7 @@ import { buildHelpIndex, searchHelp } from "@/lib/help/search-index";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/help",
   notFound: () => {
     throw new Error("not-found");
   },
