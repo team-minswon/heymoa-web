@@ -9,7 +9,6 @@ export * from "./meeting-approval/meeting-approval";
 export * from "./meeting-review/meeting-review";
 export * from "./notes/notes";
 export * from "./notifications/notifications";
-export * from "./project-terms/project-terms";
 export * from "./projects/projects";
 export * from "./proposals/proposals";
 export * from "./relations/relations";

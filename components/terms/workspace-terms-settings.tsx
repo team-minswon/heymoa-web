@@ -5,16 +5,23 @@ import { DataBoundary } from "@/components/ui/data-boundary";
 import { HelpTip } from "@/components/ui/help-tip";
 import {
   addWorkspaceTerm,
+  addWorkspaceTerms,
   deleteWorkspaceTerm,
   getAddWorkspaceTermMutationKey,
   getDeleteWorkspaceTermMutationKey,
   getGetWorkspaceTermsQueryKey,
   useGetWorkspaceTermsSuspense,
 } from "@/lib/api/generated/workspace-terms/workspace-terms";
-import { termOfResponse, termQueryOptions } from "@/lib/terms/term-list";
+import {
+  termOfResponse,
+  termQueryOptions,
+  type RejectReason,
+} from "@/lib/terms/term-list";
 import {
   isDictionaryBusy,
   useTermDictionary,
+  useTermProgress,
+  type BatchResult,
 } from "@/lib/terms/use-term-dictionary";
 
 export const WORKSPACE_TERMS_HELP =
@@ -23,7 +30,7 @@ export const WORKSPACE_TERMS_HELP =
 export const workspaceTermsScope = (workspaceId: string) =>
   `terms:workspace:${workspaceId}`;
 
-/** 워크스페이스 용어 사전을 읽는다. 설정 탭과 프로젝트 창(중복 알림)이 같은 캐시를 본다. */
+/** 워크스페이스 용어 사전을 읽는다. */
 export function useWorkspaceTerms(workspaceId: string) {
   const response = useGetWorkspaceTermsSuspense(workspaceId, {
     query: termQueryOptions(() =>
@@ -44,8 +51,24 @@ export function useWorkspaceTermDictionary(workspaceId: string) {
     queryKey: getGetWorkspaceTermsQueryKey(workspaceId),
     addKey: getAddWorkspaceTermMutationKey(),
     removeKey: getDeleteWorkspaceTermMutationKey(),
-    addTerm: async (term) =>
+    addOne: async (term) =>
       termOfResponse(await addWorkspaceTerm(workspaceId, { term })),
+    addBatch: async (terms): Promise<BatchResult> => {
+      const response = await addWorkspaceTerms(workspaceId, { terms });
+      const data =
+        response.status === 200 && response.data.success
+          ? response.data.data
+          : undefined;
+      if (!data) throw new Error("용어를 더하지 못했습니다.");
+      return {
+        ...data,
+        // 계약은 문자열로만 알려 준다 — 값 집합은 LIMIT · TOO_LONG · BLANK(server APP-1226)
+        rejected: data.rejected.map((item) => ({
+          term: item.term,
+          reason: item.reason as RejectReason,
+        })),
+      };
+    },
     removeTerm: (termId) => deleteWorkspaceTerm(workspaceId, termId),
   });
 }
@@ -53,19 +76,22 @@ export function useWorkspaceTermDictionary(workspaceId: string) {
 function WorkspaceTermsEditor({ workspaceId }: { workspaceId: string }) {
   const { terms, limit } = useWorkspaceTerms(workspaceId);
   const dictionary = useWorkspaceTermDictionary(workspaceId);
+  const progress = useTermProgress(workspaceTermsScope(workspaceId));
   return (
     <TermEditor
       inputId="workspace-term-input"
       terms={terms}
       limit={limit}
-      onAdd={dictionary.add}
+      onAddMany={dictionary.addMany}
       onRemove={dictionary.remove}
+      progress={progress}
     />
   );
 }
 
 /**
- * 설정의 「용어 사전」 탭 (APP-1189). 설명은 제목 옆 ?에 두고 본문은 칩 목록이 바로 보이게 한다. 편집은 멤버 전원이다.
+ * 설정의 「용어 사전」 탭 (APP-1189 · APP-1227). 사전은 워크스페이스 하나다. 설명은 제목 옆 ?에 두고 본문은 입력 카드와
+ * 칩 목록이 바로 보이게 한다. 편집은 멤버 전원이다.
  */
 export function WorkspaceTermsSettings({
   workspaceId,

@@ -6,19 +6,14 @@
  * OpenAPI spec version: 1.0.0
  */
 
-/**
- * 성공 응답 데이터
- */
-export type ProjectTermResponseData = {
+export type WorkspaceTermBatchResponseDataExistingItem = {
   /**
    * 용어의 13자리 TSID
    * @pattern ^[0-9A-HJKMNP-TV-Z]{13}$
    */
   termId: string;
-  /** 워크스페이스 사전에도 같은 용어가 있는지. 있으면 프로젝트에서 지워도 연결에는 계속 실린다 */
-  inWorkspace: boolean;
   /**
-   * 사용자가 쓴 표기의 용어
+   * 저장된 표기
    * @maxLength 40
    */
   term: string;

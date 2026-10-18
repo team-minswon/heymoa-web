@@ -25,8 +25,10 @@ import type {
 
 import type {
   AppErrorResponse,
+  TermBatchRequest,
   TermRequest,
   UnauthorizedResponse,
+  WorkspaceTermBatchResponse,
   WorkspaceTermListResponse,
   WorkspaceTermResponse,
 } from "../models";
@@ -730,4 +732,149 @@ export const useDeleteWorkspaceTerm = <
     getDeleteWorkspaceTermMutationOptions(options),
     queryClient
   );
+};
+export type addWorkspaceTermsResponse200 = {
+  data: WorkspaceTermBatchResponse;
+  status: 200;
+};
+
+export type addWorkspaceTermsResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type addWorkspaceTermsResponseSuccess = addWorkspaceTermsResponse200 & {
+  headers: Headers;
+};
+export type addWorkspaceTermsResponseError = addWorkspaceTermsResponse401 & {
+  headers: Headers;
+};
+
+export type addWorkspaceTermsResponse =
+  | addWorkspaceTermsResponseSuccess
+  | addWorkspaceTermsResponseError;
+
+export const getAddWorkspaceTermsUrl = (workspaceId: string) => {
+  return `/v1/workspaces/${workspaceId}/terms/batch`;
+};
+
+/**
+ * 워크스페이스 전사 용어 사전에 용어 여러 개를 한 번에 더한다. 한도를 넘어도 409 로 막지 않고 들어갈 만큼 넣은 뒤 나머지는 rejected 에 사유와 함께 돌려준다. 이미 있던 용어는 existing 이다. 항상 200.
+ * @summary 워크스페이스 용어 일괄 추가
+ */
+export const addWorkspaceTerms = async (
+  workspaceId: string,
+  termBatchRequest?: TermBatchRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<addWorkspaceTermsResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<addWorkspaceTermsResponse>(
+    getAddWorkspaceTermsUrl(workspaceId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(termBatchRequest),
+    }
+  );
+};
+
+export const getAddWorkspaceTermsMutationKey = () =>
+  ["addWorkspaceTerms"] as const;
+
+export const getAddWorkspaceTermsMutationOptions = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addWorkspaceTerms>>,
+    TError,
+    AddWorkspaceTermsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addWorkspaceTerms>>,
+  TError,
+  AddWorkspaceTermsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAddWorkspaceTermsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addWorkspaceTerms>>,
+    AddWorkspaceTermsMutationVariables
+  > = (props) => {
+    const { workspaceId, data } = props ?? {};
+
+    return addWorkspaceTerms(workspaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddWorkspaceTermsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addWorkspaceTerms>>
+>;
+export type AddWorkspaceTermsMutationBody = TermBatchRequest | undefined;
+export type AddWorkspaceTermsMutationError = UnauthorizedResponse;
+export type AddWorkspaceTermsMutationVariables = {
+  workspaceId: string;
+  data?: TermBatchRequest;
+};
+
+/**
+ * @summary 워크스페이스 용어 일괄 추가
+ */
+export const useAddWorkspaceTerms = <
+  TError = UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof addWorkspaceTerms>>,
+      TError,
+      AddWorkspaceTermsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof addWorkspaceTerms>>,
+  TError,
+  AddWorkspaceTermsMutationVariables,
+  TContext
+> => {
+  return useMutation(getAddWorkspaceTermsMutationOptions(options), queryClient);
 };

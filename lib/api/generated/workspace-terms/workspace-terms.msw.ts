@@ -11,6 +11,7 @@ import { HttpResponse, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
 import type {
+  WorkspaceTermBatchResponse,
   WorkspaceTermListResponse,
   WorkspaceTermResponse,
 } from "../models";
@@ -35,6 +36,17 @@ export const getAddWorkspaceTermResponseMock = (): WorkspaceTermResponse =>
       error: null,
     },
   ]);
+
+export const getAddWorkspaceTermsResponseMock =
+  (): WorkspaceTermBatchResponse => ({
+    success: true,
+    data: {
+      added: [{ termId: "0K9GVJT2C4Q22", term: "HeyMoa" }],
+      existing: [{ termId: "0K9GVJT2C4Q23", term: "Kafka" }],
+      rejected: [{ term: "Redis", reason: "LIMIT" }],
+    },
+    error: null,
+  });
 
 export const getGetWorkspaceTermsMockHandler = (
   overrideResponse?:
@@ -104,8 +116,33 @@ export const getDeleteWorkspaceTermMockHandler = (
     options
   );
 };
+
+export const getAddWorkspaceTermsMockHandler = (
+  overrideResponse?:
+    | WorkspaceTermBatchResponse
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0]
+      ) => Promise<WorkspaceTermBatchResponse> | WorkspaceTermBatchResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.post(
+    "*/v1/workspaces/:workspaceId/terms/batch",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAddWorkspaceTermsResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
 export const getWorkspaceTermsMock = () => [
   getGetWorkspaceTermsMockHandler(),
   getAddWorkspaceTermMockHandler(),
   getDeleteWorkspaceTermMockHandler(),
+  getAddWorkspaceTermsMockHandler(),
 ];

@@ -1,11 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/fetcher";
 import type { Term } from "@/lib/terms/term-list";
-import { useTermDictionary } from "@/lib/terms/use-term-dictionary";
+import {
+  resetBatchSupport,
+  useTermDictionary,
+  type BatchResult,
+} from "@/lib/terms/use-term-dictionary";
 
 const KEY = ["/v1/workspaces/W/terms"];
 let scope = 0;
@@ -37,8 +41,11 @@ function deferred<T>() {
 
 function setup(
   client: QueryClient,
-  addTerm: (term: string) => Promise<Term>,
-  removeTerm: (termId: string) => Promise<unknown> = async () => undefined
+  addOne: (term: string) => Promise<Term>,
+  options: {
+    addBatch?: (terms: string[]) => Promise<BatchResult>;
+    removeTerm?: (termId: string) => Promise<unknown>;
+  } = {}
 ) {
   const scopeId = `test:${(scope += 1)}`;
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -51,12 +58,22 @@ function setup(
         queryKey: KEY,
         addKey: ["addWorkspaceTerm"],
         removeKey: ["deleteWorkspaceTerm"],
-        addTerm,
-        removeTerm,
+        addOne,
+        addBatch:
+          options.addBatch ??
+          (async () => {
+            throw new Error("일괄을 쓰지 않는 시험");
+          }),
+        removeTerm: options.removeTerm ?? (async () => undefined),
       }),
     { wrapper }
   );
 }
+
+const apiError = (status: number, code: string) =>
+  new ApiError(status, { code, message: code, details: null }, null);
+
+beforeEach(resetBatchSupport);
 
 describe("useTermDictionary", () => {
   it("칩을 임시 id 로 먼저 세우고 응답 id 로 바꾸며, 재조회하지 않는다", async () => {
@@ -66,7 +83,7 @@ describe("useTermDictionary", () => {
     const reply = deferred<Term>();
     const { result } = setup(client, () => reply.promise);
 
-    act(() => result.current.add(" MCP "));
+    act(() => result.current.addMany([" MCP "]));
     await waitFor(() =>
       expect(termsOf(client).map((t) => t.term)).toEqual(["HeyMoa", "MCP"])
     );
@@ -76,6 +93,146 @@ describe("useTermDictionary", () => {
     await waitFor(() => expect(termsOf(client)[1].termId).toBe("2"));
     expect(invalidate).not.toHaveBeenCalled();
     expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it("여러 개는 일괄 한 번으로 보내고 칩을 한꺼번에 세운 뒤 응답 id 로 바꾼다", async () => {
+    const client = seed([]);
+    const reply = deferred<BatchResult>();
+    const addBatch = vi.fn(() => reply.promise);
+    const { result } = setup(
+      client,
+      async () => {
+        throw new Error("항목 추가는 부르지 않는다");
+      },
+      { addBatch }
+    );
+    const done = vi.fn();
+
+    act(() =>
+      result.current.addMany(["kubernetes", "k8s", "헬름 차트"], {
+        onDone: done,
+      })
+    );
+    await waitFor(() => expect(termsOf(client)).toHaveLength(3));
+    expect(addBatch).toHaveBeenCalledTimes(1);
+    expect(addBatch).toHaveBeenCalledWith(["kubernetes", "k8s", "헬름 차트"]);
+
+    await act(async () =>
+      reply.resolve({
+        added: [
+          { termId: "a", term: "kubernetes" },
+          { termId: "b", term: "k8s" },
+        ],
+        existing: [],
+        rejected: [{ term: "헬름 차트", reason: "LIMIT" }],
+      })
+    );
+    // 거절된 칩은 빠지고, 나머지는 실제 id 를 받는다
+    await waitFor(() =>
+      expect(termsOf(client).map((t) => t.termId)).toEqual(["a", "b"])
+    );
+    expect(done).toHaveBeenCalledWith({
+      added: 2,
+      existing: 0,
+      rejected: [{ term: "헬름 차트", reason: "LIMIT" }],
+      failed: [],
+    });
+  });
+
+  it("100개를 넘으면 100개씩 나눠 보낸다", async () => {
+    const client = seed([]);
+    const addBatch = vi.fn(
+      async (terms: string[]): Promise<BatchResult> => ({
+        added: terms.map((term) => ({ termId: `id-${term}`, term })),
+        existing: [],
+        rejected: [],
+      })
+    );
+    const { result } = setup(
+      client,
+      async () => {
+        throw new Error("x");
+      },
+      { addBatch }
+    );
+    const terms = Array.from({ length: 150 }, (_, i) => `용어${i}`);
+    act(() => result.current.addMany(terms));
+    await waitFor(() => expect(addBatch).toHaveBeenCalledTimes(2));
+    expect(addBatch.mock.calls.map(([part]) => part.length)).toEqual([100, 50]);
+    await waitFor(() => expect(termsOf(client)[0].termId).toBe("id-용어0"));
+    expect(termsOf(client)).toHaveLength(150);
+  });
+
+  it("서버가 일괄을 모르면(404/405) 항목 추가를 직렬로 부르고 다음부터는 일괄을 시도하지 않는다", async () => {
+    const client = seed([]);
+    const addBatch = vi.fn(async (): Promise<BatchResult> => {
+      throw apiError(404, "NOT_FOUND");
+    });
+    const calls: string[] = [];
+    const { result } = setup(
+      client,
+      async (term) => {
+        calls.push(term);
+        return { termId: `id-${term}`, term };
+      },
+      { addBatch }
+    );
+    act(() => result.current.addMany(["A", "B", "C"]));
+    await waitFor(() => expect(calls).toEqual(["A", "B", "C"]));
+    await waitFor(() =>
+      expect(termsOf(client).map((t) => t.termId)).toEqual([
+        "id-A",
+        "id-B",
+        "id-C",
+      ])
+    );
+    act(() => result.current.addMany(["D", "E"]));
+    await waitFor(() => expect(calls).toEqual(["A", "B", "C", "D", "E"]));
+    expect(addBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("직렬 도중 실패하면 실패한 것만 돌려주고 성공한 것은 남긴다", async () => {
+    const client = seed([]);
+    const addBatch = vi.fn(async (): Promise<BatchResult> => {
+      throw apiError(405, "METHOD_NOT_ALLOWED");
+    });
+    const done = vi.fn();
+    const { result } = setup(
+      client,
+      async (term) => {
+        if (term === "B") throw apiError(500, "INTERNAL_ERROR");
+        return { termId: `id-${term}`, term };
+      },
+      { addBatch }
+    );
+    act(() => result.current.addMany(["A", "B", "C"], { onDone: done }));
+    await waitFor(() => expect(done).toHaveBeenCalled());
+    expect(done.mock.calls[0][0]).toMatchObject({
+      added: 1,
+      failed: ["B", "C"],
+    });
+    await waitFor(() =>
+      expect(termsOf(client)).toEqual([{ termId: "id-A", term: "A" }])
+    );
+  });
+
+  it("하나도 못 넣고 실패하면 칩을 되돌리고 실패 콜백으로 보낸 용어를 돌려준다", async () => {
+    const client = seed([]);
+    const failed = vi.fn();
+    const { result } = setup(
+      client,
+      async () => {
+        throw new Error("x");
+      },
+      {
+        addBatch: async () => {
+          throw apiError(500, "INTERNAL_ERROR");
+        },
+      }
+    );
+    act(() => result.current.addMany(["A", "B"], { onFailed: failed }));
+    await waitFor(() => expect(failed).toHaveBeenCalledWith(["A", "B"]));
+    expect(termsOf(client)).toHaveLength(0);
   });
 
   it("요청을 한 줄로 보내고, 실패한 추가만 되돌리며 뒤의 칩은 깜빡이지 않는다", async () => {
@@ -88,8 +245,8 @@ describe("useTermDictionary", () => {
     });
 
     act(() => {
-      result.current.add("A");
-      result.current.add("B");
+      result.current.addMany(["A"]);
+      result.current.addMany(["B"]);
     });
     await waitFor(() => expect(termsOf(client)).toHaveLength(2));
     // 앞 요청이 끝나기 전에 뒤 요청은 나가지 않는다
@@ -109,9 +266,9 @@ describe("useTermDictionary", () => {
     const client = seed([]);
     const reply = deferred<Term>();
     const removeTerm = vi.fn(async () => undefined);
-    const { result } = setup(client, () => reply.promise, removeTerm);
+    const { result } = setup(client, () => reply.promise, { removeTerm });
 
-    act(() => result.current.add("A"));
+    act(() => result.current.addMany(["A"]));
     await waitFor(() => expect(termsOf(client)).toHaveLength(1));
     act(() => result.current.remove(termsOf(client)[0].termId));
     await waitFor(() => expect(termsOf(client)).toHaveLength(0));
@@ -127,48 +284,29 @@ describe("useTermDictionary", () => {
       termId: "1",
       term: "MCP",
     }));
-    act(() => result.current.add("mcp"));
+    act(() => result.current.addMany(["mcp"]));
     await waitFor(() =>
       expect(termsOf(client)).toEqual([{ termId: "1", term: "MCP" }])
     );
   });
 
-  it("409 면 줄이 빈 뒤 한 번만 다시 받는다", async () => {
+  it("한도 거절(409·LIMIT)이면 줄이 빈 뒤 한 번만 다시 받는다", async () => {
     const client = seed([]);
     const refetch = vi
       .spyOn(client, "refetchQueries")
       .mockResolvedValue(undefined);
-    const conflict = new ApiError(
-      409,
-      { code: "TERM_LIMIT_EXCEEDED", message: "한도", details: null },
-      null
-    );
     const { result } = setup(client, async () => {
-      throw conflict;
+      throw apiError(409, "TERM_LIMIT_EXCEEDED");
     });
-    act(() => result.current.add("A"));
+    const done = vi.fn();
+    act(() => result.current.addMany(["A"], { onDone: done }));
     await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1));
-    expect(termsOf(client)).toHaveLength(0);
-  });
-});
-
-describe("useTermDictionary 실패 콜백", () => {
-  it("연달아 더하다 앞 것만 실패해도 그 용어를 돌려준다", async () => {
-    const client = seed([]);
-    const replies = [deferred<Term>(), deferred<Term>()];
-    let call = 0;
-    const { result } = setup(client, () => replies[call++].promise);
-    const failed: string[] = [];
-    act(() => {
-      result.current.add("A", (term) => failed.push(term));
-      result.current.add("B", (term) => failed.push(term));
+    expect(done).toHaveBeenCalledWith({
+      added: 0,
+      existing: 0,
+      rejected: [{ term: "A", reason: "LIMIT" }],
+      failed: [],
     });
-    await act(async () => replies[0].reject(new Error("boom")));
-    await waitFor(() => expect(failed).toEqual(["A"]));
-    await act(async () => replies[1].resolve({ termId: "b", term: "B" }));
-    await waitFor(() =>
-      expect(termsOf(client)).toEqual([{ termId: "b", term: "B" }])
-    );
-    expect(failed).toEqual(["A"]);
+    expect(termsOf(client)).toHaveLength(0);
   });
 });

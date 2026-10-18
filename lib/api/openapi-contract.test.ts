@@ -304,7 +304,9 @@ describe("contract sync 2026-07-29", () => {
     // `workspaces/{workspaceId}/terms`·`.../terms/{termId}`·`.../projects/{projectId}/terms`·
     // `.../projects/{projectId}/terms/{termId}`·`notes/{noteId}/context`.
     // 합치면 77 → 84 (멤버 표시 이름 1 + 답변 읽음 1 + 용어 사전 넷 + 회의 맥락 1).
-    expect(paths).toHaveLength(84);
+    // APP-1227(server APP-1226)에서 프로젝트 용어 사전 둘이 사라지고(`.../projects/{projectId}/terms`·`.../terms/{termId}`)
+    // 일괄 추가 `workspaces/{workspaceId}/terms/batch` 하나가 늘었다 (84 → 83).
+    expect(paths).toHaveLength(83);
     expect(paths.filter((path) => path.startsWith("/internal"))).toEqual([]);
   });
 

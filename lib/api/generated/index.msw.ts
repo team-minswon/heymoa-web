@@ -9,7 +9,6 @@ export { getMeetingApprovalMock } from "./meeting-approval/meeting-approval.msw"
 export { getMeetingReviewMock } from "./meeting-review/meeting-review.msw";
 export { getNotesMock } from "./notes/notes.msw";
 export { getNotificationsMock } from "./notifications/notifications.msw";
-export { getProjectTermsMock } from "./project-terms/project-terms.msw";
 export { getProjectsMock } from "./projects/projects.msw";
 export { getProposalsMock } from "./proposals/proposals.msw";
 export { getRelationsMock } from "./relations/relations.msw";
