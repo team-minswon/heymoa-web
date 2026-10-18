@@ -88,7 +88,7 @@ export function HelpClip({
 
   return (
     <figure ref={figure} data-reveal="" className="m-0 flex flex-col gap-2">
-      <div className="relative overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] shadow-[0_1px_2px_rgba(28,24,69,0.06),0_8px_24px_-12px_rgba(28,24,69,0.18)]">
+      <div className="relative overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] shadow-(--help-shadow)">
         <video
           ref={video}
           muted

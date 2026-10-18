@@ -17,8 +17,9 @@ import {
 import { HelpMotion } from "@/components/help/help-motion";
 import { HelpPalette } from "@/components/help/help-palette";
 import { JsonLd } from "@/components/help/json-ld";
-import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
+import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { siteConfig } from "@/lib/site";
+import { HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
@@ -55,7 +56,7 @@ export default async function HelpGroupPage({ params }: Props) {
   if (!group) notFound();
   const topics = helpTopicsOfGroup(group.slug);
   return (
-    <div style={TV_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
+    <div style={HELP_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
       <HelpMotion />
       <JsonLd
         data={{

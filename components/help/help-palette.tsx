@@ -12,11 +12,12 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
+import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { HelpHitRow, hitHref } from "@/components/help/help-hit-list";
 import { searchHelp } from "@/lib/help/search-index";
 import { goSamePage } from "@/lib/help/scroll";
 import { useHelpIndex } from "@/lib/help/use-help-index";
+import { HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 const isMac = () =>
@@ -119,7 +120,7 @@ export function HelpPalette() {
         <DialogContent
           showCloseButton={false}
           finalFocus={() => arrived.current ?? true}
-          style={TV_VARS}
+          style={HELP_VARS}
           className="top-[18vh] max-w-[640px] duration-200 translate-y-0 gap-0 rounded-[20px] bg-white p-0 text-[var(--tv-ink)] sm:max-w-[640px]"
         >
           <DialogTitle className="sr-only">사용 가이드 검색</DialogTitle>

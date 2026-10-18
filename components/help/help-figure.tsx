@@ -9,9 +9,10 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
+import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { helpAssetUrl } from "@/lib/help/asset-url";
 import { HELP_MEDIA } from "@/lib/help/media-manifest";
+import { HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 /**
@@ -59,7 +60,7 @@ export function HelpFigure({
         onClick={() => setOpen(true)}
         aria-label={`${alt} — 크게 보기`}
         className={cn(
-          "group/fig relative block cursor-zoom-in overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] p-0 shadow-[0_1px_2px_rgba(28,24,69,0.06),0_8px_24px_-12px_rgba(28,24,69,0.18)] help-fade hover:shadow-[0_2px_4px_rgba(28,24,69,0.08),0_12px_28px_-12px_rgba(28,24,69,0.28)] motion-reduce:transition-none",
+          "group/fig relative block cursor-zoom-in overflow-hidden rounded-[16px] border border-[var(--tv-rule)] bg-[var(--tv-lav-soft)] p-0 shadow-(--help-shadow) help-fade hover:shadow-(--help-shadow-hover) motion-reduce:transition-none",
           FOCUS
         )}
       >
@@ -78,7 +79,7 @@ export function HelpFigure({
       ) : null}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          style={TV_VARS}
+          style={HELP_VARS}
           className="max-h-[92vh] w-auto duration-200 max-w-[min(1240px,calc(100vw-2rem))] gap-3 overflow-auto rounded-[20px] bg-white p-3 text-[var(--tv-ink)] sm:max-w-[min(1240px,calc(100vw-2rem))]"
         >
           <DialogTitle className="sr-only">{alt}</DialogTitle>

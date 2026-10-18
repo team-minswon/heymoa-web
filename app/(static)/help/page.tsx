@@ -24,8 +24,9 @@ import {
 import { HelpMotion } from "@/components/help/help-motion";
 import { JsonLd } from "@/components/help/json-ld";
 import { LegacyHashRedirect } from "@/components/help/legacy-hash-redirect";
-import { FOCUS, TV_VARS } from "@/components/heymoa/landing/tokens";
+import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { siteConfig } from "@/lib/site";
+import { HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
@@ -78,7 +79,7 @@ export default function HelpHubPage() {
     (topic) => helpAxisOf(topic) === "situation"
   );
   return (
-    <div style={TV_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
+    <div style={HELP_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
       <HelpMotion />
       <JsonLd
         data={{
@@ -117,7 +118,11 @@ export default function HelpHubPage() {
                 <li key={topic.slug} data-reveal="">
                   <Link
                     href={helpPathOf(topic)}
-                    className={cn(card, "bg-[var(--tv-lav-soft)] p-7", FOCUS)}
+                    className={cn(
+                      card,
+                      "bg-[var(--tv-lav-soft)] p-7 hover:bg-[var(--tv-lav)]",
+                      FOCUS
+                    )}
                   >
                     <span className="text-[22px] leading-[1.3] font-extrabold tracking-[-0.03em] break-keep text-[var(--tv-ink)]">
                       {topic.title}

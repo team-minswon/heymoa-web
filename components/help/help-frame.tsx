@@ -8,7 +8,6 @@ import {
   H2,
   LEAD,
   RADIUS,
-  TV_VARS,
 } from "@/components/heymoa/landing/tokens";
 import { AnchorCopy } from "@/components/help/anchor-copy";
 import { HelpMotion } from "@/components/help/help-motion";
@@ -19,6 +18,7 @@ import { HelpTopicList } from "@/components/help/help-topic-list";
 import { helpGroups } from "@/app/(static)/help/_content/groups";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
 import type { HelpAxis, HelpTopic } from "@/app/(static)/help/_content/types";
+import { HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 /**
@@ -78,7 +78,7 @@ export function HelpPageFrame({
 }) {
   const outline = topic.sections.map(({ id, title }) => ({ id, title }));
   return (
-    <div style={TV_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
+    <div style={HELP_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
       <HelpMotion />
       <HelpHeader
         label={

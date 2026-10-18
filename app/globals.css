@@ -118,16 +118,66 @@
 
      얼굴에 글자를 얹지 않으므로 대비 하한이 없다 — 글자를 다시 넣으려면 채도부터 내려야 한다.
      뒤 다섯(-soft)은 열한 번째 화자부터 되돌아 쓰는 자리다. */
-  --el-orb-mint: radial-gradient(circle at 28% 22%, hsl(163 62% 88%), hsl(163 60% 68%) 45%, hsl(211 66% 62%));
-  --el-orb-peach: radial-gradient(circle at 28% 22%, hsl(23 62% 88%), hsl(23 60% 68%) 45%, hsl(6 66% 62%));
-  --el-orb-lavender: radial-gradient(circle at 28% 22%, hsl(264 62% 88%), hsl(264 60% 68%) 45%, hsl(325 66% 62%));
-  --el-orb-sky: radial-gradient(circle at 28% 22%, hsl(210 62% 88%), hsl(210 60% 68%) 45%, hsl(254 66% 62%));
-  --el-orb-rose: radial-gradient(circle at 28% 22%, hsl(345 62% 88%), hsl(345 60% 68%) 45%, hsl(335 66% 62%));
-  --el-orb-mint-soft: radial-gradient(circle at 28% 22%, hsl(163 58% 94%), hsl(163 52% 81%) 45%, hsl(211 56% 76%));
-  --el-orb-peach-soft: radial-gradient(circle at 28% 22%, hsl(23 58% 94%), hsl(23 52% 81%) 45%, hsl(6 56% 76%));
-  --el-orb-lavender-soft: radial-gradient(circle at 28% 22%, hsl(264 58% 94%), hsl(264 52% 81%) 45%, hsl(325 56% 76%));
-  --el-orb-sky-soft: radial-gradient(circle at 28% 22%, hsl(210 58% 94%), hsl(210 52% 81%) 45%, hsl(254 56% 76%));
-  --el-orb-rose-soft: radial-gradient(circle at 28% 22%, hsl(345 58% 94%), hsl(345 52% 81%) 45%, hsl(335 56% 76%));
+  --el-orb-mint: radial-gradient(
+    circle at 28% 22%,
+    hsl(163 62% 88%),
+    hsl(163 60% 68%) 45%,
+    hsl(211 66% 62%)
+  );
+  --el-orb-peach: radial-gradient(
+    circle at 28% 22%,
+    hsl(23 62% 88%),
+    hsl(23 60% 68%) 45%,
+    hsl(6 66% 62%)
+  );
+  --el-orb-lavender: radial-gradient(
+    circle at 28% 22%,
+    hsl(264 62% 88%),
+    hsl(264 60% 68%) 45%,
+    hsl(325 66% 62%)
+  );
+  --el-orb-sky: radial-gradient(
+    circle at 28% 22%,
+    hsl(210 62% 88%),
+    hsl(210 60% 68%) 45%,
+    hsl(254 66% 62%)
+  );
+  --el-orb-rose: radial-gradient(
+    circle at 28% 22%,
+    hsl(345 62% 88%),
+    hsl(345 60% 68%) 45%,
+    hsl(335 66% 62%)
+  );
+  --el-orb-mint-soft: radial-gradient(
+    circle at 28% 22%,
+    hsl(163 58% 94%),
+    hsl(163 52% 81%) 45%,
+    hsl(211 56% 76%)
+  );
+  --el-orb-peach-soft: radial-gradient(
+    circle at 28% 22%,
+    hsl(23 58% 94%),
+    hsl(23 52% 81%) 45%,
+    hsl(6 56% 76%)
+  );
+  --el-orb-lavender-soft: radial-gradient(
+    circle at 28% 22%,
+    hsl(264 58% 94%),
+    hsl(264 52% 81%) 45%,
+    hsl(325 56% 76%)
+  );
+  --el-orb-sky-soft: radial-gradient(
+    circle at 28% 22%,
+    hsl(210 58% 94%),
+    hsl(210 52% 81%) 45%,
+    hsl(254 56% 76%)
+  );
+  --el-orb-rose-soft: radial-gradient(
+    circle at 28% 22%,
+    hsl(345 58% 94%),
+    hsl(345 52% 81%) 45%,
+    hsl(335 56% 76%)
+  );
 
   --el-success: #16a34a;
   --el-error: #dc2626;
@@ -418,6 +468,12 @@
   --help-fast: 150ms;
   --help-base: 200ms;
   --help-ease: ease-out;
+  /* 그림자는 중립 잉크(`--el-ink`) 색이다. */
+  --help-shadow:
+    0 1px 2px rgb(12 10 9 / 0.06), 0 8px 24px -12px rgb(12 10 9 / 0.18);
+  --help-shadow-hover:
+    0 2px 4px rgb(12 10 9 / 0.08), 0 12px 28px -12px rgb(12 10 9 / 0.28);
+  --help-shadow-lift: 0 10px 24px -14px rgb(12 10 9 / 0.32);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -443,7 +499,7 @@
   @media (hover: hover) {
     .help-lift:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 24px -14px rgba(28, 24, 69, 0.32);
+      box-shadow: var(--help-shadow-lift);
     }
   }
 
