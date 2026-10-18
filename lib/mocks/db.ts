@@ -1788,7 +1788,8 @@ function createSeedState(): StoreState {
       {
         feedbackId: "01K0000000031",
         kind: "INCIDENT",
-        message: "녹음 중에 전사가 몇 분 멈췄어요. 데스크톱 앱이고 화면은 노트 상세였습니다.",
+        message:
+          "녹음 중에 전사가 몇 분 멈췄어요. 데스크톱 앱이고 화면은 노트 상세였습니다.",
         answer:
           "불편을 드려 죄송합니다. 네트워크가 끊긴 구간이 있었고, 다시 연결되며 이어서 받아쓰도록 고쳤습니다.",
         answeredAt: "2026-10-17T09:30:00.000Z",
@@ -3301,6 +3302,16 @@ export const mockDb = {
     };
     state.workspaces.push(workspace);
     attachWorkspaceState(workspace.workspaceId, workspace.role);
+    // 서버는 워크스페이스를 만들 때 「일반」 프로젝트를 함께 만든다(APP-1179).
+    const createdAt = nextTimestamp();
+    state.projects.push({
+      projectId: nextId(),
+      workspaceId: workspace.workspaceId,
+      name: "일반",
+      description: null,
+      createdAt,
+      updatedAt: createdAt,
+    });
     return copy(workspace);
   },
 

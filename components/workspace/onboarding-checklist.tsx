@@ -50,11 +50,9 @@ export type OnboardingChecklistModel = {
  */
 export function useOnboardingChecklist({
   workspaceId,
-  projectCount,
   isWorkspacePending,
 }: {
   workspaceId: string;
-  projectCount: number;
   isWorkspacePending: boolean;
 }): OnboardingChecklistModel | null {
   const userId = useAuth().user?.userId;
@@ -89,7 +87,6 @@ export function useOnboardingChecklist({
     isWorkspacePending || !page
       ? null
       : {
-          hasProject: projectCount > 0,
           hasRecording: hasRecordedMeeting(page),
         };
   const factsReady = facts !== null;
@@ -104,10 +101,7 @@ export function useOnboardingChecklist({
     });
   }, [userId, undecided, factsReady, hasRecording]);
 
-  const done = completedSteps(
-    state,
-    facts ?? { hasProject: projectCount > 0, hasRecording: false }
-  );
+  const done = completedSteps(state, facts ?? { hasRecording: false });
   const progress = requiredProgress(done);
   const finished = progress.done === progress.total;
 
@@ -157,16 +151,13 @@ export function OnboardingChecklist({
   model: OnboardingChecklistModel;
 }) {
   const router = useRouter();
-  const { openCreateProject, requestNewMeeting, openSettings } =
-    useWorkspaceShell();
+  const { requestNewMeeting, openSettings } = useWorkspaceShell();
   const { userId, done, endedNoteId, hasMoreNotes, retry } = model;
   const progress = requiredProgress(done);
   const allDone = progress.done === progress.total;
 
   const actionOf = (id: ChecklistStepId): (() => void) | undefined => {
     switch (id) {
-      case "project":
-        return openCreateProject;
       case "record":
         return requestNewMeeting;
       case "confirm":

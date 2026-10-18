@@ -4,7 +4,8 @@ import type { NoteListResponseData } from "@/lib/api/generated/models";
 /**
  * 「시작하기」 체크리스트 (APP-1023).
  *
- * **완료 여부는 되도록 서버 데이터로 본다** — 프로젝트가 있는가, 기록을 시작한 회의가 있는가.
+ * **완료 여부는 되도록 서버 데이터로 본다** — 기록을 시작한 회의가 있는가. (프로젝트 만들기 단계는 뺐다 —
+ * 서버가 워크스페이스마다 「일반」 프로젝트를 만들어 줘서(APP-1179) 새 사용자는 시작부터 끝난 단계가 된다.)
  * 브라우저와 데스크톱 앱은 localStorage를 나눠 쓰지 않아서(`persist:heymoa` 파티션) 기기에만
  * 적어 두면 한쪽에서 한 일이 다른 쪽에서 안 한 것으로 보인다. 서버로 알 수 없는 둘(요약 검토,
  * 초대)만 「이 기기에서 해 봤다」로 적는다.
@@ -13,7 +14,6 @@ import type { NoteListResponseData } from "@/lib/api/generated/models";
  * 있다 — 기기를 넘어 맞추려면 서버에 사용자 설정이 있어야 해서 지금은 받아들인다.
  */
 export const CHECKLIST_STEPS = [
-  { id: "project", label: "프로젝트 만들기", optional: false },
   { id: "record", label: "첫 회의 기록하기", optional: false },
   { id: "confirm", label: "요약 검토 완료하기", optional: false },
   // 혼자 쓰는 사람도 끝까지 갈 수 있게 초대는 선택이다 — 필수 셋을 마치면 닫힌다
@@ -45,7 +45,6 @@ export const STEP_OF_EVENT: Partial<Record<AnalyticsEvent, ChecklistStepId>> = {
 };
 
 export type ChecklistFacts = {
-  hasProject: boolean;
   hasRecording: boolean;
 };
 
@@ -53,15 +52,22 @@ export type ChecklistFacts = {
  * 기록을 시작한 회의가 있는가. 목록은 첫 쪽(30개)만 읽는다 — 뒤에 더 있는 워크스페이스는 새 워크스페이스가
  * 아니라서, 첫 쪽에 기록이 안 보여도 있는 것으로 본다. 아니면 기존 사용자에게 체크리스트가 열린다(codex 리뷰).
  */
-export function hasRecordedMeeting(page: Pick<NoteListResponseData, "notes" | "hasMore">) {
-  return page.hasMore || page.notes.some((note) => note.meetingStartedAt !== null);
+export function hasRecordedMeeting(
+  page: Pick<NoteListResponseData, "notes" | "hasMore">
+) {
+  return (
+    page.hasMore || page.notes.some((note) => note.meetingStartedAt !== null)
+  );
 }
 
 /**
  * 체크리스트를 그릴지. 열려 있으면 그린다. **처음 판단하기 전에 목록을 못 읽었을 때도** 실패와 다시 시도를
  * 보이려고 그린다 — 안 그리면 판단이 영영 안 나서 새 사용자에게 시작 안내가 조용히 사라진다(codex 리뷰).
  */
-export function isChecklistVisible(state: ChecklistState | null, failed: boolean) {
+export function isChecklistVisible(
+  state: ChecklistState | null,
+  failed: boolean
+) {
   return state?.status === "open" || (state === null && failed);
 }
 
@@ -70,7 +76,6 @@ export function completedSteps(
   facts: ChecklistFacts
 ) {
   const done = new Set<ChecklistStepId>(state?.done ?? []);
-  if (facts.hasProject) done.add("project");
   if (facts.hasRecording) done.add("record");
   return done;
 }
@@ -81,7 +86,9 @@ export function completedSteps(
  * 1/5」를 들이밀지 않는다. 그들도 계정 메뉴의 「시작 안내 다시 보기」로 열 수 있다.
  * 정한 값은 적어 두고 다시 정하지 않는다 — 닫힌 사람에게는 목록도 다시 읽지 않는다.
  */
-export function firstChecklistStatus(facts: Pick<ChecklistFacts, "hasRecording">) {
+export function firstChecklistStatus(
+  facts: Pick<ChecklistFacts, "hasRecording">
+) {
   return facts.hasRecording ? ("dismissed" as const) : ("open" as const);
 }
 
