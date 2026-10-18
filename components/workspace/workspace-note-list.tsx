@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Loader2Icon, RefreshCcw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { RefreshCcw } from "lucide-react";
 import { toast } from "@/lib/ui/toast";
 
 import { NoteListRow } from "@/components/workspace/note-list-row";
 import { WorkspaceOnboarding } from "@/components/workspace/workspace-onboarding";
 import { Button } from "@/components/ui/button";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteListResponseDataNotesItem } from "@/lib/api/generated/models";
 import { isMeetingActive } from "@/lib/notes/meeting-state";
@@ -51,6 +52,30 @@ export function WorkspaceNoteList({
   // 목록 전체가 이 타이머 하나만 공유하되, 각 활성 회의의 다음 경과 분 경계 중 가장 가까운
   // 시각에 깨운다. 시작 초가 다른 회의도 최대 59초 늦게 바뀌지 않는다.
   const now = useAlignedNow(60_000, true, activeMeetingStarts);
+
+  /**
+   * 「더 보기」가 끝난 순간 이미 있던 행. 그 뒤에 붙은 행만 짧게 들어온다(APP-1215). 폴링 · 범위 바꾸기로 바뀐 목록은 움직이지
+   * 않는다 — 불러오는 중이던 직전 렌더에서 넘어온 변화만 본다.
+   */
+  const ids = notes.map((note) => note.noteId).join(",");
+  const [shown, setShown] = useState<{
+    ids: string;
+    loadingMore: boolean;
+    before: Set<string> | null;
+  }>({ ids, loadingMore: isLoadingMore, before: null });
+  if (shown.ids !== ids || shown.loadingMore !== isLoadingMore) {
+    setShown({
+      ids,
+      loadingMore: isLoadingMore,
+      before:
+        shown.ids === ids
+          ? shown.before
+          : // 앞에 이어 붙은 것만 — 더 보기 도중 범위를 바꾸면 목록이 통째로 바뀐다.
+            shown.loadingMore && ids.startsWith(shown.ids)
+            ? new Set(shown.ids.split(","))
+            : null,
+    });
+  }
 
   useEffect(() => {
     retryRef.current = onRetry;
@@ -142,6 +167,9 @@ export function WorkspaceNoteList({
                 workspaceId={workspaceId}
                 note={note}
                 now={now}
+                arrived={
+                  shown.before !== null && !shown.before.has(note.noteId)
+                }
               />
             ))}
           </div>
@@ -149,21 +177,13 @@ export function WorkspaceNoteList({
       ))}
       {hasMore && onLoadMore ? (
         <div className="flex justify-center pt-6">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            disabled={isLoadingMore}
+          <LoadMoreButton
+            loading={isLoadingMore}
+            loadingLabel="이전 기록 불러오는 중"
             onClick={onLoadMore}
           >
-            {isLoadingMore ? (
-              <>
-                <Loader2Icon className="animate-spin" /> 불러오는 중
-              </>
-            ) : (
-              "이전 기록 더 보기"
-            )}
-          </Button>
+            이전 기록 더 보기
+          </LoadMoreButton>
         </div>
       ) : null}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2Icon, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -15,6 +15,7 @@ import { useTaskUpdate } from "@/components/tasks/use-task-update";
 import { assigneeKey } from "@/lib/assignees/describe";
 import { Button } from "@/components/ui/button";
 import { InlineRetry } from "@/components/ui/inline-retry";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -414,21 +415,13 @@ export function AllTasks({ workspaceId }: { workspaceId: string }) {
                 )}
                 {hasMore ? (
                   <div className="mt-4 flex justify-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                      disabled={isLoadingMore}
+                    <LoadMoreButton
+                      loading={isLoadingMore}
+                      loadingLabel="할 일 더 불러오는 중"
                       onClick={() => setPages((current) => current + 1)}
                     >
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2Icon className="animate-spin" /> 불러오는 중
-                        </>
-                      ) : (
-                        "할 일 더 보기"
-                      )}
-                    </Button>
+                      할 일 더 보기
+                    </LoadMoreButton>
                   </div>
                 ) : null}
               </div>

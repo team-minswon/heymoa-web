@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -801,16 +802,15 @@ function UsageHistory({
             </p>
           ) : null}
           {usages.length > visible || query.hasNextPage ? (
-            <Button
+            <LoadMoreButton
               variant="ghost"
-              size="sm"
-              className="mt-2 h-7 px-2 text-xs"
+              className="mt-2 h-7 rounded-control px-2 text-xs"
               loading={query.isFetchingNextPage}
-              disabled={query.isFetchingNextPage}
+              loadingLabel="사용 내역 더 불러오는 중"
               onClick={showMore}
             >
               더 보기
-            </Button>
+            </LoadMoreButton>
           ) : null}
         </>
       )}

@@ -164,11 +164,14 @@ export function NoteListRow({
   workspaceId,
   note,
   now = null,
+  arrived = false,
 }: {
   workspaceId: string;
   note: NoteListResponseDataNotesItem;
   /** 목록이 내려주는 공용 시계. 없으면 절대 날짜 fallback. */
   now?: number | null;
+  /** 「더 보기」로 방금 이어 붙은 행. 짧게 옅은 데서 들어온다 — 자리는 처음부터 잡혀 있어 아래가 밀리지 않는다. */
+  arrived?: boolean;
 }) {
   const recording = useRecording();
   const isRecording =
@@ -208,7 +211,13 @@ export function NoteListRow({
     // hover 배경은 행 전체를 덮으니 같은 자리가 두 가지 크기로 보였다.
     // 조건은 여전히 링크의 `:focus-visible`이다(`has-*`) — 메뉴 버튼에 포커스가 갈 때는
     // 그 버튼의 링이 따로 있으므로 행까지 두르면 링이 두 겹이 된다.
-    <article className="group flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset">
+    <article
+      className={cn(
+        "group flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset",
+        arrived &&
+          "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
+      )}
+    >
       <Link
         href={sideHref}
         onClick={() => track("note_opened", {

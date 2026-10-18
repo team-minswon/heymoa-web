@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Bell, Loader2 } from "lucide-react";
+import { AlertTriangle, Bell } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -232,21 +233,14 @@ export function NotificationBell() {
           )}
           {data?.hasMore ? (
             <div className="flex justify-center border-t border-[var(--el-hairline)] p-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-[30px] rounded-full"
-                disabled={isLoadingMore}
+              <LoadMoreButton
+                className="h-[30px]"
+                loading={isLoadingMore}
+                loadingLabel="알림 더 불러오는 중"
                 onClick={() => setPages((current) => current + 1)}
               >
-                {isLoadingMore ? (
-                  <>
-                    <Loader2 className="animate-spin" /> 불러오는 중
-                  </>
-                ) : (
-                  "알림 더 보기"
-                )}
-              </Button>
+                알림 더 보기
+              </LoadMoreButton>
             </div>
           ) : null}
         </div>

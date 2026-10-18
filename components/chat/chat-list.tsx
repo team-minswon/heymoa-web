@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, Loader2Icon } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { TimeRule } from "@/components/chat/time-rule";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -120,21 +120,13 @@ export function ChatList({
           ))}
           {hasMore && onLoadMore ? (
             <div className="flex justify-center py-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full"
-                disabled={isLoadingMore}
+              <LoadMoreButton
+                loading={isLoadingMore}
+                loadingLabel="이전 대화 불러오는 중"
                 onClick={onLoadMore}
               >
-                {isLoadingMore ? (
-                  <>
-                    <Loader2Icon className="animate-spin" /> 불러오는 중
-                  </>
-                ) : (
-                  "이전 대화 더 보기"
-                )}
-              </Button>
+                이전 대화 더 보기
+              </LoadMoreButton>
             </div>
           ) : null}
         </div>
