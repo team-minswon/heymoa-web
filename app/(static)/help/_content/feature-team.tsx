@@ -1,4 +1,9 @@
-import { HelpFigure, go, Key } from "@/app/(static)/help/_content/shared";
+import {
+  HelpFigure,
+  go,
+  Key,
+  HelpClip,
+} from "@/app/(static)/help/_content/shared";
 import type { HelpTopic } from "@/app/(static)/help/_content/types";
 
 export const teamTopics: readonly HelpTopic[] = [
@@ -24,6 +29,12 @@ export const teamTopics: readonly HelpTopic[] = [
             src="tasks/table.webp"
             alt="할 일 화면에서 진행 중 탭이 선택되고 기한 지남 묶음 아래에 할 일 표가 보이는 화면"
             caption="할 일 화면입니다. 위쪽에서 상태·내 할 일·프로젝트로 거릅니다."
+          />,
+          <HelpClip
+            key="clip"
+            name="tasks-filter"
+            alt="할 일 화면에서 완료·진행 중 탭과 내 할 일 필터를 누르는 영상"
+            caption="상태 탭과 「내 할 일」로 거르는 흐름입니다."
           />,
           "프로젝트는 「프로젝트 전체」 선택에서 좁힙니다. 진행 중 탭은 「기한 지남」, 「이번 주」, 「다음 주 이후」, 「기한 없음」으로 묶여 「내용」·「프로젝트」·「담당」·「기한」 열로 보입니다. 할 일은 30개씩 표시되고, 더 보려면 「할 일 더 보기」를 누릅니다.",
         ],
@@ -79,6 +90,12 @@ export const teamTopics: readonly HelpTopic[] = [
             src="agent/chat.webp"
             alt="내 에이전트 패널에서 5월 예산을 묻는 질문과 근거가 있는 답이 보이는 화면"
             caption="내 에이전트 패널입니다. 입력칸에서 「@」로 프로젝트와 회의록을 붙입니다."
+          />,
+          <HelpClip
+            key="clip"
+            name="agent-ask"
+            alt="내 에이전트에서 새 대화를 열고 회의록에서 찾기를 눌러 질문하면 답이 흐르는 영상"
+            caption="내 에이전트에게 지난 회의를 묻는 흐름입니다."
           />,
           "입력칸에서 「@」로 프로젝트와 회의록을 골라 범위를 정합니다. 범위는 20개까지입니다. 노트에서 열면 그 회의록이 범위로 자동 붙습니다. 프로젝트에서 확정한 결정·할 일을 물으려면 프로젝트도 함께 붙입니다.",
           "Enter로 전송하고 Shift+Enter로 줄을 바꿉니다. 「+」는 새 대화, 「기록」은 이전 대화 목록입니다. 대화를 지우거나 이름을 바꾸는 기능은 없고, 대화 제목은 첫 질문으로 정해집니다. 대화가 아주 길어지면 앞부분은 요약해 접히니 중요한 맥락은 새 질문에 다시 적습니다.",
@@ -149,6 +166,12 @@ export const teamTopics: readonly HelpTopic[] = [
         title: "멤버 초대",
         body: [
           "관리자는 설정 › 워크스페이스 › 「멤버」의 「멤버 초대」에서 이메일과 역할(「멤버」·「관리자」)을 정해 「초대」를 누릅니다. 역할은 관리자와 멤버 둘뿐입니다.",
+          <HelpClip
+            key="clip"
+            name="members-invite"
+            alt="설정의 멤버 탭에서 동료 이메일을 입력해 초대하면 대기 중인 초대에 올라가는 영상"
+            caption="이메일을 입력하고 「초대」를 누르면 「대기 중인 초대」에 올라갑니다."
+          />,
           <>
             초대한 주소로 메일이 가고,{" "}
             <Key>링크는 보낸 지 1일 동안만 유효합니다</Key>. 같은 주소에 대기
@@ -210,6 +233,12 @@ export const teamTopics: readonly HelpTopic[] = [
             src="feedback/dialog.webp"
             alt="문의·피드백 창에서 분류 네 가지와 내용 입력칸, 글자 수가 보이는 화면"
             caption="현재 화면 경로와 사용 환경이 함께 담기고 회의 내용은 보내지 않습니다."
+          />,
+          <HelpClip
+            key="clip"
+            name="feedback-send"
+            alt="문의·피드백에서 사용 문의를 골라 내용을 적고 보내면 내 문의에 쌓이는 영상"
+            caption="분류를 고르고 내용을 적어 보내면 「내 문의」에 쌓입니다."
           />,
           <>
             <Key>한 시간에 보낼 수 있는 문의 수가 정해져 있어</Key>, 넘으면

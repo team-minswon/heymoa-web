@@ -1,4 +1,9 @@
-import { HelpFigure, go, Key } from "@/app/(static)/help/_content/shared";
+import {
+  HelpFigure,
+  go,
+  Key,
+  HelpClip,
+} from "@/app/(static)/help/_content/shared";
 import type { HelpTopic } from "@/app/(static)/help/_content/types";
 
 export const summaryTopics: readonly HelpTopic[] = [
@@ -102,6 +107,12 @@ export const summaryTopics: readonly HelpTopic[] = [
         title: "검토 완료",
         body: [
           "아래에 고정된 막대가 「결정 N개와 할 일 N개를 프로젝트에 올립니다」라고 알려 줍니다. 고르지 않은 제안이 있으면 「확인할 제안 N개」로 막히고 「제안으로 가기」로 이동합니다.",
+          <HelpClip
+            key="clip"
+            name="review-confirm"
+            alt="검토 화면에서 항목을 펼쳐 근거를 확인하고 검토 완료를 눌러 확정하는 영상"
+            caption="항목을 펼쳐 근거를 확인하고 「검토 완료」로 확정하는 흐름입니다."
+          />,
           "「검토 완료」를 누르고 확인창에서 한 번 더 누르면 포함한 항목이 프로젝트에 확정됩니다. 포함한 할 일은 프로젝트 할 일이 되어 할 일 화면에 나타나고, 결정과 이슈·질문은 프로젝트에 기록으로 쌓입니다.",
           <>
             <Key>
@@ -151,6 +162,12 @@ export const summaryTopics: readonly HelpTopic[] = [
         title: "이메일로 보내기",
         body: [
           "「공유하기」에서 「이메일로 보내기」를 고르면 「회의록 보내기」 창이 열립니다. 「보낼 내용」은 회의록이 기본이고 「녹취록」을 더할 수 있습니다.",
+          <HelpClip
+            key="clip"
+            name="export-mail"
+            alt="공유 메뉴에서 이메일로 보내기를 열어 참석자 모두를 추가하고 보내면 결과가 표시되는 영상"
+            caption="「참석자 모두 추가」로 받는 사람을 채워 보내고 결과를 확인하는 흐름입니다."
+          />,
           "「받는 사람」은 「참석자 모두 추가」로 채우거나 주소를 쉼표나 Enter로 구분해 입력합니다. 워크스페이스 밖 주소도 됩니다. 한 번에 10명까지, 메시지(선택)는 1000자까지이고 PDF는 10MB 이하여야 합니다.",
           "받는 사람에게는 「[회의록] 회의 제목」 메일이 가고 PDF가 첨부됩니다. 회의록 내용은 본문이 아니라 첨부로만 갑니다. 회신하면 보낸 사람에게 전달됩니다.",
           <>

@@ -30,6 +30,21 @@ export const HELP_MEDIA = {
     "height": 540,
     "bytes": 145149
   },
+  "clips/export-mail": {
+    "width": 960,
+    "height": 540,
+    "bytes": 402728
+  },
+  "clips/feedback-send": {
+    "width": 960,
+    "height": 540,
+    "bytes": 316425
+  },
+  "clips/members-invite": {
+    "width": 960,
+    "height": 540,
+    "bytes": 165953
+  },
   "clips/new-meeting-record": {
     "width": 960,
     "height": 540,

@@ -1,4 +1,9 @@
-import { HelpFigure, go, Key } from "@/app/(static)/help/_content/shared";
+import {
+  HelpFigure,
+  go,
+  Key,
+  HelpClip,
+} from "@/app/(static)/help/_content/shared";
 import type { HelpTopic } from "@/app/(static)/help/_content/types";
 
 export const recordTopics: readonly HelpTopic[] = [
@@ -14,6 +19,12 @@ export const recordTopics: readonly HelpTopic[] = [
         title: "기록 시작하기",
         body: [
           "노트 아래 가운데의 빨간 점 버튼이 「회의 시작」입니다. 중지된 회의에서는 「재개」로 바뀝니다. 누르면 「스크립트」 탭으로 넘어가고 브라우저가 마이크 권한을 묻습니다. 워크스페이스 멤버라면 누구나 시작하고 재개할 수 있습니다.",
+          <HelpClip
+            key="clip"
+            name="new-meeting-record"
+            alt="새 노트에서 회의 이름을 입력해 만들고 회의 시작을 눌러 받아 적히는 것을 본 뒤 중지하는 영상"
+            caption="새 회의를 만들고 기록을 시작했다가 중지하는 흐름입니다."
+          />,
           <>
             브라우저에서는 마이크 소리만 기록합니다. 도크 위의 「상대방 소리까지
             기록하려면 데스크톱 앱」 안내처럼, 화상회의 상대방의 소리까지
@@ -126,6 +137,12 @@ export const recordTopics: readonly HelpTopic[] = [
             alt="스크립트에서 화자 이름을 눌러 참석자 목록과 적용 범위 선택이 열린 화면"
             caption="화자 이름을 누르면 참석자를 고르는 메뉴가 열립니다."
           />,
+          <HelpClip
+            key="clip"
+            name="speaker-assign"
+            alt="스크립트에서 이름 없는 화자를 눌러 참석자를 고르는 영상"
+            caption="이름 없는 화자를 눌러 참석자를 고르는 흐름입니다."
+          />,
           "범위는 「이 화자의 모든 발화에 적용」(기본)과 「현재 발화에만 적용」 중에서 고릅니다. 개별로 고친 발화가 있으면 모두 적용할 때 그 지정이 사라진다는 확인창이 뜹니다.",
           "「미지정 N」은 아직 누구인지 모르는 다음 화자로 넘어가는 버튼입니다. 「화자」는 누가 얼마나 말했는지 보여 주는 패널이고, 화면 아래 화자 도크에서도 막대를 눌러 그 시각으로 이동합니다.",
           <>
@@ -150,6 +167,12 @@ export const recordTopics: readonly HelpTopic[] = [
         title: "회의 맥락",
         body: [
           "「정보」 탭의 「회의 맥락」에 「주제」(200자)와 「배경」(1000자)을 적어 두면 받아 적을 때 참고합니다. 프로젝트 이름, 회의 제목, 참석자 이름은 적지 않아도 자동으로 들어갑니다.",
+          <HelpClip
+            key="clip"
+            name="context-autosave"
+            alt="회의 맥락의 주제와 배경을 입력하면 자동으로 저장되는 영상"
+            caption="회의 맥락은 입력을 멈추면 자동으로 저장됩니다."
+          />,
           "입력을 멈추면 잠시 뒤 자동으로 저장됩니다. 입력칸을 벗어날 때도 저장됩니다. 「저장하는 중…」에서 「저장했어요」로 바뀌고, 실패하면 「저장하지 못했어요」와 다시 시도 버튼이 나옵니다.",
           "녹음 중에 내용을 고치면 「녹음을 다시 이어 갈 때부터 반영돼요」라는 안내가 나옵니다. 종료한 회의에서는 읽기 전용으로만 보입니다.",
         ],
@@ -159,6 +182,12 @@ export const recordTopics: readonly HelpTopic[] = [
         title: "용어 사전",
         body: [
           "받아쓰기가 자주 틀리는 제품명, 사내 용어, 영어 약어는 설정 › 워크스페이스 › 「용어 사전」에 등록합니다. 이 워크스페이스의 모든 회의에서 쓰이고, 워크스페이스 멤버 누구나 추가하고 지울 수 있습니다. 프로젝트별 사전은 없습니다.",
+          <HelpClip
+            key="clip"
+            name="dictionary-batch"
+            alt="용어 사전에 여러 용어를 쉼표로 붙여 넣고 한 번에 추가하는 영상"
+            caption="여러 용어를 한 번에 붙여 넣어 추가하는 흐름입니다."
+          />,
           "여러 용어를 쉼표, 줄바꿈, 세미콜론, 탭으로 구분해 한 번에 붙여 넣습니다. 한 번에 100개까지 넣을 수 있습니다. 입력칸 아래 미리보기에서 「이미 있어요」·「40자 초과」·「한도 초과」를 확인하고 Enter로 추가합니다. 줄을 바꾸려면 Shift+Enter를 누릅니다.",
           <>
             <Key>용어는 40자까지이고 워크스페이스에 200개까지 등록합니다</Key>.{" "}

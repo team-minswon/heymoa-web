@@ -146,4 +146,65 @@ export const scenes = [
       );
     },
   },
+  {
+    name: "members-invite",
+    path: `${workspace}?settings=members`,
+    ready: (p) => p.getByPlaceholder("name@gmail.com").waitFor(),
+    async run(p) {
+      const dialog = p.getByRole("dialog");
+      await type(
+        p,
+        p.getByPlaceholder("name@gmail.com"),
+        "jisoo.kang@example.com"
+      );
+      await p.waitForTimeout(600);
+      await click(p, dialog.getByRole("button", { name: "초대", exact: true }));
+      const pending = p.getByText("jisoo.kang@example.com").last();
+      await pending.waitFor();
+      await pending.scrollIntoViewIfNeeded();
+      await p.waitForTimeout(1400);
+    },
+  },
+  {
+    name: "export-mail",
+    path: note("01KH000001002", "summary"),
+    ready: (p) => button(p, "내보내기·공유").waitFor(),
+    async run(p) {
+      await click(p, button(p, "내보내기·공유"));
+      await click(p, p.getByRole("menuitem", { name: "이메일로 보내기" }));
+      const dialog = p.getByRole("dialog", { name: "회의록 보내기" });
+      await dialog.waitFor();
+      await p.waitForTimeout(500);
+      await click(p, dialog.getByRole("button", { name: /참석자 모두 추가/ }));
+      await type(
+        p,
+        dialog.getByPlaceholder("받는 분께 남길 말을 적으세요"),
+        "오늘 회의록 공유드립니다."
+      );
+      await click(p, dialog.getByRole("button", { name: /보내기$/ }).last());
+      await p.waitForTimeout(1800);
+    },
+  },
+  {
+    name: "feedback-send",
+    path: workspace,
+    ready: (p) => p.getByRole("button", { name: /문의·피드백/ }).waitFor(),
+    async run(p) {
+      await click(p, p.getByRole("button", { name: /문의·피드백/ }));
+      const dialog = p.getByRole("dialog");
+      await dialog.waitFor();
+      await p.waitForTimeout(500);
+      await click(p, dialog.getByText("사용 문의", { exact: true }));
+      await type(
+        p,
+        dialog.getByLabel("내용", { exact: true }),
+        "회의 맥락은 어디서 적나요?"
+      );
+      await click(
+        p,
+        dialog.getByRole("button", { name: "보내기", exact: true })
+      );
+      await p.waitForTimeout(1800);
+    },
+  },
 ];

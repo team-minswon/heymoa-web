@@ -34,14 +34,16 @@ test("가이드 페이지에서 찾으면 본문이 칠해지고 이전·다음�
   await input.press("Shift+Enter");
   await expect(page.getByText(`1 / ${total}`)).toBeVisible();
 
-  // 활성 일치는 화면 안에 있다
-  const rect = await page.evaluate(() => {
-    const range = [...(CSS.highlights.get("help-search-active") ?? [])][0] as Range;
-    const box = range.getBoundingClientRect();
-    return { top: box.top, bottom: box.bottom, height: innerHeight };
-  });
-  expect(rect.top).toBeGreaterThanOrEqual(0);
-  expect(rect.bottom).toBeLessThanOrEqual(rect.height);
+  // 활성 일치는 화면 안에 있다 — 이동이 부드러운 스크롤(APP-1237)이라 멈출 때까지 기다린다.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const range = [...(CSS.highlights.get("help-search-active") ?? [])][0] as Range;
+        const box = range.getBoundingClientRect();
+        return box.top >= 0 && box.bottom <= innerHeight;
+      })
+    )
+    .toBe(true);
 
   // 일치가 없는 조항의 목차는 흐려진다. 없으면 안내한다
   await input.fill("ㅋㅋㅋ없는낱말");
@@ -102,5 +104,34 @@ test("움직임 줄이기 설정이면 영상은 자동 재생하지 않는다",
   await video.scrollIntoViewIfNeeded();
   await page.waitForTimeout(1200);
   expect(await video.evaluate((el: HTMLVideoElement) => el.paused)).toBe(true);
+  await context.close();
+});
+
+test("같은 페이지 목차는 부드럽게 스크롤하고 주소만 바꾼다 (APP-1237)", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/help/record/recording");
+  await page.waitForLoadState("networkidle");
+  const link = page.locator("aside [data-toc-link]").nth(3);
+  const id = (await link.getAttribute("href"))!.slice(1);
+  const rsc: string[] = [];
+  page.on("request", (r) => r.url().includes("_rsc") && rsc.push(r.url()));
+  await link.click();
+  await expect(page).toHaveURL(new RegExp(`#${id}$`));
+  // 스크롤이 멈추면 제목이 고정 머리 아래(scroll-margin 96)에 선다
+  await expect
+    .poll(() => page.evaluate((i) => Math.round(document.getElementById(i)!.getBoundingClientRect().top), id))
+    .toBe(96);
+  await expect(page.locator(`#${id} h2`)).toBeFocused();
+  expect(rsc).toEqual([]);
+});
+
+test("움직임 줄이기면 목차 이동이 바로 끝난다 (APP-1237)", async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.goto("/help/record/recording");
+  await page.waitForLoadState("networkidle");
+  await page.locator("aside [data-toc-link]").nth(3).click();
+  const top = await page.evaluate(() => Math.round(document.getElementById(location.hash.slice(1))!.getBoundingClientRect().top));
+  expect(top).toBe(96);
   await context.close();
 });
