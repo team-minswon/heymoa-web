@@ -247,3 +247,36 @@ test("사이드바 항목을 눌러도 모든 항목의 폭·높이가 그대로
   await expect(page).toHaveURL(/\/help\/situations\/(?!fix-speakers)/);
   expect(await sizes()).toEqual(before);
 });
+
+// 뒤로 가기로 허브에 돌아오면 주소의 ?q= 를 지웠다 100ms 뒤 다시 붙이던 문제(마운트 효과가 주소를 썼다).
+test("허브에서 검색해 결과를 눌렀다 뒤로 가면 주소가 바뀌지 않고 history 가 쌓이지 않는다", async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __writes: string[] };
+    w.__writes = [];
+    for (const m of ["replaceState", "pushState"] as const) {
+      const orig = history[m];
+      history[m] = function (...args: Parameters<History["replaceState"]>) {
+        w.__writes.push(`${m} ${String(args[2])}`);
+        return orig.apply(this, args);
+      };
+    }
+  });
+  await page.goto("/help");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("searchbox", { name: "사용 가이드 전체에서 찾기" }).fill("녹음 상태");
+  await expect(page).toHaveURL(/\/help\?q=/);
+  await page.locator("ul a[href*='?q=']").first().click();
+  await expect(page).toHaveURL(/\/help\/[^/]+\/[^/?]+\?q=/);
+  await page.waitForLoadState("networkidle");
+  const historyBefore = await page.evaluate(() => history.length);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/help\?q=/);
+  const right = page.url();
+  await page.evaluate(() => ((window as unknown as { __writes: string[] }).__writes.length = 0));
+  await page.waitForTimeout(1000);
+  expect(page.url()).toBe(right); // 뒤늦게 바뀌지 않는다
+  expect(await page.evaluate(() => history.length)).toBe(historyBefore);
+  // 돌아온 뒤 우리 쪽에서 history 를 쓰지 않는다
+  expect(await page.evaluate(() => (window as unknown as { __writes: string[] }).__writes)).toEqual([]);
+  await expect(page.getByRole("searchbox", { name: "사용 가이드 전체에서 찾기" })).toHaveValue("녹음 상태");
+});

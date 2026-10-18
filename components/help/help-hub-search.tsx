@@ -2,7 +2,16 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- 주소(?q=)는 서버가 그린 HTML 과 첫 렌더를 맞추려고 마운트한 뒤에만 읽는다 */
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 
 import { FOCUS } from "@/components/heymoa/landing/tokens";
@@ -26,6 +35,13 @@ type Hub = {
   failed: boolean;
 };
 const HubContext = createContext<Hub | null>(null);
+/** 주소의 `?q=` 를 알린다(마운트 · 뒤로/앞으로). 화면에는 아무것도 그리지 않는다. */
+function UrlQuerySync({ onChange }: { onChange: (q: string) => void }) {
+  const q = useSearchParams().get("q") ?? "";
+  useEffect(() => onChange(q), [q, onChange]);
+  return null;
+}
+
 const useHub = () => {
   const hub = useContext(HubContext);
   if (!hub) throw new Error("HelpHubProvider 안에서 써야 합니다");
@@ -42,24 +58,36 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const [announce, setAnnounce] = useState("");
+  const timer = useRef(0);
+  // 우리가 방금 주소에 쓴 검색어. 이것과 같은 주소 변화는 바깥 이동이 아니라 우리 자신의 기록이라 입력을 되돌리지 않는다.
+  const written = useRef<string | null>(null);
   const { entries, failed } = useHelpIndex(value.length > 0);
 
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("q");
-    if (q) setValue(q);
+  // 주소가 원본이다. 마운트 · 뒤로/앞으로 · 새로고침으로 주소가 정해지면 그 검색어를 읽어 오기만 하고 **주소를 쓰지 않는다**.
+  // (예전에는 마운트 효과가 주소의 `?q=` 를 지웠다가 100ms 뒤 다시 붙였다 — 뒤로 갔을 때 주소가 뒤늦게 바뀌었다.)
+  const syncFromUrl = useCallback((q: string) => {
+    if (q === written.current) return;
+    window.clearTimeout(timer.current);
+    setValue(q);
+    setQuery(q);
   }, []);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setQuery(value), DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [value]);
-
-  useEffect(() => {
+  // 주소는 사용자가 입력할 때만 쓴다(같은 항목을 바꾸는 `replaceState` 라 history 가 쌓이지 않는다).
+  const writeUrl = (q: string) => {
+    written.current = q;
     const url = new URL(window.location.href);
-    if (query) url.searchParams.set("q", query);
+    if (q) url.searchParams.set("q", q);
     else url.searchParams.delete("q");
-    window.history.replaceState(window.history.state, "", url);
-  }, [query]);
+    window.history.replaceState(null, "", url);
+  };
+  const type = (next: string) => {
+    setValue(next);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      setQuery(next);
+      writeUrl(next);
+    }, DEBOUNCE_MS);
+  };
 
   const hits = query && entries ? searchHelp(entries, query) : [];
 
@@ -101,8 +129,10 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clear = () => {
+    window.clearTimeout(timer.current);
     setValue("");
     setQuery("");
+    writeUrl("");
     inputRef.current?.focus();
   };
 
@@ -111,7 +141,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
     <HubContext.Provider
       value={{
         value,
-        setValue,
+        setValue: type,
         query,
         clear,
         inputRef,
@@ -121,6 +151,9 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
         failed,
       }}
     >
+      <Suspense fallback={null}>
+        <UrlQuerySync onChange={syncFromUrl} />
+      </Suspense>
       {children}
     </HubContext.Provider>
   );
