@@ -15,13 +15,18 @@ import {
   RADIUS,
   TV_VARS,
 } from "@/components/heymoa/landing/tokens";
+import { WebPageJsonLd } from "@/components/help/json-ld";
 import { DESKTOP_INSTALLERS } from "@/lib/desktop/downloads";
+import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
+const DESCRIPTION =
+  "HeyMoa(헤이모아) 데스크톱 앱 설치와 업데이트 안내. Mac·Windows에서 내 목소리와 컴퓨터 소리를 함께 기록합니다.";
+
 export const metadata: Metadata = {
   title: "데스크톱 다운로드",
-  description: "HeyMoa(헤이모아) 데스크톱 앱 설치와 업데이트 안내. Mac·Windows에서 내 목소리와 컴퓨터 소리를 함께 기록합니다.",
+  description: DESCRIPTION,
   alternates: { canonical: "/download" },
 };
 
@@ -54,6 +59,20 @@ export default function DownloadPage() {
       style={TV_VARS}
       className="w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8"
     >
+      <WebPageJsonLd
+        name="데스크톱 앱 다운로드"
+        description={DESCRIPTION}
+        path="/download"
+        extra={{
+          "@type": "SoftwareApplication",
+          name: siteConfig.brandLabel,
+          applicationCategory: "BusinessApplication",
+          operatingSystem: PLATFORMS.map(({ need }) => need).join(", "),
+          downloadUrl: PLATFORMS.flatMap(({ installers }) =>
+            installers.map(({ href }) => `${siteConfig.url}${href}`)
+          ),
+        }}
+      />
       <Suspense fallback={null}>
         <DesktopAutoDownload />
       </Suspense>

@@ -5,25 +5,25 @@ export const helpGroups: readonly HelpGroup[] = [
   {
     slug: "start",
     title: "시작하기",
-    summary: "로그인하고, 첫 회의를 기록하고, 화면과 계정, 데스크톱 앱을 알아봐요.",
+    summary: "HeyMoa(헤이모아)에 로그인하고, 첫 회의를 기록하고, 화면과 계정, 데스크톱 앱을 알아봐요.",
     axis: "feature",
   },
   {
     slug: "record",
     title: "녹음과 받아쓰기",
-    summary: "회의를 녹음하고, 참석자와 화자를 정하고, 용어 사전과 타임라인을 써요.",
+    summary: "회의를 녹음하고 받아쓰는 동안 참석자와 화자를 정하고, 용어 사전과 타임라인을 쓰는 방법이에요.",
     axis: "feature",
   },
   {
     slug: "summary",
     title: "요약과 검토",
-    summary: "회의를 종료하고, 결정과 할 일을 검토해 확정하고, 복사·PDF·메일로 나눠요.",
+    summary: "회의를 종료하면 AI가 정리한 결정과 할 일을 검토해 확정하고, 복사·PDF·메일로 나눌 수 있어요.",
     axis: "feature",
   },
   {
     slug: "team",
     title: "함께 쓰기",
-    summary: "할 일을 나누고, 내 에이전트에게 묻고, 멤버를 초대하고, 문의를 보내요.",
+    summary: "팀과 함께 할 일을 나누고, 내 에이전트에게 회의 내용을 묻고, 멤버를 초대하고, 문의를 보내요.",
     axis: "feature",
   },
   {
@@ -35,14 +35,14 @@ export const helpGroups: readonly HelpGroup[] = [
   {
     slug: "fix",
     title: "문제 해결과 규칙",
-    summary: "안내 문구별 해결 방법과 한도·규칙을 모았어요.",
+    summary: "HeyMoa(헤이모아)를 쓰다 만나는 안내 문구별 해결 방법과, 녹음·요약·초대의 한도와 규칙을 한곳에 모았어요.",
     axis: "feature",
   },
   {
     slug: "situations",
     title: "상황별로 찾기",
     summary:
-      "겪고 있는 상황을 고르면, 먼저 볼 곳과 해결 단계를 알려 줘요.",
+      "첫 회의 기록, 녹음 문제, 요약 검토처럼 HeyMoa(헤이모아)에서 겪는 상황을 고르면 먼저 볼 곳과 해결 단계를 알려 줘요.",
     axis: "situation",
   },
 ];

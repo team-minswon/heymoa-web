@@ -5,13 +5,19 @@ import {
   LegalDocument,
   type LegalSection,
 } from "@/app/(static)/legal-document";
+import { WebPageJsonLd } from "@/components/help/json-ld";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-static";
 
+const DESCRIPTION = `${siteConfig.brandLabel}의 계정, 회의 음성, 스크립트 데이터와 서비스 이용 기록 처리에 관한 안내입니다.`;
+
+// 시행일이 곧 최종 수정일이다. 아래 `effectiveDate` 와 같이 고친다.
+const EFFECTIVE_ISO = "2026-10-18";
+
 export const metadata: Metadata = {
   title: "개인정보 처리방침",
-  description: `${siteConfig.brandLabel}의 계정, 회의 음성, 스크립트 데이터와 서비스 이용 기록 처리에 관한 안내입니다.`,
+  description: DESCRIPTION,
   alternates: { canonical: "/privacy" },
 };
 
@@ -219,12 +225,15 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <LegalDocument
+    <>
+      <WebPageJsonLd name="개인정보 처리방침" description={DESCRIPTION} path="/privacy" dateModified={EFFECTIVE_ISO} />
+      <LegalDocument
       label="법적 고지"
       title="개인정보 처리방침"
       description="회의를 기록하는 순간부터 저장된 스크립트를 다시 확인할 때까지, HeyMoa가 어떤 정보를 왜 처리하는지 안내합니다."
       effectiveDate="2026년 10월 18일"
       sections={sections}
     />
+    </>
   );
 }

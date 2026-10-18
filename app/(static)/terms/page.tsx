@@ -4,13 +4,19 @@ import {
   LegalDocument,
   type LegalSection,
 } from "@/app/(static)/legal-document";
+import { WebPageJsonLd } from "@/components/help/json-ld";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-static";
 
+const DESCRIPTION = `${siteConfig.brandLabel}의 계정, 워크스페이스, 실시간 회의 스크립트와 저장된 노트 이용 조건에 관한 안내입니다.`;
+
+// 시행일이 곧 최종 수정일이다. 아래 `effectiveDate` 와 같이 고친다.
+const EFFECTIVE_ISO = "2026-10-18";
+
 export const metadata: Metadata = {
   title: "이용약관",
-  description: `${siteConfig.brandLabel}의 계정, 워크스페이스, 실시간 회의 스크립트와 저장된 노트 이용 조건에 관한 안내입니다.`,
+  description: DESCRIPTION,
   alternates: { canonical: "/terms" },
 };
 
@@ -98,12 +104,15 @@ const sections = [
 
 export default function TermsPage() {
   return (
-    <LegalDocument
+    <>
+      <WebPageJsonLd name="이용약관" description={DESCRIPTION} path="/terms" dateModified={EFFECTIVE_ISO} />
+      <LegalDocument
       label="법적 고지"
       title="이용약관"
       description="회의 음성을 안전하게 다루고 자동 스크립트를 책임 있게 활용하기 위해 서비스 이용자가 알아야 할 기본 원칙입니다."
       effectiveDate="2026년 10월 18일"
       sections={sections}
     />
+    </>
   );
 }

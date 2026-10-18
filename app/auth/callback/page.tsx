@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+
 import { AuthCallbackClient } from "@/components/auth/auth-callback-client";
+
+import { privateRouteMetadata } from "@/lib/site";
+
+// 토큰이 실리는 입구라 robots.txt 와 별개로 페이지가 noindex 를 낸다(APP-1036).
+export const metadata: Metadata = privateRouteMetadata;
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
