@@ -791,6 +791,20 @@ export const restHandlers = [
       };
     });
   }),
+  http.patch(
+    "*/v1/workspaces/:workspaceId/guests/:guestId",
+    async ({ request, params }) =>
+      resultOf(
+        async () =>
+          mockDb.renameWorkspaceGuest(
+            id(params.workspaceId),
+            id(params.guestId),
+            ((await request.json()) as { displayName?: string }).displayName ??
+              ""
+          ),
+        notFound("WORKSPACE_GUEST_NOT_FOUND", "임시 참여자를 찾을 수 없습니다.")
+      )
+  ),
   http.delete("*/v1/workspaces/:workspaceId/guests/:guestId", ({ params }) =>
     commandResult(() =>
       mockDb.deleteWorkspaceGuest(id(params.workspaceId), id(params.guestId))

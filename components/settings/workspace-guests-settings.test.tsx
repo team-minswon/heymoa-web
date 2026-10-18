@@ -33,6 +33,7 @@ const state = vi.hoisted(() => ({
   preview: vi.fn(),
   link: vi.fn(),
   remove: vi.fn(),
+  rename: vi.fn(),
 }));
 
 vi.mock("@/lib/workspace/use-guest-list-pages", () => ({
@@ -64,6 +65,10 @@ vi.mock("@/lib/workspace/use-guest-list-pages", () => ({
           },
     };
   },
+}));
+
+vi.mock("@/lib/workspace/use-rename-guest", () => ({
+  useRenameGuest: () => ({ rename: state.rename, isPending: false }),
 }));
 
 vi.mock("@/lib/api/generated/workspaces/workspaces", () => ({
@@ -135,6 +140,7 @@ describe("WorkspaceGuestsSettings", () => {
     state.preview.mockReset();
     state.link.mockReset();
     state.remove.mockReset();
+    state.rename.mockReset();
     state.remove.mockResolvedValue(envelope({ affectedNoteCount: 3 }));
   });
   afterEach(cleanup);
@@ -270,9 +276,68 @@ describe("WorkspaceGuestsSettings", () => {
   it("ADMIN이 아니면 목록은 보이고 연동·삭제만 사라진다", () => {
     renderSection(false);
 
+    expect(screen.queryByRole("button", { name: "이름 변경" })).toBeNull();
     expect(screen.getByText("박서준")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "연동" })).toBeNull();
     expect(screen.queryByRole("button", { name: "삭제" })).toBeNull();
+  });
+
+  describe("이름 변경", () => {
+    function startEditing() {
+      renderSection();
+      fireEvent.click(screen.getByRole("button", { name: "이름 변경" }));
+      return screen.getByRole("textbox", { name: "임시 참여자 이름" });
+    }
+
+    it("행 안에서 입력으로 바뀌고 Enter 로 저장한다", () => {
+      const input = startEditing();
+      expect(input).toHaveValue("박서준");
+
+      fireEvent.change(input, { target: { value: "  박서준2 " } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      expect(state.rename).toHaveBeenCalledWith("박서준2");
+      expect(screen.queryByRole("textbox")).toBeNull();
+    });
+
+    it("Esc 는 저장하지 않고 닫는다", () => {
+      const input = startEditing();
+
+      fireEvent.change(input, { target: { value: "다른 이름" } });
+      fireEvent.keyDown(input, { key: "Escape" });
+
+      expect(state.rename).not.toHaveBeenCalled();
+      expect(screen.queryByRole("textbox")).toBeNull();
+      expect(screen.getByText("박서준")).toBeInTheDocument();
+    });
+
+    it("빈 값은 저장하지 않고 입력을 그대로 둔다", () => {
+      const input = startEditing();
+
+      fireEvent.change(input, { target: { value: "   " } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      expect(state.rename).not.toHaveBeenCalled();
+      expect(screen.getByRole("textbox")).toBeInTheDocument();
+    });
+
+    it("이름이 그대로면 요청하지 않는다", () => {
+      const input = startEditing();
+
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      expect(state.rename).not.toHaveBeenCalled();
+      expect(screen.queryByRole("textbox")).toBeNull();
+    });
+
+    it("한글 조합 중의 Enter 는 저장하지 않는다", () => {
+      const input = startEditing();
+
+      fireEvent.change(input, { target: { value: "박서" } });
+      fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+
+      expect(state.rename).not.toHaveBeenCalled();
+    });
   });
 
   it("연동은 멤버를 고른 뒤 미리보기를 먼저 보여준다", async () => {

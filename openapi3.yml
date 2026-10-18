@@ -153,71 +153,71 @@ paths:
   /v1/feedbacks:
     get:
       tags:
-      - "Feedbacks"
-      summary: "내 문의 조회"
-      description: "내가 보낸 문의와 운영자의 답변을 최신순 최대 50건으로 돌려준다."
-      operationId: "getMyFeedbacks"
+      - Feedbacks
+      summary: 내 문의 조회
+      description: 내가 보낸 문의와 운영자의 답변을 최신순 최대 50건으로 돌려준다.
+      operationId: getMyFeedbacks
       responses:
-        "200":
-          description: "요청 성공"
+        '200':
+          description: 요청 성공
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FeedbackListResponse"
+                $ref: '#/components/schemas/FeedbackListResponse'
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
                       feedbacks:
-                      - feedbackId: "0HZX2K7M9Q4AJ"
-                        kind: "INCIDENT"
-                        message: "녹음이 자꾸 끊겨요"
+                      - feedbackId: 0HZX2K7M9Q4AJ
+                        kind: INCIDENT
+                        message: 녹음이 자꾸 끊겨요
                         answer: null
                         answeredAt: null
-                        createdAt: "2026-07-14T01:02:03Z"
+                        createdAt: '2026-07-14T01:02:03Z'
                     error: null
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
     post:
       tags:
-      - "Feedbacks"
-      summary: "문의·피드백 접수"
-      description: "문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지."
-      operationId: "createFeedback"
+      - Feedbacks
+      summary: 문의·피드백 접수
+      description: 문의를 저장하고 운영 알림을 보낸다. 사용자당 시간당 5건까지.
+      operationId: createFeedback
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateFeedbackRequest"
+              $ref: '#/components/schemas/CreateFeedbackRequest'
             examples:
               createFeedback_Success:
                 value:
-                  kind: "INCIDENT"
-                  message: "녹음이 자꾸 끊겨요"
+                  kind: INCIDENT
+                  message: 녹음이 자꾸 끊겨요
       responses:
-        "201":
-          description: "생성 성공"
+        '201':
+          description: 생성 성공
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FeedbackResponse"
+                $ref: '#/components/schemas/FeedbackResponse'
               examples:
                 SUCCESS:
                   value:
                     success: true
                     data:
-                      feedbackId: "0HZX2K7M9Q4AJ"
-                      kind: "INCIDENT"
-                      message: "녹음이 자꾸 끊겨요"
+                      feedbackId: 0HZX2K7M9Q4AJ
+                      kind: INCIDENT
+                      message: 녹음이 자꾸 끊겨요
                       answer: null
                       answeredAt: null
-                      createdAt: "2026-07-14T01:02:03Z"
+                      createdAt: '2026-07-14T01:02:03Z'
                     error: null
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
   /v1/notifications:
@@ -5167,6 +5167,119 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       security:
       - accessCookie: []
+    patch:
+      tags:
+      - Workspaces
+      summary: 워크스페이스 임시 참여자 이름 변경
+      description: 임시 참여자의 이름을 고친다. 같은 행의 이름만 바뀌므로 참석자 연결과 화자 지정은 그대로 유지된다. ADMIN만 부를 수 있고, 같은 이름의 임시 참여자를 허용한다(만들 때와 같다). 이름은 앞뒤 공백을 지우고 1~100자여야 하며, 응답은 목록 항목과 같은 모양이다.
+      operationId: renameWorkspaceGuest
+      parameters:
+      - name: workspaceId
+        in: path
+        description: 워크스페이스의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 워크스페이스의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AD
+      - name: guestId
+        in: path
+        description: 임시 참여자의 13자리 TSID
+        required: true
+        schema:
+          type: string
+          description: 임시 참여자의 13자리 TSID
+          nullable: false
+          pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+        example: 0HZX2K7M9Q4AR
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameWorkspaceGuestRequest'
+            examples:
+              renameWorkspaceGuest_WorkspaceAccessDeniedException:
+                value:
+                  displayName: 박서준
+              renameWorkspaceGuest_BadRequest:
+                value:
+                  displayName: ' '
+              renameWorkspaceGuest_WorkspaceGuestNotFoundException:
+                value:
+                  displayName: 박서준
+              renameWorkspaceGuest_Success:
+                value:
+                  displayName: 박서준
+      responses:
+        '200':
+          description: 요청 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceGuestResponse'
+              examples:
+                SUCCESS:
+                  value:
+                    success: true
+                    data:
+                      guestId: 0HZX2K7M9Q4AR
+                      displayName: 박서준
+                      noteCount: 3
+                      createdAt: '2026-07-14T01:02:03Z'
+                    error: null
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BAD_REQUEST
+                      message: 잘못된 요청입니다.
+                      details:
+                      - field: displayName
+                        message: 비울 수 없습니다.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_ACCESS_DENIED:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_ACCESS_DENIED
+                      message: 워크스페이스를 변경할 권한이 없습니다.
+                      details: null
+        '404':
+          description: 요청한 리소스를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppErrorResponse'
+              examples:
+                WORKSPACE_GUEST_NOT_FOUND:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: WORKSPACE_GUEST_NOT_FOUND
+                      message: 임시 참여자를 찾을 수 없습니다.
+                      details: null
+      security:
+      - accessCookie: []
   /v1/workspaces/{workspaceId}/integrations/{provider}:
     delete:
       tags:
@@ -10022,27 +10135,27 @@ components:
           example: 0HZX2K7M9Q4AD
           pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
     CreateFeedbackRequest:
-      title: "CreateFeedbackRequest"
+      title: CreateFeedbackRequest
       required:
-      - "kind"
-      - "message"
-      type: "object"
+      - kind
+      - message
+      type: object
       properties:
         kind:
-          type: "string"
-          description: "문의 종류"
+          type: string
+          description: 문의 종류
           nullable: false
-          example: "INCIDENT"
+          example: INCIDENT
           enum:
-          - "INCIDENT"
-          - "QUESTION"
-          - "SUGGESTION"
-          - "OTHER"
+          - INCIDENT
+          - QUESTION
+          - SUGGESTION
+          - OTHER
         message:
-          type: "string"
-          description: "내용. 앞뒤 공백을 뺀 길이가 1~1500자"
+          type: string
+          description: 내용. 앞뒤 공백을 뺀 길이가 1~1500자
           nullable: false
-          example: "녹음이 자꾸 끊겨요"
+          example: 녹음이 자꾸 끊겨요
           minLength: 1
           maxLength: 1500
     CreateProjectTaskRequest:
@@ -10521,152 +10634,152 @@ components:
           description: 실패 시 null인 응답 데이터
           nullable: true
     FeedbackListResponse:
-      title: "FeedbackListResponse"
+      title: FeedbackListResponse
       required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
+      - data
+      - error
+      - success
+      type: object
       properties:
         data:
           required:
-          - "feedbacks"
-          type: "object"
+          - feedbacks
+          type: object
           properties:
             feedbacks:
-              type: "array"
-              description: "내 문의. 최신순 최대 50건"
+              type: array
+              description: 내 문의. 최신순 최대 50건
               items:
                 required:
-                - "createdAt"
-                - "feedbackId"
-                - "kind"
-                - "message"
-                - "answer"
-                - "answeredAt"
-                type: "object"
+                - createdAt
+                - feedbackId
+                - kind
+                - message
+                - answer
+                - answeredAt
+                type: object
                 properties:
                   createdAt:
-                    type: "string"
-                    description: "접수 시각"
+                    type: string
+                    description: 접수 시각
                     nullable: false
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
                   answer:
-                    type: "string"
-                    description: "운영자의 답변. 아직 없으면 null"
+                    type: string
+                    description: 운영자의 답변. 아직 없으면 null
                     nullable: true
-                    example: "확인했습니다."
+                    example: 확인했습니다.
                   kind:
-                    type: "string"
-                    description: "문의 종류"
+                    type: string
+                    description: 문의 종류
                     nullable: false
-                    example: "INCIDENT"
+                    example: INCIDENT
                     enum:
-                    - "INCIDENT"
-                    - "QUESTION"
-                    - "SUGGESTION"
-                    - "OTHER"
+                    - INCIDENT
+                    - QUESTION
+                    - SUGGESTION
+                    - OTHER
                   answeredAt:
-                    type: "string"
-                    description: "답변한 시각. 답변이 없으면 null"
+                    type: string
+                    description: 답변한 시각. 답변이 없으면 null
                     nullable: true
-                    example: "2026-07-14T01:02:03Z"
-                    format: "date-time"
+                    example: '2026-07-14T01:02:03Z'
+                    format: date-time
                   feedbackId:
-                    type: "string"
-                    description: "문의 식별자"
+                    type: string
+                    description: 문의 식별자
                     nullable: false
-                    example: "0HZX2K7M9Q4AJ"
-                    pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+                    example: 0HZX2K7M9Q4AJ
+                    pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
                   message:
-                    type: "string"
-                    description: "보낸 내용"
+                    type: string
+                    description: 보낸 내용
                     nullable: false
-                    example: "녹음이 자꾸 끊겨요"
+                    example: 녹음이 자꾸 끊겨요
                     maxLength: 1500
               nullable: false
-          description: "성공 응답 데이터"
+          description: 성공 응답 데이터
           nullable: false
         success:
-          type: "boolean"
-          description: "요청 성공 여부"
+          type: boolean
+          description: 요청 성공 여부
           nullable: false
           example: true
         error:
           nullable: true
           enum:
           - null
-          description: "성공 시 null인 오류 정보"
+          description: 성공 시 null인 오류 정보
     FeedbackResponse:
-      title: "FeedbackResponse"
+      title: FeedbackResponse
       required:
-      - "data"
-      - "error"
-      - "success"
-      type: "object"
+      - data
+      - error
+      - success
+      type: object
       properties:
         data:
           required:
-          - "createdAt"
-          - "feedbackId"
-          - "kind"
-          - "message"
-          - "answer"
-          - "answeredAt"
-          type: "object"
+          - createdAt
+          - feedbackId
+          - kind
+          - message
+          - answer
+          - answeredAt
+          type: object
           properties:
             createdAt:
-              type: "string"
-              description: "접수 시각"
+              type: string
+              description: 접수 시각
               nullable: false
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
             answer:
-              type: "string"
-              description: "운영자의 답변. 아직 없으면 null"
+              type: string
+              description: 운영자의 답변. 아직 없으면 null
               nullable: true
-              example: "확인했습니다."
+              example: 확인했습니다.
             kind:
-              type: "string"
-              description: "문의 종류"
+              type: string
+              description: 문의 종류
               nullable: false
-              example: "INCIDENT"
+              example: INCIDENT
               enum:
-              - "INCIDENT"
-              - "QUESTION"
-              - "SUGGESTION"
-              - "OTHER"
+              - INCIDENT
+              - QUESTION
+              - SUGGESTION
+              - OTHER
             answeredAt:
-              type: "string"
-              description: "답변한 시각. 답변이 없으면 null"
+              type: string
+              description: 답변한 시각. 답변이 없으면 null
               nullable: true
-              example: "2026-07-14T01:02:03Z"
-              format: "date-time"
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
             feedbackId:
-              type: "string"
-              description: "문의 식별자"
+              type: string
+              description: 문의 식별자
               nullable: false
-              example: "0HZX2K7M9Q4AJ"
-              pattern: "^[0-9A-HJKMNP-TV-Z]{13}$"
+              example: 0HZX2K7M9Q4AJ
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
             message:
-              type: "string"
-              description: "보낸 내용"
+              type: string
+              description: 보낸 내용
               nullable: false
-              example: "녹음이 자꾸 끊겨요"
+              example: 녹음이 자꾸 끊겨요
               maxLength: 1500
-          description: "성공 응답 데이터"
+          description: 성공 응답 데이터
           nullable: false
         success:
-          type: "boolean"
-          description: "요청 성공 여부"
+          type: boolean
+          description: 요청 성공 여부
           nullable: false
           example: true
         error:
           nullable: true
           enum:
           - null
-          description: "성공 시 null인 오류 정보"
+          description: 성공 시 null인 오류 정보
     GuestLinkResponse:
       title: GuestLinkResponse
       required:
@@ -16234,6 +16347,71 @@ components:
             enum:
             - AGENDA_LOG
             - TRANSCRIPT
+    RenameWorkspaceGuestRequest:
+      title: RenameWorkspaceGuestRequest
+      required:
+      - displayName
+      type: object
+      properties:
+        displayName:
+          type: string
+          description: 바꿀 임시 참여자 이름. 앞뒤 공백과 제어문자는 저장 전에 정리된다
+          nullable: false
+          example: 박서준
+          minLength: 1
+          maxLength: 100
+    WorkspaceGuestResponse:
+      title: WorkspaceGuestResponse
+      required:
+      - data
+      - error
+      - success
+      type: object
+      properties:
+        data:
+          required:
+          - createdAt
+          - displayName
+          - guestId
+          - noteCount
+          type: object
+          properties:
+            createdAt:
+              type: string
+              description: 임시 참여자가 만들어진 시각
+              nullable: false
+              example: '2026-07-14T01:02:03Z'
+              format: date-time
+            displayName:
+              type: string
+              description: 바뀐 임시 참여자 이름
+              nullable: false
+              example: 박서준
+            noteCount:
+              type: integer
+              description: 이 임시 참여자가 참여자로 들어가 있는 회의 수
+              nullable: false
+              example: 3
+              format: int64
+              minimum: 0
+            guestId:
+              type: string
+              description: 임시 참여자의 13자리 TSID
+              nullable: false
+              example: 0HZX2K7M9Q4AR
+              pattern: ^[0-9A-HJKMNP-TV-Z]{13}$
+          description: 성공 응답 데이터
+          nullable: false
+        success:
+          type: boolean
+          description: 요청 성공 여부
+          nullable: false
+          example: true
+        error:
+          nullable: true
+          enum:
+          - null
+          description: 성공 시 null인 오류 정보
   securitySchemes:
     accessCookie:
       type: apiKey

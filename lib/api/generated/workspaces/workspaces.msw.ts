@@ -14,6 +14,7 @@ import type {
   GuestLinkResponse,
   UpdateWorkspaceResponse,
   WorkspaceGuestListResponse,
+  WorkspaceGuestResponse,
   WorkspaceListResponse,
   WorkspaceResponse,
 } from "../models";
@@ -91,6 +92,18 @@ export const getDeleteWorkspaceGuestResponseMock =
   (): DeleteWorkspaceGuestResponse => ({
     success: true,
     data: { affectedNoteCount: 3 },
+    error: null,
+  });
+
+export const getRenameWorkspaceGuestResponseMock =
+  (): WorkspaceGuestResponse => ({
+    success: true,
+    data: {
+      guestId: "0HZX2K7M9Q4AR",
+      displayName: "박서준",
+      noteCount: 3,
+      createdAt: "2026-07-14T01:02:03Z",
+    },
     error: null,
   });
 
@@ -259,6 +272,30 @@ export const getDeleteWorkspaceGuestMockHandler = (
   );
 };
 
+export const getRenameWorkspaceGuestMockHandler = (
+  overrideResponse?:
+    | WorkspaceGuestResponse
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0]
+      ) => Promise<WorkspaceGuestResponse> | WorkspaceGuestResponse),
+  options?: RequestHandlerOptions
+) => {
+  return http.patch(
+    "*/v1/workspaces/:workspaceId/guests/:guestId",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRenameWorkspaceGuestResponseMock(),
+        { status: 200 }
+      );
+    },
+    options
+  );
+};
+
 export const getLinkWorkspaceGuestMockHandler = (
   overrideResponse?:
     | GuestLinkResponse
@@ -313,6 +350,7 @@ export const getWorkspacesMock = () => [
   getUpdateWorkspaceMockHandler(),
   getGetWorkspaceGuestsMockHandler(),
   getDeleteWorkspaceGuestMockHandler(),
+  getRenameWorkspaceGuestMockHandler(),
   getLinkWorkspaceGuestMockHandler(),
   getPreviewWorkspaceGuestLinkMockHandler(),
 ];

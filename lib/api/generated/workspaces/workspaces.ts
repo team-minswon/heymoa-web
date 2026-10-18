@@ -31,10 +31,12 @@ import type {
   GetWorkspaceGuestsParams,
   GuestLinkResponse,
   LinkWorkspaceGuestRequest,
+  RenameWorkspaceGuestRequest,
   UnauthorizedResponse,
   UpdateWorkspaceRequest,
   UpdateWorkspaceResponse,
   WorkspaceGuestListResponse,
+  WorkspaceGuestResponse,
   WorkspaceListResponse,
   WorkspaceResponse,
 } from "../models";
@@ -1560,6 +1562,184 @@ export const useDeleteWorkspaceGuest = <
 > => {
   return useMutation(
     getDeleteWorkspaceGuestMutationOptions(options),
+    queryClient
+  );
+};
+export type renameWorkspaceGuestResponse200 = {
+  data: WorkspaceGuestResponse;
+  status: 200;
+};
+
+export type renameWorkspaceGuestResponse400 = {
+  data: AppErrorResponse;
+  status: 400;
+};
+
+export type renameWorkspaceGuestResponse401 = {
+  data: UnauthorizedResponse;
+  status: 401;
+};
+
+export type renameWorkspaceGuestResponse403 = {
+  data: AppErrorResponse;
+  status: 403;
+};
+
+export type renameWorkspaceGuestResponse404 = {
+  data: AppErrorResponse;
+  status: 404;
+};
+
+export type renameWorkspaceGuestResponseSuccess =
+  renameWorkspaceGuestResponse200 & {
+    headers: Headers;
+  };
+export type renameWorkspaceGuestResponseError = (
+  | renameWorkspaceGuestResponse400
+  | renameWorkspaceGuestResponse401
+  | renameWorkspaceGuestResponse403
+  | renameWorkspaceGuestResponse404
+) & {
+  headers: Headers;
+};
+
+export type renameWorkspaceGuestResponse =
+  | renameWorkspaceGuestResponseSuccess
+  | renameWorkspaceGuestResponseError;
+
+export const getRenameWorkspaceGuestUrl = (
+  workspaceId: string,
+  guestId: string
+) => {
+  return `/v1/workspaces/${workspaceId}/guests/${guestId}`;
+};
+
+/**
+ * 임시 참여자의 이름을 고친다. 같은 행의 이름만 바뀌므로 참석자 연결과 화자 지정은 그대로 유지된다. ADMIN만 부를 수 있고, 같은 이름의 임시 참여자를 허용한다(만들 때와 같다). 이름은 앞뒤 공백을 지우고 1~100자여야 하며, 응답은 목록 항목과 같은 모양이다.
+ * @summary 워크스페이스 임시 참여자 이름 변경
+ */
+export const renameWorkspaceGuest = async (
+  workspaceId: string,
+  guestId: string,
+  renameWorkspaceGuestRequest?: RenameWorkspaceGuestRequest,
+  options?: Parameters<typeof apiFetch>[1]
+): Promise<renameWorkspaceGuestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string]
+        )
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return apiFetch<renameWorkspaceGuestResponse>(
+    getRenameWorkspaceGuestUrl(workspaceId, guestId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(renameWorkspaceGuestRequest),
+    }
+  );
+};
+
+export const getRenameWorkspaceGuestMutationKey = () =>
+  ["renameWorkspaceGuest"] as const;
+
+export const getRenameWorkspaceGuestMutationOptions = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renameWorkspaceGuest>>,
+    TError,
+    RenameWorkspaceGuestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renameWorkspaceGuest>>,
+  TError,
+  RenameWorkspaceGuestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRenameWorkspaceGuestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renameWorkspaceGuest>>,
+    RenameWorkspaceGuestMutationVariables
+  > = (props) => {
+    const { workspaceId, guestId, data } = props ?? {};
+
+    return renameWorkspaceGuest(workspaceId, guestId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenameWorkspaceGuestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renameWorkspaceGuest>>
+>;
+export type RenameWorkspaceGuestMutationBody =
+  | RenameWorkspaceGuestRequest
+  | undefined;
+export type RenameWorkspaceGuestMutationError =
+  | AppErrorResponse
+  | UnauthorizedResponse;
+export type RenameWorkspaceGuestMutationVariables = {
+  workspaceId: string;
+  guestId: string;
+  data?: RenameWorkspaceGuestRequest;
+};
+
+/**
+ * @summary 워크스페이스 임시 참여자 이름 변경
+ */
+export const useRenameWorkspaceGuest = <
+  TError = AppErrorResponse | UnauthorizedResponse,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof renameWorkspaceGuest>>,
+      TError,
+      RenameWorkspaceGuestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof renameWorkspaceGuest>>,
+  TError,
+  RenameWorkspaceGuestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRenameWorkspaceGuestMutationOptions(options),
     queryClient
   );
 };

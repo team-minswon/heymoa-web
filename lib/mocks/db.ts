@@ -3626,6 +3626,48 @@ export const mockDb = {
   },
 
   /**
+   * 임시 참여자의 이름을 고친다 (APP-1193). **같은 행의 이름만 바뀐다** — 참여 기록 id 와 화자 지정은
+   * 그대로고, 회의가 들고 있는 이름 사본(참여자·화자 목록)만 따라 바뀐다. 같은 이름은 막지 않는다.
+   */
+  renameWorkspaceGuest(
+    workspaceId: string,
+    guestId: string,
+    displayName: string
+  ) {
+    requireWorkspaceAdmin(workspaceId);
+    const guest = state.workspaceGuests.find(
+      (row) => row.guestId === guestId && row.workspaceId === workspaceId
+    );
+    if (!guest) fail("WORKSPACE_GUEST_NOT_FOUND");
+
+    const name = displayName
+      .replace(/[\u0000-\u001F\u007F\u0085\u2028\u2029]+/g, " ")
+      .trim();
+    if (name.length === 0 || name.length > 100) fail("BAD_REQUEST");
+
+    guest.displayName = name;
+    for (const note of state.notes) {
+      const participantIds = new Set<string>();
+      note.participants = note.participants.map((row) => {
+        if (row.guestId !== guestId) return row;
+        participantIds.add(row.participantId);
+        return { ...row, name };
+      });
+      for (const participantId of participantIds) {
+        renameSpeaker(note.noteId, participantId, { userId: "", name });
+      }
+    }
+    return copy({
+      guestId,
+      displayName: name,
+      noteCount: state.notes.filter((note) =>
+        note.participants.some((row) => row.guestId === guestId)
+      ).length,
+      createdAt: guest.createdAt,
+    });
+  },
+
+  /**
    * 임시 참여자를 지운다. **되돌릴 수 없다** — 그 참여 기록과 거기 붙은 화자 연결이
    * 함께 사라진다. 서버에서는 `ON DELETE CASCADE` 가 하는 일이라 목이 흉내 낸다.
    */

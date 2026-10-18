@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PersonAvatar } from "@/components/heymoa/person-avatar";
 import {
@@ -30,6 +31,7 @@ import { invalidateNoteLists } from "@/lib/notes/invalidate";
 import { useGetWorkspaceMembers } from "@/lib/api/generated/workspace-members/workspace-members";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGuestListPages } from "@/lib/workspace/use-guest-list-pages";
+import { useRenameGuest } from "@/lib/workspace/use-rename-guest";
 import type {
   GuestLinkResponseData,
   WorkspaceGuestListResponseDataGuestsItem,
@@ -188,6 +190,11 @@ export function WorkspaceGuestsSettings({
               <GuestRow
                 key={guest.guestId}
                 guest={guest}
+                workspaceId={workspaceId}
+                // **이름 변경은 삭제와 달리 목록이 낡아도 안전하다** — 낡은 숫자를 근거로 되돌릴 수 없는 일을
+                // 하는 게 아니라 이름 하나를 덮을 뿐이고, 결과는 응답으로 캐시에 직접 쓴다. 그래서 재조회
+                // 중·실패 중에도 잠그지 않고 역할만 본다.
+                canRename={canManage}
                 // **낡은 값으로는 지우지 못하게 한다.** 캐시를 살려 목록은 그대로 그리지만,
                 // 그 사이 남이 이 사람을 다른 회의에 넣었으면 확인창의 「회의록 N개」가 거짓이
                 // 된다 — 삭제는 되돌릴 수 없고 화자 연결까지 CASCADE 로 가져간다.
@@ -260,28 +267,86 @@ export function WorkspaceGuestsSettings({
 
 function GuestRow({
   guest,
+  workspaceId,
   canManage,
+  canRename,
   onOpen,
 }: {
   guest: WorkspaceGuestListResponseDataGuestsItem;
+  workspaceId: string;
   canManage: boolean;
+  canRename: boolean;
   onOpen: (kind: "link" | "delete") => void;
 }) {
+  const { rename } = useRenameGuest({
+    workspaceId,
+    guestId: guest.guestId,
+    displayName: guest.displayName,
+  });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const trimmed = draft.trim();
+  const empty = trimmed.length === 0;
+
+  function save() {
+    // 빈 값은 저장하지 않는다 — 입력을 그대로 두어 고치게 한다.
+    if (empty) return;
+    setEditing(false);
+    // 안 바뀌었으면 요청하지 않는다.
+    if (trimmed !== guest.displayName) rename(trimmed);
+  }
+
   return (
     <li className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
       {/* 색은 `guestId` 가 정한다 — 이름은 겹치고(박도현·박순영) 개명하면 튄다. */}
       <PersonAvatar name={guest.guestId} size={28} />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm text-[var(--el-ink)]">
-          {guest.displayName}
-        </span>
+        {editing && canRename ? (
+          <Input
+            autoFocus
+            aria-label="임시 참여자 이름"
+            aria-invalid={empty}
+            maxLength={100}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              // 한글 조합 중의 Enter 는 글자를 확정하는 키다 — 저장으로 읽지 않는다.
+              if (event.nativeEvent.isComposing) return;
+              if (event.key === "Enter") {
+                event.preventDefault();
+                save();
+              } else if (event.key === "Escape") {
+                // 대화상자 안이라 Esc 가 설정 창까지 닫지 않게 여기서 멈춘다.
+                event.stopPropagation();
+                setEditing(false);
+              }
+            }}
+          />
+        ) : (
+          <span className="truncate text-sm text-[var(--el-ink)]">
+            {guest.displayName}
+          </span>
+        )}
         <span className="text-xs text-[var(--el-muted)]">
           회의록 {guest.noteCount}개
         </span>
       </span>
 
       {/* **관리는 ADMIN만이다.** 목록 자체는 전원이 본다 */}
-      {canManage ? (
+      {canRename && !editing ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-[30px] shrink-0"
+          onClick={() => {
+            setDraft(guest.displayName);
+            setEditing(true);
+          }}
+        >
+          이름 변경
+        </Button>
+      ) : null}
+      {canManage && !editing ? (
         <span className="flex shrink-0 items-center gap-1.5">
           <Button
             variant="outline"

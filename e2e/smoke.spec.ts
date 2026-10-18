@@ -2078,6 +2078,39 @@ test("opens guest settings from the participants popup", async ({ page }) => {
 });
 
 /**
+ * 설정에서 임시 참여자 이름을 고치면 참석자 필드의 이름도 따라 바뀐다 (APP-1194).
+ *
+ * **서비스 워커를 지나는 PATCH 왕복이다.** 응답 값을 캐시에 직접 쓰므로 노트 화면은 재조회 없이 바뀐다.
+ */
+test("renames a guest in settings and the attendee field follows", async ({
+  page,
+}) => {
+  await page.goto(
+    `/w/${MOCK_WORKSPACE_ID}/notes/${STARTER_NOTE_ID}?view=side&tab=details`
+  );
+  await expect(page.getByLabel("박서준 (외부)").first()).toBeVisible();
+
+  await page.getByRole("combobox", { name: "참여자 추가" }).click();
+  await page.getByRole("button", { name: "임시 참여자 관리" }).click();
+  const dialog = page.getByRole("dialog", { name: /설정/ });
+  await expect(dialog).toBeVisible();
+
+  const row = dialog
+    .getByRole("listitem")
+    .filter({ hasText: "박서준" })
+    .first();
+  await row.getByRole("button", { name: "이름 변경" }).click();
+  // 입력이 열린 행은 이름이 텍스트가 아니라 값이라 `row` 가 더는 안 잡힌다 — 열린 입력은 하나뿐이다.
+  const input = dialog.getByRole("textbox", { name: "임시 참여자 이름" });
+  await input.fill("박서준2");
+  await input.press("Enter");
+
+  await expect(dialog.getByText("박서준2")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("박서준2 (외부)").first()).toBeVisible();
+});
+
+/**
  * **멤버를 빼도 임시 참여자가 남는다.** 이 이슈의 핵심 완료 기준이고, 저장 요청을 계정과
  * 임시 둘로 가른 이유다 — 한 요청에 섞어 보내면 멤버 하나를 바꿀 때마다 임시 참여자가
  * 함께 지워지고 그 화자 연결이 CASCADE 로 날아간다.
