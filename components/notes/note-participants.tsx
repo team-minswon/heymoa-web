@@ -113,7 +113,7 @@ export function ParticipantAvatar({
  * 아이콘이 숨겨져 점으로만 보여 뜻이 안 읽혔다. 진행자는 `진행` 라벨과 함께 글자 옆에
  * 세운다(`note-list-row`) — 라벨이 있어야 무엇인지 알 수 있다.
  *
- * `max`가 목록(3)과 상세(5)에서 다른 이유는 목록 행이 52px 한 줄이라 아바타가 넓어질수록
+ * `max`가 목록(4)과 상세(5)에서 다른 이유는 목록 행이 한 줄이라 아바타가 넓어질수록
  * 제목이 먼저 잘리기 때문이다.
  */
 export function NoteParticipantAvatars({

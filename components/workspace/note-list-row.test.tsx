@@ -319,4 +319,53 @@ describe("NoteListRow", () => {
     });
     expect(screen.queryByText("삭제")).toBeNull();
   });
+
+  /** 참석자 그룹은 최대 4명 — 5명부터 4개 + `+N`(보이지 않는 인원). 인원 글자와 모순이 없어야 한다. */
+  it.each([
+    [3, 3, null],
+    [4, 4, null],
+    [5, 4, "+1"],
+    [12, 4, "+8"],
+  ] as const)("참석자 %i명이면 아바타 %i개와 %s 를 보인다", (count, shown, more) => {
+    const participants = Array.from({ length: count }, (_, k) => ({
+      participantId: `p${k}`,
+      userId: `u${k}`,
+      guestId: null,
+      name: `참석자${k}`,
+      email: `p${k}@heymoa.test`,
+      image: null,
+    }));
+    const { container } = renderRow(note({ participants }));
+
+    const people = container.querySelector('[data-slot="note-row-people"]')!;
+    expect(people.querySelectorAll('[data-slot="avatar"]')).toHaveLength(shown);
+    const chip = people.querySelector('[aria-label^="외 "]');
+    expect(chip?.textContent ?? null).toBe(more);
+    expect(screen.getByText(`참여 ${count}명`)).toBeInTheDocument();
+  });
+
+  /** jsdom 은 hover 를 못 흉내 내니 열린 상태의 클래스가 걸려 있는지로 고정한다. */
+  it("행이 열리면(hover·키보드 포커스·메뉴 열림·터치) 아바타는 비키고 메뉴 버튼이 나타난다", () => {
+    const { container } = renderRow(note());
+    const people = container.querySelector('[data-slot="note-row-people"]')!;
+    const menu = screen.getByRole("button", { name: /노트 메뉴/ });
+
+    for (const state of [
+      "group-hover/row",
+      "group-has-[:focus-visible]/row",
+      "group-has-[[aria-expanded=true]]/row",
+    ]) {
+      expect(people.className).toContain(`${state}:-translate-x-9`);
+      expect(menu.className).toContain(`${state}:opacity-100`);
+    }
+    expect(people.className).toContain("[@media(hover:none)]:-translate-x-9");
+    expect(menu.className).toContain("[@media(hover:none)]:opacity-100");
+    // 기본은 숨김 + 클릭 차단, 전환은 reduced-motion 에서 끈다.
+    expect(menu.className).toMatch(/\bopacity-0\b/);
+    expect(menu.className).toContain("pointer-events-none");
+    expect(people.className).toContain("motion-reduce:transition-none");
+    expect(menu.className).toContain("motion-reduce:transition-none");
+    // 숨겨져도 키보드로 닿는다(탭 순서 불변).
+    expect(menu).not.toHaveAttribute("tabindex", "-1");
+  });
 });

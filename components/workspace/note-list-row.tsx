@@ -37,6 +37,17 @@ import {
 } from "@/lib/notes/meeting-state";
 import { cn } from "@/lib/utils";
 
+/**
+ * 행이 「열린」 상태일 때만 켜지는 변형. 아바타가 `…` 폭만큼 왼쪽으로 비키고 `…` 가 나타난다.
+ * 포인터 hover, **키보드 포커스**(`:focus-visible` — 마우스로 누른 포커스는 제외), 메뉴가 열려 있는
+ * 동안(`aria-expanded`), 그리고 hover 가 없는 터치 환경에서 늘 켠다.
+ * Tailwind 는 클래스를 정적 문자열로만 읽으므로 두 곳에서 같은 목록을 그대로 쓴다.
+ */
+const SHIFT_WHEN_OPEN =
+  "group-hover/row:-translate-x-9 group-has-[:focus-visible]/row:-translate-x-9 group-has-[[aria-expanded=true]]/row:-translate-x-9 [@media(hover:none)]:-translate-x-9";
+const REVEAL_WHEN_OPEN =
+  "group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-has-[:focus-visible]/row:pointer-events-auto group-has-[:focus-visible]/row:opacity-100 group-has-[[aria-expanded=true]]/row:pointer-events-auto group-has-[[aria-expanded=true]]/row:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100";
+
 function ActiveRecordingMeter({ title }: { title: string }) {
   const meter = useRecordingMeter();
 
@@ -213,7 +224,7 @@ export function NoteListRow({
     // 그 버튼의 링이 따로 있으므로 행까지 두르면 링이 두 겹이 된다.
     <article
       className={cn(
-        "group flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset",
+        "group/row relative flex h-16 items-center gap-2 rounded-control px-3 transition-colors hover:bg-[var(--el-canvas-soft)] focus-within:bg-[var(--el-canvas-soft)] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--el-ink)] has-[a:focus-visible]:ring-inset",
         arrived &&
           "animate-in fade-in-0 duration-200 ease-out motion-reduce:animate-none"
       )}
@@ -244,7 +255,16 @@ export function NoteListRow({
         {/* `진행자 | 참여자들`. 구분선이 두 뭉치의 뜻을 가른다 — 한 줄에 섞으면 어느 얼굴이
             무엇인지 알 수 없고, 배지로 표시해 봤자 이 크기에서는 점으로만 보인다.
             화면 폭으로 접지 않는다 — 접으면 모바일에서 진행자를 알 방법이 사라진다. */}
-        <span className="flex shrink-0 items-center gap-2">
+        {/* 오른쪽 끝에 붙어 있다가 행이 열리면 `…` 폭(28px) + 간격(8px) = 36px 만큼 왼쪽으로
+            비킨다. `ml-9` 는 그 36px 을 **미리 제목 쪽에서 비워 두는 몫**이다 — 안 그러면
+            비킨 아바타가 말줄임된 제목 끝을 덮는다. 이동은 transform 이라 레이아웃은 안 흔들린다. */}
+        <span
+          data-slot="note-row-people"
+          className={cn(
+            "ml-9 flex shrink-0 items-center gap-2 transition-transform duration-200 ease-out motion-reduce:transition-none",
+            SHIFT_WHEN_OPEN
+          )}
+        >
           {note.meetingStartedBy ? (
             <>
               <ParticipantAvatar
@@ -260,7 +280,7 @@ export function NoteListRow({
           ) : null}
           <NoteParticipantAvatars
             participants={note.participants}
-            max={3}
+            max={4}
             size="sm"
           />
         </span>
@@ -273,7 +293,13 @@ export function NoteListRow({
               variant="ghost"
               size="icon-sm"
               aria-label={`${note.title} 노트 메뉴`}
-              className="rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+              data-slot="note-row-menu"
+              // 숨겨진 동안은 클릭도 받지 않는다 — 오른쪽 끝의 링크 영역을 가리지 않게.
+              // 키보드 포커스는 그대로 닿고(탭 순서 불변), 포커스되면 위 REVEAL 로 나타난다.
+              className={cn(
+                "pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-full opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none",
+                REVEAL_WHEN_OPEN
+              )}
             />
           }
         >
