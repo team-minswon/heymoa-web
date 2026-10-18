@@ -62,6 +62,8 @@ export type MinutesAgenda = {
   no: number | null;
   title: string;
   gist: string | null;
+  /** 목차의 축약본과 별개로 본문에 보존할 안건 요약 전문 */
+  text: string;
   /** 이 안건이 처음 나온 녹취록 시각 */
   start: string | null;
   decisions: number;
@@ -307,7 +309,7 @@ export function buildMinutes({
     for (const { segmentId } of item.citations ?? []) refsOf.set(segmentId, [...(refsOf.get(segmentId) ?? []), label]);
   };
 
-  const place = (no: number | null, title: string, gist: string | null, startMs: number | null, source: Pick<MinutesTopic, "decisions" | "tasks" | "open">) => {
+  const place = (no: number | null, title: string, gist: string | null, startMs: number | null, source: Pick<MinutesTopic, "decisions" | "tasks" | "open">, text = "") => {
     const picked = { decisions: fresh(source.decisions), tasks: fresh(source.tasks), open: fresh(source.open) };
     for (const item of picked.decisions) {
       decisions.push({ no: decisions.length + 1, text: item.content.trim(), agendaNo: no, at: pointAt(citedAt(item)) });
@@ -336,12 +338,12 @@ export function buildMinutes({
     }
     const counts = { decisions: picked.decisions.length, actions: picked.tasks.length, open: picked.open.length };
     if (!gist && counts.decisions + counts.actions + counts.open === 0) return;
-    agendas.push({ no, title, gist, start: pointAt(startMs), ...counts });
+    agendas.push({ no, title, gist, text, start: pointAt(startMs), ...counts });
     if (no !== null && startMs !== null) agendaStarts.push({ ms: startMs, no, title });
   };
 
   topics.forEach((topic, index) =>
-    place(index + 1, topic.title.trim(), gistOf(topic), topic.startMs ?? null, topic)
+    place(index + 1, topic.title.trim(), gistOf(topic), topic.startMs ?? null, topic, topic.text.trim() || topic.gist?.trim() || "")
   );
   const rest = (key: ReviewSection["key"]) => sections.find((section) => section.key === key)?.items ?? [];
   place(null, OTHER_AGENDA, null, null, { decisions: rest("DECISION"), tasks: rest("ACTION_ITEM"), open: unfiledOpen });

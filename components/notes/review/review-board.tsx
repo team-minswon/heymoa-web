@@ -1,7 +1,8 @@
 "use client";
 
 import { reviewToMarkdown } from "@/lib/notes/review/markdown";
-import { renderMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
+import { createMinutesPdfRenderer } from "@/components/notes/minutes/render-minutes-pdf";
+import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
 import { widerExports } from "@/lib/notes/minutes/exports";
 import { overviewText, summaryTopics } from "@/lib/notes/review/summary";
 import { useQueryClient } from "@tanstack/react-query";
@@ -276,6 +277,8 @@ export function ReviewBoard({
   );
   const segments = useMemo(() => transcript?.segments ?? [], [transcript]);
   const speakers = transcript?.diarization.speakers;
+  const [renderPdf] = useState(createMinutesPdfRenderer);
+  const exportVersion = useMemo(() => JSON.stringify({ noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName }), [noteId, noteMeta, confirmed, summary, items, transcript, participants, currentUserName]);
   // 항목이 나온 때는 인용한 스크립트 구간으로 계산한다(APP-865) — server 는 항목에 시각을 싣지 않는다.
   const starts = useMemo(() => segmentStarts(segments), [segments]);
   const citedAt = useCallback(
@@ -641,7 +644,7 @@ export function ReviewBoard({
   // 복사 · PDF · 메일이 같은 회의록 재료를 쓴다 — 셋이 따로 조립하면 받은 PDF 와 내려받은 PDF 가 갈라진다.
   // 녹취록이 온 뒤에 연다 — 항목 시각 · 안건 시작 · 회의 길이를 녹취록에서 잰다. **받은 녹취록이 있는지로 가린다**:
   // isSuccess 로 가리면 다시 받기가 실패할 때 열린 PDF · 메일 창이 사라지고 쓰던 받는 사람 · 메시지도 날아갔다
-  const wider =
+  const exportSources =
     noteMeta && transcript
       ? widerExports({
           queryClient,
@@ -665,6 +668,13 @@ export function ReviewBoard({
           unnamedSpeakers: unnamedSpeakers.length,
         })
       : undefined;
+  const preparePdf: PrepareMinutesPdf = async (include, signal) => {
+    if (!exportSources) throw new Error("회의록 자료를 불러오지 못했습니다.");
+    const doc = await exportSources.minutes(include);
+    signal?.throwIfAborted();
+    return { blob: await renderPdf(doc, signal), fileName: doc.fileName };
+  };
+  const wider = exportSources ? { ...exportSources, preparePdf, version: exportVersion } : undefined;
   const isMine = (item: ReviewItem) =>
     Boolean(currentUserId) &&
     item.assignee?.type === "USER" &&
@@ -969,9 +979,9 @@ export function ReviewBoard({
             speaker.type === "SPEAKER_LABEL" ? [`화자 ${speaker.label}`] : []
           )}
           // 「PDF로 내보내기」와 같은 생성기다 — 받는 사람이 받는 파일과 내려받은 파일이 같다
-          buildPdf={async (include) =>
-            renderMinutesPdf(await wider.minutes(include))
-          }
+          buildPdf={async (include) => (await preparePdf(include)).blob}
+          preparePdf={preparePdf}
+          version={exportVersion}
         />
       ) : null}
     </div>

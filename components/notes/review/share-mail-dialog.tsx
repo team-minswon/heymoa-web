@@ -2,6 +2,10 @@
 
 import { Check, ChevronDown, CircleAlert, FileText, Info, LoaderCircle, Paperclip } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { PdfPreview } from "@/components/notes/minutes/pdf-preview";
+import { usePdfArtifact } from "@/components/notes/minutes/use-pdf-artifact";
+import type { PrepareMinutesPdf } from "@/components/notes/minutes/render-minutes-pdf";
+import { minutesFileName } from "@/lib/notes/minutes/model";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import {
@@ -64,6 +68,8 @@ export function ShareMailDialog({
   attendees,
   unnamedSpeakers,
   buildPdf,
+  preparePdf,
+  version = "initial",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -75,6 +81,8 @@ export function ShareMailDialog({
   /** 녹취록에 이름 없이 나갈 화자의 표시 이름(「화자 C」) */
   unnamedSpeakers: readonly string[];
   buildPdf: (include: MinutesInclude) => Promise<Blob>;
+  preparePdf?: PrepareMinutesPdf;
+  version?: string;
 }) {
   const { user } = useAuth();
   const recipientsId = useId();
@@ -92,6 +100,7 @@ export function ShareMailDialog({
   ];
 
   const [include, setInclude] = useState<MinutesInclude>({ transcript: false });
+  const [previewed, setPreviewed] = useState(false);
   // **열 때마다 녹취록을 끈다** — 창은 닫혀도 마운트된 채라 지난번에 켠 녹취록이 다음 메일에 말없이 실렸다.
   // 받는 사람 · 메시지는 쓰다 만 것이라 남긴다(보내면 비운다)
   // 보낸 뒤에는 창을 닫지 않고 받는 사람별 결과를 그린다. [since] 는 결과를 다시 묻기 시작한 때다
@@ -110,6 +119,7 @@ export function ShareMailDialog({
     setWasOpen(open);
     if (open) {
       setInclude({ transcript: false });
+      setPreviewed(false);
       // 아직 결과를 기다리는 발송이 있으면 그 결과 화면을 다시 연다 — 지우면 그 발송을 더 묻지 않아 뒤에 나온
       // 실패를 아무도 모른다. 끝난 발송만 걷고 새로 쓴다
       if (sentDone) setSent(null);
@@ -119,9 +129,18 @@ export function ShareMailDialog({
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [message, setMessage] = useState("");
   const [building, setBuilding] = useState(false);
+  const sending = useRef(false);
   const sendMail = useSendNoteShareMail();
+  const pdf = usePdfArtifact(open, version, include, preparePdf ?? (async (option) => ({
+    blob: await buildPdf(option), fileName: minutesFileName(meeting.title, meeting.whenIso),
+  })));
+  const preview = async () => {
+    try { await pdf.prepare(); setPreviewed(true); }
+    catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) toast.error(errorMessageOf(error, "회의록 PDF를 만들지 못했습니다.")); }
+  };
 
-  const busy = building || sendMail.isPending;
+  const busy = building || pdf.pending || sendMail.isPending;
+  const submitting = building || sendMail.isPending;
   const problem = recipientProblem(recipients);
   const rejected = RECIPIENT_CODES.has(errorCodeOf(sendMail.error) ?? "");
   const remainingAttendees = attendees.filter((person) => !hasRecipient(recipients, person.email));
@@ -134,11 +153,15 @@ export function ShareMailDialog({
   };
 
   const send = async () => {
+    if (sending.current || busy) return;
+    sending.current = true;
     let file: Blob;
     setBuilding(true);
     try {
-      file = await buildPdf(include);
+      file = (await pdf.prepare()).blob;
     } catch (error) {
+      sending.current = false;
+      if (error instanceof DOMException && error.name === "AbortError") return;
       toast.error(errorMessageOf(error, "회의록 PDF를 만들지 못했습니다."));
       return;
     } finally {
@@ -158,6 +181,7 @@ export function ShareMailDialog({
       },
       {
         onSuccess: (response) => {
+          sending.current = false;
           // 202 는 접수일 뿐이다(계약). 받는 사람별 결과는 이 창에서 이어 묻는다
           const mailId = response.status === 202 ? response.data.data?.mailId : undefined;
           if (!mailId) return;
@@ -167,6 +191,7 @@ export function ShareMailDialog({
           setRecipients([]);
           setMessage("");
         },
+        onError: () => { sending.current = false; },
       }
     );
   };
@@ -204,9 +229,9 @@ export function ShareMailDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next || !busy) && onOpenChange(next)}>
+    <Dialog open={open} onOpenChange={(next) => (next || !submitting) && onOpenChange(next)}>
       <DialogContent
-        showCloseButton={!busy}
+        showCloseButton={!submitting}
         className={cn(
           "flex max-h-[calc(100dvh-3rem)] flex-col gap-0 p-0 break-keep sm:max-w-[520px]",
           // 좁은 화면은 아래 시트 — 손이 닿는 자리에 보내기가 오고, 키보드가 올라와도 위가 덜 가린다
@@ -276,7 +301,7 @@ export function ShareMailDialog({
               value={recipients}
               onChange={changeRecipients}
               groups={groups}
-              disabled={busy}
+              disabled={submitting}
               invalid={Boolean(problem) || rejected}
               describedBy={problem ? problemId : undefined}
             />
@@ -293,7 +318,7 @@ export function ShareMailDialog({
               {attendees.length > 0 ? (
                 <button
                   type="button"
-                  disabled={busy || remainingAttendees.length === 0}
+                  disabled={submitting || remainingAttendees.length === 0}
                   className="text-[13px] font-medium text-[var(--el-ink)] underline decoration-[var(--el-hairline-strong)] underline-offset-[3px] disabled:text-[var(--el-muted)] disabled:no-underline"
                   onClick={() => changeRecipients(addRecipients(recipients, remainingAttendees))}
                 >
@@ -325,11 +350,17 @@ export function ShareMailDialog({
               id={`${recipientsId}-message`}
               value={message}
               maxLength={MAX_MESSAGE_LENGTH}
-              disabled={busy}
+              disabled={submitting}
               placeholder="받는 분께 남길 말을 적으세요"
               className="min-h-[72px] rounded-block"
               onChange={(event) => setMessage(event.target.value)}
             />
+          </div>
+
+          <div>
+            <Button variant="outline" loading={pdf.pending && !building} disabled={building || sendMail.isPending} onClick={() => void preview()}>첨부 PDF 미리보기</Button>
+            {previewed && pdf.artifact ? <PdfPreview blob={pdf.artifact.blob} /> : null}
+            {pdf.invalidated ? <p role="status" className="mt-2 text-sm text-[var(--el-muted)]">내용이나 포함 항목이 바뀌었습니다. PDF를 다시 확인해 주세요.</p> : null}
           </div>
 
           <MailPreview
@@ -343,9 +374,9 @@ export function ShareMailDialog({
         </div>
 
         <DialogFooter className="mx-0 mt-3.5 mb-0 rounded-b-panel bg-transparent px-5 pt-3.5 pb-4 max-sm:rounded-b-none">
-          <DialogClose render={<Button variant="outline" disabled={busy} />}>취소</DialogClose>
+          <DialogClose render={<Button variant="outline" disabled={submitting} />}>취소</DialogClose>
           <Button
-            loading={busy}
+            loading={submitting}
             disabled={busy || recipients.length === 0 || Boolean(problem)}
             onClick={() => void send()}
           >

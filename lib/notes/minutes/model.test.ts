@@ -143,8 +143,8 @@ describe("buildMinutes", () => {
     expect(doc.headline).toBe("범위를 메일과 PDF로 나눈다");
     expect(doc.lead).toEqual(["PDF는 web이 만든다."]);
     expect(doc.agendas).toEqual([
-      { no: 1, title: "외부 공유", gist: "메일과 PDF로 나누기로 했다", start: "03:00", decisions: 1, actions: 3, open: 0 },
-      { no: 2, title: "발송 상한", gist: "시간당 상한을 둔다", start: null, decisions: 0, actions: 0, open: 1 },
+      { no: 1, title: "외부 공유", gist: "메일과 PDF로 나누기로 했다", text: "메일과 PDF로 나누기로 했다", start: "03:00", decisions: 1, actions: 3, open: 0 },
+      { no: 2, title: "발송 상한", gist: "시간당 상한을 둔다", text: "시간당 상한을 둔다", start: null, decisions: 0, actions: 0, open: 1 },
     ]);
     expect(doc.owners).toEqual([
       { name: "김민수", count: 2 },
@@ -166,6 +166,8 @@ describe("buildMinutes", () => {
     expect(doc.agendas[0].gist).toBe("메일로 보낸다.");
     expect(doc.agendas[1].gist!.length).toBeLessThanOrEqual(61);
     expect(doc.agendas[1].gist!.endsWith("…")).toBe(true);
+    expect(doc.agendas[0].text).toBe("메일로 보낸다. 상한은 30건이다.");
+    expect(doc.agendas[1].text).toBe(long);
   });
 
   it("상세는 결정 · 할 일 · 미결을 한 번씩 번호 매겨 안건 번호 · 녹취록 시각과 싣고, 두 안건에 걸린 항목은 한 번, 뺀 항목은 안 싣는다", () => {

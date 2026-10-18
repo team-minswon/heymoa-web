@@ -48,9 +48,9 @@ async function render(include: MinutesInclude) {
 
 describe("renderMinutesPdfInline", () => {
   // 쪽 수로 「붙임은 새 쪽에서 시작한다」를 본다. 글자 모양은 사람이 PDF 를 열어 본다(jsdom 은 그리지 못한다)
-  it("1쪽 핵심 뒤 상세는 새 쪽에서, 녹취록을 고르면 부록이 또 새 쪽에서 시작한다", async () => {
-    expect(await render({ transcript: false })).toEqual({ head: "%PDF-", pages: 2 });
-    expect(await render({ transcript: true })).toEqual({ head: "%PDF-", pages: 3 });
+  it("목차 뒤 안건 전문과 상세를 새 쪽에서 읽고 녹취록은 별도 부록으로 붙는다", async () => {
+    expect(await render({ transcript: false })).toEqual({ head: "%PDF-", pages: 3 });
+    expect(await render({ transcript: true })).toEqual({ head: "%PDF-", pages: 4 });
   }, 30_000);
 
   it("한 쪽보다 긴 항목은 여러 행으로 나뉘어 다음 쪽으로 이어진다 — 한 행에 두면 뒤가 쪽 밖으로 잘린다", async () => {
@@ -73,6 +73,16 @@ describe("renderMinutesPdfInline", () => {
     expect(parts.join("")).toBe(line);
   });
 
+  it("3시간 분량의 긴 녹취록도 빈 마지막 표에 몰리지 않고 여러 쪽에 나뉜다", async () => {
+    const base = doc({ transcript: true });
+    const longDoc = { ...base, transcript: Array.from({ length: 1800 }, (_, index) => ({
+      type: "utterance" as const, at: `${Math.floor(index / 10)}:00`, speaker: "AlexandriaChristopherSmith", unnamed: false,
+      text: `${index + 1}번째 발언입니다. 안건과 할 일을 확인했습니다. 근거와 일정을 함께 확인했습니다.`, refs: [],
+    })) };
+    const bytes = Buffer.from(await (await renderMinutesPdfInline(longDoc, FONTS)).arrayBuffer());
+    expect(bytes.toString("latin1").match(/\/Type \/Page\b(?!s)/g)!.length).toBeGreaterThan(30);
+  }, 90_000);
+
   it("빈칸 없이 긴 낱말은 글자마다 줄을 바꿀 수 있고, 짧은 낱말은 그대로다", () => {
     expect(breakableWord("회의록")).toEqual(["회의록"]);
     expect(breakableWord("abcdefgh")).toEqual(["abcdefgh"]);
@@ -83,7 +93,7 @@ describe("renderMinutesPdfInline", () => {
     expect(breakableWord(url).length).toBe(url.length * 2);
   });
 
-  it("안건 여덟 개에 요지가 길어도 1쪽 핵심은 한 쪽에 들고 상세는 2쪽에서 시작한다", async () => {
+  it("안건 여덟 개의 긴 전문을 추가 쪽에 싣고 내부 이동과 북마크를 제공한다", async () => {
     const gist = "요지 문장이 길게 이어집니다 ".repeat(20);
     const topics = Array.from({ length: 8 }, (_, index) => ({
       title: `안건 ${index + 1} 제목이 조금 깁니다`,
@@ -104,6 +114,8 @@ describe("renderMinutesPdfInline", () => {
       include: { transcript: false },
     });
     const bytes = Buffer.from(await (await renderMinutesPdfInline(big, FONTS)).arrayBuffer());
-    expect(bytes.toString("latin1").match(/\/Type \/Page\b(?!s)/g)?.length).toBe(2);
+    expect(bytes.toString("latin1").match(/\/Type \/Page\b(?!s)/g)?.length).toBeGreaterThan(2);
+    expect(bytes.toString("latin1")).toContain("/Outlines");
+    expect(bytes.toString("latin1")).toContain("minutes-agenda-1");
   }, 30_000);
 });
