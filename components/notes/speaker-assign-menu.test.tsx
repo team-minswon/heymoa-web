@@ -166,6 +166,30 @@ describe("SpeakerAssignMenu", () => {
     expect(onAssign).toHaveBeenCalledWith({ userId: "01K0000000777" }, "label");
   });
 
+  /** 참여자가 아닌 멤버도 기본 목록에는 없고(APP-1163), 이름을 치면 후보로 뜬다. */
+  it("참여자가 아닌 멤버는 검색 전에는 숨고 검색하면 후보로 뜬다", () => {
+    const notYet = {
+      participantId: null,
+      userId: "01K0000000777",
+      name: "정하윤",
+      email: "hayoon@example.com",
+      searchOnly: true,
+    };
+    render(
+      <SpeakerAssignMenu
+        identity={identity}
+        candidates={[...candidates, notYet]}
+        onAssign={vi.fn()}
+      />
+    );
+
+    open();
+    expect(screen.queryByRole("option", { name: /정하윤/ })).toBeNull();
+
+    search("정하윤");
+    expect(screen.getByRole("option", { name: /정하윤/ })).toBeTruthy();
+  });
+
   /**
    * 이 회의 밖의 임시 참여자다. **기본 목록에는 안 쌓고 이름을 쳤을 때만** 나타난다 —
    * 늘 보이면 회의와 상관없는 이름으로 불어나고, 아예 빼면 사람이 같은 이름을 하나 더 만든다.

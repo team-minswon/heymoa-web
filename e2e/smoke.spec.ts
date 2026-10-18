@@ -2167,9 +2167,12 @@ test("assigns a workspace member who is not yet a participant and checks them in
   await expect(memberOption()).toHaveAttribute("aria-selected", "false");
   await page.keyboard.press("Escape");
 
-  // 전사에서 그 사람을 화자로 고른다 — 참여자가 아닌데도 후보에 있어야 한다.
+  // 전사에서 그 사람을 화자로 고른다 — 참여자가 아니어도 검색하면 후보에 있어야 한다.
   await page.getByRole("tab", { name: "스크립트" }).click();
   await page.getByLabel("화자 B 화자 지정").first().click();
+  // 기본 목록은 이 회의 참여자만이다(APP-1163) — 이름을 쳐야 나타난다.
+  await expect(memberOption()).toHaveCount(0);
+  await page.getByRole("combobox", { name: /참석자 검색/ }).fill(MEMBER_NAME);
   await memberOption().click();
 
   await expect(
