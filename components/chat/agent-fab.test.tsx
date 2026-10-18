@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AgentFab } from "@/components/chat/agent-fab";
@@ -13,6 +19,64 @@ function renderFab(over: Partial<Parameters<typeof AgentFab>[0]> = {}) {
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuthUserId: () => "u1",
 }));
+
+describe("AgentFab 시선 끌기", () => {
+  beforeEach(() => {
+    window.localStorage.setItem("heymoa:u:u1:agent-intro-dismissed", "1");
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it("20초 뒤 파동 신호가 켜지고 2.4초 뒤 꺼진다. 말풍선은 자동으로 안 뜬다", () => {
+    renderFab();
+    const button = screen.getByRole("button", { name: "내 에이전트 열기" });
+    expect(button.hasAttribute("data-nudge")).toBe(false);
+    act(() => void vi.advanceTimersByTime(20_000));
+    expect(button.hasAttribute("data-nudge")).toBe(true);
+    expect(document.body.textContent).not.toContain("무엇이든 질문해보세요!");
+    act(() => void vi.advanceTimersByTime(2_400));
+    expect(button.hasAttribute("data-nudge")).toBe(false);
+  });
+
+  it("안내 카드를 닫은 시점부터 20초를 센다", () => {
+    window.localStorage.clear();
+    renderFab();
+    act(() => void vi.advanceTimersByTime(60_000));
+    const button = screen.getByRole("button", { name: "내 에이전트 열기" });
+    expect(button.hasAttribute("data-nudge")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "다시 보지 않기" }));
+    act(() => void vi.advanceTimersByTime(19_999));
+    expect(button.hasAttribute("data-nudge")).toBe(false);
+    act(() => void vi.advanceTimersByTime(1));
+    expect(button.hasAttribute("data-nudge")).toBe(true);
+  });
+
+  it("안내 카드가 떠 있거나 패널이 열려 있으면 부르지 않는다", () => {
+    window.localStorage.clear();
+    renderFab();
+    act(() => void vi.advanceTimersByTime(60_000));
+    expect(vi.getTimerCount()).toBe(0);
+    cleanup();
+    window.localStorage.setItem("heymoa:u:u1:agent-intro-dismissed", "1");
+    renderFab({ hidden: true });
+    act(() => void vi.advanceTimersByTime(60_000));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("한 번 열어 본 뒤에는 부르지 않는다", () => {
+    renderFab();
+    fireEvent.click(screen.getByRole("button", { name: "내 에이전트 열기" }));
+    act(() => void vi.advanceTimersByTime(60_000));
+    expect(
+      screen
+        .getByRole("button", { name: "내 에이전트 열기" })
+        .hasAttribute("data-nudge")
+    ).toBe(false);
+  });
+});
 
 describe("AgentFab", () => {
   beforeEach(() => window.localStorage.clear());

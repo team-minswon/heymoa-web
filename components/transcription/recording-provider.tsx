@@ -849,6 +849,15 @@ export function useRecording() {
   return value;
 }
 
+/**
+ * 녹음·연결·종료 중인가. 제공자 밖에서도 던지지 않고 false 다 — 집중을 깨지 않으려 눈치를 보는 장식(에이전트 버튼의
+ * 시선 끌기)이 읽는 값이라, 없다고 화면이 깨져서는 안 된다.
+ */
+export function useIsRecordingBusy() {
+  const value = useContext(RecordingContext);
+  return value ? isRecordingLive(value) : false;
+}
+
 export function useRecordingMeter() {
   const value = useContext(RecordingMeterContext);
   if (!value) {

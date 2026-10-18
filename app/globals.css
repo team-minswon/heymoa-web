@@ -508,6 +508,17 @@
   }
 }
 
+/* 에이전트 버튼의 시선 끌기(`agent-fab`). 버튼 둘레에 옅은 파동이 두 번 퍼진다(12px, 0.35 → 0). 캐릭터는 움직이지 않는다.
+   box-shadow 라 레이아웃을 밀지 않는다. 호출부가 `motion-safe:` 로만 건다. */
+@keyframes fab-ring {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 12px color-mix(in oklch, var(--primary) 0%, transparent);
+  }
+}
+
 @keyframes end-nudge-countdown {
   from {
     width: 100%;

@@ -183,6 +183,7 @@ export function PersonalChatProvider({
       {/* FAB 는 패널과 자리를 주고받는 한 쌍이라 언마운트하지 않고 같은 길이로 물러난다. */}
       <AgentFab
         hidden={fabHidden}
+        engaged={hasOpened || railed}
         onOpen={value.open}
         className={cn(
           CHAT_MOTION,

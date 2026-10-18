@@ -7,6 +7,8 @@ import { MessageCircle } from "lucide-react";
 
 import { STARTERS } from "@/components/chat/chat-starter";
 import { useAuthUserId } from "@/components/auth/auth-provider";
+import { useAgentNudge } from "@/components/chat/use-agent-nudge";
+import { useIsRecordingBusy } from "@/components/transcription/recording-provider";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -57,16 +59,28 @@ function useAgentIntro() {
  */
 export function AgentFab({
   hidden,
+  engaged = false,
   onOpen,
   className,
 }: {
   hidden: boolean;
+  /** 이 버튼 밖(노트 레일 등)에서 에이전트를 이미 써 봤다 */
+  engaged?: boolean;
   onOpen: () => void;
   /** 열림·닫힘 움직임. 패널과 같은 길이로 물러나야 해서 호출부가 준다 */
   className: string;
 }) {
   const { visible, dismiss } = useAgentIntro();
   const showIntro = visible && !hidden;
+  // 사용자가 hover·포커스로 말풍선을 열었는가(말풍선은 그때만 뜬다). 그동안은 파동을 멈춘다
+  const [userOpen, setUserOpen] = useState(false);
+  // 한 번 열어 본 사람은 이 방문에서 더 부르지 않는다. 안내 카드가 보이는 동안(`showIntro`)도 시작하지 않는다 — 카드 > 파동
+  const [opened, setOpened] = useState(false);
+  if (engaged && !opened) setOpened(true);
+  const busy = useIsRecordingBusy();
+  const nudging = useAgentNudge(
+    !hidden && !showIntro && !userOpen && !opened && !busy
+  );
 
   // 카드가 떠 있는 동안만 Esc 를 듣는다. 다른 것이 이미 Esc 를 먹었으면 건드리지 않는다
   useEffect(() => {
@@ -81,6 +95,7 @@ export function AgentFab({
   const open = () => {
     track("agent_opened", { surface: "fab" });
     dismiss();
+    setOpened(true);
     onOpen();
   };
 
@@ -129,23 +144,28 @@ export function AgentFab({
         </section>
       ) : null}
       {/* 카드가 떠 있을 때는 카드가 말하므로 툴팁을 끈다 */}
-      <Tooltip disabled={showIntro}>
+      <Tooltip disabled={showIntro} onOpenChange={setUserOpen}>
         <TooltipTrigger
           render={
             <Button
               size="xl"
               aria-label="내 에이전트 열기"
+              data-nudge={nudging || undefined}
               aria-hidden={hidden || undefined}
               inert={hidden}
               tabIndex={hidden ? -1 : undefined}
               onClick={open}
               className={cn(
-                "fixed right-8 bottom-8 z-40 h-11 rounded-full pr-5 pl-4 shadow-e2",
+                "group/fab fixed right-8 bottom-8 z-40 h-11 rounded-full pr-5 pl-4 shadow-e2",
                 className
               )}
             />
           }
         >
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 rounded-full group-data-[nudge]/fab:motion-safe:animate-[fab-ring_1.2s_ease-out_2]"
+          />
           {showIntro ? (
             <span
               aria-hidden
@@ -155,7 +175,7 @@ export function AgentFab({
           <MessageCircle aria-hidden className="size-4" />내 에이전트
         </TooltipTrigger>
         <TooltipContent side="top" align="end">
-          회의록을 찾고 할 일을 만들어 줘요
+          무엇이든 질문해보세요!
         </TooltipContent>
       </Tooltip>
     </>
