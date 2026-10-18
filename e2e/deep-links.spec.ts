@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const MOCK_WORKSPACE_ID = "01K0000000000";
-/** 목 워크스페이스의 첫 프로젝트 「주간」(`lib/mocks/db.ts`). */
+/** 목 워크스페이스의 첫 프로젝트 “주간”(`lib/mocks/db.ts`). */
 const PROJECT_ID = "01K0000000001";
 /** 화자 분리까지 끝난 종료 노트. 전사가 아카이브로 그려진다(`lib/mocks/db.ts`). */
 const ENDED_NOTE_ID = "01K0000000020";

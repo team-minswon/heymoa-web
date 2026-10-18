@@ -52,7 +52,7 @@ test("일치가 없는 검색어는 막대가 안내한다", async ({ page }) =>
 test("허브에서 찾으면 결과를 누른 페이지가 같은 검색어로 칠해진다", async ({ page }) => {
   await page.goto("/help");
   await page.getByRole("searchbox", { name: "사용 가이드 전체에서 찾기" }).fill("권한");
-  const first = page.getByRole("link", { name: /회의 기록과 마이크 · 기록 시작하기/ });
+  const first = page.getByRole("link", { name: /회의 기록과 마이크 · 기록 시작하는 법/ });
   await first.click();
   await expect(page).toHaveURL(/\/help\/record\/recording\?q=.*#start/);
   await expect(page.getByRole("search", { name: "본문에서 일치하는 곳" })).toContainText("권한");
@@ -134,7 +134,7 @@ test("상황별 페이지는 단계 목록과 영상을 낸다 · 기능 페이�
   await expect(page.getByRole("heading", { name: "이렇게 해 보세요" })).toBeVisible();
   await expect(page.locator("#help-article ol li").first()).toBeVisible();
   expect(await page.locator("video").first().evaluate((v: HTMLVideoElement) => v.muted)).toBe(true);
-  // 기능 페이지 끝에 「이런 상황에서 보세요」가 이 레시피로 연결된다
+  // 기능 페이지 끝에 “이런 상황에서 보세요”가 이 레시피로 연결된다
   await page.goto("/help/record/speakers");
   await expect(page.getByRole("link", { name: "이름이 잘못 나온 화자를 고치고 싶어요" }).last()).toBeVisible();
 });

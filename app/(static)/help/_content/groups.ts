@@ -5,44 +5,44 @@ export const helpGroups: readonly HelpGroup[] = [
   {
     slug: "start",
     title: "시작하기",
-    summary: "로그인, 첫 회의, 화면 구성, 계정과 개인정보, 데스크톱 앱.",
+    summary: "로그인하고, 첫 회의를 기록하고, 화면과 계정, 데스크톱 앱을 알아봐요.",
     axis: "feature",
   },
   {
     slug: "record",
     title: "녹음과 받아쓰기",
-    summary: "회의 녹음, 참석자와 화자, 회의 맥락·용어 사전, 실시간 타임라인.",
+    summary: "회의를 녹음하고, 참석자와 화자를 정하고, 용어 사전과 타임라인을 써요.",
     axis: "feature",
   },
   {
     slug: "summary",
     title: "요약과 검토",
-    summary: "회의 종료와 분석, 결정·할 일 검토와 확정, 복사·PDF·메일 공유.",
+    summary: "회의를 종료하고, 결정과 할 일을 검토해 확정하고, 복사·PDF·메일로 나눠요.",
     axis: "feature",
   },
   {
     slug: "team",
     title: "함께 쓰기",
-    summary: "할 일, 내 에이전트, 멤버와 임시 참여자, 문의·피드백.",
+    summary: "할 일을 나누고, 내 에이전트에게 묻고, 멤버를 초대하고, 문의를 보내요.",
     axis: "feature",
   },
   {
     slug: "connect",
     title: "연결",
-    summary: "Linear·GitHub 연동과 외부 AI 앱(MCP) 연결.",
+    summary: "Linear·GitHub를 잇고, 외부 AI 앱(MCP)에서 내 회의를 읽게 해요.",
     axis: "feature",
   },
   {
     slug: "fix",
     title: "문제 해결과 규칙",
-    summary: "안내 문구별 해결 방법과 한도·규칙 모음.",
+    summary: "안내 문구별 해결 방법과 한도·규칙을 모았어요.",
     axis: "feature",
   },
   {
     slug: "situations",
     title: "상황별로 찾기",
     summary:
-      "상황별로 문제와 먼저 확인할 곳을 살펴보고 해결 단계를 따라 합니다.",
+      "겪고 있는 상황을 고르면, 먼저 볼 곳과 해결 단계를 알려 줘요.",
     axis: "situation",
   },
 ];

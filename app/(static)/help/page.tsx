@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-static";
 
 const TITLE = `${siteConfig.brandLabel} 사용법`;
-const DESCRIPTION = `헤이모아(${siteConfig.name})의 회의 기록, 화자 지정, 회의 맥락과 용어 사전, 요약 검토, 데스크톱 앱과 AI 앱 연결 방법을 주제별로 안내합니다.`;
+const DESCRIPTION = `헤이모아(${siteConfig.name})의 회의 기록, 화자 지정, 회의 맥락과 용어 사전, 요약 검토, 데스크톱 앱과 AI 앱 연결 방법을 주제별로 알려 줘요.`;
 
 export const metadata: Metadata = {
   title: { absolute: `사용 가이드 · ${TITLE}` },

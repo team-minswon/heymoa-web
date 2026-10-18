@@ -9,7 +9,7 @@ export type HelpSection = {
   body: readonly ReactNode[];
 };
 
-/** 가이드의 두 축: 기능별(그룹 아래 페이지)과 상황별(「이럴 때 어떻게 하나요」 레시피). */
+/** 가이드의 두 축: 기능별(그룹 아래 페이지)과 상황별(“이럴 때 어떻게 하나요” 레시피). */
 export type HelpAxis = "feature" | "situation";
 
 export type HelpGroup = {
@@ -31,6 +31,8 @@ export type HelpTopic = {
   sections: readonly HelpSection[];
   /** 상황별 레시피에서 단계가 분명할 때만: JSON-LD `HowTo` 의 단계(본문에 있는 글과 같아야 한다). */
   howTo?: readonly string[];
-  /** 상황별 레시피가 가리키는 기능 페이지. 그 기능 페이지 끝에 「이런 상황에서 보세요」 역링크가 자동으로 선다. */
+  /** 문제 해결처럼 “질문 — 답”이 본문에 그대로 있는 페이지의 FAQPage JSON-LD. 단계(`howTo`)가 있으면 내지 않는다. */
+  faq?: readonly { question: string; answer: string }[];
+  /** 상황별 레시피가 가리키는 기능 페이지. 그 기능 페이지 끝에 “이런 상황에서 보세요” 역링크가 자동으로 선다. */
   related?: readonly HelpPageId[];
 };

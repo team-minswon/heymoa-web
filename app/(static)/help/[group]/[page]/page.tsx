@@ -10,7 +10,6 @@ import { helpTopics } from "@/app/(static)/help/_content/topics";
 import { HelpPageFrame } from "@/components/help/help-frame";
 import { JsonLd } from "@/components/help/json-ld";
 import { HELP_MODIFIED, HELP_PUBLISHED } from "@/lib/help/dates";
-import { textOf } from "@/lib/help/text";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -46,20 +45,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** "질문 — 답" 꼴의 문단만 FAQ 로 낸다. 본문에 그대로 있는 글만 쓴다. */
-function faqOf(sections: readonly { body: readonly React.ReactNode[] }[]) {
-  const items = sections
-    .flatMap((section) => section.body.map(textOf))
-    .map((text) => text.split(" — "))
-    .filter((parts) => parts.length === 2)
-    .map(([name, text]) => ({
-      "@type": "Question",
-      name: name.replace(/[\u300c\u300d]/g, "").trim(),
-      acceptedAnswer: { "@type": "Answer", text: text.trim() },
-    }));
-  return items.length > 0 ? items : null;
-}
-
 export default async function HelpTopicPage({ params }: Props) {
   const { group, page } = await params;
   const index = helpTopics.findIndex(
@@ -69,12 +54,14 @@ export default async function HelpTopicPage({ params }: Props) {
   const topic = helpTopics[index];
   const groupInfo = helpGroupBySlug(group)!;
   const url = `${siteConfig.url}${helpPathOf(topic)}`;
-  // FAQ 는 "질문 — 답" 문단이 있는 문제 해결 페이지만. 단계가 분명한 상황별 페이지는 HowTo 다 — 둘을 겹쳐 마크업하지 않는다.
-  const faq = topic.howTo
-    ? null
-    : topic.slug === "troubleshooting"
-      ? faqOf(topic.sections)
-      : null;
+  // FAQ 는 마크다운의 "자주 묻는 질문"과 문제 해결 블록(증상 → 해결 방법)에서 온다. 단계가 분명한 상황별 페이지는 HowTo 다 — 둘을 겹쳐 마크업하지 않는다.
+  const faq = topic.faq?.length
+    ? topic.faq.map(({ question, answer }) => ({
+        "@type": "Question",
+        name: question,
+        acceptedAnswer: { "@type": "Answer", text: answer },
+      }))
+    : null;
 
   return (
     <>
