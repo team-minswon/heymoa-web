@@ -3,10 +3,12 @@
 import { usePathname } from "next/navigation";
 
 import { TopBar } from "@/components/heymoa/landing/top-bar";
+import { HelpTopBar } from "@/components/help/help-top-bar";
 import { FocusTopBar } from "@/components/layout/focus-chrome";
 import {
   isChromelessRoute,
   isFocusChromeRoute,
+  isHelpRoute,
   isLandingChromeRoute,
 } from "@/lib/routes/app-route";
 
@@ -15,6 +17,11 @@ export function NavbarGate({ children }: { children: React.ReactNode }) {
 
   if (isChromelessRoute(pathname)) {
     return null;
+  }
+
+  // 사용 가이드는 랜딩 바 대신 검색 · 탭이 있는 가이드 전용 상단바를 세운다.
+  if (isHelpRoute(pathname)) {
+    return <HelpTopBar />;
   }
 
   // 랜딩 · 약관 · 개인정보 · 데스크톱 다운로드는 마케팅 Navbar 대신 랜딩 상단 바를 세운다(경로는 `isLandingChromeRoute` 한 곳).

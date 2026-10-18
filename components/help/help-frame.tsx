@@ -1,183 +1,167 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
-import {
-  BODY,
-  CARD_TITLE,
-  FOCUS,
-  H2,
-  LEAD,
-  RADIUS,
-} from "@/components/heymoa/landing/tokens";
+import { BODY, CARD_TITLE, FOCUS } from "@/components/heymoa/landing/tokens";
 import { AnchorCopy } from "@/components/help/anchor-copy";
-import { HelpMotion } from "@/components/help/help-motion";
-import { HelpPalette } from "@/components/help/help-palette";
 import { HelpPageToc } from "@/components/help/help-page-toc";
 import { HelpSearch } from "@/components/help/help-search";
-import { HelpTopicList } from "@/components/help/help-topic-list";
-import { helpGroups } from "@/app/(static)/help/_content/groups";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
-import type { HelpAxis, HelpTopic } from "@/app/(static)/help/_content/types";
-import { HELP_VARS } from "@/components/help/help-vars";
+import type { HelpGroup, HelpTopic } from "@/app/(static)/help/_content/types";
 import { cn } from "@/lib/utils";
 
 /**
- * 사용 가이드 전용 기둥. 약관 · 개인정보의 공통 틀(`CONTAINER` 1120)보다 넓다 — 문서 사이트처럼 왼쪽 주제 목록 · 가운데
- * 본문 · 오른쪽 「이 페이지」 목차 셋이 서야 해서다. 1440 에서 좌우 40 을 빼고 남는 1280 을 쓴다(240 + 본문 756 + 220 + 간격).
- * 머리 판도 같은 기둥에 서서 본문과 가장자리가 맞는다.
+ * 사용 가이드 본문 칸의 바깥 여백. 가이드 셸(`app/(static)/help/layout.tsx`)이 상단바 · 사이드바를 세우고, 페이지는 이 여백 안에서
+ * 화면 폭을 거의 다 쓴다(양옆 24~40, 초광폭 상한은 셸의 1800).
  */
-export const HELP_CONTAINER = "mx-auto w-full max-w-[1360px] px-5 lg:px-10";
+export const HELP_PAD = "w-full px-6 pt-8 pb-16 lg:px-8 xl:px-10";
 
-export const HELP_ROOT =
-  "w-full flex-1 bg-white pb-6 text-[var(--tv-ink)] lg:pb-8";
+/** 읽기 폭 상한. 글줄이 너무 길어지지 않게 하되 영상 · 이미지 · 표는 이 칸을 꽉 쓴다. */
+export const HELP_READING = "mx-auto w-full max-w-[920px] min-w-0";
 
-/** 가이드 루트에 붙는 표식. 모션 배선(`HelpMotion`)이 이 안의 요소만 만진다. */
-export const HELP_ROOT_PROPS = { "data-help-root": "" } as const;
-
-export function HelpHeader({
-  label,
+/**
+ * 페이지 머리말. 색 박스 없이 breadcrumb(작은 글씨) → h1 → 요약 두 줄 이내. 허브는 breadcrumb 이 없다.
+ */
+export function HelpPageHead({
+  crumbs,
   title,
   description,
   children,
 }: {
-  label: React.ReactNode;
+  crumbs?: readonly { label: string; href: string }[];
   title: string;
   description: string;
   children?: React.ReactNode;
 }) {
   return (
-    <div className={cn(HELP_CONTAINER, "pt-3 lg:pt-6")}>
-      <header
-        className={cn(
-          RADIUS.face,
-          "bg-[var(--tv-lav)] px-6 py-10 lg:px-12 lg:py-14"
-        )}
-      >
-        <p className="m-0 inline-flex h-7 items-center rounded-full bg-white px-3 text-[13px] font-extrabold leading-none tracking-[0.02em] text-[var(--tv-brand-deep)]">
-          {label}
-        </p>
-        <h1 className={cn(H2, "mt-4 max-w-[820px]")}>{title}</h1>
-        <p className={cn(LEAD, "mt-4 max-w-[640px]")}>{description}</p>
-        {children}
-      </header>
-    </div>
+    <header>
+      {crumbs && crumbs.length > 0 ? (
+        <nav aria-label="breadcrumb">
+          <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[13px] text-[var(--tv-muted)]">
+            {crumbs.map((crumb, i) => (
+              <li key={crumb.href} className="flex items-center gap-1.5">
+                {i > 0 ? <span aria-hidden>›</span> : null}
+                <Link
+                  href={crumb.href}
+                  className={cn(
+                    "rounded-[4px] underline-offset-4 hover:text-[var(--tv-ink)] hover:underline",
+                    FOCUS
+                  )}
+                >
+                  {crumb.label}
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      ) : null}
+      <h1 className="m-0 mt-2 text-[32px] leading-[1.2] font-extrabold tracking-[-0.035em] break-keep text-[var(--tv-ink)] lg:text-[36px]">
+        {title}
+      </h1>
+      <p className="m-0 mt-3 max-w-[760px] text-[16px] leading-[1.7] break-keep text-[var(--tv-muted)]">
+        {description}
+      </p>
+      {children}
+    </header>
   );
 }
 
-/** 주제 한 페이지: 머리 판 · 왼쪽 주제 목록 · 본문 · 오른쪽 목차 · 이전/다음. */
+/** 주제 한 페이지: 머리말 · 본문 · 이전/다음, 오른쪽에 이 페이지에서 목차(xl 이상. 그보다 좁으면 본문 위 접이식). */
 export function HelpPageFrame({
   topic,
-  axis,
+  group,
   prev,
   next,
 }: {
   topic: HelpTopic;
-  axis: HelpAxis;
+  group: HelpGroup;
   prev?: HelpTopic;
   next?: HelpTopic;
 }) {
   const outline = topic.sections.map(({ id, title }) => ({ id, title }));
   return (
-    <div style={HELP_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
-      <HelpMotion />
-      <HelpHeader
-        label={
-          <Link
-            href="/help"
+    <div
+      className={cn(
+        HELP_PAD,
+        "grid items-start xl:grid-cols-[minmax(0,1fr)_240px] xl:gap-10"
+      )}
+    >
+      <HelpSearch targetId="help-article" />
+      <div data-help-main="" className={HELP_READING}>
+        <HelpPageHead
+          crumbs={[
+            { label: "사용 가이드", href: "/help" },
+            { label: group.title, href: `/help/${group.slug}` },
+          ]}
+          title={topic.title}
+          description={topic.summary}
+        />
+
+        <details className="details-motion mt-6 rounded-[10px] border border-[var(--tv-rule)] xl:hidden">
+          <summary
             className={cn(
-              "rounded-[4px] hover:underline underline-offset-4",
+              "flex min-h-10 cursor-pointer items-center rounded-[10px] px-4 text-[14px] font-extrabold text-[var(--tv-ink)]",
               FOCUS
             )}
           >
-            ← 사용 가이드
-          </Link>
-        }
-        title={topic.title}
-        description={topic.summary}
-      >
-        <div className="mt-8 max-w-[640px]">
-          <HelpPalette />
-        </div>
-      </HelpHeader>
+            이 페이지에서
+          </summary>
+          <HelpPageToc sections={outline} hideLabel className="px-3 pb-3" />
+        </details>
 
-      <div
-        className={cn(
-          HELP_CONTAINER,
-          "mt-8 grid items-start gap-6 lg:mt-12 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[240px_minmax(0,1fr)_220px]"
-        )}
-      >
-        <aside className="box-border rounded-[20px] bg-[var(--tv-lav-soft)] p-5 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
-          <HelpSearch targetId="help-article" />
-          <div className="mt-5">
-            <HelpTopicList
-              groups={helpGroups}
-              topics={helpTopics}
-              current={topic.slug}
-              axis={axis}
-            />
-          </div>
-        </aside>
-
-        <div data-help-main="" className="min-w-0 max-w-[800px]">
-          <HelpPageToc
-            sections={outline}
-            className="mb-4 rounded-[20px] bg-[var(--tv-lav-soft)] p-4 xl:hidden"
-          />
-          <article
-            id="help-article"
-            className="box-border rounded-[24px] border border-[var(--tv-rule)] bg-white p-6 sm:p-9 lg:p-12"
-          >
-            {topic.sections.map((section, index) => (
-              <section
-                id={section.id}
-                key={section.id}
-                className={cn("scroll-mt-24", index > 0 && "mt-10 lg:mt-12")}
+        <article
+          id="help-article"
+          className="mt-8 border-t border-[var(--tv-rule)] pt-8"
+        >
+          {topic.sections.map((section, index) => (
+            <section
+              id={section.id}
+              key={section.id}
+              className={cn(
+                "scroll-mt-[calc(var(--help-top)+16px)]",
+                index > 0 && "mt-10 lg:mt-12"
+              )}
+            >
+              <div
+                data-help-heading=""
+                className="group/heading -mx-2 flex items-center gap-1 rounded-[8px] px-2"
               >
-                <div
-                  data-help-heading=""
-                  className="group/heading -mx-2 flex items-center gap-1 rounded-[8px] px-2"
-                >
-                  <h2 className={CARD_TITLE}>{section.title}</h2>
-                  <AnchorCopy id={section.id} title={section.title} />
-                </div>
-                <div className="mt-3 flex flex-col gap-3 lg:mt-4">
-                  {section.body.map((paragraph, i) =>
-                    typeof paragraph === "string" ? (
-                      <p
-                        key={i}
-                        className={cn(BODY, "[overflow-wrap:anywhere]")}
-                      >
-                        {paragraph}
-                      </p>
-                    ) : (
-                      <div
-                        key={i}
-                        className={cn(BODY, "[overflow-wrap:anywhere]")}
-                      >
-                        {paragraph}
-                      </div>
-                    )
-                  )}
-                </div>
-              </section>
-            ))}
-          </article>
+                <h2 className={CARD_TITLE}>{section.title}</h2>
+                <AnchorCopy id={section.id} title={section.title} />
+              </div>
+              <div className="mt-3 flex flex-col gap-3 lg:mt-4">
+                {section.body.map((paragraph, i) =>
+                  typeof paragraph === "string" ? (
+                    <p key={i} className={cn(BODY, "[overflow-wrap:anywhere]")}>
+                      {paragraph}
+                    </p>
+                  ) : (
+                    <div key={i} className={cn(BODY, "[overflow-wrap:anywhere]")}>
+                      {paragraph}
+                    </div>
+                  )
+                )}
+              </div>
+            </section>
+          ))}
+        </article>
 
-          {axis === "feature" ? <RelatedSituations topic={topic} /> : null}
+        {group.axis === "feature" ? <RelatedSituations topic={topic} /> : null}
 
-          <nav
-            aria-label="이전·다음 주제"
-            className="mt-6 grid gap-3 sm:grid-cols-2"
-          >
-            {prev ? <StepLink topic={prev} direction="prev" /> : <span />}
-            {next ? <StepLink topic={next} direction="next" /> : <span />}
-          </nav>
-        </div>
-
-        <aside className="sticky top-24 hidden xl:block">
-          <HelpPageToc sections={outline} />
-        </aside>
+        <nav
+          aria-label="이전·다음 주제"
+          className="mt-8 grid gap-3 sm:grid-cols-2"
+        >
+          {prev ? <StepLink topic={prev} direction="prev" /> : <span />}
+          {next ? <StepLink topic={next} direction="next" /> : <span />}
+        </nav>
       </div>
+
+      <aside
+        aria-label="이 페이지 목차 영역"
+        className="sticky top-[calc(var(--help-top)+32px)] hidden max-h-[calc(100dvh-var(--help-top)-64px)] overflow-y-auto xl:block"
+      >
+        <HelpPageToc sections={outline} />
+      </aside>
     </div>
   );
 }
@@ -194,7 +178,7 @@ function StepLink({
     <Link
       href={`/help/${topic.group}/${topic.slug}`}
       className={cn(
-        "group flex flex-col gap-1 rounded-[16px] border border-[var(--tv-rule)] px-5 py-4 help-lift hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]",
+        "group flex flex-col gap-1 rounded-[16px] border border-[var(--tv-rule)] px-5 py-4 help-lift hover:border-[var(--tv-rule-strong)] hover:bg-[var(--tv-lav-soft)]",
         next && "sm:items-end sm:text-right",
         FOCUS
       )}
@@ -212,7 +196,7 @@ function StepLink({
 }
 
 /**
- * 기능 페이지 끝의 「이런 상황에서 보세요」. 상황별 페이지가 이 페이지를 `related` 로 가리키면 자동으로 선다 — 글을 복제하지 않고
+ * 기능 페이지 끝의 "이런 상황에서 보세요". 상황별 페이지가 이 페이지를 `related` 로 가리키면 자동으로 선다 — 글을 복제하지 않고
  * 링크만 둔다(탐색과 내부 링크망).
  */
 function RelatedSituations({ topic }: { topic: HelpTopic }) {
@@ -221,7 +205,7 @@ function RelatedSituations({ topic }: { topic: HelpTopic }) {
   return (
     <section
       aria-labelledby="related-situations"
-      className="mt-6 rounded-[20px] bg-[var(--tv-lav-soft)] p-6"
+      className="mt-6 rounded-[16px] border border-[var(--tv-rule)] p-6"
     >
       <h2
         id="related-situations"
@@ -235,7 +219,7 @@ function RelatedSituations({ topic }: { topic: HelpTopic }) {
             <Link
               href={`/help/${situation.group}/${situation.slug}`}
               className={cn(
-                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-white hover:text-[var(--tv-brand-deep)]",
+                "flex min-h-9 items-center rounded-[8px] px-2 text-[15px] break-keep text-[var(--tv-body)] help-fade hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",
                 FOCUS
               )}
             >

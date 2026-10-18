@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * 가이드의 움직이는 설명. 소리 없는 짧은 루프 영상(WebM + MP4, 첫 장면 poster)이다.
  *
  * - **화면에 들어올 때만 재생**하고 벗어나면 멈춘다(IntersectionObserver) — 안 보이는 영상이 전송량과 배터리를 쓰지 않게.
- * - `prefers-reduced-motion` 이면 자동 재생하지 않고 poster 만 보인다. 「재생」 버튼으로 직접 볼 수 있다.
+ * - `prefers-reduced-motion` 이면 자동 재생하지 않고 poster 만 보인다. "재생" 버튼으로 직접 볼 수 있다.
  * - 재생/일시정지 버튼은 키보드로 닿는다. 영상에 의존하지 않도록 따라 하는 단계는 본문 글에 따로 적는다.
  * - 파일은 `pnpm help:clips` 가 `public/help/clips/` 에 만든다.
  */

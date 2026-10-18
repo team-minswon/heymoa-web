@@ -465,6 +465,8 @@
    (`components/help/help-motion.tsx`) — JS 가 없거나 크롤러가 읽어도 본문이 그대로 있다.
    ★ `@starting-style` 은 쓰지 않는다: 새로고침 때 빈 화면 뒤 뒤늦게 나타나는 문제가 있다(error-loading.md). */
 :root {
+  /* 가이드 고정 상단바(56) + 탭 줄(40) + 아래 선(1). 사이드바·목차·앵커 오프셋이 이 값 하나를 쓴다. */
+  --help-top: 97px;
   --help-fast: 150ms;
   --help-base: 200ms;
   --help-ease: ease-out;

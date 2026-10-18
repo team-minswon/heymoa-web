@@ -80,17 +80,14 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [query, entries, hits.length]);
 
-  // `/` 와 ⌘K · Ctrl+K 모두 이 칸으로 온다(입력 중이 아닐 때의 `/`).
+  // 입력 중이 아닐 때의 `/` 는 이 칸으로 온다. ⌘K · Ctrl+K 는 상단바의 검색 팔레트가 받는다.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const palette =
-        event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey);
       const slash =
         event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey;
-      if (!palette && !slash) return;
+      if (!slash) return;
       const target = event.target;
       if (
-        slash &&
         target instanceof HTMLElement &&
         (target.isContentEditable ||
           /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
@@ -133,7 +130,7 @@ export function HelpHubProvider({ children }: { children: React.ReactNode }) {
 export function HelpHubInput() {
   const { value, setValue, clear, inputRef, announce } = useHub();
   return (
-    <div className="mt-8 max-w-[640px]">
+    <div className="mt-5 max-w-[640px]">
       <div role="search" className="relative">
         <Search
           aria-hidden
@@ -141,6 +138,7 @@ export function HelpHubInput() {
         />
         <input
           ref={inputRef}
+          data-help-hub-input=""
           type="search"
           value={value}
           aria-label="사용 가이드 전체에서 찾기"
@@ -157,7 +155,7 @@ export function HelpHubInput() {
             }
           }}
           className={cn(
-            "h-14 w-full min-w-0 rounded-[16px] border border-[var(--tv-rule-strong)] bg-white pr-24 pl-12 text-[16px] text-[var(--tv-ink)] help-fade placeholder:text-[var(--tv-muted)] hover:border-[var(--tv-brand)] [&::-webkit-search-cancel-button]:hidden",
+            "h-12 w-full min-w-0 rounded-[12px] border border-[var(--tv-rule-strong)] bg-white pr-24 pl-12 text-[16px] text-[var(--tv-ink)] help-fade placeholder:text-[var(--tv-muted)] hover:border-[var(--tv-brand)] [&::-webkit-search-cancel-button]:hidden",
             FOCUS
           )}
         />
@@ -208,7 +206,7 @@ export function HelpHubBody({ children }: { children: React.ReactNode }) {
   if (hits.length === 0)
     return (
       <p className="m-0 text-[16px] leading-[1.75] break-keep text-[var(--tv-body)]">
-        「{query}」와 일치하는 내용이 없어요. 다른 낱말로 찾아보세요.
+        ‘{query}’와 일치하는 내용이 없어요. 다른 낱말로 찾아보세요.
       </p>
     );
   return (

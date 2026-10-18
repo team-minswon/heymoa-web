@@ -19,7 +19,7 @@ export function AnchorCopy({ id, title }: { id: string; title: string }) {
   return (
     <button
       type="button"
-      aria-label={`「${title}」 링크 복사`}
+      aria-label={`${title} 링크 복사`}
       onClick={async () => {
         const url = new URL(window.location.href);
         url.search = "";

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const hitHref = (hit: HelpHit, query: string) =>
   `${hit.path}?q=${encodeURIComponent(query)}#${hit.sectionId}`;
 
-/** 검색 결과 한 줄 — 「주제 · 섹션」 + 일치 문장 발췌(일치 부분 강조). 허브와 ⌘K 팔레트가 같이 쓴다. */
+/** 검색 결과 한 줄 — "주제 · 섹션" + 일치 문장 발췌(일치 부분 강조). 허브와 ⌘K 팔레트가 같이 쓴다. */
 export function HelpHitRow({
   hit,
   query,

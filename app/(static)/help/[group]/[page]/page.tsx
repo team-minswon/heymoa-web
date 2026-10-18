@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import {
-  helpAxisOf,
   helpGroupBySlug,
   helpPathOf,
   helpTopicByPath,
@@ -47,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** 「질문 — 답」 꼴의 문단만 FAQ 로 낸다. 본문에 그대로 있는 글만 쓴다. */
+/** "질문 — 답" 꼴의 문단만 FAQ 로 낸다. 본문에 그대로 있는 글만 쓴다. */
 function faqOf(sections: readonly { body: readonly React.ReactNode[] }[]) {
   const items = sections
     .flatMap((section) => section.body.map(textOf))
@@ -55,7 +54,7 @@ function faqOf(sections: readonly { body: readonly React.ReactNode[] }[]) {
     .filter((parts) => parts.length === 2)
     .map(([name, text]) => ({
       "@type": "Question",
-      name: name.replace(/[「」]/g, "").trim(),
+      name: name.replace(/[\u300c\u300d]/g, "").trim(),
       acceptedAnswer: { "@type": "Answer", text: text.trim() },
     }));
   return items.length > 0 ? items : null;
@@ -70,7 +69,7 @@ export default async function HelpTopicPage({ params }: Props) {
   const topic = helpTopics[index];
   const groupInfo = helpGroupBySlug(group)!;
   const url = `${siteConfig.url}${helpPathOf(topic)}`;
-  // FAQ 는 「질문 — 답」 문단이 있는 문제 해결 페이지만. 단계가 분명한 상황별 페이지는 HowTo 다 — 둘을 겹쳐 마크업하지 않는다.
+  // FAQ 는 "질문 — 답" 문단이 있는 문제 해결 페이지만. 단계가 분명한 상황별 페이지는 HowTo 다 — 둘을 겹쳐 마크업하지 않는다.
   const faq = topic.howTo
     ? null
     : topic.slug === "troubleshooting"
@@ -147,7 +146,7 @@ export default async function HelpTopicPage({ params }: Props) {
       ) : null}
       <HelpPageFrame
         topic={topic}
-        axis={helpAxisOf(topic)}
+        group={groupInfo}
         prev={helpTopics[index - 1]}
         next={helpTopics[index + 1]}
       />

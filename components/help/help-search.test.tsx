@@ -1,10 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  act,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -13,7 +7,8 @@ vi.mock("next/navigation", () => ({
 
 import { HelpSearch } from "@/components/help/help-search";
 
-function setup() {
+function setup(q = "녹음") {
+  window.history.replaceState(null, "", q ? `/?q=${encodeURIComponent(q)}` : "/");
   return render(
     <>
       <nav>
@@ -37,9 +32,8 @@ function setup() {
   );
 }
 
-const input = () =>
-  screen.getByRole("searchbox", { name: "사용 가이드에서 찾기" });
 const settle = () => act(() => void vi.advanceTimersByTime(700));
+const bar = () => screen.queryByRole("search", { name: "본문에서 일치하는 곳" });
 
 describe("HelpSearch", () => {
   beforeEach(() => {
@@ -55,51 +49,41 @@ describe("HelpSearch", () => {
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    window.history.replaceState(null, "", "/");
   });
 
-  it("검색어가 없으면 본문을 건드리지 않고 안내만 보인다", () => {
-    const { container } = setup();
+  it("검색어가 없으면 막대도 없고 본문을 건드리지 않는다", () => {
+    const { container } = setup("");
+    expect(bar()).toBeNull();
     expect(container.querySelector("article")?.innerHTML).toContain(
       "녹음을 시작합니다"
     );
-    expect(screen.getByText("를 눌러 찾기")).toBeInTheDocument();
   });
 
-  it("입력하면 개수를 보이고 Enter / Shift+Enter 로 순환한다", () => {
+  it("?q= 로 들어오면 개수를 보이고 이전/다음으로 순환한다", () => {
     setup();
-    fireEvent.change(input(), { target: { value: "녹음" } });
     settle();
     expect(screen.getByText("1 / 2")).toBeInTheDocument();
-    fireEvent.keyDown(input(), { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "다음 일치" }));
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
-    fireEvent.keyDown(input(), { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "다음 일치" }));
     expect(screen.getByText("1 / 2")).toBeInTheDocument();
-    fireEvent.keyDown(input(), { key: "Enter", shiftKey: true });
+    fireEvent.click(screen.getByRole("button", { name: "이전 일치" }));
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
-    // 개수는 타이핑이 멎은 뒤 한 번만 알린다
+    // 개수는 한 번만 알린다
     settle();
     expect(screen.getByRole("status")).toHaveTextContent("일치하는 내용 2개");
   });
 
-  it("한글 조합 중의 Enter 는 이동하지 않는다", () => {
-    setup();
-    fireEvent.change(input(), { target: { value: "녹음" } });
-    settle();
-    fireEvent.keyDown(input(), { key: "Enter", isComposing: true });
-    expect(screen.getByText("1 / 2")).toBeInTheDocument();
-  });
-
   it("일치가 없으면 안내하고 목차는 그대로 둔다", () => {
-    setup();
-    fireEvent.change(input(), { target: { value: "없는낱말" } });
+    setup("없는낱말");
     settle();
-    expect(screen.getByText(/다른 낱말로 찾아보세요/)).toBeInTheDocument();
+    expect(screen.getByText("일치하는 내용이 없어요")).toBeInTheDocument();
     expect(document.querySelector("[data-miss]")).toBeNull();
   });
 
   it("일치가 없는 조항의 목차 항목을 흐리게 표시한다", () => {
-    setup();
-    fireEvent.change(input(), { target: { value: "요약" } });
+    setup("요약");
     settle();
     expect(document.querySelector('a[href="#a"]')).toHaveAttribute("data-miss");
     expect(document.querySelector('a[href="#b"]')).not.toHaveAttribute(
@@ -107,26 +91,11 @@ describe("HelpSearch", () => {
     );
   });
 
-  it("Esc 는 검색어를 지우고, 비었으면 입력을 벗어난다", () => {
+  it("닫기와 Esc 는 주소에서 검색어만 지운다", () => {
     setup();
-    fireEvent.change(input(), { target: { value: "녹음" } });
     settle();
-    fireEvent.keyDown(input(), { key: "Escape" });
-    expect(input()).toHaveValue("");
-    settle();
-    expect(screen.getByText("를 눌러 찾기")).toBeInTheDocument();
-  });
-
-  it("/ 는 입력 중이 아닐 때만 검색에 포커스를 준다", () => {
-    setup();
-    fireEvent.keyDown(document.body, { key: "/" });
-    expect(input()).toHaveFocus();
-    input().blur();
-    const other = document.createElement("input");
-    document.body.append(other);
-    other.focus();
-    fireEvent.keyDown(other, { key: "/" });
-    expect(input()).not.toHaveFocus();
-    other.remove();
+    fireEvent.click(screen.getByRole("button", { name: "검색 닫기" }));
+    // 막대가 사라지는 것은 Next 가 주소 변화를 알릴 때(e2e)다 — 여기 목은 반응하지 않는다.
+    expect(window.location.search).toBe("");
   });
 });

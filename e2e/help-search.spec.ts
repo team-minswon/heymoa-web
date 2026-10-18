@@ -10,51 +10,42 @@ const highlightCount = (page: Page, name: string) =>
     name
   );
 
-test("가이드 페이지에서 찾으면 본문이 칠해지고 이전·다음으로 오간다", async ({ page }) => {
-  await page.goto("/help/record/terms-context");
-  // 키 입력은 하이드레이션 뒤에 받는다
+test("?q= 로 들어오면 본문이 칠해지고 막대의 이전·다음으로 오간다", async ({ page }) => {
+  await page.goto("/help/record/terms-context?q=%EC%9A%A9%EC%96%B4");
   await page.waitForLoadState("networkidle");
-  const input = page.getByRole("searchbox", { name: "사용 가이드에서 찾기" });
-
-  // `/` 는 입력 중이 아닐 때만 검색칸으로 온다
-  await page.keyboard.press("/");
-  await expect(input).toBeFocused();
-
-  await input.fill("용어");
-  await expect(page.getByText(/^1 \/ \d+$/)).toBeVisible();
-  const total = Number((await page.getByText(/^1 \/ \d+$/).textContent())!.split("/")[1]);
+  const bar = page.getByRole("search", { name: "본문에서 일치하는 곳" });
+  await expect(bar.getByText(/^1 \/ \d+$/)).toBeVisible();
+  const total = Number((await bar.getByText(/^1 \/ \d+$/).textContent())!.split("/")[1]);
   expect(total).toBeGreaterThan(1);
   expect(await highlightCount(page, "help-search")).toBe(total);
   expect(await highlightCount(page, "help-search-active")).toBe(1);
-  // 주소에 검색어가 남아 링크로 나눌 수 있다
-  await expect(page).toHaveURL(/[?&]q=%EC%9A%A9%EC%96%B4/);
 
-  await input.press("Enter");
-  await expect(page.getByText(`2 / ${total}`)).toBeVisible();
-  await input.press("Shift+Enter");
-  await expect(page.getByText(`1 / ${total}`)).toBeVisible();
+  await bar.getByRole("button", { name: "다음 일치" }).click();
+  await expect(bar.getByText(`2 / ${total}`)).toBeVisible();
+  await bar.getByRole("button", { name: "이전 일치" }).click();
+  await expect(bar.getByText(`1 / ${total}`)).toBeVisible();
 
-  // 활성 일치는 화면 안에 있다 — 이동이 부드러운 스크롤(APP-1237)이라 멈출 때까지 기다린다.
+  // 활성 일치는 상단바(97) 아래 화면 안에 있다 — 이동이 부드러운 스크롤이라 멈출 때까지 기다린다.
   await expect
     .poll(() =>
       page.evaluate(() => {
         const range = [...(CSS.highlights.get("help-search-active") ?? [])][0] as Range;
         const box = range.getBoundingClientRect();
-        return box.top >= 0 && box.bottom <= innerHeight;
+        return box.top >= 97 && box.bottom <= innerHeight;
       })
     )
     .toBe(true);
 
-  // 일치가 없는 조항의 목차는 흐려진다. 없으면 안내한다
-  await input.fill("ㅋㅋㅋ없는낱말");
-  await expect(page.getByText(/다른 낱말로 찾아보세요/)).toBeVisible();
+  // 닫으면 막대와 칠이 사라지고 주소의 검색어도 지워진다
+  await bar.getByRole("button", { name: "검색 닫기" }).click();
+  await expect(bar).toHaveCount(0);
   expect(await highlightCount(page, "help-search")).toBe(0);
+  await expect(page).not.toHaveURL(/[?&]q=/);
+});
 
-  // Esc 는 검색어를 지운다
-  await input.fill("용어");
-  await input.press("Escape");
-  await expect(input).toHaveValue("");
-  await expect(page.getByText("를 눌러 찾기")).toBeVisible();
+test("일치가 없는 검색어는 막대가 안내한다", async ({ page }) => {
+  await page.goto("/help/record/terms-context?q=ㅋㅋㅋ없는낱말");
+  await expect(page.getByText("일치하는 내용이 없어요")).toBeVisible();
   expect(await highlightCount(page, "help-search")).toBe(0);
 });
 
@@ -64,7 +55,7 @@ test("허브에서 찾으면 결과를 누른 페이지가 같은 검색어로 �
   const first = page.getByRole("link", { name: /회의 기록과 마이크 · 기록 시작하기/ });
   await first.click();
   await expect(page).toHaveURL(/\/help\/record\/recording\?q=.*#start/);
-  await expect(page.getByRole("searchbox", { name: "사용 가이드에서 찾기" })).toHaveValue("권한");
+  await expect(page.getByRole("search", { name: "본문에서 일치하는 곳" })).toContainText("권한");
   await expect.poll(() => highlightCount(page, "help-search")).toBeGreaterThan(0);
 });
 
@@ -78,6 +69,58 @@ test("⌘K · Ctrl+K 로 검색 팔레트가 열리고 Enter 로 이동한다", 
   await expect(page.getByRole("option").first()).toBeVisible();
   await box.press("Enter");
   await expect(page).toHaveURL(/\/help\/[^/]+\/[^/?]+\?q=/);
+});
+
+// 허브 · 그룹 · 기능 · 상황 모두에서 ⌘K · Ctrl+K 가 열고, 입력칸에 포커스가 있어도 열며, 다시 누르면 닫는다.
+for (const path of ["/help", "/help/record", "/help/record/recording", "/help/situations/fix-speakers"]) {
+  test(`${path} 에서 Ctrl+K · ⌘K 로 검색 팔레트가 열리고 닫힌다`, async ({ page }) => {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    const box = page.getByRole("combobox", { name: "사용 가이드 전체에서 찾기" });
+    for (const key of ["Control+k", "Meta+k"]) {
+      await page.keyboard.press(key);
+      await expect(box).toBeFocused();
+      await page.keyboard.press(key);
+      await expect(box).toHaveCount(0);
+    }
+  });
+}
+
+test("입력칸에 포커스가 있어도 Ctrl+K 가 팔레트를 연다", async ({ page }) => {
+  await page.goto("/help");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("searchbox", { name: "사용 가이드 전체에서 찾기" }).focus();
+  await page.keyboard.press("Control+k");
+  await expect(page.getByRole("combobox", { name: "사용 가이드 전체에서 찾기" })).toBeFocused();
+});
+
+test("/ 는 기능 페이지에서 팔레트를, 허브에서는 허브 검색칸을 연다", async ({ page }) => {
+  await page.goto("/help/record/recording");
+  await page.waitForLoadState("networkidle");
+  await page.keyboard.press("/");
+  await expect(page.getByRole("combobox", { name: "사용 가이드 전체에서 찾기" })).toBeFocused();
+  await page.goto("/help");
+  await page.waitForLoadState("networkidle");
+  await page.keyboard.press("/");
+  await expect(page.getByRole("searchbox", { name: "사용 가이드 전체에서 찾기" })).toBeFocused();
+});
+
+test("사이드바는 선택한 축의 모든 그룹을 항상 펼쳐 두고 탭이 축을 바꾼다", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/help/record/recording");
+  await page.waitForLoadState("networkidle");
+  const nav = page.getByRole("navigation", { name: "사용 가이드 주제" });
+  await expect(page.locator("details", { has: nav })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "문제 해결", exact: true })).toBeVisible();
+  await expect(nav.locator("[aria-current='page']")).toHaveText("회의 기록과 마이크");
+  // 탭은 현재 페이지가 속한 축이 기본이고, 누르면 사이드바 내용만 바뀐다
+  await expect(page.getByRole("button", { name: "기능별", pressed: true })).toBeVisible();
+  await page.getByRole("button", { name: "상황별" }).click();
+  await expect(page.getByRole("button", { name: "상황별", pressed: true })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "문제 해결", exact: true })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/help\/record\/recording$/);
+  // 가로 스크롤 없음
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("옛 /help#recording 링크는 새 주제 주소로 옮겨진다", async ({ page }) => {
@@ -117,10 +160,10 @@ test("같은 페이지 목차는 부드럽게 스크롤하고 주소만 바꾼�
   page.on("request", (r) => r.url().includes("_rsc") && rsc.push(r.url()));
   await link.click();
   await expect(page).toHaveURL(new RegExp(`#${id}$`));
-  // 스크롤이 멈추면 제목이 고정 머리 아래(scroll-margin 96)에 선다
+  // 스크롤이 멈추면 제목이 고정 상단바(97) 아래(scroll-margin 97+16)에 선다 — 가려지지 않는다
   await expect
     .poll(() => page.evaluate((i) => Math.round(document.getElementById(i)!.getBoundingClientRect().top), id))
-    .toBe(96);
+    .toBe(113);
   await expect(page.locator(`#${id} h2`)).toBeFocused();
   expect(rsc).toEqual([]);
 });
@@ -132,6 +175,6 @@ test("움직임 줄이기면 목차 이동이 바로 끝난다 (APP-1237)", asyn
   await page.waitForLoadState("networkidle");
   await page.locator("aside [data-toc-link]").nth(3).click();
   const top = await page.evaluate(() => Math.round(document.getElementById(location.hash.slice(1))!.getBoundingClientRect().top));
-  expect(top).toBe(96);
+  expect(top).toBe(113);
   await context.close();
 });

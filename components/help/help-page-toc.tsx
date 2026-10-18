@@ -5,20 +5,23 @@ import { useEffect, useRef, useState } from "react";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { cn } from "@/lib/utils";
 
-/** 상단 바(64)를 지나 이 높이 위로 올라간 마지막 섹션이 「지금 읽는 곳」이다. */
+/** 상단바(97)를 지나 이 높이 위로 올라간 마지막 섹션이 "지금 읽는 곳"이다. */
 const SPY_OFFSET = 120;
 
 /**
- * 「이 페이지」 목차. 스크롤하면 지금 읽는 섹션이 진하게 + 왼쪽 막대로 바뀐다(scroll-spy). 서버가 그린 HTML 과 같아야
+ * "이 페이지" 목차. 스크롤하면 지금 읽는 섹션이 진하게 + 왼쪽 막대로 바뀐다(scroll-spy). 서버가 그린 HTML 과 같아야
  * 해서 첫 렌더에는 아무것도 활성이 아니고, 스크롤 위치는 마운트한 뒤에만 읽는다.
  */
 export function HelpPageToc({
   sections,
-  label = "이 페이지",
+  label = "이 페이지에서",
+  hideLabel = false,
   className,
 }: {
   sections: readonly { id: string; title: string }[];
   label?: string;
+  /** 접이식(`<details>`) 안에서는 요약이 이름표라 이 글자를 숨긴다. */
+  hideLabel?: boolean;
   className?: string;
 }) {
   const [active, setActive] = useState<string | null>(null);
@@ -83,9 +86,11 @@ export function HelpPageToc({
 
   return (
     <nav aria-label={`${label} 목차`} className={className}>
-      <p className="m-0 mb-2 px-3 text-[13px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]">
-        {label}
-      </p>
+      {hideLabel ? null : (
+        <p className="m-0 mb-2 px-3 text-[13px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]">
+          {label}
+        </p>
+      )}
       <ol
         ref={listRef}
         className="relative m-0 flex list-none flex-col gap-0.5 border-l border-[var(--tv-rule-strong)] p-0"
@@ -107,8 +112,8 @@ export function HelpPageToc({
                   "relative -ml-px flex min-h-8 items-center rounded-r-[8px] py-1 pr-3 pl-3.5 text-[13px] leading-[1.45] break-keep help-fade",
                   FOCUS,
                   on
-                    ? "bg-white font-bold text-[var(--tv-ink)]"
-                    : "text-[var(--tv-body)] hover:bg-white hover:text-[var(--tv-brand-deep)]"
+                    ? "bg-[var(--tv-lav-soft)] font-bold text-[var(--tv-ink)]"
+                    : "text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]"
                 )}
               >
                 {section.title}

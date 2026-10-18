@@ -9,11 +9,11 @@ import { prefersReducedMotion, scrollToSection } from "@/lib/help/scroll";
 const attrOf = (el: Element) =>
   el.hasAttribute("data-key") ? "data-key" : "data-reveal";
 
-/** 앞 화면의 주소. 모듈 값이라 페이지가 새로 마운트돼도 「다른 가이드 페이지에서 넘어왔다」를 안다(첫 로드는 null). */
+/** 앞 화면의 주소. 모듈 값이라 페이지가 새로 마운트돼도 "다른 가이드 페이지에서 넘어왔다"를 안다(첫 로드는 null). */
 let lastPath: string | null = null;
 
 /**
- * 사용 가이드의 모션 배선. 화면에는 아무것도 그리지 않는다. 값은 `app/globals.css` 의 「사용 가이드 모션」 한 곳이다.
+ * 사용 가이드의 모션 배선. 화면에는 아무것도 그리지 않는다. 값은 `app/globals.css` 의 "사용 가이드 모션" 한 곳이다.
  *
  * - **등장(한 번)**: `data-reveal` 요소 중 화면 아래에 있는 것만 숨겼다가(`pending`) 들어오면 보인다(`done`). 이미 보이는 것은
  *   건드리지 않는다. 서버 HTML 은 숨기지 않으므로 JS 가 없어도 본문이 있다.

@@ -10,23 +10,16 @@ import {
   helpTopicsOfGroup,
 } from "@/app/(static)/help/_content/paths";
 import { helpTopics } from "@/app/(static)/help/_content/topics";
-import {
-  HELP_CONTAINER,
-  HELP_ROOT,
-  HELP_ROOT_PROPS,
-  HelpHeader,
-} from "@/components/help/help-frame";
+import { HELP_PAD, HelpPageHead } from "@/components/help/help-frame";
 import {
   HelpHubBody,
   HelpHubInput,
   HelpHubProvider,
 } from "@/components/help/help-hub-search";
-import { HelpMotion } from "@/components/help/help-motion";
 import { JsonLd } from "@/components/help/json-ld";
 import { LegacyHashRedirect } from "@/components/help/legacy-hash-redirect";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { siteConfig } from "@/lib/site";
-import { HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
@@ -60,14 +53,14 @@ const FEATURED: readonly HelpPageId[] = [
 ];
 
 const card =
-  "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 help-lift hover:border-[var(--tv-brand)] hover:bg-[var(--tv-lav-soft)]";
+  "flex h-full flex-col gap-1.5 rounded-[20px] border border-[var(--tv-rule)] bg-white p-5 help-lift hover:border-[var(--tv-rule-strong)] hover:bg-[var(--tv-lav-soft)]";
 
 const H2_SMALL =
   "m-0 mb-4 text-[14px] font-extrabold tracking-[0.02em] text-[var(--tv-muted)]";
 
 /**
- * 사용 가이드 허브 (APP-1231). 머리 판 안의 큰 검색칸이 입구이고(전 페이지 검색), 그 아래 「자주 찾는 주제」, 그리고 두 축 —
- * 기능별(그룹 카드와 그 안의 페이지)과 상황별(「이럴 때」 레시피)이 나란히 선다. 옛 한 장짜리 시절의 `#해시` 링크는
+ * 사용 가이드 허브 (APP-1231). 머리 판 안의 큰 검색칸이 입구이고(전 페이지 검색), 그 아래 "자주 찾는 주제", 그리고 두 축 —
+ * 기능별(그룹 카드와 그 안의 페이지)과 상황별("이럴 때" 레시피)이 나란히 선다. 옛 한 장짜리 시절의 `#해시` 링크는
  * `LegacyHashRedirect` 가 새 주소로 옮긴다.
  */
 export default function HelpHubPage() {
@@ -79,8 +72,7 @@ export default function HelpHubPage() {
     (topic) => helpAxisOf(topic) === "situation"
   );
   return (
-    <div style={HELP_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
-      <HelpMotion />
+    <>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -103,49 +95,48 @@ export default function HelpHubPage() {
       />
       <LegacyHashRedirect map={LEGACY_HELP_ANCHORS} />
       <HelpHubProvider>
-        <HelpHeader
-          label="도움말"
-          title={TITLE}
-          description="궁금한 낱말을 찾거나, 기능 또는 상황으로 골라 읽어 보세요."
-        >
-          <HelpHubInput />
-        </HelpHeader>
-        <div data-help-main="" className={cn(HELP_CONTAINER, "mt-8 lg:mt-12")}>
-          <HelpHubBody>
-            <h2 className={H2_SMALL}>자주 찾는 주제</h2>
-            <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
-              {featured.map((topic) => (
-                <li key={topic.slug} data-reveal="">
-                  <Link
-                    href={helpPathOf(topic)}
-                    className={cn(
-                      card,
-                      "bg-[var(--tv-lav-soft)] p-7 hover:bg-[var(--tv-lav)]",
-                      FOCUS
-                    )}
-                  >
-                    <span className="text-[22px] leading-[1.3] font-extrabold tracking-[-0.03em] break-keep text-[var(--tv-ink)]">
-                      {topic.title}
-                    </span>
-                    <span className="text-[15px] leading-[1.65] break-keep text-[var(--tv-body)]">
-                      {topic.summary}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+        <div data-help-main="" className={HELP_PAD}>
+          <HelpPageHead
+            title={TITLE}
+            description="궁금한 낱말을 찾거나, 기능 또는 상황으로 골라 읽어 보세요."
+          >
+            <HelpHubInput />
+          </HelpPageHead>
+          <div className="mt-8">
+            <HelpHubBody>
+              <h2 className={H2_SMALL}>자주 찾는 주제</h2>
+              <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
+                {featured.map((topic) => (
+                  <li key={topic.slug} data-reveal="">
+                    <Link
+                      href={helpPathOf(topic)}
+                      className={cn(
+                        card,
+                        "bg-[var(--tv-lav-soft)] hover:bg-[var(--tv-lav)]",
+                        FOCUS
+                      )}
+                    >
+                      <span className="text-[20px] leading-[1.3] font-extrabold tracking-[-0.03em] break-keep text-[var(--tv-ink)]">
+                        {topic.title}
+                      </span>
+                      <span className="text-[15px] leading-[1.65] break-keep text-[var(--tv-body)]">
+                        {topic.summary}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
 
-            <div className="mt-10 grid gap-10 lg:mt-12 xl:grid-cols-2 xl:gap-8">
-              <section aria-labelledby="by-feature">
+              <section aria-labelledby="by-feature" className="mt-10">
                 <h2 id="by-feature" className={H2_SMALL}>
                   기능별로 찾기
                 </h2>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {featureGroups.map((group) => (
                     <div
                       key={group.slug}
                       data-reveal=""
-                      className="help-lift rounded-[20px] border border-[var(--tv-rule)] bg-white p-6 hover:border-[var(--tv-rule-strong)]"
+                      className="help-lift rounded-[20px] border border-[var(--tv-rule)] bg-white p-5 hover:border-[var(--tv-rule-strong)]"
                     >
                       <h3 className="m-0 text-[18px] font-extrabold leading-[1.35] break-keep text-[var(--tv-ink)]">
                         <Link
@@ -180,11 +171,11 @@ export default function HelpHubPage() {
                   ))}
                 </div>
               </section>
-              <section aria-labelledby="by-situation">
+              <section aria-labelledby="by-situation" className="mt-10">
                 <h2 id="by-situation" className={H2_SMALL}>
                   상황별로 찾기
                 </h2>
-                <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0">
+                <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {situations.map((topic) => (
                     <li key={topic.slug} data-reveal="">
                       <Link
@@ -202,10 +193,10 @@ export default function HelpHubPage() {
                   ))}
                 </ul>
               </section>
-            </div>
-          </HelpHubBody>
+            </HelpHubBody>
+          </div>
         </div>
       </HelpHubProvider>
-    </div>
+    </>
   );
 }

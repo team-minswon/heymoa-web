@@ -8,18 +8,10 @@ import {
   helpPathOf,
   helpTopicsOfGroup,
 } from "@/app/(static)/help/_content/paths";
-import {
-  HELP_CONTAINER,
-  HELP_ROOT,
-  HELP_ROOT_PROPS,
-  HelpHeader,
-} from "@/components/help/help-frame";
-import { HelpMotion } from "@/components/help/help-motion";
-import { HelpPalette } from "@/components/help/help-palette";
+import { HELP_PAD, HelpPageHead } from "@/components/help/help-frame";
 import { JsonLd } from "@/components/help/json-ld";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
 import { siteConfig } from "@/lib/site";
-import { HELP_VARS } from "@/components/help/help-vars";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-static";
@@ -50,14 +42,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** 그룹 소개: 그 그룹의 페이지를 카드로 보여 준다. 기능 그룹과 「상황별로 찾기」가 같은 틀이다. */
+/** 그룹 소개: 그 그룹의 페이지를 카드로 보여 준다. 기능 그룹과 "상황별로 찾기"가 같은 틀이다. */
 export default async function HelpGroupPage({ params }: Props) {
   const group = helpGroupBySlug((await params).group);
   if (!group) notFound();
   const topics = helpTopicsOfGroup(group.slug);
   return (
-    <div style={HELP_VARS} className={HELP_ROOT} {...HELP_ROOT_PROPS}>
-      <HelpMotion />
+    <>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -84,27 +75,13 @@ export default async function HelpGroupPage({ params }: Props) {
           ],
         }}
       />
-      <HelpHeader
-        label={
-          <Link
-            href="/help"
-            className={cn(
-              "rounded-[4px] underline-offset-4 hover:underline",
-              FOCUS
-            )}
-          >
-            ← 사용 가이드
-          </Link>
-        }
-        title={group.title}
-        description={group.summary}
-      >
-        <div className="mt-8 max-w-[640px]">
-          <HelpPalette />
-        </div>
-      </HelpHeader>
-      <div data-help-main="" className={cn(HELP_CONTAINER, "mt-8 lg:mt-12")}>
-        <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3">
+      <div data-help-main="" className={HELP_PAD}>
+        <HelpPageHead
+          crumbs={[{ label: "사용 가이드", href: "/help" }]}
+          title={group.title}
+          description={group.summary}
+        />
+        <ul className="m-0 mt-8 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {topics.map((topic) => (
             <li key={topic.slug} data-reveal="">
               <Link
@@ -125,6 +102,6 @@ export default async function HelpGroupPage({ params }: Props) {
           ))}
         </ul>
       </div>
-    </div>
+    </>
   );
 }

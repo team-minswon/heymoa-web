@@ -4,7 +4,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { FOCUS } from "@/components/heymoa/landing/tokens";
@@ -12,15 +12,10 @@ import { findMatchRanges, stepIndex } from "@/lib/help/match-ranges";
 import { prefersReducedMotion } from "@/lib/help/scroll";
 import { cn } from "@/lib/utils";
 
-const DEBOUNCE_MS = 100;
-/** 스크린리더 안내는 타이핑이 멎은 뒤 한 번만 읽는다. */
+/** 스크린리더 안내는 일치 수가 정해진 뒤 한 번만 읽는다. */
 const ANNOUNCE_MS = 600;
-
-/** 입력 중이 아닐 때만 `/` 로 검색에 들어간다. */
-const isTyping = (target: EventTarget | null) =>
-  target instanceof HTMLElement &&
-  (target.isContentEditable ||
-    /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+/** 상단바(97) 아래로 이 높이 안에 든 일치는 가려진 것으로 본다. */
+const TOP_SAFE = 120;
 
 /** 주소 해시를 안전하게 읽는다. 깨진 인코딩(`#%`)은 빈 값으로 본다. */
 const readHash = () => {
@@ -32,7 +27,7 @@ const readHash = () => {
 };
 
 /**
- * 같은 페이지 안에서 `?q=` 가 바뀌는 이동(⌘K 결과, 링크)을 알린다. 화면에는 아무것도 그리지 않아서, 정적 렌더가
+ * 같은 페이지 안에서 `?q=` 가 바뀌는 이동(검색 팔레트 결과, 링크)을 알린다. 화면에는 아무것도 그리지 않아서, 정적 렌더가
  * 요구하는 Suspense 경계로 감싸도 자리가 밀리지 않는다.
  */
 function UrlQuerySync({ onChange }: { onChange: (q: string) => void }) {
@@ -42,40 +37,29 @@ function UrlQuerySync({ onChange }: { onChange: (q: string) => void }) {
 }
 
 /**
- * 사용 가이드 검색 (APP-1232). 본문 DOM 은 건드리지 않는다 — 일치 구간을 CSS Custom Highlight API 로만 칠하므로
- * 서버가 그린 HTML 과 첫 클라이언트 렌더가 그대로 같다. 이 API 가 없는 브라우저에서는 칠하지 않고, 개수와
- * 이전/다음 이동(스크롤)만 된다. 칠하는 규칙은 `app/globals.css` 의 `::highlight(help-search*)`.
+ * 본문 안 일치 이동 막대 (APP-1232 → APP-1245). 검색은 상단바 팔레트가 하고, 이 컴포넌트는 주소의 `?q=` 로 들어온
+ * 페이지에서 본문의 일치를 칠하고 이전/다음으로 오가게 한다. 막대는 `?q=` 가 있을 때만 화면 아래에 **떠 있어서**(fixed)
+ * 나타나도 본문이 밀리지 않는다. 본문 DOM 은 건드리지 않고 일치 구간을 CSS Custom Highlight API 로만 칠하므로 서버 HTML 과
+ * 첫 클라이언트 렌더가 같다. 이 API 가 없는 브라우저에서는 칠하지 않고 개수와 이동(스크롤)만 된다. 칠하는 규칙은
+ * `app/globals.css` 의 `::highlight(help-search*)`.
  */
 export function HelpSearch({ targetId }: { targetId: string }) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const rangesRef = useRef<Range[]>([]);
-  const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const [total, setTotal] = useState(0);
   const [active, setActive] = useState(0);
   const [announce, setAnnounce] = useState("");
   const firstRun = useRef(true);
-  // 우리가 방금 주소에 쓴 검색어. 이것과 같으면 바깥 이동이 아니라 우리 자신의 기록이다.
-  const written = useRef("");
-  // 주소로 처음 들어온 직후의 이동은 모션 없이 바로 간다(공유한 링크가 로드 뒤에 흘러가지 않게). 이후 입력·이동·같은 페이지 결과는 부드럽게.
+  // 주소로 처음 들어온 직후의 이동은 모션 없이 바로 간다(공유한 링크가 로드 뒤에 흘러가지 않게). 이후 이동은 부드럽게.
   const loaded = useRef(false);
   const jump = useRef(false);
 
-  // 주소의 `?q=` 로 들어오면(허브 검색 결과, 공유한 링크, 같은 페이지의 ⌘K 결과) 그 검색어로 맞춘다.
   const syncFromUrl = useCallback((q: string) => {
     jump.current = !loaded.current && q !== "";
     loaded.current = true;
-    if (q === written.current) return;
-    written.current = q;
     firstRun.current = true; // 새 이동이니 `#섹션` 안 첫 일치부터 다시 찾는다
-    setValue(q);
     setQuery(q);
   }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setQuery(value), DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [value]);
 
   // 검색어가 바뀌면 일치를 다시 구하고 첫 일치를 활성으로 둔다. 목차에서 일치가 없는 조항은 흐리게 한다.
   useEffect(() => {
@@ -83,7 +67,7 @@ export function HelpSearch({ targetId }: { targetId: string }) {
     const ranges = root ? findMatchRanges(root, query) : [];
     rangesRef.current = ranges;
     setTotal(ranges.length);
-    // 처음 들어올 때는 주소의 `#섹션` 안 첫 일치부터 — 허브 결과에서 누른 그 자리다.
+    // 처음 들어올 때는 주소의 `#섹션` 안 첫 일치부터 — 검색 결과에서 누른 그 자리다.
     let first = 0;
     if (firstRun.current && query) {
       firstRun.current = false;
@@ -96,13 +80,6 @@ export function HelpSearch({ targetId }: { targetId: string }) {
       if (hashId && inSection > 0) first = inSection;
     }
     setActive(first);
-
-    // 검색어를 주소에 남겨 링크로 나눌 수 있게 한다(같은 화면의 상태라 `replaceState`).
-    const url = new URL(window.location.href);
-    written.current = query;
-    if (query) url.searchParams.set("q", query);
-    else url.searchParams.delete("q");
-    window.history.replaceState(window.history.state, "", url);
 
     const hit = new Set<string>();
     for (const range of ranges) {
@@ -134,8 +111,8 @@ export function HelpSearch({ targetId }: { targetId: string }) {
     }
     if (current) {
       const rect = current.getBoundingClientRect();
-      // 이미 편하게 보이는 자리면 움직이지 않는다 — 입력할 때마다 화면이 흔들리지 않게.
-      if (rect.top < 96 || rect.bottom > window.innerHeight - 80) {
+      // 이미 편하게 보이는 자리면 움직이지 않는다.
+      if (rect.top < TOP_SAFE || rect.bottom > window.innerHeight - 80) {
         current.startContainer.parentElement?.scrollIntoView({
           block: "center",
           behavior: prefersReducedMotion() || jump.current ? "auto" : "smooth",
@@ -163,18 +140,6 @@ export function HelpSearch({ targetId }: { targetId: string }) {
     return () => window.clearTimeout(timer);
   }, [query, total]);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey)
-        return;
-      if (isTyping(event.target)) return;
-      event.preventDefault();
-      inputRef.current?.focus();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
-
   const step = useCallback(
     (direction: 1 | -1) => {
       jump.current = false;
@@ -183,90 +148,54 @@ export function HelpSearch({ targetId }: { targetId: string }) {
     [total]
   );
 
-  const clear = () => {
-    setValue("");
-    setQuery("");
-    inputRef.current?.focus();
-  };
+  // 주소에서 검색어만 지운다. `null` 상태여야 Next 가 `useSearchParams` 에 알린다.
+  const close = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("q");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }, []);
 
-  const searching = query.length > 0;
+  useEffect(() => {
+    if (!query) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !document.querySelector("[role='dialog']")
+      )
+        close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [query, close]);
 
   return (
-    <div role="search" className="flex flex-col gap-2">
+    <>
       <Suspense fallback={null}>
         <UrlQuerySync onChange={syncFromUrl} />
       </Suspense>
-      <div className="relative">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--tv-muted)]"
-        />
-        <input
-          ref={inputRef}
-          type="search"
-          value={value}
-          aria-label="사용 가이드에서 찾기"
-          placeholder="찾기"
-          autoComplete="off"
-          spellCheck={false}
-          onChange={(event) => {
-            jump.current = false;
-            setValue(event.target.value);
-          }}
-          onKeyDown={(event) => {
-            // 한글 조합 중의 Enter 는 글자를 확정할 뿐이다 — 이동으로 읽지 않는다.
-            if (event.nativeEvent.isComposing) return;
-            if (event.key === "Enter") {
-              event.preventDefault();
-              step(event.shiftKey ? -1 : 1);
-            } else if (event.key === "Escape") {
-              event.preventDefault();
-              if (value) clear();
-              else inputRef.current?.blur();
-            }
-          }}
-          className={cn(
-            "h-10 w-full min-w-0 rounded-[10px] border border-[var(--tv-rule-strong)] bg-white pr-9 pl-9 text-[14px] text-[var(--tv-ink)] help-fade placeholder:text-[var(--tv-muted)] hover:border-[var(--tv-brand)] [&::-webkit-search-cancel-button]:hidden",
-            FOCUS
-          )}
-        />
-        {value ? (
-          <button
-            type="button"
-            aria-label="검색어 지우기"
-            onClick={clear}
-            className={cn(
-              "absolute top-1/2 right-1.5 grid size-7 -translate-y-1/2 place-items-center rounded-[8px] text-[var(--tv-muted)] help-fade hover:bg-[var(--tv-lav)] hover:text-[var(--tv-ink)]",
-              FOCUS
-            )}
-          >
-            <X aria-hidden className="size-4" />
-          </button>
-        ) : null}
-      </div>
-
-      {/* 이 줄은 늘 같은 높이다 — 일치 수가 나타나도 아래 목차가 밀리지 않는다. */}
-      <div className="flex min-h-[44px] items-start justify-between gap-2 text-[13px] leading-[1.5] text-[var(--tv-muted)]">
-        {!searching ? (
-          <p className="m-0 flex items-center gap-1.5">
-            <kbd className="grid h-5 min-w-5 place-items-center rounded-[6px] border border-[var(--tv-rule-strong)] bg-white px-1 font-sans text-[12px] font-bold text-[var(--tv-body)]">
-              /
-            </kbd>
-            를 눌러 찾기
-          </p>
-        ) : total === 0 ? (
-          <p className="m-0 break-keep">
-            일치하는 내용이 없어요. 다른 낱말로 찾아보세요.
-          </p>
-        ) : (
-          <>
-            <p
-              className="m-0 pt-1 font-bold tabular-nums text-[var(--tv-ink)]"
-              aria-hidden
-            >
-              {active + 1} / {total}
-            </p>
-            <div className="flex gap-1">
+      <p role="status" aria-live="polite" className="sr-only">
+        {announce}
+      </p>
+      {query ? (
+        <div
+          role="search"
+          aria-label="본문에서 일치하는 곳"
+          className="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--tv-rule-strong)] bg-white py-1 pr-1.5 pl-4 text-[14px] text-[var(--tv-body)] shadow-[0_8px_24px_-12px_rgb(12_10_9/0.35)]"
+        >
+          <span className="max-w-[200px] truncate font-bold text-[var(--tv-ink)]">
+            {query}
+          </span>
+          {total === 0 ? (
+            <span className="px-2">일치하는 내용이 없어요</span>
+          ) : (
+            <>
+              <span
+                className="px-2 font-bold tabular-nums text-[var(--tv-ink)]"
+                aria-hidden
+              >
+                {active + 1} / {total}
+              </span>
               {(
                 [
                   ["이전 일치", -1, ChevronUp],
@@ -281,20 +210,30 @@ export function HelpSearch({ targetId }: { targetId: string }) {
                   aria-label={label}
                   onClick={() => step(direction)}
                   className={cn(
-                    "size-8 text-[var(--tv-body)] hover:bg-white hover:text-[var(--tv-brand-deep)]",
+                    "size-8 rounded-full text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",
                     FOCUS
                   )}
                 >
                   <Icon aria-hidden className="size-4" />
                 </Button>
               ))}
-            </div>
-          </>
-        )}
-      </div>
-      <p role="status" aria-live="polite" className="sr-only">
-        {announce}
-      </p>
-    </div>
+            </>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="검색 닫기"
+            onClick={close}
+            className={cn(
+              "size-8 rounded-full text-[var(--tv-body)] hover:bg-[var(--tv-lav-soft)] hover:text-[var(--tv-ink)]",
+              FOCUS
+            )}
+          >
+            <X aria-hidden className="size-4" />
+          </Button>
+        </div>
+      ) : null}
+    </>
   );
 }

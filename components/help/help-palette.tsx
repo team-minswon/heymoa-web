@@ -25,7 +25,7 @@ const isMac = () =>
   /Mac|iPhone|iPad/.test(navigator.platform);
 
 /**
- * 가이드 전체 검색 팔레트. 머리 판의 「검색 ⌘K」 버튼이나 ⌘K / Ctrl+K 로 연다. 결과는 허브와 같은 줄(`HelpHitRow`)이고
+ * 가이드 전체 검색 팔레트. 상단바의 검색 버튼(⌘K 표시)이나 ⌘K / Ctrl+K 로 연다. 결과는 허브와 같은 줄(`HelpHitRow`)이고
  * ↑↓ 로 고르고 Enter 로 그 주제의 그 섹션으로 간다(도착한 페이지가 같은 검색어로 본문을 칠한다). 색인은 열 때 한 번 받는다.
  */
 export function HelpPalette() {
@@ -42,10 +42,29 @@ export function HelpPalette() {
   }, []);
 
   useEffect(() => {
+    // ⌘K · Ctrl+K 는 입력칸에 포커스가 있어도 열고(브라우저의 Ctrl+K 동작은 막는다), 열려 있으면 닫는다.
+    // `/` 는 입력 중이 아닐 때만 연다. 허브의 큰 검색칸이 있으면 그쪽이 `/` 를 받는다.
     const onKey = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         setOpen((now) => !now);
+      } else if (
+        event.key === "/" &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.defaultPrevented
+      ) {
+        const target = event.target;
+        if (
+          target instanceof HTMLElement &&
+          (target.isContentEditable ||
+            /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+        )
+          return;
+        if (document.querySelector("[data-help-hub-input]")) return;
+        event.preventDefault();
+        setOpen(true);
       }
     };
     document.addEventListener("keydown", onKey);
@@ -85,22 +104,22 @@ export function HelpPalette() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="검색어를 입력하세요 (예: 녹음, 용어 사전) — 사용 가이드 검색"
+        aria-label={`검색어를 입력하세요 (예: 녹음, 용어 사전) ${hint} — 사용 가이드 검색`}
         aria-keyshortcuts="Control+K Meta+K"
         className={cn(
-          "relative flex h-14 w-full min-w-0 items-center rounded-[16px] border border-[var(--tv-rule-strong)] bg-white pr-24 pl-12 text-left text-[16px] text-[var(--tv-muted)] help-fade hover:border-[var(--tv-brand)]",
+          "relative flex h-10 w-full min-w-0 items-center rounded-[10px] border border-[var(--tv-rule-strong)] bg-white pr-16 pl-10 text-left text-[14px] text-[var(--tv-muted)] help-fade hover:border-[var(--tv-ink)]",
           FOCUS
         )}
       >
         <Search
           aria-hidden
-          className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2"
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
         />
         <span className="truncate">
           검색어를 입력하세요 (예: 녹음, 용어 사전)
         </span>
         <kbd
-          className="pointer-events-none absolute top-1/2 right-4 grid h-6 min-w-6 -translate-y-1/2 place-items-center rounded-[6px] border border-[var(--tv-rule-strong)] bg-white px-1.5 font-sans text-[12px] font-bold"
+          className="pointer-events-none absolute top-1/2 right-3 grid h-6 min-w-6 -translate-y-1/2 place-items-center rounded-[6px] border border-[var(--tv-rule-strong)] bg-white px-1.5 font-sans text-[12px] font-bold"
           aria-hidden
         >
           {hint}
