@@ -66,10 +66,12 @@ describe("HeyMoa legal pages", () => {
       "recording",
       "desktop",
       "speakers",
+      "context",
       "summary",
       "tasks",
       "integrations",
       "agents",
+      "feedback",
       "trouble",
     ]) {
       expect(container.querySelector(`section#${id}`), id).not.toBeNull();

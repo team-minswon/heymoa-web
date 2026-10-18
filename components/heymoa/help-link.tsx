@@ -13,7 +13,18 @@ export function HelpLink({
   topic,
   children = "자세히",
 }: {
-  topic: "start" | "recording" | "desktop" | "speakers" | "summary" | "tasks" | "integrations" | "agents" | "trouble";
+  topic:
+    | "start"
+    | "recording"
+    | "desktop"
+    | "speakers"
+    | "context"
+    | "summary"
+    | "tasks"
+    | "integrations"
+    | "agents"
+    | "feedback"
+    | "trouble";
   children?: ReactNode;
 }) {
   return (
